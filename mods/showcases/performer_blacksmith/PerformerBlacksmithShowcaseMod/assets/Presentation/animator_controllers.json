@@ -11,7 +11,7 @@
         "fromStateIndex": 0,
         "toStateIndex": 1,
         "conditionKind": "FloatGreaterOrEqual",
-        "parameterIndex": 0,
+        "parameterIndex": 105,
         "threshold": 0.2,
         "durationSeconds": 0.08
       },
@@ -19,7 +19,7 @@
         "fromStateIndex": 1,
         "toStateIndex": 0,
         "conditionKind": "FloatLessOrEqual",
-        "parameterIndex": 0,
+        "parameterIndex": 105,
         "threshold": 0.1,
         "durationSeconds": 0.08
       }

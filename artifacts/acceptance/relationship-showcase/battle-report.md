@@ -3,7 +3,7 @@
 ## Header
 - scenario: `relationship-showcase`
 - build: `GameEngine 1.0.0.0`
-- execution_timestamp_utc: `2026-04-19T00:04:22.5319674+00:00`
+- execution_timestamp_utc: `2026-04-28T23:01:21.1411884+00:00`
 - map: `relationship_showcase`
 - clock: `fixed 1/60s`
 
@@ -60,10 +60,10 @@
 
 ## Summary Stats
 - snapshots captured: `7`
-- median headless tick: `0.528ms`
-- max headless tick: `13.029ms`
+- median headless tick: `0.410ms`
+- max headless tick: `8.898ms`
 - final loyalty: `Liu->Guan 65`, `Liu->Zhang 65`
 - final support: `Guan->Zhang 60`
-- final ground rings: `2`
+- final ground rings: `53`
 - final ui excerpt: `Faction State | Peach Garden Covenant | Selected Hero | Guan Yu | Enemy Focus`
 - reusable wiring: `RelationshipRuntime`, `RelationshipChangeBuffer`, `RelationshipCatalogPipelineLoader`, `RelationshipCatalogInstaller`, `RelationshipProcessingSystem`, `RelationshipCallbackProcessor`, `RelationshipSynergyProcessor`, `TriggerManager`, `EffectRequestQueue`, `TeamEntityLookup`

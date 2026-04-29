@@ -26,6 +26,7 @@ namespace Ludots.Core.Presentation.Assets
             int id = _ids.Register(key);
             EnsureCapacity(id);
             definition.ControllerId = id;
+            definition.BuildTransitionIndex();
             _definitions[id] = definition;
             _hasDefinitions[id] = true;
             return id;

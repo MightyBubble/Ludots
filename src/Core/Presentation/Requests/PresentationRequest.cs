@@ -138,5 +138,24 @@ namespace Ludots.Core.Presentation.Requests
                 StableId = stableId,
             };
         }
+
+        public static PresentationRequest RemoveSurfaceSource(Entity owner, int stableId)
+        {
+            return new PresentationRequest
+            {
+                Kind = PresentationRequestKind.RemoveSurfaceSource,
+                Owner = owner,
+                StableId = stableId,
+            };
+        }
+
+        public static PresentationRequest ClearTransientVisualProjection(Entity owner)
+        {
+            return new PresentationRequest
+            {
+                Kind = PresentationRequestKind.ClearTransientVisualProjection,
+                Owner = owner,
+            };
+        }
     }
 }

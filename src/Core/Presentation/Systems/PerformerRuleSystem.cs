@@ -77,6 +77,7 @@ namespace Ludots.Core.Presentation.Systems
             _programs = programs;
             _graphApi = graphApi;
             _globals = globals;
+            _runtime?.BindDefinitions(_definitions);
         }
 
         public override void Update(in float dt)

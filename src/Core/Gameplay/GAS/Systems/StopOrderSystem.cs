@@ -1,4 +1,7 @@
+using System;
+using System.Collections.Generic;
 using System.Runtime.CompilerServices;
+using Arch.Buffer;
 using Arch.Core;
 using Arch.System;
 using Ludots.Core.Gameplay.GAS.Components;
@@ -14,6 +17,8 @@ namespace Ludots.Core.Gameplay.GAS.Systems
 
         private readonly OrderTypeRegistry _orderTypeRegistry;
         private readonly int _stopOrderTypeId;
+        private readonly CommandBuffer _commandBuffer = new();
+        private readonly List<Entity> _completedOrders = new(64);
         public StopOrderSystem(
             World world,
             OrderTypeRegistry orderTypeRegistry,
@@ -25,6 +30,7 @@ namespace Ludots.Core.Gameplay.GAS.Systems
 
         public override void Update(in float dt)
         {
+            _completedOrders.Clear();
             foreach (ref var chunk in World.Query(in _query))
             {
                 var buffers = chunk.GetSpan<OrderBuffer>();
@@ -43,7 +49,7 @@ namespace Ludots.Core.Gameplay.GAS.Systems
 
                     if (World.Has<AbilityExecInstance>(entity))
                     {
-                        World.Remove<AbilityExecInstance>(entity);
+                        _commandBuffer.Remove<AbilityExecInstance>(in entity);
                     }
 
                     if (World.Has<NavGoal2D>(entity))
@@ -52,9 +58,25 @@ namespace Ludots.Core.Gameplay.GAS.Systems
                         goal.Kind = NavGoalKind2D.None;
                     }
 
-                    OrderSubmitter.NotifyOrderComplete(World, entity, _orderTypeRegistry);
+                    _completedOrders.Add(entity);
                 }
             }
+
+            if (_commandBuffer.Size > 0)
+            {
+                _commandBuffer.Playback(World);
+            }
+
+            for (int i = 0; i < _completedOrders.Count; i++)
+            {
+                OrderSubmitter.NotifyOrderComplete(World, _completedOrders[i], _orderTypeRegistry);
+            }
+        }
+
+        public override void Dispose()
+        {
+            _commandBuffer.Dispose();
+            base.Dispose();
         }
     }
 }

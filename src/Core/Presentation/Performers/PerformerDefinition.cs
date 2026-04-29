@@ -98,9 +98,15 @@ namespace Ludots.Core.Presentation.Performers
         internal int[] AssetBehaviorIndices = System.Array.Empty<int>();
         internal int[] CacheableAssetBehaviorIndices = System.Array.Empty<int>();
         internal int[] TickBehaviorIndices = System.Array.Empty<int>();
+        internal int[] MaterialBehaviorIndices = System.Array.Empty<int>();
+        internal int[] MaterialSourceFloatParamKeys = System.Array.Empty<int>();
         internal int[] StaticVisualFloatParamKeys = System.Array.Empty<int>();
         internal int[] StaticVisualIntParamKeys = System.Array.Empty<int>();
         internal int[] StaticVisualVectorParamKeys = System.Array.Empty<int>();
+        internal bool SupportsSingleVisualProxyFastEmit;
+        internal int SingleVisualProxyFastBehaviorIndex;
+        internal bool SupportsSingleAnimatorFastUpdate;
+        internal int SingleAnimatorFastBehaviorIndex;
 
         internal void BuildBindingIndex()
         {
@@ -202,15 +208,23 @@ namespace Ludots.Core.Presentation.Performers
             AssetBehaviorIndices = System.Array.Empty<int>();
             CacheableAssetBehaviorIndices = System.Array.Empty<int>();
             TickBehaviorIndices = System.Array.Empty<int>();
+            MaterialBehaviorIndices = System.Array.Empty<int>();
+            MaterialSourceFloatParamKeys = System.Array.Empty<int>();
             StaticVisualFloatParamKeys = System.Array.Empty<int>();
             StaticVisualIntParamKeys = System.Array.Empty<int>();
             StaticVisualVectorParamKeys = System.Array.Empty<int>();
+            SupportsSingleVisualProxyFastEmit = false;
+            SingleVisualProxyFastBehaviorIndex = -1;
+            SupportsSingleAnimatorFastUpdate = false;
+            SingleAnimatorFastBehaviorIndex = -1;
             System.Collections.Generic.Dictionary<int, System.Collections.Generic.List<int>>? attributeParamBindingMap = null;
             System.Collections.Generic.Dictionary<int, System.Collections.Generic.List<int>>? attributeBehaviorMap = null;
             System.Collections.Generic.Dictionary<int, System.Collections.Generic.List<int>>? tagBehaviorMap = null;
             var staticFloatParams = new System.Collections.Generic.HashSet<int>();
             var staticIntParams = new System.Collections.Generic.HashSet<int>();
             var staticVectorParams = new System.Collections.Generic.HashSet<int>();
+            var materialSourceFloatParams = new System.Collections.Generic.HashSet<int>();
+            System.Collections.Generic.List<int>? materialBehaviorIndices = null;
             bool blocksEventDrivenStaticEmit = HasSurfaceAuthoring;
 
             if (Bindings != null)
@@ -232,6 +246,13 @@ namespace Ludots.Core.Presentation.Performers
 
             if (Behaviors == null || Behaviors.Length == 0)
             {
+                OwnerAttributeWork = BuildOwnerAttributeWork(attributeParamBindingMap, attributeBehaviorMap);
+                OwnerTagWork = BuildOwnerTagWork(tagBehaviorMap);
+                UsesRetainedPresentationRequest =
+                    HasSurfaceAuthoring &&
+                    DefaultLifetime <= 0f &&
+                    PositionYDriftPerSecond == 0f &&
+                    VisibilityCondition.GraphProgramId <= 0;
                 return;
             }
 
@@ -327,26 +348,44 @@ namespace Ludots.Core.Presentation.Performers
                     case BehaviorKind.Attachment:
                         tickBehaviorIndices ??= new System.Collections.Generic.List<int>(4);
                         tickBehaviorIndices.Add(i);
-                        RequiresBootstrapProcessing = true;
-                        blocksEventDrivenStaticEmit = true;
-                        hasStaticOnlyVisuals = false;
+                        if (slot.Attachment.Target != AttachmentTarget.Parent)
+                        {
+                            blocksEventDrivenStaticEmit = true;
+                            hasStaticOnlyVisuals = false;
+                        }
+                        break;
+                    case BehaviorKind.Grounding:
+                        if (slot.Grounding.Mode != GroundingMode.None &&
+                            slot.Grounding.UpdatePolicy == GroundingUpdatePolicy.EveryFrame)
+                        {
+                            tickBehaviorIndices ??= new System.Collections.Generic.List<int>(4);
+                            tickBehaviorIndices.Add(i);
+                            blocksEventDrivenStaticEmit = true;
+                            hasStaticOnlyVisuals = false;
+                        }
+                        if (slot.Grounding.Mode != GroundingMode.None &&
+                            slot.Grounding.UpdatePolicy == GroundingUpdatePolicy.Once)
+                        {
+                            RequiresBootstrapProcessing = true;
+                        }
                         break;
                     case BehaviorKind.Sound:
                         tickBehaviorIndices ??= new System.Collections.Generic.List<int>(4);
                         tickBehaviorIndices.Add(i);
-                        RequiresBootstrapProcessing = true;
                         blocksEventDrivenStaticEmit = true;
                         hasStaticOnlyVisuals = false;
                         break;
                     case BehaviorKind.Spline:
                         tickBehaviorIndices ??= new System.Collections.Generic.List<int>(4);
                         tickBehaviorIndices.Add(i);
-                        RequiresBootstrapProcessing = true;
                         blocksEventDrivenStaticEmit = true;
                         hasStaticOnlyVisuals = false;
                         break;
                     case BehaviorKind.Material:
                         RequiresBootstrapProcessing = true;
+                        materialBehaviorIndices ??= new System.Collections.Generic.List<int>(2);
+                        materialBehaviorIndices.Add(i);
+                        AddIfValid(materialSourceFloatParams, slot.Material.MaterialSwapParamKey);
                         break;
                 }
             }
@@ -354,16 +393,20 @@ namespace Ludots.Core.Presentation.Performers
             AssetBehaviorIndices = assetBehaviorIndices?.ToArray() ?? System.Array.Empty<int>();
             CacheableAssetBehaviorIndices = cacheableAssetBehaviorIndices?.ToArray() ?? System.Array.Empty<int>();
             TickBehaviorIndices = tickBehaviorIndices?.ToArray() ?? System.Array.Empty<int>();
+            MaterialBehaviorIndices = materialBehaviorIndices?.ToArray() ?? System.Array.Empty<int>();
+            MaterialSourceFloatParamKeys = materialSourceFloatParams.Count == 0 ? System.Array.Empty<int>() : Sort(materialSourceFloatParams);
             StaticVisualFloatParamKeys = staticFloatParams.Count == 0 ? System.Array.Empty<int>() : Sort(staticFloatParams);
             StaticVisualIntParamKeys = staticIntParams.Count == 0 ? System.Array.Empty<int>() : Sort(staticIntParams);
             StaticVisualVectorParamKeys = staticVectorParams.Count == 0 ? System.Array.Empty<int>() : Sort(staticVectorParams);
             OwnerAttributeWork = BuildOwnerAttributeWork(attributeParamBindingMap, attributeBehaviorMap);
             OwnerTagWork = BuildOwnerTagWork(tagBehaviorMap);
-            UsesStableVisualCache = hasCacheableVisual && !hasDynamicVisualLane;
+            UsesStableVisualCache =
+                hasCacheableVisual &&
+                !hasDynamicVisualLane &&
+                !blocksEventDrivenStaticEmit;
             UsesEventDrivenStaticEmit =
                 UsesStableVisualCache &&
                 hasStaticOnlyVisuals &&
-                !blocksEventDrivenStaticEmit &&
                 DefaultLifetime <= 0f &&
                 PositionYDriftPerSecond == 0f &&
                 VisibilityCondition.Inline == InlineConditionKind.None &&
@@ -372,10 +415,78 @@ namespace Ludots.Core.Presentation.Performers
                 AssetBehaviorIndices.Length == 1 &&
                 SupportsReplayableSingleRequest(Behaviors[AssetBehaviorIndices[0]].AssetBinding.AssetKind);
             UsesRetainedPresentationRequest =
-                SupportsSingleRequestReplay &&
+                (SupportsSingleRequestReplay || HasSurfaceAuthoring) &&
                 DefaultLifetime <= 0f &&
                 PositionYDriftPerSecond == 0f &&
                 VisibilityCondition.GraphProgramId <= 0;
+            SupportsSingleVisualProxyFastEmit =
+                AssetBehaviorIndices.Length == 1 &&
+                SupportsSingleVisualProxyFastEmitFor(Behaviors[AssetBehaviorIndices[0]].AssetBinding);
+            SingleVisualProxyFastBehaviorIndex = SupportsSingleVisualProxyFastEmit
+                ? AssetBehaviorIndices[0]
+                : -1;
+            SupportsSingleAnimatorFastUpdate =
+                HasAnimatorBehavior &&
+                AnimatorSlotMask != 0u &&
+                IsPowerOfTwo(AnimatorSlotMask);
+            SingleAnimatorFastBehaviorIndex = SupportsSingleAnimatorFastUpdate
+                ? FindBehaviorIndexForSlot(Behaviors, TrailingZeroCount(AnimatorSlotMask), BehaviorKind.Animator)
+                : -1;
+            SupportsSingleAnimatorFastUpdate &= SingleAnimatorFastBehaviorIndex >= 0;
+        }
+
+        private static int FindBehaviorIndexForSlot(BehaviorSlot[] behaviors, int slotIndex, BehaviorKind kind)
+        {
+            if (behaviors == null || slotIndex < 0)
+            {
+                return -1;
+            }
+
+            for (int i = 0; i < behaviors.Length; i++)
+            {
+                if (behaviors[i].Kind == kind && behaviors[i].SlotIndex == slotIndex)
+                {
+                    return i;
+                }
+            }
+
+            return -1;
+        }
+
+        private static bool IsPowerOfTwo(uint value)
+        {
+            return value != 0u && (value & (value - 1u)) == 0u;
+        }
+
+        private static int TrailingZeroCount(uint value)
+        {
+            int count = 0;
+            while ((value & 1u) == 0u)
+            {
+                count++;
+                value >>= 1;
+            }
+
+            return count;
+        }
+
+        private static bool SupportsSingleVisualProxyFastEmitFor(in AssetBindingConfig asset)
+        {
+            return asset.AssetKind is AssetKind.Mesh or AssetKind.SkinnedMesh or AssetKind.Decal or AssetKind.VFX &&
+                   asset.ScaleParamKey < 0 &&
+                   asset.ColorParamKey < 0 &&
+                   asset.MaterialParamKey < 0 &&
+                   asset.AssetSwapParamKey < 0 &&
+                   asset.VisibilityParamKey < 0 &&
+                   asset.LocalOffset == Vector3.Zero &&
+                   asset.LocalRotation == Quaternion.Identity &&
+                   asset.LocalScale == Vector3.One &&
+                   !HasAssetSwapTable(asset);
+        }
+
+        private static bool HasAssetSwapTable(in AssetBindingConfig asset)
+        {
+            return asset.AssetSwapTable != null && asset.AssetSwapTable.Length != 0;
         }
 
         private static bool SupportsReplayableSingleRequest(AssetKind kind)
@@ -398,9 +509,7 @@ namespace Ludots.Core.Presentation.Performers
         {
             return asset.LocalOffset != Vector3.Zero ||
                    asset.LocalRotation != Quaternion.Identity ||
-                   asset.LocalScale != Vector3.One ||
-                   asset.Grounding != GroundingMode.None ||
-                   asset.GroundingOffset != 0f;
+                   asset.LocalScale != Vector3.One;
         }
 
         private static bool AssetBindingSupportsEventDrivenStaticEmit(in AssetBindingConfig asset)
@@ -410,7 +519,7 @@ namespace Ludots.Core.Presentation.Performers
 
         internal bool AffectsStaticVisualParam(int paramKey, ParamLane lane)
         {
-            if ((!UsesEventDrivenStaticEmit && !UsesRetainedPresentationRequest) || paramKey < 0)
+            if (paramKey < 0)
             {
                 return false;
             }
@@ -422,6 +531,13 @@ namespace Ludots.Core.Presentation.Performers
                 ParamLane.Vector => Contains(StaticVisualVectorParamKeys, paramKey),
                 _ => false,
             };
+        }
+
+        internal bool AffectsMaterialSourceParam(int paramKey, ParamLane lane)
+        {
+            return lane == ParamLane.Float &&
+                   paramKey >= 0 &&
+                   Contains(MaterialSourceFloatParamKeys, paramKey);
         }
 
         private static void CollectStaticVisualParams(

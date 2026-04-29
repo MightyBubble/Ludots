@@ -169,6 +169,60 @@ namespace Ludots.Core.Presentation.Systems
             return emitted;
         }
 
+        public void RemoveStaticStableVisuals(
+            in PerformerState state,
+            in PerformerDefinition definition,
+            StableDrawCache stableDrawCache)
+        {
+            if (stableDrawCache == null)
+            {
+                throw new ArgumentNullException(nameof(stableDrawCache));
+            }
+
+            BehaviorSlot[] behaviors = definition.Behaviors;
+            int[] cacheableAssetBehaviorIndices = definition.CacheableAssetBehaviorIndices;
+            for (int i = 0; i < cacheableAssetBehaviorIndices.Length; i++)
+            {
+                ref readonly BehaviorSlot slot = ref behaviors[cacheableAssetBehaviorIndices[i]];
+                stableDrawCache.Remove(PerformerBehaviorRuntimeUtility.ComposeVisualStableId(
+                    state.StableId,
+                    slot.SlotIndex,
+                    slot.AssetBinding.AssetKind,
+                    state.DefId));
+            }
+        }
+
+        public bool TryGetAnimatorPackedState(Entity entity, out AnimatorPackedState state)
+        {
+            if (_animatorStates == null)
+            {
+                state = default;
+                return false;
+            }
+
+            return _animatorStates.TryGetPackedState(entity, out state);
+        }
+
+        public AnimatorPackedState GetAnimatorPackedStateBySlot(int slot)
+        {
+            if (_animatorStates == null || slot < 0)
+            {
+                return default;
+            }
+
+            return _animatorStates.GetPackedStateBySlot(slot);
+        }
+
+        public AnimationOverlayRequest GetAnimationOverlayBySlot(int slot)
+        {
+            if (_animatorStates == null || slot < 0)
+            {
+                return default;
+            }
+
+            return _animatorStates.GetOverlayBySlot(slot);
+        }
+
         private void EmitVisualAsset(
             Entity entity,
             in PerformerState state,

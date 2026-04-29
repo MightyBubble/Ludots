@@ -33,6 +33,11 @@ namespace Ludots.Core.Presentation.Systems
                 ref readonly PresentationRequest request = ref span[i];
                 if (request.Kind != PresentationRequestKind.SurfaceSource)
                 {
+                    if (request.Kind == PresentationRequestKind.RemoveSurfaceSource)
+                    {
+                        _runtime.MarkPendingRemoval(request.StableId);
+                    }
+
                     continue;
                 }
 

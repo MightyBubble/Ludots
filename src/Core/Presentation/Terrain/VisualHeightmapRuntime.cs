@@ -39,17 +39,22 @@ namespace Ludots.Core.Presentation.Terrain
                 throw new ArgumentException("Visual heightmap batch sample spans must have identical lengths.");
             }
 
-            if (!TryResolveLayer(layerIndex, out _))
+            if (!TryResolveLayer(layerIndex, out VisualHeightmapLayerDefinition layer))
             {
                 return false;
             }
 
-            for (int i = 0; i < outHeightCm.Length; i++)
-            {
-                outHeightCm[i] = TrySampleHeightCm(worldXCm[i], worldYCm[i], out float heightCm, layerIndex)
-                    ? heightCm
-                    : float.NaN;
-            }
+            WorldAabbCm bounds = _asset.Bounds;
+            VisualHeightmapQueries.SampleHeightsCm(
+                this,
+                in bounds,
+                _asset.SampleColumns,
+                _asset.SampleRows,
+                _asset.InterpolationMode,
+                layer.SampleOffset,
+                worldXCm,
+                worldYCm,
+                outHeightCm);
 
             return true;
         }

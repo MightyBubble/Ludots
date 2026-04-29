@@ -337,6 +337,8 @@ namespace Ludots.Tests.Presentation
                 ?? throw new InvalidOperationException("EffectRequestQueue missing.");
             var hud = engine.GetService(CoreServiceKeys.PresentationWorldHudBuffer)
                 ?? throw new InvalidOperationException("PresentationWorldHudBuffer missing.");
+            var timings = engine.GetService(CoreServiceKeys.PresentationTimingDiagnostics)
+                ?? throw new InvalidOperationException("PresentationTimingDiagnostics missing.");
 
             int damagedAssetId = ResolveMeshAssetId(engine, "blacksmith.building.damaged");
             int ruinedAssetId = ResolveMeshAssetId(engine, "blacksmith.building.ruined");
@@ -353,8 +355,47 @@ namespace Ludots.Tests.Presentation
                 TargetContext = building,
                 TemplateId = damagedEffectId,
             });
-            PerformerBlacksmithShowcaseTestHarness.Tick(engine, 12);
+            int observedOwnerAttributeChanges = 0;
+            for (int i = 0; i < 12; i++)
+            {
+                engine.Tick(1f / 60f);
+                observedOwnerAttributeChanges += timings.PerformerOwnerAttributeChangesLastFrame;
+            }
+            Assert.That(observedOwnerAttributeChanges, Is.GreaterThan(0), "Durability effect must reach PerformerBehaviorSystem as an owner attribute change.");
 
+            int durabilityId = AttributeRegistry.GetId("Durability");
+            ref AttributeBuffer damagedAttributes = ref engine.World.Get<AttributeBuffer>(building);
+            Assert.That(damagedAttributes.GetCurrent(durabilityId), Is.EqualTo(50f).Within(0.001f));
+            Assert.That(damagedAttributes.GetBase(durabilityId), Is.EqualTo(100f).Within(0.001f));
+            var defs = engine.GetService(CoreServiceKeys.PerformerDefinitionRegistry)!;
+            var runtime = engine.GetService(CoreServiceKeys.PerformerEntityRuntime)!;
+            int leftDefId = defs.GetId(PerformerBlacksmithShowcaseIds.WorkshopLeftDefinitionId);
+            int rightDefId = defs.GetId(PerformerBlacksmithShowcaseIds.WorkshopRightDefinitionId);
+            Assert.That(defs.TryGet(leftDefId, out PerformerDefinition leftDefinition), Is.True);
+            Assert.That(defs.TryGet(rightDefId, out PerformerDefinition rightDefinition), Is.True);
+            Assert.That(HasDurabilityAttributeBinding(leftDefinition, durabilityId), Is.True, "Left workshop must keep inherited Durability AttributeBinding behavior.");
+            Assert.That(HasDurabilityAttributeBinding(rightDefinition, durabilityId), Is.True, "Right workshop must keep inherited Durability AttributeBinding behavior.");
+            Assert.That(runtime.GetActiveByOwnerDefinition(leftDefId, building).Count, Is.EqualTo(1));
+            Assert.That(runtime.GetActiveByOwnerDefinition(rightDefId, building).Count, Is.EqualTo(1));
+            var q = new QueryDescription().WithAll<PerformerState>();
+            int damagedWorkshopParamCount = 0;
+            string workshopParamSummary = string.Empty;
+            engine.World.Query(in q, (Entity entity, ref PerformerState state) =>
+            {
+                if (state.DefId == leftDefId || state.DefId == rightDefId)
+                {
+                    var ints = engine.World.Get<PerformerIntParams>(entity);
+                    var floats = engine.World.Get<PerformerFloatParams>(entity);
+                    ints.TryGet(104, out int p104);
+                    floats.TryGet(101, out float p101);
+                    workshopParamSummary += $"def={state.DefId} p101={p101:0.###} p104={p104};";
+                    if (p104 == 2 && MathF.Abs(p101 - 0.5f) <= 0.001f)
+                    {
+                        damagedWorkshopParamCount++;
+                    }
+                }
+            });
+            Assert.That(damagedWorkshopParamCount, Is.EqualTo(2), workshopParamSummary);
             Assert.That(CountVisiblePrimitivesByMesh(engine, damagedAssetId), Is.EqualTo(2));
             Assert.That(CaptureHudBarValue(hud), Is.EqualTo(0.5f).Within(0.05f));
 
@@ -444,5 +485,22 @@ namespace Ludots.Tests.Presentation
 
             return 0f;
         }
+
+        private static bool HasDurabilityAttributeBinding(PerformerDefinition definition, int durabilityId)
+        {
+            for (int i = 0; i < definition.Behaviors.Length; i++)
+            {
+                ref readonly BehaviorSlot slot = ref definition.Behaviors[i];
+                if (slot.Kind == BehaviorKind.AttributeBinding &&
+                    slot.AttributeBinding.AttributeId == durabilityId &&
+                    slot.AttributeBinding.TargetParamKey == 101)
+                {
+                    return true;
+                }
+            }
+
+            return false;
+        }
+
     }
 }

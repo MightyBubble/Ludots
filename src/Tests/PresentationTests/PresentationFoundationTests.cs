@@ -1065,6 +1065,7 @@ namespace Ludots.Tests.Presentation
             Entity entity = world.Create(
                 WorldPositionCm.FromCm(400, 800),
                 new PreviousWorldPositionCm { Value = Fix64Vec2.FromInt(300, 700) },
+                new VisualHeightmapSampleState(),
                 new VisualTransform
                 {
                     Position = new Vector3(1f, 2f, 5f),
@@ -1098,6 +1099,42 @@ namespace Ludots.Tests.Presentation
             Assert.That(visual.Position.X, Is.EqualTo(1f).Within(0.001f));
             Assert.That(visual.Position.Y, Is.EqualTo(120f * 0.01f).Within(0.001f));
             Assert.That(visual.Position.Z, Is.EqualTo(5f).Within(0.001f));
+        }
+
+        [Test]
+        public void TerrainHeightSyncSystem_DoesNotSampleDynamicEntityWithoutExplicitHeightmapState()
+        {
+            using var world = World.Create();
+            Entity entity = world.Create(
+                WorldPositionCm.FromCm(400, 800),
+                new PreviousWorldPositionCm { Value = Fix64Vec2.FromInt(300, 700) },
+                new VisualTransform
+                {
+                    Position = new Vector3(1f, 2f, 5f),
+                    Rotation = Quaternion.Identity,
+                    Scale = Vector3.One,
+                });
+
+            var heightmap = new VisualHeightmapRuntime(
+                VisualHeightmapAsset.CreateSingleLayer(
+                    new Ludots.Core.Mathematics.WorldAabbCm(0, 0, 1000, 1000),
+                    sampleColumns: 2,
+                    sampleRows: 2,
+                    new short[]
+                    {
+                        0, 100,
+                        100, 200,
+                    }));
+            var globals = new Dictionary<string, object>
+            {
+                [CoreServiceKeys.VisualHeightmap.Name] = heightmap,
+            };
+
+            using var system = new TerrainHeightSyncSystem(world, globals);
+            system.Update(0.016f);
+
+            VisualTransform visual = world.Get<VisualTransform>(entity);
+            Assert.That(visual.Position.Y, Is.EqualTo(2f).Within(0.001f));
         }
 
         [Test]

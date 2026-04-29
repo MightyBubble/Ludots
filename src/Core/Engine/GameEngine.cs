@@ -623,7 +623,13 @@ namespace Ludots.Core.Engine
             var presentationConfig = config.Presentation ?? new PresentationRuntimeConfig();
             var presentationEventStream = new PresentationEventStream(presentationConfig.GetEffectivePresentationEventStreamCapacity());
             var presentationOwnerChanges = new PresentationOwnerChangeBuffer(presentationConfig.GetEffectivePresentationEventStreamCapacity());
-            var presentationBridgeSystem = new PresentationBridgeSystem(World, EventBus, presentationEventStream, GameSession, gasPresentationEvents, presentationOwnerChanges);
+            var presentationBridgeSystem = new PresentationBridgeSystem(
+                World,
+                EventBus,
+                presentationEventStream,
+                GameSession,
+                gasPresentationEvents,
+                presentationOwnerChanges);
             var globalEventBridgeSystem = new GlobalEventBridgeSystem(World, globalPresentationEvents, presentationEventStream, GameSession);
             var performerCommandBuffer = new PerformerCommandBuffer(presentationConfig.GetEffectivePerformerCommandCapacity());
             var presentationPrefabs = new PrefabRegistry();
@@ -648,6 +654,7 @@ namespace Ludots.Core.Engine
             var performerDefinitions = new PerformerDefinitionRegistry();
             var performerRuntime = new PerformerEntityRuntime(World);
             var performerAnimatorStates = new PerformerAnimatorStateBuffer(presentationConfig.GetEffectivePerformerInstanceCapacity());
+            performerRuntime.BindAnimatorStates(performerAnimatorStates);
             var surfacePayloads = new SurfaceSourcePayloadRegistry();
             var surfaceRuntime = new SurfaceSourceRuntimeRegistry();
             var presentationBehaviors = new PresentationBehaviorRegistry();
@@ -662,7 +669,12 @@ namespace Ludots.Core.Engine
             var presentationTextLocaleSelection = new PresentationTextLocaleSelection(presentationTextCatalog);
             performerDefinitions.RebuildCompiledViews();
             var performerRuleSystem = new PerformerRuleSystem(World, presentationEventStream, performerCommandBuffer, performerDefinitions, performerRuntime, graphProgramRegistry, performerGraphApi, GlobalContext);
-            var presentationEntityLifecycleSystem = new PresentationEntityLifecycleSystem(World, presentationEventStream, performerRuntime, performerDefinitions);
+            var presentationEntityLifecycleSystem = new PresentationEntityLifecycleSystem(
+                World,
+                presentationEventStream,
+                performerRuntime,
+                performerDefinitions,
+                presentationStableIds);
             var presentationEntityFinalizeDestroySystem = new PresentationEntityFinalizeDestroySystem(World);
             var performerRuntimeSystem = new PerformerRuntimeSystem(
                 World,
@@ -696,7 +708,8 @@ namespace Ludots.Core.Engine
                 performerAnimatorStates,
                 soundRequestBuffer,
                 presentationTimingDiagnostics,
-                stableDrawCache);
+                stableDrawCache,
+                skinnedVisualBatchBuffer);
             var surfaceSourceFlushSystem = new SurfaceSourceFlushSystem(World, presentationRequestBuffer, surfacePayloads, surfaceRuntime);
             var surfaceSourceLifecycleSystem = new SurfaceSourceLifecycleSystem(World, surfaceRuntime, performerCommandBuffer);
             var chunkSurfaceBakeSystem = new ChunkSurfaceBakeSystem(World, surfaceRuntime, meshAssets, materialAssets, performerDefinitions, performerCommandBuffer, performerRuntime);
@@ -1056,7 +1069,8 @@ namespace Ludots.Core.Engine
                 performerDefinitions,
                 presentationEventStream,
                 _spatialPartition,
-                WorldSizeSpec),
+                WorldSizeSpec,
+                presentationTimingDiagnostics),
                 SystemGroup.EffectProcessing);
             const string manifestationObstacleBridgeSystemTypeName = "Ludots.Core.Physics2D.Systems.ManifestationObstacleBridge2DSystem";
             var manifestationObstacleBridgeType = Type.GetType($"{manifestationObstacleBridgeSystemTypeName}, Ludots.Physics2D", throwOnError: false);
@@ -1120,6 +1134,8 @@ namespace Ludots.Core.Engine
             RegisterPresentationSystem(performerRuleSystem);
             // PerformerRuntimeSystem consumes commands, manages instance lifecycle.
             RegisterPresentationSystem(performerRuntimeSystem);
+            // Entity-anchored performers follow owner VisualTransform before behavior/animator/emit reads them.
+            RegisterPresentationSystem(new PerformerEntityTransformSyncSystem(World, presentationTimingDiagnostics));
             // PerformerBehaviorSystem drives blackboard-bound behavior before animator and emit read it.
             RegisterPresentationSystem(performerBehaviorSystem);
             RegisterPresentationSystem(animatorRuntimeSystem);

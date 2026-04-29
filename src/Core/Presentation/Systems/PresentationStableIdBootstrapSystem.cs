@@ -1,4 +1,5 @@
 using System;
+using Arch.Buffer;
 using Arch.Core;
 using Arch.System;
 using Ludots.Core.Gameplay.Spawning;
@@ -13,6 +14,7 @@ namespace Ludots.Core.Presentation.Systems
     public sealed class PresentationStableIdBootstrapSystem : BaseSystem<World, float>
     {
         private readonly PresentationStableIdAllocator _stableIds;
+        private readonly CommandBuffer _commandBuffer = new();
         private readonly QueryDescription _missingStableIdQuery = new QueryDescription()
             .WithAll<EntityTemplateKeyCm>()
             .WithNone<PresentationStableId>();
@@ -30,12 +32,28 @@ namespace Ludots.Core.Presentation.Systems
             {
                 for (int i = 0; i < chunk.Count; i++)
                 {
-                    World.Add(chunk.Entity(i), new PresentationStableId
+                    _commandBuffer.Add(chunk.Entity(i), new PresentationStableId
                     {
                         Value = _stableIds.Allocate(),
                     });
                 }
             }
+
+            PlaybackStructuralChanges();
+        }
+
+        private void PlaybackStructuralChanges()
+        {
+            if (_commandBuffer.Size > 0)
+            {
+                _commandBuffer.Playback(World);
+            }
+        }
+
+        public override void Dispose()
+        {
+            _commandBuffer.Dispose();
+            base.Dispose();
         }
     }
 }

@@ -178,6 +178,71 @@ namespace Ludots.Tests.Presentation
         }
 
         [Test]
+        public void Load_RejectsGroundingInsideAssetBinding()
+        {
+            WriteCatalog();
+            WritePerformers(
+                """
+                [
+                  {
+                    "id": "bad_asset_grounding",
+                    "behaviors": [
+                      {
+                        "slot": 0,
+                        "kind": "AssetBinding",
+                        "activeByDefault": true,
+                        "assetBinding": {
+                          "assetKind": "Mesh",
+                          "assetId": "cube",
+                          "renderPath": "InstancedStaticMesh",
+                          "grounding": "SnapToGround"
+                        }
+                      }
+                    ]
+                  },
+                  {
+                    "id": "good_mesh",
+                    "behaviors": [
+                      {
+                        "slot": 0,
+                        "kind": "AssetBinding",
+                        "activeByDefault": true,
+                        "assetBinding": {
+                          "assetKind": "Mesh",
+                          "assetId": "cube",
+                          "renderPath": "InstancedStaticMesh"
+                        }
+                      },
+                      {
+                        "slot": 1,
+                        "kind": "Grounding",
+                        "activeByDefault": true,
+                        "grounding": {
+                          "mode": "SnapToGround",
+                          "updatePolicy": "Once"
+                        }
+                      }
+                    ]
+                  }
+                ]
+                """);
+
+            var (_, _, pipeline, catalog) = BuildPipeline();
+            var registry = new PerformerDefinitionRegistry();
+            var loader = new PerformerDefinitionConfigLoader(
+                pipeline,
+                registry,
+                resolveBehaviorAssetId: (kind, key) =>
+                    kind == AssetKind.Mesh && string.Equals(key, "cube", StringComparison.Ordinal) ? 42 : 0);
+
+            loader.Load(catalog);
+
+            Assert.That(registry.TryGet(registry.GetId("bad_asset_grounding"), out _), Is.False);
+            Assert.That(registry.TryGet(registry.GetId("good_mesh"), out var good), Is.True);
+            Assert.That(good.Behaviors[1].Grounding.UpdatePolicy, Is.EqualTo(GroundingUpdatePolicy.Once));
+        }
+
+        [Test]
         public void Load_PreservesChildrenAsDeclarativeHierarchy_WithoutSyntheticRules()
         {
             WriteCatalog();

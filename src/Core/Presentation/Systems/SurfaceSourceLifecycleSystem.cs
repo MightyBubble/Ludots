@@ -24,8 +24,6 @@ namespace Ludots.Core.Presentation.Systems
 
         public override void Update(in float dt)
         {
-            _runtime.MarkStaleAsPendingRemoval();
-
             foreach (SurfaceSourceRecord record in _runtime.Records)
             {
                 if (!record.PendingRemoval)

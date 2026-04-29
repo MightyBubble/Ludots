@@ -6,6 +6,7 @@ namespace Ludots.Core.Presentation.Components
     /// </summary>
     public struct PresentationStaticTransform
     {
+        public int CullEpoch;
     }
 
     /// <summary>

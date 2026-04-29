@@ -27,7 +27,7 @@ namespace Ludots.Core.Presentation.Rendering
             _drawBuffer.Clear();
             _snapshotBuffer?.Clear();
             _proxyBuffer?.Clear();
-            _skinnedBatchBuffer?.Clear();
+            _skinnedBatchBuffer?.ClearProjection();
         }
 
         public void Emit(in PresentationVisualProxy proxy)

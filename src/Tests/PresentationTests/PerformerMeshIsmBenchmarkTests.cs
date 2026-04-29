@@ -112,6 +112,7 @@ namespace Ludots.Tests.Presentation
                 ?? throw new InvalidOperationException("PerformerEntityRuntime missing.");
             PresentationTimingDiagnostics timings = engine.GetService(CoreServiceKeys.PresentationTimingDiagnostics)
                 ?? throw new InvalidOperationException("PresentationTimingDiagnostics missing.");
+            timings.SystemBreakdownEnabled = true;
             PerformerDefinitionRegistry definitions = engine.GetService(CoreServiceKeys.PerformerDefinitionRegistry)
                 ?? throw new InvalidOperationException("PerformerDefinitionRegistry missing.");
             PresentationEventStream events = engine.GetService(CoreServiceKeys.PresentationEventStream)
@@ -135,13 +136,44 @@ namespace Ludots.Tests.Presentation
             float initDiagCameraCullingMs = 0f;
             float initDiagCameraCullingEntityProcessMs = 0f;
             float initDiagCameraCullingPerformerSyncMs = 0f;
+            float initDiagCameraCullingStaticProcessMs = 0f;
+            float initDiagCameraCullingStaticPendingRemoveMs = 0f;
+            float initDiagCameraCullingDynamicProcessMs = 0f;
             float initDiagBehaviorMs = 0f;
             float initDiagAnimatorMs = 0f;
+            float initDiagTransformSyncMs = 0f;
+            float initRuntimeSpawnBatchPrepareMs = 0f;
+            float initRuntimeSpawnWorldCreateMs = 0f;
+            float initRuntimeSpawnFillBatchMs = 0f;
+            float initRuntimeSpawnPostSpawnMs = 0f;
+            float initRuntimeSpawnPerformerBatchMs = 0f;
+            float initRuntimeSpawnPerformerCreateMs = 0f;
+            float initRuntimeSpawnPerformerBootstrapMarkMs = 0f;
+            float initRuntimeSpawnPerformerCreateSetupMs = 0f;
+            float initRuntimeSpawnPerformerWorldCreateMs = 0f;
+            float initRuntimeSpawnPerformerComponentFillMs = 0f;
+            float initRuntimeSpawnPerformerIndexWriteMs = 0f;
+            float initRuntimeSpawnPerformerOwnerPayloadMs = 0f;
+            float initRuntimeSpawnPerformerPostCreateMs = 0f;
+            int initRuntimeSpawnBatchCount = 0;
+            int initRuntimeSpawnPerformerCreated = 0;
             float initDiagEmitMs = 0f;
             float initDiagEmitDirtyProcessMs = 0f;
             float initDiagEmitDirtyCleanupMs = 0f;
             int initDiagEmitDirtyCount = 0;
             float initDiagRequestFlushMs = 0f;
+            string initPresentationTop1Name = string.Empty;
+            float initPresentationTop1Ms = 0f;
+            string initPresentationTop2Name = string.Empty;
+            float initPresentationTop2Ms = 0f;
+            string initPresentationTop3Name = string.Empty;
+            float initPresentationTop3Ms = 0f;
+            string initSimulationTop1Name = string.Empty;
+            float initSimulationTop1Ms = 0f;
+            string initSimulationTop2Name = string.Empty;
+            float initSimulationTop2Ms = 0f;
+            string initSimulationTop3Name = string.Empty;
+            float initSimulationTop3Ms = 0f;
             int settleFrames = 0;
             for (int settleAttempt = 0; settleAttempt < 12; settleAttempt++)
             {
@@ -157,13 +189,44 @@ namespace Ludots.Tests.Presentation
                     initDiagCameraCullingMs = timings.LastCameraCullingMs;
                     initDiagCameraCullingEntityProcessMs = timings.LastCameraCullingEntityProcessMs;
                     initDiagCameraCullingPerformerSyncMs = timings.LastCameraCullingPerformerSyncMs;
+                    initDiagCameraCullingStaticProcessMs = timings.LastCameraCullingStaticProcessMs;
+                    initDiagCameraCullingStaticPendingRemoveMs = timings.LastCameraCullingStaticPendingRemoveMs;
+                    initDiagCameraCullingDynamicProcessMs = timings.LastCameraCullingDynamicProcessMs;
                     initDiagBehaviorMs = timings.LastPerformerBehaviorMs;
                     initDiagAnimatorMs = timings.LastPerformerAnimatorMs;
+                    initDiagTransformSyncMs = timings.LastPerformerEntityTransformSyncMs;
+                    initRuntimeSpawnBatchPrepareMs = timings.LastRuntimeSpawnBatchPrepareMs;
+                    initRuntimeSpawnWorldCreateMs = timings.LastRuntimeSpawnWorldCreateMs;
+                    initRuntimeSpawnFillBatchMs = timings.LastRuntimeSpawnFillBatchMs;
+                    initRuntimeSpawnPostSpawnMs = timings.LastRuntimeSpawnPostSpawnMs;
+                    initRuntimeSpawnPerformerBatchMs = timings.LastRuntimeSpawnPerformerBatchMs;
+                    initRuntimeSpawnPerformerCreateMs = timings.LastRuntimeSpawnPerformerCreateMs;
+                    initRuntimeSpawnPerformerBootstrapMarkMs = timings.LastRuntimeSpawnPerformerBootstrapMarkMs;
+                    initRuntimeSpawnPerformerCreateSetupMs = timings.LastRuntimeSpawnPerformerCreateSetupMs;
+                    initRuntimeSpawnPerformerWorldCreateMs = timings.LastRuntimeSpawnPerformerWorldCreateMs;
+                    initRuntimeSpawnPerformerComponentFillMs = timings.LastRuntimeSpawnPerformerComponentFillMs;
+                    initRuntimeSpawnPerformerIndexWriteMs = timings.LastRuntimeSpawnPerformerIndexWriteMs;
+                    initRuntimeSpawnPerformerOwnerPayloadMs = timings.LastRuntimeSpawnPerformerOwnerPayloadMs;
+                    initRuntimeSpawnPerformerPostCreateMs = timings.LastRuntimeSpawnPerformerPostCreateMs;
+                    initRuntimeSpawnBatchCount = timings.RuntimeSpawnBatchCountLastFrame;
+                    initRuntimeSpawnPerformerCreated = timings.RuntimeSpawnPerformerCreatedLastFrame;
                     initDiagEmitMs = timings.LastPerformerEmitMs;
                     initDiagEmitDirtyProcessMs = timings.LastPerformerEmitDirtyProcessMs;
                     initDiagEmitDirtyCleanupMs = timings.LastPerformerEmitDirtyCleanupMs;
                     initDiagEmitDirtyCount = timings.PerformerEmitDirtyCountLastFrame;
                     initDiagRequestFlushMs = timings.LastPresentationRequestFlushMs;
+                    initPresentationTop1Name = timings.LastPresentationTopSystem1Name;
+                    initPresentationTop1Ms = timings.LastPresentationTopSystem1Ms;
+                    initPresentationTop2Name = timings.LastPresentationTopSystem2Name;
+                    initPresentationTop2Ms = timings.LastPresentationTopSystem2Ms;
+                    initPresentationTop3Name = timings.LastPresentationTopSystem3Name;
+                    initPresentationTop3Ms = timings.LastPresentationTopSystem3Ms;
+                    initSimulationTop1Name = timings.LastSimulationTopSystem1Name;
+                    initSimulationTop1Ms = timings.LastSimulationTopSystem1Ms;
+                    initSimulationTop2Name = timings.LastSimulationTopSystem2Name;
+                    initSimulationTop2Ms = timings.LastSimulationTopSystem2Ms;
+                    initSimulationTop3Name = timings.LastSimulationTopSystem3Name;
+                    initSimulationTop3Ms = timings.LastSimulationTopSystem3Ms;
                 }
 
                 long validationStart = Stopwatch.GetTimestamp();
@@ -217,6 +280,7 @@ namespace Ludots.Tests.Presentation
             double[] cameraCullingPerformerSyncDiagMs = new double[MeasuredTickFrames];
             double[] behaviorDiagMs = new double[MeasuredTickFrames];
             double[] animatorDiagMs = new double[MeasuredTickFrames];
+            double[] transformSyncDiagMs = new double[MeasuredTickFrames];
             double[] emitDiagMs = new double[MeasuredTickFrames];
             double[] requestFlushDiagMs = new double[MeasuredTickFrames];
             for (int frame = 0; frame < MeasuredTickFrames; frame++)
@@ -232,6 +296,7 @@ namespace Ludots.Tests.Presentation
                 cameraCullingPerformerSyncDiagMs[frame] = timings.CameraCullingPerformerSyncMs;
                 behaviorDiagMs[frame] = timings.PerformerBehaviorMs;
                 animatorDiagMs[frame] = timings.PerformerAnimatorMs;
+                transformSyncDiagMs[frame] = timings.PerformerEntityTransformSyncMs;
                 emitDiagMs[frame] = timings.PerformerEmitMs;
                 requestFlushDiagMs[frame] = timings.PresentationRequestFlushMs;
 
@@ -260,13 +325,44 @@ namespace Ludots.Tests.Presentation
                 initDiagCameraCullingMs,
                 initDiagCameraCullingEntityProcessMs,
                 initDiagCameraCullingPerformerSyncMs,
+                initDiagCameraCullingStaticProcessMs,
+                initDiagCameraCullingStaticPendingRemoveMs,
+                initDiagCameraCullingDynamicProcessMs,
                 initDiagBehaviorMs,
                 initDiagAnimatorMs,
+                initDiagTransformSyncMs,
+                initRuntimeSpawnBatchPrepareMs,
+                initRuntimeSpawnWorldCreateMs,
+                initRuntimeSpawnFillBatchMs,
+                initRuntimeSpawnPostSpawnMs,
+                initRuntimeSpawnPerformerBatchMs,
+                initRuntimeSpawnPerformerCreateMs,
+                initRuntimeSpawnPerformerBootstrapMarkMs,
+                initRuntimeSpawnPerformerCreateSetupMs,
+                initRuntimeSpawnPerformerWorldCreateMs,
+                initRuntimeSpawnPerformerComponentFillMs,
+                initRuntimeSpawnPerformerIndexWriteMs,
+                initRuntimeSpawnPerformerOwnerPayloadMs,
+                initRuntimeSpawnPerformerPostCreateMs,
+                initRuntimeSpawnBatchCount,
+                initRuntimeSpawnPerformerCreated,
                 initDiagEmitMs,
                 initDiagEmitDirtyProcessMs,
                 initDiagEmitDirtyCleanupMs,
                 initDiagEmitDirtyCount,
                 initDiagRequestFlushMs,
+                initPresentationTop1Name,
+                initPresentationTop1Ms,
+                initPresentationTop2Name,
+                initPresentationTop2Ms,
+                initPresentationTop3Name,
+                initPresentationTop3Ms,
+                initSimulationTop1Name,
+                initSimulationTop1Ms,
+                initSimulationTop2Name,
+                initSimulationTop2Ms,
+                initSimulationTop3Name,
+                initSimulationTop3Ms,
                 raylibInitBridgeSyncMs,
                 tickMs,
                 bridgeSyncMs,
@@ -278,6 +374,7 @@ namespace Ludots.Tests.Presentation
                 cameraCullingPerformerSyncDiagMs,
                 behaviorDiagMs,
                 animatorDiagMs,
+                transformSyncDiagMs,
                 emitDiagMs,
                 requestFlushDiagMs,
                 primitives.DroppedTotal,
@@ -441,13 +538,13 @@ namespace Ludots.Tests.Presentation
             sb.AppendLine();
             sb.AppendLine("## Init Breakdown");
             sb.AppendLine();
-            sb.AppendLine("| Count | init diag Total Tick | init diag Presentation | init diag Simulation | init diag Camera Culling | init cull entity | init cull performer sync | init diag Behavior | init diag Animator | init diag Emit | init diag Emit Process | init diag Emit Cleanup | init dirty performers | init diag Request Flush |");
-            sb.AppendLine("|---:|---:|---:|---:|---:|---:|---:|---:|---:|---:|---:|---:|---:|---:|");
+            sb.AppendLine("| Count | init diag Total Tick | init diag Presentation | init diag Simulation | runtime batch | runtime prepare | runtime world create | runtime fill batch | runtime post spawn | runtime performer batch | runtime performer create | performer setup | performer world create | performer component fill | performer index write | performer owner payload | performer post create | runtime bootstrap mark | runtime performers | init diag Camera Culling | init cull entity | init cull static | init cull pending remove | init cull dynamic | init cull performer sync | init diag Behavior | init diag Animator | init diag Transform Sync | init diag Emit | init diag Emit Process | init diag Emit Cleanup | init dirty performers | init diag Request Flush | init top presentation systems | init top simulation systems |");
+            sb.AppendLine("|---:|---:|---:|---:|---:|---:|---:|---:|---:|---:|---:|---:|---:|---:|---:|---:|---:|---:|---:|---:|---:|---:|---:|---:|---:|---:|---:|---:|---:|---:|---:|---:|---:|---|---|");
             for (int i = 0; i < results.Length; i++)
             {
                 MeshIsmBenchmarkResult r = results[i];
                 sb.AppendLine(CultureInfo.InvariantCulture,
-                    $"| {r.Count} | {r.InitDiagTotalTickMs:F4} ms | {r.InitDiagPresentationMs:F4} ms | {r.InitDiagSimulationMs:F4} ms | {r.InitDiagCameraCullingMs:F4} ms | {r.InitDiagCameraCullingEntityProcessMs:F4} ms | {r.InitDiagCameraCullingPerformerSyncMs:F4} ms | {r.InitDiagBehaviorMs:F4} ms | {r.InitDiagAnimatorMs:F4} ms | {r.InitDiagEmitMs:F4} ms | {r.InitDiagEmitDirtyProcessMs:F4} ms | {r.InitDiagEmitDirtyCleanupMs:F4} ms | {r.InitDiagEmitDirtyCount} | {r.InitDiagRequestFlushMs:F4} ms |");
+                    $"| {r.Count} | {r.InitDiagTotalTickMs:F4} ms | {r.InitDiagPresentationMs:F4} ms | {r.InitDiagSimulationMs:F4} ms | {r.InitRuntimeSpawnBatchCount} | {r.InitRuntimeSpawnBatchPrepareMs:F4} ms | {r.InitRuntimeSpawnWorldCreateMs:F4} ms | {r.InitRuntimeSpawnFillBatchMs:F4} ms | {r.InitRuntimeSpawnPostSpawnMs:F4} ms | {r.InitRuntimeSpawnPerformerBatchMs:F4} ms | {r.InitRuntimeSpawnPerformerCreateMs:F4} ms | {r.InitRuntimeSpawnPerformerCreateSetupMs:F4} ms | {r.InitRuntimeSpawnPerformerWorldCreateMs:F4} ms | {r.InitRuntimeSpawnPerformerComponentFillMs:F4} ms | {r.InitRuntimeSpawnPerformerIndexWriteMs:F4} ms | {r.InitRuntimeSpawnPerformerOwnerPayloadMs:F4} ms | {r.InitRuntimeSpawnPerformerPostCreateMs:F4} ms | {r.InitRuntimeSpawnPerformerBootstrapMarkMs:F4} ms | {r.InitRuntimeSpawnPerformerCreated} | {r.InitDiagCameraCullingMs:F4} ms | {r.InitDiagCameraCullingEntityProcessMs:F4} ms | {r.InitDiagCameraCullingStaticProcessMs:F4} ms | {r.InitDiagCameraCullingStaticPendingRemoveMs:F4} ms | {r.InitDiagCameraCullingDynamicProcessMs:F4} ms | {r.InitDiagCameraCullingPerformerSyncMs:F4} ms | {r.InitDiagBehaviorMs:F4} ms | {r.InitDiagAnimatorMs:F4} ms | {r.InitDiagTransformSyncMs:F4} ms | {r.InitDiagEmitMs:F4} ms | {r.InitDiagEmitDirtyProcessMs:F4} ms | {r.InitDiagEmitDirtyCleanupMs:F4} ms | {r.InitDiagEmitDirtyCount} | {r.InitDiagRequestFlushMs:F4} ms | {FormatPresentationTopSystems(r)} | {FormatSimulationTopSystems(r)} |");
             }
 
             sb.AppendLine();
@@ -467,13 +564,13 @@ namespace Ludots.Tests.Presentation
             sb.AppendLine();
             sb.AppendLine("> `diag_*` values below come from `PresentationTimingDiagnostics` and are exponentially smoothed in-engine; use them as stable attribution, not exact per-frame wall-clock sums.");
             sb.AppendLine();
-            sb.AppendLine("| Count | diag Total Tick | diag Presentation | diag Simulation | diag Camera Culling | diag cull entity | diag cull performer sync | diag Behavior | diag Animator | diag Emit | diag Request Flush |");
-            sb.AppendLine("|---:|---:|---:|---:|---:|---:|---:|---:|---:|---:|---:|");
+            sb.AppendLine("| Count | diag Total Tick | diag Presentation | diag Simulation | diag Camera Culling | diag cull entity | diag cull performer sync | diag Behavior | diag Animator | diag Transform Sync | diag Emit | diag Request Flush |");
+            sb.AppendLine("|---:|---:|---:|---:|---:|---:|---:|---:|---:|---:|---:|---:|");
             for (int i = 0; i < results.Length; i++)
             {
                 MeshIsmBenchmarkResult r = results[i];
                 sb.AppendLine(CultureInfo.InvariantCulture,
-                    $"| {r.Count} | {Average(r.DiagTotalTickMs):F4} ms | {Average(r.DiagPresentationMs):F4} ms | {Average(r.DiagSimulationMs):F4} ms | {Average(r.DiagCameraCullingMs):F4} ms | {Average(r.DiagCameraCullingEntityProcessMs):F4} ms | {Average(r.DiagCameraCullingPerformerSyncMs):F4} ms | {Average(r.DiagBehaviorMs):F4} ms | {Average(r.DiagAnimatorMs):F4} ms | {Average(r.DiagEmitMs):F4} ms | {Average(r.DiagRequestFlushMs):F4} ms |");
+                    $"| {r.Count} | {Average(r.DiagTotalTickMs):F4} ms | {Average(r.DiagPresentationMs):F4} ms | {Average(r.DiagSimulationMs):F4} ms | {Average(r.DiagCameraCullingMs):F4} ms | {Average(r.DiagCameraCullingEntityProcessMs):F4} ms | {Average(r.DiagCameraCullingPerformerSyncMs):F4} ms | {Average(r.DiagBehaviorMs):F4} ms | {Average(r.DiagAnimatorMs):F4} ms | {Average(r.DiagTransformSyncMs):F4} ms | {Average(r.DiagEmitMs):F4} ms | {Average(r.DiagRequestFlushMs):F4} ms |");
             }
 
             sb.AppendLine();
@@ -481,7 +578,7 @@ namespace Ludots.Tests.Presentation
             {
                 MeshIsmBenchmarkResult r = results[i];
                 sb.AppendLine(CultureInfo.InvariantCulture,
-                    $"- {r.Count}: init create+emit per entity `{(r.CreateAndFirstEmitMs / Math.Max(1, r.Count)):F6} ms`, first tick `{r.FirstTickMs:F4} ms`, validation scans `{r.ValidationScansMs:F4} ms`, init diag emit `{r.InitDiagEmitMs:F4} ms`, dirty emit process `{r.InitDiagEmitDirtyProcessMs:F4} ms`, dirty emit cleanup `{r.InitDiagEmitDirtyCleanupMs:F4} ms`, init diag request flush `{r.InitDiagRequestFlushMs:F4} ms`, init diag culling `{r.InitDiagCameraCullingMs:F4} ms`, init cull entity `{r.InitDiagCameraCullingEntityProcessMs:F4} ms`, init cull performer sync `{r.InitDiagCameraCullingPerformerSyncMs:F4} ms`, initial bridge sync per primitive `{(r.RaylibInitBridgeSyncMs / Math.Max(1, r.IsmPrimitiveCount)):F6} ms`, stable avg tick per entity `{(Average(r.TickMs) / Math.Max(1, r.Count)):F6} ms`, drops events `{r.EventDrops}` commands `{r.CommandDrops}` primitives `{r.PrimitiveDrops}`");
+                    $"- {r.Count}: init create+emit per entity `{(r.CreateAndFirstEmitMs / Math.Max(1, r.Count)):F6} ms`, runtime prepare `{r.InitRuntimeSpawnBatchPrepareMs:F4} ms`, world create `{r.InitRuntimeSpawnWorldCreateMs:F4} ms`, fill batch `{r.InitRuntimeSpawnFillBatchMs:F4} ms`, post spawn `{r.InitRuntimeSpawnPostSpawnMs:F4} ms`, performer batch `{r.InitRuntimeSpawnPerformerBatchMs:F4} ms`, performer create `{r.InitRuntimeSpawnPerformerCreateMs:F4} ms`, performer setup `{r.InitRuntimeSpawnPerformerCreateSetupMs:F4} ms`, performer world create `{r.InitRuntimeSpawnPerformerWorldCreateMs:F4} ms`, performer component fill `{r.InitRuntimeSpawnPerformerComponentFillMs:F4} ms`, performer index write `{r.InitRuntimeSpawnPerformerIndexWriteMs:F4} ms`, performer owner payload `{r.InitRuntimeSpawnPerformerOwnerPayloadMs:F4} ms`, performer post create `{r.InitRuntimeSpawnPerformerPostCreateMs:F4} ms`, bootstrap mark `{r.InitRuntimeSpawnPerformerBootstrapMarkMs:F4} ms`, first tick `{r.FirstTickMs:F4} ms`, validation scans `{r.ValidationScansMs:F4} ms`, init diag transform sync `{r.InitDiagTransformSyncMs:F4} ms`, init diag emit `{r.InitDiagEmitMs:F4} ms`, dirty emit process `{r.InitDiagEmitDirtyProcessMs:F4} ms`, dirty emit cleanup `{r.InitDiagEmitDirtyCleanupMs:F4} ms`, init diag request flush `{r.InitDiagRequestFlushMs:F4} ms`, init diag culling `{r.InitDiagCameraCullingMs:F4} ms`, init cull entity `{r.InitDiagCameraCullingEntityProcessMs:F4} ms`, init cull static `{r.InitDiagCameraCullingStaticProcessMs:F4} ms`, init cull pending remove `{r.InitDiagCameraCullingStaticPendingRemoveMs:F4} ms`, init cull dynamic `{r.InitDiagCameraCullingDynamicProcessMs:F4} ms`, init cull performer sync `{r.InitDiagCameraCullingPerformerSyncMs:F4} ms`, initial bridge sync per primitive `{(r.RaylibInitBridgeSyncMs / Math.Max(1, r.IsmPrimitiveCount)):F6} ms`, stable avg tick per entity `{(Average(r.TickMs) / Math.Max(1, r.Count)):F6} ms`, drops events `{r.EventDrops}` commands `{r.CommandDrops}` primitives `{r.PrimitiveDrops}`");
             }
 
             return sb.ToString();
@@ -490,6 +587,18 @@ namespace Ludots.Tests.Presentation
         private static double ElapsedMs(long startTimestamp)
         {
             return (Stopwatch.GetTimestamp() - startTimestamp) * 1000d / Stopwatch.Frequency;
+        }
+
+        private static string FormatPresentationTopSystems(in MeshIsmBenchmarkResult result)
+        {
+            return string.Create(CultureInfo.InvariantCulture,
+                $"{result.InitPresentationTop1Name} {result.InitPresentationTop1Ms:F4} ms; {result.InitPresentationTop2Name} {result.InitPresentationTop2Ms:F4} ms; {result.InitPresentationTop3Name} {result.InitPresentationTop3Ms:F4} ms");
+        }
+
+        private static string FormatSimulationTopSystems(in MeshIsmBenchmarkResult result)
+        {
+            return string.Create(CultureInfo.InvariantCulture,
+                $"{result.InitSimulationTop1Name} {result.InitSimulationTop1Ms:F4} ms; {result.InitSimulationTop2Name} {result.InitSimulationTop2Ms:F4} ms; {result.InitSimulationTop3Name} {result.InitSimulationTop3Ms:F4} ms");
         }
 
         private static double Average(double[] values)
@@ -556,13 +665,44 @@ namespace Ludots.Tests.Presentation
             float InitDiagCameraCullingMs,
             float InitDiagCameraCullingEntityProcessMs,
             float InitDiagCameraCullingPerformerSyncMs,
+            float InitDiagCameraCullingStaticProcessMs,
+            float InitDiagCameraCullingStaticPendingRemoveMs,
+            float InitDiagCameraCullingDynamicProcessMs,
             float InitDiagBehaviorMs,
             float InitDiagAnimatorMs,
+            float InitDiagTransformSyncMs,
+            float InitRuntimeSpawnBatchPrepareMs,
+            float InitRuntimeSpawnWorldCreateMs,
+            float InitRuntimeSpawnFillBatchMs,
+            float InitRuntimeSpawnPostSpawnMs,
+            float InitRuntimeSpawnPerformerBatchMs,
+            float InitRuntimeSpawnPerformerCreateMs,
+            float InitRuntimeSpawnPerformerBootstrapMarkMs,
+            float InitRuntimeSpawnPerformerCreateSetupMs,
+            float InitRuntimeSpawnPerformerWorldCreateMs,
+            float InitRuntimeSpawnPerformerComponentFillMs,
+            float InitRuntimeSpawnPerformerIndexWriteMs,
+            float InitRuntimeSpawnPerformerOwnerPayloadMs,
+            float InitRuntimeSpawnPerformerPostCreateMs,
+            int InitRuntimeSpawnBatchCount,
+            int InitRuntimeSpawnPerformerCreated,
             float InitDiagEmitMs,
             float InitDiagEmitDirtyProcessMs,
             float InitDiagEmitDirtyCleanupMs,
             int InitDiagEmitDirtyCount,
             float InitDiagRequestFlushMs,
+            string InitPresentationTop1Name,
+            float InitPresentationTop1Ms,
+            string InitPresentationTop2Name,
+            float InitPresentationTop2Ms,
+            string InitPresentationTop3Name,
+            float InitPresentationTop3Ms,
+            string InitSimulationTop1Name,
+            float InitSimulationTop1Ms,
+            string InitSimulationTop2Name,
+            float InitSimulationTop2Ms,
+            string InitSimulationTop3Name,
+            float InitSimulationTop3Ms,
             double RaylibInitBridgeSyncMs,
             double[] TickMs,
             double[] BridgeSyncTickMs,
@@ -574,6 +714,7 @@ namespace Ludots.Tests.Presentation
             double[] DiagCameraCullingPerformerSyncMs,
             double[] DiagBehaviorMs,
             double[] DiagAnimatorMs,
+            double[] DiagTransformSyncMs,
             double[] DiagEmitMs,
             double[] DiagRequestFlushMs,
             int PrimitiveDrops,

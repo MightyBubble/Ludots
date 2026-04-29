@@ -18,8 +18,7 @@ namespace Ludots.Core.Presentation.Performers
             bool hasParent,
             in VisualTransform ownerTransform,
             bool hasOwnerTransform,
-            in AssetBindingConfig assetBinding,
-            IVisualHeightmap? heightmap = null)
+            in AssetBindingConfig assetBinding)
         {
             Vector3 basePosition;
             Quaternion baseRotation;
@@ -37,8 +36,7 @@ namespace Ludots.Core.Presentation.Performers
                         baseScale,
                         assetBinding,
                         inheritScale: true,
-                        performer.TransformSource,
-                        heightmap);
+                        performer.TransformSource);
 
                 case TransformSource.EntityTransform:
                     basePosition = hasOwnerTransform ? ownerTransform.Position : performer.WorldPosition;
@@ -50,20 +48,16 @@ namespace Ludots.Core.Presentation.Performers
                         baseScale,
                         assetBinding,
                         inheritScale: true,
-                        performer.TransformSource,
-                        heightmap);
+                        performer.TransformSource);
 
                 case TransformSource.SplineDriven:
                     basePosition = performer.WorldPosition;
                     baseRotation = NormalizeOrIdentity(performer.WorldRotation);
                     baseScale = NormalizeScale(assetBinding.LocalScale);
-                    return ApplyGrounding(
+                    return CreateResolvedTransform(
                         basePosition + assetBinding.LocalOffset,
                         NormalizeOrIdentity(baseRotation * NormalizeOrIdentity(assetBinding.LocalRotation)),
-                        baseScale,
-                        assetBinding,
-                        performer.TransformSource,
-                        heightmap);
+                        baseScale);
 
                 case TransformSource.BoneAttached:
                 case TransformSource.AttachedToParent:
@@ -76,17 +70,13 @@ namespace Ludots.Core.Presentation.Performers
                         baseScale,
                         assetBinding,
                         inheritScale: true,
-                        performer.TransformSource,
-                        heightmap);
+                        performer.TransformSource);
 
                 case TransformSource.WorldFixed:
-                    return ApplyGrounding(
+                    return CreateResolvedTransform(
                         performer.WorldPosition,
                         NormalizeOrIdentity(performer.WorldRotation),
-                        NormalizeScale(assetBinding.LocalScale),
-                        assetBinding,
-                        performer.TransformSource,
-                        heightmap);
+                        NormalizeScale(assetBinding.LocalScale));
 
                 default:
                     throw new ArgumentOutOfRangeException(nameof(performer.TransformSource), performer.TransformSource, "Unsupported performer transform source.");
@@ -122,6 +112,44 @@ namespace Ludots.Core.Presentation.Performers
             }
         }
 
+        public static void ResolveBatch(
+            Span<Vector3> positions,
+            Span<Quaternion> rotations,
+            Span<GroundingMode> modes,
+            Span<float> offsets,
+            IVisualHeightmap heightmap)
+        {
+            if (heightmap == null)
+            {
+                throw new ArgumentNullException(nameof(heightmap));
+            }
+
+            if (positions.Length != rotations.Length ||
+                positions.Length != modes.Length ||
+                positions.Length != offsets.Length)
+            {
+                throw new ArgumentException("Performer grounding batch spans must have the same length.");
+            }
+
+            for (int i = 0; i < positions.Length; i++)
+            {
+                if (modes[i] == GroundingMode.None)
+                {
+                    continue;
+                }
+
+                if (modes[i] == GroundingMode.AlignToSurface)
+                {
+                    positions[i] = ResolveAlignedPosition(positions[i], offsets[i], heightmap, out Vector3 normal);
+                    rotations[i] = AlignUpToNormal(rotations[i], normal);
+                }
+                else
+                {
+                    positions[i] = ResolveSnappedPosition(positions[i], offsets[i], heightmap);
+                }
+            }
+        }
+
         public static Quaternion AlignUpToNormal(Quaternion rotation, Vector3 targetNormal)
         {
             Vector3 currentUp = Vector3.Transform(Vector3.UnitY, NormalizeOrIdentity(rotation));
@@ -135,8 +163,7 @@ namespace Ludots.Core.Presentation.Performers
             in Vector3 baseScale,
             in AssetBindingConfig assetBinding,
             bool inheritScale,
-            TransformSource transformSource,
-            IVisualHeightmap? heightmap)
+            TransformSource transformSource)
         {
             Vector3 localScale = NormalizeScale(assetBinding.LocalScale);
             Vector3 resolvedScale = inheritScale ? baseScale * localScale : localScale;
@@ -144,48 +171,17 @@ namespace Ludots.Core.Presentation.Performers
             Vector3 position = basePosition + Vector3.Transform(localOffset, baseRotation);
             Quaternion rotation = NormalizeOrIdentity(baseRotation * NormalizeOrIdentity(assetBinding.LocalRotation));
 
-            return ApplyGrounding(position, rotation, resolvedScale, assetBinding, transformSource, heightmap);
-        }
-
-        private static PerformerResolvedTransform ApplyGrounding(
-            Vector3 position,
-            Quaternion rotation,
-            Vector3 scale,
-            in AssetBindingConfig assetBinding,
-            TransformSource transformSource,
-            IVisualHeightmap? heightmap)
-        {
-            if (assetBinding.Grounding == GroundingMode.None ||
-                transformSource == TransformSource.BoneAttached ||
+            if (transformSource == TransformSource.BoneAttached ||
                 transformSource == TransformSource.AttachedToParent)
             {
-                return new PerformerResolvedTransform
-                {
-                    Position = position,
-                    Rotation = rotation,
-                    Scale = scale,
-                };
+                resolvedScale = NormalizeScale(baseScale);
             }
 
-            if (heightmap == null)
-            {
-                throw new InvalidOperationException("Performer grounding requires IVisualHeightmap.");
-            }
+            return CreateResolvedTransform(position, rotation, resolvedScale);
+        }
 
-            if (assetBinding.Grounding == GroundingMode.SnapToGround)
-            {
-                position = ResolveSnappedPosition(position, assetBinding.GroundingOffset, heightmap);
-            }
-            else if (assetBinding.Grounding == GroundingMode.AlignToSurface)
-            {
-                position = ResolveAlignedPosition(position, assetBinding.GroundingOffset, heightmap, out Vector3 normal);
-                rotation = AlignUpToNormal(rotation, normal);
-            }
-            else
-            {
-                throw new ArgumentOutOfRangeException(nameof(assetBinding.Grounding), assetBinding.Grounding, "Unsupported performer grounding mode.");
-            }
-
+        private static PerformerResolvedTransform CreateResolvedTransform(Vector3 position, Quaternion rotation, Vector3 scale)
+        {
             return new PerformerResolvedTransform
             {
                 Position = position,
@@ -198,12 +194,14 @@ namespace Ludots.Core.Presentation.Performers
         {
             if (!heightmap.TrySampleHeightCm(position.X * MetersToCm, position.Z * MetersToCm, out float heightCm))
             {
-                throw new InvalidOperationException($"Performer grounding could not sample visual height at ({position.X}, {position.Z}) meters.");
+                position.Y = offsetMeters;
+                return position;
             }
 
             if (float.IsNaN(heightCm) || float.IsInfinity(heightCm))
             {
-                throw new InvalidOperationException($"Performer grounding received invalid visual height at ({position.X}, {position.Z}) meters.");
+                position.Y = offsetMeters;
+                return position;
             }
 
             position.Y = heightCm * CmToMeters + offsetMeters;
@@ -245,12 +243,16 @@ namespace Ludots.Core.Presentation.Performers
                     layerIndex,
                     hitMask))
             {
-                throw new InvalidOperationException("Performer grounding requested normal alignment but the visual heightmap raycast batch failed.");
+                position.Y = offsetMeters;
+                normal = Vector3.UnitY;
+                return position;
             }
 
             if (hitMask[0] == 0)
             {
-                throw new InvalidOperationException("Performer grounding requested normal alignment but no ground hit was found.");
+                position.Y = offsetMeters;
+                normal = Vector3.UnitY;
+                return position;
             }
 
             position.Y = hitHeight[0] * CmToMeters + offsetMeters;

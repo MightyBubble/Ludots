@@ -7,7 +7,7 @@ namespace Ludots.Core.Presentation.Performers
 {
     public sealed class PerformerAnimatorStateBuffer
     {
-        private readonly Dictionary<int, int> _entityToSlot = new();
+        private int[] _slotByEntityId;
         private AnimatorPackedState[] _packedStates;
         private AnimatorRuntimeState[] _runtimeStates;
         private AnimatorFeedbackBuffer[] _feedbackBuffers;
@@ -23,29 +23,41 @@ namespace Ludots.Core.Presentation.Performers
             _runtimeStates = new AnimatorRuntimeState[capacity];
             _feedbackBuffers = new AnimatorFeedbackBuffer[capacity];
             _overlays = new AnimationOverlayRequest[capacity];
+            _slotByEntityId = new int[capacity];
         }
 
         public bool IsAllocated(Entity entity)
         {
-            return entity != Entity.Null && _entityToSlot.ContainsKey(entity.Id);
+            return entity != Entity.Null &&
+                   entity.Id >= 0 &&
+                   entity.Id < _slotByEntityId.Length &&
+                   _slotByEntityId[entity.Id] != 0;
+        }
+
+        public int Allocate(Entity entity, int controllerId)
+        {
+            return EnsureAndResolveSlot(entity, controllerId);
         }
 
         public void Ensure(Entity entity, int controllerId)
         {
             if (entity == Entity.Null) return;
-            if (_entityToSlot.TryGetValue(entity.Id, out int slot))
+            EnsureEntityCapacity(entity.Id);
+            int encodedSlot = _slotByEntityId[entity.Id];
+            if (encodedSlot != 0)
             {
-                if (_packedStates[slot].GetControllerId() != controllerId)
+                int existingSlot = encodedSlot - 1;
+                if (_packedStates[existingSlot].GetControllerId() != controllerId)
                 {
-                    _packedStates[slot] = AnimatorPackedState.Create(controllerId);
-                    _runtimeStates[slot] = AnimatorRuntimeState.Create(controllerId);
-                    _feedbackBuffers[slot] = default;
-                    _overlays[slot] = default;
+                    _packedStates[existingSlot] = AnimatorPackedState.Create(controllerId);
+                    _runtimeStates[existingSlot] = AnimatorRuntimeState.Create(controllerId);
+                    _feedbackBuffers[existingSlot] = default;
+                    _overlays[existingSlot] = default;
                 }
                 return;
             }
-            slot = AllocateSlot();
-            _entityToSlot[entity.Id] = slot;
+            int slot = AllocateSlot();
+            _slotByEntityId[entity.Id] = slot + 1;
             _packedStates[slot] = AnimatorPackedState.Create(controllerId);
             _runtimeStates[slot] = AnimatorRuntimeState.Create(controllerId);
             _feedbackBuffers[slot] = default;
@@ -55,13 +67,16 @@ namespace Ludots.Core.Presentation.Performers
         public void Clear(Entity entity)
         {
             if (entity == Entity.Null) return;
-            if (!_entityToSlot.TryGetValue(entity.Id, out int slot)) return;
+            if (entity.Id < 0 || entity.Id >= _slotByEntityId.Length) return;
+            int encodedSlot = _slotByEntityId[entity.Id];
+            if (encodedSlot == 0) return;
+            int slot = encodedSlot - 1;
             _packedStates[slot] = default;
             _runtimeStates[slot] = default;
             _feedbackBuffers[slot] = default;
             _overlays[slot] = default;
             _freeSlots.Push(slot);
-            _entityToSlot.Remove(entity.Id);
+            _slotByEntityId[entity.Id] = 0;
         }
 
         public ref AnimatorPackedState GetPackedState(Entity entity)
@@ -84,11 +99,90 @@ namespace Ludots.Core.Presentation.Performers
             return ref _overlays[ResolveSlot(entity)];
         }
 
+        public ref AnimationOverlayRequest GetOverlayBySlot(int slot)
+        {
+            return ref _overlays[slot];
+        }
+
+        public int EnsureAndResolveSlot(Entity entity, int controllerId)
+        {
+            if (entity == Entity.Null)
+            {
+                throw new InvalidOperationException("Performer animator state cannot be allocated for a null entity.");
+            }
+
+            EnsureEntityCapacity(entity.Id);
+            int encodedSlot = _slotByEntityId[entity.Id];
+            if (encodedSlot != 0)
+            {
+                int existingSlot = encodedSlot - 1;
+                if (_packedStates[existingSlot].GetControllerId() != controllerId)
+                {
+                    _packedStates[existingSlot] = AnimatorPackedState.Create(controllerId);
+                    _runtimeStates[existingSlot] = AnimatorRuntimeState.Create(controllerId);
+                    _feedbackBuffers[existingSlot] = default;
+                    _overlays[existingSlot] = default;
+                }
+
+                return existingSlot;
+            }
+
+            int slot = AllocateSlot();
+            _slotByEntityId[entity.Id] = slot + 1;
+            _packedStates[slot] = AnimatorPackedState.Create(controllerId);
+            _runtimeStates[slot] = AnimatorRuntimeState.Create(controllerId);
+            _feedbackBuffers[slot] = default;
+            _overlays[slot] = default;
+            return slot;
+        }
+
+        public bool TryGetPackedState(Entity entity, out AnimatorPackedState state)
+        {
+            if (entity == Entity.Null ||
+                entity.Id < 0 ||
+                entity.Id >= _slotByEntityId.Length)
+            {
+                state = default;
+                return false;
+            }
+
+            int encodedSlot = _slotByEntityId[entity.Id];
+            if (encodedSlot == 0)
+            {
+                state = default;
+                return false;
+            }
+
+            state = _packedStates[encodedSlot - 1];
+            return true;
+        }
+
+        public ref AnimatorPackedState GetPackedStateBySlot(int slot)
+        {
+            return ref _packedStates[slot];
+        }
+
+        public ref AnimatorRuntimeState GetRuntimeStateBySlot(int slot)
+        {
+            return ref _runtimeStates[slot];
+        }
+
+        public ref AnimatorFeedbackBuffer GetFeedbackBufferBySlot(int slot)
+        {
+            return ref _feedbackBuffers[slot];
+        }
+
         private int ResolveSlot(Entity entity)
         {
-            if (entity == Entity.Null || !_entityToSlot.TryGetValue(entity.Id, out int slot))
+            if (entity == Entity.Null ||
+                entity.Id < 0 ||
+                entity.Id >= _slotByEntityId.Length ||
+                _slotByEntityId[entity.Id] == 0)
+            {
                 throw new InvalidOperationException($"Performer animator state for entity {entity.Id} is not allocated.");
-            return slot;
+            }
+
+            return _slotByEntityId[entity.Id] - 1;
         }
 
         private int AllocateSlot()
@@ -105,6 +199,22 @@ namespace Ludots.Core.Presentation.Performers
             Array.Resize(ref _runtimeStates, newCapacity);
             Array.Resize(ref _feedbackBuffers, newCapacity);
             Array.Resize(ref _overlays, newCapacity);
+        }
+
+        private void EnsureEntityCapacity(int entityId)
+        {
+            if (entityId < _slotByEntityId.Length)
+            {
+                return;
+            }
+
+            int next = _slotByEntityId.Length * 2;
+            if (next <= entityId)
+            {
+                next = entityId + 1;
+            }
+
+            Array.Resize(ref _slotByEntityId, next);
         }
     }
 }

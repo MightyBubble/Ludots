@@ -1,0 +1,19 @@
+{
+  "Id": "performer_blacksmith_dynamic_worker_benchmark",
+  "Tags": ["showcase", "performer", "benchmark", "dynamic", "skinned", "animator"],
+  "VisualHeightmapAsset": "assets/terrain/performer_blacksmith_showcase_flat.vhtm",
+  "Boards": [
+    {
+      "Name": "default",
+      "SpatialType": "Grid",
+      "WidthInTiles": 1,
+      "HeightInTiles": 1,
+      "GridCellSizeCm": 100
+    }
+  ],
+  "DefaultCamera": {
+    "TargetXCm": 0,
+    "TargetYCm": 0
+  },
+  "Entities": []
+}

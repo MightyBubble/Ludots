@@ -84,6 +84,27 @@
     ]
   },
   {
+    "id": "blacksmith_dynamic_worker_bootstrap",
+    "rules": [
+      {
+        "event": { "kind": "EntitySpawned", "key": "blacksmith_dynamic_worker_entity" },
+        "condition": { "inline": "SourceHasVisualTransform" },
+        "command": {
+          "kind": "CreatePerformer",
+          "definitionId": "blacksmith_dynamic_worker_actor",
+          "scopeSource": "EventPayloadA"
+        }
+      },
+      {
+        "event": { "kind": "EntityDestroyed", "key": "blacksmith_dynamic_worker_entity" },
+        "command": {
+          "kind": "DestroyPerformerScope",
+          "scopeSource": "EventPayloadA"
+        }
+      }
+    ]
+  },
+  {
     "id": "blacksmith_mesh_benchmark_ism",
     "behaviors": [
       {
@@ -96,6 +117,66 @@
           "materialId": "default_surface",
           "renderPath": "InstancedStaticMesh",
           "mobility": "Static"
+        }
+      }
+    ]
+  },
+  {
+    "id": "blacksmith_dynamic_worker_actor",
+    "children": [
+      { "definitionId": "blacksmith_dynamic_worker_tool_attachment", "scopeTag": "structure" }
+    ],
+    "behaviors": [
+      {
+        "slot": 0,
+        "kind": "AssetBinding",
+        "activeByDefault": true,
+        "assetBinding": {
+          "assetKind": "SkinnedMesh",
+          "assetId": "blacksmith.worker.knight",
+          "materialId": "default_surface",
+          "renderPath": "GpuSkinnedInstance",
+          "mobility": "Movable"
+        }
+      },
+      {
+        "slot": 1,
+        "kind": "Animator",
+        "activeByDefault": true,
+        "animator": {
+          "animatorControllerId": "blacksmith.worker.locomotion",
+          "animationProfileId": "blacksmith.worker.profile",
+          "speedParamKey": 105,
+          "stateParamKey": -1
+        }
+      },
+      {
+        "slot": 2,
+        "kind": "Grounding",
+        "activeByDefault": true,
+        "grounding": {
+          "mode": "SnapToGround",
+          "offset": 0.0,
+          "updatePolicy": "EveryFrame"
+        }
+      }
+    ],
+    "paramDefaults": [
+      { "paramKey": 105, "lane": "Float", "floatValue": 1.0 }
+    ]
+  },
+  {
+    "id": "blacksmith_dynamic_worker_tool_attachment",
+    "behaviors": [
+      {
+        "slot": 1,
+        "kind": "Attachment",
+        "activeByDefault": true,
+        "attachment": {
+          "target": "Parent",
+          "offset": [0.0, 0.65, -0.35],
+          "rotationOffset": [0.0, 0.0, 0.0, 1.0],
+          "inheritScale": false
         }
       }
     ]
@@ -214,10 +295,7 @@
           ],
           "materialId": "default_surface",
           "renderPath": "InstancedStaticMesh",
-          "mobility": "Static",
-          "grounding": "SnapToGround",
-          "localOffset": [0.0, 0.0, 0.0],
-          "localScale": [1.0, 1.0, 1.0]
+          "mobility": "Static"
         }
       },
       {
@@ -232,6 +310,16 @@
             { "threshold": 0.0, "outputParamKey": 104, "outputValue": 3.0 },
             { "threshold": 0.5, "outputParamKey": 104, "outputValue": 2.0 }
           ]
+        }
+      },
+      {
+        "slot": 2,
+        "kind": "Grounding",
+        "activeByDefault": true,
+        "grounding": {
+          "mode": "SnapToGround",
+          "offset": 0.0,
+          "updatePolicy": "Once"
         }
       }
     ],
@@ -260,10 +348,18 @@
           ],
           "materialId": "default_surface",
           "renderPath": "InstancedStaticMesh",
-          "mobility": "Static",
-          "grounding": "SnapToGround",
-          "localOffset": [2.0, 0.0, 0.0],
-          "localScale": [1.0, 1.0, 1.0]
+          "mobility": "Static"
+        }
+      },
+      {
+        "slot": 3,
+        "kind": "Attachment",
+        "activeByDefault": true,
+        "attachment": {
+          "target": "Parent",
+          "offset": [2.0, 0.0, 0.0],
+          "rotationOffset": [0.0, 0.0, 0.0, 1.0],
+          "inheritScale": false
         }
       }
     ]
@@ -291,10 +387,18 @@
           ],
           "materialId": "default_surface",
           "renderPath": "InstancedStaticMesh",
-          "mobility": "Static",
-          "grounding": "SnapToGround",
-          "localOffset": [-2.0, 0.0, 0.0],
-          "localScale": [1.0, 1.0, 1.0]
+          "mobility": "Static"
+        }
+      },
+      {
+        "slot": 3,
+        "kind": "Attachment",
+        "activeByDefault": true,
+        "attachment": {
+          "target": "Parent",
+          "offset": [-2.0, 0.0, 0.0],
+          "rotationOffset": [0.0, 0.0, 0.0, 1.0],
+          "inheritScale": false
         }
       }
     ]
@@ -314,10 +418,28 @@
           "assetId": "blacksmith.furnace",
           "materialId": "default_surface",
           "renderPath": "InstancedStaticMesh",
-          "mobility": "Static",
-          "grounding": "SnapToGround",
-          "localOffset": [0.0, 0.0, 3.0],
-          "localScale": [1.0, 1.0, 1.0]
+          "mobility": "Static"
+        }
+      },
+      {
+        "slot": 1,
+        "kind": "Attachment",
+        "activeByDefault": true,
+        "attachment": {
+          "target": "Parent",
+          "offset": [0.0, 0.0, 3.0],
+          "rotationOffset": [0.0, 0.0, 0.0, 1.0],
+          "inheritScale": false
+        }
+      },
+      {
+        "slot": 2,
+        "kind": "Grounding",
+        "activeByDefault": true,
+        "grounding": {
+          "mode": "SnapToGround",
+          "offset": 0.0,
+          "updatePolicy": "Once"
         }
       }
     ]
@@ -346,7 +468,6 @@
           "assetId": "blacksmith.smoke.billboard",
           "renderPath": "StaticMesh",
           "mobility": "Movable",
-          "localOffset": [0.0, 0.0, 0.0],
           "localScale": [2.2, 2.2, 2.2]
         }
       },
@@ -375,8 +496,18 @@
           "assetKind": "Spline",
           "assetId": 1500,
           "mobility": "Movable",
-          "localOffset": [0.0, 0.05, -1.8],
           "localScale": [3.6, 1.0, 1.0]
+        }
+      },
+      {
+        "slot": 1,
+        "kind": "Attachment",
+        "activeByDefault": true,
+        "attachment": {
+          "target": "Parent",
+          "offset": [0.0, 0.05, -1.8],
+          "rotationOffset": [0.0, 0.0, 0.0, 1.0],
+          "inheritScale": false
         }
       }
     ]
@@ -393,10 +524,28 @@
           "assetKind": "GroundOverlay",
           "assetId": "Ring",
           "mobility": "Static",
-          "grounding": "AlignToSurface",
-          "groundingOffset": 0.02,
-          "localOffset": [0.0, 0.0, 1.4],
           "localScale": [2.3, 1.2, 0.08]
+        }
+      },
+      {
+        "slot": 1,
+        "kind": "Attachment",
+        "activeByDefault": true,
+        "attachment": {
+          "target": "Parent",
+          "offset": [0.0, 0.0, 1.4],
+          "rotationOffset": [0.0, 0.0, 0.0, 1.0],
+          "inheritScale": false
+        }
+      },
+      {
+        "slot": 2,
+        "kind": "Grounding",
+        "activeByDefault": true,
+        "grounding": {
+          "mode": "AlignToSurface",
+          "offset": 0.02,
+          "updatePolicy": "Once"
         }
       }
     ]
@@ -443,6 +592,26 @@
         "event": { "kind": "TagEffectiveChanged", "key": "working" },
         "condition": { "inline": "TagLost" },
         "command": { "kind": "DeactivateBehavior", "targetBehaviorSlot": 3 }
+      },
+      {
+        "event": { "kind": "TagEffectiveChanged", "key": "working" },
+        "condition": { "inline": "TagGained" },
+        "command": { "kind": "ActivateBehavior", "targetBehaviorSlot": 4 }
+      },
+      {
+        "event": { "kind": "TagEffectiveChanged", "key": "working" },
+        "condition": { "inline": "TagLost" },
+        "command": { "kind": "DeactivateBehavior", "targetBehaviorSlot": 4 }
+      },
+      {
+        "event": { "kind": "TagEffectiveChanged", "key": "working" },
+        "condition": { "inline": "TagGained" },
+        "command": { "kind": "ActivateBehavior", "targetBehaviorSlot": 5 }
+      },
+      {
+        "event": { "kind": "TagEffectiveChanged", "key": "working" },
+        "condition": { "inline": "TagLost" },
+        "command": { "kind": "DeactivateBehavior", "targetBehaviorSlot": 5 }
       }
     ],
     "behaviors": [
@@ -455,10 +624,7 @@
           "assetId": "blacksmith.worker.knight",
           "materialId": "default_surface",
           "renderPath": "SkinnedMesh",
-          "mobility": "Movable",
-          "grounding": "SnapToGround",
-          "localOffset": [0.0, 0.0, -2.0],
-          "localScale": [1.0, 1.0, 1.0]
+          "mobility": "Movable"
         }
       },
       {
@@ -493,6 +659,27 @@
           "progressParamKey": 109,
           "loop": true
         }
+      },
+      {
+        "slot": 4,
+        "kind": "Grounding",
+        "activeByDefault": false,
+        "grounding": {
+          "mode": "SnapToGround",
+          "offset": 0.0,
+          "updatePolicy": "EveryFrame"
+        }
+      },
+      {
+        "slot": 5,
+        "kind": "Attachment",
+        "activeByDefault": false,
+        "attachment": {
+          "target": "Parent",
+          "offset": [0.0, 0.0, -2.0],
+          "rotationOffset": [0.0, 0.0, 0.0, 1.0],
+          "inheritScale": false
+        }
       }
     ],
     "paramDefaults": [
@@ -511,8 +698,18 @@
           "assetKind": "WorldHud",
           "materialParamKey": 106,
           "mobility": "Movable",
-          "localOffset": [0.0, 4.7, 0.0],
           "localScale": [96.0, 10.0, 1.0]
+        }
+      },
+      {
+        "slot": 1,
+        "kind": "Attachment",
+        "activeByDefault": true,
+        "attachment": {
+          "target": "Parent",
+          "offset": [0.0, 4.7, 0.0],
+          "rotationOffset": [0.0, 0.0, 0.0, 1.0],
+          "inheritScale": false
         }
       }
     ],
@@ -532,8 +729,18 @@
           "assetKind": "WorldHud",
           "materialParamKey": 106,
           "mobility": "Movable",
-          "localOffset": [0.0, 4.1, 0.0],
           "localScale": [56.0, 7.0, 1.0]
+        }
+      },
+      {
+        "slot": 1,
+        "kind": "Attachment",
+        "activeByDefault": true,
+        "attachment": {
+          "target": "Parent",
+          "offset": [0.0, 4.1, 0.0],
+          "rotationOffset": [0.0, 0.0, 0.0, 1.0],
+          "inheritScale": false
         }
       }
     ],
@@ -558,8 +765,18 @@
           "scaleParamKey": 107,
           "materialParamKey": 108,
           "mobility": "Movable",
-          "localOffset": [0.0, 5.9, 0.0],
           "localScale": [1.0, 1.0, 1.0]
+        }
+      },
+      {
+        "slot": 1,
+        "kind": "Attachment",
+        "activeByDefault": true,
+        "attachment": {
+          "target": "Parent",
+          "offset": [0.0, 5.9, 0.0],
+          "rotationOffset": [0.0, 0.0, 0.0, 1.0],
+          "inheritScale": false
         }
       }
     ],
@@ -585,8 +802,18 @@
           "scaleParamKey": 107,
           "materialParamKey": 108,
           "mobility": "Movable",
-          "localOffset": [0.0, 5.1, 0.0],
           "localScale": [1.0, 1.0, 1.0]
+        }
+      },
+      {
+        "slot": 1,
+        "kind": "Attachment",
+        "activeByDefault": true,
+        "attachment": {
+          "target": "Parent",
+          "offset": [0.0, 5.1, 0.0],
+          "rotationOffset": [0.0, 0.0, 0.0, 1.0],
+          "inheritScale": false
         }
       }
     ],

@@ -21,6 +21,7 @@ namespace Ludots.Core.Gameplay.GAS.Systems
 
         private readonly GraphProgramRegistry _graphPrograms;
         private readonly IGraphRuntimeApi _graphApi;
+        private readonly CommandBuffer _commandBuffer = new();
 
         public AttributeAggregatorSystem(World world, GraphProgramRegistry graphPrograms = null, IGraphRuntimeApi graphApi = null) : base(world)
         {
@@ -30,11 +31,10 @@ namespace Ludots.Core.Gameplay.GAS.Systems
 
         public override unsafe void Update(in float dt)
         {
-            var commandBuffer = new CommandBuffer();
             var withDirtyJob = new AttributeAggregatorWithDirtyJob
             {
                 World = World,
-                CommandBuffer = commandBuffer,
+                CommandBuffer = _commandBuffer,
                 GraphPrograms = _graphPrograms,
                 GraphApi = _graphApi,
             };
@@ -43,13 +43,22 @@ namespace Ludots.Core.Gameplay.GAS.Systems
             var withoutDirtyJob = new AttributeAggregatorWithoutDirtyJob
             {
                 World = World,
-                CommandBuffer = commandBuffer,
+                CommandBuffer = _commandBuffer,
                 GraphPrograms = _graphPrograms,
                 GraphApi = _graphApi,
             };
             World.InlineEntityQuery<AttributeAggregatorWithoutDirtyJob, AttributeBuffer, ActiveEffectContainer>(in _withoutDirtyFlagsQuery, ref withoutDirtyJob);
 
-            commandBuffer.Playback(World, dispose: true);
+            if (_commandBuffer.Size > 0)
+            {
+                _commandBuffer.Playback(World);
+            }
+        }
+
+        public override void Dispose()
+        {
+            _commandBuffer.Dispose();
+            base.Dispose();
         }
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
@@ -176,6 +185,8 @@ namespace Ludots.Core.Gameplay.GAS.Systems
                     GraphPrograms,
                     GraphApi);
                 RestorePersistentCurrentValues(ref attrBuffer, oldValues, touchedMask);
+                bool hasPresentationChanged = World.Has<GameplayAttributeChangedBits>(entity);
+                GameplayAttributeChangedBits presentationChangedLocal = default;
 
                 // 4. 标记脏属性（用于延迟触发器）
                 for (int i = 0; i < AttributeBuffer.MAX_ATTRS; i++)
@@ -183,7 +194,13 @@ namespace Ludots.Core.Gameplay.GAS.Systems
                     if (oldValues[i] != attrBuffer.CurrentValues[i])
                     {
                         dirtyFlags.MarkAttributeDirty(i);
+                        MarkPresentationChanged(World, entity, i, ref presentationChangedLocal, ref hasPresentationChanged);
                     }
+                }
+
+                if (!hasPresentationChanged && presentationChangedLocal.IsAnyBitSet())
+                {
+                    CommandBuffer.Add(entity, presentationChangedLocal);
                 }
 
                 CommandBuffer.Remove<AttributeAggregateDirty>(entity);
@@ -218,13 +235,21 @@ namespace Ludots.Core.Gameplay.GAS.Systems
 
                 var dirtyFlags = new DirtyFlags();
                 bool anyDirty = false;
+                bool hasPresentationChanged = World.Has<GameplayAttributeChangedBits>(entity);
+                GameplayAttributeChangedBits presentationChangedLocal = default;
                 for (int i = 0; i < AttributeBuffer.MAX_ATTRS; i++)
                 {
                     if (oldValues[i] != attrBuffer.CurrentValues[i])
                     {
                         dirtyFlags.MarkAttributeDirty(i);
+                        MarkPresentationChanged(World, entity, i, ref presentationChangedLocal, ref hasPresentationChanged);
                         anyDirty = true;
                     }
+                }
+
+                if (!hasPresentationChanged && presentationChangedLocal.IsAnyBitSet())
+                {
+                    CommandBuffer.Add(entity, presentationChangedLocal);
                 }
 
                 if (!anyDirty)
@@ -275,6 +300,23 @@ namespace Ludots.Core.Gameplay.GAS.Systems
                     attrBuffer.SetCurrent(i, previousCurrentValues[i]);
                 }
             }
+        }
+
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        private static void MarkPresentationChanged(
+            World world,
+            Entity entity,
+            int attributeId,
+            ref GameplayAttributeChangedBits presentationChangedLocal,
+            ref bool hasPresentationChanged)
+        {
+            if (hasPresentationChanged)
+            {
+                world.Get<GameplayAttributeChangedBits>(entity).Mark(attributeId);
+                return;
+            }
+
+            presentationChangedLocal.Mark(attributeId);
         }
     }
 }

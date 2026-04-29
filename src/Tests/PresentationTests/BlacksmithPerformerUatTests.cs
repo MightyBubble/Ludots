@@ -17,6 +17,7 @@ using Ludots.Core.Presentation.Assets;
 using Ludots.Core.Presentation.Components;
 using Ludots.Core.Presentation.Config;
 using Ludots.Core.Presentation.Events;
+using Ludots.Core.Presentation.Hud;
 using Ludots.Core.Presentation.Performers;
 using Ludots.Core.Presentation.Rendering;
 using Ludots.Core.Presentation.Requests;
@@ -71,6 +72,7 @@ namespace Ludots.Tests.Presentation
 
             TagRegistry.Clear();
             PerformerScopeTagRegistry.Clear();
+            AttributeRegistry.Clear();
             AttributeRegistry.Register("durability");
             TagRegistry.Register("working");
         }
@@ -80,6 +82,7 @@ namespace Ludots.Tests.Presentation
         {
             TagRegistry.Clear();
             PerformerScopeTagRegistry.Clear();
+            AttributeRegistry.Clear();
             try
             {
                 Directory.Delete(_tempRoot, recursive: true);
@@ -134,8 +137,12 @@ namespace Ludots.Tests.Presentation
 
             string source = File.ReadAllText(sourcePath);
 
-            string forbiddenConstruction = "new " + nameof(PrefabRegistry) + "()";
-            Assert.That(source, Does.Not.Contain(forbiddenConstruction));
+            int runtimeStart = source.IndexOf("var runtime = new PerformerRuntimeSystem(", StringComparison.Ordinal);
+            Assert.That(runtimeStart, Is.GreaterThanOrEqualTo(0));
+            int runtimeEnd = source.IndexOf(");", runtimeStart, StringComparison.Ordinal);
+            Assert.That(runtimeEnd, Is.GreaterThan(runtimeStart));
+            string runtimeConstruction = source.Substring(runtimeStart, runtimeEnd - runtimeStart);
+            Assert.That(runtimeConstruction, Does.Not.Contain(nameof(PrefabRegistry)));
         }
 
         [Test]
@@ -286,6 +293,14 @@ namespace Ludots.Tests.Presentation
             private readonly PerformerAnimatorStateBuffer _animatorStates;
             private readonly PresentationRequestBuffer _requests;
             private readonly SoundRequestBuffer _soundRequests;
+            private readonly StableDrawCache _stableDrawCache;
+            private readonly PrimitiveDrawBuffer _primitives;
+            private readonly GroundOverlayBuffer _groundOverlays;
+            private readonly WorldHudBatchBuffer _worldHud;
+            private readonly RoadSplineBuffer _roadSplines;
+            private readonly PrimitiveDrawBuffer _snapshotBuffer;
+            private readonly PresentationVisualProxyBuffer _proxyBuffer;
+            private readonly SkinnedVisualBatchBuffer _skinnedBatchBuffer;
             private readonly GlobalPresentationEventBuffer _globalEvents;
 
             private readonly PresentationEntityLifecycleSystem _entityLifecycle;
@@ -295,6 +310,7 @@ namespace Ludots.Tests.Presentation
             private readonly AnimatorRuntimeSystem _animator;
             private readonly PerformerBehaviorSystem _behavior;
             private readonly PerformerEmitSystem _emit;
+            private readonly PresentationRequestFlushSystem _flush;
 
             private int _stableSeed = 7000;
 
@@ -308,6 +324,14 @@ namespace Ludots.Tests.Presentation
                 PerformerAnimatorStateBuffer animatorStates,
                 PresentationRequestBuffer requests,
                 SoundRequestBuffer soundRequests,
+                StableDrawCache stableDrawCache,
+                PrimitiveDrawBuffer primitives,
+                GroundOverlayBuffer groundOverlays,
+                WorldHudBatchBuffer worldHud,
+                RoadSplineBuffer roadSplines,
+                PrimitiveDrawBuffer snapshotBuffer,
+                PresentationVisualProxyBuffer proxyBuffer,
+                SkinnedVisualBatchBuffer skinnedBatchBuffer,
                 GlobalPresentationEventBuffer globalEvents,
                 PresentationEntityLifecycleSystem entityLifecycle,
                 GlobalEventBridgeSystem globalBridge,
@@ -315,7 +339,8 @@ namespace Ludots.Tests.Presentation
                 PerformerRuntimeSystem runtime,
                 AnimatorRuntimeSystem animator,
                 PerformerBehaviorSystem behavior,
-                PerformerEmitSystem emit)
+                PerformerEmitSystem emit,
+                PresentationRequestFlushSystem flush)
             {
                 _world = world;
                 _modLoader = modLoader;
@@ -326,6 +351,14 @@ namespace Ludots.Tests.Presentation
                 _animatorStates = animatorStates;
                 _requests = requests;
                 _soundRequests = soundRequests;
+                _stableDrawCache = stableDrawCache;
+                _primitives = primitives;
+                _groundOverlays = groundOverlays;
+                _worldHud = worldHud;
+                _roadSplines = roadSplines;
+                _snapshotBuffer = snapshotBuffer;
+                _proxyBuffer = proxyBuffer;
+                _skinnedBatchBuffer = skinnedBatchBuffer;
                 _globalEvents = globalEvents;
                 _entityLifecycle = entityLifecycle;
                 _globalBridge = globalBridge;
@@ -334,6 +367,7 @@ namespace Ludots.Tests.Presentation
                 _animator = animator;
                 _behavior = behavior;
                 _emit = emit;
+                _flush = flush;
             }
 
             public PerformerEntityRuntime Instances => _instances;
@@ -353,7 +387,9 @@ namespace Ludots.Tests.Presentation
                 ConfigCatalog catalog = ConfigCatalogLoader.Load(pipeline);
 
                 var meshAssets = new MeshAssetRegistry();
-                new MeshAssetConfigLoader(pipeline, meshAssets).Load(catalog);
+                var presentationPrefabs = new PrefabRegistry();
+                new MeshAssetConfigLoader(pipeline, meshAssets, presentationPrefabs).Load(catalog);
+                var materialAssets = new PresentationMaterialRegistry();
 
                 var textCatalog = new PresentationTextCatalogLoader(pipeline).Load(catalog);
                 var animatorControllers = new AnimatorControllerRegistry();
@@ -394,7 +430,7 @@ namespace Ludots.Tests.Presentation
                     resolveTextTokenId: textCatalog.GetTokenId,
                     resolveEntityTemplateKey: key => string.Equals(key, "blacksmith", StringComparison.Ordinal) ? BlacksmithTemplateKeyId : 0,
                     resolveEffectTemplateId: _ => 0,
-                    resolveMaterialId: _ => 0,
+                    resolveMaterialId: ResolveFixtureMaterialId,
                     resolveAnimatorControllerId: animatorControllers.GetId,
                     resolveAnimationProfileId: animationProfiles.GetId,
                     resolveBehaviorAssetId: ResolveBehaviorAssetId).Load(catalog);
@@ -405,6 +441,14 @@ namespace Ludots.Tests.Presentation
                 var animatorStates = new PerformerAnimatorStateBuffer(64);
                 var requests = new PresentationRequestBuffer(512);
                 var soundRequests = new SoundRequestBuffer(256);
+                var stableDrawCache = new StableDrawCache(512);
+                var primitives = new PrimitiveDrawBuffer(512);
+                var groundOverlays = new GroundOverlayBuffer(128);
+                var worldHud = new WorldHudBatchBuffer(128);
+                var roadSplines = new RoadSplineBuffer(128);
+                var snapshotBuffer = new PrimitiveDrawBuffer(512);
+                var proxyBuffer = new PresentationVisualProxyBuffer(512);
+                var skinnedBatchBuffer = new SkinnedVisualBatchBuffer(128);
                 var globalEvents = new GlobalPresentationEventBuffer(64);
 
                 var gameSession = new GameSession();
@@ -424,10 +468,32 @@ namespace Ludots.Tests.Presentation
                     instances,
                     stableIds,
                     definitions,
-                    animatorStates);
+                    animatorStates,
+                    stableDrawCache);
                 var animator = new AnimatorRuntimeSystem(world, animatorControllers, instances, definitions, animatorStates);
                 var behavior = new PerformerBehaviorSystem(world, instances, definitions, events, soundRequests, new FlatHeightmap());
-                var emit = new PerformerEmitSystem(world, instances, definitions, requests, new Dictionary<string, object>(), animatorStates, soundRequests);
+                var emit = new PerformerEmitSystem(
+                    world,
+                    instances,
+                    definitions,
+                    requests,
+                    new Dictionary<string, object>(),
+                    animatorStates,
+                    soundRequests,
+                    stableDrawCache: stableDrawCache);
+                var flush = new PresentationRequestFlushSystem(
+                    world,
+                    requests,
+                    presentationPrefabs,
+                    meshAssets,
+                    stableDrawCache,
+                    primitives,
+                    groundOverlays,
+                    worldHud,
+                    roadSplines,
+                    snapshotBuffer,
+                    proxyBuffer,
+                    skinnedBatchBuffer);
 
                 Assert.That(definitions.GetId(BlacksmithRootKey), Is.GreaterThan(0));
                 Assert.That(PerformerScopeTagRegistry.GetId("working"), Is.GreaterThan(0));
@@ -442,6 +508,14 @@ namespace Ludots.Tests.Presentation
                     animatorStates,
                     requests,
                     soundRequests,
+                    stableDrawCache,
+                    primitives,
+                    groundOverlays,
+                    worldHud,
+                    roadSplines,
+                    snapshotBuffer,
+                    proxyBuffer,
+                    skinnedBatchBuffer,
                     globalEvents,
                     entityLifecycle,
                     globalBridge,
@@ -449,7 +523,8 @@ namespace Ludots.Tests.Presentation
                     runtime,
                     animator,
                     behavior,
-                    emit);
+                    emit,
+                    flush);
 
                 static int ResolveBehaviorAssetId(AssetKind kind, string key)
                 {
@@ -460,6 +535,16 @@ namespace Ludots.Tests.Presentation
                         (AssetKind.Sound, "anvil_hammering") => HammerSoundAssetId,
                         _ => 0,
                     };
+                }
+
+                int ResolveFixtureMaterialId(string key)
+                {
+                    if (int.TryParse(key, out int numericId))
+                    {
+                        return numericId;
+                    }
+
+                    return materialAssets.GetId(key);
                 }
             }
 
@@ -591,6 +676,7 @@ namespace Ludots.Tests.Presentation
                 _animator.Update(dt);
                 _behavior.Update(dt);
                 _emit.Update(dt);
+                _flush.Update(dt);
             }
 
             private bool ContainsPerformerDestroyedEvent()
@@ -641,11 +727,10 @@ namespace Ludots.Tests.Presentation
             public int CountVisualByAsset(int assetId)
             {
                 int count = 0;
-                foreach (ref readonly PresentationRequest request in _requests.GetSpan())
+                foreach (ref readonly PrimitiveDrawItem item in _primitives.GetSpan())
                 {
-                    if (request.Kind == PresentationRequestKind.VisualProxy &&
-                        request.VisualProxy.MeshAssetId == assetId &&
-                        request.VisualProxy.Visibility == VisualVisibility.Visible)
+                    if (item.MeshAssetId == assetId &&
+                        item.Visibility == VisualVisibility.Visible)
                     {
                         count++;
                     }
@@ -657,11 +742,10 @@ namespace Ludots.Tests.Presentation
             public int CountVisualByMaterial(int materialId)
             {
                 int count = 0;
-                foreach (ref readonly PresentationRequest request in _requests.GetSpan())
+                foreach (ref readonly PrimitiveDrawItem item in _primitives.GetSpan())
                 {
-                    if (request.Kind == PresentationRequestKind.VisualProxy &&
-                        request.VisualProxy.MaterialId == materialId &&
-                        request.VisualProxy.Visibility == VisualVisibility.Visible)
+                    if (item.MaterialId == materialId &&
+                        item.Visibility == VisualVisibility.Visible)
                     {
                         count++;
                     }
@@ -685,6 +769,7 @@ namespace Ludots.Tests.Presentation
 
             public void Dispose()
             {
+                _flush.Dispose();
                 _emit.Dispose();
                 _behavior.Dispose();
                 _animator.Dispose();

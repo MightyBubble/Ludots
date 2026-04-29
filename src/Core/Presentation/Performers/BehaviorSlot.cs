@@ -17,6 +17,7 @@ namespace Ludots.Core.Presentation.Performers
         public SoundConfig Sound;
         public MaterialConfig Material;
         public SplineConfig Spline;
+        public GroundingConfig Grounding;
     }
 
     public enum BehaviorKind : byte
@@ -29,6 +30,7 @@ namespace Ludots.Core.Presentation.Performers
         Sound = 6,
         Material = 7,
         Spline = 8,
+        Grounding = 9,
     }
 
     public struct AssetBindingConfig
@@ -49,8 +51,6 @@ namespace Ludots.Core.Presentation.Performers
         public int VisibilityParamKey;
         public bool HasMaxLod;
         public LODLevel MaxLod;
-        public GroundingMode Grounding;
-        public float GroundingOffset;
     }
 
     public struct AssetSwapEntry
@@ -149,5 +149,18 @@ namespace Ludots.Core.Presentation.Performers
         None = 0,
         SnapToGround = 1,
         AlignToSurface = 2,
+    }
+
+    public struct GroundingConfig
+    {
+        public GroundingMode Mode;
+        public float Offset;
+        public GroundingUpdatePolicy UpdatePolicy;
+    }
+
+    public enum GroundingUpdatePolicy : byte
+    {
+        Once = 0,
+        EveryFrame = 1,
     }
 }

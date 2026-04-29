@@ -2,8 +2,11 @@ using System;
 using System.Collections.Generic;
 using System.Diagnostics;
 using System.Numerics;
+using System.Runtime.CompilerServices;
+using Arch.Buffer;
 using Arch.Core;
 using Arch.System;
+using Ludots.Core.Diagnostics;
 using Ludots.Core.Gameplay.GAS.Components;
 using Ludots.Core.Components;
 using Ludots.Core.Presentation.Commands;
@@ -67,9 +70,23 @@ namespace Ludots.Core.Presentation.Systems
             .WithAll<GameplayTagEffectiveChangedBits>();
         private readonly QueryDescription _tickDrivenQuery = new QueryDescription()
             .WithAll<PerformerState, PerformerWorldPosition>()
-            .WithAny<PerfHasSpline, PerfHasAttachment, PerfHasSound>()
+            .WithAny<PerfHasSpline, PerfHasAttachmentTick, PerfHasGrounding, PerfHasSound>()
             .WithNone<PerformerBootstrapPending>();
+        private readonly QueryDescription _materialDirtyQuery = new QueryDescription()
+            .WithAll<PerformerState, PerfMaterialDirty>()
+            .WithNone<PerformerBootstrapPending>();
+        private readonly CommandBuffer _commandBuffer = new();
         private readonly List<Entity> _bootstrapClearList = new(256);
+        private readonly List<Entity> _materialDirtyClearList = new(256);
+        private Vector3[] _groundingPositions = Array.Empty<Vector3>();
+        private GroundingMode[] _groundingModes = Array.Empty<GroundingMode>();
+        private float[] _groundingOffsets = Array.Empty<float>();
+        private int[] _groundingIndices = Array.Empty<int>();
+        private Quaternion[] _groundingRotations = Array.Empty<Quaternion>();
+        private float[] _groundingWorldXCm = Array.Empty<float>();
+        private float[] _groundingWorldZCm = Array.Empty<float>();
+        private float[] _groundingHeightsCm = Array.Empty<float>();
+        private bool _warnedMissingGroundingHeightmap;
 
         private struct SoundTrackingState
         {
@@ -77,6 +94,7 @@ namespace Ludots.Core.Presentation.Systems
             public int StableId;
             public int DefinitionId;
         }
+
         public PerformerBehaviorSystem(
             World world,
             PerformerEntityRuntime runtime,
@@ -134,10 +152,25 @@ namespace Ludots.Core.Presentation.Systems
         {
             EnsureDefinitionIndexesCurrent();
             long start = _timingDiagnostics != null ? Stopwatch.GetTimestamp() : 0L;
-            ProcessCreatedPerformers(dt);
-            int ownerChanges = ProcessOwnerChanges();
-            int tickDrivenCount = ProcessTickDrivenPerformers(dt);
-            ClearProcessedBootstrapMarkers();
+            int ownerChanges;
+            int tickDrivenCount;
+            _runtime.BeginDeferredStructuralChanges(_commandBuffer);
+            try
+            {
+                ProcessCreatedPerformers(dt);
+                ownerChanges = ProcessOwnerChanges();
+                PlaybackStructuralChanges();
+                ProcessDirtyMaterialPerformers();
+                tickDrivenCount = ProcessTickDrivenPerformers(dt);
+                ClearProcessedBootstrapMarkers();
+                ClearProcessedMaterialDirtyMarkers();
+            }
+            finally
+            {
+                _runtime.EndDeferredStructuralChanges(_commandBuffer);
+            }
+
+            PlaybackStructuralChanges();
             int destroyEventScanCount = StopDestroyedSounds();
             _ownerChanges?.Clear();
 
@@ -179,11 +212,35 @@ namespace Ludots.Core.Presentation.Systems
         private void ProcessCreatedPerformers(float tickDt)
         {
             _bootstrapClearList.Clear();
-            World.Query(in _bootstrapPendingQuery, (Entity entity, ref PerformerState state, ref PerformerBootstrapPending pending) =>
+            foreach (ref var chunk in World.Query(in _bootstrapPendingQuery))
             {
-                ProcessPerformer(entity, firstFrame: true, updateAttributeBindings: true, updateTagBindings: true, tickDt, tickDrivenOnly: false);
-                _bootstrapClearList.Add(entity);
-            });
+                Span<PerformerState> states = chunk.GetSpan<PerformerState>();
+                bool processedChunk = false;
+                bool singleDefinitionChunk = TryResolveSingleDefinitionChunk(states, chunk.Count, out int chunkDefId);
+                if (singleDefinitionChunk &&
+                    _definitions.TryGet(chunkDefId, out PerformerDefinition chunkDefinition))
+                {
+                    processedChunk = TryProcessBootstrapChunkFast(chunk, states, chunkDefinition, tickDt);
+                }
+
+                ref Entity entityFirst = ref chunk.Entity(0);
+                foreach (int index in chunk)
+                {
+                    Entity entity = Unsafe.Add(ref entityFirst, index);
+                    if (!processedChunk)
+                    {
+                        ProcessPerformer(
+                            entity,
+                            firstFrame: true,
+                            updateAttributeBindings: true,
+                            updateTagBindings: true,
+                            tickDt,
+                            tickDrivenOnly: false);
+                    }
+
+                    _bootstrapClearList.Add(entity);
+                }
+            }
         }
 
         private void ClearProcessedBootstrapMarkers()
@@ -193,22 +250,91 @@ namespace Ludots.Core.Presentation.Systems
                 Entity entity = _bootstrapClearList[i];
                 if (World.IsAlive(entity) && World.Has<PerformerBootstrapPending>(entity))
                 {
-                    World.Remove<PerformerBootstrapPending>(entity);
+                    _commandBuffer.Remove<PerformerBootstrapPending>(in entity);
                 }
             }
+        }
+
+        private bool TryProcessBootstrapChunkFast(
+            Chunk chunk,
+            Span<PerformerState> states,
+            PerformerDefinition definition,
+            float tickDt)
+        {
+            if (!CanProcessBootstrapChunkFast(definition))
+            {
+                return false;
+            }
+
+            Span<PerformerWorldPosition> positions = chunk.GetSpan<PerformerWorldPosition>();
+            Span<PerformerWorldRotation> rotations = chunk.GetSpan<PerformerWorldRotation>();
+            Span<PerformerWorldScale> scales = chunk.GetSpan<PerformerWorldScale>();
+            Span<PerformerTransformSource> sources = chunk.GetSpan<PerformerTransformSource>();
+            Span<PerformerParent> parents = chunk.GetSpan<PerformerParent>();
+
+            ResolveDefaultTransformSourceBatch(states, sources, parents, chunk);
+            ResolveTransformBatch(positions, rotations, scales, sources, parents, states, definition, chunk);
+
+            if (TryResolveParentAttachmentOnly(definition, out AttachmentConfig attachmentConfig, out int attachmentSlot))
+            {
+                ApplyParentAttachmentBatch(
+                    positions,
+                    rotations,
+                    scales,
+                    sources,
+                    parents,
+                    states,
+                    attachmentSlot,
+                    in attachmentConfig,
+                    chunk);
+            }
+
+            if (DefinitionHasBootstrapGroundingWork(definition))
+            {
+                if (TrySkipOwnerBackedSnapToGroundBatch(
+                        states,
+                        definition.Behaviors,
+                        chunk))
+                {
+                    return true;
+                }
+
+                IVisualHeightmap? heightmap = _heightmapProvider();
+                if (heightmap == null)
+                {
+                    WarnMissingGroundingHeightmap();
+                    SetBootstrapGroundingMissingHeightmapHeightBatch(
+                        positions,
+                        states,
+                        definition.Behaviors,
+                        chunk);
+                }
+                else
+                {
+                    ApplyBootstrapGroundingBatch(
+                        positions,
+                        rotations,
+                        states,
+                        definition.Behaviors,
+                        heightmap,
+                        chunk);
+                }
+            }
+
+            return true;
         }
 
         private int ProcessOwnerChanges()
         {
             _lastOwnerAttributeChangeCount = 0;
             _lastOwnerTagChangeCount = 0;
+            int processed = ProcessDirtyOwnersFromComponents();
             if (_ownerChanges == null)
             {
-                return ProcessDirtyOwnersFromComponents();
+                return processed;
             }
 
             ReadOnlySpan<PresentationOwnerChange> changes = _ownerChanges.GetSpan();
-            int processed = 0;
             for (int i = 0; i < changes.Length; i++)
             {
                 ref readonly var change = ref changes[i];
@@ -238,42 +364,59 @@ namespace Ludots.Core.Presentation.Systems
         private int ProcessDirtyOwnersFromComponents()
         {
             int processed = 0;
-            World.Query(in _dirtyOwnerAttributeQuery, (Entity owner, ref GameplayAttributeChangedBits bits) =>
+            foreach (ref Chunk chunk in World.Query(in _dirtyOwnerAttributeQuery))
             {
-                for (int attributeId = 0; attributeId < AttributeBuffer.MAX_ATTRS; attributeId++)
+                ref Entity entityFirst = ref chunk.Entity(0);
+                Span<GameplayAttributeChangedBits> changedBits = chunk.GetSpan<GameplayAttributeChangedBits>();
+                foreach (int index in chunk)
                 {
-                    if (bits.IsSet(attributeId))
+                    Entity owner = Unsafe.Add(ref entityFirst, index);
+                    ref GameplayAttributeChangedBits bits = ref changedBits[index];
+                    for (int attributeId = 0; attributeId < AttributeBuffer.MAX_ATTRS; attributeId++)
                     {
-                        ProcessOwnerAttributeChange(owner, attributeId);
-                        _lastOwnerAttributeChangeCount++;
-                        processed++;
+                        if (bits.IsSet(attributeId))
+                        {
+                            ProcessOwnerAttributeChange(owner, attributeId);
+                            _lastOwnerAttributeChangeCount++;
+                            processed++;
+                        }
                     }
                 }
-            });
+            }
 
-            World.Query(in _dirtyOwnerTagQuery, (Entity owner, ref GameplayTagEffectiveChangedBits bits) =>
+            foreach (ref Chunk chunk in World.Query(in _dirtyOwnerTagQuery))
             {
-                unsafe
+                ref Entity entityFirst = ref chunk.Entity(0);
+                Span<GameplayTagEffectiveChangedBits> changedBits = chunk.GetSpan<GameplayTagEffectiveChangedBits>();
+                Span<GameplayTagContainer> tagContainers = chunk.Has<GameplayTagContainer>()
+                    ? chunk.GetSpan<GameplayTagContainer>()
+                    : Span<GameplayTagContainer>.Empty;
+                foreach (int index in chunk)
                 {
-                    fixed (ulong* words = bits.Bits)
+                    Entity owner = Unsafe.Add(ref entityFirst, index);
+                    ref GameplayTagEffectiveChangedBits bits = ref changedBits[index];
+                    unsafe
                     {
-                        for (int wordIndex = 0; wordIndex < 4; wordIndex++)
+                        fixed (ulong* words = bits.Bits)
                         {
-                            ulong word = words[wordIndex];
-                            while (word != 0)
+                            for (int wordIndex = 0; wordIndex < 4; wordIndex++)
                             {
-                                int bit = BitOperations.TrailingZeroCount(word);
-                                word &= word - 1;
-                                int tagId = (wordIndex << 6) + bit;
-                                bool tagActive = World.Has<GameplayTagContainer>(owner) && World.Get<GameplayTagContainer>(owner).HasTag(tagId);
-                                ProcessOwnerTagChange(owner, tagId, tagActive);
-                                _lastOwnerTagChangeCount++;
-                                processed++;
+                                ulong word = words[wordIndex];
+                                while (word != 0)
+                                {
+                                    int bit = BitOperations.TrailingZeroCount(word);
+                                    word &= word - 1;
+                                    int tagId = (wordIndex << 6) + bit;
+                                    bool tagActive = !tagContainers.IsEmpty && tagContainers[index].HasTag(tagId);
+                                    ProcessOwnerTagChange(owner, tagId, tagActive);
+                                    _lastOwnerTagChangeCount++;
+                                    processed++;
+                                }
                             }
                         }
                     }
                 }
-            });
+            }
 
             return processed;
         }
@@ -349,13 +492,181 @@ namespace Ludots.Core.Presentation.Systems
         private int ProcessTickDrivenPerformers(float tickDt)
         {
             int processed = 0;
-            World.Query(in _tickDrivenQuery, (Entity entity, ref PerformerState state, ref PerformerWorldPosition pos) =>
+            foreach (ref var chunk in World.Query(in _tickDrivenQuery))
             {
-                processed++;
-                ProcessPerformer(entity, firstFrame: false, updateAttributeBindings: false, updateTagBindings: false, tickDt, tickDrivenOnly: true);
-            });
+                Span<PerformerState> states = chunk.GetSpan<PerformerState>();
+                Span<PerformerWorldPosition> positions = chunk.GetSpan<PerformerWorldPosition>();
+                PerformerDefinition? chunkDefinition = null;
+                bool singleDefinitionChunk = TryResolveSingleDefinitionChunk(states, chunk.Count, out int chunkDefId);
+                if (singleDefinitionChunk && !_definitions.TryGet(chunkDefId, out chunkDefinition))
+                {
+                    singleDefinitionChunk = false;
+                }
+
+                bool batchGrounding = singleDefinitionChunk && chunkDefinition != null && DefinitionHasGroundingWork(chunkDefinition);
+                Span<PerformerWorldRotation> rotations = batchGrounding
+                    ? chunk.GetSpan<PerformerWorldRotation>()
+                    : Span<PerformerWorldRotation>.Empty;
+                ref Entity entityFirst = ref chunk.Entity(0);
+
+                if (batchGrounding && DefinitionIsGroundingOnly(chunkDefinition!))
+                {
+                    if (TrySkipOwnerBackedSnapToGroundBatch(
+                            states,
+                            chunkDefinition!.TickBehaviorIndices,
+                            chunkDefinition.Behaviors,
+                            chunk))
+                    {
+                        processed += chunk.Count;
+                        continue;
+                    }
+
+                    IVisualHeightmap? heightmap = _heightmapProvider();
+                    if (heightmap == null)
+                    {
+                        WarnMissingGroundingHeightmap();
+                        SetGroundingMissingHeightmapHeightBatch(
+                            positions,
+                            states,
+                            chunkDefinition!.TickBehaviorIndices,
+                            chunkDefinition.Behaviors,
+                            chunk);
+                        processed += chunk.Count;
+                        continue;
+                    }
+
+                    ApplyGroundingBatch(
+                        positions,
+                        rotations,
+                        states,
+                        chunkDefinition!.TickBehaviorIndices,
+                        chunkDefinition.Behaviors,
+                        heightmap,
+                        chunk);
+                    processed += chunk.Count;
+                    continue;
+                }
+
+                if (singleDefinitionChunk &&
+                    chunkDefinition != null &&
+                    TryResolveParentAttachmentOnly(chunkDefinition, out AttachmentConfig attachmentConfig, out int attachmentSlot))
+                {
+                    Span<PerformerParent> parents = chunk.GetSpan<PerformerParent>();
+                    rotations = chunk.GetSpan<PerformerWorldRotation>();
+                    Span<PerformerWorldScale> scales = chunk.GetSpan<PerformerWorldScale>();
+                    Span<PerformerTransformSource> sources = chunk.GetSpan<PerformerTransformSource>();
+                    ApplyParentAttachmentBatch(
+                        positions,
+                        rotations,
+                        scales,
+                        sources,
+                        parents,
+                        states,
+                        attachmentSlot,
+                        in attachmentConfig,
+                        chunk);
+                    processed += chunk.Count;
+                    continue;
+                }
+
+                foreach (int index in chunk)
+                {
+                    processed++;
+                    Entity entity = Unsafe.Add(ref entityFirst, index);
+                    ProcessPerformer(
+                        entity,
+                        firstFrame: false,
+                        updateAttributeBindings: false,
+                        updateTagBindings: false,
+                        tickDt,
+                        tickDrivenOnly: true,
+                        skipGroundingBehaviors: batchGrounding);
+                }
+
+                if (batchGrounding)
+                {
+                    PerformerDefinition groundingDefinition = chunkDefinition!;
+                    if (TrySkipOwnerBackedSnapToGroundBatch(
+                            states,
+                            groundingDefinition.TickBehaviorIndices,
+                            groundingDefinition.Behaviors,
+                            chunk))
+                    {
+                        continue;
+                    }
+
+                    IVisualHeightmap? heightmap = _heightmapProvider();
+                    if (heightmap == null)
+                    {
+                        WarnMissingGroundingHeightmap();
+                        SetGroundingMissingHeightmapHeightBatch(
+                            positions,
+                            states,
+                            groundingDefinition.TickBehaviorIndices,
+                            groundingDefinition.Behaviors,
+                            chunk);
+                        continue;
+                    }
+
+                    ApplyGroundingBatch(
+                        positions,
+                        rotations,
+                        states,
+                        groundingDefinition.TickBehaviorIndices,
+                        groundingDefinition.Behaviors,
+                        heightmap,
+                        chunk);
+                }
+            }
 
             return processed;
+        }
+
+        private void ProcessDirtyMaterialPerformers()
+        {
+            _materialDirtyClearList.Clear();
+            foreach (ref Chunk chunk in World.Query(in _materialDirtyQuery))
+            {
+                ref Entity entityFirst = ref chunk.Entity(0);
+                Span<PerformerState> states = chunk.GetSpan<PerformerState>();
+                foreach (int index in chunk)
+                {
+                    Entity entity = Unsafe.Add(ref entityFirst, index);
+                    ref readonly PerformerState state = ref states[index];
+                    if (_definitions.TryGet(state.DefId, out PerformerDefinition definition))
+                    {
+                        ProcessMaterialBehaviors(entity, in state, definition);
+                    }
+
+                    _materialDirtyClearList.Add(entity);
+                }
+            }
+        }
+
+        private void ClearProcessedMaterialDirtyMarkers()
+        {
+            for (int i = 0; i < _materialDirtyClearList.Count; i++)
+            {
+                Entity entity = _materialDirtyClearList[i];
+                if (World.IsAlive(entity) && World.Has<PerfMaterialDirty>(entity))
+                {
+                    _commandBuffer.Remove<PerfMaterialDirty>(in entity);
+                }
+            }
+        }
+
+        private void PlaybackStructuralChanges()
+        {
+            if (_commandBuffer.Size > 0)
+            {
+                _commandBuffer.Playback(World);
+            }
+        }
+
+        public override void Dispose()
+        {
+            _commandBuffer.Dispose();
+            base.Dispose();
         }
 
         private void ProcessPerformer(
@@ -364,7 +675,8 @@ namespace Ludots.Core.Presentation.Systems
             bool updateAttributeBindings,
             bool updateTagBindings,
             float tickDt,
-            bool tickDrivenOnly)
+            bool tickDrivenOnly,
+            bool skipGroundingBehaviors = false)
         {
             if (!World.IsAlive(entity) || !World.Has<PerformerState>(entity))
             {
@@ -391,6 +703,8 @@ namespace Ludots.Core.Presentation.Systems
                 HandleReusedSoundSlot(entity, in state, behaviors);
             }
 
+            ResolveTransform(entity, ref state, definition, behaviors);
+
             uint currentSoundMask = 0u;
             if (tickDrivenOnly)
             {
@@ -407,6 +721,12 @@ namespace Ludots.Core.Presentation.Systems
                     {
                         case BehaviorKind.Attachment:
                             ApplyAttachment(entity, in slot.Attachment);
+                            break;
+                        case BehaviorKind.Grounding:
+                            if (!skipGroundingBehaviors)
+                            {
+                                ApplyGrounding(entity, in slot.Grounding);
+                            }
                             break;
                         case BehaviorKind.Sound:
                             ApplySound(entity, in state, slot);
@@ -441,6 +761,12 @@ namespace Ludots.Core.Presentation.Systems
                         case BehaviorKind.Attachment:
                             ApplyAttachment(entity, in slot.Attachment);
                             break;
+                        case BehaviorKind.Grounding:
+                            if (!skipGroundingBehaviors)
+                            {
+                                ApplyGrounding(entity, in slot.Grounding);
+                            }
+                            break;
                         case BehaviorKind.Sound:
                             ApplySound(entity, in state, slot);
                             currentSoundMask |= 1u << slot.SlotIndex;
@@ -470,7 +796,6 @@ namespace Ludots.Core.Presentation.Systems
                 }
             }
 
-            ResolveTransform(entity, ref state, definition, behaviors);
         }
 
         private static bool HasSoundBehavior(BehaviorSlot[] behaviors)
@@ -485,6 +810,32 @@ namespace Ludots.Core.Presentation.Systems
 
             return false;
         }
+
+        private void ProcessMaterialBehaviors(Entity entity, in PerformerState state, PerformerDefinition definition)
+        {
+            int[] materialBehaviorIndices = definition.MaterialBehaviorIndices;
+            if (materialBehaviorIndices.Length == 0)
+            {
+                return;
+            }
+
+            BehaviorSlot[] behaviors = definition.Behaviors;
+            for (int i = 0; i < materialBehaviorIndices.Length; i++)
+            {
+                int behaviorIndex = materialBehaviorIndices[i];
+                if ((uint)behaviorIndex >= (uint)behaviors.Length)
+                {
+                    continue;
+                }
+
+                ref readonly BehaviorSlot slot = ref behaviors[behaviorIndex];
+                if (IsBehaviorActive(state.BehaviorActiveMask, slot.SlotIndex))
+                {
+                    ApplyMaterialBinding(entity, slot.Material);
+                }
+            }
+        }
+
         private void ApplyBindings(Entity entity, Entity owner, PerformerDefinition definition)
         {
             PerformerParamBinding[] bindings = definition.Bindings;
@@ -497,16 +848,16 @@ namespace Ludots.Core.Presentation.Systems
                 switch (value.Source)
                 {
                     case ValueSourceKind.EntityColor:
-                        _runtime.SetParam(entity, binding.ParamKey, ParamLane.Float, ResolveEntityColorChannel(owner, value.SourceId), 0, Vector4.Zero);
+                        SetParam(entity, binding.ParamKey, ParamLane.Float, ResolveEntityColorChannel(owner, value.SourceId), 0, Vector4.Zero);
                         break;
                     case ValueSourceKind.EntityColorVector:
-                        _runtime.SetParam(entity, binding.ParamKey, ParamLane.Vector, 0f, 0, ResolveEntityColor(owner));
+                        SetParam(entity, binding.ParamKey, ParamLane.Vector, 0f, 0, ResolveEntityColor(owner));
                         break;
                     case ValueSourceKind.FacingRadians:
-                        _runtime.SetParam(entity, binding.ParamKey, ParamLane.Float, ResolveFacingRadians(owner), 0, Vector4.Zero);
+                        SetParam(entity, binding.ParamKey, ParamLane.Float, ResolveFacingRadians(owner), 0, Vector4.Zero);
                         break;
                     case ValueSourceKind.FacingDegrees:
-                        _runtime.SetParam(entity, binding.ParamKey, ParamLane.Float, ResolveFacingRadians(owner) * (180f / MathF.PI), 0, Vector4.Zero);
+                        SetParam(entity, binding.ParamKey, ParamLane.Float, ResolveFacingRadians(owner) * (180f / MathF.PI), 0, Vector4.Zero);
                         break;
                     case ValueSourceKind.Attribute:
                     case ValueSourceKind.AttributeRatio:
@@ -514,10 +865,10 @@ namespace Ludots.Core.Presentation.Systems
                         if (!hasAttributes) continue;
                         ref AttributeBuffer attributes = ref World.Get<AttributeBuffer>(owner);
                         float resolved = ResolveAttributeValue(ref attributes, value.SourceId, value.Source);
-                        _runtime.SetParam(entity, binding.ParamKey, ParamLane.Float, resolved, 0, Vector4.Zero);
+                        SetParam(entity, binding.ParamKey, ParamLane.Float, resolved, 0, Vector4.Zero);
                         break;
                     case ValueSourceKind.Constant:
-                        _runtime.SetParam(entity, binding.ParamKey, ParamLane.Float, value.ConstantValue, 0, Vector4.Zero);
+                        SetParam(entity, binding.ParamKey, ParamLane.Float, value.ConstantValue, 0, Vector4.Zero);
                         break;
                     case ValueSourceKind.Graph:
                         break;
@@ -536,7 +887,7 @@ namespace Ludots.Core.Presentation.Systems
             {
                 ref readonly PerformerParamBinding binding = ref definition.Bindings[paramBindingIndices[i]];
                 float resolved = ResolveAttributeValue(ref attributes, binding.Value.SourceId, binding.Value.Source);
-                _runtime.SetParam(entity, binding.ParamKey, ParamLane.Float, resolved, 0, Vector4.Zero);
+                SetParam(entity, binding.ParamKey, ParamLane.Float, resolved, 0, Vector4.Zero);
             }
 
             int[] behaviorIndices = work.BehaviorIndices;
@@ -577,7 +928,7 @@ namespace Ludots.Core.Presentation.Systems
         private void ApplyAttributeBinding(Entity entity, ref AttributeBuffer attributes, in AttributeBindingConfig config)
         {
             float value = ResolveAttributeValue(ref attributes, config.AttributeId, config.Mode);
-            _runtime.SetParam(entity, config.TargetParamKey, ParamLane.Float, value, 0, Vector4.Zero);
+            SetParam(entity, config.TargetParamKey, ParamLane.Float, value, 0, Vector4.Zero);
 
             ThresholdMapping[] thresholds = config.Thresholds ?? Array.Empty<ThresholdMapping>();
             for (int i = 0; i < thresholds.Length; i++)
@@ -589,8 +940,8 @@ namespace Ludots.Core.Presentation.Systems
                 }
 
                 int thresholdIntValue = (int)threshold.OutputValue;
-                _runtime.SetParam(entity, threshold.OutputParamKey, ParamLane.Float, threshold.OutputValue, thresholdIntValue, Vector4.Zero);
-                _runtime.SetParam(entity, threshold.OutputParamKey, ParamLane.Int, threshold.OutputValue, thresholdIntValue, Vector4.Zero);
+                SetParam(entity, threshold.OutputParamKey, ParamLane.Float, threshold.OutputValue, thresholdIntValue, Vector4.Zero);
+                SetParam(entity, threshold.OutputParamKey, ParamLane.Int, threshold.OutputValue, thresholdIntValue, Vector4.Zero);
                 return;
             }
 
@@ -601,12 +952,12 @@ namespace Ludots.Core.Presentation.Systems
                 ref readonly ThresholdMapping threshold = ref thresholds[i];
                 if (hasFloatParams)
                 {
-                    _runtime.ClearParam(entity, threshold.OutputParamKey, ParamLane.Float);
+                    ClearParam(entity, threshold.OutputParamKey, ParamLane.Float);
                 }
 
                 if (hasIntParams)
                 {
-                    _runtime.ClearParam(entity, threshold.OutputParamKey, ParamLane.Int);
+                    ClearParam(entity, threshold.OutputParamKey, ParamLane.Int);
                 }
             }
         }
@@ -618,7 +969,7 @@ namespace Ludots.Core.Presentation.Systems
                 active = !active;
             }
 
-            _runtime.SetParam(entity, config.TargetParamKey, ParamLane.Int, 0f, active ? 1 : 0, Vector4.Zero);
+            SetParam(entity, config.TargetParamKey, ParamLane.Int, 0f, active ? 1 : 0, Vector4.Zero);
         }
 
         private void ApplyMaterialBinding(Entity entity, in MaterialConfig config)
@@ -642,7 +993,7 @@ namespace Ludots.Core.Presentation.Systems
                 }
             }
             if (materialId > 0 && config.MaterialSwapParamKey >= 0)
-                _runtime.SetParam(entity, config.MaterialSwapParamKey, ParamLane.Int, 0f, materialId, Vector4.Zero);
+                SetParam(entity, config.MaterialSwapParamKey, ParamLane.Int, 0f, materialId, Vector4.Zero);
         }
         private void ApplySound(Entity entity, in PerformerState state, in BehaviorSlot slot)
         {
@@ -879,6 +1230,798 @@ namespace Ludots.Core.Presentation.Systems
                 config.InheritScale ? NormalizeScale(boneScale) : Vector3.One);
         }
 
+        private void ApplyGrounding(Entity entity, in GroundingConfig config)
+        {
+            if (config.Mode == GroundingMode.None || !World.Has<PerformerWorldPosition>(entity))
+            {
+                return;
+            }
+
+            if (World.Has<PerformerState>(entity) &&
+                ShouldSkipOwnerBackedSnapToGround(in World.Get<PerformerState>(entity), config, entity))
+            {
+                return;
+            }
+
+            IVisualHeightmap? heightmap = _heightmapProvider();
+            if (heightmap == null)
+            {
+                WarnMissingGroundingHeightmap();
+                SetGroundingMissingHeightmapHeight(entity, config.Offset);
+                return;
+            }
+
+            ref PerformerWorldPosition position = ref World.Get<PerformerWorldPosition>(entity);
+            Span<Vector3> positions = stackalloc Vector3[1] { position.Value };
+            Span<GroundingMode> modes = stackalloc GroundingMode[1] { config.Mode };
+            Span<float> offsets = stackalloc float[1] { config.Offset };
+            if (config.Mode == GroundingMode.AlignToSurface && World.Has<PerformerWorldRotation>(entity))
+            {
+                ref PerformerWorldRotation rotation = ref World.Get<PerformerWorldRotation>(entity);
+                Span<Quaternion> rotations = stackalloc Quaternion[1] { rotation.Value };
+                PerformerGroundingUtility.ResolveBatch(positions, rotations, modes, offsets, heightmap);
+                rotation.Value = rotations[0];
+            }
+            else
+            {
+                PerformerGroundingUtility.ResolveBatch(positions, modes, offsets, heightmap);
+            }
+
+            position.Value = positions[0];
+        }
+
+        private void WarnMissingGroundingHeightmap()
+        {
+            if (_warnedMissingGroundingHeightmap)
+            {
+                return;
+            }
+
+            Log.Warn(in LogChannels.Presentation, "Performer grounding requested VisualHeightmap, but none is registered; missing-heightmap grounding writes height 0.");
+            _warnedMissingGroundingHeightmap = true;
+        }
+
+        private void SetGroundingMissingHeightmapHeight(Entity entity, float offset)
+        {
+            if (!World.Has<PerformerWorldPosition>(entity))
+            {
+                return;
+            }
+
+            ref PerformerWorldPosition position = ref World.Get<PerformerWorldPosition>(entity);
+            position.Value.Y = offset;
+        }
+
+        private void SetGroundingMissingHeightmapHeightBatch(
+            Span<PerformerWorldPosition> positions,
+            Span<PerformerState> states,
+            int[] tickBehaviorIndices,
+            BehaviorSlot[] behaviors,
+            Chunk chunk)
+        {
+            for (int behaviorIndex = 0; behaviorIndex < tickBehaviorIndices.Length; behaviorIndex++)
+            {
+                ref readonly BehaviorSlot slot = ref behaviors[tickBehaviorIndices[behaviorIndex]];
+                if (slot.Kind != BehaviorKind.Grounding ||
+                    slot.Grounding.Mode == GroundingMode.None)
+                {
+                    continue;
+                }
+
+                foreach (int index in chunk)
+                {
+                    if (!IsBehaviorActive(states[index].BehaviorActiveMask, slot.SlotIndex))
+                    {
+                        continue;
+                    }
+
+                    positions[index].Value.Y = slot.Grounding.Offset;
+                }
+            }
+        }
+
+        private void SetBootstrapGroundingMissingHeightmapHeightBatch(
+            Span<PerformerWorldPosition> positions,
+            Span<PerformerState> states,
+            BehaviorSlot[] behaviors,
+            Chunk chunk)
+        {
+            for (int behaviorIndex = 0; behaviorIndex < behaviors.Length; behaviorIndex++)
+            {
+                ref readonly BehaviorSlot slot = ref behaviors[behaviorIndex];
+                if (slot.Kind != BehaviorKind.Grounding ||
+                    slot.Grounding.Mode == GroundingMode.None)
+                {
+                    continue;
+                }
+
+                foreach (int index in chunk)
+                {
+                    if (!IsBehaviorActive(states[index].BehaviorActiveMask, slot.SlotIndex))
+                    {
+                        continue;
+                    }
+
+                    positions[index].Value.Y = slot.Grounding.Offset;
+                }
+            }
+        }
+
+        private static bool CanSkipOwnerBackedSnapToGround(
+            in PerformerState state,
+            in GroundingConfig config,
+            TransformSource transformSource)
+        {
+            if (config.Mode != GroundingMode.SnapToGround ||
+                config.Offset != 0f ||
+                state.AnchorKind != PresentationAnchorKind.Entity ||
+                transformSource != TransformSource.EntityTransform)
+            {
+                return false;
+            }
+
+            return true;
+        }
+
+        private bool ShouldSkipOwnerBackedSnapToGround(
+            in PerformerState state,
+            in GroundingConfig config,
+            Entity performer)
+        {
+            if (config.Mode != GroundingMode.SnapToGround ||
+                config.Offset != 0f ||
+                state.AnchorKind != PresentationAnchorKind.Entity ||
+                !World.Has<PerformerTransformSource>(performer) ||
+                World.Get<PerformerTransformSource>(performer).Value != TransformSource.EntityTransform)
+            {
+                return false;
+            }
+
+            return true;
+        }
+
+        private bool TrySkipOwnerBackedSnapToGroundBatch(
+            Span<PerformerState> states,
+            BehaviorSlot[] behaviors,
+            Chunk chunk)
+        {
+            if (behaviors.Length == 0 || !chunk.Has<PerformerTransformSource>())
+            {
+                return false;
+            }
+
+            Span<PerformerTransformSource> transformSources = chunk.GetSpan<PerformerTransformSource>();
+            bool sawGrounding = false;
+            for (int behaviorIndex = 0; behaviorIndex < behaviors.Length; behaviorIndex++)
+            {
+                ref readonly BehaviorSlot slot = ref behaviors[behaviorIndex];
+                if (slot.Kind != BehaviorKind.Grounding || slot.Grounding.Mode == GroundingMode.None)
+                {
+                    continue;
+                }
+
+                sawGrounding = true;
+                if (!CanSkipOwnerBackedSnapToGroundBehavior(in slot.Grounding))
+                {
+                    return false;
+                }
+
+                foreach (int index in chunk)
+                {
+                    if (!IsBehaviorActive(states[index].BehaviorActiveMask, slot.SlotIndex))
+                    {
+                        continue;
+                    }
+
+                    if (!CanSkipOwnerBackedSnapToGroundPerformer(in states[index], transformSources[index].Value))
+                    {
+                        return false;
+                    }
+                }
+            }
+
+            return sawGrounding;
+        }
+
+        private bool TrySkipOwnerBackedSnapToGroundBatch(
+            Span<PerformerState> states,
+            int[] behaviorIndices,
+            BehaviorSlot[] behaviors,
+            Chunk chunk)
+        {
+            if (behaviorIndices.Length == 0 || !chunk.Has<PerformerTransformSource>())
+            {
+                return false;
+            }
+
+            Span<PerformerTransformSource> transformSources = chunk.GetSpan<PerformerTransformSource>();
+            bool sawGrounding = false;
+            for (int i = 0; i < behaviorIndices.Length; i++)
+            {
+                ref readonly BehaviorSlot slot = ref behaviors[behaviorIndices[i]];
+                if (slot.Kind != BehaviorKind.Grounding || slot.Grounding.Mode == GroundingMode.None)
+                {
+                    continue;
+                }
+
+                sawGrounding = true;
+                if (!CanSkipOwnerBackedSnapToGroundBehavior(in slot.Grounding))
+                {
+                    return false;
+                }
+
+                foreach (int index in chunk)
+                {
+                    if (!IsBehaviorActive(states[index].BehaviorActiveMask, slot.SlotIndex))
+                    {
+                        continue;
+                    }
+
+                    if (!CanSkipOwnerBackedSnapToGroundPerformer(in states[index], transformSources[index].Value))
+                    {
+                        return false;
+                    }
+                }
+            }
+
+            return sawGrounding;
+        }
+
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        private static bool CanSkipOwnerBackedSnapToGroundBehavior(in GroundingConfig config)
+        {
+            return config.Mode == GroundingMode.SnapToGround && config.Offset == 0f;
+        }
+
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        private static bool CanSkipOwnerBackedSnapToGroundPerformer(
+            in PerformerState state,
+            TransformSource transformSource)
+        {
+            return state.AnchorKind == PresentationAnchorKind.Entity &&
+                   transformSource == TransformSource.EntityTransform &&
+                   state.OwnerEntity != Entity.Null;
+        }
+
+        private void ApplyGroundingBatch(
+            Span<PerformerWorldPosition> positions,
+            Span<PerformerWorldRotation> rotations,
+            Span<PerformerState> states,
+            int[] tickBehaviorIndices,
+            BehaviorSlot[] behaviors,
+            IVisualHeightmap heightmap,
+            Chunk chunk)
+        {
+            if (tickBehaviorIndices.Length == 0)
+            {
+                return;
+            }
+
+            foreach (int behaviorIndex in tickBehaviorIndices)
+            {
+                ref readonly BehaviorSlot slot = ref behaviors[behaviorIndex];
+                if (slot.Kind != BehaviorKind.Grounding || slot.Grounding.Mode == GroundingMode.None)
+                {
+                    continue;
+                }
+
+                int count = 0;
+                EnsureGroundingCapacity(chunk.Count);
+                Span<PerformerTransformSource> transformSources = chunk.Has<PerformerTransformSource>()
+                    ? chunk.GetSpan<PerformerTransformSource>()
+                    : Span<PerformerTransformSource>.Empty;
+                foreach (int index in chunk)
+                {
+                    if (!IsBehaviorActive(states[index].BehaviorActiveMask, slot.SlotIndex))
+                    {
+                        continue;
+                    }
+
+                    TransformSource transformSource = transformSources.IsEmpty
+                        ? TransformSource.WorldFixed
+                        : transformSources[index].Value;
+                    if (CanSkipOwnerBackedSnapToGround(in states[index], slot.Grounding, transformSource))
+                    {
+                        continue;
+                    }
+
+                    _groundingIndices[count] = index;
+                    _groundingPositions[count] = positions[index].Value;
+                    _groundingRotations[count] = rotations[index].Value;
+                    _groundingModes[count] = slot.Grounding.Mode;
+                    _groundingOffsets[count] = slot.Grounding.Offset;
+                    count++;
+                }
+
+                if (count == 0)
+                {
+                    continue;
+                }
+
+                if (slot.Grounding.Mode == GroundingMode.SnapToGround)
+                {
+                    ApplySnapToGroundBatch(count, heightmap);
+                }
+                else
+                {
+                    PerformerGroundingUtility.ResolveBatch(
+                        _groundingPositions.AsSpan(0, count),
+                        _groundingRotations.AsSpan(0, count),
+                        _groundingModes.AsSpan(0, count),
+                        _groundingOffsets.AsSpan(0, count),
+                        heightmap);
+                }
+
+                for (int i = 0; i < count; i++)
+                {
+                    int index = _groundingIndices[i];
+                    positions[index].Value = _groundingPositions[i];
+                    rotations[index].Value = _groundingRotations[i];
+                }
+            }
+        }
+
+        private void ApplyBootstrapGroundingBatch(
+            Span<PerformerWorldPosition> positions,
+            Span<PerformerWorldRotation> rotations,
+            Span<PerformerState> states,
+            BehaviorSlot[] behaviors,
+            IVisualHeightmap heightmap,
+            Chunk chunk)
+        {
+            for (int behaviorIndex = 0; behaviorIndex < behaviors.Length; behaviorIndex++)
+            {
+                ref readonly BehaviorSlot slot = ref behaviors[behaviorIndex];
+                if (slot.Kind != BehaviorKind.Grounding || slot.Grounding.Mode == GroundingMode.None)
+                {
+                    continue;
+                }
+
+                int count = 0;
+                EnsureGroundingCapacity(chunk.Count);
+                Span<PerformerTransformSource> transformSources = chunk.Has<PerformerTransformSource>()
+                    ? chunk.GetSpan<PerformerTransformSource>()
+                    : Span<PerformerTransformSource>.Empty;
+                foreach (int index in chunk)
+                {
+                    if (!IsBehaviorActive(states[index].BehaviorActiveMask, slot.SlotIndex))
+                    {
+                        continue;
+                    }
+
+                    TransformSource transformSource = transformSources.IsEmpty
+                        ? TransformSource.WorldFixed
+                        : transformSources[index].Value;
+                    if (CanSkipOwnerBackedSnapToGround(in states[index], slot.Grounding, transformSource))
+                    {
+                        continue;
+                    }
+
+                    _groundingIndices[count] = index;
+                    _groundingPositions[count] = positions[index].Value;
+                    _groundingRotations[count] = rotations[index].Value;
+                    _groundingModes[count] = slot.Grounding.Mode;
+                    _groundingOffsets[count] = slot.Grounding.Offset;
+                    count++;
+                }
+
+                if (count == 0)
+                {
+                    continue;
+                }
+
+                if (slot.Grounding.Mode == GroundingMode.SnapToGround)
+                {
+                    ApplySnapToGroundBatch(count, heightmap);
+                }
+                else
+                {
+                    PerformerGroundingUtility.ResolveBatch(
+                        _groundingPositions.AsSpan(0, count),
+                        _groundingRotations.AsSpan(0, count),
+                        _groundingModes.AsSpan(0, count),
+                        _groundingOffsets.AsSpan(0, count),
+                        heightmap);
+                }
+
+                for (int i = 0; i < count; i++)
+                {
+                    int index = _groundingIndices[i];
+                    positions[index].Value = _groundingPositions[i];
+                    rotations[index].Value = _groundingRotations[i];
+                }
+            }
+        }
+
+        private void ApplySnapToGroundBatch(int count, IVisualHeightmap heightmap)
+        {
+            const float metersToCm = 100f;
+            const float cmToMeters = 0.01f;
+            Span<float> worldXCm = _groundingWorldXCm.AsSpan(0, count);
+            Span<float> worldZCm = _groundingWorldZCm.AsSpan(0, count);
+            Span<float> heightsCm = _groundingHeightsCm.AsSpan(0, count);
+            for (int i = 0; i < count; i++)
+            {
+                Vector3 position = _groundingPositions[i];
+                worldXCm[i] = position.X * metersToCm;
+                worldZCm[i] = position.Z * metersToCm;
+            }
+
+            if (!heightmap.SampleHeightsCm(worldXCm, worldZCm, heightsCm))
+            {
+                for (int i = 0; i < count; i++)
+                {
+                    _groundingPositions[i].Y = _groundingOffsets[i];
+                }
+
+                Log.Warn(in LogChannels.Presentation, "Performer grounding batch could not sample visual heights; missing-heightmap grounding writes height 0.");
+                return;
+            }
+
+            for (int i = 0; i < count; i++)
+            {
+                float heightCm = heightsCm[i];
+                if (!float.IsFinite(heightCm))
+                {
+                    _groundingPositions[i].Y = _groundingOffsets[i];
+                    continue;
+                }
+
+                _groundingPositions[i].Y = (heightCm * cmToMeters) + _groundingOffsets[i];
+            }
+        }
+
+        private void ApplyParentAttachmentBatch(
+            Span<PerformerWorldPosition> positions,
+            Span<PerformerWorldRotation> rotations,
+            Span<PerformerWorldScale> scales,
+            Span<PerformerTransformSource> sources,
+            Span<PerformerParent> parents,
+            Span<PerformerState> states,
+            int slotIndex,
+            in AttachmentConfig config,
+            Chunk chunk)
+        {
+            foreach (int index in chunk)
+            {
+                if (!IsBehaviorActive(states[index].BehaviorActiveMask, slotIndex))
+                {
+                    continue;
+                }
+
+                Entity parentEntity = parents[index].Parent;
+                if (parentEntity == Entity.Null ||
+                    !TryReadAttachmentParentTransform(
+                        parentEntity,
+                        out Vector3 parentPos,
+                        out Quaternion parentRot,
+                        out Vector3 parentScale))
+                {
+                    continue;
+                }
+
+                Quaternion normalizedParentRot = NormalizeOrIdentity(parentRot);
+                Vector3 normalizedParentScale = NormalizeScale(parentScale);
+                Vector3 scaledOffset = config.InheritScale ? normalizedParentScale * config.Offset : config.Offset;
+                sources[index].Value = TransformSource.AttachedToParent;
+                positions[index].Value = parentPos + Vector3.Transform(scaledOffset, normalizedParentRot);
+                rotations[index].Value = NormalizeOrIdentity(normalizedParentRot * NormalizeOrIdentity(config.RotationOffset));
+                scales[index].Value = config.InheritScale ? normalizedParentScale : Vector3.One;
+            }
+        }
+
+        private bool TryReadAttachmentParentTransform(
+            Entity parent,
+            out Vector3 position,
+            out Quaternion rotation,
+            out Vector3 scale)
+        {
+            if (!World.IsAlive(parent) || !World.Has<PerformerWorldPosition>(parent))
+            {
+                position = default;
+                rotation = Quaternion.Identity;
+                scale = Vector3.One;
+                return false;
+            }
+
+            position = World.Get<PerformerWorldPosition>(parent).Value;
+            rotation = World.Has<PerformerWorldRotation>(parent)
+                ? World.Get<PerformerWorldRotation>(parent).Value
+                : Quaternion.Identity;
+            scale = World.Has<PerformerWorldScale>(parent)
+                ? World.Get<PerformerWorldScale>(parent).Value
+                : Vector3.One;
+            return true;
+        }
+
+        private static bool TryResolveSingleDefinitionChunk(Span<PerformerState> states, int count, out int definitionId)
+        {
+            definitionId = count > 0 ? states[0].DefId : -1;
+            if (definitionId <= 0)
+            {
+                return false;
+            }
+
+            for (int i = 1; i < count; i++)
+            {
+                if (states[i].DefId != definitionId)
+                {
+                    definitionId = -1;
+                    return false;
+                }
+            }
+
+            return true;
+        }
+
+        private void ResolveDefaultTransformSourceBatch(
+            Span<PerformerState> states,
+            Span<PerformerTransformSource> sources,
+            Span<PerformerParent> parents,
+            Chunk chunk)
+        {
+            foreach (int index in chunk)
+            {
+                ref PerformerTransformSource source = ref sources[index];
+                if (source.Value is TransformSource.BoneAttached or TransformSource.AttachedToParent)
+                {
+                    continue;
+                }
+
+                Entity parentEntity = parents[index].Parent;
+                source.Value = parentEntity != Entity.Null && World.IsAlive(parentEntity)
+                    ? TransformSource.InheritParent
+                    : states[index].AnchorKind == PresentationAnchorKind.Entity
+                        ? TransformSource.EntityTransform
+                        : TransformSource.WorldFixed;
+            }
+        }
+
+        private void ResolveTransformBatch(
+            Span<PerformerWorldPosition> positions,
+            Span<PerformerWorldRotation> rotations,
+            Span<PerformerWorldScale> scales,
+            Span<PerformerTransformSource> sources,
+            Span<PerformerParent> parents,
+            Span<PerformerState> states,
+            PerformerDefinition definition,
+            Chunk chunk)
+        {
+            AssetBindingConfig assetBinding = ResolvePrimaryAssetBinding(definition, states[0].BehaviorActiveMask);
+            foreach (int index in chunk)
+            {
+                PerformerTransformSnapshot performerSnapshot = new PerformerTransformSnapshot
+                {
+                    WorldPosition = positions[index].Value,
+                    WorldRotation = rotations[index].Value,
+                    WorldScale = scales[index].Value,
+                    TransformSource = sources[index].Value,
+                };
+
+                Entity parentEntity = parents[index].Parent;
+                bool hasParent = parentEntity != Entity.Null &&
+                                 World.IsAlive(parentEntity) &&
+                                 World.Has<PerformerState>(parentEntity);
+                PerformerTransformSnapshot parentSnapshot = default;
+                if (hasParent)
+                {
+                    parentSnapshot.WorldPosition = World.Has<PerformerWorldPosition>(parentEntity)
+                        ? World.Get<PerformerWorldPosition>(parentEntity).Value
+                        : Vector3.Zero;
+                    parentSnapshot.WorldRotation = World.Has<PerformerWorldRotation>(parentEntity)
+                        ? World.Get<PerformerWorldRotation>(parentEntity).Value
+                        : Quaternion.Identity;
+                    parentSnapshot.WorldScale = World.Has<PerformerWorldScale>(parentEntity)
+                        ? World.Get<PerformerWorldScale>(parentEntity).Value
+                        : Vector3.One;
+                }
+
+                Entity ownerEntity = states[index].OwnerEntity;
+                bool hasOwnerTransform = World.IsAlive(ownerEntity) && World.Has<VisualTransform>(ownerEntity);
+                VisualTransform ownerTransform = hasOwnerTransform
+                    ? World.Get<VisualTransform>(ownerEntity)
+                    : default;
+
+                PerformerResolvedTransform resolved = PerformerGroundingUtility.ResolveTransform(
+                    performerSnapshot,
+                    parentSnapshot,
+                    hasParent,
+                    ownerTransform,
+                    hasOwnerTransform,
+                    assetBinding);
+
+                positions[index].Value = resolved.Position;
+                rotations[index].Value = resolved.Rotation;
+                scales[index].Value = resolved.Scale;
+            }
+        }
+
+        private static AssetBindingConfig ResolvePrimaryAssetBinding(
+            PerformerDefinition definition,
+            uint activeBehaviorMask)
+        {
+            BehaviorSlot[] behaviors = definition.Behaviors;
+            int primaryAssetBehaviorIndex = definition.PrimaryAssetBehaviorIndex;
+            if (primaryAssetBehaviorIndex >= 0 && primaryAssetBehaviorIndex < behaviors.Length)
+            {
+                ref readonly BehaviorSlot primarySlot = ref behaviors[primaryAssetBehaviorIndex];
+                if (primarySlot.Kind == BehaviorKind.AssetBinding &&
+                    IsBehaviorActive(activeBehaviorMask, primarySlot.SlotIndex))
+                {
+                    return primarySlot.AssetBinding;
+                }
+            }
+
+            for (int i = 0; i < behaviors.Length; i++)
+            {
+                ref readonly BehaviorSlot slot = ref behaviors[i];
+                if (slot.Kind == BehaviorKind.AssetBinding &&
+                    IsBehaviorActive(activeBehaviorMask, slot.SlotIndex))
+                {
+                    return slot.AssetBinding;
+                }
+            }
+
+            return new AssetBindingConfig { LocalScale = Vector3.One };
+        }
+
+        private static bool CanProcessBootstrapChunkFast(PerformerDefinition definition)
+        {
+            if (definition.Bindings.Length != 0 ||
+                definition.MaterialBehaviorIndices.Length != 0 ||
+                definition.HasOwnerAttributeBindingWork ||
+                definition.HasOwnerTagBindingWork ||
+                definition.HasSurfaceAuthoring)
+            {
+                return false;
+            }
+
+            BehaviorSlot[] behaviors = definition.Behaviors;
+            uint defaultMask = BuildDefaultBehaviorMaskForFastEligibility(definition);
+            for (int i = 0; i < behaviors.Length; i++)
+            {
+                ref readonly BehaviorSlot slot = ref behaviors[i];
+                if (!IsBehaviorActive(defaultMask, slot.SlotIndex))
+                {
+                    continue;
+                }
+
+                switch (slot.Kind)
+                {
+                    case BehaviorKind.AssetBinding:
+                        break;
+                    case BehaviorKind.Animator:
+                        break;
+                    case BehaviorKind.Attachment:
+                        if (slot.Attachment.Target != AttachmentTarget.Parent)
+                        {
+                            return false;
+                        }
+
+                        break;
+                    case BehaviorKind.Grounding:
+                        break;
+                    default:
+                        return false;
+                }
+            }
+
+            return true;
+        }
+
+        private static uint BuildDefaultBehaviorMaskForFastEligibility(PerformerDefinition definition)
+        {
+            uint mask = 0u;
+            BehaviorSlot[] behaviors = definition.Behaviors;
+            for (int i = 0; i < behaviors.Length; i++)
+            {
+                ref readonly BehaviorSlot slot = ref behaviors[i];
+                if (slot.ActiveByDefault && slot.SlotIndex is >= 0 and < 32)
+                {
+                    mask |= 1u << slot.SlotIndex;
+                }
+            }
+
+            return mask;
+        }
+
+        private static bool DefinitionHasGroundingWork(PerformerDefinition definition)
+        {
+            int[] tickBehaviorIndices = definition.TickBehaviorIndices;
+            BehaviorSlot[] behaviors = definition.Behaviors;
+            for (int i = 0; i < tickBehaviorIndices.Length; i++)
+            {
+                ref readonly BehaviorSlot slot = ref behaviors[tickBehaviorIndices[i]];
+                if (slot.Kind == BehaviorKind.Grounding &&
+                    slot.Grounding.Mode != GroundingMode.None &&
+                    slot.Grounding.UpdatePolicy == GroundingUpdatePolicy.EveryFrame)
+                {
+                    return true;
+                }
+            }
+
+            return false;
+        }
+
+        private static bool DefinitionHasBootstrapGroundingWork(PerformerDefinition definition)
+        {
+            BehaviorSlot[] behaviors = definition.Behaviors;
+            for (int i = 0; i < behaviors.Length; i++)
+            {
+                ref readonly BehaviorSlot slot = ref behaviors[i];
+                if (slot.Kind == BehaviorKind.Grounding && slot.Grounding.Mode != GroundingMode.None)
+                {
+                    return true;
+                }
+            }
+
+            return false;
+        }
+
+        private static bool DefinitionIsGroundingOnly(PerformerDefinition definition)
+        {
+            int[] tickBehaviorIndices = definition.TickBehaviorIndices;
+            if (tickBehaviorIndices.Length == 0)
+            {
+                return false;
+            }
+
+            BehaviorSlot[] behaviors = definition.Behaviors;
+            for (int i = 0; i < tickBehaviorIndices.Length; i++)
+            {
+                ref readonly BehaviorSlot slot = ref behaviors[tickBehaviorIndices[i]];
+                if (slot.Kind != BehaviorKind.Grounding || slot.Grounding.Mode == GroundingMode.None)
+                {
+                    return false;
+                }
+            }
+
+            return true;
+        }
+
+        private static bool TryResolveParentAttachmentOnly(
+            PerformerDefinition definition,
+            out AttachmentConfig config,
+            out int slotIndex)
+        {
+            config = default;
+            slotIndex = -1;
+            int[] tickBehaviorIndices = definition.TickBehaviorIndices;
+            if (tickBehaviorIndices.Length != 1)
+            {
+                return false;
+            }
+
+            BehaviorSlot[] behaviors = definition.Behaviors;
+            ref readonly BehaviorSlot slot = ref behaviors[tickBehaviorIndices[0]];
+            if (slot.Kind != BehaviorKind.Attachment || slot.Attachment.Target != AttachmentTarget.Parent)
+            {
+                return false;
+            }
+
+            config = slot.Attachment;
+            slotIndex = slot.SlotIndex;
+            return true;
+        }
+
+        private void EnsureGroundingCapacity(int required)
+        {
+            if (required <= _groundingPositions.Length)
+            {
+                return;
+            }
+
+            int capacity = Math.Max(required, Math.Max(256, _groundingPositions.Length * 2));
+            Array.Resize(ref _groundingPositions, capacity);
+            Array.Resize(ref _groundingModes, capacity);
+            Array.Resize(ref _groundingOffsets, capacity);
+            Array.Resize(ref _groundingIndices, capacity);
+            Array.Resize(ref _groundingRotations, capacity);
+            Array.Resize(ref _groundingWorldXCm, capacity);
+            Array.Resize(ref _groundingWorldZCm, capacity);
+            Array.Resize(ref _groundingHeightsCm, capacity);
+        }
+
         private void SetTransform(Entity entity, TransformSource source, Vector3 position, Quaternion rotation, Vector3 scale)
         {
             if (World.Has<PerformerTransformSource>(entity))
@@ -890,6 +2033,17 @@ namespace Ludots.Core.Presentation.Systems
             if (World.Has<PerformerWorldScale>(entity))
                 World.Get<PerformerWorldScale>(entity).Value = scale;
         }
+
+        private void SetParam(Entity entity, int paramKey, ParamLane lane, float floatValue, int intValue, in Vector4 vectorValue)
+        {
+            _runtime.SetParamAndPropagateToAffectedChildren(entity, paramKey, lane, floatValue, intValue, in vectorValue);
+        }
+
+        private void ClearParam(Entity entity, int paramKey, ParamLane lane)
+        {
+            _runtime.ClearParamAndPropagateToAffectedChildren(entity, paramKey, lane);
+        }
+
         private void ResolveTransform(Entity entity, ref PerformerState state, PerformerDefinition definition, BehaviorSlot[] behaviors)
         {
             AssetBindingConfig assetBinding = new AssetBindingConfig { LocalScale = Vector3.One };
@@ -948,7 +2102,7 @@ namespace Ludots.Core.Presentation.Systems
             performerSnapshot.TransformSource = World.Has<PerformerTransformSource>(entity) ? World.Get<PerformerTransformSource>(entity).Value : TransformSource.EntityTransform;
 
             PerformerResolvedTransform resolved = PerformerGroundingUtility.ResolveTransform(
-                performerSnapshot, parentSnapshot, hasParent, ownerTransform, hasOwnerTransform, assetBinding, _heightmapProvider());
+                performerSnapshot, parentSnapshot, hasParent, ownerTransform, hasOwnerTransform, assetBinding);
 
             if (World.Has<PerformerWorldPosition>(entity))
                 World.Get<PerformerWorldPosition>(entity).Value = resolved.Position;

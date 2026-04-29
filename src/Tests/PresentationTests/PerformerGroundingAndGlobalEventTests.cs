@@ -1,7 +1,10 @@
 using System;
+using System.Collections.Generic;
 using System.Numerics;
 using Arch.Core;
+using Ludots.Core.Components;
 using Ludots.Core.Gameplay;
+using Ludots.Core.Gameplay.GAS.Components;
 using Ludots.Core.Presentation;
 using Ludots.Core.Presentation.Commands;
 using Ludots.Core.Presentation.Components;
@@ -56,7 +59,7 @@ namespace Ludots.Tests.Presentation
         }
 
         [Test]
-        public void ResolveTransform_EntityTransform_UsesOwnerTransformAndLocalOffset()
+        public void ResolveTransform_EntityTransform_ComposesOwnerTransformAndAssetLocalTransform()
         {
             var instance = new PerformerTransformSnapshot
             {
@@ -87,10 +90,10 @@ namespace Ludots.Tests.Presentation
                 hasOwnerTransform: true,
                 asset);
 
-            Assert.That(resolved.Position.X, Is.EqualTo(11f).Within(0.001f));
+            Assert.That(resolved.Position.X, Is.EqualTo(10f).Within(0.001f));
             Assert.That(resolved.Position.Y, Is.EqualTo(2f).Within(0.001f));
-            Assert.That(resolved.Position.Z, Is.EqualTo(20f).Within(0.001f));
-            Assert.That(resolved.Scale, Is.EqualTo(new Vector3(2f, 3f, 4f)));
+            Assert.That(resolved.Position.Z, Is.EqualTo(11f).Within(0.001f));
+            Assert.That(resolved.Scale, Is.EqualTo(new Vector3(18f, 27f, 36f)));
             Vector3 forward = Vector3.Transform(Vector3.UnitZ, resolved.Rotation);
             Assert.That(MathF.Abs(forward.X), Is.GreaterThan(0.6f));
         }
@@ -127,7 +130,7 @@ namespace Ludots.Tests.Presentation
         }
 
         [Test]
-        public void ResolveTransform_SnapToGround_UsesVisualHeightmap()
+        public void ResolveTransform_WorldFixed_DoesNotApplyGrounding()
         {
             var instance = new PerformerTransformSnapshot
             {
@@ -139,8 +142,6 @@ namespace Ludots.Tests.Presentation
             var asset = new AssetBindingConfig
             {
                 LocalScale = Vector3.One,
-                Grounding = GroundingMode.SnapToGround,
-                GroundingOffset = 1.25f,
             };
 
             PerformerResolvedTransform resolved = PerformerGroundingUtility.ResolveTransform(
@@ -149,10 +150,9 @@ namespace Ludots.Tests.Presentation
                 hasParent: false,
                 ownerTransform: default,
                 hasOwnerTransform: false,
-                asset,
-                new StubHeightmap(heightCm: 250f));
+                asset);
 
-            Assert.That(resolved.Position.Y, Is.EqualTo(3.75f).Within(0.001f));
+            Assert.That(resolved.Position.Y, Is.EqualTo(9f).Within(0.001f));
         }
 
         [Test]
@@ -168,7 +168,6 @@ namespace Ludots.Tests.Presentation
             var asset = new AssetBindingConfig
             {
                 LocalScale = Vector3.One,
-                Grounding = GroundingMode.None,
             };
 
             PerformerResolvedTransform resolved = PerformerGroundingUtility.ResolveTransform(
@@ -177,8 +176,7 @@ namespace Ludots.Tests.Presentation
                 hasParent: false,
                 ownerTransform: default,
                 hasOwnerTransform: false,
-                asset,
-                new ThrowingHeightmap());
+                asset);
 
             Assert.That(resolved.Position, Is.EqualTo(new Vector3(7f, 8f, 9f)));
         }
@@ -200,7 +198,14 @@ namespace Ludots.Tests.Presentation
             ];
             float[] offsets = [0f, 1.25f, 0.5f];
 
-            PerformerGroundingUtility.ResolveBatch(positions, modes, offsets, new StubHeightmap(heightCm: 250f));
+            Quaternion[] rotations =
+            [
+                Quaternion.Identity,
+                Quaternion.Identity,
+                Quaternion.Identity,
+            ];
+
+            PerformerGroundingUtility.ResolveBatch(positions, rotations, modes, offsets, new StubHeightmap(heightCm: 250f));
 
             Assert.That(positions[0], Is.EqualTo(new Vector3(1f, 2f, 3f)));
             Assert.That(positions[1].Y, Is.EqualTo(3.75f).Within(0.001f));
@@ -208,32 +213,18 @@ namespace Ludots.Tests.Presentation
         }
 
         [Test]
-        public void ResolveTransform_AlignToSurface_RotatesUpAxisToGroundNormal()
+        public void ResolveBatch_AlignToSurface_RotatesUpAxisToGroundNormal()
         {
-            var instance = new PerformerTransformSnapshot
-            {
-                TransformSource = TransformSource.WorldFixed,
-                WorldPosition = new Vector3(1f, 0f, 2f),
-                WorldRotation = Quaternion.Identity,
-            };
-
-            var asset = new AssetBindingConfig
-            {
-                LocalScale = Vector3.One,
-                Grounding = GroundingMode.AlignToSurface,
-            };
-
+            Vector3[] positions = [new Vector3(1f, 0f, 2f)];
+            Quaternion[] rotations = [Quaternion.Identity];
+            GroundingMode[] modes = [GroundingMode.AlignToSurface];
+            float[] offsets = [0f];
             Vector3 surfaceNormal = Vector3.Normalize(new Vector3(0f, 1f, 1f));
-            PerformerResolvedTransform resolved = PerformerGroundingUtility.ResolveTransform(
-                instance,
-                default,
-                hasParent: false,
-                ownerTransform: default,
-                hasOwnerTransform: false,
-                asset,
-                new StubHeightmap(heightCm: 120f, normal: surfaceNormal));
 
-            Vector3 up = Vector3.Transform(Vector3.UnitY, resolved.Rotation);
+            PerformerGroundingUtility.ResolveBatch(positions, rotations, modes, offsets, new StubHeightmap(heightCm: 120f, normal: surfaceNormal));
+
+            Vector3 up = Vector3.Transform(Vector3.UnitY, rotations[0]);
+            Assert.That(positions[0].Y, Is.EqualTo(1.2f).Within(0.001f));
             Assert.That(Vector3.Dot(Vector3.Normalize(up), surfaceNormal), Is.GreaterThan(0.999f));
         }
 
@@ -245,12 +236,12 @@ namespace Ludots.Tests.Presentation
                 TransformSource = TransformSource.BoneAttached,
                 WorldPosition = new Vector3(5f, 6f, 7f),
                 WorldRotation = Quaternion.Identity,
+                WorldScale = Vector3.One,
             };
 
             var asset = new AssetBindingConfig
             {
                 LocalScale = new Vector3(2f, 3f, 4f),
-                Grounding = GroundingMode.SnapToGround,
             };
 
             PerformerResolvedTransform resolved = PerformerGroundingUtility.ResolveTransform(
@@ -259,11 +250,10 @@ namespace Ludots.Tests.Presentation
                 hasParent: false,
                 ownerTransform: default,
                 hasOwnerTransform: false,
-                asset,
-                new StubHeightmap(heightCm: 999f));
+                asset);
 
             Assert.That(resolved.Position, Is.EqualTo(instance.WorldPosition));
-            Assert.That(resolved.Scale, Is.EqualTo(asset.LocalScale));
+            Assert.That(resolved.Scale, Is.EqualTo(instance.WorldScale));
         }
 
         [Test]
@@ -280,7 +270,6 @@ namespace Ludots.Tests.Presentation
             var asset = new AssetBindingConfig
             {
                 LocalScale = Vector3.One,
-                Grounding = GroundingMode.AlignToSurface,
             };
 
             PerformerResolvedTransform resolved = PerformerGroundingUtility.ResolveTransform(
@@ -289,8 +278,7 @@ namespace Ludots.Tests.Presentation
                 hasParent: false,
                 ownerTransform: default,
                 hasOwnerTransform: false,
-                asset,
-                new StubHeightmap(heightCm: 999f));
+                asset);
 
             Assert.That(resolved.Position, Is.EqualTo(instance.WorldPosition));
             Assert.That(resolved.Scale, Is.EqualTo(instance.WorldScale));
@@ -330,8 +318,6 @@ namespace Ludots.Tests.Presentation
                             Mobility = VisualMobility.Static,
                             LocalOffset = new Vector3(2f, 0f, -3f),
                             LocalScale = new Vector3(1.5f, 1f, 1.5f),
-                            Grounding = GroundingMode.SnapToGround,
-                            GroundingOffset = 0.25f,
                             ScaleParamKey = -1,
                             ColorParamKey = -1,
                             MaterialParamKey = -1,
@@ -375,6 +361,476 @@ namespace Ludots.Tests.Presentation
             Assert.That(world.Has<PerformerBootstrapPending>(performer), Is.True, "grounding/local transform still require one-shot bootstrap.");
             Assert.That(world.Has<PerfStaticStableVisual>(performer), Is.True, "grounded static mesh should still use event-driven stable emit after bootstrap.");
             Assert.That(world.Get<PerformerEmitCache>(performer).StaticDirty, Is.EqualTo((byte)1));
+        }
+
+        [Test]
+        public void RuntimeCreate_StaticOnceGrounding_DoesNotEnterTickDrivenGrounding()
+        {
+            using var world = World.Create();
+            var commands = new PerformerCommandBuffer();
+            var events = new PresentationEventStream();
+            var runtime = new PerformerEntityRuntime(world);
+            var stableIds = new PresentationStableIdAllocator();
+            var definitions = new PerformerDefinitionRegistry();
+            Entity owner = world.Create(
+                new VisualTransform
+                {
+                    Position = new Vector3(10f, 2f, 20f),
+                    Rotation = Quaternion.Identity,
+                    Scale = Vector3.One,
+                },
+                new PresentationStaticTransform());
+
+            int defId = definitions.Register("static.once.grounded.mesh", new PerformerDefinition
+            {
+                Behaviors =
+                [
+                    new BehaviorSlot
+                    {
+                        SlotIndex = 0,
+                        Kind = BehaviorKind.AssetBinding,
+                        ActiveByDefault = true,
+                        AssetBinding = new AssetBindingConfig
+                        {
+                            AssetKind = AssetKind.Mesh,
+                            AssetId = 77,
+                            MaterialId = 11,
+                            RenderPath = VisualRenderPath.InstancedStaticMesh,
+                            Mobility = VisualMobility.Static,
+                            LocalScale = Vector3.One,
+                            ScaleParamKey = -1,
+                            ColorParamKey = -1,
+                            MaterialParamKey = -1,
+                            AssetSwapParamKey = -1,
+                            VisibilityParamKey = -1,
+                        },
+                    },
+                    new BehaviorSlot
+                    {
+                        SlotIndex = 1,
+                        Kind = BehaviorKind.Grounding,
+                        ActiveByDefault = true,
+                        Grounding = new GroundingConfig
+                        {
+                            Mode = GroundingMode.SnapToGround,
+                            Offset = 0f,
+                            UpdatePolicy = GroundingUpdatePolicy.Once,
+                        },
+                    },
+                ],
+            });
+
+            using var runtimeSystem = new PerformerRuntimeSystem(
+                world,
+                commands,
+                events,
+                new TransientMarkerBuffer(),
+                new PresentationRequestBuffer(),
+                runtime,
+                stableIds,
+                definitions);
+
+            Assert.That(commands.TryAdd(new PerformerCommand
+            {
+                CommandKind = PerformerCommandKind.CreatePerformer,
+                PerformerDefinitionId = defId,
+                Source = owner,
+                ScopeTag = 1,
+                AnchorKind = PresentationAnchorKind.Entity,
+            }), Is.True);
+
+            runtimeSystem.Update(0.016f);
+
+            Entity performer = Entity.Null;
+            world.Query(new QueryDescription().WithAll<PerformerState>(), (Entity entity, ref PerformerState state) =>
+            {
+                if (state.DefId == defId)
+                {
+                    performer = entity;
+                }
+            });
+
+            Assert.That(performer, Is.Not.EqualTo(Entity.Null));
+            Assert.That(world.Has<PerformerBootstrapPending>(performer), Is.True);
+            Assert.That(world.Has<PerfHasGrounding>(performer), Is.False, "Once grounding must stay out of the per-frame grounding query.");
+            Assert.That(world.Has<PerfStaticStableVisual>(performer), Is.True, "Static mesh with one-shot grounding remains eligible for event-driven stable emit.");
+        }
+
+        [Test]
+        public void BehaviorSystem_OwnerAttributeChangeBuffer_UpdatesOwnerScopedPerformerOnly()
+        {
+            using var world = World.Create();
+            var runtime = new PerformerEntityRuntime(world);
+            var definitions = new PerformerDefinitionRegistry();
+            var events = new PresentationEventStream();
+            var ownerChanges = new PresentationOwnerChangeBuffer();
+            var sounds = new SoundRequestBuffer();
+            int durabilityId = 7;
+            Entity owner = world.Create(new AttributeBuffer());
+            ref AttributeBuffer attributes = ref world.Get<AttributeBuffer>(owner);
+            attributes.SetBase(durabilityId, 100f);
+            attributes.SetCurrent(durabilityId, 50f);
+
+            int defId = definitions.Register("owner.attr.bound.visual", new PerformerDefinition
+            {
+                Behaviors =
+                [
+                    new BehaviorSlot
+                    {
+                        SlotIndex = 0,
+                        Kind = BehaviorKind.AttributeBinding,
+                        ActiveByDefault = true,
+                        AttributeBinding = new AttributeBindingConfig
+                        {
+                            AttributeId = durabilityId,
+                            TargetParamKey = 101,
+                            Mode = ValueSourceKind.AttributeRatio,
+                            Thresholds =
+                            [
+                                new ThresholdMapping
+                                {
+                                    Threshold = 0.5f,
+                                    OutputParamKey = 104,
+                                    OutputValue = 2f,
+                                },
+                            ],
+                        },
+                    },
+                ],
+            });
+            Entity performer = runtime.Create(
+                defId,
+                owner,
+                scopeId: 1,
+                PresentationAnchorKind.Entity,
+                worldPosition: Vector3.Zero,
+                stableId: 11,
+                parent: Entity.Null,
+                definitions.Get(defId));
+
+            ownerChanges.TryAdd(new PresentationOwnerChange(owner, PresentationOwnerChangeKind.Attribute, durabilityId));
+
+            using var system = new PerformerBehaviorSystem(
+                world,
+                runtime,
+                definitions,
+                events,
+                ownerChanges,
+                sounds);
+
+            system.Update(0.016f);
+
+            Assert.That(world.Get<PerformerFloatParams>(performer).TryGet(101, out float ratio), Is.True);
+            Assert.That(ratio, Is.EqualTo(0.5f).Within(0.001f));
+            Assert.That(world.Get<PerformerIntParams>(performer).TryGet(104, out int state), Is.True);
+            Assert.That(state, Is.EqualTo(2));
+        }
+
+        [Test]
+        public void BehaviorSystem_BootstrapAttachmentThenOnceGrounding_ComposesBeforeSamplingHeight()
+        {
+            using var world = World.Create();
+            var runtime = new PerformerEntityRuntime(world);
+            var definitions = new PerformerDefinitionRegistry();
+            var events = new PresentationEventStream();
+            var sounds = new SoundRequestBuffer();
+            Entity owner = world.Create(
+                new VisualTransform
+                {
+                    Position = new Vector3(10f, 0f, 20f),
+                    Rotation = Quaternion.Identity,
+                    Scale = Vector3.One,
+                },
+                new PresentationStaticTransform());
+
+            int parentDefId = definitions.Register("static.parent", new PerformerDefinition());
+            int childDefId = definitions.Register("static.child.attached.once.grounded", new PerformerDefinition
+            {
+                Behaviors =
+                [
+                    new BehaviorSlot
+                    {
+                        SlotIndex = 0,
+                        Kind = BehaviorKind.Attachment,
+                        ActiveByDefault = true,
+                        Attachment = new AttachmentConfig
+                        {
+                            Target = AttachmentTarget.Parent,
+                            Offset = new Vector3(2f, 0f, 3f),
+                            RotationOffset = Quaternion.Identity,
+                            InheritScale = false,
+                        },
+                    },
+                    new BehaviorSlot
+                    {
+                        SlotIndex = 1,
+                        Kind = BehaviorKind.Grounding,
+                        ActiveByDefault = true,
+                        Grounding = new GroundingConfig
+                        {
+                            Mode = GroundingMode.SnapToGround,
+                            Offset = 0.5f,
+                            UpdatePolicy = GroundingUpdatePolicy.Once,
+                        },
+                    },
+                ],
+            });
+            Entity parent = runtime.Create(
+                parentDefId,
+                owner,
+                scopeId: 1,
+                PresentationAnchorKind.Entity,
+                world.Get<VisualTransform>(owner).Position,
+                stableId: 11,
+                parent: Entity.Null,
+                definitions.Get(parentDefId));
+            Entity child = runtime.Create(
+                childDefId,
+                owner,
+                scopeId: 1,
+                PresentationAnchorKind.Entity,
+                world.Get<VisualTransform>(owner).Position,
+                stableId: 12,
+                parent,
+                definitions.Get(childDefId));
+            world.Add(child, new PerformerBootstrapPending());
+
+            using var system = new PerformerBehaviorSystem(
+                world,
+                runtime,
+                definitions,
+                events,
+                sounds,
+                new StubHeightmap(heightCm: 250f));
+
+            system.Update(0.016f);
+
+            Vector3 position = world.Get<PerformerWorldPosition>(child).Value;
+            Assert.That(position.X, Is.EqualTo(12f).Within(0.001f));
+            Assert.That(position.Z, Is.EqualTo(23f).Within(0.001f));
+            Assert.That(position.Y, Is.EqualTo(3f).Within(0.001f));
+            Assert.That(world.Has<PerformerBootstrapPending>(child), Is.False);
+            Assert.That(world.Has<PerfHasGrounding>(child), Is.False);
+        }
+
+        [Test]
+        public void BehaviorSystem_SkipsDuplicateEntityBackedSnapToGround_WhenOwnerVisualHeightAlreadySampled()
+        {
+            using var world = World.Create();
+            var runtime = new PerformerEntityRuntime(world);
+            var definitions = new PerformerDefinitionRegistry();
+            var events = new PresentationEventStream();
+            var sounds = new SoundRequestBuffer();
+            Entity frame = world.Create(new PresentationFrameState { FrameId = 7 }, new PresentationFrameStateTag());
+            Entity owner = world.Create(
+                new VisualTransform
+                {
+                    Position = new Vector3(10f, 2.5f, 20f),
+                    Rotation = Quaternion.Identity,
+                    Scale = Vector3.One,
+                },
+                new VisualHeightmapSampleState { FrameId = 7, Sampled = 1 });
+
+            int defId = definitions.Register("entity.grounded.root", new PerformerDefinition
+            {
+                Behaviors =
+                [
+                    new BehaviorSlot
+                    {
+                        SlotIndex = 0,
+                        Kind = BehaviorKind.Grounding,
+                        ActiveByDefault = true,
+                        Grounding = new GroundingConfig
+                        {
+                            Mode = GroundingMode.SnapToGround,
+                            Offset = 0f,
+                            UpdatePolicy = GroundingUpdatePolicy.EveryFrame,
+                        },
+                    },
+                ],
+            });
+
+            Entity performer = runtime.Create(
+                defId,
+                owner,
+                scopeId: 1,
+                PresentationAnchorKind.Entity,
+                worldPosition: world.Get<VisualTransform>(owner).Position,
+                stableId: 11,
+                parent: Entity.Null,
+                definitions.Get(defId));
+            if (world.Has<PerformerBootstrapPending>(performer))
+            {
+                world.Remove<PerformerBootstrapPending>(performer);
+            }
+            Assert.That(world.Has<PerfHasGrounding>(performer), Is.True);
+
+            using var system = new PerformerBehaviorSystem(
+                world,
+                runtime,
+                definitions,
+                events,
+                sounds,
+                new ThrowingHeightmap());
+
+            Assert.DoesNotThrow(() => system.Update(0.016f));
+            Assert.That(world.Get<PerformerWorldPosition>(performer).Value.Y, Is.EqualTo(2.5f).Within(0.001f));
+            world.Destroy(frame);
+        }
+
+        [Test]
+        public void BehaviorSystem_DoesNotSkipSnapToGround_WhenOffsetRequiresPerformerGrounding()
+        {
+            using var world = World.Create();
+            var runtime = new PerformerEntityRuntime(world);
+            var definitions = new PerformerDefinitionRegistry();
+            var events = new PresentationEventStream();
+            var sounds = new SoundRequestBuffer();
+            world.Create(new PresentationFrameState { FrameId = 7 }, new PresentationFrameStateTag());
+            Entity owner = world.Create(
+                new VisualTransform
+                {
+                    Position = new Vector3(10f, 2.5f, 20f),
+                    Rotation = Quaternion.Identity,
+                    Scale = Vector3.One,
+                },
+                new VisualHeightmapSampleState { FrameId = 7, Sampled = 1 });
+
+            int defId = definitions.Register("entity.grounded.offset.root", new PerformerDefinition
+            {
+                Behaviors =
+                [
+                    new BehaviorSlot
+                    {
+                        SlotIndex = 0,
+                        Kind = BehaviorKind.Grounding,
+                        ActiveByDefault = true,
+                        Grounding = new GroundingConfig
+                        {
+                            Mode = GroundingMode.SnapToGround,
+                            Offset = 1.25f,
+                            UpdatePolicy = GroundingUpdatePolicy.EveryFrame,
+                        },
+                    },
+                ],
+            });
+
+            Entity performer = runtime.Create(
+                defId,
+                owner,
+                scopeId: 1,
+                PresentationAnchorKind.Entity,
+                worldPosition: world.Get<VisualTransform>(owner).Position,
+                stableId: 11,
+                parent: Entity.Null,
+                definitions.Get(defId));
+            if (world.Has<PerformerBootstrapPending>(performer))
+            {
+                world.Remove<PerformerBootstrapPending>(performer);
+            }
+
+            using var system = new PerformerBehaviorSystem(
+                world,
+                runtime,
+                definitions,
+                events,
+                sounds,
+                new StubHeightmap(heightCm: 250f));
+
+            system.Update(0.016f);
+
+            Assert.That(world.Get<PerformerWorldPosition>(performer).Value.Y, Is.EqualTo(3.75f).Within(0.001f));
+        }
+
+        [Test]
+        public void BehaviorSystem_EveryFrameGroundingWithoutHeightmap_FallsBackToOffset()
+        {
+            using var world = World.Create();
+            var runtime = new PerformerEntityRuntime(world);
+            var definitions = new PerformerDefinitionRegistry();
+            var events = new PresentationEventStream();
+            var sounds = new SoundRequestBuffer();
+            Entity owner = world.Create(
+                new VisualTransform
+                {
+                    Position = new Vector3(10f, 9f, 20f),
+                    Rotation = Quaternion.Identity,
+                    Scale = Vector3.One,
+                });
+
+            int defId = definitions.Register("entity.grounded.no.heightmap", new PerformerDefinition
+            {
+                Behaviors =
+                [
+                    new BehaviorSlot
+                    {
+                        SlotIndex = 0,
+                        Kind = BehaviorKind.Grounding,
+                        ActiveByDefault = true,
+                        Grounding = new GroundingConfig
+                        {
+                            Mode = GroundingMode.SnapToGround,
+                            Offset = 1.25f,
+                            UpdatePolicy = GroundingUpdatePolicy.EveryFrame,
+                        },
+                    },
+                ],
+            });
+
+            Entity performer = runtime.Create(
+                defId,
+                owner,
+                scopeId: 1,
+                PresentationAnchorKind.Entity,
+                worldPosition: world.Get<VisualTransform>(owner).Position,
+                stableId: 11,
+                parent: Entity.Null,
+                definitions.Get(defId));
+            if (world.Has<PerformerBootstrapPending>(performer))
+            {
+                world.Remove<PerformerBootstrapPending>(performer);
+            }
+
+            using var system = new PerformerBehaviorSystem(
+                world,
+                runtime,
+                definitions,
+                events,
+                sounds,
+                heightmap: null);
+
+            Assert.DoesNotThrow(() => system.Update(0.016f));
+
+            Assert.That(world.Has<PerfHasGrounding>(performer), Is.True);
+            Assert.That(world.Get<PerformerWorldPosition>(performer).Value.Y, Is.EqualTo(1.25f).Within(0.001f));
+        }
+
+        [Test]
+        public void TerrainHeightSync_StaticWithoutHeightmap_ProjectsOnceToZeroAndClearsPending()
+        {
+            using var world = World.Create();
+            world.Create(new PresentationFrameState { Enabled = true, InterpolationAlpha = 1f, FrameId = 1 }, new PresentationFrameStateTag());
+            Entity entity = world.Create(
+                WorldPositionCm.FromCmFloat(100f, 200f),
+                new PreviousWorldPositionCm { Value = WorldPositionCm.FromCmFloat(100f, 200f).Value },
+                new VisualTransform
+                {
+                    Position = new Vector3(1f, 9f, 2f),
+                    Rotation = Quaternion.Identity,
+                    Scale = Vector3.One,
+                },
+                new PresentationStaticTransform(),
+                new PresentationStaticHeightPending());
+
+            using var system = new TerrainHeightSyncSystem(world, new Dictionary<string, object>());
+
+            Assert.DoesNotThrow(() => system.Update(0.016f));
+            Assert.That(world.Get<VisualTransform>(entity).Position.Y, Is.EqualTo(0f).Within(0.001f));
+            Assert.That(world.Has<PresentationStaticHeightPending>(entity), Is.False);
+
+            world.Get<VisualTransform>(entity).Position.Y = 9f;
+            Assert.DoesNotThrow(() => system.Update(0.016f));
+            Assert.That(world.Get<VisualTransform>(entity).Position.Y, Is.EqualTo(9f).Within(0.001f));
         }
 
         [Test]

@@ -4,6 +4,7 @@ using Arch.System;
 using Ludots.Core.Engine;
 using Ludots.Core.Gameplay.GAS.Components;
 using Ludots.Core.Gameplay.GAS.Orders;
+using System.Runtime.CompilerServices;
 
 namespace Ludots.Core.Gameplay.GAS.Systems
 {
@@ -43,48 +44,59 @@ namespace Ludots.Core.Gameplay.GAS.Systems
         public override void Update(in float dt)
         {
             int currentStep = _clock.Now(ClockDomainId.Step);
+            Span<Order> extracted = stackalloc Order[OrderContinuationBuffer.MAX_CONTINUATIONS];
 
-            World.Query(in Query, (Entity entity, ref OrderBuffer buffer, ref OrderContinuationBuffer continuations, ref CompletedOrderSignal signal) =>
+            foreach (ref var chunk in World.Query(in Query))
             {
-                if (signal.OrderId <= 0 || !continuations.HasEntries)
+                ref Entity entityFirst = ref chunk.Entity(0);
+                var buffers = chunk.GetSpan<OrderBuffer>();
+                var continuations = chunk.GetSpan<OrderContinuationBuffer>();
+                var signals = chunk.GetSpan<CompletedOrderSignal>();
+                foreach (var index in chunk)
                 {
+                    ref CompletedOrderSignal signal = ref signals[index];
+                    ref OrderContinuationBuffer continuation = ref continuations[index];
+                    if (signal.OrderId <= 0 || !continuation.HasEntries)
+                    {
+                        signal = default;
+                        continue;
+                    }
+
+                    int count = continuation.Extract(signal.OrderId, extracted);
                     signal = default;
-                    return;
-                }
+                    Entity entity = Unsafe.Add(ref entityFirst, index);
+                    ref OrderBuffer buffer = ref buffers[index];
 
-                Span<Order> extracted = stackalloc Order[OrderContinuationBuffer.MAX_CONTINUATIONS];
-                int count = continuations.Extract(signal.OrderId, extracted);
-                signal = default;
-
-                for (int i = 0; i < count; i++)
-                {
-                    var order = extracted[i];
-                    order.Actor = entity;
-
-                    var result = OrderSubmitter.Submit(
-                        World,
-                        entity,
-                        in order,
-                        _orderTypeRegistry,
-                        _orderRuleRegistry,
-                        currentStep,
-                        _stepRateHz);
-
-                    if (result != OrderSubmitResult.Blocked)
+                    for (int i = 0; i < count; i++)
                     {
-                        continue;
-                    }
+                        var order = extracted[i];
+                        order.Actor = entity;
 
-                    var config = _orderTypeRegistry.Get(order.OrderTypeId);
-                    if (config.PendingBufferWindowMs <= 0)
-                    {
-                        continue;
-                    }
+                        var result = OrderSubmitter.Submit(
+                            World,
+                            entity,
+                            in order,
+                            _orderTypeRegistry,
+                            _orderRuleRegistry,
+                            currentStep,
+                            _stepRateHz);
 
-                    int expireStep = currentStep + (config.PendingBufferWindowMs * _stepRateHz) / 1000;
-                    buffer.SetPending(in order, config.Priority, expireStep, currentStep);
+                        if (result != OrderSubmitResult.Blocked)
+                        {
+                            continue;
+                        }
+
+                        var config = _orderTypeRegistry.Get(order.OrderTypeId);
+                        if (config.PendingBufferWindowMs <= 0)
+                        {
+                            continue;
+                        }
+
+                        int expireStep = currentStep + (config.PendingBufferWindowMs * _stepRateHz) / 1000;
+                        buffer.SetPending(in order, config.Priority, expireStep, currentStep);
+                    }
                 }
-            });
+            }
         }
     }
 }

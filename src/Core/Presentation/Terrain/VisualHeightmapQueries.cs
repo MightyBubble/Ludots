@@ -55,6 +55,34 @@ namespace Ludots.Core.Presentation.Terrain
             return float.IsFinite(heightCm);
         }
 
+        public static void SampleHeightsCm(
+            IVisualHeightmapSampleAccessor accessor,
+            in WorldAabbCm bounds,
+            int sampleColumns,
+            int sampleRows,
+            VisualHeightmapInterpolationMode interpolationMode,
+            int layerSampleOffset,
+            ReadOnlySpan<float> worldXCm,
+            ReadOnlySpan<float> worldYCm,
+            Span<float> outHeightCm)
+        {
+            for (int i = 0; i < outHeightCm.Length; i++)
+            {
+                outHeightCm[i] = TrySampleHeightCm(
+                    accessor,
+                    in bounds,
+                    sampleColumns,
+                    sampleRows,
+                    interpolationMode,
+                    layerSampleOffset,
+                    worldXCm[i],
+                    worldYCm[i],
+                    out float heightCm)
+                    ? heightCm
+                    : float.NaN;
+            }
+        }
+
         public static bool TrySampleSurface(
             IVisualHeightmapSampleAccessor accessor,
             in WorldAabbCm bounds,

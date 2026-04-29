@@ -2,6 +2,7 @@ using Arch.Core;
 using Arch.Core.Extensions;
 using Arch.System;
 using Ludots.Core.Gameplay.GAS.Components;
+using System.Runtime.CompilerServices;
 
 namespace Ludots.Core.Gameplay.GAS.Systems
 {
@@ -26,11 +27,27 @@ namespace Ludots.Core.Gameplay.GAS.Systems
 
         public override void Update(in float dt)
         {
-            World.Query(in Query, (Entity entity, ref AbilityStateBuffer abilities, ref AbilityFormSetRef formSetRef, ref AbilityFormSlotBuffer formSlots) =>
+            var job = new RouteJob
+            {
+                World = World,
+                FormSets = _formSets,
+                TagOps = _tagOps,
+            };
+            World.InlineEntityQuery<RouteJob, AbilityStateBuffer, AbilityFormSetRef, AbilityFormSlotBuffer>(in Query, ref job);
+        }
+
+        private struct RouteJob : IForEachWithEntity<AbilityStateBuffer, AbilityFormSetRef, AbilityFormSlotBuffer>
+        {
+            public World World;
+            public AbilityFormSetRegistry FormSets;
+            public TagOps TagOps;
+
+            [MethodImpl(MethodImplOptions.AggressiveInlining)]
+            public void Update(Entity entity, ref AbilityStateBuffer abilities, ref AbilityFormSetRef formSetRef, ref AbilityFormSlotBuffer formSlots)
             {
                 formSlots.ClearAll();
 
-                if (formSetRef.FormSetId <= 0 || !_formSets.TryGet(formSetRef.FormSetId, out var formSet))
+                if (formSetRef.FormSetId <= 0 || !FormSets.TryGet(formSetRef.FormSetId, out var formSet))
                 {
                     return;
                 }
@@ -42,7 +59,7 @@ namespace Ludots.Core.Gameplay.GAS.Systems
                 for (int routeIndex = 0; routeIndex < formSet.Routes.Count; routeIndex++)
                 {
                     var route = formSet.Routes[routeIndex];
-                    if (!MatchesRoute(ref tags, hasTags, in route))
+                    if (!MatchesRoute(TagOps, ref tags, hasTags, in route))
                     {
                         continue;
                     }
@@ -72,22 +89,22 @@ namespace Ludots.Core.Gameplay.GAS.Systems
 
                     formSlots.SetOverride(slotOverride.SlotIndex, slotOverride.AbilityId);
                 }
-            });
+            }
         }
 
-        private bool MatchesRoute(ref GameplayTagContainer tags, bool hasTags, in AbilityFormRouteDefinition route)
+        private static bool MatchesRoute(TagOps tagOps, ref GameplayTagContainer tags, bool hasTags, in AbilityFormRouteDefinition route)
         {
             var requiredAll = route.RequiredAll;
             if (!requiredAll.IsEmpty)
             {
-                if (!hasTags || !_tagOps.ContainsAll(ref tags, in requiredAll, TagSense.Effective))
+                if (!hasTags || !tagOps.ContainsAll(ref tags, in requiredAll, TagSense.Effective))
                 {
                     return false;
                 }
             }
 
             var blockedAny = route.BlockedAny;
-            if (hasTags && !blockedAny.IsEmpty && _tagOps.Intersects(ref tags, in blockedAny, TagSense.Effective))
+            if (hasTags && !blockedAny.IsEmpty && tagOps.Intersects(ref tags, in blockedAny, TagSense.Effective))
             {
                 return false;
             }

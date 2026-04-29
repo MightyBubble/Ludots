@@ -796,6 +796,7 @@ namespace Ludots.Tests.Presentation
             Entity entity = world.Create(
                 WorldPositionCm.FromCm(400, 800),
                 new PreviousWorldPositionCm { Value = Fix64Vec2.FromInt(0, 400) },
+                new VisualHeightmapSampleState(),
                 new VisualTransform
                 {
                     Position = new Vector3(1f, 0f, 5f),

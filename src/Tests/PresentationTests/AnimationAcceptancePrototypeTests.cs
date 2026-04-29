@@ -176,6 +176,7 @@ namespace Ludots.Tests.Presentation
             var engine = new GameEngine();
             engine.InitializeWithConfigPipeline(modPaths, assetsRoot);
             InstallInput(engine);
+            HeadlessPresentationTestHost.Install(engine);
             engine.Start();
             return engine;
         }
@@ -186,6 +187,7 @@ namespace Ludots.Tests.Presentation
             for (int i = 0; i < frames; i++)
             {
                 engine.Tick(1f / 60f);
+                HeadlessPresentationTestHost.UpdateCamera(engine);
             }
         }
 

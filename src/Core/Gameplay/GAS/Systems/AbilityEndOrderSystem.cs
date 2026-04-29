@@ -1,4 +1,7 @@
+using System;
+using System.Collections.Generic;
 using System.Runtime.CompilerServices;
+using Arch.Buffer;
 using Arch.Core;
 using Arch.System;
 using Ludots.Core.Gameplay.GAS.Components;
@@ -17,6 +20,8 @@ namespace Ludots.Core.Gameplay.GAS.Systems
 
         private readonly OrderTypeRegistry _orderTypeRegistry;
         private readonly int _abilityEndOrderTypeId;
+        private readonly CommandBuffer _commandBuffer = new();
+        private readonly List<Entity> _completedOrders = new(64);
 
         public AbilityEndOrderSystem(World world, OrderTypeRegistry orderTypeRegistry, int abilityEndOrderTypeId)
             : base(world)
@@ -32,6 +37,7 @@ namespace Ludots.Core.Gameplay.GAS.Systems
                 return;
             }
 
+            _completedOrders.Clear();
             foreach (ref var chunk in World.Query(in _query))
             {
                 var buffers = chunk.GetSpan<OrderBuffer>();
@@ -57,12 +63,28 @@ namespace Ludots.Core.Gameplay.GAS.Systems
                     if (World.TryGet(entity, out AbilityExecInstance exec) &&
                         (!hasSlot || exec.AbilitySlot == slotIndex))
                     {
-                        World.Remove<AbilityExecInstance>(entity);
+                        _commandBuffer.Remove<AbilityExecInstance>(in entity);
                     }
 
-                    OrderSubmitter.NotifyOrderComplete(World, entity, _orderTypeRegistry);
+                    _completedOrders.Add(entity);
                 }
             }
+
+            if (_commandBuffer.Size > 0)
+            {
+                _commandBuffer.Playback(World);
+            }
+
+            for (int i = 0; i < _completedOrders.Count; i++)
+            {
+                OrderSubmitter.NotifyOrderComplete(World, _completedOrders[i], _orderTypeRegistry);
+            }
+        }
+
+        public override void Dispose()
+        {
+            _commandBuffer.Dispose();
+            base.Dispose();
         }
     }
 }

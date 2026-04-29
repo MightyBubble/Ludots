@@ -4,6 +4,7 @@ using System.Diagnostics;
 using System.Collections.Generic;
 using System.Runtime.CompilerServices;
 using System.Runtime.InteropServices;
+using Arch.Buffer;
 using Arch.Core;
 using Ludots.Core.Components;
 using Ludots.Core.Mathematics;
@@ -25,49 +26,109 @@ namespace Ludots.Core.Systems
         private static readonly QueryDescription _visualBoundsLodQuery = new QueryDescription()
             .WithAll<WorldPositionCm, CullState, VisualTransform, PresentationLocalBounds, PresentationLodProfile>()
             .WithNone<PresentationStaticTransform>();
+        private static readonly QueryDescription _payloadVisualBoundsLodQuery = new QueryDescription()
+            .WithAll<WorldPositionCm, CullState, VisualTransform, PresentationLocalBounds, PresentationLodProfile, PresentationOwnerHasPerformerPayload>()
+            .WithNone<PresentationStaticTransform>();
         private static readonly QueryDescription _visualBoundsQuery = new QueryDescription()
             .WithAll<WorldPositionCm, CullState, VisualTransform, PresentationLocalBounds>()
+            .WithNone<PresentationLodProfile, PresentationStaticTransform>();
+        private static readonly QueryDescription _payloadVisualBoundsQuery = new QueryDescription()
+            .WithAll<WorldPositionCm, CullState, VisualTransform, PresentationLocalBounds, PresentationOwnerHasPerformerPayload>()
             .WithNone<PresentationLodProfile, PresentationStaticTransform>();
         private static readonly QueryDescription _visualLodQuery = new QueryDescription()
             .WithAll<WorldPositionCm, CullState, VisualTransform, PresentationLodProfile>()
             .WithNone<PresentationLocalBounds, PresentationStaticTransform>();
+        private static readonly QueryDescription _payloadVisualLodQuery = new QueryDescription()
+            .WithAll<WorldPositionCm, CullState, VisualTransform, PresentationLodProfile, PresentationOwnerHasPerformerPayload>()
+            .WithNone<PresentationLocalBounds, PresentationStaticTransform>();
         private static readonly QueryDescription _visualDefaultQuery = new QueryDescription()
             .WithAll<WorldPositionCm, CullState, VisualTransform>()
+            .WithNone<PresentationLocalBounds, PresentationLodProfile, PresentationStaticTransform>();
+        private static readonly QueryDescription _payloadVisualDefaultQuery = new QueryDescription()
+            .WithAll<WorldPositionCm, CullState, VisualTransform, PresentationOwnerHasPerformerPayload>()
             .WithNone<PresentationLocalBounds, PresentationLodProfile, PresentationStaticTransform>();
         private static readonly QueryDescription _noVisualQuery = new QueryDescription()
             .WithAll<WorldPositionCm, CullState>()
             .WithNone<VisualTransform, PresentationStaticTransform>();
+        private static readonly QueryDescription _payloadNoVisualQuery = new QueryDescription()
+            .WithAll<WorldPositionCm, CullState, PresentationOwnerHasPerformerPayload>()
+            .WithNone<VisualTransform, PresentationStaticTransform>();
         private static readonly QueryDescription _staticVisualBoundsLodQuery = new QueryDescription()
             .WithAll<WorldPositionCm, CullState, PresentationStaticTransform, VisualTransform, PresentationLocalBounds, PresentationLodProfile>();
+        private static readonly QueryDescription _payloadStaticVisualBoundsLodQuery = new QueryDescription()
+            .WithAll<WorldPositionCm, CullState, PresentationStaticTransform, VisualTransform, PresentationLocalBounds, PresentationLodProfile, PresentationOwnerHasPerformerPayload>();
         private static readonly QueryDescription _staticVisualBoundsQuery = new QueryDescription()
             .WithAll<WorldPositionCm, CullState, PresentationStaticTransform, VisualTransform, PresentationLocalBounds>()
+            .WithNone<PresentationLodProfile>();
+        private static readonly QueryDescription _payloadStaticVisualBoundsQuery = new QueryDescription()
+            .WithAll<WorldPositionCm, CullState, PresentationStaticTransform, VisualTransform, PresentationLocalBounds, PresentationOwnerHasPerformerPayload>()
             .WithNone<PresentationLodProfile>();
         private static readonly QueryDescription _staticVisualLodQuery = new QueryDescription()
             .WithAll<WorldPositionCm, CullState, PresentationStaticTransform, VisualTransform, PresentationLodProfile>()
             .WithNone<PresentationLocalBounds>();
+        private static readonly QueryDescription _payloadStaticVisualLodQuery = new QueryDescription()
+            .WithAll<WorldPositionCm, CullState, PresentationStaticTransform, VisualTransform, PresentationLodProfile, PresentationOwnerHasPerformerPayload>()
+            .WithNone<PresentationLocalBounds>();
         private static readonly QueryDescription _staticVisualDefaultQuery = new QueryDescription()
             .WithAll<WorldPositionCm, CullState, PresentationStaticTransform, VisualTransform>()
+            .WithNone<PresentationLocalBounds, PresentationLodProfile>();
+        private static readonly QueryDescription _payloadStaticVisualDefaultQuery = new QueryDescription()
+            .WithAll<WorldPositionCm, CullState, PresentationStaticTransform, VisualTransform, PresentationOwnerHasPerformerPayload>()
             .WithNone<PresentationLocalBounds, PresentationLodProfile>();
         private static readonly QueryDescription _staticNoVisualQuery = new QueryDescription()
             .WithAll<WorldPositionCm, CullState, PresentationStaticTransform>()
             .WithNone<VisualTransform, PresentationLocalBounds, PresentationLodProfile>();
-        private static readonly QueryDescription _staticDirtyQuery = new QueryDescription()
-            .WithAll<WorldPositionCm, CullState, PresentationStaticTransform, PresentationStaticCullPending>();
+        private static readonly QueryDescription _payloadStaticNoVisualQuery = new QueryDescription()
+            .WithAll<WorldPositionCm, CullState, PresentationStaticTransform, PresentationOwnerHasPerformerPayload>()
+            .WithNone<VisualTransform, PresentationLocalBounds, PresentationLodProfile>();
+        private static readonly QueryDescription _staticPendingVisualBoundsLodQuery = new QueryDescription()
+            .WithAll<WorldPositionCm, CullState, PresentationStaticTransform, PresentationStaticCullPending, VisualTransform, PresentationLocalBounds, PresentationLodProfile>();
+        private static readonly QueryDescription _payloadStaticPendingVisualBoundsLodQuery = new QueryDescription()
+            .WithAll<WorldPositionCm, CullState, PresentationStaticTransform, PresentationStaticCullPending, VisualTransform, PresentationLocalBounds, PresentationLodProfile, PresentationOwnerHasPerformerPayload>();
+        private static readonly QueryDescription _staticPendingVisualBoundsQuery = new QueryDescription()
+            .WithAll<WorldPositionCm, CullState, PresentationStaticTransform, PresentationStaticCullPending, VisualTransform, PresentationLocalBounds>()
+            .WithNone<PresentationLodProfile>();
+        private static readonly QueryDescription _payloadStaticPendingVisualBoundsQuery = new QueryDescription()
+            .WithAll<WorldPositionCm, CullState, PresentationStaticTransform, PresentationStaticCullPending, VisualTransform, PresentationLocalBounds, PresentationOwnerHasPerformerPayload>()
+            .WithNone<PresentationLodProfile>();
+        private static readonly QueryDescription _staticPendingVisualLodQuery = new QueryDescription()
+            .WithAll<WorldPositionCm, CullState, PresentationStaticTransform, PresentationStaticCullPending, VisualTransform, PresentationLodProfile>()
+            .WithNone<PresentationLocalBounds>();
+        private static readonly QueryDescription _payloadStaticPendingVisualLodQuery = new QueryDescription()
+            .WithAll<WorldPositionCm, CullState, PresentationStaticTransform, PresentationStaticCullPending, VisualTransform, PresentationLodProfile, PresentationOwnerHasPerformerPayload>()
+            .WithNone<PresentationLocalBounds>();
+        private static readonly QueryDescription _staticPendingVisualDefaultQuery = new QueryDescription()
+            .WithAll<WorldPositionCm, CullState, PresentationStaticTransform, PresentationStaticCullPending, VisualTransform>()
+            .WithNone<PresentationLocalBounds, PresentationLodProfile>();
+        private static readonly QueryDescription _payloadStaticPendingVisualDefaultQuery = new QueryDescription()
+            .WithAll<WorldPositionCm, CullState, PresentationStaticTransform, PresentationStaticCullPending, VisualTransform, PresentationOwnerHasPerformerPayload>()
+            .WithNone<PresentationLocalBounds, PresentationLodProfile>();
+        private static readonly QueryDescription _staticPendingNoVisualQuery = new QueryDescription()
+            .WithAll<WorldPositionCm, CullState, PresentationStaticTransform, PresentationStaticCullPending>()
+            .WithNone<VisualTransform, PresentationLocalBounds, PresentationLodProfile>();
+        private static readonly QueryDescription _payloadStaticPendingNoVisualQuery = new QueryDescription()
+            .WithAll<WorldPositionCm, CullState, PresentationStaticTransform, PresentationStaticCullPending, PresentationOwnerHasPerformerPayload>()
+            .WithNone<VisualTransform, PresentationLocalBounds, PresentationLodProfile>();
         private static readonly PresentationLocalBounds _defaultBounds =
             PresentationLocalBounds.Create(Vector3.Zero, new Vector3(0.5f, 0.5f, 0.5f));
 
         private readonly CameraManager _cameraManager;
+        private readonly ISpatialQueryService _spatial;
         private readonly IViewController _view;
         private readonly ILoadedChunks? _loadedChunks;
         private readonly PresentationTimingDiagnostics? _timingDiagnostics;
         private readonly PerformerEntityRuntime? _performers;
-        private HashSet<Entity> _changedOwnerSet = new HashSet<Entity>(32768);
         private List<Entity> _changedOwners = new List<Entity>(32768);
+        private Entity[] _spatialQueryBuffer = new Entity[65536];
+        private readonly HashSet<Entity> _spatialCandidates = new(65536);
+        private readonly CommandBuffer _commandBuffer = new();
         private int _lastPerformerCullSyncStructureVersion = -1;
         private bool _ownerCullChangedThisFrame;
+        private bool _allCullChangesSyncedThisFrame;
         private CameraStateSnapshot _lastStaticCullCameraState;
         private float _lastStaticCullAspectRatio = -1f;
         private bool _hasStaticCullCameraState;
+        private int _staticCullEpoch;
         private int _lastStaticVisibleCount;
 
         public CameraCullingDebugState DebugState { get; } = new CameraCullingDebugState();
@@ -75,6 +136,22 @@ namespace Ludots.Core.Systems
         public float HighLODDistCm = 4000f;
         public float MediumLODDistCm = 10000f;
         public float LowLODDistCm = 20000f;
+
+        private QueryDescription VisualBoundsLodQuery => _performers == null ? _visualBoundsLodQuery : _payloadVisualBoundsLodQuery;
+        private QueryDescription VisualBoundsQuery => _performers == null ? _visualBoundsQuery : _payloadVisualBoundsQuery;
+        private QueryDescription VisualLodQuery => _performers == null ? _visualLodQuery : _payloadVisualLodQuery;
+        private QueryDescription VisualDefaultQuery => _performers == null ? _visualDefaultQuery : _payloadVisualDefaultQuery;
+        private QueryDescription NoVisualQuery => _performers == null ? _noVisualQuery : _payloadNoVisualQuery;
+        private QueryDescription StaticVisualBoundsLodQuery => _performers == null ? _staticVisualBoundsLodQuery : _payloadStaticVisualBoundsLodQuery;
+        private QueryDescription StaticVisualBoundsQuery => _performers == null ? _staticVisualBoundsQuery : _payloadStaticVisualBoundsQuery;
+        private QueryDescription StaticVisualLodQuery => _performers == null ? _staticVisualLodQuery : _payloadStaticVisualLodQuery;
+        private QueryDescription StaticVisualDefaultQuery => _performers == null ? _staticVisualDefaultQuery : _payloadStaticVisualDefaultQuery;
+        private QueryDescription StaticNoVisualQuery => _performers == null ? _staticNoVisualQuery : _payloadStaticNoVisualQuery;
+        private QueryDescription StaticPendingVisualBoundsLodQuery => _performers == null ? _staticPendingVisualBoundsLodQuery : _payloadStaticPendingVisualBoundsLodQuery;
+        private QueryDescription StaticPendingVisualBoundsQuery => _performers == null ? _staticPendingVisualBoundsQuery : _payloadStaticPendingVisualBoundsQuery;
+        private QueryDescription StaticPendingVisualLodQuery => _performers == null ? _staticPendingVisualLodQuery : _payloadStaticPendingVisualLodQuery;
+        private QueryDescription StaticPendingVisualDefaultQuery => _performers == null ? _staticPendingVisualDefaultQuery : _payloadStaticPendingVisualDefaultQuery;
+        private QueryDescription StaticPendingNoVisualQuery => _performers == null ? _staticPendingNoVisualQuery : _payloadStaticPendingNoVisualQuery;
 
         public CameraCullingSystem(
             World world,
@@ -104,7 +181,7 @@ namespace Ludots.Core.Systems
             : base(world)
         {
             _cameraManager = cameraManager;
-            _ = spatial ?? throw new ArgumentNullException(nameof(spatial));
+            _spatial = spatial ?? throw new ArgumentNullException(nameof(spatial));
             _view = view ?? throw new ArgumentNullException(nameof(view));
             _loadedChunks = loadedChunks;
             _performers = performers;
@@ -136,7 +213,6 @@ namespace Ludots.Core.Systems
             float minY = target.Y - logicHeight / 2f;
             float maxY = target.Y + logicHeight / 2f;
 
-            _changedOwnerSet.Clear();
             _changedOwners.Clear();
 
             int ix = (int)MathF.Floor(minX);
@@ -148,19 +224,28 @@ namespace Ludots.Core.Systems
 
             WorldAabbCm queryBounds = new WorldAabbCm(ix, iy, iw, ih);
             _ownerCullChangedThisFrame = false;
+            _allCullChangesSyncedThisFrame = true;
+            RefreshSpatialCandidates(in queryBounds);
 
             float tx = target.X;
             float ty = target.Y;
             float highSq = HighLODDistCm * HighLODDistCm;
             float medSq = MediumLODDistCm * MediumLODDistCm;
             float lowSq2 = LowLODDistCm * LowLODDistCm;
-            bool cameraChanged = !_hasStaticCullCameraState ||
+            bool hasStaticCullCameraState = _hasStaticCullCameraState;
+            bool cameraChanged = hasStaticCullCameraState &&
                                  HasCameraStateChanged(in cameraState, aspectRatio);
             int visibleCount = _lastStaticVisibleCount;
             long entityProcessStart = Stopwatch.GetTimestamp();
+            int activeStaticCullEpoch = _staticCullEpoch == int.MaxValue ? 1 : _staticCullEpoch + 1;
+            double staticProcessMs = 0d;
+            double staticPendingRemoveMs = 0d;
+            double dynamicProcessMs = 0d;
+            long staticProcessStart = Stopwatch.GetTimestamp();
 
             if (cameraChanged)
             {
+                _staticCullEpoch = activeStaticCullEpoch;
                 _lastStaticVisibleCount = 0;
                 _lastStaticVisibleCount = ProcessStaticEntitiesFull(
                     queryBounds,
@@ -174,39 +259,58 @@ namespace Ludots.Core.Systems
                     rebuildVisibleCount: true,
                     _lastStaticVisibleCount);
 
-                _hasStaticCullCameraState = true;
-                _lastStaticCullCameraState = cameraState;
-                _lastStaticCullAspectRatio = aspectRatio;
-
-                World.Remove<PresentationStaticCullPending>(in _staticDirtyQuery);
-
+                staticProcessMs += ElapsedMs(staticProcessStart);
                 visibleCount = _lastStaticVisibleCount;
             }
             else
             {
-                _lastStaticVisibleCount = ProcessStaticEntities(
-                    in _staticDirtyQuery,
-                    queryBounds,
-                    target,
-                    distanceCm,
-                    tx,
-                    ty,
-                    highSq,
-                    medSq,
-                    lowSq2,
-                    rebuildVisibleCount: false,
-                    _lastStaticVisibleCount);
+                if (!hasStaticCullCameraState)
+                {
+                    _staticCullEpoch = activeStaticCullEpoch;
+                    _lastStaticVisibleCount = ProcessStaticEntitiesFull(
+                        queryBounds,
+                        target,
+                        distanceCm,
+                        tx,
+                        ty,
+                        highSq,
+                        medSq,
+                        lowSq2,
+                        rebuildVisibleCount: true,
+                        staticVisibleCount: 0);
+                }
+                else
+                {
+                    _lastStaticVisibleCount = ProcessStaticEntitiesDirty(
+                        queryBounds,
+                        target,
+                        distanceCm,
+                        tx,
+                        ty,
+                        highSq,
+                        medSq,
+                        lowSq2,
+                        rebuildVisibleCount: false,
+                        _lastStaticVisibleCount);
+                }
 
-                World.Remove<PresentationStaticCullPending>(in _staticDirtyQuery);
+                staticProcessMs += ElapsedMs(staticProcessStart);
 
                 visibleCount = _lastStaticVisibleCount;
             }
 
+            _hasStaticCullCameraState = true;
+            _lastStaticCullCameraState = cameraState;
+            _lastStaticCullAspectRatio = aspectRatio;
+            PlaybackStructuralChanges();
+
+            long dynamicProcessStart = Stopwatch.GetTimestamp();
             ProcessVisualBoundsLod(in queryBounds, target, distanceCm, tx, ty, highSq, medSq, lowSq2, ref visibleCount);
             ProcessVisualBounds(in queryBounds, target, distanceCm, tx, ty, highSq, medSq, lowSq2, ref visibleCount);
             ProcessVisualLod(in queryBounds, target, distanceCm, tx, ty, highSq, medSq, lowSq2, ref visibleCount);
             ProcessVisualDefault(in queryBounds, target, distanceCm, tx, ty, highSq, medSq, lowSq2, ref visibleCount);
             ProcessNoVisual(in queryBounds, target, distanceCm, tx, ty, highSq, medSq, lowSq2, ref visibleCount);
+            dynamicProcessMs = ElapsedMs(dynamicProcessStart);
 
             DebugState.MinX = minX;
             DebugState.MaxX = maxX;
@@ -222,26 +326,90 @@ namespace Ludots.Core.Systems
             SyncPerformerCullVisibilityIfDirty();
             double performerSyncMs = (Stopwatch.GetTimestamp() - performerSyncStart) * 1000.0 / Stopwatch.Frequency;
             _timingDiagnostics?.ObserveCameraCullingBreakdown(entityProcessMs, performerSyncMs);
+            _timingDiagnostics?.ObserveCameraCullingStageBreakdown(staticProcessMs, staticPendingRemoveMs, dynamicProcessMs);
             _timingDiagnostics?.ObserveCameraCulling((Stopwatch.GetTimestamp() - start) * 1000.0 / Stopwatch.Frequency, visibleCount);
         }
 
-        private void TrackCullToCulled(Entity owner, in CullState cull)
+        public override void Dispose()
         {
-            if (cull.LOD == LODLevel.Culled && !cull.IsVisible)
-            {
-                return;
-            }
+            _commandBuffer.Dispose();
+            base.Dispose();
+        }
 
-            TrackCullChange(owner);
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        private static double ElapsedMs(long startTimestamp)
+        {
+            return (Stopwatch.GetTimestamp() - startTimestamp) * 1000.0 / Stopwatch.Frequency;
         }
 
         private void TrackCullChange(Entity owner)
         {
             _ownerCullChangedThisFrame = true;
-            if (owner != Entity.Null && _changedOwnerSet.Add(owner))
+            _allCullChangesSyncedThisFrame = false;
+            if (owner != Entity.Null)
             {
                 _changedOwners.Add(owner);
             }
+        }
+
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        private void TrackOrSyncCullChange(Entity owner, in CullState cull)
+        {
+            if (!TrySyncSingleRootPayloadCull(owner, in cull))
+            {
+                TrackCullChange(owner);
+            }
+        }
+
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        private void TrackOrSyncCullChange(
+            Entity owner,
+            in CullState cull,
+            in PresentationOwnerHasPerformerPayload payload)
+        {
+            if (!TrySyncSingleRootPayloadCull(in payload, in cull))
+            {
+                TrackCullChange(owner);
+            }
+        }
+
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        private bool TrySyncSingleRootPayloadCull(Entity owner, in CullState cull)
+        {
+            if (_performers == null ||
+                owner == Entity.Null ||
+                !World.Has<PresentationOwnerHasPerformerPayload>(owner))
+            {
+                return false;
+            }
+
+            ref readonly PresentationOwnerHasPerformerPayload payload = ref World.Get<PresentationOwnerHasPerformerPayload>(owner);
+            return TrySyncSingleRootPayloadCull(in payload, in cull);
+        }
+
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        private bool TrySyncSingleRootPayloadCull(in PresentationOwnerHasPerformerPayload payload, in CullState cull)
+        {
+            if (_performers == null)
+            {
+                return false;
+            }
+
+            if (payload.Count != 1 ||
+                payload.SingleRootPerformer == Entity.Null)
+            {
+                return false;
+            }
+
+            if (_performers.TrySyncSingleRootCullVisibilityAndMarkEventDrivenStaticEmitDirty(
+                    payload.SingleRootPerformer,
+                    cull.IsVisible,
+                    cull.LOD))
+            {
+                return true;
+            }
+
+            return false;
         }
 
         private void SyncPerformerCullVisibilityIfDirty()
@@ -255,6 +423,13 @@ namespace Ludots.Core.Systems
             if (!_ownerCullChangedThisFrame &&
                 _lastPerformerCullSyncStructureVersion == structureVersion)
             {
+                return;
+            }
+
+            if (!_ownerCullChangedThisFrame &&
+                _allCullChangesSyncedThisFrame)
+            {
+                _lastPerformerCullSyncStructureVersion = structureVersion;
                 return;
             }
 
@@ -296,8 +471,32 @@ namespace Ludots.Core.Systems
                    _lastStaticCullCameraState.IsFollowing != state.IsFollowing;
         }
 
-        private int ProcessStaticEntities(
-            in QueryDescription query,
+        private void RefreshSpatialCandidates(in WorldAabbCm queryBounds)
+        {
+            _spatialCandidates.Clear();
+
+            while (true)
+            {
+                SpatialQueryResult result = _spatial.QueryAabb(in queryBounds, _spatialQueryBuffer);
+                for (int i = 0; i < result.Count; i++)
+                {
+                    _spatialCandidates.Add(_spatialQueryBuffer[i]);
+                }
+
+                if (!result.Overflowed)
+                {
+                    return;
+                }
+
+                int nextCapacity = _spatialQueryBuffer.Length <= 0
+                    ? 1024
+                    : _spatialQueryBuffer.Length * 2;
+                _spatialQueryBuffer = new Entity[nextCapacity];
+                _spatialCandidates.Clear();
+            }
+        }
+
+        private int ProcessStaticEntitiesDirty(
             WorldAabbCm queryBounds,
             Vector2 target,
             float distanceCm,
@@ -309,78 +508,13 @@ namespace Ludots.Core.Systems
             bool rebuildVisibleCount,
             int staticVisibleCount)
         {
-            WorldAabbCm bounds = queryBounds;
             int updatedVisibleCount = staticVisibleCount;
-            World.Query(in query, (Entity entity, ref WorldPositionCm position, ref CullState cull) =>
-            {
-                bool wasVisible = cull.IsVisible;
-                int localVisibleCount = 0;
-
-                if (World.TryGet(entity, out VisualTransform visual))
-                {
-                    PresentationLocalBounds localBounds = World.TryGet(entity, out PresentationLocalBounds resolvedBounds)
-                        ? resolvedBounds
-                        : _defaultBounds;
-                    bool hasLodProfile = World.TryGet(entity, out PresentationLodProfile lodProfile);
-                    ProcessEntity(
-                        entity,
-                        ref cull,
-                        in position,
-                        in visual,
-                        in localBounds,
-                        in lodProfile,
-                        hasLodProfile,
-                        in bounds,
-                        target,
-                        distanceCm,
-                        tx,
-                        ty,
-                        highSq,
-                        medSq,
-                        lowSq2,
-                        ref localVisibleCount);
-                }
-                else
-                {
-                    PresentationLocalBounds localBounds = World.TryGet(entity, out PresentationLocalBounds resolvedBounds)
-                        ? resolvedBounds
-                        : _defaultBounds;
-                    bool hasLodProfile = World.TryGet(entity, out PresentationLodProfile lodProfile);
-                    ProcessEntityWithoutVisual(
-                        entity,
-                        ref cull,
-                        in position,
-                        in localBounds,
-                        in lodProfile,
-                        hasLodProfile,
-                        in bounds,
-                        target,
-                        distanceCm,
-                        tx,
-                        ty,
-                        highSq,
-                        medSq,
-                        lowSq2,
-                        ref localVisibleCount);
-                }
-
-                if (rebuildVisibleCount)
-                {
-                    if (cull.IsVisible)
-                    {
-                        updatedVisibleCount++;
-                    }
-                }
-                else if (!wasVisible && cull.IsVisible)
-                {
-                    updatedVisibleCount++;
-                }
-                else if (wasVisible && !cull.IsVisible)
-                {
-                    updatedVisibleCount--;
-                }
-            });
-
+            int cullEpoch = _staticCullEpoch;
+            ProcessStaticVisualBoundsLod(in queryBounds, target, distanceCm, tx, ty, highSq, medSq, lowSq2, rebuildVisibleCount, ref updatedVisibleCount, StaticPendingVisualBoundsLodQuery, cullEpoch, onlyUnprocessed: false);
+            ProcessStaticVisualBounds(in queryBounds, target, distanceCm, tx, ty, highSq, medSq, lowSq2, rebuildVisibleCount, ref updatedVisibleCount, StaticPendingVisualBoundsQuery, cullEpoch, onlyUnprocessed: false);
+            ProcessStaticVisualLod(in queryBounds, target, distanceCm, tx, ty, highSq, medSq, lowSq2, rebuildVisibleCount, ref updatedVisibleCount, StaticPendingVisualLodQuery, cullEpoch, onlyUnprocessed: false);
+            ProcessStaticVisualDefault(in queryBounds, target, distanceCm, tx, ty, highSq, medSq, lowSq2, rebuildVisibleCount, ref updatedVisibleCount, StaticPendingVisualDefaultQuery, cullEpoch, onlyUnprocessed: false);
+            ProcessStaticNoVisual(in queryBounds, target, distanceCm, tx, ty, highSq, medSq, lowSq2, rebuildVisibleCount, ref updatedVisibleCount, StaticPendingNoVisualQuery, cullEpoch, onlyUnprocessed: false);
             return updatedVisibleCount;
         }
 
@@ -397,11 +531,12 @@ namespace Ludots.Core.Systems
             int staticVisibleCount)
         {
             int updatedVisibleCount = staticVisibleCount;
-            ProcessStaticVisualBoundsLod(in queryBounds, target, distanceCm, tx, ty, highSq, medSq, lowSq2, rebuildVisibleCount, ref updatedVisibleCount);
-            ProcessStaticVisualBounds(in queryBounds, target, distanceCm, tx, ty, highSq, medSq, lowSq2, rebuildVisibleCount, ref updatedVisibleCount);
-            ProcessStaticVisualLod(in queryBounds, target, distanceCm, tx, ty, highSq, medSq, lowSq2, rebuildVisibleCount, ref updatedVisibleCount);
-            ProcessStaticVisualDefault(in queryBounds, target, distanceCm, tx, ty, highSq, medSq, lowSq2, rebuildVisibleCount, ref updatedVisibleCount);
-            ProcessStaticNoVisual(in queryBounds, target, distanceCm, tx, ty, highSq, medSq, lowSq2, rebuildVisibleCount, ref updatedVisibleCount);
+            int cullEpoch = _staticCullEpoch;
+            ProcessStaticVisualBoundsLod(in queryBounds, target, distanceCm, tx, ty, highSq, medSq, lowSq2, rebuildVisibleCount, ref updatedVisibleCount, StaticVisualBoundsLodQuery, cullEpoch, onlyUnprocessed: false);
+            ProcessStaticVisualBounds(in queryBounds, target, distanceCm, tx, ty, highSq, medSq, lowSq2, rebuildVisibleCount, ref updatedVisibleCount, StaticVisualBoundsQuery, cullEpoch, onlyUnprocessed: false);
+            ProcessStaticVisualLod(in queryBounds, target, distanceCm, tx, ty, highSq, medSq, lowSq2, rebuildVisibleCount, ref updatedVisibleCount, StaticVisualLodQuery, cullEpoch, onlyUnprocessed: false);
+            ProcessStaticVisualDefault(in queryBounds, target, distanceCm, tx, ty, highSq, medSq, lowSq2, rebuildVisibleCount, ref updatedVisibleCount, StaticVisualDefaultQuery, cullEpoch, onlyUnprocessed: false);
+            ProcessStaticNoVisual(in queryBounds, target, distanceCm, tx, ty, highSq, medSq, lowSq2, rebuildVisibleCount, ref updatedVisibleCount, StaticNoVisualQuery, cullEpoch, onlyUnprocessed: false);
             return updatedVisibleCount;
         }
 
@@ -415,18 +550,31 @@ namespace Ludots.Core.Systems
             float medSq,
             float lowSq2,
             bool rebuildVisibleCount,
-            ref int visibleCount)
+            ref int visibleCount,
+            in QueryDescription query,
+            int cullEpoch,
+            bool onlyUnprocessed)
         {
-            foreach (ref var chunk in World.Query(in _staticVisualBoundsLodQuery))
+            foreach (ref var chunk in World.Query(in query))
             {
                 ref Entity entityFirst = ref chunk.Entity(0);
                 var positions = chunk.GetSpan<WorldPositionCm>();
                 var culls = chunk.GetSpan<CullState>();
+                var statics = chunk.GetSpan<PresentationStaticTransform>();
                 var visuals = chunk.GetSpan<VisualTransform>();
                 var bounds = chunk.GetSpan<PresentationLocalBounds>();
                 var lods = chunk.GetSpan<PresentationLodProfile>();
+                bool hasPayloads = chunk.Has<PresentationOwnerHasPerformerPayload>();
+                var payloads = hasPayloads
+                    ? chunk.GetSpan<PresentationOwnerHasPerformerPayload>()
+                    : default;
                 foreach (var index in chunk)
                 {
+                    if (onlyUnprocessed && statics[index].CullEpoch == cullEpoch)
+                    {
+                        continue;
+                    }
+
                     Entity entity = Unsafe.Add(ref entityFirst, index);
                     bool wasVisible = culls[index].IsVisible;
                     int localVisibleCount = 0;
@@ -446,7 +594,12 @@ namespace Ludots.Core.Systems
                         highSq,
                         medSq,
                         lowSq2,
+                        useSpatialGate: false,
+                        hasPayloads,
+                        hasPayloads ? payloads[index] : default,
                         ref localVisibleCount);
+                    statics[index].CullEpoch = cullEpoch;
+                    QueueStaticCullPendingClear(entity);
                     AdjustVisibleCountAfterStaticProcess(rebuildVisibleCount, wasVisible, culls[index].IsVisible, ref visibleCount);
                 }
             }
@@ -462,17 +615,30 @@ namespace Ludots.Core.Systems
             float medSq,
             float lowSq2,
             bool rebuildVisibleCount,
-            ref int visibleCount)
+            ref int visibleCount,
+            in QueryDescription query,
+            int cullEpoch,
+            bool onlyUnprocessed)
         {
-            foreach (ref var chunk in World.Query(in _staticVisualBoundsQuery))
+            foreach (ref var chunk in World.Query(in query))
             {
                 ref Entity entityFirst = ref chunk.Entity(0);
                 var positions = chunk.GetSpan<WorldPositionCm>();
                 var culls = chunk.GetSpan<CullState>();
+                var statics = chunk.GetSpan<PresentationStaticTransform>();
                 var visuals = chunk.GetSpan<VisualTransform>();
                 var bounds = chunk.GetSpan<PresentationLocalBounds>();
+                bool hasPayloads = chunk.Has<PresentationOwnerHasPerformerPayload>();
+                var payloads = hasPayloads
+                    ? chunk.GetSpan<PresentationOwnerHasPerformerPayload>()
+                    : default;
                 foreach (var index in chunk)
                 {
+                    if (onlyUnprocessed && statics[index].CullEpoch == cullEpoch)
+                    {
+                        continue;
+                    }
+
                     Entity entity = Unsafe.Add(ref entityFirst, index);
                     bool wasVisible = culls[index].IsVisible;
                     int localVisibleCount = 0;
@@ -492,7 +658,12 @@ namespace Ludots.Core.Systems
                         highSq,
                         medSq,
                         lowSq2,
+                        useSpatialGate: false,
+                        hasPayloads,
+                        hasPayloads ? payloads[index] : default,
                         ref localVisibleCount);
+                    statics[index].CullEpoch = cullEpoch;
+                    QueueStaticCullPendingClear(entity);
                     AdjustVisibleCountAfterStaticProcess(rebuildVisibleCount, wasVisible, culls[index].IsVisible, ref visibleCount);
                 }
             }
@@ -508,17 +679,30 @@ namespace Ludots.Core.Systems
             float medSq,
             float lowSq2,
             bool rebuildVisibleCount,
-            ref int visibleCount)
+            ref int visibleCount,
+            in QueryDescription query,
+            int cullEpoch,
+            bool onlyUnprocessed)
         {
-            foreach (ref var chunk in World.Query(in _staticVisualLodQuery))
+            foreach (ref var chunk in World.Query(in query))
             {
                 ref Entity entityFirst = ref chunk.Entity(0);
                 var positions = chunk.GetSpan<WorldPositionCm>();
                 var culls = chunk.GetSpan<CullState>();
+                var statics = chunk.GetSpan<PresentationStaticTransform>();
                 var visuals = chunk.GetSpan<VisualTransform>();
                 var lods = chunk.GetSpan<PresentationLodProfile>();
+                bool hasPayloads = chunk.Has<PresentationOwnerHasPerformerPayload>();
+                var payloads = hasPayloads
+                    ? chunk.GetSpan<PresentationOwnerHasPerformerPayload>()
+                    : default;
                 foreach (var index in chunk)
                 {
+                    if (onlyUnprocessed && statics[index].CullEpoch == cullEpoch)
+                    {
+                        continue;
+                    }
+
                     Entity entity = Unsafe.Add(ref entityFirst, index);
                     bool wasVisible = culls[index].IsVisible;
                     int localVisibleCount = 0;
@@ -538,7 +722,12 @@ namespace Ludots.Core.Systems
                         highSq,
                         medSq,
                         lowSq2,
+                        useSpatialGate: false,
+                        hasPayloads,
+                        hasPayloads ? payloads[index] : default,
                         ref localVisibleCount);
+                    statics[index].CullEpoch = cullEpoch;
+                    QueueStaticCullPendingClear(entity);
                     AdjustVisibleCountAfterStaticProcess(rebuildVisibleCount, wasVisible, culls[index].IsVisible, ref visibleCount);
                 }
             }
@@ -554,27 +743,37 @@ namespace Ludots.Core.Systems
             float medSq,
             float lowSq2,
             bool rebuildVisibleCount,
-            ref int visibleCount)
+            ref int visibleCount,
+            in QueryDescription query,
+            int cullEpoch,
+            bool onlyUnprocessed)
         {
-            foreach (ref var chunk in World.Query(in _staticVisualDefaultQuery))
+            foreach (ref var chunk in World.Query(in query))
             {
                 ref Entity entityFirst = ref chunk.Entity(0);
                 var positions = chunk.GetSpan<WorldPositionCm>();
                 var culls = chunk.GetSpan<CullState>();
+                var statics = chunk.GetSpan<PresentationStaticTransform>();
                 var visuals = chunk.GetSpan<VisualTransform>();
+                bool hasPayloads = chunk.Has<PresentationOwnerHasPerformerPayload>();
+                var payloads = hasPayloads
+                    ? chunk.GetSpan<PresentationOwnerHasPerformerPayload>()
+                    : default;
                 foreach (var index in chunk)
                 {
+                    if (onlyUnprocessed && statics[index].CullEpoch == cullEpoch)
+                    {
+                        continue;
+                    }
+
                     Entity entity = Unsafe.Add(ref entityFirst, index);
                     bool wasVisible = culls[index].IsVisible;
                     int localVisibleCount = 0;
-                    ProcessEntity(
+                    ProcessEntityWithDefaultVisual(
                         entity,
                         ref culls[index],
                         in positions[index],
                         in visuals[index],
-                        in _defaultBounds,
-                        default,
-                        hasLodProfile: false,
                         in queryBounds,
                         target,
                         distanceCm,
@@ -583,7 +782,12 @@ namespace Ludots.Core.Systems
                         highSq,
                         medSq,
                         lowSq2,
+                        useSpatialGate: false,
+                        hasPayloads,
+                        hasPayloads ? payloads[index] : default,
                         ref localVisibleCount);
+                    statics[index].CullEpoch = cullEpoch;
+                    QueueStaticCullPendingClear(entity);
                     AdjustVisibleCountAfterStaticProcess(rebuildVisibleCount, wasVisible, culls[index].IsVisible, ref visibleCount);
                 }
             }
@@ -599,15 +803,28 @@ namespace Ludots.Core.Systems
             float medSq,
             float lowSq2,
             bool rebuildVisibleCount,
-            ref int visibleCount)
+            ref int visibleCount,
+            in QueryDescription query,
+            int cullEpoch,
+            bool onlyUnprocessed)
         {
-            foreach (ref var chunk in World.Query(in _staticNoVisualQuery))
+            foreach (ref var chunk in World.Query(in query))
             {
                 ref Entity entityFirst = ref chunk.Entity(0);
                 var positions = chunk.GetSpan<WorldPositionCm>();
                 var culls = chunk.GetSpan<CullState>();
+                var statics = chunk.GetSpan<PresentationStaticTransform>();
+                bool hasPayloads = chunk.Has<PresentationOwnerHasPerformerPayload>();
+                var payloads = hasPayloads
+                    ? chunk.GetSpan<PresentationOwnerHasPerformerPayload>()
+                    : default;
                 foreach (var index in chunk)
                 {
+                    if (onlyUnprocessed && statics[index].CullEpoch == cullEpoch)
+                    {
+                        continue;
+                    }
+
                     Entity entity = Unsafe.Add(ref entityFirst, index);
                     bool wasVisible = culls[index].IsVisible;
                     int localVisibleCount = 0;
@@ -626,9 +843,31 @@ namespace Ludots.Core.Systems
                         highSq,
                         medSq,
                         lowSq2,
+                        useSpatialGate: false,
+                        hasPayloads,
+                        hasPayloads ? payloads[index] : default,
                         ref localVisibleCount);
+                    statics[index].CullEpoch = cullEpoch;
+                    QueueStaticCullPendingClear(entity);
                     AdjustVisibleCountAfterStaticProcess(rebuildVisibleCount, wasVisible, culls[index].IsVisible, ref visibleCount);
                 }
+            }
+        }
+
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        private void QueueStaticCullPendingClear(Entity entity)
+        {
+            if (World.Has<PresentationStaticCullPending>(entity))
+            {
+                _commandBuffer.Remove<PresentationStaticCullPending>(in entity);
+            }
+        }
+
+        private void PlaybackStructuralChanges()
+        {
+            if (_commandBuffer.Size > 0)
+            {
+                _commandBuffer.Playback(World);
             }
         }
 
@@ -670,7 +909,8 @@ namespace Ludots.Core.Systems
             float lowSq2,
             ref int visibleCount)
         {
-            foreach (ref var chunk in World.Query(in _visualBoundsLodQuery))
+            QueryDescription query = VisualBoundsLodQuery;
+            foreach (ref var chunk in World.Query(in query))
             {
                 ref Entity entityFirst = ref chunk.Entity(0);
                 var positions = chunk.GetSpan<WorldPositionCm>();
@@ -713,7 +953,8 @@ namespace Ludots.Core.Systems
             float lowSq2,
             ref int visibleCount)
         {
-            foreach (ref var chunk in World.Query(in _visualBoundsQuery))
+            QueryDescription query = VisualBoundsQuery;
+            foreach (ref var chunk in World.Query(in query))
             {
                 ref Entity entityFirst = ref chunk.Entity(0);
                 var positions = chunk.GetSpan<WorldPositionCm>();
@@ -755,7 +996,8 @@ namespace Ludots.Core.Systems
             float lowSq2,
             ref int visibleCount)
         {
-            foreach (ref var chunk in World.Query(in _visualLodQuery))
+            QueryDescription query = VisualLodQuery;
+            foreach (ref var chunk in World.Query(in query))
             {
                 ref Entity entityFirst = ref chunk.Entity(0);
                 var positions = chunk.GetSpan<WorldPositionCm>();
@@ -797,7 +1039,8 @@ namespace Ludots.Core.Systems
             float lowSq2,
             ref int visibleCount)
         {
-            foreach (ref var chunk in World.Query(in _visualDefaultQuery))
+            QueryDescription query = VisualDefaultQuery;
+            foreach (ref var chunk in World.Query(in query))
             {
                 ref Entity entityFirst = ref chunk.Entity(0);
                 var positions = chunk.GetSpan<WorldPositionCm>();
@@ -806,14 +1049,11 @@ namespace Ludots.Core.Systems
                 foreach (var index in chunk)
                 {
                     Entity entity = Unsafe.Add(ref entityFirst, index);
-                    ProcessEntity(
+                    ProcessEntityWithDefaultVisual(
                         entity,
                         ref culls[index],
                         in positions[index],
                         in visuals[index],
-                        in _defaultBounds,
-                        default,
-                        hasLodProfile: false,
                         in queryBounds,
                         target,
                         distanceCm,
@@ -838,7 +1078,8 @@ namespace Ludots.Core.Systems
             float lowSq2,
             ref int visibleCount)
         {
-            foreach (ref var chunk in World.Query(in _noVisualQuery))
+            QueryDescription query = NoVisualQuery;
+            foreach (ref var chunk in World.Query(in query))
             {
                 ref Entity entityFirst = ref chunk.Entity(0);
                 var positions = chunk.GetSpan<WorldPositionCm>();
@@ -889,15 +1130,59 @@ namespace Ludots.Core.Systems
             float lowSq2,
             ref int visibleCount)
         {
-            if (!HasPresentationPayload(entity))
+            ProcessEntity(
+                entity,
+                ref cull,
+                in worldPosition,
+                in visualTransform,
+                in localBounds,
+                in lodProfile,
+                hasLodProfile,
+                in queryBounds,
+                target,
+                distanceCm,
+                tx,
+                ty,
+                highSq,
+                medSq,
+                lowSq2,
+                useSpatialGate: true,
+                hasPayload: false,
+                default,
+                ref visibleCount);
+        }
+
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        private void ProcessEntity(
+            Entity entity,
+            ref CullState cull,
+            in WorldPositionCm worldPosition,
+            in VisualTransform visualTransform,
+            in PresentationLocalBounds localBounds,
+            in PresentationLodProfile lodProfile,
+            bool hasLodProfile,
+            in WorldAabbCm queryBounds,
+            Vector2 target,
+            float distanceCm,
+            float tx,
+            float ty,
+            float highSq,
+            float medSq,
+            float lowSq2,
+            bool useSpatialGate,
+            bool hasPayload,
+            in PresentationOwnerHasPerformerPayload payload,
+            ref int visibleCount)
+        {
+            var wp = worldPosition.Value;
+            float px = wp.X.ToFloat();
+            float py = wp.Y.ToFloat();
+            if (useSpatialGate && !PassesSpatialCandidateGate(entity))
             {
                 ForceCull(entity, ref cull);
                 return;
             }
 
-            var wp = worldPosition.Value;
-            float px = wp.X.ToFloat();
-            float py = wp.Y.ToFloat();
             if (!PassesLoadedChunkGate(px, py))
             {
                 ForceCull(entity, ref cull);
@@ -929,13 +1214,126 @@ namespace Ludots.Core.Systems
             LODLevel resolvedLod = hasLodProfile
                 ? ResolveLod(distSq, coverage01, in lodProfile)
                 : ResolveLod(distSq, coverage01, highSq, medSq, lowSq2);
-            if (cull.IsVisible != (resolvedLod != LODLevel.Culled) || cull.LOD != resolvedLod)
-            {
-                TrackCullChange(entity);
-            }
+            bool changed = cull.IsVisible != (resolvedLod != LODLevel.Culled) || cull.LOD != resolvedLod;
 
             cull.LOD = resolvedLod;
             cull.IsVisible = resolvedLod != LODLevel.Culled;
+            if (changed)
+            {
+                if (hasPayload)
+                {
+                    TrackOrSyncCullChange(entity, in cull, in payload);
+                }
+                else
+                {
+                    TrackOrSyncCullChange(entity, in cull);
+                }
+            }
+
+            if (cull.IsVisible)
+            {
+                visibleCount++;
+            }
+        }
+
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        private void ProcessEntityWithDefaultVisual(
+            Entity entity,
+            ref CullState cull,
+            in WorldPositionCm worldPosition,
+            in VisualTransform visualTransform,
+            in WorldAabbCm queryBounds,
+            Vector2 target,
+            float distanceCm,
+            float tx,
+            float ty,
+            float highSq,
+            float medSq,
+            float lowSq2,
+            ref int visibleCount)
+        {
+            ProcessEntityWithDefaultVisual(
+                entity,
+                ref cull,
+                in worldPosition,
+                in visualTransform,
+                in queryBounds,
+                target,
+                distanceCm,
+                tx,
+                ty,
+                highSq,
+                medSq,
+                lowSq2,
+                useSpatialGate: true,
+                hasPayload: false,
+                default,
+                ref visibleCount);
+        }
+
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        private void ProcessEntityWithDefaultVisual(
+            Entity entity,
+            ref CullState cull,
+            in WorldPositionCm worldPosition,
+            in VisualTransform visualTransform,
+            in WorldAabbCm queryBounds,
+            Vector2 target,
+            float distanceCm,
+            float tx,
+            float ty,
+            float highSq,
+            float medSq,
+            float lowSq2,
+            bool useSpatialGate,
+            bool hasPayload,
+            in PresentationOwnerHasPerformerPayload payload,
+            ref int visibleCount)
+        {
+            var wp = worldPosition.Value;
+            float px = wp.X.ToFloat();
+            float py = wp.Y.ToFloat();
+            if (useSpatialGate && !PassesSpatialCandidateGate(entity))
+            {
+                ForceCull(entity, ref cull);
+                return;
+            }
+
+            if (!PassesLoadedChunkGate(px, py))
+            {
+                ForceCull(entity, ref cull);
+                return;
+            }
+
+            if (!IntersectsViewportDefaultBounds(in visualTransform, in queryBounds))
+            {
+                ForceCull(entity, ref cull);
+                return;
+            }
+
+            float dx = px - tx;
+            float dy = py - ty;
+            float distSq = dx * dx + dy * dy;
+            cull.DistanceToCameraSq = distSq;
+            cull.ScreenCoverage01 = 0f;
+
+            LODLevel resolvedLod = ResolveLod(distSq, coverage01: 0f, highSq, medSq, lowSq2);
+            bool changed = cull.IsVisible != (resolvedLod != LODLevel.Culled) || cull.LOD != resolvedLod;
+
+            cull.LOD = resolvedLod;
+            cull.IsVisible = resolvedLod != LODLevel.Culled;
+            if (changed)
+            {
+                if (hasPayload)
+                {
+                    TrackOrSyncCullChange(entity, in cull, in payload);
+                }
+                else
+                {
+                    TrackOrSyncCullChange(entity, in cull);
+                }
+            }
+
             if (cull.IsVisible)
             {
                 visibleCount++;
@@ -960,15 +1358,57 @@ namespace Ludots.Core.Systems
             float lowSq2,
             ref int visibleCount)
         {
-            if (!HasPresentationPayload(entity))
+            ProcessEntityWithoutVisual(
+                entity,
+                ref cull,
+                in worldPosition,
+                in localBounds,
+                in lodProfile,
+                hasLodProfile,
+                in queryBounds,
+                target,
+                distanceCm,
+                tx,
+                ty,
+                highSq,
+                medSq,
+                lowSq2,
+                useSpatialGate: true,
+                hasPayload: false,
+                default,
+                ref visibleCount);
+        }
+
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        private void ProcessEntityWithoutVisual(
+            Entity entity,
+            ref CullState cull,
+            in WorldPositionCm worldPosition,
+            in PresentationLocalBounds localBounds,
+            in PresentationLodProfile lodProfile,
+            bool hasLodProfile,
+            in WorldAabbCm queryBounds,
+            Vector2 target,
+            float distanceCm,
+            float tx,
+            float ty,
+            float highSq,
+            float medSq,
+            float lowSq2,
+            bool useSpatialGate,
+            bool hasPayload,
+            in PresentationOwnerHasPerformerPayload payload,
+            ref int visibleCount)
+        {
+            var wp = worldPosition.Value;
+            float px = wp.X.ToFloat();
+            float py = wp.Y.ToFloat();
+            if (useSpatialGate && !PassesSpatialCandidateGate(entity))
             {
                 ForceCull(entity, ref cull);
                 return;
             }
 
-            var wp = worldPosition.Value;
-            float px = wp.X.ToFloat();
-            float py = wp.Y.ToFloat();
             if (!PassesLoadedChunkGate(px, py))
             {
                 ForceCull(entity, ref cull);
@@ -1001,13 +1441,22 @@ namespace Ludots.Core.Systems
             LODLevel resolvedLod = hasLodProfile
                 ? ResolveLod(distSq, coverage01, in lodProfile)
                 : ResolveLod(distSq, coverage01, highSq, medSq, lowSq2);
-            if (cull.IsVisible != (resolvedLod != LODLevel.Culled) || cull.LOD != resolvedLod)
-            {
-                TrackCullChange(entity);
-            }
+            bool changed = cull.IsVisible != (resolvedLod != LODLevel.Culled) || cull.LOD != resolvedLod;
 
             cull.LOD = resolvedLod;
             cull.IsVisible = resolvedLod != LODLevel.Culled;
+            if (changed)
+            {
+                if (hasPayload)
+                {
+                    TrackOrSyncCullChange(entity, in cull, in payload);
+                }
+                else
+                {
+                    TrackOrSyncCullChange(entity, in cull);
+                }
+            }
+
             if (cull.IsVisible)
             {
                 visibleCount++;
@@ -1015,12 +1464,31 @@ namespace Ludots.Core.Systems
         }
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        private static bool IntersectsViewportDefaultBounds(
+            in VisualTransform visualTransform,
+            in WorldAabbCm queryBounds)
+        {
+            float halfWidthCm = MathF.Max(10f, MathF.Abs(visualTransform.Scale.X) * 50f);
+            float halfDepthCm = MathF.Max(10f, MathF.Abs(visualTransform.Scale.Z) * 50f);
+            float centerXCm = visualTransform.Position.X * 100f;
+            float centerYCm = visualTransform.Position.Z * 100f;
+            return centerXCm + halfWidthCm >= queryBounds.Left &&
+                   centerXCm - halfWidthCm <= queryBounds.Right &&
+                   centerYCm + halfDepthCm >= queryBounds.Top &&
+                   centerYCm - halfDepthCm <= queryBounds.Bottom;
+        }
+
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
         private void ForceCull(Entity owner, ref CullState cull)
         {
-            TrackCullToCulled(owner, in cull);
+            bool changed = cull.LOD != LODLevel.Culled || cull.IsVisible;
             cull.LOD = LODLevel.Culled;
             cull.IsVisible = false;
             cull.ScreenCoverage01 = 0f;
+            if (changed)
+            {
+                TrackOrSyncCullChange(owner, in cull);
+            }
         }
 
         private bool PassesLoadedChunkGate(float worldXCm, float worldYCm)
@@ -1036,6 +1504,12 @@ namespace Ludots.Core.Systems
             int chunkY = cellY >> 6;
             long key = HexCoordinates.GetChunkKey(chunkX, chunkY);
             return _loadedChunks.IsLoaded(key);
+        }
+
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        private bool PassesSpatialCandidateGate(Entity entity)
+        {
+            return _spatialCandidates.Contains(entity);
         }
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
@@ -1091,16 +1565,6 @@ namespace Ludots.Core.Systems
             float approxRadiusCm = MathF.Max(halfWidthCm, halfDepthCm);
             float distanceToCameraCm = MathF.Max(1f, MathF.Sqrt(((px - target.X) * (px - target.X)) + ((py - target.Y) * (py - target.Y)) + (distanceCm * distanceCm * 0.04f)));
             screenCoverage01 = Math.Clamp((approxRadiusCm * 2f) / MathF.Max(distanceToCameraCm, 1f), 0f, 1f);
-        }
-
-        private bool HasPresentationPayload(Entity entity)
-        {
-            if (_performers == null)
-            {
-                return true;
-            }
-
-            return World.Has<PresentationOwnerHasPerformerPayload>(entity);
         }
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]

@@ -1,3 +1,5 @@
+using Arch.Core;
+
 namespace Ludots.Core.Presentation.Components
 {
     /// <summary>
@@ -7,5 +9,6 @@ namespace Ludots.Core.Presentation.Components
     public struct PresentationOwnerHasPerformerPayload
     {
         public int Count;
+        public Entity SingleRootPerformer;
     }
 }

@@ -1,10 +1,13 @@
 using System;
 using System.Collections.Generic;
 using System.Numerics;
+using System.Runtime.CompilerServices;
+using Arch.Buffer;
 using Arch.Core;
 using Arch.System;
 using Ludots.Core.Components;
 using Ludots.Core.Mathematics.FixedPoint;
+using Ludots.Core.Diagnostics;
 using Ludots.Core.Presentation.Components;
 using Ludots.Core.Presentation.Terrain;
 using Ludots.Core.Scripting;
@@ -25,16 +28,18 @@ namespace Ludots.Core.Presentation.Systems
         private readonly World _world;
         private readonly IReadOnlyDictionary<string, object> _globals;
         private static readonly QueryDescription _query = new QueryDescription()
-            .WithAll<WorldPositionCm, VisualTransform>()
+            .WithAll<WorldPositionCm, VisualTransform, VisualHeightmapSampleState>()
             .WithNone<PresentationStaticTransform>();
         private static readonly QueryDescription _staticPendingQuery = new QueryDescription()
             .WithAll<WorldPositionCm, VisualTransform, PresentationStaticTransform, PresentationStaticHeightPending>();
         private static readonly QueryDescription _frameStateQuery = new QueryDescription()
             .WithAll<PresentationFrameState>();
-        private Entity[] _projectedEntities = Array.Empty<Entity>();
         private float[] _projectedXs = Array.Empty<float>();
         private float[] _projectedYs = Array.Empty<float>();
         private float[] _projectedHeights = Array.Empty<float>();
+        private Entity[] _staticPendingEntities = Array.Empty<Entity>();
+        private readonly CommandBuffer _commandBuffer = new();
+        private bool _warnedMissingHeightmap;
 
         /// <summary>地形高度缩放（米/高度单位），需与地形渲染器一致，默认 2.0。</summary>
         public float HeightScale { get; set; } = 2.0f;
@@ -55,98 +60,262 @@ namespace Ludots.Core.Presentation.Systems
                     : null;
             if (heightmap is null)
             {
+                WarnMissingHeightmap();
+                SyncStaticPendingToZeroHeight();
                 return;
             }
 
-            float alpha = ReadInterpolationAlpha();
-            TrySyncFromHeightmap(heightmap, alpha, in _query);
-            if (TrySyncFromHeightmap(heightmap, alpha, in _staticPendingQuery))
-            {
-                _world.Remove<PresentationStaticHeightPending>(in _staticPendingQuery);
-            }
+            ReadFrameState(out float alpha, out int frameId);
+            TrySyncFromHeightmap(heightmap, alpha, frameId, in _query);
+            TrySyncStaticPendingFromHeightmap(heightmap, alpha, frameId);
         }
 
         public void AfterUpdate(in float dt) { }
         public void BeforeUpdate(in float dt) { }
-        public void Dispose() { }
-
-        private float ReadInterpolationAlpha()
+        public void Dispose()
         {
-            float alpha = 1f;
-            _world.Query(in _frameStateQuery, (ref PresentationFrameState state) =>
-            {
-                alpha = state.Enabled ? state.InterpolationAlpha : 1f;
-            });
-            return alpha;
+            _commandBuffer.Dispose();
         }
 
-        private bool TrySyncFromHeightmap(IVisualHeightmap heightmap, float alpha, in QueryDescription query)
+        private void ReadFrameState(out float alpha, out int frameId)
+        {
+            var job = new ReadFrameStateJob();
+            _world.InlineQuery<ReadFrameStateJob, PresentationFrameState>(in _frameStateQuery, ref job);
+            alpha = job.Alpha;
+            frameId = job.FrameId;
+        }
+
+        private struct ReadFrameStateJob : IForEach<PresentationFrameState>
+        {
+            public float Alpha;
+            public int FrameId;
+
+            public ReadFrameStateJob()
+            {
+                Alpha = 1f;
+                FrameId = 0;
+            }
+
+            [MethodImpl(MethodImplOptions.AggressiveInlining)]
+            public void Update(ref PresentationFrameState state)
+            {
+                Alpha = state.Enabled ? state.InterpolationAlpha : 1f;
+                FrameId = state.FrameId;
+            }
+        }
+
+        private bool TrySyncFromHeightmap(IVisualHeightmap heightmap, float alpha, int frameId, in QueryDescription query)
+        {
+            bool any = false;
+            Fix64 fixedAlpha = Fix64.FromFloat(alpha);
+            foreach (ref var chunk in _world.Query(in query))
+            {
+                int count = chunk.Count;
+                EnsureProjectionCapacity(count);
+
+                Span<WorldPositionCm> currentPositions = chunk.GetSpan<WorldPositionCm>();
+                Span<VisualTransform> visuals = chunk.GetSpan<VisualTransform>();
+                Span<PreviousWorldPositionCm> previousPositions = chunk.Has<PreviousWorldPositionCm>()
+                    ? chunk.GetSpan<PreviousWorldPositionCm>()
+                    : Span<PreviousWorldPositionCm>.Empty;
+                Span<VisualHeightmapSampleState> heightSampleStates = chunk.Has<VisualHeightmapSampleState>()
+                    ? chunk.GetSpan<VisualHeightmapSampleState>()
+                    : Span<VisualHeightmapSampleState>.Empty;
+
+                foreach (int index in chunk)
+                {
+                    Vector2 worldCm = previousPositions.Length == 0
+                        ? currentPositions[index].Value.ToVector2()
+                        : Fix64Vec2.Lerp(previousPositions[index].Value, currentPositions[index].Value, fixedAlpha).ToVector2();
+                    _projectedXs[index] = worldCm.X;
+                    _projectedYs[index] = worldCm.Y;
+                }
+
+                if (!heightmap.SampleHeightsCm(
+                        _projectedXs.AsSpan(0, count),
+                        _projectedYs.AsSpan(0, count),
+                        _projectedHeights.AsSpan(0, count)))
+                {
+                    continue;
+                }
+
+                any = true;
+                foreach (int index in chunk)
+                {
+                    float heightCm = _projectedHeights[index];
+                    if (float.IsNaN(heightCm) || float.IsInfinity(heightCm))
+                    {
+                        continue;
+                    }
+
+                    visuals[index].Position.Y = heightCm * CmToM;
+                    if (!heightSampleStates.IsEmpty)
+                    {
+                        heightSampleStates[index] = new VisualHeightmapSampleState
+                        {
+                            FrameId = frameId,
+                            Sampled = 1,
+                        };
+                    }
+                }
+            }
+
+            return any;
+        }
+
+        private void TrySyncStaticPendingFromHeightmap(IVisualHeightmap heightmap, float alpha, int frameId)
         {
             int count = 0;
-            _world.Query(in query, (Entity entity, ref WorldPositionCm current, ref VisualTransform visual) =>
+            if (TrySyncFromHeightmap(heightmap, alpha, frameId, in _staticPendingQuery, ref count))
             {
-                EnsureProjectionCapacity(count + 1);
-                Vector2 worldCm = ResolveWorldCm(entity, current.Value, alpha);
-                _projectedEntities[count] = entity;
-                _projectedXs[count] = worldCm.X;
-                _projectedYs[count] = worldCm.Y;
-                count++;
-            });
+                RemoveStaticPendingMarkers(_staticPendingEntities.AsSpan(0, count));
+            }
+        }
 
-            if (count <= 0 ||
-                !heightmap.SampleHeightsCm(
-                    _projectedXs.AsSpan(0, count),
-                    _projectedYs.AsSpan(0, count),
-                    _projectedHeights.AsSpan(0, count)))
+        private void SyncStaticPendingToZeroHeight()
+        {
+            int count = 0;
+            foreach (ref var chunk in _world.Query(in _staticPendingQuery))
             {
-                return false;
+                Span<VisualTransform> visuals = chunk.GetSpan<VisualTransform>();
+                foreach (int index in chunk)
+                {
+                    visuals[index].Position.Y = 0f;
+                    AddStaticPendingEntity(ref count, chunk.Entity(index));
+                }
             }
 
-            for (int i = 0; i < count; i++)
+            if (count > 0)
             {
-                Entity entity = _projectedEntities[i];
-                if (!_world.IsAlive(entity) || !_world.Has<VisualTransform>(entity))
+                RemoveStaticPendingMarkers(_staticPendingEntities.AsSpan(0, count));
+            }
+        }
+
+        private bool TrySyncFromHeightmap(
+            IVisualHeightmap heightmap,
+            float alpha,
+            int frameId,
+            in QueryDescription query,
+            ref int staticPendingCount)
+        {
+            bool any = false;
+            Fix64 fixedAlpha = Fix64.FromFloat(alpha);
+            foreach (ref var chunk in _world.Query(in query))
+            {
+                int count = chunk.Count;
+                EnsureProjectionCapacity(count);
+
+                Span<WorldPositionCm> currentPositions = chunk.GetSpan<WorldPositionCm>();
+                Span<VisualTransform> visuals = chunk.GetSpan<VisualTransform>();
+                Span<PreviousWorldPositionCm> previousPositions = chunk.Has<PreviousWorldPositionCm>()
+                    ? chunk.GetSpan<PreviousWorldPositionCm>()
+                    : Span<PreviousWorldPositionCm>.Empty;
+                Span<VisualHeightmapSampleState> heightSampleStates = chunk.Has<VisualHeightmapSampleState>()
+                    ? chunk.GetSpan<VisualHeightmapSampleState>()
+                    : Span<VisualHeightmapSampleState>.Empty;
+
+                foreach (int index in chunk)
+                {
+                    Vector2 worldCm = previousPositions.Length == 0
+                        ? currentPositions[index].Value.ToVector2()
+                        : Fix64Vec2.Lerp(previousPositions[index].Value, currentPositions[index].Value, fixedAlpha).ToVector2();
+                    _projectedXs[index] = worldCm.X;
+                    _projectedYs[index] = worldCm.Y;
+                }
+
+                if (!heightmap.SampleHeightsCm(
+                        _projectedXs.AsSpan(0, count),
+                        _projectedYs.AsSpan(0, count),
+                        _projectedHeights.AsSpan(0, count)))
                 {
                     continue;
                 }
 
-                float heightCm = _projectedHeights[i];
-                if (float.IsNaN(heightCm) || float.IsInfinity(heightCm))
+                any = true;
+                foreach (int index in chunk)
                 {
-                    continue;
+                    float heightCm = _projectedHeights[index];
+                    if (float.IsNaN(heightCm) || float.IsInfinity(heightCm))
+                    {
+                        visuals[index].Position.Y = 0f;
+                    }
+                    else
+                    {
+                        visuals[index].Position.Y = heightCm * CmToM;
+                    }
+
+                    if (!heightSampleStates.IsEmpty)
+                    {
+                        heightSampleStates[index] = new VisualHeightmapSampleState
+                        {
+                            FrameId = frameId,
+                            Sampled = 1,
+                        };
+                    }
+
+                    AddStaticPendingEntity(ref staticPendingCount, chunk.Entity(index));
                 }
-
-                ref var visual = ref _world.Get<VisualTransform>(entity);
-                Vector3 position = visual.Position;
-                position.Y = heightCm * CmToM;
-                visual.Position = position;
             }
 
-            return true;
+            return any;
         }
 
-        private Vector2 ResolveWorldCm(Entity entity, in Fix64Vec2 current, float alpha)
+        private void RemoveStaticPendingMarkers(ReadOnlySpan<Entity> entities)
         {
-            if (_world.TryGet(entity, out PreviousWorldPositionCm previous))
+            for (int i = 0; i < entities.Length; i++)
             {
-                return Fix64Vec2.Lerp(previous.Value, current, Fix64.FromFloat(alpha)).ToVector2();
+                Entity entity = entities[i];
+                if (_world.IsAlive(entity) && _world.Has<PresentationStaticHeightPending>(entity))
+                {
+                    _commandBuffer.Remove<PresentationStaticHeightPending>(in entity);
+                }
             }
 
-            return current.ToVector2();
+            if (entities.Length > 0)
+            {
+                _commandBuffer.Playback(_world);
+            }
         }
 
-        private void EnsureProjectionCapacity(int required)
+        private void AddStaticPendingEntity(ref int count, Entity entity)
         {
-            if (required <= _projectedEntities.Length)
+            EnsureStaticPendingCapacity(count + 1);
+            _staticPendingEntities[count++] = entity;
+        }
+
+        private void WarnMissingHeightmap()
+        {
+            if (_warnedMissingHeightmap)
             {
                 return;
             }
 
-            int capacity = Math.Max(required, Math.Max(4, _projectedEntities.Length * 2));
-            Array.Resize(ref _projectedEntities, capacity);
+            Log.Warn(in LogChannels.Presentation, "Terrain height sync requested VisualHeightmap, but none is registered; static projection writes height 0.");
+            _warnedMissingHeightmap = true;
+        }
+
+        private void EnsureProjectionCapacity(int required)
+        {
+            if (required <= _projectedXs.Length)
+            {
+                return;
+            }
+
+            int capacity = Math.Max(required, Math.Max(4, _projectedXs.Length * 2));
             Array.Resize(ref _projectedXs, capacity);
             Array.Resize(ref _projectedYs, capacity);
             Array.Resize(ref _projectedHeights, capacity);
+        }
+
+        private void EnsureStaticPendingCapacity(int required)
+        {
+            if (required <= _staticPendingEntities.Length)
+            {
+                return;
+            }
+
+            int capacity = Math.Max(required, Math.Max(256, _staticPendingEntities.Length * 2));
+            Array.Resize(ref _staticPendingEntities, capacity);
         }
     }
 }

@@ -1,4 +1,5 @@
 using System;
+using Arch.Buffer;
 using Arch.Core;
 using Arch.System;
 using Ludots.Core.Components;
@@ -18,6 +19,7 @@ namespace Ludots.Core.Presentation.Systems
             .WithNone<ProjectilePresentationBootstrapState>();
 
         private readonly PresentationStableIdAllocator _stableIds;
+        private readonly CommandBuffer _commandBuffer = new();
 
         public ProjectilePresentationBootstrapSystem(
             World world,
@@ -36,30 +38,46 @@ namespace Ludots.Core.Presentation.Systems
                 for (int i = 0; i < chunk.Count; i++)
                 {
                     Entity entity = chunk.Entity(i);
-                    World.Add(entity, new ProjectilePresentationBootstrapState());
+                    _commandBuffer.Add(entity, new ProjectilePresentationBootstrapState());
 
                     EnsurePresentationContract(entity);
 
                 }
             }
+
+            PlaybackStructuralChanges();
         }
 
         private void EnsurePresentationContract(Entity entity)
         {
             if (!World.Has<VisualTransform>(entity))
             {
-                World.Add(entity, VisualTransform.Default);
+                _commandBuffer.Add(entity, VisualTransform.Default);
             }
 
             if (!World.Has<CullState>(entity))
             {
-                World.Add(entity, new CullState { IsVisible = false, LOD = LODLevel.Culled });
+                _commandBuffer.Add(entity, new CullState { IsVisible = false, LOD = LODLevel.Culled });
             }
 
             if (!World.Has<PresentationStableId>(entity))
             {
-                World.Add(entity, new PresentationStableId { Value = _stableIds.Allocate() });
+                _commandBuffer.Add(entity, new PresentationStableId { Value = _stableIds.Allocate() });
             }
+        }
+
+        private void PlaybackStructuralChanges()
+        {
+            if (_commandBuffer.Size > 0)
+            {
+                _commandBuffer.Playback(World);
+            }
+        }
+
+        public override void Dispose()
+        {
+            _commandBuffer.Dispose();
+            base.Dispose();
         }
     }
 }

@@ -174,8 +174,6 @@ namespace Ludots.Tests.GAS
                             MaterialParamKey = -1,
                             AssetSwapParamKey = -1,
                             VisibilityParamKey = -1,
-                            Grounding = GroundingMode.None,
-                            GroundingOffset = 0f,
                         }
                     }
                 },

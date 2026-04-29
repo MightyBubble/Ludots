@@ -1,4 +1,5 @@
 using System.Collections.Generic;
+using Arch.Buffer;
 using Arch.Core;
 using Arch.System;
 using Ludots.Core.Components;
@@ -20,6 +21,7 @@ namespace Ludots.Core.Gameplay.GAS.Systems
     {
         private static readonly QueryDescription _query = new QueryDescription().WithAll<DisplacementState>();
         private readonly List<Entity> _toDestroy = new();
+        private readonly CommandBuffer _commandBuffer = new();
         private readonly int _navMoveTagId;
 
         public DisplacementRuntimeSystem(World world) : base(world)
@@ -31,51 +33,63 @@ namespace Ludots.Core.Gameplay.GAS.Systems
         {
             _toDestroy.Clear();
 
-            World.Query(in _query, (Entity e, ref DisplacementState disp) =>
+            foreach (ref var chunk in World.Query(in _query))
             {
-                if (!World.IsAlive(disp.TargetEntity) || !World.Has<WorldPositionCm>(disp.TargetEntity))
+                ref Entity entityFirst = ref chunk.Entity(0);
+                var displacements = chunk.GetSpan<DisplacementState>();
+                foreach (var index in chunk)
                 {
-                    RestoreNavigationOverride(ref disp);
-                    _toDestroy.Add(e);
-                    return;
+                    Entity entity = System.Runtime.CompilerServices.Unsafe.Add(ref entityFirst, index);
+                    ref DisplacementState disp = ref displacements[index];
+                    if (!World.IsAlive(disp.TargetEntity) || !World.Has<WorldPositionCm>(disp.TargetEntity))
+                    {
+                        RestoreNavigationOverride(ref disp);
+                        _toDestroy.Add(entity);
+                        continue;
+                    }
+
+                    if (disp.RemainingTicks <= 0 || disp.RemainingDistanceCm <= Fix64.Zero)
+                    {
+                        RestoreNavigationOverride(ref disp);
+                        _toDestroy.Add(entity);
+                        continue;
+                    }
+
+                    ApplyNavigationOverride(ref disp);
+
+                    Fix64 stepCm = Fix64.FromInt(disp.TotalDistanceCm) / Fix64.FromInt(disp.TotalDurationTicks);
+                    if (stepCm > disp.RemainingDistanceCm)
+                    {
+                        stepCm = disp.RemainingDistanceCm;
+                    }
+
+                    Fix64Vec2 direction = ComputeDirection(in disp, World);
+
+                    ref var pos = ref World.Get<WorldPositionCm>(disp.TargetEntity);
+                    pos.Value = pos.Value + direction * stepCm;
+
+                    disp.RemainingDistanceCm -= stepCm;
+                    disp.RemainingTicks--;
+
+                    if (disp.RemainingTicks <= 0 || disp.RemainingDistanceCm <= Fix64.Zero)
+                    {
+                        RestoreNavigationOverride(ref disp);
+                        _toDestroy.Add(entity);
+                    }
                 }
-
-                if (disp.RemainingTicks <= 0 || disp.RemainingDistanceCm <= Fix64.Zero)
-                {
-                    RestoreNavigationOverride(ref disp);
-                    _toDestroy.Add(e);
-                    return;
-                }
-
-                ApplyNavigationOverride(ref disp);
-
-                Fix64 stepCm = Fix64.FromInt(disp.TotalDistanceCm) / Fix64.FromInt(disp.TotalDurationTicks);
-                if (stepCm > disp.RemainingDistanceCm)
-                {
-                    stepCm = disp.RemainingDistanceCm;
-                }
-
-                Fix64Vec2 direction = ComputeDirection(in disp, World);
-
-                ref var pos = ref World.Get<WorldPositionCm>(disp.TargetEntity);
-                pos.Value = pos.Value + direction * stepCm;
-
-                disp.RemainingDistanceCm -= stepCm;
-                disp.RemainingTicks--;
-
-                if (disp.RemainingTicks <= 0 || disp.RemainingDistanceCm <= Fix64.Zero)
-                {
-                    RestoreNavigationOverride(ref disp);
-                    _toDestroy.Add(e);
-                }
-            });
+            }
 
             for (int i = 0; i < _toDestroy.Count; i++)
             {
                 if (World.IsAlive(_toDestroy[i]))
                 {
-                    World.Destroy(_toDestroy[i]);
+                    _commandBuffer.Destroy(_toDestroy[i]);
                 }
+            }
+
+            if (_commandBuffer.Size > 0)
+            {
+                _commandBuffer.Playback(World);
             }
         }
 
@@ -253,6 +267,12 @@ namespace Ludots.Core.Gameplay.GAS.Systems
                 default:
                     return Fix64Vec2.UnitX;
             }
+        }
+
+        public override void Dispose()
+        {
+            _commandBuffer.Dispose();
+            base.Dispose();
         }
     }
 }

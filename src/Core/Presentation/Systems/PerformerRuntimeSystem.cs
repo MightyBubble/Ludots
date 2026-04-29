@@ -4,11 +4,13 @@ using Arch.Core;
 using Arch.System;
 using Ludots.Core.Presentation.Components;
 using Ludots.Core.Presentation.Events;
+using Ludots.Core.Presentation.Hud;
 using Ludots.Core.Presentation.Performers;
 using Ludots.Core.Presentation.Requests;
 using Ludots.Core.Presentation.Rendering;
 using Ludots.Core.Presentation.Commands;
 using Ludots.Core.Presentation;
+using Ludots.Core.Gameplay.Spawning;
 
 namespace Ludots.Core.Presentation.Systems
 {
@@ -52,6 +54,7 @@ namespace Ludots.Core.Presentation.Systems
         public override void Update(in float dt)
         {
             ReleaseDestroyedOwnerAnchors();
+            _runtime.ReleaseDeadOwners(EmitDestroyedEvent);
 
             var cmdSpan = _commands.GetSpan();
             for (int i = 0; i < cmdSpan.Length; i++)
@@ -79,8 +82,7 @@ namespace Ludots.Core.Presentation.Systems
                     case PerformerCommandKind.SetParam:
                         if (World.IsAlive(cmd.PerformerEntity) && World.Has<PerformerState>(cmd.PerformerEntity))
                         {
-                            _runtime.SetParam(cmd.PerformerEntity, cmd.ParamKey, cmd.ParamLane, cmd.ParamValue, cmd.IntValue, cmd.VectorValue);
-                            MarkHierarchyForBootstrap(cmd.PerformerEntity);
+                            _runtime.SetParamAndPropagateToAffectedChildren(cmd.PerformerEntity, cmd.ParamKey, cmd.ParamLane, cmd.ParamValue, cmd.IntValue, cmd.VectorValue);
                         }
                         break;
 
@@ -204,10 +206,7 @@ namespace Ludots.Core.Presentation.Systems
                 return;
             }
 
-            if (World.IsAlive(cmd.Source) &&
-                World.Has<PerformerRootBootstrapHandled>(cmd.Source) &&
-                cmd.AnchorKind == PresentationAnchorKind.Entity &&
-                cmd.ParentEntity == Entity.Null)
+            if (ShouldSkipHandledRootBootstrapCreate(in cmd))
             {
                 return;
             }
@@ -234,10 +233,7 @@ namespace Ludots.Core.Presentation.Systems
             ref PerformerState state = ref World.Get<PerformerState>(entity);
             state.BehaviorActiveMask = BuildDefaultBehaviorMask(definition);
             MarkHierarchyForBootstrapIfNeeded(entity);
-            if (_definitions.HasPerformerCreatedRules)
-            {
-                EmitCreatedEvent(entity, World.Get<PerformerState>(entity));
-            }
+            EmitCreatedEvent(entity, World.Get<PerformerState>(entity));
         }
 
         private static Entity NormalizeOptionalEntity(Entity entity)
@@ -251,6 +247,42 @@ namespace Ludots.Core.Presentation.Systems
                 return false;
             return _runtime.HasActiveScopedInstance(
                 cmd.PerformerDefinitionId, cmd.Source, cmd.ScopeTag, cmd.AnchorKind, cmd.Position);
+        }
+
+        private bool ShouldSkipHandledRootBootstrapCreate(in PerformerCommand cmd)
+        {
+            if (!World.IsAlive(cmd.Source) ||
+                !World.Has<PerformerRootBootstrapHandled>(cmd.Source) ||
+                cmd.AnchorKind != PresentationAnchorKind.Entity ||
+                cmd.ParentEntity != Entity.Null ||
+                !World.Has<EntityTemplateKeyCm>(cmd.Source))
+            {
+                return false;
+            }
+
+            int templateKeyId = World.Get<EntityTemplateKeyCm>(cmd.Source).TemplateKeyId;
+            if (templateKeyId <= 0 ||
+                !_definitions.BootstrapRegistry.TryGetEntitySpawnCreates(
+                    templateKeyId,
+                    out CompiledPerformerBootstrapRegistry.BootstrapCreateRule[] rules))
+            {
+                return false;
+            }
+
+            for (int i = 0; i < rules.Length; i++)
+            {
+                if (rules[i].PerformerDefinitionId != cmd.PerformerDefinitionId)
+                {
+                    continue;
+                }
+
+                int stableId = World.Has<PresentationStableId>(cmd.Source)
+                    ? World.Get<PresentationStableId>(cmd.Source).Value
+                    : 0;
+                return rules[i].ResolveScopeTag(stableId) == cmd.ScopeTag;
+            }
+
+            return false;
         }
 
         private static uint BuildDefaultBehaviorMask(PerformerDefinition definition)
@@ -288,6 +320,7 @@ namespace Ludots.Core.Presentation.Systems
         private void EmitDestroyedEvent(Entity performer, PerformerState state)
         {
             RemoveStableVisualCacheIfPresent(performer, in state);
+            EmitRetainedPresentationRemovalIfPresent(performer, in state);
             _animatorStates?.Clear(performer);
 
             if (!_events.TryAdd(new PresentationEvent
@@ -310,7 +343,6 @@ namespace Ludots.Core.Presentation.Systems
             if (_stableDrawCache == null ||
                 !World.IsAlive(performer) ||
                 !World.Has<PerformerEmitCache>(performer) ||
-                World.Get<PerformerEmitCache>(performer).StableVisualPresent == 0 ||
                 !_definitions.TryGet(state.DefId, out PerformerDefinition definition))
             {
                 return;
@@ -326,6 +358,57 @@ namespace Ludots.Core.Presentation.Systems
                     slot.SlotIndex,
                     slot.AssetBinding.AssetKind,
                     state.DefId));
+            }
+        }
+
+        private void EmitRetainedPresentationRemovalIfPresent(Entity performer, in PerformerState state)
+        {
+            if (!_definitions.TryGet(state.DefId, out PerformerDefinition definition) ||
+                !World.IsAlive(performer) ||
+                !World.Has<PerformerEmitCache>(performer) ||
+                World.Get<PerformerEmitCache>(performer).RetainedRequestPresent == 0)
+            {
+                return;
+            }
+
+            if (definition.HasSurfaceAuthoring)
+            {
+                _requests.Add(PresentationRequest.RemoveSurfaceSource(state.OwnerEntity, state.StableId));
+            }
+
+            if (!definition.UsesRetainedPresentationRequest ||
+                definition.AssetBehaviorIndices.Length != 1 ||
+                definition.Behaviors == null)
+            {
+                return;
+            }
+
+            ref readonly BehaviorSlot slot = ref definition.Behaviors[definition.AssetBehaviorIndices[0]];
+            int stableId = slot.AssetBinding.AssetKind switch
+            {
+                AssetKind.WorldHud => HudItemIdentity.ComposeStableId(state.StableId, WorldHudItemKind.Bar, state.DefId),
+                AssetKind.WorldText => HudItemIdentity.ComposeStableId(state.StableId, WorldHudItemKind.Text, state.DefId),
+                AssetKind.Spline => PerformerBehaviorRuntimeUtility.ComposeVisualStableId(state.StableId, slot.SlotIndex, slot.AssetBinding.AssetKind, state.DefId),
+                AssetKind.GroundOverlay => PerformerBehaviorRuntimeUtility.ComposeVisualStableId(state.StableId, slot.SlotIndex, slot.AssetBinding.AssetKind, state.DefId),
+                _ => 0,
+            };
+            if (stableId <= 0)
+            {
+                return;
+            }
+
+            switch (slot.AssetBinding.AssetKind)
+            {
+                case AssetKind.WorldHud:
+                case AssetKind.WorldText:
+                    _requests.Add(PresentationRequest.RemoveWorldHud(state.OwnerEntity, stableId));
+                    break;
+                case AssetKind.Spline:
+                    _requests.Add(PresentationRequest.RemoveRoadSpline(state.OwnerEntity, stableId));
+                    break;
+                case AssetKind.GroundOverlay:
+                    _requests.Add(PresentationRequest.RemoveGroundOverlay(state.OwnerEntity, stableId));
+                    break;
             }
         }
 

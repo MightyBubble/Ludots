@@ -1,5 +1,6 @@
 using System;
 using System.Collections.Generic;
+using Arch.Buffer;
 using Arch.Core;
 using Arch.System;
 using Ludots.Core.Components;
@@ -20,6 +21,8 @@ namespace Ludots.Core.Gameplay.GAS.Systems
         private readonly EffectRequestQueue _effectRequests;
         private readonly ISpatialQueryService _spatialQueries;
         private readonly List<Entity> _toDestroy = new();
+        private readonly HashSet<Entity> _toDestroySet = new();
+        private readonly CommandBuffer _commandBuffer = new();
 
         public ProjectileRuntimeSystem(World world, EffectRequestQueue effectRequests, ISpatialQueryService spatialQueries) : base(world)
         {
@@ -35,12 +38,20 @@ namespace Ludots.Core.Gameplay.GAS.Systems
             }
 
             _toDestroy.Clear();
+            _toDestroySet.Clear();
             Fix64 deltaTime = Fix64.FromFloat(dt);
 
-            World.Query(in Query, (Entity entity, ref ProjectileState projectile, ref WorldPositionCm position) =>
+            foreach (ref var chunk in World.Query(in Query))
             {
-                UpdateProjectile(entity, ref projectile, ref position, deltaTime);
-            });
+                ref Entity entityFirst = ref chunk.Entity(0);
+                var projectiles = chunk.GetSpan<ProjectileState>();
+                var positions = chunk.GetSpan<WorldPositionCm>();
+                foreach (var index in chunk)
+                {
+                    Entity entity = System.Runtime.CompilerServices.Unsafe.Add(ref entityFirst, index);
+                    UpdateProjectile(entity, ref projectiles[index], ref positions[index], deltaTime);
+                }
+            }
 
             for (int i = 0; i < _toDestroy.Count; i++)
             {
@@ -50,19 +61,24 @@ namespace Ludots.Core.Gameplay.GAS.Systems
                     {
                         if (!World.Has<PresentationDestroyPending>(_toDestroy[i]))
                         {
-                            World.Add(_toDestroy[i], new PresentationDestroyPending());
+                            _commandBuffer.Add(_toDestroy[i], new PresentationDestroyPending());
                         }
 
                         if (World.Has<PresentationDestroyEventPublished>(_toDestroy[i]))
                         {
-                            World.Remove<PresentationDestroyEventPublished>(_toDestroy[i]);
+                            _commandBuffer.Remove<PresentationDestroyEventPublished>(_toDestroy[i]);
                         }
 
                         continue;
                     }
 
-                    World.Destroy(_toDestroy[i]);
+                    _commandBuffer.Destroy(_toDestroy[i]);
                 }
+            }
+
+            if (_commandBuffer.Size > 0)
+            {
+                _commandBuffer.Playback(World);
             }
         }
 
@@ -70,13 +86,13 @@ namespace Ludots.Core.Gameplay.GAS.Systems
         {
             if (!World.IsAlive(projectile.Source))
             {
-                _toDestroy.Add(entity);
+                QueueDestroy(entity);
                 return;
             }
 
             if (projectile.Speed <= Fix64.Zero || projectile.Range <= 0)
             {
-                _toDestroy.Add(entity);
+                QueueDestroy(entity);
                 return;
             }
 
@@ -134,7 +150,7 @@ namespace Ludots.Core.Gameplay.GAS.Systems
                             position.Value = World.Get<WorldPositionCm>(firstHit).Value;
                         }
 
-                        _toDestroy.Add(entity);
+                        QueueDestroy(entity);
                         return;
                     }
                 }
@@ -151,7 +167,7 @@ namespace Ludots.Core.Gameplay.GAS.Systems
             if (completed)
             {
                 PublishEffect(projectile.ImpactEffectTemplateId, in projectile, World.IsAlive(projectile.Target) ? projectile.Target : Entity.Null, position.Value);
-                _toDestroy.Add(entity);
+                QueueDestroy(entity);
             }
         }
 
@@ -260,7 +276,7 @@ namespace Ludots.Core.Gameplay.GAS.Systems
 
                 if (projectile.MaxHitCount > 0 && projectile.DistinctHitCount >= projectile.MaxHitCount)
                 {
-                    _toDestroy.Add(projectileEntity);
+                    QueueDestroy(projectileEntity);
                     return true;
                 }
 
@@ -271,6 +287,14 @@ namespace Ludots.Core.Gameplay.GAS.Systems
             }
 
             return firstHit != Entity.Null;
+        }
+
+        private void QueueDestroy(Entity entity)
+        {
+            if (_toDestroySet.Add(entity))
+            {
+                _toDestroy.Add(entity);
+            }
         }
 
         private bool IsValidCollisionTarget(Entity projectileEntity, in ProjectileState projectile, Entity candidate, int sourceTeamId)
@@ -455,6 +479,12 @@ namespace Ludots.Core.Gameplay.GAS.Systems
             }
 
             return (segment.Length() * projection).RoundToInt();
+        }
+
+        public override void Dispose()
+        {
+            _commandBuffer.Dispose();
+            base.Dispose();
         }
     }
 }

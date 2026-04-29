@@ -875,6 +875,9 @@ namespace Ludots.Core.Presentation.Config
                     case BehaviorKind.Spline:
                         slot.Spline = ParseSpline(obj["spline"]);
                         break;
+                    case BehaviorKind.Grounding:
+                        slot.Grounding = ParseGrounding(obj["grounding"]);
+                        break;
                     default:
                         throw new InvalidOperationException($"Unsupported performer behavior kind '{kind}'.");
                 }
@@ -948,6 +951,12 @@ namespace Ludots.Core.Presentation.Config
                 throw new InvalidOperationException("AssetBinding behavior requires object field 'assetBinding'.");
             }
 
+            if (obj.ContainsKey("grounding") || obj.ContainsKey("groundingOffset"))
+            {
+                throw new InvalidOperationException(
+                    "AssetBinding must not declare grounding or groundingOffset. Use a Grounding behavior with an explicit updatePolicy.");
+            }
+
             AssetKind assetKind = ParseEnum(obj["assetKind"]?.GetValue<string>(), AssetKind.Mesh);
             return new AssetBindingConfig
             {
@@ -969,8 +978,6 @@ namespace Ludots.Core.Presentation.Config
                 VisibilityParamKey = obj["visibilityParamKey"]?.GetValue<int>() ?? -1,
                 HasMaxLod = obj.ContainsKey("maxLod"),
                 MaxLod = ParseEnum(obj["maxLod"]?.GetValue<string>(), LODLevel.Low),
-                Grounding = ParseEnum(obj["grounding"]?.GetValue<string>(), GroundingMode.None),
-                GroundingOffset = obj["groundingOffset"]?.GetValue<float>() ?? 0f,
             };
         }
 
@@ -1041,6 +1048,21 @@ namespace Ludots.Core.Presentation.Config
                 Offset = ParseVector3(obj["offset"]),
                 RotationOffset = ParseQuaternion(obj["rotationOffset"]),
                 InheritScale = obj["inheritScale"]?.GetValue<bool>() ?? false,
+            };
+        }
+
+        private static GroundingConfig ParseGrounding(JsonNode? node)
+        {
+            if (node is not JsonObject obj)
+            {
+                throw new InvalidOperationException("Grounding behavior requires object field 'grounding'.");
+            }
+
+            return new GroundingConfig
+            {
+                Mode = ParseEnum(obj["mode"]?.GetValue<string>(), GroundingMode.SnapToGround),
+                Offset = obj["offset"]?.GetValue<float>() ?? 0f,
+                UpdatePolicy = ParseEnum(obj["updatePolicy"]?.GetValue<string>(), GroundingUpdatePolicy.Once),
             };
         }
 

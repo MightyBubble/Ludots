@@ -16,6 +16,7 @@ namespace Ludots.Core.Gameplay.GAS.Systems
 
         private readonly DeferredTriggerQueue _triggerQueue;
         private readonly TagOps _tagOps;
+        private readonly CommandBuffer _commandBuffer = new();
 
         public DeferredTriggerCollectionSystem(World world, DeferredTriggerQueue triggerQueue, TagOps tagOps = null) : base(world)
         {
@@ -25,17 +26,25 @@ namespace Ludots.Core.Gameplay.GAS.Systems
 
         public override void Update(in float dt)
         {
-            var commandBuffer = new CommandBuffer();
             var job = new CollectionJob
             {
                 World = World,
                 TriggerQueue = _triggerQueue,
-                CommandBuffer = commandBuffer,
+                CommandBuffer = _commandBuffer,
                 TagOps = _tagOps
             };
 
             World.InlineEntityQuery<CollectionJob, DirtyFlags>(in _dirtyQuery, ref job);
-            commandBuffer.Playback(World, dispose: true);
+            if (_commandBuffer.Size > 0)
+            {
+                _commandBuffer.Playback(World);
+            }
+        }
+
+        public override void Dispose()
+        {
+            _commandBuffer.Dispose();
+            base.Dispose();
         }
 
         unsafe struct CollectionJob : IForEachWithEntity<DirtyFlags>

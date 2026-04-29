@@ -11,5 +11,7 @@ namespace Ludots.Core.Presentation.Requests
         RemoveGroundOverlay = 7,
         RemoveWorldHud = 8,
         RemoveRoadSpline = 9,
+        RemoveSurfaceSource = 10,
+        ClearTransientVisualProjection = 11,
     }
 }

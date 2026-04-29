@@ -9,7 +9,10 @@ namespace Ludots.Core.Presentation.Performers
     public struct PerfHasSound {}
     public struct PerfHasSpline {}
     public struct PerfHasAttachment {}
+    public struct PerfHasAttachmentTick {}
+    public struct PerfHasGrounding {}
     public struct PerfStaticStableVisual {}
     public struct PerfRetainedPresentationRequest {}
+    public struct PerfMaterialDirty {}
     public struct PerformerEmitDirty {}
 }

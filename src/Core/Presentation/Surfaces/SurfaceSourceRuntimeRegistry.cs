@@ -15,7 +15,6 @@ namespace Ludots.Core.Presentation.Surfaces
         public SurfaceSourceRequest Request;
         public SurfacePayloadSnapshot Payload;
         public int PayloadVersion;
-        public int LastSeenFrame;
         public int MeshAssetId;
         public Entity Entity;
         public Entity RenderPerformerEntity;
@@ -53,7 +52,6 @@ namespace Ludots.Core.Presentation.Surfaces
                     Request = request,
                     Payload = payload,
                     PayloadVersion = payload.Version,
-                    LastSeenFrame = frame,
                     Entity = Entity.Null,
                     Dirty = true,
                 };
@@ -61,7 +59,6 @@ namespace Ludots.Core.Presentation.Surfaces
                 return;
             }
 
-            record.LastSeenFrame = frame;
             record.PendingRemoval = false;
             if (record.ScopeId != request.ScopeId ||
                 record.PerformerDefinitionId != request.PerformerDefinitionId ||
@@ -77,15 +74,14 @@ namespace Ludots.Core.Presentation.Surfaces
             record.PayloadVersion = payload.Version;
         }
 
-        public void MarkStaleAsPendingRemoval()
+        public void MarkPendingRemoval(int stableId)
         {
-            foreach (SurfaceSourceRecord record in _records.Values)
+            if (stableId <= 0 || !_records.TryGetValue(stableId, out SurfaceSourceRecord? record))
             {
-                if (record.LastSeenFrame != CurrentFrame)
-                {
-                    record.PendingRemoval = true;
-                }
+                return;
             }
+
+            record.PendingRemoval = true;
         }
 
         public bool Remove(int stableId)

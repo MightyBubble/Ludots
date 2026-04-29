@@ -82,6 +82,12 @@ namespace Ludots.Core.Presentation.Rendering
 
         public void AddNew(in PresentationVisualProxy proxy)
         {
+            if (_slotByStableId.ContainsKey(proxy.StableId))
+            {
+                throw new InvalidOperationException(
+                    $"StableDrawCache already contains stableId={proxy.StableId}. AddNew is reserved for first-time static visual insertion.");
+            }
+
             EnsureCapacity(_count + 1);
             int slot = _count++;
             _slotByStableId.Add(proxy.StableId, slot);
@@ -102,6 +108,11 @@ namespace Ludots.Core.Presentation.Rendering
             }
 
             RemoveAt(slot);
+        }
+
+        public bool Contains(int stableId)
+        {
+            return _slotByStableId.ContainsKey(stableId);
         }
 
         public bool UpdatePosition(int stableId, Vector3 newPosition)

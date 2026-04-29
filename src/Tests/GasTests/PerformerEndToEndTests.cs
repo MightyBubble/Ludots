@@ -116,7 +116,12 @@ namespace Ludots.Tests.Presentation
             var graphApi = new GasGraphRuntimeApi(_world, null, null, null);
 
             _bridge = new PresentationBridgeSystem(_world, _eventBus, _presEvents, session, _gasEvents);
-            _entityLifecycle = new PresentationEntityLifecycleSystem(_world, _presEvents);
+            _entityLifecycle = new PresentationEntityLifecycleSystem(
+                _world,
+                _presEvents,
+                _instances,
+                _defs,
+                _stableIds);
             _finalizeDestroy = new PresentationEntityFinalizeDestroySystem(_world);
             _ruleSystem = new PerformerRuleSystem(_world, _presEvents, _commands, _defs, _instances, _programs, graphApi, _globals);
             _runtimeSystem = new PerformerRuntimeSystem(_world, _commands, _presEvents, new TransientMarkerBuffer(), _requests, _instances, _stableIds, _defs);
@@ -674,8 +679,6 @@ namespace Ludots.Tests.Presentation
                 MaterialParamKey = valueParamKey,
                 AssetSwapParamKey = -1,
                 VisibilityParamKey = -1,
-                Grounding = GroundingMode.None,
-                GroundingOffset = 0f,
             };
         }
 
@@ -696,8 +699,6 @@ namespace Ludots.Tests.Presentation
                 MaterialParamKey = -1,
                 AssetSwapParamKey = -1,
                 VisibilityParamKey = -1,
-                Grounding = GroundingMode.None,
-                GroundingOffset = 0f,
             };
         }
 

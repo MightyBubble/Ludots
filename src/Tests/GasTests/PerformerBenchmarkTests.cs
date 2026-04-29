@@ -123,16 +123,19 @@ namespace Ludots.Tests.Presentation
         }
 
         private Entity CreateOwner(Vector3 position, AttributeBuffer attributes = default, bool hasAttributes = false, bool visible = true)
+            => CreateOwner(_world, position, attributes, hasAttributes, visible);
+
+        private Entity CreateOwner(World world, Vector3 position, AttributeBuffer attributes = default, bool hasAttributes = false, bool visible = true)
         {
-            var entity = _world.Create(new VisualTransform { Position = position });
-            _world.Add(entity, new PresentationStableId { Value = _stableIds.Allocate() });
+            var entity = world.Create(new VisualTransform { Position = position });
+            world.Add(entity, new PresentationStableId { Value = _stableIds.Allocate() });
             if (hasAttributes)
             {
-                _world.Add(entity, attributes);
+                world.Add(entity, attributes);
             }
             if (!visible)
             {
-                _world.Add(entity, new CullState { IsVisible = false });
+                world.Add(entity, new CullState { IsVisible = false });
             }
             return entity;
         }
@@ -299,7 +302,7 @@ namespace Ludots.Tests.Presentation
         {
             var benchWorld = World.Create();
             var buf = new PerformerEntityRuntime(benchWorld);
-            var entity = CreateOwner(Vector3.Zero);
+            var entity = CreateOwner(benchWorld, Vector3.Zero);
 
             WarmUpGC();
             long startAlloc = GC.GetAllocatedBytesForCurrentThread();
@@ -339,7 +342,7 @@ namespace Ludots.Tests.Presentation
         {
             var benchWorld = World.Create();
             var buf = new PerformerEntityRuntime(benchWorld);
-            var entity = CreateOwner(Vector3.Zero);
+            var entity = CreateOwner(benchWorld, Vector3.Zero);
             var created = new Entity[2000];
             for (int i = 0; i < 2000; i++)
             {
@@ -648,8 +651,6 @@ namespace Ludots.Tests.Presentation
                             MaterialParamKey = WellKnownPerformerParamKeys.BarFillRatio,
                             AssetSwapParamKey = -1,
                             VisibilityParamKey = -1,
-                            Grounding = GroundingMode.None,
-                            GroundingOffset = 0f,
                         }
                     }
                 },

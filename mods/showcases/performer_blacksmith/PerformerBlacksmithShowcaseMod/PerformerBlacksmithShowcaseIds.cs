@@ -9,6 +9,7 @@ namespace PerformerBlacksmithShowcaseMod
         public const string ScatterHudBarBenchmarkMapId = "performer_blacksmith_scatter_hudbar_benchmark";
         public const string ScatterHudTextBenchmarkMapId = "performer_blacksmith_scatter_hudtext_benchmark";
         public const string MeshBenchmarkMapId = "performer_blacksmith_mesh_ism_benchmark";
+        public const string DynamicWorkerBenchmarkMapId = "performer_blacksmith_dynamic_worker_benchmark";
         public const string EntityName = "Blacksmith";
         public const string TemplateId = "blacksmith_building";
         public const string MeshBenchmarkEntityName = "BlacksmithMeshBenchmark";
@@ -20,8 +21,12 @@ namespace PerformerBlacksmithShowcaseMod
         public const string MeshHudTextBenchmarkEntityName = "BlacksmithMeshHudTextBenchmark";
         public const string MeshHudTextBenchmarkTemplateId = "blacksmith_mesh_hudtext_benchmark_entity";
         public const string MeshHudTextBenchmarkDefinitionId = "blacksmith_mesh_benchmark_hudtext";
+        public const string DynamicWorkerEntityName = "BlacksmithDynamicWorker";
+        public const string DynamicWorkerTemplateId = "blacksmith_dynamic_worker_entity";
+        public const string DynamicWorkerDefinitionId = "blacksmith_dynamic_worker_actor";
         public const int ScatterBenchmarkDefaultTotal = 30_000;
         public const int MeshBenchmarkDefaultTotal = 30_000;
+        public const int DynamicWorkerBenchmarkDefaultTotal = 10_000;
         public const string RootDefinitionId = "blacksmith_root";
         public const string WorkshopLeftDefinitionId = "blacksmith_workshop_left_mesh";
         public const string WorkshopRightDefinitionId = "blacksmith_workshop_right_mesh";
@@ -54,7 +59,8 @@ namespace PerformerBlacksmithShowcaseMod
                    IsScatterBenchmarkMap(mapId) ||
                    IsScatterHudBarBenchmarkMap(mapId) ||
                    IsScatterHudTextBenchmarkMap(mapId) ||
-                   IsMeshBenchmarkMap(mapId);
+                   IsMeshBenchmarkMap(mapId) ||
+                   IsDynamicWorkerBenchmarkMap(mapId);
         }
 
         public static bool IsInteractiveShowcaseMap(string? mapId)
@@ -80,6 +86,11 @@ namespace PerformerBlacksmithShowcaseMod
         public static bool IsMeshBenchmarkMap(string? mapId)
         {
             return string.Equals(mapId, MeshBenchmarkMapId, StringComparison.OrdinalIgnoreCase);
+        }
+
+        public static bool IsDynamicWorkerBenchmarkMap(string? mapId)
+        {
+            return string.Equals(mapId, DynamicWorkerBenchmarkMapId, StringComparison.OrdinalIgnoreCase);
         }
     }
 }

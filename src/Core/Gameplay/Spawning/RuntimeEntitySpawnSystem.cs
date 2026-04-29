@@ -1,5 +1,6 @@
 using System;
 using System.Collections.Generic;
+using System.Diagnostics;
 using Arch.Core;
 using Arch.Core.Extensions;
 using Arch.System;
@@ -14,6 +15,7 @@ using Ludots.Core.Presentation;
 using Ludots.Core.Presentation.Commands;
 using Ludots.Core.Presentation.Components;
 using Ludots.Core.Presentation.Events;
+using Ludots.Core.Presentation.Hud;
 using Ludots.Core.Presentation.Performers;
 using Ludots.Core.Spatial;
 
@@ -44,6 +46,7 @@ namespace Ludots.Core.Gameplay.Spawning
         private readonly PresentationEventStream? _presentationEvents;
         private readonly ISpatialPartitionWorld? _spatialPartition;
         private readonly WorldSizeSpec _worldSizeSpec;
+        private readonly PresentationTimingDiagnostics? _timingDiagnostics;
 
         public RuntimeEntitySpawnSystem(
             World world,
@@ -56,7 +59,8 @@ namespace Ludots.Core.Gameplay.Spawning
             PerformerDefinitionRegistry? performerDefinitions = null,
             PresentationEventStream? presentationEvents = null,
             ISpatialPartitionWorld? spatialPartition = null,
-            WorldSizeSpec worldSizeSpec = default)
+            WorldSizeSpec worldSizeSpec = default,
+            PresentationTimingDiagnostics? timingDiagnostics = null)
             : base(world)
         {
             _requests = requests ?? throw new ArgumentNullException(nameof(requests));
@@ -78,6 +82,7 @@ namespace Ludots.Core.Gameplay.Spawning
             _performerDefinitions = performerDefinitions;
             _performerBootstrap = performerDefinitions?.BootstrapRegistry;
             _presentationEvents = presentationEvents;
+            _timingDiagnostics = timingDiagnostics;
         }
 
         public override void Update(in float dt)
@@ -98,11 +103,9 @@ namespace Ludots.Core.Gameplay.Spawning
                     {
                         if (!TrySpawnTemplateBatch(peek.TemplateId, template, batchCount))
                         {
-                            for (int i = 0; i < batchCount; i++)
-                            {
-                                var spawnedFallback = SpawnTemplate(_batchRequests[i]);
-                                PublishOnSpawnEffect(in _batchRequests[i], spawnedFallback);
-                            }
+                            throw new InvalidOperationException(
+                                $"Runtime template batch spawn failed after template '{peek.TemplateId}' was classified as batch-compatible. " +
+                                "The production path must stay on the validated bulk lane.");
                         }
 
                         continue;
@@ -216,6 +219,7 @@ namespace Ludots.Core.Gameplay.Spawning
 
         private bool TrySpawnTemplateBatch(string templateId, EntityTemplate template, int count)
         {
+            long prepareStart = Stopwatch.GetTimestamp();
             bool allHaveMapEntity = true;
             for (int i = 0; i < count; i++)
             {
@@ -234,6 +238,18 @@ namespace Ludots.Core.Gameplay.Spawning
             int templateKeyId = ResolveOrRegisterTemplateKeyId(templateId);
             bool hasDirectBootstrap = HasDirectEntitySpawnBootstrap(templateKeyId);
             bool publishSpawnedEvent = ShouldPublishSpawnedEvent(templateKeyId, hasDirectBootstrap);
+            bool hasSourceTeamWork = false;
+            bool hasSourcePlayerOwnerWork = false;
+            bool hasParentWork = false;
+            bool hasRequestOnSpawnEffect = false;
+            for (int i = 0; i < count; i++)
+            {
+                ref readonly var request = ref _batchRequests[i];
+                hasSourceTeamWork |= request.CopySourceTeam != 0;
+                hasSourcePlayerOwnerWork |= request.CopySourcePlayerOwner != 0;
+                hasParentWork |= request.LinkSourceAsParent != 0 || World.IsAlive(request.Parent);
+                hasRequestOnSpawnEffect |= request.OnSpawnEffectTemplateId > 0;
+            }
 
             TemplateBatchSpawnFeatures features =
                 TemplateBatchSpawnFeatures.PresentationStableId |
@@ -242,6 +258,12 @@ namespace Ludots.Core.Gameplay.Spawning
             {
                 features |= TemplateBatchSpawnFeatures.MapEntity;
             }
+
+            if (CanPreseedOwnerPayloadMarker(template, templateKeyId))
+            {
+                features |= TemplateBatchSpawnFeatures.PresentationOwnerHasPerformerPayload;
+            }
+            double prepareMs = ElapsedMs(prepareStart);
 
             if (!_templateBatchSpawner.TryCreateBatch(
                 templateId,
@@ -256,41 +278,148 @@ namespace Ludots.Core.Gameplay.Spawning
                 return false;
             }
 
+            double postSpawnMs = 0d;
             int onSpawnEffectTemplateId = _templateBatchSpawner.GetOnSpawnEffectTemplateId(templateId, template);
-            for (int i = 0; i < created.Length; i++)
+            bool requiresPostSpawnLoop =
+                hasSourceTeamWork ||
+                hasSourcePlayerOwnerWork ||
+                hasParentWork ||
+                publishSpawnedEvent ||
+                hasRequestOnSpawnEffect ||
+                onSpawnEffectTemplateId > 0 ||
+                !allHaveMapEntity;
+            if (requiresPostSpawnLoop)
             {
-                Entity entity = created[i];
-                ref readonly var request = ref _batchRequests[i];
-                TryApplySourceTeam(in request, entity);
-                TryApplySourcePlayerOwner(in request, entity);
-                if (!allHaveMapEntity)
+                long postSpawnStart = Stopwatch.GetTimestamp();
+                for (int i = 0; i < created.Length; i++)
                 {
-                    TryApplyMapOwnership(in request, entity);
+                    Entity entity = created[i];
+                    ref readonly var request = ref _batchRequests[i];
+                    if (hasSourceTeamWork)
+                    {
+                        TryApplySourceTeam(in request, entity);
+                    }
+
+                    if (hasSourcePlayerOwnerWork)
+                    {
+                        TryApplySourcePlayerOwner(in request, entity);
+                    }
+
+                    if (!allHaveMapEntity)
+                    {
+                        TryApplyMapOwnership(in request, entity);
+                    }
+
+                    if (hasParentWork)
+                    {
+                        TryApplyParentLink(in request, entity);
+                    }
+
+                    if (publishSpawnedEvent)
+                    {
+                        PublishSpawnedPresentationEvent(entity);
+                    }
+
+                    if (hasRequestOnSpawnEffect || onSpawnEffectTemplateId > 0)
+                    {
+                        PublishOnSpawnEffect(in request, entity, onSpawnEffectTemplateId);
+                    }
                 }
 
-                TryApplyParentLink(in request, entity);
-                if (publishSpawnedEvent)
-                {
-                    PublishSpawnedPresentationEvent(entity);
-                }
-
-                if (onSpawnEffectTemplateId > 0)
-                {
-                    PublishOnSpawnEffect(in request, entity, onSpawnEffectTemplateId);
-                }
+                postSpawnMs = ElapsedMs(postSpawnStart);
             }
 
+            double performerBatchMs = 0d;
+            double performerCreateMs = 0d;
+            double performerBootstrapMarkMs = 0d;
+            double performerCreateSetupMs = 0d;
+            double performerWorldCreateMs = 0d;
+            double performerComponentFillMs = 0d;
+            double performerIndexWriteMs = 0d;
+            double performerOwnerPayloadMs = 0d;
+            double performerPostCreateMs = 0d;
+            int performerCreated = 0;
             if (hasDirectBootstrap)
             {
+                long performerBatchStart = Stopwatch.GetTimestamp();
                 TryBootstrapPerformerBatch(
                     templateKeyId,
                     created,
                     _performerBatchStableIds.AsSpan(0, created.Length),
                     _performerBatchOwnerTransforms.AsSpan(0, created.Length),
-                    _performerBatchOwnerCulls.AsSpan(0, created.Length));
+                    _performerBatchOwnerCulls.AsSpan(0, created.Length),
+                    out performerCreated,
+                    out performerCreateMs,
+                    out performerBootstrapMarkMs,
+                    out performerCreateSetupMs,
+                    out performerWorldCreateMs,
+                    out performerComponentFillMs,
+                    out performerIndexWriteMs,
+                    out performerOwnerPayloadMs,
+                    out performerPostCreateMs);
+                performerBatchMs = ElapsedMs(performerBatchStart);
+            }
+
+            _timingDiagnostics?.ObserveRuntimeSpawnBatch(
+                count,
+                performerCreated,
+                prepareMs,
+                _templateBatchSpawner.LastWorldCreateMs,
+                _templateBatchSpawner.LastFillCreatedBatchMs,
+                postSpawnMs,
+                performerBatchMs,
+                performerCreateMs,
+                performerBootstrapMarkMs,
+                performerCreateSetupMs,
+                performerWorldCreateMs,
+                performerComponentFillMs,
+                performerIndexWriteMs,
+                performerOwnerPayloadMs,
+                performerPostCreateMs);
+
+            return true;
+        }
+
+        private bool CanPreseedOwnerPayloadMarker(EntityTemplate template, int templateKeyId)
+        {
+            if (_performerBootstrap == null ||
+                templateKeyId <= 0 ||
+                !_performerBootstrap.TryGetEntitySpawnCreates(templateKeyId, out CompiledPerformerBootstrapRegistry.BootstrapCreateRule[] rules) ||
+                rules.Length == 0)
+            {
+                return false;
+            }
+
+            for (int i = 0; i < rules.Length; i++)
+            {
+                ref readonly var rule = ref rules[i];
+                if (rule.ResolveScopeTag(1) <= 0 || !TemplateSatisfiesBootstrapCondition(template, rule.InlineCondition))
+                {
+                    return false;
+                }
             }
 
             return true;
+        }
+
+        private static bool TemplateSatisfiesBootstrapCondition(EntityTemplate template, InlineConditionKind condition)
+        {
+            if (condition == InlineConditionKind.None)
+            {
+                return true;
+            }
+
+            if (template?.Components == null)
+            {
+                return false;
+            }
+
+            return condition switch
+            {
+                InlineConditionKind.SourceHasVisualTransform => true,
+                InlineConditionKind.SourceHasAttributes => template.Components.ContainsKey("AttributeBuffer"),
+                _ => false,
+            };
         }
 
         private Entity SpawnAssembly(in RuntimeEntitySpawnRequest request)
@@ -657,6 +786,48 @@ namespace Ludots.Core.Gameplay.Spawning
             ReadOnlySpan<VisualTransform> ownerTransforms,
             ReadOnlySpan<CullState> ownerCulls)
         {
+            TryBootstrapPerformerBatch(
+                templateKeyId,
+                owners,
+                stableIds,
+                ownerTransforms,
+                ownerCulls,
+                out _,
+                out _,
+                out _,
+                out _,
+                out _,
+                out _,
+                out _,
+                out _,
+                out _);
+        }
+
+        private void TryBootstrapPerformerBatch(
+            int templateKeyId,
+            ReadOnlySpan<Entity> owners,
+            ReadOnlySpan<int> stableIds,
+            ReadOnlySpan<VisualTransform> ownerTransforms,
+            ReadOnlySpan<CullState> ownerCulls,
+            out int totalCreated,
+            out double performerCreateMs,
+            out double bootstrapMarkMs,
+            out double performerCreateSetupMs,
+            out double performerWorldCreateMs,
+            out double performerComponentFillMs,
+            out double performerIndexWriteMs,
+            out double performerOwnerPayloadMs,
+            out double performerPostCreateMs)
+        {
+            totalCreated = 0;
+            performerCreateMs = 0d;
+            bootstrapMarkMs = 0d;
+            performerCreateSetupMs = 0d;
+            performerWorldCreateMs = 0d;
+            performerComponentFillMs = 0d;
+            performerIndexWriteMs = 0d;
+            performerOwnerPayloadMs = 0d;
+            performerPostCreateMs = 0d;
             if (_performerRuntime == null || _performerDefinitions == null || _performerBootstrap == null || owners.Length == 0)
             {
                 return;
@@ -712,6 +883,7 @@ namespace Ludots.Core.Gameplay.Spawning
                     continue;
                 }
 
+                long createStart = Stopwatch.GetTimestamp();
                 _performerRuntime.CreateEntityAnchoredRootBatch(
                     _performerDefinitions,
                     rule.PerformerDefinitionId,
@@ -723,12 +895,27 @@ namespace Ludots.Core.Gameplay.Spawning
                     definition,
                     _performerBatchCreated.AsSpan(0, createCount),
                     _stableIds.Allocate);
+                performerCreateMs += ElapsedMs(createStart);
+                performerCreateSetupMs += _performerRuntime.LastRootBatchSetupMs;
+                performerWorldCreateMs += _performerRuntime.LastRootBatchWorldCreateMs;
+                performerComponentFillMs += _performerRuntime.LastRootBatchComponentFillMs;
+                performerIndexWriteMs += _performerRuntime.LastRootBatchIndexWriteMs;
+                performerOwnerPayloadMs += _performerRuntime.LastRootBatchOwnerPayloadMs;
+                performerPostCreateMs += _performerRuntime.LastRootBatchPostCreateMs;
 
+                long markStart = Stopwatch.GetTimestamp();
                 for (int i = 0; i < createCount; i++)
                 {
                     MarkHierarchyForBootstrapIfNeeded(_performerBatchCreated[i]);
                 }
+                bootstrapMarkMs += ElapsedMs(markStart);
+                totalCreated += createCount;
             }
+        }
+
+        private static double ElapsedMs(long startTimestamp)
+        {
+            return (Stopwatch.GetTimestamp() - startTimestamp) * 1000d / Stopwatch.Frequency;
         }
 
         private int ResolveTemplateKeyId(string templateId, Entity owner)

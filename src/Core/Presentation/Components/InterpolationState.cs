@@ -49,6 +49,11 @@ namespace Ludots.Core.Presentation.Components
         public int FixedUpdatesThisFrame;
         
         /// <summary>
+        /// Monotonic render-frame id assigned by PresentationFrameSetupSystem.
+        /// </summary>
+        public int FrameId;
+
+        /// <summary>
         /// Default state with interpolation enabled.
         /// </summary>
         public static PresentationFrameState Default => new PresentationFrameState
@@ -57,7 +62,8 @@ namespace Ludots.Core.Presentation.Components
             Enabled = true,
             RenderDeltaTime = 0f,
             FixedDeltaTime = 0.02f,
-            FixedUpdatesThisFrame = 0
+            FixedUpdatesThisFrame = 0,
+            FrameId = 0
         };
     }
     

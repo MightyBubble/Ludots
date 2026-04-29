@@ -2,6 +2,7 @@ using System.Collections.Generic;
 using System.IO;
 using System.Numerics;
 using Ludots.Core.Engine;
+using Ludots.Core.Gameplay.GAS.Registry;
 using Ludots.Core.Gameplay.Spawning;
 using Ludots.Core.Input.Config;
 using Ludots.Core.Input.Runtime;
@@ -27,6 +28,7 @@ namespace Ludots.Tests.Presentation
 
         internal static GameEngine CreateEngine(params string[] modIds)
         {
+            ResetGlobalRegistries();
             string repoRoot = FindRepoRoot();
             string assetsRoot = Path.Combine(repoRoot, "assets");
             string[] resolvedModIds = modIds.Length == 0 ? ShowcaseMods : modIds;
@@ -38,6 +40,13 @@ namespace Ludots.Tests.Presentation
             InstallHeadlessPresentation(engine);
             engine.Start();
             return engine;
+        }
+
+        private static void ResetGlobalRegistries()
+        {
+            AttributeRegistry.Clear();
+            Ludots.Core.Gameplay.GAS.Registry.TagRegistry.Clear();
+            Ludots.Core.Presentation.Performers.PerformerScopeTagRegistry.Clear();
         }
 
         internal static void LoadMap(GameEngine engine, string mapId, int frames = 8)

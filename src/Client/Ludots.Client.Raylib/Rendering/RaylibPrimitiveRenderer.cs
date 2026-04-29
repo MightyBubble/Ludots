@@ -41,6 +41,8 @@ namespace Ludots.Client.Raylib.Rendering
         private readonly List<Batch> _sphereBatches = new List<Batch>(16);
         private readonly Dictionary<long, ModelInstanceBatch> _modelInstanceBatches = new Dictionary<long, ModelInstanceBatch>();
         private readonly Dictionary<RaylibIsmRenderBridge.Bucket, ModelInstanceBatch> _staticModelInstanceBatches = new();
+        private readonly Dictionary<GpuSkinnedInstanceBatchKey, GpuSkinnedInstanceBatch> _gpuSkinnedInstanceBatches = new();
+        private readonly List<GpuSkinnedInstanceBatch> _activeGpuSkinnedInstanceBatches = new(64);
         private readonly RaylibIsmRenderBridge _ismBridge = new RaylibIsmRenderBridge();
 
         private readonly Dictionary<int, CachedModel> _modelCache = new Dictionary<int, CachedModel>();
@@ -64,6 +66,10 @@ namespace Ludots.Client.Raylib.Rendering
         public int LastPersistentCreates { get; private set; }
         public int LastPersistentUpdates { get; private set; }
         public int LastPersistentRemoves { get; private set; }
+        public int LastGpuSkinnedInstances { get; private set; }
+        public int LastGpuSkinnedBatches { get; private set; }
+        public double LastGpuSkinnedMatrixBuildMs { get; private set; }
+        public double LastGpuSkinnedMeshDrawMs { get; private set; }
         public int LastMeshVisualCount { get; private set; }
         public int LastDecalVisualCount { get; private set; }
         public int LastVfxVisualCount { get; private set; }
@@ -121,6 +127,10 @@ namespace Ludots.Client.Raylib.Rendering
             LastPersistentCreates = 0;
             LastPersistentUpdates = 0;
             LastPersistentRemoves = 0;
+            LastGpuSkinnedInstances = 0;
+            LastGpuSkinnedBatches = 0;
+            LastGpuSkinnedMatrixBuildMs = 0d;
+            LastGpuSkinnedMeshDrawMs = 0d;
             LastMeshVisualCount = 0;
             LastDecalVisualCount = 0;
             LastVfxVisualCount = 0;
@@ -329,7 +339,6 @@ namespace Ludots.Client.Raylib.Rendering
         private bool TryDrawPrototypeSkinned(in PrimitiveDrawItem item, MeshAssetRegistry meshes, float scaleMul)
         {
             if (!item.RenderPath.IsSkinnedLane() ||
-                !item.AnimationOverlay.HasAnyClip ||
                 !meshes.TryGetDescriptor(item.MeshAssetId, out var descriptor) ||
                 descriptor.Type != MeshAssetType.Primitive)
             {
@@ -338,15 +347,18 @@ namespace Ludots.Client.Raylib.Rendering
 
             Vector3 scale = item.Scale * scaleMul;
             float baseYaw = ExtractYawRad(item.Rotation);
+            AnimationOverlayRequest sourceOverlay = item.AnimationOverlay;
+            AnimatorPackedState sourceAnimator = item.Animator;
+            AnimationOverlayRequest overlay = ResolvePrototypeOverlay(in sourceOverlay, in sourceAnimator);
 
             switch (descriptor.PrimitiveKind)
             {
                 case PrimitiveMeshKind.Cube:
-                    DrawTankPrototype(item.Position, scale, item.Color, baseYaw, item.AnimationOverlay);
+                    DrawTankPrototype(item.Position, scale, item.Color, baseYaw, in overlay);
                     return true;
 
                 case PrimitiveMeshKind.Sphere:
-                    DrawHumanoidPrototype(item.Position, scale, item.Color, baseYaw, item.AnimationOverlay);
+                    DrawHumanoidPrototype(item.Position, scale, item.Color, baseYaw, in overlay);
                     return true;
 
                 default:
@@ -357,10 +369,16 @@ namespace Ludots.Client.Raylib.Rendering
         private void DrawSkinnedBatch(SkinnedVisualBatchBuffer skinnedBatch, Camera3D camera, MeshAssetRegistry meshes, float scaleMul, in PrefabFinalizationContext finalizationContext)
         {
             var span = skinnedBatch.GetSpan();
+            PrepareGpuSkinnedInstanceBatches();
             for (int i = 0; i < span.Length; i++)
             {
                 ref readonly var item = ref span[i];
                 if (item.Visibility != VisualVisibility.Visible)
+                {
+                    continue;
+                }
+
+                if (TrySubmitGpuSkinnedInstance(item, meshes, scaleMul))
                 {
                     continue;
                 }
@@ -380,12 +398,90 @@ namespace Ludots.Client.Raylib.Rendering
                     meshes,
                     in finalizationContext);
             }
+
+            FlushGpuSkinnedInstanceBatches();
+        }
+
+        private void PrepareGpuSkinnedInstanceBatches()
+        {
+            for (int i = 0; i < _activeGpuSkinnedInstanceBatches.Count; i++)
+            {
+                _activeGpuSkinnedInstanceBatches[i].Count = 0;
+            }
+
+            _activeGpuSkinnedInstanceBatches.Clear();
+        }
+
+        private bool TrySubmitGpuSkinnedInstance(in SkinnedVisualBatchItem item, MeshAssetRegistry meshes, float scaleMul)
+        {
+            if (item.RenderPath != VisualRenderPath.GpuSkinnedInstance ||
+                !meshes.TryGetDescriptor(item.MeshAssetId, out MeshAssetDescriptor descriptor) ||
+                descriptor.Type != MeshAssetType.Model)
+            {
+                return false;
+            }
+
+            if (!TryGetOrLoadModel(item.MeshAssetId, in descriptor, out CachedModel cached))
+            {
+                DrawMissingModelMarker(item.Position, item.Scale * scaleMul);
+                return true;
+            }
+
+            long start = Stopwatch.GetTimestamp();
+            uint colorKey = PackRgba(item.Color);
+            var key = new GpuSkinnedInstanceBatchKey(
+                item.MeshAssetId,
+                item.MaterialId,
+                colorKey,
+                item.Animator.GetPrimaryStateIndex(),
+                item.Animator.GetSecondaryStateIndex());
+            if (!_gpuSkinnedInstanceBatches.TryGetValue(key, out GpuSkinnedInstanceBatch? batch))
+            {
+                batch = new GpuSkinnedInstanceBatch(key);
+                _gpuSkinnedInstanceBatches.Add(key, batch);
+            }
+
+            if (batch.Count == 0)
+            {
+                batch.Model = cached.Model;
+                _activeGpuSkinnedInstanceBatches.Add(batch);
+            }
+
+            batch.Add(RaylibMatrix.FromSystemNumerics(
+                Matrix4x4.CreateScale(item.Scale * scaleMul) *
+                Matrix4x4.CreateFromQuaternion(PrefabTransformUtility.NormalizeOrIdentity(item.Rotation)) *
+                Matrix4x4.CreateTranslation(item.Position)));
+            LastGpuSkinnedMatrixBuildMs += (Stopwatch.GetTimestamp() - start) * 1000d / Stopwatch.Frequency;
+            return true;
+        }
+
+        private void FlushGpuSkinnedInstanceBatches()
+        {
+            if (_activeGpuSkinnedInstanceBatches.Count == 0)
+            {
+                return;
+            }
+
+            EnsureInitialized();
+            long drawStart = Stopwatch.GetTimestamp();
+            for (int i = 0; i < _activeGpuSkinnedInstanceBatches.Count; i++)
+            {
+                GpuSkinnedInstanceBatch batch = _activeGpuSkinnedInstanceBatches[i];
+                if (batch.Count == 0)
+                {
+                    continue;
+                }
+
+                LastGpuSkinnedInstances += batch.Count;
+                LastGpuSkinnedBatches += DrawModelInstanceBatch(batch.Model, batch, batch.Key.ColorKey);
+            }
+
+            LastGpuSkinnedMeshDrawMs += (Stopwatch.GetTimestamp() - drawStart) * 1000d / Stopwatch.Frequency;
         }
 
         private bool TryDrawPrototypeSkinned(in SkinnedVisualBatchItem item, MeshAssetRegistry meshes, float scaleMul)
         {
             if (!item.RenderPath.IsSkinnedLane() ||
-                !item.AnimationOverlay.HasAnyClip ||
                 !meshes.TryGetDescriptor(item.MeshAssetId, out var descriptor) ||
                 descriptor.Type != MeshAssetType.Primitive)
             {
@@ -394,20 +490,48 @@ namespace Ludots.Client.Raylib.Rendering
 
             Vector3 scale = item.Scale * scaleMul;
             float baseYaw = ExtractYawRad(item.Rotation);
+            AnimationOverlayRequest sourceOverlay = item.AnimationOverlay;
+            AnimatorPackedState sourceAnimator = item.Animator;
+            AnimationOverlayRequest overlay = ResolvePrototypeOverlay(in sourceOverlay, in sourceAnimator);
 
             switch (descriptor.PrimitiveKind)
             {
                 case PrimitiveMeshKind.Cube:
-                    DrawTankPrototype(item.Position, scale, item.Color, baseYaw, item.AnimationOverlay);
+                    DrawTankPrototype(item.Position, scale, item.Color, baseYaw, in overlay);
                     return true;
 
                 case PrimitiveMeshKind.Sphere:
-                    DrawHumanoidPrototype(item.Position, scale, item.Color, baseYaw, item.AnimationOverlay);
+                    DrawHumanoidPrototype(item.Position, scale, item.Color, baseYaw, in overlay);
                     return true;
 
                 default:
                     return false;
             }
+        }
+
+        private static AnimationOverlayRequest ResolvePrototypeOverlay(
+            in AnimationOverlayRequest overlay,
+            in AnimatorPackedState animator)
+        {
+            if (overlay.HasAnyClip)
+            {
+                return overlay;
+            }
+
+            if ((animator.GetFlags() & AnimatorPackedStateFlags.Active) == 0)
+            {
+                return default;
+            }
+
+            return new AnimationOverlayRequest
+            {
+                BaseClip = new AnimatorBuiltinClipState
+                {
+                    ClipId = AnimatorBuiltinClipId.LocomotionCycle,
+                    NormalizedTime01 = animator.GetNormalizedTime01(),
+                    Weight01 = 1f,
+                },
+            };
         }
 
         private void DrawAssetRecursive(int meshAssetId, Vector3 position, Quaternion rotation, Vector3 scale, Vector4 color, Camera3D camera, MeshAssetRegistry meshes, in PrefabFinalizationContext finalizationContext)
@@ -1596,6 +1720,33 @@ namespace Ludots.Client.Raylib.Rendering
             return drawCalls;
         }
 
+        private int DrawModelInstanceBatch(Model model, GpuSkinnedInstanceBatch batch, uint colorKey)
+        {
+            if (model.meshCount <= 0 || batch.Count <= 0)
+            {
+                return 0;
+            }
+
+            int drawCalls = 0;
+            fixed (RaylibMatrix* transforms = batch.Transforms)
+            {
+                for (int meshIndex = 0; meshIndex < model.meshCount; meshIndex++)
+                {
+                    Mesh mesh = model.meshes[meshIndex];
+                    Material material = ResolveInstancedModelMaterial(model, meshIndex);
+                    ApplyInstancedMaterialTint(ref material, colorKey);
+                    for (int offset = 0; offset < batch.Count; offset += MaxModelInstancesPerDraw)
+                    {
+                        int chunkCount = Math.Min(MaxModelInstancesPerDraw, batch.Count - offset);
+                        Rl.DrawMeshInstanced(mesh, material, transforms + offset, chunkCount);
+                        drawCalls++;
+                    }
+                }
+            }
+
+            return drawCalls;
+        }
+
         private Material ResolveInstancedModelMaterial(Model model, int meshIndex)
         {
             if (model.materialCount <= 0 || model.materials == null)
@@ -1851,6 +2002,37 @@ namespace Ludots.Client.Raylib.Rendering
                 Transforms = new RaylibMatrix[Math.Max(4, initialCapacity)];
                 Count = 0;
                 Revision = int.MinValue;
+            }
+
+            public void Add(in RaylibMatrix matrix)
+            {
+                if (Count >= Transforms.Length)
+                {
+                    Array.Resize(ref Transforms, Transforms.Length * 2);
+                }
+
+                Transforms[Count++] = matrix;
+            }
+        }
+
+        private readonly record struct GpuSkinnedInstanceBatchKey(
+            int MeshAssetId,
+            int MaterialId,
+            uint ColorKey,
+            int PrimaryStateIndex,
+            int SecondaryStateIndex);
+
+        private sealed class GpuSkinnedInstanceBatch
+        {
+            public readonly GpuSkinnedInstanceBatchKey Key;
+            public RaylibMatrix[] Transforms;
+            public int Count;
+            public Model Model;
+
+            public GpuSkinnedInstanceBatch(GpuSkinnedInstanceBatchKey key, int initialCapacity = 256)
+            {
+                Key = key;
+                Transforms = new RaylibMatrix[Math.Max(4, initialCapacity)];
             }
 
             public void Add(in RaylibMatrix matrix)

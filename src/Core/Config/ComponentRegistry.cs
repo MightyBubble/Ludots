@@ -3,6 +3,7 @@ using System.Collections.Generic;
 using System.Text.Json;
 using System.Text.Json.Nodes;
 using Arch.Core;
+using Arch.Core.Utils;
 using Arch.Core.Extensions;
 using Ludots.Core.Components;
 using Ludots.Core.Gameplay.GAS;
@@ -26,6 +27,7 @@ namespace Ludots.Core.Config
     public static class ComponentRegistry
     {
         private static readonly Dictionary<string, ComponentSetter> _setters = new Dictionary<string, ComponentSetter>();
+        private static readonly Dictionary<string, ComponentType> _componentTypes = new Dictionary<string, ComponentType>();
         private static readonly Dictionary<string, string> _registrationSource = new Dictionary<string, string>();
         private static RegistrationConflictReport _conflictReport;
 
@@ -60,7 +62,9 @@ namespace Ludots.Core.Config
             Register<BlackboardIntBuffer>("BlackboardIntBuffer");
             Register("AbilityExecAimSync", SetAbilityExecAimSync);
             Register<VisualTransform>("VisualTransform");
+            Register<VisualHeightmapSampleState>("VisualHeightmapSampleState");
             Register("PresentationStaticTransform", SetPresentationStaticTransform);
+            Register<PresentationStaticHeightPending>("PresentationStaticHeightPending");
             Register("ManifestationObstacleIntent2D", SetManifestationObstacleIntent2D);
             Register("ManifestationObstaclePolygon2D", SetManifestationObstaclePolygon2D);
             Register("ManifestationMotion2D", SetManifestationMotion2D);
@@ -73,7 +77,7 @@ namespace Ludots.Core.Config
             {
                 T component = json.Deserialize<T>(new JsonSerializerOptions { IncludeFields = true });
                 entity.Add<T>(component);
-            });
+            }, null, Component<T>.ComponentType);
         }
 
         public static void SetConflictReport(RegistrationConflictReport report)
@@ -82,6 +86,11 @@ namespace Ludots.Core.Config
         }
 
         public static void Register(string name, ComponentSetter setter, string modId = null)
+        {
+            Register(name, setter, modId, componentType: null);
+        }
+
+        private static void Register(string name, ComponentSetter setter, string modId, ComponentType? componentType)
         {
 #if DEBUG
             if (_setters.ContainsKey(name))
@@ -93,7 +102,21 @@ namespace Ludots.Core.Config
             }
 #endif
             _setters[name] = setter;
+            if (componentType.HasValue)
+            {
+                _componentTypes[name] = componentType.Value;
+            }
+            else
+            {
+                _componentTypes.Remove(name);
+            }
+
             _registrationSource[name] = modId ?? "(core)";
+        }
+
+        public static bool TryGetComponentType(string componentName, out ComponentType componentType)
+        {
+            return _componentTypes.TryGetValue(componentName, out componentType);
         }
 
         public static void Apply(Entity entity, string componentName, JsonNode data)
@@ -355,7 +378,6 @@ namespace Ludots.Core.Config
         {
             entity.Add(new PresentationStaticTransform());
             entity.Add(new PresentationStaticVisualPending());
-            entity.Add(new PresentationStaticHeightPending());
             entity.Add(new PresentationStaticCullPending());
         }
 

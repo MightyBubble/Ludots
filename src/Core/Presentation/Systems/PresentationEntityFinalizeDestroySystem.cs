@@ -1,3 +1,4 @@
+using Arch.Buffer;
 using Arch.Core;
 using Arch.System;
 using Ludots.Core.Presentation.Components;
@@ -12,6 +13,7 @@ namespace Ludots.Core.Presentation.Systems
     {
         private readonly QueryDescription _query = new QueryDescription()
             .WithAll<PresentationDestroyPending, PresentationDestroyEventPublished>();
+        private readonly CommandBuffer _commandBuffer = new();
 
         public PresentationEntityFinalizeDestroySystem(World world)
             : base(world)
@@ -28,10 +30,21 @@ namespace Ludots.Core.Presentation.Systems
                     Entity entity = chunk.Entity(i);
                     if (World.IsAlive(entity))
                     {
-                        World.Destroy(entity);
+                        _commandBuffer.Destroy(in entity);
                     }
                 }
             }
+
+            if (_commandBuffer.Size > 0)
+            {
+                _commandBuffer.Playback(World);
+            }
+        }
+
+        public override void Dispose()
+        {
+            _commandBuffer.Dispose();
+            base.Dispose();
         }
     }
 }

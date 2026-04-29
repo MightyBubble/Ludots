@@ -72,5 +72,19 @@
       "GameplayTagContainer": {},
       "TagCountContainer": {}
     }
+  },
+  {
+    "id": "blacksmith_dynamic_worker_entity",
+    "components": {
+      "Name": { "Value": "BlacksmithDynamicWorker" },
+      "WorldPositionCm": { "Value": { "X": 0, "Y": 0 } },
+      "FacingDirection": { "AngleRad": 0.0 },
+      "AttributeBuffer": {
+        "base": {}
+      },
+      "GameplayTagContainer": {},
+      "TagCountContainer": {},
+      "DynamicWorkerCrowdTag": {}
+    }
   }
 ]

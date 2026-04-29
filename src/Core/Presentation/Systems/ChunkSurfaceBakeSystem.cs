@@ -24,6 +24,7 @@ namespace Ludots.Core.Presentation.Systems
         private readonly PerformerDefinitionRegistry _performerDefinitions;
         private readonly PerformerCommandBuffer _commands;
         private readonly PerformerEntityRuntime _performerRuntime;
+        private readonly List<int> _completedRemovals = new(64);
 
         public ChunkSurfaceBakeSystem(
             World world,
@@ -45,14 +46,14 @@ namespace Ludots.Core.Presentation.Systems
 
         public override void Update(in float dt)
         {
-            var completedRemovals = new List<int>();
+            _completedRemovals.Clear();
             foreach (SurfaceSourceRecord record in _runtime.Records)
             {
                 if (record.PendingRemoval)
                 {
                     if (record.Entity == Entity.Null || !World.IsAlive(record.Entity))
                     {
-                        completedRemovals.Add(record.SourceStableId);
+                        _completedRemovals.Add(record.SourceStableId);
                     }
 
                     continue;
@@ -67,9 +68,9 @@ namespace Ludots.Core.Presentation.Systems
                 BuildOrUpdateRecord(record);
             }
 
-            for (int i = 0; i < completedRemovals.Count; i++)
+            for (int i = 0; i < _completedRemovals.Count; i++)
             {
-                _runtime.Remove(completedRemovals[i]);
+                _runtime.Remove(_completedRemovals[i]);
             }
         }
 
@@ -260,7 +261,6 @@ namespace Ludots.Core.Presentation.Systems
                             AssetSwapParamKey = SurfaceMeshParamKey,
                             MaterialParamKey = SurfaceMaterialParamKey,
                             VisibilityParamKey = SurfaceVisibilityParamKey,
-                            Grounding = GroundingMode.None,
                         },
                     },
                 },
@@ -289,8 +289,13 @@ namespace Ludots.Core.Presentation.Systems
                 record.RenderPerformerEntity = Entity.Null;
             }
 
-            Entity existing = FindRenderPerformer(record);
-            if (existing != Entity.Null)
+            if (_performerRuntime.TryGetActiveScopedInstance(
+                    record.RenderPerformerDefinitionId,
+                    record.Entity,
+                    record.RenderScopeId,
+                    PresentationAnchorKind.Entity,
+                    Vector3.Zero,
+                    out Entity existing))
             {
                 record.RenderPerformerEntity = existing;
                 return existing;
@@ -316,23 +321,6 @@ namespace Ludots.Core.Presentation.Systems
             }
 
             return Entity.Null;
-        }
-
-        private Entity FindRenderPerformer(SurfaceSourceRecord record)
-        {
-            Entity found = Entity.Null;
-            var query = new QueryDescription().WithAll<PerformerState>();
-            World.Query(in query, (Entity entity, ref PerformerState state) =>
-            {
-                if (found != Entity.Null) return;
-                if (state.OwnerEntity == record.Entity &&
-                    state.DefId == record.RenderPerformerDefinitionId &&
-                    state.ScopeId == record.RenderScopeId)
-                {
-                    found = entity;
-                }
-            });
-            return found;
         }
 
         private static int ComposeRenderScopeId(int sourceScopeId, int stableId)

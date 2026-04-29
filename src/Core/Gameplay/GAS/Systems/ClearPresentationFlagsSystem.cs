@@ -11,18 +11,27 @@ namespace Ludots.Core.Gameplay.GAS.Systems
             .WithAll<GameplayTagEffectiveChangedBits>();
         private static readonly QueryDescription _attributeQuery = new QueryDescription()
             .WithAll<GameplayAttributeChangedBits>();
+        private readonly CommandBuffer _commandBuffer = new();
 
         public ClearPresentationFlagsSystem(World world) : base(world) { }
 
         public override void Update(in float dt)
         {
-            var commandBuffer = new CommandBuffer();
-            var tagJob = new ClearTagJob { CommandBuffer = commandBuffer };
+            var tagJob = new ClearTagJob { CommandBuffer = _commandBuffer };
             World.InlineEntityQuery<ClearTagJob, GameplayTagEffectiveChangedBits>(in _tagQuery, ref tagJob);
 
-            var attributeJob = new ClearAttributeJob { CommandBuffer = commandBuffer };
+            var attributeJob = new ClearAttributeJob { CommandBuffer = _commandBuffer };
             World.InlineEntityQuery<ClearAttributeJob, GameplayAttributeChangedBits>(in _attributeQuery, ref attributeJob);
-            commandBuffer.Playback(World, dispose: true);
+            if (_commandBuffer.Size > 0)
+            {
+                _commandBuffer.Playback(World);
+            }
+        }
+
+        public override void Dispose()
+        {
+            _commandBuffer.Dispose();
+            base.Dispose();
         }
 
         private struct ClearTagJob : IForEachWithEntity<GameplayTagEffectiveChangedBits>
