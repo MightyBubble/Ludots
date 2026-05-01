@@ -171,23 +171,26 @@ namespace Ludots.Core.Presentation.Systems
 
             public unsafe void Update(Entity entity, ref GameplayAttributeChangedBits changed, ref AttributeBuffer attributes)
             {
-                for (int attributeId = 0; attributeId < AttributeBuffer.MAX_ATTRS; attributeId++)
+                fixed (byte* bits = changed.Bits)
                 {
-                    if (!changed.IsSet(attributeId))
+                    for (int attributeId = 0; attributeId < AttributeBuffer.MAX_ATTRS; attributeId++)
                     {
-                        continue;
-                    }
+                        if (bits[attributeId] == 0)
+                        {
+                            continue;
+                        }
 
-                    Stream.TryAdd(new PresentationEvent
-                    {
-                        LogicTickStamp = Tick,
-                        Kind = PresentationEventKind.AttributeValueChanged,
-                        KeyId = attributeId,
-                        Source = entity,
-                        Target = entity,
-                        Magnitude = attributes.GetCurrent(attributeId),
-                    });
-                    OwnerChanges?.TryAdd(new PresentationOwnerChange(entity, PresentationOwnerChangeKind.Attribute, attributeId));
+                        Stream.TryAdd(new PresentationEvent
+                        {
+                            LogicTickStamp = Tick,
+                            Kind = PresentationEventKind.AttributeValueChanged,
+                            KeyId = attributeId,
+                            Source = entity,
+                            Target = entity,
+                            Magnitude = attributes.GetCurrent(attributeId),
+                        });
+                        OwnerChanges?.TryAdd(new PresentationOwnerChange(entity, PresentationOwnerChangeKind.Attribute, attributeId));
+                    }
                 }
             }
         }

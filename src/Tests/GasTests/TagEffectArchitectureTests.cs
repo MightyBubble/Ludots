@@ -842,6 +842,91 @@ namespace Ludots.Tests.GAS
         }
 
         [Test]
+        public void RuntimeEntitySpawnSystem_BatchTemplate_AppliesAttributeCurrentAndPreseedsSnapshot()
+        {
+            int durabilityId = AttributeRegistry.Register("Test.Batch.Durability");
+            string templateJson = @"[
+              {
+                ""id"": ""test_attr_current_batch"",
+                ""components"": {
+                  ""Name"": { ""Value"": ""Template:AttrCurrent"" },
+                  ""WorldPositionCm"": { ""Value"": { ""X"": 0, ""Y"": 0 } },
+                  ""FacingDirection"": { ""AngleRad"": 0.0 },
+                  ""AttributeBuffer"": {
+                    ""base"": { ""Test.Batch.Durability"": 100 },
+                    ""current"": { ""Test.Batch.Durability"": 72 }
+                  },
+                  ""GameplayTagContainer"": {},
+                  ""TagCountContainer"": {}
+                }
+              }
+            ]";
+
+            var pipeline = CreateMinimalPipeline(@"{ ""id"": ""noop"", ""presetType"": ""None"" }", templateJson);
+            var templates = new DataRegistry<EntityTemplate>(pipeline);
+            templates.Load("Entities/templates.json");
+
+            using var world = World.Create();
+            var requests = new RuntimeEntitySpawnQueue(capacity: 4);
+            var templateKeys = new EntityTemplateKeyRegistry();
+            var stableIds = new Ludots.Core.Presentation.PresentationStableIdAllocator();
+            var system = new RuntimeEntitySpawnSystem(
+                world,
+                requests,
+                templates,
+                templateKeys,
+                stableIds);
+
+            for (int i = 0; i < 2; i++)
+            {
+                That(requests.TryEnqueue(new RuntimeEntitySpawnRequest
+                {
+                    Kind = RuntimeEntitySpawnKind.Template,
+                    TemplateId = "test_attr_current_batch",
+                    WorldPositionCm = Fix64Vec2.FromInt(i * 100, 0),
+                    HasWorldPosition = 1,
+                }), Is.True);
+            }
+
+            system.Update(0f);
+
+            Entity first = Entity.Null;
+            int count = 0;
+            var query = new QueryDescription().WithAll<Name, AttributeBuffer, AttributeLastSnapshot>();
+            world.Query(in query, (Entity entity, ref Name name, ref AttributeBuffer attributes, ref AttributeLastSnapshot snapshot) =>
+            {
+                if (!string.Equals(name.Value, "Template:AttrCurrent", StringComparison.Ordinal))
+                {
+                    return;
+                }
+
+                count++;
+                if (first == Entity.Null)
+                {
+                    first = entity;
+                }
+
+                That(attributes.GetBase(durabilityId), Is.EqualTo(100f));
+                That(attributes.GetCurrent(durabilityId), Is.EqualTo(72f));
+                unsafe { That(snapshot.Values[durabilityId], Is.EqualTo(72f)); }
+            });
+
+            That(count, Is.EqualTo(2));
+            That(first, Is.Not.EqualTo(Entity.Null));
+
+            var queue = new DeferredTriggerQueue();
+            using var deferred = new DeferredTriggerCollectionSystem(world, queue);
+            AttributeMutationOps.AddCurrent(world, first, durabilityId, -2f);
+            deferred.Update(0.016f);
+
+            That(queue.AttributeTriggerCount, Is.EqualTo(1));
+            var trigger = queue.GetAttributeTrigger(0);
+            That(trigger.AttributeId, Is.EqualTo(durabilityId));
+            That(trigger.OldValue, Is.EqualTo(72f));
+            That(trigger.NewValue, Is.EqualTo(70f));
+        }
+
+        [Test]
         public void RuntimeEntitySpawnSystem_SpawnUnitType_CopiesPlayerOwnerAndLinksParentWhenRequested()
         {
             UnitTypeRegistry.Clear();

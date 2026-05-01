@@ -410,6 +410,50 @@ namespace Ludots.Tests.Presentation
         }
 
         [Test]
+        public void WorldHudToScreenSystem_SubmitsInCameraLargeBars()
+        {
+            var world = World.Create();
+            try
+            {
+                var worldHud = new WorldHudBatchBuffer(4);
+                var screenHud = new ScreenHudBatchBuffer(4);
+                worldHud.TryAdd(new WorldHudItem
+                {
+                    StableId = 901,
+                    DirtySerial = 902,
+                    Kind = WorldHudItemKind.Bar,
+                    WorldPosition = new Vector3(10f, 2f, 0f),
+                    Width = 1024f,
+                    Height = 24f,
+                    Value0 = 0.75f,
+                    Color0 = new Vector4(0.1f, 0.1f, 0.1f, 1f),
+                    Color1 = new Vector4(0.2f, 0.8f, 0.2f, 1f),
+                });
+
+                var system = new WorldHudToScreenSystem(
+                    world,
+                    worldHud,
+                    strings: null,
+                    projector: new FixedProjector(new Vector2(960f, 360f)),
+                    view: new FixedViewController(new Vector2(1920f, 1080f)),
+                    screenHud: screenHud);
+
+                system.Update(0f);
+
+                Assert.That(screenHud.BarCount, Is.EqualTo(1),
+                    "screen-visible HUD bars must not be rejected by readability, density, or size caps");
+                Assert.That(screenHud.DroppedTotal, Is.EqualTo(0));
+                ref readonly var item = ref screenHud.GetBarSpan()[0];
+                Assert.That(item.Width, Is.EqualTo(1024f));
+                Assert.That(item.StableId, Is.EqualTo(901));
+            }
+            finally
+            {
+                World.Destroy(world);
+            }
+        }
+
+        [Test]
         public void WorldHudToScreenSystem_RoundsStationaryProjectionJitter_ForRetainedOverlay()
         {
             var world = World.Create();

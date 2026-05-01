@@ -9,6 +9,7 @@ using Arch.Core.Utils;
 using System.Runtime.InteropServices;
 using System.Runtime.CompilerServices;
 using Ludots.Core.Gameplay.GAS;
+using Ludots.Core.Gameplay.GAS.Components;
 using Ludots.Core.Presentation.Commands;
 using Ludots.Core.Presentation.Components;
 
@@ -16,7 +17,6 @@ namespace Ludots.Core.Presentation.Performers
 {
     public sealed class PerformerEntityRuntime
     {
-        private static readonly PerformerDefinition EmptyDefinition = new();
         private static readonly QueryDescription _performerCullQuery = new QueryDescription()
             .WithAll<PerformerState, PerformerCullState>();
         private static readonly QueryDescription _performerStateQuery = new QueryDescription()
@@ -36,16 +36,19 @@ namespace Ludots.Core.Presentation.Performers
         private PerformerAnimatorStateBuffer? _animatorStates;
         private readonly Dictionary<int, List<Entity>> _byDefinition = new();
         private readonly Dictionary<OwnerKey, OwnerPerformerBucket> _byOwner = new();
-        private readonly Dictionary<OwnerDefinitionKey, List<Entity>> _byOwnerDefinition = new();
+        private readonly Dictionary<OwnerDefinitionKey, OwnerPerformerBucket> _byOwnerDefinition = new();
         private readonly Dictionary<int, EntityBucket> _byScope = new();
         private readonly Dictionary<ScopedOwnerKey, Entity> _scopedInstances = new();
         private readonly List<OwnerKey> _deadOwnerKeys = new(256);
+        private readonly List<OwnerDefinitionKey> _ownerDefinitionScratch = new(256);
         private readonly List<Entity> _entityScratch = new(256);
         private readonly CommandBuffer _structuralCommands = new();
         private Entity[] _childBatchCreated = Array.Empty<Entity>();
         private int[] _childBatchScopeIds = Array.Empty<int>();
         private int[] _childBatchStableIds = Array.Empty<int>();
         private Entity[] _scopeDestroyBuffer = Array.Empty<Entity>();
+        private Entity[] _retainedPresentationDirtyBuffer = Array.Empty<Entity>();
+        private int _retainedPresentationDirtyBufferCount;
         private CommandBuffer? _deferredStructuralCommands;
         private bool _suppressOwnerPayloadMarkerWrites;
 
@@ -54,6 +57,8 @@ namespace Ludots.Core.Presentation.Performers
         public bool HasNonRootPerformers => _nonRootCount != 0;
         public bool HasDirtyStaticVisuals => _dirtyStaticVisualCount != 0;
         public bool HasDirtyRetainedPresentationRequests => _dirtyRetainedPresentationRequestCount != 0;
+        public ReadOnlySpan<Entity> RetainedPresentationDirtyEntities =>
+            _retainedPresentationDirtyBuffer.AsSpan(0, _retainedPresentationDirtyBufferCount);
         public World World => _world;
         public double LastRootBatchSetupMs { get; private set; }
         public double LastRootBatchWorldCreateMs { get; private set; }
@@ -61,6 +66,11 @@ namespace Ludots.Core.Presentation.Performers
         public double LastRootBatchIndexWriteMs { get; private set; }
         public double LastRootBatchOwnerPayloadMs { get; private set; }
         public double LastRootBatchPostCreateMs { get; private set; }
+        public double LastChildBatchSetupMs { get; private set; }
+        public double LastChildBatchWorldCreateMs { get; private set; }
+        public double LastChildBatchComponentFillMs { get; private set; }
+        public double LastChildBatchIndexWriteMs { get; private set; }
+        public double LastChildBatchStableIdMs { get; private set; }
 
         public PerformerEntityRuntime(World world)
         {
@@ -75,6 +85,11 @@ namespace Ludots.Core.Presentation.Performers
             LastRootBatchIndexWriteMs = 0d;
             LastRootBatchOwnerPayloadMs = 0d;
             LastRootBatchPostCreateMs = 0d;
+            LastChildBatchSetupMs = 0d;
+            LastChildBatchWorldCreateMs = 0d;
+            LastChildBatchComponentFillMs = 0d;
+            LastChildBatchIndexWriteMs = 0d;
+            LastChildBatchStableIdMs = 0d;
         }
 
         private static double ElapsedMs(long startTimestamp)
@@ -214,12 +229,17 @@ namespace Ludots.Core.Presentation.Performers
                 return 0;
             }
 
-            definition ??= EmptyDefinition;
+            definition = ResolveDefinition(defId, definition);
             ResetLastRootBatchTiming();
             long setupStart = Stopwatch.GetTimestamp();
             ReserveBatchIndexCapacity(owners.Length, definition);
             uint defaultBehaviorMask = BuildDefaultBehaviorMask(definition);
-            Signature signature = BuildBatchSignature(definition, defaultBehaviorMask);
+            bool includeTransformSyncTick = BatchRequiresTransformSyncTick(definition, defaultBehaviorMask, owners);
+            Signature signature = BuildBatchSignature(
+                definition,
+                defaultBehaviorMask,
+                includeTransformSyncTick,
+                includeAttachmentTick: true);
             LastRootBatchSetupMs = ElapsedMs(setupStart);
             long worldCreateStart = Stopwatch.GetTimestamp();
             _world.Create(created, signature, owners.Length);
@@ -324,7 +344,10 @@ namespace Ludots.Core.Presentation.Performers
 
         public void InitializeTransform(Entity performer, PerformerDefinition definition)
         {
-            definition ??= EmptyDefinition;
+            if (definition == null)
+            {
+                throw new ArgumentNullException(nameof(definition), "Performer transform initialization requires a resolved definition.");
+            }
 
             if (!_world.IsAlive(performer) || !_world.Has<PerformerState>(performer))
             {
@@ -357,7 +380,7 @@ namespace Ludots.Core.Presentation.Performers
         public Entity Create(int defId, Entity owner, int scopeId)
         {
             return Create(defId, owner, scopeId, PresentationAnchorKind.Entity,
-                Vector3.Zero, 0, Entity.Null, default);
+                Vector3.Zero, 0, Entity.Null, ResolveDefinition(defId, null));
         }
 
         public void Destroy(Entity performer, Action<Entity, PerformerState>? onDestroyed = null)
@@ -383,10 +406,10 @@ namespace Ludots.Core.Presentation.Performers
                 {
                     _dirtyStaticVisualCount--;
                 }
-                if (emitCache.RetainedDirty != 0 && _dirtyRetainedPresentationRequestCount > 0)
-                {
-                    _dirtyRetainedPresentationRequestCount--;
-                }
+            if (emitCache.RetainedDirty != 0 && _dirtyRetainedPresentationRequestCount > 0)
+            {
+                _dirtyRetainedPresentationRequestCount--;
+            }
             }
             RemoveIndexes(performer, in snapshot);
             onDestroyed?.Invoke(performer, snapshot);
@@ -654,15 +677,9 @@ namespace Ludots.Core.Presentation.Performers
                 return TryMatchEntityAnchoredScopedInstance(single, defId, scopeId, out entity);
             }
 
-            List<Entity>? many = bucket.Many;
-            if (many == null)
+            for (int i = 0; i < bucket.Count; i++)
             {
-                return false;
-            }
-
-            for (int i = 0; i < many.Count; i++)
-            {
-                if (TryMatchEntityAnchoredScopedInstance(many[i], defId, scopeId, out entity))
+                if (TryMatchEntityAnchoredScopedInstance(bucket.GetAt(i), defId, scopeId, out entity))
                 {
                     return true;
                 }
@@ -701,30 +718,27 @@ namespace Ludots.Core.Presentation.Performers
 
         public IReadOnlyList<Entity> GetActiveByOwnerDefinition(int defId, Entity owner)
         {
-            return _byOwnerDefinition.TryGetValue(new OwnerDefinitionKey(owner, defId), out var entities)
+            return _byOwnerDefinition.TryGetValue(new OwnerDefinitionKey(owner, defId), out OwnerPerformerBucket entities)
                 ? entities
                 : Array.Empty<Entity>();
         }
 
-        internal bool TryGetActiveByOwner(Entity owner, out Entity single, out List<Entity>? many)
+        internal bool TryGetActiveByOwnerDefinition(int defId, Entity owner, out OwnerPerformerBucket entities)
         {
-            single = Entity.Null;
-            many = null;
+            return _byOwnerDefinition.TryGetValue(new OwnerDefinitionKey(owner, defId), out entities!);
+        }
+
+        internal bool TryGetActiveByOwner(Entity owner, out OwnerPerformerBucket performers)
+        {
+            performers = default;
             if (owner == Entity.Null ||
-                !_byOwner.TryGetValue(new OwnerKey(owner), out OwnerPerformerBucket bucket) ||
-                bucket.Count == 0)
+                !_byOwner.TryGetValue(new OwnerKey(owner), out performers) ||
+                performers.Count == 0)
             {
                 return false;
             }
 
-            if (bucket.Count == 1)
-            {
-                single = bucket.Single;
-                return true;
-            }
-
-            many = bucket.Many;
-            return many != null && many.Count != 0;
+            return true;
         }
 
         internal int ReleaseDeadOwners(Action<Entity, PerformerState>? onDestroyed = null)
@@ -764,16 +778,9 @@ namespace Ludots.Core.Presentation.Performers
                     continue;
                 }
 
-                List<Entity>? many = bucket.Many;
-                if (many == null || many.Count == 0)
+                for (int performerIndex = 0; performerIndex < bucket.Count; performerIndex++)
                 {
-                    continue;
-                }
-
-                Entity[] owned = many.ToArray();
-                for (int performerIndex = 0; performerIndex < owned.Length; performerIndex++)
-                {
-                    Entity performer = owned[performerIndex];
+                    Entity performer = bucket.GetAt(performerIndex);
                     if (_world.IsAlive(performer) && _world.Has<PerformerState>(performer))
                     {
                         Destroy(performer, onDestroyed);
@@ -849,15 +856,9 @@ namespace Ludots.Core.Presentation.Performers
                     continue;
                 }
 
-                List<Entity>? many = performers.Many;
-                if (many == null)
+                for (int performerIndex = 0; performerIndex < performers.Count; performerIndex++)
                 {
-                    continue;
-                }
-
-                for (int performerIndex = 0; performerIndex < many.Count; performerIndex++)
-                {
-                    SyncOwnerRootCull(many[performerIndex], ownerVisible, ownerLod);
+                    SyncOwnerRootCull(performers.GetAt(performerIndex), ownerVisible, ownerLod);
                 }
             }
         }
@@ -877,15 +878,9 @@ namespace Ludots.Core.Presentation.Performers
                     continue;
                 }
 
-                List<Entity>? many = performers.Many;
-                if (many == null)
+                for (int performerIndex = 0; performerIndex < performers.Count; performerIndex++)
                 {
-                    continue;
-                }
-
-                for (int performerIndex = 0; performerIndex < many.Count; performerIndex++)
-                {
-                    MarkStaticDirty(many[performerIndex]);
+                    MarkStaticDirty(performers.GetAt(performerIndex));
                 }
             }
         }
@@ -918,15 +913,9 @@ namespace Ludots.Core.Presentation.Performers
                     continue;
                 }
 
-                List<Entity>? many = performers.Many;
-                if (many == null)
+                for (int performerIndex = 0; performerIndex < performers.Count; performerIndex++)
                 {
-                    continue;
-                }
-
-                for (int performerIndex = 0; performerIndex < many.Count; performerIndex++)
-                {
-                    SyncRootCullAndMaybeMarkStaticDirty(many[performerIndex], ownerVisible, ownerLod);
+                    SyncRootCullAndMaybeMarkStaticDirty(performers.GetAt(performerIndex), ownerVisible, ownerLod);
                 }
             }
         }
@@ -975,6 +964,7 @@ namespace Ludots.Core.Presentation.Performers
                 Span<PerformerState> states = chunk.GetSpan<PerformerState>();
                 Span<PerformerCullState> culls = chunk.GetSpan<PerformerCullState>();
                 Span<PerformerEmitCache> emitCaches = chunk.GetSpan<PerformerEmitCache>();
+                ref Entity entityFirst = ref chunk.Entity(0);
                 bool hasStaticStableVisual = chunk.Has<PerfStaticStableVisual>();
                 bool hasRetainedPresentationRequest = chunk.Has<PerfRetainedPresentationRequest>();
 
@@ -999,7 +989,11 @@ namespace Ludots.Core.Presentation.Performers
 
                     if (hasRetainedPresentationRequest)
                     {
-                        MarkRetainedPresentationRequestDirty(ref emitCache);
+                        Entity entity = Unsafe.Add(ref entityFirst, index);
+                        if (MarkRetainedPresentationRequestDirty(ref emitCache))
+                        {
+                            AppendRetainedPresentationDirtyEntity(entity);
+                        }
                     }
                 }
             }
@@ -1174,6 +1168,7 @@ namespace Ludots.Core.Presentation.Performers
             SyncTickBehaviorMarker<PerfHasAttachment>(entity, hasAttachment);
             SyncTickBehaviorMarker<PerfHasAttachmentTick>(entity, hasAttachmentTick);
             SyncTickBehaviorMarker<PerfHasGrounding>(entity, hasGrounding);
+            SyncTickBehaviorMarker<PerfTransformSyncTick>(entity, PerformerTransformRequiresTick(entity, depth: 0));
             SyncTickBehaviorMarker<PerfHasAnimator>(entity, hasAnimator);
         }
 
@@ -1186,6 +1181,7 @@ namespace Ludots.Core.Presentation.Performers
 
             bool hasEmitWork = false;
             bool retainedPresentationRequest = definition.UsesRetainedPresentationRequest;
+            bool retainedPresentationLifecycleTick = definition.NeedsRetainedPresentationRequestLifecycleTick;
             bool needsInactiveVisualRemoval = false;
             if (!hasEmitWork && !definition.UsesEventDrivenStaticEmit && !retainedPresentationRequest)
             {
@@ -1221,10 +1217,13 @@ namespace Ludots.Core.Presentation.Performers
 
             SyncTickBehaviorMarker<PerfHasEmitWork>(entity, hasEmitWork);
             SyncTickBehaviorMarker<PerfRetainedPresentationRequest>(entity, retainedPresentationRequest);
+            SyncTickBehaviorMarker<PerfRetainedPresentationRequestLifecycleTick>(entity, retainedPresentationLifecycleTick);
             if (retainedPresentationRequest)
             {
                 MarkRetainedPresentationRequestDirty(entity);
             }
+
+            SyncTickBehaviorMarker<PerfTransformSyncTick>(entity, PerformerTransformRequiresTick(entity, depth: 0));
         }
 
         public bool SetBehaviorActive(Entity entity, PerformerDefinition definition, int slotIndex, bool active)
@@ -1299,6 +1298,11 @@ namespace Ludots.Core.Presentation.Performers
                 RemoveMarker<PerfHasGrounding>(entity);
             }
 
+            if (_world.Has<PerfTransformSyncTick>(entity))
+            {
+                RemoveMarker<PerfTransformSyncTick>(entity);
+            }
+
             if (_world.Has<PerfHasAnimator>(entity))
             {
                 RemoveMarker<PerfHasAnimator>(entity);
@@ -1312,6 +1316,11 @@ namespace Ludots.Core.Presentation.Performers
             if (_world.Has<PerfRetainedPresentationRequest>(entity))
             {
                 RemoveMarker<PerfRetainedPresentationRequest>(entity);
+            }
+
+            if (_world.Has<PerfRetainedPresentationRequestLifecycleTick>(entity))
+            {
+                RemoveMarker<PerfRetainedPresentationRequestLifecycleTick>(entity);
             }
         }
 
@@ -1399,6 +1408,89 @@ namespace Ludots.Core.Presentation.Performers
                    definition.HasSurfaceAuthoring ||
                    definition.UsesRetainedPresentationRequest ||
                    (definition.Children != null && definition.Children.Length != 0);
+        }
+
+        private bool BatchRequiresTransformSyncTick(
+            PerformerDefinition definition,
+            uint activeMask,
+            ReadOnlySpan<Entity> owners)
+        {
+            if (owners.Length == 0)
+            {
+                return false;
+            }
+
+            for (int i = 0; i < owners.Length; i++)
+            {
+                Entity owner = owners[i];
+                if (owner == Entity.Null ||
+                    !_world.IsAlive(owner) ||
+                    !_world.Has<PresentationStaticTransform>(owner))
+                {
+                    return true;
+                }
+            }
+
+            return DefinitionRequiresTransformSyncForStaticOwner(definition, activeMask, depth: 0);
+        }
+
+        private bool DefinitionRequiresTransformSyncForStaticOwner(
+            PerformerDefinition definition,
+            uint activeMask,
+            int depth)
+        {
+            if (depth >= 8)
+            {
+                return true;
+            }
+
+            BehaviorSlot[] behaviors = definition.Behaviors;
+            if (behaviors != null)
+            {
+                for (int i = 0; i < behaviors.Length; i++)
+                {
+                    ref readonly BehaviorSlot slot = ref behaviors[i];
+                    if (slot.SlotIndex is < 0 or >= 32 ||
+                        (activeMask & (1u << slot.SlotIndex)) == 0)
+                    {
+                        continue;
+                    }
+
+                    switch (slot.Kind)
+                    {
+                        case BehaviorKind.Spline:
+                            return true;
+                        case BehaviorKind.Attachment:
+                            if (slot.Attachment.Target != AttachmentTarget.Parent)
+                            {
+                                return true;
+                            }
+                            break;
+                    }
+                }
+            }
+
+            ChildPerformerRef[] children = definition.Children;
+            if (children == null || children.Length == 0 || _definitions == null)
+            {
+                return false;
+            }
+
+            for (int i = 0; i < children.Length; i++)
+            {
+                if (!_definitions.TryGet(children[i].DefinitionId, out PerformerDefinition childDefinition))
+                {
+                    return true;
+                }
+
+                uint childMask = BuildDefaultBehaviorMask(childDefinition);
+                if (DefinitionRequiresTransformSyncForStaticOwner(childDefinition, childMask, depth + 1))
+                {
+                    return true;
+                }
+            }
+
+            return false;
         }
 
         private bool PerformerTransformRequiresTick(Entity performer, int depth)
@@ -1514,8 +1606,11 @@ namespace Ludots.Core.Presentation.Performers
                 AddMarker<PerfRetainedPresentationRequest>(entity);
             }
 
-            ref PerformerEmitCache emitCache = ref _world.Get<PerformerEmitCache>(entity);
-            MarkRetainedPresentationRequestDirty(ref emitCache);
+            SyncTickBehaviorMarker<PerfRetainedPresentationRequestLifecycleTick>(
+                entity,
+                definition.NeedsRetainedPresentationRequestLifecycleTick);
+
+            MarkRetainedPresentationRequestDirty(entity);
         }
 
         private void CreateChildrenRecursive(
@@ -1632,6 +1727,7 @@ namespace Ludots.Core.Presentation.Performers
                 }
 
                 bool hasParamDefaults = childDefinition.ParamDefaults != null && childDefinition.ParamDefaults.Length != 0;
+                long stableIdStart = Stopwatch.GetTimestamp();
                 int childScopeCount = 0;
                 for (int i = 0; i < parentEntities.Length; i++)
                 {
@@ -1639,11 +1735,29 @@ namespace Ludots.Core.Presentation.Performers
                     _childBatchStableIds[i] = allocateStableId != null ? allocateStableId() : 0;
                     childScopeCount++;
                 }
+                LastChildBatchStableIdMs += ElapsedMs(stableIdStart);
 
+                long childSetupStart = Stopwatch.GetTimestamp();
                 uint defaultBehaviorMask = BuildDefaultBehaviorMask(childDefinition);
-                Signature signature = BuildBatchSignature(childDefinition, defaultBehaviorMask);
+                bool includeTransformSyncTick = !BatchCanInlineParentAttachmentWithoutTick(
+                    childDefinition,
+                    defaultBehaviorMask,
+                    parentEntities,
+                    depth: 0);
+                bool includeAttachmentTick = includeTransformSyncTick;
+                Signature signature = BuildBatchSignature(
+                    childDefinition,
+                    defaultBehaviorMask,
+                    includeTransformSyncTick,
+                    includeAttachmentTick);
+                LastChildBatchSetupMs += ElapsedMs(childSetupStart);
+
+                long childWorldCreateStart = Stopwatch.GetTimestamp();
                 _world.Create(_childBatchCreated.AsSpan(0, childScopeCount), signature, childScopeCount);
+                LastChildBatchWorldCreateMs += ElapsedMs(childWorldCreateStart);
                 ReserveBatchIndexCapacity(childScopeCount, childDefinition);
+
+                long childFillStart = Stopwatch.GetTimestamp();
                 FillEntityAnchoredBatch(
                     _childBatchCreated.AsSpan(0, childScopeCount),
                     owners,
@@ -1656,7 +1770,9 @@ namespace Ludots.Core.Presentation.Performers
                     childDefinition,
                     defaultBehaviorMask,
                     anchorKind,
-                    out _);
+                    out double childIndexWriteMs);
+                LastChildBatchIndexWriteMs += childIndexWriteMs;
+                LastChildBatchComponentFillMs += Math.Max(0d, ElapsedMs(childFillStart) - childIndexWriteMs);
 
                 if (childDefinition.UsesEventDrivenStaticEmit)
                 {
@@ -1682,6 +1798,32 @@ namespace Ludots.Core.Presentation.Performers
             }
         }
 
+        private bool BatchCanInlineParentAttachmentWithoutTick(
+            PerformerDefinition definition,
+            uint activeMask,
+            ReadOnlySpan<Entity> parents,
+            int depth)
+        {
+            if (!TryGetInlineParentAttachment(definition, activeMask, out _) ||
+                !DefinitionHasAttachmentTransformConsumers(definition) ||
+                parents.Length == 0)
+            {
+                return false;
+            }
+
+            for (int i = 0; i < parents.Length; i++)
+            {
+                Entity parent = parents[i];
+                if (parent == Entity.Null ||
+                    PerformerTransformRequiresTick(parent, depth))
+                {
+                    return false;
+                }
+            }
+
+            return true;
+        }
+
         private static bool CanBatchCreateDirectChildren(
             PerformerDefinitionRegistry definitions,
             ChildPerformerRef[] children)
@@ -1691,7 +1833,7 @@ namespace Ludots.Core.Presentation.Performers
                 ref readonly ChildPerformerRef child = ref children[i];
                 if ((child.ParamOverrides != null && child.ParamOverrides.Length != 0) ||
                     !definitions.TryGet(child.DefinitionId, out PerformerDefinition childDefinition) ||
-                    childDefinition.RequiresBootstrapProcessing ||
+                    RequiresDeferredBootstrapAfterBatchCreate(childDefinition) ||
                     (childDefinition.Children != null && childDefinition.Children.Length != 0))
                 {
                     return false;
@@ -1737,6 +1879,19 @@ namespace Ludots.Core.Presentation.Performers
         }
 
         private static Signature BuildBatchSignature(PerformerDefinition definition, uint defaultBehaviorMask)
+        {
+            return BuildBatchSignature(
+                definition,
+                defaultBehaviorMask,
+                includeTransformSyncTick: true,
+                includeAttachmentTick: true);
+        }
+
+        private static Signature BuildBatchSignature(
+            PerformerDefinition definition,
+            uint defaultBehaviorMask,
+            bool includeTransformSyncTick,
+            bool includeAttachmentTick)
         {
             Signature signature =
                 Component<PerformerState>.Signature +
@@ -1784,7 +1939,8 @@ namespace Ludots.Core.Presentation.Performers
                         case BehaviorKind.Animator: hasAnimator = true; break;
                         case BehaviorKind.Attachment:
                             hasAttachment = true;
-                            hasAttachmentTick |= DefinitionHasAttachmentTransformConsumers(definition);
+                            hasAttachmentTick |= includeAttachmentTick &&
+                                                 DefinitionHasAttachmentTransformConsumers(definition);
                             break;
                     }
                 }
@@ -1815,9 +1971,193 @@ namespace Ludots.Core.Presentation.Performers
             if (definition.UsesRetainedPresentationRequest)
             {
                 signature += Component<PerfRetainedPresentationRequest>.Signature;
+                if (definition.NeedsRetainedPresentationRequestLifecycleTick)
+                {
+                    signature += Component<PerfRetainedPresentationRequestLifecycleTick>.Signature;
+                }
+            }
+
+            if (includeTransformSyncTick)
+            {
+                signature += Component<PerfTransformSyncTick>.Signature;
             }
 
             return signature;
+        }
+
+        public static bool RequiresDeferredBootstrapAfterBatchCreate(PerformerDefinition definition)
+        {
+            if (definition == null || !definition.RequiresBootstrapProcessing)
+            {
+                return false;
+            }
+
+            if (definition.HasSurfaceAuthoring ||
+                definition.HasOwnerTagBindingWork ||
+                definition.MaterialBehaviorIndices.Length != 0 ||
+                definition.BootstrapGroundingBehaviorIndices.Length != 0 ||
+                !CanInlineInitialParamBindings(definition) ||
+                !CanInlineInitialAttributeBehaviors(definition) ||
+                ActiveAssetBindingNeedsDeferredBootstrap(definition) ||
+                ActiveAttachmentNeedsDeferredBootstrap(definition))
+            {
+                return true;
+            }
+
+            return false;
+        }
+
+        public static bool RequiresDeferredBootstrapAfterBatchCreateHierarchy(
+            PerformerDefinition definition,
+            PerformerDefinitionRegistry definitions)
+        {
+            if (definition == null)
+            {
+                return false;
+            }
+
+            if (RequiresDeferredBootstrapAfterBatchCreate(definition))
+            {
+                return true;
+            }
+
+            ChildPerformerRef[] children = definition.Children;
+            if (children == null || children.Length == 0)
+            {
+                return false;
+            }
+
+            if (definitions == null)
+            {
+                throw new ArgumentNullException(nameof(definitions));
+            }
+
+            for (int i = 0; i < children.Length; i++)
+            {
+                ref readonly ChildPerformerRef child = ref children[i];
+                if (!definitions.TryGet(child.DefinitionId, out PerformerDefinition childDefinition))
+                {
+                    throw new InvalidOperationException($"Performer child definition id={child.DefinitionId} is not registered.");
+                }
+
+                if (RequiresDeferredBootstrapAfterBatchCreateHierarchy(childDefinition, definitions))
+                {
+                    return true;
+                }
+            }
+
+            return false;
+        }
+
+        private static bool CanInlineInitialParamBindings(PerformerDefinition definition)
+        {
+            PerformerParamBinding[] bindings = definition.Bindings;
+            for (int i = 0; i < bindings.Length; i++)
+            {
+                switch (bindings[i].Value.Source)
+                {
+                    case ValueSourceKind.Attribute:
+                    case ValueSourceKind.AttributeRatio:
+                    case ValueSourceKind.AttributeBase:
+                    case ValueSourceKind.Constant:
+                        break;
+                    default:
+                        return false;
+                }
+            }
+
+            return true;
+        }
+
+        private static bool CanInlineInitialAttributeBehaviors(PerformerDefinition definition)
+        {
+            if (!definition.HasOwnerAttributeBindingWork)
+            {
+                return true;
+            }
+
+            BehaviorSlot[] behaviors = definition.Behaviors;
+            uint activeMask = BuildDefaultBehaviorMask(definition);
+            for (int i = 0; i < behaviors.Length; i++)
+            {
+                ref readonly BehaviorSlot slot = ref behaviors[i];
+                if (slot.Kind != BehaviorKind.AttributeBinding ||
+                    slot.SlotIndex is < 0 or >= 32 ||
+                    (activeMask & (1u << slot.SlotIndex)) == 0)
+                {
+                    continue;
+                }
+
+                if (slot.AttributeBinding.AttributeId < 0 ||
+                    slot.AttributeBinding.TargetParamKey < 0)
+                {
+                    return false;
+                }
+            }
+
+            return true;
+        }
+
+        private static bool ActiveAssetBindingNeedsDeferredBootstrap(PerformerDefinition definition)
+        {
+            BehaviorSlot[] behaviors = definition.Behaviors;
+            uint activeMask = BuildDefaultBehaviorMask(definition);
+            for (int i = 0; i < behaviors.Length; i++)
+            {
+                ref readonly BehaviorSlot slot = ref behaviors[i];
+                if (slot.Kind != BehaviorKind.AssetBinding ||
+                    slot.SlotIndex is < 0 or >= 32 ||
+                    (activeMask & (1u << slot.SlotIndex)) == 0)
+                {
+                    continue;
+                }
+
+                if (slot.AssetBinding.LocalOffset != Vector3.Zero ||
+                    slot.AssetBinding.LocalRotation != Quaternion.Identity ||
+                    (slot.AssetBinding.LocalScale != Vector3.One &&
+                     !AssetBindingUsesRetainedPresentationScale(slot.AssetBinding.AssetKind)))
+                {
+                    return true;
+                }
+            }
+
+            return false;
+        }
+
+        private static bool AssetBindingUsesRetainedPresentationScale(AssetKind kind)
+        {
+            return kind is AssetKind.WorldHud or AssetKind.WorldText or AssetKind.Spline or AssetKind.GroundOverlay;
+        }
+
+        private static bool ActiveAttachmentNeedsDeferredBootstrap(PerformerDefinition definition)
+        {
+            BehaviorSlot[] behaviors = definition.Behaviors;
+            uint activeMask = BuildDefaultBehaviorMask(definition);
+            bool foundParentAttachment = false;
+            for (int i = 0; i < behaviors.Length; i++)
+            {
+                ref readonly BehaviorSlot slot = ref behaviors[i];
+                if (slot.Kind != BehaviorKind.Attachment ||
+                    slot.SlotIndex is < 0 or >= 32 ||
+                    (activeMask & (1u << slot.SlotIndex)) == 0)
+                {
+                    continue;
+                }
+
+                if (slot.Attachment.Target != AttachmentTarget.Parent)
+                {
+                    return true;
+                }
+
+                if (foundParentAttachment)
+                {
+                    return true;
+                }
+
+                foundParentAttachment = true;
+            }
+
+            return false;
         }
 
         private PerformerDefinition ResolveDefinition(int defId, PerformerDefinition definition)
@@ -1829,7 +2169,7 @@ namespace Ludots.Core.Presentation.Performers
 
             return _definitions != null && _definitions.TryGet(defId, out PerformerDefinition resolved)
                 ? resolved
-                : EmptyDefinition;
+                : throw new InvalidOperationException($"Performer entity references unknown definition id={defId}.");
         }
 
         private void ReconcileBoundDefinitions()
@@ -2007,7 +2347,7 @@ namespace Ludots.Core.Presentation.Performers
 
             RebuildOwnerPayloadMarkersFromIndex();
             SortEntityIndexesByStableId(_byDefinition);
-            SortEntityIndexesByStableId(_byOwnerDefinition);
+            SortOwnerDefinitionIndexesByStableId();
         }
 
         private readonly struct ReconcileDefinitionWork
@@ -2031,6 +2371,27 @@ namespace Ludots.Core.Presentation.Performers
             {
                 entities.Sort(CompareByStableIdThenEntityId);
             }
+        }
+
+        private void SortOwnerDefinitionIndexesByStableId()
+        {
+            _ownerDefinitionScratch.Clear();
+            foreach (OwnerDefinitionKey key in _byOwnerDefinition.Keys)
+            {
+                _ownerDefinitionScratch.Add(key);
+            }
+
+            for (int i = 0; i < _ownerDefinitionScratch.Count; i++)
+            {
+                OwnerDefinitionKey key = _ownerDefinitionScratch[i];
+                ref OwnerPerformerBucket bucket = ref CollectionsMarshal.GetValueRefOrNullRef(_byOwnerDefinition, key);
+                if (!Unsafe.IsNullRef(ref bucket))
+                {
+                    bucket.Sort(CompareByStableIdThenEntityId);
+                }
+            }
+
+            _ownerDefinitionScratch.Clear();
         }
 
         private int CompareByStableIdThenEntityId(Entity left, Entity right)
@@ -2086,6 +2447,12 @@ namespace Ludots.Core.Presentation.Performers
             PresentationAnchorKind anchorKind,
             out double indexWriteMs)
         {
+            bool hasInlineParentAttachment = TryGetInlineParentAttachment(
+                definition,
+                defaultBehaviorMask,
+                out AttachmentConfig parentAttachment);
+            bool hasInlineParamBindings = definition.Bindings.Length != 0 && CanInlineInitialParamBindings(definition);
+            bool hasInlineAttributeBehaviors = definition.HasOwnerAttributeBindingWork && CanInlineInitialAttributeBehaviors(definition);
             Entity first = created[0];
             Archetype archetype = _world.GetEntityDataArray()[first.Id].Archetype;
             Slot slot = _world.GetSlot(first);
@@ -2141,6 +2508,28 @@ namespace Ludots.Core.Presentation.Performers
                     Vector3 position = ownerTransform.Position + definition.PositionOffset;
                     Quaternion rotation = ownerTransform.Rotation;
                     Vector3 scale = ownerTransform.Scale;
+                    if (hasInlineParentAttachment &&
+                        parent != Entity.Null &&
+                        _world.IsAlive(parent))
+                    {
+                        Vector3 parentPosition = _world.Has<PerformerWorldPosition>(parent)
+                            ? _world.Get<PerformerWorldPosition>(parent).Value
+                            : Vector3.Zero;
+                        Quaternion parentRotation = _world.Has<PerformerWorldRotation>(parent)
+                            ? _world.Get<PerformerWorldRotation>(parent).Value
+                            : Quaternion.Identity;
+                        Vector3 parentScale = _world.Has<PerformerWorldScale>(parent)
+                            ? _world.Get<PerformerWorldScale>(parent).Value
+                            : Vector3.One;
+                        Quaternion normalizedParentRotation = NormalizeOrIdentity(parentRotation);
+                        Vector3 normalizedParentScale = NormalizeScale(parentScale);
+                        Vector3 scaledOffset = parentAttachment.InheritScale
+                            ? normalizedParentScale * parentAttachment.Offset
+                            : parentAttachment.Offset;
+                        position = parentPosition + Vector3.Transform(scaledOffset, normalizedParentRotation);
+                        rotation = NormalizeOrIdentity(normalizedParentRotation * NormalizeOrIdentity(parentAttachment.RotationOffset));
+                        scale = parentAttachment.InheritScale ? normalizedParentScale : Vector3.One;
+                    }
 
                     states[componentIndex] = state;
                     positions[componentIndex] = new PerformerWorldPosition { Value = position };
@@ -2148,7 +2537,11 @@ namespace Ludots.Core.Presentation.Performers
                     scales[componentIndex] = new PerformerWorldScale { Value = scale };
                     transformSources[componentIndex] = new PerformerTransformSource
                     {
-                        Value = parent != Entity.Null ? TransformSource.InheritParent : TransformSource.EntityTransform,
+                        Value = hasInlineParentAttachment && parent != Entity.Null
+                            ? TransformSource.AttachedToParent
+                            : parent != Entity.Null
+                                ? TransformSource.InheritParent
+                                : TransformSource.EntityTransform,
                     };
                     parentComponents[componentIndex] = new PerformerParent { Parent = parent };
                     children[componentIndex] = default;
@@ -2175,6 +2568,30 @@ namespace Ludots.Core.Presentation.Performers
                             Value = AllocateAnimatorSlot(performer, definition),
                         };
                     }
+
+                    if (hasInlineParamBindings)
+                    {
+                        bool hasAttributes = _world.IsAlive(owner) && _world.Has<AttributeBuffer>(owner);
+                        AttributeBuffer attributes = hasAttributes ? _world.Get<AttributeBuffer>(owner) : default;
+                        ApplyInlineInitialParamBindings(
+                            ref floatParams[componentIndex],
+                            definition.Bindings,
+                            ref attributes,
+                            hasAttributes);
+                    }
+
+                    if (hasInlineAttributeBehaviors &&
+                        _world.IsAlive(owner) &&
+                        _world.Has<AttributeBuffer>(owner))
+                    {
+                        ref AttributeBuffer attributes = ref _world.Get<AttributeBuffer>(owner);
+                        ApplyInlineInitialAttributeBehaviors(
+                            ref floatParams[componentIndex],
+                            ref intParams[componentIndex],
+                            definition.Behaviors,
+                            defaultBehaviorMask,
+                            ref attributes);
+                    }
                 }
 
                 batchIndex += run;
@@ -2185,6 +2602,154 @@ namespace Ludots.Core.Presentation.Performers
             long indexStart = Stopwatch.GetTimestamp();
             AddEntityAnchoredBatchIndexes(created, owners, scopeIds, parentEntities, defId, definition, anchorKind);
             indexWriteMs = ElapsedMs(indexStart);
+        }
+
+        private static bool TryGetInlineParentAttachment(
+            PerformerDefinition definition,
+            uint activeMask,
+            out AttachmentConfig attachment)
+        {
+            attachment = default;
+            bool found = false;
+            BehaviorSlot[] behaviors = definition.Behaviors;
+            for (int i = 0; i < behaviors.Length; i++)
+            {
+                ref readonly BehaviorSlot slot = ref behaviors[i];
+                if (slot.Kind != BehaviorKind.Attachment ||
+                    slot.SlotIndex is < 0 or >= 32 ||
+                    (activeMask & (1u << slot.SlotIndex)) == 0)
+                {
+                    continue;
+                }
+
+                if (slot.Attachment.Target != AttachmentTarget.Parent || found)
+                {
+                    attachment = default;
+                    return false;
+                }
+
+                attachment = slot.Attachment;
+                found = true;
+            }
+
+            return found;
+        }
+
+        private static void ApplyInlineInitialParamBindings(
+            ref PerformerFloatParams floatParams,
+            PerformerParamBinding[] bindings,
+            ref AttributeBuffer attributes,
+            bool hasAttributes)
+        {
+            for (int i = 0; i < bindings.Length; i++)
+            {
+                ref readonly PerformerParamBinding binding = ref bindings[i];
+                float value;
+                switch (binding.Value.Source)
+                {
+                    case ValueSourceKind.Constant:
+                        value = binding.Value.ConstantValue;
+                        break;
+                    case ValueSourceKind.Attribute:
+                    case ValueSourceKind.AttributeRatio:
+                    case ValueSourceKind.AttributeBase:
+                        if (!hasAttributes)
+                        {
+                            continue;
+                        }
+
+                        value = ResolveAttributeValue(ref attributes, binding.Value.SourceId, binding.Value.Source);
+                        break;
+                    default:
+                        continue;
+                }
+
+                floatParams.Set(binding.ParamKey, value);
+            }
+        }
+
+        private static void ApplyInlineInitialAttributeBehaviors(
+            ref PerformerFloatParams floatParams,
+            ref PerformerIntParams intParams,
+            BehaviorSlot[] behaviors,
+            uint activeMask,
+            ref AttributeBuffer attributes)
+        {
+            for (int i = 0; i < behaviors.Length; i++)
+            {
+                ref readonly BehaviorSlot slot = ref behaviors[i];
+                if (slot.Kind != BehaviorKind.AttributeBinding ||
+                    slot.SlotIndex is < 0 or >= 32 ||
+                    (activeMask & (1u << slot.SlotIndex)) == 0)
+                {
+                    continue;
+                }
+
+                ApplyInlineInitialAttributeBehavior(
+                    ref floatParams,
+                    ref intParams,
+                    in slot.AttributeBinding,
+                    ref attributes);
+            }
+        }
+
+        private static void ApplyInlineInitialAttributeBehavior(
+            ref PerformerFloatParams floatParams,
+            ref PerformerIntParams intParams,
+            in AttributeBindingConfig config,
+            ref AttributeBuffer attributes)
+        {
+            float value = ResolveAttributeValue(ref attributes, config.AttributeId, config.Mode);
+            floatParams.Set(config.TargetParamKey, value);
+
+            ThresholdMapping[] thresholds = config.Thresholds ?? Array.Empty<ThresholdMapping>();
+            for (int i = 0; i < thresholds.Length; i++)
+            {
+                ref readonly ThresholdMapping threshold = ref thresholds[i];
+                if (value > threshold.Threshold)
+                {
+                    continue;
+                }
+
+                int thresholdIntValue = (int)threshold.OutputValue;
+                floatParams.Set(threshold.OutputParamKey, threshold.OutputValue);
+                intParams.Set(threshold.OutputParamKey, thresholdIntValue);
+                return;
+            }
+        }
+
+        private static float ResolveAttributeValue(ref AttributeBuffer attributes, int attributeId, ValueSourceKind mode)
+        {
+            return mode switch
+            {
+                ValueSourceKind.Attribute => attributes.GetCurrent(attributeId),
+                ValueSourceKind.AttributeRatio => ResolveAttributeRatio(ref attributes, attributeId),
+                ValueSourceKind.AttributeBase => attributes.GetBase(attributeId),
+                _ => attributes.GetCurrent(attributeId),
+            };
+        }
+
+        private static float ResolveAttributeRatio(ref AttributeBuffer attributes, int attributeId)
+        {
+            float current = attributes.GetCurrent(attributeId);
+            float max = attributes.GetBase(attributeId);
+            return max <= 0f ? 0f : Math.Clamp(current / max, 0f, 1f);
+        }
+
+        private static Quaternion NormalizeOrIdentity(Quaternion value)
+        {
+            float lengthSquared = value.LengthSquared();
+            if (lengthSquared <= 0.000001f)
+            {
+                return Quaternion.Identity;
+            }
+
+            return Quaternion.Normalize(value);
+        }
+
+        private static Vector3 NormalizeScale(Vector3 value)
+        {
+            return value == Vector3.Zero ? Vector3.One : value;
         }
 
         private void AddEntityAnchoredBatchIndexes(
@@ -2215,7 +2780,7 @@ namespace Ludots.Core.Presentation.Performers
 
                 if (needsByOwnerDefinitionIndex)
                 {
-                    AddToIndex(_byOwnerDefinition, new OwnerDefinitionKey(owner, defId), performer, initialListCapacity: 1);
+                    AddToOwnerDefinitionIndex(owner, defId, performer);
                 }
 
                 if (scopeId > 0)
@@ -2396,7 +2961,7 @@ namespace Ludots.Core.Presentation.Performers
             AddToOwnerIndex(state.OwnerEntity, performer);
             if (definition.NeedsByOwnerDefinitionIndex)
             {
-                AddToIndex(_byOwnerDefinition, new OwnerDefinitionKey(state.OwnerEntity, state.DefId), performer, initialListCapacity: 1);
+                AddToOwnerDefinitionIndex(state.OwnerEntity, state.DefId, performer);
             }
 
             if (state.ScopeId > 0)
@@ -2420,7 +2985,7 @@ namespace Ludots.Core.Presentation.Performers
         {
             RemoveFromIndex(_byDefinition, state.DefId, performer);
             RemoveFromOwnerIndex(state.OwnerEntity, performer);
-            RemoveFromIndex(_byOwnerDefinition, new OwnerDefinitionKey(state.OwnerEntity, state.DefId), performer);
+            RemoveFromOwnerDefinitionIndex(state.OwnerEntity, state.DefId, performer);
             if (state.ScopeId > 0)
             {
                 RemoveFromScopeIndex(state.ScopeId, performer);
@@ -2644,6 +3209,40 @@ namespace Ludots.Core.Presentation.Performers
             WriteOwnerPayloadMarker(owner, in bucket);
         }
 
+        private void AddToOwnerDefinitionIndex(Entity owner, int defId, Entity performer)
+        {
+            if (owner == Entity.Null)
+            {
+                return;
+            }
+
+            ref OwnerPerformerBucket bucket = ref CollectionsMarshal.GetValueRefOrAddDefault(
+                _byOwnerDefinition,
+                new OwnerDefinitionKey(owner, defId),
+                out _);
+            bucket.Add(performer);
+        }
+
+        private void RemoveFromOwnerDefinitionIndex(Entity owner, int defId, Entity performer)
+        {
+            if (owner == Entity.Null)
+            {
+                return;
+            }
+
+            OwnerDefinitionKey key = new(owner, defId);
+            ref OwnerPerformerBucket bucket = ref CollectionsMarshal.GetValueRefOrNullRef(_byOwnerDefinition, key);
+            if (Unsafe.IsNullRef(ref bucket) || !bucket.Remove(performer))
+            {
+                return;
+            }
+
+            if (bucket.Count == 0)
+            {
+                _byOwnerDefinition.Remove(key);
+            }
+        }
+
         private void WriteOwnerPayloadMarker(Entity owner, in OwnerPerformerBucket bucket)
         {
             if (owner == Entity.Null || !_world.IsAlive(owner))
@@ -2722,9 +3321,13 @@ namespace Ludots.Core.Presentation.Performers
             }
 
             ref PerformerCullState cull = ref _world.Get<PerformerCullState>(performer);
+            bool changed = cull.OwnerCullVisible != ownerVisible || cull.LOD != ownerLod;
             cull.OwnerCullVisible = ownerVisible;
             cull.LOD = ownerLod;
-            MarkStaticDirty(performer);
+            if (changed)
+            {
+                MarkStaticDirty(performer);
+            }
         }
 
         private void MarkStaticDirty(Entity performer)
@@ -2743,7 +3346,10 @@ namespace Ludots.Core.Presentation.Performers
 
             if (_world.Has<PerfRetainedPresentationRequest>(performer))
             {
-                MarkRetainedPresentationRequestDirty(ref emitCache);
+                if (MarkRetainedPresentationRequestDirty(ref emitCache))
+                {
+                    AppendRetainedPresentationDirtyEntity(performer);
+                }
             }
         }
 
@@ -2828,7 +3434,10 @@ namespace Ludots.Core.Presentation.Performers
 
                 if (_world.Has<PerfRetainedPresentationRequest>(performer))
                 {
-                    MarkRetainedPresentationRequestDirty(ref emitCache);
+                    if (MarkRetainedPresentationRequestDirty(ref emitCache))
+                    {
+                        AppendRetainedPresentationDirtyEntity(performer);
+                    }
                 }
             }
         }
@@ -2943,6 +3552,17 @@ namespace Ludots.Core.Presentation.Performers
             }
         }
 
+        public void ClearConsumedRetainedPresentationDirtyEntities()
+        {
+            if (_retainedPresentationDirtyBufferCount == 0)
+            {
+                return;
+            }
+
+            Array.Clear(_retainedPresentationDirtyBuffer, 0, _retainedPresentationDirtyBufferCount);
+            _retainedPresentationDirtyBufferCount = 0;
+        }
+
         private void SyncCullHierarchy(Entity performer, bool ownerVisible, LODLevel ownerLod, bool parentVisible)
         {
             if (!_world.IsAlive(performer) || !_world.Has<PerformerCullState>(performer))
@@ -3016,18 +3636,35 @@ namespace Ludots.Core.Presentation.Performers
             }
 
             ref PerformerEmitCache emitCache = ref _world.Get<PerformerEmitCache>(performer);
-            MarkRetainedPresentationRequestDirty(ref emitCache);
+            if (MarkRetainedPresentationRequestDirty(ref emitCache))
+            {
+                AppendRetainedPresentationDirtyEntity(performer);
+            }
         }
 
-        private void MarkRetainedPresentationRequestDirty(ref PerformerEmitCache emitCache)
+        private bool MarkRetainedPresentationRequestDirty(ref PerformerEmitCache emitCache)
         {
             if (emitCache.RetainedDirty != 0)
             {
-                return;
+                return false;
             }
 
             emitCache.RetainedDirty = 1;
             _dirtyRetainedPresentationRequestCount++;
+            return true;
+        }
+
+        private void AppendRetainedPresentationDirtyEntity(Entity performer)
+        {
+            if (_retainedPresentationDirtyBufferCount == _retainedPresentationDirtyBuffer.Length)
+            {
+                int nextCapacity = _retainedPresentationDirtyBuffer.Length == 0
+                    ? 256
+                    : _retainedPresentationDirtyBuffer.Length * 2;
+                Array.Resize(ref _retainedPresentationDirtyBuffer, nextCapacity);
+            }
+
+            _retainedPresentationDirtyBuffer[_retainedPresentationDirtyBufferCount++] = performer;
         }
 
         private readonly struct OwnerKey : IEquatable<OwnerKey>
@@ -3148,11 +3785,17 @@ namespace Ludots.Core.Presentation.Performers
             }
         }
 
-        private struct OwnerPerformerBucket
+        internal struct OwnerPerformerBucket : IReadOnlyList<Entity>
         {
+            private const int InlineCapacity = 4;
             public Entity Single;
+            public Entity Inline1;
+            public Entity Inline2;
+            public Entity Inline3;
             public List<Entity>? Many;
             public int Count;
+
+            readonly int IReadOnlyCollection<Entity>.Count => Count;
 
             public void Add(Entity performer)
             {
@@ -3165,14 +3808,34 @@ namespace Ludots.Core.Presentation.Performers
 
                 if (Count == 1)
                 {
-                    Many = new List<Entity>(4) { Single, performer };
-                    Single = Entity.Null;
+                    Inline1 = performer;
                     Count = 2;
                     return;
                 }
 
-                Many!.Add(performer);
-                Count++;
+                if (Count == 2)
+                {
+                    Inline2 = performer;
+                    Count = 3;
+                    return;
+                }
+
+                if (Count == 3)
+                {
+                    Inline3 = performer;
+                    Count = 4;
+                    return;
+                }
+
+                Many ??= new List<Entity>(InlineCapacity * 2)
+                {
+                    Single,
+                    Inline1,
+                    Inline2,
+                    Inline3,
+                };
+                Many.Add(performer);
+                Count = Many.Count;
             }
 
             public bool Remove(Entity performer)
@@ -3194,12 +3857,23 @@ namespace Ludots.Core.Presentation.Performers
                     return true;
                 }
 
-                List<Entity>? many = Many;
-                if (many == null)
+                if (Many == null)
                 {
+                    for (int i = 0; i < Count; i++)
+                    {
+                        if (GetAt(i) != performer)
+                        {
+                            continue;
+                        }
+
+                        RemoveInlineAt(i);
+                        return true;
+                    }
+
                     return false;
                 }
 
+                List<Entity> many = Many;
                 for (int i = many.Count - 1; i >= 0; i--)
                 {
                     if (many[i] != performer)
@@ -3211,10 +3885,9 @@ namespace Ludots.Core.Presentation.Performers
                     many[i] = many[last];
                     many.RemoveAt(last);
                     Count--;
-                    if (Count == 1)
+                    if (Count <= InlineCapacity)
                     {
-                        Single = many[0];
-                        many.Clear();
+                        CopyManyToInline(many);
                         Many = null;
                     }
 
@@ -3228,6 +3901,139 @@ namespace Ludots.Core.Presentation.Performers
             {
                 performer = Single;
                 return Count == 1;
+            }
+
+            public readonly Entity this[int index] => GetAt(index);
+
+            public readonly Entity GetAt(int index)
+            {
+                if ((uint)index >= (uint)Count)
+                {
+                    return Entity.Null;
+                }
+
+                if (Many != null)
+                {
+                    return Many[index];
+                }
+
+                return index switch
+                {
+                    0 => Count == 1 ? Single : Single,
+                    1 => Inline1,
+                    2 => Inline2,
+                    3 => Inline3,
+                    _ => Entity.Null,
+                };
+            }
+
+            public void Sort(Comparison<Entity> comparison)
+            {
+                if (Count <= 1)
+                {
+                    return;
+                }
+
+                if (Many != null)
+                {
+                    Many.Sort(comparison);
+                    return;
+                }
+
+                Span<Entity> values = stackalloc Entity[InlineCapacity];
+                for (int i = 0; i < Count; i++)
+                {
+                    values[i] = GetAt(i);
+                }
+
+                values.Slice(0, Count).Sort(comparison);
+                for (int i = 0; i < Count; i++)
+                {
+                    SetInline(i, values[i]);
+                }
+            }
+
+            public readonly Enumerator GetEnumerator()
+            {
+                return new Enumerator(this);
+            }
+
+            readonly IEnumerator<Entity> IEnumerable<Entity>.GetEnumerator()
+            {
+                for (int i = 0; i < Count; i++)
+                {
+                    yield return GetAt(i);
+                }
+            }
+
+            readonly System.Collections.IEnumerator System.Collections.IEnumerable.GetEnumerator()
+            {
+                return ((IEnumerable<Entity>)this).GetEnumerator();
+            }
+
+            private void RemoveInlineAt(int index)
+            {
+                int last = Count - 1;
+                Entity replacement = GetAt(last);
+                SetInline(index, replacement);
+                SetInline(last, Entity.Null);
+                Count--;
+                if (Count == 1)
+                {
+                    Inline1 = Entity.Null;
+                    Inline2 = Entity.Null;
+                    Inline3 = Entity.Null;
+                }
+            }
+
+            private void CopyManyToInline(List<Entity> many)
+            {
+                Count = many.Count;
+                Single = Count > 0 ? many[0] : Entity.Null;
+                Inline1 = Count > 1 ? many[1] : Entity.Null;
+                Inline2 = Count > 2 ? many[2] : Entity.Null;
+                Inline3 = Count > 3 ? many[3] : Entity.Null;
+                many.Clear();
+            }
+
+            private void SetInline(int index, Entity value)
+            {
+                switch (index)
+                {
+                    case 0: Single = value; break;
+                    case 1: Inline1 = value; break;
+                    case 2: Inline2 = value; break;
+                    case 3: Inline3 = value; break;
+                }
+            }
+
+            public struct Enumerator
+            {
+                private readonly OwnerPerformerBucket _bucket;
+                private int _index;
+
+                internal Enumerator(OwnerPerformerBucket bucket)
+                {
+                    _bucket = bucket;
+                    _index = -1;
+                    Current = Entity.Null;
+                }
+
+                public Entity Current { get; private set; }
+
+                public bool MoveNext()
+                {
+                    int next = _index + 1;
+                    if (next >= _bucket.Count)
+                    {
+                        Current = Entity.Null;
+                        return false;
+                    }
+
+                    _index = next;
+                    Current = _bucket.GetAt(next);
+                    return true;
+                }
             }
         }
 

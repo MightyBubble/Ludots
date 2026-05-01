@@ -232,6 +232,7 @@ namespace Ludots.Core.Config
                     : default;
                 Span<CullState> culls = chunk.GetSpan<CullState>();
                 Span<AttributeBuffer> attributes = chunk.GetSpan<AttributeBuffer>();
+                Span<AttributeLastSnapshot> attributeSnapshots = chunk.GetSpan<AttributeLastSnapshot>();
                 Span<GameplayTagContainer> gameplayTags = chunk.GetSpan<GameplayTagContainer>();
                 Span<TagCountContainer> tagCounts = chunk.GetSpan<TagCountContainer>();
                 Span<EntityTemplateKeyCm> templateKeys = chunk.GetSpan<EntityTemplateKeyCm>();
@@ -269,7 +270,9 @@ namespace Ludots.Core.Config
                     }
 
                     culls[componentIndex] = cull;
-                    attributes[componentIndex] = descriptor.CreateAttributeBuffer();
+                    AttributeBuffer attributeBuffer = descriptor.CreateAttributeBuffer();
+                    attributes[componentIndex] = attributeBuffer;
+                    attributeSnapshots[componentIndex] = descriptor.CreateAttributeLastSnapshot(ref attributeBuffer);
                     gameplayTags[componentIndex] = descriptor.GameplayTags;
                     tagCounts[componentIndex] = descriptor.TagCounts;
                     templateKeys[componentIndex] = descriptor.TemplateKey;
@@ -468,10 +471,33 @@ namespace Ludots.Core.Config
                 var buffer = default(AttributeBuffer);
                 for (int i = 0; i < _attributeSeeds.Length; i++)
                 {
-                    buffer.SetBase(_attributeSeeds[i].AttributeId, _attributeSeeds[i].BaseValue);
+                    if (_attributeSeeds[i].HasBase)
+                    {
+                        buffer.SetBase(_attributeSeeds[i].AttributeId, _attributeSeeds[i].BaseValue);
+                    }
+                }
+
+                for (int i = 0; i < _attributeSeeds.Length; i++)
+                {
+                    if (_attributeSeeds[i].HasCurrent)
+                    {
+                        buffer.SetCurrent(_attributeSeeds[i].AttributeId, _attributeSeeds[i].CurrentValue);
+                    }
                 }
 
                 return buffer;
+            }
+
+            public unsafe AttributeLastSnapshot CreateAttributeLastSnapshot(ref AttributeBuffer buffer)
+            {
+                var snapshot = default(AttributeLastSnapshot);
+                for (int i = 0; i < _attributeSeeds.Length; i++)
+                {
+                    int attributeId = _attributeSeeds[i].AttributeId;
+                    snapshot.Values[attributeId] = buffer.GetCurrent(attributeId);
+                }
+
+                return snapshot;
             }
 
             public static TemplateSpawnDescriptor Create(string templateId, EntityTemplate template, EntityTemplateKeyRegistry templateKeys)
@@ -586,6 +612,7 @@ namespace Ludots.Core.Config
                     Component<VisualTransform>.Signature +
                     Component<CullState>.Signature +
                     Component<AttributeBuffer>.Signature +
+                    Component<AttributeLastSnapshot>.Signature +
                     Component<GameplayTagContainer>.Signature +
                     Component<TagCountContainer>.Signature +
                     Component<EntityTemplateKeyCm>.Signature;
@@ -787,44 +814,121 @@ namespace Ludots.Core.Config
                     return false;
                 }
 
-                if (!obj.TryGetPropertyValue("base", out JsonNode baseNode) || baseNode is not JsonObject baseObj)
+                JsonObject baseObj = null;
+                if (obj.TryGetPropertyValue("base", out JsonNode baseNode) && baseNode is JsonObject parsedBase)
+                {
+                    baseObj = parsedBase;
+                }
+
+                JsonObject currentObj = null;
+                if (obj.TryGetPropertyValue("current", out JsonNode currentNode) && currentNode is JsonObject parsedCurrent)
+                {
+                    currentObj = parsedCurrent;
+                }
+
+                if ((baseObj == null || baseObj.Count == 0) &&
+                    (currentObj == null || currentObj.Count == 0))
                 {
                     return true;
                 }
 
-                if (baseObj.Count == 0)
+                int capacity = (baseObj?.Count ?? 0) + (currentObj?.Count ?? 0);
+                seeds = new AttributeSeed[capacity];
+                int count = 0;
+
+                if (baseObj != null)
                 {
-                    return true;
+                    foreach (var kvp in baseObj)
+                    {
+                        if (kvp.Value == null)
+                        {
+                            continue;
+                        }
+
+                        int attributeId = ResolveAttributeId(kvp.Key);
+                        UpsertAttributeSeed(
+                            ref seeds,
+                            ref count,
+                            attributeId,
+                            hasBase: true,
+                            baseValue: kvp.Value.GetValue<float>(),
+                            hasCurrent: false,
+                            currentValue: 0f);
+                    }
                 }
 
-                seeds = new AttributeSeed[baseObj.Count];
-                int index = 0;
-                foreach (var kvp in baseObj)
+                if (currentObj != null)
                 {
-                    if (kvp.Value == null)
+                    foreach (var kvp in currentObj)
                     {
-                        continue;
-                    }
+                        if (kvp.Value == null)
+                        {
+                            continue;
+                        }
 
-                    int attributeId = AttributeRegistry.GetId(kvp.Key);
-                    if (attributeId == AttributeRegistry.InvalidId)
-                    {
-                        attributeId = AttributeRegistry.Register(kvp.Key);
+                        int attributeId = ResolveAttributeId(kvp.Key);
+                        UpsertAttributeSeed(
+                            ref seeds,
+                            ref count,
+                            attributeId,
+                            hasBase: false,
+                            baseValue: 0f,
+                            hasCurrent: true,
+                            currentValue: kvp.Value.GetValue<float>());
                     }
-
-                    seeds[index++] = new AttributeSeed(attributeId, kvp.Value.GetValue<float>());
                 }
 
-                if (index != seeds.Length)
+                if (count != seeds.Length)
                 {
-                    Array.Resize(ref seeds, index);
+                    Array.Resize(ref seeds, count);
                 }
 
                 return true;
             }
+
+            private static int ResolveAttributeId(string attributeName)
+            {
+                int attributeId = AttributeRegistry.GetId(attributeName);
+                return attributeId == AttributeRegistry.InvalidId
+                    ? AttributeRegistry.Register(attributeName)
+                    : attributeId;
+            }
+
+            private static void UpsertAttributeSeed(
+                ref AttributeSeed[] seeds,
+                ref int count,
+                int attributeId,
+                bool hasBase,
+                float baseValue,
+                bool hasCurrent,
+                float currentValue)
+            {
+                for (int i = 0; i < count; i++)
+                {
+                    if (seeds[i].AttributeId != attributeId)
+                    {
+                        continue;
+                    }
+
+                    seeds[i] = new AttributeSeed(
+                        attributeId,
+                        hasBase || seeds[i].HasBase,
+                        hasBase ? baseValue : seeds[i].BaseValue,
+                        hasCurrent || seeds[i].HasCurrent,
+                        hasCurrent ? currentValue : seeds[i].CurrentValue);
+                    return;
+                }
+
+                seeds[count++] = new AttributeSeed(attributeId, hasBase, baseValue, hasCurrent, currentValue);
+            }
         }
 
-        private readonly record struct AttributeSeed(int AttributeId, float BaseValue);
+        private readonly record struct AttributeSeed(
+            int AttributeId,
+            bool HasBase,
+            float BaseValue,
+            bool HasCurrent,
+            float CurrentValue);
 
         private static VisualTransform CreateStaticVisualTransform(
             in Ludots.Core.Mathematics.FixedPoint.Fix64Vec2 worldPosition,

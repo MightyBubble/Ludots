@@ -77,13 +77,13 @@ namespace Ludots.Core.Presentation.Config
 
         private static AnimationBlendInputSource ParseBlendInput(
             JsonNode? node,
-            AnimationBlendInputSource fallback,
+            AnimationBlendInputSource defaultValue,
             string key,
             string axisLabel)
         {
             if (node == null)
             {
-                return fallback;
+                return defaultValue;
             }
 
             string value = node.GetValue<string>();

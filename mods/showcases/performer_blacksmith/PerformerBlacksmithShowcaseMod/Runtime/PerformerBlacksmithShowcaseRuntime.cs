@@ -84,6 +84,13 @@ namespace PerformerBlacksmithShowcaseMod.Runtime
 
         public bool IsCleanPerformanceScene => _activeEngine != null && ShouldUseCleanPerformanceScene(_activeEngine);
 
+        public bool SuppressHostDiagnosticUi => _activeEngine != null &&
+            PerformerBlacksmithShowcaseIds.IsShowcaseMap(_activeEngine.CurrentMapSession?.MapId.Value) &&
+            !ReadEnvBool(ForceBenchmarkUiEnvKey);
+
+        public bool SuppressHostDebugGuides => _activeEngine != null &&
+            PerformerBlacksmithShowcaseIds.IsShowcaseMap(_activeEngine.CurrentMapSession?.MapId.Value);
+
         public int ScatterMin => ScatterMinTotal;
 
         public int ScatterMax => _activeEngine != null ? ResolveScatterUiMax(_activeEngine) : ScatterUiHardMaxTotal;
@@ -294,10 +301,6 @@ namespace PerformerBlacksmithShowcaseMod.Runtime
             }
 
             int clampedTotal = ClampScatterTotal(engine, totalBuildings);
-            if (engine.GetService(CoreServiceKeys.RuntimeEntitySpawnQueue) is RuntimeEntitySpawnQueue resetQueue)
-            {
-                resetQueue.Clear();
-            }
 
             ClearScatterBuildings(engine);
             _scatterRequestedTotal = clampedTotal;
@@ -413,7 +416,7 @@ namespace PerformerBlacksmithShowcaseMod.Runtime
 
         private static bool UsesCleanHudTextScatter(GameEngine engine)
         {
-            return IsInteractiveMode(engine);
+            return IsScatterHudTextBenchmarkMode(engine);
         }
 
         private static bool ShouldUseCleanPerformanceScene(GameEngine engine)
@@ -670,11 +673,17 @@ namespace PerformerBlacksmithShowcaseMod.Runtime
                 return;
             }
 
-            int totalBlacksmiths = CountTrackedBlacksmithEntities(engine, out _);
-            bool largeCrowd = totalBlacksmiths > DetailedPanelCrowdThreshold;
             bool forcePanel = ReadEnvBool(ForcePanelEnvKey);
             bool benchmarkPanelSuppressed = IsBenchmarkMode(engine) && !forcePanel;
-            if ((largeCrowd && !forcePanel) || benchmarkPanelSuppressed)
+            if (benchmarkPanelSuppressed)
+            {
+                _panelController.ClearIfOwned(root);
+                return;
+            }
+
+            int totalBlacksmiths = CountTrackedBlacksmithEntities(engine, out _);
+            bool largeCrowd = totalBlacksmiths > DetailedPanelCrowdThreshold;
+            if (largeCrowd && !forcePanel)
             {
                 _panelController.ClearIfOwned(root);
                 return;
@@ -1462,12 +1471,12 @@ namespace PerformerBlacksmithShowcaseMod.Runtime
             _panelRefreshCooldown = 0f;
         }
 
-        private static int ReadEnvInt(string key, int fallback)
+        private static int ReadEnvInt(string key, int defaultValue)
         {
             string? raw = Environment.GetEnvironmentVariable(key);
             return int.TryParse(raw, out int parsed) && parsed > 0
                 ? parsed
-                : fallback;
+                : defaultValue;
         }
 
         private static float ResolveAutoScatterMinRadiusCm()
@@ -1480,19 +1489,19 @@ namespace PerformerBlacksmithShowcaseMod.Runtime
         private static float ResolveAutoScatterMaxRadiusCm()
         {
             float minRadius = ResolveAutoScatterMinRadiusCm();
-            float fallbackMax = MathF.Max(
+            float defaultMax = MathF.Max(
                 minRadius + 1f,
                 PerformerBlacksmithScatterPlanner.DefaultMaxRadiusCm);
-            float maxRadius = ReadEnvFloat(AutoScatterMaxRadiusEnvKey, fallbackMax);
+            float maxRadius = ReadEnvFloat(AutoScatterMaxRadiusEnvKey, defaultMax);
             return MathF.Max(minRadius + 1f, maxRadius);
         }
 
-        private static float ReadEnvFloat(string key, float fallback)
+        private static float ReadEnvFloat(string key, float defaultValue)
         {
             string? raw = Environment.GetEnvironmentVariable(key);
             return float.TryParse(raw, out float parsed) && parsed > 0f
                 ? parsed
-                : fallback;
+                : defaultValue;
         }
 
         private static bool ReadEnvBool(string key)

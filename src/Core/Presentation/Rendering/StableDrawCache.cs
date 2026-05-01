@@ -16,14 +16,25 @@ namespace Ludots.Core.Presentation.Rendering
         private readonly Dictionary<int, int> _slotByStableId;
         private PresentationVisualProxy[] _entries;
         private int[] _frameTouched;
+        private PrimitiveDrawItem[] _staticMeshDeltaItems = Array.Empty<PrimitiveDrawItem>();
+        private int[] _staticMeshRemovedStableIds = Array.Empty<int>();
         private int _count;
         private int _frameStamp;
         private int _contentRevision;
         private int _staticMeshGeometryRevision;
+        private int _staticMeshDeltaBaseRevision;
+        private int _staticMeshDeltaItemCount;
+        private int _staticMeshRemovedStableIdCount;
 
         public int Count => _count;
         public int ContentRevision => _contentRevision;
         public int StaticMeshGeometryRevision => _staticMeshGeometryRevision;
+        public int StaticMeshDeltaBaseRevision => _staticMeshDeltaBaseRevision;
+        public ReadOnlySpan<PrimitiveDrawItem> StaticMeshDeltaItems =>
+            new ReadOnlySpan<PrimitiveDrawItem>(_staticMeshDeltaItems, 0, _staticMeshDeltaItemCount);
+
+        public ReadOnlySpan<int> StaticMeshRemovedStableIds =>
+            new ReadOnlySpan<int>(_staticMeshRemovedStableIds, 0, _staticMeshRemovedStableIdCount);
 
         public StableDrawCache(int capacity = 131072)
         {
@@ -61,6 +72,7 @@ namespace Ludots.Core.Presentation.Rendering
                 if (!StaticMeshLaneStateEquals(current, proxy))
                 {
                     _staticMeshGeometryRevision++;
+                    TrackStaticMeshDelta(in proxy);
                 }
 
                 _entries[existing] = proxy;
@@ -77,6 +89,7 @@ namespace Ludots.Core.Presentation.Rendering
             if (proxy.RenderPath.IsStaticInstanceLane())
             {
                 _staticMeshGeometryRevision++;
+                TrackStaticMeshDelta(in proxy);
             }
         }
 
@@ -97,6 +110,7 @@ namespace Ludots.Core.Presentation.Rendering
             if (proxy.RenderPath.IsStaticInstanceLane())
             {
                 _staticMeshGeometryRevision++;
+                TrackStaticMeshDelta(in proxy);
             }
         }
 
@@ -134,6 +148,7 @@ namespace Ludots.Core.Presentation.Rendering
             if (_entries[slot].RenderPath.IsStaticInstanceLane())
             {
                 _staticMeshGeometryRevision++;
+                TrackStaticMeshDelta(in _entries[slot]);
             }
             return true;
         }
@@ -166,7 +181,17 @@ namespace Ludots.Core.Presentation.Rendering
             _frameStamp = 0;
             _contentRevision = 0;
             _staticMeshGeometryRevision = 0;
+            _staticMeshDeltaBaseRevision = 0;
+            _staticMeshDeltaItemCount = 0;
+            _staticMeshRemovedStableIdCount = 0;
             Array.Clear(_frameTouched, 0, _frameTouched.Length);
+        }
+
+        public void ClearStaticMeshDeltas()
+        {
+            _staticMeshDeltaItemCount = 0;
+            _staticMeshRemovedStableIdCount = 0;
+            _staticMeshDeltaBaseRevision = _contentRevision;
         }
 
         private void EnsureCapacity(int required)
@@ -193,6 +218,7 @@ namespace Ludots.Core.Presentation.Rendering
             if (_entries[slot].RenderPath.IsStaticInstanceLane())
             {
                 _staticMeshGeometryRevision++;
+                TrackStaticMeshRemoval(_entries[slot].StableId);
             }
 
             _slotByStableId.Remove(removedStableId);
@@ -238,6 +264,9 @@ namespace Ludots.Core.Presentation.Rendering
                 && itemA.Position.Equals(itemB.Position)
                 && itemA.Rotation.Equals(itemB.Rotation)
                 && itemA.Scale.Equals(itemB.Scale)
+                && itemA.Color.Equals(itemB.Color)
+                && itemA.Flags == itemB.Flags
+                && itemA.LOD == itemB.LOD
                 && itemA.Visibility == itemB.Visibility;
         }
 
@@ -250,6 +279,60 @@ namespace Ludots.Core.Presentation.Rendering
                 Flags = proxy.Flags,
                 LOD = proxy.LOD,
             };
+        }
+
+        private void TrackStaticMeshDelta(in PresentationVisualProxy proxy)
+        {
+            if (!proxy.RenderPath.IsStaticInstanceLane())
+            {
+                return;
+            }
+
+            EnsureDeltaItemCapacity(_staticMeshDeltaItemCount + 1);
+            _staticMeshDeltaItems[_staticMeshDeltaItemCount++] = ToPrimitive(proxy);
+        }
+
+        private void TrackStaticMeshRemoval(int stableId)
+        {
+            if (stableId <= 0)
+            {
+                return;
+            }
+
+            EnsureRemovedStableIdCapacity(_staticMeshRemovedStableIdCount + 1);
+            _staticMeshRemovedStableIds[_staticMeshRemovedStableIdCount++] = stableId;
+        }
+
+        private void EnsureDeltaItemCapacity(int required)
+        {
+            if (required <= _staticMeshDeltaItems.Length)
+            {
+                return;
+            }
+
+            int next = _staticMeshDeltaItems.Length == 0 ? 16 : _staticMeshDeltaItems.Length * 2;
+            if (next < required)
+            {
+                next = required;
+            }
+
+            Array.Resize(ref _staticMeshDeltaItems, next);
+        }
+
+        private void EnsureRemovedStableIdCapacity(int required)
+        {
+            if (required <= _staticMeshRemovedStableIds.Length)
+            {
+                return;
+            }
+
+            int next = _staticMeshRemovedStableIds.Length == 0 ? 16 : _staticMeshRemovedStableIds.Length * 2;
+            if (next < required)
+            {
+                next = required;
+            }
+
+            Array.Resize(ref _staticMeshRemovedStableIds, next);
         }
     }
 }

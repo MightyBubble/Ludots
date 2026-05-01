@@ -225,7 +225,18 @@ namespace Ludots.Core.Systems
             WorldAabbCm queryBounds = new WorldAabbCm(ix, iy, iw, ih);
             _ownerCullChangedThisFrame = false;
             _allCullChangesSyncedThisFrame = true;
-            RefreshSpatialCandidates(in queryBounds);
+            bool hasDynamicCullWork = HasDynamicCullWork();
+            double spatialQueryMs = 0d;
+            if (hasDynamicCullWork)
+            {
+                long spatialQueryStart = Stopwatch.GetTimestamp();
+                RefreshSpatialCandidates(in queryBounds);
+                spatialQueryMs = ElapsedMs(spatialQueryStart);
+            }
+            else if (_spatialCandidates.Count != 0)
+            {
+                _spatialCandidates.Clear();
+            }
 
             float tx = target.X;
             float ty = target.Y;
@@ -304,13 +315,16 @@ namespace Ludots.Core.Systems
             _lastStaticCullAspectRatio = aspectRatio;
             PlaybackStructuralChanges();
 
-            long dynamicProcessStart = Stopwatch.GetTimestamp();
-            ProcessVisualBoundsLod(in queryBounds, target, distanceCm, tx, ty, highSq, medSq, lowSq2, ref visibleCount);
-            ProcessVisualBounds(in queryBounds, target, distanceCm, tx, ty, highSq, medSq, lowSq2, ref visibleCount);
-            ProcessVisualLod(in queryBounds, target, distanceCm, tx, ty, highSq, medSq, lowSq2, ref visibleCount);
-            ProcessVisualDefault(in queryBounds, target, distanceCm, tx, ty, highSq, medSq, lowSq2, ref visibleCount);
-            ProcessNoVisual(in queryBounds, target, distanceCm, tx, ty, highSq, medSq, lowSq2, ref visibleCount);
-            dynamicProcessMs = ElapsedMs(dynamicProcessStart);
+            if (hasDynamicCullWork)
+            {
+                long dynamicProcessStart = Stopwatch.GetTimestamp();
+                ProcessVisualBoundsLod(in queryBounds, target, distanceCm, tx, ty, highSq, medSq, lowSq2, ref visibleCount);
+                ProcessVisualBounds(in queryBounds, target, distanceCm, tx, ty, highSq, medSq, lowSq2, ref visibleCount);
+                ProcessVisualLod(in queryBounds, target, distanceCm, tx, ty, highSq, medSq, lowSq2, ref visibleCount);
+                ProcessVisualDefault(in queryBounds, target, distanceCm, tx, ty, highSq, medSq, lowSq2, ref visibleCount);
+                ProcessNoVisual(in queryBounds, target, distanceCm, tx, ty, highSq, medSq, lowSq2, ref visibleCount);
+                dynamicProcessMs = ElapsedMs(dynamicProcessStart);
+            }
 
             DebugState.MinX = minX;
             DebugState.MaxX = maxX;
@@ -326,6 +340,7 @@ namespace Ludots.Core.Systems
             SyncPerformerCullVisibilityIfDirty();
             double performerSyncMs = (Stopwatch.GetTimestamp() - performerSyncStart) * 1000.0 / Stopwatch.Frequency;
             _timingDiagnostics?.ObserveCameraCullingBreakdown(entityProcessMs, performerSyncMs);
+            _timingDiagnostics?.ObserveCameraCullingSpatialQuery(spatialQueryMs);
             _timingDiagnostics?.ObserveCameraCullingStageBreakdown(staticProcessMs, staticPendingRemoveMs, dynamicProcessMs);
             _timingDiagnostics?.ObserveCameraCulling((Stopwatch.GetTimestamp() - start) * 1000.0 / Stopwatch.Frequency, visibleCount);
         }
@@ -459,13 +474,13 @@ namespace Ludots.Core.Systems
 
         private bool HasCameraStateChanged(in CameraStateSnapshot state, float aspectRatio)
         {
-            const float epsilon = 0.0001f;
-            return MathF.Abs(_lastStaticCullAspectRatio - aspectRatio) > epsilon ||
-                   Vector2.DistanceSquared(_lastStaticCullCameraState.TargetCm, state.TargetCm) > epsilon ||
-                   MathF.Abs(_lastStaticCullCameraState.Yaw - state.Yaw) > epsilon ||
-                   MathF.Abs(_lastStaticCullCameraState.Pitch - state.Pitch) > epsilon ||
-                   MathF.Abs(_lastStaticCullCameraState.DistanceCm - state.DistanceCm) > epsilon ||
-                   MathF.Abs(_lastStaticCullCameraState.FovYDeg - state.FovYDeg) > epsilon ||
+            const float scalarEpsilon = 0.01f;
+            const float targetEpsilonSq = 1f;
+            return MathF.Abs(_lastStaticCullAspectRatio - aspectRatio) > scalarEpsilon ||
+                   Vector2.DistanceSquared(_lastStaticCullCameraState.TargetCm, state.TargetCm) > targetEpsilonSq ||
+                   MathF.Abs(_lastStaticCullCameraState.Pitch - state.Pitch) > scalarEpsilon ||
+                   MathF.Abs(_lastStaticCullCameraState.DistanceCm - state.DistanceCm) > scalarEpsilon ||
+                   MathF.Abs(_lastStaticCullCameraState.FovYDeg - state.FovYDeg) > scalarEpsilon ||
                    _lastStaticCullCameraState.RigKind != state.RigKind ||
                    _lastStaticCullCameraState.ZoomLevel != state.ZoomLevel ||
                    _lastStaticCullCameraState.IsFollowing != state.IsFollowing;
@@ -516,6 +531,30 @@ namespace Ludots.Core.Systems
             ProcessStaticVisualDefault(in queryBounds, target, distanceCm, tx, ty, highSq, medSq, lowSq2, rebuildVisibleCount, ref updatedVisibleCount, StaticPendingVisualDefaultQuery, cullEpoch, onlyUnprocessed: false);
             ProcessStaticNoVisual(in queryBounds, target, distanceCm, tx, ty, highSq, medSq, lowSq2, rebuildVisibleCount, ref updatedVisibleCount, StaticPendingNoVisualQuery, cullEpoch, onlyUnprocessed: false);
             return updatedVisibleCount;
+        }
+
+        private bool HasDynamicCullWork()
+        {
+            QueryDescription query = VisualBoundsLodQuery;
+            if (HasAny(in query)) return true;
+            query = VisualBoundsQuery;
+            if (HasAny(in query)) return true;
+            query = VisualLodQuery;
+            if (HasAny(in query)) return true;
+            query = VisualDefaultQuery;
+            if (HasAny(in query)) return true;
+            query = NoVisualQuery;
+            return HasAny(in query);
+        }
+
+        private bool HasAny(in QueryDescription query)
+        {
+            foreach (ref var _ in World.Query(in query))
+            {
+                return true;
+            }
+
+            return false;
         }
 
         private int ProcessStaticEntitiesFull(

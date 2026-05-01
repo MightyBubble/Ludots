@@ -39,7 +39,6 @@ namespace Ludots.Adapter.Raylib
     internal static class RaylibHostLoop
     {
         private const uint FlagWindowResizable = 4;
-        private const string ForceBenchmarkUiEnvKey = "LUDOTS_BLACKSMITH_FORCE_BENCHMARK_UI";
         private static readonly ServiceKey<IRaylibBenchmarkRenderer> RaylibBenchmarkRendererKey = new("Platform.RaylibBenchmarkRenderer");
         private static bool _uiPointerCaptured;
         private static bool _emptyBufferWarned;
@@ -92,14 +91,7 @@ namespace Ludots.Adapter.Raylib
                 config.WindowWidth = screenWidth;
                 config.WindowHeight = screenHeight;
 
-                using var compositeRenderer = new RaylibSkiaRenderer(screenWidth, screenHeight);
-                using var underlayLayer = new SkiaRasterLayer();
-                using var uiLayer = new SkiaRasterLayer();
-                using var overlayLayer = new SkiaRasterLayer();
-                using var overlaySkiaRenderer = new SkiaOverlayRenderer();
-                underlayLayer.Resize(screenWidth, screenHeight);
-                uiLayer.Resize(screenWidth, screenHeight);
-                overlayLayer.Resize(screenWidth, screenHeight);
+                using var overlayCompositor = new RaylibOverlayCompositor(screenWidth, screenHeight);
                 uiRoot.Resize(screenWidth, screenHeight);
 
                 var initialCamera = new Camera3D
@@ -184,14 +176,6 @@ namespace Ludots.Adapter.Raylib
 
                 int lastW = screenWidth;
                 int lastH = screenHeight;
-                bool underlayHadContent = false;
-                bool overlayHadContent = false;
-                bool uiHadContent = false;
-                bool compositeHadContent = false;
-                int underlayLayerVersion = -1;
-                int topOverlayLayerVersion = -1;
-                var underlayPacer = new PresentationOverlayLanePacer(PresentationOverlayLayer.UnderUi);
-                bool underlayHasPendingRefresh = false;
                 string? screenshotPath = Environment.GetEnvironmentVariable("LUDOTS_TAKE_SCREENSHOT_PATH");
                 string? diagnosticPath = Environment.GetEnvironmentVariable("LUDOTS_RAYLIB_DIAGNOSTIC_PATH");
                 string? screenshotTargetPath = string.IsNullOrWhiteSpace(screenshotPath)
@@ -213,6 +197,15 @@ namespace Ludots.Adapter.Raylib
                 int timingLogIntervalFrames = int.TryParse(Environment.GetEnvironmentVariable("LUDOTS_RAYLIB_TIMING_LOG_INTERVAL_FRAMES"), out int parsedTimingLogIntervalFrames)
                     ? Math.Max(0, parsedTimingLogIntervalFrames)
                     : 0;
+                bool timingSystemBreakdownEnabled = timingLogIntervalFrames > 0 ||
+                    ReadEnvBoolOrDefault("LUDOTS_RAYLIB_TIMING_SYSTEM_BREAKDOWN", defaultValue: false);
+                if (presentationTiming != null)
+                {
+                    presentationTiming.SystemBreakdownEnabled = timingSystemBreakdownEnabled;
+                }
+                bool lightweightDiagnosticHudEnabled = ReadEnvBoolOrDefault(
+                    "LUDOTS_RAYLIB_LIGHTWEIGHT_DIAGNOSTIC_HUD",
+                    defaultValue: false);
                 float autoOrbitDegPerSecond = float.TryParse(Environment.GetEnvironmentVariable("LUDOTS_RAYLIB_AUTO_ORBIT_DEG_PER_SEC"), out float parsedAutoOrbitDegPerSecond)
                     ? parsedAutoOrbitDegPerSecond
                     : 0f;
@@ -243,10 +236,7 @@ namespace Ludots.Adapter.Raylib
                             lastH = h;
                             config.WindowWidth = w;
                             config.WindowHeight = h;
-                            compositeRenderer.Resize(w, h);
-                            underlayLayer.Resize(w, h);
-                            uiLayer.Resize(w, h);
-                            overlayLayer.Resize(w, h);
+                            overlayCompositor.Resize(w, h);
                             uiRoot.Resize(w, h);
                         }
 
@@ -255,11 +245,12 @@ namespace Ludots.Adapter.Raylib
                         var renderDebug = ResolveRenderDebugState(engine);
                         string? activeMapId = engine.CurrentMapSession?.MapId.Value;
                         IBenchmarkSceneController? benchmarkController = engine.GetService(CoreServiceKeys.BenchmarkSceneController);
-                        bool blacksmithBenchmarkMapActive = IsBlacksmithBenchmarkMap(activeMapId);
-                        bool blacksmithCleanPerformanceMode = IsBlacksmithCleanPerformanceMode(activeMapId, benchmarkController);
-                        bool drawTerrain = renderDebug.DrawTerrain && !blacksmithCleanPerformanceMode;
+                        bool cleanPerformanceMode = IsCleanPerformanceScene(benchmarkController);
+                        bool hostDiagnosticUiSuppressed = benchmarkController is { IsActive: true, SuppressHostDiagnosticUi: true };
+                        bool hostDebugGuidesSuppressed = benchmarkController is { IsActive: true, SuppressHostDebugGuides: true };
+                        bool drawTerrain = renderDebug.DrawTerrain && !cleanPerformanceMode;
                         bool drawPrimitives = renderDebug.DrawPrimitives;
-                        bool drawDebugDraw = renderDebug.DrawDebugDraw && !blacksmithCleanPerformanceMode;
+                        bool drawDebugDraw = renderDebug.DrawDebugDraw && !cleanPerformanceMode;
                         bool drawSkiaUi = renderDebug.DrawSkiaUi;
 
                         double uiInputMs = 0d;
@@ -292,7 +283,6 @@ namespace Ludots.Adapter.Raylib
                         benchmarkRenderer?.PrepareFrame(presentationTiming, lastW, lastH);
 
                         bool uxPrototypeMapActive = string.Equals(activeMapId, "ux_prototype_battle", StringComparison.OrdinalIgnoreCase);
-                        bool benchmarkUiDisabled = blacksmithBenchmarkMapActive && !ReadEnvBool(ForceBenchmarkUiEnvKey);
                         if (overlaySceneBuilder != null && overlayScene != null)
                         {
                             long overlayBuildStart = Stopwatch.GetTimestamp();
@@ -319,7 +309,7 @@ namespace Ludots.Adapter.Raylib
                         long mode3DStart = Stopwatch.GetTimestamp();
                         Rl.BeginMode3D(activeCamera);
 
-                        if (drawDebugDraw && !uxPrototypeMapActive && !blacksmithBenchmarkMapActive)
+                        if (drawDebugDraw && !uxPrototypeMapActive && !hostDebugGuidesSuppressed)
                         {
                             DrawInfiniteGrid(activeCamera.target, 300, 1.0f, 10);
 
@@ -385,7 +375,7 @@ namespace Ludots.Adapter.Raylib
                         }
 
                         // Draw ground overlays (range circles, cones, etc.)
-                        if (!blacksmithCleanPerformanceMode &&
+                        if (!cleanPerformanceMode &&
                             engine.TryGetService(CoreServiceKeys.GroundOverlayBuffer, out GroundOverlayBuffer overlays) &&
                             overlays.Count > 0)
                         {
@@ -398,7 +388,7 @@ namespace Ludots.Adapter.Raylib
                             presentationTiming?.ObserveGroundOverlayRender(0d, 0);
                         }
 
-                        if (!blacksmithCleanPerformanceMode &&
+                        if (!cleanPerformanceMode &&
                             engine.GlobalContext.TryGetValue(CoreServiceKeys.RoadSplineBuffer.Name, out var splineObj) &&
                             splineObj is RoadSplineBuffer roadSplines && roadSplines.Count > 0)
                         {
@@ -429,184 +419,45 @@ namespace Ludots.Adapter.Raylib
                         presentationTiming?.ObserveMode3D(ElapsedMs(mode3DStart));
 
                         long overlayStart = Stopwatch.GetTimestamp();
-                        overlaySkiaRenderer.ResetFrameStats();
-                        double overlayPaintMs = 0d;
-                        double overlayCompositeMs = 0d;
-                        double overlayUploadMs = 0d;
-                        double overlayFinalDrawMs = 0d;
-
-                        // Benchmark maps still need production-path world HUD/text rendering.
-                        // Only the heavyweight UI layer / top overlay debug panels are suppressed.
-                        bool hasUnderlay = overlayScene != null && overlayScene.ContainsLayer(PresentationOverlayLayer.UnderUi);
-                        bool hasTopOverlay = !benchmarkUiDisabled && overlayScene != null && overlayScene.ContainsLayer(PresentationOverlayLayer.TopMost);
-                        bool hasUiLayer = !benchmarkUiDisabled && drawSkiaUi && uiRoot.Scene != null;
-                        bool directUnderlayComposite = hasUnderlay && !hasUiLayer && !hasTopOverlay;
-
-                        int currentUnderlayVersion = overlayScene?.GetLayerVersion(PresentationOverlayLayer.UnderUi) ?? 0;
-                        int currentTopOverlayVersion = overlayScene?.GetLayerVersion(PresentationOverlayLayer.TopMost) ?? 0;
-                        bool refreshUnderlay = overlayScene != null && (hasUnderlay || underlayHadContent) &&
-                            (underlayHasPendingRefresh || currentUnderlayVersion != underlayLayerVersion || hasUnderlay != underlayHadContent);
-                        bool underlayCanvasChanged = false;
-                        if (refreshUnderlay)
-                        {
-                            long underlayRenderStart = Stopwatch.GetTimestamp();
-                            PresentationOverlayLanePacer.LaneRefreshPlan underlayPlan = default;
-                            if (hasUnderlay)
-                            {
-                                underlayPlan = underlayPacer.BuildPlan(overlayScene!);
-                            }
-
-                            if (directUnderlayComposite)
-                            {
-                                compositeRenderer.Canvas.Clear(SKColors.Transparent);
-                            }
-                            else
-                            {
-                                underlayLayer.Clear();
-                            }
-
-                            if (hasUnderlay)
-                            {
-                                SKCanvas targetCanvas = directUnderlayComposite
-                                    ? compositeRenderer.Canvas
-                                    : underlayLayer.Canvas;
-                                overlaySkiaRenderer.Render(overlayScene!, targetCanvas,
-                                    PresentationOverlayLayer.UnderUi, underlayPlan);
-                                underlayLayer.SetHasContent(!directUnderlayComposite);
-                            }
-                            underlayCanvasChanged = true;
-
-                            if (hasUnderlay)
-                            {
-                                underlayPacer.MarkPresented(overlayScene!, underlayPlan);
-                                underlayHasPendingRefresh = underlayPlan.HasPendingRefresh;
-                            }
-                            else
-                            {
-                                underlayPacer.Reset();
-                                underlayHasPendingRefresh = false;
-                            }
-
-                            underlayHadContent = hasUnderlay;
-                            underlayLayerVersion = currentUnderlayVersion;
-                            overlayPaintMs += ElapsedMs(underlayRenderStart);
-                        }
-
-                        bool refreshUiLayer = hasUiLayer
-                            ? (!uiHadContent || uiRoot.IsDirty)
-                            : uiHadContent;
-                        if (refreshUiLayer)
-                        {
-                            long uiRenderStart = Stopwatch.GetTimestamp();
-                            uiLayer.Clear();
-                            if (hasUiLayer)
-                            {
-                                skiaRenderer.SetCanvas(uiLayer.Canvas);
-                                uiRoot.Render();
-                                uiLayer.SetHasContent(true);
-                            }
-                            double uiRenderMs = ElapsedMs(uiRenderStart);
-                            presentationTiming?.ObserveUiRender(uiRenderMs);
-                            overlayPaintMs += uiRenderMs;
-                            uiHadContent = hasUiLayer;
-                        }
-                        else
-                        {
-                            presentationTiming?.ObserveUiRender(0d);
-                        }
-
-                        bool refreshTopOverlay = overlayScene != null && (hasTopOverlay || overlayHadContent) &&
-                            (currentTopOverlayVersion != topOverlayLayerVersion || hasTopOverlay != overlayHadContent);
-                        if (refreshTopOverlay)
-                        {
-                            long topOverlayRenderStart = Stopwatch.GetTimestamp();
-                            overlayLayer.Clear();
-                            if (hasTopOverlay)
-                            {
-                                overlaySkiaRenderer.Render(overlayScene!, overlayLayer.Canvas, PresentationOverlayLayer.TopMost);
-                                overlayLayer.SetHasContent(true);
-                            }
-                            overlayPaintMs += ElapsedMs(topOverlayRenderStart);
-                            overlayHadContent = hasTopOverlay;
-                            topOverlayLayerVersion = currentTopOverlayVersion;
-                        }
-
-                        bool hasCompositeContent = hasUnderlay || hasUiLayer || hasTopOverlay;
-                        bool refreshComposite = underlayCanvasChanged || refreshUiLayer || refreshTopOverlay
-                            || hasCompositeContent != compositeHadContent;
-                        if (refreshComposite && directUnderlayComposite)
-                        {
-                            overlayCompositeMs = 0d;
-
-                            long uiUploadStart = Stopwatch.GetTimestamp();
-                            compositeRenderer.UpdateTexture();
-                            overlayUploadMs = hasCompositeContent ? ElapsedMs(uiUploadStart) : 0d;
-                            presentationTiming?.ObserveUiUpload(overlayUploadMs);
-                            compositeHadContent = hasCompositeContent;
-                        }
-                        else if (refreshComposite)
-                        {
-                            long compositeStart = Stopwatch.GetTimestamp();
-                            compositeRenderer.Canvas.Clear(SKColors.Transparent);
-                            if (hasUnderlay)
-                            {
-                                underlayLayer.DrawTo(compositeRenderer.Canvas);
-                            }
-
-                            if (hasUiLayer)
-                            {
-                                uiLayer.DrawTo(compositeRenderer.Canvas);
-                            }
-
-                            if (hasTopOverlay)
-                            {
-                                overlayLayer.DrawTo(compositeRenderer.Canvas);
-                            }
-                            overlayCompositeMs = ElapsedMs(compositeStart);
-
-                            long uiUploadStart = Stopwatch.GetTimestamp();
-                            compositeRenderer.UpdateTexture();
-                            overlayUploadMs = hasCompositeContent ? ElapsedMs(uiUploadStart) : 0d;
-                            presentationTiming?.ObserveUiUpload(overlayUploadMs);
-                            compositeHadContent = hasCompositeContent;
-                        }
-                        else
-                        {
-                            presentationTiming?.ObserveUiUpload(0d);
-                        }
-
-                        if (hasCompositeContent || compositeHadContent)
-                        {
-                            long finalDrawStart = Stopwatch.GetTimestamp();
-                            if (directUnderlayComposite)
-                            {
-                                compositeRenderer.Draw();
-                            }
-                            else
-                            {
-                                compositeRenderer.Draw();
-                            }
-                            overlayFinalDrawMs = ElapsedMs(finalDrawStart);
-                        }
-
-                        presentationTiming?.ObserveCompositeSkip(!refreshComposite);
+                        OverlayCompositeResult overlayResult = overlayCompositor.Render(
+                            overlayScene,
+                            uiRoot,
+                            skiaRenderer,
+                            drawSkiaUi,
+                            hostDiagnosticUiSuppressed);
+                        presentationTiming?.ObserveUiRender(overlayResult.UiRenderMs);
+                        presentationTiming?.ObserveUiUpload(overlayResult.UploadMs);
+                        presentationTiming?.ObserveCompositeSkip(!overlayResult.RefreshComposite);
                         screenOverlayBuffer?.Clear();
                         presentationTiming?.ObserveScreenOverlayDraw(
                             ElapsedMs(overlayStart),
-                            overlayPaintMs,
-                            overlayCompositeMs,
-                            overlayUploadMs,
-                            overlayFinalDrawMs,
-                            overlaySkiaRenderer.RebuiltLaneCountLastFrame,
-                            overlaySkiaRenderer.CachedTextLayoutCount);
+                            overlayResult.PaintMs,
+                            overlayResult.CompositeMs,
+                            overlayResult.UploadMs,
+                            overlayResult.FinalDrawMs,
+                            overlayCompositor.OverlayRenderer.RebuiltLaneCountLastFrame,
+                            overlayCompositor.OverlayRenderer.CachedTextLayoutCount);
                         if (timingLogIntervalFrames > 0 && frameIndex % timingLogIntervalFrames == 0)
                         {
+                            SkiaOverlayRenderer overlaySkiaRenderer = overlayCompositor.OverlayRenderer;
                             AppendRaylibDiagnostic(
                                 diagnosticPath,
-                                $"overlay-lanes backend=skia underBar={overlaySkiaRenderer.LastUnderUiBarMs:F2} underText={overlaySkiaRenderer.LastUnderUiTextMs:F2} barBuild={overlaySkiaRenderer.LastBarBatchBuildMs:F2} barDraw={overlaySkiaRenderer.LastBarBatchDrawMs:F2} textBuild={overlaySkiaRenderer.LastTextBatchBuildMs:F2} textDraw={overlaySkiaRenderer.LastTextBatchDrawMs:F2}");
+                                $"overlay-lanes backend=skia underBar={overlaySkiaRenderer.LastUnderUiBarMs:F2} underText={overlaySkiaRenderer.LastUnderUiTextMs:F2} barBuild={overlaySkiaRenderer.LastBarBatchBuildMs:F2} barDraw={overlaySkiaRenderer.LastBarBatchDrawMs:F2} barBuckets={overlaySkiaRenderer.LastBarBatchBucketCount} barCache={overlaySkiaRenderer.LastBarSpriteCacheHits}/{overlaySkiaRenderer.LastBarSpriteCacheMisses}/clear{overlaySkiaRenderer.LastBarSpriteCacheClears}/size{overlaySkiaRenderer.BarSpriteCacheCount} textBuild={overlaySkiaRenderer.LastTextBatchBuildMs:F2} textDraw={overlaySkiaRenderer.LastTextBatchDrawMs:F2} textBuckets={overlaySkiaRenderer.LastTextSpriteBatchBucketCount} textSpriteCache={overlaySkiaRenderer.LastTextSpriteCacheHits}/{overlaySkiaRenderer.LastTextSpriteCacheMisses}/clear{overlaySkiaRenderer.LastTextSpriteCacheClears}/size{overlaySkiaRenderer.TextSpriteCacheCount} textLayout={overlaySkiaRenderer.LastTextLayoutCacheHits}/{overlaySkiaRenderer.LastTextLayoutCacheMisses}/clear{overlaySkiaRenderer.LastTextLayoutCacheClears}/size{overlaySkiaRenderer.CachedTextLayoutCount}");
                         }
 
-                        presentationTiming?.ObserveNativeDiagnosticHud(0d);
+                        bool drawLightweightDiagnosticHud =
+                            lightweightDiagnosticHudEnabled &&
+                            (hostDiagnosticUiSuppressed || !string.IsNullOrWhiteSpace(diagnosticPath));
+                        if (drawLightweightDiagnosticHud)
+                        {
+                            long nativeDiagnosticStart = Stopwatch.GetTimestamp();
+                            DrawLightweightDiagnosticHud(engine, presentationTiming);
+                            presentationTiming?.ObserveNativeDiagnosticHud(ElapsedMs(nativeDiagnosticStart));
+                        }
+                        else
+                        {
+                            presentationTiming?.ObserveNativeDiagnosticHud(0d);
+                        }
 
                         long endDrawingStart = Stopwatch.GetTimestamp();
                         Rl.EndDrawing();
@@ -618,7 +469,7 @@ namespace Ludots.Adapter.Raylib
                         if (timingLogIntervalFrames > 0 && frameIndex % timingLogIntervalFrames == 0)
                         {
                             AppendRaylibDiagnostic(diagnosticPath, $"sample frame={frameIndex}");
-                            AppendRaylibDiagnostic(diagnosticPath, BuildTimingDiagnostic(engine, presentationTiming));
+                            AppendRaylibDiagnostic(diagnosticPath, BuildTimingDiagnostic(engine, presentationTiming, overlayScene));
                         }
 
                         if (screenshotPending && frameIndex >= screenshotFrame)
@@ -633,7 +484,7 @@ namespace Ludots.Adapter.Raylib
                             AppendRaylibDiagnostic(
                                 diagnosticPath,
                                 $"screenshot frame={frameIndex} cameraPos=({activeCamera.position.X:F2},{activeCamera.position.Y:F2},{activeCamera.position.Z:F2}) cameraTarget=({activeCamera.target.X:F2},{activeCamera.target.Y:F2},{activeCamera.target.Z:F2})");
-                            AppendRaylibDiagnostic(diagnosticPath, BuildTimingDiagnostic(engine, presentationTiming));
+                            AppendRaylibDiagnostic(diagnosticPath, BuildTimingDiagnostic(engine, presentationTiming, overlayScene));
                             AppendRaylibDiagnostic(diagnosticPath, primitiveRenderer.BuildVisualKindDiagnosticSummary());
                             AppendRaylibDiagnostic(diagnosticPath, BuildInputSelectionDiagnostic(engine));
 
@@ -655,7 +506,7 @@ namespace Ludots.Adapter.Raylib
                         if (autoExitFrame > 0 && frameIndex >= autoExitFrame)
                         {
                             AppendRaylibDiagnostic(diagnosticPath, $"auto-exit frame={frameIndex}");
-                            AppendRaylibDiagnostic(diagnosticPath, BuildTimingDiagnostic(engine, presentationTiming));
+                            AppendRaylibDiagnostic(diagnosticPath, BuildTimingDiagnostic(engine, presentationTiming, overlayScene));
                             break;
                         }
                     }
@@ -691,12 +542,17 @@ namespace Ludots.Adapter.Raylib
             File.AppendAllText(fullPath, $"[{DateTime.UtcNow:O}] {message}{Environment.NewLine}");
         }
 
-        private static bool ReadEnvBool(string key)
+        private static bool IsCleanPerformanceScene(IBenchmarkSceneController? benchmarkController)
+        {
+            return benchmarkController is { IsActive: true, IsCleanPerformanceScene: true };
+        }
+
+        private static bool ReadEnvBoolOrDefault(string key, bool defaultValue)
         {
             string? raw = Environment.GetEnvironmentVariable(key);
             if (string.IsNullOrWhiteSpace(raw))
             {
-                return false;
+                return defaultValue;
             }
 
             return raw.Equals("1", StringComparison.OrdinalIgnoreCase) ||
@@ -705,34 +561,34 @@ namespace Ludots.Adapter.Raylib
                    raw.Equals("on", StringComparison.OrdinalIgnoreCase);
         }
 
-        private static bool IsBlacksmithBenchmarkMap(string? mapId)
+        private static void DrawLightweightDiagnosticHud(GameEngine engine, PresentationTimingDiagnostics? timing)
         {
-            return string.Equals(mapId, "performer_blacksmith_showcase", StringComparison.OrdinalIgnoreCase) ||
-                   string.Equals(mapId, "performer_blacksmith_mesh_ism_benchmark", StringComparison.OrdinalIgnoreCase) ||
-                   string.Equals(mapId, "performer_blacksmith_scatter_benchmark", StringComparison.OrdinalIgnoreCase) ||
-                   string.Equals(mapId, "performer_blacksmith_scatter_hudbar_benchmark", StringComparison.OrdinalIgnoreCase) ||
-                   string.Equals(mapId, "performer_blacksmith_scatter_hudtext_benchmark", StringComparison.OrdinalIgnoreCase);
-        }
-
-        private static bool IsBlacksmithCleanPerformanceMode(string? mapId, IBenchmarkSceneController? benchmarkController)
-        {
-            if (benchmarkController is { IsActive: true, IsCleanPerformanceScene: true })
+            if (timing == null)
             {
-                return true;
+                return;
             }
 
-            return string.Equals(mapId, "performer_blacksmith_mesh_ism_benchmark", StringComparison.OrdinalIgnoreCase) ||
-                   string.Equals(mapId, "performer_blacksmith_scatter_benchmark", StringComparison.OrdinalIgnoreCase) ||
-                   string.Equals(mapId, "performer_blacksmith_scatter_hudbar_benchmark", StringComparison.OrdinalIgnoreCase) ||
-                   string.Equals(mapId, "performer_blacksmith_scatter_hudtext_benchmark", StringComparison.OrdinalIgnoreCase) ||
-                   (string.Equals(mapId, "performer_blacksmith_showcase", StringComparison.OrdinalIgnoreCase) &&
-                    ReadEnvInt("LUDOTS_BLACKSMITH_AUTO_SCATTER_TOTAL", 0) > 1);
-        }
+            ScreenHudBatchBuffer? screenHud = engine.GetService(CoreServiceKeys.PresentationScreenHudBuffer);
+            WorldHudBatchBuffer? worldHud = engine.GetService(CoreServiceKeys.PresentationWorldHudBuffer);
+            float frameMs = timing.LastWallFrameMs > 0.001f
+                ? timing.LastWallFrameMs
+                : (timing.WallFrameMs > 0.001f ? timing.WallFrameMs : timing.LastFrameMs);
+            float fps = frameMs > 0.001f ? 1000f / frameMs : 0f;
+            string line1 = $"FPS {fps:F1} | frame {frameMs:F2}ms | tick {timing.LastTotalTickMs:F2}ms | cull {timing.LastCameraCullingMs:F2}ms";
+            string line2 = $"ISM {timing.PrimitiveInstancesLastFrame}/{timing.PrimitiveBatchesLastFrame} | prim {timing.LastPrimitiveRenderMs:F2}ms sync {timing.LastPrimitivePersistentSyncMs:F2}ms draw {timing.LastPrimitiveMeshDrawMs:F2}ms";
+            string line3 = $"HUD raw {worldHud?.Count ?? 0} projected {timing.WorldHudProjectedLastFrame} bars/text {screenHud?.BarCount ?? 0}/{screenHud?.TextCount ?? 0} | hudProj {timing.LastWorldHudProjectionMs:F2}ms overlay {timing.LastScreenOverlayDrawMs:F2}ms";
 
-        private static int ReadEnvInt(string key, int fallback)
-        {
-            string? raw = Environment.GetEnvironmentVariable(key);
-            return int.TryParse(raw, out int value) ? value : fallback;
+            const int x = 10;
+            const int y = 10;
+            const int fontSize = 14;
+            const int lineHeight = 18;
+            const int panelWidth = 850;
+            const int panelHeight = 70;
+            Rl.DrawRectangle(x - 6, y - 6, panelWidth, panelHeight, new Color(0, 0, 0, 150));
+            Rl.DrawRectangleLines(x - 6, y - 6, panelWidth, panelHeight, new Color(45, 230, 130, 220));
+            Rl.DrawText(line1, x, y, fontSize, new Color(190, 255, 210, 255));
+            Rl.DrawText(line2, x, y + lineHeight, fontSize, new Color(210, 235, 255, 255));
+            Rl.DrawText(line3, x, y + lineHeight * 2, fontSize, new Color(255, 240, 180, 255));
         }
 
         private static float WrapDegrees(float degrees)
@@ -741,7 +597,10 @@ namespace Ludots.Adapter.Raylib
             return degrees < 0f ? degrees + 360f : degrees;
         }
 
-        private static string BuildTimingDiagnostic(GameEngine engine, PresentationTimingDiagnostics? timing)
+        private static string BuildTimingDiagnostic(
+            GameEngine engine,
+            PresentationTimingDiagnostics? timing,
+            PresentationOverlayScene? overlayScene)
         {
             if (timing == null)
             {
@@ -750,18 +609,20 @@ namespace Ludots.Adapter.Raylib
 
             WorldHudBatchBuffer? worldHud = engine.GetService(CoreServiceKeys.PresentationWorldHudBuffer);
             ScreenHudBatchBuffer? screenHud = engine.GetService(CoreServiceKeys.PresentationScreenHudBuffer);
+            PrimitiveDrawBuffer? primitives = engine.GetService(CoreServiceKeys.PresentationPrimitiveDrawBuffer);
+            PerformerEntityRuntime? performers = engine.GetService(CoreServiceKeys.PerformerEntityRuntime);
             GroundOverlayBuffer? groundOverlay = engine.GetService(CoreServiceKeys.GroundOverlayBuffer);
             RoadSplineBuffer? roadSpline = engine.GetService(CoreServiceKeys.RoadSplineBuffer);
             DebugDrawCommandBuffer? debugDraw = engine.GetService(CoreServiceKeys.DebugDrawCommandBuffer);
             string? activeMapId = engine.CurrentMapSession?.MapId.Value;
             IBenchmarkSceneController? benchmarkController = engine.GetService(CoreServiceKeys.BenchmarkSceneController);
-            bool cleanPerformanceMode = IsBlacksmithCleanPerformanceMode(activeMapId, benchmarkController);
+            bool cleanPerformanceMode = IsCleanPerformanceScene(benchmarkController);
             float frameMs = timing.LastWallFrameMs > 0.001f
                 ? timing.LastWallFrameMs
                 : (timing.WallFrameMs > 0.001f ? timing.WallFrameMs : timing.LastFrameMs);
             float fps = frameMs > 0.001f ? 1000f / frameMs : 0f;
             int rawDebugDrawCount = debugDraw == null ? 0 : debugDraw.Lines.Count + debugDraw.Circles.Count + debugDraw.Boxes.Count;
-            return $"timing frame={frameMs:F2}ms fps={fps:F1} cleanPerf={(cleanPerformanceMode ? 1 : 0)} gap={timing.LastHostLoopGapMs:F2} poll={timing.LastWindowPollMs:F2} pre={timing.LastHostPreTickMs:F2} tick={timing.LastTotalTickMs:F2} post={timing.LastHostPostTickMs:F2} begin={timing.LastBeginDrawingMs:F2} sim={timing.LastSimulationMs:F2} presentation={timing.LastPresentationMs:F2} cull={timing.LastCameraCullingMs:F2} cullEntity={timing.LastCameraCullingEntityProcessMs:F2} cullSync={timing.LastCameraCullingPerformerSyncMs:F2} hudProj={timing.LastWorldHudProjectionMs:F2} hudRaw={timing.WorldHudItemsLastProjection} hudProjected={timing.WorldHudProjectedLastFrame} hudDensitySkip={timing.WorldHudDensitySkippedLastFrame} mode3D={timing.LastMode3DMs:F2} terrain={timing.LastTerrainRenderMs:F2} primitive={timing.LastPrimitiveRenderMs:F2} primSync={timing.LastPrimitivePersistentSyncMs:F2} primBucket={timing.LastPrimitivePersistentBucketDrawMs:F2} primImmediate={timing.LastPrimitiveImmediateDrawMs:F2} primImmediateSkip={timing.PrimitiveImmediateSkippedLastFrame} primBuild={timing.LastPrimitiveMatrixBuildMs:F2} primDraw={timing.LastPrimitiveMeshDrawMs:F2} primInstances={timing.PrimitiveInstancesLastFrame} primBatches={timing.PrimitiveBatchesLastFrame} primCache={timing.PrimitiveMatrixCacheHitsLastFrame}/{timing.PrimitiveMatrixCacheMissesLastFrame} ground={timing.LastGroundOverlayRenderMs:F2} groundCount={timing.GroundOverlaysLastFrame} groundRaw={groundOverlay?.Count ?? 0} spline={timing.LastRoadSplineRenderMs:F2} splineCount={timing.RoadSplinesLastFrame} splineRaw={roadSpline?.Count ?? 0} debugDraw={timing.LastDebugDrawRenderMs:F2} debugDrawCount={timing.DebugDrawCommandsLastFrame} debugDrawRaw={rawDebugDrawCount} overlay={timing.LastScreenOverlayDrawMs:F2} overlayBuild={timing.LastScreenOverlayBuildMs:F2} overlayDirtyLanes={timing.ScreenOverlayDirtyLanesLastFrame} overlayItems={timing.ScreenOverlayItemsLastFrame} overlayRebuilt={timing.ScreenOverlayRebuiltLanesLastFrame} overlayPaint={timing.LastScreenOverlayPaintMs:F2} overlayComposite={timing.LastScreenOverlayCompositeMs:F2} uiRender={timing.LastUiRenderMs:F2} uiUpload={timing.LastUiUploadMs:F2} overlayFinal={timing.LastScreenOverlayFinalDrawMs:F2} nativeDiag={timing.LastNativeDiagnosticHudMs:F2} emit={timing.LastPerformerEmitMs:F2} emitDirty={timing.LastPerformerEmitDirtyProcessMs:F2} emitDirtyCount={timing.PerformerEmitDirtyCountLastFrame} emitRetained={timing.LastPerformerEmitRetainedProcessMs:F2} emitRetainedCount={timing.PerformerEmitRetainedCountLastFrame} endDraw={timing.LastEndDrawingMs:F2} screenshot={timing.LastScreenshotMs:F2} worldHud={worldHud?.Count ?? 0} screenBars={screenHud?.BarCount ?? 0} screenText={screenHud?.TextCount ?? 0}";
+            return $"timing frame={frameMs:F2}ms fps={fps:F1} cleanPerf={(cleanPerformanceMode ? 1 : 0)} visibleEntities={timing.VisibleEntitiesLastFrame} performerActive={performers?.ActiveCount ?? 0} primitiveRaw={primitives?.Count ?? 0} primitiveStaticRaw={primitives?.StaticMeshLaneItemCount ?? 0} gap={timing.LastHostLoopGapMs:F2} poll={timing.LastWindowPollMs:F2} pre={timing.LastHostPreTickMs:F2} tick={timing.LastTotalTickMs:F2} post={timing.LastHostPostTickMs:F2} begin={timing.LastBeginDrawingMs:F2} sim={timing.LastSimulationMs:F2} simTop1={timing.LastSimulationTopSystem1Name}:{timing.LastSimulationTopSystem1Ms:F2} simTop2={timing.LastSimulationTopSystem2Name}:{timing.LastSimulationTopSystem2Ms:F2} simTop3={timing.LastSimulationTopSystem3Name}:{timing.LastSimulationTopSystem3Ms:F2} presentation={timing.LastPresentationMs:F2} presTop1={timing.LastPresentationTopSystem1Name}:{timing.LastPresentationTopSystem1Ms:F2} presTop2={timing.LastPresentationTopSystem2Name}:{timing.LastPresentationTopSystem2Ms:F2} presTop3={timing.LastPresentationTopSystem3Name}:{timing.LastPresentationTopSystem3Ms:F2} behavior={timing.LastPerformerBehaviorMs:F2} behaviorBoot={timing.PerformerBootstrapCountLastFrame} behaviorOwner={timing.PerformerOwnerChangesLastFrame} behaviorAttr={timing.PerformerOwnerAttributeChangesLastFrame} behaviorTag={timing.PerformerOwnerTagChangesLastFrame} behaviorTick={timing.PerformerTickDrivenCountLastFrame} animator={timing.LastPerformerAnimatorMs:F2} transformSync={timing.LastPerformerEntityTransformSyncMs:F2} requestFlush={timing.LastPresentationRequestFlushMs:F2} spawnBatch={timing.LastRuntimeSpawnBatchPrepareMs:F2}/{timing.LastRuntimeSpawnWorldCreateMs:F2}/{timing.LastRuntimeSpawnFillBatchMs:F2}/{timing.LastRuntimeSpawnPostSpawnMs:F2} spawnPerf={timing.LastRuntimeSpawnPerformerBatchMs:F2}/{timing.LastRuntimeSpawnPerformerCreateMs:F2}/{timing.LastRuntimeSpawnPerformerBootstrapMarkMs:F2} spawnPerfParts={timing.LastRuntimeSpawnPerformerCreateSetupMs:F2}/{timing.LastRuntimeSpawnPerformerWorldCreateMs:F2}/{timing.LastRuntimeSpawnPerformerComponentFillMs:F2}/{timing.LastRuntimeSpawnPerformerIndexWriteMs:F2}/{timing.LastRuntimeSpawnPerformerOwnerPayloadMs:F2}/{timing.LastRuntimeSpawnPerformerPostCreateMs:F2} spawnPerfChildParts={timing.LastRuntimeSpawnPerformerChildSetupMs:F2}/{timing.LastRuntimeSpawnPerformerChildWorldCreateMs:F2}/{timing.LastRuntimeSpawnPerformerChildComponentFillMs:F2}/{timing.LastRuntimeSpawnPerformerChildIndexWriteMs:F2}/{timing.LastRuntimeSpawnPerformerChildStableIdMs:F2} cull={timing.LastCameraCullingMs:F2} cullSpatial={timing.LastCameraCullingSpatialQueryMs:F2} cullStatic={timing.LastCameraCullingStaticProcessMs:F2} cullDyn={timing.LastCameraCullingDynamicProcessMs:F2} cullEntity={timing.LastCameraCullingEntityProcessMs:F2} cullSync={timing.LastCameraCullingPerformerSyncMs:F2} hudProj={timing.LastWorldHudProjectionMs:F2} hudRaw={timing.WorldHudItemsLastProjection} hudProjected={timing.WorldHudProjectedLastFrame} hudDensitySkip={timing.WorldHudDensitySkippedLastFrame} mode3D={timing.LastMode3DMs:F2} terrain={timing.LastTerrainRenderMs:F2} primitive={timing.LastPrimitiveRenderMs:F2} primSync={timing.LastPrimitivePersistentSyncMs:F2} primBucket={timing.LastPrimitivePersistentBucketDrawMs:F2} primImmediate={timing.LastPrimitiveImmediateDrawMs:F2} primImmediateSkip={timing.PrimitiveImmediateSkippedLastFrame} primBuild={timing.LastPrimitiveMatrixBuildMs:F2} primDraw={timing.LastPrimitiveMeshDrawMs:F2} primInstances={timing.PrimitiveInstancesLastFrame} primBatches={timing.PrimitiveBatchesLastFrame} primCache={timing.PrimitiveMatrixCacheHitsLastFrame}/{timing.PrimitiveMatrixCacheMissesLastFrame} ground={timing.LastGroundOverlayRenderMs:F2} groundCount={timing.GroundOverlaysLastFrame} groundRaw={groundOverlay?.Count ?? 0} spline={timing.LastRoadSplineRenderMs:F2} splineCount={timing.RoadSplinesLastFrame} splineRaw={roadSpline?.Count ?? 0} debugDraw={timing.LastDebugDrawRenderMs:F2} debugDrawCount={timing.DebugDrawCommandsLastFrame} debugDrawRaw={rawDebugDrawCount} overlay={timing.LastScreenOverlayDrawMs:F2} overlayBuild={timing.LastScreenOverlayBuildMs:F2} overlayDirtyLanes={timing.ScreenOverlayDirtyLanesLastFrame} overlayItems={timing.ScreenOverlayItemsLastFrame} overlayRebuilt={timing.ScreenOverlayRebuiltLanesLastFrame} overlayPaint={timing.LastScreenOverlayPaintMs:F2} overlayComposite={timing.LastScreenOverlayCompositeMs:F2} uiRender={timing.LastUiRenderMs:F2} uiUpload={timing.LastUiUploadMs:F2} overlayFinal={timing.LastScreenOverlayFinalDrawMs:F2} nativeDiag={timing.LastNativeDiagnosticHudMs:F2} emit={timing.LastPerformerEmitMs:F2} emitDirty={timing.LastPerformerEmitDirtyProcessMs:F2} emitDirtyCount={timing.PerformerEmitDirtyCountLastFrame} emitRetained={timing.LastPerformerEmitRetainedProcessMs:F2} emitRetainedCount={timing.PerformerEmitRetainedCountLastFrame} emitRetainedDirect={timing.PerformerEmitRetainedDirectHitsLastFrame}/{timing.PerformerEmitRetainedFallbacksLastFrame}/{timing.PerformerEmitRetainedDirectMissesLastFrame} endDraw={timing.LastEndDrawingMs:F2} screenshot={timing.LastScreenshotMs:F2} worldHud={worldHud?.Count ?? 0} screenBars={screenHud?.BarCount ?? 0} screenText={screenHud?.TextCount ?? 0} worldHudDrops={worldHud?.DroppedTotal ?? 0} screenHudDrops={screenHud?.DroppedTotal ?? 0} overlaySceneDrops={overlayScene?.DroppedTotal ?? 0}";
         }
 
         private static void ValidateRequiredContextBeforeLoop(GameEngine engine)

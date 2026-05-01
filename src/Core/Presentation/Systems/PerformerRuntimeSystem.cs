@@ -53,6 +53,15 @@ namespace Ludots.Core.Presentation.Systems
         }
         public override void Update(in float dt)
         {
+            bool hasCommands = _commands.Count != 0;
+            bool hasEvents = _events.Count != 0;
+            bool hasMarkers = _markers.Count != 0;
+            bool needsCullSync = _lastCullSyncStructureVersion != _runtime.StructureVersion;
+            if (!hasCommands && !hasEvents && !hasMarkers && !needsCullSync)
+            {
+                return;
+            }
+
             ReleaseDestroyedOwnerAnchors();
             _runtime.ReleaseDeadOwners(EmitDestroyedEvent);
 
@@ -147,12 +156,12 @@ namespace Ludots.Core.Presentation.Systems
 
         private void DestroyPerformersOwnedBy(Entity owner)
         {
-            if (!_runtime.TryGetActiveByOwner(owner, out Entity single, out System.Collections.Generic.List<Entity>? many))
+            if (!_runtime.TryGetActiveByOwner(owner, out PerformerEntityRuntime.OwnerPerformerBucket performers))
             {
                 return;
             }
 
-            if (single != Entity.Null)
+            if (performers.TryGetSingle(out Entity single))
             {
                 if (World.IsAlive(single) && World.Has<PerformerState>(single))
                 {
@@ -162,15 +171,9 @@ namespace Ludots.Core.Presentation.Systems
                 return;
             }
 
-            if (many == null || many.Count == 0)
+            for (int i = 0; i < performers.Count; i++)
             {
-                return;
-            }
-
-            Entity[] owned = many.ToArray();
-            for (int i = 0; i < owned.Length; i++)
-            {
-                Entity performer = owned[i];
+                Entity performer = performers.GetAt(i);
                 if (World.IsAlive(performer) && World.Has<PerformerState>(performer))
                 {
                     _runtime.Destroy(performer, EmitDestroyedEvent);

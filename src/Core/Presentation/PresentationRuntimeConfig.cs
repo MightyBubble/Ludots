@@ -2,7 +2,7 @@ namespace Ludots.Core.Presentation
 {
     /// <summary>
     /// Engine-level presentation runtime capacity knobs merged from game.json.
-    /// Defaults are sized for playable showcase scenes rather than tiny unit-test maps.
+    /// Defaults are sized for production-scale presentation scenes rather than tiny unit-test maps.
     /// </summary>
     public sealed class PresentationRuntimeConfig
     {

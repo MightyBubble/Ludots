@@ -1,13 +1,12 @@
 {
   "Id": "performer_blacksmith_scatter_hudtext_benchmark",
   "Tags": ["showcase", "performer", "benchmark", "scatter", "blacksmith", "hudbar", "hudtext"],
-  "VisualHeightmapAsset": "assets/terrain/performer_blacksmith_showcase_flat.vhtm",
   "Boards": [
     {
       "Name": "default",
       "SpatialType": "Grid",
-      "WidthInTiles": 1,
-      "HeightInTiles": 1,
+      "WidthInTiles": 2,
+      "HeightInTiles": 2,
       "GridCellSizeCm": 100
     }
   ],

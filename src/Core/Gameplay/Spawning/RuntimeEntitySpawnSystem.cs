@@ -338,6 +338,11 @@ namespace Ludots.Core.Gameplay.Spawning
             double performerIndexWriteMs = 0d;
             double performerOwnerPayloadMs = 0d;
             double performerPostCreateMs = 0d;
+            double performerChildSetupMs = 0d;
+            double performerChildWorldCreateMs = 0d;
+            double performerChildComponentFillMs = 0d;
+            double performerChildIndexWriteMs = 0d;
+            double performerChildStableIdMs = 0d;
             int performerCreated = 0;
             if (hasDirectBootstrap)
             {
@@ -356,7 +361,12 @@ namespace Ludots.Core.Gameplay.Spawning
                     out performerComponentFillMs,
                     out performerIndexWriteMs,
                     out performerOwnerPayloadMs,
-                    out performerPostCreateMs);
+                    out performerPostCreateMs,
+                    out performerChildSetupMs,
+                    out performerChildWorldCreateMs,
+                    out performerChildComponentFillMs,
+                    out performerChildIndexWriteMs,
+                    out performerChildStableIdMs);
                 performerBatchMs = ElapsedMs(performerBatchStart);
             }
 
@@ -375,7 +385,12 @@ namespace Ludots.Core.Gameplay.Spawning
                 performerComponentFillMs,
                 performerIndexWriteMs,
                 performerOwnerPayloadMs,
-                performerPostCreateMs);
+                performerPostCreateMs,
+                performerChildSetupMs,
+                performerChildWorldCreateMs,
+                performerChildComponentFillMs,
+                performerChildIndexWriteMs,
+                performerChildStableIdMs);
 
             return true;
         }
@@ -800,6 +815,11 @@ namespace Ludots.Core.Gameplay.Spawning
                 out _,
                 out _,
                 out _,
+                out _,
+                out _,
+                out _,
+                out _,
+                out _,
                 out _);
         }
 
@@ -817,7 +837,12 @@ namespace Ludots.Core.Gameplay.Spawning
             out double performerComponentFillMs,
             out double performerIndexWriteMs,
             out double performerOwnerPayloadMs,
-            out double performerPostCreateMs)
+            out double performerPostCreateMs,
+            out double performerChildSetupMs,
+            out double performerChildWorldCreateMs,
+            out double performerChildComponentFillMs,
+            out double performerChildIndexWriteMs,
+            out double performerChildStableIdMs)
         {
             totalCreated = 0;
             performerCreateMs = 0d;
@@ -828,6 +853,11 @@ namespace Ludots.Core.Gameplay.Spawning
             performerIndexWriteMs = 0d;
             performerOwnerPayloadMs = 0d;
             performerPostCreateMs = 0d;
+            performerChildSetupMs = 0d;
+            performerChildWorldCreateMs = 0d;
+            performerChildComponentFillMs = 0d;
+            performerChildIndexWriteMs = 0d;
+            performerChildStableIdMs = 0d;
             if (_performerRuntime == null || _performerDefinitions == null || _performerBootstrap == null || owners.Length == 0)
             {
                 return;
@@ -902,13 +932,23 @@ namespace Ludots.Core.Gameplay.Spawning
                 performerIndexWriteMs += _performerRuntime.LastRootBatchIndexWriteMs;
                 performerOwnerPayloadMs += _performerRuntime.LastRootBatchOwnerPayloadMs;
                 performerPostCreateMs += _performerRuntime.LastRootBatchPostCreateMs;
+                performerChildSetupMs += _performerRuntime.LastChildBatchSetupMs;
+                performerChildWorldCreateMs += _performerRuntime.LastChildBatchWorldCreateMs;
+                performerChildComponentFillMs += _performerRuntime.LastChildBatchComponentFillMs;
+                performerChildIndexWriteMs += _performerRuntime.LastChildBatchIndexWriteMs;
+                performerChildStableIdMs += _performerRuntime.LastChildBatchStableIdMs;
 
-                long markStart = Stopwatch.GetTimestamp();
-                for (int i = 0; i < createCount; i++)
+                if (PerformerEntityRuntime.RequiresDeferredBootstrapAfterBatchCreateHierarchy(definition, _performerDefinitions))
                 {
-                    MarkHierarchyForBootstrapIfNeeded(_performerBatchCreated[i]);
+                    long markStart = Stopwatch.GetTimestamp();
+                    for (int i = 0; i < createCount; i++)
+                    {
+                        MarkHierarchyForBootstrapAfterBatchCreateIfNeeded(_performerBatchCreated[i]);
+                    }
+
+                    bootstrapMarkMs += ElapsedMs(markStart);
                 }
-                bootstrapMarkMs += ElapsedMs(markStart);
+
                 totalCreated += createCount;
             }
         }
@@ -1029,6 +1069,32 @@ namespace Ludots.Core.Gameplay.Spawning
                 if (World.IsAlive(child))
                 {
                     MarkHierarchyForBootstrapIfNeeded(child);
+                }
+            }
+        }
+
+        private void MarkHierarchyForBootstrapAfterBatchCreateIfNeeded(Entity root)
+        {
+            if (!World.IsAlive(root) || !World.Has<PerformerState>(root))
+            {
+                return;
+            }
+
+            ref readonly PerformerState state = ref World.Get<PerformerState>(root);
+            if (_performerDefinitions != null &&
+                _performerDefinitions.TryGet(state.DefId, out PerformerDefinition definition) &&
+                PerformerEntityRuntime.RequiresDeferredBootstrapAfterBatchCreate(definition))
+            {
+                MarkPerformer(root);
+            }
+
+            ref PerformerChildren children = ref World.Get<PerformerChildren>(root);
+            for (int i = 0; i < children.Count; i++)
+            {
+                Entity child = children.Get(i);
+                if (World.IsAlive(child))
+                {
+                    MarkHierarchyForBootstrapAfterBatchCreateIfNeeded(child);
                 }
             }
         }

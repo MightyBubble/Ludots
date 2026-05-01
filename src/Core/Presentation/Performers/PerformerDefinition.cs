@@ -87,6 +87,7 @@ namespace Ludots.Core.Presentation.Performers
         internal bool UsesStableVisualCache;
         internal bool UsesEventDrivenStaticEmit;
         internal bool UsesRetainedPresentationRequest;
+        internal bool NeedsRetainedPresentationRequestLifecycleTick;
         internal bool NeedsByDefinitionIndex;
         internal bool NeedsByOwnerDefinitionIndex;
         internal bool HasOwnerAttributeBindingWork;
@@ -202,7 +203,7 @@ namespace Ludots.Core.Presentation.Performers
             UsesEventDrivenStaticEmit = false;
             UsesRetainedPresentationRequest = false;
             NeedsByDefinitionIndex = Rules != null && Rules.Length > 0;
-            NeedsByOwnerDefinitionIndex = NeedsByDefinitionIndex || (Bindings != null && Bindings.Length > 0);
+            NeedsByOwnerDefinitionIndex = NeedsByDefinitionIndex;
             HasOwnerAttributeBindingWork = false;
             HasOwnerTagBindingWork = false;
             SupportsSingleRequestReplay = false;
@@ -261,6 +262,9 @@ namespace Ludots.Core.Presentation.Performers
                     DefaultLifetime <= 0f &&
                     PositionYDriftPerSecond == 0f &&
                     VisibilityCondition.GraphProgramId <= 0;
+                NeedsRetainedPresentationRequestLifecycleTick =
+                    UsesRetainedPresentationRequest &&
+                    (DefaultLifetime > 0f || VisibilityCondition.Inline != InlineConditionKind.None || VisibilityCondition.GraphProgramId > 0);
                 return;
             }
 
@@ -441,6 +445,9 @@ namespace Ludots.Core.Presentation.Performers
                 DefaultLifetime <= 0f &&
                 PositionYDriftPerSecond == 0f &&
                 VisibilityCondition.GraphProgramId <= 0;
+            NeedsRetainedPresentationRequestLifecycleTick =
+                UsesRetainedPresentationRequest &&
+                (DefaultLifetime > 0f || VisibilityCondition.Inline != InlineConditionKind.None || VisibilityCondition.GraphProgramId > 0);
             SupportsSingleVisualProxyFastEmit =
                 AssetBehaviorIndices.Length == 1 &&
                 SupportsSingleVisualProxyFastEmitFor(Behaviors[AssetBehaviorIndices[0]].AssetBinding);
@@ -548,7 +555,12 @@ namespace Ludots.Core.Presentation.Performers
         {
             return asset.LocalOffset != Vector3.Zero ||
                    asset.LocalRotation != Quaternion.Identity ||
-                   asset.LocalScale != Vector3.One;
+                   (asset.LocalScale != Vector3.One && !AssetBindingUsesRetainedPresentationScale(asset.AssetKind));
+        }
+
+        private static bool AssetBindingUsesRetainedPresentationScale(AssetKind kind)
+        {
+            return kind is AssetKind.WorldHud or AssetKind.WorldText or AssetKind.Spline or AssetKind.GroundOverlay;
         }
 
         private static bool AssetBindingSupportsEventDrivenStaticEmit(in AssetBindingConfig asset)

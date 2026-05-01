@@ -25,7 +25,7 @@ namespace Ludots.Core.Presentation.Systems
         private readonly PresentationTimingDiagnostics? _timingDiagnostics;
         private readonly QueryDescription _activeAnimatorQuery = new QueryDescription()
             .WithAll<PerformerState, PerfHasAnimator, PerformerFloatParams, PerformerFloatDefaults, PerformerParent>();
-        private PerformerAnimatorSlot _fallbackAnimatorSlot;
+        private PerformerAnimatorSlot _scratchAnimatorSlot;
 
         public AnimatorRuntimeSystem(
             World world,
@@ -90,12 +90,12 @@ namespace Ludots.Core.Presentation.Systems
                         {
                             if (!hasAnimatorSlots)
                             {
-                                _fallbackAnimatorSlot.Value = -1;
+                                _scratchAnimatorSlot.Value = -1;
                             }
 
                             ref PerformerAnimatorSlot animatorSlot = ref hasAnimatorSlots
                                 ? ref animatorSlots[index]
-                                : ref _fallbackAnimatorSlot;
+                                : ref _scratchAnimatorSlot;
                             UpdateAnimator(
                                 entity,
                                 slot.Animator,
@@ -122,12 +122,12 @@ namespace Ludots.Core.Presentation.Systems
 
                         if (!hasAnimatorSlots)
                         {
-                            _fallbackAnimatorSlot.Value = -1;
+                            _scratchAnimatorSlot.Value = -1;
                         }
 
                         ref PerformerAnimatorSlot animatorSlot = ref hasAnimatorSlots
                             ? ref animatorSlots[index]
-                            : ref _fallbackAnimatorSlot;
+                            : ref _scratchAnimatorSlot;
                         UpdateAnimator(
                             entity,
                             slot.Animator,

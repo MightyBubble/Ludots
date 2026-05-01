@@ -88,6 +88,9 @@ namespace Ludots.Core.Presentation.Systems
         private float[] _groundingHeightsCm = Array.Empty<float>();
         private bool _warnedMissingGroundingHeightmap;
         private bool _warnedGroundingSampleFailure;
+        private readonly HashSet<int> _warnedBoneAttachmentProviderMissing = new();
+        private readonly HashSet<int> _warnedBoneAttachmentInvalidBone = new();
+        private readonly HashSet<int> _warnedBoneAttachmentResolveFailed = new();
 
         private struct SoundTrackingState
         {
@@ -332,12 +335,12 @@ namespace Ludots.Core.Presentation.Systems
         {
             _lastOwnerAttributeChangeCount = 0;
             _lastOwnerTagChangeCount = 0;
-            int processed = ProcessDirtyOwnersFromComponents();
             if (_ownerChanges == null)
             {
-                return processed;
+                return ProcessDirtyOwnersFromComponents();
             }
 
+            int processed = 0;
             ReadOnlySpan<PresentationOwnerChange> changes = _ownerChanges.GetSpan();
             for (int i = 0; i < changes.Length; i++)
             {
@@ -429,68 +432,83 @@ namespace Ludots.Core.Presentation.Systems
         {
             if (!World.IsAlive(owner) ||
                 !World.Has<AttributeBuffer>(owner) ||
-                !_ownerAttributeWorkIndex.TryGetValue(attributeId, out OwnerAttributeWorkTarget[] targets))
+                !_runtime.TryGetActiveByOwner(owner, out PerformerEntityRuntime.OwnerPerformerBucket performers))
             {
                 return;
             }
 
             ref AttributeBuffer attributes = ref World.Get<AttributeBuffer>(owner);
-            for (int i = 0; i < targets.Length; i++)
+            if (performers.TryGetSingle(out Entity single))
             {
-                ProcessOwnerAttributeChangeBucket(owner, ref attributes, in targets[i]);
+                ProcessOwnerAttributeWorkForPerformer(single, attributeId, ref attributes);
+                return;
             }
-        }
 
-        private void ProcessOwnerAttributeChangeBucket(
-            Entity owner,
-            ref AttributeBuffer attributes,
-            in OwnerAttributeWorkTarget target)
-        {
-            IReadOnlyList<Entity> performers = _runtime.GetActiveByOwnerDefinition(target.DefinitionId, owner);
-            for (int i = 0; i < performers.Count; i++)
+            int count = performers.Count;
+            for (int i = 0; i < count; i++)
             {
-                Entity performer = performers[i];
-                if (!World.IsAlive(performer) || !World.Has<PerformerState>(performer))
-                {
-                    continue;
-                }
-
-                ApplyOwnerAttributeWork(performer, target.Definition, ref attributes, in target.Work);
+                ProcessOwnerAttributeWorkForPerformer(performers.GetAt(i), attributeId, ref attributes);
             }
         }
 
         private void ProcessOwnerTagChange(Entity owner, int tagId, bool? tagActiveOverride = null)
         {
             if (!World.IsAlive(owner) ||
-                !_ownerTagWorkIndex.TryGetValue(tagId, out OwnerTagWorkTarget[] targets))
+                !_runtime.TryGetActiveByOwner(owner, out PerformerEntityRuntime.OwnerPerformerBucket performers))
             {
                 return;
             }
 
             bool tagActive = tagActiveOverride ??
                 (World.Has<GameplayTagContainer>(owner) && World.Get<GameplayTagContainer>(owner).HasTag(tagId));
-            for (int i = 0; i < targets.Length; i++)
+            if (performers.TryGetSingle(out Entity single))
             {
-                ProcessOwnerTagChangeBucket(owner, tagActive, in targets[i]);
+                ProcessOwnerTagWorkForPerformer(single, tagId, tagActive);
+                return;
+            }
+
+            int count = performers.Count;
+            for (int i = 0; i < count; i++)
+            {
+                ProcessOwnerTagWorkForPerformer(performers.GetAt(i), tagId, tagActive);
             }
         }
 
-        private void ProcessOwnerTagChangeBucket(
-            Entity owner,
-            bool tagActive,
-            in OwnerTagWorkTarget target)
+        private void ProcessOwnerAttributeWorkForPerformer(
+            Entity performer,
+            int attributeId,
+            ref AttributeBuffer attributes)
         {
-            IReadOnlyList<Entity> performers = _runtime.GetActiveByOwnerDefinition(target.DefinitionId, owner);
-            for (int i = 0; i < performers.Count; i++)
+            if (!World.IsAlive(performer) || !World.Has<PerformerState>(performer))
             {
-                Entity performer = performers[i];
-                if (!World.IsAlive(performer) || !World.Has<PerformerState>(performer))
-                {
-                    continue;
-                }
-
-                ApplyOwnerTagWork(performer, target.Definition, in target.Work, tagActive);
+                return;
             }
+
+            ref readonly PerformerState state = ref World.Get<PerformerState>(performer);
+            if (!_definitions.TryGet(state.DefId, out PerformerDefinition definition) ||
+                !definition.TryGetOwnerAttributeWork(attributeId, out PerformerDefinition.OwnerAttributeWorkItem work))
+            {
+                return;
+            }
+
+            ApplyOwnerAttributeWork(performer, definition, ref attributes, in work);
+        }
+
+        private void ProcessOwnerTagWorkForPerformer(Entity performer, int tagId, bool tagActive)
+        {
+            if (!World.IsAlive(performer) || !World.Has<PerformerState>(performer))
+            {
+                return;
+            }
+
+            ref readonly PerformerState state = ref World.Get<PerformerState>(performer);
+            if (!_definitions.TryGet(state.DefId, out PerformerDefinition definition) ||
+                !definition.TryGetOwnerTagWork(tagId, out PerformerDefinition.OwnerTagWorkItem work))
+            {
+                return;
+            }
+
+            ApplyOwnerTagWork(performer, definition, in work, tagActive);
         }
 
         private int ProcessTickDrivenPerformers(float tickDt)
@@ -1093,6 +1111,11 @@ namespace Ludots.Core.Presentation.Systems
 
         private int StopDestroyedSounds()
         {
+            if (_soundTracking.Count == 0)
+            {
+                return 0;
+            }
+
             ReadOnlySpan<PresentationEvent> events = _events.GetSpan();
             int scanned = 0;
             for (int i = 0; i < events.Length; i++)
@@ -1191,7 +1214,12 @@ namespace Ludots.Core.Presentation.Systems
                     ApplyParentAttachment(entity, parentPos, parentRot, parentScale, config);
                     return;
                 case AttachmentTarget.Bone:
-                    if (!World.Has<PerformerState>(parentEntity)) return;
+                    if (!World.Has<PerformerState>(parentEntity))
+                    {
+                        WarnBoneAttachment(entity, _warnedBoneAttachmentResolveFailed, "parent performer state is missing");
+                        return;
+                    }
+
                     ApplyBoneAttachment(entity, World.Get<PerformerState>(parentEntity).StableId, config);
                     return;
             }
@@ -1210,15 +1238,42 @@ namespace Ludots.Core.Presentation.Systems
 
         private void ApplyBoneAttachment(Entity entity, int parentStableId, in AttachmentConfig config)
         {
-            if (_boneTransformProvider == null || config.BoneId <= 0) return;
+            if (_boneTransformProvider == null)
+            {
+                WarnBoneAttachment(entity, _warnedBoneAttachmentProviderMissing, $"bone provider is not registered for parentStableId={parentStableId}, boneId={config.BoneId}");
+                return;
+            }
+
+            if (config.BoneId <= 0)
+            {
+                WarnBoneAttachment(entity, _warnedBoneAttachmentInvalidBone, $"invalid boneId={config.BoneId} for parentStableId={parentStableId}");
+                return;
+            }
+
             if (!_boneTransformProvider.TryGetBoneWorldTransform(parentStableId, config.BoneId,
                     out Vector3 bonePosition, out Quaternion boneRotation, out Vector3 boneScale))
+            {
+                WarnBoneAttachment(entity, _warnedBoneAttachmentResolveFailed, $"bone transform could not be resolved for parentStableId={parentStableId}, boneId={config.BoneId}");
                 return;
+            }
+
             Quaternion normalizedBoneRotation = NormalizeOrIdentity(boneRotation);
             SetTransform(entity, TransformSource.BoneAttached,
                 bonePosition + Vector3.Transform(config.Offset, normalizedBoneRotation),
                 NormalizeOrIdentity(normalizedBoneRotation * NormalizeOrIdentity(config.RotationOffset)),
                 config.InheritScale ? NormalizeScale(boneScale) : Vector3.One);
+        }
+
+        private static void WarnBoneAttachment(Entity entity, HashSet<int> once, string reason)
+        {
+            if (!once.Add(entity.Id))
+            {
+                return;
+            }
+
+            Log.Warn(
+                in LogChannels.Presentation,
+                $"Performer bone attachment skipped for performerEntityId={entity.Id}: {reason}. Parent-position substitution is not applied.");
         }
 
         private void ApplyGrounding(Entity entity, in GroundingConfig config)

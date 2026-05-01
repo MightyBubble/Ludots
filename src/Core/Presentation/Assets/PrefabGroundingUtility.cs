@@ -221,8 +221,8 @@ namespace Ludots.Core.Presentation.Assets
         private static Quaternion CreateRotationBetween(Vector3 from, Vector3 to)
         {
             const float epsilon = 0.000001f;
-            Vector3 fromNormalized = NormalizeOrDefault(from, Vector3.UnitY);
-            Vector3 toNormalized = NormalizeOrDefault(to, Vector3.UnitY);
+            Vector3 fromNormalized = NormalizeOrAxis(from, Vector3.UnitY);
+            Vector3 toNormalized = NormalizeOrAxis(to, Vector3.UnitY);
             float dot = Math.Clamp(Vector3.Dot(fromNormalized, toNormalized), -1f, 1f);
 
             if (dot >= 1f - epsilon)
@@ -252,12 +252,12 @@ namespace Ludots.Core.Presentation.Assets
                 scale * 0.5f));
         }
 
-        private static Vector3 NormalizeOrDefault(Vector3 value, Vector3 fallback)
+        private static Vector3 NormalizeOrAxis(Vector3 value, Vector3 axis)
         {
             float lengthSquared = value.LengthSquared();
             return lengthSquared > 0.000001f
                 ? value / MathF.Sqrt(lengthSquared)
-                : fallback;
+                : axis;
         }
     }
 }

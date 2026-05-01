@@ -256,15 +256,15 @@ namespace Ludots.Core.Presentation.Performers
             }
 
             position.Y = hitHeight[0] * CmToMeters + offsetMeters;
-            normal = NormalizeOrDefault(new Vector3(normalX[0], normalY[0], normalZ[0]), Vector3.UnitY);
+            normal = NormalizeOrAxis(new Vector3(normalX[0], normalY[0], normalZ[0]), Vector3.UnitY);
             return position;
         }
 
         private static Quaternion CreateRotationBetween(Vector3 from, Vector3 to)
         {
             const float epsilon = 0.000001f;
-            Vector3 fromNormalized = NormalizeOrDefault(from, Vector3.UnitY);
-            Vector3 toNormalized = NormalizeOrDefault(to, Vector3.UnitY);
+            Vector3 fromNormalized = NormalizeOrAxis(from, Vector3.UnitY);
+            Vector3 toNormalized = NormalizeOrAxis(to, Vector3.UnitY);
             float dot = Math.Clamp(Vector3.Dot(fromNormalized, toNormalized), -1f, 1f);
 
             if (dot >= 1f - epsilon)
@@ -305,12 +305,12 @@ namespace Ludots.Core.Presentation.Performers
             return value == Vector3.Zero ? Vector3.One : value;
         }
 
-        private static Vector3 NormalizeOrDefault(Vector3 value, Vector3 fallback)
+        private static Vector3 NormalizeOrAxis(Vector3 value, Vector3 axis)
         {
             float lengthSquared = value.LengthSquared();
             return lengthSquared > 0.000001f
                 ? value / MathF.Sqrt(lengthSquared)
-                : fallback;
+                : axis;
         }
     }
 

@@ -114,6 +114,13 @@
         "assetBinding": {
           "assetKind": "Mesh",
           "assetId": "blacksmith.building.north.intact",
+          "assetSwapParamKey": 104,
+          "assetSwapTable": [
+            { "paramValue": 0, "assetId": "blacksmith.building.north.intact" },
+            { "paramValue": 1, "assetId": "blacksmith.building.south.intact" },
+            { "paramValue": 2, "assetId": "blacksmith.building.damaged" },
+            { "paramValue": 3, "assetId": "blacksmith.building.ruined" }
+          ],
           "materialId": "default_surface",
           "renderPath": "InstancedStaticMesh",
           "mobility": "Static"
@@ -378,13 +385,6 @@
         "assetBinding": {
           "assetKind": "Mesh",
           "assetId": "blacksmith.building.north.intact",
-          "assetSwapParamKey": 104,
-          "assetSwapTable": [
-            { "paramValue": 0, "assetId": "blacksmith.building.north.intact" },
-            { "paramValue": 1, "assetId": "blacksmith.building.south.intact" },
-            { "paramValue": 2, "assetId": "blacksmith.building.damaged" },
-            { "paramValue": 3, "assetId": "blacksmith.building.ruined" }
-          ],
           "materialId": "default_surface",
           "renderPath": "InstancedStaticMesh",
           "mobility": "Static"
@@ -729,7 +729,7 @@
           "assetKind": "WorldHud",
           "materialParamKey": 106,
           "mobility": "Movable",
-          "localScale": [56.0, 7.0, 1.0]
+          "localScale": [72.0, 8.0, 1.0]
         }
       },
       {
@@ -738,7 +738,7 @@
         "activeByDefault": true,
         "attachment": {
           "target": "Parent",
-          "offset": [0.0, 4.1, 0.0],
+          "offset": [0.0, 4.8, 0.0],
           "rotationOffset": [0.0, 0.0, 0.0, 1.0],
           "inheritScale": false
         }
@@ -747,7 +747,7 @@
     "bindings": [
       { "paramKey": 106, "source": "attributeRatio", "attributeName": "Durability" }
     ],
-    "defaultColor": [0.98, 0.22, 0.14, 1.0]
+    "defaultColor": [0.1, 1.0, 0.15, 1.0]
   },
   {
     "id": "blacksmith_durability_hud_text",
@@ -811,7 +811,7 @@
         "activeByDefault": true,
         "attachment": {
           "target": "Parent",
-          "offset": [0.0, 5.1, 0.0],
+          "offset": [0.0, 5.9, 0.0],
           "rotationOffset": [0.0, 0.0, 0.0, 1.0],
           "inheritScale": false
         }

@@ -10,6 +10,7 @@ namespace Ludots.Client.Raylib.Rendering
     {
         private readonly RaylibPrimitiveRenderer _primitiveRenderer;
         private readonly MeshAssetRegistry _meshes;
+        private readonly RaylibIsmRenderBridge _benchmarkBridge = new();
 
         public RaylibBenchmarkRenderer(RaylibPrimitiveRenderer primitiveRenderer, MeshAssetRegistry meshes)
         {
@@ -17,35 +18,35 @@ namespace Ludots.Client.Raylib.Rendering
             _meshes = meshes ?? throw new ArgumentNullException(nameof(meshes));
         }
 
-        public RaylibBenchmarkStats LastStats => _primitiveRenderer.IsmBridge.LastStats;
+        public RaylibBenchmarkStats LastStats => _benchmarkBridge.LastStats;
 
-        public RaylibBenchmarkScene CurrentScene => _primitiveRenderer.IsmBridge.GetBenchmarkScene();
+        public RaylibBenchmarkScene CurrentScene => _benchmarkBridge.GetBenchmarkScene();
 
         public void SetScene(in RaylibBenchmarkScene scene)
         {
-            _primitiveRenderer.IsmBridge.SetBenchmarkScene(scene);
+            _benchmarkBridge.SetBenchmarkScene(scene);
         }
 
         public bool SetActiveInstanceCount(int count)
         {
-            return _primitiveRenderer.IsmBridge.SetBenchmarkActiveInstanceCount(count);
+            return _benchmarkBridge.SetBenchmarkActiveInstanceCount(count);
         }
 
         public int GetActiveInstanceCount()
         {
-            return _primitiveRenderer.IsmBridge.GetBenchmarkActiveInstanceCount();
+            return _benchmarkBridge.GetBenchmarkActiveInstanceCount();
         }
 
-        public bool Draw(Camera3D fallbackCamera)
+        public bool Draw(Camera3D baseCamera)
         {
-            RaylibBenchmarkScene scene = _primitiveRenderer.IsmBridge.GetBenchmarkScene();
+            RaylibBenchmarkScene scene = _benchmarkBridge.GetBenchmarkScene();
             if (!scene.Enabled)
             {
                 return false;
             }
 
-            RaylibBenchmarkStats buildStats = _primitiveRenderer.IsmBridge.BuildBenchmarkBuckets();
-            Camera3D camera = fallbackCamera;
+            RaylibBenchmarkStats buildStats = _benchmarkBridge.BuildBenchmarkBuckets();
+            Camera3D camera = baseCamera;
             camera.position = scene.Camera.Position;
             camera.target = scene.Camera.Target;
             if (scene.Camera.FovY > 0.01f)
@@ -56,14 +57,14 @@ namespace Ludots.Client.Raylib.Rendering
             long drawStart = Stopwatch.GetTimestamp();
             int visibleCount = 0;
             _primitiveRenderer.ResetInstancedStats();
-            foreach (RaylibIsmRenderBridge.Bucket bucket in _primitiveRenderer.IsmBridge.ActiveBuckets)
+            foreach (RaylibIsmRenderBridge.Bucket bucket in _benchmarkBridge.ActiveBuckets)
             {
                 visibleCount += bucket.Items.Count;
                 _primitiveRenderer.DrawInstancedBucket(bucket, _meshes);
             }
 
             double drawMs = (Stopwatch.GetTimestamp() - drawStart) * 1000.0 / Stopwatch.Frequency;
-            _primitiveRenderer.IsmBridge.CompleteBenchmarkDraw(drawMs, visibleCount);
+            _benchmarkBridge.CompleteBenchmarkDraw(drawMs, visibleCount);
             return buildStats.Active;
         }
     }

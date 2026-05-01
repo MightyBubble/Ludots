@@ -20,6 +20,7 @@ namespace Ludots.Adapter.Raylib.Services
         private const int SliderTrackHeight = 16;
         private const int SliderLeft = 34;
         private const int SliderTop = 92;
+        private const string StressOverlayEnvKey = "LUDOTS_RAYLIB_BENCHMARK_STRESS_OVERLAY";
 
         private readonly RaylibBenchmarkRenderer _renderer;
         private readonly ScreenHudBatchBuffer _screenHud;
@@ -62,9 +63,9 @@ namespace Ludots.Adapter.Raylib.Services
             _frameSerial = 1;
         }
 
-        public bool Draw(Camera3D fallbackCamera)
+        public bool Draw(Camera3D baseCamera)
         {
-            return _renderer.Draw(fallbackCamera);
+            return _renderer.Draw(baseCamera);
         }
 
         public bool SetActiveInstanceCount(int count)
@@ -99,7 +100,7 @@ namespace Ludots.Adapter.Raylib.Services
             _frameSerial++;
             UpdateSlider(scene.Instances.Length);
             _renderer.SetActiveInstanceCount(_targetInstanceCount);
-            PopulateSkiaHud(LastStats, timing, screenWidth, screenHeight);
+            PopulateSkiaHud(LastStats, timing, screenWidth, screenHeight, IsStressOverlayEnabled());
         }
 
         private void UpdateSlider(int maxInstances)
@@ -130,14 +131,17 @@ namespace Ludots.Adapter.Raylib.Services
             _targetInstanceCount = RoundInstanceCount(Math.Clamp(unclamped, MinInstances, maxInstances));
         }
 
-        private void PopulateSkiaHud(RaylibBenchmarkStats stats, PresentationTimingDiagnostics? timing, int screenWidth, int screenHeight)
+        private void PopulateSkiaHud(RaylibBenchmarkStats stats, PresentationTimingDiagnostics? timing, int screenWidth, int screenHeight, bool includeStressOverlay)
         {
             _screenHud.Clear();
             _screenOverlay.Clear();
 
             AddControlPanel(stats, timing);
-            AddAnimatedHudBars(screenWidth);
-            AddAnimatedOverlayTexts(stats, timing, screenWidth, screenHeight);
+            if (includeStressOverlay)
+            {
+                AddAnimatedHudBars(screenWidth);
+                AddAnimatedOverlayTexts(stats, timing, screenWidth, screenHeight);
+            }
         }
 
         private void AddControlPanel(RaylibBenchmarkStats stats, PresentationTimingDiagnostics? timing)
@@ -300,6 +304,16 @@ namespace Ludots.Adapter.Raylib.Services
         {
             float frameTime = Rl.GetFrameTime();
             return frameTime > 0.0001f ? (int)MathF.Round(1f / frameTime) : 0;
+        }
+
+        private static bool IsStressOverlayEnabled()
+        {
+            string? raw = Environment.GetEnvironmentVariable(StressOverlayEnvKey);
+            return raw != null &&
+                   (raw.Equals("1", StringComparison.OrdinalIgnoreCase) ||
+                    raw.Equals("true", StringComparison.OrdinalIgnoreCase) ||
+                    raw.Equals("yes", StringComparison.OrdinalIgnoreCase) ||
+                    raw.Equals("on", StringComparison.OrdinalIgnoreCase));
         }
     }
 }

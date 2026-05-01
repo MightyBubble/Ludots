@@ -75,6 +75,7 @@ namespace Ludots.Core.Gameplay.GAS
                 new EffectModifiers(),
                 new EffectResolveOrder()
             );
+            AddLifetimeMarkers(world, entity, in ge);
 
             return entity;
         }
@@ -109,6 +110,7 @@ namespace Ludots.Core.Gameplay.GAS
             });
             commandBuffer.Set(entity, new EffectModifiers());
             commandBuffer.Set(entity, new EffectResolveOrder());
+            AddLifetimeMarkers(commandBuffer, entity, in ge);
             return entity;
         }
 
@@ -133,6 +135,34 @@ namespace Ludots.Core.Gameplay.GAS
         {
             ref var mods = ref world.Get<EffectModifiers>(effectEntity);
             mods.Add(attrId, op, value);
+        }
+
+        private static void AddLifetimeMarkers(World world, Entity entity, in GameplayEffect effect)
+        {
+            if (effect.PeriodTicks > 0 &&
+                (effect.LifetimeKind == EffectLifetimeKind.After || effect.LifetimeKind == EffectLifetimeKind.Infinite))
+            {
+                world.Add(entity, new EffectPeriodicTick());
+            }
+
+            if (effect.LifetimeKind == EffectLifetimeKind.After || effect.ExpireCondition.IsValid)
+            {
+                world.Add(entity, new EffectExpirationCheck());
+            }
+        }
+
+        private static void AddLifetimeMarkers(CommandBuffer commandBuffer, Entity entity, in GameplayEffect effect)
+        {
+            if (effect.PeriodTicks > 0 &&
+                (effect.LifetimeKind == EffectLifetimeKind.After || effect.LifetimeKind == EffectLifetimeKind.Infinite))
+            {
+                commandBuffer.Add(entity, new EffectPeriodicTick());
+            }
+
+            if (effect.LifetimeKind == EffectLifetimeKind.After || effect.ExpireCondition.IsValid)
+            {
+                commandBuffer.Add(entity, new EffectExpirationCheck());
+            }
         }
     }
 }

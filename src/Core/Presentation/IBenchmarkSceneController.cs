@@ -5,6 +5,8 @@ namespace Ludots.Core.Presentation
         bool IsActive { get; }
         bool SupportsScatterControl { get; }
         bool IsCleanPerformanceScene { get; }
+        bool SuppressHostDiagnosticUi { get; }
+        bool SuppressHostDebugGuides { get; }
         int ScatterMin { get; }
         int ScatterMax { get; }
         int ScatterTarget { get; }

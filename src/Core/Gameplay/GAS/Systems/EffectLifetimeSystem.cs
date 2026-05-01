@@ -18,6 +18,10 @@ namespace Ludots.Core.Gameplay.GAS.Systems
     {
         private static readonly QueryDescription _activeEffectsQuery = new QueryDescription()
             .WithAll<GameplayEffect, EffectContext>();
+        private static readonly QueryDescription _periodicEffectsQuery = new QueryDescription()
+            .WithAll<GameplayEffect, EffectContext, EffectPeriodicTick>();
+        private static readonly QueryDescription _expirationEffectsQuery = new QueryDescription()
+            .WithAll<GameplayEffect, EffectContext, EffectExpirationCheck>();
 
         private readonly EffectRequestQueue _effectRequests;
         private readonly GasBudget _budget;
@@ -117,7 +121,7 @@ namespace Ludots.Core.Gameplay.GAS.Systems
                 PeriodPhaseGraphs = _periodPhaseGraphs,
                 Budget = _callbackCreateBudget
             };
-            World.InlineEntityQuery<LifetimeTickJob, GameplayEffect, EffectContext>(in _activeEffectsQuery, ref tickJob);
+            World.InlineEntityQuery<LifetimeTickJob, GameplayEffect, EffectContext>(in _periodicEffectsQuery, ref tickJob);
 
 
             var cleanupJob = new LifetimeCleanupJob
@@ -134,7 +138,7 @@ namespace Ludots.Core.Gameplay.GAS.Systems
                 TagOps = _tagOps,
                 GasBudget = _budget
             };
-            World.InlineEntityQuery<LifetimeCleanupJob, GameplayEffect, EffectContext>(in _activeEffectsQuery, ref cleanupJob);
+            World.InlineEntityQuery<LifetimeCleanupJob, GameplayEffect, EffectContext>(in _expirationEffectsQuery, ref cleanupJob);
 
             // ── Execute Phase Graphs for period/expire/remove ──
             ExecutePhaseGraphsForEntries(_periodPhaseGraphs, EffectPhaseId.OnPeriod, _builtinRuntime);

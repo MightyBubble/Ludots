@@ -709,7 +709,8 @@ namespace Ludots.Core.Engine
                 soundRequestBuffer,
                 presentationTimingDiagnostics,
                 stableDrawCache,
-                skinnedVisualBatchBuffer);
+                skinnedVisualBatchBuffer,
+                worldHudBuffer);
             var surfaceSourceFlushSystem = new SurfaceSourceFlushSystem(World, presentationRequestBuffer, surfacePayloads, surfaceRuntime);
             var surfaceSourceLifecycleSystem = new SurfaceSourceLifecycleSystem(World, surfaceRuntime, performerCommandBuffer);
             var chunkSurfaceBakeSystem = new ChunkSurfaceBakeSystem(World, surfaceRuntime, meshAssets, materialAssets, performerDefinitions, performerCommandBuffer, performerRuntime);

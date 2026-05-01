@@ -47,10 +47,16 @@ namespace Ludots.Core.Presentation.Config
             {
                 var node = merged[i].Node;
                 string key = node["id"]?.GetValue<string>();
-                if (string.IsNullOrWhiteSpace(key)) continue;
+                if (string.IsNullOrWhiteSpace(key))
+                {
+                    throw new InvalidOperationException("Presentation/mesh_assets.json entry is missing required 'id'.");
+                }
 
-                var desc = ParseDescriptor(node);
-                if (desc.Type == MeshAssetType.None) continue;
+                var desc = ParseDescriptor(node, key);
+                if (desc.Type == MeshAssetType.None)
+                {
+                    throw new InvalidOperationException($"Presentation/mesh_assets.json asset '{key}' resolved to MeshAssetType.None.");
+                }
 
                 _meshRegistry.Register(key, in desc);
             }
@@ -65,7 +71,10 @@ namespace Ludots.Core.Presentation.Config
             {
                 var node = merged[i].Node;
                 string prefabKey = node["id"]?.GetValue<string>();
-                if (string.IsNullOrWhiteSpace(prefabKey)) continue;
+                if (string.IsNullOrWhiteSpace(prefabKey))
+                {
+                    throw new InvalidOperationException("Presentation/prefabs.json entry is missing required 'id'.");
+                }
 
                 string meshRef = node["meshAssetId"]?.GetValue<string>();
                 int meshAssetId = string.IsNullOrWhiteSpace(meshRef) ? 0 : _meshRegistry.GetId(meshRef);
@@ -92,18 +101,24 @@ namespace Ludots.Core.Presentation.Config
             }
         }
 
-        private MeshAssetDescriptor ParseDescriptor(JsonNode node)
+        private MeshAssetDescriptor ParseDescriptor(JsonNode node, string key)
         {
             string typeStr = node["type"]?.GetValue<string>();
             if (!Enum.TryParse<MeshAssetType>(typeStr, ignoreCase: true, out var type))
-                return default;
+            {
+                throw new InvalidOperationException($"Presentation/mesh_assets.json asset '{key}' has invalid or missing type '{typeStr}'.");
+            }
 
             switch (type)
             {
                 case MeshAssetType.Primitive:
                 {
                     string kindStr = node["primitiveKind"]?.GetValue<string>();
-                    Enum.TryParse<PrimitiveMeshKind>(kindStr, ignoreCase: true, out var kind);
+                    if (!Enum.TryParse<PrimitiveMeshKind>(kindStr, ignoreCase: true, out var kind))
+                    {
+                        throw new InvalidOperationException($"Presentation/mesh_assets.json primitive asset '{key}' has invalid or missing primitiveKind '{kindStr}'.");
+                    }
+
                     return MeshAssetDescriptor.Primitive(0, kind);
                 }
                 case MeshAssetType.Model:
@@ -111,7 +126,6 @@ namespace Ludots.Core.Presentation.Config
                 {
                     if (node["sourceUris"] != null)
                     {
-                        string key = node["id"]?.GetValue<string>() ?? "<unknown>";
                         throw new InvalidOperationException(
                             $"Presentation/mesh_assets.json asset '{key}' declares sourceUris. Platform paths belong in Presentation/host_assets.json.");
                     }
@@ -126,7 +140,7 @@ namespace Ludots.Core.Presentation.Config
                     return MeshAssetDescriptor.Prefab(0, parts);
                 }
                 default:
-                    return default;
+                    throw new InvalidOperationException($"Presentation/mesh_assets.json asset '{key}' uses unsupported mesh asset type '{type}'.");
             }
         }
 

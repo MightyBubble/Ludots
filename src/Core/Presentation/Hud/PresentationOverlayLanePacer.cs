@@ -179,13 +179,13 @@ namespace Ludots.Core.Presentation.Hud
                 }
             }
 
-            PresentationOverlayItemKind fallback = deferredLargeKinds[0];
-            _nextLargeLaneCursor = GetLargeLaneOrderIndex(fallback) + 1;
+            PresentationOverlayItemKind selected = deferredLargeKinds[0];
+            _nextLargeLaneCursor = GetLargeLaneOrderIndex(selected) + 1;
             if (_nextLargeLaneCursor >= LargeLaneOrder.Length)
             {
                 _nextLargeLaneCursor = 0;
             }
-            return fallback;
+            return selected;
         }
 
         private static int GetLargeLaneOrderIndex(PresentationOverlayItemKind kind)

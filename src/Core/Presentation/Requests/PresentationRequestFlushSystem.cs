@@ -143,6 +143,11 @@ namespace Ludots.Core.Presentation.Requests
                 _lastProjectedRevision = contentRevision;
                 _snapshotBuffer.SetRevision(contentRevision);
                 _snapshotBuffer.SetStaticMeshGeometryRevision(_stableDrawCache.StaticMeshGeometryRevision);
+                _snapshotBuffer.SetStaticMeshDeltas(
+                    _stableDrawCache.StaticMeshDeltaBaseRevision,
+                    _stableDrawCache.StaticMeshDeltaItems,
+                    _stableDrawCache.StaticMeshRemovedStableIds);
+                _stableDrawCache.ClearStaticMeshDeltas();
             }
             _requests.Clear();
 

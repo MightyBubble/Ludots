@@ -3,6 +3,7 @@ using System.Collections.Generic;
 using System.Diagnostics;
 using System.IO;
 using System.Numerics;
+using Ludots.Core.Diagnostics;
 using Ludots.Core.Modding;
 using Ludots.Core.Presentation.AdapterSync;
 using Ludots.Core.Presentation.Assets;
@@ -27,7 +28,8 @@ namespace Ludots.Client.Raylib.Rendering
         private readonly PresentationMaterialRegistry? _materials;
         private readonly string? _diagnosticPath;
         private readonly PrefabFinalizedVisualBuffer _prefabVisuals = new PrefabFinalizedVisualBuffer();
-        private const int MaxModelInstancesPerDraw = 1024;
+        private const int DefaultMaxModelInstancesPerDraw = 32768;
+        private const int HardMaxModelInstancesPerDraw = 131072;
 
         private bool _initialized;
         private Mesh _cubeMesh;
@@ -50,8 +52,11 @@ namespace Ludots.Client.Raylib.Rendering
         private readonly Dictionary<int, CachedTexture> _textureCache = new Dictionary<int, CachedTexture>();
         private readonly HashSet<int> _loggedTextureDiagnostics = new HashSet<int>();
         private readonly HashSet<int> _loggedBillboardDrawDiagnostics = new HashSet<int>();
+        private readonly HashSet<int> _reportedMissingModelDraws = new HashSet<int>();
+        private readonly HashSet<int> _reportedInvalidInstancedMaterials = new HashSet<int>();
         private Material _proceduralMeshMaterial;
         private bool _proceduralMeshMaterialLoaded;
+        private readonly int _maxModelInstancesPerDraw;
 
         public int LastInstancedInstances { get; private set; }
         public int LastInstancedBatches { get; private set; }
@@ -90,6 +95,7 @@ namespace Ludots.Client.Raylib.Rendering
             _vfs = vfs;
             _materials = materials;
             _diagnosticPath = Environment.GetEnvironmentVariable("LUDOTS_RAYLIB_DIAGNOSTIC_PATH");
+            _maxModelInstancesPerDraw = ResolveMaxModelInstancesPerDraw();
         }
 
         public void Draw(PrimitiveDrawBuffer draw, Camera3D camera, MeshAssetRegistry meshes, float scaleMul = 1f, IVisualHeightmap? visualHeightmap = null)
@@ -176,9 +182,9 @@ namespace Ludots.Client.Raylib.Rendering
                 return;
             }
 
-            long fallbackImmediateStart = Stopwatch.GetTimestamp();
+            long immediateDrawStart = Stopwatch.GetTimestamp();
             DrawImmediateWithDescriptors(span, camera, meshes, scaleMul, persistentStaticLanesActive: false, skinnedBatchActive: false, in finalizationContext);
-            LastImmediateDrawMs = (Stopwatch.GetTimestamp() - fallbackImmediateStart) * 1000d / Stopwatch.Frequency;
+            LastImmediateDrawMs = (Stopwatch.GetTimestamp() - immediateDrawStart) * 1000d / Stopwatch.Frequency;
         }
 
         private void DrawPersistentStaticLanes(Camera3D camera, MeshAssetRegistry meshes, float scaleMul, in PrefabFinalizationContext finalizationContext)
@@ -423,7 +429,7 @@ namespace Ludots.Client.Raylib.Rendering
 
             if (!TryGetOrLoadModel(item.MeshAssetId, in descriptor, out CachedModel cached))
             {
-                DrawMissingModelMarker(item.Position, item.Scale * scaleMul);
+                WarnMissingModelSkipped(item.MeshAssetId, item.StableId, "gpu-skinned instanced draw");
                 return true;
             }
 
@@ -975,7 +981,7 @@ namespace Ludots.Client.Raylib.Rendering
         {
             if (!TryGetOrLoadModel(meshAssetId, desc, out var cached))
             {
-                DrawMissingModelMarker(position, scale);
+                WarnMissingModelSkipped(meshAssetId, stableId: 0, "model draw");
                 return;
             }
 
@@ -989,7 +995,6 @@ namespace Ludots.Client.Raylib.Rendering
         {
             if (!TryGetOrLoadTexture(meshAssetId, desc, out var cached))
             {
-                DrawMissingModelMarker(position, scale);
                 return;
             }
 
@@ -1239,11 +1244,17 @@ namespace Ludots.Client.Raylib.Rendering
             File.AppendAllText(fullPath, $"[{DateTime.UtcNow:O}] meshAssetId={meshAssetId} {message}{Environment.NewLine}");
         }
 
-        private static void DrawMissingModelMarker(Vector3 position, Vector3 scale)
+        private void WarnMissingModelSkipped(int meshAssetId, int stableId, string path)
         {
-            float s = MathF.Max(scale.X, MathF.Max(scale.Y, scale.Z)) * 0.3f;
-            if (s < 0.05f) s = 0.3f;
-            Rl.DrawCube(position, s, s, s, new Color(255, 0, 255, 255));
+            if (!_reportedMissingModelDraws.Add(meshAssetId))
+            {
+                return;
+            }
+
+            string stableText = stableId > 0 ? $" stableId={stableId}" : string.Empty;
+            Log.Warn(
+                in LogChannels.Presentation,
+                $"Raylib renderer skipped {path}{stableText}: meshAssetId={meshAssetId} could not be loaded. No placeholder model is drawn.");
         }
 
         private static Mesh CreateProceduralMesh(ProceduralMeshAssetData proceduralMesh)
@@ -1605,12 +1616,7 @@ namespace Ludots.Client.Raylib.Rendering
 
             if (!TryGetOrLoadModel(first.MeshAssetId, in descriptor, out CachedModel cached))
             {
-                for (int i = 0; i < items.Count; i++)
-                {
-                    PrimitiveDrawItem item = items[i];
-                    DrawMissingModelMarker(item.Position, item.Scale * scaleMul);
-                }
-
+                WarnMissingModelSkipped(first.MeshAssetId, first.StableId, "instanced static mesh bucket");
                 return true;
             }
 
@@ -1705,11 +1711,14 @@ namespace Ludots.Client.Raylib.Rendering
                 for (int meshIndex = 0; meshIndex < model.meshCount; meshIndex++)
                 {
                     Mesh mesh = model.meshes[meshIndex];
-                    Material material = ResolveInstancedModelMaterial(model, meshIndex);
-                    ApplyInstancedMaterialTint(ref material, colorKey);
-                    for (int offset = 0; offset < batch.Count; offset += MaxModelInstancesPerDraw)
+                    if (!TryResolveInstancedModelMaterial(model, meshIndex, out Material material))
                     {
-                        int chunkCount = Math.Min(MaxModelInstancesPerDraw, batch.Count - offset);
+                        continue;
+                    }
+                    ApplyInstancedMaterialTint(ref material, colorKey);
+                    for (int offset = 0; offset < batch.Count; offset += _maxModelInstancesPerDraw)
+                    {
+                        int chunkCount = Math.Min(_maxModelInstancesPerDraw, batch.Count - offset);
                         Rl.DrawMeshInstanced(mesh, material, transforms + offset, chunkCount);
                         drawCalls++;
                     }
@@ -1733,11 +1742,14 @@ namespace Ludots.Client.Raylib.Rendering
                 for (int meshIndex = 0; meshIndex < model.meshCount; meshIndex++)
                 {
                     Mesh mesh = model.meshes[meshIndex];
-                    Material material = ResolveInstancedModelMaterial(model, meshIndex);
-                    ApplyInstancedMaterialTint(ref material, colorKey);
-                    for (int offset = 0; offset < batch.Count; offset += MaxModelInstancesPerDraw)
+                    if (!TryResolveInstancedModelMaterial(model, meshIndex, out Material material))
                     {
-                        int chunkCount = Math.Min(MaxModelInstancesPerDraw, batch.Count - offset);
+                        continue;
+                    }
+                    ApplyInstancedMaterialTint(ref material, colorKey);
+                    for (int offset = 0; offset < batch.Count; offset += _maxModelInstancesPerDraw)
+                    {
+                        int chunkCount = Math.Min(_maxModelInstancesPerDraw, batch.Count - offset);
                         Rl.DrawMeshInstanced(mesh, material, transforms + offset, chunkCount);
                         drawCalls++;
                     }
@@ -1747,13 +1759,20 @@ namespace Ludots.Client.Raylib.Rendering
             return drawCalls;
         }
 
-        private Material ResolveInstancedModelMaterial(Model model, int meshIndex)
+        private bool TryResolveInstancedModelMaterial(Model model, int meshIndex, out Material material)
         {
             if (model.materialCount <= 0 || model.materials == null)
             {
-                Material fallback = _material;
-                fallback.shader = _shader;
-                return fallback;
+                material = default;
+                int reportKey = HashCode.Combine(model.meshCount, meshIndex, model.materialCount);
+                if (_reportedInvalidInstancedMaterials.Add(reportKey))
+                {
+                    Log.Warn(
+                        in LogChannels.Presentation,
+                        $"Raylib instanced model skipped meshIndex={meshIndex}: imported model has no material. Host asset material import must provide an explicit material.");
+                }
+
+                return false;
             }
 
             int materialIndex = 0;
@@ -1764,12 +1783,21 @@ namespace Ludots.Client.Raylib.Rendering
 
             if (materialIndex < 0 || materialIndex >= model.materialCount)
             {
-                materialIndex = 0;
+                int reportKey = HashCode.Combine(model.meshCount, meshIndex, materialIndex);
+                if (_reportedInvalidInstancedMaterials.Add(reportKey))
+                {
+                    Log.Warn(
+                        in LogChannels.Presentation,
+                        $"Raylib instanced model skipped meshIndex={meshIndex}: meshMaterial index {materialIndex} is outside materialCount={model.materialCount}.");
+                }
+
+                material = default;
+                return false;
             }
 
-            Material material = model.materials[materialIndex];
+            material = model.materials[materialIndex];
             material.shader = _shader;
-            return material;
+            return true;
         }
 
         private void ApplyInstancedMaterialTint(ref Material material, uint colorKey)
@@ -1782,6 +1810,17 @@ namespace Ludots.Client.Raylib.Rendering
                 Vector4 diffuse = new(color.r / 255f, color.g / 255f, color.b / 255f, color.a / 255f);
                 Rl.SetShaderValue(_shader, _locColDiffuse, &diffuse, (int)Rl.ShaderUniformDataType.SHADER_UNIFORM_VEC4);
             }
+        }
+
+        private static int ResolveMaxModelInstancesPerDraw()
+        {
+            string? raw = Environment.GetEnvironmentVariable("LUDOTS_RAYLIB_MAX_MODEL_INSTANCES_PER_DRAW");
+            if (int.TryParse(raw, out int configured) && configured > 0)
+            {
+                return Math.Clamp(configured, 1, HardMaxModelInstancesPerDraw);
+            }
+
+            return DefaultMaxModelInstancesPerDraw;
         }
 
         private void AddInstance(List<Batch> batches, uint colorKey, in RaylibMatrix matrix)

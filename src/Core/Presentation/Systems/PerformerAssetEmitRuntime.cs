@@ -502,16 +502,17 @@ namespace Ludots.Core.Presentation.Systems
         {
             Vector3 scale = performerWorldScale;
             scale = scale == Vector3.Zero ? Vector3.One : scale;
+            scale *= asset.LocalScale == Vector3.Zero ? Vector3.One : asset.LocalScale;
             if (asset.ScaleParamKey >= 0)
                 scale *= _runtime.ResolveFloat(entity, asset.ScaleParamKey, 1f);
             return scale;
         }
 
-        private Vector4 ResolveColor(Entity entity, in AssetBindingConfig asset, Vector4 fallback)
+        private Vector4 ResolveColor(Entity entity, in AssetBindingConfig asset, Vector4 defaultColor)
         {
             return asset.ColorParamKey >= 0
-                ? _runtime.ResolveVector(entity, asset.ColorParamKey, fallback)
-                : fallback;
+                ? _runtime.ResolveVector(entity, asset.ColorParamKey, defaultColor)
+                : defaultColor;
         }
 
         private AnimatorPackedState ResolveAnimator(Entity entity, VisualRenderPath renderPath)

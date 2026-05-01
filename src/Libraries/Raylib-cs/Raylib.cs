@@ -143,6 +143,18 @@ namespace Raylib_cs
         CAMERA_THIRD_PERSON
     }
 
+    public enum BlendMode
+    {
+        BLEND_ALPHA = 0,
+        BLEND_ADDITIVE,
+        BLEND_MULTIPLIED,
+        BLEND_ADD_COLORS,
+        BLEND_SUBTRACT_COLORS,
+        BLEND_ALPHA_PREMULTIPLY,
+        BLEND_CUSTOM,
+        BLEND_CUSTOM_SEPARATE
+    }
+
     [StructLayout(LayoutKind.Sequential)]
     public struct Rectangle
     {
@@ -228,6 +240,14 @@ namespace Raylib_cs
         public int height;
         public int mipmaps;
         public int format;
+    }
+
+    [StructLayout(LayoutKind.Sequential)]
+    public struct RenderTexture2D
+    {
+        public uint id;
+        public Texture2D texture;
+        public Texture2D depth;
     }
 
     [StructLayout(LayoutKind.Sequential)]
@@ -551,6 +571,27 @@ namespace Raylib_cs
 
         [DllImport(NativeLib, CallingConvention = CallingConvention.Cdecl)]
         public static extern void DrawTexture(Texture2D texture, int posX, int posY, Color tint);
+
+        [DllImport(NativeLib, CallingConvention = CallingConvention.Cdecl)]
+        public static extern RenderTexture2D LoadRenderTexture(int width, int height);
+
+        [DllImport(NativeLib, CallingConvention = CallingConvention.Cdecl)]
+        public static extern void UnloadRenderTexture(RenderTexture2D target);
+
+        [DllImport(NativeLib, CallingConvention = CallingConvention.Cdecl)]
+        public static extern void BeginTextureMode(RenderTexture2D target);
+
+        [DllImport(NativeLib, CallingConvention = CallingConvention.Cdecl)]
+        public static extern void EndTextureMode();
+
+        [DllImport(NativeLib, CallingConvention = CallingConvention.Cdecl)]
+        public static extern void DrawTextureRec(Texture2D texture, Rectangle source, Vector2 position, Color tint);
+
+        [DllImport(NativeLib, CallingConvention = CallingConvention.Cdecl)]
+        public static extern void BeginBlendMode(BlendMode mode);
+
+        [DllImport(NativeLib, CallingConvention = CallingConvention.Cdecl)]
+        public static extern void EndBlendMode();
 
         [DllImport(NativeLib, CallingConvention = CallingConvention.Cdecl)]
         public static extern void DrawBillboardRec(Camera3D camera, Texture2D texture, Rectangle source, Vector3 position, Vector2 size, Color tint);

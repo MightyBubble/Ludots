@@ -49,6 +49,7 @@ namespace Ludots.Core.Gameplay.GAS.Systems
         private EffectLoopSubstage _substage;
         private int _pass;
         private bool _inSlice;
+        private bool _hasPendingEffectsCached;
 
         private Entity _runtimeStateEntity;
 
@@ -82,6 +83,7 @@ namespace Ludots.Core.Gameplay.GAS.Systems
                 _stage = EffectLoopStage.ProposalAndApply;
                 _substage = EffectLoopSubstage.Proposal;
                 _pass = 0;
+                _hasPendingEffectsCached = HasPendingEffects();
             }
 
             UpdateRuntimeState();
@@ -116,7 +118,8 @@ namespace Ludots.Core.Gameplay.GAS.Systems
                     if (!_application.UpdateSlice(dt, remainingMs)) return false;
                     _substage = EffectLoopSubstage.Proposal;
                     _pass++;
-                    if (!HasPendingEffects() || _pass >= GasConstants.MAX_EFFECT_PROCESSING_PASSES_PER_FRAME)
+                    _hasPendingEffectsCached = HasPendingEffects();
+                    if (!_hasPendingEffectsCached || _pass >= GasConstants.MAX_EFFECT_PROCESSING_PASSES_PER_FRAME)
                     {
                         _stage = EffectLoopStage.Lifetime;
                         _substage = EffectLoopSubstage.Proposal;
@@ -148,7 +151,8 @@ namespace Ludots.Core.Gameplay.GAS.Systems
                     if (!_application.UpdateSlice(dt, remainingMs)) return false;
                     _substage = EffectLoopSubstage.Proposal;
                     _pass++;
-                    if (!HasPendingEffects() || _pass >= GasConstants.MAX_EFFECT_PROCESSING_PASSES_PER_FRAME)
+                    _hasPendingEffectsCached = HasPendingEffects();
+                    if (!_hasPendingEffectsCached || _pass >= GasConstants.MAX_EFFECT_PROCESSING_PASSES_PER_FRAME)
                     {
                         _stage = EffectLoopStage.Done;
                     }
@@ -156,6 +160,7 @@ namespace Ludots.Core.Gameplay.GAS.Systems
                 }
 
                 _inSlice = false;
+                _hasPendingEffectsCached = false;
                 UpdateRuntimeState();
                 return true;
             }
@@ -167,6 +172,7 @@ namespace Ludots.Core.Gameplay.GAS.Systems
             _stage = EffectLoopStage.ProposalAndApply;
             _substage = EffectLoopSubstage.Proposal;
             _pass = 0;
+            _hasPendingEffectsCached = false;
             _proposal.ResetSlice();
             _application.ResetSlice();
             UpdateRuntimeState();
@@ -190,7 +196,7 @@ namespace Ludots.Core.Gameplay.GAS.Systems
                 EffectLoopStage = (byte)_stage,
                 EffectLoopSubstage = (byte)_substage,
                 EffectLoopPass = _pass,
-                HasPendingEffects = HasPendingEffects(),
+                HasPendingEffects = _hasPendingEffectsCached,
 
                 ProposalWindowPhase = phase,
                 ProposalWaitingInput = phase == 2,

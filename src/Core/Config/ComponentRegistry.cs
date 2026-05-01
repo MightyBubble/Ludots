@@ -454,6 +454,7 @@ namespace Ludots.Core.Config
             if (data is not JsonObject obj)
             {
                 entity.Add(buffer);
+                entity.Add(default(AttributeLastSnapshot));
                 return;
             }
 
@@ -468,7 +469,28 @@ namespace Ludots.Core.Config
                 }
             }
 
+            if (obj.TryGetPropertyValue("current", out var currentNode) && currentNode is JsonObject currentObj)
+            {
+                foreach (var kvp in currentObj)
+                {
+                    if (kvp.Value == null) continue;
+                    float v = kvp.Value.GetValue<float>();
+                    int attrId = AttributeRegistry.Register(kvp.Key);
+                    buffer.SetCurrent(attrId, v);
+                }
+            }
+
+            var snapshot = default(AttributeLastSnapshot);
+            ulong definedMask = buffer.DefinedMask;
+            while (definedMask != 0UL)
+            {
+                int attributeId = System.Numerics.BitOperations.TrailingZeroCount(definedMask);
+                definedMask &= definedMask - 1UL;
+                snapshot.Values[attributeId] = buffer.GetCurrent(attributeId);
+            }
+
             entity.Add(buffer);
+            entity.Add(snapshot);
         }
 
         private static void SetManifestationObstacleIntent2D(Entity entity, JsonNode data)

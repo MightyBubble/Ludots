@@ -62,6 +62,36 @@ namespace Ludots.Core.Presentation.AdapterSync
             Sync(snapshot != null ? snapshot.GetSpan() : ReadOnlySpan<PrimitiveDrawItem>.Empty);
         }
 
+        public void SyncDeltas(ReadOnlySpan<PrimitiveDrawItem> changedItems, ReadOnlySpan<int> removedStableIds)
+        {
+            _operations.Clear();
+            _pendingRemovals.Clear();
+            LastCreateCount = 0;
+            LastUpdateCount = 0;
+            LastRemoveCount = 0;
+
+            for (int i = 0; i < removedStableIds.Length; i++)
+            {
+                int stableId = removedStableIds[i];
+                if (stableId > 0)
+                {
+                    RemoveBinding(stableId);
+                }
+            }
+
+            for (int i = 0; i < changedItems.Length; i++)
+            {
+                ref readonly PrimitiveDrawItem item = ref changedItems[i];
+                if (!StaticMeshLaneKey.Supports(item))
+                {
+                    continue;
+                }
+
+                ValidateStableId(item.StableId);
+                SyncDeltaItem(item.StableId, item);
+            }
+        }
+
         public void Sync(ReadOnlySpan<PrimitiveDrawItem> snapshot)
         {
             _operations.Clear();
@@ -135,6 +165,35 @@ namespace Ludots.Core.Presentation.AdapterSync
             }
 
             entry.SeenFrame = _syncFrame;
+            StaticMeshAdapterBindingState current = entry.Binding;
+            if (!current.Lane.Equals(lane))
+            {
+                RemoveBinding(stableId);
+                CreateBinding(stableId, lane, item);
+                return;
+            }
+
+            PrimitiveDrawItem currentItem = current.Item;
+            if (ItemEquals(in currentItem, in item))
+            {
+                return;
+            }
+
+            var updated = current.WithItem(item);
+            entry.Binding = updated;
+            _operations.Add(new StaticMeshAdapterSyncOp(StaticMeshAdapterSyncOpKind.Update, updated));
+            LastUpdateCount++;
+        }
+
+        private void SyncDeltaItem(int stableId, in PrimitiveDrawItem item)
+        {
+            StaticMeshLaneKey lane = StaticMeshLaneKey.FromItem(item);
+            if (!_bindingsByStableId.TryGetValue(stableId, out var entry))
+            {
+                CreateBinding(stableId, lane, item);
+                return;
+            }
+
             StaticMeshAdapterBindingState current = entry.Binding;
             if (!current.Lane.Equals(lane))
             {

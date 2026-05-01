@@ -1469,17 +1469,17 @@ namespace Ludots.Core.Presentation.Config
             return Vector3.Zero;
         }
 
-        private static Vector3 ParseVector3OrDefault(JsonNode? node, Vector3 fallback)
+        private static Vector3 ParseVector3OrDefault(JsonNode? node, Vector3 defaultValue)
         {
             if (node is JsonArray arr && arr.Count >= 3)
             {
                 return new Vector3(
-                    arr[0]?.GetValue<float>() ?? fallback.X,
-                    arr[1]?.GetValue<float>() ?? fallback.Y,
-                    arr[2]?.GetValue<float>() ?? fallback.Z);
+                    arr[0]?.GetValue<float>() ?? defaultValue.X,
+                    arr[1]?.GetValue<float>() ?? defaultValue.Y,
+                    arr[2]?.GetValue<float>() ?? defaultValue.Z);
             }
 
-            return fallback;
+            return defaultValue;
         }
 
         private static Quaternion ParseQuaternion(JsonNode? node)
@@ -1524,14 +1524,14 @@ namespace Ludots.Core.Presentation.Config
             return new Vector4(1f, 1f, 1f, 1f);
         }
 
-        private static T ParseEnum<T>(string? s, T fallback) where T : struct, Enum
+        private static T ParseEnum<T>(string? s, T defaultValue) where T : struct, Enum
         {
             if (string.IsNullOrWhiteSpace(s))
             {
-                return fallback;
+                return defaultValue;
             }
 
-            return Enum.TryParse<T>(s, ignoreCase: true, out var parsed) ? parsed : fallback;
+            return Enum.TryParse<T>(s, ignoreCase: true, out var parsed) ? parsed : defaultValue;
         }
     }
 }

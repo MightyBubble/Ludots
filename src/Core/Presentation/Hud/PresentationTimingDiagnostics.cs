@@ -54,6 +54,8 @@ namespace Ludots.Core.Presentation.Hud
         public float LastCameraCullingEntityProcessMs { get; private set; }
         public float CameraCullingPerformerSyncMs { get; private set; }
         public float LastCameraCullingPerformerSyncMs { get; private set; }
+        public float CameraCullingSpatialQueryMs { get; private set; }
+        public float LastCameraCullingSpatialQueryMs { get; private set; }
         public float CameraCullingStaticProcessMs { get; private set; }
         public float LastCameraCullingStaticProcessMs { get; private set; }
         public float CameraCullingStaticPendingRemoveMs { get; private set; }
@@ -114,6 +116,11 @@ namespace Ludots.Core.Presentation.Hud
         public float LastRuntimeSpawnPerformerIndexWriteMs { get; private set; }
         public float LastRuntimeSpawnPerformerOwnerPayloadMs { get; private set; }
         public float LastRuntimeSpawnPerformerPostCreateMs { get; private set; }
+        public float LastRuntimeSpawnPerformerChildSetupMs { get; private set; }
+        public float LastRuntimeSpawnPerformerChildWorldCreateMs { get; private set; }
+        public float LastRuntimeSpawnPerformerChildComponentFillMs { get; private set; }
+        public float LastRuntimeSpawnPerformerChildIndexWriteMs { get; private set; }
+        public float LastRuntimeSpawnPerformerChildStableIdMs { get; private set; }
         public int RuntimeSpawnBatchCountLastFrame { get; private set; }
         public int RuntimeSpawnPerformerCreatedLastFrame { get; private set; }
         public float PerformerEmitMs { get; private set; }
@@ -126,6 +133,9 @@ namespace Ludots.Core.Presentation.Hud
         public float PerformerEmitRetainedProcessMs { get; private set; }
         public float LastPerformerEmitRetainedProcessMs { get; private set; }
         public int PerformerEmitRetainedCountLastFrame { get; private set; }
+        public int PerformerEmitRetainedDirectHitsLastFrame { get; private set; }
+        public int PerformerEmitRetainedFallbacksLastFrame { get; private set; }
+        public int PerformerEmitRetainedDirectMissesLastFrame { get; private set; }
         public float PresentationRequestFlushMs { get; private set; }
         public float LastPresentationRequestFlushMs { get; private set; }
         public float TerrainRenderMs { get; private set; }
@@ -267,6 +277,12 @@ namespace Ludots.Core.Presentation.Hud
             CameraCullingPerformerSyncMs = Smooth(CameraCullingPerformerSyncMs, (float)performerSyncMs);
         }
 
+        public void ObserveCameraCullingSpatialQuery(double spatialQueryMs)
+        {
+            LastCameraCullingSpatialQueryMs = (float)spatialQueryMs;
+            CameraCullingSpatialQueryMs = Smooth(CameraCullingSpatialQueryMs, (float)spatialQueryMs);
+        }
+
         public void ObserveCameraCullingStageBreakdown(double staticProcessMs, double staticPendingRemoveMs, double dynamicProcessMs)
         {
             LastCameraCullingStaticProcessMs = (float)staticProcessMs;
@@ -406,7 +422,12 @@ namespace Ludots.Core.Presentation.Hud
             double performerComponentFillMs = 0d,
             double performerIndexWriteMs = 0d,
             double performerOwnerPayloadMs = 0d,
-            double performerPostCreateMs = 0d)
+            double performerPostCreateMs = 0d,
+            double performerChildSetupMs = 0d,
+            double performerChildWorldCreateMs = 0d,
+            double performerChildComponentFillMs = 0d,
+            double performerChildIndexWriteMs = 0d,
+            double performerChildStableIdMs = 0d)
         {
             RuntimeSpawnBatchCountLastFrame = batchCount;
             RuntimeSpawnPerformerCreatedLastFrame = performerCreated;
@@ -430,6 +451,11 @@ namespace Ludots.Core.Presentation.Hud
             LastRuntimeSpawnPerformerIndexWriteMs = (float)performerIndexWriteMs;
             LastRuntimeSpawnPerformerOwnerPayloadMs = (float)performerOwnerPayloadMs;
             LastRuntimeSpawnPerformerPostCreateMs = (float)performerPostCreateMs;
+            LastRuntimeSpawnPerformerChildSetupMs = (float)performerChildSetupMs;
+            LastRuntimeSpawnPerformerChildWorldCreateMs = (float)performerChildWorldCreateMs;
+            LastRuntimeSpawnPerformerChildComponentFillMs = (float)performerChildComponentFillMs;
+            LastRuntimeSpawnPerformerChildIndexWriteMs = (float)performerChildIndexWriteMs;
+            LastRuntimeSpawnPerformerChildStableIdMs = (float)performerChildStableIdMs;
         }
 
         public void ObservePerformerEmit(double sampleMs)
@@ -452,6 +478,13 @@ namespace Ludots.Core.Presentation.Hud
             LastPerformerEmitRetainedProcessMs = (float)processMs;
             PerformerEmitRetainedProcessMs = Smooth(PerformerEmitRetainedProcessMs, (float)processMs);
             PerformerEmitRetainedCountLastFrame = dirtyCount;
+        }
+
+        public void ObservePerformerEmitRetainedDirectPath(int directHits, int fallbacks, int directMisses)
+        {
+            PerformerEmitRetainedDirectHitsLastFrame = directHits;
+            PerformerEmitRetainedFallbacksLastFrame = fallbacks;
+            PerformerEmitRetainedDirectMissesLastFrame = directMisses;
         }
 
         public void ObservePresentationRequestFlush(double sampleMs)

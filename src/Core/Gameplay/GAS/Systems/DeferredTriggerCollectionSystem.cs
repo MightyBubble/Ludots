@@ -61,8 +61,6 @@ namespace Ludots.Core.Gameplay.GAS.Systems
                 {
                     ref var attrBuffer = ref World.Get<AttributeBuffer>(entity);
                     bool hasSnapshot = World.Has<AttributeLastSnapshot>(entity);
-                    bool hasPresentationChanged = World.Has<GameplayAttributeChangedBits>(entity);
-                    GameplayAttributeChangedBits presentationChangedLocal = default;
                     if (!hasSnapshot)
                     {
                         var snap = default(AttributeLastSnapshot);
@@ -81,21 +79,9 @@ namespace Ludots.Core.Gameplay.GAS.Systems
                                 OldValue = 0f,
                                 NewValue = newValue
                             });
-                            if (hasPresentationChanged)
-                            {
-                                World.Get<GameplayAttributeChangedBits>(entity).Mark(i);
-                            }
-                            else
-                            {
-                                presentationChangedLocal.Mark(i);
-                            }
                             dirtyFlags.ClearAttributeDirty(i);
                         }
                         CommandBuffer.Add(entity, snap);
-                        if (!hasPresentationChanged && presentationChangedLocal.IsAnyBitSet())
-                        {
-                            CommandBuffer.Add(entity, presentationChangedLocal);
-                        }
                     }
                     else
                     {
@@ -117,20 +103,8 @@ namespace Ludots.Core.Gameplay.GAS.Systems
                                     OldValue = oldValue,
                                     NewValue = newValue
                                 });
-                                if (hasPresentationChanged)
-                                {
-                                    World.Get<GameplayAttributeChangedBits>(entity).Mark(i);
-                                }
-                                else
-                                {
-                                    presentationChangedLocal.Mark(i);
-                                }
                             }
                             dirtyFlags.ClearAttributeDirty(i);
-                        }
-                        if (!hasPresentationChanged && presentationChangedLocal.IsAnyBitSet())
-                        {
-                            CommandBuffer.Add(entity, presentationChangedLocal);
                         }
                     }
                 }

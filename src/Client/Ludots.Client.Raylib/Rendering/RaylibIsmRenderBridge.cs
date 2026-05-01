@@ -2,6 +2,7 @@ using System;
 using System.Collections.Generic;
 using System.Diagnostics;
 using System.Numerics;
+using Ludots.Core.Diagnostics;
 using Ludots.Core.Presentation.AdapterSync;
 using Ludots.Core.Presentation.Components;
 using Ludots.Core.Presentation.Rendering;
@@ -60,6 +61,7 @@ namespace Ludots.Client.Raylib.Rendering
         private readonly List<Bucket> _activeBuckets = new();
         private readonly Dictionary<int, BucketSlot> _bucketSlotsByStableId = new();
         private readonly Dictionary<int, Vector4> _materialColors = new();
+        private readonly HashSet<int> _reportedMissingBenchmarkMaterials = new();
         private RaylibBenchmarkScene _benchmarkScene;
         private RaylibBenchmarkStats _lastStats;
         private int _benchmarkActiveInstanceCount;
@@ -97,6 +99,18 @@ namespace Ludots.Client.Raylib.Rendering
                 return;
             }
 
+            if (!requiresFullRebuild &&
+                snapshot.StaticMeshDeltaBaseRevision == _lastPersistentSnapshotRevision &&
+                snapshot.StaticMeshDeltaItemCount + snapshot.StaticMeshRemovedStableIdCount > 0)
+            {
+                _planner.SyncDeltas(snapshot.GetStaticMeshDeltaItems(), snapshot.GetStaticMeshRemovedStableIds());
+                _lastPersistentSnapshotRevision = snapshot.Revision;
+                _lastPersistentStaticMeshGeometryRevision = staticMeshGeometryRevision;
+                ApplySyncOperations(_planner.Operations);
+                LastPersistentSyncMs = (Stopwatch.GetTimestamp() - syncStart) * 1000d / Stopwatch.Frequency;
+                return;
+            }
+
             _planner.Sync(snapshot);
             _lastPersistentSnapshotRevision = snapshot.Revision;
             _lastPersistentStaticMeshGeometryRevision = staticMeshGeometryRevision;
@@ -116,6 +130,7 @@ namespace Ludots.Client.Raylib.Rendering
         {
             _benchmarkScene = scene;
             _materialColors.Clear();
+            _reportedMissingBenchmarkMaterials.Clear();
             foreach (RaylibBenchmarkMaterialColor color in scene.Palette.Colors.Span)
             {
                 _materialColors[color.MaterialId] = color.Color;
@@ -285,17 +300,21 @@ namespace Ludots.Client.Raylib.Rendering
 
             PrimitiveDrawItem current = slot.Bucket.Items[slot.ItemIndex];
             slot.Bucket.Items[slot.ItemIndex] = binding.Item;
-            if (!InstanceMatrixEquals(current, binding.Item))
+            if (!BucketItemEquals(current, binding.Item))
             {
                 slot.Bucket.MarkDirty();
             }
         }
 
-        private static bool InstanceMatrixEquals(in PrimitiveDrawItem a, in PrimitiveDrawItem b)
+        private static bool BucketItemEquals(in PrimitiveDrawItem a, in PrimitiveDrawItem b)
         {
             return a.Position.Equals(b.Position)
                 && a.Rotation.Equals(b.Rotation)
-                && a.Scale.Equals(b.Scale);
+                && a.Scale.Equals(b.Scale)
+                && a.Color.Equals(b.Color)
+                && a.Flags == b.Flags
+                && a.LOD == b.LOD
+                && a.Visibility == b.Visibility;
         }
 
         private void RemoveVisibleBinding(int stableId)
@@ -365,7 +384,7 @@ namespace Ludots.Client.Raylib.Rendering
                     Position = instance.Position,
                     Rotation = instance.Rotation,
                     Scale = instance.Scale,
-                    Color = ResolveMaterialColor(instance.MaterialId, instance.Color),
+                    Color = ResolveMaterialColor(instance.MaterialId, instance.Color, i + 1),
                     MaterialId = instance.MaterialId,
                     StableId = i + 1,
                     TemplateId = 0,
@@ -391,14 +410,21 @@ namespace Ludots.Client.Raylib.Rendering
             _lastBenchmarkBucketRebuildMs = (Stopwatch.GetTimestamp() - rebuildStart) * 1000.0 / Stopwatch.Frequency;
         }
 
-        private Vector4 ResolveMaterialColor(int materialId, Vector4 fallback)
+        private Vector4 ResolveMaterialColor(int materialId, Vector4 configuredColor, int stableId)
         {
             if (materialId > 0 && _materialColors.TryGetValue(materialId, out Vector4 color))
             {
                 return color;
             }
 
-            return fallback == Vector4.Zero ? _benchmarkScene.Palette.DefaultColor : fallback;
+            if (materialId > 0 && _reportedMissingBenchmarkMaterials.Add(materialId))
+            {
+                Log.Warn(
+                    in LogChannels.Presentation,
+                    $"Raylib benchmark instance stableId={stableId} references materialId={materialId}, but the benchmark palette has no matching material color. The instance keeps its configured color.");
+            }
+
+            return configuredColor;
         }
     }
 }

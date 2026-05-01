@@ -47,8 +47,6 @@ namespace Ludots.Core.Presentation.Hud
             hash = Mix(hash, fontSize);
             hash = Mix(hash, legacyStringId);
             hash = Mix(hash, legacyModeId);
-            hash = Mix(hash, BitConverter.SingleToInt32Bits(value0));
-            hash = Mix(hash, BitConverter.SingleToInt32Bits(value1));
             hash = Mix(hash, color);
             hash = Mix(hash, packet.TokenId);
             hash = Mix(hash, packet.ArgCount);
@@ -56,7 +54,33 @@ namespace Ludots.Core.Presentation.Hud
             hash = Mix(hash, packet.Arg1);
             hash = Mix(hash, packet.Arg2);
             hash = Mix(hash, packet.Arg3);
+            if (!packet.HasValue)
+            {
+                hash = MixLegacyTextValues(hash, legacyModeId, value0, value1);
+            }
+
             return Finalize(hash);
+        }
+
+        private static int MixLegacyTextValues(int hash, int legacyModeId, float value0, float value1)
+        {
+            WorldHudValueMode mode = (WorldHudValueMode)legacyModeId;
+            switch (mode)
+            {
+                case WorldHudValueMode.AttributeCurrentOverBase:
+                    hash = Mix(hash, (int)value0);
+                    hash = Mix(hash, (int)value1);
+                    return hash;
+
+                case WorldHudValueMode.AttributeCurrent:
+                    return Mix(hash, (int)value0);
+
+                case WorldHudValueMode.Constant:
+                    return Mix(hash, BitConverter.SingleToInt32Bits(value0));
+
+                default:
+                    return hash;
+            }
         }
 
         private static int Mix(int hash, int value)

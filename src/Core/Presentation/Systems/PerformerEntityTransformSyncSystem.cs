@@ -14,8 +14,7 @@ namespace Ludots.Core.Presentation.Systems
     public sealed class PerformerEntityTransformSyncSystem : BaseSystem<World, float>
     {
         private static readonly QueryDescription EntityAnchoredQuery = new QueryDescription()
-            .WithAll<PerformerState, PerformerWorldPosition, PerformerWorldRotation, PerformerWorldScale, PerformerTransformSource, PerformerEmitCache>()
-            .WithAny<PerfHasEmitWork, PerfRetainedPresentationRequest>()
+            .WithAll<PerformerState, PerformerWorldPosition, PerformerWorldRotation, PerformerWorldScale, PerformerTransformSource, PerformerEmitCache, PerfTransformSyncTick>()
             .WithNone<PerformerBootstrapPending, PerfStaticStableVisual>();
 
         private readonly PresentationTimingDiagnostics? _timingDiagnostics;
