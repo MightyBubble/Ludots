@@ -480,7 +480,7 @@ namespace Ludots.Core.Presentation.Systems
         private int ResolveAssetId(Entity entity, in AssetBindingConfig asset)
         {
             if (asset.AssetSwapParamKey < 0) return asset.AssetId;
-            int resolved = _runtime.ResolveInt(entity, asset.AssetSwapParamKey, asset.AssetId);
+            if (!_runtime.TryResolveInt(entity, asset.AssetSwapParamKey, out int resolved)) return asset.AssetId;
             AssetSwapEntry[] table = asset.AssetSwapTable ?? Array.Empty<AssetSwapEntry>();
             if (table.Length == 0) return resolved;
             for (int i = 0; i < table.Length; i++)

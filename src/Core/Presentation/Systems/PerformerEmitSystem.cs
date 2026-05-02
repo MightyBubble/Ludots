@@ -544,7 +544,11 @@ namespace Ludots.Core.Presentation.Systems
                 return asset.AssetId;
             }
 
-            int resolved = _runtime.ResolveInt(entity, asset.AssetSwapParamKey, asset.AssetId);
+            if (!_runtime.TryResolveInt(entity, asset.AssetSwapParamKey, out int resolved))
+            {
+                return asset.AssetId;
+            }
+
             AssetSwapEntry[] table = asset.AssetSwapTable ?? Array.Empty<AssetSwapEntry>();
             if (table.Length == 0)
             {

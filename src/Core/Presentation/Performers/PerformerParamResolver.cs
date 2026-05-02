@@ -28,23 +28,29 @@ namespace Ludots.Core.Presentation.Performers
 
         public static int ResolveInt(World world, Entity performer, int paramKey, int defaultValue = 0)
         {
+            return TryResolveInt(world, performer, paramKey, out int value) ? value : defaultValue;
+        }
+
+        public static bool TryResolveInt(World world, Entity performer, int paramKey, out int value)
+        {
             Entity current = performer;
             while (world.IsAlive(current))
             {
                 if (world.Has<PerformerIntParams>(current))
                 {
                     ref var overrides = ref world.Get<PerformerIntParams>(current);
-                    if (overrides.TryGet(paramKey, out int val)) return val;
+                    if (overrides.TryGet(paramKey, out value)) return true;
                 }
                 if (world.Has<PerformerIntDefaults>(current))
                 {
                     ref var defaults = ref world.Get<PerformerIntDefaults>(current);
-                    if (defaults.TryGet(paramKey, out int val)) return val;
+                    if (defaults.TryGet(paramKey, out value)) return true;
                 }
                 if (!world.Has<PerformerParent>(current)) break;
                 current = world.Get<PerformerParent>(current).Parent;
             }
-            return defaultValue;
+            value = default;
+            return false;
         }
 
         public static Vector4 ResolveVector(World world, Entity performer, int paramKey, Vector4 defaultValue)

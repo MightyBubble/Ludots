@@ -988,6 +988,7 @@ namespace Ludots.Client.Raylib.Rendering
             var tint = ToRaylibColor(color);
             var model = cached.Model;
             ToAxisAngleDegrees(rotation, out Vector3 axis, out float angleDegrees);
+            RestoreOpaqueModelState();
             Rl.DrawModelEx(model, position, axis, angleDegrees, scale, tint);
         }
 
@@ -1706,6 +1707,7 @@ namespace Ludots.Client.Raylib.Rendering
 
             int drawCalls = 0;
             long drawStart = Stopwatch.GetTimestamp();
+            RestoreOpaqueModelState();
             fixed (RaylibMatrix* transforms = batch.Transforms)
             {
                 for (int meshIndex = 0; meshIndex < model.meshCount; meshIndex++)
@@ -1737,6 +1739,7 @@ namespace Ludots.Client.Raylib.Rendering
             }
 
             int drawCalls = 0;
+            RestoreOpaqueModelState();
             fixed (RaylibMatrix* transforms = batch.Transforms)
             {
                 for (int meshIndex = 0; meshIndex < model.meshCount; meshIndex++)
@@ -1757,6 +1760,13 @@ namespace Ludots.Client.Raylib.Rendering
             }
 
             return drawCalls;
+        }
+
+        private static void RestoreOpaqueModelState()
+        {
+            Rl.rlEnableDepthTest();
+            Rl.rlEnableDepthMask();
+            Rl.rlEnableBackfaceCulling();
         }
 
         private bool TryResolveInstancedModelMaterial(Model model, int meshIndex, out Material material)

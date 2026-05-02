@@ -546,6 +546,11 @@ namespace Ludots.Core.Presentation.Performers
             return PerformerParamResolver.ResolveInt(_world, performer, paramKey, defaultValue);
         }
 
+        public bool TryResolveInt(Entity performer, int paramKey, out int value)
+        {
+            return PerformerParamResolver.TryResolveInt(_world, performer, paramKey, out value);
+        }
+
         public Vector4 ResolveVector(Entity performer, int paramKey, Vector4 defaultValue)
         {
             return PerformerParamResolver.ResolveVector(_world, performer, paramKey, defaultValue);

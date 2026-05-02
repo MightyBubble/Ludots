@@ -12,6 +12,7 @@ using Ludots.Core.Gameplay.Spawning;
 using Ludots.Core.Map;
 using Ludots.Core.Mathematics.FixedPoint;
 using Ludots.Core.Presentation.Components;
+using Ludots.Core.Presentation.Assets;
 using Ludots.Core.Presentation.Events;
 using Ludots.Core.Presentation.Hud;
 using Ludots.Core.Presentation.Performers;
@@ -58,6 +59,43 @@ namespace Ludots.Tests.Presentation
             Assert.That(assetBinding.ContainsKey("localScale"), Is.False, "AssetBinding must not own local transform scale.");
             Assert.That(assetBinding.ContainsKey("grounding"), Is.False, "Grounding belongs to transform/grounding behavior, not AssetBinding.");
             Assert.That(assetBinding.ContainsKey("groundingOffset"), Is.False, "Grounding belongs to transform/grounding behavior, not AssetBinding.");
+        }
+
+        [Test]
+        public void BenchmarkMeshAssetBinding_WithoutSwapParam_UsesBaseAsset()
+        {
+            using GameEngine engine = PerformerBlacksmithShowcaseTestHarness.CreateEngine();
+            PerformerBlacksmithShowcaseTestHarness.LoadMap(engine, PerformerBlacksmithShowcaseIds.ShowcaseMapId, frames: 8);
+
+            RuntimeEntitySpawnQueue queue = engine.GetService(CoreServiceKeys.RuntimeEntitySpawnQueue)
+                ?? throw new InvalidOperationException("RuntimeEntitySpawnQueue missing.");
+            PrimitiveDrawBuffer snapshot = engine.GetService(CoreServiceKeys.PresentationVisualSnapshotBuffer)
+                ?? throw new InvalidOperationException("PresentationVisualSnapshotBuffer missing.");
+            PerformerDefinitionRegistry definitions = engine.GetService(CoreServiceKeys.PerformerDefinitionRegistry)
+                ?? throw new InvalidOperationException("PerformerDefinitionRegistry missing.");
+            MeshAssetRegistry meshes = engine.GetService(CoreServiceKeys.PresentationMeshAssetRegistry)
+                ?? throw new InvalidOperationException("PresentationMeshAssetRegistry missing.");
+
+            int benchmarkPerformerDefId = definitions.GetId(BenchmarkPerformerId);
+            int northIntactMeshId = meshes.GetId("blacksmith.building.north.intact");
+            int ruinedMeshId = meshes.GetId("blacksmith.building.ruined");
+
+            EnqueueBenchmarkTemplates(queue, engine.CurrentMapSession?.MapId ?? default, 1, out _);
+            PerformerBlacksmithShowcaseTestHarness.Tick(engine, 4);
+
+            PrimitiveDrawItem? emitted = null;
+            foreach (ref readonly PrimitiveDrawItem item in snapshot.GetSpan())
+            {
+                if (item.TemplateId == benchmarkPerformerDefId)
+                {
+                    emitted = item;
+                    break;
+                }
+            }
+
+            Assert.That(emitted.HasValue, Is.True, "Benchmark performer should emit one production primitive.");
+            Assert.That(emitted!.Value.MeshAssetId, Is.EqualTo(northIntactMeshId), "Missing assetSwap param must keep the configured base asset.");
+            Assert.That(emitted.Value.MeshAssetId, Is.Not.EqualTo(ruinedMeshId), "Missing assetSwap param must not be interpreted as a swap-table state value.");
         }
 
         [Test]

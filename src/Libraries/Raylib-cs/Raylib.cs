@@ -608,6 +608,18 @@ namespace Raylib_cs
         [DllImport(NativeLib, CallingConvention = CallingConvention.Cdecl)]
         public static extern void rlEnableBackfaceCulling();
 
+        [DllImport(NativeLib, CallingConvention = CallingConvention.Cdecl)]
+        public static extern void rlEnableDepthTest();
+
+        [DllImport(NativeLib, CallingConvention = CallingConvention.Cdecl)]
+        public static extern void rlDisableDepthTest();
+
+        [DllImport(NativeLib, CallingConvention = CallingConvention.Cdecl)]
+        public static extern void rlEnableDepthMask();
+
+        [DllImport(NativeLib, CallingConvention = CallingConvention.Cdecl)]
+        public static extern void rlDisableDepthMask();
+
         // --- Model APIs ---
 
         [DllImport(NativeLib, CallingConvention = CallingConvention.Cdecl)]
