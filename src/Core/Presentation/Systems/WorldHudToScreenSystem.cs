@@ -27,6 +27,7 @@ namespace Ludots.Core.Presentation.Systems
         private int _lastWorldHudRevision = -1;
         private int _lastWorldHudProjectionRevision = -1;
         private int _lastProjectionRevision = -1;
+        private int _lastCullVisibilityRevision = -1;
         private int _lastSelectedCount;
 
         private const int Margin = 200;
@@ -65,9 +66,11 @@ namespace Ludots.Core.Presentation.Systems
             int projectionRevision = _projector is IProjectionRevisionProvider revisionProvider
                 ? revisionProvider.ProjectionRevision
                 : -1;
+            int cullVisibilityRevision = _cullingDebug?.VisibilityRevision ?? -1;
             bool projectionUnchanged = projectionRevision >= 0 &&
                                        worldHudProjectionRevision == _lastWorldHudProjectionRevision &&
-                                       projectionRevision == _lastProjectionRevision;
+                                       projectionRevision == _lastProjectionRevision &&
+                                       cullVisibilityRevision == _lastCullVisibilityRevision;
             if (projectionUnchanged && worldHudRevision != _lastWorldHudRevision)
             {
                 ReadOnlySpan<WorldHudItem> dirtyContent = _worldHud.GetDirtyContentSpan();
@@ -83,7 +86,8 @@ namespace Ludots.Core.Presentation.Systems
 
             if (projectionRevision >= 0 &&
                 worldHudRevision == _lastWorldHudRevision &&
-                projectionRevision == _lastProjectionRevision)
+                projectionRevision == _lastProjectionRevision &&
+                cullVisibilityRevision == _lastCullVisibilityRevision)
             {
                 _timingDiagnostics?.ObserveWorldHudProjection(
                     (Stopwatch.GetTimestamp() - start) * 1000.0 / Stopwatch.Frequency);
@@ -118,6 +122,7 @@ namespace Ludots.Core.Presentation.Systems
             bool canReplaySelection = projectionRevision >= 0 &&
                                       worldHudProjectionRevision == _lastWorldHudProjectionRevision &&
                                       projectionRevision == _lastProjectionRevision &&
+                                      cullVisibilityRevision == _lastCullVisibilityRevision &&
                                       _lastSelectedCount > 0;
             if (canReplaySelection)
             {
@@ -129,6 +134,7 @@ namespace Ludots.Core.Presentation.Systems
                     0);
                 _screenHud.EndProjectedBuild(removeUnseenProjectedItems: false);
                 _lastWorldHudRevision = worldHudRevision;
+                _lastCullVisibilityRevision = cullVisibilityRevision;
                 return;
             }
 
@@ -136,35 +142,53 @@ namespace Ludots.Core.Presentation.Systems
             int projectedBarIndex = 0;
             int projectedTextIndex = 0;
 
-            ReadOnlySpan<WorldHudOwnerGroup> ownerGroups = _worldHud.GetOwnerGroupSpan();
-            ReadOnlySpan<int> groupedIndices = _worldHud.GetGroupedItemIndexSpan();
-            for (int groupIndex = 0; groupIndex < ownerGroups.Length; groupIndex++)
+            for (int itemIndex = 0; itemIndex < span.Length;)
             {
-                ref readonly WorldHudOwnerGroup group = ref ownerGroups[groupIndex];
-                float itemXCm = group.WorldPosition.X * 100f;
-                float itemZCm = group.WorldPosition.Z * 100f;
+                ref readonly WorldHudItem first = ref span[itemIndex];
+                if (IsAssignedOwner(first.Owner) && !IsOwnerVisible(first.Owner))
+                {
+                    itemIndex = SkipAdjacentOwnerItems(span, itemIndex, in first);
+                    continue;
+                }
+
+                float itemXCm = first.WorldPosition.X * 100f;
+                float itemZCm = first.WorldPosition.Z * 100f;
                 if (useCoarseCull &&
                     (itemXCm < minX ||
                      itemXCm > maxX ||
                      itemZCm < minZ ||
                      itemZCm > maxZ))
                 {
+                    itemIndex = SkipAdjacentOwnerItems(span, itemIndex, in first);
                     continue;
                 }
 
-                System.Numerics.Vector2 screen = hasProjectionSnapshot
-                    ? ProjectWorldToScreenFast(group.WorldPosition, in viewProjection, projectionWidth, projectionHeight)
-                    : _projector.WorldToScreen(group.WorldPosition);
+                System.Numerics.Vector2 screen;
+                if (!TryGetOwnerFrameProjection(first.Owner, first.WorldPosition, out screen))
+                {
+                    screen = hasProjectionSnapshot
+                        ? ProjectWorldToScreenFast(first.WorldPosition, in viewProjection, projectionWidth, projectionHeight)
+                        : _projector.WorldToScreen(first.WorldPosition);
+                    if (!float.IsNaN(screen.X) &&
+                        !float.IsNaN(screen.Y) &&
+                        !float.IsInfinity(screen.X) &&
+                        !float.IsInfinity(screen.Y))
+                    {
+                        CacheOwnerFrameProjection(first.Owner, first.WorldPosition, screen);
+                    }
+                }
 
                 if (float.IsNaN(screen.X) || float.IsNaN(screen.Y) ||
                     float.IsInfinity(screen.X) || float.IsInfinity(screen.Y))
                 {
+                    itemIndex = SkipAdjacentOwnerItems(span, itemIndex, in first);
                     continue;
                 }
 
-                ProjectOwnerGroup(
-                    groupedIndices,
-                    in group,
+                itemIndex = ProjectAdjacentOwnerItems(
+                    span,
+                    itemIndex,
+                    in first,
                     screen,
                     screenWidth,
                     screenHeight,
@@ -182,6 +206,7 @@ namespace Ludots.Core.Presentation.Systems
             _lastWorldHudRevision = worldHudRevision;
             _lastWorldHudProjectionRevision = worldHudProjectionRevision;
             _lastProjectionRevision = projectionRevision;
+            _lastCullVisibilityRevision = cullVisibilityRevision;
             _worldHud.ClearContentDeltas();
         }
 
@@ -190,6 +215,7 @@ namespace Ludots.Core.Presentation.Systems
             ReadOnlySpan<int> removedStableIds,
             ref long start)
         {
+            int cullVisibilityRevision = _cullingDebug?.VisibilityRevision ?? -1;
             int projectedItems = 0;
             for (int i = 0; i < removedStableIds.Length; i++)
             {
@@ -207,6 +233,7 @@ namespace Ludots.Core.Presentation.Systems
 
             _lastWorldHudRevision = _worldHud.ContentRevision;
             _lastWorldHudProjectionRevision = _worldHud.ProjectionRevision;
+            _lastCullVisibilityRevision = cullVisibilityRevision;
             _worldHud.ClearContentDeltas();
             _timingDiagnostics?.ObserveWorldHudProjection(
                 (Stopwatch.GetTimestamp() - start) * 1000.0 / Stopwatch.Frequency,
@@ -291,127 +318,14 @@ namespace Ludots.Core.Presentation.Systems
             _selectedHudProjections[_lastSelectedCount++] = new SelectedHudProjection(stableId, screen);
         }
 
-        private void ProjectOwnerGroup(
-            ReadOnlySpan<int> groupedIndices,
-            in WorldHudOwnerGroup group,
+        private void ProjectSingleItem(
+            in WorldHudItem item,
             System.Numerics.Vector2 screen,
             float screenWidth,
             float screenHeight,
             ref int projectedItems,
             ref int projectedBarIndex,
             ref int projectedTextIndex)
-        {
-            int end = group.Start + group.Count;
-            for (int cursor = group.Start; cursor < end; cursor++)
-            {
-                ref readonly WorldHudItem item = ref _worldHud.GetItemRef(groupedIndices[cursor]);
-                float x = MathF.Round(screen.X - item.Width * 0.5f);
-                float y = MathF.Round(screen.Y);
-
-                int ix = (int)x;
-                int iy = (int)y;
-                int iw = (int)item.Width;
-                int ih = (int)item.Height;
-
-                if (item.Kind == WorldHudItemKind.Bar)
-                {
-                    if (iw > 0 &&
-                        ih > 0 &&
-                        ix + iw >= -Margin &&
-                        iy + ih >= -Margin &&
-                        ix <= screenWidth + Margin &&
-                        iy <= screenHeight + Margin)
-                    {
-                        if (_retainedProjectedBuild &&
-                            _screenHud.TryUpsertProjectedBarPosition(
-                                projectedBarIndex,
-                                item.StableId,
-                                item.DirtySerial,
-                                x,
-                                y))
-                        {
-                            projectedBarIndex++;
-                            projectedItems++;
-                            continue;
-                        }
-
-                        ScreenHudBarItem bar = new()
-                        {
-                            StableId = item.StableId,
-                            DirtySerial = item.DirtySerial,
-                            ScreenX = x,
-                            ScreenY = y,
-                            Color0 = item.Color0,
-                            Color1 = item.Color1,
-                            Width = item.Width,
-                            Height = item.Height,
-                            Value0 = item.Value0,
-                        };
-                        bool accepted = _retainedProjectedBuild
-                            ? _screenHud.TryUpsertProjectedBar(in bar, projectedBarIndex)
-                            : _screenHud.TryAddProjectedBar(in bar);
-                        projectedBarIndex++;
-                        if (accepted)
-                        {
-                            projectedItems++;
-                        }
-                    }
-                }
-                else if (item.Kind == WorldHudItemKind.Text)
-                {
-                    int fontSize = item.FontSize <= 0 ? 16 : item.FontSize;
-                    if (ix + fontSize >= -Margin &&
-                        iy + fontSize >= -Margin &&
-                        ix <= screenWidth + Margin &&
-                        iy <= screenHeight + Margin)
-                    {
-                        if (_retainedProjectedBuild &&
-                            _screenHud.TryUpsertProjectedTextPosition(
-                                projectedTextIndex,
-                                item.StableId,
-                                item.DirtySerial,
-                                x,
-                                y))
-                        {
-                            projectedTextIndex++;
-                            projectedItems++;
-                            continue;
-                        }
-
-                        ScreenHudTextItem text = new()
-                        {
-                            StableId = item.StableId,
-                            DirtySerial = item.DirtySerial,
-                            ScreenX = x,
-                            ScreenY = y,
-                            Color0 = item.Color0,
-                            Value0 = item.Value0,
-                            Value1 = item.Value1,
-                            Id0 = item.Id0,
-                            Id1 = item.Id1,
-                            FontSize = item.FontSize,
-                            Text = item.Text,
-                        };
-                    bool accepted = _retainedProjectedBuild
-                        ? _screenHud.TryUpsertProjectedText(in text, projectedTextIndex)
-                        : _screenHud.TryAddProjectedText(in text);
-                    projectedTextIndex++;
-                    if (accepted)
-                    {
-                        projectedItems++;
-                        }
-                    }
-                }
-
-            }
-        }
-
-        private void ProjectSingleItem(
-            in WorldHudItem item,
-            System.Numerics.Vector2 screen,
-            float screenWidth,
-            float screenHeight,
-            ref int projectedItems)
         {
             float x = MathF.Round(screen.X - item.Width * 0.5f);
             float y = MathF.Round(screen.Y);
@@ -433,6 +347,19 @@ namespace Ludots.Core.Presentation.Systems
                     return;
                 }
 
+                if (_retainedProjectedBuild &&
+                    _screenHud.TryUpsertProjectedBarPosition(
+                        projectedBarIndex,
+                        item.StableId,
+                        item.DirtySerial,
+                        x,
+                        y))
+                {
+                    projectedBarIndex++;
+                    projectedItems++;
+                    return;
+                }
+
                 ScreenHudBarItem bar = new()
                 {
                     StableId = item.StableId,
@@ -445,7 +372,11 @@ namespace Ludots.Core.Presentation.Systems
                     Height = item.Height,
                     Value0 = item.Value0,
                 };
-                if (_screenHud.TryUpsertProjectedBar(in bar))
+                bool accepted = _retainedProjectedBuild
+                    ? _screenHud.TryUpsertProjectedBar(in bar, projectedBarIndex)
+                    : _screenHud.TryAddProjectedBar(in bar);
+                projectedBarIndex++;
+                if (accepted)
                 {
                     projectedItems++;
                 }
@@ -467,6 +398,19 @@ namespace Ludots.Core.Presentation.Systems
                 return;
             }
 
+            if (_retainedProjectedBuild &&
+                _screenHud.TryUpsertProjectedTextPosition(
+                    projectedTextIndex,
+                    item.StableId,
+                    item.DirtySerial,
+                    x,
+                    y))
+            {
+                projectedTextIndex++;
+                projectedItems++;
+                return;
+            }
+
             ScreenHudTextItem text = new()
             {
                 StableId = item.StableId,
@@ -481,7 +425,11 @@ namespace Ludots.Core.Presentation.Systems
                 FontSize = item.FontSize,
                 Text = item.Text,
             };
-            if (_screenHud.TryUpsertProjectedText(in text))
+            bool textAccepted = _retainedProjectedBuild
+                ? _screenHud.TryUpsertProjectedText(in text, projectedTextIndex)
+                : _screenHud.TryAddProjectedText(in text);
+            projectedTextIndex++;
+            if (textAccepted)
             {
                 projectedItems++;
             }
@@ -494,18 +442,43 @@ namespace Ludots.Core.Presentation.Systems
             System.Numerics.Vector2 screen,
             float screenWidth,
             float screenHeight,
-            ref int projectedItems)
+            ref int projectedItems,
+            ref int projectedBarIndex,
+            ref int projectedTextIndex)
         {
             int index = startIndex;
             do
             {
                 ref readonly WorldHudItem item = ref span[index];
-                ProjectSingleItem(in item, screen, screenWidth, screenHeight, ref projectedItems);
+                ProjectSingleItem(
+                    in item,
+                    screen,
+                    screenWidth,
+                    screenHeight,
+                    ref projectedItems,
+                    ref projectedBarIndex,
+                    ref projectedTextIndex);
                 index++;
             }
             while (index < span.Length &&
                    span[index].Owner == first.Owner &&
                    span[index].WorldPosition == first.WorldPosition);
+
+            return index;
+        }
+
+        private static int SkipAdjacentOwnerItems(
+            ReadOnlySpan<WorldHudItem> span,
+            int startIndex,
+            in WorldHudItem first)
+        {
+            int index = startIndex + 1;
+            while (index < span.Length &&
+                   span[index].Owner == first.Owner &&
+                   span[index].WorldPosition == first.WorldPosition)
+            {
+                index++;
+            }
 
             return index;
         }

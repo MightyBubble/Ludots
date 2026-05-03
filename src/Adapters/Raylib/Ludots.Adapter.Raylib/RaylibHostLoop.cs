@@ -448,9 +448,7 @@ namespace Ludots.Adapter.Raylib
                                 $"overlay-lanes backend=skia underBar={overlaySkiaRenderer.LastUnderUiBarMs:F2} underText={overlaySkiaRenderer.LastUnderUiTextMs:F2} barBuild={overlaySkiaRenderer.LastBarBatchBuildMs:F2} barDraw={overlaySkiaRenderer.LastBarBatchDrawMs:F2} barBuckets={overlaySkiaRenderer.LastBarBatchBucketCount} barCache={overlaySkiaRenderer.LastBarSpriteCacheHits}/{overlaySkiaRenderer.LastBarSpriteCacheMisses}/clear{overlaySkiaRenderer.LastBarSpriteCacheClears}/size{overlaySkiaRenderer.BarSpriteCacheCount} textBuild={overlaySkiaRenderer.LastTextBatchBuildMs:F2} textDraw={overlaySkiaRenderer.LastTextBatchDrawMs:F2} textBuckets={overlaySkiaRenderer.LastTextSpriteBatchBucketCount} textSpriteCache={overlaySkiaRenderer.LastTextSpriteCacheHits}/{overlaySkiaRenderer.LastTextSpriteCacheMisses}/clear{overlaySkiaRenderer.LastTextSpriteCacheClears}/size{overlaySkiaRenderer.TextSpriteCacheCount} textLayout={overlaySkiaRenderer.LastTextLayoutCacheHits}/{overlaySkiaRenderer.LastTextLayoutCacheMisses}/clear{overlaySkiaRenderer.LastTextLayoutCacheClears}/size{overlaySkiaRenderer.CachedTextLayoutCount}");
                         }
 
-                        bool drawLightweightDiagnosticHud =
-                            lightweightDiagnosticHudEnabled &&
-                            (hostDiagnosticUiSuppressed || !string.IsNullOrWhiteSpace(diagnosticPath));
+                        bool drawLightweightDiagnosticHud = lightweightDiagnosticHudEnabled;
                         if (drawLightweightDiagnosticHud)
                         {
                             long nativeDiagnosticStart = Stopwatch.GetTimestamp();
@@ -573,6 +571,7 @@ namespace Ludots.Adapter.Raylib
 
             ScreenHudBatchBuffer? screenHud = engine.GetService(CoreServiceKeys.PresentationScreenHudBuffer);
             WorldHudBatchBuffer? worldHud = engine.GetService(CoreServiceKeys.PresentationWorldHudBuffer);
+            Ludots.Core.Gameplay.GAS.EffectRequestQueue? effectRequests = engine.GetService(CoreServiceKeys.EffectRequestQueue);
             float frameMs = timing.LastWallFrameMs > 0.001f
                 ? timing.LastWallFrameMs
                 : (timing.WallFrameMs > 0.001f ? timing.WallFrameMs : timing.LastFrameMs);
@@ -581,13 +580,14 @@ namespace Ludots.Adapter.Raylib
             string line2 = $"ISM {FormatFixed(timing.PrimitiveInstancesLastFrame, 6)}  BATCH {FormatFixed(timing.PrimitiveBatchesLastFrame, 3)}  3D {FormatFixed(timing.LastMode3DMs, 5, 1)}MS  DRAW {FormatFixed(timing.LastPrimitiveMeshDrawMs, 5, 1)}MS";
             string line3 = $"HUD {FormatFixed(timing.WorldHudProjectedLastFrame, 6)}/{FormatFixed(worldHud?.Count ?? 0, 6)}  BAR {FormatFixed(screenHud?.BarCount ?? 0, 6)}  TEXT {FormatFixed(screenHud?.TextCount ?? 0, 6)}";
             string line4 = $"SKIA {FormatFixed(timing.LastScreenOverlayPaintMs, 5, 1)}MS  EMIT {FormatFixed(timing.LastPerformerEmitMs, 5, 1)}MS  BEHAV {FormatFixed(timing.LastPerformerBehaviorMs, 5, 1)}MS";
+            string line5 = $"FXQ {FormatFixed(effectRequests?.Count ?? 0, 6)}  OVF {FormatFixed(effectRequests?.OverflowCount ?? 0, 6)}  DROP {FormatFixed(effectRequests?.DroppedCount ?? 0, 6)}";
 
             const int x = 10;
             const int y = 10;
             const int fontSize = 20;
             const int lineHeight = 25;
             const int panelWidth = 720;
-            const int panelHeight = 112;
+            const int panelHeight = 137;
             var background = new Color(0, 0, 0, 238);
             var border = new Color(80, 255, 150, 255);
             Rl.DrawRectangle(x - 8, y - 8, panelWidth, panelHeight, background);
@@ -596,6 +596,7 @@ namespace Ludots.Adapter.Raylib
             DrawDiagnosticText(line2, x, y + lineHeight, fontSize, new Color(220, 240, 255, 255));
             DrawDiagnosticText(line3, x, y + lineHeight * 2, fontSize, new Color(255, 245, 185, 255));
             DrawDiagnosticText(line4, x, y + lineHeight * 3, fontSize, new Color(245, 210, 255, 255));
+            DrawDiagnosticText(line5, x, y + lineHeight * 4, fontSize, new Color(255, 215, 180, 255));
         }
 
         private static string FormatFixed(float value, int width, int decimals)

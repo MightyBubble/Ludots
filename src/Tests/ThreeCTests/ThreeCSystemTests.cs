@@ -855,6 +855,91 @@ namespace Ludots.Tests.ThreeC
         // 鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲
 
         [Test]
+        public void Culling_StaticCameraYawChange_RecomputesStaticVisibility()
+        {
+            using var world = World.Create();
+            world.Create(
+                new PresentationFrameState { InterpolationAlpha = 1f, Enabled = true },
+                new PresentationFrameStateTag());
+
+            var manager = new CameraManager();
+            manager.State.TargetCm = Vector2.Zero;
+            manager.PreviousState.TargetCm = Vector2.Zero;
+            manager.State.Yaw = 0f;
+            manager.PreviousState.Yaw = 0f;
+            manager.State.DistanceCm = 2000f;
+            manager.PreviousState.DistanceCm = 2000f;
+            manager.State.Pitch = 45f;
+            manager.PreviousState.Pitch = 45f;
+            manager.State.FovYDeg = 60f;
+            manager.PreviousState.FovYDeg = 60f;
+
+            var spatial = new StubSpatialQueryService();
+            var view = new StubViewController();
+            Entity entity = world.Create(
+                WorldPositionCm.FromCm(0, 2600),
+                new CullState { IsVisible = false, LOD = LODLevel.Culled },
+                new PresentationStaticTransform(),
+                new VisualTransform
+                {
+                    Position = new Vector3(0f, 0f, 26f),
+                    Rotation = Quaternion.Identity,
+                    Scale = Vector3.One,
+                },
+                PresentationLocalBounds.Create(Vector3.Zero, new Vector3(1f, 1f, 1f)));
+
+            using var system = new CameraCullingSystem(world, manager, spatial, view, timingDiagnostics: null);
+            system.Update(0.016f);
+            That(world.Get<CullState>(entity).IsVisible, Is.False);
+
+            manager.State.Yaw = 90f;
+            manager.PreviousState.Yaw = 90f;
+            system.Update(0.016f);
+
+            ref CullState cull = ref world.Get<CullState>(entity);
+            That(cull.IsVisible, Is.True, "Static culling must treat yaw changes as camera changes.");
+        }
+
+        [Test]
+        public void Culling_UsesRotatedVisualBounds_ForViewportIntersection()
+        {
+            using var world = World.Create();
+            world.Create(
+                new PresentationFrameState { InterpolationAlpha = 1f, Enabled = true },
+                new PresentationFrameStateTag());
+
+            var manager = new CameraManager();
+            manager.State.TargetCm = Vector2.Zero;
+            manager.PreviousState.TargetCm = Vector2.Zero;
+            manager.State.DistanceCm = 2000f;
+            manager.PreviousState.DistanceCm = 2000f;
+            manager.State.Pitch = 45f;
+            manager.PreviousState.Pitch = 45f;
+            manager.State.FovYDeg = 60f;
+            manager.PreviousState.FovYDeg = 60f;
+
+            var spatial = new StubSpatialQueryService();
+            var view = new StubViewController();
+            Entity entity = world.Create(
+                WorldPositionCm.FromCm(5000, 0),
+                new CullState { IsVisible = false, LOD = LODLevel.Culled },
+                new PresentationStaticTransform(),
+                new VisualTransform
+                {
+                    Position = Vector3.Zero,
+                    Rotation = Quaternion.CreateFromAxisAngle(Vector3.UnitY, MathF.PI * 0.5f),
+                    Scale = Vector3.One,
+                },
+                PresentationLocalBounds.Create(Vector3.Zero, new Vector3(1f, 1f, 30f)));
+
+            using var system = new CameraCullingSystem(world, manager, spatial, view, timingDiagnostics: null);
+            system.Update(0.016f);
+
+            ref CullState cull = ref world.Get<CullState>(entity);
+            That(cull.IsVisible, Is.True, "Culling must use VisualTransform rotation and local bounds, not only logic position.");
+        }
+
+        [Test]
         public void Physics2DSync_ExactFixedPointCopy()
         {
             using var world = World.Create();

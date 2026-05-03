@@ -7,10 +7,12 @@ using Ludots.Core.Engine;
 using Ludots.Core.Modding;
 using Ludots.Core.Presentation.Camera;
 using Ludots.Core.Presentation.Config;
+using Ludots.Core.Presentation.Components;
 using Ludots.Core.Presentation.Hud;
 using Ludots.Core.Presentation.Performers;
 using Ludots.Core.Presentation.Systems;
 using Ludots.Core.Scripting;
+using Ludots.Core.Systems;
 using Ludots.Platform.Abstractions;
 using NUnit.Framework;
 
@@ -504,6 +506,122 @@ namespace Ludots.Tests.Presentation
         }
 
         [Test]
+        public void WorldHudToScreenSystem_RebuildsWhenOwnerCullVisibilityChanges()
+        {
+            var world = World.Create();
+            try
+            {
+                var worldHud = new WorldHudBatchBuffer(4);
+                var screenHud = new ScreenHudBatchBuffer(4);
+                var cullingDebug = new CameraCullingDebugState();
+                Entity owner = world.Create(new CullState { IsVisible = true, LOD = LODLevel.High });
+                worldHud.TryAdd(new WorldHudItem
+                {
+                    StableId = 991,
+                    DirtySerial = 1,
+                    Owner = owner,
+                    Kind = WorldHudItemKind.Bar,
+                    WorldPosition = new Vector3(10f, 2f, 0f),
+                    Width = 80f,
+                    Height = 8f,
+                    Value0 = 0.75f,
+                });
+
+                var system = new WorldHudToScreenSystem(
+                    world,
+                    worldHud,
+                    strings: null,
+                    projector: new FixedProjector(new Vector2(320f, 240f)),
+                    view: new FixedViewController(new Vector2(1920f, 1080f)),
+                    screenHud: screenHud,
+                    cullingDebug: cullingDebug);
+
+                system.Update(0f);
+                Assert.That(screenHud.BarCount, Is.EqualTo(1));
+
+                ref CullState ownerCull = ref world.Get<CullState>(owner);
+                ownerCull.IsVisible = false;
+                ownerCull.LOD = LODLevel.Culled;
+                cullingDebug.VisibilityRevision++;
+                system.Update(0f);
+
+                Assert.That(screenHud.BarCount, Is.EqualTo(0),
+                    "retained HUD projection must remove items when owner CullState changes even if projection and content are unchanged");
+            }
+            finally
+            {
+                World.Destroy(world);
+            }
+        }
+
+        [Test]
+        public void WorldHudToScreenSystem_ReusesOwnerProjection_ForNonAdjacentHudItems()
+        {
+            var world = World.Create();
+            try
+            {
+                var worldHud = new WorldHudBatchBuffer(8);
+                var screenHud = new ScreenHudBatchBuffer(8);
+                Entity owner = world.Create(new CullState { IsVisible = true, LOD = LODLevel.High });
+                var sharedPosition = new Vector3(10f, 2f, 0f);
+                worldHud.TryAdd(new WorldHudItem
+                {
+                    StableId = 1201,
+                    DirtySerial = 1,
+                    Owner = owner,
+                    Kind = WorldHudItemKind.Bar,
+                    WorldPosition = sharedPosition,
+                    Width = 80f,
+                    Height = 8f,
+                    Value0 = 0.75f,
+                });
+                worldHud.TryAdd(new WorldHudItem
+                {
+                    StableId = 1202,
+                    DirtySerial = 1,
+                    Owner = Entity.Null,
+                    Kind = WorldHudItemKind.Bar,
+                    WorldPosition = new Vector3(12f, 2f, 0f),
+                    Width = 80f,
+                    Height = 8f,
+                    Value0 = 0.5f,
+                });
+                worldHud.TryAdd(new WorldHudItem
+                {
+                    StableId = 1203,
+                    DirtySerial = 1,
+                    Owner = owner,
+                    Kind = WorldHudItemKind.Text,
+                    WorldPosition = sharedPosition,
+                    Width = 80f,
+                    Height = 16f,
+                    FontSize = 16,
+                });
+
+                var projector = new CountingProjector(new Vector2(320f, 240f));
+                var system = new WorldHudToScreenSystem(
+                    world,
+                    worldHud,
+                    strings: null,
+                    projector: projector,
+                    view: new FixedViewController(new Vector2(1920f, 1080f)),
+                    screenHud: screenHud,
+                    cullingDebug: new CameraCullingDebugState());
+
+                system.Update(0f);
+
+                Assert.That(screenHud.BarCount, Is.EqualTo(2));
+                Assert.That(screenHud.TextCount, Is.EqualTo(1));
+                Assert.That(projector.CallCount, Is.EqualTo(2),
+                    "The same owner/world-position pair should be projected once per frame even when HUD items are not adjacent.");
+            }
+            finally
+            {
+                World.Destroy(world);
+            }
+        }
+
+        [Test]
         public void PresentationTextFormatter_FormatsPacketAgainstLocaleTemplate()
         {
             WriteFile("Core", "config_catalog.json",
@@ -678,6 +796,24 @@ namespace Ludots.Tests.Presentation
             }
 
             public Vector2 WorldToScreen(Vector3 worldPosition) => _screen;
+        }
+
+        private sealed class CountingProjector : IScreenProjector
+        {
+            private readonly Vector2 _screen;
+
+            public CountingProjector(Vector2 screen)
+            {
+                _screen = screen;
+            }
+
+            public int CallCount { get; private set; }
+
+            public Vector2 WorldToScreen(Vector3 worldPosition)
+            {
+                CallCount++;
+                return _screen;
+            }
         }
 
         private sealed class SequenceProjector : IScreenProjector

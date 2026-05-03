@@ -130,6 +130,7 @@ namespace Ludots.Core.Systems
         private bool _hasStaticCullCameraState;
         private int _staticCullEpoch;
         private int _lastStaticVisibleCount;
+        private int _visibilityRevision;
 
         public CameraCullingDebugState DebugState { get; } = new CameraCullingDebugState();
 
@@ -195,34 +196,16 @@ namespace Ludots.Core.Systems
             var target = cameraState.TargetCm;
             float distanceCm = cameraState.DistanceCm;
 
-            float fovY = cameraState.FovYDeg * (float)(Math.PI / 180.0f);
             float aspectRatio = _view.AspectRatio;
-            float pitchRad = cameraState.Pitch * (float)(Math.PI / 180.0f);
-
-            float logicHeight = 2.0f * distanceCm * (float)Math.Tan(fovY / 2.0f);
-            float pitchScale = 1.0f / (float)Math.Max(Math.Sin(pitchRad), 0.1f);
-            logicHeight *= pitchScale;
-            float logicWidth = logicHeight * aspectRatio;
-
-            float buffer = 1.5f;
-            logicWidth *= buffer;
-            logicHeight *= buffer;
-
-            float minX = target.X - logicWidth / 2f;
-            float maxX = target.X + logicWidth / 2f;
-            float minY = target.Y - logicHeight / 2f;
-            float maxY = target.Y + logicHeight / 2f;
+            WorldAabbCm queryBounds = ComputeBroadPhaseCameraAabb(
+                in cameraState,
+                aspectRatio,
+                out float minX,
+                out float maxX,
+                out float minY,
+                out float maxY);
 
             _changedOwners.Clear();
-
-            int ix = (int)MathF.Floor(minX);
-            int iy = (int)MathF.Floor(minY);
-            int iw = (int)MathF.Ceiling(maxX - minX);
-            int ih = (int)MathF.Ceiling(maxY - minY);
-            if (iw < 0) iw = 0;
-            if (ih < 0) ih = 0;
-
-            WorldAabbCm queryBounds = new WorldAabbCm(ix, iy, iw, ih);
             _ownerCullChangedThisFrame = false;
             _allCullChangesSyncedThisFrame = true;
             bool hasDynamicCullWork = HasDynamicCullWork();
@@ -335,6 +318,7 @@ namespace Ludots.Core.Systems
             DebugState.LowLodDist = LowLODDistCm;
             DebugState.CameraTargetCm = new System.Numerics.Vector2(target.X, target.Y);
             DebugState.VisibleEntityCount = visibleCount;
+            DebugState.VisibilityRevision = _visibilityRevision;
             double entityProcessMs = (Stopwatch.GetTimestamp() - entityProcessStart) * 1000.0 / Stopwatch.Frequency;
             long performerSyncStart = Stopwatch.GetTimestamp();
             SyncPerformerCullVisibilityIfDirty();
@@ -361,10 +345,17 @@ namespace Ludots.Core.Systems
         {
             _ownerCullChangedThisFrame = true;
             _allCullChangesSyncedThisFrame = false;
+            AdvanceVisibilityRevision();
             if (owner != Entity.Null)
             {
                 _changedOwners.Add(owner);
             }
+        }
+
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        private void AdvanceVisibilityRevision()
+        {
+            _visibilityRevision = _visibilityRevision == int.MaxValue ? 1 : _visibilityRevision + 1;
         }
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
@@ -421,6 +412,7 @@ namespace Ludots.Core.Systems
                     cull.IsVisible,
                     cull.LOD))
             {
+                AdvanceVisibilityRevision();
                 return true;
             }
 
@@ -478,6 +470,7 @@ namespace Ludots.Core.Systems
             const float targetEpsilonSq = 1f;
             return MathF.Abs(_lastStaticCullAspectRatio - aspectRatio) > scalarEpsilon ||
                    Vector2.DistanceSquared(_lastStaticCullCameraState.TargetCm, state.TargetCm) > targetEpsilonSq ||
+                   MathF.Abs(AngleDeltaDeg(_lastStaticCullCameraState.Yaw, state.Yaw)) > scalarEpsilon ||
                    MathF.Abs(_lastStaticCullCameraState.Pitch - state.Pitch) > scalarEpsilon ||
                    MathF.Abs(_lastStaticCullCameraState.DistanceCm - state.DistanceCm) > scalarEpsilon ||
                    MathF.Abs(_lastStaticCullCameraState.FovYDeg - state.FovYDeg) > scalarEpsilon ||
@@ -1151,6 +1144,48 @@ namespace Ludots.Core.Systems
         }
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        private static float AngleDeltaDeg(float from, float to)
+        {
+            return ((to - from + 540f) % 360f) - 180f;
+        }
+
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        private static WorldAabbCm ComputeBroadPhaseCameraAabb(
+            in CameraStateSnapshot cameraState,
+            float aspectRatio,
+            out float minX,
+            out float maxX,
+            out float minY,
+            out float maxY)
+        {
+            (float logicWidth, float logicHeight) = CameraViewportUtil.ComputeViewportExtent(
+                cameraState.DistanceCm,
+                cameraState.FovYDeg,
+                cameraState.Pitch,
+                aspectRatio);
+
+            float halfWidth = logicWidth * 0.5f;
+            float halfHeight = logicHeight * 0.5f;
+            float yawRad = cameraState.Yaw * (MathF.PI / 180f);
+            float sinYaw = MathF.Sin(yawRad);
+            float cosYaw = MathF.Cos(yawRad);
+
+            float halfX = (MathF.Abs(cosYaw) * halfWidth) + (MathF.Abs(sinYaw) * halfHeight);
+            float halfY = (MathF.Abs(sinYaw) * halfWidth) + (MathF.Abs(cosYaw) * halfHeight);
+
+            minX = cameraState.TargetCm.X - halfX;
+            maxX = cameraState.TargetCm.X + halfX;
+            minY = cameraState.TargetCm.Y - halfY;
+            maxY = cameraState.TargetCm.Y + halfY;
+
+            int ix = (int)MathF.Floor(minX);
+            int iy = (int)MathF.Floor(minY);
+            int iw = Math.Max(0, (int)MathF.Ceiling(maxX - minX));
+            int ih = Math.Max(0, (int)MathF.Ceiling(maxY - minY));
+            return new WorldAabbCm(ix, iy, iw, ih);
+        }
+
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
         private void ProcessEntity(
             Entity entity,
             ref CullState cull,
@@ -1461,6 +1496,7 @@ namespace Ludots.Core.Systems
                 distanceCm,
                 in queryBounds,
                 new Vector3(px * 0.01f, 0f, py * 0.01f),
+                Quaternion.Identity,
                 Vector3.One,
                 in localBounds,
                 out float coverage01,
@@ -1507,14 +1543,21 @@ namespace Ludots.Core.Systems
             in VisualTransform visualTransform,
             in WorldAabbCm queryBounds)
         {
-            float halfWidthCm = MathF.Max(10f, MathF.Abs(visualTransform.Scale.X) * 50f);
-            float halfDepthCm = MathF.Max(10f, MathF.Abs(visualTransform.Scale.Z) * 50f);
-            float centerXCm = visualTransform.Position.X * 100f;
-            float centerYCm = visualTransform.Position.Z * 100f;
-            return centerXCm + halfWidthCm >= queryBounds.Left &&
-                   centerXCm - halfWidthCm <= queryBounds.Right &&
-                   centerYCm + halfDepthCm >= queryBounds.Top &&
-                   centerYCm - halfDepthCm <= queryBounds.Bottom;
+            ComputeVisualWorldAabbCm(
+                in visualTransform.Position,
+                in visualTransform.Rotation,
+                in visualTransform.Scale,
+                in _defaultBounds,
+                out float minX,
+                out float maxX,
+                out float minY,
+                out float maxY,
+                out _,
+                out _);
+            return maxX >= queryBounds.Left &&
+                   minX <= queryBounds.Right &&
+                   maxY >= queryBounds.Top &&
+                   minY <= queryBounds.Bottom;
         }
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
@@ -1570,6 +1613,7 @@ namespace Ludots.Core.Systems
                 distanceCm,
                 in queryBounds,
                 visualTransform.Position,
+                visualTransform.Rotation,
                 visualTransform.Scale,
                 in localBounds,
                 out screenCoverage01,
@@ -1584,17 +1628,23 @@ namespace Ludots.Core.Systems
             float distanceCm,
             in WorldAabbCm queryBounds,
             in Vector3 center,
+            in Quaternion rotation,
             in Vector3 scale,
             in PresentationLocalBounds localBounds,
             out float screenCoverage01,
             out bool intersectsViewport)
         {
-            float halfWidthCm = MathF.Max(10f, localBounds.Extents.X * MathF.Abs(scale.X) * 100f);
-            float halfDepthCm = MathF.Max(10f, localBounds.Extents.Z * MathF.Abs(scale.Z) * 100f);
-            float minX = (center.X * 100f) + (localBounds.Center.X * scale.X * 100f) - halfWidthCm;
-            float maxX = minX + (halfWidthCm * 2f);
-            float minY = (center.Z * 100f) + (localBounds.Center.Z * scale.Z * 100f) - halfDepthCm;
-            float maxY = minY + (halfDepthCm * 2f);
+            ComputeVisualWorldAabbCm(
+                in center,
+                in rotation,
+                in scale,
+                in localBounds,
+                out float minX,
+                out float maxX,
+                out float minY,
+                out float maxY,
+                out float halfWidthCm,
+                out float halfDepthCm);
 
             intersectsViewport = maxX >= queryBounds.Left &&
                                  minX <= queryBounds.Right &&
@@ -1604,6 +1654,67 @@ namespace Ludots.Core.Systems
             float approxRadiusCm = MathF.Max(halfWidthCm, halfDepthCm);
             float distanceToCameraCm = MathF.Max(1f, MathF.Sqrt(((px - target.X) * (px - target.X)) + ((py - target.Y) * (py - target.Y)) + (distanceCm * distanceCm * 0.04f)));
             screenCoverage01 = Math.Clamp((approxRadiusCm * 2f) / MathF.Max(distanceToCameraCm, 1f), 0f, 1f);
+        }
+
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        private static void ComputeVisualWorldAabbCm(
+            in Vector3 position,
+            in Quaternion rotation,
+            in Vector3 scale,
+            in PresentationLocalBounds localBounds,
+            out float minX,
+            out float maxX,
+            out float minY,
+            out float maxY,
+            out float halfWidthCm,
+            out float halfDepthCm)
+        {
+            Quaternion normalizedRotation = NormalizeOrIdentity(rotation);
+            Vector3 scaledCenter = new Vector3(
+                localBounds.Center.X * scale.X,
+                localBounds.Center.Y * scale.Y,
+                localBounds.Center.Z * scale.Z);
+            Vector3 worldCenter = position + Vector3.Transform(scaledCenter, normalizedRotation);
+
+            Vector3 extents = new Vector3(
+                MathF.Abs(localBounds.Extents.X * scale.X),
+                MathF.Abs(localBounds.Extents.Y * scale.Y),
+                MathF.Abs(localBounds.Extents.Z * scale.Z));
+
+            Vector3 axisX = Vector3.Transform(Vector3.UnitX, normalizedRotation);
+            Vector3 axisY = Vector3.Transform(Vector3.UnitY, normalizedRotation);
+            Vector3 axisZ = Vector3.Transform(Vector3.UnitZ, normalizedRotation);
+            halfWidthCm = MathF.Max(
+                10f,
+                ((MathF.Abs(axisX.X) * extents.X) +
+                 (MathF.Abs(axisY.X) * extents.Y) +
+                 (MathF.Abs(axisZ.X) * extents.Z)) * 100f);
+            halfDepthCm = MathF.Max(
+                10f,
+                ((MathF.Abs(axisX.Z) * extents.X) +
+                 (MathF.Abs(axisY.Z) * extents.Y) +
+                 (MathF.Abs(axisZ.Z) * extents.Z)) * 100f);
+
+            float centerXCm = worldCenter.X * 100f;
+            float centerYCm = worldCenter.Z * 100f;
+            minX = centerXCm - halfWidthCm;
+            maxX = centerXCm + halfWidthCm;
+            minY = centerYCm - halfDepthCm;
+            maxY = centerYCm + halfDepthCm;
+        }
+
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        private static Quaternion NormalizeOrIdentity(in Quaternion rotation)
+        {
+            float lenSq = rotation.LengthSquared();
+            if (lenSq < 1e-8f || float.IsNaN(lenSq) || float.IsInfinity(lenSq))
+            {
+                return Quaternion.Identity;
+            }
+
+            return MathF.Abs(lenSq - 1f) <= 1e-4f
+                ? rotation
+                : Quaternion.Normalize(rotation);
         }
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]

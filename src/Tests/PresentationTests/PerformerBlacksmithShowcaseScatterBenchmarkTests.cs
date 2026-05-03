@@ -258,6 +258,67 @@ namespace Ludots.Tests.Presentation
             Assert.That(screenHud.DroppedTotal, Is.EqualTo(0));
         }
 
+        [Test]
+        public void Scatter_30000_ProductionPathRandomDrift_PublishesEffectForEverySpawnedEntity()
+        {
+            using var engine = PerformerBlacksmithShowcaseTestHarness.CreateEngine();
+            var hudProjection = PerformerBlacksmithShowcaseTestHarness.CreateHeadlessHudProjection(engine);
+            PerformerBlacksmithShowcaseTestHarness.LoadMap(engine, PerformerBlacksmithShowcaseIds.ShowcaseMapId, frames: 8);
+
+            int queued = PerformerBlacksmithShowcaseTestHarness.EnqueueScatter(
+                engine,
+                totalBuildings: 30000,
+                seed: 16180339,
+                minRadiusCm: 5000f,
+                maxRadiusCm: 12000f);
+            Assert.That(queued, Is.EqualTo(29999));
+
+            PerformerBlacksmithShowcaseTestHarness.TickWithHudProjection(engine, hudProjection, 90);
+
+            var effectQueue = engine.GetService(CoreServiceKeys.EffectRequestQueue)
+                ?? throw new InvalidOperationException("EffectRequestQueue missing.");
+            int randomDriftEffectId = Ludots.Core.Gameplay.GAS.Registry.EffectTemplateIdRegistry.GetId("Effect.Showcase.Blacksmith.RandomDrift");
+            int blacksmithCount = 0;
+            int blacksmithWithRandomDrift = 0;
+            var attributeQuery = new QueryDescription().WithAll<Name, AttributeBuffer>();
+            engine.World.Query(in attributeQuery, (Entity entity, ref Name name, ref AttributeBuffer _) =>
+            {
+                if (!string.Equals(name.Value, PerformerBlacksmithShowcaseIds.EntityName, StringComparison.OrdinalIgnoreCase))
+                {
+                    return;
+                }
+
+                blacksmithCount++;
+                if (!engine.World.Has<ActiveEffectContainer>(entity))
+                {
+                    return;
+                }
+
+                ref ActiveEffectContainer activeEffects = ref engine.World.Get<ActiveEffectContainer>(entity);
+                for (int i = 0; i < activeEffects.Count; i++)
+                {
+                    Entity effectEntity = activeEffects.GetEntity(i);
+                    if (!engine.World.IsAlive(effectEntity) || !engine.World.Has<EffectTemplateRef>(effectEntity))
+                    {
+                        continue;
+                    }
+
+                    if (engine.World.Get<EffectTemplateRef>(effectEntity).TemplateId == randomDriftEffectId)
+                    {
+                        blacksmithWithRandomDrift++;
+                        break;
+                    }
+                }
+            });
+
+            TestContext.Out.WriteLine(
+                $"30K random drift coverage: blacksmiths={blacksmithCount}, activeRandomDrift={blacksmithWithRandomDrift}, fxQueue={effectQueue.Count}, fxOverflow={effectQueue.OverflowCount}, fxDropped={effectQueue.DroppedCount}, fxCapacity={effectQueue.Capacity}");
+
+            Assert.That(blacksmithCount, Is.EqualTo(30000));
+            Assert.That(blacksmithWithRandomDrift, Is.EqualTo(30000));
+            Assert.That(effectQueue.DroppedCount, Is.EqualTo(0));
+        }
+
         private static ScatterScenarioResult RunScenario(ScatterScenario scenario)
         {
             using var engine = PerformerBlacksmithShowcaseTestHarness.CreateEngine();

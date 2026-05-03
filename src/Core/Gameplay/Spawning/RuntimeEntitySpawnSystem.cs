@@ -280,6 +280,11 @@ namespace Ludots.Core.Gameplay.Spawning
 
             double postSpawnMs = 0d;
             int onSpawnEffectTemplateId = _templateBatchSpawner.GetOnSpawnEffectTemplateId(templateId, template);
+            if (_effectRequests != null && (hasRequestOnSpawnEffect || onSpawnEffectTemplateId > 0))
+            {
+                _effectRequests.Reserve(_effectRequests.Count + _effectRequests.OverflowCount + created.Length);
+            }
+
             bool requiresPostSpawnLoop =
                 hasSourceTeamWork ||
                 hasSourcePlayerOwnerWork ||
