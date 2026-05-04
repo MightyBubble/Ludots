@@ -15,7 +15,7 @@
     "maxDistanceCm": 50000,
     "minPitchDeg": 20,
     "maxPitchDeg": 80,
-    "panMode": "KeyboardAndEdge",
+    "panMode": "Keyboard",
     "edgePanMarginPx": 10,
     "edgePanSpeedCmPerSec": 12000,
     "panCmPerSecond": 12000,

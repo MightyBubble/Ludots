@@ -160,18 +160,9 @@ namespace Ludots.Client.Raylib.Rendering
                     DrawSkinnedBatch(skinnedBatch, camera, meshes, scaleMul, in finalizationContext);
                 }
 
-                int coveredByPersistentLanes = draw.StaticMeshLaneItemCount +
-                    (skinnedBatch != null ? draw.SkinnedLaneItemCount : 0);
-                if (coveredByPersistentLanes == span.Length)
-                {
-                    LastImmediateSkippedCount = span.Length;
-                }
-                else
-                {
-                    long immediateStart = Stopwatch.GetTimestamp();
-                    DrawImmediateWithDescriptors(span, camera, meshes, scaleMul, persistentStaticLanesActive: true, skinnedBatchActive: skinnedBatch != null, in finalizationContext);
-                    LastImmediateDrawMs = (Stopwatch.GetTimestamp() - immediateStart) * 1000d / Stopwatch.Frequency;
-                }
+                long immediateStart = Stopwatch.GetTimestamp();
+                DrawImmediateWithDescriptors(span, camera, meshes, scaleMul, persistentStaticLanesActive: true, skinnedBatchActive: skinnedBatch != null, in finalizationContext);
+                LastImmediateDrawMs = (Stopwatch.GetTimestamp() - immediateStart) * 1000d / Stopwatch.Frequency;
 
                 return;
             }

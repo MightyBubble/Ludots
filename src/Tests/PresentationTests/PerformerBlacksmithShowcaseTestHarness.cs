@@ -13,6 +13,7 @@ using Ludots.Core.Scripting;
 using Ludots.Core.Systems;
 using Ludots.Platform.Abstractions;
 using NUnit.Framework;
+using PerformerBlacksmithShowcaseMod;
 using PerformerBlacksmithShowcaseMod.Runtime;
 
 namespace Ludots.Tests.Presentation
@@ -29,6 +30,7 @@ namespace Ludots.Tests.Presentation
         internal static GameEngine CreateEngine(params string[] modIds)
         {
             ResetGlobalRegistries();
+            _ = typeof(PerformerBlacksmithShowcaseModEntry).Assembly;
             string repoRoot = FindRepoRoot();
             string assetsRoot = Path.Combine(repoRoot, "assets");
             string[] resolvedModIds = modIds.Length == 0 ? ShowcaseMods : modIds;

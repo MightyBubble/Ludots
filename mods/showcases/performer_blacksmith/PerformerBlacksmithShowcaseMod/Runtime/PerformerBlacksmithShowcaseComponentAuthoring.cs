@@ -7,6 +7,7 @@ namespace PerformerBlacksmithShowcaseMod.Runtime
         public static void Register()
         {
             ComponentRegistry.Register<DynamicWorkerCrowdTag>("DynamicWorkerCrowdTag");
+            ComponentRegistry.Register<MinimapMarkerBallMovementTag>("MinimapMarkerBallMovementTag");
         }
     }
 }

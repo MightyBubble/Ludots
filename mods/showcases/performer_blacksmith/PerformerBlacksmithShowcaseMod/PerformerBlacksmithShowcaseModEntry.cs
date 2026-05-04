@@ -24,6 +24,9 @@ namespace PerformerBlacksmithShowcaseMod
                     engine.RegisterSystem(
                         new DynamicWorkerCrowdMovementSystem(engine),
                         SystemGroup.PostMovement);
+                    engine.RegisterSystem(
+                        new MinimapMarkerBallMovementSystem(engine),
+                        SystemGroup.PostMovement);
                     engine.RegisterPresentationSystem(
                         new PerformerBlacksmithShowcasePresentationSystem(engine, runtime));
                 }

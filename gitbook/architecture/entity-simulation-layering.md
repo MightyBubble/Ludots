@@ -130,11 +130,12 @@
 ### 3.5 Core Minimap
 
 - Core minimap 属于 Presentation 基建，不属于业务 Mod
-- 正式逻辑信号源是 `Name + WorldPositionCm + MapEntity`
-- `Team` 只作为阵营颜色/关系的可选读取，不参与信号存在性判定
+- 正式逻辑信号源是 performer authoring 中显式声明的 `MinimapMarker` behavior
+- marker 位置唯一来自 performer world position；颜色、尺寸、可见性和朝向来自 `MinimapMarker` behavior 配置/参数绑定
+- `Name`、`MapEntity`、`Team` 都不得作为 marker 存在性的推断入口
 - Visual heightmap、chunk streaming、camera culling、visual LOD 都不能 gate minimap 逻辑信号
 - `IVisualHeightmapRenderSource` / `WorldSizeSpec` 只用于 RTS full-map preset 解析地图 bounds
-- 256x256 大世界通过战略 cell 聚合展示，不能把 generic crowd 展开成逐实体 overlay 文本
+- 256x256 大世界展示 authored performer marker；不做名称推断、战略热力图或缺信号 fallback
 
 ## 4 双车道仿真口径
 

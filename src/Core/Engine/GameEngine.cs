@@ -354,7 +354,7 @@ namespace Ludots.Core.Engine
             ConfigPipeline = new ConfigPipeline((VirtualFileSystem)VFS, ModLoader);
             ((MapManager)MapManager).SetConfigPipeline(ConfigPipeline);
             MergedConfig = ConfigPipeline.MergeGameConfig();
-            MergedConfig.Presentation.CameraCulling.Validate();
+            MergedConfig.Presentation.Validate();
 
             ConfigCatalog = Ludots.Core.Config.ConfigCatalogLoader.Load(ConfigPipeline);
             ConfigConflictReport = new Ludots.Core.Config.ConfigConflictReport();
@@ -767,7 +767,7 @@ namespace Ludots.Core.Engine
                 "MeshAssetRegistry: 'sphere' descriptor missing or invalid after config load");
 
             var worldHudStrings = new WorldHudStringTable(presentationTextCatalog, presentationTextLocaleSelection);
-            var minimapRuntime = new MinimapRuntime();
+            var minimapRuntime = new MinimapRuntime(presentationConfig.Minimap);
             var chunkDebugPanelRuntime = new ChunkDebugPanelRuntime();
             var minimapMarkerBuffer = new MinimapMarkerBuffer(presentationConfig.GetEffectiveMinimapMarkerCapacity());
             var minimapScreenMarkerBuffer = new MinimapScreenMarkerBuffer(presentationConfig.GetEffectiveMinimapMarkerCapacity());
@@ -1527,6 +1527,9 @@ namespace Ludots.Core.Engine
                     FovYDeg = cam.FovYDeg
                 });
             }
+
+            EnsureCameraRuntimeConfigured();
+            GameSession.Camera.SynchronizeActiveVirtualCameraBoundsAndHeight();
 
             var state = GameSession.Camera.State;
             Diagnostics.Log.Info(in LogChannels.Engine, $"Applied DefaultCamera: yaw={state.Yaw} pitch={state.Pitch} dist={state.DistanceCm}cm fov={state.FovYDeg}");

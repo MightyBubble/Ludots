@@ -132,14 +132,15 @@ namespace Ludots.Core.Presentation.Systems
                 }
 
                 VisualRenderPath renderPath = ResolveRenderPath(in asset);
-                Quaternion rotation = NormalizeOrIdentity(performerWorldRotation);
+                Quaternion rotation = ResolveRotation(in asset, performerWorldRotation);
                 Vector3 scale = ResolveScale(entity, in asset, performerWorldScale);
+                Vector3 assetPosition = ResolveAssetPosition(position, performerWorldRotation, performerWorldScale, in asset);
                 Vector4 color = ApplyAlpha(ResolveColor(entity, in asset, definition.DefaultColor), ResolveAlpha(in state, in definition));
                 PresentationVisualProxy proxy = new PresentationVisualProxy
                 {
                     ProxyKind = PresentationVisualProxyKind.Performer,
                     MeshAssetId = ResolveAssetId(entity, in asset),
-                    Position = position,
+                    Position = assetPosition,
                     Rotation = rotation,
                     Scale = scale,
                     Color = color,
@@ -508,6 +509,27 @@ namespace Ludots.Core.Presentation.Systems
             return scale;
         }
 
+        private static Quaternion ResolveRotation(in AssetBindingConfig asset, Quaternion performerWorldRotation)
+        {
+            return NormalizeOrIdentity(NormalizeOrIdentity(performerWorldRotation) * NormalizeOrIdentity(asset.LocalRotation));
+        }
+
+        private static Vector3 ResolveAssetPosition(
+            Vector3 position,
+            Quaternion performerWorldRotation,
+            Vector3 performerWorldScale,
+            in AssetBindingConfig asset)
+        {
+            if (asset.LocalOffset == Vector3.Zero)
+            {
+                return position;
+            }
+
+            Vector3 scale = performerWorldScale == Vector3.Zero ? Vector3.One : performerWorldScale;
+            Vector3 localOffset = scale * asset.LocalOffset;
+            return position + Vector3.Transform(localOffset, NormalizeOrIdentity(performerWorldRotation));
+        }
+
         private Vector4 ResolveColor(Entity entity, in AssetBindingConfig asset, Vector4 defaultColor)
         {
             return asset.ColorParamKey >= 0
@@ -583,8 +605,8 @@ namespace Ludots.Core.Presentation.Systems
             {
                 ProxyKind = PresentationVisualProxyKind.Performer,
                 MeshAssetId = ResolveAssetId(entity, in asset),
-                Position = position,
-                Rotation = NormalizeOrIdentity(performerWorldRotation),
+                Position = ResolveAssetPosition(position, performerWorldRotation, performerWorldScale, in asset),
+                Rotation = ResolveRotation(in asset, performerWorldRotation),
                 Scale = ResolveScale(entity, in asset, performerWorldScale),
                 Color = ApplyAlpha(ResolveColor(entity, in asset, definition.DefaultColor), alpha),
                 StableId = PerformerBehaviorRuntimeUtility.ComposeVisualStableId(state.StableId, slotIndex, asset.AssetKind, state.DefId),

@@ -11,7 +11,7 @@ namespace Ludots.Core.Gameplay.Camera.Behaviors
 
         public ZoomBehavior(string zoomActionId, float cmPerWheel, float minDistanceCm, float maxDistanceCm)
         {
-            _zoomActionId = zoomActionId ?? "Zoom";
+            _zoomActionId = zoomActionId ?? VirtualCameraDefinition.DefaultZoomActionId;
             _cmPerWheel = cmPerWheel;
             _minDistanceCm = minDistanceCm;
             _maxDistanceCm = maxDistanceCm;

@@ -141,22 +141,36 @@
           "assetId": "sphere",
           "materialId": "default_surface",
           "renderPath": "InstancedStaticMesh",
-          "mobility": "Static",
+          "mobility": "Movable",
           "localScale": [2.8, 2.8, 2.8]
         }
       },
       {
         "slot": 1,
+        "kind": "AssetBinding",
+        "activeByDefault": true,
+        "assetBinding": {
+          "assetKind": "Mesh",
+          "assetId": "cube",
+          "materialId": "default_surface",
+          "renderPath": "InstancedStaticMesh",
+          "mobility": "Movable",
+          "localOffset": [0.0, 0.42, -2.15],
+          "localScale": [0.55, 0.28, 1.85]
+        }
+      },
+      {
+        "slot": 2,
         "kind": "Grounding",
         "activeByDefault": true,
         "grounding": {
           "mode": "SnapToGround",
           "offset": 5.6,
-          "updatePolicy": "Once"
+          "updatePolicy": "EveryFrame"
         }
       },
       {
-        "slot": 2,
+        "slot": 3,
         "kind": "MinimapMarker",
         "activeByDefault": true,
         "minimapMarker": {

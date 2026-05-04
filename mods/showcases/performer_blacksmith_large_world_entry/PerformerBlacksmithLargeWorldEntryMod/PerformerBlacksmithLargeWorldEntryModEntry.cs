@@ -13,9 +13,8 @@ public sealed class PerformerBlacksmithLargeWorldEntryModEntry : IMod
 {
     private const string MinimapPresetEnvKey = "LUDOTS_MINIMAP_PRESET";
     private const string MinimapVisibleEnvKey = "LUDOTS_MINIMAP_VISIBLE";
-    private const string MinimapHalfExtentEnvKey = "LUDOTS_MINIMAP_HALF_EXTENT_CM";
+    private const string MinimapZoomNormalizedEnvKey = "LUDOTS_MINIMAP_ZOOM_NORMALIZED";
     private const string MinimapRotateWithCameraEnvKey = "LUDOTS_MINIMAP_ROTATE_WITH_CAMERA";
-    private const string MinimapWheelZoomStepsEnvKey = "LUDOTS_MINIMAP_WHEEL_ZOOM_STEPS";
     private const string ChunkDebugVisibleEnvKey = "LUDOTS_CHUNK_DEBUG_VISIBLE";
 
     public void OnLoad(IModContext context)
@@ -70,7 +69,7 @@ public sealed class PerformerBlacksmithLargeWorldEntryModEntry : IMod
             string.Equals(raw, "camera", System.StringComparison.OrdinalIgnoreCase))
         {
             runtime.UseFollowCameraPreset(
-                ReadEnvFloatOrDefault(MinimapHalfExtentEnvKey, 7000f),
+                runtime.HalfExtentCm,
                 ReadEnvBoolOrDefault(MinimapRotateWithCameraEnvKey, defaultValue: true));
             return;
         }
@@ -80,18 +79,12 @@ public sealed class PerformerBlacksmithLargeWorldEntryModEntry : IMod
 
     private static void ApplyMinimapZoom(MinimapRuntime runtime)
     {
-        int steps = ReadEnvIntOrDefault(MinimapWheelZoomStepsEnvKey, 0);
-        if (steps == 0)
+        if (!TryReadEnvNormalized(MinimapZoomNormalizedEnvKey, out float normalized))
         {
             return;
         }
 
-        float direction = steps > 0 ? 1f : -1f;
-        int count = System.Math.Abs(steps);
-        for (int i = 0; i < count; i++)
-        {
-            runtime.ApplyWheelZoom(direction);
-        }
+        runtime.SetZoomNormalized(normalized);
     }
 
     private static bool ReadEnvBoolOrDefault(string key, bool defaultValue)
@@ -108,17 +101,15 @@ public sealed class PerformerBlacksmithLargeWorldEntryModEntry : IMod
             string.Equals(raw, "on", System.StringComparison.OrdinalIgnoreCase);
     }
 
-    private static float ReadEnvFloatOrDefault(string key, float defaultValue)
+    private static bool TryReadEnvNormalized(string key, out float value)
     {
         string? raw = System.Environment.GetEnvironmentVariable(key);
-        return float.TryParse(raw, out float value) && float.IsFinite(value) && value > 0f
-            ? value
-            : defaultValue;
-    }
+        if (float.TryParse(raw, out value) && float.IsFinite(value) && value >= 0f && value <= 1f)
+        {
+            return true;
+        }
 
-    private static int ReadEnvIntOrDefault(string key, int defaultValue)
-    {
-        string? raw = System.Environment.GetEnvironmentVariable(key);
-        return int.TryParse(raw, out int value) ? value : defaultValue;
+        value = 0f;
+        return false;
     }
 }

@@ -21,6 +21,7 @@ using Ludots.Core.Presentation.Terrain;
 using Ludots.Core.Scripting;
 using NUnit.Framework;
 using PerformerBlacksmithShowcaseMod;
+using PerformerBlacksmithShowcaseMod.Runtime;
 
 namespace Ludots.Tests.Presentation
 {
@@ -127,7 +128,8 @@ namespace Ludots.Tests.Presentation
                 PerformerBlacksmithShowcaseIds.MinimapMarkerLargeWorldShowcaseMapId,
                 frames: 2);
 
-            Assert.That(engine.CurrentMapSession?.MapConfig.VisualHeightmapAsset, Is.EqualTo("assets/terrain/performer_blacksmith_dynamic_worker_large_world.vhtm"));
+            const string expectedHeightmapAsset = "assets/terrain/performer_blacksmith_minimap_marker_large_world_relief.vhtm";
+            Assert.That(engine.CurrentMapSession?.MapConfig.VisualHeightmapAsset, Is.EqualTo(expectedHeightmapAsset));
             Assert.That(engine.CurrentMapSession?.MapConfig.DefaultCamera?.VirtualCameraId, Is.EqualTo("PerformerBlacksmith.Camera.LargeWorldHeightmap"));
             Assert.That(engine.GetService(CoreServiceKeys.VisualHeightmap), Is.AssignableTo<IVisualHeightmapRenderSource>());
 
@@ -144,6 +146,35 @@ namespace Ludots.Tests.Presentation
                 engine.GameSession.Camera.State.TargetCm.Y,
                 out float expectedHeightCm), Is.True);
             Assert.That(engine.GameSession.Camera.State.TargetHeightCm, Is.EqualTo(expectedHeightCm + definition.TargetHeightOffsetCm).Within(0.01f));
+
+            string assetPath = Path.Combine(
+                PerformerBlacksmithShowcaseTestHarness.FindRepoRoot(),
+                "mods",
+                "showcases",
+                "performer_blacksmith",
+                "PerformerBlacksmithShowcaseMod",
+                "assets",
+                "terrain",
+                "performer_blacksmith_minimap_marker_large_world_relief.vhtm");
+            using FileStream stream = File.OpenRead(assetPath);
+            VisualHeightmapAsset asset = VisualHeightmapBinary.Read(stream);
+            short minHeight = short.MaxValue;
+            short maxHeight = short.MinValue;
+            for (int i = 0; i < asset.HeightSamplesCm.Length; i++)
+            {
+                short sample = asset.HeightSamplesCm[i];
+                minHeight = Math.Min(minHeight, sample);
+                maxHeight = Math.Max(maxHeight, sample);
+            }
+
+            Assert.Multiple(() =>
+            {
+                Assert.That(asset.SampleColumns, Is.EqualTo(1025));
+                Assert.That(asset.SampleRows, Is.EqualTo(1025));
+                Assert.That(asset.InterpolationMode, Is.EqualTo(VisualHeightmapInterpolationMode.TriangleHeightfield));
+                Assert.That(asset.Layers[0].Name, Is.EqualTo("relief"));
+                Assert.That(maxHeight - minHeight, Is.GreaterThan(6500), "The minimap marker showcase surface must have visibly stronger relief than the benchmark plane.");
+            });
         }
 
         [Test]
@@ -201,10 +232,16 @@ namespace Ludots.Tests.Presentation
             Assert.That(snapshot.VisibleMarkerCount, Is.EqualTo(expectedMarkers));
             Assert.That(snapshot.VisibleMarkers.Count, Is.EqualTo(expectedMarkers));
 
-            SelectZoomStableScreenMarkerPair(minimap, screenMarkers, out int stableIdA, out int stableIdB, out float beforeDistance);
+            Dictionary<int, Vector2> beforeScreenMarkers = CaptureScreenMarkerPositions(screenMarkers);
             minimap.ApplyWheelZoom(1f);
             minimap.Refresh(engine, markerBuffer, screenMarkers);
-            float afterDistance = DistanceBetweenStableScreenMarkers(screenMarkers, stableIdA, stableIdB);
+            SelectCommonZoomStableScreenMarkerPair(
+                beforeScreenMarkers,
+                screenMarkers,
+                out int stableIdA,
+                out int stableIdB,
+                out float beforeDistance,
+                out float afterDistance);
             Assert.That(afterDistance, Is.GreaterThan(beforeDistance * 1.05f), "Zooming in must increase screen distance between fixed world markers.");
         }
 
@@ -246,14 +283,31 @@ namespace Ludots.Tests.Presentation
                 out int rootStableVisualPresentRows);
             int primitiveMarkerRows = CountMarkerDefinitionRows(primitives, markerDefinitionId);
             int snapshotMarkerRows = CountMarkerDefinitionRows(snapshot, markerDefinitionId);
-            AssertVisibleMarkerSpherePayloads(primitives, markerDefinitionId);
+            Vector2 expectedCameraTargetM = ResolveDefaultCameraTargetMeters(engine);
+            AssertVisibleMarkerWorldPayloads(primitives, markerDefinitionId, expectedCameraTargetM, out int sphereRows, out int orientationRows);
+            CountMinimapMarkerBallMovementRows(
+                engine,
+                out int markerMovementRows,
+                out int dynamicWorkerTagRows,
+                out int staticTransformRows,
+                out int movedRows,
+                out int sampledRows,
+                out int finiteFacingRows);
 
             Assert.Multiple(() =>
             {
                 Assert.That(ownerVisualRows, Is.EqualTo(expectedMarkers), "Every minimap marker ball owner must carry the production VisualTransform path.");
                 Assert.That(ownerPayloadRows, Is.EqualTo(expectedMarkers), "Every minimap marker ball owner must be linked to its performer payload for hot culling.");
                 Assert.That(rootPerformerRows, Is.EqualTo(expectedMarkers), "Every authored ball entity must create the authored MinimapMarker performer.");
-                Assert.That(rootStaticRows, Is.EqualTo(expectedMarkers), "Authored static sphere performers must use the event-driven StableDrawCache lane.");
+                Assert.That(rootStaticRows, Is.EqualTo(0), "Marker balls are movable performer visuals, not static StableDrawCache impostors.");
+                Assert.That(markerMovementRows, Is.EqualTo(expectedMarkers), "Every marker ball must opt into the dedicated movement tag.");
+                Assert.That(dynamicWorkerTagRows, Is.EqualTo(0), "Marker balls must not reuse the dynamic worker movement tag.");
+                Assert.That(staticTransformRows, Is.EqualTo(0), "Marker balls must stay on the movable VisualTransform/heightmap path.");
+                Assert.That(movedRows, Is.GreaterThan(0), "Marker balls must move through the generic world-position performer chain.");
+                Assert.That(sampledRows, Is.EqualTo(expectedMarkers), "Marker balls must sample the visual heightmap so the scene, not the minimap, shows terrain relief.");
+                Assert.That(finiteFacingRows, Is.EqualTo(expectedMarkers), "Marker balls must expose finite 2D facing for primitive and minimap orientation.");
+                Assert.That(sphereRows, Is.GreaterThan(0), "The world view must submit visible red sphere rows.");
+                Assert.That(orientationRows, Is.GreaterThan(0), "The world view must submit visible asymmetric primitive rows so facing is readable.");
                 Assert.That(rootOwnerCullVisibleRows, Is.GreaterThan(0), BuildMinimapWorldVisualDiagnostics(
                     ownerVisualRows,
                     ownerPayloadRows,
@@ -267,11 +321,13 @@ namespace Ludots.Tests.Presentation
                     primitives.Count,
                     primitives.StaticMeshLaneItemCount,
                     primitiveMarkerRows,
+                    sphereRows,
+                    orientationRows,
                     snapshot.Count,
                     snapshot.StaticMeshLaneItemCount,
                     snapshotMarkerRows,
                     timings.VisibleEntitiesLastFrame));
-                Assert.That(rootStableVisualPresentRows, Is.GreaterThan(0), BuildMinimapWorldVisualDiagnostics(
+                Assert.That(rootStableVisualPresentRows, Is.EqualTo(0), BuildMinimapWorldVisualDiagnostics(
                     ownerVisualRows,
                     ownerPayloadRows,
                     ownerVisibleRows,
@@ -284,6 +340,8 @@ namespace Ludots.Tests.Presentation
                     primitives.Count,
                     primitives.StaticMeshLaneItemCount,
                     primitiveMarkerRows,
+                    sphereRows,
+                    orientationRows,
                     snapshot.Count,
                     snapshot.StaticMeshLaneItemCount,
                     snapshotMarkerRows,
@@ -301,6 +359,8 @@ namespace Ludots.Tests.Presentation
                     primitives.Count,
                     primitives.StaticMeshLaneItemCount,
                     primitiveMarkerRows,
+                    sphereRows,
+                    orientationRows,
                     snapshot.Count,
                     snapshot.StaticMeshLaneItemCount,
                     snapshotMarkerRows,
@@ -308,9 +368,17 @@ namespace Ludots.Tests.Presentation
             });
         }
 
-        private static void AssertVisibleMarkerSpherePayloads(PrimitiveDrawBuffer primitives, int markerDefinitionId)
+        private static void AssertVisibleMarkerWorldPayloads(
+            PrimitiveDrawBuffer primitives,
+            int markerDefinitionId,
+            Vector2 expectedCameraTargetM,
+            out int sphereRows,
+            out int orientationRows)
         {
             int checkedRows = 0;
+            int checkedOrientationRows = 0;
+            sphereRows = 0;
+            orientationRows = 0;
             foreach (ref readonly PrimitiveDrawItem item in primitives.GetSpan())
             {
                 if (item.TemplateId != markerDefinitionId || !item.RenderPath.IsStaticInstanceLane())
@@ -318,22 +386,53 @@ namespace Ludots.Tests.Presentation
                     continue;
                 }
 
-                checkedRows++;
-                Assert.That(item.Scale.X, Is.InRange(6f, 14f), "Visible minimap showcase spheres must be large enough to read without swallowing the camera.");
-                Assert.That(item.Scale.Y, Is.InRange(6f, 14f), "Visible minimap showcase spheres must be large enough to read without swallowing the camera.");
-                Assert.That(item.Scale.Z, Is.InRange(6f, 14f), "Visible minimap showcase spheres must be large enough to read without swallowing the camera.");
-                Assert.That(item.Color.X, Is.GreaterThanOrEqualTo(0.85f), "Visible minimap showcase spheres must contrast against the Raylib clear color.");
-                Assert.That(item.Color.Y, Is.LessThanOrEqualTo(0.35f), "Visible minimap showcase spheres must contrast against the Raylib clear color.");
-                Assert.That(item.Color.Z, Is.LessThanOrEqualTo(0.2f), "Visible minimap showcase spheres must contrast against the Raylib clear color.");
-                Assert.That(MathF.Abs(item.Position.X), Is.LessThanOrEqualTo(92f), "The acceptance cluster must place visible balls near the default camera target.");
-                Assert.That(MathF.Abs(item.Position.Z), Is.LessThanOrEqualTo(92f), "The acceptance cluster must place visible balls near the default camera target.");
-                if (checkedRows >= 8)
+                bool isRed = item.Color.X >= 0.85f && item.Color.Y <= 0.35f && item.Color.Z <= 0.2f;
+                bool sphereScale =
+                    item.Scale.X is >= 2.5f and <= 14f &&
+                    item.Scale.Y is >= 2.5f and <= 14f &&
+                    item.Scale.Z is >= 2.5f and <= 14f &&
+                    MathF.Abs(item.Scale.X - item.Scale.Z) <= MathF.Max(0.5f, item.Scale.X * 0.12f);
+                bool orientationScale =
+                    item.Scale.X is >= 0.3f and <= 4f &&
+                    item.Scale.Y is >= 0.15f and <= 2.4f &&
+                    item.Scale.Z is >= 1.2f and <= 8f &&
+                    item.Scale.Z >= item.Scale.X * 2.0f;
+
+                if (sphereScale && isRed)
+                {
+                    sphereRows++;
+                    checkedRows++;
+                    Assert.That(MathF.Abs(item.Position.X - expectedCameraTargetM.X), Is.LessThanOrEqualTo(140f), "The acceptance cluster must place visible balls near the configured default camera target.");
+                    Assert.That(MathF.Abs(item.Position.Z - expectedCameraTargetM.Y), Is.LessThanOrEqualTo(140f), "The acceptance cluster must place visible balls near the configured default camera target.");
+                }
+                else if (orientationScale && isRed)
+                {
+                    orientationRows++;
+                    checkedOrientationRows++;
+                    Assert.That(MathF.Abs(item.Position.X - expectedCameraTargetM.X), Is.LessThanOrEqualTo(180f), "Orientation primitives must stay attached to visible marker balls near the configured default camera target.");
+                    Assert.That(MathF.Abs(item.Position.Z - expectedCameraTargetM.Y), Is.LessThanOrEqualTo(180f), "Orientation primitives must stay attached to visible marker balls near the configured default camera target.");
+                    Assert.That(float.IsFinite(item.Rotation.X), Is.True);
+                    Assert.That(float.IsFinite(item.Rotation.Y), Is.True);
+                    Assert.That(float.IsFinite(item.Rotation.Z), Is.True);
+                    Assert.That(float.IsFinite(item.Rotation.W), Is.True);
+                }
+
+                if (checkedRows >= 8 && checkedOrientationRows >= 8)
                 {
                     return;
                 }
             }
 
-            Assert.Fail("No visible minimap marker sphere payload rows were available for visual authoring validation.");
+            Assert.Fail($"Expected visible minimap marker sphere and orientation primitive rows. sphereRows={sphereRows}, orientationRows={orientationRows}.");
+        }
+
+        private static Vector2 ResolveDefaultCameraTargetMeters(GameEngine engine)
+        {
+            float targetXCm = engine.CurrentMapSession?.MapConfig?.DefaultCamera?.TargetXCm
+                ?? engine.GameSession.Camera.State.TargetCm.X;
+            float targetYCm = engine.CurrentMapSession?.MapConfig?.DefaultCamera?.TargetYCm
+                ?? engine.GameSession.Camera.State.TargetCm.Y;
+            return new Vector2(targetXCm * 0.01f, targetYCm * 0.01f);
         }
 
         [Test]
@@ -794,6 +893,72 @@ namespace Ludots.Tests.Presentation
             rootStableVisualPresentRows = stableVisualPresentRoots;
         }
 
+        private static void CountMinimapMarkerBallMovementRows(
+            GameEngine engine,
+            out int markerMovementRows,
+            out int dynamicWorkerTagRows,
+            out int staticTransformRows,
+            out int movedRows,
+            out int sampledRows,
+            out int finiteFacingRows)
+        {
+            int markerMovement = 0;
+            int dynamicWorkerTags = 0;
+            int staticTransforms = 0;
+            int moved = 0;
+            int sampled = 0;
+            int finiteFacing = 0;
+
+            var query = new QueryDescription()
+                .WithAll<Name, WorldPositionCm, PreviousWorldPositionCm, VisualHeightmapSampleState, FacingDirection>();
+            engine.World.Query(
+                in query,
+                (Entity entity, ref Name name, ref WorldPositionCm position, ref PreviousWorldPositionCm previous, ref VisualHeightmapSampleState sampleState, ref FacingDirection facing) =>
+                {
+                    if (!string.Equals(name.Value, PerformerBlacksmithShowcaseIds.MinimapMarkerBallEntityName, StringComparison.Ordinal))
+                    {
+                        return;
+                    }
+
+                    if (engine.World.Has<MinimapMarkerBallMovementTag>(entity))
+                    {
+                        markerMovement++;
+                    }
+
+                    if (engine.World.Has<DynamicWorkerCrowdTag>(entity))
+                    {
+                        dynamicWorkerTags++;
+                    }
+
+                    if (engine.World.Has<PresentationStaticTransform>(entity))
+                    {
+                        staticTransforms++;
+                    }
+
+                    if (position.Value != previous.Value)
+                    {
+                        moved++;
+                    }
+
+                    if (sampleState.Sampled != 0)
+                    {
+                        sampled++;
+                    }
+
+                    if (float.IsFinite(facing.AngleRad))
+                    {
+                        finiteFacing++;
+                    }
+                });
+
+            markerMovementRows = markerMovement;
+            dynamicWorkerTagRows = dynamicWorkerTags;
+            staticTransformRows = staticTransforms;
+            movedRows = moved;
+            sampledRows = sampled;
+            finiteFacingRows = finiteFacing;
+        }
+
         private static int CountMarkerDefinitionRows(PrimitiveDrawBuffer buffer, int markerDefinitionId)
         {
             int count = 0;
@@ -853,6 +1018,8 @@ namespace Ludots.Tests.Presentation
             int primitiveCount,
             int primitiveStaticCount,
             int primitiveMarkerRows,
+            int primitiveSphereRows,
+            int primitiveOrientationRows,
             int snapshotCount,
             int snapshotStaticCount,
             int snapshotMarkerRows,
@@ -861,82 +1028,72 @@ namespace Ludots.Tests.Presentation
             return "Minimap marker showcase must submit real visible world sphere visuals; " +
                    $"owners visual/payload/visible={ownerVisualRows}/{ownerPayloadRows}/{ownerVisibleRows}, " +
                    $"performers root/static/dirty/ownerVisible/stablePresent={rootPerformerRows}/{rootStaticRows}/{rootDirtyRows}/{rootOwnerCullVisibleRows}/{rootStableVisualPresentRows}, " +
-                   $"stableCache={stableCacheCount}, primitive total/static/marker={primitiveCount}/{primitiveStaticCount}/{primitiveMarkerRows}, " +
+                   $"stableCache={stableCacheCount}, primitive total/static/marker/sphere/orientation={primitiveCount}/{primitiveStaticCount}/{primitiveMarkerRows}/{primitiveSphereRows}/{primitiveOrientationRows}, " +
                    $"snapshot total/static/marker={snapshotCount}/{snapshotStaticCount}/{snapshotMarkerRows}, visibleEntities={visibleEntities}.";
         }
 
-        private static void SelectZoomStableScreenMarkerPair(
-            MinimapRuntime minimap,
-            MinimapScreenMarkerBuffer screenMarkers,
+        private static Dictionary<int, Vector2> CaptureScreenMarkerPositions(MinimapScreenMarkerBuffer screenMarkers)
+        {
+            var positions = new Dictionary<int, Vector2>(screenMarkers.Count);
+            for (int i = 0; i < screenMarkers.Count; i++)
+            {
+                positions[screenMarkers.GetStableId(i)] = new Vector2(
+                    screenMarkers.GetScreenX(i),
+                    screenMarkers.GetScreenY(i));
+            }
+
+            return positions;
+        }
+
+        private static void SelectCommonZoomStableScreenMarkerPair(
+            Dictionary<int, Vector2> beforeScreenMarkers,
+            MinimapScreenMarkerBuffer afterScreenMarkers,
             out int stableIdA,
             out int stableIdB,
-            out float distance)
+            out float beforeDistance,
+            out float afterDistance)
         {
-            Assert.That(screenMarkers.Count, Is.GreaterThanOrEqualTo(2));
-            float safeMinX = minimap.FieldX + (minimap.FieldSize * 0.2f);
-            float safeMaxX = minimap.FieldX + (minimap.FieldSize * 0.8f);
-            float safeMinY = minimap.FieldY + (minimap.FieldSize * 0.2f);
-            float safeMaxY = minimap.FieldY + (minimap.FieldSize * 0.8f);
-
+            Assert.That(beforeScreenMarkers.Count, Is.GreaterThanOrEqualTo(2));
+            Assert.That(afterScreenMarkers.Count, Is.GreaterThanOrEqualTo(2));
             stableIdA = 0;
             stableIdB = 0;
-            float bestDistanceSquared = 0f;
-            for (int i = 0; i < screenMarkers.Count - 1; i++)
+            beforeDistance = 0f;
+            afterDistance = 0f;
+
+            for (int i = 0; i < afterScreenMarkers.Count - 1; i++)
             {
-                float ax = screenMarkers.GetScreenX(i);
-                float ay = screenMarkers.GetScreenY(i);
-                if (ax < safeMinX || ax > safeMaxX || ay < safeMinY || ay > safeMaxY)
+                int idA = afterScreenMarkers.GetStableId(i);
+                if (!beforeScreenMarkers.TryGetValue(idA, out Vector2 beforeA))
                 {
                     continue;
                 }
 
-                for (int j = i + 1; j < screenMarkers.Count; j++)
+                Vector2 afterA = new(afterScreenMarkers.GetScreenX(i), afterScreenMarkers.GetScreenY(i));
+                for (int j = i + 1; j < afterScreenMarkers.Count; j++)
                 {
-                    float bx = screenMarkers.GetScreenX(j);
-                    float by = screenMarkers.GetScreenY(j);
-                    if (bx < safeMinX || bx > safeMaxX || by < safeMinY || by > safeMaxY)
+                    int idB = afterScreenMarkers.GetStableId(j);
+                    if (!beforeScreenMarkers.TryGetValue(idB, out Vector2 beforeB))
                     {
                         continue;
                     }
 
-                    float dx = bx - ax;
-                    float dy = by - ay;
-                    float distanceSquared = (dx * dx) + (dy * dy);
-                    if (distanceSquared > bestDistanceSquared)
+                    float candidateBeforeDistance = Vector2.Distance(beforeA, beforeB);
+                    if (candidateBeforeDistance <= beforeDistance)
                     {
-                        bestDistanceSquared = distanceSquared;
-                        stableIdA = screenMarkers.GetStableId(i);
-                        stableIdB = screenMarkers.GetStableId(j);
+                        continue;
                     }
+
+                    Vector2 afterB = new(afterScreenMarkers.GetScreenX(j), afterScreenMarkers.GetScreenY(j));
+                    stableIdA = idA;
+                    stableIdB = idB;
+                    beforeDistance = candidateBeforeDistance;
+                    afterDistance = Vector2.Distance(afterA, afterB);
                 }
             }
 
-            Assert.That(stableIdA, Is.GreaterThan(0), "The minimap marker showcase must place at least two markers near the RTS minimap center so zoom can be verified on stable ids.");
-            Assert.That(stableIdB, Is.GreaterThan(0), "The minimap marker showcase must place at least two markers near the RTS minimap center so zoom can be verified on stable ids.");
-            distance = MathF.Sqrt(bestDistanceSquared);
-        }
-
-        private static float DistanceBetweenStableScreenMarkers(MinimapScreenMarkerBuffer screenMarkers, int stableIdA, int stableIdB)
-        {
-            int indexA = FindScreenMarkerIndex(screenMarkers, stableIdA);
-            int indexB = FindScreenMarkerIndex(screenMarkers, stableIdB);
-            float dx = screenMarkers.GetScreenX(indexB) - screenMarkers.GetScreenX(indexA);
-            float dy = screenMarkers.GetScreenY(indexB) - screenMarkers.GetScreenY(indexA);
-            return MathF.Sqrt((dx * dx) + (dy * dy));
-        }
-
-        private static int FindScreenMarkerIndex(MinimapScreenMarkerBuffer screenMarkers, int stableId)
-        {
-            for (int i = 0; i < screenMarkers.Count; i++)
-            {
-                if (screenMarkers.GetStableId(i) == stableId)
-                {
-                    return i;
-                }
-            }
-
-            Assert.Fail($"Expected minimap screen marker stableId {stableId} to remain visible after zoom.");
-            return -1;
+            Assert.That(stableIdA, Is.GreaterThan(0), "The minimap marker showcase must keep at least two authored marker ids visible across zoom.");
+            Assert.That(stableIdB, Is.GreaterThan(0), "The minimap marker showcase must keep at least two authored marker ids visible across zoom.");
+            Assert.That(beforeDistance, Is.GreaterThan(1f), "The stable marker pair must have measurable pre-zoom separation.");
         }
 
         private static void CountDynamicWorkerSignalRows(

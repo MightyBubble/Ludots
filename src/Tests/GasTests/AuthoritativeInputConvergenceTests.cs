@@ -439,12 +439,32 @@ namespace Ludots.Tests.GAS
 
             Vector2 outside = new(minimap.FieldX - 12f, minimap.FieldY - 12f);
             float halfBeforeOutsideWheel = minimap.HalfExtentCm;
+            float zoomBeforeOutsideWheel = minimap.ZoomNormalized;
             backend.MousePosition = outside;
             backend.MouseWheel = 1f;
             system.Update(1f / 60f);
 
             Assert.That(minimap.HalfExtentCm, Is.EqualTo(halfBeforeOutsideWheel).Within(0.01f));
+            Assert.That(minimap.ZoomNormalized, Is.EqualTo(zoomBeforeOutsideWheel).Within(0.0001f));
             Assert.That(handler.ReadAction<float>("Zoom"), Is.EqualTo(1f), "Wheel outside minimap must remain available to camera/gameplay input.");
+
+            backend.MouseWheel = 0f;
+            Vector2 slider = new(minimap.ZoomSliderX + (minimap.ZoomSliderWidth * 0.2f), minimap.ZoomSliderY + (minimap.ZoomSliderHeightPx * 0.5f));
+            backend.MousePosition = slider;
+            backend.Buttons["<Mouse>/LeftButton"] = true;
+            system.Update(1f / 60f);
+            Assert.That(minimap.ZoomNormalized, Is.EqualTo(0.2f).Within(0.03f), "Zoom slider must write the same normalized zoom state used by wheel zoom.");
+            float halfAfterSlider = minimap.HalfExtentCm;
+            float zoomAfterSlider = minimap.ZoomNormalized;
+            backend.Buttons["<Mouse>/LeftButton"] = false;
+            system.Update(1f / 60f);
+
+            Vector2 insideFieldForWheel = new(minimap.FieldX + (minimap.FieldSize * 0.5f), minimap.FieldY + (minimap.FieldSize * 0.5f));
+            backend.MousePosition = insideFieldForWheel;
+            backend.MouseWheel = 1f;
+            system.Update(1f / 60f);
+            Assert.That(minimap.ZoomNormalized, Is.LessThan(zoomAfterSlider), "Wheel zoom must mutate the same normalized zoom SSOT as the slider.");
+            Assert.That(minimap.HalfExtentCm, Is.LessThan(halfAfterSlider), "Wheel zoom in should shrink the metric half extent.");
 
             backend.MouseWheel = 0f;
             Vector2 firstDrag = new(minimap.FieldX + (minimap.FieldSize * 0.25f), minimap.FieldY + (minimap.FieldSize * 0.25f));

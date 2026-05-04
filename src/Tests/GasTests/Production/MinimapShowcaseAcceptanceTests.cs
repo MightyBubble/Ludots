@@ -104,7 +104,7 @@ public sealed class MinimapShowcaseAcceptanceTests
             screenshot = "screens/001_rts_marker_overview.svg"
         });
 
-        runtime.UseFollowCameraPreset(7000f, rotateWithCamera: false);
+        runtime.UseFollowCameraPreset(13000f, rotateWithCamera: false);
         runtime.Refresh(engine, markers, screenMarkers);
         SnapshotView camera = MapSnapshot(runtime.CaptureDebugSnapshot());
         Assert.That(camera.Preset, Is.EqualTo(MinimapPreset.FollowCamera));
@@ -308,9 +308,9 @@ public sealed class MinimapShowcaseAcceptanceTests
         float afterStep = runtime.MetricGridStepCm;
         Assert.That(afterStep, Is.LessThanOrEqualTo(beforeStep), "Metric grid spacing must become finer or remain at a snap boundary after zoom-in.");
 
-        Vector2 rightScreen = new(runtime.FieldX + (runtime.FieldSize * 0.75f), runtime.FieldY + (runtime.FieldSize * 0.5f));
+        Vector2 rightScreen = new(runtime.FieldX + (runtime.FieldSize * 0.95f), runtime.FieldY + (runtime.FieldSize * 0.5f));
         Assert.That(runtime.TryScreenToWorld(rightScreen, out Vector2 northUpWorld), Is.True);
-        engine.GameSession.Camera.ApplyPose(new Ludots.Core.Gameplay.Camera.CameraPoseRequest { Yaw = 90f });
+        engine.GameSession.Camera.State.Yaw = 90f;
         runtime.SetRotateWithCamera(true);
         runtime.Refresh(engine, markers, screenMarkers);
         Assert.That(runtime.TryScreenToWorld(rightScreen, out Vector2 rotatedWorld), Is.True);
@@ -535,7 +535,15 @@ public sealed class MinimapShowcaseAcceptanceTests
             }
         }
 
-        Assert.That(beforeDistance, Is.GreaterThan(0f), "Expected at least one stable marker pair to remain visible after zoom.");
+        Assert.That(
+            beforeDistance,
+            Is.GreaterThan(0f),
+            "Expected at least one stable marker pair to remain visible after zoom. " +
+            $"beforeVisible={before.VisibleMarkerCount}/{before.MarkerCount} " +
+            $"afterVisible={after.VisibleMarkerCount}/{after.MarkerCount} " +
+            $"beforeExtent={before.HalfExtentCm:0.###} afterExtent={after.HalfExtentCm:0.###} " +
+            $"beforeIds=[{string.Join(",", before.VisibleMarkers.Select(marker => marker.StableId))}] " +
+            $"afterIds=[{string.Join(",", after.VisibleMarkers.Select(marker => marker.StableId))}]");
     }
 
     private static float DistanceBetweenMarkers(SnapshotView snapshot, int stableIdA, int stableIdB)

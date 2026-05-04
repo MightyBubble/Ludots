@@ -11,13 +11,15 @@ using PerformerBlacksmithShowcaseMod.Runtime;
 
 namespace PerformerBlacksmithShowcaseMod.Systems
 {
-    internal sealed class DynamicWorkerCrowdMovementSystem : BaseSystem<World, float>
+    internal sealed class MinimapMarkerBallMovementSystem : BaseSystem<World, float>
     {
         private const string MetadataSectionKey = "performerBlacksmith";
-        private const string MovementPaddingMetadataKey = "dynamicWorkerMovementPaddingCm";
-        private const string MovementSpeedMetadataKey = "dynamicWorkerMovementSpeedCmPerSecond";
-        private static readonly QueryDescription WorkerQuery = new QueryDescription()
-            .WithAll<DynamicWorkerCrowdTag, WorldPositionCm, PreviousWorldPositionCm, FacingDirection>();
+        private const string MovementPaddingMetadataKey = "minimapMarkerMovementPaddingCm";
+        private const string MovementSpeedMetadataKey = "minimapMarkerMovementSpeedCmPerSecond";
+        private const string MovementTurnPeriodMetadataKey = "minimapMarkerMovementTurnPeriodSeconds";
+
+        private static readonly QueryDescription MarkerQuery = new QueryDescription()
+            .WithAll<MinimapMarkerBallMovementTag, WorldPositionCm, PreviousWorldPositionCm, FacingDirection>();
 
         private readonly GameEngine _engine;
         private string _configuredMapId = string.Empty;
@@ -26,9 +28,10 @@ namespace PerformerBlacksmithShowcaseMod.Systems
         private float _topCm;
         private float _bottomCm;
         private float _speedCmPerSecond;
+        private float _turnPeriodSeconds = 11f;
         private float _elapsedSeconds;
 
-        public DynamicWorkerCrowdMovementSystem(GameEngine engine)
+        public MinimapMarkerBallMovementSystem(GameEngine engine)
             : base(engine?.World ?? throw new ArgumentNullException(nameof(engine)))
         {
             _engine = engine;
@@ -36,7 +39,6 @@ namespace PerformerBlacksmithShowcaseMod.Systems
 
         public override void Update(in float dt)
         {
-            string? mapId = _engine.CurrentMapSession?.MapId.Value;
             if (!ShouldRunForFocusedMap())
             {
                 return;
@@ -46,8 +48,9 @@ namespace PerformerBlacksmithShowcaseMod.Systems
             _elapsedSeconds += dt;
             float elapsed = _elapsedSeconds;
             float speed = _speedCmPerSecond;
+            float turnScale = MathF.PI * 2f / MathF.Max(0.001f, _turnPeriodSeconds);
 
-            foreach (ref var chunk in World.Query(in WorkerQuery))
+            foreach (ref var chunk in World.Query(in MarkerQuery))
             {
                 Span<WorldPositionCm> positions = chunk.GetSpan<WorldPositionCm>();
                 Span<PreviousWorldPositionCm> previousPositions = chunk.GetSpan<PreviousWorldPositionCm>();
@@ -60,12 +63,14 @@ namespace PerformerBlacksmithShowcaseMod.Systems
 
                     float x = position.Value.X.ToFloat();
                     float y = position.Value.Y.ToFloat();
-                    float phase = ((x * 0.0017f) + (y * 0.0023f)) % (MathF.PI * 2f);
-                    float angle = elapsed * 0.85f + phase;
+                    float phase = ((x * 0.00031f) + (y * 0.00047f)) % (MathF.PI * 2f);
+                    float wobble = MathF.Sin((elapsed * 0.37f) + phase) * 0.7f;
+                    float angle = (elapsed * turnScale) + phase + wobble;
                     float vx = MathF.Cos(angle) * speed;
                     float vy = MathF.Sin(angle) * speed;
                     float nextX = x + (vx * dt);
                     float nextY = y + (vy * dt);
+
                     if (nextX < _leftCm)
                     {
                         nextX = _leftCm;
@@ -102,7 +107,7 @@ namespace PerformerBlacksmithShowcaseMod.Systems
         private void EnsureConfiguredForFocusedMap()
         {
             string mapId = _engine.CurrentMapSession?.MapId.Value
-                ?? throw new InvalidOperationException("Dynamic worker movement requires a focused map session.");
+                ?? throw new InvalidOperationException("Minimap marker ball movement requires a focused map session.");
             if (string.Equals(_configuredMapId, mapId, StringComparison.Ordinal))
             {
                 return;
@@ -112,15 +117,16 @@ namespace PerformerBlacksmithShowcaseMod.Systems
             if (heightmap is not IVisualHeightmapRenderSource renderSource)
             {
                 throw new InvalidOperationException(
-                    $"Map '{mapId}' must provide a VisualHeightmap render source before dynamic worker movement starts.");
+                    $"Map '{mapId}' must provide a VisualHeightmap render source before minimap marker ball movement starts.");
             }
 
             float paddingCm = ReadRequiredMapMetadataFloat(_engine, MovementPaddingMetadataKey);
             float speedCmPerSecond = ReadRequiredMapMetadataFloat(_engine, MovementSpeedMetadataKey);
-            if (paddingCm < 0f || speedCmPerSecond <= 0f)
+            float turnPeriodSeconds = ReadRequiredMapMetadataFloat(_engine, MovementTurnPeriodMetadataKey);
+            if (paddingCm < 0f || speedCmPerSecond <= 0f || turnPeriodSeconds <= 0f)
             {
                 throw new InvalidOperationException(
-                    $"Map '{mapId}' has invalid dynamic worker movement metadata. Padding must be >= 0 and speed must be > 0.");
+                    $"Map '{mapId}' has invalid minimap marker movement metadata. Padding must be >= 0, speed must be > 0, and turn period must be > 0.");
             }
 
             float left = renderSource.Bounds.Left + paddingCm;
@@ -130,7 +136,7 @@ namespace PerformerBlacksmithShowcaseMod.Systems
             if (left >= right || top >= bottom)
             {
                 throw new InvalidOperationException(
-                    $"Map '{mapId}' dynamic worker movement padding leaves no valid VisualHeightmap walking area.");
+                    $"Map '{mapId}' minimap marker movement padding leaves no valid VisualHeightmap walking area.");
             }
 
             _leftCm = left;
@@ -138,6 +144,7 @@ namespace PerformerBlacksmithShowcaseMod.Systems
             _topCm = top;
             _bottomCm = bottom;
             _speedCmPerSecond = speedCmPerSecond;
+            _turnPeriodSeconds = turnPeriodSeconds;
             _configuredMapId = mapId;
         }
 
@@ -151,7 +158,7 @@ namespace PerformerBlacksmithShowcaseMod.Systems
             {
                 string mapId = engine.CurrentMapSession?.MapId.Value ?? "<none>";
                 throw new InvalidOperationException(
-                    $"Map '{mapId}' must declare metadata.{MetadataSectionKey}.{key} for dynamic worker movement.");
+                    $"Map '{mapId}' must declare metadata.{MetadataSectionKey}.{key} for minimap marker ball movement.");
             }
 
             try
@@ -160,7 +167,7 @@ namespace PerformerBlacksmithShowcaseMod.Systems
                 if (!float.IsFinite(value))
                 {
                     throw new InvalidOperationException(
-                        $"metadata.{MetadataSectionKey}.{key} must be finite for dynamic worker movement.");
+                        $"metadata.{MetadataSectionKey}.{key} must be finite for minimap marker ball movement.");
                 }
 
                 return value;
@@ -168,13 +175,13 @@ namespace PerformerBlacksmithShowcaseMod.Systems
             catch (FormatException ex)
             {
                 throw new InvalidOperationException(
-                    $"metadata.{MetadataSectionKey}.{key} must be a number for dynamic worker movement.",
+                    $"metadata.{MetadataSectionKey}.{key} must be a number for minimap marker ball movement.",
                     ex);
             }
             catch (InvalidOperationException ex) when (!ex.Message.Contains("metadata.", StringComparison.Ordinal))
             {
                 throw new InvalidOperationException(
-                    $"metadata.{MetadataSectionKey}.{key} must be a number for dynamic worker movement.",
+                    $"metadata.{MetadataSectionKey}.{key} must be a number for minimap marker ball movement.",
                     ex);
             }
         }
@@ -187,7 +194,9 @@ namespace PerformerBlacksmithShowcaseMod.Systems
                 sectionObject.TryGetPropertyValue(MovementPaddingMetadataKey, out JsonNode? paddingNode) &&
                 paddingNode != null &&
                 sectionObject.TryGetPropertyValue(MovementSpeedMetadataKey, out JsonNode? speedNode) &&
-                speedNode != null;
+                speedNode != null &&
+                sectionObject.TryGetPropertyValue(MovementTurnPeriodMetadataKey, out JsonNode? turnPeriodNode) &&
+                turnPeriodNode != null;
         }
     }
 }

@@ -1,6 +1,6 @@
 {
   "Id": "performer_blacksmith_minimap_marker_large_world_showcase",
-  "VisualHeightmapAsset": "assets/terrain/performer_blacksmith_dynamic_worker_large_world.vhtm",
+  "VisualHeightmapAsset": "assets/terrain/performer_blacksmith_minimap_marker_large_world_relief.vhtm",
   "Tags": ["showcase", "performer", "minimap", "large-world"],
   "Metadata": {
     "performerBlacksmith": {
@@ -8,10 +8,13 @@
       "minimapMarkerScatterPaddingCm": 64000.0,
       "minimapMarkerScatterJitterCm": 4200.0,
       "minimapMarkerVisibleClusterCount": 64,
-      "minimapMarkerVisibleClusterCenterXCm": 0.0,
-      "minimapMarkerVisibleClusterCenterYCm": 0.0,
+      "minimapMarkerVisibleClusterCenterXCm": -2099200.0,
+      "minimapMarkerVisibleClusterCenterYCm": 2508800.0,
       "minimapMarkerVisibleClusterRadiusCm": 9000.0,
-      "minimapMarkerScatterSeed": 129135
+      "minimapMarkerScatterSeed": 129135,
+      "minimapMarkerMovementPaddingCm": 64000.0,
+      "minimapMarkerMovementSpeedCmPerSecond": 42.0,
+      "minimapMarkerMovementTurnPeriodSeconds": 11.0
     }
   },
   "Boards": [
@@ -26,8 +29,8 @@
   ],
   "DefaultCamera": {
     "VirtualCameraId": "PerformerBlacksmith.Camera.LargeWorldHeightmap",
-    "TargetXCm": 0,
-    "TargetYCm": 0,
+    "TargetXCm": -2099200,
+    "TargetYCm": 2508800,
     "Yaw": 45,
     "Pitch": 42,
     "DistanceCm": 12000,

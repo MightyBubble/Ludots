@@ -579,6 +579,27 @@ namespace Ludots.Core.Presentation.Systems
             return resolved;
         }
 
+        private static Quaternion ResolveAssetRotation(in AssetBindingConfig asset, Quaternion performerWorldRotation)
+        {
+            return NormalizeOrIdentity(NormalizeOrIdentity(performerWorldRotation) * NormalizeOrIdentity(asset.LocalRotation));
+        }
+
+        private static Vector3 ResolveAssetPosition(
+            Vector3 position,
+            Quaternion performerWorldRotation,
+            Vector3 performerWorldScale,
+            in AssetBindingConfig asset)
+        {
+            if (asset.LocalOffset == Vector3.Zero)
+            {
+                return position;
+            }
+
+            Vector3 scale = performerWorldScale == Vector3.Zero ? Vector3.One : performerWorldScale;
+            Vector3 localOffset = scale * asset.LocalOffset;
+            return position + Vector3.Transform(localOffset, NormalizeOrIdentity(performerWorldRotation));
+        }
+
         private Vector4 ResolveAssetColor(Entity entity, in AssetBindingConfig asset, Vector4 defaultColor)
         {
             return asset.ColorParamKey >= 0
@@ -1163,8 +1184,8 @@ namespace Ludots.Core.Presentation.Systems
             if (!_skinnedVisualBatchBuffer.TryAddDirect(new SkinnedVisualBatchItem
             {
                 MeshAssetId = asset.AssetId,
-                Position = performerWorldPosition + definition.PositionOffset,
-                Rotation = NormalizeOrIdentity(performerWorldRotation),
+                Position = ResolveAssetPosition(performerWorldPosition + definition.PositionOffset, performerWorldRotation, performerWorldScale, in asset),
+                Rotation = ResolveAssetRotation(in asset, performerWorldRotation),
                 Scale = ResolveAssetScale(entity, in asset, performerWorldScale),
                 Color = definition.DefaultColor,
                 StableId = PerformerBehaviorRuntimeUtility.ComposeVisualStableId(state.StableId, slotIndex, AssetKind.SkinnedMesh, state.DefId),
@@ -1528,8 +1549,8 @@ namespace Ludots.Core.Presentation.Systems
             if (!_skinnedVisualBatchBuffer.TryAddDirect(new SkinnedVisualBatchItem
             {
                 MeshAssetId = asset.AssetId,
-                Position = performerWorldPosition + definition.PositionOffset,
-                Rotation = NormalizeOrIdentity(performerWorldRotation),
+                Position = ResolveAssetPosition(performerWorldPosition + definition.PositionOffset, performerWorldRotation, performerWorldScale, in asset),
+                Rotation = ResolveAssetRotation(in asset, performerWorldRotation),
                 Scale = ResolveAssetScale(entity, in asset, performerWorldScale),
                 Color = definition.DefaultColor,
                 StableId = PerformerBehaviorRuntimeUtility.ComposeVisualStableId(state.StableId, slotIndex, asset.AssetKind, state.DefId),
@@ -1572,8 +1593,8 @@ namespace Ludots.Core.Presentation.Systems
             {
                 ProxyKind = PresentationVisualProxyKind.Performer,
                 MeshAssetId = asset.AssetId,
-                Position = performerWorldPosition + definition.PositionOffset,
-                Rotation = NormalizeOrIdentity(performerWorldRotation),
+                Position = ResolveAssetPosition(performerWorldPosition + definition.PositionOffset, performerWorldRotation, performerWorldScale, in asset),
+                Rotation = ResolveAssetRotation(in asset, performerWorldRotation),
                 Scale = ResolveAssetScale(entity, in asset, performerWorldScale),
                 Color = definition.DefaultColor,
                 StableId = PerformerBehaviorRuntimeUtility.ComposeVisualStableId(state.StableId, slotIndex, asset.AssetKind, state.DefId),

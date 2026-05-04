@@ -113,6 +113,19 @@ namespace Ludots.Core.Gameplay.Camera
             ApplyPoseToState(State, request);
         }
 
+        public void SynchronizeActiveVirtualCameraBoundsAndHeight()
+        {
+            if (VirtualCameraBrain == null || !VirtualCameraBrain.HasActiveCamera)
+            {
+                return;
+            }
+
+            ApplyActiveVirtualCameraBoundsAndHeight();
+            VirtualCameraBrain.ApplyToState(State, _logicInput, 0f);
+            CopyState(State, PreviousState);
+            FollowTargetPositionCm = VirtualCameraBrain.ActiveFollowTargetPositionCm;
+        }
+
         public void ActivateVirtualCamera(
             string id,
             float? blendDurationSeconds = null,

@@ -7,6 +7,7 @@ using Ludots.Core.Engine;
 using Ludots.Core.Gameplay.Camera;
 using Ludots.Core.Input.Selection;
 using Ludots.Core.Mathematics;
+using Ludots.Core.Presentation;
 using Ludots.Core.Presentation.Hud;
 using Ludots.Core.Presentation.Performers;
 using Ludots.Platform.Abstractions;
@@ -62,10 +63,15 @@ namespace Ludots.Core.Presentation.Minimap
         private const float MaxHalfExtentCm = 100_000_000f;
         private const int PanelInset = 18;
         private const int PanelHeaderHeight = 44;
-        private const int PanelFooterHeight = 36;
+        private const int PanelFooterTextHeight = 36;
+        private const int ZoomSliderHeight = 28;
         private const int MinFieldSize = 264;
         private const int MaxFieldSize = 660;
         private const int PanelMargin = 24;
+        private const int ZoomSliderTrackHeight = 6;
+        private const int ZoomSliderThumbWidth = 10;
+        private const int ZoomSliderThumbHeight = 18;
+        private const int ZoomSliderHitPadding = 6;
         private const int MarkerStableIdSalt = 0x4d4d;
         private const int CameraFrustumPointCapacity = 16;
         private const int CameraFrustumLineThickness = 3;
@@ -82,6 +88,7 @@ namespace Ludots.Core.Presentation.Minimap
         private const byte LineClipOutTop = 8;
         private const int DebugVisibleMarkerCapacity = 2048;
 
+        private readonly MinimapRuntimeConfig _config;
         private static readonly string[] BandLabels =
         {
             "Strategic",
@@ -116,6 +123,10 @@ namespace Ludots.Core.Presentation.Minimap
         private float _centerXcm;
         private float _centerYcm;
         private float _halfExtentCm = 22000f;
+        private float _zoomNormalized = 1f;
+        private float _minZoomHalfExtentCm = 750f;
+        private float _maxZoomHalfExtentCm = 22000f;
+        private bool _zoomRangeInitialized;
         private float _minWorldXcm;
         private float _minWorldYcm;
         private float _maxWorldXcm;
@@ -131,6 +142,9 @@ namespace Ludots.Core.Presentation.Minimap
         private int _fieldX = 858;
         private int _fieldY = 80;
         private int _fieldSize = 272;
+        private int _zoomSliderX = 858;
+        private int _zoomSliderY = 356;
+        private int _zoomSliderWidth = 272;
         private int _markerCount;
         private int _visibleMarkerCount;
         private bool _cameraFrustumVisible;
@@ -140,6 +154,18 @@ namespace Ludots.Core.Presentation.Minimap
         private int _cachedFooterMarkerCount = -1;
         private int _cachedFooterVisibleMarkerCount = -1;
         private string _cachedMarkerFooter = "Markers 0/0";
+
+        public MinimapRuntime()
+            : this(null)
+        {
+        }
+
+        public MinimapRuntime(MinimapRuntimeConfig? config)
+        {
+            _config = config ?? new MinimapRuntimeConfig();
+            _config.Validate();
+            _zoomNormalized = Math.Clamp(_config.InitialZoomNormalized, 0f, 1f);
+        }
 
         public bool Visible { get; set; }
 
@@ -163,6 +189,10 @@ namespace Ludots.Core.Presentation.Minimap
 
         public float HalfExtentCm => _halfExtentCm;
 
+        public float ZoomNormalized => _zoomNormalized;
+
+        public bool ZoomSliderEnabled => _config.ZoomSliderEnabled;
+
         public string Diagnostic => _diagnostic;
 
         public int FieldX => _fieldX;
@@ -170,6 +200,14 @@ namespace Ludots.Core.Presentation.Minimap
         public int FieldY => _fieldY;
 
         public int FieldSize => _fieldSize;
+
+        public int ZoomSliderX => _zoomSliderX;
+
+        public int ZoomSliderY => _zoomSliderY;
+
+        public int ZoomSliderWidth => _zoomSliderWidth;
+
+        public int ZoomSliderHeightPx => _config.ZoomSliderEnabled ? ZoomSliderHeight : 0;
 
         public float MetricGridStepCm => _metricGridStepCm;
 
@@ -187,7 +225,7 @@ namespace Ludots.Core.Presentation.Minimap
         {
             Preset = MinimapPreset.FollowEntity;
             FollowEntity = entity;
-            _halfExtentCm = ClampHalfExtent(halfExtentCm);
+            SetHalfExtentAndSyncZoom(halfExtentCm);
             _viewportInitialized = entity != Entity.Null;
         }
 
@@ -202,7 +240,7 @@ namespace Ludots.Core.Presentation.Minimap
         {
             Preset = MinimapPreset.FollowCamera;
             FollowEntity = Entity.Null;
-            _halfExtentCm = ClampHalfExtent(halfExtentCm);
+            SetHalfExtentAndSyncZoom(halfExtentCm);
             RotateWithCamera = rotateWithCamera;
             _viewportInitialized = true;
         }
@@ -241,6 +279,7 @@ namespace Ludots.Core.Presentation.Minimap
             _minWorldYcm = bounds.Top;
             _maxWorldXcm = bounds.Right;
             _maxWorldYcm = bounds.Bottom;
+            ResolveZoomRange(engine, in bounds);
 
             ApplyPresetViewport(engine, in bounds);
             ClampViewportToBounds(in bounds);
@@ -276,14 +315,16 @@ namespace Ludots.Core.Presentation.Minimap
             overlay.AddText(_panelX + _panelWidth - 118, _panelY + 14, BandLabels[(int)ZoomBand], 14, new Vector4(1f, 0.84f, 0.42f, 1f));
             RenderGrid(overlay);
             RenderCameraFrustum(overlay);
+            RenderZoomSlider(overlay);
 
             if (!string.IsNullOrWhiteSpace(_diagnostic))
             {
                 overlay.AddText(_fieldX + 16, _fieldY + 28, _diagnostic, 14, new Vector4(1f, 0.72f, 0.48f, 1f));
             }
 
-            overlay.AddText(_panelX + PanelInset, _fieldY + _fieldSize + 21, ResolveMarkerFooterText(), 13, new Vector4(0.78f, 0.86f, 0.93f, 1f));
-            overlay.AddText(_panelX + _panelWidth - 146, _fieldY + _fieldSize + 21, ResolvePresetLabel(), 13, new Vector4(0.66f, 0.76f, 0.84f, 1f));
+            int footerTextY = _fieldY + _fieldSize + (_config.ZoomSliderEnabled ? ZoomSliderHeight : 0) + 21;
+            overlay.AddText(_panelX + PanelInset, footerTextY, ResolveMarkerFooterText(), 13, new Vector4(0.78f, 0.86f, 0.93f, 1f));
+            overlay.AddText(_panelX + _panelWidth - 146, footerTextY, ResolvePresetLabel(), 13, new Vector4(0.66f, 0.76f, 0.84f, 1f));
         }
 
         public bool ContainsField(Vector2 screenPosition)
@@ -293,6 +334,32 @@ namespace Ludots.Core.Presentation.Minimap
                 screenPosition.Y >= _fieldY &&
                 screenPosition.X <= _fieldX + _fieldSize &&
                 screenPosition.Y <= _fieldY + _fieldSize;
+        }
+
+        public bool ContainsInteractiveRegion(Vector2 screenPosition)
+        {
+            return ContainsField(screenPosition) || ContainsZoomSlider(screenPosition);
+        }
+
+        public bool ContainsZoomSlider(Vector2 screenPosition)
+        {
+            return Visible &&
+                _config.ZoomSliderEnabled &&
+                screenPosition.X >= _zoomSliderX - ZoomSliderHitPadding &&
+                screenPosition.Y >= _zoomSliderY - ZoomSliderHitPadding &&
+                screenPosition.X <= _zoomSliderX + _zoomSliderWidth + ZoomSliderHitPadding &&
+                screenPosition.Y <= _zoomSliderY + ZoomSliderHeight + ZoomSliderHitPadding;
+        }
+
+        public void SetZoomFromSliderPointer(Vector2 screenPosition)
+        {
+            if (!_config.ZoomSliderEnabled)
+            {
+                return;
+            }
+
+            float normalized = (screenPosition.X - _zoomSliderX) / MathF.Max(1f, _zoomSliderWidth);
+            SetZoomNormalized(normalized);
         }
 
         public bool TryScreenToWorld(Vector2 screenPosition, out Vector2 worldCm)
@@ -337,7 +404,7 @@ namespace Ludots.Core.Presentation.Minimap
         {
             _centerXcm = centerXcm;
             _centerYcm = centerYcm;
-            _halfExtentCm = ClampHalfExtent(halfExtentCm);
+            SetHalfExtentAndSyncZoom(halfExtentCm);
             _viewportInitialized = true;
         }
 
@@ -352,7 +419,7 @@ namespace Ludots.Core.Presentation.Minimap
             _centerYcm = (_minWorldYcm + _maxWorldYcm) * 0.5f;
             float spanX = MathF.Max(2400f, _maxWorldXcm - _minWorldXcm);
             float spanY = MathF.Max(2400f, _maxWorldYcm - _minWorldYcm);
-            _halfExtentCm = ClampHalfExtent(MathF.Max(spanX, spanY) * 0.6f);
+            SetHalfExtentAndSyncZoom(MathF.Max(spanX, spanY) * 0.6f);
             _viewportInitialized = true;
         }
 
@@ -396,13 +463,8 @@ namespace Ludots.Core.Presentation.Minimap
             {
                 hasAnchor = TryScreenToWorld(screenAnchor, out anchorWorldBefore);
             }
-            float factor = MathF.Pow(0.85f, wheelDelta);
-            if (!float.IsFinite(factor) || factor <= 0f)
-            {
-                factor = wheelDelta > 0f ? 0.85f : 1.18f;
-            }
-
-            _halfExtentCm = ClampHalfExtent(_halfExtentCm * factor);
+            float nextZoom = _zoomNormalized - (wheelDelta * _config.WheelZoomNormalizedStep);
+            SetZoomNormalized(nextZoom);
             if (hasAnchor)
             {
                 ScreenToMapLocal(screenAnchor, clampToField: false, out float localXcm, out float localYcm);
@@ -414,6 +476,13 @@ namespace Ludots.Core.Presentation.Minimap
             _viewportInitialized = true;
         }
 
+        public void SetZoomNormalized(float normalized)
+        {
+            _zoomNormalized = Math.Clamp(normalized, 0f, 1f);
+            ApplyZoomNormalized(_zoomNormalized);
+            _viewportInitialized = true;
+        }
+
         public void CycleZoom(int delta)
         {
             if (delta == 0)
@@ -421,23 +490,7 @@ namespace Ludots.Core.Presentation.Minimap
                 return;
             }
 
-            MinimapZoomBand next = ZoomBand;
-            if (delta > 0 && next > MinimapZoomBand.Strategic)
-            {
-                next--;
-            }
-            else if (delta < 0 && next < MinimapZoomBand.Tactical)
-            {
-                next++;
-            }
-
-            _halfExtentCm = next switch
-            {
-                MinimapZoomBand.Strategic => 22000f,
-                MinimapZoomBand.Regional => 7000f,
-                _ => 1800f,
-            };
-            _viewportInitialized = true;
+            SetZoomNormalized(_zoomNormalized + (delta * _config.ButtonZoomNormalizedStep));
         }
 
         public void PanNormalized(float dx, float dy)
@@ -501,7 +554,7 @@ namespace Ludots.Core.Presentation.Minimap
                 {
                     _centerXcm = bounds.Left + (bounds.Width * 0.5f);
                     _centerYcm = bounds.Top + (bounds.Height * 0.5f);
-                    _halfExtentCm = ClampHalfExtent(MathF.Max(bounds.Width, bounds.Height) * 0.52f);
+                    SetZoomNormalized(1f);
                     _viewportInitialized = true;
                 }
 
@@ -512,7 +565,7 @@ namespace Ludots.Core.Presentation.Minimap
             {
                 _centerXcm = bounds.Left + (bounds.Width * 0.5f);
                 _centerYcm = bounds.Top + (bounds.Height * 0.5f);
-                _halfExtentCm = ClampHalfExtent(MathF.Max(bounds.Width, bounds.Height) * 0.52f);
+                SetZoomNormalized(1f);
                 _viewportInitialized = true;
             }
         }
@@ -586,8 +639,8 @@ namespace Ludots.Core.Presentation.Minimap
 
         private void ClampViewportToBounds(in WorldAabbCm bounds)
         {
-            float maxHalf = ClampHalfExtent(MathF.Max(bounds.Width, bounds.Height) * 0.52f);
-            _halfExtentCm = MathF.Min(ClampHalfExtent(_halfExtentCm), maxHalf);
+            float maxHalf = MathF.Max(_minZoomHalfExtentCm, _maxZoomHalfExtentCm);
+            SetHalfExtentAndSyncZoom(MathF.Min(ClampHalfExtent(_halfExtentCm), maxHalf));
             float padding = _halfExtentCm * 0.35f;
             _centerXcm = Math.Clamp(_centerXcm, bounds.Left - padding, bounds.Right + padding);
             _centerYcm = Math.Clamp(_centerYcm, bounds.Top - padding, bounds.Bottom + padding);
@@ -698,6 +751,32 @@ namespace Ludots.Core.Presentation.Minimap
                 int thickness = IsMajorGridLine(y, step) ? 2 : 1;
                 AddWorldLineClipped(overlay, minX, y, maxX, y, thickness, color);
             }
+        }
+
+        private void RenderZoomSlider(ScreenOverlayBuffer overlay)
+        {
+            if (!_config.ZoomSliderEnabled)
+            {
+                return;
+            }
+
+            int trackX = _zoomSliderX;
+            int trackY = _zoomSliderY + ((ZoomSliderHeight - ZoomSliderTrackHeight) / 2);
+            int thumbCenterX = trackX + (int)MathF.Round(_zoomNormalized * MathF.Max(1, _zoomSliderWidth));
+            int thumbX = thumbCenterX - (ZoomSliderThumbWidth / 2);
+            int thumbY = _zoomSliderY + ((ZoomSliderHeight - ZoomSliderThumbHeight) / 2);
+            Vector4 track = new(0.15f, 0.25f, 0.31f, 0.95f);
+            Vector4 fill = new(0.93f, 0.72f, 0.28f, 0.98f);
+            Vector4 thumb = new(1f, 0.93f, 0.62f, 1f);
+            Vector4 border = new(0.48f, 0.70f, 0.86f, 1f);
+            overlay.AddRect(trackX, trackY, _zoomSliderWidth, ZoomSliderTrackHeight, track, border);
+            int fillWidth = Math.Max(0, thumbCenterX - trackX);
+            if (fillWidth > 0)
+            {
+                overlay.AddRect(trackX, trackY, fillWidth, ZoomSliderTrackHeight, fill, fill);
+            }
+
+            overlay.AddRect(thumbX, thumbY, ZoomSliderThumbWidth, ZoomSliderThumbHeight, thumb, border);
         }
 
         private float ResolveMetricGridStepCm()
@@ -1054,12 +1133,12 @@ namespace Ludots.Core.Presentation.Minimap
             return (_mapRight * localXcm) + (_mapUp * localYcm);
         }
 
-        private static Vector2 NormalizeOrDefault(Vector2 value, Vector2 fallback)
+        private static Vector2 NormalizeOrDefault(Vector2 value, Vector2 defaultValue)
         {
             float lengthSquared = value.LengthSquared();
             if (!float.IsFinite(lengthSquared) || lengthSquared <= 0.000001f)
             {
-                return fallback;
+                return defaultValue;
             }
 
             return value / MathF.Sqrt(lengthSquared);
@@ -1085,19 +1164,24 @@ namespace Ludots.Core.Presentation.Minimap
         {
             int screenWidth = engine.MergedConfig?.WindowWidth > 0 ? engine.MergedConfig.WindowWidth : 1280;
             int screenHeight = engine.MergedConfig?.WindowHeight > 0 ? engine.MergedConfig.WindowHeight : 720;
-            _fieldSize = ResolveFieldSize(screenWidth, screenHeight);
+            _fieldSize = ResolveFieldSize(screenWidth, screenHeight, _config.ZoomSliderEnabled);
             _panelWidth = _fieldSize + (PanelInset * 2);
-            _panelHeight = PanelHeaderHeight + _fieldSize + PanelFooterHeight;
+            _panelHeight = PanelHeaderHeight + _fieldSize + PanelFooterTextHeight + (_config.ZoomSliderEnabled ? ZoomSliderHeight : 0);
             _panelX = Math.Max(PanelMargin, screenWidth - _panelWidth - PanelMargin);
             _panelY = Math.Max(PanelMargin, Math.Min(PanelMargin, screenHeight - _panelHeight - PanelMargin));
             _fieldX = _panelX + PanelInset;
             _fieldY = _panelY + PanelHeaderHeight;
+            _zoomSliderX = _fieldX;
+            _zoomSliderY = _fieldY + _fieldSize + 4;
+            _zoomSliderWidth = _fieldSize;
         }
 
-        private static int ResolveFieldSize(int screenWidth, int screenHeight)
+        private static int ResolveFieldSize(int screenWidth, int screenHeight, bool zoomSliderEnabled)
         {
             int widthLimit = Math.Max(120, screenWidth - (PanelMargin * 2) - (PanelInset * 2));
-            int heightLimit = Math.Max(120, screenHeight - (PanelMargin * 2) - PanelHeaderHeight - PanelFooterHeight);
+            int heightLimit = Math.Max(
+                120,
+                screenHeight - (PanelMargin * 2) - PanelHeaderHeight - PanelFooterTextHeight - (zoomSliderEnabled ? ZoomSliderHeight : 0));
             int available = Math.Min(widthLimit, heightLimit);
             int desired = Math.Min(MaxFieldSize, available);
             if (desired >= MinFieldSize)
@@ -1147,6 +1231,133 @@ namespace Ludots.Core.Presentation.Minimap
         private static float ClampHalfExtent(float halfExtentCm)
         {
             return Math.Clamp(halfExtentCm, MinHalfExtentCm, MaxHalfExtentCm);
+        }
+
+        private void ResolveZoomRange(GameEngine engine, in WorldAabbCm bounds)
+        {
+            float minHalfExtent = ResolveConfiguredHalfExtent(engine, in bounds, _config.MinZoomExtentMode, _config.MinZoomExplicitHalfExtentCm);
+            float maxHalfExtent = ResolveConfiguredHalfExtent(engine, in bounds, _config.MaxZoomExtentMode, _config.MaxZoomExplicitHalfExtentCm);
+            minHalfExtent = ClampHalfExtent(minHalfExtent);
+            maxHalfExtent = ClampHalfExtent(maxHalfExtent);
+            if (minHalfExtent > maxHalfExtent)
+            {
+                throw new InvalidOperationException(
+                    $"MINIMAP.ERR.InvalidZoomRange minHalfExtentCm={minHalfExtent} must be <= maxHalfExtentCm={maxHalfExtent}.");
+            }
+
+            bool changed =
+                !_zoomRangeInitialized ||
+                MathF.Abs(_minZoomHalfExtentCm - minHalfExtent) > 0.001f ||
+                MathF.Abs(_maxZoomHalfExtentCm - maxHalfExtent) > 0.001f;
+            _minZoomHalfExtentCm = minHalfExtent;
+            _maxZoomHalfExtentCm = maxHalfExtent;
+            _zoomRangeInitialized = true;
+            if (_viewportInitialized)
+            {
+                SetHalfExtentAndSyncZoom(_halfExtentCm);
+                return;
+            }
+
+            if (!changed)
+            {
+                return;
+            }
+
+            _zoomNormalized = Math.Clamp(_config.InitialZoomNormalized, 0f, 1f);
+            ApplyZoomNormalized(_zoomNormalized);
+        }
+
+        private static float ResolveConfiguredHalfExtent(
+            GameEngine engine,
+            in WorldAabbCm bounds,
+            MinimapZoomExtentMode mode,
+            float explicitHalfExtentCm)
+        {
+            return mode switch
+            {
+                MinimapZoomExtentMode.OneChunk => ResolvePrimaryBoardChunkExtentCm(engine),
+                MinimapZoomExtentMode.FullMap => MathF.Max(bounds.Width, bounds.Height) * 0.52f,
+                MinimapZoomExtentMode.ExplicitCm => explicitHalfExtentCm,
+                _ => throw new InvalidOperationException($"MINIMAP.ERR.InvalidZoomExtentMode {mode}."),
+            };
+        }
+
+        private static float ResolvePrimaryBoardChunkExtentCm(GameEngine engine)
+        {
+            if (engine.CurrentMapSession?.MapConfig?.Boards == null ||
+                engine.CurrentMapSession.MapConfig.Boards.Count == 0)
+            {
+                throw new InvalidOperationException("MINIMAP.ERR.ChunkZoomRequiresBoardConfig");
+            }
+
+            var boards = engine.CurrentMapSession.MapConfig.Boards;
+            var board = boards.Count == 1 ? boards[0] : null;
+            for (int i = 0; i < boards.Count; i++)
+            {
+                if (string.Equals(boards[i]?.Name, "default", StringComparison.OrdinalIgnoreCase))
+                {
+                    board = boards[i];
+                    break;
+                }
+            }
+
+            if (board == null)
+            {
+                throw new InvalidOperationException("MINIMAP.ERR.ChunkZoomRequiresDefaultBoardConfig");
+            }
+
+            if (board.ChunkSizeCells <= 0 || board.GridCellSizeCm <= 0)
+            {
+                throw new InvalidOperationException("MINIMAP.ERR.ChunkZoomInvalidBoardConfig");
+            }
+
+            return board.ChunkSizeCells * board.GridCellSizeCm * 0.5f;
+        }
+
+        private void ApplyZoomNormalized(float normalized)
+        {
+            float t = Math.Clamp(normalized, 0f, 1f);
+            _halfExtentCm = InterpolateZoomHalfExtent(t);
+        }
+
+        private void SetHalfExtentAndSyncZoom(float halfExtentCm)
+        {
+            float clamped = ClampHalfExtent(halfExtentCm);
+            if (!_zoomRangeInitialized)
+            {
+                _halfExtentCm = clamped;
+                return;
+            }
+
+            clamped = Math.Clamp(clamped, _minZoomHalfExtentCm, _maxZoomHalfExtentCm);
+            _halfExtentCm = clamped;
+            _zoomNormalized = SolveZoomNormalized(clamped);
+        }
+
+        private float InterpolateZoomHalfExtent(float normalized)
+        {
+            float min = MathF.Max(1f, _minZoomHalfExtentCm);
+            float max = MathF.Max(min, _maxZoomHalfExtentCm);
+            if (max - min <= 0.001f)
+            {
+                return ClampHalfExtent(min);
+            }
+
+            float ratio = max / min;
+            return ClampHalfExtent(min * MathF.Pow(ratio, normalized));
+        }
+
+        private float SolveZoomNormalized(float halfExtentCm)
+        {
+            float min = MathF.Max(1f, _minZoomHalfExtentCm);
+            float max = MathF.Max(min, _maxZoomHalfExtentCm);
+            if (max - min <= 0.001f)
+            {
+                return 0f;
+            }
+
+            float clamped = Math.Clamp(halfExtentCm, min, max);
+            return Math.Clamp(MathF.Log(clamped / min) / MathF.Log(max / min), 0f, 1f);
         }
 
         private void ResetBounds()

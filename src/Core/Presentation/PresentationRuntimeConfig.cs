@@ -23,6 +23,7 @@ namespace Ludots.Core.Presentation
         public int MinimapMarkerCapacity { get; set; } = 131072;
         public int RuntimeEntitySpawnQueueCapacity { get; set; } = 131072;
         public CameraCullingRuntimeConfig CameraCulling { get; set; } = new CameraCullingRuntimeConfig();
+        public MinimapRuntimeConfig Minimap { get; set; } = new MinimapRuntimeConfig();
 
         public int GetEffectivePerformerInstanceCapacity()
         {
@@ -92,6 +93,68 @@ namespace Ludots.Core.Presentation
         public int GetEffectiveRuntimeEntitySpawnQueueCapacity()
         {
             return RuntimeEntitySpawnQueueCapacity > 0 ? RuntimeEntitySpawnQueueCapacity : 131072;
+        }
+
+        public void Validate()
+        {
+            CameraCulling.Validate();
+            Minimap.Validate();
+        }
+    }
+
+    public enum MinimapZoomExtentMode
+    {
+        OneChunk = 0,
+        FullMap = 1,
+        ExplicitCm = 2,
+    }
+
+    public sealed class MinimapRuntimeConfig
+    {
+        public float InitialZoomNormalized { get; set; } = 1f;
+        public float WheelZoomNormalizedStep { get; set; } = 0.08f;
+        public float ButtonZoomNormalizedStep { get; set; } = 0.18f;
+        public bool ZoomSliderEnabled { get; set; } = true;
+        public MinimapZoomExtentMode MinZoomExtentMode { get; set; } = MinimapZoomExtentMode.ExplicitCm;
+        public MinimapZoomExtentMode MaxZoomExtentMode { get; set; } = MinimapZoomExtentMode.FullMap;
+        public float MinZoomExplicitHalfExtentCm { get; set; } = 750f;
+        public float MaxZoomExplicitHalfExtentCm { get; set; } = 0f;
+
+        public void Validate()
+        {
+            if (!float.IsFinite(InitialZoomNormalized) ||
+                InitialZoomNormalized < 0f ||
+                InitialZoomNormalized > 1f)
+            {
+                throw new InvalidOperationException(
+                    "presentation.minimap.initialZoomNormalized must be finite and in [0, 1].");
+            }
+
+            if (!float.IsFinite(WheelZoomNormalizedStep) || WheelZoomNormalizedStep <= 0f)
+            {
+                throw new InvalidOperationException(
+                    "presentation.minimap.wheelZoomNormalizedStep must be finite and > 0.");
+            }
+
+            if (!float.IsFinite(ButtonZoomNormalizedStep) || ButtonZoomNormalizedStep <= 0f)
+            {
+                throw new InvalidOperationException(
+                    "presentation.minimap.buttonZoomNormalizedStep must be finite and > 0.");
+            }
+
+            if (MinZoomExtentMode == MinimapZoomExtentMode.ExplicitCm &&
+                (!float.IsFinite(MinZoomExplicitHalfExtentCm) || MinZoomExplicitHalfExtentCm <= 0f))
+            {
+                throw new InvalidOperationException(
+                    "presentation.minimap.minZoomExplicitHalfExtentCm must be finite and > 0 when minZoomExtentMode is ExplicitCm.");
+            }
+
+            if (MaxZoomExtentMode == MinimapZoomExtentMode.ExplicitCm &&
+                (!float.IsFinite(MaxZoomExplicitHalfExtentCm) || MaxZoomExplicitHalfExtentCm <= 0f))
+            {
+                throw new InvalidOperationException(
+                    "presentation.minimap.maxZoomExplicitHalfExtentCm must be finite and > 0 when maxZoomExtentMode is ExplicitCm.");
+            }
         }
     }
 

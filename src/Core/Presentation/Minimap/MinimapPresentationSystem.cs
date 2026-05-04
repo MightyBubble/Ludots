@@ -1,6 +1,7 @@
 using System.Numerics;
 using Arch.System;
 using Ludots.Core.Engine;
+using Ludots.Core.Gameplay.Camera;
 using Ludots.Core.Input.Interaction;
 using Ludots.Core.Input.Runtime;
 using Ludots.Core.Presentation.Hud;
@@ -77,6 +78,7 @@ namespace Ludots.Core.Presentation.Minimap
         private bool _prevPresetToggle;
         private bool _prevRotateToggle;
         private bool _dragging;
+        private bool _zoomSliderDragging;
 
         public MinimapInputConsumer(MinimapRuntime runtime)
         {
@@ -161,30 +163,52 @@ namespace Ludots.Core.Presentation.Minimap
         {
             InteractionActionBindings bindings = InteractionActionBindingsResolver.Require(engine.GlobalContext, nameof(MinimapInputConsumer));
             Vector2 pointer = input.ReadAction<Vector2>(bindings.PointerPositionActionId);
-            bool inside = _runtime.ContainsField(pointer);
+            bool insideField = _runtime.ContainsField(pointer);
+            bool insideSlider = _runtime.ContainsZoomSlider(pointer);
+            bool insideInteractive = insideField || insideSlider;
             bool confirmDown = input.IsDown(bindings.ConfirmActionId);
             bool confirmPressed = input.PressedThisFrame(bindings.ConfirmActionId);
             bool confirmReleased = input.ReleasedThisFrame(bindings.ConfirmActionId);
             float wheelDelta = input.ReadAction<float>(MinimapInputActions.Zoom);
 
-            if (inside)
+            if (insideInteractive)
             {
                 engine.SetService(CoreServiceKeys.PointerInputCaptured, true);
                 if (wheelDelta != 0f)
                 {
                     _runtime.ApplyWheelZoom(wheelDelta, pointer);
-                    SuppressCameraZoom(input);
+                    SuppressCameraZoom(engine, input);
                 }
             }
 
             if (confirmReleased)
             {
                 _dragging = false;
+                _zoomSliderDragging = false;
             }
 
-            if (inside && confirmPressed)
+            if (insideSlider && confirmPressed)
+            {
+                _zoomSliderDragging = true;
+                _runtime.SetZoomFromSliderPointer(pointer);
+            }
+            else if (insideField && confirmPressed)
             {
                 _dragging = true;
+            }
+
+            if (_zoomSliderDragging)
+            {
+                if (!confirmDown && !confirmPressed)
+                {
+                    _zoomSliderDragging = false;
+                    return;
+                }
+
+                _runtime.SetZoomFromSliderPointer(pointer);
+                engine.SetService(CoreServiceKeys.PointerInputCaptured, true);
+                SuppressConfirm(engine, input, bindings.ConfirmActionId);
+                return;
             }
 
             if (!_dragging)
@@ -205,16 +229,32 @@ namespace Ludots.Core.Presentation.Minimap
 
             _runtime.JumpCameraTo(engine, worldCm);
             engine.SetService(CoreServiceKeys.PointerInputCaptured, true);
-            input.SuppressActionThisFrame(bindings.ConfirmActionId);
+            SuppressConfirm(engine, input, bindings.ConfirmActionId);
+        }
+
+        private static void SuppressConfirm(PlayerInputHandler input, string actionId)
+        {
+            input.SuppressActionThisFrame(actionId);
+        }
+
+        private static void SuppressConfirm(GameEngine engine, PlayerInputHandler input, string actionId)
+        {
+            SuppressConfirm(input, actionId);
             if (engine.GetService(CoreServiceKeys.AuthoritativePointerButtons) is AuthoritativePointerButtonSnapshot pointerButtons)
             {
-                pointerButtons.SuppressAction(bindings.ConfirmActionId);
+                pointerButtons.SuppressAction(actionId);
             }
         }
 
-        private static void SuppressCameraZoom(PlayerInputHandler input)
+        private static void SuppressCameraZoom(GameEngine engine, PlayerInputHandler input)
         {
-            input.SuppressActionThisFrame("Zoom");
+            string? zoomActionId = engine.GameSession.Camera.VirtualCameraBrain?.ActiveDefinition?.ZoomActionId;
+            if (!string.IsNullOrWhiteSpace(zoomActionId))
+            {
+                input.SuppressActionThisFrame(zoomActionId);
+            }
+
+            input.SuppressActionThisFrame(VirtualCameraDefinition.DefaultZoomActionId);
         }
     }
 
