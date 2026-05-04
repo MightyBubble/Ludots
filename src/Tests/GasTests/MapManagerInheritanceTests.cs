@@ -153,6 +153,51 @@ namespace GasTests
             }
         }
 
+        [Test]
+        public void LoadMap_WhenChildOverridesMetadata_MergesByTopLevelKey()
+        {
+            var tempRoot = CreateTempDir();
+            try
+            {
+                WriteMapConfig(tempRoot, "parent", """
+                {
+                  "id": "parent",
+                  "metadata": {
+                    "terrain": {
+                      "profile": "parent"
+                    },
+                    "benchmark": {
+                      "count": 1000
+                    }
+                  }
+                }
+                """);
+
+                WriteMapConfig(tempRoot, "child", """
+                {
+                  "id": "child",
+                  "parentId": "parent",
+                  "metadata": {
+                    "benchmark": {
+                      "count": 30000
+                    }
+                  }
+                }
+                """);
+
+                var manager = CreateMapManager(tempRoot);
+                var cfg = manager.LoadMap("child");
+
+                Assert.That(cfg, Is.Not.Null);
+                Assert.That(cfg!.Metadata["terrain"]!["profile"]!.GetValue<string>(), Is.EqualTo("parent"));
+                Assert.That(cfg.Metadata["benchmark"]!["count"]!.GetValue<int>(), Is.EqualTo(30000));
+            }
+            finally
+            {
+                TryDelete(tempRoot);
+            }
+        }
+
         private static MapManager CreateMapManager(string coreRoot)
         {
             var vfs = new VirtualFileSystem();

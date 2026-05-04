@@ -38,7 +38,7 @@
 
 静态实体的 performer 树在创建后几乎不变。如果每帧仍然遍历它们做 behavior eval + emit，等于白白浪费 100K 次迭代。
 
-### 1.4 LOD 子节点裁剪
+### 1.4 LOD 子节点分档
 
 即使全部在屏幕上，远处实体不需要全部 5 个 children：
 
@@ -49,7 +49,7 @@
 | Far（> 100m） | ~20,000 | 2（mesh + billboard 血条） | 40,000 |
 | **合计** | **30,000** | | **74,000** |
 
-LOD 裁剪把 150K 降到 ~74K。结合静态/动态分区，真正需要每帧处理的实例大幅减少。
+LOD 分档把 150K 降到 ~74K。这里的 LOD 只控制视觉质量/子节点启用策略，不等于 camera culling，也不能把距离阈值当成可见性剔除。
 
 ### 1.5 根因
 
@@ -280,6 +280,7 @@ GAS 基建已有完整的 entity-level 变化信号：
 ### 迭代 4：Culling Gate（屏幕边缘优化）
 
 虽然 30K 全部"在场景中"，但相机视锥仍然有边界。`CameraCullingSystem` 已在 entity 上写 `CullState.IsVisible`。
+`CullState.LOD` 只写 High/Medium/Low 质量层；可见性只看 `CullState.IsVisible` / `PerformerCullState.OwnerCullVisible`。全局阈值显式配置在 `presentation.cameraCulling`，由 `GameConfig.Presentation.CameraCulling` 提供给各 host。
 
 改动：
 - `PerformerInstance` 新增 `bool OwnerCullVisible`

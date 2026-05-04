@@ -100,7 +100,8 @@ namespace Ludots.Core.Presentation.Camera
 
             var view = Matrix4x4.CreateLookAt(camera.Position, camera.Target, camera.Up);
             float fovYRad = camera.FovYDeg * (float)(Math.PI / 180.0);
-            var projection = Matrix4x4.CreatePerspectiveFieldOfView(fovYRad, _view.AspectRatio, 0.1f, 10000f);
+            CameraClipPlanes clipPlanes = CameraViewportUtil.ResolveClipPlanes(in camera);
+            var projection = Matrix4x4.CreatePerspectiveFieldOfView(fovYRad, _view.AspectRatio, clipPlanes.NearMeters, clipPlanes.FarMeters);
             _viewProjection = view * projection;
         }
 

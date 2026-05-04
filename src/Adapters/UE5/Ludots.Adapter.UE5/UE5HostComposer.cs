@@ -268,7 +268,8 @@ namespace Ludots.Adapter.UE5
                 engine.GameSession.Camera,
                 engine.SpatialQueries,
                 viewController,
-                performers: engine.GetService(CoreServiceKeys.PerformerEntityRuntime));
+                performers: engine.GetService(CoreServiceKeys.PerformerEntityRuntime),
+                cullingConfig: engine.MergedConfig.Presentation.CameraCulling);
             engine.InsertPresentationSystemBefore<PresentationEntityLifecycleSystem>(cullingSystem);
             engine.SetService(CoreServiceKeys.CameraCullingDebugState, cullingSystem.DebugState);
 

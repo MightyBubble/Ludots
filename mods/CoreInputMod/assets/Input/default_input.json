@@ -9,7 +9,16 @@
     { "id": "ViewModeNext", "name": "Gameplay_ViewModeNext", "type": "Button" },
     { "id": "ViewModePrev", "name": "Gameplay_ViewModePrev", "type": "Button" },
     { "id": "TabTarget", "name": "Gameplay_TabTarget", "type": "Button" },
-    { "id": "TabTargetReverse", "name": "Gameplay_TabTargetReverse", "type": "Button" }
+    { "id": "TabTargetReverse", "name": "Gameplay_TabTargetReverse", "type": "Button" },
+    { "id": "PointerPos", "name": "Pointer_Position", "type": "Axis2D" },
+    { "id": "Minimap.Toggle", "name": "Minimap_Toggle", "type": "Button" },
+    { "id": "Minimap.TogglePreset", "name": "Minimap_TogglePreset", "type": "Button" },
+    { "id": "Minimap.ToggleRotateWithCamera", "name": "Minimap_ToggleRotateWithCamera", "type": "Button" },
+    { "id": "Minimap.Zoom", "name": "Minimap_Zoom", "type": "Axis1D" },
+    { "id": "Minimap.ZoomIn", "name": "Minimap_ZoomIn", "type": "Button" },
+    { "id": "Minimap.ZoomOut", "name": "Minimap_ZoomOut", "type": "Button" },
+    { "id": "Minimap.Pan", "name": "Minimap_Pan", "type": "Axis2D" },
+    { "id": "Minimap.CenterOnSelection", "name": "Minimap_CenterOnSelection", "type": "Button" }
   ],
   "contexts": [
     {
@@ -25,7 +34,28 @@
         { "actionId": "ResponseChainActivate", "path": "<Keyboard>/1" },
         { "actionId": "ViewModeNext", "path": "<Keyboard>/v" },
         { "actionId": "ViewModePrev", "path": "<Keyboard>/b" },
-        { "actionId": "TabTarget", "path": "<Keyboard>/tab" }
+        { "actionId": "TabTarget", "path": "<Keyboard>/tab" },
+        { "actionId": "PointerPos", "path": "<Mouse>/Pos" },
+        { "actionId": "Minimap.Toggle", "path": "<Keyboard>/m" },
+        { "actionId": "Minimap.TogglePreset", "path": "<Keyboard>/f6" },
+        { "actionId": "Minimap.ToggleRotateWithCamera", "path": "<Keyboard>/f7" },
+        { "actionId": "Minimap.Zoom", "path": "<Mouse>/ScrollY" },
+        { "actionId": "Minimap.ZoomIn", "path": "<Keyboard>/pageUp" },
+        { "actionId": "Minimap.ZoomOut", "path": "<Keyboard>/pageDown" },
+        {
+          "actionId": "Minimap.Pan",
+          "compositeType": "Vector2",
+          "compositeParts": [
+            { "path": "<Keyboard>/i" },
+            { "path": "<Keyboard>/k" },
+            { "path": "<Keyboard>/j" },
+            { "path": "<Keyboard>/l" }
+          ],
+          "processors": [
+            { "type": "Normalize" }
+          ]
+        },
+        { "actionId": "Minimap.CenterOnSelection", "path": "<Keyboard>/home" }
       ]
     }
   ]

@@ -18,6 +18,7 @@ namespace Ludots.Core.Presentation.Performers
         public MaterialConfig Material;
         public SplineConfig Spline;
         public GroundingConfig Grounding;
+        public MinimapMarkerConfig MinimapMarker;
     }
 
     public enum BehaviorKind : byte
@@ -31,6 +32,7 @@ namespace Ludots.Core.Presentation.Performers
         Material = 7,
         Spline = 8,
         Grounding = 9,
+        MinimapMarker = 10,
     }
 
     public struct AssetBindingConfig
@@ -162,5 +164,20 @@ namespace Ludots.Core.Presentation.Performers
     {
         Once = 0,
         EveryFrame = 1,
+    }
+
+    public enum MinimapMarkerShape : byte
+    {
+        Circle = 1,
+    }
+
+    public struct MinimapMarkerConfig
+    {
+        public MinimapMarkerShape Shape;
+        public Vector4 Color;
+        public float SizePx;
+        public int ColorParamKey;
+        public int SizeParamKey;
+        public int VisibilityParamKey;
     }
 }

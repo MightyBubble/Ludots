@@ -79,7 +79,7 @@ namespace Ludots.Core.Presentation.Performers
                 HasOwnerTeam = ownerTeam.HasValue,
                 HasOwnerOwner = ownerOwner.HasValue,
                 IsVisible = cullState.IsVisible,
-                IsCulled = cullState.LOD == LODLevel.Culled,
+                IsCulled = !cullState.IsVisible,
                 HasVision = hasVision,
                 HasRelationshipLink = hasRelationshipLink,
                 HasTeamRelationship = teamRelationship.HasValue,
@@ -127,7 +127,7 @@ namespace Ludots.Core.Presentation.Performers
         {
             bool revealHidden = input.Audience.RevealHidden;
             bool hasVision = revealHidden || input.HasVision;
-            bool isCulled = !revealHidden && (input.IsCulled || input.LOD == LODLevel.Culled);
+            bool isCulled = !revealHidden && input.IsCulled;
             bool isVisible = revealHidden || (input.IsVisible && hasVision && !isCulled);
             LODLevel lod = revealHidden && input.LOD == LODLevel.Culled
                 ? LODLevel.High

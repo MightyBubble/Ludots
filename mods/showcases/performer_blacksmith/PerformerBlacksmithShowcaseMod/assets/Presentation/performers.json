@@ -105,6 +105,69 @@
     ]
   },
   {
+    "id": "blacksmith_minimap_marker_ball_bootstrap",
+    "rules": [
+      {
+        "event": { "kind": "EntitySpawned", "key": "blacksmith_minimap_marker_ball_entity" },
+        "condition": { "inline": "SourceHasVisualTransform" },
+        "command": {
+          "kind": "CreatePerformer",
+          "definitionId": "blacksmith_minimap_marker_ball",
+          "scopeSource": "EventPayloadA"
+        }
+      },
+      {
+        "event": { "kind": "EntityDestroyed", "key": "blacksmith_minimap_marker_ball_entity" },
+        "command": {
+          "kind": "DestroyPerformerScope",
+          "scopeSource": "EventPayloadA"
+        }
+      }
+    ]
+  },
+  {
+    "id": "blacksmith_minimap_marker_ball",
+    "defaultColor": [1.0, 0.24, 0.06, 1.0],
+    "behaviors": [
+      {
+        "slot": 0,
+        "kind": "AssetBinding",
+        "activeByDefault": true,
+        "assetBinding": {
+          "assetKind": "Mesh",
+          "assetId": "sphere",
+          "materialId": "default_surface",
+          "renderPath": "InstancedStaticMesh",
+          "mobility": "Static",
+          "localScale": [2.8, 2.8, 2.8]
+        }
+      },
+      {
+        "slot": 1,
+        "kind": "Grounding",
+        "activeByDefault": true,
+        "grounding": {
+          "mode": "SnapToGround",
+          "offset": 5.6,
+          "updatePolicy": "Once"
+        }
+      },
+      {
+        "slot": 2,
+        "kind": "MinimapMarker",
+        "activeByDefault": true,
+        "minimapMarker": {
+          "shape": "Circle",
+          "color": [1.0, 0.24, 0.06, 1.0],
+          "sizePx": 11.0,
+          "colorParamKey": -1,
+          "sizeParamKey": -1,
+          "visibilityParamKey": -1
+        }
+      }
+    ]
+  },
+  {
     "id": "blacksmith_mesh_benchmark_ism",
     "behaviors": [
       {

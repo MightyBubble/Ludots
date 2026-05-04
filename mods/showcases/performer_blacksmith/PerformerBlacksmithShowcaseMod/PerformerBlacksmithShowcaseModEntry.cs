@@ -22,7 +22,7 @@ namespace PerformerBlacksmithShowcaseMod
                 {
                     engine.SetService(CoreServiceKeys.BenchmarkSceneController, runtime);
                     engine.RegisterSystem(
-                        new DynamicWorkerCrowdMovementSystem(engine.World),
+                        new DynamicWorkerCrowdMovementSystem(engine),
                         SystemGroup.PostMovement);
                     engine.RegisterPresentationSystem(
                         new PerformerBlacksmithShowcasePresentationSystem(engine, runtime));

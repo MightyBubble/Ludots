@@ -647,7 +647,7 @@ namespace Ludots.Core.Config
                     defaultWorldPosition,
                     new FacingDirection { AngleRad = facingAngle },
                     VisualTransform.Default,
-                    new CullState { IsVisible = false, LOD = LODLevel.Culled },
+                    new CullState { IsVisible = false, LOD = LODLevel.Low },
                     default,
                     default,
                     new EntityTemplateKeyCm { TemplateKeyId = templateKeyId },

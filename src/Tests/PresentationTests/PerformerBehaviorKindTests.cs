@@ -23,10 +23,10 @@ namespace Ludots.Tests.Presentation
     public sealed class PerformerBehaviorKindTests
     {
         [Test]
-        public void BehaviorKindContract_ArchitectureExposesEightKinds()
+        public void BehaviorKindContract_ArchitectureExposesCoreKinds()
         {
             BehaviorKind[] values = (BehaviorKind[])Enum.GetValues(typeof(BehaviorKind));
-            Assert.That(values.Length, Is.EqualTo(8), "BehaviorKind SSOT is the architecture enum, which defines 8 kinds.");
+            Assert.That(values.Length, Is.EqualTo(10), "BehaviorKind SSOT is the architecture enum.");
             Assert.That(values, Does.Contain(BehaviorKind.AssetBinding));
             Assert.That(values, Does.Contain(BehaviorKind.AttributeBinding));
             Assert.That(values, Does.Contain(BehaviorKind.TagBinding));
@@ -35,6 +35,8 @@ namespace Ludots.Tests.Presentation
             Assert.That(values, Does.Contain(BehaviorKind.Sound));
             Assert.That(values, Does.Contain(BehaviorKind.Material));
             Assert.That(values, Does.Contain(BehaviorKind.Spline));
+            Assert.That(values, Does.Contain(BehaviorKind.Grounding));
+            Assert.That(values, Does.Contain(BehaviorKind.MinimapMarker));
         }
 
         [Test]
@@ -48,6 +50,8 @@ namespace Ludots.Tests.Presentation
             Assert.That((byte)BehaviorKind.Sound, Is.EqualTo(6));
             Assert.That((byte)BehaviorKind.Material, Is.EqualTo(7));
             Assert.That((byte)BehaviorKind.Spline, Is.EqualTo(8));
+            Assert.That((byte)BehaviorKind.Grounding, Is.EqualTo(9));
+            Assert.That((byte)BehaviorKind.MinimapMarker, Is.EqualTo(10));
         }
 
         [Test]

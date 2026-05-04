@@ -834,7 +834,7 @@ namespace Ludots.Core.Presentation.Config
                     throw new InvalidOperationException($"Performer behavior[{i}] must be an object.");
                 }
 
-                BehaviorKind kind = ParseEnum(obj["kind"]?.GetValue<string>(), BehaviorKind.AssetBinding);
+                BehaviorKind kind = ParseRequiredEnum<BehaviorKind>(obj["kind"], $"Performer '{ownerKey}' behavior[{i}].kind");
                 int slotIndex = obj["slot"]?.GetValue<int>() ?? i;
                 if (slotIndex is < 0 or >= 32)
                 {
@@ -877,6 +877,9 @@ namespace Ludots.Core.Presentation.Config
                         break;
                     case BehaviorKind.Grounding:
                         slot.Grounding = ParseGrounding(obj["grounding"]);
+                        break;
+                    case BehaviorKind.MinimapMarker:
+                        slot.MinimapMarker = ParseMinimapMarker(obj["minimapMarker"]);
                         break;
                     default:
                         throw new InvalidOperationException($"Unsupported performer behavior kind '{kind}'.");
@@ -1063,6 +1066,38 @@ namespace Ludots.Core.Presentation.Config
                 Mode = ParseEnum(obj["mode"]?.GetValue<string>(), GroundingMode.SnapToGround),
                 Offset = obj["offset"]?.GetValue<float>() ?? 0f,
                 UpdatePolicy = ParseEnum(obj["updatePolicy"]?.GetValue<string>(), GroundingUpdatePolicy.Once),
+            };
+        }
+
+        private static MinimapMarkerConfig ParseMinimapMarker(JsonNode? node)
+        {
+            if (node is not JsonObject obj)
+            {
+                throw new InvalidOperationException("MinimapMarker behavior requires object field 'minimapMarker'.");
+            }
+
+            MinimapMarkerShape shape = ParseRequiredEnum<MinimapMarkerShape>(
+                obj["shape"],
+                "MinimapMarker.shape");
+            if (shape != MinimapMarkerShape.Circle)
+            {
+                throw new InvalidOperationException($"MinimapMarker shape '{shape}' is not supported. Use Circle.");
+            }
+
+            float sizePx = obj["sizePx"]?.GetValue<float>() ?? 6f;
+            if (!float.IsFinite(sizePx) || sizePx <= 0f)
+            {
+                throw new InvalidOperationException("MinimapMarker sizePx must be a positive finite number.");
+            }
+
+            return new MinimapMarkerConfig
+            {
+                Shape = shape,
+                Color = ParseColor(obj["color"]),
+                SizePx = sizePx,
+                ColorParamKey = obj["colorParamKey"]?.GetValue<int>() ?? -1,
+                SizeParamKey = obj["sizeParamKey"]?.GetValue<int>() ?? -1,
+                VisibilityParamKey = obj["visibilityParamKey"]?.GetValue<int>() ?? -1,
             };
         }
 
@@ -1532,6 +1567,21 @@ namespace Ludots.Core.Presentation.Config
             }
 
             return Enum.TryParse<T>(s, ignoreCase: true, out var parsed) ? parsed : defaultValue;
+        }
+
+        private static T ParseRequiredEnum<T>(JsonNode? node, string context) where T : struct, Enum
+        {
+            if (node is not JsonValue value || !value.TryGetValue<string>(out string? text) || string.IsNullOrWhiteSpace(text))
+            {
+                throw new InvalidOperationException($"{context} requires a non-empty enum string.");
+            }
+
+            if (!Enum.TryParse<T>(text, ignoreCase: true, out T parsed))
+            {
+                throw new InvalidOperationException($"{context} has invalid value '{text}'.");
+            }
+
+            return parsed;
         }
     }
 }

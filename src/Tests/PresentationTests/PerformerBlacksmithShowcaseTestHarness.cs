@@ -163,7 +163,8 @@ namespace Ludots.Tests.Presentation
                 view,
                 loadedChunks: null,
                 performers: engine.GetService(CoreServiceKeys.PerformerEntityRuntime),
-                timingDiagnostics: timings);
+                timingDiagnostics: timings,
+                cullingConfig: engine.MergedConfig.Presentation.CameraCulling);
             engine.InsertPresentationSystemBefore<PresentationEntityLifecycleSystem>(culling);
             engine.SetService(CoreServiceKeys.CameraCullingDebugState, culling.DebugState);
             engine.GlobalContext["Tests.PerformerBlacksmith.HeadlessCamera"] = new HeadlessCameraRuntime(

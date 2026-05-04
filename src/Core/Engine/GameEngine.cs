@@ -42,10 +42,12 @@ using Ludots.Core.Presentation.Systems;
 using Ludots.Core.Presentation.Assets;
 using Ludots.Core.Presentation.Commands;
 using Ludots.Core.Presentation.Config;
+using Ludots.Core.Presentation.ChunkDebug;
 using Ludots.Core.Presentation.Requests;
 using Ludots.Core.Presentation.Terrain;
 using Ludots.Core.Presentation.Rendering;
 using Ludots.Core.Presentation.Hud;
+using Ludots.Core.Presentation.Minimap;
 using Ludots.Core.Gameplay.GAS.Presentation;
 using Ludots.Core.Presentation.Surfaces;
 // Indicators directory removed — unified into Performers
@@ -352,6 +354,7 @@ namespace Ludots.Core.Engine
             ConfigPipeline = new ConfigPipeline((VirtualFileSystem)VFS, ModLoader);
             ((MapManager)MapManager).SetConfigPipeline(ConfigPipeline);
             MergedConfig = ConfigPipeline.MergeGameConfig();
+            MergedConfig.Presentation.CameraCulling.Validate();
 
             ConfigCatalog = Ludots.Core.Config.ConfigCatalogLoader.Load(ConfigPipeline);
             ConfigConflictReport = new Ludots.Core.Config.ConfigConflictReport();
@@ -764,6 +767,14 @@ namespace Ludots.Core.Engine
                 "MeshAssetRegistry: 'sphere' descriptor missing or invalid after config load");
 
             var worldHudStrings = new WorldHudStringTable(presentationTextCatalog, presentationTextLocaleSelection);
+            var minimapRuntime = new MinimapRuntime();
+            var chunkDebugPanelRuntime = new ChunkDebugPanelRuntime();
+            var minimapMarkerBuffer = new MinimapMarkerBuffer(presentationConfig.GetEffectiveMinimapMarkerCapacity());
+            var minimapScreenMarkerBuffer = new MinimapScreenMarkerBuffer(presentationConfig.GetEffectiveMinimapMarkerCapacity());
+            var inputFrameConsumers = new List<IInputFrameConsumer>
+            {
+                new MinimapInputConsumer(minimapRuntime)
+            };
 
             var abilitySystem = new AbilitySystem(World, effectRequestQueue, abilityDefinitions, tagOps, graphProgramRegistry, gasGraphApi);
             var reactionSystem = new ReactionSystem(World, abilitySystem, EventBus);
@@ -937,6 +948,11 @@ namespace Ludots.Core.Engine
             var screenHudBuffer = new ScreenHudBatchBuffer(presentationConfig.GetEffectiveScreenHudCapacity());
             SetService(CoreServiceKeys.PresentationScreenHudBuffer, screenHudBuffer);
             SetService(CoreServiceKeys.ScreenOverlayBuffer, new ScreenOverlayBuffer());
+            SetService(CoreServiceKeys.MinimapRuntime, minimapRuntime);
+            SetService(CoreServiceKeys.MinimapMarkerBuffer, minimapMarkerBuffer);
+            SetService(CoreServiceKeys.MinimapScreenMarkerBuffer, minimapScreenMarkerBuffer);
+            SetService(CoreServiceKeys.ChunkDebugPanelRuntime, chunkDebugPanelRuntime);
+            SetService(CoreServiceKeys.InputFrameConsumers, inputFrameConsumers);
             SetService(CoreServiceKeys.RenderDebugState, new RenderDebugState());
             SetService(CoreServiceKeys.PresentationTimingDiagnostics, presentationTimingDiagnostics);
             SetService(CoreServiceKeys.TransientMarkerBuffer, transientMarkerBuffer);
@@ -1124,7 +1140,7 @@ namespace Ludots.Core.Engine
             // WorldToVisualSyncSystem: 插值 WorldPositionCm → VisualTransform（必须在 PresentationFrameSetup 之后）
             RegisterPresentationSystem(new WorldToVisualSyncSystem(World));
             // TerrainHeightSyncSystem: 采样地形高度写入 VisualTransform.Y，使实体贴附地表
-            RegisterPresentationSystem(new TerrainHeightSyncSystem(World, GlobalContext));
+            RegisterPresentationSystem(new TerrainHeightSyncSystem(World, GlobalContext, presentationTimingDiagnostics));
             RegisterPresentationSystem(presentationEntityLifecycleSystem);
             RegisterPresentationSystem(new ResponseChainDirectorSystem(World, orderRequestQueue, responseChainTelemetry, responseChainUiState, transientMarkerBuffer, presentationPrefabs));
             RegisterPresentationSystem(new ResponseChainHumanOrderSourceSystem(GlobalContext, responseChainUiState, chainOrderQueue));
@@ -1140,6 +1156,7 @@ namespace Ludots.Core.Engine
             // PerformerBehaviorSystem drives blackboard-bound behavior before animator and emit read it.
             RegisterPresentationSystem(performerBehaviorSystem);
             RegisterPresentationSystem(animatorRuntimeSystem);
+            RegisterPresentationSystem(new PerformerMinimapMarkerSystem(World, performerDefinitions, minimapMarkerBuffer, presentationTimingDiagnostics));
             // PerformerEmitSystem is the Wave 4 asset-binding emitter.
             RegisterPresentationSystem(performerEmitSystem);
             RegisterPresentationSystem(clearPresentationFlagsSystem);
@@ -1148,6 +1165,8 @@ namespace Ludots.Core.Engine
             RegisterPresentationSystem(chunkSurfaceBakeSystem);
             RegisterPresentationSystem(presentationEntityFinalizeDestroySystem);
             RegisterPresentationSystem(presentationRequestFlushSystem);
+            RegisterPresentationSystem(new MinimapPresentationSystem(this, minimapRuntime, minimapMarkerBuffer, minimapScreenMarkerBuffer));
+            RegisterPresentationSystem(new ChunkDebugPanelPresentationSystem(this, chunkDebugPanelRuntime));
         }
 
         private void OnFixedStepCompleted(float fixedDt)

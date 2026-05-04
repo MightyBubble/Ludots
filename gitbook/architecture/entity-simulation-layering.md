@@ -14,7 +14,7 @@
 
 - 逻辑位置真相：`WorldPositionCm`、`PreviousWorldPositionCm`
 - 物理热路径位置：`Position2D`、`PreviousPosition2D`
-- 视觉裁剪与视觉 LOD：`CullState`、`CameraCullingSystem`
+- 视觉可见性与视觉 LOD：`CullState`、`CameraCullingSystem`
 - 层级过滤表达：`EntityLayer`、`LayerMask`
 - Navigation / Physics 模式表达：`NavPhysicsMode`、`NavSolverMode`
 - ORCA / Hybrid / Sonar steering：`Navigation2DSteeringSystem2D`
@@ -120,9 +120,21 @@
 解释如下：
 
 - `CullState` 只负责视觉
+- `CullState.IsVisible` 是 camera viewport / spatial / loaded chunk gate 的可见性结果
+- `CullState.LOD` 只表示视觉质量层级，不得作为剔除真相；距离 LOD 阈值不能形成相机跟随的圆形 visibility mask
+- `CameraCullingSystem` 的距离阈值来自全局 `GameConfig.Presentation.CameraCulling`，即 `assets/game.json` 经 `ConfigPipeline.MergeGameConfig()` 合并后的单例配置
 - `SimulationLodState` 才是逻辑预算真相
 - 允许同一个 entity 视觉可见但仿真降频
 - 也允许同一个 entity 视觉不可见但仍保持后端真相更新
+
+### 3.5 Core Minimap
+
+- Core minimap 属于 Presentation 基建，不属于业务 Mod
+- 正式逻辑信号源是 `Name + WorldPositionCm + MapEntity`
+- `Team` 只作为阵营颜色/关系的可选读取，不参与信号存在性判定
+- Visual heightmap、chunk streaming、camera culling、visual LOD 都不能 gate minimap 逻辑信号
+- `IVisualHeightmapRenderSource` / `WorldSizeSpec` 只用于 RTS full-map preset 解析地图 bounds
+- 256x256 大世界通过战略 cell 聚合展示，不能把 generic crowd 展开成逐实体 overlay 文本
 
 ## 4 双车道仿真口径
 

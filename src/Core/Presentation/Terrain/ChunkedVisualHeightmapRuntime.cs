@@ -9,7 +9,7 @@ namespace Ludots.Core.Presentation.Terrain
     /// IVisualHeightmap runtime over a sparse loaded chunk store.
     /// Missing chunks return false instead of inventing implicit global terrain.
     /// </summary>
-    public sealed class ChunkedVisualHeightmapRuntime : IVisualHeightmap, IVisualHeightmapSampleAccessor
+    public sealed class ChunkedVisualHeightmapRuntime : IVisualHeightmap, IVisualHeightmapRenderSource, IVisualHeightmapSampleAccessor
     {
         private readonly ChunkedVisualHeightmapDescriptor _descriptor;
         private readonly ChunkedVisualHeightmapStore _store;
@@ -23,6 +23,53 @@ namespace Ludots.Core.Presentation.Terrain
         public ChunkedVisualHeightmapDescriptor Descriptor => _descriptor;
 
         public ChunkedVisualHeightmapStore Store => _store;
+
+        public WorldAabbCm Bounds => _descriptor.Bounds;
+
+        public int ChunkColumns => _descriptor.ChunkColumns;
+
+        public int ChunkRows => _descriptor.ChunkRows;
+
+        public int SamplesPerChunkColumn => _descriptor.SamplesPerChunkColumn;
+
+        public int SamplesPerChunkRow => _descriptor.SamplesPerChunkRow;
+
+        public int DefaultLayerIndex => _descriptor.DefaultLayerIndex;
+
+        public int Revision => _store.Revision;
+
+        public bool TryGetChunk(int chunkX, int chunkY, out VisualHeightmapRenderChunk chunk)
+        {
+            chunk = default;
+            if (!_store.TryGetChunk(chunkX, chunkY, out ChunkedVisualHeightmapChunk source) ||
+                !TryResolveLayerIndex(_descriptor.DefaultLayerIndex, out int layerIndex))
+            {
+                return false;
+            }
+
+            VisualHeightmapLayerDefinition layer = _descriptor.Layers[layerIndex];
+            WorldAabbCm bounds = new WorldAabbCm(
+                _descriptor.Bounds.Left + (chunkX * _descriptor.ChunkWorldWidthCm),
+                _descriptor.Bounds.Top + (chunkY * _descriptor.ChunkWorldHeightCm),
+                _descriptor.ChunkWorldWidthCm,
+                _descriptor.ChunkWorldHeightCm);
+            chunk = new VisualHeightmapRenderChunk(
+                chunkX,
+                chunkY,
+                bounds,
+                _descriptor.SamplesPerChunkColumn,
+                _descriptor.SamplesPerChunkRow,
+                _descriptor.ChunkWorldWidthCm / (float)(_descriptor.SamplesPerChunkColumn - 1),
+                _descriptor.ChunkWorldHeightCm / (float)(_descriptor.SamplesPerChunkRow - 1),
+                source.HeightSamplesCm,
+                source.HeightSamplesRaw,
+                _descriptor.SampleScale,
+                _descriptor.StorageLayout,
+                _descriptor.SamplesPerChunkColumn,
+                layer.SampleOffset,
+                HashCode.Combine(_store.Revision, source.Generation));
+            return true;
+        }
 
         public bool TrySampleHeightCm(float worldXCm, float worldYCm, out float heightCm, int layerIndex = 0)
         {

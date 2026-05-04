@@ -800,6 +800,7 @@ namespace Ludots.Tests.GAS.Production
                 engine.GameSession.Camera,
                 engine.SpatialQueries,
                 view,
+                cullingConfig: engine.MergedConfig.Presentation.CameraCulling,
                 loadedChunks: null,
                 performers: engine.GetService(CoreServiceKeys.PerformerEntityRuntime),
                 timingDiagnostics: timingDiagnostics);

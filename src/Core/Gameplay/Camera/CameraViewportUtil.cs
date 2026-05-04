@@ -13,8 +13,9 @@ namespace Ludots.Core.Gameplay.Camera
     /// </summary>
     public static class CameraViewportUtil
     {
-        private const float NearPlane = 0.1f;
-        private const float FarPlane = 10000f;
+        public const float DefaultNearPlaneMeters = 0.1f;
+        public const float DefaultFarPlaneMeters = 10000f;
+        private const float FarPlaneDistanceMultiplier = 8f;
 
         /// <summary>
         /// Compute viewport extent in logic space (cm) with buffer.
@@ -75,7 +76,8 @@ namespace Ludots.Core.Gameplay.Camera
         {
             var view = Matrix4x4.CreateLookAt(camera.Position, camera.Target, camera.Up);
             float fovYRad = camera.FovYDeg * (float)(Math.PI / 180.0);
-            var proj = Matrix4x4.CreatePerspectiveFieldOfView(fovYRad, aspectRatio, NearPlane, FarPlane);
+            CameraClipPlanes clipPlanes = ResolveClipPlanes(in camera);
+            var proj = Matrix4x4.CreatePerspectiveFieldOfView(fovYRad, aspectRatio, clipPlanes.NearMeters, clipPlanes.FarMeters);
 
             var world4 = new Vector4(worldM, 1f);
             var viewProj = view * proj;
@@ -116,7 +118,8 @@ namespace Ludots.Core.Gameplay.Camera
 
             var view = Matrix4x4.CreateLookAt(camera.Position, camera.Target, camera.Up);
             float fovYRad = camera.FovYDeg * (float)(Math.PI / 180.0);
-            var projection = Matrix4x4.CreatePerspectiveFieldOfView(fovYRad, aspectRatio, NearPlane, FarPlane);
+            CameraClipPlanes clipPlanes = ResolveClipPlanes(in camera);
+            var projection = Matrix4x4.CreatePerspectiveFieldOfView(fovYRad, aspectRatio, clipPlanes.NearMeters, clipPlanes.FarMeters);
             var viewProj = view * projection;
             if (!Matrix4x4.Invert(viewProj, out var invViewProj))
             {
@@ -141,6 +144,18 @@ namespace Ludots.Core.Gameplay.Camera
             var farWorld = new Vector3(farWorld4.X, farWorld4.Y, farWorld4.Z);
             var direction = Vector3.Normalize(farWorld - nearWorld);
             return new ScreenRay(nearWorld, direction);
+        }
+
+        public static CameraClipPlanes ResolveClipPlanes(in CameraRenderState3D camera)
+        {
+            float distanceMeters = Vector3.Distance(camera.Position, camera.Target);
+            float farMeters = DefaultFarPlaneMeters;
+            if (float.IsFinite(distanceMeters) && distanceMeters > 0f)
+            {
+                farMeters = MathF.Max(farMeters, distanceMeters * FarPlaneDistanceMultiplier);
+            }
+
+            return new CameraClipPlanes(DefaultNearPlaneMeters, farMeters);
         }
 
         /// <summary>

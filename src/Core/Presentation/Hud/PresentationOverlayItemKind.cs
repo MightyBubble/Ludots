@@ -5,6 +5,8 @@ namespace Ludots.Core.Presentation.Hud
         None = 0,
         Text = 1,
         Rect = 2,
-        Bar = 3
+        Bar = 3,
+        MinimapMarker = 4,
+        Line = 5
     }
 }

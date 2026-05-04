@@ -592,6 +592,30 @@ namespace Ludots.Client.Raylib.Rendering
             return $"prefab-visual-counts lastFrame(mesh={LastMeshVisualCount},decal={LastDecalVisualCount},vfx={LastVfxVisualCount},surface={LastSurfaceVisualCount}) total(mesh={TotalMeshVisualCount},decal={TotalDecalVisualCount},vfx={TotalVfxVisualCount},surface={TotalSurfaceVisualCount})";
         }
 
+        public string BuildPrimitiveLaneDiagnosticSummary(MeshAssetRegistry meshes)
+        {
+            if (meshes == null) throw new ArgumentNullException(nameof(meshes));
+
+            int bucketCount = _ismBridge.ActiveBuckets.Count;
+            if (bucketCount == 0)
+            {
+                return "primitive-lane bucketCount=0";
+            }
+
+            RaylibIsmRenderBridge.Bucket bucket = _ismBridge.ActiveBuckets[0];
+            int itemCount = bucket.Items.Count;
+            if (itemCount == 0)
+            {
+                return $"primitive-lane bucketCount={bucketCount} firstBucketItems=0";
+            }
+
+            PrimitiveDrawItem item = bucket.Items[0];
+            string mesh = meshes.TryGetDescriptor(item.MeshAssetId, out MeshAssetDescriptor descriptor)
+                ? $"{descriptor.Type}/{descriptor.PrimitiveKind}"
+                : "missing";
+            return $"primitive-lane bucketCount={bucketCount} firstBucketItems={itemCount} mesh={mesh} meshAssetId={item.MeshAssetId} stable={item.StableId} renderPath={item.RenderPath} mobility={item.Mobility} visibility={item.Visibility} pos=({item.Position.X:F2},{item.Position.Y:F2},{item.Position.Z:F2}) scale=({item.Scale.X:F2},{item.Scale.Y:F2},{item.Scale.Z:F2}) color=({item.Color.X:F2},{item.Color.Y:F2},{item.Color.Z:F2},{item.Color.W:F2})";
+        }
+
         private void SubmitMeshVisual(in PrefabFinalizedVisual visual, Camera3D camera)
         {
             switch (visual.MeshDescriptor.Type)
@@ -1870,6 +1894,7 @@ namespace Ludots.Client.Raylib.Rendering
                 if (b.Count == 0) continue;
 
                 SetTintUniform(b.ColorKey);
+                SetColDiffuseUniform(Vector4.One);
 
                 fixed (RaylibMatrix* p = b.Transforms)
                 {
@@ -1894,6 +1919,12 @@ namespace Ludots.Client.Raylib.Rendering
             float a = ((colorKey >> 24) & 0xFF) / 255f;
             var cd = new Vector4(r, g, b, a);
             Rl.SetShaderValue(_shader, _locTint, &cd, (int)Rl.ShaderUniformDataType.SHADER_UNIFORM_VEC4);
+        }
+
+        private void SetColDiffuseUniform(Vector4 color)
+        {
+            if (_locColDiffuse < 0) return;
+            Rl.SetShaderValue(_shader, _locColDiffuse, &color, (int)Rl.ShaderUniformDataType.SHADER_UNIFORM_VEC4);
         }
 
         private void EnsureInitialized()
@@ -1929,13 +1960,39 @@ namespace Ludots.Client.Raylib.Rendering
             _locTint = Rl.GetShaderLocation(_shader, "tint");
             int locMvp = Rl.GetShaderLocation(_shader, "mvp");
             int locInstance = Rl.GetShaderLocationAttrib(_shader, "instanceTransform");
+            int locVertexPosition = Rl.GetShaderLocationAttrib(_shader, "vertexPosition");
 
+            _shader.locs[(int)Rl.ShaderLocationIndex.SHADER_LOC_VERTEX_POSITION] = locVertexPosition;
+            _shader.locs[(int)Rl.ShaderLocationIndex.SHADER_LOC_VERTEX_TEXCOORD01] = -1;
+            _shader.locs[(int)Rl.ShaderLocationIndex.SHADER_LOC_VERTEX_TEXCOORD02] = -1;
+            _shader.locs[(int)Rl.ShaderLocationIndex.SHADER_LOC_VERTEX_NORMAL] = -1;
+            _shader.locs[(int)Rl.ShaderLocationIndex.SHADER_LOC_VERTEX_TANGENT] = -1;
+            _shader.locs[(int)Rl.ShaderLocationIndex.SHADER_LOC_VERTEX_COLOR] = -1;
             _shader.locs[(int)Rl.ShaderLocationIndex.SHADER_LOC_MATRIX_MVP] = locMvp;
+            _shader.locs[(int)Rl.ShaderLocationIndex.SHADER_LOC_MATRIX_VIEW] = -1;
+            _shader.locs[(int)Rl.ShaderLocationIndex.SHADER_LOC_MATRIX_PROJECTION] = -1;
             _shader.locs[(int)Rl.ShaderLocationIndex.SHADER_LOC_MATRIX_MODEL] = locInstance;
+            _shader.locs[(int)Rl.ShaderLocationIndex.SHADER_LOC_MATRIX_NORMAL] = -1;
+            _shader.locs[(int)Rl.ShaderLocationIndex.SHADER_LOC_VECTOR_VIEW] = -1;
             _shader.locs[(int)Rl.ShaderLocationIndex.SHADER_LOC_COLOR_DIFFUSE] = _locColDiffuse;
+            _shader.locs[(int)Rl.ShaderLocationIndex.SHADER_LOC_COLOR_SPECULAR] = -1;
+            _shader.locs[(int)Rl.ShaderLocationIndex.SHADER_LOC_COLOR_AMBIENT] = -1;
+            _shader.locs[(int)Rl.ShaderLocationIndex.SHADER_LOC_MAP_ALBEDO] = -1;
+            _shader.locs[(int)Rl.ShaderLocationIndex.SHADER_LOC_MAP_METALNESS] = -1;
+            _shader.locs[(int)Rl.ShaderLocationIndex.SHADER_LOC_MAP_NORMAL] = -1;
+            _shader.locs[(int)Rl.ShaderLocationIndex.SHADER_LOC_MAP_ROUGHNESS] = -1;
+            _shader.locs[(int)Rl.ShaderLocationIndex.SHADER_LOC_MAP_OCCLUSION] = -1;
+            _shader.locs[(int)Rl.ShaderLocationIndex.SHADER_LOC_MAP_EMISSION] = -1;
+            _shader.locs[(int)Rl.ShaderLocationIndex.SHADER_LOC_MAP_HEIGHT] = -1;
+            _shader.locs[(int)Rl.ShaderLocationIndex.SHADER_LOC_MAP_CUBEMAP] = -1;
+            _shader.locs[(int)Rl.ShaderLocationIndex.SHADER_LOC_MAP_IRRADIANCE] = -1;
+            _shader.locs[(int)Rl.ShaderLocationIndex.SHADER_LOC_MAP_PREFILTER] = -1;
+            _shader.locs[(int)Rl.ShaderLocationIndex.SHADER_LOC_MAP_BRDF] = -1;
 
+            if (locVertexPosition < 0) throw new InvalidOperationException("Shader attrib 'vertexPosition' not found.");
             if (locMvp < 0) throw new InvalidOperationException("Shader uniform 'mvp' not found.");
             if (locInstance < 0) throw new InvalidOperationException("Shader attrib 'instanceTransform' not found.");
+            if (_locColDiffuse < 0) throw new InvalidOperationException("Shader uniform 'colDiffuse' not found.");
             if (_locTint < 0) throw new InvalidOperationException("Shader uniform 'tint' not found.");
 
             _initialized = true;

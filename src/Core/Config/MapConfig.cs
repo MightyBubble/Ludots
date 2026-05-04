@@ -13,6 +13,7 @@ namespace Ludots.Core.Config
         public Dictionary<string, string> Dependencies { get; set; } = new Dictionary<string, string>();
         public string VisualHeightmapAsset { get; set; }
         public List<string> Tags { get; set; } = new List<string>();
+        public Dictionary<string, JsonNode> Metadata { get; set; } = new Dictionary<string, JsonNode>();
         public List<EntitySpawnData> Entities { get; set; } = new List<EntitySpawnData>();
 
         /// <summary>

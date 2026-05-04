@@ -12,6 +12,7 @@ using Ludots.Core.Gameplay.Camera;
 using Ludots.Core.Map.Hex;
 using Ludots.Core.Presentation.Camera;
 using Ludots.Core.Presentation.Components;
+using Ludots.Core.Presentation;
 using Ludots.Core.Presentation.Hud;
 using Ludots.Core.Presentation.Performers;
 using Ludots.Core.Scripting;
@@ -134,9 +135,9 @@ namespace Ludots.Core.Systems
 
         public CameraCullingDebugState DebugState { get; } = new CameraCullingDebugState();
 
-        public float HighLODDistCm = 4000f;
-        public float MediumLODDistCm = 10000f;
-        public float LowLODDistCm = 20000f;
+        public float HighLODDistCm { get; }
+        public float MediumLODDistCm { get; }
+        public float LowLODDistCm { get; }
 
         private QueryDescription VisualBoundsLodQuery => _performers == null ? _visualBoundsLodQuery : _payloadVisualBoundsLodQuery;
         private QueryDescription VisualBoundsQuery => _performers == null ? _visualBoundsQuery : _payloadVisualBoundsQuery;
@@ -159,23 +160,7 @@ namespace Ludots.Core.Systems
             CameraManager cameraManager,
             ISpatialQueryService spatial,
             IViewController view,
-            PresentationTimingDiagnostics? timingDiagnostics)
-            : this(
-                world,
-                cameraManager,
-                spatial,
-                view,
-                loadedChunks: null,
-                performers: null,
-                timingDiagnostics)
-        {
-        }
-
-        public CameraCullingSystem(
-            World world,
-            CameraManager cameraManager,
-            ISpatialQueryService spatial,
-            IViewController view,
+            CameraCullingRuntimeConfig cullingConfig,
             ILoadedChunks? loadedChunks = null,
             PerformerEntityRuntime? performers = null,
             PresentationTimingDiagnostics? timingDiagnostics = null)
@@ -187,6 +172,11 @@ namespace Ludots.Core.Systems
             _loadedChunks = loadedChunks;
             _performers = performers;
             _timingDiagnostics = timingDiagnostics;
+            cullingConfig = cullingConfig ?? throw new ArgumentNullException(nameof(cullingConfig));
+            cullingConfig.Validate();
+            HighLODDistCm = cullingConfig.HighLodDistanceCm;
+            MediumLODDistCm = cullingConfig.MediumLodDistanceCm;
+            LowLODDistCm = cullingConfig.LowLodDistanceCm;
         }
 
         public override void Update(in float dt)
@@ -434,7 +424,8 @@ namespace Ludots.Core.Systems
             }
 
             if (!_ownerCullChangedThisFrame &&
-                _allCullChangesSyncedThisFrame)
+                _allCullChangesSyncedThisFrame &&
+                _lastPerformerCullSyncStructureVersion == structureVersion)
             {
                 _lastPerformerCullSyncStructureVersion = structureVersion;
                 return;
@@ -1288,10 +1279,10 @@ namespace Ludots.Core.Systems
             LODLevel resolvedLod = hasLodProfile
                 ? ResolveLod(distSq, coverage01, in lodProfile)
                 : ResolveLod(distSq, coverage01, highSq, medSq, lowSq2);
-            bool changed = cull.IsVisible != (resolvedLod != LODLevel.Culled) || cull.LOD != resolvedLod;
+            bool changed = !cull.IsVisible || cull.LOD != resolvedLod;
 
             cull.LOD = resolvedLod;
-            cull.IsVisible = resolvedLod != LODLevel.Culled;
+            cull.IsVisible = true;
             if (changed)
             {
                 if (hasPayload)
@@ -1392,10 +1383,10 @@ namespace Ludots.Core.Systems
             cull.ScreenCoverage01 = 0f;
 
             LODLevel resolvedLod = ResolveLod(distSq, coverage01: 0f, highSq, medSq, lowSq2);
-            bool changed = cull.IsVisible != (resolvedLod != LODLevel.Culled) || cull.LOD != resolvedLod;
+            bool changed = !cull.IsVisible || cull.LOD != resolvedLod;
 
             cull.LOD = resolvedLod;
-            cull.IsVisible = resolvedLod != LODLevel.Culled;
+            cull.IsVisible = true;
             if (changed)
             {
                 if (hasPayload)
@@ -1516,10 +1507,10 @@ namespace Ludots.Core.Systems
             LODLevel resolvedLod = hasLodProfile
                 ? ResolveLod(distSq, coverage01, in lodProfile)
                 : ResolveLod(distSq, coverage01, highSq, medSq, lowSq2);
-            bool changed = cull.IsVisible != (resolvedLod != LODLevel.Culled) || cull.LOD != resolvedLod;
+            bool changed = !cull.IsVisible || cull.LOD != resolvedLod;
 
             cull.LOD = resolvedLod;
-            cull.IsVisible = resolvedLod != LODLevel.Culled;
+            cull.IsVisible = true;
             if (changed)
             {
                 if (hasPayload)
@@ -1563,8 +1554,12 @@ namespace Ludots.Core.Systems
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
         private void ForceCull(Entity owner, ref CullState cull)
         {
-            bool changed = cull.LOD != LODLevel.Culled || cull.IsVisible;
-            cull.LOD = LODLevel.Culled;
+            bool changed = cull.IsVisible || cull.LOD == LODLevel.Culled;
+            if (cull.LOD == LODLevel.Culled)
+            {
+                cull.LOD = LODLevel.Low;
+            }
+
             cull.IsVisible = false;
             cull.ScreenCoverage01 = 0f;
             if (changed)
@@ -1735,7 +1730,7 @@ namespace Ludots.Core.Systems
                 return LODLevel.Low;
             }
 
-            return LODLevel.Culled;
+            return LODLevel.Low;
         }
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
@@ -1756,7 +1751,7 @@ namespace Ludots.Core.Systems
                 return LODLevel.Low;
             }
 
-            return LODLevel.Culled;
+            return LODLevel.Low;
         }
 
         private float ReadPresentationAlpha()

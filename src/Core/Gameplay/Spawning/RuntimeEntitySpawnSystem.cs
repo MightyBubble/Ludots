@@ -145,7 +145,7 @@ namespace Ludots.Core.Gameplay.Spawning
                 new WorldPositionCm { Value = request.WorldPositionCm },
                 new PreviousWorldPositionCm { Value = request.WorldPositionCm },
                 VisualTransform.Default,
-                new CullState { IsVisible = false, LOD = LODLevel.Culled },
+                new CullState { IsVisible = false, LOD = LODLevel.Low },
                 new AttributeBuffer());
             EnsurePresentationStableId(entity);
 
@@ -542,7 +542,7 @@ namespace Ludots.Core.Gameplay.Spawning
 
             if (!World.Has<CullState>(entity))
             {
-                World.Add(entity, new CullState { IsVisible = false, LOD = LODLevel.Culled });
+                World.Add(entity, new CullState { IsVisible = false, LOD = LODLevel.Low });
             }
 
             EnsurePresentationStableId(entity);

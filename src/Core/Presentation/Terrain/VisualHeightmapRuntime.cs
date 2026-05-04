@@ -4,16 +4,84 @@ using Ludots.Platform.Abstractions;
 
 namespace Ludots.Core.Presentation.Terrain
 {
-    public sealed class VisualHeightmapRuntime : IVisualHeightmap, IVisualHeightmapSampleAccessor
+    public sealed class VisualHeightmapRuntime : IVisualHeightmap, IVisualHeightmapRenderSource, IVisualHeightmapSampleAccessor
     {
+        private const int PreferredRenderChunkSampleSpan = 33;
         private readonly VisualHeightmapAsset _asset;
+        private readonly int _renderChunkColumns;
+        private readonly int _renderChunkRows;
+        private readonly int _renderChunkStepColumns;
+        private readonly int _renderChunkStepRows;
 
         public VisualHeightmapRuntime(VisualHeightmapAsset asset)
         {
             _asset = asset ?? throw new ArgumentNullException(nameof(asset));
+            _renderChunkColumns = ResolveRenderChunkCount(_asset.SampleColumns);
+            _renderChunkRows = ResolveRenderChunkCount(_asset.SampleRows);
+            _renderChunkStepColumns = ResolveRenderChunkStep(_asset.SampleColumns, _renderChunkColumns);
+            _renderChunkStepRows = ResolveRenderChunkStep(_asset.SampleRows, _renderChunkRows);
         }
 
         public VisualHeightmapAsset Asset => _asset;
+
+        public WorldAabbCm Bounds => _asset.Bounds;
+
+        public int ChunkColumns => _renderChunkColumns;
+
+        public int ChunkRows => _renderChunkRows;
+
+        public int SamplesPerChunkColumn => _renderChunkStepColumns + 1;
+
+        public int SamplesPerChunkRow => _renderChunkStepRows + 1;
+
+        public int DefaultLayerIndex => _asset.DefaultLayerIndex;
+
+        public int Revision => 0;
+
+        public bool TryGetChunk(int chunkX, int chunkY, out VisualHeightmapRenderChunk chunk)
+        {
+            if ((uint)chunkX >= (uint)_renderChunkColumns ||
+                (uint)chunkY >= (uint)_renderChunkRows ||
+                !TryResolveLayerIndex(_asset.DefaultLayerIndex, out int resolvedLayer))
+            {
+                chunk = default;
+                return false;
+            }
+
+            VisualHeightmapLayerDefinition layer = _asset.Layers[resolvedLayer];
+            int sampleX = chunkX * _renderChunkStepColumns;
+            int sampleY = chunkY * _renderChunkStepRows;
+            int sampleEndX = Math.Min(_asset.SampleColumns - 1, sampleX + _renderChunkStepColumns);
+            int sampleEndY = Math.Min(_asset.SampleRows - 1, sampleY + _renderChunkStepRows);
+            int sampleColumns = sampleEndX - sampleX + 1;
+            int sampleRows = sampleEndY - sampleY + 1;
+            float sampleStepXCm = _asset.Bounds.Width / (float)(_asset.SampleColumns - 1);
+            float sampleStepYCm = _asset.Bounds.Height / (float)(_asset.SampleRows - 1);
+            int boundsLeft = RoundSampleWorldCm(_asset.Bounds.Left, sampleX, sampleStepXCm);
+            int boundsTop = RoundSampleWorldCm(_asset.Bounds.Top, sampleY, sampleStepYCm);
+            int boundsRight = RoundSampleWorldCm(_asset.Bounds.Left, sampleEndX, sampleStepXCm);
+            int boundsBottom = RoundSampleWorldCm(_asset.Bounds.Top, sampleEndY, sampleStepYCm);
+            chunk = new VisualHeightmapRenderChunk(
+                chunkX,
+                chunkY,
+                new WorldAabbCm(
+                    boundsLeft,
+                    boundsTop,
+                    boundsRight - boundsLeft,
+                    boundsBottom - boundsTop),
+                sampleColumns,
+                sampleRows,
+                sampleStepXCm,
+                sampleStepYCm,
+                _asset.HeightSamplesCm,
+                _asset.HeightSamplesRaw,
+                _asset.SampleScale,
+                _asset.StorageLayout,
+                _asset.SampleColumns,
+                layer.SampleOffset + (sampleY * _asset.SampleColumns) + sampleX,
+                Revision);
+            return true;
+        }
 
         public bool TrySampleHeightCm(float worldXCm, float worldYCm, out float heightCm, int layerIndex = 0)
         {
@@ -190,6 +258,29 @@ namespace Ludots.Core.Presentation.Terrain
 
             layer = _asset.Layers[resolvedLayer];
             return true;
+        }
+
+        private static int ResolveRenderChunkCount(int sampleCount)
+        {
+            if (sampleCount <= PreferredRenderChunkSampleSpan)
+            {
+                return 1;
+            }
+
+            int sampleSteps = sampleCount - 1;
+            int chunkSteps = PreferredRenderChunkSampleSpan - 1;
+            return Math.Max(1, (int)Math.Ceiling(sampleSteps / (double)chunkSteps));
+        }
+
+        private static int ResolveRenderChunkStep(int sampleCount, int chunkCount)
+        {
+            int sampleSteps = sampleCount - 1;
+            return Math.Max(1, (int)Math.Ceiling(sampleSteps / (double)chunkCount));
+        }
+
+        private static int RoundSampleWorldCm(int originCm, int sampleIndex, float sampleStepCm)
+        {
+            return originCm + (int)MathF.Round(sampleIndex * sampleStepCm);
         }
     }
 }

@@ -3,7 +3,12 @@
   "startupInputContexts": ["Default_Gameplay"],
   "presentation": {
     "performerInstanceCapacity": 2048,
-    "presentationEventStreamCapacity": 65536
+    "presentationEventStreamCapacity": 65536,
+    "cameraCulling": {
+      "highLodDistanceCm": 4000.0,
+      "mediumLodDistanceCm": 10000.0,
+      "lowLodDistanceCm": 20000.0
+    }
   },
   "constants": {
     "orderTypeIds": {

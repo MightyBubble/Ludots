@@ -13,8 +13,8 @@ namespace Ludots.Core.Presentation.Hud
         private readonly PresentationOverlayLayer _layer;
         private readonly int _largeUnderUiThreshold;
         private readonly int _maxLargeLanesPerFrame;
-        private readonly int[] _presentedVersions = new int[3];
-        private readonly bool[] _presentedHasContent = new bool[3];
+        private readonly int[] _presentedVersions = new int[5];
+        private readonly bool[] _presentedHasContent = new bool[5];
 
         private int _nextLargeLaneCursor;
 
@@ -43,7 +43,7 @@ namespace Ludots.Core.Presentation.Hud
             int deferredLargeCount = 0;
             Span<PresentationOverlayItemKind> deferredLargeKinds = stackalloc PresentationOverlayItemKind[LargeLaneOrder.Length];
 
-            for (int kindValue = (int)PresentationOverlayItemKind.Text; kindValue <= (int)PresentationOverlayItemKind.Bar; kindValue++)
+            for (int kindValue = (int)PresentationOverlayItemKind.Text; kindValue <= (int)PresentationOverlayItemKind.Line; kindValue++)
             {
                 PresentationOverlayItemKind kind = (PresentationOverlayItemKind)kindValue;
                 int index = GetKindIndex(kind);
@@ -112,7 +112,7 @@ namespace Ludots.Core.Presentation.Hud
         {
             ArgumentNullException.ThrowIfNull(scene);
 
-            for (int kindValue = (int)PresentationOverlayItemKind.Text; kindValue <= (int)PresentationOverlayItemKind.Bar; kindValue++)
+            for (int kindValue = (int)PresentationOverlayItemKind.Text; kindValue <= (int)PresentationOverlayItemKind.Line; kindValue++)
             {
                 PresentationOverlayItemKind kind = (PresentationOverlayItemKind)kindValue;
                 if (!plan.ShouldRefresh(kind))
@@ -208,6 +208,8 @@ namespace Ludots.Core.Presentation.Hud
                 PresentationOverlayItemKind.Text => 0,
                 PresentationOverlayItemKind.Rect => 1,
                 PresentationOverlayItemKind.Bar => 2,
+                PresentationOverlayItemKind.MinimapMarker => 3,
+                PresentationOverlayItemKind.Line => 4,
                 _ => throw new ArgumentOutOfRangeException(nameof(kind)),
             };
         }
@@ -219,6 +221,8 @@ namespace Ludots.Core.Presentation.Hud
                 PresentationOverlayItemKind.Text => 1 << 0,
                 PresentationOverlayItemKind.Rect => 1 << 1,
                 PresentationOverlayItemKind.Bar => 1 << 2,
+                PresentationOverlayItemKind.MinimapMarker => 1 << 3,
+                PresentationOverlayItemKind.Line => 1 << 4,
                 _ => throw new ArgumentOutOfRangeException(nameof(kind)),
             };
         }

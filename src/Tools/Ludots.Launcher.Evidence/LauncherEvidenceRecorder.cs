@@ -218,7 +218,7 @@ public static class LauncherEvidenceRecorder
         engine.SetService(CoreServiceKeys.ScreenProjector, (IScreenProjector)screenProjector);
         engine.SetService(CoreServiceKeys.ScreenRayProvider, (IScreenRayProvider)screenRayProvider);
 
-        var cullingSystem = new CameraCullingSystem(engine.World, engine.GameSession.Camera, engine.SpatialQueries, viewController);
+        var cullingSystem = new CameraCullingSystem(engine.World, engine.GameSession.Camera, engine.SpatialQueries, viewController, cullingConfig: engine.MergedConfig.Presentation.CameraCulling);
         engine.RegisterPresentationSystem(cullingSystem);
         engine.SetService(CoreServiceKeys.CameraCullingDebugState, cullingSystem.DebugState);
 
@@ -273,7 +273,7 @@ public static class LauncherEvidenceRecorder
         engine.SetService(CoreServiceKeys.ScreenProjector, (IScreenProjector)screenProjector);
         engine.SetService(CoreServiceKeys.ScreenRayProvider, (IScreenRayProvider)screenRayProvider);
 
-        var cullingSystem = new CameraCullingSystem(engine.World, engine.GameSession.Camera, engine.SpatialQueries, viewController);
+        var cullingSystem = new CameraCullingSystem(engine.World, engine.GameSession.Camera, engine.SpatialQueries, viewController, cullingConfig: engine.MergedConfig.Presentation.CameraCulling);
         engine.RegisterPresentationSystem(cullingSystem);
         engine.SetService(CoreServiceKeys.CameraCullingDebugState, cullingSystem.DebugState);
 

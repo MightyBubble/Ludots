@@ -82,6 +82,7 @@ namespace Ludots.Core.Presentation.Performers
         internal bool HasAssetBindingBehavior;
         internal bool HasAnimatorBehavior;
         internal bool HasSoundBehavior;
+        internal bool HasMinimapMarkerBehavior;
         internal bool HasSurfaceAuthoring;
         internal bool RequiresBootstrapProcessing;
         internal bool UsesStableVisualCache;
@@ -102,6 +103,7 @@ namespace Ludots.Core.Presentation.Performers
         internal int[] TickBehaviorIndices = System.Array.Empty<int>();
         internal int[] BootstrapGroundingBehaviorIndices = System.Array.Empty<int>();
         internal int[] MaterialBehaviorIndices = System.Array.Empty<int>();
+        internal int[] MinimapMarkerBehaviorIndices = System.Array.Empty<int>();
         internal bool HasEveryFrameGroundingWork;
         internal bool TickBehaviorsAreGroundingOnly;
         internal int[] MaterialSourceFloatParamKeys = System.Array.Empty<int>();
@@ -197,6 +199,7 @@ namespace Ludots.Core.Presentation.Performers
             HasAssetBindingBehavior = false;
             HasAnimatorBehavior = false;
             HasSoundBehavior = false;
+            HasMinimapMarkerBehavior = false;
             HasSurfaceAuthoring = Surface != null;
             RequiresBootstrapProcessing = (Bindings != null && Bindings.Length > 0) || HasSurfaceAuthoring;
             UsesStableVisualCache = false;
@@ -216,6 +219,7 @@ namespace Ludots.Core.Presentation.Performers
             TickBehaviorIndices = System.Array.Empty<int>();
             BootstrapGroundingBehaviorIndices = System.Array.Empty<int>();
             MaterialBehaviorIndices = System.Array.Empty<int>();
+            MinimapMarkerBehaviorIndices = System.Array.Empty<int>();
             HasEveryFrameGroundingWork = false;
             TickBehaviorsAreGroundingOnly = false;
             MaterialSourceFloatParamKeys = System.Array.Empty<int>();
@@ -234,6 +238,7 @@ namespace Ludots.Core.Presentation.Performers
             var staticVectorParams = new System.Collections.Generic.HashSet<int>();
             var materialSourceFloatParams = new System.Collections.Generic.HashSet<int>();
             System.Collections.Generic.List<int>? materialBehaviorIndices = null;
+            System.Collections.Generic.List<int>? minimapMarkerBehaviorIndices = null;
             bool blocksEventDrivenStaticEmit = HasSurfaceAuthoring;
 
             if (Bindings != null)
@@ -409,6 +414,11 @@ namespace Ludots.Core.Presentation.Performers
                         materialBehaviorIndices.Add(i);
                         AddIfValid(materialSourceFloatParams, slot.Material.MaterialSwapParamKey);
                         break;
+                    case BehaviorKind.MinimapMarker:
+                        HasMinimapMarkerBehavior = true;
+                        minimapMarkerBehaviorIndices ??= new System.Collections.Generic.List<int>(2);
+                        minimapMarkerBehaviorIndices.Add(i);
+                        break;
                 }
             }
 
@@ -417,6 +427,7 @@ namespace Ludots.Core.Presentation.Performers
             TickBehaviorIndices = tickBehaviorIndices?.ToArray() ?? System.Array.Empty<int>();
             BootstrapGroundingBehaviorIndices = bootstrapGroundingBehaviorIndices?.ToArray() ?? System.Array.Empty<int>();
             MaterialBehaviorIndices = materialBehaviorIndices?.ToArray() ?? System.Array.Empty<int>();
+            MinimapMarkerBehaviorIndices = minimapMarkerBehaviorIndices?.ToArray() ?? System.Array.Empty<int>();
             TickBehaviorsAreGroundingOnly = HasEveryFrameGroundingWork &&
                                            TickBehaviorIndices.Length != 0 &&
                                            TickBehaviorIndices.Length == CountEveryFrameGroundingTickBehaviors(Behaviors, TickBehaviorIndices);

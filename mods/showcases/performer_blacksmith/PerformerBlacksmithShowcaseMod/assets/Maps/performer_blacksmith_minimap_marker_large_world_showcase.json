@@ -1,0 +1,36 @@
+{
+  "Id": "performer_blacksmith_minimap_marker_large_world_showcase",
+  "Tags": ["showcase", "performer", "minimap", "large-world"],
+  "Metadata": {
+    "performerBlacksmith": {
+      "minimapMarkerShowcaseTotal": 300,
+      "minimapMarkerScatterPaddingCm": 64000.0,
+      "minimapMarkerScatterJitterCm": 4200.0,
+      "minimapMarkerVisibleClusterCount": 64,
+      "minimapMarkerVisibleClusterCenterXCm": 0.0,
+      "minimapMarkerVisibleClusterCenterYCm": 0.0,
+      "minimapMarkerVisibleClusterRadiusCm": 9000.0,
+      "minimapMarkerScatterSeed": 129135
+    }
+  },
+  "Boards": [
+    {
+      "Name": "default",
+      "SpatialType": "Grid",
+      "WidthInTiles": 256,
+      "HeightInTiles": 256,
+      "GridCellSizeCm": 100,
+      "ChunkSizeCells": 64
+    }
+  ],
+  "DefaultCamera": {
+    "VirtualCameraId": "Default",
+    "TargetXCm": 0,
+    "TargetYCm": 0,
+    "Yaw": 45,
+    "Pitch": 42,
+    "DistanceCm": 12000,
+    "FovYDeg": 55
+  },
+  "Entities": []
+}

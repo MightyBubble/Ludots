@@ -57,7 +57,7 @@ namespace Ludots.Core.Presentation.Systems
 
             if (!World.Has<CullState>(entity))
             {
-                _commandBuffer.Add(entity, new CullState { IsVisible = false, LOD = LODLevel.Culled });
+                _commandBuffer.Add(entity, new CullState { IsVisible = false, LOD = LODLevel.Low });
             }
 
             if (!World.Has<PresentationStableId>(entity))

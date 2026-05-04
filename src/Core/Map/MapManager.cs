@@ -203,6 +203,13 @@ namespace Ludots.Core.Map
                 }
             }
             if (source.Entities != null) target.Entities.AddRange(source.Entities);
+            if (source.Metadata != null)
+            {
+                foreach (var kvp in source.Metadata)
+                {
+                    target.Metadata[kvp.Key] = kvp.Value?.DeepClone();
+                }
+            }
 
             // Merge Tags
             if (source.Tags != null)

@@ -9,6 +9,7 @@ using Ludots.Core.Components;
 using Ludots.Core.Mathematics.FixedPoint;
 using Ludots.Core.Diagnostics;
 using Ludots.Core.Presentation.Components;
+using Ludots.Core.Presentation.Hud;
 using Ludots.Core.Presentation.Terrain;
 using Ludots.Core.Scripting;
 
@@ -27,6 +28,7 @@ namespace Ludots.Core.Presentation.Systems
         private const float CmToM = 0.01f;
         private readonly World _world;
         private readonly IReadOnlyDictionary<string, object> _globals;
+        private readonly PresentationTimingDiagnostics? _timingDiagnostics;
         private static readonly QueryDescription _query = new QueryDescription()
             .WithAll<WorldPositionCm, VisualTransform, VisualHeightmapSampleState>()
             .WithNone<PresentationStaticTransform>();
@@ -40,20 +42,27 @@ namespace Ludots.Core.Presentation.Systems
         private Entity[] _staticPendingEntities = Array.Empty<Entity>();
         private readonly CommandBuffer _commandBuffer = new();
         private bool _warnedMissingHeightmap;
+        private int _sampledThisFrame;
 
         /// <summary>地形高度缩放（米/高度单位），需与地形渲染器一致，默认 2.0。</summary>
         public float HeightScale { get; set; } = 2.0f;
 
-        public TerrainHeightSyncSystem(World world, IReadOnlyDictionary<string, object> globals)
+        public TerrainHeightSyncSystem(
+            World world,
+            IReadOnlyDictionary<string, object> globals,
+            PresentationTimingDiagnostics? timingDiagnostics = null)
         {
             _world = world ?? throw new ArgumentNullException(nameof(world));
             _globals = globals ?? throw new ArgumentNullException(nameof(globals));
+            _timingDiagnostics = timingDiagnostics;
         }
 
         public void Initialize() { }
 
         public void Update(in float dt)
         {
+            long start = _timingDiagnostics != null ? System.Diagnostics.Stopwatch.GetTimestamp() : 0L;
+            _sampledThisFrame = 0;
             IVisualHeightmap? heightmap =
                 _globals.TryGetValue(CoreServiceKeys.VisualHeightmap.Name, out var heightmapObj)
                     ? heightmapObj as IVisualHeightmap
@@ -62,12 +71,14 @@ namespace Ludots.Core.Presentation.Systems
             {
                 WarnMissingHeightmap();
                 SyncStaticPendingToZeroHeight();
+                ObserveTiming(start);
                 return;
             }
 
             ReadFrameState(out float alpha, out int frameId);
             TrySyncFromHeightmap(heightmap, alpha, frameId, in _query);
             TrySyncStaticPendingFromHeightmap(heightmap, alpha, frameId);
+            ObserveTiming(start);
         }
 
         public void AfterUpdate(in float dt) { }
@@ -140,6 +151,7 @@ namespace Ludots.Core.Presentation.Systems
                 }
 
                 any = true;
+                _sampledThisFrame += count;
                 foreach (int index in chunk)
                 {
                     float heightCm = _projectedHeights[index];
@@ -232,6 +244,7 @@ namespace Ludots.Core.Presentation.Systems
                 }
 
                 any = true;
+                _sampledThisFrame += count;
                 foreach (int index in chunk)
                 {
                     float heightCm = _projectedHeights[index];
@@ -292,6 +305,17 @@ namespace Ludots.Core.Presentation.Systems
 
             Log.Warn(in LogChannels.Presentation, "Terrain height sync requested VisualHeightmap, but none is registered; static projection writes height 0.");
             _warnedMissingHeightmap = true;
+        }
+
+        private void ObserveTiming(long startTimestamp)
+        {
+            if (_timingDiagnostics == null)
+            {
+                return;
+            }
+
+            double elapsedMs = (System.Diagnostics.Stopwatch.GetTimestamp() - startTimestamp) * 1000d / System.Diagnostics.Stopwatch.Frequency;
+            _timingDiagnostics.ObserveTerrainHeightSync(elapsedMs, _sampledThisFrame);
         }
 
         private void EnsureProjectionCapacity(int required)

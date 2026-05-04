@@ -58,7 +58,6 @@
     <ProjectReference Include="..\..\..\mods\showcases\relationship\RelationshipShowcaseMod\RelationshipShowcaseMod.csproj" />
     <ProjectReference Include="..\..\..\mods\showcases\narrative\NarrativeShowcaseMod\NarrativeShowcaseMod.csproj" />
     <ProjectReference Include="..\..\..\mods\showcases\champion_skill_sandbox\ChampionSkillSandboxMod\ChampionSkillSandboxMod.csproj" />
-    <ProjectReference Include="..\..\..\mods\capabilities\minimap\MinimapControlMod\MinimapControlMod.csproj" />
     <ProjectReference Include="..\..\..\mods\showcases\minimap\MinimapShowcaseMod\MinimapShowcaseMod.csproj" />
     <ProjectReference Include="..\..\..\mods\showcases\chunk_streaming\ChunkStreamingShowcaseMod\ChunkStreamingShowcaseMod.csproj" />
     <ProjectReference Include="..\..\..\mods\showcases\road_network\RoadNetworkShowcaseMod\RoadNetworkShowcaseMod.csproj" />

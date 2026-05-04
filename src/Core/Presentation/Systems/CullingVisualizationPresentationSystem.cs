@@ -11,7 +11,8 @@ namespace Ludots.Core.Presentation.Systems
 {
     /// <summary>
     /// Reads <see cref="RenderCameraDebugState.DrawLogicalCullingDebug"/> and writes
-    /// culling AABB + LOD rings to <see cref="DebugDrawCommandBuffer"/>.
+    /// culling AABB + LOD threshold rings to <see cref="DebugDrawCommandBuffer"/>.
+    /// The rings are diagnostic LOD boundaries, not visibility masks.
     /// Purely Core layer — no platform dependency.
     /// </summary>
     public sealed class CullingVisualizationPresentationSystem : ISystem<float>

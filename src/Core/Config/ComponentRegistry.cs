@@ -371,7 +371,7 @@ namespace Ludots.Core.Config
             // Add the companion components required by interpolation, rendering, and culling.
             entity.Add(new PreviousWorldPositionCm { Value = fix64Pos });
             entity.Add(VisualTransform.Default);
-            entity.Add(new CullState { IsVisible = false, LOD = LODLevel.Culled });
+            entity.Add(new CullState { IsVisible = false, LOD = LODLevel.Low });
         }
 
         private static void SetPresentationStaticTransform(Entity entity, JsonNode data)

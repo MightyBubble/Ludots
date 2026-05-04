@@ -14,6 +14,11 @@
     "roadSplineCapacity": 65536,
     "worldHudCapacity": 1048576,
     "screenHudCapacity": 1048576,
-    "runtimeEntitySpawnQueueCapacity": 524288
+    "runtimeEntitySpawnQueueCapacity": 524288,
+    "cameraCulling": {
+      "highLodDistanceCm": 20000.0,
+      "mediumLodDistanceCm": 70000.0,
+      "lowLodDistanceCm": 180000.0
+    }
   }
 }

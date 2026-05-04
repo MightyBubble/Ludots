@@ -78,6 +78,7 @@
     "components": {
       "Name": { "Value": "BlacksmithDynamicWorker" },
       "WorldPositionCm": { "Value": { "X": 0, "Y": 0 } },
+      "VisualHeightmapSampleState": {},
       "FacingDirection": { "AngleRad": 0.0 },
       "AttributeBuffer": {
         "base": {}
@@ -85,6 +86,20 @@
       "GameplayTagContainer": {},
       "TagCountContainer": {},
       "DynamicWorkerCrowdTag": {}
+    }
+  },
+  {
+    "id": "blacksmith_minimap_marker_ball_entity",
+    "components": {
+      "Name": { "Value": "BlacksmithMinimapMarkerBall" },
+      "WorldPositionCm": { "Value": { "X": 0, "Y": 0 } },
+      "PresentationStaticTransform": {},
+      "FacingDirection": { "AngleRad": 0.0 },
+      "AttributeBuffer": {
+        "base": {}
+      },
+      "GameplayTagContainer": {},
+      "TagCountContainer": {}
     }
   }
 ]

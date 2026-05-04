@@ -243,6 +243,101 @@ namespace Ludots.Tests.Presentation
         }
 
         [Test]
+        public void Load_ParsesMinimapMarkerBehaviorAsAuthoredCoreSignal()
+        {
+            WriteCatalog();
+            WritePerformers(
+                """
+                [
+                  {
+                    "id": "marker_actor",
+                    "behaviors": [
+                      {
+                        "slot": 4,
+                        "kind": "MinimapMarker",
+                        "activeByDefault": true,
+                        "minimapMarker": {
+                          "shape": "Circle",
+                          "color": [0.18, 0.82, 1.0, 1.0],
+                          "sizePx": 8.0,
+                          "colorParamKey": 21,
+                          "sizeParamKey": 22,
+                          "visibilityParamKey": 23
+                        }
+                      }
+                    ]
+                  }
+                ]
+                """);
+
+            var (_, _, pipeline, catalog) = BuildPipeline();
+            var registry = new PerformerDefinitionRegistry();
+            var loader = new PerformerDefinitionConfigLoader(pipeline, registry);
+
+            loader.Load(catalog);
+
+            Assert.That(registry.TryGet(registry.GetId("marker_actor"), out var definition), Is.True);
+            Assert.That(definition.Behaviors[0].Kind, Is.EqualTo(BehaviorKind.MinimapMarker));
+            Assert.That(definition.Behaviors[0].SlotIndex, Is.EqualTo(4));
+            Assert.That(definition.Behaviors[0].ActiveByDefault, Is.True);
+            Assert.That(definition.Behaviors[0].MinimapMarker.Shape, Is.EqualTo(MinimapMarkerShape.Circle));
+            Assert.That(definition.Behaviors[0].MinimapMarker.Color, Is.EqualTo(new Vector4(0.18f, 0.82f, 1.0f, 1.0f)));
+            Assert.That(definition.Behaviors[0].MinimapMarker.SizePx, Is.EqualTo(8f));
+            Assert.That(definition.Behaviors[0].MinimapMarker.ColorParamKey, Is.EqualTo(21));
+            Assert.That(definition.Behaviors[0].MinimapMarker.SizeParamKey, Is.EqualTo(22));
+            Assert.That(definition.Behaviors[0].MinimapMarker.VisibilityParamKey, Is.EqualTo(23));
+        }
+
+        [Test]
+        public void Load_SkipsInvalidMinimapMarkerShapeWithoutDefaultingToAssetBinding()
+        {
+            WriteCatalog();
+            WritePerformers(
+                """
+                [
+                  {
+                    "id": "bad_marker",
+                    "behaviors": [
+                      {
+                        "slot": 0,
+                        "kind": "MinimapMarker",
+                        "minimapMarker": {
+                          "shape": "Square",
+                          "color": [1.0, 0.0, 0.0, 1.0],
+                          "sizePx": 8.0
+                        }
+                      }
+                    ]
+                  },
+                  {
+                    "id": "good_marker",
+                    "behaviors": [
+                      {
+                        "slot": 0,
+                        "kind": "MinimapMarker",
+                        "minimapMarker": {
+                          "shape": "Circle",
+                          "color": [0.0, 1.0, 0.0, 1.0],
+                          "sizePx": 6.0
+                        }
+                      }
+                    ]
+                  }
+                ]
+                """);
+
+            var (_, _, pipeline, catalog) = BuildPipeline();
+            var registry = new PerformerDefinitionRegistry();
+            var loader = new PerformerDefinitionConfigLoader(pipeline, registry);
+
+            Assert.DoesNotThrow(() => loader.Load(catalog));
+
+            Assert.That(registry.GetId("bad_marker"), Is.EqualTo(0));
+            Assert.That(registry.TryGet(registry.GetId("good_marker"), out var good), Is.True);
+            Assert.That(good.Behaviors[0].Kind, Is.EqualTo(BehaviorKind.MinimapMarker));
+        }
+
+        [Test]
         public void Load_PreservesChildrenAsDeclarativeHierarchy_WithoutSyntheticRules()
         {
             WriteCatalog();

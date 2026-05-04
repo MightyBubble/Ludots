@@ -1,26 +1,19 @@
 using System;
-using System.Collections;
 using System.Collections.Generic;
 using System.Diagnostics;
 using System.IO;
 using System.Linq;
-using System.Linq.Expressions;
 using System.Numerics;
-using System.Reflection;
 using System.Text;
 using System.Text.Json;
-using Arch.Core;
-using Ludots.Core.Components;
 using Ludots.Core.Engine;
-using Ludots.Core.Gameplay.Components;
 using Ludots.Core.Input.Runtime;
-using Ludots.Core.Input.Selection;
+using Ludots.Core.Mathematics;
 using Ludots.Core.Presentation.Camera;
 using Ludots.Core.Presentation.Hud;
+using Ludots.Core.Presentation.Minimap;
 using Ludots.Core.Scripting;
 using Ludots.Platform.Abstractions;
-using MinimapControlMod;
-using MinimapControlMod.Runtime;
 using NUnit.Framework;
 
 namespace Ludots.Tests.GAS.Production;
@@ -37,37 +30,22 @@ public sealed class MinimapShowcaseAcceptanceTests
         "LudotsCoreMod",
         "CoreInputMod",
         "FourXDemoMod",
-        "MinimapControlMod",
         "MinimapShowcaseMod",
     };
 
-    private sealed record SignalView(
-        string Label,
-        int TeamId,
-        MinimapSignalKind Kind,
-        MinimapSignalFlags Flags,
+    private sealed record MarkerView(
+        int StableId,
         float WorldXcm,
         float WorldYcm,
         float NormalizedX,
-        float NormalizedY);
-
-    private sealed record CellView(
-        int CellX,
-        int CellY,
-        int Total,
-        int Friendly,
-        int Hostile,
-        int Neutral,
-        int Structures,
-        int Objectives,
-        int Resources,
-        int Hazards);
+        float NormalizedY,
+        string Color,
+        float SizePx);
 
     private sealed record SnapshotView(
         string MapId,
-        string SelectedLabel,
-        int PerspectiveTeamId,
         MinimapZoomBand ZoomBand,
+        MinimapPreset Preset,
         float CenterXcm,
         float CenterYcm,
         float HalfExtentCm,
@@ -75,11 +53,14 @@ public sealed class MinimapShowcaseAcceptanceTests
         float MinWorldYcm,
         float MaxWorldXcm,
         float MaxWorldYcm,
-        IReadOnlyList<SignalView> VisibleSignals,
-        IReadOnlyList<CellView> StrategicCells);
+        float CameraTargetXcm,
+        float CameraTargetYcm,
+        int MarkerCount,
+        int VisibleMarkerCount,
+        IReadOnlyList<MarkerView> VisibleMarkers);
 
     [Test]
-    public void MinimapShowcase_WritesAcceptanceArtifacts()
+    public void MinimapShowcase_WritesMarkerOnlyAcceptanceArtifacts()
     {
         string repoRoot = FindRepoRoot();
         string artifactDir = Path.Combine(repoRoot, "artifacts", "acceptance", "minimap-showcase");
@@ -94,86 +75,97 @@ public sealed class MinimapShowcaseAcceptanceTests
         using var engine = CreateEngine();
         LoadMap(engine, MapId, frameTimesMs);
 
-        RuntimeFacade runtime = RuntimeFacade.Resolve(engine);
+        MinimapRuntime runtime = ResolveMinimapRuntime(engine);
+        MinimapMarkerBuffer markers = engine.GetService(CoreServiceKeys.MinimapMarkerBuffer)
+            ?? throw new InvalidOperationException("MinimapMarkerBuffer missing.");
+        MinimapScreenMarkerBuffer screenMarkers = engine.GetService(CoreServiceKeys.MinimapScreenMarkerBuffer)
+            ?? throw new InvalidOperationException("MinimapScreenMarkerBuffer missing.");
 
-        Tick(engine, 2, frameTimesMs);
-        Assert.That(runtime.Visible, Is.True);
-        Assert.That(runtime.SignalCount, Is.GreaterThanOrEqualTo(18));
+        SeedAuthoredMarkers(markers);
+        runtime.Visible = true;
+        runtime.UseRtsFullMapPreset();
+        runtime.Refresh(engine, markers, screenMarkers);
 
-        SnapshotView strategic = runtime.CaptureSnapshot();
-        Assert.That(strategic.ZoomBand, Is.EqualTo(MinimapZoomBand.Strategic));
-        WriteSnapshotSvg(strategic, Path.Combine(screensDir, "001_strategic_overview.svg"));
-        timeline.Add("[T+001] Strategic overview locked to the whole theater; capitals, resources, hazards, and objective sectors aggregate into empire-scale cells.");
+        SnapshotView rts = MapSnapshot(runtime.CaptureDebugSnapshot());
+        Assert.That(rts.Preset, Is.EqualTo(MinimapPreset.RtsFullMap));
+        Assert.That(rts.MarkerCount, Is.EqualTo(20));
+        Assert.That(rts.VisibleMarkerCount, Is.EqualTo(20));
+        WriteSnapshotSvg(rts, Path.Combine(screensDir, "001_rts_marker_overview.svg"));
+        timeline.Add("[T+001] RTS preset draws all authored performer markers directly from the core marker buffer.");
         traces.Add(new
         {
-            step = "001_strategic_overview",
-            band = strategic.ZoomBand.ToString(),
-            selected = strategic.SelectedLabel,
-            visible_signals = strategic.VisibleSignals.Count,
-            strategic_cells = strategic.StrategicCells.Count,
-            screenshot = "screens/001_strategic_overview.svg"
+            step = "001_rts_marker_overview",
+            preset = rts.Preset.ToString(),
+            band = rts.ZoomBand.ToString(),
+            visible_markers = rts.VisibleMarkerCount,
+            screenshot = "screens/001_rts_marker_overview.svg"
         });
 
-        SelectNamedEntity(engine, "Frontier Bastion");
-        runtime.SetViewport(9400f, 3600f, 7000f);
-        Tick(engine, 1, frameTimesMs);
-        SnapshotView regional = runtime.CaptureSnapshot();
-        Assert.That(regional.ZoomBand, Is.EqualTo(MinimapZoomBand.Regional));
-        Assert.That(regional.SelectedLabel, Is.EqualTo("Frontier Bastion"));
-        WriteSnapshotSvg(regional, Path.Combine(screensDir, "002_regional_frontier.svg"));
-        timeline.Add("[T+002] Regional zoom centers the frontier; bastion, fleet, border watch, and nearby neutral nodes remain readable without flooding the panel with every actor.");
+        runtime.UseCameraCenteredPreset(7000f);
+        runtime.Refresh(engine, markers, screenMarkers);
+        SnapshotView camera = MapSnapshot(runtime.CaptureDebugSnapshot());
+        Assert.That(camera.Preset, Is.EqualTo(MinimapPreset.CameraCentered));
+        Assert.That(camera.VisibleMarkerCount, Is.GreaterThan(0));
+        Assert.That(camera.VisibleMarkerCount, Is.LessThan(rts.VisibleMarkerCount));
+        WriteSnapshotSvg(camera, Path.Combine(screensDir, "002_camera_marker_window.svg"));
+        timeline.Add("[T+002] Camera-centered preset keeps the camera target centered and clips markers outside the local window.");
         traces.Add(new
         {
-            step = "002_regional_frontier",
-            band = regional.ZoomBand.ToString(),
-            selected = regional.SelectedLabel,
-            visible_signals = regional.VisibleSignals.Count,
-            strategic_cells = regional.StrategicCells.Count,
-            screenshot = "screens/002_regional_frontier.svg"
+            step = "002_camera_marker_window",
+            preset = camera.Preset.ToString(),
+            band = camera.ZoomBand.ToString(),
+            visible_markers = camera.VisibleMarkerCount,
+            screenshot = "screens/002_camera_marker_window.svg"
         });
 
-        SelectNamedEntity(engine, "Imperial Vanguard Fleet");
-        runtime.SetViewport(7200f, 2900f, 1800f);
-        Tick(engine, 1, frameTimesMs);
-        SnapshotView tactical = runtime.CaptureSnapshot();
-        Assert.That(tactical.ZoomBand, Is.EqualTo(MinimapZoomBand.Tactical));
-        Assert.That(tactical.SelectedLabel, Is.EqualTo("Imperial Vanguard Fleet"));
-        WriteSnapshotSvg(tactical, Path.Combine(screensDir, "003_tactical_vanguard.svg"));
-        timeline.Add("[T+003] Tactical zoom collapses down to the selected fleet pocket; individual actors, alerts, and selection focus render as local command detail.");
+        runtime.ApplyWheelZoom(1f);
+        runtime.Refresh(engine, markers, screenMarkers);
+        SnapshotView zoomed = MapSnapshot(runtime.CaptureDebugSnapshot());
+        SelectZoomStableMarkerPair(camera, zoomed, out float beforeDistance, out float afterDistance);
+        Assert.That(afterDistance, Is.GreaterThan(beforeDistance * 1.05f));
+        WriteSnapshotSvg(zoomed, Path.Combine(screensDir, "003_camera_marker_zoom.svg"));
+        timeline.Add("[T+003] Zooming in increases screen-space distance between the same authored markers.");
         traces.Add(new
         {
-            step = "003_tactical_vanguard",
-            band = tactical.ZoomBand.ToString(),
-            selected = tactical.SelectedLabel,
-            visible_signals = tactical.VisibleSignals.Count,
-            strategic_cells = tactical.StrategicCells.Count,
-            screenshot = "screens/003_tactical_vanguard.svg"
+            step = "003_camera_marker_zoom",
+            preset = zoomed.Preset.ToString(),
+            band = zoomed.ZoomBand.ToString(),
+            visible_markers = zoomed.VisibleMarkerCount,
+            screenshot = "screens/003_camera_marker_zoom.svg"
         });
 
         File.WriteAllText(
             Path.Combine(artifactDir, "trace.jsonl"),
             string.Join(Environment.NewLine, traces.Select(trace => JsonSerializer.Serialize(trace))));
-        File.WriteAllText(Path.Combine(artifactDir, "battle-report.md"), BuildBattleReport(timeline, strategic, regional, tactical, frameTimesMs));
+        File.WriteAllText(Path.Combine(artifactDir, "battle-report.md"), BuildBattleReport(timeline, rts, camera, zoomed, frameTimesMs));
         File.WriteAllText(Path.Combine(artifactDir, "path.mmd"), BuildPathMermaid());
     }
 
     [Test]
-    public void MinimapControlRuntime_RefreshAndRender_StayWithinZeroAllocBudget()
+    public void CoreMinimapRuntime_RefreshAndRender_StayWithinZeroAllocBudget()
     {
         var frameTimesMs = new List<double>();
         using var engine = CreateEngine();
         LoadMap(engine, MapId, frameTimesMs);
 
-        RuntimeFacade runtime = RuntimeFacade.Resolve(engine);
+        MinimapRuntime runtime = ResolveMinimapRuntime(engine);
+        MinimapMarkerBuffer markers = engine.GetService(CoreServiceKeys.MinimapMarkerBuffer)
+            ?? throw new InvalidOperationException("MinimapMarkerBuffer missing.");
+        MinimapScreenMarkerBuffer screenMarkers = engine.GetService(CoreServiceKeys.MinimapScreenMarkerBuffer)
+            ?? throw new InvalidOperationException("MinimapScreenMarkerBuffer missing.");
         ScreenOverlayBuffer overlay = engine.GetService(CoreServiceKeys.ScreenOverlayBuffer)
             ?? throw new InvalidOperationException("ScreenOverlayBuffer missing.");
 
+        SeedAuthoredMarkers(markers);
+        runtime.Visible = true;
+        runtime.UseRtsFullMapPreset();
         for (int i = 0; i < 24; i++)
         {
             overlay.Clear();
-            runtime.Refresh(engine);
+            runtime.Refresh(engine, markers, screenMarkers);
             runtime.Render(overlay);
             Tick(engine, 1, frameTimesMs);
+            SeedAuthoredMarkers(markers);
         }
 
         GC.Collect();
@@ -184,7 +176,7 @@ public sealed class MinimapShowcaseAcceptanceTests
         for (int i = 0; i < 96; i++)
         {
             overlay.Clear();
-            runtime.Refresh(engine);
+            runtime.Refresh(engine, markers, screenMarkers);
             runtime.Render(overlay);
         }
 
@@ -192,21 +184,130 @@ public sealed class MinimapShowcaseAcceptanceTests
         Assert.That(allocatedBytes, Is.LessThanOrEqualTo(2048L), $"Expected zero-allocation SoA hot path budget, got {allocatedBytes} bytes.");
     }
 
+    [Test]
+    public void CoreMinimapRuntime_Render_SubmitsCameraFrustumAsLineOverlay()
+    {
+        var frameTimesMs = new List<double>();
+        using var engine = CreateEngine();
+        LoadMap(engine, MapId, frameTimesMs);
+
+        MinimapRuntime runtime = ResolveMinimapRuntime(engine);
+        MinimapMarkerBuffer markers = engine.GetService(CoreServiceKeys.MinimapMarkerBuffer)
+            ?? throw new InvalidOperationException("MinimapMarkerBuffer missing.");
+        MinimapScreenMarkerBuffer screenMarkers = engine.GetService(CoreServiceKeys.MinimapScreenMarkerBuffer)
+            ?? throw new InvalidOperationException("MinimapScreenMarkerBuffer missing.");
+        ScreenOverlayBuffer overlay = engine.GetService(CoreServiceKeys.ScreenOverlayBuffer)
+            ?? throw new InvalidOperationException("ScreenOverlayBuffer missing.");
+
+        SeedAuthoredMarkers(markers);
+        runtime.Visible = true;
+        runtime.UseRtsFullMapPreset();
+        overlay.Clear();
+        runtime.Refresh(engine, markers, screenMarkers);
+        runtime.Render(overlay);
+
+        int lineCount = 0;
+        int thickLineCount = 0;
+        foreach (ref readonly ScreenOverlayItem item in overlay.GetSpan())
+        {
+            if (item.Kind != ScreenOverlayItemKind.Line)
+            {
+                continue;
+            }
+
+            lineCount++;
+            if (item.Thickness >= 3)
+            {
+                thickLineCount++;
+            }
+
+            Assert.That(item.X, Is.InRange(runtime.FieldX, runtime.FieldX + runtime.FieldSize - 1));
+            Assert.That(item.Y, Is.InRange(runtime.FieldY, runtime.FieldY + runtime.FieldSize - 1));
+            Assert.That(item.Width, Is.InRange(runtime.FieldX, runtime.FieldX + runtime.FieldSize - 1));
+            Assert.That(item.Height, Is.InRange(runtime.FieldY, runtime.FieldY + runtime.FieldSize - 1));
+        }
+
+        Assert.That(lineCount, Is.GreaterThanOrEqualTo(8), "Camera frustum should submit shadow and foreground line segments.");
+        Assert.That(thickLineCount, Is.GreaterThanOrEqualTo(4));
+    }
+
+    [Test]
+    public void CoreMinimapRuntime_ZoomUpdatesMetricGridStepAndRotationBasis()
+    {
+        var frameTimesMs = new List<double>();
+        using var engine = CreateEngine();
+        LoadMap(engine, MapId, frameTimesMs);
+
+        MinimapRuntime runtime = ResolveMinimapRuntime(engine);
+        MinimapMarkerBuffer markers = engine.GetService(CoreServiceKeys.MinimapMarkerBuffer)
+            ?? throw new InvalidOperationException("MinimapMarkerBuffer missing.");
+        MinimapScreenMarkerBuffer screenMarkers = engine.GetService(CoreServiceKeys.MinimapScreenMarkerBuffer)
+            ?? throw new InvalidOperationException("MinimapScreenMarkerBuffer missing.");
+        ScreenOverlayBuffer overlay = engine.GetService(CoreServiceKeys.ScreenOverlayBuffer)
+            ?? throw new InvalidOperationException("ScreenOverlayBuffer missing.");
+
+        SeedAuthoredMarkers(markers);
+        runtime.Visible = true;
+        runtime.UseCameraCenteredPreset(22000f);
+        runtime.SetRotateWithCamera(false);
+        overlay.Clear();
+        runtime.Refresh(engine, markers, screenMarkers);
+        runtime.Render(overlay);
+        float beforeStep = runtime.MetricGridStepCm;
+
+        Vector2 centerScreen = new(runtime.FieldX + (runtime.FieldSize * 0.5f), runtime.FieldY + (runtime.FieldSize * 0.5f));
+        runtime.ApplyWheelZoom(2f, centerScreen);
+        overlay.Clear();
+        runtime.Refresh(engine, markers, screenMarkers);
+        runtime.Render(overlay);
+        float afterStep = runtime.MetricGridStepCm;
+        Assert.That(afterStep, Is.LessThanOrEqualTo(beforeStep), "Metric grid spacing must become finer or remain at a snap boundary after zoom-in.");
+
+        Vector2 rightScreen = new(runtime.FieldX + (runtime.FieldSize * 0.75f), runtime.FieldY + (runtime.FieldSize * 0.5f));
+        Assert.That(runtime.TryScreenToWorld(rightScreen, out Vector2 northUpWorld), Is.True);
+        engine.GameSession.Camera.ApplyPose(new Ludots.Core.Gameplay.Camera.CameraPoseRequest { Yaw = 90f });
+        runtime.SetRotateWithCamera(true);
+        runtime.Refresh(engine, markers, screenMarkers);
+        Assert.That(runtime.TryScreenToWorld(rightScreen, out Vector2 rotatedWorld), Is.True);
+
+        Assert.That(Vector2.Distance(rotatedWorld, northUpWorld), Is.GreaterThan(10f));
+        Assert.That(runtime.RotateWithCamera, Is.True);
+    }
+
+    private static void SeedAuthoredMarkers(MinimapMarkerBuffer markers)
+    {
+        markers.BeginFrame();
+        for (int i = 0; i < 20; i++)
+        {
+            int column = i % 5;
+            int row = i / 5;
+            float x = -14000f + (column * 7000f);
+            float y = -10500f + (row * 7000f);
+            var color = new Vector4(0.12f, 0.82f, 1f, 1f);
+            if (i % 5 == 0)
+            {
+                color = new Vector4(1f, 0.72f, 0.18f, 1f);
+            }
+
+            Assert.That(markers.TryAdd(1000 + i, x, y, in color, 7f), Is.True);
+        }
+    }
+
     private static string BuildBattleReport(
         IReadOnlyList<string> timeline,
-        SnapshotView strategic,
-        SnapshotView regional,
-        SnapshotView tactical,
+        SnapshotView rts,
+        SnapshotView camera,
+        SnapshotView zoomed,
         IReadOnlyList<double> frameTimesMs)
     {
         var sb = new StringBuilder();
         sb.AppendLine("# Scenario: minimap-showcase");
         sb.AppendLine();
         sb.AppendLine("## Header");
-        sb.AppendLine("- build: GasTests / MinimapShowcase_WritesAcceptanceArtifacts");
+        sb.AppendLine("- build: GasTests / MinimapShowcase_WritesMarkerOnlyAcceptanceArtifacts");
         sb.AppendLine("- map: minimap_showcase");
-        sb.AppendLine("- clock: FixedFrame @ 60 Hz");
-        sb.AppendLine("- screenshots: `screens/001_strategic_overview.svg`, `screens/002_regional_frontier.svg`, `screens/003_tactical_vanguard.svg`");
+        sb.AppendLine("- source: core MinimapMarkerBuffer");
+        sb.AppendLine("- screenshots: `screens/001_rts_marker_overview.svg`, `screens/002_camera_marker_window.svg`, `screens/003_camera_marker_zoom.svg`");
         sb.AppendLine();
         sb.AppendLine("## Timeline");
         for (int i = 0; i < timeline.Count; i++)
@@ -217,17 +318,13 @@ public sealed class MinimapShowcaseAcceptanceTests
         sb.AppendLine();
         sb.AppendLine("## Outcome");
         sb.AppendLine("- result: success");
-        sb.AppendLine("- failure_branch: minimap overlay failed to switch zoom band, lost selection perspective, or exceeded the overlay hot-path budget");
-        sb.AppendLine($"- final_band: {tactical.ZoomBand}");
-        sb.AppendLine($"- final_selected: {tactical.SelectedLabel}");
-        sb.AppendLine($"- strategic_visible: {strategic.VisibleSignals.Count}");
-        sb.AppendLine($"- regional_visible: {regional.VisibleSignals.Count}");
-        sb.AppendLine($"- tactical_visible: {tactical.VisibleSignals.Count}");
+        sb.AppendLine("- failure_branch: minimap marker projection failed, camera preset did not clip to local markers, or render hot path exceeded allocation budget");
+        sb.AppendLine($"- rts_visible: {rts.VisibleMarkerCount}/{rts.MarkerCount}");
+        sb.AppendLine($"- camera_visible: {camera.VisibleMarkerCount}/{camera.MarkerCount}");
+        sb.AppendLine($"- zoom_visible: {zoomed.VisibleMarkerCount}/{zoomed.MarkerCount}");
         sb.AppendLine();
         sb.AppendLine("## Summary Stats");
-        sb.AppendLine($"- signal_pool: {strategic.VisibleSignals.Count}");
-        sb.AppendLine($"- strategic_cells: {strategic.StrategicCells.Count}");
-        sb.AppendLine($"- perspective_team: {strategic.PerspectiveTeamId}");
+        sb.AppendLine($"- marker_pool: {rts.MarkerCount}");
         sb.AppendLine($"- median_tick_ms: {Median(frameTimesMs):0.000}");
         sb.AppendLine($"- max_tick_ms: {(frameTimesMs.Count == 0 ? 0d : frameTimesMs.Max()):0.000}");
         return sb.ToString();
@@ -238,12 +335,10 @@ public sealed class MinimapShowcaseAcceptanceTests
         return string.Join(Environment.NewLine, new[]
         {
             "flowchart TD",
-            "    A[\"Load minimap_showcase and enable MinimapControlMod runtime\"] --> B[\"Strategic viewport captures empire-scale cells\"]",
-            "    B --> C[\"Select Frontier Bastion and zoom to regional viewport\"]",
-            "    C --> D[\"Regional viewport keeps frontier structures, fleets, and neutral nodes readable\"]",
-            "    D --> E[\"Select Imperial Vanguard Fleet and zoom to tactical viewport\"]",
-            "    E --> F[\"Tactical viewport exposes local fleet pocket detail\"]",
-            "    F --> G[\"Write screenshots, trace, and battle report\"]"
+            "    A[\"Seed core MinimapMarkerBuffer\"] --> B[\"RTS preset projects full marker set\"]",
+            "    B --> C[\"Camera-centered preset clips to local markers\"]",
+            "    C --> D[\"Zoom changes marker screen spacing\"]",
+            "    D --> E[\"Write marker-only artifacts\"]"
         });
     }
 
@@ -258,7 +353,7 @@ public sealed class MinimapShowcaseAcceptanceTests
         var shapes = new List<string>
         {
             $"<rect x=\"0\" y=\"0\" width=\"{width}\" height=\"{height}\" fill=\"#091018\" />",
-            $"<rect x=\"40\" y=\"40\" width=\"1120\" height=\"780\" rx=\"24\" fill=\"#12202d\" stroke=\"#4d728a\" stroke-width=\"2\" />",
+            $"<rect x=\"40\" y=\"40\" width=\"1120\" height=\"780\" rx=\"18\" fill=\"#12202d\" stroke=\"#4d728a\" stroke-width=\"2\" />",
             $"<rect x=\"{fieldX}\" y=\"{fieldY}\" width=\"{fieldSize}\" height=\"{fieldSize}\" rx=\"10\" fill=\"#08141d\" stroke=\"#365264\" stroke-width=\"2\" />"
         };
 
@@ -270,300 +365,135 @@ public sealed class MinimapShowcaseAcceptanceTests
             shapes.Add($"<line x1=\"{fieldX}\" y1=\"{fieldY + offset}\" x2=\"{fieldX + fieldSize}\" y2=\"{fieldY + offset}\" stroke=\"#274051\" stroke-width=\"1\" />");
         }
 
-        if (snapshot.ZoomBand == MinimapZoomBand.Strategic)
+        foreach (MarkerView marker in snapshot.VisibleMarkers)
         {
-            int cellSize = fieldSize / 12;
-            foreach (CellView cell in snapshot.StrategicCells)
-            {
-                string fill = "#243544";
-                if (cell.Hostile > cell.Friendly && cell.Hostile >= cell.Neutral) fill = "#572626";
-                else if (cell.Friendly >= cell.Neutral) fill = "#174056";
-                if (cell.Objectives > 0) fill = "#5d4830";
-                if (cell.Resources > 0) fill = "#21554a";
-                if (cell.Hazards > 0) fill = "#61332d";
-
-                int x = fieldX + (cell.CellX * cellSize) + 2;
-                int y = fieldY + (cell.CellY * cellSize) + 2;
-                shapes.Add($"<rect x=\"{x}\" y=\"{y}\" width=\"{cellSize - 4}\" height=\"{cellSize - 4}\" rx=\"4\" fill=\"{fill}\" stroke=\"#162633\" stroke-width=\"1\" />");
-                shapes.Add($"<text x=\"{x + 8}\" y=\"{y + 20}\" fill=\"#f7fafc\" font-size=\"12\" font-family=\"Consolas, monospace\">{cell.Total}</text>");
-            }
+            int x = fieldX + (int)MathF.Round(marker.NormalizedX * fieldSize);
+            int y = fieldY + (int)MathF.Round((1f - marker.NormalizedY) * fieldSize);
+            int radius = Math.Max(3, (int)MathF.Round(marker.SizePx * 0.75f));
+            shapes.Add($"<circle cx=\"{x}\" cy=\"{y}\" r=\"{radius + 2}\" fill=\"#021017\" stroke=\"#092b38\" stroke-width=\"1\" />");
+            shapes.Add($"<circle cx=\"{x}\" cy=\"{y}\" r=\"{radius}\" fill=\"{marker.Color}\" />");
         }
 
-        foreach (SignalView signal in snapshot.VisibleSignals)
-        {
-            int x = fieldX + (int)MathF.Round(signal.NormalizedX * fieldSize);
-            int y = fieldY + (int)MathF.Round(signal.NormalizedY * fieldSize);
-            string color = ResolveSvgColor(signal.Flags);
-            string icon = ResolveSvgIcon(signal.Kind);
-            if ((signal.Flags & MinimapSignalFlags.Selected) != 0)
-            {
-                shapes.Add($"<rect x=\"{x - 12}\" y=\"{y - 14}\" width=\"26\" height=\"26\" rx=\"6\" fill=\"none\" stroke=\"#f6d56e\" stroke-width=\"2\" />");
-            }
-
-            shapes.Add($"<text x=\"{x - 4}\" y=\"{y + 5}\" fill=\"{color}\" font-size=\"16\" font-family=\"Consolas, monospace\">{EscapeSvg(icon)}</text>");
-            if ((signal.Flags & MinimapSignalFlags.Alert) != 0)
-            {
-                shapes.Add($"<circle cx=\"{x + 14}\" cy=\"{y - 8}\" r=\"4\" fill=\"#ff695d\" />");
-            }
-        }
+        float cameraNormalizedX = (snapshot.CameraTargetXcm - (snapshot.CenterXcm - snapshot.HalfExtentCm)) / MathF.Max(1f, snapshot.HalfExtentCm * 2f);
+        float cameraNormalizedY = (snapshot.CameraTargetYcm - (snapshot.CenterYcm - snapshot.HalfExtentCm)) / MathF.Max(1f, snapshot.HalfExtentCm * 2f);
+        int cameraX = fieldX + (int)MathF.Round(Math.Clamp(cameraNormalizedX, 0f, 1f) * fieldSize);
+        int cameraY = fieldY + (int)MathF.Round((1f - Math.Clamp(cameraNormalizedY, 0f, 1f)) * fieldSize);
+        shapes.Add($"<rect x=\"{cameraX - 18}\" y=\"{cameraY - 18}\" width=\"36\" height=\"36\" fill=\"none\" stroke=\"#ffd95c\" stroke-width=\"4\" />");
+        shapes.Add($"<line x1=\"{cameraX - 16}\" y1=\"{cameraY}\" x2=\"{cameraX + 16}\" y2=\"{cameraY}\" stroke=\"#fff3a0\" stroke-width=\"4\" />");
+        shapes.Add($"<line x1=\"{cameraX}\" y1=\"{cameraY - 16}\" x2=\"{cameraX}\" y2=\"{cameraY + 16}\" stroke=\"#fff3a0\" stroke-width=\"4\" />");
 
         string svg = $$"""
 <svg xmlns="http://www.w3.org/2000/svg" width="{{width}}" height="{{height}}" viewBox="0 0 {{width}} {{height}}">
   {{string.Join(Environment.NewLine + "  ", shapes)}}
-  <text x="760" y="120" fill="#f7fafc" font-size="34" font-family="Consolas, monospace">4X Minimap Showcase</text>
-  <text x="760" y="160" fill="#f6d56e" font-size="24" font-family="Consolas, monospace">Band: {{snapshot.ZoomBand}}</text>
-  <text x="760" y="204" fill="#dde8f2" font-size="22" font-family="Consolas, monospace">Selected: {{EscapeSvg(snapshot.SelectedLabel)}}</text>
-  <text x="760" y="248" fill="#9eb2c2" font-size="18" font-family="Consolas, monospace">Perspective Team: {{snapshot.PerspectiveTeamId}}</text>
+  <text x="760" y="120" fill="#f7fafc" font-size="34" font-family="Consolas, monospace">Core Marker Minimap</text>
+  <text x="760" y="160" fill="#f6d56e" font-size="24" font-family="Consolas, monospace">Preset: {{snapshot.Preset}}</text>
+  <text x="760" y="204" fill="#dde8f2" font-size="22" font-family="Consolas, monospace">Band: {{snapshot.ZoomBand}}</text>
+  <text x="760" y="248" fill="#9eb2c2" font-size="18" font-family="Consolas, monospace">Markers: {{snapshot.VisibleMarkerCount}}/{{snapshot.MarkerCount}}</text>
   <text x="760" y="280" fill="#9eb2c2" font-size="18" font-family="Consolas, monospace">Viewport: center=({{snapshot.CenterXcm:0}}, {{snapshot.CenterYcm:0}}) extent={{snapshot.HalfExtentCm:0}}</text>
-  <text x="760" y="330" fill="#f7fafc" font-size="20" font-family="Consolas, monospace">Visible Signals</text>
-  <text x="760" y="360" fill="#9eb2c2" font-size="18" font-family="Consolas, monospace">{{snapshot.VisibleSignals.Count}} in current band</text>
-  <text x="760" y="410" fill="#f7fafc" font-size="20" font-family="Consolas, monospace">Bounds</text>
-  <text x="760" y="440" fill="#9eb2c2" font-size="18" font-family="Consolas, monospace">min=({{snapshot.MinWorldXcm:0}}, {{snapshot.MinWorldYcm:0}})</text>
-  <text x="760" y="470" fill="#9eb2c2" font-size="18" font-family="Consolas, monospace">max=({{snapshot.MaxWorldXcm:0}}, {{snapshot.MaxWorldYcm:0}})</text>
-  <text x="760" y="530" fill="#f7fafc" font-size="20" font-family="Consolas, monospace">Layer Semantics</text>
-  <text x="760" y="560" fill="#9eb2c2" font-size="18" font-family="Consolas, monospace">Strategic = sector aggregation</text>
-  <text x="760" y="590" fill="#9eb2c2" font-size="18" font-family="Consolas, monospace">Regional = structures + frontier traffic</text>
-  <text x="760" y="620" fill="#9eb2c2" font-size="18" font-family="Consolas, monospace">Tactical = local actor detail</text>
-  <text x="760" y="680" fill="#f7fafc" font-size="20" font-family="Consolas, monospace">Legend</text>
-  <text x="760" y="710" fill="#68d2ff" font-size="18" font-family="Consolas, monospace">Friendly</text>
-  <text x="900" y="710" fill="#f06f68" font-size="18" font-family="Consolas, monospace">Hostile</text>
-  <text x="1030" y="710" fill="#7be0ca" font-size="18" font-family="Consolas, monospace">Resource</text>
-  <text x="760" y="740" fill="#f6d56e" font-size="18" font-family="Consolas, monospace">Objective / Selected</text>
+  <text x="760" y="330" fill="#f7fafc" font-size="20" font-family="Consolas, monospace">Source</text>
+  <text x="760" y="360" fill="#9eb2c2" font-size="18" font-family="Consolas, monospace">Authored performer marker buffer</text>
+  <text x="760" y="390" fill="#9eb2c2" font-size="18" font-family="Consolas, monospace">No Name/Team/MapEntity scan</text>
+  <text x="760" y="440" fill="#f7fafc" font-size="20" font-family="Consolas, monospace">Bounds</text>
+  <text x="760" y="470" fill="#9eb2c2" font-size="18" font-family="Consolas, monospace">min=({{snapshot.MinWorldXcm:0}}, {{snapshot.MinWorldYcm:0}})</text>
+  <text x="760" y="500" fill="#9eb2c2" font-size="18" font-family="Consolas, monospace">max=({{snapshot.MaxWorldXcm:0}}, {{snapshot.MaxWorldYcm:0}})</text>
 </svg>
 """;
         File.WriteAllText(path, svg);
     }
 
-    private static string ResolveSvgIcon(MinimapSignalKind kind)
+    private static MinimapRuntime ResolveMinimapRuntime(GameEngine engine)
     {
-        return kind switch
-        {
-            MinimapSignalKind.Capital => "C",
-            MinimapSignalKind.Settlement => "S",
-            MinimapSignalKind.Fleet => "F",
-            MinimapSignalKind.Army => "A",
-            MinimapSignalKind.Scout => "s",
-            MinimapSignalKind.Objective => "O",
-            MinimapSignalKind.Resource => "R",
-            MinimapSignalKind.Hazard => "!",
-            _ => "P",
-        };
+        return engine.GetService(CoreServiceKeys.MinimapRuntime)
+            ?? throw new InvalidOperationException("Core MinimapRuntime missing.");
     }
 
-    private static string ResolveSvgColor(MinimapSignalFlags flags)
+    private static SnapshotView MapSnapshot(MinimapDebugSnapshot snapshot)
     {
-        if ((flags & MinimapSignalFlags.Selected) != 0) return "#f6d56e";
-        if ((flags & MinimapSignalFlags.Objective) != 0) return "#f6d56e";
-        if ((flags & MinimapSignalFlags.Resource) != 0) return "#7be0ca";
-        if ((flags & MinimapSignalFlags.Hazard) != 0) return "#ff7564";
-        if ((flags & MinimapSignalFlags.Hostile) != 0) return "#f06f68";
-        if ((flags & MinimapSignalFlags.Friendly) != 0) return "#68d2ff";
-        return "#d7e3ed";
-    }
-
-    private sealed class RuntimeFacade
-    {
-        private readonly object _instance;
-        private readonly Func<object, bool> _getVisible;
-        private readonly Func<object, int> _getSignalCount;
-        private readonly Action<object, GameEngine> _refresh;
-        private readonly Action<object, ScreenOverlayBuffer> _render;
-        private readonly Action<object, float, float, float> _setViewport;
-        private readonly Func<object, object> _captureSnapshot;
-
-        private RuntimeFacade(
-            object instance,
-            Func<object, bool> getVisible,
-            Func<object, int> getSignalCount,
-            Action<object, GameEngine> refresh,
-            Action<object, ScreenOverlayBuffer> render,
-            Action<object, float, float, float> setViewport,
-            Func<object, object> captureSnapshot)
+        var markers = new List<MarkerView>(snapshot.VisibleMarkers.Count);
+        foreach (MinimapDebugMarker marker in snapshot.VisibleMarkers)
         {
-            _instance = instance;
-            _getVisible = getVisible;
-            _getSignalCount = getSignalCount;
-            _refresh = refresh;
-            _render = render;
-            _setViewport = setViewport;
-            _captureSnapshot = captureSnapshot;
+            markers.Add(new MarkerView(
+                marker.StableId,
+                marker.WorldXcm,
+                marker.WorldYcm,
+                marker.NormalizedX,
+                marker.NormalizedY,
+                ToSvgColor(marker.Color),
+                marker.SizePx));
         }
 
-        public bool Visible => _getVisible(_instance);
-
-        public int SignalCount => _getSignalCount(_instance);
-
-        public static RuntimeFacade Resolve(GameEngine engine)
-        {
-            if (!engine.GlobalContext.TryGetValue(MinimapControlServiceKeys.Runtime.Name, out object? runtime) || runtime == null)
-            {
-                throw new InvalidOperationException("MinimapControlRuntime missing.");
-            }
-
-            Type runtimeType = runtime.GetType();
-            return new RuntimeFacade(
-                runtime,
-                CompilePropertyGetter<bool>(runtimeType, "Visible"),
-                CompilePropertyGetter<int>(runtimeType, "SignalCount"),
-                CompileAction<GameEngine>(runtimeType, "Refresh"),
-                CompileAction<ScreenOverlayBuffer>(runtimeType, "Render"),
-                CompileAction<float, float, float>(runtimeType, "SetViewport"),
-                CompileFunc(runtimeType, "CaptureDebugSnapshot"));
-        }
-
-        public void Refresh(GameEngine engine) => _refresh(_instance, engine);
-
-        public void Render(ScreenOverlayBuffer overlay) => _render(_instance, overlay);
-
-        public void SetViewport(float centerXcm, float centerYcm, float halfExtentCm) =>
-            _setViewport(_instance, centerXcm, centerYcm, halfExtentCm);
-
-        public SnapshotView CaptureSnapshot() => MapSnapshot(_captureSnapshot(_instance));
-
-        private static Func<object, T> CompilePropertyGetter<T>(Type runtimeType, string propertyName)
-        {
-            PropertyInfo property = runtimeType.GetProperty(propertyName, BindingFlags.Instance | BindingFlags.Public)
-                ?? throw new MissingMemberException(runtimeType.FullName, propertyName);
-            var instance = Expression.Parameter(typeof(object), "instance");
-            var body = Expression.Convert(
-                Expression.Property(Expression.Convert(instance, runtimeType), property),
-                typeof(T));
-            return Expression.Lambda<Func<object, T>>(body, instance).Compile();
-        }
-
-        private static Action<object, TArg> CompileAction<TArg>(Type runtimeType, string methodName)
-        {
-            MethodInfo method = runtimeType.GetMethod(methodName, BindingFlags.Instance | BindingFlags.Public, [typeof(TArg)])
-                ?? throw new MissingMethodException(runtimeType.FullName, methodName);
-            var instance = Expression.Parameter(typeof(object), "instance");
-            var arg = Expression.Parameter(typeof(TArg), "arg");
-            var body = Expression.Call(Expression.Convert(instance, runtimeType), method, arg);
-            return Expression.Lambda<Action<object, TArg>>(body, instance, arg).Compile();
-        }
-
-        private static Action<object, TArg1, TArg2, TArg3> CompileAction<TArg1, TArg2, TArg3>(Type runtimeType, string methodName)
-        {
-            MethodInfo method = runtimeType.GetMethod(methodName, BindingFlags.Instance | BindingFlags.Public, [typeof(TArg1), typeof(TArg2), typeof(TArg3)])
-                ?? throw new MissingMethodException(runtimeType.FullName, methodName);
-            var instance = Expression.Parameter(typeof(object), "instance");
-            var arg1 = Expression.Parameter(typeof(TArg1), "arg1");
-            var arg2 = Expression.Parameter(typeof(TArg2), "arg2");
-            var arg3 = Expression.Parameter(typeof(TArg3), "arg3");
-            var body = Expression.Call(Expression.Convert(instance, runtimeType), method, arg1, arg2, arg3);
-            return Expression.Lambda<Action<object, TArg1, TArg2, TArg3>>(body, instance, arg1, arg2, arg3).Compile();
-        }
-
-        private static Func<object, object> CompileFunc(Type runtimeType, string methodName)
-        {
-            MethodInfo method = runtimeType.GetMethod(methodName, BindingFlags.Instance | BindingFlags.Public, Type.EmptyTypes)
-                ?? throw new MissingMethodException(runtimeType.FullName, methodName);
-            var instance = Expression.Parameter(typeof(object), "instance");
-            var body = Expression.Convert(
-                Expression.Call(Expression.Convert(instance, runtimeType), method),
-                typeof(object));
-            return Expression.Lambda<Func<object, object>>(body, instance).Compile();
-        }
-    }
-
-    private static SnapshotView MapSnapshot(object snapshot)
-    {
         return new SnapshotView(
-            GetProperty<string>(snapshot, "MapId"),
-            GetProperty<string>(snapshot, "SelectedLabel"),
-            GetProperty<int>(snapshot, "PerspectiveTeamId"),
-            (MinimapZoomBand)Convert.ToByte(GetProperty<object>(snapshot, "ZoomBand")),
-            GetProperty<float>(snapshot, "CenterXcm"),
-            GetProperty<float>(snapshot, "CenterYcm"),
-            GetProperty<float>(snapshot, "HalfExtentCm"),
-            GetProperty<float>(snapshot, "MinWorldXcm"),
-            GetProperty<float>(snapshot, "MinWorldYcm"),
-            GetProperty<float>(snapshot, "MaxWorldXcm"),
-            GetProperty<float>(snapshot, "MaxWorldYcm"),
-            GetList(snapshot, "VisibleSignals", MapSignal),
-            GetList(snapshot, "StrategicCells", MapCell));
+            snapshot.MapId,
+            snapshot.ZoomBand,
+            snapshot.Preset,
+            snapshot.CenterXcm,
+            snapshot.CenterYcm,
+            snapshot.HalfExtentCm,
+            snapshot.MinWorldXcm,
+            snapshot.MinWorldYcm,
+            snapshot.MaxWorldXcm,
+            snapshot.MaxWorldYcm,
+            snapshot.CameraTargetXcm,
+            snapshot.CameraTargetYcm,
+            snapshot.MarkerCount,
+            snapshot.VisibleMarkerCount,
+            markers);
     }
 
-    private static SignalView MapSignal(object signal)
+    private static void SelectZoomStableMarkerPair(SnapshotView before, SnapshotView after, out float beforeDistance, out float afterDistance)
     {
-        return new SignalView(
-            GetProperty<string>(signal, "Label"),
-            GetProperty<int>(signal, "TeamId"),
-            (MinimapSignalKind)Convert.ToByte(GetProperty<object>(signal, "Kind")),
-            (MinimapSignalFlags)Convert.ToUInt16(GetProperty<object>(signal, "Flags")),
-            GetProperty<float>(signal, "WorldXcm"),
-            GetProperty<float>(signal, "WorldYcm"),
-            GetProperty<float>(signal, "NormalizedX"),
-            GetProperty<float>(signal, "NormalizedY"));
-    }
-
-    private static CellView MapCell(object cell)
-    {
-        return new CellView(
-            GetProperty<int>(cell, "CellX"),
-            GetProperty<int>(cell, "CellY"),
-            GetProperty<int>(cell, "Total"),
-            GetProperty<int>(cell, "Friendly"),
-            GetProperty<int>(cell, "Hostile"),
-            GetProperty<int>(cell, "Neutral"),
-            GetProperty<int>(cell, "Structures"),
-            GetProperty<int>(cell, "Objectives"),
-            GetProperty<int>(cell, "Resources"),
-            GetProperty<int>(cell, "Hazards"));
-    }
-
-    private static IReadOnlyList<T> GetList<T>(object instance, string propertyName, Func<object, T> mapper)
-    {
-        object value = GetProperty<object>(instance, propertyName);
-        if (value is not IEnumerable enumerable)
+        beforeDistance = 0f;
+        afterDistance = 0f;
+        for (int i = 0; i < before.VisibleMarkers.Count; i++)
         {
-            return Array.Empty<T>();
-        }
-
-        var items = new List<T>();
-        foreach (object? entry in enumerable)
-        {
-            if (entry != null)
+            int stableIdA = before.VisibleMarkers[i].StableId;
+            if (!after.VisibleMarkers.Any(marker => marker.StableId == stableIdA))
             {
-                items.Add(mapper(entry));
+                continue;
+            }
+
+            for (int j = i + 1; j < before.VisibleMarkers.Count; j++)
+            {
+                int stableIdB = before.VisibleMarkers[j].StableId;
+                if (!after.VisibleMarkers.Any(marker => marker.StableId == stableIdB))
+                {
+                    continue;
+                }
+
+                float candidateBefore = DistanceBetweenMarkers(before, stableIdA, stableIdB);
+                if (candidateBefore <= beforeDistance)
+                {
+                    continue;
+                }
+
+                beforeDistance = candidateBefore;
+                afterDistance = DistanceBetweenMarkers(after, stableIdA, stableIdB);
             }
         }
 
-        return items;
+        Assert.That(beforeDistance, Is.GreaterThan(0f), "Expected at least one stable marker pair to remain visible after zoom.");
     }
 
-    private static T GetProperty<T>(object instance, string propertyName)
+    private static float DistanceBetweenMarkers(SnapshotView snapshot, int stableIdA, int stableIdB)
     {
-        PropertyInfo property = instance.GetType().GetProperty(propertyName, BindingFlags.Instance | BindingFlags.Public)
-            ?? throw new MissingMemberException(instance.GetType().FullName, propertyName);
-        object? value = property.GetValue(instance);
-        if (value is T typed)
-        {
-            return typed;
-        }
-
-        if (value == null)
-        {
-            return default!;
-        }
-
-        return (T)Convert.ChangeType(value, typeof(T));
+        MarkerView a = snapshot.VisibleMarkers.First(marker => marker.StableId == stableIdA);
+        MarkerView b = snapshot.VisibleMarkers.First(marker => marker.StableId == stableIdB);
+        float dx = b.NormalizedX - a.NormalizedX;
+        float dy = b.NormalizedY - a.NormalizedY;
+        return MathF.Sqrt((dx * dx) + (dy * dy));
     }
 
-    private static void SelectNamedEntity(GameEngine engine, string entityName)
+    private static string ToSvgColor(Vector4 color)
     {
-        Entity entity = FindEntityByName(engine.World, entityName);
-        Assert.That(entity, Is.Not.EqualTo(Entity.Null), $"Entity '{entityName}' was not found.");
+        int r = ToByte(color.X);
+        int g = ToByte(color.Y);
+        int b = ToByte(color.Z);
+        return $"#{r:X2}{g:X2}{b:X2}";
+    }
 
-        SelectionRuntime selection = engine.GetService(CoreServiceKeys.SelectionRuntime)
-            ?? throw new InvalidOperationException("SelectionRuntime missing.");
-        Entity viewer = engine.GlobalContext.TryGetValue(CoreServiceKeys.LocalPlayerEntity.Name, out object? viewerObj) && viewerObj is Entity local
-            ? local
-            : entity;
-
-        selection.ReplaceSelection(viewer, SelectionSetKeys.LivePrimary, stackalloc[] { entity });
-        selection.TryBindView(viewer, SelectionViewKeys.Primary, viewer, SelectionSetKeys.LivePrimary);
-        engine.GlobalContext[CoreServiceKeys.SelectionViewViewerEntity.Name] = viewer;
-        engine.GlobalContext[CoreServiceKeys.SelectionViewKey.Name] = SelectionViewKeys.Primary;
+    private static int ToByte(float value)
+    {
+        return (int)MathF.Round(Math.Clamp(value, 0f, 1f) * 255f);
     }
 
     private static GameEngine CreateEngine()
@@ -576,8 +506,6 @@ public sealed class MinimapShowcaseAcceptanceTests
         engine.InitializeWithConfigPipeline(modPaths, assetsRoot);
         InstallInput(engine);
         engine.SetService(CoreServiceKeys.ViewController, new StubViewController(1920f, 1080f));
-        engine.SetService(CoreServiceKeys.ScreenProjector, new WorldMappedScreenProjector());
-        engine.SetService(CoreServiceKeys.ScreenRayProvider, new WorldMappedScreenRayProvider());
         return engine;
     }
 
@@ -600,30 +528,13 @@ public sealed class MinimapShowcaseAcceptanceTests
         var backend = engine.GlobalContext["Tests.MinimapShowcase.InputBackend"] as TestInputBackend;
         for (int i = 0; i < frames; i++)
         {
-            if (backend != null)
-            {
-                backend.SetMouseWheel(0f);
-            }
+            backend?.SetMouseWheel(0f);
 
             long start = Stopwatch.GetTimestamp();
             engine.Tick(DeltaTime);
             long end = Stopwatch.GetTimestamp();
             frameTimesMs.Add((end - start) * 1000d / Stopwatch.Frequency);
         }
-    }
-
-    private static Entity FindEntityByName(World world, string name)
-    {
-        Entity found = Entity.Null;
-        var query = new QueryDescription().WithAll<Name>();
-        world.Query(in query, (Entity entity, ref Name entityName) =>
-        {
-            if (found == Entity.Null && string.Equals(entityName.Value, name, StringComparison.Ordinal))
-            {
-                found = entity;
-            }
-        });
-        return found;
     }
 
     private static string FindRepoRoot()
@@ -657,28 +568,12 @@ public sealed class MinimapShowcaseAcceptanceTests
             : ordered[middle];
     }
 
-    private static string EscapeSvg(string? value)
-    {
-        if (string.IsNullOrEmpty(value))
-        {
-            return string.Empty;
-        }
-
-        return value
-            .Replace("&", "&amp;", StringComparison.Ordinal)
-            .Replace("<", "&lt;", StringComparison.Ordinal)
-            .Replace(">", "&gt;", StringComparison.Ordinal)
-            .Replace("\"", "&quot;", StringComparison.Ordinal);
-    }
-
     private sealed class TestInputBackend : IInputBackend
     {
         private readonly Dictionary<string, bool> _buttons = new(StringComparer.Ordinal);
         private Vector2 _mousePosition;
         private float _mouseWheel;
 
-        public void SetButton(string path, bool isDown) => _buttons[path] = isDown;
-        public void SetMousePosition(Vector2 position) => _mousePosition = position;
         public void SetMouseWheel(float wheel) => _mouseWheel = wheel;
 
         public float GetAxis(string devicePath) => 0f;
@@ -700,23 +595,5 @@ public sealed class MinimapShowcaseAcceptanceTests
         public Vector2 Resolution { get; }
         public float Fov => 60f;
         public float AspectRatio => Resolution.Y <= 0f ? 1f : Resolution.X / Resolution.Y;
-    }
-
-    private sealed class WorldMappedScreenRayProvider : IScreenRayProvider
-    {
-        public ScreenRay GetRay(Vector2 screenPosition)
-        {
-            return new ScreenRay(
-                new Vector3(screenPosition.X / 100f, 10f, screenPosition.Y / 100f),
-                -Vector3.UnitY);
-        }
-    }
-
-    private sealed class WorldMappedScreenProjector : IScreenProjector
-    {
-        public Vector2 WorldToScreen(Vector3 worldPosition)
-        {
-            return new Vector2(worldPosition.X * 100f, worldPosition.Z * 100f);
-        }
     }
 }

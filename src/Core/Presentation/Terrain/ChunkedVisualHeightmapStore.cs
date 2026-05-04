@@ -22,6 +22,8 @@ namespace Ludots.Core.Presentation.Terrain
 
         public ChunkedVisualHeightmapDescriptor Descriptor { get; }
 
+        public int Revision { get; private set; }
+
         public int LoadedChunkCount => _chunks.Count;
 
         public void SubscribeToLoadedChunks(ILoadedChunks source)
@@ -59,6 +61,7 @@ namespace Ludots.Core.Presentation.Terrain
 
             long key = GraphChunkKey.Pack(chunk.ChunkX, chunk.ChunkY);
             _chunks[key] = chunk;
+            Revision++;
             ThreadCache cache = GetThreadCache();
             if (ReferenceEquals(cache.Owner, this) && cache.Key == key)
             {
@@ -73,6 +76,7 @@ namespace Ludots.Core.Presentation.Terrain
             bool removed = _chunks.Remove(key);
             if (removed)
             {
+                Revision++;
                 InvalidateThreadCache(key);
             }
 
@@ -127,6 +131,7 @@ namespace Ludots.Core.Presentation.Terrain
         {
             if (_chunks.Remove(chunkKey))
             {
+                Revision++;
                 InvalidateThreadCache(chunkKey);
             }
         }

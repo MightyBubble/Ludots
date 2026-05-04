@@ -782,6 +782,47 @@ namespace Ludots.Tests.Presentation
         }
 
         [Test]
+        public void VisualHeightmapRuntime_RenderSource_SupportsUnevenChunkTailWithoutSecondTruth()
+        {
+            const int columns = 70;
+            const int rows = 35;
+            short[] samples = new short[columns * rows];
+            for (int y = 0; y < rows; y++)
+            {
+                for (int x = 0; x < columns; x++)
+                {
+                    samples[(y * columns) + x] = (short)((x * 10) + y);
+                }
+            }
+
+            var runtime = new VisualHeightmapRuntime(
+                VisualHeightmapAsset.CreateSingleLayer(
+                    new WorldAabbCm(-1200, -700, 6900, 3400),
+                    columns,
+                    rows,
+                    samples));
+            IVisualHeightmapRenderSource source = runtime;
+
+            Assert.That(source.ChunkColumns, Is.EqualTo(3));
+            Assert.That(source.ChunkRows, Is.EqualTo(2));
+
+            Assert.That(source.TryGetChunk(2, 1, out VisualHeightmapRenderChunk tail), Is.True);
+            Assert.That(tail.SampleColumns, Is.EqualTo(24));
+            Assert.That(tail.SampleRows, Is.EqualTo(18));
+            Assert.That(tail.SampleStepXCm, Is.EqualTo(100f).Within(0.001f));
+            Assert.That(tail.SampleStepYCm, Is.EqualTo(100f).Within(0.001f));
+            Assert.That(tail.Bounds.Left, Is.EqualTo(3400));
+            Assert.That(tail.Bounds.Top, Is.EqualTo(1000));
+            Assert.That(tail.Bounds.Right, Is.EqualTo(5700));
+            Assert.That(tail.Bounds.Bottom, Is.EqualTo(2700));
+
+            Assert.That(tail.TryReadHeightCm(23, 17, out float lastHeightCm), Is.True);
+            Assert.That(lastHeightCm, Is.EqualTo((69 * 10) + 34).Within(0.001f));
+            Assert.That(runtime.TrySampleHeightCm(5700f, 2700f, out float sampledHeightCm), Is.True);
+            Assert.That(sampledHeightCm, Is.EqualTo(lastHeightCm).Within(0.001f));
+        }
+
+        [Test]
         public void TerrainHeightSyncSystem_PrefersVisualHeightmap_AndGroundRaycastUsesSameTruth()
         {
             using var world = World.Create();

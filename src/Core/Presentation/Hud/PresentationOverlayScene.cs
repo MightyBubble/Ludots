@@ -6,7 +6,8 @@ namespace Ludots.Core.Presentation.Hud
 {
     public sealed class PresentationOverlayScene
     {
-        private const int LaneCount = 6;
+        private const int KindCount = 5;
+        private const int LaneCount = 10;
 
         private readonly LaneState[] _lanes;
         private readonly PresentationOverlayItem[] _flattenedItems;
@@ -230,7 +231,7 @@ namespace Ludots.Core.Presentation.Hud
             _building = true;
             _buildCount = 0;
 
-            for (int kindValue = (int)PresentationOverlayItemKind.Text; kindValue <= (int)PresentationOverlayItemKind.Bar; kindValue++)
+            for (int kindValue = (int)PresentationOverlayItemKind.Text; kindValue <= (int)PresentationOverlayItemKind.Line; kindValue++)
             {
                 LaneState lane = _lanes[GetLaneIndex(layer, (PresentationOverlayItemKind)kindValue)];
                 lane.PendingCount = 0;
@@ -247,7 +248,7 @@ namespace Ludots.Core.Presentation.Hud
             }
 
             bool layerDirty = false;
-            for (int kindValue = (int)PresentationOverlayItemKind.Text; kindValue <= (int)PresentationOverlayItemKind.Bar; kindValue++)
+            for (int kindValue = (int)PresentationOverlayItemKind.Text; kindValue <= (int)PresentationOverlayItemKind.Line; kindValue++)
             {
                 LaneState lane = _lanes[GetLaneIndex(layer, (PresentationOverlayItemKind)kindValue)];
                 if (lane.Count != lane.PendingCount)
@@ -335,7 +336,7 @@ namespace Ludots.Core.Presentation.Hud
         public void ClearLayer(PresentationOverlayLayer layer)
         {
             bool layerDirty = false;
-            for (int kindValue = (int)PresentationOverlayItemKind.Text; kindValue <= (int)PresentationOverlayItemKind.Bar; kindValue++)
+            for (int kindValue = (int)PresentationOverlayItemKind.Text; kindValue <= (int)PresentationOverlayItemKind.Line; kindValue++)
             {
                 LaneState lane = _lanes[GetLaneIndex(layer, (PresentationOverlayItemKind)kindValue)];
                 if (lane.Count <= 0)
@@ -467,7 +468,7 @@ namespace Ludots.Core.Presentation.Hud
 
         public bool ContainsLayer(PresentationOverlayLayer layer)
         {
-            for (int kind = 1; kind <= 3; kind++)
+            for (int kind = 1; kind <= KindCount; kind++)
             {
                 if (_lanes[GetLaneIndex(layer, (PresentationOverlayItemKind)kind)].Count > 0)
                 {
@@ -570,6 +571,69 @@ namespace Ludots.Core.Presentation.Hud
                 Value0 = value,
                 Color0 = background,
                 Color1 = foreground
+            };
+            return TryStore(in item);
+        }
+
+        public bool TryAddMinimapMarker(
+            PresentationOverlayLayer layer,
+            float x,
+            float y,
+            float sizePx,
+            in Vector4 color,
+            int stableId = 0,
+            int dirtySerial = 0,
+            uint flags = 0u)
+        {
+            if (sizePx <= 0f)
+            {
+                return true;
+            }
+
+            var item = new PresentationOverlayItem
+            {
+                StableId = stableId,
+                DirtySerial = dirtySerial,
+                Kind = PresentationOverlayItemKind.MinimapMarker,
+                Layer = layer,
+                X = x,
+                Y = y,
+                Width = sizePx,
+                Height = sizePx,
+                Color0 = color,
+                Value0 = flags
+            };
+            return TryStore(in item);
+        }
+
+        public bool TryAddLine(
+            PresentationOverlayLayer layer,
+            float x0,
+            float y0,
+            float x1,
+            float y1,
+            float thickness,
+            in Vector4 color,
+            int stableId = 0,
+            int dirtySerial = 0)
+        {
+            if (thickness <= 0f || color.W <= 0f)
+            {
+                return true;
+            }
+
+            var item = new PresentationOverlayItem
+            {
+                StableId = stableId,
+                DirtySerial = dirtySerial,
+                Kind = PresentationOverlayItemKind.Line,
+                Layer = layer,
+                X = x0,
+                Y = y0,
+                Width = x1,
+                Height = y1,
+                Value0 = thickness,
+                Color0 = color
             };
             return TryStore(in item);
         }
@@ -1455,7 +1519,7 @@ namespace Ludots.Core.Presentation.Hud
 
         private static PresentationOverlayLayer GetLayer(int laneIndex)
         {
-            return (PresentationOverlayLayer)(laneIndex / 3);
+            return (PresentationOverlayLayer)(laneIndex / KindCount);
         }
 
         private void IncrementDirtyLayers(ReadOnlySpan<bool> layerDirty)
@@ -1471,12 +1535,12 @@ namespace Ludots.Core.Presentation.Hud
 
         private static int GetLaneIndex(PresentationOverlayLayer layer, PresentationOverlayItemKind kind)
         {
-            if (kind is PresentationOverlayItemKind.None or < PresentationOverlayItemKind.Text or > PresentationOverlayItemKind.Bar)
+            if (kind is PresentationOverlayItemKind.None or < PresentationOverlayItemKind.Text or > PresentationOverlayItemKind.Line)
             {
                 throw new ArgumentOutOfRangeException(nameof(kind));
             }
 
-            return ((int)layer * 3) + ((int)kind - 1);
+            return ((int)layer * KindCount) + ((int)kind - 1);
         }
 
         private static void EnsureLaneCapacity(LaneState lane, int required)

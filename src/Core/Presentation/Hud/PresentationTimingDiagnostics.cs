@@ -96,6 +96,10 @@ namespace Ludots.Core.Presentation.Hud
         public float LastPerformerAnimatorMs { get; private set; }
         public float PerformerEntityTransformSyncMs { get; private set; }
         public float LastPerformerEntityTransformSyncMs { get; private set; }
+        public float PerformerMinimapMarkerMs { get; private set; }
+        public float LastPerformerMinimapMarkerMs { get; private set; }
+        public int PerformerMinimapMarkersLastFrame { get; private set; }
+        public int PerformerMinimapDroppedLastFrame { get; private set; }
         public float RuntimeSpawnBatchPrepareMs { get; private set; }
         public float LastRuntimeSpawnBatchPrepareMs { get; private set; }
         public float RuntimeSpawnWorldCreateMs { get; private set; }
@@ -141,6 +145,8 @@ namespace Ludots.Core.Presentation.Hud
         public float TerrainRenderMs { get; private set; }
         public float LastTerrainRenderMs { get; private set; }
         public float TerrainChunkBuildMs { get; private set; }
+        public float TerrainHeightSyncMs { get; private set; }
+        public float LastTerrainHeightSyncMs { get; private set; }
         public float PrimitiveRenderMs { get; private set; }
         public float LastPrimitiveRenderMs { get; private set; }
         public float PrimitiveMatrixBuildMs { get; private set; }
@@ -181,8 +187,14 @@ namespace Ludots.Core.Presentation.Hud
         public int ScreenOverlayTextLayoutCacheCount { get; private set; }
         public int TerrainChunksDrawnLastFrame { get; private set; }
         public int TerrainChunksBuiltLastFrame { get; private set; }
+        public int TerrainHeightSamplesLastFrame { get; private set; }
         public int PrimitiveInstancesLastFrame { get; private set; }
         public int PrimitiveBatchesLastFrame { get; private set; }
+        public int SkinnedRawLastFrame { get; private set; }
+        public int GpuSkinnedInstancesLastFrame { get; private set; }
+        public int GpuSkinnedBatchesLastFrame { get; private set; }
+        public float LastGpuSkinnedMatrixBuildMs { get; private set; }
+        public float LastGpuSkinnedMeshDrawMs { get; private set; }
         public int PrimitiveMatrixCacheHitsLastFrame { get; private set; }
         public int PrimitiveMatrixCacheMissesLastFrame { get; private set; }
         public int PrimitiveImmediateSkippedLastFrame { get; private set; }
@@ -294,6 +306,15 @@ namespace Ludots.Core.Presentation.Hud
         }
 
         public void ObserveCameraPresenter(double sampleMs) => CameraPresenterMs = Smooth(CameraPresenterMs, (float)sampleMs);
+
+        public void ObservePerformerMinimapMarker(double sampleMs, int markers, int dropped)
+        {
+            LastPerformerMinimapMarkerMs = (float)sampleMs;
+            PerformerMinimapMarkerMs = Smooth(PerformerMinimapMarkerMs, (float)sampleMs);
+            PerformerMinimapMarkersLastFrame = markers;
+            PerformerMinimapDroppedLastFrame = dropped;
+        }
+
         public void ObserveWorldHudProjection(double sampleMs)
         {
             ObserveWorldHudProjection(sampleMs, WorldHudItemsLastProjection, WorldHudProjectedLastFrame, WorldHudDensitySkippedLastFrame);
@@ -502,6 +523,13 @@ namespace Ludots.Core.Presentation.Hud
             TerrainChunksBuiltLastFrame = builtChunks;
         }
 
+        public void ObserveTerrainHeightSync(double sampleMs, int sampledCount)
+        {
+            LastTerrainHeightSyncMs = (float)sampleMs;
+            TerrainHeightSyncMs = Smooth(TerrainHeightSyncMs, (float)sampleMs);
+            TerrainHeightSamplesLastFrame = sampledCount;
+        }
+
         public void ObservePrimitiveRender(double sampleMs, int instances, int batches)
         {
             ObservePrimitiveRender(sampleMs, instances, batches, 0d, 0d, 0, 0, 0d, 0d, 0d, 0);
@@ -541,7 +569,12 @@ namespace Ludots.Core.Presentation.Hud
             double persistentSyncMs,
             double persistentBucketDrawMs,
             double immediateDrawMs,
-            int immediateSkippedCount)
+            int immediateSkippedCount,
+            int skinnedRawCount = 0,
+            int gpuSkinnedInstances = 0,
+            int gpuSkinnedBatches = 0,
+            double gpuSkinnedMatrixBuildMs = 0d,
+            double gpuSkinnedMeshDrawMs = 0d)
         {
             LastPrimitiveRenderMs = (float)sampleMs;
             PrimitiveRenderMs = Smooth(PrimitiveRenderMs, (float)sampleMs);
@@ -557,6 +590,11 @@ namespace Ludots.Core.Presentation.Hud
             PrimitiveImmediateDrawMs = Smooth(PrimitiveImmediateDrawMs, (float)immediateDrawMs);
             PrimitiveInstancesLastFrame = instances;
             PrimitiveBatchesLastFrame = batches;
+            SkinnedRawLastFrame = skinnedRawCount;
+            GpuSkinnedInstancesLastFrame = gpuSkinnedInstances;
+            GpuSkinnedBatchesLastFrame = gpuSkinnedBatches;
+            LastGpuSkinnedMatrixBuildMs = (float)gpuSkinnedMatrixBuildMs;
+            LastGpuSkinnedMeshDrawMs = (float)gpuSkinnedMeshDrawMs;
             PrimitiveMatrixCacheHitsLastFrame = matrixCacheHits;
             PrimitiveMatrixCacheMissesLastFrame = matrixCacheMisses;
             PrimitiveImmediateSkippedLastFrame = immediateSkippedCount;

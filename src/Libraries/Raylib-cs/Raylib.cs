@@ -155,6 +155,13 @@ namespace Raylib_cs
         BLEND_CUSTOM_SEPARATE
     }
 
+    public enum RlMatrixMode
+    {
+        RL_MODELVIEW = 0x1700,
+        RL_PROJECTION = 0x1701,
+        RL_TEXTURE = 0x1702
+    }
+
     [StructLayout(LayoutKind.Sequential)]
     public struct Rectangle
     {
@@ -365,6 +372,30 @@ namespace Raylib_cs
 
         [DllImport(NativeLib, CallingConvention = CallingConvention.Cdecl)]
         public static extern void EndMode3D();
+
+        [DllImport(NativeLib, CallingConvention = CallingConvention.Cdecl)]
+        public static extern void rlDrawRenderBatchActive();
+
+        [DllImport(NativeLib, CallingConvention = CallingConvention.Cdecl)]
+        public static extern void rlMatrixMode(int mode);
+
+        [DllImport(NativeLib, CallingConvention = CallingConvention.Cdecl)]
+        public static extern void rlPushMatrix();
+
+        [DllImport(NativeLib, CallingConvention = CallingConvention.Cdecl)]
+        public static extern void rlPopMatrix();
+
+        [DllImport(NativeLib, CallingConvention = CallingConvention.Cdecl)]
+        public static extern void rlLoadIdentity();
+
+        [DllImport(NativeLib, CallingConvention = CallingConvention.Cdecl)]
+        public static extern void rlFrustum(double left, double right, double bottom, double top, double znear, double zfar);
+
+        [DllImport(NativeLib, CallingConvention = CallingConvention.Cdecl)]
+        public static extern void rlOrtho(double left, double right, double bottom, double top, double znear, double zfar);
+
+        [DllImport(NativeLib, CallingConvention = CallingConvention.Cdecl)]
+        public static extern unsafe void rlMultMatrixf(float* matf);
 
         [DllImport(NativeLib, CallingConvention = CallingConvention.Cdecl)]
         public static extern void DrawCube(Vector3 position, float width, float height, float length, Color color);

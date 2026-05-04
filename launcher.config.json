@@ -72,6 +72,14 @@
         "value": "mods/showcases/performer_blacksmith/PerformerBlacksmithShowcaseMod",
         "projectPath": "PerformerBlacksmithShowcaseMod.csproj"
       }
+    },
+    {
+      "name": "performer_blacksmith_large_world",
+      "target": {
+        "type": "path",
+        "value": "mods/showcases/performer_blacksmith_large_world_entry/PerformerBlacksmithLargeWorldEntryMod",
+        "projectPath": "PerformerBlacksmithLargeWorldEntryMod.csproj"
+      }
     }
   ],
   "adapters": {

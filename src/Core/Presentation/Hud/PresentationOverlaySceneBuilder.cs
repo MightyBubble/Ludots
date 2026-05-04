@@ -1,6 +1,8 @@
 using System;
 using System.Collections.Generic;
+using System.Numerics;
 using Ludots.Core.Presentation.Config;
+using Ludots.Core.Presentation.Minimap;
 
 namespace Ludots.Core.Presentation.Hud
 {
@@ -14,6 +16,7 @@ namespace Ludots.Core.Presentation.Hud
         private readonly PresentationTextCatalog? _textCatalog;
         private readonly PresentationTextLocaleSelection? _localeSelection;
         private readonly ScreenOverlayBuffer? _screenOverlay;
+        private readonly MinimapScreenMarkerBuffer? _minimapMarkers;
         private readonly Dictionary<TextPacketCacheKey, string> _textPacketCache = new();
         private readonly Dictionary<NumericTextCacheKey, string> _numericTextCache = new();
         private readonly Dictionary<int, ScreenHudResolvedTextCacheEntry> _screenHudResolvedTextCache = new();
@@ -25,13 +28,15 @@ namespace Ludots.Core.Presentation.Hud
             WorldHudStringTable? worldHudStrings,
             PresentationTextCatalog? textCatalog,
             PresentationTextLocaleSelection? localeSelection,
-            ScreenOverlayBuffer? screenOverlay)
+            ScreenOverlayBuffer? screenOverlay,
+            MinimapScreenMarkerBuffer? minimapMarkers = null)
         {
             _screenHud = screenHud ?? throw new ArgumentNullException(nameof(screenHud));
             _worldHudStrings = worldHudStrings;
             _textCatalog = textCatalog;
             _localeSelection = localeSelection;
             _screenOverlay = screenOverlay;
+            _minimapMarkers = minimapMarkers;
         }
 
         public void Build(PresentationOverlayScene scene)
@@ -90,6 +95,11 @@ namespace Ludots.Core.Presentation.Hud
             if (screenHudRevision == _lastScreenHudRevision)
             {
                 scene.BeginDeltaBuild();
+                if (HasScreenOverlayContent(scene))
+                {
+                    RebuildScreenOverlay(scene);
+                }
+
                 _screenHud.ClearDeltas();
                 return true;
             }
@@ -214,13 +224,14 @@ namespace Ludots.Core.Presentation.Hud
 
         private bool HasScreenOverlayContent(PresentationOverlayScene scene)
         {
-            return _screenOverlay != null &&
-                (_screenOverlay.Count > 0 || scene.ContainsLayer(PresentationOverlayLayer.TopMost));
+            return (_screenOverlay != null && _screenOverlay.Count > 0) ||
+                (_minimapMarkers != null && _minimapMarkers.Count > 0) ||
+                scene.ContainsLayer(PresentationOverlayLayer.TopMost);
         }
 
         private void RebuildScreenOverlay(PresentationOverlayScene scene)
         {
-            if (_screenOverlay == null)
+            if (_screenOverlay == null && (_minimapMarkers == null || _minimapMarkers.Count <= 0))
             {
                 if (scene.ContainsLayer(PresentationOverlayLayer.TopMost))
                 {
@@ -306,49 +317,80 @@ namespace Ludots.Core.Presentation.Hud
 
         private void AppendScreenOverlay(PresentationOverlayScene scene)
         {
-            if (_screenOverlay == null)
+            if (_screenOverlay != null)
+            {
+                ReadOnlySpan<ScreenOverlayItem> span = _screenOverlay.GetSpan();
+                for (int i = 0; i < span.Length; i++)
+                {
+                    ref readonly ScreenOverlayItem item = ref span[i];
+                    switch (item.Kind)
+                    {
+                        case ScreenOverlayItemKind.Text:
+                        {
+                            string? text = ResolveScreenOverlayText(in item);
+                            if (!string.IsNullOrEmpty(text))
+                            {
+                                scene.TryAddText(
+                                    PresentationOverlayLayer.TopMost,
+                                    item.X,
+                                    item.Y,
+                                    text,
+                                    item.FontSize <= 0 ? 16 : item.FontSize,
+                                    item.Color,
+                                    item.StableId,
+                                    item.DirtySerial);
+                            }
+
+                            break;
+                        }
+
+                        case ScreenOverlayItemKind.Rect:
+                            scene.TryAddRect(
+                                PresentationOverlayLayer.TopMost,
+                                item.X,
+                                item.Y,
+                                item.Width,
+                                item.Height,
+                                item.BackgroundColor,
+                                item.Color,
+                                item.StableId,
+                                item.DirtySerial);
+                            break;
+
+                        case ScreenOverlayItemKind.Line:
+                            scene.TryAddLine(
+                                PresentationOverlayLayer.TopMost,
+                                item.X,
+                                item.Y,
+                                item.Width,
+                                item.Height,
+                                item.Thickness,
+                                item.Color,
+                                item.StableId,
+                                item.DirtySerial);
+                            break;
+                    }
+                }
+            }
+
+            if (_minimapMarkers == null)
             {
                 return;
             }
 
-            ReadOnlySpan<ScreenOverlayItem> span = _screenOverlay.GetSpan();
-            for (int i = 0; i < span.Length; i++)
+            int markerCount = _minimapMarkers.Count;
+            for (int i = 0; i < markerCount; i++)
             {
-                ref readonly ScreenOverlayItem item = ref span[i];
-                switch (item.Kind)
-                {
-                    case ScreenOverlayItemKind.Text:
-                    {
-                        string? text = ResolveScreenOverlayText(in item);
-                        if (!string.IsNullOrEmpty(text))
-                        {
-                            scene.TryAddText(
-                                PresentationOverlayLayer.TopMost,
-                                item.X,
-                                item.Y,
-                                text,
-                                item.FontSize <= 0 ? 16 : item.FontSize,
-                                item.Color,
-                                item.StableId,
-                                item.DirtySerial);
-                        }
-
-                        break;
-                    }
-
-                    case ScreenOverlayItemKind.Rect:
-                        scene.TryAddRect(
-                            PresentationOverlayLayer.TopMost,
-                            item.X,
-                            item.Y,
-                            item.Width,
-                            item.Height,
-                            item.BackgroundColor,
-                            item.Color,
-                            item.StableId,
-                            item.DirtySerial);
-                        break;
-                }
+                Vector4 color = _minimapMarkers.GetColor(i);
+                scene.TryAddMinimapMarker(
+                    PresentationOverlayLayer.TopMost,
+                    _minimapMarkers.GetScreenX(i),
+                    _minimapMarkers.GetScreenY(i),
+                    _minimapMarkers.GetSizePx(i),
+                    in color,
+                    _minimapMarkers.GetStableId(i),
+                    dirtySerial: 0,
+                    _minimapMarkers.GetFlags(i));
             }
         }
 

@@ -2,6 +2,7 @@ using System;
 using System.Numerics;
 using Ludots.Core.Presentation.Config;
 using Ludots.Core.Presentation.Hud;
+using Ludots.Core.Presentation.Minimap;
 using Ludots.Core.Registry;
 using Ludots.Presentation.Skia;
 using NUnit.Framework;
@@ -20,6 +21,7 @@ public sealed class NativeSkiaOverlayTests
         var locale = new PresentationTextLocaleSelection(catalog);
         var worldHudStrings = new WorldHudStringTable(catalog, locale, legacyCapacity: 4);
         var overlayBuffer = new ScreenOverlayBuffer();
+        var minimapMarkers = new MinimapScreenMarkerBuffer(8);
 
         var textPacket = PresentationTextPacket.FromToken(1);
         textPacket.SetArg(0, PresentationTextArg.FromInt32(42));
@@ -52,8 +54,10 @@ public sealed class NativeSkiaOverlayTests
 
         overlayBuffer.AddRect(100, 110, 64, 24, new Vector4(0f, 0f, 0f, 0.85f), new Vector4(1f, 1f, 1f, 1f));
         overlayBuffer.AddText(108, 116, "Telemetry", 14, new Vector4(0.9f, 0.9f, 0.2f, 1f));
+        overlayBuffer.AddLine(112, 120, 156, 132, 4, new Vector4(1f, 0.85f, 0.2f, 1f));
+        minimapMarkers.TryAdd(303, 144f, 152f, new Vector4(0.18f, 0.82f, 1f, 1f), 8f);
 
-        var builder = new PresentationOverlaySceneBuilder(screenHud, worldHudStrings, catalog, locale, overlayBuffer);
+        var builder = new PresentationOverlaySceneBuilder(screenHud, worldHudStrings, catalog, locale, overlayBuffer, minimapMarkers);
         var scene = new PresentationOverlayScene(16);
 
         builder.Build(scene);
@@ -62,13 +66,16 @@ public sealed class NativeSkiaOverlayTests
         ReadOnlySpan<PresentationOverlayItem> underUiText = scene.GetLaneSpan(PresentationOverlayLayer.UnderUi, PresentationOverlayItemKind.Text);
         ReadOnlySpan<PresentationOverlayItem> topRects = scene.GetLaneSpan(PresentationOverlayLayer.TopMost, PresentationOverlayItemKind.Rect);
         ReadOnlySpan<PresentationOverlayItem> topText = scene.GetLaneSpan(PresentationOverlayLayer.TopMost, PresentationOverlayItemKind.Text);
+        ReadOnlySpan<PresentationOverlayItem> topMarkers = scene.GetLaneSpan(PresentationOverlayLayer.TopMost, PresentationOverlayItemKind.MinimapMarker);
+        ReadOnlySpan<PresentationOverlayItem> topLines = scene.GetLaneSpan(PresentationOverlayLayer.TopMost, PresentationOverlayItemKind.Line);
 
-        Assert.That(scene.Count, Is.EqualTo(4));
-        Assert.That(scene.DirtyLaneCount, Is.EqualTo(4));
+        Assert.That(scene.Count, Is.EqualTo(6));
+        Assert.That(scene.DirtyLaneCount, Is.EqualTo(6));
         Assert.That(underUiBars.Length, Is.EqualTo(1));
         Assert.That(underUiText.Length, Is.EqualTo(1));
         Assert.That(topRects.Length, Is.EqualTo(1));
         Assert.That(topText.Length, Is.EqualTo(1));
+        Assert.That(topLines.Length, Is.EqualTo(1));
         Assert.That(underUiBars[0].Kind, Is.EqualTo(PresentationOverlayItemKind.Bar));
         Assert.That(underUiBars[0].StableId, Is.EqualTo(101));
         Assert.That(underUiBars[0].DirtySerial, Is.EqualTo(1001));
@@ -77,6 +84,18 @@ public sealed class NativeSkiaOverlayTests
         Assert.That(underUiText[0].DirtySerial, Is.EqualTo(2002));
         Assert.That(topRects[0].Kind, Is.EqualTo(PresentationOverlayItemKind.Rect));
         Assert.That(topText[0].Text, Is.EqualTo("Telemetry"));
+        Assert.That(topMarkers.Length, Is.EqualTo(1));
+        Assert.That(topMarkers[0].Kind, Is.EqualTo(PresentationOverlayItemKind.MinimapMarker));
+        Assert.That(topMarkers[0].StableId, Is.EqualTo(303));
+        Assert.That(topMarkers[0].X, Is.EqualTo(144f));
+        Assert.That(topMarkers[0].Y, Is.EqualTo(152f));
+        Assert.That(topMarkers[0].Width, Is.EqualTo(8f));
+        Assert.That(topLines[0].Kind, Is.EqualTo(PresentationOverlayItemKind.Line));
+        Assert.That(topLines[0].X, Is.EqualTo(112f));
+        Assert.That(topLines[0].Y, Is.EqualTo(120f));
+        Assert.That(topLines[0].Width, Is.EqualTo(156f));
+        Assert.That(topLines[0].Height, Is.EqualTo(132f));
+        Assert.That(topLines[0].Value0, Is.EqualTo(4f));
     }
 
     [Test]
@@ -122,6 +141,34 @@ public sealed class NativeSkiaOverlayTests
         Assert.That(scene.GetLaneVersion(PresentationOverlayLayer.TopMost, PresentationOverlayItemKind.Text), Is.GreaterThan(topTextVersion));
         Assert.That(scene.GetLayerVersion(PresentationOverlayLayer.UnderUi), Is.EqualTo(underUiLayerVersion));
         Assert.That(scene.GetLayerVersion(PresentationOverlayLayer.TopMost), Is.GreaterThan(topLayerVersion));
+    }
+
+    [Test]
+    public void OverlaySceneBuilder_RebuildsPerFrameScreenOverlay_WhenHudRevisionIsUnchanged()
+    {
+        var screenHud = new ScreenHudBatchBuffer(8);
+        var overlayBuffer = new ScreenOverlayBuffer();
+        var builder = new PresentationOverlaySceneBuilder(screenHud, null, null, null, overlayBuffer);
+        var scene = new PresentationOverlayScene(16);
+
+        overlayBuffer.AddText(108, 116, "NO MINIMAP SIGNALS", 14, new Vector4(1f, 0.7f, 0.4f, 1f));
+        builder.Build(scene);
+
+        Assert.That(GetSingleTopMostText(scene), Is.EqualTo("NO MINIMAP SIGNALS"));
+        int topTextVersion = scene.GetLaneVersion(PresentationOverlayLayer.TopMost, PresentationOverlayItemKind.Text);
+
+        overlayBuffer.Clear();
+        overlayBuffer.AddText(108, 116, "RTS full-map preset", 14, new Vector4(0.7f, 0.9f, 1f, 1f));
+        builder.Build(scene);
+
+        Assert.That(GetSingleTopMostText(scene), Is.EqualTo("RTS full-map preset"));
+        Assert.That(scene.GetLaneVersion(PresentationOverlayLayer.TopMost, PresentationOverlayItemKind.Text), Is.GreaterThan(topTextVersion));
+
+        overlayBuffer.Clear();
+        builder.Build(scene);
+
+        Assert.That(scene.GetLaneSpan(PresentationOverlayLayer.TopMost, PresentationOverlayItemKind.Text).Length, Is.EqualTo(0));
+        Assert.That(scene.ContainsLayer(PresentationOverlayLayer.TopMost), Is.False);
     }
 
     [Test]
@@ -262,6 +309,101 @@ public sealed class NativeSkiaOverlayTests
         renderer.Render(scene, surface.Canvas, PresentationOverlayLayer.UnderUi);
         renderer.Render(scene, surface.Canvas, PresentationOverlayLayer.TopMost);
         Assert.That(renderer.RebuiltLaneCountLastFrame, Is.EqualTo(0));
+    }
+
+    [Test]
+    public void SkiaOverlayRenderer_DrawsLargeTopMostTextLane_WhenTextHasNoStableId()
+    {
+        var scene = new PresentationOverlayScene(256);
+        scene.BeginBuild();
+        for (int i = 0; i < 64; i++)
+        {
+            scene.TryAddText(
+                PresentationOverlayLayer.TopMost,
+                x: 10f,
+                y: 6f + (i * 3f),
+                text: $"M{i}",
+                fontSize: 12,
+                color: new Vector4(1f, 1f, 1f, 1f));
+        }
+
+        scene.EndBuild();
+
+        using var renderer = new SkiaOverlayRenderer();
+        using var surface = SKSurface.Create(new SKImageInfo(256, 256));
+        surface.Canvas.Clear(SKColors.Transparent);
+
+        renderer.ResetFrameStats();
+        renderer.Render(scene, surface.Canvas, PresentationOverlayLayer.TopMost);
+
+        using var image = surface.Snapshot();
+        using var bitmap = SKBitmap.FromImage(image);
+
+        Assert.That(renderer.RebuiltLaneCountLastFrame, Is.EqualTo(0));
+        Assert.That(CountOpaquePixels(bitmap, 10, 6, 60, 42), Is.GreaterThan(0),
+            "Large TopMost diagnostic text emitted from ScreenOverlayBuffer has no stable ids and must still render.");
+    }
+
+    [Test]
+    public void SkiaOverlayRenderer_DrawsMinimapMarkerLaneWithExpectedColor()
+    {
+        var scene = new PresentationOverlayScene(512);
+        scene.BeginBuild();
+        for (int i = 0; i < 300; i++)
+        {
+            float x = 20f + ((i % 30) * 7f);
+            float y = 20f + ((i / 30) * 7f);
+            scene.TryAddMinimapMarker(
+                PresentationOverlayLayer.TopMost,
+                x,
+                y,
+                sizePx: 6f,
+                color: new Vector4(0f, 1f, 0.75f, 1f),
+                stableId: 10_000 + i);
+        }
+
+        scene.EndBuild();
+
+        using var renderer = new SkiaOverlayRenderer();
+        using var surface = SKSurface.Create(new SKImageInfo(256, 128));
+        surface.Canvas.Clear(SKColors.Transparent);
+
+        renderer.ResetFrameStats();
+        renderer.Render(scene, surface.Canvas, PresentationOverlayLayer.TopMost);
+
+        using var image = surface.Snapshot();
+        using var bitmap = SKBitmap.FromImage(image);
+
+        Assert.That(CountOpaquePixels(bitmap, 16, 16, 240, 100), Is.GreaterThan(1200));
+        Assert.That(CountPixelsNear(bitmap, new SKColor(0, 255, 191, 255), 16, 16, 240, 100, tolerance: 10), Is.GreaterThan(600));
+    }
+
+    [Test]
+    public void SkiaOverlayRenderer_DrawsLineLaneWithExpectedColor()
+    {
+        var scene = new PresentationOverlayScene(16);
+        scene.BeginBuild();
+        scene.TryAddLine(
+            PresentationOverlayLayer.TopMost,
+            x0: 24f,
+            y0: 24f,
+            x1: 116f,
+            y1: 84f,
+            thickness: 5f,
+            color: new Vector4(1f, 0.86f, 0.3f, 1f));
+        scene.EndBuild();
+
+        using var renderer = new SkiaOverlayRenderer();
+        using var surface = SKSurface.Create(new SKImageInfo(144, 108));
+        surface.Canvas.Clear(SKColors.Transparent);
+
+        renderer.Render(scene, surface.Canvas, PresentationOverlayLayer.TopMost);
+
+        using var image = surface.Snapshot();
+        using var bitmap = SKBitmap.FromImage(image);
+
+        Assert.That(CountOpaquePixels(bitmap, 20, 20, 122, 90), Is.GreaterThan(320));
+        Assert.That(CountPixelsNear(bitmap, new SKColor(255, 219, 76, 255), 20, 20, 122, 90, tolerance: 14), Is.GreaterThan(220));
     }
 
     [Test]
@@ -556,6 +698,13 @@ public sealed class NativeSkiaOverlayTests
         overlayBuffer.AddText(108, 116, topText, 14, new Vector4(0.9f, 0.9f, 0.2f, 1f));
     }
 
+    private static string GetSingleTopMostText(PresentationOverlayScene scene)
+    {
+        ReadOnlySpan<PresentationOverlayItem> span = scene.GetLaneSpan(PresentationOverlayLayer.TopMost, PresentationOverlayItemKind.Text);
+        Assert.That(span.Length, Is.EqualTo(1));
+        return span[0].Text ?? string.Empty;
+    }
+
     private static void BuildLargeUnderUiScene(PresentationOverlayScene scene, float xOffset)
     {
         scene.BeginBuild();
@@ -624,6 +773,27 @@ public sealed class NativeSkiaOverlayTests
             for (int x = left; x < right; x++)
             {
                 if (bitmap.GetPixel(x, y).Alpha > 0)
+                {
+                    count++;
+                }
+            }
+        }
+
+        return count;
+    }
+
+    private static int CountPixelsNear(SKBitmap bitmap, SKColor target, int left, int top, int right, int bottom, int tolerance)
+    {
+        int count = 0;
+        for (int y = top; y < bottom; y++)
+        {
+            for (int x = left; x < right; x++)
+            {
+                SKColor pixel = bitmap.GetPixel(x, y);
+                if (Math.Abs(pixel.Red - target.Red) <= tolerance &&
+                    Math.Abs(pixel.Green - target.Green) <= tolerance &&
+                    Math.Abs(pixel.Blue - target.Blue) <= tolerance &&
+                    Math.Abs(pixel.Alpha - target.Alpha) <= tolerance)
                 {
                     count++;
                 }

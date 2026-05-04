@@ -89,6 +89,23 @@ namespace Ludots.Core.Input.Runtime
             }
         }
 
+        public void SuppressActionThisTick(string actionId)
+        {
+            if (string.IsNullOrWhiteSpace(actionId) ||
+                !_states.TryGetValue(actionId, out var state))
+            {
+                return;
+            }
+
+            state.IsDown = false;
+            state.PressedThisTick = false;
+            state.ReleasedThisTick = false;
+            state.HasPressPointer = false;
+            state.HasReleasePointer = false;
+            state.HasLastDownPointer = false;
+            _states[actionId] = state;
+        }
+
         private struct PendingPointerButtonState
         {
             public Vector2 Pointer;
@@ -133,6 +150,17 @@ namespace Ludots.Core.Input.Runtime
 
             return _states.TryGetValue(actionId, out state);
         }
+
+        public void SuppressAction(string actionId)
+        {
+            if (string.IsNullOrWhiteSpace(actionId) ||
+                !_states.TryGetValue(actionId, out PointerButtonState state))
+            {
+                return;
+            }
+
+            _states[actionId] = state.Suppress();
+        }
     }
 
     public readonly struct PointerButtonState
@@ -171,5 +199,20 @@ namespace Ludots.Core.Input.Runtime
         public bool HasPressPointer { get; }
         public bool HasReleasePointer { get; }
         public bool HasLastDownPointer { get; }
+
+        public PointerButtonState Suppress()
+        {
+            return new PointerButtonState(
+                Pointer,
+                PressPointer,
+                ReleasePointer,
+                LastDownPointer,
+                isDown: false,
+                pressedThisFrame: false,
+                releasedThisFrame: false,
+                hasPressPointer: false,
+                hasReleasePointer: false,
+                hasLastDownPointer: false);
+        }
     }
 }

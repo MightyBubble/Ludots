@@ -14,7 +14,8 @@ namespace Ludots.Presentation.Skia
 {
     public sealed class SkiaOverlayRenderer : IDisposable
     {
-        private const int LaneCount = 6;
+        private const int KindCount = 5;
+        private const int LaneCount = 10;
         private const int MaxBarSpriteCacheEntries = 2048;
         private const int MaxTextLayoutCacheEntries = 8192;
         private const int MaxTextSpriteCacheEntries = 8192;
@@ -27,6 +28,8 @@ namespace Ludots.Presentation.Skia
         private static readonly PresentationOverlayItemKind[] RenderOrder =
         {
             PresentationOverlayItemKind.Rect,
+            PresentationOverlayItemKind.MinimapMarker,
+            PresentationOverlayItemKind.Line,
             PresentationOverlayItemKind.Bar,
             PresentationOverlayItemKind.Text
         };
@@ -45,6 +48,8 @@ namespace Ludots.Presentation.Skia
         private readonly Dictionary<TextSpriteCacheKey, CachedTextSprite> _textSpriteCache = new();
         private readonly Dictionary<TextBatchKey, int> _textSpriteBatchMap = new();
         private readonly List<TextSpriteBatchBucket> _textSpriteBatchBuckets = new();
+        private readonly Dictionary<MarkerBatchKey, int> _markerBatchMap = new();
+        private readonly List<MarkerBatchBucket> _markerBatchBuckets = new();
         private readonly RetainedBarLaneState[] _retainedBarLanes = new RetainedBarLaneState[LaneCount];
         private readonly RetainedTextSpriteLaneState[] _retainedTextSpriteLanes = new RetainedTextSpriteLaneState[LaneCount];
         private readonly SKPicture?[] _lanePictures = new SKPicture?[LaneCount];
@@ -420,6 +425,14 @@ namespace Ludots.Presentation.Skia
                     new SKRect(item.X - pad, item.Y - pad, item.X + EstimateTextWidth(item.Text, item.FontSize) + pad, item.Y + Math.Max(1, item.FontSize) * 1.5f + pad),
                 PresentationOverlayItemKind.Rect =>
                     new SKRect(item.X - pad, item.Y - pad, item.X + item.Width + pad, item.Y + item.Height + pad),
+                PresentationOverlayItemKind.MinimapMarker =>
+                    new SKRect(item.X - (item.Width * 0.5f) - pad, item.Y - (item.Width * 0.5f) - pad, item.X + (item.Width * 0.5f) + pad, item.Y + (item.Width * 0.5f) + pad),
+                PresentationOverlayItemKind.Line =>
+                    new SKRect(
+                        MathF.Min(item.X, item.Width) - MathF.Max(pad, item.Value0),
+                        MathF.Min(item.Y, item.Height) - MathF.Max(pad, item.Value0),
+                        MathF.Max(item.X, item.Width) + MathF.Max(pad, item.Value0),
+                        MathF.Max(item.Y, item.Height) + MathF.Max(pad, item.Value0)),
                 _ => SKRect.Empty
             };
         }
@@ -491,6 +504,44 @@ namespace Ludots.Presentation.Skia
             }
         }
 
+        private void DrawMinimapMarker(SKCanvas canvas, in PresentationOverlayItem item)
+        {
+            if (item.Width <= 0f || item.Color0.W <= 0f)
+            {
+                return;
+            }
+
+            _fillPaint.Style = SKPaintStyle.Fill;
+            _fillPaint.Color = ToSkColor(item.Color0);
+            canvas.DrawCircle(item.X, item.Y, MathF.Max(0.5f, item.Width * 0.5f), _fillPaint);
+        }
+
+        private void DrawLine(SKCanvas canvas, in PresentationOverlayItem item)
+        {
+            if (item.Value0 <= 0f || item.Color0.W <= 0f)
+            {
+                return;
+            }
+
+            SKPaintStyle previousStyle = _strokePaint.Style;
+            SKStrokeCap previousCap = _strokePaint.StrokeCap;
+            float previousStrokeWidth = _strokePaint.StrokeWidth;
+            _strokePaint.Style = SKPaintStyle.Stroke;
+            _strokePaint.StrokeCap = SKStrokeCap.Round;
+            _strokePaint.StrokeWidth = MathF.Max(1f, item.Value0);
+            _strokePaint.Color = ToSkColor(item.Color0);
+            try
+            {
+                canvas.DrawLine(item.X, item.Y, item.Width, item.Height, _strokePaint);
+            }
+            finally
+            {
+                _strokePaint.Style = previousStyle;
+                _strokePaint.StrokeCap = previousCap;
+                _strokePaint.StrokeWidth = previousStrokeWidth;
+            }
+        }
+
         private void DrawLaneImmediate(SKCanvas canvas, PresentationOverlayItemKind kind, ReadOnlySpan<PresentationOverlayItem> span)
         {
             if (kind == PresentationOverlayItemKind.Bar)
@@ -505,6 +556,12 @@ namespace Ludots.Presentation.Skia
                 return;
             }
 
+            if (kind == PresentationOverlayItemKind.MinimapMarker)
+            {
+                DrawMinimapMarkersBatched(canvas, span);
+                return;
+            }
+
             for (int i = 0; i < span.Length; i++)
             {
                 ref readonly PresentationOverlayItem item = ref span[i];
@@ -512,6 +569,14 @@ namespace Ludots.Presentation.Skia
                 {
                     case PresentationOverlayItemKind.Rect:
                         DrawRect(canvas, item);
+                        break;
+
+                    case PresentationOverlayItemKind.MinimapMarker:
+                        DrawMinimapMarker(canvas, item);
+                        break;
+
+                    case PresentationOverlayItemKind.Line:
+                        DrawLine(canvas, item);
                         break;
                 }
             }
@@ -531,7 +596,15 @@ namespace Ludots.Presentation.Skia
                     break;
 
                 case PresentationOverlayItemKind.Text:
-                    DrawTextSpriteRetainedBatched(canvas, laneIndex, laneVersion, span);
+                    if (CanUseRetainedTextSprites(span))
+                    {
+                        DrawTextSpriteRetainedBatched(canvas, laneIndex, laneVersion, span);
+                    }
+                    else
+                    {
+                        DrawTextBatched(canvas, span);
+                    }
+
                     break;
 
                 default:
@@ -630,6 +703,67 @@ namespace Ludots.Presentation.Skia
                 DrawAtlasCount(canvas, bucket.Image, bucket.Sprites, bucket.Transforms, bucket.Count);
             }
             LastBarBatchDrawMs += ElapsedMs(drawStart);
+        }
+
+        private void DrawMinimapMarkersBatched(SKCanvas canvas, ReadOnlySpan<PresentationOverlayItem> span)
+        {
+            _markerBatchMap.Clear();
+            int bucketCount = 0;
+            for (int i = 0; i < span.Length; i++)
+            {
+                ref readonly PresentationOverlayItem item = ref span[i];
+                if (item.Width <= 0f || item.Color0.W <= 0f)
+                {
+                    continue;
+                }
+
+                MarkerBatchKey key = CreateMarkerBatchKey(item);
+                if (!_markerBatchMap.TryGetValue(key, out int bucketIndex))
+                {
+                    if (bucketCount >= _markerBatchBuckets.Count)
+                    {
+                        _markerBatchBuckets.Add(new MarkerBatchBucket());
+                    }
+
+                    bucketIndex = bucketCount++;
+                    _markerBatchMap[key] = bucketIndex;
+                    _markerBatchBuckets[bucketIndex].Reset(ToSkColor(item.Color0), MathF.Max(1f, item.Width));
+                }
+
+                _markerBatchBuckets[bucketIndex].Add(item.X, item.Y);
+            }
+
+            if (bucketCount <= 0)
+            {
+                return;
+            }
+
+            SKPaintStyle previousStyle = _fillPaint.Style;
+            SKStrokeCap previousCap = _fillPaint.StrokeCap;
+            float previousStrokeWidth = _fillPaint.StrokeWidth;
+            _fillPaint.Style = SKPaintStyle.Stroke;
+            _fillPaint.StrokeCap = SKStrokeCap.Round;
+            try
+            {
+                for (int bucketIndex = 0; bucketIndex < bucketCount; bucketIndex++)
+                {
+                    MarkerBatchBucket bucket = _markerBatchBuckets[bucketIndex];
+                    if (bucket.Count <= 0)
+                    {
+                        continue;
+                    }
+
+                    _fillPaint.Color = bucket.Color;
+                    _fillPaint.StrokeWidth = bucket.SizePx;
+                    bucket.Draw(canvas, _fillPaint);
+                }
+            }
+            finally
+            {
+                _fillPaint.Style = previousStyle;
+                _fillPaint.StrokeCap = previousCap;
+                _fillPaint.StrokeWidth = previousStrokeWidth;
+            }
         }
 
         private void DrawBarRetainedBatched(
@@ -1156,6 +1290,14 @@ namespace Ludots.Presentation.Skia
                         case PresentationOverlayItemKind.Rect:
                             DrawRect(pictureCanvas, item);
                             break;
+
+                        case PresentationOverlayItemKind.MinimapMarker:
+                            DrawMinimapMarker(pictureCanvas, item);
+                            break;
+
+                        case PresentationOverlayItemKind.Line:
+                            DrawLine(pictureCanvas, item);
+                            break;
                     }
                 }
             }
@@ -1335,6 +1477,20 @@ namespace Ludots.Presentation.Skia
             int activeBucketCount = DrawRetainedTextAtlas(canvas, state);
             LastTextSpriteBatchBucketCount += activeBucketCount;
             LastTextBatchDrawMs += ElapsedMs(drawStart);
+        }
+
+        private static bool CanUseRetainedTextSprites(ReadOnlySpan<PresentationOverlayItem> span)
+        {
+            for (int i = 0; i < span.Length; i++)
+            {
+                ref readonly PresentationOverlayItem item = ref span[i];
+                if (!string.IsNullOrEmpty(item.Text) && item.StableId <= 0)
+                {
+                    return false;
+                }
+            }
+
+            return true;
         }
 
         private int DrawRetainedTextAtlas(SKCanvas canvas, RetainedTextSpriteLaneState state)
@@ -1811,6 +1967,13 @@ namespace Ludots.Presentation.Skia
                 ToColorKey(ToSkColor(item.Color1)));
         }
 
+        private static MarkerBatchKey CreateMarkerBatchKey(in PresentationOverlayItem item)
+        {
+            return new MarkerBatchKey(
+                ToColorKey(ToSkColor(item.Color0)),
+                Math.Max(1, (int)MathF.Round(item.Width)));
+        }
+
         private static int QuantizeBarFillPx(int widthPx, float value)
         {
             int fillPx = (int)MathF.Round(widthPx * Math.Clamp(value, 0f, 1f));
@@ -1974,6 +2137,14 @@ namespace Ludots.Presentation.Skia
             IntPtr cullRect,
             IntPtr paint);
 
+        [DllImport("libSkiaSharp", EntryPoint = "sk_canvas_draw_points", CallingConvention = CallingConvention.Cdecl)]
+        private static extern void SkCanvasDrawPoints(
+            IntPtr canvas,
+            SKPointMode pointMode,
+            IntPtr count,
+            IntPtr points,
+            IntPtr paint);
+
 
         private static SKColor ToSkColor(in System.Numerics.Vector4 color)
         {
@@ -1986,7 +2157,7 @@ namespace Ludots.Presentation.Skia
 
         private static int GetLaneIndex(PresentationOverlayLayer layer, PresentationOverlayItemKind kind)
         {
-            return ((int)layer * 3) + ((int)kind - 1);
+            return ((int)layer * KindCount) + ((int)kind - 1);
         }
 
         private readonly record struct FontCacheKey(string FamilyName, int FontSize);
@@ -2003,6 +2174,8 @@ namespace Ludots.Presentation.Skia
         private readonly record struct TextBatchKey(string Text, int FontSize, uint ColorKey);
 
         private readonly record struct TextSpriteCacheKey(string Text, int FontSize, uint ColorKey);
+
+        private readonly record struct MarkerBatchKey(uint ColorKey, int SizePx);
 
         private readonly record struct CachedTextRun(
             SKTextBlob? Blob,
@@ -2623,6 +2796,69 @@ namespace Ludots.Presentation.Skia
                 }
 
                 return next;
+            }
+        }
+
+        private sealed class MarkerBatchBucket
+        {
+            private SKPoint[] _points = Array.Empty<SKPoint>();
+
+            public SKColor Color { get; private set; }
+
+            public float SizePx { get; private set; }
+
+            public int Count { get; private set; }
+
+            public void Reset(SKColor color, float sizePx)
+            {
+                Color = color;
+                SizePx = sizePx;
+                Count = 0;
+            }
+
+            public void Add(float x, float y)
+            {
+                EnsureCapacity(Count + 1);
+                _points[Count++] = new SKPoint(x, y);
+            }
+
+            public void Draw(SKCanvas canvas, SKPaint paint)
+            {
+                if (Count <= 0)
+                {
+                    return;
+                }
+
+                if (Count == _points.Length)
+                {
+                    canvas.DrawPoints(SKPointMode.Points, _points, paint);
+                    return;
+                }
+
+                GCHandle pointsHandle = GCHandle.Alloc(_points, GCHandleType.Pinned);
+                try
+                {
+                    SkCanvasDrawPoints(
+                        canvas.Handle,
+                        SKPointMode.Points,
+                        (IntPtr)Count,
+                        pointsHandle.AddrOfPinnedObject(),
+                        paint.Handle);
+                }
+                finally
+                {
+                    pointsHandle.Free();
+                }
+            }
+
+            private void EnsureCapacity(int required)
+            {
+                if (_points.Length >= required)
+                {
+                    return;
+                }
+
+                Array.Resize(ref _points, ResolveNextCapacity(_points.Length, required));
             }
         }
 

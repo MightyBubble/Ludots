@@ -1,3 +1,5 @@
+using System;
+
 namespace Ludots.Core.Presentation
 {
     /// <summary>
@@ -18,7 +20,9 @@ namespace Ludots.Core.Presentation
         public int RoadSplineCapacity { get; set; } = 65536;
         public int WorldHudCapacity { get; set; } = 131072;
         public int ScreenHudCapacity { get; set; } = 131072;
+        public int MinimapMarkerCapacity { get; set; } = 131072;
         public int RuntimeEntitySpawnQueueCapacity { get; set; } = 131072;
+        public CameraCullingRuntimeConfig CameraCulling { get; set; } = new CameraCullingRuntimeConfig();
 
         public int GetEffectivePerformerInstanceCapacity()
         {
@@ -80,9 +84,35 @@ namespace Ludots.Core.Presentation
             return ScreenHudCapacity > 0 ? ScreenHudCapacity : 131072;
         }
 
+        public int GetEffectiveMinimapMarkerCapacity()
+        {
+            return MinimapMarkerCapacity > 0 ? MinimapMarkerCapacity : 131072;
+        }
+
         public int GetEffectiveRuntimeEntitySpawnQueueCapacity()
         {
             return RuntimeEntitySpawnQueueCapacity > 0 ? RuntimeEntitySpawnQueueCapacity : 131072;
+        }
+    }
+
+    public sealed class CameraCullingRuntimeConfig
+    {
+        public float HighLodDistanceCm { get; set; } = 4000f;
+        public float MediumLodDistanceCm { get; set; } = 10000f;
+        public float LowLodDistanceCm { get; set; } = 20000f;
+
+        public void Validate()
+        {
+            if (!float.IsFinite(HighLodDistanceCm) ||
+                !float.IsFinite(MediumLodDistanceCm) ||
+                !float.IsFinite(LowLodDistanceCm) ||
+                HighLodDistanceCm <= 0f ||
+                MediumLodDistanceCm <= HighLodDistanceCm ||
+                LowLodDistanceCm <= MediumLodDistanceCm)
+            {
+                throw new InvalidOperationException(
+                    "presentation.cameraCulling requires positive lod distances with high < medium < low.");
+            }
         }
     }
 }

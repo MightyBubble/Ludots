@@ -448,6 +448,26 @@ namespace Ludots.Tests.ThreeC
             Assert.That(Vector3.DistanceSquared(renderState.Position, renderState.Target), Is.GreaterThan(0.1f));
         }
 
+        [Test]
+        public void CameraViewportUtil_ResolveClipPlanes_ScalesForLargeWorldStrategicCamera()
+        {
+            var state = new CameraState
+            {
+                TargetCm = Vector2.Zero,
+                DistanceCm = 180_000f,
+                Pitch = 62f,
+                Yaw = 45f,
+                FovYDeg = 60f
+            };
+
+            CameraRenderState3D renderState = CameraViewportUtil.StateToRenderState(state);
+            CameraClipPlanes clipPlanes = CameraViewportUtil.ResolveClipPlanes(in renderState);
+
+            Assert.That(clipPlanes.NearMeters, Is.EqualTo(CameraViewportUtil.DefaultNearPlaneMeters).Within(0.0001f));
+            Assert.That(clipPlanes.FarMeters, Is.GreaterThan(Vector3.Distance(renderState.Position, renderState.Target) * 4f));
+            Assert.That(clipPlanes.FarMeters, Is.GreaterThan(CameraViewportUtil.DefaultFarPlaneMeters));
+        }
+
         private static CameraManager CreateManagerWithRegistry(params VirtualCameraDefinition[] definitions)
         {
             var manager = new CameraManager();

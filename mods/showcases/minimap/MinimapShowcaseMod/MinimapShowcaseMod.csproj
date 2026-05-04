@@ -10,7 +10,6 @@
     <ProjectReference Include="..\..\..\..\src\Core\Ludots.Core.csproj" />
     <ProjectReference Include="..\..\..\CoreInputMod\CoreInputMod.csproj" />
     <ProjectReference Include="..\..\..\FourXDemoMod\FourXDemoMod.csproj" />
-    <ProjectReference Include="..\..\..\capabilities\minimap\MinimapControlMod\MinimapControlMod.csproj" />
   </ItemGroup>
 
 </Project>

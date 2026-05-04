@@ -175,7 +175,7 @@ namespace Ludots.Tests.GAS.Production
             engine.SetService(CoreServiceKeys.ScreenRayProvider, new WorldMappedScreenRayProvider());
             engine.SetService(CoreServiceKeys.ScreenProjector, new WorldMappedScreenProjector());
 
-            var culling = new CameraCullingSystem(engine.World, engine.GameSession.Camera, engine.SpatialQueries, view);
+            var culling = new CameraCullingSystem(engine.World, engine.GameSession.Camera, engine.SpatialQueries, view, cullingConfig: engine.MergedConfig.Presentation.CameraCulling);
             engine.RegisterPresentationSystem(culling);
             engine.SetService(CoreServiceKeys.CameraCullingDebugState, culling.DebugState);
 

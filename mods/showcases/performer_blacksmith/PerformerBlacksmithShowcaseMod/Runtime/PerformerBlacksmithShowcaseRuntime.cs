@@ -2,6 +2,7 @@ using System;
 using System.Collections.Generic;
 using System.Diagnostics;
 using System.Numerics;
+using System.Text.Json.Nodes;
 using System.Threading.Tasks;
 using Arch.Core;
 using Ludots.Core.Components;
@@ -17,6 +18,7 @@ using Ludots.Core.Presentation.Events;
 using Ludots.Core.Presentation.Hud;
 using Ludots.Core.Presentation.Performers;
 using Ludots.Core.Presentation.Rendering;
+using Ludots.Core.Presentation.Terrain;
 using Ludots.Core.Scripting;
 using Ludots.UI;
 using PerformerBlacksmithShowcaseMod.UI;
@@ -46,6 +48,19 @@ namespace PerformerBlacksmithShowcaseMod.Runtime
         private const string AutoScatterMinRadiusEnvKey = "LUDOTS_BLACKSMITH_AUTO_SCATTER_MIN_RADIUS_CM";
         private const string AutoScatterMaxRadiusEnvKey = "LUDOTS_BLACKSMITH_AUTO_SCATTER_MAX_RADIUS_CM";
         private const string AutoMeshBenchmarkTotalEnvKey = "LUDOTS_BLACKSMITH_MESH_BENCHMARK_TOTAL";
+        private const string AutoDynamicWorkerBenchmarkTotalEnvKey = "LUDOTS_BLACKSMITH_DYNAMIC_WORKER_BENCHMARK_TOTAL";
+        private const string MetadataSectionKey = "performerBlacksmith";
+        private const string DynamicWorkerBenchmarkTotalMetadataKey = "dynamicWorkerBenchmarkTotal";
+        private const string DynamicWorkerScatterJitterMetadataKey = "dynamicWorkerScatterJitterCm";
+        private const string DynamicWorkerScatterPaddingMetadataKey = "dynamicWorkerScatterPaddingCm";
+        private const string MinimapMarkerShowcaseTotalMetadataKey = "minimapMarkerShowcaseTotal";
+        private const string MinimapMarkerScatterJitterMetadataKey = "minimapMarkerScatterJitterCm";
+        private const string MinimapMarkerScatterPaddingMetadataKey = "minimapMarkerScatterPaddingCm";
+        private const string MinimapMarkerVisibleClusterCountMetadataKey = "minimapMarkerVisibleClusterCount";
+        private const string MinimapMarkerVisibleClusterCenterXMetadataKey = "minimapMarkerVisibleClusterCenterXCm";
+        private const string MinimapMarkerVisibleClusterCenterYMetadataKey = "minimapMarkerVisibleClusterCenterYCm";
+        private const string MinimapMarkerVisibleClusterRadiusMetadataKey = "minimapMarkerVisibleClusterRadiusCm";
+        private const string MinimapMarkerScatterSeedMetadataKey = "minimapMarkerScatterSeed";
         private const string ForcePanelEnvKey = "LUDOTS_BLACKSMITH_FORCE_PANEL";
         private const string ForceBenchmarkUiEnvKey = "LUDOTS_BLACKSMITH_FORCE_BENCHMARK_UI";
         private const float PanelRefreshIntervalSeconds = 0.25f;
@@ -73,6 +88,8 @@ namespace PerformerBlacksmithShowcaseMod.Runtime
         private int _lastQueuedScatterExtras;
         private bool _autoScatterApplied;
         private bool _autoMeshBenchmarkApplied;
+        private bool _autoDynamicWorkerBenchmarkApplied;
+        private bool _autoMinimapMarkerShowcaseApplied;
         private float _panelRefreshCooldown;
         private bool _panelDirty = true;
         private PerformerBlacksmithShowcasePanelState _cachedPanelState = PerformerBlacksmithShowcasePanelState.Empty;
@@ -132,6 +149,8 @@ namespace PerformerBlacksmithShowcaseMod.Runtime
                 (IsScatterHudBarBenchmarkMode(engine) && CountMeshHudBarBenchmarkEntities(engine) > 0) ||
                 (IsScatterHudTextBenchmarkMode(engine) && CountMeshHudTextBenchmarkEntities(engine) > 0);
             _autoMeshBenchmarkApplied = IsMeshBenchmarkMode(engine) && CountMeshBenchmarkEntities(engine) > 0;
+            _autoDynamicWorkerBenchmarkApplied = IsDynamicWorkerBenchmarkMode(engine) && CountDynamicWorkerEntities(engine) > 0;
+            _autoMinimapMarkerShowcaseApplied = IsMinimapMarkerShowcaseMode(engine) && CountMinimapMarkerBallEntities(engine) > 0;
             TryApplyStartupBenchmarkLayout(engine);
             MarkPanelDirty();
             return Task.CompletedTask;
@@ -149,6 +168,8 @@ namespace PerformerBlacksmithShowcaseMod.Runtime
             _destroyed = false;
             _autoScatterApplied = false;
             _autoMeshBenchmarkApplied = false;
+            _autoDynamicWorkerBenchmarkApplied = false;
+            _autoMinimapMarkerShowcaseApplied = false;
             _panelDirty = true;
             _panelRefreshCooldown = 0f;
             _cachedPanelState = PerformerBlacksmithShowcasePanelState.Empty;
@@ -406,9 +427,21 @@ namespace PerformerBlacksmithShowcaseMod.Runtime
             return PerformerBlacksmithShowcaseIds.IsMeshBenchmarkMap(engine.CurrentMapSession?.MapId.Value);
         }
 
+        private static bool IsDynamicWorkerBenchmarkMode(GameEngine engine)
+        {
+            return PerformerBlacksmithShowcaseIds.IsDynamicWorkerBenchmarkMap(engine.CurrentMapSession?.MapId.Value);
+        }
+
+        private static bool IsMinimapMarkerShowcaseMode(GameEngine engine)
+        {
+            return PerformerBlacksmithShowcaseIds.IsMinimapMarkerLargeWorldShowcaseMap(engine.CurrentMapSession?.MapId.Value);
+        }
+
         private static bool IsBenchmarkMode(GameEngine engine)
         {
             return IsMeshBenchmarkMode(engine) ||
+                   IsDynamicWorkerBenchmarkMode(engine) ||
+                   IsMinimapMarkerShowcaseMode(engine) ||
                    IsScatterBenchmarkMode(engine) ||
                    IsScatterHudBarBenchmarkMode(engine) ||
                    IsScatterHudTextBenchmarkMode(engine);
@@ -422,6 +455,8 @@ namespace PerformerBlacksmithShowcaseMod.Runtime
         private static bool ShouldUseCleanPerformanceScene(GameEngine engine)
         {
             return IsMeshBenchmarkMode(engine) ||
+                   IsDynamicWorkerBenchmarkMode(engine) ||
+                   IsMinimapMarkerShowcaseMode(engine) ||
                    IsScatterBenchmarkMode(engine) ||
                    IsScatterHudBarBenchmarkMode(engine) ||
                    IsScatterHudTextBenchmarkMode(engine) ||
@@ -481,6 +516,18 @@ namespace PerformerBlacksmithShowcaseMod.Runtime
                 return;
             }
 
+            if (IsDynamicWorkerBenchmarkMode(engine))
+            {
+                TryApplyDynamicWorkerBenchmark(engine);
+                return;
+            }
+
+            if (IsMinimapMarkerShowcaseMode(engine))
+            {
+                TryApplyMinimapMarkerShowcase(engine);
+                return;
+            }
+
             if (IsInteractiveMode(engine))
             {
                 TryApplyAutoScatter(engine);
@@ -534,6 +581,50 @@ namespace PerformerBlacksmithShowcaseMod.Runtime
             Flash($"Mesh benchmark total => {enqueued}");
         }
 
+        private void TryApplyDynamicWorkerBenchmark(GameEngine engine)
+        {
+            if (_autoDynamicWorkerBenchmarkApplied)
+            {
+                return;
+            }
+
+            if (CountDynamicWorkerEntities(engine) > 0)
+            {
+                _autoDynamicWorkerBenchmarkApplied = true;
+                return;
+            }
+
+            if (engine.GetService(CoreServiceKeys.RuntimeEntitySpawnQueue) is not RuntimeEntitySpawnQueue spawnQueue)
+            {
+                Flash("Dynamic worker benchmark unavailable: RuntimeEntitySpawnQueue missing");
+                return;
+            }
+
+            int requested = ResolveDynamicWorkerBenchmarkTotal(engine);
+            if (requested <= 0)
+            {
+                _autoDynamicWorkerBenchmarkApplied = true;
+                return;
+            }
+
+            int total = Math.Clamp(requested, ScatterMinTotal, ScatterUiHardMaxTotal);
+            int enqueued = EnqueueDynamicWorkerBenchmark(spawnQueue, engine, total);
+            _scatterRequestedTotal = total;
+            _scatterTargetTotal = total;
+            _lastQueuedScatterExtras = enqueued;
+            _autoDynamicWorkerBenchmarkApplied = true;
+            Flash($"Dynamic worker benchmark total => {enqueued}");
+        }
+
+        private static int ResolveDynamicWorkerBenchmarkTotal(GameEngine engine)
+        {
+            int metadataTotal = ReadRequiredMapMetadataInt(
+                engine,
+                MetadataSectionKey,
+                DynamicWorkerBenchmarkTotalMetadataKey);
+            return ReadEnvInt(AutoDynamicWorkerBenchmarkTotalEnvKey, metadataTotal);
+        }
+
         private static int EnqueueMeshBenchmark(RuntimeEntitySpawnQueue queue, GameEngine engine, int total)
         {
             int count = Math.Max(0, total);
@@ -564,6 +655,173 @@ namespace PerformerBlacksmithShowcaseMod.Runtime
                 minRadiusCm,
                 maxRadiusCm,
                 jitterCm);
+        }
+
+        private static int EnqueueDynamicWorkerBenchmark(RuntimeEntitySpawnQueue queue, GameEngine engine, int total)
+        {
+            int count = Math.Max(0, total);
+            if (count == 0)
+            {
+                return 0;
+            }
+
+            int seed = unchecked(Environment.TickCount ^ (count * 61543));
+            IVisualHeightmapRenderSource heightmap = RequireVisualHeightmapRenderSource(engine);
+            float jitterCm = ReadRequiredMapMetadataFloat(
+                engine,
+                MetadataSectionKey,
+                DynamicWorkerScatterJitterMetadataKey);
+            float paddingCm = ReadRequiredMapMetadataFloat(
+                engine,
+                MetadataSectionKey,
+                DynamicWorkerScatterPaddingMetadataKey);
+            if (jitterCm < 0f || paddingCm < 0f)
+            {
+                throw new InvalidOperationException(
+                    $"Map '{engine.CurrentMapSession?.MapId.Value ?? "<none>"}' has invalid dynamic worker scatter metadata. " +
+                    $"{DynamicWorkerScatterJitterMetadataKey} and {DynamicWorkerScatterPaddingMetadataKey} must be >= 0.");
+            }
+
+            float leftCm = heightmap.Bounds.Left + paddingCm + jitterCm;
+            float rightCm = heightmap.Bounds.Right - paddingCm - jitterCm;
+            float topCm = heightmap.Bounds.Top + paddingCm + jitterCm;
+            float bottomCm = heightmap.Bounds.Bottom - paddingCm - jitterCm;
+            if (leftCm >= rightCm || topCm >= bottomCm)
+            {
+                throw new InvalidOperationException(
+                    $"Map '{engine.CurrentMapSession?.MapId.Value ?? "<none>"}' dynamic worker scatter padding leaves no valid VisualHeightmap spawn area.");
+            }
+
+            return PerformerBlacksmithScatterPlanner.EnqueueTemplateAreaScatter(
+                queue,
+                engine.CurrentMapSession?.MapId ?? default,
+                PerformerBlacksmithShowcaseIds.DynamicWorkerTemplateId,
+                count,
+                seed,
+                leftCm,
+                rightCm,
+                topCm,
+                bottomCm,
+                jitterCm);
+        }
+
+        private void TryApplyMinimapMarkerShowcase(GameEngine engine)
+        {
+            if (_autoMinimapMarkerShowcaseApplied)
+            {
+                return;
+            }
+
+            if (CountMinimapMarkerBallEntities(engine) > 0)
+            {
+                _autoMinimapMarkerShowcaseApplied = true;
+                return;
+            }
+
+            if (engine.GetService(CoreServiceKeys.RuntimeEntitySpawnQueue) is not RuntimeEntitySpawnQueue spawnQueue)
+            {
+                Flash("Minimap marker showcase unavailable: RuntimeEntitySpawnQueue missing");
+                return;
+            }
+
+            int requested = ReadRequiredMapMetadataInt(engine, MetadataSectionKey, MinimapMarkerShowcaseTotalMetadataKey);
+            int total = Math.Clamp(requested, ScatterMinTotal, ScatterUiHardMaxTotal);
+            int enqueued = EnqueueMinimapMarkerShowcase(spawnQueue, engine, total);
+            _scatterRequestedTotal = total;
+            _scatterTargetTotal = total;
+            _lastQueuedScatterExtras = enqueued;
+            _autoMinimapMarkerShowcaseApplied = true;
+            Flash($"Minimap marker balls => {enqueued}");
+        }
+
+        private static int EnqueueMinimapMarkerShowcase(RuntimeEntitySpawnQueue queue, GameEngine engine, int total)
+        {
+            int count = Math.Max(0, total);
+            if (count == 0)
+            {
+                return 0;
+            }
+
+            float jitterCm = ReadRequiredMapMetadataFloat(engine, MetadataSectionKey, MinimapMarkerScatterJitterMetadataKey);
+            float paddingCm = ReadRequiredMapMetadataFloat(engine, MetadataSectionKey, MinimapMarkerScatterPaddingMetadataKey);
+            if (jitterCm < 0f || paddingCm < 0f)
+            {
+                throw new InvalidOperationException(
+                    $"Map '{engine.CurrentMapSession?.MapId.Value ?? "<none>"}' has invalid minimap marker scatter metadata. " +
+                    $"{MinimapMarkerScatterJitterMetadataKey} and {MinimapMarkerScatterPaddingMetadataKey} must be >= 0.");
+            }
+
+            var bounds = engine.WorldSizeSpec.Bounds;
+            float leftCm = bounds.Left + paddingCm + jitterCm;
+            float rightCm = bounds.Right - paddingCm - jitterCm;
+            float topCm = bounds.Top + paddingCm + jitterCm;
+            float bottomCm = bounds.Bottom - paddingCm - jitterCm;
+            if (leftCm >= rightCm || topCm >= bottomCm)
+            {
+                throw new InvalidOperationException(
+                    $"Map '{engine.CurrentMapSession?.MapId.Value ?? "<none>"}' minimap marker scatter padding leaves no valid world spawn area.");
+            }
+
+            int seed = ReadOptionalMapMetadataInt(engine, MetadataSectionKey, MinimapMarkerScatterSeedMetadataKey, unchecked(Environment.TickCount ^ (count * 31991)));
+            int clusterCount = Math.Clamp(
+                ReadOptionalMapMetadataInt(engine, MetadataSectionKey, MinimapMarkerVisibleClusterCountMetadataKey, 0),
+                0,
+                count);
+            int queued = 0;
+            if (clusterCount > 0)
+            {
+                float clusterCenterXCm = ReadOptionalMapMetadataFloat(engine, MetadataSectionKey, MinimapMarkerVisibleClusterCenterXMetadataKey, 0f);
+                float clusterCenterYCm = ReadOptionalMapMetadataFloat(engine, MetadataSectionKey, MinimapMarkerVisibleClusterCenterYMetadataKey, 0f);
+                float clusterRadiusCm = ReadRequiredMapMetadataFloat(engine, MetadataSectionKey, MinimapMarkerVisibleClusterRadiusMetadataKey);
+                if (clusterRadiusCm <= 0f)
+                {
+                    throw new InvalidOperationException(
+                        $"metadata.{MetadataSectionKey}.{MinimapMarkerVisibleClusterRadiusMetadataKey} must be > 0 for the minimap marker showcase.");
+                }
+
+                queued += PerformerBlacksmithScatterPlanner.EnqueueTemplateClusterScatter(
+                    queue,
+                    engine.CurrentMapSession?.MapId ?? default,
+                    PerformerBlacksmithShowcaseIds.MinimapMarkerBallTemplateId,
+                    clusterCount,
+                    seed,
+                    clusterCenterXCm,
+                    clusterCenterYCm,
+                    clusterRadiusCm,
+                    MathF.Min(jitterCm, clusterRadiusCm * 0.04f));
+            }
+
+            int remaining = count - queued;
+            if (remaining <= 0)
+            {
+                return queued;
+            }
+
+            queued += PerformerBlacksmithScatterPlanner.EnqueueTemplateAreaScatter(
+                queue,
+                engine.CurrentMapSession?.MapId ?? default,
+                PerformerBlacksmithShowcaseIds.MinimapMarkerBallTemplateId,
+                remaining,
+                unchecked(seed ^ 0x5bd1e995),
+                leftCm,
+                rightCm,
+                topCm,
+                bottomCm,
+                jitterCm);
+            return queued;
+        }
+
+        private static IVisualHeightmapRenderSource RequireVisualHeightmapRenderSource(GameEngine engine)
+        {
+            IVisualHeightmap? heightmap = engine.GetService(CoreServiceKeys.VisualHeightmap);
+            if (heightmap is IVisualHeightmapRenderSource renderSource)
+            {
+                return renderSource;
+            }
+
+            string mapId = engine.CurrentMapSession?.MapId.Value ?? "<none>";
+            throw new InvalidOperationException(
+                $"Map '{mapId}' must provide a VisualHeightmap render source for the dynamic worker benchmark production path.");
         }
 
         private Entity FindRootBuildingEntity(GameEngine engine)
@@ -1156,8 +1414,52 @@ namespace PerformerBlacksmithShowcaseMod.Runtime
             return total;
         }
 
+        private static int CountDynamicWorkerEntities(GameEngine engine)
+        {
+            int total = 0;
+            var query = new QueryDescription().WithAll<Name>();
+            engine.World.Query(in query, (ref Name name) =>
+            {
+                if (string.Equals(name.Value, PerformerBlacksmithShowcaseIds.DynamicWorkerEntityName, StringComparison.OrdinalIgnoreCase))
+                {
+                    total++;
+                }
+            });
+
+            return total;
+        }
+
+        private static int CountMinimapMarkerBallEntities(GameEngine engine)
+        {
+            int total = 0;
+            var query = new QueryDescription().WithAll<Name>();
+            engine.World.Query(in query, (ref Name name) =>
+            {
+                if (string.Equals(name.Value, PerformerBlacksmithShowcaseIds.MinimapMarkerBallEntityName, StringComparison.OrdinalIgnoreCase))
+                {
+                    total++;
+                }
+            });
+
+            return total;
+        }
+
         private int CountTrackedBlacksmithEntities(GameEngine engine, out int scatterExtras)
         {
+            if (IsDynamicWorkerBenchmarkMode(engine))
+            {
+                int total = CountDynamicWorkerEntities(engine);
+                scatterExtras = total;
+                return total;
+            }
+
+            if (IsMinimapMarkerShowcaseMode(engine))
+            {
+                int total = CountMinimapMarkerBallEntities(engine);
+                scatterExtras = total;
+                return total;
+            }
+
             if (UsesCleanHudTextScatter(engine))
             {
                 int total = CountMeshHudTextBenchmarkEntities(engine);
@@ -1263,6 +1565,8 @@ namespace PerformerBlacksmithShowcaseMod.Runtime
             _scatterRequestedTotal = 1;
             _scatterTargetTotal = ScatterDefaultTarget;
             _autoMeshBenchmarkApplied = false;
+            _autoDynamicWorkerBenchmarkApplied = false;
+            _autoMinimapMarkerShowcaseApplied = false;
             MarkPanelDirty();
         }
 
@@ -1477,6 +1781,148 @@ namespace PerformerBlacksmithShowcaseMod.Runtime
             return int.TryParse(raw, out int parsed) && parsed > 0
                 ? parsed
                 : defaultValue;
+        }
+
+        private static int ReadRequiredMapMetadataInt(GameEngine engine, string section, string key)
+        {
+            JsonNode valueNode = ReadRequiredMapMetadataValue(engine, section, key);
+
+            try
+            {
+                int value = valueNode.GetValue<int>();
+                if (value <= 0)
+                {
+                    throw new InvalidOperationException(
+                        $"metadata.{section}.{key} must be > 0 for the dynamic worker benchmark production path.");
+                }
+
+                return value;
+            }
+            catch (FormatException ex)
+            {
+                throw new InvalidOperationException(
+                    $"metadata.{section}.{key} must be an integer for the dynamic worker benchmark production path.",
+                    ex);
+            }
+            catch (InvalidOperationException ex) when (!ex.Message.Contains("metadata.", StringComparison.Ordinal))
+            {
+                throw new InvalidOperationException(
+                    $"metadata.{section}.{key} must be an integer for the dynamic worker benchmark production path.",
+                    ex);
+            }
+        }
+
+        private static float ReadRequiredMapMetadataFloat(GameEngine engine, string section, string key)
+        {
+            JsonNode valueNode = ReadRequiredMapMetadataValue(engine, section, key);
+
+            try
+            {
+                float value = valueNode.GetValue<float>();
+                if (!float.IsFinite(value))
+                {
+                    throw new InvalidOperationException(
+                        $"metadata.{section}.{key} must be finite for the dynamic worker benchmark production path.");
+                }
+
+                return value;
+            }
+            catch (FormatException ex)
+            {
+                throw new InvalidOperationException(
+                    $"metadata.{section}.{key} must be a number for the dynamic worker benchmark production path.",
+                    ex);
+            }
+            catch (InvalidOperationException ex) when (!ex.Message.Contains("metadata.", StringComparison.Ordinal))
+            {
+                throw new InvalidOperationException(
+                    $"metadata.{section}.{key} must be a number for the dynamic worker benchmark production path.",
+                    ex);
+            }
+        }
+
+        private static JsonNode ReadRequiredMapMetadataValue(GameEngine engine, string section, string key)
+        {
+            if (engine.CurrentMapSession?.MapConfig?.Metadata == null ||
+                !engine.CurrentMapSession.MapConfig.Metadata.TryGetValue(section, out JsonNode? sectionNode) ||
+                sectionNode is not JsonObject sectionObject ||
+                !sectionObject.TryGetPropertyValue(key, out JsonNode? valueNode) ||
+                valueNode == null)
+            {
+                string mapId = engine.CurrentMapSession?.MapId.Value ?? "<none>";
+                throw new InvalidOperationException(
+                    $"Map '{mapId}' must declare metadata.{section}.{key} for the dynamic worker benchmark production path.");
+            }
+
+            return valueNode;
+        }
+
+        private static int ReadOptionalMapMetadataInt(GameEngine engine, string section, string key, int defaultValue)
+        {
+            if (!TryReadMapMetadataValue(engine, section, key, out JsonNode? valueNode) ||
+                valueNode == null)
+            {
+                return defaultValue;
+            }
+
+            try
+            {
+                return valueNode.GetValue<int>();
+            }
+            catch (FormatException ex)
+            {
+                throw new InvalidOperationException(
+                    $"metadata.{section}.{key} must be an integer for the minimap marker showcase.",
+                    ex);
+            }
+            catch (InvalidOperationException ex) when (!ex.Message.Contains("metadata.", StringComparison.Ordinal))
+            {
+                throw new InvalidOperationException(
+                    $"metadata.{section}.{key} must be an integer for the minimap marker showcase.",
+                    ex);
+            }
+        }
+
+        private static float ReadOptionalMapMetadataFloat(GameEngine engine, string section, string key, float defaultValue)
+        {
+            if (!TryReadMapMetadataValue(engine, section, key, out JsonNode? valueNode) ||
+                valueNode == null)
+            {
+                return defaultValue;
+            }
+
+            try
+            {
+                float value = valueNode.GetValue<float>();
+                if (!float.IsFinite(value))
+                {
+                    throw new InvalidOperationException(
+                        $"metadata.{section}.{key} must be finite for the minimap marker showcase.");
+                }
+
+                return value;
+            }
+            catch (FormatException ex)
+            {
+                throw new InvalidOperationException(
+                    $"metadata.{section}.{key} must be a number for the minimap marker showcase.",
+                    ex);
+            }
+            catch (InvalidOperationException ex) when (!ex.Message.Contains("metadata.", StringComparison.Ordinal))
+            {
+                throw new InvalidOperationException(
+                    $"metadata.{section}.{key} must be a number for the minimap marker showcase.",
+                    ex);
+            }
+        }
+
+        private static bool TryReadMapMetadataValue(GameEngine engine, string section, string key, out JsonNode? valueNode)
+        {
+            valueNode = null;
+            return engine.CurrentMapSession?.MapConfig?.Metadata != null &&
+                   engine.CurrentMapSession.MapConfig.Metadata.TryGetValue(section, out JsonNode? sectionNode) &&
+                   sectionNode is JsonObject sectionObject &&
+                   sectionObject.TryGetPropertyValue(key, out valueNode);
         }
 
         private static float ResolveAutoScatterMinRadiusCm()
