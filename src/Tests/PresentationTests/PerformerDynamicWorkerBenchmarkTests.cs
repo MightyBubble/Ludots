@@ -7,6 +7,7 @@ using System.Text;
 using Arch.Core;
 using Ludots.Core.Components;
 using Ludots.Core.Engine;
+using Ludots.Core.Gameplay.Camera;
 using Ludots.Core.Gameplay.Spawning;
 using Ludots.Core.Map;
 using Ludots.Core.Presentation.Commands;
@@ -118,6 +119,34 @@ namespace Ludots.Tests.Presentation
         }
 
         [Test]
+        public void MinimapMarkerLargeWorldShowcase_UsesVisualHeightmapSceneAndCameraProfile()
+        {
+            using GameEngine engine = PerformerBlacksmithShowcaseTestHarness.CreateEngine();
+            PerformerBlacksmithShowcaseTestHarness.LoadMap(
+                engine,
+                PerformerBlacksmithShowcaseIds.MinimapMarkerLargeWorldShowcaseMapId,
+                frames: 2);
+
+            Assert.That(engine.CurrentMapSession?.MapConfig.VisualHeightmapAsset, Is.EqualTo("assets/terrain/performer_blacksmith_dynamic_worker_large_world.vhtm"));
+            Assert.That(engine.CurrentMapSession?.MapConfig.DefaultCamera?.VirtualCameraId, Is.EqualTo("PerformerBlacksmith.Camera.LargeWorldHeightmap"));
+            Assert.That(engine.GetService(CoreServiceKeys.VisualHeightmap), Is.AssignableTo<IVisualHeightmapRenderSource>());
+
+            VirtualCameraRegistry cameraRegistry = engine.GetService(CoreServiceKeys.VirtualCameraRegistry)
+                ?? throw new InvalidOperationException("VirtualCameraRegistry missing.");
+            Assert.That(cameraRegistry.TryGet("PerformerBlacksmith.Camera.LargeWorldHeightmap", out VirtualCameraDefinition? definition), Is.True);
+            Assert.That(definition.TargetHeightMode, Is.EqualTo(VirtualCameraTargetHeightMode.VisualHeightmap));
+            Assert.That(definition.TargetHeightLayerIndex, Is.EqualTo(0));
+
+            IVisualHeightmap heightmap = engine.GetService(CoreServiceKeys.VisualHeightmap)
+                ?? throw new InvalidOperationException("VisualHeightmap missing.");
+            Assert.That(heightmap.TrySampleHeightCm(
+                engine.GameSession.Camera.State.TargetCm.X,
+                engine.GameSession.Camera.State.TargetCm.Y,
+                out float expectedHeightCm), Is.True);
+            Assert.That(engine.GameSession.Camera.State.TargetHeightCm, Is.EqualTo(expectedHeightCm + definition.TargetHeightOffsetCm).Within(0.01f));
+        }
+
+        [Test]
         public void MinimapMarkerLargeWorldShowcase_ProducesAuthoredPerformerMarkersForFullMapAndZoom()
         {
             const int expectedMarkers = PerformerBlacksmithShowcaseIds.MinimapMarkerShowcaseDefaultTotal;
@@ -161,8 +190,10 @@ namespace Ludots.Tests.Presentation
             Assert.That(engine.CurrentMapSession.MapConfig.Boards[0].HeightInTiles, Is.EqualTo(256));
             Assert.That(markerBuffer.Count, Is.EqualTo(expectedMarkers));
             Assert.That(markerBuffer.DroppedSinceClear, Is.EqualTo(0));
+            Assert.That(CountOrientedMarkers(markerBuffer), Is.EqualTo(expectedMarkers));
             Assert.That(screenMarkers.Count, Is.EqualTo(expectedMarkers));
             Assert.That(screenMarkers.DroppedSinceClear, Is.EqualTo(0));
+            Assert.That(CountOrientedScreenMarkers(screenMarkers), Is.EqualTo(expectedMarkers));
             Assert.That(minimap.MarkerCount, Is.EqualTo(expectedMarkers));
             Assert.That(minimap.VisibleMarkerCount, Is.EqualTo(expectedMarkers));
             Assert.That(snapshot.Preset, Is.EqualTo(MinimapPreset.RtsFullMap));
@@ -775,6 +806,38 @@ namespace Ludots.Tests.Presentation
             }
 
             return count;
+        }
+
+        private static int CountOrientedMarkers(MinimapMarkerBuffer markers)
+        {
+            int total = 0;
+            for (int i = 0; i < markers.Count; i++)
+            {
+                if ((markers.GetFlags(i) & MinimapMarkerFlags.HasOrientation) != 0u &&
+                    float.IsFinite(markers.GetOrientationRad(i)) &&
+                    markers.GetOrientationLengthPx(i) > 0f)
+                {
+                    total++;
+                }
+            }
+
+            return total;
+        }
+
+        private static int CountOrientedScreenMarkers(MinimapScreenMarkerBuffer screenMarkers)
+        {
+            int total = 0;
+            for (int i = 0; i < screenMarkers.Count; i++)
+            {
+                if ((screenMarkers.GetFlags(i) & MinimapMarkerFlags.HasOrientation) != 0u &&
+                    float.IsFinite(screenMarkers.GetOrientationRad(i)) &&
+                    screenMarkers.GetOrientationLengthPx(i) > 0f)
+                {
+                    total++;
+                }
+            }
+
+            return total;
         }
 
         private static string BuildMinimapWorldVisualDiagnostics(

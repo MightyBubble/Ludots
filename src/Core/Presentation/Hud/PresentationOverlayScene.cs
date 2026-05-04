@@ -583,7 +583,9 @@ namespace Ludots.Core.Presentation.Hud
             in Vector4 color,
             int stableId = 0,
             int dirtySerial = 0,
-            uint flags = 0u)
+            uint flags = 0u,
+            float orientationRad = 0f,
+            float orientationLengthPx = 0f)
         {
             if (sizePx <= 0f)
             {
@@ -601,7 +603,9 @@ namespace Ludots.Core.Presentation.Hud
                 Width = sizePx,
                 Height = sizePx,
                 Color0 = color,
-                Value0 = flags
+                Value0 = flags,
+                Value1 = orientationRad,
+                Value2 = orientationLengthPx
             };
             return TryStore(in item);
         }
@@ -1499,7 +1503,9 @@ namespace Ludots.Core.Presentation.Hud
                 left.Width != right.Width ||
                 left.Height != right.Height ||
                 left.FontSize != right.FontSize ||
-                left.Value0 != right.Value0)
+                left.Value0 != right.Value0 ||
+                left.Value1 != right.Value1 ||
+                left.Value2 != right.Value2)
             {
                 return PresentationOverlayItemCompareResult.Content;
             }

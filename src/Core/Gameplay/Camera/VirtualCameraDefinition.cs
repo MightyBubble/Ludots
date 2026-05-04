@@ -12,6 +12,9 @@ namespace Ludots.Core.Gameplay.Camera
         public CameraRigKind RigKind { get; set; } = CameraRigKind.Orbit;
         public VirtualCameraTargetSource TargetSource { get; set; } = VirtualCameraTargetSource.CurrentState;
         public Vector2 FixedTargetCm { get; set; } = Vector2.Zero;
+        public VirtualCameraTargetHeightMode TargetHeightMode { get; set; } = VirtualCameraTargetHeightMode.Flat;
+        public int TargetHeightLayerIndex { get; set; }
+        public float TargetHeightOffsetCm { get; set; }
         public float Yaw { get; set; } = 180f;
         public float Pitch { get; set; } = 45f;
         public float DistanceCm { get; set; } = 3000f;

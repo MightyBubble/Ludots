@@ -47,8 +47,10 @@ namespace Ludots.Core.Gameplay.Camera
                     var config = JsonSerializer.Deserialize<VirtualCameraDefinitionConfig>(node.ToJsonString(), _options);
                     if (config == null || string.IsNullOrWhiteSpace(config.Id))
                     {
-                        continue;
+                        throw new System.InvalidOperationException("VirtualCameraDefinition.id is required.");
                     }
+
+                    ValidateConfig(config);
 
                     _registry.Register(new VirtualCameraDefinition
                     {
@@ -62,6 +64,9 @@ namespace Ludots.Core.Gameplay.Camera
                         FixedTargetCm = config.FixedTargetCm == null
                             ? Vector2.Zero
                             : new Vector2(config.FixedTargetCm.X, config.FixedTargetCm.Y),
+                        TargetHeightMode = config.TargetHeightMode,
+                        TargetHeightLayerIndex = config.TargetHeightLayerIndex,
+                        TargetHeightOffsetCm = config.TargetHeightOffsetCm,
                         Yaw = config.Yaw,
                         Pitch = config.Pitch,
                         DistanceCm = config.DistanceCm,
@@ -101,10 +106,27 @@ namespace Ludots.Core.Gameplay.Camera
                         AllowUserInput = config.AllowUserInput
                     });
                 }
-                catch (System.Exception)
+                catch (System.Exception ex)
                 {
-                    // Skip invalid entries
+                    throw new System.InvalidOperationException(
+                        $"Failed to load virtual camera definition from '{entry.RelativePath}' entry {i}.",
+                        ex);
                 }
+            }
+        }
+
+        private static void ValidateConfig(VirtualCameraDefinitionConfig config)
+        {
+            if (config.TargetHeightLayerIndex < 0)
+            {
+                throw new System.InvalidOperationException(
+                    $"Virtual camera '{config.Id}' targetHeightLayerIndex must be >= 0.");
+            }
+
+            if (!float.IsFinite(config.TargetHeightOffsetCm))
+            {
+                throw new System.InvalidOperationException(
+                    $"Virtual camera '{config.Id}' targetHeightOffsetCm must be finite.");
             }
         }
 
@@ -118,6 +140,9 @@ namespace Ludots.Core.Gameplay.Camera
             public CameraRigKind RigKind { get; set; } = CameraRigKind.Orbit;
             public VirtualCameraTargetSource TargetSource { get; set; } = VirtualCameraTargetSource.CurrentState;
             public Vector2Config? FixedTargetCm { get; set; }
+            public VirtualCameraTargetHeightMode TargetHeightMode { get; set; } = VirtualCameraTargetHeightMode.Flat;
+            public int TargetHeightLayerIndex { get; set; }
+            public float TargetHeightOffsetCm { get; set; }
             public float Yaw { get; set; } = 180f;
             public float Pitch { get; set; } = 45f;
             public float DistanceCm { get; set; } = 3000f;

@@ -2,6 +2,7 @@ using System.Threading.Tasks;
 using Ludots.Core.Engine;
 using Ludots.Core.Modding;
 using Ludots.Core.Presentation.ChunkDebug;
+using Ludots.Core.Presentation.Hud;
 using Ludots.Core.Presentation.Minimap;
 using Ludots.Core.Scripting;
 using PerformerBlacksmithShowcaseMod;
@@ -49,6 +50,11 @@ public sealed class PerformerBlacksmithLargeWorldEntryModEntry : IMod
         runtime.SetRotateWithCamera(ReadEnvBoolOrDefault(MinimapRotateWithCameraEnvKey, defaultValue: false));
         ConfigureMinimapPreset(runtime);
         ApplyMinimapZoom(runtime);
+        if (engine.GetService(CoreServiceKeys.RenderDebugState) is RenderDebugState renderDebug)
+        {
+            renderDebug.DrawTerrain = true;
+        }
+
         if (engine.GetService(CoreServiceKeys.ChunkDebugPanelRuntime) is ChunkDebugPanelRuntime chunkDebug)
         {
             chunkDebug.Visible = ReadEnvBoolOrDefault(ChunkDebugVisibleEnvKey, defaultValue: true);
@@ -60,10 +66,12 @@ public sealed class PerformerBlacksmithLargeWorldEntryModEntry : IMod
     private static void ConfigureMinimapPreset(MinimapRuntime runtime)
     {
         string? raw = System.Environment.GetEnvironmentVariable(MinimapPresetEnvKey);
-        if (string.Equals(raw, "camera", System.StringComparison.OrdinalIgnoreCase) ||
-            string.Equals(raw, "camera-centered", System.StringComparison.OrdinalIgnoreCase))
+        if (string.Equals(raw, "follow-camera", System.StringComparison.OrdinalIgnoreCase) ||
+            string.Equals(raw, "camera", System.StringComparison.OrdinalIgnoreCase))
         {
-            runtime.UseCameraCenteredPreset(ReadEnvFloatOrDefault(MinimapHalfExtentEnvKey, 7000f));
+            runtime.UseFollowCameraPreset(
+                ReadEnvFloatOrDefault(MinimapHalfExtentEnvKey, 7000f),
+                ReadEnvBoolOrDefault(MinimapRotateWithCameraEnvKey, defaultValue: true));
             return;
         }
 

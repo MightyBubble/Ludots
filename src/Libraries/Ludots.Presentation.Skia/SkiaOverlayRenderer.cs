@@ -6,6 +6,7 @@ using System.Diagnostics;
 using System.Runtime.InteropServices;
 using System.Text;
 using Ludots.Core.Presentation.Hud;
+using Ludots.Core.Presentation.Minimap;
 using Ludots.UI.Runtime;
 using Ludots.UI.Skia;
 using SkiaSharp;
@@ -426,7 +427,7 @@ namespace Ludots.Presentation.Skia
                 PresentationOverlayItemKind.Rect =>
                     new SKRect(item.X - pad, item.Y - pad, item.X + item.Width + pad, item.Y + item.Height + pad),
                 PresentationOverlayItemKind.MinimapMarker =>
-                    new SKRect(item.X - (item.Width * 0.5f) - pad, item.Y - (item.Width * 0.5f) - pad, item.X + (item.Width * 0.5f) + pad, item.Y + (item.Width * 0.5f) + pad),
+                    ResolveMinimapMarkerBounds(in item, pad),
                 PresentationOverlayItemKind.Line =>
                     new SKRect(
                         MathF.Min(item.X, item.Width) - MathF.Max(pad, item.Value0),
@@ -435,6 +436,20 @@ namespace Ludots.Presentation.Skia
                         MathF.Max(item.Y, item.Height) + MathF.Max(pad, item.Value0)),
                 _ => SKRect.Empty
             };
+        }
+
+        private static SKRect ResolveMinimapMarkerBounds(in PresentationOverlayItem item, float pad)
+        {
+            float radius = item.Width * 0.5f;
+            if (((uint)item.Value0 & MinimapMarkerFlags.HasOrientation) != 0u &&
+                item.Value2 > 0f &&
+                float.IsFinite(item.Value2))
+            {
+                radius = MathF.Max(radius, item.Value2);
+            }
+
+            radius += pad;
+            return new SKRect(item.X - radius, item.Y - radius, item.X + radius, item.Y + radius);
         }
 
         private static float EstimateTextWidth(string? text, int fontSize)
@@ -514,6 +529,45 @@ namespace Ludots.Presentation.Skia
             _fillPaint.Style = SKPaintStyle.Fill;
             _fillPaint.Color = ToSkColor(item.Color0);
             canvas.DrawCircle(item.X, item.Y, MathF.Max(0.5f, item.Width * 0.5f), _fillPaint);
+            DrawMinimapMarkerOrientation(canvas, in item);
+        }
+
+        private void DrawMinimapMarkerOrientation(SKCanvas canvas, in PresentationOverlayItem item)
+        {
+            if (((uint)item.Value0 & MinimapMarkerFlags.HasOrientation) == 0u ||
+                item.Value2 <= 0f ||
+                item.Color0.W <= 0f ||
+                !float.IsFinite(item.Value1) ||
+                !float.IsFinite(item.Value2))
+            {
+                return;
+            }
+
+            float lengthPx = MathF.Max(item.Value2, item.Width * 0.55f);
+            float endX = item.X + (MathF.Cos(item.Value1) * lengthPx);
+            float endY = item.Y + (MathF.Sin(item.Value1) * lengthPx);
+            SKPaintStyle previousStyle = _strokePaint.Style;
+            SKStrokeCap previousCap = _strokePaint.StrokeCap;
+            float previousStrokeWidth = _strokePaint.StrokeWidth;
+            SKColor previousColor = _strokePaint.Color;
+            _strokePaint.Style = SKPaintStyle.Stroke;
+            _strokePaint.StrokeCap = SKStrokeCap.Round;
+            try
+            {
+                _strokePaint.Color = new SKColor(0, 0, 0, (byte)Math.Clamp(item.Color0.W * 210f, 0f, 255f));
+                _strokePaint.StrokeWidth = MathF.Max(2f, item.Width * 0.30f);
+                canvas.DrawLine(item.X, item.Y, endX, endY, _strokePaint);
+                _strokePaint.Color = ToSkColor(item.Color0);
+                _strokePaint.StrokeWidth = MathF.Max(1f, item.Width * 0.16f);
+                canvas.DrawLine(item.X, item.Y, endX, endY, _strokePaint);
+            }
+            finally
+            {
+                _strokePaint.Style = previousStyle;
+                _strokePaint.StrokeCap = previousCap;
+                _strokePaint.StrokeWidth = previousStrokeWidth;
+                _strokePaint.Color = previousColor;
+            }
         }
 
         private void DrawLine(SKCanvas canvas, in PresentationOverlayItem item)
@@ -763,6 +817,12 @@ namespace Ludots.Presentation.Skia
                 _fillPaint.Style = previousStyle;
                 _fillPaint.StrokeCap = previousCap;
                 _fillPaint.StrokeWidth = previousStrokeWidth;
+            }
+
+            for (int i = 0; i < span.Length; i++)
+            {
+                ref readonly PresentationOverlayItem item = ref span[i];
+                DrawMinimapMarkerOrientation(canvas, in item);
             }
         }
 

@@ -1090,6 +1090,37 @@ namespace Ludots.Core.Presentation.Config
                 throw new InvalidOperationException("MinimapMarker sizePx must be a positive finite number.");
             }
 
+            MinimapMarkerOrientationMode orientationMode = ParseRequiredEnumOrDefault(
+                obj["orientationMode"],
+                MinimapMarkerOrientationMode.None,
+                "MinimapMarker.orientationMode");
+            int orientationParamKey = obj["orientationParamKey"]?.GetValue<int>() ?? -1;
+            float orientationOffsetRad = obj["orientationOffsetRad"]?.GetValue<float>() ?? 0f;
+            float orientationLengthPx = obj["orientationLengthPx"]?.GetValue<float>() ?? 0f;
+            if (!float.IsFinite(orientationOffsetRad))
+            {
+                throw new InvalidOperationException("MinimapMarker orientationOffsetRad must be finite.");
+            }
+
+            if (orientationMode != MinimapMarkerOrientationMode.None)
+            {
+                if (orientationParamKey < 0)
+                {
+                    throw new InvalidOperationException("MinimapMarker orientationParamKey is required when orientationMode is not None.");
+                }
+
+                if (!float.IsFinite(orientationLengthPx) || orientationLengthPx <= 0f)
+                {
+                    throw new InvalidOperationException("MinimapMarker orientationLengthPx must be a positive finite number when orientationMode is not None.");
+                }
+            }
+            else
+            {
+                orientationParamKey = -1;
+                orientationOffsetRad = 0f;
+                orientationLengthPx = 0f;
+            }
+
             return new MinimapMarkerConfig
             {
                 Shape = shape,
@@ -1098,6 +1129,10 @@ namespace Ludots.Core.Presentation.Config
                 ColorParamKey = obj["colorParamKey"]?.GetValue<int>() ?? -1,
                 SizeParamKey = obj["sizeParamKey"]?.GetValue<int>() ?? -1,
                 VisibilityParamKey = obj["visibilityParamKey"]?.GetValue<int>() ?? -1,
+                OrientationMode = orientationMode,
+                OrientationParamKey = orientationParamKey,
+                OrientationOffsetRad = orientationOffsetRad,
+                OrientationLengthPx = orientationLengthPx,
             };
         }
 
@@ -1582,6 +1617,16 @@ namespace Ludots.Core.Presentation.Config
             }
 
             return parsed;
+        }
+
+        private static T ParseRequiredEnumOrDefault<T>(JsonNode? node, T defaultValue, string context) where T : struct, Enum
+        {
+            if (node == null)
+            {
+                return defaultValue;
+            }
+
+            return ParseRequiredEnum<T>(node, context);
         }
     }
 }

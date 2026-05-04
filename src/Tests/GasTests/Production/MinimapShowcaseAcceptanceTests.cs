@@ -40,7 +40,10 @@ public sealed class MinimapShowcaseAcceptanceTests
         float NormalizedX,
         float NormalizedY,
         string Color,
-        float SizePx);
+        float SizePx,
+        float OrientationRad,
+        float OrientationLengthPx,
+        uint Flags);
 
     private sealed record SnapshotView(
         string MapId,
@@ -101,14 +104,14 @@ public sealed class MinimapShowcaseAcceptanceTests
             screenshot = "screens/001_rts_marker_overview.svg"
         });
 
-        runtime.UseCameraCenteredPreset(7000f);
+        runtime.UseFollowCameraPreset(7000f, rotateWithCamera: false);
         runtime.Refresh(engine, markers, screenMarkers);
         SnapshotView camera = MapSnapshot(runtime.CaptureDebugSnapshot());
-        Assert.That(camera.Preset, Is.EqualTo(MinimapPreset.CameraCentered));
+        Assert.That(camera.Preset, Is.EqualTo(MinimapPreset.FollowCamera));
         Assert.That(camera.VisibleMarkerCount, Is.GreaterThan(0));
         Assert.That(camera.VisibleMarkerCount, Is.LessThan(rts.VisibleMarkerCount));
         WriteSnapshotSvg(camera, Path.Combine(screensDir, "002_camera_marker_window.svg"));
-        timeline.Add("[T+002] Camera-centered preset keeps the camera target centered and clips markers outside the local window.");
+        timeline.Add("[T+002] Follow-camera preset keeps the camera target centered and clips markers outside the local window.");
         traces.Add(new
         {
             step = "002_camera_marker_window",
@@ -232,6 +235,48 @@ public sealed class MinimapShowcaseAcceptanceTests
     }
 
     [Test]
+    public void CoreMinimapRuntime_ProjectsConfigDrivenMarkerOrientationIntoScreenSpace()
+    {
+        var frameTimesMs = new List<double>();
+        using var engine = CreateEngine();
+        LoadMap(engine, MapId, frameTimesMs);
+
+        MinimapRuntime runtime = ResolveMinimapRuntime(engine);
+        MinimapMarkerBuffer markers = engine.GetService(CoreServiceKeys.MinimapMarkerBuffer)
+            ?? throw new InvalidOperationException("MinimapMarkerBuffer missing.");
+        MinimapScreenMarkerBuffer screenMarkers = engine.GetService(CoreServiceKeys.MinimapScreenMarkerBuffer)
+            ?? throw new InvalidOperationException("MinimapScreenMarkerBuffer missing.");
+
+        markers.BeginFrame();
+        var color = new Vector4(1f, 0.28f, 0.08f, 1f);
+        Assert.That(markers.TryAdd(
+            7001,
+            0f,
+            0f,
+            in color,
+            12f,
+            MinimapMarkerFlags.HasOrientation,
+            0f,
+            22f), Is.True);
+
+        runtime.Visible = true;
+        runtime.UseFollowCameraPreset(7000f, rotateWithCamera: false);
+        runtime.Refresh(engine, markers, screenMarkers);
+
+        Assert.That(screenMarkers.Count, Is.EqualTo(1));
+        Assert.That((screenMarkers.GetFlags(0) & MinimapMarkerFlags.HasOrientation), Is.Not.EqualTo(0u));
+        Assert.That(NormalizeSignedRadians(screenMarkers.GetOrientationRad(0)), Is.EqualTo(0f).Within(0.001f));
+        Assert.That(screenMarkers.GetOrientationLengthPx(0), Is.EqualTo(22f));
+
+        engine.GameSession.Camera.State.Yaw = 90f;
+        runtime.SetRotateWithCamera(true);
+        runtime.Refresh(engine, markers, screenMarkers);
+
+        Assert.That(screenMarkers.Count, Is.EqualTo(1));
+        Assert.That(NormalizeSignedRadians(screenMarkers.GetOrientationRad(0)), Is.EqualTo(MathF.PI * 0.5f).Within(0.001f));
+    }
+
+    [Test]
     public void CoreMinimapRuntime_ZoomUpdatesMetricGridStepAndRotationBasis()
     {
         var frameTimesMs = new List<double>();
@@ -248,7 +293,7 @@ public sealed class MinimapShowcaseAcceptanceTests
 
         SeedAuthoredMarkers(markers);
         runtime.Visible = true;
-        runtime.UseCameraCenteredPreset(22000f);
+        runtime.UseFollowCameraPreset(22000f, rotateWithCamera: false);
         runtime.SetRotateWithCamera(false);
         overlay.Clear();
         runtime.Refresh(engine, markers, screenMarkers);
@@ -289,7 +334,16 @@ public sealed class MinimapShowcaseAcceptanceTests
                 color = new Vector4(1f, 0.72f, 0.18f, 1f);
             }
 
-            Assert.That(markers.TryAdd(1000 + i, x, y, in color, 7f), Is.True);
+            float facingRad = MathF.Atan2(y, x);
+            Assert.That(markers.TryAdd(
+                1000 + i,
+                x,
+                y,
+                in color,
+                7f,
+                MinimapMarkerFlags.HasOrientation,
+                facingRad,
+                16f), Is.True);
         }
     }
 
@@ -372,6 +426,13 @@ public sealed class MinimapShowcaseAcceptanceTests
             int radius = Math.Max(3, (int)MathF.Round(marker.SizePx * 0.75f));
             shapes.Add($"<circle cx=\"{x}\" cy=\"{y}\" r=\"{radius + 2}\" fill=\"#021017\" stroke=\"#092b38\" stroke-width=\"1\" />");
             shapes.Add($"<circle cx=\"{x}\" cy=\"{y}\" r=\"{radius}\" fill=\"{marker.Color}\" />");
+            if ((marker.Flags & MinimapMarkerFlags.HasOrientation) != 0u && marker.OrientationLengthPx > 0f)
+            {
+                int endX = x + (int)MathF.Round(MathF.Cos(marker.OrientationRad) * marker.OrientationLengthPx);
+                int endY = y + (int)MathF.Round(MathF.Sin(marker.OrientationRad) * marker.OrientationLengthPx);
+                shapes.Add($"<line x1=\"{x}\" y1=\"{y}\" x2=\"{endX}\" y2=\"{endY}\" stroke=\"#020608\" stroke-width=\"5\" stroke-linecap=\"round\" />");
+                shapes.Add($"<line x1=\"{x}\" y1=\"{y}\" x2=\"{endX}\" y2=\"{endY}\" stroke=\"{marker.Color}\" stroke-width=\"3\" stroke-linecap=\"round\" />");
+            }
         }
 
         float cameraNormalizedX = (snapshot.CameraTargetXcm - (snapshot.CenterXcm - snapshot.HalfExtentCm)) / MathF.Max(1f, snapshot.HalfExtentCm * 2f);
@@ -419,7 +480,10 @@ public sealed class MinimapShowcaseAcceptanceTests
                 marker.NormalizedX,
                 marker.NormalizedY,
                 ToSvgColor(marker.Color),
-                marker.SizePx));
+                marker.SizePx,
+                marker.OrientationRad,
+                marker.OrientationLengthPx,
+                marker.Flags));
         }
 
         return new SnapshotView(
@@ -566,6 +630,22 @@ public sealed class MinimapShowcaseAcceptanceTests
         return ordered.Length % 2 == 0
             ? (ordered[middle - 1] + ordered[middle]) * 0.5d
             : ordered[middle];
+    }
+
+    private static float NormalizeSignedRadians(float radians)
+    {
+        float twoPi = MathF.PI * 2f;
+        radians %= twoPi;
+        if (radians > MathF.PI)
+        {
+            radians -= twoPi;
+        }
+        else if (radians < -MathF.PI)
+        {
+            radians += twoPi;
+        }
+
+        return radians;
     }
 
     private sealed class TestInputBackend : IInputBackend

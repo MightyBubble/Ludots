@@ -24,7 +24,7 @@ namespace Ludots.Core.Presentation.Minimap
     {
         FollowEntity = 0,
         RtsFullMap = 1,
-        CameraCentered = 2,
+        FollowCamera = 2,
     }
 
     public readonly record struct MinimapDebugMarker(
@@ -35,6 +35,8 @@ namespace Ludots.Core.Presentation.Minimap
         float NormalizedY,
         Vector4 Color,
         float SizePx,
+        float OrientationRad,
+        float OrientationLengthPx,
         uint Flags);
 
     public sealed record MinimapDebugSnapshot(
@@ -196,11 +198,12 @@ namespace Ludots.Core.Presentation.Minimap
             _viewportInitialized = false;
         }
 
-        public void UseCameraCenteredPreset(float halfExtentCm = 7000f)
+        public void UseFollowCameraPreset(float halfExtentCm = 7000f, bool rotateWithCamera = true)
         {
-            Preset = MinimapPreset.CameraCentered;
+            Preset = MinimapPreset.FollowCamera;
             FollowEntity = Entity.Null;
             _halfExtentCm = ClampHalfExtent(halfExtentCm);
+            RotateWithCamera = rotateWithCamera;
             _viewportInitialized = true;
         }
 
@@ -483,7 +486,7 @@ namespace Ludots.Core.Presentation.Minimap
                 return;
             }
 
-            if (Preset == MinimapPreset.CameraCentered)
+            if (Preset == MinimapPreset.FollowCamera)
             {
                 Vector2 cameraTarget = engine.GameSession.Camera.State.TargetCm;
                 _centerXcm = cameraTarget.X;
@@ -534,7 +537,15 @@ namespace Ludots.Core.Presentation.Minimap
                 Vector4 color = markers.GetColor(i);
                 float size = markers.GetSizePx(i);
                 uint flags = markers.GetFlags(i);
-                if (screenMarkers.TryAdd(stableId, screenX, screenY, in color, size, flags))
+                float orientationRad = 0f;
+                float orientationLengthPx = 0f;
+                if ((flags & MinimapMarkerFlags.HasOrientation) != 0u)
+                {
+                    orientationRad = ProjectOrientationToScreen(markers.GetOrientationRad(i));
+                    orientationLengthPx = markers.GetOrientationLengthPx(i);
+                }
+
+                if (screenMarkers.TryAdd(stableId, screenX, screenY, in color, size, flags, orientationRad, orientationLengthPx))
                 {
                     _visibleMarkerCount++;
                     if (_debugVisibleMarkers.Count < DebugVisibleMarkerCapacity)
@@ -547,10 +558,20 @@ namespace Ludots.Core.Presentation.Minimap
                             normalizedY,
                             color,
                             size,
+                            orientationRad,
+                            orientationLengthPx,
                             flags));
                     }
                 }
             }
+        }
+
+        private float ProjectOrientationToScreen(float worldOrientationRad)
+        {
+            Vector2 direction = new(MathF.Cos(worldOrientationRad), MathF.Sin(worldOrientationRad));
+            float localRight = Vector2.Dot(direction, _mapRight);
+            float localUp = Vector2.Dot(direction, _mapUp);
+            return MathF.Atan2(-localUp, localRight);
         }
 
         private static int ComposeMarkerStableId(int stableId)
@@ -1105,7 +1126,7 @@ namespace Ludots.Core.Presentation.Minimap
             return Preset switch
             {
                 MinimapPreset.RtsFullMap => RotateWithCamera ? "RTS Rot" : "RTS North",
-                MinimapPreset.CameraCentered => RotateWithCamera ? "Camera Rot" : "Camera North",
+                MinimapPreset.FollowCamera => RotateWithCamera ? "Camera Rot" : "Camera North",
                 _ => RotateWithCamera ? "Follow Rot" : "Follow North",
             };
         }

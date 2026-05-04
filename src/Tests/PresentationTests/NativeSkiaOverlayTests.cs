@@ -90,6 +90,7 @@ public sealed class NativeSkiaOverlayTests
         Assert.That(topMarkers[0].X, Is.EqualTo(144f));
         Assert.That(topMarkers[0].Y, Is.EqualTo(152f));
         Assert.That(topMarkers[0].Width, Is.EqualTo(8f));
+        Assert.That(topMarkers[0].Value0, Is.EqualTo(0f));
         Assert.That(topLines[0].Kind, Is.EqualTo(PresentationOverlayItemKind.Line));
         Assert.That(topLines[0].X, Is.EqualTo(112f));
         Assert.That(topLines[0].Y, Is.EqualTo(120f));
@@ -376,6 +377,36 @@ public sealed class NativeSkiaOverlayTests
 
         Assert.That(CountOpaquePixels(bitmap, 16, 16, 240, 100), Is.GreaterThan(1200));
         Assert.That(CountPixelsNear(bitmap, new SKColor(0, 255, 191, 255), 16, 16, 240, 100, tolerance: 10), Is.GreaterThan(600));
+    }
+
+    [Test]
+    public void SkiaOverlayRenderer_DrawsMinimapMarkerOrientationWithExpectedColor()
+    {
+        var scene = new PresentationOverlayScene(16);
+        scene.BeginBuild();
+        scene.TryAddMinimapMarker(
+            PresentationOverlayLayer.TopMost,
+            x: 40f,
+            y: 48f,
+            sizePx: 14f,
+            color: new Vector4(1f, 0.2f, 0.05f, 1f),
+            stableId: 404,
+            flags: MinimapMarkerFlags.HasOrientation,
+            orientationRad: 0f,
+            orientationLengthPx: 34f);
+        scene.EndBuild();
+
+        using var renderer = new SkiaOverlayRenderer();
+        using var surface = SKSurface.Create(new SKImageInfo(96, 96));
+        surface.Canvas.Clear(SKColors.Transparent);
+
+        renderer.Render(scene, surface.Canvas, PresentationOverlayLayer.TopMost);
+
+        using var image = surface.Snapshot();
+        using var bitmap = SKBitmap.FromImage(image);
+
+        Assert.That(CountOpaquePixels(bitmap, 34, 42, 80, 55), Is.GreaterThan(130));
+        Assert.That(CountPixelsNear(bitmap, new SKColor(255, 51, 13, 255), 54, 45, 78, 51, tolerance: 18), Is.GreaterThan(16));
     }
 
     [Test]

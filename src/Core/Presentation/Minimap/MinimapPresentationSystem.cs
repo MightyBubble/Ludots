@@ -107,7 +107,7 @@ namespace Ludots.Core.Presentation.Minimap
             {
                 if (_runtime.Preset == MinimapPreset.RtsFullMap)
                 {
-                    _runtime.UseCameraCenteredPreset();
+                    _runtime.UseFollowCameraPreset();
                 }
                 else
                 {

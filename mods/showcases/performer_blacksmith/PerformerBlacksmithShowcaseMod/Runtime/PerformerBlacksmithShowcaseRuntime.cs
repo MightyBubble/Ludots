@@ -106,7 +106,8 @@ namespace PerformerBlacksmithShowcaseMod.Runtime
             !ReadEnvBool(ForceBenchmarkUiEnvKey);
 
         public bool SuppressHostDebugGuides => _activeEngine != null &&
-            PerformerBlacksmithShowcaseIds.IsShowcaseMap(_activeEngine.CurrentMapSession?.MapId.Value);
+            PerformerBlacksmithShowcaseIds.IsShowcaseMap(_activeEngine.CurrentMapSession?.MapId.Value) &&
+            !PerformerBlacksmithShowcaseIds.IsMinimapMarkerLargeWorldShowcaseMap(_activeEngine.CurrentMapSession?.MapId.Value);
 
         public int ScatterMin => ScatterMinTotal;
 
@@ -456,7 +457,6 @@ namespace PerformerBlacksmithShowcaseMod.Runtime
         {
             return IsMeshBenchmarkMode(engine) ||
                    IsDynamicWorkerBenchmarkMode(engine) ||
-                   IsMinimapMarkerShowcaseMode(engine) ||
                    IsScatterBenchmarkMode(engine) ||
                    IsScatterHudBarBenchmarkMode(engine) ||
                    IsScatterHudTextBenchmarkMode(engine) ||

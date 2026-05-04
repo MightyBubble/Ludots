@@ -262,7 +262,11 @@ namespace Ludots.Tests.Presentation
                           "sizePx": 8.0,
                           "colorParamKey": 21,
                           "sizeParamKey": 22,
-                          "visibilityParamKey": 23
+                          "visibilityParamKey": 23,
+                          "orientationMode": "ParamRadians",
+                          "orientationParamKey": 24,
+                          "orientationOffsetRad": 0.25,
+                          "orientationLengthPx": 15.0
                         }
                       }
                     ]
@@ -286,6 +290,10 @@ namespace Ludots.Tests.Presentation
             Assert.That(definition.Behaviors[0].MinimapMarker.ColorParamKey, Is.EqualTo(21));
             Assert.That(definition.Behaviors[0].MinimapMarker.SizeParamKey, Is.EqualTo(22));
             Assert.That(definition.Behaviors[0].MinimapMarker.VisibilityParamKey, Is.EqualTo(23));
+            Assert.That(definition.Behaviors[0].MinimapMarker.OrientationMode, Is.EqualTo(MinimapMarkerOrientationMode.ParamRadians));
+            Assert.That(definition.Behaviors[0].MinimapMarker.OrientationParamKey, Is.EqualTo(24));
+            Assert.That(definition.Behaviors[0].MinimapMarker.OrientationOffsetRad, Is.EqualTo(0.25f));
+            Assert.That(definition.Behaviors[0].MinimapMarker.OrientationLengthPx, Is.EqualTo(15f));
         }
 
         [Test]
@@ -333,6 +341,75 @@ namespace Ludots.Tests.Presentation
             Assert.DoesNotThrow(() => loader.Load(catalog));
 
             Assert.That(registry.GetId("bad_marker"), Is.EqualTo(0));
+            Assert.That(registry.TryGet(registry.GetId("good_marker"), out var good), Is.True);
+            Assert.That(good.Behaviors[0].Kind, Is.EqualTo(BehaviorKind.MinimapMarker));
+        }
+
+        [Test]
+        public void Load_SkipsInvalidMinimapMarkerOrientationWithoutDefaultingToAssetBinding()
+        {
+            WriteCatalog();
+            WritePerformers(
+                """
+                [
+                  {
+                    "id": "bad_orientation",
+                    "behaviors": [
+                      {
+                        "slot": 0,
+                        "kind": "MinimapMarker",
+                        "minimapMarker": {
+                          "shape": "Circle",
+                          "color": [1.0, 0.0, 0.0, 1.0],
+                          "sizePx": 8.0,
+                          "orientationMode": "EntityYaw",
+                          "orientationParamKey": 11,
+                          "orientationLengthPx": 12.0
+                        }
+                      }
+                    ]
+                  },
+                  {
+                    "id": "bad_missing_key",
+                    "behaviors": [
+                      {
+                        "slot": 0,
+                        "kind": "MinimapMarker",
+                        "minimapMarker": {
+                          "shape": "Circle",
+                          "color": [1.0, 0.0, 0.0, 1.0],
+                          "sizePx": 8.0,
+                          "orientationMode": "ParamDegrees",
+                          "orientationLengthPx": 12.0
+                        }
+                      }
+                    ]
+                  },
+                  {
+                    "id": "good_marker",
+                    "behaviors": [
+                      {
+                        "slot": 0,
+                        "kind": "MinimapMarker",
+                        "minimapMarker": {
+                          "shape": "Circle",
+                          "color": [0.0, 1.0, 0.0, 1.0],
+                          "sizePx": 6.0
+                        }
+                      }
+                    ]
+                  }
+                ]
+                """);
+
+            var (_, _, pipeline, catalog) = BuildPipeline();
+            var registry = new PerformerDefinitionRegistry();
+            var loader = new PerformerDefinitionConfigLoader(pipeline, registry);
+
+            Assert.DoesNotThrow(() => loader.Load(catalog));
+
+            Assert.That(registry.GetId("bad_orientation"), Is.EqualTo(0));
+            Assert.That(registry.GetId("bad_missing_key"), Is.EqualTo(0));
             Assert.That(registry.TryGet(registry.GetId("good_marker"), out var good), Is.True);
             Assert.That(good.Behaviors[0].Kind, Is.EqualTo(BehaviorKind.MinimapMarker));
         }

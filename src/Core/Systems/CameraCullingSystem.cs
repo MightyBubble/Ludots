@@ -461,6 +461,7 @@ namespace Ludots.Core.Systems
             const float targetEpsilonSq = 1f;
             return MathF.Abs(_lastStaticCullAspectRatio - aspectRatio) > scalarEpsilon ||
                    Vector2.DistanceSquared(_lastStaticCullCameraState.TargetCm, state.TargetCm) > targetEpsilonSq ||
+                   MathF.Abs(_lastStaticCullCameraState.TargetHeightCm - state.TargetHeightCm) > scalarEpsilon ||
                    MathF.Abs(AngleDeltaDeg(_lastStaticCullCameraState.Yaw, state.Yaw)) > scalarEpsilon ||
                    MathF.Abs(_lastStaticCullCameraState.Pitch - state.Pitch) > scalarEpsilon ||
                    MathF.Abs(_lastStaticCullCameraState.DistanceCm - state.DistanceCm) > scalarEpsilon ||

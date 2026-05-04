@@ -128,6 +128,9 @@
   {
     "id": "blacksmith_minimap_marker_ball",
     "defaultColor": [1.0, 0.24, 0.06, 1.0],
+    "bindings": [
+      { "paramKey": 110, "source": "facingRadians" }
+    ],
     "behaviors": [
       {
         "slot": 0,
@@ -162,7 +165,11 @@
           "sizePx": 11.0,
           "colorParamKey": -1,
           "sizeParamKey": -1,
-          "visibilityParamKey": -1
+          "visibilityParamKey": -1,
+          "orientationMode": "ParamRadians",
+          "orientationParamKey": 110,
+          "orientationOffsetRad": 0.0,
+          "orientationLengthPx": 15.0
         }
       }
     ]

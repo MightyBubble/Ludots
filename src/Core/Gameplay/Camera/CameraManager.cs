@@ -2,6 +2,7 @@ using System;
 using System.Numerics;
 using Ludots.Core.Input.Runtime;
 using Ludots.Core.Mathematics;
+using Ludots.Core.Presentation.Terrain;
 
 namespace Ludots.Core.Gameplay.Camera
 {
@@ -21,6 +22,7 @@ namespace Ludots.Core.Gameplay.Camera
         private string _controllerCameraId = string.Empty;
         private long _lastCapturedInputRevision = -1;
         private Func<WorldAabbCm>? _targetBoundsProvider;
+        private Func<IVisualHeightmap?>? _visualHeightmapProvider;
         private bool _userInputSuppressed;
 
         /// <summary>
@@ -52,11 +54,13 @@ namespace Ludots.Core.Gameplay.Camera
         public void ConfigureRuntime(
             PlayerInputHandler input,
             Presentation.Camera.IViewController view,
-            Func<WorldAabbCm>? targetBoundsProvider = null)
+            Func<WorldAabbCm>? targetBoundsProvider = null,
+            Func<IVisualHeightmap?>? visualHeightmapProvider = null)
         {
             _liveInput = input ?? throw new ArgumentNullException(nameof(input));
             _runtimeContext = new CameraBehaviorContext(_logicInput, view ?? throw new ArgumentNullException(nameof(view)));
             _targetBoundsProvider = targetBoundsProvider;
+            _visualHeightmapProvider = visualHeightmapProvider;
             InvalidateController();
             ResetInputTracking();
             CaptureVisualInput(force: true);
@@ -214,6 +218,7 @@ namespace Ludots.Core.Gameplay.Camera
                 return;
             }
 
+            ApplyActiveVirtualCameraBoundsAndHeight();
             VirtualCameraBrain.ApplyToState(State, _logicInput, dt);
             var activeDefinition = VirtualCameraBrain.ActiveDefinition;
             bool allowsUserInput = VirtualCameraBrain.AllowsInput && !_userInputSuppressed;
@@ -234,13 +239,16 @@ namespace Ludots.Core.Gameplay.Camera
                 }
             }
 
-            if (ApplyWorldBoundsConfine(activeDefinition))
+            if (runtimeStateNeedsCapture && VirtualCameraBrain.AllowsInput)
             {
-                runtimeStateNeedsCapture = true;
-            }
-
-            if (runtimeStateNeedsCapture)
-            {
+                ApplyWorldBoundsConfineToState(activeDefinition);
+                ApplyTargetHeightToState(activeDefinition);
+                VirtualCameraBrain.ApplyPose(new CameraPoseRequest
+                {
+                    VirtualCameraId = activeDefinition?.Id ?? string.Empty,
+                    TargetCm = State.TargetCm,
+                    TargetHeightCm = State.TargetHeightCm
+                });
                 VirtualCameraBrain.CapturePostControllerState(State);
             }
 
@@ -360,8 +368,12 @@ namespace Ludots.Core.Gameplay.Camera
             _lastCapturedInputRevision = -1;
         }
 
-        private bool ApplyWorldBoundsConfine(VirtualCameraDefinition? definition)
+        private bool TryResolveWorldBoundsConfine(
+            VirtualCameraDefinition? definition,
+            Vector2 targetCm,
+            out Vector2 clamped)
         {
+            clamped = targetCm;
             if (definition == null ||
                 !definition.ConfineTargetToWorldBounds ||
                 _targetBoundsProvider == null)
@@ -370,17 +382,89 @@ namespace Ludots.Core.Gameplay.Camera
             }
 
             WorldAabbCm bounds = ExpandBounds(_targetBoundsProvider(), definition.ConfinePaddingCm);
-            var clamped = new Vector2(
-                Math.Clamp(State.TargetCm.X, bounds.Left, bounds.Right),
-                Math.Clamp(State.TargetCm.Y, bounds.Top, bounds.Bottom));
+            clamped = new Vector2(
+                Math.Clamp(targetCm.X, bounds.Left, bounds.Right),
+                Math.Clamp(targetCm.Y, bounds.Top, bounds.Bottom));
 
-            if (Vector2.DistanceSquared(clamped, State.TargetCm) <= 0.0001f)
+            return Vector2.DistanceSquared(clamped, targetCm) > 0.0001f;
+        }
+
+        private bool ApplyWorldBoundsConfineToState(VirtualCameraDefinition? definition)
+        {
+            if (!TryResolveWorldBoundsConfine(definition, State.TargetCm, out Vector2 clamped))
             {
                 return false;
             }
 
             State.TargetCm = clamped;
             return true;
+        }
+
+        private void ApplyTargetHeightToState(VirtualCameraDefinition? definition)
+        {
+            State.TargetHeightCm = ResolveTargetHeight(definition, State.TargetCm);
+        }
+
+        private void ApplyActiveVirtualCameraBoundsAndHeight()
+        {
+            if (VirtualCameraBrain == null ||
+                !VirtualCameraBrain.TryGetActiveRuntimeTarget(_logicInput, out var definition, out Vector2 targetCm))
+            {
+                return;
+            }
+
+            if (TryResolveWorldBoundsConfine(definition, targetCm, out Vector2 clampedTargetCm))
+            {
+                targetCm = clampedTargetCm;
+                VirtualCameraBrain.SetActiveRuntimeTarget(targetCm);
+            }
+
+            float targetHeightCm = ResolveTargetHeight(definition, targetCm);
+            VirtualCameraBrain.SetActiveRuntimeTargetHeight(targetHeightCm);
+        }
+
+        private float ResolveTargetHeight(VirtualCameraDefinition? definition, Vector2 targetCm)
+        {
+            if (definition == null)
+            {
+                return 0f;
+            }
+
+            float targetHeightCm = definition.TargetHeightMode switch
+            {
+                VirtualCameraTargetHeightMode.Flat => definition.TargetHeightOffsetCm,
+                VirtualCameraTargetHeightMode.VisualHeightmap => SampleRequiredVisualHeightmapHeight(definition, targetCm) + definition.TargetHeightOffsetCm,
+                _ => throw new InvalidOperationException($"Virtual camera '{definition.Id}' declares unsupported target height mode '{definition.TargetHeightMode}'."),
+            };
+
+            if (!float.IsFinite(targetHeightCm))
+            {
+                throw new InvalidOperationException($"Virtual camera '{definition.Id}' resolved a non-finite target height.");
+            }
+
+            return targetHeightCm;
+        }
+
+        private float SampleRequiredVisualHeightmapHeight(VirtualCameraDefinition definition, Vector2 targetCm)
+        {
+            IVisualHeightmap? heightmap = _visualHeightmapProvider?.Invoke();
+            if (heightmap == null)
+            {
+                throw new InvalidOperationException(
+                    $"Virtual camera '{definition.Id}' requires CoreServiceKeys.VisualHeightmap for target height, but no focused map visual heightmap service is bound.");
+            }
+
+            if (!heightmap.TrySampleHeightCm(
+                    targetCm.X,
+                    targetCm.Y,
+                    out float heightCm,
+                    definition.TargetHeightLayerIndex))
+            {
+                throw new InvalidOperationException(
+                    $"Virtual camera '{definition.Id}' could not sample VisualHeightmap target height at ({targetCm.X}, {targetCm.Y}) cm on layer {definition.TargetHeightLayerIndex}.");
+            }
+
+            return heightCm;
         }
 
         private static WorldAabbCm ExpandBounds(WorldAabbCm bounds, float paddingCm)
@@ -396,6 +480,7 @@ namespace Ludots.Core.Gameplay.Camera
         private static void ApplyPoseToState(CameraState state, CameraPoseRequest request)
         {
             if (request.TargetCm.HasValue) state.TargetCm = request.TargetCm.Value;
+            if (request.TargetHeightCm.HasValue) state.TargetHeightCm = request.TargetHeightCm.Value;
             if (request.Yaw.HasValue) state.Yaw = request.Yaw.Value;
             if (request.Pitch.HasValue) state.Pitch = request.Pitch.Value;
             if (request.DistanceCm.HasValue) state.DistanceCm = request.DistanceCm.Value;
@@ -405,6 +490,7 @@ namespace Ludots.Core.Gameplay.Camera
         private static void CopyState(CameraState source, CameraState destination)
         {
             destination.TargetCm = source.TargetCm;
+            destination.TargetHeightCm = source.TargetHeightCm;
             destination.Yaw = source.Yaw;
             destination.Pitch = source.Pitch;
             destination.DistanceCm = source.DistanceCm;

@@ -390,7 +390,9 @@ namespace Ludots.Core.Presentation.Hud
                     in color,
                     _minimapMarkers.GetStableId(i),
                     dirtySerial: 0,
-                    _minimapMarkers.GetFlags(i));
+                    _minimapMarkers.GetFlags(i),
+                    _minimapMarkers.GetOrientationRad(i),
+                    _minimapMarkers.GetOrientationLengthPx(i));
             }
         }
 

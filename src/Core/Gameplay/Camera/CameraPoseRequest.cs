@@ -6,6 +6,7 @@ namespace Ludots.Core.Gameplay.Camera
     {
         public string VirtualCameraId { get; set; } = string.Empty;
         public Vector2? TargetCm { get; set; }
+        public float? TargetHeightCm { get; set; }
         public float? Yaw { get; set; }
         public float? Pitch { get; set; }
         public float? DistanceCm { get; set; }

@@ -54,6 +54,7 @@ namespace PerformerBlacksmithShowcaseMod
         public const int ParamDurabilityCurrent = 107;
         public const int ParamDurabilityBase = 108;
         public const int ParamWorkerProgress = 109;
+        public const int ParamMinimapFacing = 110;
 
         public const string EffectSetDurabilityIntact = "Effect.Showcase.Blacksmith.SetDurabilityIntact";
         public const string EffectSetDurabilityDamaged = "Effect.Showcase.Blacksmith.SetDurabilityDamaged";

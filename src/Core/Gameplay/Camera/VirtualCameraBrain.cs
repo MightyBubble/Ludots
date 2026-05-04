@@ -122,10 +122,74 @@ namespace Ludots.Core.Gameplay.Camera
 
             ref var state = ref runtime.RuntimeState;
             if (request.TargetCm.HasValue) state.TargetCm = request.TargetCm.Value;
+            if (request.TargetHeightCm.HasValue) state.TargetHeightCm = request.TargetHeightCm.Value;
             if (request.Yaw.HasValue) state.Yaw = request.Yaw.Value;
             if (request.Pitch.HasValue) state.Pitch = request.Pitch.Value;
             if (request.DistanceCm.HasValue) state.DistanceCm = request.DistanceCm.Value;
             if (request.FovYDeg.HasValue) state.FovYDeg = request.FovYDeg.Value;
+            return true;
+        }
+
+        public bool TryGetActiveRuntimeTarget(
+            IInputActionReader? input,
+            out VirtualCameraDefinition? definition,
+            out Vector2 targetCm)
+        {
+            ResolveActiveCamera();
+            if (_resolved == null)
+            {
+                definition = null;
+                targetCm = default;
+                return false;
+            }
+
+            ResolveRuntimeStates(input);
+            definition = _resolved.Definition;
+            targetCm = _resolved.RuntimeState.TargetCm;
+            return true;
+        }
+
+        public bool SetActiveRuntimeTarget(Vector2 targetCm)
+        {
+            if (_resolved == null)
+            {
+                return false;
+            }
+
+            if (!float.IsFinite(targetCm.X) || !float.IsFinite(targetCm.Y))
+            {
+                throw new InvalidOperationException(
+                    $"Virtual camera '{_resolved.Definition.Id}' resolved a non-finite target.");
+            }
+
+            if (Vector2.DistanceSquared(_resolved.RuntimeState.TargetCm, targetCm) <= 0.0001f)
+            {
+                return false;
+            }
+
+            _resolved.RuntimeState.TargetCm = targetCm;
+            return true;
+        }
+
+        public bool SetActiveRuntimeTargetHeight(float targetHeightCm)
+        {
+            if (_resolved == null)
+            {
+                return false;
+            }
+
+            if (!float.IsFinite(targetHeightCm))
+            {
+                throw new InvalidOperationException(
+                    $"Virtual camera '{_resolved.Definition.Id}' resolved a non-finite target height.");
+            }
+
+            if (MathF.Abs(_resolved.RuntimeState.TargetHeightCm - targetHeightCm) <= 0.0001f)
+            {
+                return false;
+            }
+
+            _resolved.RuntimeState.TargetHeightCm = targetHeightCm;
             return true;
         }
 
@@ -323,6 +387,7 @@ namespace Ludots.Core.Gameplay.Camera
                 TargetCm = definition.TargetSource == VirtualCameraTargetSource.Fixed
                     ? definition.FixedTargetCm
                     : currentState.TargetCm,
+                TargetHeightCm = currentState.TargetHeightCm,
                 Yaw = definition.Yaw,
                 Pitch = definition.Pitch,
                 DistanceCm = definition.DistanceCm,

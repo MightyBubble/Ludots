@@ -1,5 +1,6 @@
 {
   "Id": "performer_blacksmith_minimap_marker_large_world_showcase",
+  "VisualHeightmapAsset": "assets/terrain/performer_blacksmith_dynamic_worker_large_world.vhtm",
   "Tags": ["showcase", "performer", "minimap", "large-world"],
   "Metadata": {
     "performerBlacksmith": {
@@ -24,7 +25,7 @@
     }
   ],
   "DefaultCamera": {
-    "VirtualCameraId": "Default",
+    "VirtualCameraId": "PerformerBlacksmith.Camera.LargeWorldHeightmap",
     "TargetXCm": 0,
     "TargetYCm": 0,
     "Yaw": 45,

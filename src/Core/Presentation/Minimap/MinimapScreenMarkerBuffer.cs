@@ -10,6 +10,8 @@ namespace Ludots.Core.Presentation.Minimap
         private readonly float[] _screenY;
         private readonly Vector4[] _colors;
         private readonly float[] _sizePx;
+        private readonly float[] _orientationRad;
+        private readonly float[] _orientationLengthPx;
         private readonly uint[] _flags;
         private int _count;
 
@@ -26,6 +28,8 @@ namespace Ludots.Core.Presentation.Minimap
             _screenY = new float[capacity];
             _colors = new Vector4[capacity];
             _sizePx = new float[capacity];
+            _orientationRad = new float[capacity];
+            _orientationLengthPx = new float[capacity];
             _flags = new uint[capacity];
         }
 
@@ -43,7 +47,15 @@ namespace Ludots.Core.Presentation.Minimap
             DroppedSinceClear = 0;
         }
 
-        public bool TryAdd(int stableId, float screenX, float screenY, in Vector4 color, float sizePx, uint flags = 0u)
+        public bool TryAdd(
+            int stableId,
+            float screenX,
+            float screenY,
+            in Vector4 color,
+            float sizePx,
+            uint flags = 0u,
+            float orientationRad = 0f,
+            float orientationLengthPx = 0f)
         {
             int index = _count;
             if ((uint)index >= (uint)Capacity)
@@ -59,6 +71,8 @@ namespace Ludots.Core.Presentation.Minimap
             _screenY[index] = screenY;
             _colors[index] = color;
             _sizePx[index] = sizePx;
+            _orientationRad[index] = orientationRad;
+            _orientationLengthPx[index] = orientationLengthPx;
             _flags[index] = flags;
             return true;
         }
@@ -72,6 +86,10 @@ namespace Ludots.Core.Presentation.Minimap
         public Vector4 GetColor(int index) => _colors[index];
 
         public float GetSizePx(int index) => _sizePx[index];
+
+        public float GetOrientationRad(int index) => _orientationRad[index];
+
+        public float GetOrientationLengthPx(int index) => _orientationLengthPx[index];
 
         public uint GetFlags(int index) => _flags[index];
     }

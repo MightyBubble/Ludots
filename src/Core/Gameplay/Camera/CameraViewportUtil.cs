@@ -173,7 +173,9 @@ namespace Ludots.Core.Gameplay.Camera
         public static CameraRenderState3D StateToRenderState(in CameraStateSnapshot state, RenderCameraDebugState cameraDebug = null)
         {
             Vector3 targetPos = new Vector3(
-                WorldUnits.CmToM(state.TargetCm.X), 0f, WorldUnits.CmToM(state.TargetCm.Y));
+                WorldUnits.CmToM(state.TargetCm.X),
+                WorldUnits.CmToM(state.TargetHeightCm),
+                WorldUnits.CmToM(state.TargetCm.Y));
 
             float yawRad = state.Yaw * (float)(Math.PI / 180.0);
             float pitchRad = state.Pitch * (float)(Math.PI / 180.0);

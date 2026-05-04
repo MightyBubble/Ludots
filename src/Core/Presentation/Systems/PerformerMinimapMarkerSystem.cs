@@ -123,6 +123,22 @@ namespace Ludots.Core.Presentation.Systems
 
                         Vector4 color = ResolveColor(marker, hasVectorParams, hasVectorDefaults, in vectorParams, in vectorDefaults, i);
                         float sizePx = ResolveSize(marker, hasFloatParams, hasFloatDefaults, in floatParams, in floatDefaults, i);
+                        uint flags = 0u;
+                        float orientationRad = 0f;
+                        float orientationLengthPx = 0f;
+                        if (TryResolveOrientation(
+                                marker,
+                                hasFloatParams,
+                                hasFloatDefaults,
+                                in floatParams,
+                                in floatDefaults,
+                                i,
+                                out orientationRad,
+                                out orientationLengthPx))
+                        {
+                            flags |= MinimapMarkerFlags.HasOrientation;
+                        }
+
                         Vector3 worldPosition = positions[i].Value;
                         int stableId = PerformerBehaviorRuntimeUtility.ComposeBehaviorStableId(state.StableId, slot.SlotIndex);
                         Markers.TryAddThreadSafe(
@@ -130,7 +146,10 @@ namespace Ludots.Core.Presentation.Systems
                             worldPosition.X * 100f,
                             worldPosition.Z * 100f,
                             in color,
-                            sizePx);
+                            sizePx,
+                            flags,
+                            orientationRad,
+                            orientationLengthPx);
                     }
                 }
             }
@@ -234,6 +253,52 @@ namespace Ludots.Core.Presentation.Systems
             }
 
             return marker.SizePx;
+        }
+
+        private static bool TryResolveOrientation(
+            in MinimapMarkerConfig marker,
+            bool hasFloatParams,
+            bool hasFloatDefaults,
+            in Span<PerformerFloatParams> floatParams,
+            in Span<PerformerFloatDefaults> floatDefaults,
+            int index,
+            out float orientationRad,
+            out float orientationLengthPx)
+        {
+            orientationRad = 0f;
+            orientationLengthPx = 0f;
+            if (marker.OrientationMode == MinimapMarkerOrientationMode.None)
+            {
+                return false;
+            }
+
+            float value;
+            if (hasFloatParams && floatParams[index].TryGet(marker.OrientationParamKey, out float paramValue))
+            {
+                value = paramValue;
+            }
+            else if (hasFloatDefaults && floatDefaults[index].TryGet(marker.OrientationParamKey, out float defaultValue))
+            {
+                value = defaultValue;
+            }
+            else
+            {
+                return false;
+            }
+
+            if (!float.IsFinite(value))
+            {
+                return false;
+            }
+
+            orientationRad = marker.OrientationMode == MinimapMarkerOrientationMode.ParamDegrees
+                ? value * (MathF.PI / 180f)
+                : value;
+            orientationRad += marker.OrientationOffsetRad;
+            orientationLengthPx = marker.OrientationLengthPx;
+            return float.IsFinite(orientationRad) &&
+                float.IsFinite(orientationLengthPx) &&
+                orientationLengthPx > 0f;
         }
     }
 }

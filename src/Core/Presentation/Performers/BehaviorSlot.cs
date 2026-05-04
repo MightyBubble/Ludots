@@ -171,6 +171,13 @@ namespace Ludots.Core.Presentation.Performers
         Circle = 1,
     }
 
+    public enum MinimapMarkerOrientationMode : byte
+    {
+        None = 0,
+        ParamRadians = 1,
+        ParamDegrees = 2,
+    }
+
     public struct MinimapMarkerConfig
     {
         public MinimapMarkerShape Shape;
@@ -179,5 +186,9 @@ namespace Ludots.Core.Presentation.Performers
         public int ColorParamKey;
         public int SizeParamKey;
         public int VisibilityParamKey;
+        public MinimapMarkerOrientationMode OrientationMode;
+        public int OrientationParamKey;
+        public float OrientationOffsetRad;
+        public float OrientationLengthPx;
     }
 }

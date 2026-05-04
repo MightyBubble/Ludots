@@ -15,6 +15,8 @@ namespace Ludots.Core.Gameplay.Camera
         /// </summary>
         public Vector2 TargetCm { get; set; }
 
+        public float TargetHeightCm { get; set; }
+
         /// <summary>
         /// Horizontal rotation in degrees (or fixed point).
         /// </summary>
