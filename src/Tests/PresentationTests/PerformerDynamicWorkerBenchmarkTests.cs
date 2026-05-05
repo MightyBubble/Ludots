@@ -284,8 +284,13 @@ namespace Ludots.Tests.Presentation
                 markerDefinitionId,
                 out int ownerVisualRows,
                 out int ownerPayloadRows,
+                out int ownerPayloadTransformSyncRows,
+                out int ownerPerformerPlaneSyncRows,
+                out int ownerPerformerFacingSyncRows,
                 out int ownerVisibleRows,
                 out int rootPerformerRows,
+                out int rootTransformSyncRows,
+                out int rootOwnerPayloadTransformSyncRows,
                 out int rootStaticRows,
                 out int rootDirtyRows,
                 out int rootOwnerCullVisibleRows,
@@ -308,12 +313,17 @@ namespace Ludots.Tests.Presentation
             {
                 Assert.That(ownerVisualRows, Is.EqualTo(expectedMarkers), "Every minimap marker ball owner must carry the production VisualTransform path.");
                 Assert.That(ownerPayloadRows, Is.EqualTo(expectedMarkers), "Every minimap marker ball owner must be linked to its performer payload for hot culling.");
+                Assert.That(ownerPayloadTransformSyncRows, Is.EqualTo(expectedMarkers), "Every minimap marker ball owner payload must opt into the production single-root transform sync lane.");
+                Assert.That(ownerPerformerPlaneSyncRows, Is.EqualTo(expectedMarkers), "Every moving marker owner must be the transform SSOT consumed by its performer.");
+                Assert.That(ownerPerformerFacingSyncRows, Is.EqualTo(expectedMarkers), "Every moving marker owner facing must be the facing SSOT consumed by its performer.");
                 Assert.That(rootPerformerRows, Is.EqualTo(expectedMarkers), "Every authored ball entity must create the authored MinimapMarker performer.");
+                Assert.That(rootTransformSyncRows, Is.EqualTo(expectedMarkers), "Every marker performer must stay on the production transform sync tick path.");
+                Assert.That(rootOwnerPayloadTransformSyncRows, Is.EqualTo(expectedMarkers), "The large batch path must keep the explicit owner-payload transform sync marker.");
                 Assert.That(rootStaticRows, Is.EqualTo(0), "Marker balls are movable performer visuals, not static StableDrawCache impostors.");
                 Assert.That(markerMovementRows, Is.EqualTo(expectedMarkers), "Every marker ball must opt into the dedicated movement tag.");
                 Assert.That(dynamicWorkerTagRows, Is.EqualTo(0), "Marker balls must not reuse the dynamic worker movement tag.");
                 Assert.That(staticTransformRows, Is.EqualTo(0), "Marker balls must stay on the movable VisualTransform/heightmap path.");
-                Assert.That(movedRows, Is.GreaterThan(0), "Marker balls must move through the generic world-position performer chain.");
+                Assert.That(movedRows, Is.EqualTo(expectedMarkers), "All marker balls must move through the generic world-position performer chain.");
                 Assert.That(maxDisplacementCm, Is.GreaterThan(3f), "Marker balls must advance through the configured slow movement path and be readable over sustained frames.");
                 Assert.That(sampledRows, Is.EqualTo(expectedMarkers), "Marker balls must sample the visual heightmap so the scene, not the minimap, shows terrain relief.");
                 Assert.That(finiteFacingRows, Is.EqualTo(expectedMarkers), "Marker balls must expose finite 2D facing for primitive and minimap orientation.");
@@ -1050,8 +1060,13 @@ namespace Ludots.Tests.Presentation
             int markerDefinitionId,
             out int ownerVisualRows,
             out int ownerPayloadRows,
+            out int ownerPayloadTransformSyncRows,
+            out int ownerPerformerPlaneSyncRows,
+            out int ownerPerformerFacingSyncRows,
             out int ownerVisibleRows,
             out int rootPerformerRows,
+            out int rootTransformSyncRows,
+            out int rootOwnerPayloadTransformSyncRows,
             out int rootStaticRows,
             out int rootDirtyRows,
             out int rootOwnerCullVisibleRows,
@@ -1059,9 +1074,12 @@ namespace Ludots.Tests.Presentation
         {
             int ownersWithVisual = 0;
             int ownersWithPayload = 0;
+            int ownersWithPayloadTransformSync = 0;
+            int ownersWithSyncedPerformerPlane = 0;
+            int ownersWithSyncedPerformerFacing = 0;
             int ownersVisible = 0;
-            var ownerQuery = new QueryDescription().WithAll<Name, VisualTransform, CullState>();
-            engine.World.Query(in ownerQuery, (Entity entity, ref Name name, ref CullState cull) =>
+            var ownerQuery = new QueryDescription().WithAll<Name, WorldPositionCm, VisualTransform, CullState, FacingDirection>();
+            engine.World.Query(in ownerQuery, (Entity entity, ref Name name, ref WorldPositionCm worldPosition, ref CullState cull, ref FacingDirection facing) =>
             {
                 if (!string.Equals(name.Value, PerformerBlacksmithShowcaseIds.MinimapMarkerBallEntityName, StringComparison.Ordinal))
                 {
@@ -1072,6 +1090,38 @@ namespace Ludots.Tests.Presentation
                 if (engine.World.Has<PresentationOwnerHasPerformerPayload>(entity))
                 {
                     ownersWithPayload++;
+                    ref readonly PresentationOwnerHasPerformerPayload payload = ref engine.World.Get<PresentationOwnerHasPerformerPayload>(entity);
+                    if (payload.SingleRootTransformSync != 0)
+                    {
+                        ownersWithPayloadTransformSync++;
+                    }
+
+                    Entity performer = payload.SingleRootPerformer;
+                    if (performer != Entity.Null &&
+                        engine.World.IsAlive(performer) &&
+                        engine.World.Has<PerformerState>(performer) &&
+                        engine.World.Get<PerformerState>(performer).DefId == markerDefinitionId)
+                    {
+                        if (engine.World.Has<PerformerWorldPlanePosition>(performer))
+                        {
+                            Vector2 ownerPlaneCm = worldPosition.Value.ToVector2();
+                            Vector2 performerPlaneCm = engine.World.Get<PerformerWorldPlanePosition>(performer).ValueCm;
+                            if (Vector2.DistanceSquared(ownerPlaneCm, performerPlaneCm) <= 0.0001f)
+                            {
+                                ownersWithSyncedPerformerPlane++;
+                            }
+                        }
+
+                        if (engine.World.Has<PerformerWorldFacing>(performer))
+                        {
+                            PerformerWorldFacing performerFacing = engine.World.Get<PerformerWorldFacing>(performer);
+                            if (performerFacing.HasValue != 0 &&
+                                WorldPlane2D.AngleDistanceRad(performerFacing.AngleRad, facing.AngleRad) <= 0.0005f)
+                            {
+                                ownersWithSyncedPerformerFacing++;
+                            }
+                        }
+                    }
                 }
 
                 if (cull.IsVisible)
@@ -1081,6 +1131,8 @@ namespace Ludots.Tests.Presentation
             });
 
             int roots = 0;
+            int transformSyncRoots = 0;
+            int ownerPayloadTransformSyncRoots = 0;
             int staticRoots = 0;
             int dirtyRoots = 0;
             int ownerCullVisibleRoots = 0;
@@ -1094,6 +1146,16 @@ namespace Ludots.Tests.Presentation
                 }
 
                 roots++;
+                if (engine.World.Has<PerfTransformSyncTick>(entity))
+                {
+                    transformSyncRoots++;
+                }
+
+                if (engine.World.Has<PerfOwnerPayloadTransformSync>(entity))
+                {
+                    ownerPayloadTransformSyncRoots++;
+                }
+
                 if (engine.World.Has<PerfStaticStableVisual>(entity))
                 {
                     staticRoots++;
@@ -1117,8 +1179,13 @@ namespace Ludots.Tests.Presentation
 
             ownerVisualRows = ownersWithVisual;
             ownerPayloadRows = ownersWithPayload;
+            ownerPayloadTransformSyncRows = ownersWithPayloadTransformSync;
+            ownerPerformerPlaneSyncRows = ownersWithSyncedPerformerPlane;
+            ownerPerformerFacingSyncRows = ownersWithSyncedPerformerFacing;
             ownerVisibleRows = ownersVisible;
             rootPerformerRows = roots;
+            rootTransformSyncRows = transformSyncRoots;
+            rootOwnerPayloadTransformSyncRows = ownerPayloadTransformSyncRoots;
             rootStaticRows = staticRoots;
             rootDirtyRows = dirtyRoots;
             rootOwnerCullVisibleRows = ownerCullVisibleRoots;

@@ -52,13 +52,11 @@ namespace PerformerBlacksmithShowcaseMod.Systems
             foreach (ref var chunk in World.Query(in WorkerQuery))
             {
                 Span<WorldPositionCm> positions = chunk.GetSpan<WorldPositionCm>();
-                Span<PreviousWorldPositionCm> previousPositions = chunk.GetSpan<PreviousWorldPositionCm>();
                 Span<FacingDirection> facings = chunk.GetSpan<FacingDirection>();
 
                 foreach (int index in chunk)
                 {
                     ref WorldPositionCm position = ref positions[index];
-                    previousPositions[index] = new PreviousWorldPositionCm { Value = position.Value };
 
                     float x = position.Value.X.ToFloat();
                     float y = position.Value.Y.ToFloat();

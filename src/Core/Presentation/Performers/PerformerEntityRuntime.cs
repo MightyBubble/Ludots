@@ -2963,6 +2963,7 @@ namespace Ludots.Core.Presentation.Performers
                     {
                         Count = 1,
                         SingleRootPerformer = performers[index],
+                        SingleRootTransformSync = CanUseOwnerPayloadTransformSync(performers[index]) ? (byte)1 : (byte)0,
                     };
                 }
 

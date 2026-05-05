@@ -12,6 +12,7 @@
 - [实体仿真阶段验收](entity-simulation-uat.md)
 - [UAT 可玩 Showcase 矩阵](uat-playable-showcase-matrix.md)
 - [Prefab Grounding 与 Visual Height](prefab-grounding-and-visual-height.md)
+- [Core Minimap Authoring](core-minimap-authoring.md)
 - [Performer-as-Actor 架构总览](performer-as-actor-architecture.md)
 - [Performer 参数黑板与 Animator 统一](performer-param-blackboard.md)
 - [Performer Transform、Grounding 与 Attachment](performer-transform-and-attachment.md)

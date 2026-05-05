@@ -13,8 +13,8 @@
       "minimapMarkerVisibleClusterRadiusCm": 9000.0,
       "minimapMarkerScatterSeed": 129135,
       "minimapMarkerMovementPaddingCm": 64000.0,
-      "minimapMarkerMovementSpeedCmPerSecond": 420.0,
-      "minimapMarkerMovementTurnPeriodSeconds": 11.0
+      "minimapMarkerMovementSpeedCmPerSecond": 1800.0,
+      "minimapMarkerMovementTurnPeriodSeconds": 7.0
     }
   },
   "Boards": [
