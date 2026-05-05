@@ -107,12 +107,12 @@ namespace Ludots.Core.Spatial
         private sealed class Chunk
         {
             private readonly int _size;
-            private readonly List<Entity>[] _cells;
+            private readonly CellList[] _cells;
 
             public Chunk(int size)
             {
                 _size = size;
-                _cells = new List<Entity>[size * size];
+                _cells = new CellList[size * size];
             }
 
             public void Clear()
@@ -126,12 +126,13 @@ namespace Ludots.Core.Spatial
             public void Add(Entity entity, int localX, int localY)
             {
                 int idx = (localY * _size) + localX;
-                var list = _cells[idx];
+                CellList? list = _cells[idx];
                 if (list == null)
                 {
-                    list = new List<Entity>(4);
+                    list = new CellList();
                     _cells[idx] = list;
                 }
+
                 list.Add(entity);
             }
 
@@ -141,11 +142,62 @@ namespace Ludots.Core.Spatial
                 _cells[idx]?.Remove(entity);
             }
 
-            public List<Entity> GetCellList(int localX, int localY)
+            public IReadOnlyList<Entity> GetCellList(int localX, int localY)
             {
                 int idx = (localY * _size) + localX;
                 return _cells[idx];
             }
+        }
+
+        private sealed class CellList : IReadOnlyList<Entity>
+        {
+            private readonly List<Entity> _entities = new(4);
+            private readonly Dictionary<Entity, int> _indices = new(4);
+
+            public int Count => _entities.Count;
+
+            public Entity this[int index] => _entities[index];
+
+            public void Add(Entity entity)
+            {
+                if (_indices.ContainsKey(entity))
+                {
+                    return;
+                }
+
+                _indices[entity] = _entities.Count;
+                _entities.Add(entity);
+            }
+
+            public void Remove(Entity entity)
+            {
+                if (!_indices.TryGetValue(entity, out int index))
+                {
+                    return;
+                }
+
+                int lastIndex = _entities.Count - 1;
+                Entity last = _entities[lastIndex];
+                _entities[index] = last;
+                _entities.RemoveAt(lastIndex);
+                _indices.Remove(entity);
+                if (index != lastIndex)
+                {
+                    _indices[last] = index;
+                }
+            }
+
+            public void Clear()
+            {
+                _entities.Clear();
+                _indices.Clear();
+            }
+
+            public List<Entity>.Enumerator GetEnumerator() => _entities.GetEnumerator();
+
+            System.Collections.Generic.IEnumerator<Entity> System.Collections.Generic.IEnumerable<Entity>.GetEnumerator() => _entities.GetEnumerator();
+
+            System.Collections.IEnumerator System.Collections.IEnumerable.GetEnumerator() => _entities.GetEnumerator();
         }
     }
 }

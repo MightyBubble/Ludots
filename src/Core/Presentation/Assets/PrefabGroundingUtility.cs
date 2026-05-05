@@ -1,5 +1,6 @@
 using System;
 using System.Numerics;
+using Ludots.Core.Mathematics;
 using Ludots.Core.Presentation.Terrain;
 using Ludots.Platform.Abstractions;
 
@@ -213,9 +214,9 @@ namespace Ludots.Core.Presentation.Assets
 
         private static Quaternion AlignUpToNormal(Quaternion rotation, Vector3 targetNormal)
         {
-            Vector3 currentUp = Vector3.Transform(Vector3.UnitY, PrefabTransformUtility.NormalizeOrIdentity(rotation));
+            Vector3 currentUp = Vector3.Transform(Vector3.UnitY, WorldPlane2D.NormalizeOrIdentity(rotation));
             Quaternion alignment = CreateRotationBetween(currentUp, targetNormal);
-            return Quaternion.Normalize(alignment * PrefabTransformUtility.NormalizeOrIdentity(rotation));
+            return WorldPlane2D.NormalizeOrIdentity(alignment * WorldPlane2D.NormalizeOrIdentity(rotation));
         }
 
         private static Quaternion CreateRotationBetween(Vector3 from, Vector3 to)

@@ -233,6 +233,7 @@ namespace Ludots.Core.Presentation.Hud
         {
             if (_screenOverlay == null && (_minimapMarkers == null || _minimapMarkers.Count <= 0))
             {
+                scene.SetTopMostMinimapMarkers(null);
                 if (scene.ContainsLayer(PresentationOverlayLayer.TopMost))
                 {
                     scene.ClearLayer(PresentationOverlayLayer.TopMost);
@@ -375,25 +376,11 @@ namespace Ludots.Core.Presentation.Hud
 
             if (_minimapMarkers == null)
             {
+                scene.SetTopMostMinimapMarkers(null);
                 return;
             }
 
-            int markerCount = _minimapMarkers.Count;
-            for (int i = 0; i < markerCount; i++)
-            {
-                Vector4 color = _minimapMarkers.GetColor(i);
-                scene.TryAddMinimapMarker(
-                    PresentationOverlayLayer.TopMost,
-                    _minimapMarkers.GetScreenX(i),
-                    _minimapMarkers.GetScreenY(i),
-                    _minimapMarkers.GetSizePx(i),
-                    in color,
-                    _minimapMarkers.GetStableId(i),
-                    dirtySerial: 0,
-                    _minimapMarkers.GetFlags(i),
-                    _minimapMarkers.GetOrientationRad(i),
-                    _minimapMarkers.GetOrientationLengthPx(i));
-            }
+            scene.SetTopMostMinimapMarkers(_minimapMarkers);
         }
 
         private string? ResolveScreenHudText(in ScreenHudTextItem item)

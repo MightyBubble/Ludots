@@ -18,7 +18,9 @@ namespace Ludots.Adapter.Raylib
         private readonly SkiaRasterLayer _overlayLayer = new();
         private readonly SkiaOverlayRenderer _overlayRenderer = new();
         private RaylibSkiaGpuOverlaySurface? _gpuUnderlaySurface;
+        private RaylibSkiaGpuOverlaySurface? _gpuTopOverlaySurface;
         private RaylibSkiaFramebufferOverlaySurface? _framebufferUnderlaySurface;
+        private RaylibSkiaFramebufferOverlaySurface? _framebufferTopOverlaySurface;
 
         private bool _underlayHadContent;
         private bool _overlayHadContent;
@@ -68,6 +70,10 @@ namespace Ludots.Adapter.Raylib
             bool hasUnderlay = scene != null && scene.ContainsLayer(PresentationOverlayLayer.UnderUi);
             bool hasTopOverlay = scene != null && scene.ContainsLayer(PresentationOverlayLayer.TopMost);
             bool hasUiLayer = !suppressHostDiagnosticUi && drawSkiaUi && uiRoot.Scene != null;
+            bool directTopOverlayComposite = hasTopOverlay && _useGpuDirectUnderlay;
+            bool framebufferDirectTopOverlay = directTopOverlayComposite && _useFramebufferDirectUnderlay;
+            bool gpuDirectTopOverlay = directTopOverlayComposite && !framebufferDirectTopOverlay;
+            bool rasterTopOverlay = hasTopOverlay && !directTopOverlayComposite;
             bool directUnderlayComposite = hasUnderlay && !hasUiLayer && !hasTopOverlay;
             bool framebufferDirectUnderlay = directUnderlayComposite && _useGpuDirectUnderlay && _useFramebufferDirectUnderlay;
             bool gpuDirectUnderlay = directUnderlayComposite && _useGpuDirectUnderlay && !framebufferDirectUnderlay;
@@ -112,15 +118,46 @@ namespace Ludots.Adapter.Raylib
             }
 
             bool refreshTopOverlay = scene != null && (hasTopOverlay || _overlayHadContent) &&
-                (currentTopOverlayVersion != _topOverlayLayerVersion || hasTopOverlay != _overlayHadContent);
+                (currentTopOverlayVersion != _topOverlayLayerVersion ||
+                 hasTopOverlay != _overlayHadContent ||
+                 (framebufferDirectTopOverlay && hasTopOverlay));
             if (refreshTopOverlay)
             {
                 long topOverlayRenderStart = Stopwatch.GetTimestamp();
-                _overlayLayer.Clear();
-                if (hasTopOverlay)
+                if (gpuDirectTopOverlay)
                 {
-                    _overlayRenderer.Render(scene!, _overlayLayer.Canvas, PresentationOverlayLayer.TopMost);
-                    _overlayLayer.SetHasContent(true);
+                    if (hasTopOverlay)
+                    {
+                        _gpuTopOverlaySurface ??= new RaylibSkiaGpuOverlaySurface();
+                        if (!_gpuTopOverlaySurface.TryRender(
+                            scene!,
+                            _overlayRenderer,
+                            PresentationOverlayLayer.TopMost,
+                            _compositeRenderer.Width,
+                            _compositeRenderer.Height))
+                        {
+                            throw new InvalidOperationException("Raylib Skia GPU top overlay is required for this production path but could not render.");
+                        }
+                    }
+                    else
+                    {
+                        _gpuTopOverlaySurface?.Clear(_compositeRenderer.Width, _compositeRenderer.Height);
+                    }
+
+                    _overlayLayer.SetHasContent(false);
+                }
+                else if (framebufferDirectTopOverlay)
+                {
+                    _overlayLayer.SetHasContent(false);
+                }
+                else
+                {
+                    _overlayLayer.Clear();
+                    if (hasTopOverlay)
+                    {
+                        _overlayRenderer.Render(scene!, _overlayLayer.Canvas, PresentationOverlayLayer.TopMost);
+                        _overlayLayer.SetHasContent(true);
+                    }
                 }
 
                 paintMs += ElapsedMs(topOverlayRenderStart);
@@ -128,8 +165,10 @@ namespace Ludots.Adapter.Raylib
                 _topOverlayLayerVersion = currentTopOverlayVersion;
             }
 
-            bool hasCompositeContent = hasUnderlay || hasUiLayer || hasTopOverlay;
-            bool refreshComposite = underlayCanvasChanged || refreshUiLayer || refreshTopOverlay ||
+            bool hasCompositeContent = hasUnderlay || hasUiLayer || rasterTopOverlay;
+            bool refreshComposite = underlayCanvasChanged ||
+                refreshUiLayer ||
+                (refreshTopOverlay && rasterTopOverlay) ||
                 hasCompositeContent != _compositeHadContent;
 
             if (framebufferDirectUnderlay || gpuDirectUnderlay)
@@ -157,7 +196,7 @@ namespace Ludots.Adapter.Raylib
                     _uiLayer.DrawTo(_compositeRenderer.Canvas);
                 }
 
-                if (hasTopOverlay)
+                if (rasterTopOverlay)
                 {
                     _overlayLayer.DrawTo(_compositeRenderer.Canvas);
                 }
@@ -170,7 +209,7 @@ namespace Ludots.Adapter.Raylib
                 _compositeHadContent = hasCompositeContent;
             }
 
-            if (hasCompositeContent || _compositeHadContent)
+            if (hasCompositeContent || _compositeHadContent || directTopOverlayComposite)
             {
                 long finalDrawStart = Stopwatch.GetTimestamp();
                 if (framebufferDirectUnderlay)
@@ -181,9 +220,24 @@ namespace Ludots.Adapter.Raylib
                 {
                     _gpuUnderlaySurface?.Draw();
                 }
-                else
+                else if (hasCompositeContent || _compositeHadContent)
                 {
                     _compositeRenderer.Draw();
+                }
+
+                if (gpuDirectTopOverlay)
+                {
+                    _gpuTopOverlaySurface?.Draw();
+                }
+                else if (framebufferDirectTopOverlay && hasTopOverlay)
+                {
+                    _framebufferTopOverlaySurface ??= new RaylibSkiaFramebufferOverlaySurface();
+                    _framebufferTopOverlaySurface.Render(
+                        scene!,
+                        _overlayRenderer,
+                        PresentationOverlayLayer.TopMost,
+                        _compositeRenderer.Width,
+                        _compositeRenderer.Height);
                 }
 
                 finalDrawMs = ElapsedMs(finalDrawStart);
@@ -201,6 +255,10 @@ namespace Ludots.Adapter.Raylib
         public void Dispose()
         {
             _overlayRenderer.Dispose();
+            _gpuTopOverlaySurface?.Dispose();
+            _gpuTopOverlaySurface = null;
+            _framebufferTopOverlaySurface?.Dispose();
+            _framebufferTopOverlaySurface = null;
             _framebufferUnderlaySurface?.Dispose();
             _framebufferUnderlaySurface = null;
             _gpuUnderlaySurface?.Dispose();

@@ -58,6 +58,12 @@ namespace Ludots.Core.Components
     {
         public Fix64Vec2 Value;
     }
+
+    /// <summary>
+    /// Declares that an entity has logic-plane position but is not part of gameplay spatial queries.
+    /// Presentation-only stress actors can opt out explicitly instead of being inferred by the spatial system.
+    /// </summary>
+    public struct SpatialPartitionExcluded {}
     
     /// <summary>
     /// 逻辑层面朝方向（弧度，0 = +X 方向，逆时针正方向）。
@@ -72,7 +78,7 @@ namespace Ludots.Core.Components
     {
         /// <summary>
         /// 面朝方向角度（弧度）。
-        /// 0 = +X, π/2 = +Y(逻辑) → -Z(视觉)
+        /// 0 = +X, π/2 = +Y(逻辑) -> +Z(视觉)
         /// </summary>
         public float AngleRad;
     }

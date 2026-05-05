@@ -254,7 +254,7 @@ namespace Ludots.Core.Input.Orders
                     Center = start,
                     Length = length,
                     Width = widthMeters,
-                    Rotation = MathF.Atan2(delta.Y, delta.X),
+                    Rotation = WorldPlane2D.FacingRadFromDirection(delta.X, delta.Y),
                     FillColor = fill,
                     BorderColor = border,
                     BorderWidth = 0.02f
@@ -292,7 +292,7 @@ namespace Ludots.Core.Input.Orders
                         Center = previous,
                         Length = length,
                         Width = widthMeters,
-                        Rotation = MathF.Atan2(delta.Y, delta.X),
+                        Rotation = WorldPlane2D.FacingRadFromDirection(delta.X, delta.Y),
                         FillColor = fill,
                         BorderColor = border,
                         BorderWidth = 0.02f

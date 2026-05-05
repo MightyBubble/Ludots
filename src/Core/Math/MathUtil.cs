@@ -54,7 +54,7 @@ namespace Ludots.Core.Mathematics
             _sinLut = new int[360];
             for (int i = 0; i < 360; i++)
             {
-                double angleRad = i * System.Math.PI / 180.0;
+                double angleRad = WorldPlane2D.DegToRadValue(i);
                 _sinLut[i] = (int)(System.Math.Sin(angleRad) * ScalingFactor);
             }
         }

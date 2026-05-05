@@ -5,6 +5,7 @@ using Arch.System;
 using Ludots.Core.Components;
 using Ludots.Core.Gameplay.GAS.Components;
 using Ludots.Core.Gameplay.GAS.Registry;
+using Ludots.Core.Mathematics;
 using Ludots.Core.Mathematics.FixedPoint;
 using Ludots.Core.Navigation2D.Components;
 using Ludots.Core.Physics;
@@ -259,9 +260,7 @@ namespace Ludots.Core.Gameplay.GAS.Systems
 
                 case DisplacementDirectionMode.Fixed:
                 {
-                    Fix64 cos = Fix64Math.Cos(disp.FixedDirectionRad);
-                    Fix64 sin = Fix64Math.Sin(disp.FixedDirectionRad);
-                    return new Fix64Vec2(cos, sin);
+                    return WorldPlane2D.Fix64DirectionFromFacingRad(disp.FixedDirectionRad);
                 }
 
                 default:

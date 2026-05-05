@@ -2,6 +2,7 @@ using System;
 using System.Collections.Generic;
 using System.Numerics;
 using Arch.Core;
+using Ludots.Core.Mathematics;
 using Ludots.Core.Presentation.Components;
 using Ludots.Core.Presentation.Hud;
 using Ludots.Core.Presentation.Performers;
@@ -46,6 +47,7 @@ namespace Ludots.Core.Presentation.Systems
             LODLevel lod,
             Vector3 performerWorldPosition,
             Quaternion performerWorldRotation,
+            in PerformerWorldFacing performerWorldFacing,
             Vector3 performerWorldScale)
         {
             Vector3 position = ResolvePosition(in state, in definition, performerWorldPosition);
@@ -83,7 +85,7 @@ namespace Ludots.Core.Presentation.Systems
                     return;
 
                 case AssetKind.GroundOverlay:
-                    EmitGroundOverlayAsset(entity, state.DefId, in state, in definition, slotIndex, in asset, lod, position, performerWorldRotation, performerWorldScale, alpha);
+                    EmitGroundOverlayAsset(entity, state.DefId, in state, in definition, slotIndex, in asset, lod, position, in performerWorldFacing, performerWorldScale, alpha);
                     return;
 
                 default:
@@ -98,6 +100,7 @@ namespace Ludots.Core.Presentation.Systems
             LODLevel lod,
             Vector3 performerWorldPosition,
             Quaternion performerWorldRotation,
+            in PerformerWorldFacing performerWorldFacing,
             Vector3 performerWorldScale,
             StableDrawCache stableDrawCache,
             bool addOnly)
@@ -342,7 +345,7 @@ namespace Ludots.Core.Presentation.Systems
                 : MathF.Max(ResolveScale(entity, in asset, performerWorldScale).X, 0.001f);
             Vector4 color = ApplyAlpha(ResolveColor(entity, in asset, definition.DefaultColor), alpha);
             Vector3 p0 = position;
-            Vector3 p3 = p0 + Vector3.Transform(Vector3.UnitZ * MathF.Max(width, 0.001f), NormalizeOrIdentity(performerWorldRotation));
+            Vector3 p3 = p0 + Vector3.Transform(Vector3.UnitZ * MathF.Max(width, 0.001f), WorldPlane2D.NormalizeOrIdentity(performerWorldRotation));
             Vector3 p1 = Vector3.Lerp(p0, p3, 0.33f);
             Vector3 p2 = Vector3.Lerp(p0, p3, 0.66f);
 
@@ -445,7 +448,7 @@ namespace Ludots.Core.Presentation.Systems
             in AssetBindingConfig asset,
             LODLevel lod,
             Vector3 position,
-            Quaternion performerWorldRotation,
+            in PerformerWorldFacing performerWorldFacing,
             Vector3 performerWorldScale,
             float alpha)
         {
@@ -464,7 +467,7 @@ namespace Ludots.Core.Presentation.Systems
                 Center = position,
                 Radius = radius,
                 InnerRadius = shape == GroundOverlayShape.Ring ? innerRadius : 0f,
-                Rotation = ResolveYaw(performerWorldRotation),
+                Rotation = ResolveGroundOverlayRotation(performerWorldFacing),
                 Length = shape == GroundOverlayShape.Line ? length : 0f,
                 Width = shape == GroundOverlayShape.Line ? width : 0f,
                 FillColor = color,
@@ -511,7 +514,7 @@ namespace Ludots.Core.Presentation.Systems
 
         private static Quaternion ResolveRotation(in AssetBindingConfig asset, Quaternion performerWorldRotation)
         {
-            return NormalizeOrIdentity(NormalizeOrIdentity(performerWorldRotation) * NormalizeOrIdentity(asset.LocalRotation));
+            return WorldPlane2D.ResolveVisualAssetRotation(in performerWorldRotation, in asset.LocalRotation);
         }
 
         private static Vector3 ResolveAssetPosition(
@@ -520,14 +523,11 @@ namespace Ludots.Core.Presentation.Systems
             Vector3 performerWorldScale,
             in AssetBindingConfig asset)
         {
-            if (asset.LocalOffset == Vector3.Zero)
-            {
-                return position;
-            }
-
-            Vector3 scale = performerWorldScale == Vector3.Zero ? Vector3.One : performerWorldScale;
-            Vector3 localOffset = scale * asset.LocalOffset;
-            return position + Vector3.Transform(localOffset, NormalizeOrIdentity(performerWorldRotation));
+            return WorldPlane2D.ResolveVisualAssetPosition(
+                in position,
+                in performerWorldRotation,
+                in performerWorldScale,
+                in asset.LocalOffset);
         }
 
         private Vector4 ResolveColor(Entity entity, in AssetBindingConfig asset, Vector4 defaultColor)
@@ -578,13 +578,6 @@ namespace Ludots.Core.Presentation.Systems
         private static bool IsWithinMaxLod(LODLevel lod, in AssetBindingConfig asset)
         {
             return lod != LODLevel.Culled && (!asset.HasMaxLod || lod <= asset.MaxLod);
-        }
-
-        private static Quaternion NormalizeOrIdentity(Quaternion value)
-        {
-            return value.LengthSquared() > 0.000001f
-                ? Quaternion.Normalize(value)
-                : Quaternion.Identity;
         }
 
         private PresentationVisualProxy BuildVisualProxy(
@@ -640,11 +633,11 @@ namespace Ludots.Core.Presentation.Systems
             };
         }
 
-        private static float ResolveYaw(Quaternion rotation)
+        private static float ResolveGroundOverlayRotation(in PerformerWorldFacing facing)
         {
-            rotation = NormalizeOrIdentity(rotation);
-            Vector3 forward = Vector3.Transform(Vector3.UnitZ, rotation);
-            return MathF.Atan2(forward.Z, forward.X);
+            return facing.HasValue != 0 && float.IsFinite(facing.AngleRad)
+                ? facing.AngleRad
+                : 0f;
         }
 
         internal static Vector3 ResolvePosition(in PerformerState state, in PerformerDefinition definition, Vector3 performerWorldPosition)

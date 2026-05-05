@@ -128,9 +128,6 @@
   {
     "id": "blacksmith_minimap_marker_ball",
     "defaultColor": [1.0, 0.24, 0.06, 1.0],
-    "bindings": [
-      { "paramKey": 110, "source": "facingRadians" }
-    ],
     "behaviors": [
       {
         "slot": 0,
@@ -155,8 +152,8 @@
           "materialId": "default_surface",
           "renderPath": "InstancedStaticMesh",
           "mobility": "Movable",
-          "localOffset": [0.0, 0.42, -2.15],
-          "localScale": [0.55, 0.28, 1.85]
+          "localOffset": [2.15, 0.42, 0.0],
+          "localScale": [1.85, 0.28, 0.55]
         }
       },
       {
@@ -180,8 +177,8 @@
           "colorParamKey": -1,
           "sizeParamKey": -1,
           "visibilityParamKey": -1,
-          "orientationMode": "ParamRadians",
-          "orientationParamKey": 110,
+          "orientationMode": "PerformerForward",
+          "orientationParamKey": -1,
           "orientationOffsetRad": 0.0,
           "orientationLengthPx": 15.0
         }

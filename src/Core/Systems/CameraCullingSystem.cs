@@ -26,33 +26,63 @@ namespace Ludots.Core.Systems
             .WithAll<PresentationFrameState>();
         private static readonly QueryDescription _visualBoundsLodQuery = new QueryDescription()
             .WithAll<WorldPositionCm, CullState, VisualTransform, PresentationLocalBounds, PresentationLodProfile>()
-            .WithNone<PresentationStaticTransform>();
+            .WithNone<PresentationStaticTransform, SpatialPartitionExcluded>();
         private static readonly QueryDescription _payloadVisualBoundsLodQuery = new QueryDescription()
             .WithAll<WorldPositionCm, CullState, VisualTransform, PresentationLocalBounds, PresentationLodProfile, PresentationOwnerHasPerformerPayload>()
+            .WithNone<PresentationStaticTransform, SpatialPartitionExcluded>();
+        private static readonly QueryDescription _spatialExcludedVisualBoundsLodQuery = new QueryDescription()
+            .WithAll<WorldPositionCm, CullState, VisualTransform, PresentationLocalBounds, PresentationLodProfile, SpatialPartitionExcluded>()
+            .WithNone<PresentationStaticTransform>();
+        private static readonly QueryDescription _payloadSpatialExcludedVisualBoundsLodQuery = new QueryDescription()
+            .WithAll<WorldPositionCm, CullState, VisualTransform, PresentationLocalBounds, PresentationLodProfile, PresentationOwnerHasPerformerPayload, SpatialPartitionExcluded>()
             .WithNone<PresentationStaticTransform>();
         private static readonly QueryDescription _visualBoundsQuery = new QueryDescription()
             .WithAll<WorldPositionCm, CullState, VisualTransform, PresentationLocalBounds>()
-            .WithNone<PresentationLodProfile, PresentationStaticTransform>();
+            .WithNone<PresentationLodProfile, PresentationStaticTransform, SpatialPartitionExcluded>();
         private static readonly QueryDescription _payloadVisualBoundsQuery = new QueryDescription()
             .WithAll<WorldPositionCm, CullState, VisualTransform, PresentationLocalBounds, PresentationOwnerHasPerformerPayload>()
+            .WithNone<PresentationLodProfile, PresentationStaticTransform, SpatialPartitionExcluded>();
+        private static readonly QueryDescription _spatialExcludedVisualBoundsQuery = new QueryDescription()
+            .WithAll<WorldPositionCm, CullState, VisualTransform, PresentationLocalBounds, SpatialPartitionExcluded>()
+            .WithNone<PresentationLodProfile, PresentationStaticTransform>();
+        private static readonly QueryDescription _payloadSpatialExcludedVisualBoundsQuery = new QueryDescription()
+            .WithAll<WorldPositionCm, CullState, VisualTransform, PresentationLocalBounds, PresentationOwnerHasPerformerPayload, SpatialPartitionExcluded>()
             .WithNone<PresentationLodProfile, PresentationStaticTransform>();
         private static readonly QueryDescription _visualLodQuery = new QueryDescription()
             .WithAll<WorldPositionCm, CullState, VisualTransform, PresentationLodProfile>()
-            .WithNone<PresentationLocalBounds, PresentationStaticTransform>();
+            .WithNone<PresentationLocalBounds, PresentationStaticTransform, SpatialPartitionExcluded>();
         private static readonly QueryDescription _payloadVisualLodQuery = new QueryDescription()
             .WithAll<WorldPositionCm, CullState, VisualTransform, PresentationLodProfile, PresentationOwnerHasPerformerPayload>()
+            .WithNone<PresentationLocalBounds, PresentationStaticTransform, SpatialPartitionExcluded>();
+        private static readonly QueryDescription _spatialExcludedVisualLodQuery = new QueryDescription()
+            .WithAll<WorldPositionCm, CullState, VisualTransform, PresentationLodProfile, SpatialPartitionExcluded>()
+            .WithNone<PresentationLocalBounds, PresentationStaticTransform>();
+        private static readonly QueryDescription _payloadSpatialExcludedVisualLodQuery = new QueryDescription()
+            .WithAll<WorldPositionCm, CullState, VisualTransform, PresentationLodProfile, PresentationOwnerHasPerformerPayload, SpatialPartitionExcluded>()
             .WithNone<PresentationLocalBounds, PresentationStaticTransform>();
         private static readonly QueryDescription _visualDefaultQuery = new QueryDescription()
             .WithAll<WorldPositionCm, CullState, VisualTransform>()
-            .WithNone<PresentationLocalBounds, PresentationLodProfile, PresentationStaticTransform>();
+            .WithNone<PresentationLocalBounds, PresentationLodProfile, PresentationStaticTransform, SpatialPartitionExcluded>();
         private static readonly QueryDescription _payloadVisualDefaultQuery = new QueryDescription()
             .WithAll<WorldPositionCm, CullState, VisualTransform, PresentationOwnerHasPerformerPayload>()
+            .WithNone<PresentationLocalBounds, PresentationLodProfile, PresentationStaticTransform, SpatialPartitionExcluded>();
+        private static readonly QueryDescription _spatialExcludedVisualDefaultQuery = new QueryDescription()
+            .WithAll<WorldPositionCm, CullState, VisualTransform, SpatialPartitionExcluded>()
+            .WithNone<PresentationLocalBounds, PresentationLodProfile, PresentationStaticTransform>();
+        private static readonly QueryDescription _payloadSpatialExcludedVisualDefaultQuery = new QueryDescription()
+            .WithAll<WorldPositionCm, CullState, VisualTransform, PresentationOwnerHasPerformerPayload, SpatialPartitionExcluded>()
             .WithNone<PresentationLocalBounds, PresentationLodProfile, PresentationStaticTransform>();
         private static readonly QueryDescription _noVisualQuery = new QueryDescription()
             .WithAll<WorldPositionCm, CullState>()
-            .WithNone<VisualTransform, PresentationStaticTransform>();
+            .WithNone<VisualTransform, PresentationStaticTransform, SpatialPartitionExcluded>();
         private static readonly QueryDescription _payloadNoVisualQuery = new QueryDescription()
             .WithAll<WorldPositionCm, CullState, PresentationOwnerHasPerformerPayload>()
+            .WithNone<VisualTransform, PresentationStaticTransform, SpatialPartitionExcluded>();
+        private static readonly QueryDescription _spatialExcludedNoVisualQuery = new QueryDescription()
+            .WithAll<WorldPositionCm, CullState, SpatialPartitionExcluded>()
+            .WithNone<VisualTransform, PresentationStaticTransform>();
+        private static readonly QueryDescription _payloadSpatialExcludedNoVisualQuery = new QueryDescription()
+            .WithAll<WorldPositionCm, CullState, PresentationOwnerHasPerformerPayload, SpatialPartitionExcluded>()
             .WithNone<VisualTransform, PresentationStaticTransform>();
         private static readonly QueryDescription _staticVisualBoundsLodQuery = new QueryDescription()
             .WithAll<WorldPositionCm, CullState, PresentationStaticTransform, VisualTransform, PresentationLocalBounds, PresentationLodProfile>();
@@ -140,10 +170,15 @@ namespace Ludots.Core.Systems
         public float LowLODDistCm { get; }
 
         private QueryDescription VisualBoundsLodQuery => _performers == null ? _visualBoundsLodQuery : _payloadVisualBoundsLodQuery;
+        private QueryDescription SpatialExcludedVisualBoundsLodQuery => _performers == null ? _spatialExcludedVisualBoundsLodQuery : _payloadSpatialExcludedVisualBoundsLodQuery;
         private QueryDescription VisualBoundsQuery => _performers == null ? _visualBoundsQuery : _payloadVisualBoundsQuery;
+        private QueryDescription SpatialExcludedVisualBoundsQuery => _performers == null ? _spatialExcludedVisualBoundsQuery : _payloadSpatialExcludedVisualBoundsQuery;
         private QueryDescription VisualLodQuery => _performers == null ? _visualLodQuery : _payloadVisualLodQuery;
+        private QueryDescription SpatialExcludedVisualLodQuery => _performers == null ? _spatialExcludedVisualLodQuery : _payloadSpatialExcludedVisualLodQuery;
         private QueryDescription VisualDefaultQuery => _performers == null ? _visualDefaultQuery : _payloadVisualDefaultQuery;
+        private QueryDescription SpatialExcludedVisualDefaultQuery => _performers == null ? _spatialExcludedVisualDefaultQuery : _payloadSpatialExcludedVisualDefaultQuery;
         private QueryDescription NoVisualQuery => _performers == null ? _noVisualQuery : _payloadNoVisualQuery;
+        private QueryDescription SpatialExcludedNoVisualQuery => _performers == null ? _spatialExcludedNoVisualQuery : _payloadSpatialExcludedNoVisualQuery;
         private QueryDescription StaticVisualBoundsLodQuery => _performers == null ? _staticVisualBoundsLodQuery : _payloadStaticVisualBoundsLodQuery;
         private QueryDescription StaticVisualBoundsQuery => _performers == null ? _staticVisualBoundsQuery : _payloadStaticVisualBoundsQuery;
         private QueryDescription StaticVisualLodQuery => _performers == null ? _staticVisualLodQuery : _payloadStaticVisualLodQuery;
@@ -291,11 +326,16 @@ namespace Ludots.Core.Systems
             if (hasDynamicCullWork)
             {
                 long dynamicProcessStart = Stopwatch.GetTimestamp();
-                ProcessVisualBoundsLod(in queryBounds, target, distanceCm, tx, ty, highSq, medSq, lowSq2, ref visibleCount);
-                ProcessVisualBounds(in queryBounds, target, distanceCm, tx, ty, highSq, medSq, lowSq2, ref visibleCount);
-                ProcessVisualLod(in queryBounds, target, distanceCm, tx, ty, highSq, medSq, lowSq2, ref visibleCount);
-                ProcessVisualDefault(in queryBounds, target, distanceCm, tx, ty, highSq, medSq, lowSq2, ref visibleCount);
-                ProcessNoVisual(in queryBounds, target, distanceCm, tx, ty, highSq, medSq, lowSq2, ref visibleCount);
+                ProcessVisualBoundsLod(in queryBounds, target, distanceCm, tx, ty, highSq, medSq, lowSq2, ref visibleCount, VisualBoundsLodQuery, useSpatialGate: true);
+                ProcessVisualBounds(in queryBounds, target, distanceCm, tx, ty, highSq, medSq, lowSq2, ref visibleCount, VisualBoundsQuery, useSpatialGate: true);
+                ProcessVisualLod(in queryBounds, target, distanceCm, tx, ty, highSq, medSq, lowSq2, ref visibleCount, VisualLodQuery, useSpatialGate: true);
+                ProcessVisualDefault(in queryBounds, target, distanceCm, tx, ty, highSq, medSq, lowSq2, ref visibleCount, VisualDefaultQuery, useSpatialGate: true);
+                ProcessNoVisual(in queryBounds, target, distanceCm, tx, ty, highSq, medSq, lowSq2, ref visibleCount, NoVisualQuery, useSpatialGate: true);
+                ProcessVisualBoundsLod(in queryBounds, target, distanceCm, tx, ty, highSq, medSq, lowSq2, ref visibleCount, SpatialExcludedVisualBoundsLodQuery, useSpatialGate: false);
+                ProcessVisualBounds(in queryBounds, target, distanceCm, tx, ty, highSq, medSq, lowSq2, ref visibleCount, SpatialExcludedVisualBoundsQuery, useSpatialGate: false);
+                ProcessVisualLod(in queryBounds, target, distanceCm, tx, ty, highSq, medSq, lowSq2, ref visibleCount, SpatialExcludedVisualLodQuery, useSpatialGate: false);
+                ProcessVisualDefault(in queryBounds, target, distanceCm, tx, ty, highSq, medSq, lowSq2, ref visibleCount, SpatialExcludedVisualDefaultQuery, useSpatialGate: false);
+                ProcessNoVisual(in queryBounds, target, distanceCm, tx, ty, highSq, medSq, lowSq2, ref visibleCount, SpatialExcludedNoVisualQuery, useSpatialGate: false);
                 dynamicProcessMs = ElapsedMs(dynamicProcessStart);
             }
 
@@ -529,6 +569,16 @@ namespace Ludots.Core.Systems
             query = VisualDefaultQuery;
             if (HasAny(in query)) return true;
             query = NoVisualQuery;
+            if (HasAny(in query)) return true;
+            query = SpatialExcludedVisualBoundsLodQuery;
+            if (HasAny(in query)) return true;
+            query = SpatialExcludedVisualBoundsQuery;
+            if (HasAny(in query)) return true;
+            query = SpatialExcludedVisualLodQuery;
+            if (HasAny(in query)) return true;
+            query = SpatialExcludedVisualDefaultQuery;
+            if (HasAny(in query)) return true;
+            query = SpatialExcludedNoVisualQuery;
             return HasAny(in query);
         }
 
@@ -931,9 +981,10 @@ namespace Ludots.Core.Systems
             float highSq,
             float medSq,
             float lowSq2,
-            ref int visibleCount)
+            ref int visibleCount,
+            in QueryDescription query,
+            bool useSpatialGate)
         {
-            QueryDescription query = VisualBoundsLodQuery;
             foreach (ref var chunk in World.Query(in query))
             {
                 ref Entity entityFirst = ref chunk.Entity(0);
@@ -942,6 +993,10 @@ namespace Ludots.Core.Systems
                 var visuals = chunk.GetSpan<VisualTransform>();
                 var bounds = chunk.GetSpan<PresentationLocalBounds>();
                 var lods = chunk.GetSpan<PresentationLodProfile>();
+                bool hasPayloads = chunk.Has<PresentationOwnerHasPerformerPayload>();
+                var payloads = hasPayloads
+                    ? chunk.GetSpan<PresentationOwnerHasPerformerPayload>()
+                    : default;
                 foreach (var index in chunk)
                 {
                     Entity entity = Unsafe.Add(ref entityFirst, index);
@@ -961,6 +1016,9 @@ namespace Ludots.Core.Systems
                         highSq,
                         medSq,
                         lowSq2,
+                        useSpatialGate,
+                        hasPayloads,
+                        hasPayloads ? payloads[index] : default,
                         ref visibleCount);
                 }
             }
@@ -975,9 +1033,10 @@ namespace Ludots.Core.Systems
             float highSq,
             float medSq,
             float lowSq2,
-            ref int visibleCount)
+            ref int visibleCount,
+            in QueryDescription query,
+            bool useSpatialGate)
         {
-            QueryDescription query = VisualBoundsQuery;
             foreach (ref var chunk in World.Query(in query))
             {
                 ref Entity entityFirst = ref chunk.Entity(0);
@@ -985,6 +1044,10 @@ namespace Ludots.Core.Systems
                 var culls = chunk.GetSpan<CullState>();
                 var visuals = chunk.GetSpan<VisualTransform>();
                 var bounds = chunk.GetSpan<PresentationLocalBounds>();
+                bool hasPayloads = chunk.Has<PresentationOwnerHasPerformerPayload>();
+                var payloads = hasPayloads
+                    ? chunk.GetSpan<PresentationOwnerHasPerformerPayload>()
+                    : default;
                 foreach (var index in chunk)
                 {
                     Entity entity = Unsafe.Add(ref entityFirst, index);
@@ -1004,6 +1067,9 @@ namespace Ludots.Core.Systems
                         highSq,
                         medSq,
                         lowSq2,
+                        useSpatialGate,
+                        hasPayloads,
+                        hasPayloads ? payloads[index] : default,
                         ref visibleCount);
                 }
             }
@@ -1018,9 +1084,10 @@ namespace Ludots.Core.Systems
             float highSq,
             float medSq,
             float lowSq2,
-            ref int visibleCount)
+            ref int visibleCount,
+            in QueryDescription query,
+            bool useSpatialGate)
         {
-            QueryDescription query = VisualLodQuery;
             foreach (ref var chunk in World.Query(in query))
             {
                 ref Entity entityFirst = ref chunk.Entity(0);
@@ -1028,6 +1095,10 @@ namespace Ludots.Core.Systems
                 var culls = chunk.GetSpan<CullState>();
                 var visuals = chunk.GetSpan<VisualTransform>();
                 var lods = chunk.GetSpan<PresentationLodProfile>();
+                bool hasPayloads = chunk.Has<PresentationOwnerHasPerformerPayload>();
+                var payloads = hasPayloads
+                    ? chunk.GetSpan<PresentationOwnerHasPerformerPayload>()
+                    : default;
                 foreach (var index in chunk)
                 {
                     Entity entity = Unsafe.Add(ref entityFirst, index);
@@ -1047,6 +1118,9 @@ namespace Ludots.Core.Systems
                         highSq,
                         medSq,
                         lowSq2,
+                        useSpatialGate,
+                        hasPayloads,
+                        hasPayloads ? payloads[index] : default,
                         ref visibleCount);
                 }
             }
@@ -1061,15 +1135,20 @@ namespace Ludots.Core.Systems
             float highSq,
             float medSq,
             float lowSq2,
-            ref int visibleCount)
+            ref int visibleCount,
+            in QueryDescription query,
+            bool useSpatialGate)
         {
-            QueryDescription query = VisualDefaultQuery;
             foreach (ref var chunk in World.Query(in query))
             {
                 ref Entity entityFirst = ref chunk.Entity(0);
                 var positions = chunk.GetSpan<WorldPositionCm>();
                 var culls = chunk.GetSpan<CullState>();
                 var visuals = chunk.GetSpan<VisualTransform>();
+                bool hasPayloads = chunk.Has<PresentationOwnerHasPerformerPayload>();
+                var payloads = hasPayloads
+                    ? chunk.GetSpan<PresentationOwnerHasPerformerPayload>()
+                    : default;
                 foreach (var index in chunk)
                 {
                     Entity entity = Unsafe.Add(ref entityFirst, index);
@@ -1086,6 +1165,9 @@ namespace Ludots.Core.Systems
                         highSq,
                         medSq,
                         lowSq2,
+                        useSpatialGate,
+                        hasPayloads,
+                        hasPayloads ? payloads[index] : default,
                         ref visibleCount);
                 }
             }
@@ -1100,14 +1182,19 @@ namespace Ludots.Core.Systems
             float highSq,
             float medSq,
             float lowSq2,
-            ref int visibleCount)
+            ref int visibleCount,
+            in QueryDescription query,
+            bool useSpatialGate)
         {
-            QueryDescription query = NoVisualQuery;
             foreach (ref var chunk in World.Query(in query))
             {
                 ref Entity entityFirst = ref chunk.Entity(0);
                 var positions = chunk.GetSpan<WorldPositionCm>();
                 var culls = chunk.GetSpan<CullState>();
+                bool hasPayloads = chunk.Has<PresentationOwnerHasPerformerPayload>();
+                var payloads = hasPayloads
+                    ? chunk.GetSpan<PresentationOwnerHasPerformerPayload>()
+                    : default;
                 foreach (var index in chunk)
                 {
                     Entity entity = Unsafe.Add(ref entityFirst, index);
@@ -1130,6 +1217,9 @@ namespace Ludots.Core.Systems
                         highSq,
                         medSq,
                         lowSq2,
+                        useSpatialGate,
+                        hasPayloads,
+                        hasPayloads ? payloads[index] : default,
                         ref visibleCount);
                 }
             }
@@ -1158,12 +1248,11 @@ namespace Ludots.Core.Systems
 
             float halfWidth = logicWidth * 0.5f;
             float halfHeight = logicHeight * 0.5f;
-            float yawRad = cameraState.Yaw * (MathF.PI / 180f);
-            float sinYaw = MathF.Sin(yawRad);
-            float cosYaw = MathF.Cos(yawRad);
+            Vector2 cameraForward = WorldPlane2D.CameraForwardFromYawDegrees(cameraState.Yaw);
+            Vector2 cameraRight = WorldPlane2D.CameraRightFromYawDegrees(cameraState.Yaw);
 
-            float halfX = (MathF.Abs(cosYaw) * halfWidth) + (MathF.Abs(sinYaw) * halfHeight);
-            float halfY = (MathF.Abs(sinYaw) * halfWidth) + (MathF.Abs(cosYaw) * halfHeight);
+            float halfX = (MathF.Abs(cameraRight.X) * halfWidth) + (MathF.Abs(cameraForward.X) * halfHeight);
+            float halfY = (MathF.Abs(cameraRight.Y) * halfWidth) + (MathF.Abs(cameraForward.Y) * halfHeight);
 
             minX = cameraState.TargetCm.X - halfX;
             maxX = cameraState.TargetCm.X + halfX;
@@ -1295,6 +1384,10 @@ namespace Ludots.Core.Systems
                     TrackOrSyncCullChange(entity, in cull);
                 }
             }
+            else if (hasPayload)
+            {
+                EnsureVisiblePayloadEmitWork(in payload);
+            }
 
             if (cull.IsVisible)
             {
@@ -1398,6 +1491,10 @@ namespace Ludots.Core.Systems
                 {
                     TrackOrSyncCullChange(entity, in cull);
                 }
+            }
+            else if (hasPayload)
+            {
+                EnsureVisiblePayloadEmitWork(in payload);
             }
 
             if (cull.IsVisible)
@@ -1523,10 +1620,30 @@ namespace Ludots.Core.Systems
                     TrackOrSyncCullChange(entity, in cull);
                 }
             }
+            else if (hasPayload)
+            {
+                EnsureVisiblePayloadEmitWork(in payload);
+            }
 
             if (cull.IsVisible)
             {
                 visibleCount++;
+            }
+        }
+
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        private void EnsureVisiblePayloadEmitWork(in PresentationOwnerHasPerformerPayload payload)
+        {
+            if (_performers == null ||
+                payload.Count != 1 ||
+                payload.SingleRootPerformer == Entity.Null)
+            {
+                return;
+            }
+
+            if (_performers.EnsureRequestBackedEmitWorkScheduledIfNeeded(payload.SingleRootPerformer))
+            {
+                AdvanceVisibilityRevision();
             }
         }
 
@@ -1665,7 +1782,7 @@ namespace Ludots.Core.Systems
             out float halfWidthCm,
             out float halfDepthCm)
         {
-            Quaternion normalizedRotation = NormalizeOrIdentity(rotation);
+            Quaternion normalizedRotation = WorldPlane2D.NormalizeOrIdentity(rotation);
             Vector3 scaledCenter = new Vector3(
                 localBounds.Center.X * scale.X,
                 localBounds.Center.Y * scale.Y,
@@ -1684,33 +1801,19 @@ namespace Ludots.Core.Systems
                 10f,
                 ((MathF.Abs(axisX.X) * extents.X) +
                  (MathF.Abs(axisY.X) * extents.Y) +
-                 (MathF.Abs(axisZ.X) * extents.Z)) * 100f);
+                 (MathF.Abs(axisZ.X) * extents.Z)) * WorldUnits.CmPerMeter);
             halfDepthCm = MathF.Max(
                 10f,
                 ((MathF.Abs(axisX.Z) * extents.X) +
                  (MathF.Abs(axisY.Z) * extents.Y) +
-                 (MathF.Abs(axisZ.Z) * extents.Z)) * 100f);
+                 (MathF.Abs(axisZ.Z) * extents.Z)) * WorldUnits.CmPerMeter);
 
-            float centerXCm = worldCenter.X * 100f;
-            float centerYCm = worldCenter.Z * 100f;
+            float centerXCm = worldCenter.X * WorldUnits.CmPerMeter;
+            float centerYCm = worldCenter.Z * WorldUnits.CmPerMeter;
             minX = centerXCm - halfWidthCm;
             maxX = centerXCm + halfWidthCm;
             minY = centerYCm - halfDepthCm;
             maxY = centerYCm + halfDepthCm;
-        }
-
-        [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        private static Quaternion NormalizeOrIdentity(in Quaternion rotation)
-        {
-            float lenSq = rotation.LengthSquared();
-            if (lenSq < 1e-8f || float.IsNaN(lenSq) || float.IsInfinity(lenSq))
-            {
-                return Quaternion.Identity;
-            }
-
-            return MathF.Abs(lenSq - 1f) <= 1e-4f
-                ? rotation
-                : Quaternion.Normalize(rotation);
         }
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]

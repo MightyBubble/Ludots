@@ -265,24 +265,8 @@ namespace Ludots.Core.Input.Orders
         {
             float dx = targetWorldCm.X - actorWorldCm.X;
             float dy = targetWorldCm.Y - actorWorldCm.Y;
-            float targetAngle = MathF.Atan2(dy, dx);
-            float delta = NormalizeAngleRad(targetAngle - facingAngleRad);
-            return MathF.Abs(delta) * (180f / MathF.PI);
-        }
-
-        private static float NormalizeAngleRad(float angle)
-        {
-            while (angle > MathF.PI)
-            {
-                angle -= MathF.Tau;
-            }
-
-            while (angle < -MathF.PI)
-            {
-                angle += MathF.Tau;
-            }
-
-            return angle;
+            float targetAngle = WorldPlane2D.FacingRadFromDirection(dx, dy);
+            return WorldPlane2D.RadToDegValue(WorldPlane2D.AngleDistanceRad(targetAngle, facingAngleRad));
         }
     }
 }

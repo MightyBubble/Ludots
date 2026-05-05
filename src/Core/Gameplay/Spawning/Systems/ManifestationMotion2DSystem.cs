@@ -3,6 +3,7 @@ using Arch.Core;
 using Arch.System;
 using Ludots.Core.Components;
 using Ludots.Core.Gameplay.GAS.Components;
+using Ludots.Core.Mathematics;
 using Ludots.Core.Mathematics.FixedPoint;
 
 namespace Ludots.Core.Gameplay.Spawning.Systems
@@ -49,10 +50,9 @@ namespace Ludots.Core.Gameplay.Spawning.Systems
                     float? offsetFacing = facing ?? ResolveOffsetFacing(entity, parent);
                     if (motion.ForwardOffsetCm != 0 && offsetFacing.HasValue)
                     {
-                        float angleRad = offsetFacing.Value;
-                        anchoredPosition += Fix64Vec2.FromFloat(
-                            MathF.Cos(angleRad) * motion.ForwardOffsetCm,
-                            MathF.Sin(angleRad) * motion.ForwardOffsetCm);
+                        anchoredPosition += WorldPlane2D.Fix64OffsetCmFromFacingRad(
+                            offsetFacing.Value,
+                            motion.ForwardOffsetCm);
                     }
 
                     Upsert(entity, new WorldPositionCm { Value = anchoredPosition });
@@ -66,7 +66,7 @@ namespace Ludots.Core.Gameplay.Spawning.Systems
             float current = World.Has<FacingDirection>(entity)
                 ? World.Get<FacingDirection>(entity).AngleRad
                 : 0f;
-            return current + (motion.SweepDegreesPerSecond * (MathF.PI / 180f) * deltaSeconds);
+            return current + (WorldPlane2D.DegToRadValue(motion.SweepDegreesPerSecond) * deltaSeconds);
         }
 
         private float? ResolveParentExecutionFacing(Entity parent)
@@ -84,7 +84,7 @@ namespace Ludots.Core.Gameplay.Spawning.Systems
                 return null;
             }
 
-            return Fix64Math.Atan2Fast(delta.Y, delta.X).ToFloat();
+            return WorldPlane2D.FacingRadFromDirection(in delta);
         }
 
         private float? ResolveOffsetFacing(Entity entity, Entity parent)

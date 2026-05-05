@@ -1,6 +1,7 @@
 using System;
 using System.Numerics;
 using Arch.Core;
+using Ludots.Core.Mathematics;
 using Ludots.Core.Presentation.Components;
 using Ludots.Core.Presentation.Terrain;
 
@@ -23,51 +24,60 @@ namespace Ludots.Core.Presentation.Performers
             Vector3 basePosition;
             Quaternion baseRotation;
             Vector3 baseScale;
+            PerformerWorldFacing baseFacing;
 
             switch (performer.TransformSource)
             {
                 case TransformSource.InheritParent:
                     basePosition = hasParent ? parent.WorldPosition : performer.WorldPosition;
-                    baseRotation = hasParent ? NormalizeOrIdentity(parent.WorldRotation) : NormalizeOrIdentity(performer.WorldRotation);
-                    baseScale = hasParent ? NormalizeScale(parent.WorldScale) : NormalizeScale(performer.WorldScale);
+                    baseRotation = hasParent ? WorldPlane2D.NormalizeOrIdentity(parent.WorldRotation) : WorldPlane2D.NormalizeOrIdentity(performer.WorldRotation);
+                    baseScale = hasParent ? WorldPlane2D.NormalizeScale(parent.WorldScale) : WorldPlane2D.NormalizeScale(performer.WorldScale);
+                    baseFacing = hasParent ? parent.WorldFacing : performer.WorldFacing;
                     return ApplyLocalAndGrounding(
                         basePosition,
                         baseRotation,
                         baseScale,
+                        baseFacing,
                         assetBinding,
                         inheritScale: true,
                         performer.TransformSource);
 
                 case TransformSource.EntityTransform:
                     basePosition = hasOwnerTransform ? ownerTransform.Position : performer.WorldPosition;
-                    baseRotation = hasOwnerTransform ? NormalizeOrIdentity(ownerTransform.Rotation) : NormalizeOrIdentity(performer.WorldRotation);
-                    baseScale = hasOwnerTransform ? NormalizeScale(ownerTransform.Scale) : NormalizeScale(performer.WorldScale);
+                    baseRotation = hasOwnerTransform ? WorldPlane2D.NormalizeOrIdentity(ownerTransform.Rotation) : WorldPlane2D.NormalizeOrIdentity(performer.WorldRotation);
+                    baseScale = hasOwnerTransform ? WorldPlane2D.NormalizeScale(ownerTransform.Scale) : WorldPlane2D.NormalizeScale(performer.WorldScale);
+                    baseFacing = performer.WorldFacing;
                     return ApplyLocalAndGrounding(
                         basePosition,
                         baseRotation,
                         baseScale,
+                        baseFacing,
                         assetBinding,
                         inheritScale: true,
                         performer.TransformSource);
 
                 case TransformSource.SplineDriven:
                     basePosition = performer.WorldPosition;
-                    baseRotation = NormalizeOrIdentity(performer.WorldRotation);
-                    baseScale = NormalizeScale(assetBinding.LocalScale);
+                    baseRotation = WorldPlane2D.NormalizeOrIdentity(performer.WorldRotation);
+                    baseScale = WorldPlane2D.NormalizeScale(assetBinding.LocalScale);
+                    baseFacing = performer.WorldFacing;
                     return CreateResolvedTransform(
-                        basePosition + assetBinding.LocalOffset,
-                        NormalizeOrIdentity(baseRotation * NormalizeOrIdentity(assetBinding.LocalRotation)),
-                        baseScale);
+                        WorldPlane2D.TransformVisualLocal(basePosition, baseRotation, Vector3.One, in assetBinding.LocalOffset),
+                        WorldPlane2D.ComposeVisualRotation(baseRotation, assetBinding.LocalRotation),
+                        baseScale,
+                        baseFacing);
 
                 case TransformSource.BoneAttached:
                 case TransformSource.AttachedToParent:
                     basePosition = performer.WorldPosition;
-                    baseRotation = NormalizeOrIdentity(performer.WorldRotation);
-                    baseScale = NormalizeScale(performer.WorldScale);
+                    baseRotation = WorldPlane2D.NormalizeOrIdentity(performer.WorldRotation);
+                    baseScale = WorldPlane2D.NormalizeScale(performer.WorldScale);
+                    baseFacing = performer.WorldFacing;
                     return ApplyLocalAndGrounding(
                         basePosition,
                         baseRotation,
                         baseScale,
+                        baseFacing,
                         assetBinding,
                         inheritScale: true,
                         performer.TransformSource);
@@ -75,8 +85,9 @@ namespace Ludots.Core.Presentation.Performers
                 case TransformSource.WorldFixed:
                     return CreateResolvedTransform(
                         performer.WorldPosition,
-                        NormalizeOrIdentity(performer.WorldRotation),
-                        NormalizeScale(assetBinding.LocalScale));
+                        WorldPlane2D.NormalizeOrIdentity(performer.WorldRotation),
+                        WorldPlane2D.NormalizeScale(assetBinding.LocalScale),
+                        performer.WorldFacing);
 
                 default:
                     throw new ArgumentOutOfRangeException(nameof(performer.TransformSource), performer.TransformSource, "Unsupported performer transform source.");
@@ -152,41 +163,47 @@ namespace Ludots.Core.Presentation.Performers
 
         public static Quaternion AlignUpToNormal(Quaternion rotation, Vector3 targetNormal)
         {
-            Vector3 currentUp = Vector3.Transform(Vector3.UnitY, NormalizeOrIdentity(rotation));
+            Vector3 currentUp = Vector3.Transform(Vector3.UnitY, WorldPlane2D.NormalizeOrIdentity(rotation));
             Quaternion alignment = CreateRotationBetween(currentUp, targetNormal);
-            return NormalizeOrIdentity(alignment * NormalizeOrIdentity(rotation));
+            return WorldPlane2D.NormalizeOrIdentity(alignment * WorldPlane2D.NormalizeOrIdentity(rotation));
         }
 
         private static PerformerResolvedTransform ApplyLocalAndGrounding(
             in Vector3 basePosition,
             in Quaternion baseRotation,
             in Vector3 baseScale,
+            in PerformerWorldFacing baseFacing,
             in AssetBindingConfig assetBinding,
             bool inheritScale,
             TransformSource transformSource)
         {
-            Vector3 localScale = NormalizeScale(assetBinding.LocalScale);
+            Vector3 localScale = WorldPlane2D.NormalizeScale(assetBinding.LocalScale);
             Vector3 resolvedScale = inheritScale ? baseScale * localScale : localScale;
-            Vector3 localOffset = inheritScale ? baseScale * assetBinding.LocalOffset : assetBinding.LocalOffset;
-            Vector3 position = basePosition + Vector3.Transform(localOffset, baseRotation);
-            Quaternion rotation = NormalizeOrIdentity(baseRotation * NormalizeOrIdentity(assetBinding.LocalRotation));
+            Vector3 parentScale = inheritScale ? baseScale : Vector3.One;
+            Vector3 position = WorldPlane2D.TransformVisualLocal(basePosition, baseRotation, parentScale, in assetBinding.LocalOffset);
+            Quaternion rotation = WorldPlane2D.ComposeVisualRotation(baseRotation, assetBinding.LocalRotation);
 
             if (transformSource == TransformSource.BoneAttached ||
                 transformSource == TransformSource.AttachedToParent)
             {
-                resolvedScale = NormalizeScale(baseScale);
+                resolvedScale = WorldPlane2D.NormalizeScale(baseScale);
             }
 
-            return CreateResolvedTransform(position, rotation, resolvedScale);
+            return CreateResolvedTransform(position, rotation, resolvedScale, baseFacing);
         }
 
-        private static PerformerResolvedTransform CreateResolvedTransform(Vector3 position, Quaternion rotation, Vector3 scale)
+        private static PerformerResolvedTransform CreateResolvedTransform(
+            Vector3 position,
+            Quaternion rotation,
+            Vector3 scale,
+            in PerformerWorldFacing facing)
         {
             return new PerformerResolvedTransform
             {
                 Position = position,
                 Rotation = rotation,
                 Scale = scale,
+                Facing = facing,
             };
         }
 
@@ -286,23 +303,11 @@ namespace Ludots.Core.Presentation.Performers
             Vector3 cross = Vector3.Cross(fromNormalized, toNormalized);
             float scale = MathF.Sqrt((1f + dot) * 2f);
             float invScale = 1f / scale;
-            return NormalizeOrIdentity(new Quaternion(
+            return WorldPlane2D.NormalizeOrIdentity(new Quaternion(
                 cross.X * invScale,
                 cross.Y * invScale,
                 cross.Z * invScale,
                 scale * 0.5f));
-        }
-
-        private static Quaternion NormalizeOrIdentity(Quaternion value)
-        {
-            return value.LengthSquared() > 0.000001f
-                ? Quaternion.Normalize(value)
-                : Quaternion.Identity;
-        }
-
-        private static Vector3 NormalizeScale(Vector3 value)
-        {
-            return value == Vector3.Zero ? Vector3.One : value;
         }
 
         private static Vector3 NormalizeOrAxis(Vector3 value, Vector3 axis)
@@ -319,6 +324,7 @@ namespace Ludots.Core.Presentation.Performers
         public Vector3 Position;
         public Quaternion Rotation;
         public Vector3 Scale;
+        public PerformerWorldFacing Facing;
     }
 
     public struct PerformerTransformSnapshot
@@ -326,6 +332,7 @@ namespace Ludots.Core.Presentation.Performers
         public Vector3 WorldPosition;
         public Quaternion WorldRotation;
         public Vector3 WorldScale;
+        public PerformerWorldFacing WorldFacing;
         public TransformSource TransformSource;
     }
 }

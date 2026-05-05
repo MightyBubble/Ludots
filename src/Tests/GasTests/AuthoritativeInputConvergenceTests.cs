@@ -486,7 +486,32 @@ namespace Ludots.Tests.GAS
             backend.Buttons["<Mouse>/LeftButton"] = false;
             system.Update(1f / 60f);
 
+            Vector2 presetToggle = new(
+                minimap.PresetToggleX + (minimap.PresetToggleWidth * 0.5f),
+                minimap.PresetToggleY + (minimap.PresetToggleHeight * 0.5f));
+            backend.MousePosition = presetToggle;
+            backend.Buttons["<Mouse>/LeftButton"] = true;
+            system.Update(1f / 60f);
+            Assert.That(minimap.Preset, Is.EqualTo(MinimapPreset.FollowCamera), "Mode toggle button must switch to follow-camera through the shared pointer confirm input.");
+            Assert.That(handler.PressedThisFrame("Select"), Is.False, "Mode toggle clicks must not leak into gameplay selection.");
+
+            backend.Buttons["<Mouse>/LeftButton"] = false;
+            system.Update(1f / 60f);
+
+            Vector2 rotateToggle = new(
+                minimap.RotateToggleX + (minimap.RotateToggleWidth * 0.5f),
+                minimap.RotateToggleY + (minimap.RotateToggleHeight * 0.5f));
             bool beforeRotation = minimap.RotateWithCamera;
+            backend.MousePosition = rotateToggle;
+            backend.Buttons["<Mouse>/LeftButton"] = true;
+            system.Update(1f / 60f);
+            Assert.That(minimap.RotateWithCamera, Is.EqualTo(!beforeRotation), "Rotate toggle button must use the shared pointer confirm input.");
+            Assert.That(handler.PressedThisFrame("Select"), Is.False, "Rotate toggle clicks must not leak into gameplay selection.");
+
+            backend.Buttons["<Mouse>/LeftButton"] = false;
+            system.Update(1f / 60f);
+
+            beforeRotation = minimap.RotateWithCamera;
             backend.Buttons["<Keyboard>/f7"] = true;
             system.Update(1f / 60f);
             Assert.That(minimap.RotateWithCamera, Is.EqualTo(!beforeRotation));

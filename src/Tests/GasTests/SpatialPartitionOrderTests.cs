@@ -75,6 +75,37 @@ namespace GasTests
             Assert.That(PartitionContains(entity, cxNew, cyNew), Is.False);
         }
 
+        [Test]
+        public void SpatialPartitionExcluded_WorldPositionDoesNotJoinGameplayPartition()
+        {
+            var entity = _world.Create(
+                new WorldPositionCm { Value = Fix64Vec2.FromInt(500, 0) },
+                new SpatialPartitionExcluded());
+            var spatialUpdate = new SpatialPartitionUpdateSystem(_world, _partition, _spec);
+
+            spatialUpdate.Update(0.016f);
+
+            Assert.That(_world.Has<SpatialCellRef>(entity), Is.False);
+            (int cx, int cy) = WorldToCell(500, 0, _spec.GridCellSizeCm);
+            Assert.That(PartitionContains(entity, cx, cy), Is.False);
+        }
+
+        [Test]
+        public void SpatialPartitionExcluded_RemovesExistingGameplayPartitionRef()
+        {
+            var entity = _world.Create(
+                new WorldPositionCm { Value = Fix64Vec2.FromInt(500, 0) });
+            var spatialUpdate = new SpatialPartitionUpdateSystem(_world, _partition, _spec);
+            spatialUpdate.Update(0.016f);
+
+            _world.Add(entity, new SpatialPartitionExcluded());
+            spatialUpdate.Update(0.016f);
+
+            Assert.That(_world.Has<SpatialCellRef>(entity), Is.False);
+            (int cx, int cy) = WorldToCell(500, 0, _spec.GridCellSizeCm);
+            Assert.That(PartitionContains(entity, cx, cy), Is.False);
+        }
+
         private bool PartitionContains(Entity e, int cellX, int cellY)
         {
             Span<Entity> buffer = stackalloc Entity[16];

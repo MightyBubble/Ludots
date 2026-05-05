@@ -176,6 +176,7 @@ namespace Ludots.Core.Presentation.Performers
         None = 0,
         ParamRadians = 1,
         ParamDegrees = 2,
+        PerformerForward = 3,
     }
 
     public struct MinimapMarkerConfig

@@ -1,4 +1,5 @@
 using System;
+using System.Collections.Generic;
 using System.Diagnostics;
 using System.Numerics;
 using System.Runtime.CompilerServices;
@@ -8,18 +9,22 @@ using Ludots.Core.Presentation.Components;
 using Ludots.Core.Presentation.Hud;
 using Ludots.Core.Presentation.Minimap;
 using Ludots.Core.Presentation.Performers;
+using Ludots.Core.Mathematics;
 
 namespace Ludots.Core.Presentation.Systems
 {
     public sealed class PerformerMinimapMarkerSystem : BaseSystem<World, float>
     {
         private static readonly QueryDescription MarkerQuery = new QueryDescription()
-            .WithAll<PerformerState, PerformerWorldPosition>()
+            .WithAll<PerformerState, PerformerWorldPlanePosition, PerformerWorldFacing, PerfHasMinimapMarker>()
             .WithNone<PerformerBootstrapPending>();
 
         private readonly PerformerDefinitionRegistry _definitions;
         private readonly MinimapMarkerBuffer _markers;
         private readonly PresentationTimingDiagnostics? _timingDiagnostics;
+        private int _cachedDefinitionVersion = -1;
+        private MinimapMarkerDefinitionPlan[] _markerPlansByDefinition =
+            Array.Empty<MinimapMarkerDefinitionPlan>();
 
         public PerformerMinimapMarkerSystem(
             World world,
@@ -37,11 +42,12 @@ namespace Ludots.Core.Presentation.Systems
         {
             long start = _timingDiagnostics != null ? Stopwatch.GetTimestamp() : 0L;
             _markers.BeginFrame();
+            EnsureDefinitionWorkCache();
 
             var job = new CollectMarkersChunkJob
             {
-                Definitions = _definitions,
                 Markers = _markers,
+                MarkerPlansByDefinition = _markerPlansByDefinition,
             };
 
             if (World.SharedJobScheduler == null)
@@ -65,15 +71,53 @@ namespace Ludots.Core.Presentation.Systems
             }
         }
 
+        private void EnsureDefinitionWorkCache()
+        {
+            if (_cachedDefinitionVersion == _definitions.Version)
+            {
+                return;
+            }
+
+            IReadOnlyList<int> registeredIds = _definitions.RegisteredIds;
+            int maxId = 0;
+            for (int i = 0; i < registeredIds.Count; i++)
+            {
+                maxId = Math.Max(maxId, registeredIds[i]);
+            }
+
+            if (_markerPlansByDefinition.Length <= maxId)
+            {
+                _markerPlansByDefinition = new MinimapMarkerDefinitionPlan[maxId + 1];
+            }
+            else
+            {
+                Array.Clear(_markerPlansByDefinition);
+            }
+
+            for (int i = 0; i < registeredIds.Count; i++)
+            {
+                int definitionId = registeredIds[i];
+                if (_definitions.TryGet(definitionId, out PerformerDefinition definition) &&
+                    definition.HasMinimapMarkerBehavior &&
+                    definition.MinimapMarkerWorkItems.Length != 0)
+                {
+                    _markerPlansByDefinition[definitionId] = MinimapMarkerDefinitionPlan.Create(definition.MinimapMarkerWorkItems);
+                }
+            }
+
+            _cachedDefinitionVersion = _definitions.Version;
+        }
+
         private struct CollectMarkersChunkJob : IChunkJob
         {
-            public PerformerDefinitionRegistry Definitions;
             public MinimapMarkerBuffer Markers;
+            public MinimapMarkerDefinitionPlan[] MarkerPlansByDefinition;
 
             public void Execute(ref Chunk chunk)
             {
                 Span<PerformerState> states = chunk.GetSpan<PerformerState>();
-                Span<PerformerWorldPosition> positions = chunk.GetSpan<PerformerWorldPosition>();
+                Span<PerformerWorldPlanePosition> planePositions = chunk.GetSpan<PerformerWorldPlanePosition>();
+                Span<PerformerWorldFacing> facings = chunk.GetSpan<PerformerWorldFacing>();
                 bool hasFloatParams = chunk.Has<PerformerFloatParams>();
                 bool hasFloatDefaults = chunk.Has<PerformerFloatDefaults>();
                 bool hasVectorParams = chunk.Has<PerformerVectorParams>();
@@ -87,25 +131,66 @@ namespace Ludots.Core.Presentation.Systems
                 Span<PerformerIntParams> intParams = hasIntParams ? chunk.GetSpan<PerformerIntParams>() : default;
                 Span<PerformerIntDefaults> intDefaults = hasIntDefaults ? chunk.GetSpan<PerformerIntDefaults>() : default;
 
+                int markerCount = CountChunkMarkers(
+                    states,
+                    hasFloatParams,
+                    hasFloatDefaults,
+                    hasIntParams,
+                    hasIntDefaults,
+                    in floatParams,
+                    in floatDefaults,
+                    in intParams,
+                    in intDefaults,
+                    chunk.Count,
+                    out bool useSingleMarkerFastPath);
+                if (markerCount <= 0)
+                {
+                    return;
+                }
+
+                int writeIndex = Markers.ReserveThreadSafe(markerCount, out int acceptedCount);
+                if (acceptedCount <= 0)
+                {
+                    return;
+                }
+
+                if (useSingleMarkerFastPath &&
+                    TryEmitSingleMarkerFastPath(
+                        states,
+                        planePositions,
+                        facings,
+                        chunk.Count,
+                        writeIndex,
+                        acceptedCount))
+                {
+                    return;
+                }
+
+                int emitted = 0;
+                int cachedDefId = -1;
+                MinimapMarkerDefinitionPlan cachedPlan = default;
                 for (int i = 0; i < chunk.Count; i++)
                 {
                     ref readonly PerformerState state = ref states[i];
-                    if (!Definitions.TryGet(state.DefId, out PerformerDefinition? definition) ||
-                        !definition.HasMinimapMarkerBehavior)
+                    if (!TryGetMarkerPlan(
+                            state.DefId,
+                            ref cachedDefId,
+                            ref cachedPlan,
+                            out MinimapMarkerDefinitionPlan plan))
                     {
                         continue;
                     }
 
-                    int[] markerIndices = definition.MinimapMarkerBehaviorIndices;
-                    for (int markerIndex = 0; markerIndex < markerIndices.Length; markerIndex++)
+                    PerformerDefinition.MinimapMarkerWorkItem[] markerWorkItems = plan.WorkItems;
+                    for (int markerIndex = 0; markerIndex < markerWorkItems.Length; markerIndex++)
                     {
-                        ref readonly BehaviorSlot slot = ref definition.Behaviors[markerIndices[markerIndex]];
-                        if (!IsBehaviorActive(state.BehaviorActiveMask, slot.SlotIndex))
+                        ref readonly PerformerDefinition.MinimapMarkerWorkItem work = ref markerWorkItems[markerIndex];
+                        if (!IsBehaviorActive(state.BehaviorActiveMask, work.SlotIndex))
                         {
                             continue;
                         }
 
-                        MinimapMarkerConfig marker = slot.MinimapMarker;
+                        MinimapMarkerConfig marker = work.Marker;
                         if (!IsMarkerVisible(
                                 marker.VisibilityParamKey,
                                 hasIntParams,
@@ -132,6 +217,7 @@ namespace Ludots.Core.Presentation.Systems
                                 hasFloatDefaults,
                                 in floatParams,
                                 in floatDefaults,
+                                in facings,
                                 i,
                                 out orientationRad,
                                 out orientationLengthPx))
@@ -139,19 +225,341 @@ namespace Ludots.Core.Presentation.Systems
                             flags |= MinimapMarkerFlags.HasOrientation;
                         }
 
-                        Vector3 worldPosition = positions[i].Value;
-                        int stableId = PerformerBehaviorRuntimeUtility.ComposeBehaviorStableId(state.StableId, slot.SlotIndex);
-                        Markers.TryAddThreadSafe(
+                        Vector2 worldPlanePosition = planePositions[i].ValueCm;
+                        int stableId = PerformerBehaviorRuntimeUtility.ComposeBehaviorStableId(state.StableId, work.SlotIndex);
+                        Markers.WriteReserved(
+                            writeIndex + emitted,
                             stableId,
-                            worldPosition.X * 100f,
-                            worldPosition.Z * 100f,
+                            worldPlanePosition.X,
+                            worldPlanePosition.Y,
                             in color,
                             sizePx,
                             flags,
                             orientationRad,
                             orientationLengthPx);
+                        emitted++;
+                        if (emitted >= acceptedCount)
+                        {
+                            return;
+                        }
                     }
                 }
+            }
+
+            private int CountChunkMarkers(
+                Span<PerformerState> states,
+                bool hasFloatParams,
+                bool hasFloatDefaults,
+                bool hasIntParams,
+                bool hasIntDefaults,
+                in Span<PerformerFloatParams> floatParams,
+                in Span<PerformerFloatDefaults> floatDefaults,
+                in Span<PerformerIntParams> intParams,
+                in Span<PerformerIntDefaults> intDefaults,
+                int count,
+                out bool useSingleMarkerFastPath)
+            {
+                if (TryCountSingleMarkerFastPath(states, count, out int fastCount))
+                {
+                    useSingleMarkerFastPath = true;
+                    return fastCount;
+                }
+
+                useSingleMarkerFastPath = false;
+                int markerCount = 0;
+                int cachedDefId = -1;
+                MinimapMarkerDefinitionPlan cachedPlan = default;
+                for (int i = 0; i < count; i++)
+                {
+                    ref readonly PerformerState state = ref states[i];
+                    if (!TryGetMarkerPlan(
+                            state.DefId,
+                            ref cachedDefId,
+                            ref cachedPlan,
+                            out MinimapMarkerDefinitionPlan plan))
+                    {
+                        continue;
+                    }
+
+                    PerformerDefinition.MinimapMarkerWorkItem[] markerWorkItems = plan.WorkItems;
+                    for (int markerIndex = 0; markerIndex < markerWorkItems.Length; markerIndex++)
+                    {
+                        ref readonly PerformerDefinition.MinimapMarkerWorkItem work = ref markerWorkItems[markerIndex];
+                        if (!IsBehaviorActive(state.BehaviorActiveMask, work.SlotIndex))
+                        {
+                            continue;
+                        }
+
+                        MinimapMarkerConfig marker = work.Marker;
+                        if (IsMarkerVisible(
+                                marker.VisibilityParamKey,
+                                hasIntParams,
+                                hasIntDefaults,
+                                hasFloatParams,
+                                hasFloatDefaults,
+                                in intParams,
+                                in intDefaults,
+                                in floatParams,
+                                in floatDefaults,
+                                i))
+                        {
+                            markerCount++;
+                        }
+                    }
+                }
+
+                return markerCount;
+            }
+
+            private bool TryCountSingleMarkerFastPath(
+                Span<PerformerState> states,
+                int count,
+                out int markerCount)
+            {
+                markerCount = 0;
+                int cachedDefId = -1;
+                MinimapMarkerDefinitionPlan cachedPlan = default;
+                for (int i = 0; i < count; i++)
+                {
+                    ref readonly PerformerState state = ref states[i];
+                    if (!TryGetMarkerPlan(
+                            state.DefId,
+                            ref cachedDefId,
+                            ref cachedPlan,
+                            out MinimapMarkerDefinitionPlan plan))
+                    {
+                        continue;
+                    }
+
+                    if (!plan.CanUseSingleMarkerFastPath)
+                    {
+                        return false;
+                    }
+
+                    if ((state.BehaviorActiveMask & plan.SingleSlotMask) != 0u)
+                    {
+                        markerCount++;
+                    }
+                }
+
+                return true;
+            }
+
+            private bool TryEmitSingleMarkerFastPath(
+                Span<PerformerState> states,
+                Span<PerformerWorldPlanePosition> planePositions,
+                Span<PerformerWorldFacing> facings,
+                int count,
+                int writeIndex,
+                int acceptedCount)
+            {
+                int emitted = 0;
+                int cachedDefId = -1;
+                MinimapMarkerDefinitionPlan cachedPlan = default;
+                for (int i = 0; i < count; i++)
+                {
+                    ref readonly PerformerState state = ref states[i];
+                    if (!TryGetMarkerPlan(
+                            state.DefId,
+                            ref cachedDefId,
+                            ref cachedPlan,
+                            out MinimapMarkerDefinitionPlan plan))
+                    {
+                        continue;
+                    }
+
+                    if (!plan.CanUseSingleMarkerFastPath)
+                    {
+                        return false;
+                    }
+
+                    if ((state.BehaviorActiveMask & plan.SingleSlotMask) == 0u)
+                    {
+                        continue;
+                    }
+
+                    uint flags = 0u;
+                    float orientationRad = 0f;
+                    float orientationLengthPx = 0f;
+                    if (plan.SingleOrientationMode == MinimapMarkerOrientationMode.PerformerForward &&
+                        TryResolvePerformerFacingOrientation(
+                            in facings[i],
+                            plan.SingleOrientationOffsetRad,
+                            plan.SingleOrientationLengthPx,
+                            out orientationRad,
+                            out orientationLengthPx))
+                    {
+                        flags = MinimapMarkerFlags.HasOrientation;
+                    }
+
+                    Vector2 worldPlanePosition = planePositions[i].ValueCm;
+                    int stableId = PerformerBehaviorRuntimeUtility.ComposeBehaviorStableId(state.StableId, plan.SingleSlotIndex);
+                    Markers.WriteReserved(
+                        writeIndex + emitted,
+                        stableId,
+                        worldPlanePosition.X,
+                        worldPlanePosition.Y,
+                        in plan.SingleColor,
+                        plan.SingleSizePx,
+                        flags,
+                        orientationRad,
+                        orientationLengthPx);
+                    emitted++;
+                    if (emitted >= acceptedCount)
+                    {
+                        return true;
+                    }
+                }
+
+                return true;
+            }
+
+            [MethodImpl(MethodImplOptions.AggressiveInlining)]
+            private bool TryGetMarkerPlan(
+                int definitionId,
+                ref int cachedDefId,
+                ref MinimapMarkerDefinitionPlan cachedPlan,
+                out MinimapMarkerDefinitionPlan plan)
+            {
+                if (definitionId == cachedDefId)
+                {
+                    plan = cachedPlan;
+                    return plan.HasWork;
+                }
+
+                cachedDefId = definitionId;
+                if ((uint)definitionId < (uint)MarkerPlansByDefinition.Length)
+                {
+                    cachedPlan = MarkerPlansByDefinition[definitionId];
+                    plan = cachedPlan;
+                    return plan.HasWork;
+                }
+
+                cachedPlan = default;
+                plan = default;
+                return false;
+            }
+        }
+
+        private readonly struct MinimapMarkerDefinitionPlan
+        {
+            public readonly PerformerDefinition.MinimapMarkerWorkItem[] WorkItems;
+            public readonly bool CanUseSingleMarkerFastPath;
+            public readonly int SingleSlotIndex;
+            public readonly uint SingleSlotMask;
+            public readonly Vector4 SingleColor;
+            public readonly float SingleSizePx;
+            public readonly MinimapMarkerOrientationMode SingleOrientationMode;
+            public readonly float SingleOrientationOffsetRad;
+            public readonly float SingleOrientationLengthPx;
+
+            private MinimapMarkerDefinitionPlan(
+                PerformerDefinition.MinimapMarkerWorkItem[] workItems,
+                bool canUseSingleMarkerFastPath,
+                int singleSlotIndex,
+                uint singleSlotMask,
+                in Vector4 singleColor,
+                float singleSizePx,
+                MinimapMarkerOrientationMode singleOrientationMode,
+                float singleOrientationOffsetRad,
+                float singleOrientationLengthPx)
+            {
+                WorkItems = workItems;
+                CanUseSingleMarkerFastPath = canUseSingleMarkerFastPath;
+                SingleSlotIndex = singleSlotIndex;
+                SingleSlotMask = singleSlotMask;
+                SingleColor = singleColor;
+                SingleSizePx = singleSizePx;
+                SingleOrientationMode = singleOrientationMode;
+                SingleOrientationOffsetRad = singleOrientationOffsetRad;
+                SingleOrientationLengthPx = singleOrientationLengthPx;
+            }
+
+            public bool HasWork => WorkItems != null && WorkItems.Length != 0;
+
+            public static MinimapMarkerDefinitionPlan Create(PerformerDefinition.MinimapMarkerWorkItem[] workItems)
+            {
+                bool fast = TryBuildSingleMarkerFastPath(
+                    workItems,
+                    out int slotIndex,
+                    out uint slotMask,
+                    out Vector4 color,
+                    out float sizePx,
+                    out MinimapMarkerOrientationMode orientationMode,
+                    out float orientationOffsetRad,
+                    out float orientationLengthPx);
+                return new MinimapMarkerDefinitionPlan(
+                    workItems,
+                    fast,
+                    slotIndex,
+                    slotMask,
+                    in color,
+                    sizePx,
+                    orientationMode,
+                    orientationOffsetRad,
+                    orientationLengthPx);
+            }
+
+            private static bool TryBuildSingleMarkerFastPath(
+                PerformerDefinition.MinimapMarkerWorkItem[] workItems,
+                out int slotIndex,
+                out uint slotMask,
+                out Vector4 color,
+                out float sizePx,
+                out MinimapMarkerOrientationMode orientationMode,
+                out float orientationOffsetRad,
+                out float orientationLengthPx)
+            {
+                slotIndex = -1;
+                slotMask = 0u;
+                color = default;
+                sizePx = 0f;
+                orientationMode = MinimapMarkerOrientationMode.None;
+                orientationOffsetRad = 0f;
+                orientationLengthPx = 0f;
+                if (workItems == null || workItems.Length != 1)
+                {
+                    return false;
+                }
+
+                ref readonly PerformerDefinition.MinimapMarkerWorkItem work = ref workItems[0];
+                if (work.SlotIndex is < 0 or >= 32)
+                {
+                    return false;
+                }
+
+                MinimapMarkerConfig marker = work.Marker;
+                if (marker.ColorParamKey >= 0 ||
+                    marker.SizeParamKey >= 0 ||
+                    marker.VisibilityParamKey >= 0 ||
+                    !float.IsFinite(marker.SizePx) ||
+                    marker.SizePx <= 0f)
+                {
+                    return false;
+                }
+
+                if (marker.OrientationMode != MinimapMarkerOrientationMode.None &&
+                    marker.OrientationMode != MinimapMarkerOrientationMode.PerformerForward)
+                {
+                    return false;
+                }
+
+                if (marker.OrientationMode == MinimapMarkerOrientationMode.PerformerForward &&
+                    (!float.IsFinite(marker.OrientationOffsetRad) ||
+                     !float.IsFinite(marker.OrientationLengthPx) ||
+                     marker.OrientationLengthPx <= 0f))
+                {
+                    return false;
+                }
+
+                slotIndex = work.SlotIndex;
+                slotMask = 1u << slotIndex;
+                color = marker.Color;
+                sizePx = marker.SizePx;
+                orientationMode = marker.OrientationMode;
+                orientationOffsetRad = marker.OrientationOffsetRad;
+                orientationLengthPx = marker.OrientationLengthPx;
+                return true;
             }
         }
 
@@ -198,7 +606,7 @@ namespace Ludots.Core.Presentation.Systems
                 return floatDefaultValue > 0.5f;
             }
 
-            return true;
+            return false;
         }
 
         private static Vector4 ResolveColor(
@@ -261,6 +669,7 @@ namespace Ludots.Core.Presentation.Systems
             bool hasFloatDefaults,
             in Span<PerformerFloatParams> floatParams,
             in Span<PerformerFloatDefaults> floatDefaults,
+            in Span<PerformerWorldFacing> facings,
             int index,
             out float orientationRad,
             out float orientationLengthPx)
@@ -270,6 +679,16 @@ namespace Ludots.Core.Presentation.Systems
             if (marker.OrientationMode == MinimapMarkerOrientationMode.None)
             {
                 return false;
+            }
+
+            if (marker.OrientationMode == MinimapMarkerOrientationMode.PerformerForward)
+            {
+                return TryResolvePerformerFacingOrientation(
+                    in facings[index],
+                    marker.OrientationOffsetRad,
+                    marker.OrientationLengthPx,
+                    out orientationRad,
+                    out orientationLengthPx);
             }
 
             float value;
@@ -292,13 +711,35 @@ namespace Ludots.Core.Presentation.Systems
             }
 
             orientationRad = marker.OrientationMode == MinimapMarkerOrientationMode.ParamDegrees
-                ? value * (MathF.PI / 180f)
+                ? WorldPlane2D.DegToRadValue(value)
                 : value;
             orientationRad += marker.OrientationOffsetRad;
             orientationLengthPx = marker.OrientationLengthPx;
             return float.IsFinite(orientationRad) &&
                 float.IsFinite(orientationLengthPx) &&
                 orientationLengthPx > 0f;
+        }
+
+        private static bool TryResolvePerformerFacingOrientation(
+            in PerformerWorldFacing facing,
+            float orientationOffsetRad,
+            float configuredLengthPx,
+            out float orientationRad,
+            out float orientationLengthPx)
+        {
+            orientationRad = 0f;
+            orientationLengthPx = 0f;
+            if (facing.HasValue == 0 ||
+                !float.IsFinite(facing.AngleRad) ||
+                !float.IsFinite(configuredLengthPx) ||
+                configuredLengthPx <= 0f)
+            {
+                return false;
+            }
+
+            orientationRad = facing.AngleRad + orientationOffsetRad;
+            orientationLengthPx = configuredLengthPx;
+            return float.IsFinite(orientationRad);
         }
     }
 }

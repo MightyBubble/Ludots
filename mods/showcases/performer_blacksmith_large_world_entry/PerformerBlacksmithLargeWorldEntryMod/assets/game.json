@@ -10,7 +10,10 @@
       "buttonZoomNormalizedStep": 0.18,
       "zoomSliderEnabled": true,
       "minZoomExtentMode": "OneChunk",
-      "maxZoomExtentMode": "FullMap"
+      "maxZoomExtentMode": "FullMap",
+      "modeToggleEnabled": true,
+      "rotateToggleEnabled": true,
+      "debugMarkerSampleCapacity": 64
     }
   }
 }

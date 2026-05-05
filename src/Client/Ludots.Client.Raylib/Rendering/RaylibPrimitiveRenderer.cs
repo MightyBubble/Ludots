@@ -4,6 +4,7 @@ using System.Diagnostics;
 using System.IO;
 using System.Numerics;
 using Ludots.Core.Diagnostics;
+using Ludots.Core.Mathematics;
 using Ludots.Core.Modding;
 using Ludots.Core.Presentation.AdapterSync;
 using Ludots.Core.Presentation.Assets;
@@ -160,9 +161,9 @@ namespace Ludots.Client.Raylib.Rendering
                     DrawSkinnedBatch(skinnedBatch, camera, meshes, scaleMul, in finalizationContext);
                 }
 
-                long immediateStart = Stopwatch.GetTimestamp();
-                DrawImmediateWithDescriptors(span, camera, meshes, scaleMul, persistentStaticLanesActive: true, skinnedBatchActive: skinnedBatch != null, in finalizationContext);
-                LastImmediateDrawMs = (Stopwatch.GetTimestamp() - immediateStart) * 1000d / Stopwatch.Frequency;
+                long dynamicLaneStart = Stopwatch.GetTimestamp();
+                DrawSnapshotDynamicLanes(span, camera, meshes, scaleMul, skinnedBatchActive: skinnedBatch != null, in finalizationContext);
+                LastImmediateDrawMs = (Stopwatch.GetTimestamp() - dynamicLaneStart) * 1000d / Stopwatch.Frequency;
 
                 return;
             }
@@ -223,6 +224,50 @@ namespace Ludots.Client.Raylib.Rendering
                     meshes,
                     in finalizationContext);
             }
+        }
+
+        private void DrawSnapshotDynamicLanes(
+            ReadOnlySpan<PrimitiveDrawItem> span,
+            Camera3D camera,
+            MeshAssetRegistry meshes,
+            float scaleMul,
+            bool skinnedBatchActive,
+            in PrefabFinalizationContext finalizationContext)
+        {
+            EnsureInitialized();
+
+            for (int i = 0; i < span.Length; i++)
+            {
+                ref readonly var item = ref span[i];
+                if (skinnedBatchActive && item.RenderPath.IsSkinnedLane())
+                {
+                    LastImmediateSkippedCount++;
+                    continue;
+                }
+
+                if (ShouldSkipImmediateDraw(item, persistentStaticLanesActive: true))
+                {
+                    LastImmediateSkippedCount++;
+                    continue;
+                }
+
+                if (TryDrawPrototypeSkinned(item, meshes, scaleMul))
+                {
+                    continue;
+                }
+
+                SubmitAssetRecursive(
+                    item.MeshAssetId,
+                    item.Position,
+                    item.Rotation,
+                    item.Scale * scaleMul,
+                    item.Color,
+                    camera,
+                    meshes,
+                    in finalizationContext);
+            }
+
+            FlushInstancedBatches();
         }
 
         internal bool ShouldSkipImmediateDraw(in PrimitiveDrawItem item, bool persistentStaticLanesActive)
@@ -315,7 +360,7 @@ namespace Ludots.Client.Raylib.Rendering
             uint key = PackRgba(color);
             var matrix = RaylibMatrix.FromSystemNumerics(
                 Matrix4x4.CreateScale(scale) *
-                Matrix4x4.CreateFromQuaternion(PrefabTransformUtility.NormalizeOrIdentity(rotation)) *
+                Matrix4x4.CreateFromQuaternion(WorldPlane2D.NormalizeOrIdentity(rotation)) *
                 Matrix4x4.CreateTranslation(position));
 
             if (kind == PrimitiveMeshKind.Cube)
@@ -330,7 +375,7 @@ namespace Ludots.Client.Raylib.Rendering
                 return;
             }
 
-            DrawPrimitive(kind, position, scale, color);
+            DrawPrimitive(kind, position, rotation, scale, color);
         }
 
         private bool TryDrawPrototypeSkinned(in PrimitiveDrawItem item, MeshAssetRegistry meshes, float scaleMul)
@@ -446,7 +491,7 @@ namespace Ludots.Client.Raylib.Rendering
 
             batch.Add(RaylibMatrix.FromSystemNumerics(
                 Matrix4x4.CreateScale(item.Scale * scaleMul) *
-                Matrix4x4.CreateFromQuaternion(PrefabTransformUtility.NormalizeOrIdentity(item.Rotation)) *
+                Matrix4x4.CreateFromQuaternion(WorldPlane2D.NormalizeOrIdentity(item.Rotation)) *
                 Matrix4x4.CreateTranslation(item.Position)));
             LastGpuSkinnedMatrixBuildMs += (Stopwatch.GetTimestamp() - start) * 1000d / Stopwatch.Frequency;
             return true;
@@ -634,7 +679,7 @@ namespace Ludots.Client.Raylib.Rendering
             switch (visual.MeshDescriptor.Type)
             {
                 case MeshAssetType.Primitive:
-                    DrawPrimitive(visual.MeshDescriptor.PrimitiveKind, visual.Position, visual.Scale, visual.Color);
+                    DrawPrimitive(visual.MeshDescriptor.PrimitiveKind, visual.Position, visual.Rotation, visual.Scale, visual.Color);
                     break;
                 case MeshAssetType.Model:
                     DrawModel(visual.MeshAssetId, visual.MeshDescriptor, visual.Position, visual.Rotation, visual.Scale, visual.Color);
@@ -654,7 +699,7 @@ namespace Ludots.Client.Raylib.Rendering
         private void DrawDecalVisual(in PrefabFinalizedVisual visual)
         {
             Vector2 size = ResolveDecalSize(in visual);
-            Quaternion rotation = PrefabTransformUtility.NormalizeOrIdentity(visual.Rotation);
+            Quaternion rotation = WorldPlane2D.NormalizeOrIdentity(visual.Rotation);
             Vector4 materialAccent = BlendSemanticColor(visual.Color, visual.MaterialId, 0.45f);
             Vector4 edgeColor = MultiplyColor(materialAccent, 1.18f, 1.18f, 0.92f, 0.92f);
             Vector4 crossColor = MultiplyColor(materialAccent, 0.86f, 1.05f, 1.18f, 0.78f);
@@ -686,7 +731,7 @@ namespace Ludots.Client.Raylib.Rendering
 
         private void DrawVfxVisual(in PrefabFinalizedVisual visual)
         {
-            Quaternion rotation = PrefabTransformUtility.NormalizeOrIdentity(visual.Rotation);
+            Quaternion rotation = WorldPlane2D.NormalizeOrIdentity(visual.Rotation);
             float baseExtent = MathF.Max(0.12f, MathF.Max(MathF.Abs(visual.Scale.X), MathF.Max(MathF.Abs(visual.Scale.Y), MathF.Abs(visual.Scale.Z))) * 0.45f);
             float radius = visual.VfxSpawnMode == PrefabVfxSpawnMode.Loop
                 ? baseExtent * 1.15f
@@ -715,7 +760,7 @@ namespace Ludots.Client.Raylib.Rendering
             switch (visual.MeshDescriptor.Type)
             {
                 case MeshAssetType.Primitive:
-                    DrawPrimitive(visual.MeshDescriptor.PrimitiveKind, visual.Position, visual.Scale, surfaceColor);
+                    DrawPrimitive(visual.MeshDescriptor.PrimitiveKind, visual.Position, visual.Rotation, visual.Scale, surfaceColor);
                     break;
                 case MeshAssetType.Model:
                     DrawModel(visual.MeshAssetId, visual.MeshDescriptor, visual.Position, visual.Rotation, visual.Scale, surfaceColor);
@@ -731,11 +776,11 @@ namespace Ludots.Client.Raylib.Rendering
                         $"{nameof(RaylibPrimitiveRenderer)} does not support surface mesh descriptor type '{visual.MeshDescriptor.Type}' for stableId={visual.StableId}.");
             }
 
-            DrawWireBox(visual.Position, ResolveSurfaceOverlaySize(in visual), PrefabTransformUtility.NormalizeOrIdentity(visual.Rotation), overlayColor);
+            DrawWireBox(visual.Position, ResolveSurfaceOverlaySize(in visual), WorldPlane2D.NormalizeOrIdentity(visual.Rotation), overlayColor);
 
             if (visual.TerrainFacing)
             {
-                Quaternion rotation = PrefabTransformUtility.NormalizeOrIdentity(visual.Rotation);
+                Quaternion rotation = WorldPlane2D.NormalizeOrIdentity(visual.Rotation);
                 Vector3 up = Vector3.Normalize(Vector3.Transform(Vector3.UnitY, rotation));
                 float normalLength = MathF.Max(0.12f, MathF.Max(MathF.Abs(visual.Scale.X), MathF.Abs(visual.Scale.Z)) * 0.4f);
                 Rl.DrawLine3D(visual.Position, visual.Position + (up * normalLength), ToRaylibColor(MultiplyColor(overlayColor, 1f, 1f, 1f, 0.8f)));
@@ -771,18 +816,58 @@ namespace Ludots.Client.Raylib.Rendering
             }
         }
 
-        private void DrawPrimitive(PrimitiveMeshKind kind, Vector3 position, Vector3 scale, Vector4 color)
+        private void DrawPrimitive(PrimitiveMeshKind kind, Vector3 position, Quaternion rotation, Vector3 scale, Vector4 color)
         {
-            var c = ToRaylibColor(color);
+            EnsureInitialized();
+            RaylibMatrix transform = RaylibMatrix.FromSystemNumerics(
+                Matrix4x4.CreateScale(scale) *
+                Matrix4x4.CreateFromQuaternion(WorldPlane2D.NormalizeOrIdentity(rotation)) *
+                Matrix4x4.CreateTranslation(position));
+            Color rayColor = ToRaylibColor(color);
+
             if (kind == PrimitiveMeshKind.Cube)
             {
-                Rl.DrawCube(position, scale.X, scale.Y, scale.Z, c);
+                DrawTransformedPrimitive(in transform, PrimitiveMeshKind.Cube, rayColor);
             }
             else if (kind == PrimitiveMeshKind.Sphere)
             {
-                float r = MathF.Max(scale.X, MathF.Max(scale.Y, scale.Z)) * 0.5f;
-                Rl.DrawSphere(position, r, c);
+                DrawTransformedPrimitive(in transform, PrimitiveMeshKind.Sphere, rayColor);
             }
+        }
+
+        private static void DrawTransformedPrimitive(in RaylibMatrix transform, PrimitiveMeshKind kind, Color color)
+        {
+            Rl.rlDrawRenderBatchActive();
+            Rl.rlPushMatrix();
+            try
+            {
+                MultMatrix(in transform);
+                if (kind == PrimitiveMeshKind.Cube)
+                {
+                    Rl.DrawCube(Vector3.Zero, 1f, 1f, 1f, color);
+                }
+                else if (kind == PrimitiveMeshKind.Sphere)
+                {
+                    Rl.DrawSphere(Vector3.Zero, 0.5f, color);
+                }
+            }
+            finally
+            {
+                Rl.rlDrawRenderBatchActive();
+                Rl.rlPopMatrix();
+            }
+        }
+
+        private static unsafe void MultMatrix(in RaylibMatrix matrix)
+        {
+            float* values = stackalloc float[16]
+            {
+                matrix.m0, matrix.m1, matrix.m2, matrix.m3,
+                matrix.m4, matrix.m5, matrix.m6, matrix.m7,
+                matrix.m8, matrix.m9, matrix.m10, matrix.m11,
+                matrix.m12, matrix.m13, matrix.m14, matrix.m15
+            };
+            Rl.rlMultMatrixf(values);
         }
 
         private void DrawTankPrototype(Vector3 position, Vector3 scale, Vector4 color, float baseYaw, in AnimationOverlayRequest overlay)
@@ -955,22 +1040,19 @@ namespace Ludots.Client.Raylib.Rendering
 
         private static Vector3 TransformLocal(Vector3 origin, Quaternion rotation, Vector3 local)
         {
-            return origin + Vector3.Transform(local, PrefabTransformUtility.NormalizeOrIdentity(rotation));
+            return origin + Vector3.Transform(local, WorldPlane2D.NormalizeOrIdentity(rotation));
         }
 
         private static Vector3 TransformLocal(Vector3 origin, float yawRad, Vector3 local)
         {
-            Vector3 right = new Vector3(MathF.Sin(yawRad), 0f, MathF.Cos(yawRad));
-            Vector3 forward = new Vector3(MathF.Cos(yawRad), 0f, -MathF.Sin(yawRad));
-            return origin + right * local.X + Vector3.UnitY * local.Y + forward * local.Z;
+            return WorldPlane2D.TransformVisualLocal2D(origin, yawRad, in local);
         }
 
         private static float ExtractYawRad(Quaternion rotation)
         {
-            Quaternion normalized = Quaternion.Normalize(rotation);
-            float sinyCosp = 2f * (normalized.W * normalized.Y + normalized.X * normalized.Z);
-            float cosyCosp = 1f - 2f * (normalized.Y * normalized.Y + normalized.Z * normalized.Z);
-            return MathF.Atan2(sinyCosp, cosyCosp);
+            return WorldPlane2D.TryExtractFacingRadFromVisualYRotation(rotation, out float facingRad)
+                ? facingRad
+                : 0f;
         }
 
         private static Vector4 MultiplyColor(Vector4 color, float r, float g, float b, float a)
@@ -1041,7 +1123,7 @@ namespace Ludots.Client.Raylib.Rendering
 
             var transform = RaylibMatrix.FromSystemNumerics(
                 Matrix4x4.CreateScale(visual.Scale) *
-                Matrix4x4.CreateFromQuaternion(PrefabTransformUtility.NormalizeOrIdentity(visual.Rotation)) *
+                Matrix4x4.CreateFromQuaternion(WorldPlane2D.NormalizeOrIdentity(visual.Rotation)) *
                 Matrix4x4.CreateTranslation(visual.Position));
 
             Rl.rlDisableBackfaceCulling();
@@ -1407,7 +1489,7 @@ namespace Ludots.Client.Raylib.Rendering
                 MathF.Max(0.01f, MathF.Abs(size.X)) * 0.5f,
                 MathF.Max(0.01f, MathF.Abs(size.Y)) * 0.5f,
                 MathF.Max(0.01f, MathF.Abs(size.Z)) * 0.5f);
-            Quaternion normalized = PrefabTransformUtility.NormalizeOrIdentity(rotation);
+            Quaternion normalized = WorldPlane2D.NormalizeOrIdentity(rotation);
             Span<Vector3> corners = stackalloc Vector3[8];
             corners[0] = TransformLocal(center, normalized, new Vector3(-half.X, -half.Y, -half.Z));
             corners[1] = TransformLocal(center, normalized, new Vector3(half.X, -half.Y, -half.Z));
@@ -1446,7 +1528,7 @@ namespace Ludots.Client.Raylib.Rendering
                 return;
             }
 
-            Quaternion normalized = PrefabTransformUtility.NormalizeOrIdentity(rotation);
+            Quaternion normalized = WorldPlane2D.NormalizeOrIdentity(rotation);
             Color ringColor = ToRaylibColor(color);
             float step = MathF.Tau / segments;
             Vector3 previous = TransformLocal(center, normalized, new Vector3(radius, 0f, 0f));
@@ -1515,7 +1597,7 @@ namespace Ludots.Client.Raylib.Rendering
 
         private static void ToAxisAngleDegrees(Quaternion rotation, out Vector3 axis, out float angleDegrees)
         {
-            Quaternion normalized = PrefabTransformUtility.NormalizeOrIdentity(rotation);
+            Quaternion normalized = WorldPlane2D.NormalizeOrIdentity(rotation);
             float w = Math.Clamp(normalized.W, -1f, 1f);
             float angleRad = 2f * MathF.Acos(w);
             float sinHalf = MathF.Sqrt(MathF.Max(0f, 1f - (w * w)));
@@ -1531,7 +1613,7 @@ namespace Ludots.Client.Raylib.Rendering
                 normalized.X / sinHalf,
                 normalized.Y / sinHalf,
                 normalized.Z / sinHalf);
-            angleDegrees = angleRad * (180f / MathF.PI);
+            angleDegrees = WorldPlane2D.RadToDegValue(angleRad);
         }
 
         // ── Instanced rendering (unchanged from original) ──
@@ -1689,7 +1771,7 @@ namespace Ludots.Client.Raylib.Rendering
                 PrimitiveDrawItem item = items[i];
                 RaylibMatrix matrix = RaylibMatrix.FromSystemNumerics(
                     Matrix4x4.CreateScale(item.Scale * scaleMul) *
-                    Matrix4x4.CreateFromQuaternion(PrefabTransformUtility.NormalizeOrIdentity(item.Rotation)) *
+                    Matrix4x4.CreateFromQuaternion(WorldPlane2D.NormalizeOrIdentity(item.Rotation)) *
                     Matrix4x4.CreateTranslation(item.Position));
                 batch.Add(matrix);
             }

@@ -502,7 +502,7 @@ namespace Ludots.Core.Input.Orders
                 var delta = toWorldCm - fromWorldCm;
                 if (delta.LengthSquared() > 0.001f)
                 {
-                    return MathF.Atan2(delta.Z, delta.X);
+                    return WorldPlane2D.FacingRadFromDirection(delta.X, delta.Z);
                 }
             }
 

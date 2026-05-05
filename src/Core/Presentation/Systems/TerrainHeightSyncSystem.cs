@@ -7,6 +7,7 @@ using Arch.Core;
 using Arch.System;
 using Ludots.Core.Components;
 using Ludots.Core.Mathematics.FixedPoint;
+using Ludots.Core.Mathematics;
 using Ludots.Core.Diagnostics;
 using Ludots.Core.Presentation.Components;
 using Ludots.Core.Presentation.Hud;
@@ -25,7 +26,6 @@ namespace Ludots.Core.Presentation.Systems
     /// </summary>
     public sealed class TerrainHeightSyncSystem : ISystem<float>
     {
-        private const float CmToM = 0.01f;
         private readonly World _world;
         private readonly IReadOnlyDictionary<string, object> _globals;
         private readonly PresentationTimingDiagnostics? _timingDiagnostics;
@@ -133,13 +133,23 @@ namespace Ludots.Core.Presentation.Systems
                     ? chunk.GetSpan<VisualHeightmapSampleState>()
                     : Span<VisualHeightmapSampleState>.Empty;
 
-                foreach (int index in chunk)
+                if (previousPositions.Length == 0)
                 {
-                    Vector2 worldCm = previousPositions.Length == 0
-                        ? currentPositions[index].Value.ToVector2()
-                        : Fix64Vec2.Lerp(previousPositions[index].Value, currentPositions[index].Value, fixedAlpha).ToVector2();
-                    _projectedXs[index] = worldCm.X;
-                    _projectedYs[index] = worldCm.Y;
+                    for (int index = 0; index < count; index++)
+                    {
+                        Vector2 worldCm = currentPositions[index].Value.ToVector2();
+                        _projectedXs[index] = worldCm.X;
+                        _projectedYs[index] = worldCm.Y;
+                    }
+                }
+                else
+                {
+                    for (int index = 0; index < count; index++)
+                    {
+                        Vector2 worldCm = Fix64Vec2.Lerp(previousPositions[index].Value, currentPositions[index].Value, fixedAlpha).ToVector2();
+                        _projectedXs[index] = worldCm.X;
+                        _projectedYs[index] = worldCm.Y;
+                    }
                 }
 
                 if (!heightmap.SampleHeightsCm(
@@ -152,17 +162,29 @@ namespace Ludots.Core.Presentation.Systems
 
                 any = true;
                 _sampledThisFrame += count;
-                foreach (int index in chunk)
+                if (heightSampleStates.IsEmpty)
                 {
-                    float heightCm = _projectedHeights[index];
-                    if (float.IsNaN(heightCm) || float.IsInfinity(heightCm))
+                    for (int index = 0; index < count; index++)
                     {
-                        continue;
-                    }
+                        float heightCm = _projectedHeights[index];
+                        if (float.IsNaN(heightCm) || float.IsInfinity(heightCm))
+                        {
+                            continue;
+                        }
 
-                    visuals[index].Position.Y = heightCm * CmToM;
-                    if (!heightSampleStates.IsEmpty)
+                        visuals[index].Position.Y = WorldUnits.CmToM(heightCm);
+                    }
+                }
+                else
+                {
+                    for (int index = 0; index < count; index++)
                     {
+                        float heightCm = _projectedHeights[index];
+                        if (!float.IsNaN(heightCm) && !float.IsInfinity(heightCm))
+                        {
+                            visuals[index].Position.Y = WorldUnits.CmToM(heightCm);
+                        }
+
                         heightSampleStates[index] = new VisualHeightmapSampleState
                         {
                             FrameId = frameId,
@@ -226,13 +248,23 @@ namespace Ludots.Core.Presentation.Systems
                     ? chunk.GetSpan<VisualHeightmapSampleState>()
                     : Span<VisualHeightmapSampleState>.Empty;
 
-                foreach (int index in chunk)
+                if (previousPositions.Length == 0)
                 {
-                    Vector2 worldCm = previousPositions.Length == 0
-                        ? currentPositions[index].Value.ToVector2()
-                        : Fix64Vec2.Lerp(previousPositions[index].Value, currentPositions[index].Value, fixedAlpha).ToVector2();
-                    _projectedXs[index] = worldCm.X;
-                    _projectedYs[index] = worldCm.Y;
+                    for (int index = 0; index < count; index++)
+                    {
+                        Vector2 worldCm = currentPositions[index].Value.ToVector2();
+                        _projectedXs[index] = worldCm.X;
+                        _projectedYs[index] = worldCm.Y;
+                    }
+                }
+                else
+                {
+                    for (int index = 0; index < count; index++)
+                    {
+                        Vector2 worldCm = Fix64Vec2.Lerp(previousPositions[index].Value, currentPositions[index].Value, fixedAlpha).ToVector2();
+                        _projectedXs[index] = worldCm.X;
+                        _projectedYs[index] = worldCm.Y;
+                    }
                 }
 
                 if (!heightmap.SampleHeightsCm(
@@ -245,28 +277,32 @@ namespace Ludots.Core.Presentation.Systems
 
                 any = true;
                 _sampledThisFrame += count;
-                foreach (int index in chunk)
+                if (heightSampleStates.IsEmpty)
                 {
-                    float heightCm = _projectedHeights[index];
-                    if (float.IsNaN(heightCm) || float.IsInfinity(heightCm))
+                    for (int index = 0; index < count; index++)
                     {
-                        visuals[index].Position.Y = 0f;
+                        float heightCm = _projectedHeights[index];
+                        visuals[index].Position.Y = float.IsNaN(heightCm) || float.IsInfinity(heightCm)
+                            ? 0f
+                            : WorldUnits.CmToM(heightCm);
+                        AddStaticPendingEntity(ref staticPendingCount, chunk.Entity(index));
                     }
-                    else
+                }
+                else
+                {
+                    for (int index = 0; index < count; index++)
                     {
-                        visuals[index].Position.Y = heightCm * CmToM;
-                    }
-
-                    if (!heightSampleStates.IsEmpty)
-                    {
+                        float heightCm = _projectedHeights[index];
+                        visuals[index].Position.Y = float.IsNaN(heightCm) || float.IsInfinity(heightCm)
+                            ? 0f
+                            : WorldUnits.CmToM(heightCm);
                         heightSampleStates[index] = new VisualHeightmapSampleState
                         {
                             FrameId = frameId,
                             Sampled = 1,
                         };
+                        AddStaticPendingEntity(ref staticPendingCount, chunk.Entity(index));
                     }
-
-                    AddStaticPendingEntity(ref staticPendingCount, chunk.Entity(index));
                 }
             }
 

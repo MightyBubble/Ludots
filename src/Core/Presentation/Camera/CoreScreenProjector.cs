@@ -1,5 +1,6 @@
 using System.Numerics;
 using Ludots.Core.Gameplay.Camera;
+using Ludots.Core.Mathematics;
 using Ludots.Platform.Abstractions;
 
 namespace Ludots.Core.Presentation.Camera
@@ -99,7 +100,7 @@ namespace Ludots.Core.Presentation.Camera
             _cachedResolution = resolution;
 
             var view = Matrix4x4.CreateLookAt(camera.Position, camera.Target, camera.Up);
-            float fovYRad = camera.FovYDeg * (float)(Math.PI / 180.0);
+            float fovYRad = WorldPlane2D.DegToRadValue(camera.FovYDeg);
             CameraClipPlanes clipPlanes = CameraViewportUtil.ResolveClipPlanes(in camera);
             var projection = Matrix4x4.CreatePerspectiveFieldOfView(fovYRad, _view.AspectRatio, clipPlanes.NearMeters, clipPlanes.FarMeters);
             _viewProjection = view * projection;

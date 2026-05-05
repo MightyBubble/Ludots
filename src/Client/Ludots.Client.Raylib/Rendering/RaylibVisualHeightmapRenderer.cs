@@ -183,6 +183,8 @@ namespace Ludots.Client.Raylib.Rendering
 
             float stepXCm = chunk.SampleStepXCm;
             float stepYCm = chunk.SampleStepYCm;
+            ResolveChunkHeightRange(in chunk, out float minHeightCm, out float maxHeightCm);
+            float heightRangeCm = MathF.Max(1f, maxHeightCm - minHeightCm);
             for (int y = 0; y < rows; y++)
             {
                 for (int x = 0; x < columns; x++)
@@ -201,11 +203,12 @@ namespace Ludots.Client.Raylib.Rendering
                     mesh.normals[f + 2] = normal.Z;
 
                     int c = vertex * 4;
-                    float heightBand = Math.Clamp((heightCm + 900f) / 1800f, 0f, 1f);
+                    float heightBand = Math.Clamp((heightCm - minHeightCm) / heightRangeCm, 0f, 1f);
                     float slope = Math.Clamp(1f - normal.Y, 0f, 1f);
-                    mesh.colors[c + 0] = ClampToByte(74f + (heightBand * 78f) + (slope * 42f));
-                    mesh.colors[c + 1] = ClampToByte(104f + (heightBand * 82f) - (slope * 18f));
-                    mesh.colors[c + 2] = ClampToByte(78f + (heightBand * 44f) - (slope * 26f));
+                    ResolveTerrainColor(heightBand, slope, out byte red, out byte green, out byte blue);
+                    mesh.colors[c + 0] = red;
+                    mesh.colors[c + 1] = green;
+                    mesh.colors[c + 2] = blue;
                     mesh.colors[c + 3] = 255;
                 }
             }
@@ -231,6 +234,50 @@ namespace Ludots.Client.Raylib.Rendering
 
             Rl.UploadMesh(ref mesh, false);
             return mesh;
+        }
+
+        private static void ResolveChunkHeightRange(in VisualHeightmapRenderChunk chunk, out float minHeightCm, out float maxHeightCm)
+        {
+            minHeightCm = float.PositiveInfinity;
+            maxHeightCm = float.NegativeInfinity;
+            int columns = chunk.SampleColumns;
+            int rows = chunk.SampleRows;
+            for (int y = 0; y < rows; y++)
+            {
+                for (int x = 0; x < columns; x++)
+                {
+                    if (!chunk.TryReadHeightCm(x, y, out float heightCm))
+                    {
+                        continue;
+                    }
+
+                    minHeightCm = MathF.Min(minHeightCm, heightCm);
+                    maxHeightCm = MathF.Max(maxHeightCm, heightCm);
+                }
+            }
+
+            if (!float.IsFinite(minHeightCm) || !float.IsFinite(maxHeightCm))
+            {
+                minHeightCm = 0f;
+                maxHeightCm = 1f;
+            }
+        }
+
+        private static void ResolveTerrainColor(float heightBand, float slope, out byte red, out byte green, out byte blue)
+        {
+            Vector3 low = new(35f, 86f, 88f);
+            Vector3 mid = new(82f, 143f, 84f);
+            Vector3 high = new(190f, 174f, 108f);
+            Vector3 peak = new(226f, 220f, 184f);
+            Vector3 color = heightBand < 0.50f
+                ? Vector3.Lerp(low, mid, heightBand * 2f)
+                : heightBand < 0.82f
+                    ? Vector3.Lerp(mid, high, (heightBand - 0.50f) / 0.32f)
+                    : Vector3.Lerp(high, peak, (heightBand - 0.82f) / 0.18f);
+            float shade = 1f - Math.Clamp(slope * 0.42f, 0f, 0.42f);
+            red = ClampToByte(color.X * shade);
+            green = ClampToByte(color.Y * shade);
+            blue = ClampToByte(color.Z * shade);
         }
 
         private static Vector3 ComputeNormal(in VisualHeightmapRenderChunk chunk, int x, int y, float stepXCm, float stepYCm)

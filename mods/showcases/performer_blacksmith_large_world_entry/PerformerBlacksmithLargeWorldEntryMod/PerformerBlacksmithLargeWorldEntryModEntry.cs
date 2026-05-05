@@ -52,6 +52,7 @@ public sealed class PerformerBlacksmithLargeWorldEntryModEntry : IMod
         if (engine.GetService(CoreServiceKeys.RenderDebugState) is RenderDebugState renderDebug)
         {
             renderDebug.DrawTerrain = true;
+            renderDebug.DrawDebugDraw = false;
         }
 
         if (engine.GetService(CoreServiceKeys.ChunkDebugPanelRuntime) is ChunkDebugPanelRuntime chunkDebug)

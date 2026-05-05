@@ -8,8 +8,10 @@ using Arch.Core.Extensions.Dangerous;
 using Arch.Core.Utils;
 using System.Runtime.InteropServices;
 using System.Runtime.CompilerServices;
+using Ludots.Core.Components;
 using Ludots.Core.Gameplay.GAS;
 using Ludots.Core.Gameplay.GAS.Components;
+using Ludots.Core.Mathematics;
 using Ludots.Core.Presentation.Commands;
 using Ludots.Core.Presentation.Components;
 
@@ -171,7 +173,9 @@ namespace Ludots.Core.Presentation.Performers
             var entity = _world.Create(
                 state,
                 new PerformerWorldPosition { Value = worldPosition },
+                new PerformerWorldPlanePosition { ValueCm = WorldPlane2D.VisualMetersToLogicCm(in worldPosition) },
                 new PerformerWorldRotation { Value = Quaternion.Identity },
+                ResolvePerformerWorldFacing(owner),
                 new PerformerWorldScale { Value = Vector3.One },
                 new PerformerTransformSource { Value = transformSource },
                 new PerformerParent { Parent = parent },
@@ -235,10 +239,13 @@ namespace Ludots.Core.Presentation.Performers
             ReserveBatchIndexCapacity(owners.Length, definition);
             uint defaultBehaviorMask = BuildDefaultBehaviorMask(definition);
             bool includeTransformSyncTick = BatchRequiresTransformSyncTick(definition, defaultBehaviorMask, owners);
+            bool includeOwnerPayloadTransformSync = includeTransformSyncTick &&
+                CanBatchUseOwnerPayloadTransformSync(definition, defaultBehaviorMask, owners);
             Signature signature = BuildBatchSignature(
                 definition,
                 defaultBehaviorMask,
                 includeTransformSyncTick,
+                includeOwnerPayloadTransformSync,
                 includeAttachmentTick: true);
             LastRootBatchSetupMs = ElapsedMs(setupStart);
             long worldCreateStart = Stopwatch.GetTimestamp();
@@ -366,6 +373,11 @@ namespace Ludots.Core.Presentation.Performers
             position += definition.PositionOffset;
 
             _world.Get<PerformerWorldPosition>(performer).Value = position;
+            if (_world.Has<PerformerWorldPlanePosition>(performer))
+            {
+                _world.Get<PerformerWorldPlanePosition>(performer).ValueCm = WorldPlane2D.VisualMetersToLogicCm(in position);
+            }
+
             if (_world.Has<PerformerWorldRotation>(performer))
             {
                 _world.Get<PerformerWorldRotation>(performer).Value = rotation;
@@ -959,6 +971,11 @@ namespace Ludots.Core.Presentation.Performers
                 MarkStaticDirty(performer);
             }
 
+            if (ownerVisible && (changed || !_world.Has<PerfHasEmitWork>(performer)))
+            {
+                EnsureRequestBackedEmitWorkScheduled(performer);
+            }
+
             return true;
         }
 
@@ -1138,6 +1155,8 @@ namespace Ludots.Core.Presentation.Performers
             bool hasAttachmentTick = false;
             bool hasGrounding = false;
             bool hasAnimator = false;
+            bool hasOwnerFacingBinding = definition.HasOwnerFacingBindingWork;
+            bool hasMinimapMarker = false;
 
             for (int i = 0; i < behaviors.Length; i++)
             {
@@ -1165,6 +1184,7 @@ namespace Ludots.Core.Presentation.Performers
                         }
 
                         break;
+                    case BehaviorKind.MinimapMarker: hasMinimapMarker = true; break;
                 }
             }
 
@@ -1173,7 +1193,11 @@ namespace Ludots.Core.Presentation.Performers
             SyncTickBehaviorMarker<PerfHasAttachment>(entity, hasAttachment);
             SyncTickBehaviorMarker<PerfHasAttachmentTick>(entity, hasAttachmentTick);
             SyncTickBehaviorMarker<PerfHasGrounding>(entity, hasGrounding);
-            SyncTickBehaviorMarker<PerfTransformSyncTick>(entity, PerformerTransformRequiresTick(entity, depth: 0));
+            SyncTickBehaviorMarker<PerfHasOwnerFacingBinding>(entity, hasOwnerFacingBinding);
+            SyncTickBehaviorMarker<PerfHasMinimapMarker>(entity, hasMinimapMarker);
+            bool needsTransformSync = PerformerTransformRequiresTick(entity, depth: 0);
+            SyncTickBehaviorMarker<PerfTransformSyncTick>(entity, needsTransformSync);
+            SyncTickBehaviorMarker<PerfOwnerPayloadTransformSync>(entity, needsTransformSync && CanUseOwnerPayloadTransformSync(entity));
             SyncTickBehaviorMarker<PerfHasAnimator>(entity, hasAnimator);
         }
 
@@ -1228,7 +1252,9 @@ namespace Ludots.Core.Presentation.Performers
                 MarkRetainedPresentationRequestDirty(entity);
             }
 
-            SyncTickBehaviorMarker<PerfTransformSyncTick>(entity, PerformerTransformRequiresTick(entity, depth: 0));
+            bool needsTransformSync = PerformerTransformRequiresTick(entity, depth: 0);
+            SyncTickBehaviorMarker<PerfTransformSyncTick>(entity, needsTransformSync);
+            SyncTickBehaviorMarker<PerfOwnerPayloadTransformSync>(entity, needsTransformSync && CanUseOwnerPayloadTransformSync(entity));
         }
 
         public bool SetBehaviorActive(Entity entity, PerformerDefinition definition, int slotIndex, bool active)
@@ -1303,9 +1329,24 @@ namespace Ludots.Core.Presentation.Performers
                 RemoveMarker<PerfHasGrounding>(entity);
             }
 
+            if (_world.Has<PerfHasOwnerFacingBinding>(entity))
+            {
+                RemoveMarker<PerfHasOwnerFacingBinding>(entity);
+            }
+
+            if (_world.Has<PerfHasMinimapMarker>(entity))
+            {
+                RemoveMarker<PerfHasMinimapMarker>(entity);
+            }
+
             if (_world.Has<PerfTransformSyncTick>(entity))
             {
                 RemoveMarker<PerfTransformSyncTick>(entity);
+            }
+
+            if (_world.Has<PerfOwnerPayloadTransformSync>(entity))
+            {
+                RemoveMarker<PerfOwnerPayloadTransformSync>(entity);
             }
 
             if (_world.Has<PerfHasAnimator>(entity))
@@ -1437,6 +1478,69 @@ namespace Ludots.Core.Presentation.Performers
             }
 
             return DefinitionRequiresTransformSyncForStaticOwner(definition, activeMask, depth: 0);
+        }
+
+        private bool CanBatchUseOwnerPayloadTransformSync(
+            PerformerDefinition definition,
+            uint activeMask,
+            ReadOnlySpan<Entity> owners)
+        {
+            if (owners.Length == 0 ||
+                !DefinitionCanUseOwnerPayloadTransformSync(definition, activeMask, depth: 0))
+            {
+                return false;
+            }
+
+            for (int i = 0; i < owners.Length; i++)
+            {
+                Entity owner = owners[i];
+                if (owner == Entity.Null ||
+                    !_world.IsAlive(owner) ||
+                    !_world.Has<PresentationOwnerHasPerformerPayload>(owner) ||
+                    _world.Has<PresentationStaticTransform>(owner))
+                {
+                    return false;
+                }
+            }
+
+            return true;
+        }
+
+        private bool DefinitionCanUseOwnerPayloadTransformSync(
+            PerformerDefinition definition,
+            uint activeMask,
+            int depth)
+        {
+            if (depth >= 8 || definition.Children.Length != 0)
+            {
+                return false;
+            }
+
+            BehaviorSlot[] behaviors = definition.Behaviors;
+            for (int i = 0; i < behaviors.Length; i++)
+            {
+                ref readonly BehaviorSlot slot = ref behaviors[i];
+                if (slot.SlotIndex is < 0 or >= 32 ||
+                    (activeMask & (1u << slot.SlotIndex)) == 0)
+                {
+                    continue;
+                }
+
+                switch (slot.Kind)
+                {
+                    case BehaviorKind.AssetBinding:
+                    case BehaviorKind.Grounding:
+                    case BehaviorKind.MinimapMarker:
+                    case BehaviorKind.Animator:
+                    case BehaviorKind.Material:
+                        break;
+
+                    default:
+                        return false;
+                }
+            }
+
+            return true;
         }
 
         private bool DefinitionRequiresTransformSyncForStaticOwner(
@@ -1749,11 +1853,13 @@ namespace Ludots.Core.Presentation.Performers
                     defaultBehaviorMask,
                     parentEntities,
                     depth: 0);
+                bool includeOwnerPayloadTransformSync = false;
                 bool includeAttachmentTick = includeTransformSyncTick;
                 Signature signature = BuildBatchSignature(
                     childDefinition,
                     defaultBehaviorMask,
                     includeTransformSyncTick,
+                    includeOwnerPayloadTransformSync,
                     includeAttachmentTick);
                 LastChildBatchSetupMs += ElapsedMs(childSetupStart);
 
@@ -1889,6 +1995,7 @@ namespace Ludots.Core.Presentation.Performers
                 definition,
                 defaultBehaviorMask,
                 includeTransformSyncTick: true,
+                includeOwnerPayloadTransformSync: false,
                 includeAttachmentTick: true);
         }
 
@@ -1896,12 +2003,15 @@ namespace Ludots.Core.Presentation.Performers
             PerformerDefinition definition,
             uint defaultBehaviorMask,
             bool includeTransformSyncTick,
+            bool includeOwnerPayloadTransformSync,
             bool includeAttachmentTick)
         {
             Signature signature =
                 Component<PerformerState>.Signature +
                 Component<PerformerWorldPosition>.Signature +
+                Component<PerformerWorldPlanePosition>.Signature +
                 Component<PerformerWorldRotation>.Signature +
+                Component<PerformerWorldFacing>.Signature +
                 Component<PerformerWorldScale>.Signature +
                 Component<PerformerTransformSource>.Signature +
                 Component<PerformerParent>.Signature +
@@ -1924,6 +2034,8 @@ namespace Ludots.Core.Presentation.Performers
                 bool hasAttachmentTick = false;
                 bool hasGrounding = false;
                 bool hasAnimator = false;
+                bool hasOwnerFacingBinding = definition.HasOwnerFacingBindingWork;
+                bool hasMinimapMarker = false;
                 for (int i = 0; i < behaviors.Length; i++)
                 {
                     ref readonly BehaviorSlot slot = ref behaviors[i];
@@ -1947,6 +2059,7 @@ namespace Ludots.Core.Presentation.Performers
                             hasAttachmentTick |= includeAttachmentTick &&
                                                  DefinitionHasAttachmentTransformConsumers(definition);
                             break;
+                        case BehaviorKind.MinimapMarker: hasMinimapMarker = true; break;
                     }
                 }
 
@@ -1960,6 +2073,8 @@ namespace Ludots.Core.Presentation.Performers
                 if (hasAttachment) signature += Component<PerfHasAttachment>.Signature;
                 if (hasAttachmentTick) signature += Component<PerfHasAttachmentTick>.Signature;
                 if (hasGrounding) signature += Component<PerfHasGrounding>.Signature;
+                if (hasOwnerFacingBinding) signature += Component<PerfHasOwnerFacingBinding>.Signature;
+                if (hasMinimapMarker) signature += Component<PerfHasMinimapMarker>.Signature;
                 if ((definition.HasSurfaceAuthoring || definition.HasAssetBindingBehavior) &&
                     !definition.UsesEventDrivenStaticEmit &&
                     !definition.UsesRetainedPresentationRequest)
@@ -1985,6 +2100,11 @@ namespace Ludots.Core.Presentation.Performers
             if (includeTransformSyncTick)
             {
                 signature += Component<PerfTransformSyncTick>.Signature;
+            }
+
+            if (includeOwnerPayloadTransformSync)
+            {
+                signature += Component<PerfOwnerPayloadTransformSync>.Signature;
             }
 
             return signature;
@@ -2471,7 +2591,9 @@ namespace Ludots.Core.Presentation.Performers
 
                 Span<PerformerState> states = chunk.GetSpan<PerformerState>();
                 Span<PerformerWorldPosition> positions = chunk.GetSpan<PerformerWorldPosition>();
+                Span<PerformerWorldPlanePosition> planePositions = chunk.GetSpan<PerformerWorldPlanePosition>();
                 Span<PerformerWorldRotation> rotations = chunk.GetSpan<PerformerWorldRotation>();
+                Span<PerformerWorldFacing> facings = chunk.GetSpan<PerformerWorldFacing>();
                 Span<PerformerWorldScale> scales = chunk.GetSpan<PerformerWorldScale>();
                 Span<PerformerTransformSource> transformSources = chunk.GetSpan<PerformerTransformSource>();
                 Span<PerformerParent> parentComponents = chunk.GetSpan<PerformerParent>();
@@ -2526,19 +2648,29 @@ namespace Ludots.Core.Presentation.Performers
                         Vector3 parentScale = _world.Has<PerformerWorldScale>(parent)
                             ? _world.Get<PerformerWorldScale>(parent).Value
                             : Vector3.One;
-                        Quaternion normalizedParentRotation = NormalizeOrIdentity(parentRotation);
-                        Vector3 normalizedParentScale = NormalizeScale(parentScale);
+                        Quaternion normalizedParentRotation = WorldPlane2D.NormalizeOrIdentity(parentRotation);
+                        Vector3 normalizedParentScale = WorldPlane2D.NormalizeScale(parentScale);
                         Vector3 scaledOffset = parentAttachment.InheritScale
                             ? normalizedParentScale * parentAttachment.Offset
                             : parentAttachment.Offset;
                         position = parentPosition + Vector3.Transform(scaledOffset, normalizedParentRotation);
-                        rotation = NormalizeOrIdentity(normalizedParentRotation * NormalizeOrIdentity(parentAttachment.RotationOffset));
+                        rotation = WorldPlane2D.NormalizeOrIdentity(normalizedParentRotation * WorldPlane2D.NormalizeOrIdentity(parentAttachment.RotationOffset));
                         scale = parentAttachment.InheritScale ? normalizedParentScale : Vector3.One;
                     }
 
                     states[componentIndex] = state;
                     positions[componentIndex] = new PerformerWorldPosition { Value = position };
+                    planePositions[componentIndex] = new PerformerWorldPlanePosition
+                    {
+                        ValueCm = WorldPlane2D.VisualMetersToLogicCm(in position),
+                    };
                     rotations[componentIndex] = new PerformerWorldRotation { Value = rotation };
+                    facings[componentIndex] = hasInlineParentAttachment &&
+                        parent != Entity.Null &&
+                        _world.IsAlive(parent) &&
+                        _world.Has<PerformerWorldFacing>(parent)
+                            ? _world.Get<PerformerWorldFacing>(parent)
+                            : ResolvePerformerWorldFacing(owner);
                     scales[componentIndex] = new PerformerWorldScale { Value = scale };
                     transformSources[componentIndex] = new PerformerTransformSource
                     {
@@ -2741,22 +2873,6 @@ namespace Ludots.Core.Presentation.Performers
             return max <= 0f ? 0f : Math.Clamp(current / max, 0f, 1f);
         }
 
-        private static Quaternion NormalizeOrIdentity(Quaternion value)
-        {
-            float lengthSquared = value.LengthSquared();
-            if (lengthSquared <= 0.000001f)
-            {
-                return Quaternion.Identity;
-            }
-
-            return Quaternion.Normalize(value);
-        }
-
-        private static Vector3 NormalizeScale(Vector3 value)
-        {
-            return value == Vector3.Zero ? Vector3.One : value;
-        }
-
         private void AddEntityAnchoredBatchIndexes(
             ReadOnlySpan<Entity> created,
             ReadOnlySpan<Entity> owners,
@@ -2954,6 +3070,22 @@ namespace Ludots.Core.Presentation.Performers
         private void RemoveOwnerPayloadRef(Entity owner)
         {
             // Owner payload presence is now derived from the owner -> performer index.
+        }
+
+        private PerformerWorldFacing ResolvePerformerWorldFacing(Entity owner)
+        {
+            if (owner == Entity.Null ||
+                !_world.IsAlive(owner) ||
+                !_world.Has<FacingDirection>(owner))
+            {
+                return default;
+            }
+
+            return new PerformerWorldFacing
+            {
+                AngleRad = _world.Get<FacingDirection>(owner).AngleRad,
+                HasValue = 1,
+            };
         }
 
         private void AddIndexes(Entity performer, in PerformerState state, PerformerDefinition definition)
@@ -3259,6 +3391,7 @@ namespace Ludots.Core.Presentation.Performers
             {
                 Count = bucket.Count,
                 SingleRootPerformer = bucket.TryGetSingle(out Entity single) ? single : Entity.Null,
+                SingleRootTransformSync = CanUseOwnerPayloadTransformSync(single) ? (byte)1 : (byte)0,
             };
 
             if (_world.Has<PresentationOwnerHasPerformerPayload>(owner))
@@ -3279,6 +3412,22 @@ namespace Ludots.Core.Presentation.Performers
             }
 
             _world.Remove<PresentationOwnerHasPerformerPayload>(owner);
+        }
+
+        private bool CanUseOwnerPayloadTransformSync(Entity performer)
+        {
+            if (performer == Entity.Null ||
+                !_world.IsAlive(performer) ||
+                !_world.Has<PerformerState>(performer) ||
+                !_world.Has<PerformerTransformSource>(performer) ||
+                !_world.Has<PerfOwnerPayloadTransformSync>(performer))
+            {
+                return false;
+            }
+
+            ref readonly PerformerState state = ref _world.Get<PerformerState>(performer);
+            return state.AnchorKind == PresentationAnchorKind.Entity &&
+                _world.Get<PerformerTransformSource>(performer).Value == TransformSource.EntityTransform;
         }
 
         private void ClearOwnerPayloadMarkers()
@@ -3332,6 +3481,11 @@ namespace Ludots.Core.Presentation.Performers
             if (changed)
             {
                 MarkStaticDirty(performer);
+            }
+
+            if (ownerVisible && (changed || !_world.Has<PerfHasEmitWork>(performer)))
+            {
+                EnsureRequestBackedEmitWorkScheduled(performer);
             }
         }
 
@@ -3608,6 +3762,11 @@ namespace Ludots.Core.Presentation.Performers
                 MarkStaticDirty(performer);
             }
 
+            if (nextVisible && (changed || !_world.Has<PerfHasEmitWork>(performer)))
+            {
+                EnsureRequestBackedEmitWorkScheduled(performer);
+            }
+
             if (!_world.Has<PerformerChildren>(performer))
             {
                 return;
@@ -3618,6 +3777,80 @@ namespace Ludots.Core.Presentation.Performers
             {
                 SyncCullHierarchyAndMarkDirty(children.Get(i), ownerVisible, ownerLod, nextVisible);
             }
+        }
+
+        private void EnsureRequestBackedEmitWorkScheduled(Entity performer)
+        {
+            if (!_world.IsAlive(performer) ||
+                !_world.Has<PerformerState>(performer) ||
+                _definitions == null)
+            {
+                return;
+            }
+
+            ref readonly PerformerState state = ref _world.Get<PerformerState>(performer);
+            if (!_definitions.TryGet(state.DefId, out PerformerDefinition definition) ||
+                !DefinitionUsesRequestBackedEmitWork(definition, state.BehaviorActiveMask))
+            {
+                return;
+            }
+
+            if (!_world.Has<PerfHasEmitWork>(performer))
+            {
+                AddMarker<PerfHasEmitWork>(performer);
+            }
+        }
+
+        public bool EnsureRequestBackedEmitWorkScheduledIfNeeded(Entity performer)
+        {
+            if (!_world.IsAlive(performer) ||
+                !_world.Has<PerformerState>(performer) ||
+                _world.Has<PerfHasEmitWork>(performer) ||
+                _definitions == null)
+            {
+                return false;
+            }
+
+            ref readonly PerformerState state = ref _world.Get<PerformerState>(performer);
+            if (!_definitions.TryGet(state.DefId, out PerformerDefinition definition) ||
+                !DefinitionUsesRequestBackedEmitWork(definition, state.BehaviorActiveMask))
+            {
+                return false;
+            }
+
+            AddMarker<PerfHasEmitWork>(performer);
+            return true;
+        }
+
+        private static bool DefinitionUsesRequestBackedEmitWork(PerformerDefinition definition, uint activeBehaviorMask)
+        {
+            if (definition == null ||
+                definition.UsesEventDrivenStaticEmit ||
+                definition.UsesRetainedPresentationRequest ||
+                definition.AssetBehaviorIndices.Length == 0)
+            {
+                return false;
+            }
+
+            BehaviorSlot[] behaviors = definition.Behaviors;
+            int[] assetBehaviorIndices = definition.AssetBehaviorIndices;
+            for (int i = 0; i < assetBehaviorIndices.Length; i++)
+            {
+                int behaviorIndex = assetBehaviorIndices[i];
+                if ((uint)behaviorIndex >= (uint)behaviors.Length)
+                {
+                    continue;
+                }
+
+                int slotIndex = behaviors[behaviorIndex].SlotIndex;
+                if (slotIndex is >= 0 and < 32 &&
+                    (activeBehaviorMask & (1u << slotIndex)) != 0)
+                {
+                    return true;
+                }
+            }
+
+            return false;
         }
 
         private void MarkStaticDirty(ref PerformerEmitCache emitCache)

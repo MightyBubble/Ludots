@@ -297,6 +297,47 @@ namespace Ludots.Tests.Presentation
         }
 
         [Test]
+        public void Load_ParsesMinimapMarkerPerformerForwardOrientationWithoutParamKey()
+        {
+            WriteCatalog();
+            WritePerformers(
+                """
+                [
+                  {
+                    "id": "marker_actor",
+                    "behaviors": [
+                      {
+                        "slot": 4,
+                        "kind": "MinimapMarker",
+                        "activeByDefault": true,
+                        "minimapMarker": {
+                          "shape": "Circle",
+                          "color": [0.18, 0.82, 1.0, 1.0],
+                          "sizePx": 8.0,
+                          "orientationMode": "PerformerForward",
+                          "orientationOffsetRad": 0.25,
+                          "orientationLengthPx": 15.0
+                        }
+                      }
+                    ]
+                  }
+                ]
+                """);
+
+            var (_, _, pipeline, catalog) = BuildPipeline();
+            var registry = new PerformerDefinitionRegistry();
+            var loader = new PerformerDefinitionConfigLoader(pipeline, registry);
+
+            loader.Load(catalog);
+
+            Assert.That(registry.TryGet(registry.GetId("marker_actor"), out var definition), Is.True);
+            Assert.That(definition.Behaviors[0].MinimapMarker.OrientationMode, Is.EqualTo(MinimapMarkerOrientationMode.PerformerForward));
+            Assert.That(definition.Behaviors[0].MinimapMarker.OrientationParamKey, Is.EqualTo(-1));
+            Assert.That(definition.Behaviors[0].MinimapMarker.OrientationOffsetRad, Is.EqualTo(0.25f));
+            Assert.That(definition.Behaviors[0].MinimapMarker.OrientationLengthPx, Is.EqualTo(15f));
+        }
+
+        [Test]
         public void Load_SkipsInvalidMinimapMarkerShapeWithoutDefaultingToAssetBinding()
         {
             WriteCatalog();

@@ -1,6 +1,7 @@
 using System;
 using System.Collections.Generic;
 using System.Numerics;
+using Ludots.Core.Presentation.Minimap;
 
 namespace Ludots.Core.Presentation.Hud
 {
@@ -14,6 +15,7 @@ namespace Ludots.Core.Presentation.Hud
         private readonly int[] _layerVersions;
         private readonly int _capacity;
 
+        private MinimapScreenMarkerBuffer? _topMostMinimapMarkers;
         private int _count;
         private int _buildCount;
         private bool _building;
@@ -52,6 +54,8 @@ namespace Ludots.Core.Presentation.Hud
         public int RetainedItemCountLastBuild { get; private set; }
 
         public int MutatedItemCountLastBuild { get; private set; }
+
+        public MinimapScreenMarkerBuffer? TopMostMinimapMarkers => _topMostMinimapMarkers;
 
         public ReadOnlySpan<PresentationOverlayItem> GetSpan()
         {
@@ -157,6 +161,7 @@ namespace Ludots.Core.Presentation.Hud
             _buildCount = 0;
             _building = false;
             _flattenedDirty = false;
+            _topMostMinimapMarkers = null;
             DirtyLaneCount = 0;
             DroppedSinceClear = 0;
             RetainedItemCountLastBuild = 0;
@@ -174,6 +179,7 @@ namespace Ludots.Core.Presentation.Hud
             _building = true;
             _buildCount = 0;
             _flattenedDirty = false;
+            _topMostMinimapMarkers = null;
             DirtyLaneCount = 0;
             DroppedSinceClear = 0;
             RetainedItemCountLastBuild = 0;
@@ -193,6 +199,7 @@ namespace Ludots.Core.Presentation.Hud
             _building = false;
             _buildCount = 0;
             _flattenedDirty = true;
+            _topMostMinimapMarkers = null;
             DirtyLaneCount = 0;
             DroppedSinceClear = 0;
             RetainedItemCountLastBuild = 0;
@@ -215,6 +222,7 @@ namespace Ludots.Core.Presentation.Hud
         {
             _building = false;
             _buildCount = 0;
+            _topMostMinimapMarkers = null;
             DirtyLaneCount = 0;
             DroppedSinceClear = 0;
             RetainedItemCountLastBuild = 0;
@@ -468,6 +476,13 @@ namespace Ludots.Core.Presentation.Hud
 
         public bool ContainsLayer(PresentationOverlayLayer layer)
         {
+            if (layer == PresentationOverlayLayer.TopMost &&
+                _topMostMinimapMarkers != null &&
+                _topMostMinimapMarkers.Count > 0)
+            {
+                return true;
+            }
+
             for (int kind = 1; kind <= KindCount; kind++)
             {
                 if (_lanes[GetLaneIndex(layer, (PresentationOverlayItemKind)kind)].Count > 0)
@@ -575,39 +590,17 @@ namespace Ludots.Core.Presentation.Hud
             return TryStore(in item);
         }
 
-        public bool TryAddMinimapMarker(
-            PresentationOverlayLayer layer,
-            float x,
-            float y,
-            float sizePx,
-            in Vector4 color,
-            int stableId = 0,
-            int dirtySerial = 0,
-            uint flags = 0u,
-            float orientationRad = 0f,
-            float orientationLengthPx = 0f)
+        public void SetTopMostMinimapMarkers(MinimapScreenMarkerBuffer? markers)
         {
-            if (sizePx <= 0f)
+            bool hadMarkers = _topMostMinimapMarkers != null && _topMostMinimapMarkers.Count > 0;
+            bool hasMarkers = markers != null && markers.Count > 0;
+            _topMostMinimapMarkers = hasMarkers ? markers : null;
+            if (hasMarkers || hadMarkers)
             {
-                return true;
+                DirtyLaneCount++;
+                Version++;
+                _layerVersions[(int)PresentationOverlayLayer.TopMost]++;
             }
-
-            var item = new PresentationOverlayItem
-            {
-                StableId = stableId,
-                DirtySerial = dirtySerial,
-                Kind = PresentationOverlayItemKind.MinimapMarker,
-                Layer = layer,
-                X = x,
-                Y = y,
-                Width = sizePx,
-                Height = sizePx,
-                Color0 = color,
-                Value0 = flags,
-                Value1 = orientationRad,
-                Value2 = orientationLengthPx
-            };
-            return TryStore(in item);
         }
 
         public bool TryAddLine(

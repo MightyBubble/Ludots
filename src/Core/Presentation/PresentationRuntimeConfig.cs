@@ -115,7 +115,10 @@ namespace Ludots.Core.Presentation
         public float WheelZoomNormalizedStep { get; set; } = 0.08f;
         public float ButtonZoomNormalizedStep { get; set; } = 0.18f;
         public bool ZoomSliderEnabled { get; set; } = true;
-        public MinimapZoomExtentMode MinZoomExtentMode { get; set; } = MinimapZoomExtentMode.ExplicitCm;
+        public bool ModeToggleEnabled { get; set; } = true;
+        public bool RotateToggleEnabled { get; set; } = true;
+        public int DebugMarkerSampleCapacity { get; set; } = 64;
+        public MinimapZoomExtentMode MinZoomExtentMode { get; set; } = MinimapZoomExtentMode.OneChunk;
         public MinimapZoomExtentMode MaxZoomExtentMode { get; set; } = MinimapZoomExtentMode.FullMap;
         public float MinZoomExplicitHalfExtentCm { get; set; } = 750f;
         public float MaxZoomExplicitHalfExtentCm { get; set; } = 0f;
@@ -140,6 +143,12 @@ namespace Ludots.Core.Presentation
             {
                 throw new InvalidOperationException(
                     "presentation.minimap.buttonZoomNormalizedStep must be finite and > 0.");
+            }
+
+            if (DebugMarkerSampleCapacity < 0)
+            {
+                throw new InvalidOperationException(
+                    "presentation.minimap.debugMarkerSampleCapacity must be >= 0.");
             }
 
             if (MinZoomExtentMode == MinimapZoomExtentMode.ExplicitCm &&

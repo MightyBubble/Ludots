@@ -72,6 +72,11 @@ namespace Ludots.Core.Presentation.Minimap
         private const int ZoomSliderThumbWidth = 10;
         private const int ZoomSliderThumbHeight = 18;
         private const int ZoomSliderHitPadding = 6;
+        private const int ToggleButtonWidth = 68;
+        private const int ToggleButtonHeight = 22;
+        private const int ToggleButtonGap = 6;
+        private const int ToggleButtonHitPadding = 4;
+        private const float FollowCameraToggleHalfExtentCm = 7000f;
         private const int MarkerStableIdSalt = 0x4d4d;
         private const int CameraFrustumPointCapacity = 16;
         private const int CameraFrustumLineThickness = 3;
@@ -86,9 +91,9 @@ namespace Ludots.Core.Presentation.Minimap
         private const byte LineClipOutRight = 2;
         private const byte LineClipOutBottom = 4;
         private const byte LineClipOutTop = 8;
-        private const int DebugVisibleMarkerCapacity = 2048;
 
         private readonly MinimapRuntimeConfig _config;
+        private readonly int _debugMarkerSampleCapacity;
         private static readonly string[] BandLabels =
         {
             "Strategic",
@@ -116,7 +121,7 @@ namespace Ludots.Core.Presentation.Minimap
             10000000f,
         };
 
-        private readonly List<MinimapDebugMarker> _debugVisibleMarkers = new(DebugVisibleMarkerCapacity);
+        private readonly List<MinimapDebugMarker> _debugVisibleMarkers;
         private readonly Vector2[] _cameraFrustumScreenPoints = new Vector2[CameraFrustumPointCapacity];
         private string _currentMapId = string.Empty;
         private string _diagnostic = string.Empty;
@@ -133,8 +138,12 @@ namespace Ludots.Core.Presentation.Minimap
         private float _maxWorldYcm;
         private Vector2 _mapRight = Vector2.UnitX;
         private Vector2 _mapUp = Vector2.UnitY;
+        private float _screenFacingOffsetRad;
         private float _metricGridStepCm = 1000f;
         private bool _viewportInitialized;
+        private bool _rtsCenterResetPending = true;
+        private bool _rtsZoomResetPending;
+        private bool _zoomNormalizedPendingRangeApply;
         private int _panelX = 840;
         private int _panelY = 24;
         private int _panelWidth = 416;
@@ -145,6 +154,10 @@ namespace Ludots.Core.Presentation.Minimap
         private int _zoomSliderX = 858;
         private int _zoomSliderY = 356;
         private int _zoomSliderWidth = 272;
+        private int _presetToggleX = 1000;
+        private int _presetToggleY = 392;
+        private int _rotateToggleX = 926;
+        private int _rotateToggleY = 392;
         private int _markerCount;
         private int _visibleMarkerCount;
         private bool _cameraFrustumVisible;
@@ -164,6 +177,10 @@ namespace Ludots.Core.Presentation.Minimap
         {
             _config = config ?? new MinimapRuntimeConfig();
             _config.Validate();
+            _debugMarkerSampleCapacity = _config.DebugMarkerSampleCapacity;
+            _debugVisibleMarkers = _debugMarkerSampleCapacity > 0
+                ? new List<MinimapDebugMarker>(_debugMarkerSampleCapacity)
+                : new List<MinimapDebugMarker>(0);
             _zoomNormalized = Math.Clamp(_config.InitialZoomNormalized, 0f, 1f);
         }
 
@@ -209,6 +226,22 @@ namespace Ludots.Core.Presentation.Minimap
 
         public int ZoomSliderHeightPx => _config.ZoomSliderEnabled ? ZoomSliderHeight : 0;
 
+        public int PresetToggleX => _presetToggleX;
+
+        public int PresetToggleY => _presetToggleY;
+
+        public int PresetToggleWidth => ToggleButtonWidth;
+
+        public int PresetToggleHeight => ToggleButtonHeight;
+
+        public int RotateToggleX => _rotateToggleX;
+
+        public int RotateToggleY => _rotateToggleY;
+
+        public int RotateToggleWidth => ToggleButtonWidth;
+
+        public int RotateToggleHeight => ToggleButtonHeight;
+
         public float MetricGridStepCm => _metricGridStepCm;
 
         public void SetRotateWithCamera(bool enabled)
@@ -225,6 +258,8 @@ namespace Ludots.Core.Presentation.Minimap
         {
             Preset = MinimapPreset.FollowEntity;
             FollowEntity = entity;
+            _rtsCenterResetPending = false;
+            _rtsZoomResetPending = false;
             SetHalfExtentAndSyncZoom(halfExtentCm);
             _viewportInitialized = entity != Entity.Null;
         }
@@ -234,15 +269,32 @@ namespace Ludots.Core.Presentation.Minimap
             Preset = MinimapPreset.RtsFullMap;
             FollowEntity = Entity.Null;
             _viewportInitialized = false;
+            _rtsCenterResetPending = true;
+            _rtsZoomResetPending = true;
         }
 
         public void UseFollowCameraPreset(float halfExtentCm = 7000f, bool rotateWithCamera = true)
         {
             Preset = MinimapPreset.FollowCamera;
             FollowEntity = Entity.Null;
+            _rtsCenterResetPending = false;
+            _rtsZoomResetPending = false;
             SetHalfExtentAndSyncZoom(halfExtentCm);
             RotateWithCamera = rotateWithCamera;
             _viewportInitialized = true;
+        }
+
+        public void ToggleRtsFollowCameraPreset()
+        {
+            if (Preset == MinimapPreset.RtsFullMap)
+            {
+                UseFollowCameraPreset(
+                    ResolveFollowCameraToggleHalfExtentCm(),
+                    RotateWithCamera);
+                return;
+            }
+
+            UseRtsFullMapPreset();
         }
 
         public void Refresh(GameEngine engine)
@@ -316,6 +368,7 @@ namespace Ludots.Core.Presentation.Minimap
             RenderGrid(overlay);
             RenderCameraFrustum(overlay);
             RenderZoomSlider(overlay);
+            RenderToggleButtons(overlay);
 
             if (!string.IsNullOrWhiteSpace(_diagnostic))
             {
@@ -324,7 +377,6 @@ namespace Ludots.Core.Presentation.Minimap
 
             int footerTextY = _fieldY + _fieldSize + (_config.ZoomSliderEnabled ? ZoomSliderHeight : 0) + 21;
             overlay.AddText(_panelX + PanelInset, footerTextY, ResolveMarkerFooterText(), 13, new Vector4(0.78f, 0.86f, 0.93f, 1f));
-            overlay.AddText(_panelX + _panelWidth - 146, footerTextY, ResolvePresetLabel(), 13, new Vector4(0.66f, 0.76f, 0.84f, 1f));
         }
 
         public bool ContainsField(Vector2 screenPosition)
@@ -338,7 +390,10 @@ namespace Ludots.Core.Presentation.Minimap
 
         public bool ContainsInteractiveRegion(Vector2 screenPosition)
         {
-            return ContainsField(screenPosition) || ContainsZoomSlider(screenPosition);
+            return ContainsField(screenPosition) ||
+                ContainsZoomSlider(screenPosition) ||
+                ContainsPresetToggle(screenPosition) ||
+                ContainsRotateToggle(screenPosition);
         }
 
         public bool ContainsZoomSlider(Vector2 screenPosition)
@@ -349,6 +404,32 @@ namespace Ludots.Core.Presentation.Minimap
                 screenPosition.Y >= _zoomSliderY - ZoomSliderHitPadding &&
                 screenPosition.X <= _zoomSliderX + _zoomSliderWidth + ZoomSliderHitPadding &&
                 screenPosition.Y <= _zoomSliderY + ZoomSliderHeight + ZoomSliderHitPadding;
+        }
+
+        public bool ContainsPresetToggle(Vector2 screenPosition)
+        {
+            return Visible &&
+                _config.ModeToggleEnabled &&
+                ContainsRect(
+                screenPosition,
+                _presetToggleX,
+                _presetToggleY,
+                ToggleButtonWidth,
+                ToggleButtonHeight,
+                ToggleButtonHitPadding);
+        }
+
+        public bool ContainsRotateToggle(Vector2 screenPosition)
+        {
+            return Visible &&
+                _config.RotateToggleEnabled &&
+                ContainsRect(
+                screenPosition,
+                _rotateToggleX,
+                _rotateToggleY,
+                ToggleButtonWidth,
+                ToggleButtonHeight,
+                ToggleButtonHitPadding);
         }
 
         public void SetZoomFromSliderPointer(Vector2 screenPosition)
@@ -479,7 +560,23 @@ namespace Ludots.Core.Presentation.Minimap
         public void SetZoomNormalized(float normalized)
         {
             _zoomNormalized = Math.Clamp(normalized, 0f, 1f);
+            if (!_zoomRangeInitialized)
+            {
+                _zoomNormalizedPendingRangeApply = true;
+                if (Preset == MinimapPreset.RtsFullMap)
+                {
+                    _viewportInitialized = false;
+                }
+
+                return;
+            }
+
             ApplyZoomNormalized(_zoomNormalized);
+            if (Preset == MinimapPreset.RtsFullMap)
+            {
+                _rtsZoomResetPending = false;
+            }
+
             _viewportInitialized = true;
         }
 
@@ -550,13 +647,21 @@ namespace Ludots.Core.Presentation.Minimap
 
             if (Preset == MinimapPreset.RtsFullMap)
             {
-                if (!_viewportInitialized)
+                if (!_viewportInitialized || _rtsCenterResetPending)
                 {
                     _centerXcm = bounds.Left + (bounds.Width * 0.5f);
                     _centerYcm = bounds.Top + (bounds.Height * 0.5f);
-                    SetZoomNormalized(1f);
-                    _viewportInitialized = true;
+                    _rtsCenterResetPending = false;
                 }
+
+                if (_rtsZoomResetPending)
+                {
+                    _zoomNormalized = 1f;
+                    ApplyZoomNormalized(_zoomNormalized);
+                    _rtsZoomResetPending = false;
+                }
+
+                _viewportInitialized = true;
 
                 return;
             }
@@ -572,59 +677,148 @@ namespace Ludots.Core.Presentation.Minimap
 
         private void ProjectMarkers(MinimapMarkerBuffer markers, MinimapScreenMarkerBuffer screenMarkers)
         {
+            screenMarkers.BeginBucketedFrame();
+            screenMarkers.SetFieldBounds(_fieldX, _fieldY, _fieldSize);
             int count = markers.Count;
+            float centerX = _centerXcm;
+            float centerY = _centerYcm;
+            float rightX = _mapRight.X;
+            float rightY = _mapRight.Y;
+            float upX = _mapUp.X;
+            float upY = _mapUp.Y;
+            float halfExtent = _halfExtentCm;
+            float fieldScale = _fieldSize - 1f;
+            float fieldX = _fieldX;
+            float fieldY = _fieldY;
+            float screenFacingOffsetRad = _screenFacingOffsetRad;
+            ReadOnlySpan<int> stableIds = markers.StableIds;
+            ReadOnlySpan<float> worldXcmValues = markers.WorldXcm;
+            ReadOnlySpan<float> worldYcmValues = markers.WorldYcm;
+            ReadOnlySpan<Vector4> colors = markers.Colors;
+            ReadOnlySpan<float> sizesPx = markers.SizePx;
+            ReadOnlySpan<float> orientationRadValues = markers.OrientationRad;
+            ReadOnlySpan<float> orientationLengthPxValues = markers.OrientationLengthPx;
+            ReadOnlySpan<uint> flagsValues = markers.Flags;
+            ReadOnlySpan<MinimapMarkerRenderBucketKey> styleBucketKeys = markers.StyleBucketKeys;
+            bool axisAligned = !RotateWithCamera;
+            Span<MinimapMarkerRenderBucketKey> cachedBucketKeys = stackalloc MinimapMarkerRenderBucketKey[MinimapScreenMarkerBuffer.OrientationBucketCount];
+            Span<int> cachedBucketIndices = stackalloc int[MinimapScreenMarkerBuffer.OrientationBucketCount];
+            cachedBucketIndices.Fill(-1);
+
+            bool captureDebugMarkers = _debugMarkerSampleCapacity > 0;
             for (int i = 0; i < count; i++)
             {
-                if (!TryWorldToMapNormalized(
-                        markers.GetWorldXcm(i),
-                        markers.GetWorldZcm(i),
+                float worldXcm = worldXcmValues[i];
+                float worldYcm = worldYcmValues[i];
+                bool projected = axisAligned
+                    ? WorldPlane2D.TryProjectWorldCmToScreenAxisAligned(
+                        worldXcm,
+                        worldYcm,
+                        centerX,
+                        centerY,
+                        halfExtent,
+                        fieldX,
+                        fieldY,
+                        fieldScale,
                         out float normalizedX,
-                        out float normalizedY))
+                        out float normalizedY,
+                        out float screenX,
+                        out float screenY)
+                    : WorldPlane2D.TryProjectWorldCmToScreen(
+                        worldXcm,
+                        worldYcm,
+                        centerX,
+                        centerY,
+                        rightX,
+                        rightY,
+                        upX,
+                        upY,
+                        halfExtent,
+                        fieldX,
+                        fieldY,
+                        fieldScale,
+                        out normalizedX,
+                        out normalizedY,
+                        out screenX,
+                        out screenY);
+                if (!projected)
                 {
                     continue;
                 }
 
-                float screenX = _fieldX + (normalizedX * (_fieldSize - 1));
-                float screenY = _fieldY + ((1f - normalizedY) * (_fieldSize - 1));
-                int stableId = ComposeMarkerStableId(markers.GetStableId(i));
-                Vector4 color = markers.GetColor(i);
-                float size = markers.GetSizePx(i);
-                uint flags = markers.GetFlags(i);
+                uint flags = flagsValues[i];
                 float orientationRad = 0f;
                 float orientationLengthPx = 0f;
+                int orientationBucket = 0;
                 if ((flags & MinimapMarkerFlags.HasOrientation) != 0u)
                 {
-                    orientationRad = ProjectOrientationToScreen(markers.GetOrientationRad(i));
-                    orientationLengthPx = markers.GetOrientationLengthPx(i);
+                    orientationBucket = WorldPlane2D.ProjectFacingRadToScreenBucket(
+                        orientationRadValues[i],
+                        screenFacingOffsetRad,
+                        MinimapScreenMarkerBuffer.OrientationBucketCount);
+                    orientationRad = WorldPlane2D.BucketToFacingRad(
+                        orientationBucket,
+                        MinimapScreenMarkerBuffer.OrientationBucketCount);
+                    orientationLengthPx = orientationLengthPxValues[i];
                 }
 
-                if (screenMarkers.TryAdd(stableId, screenX, screenY, in color, size, flags, orientationRad, orientationLengthPx))
+                MinimapMarkerRenderBucketKey bucketKey = MinimapScreenMarkerBuffer.WithOrientationBucket(
+                    styleBucketKeys[i],
+                    orientationBucket);
+                int bucketSlot = bucketKey.HasOrientation ? bucketKey.OrientationBucket : 0;
+                int stableId = ComposeMarkerStableId(stableIds[i]);
+                bool staged = false;
+                if ((uint)bucketSlot < (uint)cachedBucketIndices.Length &&
+                    cachedBucketIndices[bucketSlot] >= 0 &&
+                    cachedBucketKeys[bucketSlot].Equals(bucketKey))
                 {
-                    _visibleMarkerCount++;
-                    if (_debugVisibleMarkers.Count < DebugVisibleMarkerCapacity)
+                    staged = screenMarkers.TryStageKnownBucket(
+                        stableId,
+                        screenX,
+                        screenY,
+                        cachedBucketIndices[bucketSlot]);
+                }
+
+                if (!staged &&
+                    screenMarkers.TryStageBucketKeyed(
+                        stableId,
+                        screenX,
+                        screenY,
+                        in bucketKey,
+                        out int resolvedBucketIndex))
+                {
+                    if ((uint)bucketSlot < (uint)cachedBucketIndices.Length)
                     {
-                        _debugVisibleMarkers.Add(new MinimapDebugMarker(
-                            stableId,
-                            markers.GetWorldXcm(i),
-                            markers.GetWorldZcm(i),
-                            normalizedX,
-                            normalizedY,
-                            color,
-                            size,
-                            orientationRad,
-                            orientationLengthPx,
-                            flags));
+                        cachedBucketKeys[bucketSlot] = bucketKey;
+                        cachedBucketIndices[bucketSlot] = resolvedBucketIndex;
                     }
+
+                    staged = true;
+                }
+
+                if (!staged)
+                {
+                    continue;
+                }
+
+                _visibleMarkerCount++;
+                if (captureDebugMarkers && _debugVisibleMarkers.Count < _debugMarkerSampleCapacity)
+                {
+                    _debugVisibleMarkers.Add(new MinimapDebugMarker(
+                        stableId,
+                        worldXcm,
+                        worldYcm,
+                        normalizedX,
+                        normalizedY,
+                        colors[i],
+                        sizesPx[i],
+                        orientationRad,
+                        orientationLengthPx,
+                    flags));
                 }
             }
-        }
 
-        private float ProjectOrientationToScreen(float worldOrientationRad)
-        {
-            Vector2 direction = new(MathF.Cos(worldOrientationRad), MathF.Sin(worldOrientationRad));
-            float localRight = Vector2.Dot(direction, _mapRight);
-            float localUp = Vector2.Dot(direction, _mapUp);
-            return MathF.Atan2(-localUp, localRight);
+            screenMarkers.MaterializeStagedBucketKeys();
         }
 
         private static int ComposeMarkerStableId(int stableId)
@@ -652,14 +846,15 @@ namespace Ludots.Core.Presentation.Minimap
             {
                 _mapRight = Vector2.UnitX;
                 _mapUp = Vector2.UnitY;
+                _screenFacingOffsetRad = WorldPlane2D.ResolveScreenFacingOffsetRad(in _mapRight, in _mapUp);
                 return;
             }
 
             CameraState state = engine.GameSession.Camera.State;
-            Vector2 forward = OrbitCameraDirectionUtil.ForwardFromYawDegrees(state.Yaw);
-            Vector2 right = OrbitCameraDirectionUtil.RightFromYawDegrees(state.Yaw);
-            _mapUp = NormalizeOrDefault(forward, Vector2.UnitY);
-            _mapRight = NormalizeOrDefault(right, Vector2.UnitX);
+            WorldPlane2D.CameraMinimapBasisFromYawDegrees(state.Yaw, out Vector2 right, out Vector2 forward);
+            _mapUp = WorldPlane2D.NormalizeOrDefault(forward, Vector2.UnitY);
+            _mapRight = WorldPlane2D.NormalizeOrDefault(right, Vector2.UnitX);
+            _screenFacingOffsetRad = WorldPlane2D.ResolveScreenFacingOffsetRad(in _mapRight, in _mapUp);
         }
 
         private void UpdateCameraFrustum(GameEngine engine)
@@ -698,10 +893,10 @@ namespace Ludots.Core.Presentation.Minimap
                 return false;
             }
 
-            if (engine.World.TryGet(entity, out PerformerWorldPosition performerPosition))
+            if (engine.World.TryGet(entity, out PerformerWorldPlanePosition performerPlanePosition))
             {
-                worldXcm = performerPosition.Value.X * 100f;
-                worldYcm = performerPosition.Value.Z * 100f;
+                worldXcm = performerPlanePosition.ValueCm.X;
+                worldYcm = performerPlanePosition.ValueCm.Y;
                 return true;
             }
 
@@ -777,6 +972,44 @@ namespace Ludots.Core.Presentation.Minimap
             }
 
             overlay.AddRect(thumbX, thumbY, ZoomSliderThumbWidth, ZoomSliderThumbHeight, thumb, border);
+        }
+
+        private void RenderToggleButtons(ScreenOverlayBuffer overlay)
+        {
+            if (_config.RotateToggleEnabled)
+            {
+                RenderToggleButton(
+                    overlay,
+                    _rotateToggleX,
+                    _rotateToggleY,
+                    ResolveRotateToggleLabel(),
+                    RotateWithCamera);
+            }
+
+            if (_config.ModeToggleEnabled)
+            {
+                RenderToggleButton(
+                    overlay,
+                    _presetToggleX,
+                    _presetToggleY,
+                    ResolvePresetToggleLabel(),
+                    Preset != MinimapPreset.RtsFullMap);
+            }
+        }
+
+        private static void RenderToggleButton(ScreenOverlayBuffer overlay, int x, int y, string label, bool active)
+        {
+            Vector4 fill = active
+                ? new Vector4(0.20f, 0.40f, 0.50f, 0.96f)
+                : new Vector4(0.07f, 0.13f, 0.17f, 0.96f);
+            Vector4 border = active
+                ? new Vector4(0.82f, 0.89f, 0.48f, 1f)
+                : new Vector4(0.34f, 0.53f, 0.64f, 1f);
+            Vector4 text = active
+                ? new Vector4(0.98f, 0.96f, 0.72f, 1f)
+                : new Vector4(0.70f, 0.80f, 0.88f, 1f);
+            overlay.AddRect(x, y, ToggleButtonWidth, ToggleButtonHeight, fill, border);
+            overlay.AddText(x + 8, y + 5, label, 12, text);
         }
 
         private float ResolveMetricGridStepCm()
@@ -997,7 +1230,12 @@ namespace Ludots.Core.Presentation.Minimap
             int index)
         {
             ScreenRay ray = CameraViewportUtil.ScreenToRay(screenCorner, in camera, resolution, aspect);
-            if (!TryIntersectGroundPlane(in ray, out Vector2 worldCm))
+            if (!WorldPlane2D.TryIntersectVisualGroundPlane(
+                    in ray.Origin,
+                    in ray.Direction,
+                    planeYMeters: 0f,
+                    maxDirectionY: CameraFrustumPlaneEpsilon,
+                    out Vector2 worldCm))
             {
                 return false;
             }
@@ -1053,31 +1291,6 @@ namespace Ludots.Core.Presentation.Minimap
             }
         }
 
-        private static bool TryIntersectGroundPlane(in ScreenRay ray, out Vector2 worldCm)
-        {
-            worldCm = default;
-            if (!float.IsFinite(ray.Origin.X) ||
-                !float.IsFinite(ray.Origin.Y) ||
-                !float.IsFinite(ray.Origin.Z) ||
-                !float.IsFinite(ray.Direction.X) ||
-                !float.IsFinite(ray.Direction.Y) ||
-                !float.IsFinite(ray.Direction.Z) ||
-                ray.Direction.Y >= CameraFrustumPlaneEpsilon)
-            {
-                return false;
-            }
-
-            float t = -ray.Origin.Y / ray.Direction.Y;
-            if (!float.IsFinite(t) || t <= 0f)
-            {
-                return false;
-            }
-
-            Vector3 hit = ray.Origin + (ray.Direction * t);
-            worldCm = new Vector2(hit.X * 100f, hit.Z * 100f);
-            return float.IsFinite(worldCm.X) && float.IsFinite(worldCm.Y);
-        }
-
         private bool TryWorldToScreen(float worldXcm, float worldYcm, out float screenX, out float screenY)
         {
             if (!TryWorldToMapNormalized(worldXcm, worldYcm, out float normalizedX, out float normalizedY))
@@ -1100,64 +1313,80 @@ namespace Ludots.Core.Presentation.Minimap
 
         private void WorldToMapNormalizedUnclipped(float worldXcm, float worldYcm, out float normalizedX, out float normalizedY)
         {
-            Vector2 delta = new(worldXcm - _centerXcm, worldYcm - _centerYcm);
-            float localXcm = Vector2.Dot(delta, _mapRight);
-            float localYcm = Vector2.Dot(delta, _mapUp);
-            float invExtent = 1f / MathF.Max(1f, _halfExtentCm * 2f);
-            normalizedX = (localXcm + _halfExtentCm) * invExtent;
-            normalizedY = (localYcm + _halfExtentCm) * invExtent;
+            WorldPlane2D.WorldToMapNormalizedUnclipped(
+                worldXcm,
+                worldYcm,
+                _centerXcm,
+                _centerYcm,
+                _mapRight.X,
+                _mapRight.Y,
+                _mapUp.X,
+                _mapUp.Y,
+                _halfExtentCm,
+                out normalizedX,
+                out normalizedY);
         }
 
         private void ScreenToMapLocal(Vector2 screenPosition, bool clampToField, out float localXcm, out float localYcm)
         {
-            float normalizedX = (screenPosition.X - _fieldX) / MathF.Max(1f, _fieldSize - 1);
-            float normalizedY = 1f - ((screenPosition.Y - _fieldY) / MathF.Max(1f, _fieldSize - 1));
-            if (clampToField)
-            {
-                normalizedX = Math.Clamp(normalizedX, 0f, 1f);
-                normalizedY = Math.Clamp(normalizedY, 0f, 1f);
-            }
-
-            localXcm = (normalizedX * _halfExtentCm * 2f) - _halfExtentCm;
-            localYcm = (normalizedY * _halfExtentCm * 2f) - _halfExtentCm;
+            WorldPlane2D.ScreenToMapLocal(
+                screenPosition.X,
+                screenPosition.Y,
+                _fieldX,
+                _fieldY,
+                _fieldSize - 1f,
+                _halfExtentCm,
+                clampToField,
+                out localXcm,
+                out localYcm);
         }
 
         private Vector2 MapLocalToWorld(float localXcm, float localYcm)
         {
-            Vector2 offset = MapLocalOffsetToWorld(localXcm, localYcm);
-            return new Vector2(_centerXcm + offset.X, _centerYcm + offset.Y);
+            return WorldPlane2D.MapLocalToWorld(_centerXcm, _centerYcm, localXcm, localYcm, in _mapRight, in _mapUp);
         }
 
         private Vector2 MapLocalOffsetToWorld(float localXcm, float localYcm)
         {
-            return (_mapRight * localXcm) + (_mapUp * localYcm);
-        }
-
-        private static Vector2 NormalizeOrDefault(Vector2 value, Vector2 defaultValue)
-        {
-            float lengthSquared = value.LengthSquared();
-            if (!float.IsFinite(lengthSquared) || lengthSquared <= 0.000001f)
-            {
-                return defaultValue;
-            }
-
-            return value / MathF.Sqrt(lengthSquared);
+            return WorldPlane2D.MapLocalOffsetToWorld(localXcm, localYcm, in _mapRight, in _mapUp);
         }
 
         private void ProjectWorldToScreenClamped(float worldXcm, float worldYcm, out float screenX, out float screenY)
         {
-            WorldToMapNormalizedUnclipped(worldXcm, worldYcm, out float normalizedX, out float normalizedY);
-            normalizedX = Math.Clamp(normalizedX, 0f, 1f);
-            normalizedY = Math.Clamp(normalizedY, 0f, 1f);
-            screenX = _fieldX + (normalizedX * (_fieldSize - 1));
-            screenY = _fieldY + ((1f - normalizedY) * (_fieldSize - 1));
+            WorldPlane2D.ProjectWorldCmToScreenClamped(
+                worldXcm,
+                worldYcm,
+                _centerXcm,
+                _centerYcm,
+                _mapRight.X,
+                _mapRight.Y,
+                _mapUp.X,
+                _mapUp.Y,
+                _halfExtentCm,
+                _fieldX,
+                _fieldY,
+                _fieldSize - 1f,
+                out screenX,
+                out screenY);
         }
 
         private void ProjectWorldToScreenUnclipped(float worldXcm, float worldYcm, out float screenX, out float screenY)
         {
-            WorldToMapNormalizedUnclipped(worldXcm, worldYcm, out float normalizedX, out float normalizedY);
-            screenX = _fieldX + (normalizedX * (_fieldSize - 1));
-            screenY = _fieldY + ((1f - normalizedY) * (_fieldSize - 1));
+            WorldPlane2D.ProjectWorldCmToScreenUnclipped(
+                worldXcm,
+                worldYcm,
+                _centerXcm,
+                _centerYcm,
+                _mapRight.X,
+                _mapRight.Y,
+                _mapUp.X,
+                _mapUp.Y,
+                _halfExtentCm,
+                _fieldX,
+                _fieldY,
+                _fieldSize - 1f,
+                out screenX,
+                out screenY);
         }
 
         private void RefreshPanelLayout(GameEngine engine)
@@ -1174,6 +1403,10 @@ namespace Ludots.Core.Presentation.Minimap
             _zoomSliderX = _fieldX;
             _zoomSliderY = _fieldY + _fieldSize + 4;
             _zoomSliderWidth = _fieldSize;
+            _presetToggleX = _panelX + _panelWidth - PanelInset - ToggleButtonWidth;
+            _rotateToggleX = _presetToggleX - ToggleButtonGap - ToggleButtonWidth;
+            _presetToggleY = _fieldY + _fieldSize + (_config.ZoomSliderEnabled ? ZoomSliderHeight : 0) + 8;
+            _rotateToggleY = _presetToggleY;
         }
 
         private static int ResolveFieldSize(int screenWidth, int screenHeight, bool zoomSliderEnabled)
@@ -1215,6 +1448,21 @@ namespace Ludots.Core.Presentation.Minimap
             };
         }
 
+        private string ResolvePresetToggleLabel()
+        {
+            return Preset switch
+            {
+                MinimapPreset.RtsFullMap => "RTS",
+                MinimapPreset.FollowCamera => "Follow",
+                _ => "Entity",
+            };
+        }
+
+        private string ResolveRotateToggleLabel()
+        {
+            return RotateWithCamera ? "Rotate" : "North";
+        }
+
         private string ResolveMarkerFooterText()
         {
             if (_cachedFooterMarkerCount != _markerCount ||
@@ -1231,6 +1479,19 @@ namespace Ludots.Core.Presentation.Minimap
         private static float ClampHalfExtent(float halfExtentCm)
         {
             return Math.Clamp(halfExtentCm, MinHalfExtentCm, MaxHalfExtentCm);
+        }
+
+        private float ResolveFollowCameraToggleHalfExtentCm()
+        {
+            if (!_zoomRangeInitialized)
+            {
+                return FollowCameraToggleHalfExtentCm;
+            }
+
+            return Math.Clamp(
+                FollowCameraToggleHalfExtentCm,
+                _minZoomHalfExtentCm,
+                _maxZoomHalfExtentCm);
         }
 
         private void ResolveZoomRange(GameEngine engine, in WorldAabbCm bounds)
@@ -1252,9 +1513,24 @@ namespace Ludots.Core.Presentation.Minimap
             _minZoomHalfExtentCm = minHalfExtent;
             _maxZoomHalfExtentCm = maxHalfExtent;
             _zoomRangeInitialized = true;
+            if (_zoomNormalizedPendingRangeApply)
+            {
+                ApplyZoomNormalized(_zoomNormalized);
+                _zoomNormalizedPendingRangeApply = false;
+                return;
+            }
+
             if (_viewportInitialized)
             {
-                SetHalfExtentAndSyncZoom(_halfExtentCm);
+                if (changed)
+                {
+                    ApplyZoomNormalized(_zoomNormalized);
+                }
+                else
+                {
+                    SetHalfExtentAndSyncZoom(_halfExtentCm);
+                }
+
                 return;
             }
 
@@ -1312,6 +1588,14 @@ namespace Ludots.Core.Presentation.Minimap
             }
 
             return board.ChunkSizeCells * board.GridCellSizeCm * 0.5f;
+        }
+
+        private static bool ContainsRect(Vector2 point, int x, int y, int width, int height, int padding)
+        {
+            return point.X >= x - padding &&
+                point.Y >= y - padding &&
+                point.X <= x + width + padding &&
+                point.Y <= y + height + padding;
         }
 
         private void ApplyZoomNormalized(float normalized)

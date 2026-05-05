@@ -100,6 +100,10 @@ namespace Ludots.Core.Presentation.Hud
         public float LastPerformerMinimapMarkerMs { get; private set; }
         public int PerformerMinimapMarkersLastFrame { get; private set; }
         public int PerformerMinimapDroppedLastFrame { get; private set; }
+        public float MinimapProjectionMs { get; private set; }
+        public float LastMinimapProjectionMs { get; private set; }
+        public int MinimapScreenMarkersLastFrame { get; private set; }
+        public int MinimapScreenMarkersDroppedLastFrame { get; private set; }
         public float RuntimeSpawnBatchPrepareMs { get; private set; }
         public float LastRuntimeSpawnBatchPrepareMs { get; private set; }
         public float RuntimeSpawnWorldCreateMs { get; private set; }
@@ -313,6 +317,14 @@ namespace Ludots.Core.Presentation.Hud
             PerformerMinimapMarkerMs = Smooth(PerformerMinimapMarkerMs, (float)sampleMs);
             PerformerMinimapMarkersLastFrame = markers;
             PerformerMinimapDroppedLastFrame = dropped;
+        }
+
+        public void ObserveMinimapProjection(double sampleMs, int screenMarkers, int dropped)
+        {
+            LastMinimapProjectionMs = (float)sampleMs;
+            MinimapProjectionMs = Smooth(MinimapProjectionMs, (float)sampleMs);
+            MinimapScreenMarkersLastFrame = screenMarkers;
+            MinimapScreenMarkersDroppedLastFrame = dropped;
         }
 
         public void ObserveWorldHudProjection(double sampleMs)

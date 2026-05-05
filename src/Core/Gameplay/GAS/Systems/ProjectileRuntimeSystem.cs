@@ -8,6 +8,7 @@ using Ludots.Core.Gameplay.Components;
 using Ludots.Core.Gameplay.GAS.Components;
 using Ludots.Core.Presentation.Components;
 using Ludots.Core.Gameplay.Teams;
+using Ludots.Core.Mathematics;
 using Ludots.Core.Mathematics.FixedPoint;
 using Ludots.Core.Spatial;
 
@@ -16,8 +17,6 @@ namespace Ludots.Core.Gameplay.GAS.Systems
     public sealed class ProjectileRuntimeSystem : BaseSystem<World, float>
     {
         private static readonly QueryDescription Query = new QueryDescription().WithAll<ProjectileState, WorldPositionCm>();
-        private static readonly Fix64 Deg180 = Fix64.FromInt(180);
-
         private readonly EffectRequestQueue _effectRequests;
         private readonly ISpatialQueryService _spatialQueries;
         private readonly List<Entity> _toDestroy = new();
@@ -452,14 +451,7 @@ namespace Ludots.Core.Gameplay.GAS.Systems
 
         private static int ComputeDirectionDeg(in Fix64Vec2 delta)
         {
-            var radians = Fix64Math.Atan2Fast(delta.Y, delta.X);
-            int degrees = (radians * Deg180 / Fix64.Pi).RoundToInt();
-            if (degrees < 0)
-            {
-                degrees += 360;
-            }
-
-            return degrees;
+            return WorldPlane2D.FacingDegreesPositiveFromDirection(in delta);
         }
 
         private static int ComputeSegmentProjectionCm(in Fix64Vec2 start, in Fix64Vec2 end, in Fix64Vec2 point)

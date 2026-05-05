@@ -1,5 +1,6 @@
 using System;
 using System.Numerics;
+using Ludots.Core.Mathematics;
 using Ludots.Core.Presentation.Config;
 using Ludots.Core.Presentation.Hud;
 using Ludots.Core.Presentation.Minimap;
@@ -66,16 +67,16 @@ public sealed class NativeSkiaOverlayTests
         ReadOnlySpan<PresentationOverlayItem> underUiText = scene.GetLaneSpan(PresentationOverlayLayer.UnderUi, PresentationOverlayItemKind.Text);
         ReadOnlySpan<PresentationOverlayItem> topRects = scene.GetLaneSpan(PresentationOverlayLayer.TopMost, PresentationOverlayItemKind.Rect);
         ReadOnlySpan<PresentationOverlayItem> topText = scene.GetLaneSpan(PresentationOverlayLayer.TopMost, PresentationOverlayItemKind.Text);
-        ReadOnlySpan<PresentationOverlayItem> topMarkers = scene.GetLaneSpan(PresentationOverlayLayer.TopMost, PresentationOverlayItemKind.MinimapMarker);
         ReadOnlySpan<PresentationOverlayItem> topLines = scene.GetLaneSpan(PresentationOverlayLayer.TopMost, PresentationOverlayItemKind.Line);
 
-        Assert.That(scene.Count, Is.EqualTo(6));
+        Assert.That(scene.Count, Is.EqualTo(5));
         Assert.That(scene.DirtyLaneCount, Is.EqualTo(6));
         Assert.That(underUiBars.Length, Is.EqualTo(1));
         Assert.That(underUiText.Length, Is.EqualTo(1));
         Assert.That(topRects.Length, Is.EqualTo(1));
         Assert.That(topText.Length, Is.EqualTo(1));
         Assert.That(topLines.Length, Is.EqualTo(1));
+        Assert.That(scene.TopMostMinimapMarkers, Is.SameAs(minimapMarkers));
         Assert.That(underUiBars[0].Kind, Is.EqualTo(PresentationOverlayItemKind.Bar));
         Assert.That(underUiBars[0].StableId, Is.EqualTo(101));
         Assert.That(underUiBars[0].DirtySerial, Is.EqualTo(1001));
@@ -84,13 +85,12 @@ public sealed class NativeSkiaOverlayTests
         Assert.That(underUiText[0].DirtySerial, Is.EqualTo(2002));
         Assert.That(topRects[0].Kind, Is.EqualTo(PresentationOverlayItemKind.Rect));
         Assert.That(topText[0].Text, Is.EqualTo("Telemetry"));
-        Assert.That(topMarkers.Length, Is.EqualTo(1));
-        Assert.That(topMarkers[0].Kind, Is.EqualTo(PresentationOverlayItemKind.MinimapMarker));
-        Assert.That(topMarkers[0].StableId, Is.EqualTo(303));
-        Assert.That(topMarkers[0].X, Is.EqualTo(144f));
-        Assert.That(topMarkers[0].Y, Is.EqualTo(152f));
-        Assert.That(topMarkers[0].Width, Is.EqualTo(8f));
-        Assert.That(topMarkers[0].Value0, Is.EqualTo(0f));
+        Assert.That(scene.GetLaneSpan(PresentationOverlayLayer.TopMost, PresentationOverlayItemKind.MinimapMarker).Length, Is.EqualTo(0));
+        Assert.That(scene.TopMostMinimapMarkers!.Count, Is.EqualTo(1));
+        Assert.That(scene.TopMostMinimapMarkers.GetStableId(0), Is.EqualTo(303));
+        Assert.That(scene.TopMostMinimapMarkers.GetScreenX(0), Is.EqualTo(144f));
+        Assert.That(scene.TopMostMinimapMarkers.GetScreenY(0), Is.EqualTo(152f));
+        Assert.That(scene.TopMostMinimapMarkers.GetSizePx(0), Is.EqualTo(8f));
         Assert.That(topLines[0].Kind, Is.EqualTo(PresentationOverlayItemKind.Line));
         Assert.That(topLines[0].X, Is.EqualTo(112f));
         Assert.That(topLines[0].Y, Is.EqualTo(120f));
@@ -346,23 +346,30 @@ public sealed class NativeSkiaOverlayTests
     }
 
     [Test]
-    public void SkiaOverlayRenderer_DrawsMinimapMarkerLaneWithExpectedColor()
+    public void SkiaOverlayRenderer_ConsumesPrebucketedScreenMarkers()
     {
-        var scene = new PresentationOverlayScene(512);
-        scene.BeginBuild();
+        var screenMarkers = new MinimapScreenMarkerBuffer(512);
+        screenMarkers.BeginBucketedFrame();
+        var color = new Vector4(0f, 1f, 0.75f, 1f);
         for (int i = 0; i < 300; i++)
         {
             float x = 20f + ((i % 30) * 7f);
             float y = 20f + ((i / 30) * 7f);
-            scene.TryAddMinimapMarker(
-                PresentationOverlayLayer.TopMost,
-                x,
-                y,
-                sizePx: 6f,
-                color: new Vector4(0f, 1f, 0.75f, 1f),
-                stableId: 10_000 + i);
+            Assert.That(screenMarkers.TryAddBucketKey(in color, 6f, 0u, 0f, 0f, out _), Is.True);
         }
 
+        screenMarkers.MaterializeBuckets();
+        for (int i = 0; i < 300; i++)
+        {
+            float x = 20f + ((i % 30) * 7f);
+            float y = 20f + ((i / 30) * 7f);
+            Assert.That(screenMarkers.TryGetBucketIndex(in color, 6f, 0u, 0f, 0f, out int bucketIndex), Is.True);
+            Assert.That(screenMarkers.TryAddToBucket(bucketIndex, 10_000 + i, x, y, in color, 6f), Is.True);
+        }
+
+        var scene = new PresentationOverlayScene(512);
+        scene.BeginBuild();
+        scene.SetTopMostMinimapMarkers(screenMarkers);
         scene.EndBuild();
 
         using var renderer = new SkiaOverlayRenderer();
@@ -375,25 +382,37 @@ public sealed class NativeSkiaOverlayTests
         using var image = surface.Snapshot();
         using var bitmap = SKBitmap.FromImage(image);
 
+        Assert.That(screenMarkers.Count, Is.EqualTo(300));
+        Assert.That(screenMarkers.BucketCount, Is.EqualTo(1));
+        Assert.That(renderer.LastMinimapMarkerBatchBucketCount, Is.EqualTo(1));
         Assert.That(CountOpaquePixels(bitmap, 16, 16, 240, 100), Is.GreaterThan(1200));
         Assert.That(CountPixelsNear(bitmap, new SKColor(0, 255, 191, 255), 16, 16, 240, 100, tolerance: 10), Is.GreaterThan(600));
     }
 
     [Test]
-    public void SkiaOverlayRenderer_DrawsMinimapMarkerOrientationWithExpectedColor()
+    public void SkiaOverlayRenderer_DrawsPrebucketedMinimapMarkerOrientationWithExpectedColor()
     {
-        var scene = new PresentationOverlayScene(16);
-        scene.BeginBuild();
-        scene.TryAddMinimapMarker(
-            PresentationOverlayLayer.TopMost,
-            x: 40f,
-            y: 48f,
+        var color = new Vector4(1f, 0.2f, 0.05f, 1f);
+        var key = MinimapScreenMarkerBuffer.CreateBucketKey(
+            in color,
             sizePx: 14f,
-            color: new Vector4(1f, 0.2f, 0.05f, 1f),
-            stableId: 404,
-            flags: MinimapMarkerFlags.HasOrientation,
+            MinimapMarkerFlags.HasOrientation,
             orientationRad: 0f,
             orientationLengthPx: 34f);
+        var screenMarkers = new MinimapScreenMarkerBuffer(16);
+        screenMarkers.BeginBucketedFrame();
+        Assert.That(screenMarkers.TryAddBucketKey(in key, out int bucketIndex), Is.True);
+        screenMarkers.MaterializeBuckets();
+        Assert.That(screenMarkers.TryAddProjectedToBucket(
+            bucketIndex,
+            stableId: 404,
+            screenX: 40f,
+            screenY: 48f,
+            out _), Is.True);
+
+        var scene = new PresentationOverlayScene(16);
+        scene.BeginBuild();
+        scene.SetTopMostMinimapMarkers(screenMarkers);
         scene.EndBuild();
 
         using var renderer = new SkiaOverlayRenderer();
@@ -407,6 +426,94 @@ public sealed class NativeSkiaOverlayTests
 
         Assert.That(CountOpaquePixels(bitmap, 34, 42, 80, 55), Is.GreaterThan(130));
         Assert.That(CountPixelsNear(bitmap, new SKColor(255, 51, 13, 255), 54, 45, 78, 51, tolerance: 18), Is.GreaterThan(16));
+    }
+
+    [Test]
+    public void SkiaOverlayRenderer_PreheatedPrebucketedMinimapMarkers_DoNotAllocatePerMarkerManagedMemory()
+    {
+        const int markerCount = 30000;
+        var scene = BuildPrebucketedOrientationMarkerScene(markerCount);
+        var baselineScene = BuildPrebucketedOrientationMarkerScene(MinimapScreenMarkerBuffer.OrientationBucketCount);
+
+        using var renderer = new SkiaOverlayRenderer();
+        using var surface = SKSurface.Create(new SKImageInfo(768, 768, SKColorType.Rgba8888, SKAlphaType.Premul));
+        SKCanvas canvas = surface.Canvas;
+        for (int warm = 0; warm < 3; warm++)
+        {
+            canvas.Clear(SKColors.Transparent);
+            renderer.ResetFrameStats();
+            renderer.Render(scene, canvas, PresentationOverlayLayer.TopMost);
+            canvas.Clear(SKColors.Transparent);
+            renderer.ResetFrameStats();
+            renderer.Render(baselineScene, canvas, PresentationOverlayLayer.TopMost);
+        }
+
+        long bucketedDrawBaseline = MeasureRenderAllocation(renderer, baselineScene, canvas);
+
+        renderer.ResetFrameStats();
+        long before = GC.GetAllocatedBytesForCurrentThread();
+        renderer.Render(scene, canvas, PresentationOverlayLayer.TopMost);
+        long allocated = GC.GetAllocatedBytesForCurrentThread() - before;
+
+        Assert.That(
+            allocated,
+            Is.LessThanOrEqualTo(bucketedDrawBaseline),
+            "Preheated 30k marker atlas draw must not allocate managed memory beyond the fixed one-atlas-call bucket baseline.");
+        Assert.That(allocated, Is.LessThanOrEqualTo(64), "Any remaining allocation must stay a tiny fixed native-call cost, not scale with marker count.");
+        Assert.That(renderer.LastMinimapMarkerBatchBucketCount, Is.EqualTo(MinimapScreenMarkerBuffer.OrientationBucketCount));
+        Assert.That(renderer.LastMinimapMarkerBatchDrawMs, Is.GreaterThanOrEqualTo(0d));
+    }
+
+    private static PresentationOverlayScene BuildPrebucketedOrientationMarkerScene(int markerCount)
+    {
+        var screenMarkers = new MinimapScreenMarkerBuffer(markerCount);
+        screenMarkers.BeginBucketedFrame();
+        var color = new Vector4(1f, 0.18f, 0.08f, 1f);
+        for (int i = 0; i < markerCount; i++)
+        {
+            int bucket = i & (MinimapScreenMarkerBuffer.OrientationBucketCount - 1);
+            var key = MinimapScreenMarkerBuffer.CreateBucketKey(
+                in color,
+                sizePx: 7f,
+                MinimapMarkerFlags.HasOrientation,
+                WorldPlane2D.BucketToFacingRad(bucket, MinimapScreenMarkerBuffer.OrientationBucketCount),
+                orientationLengthPx: 14f);
+            Assert.That(screenMarkers.TryAddBucketKey(in key, out _), Is.True);
+        }
+
+        screenMarkers.MaterializeBuckets();
+        for (int i = 0; i < markerCount; i++)
+        {
+            int bucket = i & (MinimapScreenMarkerBuffer.OrientationBucketCount - 1);
+            var key = MinimapScreenMarkerBuffer.CreateBucketKey(
+                in color,
+                sizePx: 7f,
+                MinimapMarkerFlags.HasOrientation,
+                WorldPlane2D.BucketToFacingRad(bucket, MinimapScreenMarkerBuffer.OrientationBucketCount),
+                orientationLengthPx: 14f);
+            Assert.That(screenMarkers.TryGetBucketIndex(in key, out int bucketIndex), Is.True);
+            float x = 24f + ((i % 220) * 3.2f);
+            float y = 24f + (((i / 220) % 180) * 3.2f);
+            Assert.That(screenMarkers.TryAddProjectedToBucket(bucketIndex, i + 1, x, y, out _), Is.True);
+        }
+
+        var scene = new PresentationOverlayScene(16);
+        scene.BeginBuild();
+        scene.SetTopMostMinimapMarkers(screenMarkers);
+        scene.EndBuild();
+        return scene;
+    }
+
+    private static long MeasureRenderAllocation(
+        SkiaOverlayRenderer renderer,
+        PresentationOverlayScene scene,
+        SKCanvas canvas)
+    {
+        canvas.Clear(SKColors.Transparent);
+        renderer.ResetFrameStats();
+        long before = GC.GetAllocatedBytesForCurrentThread();
+        renderer.Render(scene, canvas, PresentationOverlayLayer.TopMost);
+        return GC.GetAllocatedBytesForCurrentThread() - before;
     }
 
     [Test]

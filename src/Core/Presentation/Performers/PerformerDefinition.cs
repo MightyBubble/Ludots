@@ -51,6 +51,18 @@ namespace Ludots.Core.Presentation.Performers
             }
         }
 
+        internal readonly struct MinimapMarkerWorkItem
+        {
+            public readonly int SlotIndex;
+            public readonly MinimapMarkerConfig Marker;
+
+            public MinimapMarkerWorkItem(int slotIndex, in MinimapMarkerConfig marker)
+            {
+                SlotIndex = slotIndex;
+                Marker = marker;
+            }
+        }
+
         public int Id;
         public string Key = string.Empty;
         public string Extends = string.Empty;
@@ -93,9 +105,12 @@ namespace Ludots.Core.Presentation.Performers
         internal bool NeedsByOwnerDefinitionIndex;
         internal bool HasOwnerAttributeBindingWork;
         internal bool HasOwnerTagBindingWork;
+        internal bool HasOwnerFacingBindingWork;
         internal bool SupportsSingleRequestReplay;
+        internal bool SupportsVisualProxyFastEmit;
         internal OwnerAttributeWorkItem[] OwnerAttributeWork = System.Array.Empty<OwnerAttributeWorkItem>();
         internal OwnerTagWorkItem[] OwnerTagWork = System.Array.Empty<OwnerTagWorkItem>();
+        internal int[] OwnerFacingParamBindingIndices = System.Array.Empty<int>();
         internal int AnimationProfileId;
         internal int PrimaryAssetBehaviorIndex;
         internal int[] AssetBehaviorIndices = System.Array.Empty<int>();
@@ -104,6 +119,7 @@ namespace Ludots.Core.Presentation.Performers
         internal int[] BootstrapGroundingBehaviorIndices = System.Array.Empty<int>();
         internal int[] MaterialBehaviorIndices = System.Array.Empty<int>();
         internal int[] MinimapMarkerBehaviorIndices = System.Array.Empty<int>();
+        internal MinimapMarkerWorkItem[] MinimapMarkerWorkItems = System.Array.Empty<MinimapMarkerWorkItem>();
         internal bool HasEveryFrameGroundingWork;
         internal bool TickBehaviorsAreGroundingOnly;
         internal int[] MaterialSourceFloatParamKeys = System.Array.Empty<int>();
@@ -209,9 +225,12 @@ namespace Ludots.Core.Presentation.Performers
             NeedsByOwnerDefinitionIndex = NeedsByDefinitionIndex;
             HasOwnerAttributeBindingWork = false;
             HasOwnerTagBindingWork = false;
+            HasOwnerFacingBindingWork = false;
             SupportsSingleRequestReplay = false;
+            SupportsVisualProxyFastEmit = false;
             OwnerAttributeWork = System.Array.Empty<OwnerAttributeWorkItem>();
             OwnerTagWork = System.Array.Empty<OwnerTagWorkItem>();
+            OwnerFacingParamBindingIndices = System.Array.Empty<int>();
             AnimationProfileId = 0;
             PrimaryAssetBehaviorIndex = -1;
             AssetBehaviorIndices = System.Array.Empty<int>();
@@ -220,6 +239,7 @@ namespace Ludots.Core.Presentation.Performers
             BootstrapGroundingBehaviorIndices = System.Array.Empty<int>();
             MaterialBehaviorIndices = System.Array.Empty<int>();
             MinimapMarkerBehaviorIndices = System.Array.Empty<int>();
+            MinimapMarkerWorkItems = System.Array.Empty<MinimapMarkerWorkItem>();
             HasEveryFrameGroundingWork = false;
             TickBehaviorsAreGroundingOnly = false;
             MaterialSourceFloatParamKeys = System.Array.Empty<int>();
@@ -233,12 +253,14 @@ namespace Ludots.Core.Presentation.Performers
             System.Collections.Generic.Dictionary<int, System.Collections.Generic.List<int>>? attributeParamBindingMap = null;
             System.Collections.Generic.Dictionary<int, System.Collections.Generic.List<int>>? attributeBehaviorMap = null;
             System.Collections.Generic.Dictionary<int, System.Collections.Generic.List<int>>? tagBehaviorMap = null;
+            System.Collections.Generic.List<int>? ownerFacingParamBindingIndices = null;
             var staticFloatParams = new System.Collections.Generic.HashSet<int>();
             var staticIntParams = new System.Collections.Generic.HashSet<int>();
             var staticVectorParams = new System.Collections.Generic.HashSet<int>();
             var materialSourceFloatParams = new System.Collections.Generic.HashSet<int>();
             System.Collections.Generic.List<int>? materialBehaviorIndices = null;
             System.Collections.Generic.List<int>? minimapMarkerBehaviorIndices = null;
+            System.Collections.Generic.List<MinimapMarkerWorkItem>? minimapMarkerWorkItems = null;
             bool blocksEventDrivenStaticEmit = HasSurfaceAuthoring;
 
             if (Bindings != null)
@@ -254,10 +276,17 @@ namespace Ludots.Core.Presentation.Performers
                             attributeParamBindingMap ??= new System.Collections.Generic.Dictionary<int, System.Collections.Generic.List<int>>();
                             AddIndex(attributeParamBindingMap, Bindings[i].Value.SourceId, i);
                             break;
+                        case ValueSourceKind.FacingRadians:
+                        case ValueSourceKind.FacingDegrees:
+                            HasOwnerFacingBindingWork = true;
+                            ownerFacingParamBindingIndices ??= new System.Collections.Generic.List<int>(2);
+                            ownerFacingParamBindingIndices.Add(i);
+                            break;
                     }
                 }
             }
 
+            OwnerFacingParamBindingIndices = ownerFacingParamBindingIndices?.ToArray() ?? System.Array.Empty<int>();
             if (Behaviors == null || Behaviors.Length == 0)
             {
                 OwnerAttributeWork = BuildOwnerAttributeWork(attributeParamBindingMap, attributeBehaviorMap);
@@ -418,6 +447,8 @@ namespace Ludots.Core.Presentation.Performers
                         HasMinimapMarkerBehavior = true;
                         minimapMarkerBehaviorIndices ??= new System.Collections.Generic.List<int>(2);
                         minimapMarkerBehaviorIndices.Add(i);
+                        minimapMarkerWorkItems ??= new System.Collections.Generic.List<MinimapMarkerWorkItem>(2);
+                        minimapMarkerWorkItems.Add(new MinimapMarkerWorkItem(slot.SlotIndex, in slot.MinimapMarker));
                         break;
                 }
             }
@@ -428,6 +459,7 @@ namespace Ludots.Core.Presentation.Performers
             BootstrapGroundingBehaviorIndices = bootstrapGroundingBehaviorIndices?.ToArray() ?? System.Array.Empty<int>();
             MaterialBehaviorIndices = materialBehaviorIndices?.ToArray() ?? System.Array.Empty<int>();
             MinimapMarkerBehaviorIndices = minimapMarkerBehaviorIndices?.ToArray() ?? System.Array.Empty<int>();
+            MinimapMarkerWorkItems = minimapMarkerWorkItems?.ToArray() ?? System.Array.Empty<MinimapMarkerWorkItem>();
             TickBehaviorsAreGroundingOnly = HasEveryFrameGroundingWork &&
                                            TickBehaviorIndices.Length != 0 &&
                                            TickBehaviorIndices.Length == CountEveryFrameGroundingTickBehaviors(Behaviors, TickBehaviorIndices);
@@ -461,10 +493,13 @@ namespace Ludots.Core.Presentation.Performers
                 (DefaultLifetime > 0f || VisibilityCondition.Inline != InlineConditionKind.None || VisibilityCondition.GraphProgramId > 0);
             SupportsSingleVisualProxyFastEmit =
                 AssetBehaviorIndices.Length == 1 &&
-                SupportsSingleVisualProxyFastEmitFor(Behaviors[AssetBehaviorIndices[0]].AssetBinding);
+                SupportsVisualProxyFastEmitFor(Behaviors[AssetBehaviorIndices[0]].AssetBinding);
             SingleVisualProxyFastBehaviorIndex = SupportsSingleVisualProxyFastEmit
                 ? AssetBehaviorIndices[0]
                 : -1;
+            SupportsVisualProxyFastEmit =
+                AssetBehaviorIndices.Length != 0 &&
+                SupportsVisualProxyFastEmitForAll(Behaviors, AssetBehaviorIndices);
             SupportsSingleAnimatorFastUpdate =
                 HasAnimatorBehavior &&
                 AnimatorSlotMask != 0u &&
@@ -510,7 +545,20 @@ namespace Ludots.Core.Presentation.Performers
             return count;
         }
 
-        private static bool SupportsSingleVisualProxyFastEmitFor(in AssetBindingConfig asset)
+        private static bool SupportsVisualProxyFastEmitForAll(BehaviorSlot[] behaviors, int[] assetBehaviorIndices)
+        {
+            for (int i = 0; i < assetBehaviorIndices.Length; i++)
+            {
+                if (!SupportsVisualProxyFastEmitFor(behaviors[assetBehaviorIndices[i]].AssetBinding))
+                {
+                    return false;
+                }
+            }
+
+            return true;
+        }
+
+        private static bool SupportsVisualProxyFastEmitFor(in AssetBindingConfig asset)
         {
             return asset.AssetKind is AssetKind.Mesh or AssetKind.SkinnedMesh or AssetKind.Decal or AssetKind.VFX &&
                    asset.ScaleParamKey < 0 &&
@@ -518,9 +566,6 @@ namespace Ludots.Core.Presentation.Performers
                    asset.MaterialParamKey < 0 &&
                    asset.AssetSwapParamKey < 0 &&
                    asset.VisibilityParamKey < 0 &&
-                   asset.LocalOffset == Vector3.Zero &&
-                   asset.LocalRotation == Quaternion.Identity &&
-                   asset.LocalScale == Vector3.One &&
                    !HasAssetSwapTable(asset);
         }
 

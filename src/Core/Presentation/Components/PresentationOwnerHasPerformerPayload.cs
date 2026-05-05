@@ -10,5 +10,6 @@ namespace Ludots.Core.Presentation.Components
     {
         public int Count;
         public Entity SingleRootPerformer;
+        public byte SingleRootTransformSync;
     }
 }

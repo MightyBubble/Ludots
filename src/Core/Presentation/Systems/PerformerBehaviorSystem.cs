@@ -9,6 +9,7 @@ using Arch.System;
 using Ludots.Core.Diagnostics;
 using Ludots.Core.Gameplay.GAS.Components;
 using Ludots.Core.Components;
+using Ludots.Core.Mathematics;
 using Ludots.Core.Presentation.Commands;
 using Ludots.Core.Presentation.Components;
 using Ludots.Core.Presentation.Events;
@@ -69,8 +70,8 @@ namespace Ludots.Core.Presentation.Systems
         private readonly QueryDescription _dirtyOwnerTagQuery = new QueryDescription()
             .WithAll<GameplayTagEffectiveChangedBits>();
         private readonly QueryDescription _tickDrivenQuery = new QueryDescription()
-            .WithAll<PerformerState, PerformerWorldPosition>()
-            .WithAny<PerfHasSpline, PerfHasAttachmentTick, PerfHasGrounding, PerfHasSound>()
+            .WithAll<PerformerState, PerformerWorldPosition, PerformerWorldPlanePosition>()
+            .WithAny<PerfHasSpline, PerfHasAttachmentTick, PerfHasGrounding, PerfHasSound, PerfHasOwnerFacingBinding>()
             .WithNone<PerformerBootstrapPending>();
         private readonly QueryDescription _materialDirtyQuery = new QueryDescription()
             .WithAll<PerformerState, PerfMaterialDirty>()
@@ -271,19 +272,23 @@ namespace Ludots.Core.Presentation.Systems
             }
 
             Span<PerformerWorldPosition> positions = chunk.GetSpan<PerformerWorldPosition>();
+            Span<PerformerWorldPlanePosition> planePositions = chunk.GetSpan<PerformerWorldPlanePosition>();
             Span<PerformerWorldRotation> rotations = chunk.GetSpan<PerformerWorldRotation>();
+            Span<PerformerWorldFacing> facings = chunk.GetSpan<PerformerWorldFacing>();
             Span<PerformerWorldScale> scales = chunk.GetSpan<PerformerWorldScale>();
             Span<PerformerTransformSource> sources = chunk.GetSpan<PerformerTransformSource>();
             Span<PerformerParent> parents = chunk.GetSpan<PerformerParent>();
 
             ResolveDefaultTransformSourceBatch(states, sources, parents, chunk);
-            ResolveTransformBatch(positions, rotations, scales, sources, parents, states, definition, chunk);
+            ResolveTransformBatch(positions, planePositions, rotations, facings, scales, sources, parents, states, definition, chunk);
 
             if (TryResolveParentAttachmentOnly(definition, out AttachmentConfig attachmentConfig, out int attachmentSlot))
             {
                 ApplyParentAttachmentBatch(
                     positions,
+                    planePositions,
                     rotations,
+                    facings,
                     scales,
                     sources,
                     parents,
@@ -518,6 +523,7 @@ namespace Ludots.Core.Presentation.Systems
             {
                 Span<PerformerState> states = chunk.GetSpan<PerformerState>();
                 Span<PerformerWorldPosition> positions = chunk.GetSpan<PerformerWorldPosition>();
+                Span<PerformerWorldPlanePosition> planePositions = chunk.GetSpan<PerformerWorldPlanePosition>();
                 PerformerDefinition? chunkDefinition = null;
                 bool singleDefinitionChunk = TryResolveSingleDefinitionChunk(states, chunk.Count, out int chunkDefId);
                 if (singleDefinitionChunk && !_definitions.TryGet(chunkDefId, out chunkDefinition))
@@ -531,7 +537,9 @@ namespace Ludots.Core.Presentation.Systems
                     : Span<PerformerWorldRotation>.Empty;
                 ref Entity entityFirst = ref chunk.Entity(0);
 
-                if (batchGrounding && chunkDefinition!.TickBehaviorsAreGroundingOnly)
+                if (batchGrounding &&
+                    chunkDefinition!.TickBehaviorsAreGroundingOnly &&
+                    !chunkDefinition.HasOwnerFacingBindingWork)
                 {
                     if (TrySkipOwnerBackedSnapToGroundBatch(
                             states,
@@ -571,15 +579,19 @@ namespace Ludots.Core.Presentation.Systems
 
                 if (singleDefinitionChunk &&
                     chunkDefinition != null &&
+                    !chunkDefinition.HasOwnerFacingBindingWork &&
                     TryResolveParentAttachmentOnly(chunkDefinition, out AttachmentConfig attachmentConfig, out int attachmentSlot))
                 {
                     Span<PerformerParent> parents = chunk.GetSpan<PerformerParent>();
                     rotations = chunk.GetSpan<PerformerWorldRotation>();
+                    Span<PerformerWorldFacing> facings = chunk.GetSpan<PerformerWorldFacing>();
                     Span<PerformerWorldScale> scales = chunk.GetSpan<PerformerWorldScale>();
                     Span<PerformerTransformSource> sources = chunk.GetSpan<PerformerTransformSource>();
                     ApplyParentAttachmentBatch(
                         positions,
+                        planePositions,
                         rotations,
+                        facings,
                         scales,
                         sources,
                         parents,
@@ -717,6 +729,10 @@ namespace Ludots.Core.Presentation.Systems
             if (!tickDrivenOnly)
             {
                 ApplyBindings(entity, owner, definition);
+            }
+            else if (definition.HasOwnerFacingBindingWork)
+            {
+                ApplyOwnerFacingBindings(entity, owner, definition);
             }
 
             bool hasSoundBehavior = definition.HasSoundBehavior;
@@ -866,7 +882,7 @@ namespace Ludots.Core.Presentation.Systems
                         SetParam(entity, binding.ParamKey, ParamLane.Float, ResolveFacingRadians(owner), 0, Vector4.Zero);
                         break;
                     case ValueSourceKind.FacingDegrees:
-                        SetParam(entity, binding.ParamKey, ParamLane.Float, ResolveFacingRadians(owner) * (180f / MathF.PI), 0, Vector4.Zero);
+                        SetParam(entity, binding.ParamKey, ParamLane.Float, WorldPlane2D.RadToDegValue(ResolveFacingRadians(owner)), 0, Vector4.Zero);
                         break;
                     case ValueSourceKind.Attribute:
                     case ValueSourceKind.AttributeRatio:
@@ -880,6 +896,30 @@ namespace Ludots.Core.Presentation.Systems
                         SetParam(entity, binding.ParamKey, ParamLane.Float, value.ConstantValue, 0, Vector4.Zero);
                         break;
                     case ValueSourceKind.Graph:
+                        break;
+                }
+            }
+        }
+
+        private void ApplyOwnerFacingBindings(Entity entity, Entity owner, PerformerDefinition definition)
+        {
+            int[] bindingIndices = definition.OwnerFacingParamBindingIndices;
+            if (bindingIndices.Length == 0)
+            {
+                return;
+            }
+
+            float facingRad = ResolveFacingRadians(owner);
+            for (int i = 0; i < bindingIndices.Length; i++)
+            {
+                ref readonly PerformerParamBinding binding = ref definition.Bindings[bindingIndices[i]];
+                switch (binding.Value.Source)
+                {
+                    case ValueSourceKind.FacingRadians:
+                        SetParam(entity, binding.ParamKey, ParamLane.Float, facingRad, 0, Vector4.Zero);
+                        break;
+                    case ValueSourceKind.FacingDegrees:
+                        SetParam(entity, binding.ParamKey, ParamLane.Float, WorldPlane2D.RadToDegValue(facingRad), 0, Vector4.Zero);
                         break;
                 }
             }
@@ -1193,11 +1233,18 @@ namespace Ludots.Core.Presentation.Systems
             {
                 ref var pos = ref World.Get<PerformerWorldPosition>(entity);
                 pos.Value = new Vector3(progress, pos.Value.Y, 0f);
+                SyncPlanePosition(entity, in pos.Value);
             }
             if (World.Has<PerformerWorldRotation>(entity))
             {
                 ref var rot = ref World.Get<PerformerWorldRotation>(entity);
-                rot.Value = Quaternion.Identity;
+                rot.Value = WorldPlane2D.FacingRadToVisualYRotation(0f);
+            }
+            if (World.Has<PerformerWorldFacing>(entity))
+            {
+                ref var facing = ref World.Get<PerformerWorldFacing>(entity);
+                facing.AngleRad = 0f;
+                facing.HasValue = 1;
             }
         }
 
@@ -1210,8 +1257,9 @@ namespace Ludots.Core.Presentation.Systems
                 case AttachmentTarget.Parent:
                     Vector3 parentPos = World.Has<PerformerWorldPosition>(parentEntity) ? World.Get<PerformerWorldPosition>(parentEntity).Value : Vector3.Zero;
                     Quaternion parentRot = World.Has<PerformerWorldRotation>(parentEntity) ? World.Get<PerformerWorldRotation>(parentEntity).Value : Quaternion.Identity;
+                    PerformerWorldFacing parentFacing = World.Has<PerformerWorldFacing>(parentEntity) ? World.Get<PerformerWorldFacing>(parentEntity) : default;
                     Vector3 parentScale = World.Has<PerformerWorldScale>(parentEntity) ? World.Get<PerformerWorldScale>(parentEntity).Value : Vector3.One;
-                    ApplyParentAttachment(entity, parentPos, parentRot, parentScale, config);
+                    ApplyParentAttachment(entity, parentPos, parentRot, parentFacing, parentScale, config);
                     return;
                 case AttachmentTarget.Bone:
                     if (!World.Has<PerformerState>(parentEntity))
@@ -1225,15 +1273,22 @@ namespace Ludots.Core.Presentation.Systems
             }
         }
 
-        private void ApplyParentAttachment(Entity entity, Vector3 parentPos, Quaternion parentRot, Vector3 parentScale, in AttachmentConfig config)
+        private void ApplyParentAttachment(
+            Entity entity,
+            Vector3 parentPos,
+            Quaternion parentRot,
+            in PerformerWorldFacing parentFacing,
+            Vector3 parentScale,
+            in AttachmentConfig config)
         {
-            Quaternion normalizedParentRot = NormalizeOrIdentity(parentRot);
-            Vector3 normalizedParentScale = NormalizeScale(parentScale);
+            Quaternion normalizedParentRot = WorldPlane2D.NormalizeOrIdentity(parentRot);
+            Vector3 normalizedParentScale = WorldPlane2D.NormalizeScale(parentScale);
             Vector3 scaledOffset = config.InheritScale ? normalizedParentScale * config.Offset : config.Offset;
             SetTransform(entity, TransformSource.AttachedToParent,
                 parentPos + Vector3.Transform(scaledOffset, normalizedParentRot),
-                NormalizeOrIdentity(normalizedParentRot * NormalizeOrIdentity(config.RotationOffset)),
-                config.InheritScale ? normalizedParentScale : Vector3.One);
+                WorldPlane2D.NormalizeOrIdentity(normalizedParentRot * WorldPlane2D.NormalizeOrIdentity(config.RotationOffset)),
+                config.InheritScale ? normalizedParentScale : Vector3.One,
+                parentFacing);
         }
 
         private void ApplyBoneAttachment(Entity entity, int parentStableId, in AttachmentConfig config)
@@ -1257,11 +1312,12 @@ namespace Ludots.Core.Presentation.Systems
                 return;
             }
 
-            Quaternion normalizedBoneRotation = NormalizeOrIdentity(boneRotation);
+            Quaternion normalizedBoneRotation = WorldPlane2D.NormalizeOrIdentity(boneRotation);
             SetTransform(entity, TransformSource.BoneAttached,
                 bonePosition + Vector3.Transform(config.Offset, normalizedBoneRotation),
-                NormalizeOrIdentity(normalizedBoneRotation * NormalizeOrIdentity(config.RotationOffset)),
-                config.InheritScale ? NormalizeScale(boneScale) : Vector3.One);
+                WorldPlane2D.NormalizeOrIdentity(normalizedBoneRotation * WorldPlane2D.NormalizeOrIdentity(config.RotationOffset)),
+                config.InheritScale ? WorldPlane2D.NormalizeScale(boneScale) : Vector3.One,
+                World.Has<PerformerWorldFacing>(entity) ? World.Get<PerformerWorldFacing>(entity) : default);
         }
 
         private static void WarnBoneAttachment(Entity entity, HashSet<int> once, string reason)
@@ -1689,7 +1745,9 @@ namespace Ludots.Core.Presentation.Systems
 
         private void ApplyParentAttachmentBatch(
             Span<PerformerWorldPosition> positions,
+            Span<PerformerWorldPlanePosition> planePositions,
             Span<PerformerWorldRotation> rotations,
+            Span<PerformerWorldFacing> facings,
             Span<PerformerWorldScale> scales,
             Span<PerformerTransformSource> sources,
             Span<PerformerParent> parents,
@@ -1716,12 +1774,17 @@ namespace Ludots.Core.Presentation.Systems
                     continue;
                 }
 
-                Quaternion normalizedParentRot = NormalizeOrIdentity(parentRot);
-                Vector3 normalizedParentScale = NormalizeScale(parentScale);
+                Quaternion normalizedParentRot = WorldPlane2D.NormalizeOrIdentity(parentRot);
+                Vector3 normalizedParentScale = WorldPlane2D.NormalizeScale(parentScale);
                 Vector3 scaledOffset = config.InheritScale ? normalizedParentScale * config.Offset : config.Offset;
+                Vector3 resolvedPosition = parentPos + Vector3.Transform(scaledOffset, normalizedParentRot);
                 sources[index].Value = TransformSource.AttachedToParent;
-                positions[index].Value = parentPos + Vector3.Transform(scaledOffset, normalizedParentRot);
-                rotations[index].Value = NormalizeOrIdentity(normalizedParentRot * NormalizeOrIdentity(config.RotationOffset));
+                positions[index].Value = resolvedPosition;
+                planePositions[index].ValueCm = WorldPlane2D.VisualMetersToLogicCm(in resolvedPosition);
+                rotations[index].Value = WorldPlane2D.NormalizeOrIdentity(normalizedParentRot * WorldPlane2D.NormalizeOrIdentity(config.RotationOffset));
+                facings[index] = World.Has<PerformerWorldFacing>(parentEntity)
+                    ? World.Get<PerformerWorldFacing>(parentEntity)
+                    : default;
                 scales[index].Value = config.InheritScale ? normalizedParentScale : Vector3.One;
             }
         }
@@ -1795,7 +1858,9 @@ namespace Ludots.Core.Presentation.Systems
 
         private void ResolveTransformBatch(
             Span<PerformerWorldPosition> positions,
+            Span<PerformerWorldPlanePosition> planePositions,
             Span<PerformerWorldRotation> rotations,
+            Span<PerformerWorldFacing> facings,
             Span<PerformerWorldScale> scales,
             Span<PerformerTransformSource> sources,
             Span<PerformerParent> parents,
@@ -1811,6 +1876,7 @@ namespace Ludots.Core.Presentation.Systems
                     WorldPosition = positions[index].Value,
                     WorldRotation = rotations[index].Value,
                     WorldScale = scales[index].Value,
+                    WorldFacing = facings[index],
                     TransformSource = sources[index].Value,
                 };
 
@@ -1830,6 +1896,9 @@ namespace Ludots.Core.Presentation.Systems
                     parentSnapshot.WorldScale = World.Has<PerformerWorldScale>(parentEntity)
                         ? World.Get<PerformerWorldScale>(parentEntity).Value
                         : Vector3.One;
+                    parentSnapshot.WorldFacing = World.Has<PerformerWorldFacing>(parentEntity)
+                        ? World.Get<PerformerWorldFacing>(parentEntity)
+                        : default;
                 }
 
                 Entity ownerEntity = states[index].OwnerEntity;
@@ -1847,7 +1916,9 @@ namespace Ludots.Core.Presentation.Systems
                     assetBinding);
 
                 positions[index].Value = resolved.Position;
+                planePositions[index].ValueCm = WorldPlane2D.VisualMetersToLogicCm(in resolved.Position);
                 rotations[index].Value = resolved.Rotation;
+                facings[index] = resolved.Facing;
                 scales[index].Value = resolved.Scale;
             }
         }
@@ -1989,14 +2060,25 @@ namespace Ludots.Core.Presentation.Systems
             Array.Resize(ref _groundingHeightsCm, capacity);
         }
 
-        private void SetTransform(Entity entity, TransformSource source, Vector3 position, Quaternion rotation, Vector3 scale)
+        private void SetTransform(
+            Entity entity,
+            TransformSource source,
+            Vector3 position,
+            Quaternion rotation,
+            Vector3 scale,
+            in PerformerWorldFacing facing)
         {
             if (World.Has<PerformerTransformSource>(entity))
                 World.Get<PerformerTransformSource>(entity).Value = source;
             if (World.Has<PerformerWorldPosition>(entity))
+            {
                 World.Get<PerformerWorldPosition>(entity).Value = position;
+                SyncPlanePosition(entity, in position);
+            }
             if (World.Has<PerformerWorldRotation>(entity))
                 World.Get<PerformerWorldRotation>(entity).Value = rotation;
+            if (World.Has<PerformerWorldFacing>(entity))
+                World.Get<PerformerWorldFacing>(entity) = facing;
             if (World.Has<PerformerWorldScale>(entity))
                 World.Get<PerformerWorldScale>(entity).Value = scale;
         }
@@ -2057,6 +2139,7 @@ namespace Ludots.Core.Presentation.Systems
                 parentSnapshot.WorldPosition = World.Has<PerformerWorldPosition>(parentEntity) ? World.Get<PerformerWorldPosition>(parentEntity).Value : Vector3.Zero;
                 parentSnapshot.WorldRotation = World.Has<PerformerWorldRotation>(parentEntity) ? World.Get<PerformerWorldRotation>(parentEntity).Value : Quaternion.Identity;
                 parentSnapshot.WorldScale = World.Has<PerformerWorldScale>(parentEntity) ? World.Get<PerformerWorldScale>(parentEntity).Value : Vector3.One;
+                parentSnapshot.WorldFacing = World.Has<PerformerWorldFacing>(parentEntity) ? World.Get<PerformerWorldFacing>(parentEntity) : default;
             }
 
             bool hasOwnerTransform = World.IsAlive(state.OwnerEntity) && World.Has<VisualTransform>(state.OwnerEntity);
@@ -2066,17 +2149,32 @@ namespace Ludots.Core.Presentation.Systems
             performerSnapshot.WorldPosition = World.Has<PerformerWorldPosition>(entity) ? World.Get<PerformerWorldPosition>(entity).Value : Vector3.Zero;
             performerSnapshot.WorldRotation = World.Has<PerformerWorldRotation>(entity) ? World.Get<PerformerWorldRotation>(entity).Value : Quaternion.Identity;
             performerSnapshot.WorldScale = World.Has<PerformerWorldScale>(entity) ? World.Get<PerformerWorldScale>(entity).Value : Vector3.One;
+            performerSnapshot.WorldFacing = World.Has<PerformerWorldFacing>(entity) ? World.Get<PerformerWorldFacing>(entity) : default;
             performerSnapshot.TransformSource = World.Has<PerformerTransformSource>(entity) ? World.Get<PerformerTransformSource>(entity).Value : TransformSource.EntityTransform;
 
             PerformerResolvedTransform resolved = PerformerGroundingUtility.ResolveTransform(
                 performerSnapshot, parentSnapshot, hasParent, ownerTransform, hasOwnerTransform, assetBinding);
 
             if (World.Has<PerformerWorldPosition>(entity))
+            {
                 World.Get<PerformerWorldPosition>(entity).Value = resolved.Position;
+                SyncPlanePosition(entity, in resolved.Position);
+            }
             if (World.Has<PerformerWorldRotation>(entity))
                 World.Get<PerformerWorldRotation>(entity).Value = resolved.Rotation;
+            if (World.Has<PerformerWorldFacing>(entity))
+                World.Get<PerformerWorldFacing>(entity) = resolved.Facing;
             if (World.Has<PerformerWorldScale>(entity))
                 World.Get<PerformerWorldScale>(entity).Value = resolved.Scale;
+        }
+
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        private void SyncPlanePosition(Entity entity, in Vector3 position)
+        {
+            if (World.Has<PerformerWorldPlanePosition>(entity))
+            {
+                World.Get<PerformerWorldPlanePosition>(entity).ValueCm = WorldPlane2D.VisualMetersToLogicCm(in position);
+            }
         }
 
         private void ResolveDefaultTransformSource(Entity entity, ref PerformerState state)
@@ -2136,14 +2234,5 @@ namespace Ludots.Core.Presentation.Systems
             return slotIndex is >= 0 and < 32 && (mask & (1u << slotIndex)) != 0;
         }
 
-        private static Quaternion NormalizeOrIdentity(Quaternion value)
-        {
-            return value.LengthSquared() > 0.000001f ? Quaternion.Normalize(value) : Quaternion.Identity;
-        }
-
-        private static Vector3 NormalizeScale(Vector3 value)
-        {
-            return value == Vector3.Zero ? Vector3.One : value;
-        }
     }
 }

@@ -1165,7 +1165,7 @@ namespace Ludots.Core.Engine
             RegisterPresentationSystem(chunkSurfaceBakeSystem);
             RegisterPresentationSystem(presentationEntityFinalizeDestroySystem);
             RegisterPresentationSystem(presentationRequestFlushSystem);
-            RegisterPresentationSystem(new MinimapPresentationSystem(this, minimapRuntime, minimapMarkerBuffer, minimapScreenMarkerBuffer));
+            RegisterPresentationSystem(new MinimapPresentationSystem(this, minimapRuntime, minimapMarkerBuffer, minimapScreenMarkerBuffer, presentationTimingDiagnostics));
             RegisterPresentationSystem(new ChunkDebugPanelPresentationSystem(this, chunkDebugPanelRuntime));
         }
 

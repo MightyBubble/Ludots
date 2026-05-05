@@ -3,6 +3,7 @@ using System.Runtime.CompilerServices;
 using Arch.Buffer;
 using Arch.Core;
 using Ludots.Core.Components;
+using Ludots.Core.Mathematics;
 using Ludots.Core.Mathematics.FixedPoint;
 using Ludots.Core.Presentation.Components;
 using System.Numerics;
@@ -166,7 +167,7 @@ namespace Ludots.Core.Presentation.Systems
             public void Update(Entity entity, ref WorldPositionCm current, ref PreviousWorldPositionCm previous, ref VisualTransform visual, ref FacingDirection facing)
             {
                 visual.Position = InterpolateToVisual(in previous.Value, in current.Value, Alpha);
-                visual.Rotation = FacingToYRotation(facing.AngleRad);
+                visual.Rotation = WorldPlane2D.FacingRadToVisualYRotation(facing.AngleRad);
                 CommandBuffer.Remove<PresentationStaticVisualPending>(in entity);
             }
         }
@@ -192,7 +193,7 @@ namespace Ludots.Core.Presentation.Systems
                                ref VisualTransform visual, ref FacingDirection facing)
             {
                 visual.Position = InterpolateToVisual(in previous.Value, in current.Value, Alpha);
-                visual.Rotation = FacingToYRotation(facing.AngleRad);
+                visual.Rotation = WorldPlane2D.FacingRadToVisualYRotation(facing.AngleRad);
             }
         }
         
@@ -205,21 +206,10 @@ namespace Ludots.Core.Presentation.Systems
                                ref VisualTransform visual, ref FacingDirection facing, ref CullState cull)
             {
                 visual.Position = InterpolateToVisual(in previous.Value, in current.Value, Alpha);
-                visual.Rotation = FacingToYRotation(facing.AngleRad);
+                visual.Rotation = WorldPlane2D.FacingRadToVisualYRotation(facing.AngleRad);
             }
         }
         
-        /// <summary>
-        /// 将逻辑层 XY 平面角度转换为视觉层绕 Y 轴旋转的四元数。
-        /// 逻辑: angleRad 0 = +X, π/2 = +Y
-        /// 视觉: Y-up, 对应绕 Y 轴旋转（取反，因为 XY→XZ 映射中 Y→-Z）
-        /// </summary>
-        [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        private static Quaternion FacingToYRotation(float angleRad)
-        {
-            // 逻辑 XY 到视觉 XZ: Y 轴映射到 -Z，所以角度取反
-            return Quaternion.CreateFromAxisAngle(Vector3.UnitY, -angleRad);
-        }
 
         /// <summary>
         /// 从 Fix64Vec2 (定点数厘米, XY) 插值并转换到 Visual 空间 (浮点米, XZ)。
@@ -229,12 +219,7 @@ namespace Ludots.Core.Presentation.Systems
         private static Vector3 InterpolateToVisual(in Fix64Vec2 previous, in Fix64Vec2 current, Fix64 alpha)
         {
             Fix64Vec2 interpolated = Fix64Vec2.Lerp(previous, current, alpha);
-            const float cmToM = 0.01f;
-            return new Vector3(
-                interpolated.X.ToFloat() * cmToM, 
-                0f, 
-                interpolated.Y.ToFloat() * cmToM
-            );
+            return WorldPlane2D.LogicCmToVisualMeters(in interpolated);
         }
     }
 }

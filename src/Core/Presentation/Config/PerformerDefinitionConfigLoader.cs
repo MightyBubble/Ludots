@@ -1102,13 +1102,22 @@ namespace Ludots.Core.Presentation.Config
                 throw new InvalidOperationException("MinimapMarker orientationOffsetRad must be finite.");
             }
 
-            if (orientationMode != MinimapMarkerOrientationMode.None)
+            if (orientationMode == MinimapMarkerOrientationMode.ParamRadians ||
+                orientationMode == MinimapMarkerOrientationMode.ParamDegrees)
             {
                 if (orientationParamKey < 0)
                 {
-                    throw new InvalidOperationException("MinimapMarker orientationParamKey is required when orientationMode is not None.");
+                    throw new InvalidOperationException("MinimapMarker orientationParamKey is required when orientationMode reads a param.");
                 }
 
+                if (!float.IsFinite(orientationLengthPx) || orientationLengthPx <= 0f)
+                {
+                    throw new InvalidOperationException("MinimapMarker orientationLengthPx must be a positive finite number when orientationMode is not None.");
+                }
+            }
+            else if (orientationMode == MinimapMarkerOrientationMode.PerformerForward)
+            {
+                orientationParamKey = -1;
                 if (!float.IsFinite(orientationLengthPx) || orientationLengthPx <= 0f)
                 {
                     throw new InvalidOperationException("MinimapMarker orientationLengthPx must be a positive finite number when orientationMode is not None.");

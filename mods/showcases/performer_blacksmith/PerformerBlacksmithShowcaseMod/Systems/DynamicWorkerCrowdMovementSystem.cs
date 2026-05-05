@@ -1,9 +1,11 @@
 using System;
+using System.Numerics;
 using System.Text.Json.Nodes;
 using Arch.Core;
 using Arch.System;
 using Ludots.Core.Components;
 using Ludots.Core.Engine;
+using Ludots.Core.Mathematics;
 using Ludots.Core.Mathematics.FixedPoint;
 using Ludots.Core.Presentation.Terrain;
 using Ludots.Core.Scripting;
@@ -62,8 +64,9 @@ namespace PerformerBlacksmithShowcaseMod.Systems
                     float y = position.Value.Y.ToFloat();
                     float phase = ((x * 0.0017f) + (y * 0.0023f)) % (MathF.PI * 2f);
                     float angle = elapsed * 0.85f + phase;
-                    float vx = MathF.Cos(angle) * speed;
-                    float vy = MathF.Sin(angle) * speed;
+                    Vector2 direction = WorldPlane2D.DirectionFromFacingRad(angle);
+                    float vx = direction.X * speed;
+                    float vy = direction.Y * speed;
                     float nextX = x + (vx * dt);
                     float nextY = y + (vy * dt);
                     if (nextX < _leftCm)
@@ -89,7 +92,7 @@ namespace PerformerBlacksmithShowcaseMod.Systems
                     }
 
                     position.Value = Fix64Vec2.FromFloat(nextX, nextY);
-                    facings[index].AngleRad = MathF.Atan2(vy, vx);
+                    facings[index].AngleRad = WorldPlane2D.FacingRadFromDirection(vx, vy);
                 }
             }
         }

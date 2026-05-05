@@ -32,7 +32,7 @@ namespace PerformerBlacksmithShowcaseMod
         public const int ScatterBenchmarkDefaultTotal = 30_000;
         public const int MeshBenchmarkDefaultTotal = 30_000;
         public const int DynamicWorkerBenchmarkDefaultTotal = 10_000;
-        public const int MinimapMarkerShowcaseDefaultTotal = 300;
+        public const int MinimapMarkerShowcaseDefaultTotal = 30_000;
         public const string RootDefinitionId = "blacksmith_root";
         public const string WorkshopLeftDefinitionId = "blacksmith_workshop_left_mesh";
         public const string WorkshopRightDefinitionId = "blacksmith_workshop_right_mesh";

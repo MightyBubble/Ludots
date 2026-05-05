@@ -25,8 +25,8 @@ namespace Ludots.Core.Gameplay.Camera
             float distanceCm, float fovYDeg, float pitchDeg, float aspectRatio,
             float buffer = 1.5f)
         {
-            float fovY = fovYDeg * (float)(Math.PI / 180.0);
-            float pitchRad = pitchDeg * (float)(Math.PI / 180.0);
+            float fovY = WorldPlane2D.DegToRadValue(fovYDeg);
+            float pitchRad = WorldPlane2D.DegToRadValue(pitchDeg);
 
             float logicHeight = 2.0f * distanceCm * (float)Math.Tan(fovY / 2.0f);
             float pitchScale = 1.0f / Math.Max((float)Math.Sin(pitchRad), 0.1f);
@@ -45,8 +45,8 @@ namespace Ludots.Core.Gameplay.Camera
         public static float DistanceForVerticalExtent(
             float desiredHeightCm, float fovYDeg, float pitchDeg, float buffer = 1.5f)
         {
-            float fovY = fovYDeg * (float)(Math.PI / 180.0);
-            float pitchRad = pitchDeg * (float)(Math.PI / 180.0);
+            float fovY = WorldPlane2D.DegToRadValue(fovYDeg);
+            float pitchRad = WorldPlane2D.DegToRadValue(pitchDeg);
             float sinPitch = Math.Max((float)Math.Sin(pitchRad), 0.1f);
 
             float h0 = desiredHeightCm / (2f * buffer);
@@ -75,7 +75,7 @@ namespace Ludots.Core.Gameplay.Camera
             float aspectRatio)
         {
             var view = Matrix4x4.CreateLookAt(camera.Position, camera.Target, camera.Up);
-            float fovYRad = camera.FovYDeg * (float)(Math.PI / 180.0);
+            float fovYRad = WorldPlane2D.DegToRadValue(camera.FovYDeg);
             CameraClipPlanes clipPlanes = ResolveClipPlanes(in camera);
             var proj = Matrix4x4.CreatePerspectiveFieldOfView(fovYRad, aspectRatio, clipPlanes.NearMeters, clipPlanes.FarMeters);
 
@@ -117,7 +117,7 @@ namespace Ludots.Core.Gameplay.Camera
             float ndcY = 1f - (screenPosition.Y / resolution.Y) * 2f;
 
             var view = Matrix4x4.CreateLookAt(camera.Position, camera.Target, camera.Up);
-            float fovYRad = camera.FovYDeg * (float)(Math.PI / 180.0);
+            float fovYRad = WorldPlane2D.DegToRadValue(camera.FovYDeg);
             CameraClipPlanes clipPlanes = ResolveClipPlanes(in camera);
             var projection = Matrix4x4.CreatePerspectiveFieldOfView(fovYRad, aspectRatio, clipPlanes.NearMeters, clipPlanes.FarMeters);
             var viewProj = view * projection;
@@ -177,20 +177,13 @@ namespace Ludots.Core.Gameplay.Camera
                 WorldUnits.CmToM(state.TargetHeightCm),
                 WorldUnits.CmToM(state.TargetCm.Y));
 
-            float yawRad = state.Yaw * (float)(Math.PI / 180.0);
-            float pitchRad = state.Pitch * (float)(Math.PI / 180.0);
             float distanceM = WorldUnits.CmToM(state.DistanceCm);
             if (cameraDebug is { Enabled: true })
             {
                 distanceM += cameraDebug.PullBackMeters;
             }
 
-            float hDist = distanceM * (float)Math.Cos(pitchRad);
-            float vDist = distanceM * (float)Math.Sin(pitchRad);
-
-            float offsetX = hDist * (float)Math.Sin(yawRad);
-            float offsetZ = -hDist * (float)Math.Cos(yawRad);
-            Vector3 offset = new Vector3(offsetX, vDist, offsetZ);
+            Vector3 offset = WorldPlane2D.VisualCameraTargetToCameraOffset(state.Yaw, state.Pitch, distanceM);
             Vector3 desiredPos = targetPos + offset;
             if (cameraDebug is { Enabled: true })
             {
@@ -203,7 +196,7 @@ namespace Ludots.Core.Gameplay.Camera
             if (firstPerson)
             {
                 desiredPos = targetPos;
-                forward = ForwardFromYawPitch(yawRad, pitchRad);
+                forward = WorldPlane2D.VisualCameraForwardFromYawPitchDegrees(state.Yaw, state.Pitch);
                 lookTarget = desiredPos + forward;
             }
             else
@@ -216,15 +209,6 @@ namespace Ludots.Core.Gameplay.Camera
                 up = Vector3.UnitZ;
 
             return new CameraRenderState3D(desiredPos, lookTarget, up, state.FovYDeg);
-        }
-
-        private static Vector3 ForwardFromYawPitch(float yawRad, float pitchRad)
-        {
-            float cosPitch = (float)Math.Cos(pitchRad);
-            return Vector3.Normalize(new Vector3(
-                cosPitch * (float)Math.Sin(yawRad),
-                (float)Math.Sin(pitchRad),
-                -cosPitch * (float)Math.Cos(yawRad)));
         }
     }
 }

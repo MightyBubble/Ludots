@@ -1,4 +1,5 @@
 using System.Numerics;
+using Ludots.Core.Mathematics;
 
 namespace Ludots.Core.Gameplay.Camera
 {
@@ -49,7 +50,7 @@ namespace Ludots.Core.Gameplay.Camera
             {
                 TargetCm = Vector2.Lerp(from.TargetCm, to.TargetCm, t),
                 TargetHeightCm = LerpScalar(from.TargetHeightCm, to.TargetHeightCm, t),
-                Yaw = LerpAngleDeg(from.Yaw, to.Yaw, t),
+                Yaw = WorldPlane2D.LerpAngleDegrees(from.Yaw, to.Yaw, t),
                 Pitch = LerpScalar(from.Pitch, to.Pitch, t),
                 DistanceCm = LerpScalar(from.DistanceCm, to.DistanceCm, t),
                 FovYDeg = LerpScalar(from.FovYDeg, to.FovYDeg, t),
@@ -64,17 +65,5 @@ namespace Ludots.Core.Gameplay.Camera
             return from + ((to - from) * t);
         }
 
-        private static float LerpAngleDeg(float from, float to, float t)
-        {
-            float delta = ((to - from + 540f) % 360f) - 180f;
-            return Normalize360(from + (delta * t));
-        }
-
-        private static float Normalize360(float degrees)
-        {
-            degrees %= 360f;
-            if (degrees < 0f) degrees += 360f;
-            return degrees;
-        }
     }
 }

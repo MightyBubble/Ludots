@@ -11,6 +11,7 @@ using Ludots.Core.Gameplay.GAS.Components;
 using Ludots.Core.Gameplay.GAS.Registry;
 using Ludots.Core.Gameplay.Spawning;
 using Ludots.Core.Map;
+using Ludots.Core.Mathematics;
 using Ludots.Core.Presentation;
 using Ludots.Core.Presentation.Components;
 using Ludots.Core.Spatial;
@@ -603,6 +604,7 @@ namespace Ludots.Core.Config
                 bool hasStaticTransform = template.Components.ContainsKey("PresentationStaticTransform");
                 bool hasStaticHeightPending = template.Components.ContainsKey("PresentationStaticHeightPending");
                 bool hasDynamicHeightSampling = template.Components.ContainsKey("VisualHeightmapSampleState");
+                bool hasSpatialPartitionExcluded = template.Components.ContainsKey("SpatialPartitionExcluded");
 
                 Signature signature =
                     Component<Name>.Signature +
@@ -631,6 +633,11 @@ namespace Ludots.Core.Config
                 if (hasStaticHeightPending)
                 {
                     signature += Component<PresentationStaticHeightPending>.Signature;
+                }
+
+                if (hasSpatialPartitionExcluded)
+                {
+                    signature += Component<SpatialPartitionExcluded>.Signature;
                 }
 
                 for (int i = 0; i < tagComponentTypes.Length; i++)
@@ -669,7 +676,8 @@ namespace Ludots.Core.Config
                         string.Equals(componentName, "TagCountContainer", StringComparison.Ordinal) ||
                         string.Equals(componentName, "PresentationStaticTransform", StringComparison.Ordinal) ||
                         string.Equals(componentName, "PresentationStaticCullPending", StringComparison.Ordinal) ||
-                        string.Equals(componentName, "PresentationStaticHeightPending", StringComparison.Ordinal))
+                        string.Equals(componentName, "PresentationStaticHeightPending", StringComparison.Ordinal) ||
+                        string.Equals(componentName, "SpatialPartitionExcluded", StringComparison.Ordinal))
                     {
                         continue;
                     }
@@ -726,7 +734,8 @@ namespace Ludots.Core.Config
                        string.Equals(componentName, "TagCountContainer", StringComparison.Ordinal) ||
                        string.Equals(componentName, "PresentationStaticTransform", StringComparison.Ordinal) ||
                        string.Equals(componentName, "PresentationStaticCullPending", StringComparison.Ordinal) ||
-                       string.Equals(componentName, "PresentationStaticHeightPending", StringComparison.Ordinal);
+                       string.Equals(componentName, "PresentationStaticHeightPending", StringComparison.Ordinal) ||
+                       string.Equals(componentName, "SpatialPartitionExcluded", StringComparison.Ordinal);
             }
 
             private static bool IsEmptyJsonObject(JsonNode node)
@@ -941,7 +950,7 @@ namespace Ludots.Core.Config
                     worldPosition.X.ToFloat() * cmToM,
                     0f,
                     worldPosition.Y.ToFloat() * cmToM),
-                Rotation = System.Numerics.Quaternion.CreateFromAxisAngle(System.Numerics.Vector3.UnitY, -facingAngleRad),
+                Rotation = WorldPlane2D.FacingRadToVisualYRotation(facingAngleRad),
                 Scale = System.Numerics.Vector3.One,
             };
         }

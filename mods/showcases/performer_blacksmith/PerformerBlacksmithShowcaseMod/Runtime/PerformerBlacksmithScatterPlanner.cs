@@ -1,6 +1,7 @@
 using System;
 using Ludots.Core.Gameplay.Spawning;
 using Ludots.Core.Map;
+using Ludots.Core.Mathematics;
 using Ludots.Core.Mathematics.FixedPoint;
 
 namespace PerformerBlacksmithShowcaseMod.Runtime
@@ -262,7 +263,7 @@ namespace PerformerBlacksmithShowcaseMod.Runtime
                     float jitterY = ((float)random.NextDouble() * 2f - 1f) * effectiveJitterY;
                     float x = centerXCm - radiusCm + ((column + 0.5f) * cellWidthCm) + jitterX;
                     float y = centerYCm - radiusCm + ((row + 0.5f) * cellHeightCm) + jitterY;
-                    float angle = MathF.Atan2(centerYCm - y, centerXCm - x);
+                    float angle = WorldPlane2D.FacingRadFromDirection(centerXCm - x, centerYCm - y);
 
                     scratch[batchIndex] = new RuntimeEntitySpawnRequest
                     {

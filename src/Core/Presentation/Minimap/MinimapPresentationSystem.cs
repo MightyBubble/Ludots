@@ -1,4 +1,5 @@
 using System.Numerics;
+using System.Diagnostics;
 using Arch.System;
 using Ludots.Core.Engine;
 using Ludots.Core.Gameplay.Camera;
@@ -15,6 +16,7 @@ namespace Ludots.Core.Presentation.Minimap
         private readonly MinimapRuntime _runtime;
         private readonly MinimapMarkerBuffer? _markers;
         private readonly MinimapScreenMarkerBuffer? _screenMarkers;
+        private readonly PresentationTimingDiagnostics? _timingDiagnostics;
 
         public MinimapPresentationSystem(GameEngine engine, MinimapRuntime runtime)
             : this(engine, runtime, null, null)
@@ -25,12 +27,14 @@ namespace Ludots.Core.Presentation.Minimap
             GameEngine engine,
             MinimapRuntime runtime,
             MinimapMarkerBuffer? markers,
-            MinimapScreenMarkerBuffer? screenMarkers)
+            MinimapScreenMarkerBuffer? screenMarkers,
+            PresentationTimingDiagnostics? timingDiagnostics = null)
         {
             _engine = engine ?? throw new System.ArgumentNullException(nameof(engine));
             _runtime = runtime ?? throw new System.ArgumentNullException(nameof(runtime));
             _markers = markers;
             _screenMarkers = screenMarkers;
+            _timingDiagnostics = timingDiagnostics;
         }
 
         public void Initialize()
@@ -55,7 +59,16 @@ namespace Ludots.Core.Presentation.Minimap
                 return;
             }
 
+            long refreshStart = _timingDiagnostics != null ? Stopwatch.GetTimestamp() : 0L;
             _runtime.Refresh(_engine, markers, screenMarkers);
+            if (_timingDiagnostics != null)
+            {
+                _timingDiagnostics.ObserveMinimapProjection(
+                    (Stopwatch.GetTimestamp() - refreshStart) * 1000d / Stopwatch.Frequency,
+                    screenMarkers.Count,
+                    screenMarkers.DroppedSinceClear);
+            }
+
             _runtime.Render(overlay);
         }
 
@@ -107,14 +120,7 @@ namespace Ludots.Core.Presentation.Minimap
             bool presetToggle = input.PressedThisFrame(MinimapInputActions.TogglePreset);
             if (presetToggle && !_prevPresetToggle)
             {
-                if (_runtime.Preset == MinimapPreset.RtsFullMap)
-                {
-                    _runtime.UseFollowCameraPreset();
-                }
-                else
-                {
-                    _runtime.UseRtsFullMapPreset();
-                }
+                _runtime.ToggleRtsFollowCameraPreset();
             }
 
             _prevPresetToggle = presetToggle;
@@ -165,7 +171,9 @@ namespace Ludots.Core.Presentation.Minimap
             Vector2 pointer = input.ReadAction<Vector2>(bindings.PointerPositionActionId);
             bool insideField = _runtime.ContainsField(pointer);
             bool insideSlider = _runtime.ContainsZoomSlider(pointer);
-            bool insideInteractive = insideField || insideSlider;
+            bool insidePresetToggle = _runtime.ContainsPresetToggle(pointer);
+            bool insideRotateToggle = _runtime.ContainsRotateToggle(pointer);
+            bool insideInteractive = insideField || insideSlider || insidePresetToggle || insideRotateToggle;
             bool confirmDown = input.IsDown(bindings.ConfirmActionId);
             bool confirmPressed = input.PressedThisFrame(bindings.ConfirmActionId);
             bool confirmReleased = input.ReleasedThisFrame(bindings.ConfirmActionId);
@@ -185,6 +193,22 @@ namespace Ludots.Core.Presentation.Minimap
             {
                 _dragging = false;
                 _zoomSliderDragging = false;
+            }
+
+            if (confirmPressed && insidePresetToggle)
+            {
+                _runtime.ToggleRtsFollowCameraPreset();
+                engine.SetService(CoreServiceKeys.PointerInputCaptured, true);
+                SuppressConfirm(engine, input, bindings.ConfirmActionId);
+                return;
+            }
+
+            if (confirmPressed && insideRotateToggle)
+            {
+                _runtime.ToggleRotateWithCamera();
+                engine.SetService(CoreServiceKeys.PointerInputCaptured, true);
+                SuppressConfirm(engine, input, bindings.ConfirmActionId);
+                return;
             }
 
             if (insideSlider && confirmPressed)

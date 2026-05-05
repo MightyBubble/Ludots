@@ -4,6 +4,7 @@ using Arch.System;
 using AnimationAcceptanceMod.Runtime;
 using Ludots.Core.Components;
 using Ludots.Core.Engine;
+using Ludots.Core.Mathematics;
 using Ludots.Core.Presentation.Commands;
 using Ludots.Core.Presentation.Components;
 using Ludots.Core.Presentation.Performers;
@@ -119,7 +120,7 @@ namespace AnimationAcceptanceMod.Systems
             float velocityX = -MathF.Sin(orbit) * 520f * 0.45f;
             float velocityY = MathF.Cos(orbit * 0.7f) * 280f * 0.315f;
             float speed = MathF.Min(1f, MathF.Sqrt(velocityX * velocityX + velocityY * velocityY) / 220f);
-            facing.AngleRad = MathF.Atan2(velocityY, velocityX);
+            facing.AngleRad = WorldPlane2D.FacingRadFromDirection(velocityX, velocityY);
             slot.Speed = speed;
             slot.MoveEnabled = true;
             slot.FacingYawRad = facing.AngleRad;
@@ -175,7 +176,7 @@ namespace AnimationAcceptanceMod.Systems
             float velocityX = MathF.Cos(travel) * 340f * 0.8f;
             float velocityY = MathF.Cos(travel * 0.5f) * 140f * 0.4f;
             float speed = MathF.Min(1f, MathF.Sqrt(velocityX * velocityX + velocityY * velocityY) / 240f);
-            facing.AngleRad = MathF.Atan2(velocityY, velocityX);
+            facing.AngleRad = WorldPlane2D.FacingRadFromDirection(velocityX, velocityY);
             slot.Speed = speed;
             slot.MoveEnabled = true;
             slot.FacingYawRad = facing.AngleRad;

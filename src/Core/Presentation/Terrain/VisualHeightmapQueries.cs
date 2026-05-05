@@ -66,15 +66,27 @@ namespace Ludots.Core.Presentation.Terrain
             ReadOnlySpan<float> worldYCm,
             Span<float> outHeightCm)
         {
+            float invWidth = 1f / Math.Max(1f, bounds.Width);
+            float invHeight = 1f / Math.Max(1f, bounds.Height);
+            float sampleScaleX = sampleColumns > 1 ? sampleColumns - 1 : 0f;
+            float sampleScaleY = sampleRows > 1 ? sampleRows - 1 : 0f;
+            int maxCellX = Math.Max(0, sampleColumns - 2);
+            int maxCellY = Math.Max(0, sampleRows - 2);
             for (int i = 0; i < outHeightCm.Length; i++)
             {
-                outHeightCm[i] = TrySampleHeightCm(
+                outHeightCm[i] = TrySampleHeightCmFast(
                     accessor,
                     in bounds,
                     sampleColumns,
                     sampleRows,
                     interpolationMode,
                     layerSampleOffset,
+                    invWidth,
+                    invHeight,
+                    sampleScaleX,
+                    sampleScaleY,
+                    maxCellX,
+                    maxCellY,
                     worldXCm[i],
                     worldYCm[i],
                     out float heightCm)
@@ -659,6 +671,58 @@ namespace Ludots.Core.Presentation.Terrain
             tx = sampleColumns > 1 ? sampleX - x0 : 0f;
             ty = sampleRows > 1 ? sampleY - y0 : 0f;
             return true;
+        }
+
+        private static bool TrySampleHeightCmFast(
+            IVisualHeightmapSampleAccessor accessor,
+            in WorldAabbCm bounds,
+            int sampleColumns,
+            int sampleRows,
+            VisualHeightmapInterpolationMode interpolationMode,
+            int layerSampleOffset,
+            float invWidth,
+            float invHeight,
+            float sampleScaleX,
+            float sampleScaleY,
+            int maxCellX,
+            int maxCellY,
+            float worldXCm,
+            float worldYCm,
+            out float heightCm)
+        {
+            heightCm = default;
+            if (!float.IsFinite(worldXCm) || !float.IsFinite(worldYCm))
+            {
+                return false;
+            }
+
+            if (worldXCm < bounds.Left ||
+                worldXCm > bounds.Right ||
+                worldYCm < bounds.Top ||
+                worldYCm > bounds.Bottom)
+            {
+                return false;
+            }
+
+            float sampleX = sampleColumns > 1
+                ? sampleScaleX * Math.Clamp((worldXCm - bounds.Left) * invWidth, 0f, 1f)
+                : 0f;
+            float sampleY = sampleRows > 1
+                ? sampleScaleY * Math.Clamp((worldYCm - bounds.Top) * invHeight, 0f, 1f)
+                : 0f;
+            int x0 = sampleColumns > 1 ? Math.Clamp((int)sampleX, 0, maxCellX) : 0;
+            int y0 = sampleRows > 1 ? Math.Clamp((int)sampleY, 0, maxCellY) : 0;
+            int x1 = sampleColumns > 1 ? x0 + 1 : 0;
+            int y1 = sampleRows > 1 ? y0 + 1 : 0;
+            float tx = sampleColumns > 1 ? sampleX - x0 : 0f;
+            float ty = sampleRows > 1 ? sampleY - y0 : 0f;
+            if (!TryReadCellSamples(accessor, layerSampleOffset, x0, x1, y0, y1, out float h00, out float h10, out float h01, out float h11))
+            {
+                return false;
+            }
+
+            heightCm = EvaluateHeight(interpolationMode, x0 == x1 || y0 == y1, h00, h10, h01, h11, tx, ty);
+            return float.IsFinite(heightCm);
         }
 
         private static bool TryReadCellSamples(
