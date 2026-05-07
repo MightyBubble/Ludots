@@ -75,6 +75,35 @@ public sealed record MinimapDebugCell(
     int Resources,
     int Hazards);
 
+public readonly record struct MinimapWorldRegion(
+    string Id,
+    string Label,
+    float CenterXcm,
+    float CenterYcm,
+    float WidthCm,
+    float HeightCm,
+    bool Active);
+
+public readonly record struct MinimapWorldClickRequest(
+    string RegionId,
+    float WorldXcm,
+    float WorldYcm);
+
+public enum MinimapDebugRectKind : byte
+{
+    HotZone = 0,
+    FlowWorkArea = 1,
+    SolverCache = 2,
+}
+
+public readonly record struct MinimapDebugRect(
+    string Label,
+    MinimapDebugRectKind Kind,
+    float CenterXcm,
+    float CenterYcm,
+    float WidthCm,
+    float HeightCm);
+
 public sealed record MinimapDebugSnapshot(
     string MapId,
     string SelectedLabel,
@@ -93,17 +122,16 @@ public sealed record MinimapDebugSnapshot(
 public sealed class MinimapControlRuntime
 {
     private const int MaxSignals = 512;
+    private const int MaxRegions = 64;
+    private const int MaxDebugRects = 32;
+    private const int MaxDebugChunks = 128;
     private const int StrategicGridSide = 12;
     private const int StrategicCellCount = StrategicGridSide * StrategicGridSide;
 
-    private const int PanelX = 1472;
-    private const int PanelY = 32;
-    private const int PanelWidth = 416;
-    private const int PanelHeight = 414;
-    private const int FieldX = PanelX + 18;
-    private const int FieldY = PanelY + 56;
-    private const int FieldSize = 272;
-    private const int LegendY = FieldY + FieldSize + 18;
+    private const int PanelWidth = 456;
+    private const int PanelHeight = 492;
+    private const int FieldSize = 320;
+    private const int PanelMargin = 16;
 
     private static readonly QueryDescription SignalQuery = new QueryDescription()
         .WithAll<Name, WorldPositionCm, Team, MapEntity>();
@@ -139,6 +167,10 @@ public sealed class MinimapControlRuntime
     private readonly byte[] _importance = new byte[MaxSignals];
     private readonly string[] _labels = new string[MaxSignals];
     private readonly int[] _visibleSignalIndices = new int[MaxSignals];
+    private readonly MinimapWorldRegion[] _regions = new MinimapWorldRegion[MaxRegions];
+    private readonly MinimapDebugRect[] _debugRects = new MinimapDebugRect[MaxDebugRects];
+    private readonly int[] _debugChunkX = new int[MaxDebugChunks];
+    private readonly int[] _debugChunkY = new int[MaxDebugChunks];
 
     private readonly int[] _cellTotals = new int[StrategicCellCount];
     private readonly int[] _cellFriendly = new int[StrategicCellCount];
@@ -156,6 +188,8 @@ public sealed class MinimapControlRuntime
     private readonly int _alertTagId = TagRegistry.Register("State.Minimap.Alert");
     private readonly int _frontierTagId = TagRegistry.Register("State.Minimap.Frontier");
 
+    private string _title = "4X Minimap";
+    private string _scaleLabel = string.Empty;
     private int _signalCount;
     private int _visibleSignalCount;
     private int _perspectiveTeamId;
@@ -168,7 +202,29 @@ public sealed class MinimapControlRuntime
     private float _minWorldYcm;
     private float _maxWorldXcm;
     private float _maxWorldYcm;
+    private float _minHalfExtentCm = 750f;
+    private float _tacticalHalfExtentCm = 1800f;
+    private float _regionalHalfExtentCm = 7000f;
+    private float _strategicHalfExtentCm = 22000f;
+    private float _maxHalfExtentCm = 36000f;
+    private float _worldMinXcm;
+    private float _worldMinYcm;
+    private float _worldMaxXcm;
+    private float _worldMaxYcm;
+    private float _worldFullHalfExtentCm = 22000f;
+    private int _regionCount;
+    private int _debugRectCount;
+    private int _debugChunkCount;
+    private int _debugChunkSizeCm;
+    private int _debugTotalActiveChunks;
+    private bool _debugOverlayVisible;
+    private float _cameraCenterXcm;
+    private float _cameraCenterYcm;
+    private float _cameraWidthCm;
+    private float _cameraHeightCm;
+    private bool _hasCameraView;
     private bool _viewportInitialized;
+    private bool _absoluteWorldOverview;
 
     public bool Visible { get; set; }
     public MinimapZoomBand ZoomBand { get; private set; } = MinimapZoomBand.Strategic;
@@ -180,6 +236,172 @@ public sealed class MinimapControlRuntime
     public float CenterXcm => _centerXcm;
     public float CenterYcm => _centerYcm;
     public float HalfExtentCm => _halfExtentCm;
+    public int RegionCount => _regionCount;
+    public bool AbsoluteWorldOverview => _absoluteWorldOverview;
+
+    public void ClearDebugOverlay()
+    {
+        _debugOverlayVisible = false;
+        _debugRectCount = 0;
+        _debugChunkCount = 0;
+        _debugChunkSizeCm = 0;
+        _debugTotalActiveChunks = 0;
+    }
+
+    public void ConfigureDebugChunks(int chunkSizeCm, int totalActiveChunks)
+    {
+        if (chunkSizeCm <= 0)
+        {
+            throw new InvalidOperationException("Minimap debug chunks require a positive chunk size.");
+        }
+
+        _debugOverlayVisible = true;
+        _debugChunkSizeCm = chunkSizeCm;
+        _debugTotalActiveChunks = Math.Max(0, totalActiveChunks);
+        _debugChunkCount = 0;
+    }
+
+    public void AddDebugChunk(int chunkX, int chunkY)
+    {
+        if (_debugChunkSizeCm <= 0)
+        {
+            throw new InvalidOperationException("Minimap debug chunk size must be configured before adding chunks.");
+        }
+
+        if (_debugChunkCount >= MaxDebugChunks)
+        {
+            return;
+        }
+
+        _debugOverlayVisible = true;
+        _debugChunkX[_debugChunkCount] = chunkX;
+        _debugChunkY[_debugChunkCount] = chunkY;
+        _debugChunkCount++;
+    }
+
+    public void AddDebugRect(
+        string label,
+        MinimapDebugRectKind kind,
+        float centerXcm,
+        float centerYcm,
+        float widthCm,
+        float heightCm)
+    {
+        if (string.IsNullOrWhiteSpace(label))
+        {
+            throw new InvalidOperationException("Minimap debug rect requires a non-empty label.");
+        }
+
+        if (widthCm <= 0f || heightCm <= 0f)
+        {
+            throw new InvalidOperationException($"Minimap debug rect '{label}' requires positive dimensions.");
+        }
+
+        if (_debugRectCount >= MaxDebugRects)
+        {
+            throw new InvalidOperationException($"Minimap debug rect capacity exceeded ({MaxDebugRects}).");
+        }
+
+        _debugOverlayVisible = true;
+        _debugRects[_debugRectCount++] = new MinimapDebugRect(label, kind, centerXcm, centerYcm, widthCm, heightCm);
+    }
+
+    public void SetCameraView(float centerXcm, float centerYcm, float widthCm, float heightCm)
+    {
+        if (widthCm <= 0f || heightCm <= 0f)
+        {
+            _hasCameraView = false;
+            return;
+        }
+
+        _cameraCenterXcm = centerXcm;
+        _cameraCenterYcm = centerYcm;
+        _cameraWidthCm = widthCm;
+        _cameraHeightCm = heightCm;
+        _hasCameraView = true;
+    }
+
+    public void ConfigureWorldScale(string title, float worldWidthCm, float worldHeightCm, float tacticalHalfExtentCm)
+    {
+        if (string.IsNullOrWhiteSpace(title))
+        {
+            throw new InvalidOperationException("Minimap world scale title is required.");
+        }
+
+        if (worldWidthCm <= 0f || worldHeightCm <= 0f)
+        {
+            throw new InvalidOperationException("Minimap world scale requires positive world dimensions.");
+        }
+
+        if (tacticalHalfExtentCm <= 0f)
+        {
+            throw new InvalidOperationException("Minimap world scale requires a positive tactical half extent.");
+        }
+
+        _title = title;
+        _scaleLabel = $"{MathF.Max(worldWidthCm, worldHeightCm) / 100_000f:0.#}km Map";
+        _worldMinXcm = worldWidthCm * -0.5f;
+        _worldMinYcm = worldHeightCm * -0.5f;
+        _worldMaxXcm = worldWidthCm * 0.5f;
+        _worldMaxYcm = worldHeightCm * 0.5f;
+        _worldFullHalfExtentCm = MathF.Max(worldWidthCm, worldHeightCm) * 0.5f;
+        _minHalfExtentCm = MathF.Min(750f, tacticalHalfExtentCm);
+        _tacticalHalfExtentCm = MathF.Max(_minHalfExtentCm, tacticalHalfExtentCm);
+        _strategicHalfExtentCm = _worldFullHalfExtentCm;
+        _regionalHalfExtentCm = MathF.Max(_tacticalHalfExtentCm * 2f, _strategicHalfExtentCm * 0.18f);
+        _maxHalfExtentCm = _strategicHalfExtentCm;
+        _centerXcm = 0f;
+        _centerYcm = 0f;
+        _halfExtentCm = _strategicHalfExtentCm;
+        _viewportInitialized = false;
+        _absoluteWorldOverview = false;
+    }
+
+    public void SetAbsoluteWorldOverview(bool enabled)
+    {
+        _absoluteWorldOverview = enabled;
+        if (enabled)
+        {
+            ShowFullWorld();
+        }
+    }
+
+    public void ClearWorldRegions()
+    {
+        _regionCount = 0;
+    }
+
+    public void AddWorldRegion(
+        string id,
+        string label,
+        float centerXcm,
+        float centerYcm,
+        float widthCm,
+        float heightCm,
+        bool active)
+    {
+        if (string.IsNullOrWhiteSpace(id))
+        {
+            throw new InvalidOperationException("Minimap world region requires a non-empty id.");
+        }
+
+        if (string.IsNullOrWhiteSpace(label))
+        {
+            throw new InvalidOperationException($"Minimap world region '{id}' requires a non-empty label.");
+        }
+
+        if (widthCm <= 0f || heightCm <= 0f)
+        {
+            throw new InvalidOperationException($"Minimap world region '{id}' requires positive dimensions.");
+        }
+
+        if (_regionCount >= MaxRegions)
+        {
+            throw new InvalidOperationException($"Minimap world region capacity exceeded ({MaxRegions}).");
+        }
+
+        _regions[_regionCount++] = new MinimapWorldRegion(id, label, centerXcm, centerYcm, widthCm, heightCm, active);
+    }
 
     public void Refresh(GameEngine engine)
     {
@@ -269,61 +491,88 @@ public sealed class MinimapControlRuntime
 
         if (_signalCount == 0)
         {
-            ResetTransientState();
-            return;
+            _minWorldXcm = _worldMinXcm;
+            _minWorldYcm = _worldMinYcm;
+            _maxWorldXcm = _worldMaxXcm;
+            _maxWorldYcm = _worldMaxYcm;
         }
 
-        if (!_viewportInitialized)
+        if (_absoluteWorldOverview)
         {
-            FocusOnContent();
+            ShowFullWorld();
+        }
+        else if (!_viewportInitialized)
+        {
+            ShowFullWorld();
         }
 
-        ClampViewportToContent();
+        ClampViewportToWorld();
         ZoomBand = ResolveZoomBand(_halfExtentCm);
         RebuildVisibleSet();
     }
 
     public void Render(ScreenOverlayBuffer overlay)
     {
+        Render(overlay, 1920, 1080);
+    }
+
+    public void Render(ScreenOverlayBuffer overlay, int viewportWidth, int viewportHeight)
+    {
         ArgumentNullException.ThrowIfNull(overlay);
-        if (!Visible || _signalCount == 0)
+        if (!Visible)
         {
             return;
         }
 
+        ResolvePanelLayout(viewportWidth, viewportHeight, out int panelX, out int panelY, out int fieldX, out int fieldY, out int legendY);
         overlay.AddRect(
-            PanelX,
-            PanelY,
+            panelX,
+            panelY,
             PanelWidth,
             PanelHeight,
             new Vector4(0.03f, 0.06f, 0.09f, 0.90f),
             new Vector4(0.34f, 0.49f, 0.62f, 0.90f));
-        overlay.AddText(PanelX + 18, PanelY + 24, "4X Minimap", 20, new Vector4(0.94f, 0.96f, 0.99f, 1f));
-        overlay.AddText(PanelX + 220, PanelY + 24, BandLabels[(int)ZoomBand], 16, new Vector4(0.95f, 0.78f, 0.43f, 1f));
+        overlay.AddText(panelX + 18, panelY + 24, _title, 20, new Vector4(0.94f, 0.96f, 0.99f, 1f));
+        overlay.AddText(panelX + 220, panelY + 24, string.IsNullOrWhiteSpace(_scaleLabel) ? BandLabels[(int)ZoomBand] : _scaleLabel, 16, new Vector4(0.95f, 0.78f, 0.43f, 1f));
 
         overlay.AddRect(
-            FieldX,
-            FieldY,
+            fieldX,
+            fieldY,
             FieldSize,
             FieldSize,
             new Vector4(0.04f, 0.08f, 0.12f, 0.96f),
             new Vector4(0.22f, 0.35f, 0.43f, 0.95f));
-        RenderGrid(overlay);
-
         if (ZoomBand == MinimapZoomBand.Strategic)
         {
-            RenderStrategicCells(overlay);
+            RenderStrategicCells(overlay, fieldX, fieldY);
         }
         else
         {
-            RenderSignals(overlay);
+            RenderSignals(overlay, fieldX, fieldY);
         }
 
-        overlay.AddText(PanelX + 18, LegendY, "Wheel/PageUp/PageDown zoom", 14, new Vector4(0.72f, 0.79f, 0.86f, 1f));
-        overlay.AddText(PanelX + 18, LegendY + 22, "Arrows pan  C center selected", 14, new Vector4(0.72f, 0.79f, 0.86f, 1f));
-        overlay.AddText(PanelX + 18, LegendY + 48, "Selected", 14, new Vector4(0.95f, 0.78f, 0.43f, 1f));
-        overlay.AddText(PanelX + 92, LegendY + 48, string.IsNullOrWhiteSpace(_selectedLabel) ? "None" : _selectedLabel, 14, new Vector4(0.97f, 0.98f, 1f, 1f));
-        overlay.AddText(PanelX + 18, LegendY + 72, "Empire / frontier / tactical layers switch by zoom band.", 13, new Vector4(0.60f, 0.69f, 0.76f, 1f));
+        RenderGrid(overlay, fieldX, fieldY);
+        RenderDebugChunks(overlay, fieldX, fieldY);
+        RenderRegions(overlay, fieldX, fieldY);
+        RenderDebugRects(overlay, fieldX, fieldY);
+        RenderCameraView(overlay, fieldX, fieldY);
+
+        string viewport = _absoluteWorldOverview
+            ? "RTS absolute minimap: full world view"
+            : $"view center ({FormatMeters(_centerXcm)},{FormatMeters(_centerYcm)})m half {_halfExtentCm / 100f:0}m";
+        string world = $"ABS WORLD X[{FormatMeters(_worldMinXcm)},{FormatMeters(_worldMaxXcm)}]m Y[{FormatMeters(_worldMinYcm)},{FormatMeters(_worldMaxYcm)}]m";
+        string chunks = _debugOverlayVisible && _debugChunkSizeCm > 0
+            ? BuildChunkSummary()
+            : "chunks inactive";
+        string camera = _hasCameraView
+            ? $"CAM center ({FormatMeters(_cameraCenterXcm)},{FormatMeters(_cameraCenterYcm)})m size {_cameraWidthCm / 100f:0}x{_cameraHeightCm / 100f:0}m"
+            : "CAM view unavailable";
+        overlay.AddText(panelX + 18, legendY, viewport, 13, new Vector4(0.72f, 0.90f, 1f, 1f));
+        overlay.AddText(panelX + 18, legendY + 18, world, 12, new Vector4(0.72f, 0.79f, 0.86f, 1f));
+        overlay.AddText(panelX + 18, legendY + 36, chunks, 12, new Vector4(0.54f, 0.96f, 0.58f, 1f));
+        overlay.AddText(panelX + 18, legendY + 54, camera, 12, new Vector4(0.46f, 0.94f, 1f, 1f));
+        overlay.AddText(panelX + 18, legendY + 72, "cyan CAM  green ACTIVE/WORK  blue SOLVER  amber HOTZONE", 12, new Vector4(0.84f, 0.88f, 0.92f, 1f));
+        overlay.AddText(panelX + 18, legendY + 90, "Click any in-bounds world coordinate. Empty map space is valid.", 11, new Vector4(0.60f, 0.69f, 0.76f, 1f));
     }
 
     public void SetViewport(float centerXcm, float centerYcm, float halfExtentCm)
@@ -331,11 +580,82 @@ public sealed class MinimapControlRuntime
         _centerXcm = centerXcm;
         _centerYcm = centerYcm;
         _halfExtentCm = ClampHalfExtent(halfExtentCm);
+        ClampViewportToWorld();
         _viewportInitialized = true;
+    }
+
+    public bool TryResolveWorldPointFromScreen(int viewportWidth, int viewportHeight, Vector2 screenPosition, out Vector2 worldCm)
+    {
+        ResolvePanelLayout(viewportWidth, viewportHeight, out _, out _, out int fieldX, out int fieldY, out _);
+        if (screenPosition.X < fieldX ||
+            screenPosition.X > fieldX + FieldSize ||
+            screenPosition.Y < fieldY ||
+            screenPosition.Y > fieldY + FieldSize)
+        {
+            worldCm = default;
+            return false;
+        }
+
+        float normalizedX = Math.Clamp((screenPosition.X - fieldX) / MathF.Max(1f, FieldSize - 1f), 0f, 1f);
+        float normalizedY = Math.Clamp((screenPosition.Y - fieldY) / MathF.Max(1f, FieldSize - 1f), 0f, 1f);
+        worldCm = new Vector2(ScreenToWorldX(normalizedX), ScreenToWorldY(normalizedY));
+        return true;
+    }
+
+    public bool TryResolveRegionFromScreen(int viewportWidth, int viewportHeight, Vector2 screenPosition, out string regionId, out Vector2 worldCm)
+    {
+        if (!TryResolveWorldPointFromScreen(viewportWidth, viewportHeight, screenPosition, out worldCm))
+        {
+            regionId = string.Empty;
+            return false;
+        }
+
+        int bestIndex = -1;
+        ResolvePanelLayout(viewportWidth, viewportHeight, out _, out _, out int fieldX, out int fieldY, out _);
+        for (int i = 0; i < _regionCount; i++)
+        {
+            MinimapWorldRegion region = _regions[i];
+            ResolveRegionScreenRect(region, fieldX, fieldY, out int x, out int y, out int width, out int height);
+            int centerX = x + (width / 2);
+            int centerY = y + (height / 2);
+            const int pickPaddingPx = 24;
+            bool insideScreenPick = screenPosition.X >= x - pickPaddingPx &&
+                screenPosition.X <= x + width + pickPaddingPx &&
+                screenPosition.Y >= y - pickPaddingPx &&
+                screenPosition.Y <= y + height + pickPaddingPx;
+            if (insideScreenPick)
+            {
+                bestIndex = i;
+                break;
+            }
+
+            float dx = screenPosition.X - centerX;
+            float dy = screenPosition.Y - centerY;
+            if ((dx * dx) + (dy * dy) <= pickPaddingPx * pickPaddingPx)
+            {
+                bestIndex = i;
+                break;
+            }
+        }
+
+        if (bestIndex < 0)
+        {
+            regionId = string.Empty;
+            return true;
+        }
+
+        regionId = _regions[bestIndex].Id;
+        return true;
     }
 
     public void FocusOnContent()
     {
+        if (_absoluteWorldOverview)
+        {
+            ShowFullWorld();
+            return;
+        }
+
         if (_signalCount <= 0)
         {
             return;
@@ -349,9 +669,22 @@ public sealed class MinimapControlRuntime
         _viewportInitialized = true;
     }
 
+    public void ShowFullWorld()
+    {
+        _centerXcm = 0f;
+        _centerYcm = 0f;
+        _halfExtentCm = _worldFullHalfExtentCm;
+        _viewportInitialized = true;
+    }
+
     public void CenterOnSelected(GameEngine engine)
     {
         ArgumentNullException.ThrowIfNull(engine);
+        if (_absoluteWorldOverview)
+        {
+            ShowFullWorld();
+            return;
+        }
 
         Entity selected = ResolveSelectedEntity(engine);
         if (selected == Entity.Null || !engine.World.IsAlive(selected) || !engine.World.TryGet(selected, out WorldPositionCm position))
@@ -362,23 +695,25 @@ public sealed class MinimapControlRuntime
         WorldCmInt2 world = position.ToWorldCmInt2();
         _centerXcm = world.X;
         _centerYcm = world.Y;
+        ClampViewportToWorld();
         _viewportInitialized = true;
     }
 
     public void ApplyWheelZoom(float wheelDelta)
     {
-        if (wheelDelta == 0f)
+        if (_absoluteWorldOverview || wheelDelta == 0f)
         {
             return;
         }
 
         float factor = wheelDelta > 0f ? 0.85f : 1.18f;
         _halfExtentCm = ClampHalfExtent(_halfExtentCm * factor);
+        ClampViewportToWorld();
     }
 
     public void CycleZoom(int delta)
     {
-        if (delta == 0)
+        if (_absoluteWorldOverview || delta == 0)
         {
             return;
         }
@@ -395,15 +730,16 @@ public sealed class MinimapControlRuntime
 
         _halfExtentCm = next switch
         {
-            MinimapZoomBand.Strategic => 22000f,
-            MinimapZoomBand.Regional => 7000f,
-            _ => 1800f,
+            MinimapZoomBand.Strategic => _strategicHalfExtentCm,
+            MinimapZoomBand.Regional => _regionalHalfExtentCm,
+            _ => _tacticalHalfExtentCm,
         };
+        ClampViewportToWorld();
     }
 
     public void PanNormalized(float dx, float dy)
     {
-        if (dx == 0f && dy == 0f)
+        if (_absoluteWorldOverview || (dx == 0f && dy == 0f))
         {
             return;
         }
@@ -411,6 +747,7 @@ public sealed class MinimapControlRuntime
         float step = _halfExtentCm * 1.1f;
         _centerXcm += dx * step;
         _centerYcm += dy * step;
+        ClampViewportToWorld();
     }
 
     public MinimapDebugSnapshot CaptureDebugSnapshot()
@@ -426,8 +763,8 @@ public sealed class MinimapControlRuntime
                 (MinimapSignalFlags)_flags[index],
                 _worldXcm[index],
                 _worldYcm[index],
-                NormalizeToField(_worldXcm[index], _centerXcm, _halfExtentCm),
-                NormalizeToField(_worldYcm[index], _centerYcm, _halfExtentCm)));
+                NormalizeWorldX(_worldXcm[index]),
+                NormalizeWorldY(_worldYcm[index])));
         }
 
         var cells = new List<MinimapDebugCell>(StrategicCellCount);
@@ -469,21 +806,119 @@ public sealed class MinimapControlRuntime
             cells);
     }
 
-    private void RenderGrid(ScreenOverlayBuffer overlay)
+    private void ResolvePanelLayout(
+        int viewportWidth,
+        int viewportHeight,
+        out int panelX,
+        out int panelY,
+        out int fieldX,
+        out int fieldY,
+        out int legendY)
     {
-        int step = FieldSize / 4;
-        for (int i = 1; i < 4; i++)
-        {
-            int offset = step * i;
-            overlay.AddRect(FieldX + offset, FieldY, 1, FieldSize, Vector4.Zero, new Vector4(0.15f, 0.25f, 0.30f, 0.70f));
-            overlay.AddRect(FieldX, FieldY + offset, FieldSize, 1, Vector4.Zero, new Vector4(0.15f, 0.25f, 0.30f, 0.70f));
-        }
-
-        overlay.AddRect(FieldX + (FieldSize / 2), FieldY, 1, FieldSize, Vector4.Zero, new Vector4(0.32f, 0.43f, 0.50f, 0.75f));
-        overlay.AddRect(FieldX, FieldY + (FieldSize / 2), FieldSize, 1, Vector4.Zero, new Vector4(0.32f, 0.43f, 0.50f, 0.75f));
+        int safeWidth = Math.Max(PanelWidth + (PanelMargin * 2), viewportWidth);
+        int safeHeight = Math.Max(PanelHeight + (PanelMargin * 2), viewportHeight);
+        panelX = _absoluteWorldOverview
+            ? PanelMargin
+            : Math.Max(PanelMargin, safeWidth - PanelWidth - PanelMargin);
+        panelY = Math.Max(PanelMargin, safeHeight - PanelHeight - PanelMargin);
+        fieldX = panelX + 18;
+        fieldY = panelY + 56;
+        legendY = fieldY + FieldSize + 18;
     }
 
-    private void RenderStrategicCells(ScreenOverlayBuffer overlay)
+    private void RenderGrid(ScreenOverlayBuffer overlay, int fieldX, int fieldY)
+    {
+        int divisions = _absoluteWorldOverview ? 8 : 4;
+        int step = FieldSize / divisions;
+        float minX = _centerXcm - _halfExtentCm;
+        float maxX = _centerXcm + _halfExtentCm;
+        float minY = _centerYcm - _halfExtentCm;
+        float maxY = _centerYcm + _halfExtentCm;
+        for (int i = 1; i < divisions; i++)
+        {
+            int offset = step * i;
+            Vector4 lineColor = i == divisions / 2
+                ? new Vector4(0.34f, 0.48f, 0.56f, 0.82f)
+                : new Vector4(0.15f, 0.25f, 0.30f, 0.70f);
+            overlay.AddRect(fieldX + offset, fieldY, 1, FieldSize, Vector4.Zero, lineColor);
+            overlay.AddRect(fieldX, fieldY + offset, FieldSize, 1, Vector4.Zero, lineColor);
+
+            if (i % 2 == 0)
+            {
+                float xLabel = minX + ((maxX - minX) * i / divisions);
+                float yLabel = _absoluteWorldOverview
+                    ? maxY - ((maxY - minY) * i / divisions)
+                    : minY + ((maxY - minY) * i / divisions);
+                overlay.AddText(fieldX + offset - 20, fieldY + FieldSize + 2, FormatMeters(xLabel), 9, new Vector4(0.44f, 0.58f, 0.66f, 0.95f));
+                overlay.AddText(fieldX - 42, fieldY + offset + 4, FormatMeters(yLabel), 9, new Vector4(0.44f, 0.58f, 0.66f, 0.95f));
+            }
+        }
+
+        overlay.AddText(fieldX, fieldY - 14, $"X {FormatMeters(minX)} .. {FormatMeters(maxX)}m", 10, new Vector4(0.55f, 0.72f, 0.82f, 1f));
+        overlay.AddText(fieldX + FieldSize - 122, fieldY - 14, _absoluteWorldOverview ? "top = +Y" : $"Y {FormatMeters(_centerYcm)}m", 10, new Vector4(0.55f, 0.72f, 0.82f, 1f));
+        overlay.AddText(fieldX + 2, fieldY + 12, $"Y {FormatMeters(maxY)}", 9, new Vector4(0.50f, 0.67f, 0.76f, 0.95f));
+        overlay.AddText(fieldX + 2, fieldY + FieldSize - 4, $"Y {FormatMeters(minY)}", 9, new Vector4(0.50f, 0.67f, 0.76f, 0.95f));
+    }
+
+    private void RenderDebugChunks(ScreenOverlayBuffer overlay, int fieldX, int fieldY)
+    {
+        if (!_debugOverlayVisible || _debugChunkSizeCm <= 0)
+        {
+            return;
+        }
+
+        Vector4 fill = new(0.20f, 0.72f, 0.32f, 0.22f);
+        Vector4 border = new(0.36f, 0.96f, 0.42f, 0.60f);
+        float minXcm = float.MaxValue;
+        float minYcm = float.MaxValue;
+        float maxXcm = float.MinValue;
+        float maxYcm = float.MinValue;
+        for (int i = 0; i < _debugChunkCount; i++)
+        {
+            float chunkMinXcm = _debugChunkX[i] * _debugChunkSizeCm;
+            float chunkMinYcm = _debugChunkY[i] * _debugChunkSizeCm;
+            float chunkMaxXcm = chunkMinXcm + _debugChunkSizeCm;
+            float chunkMaxYcm = chunkMinYcm + _debugChunkSizeCm;
+            minXcm = MathF.Min(minXcm, chunkMinXcm);
+            minYcm = MathF.Min(minYcm, chunkMinYcm);
+            maxXcm = MathF.Max(maxXcm, chunkMaxXcm);
+            maxYcm = MathF.Max(maxYcm, chunkMaxYcm);
+            ResolveWorldRectScreenRect(
+                chunkMinXcm,
+                chunkMinYcm,
+                chunkMaxXcm,
+                chunkMaxYcm,
+                fieldX,
+                fieldY,
+                minPixelSize: _absoluteWorldOverview ? 4 : 2,
+                out int x,
+                out int y,
+                out int width,
+                out int height);
+            overlay.AddRect(x, y, width, height, fill, border);
+        }
+
+        if (_debugChunkCount > 0)
+        {
+            ResolveWorldRectScreenRect(
+                minXcm,
+                minYcm,
+                maxXcm,
+                maxYcm,
+                fieldX,
+                fieldY,
+                minPixelSize: _absoluteWorldOverview ? 22 : 4,
+                out int x,
+                out int y,
+                out int width,
+                out int height);
+            Vector4 activeBorder = new(0.58f, 1f, 0.44f, 1f);
+            overlay.AddRect(x, y, width, height, new Vector4(0.10f, 0.45f, 0.16f, 0.10f), activeBorder);
+            overlay.AddText(Math.Clamp(x + 3, fieldX, fieldX + FieldSize - 96), Math.Clamp(y - 12, fieldY, fieldY + FieldSize - 12), "ACTIVE CHUNKS", 9, activeBorder);
+        }
+    }
+
+    private void RenderStrategicCells(ScreenOverlayBuffer overlay, int fieldX, int fieldY)
     {
         int cellSize = FieldSize / StrategicGridSide;
         for (int index = 0; index < StrategicCellCount; index++)
@@ -498,8 +933,8 @@ public sealed class MinimapControlRuntime
             int y = index / StrategicGridSide;
             Vector4 fill = ResolveCellColor(index);
             overlay.AddRect(
-                FieldX + (x * cellSize) + 2,
-                FieldY + (y * cellSize) + 2,
+                fieldX + (x * cellSize) + 2,
+                fieldY + (y * cellSize) + 2,
                 cellSize - 4,
                 cellSize - 4,
                 fill,
@@ -507,54 +942,216 @@ public sealed class MinimapControlRuntime
 
             if (_cellObjectives[index] > 0)
             {
-                overlay.AddText(FieldX + (x * cellSize) + 6, FieldY + (y * cellSize) + 14, "O", 14, new Vector4(1f, 0.86f, 0.54f, 1f));
+                overlay.AddText(fieldX + (x * cellSize) + 6, fieldY + (y * cellSize) + 14, "O", 14, new Vector4(1f, 0.86f, 0.54f, 1f));
             }
             else if (_cellResources[index] > 0)
             {
-                overlay.AddText(FieldX + (x * cellSize) + 6, FieldY + (y * cellSize) + 14, "R", 14, new Vector4(0.64f, 0.92f, 0.84f, 1f));
+                overlay.AddText(fieldX + (x * cellSize) + 6, fieldY + (y * cellSize) + 14, "R", 14, new Vector4(0.64f, 0.92f, 0.84f, 1f));
             }
             else if (_cellHazards[index] > 0)
             {
-                overlay.AddText(FieldX + (x * cellSize) + 6, FieldY + (y * cellSize) + 14, "!", 14, new Vector4(1f, 0.57f, 0.50f, 1f));
+                overlay.AddText(fieldX + (x * cellSize) + 6, fieldY + (y * cellSize) + 14, "!", 14, new Vector4(1f, 0.57f, 0.50f, 1f));
             }
 
             overlay.AddText(
-                FieldX + (x * cellSize) + cellSize - 18,
-                FieldY + (y * cellSize) + cellSize - 8,
+                fieldX + (x * cellSize) + cellSize - 18,
+                fieldY + (y * cellSize) + cellSize - 8,
                 CountLabels[Math.Min(9, total)],
                 11,
                 new Vector4(0.97f, 0.98f, 1f, 1f));
         }
 
-        RenderImportantSignals(overlay);
+        RenderImportantSignals(overlay, fieldX, fieldY);
     }
 
-    private void RenderSignals(ScreenOverlayBuffer overlay)
+    private void RenderRegions(ScreenOverlayBuffer overlay, int fieldX, int fieldY)
     {
-        for (int i = 0; i < _visibleSignalCount; i++)
+        if (_regionCount <= 0)
         {
-            RenderSignal(overlay, _visibleSignalIndices[i], iconOnly: false);
+            return;
+        }
+
+        for (int i = 0; i < _regionCount; i++)
+        {
+            MinimapWorldRegion region = _regions[i];
+            ResolveRegionScreenRect(region, fieldX, fieldY, out int x, out int y, out int width, out int height);
+            Vector4 border = region.Active
+                ? new Vector4(0.58f, 1f, 0.32f, 0.98f)
+                : new Vector4(1f, 0.76f, 0.28f, 0.86f);
+            Vector4 fill = region.Active
+                ? new Vector4(0.18f, 0.56f, 0.12f, 0.14f)
+                : new Vector4(0.62f, 0.40f, 0.08f, 0.10f);
+            overlay.AddRect(x, y, width, height, fill, border);
+            overlay.AddRect(
+                x + Math.Max(2, (width / 2) - 2),
+                y + Math.Max(2, (height / 2) - 2),
+                region.Active ? 5 : 4,
+                region.Active ? 5 : 4,
+                border,
+                border);
         }
     }
 
-    private void RenderImportantSignals(ScreenOverlayBuffer overlay)
+    private void RenderDebugRects(ScreenOverlayBuffer overlay, int fieldX, int fieldY)
+    {
+        if (!_debugOverlayVisible || _debugRectCount <= 0)
+        {
+            return;
+        }
+
+        for (int i = 0; i < _debugRectCount; i++)
+        {
+            MinimapDebugRect rect = _debugRects[i];
+            Vector4 border = rect.Kind switch
+            {
+                MinimapDebugRectKind.FlowWorkArea => new Vector4(0.50f, 1f, 0.35f, 0.96f),
+                MinimapDebugRectKind.SolverCache => new Vector4(0.32f, 0.88f, 1f, 0.96f),
+                _ => new Vector4(1f, 0.76f, 0.28f, 0.90f),
+            };
+            Vector4 fill = rect.Kind switch
+            {
+                MinimapDebugRectKind.FlowWorkArea => new Vector4(0.16f, 0.62f, 0.10f, 0.12f),
+                MinimapDebugRectKind.SolverCache => new Vector4(0.04f, 0.45f, 0.70f, 0.12f),
+                _ => new Vector4(0.72f, 0.42f, 0.08f, 0.08f),
+            };
+            ResolveWorldRectScreenRect(
+                rect.CenterXcm - (rect.WidthCm * 0.5f),
+                rect.CenterYcm - (rect.HeightCm * 0.5f),
+                rect.CenterXcm + (rect.WidthCm * 0.5f),
+                rect.CenterYcm + (rect.HeightCm * 0.5f),
+                fieldX,
+                fieldY,
+                minPixelSize: _absoluteWorldOverview ? ResolveAbsoluteDebugRectMinSize(rect.Kind) : rect.Kind == MinimapDebugRectKind.HotZone ? 6 : 10,
+                out int x,
+                out int y,
+                out int width,
+                out int height);
+            overlay.AddRect(x, y, width, height, fill, border);
+            overlay.AddText(Math.Clamp(x + 2, fieldX, fieldX + FieldSize - 80), Math.Clamp(y - 12, fieldY, fieldY + FieldSize - 12), rect.Label, 9, border);
+        }
+    }
+
+    private void ResolveRegionScreenRect(MinimapWorldRegion region, int fieldX, int fieldY, out int x, out int y, out int width, out int height)
+    {
+        ResolveWorldRectScreenRect(
+            region.CenterXcm - (region.WidthCm * 0.5f),
+            region.CenterYcm - (region.HeightCm * 0.5f),
+            region.CenterXcm + (region.WidthCm * 0.5f),
+            region.CenterYcm + (region.HeightCm * 0.5f),
+            fieldX,
+            fieldY,
+            minPixelSize: 10,
+            out x,
+            out y,
+            out width,
+            out height);
+    }
+
+    private void ResolveWorldRectScreenRect(
+        float minWorldXcm,
+        float minWorldYcm,
+        float maxWorldXcm,
+        float maxWorldYcm,
+        int fieldX,
+        int fieldY,
+        int minPixelSize,
+        out int x,
+        out int y,
+        out int width,
+        out int height)
+    {
+        float x0 = NormalizeWorldX(minWorldXcm);
+        float x1 = NormalizeWorldX(maxWorldXcm);
+        float y0 = NormalizeWorldY(minWorldYcm);
+        float y1 = NormalizeWorldY(maxWorldYcm);
+        float minX = MathF.Min(x0, x1);
+        float maxX = MathF.Max(x0, x1);
+        float minY = MathF.Min(y0, y1);
+        float maxY = MathF.Max(y0, y1);
+        int rawX = fieldX + (int)MathF.Round(minX * (FieldSize - 1));
+        int rawY = fieldY + (int)MathF.Round(minY * (FieldSize - 1));
+        int rawWidth = Math.Max(1, (int)MathF.Round((maxX - minX) * (FieldSize - 1)));
+        int rawHeight = Math.Max(1, (int)MathF.Round((maxY - minY) * (FieldSize - 1)));
+        width = Math.Max(minPixelSize, rawWidth);
+        height = Math.Max(minPixelSize, rawHeight);
+        x = rawWidth < width
+            ? fieldX + (int)MathF.Round(NormalizeWorldX((minWorldXcm + maxWorldXcm) * 0.5f) * (FieldSize - 1)) - (width / 2)
+            : rawX;
+        y = rawHeight < height
+            ? fieldY + (int)MathF.Round(NormalizeWorldY((minWorldYcm + maxWorldYcm) * 0.5f) * (FieldSize - 1)) - (height / 2)
+            : rawY;
+        x = Math.Clamp(x, fieldX, Math.Max(fieldX, fieldX + FieldSize - width));
+        y = Math.Clamp(y, fieldY, Math.Max(fieldY, fieldY + FieldSize - height));
+    }
+
+    private void RenderCameraView(ScreenOverlayBuffer overlay, int fieldX, int fieldY)
+    {
+        if (!_hasCameraView)
+        {
+            return;
+        }
+
+        float x0 = NormalizeWorldX(_cameraCenterXcm - (_cameraWidthCm * 0.5f));
+        float x1 = NormalizeWorldX(_cameraCenterXcm + (_cameraWidthCm * 0.5f));
+        float y0 = NormalizeWorldY(_cameraCenterYcm - (_cameraHeightCm * 0.5f));
+        float y1 = NormalizeWorldY(_cameraCenterYcm + (_cameraHeightCm * 0.5f));
+        float minX = MathF.Min(x0, x1);
+        float maxX = MathF.Max(x0, x1);
+        float minY = MathF.Min(y0, y1);
+        float maxY = MathF.Max(y0, y1);
+        int rawX = fieldX + (int)MathF.Round(minX * (FieldSize - 1));
+        int rawY = fieldY + (int)MathF.Round(minY * (FieldSize - 1));
+        int rawWidth = Math.Max(1, (int)MathF.Round((maxX - minX) * (FieldSize - 1)));
+        int rawHeight = Math.Max(1, (int)MathF.Round((maxY - minY) * (FieldSize - 1)));
+
+        int centerX = fieldX + (int)MathF.Round(NormalizeWorldX(_cameraCenterXcm) * (FieldSize - 1));
+        int centerY = fieldY + (int)MathF.Round(NormalizeWorldY(_cameraCenterYcm) * (FieldSize - 1));
+        int width = Math.Max(18, rawWidth);
+        int height = Math.Max(18, rawHeight);
+        int x = rawWidth < 18 ? centerX - (width / 2) : rawX;
+        int y = rawHeight < 18 ? centerY - (height / 2) : rawY;
+        x = Math.Clamp(x, fieldX, fieldX + FieldSize - width);
+        y = Math.Clamp(y, fieldY, fieldY + FieldSize - height);
+
+        Vector4 cameraColor = new(0.40f, 0.92f, 1f, 1f);
+        overlay.AddRect(
+            x,
+            y,
+            width,
+            height,
+            new Vector4(0.03f, 0.18f, 0.24f, 0.16f),
+            cameraColor);
+        overlay.AddRect(centerX - 5, centerY, 11, 1, Vector4.Zero, cameraColor);
+        overlay.AddRect(centerX, centerY - 5, 1, 11, Vector4.Zero, cameraColor);
+        overlay.AddText(Math.Clamp(x + 3, fieldX, fieldX + FieldSize - 36), Math.Max(fieldY + 12, y - 3), "CAM", 11, cameraColor);
+    }
+
+    private void RenderSignals(ScreenOverlayBuffer overlay, int fieldX, int fieldY)
+    {
+        for (int i = 0; i < _visibleSignalCount; i++)
+        {
+            RenderSignal(overlay, _visibleSignalIndices[i], iconOnly: false, fieldX, fieldY);
+        }
+    }
+
+    private void RenderImportantSignals(ScreenOverlayBuffer overlay, int fieldX, int fieldY)
     {
         for (int i = 0; i < _visibleSignalCount; i++)
         {
             int index = _visibleSignalIndices[i];
             if (_importance[index] >= 3)
             {
-                RenderSignal(overlay, index, iconOnly: true);
+                RenderSignal(overlay, index, iconOnly: true, fieldX, fieldY);
             }
         }
     }
 
-    private void RenderSignal(ScreenOverlayBuffer overlay, int index, bool iconOnly)
+    private void RenderSignal(ScreenOverlayBuffer overlay, int index, bool iconOnly, int fieldX, int fieldY)
     {
-        float normalizedX = NormalizeToField(_worldXcm[index], _centerXcm, _halfExtentCm);
-        float normalizedY = NormalizeToField(_worldYcm[index], _centerYcm, _halfExtentCm);
-        int screenX = FieldX + (int)MathF.Round(normalizedX * (FieldSize - 1));
-        int screenY = FieldY + (int)MathF.Round(normalizedY * (FieldSize - 1));
+        float normalizedX = NormalizeWorldX(_worldXcm[index]);
+        float normalizedY = NormalizeWorldY(_worldYcm[index]);
+        int screenX = fieldX + (int)MathF.Round(normalizedX * (FieldSize - 1));
+        int screenY = fieldY + (int)MathF.Round(normalizedY * (FieldSize - 1));
         string icon = ResolveIcon((MinimapSignalKind)_kinds[index]);
         Vector4 color = ResolveSignalColor((MinimapSignalFlags)_flags[index]);
 
@@ -628,36 +1225,132 @@ public sealed class MinimapControlRuntime
         float width = MathF.Max(1f, halfExtent * 2f);
         int cellX = Math.Clamp((int)(((x - minX) / width) * StrategicGridSide), 0, StrategicGridSide - 1);
         int cellY = Math.Clamp((int)(((y - minY) / width) * StrategicGridSide), 0, StrategicGridSide - 1);
+        if (_absoluteWorldOverview)
+        {
+            cellY = (StrategicGridSide - 1) - cellY;
+        }
+
         return (cellY * StrategicGridSide) + cellX;
     }
 
-    private void ClampViewportToContent()
+    private void ClampViewportToWorld()
     {
-        float spanX = MathF.Max(2400f, _maxWorldXcm - _minWorldXcm);
-        float spanY = MathF.Max(2400f, _maxWorldYcm - _minWorldYcm);
-        float maxSpan = MathF.Max(spanX, spanY);
-        _halfExtentCm = MathF.Min(ClampHalfExtent(_halfExtentCm), MathF.Max(1400f, maxSpan * 0.8f));
-
-        float padding = _halfExtentCm * 0.35f;
-        _centerXcm = Math.Clamp(_centerXcm, _minWorldXcm - padding, _maxWorldXcm + padding);
-        _centerYcm = Math.Clamp(_centerYcm, _minWorldYcm - padding, _maxWorldYcm + padding);
+        _halfExtentCm = ClampHalfExtent(_halfExtentCm);
+        float minCenterX = _worldMinXcm + _halfExtentCm;
+        float maxCenterX = _worldMaxXcm - _halfExtentCm;
+        float minCenterY = _worldMinYcm + _halfExtentCm;
+        float maxCenterY = _worldMaxYcm - _halfExtentCm;
+        _centerXcm = minCenterX <= maxCenterX
+            ? Math.Clamp(_centerXcm, minCenterX, maxCenterX)
+            : 0f;
+        _centerYcm = minCenterY <= maxCenterY
+            ? Math.Clamp(_centerYcm, minCenterY, maxCenterY)
+            : 0f;
     }
 
-    private static MinimapZoomBand ResolveZoomBand(float halfExtentCm)
+    private MinimapZoomBand ResolveZoomBand(float halfExtentCm)
     {
-        if (halfExtentCm > 11000f)
+        if (_absoluteWorldOverview)
         {
             return MinimapZoomBand.Strategic;
         }
 
-        return halfExtentCm > 3600f
+        float regionalThreshold = (_regionalHalfExtentCm + _strategicHalfExtentCm) * 0.5f;
+        if (halfExtentCm > regionalThreshold)
+        {
+            return MinimapZoomBand.Strategic;
+        }
+
+        float tacticalThreshold = (_tacticalHalfExtentCm + _regionalHalfExtentCm) * 0.5f;
+        return halfExtentCm > tacticalThreshold
             ? MinimapZoomBand.Regional
             : MinimapZoomBand.Tactical;
     }
 
-    private static float ClampHalfExtent(float halfExtentCm)
+    private float ClampHalfExtent(float halfExtentCm)
     {
-        return Math.Clamp(halfExtentCm, 750f, 36000f);
+        return Math.Clamp(halfExtentCm, _minHalfExtentCm, _maxHalfExtentCm);
+    }
+
+    private float NormalizeWorldX(float worldXcm)
+    {
+        return _absoluteWorldOverview
+            ? NormalizeToRange(worldXcm, _worldMinXcm, _worldMaxXcm)
+            : NormalizeToField(worldXcm, _centerXcm, _halfExtentCm);
+    }
+
+    private float NormalizeWorldY(float worldYcm)
+    {
+        if (!_absoluteWorldOverview)
+        {
+            return NormalizeToField(worldYcm, _centerYcm, _halfExtentCm);
+        }
+
+        return 1f - NormalizeToRange(worldYcm, _worldMinYcm, _worldMaxYcm);
+    }
+
+    private float ScreenToWorldX(float normalizedX)
+    {
+        if (_absoluteWorldOverview)
+        {
+            return _worldMinXcm + (normalizedX * MathF.Max(1f, _worldMaxXcm - _worldMinXcm));
+        }
+
+        float minX = _centerXcm - _halfExtentCm;
+        return minX + (normalizedX * _halfExtentCm * 2f);
+    }
+
+    private float ScreenToWorldY(float normalizedY)
+    {
+        if (_absoluteWorldOverview)
+        {
+            return _worldMaxYcm - (normalizedY * MathF.Max(1f, _worldMaxYcm - _worldMinYcm));
+        }
+
+        float minY = _centerYcm - _halfExtentCm;
+        return minY + (normalizedY * _halfExtentCm * 2f);
+    }
+
+    private static float NormalizeToRange(float value, float min, float max)
+    {
+        return Math.Clamp((value - min) / MathF.Max(1f, max - min), 0f, 1f);
+    }
+
+    private static string FormatMeters(float worldCm)
+    {
+        return (worldCm / 100f).ToString("0");
+    }
+
+    private static int ResolveAbsoluteDebugRectMinSize(MinimapDebugRectKind kind)
+    {
+        return kind switch
+        {
+            MinimapDebugRectKind.HotZone => 12,
+            MinimapDebugRectKind.FlowWorkArea => 18,
+            _ => 16,
+        };
+    }
+
+    private string BuildChunkSummary()
+    {
+        if (_debugChunkCount <= 0)
+        {
+            return $"active chunks {_debugTotalActiveChunks} size {_debugChunkSizeCm / 100f:0}m";
+        }
+
+        int minX = _debugChunkX[0];
+        int maxX = _debugChunkX[0];
+        int minY = _debugChunkY[0];
+        int maxY = _debugChunkY[0];
+        for (int i = 1; i < _debugChunkCount; i++)
+        {
+            minX = Math.Min(minX, _debugChunkX[i]);
+            maxX = Math.Max(maxX, _debugChunkX[i]);
+            minY = Math.Min(minY, _debugChunkY[i]);
+            maxY = Math.Max(maxY, _debugChunkY[i]);
+        }
+
+        return $"active chunks {_debugTotalActiveChunks} shown {_debugChunkCount} x[{minX},{maxX}] y[{minY},{maxY}] size {_debugChunkSizeCm / 100f:0}m";
     }
 
     private static float NormalizeToField(float worldValue, float centerValue, float halfExtentCm)

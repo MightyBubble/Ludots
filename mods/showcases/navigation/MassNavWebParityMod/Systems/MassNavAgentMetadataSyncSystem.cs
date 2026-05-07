@@ -16,6 +16,7 @@ internal sealed class MassNavAgentMetadataSyncSystem : ISystem<float>
     private readonly MassNavSimulationRuntime _simulation;
     private readonly HashSet<int> _teamSet = new();
     private int[] _teamScratch = new int[8];
+    private int _lastSyncedStructuralChangeFrame = -1;
 
     public MassNavAgentMetadataSyncSystem(GameEngine engine, MassNavSimulationRuntime simulation)
     {
@@ -34,6 +35,13 @@ internal sealed class MassNavAgentMetadataSyncSystem : ISystem<float>
         {
             return;
         }
+
+        if (_lastSyncedStructuralChangeFrame == _simulation.StructuralChangeRevision)
+        {
+            return;
+        }
+
+        _lastSyncedStructuralChangeFrame = _simulation.StructuralChangeRevision;
 
         _teamSet.Clear();
         _engine.World.Query(in Query, (ref MassNavAgentIndex agentIndex, ref Team team, ref MassNavAgentProfile profile) =>

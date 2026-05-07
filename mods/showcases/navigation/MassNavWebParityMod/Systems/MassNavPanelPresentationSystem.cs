@@ -7,8 +7,11 @@ namespace MassNavWebParityMod.Systems;
 
 internal sealed class MassNavPanelPresentationSystem : ISystem<float>
 {
+    private const float PanelRefreshIntervalSeconds = 0.25f;
+
     private readonly GameEngine _engine;
     private readonly MassNavWebParityRuntime _runtime;
+    private float _refreshAccumulatorSeconds = PanelRefreshIntervalSeconds;
 
     public MassNavPanelPresentationSystem(GameEngine engine, MassNavWebParityRuntime runtime)
     {
@@ -23,8 +26,21 @@ internal sealed class MassNavPanelPresentationSystem : ISystem<float>
 
     public void Update(in float dt)
     {
-        if (_engine.GetService(MassNavWebParityKeys.SimulationRuntime) is MassNavSimulationRuntime simulation &&
-            MassNavWebParityIds.IsCurrentPlaygroundMap(_engine))
+        if (!MassNavWebParityIds.IsCurrentPlaygroundMap(_engine))
+        {
+            _refreshAccumulatorSeconds = PanelRefreshIntervalSeconds;
+            _runtime.RefreshPanel(_engine);
+            return;
+        }
+
+        _refreshAccumulatorSeconds += dt;
+        if (_refreshAccumulatorSeconds < PanelRefreshIntervalSeconds)
+        {
+            return;
+        }
+
+        _refreshAccumulatorSeconds = 0f;
+        if (_engine.GetService(MassNavWebParityKeys.SimulationRuntime) is MassNavSimulationRuntime simulation)
         {
             simulation.ObservePanelTick();
         }

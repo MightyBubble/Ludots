@@ -7,4 +7,7 @@ public static class MinimapControlServiceKeys
 {
     public static readonly ServiceKey<MinimapControlRuntime> Runtime =
         new("MinimapControlMod.Runtime");
+
+    public static readonly ServiceKey<MinimapWorldClickRequest> WorldClickRequest =
+        new("MinimapControlMod.WorldClickRequest");
 }

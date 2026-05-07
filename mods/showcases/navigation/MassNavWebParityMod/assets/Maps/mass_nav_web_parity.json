@@ -7,9 +7,10 @@
     {
       "Name": "default",
       "SpatialType": "Grid",
-      "WidthInTiles": 100,
-      "HeightInTiles": 100,
-      "GridCellSizeCm": 100
+      "WidthInTiles": 250,
+      "HeightInTiles": 250,
+      "GridCellSizeCm": 100,
+      "ChunkSizeCells": 64
     }
   ],
   "Entities": []

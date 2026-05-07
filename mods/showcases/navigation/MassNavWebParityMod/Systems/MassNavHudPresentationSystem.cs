@@ -60,6 +60,30 @@ internal sealed class MassNavHudPresentationSystem : ISystem<float>
         AddCachedText(overlay, 6, left, 152, 16, new Vector4(1f, 0.56f, 0.46f, 1f), ((int)MathF.Round(_simulation.StepPrepMs * 10f) << 16) ^ (int)MathF.Round(_simulation.LocalSteeringMs * 10f), () => $"prep {_simulation.StepPrepMs:0.0} steer {_simulation.LocalSteeringMs:0.0}");
         AddCachedText(overlay, 7, left, 174, 16, new Vector4(1f, 0.56f, 0.46f, 1f), ((int)MathF.Round(_simulation.HardResolveMs * 10f) << 16) ^ (int)MathF.Round(_simulation.EntitySyncMs * 10f), () => $"resolve {_simulation.HardResolveMs:0.0} sync {_simulation.EntitySyncMs:0.0}");
         AddCachedText(overlay, 8, left, 196, 16, new Vector4(1f, 0.56f, 0.46f, 1f), _simulation.CrowdInViewCount ^ (_simulation.CrowdSubmittedCount << 1) ^ (ecsVisible << 2), () => $"crowd {_simulation.CrowdInViewCount}/{_simulation.CrowdSubmittedCount} ecs {ecsVisible}");
+        AddCachedText(overlay, 9, left, 218, 16, new Vector4(0.62f, 0.85f, 1f, 1f), _simulation.LoadedChunkCount ^ (_simulation.StreamingChunkSizeCm << 8) ^ (_simulation.StreamingWindowUpdatesFrame << 16), () => $"world 64km chunks {_simulation.LoadedChunkCount} updates {_simulation.StreamingWindowUpdatesFrame}");
+        AddCachedText(overlay, 10, left, 240, 16, new Vector4(1f, 0.58f, 0.42f, 1f), _simulation.CommandRejectsFrame ^ (_simulation.CommandRejectsTotal << 8), () => $"invalid orders {_simulation.CommandRejectsFrame}/{_simulation.CommandRejectsTotal}");
+        AddCachedText(overlay, 11, left, 262, 15, new Vector4(0.74f, 0.84f, 0.94f, 1f), _simulation.ScenarioSpawnCount ^ (_simulation.SceneResetCount << 10), () => $"spawn {_simulation.ScenarioSpawnCount} reset {_simulation.SceneResetCount}");
+        AddCachedText(overlay, 12, left, 282, 15, new Vector4(0.74f, 0.84f, 0.94f, 1f), _simulation.CameraBudgetUpdatesFrame ^ (_simulation.CameraBudgetUpdatesTotal << 10) ^ (_simulation.SolverWindowMovesFrame << 20), () => $"camera budget {_simulation.CameraBudgetUpdatesFrame}/{_simulation.CameraBudgetUpdatesTotal} solver move {_simulation.SolverWindowMovesFrame}/{_simulation.SolverWindowMovesTotal}");
+
+        int bottomLeftY = Math.Max(356, (int)resolution.Y - 92);
+        var serialHash = new HashCode();
+        serialHash.Add((int)MathF.Round(_simulation.SolverWindowCenterXCm));
+        serialHash.Add((int)MathF.Round(_simulation.SolverWindowCenterYCm));
+        serialHash.Add((int)MathF.Round(_simulation.SolverWindowWidthCm));
+        serialHash.Add((int)MathF.Round(_simulation.SolverWindowHeightCm));
+        serialHash.Add((int)MathF.Round(_simulation.FlowWorkAreaCenterXCm));
+        serialHash.Add((int)MathF.Round(_simulation.FlowWorkAreaCenterYCm));
+        serialHash.Add((int)MathF.Round(_simulation.FlowWorkAreaWidthCm));
+        serialHash.Add((int)MathF.Round(_simulation.FlowWorkAreaHeightCm));
+        serialHash.Add(_simulation.FlowWorkAreaRevision);
+        serialHash.Add(_simulation.LoadedChunkCount);
+        serialHash.Add(_simulation.SolverWindowMovesTotal);
+        serialHash.Add(_simulation.CameraBudgetUpdatesTotal);
+        int hotZoneSerial = serialHash.ToHashCode();
+        AddCachedText(overlay, 13, 500, bottomLeftY, 16, new Vector4(0.54f, 0.92f, 1f, 1f), hotZoneSerial, () => $"work area {_simulation.FlowWorkAreaWidthCm / 100f:0}x{_simulation.FlowWorkAreaHeightCm / 100f:0}m center ({_simulation.FlowWorkAreaCenterXCm:0},{_simulation.FlowWorkAreaCenterYCm:0})");
+        AddCachedText(overlay, 14, 500, bottomLeftY + 22, 15, new Vector4(0.74f, 0.84f, 0.94f, 1f), hotZoneSerial, () => $"solver cache ({_simulation.SolverWindowCenterXCm:0},{_simulation.SolverWindowCenterYCm:0}) cm  driver {_simulation.SolverWindowDriver}");
+        AddCachedText(overlay, 15, 500, bottomLeftY + 44, 15, new Vector4(0.74f, 0.84f, 0.94f, 1f), hotZoneSerial, () => $"budget driver {_simulation.FlowWorkAreaReason}; camera never respawns units");
+        AddCachedText(overlay, 16, 500, bottomLeftY + 66, 15, new Vector4(0.74f, 0.84f, 0.94f, 1f), hotZoneSerial, () => "RTS minimap: click anywhere to move camera; right-click selected units to any world point");
     }
 
     private void AddCachedText(ScreenOverlayBuffer overlay, int cacheIndex, int x, int y, int fontSize, Vector4 color, int dirtySerial, Func<string> factory)
@@ -76,7 +100,7 @@ internal sealed class MassNavHudPresentationSystem : ISystem<float>
 
     private static CachedHudLine[] CreateHudLineCache()
     {
-        var cache = new CachedHudLine[9];
+        var cache = new CachedHudLine[17];
         for (int i = 0; i < cache.Length; i++)
         {
             cache[i].DirtySerial = int.MinValue;

@@ -37,6 +37,8 @@ public sealed class MassNavWebParitySimState
     private readonly float[] _cost = new float[GridWidth * GridHeight];
     private readonly float[] _obsX = new float[MaxObstacles];
     private readonly float[] _obsY = new float[MaxObstacles];
+    private readonly float[] _obsWorldX = new float[MaxObstacles];
+    private readonly float[] _obsWorldY = new float[MaxObstacles];
     private readonly float[] _obsRadius = new float[MaxObstacles];
     private readonly float[] _obsR2 = new float[MaxObstacles];
     private readonly float[] _obsPR = new float[MaxObstacles];
@@ -81,6 +83,12 @@ public sealed class MassNavWebParitySimState
     private int _lastCrowdStampFrame = int.MinValue;
     private int _lastObstacleStampFrame = int.MinValue;
     private int _crowdStampCursor;
+    private float _worldOriginXCm;
+    private float _worldOriginYCm;
+    private float _worldMinXCm = float.NegativeInfinity;
+    private float _worldMaxXCm = float.PositiveInfinity;
+    private float _worldMinYCm = float.NegativeInfinity;
+    private float _worldMaxYCm = float.PositiveInfinity;
 
     public int UnitCount { get; private set; }
     public int ObstacleCount { get; private set; }
@@ -93,6 +101,18 @@ public sealed class MassNavWebParitySimState
     public ReadOnlySpan<float> PositionsCm => _positionsCm.AsSpan(0, UnitCount * 2);
     public ReadOnlySpan<int> Teams => _teams.AsSpan(0, UnitCount);
     public ReadOnlySpan<byte> SelectedFlags => _selectedFlags.AsSpan(0, UnitCount);
+    public float WorldOriginXCm => _worldOriginXCm;
+    public float WorldOriginYCm => _worldOriginYCm;
+
+    public Vector2 WorldToLocalCm(Vector2 worldCm)
+    {
+        return new Vector2(worldCm.X - _worldOriginXCm, worldCm.Y - _worldOriginYCm);
+    }
+
+    public Vector2 LocalToWorldCm(Vector2 localCm)
+    {
+        return new Vector2(localCm.X + _worldOriginXCm, localCm.Y + _worldOriginYCm);
+    }
 
     public float GetPositionX(int index) => _positionsCm[index << 1];
     public float GetPositionY(int index) => _positionsCm[(index << 1) + 1];
@@ -102,10 +122,77 @@ public sealed class MassNavWebParitySimState
     public bool IsSelected(int index) => _selectedFlags[index] != 0;
     public float GetObstacleX(int index) => _obsX[index];
     public float GetObstacleY(int index) => _obsY[index];
+    public float GetObstacleWorldX(int index) => _obsWorldX[index];
+    public float GetObstacleWorldY(int index) => _obsWorldY[index];
     public float GetObstacleRadius(int index) => _obsRadius[index];
     public float GetObstacleHardBlockRadius(int index) => Semantics.Obstacle.ResolveHardBlockRadiusCm(_obsRadius[index]);
     public float GetObstacleSoftPushRadius(int index) => _obsPR[index];
     public bool IsObstaclePoint(float xCm, float yCm) => IsObstacle(xCm, yCm);
+    public Vector2 GetVelocityCmPerSecond(int index)
+    {
+        if ((uint)index >= (uint)UnitCount)
+        {
+            return Vector2.Zero;
+        }
+
+        int offset = index << 1;
+        return new Vector2(_velocitiesCm[offset], _velocitiesCm[offset + 1]);
+    }
+
+    public void SetWorldOrigin(float originXCm, float originYCm)
+    {
+        _worldOriginXCm = originXCm;
+        _worldOriginYCm = originYCm;
+        RefreshObstacleLocalFrame();
+    }
+
+    public void SetWorldBounds(float minXCm, float maxXCm, float minYCm, float maxYCm)
+    {
+        if (minXCm > maxXCm || minYCm > maxYCm)
+        {
+            throw new InvalidOperationException("MassNavWebParitySimState requires ordered world bounds.");
+        }
+
+        _worldMinXCm = minXCm;
+        _worldMaxXCm = maxXCm;
+        _worldMinYCm = minYCm;
+        _worldMaxYCm = maxYCm;
+    }
+
+    public void ShiftLocalFrame(float deltaXCm, float deltaYCm)
+    {
+        if (deltaXCm == 0f && deltaYCm == 0f)
+        {
+            return;
+        }
+
+        int scalarCount = UnitCount * 2;
+        for (int offset = 0; offset < scalarCount; offset += 2)
+        {
+            _positionsCm[offset] -= deltaXCm;
+            _positionsCm[offset + 1] -= deltaYCm;
+            _readPositionsCm[offset] -= deltaXCm;
+            _readPositionsCm[offset + 1] -= deltaYCm;
+            _unitProgressAnchorCm[offset] -= deltaXCm;
+            _unitProgressAnchorCm[offset + 1] -= deltaYCm;
+            _unitSettledAnchorCm[offset] -= deltaXCm;
+            _unitSettledAnchorCm[offset + 1] -= deltaYCm;
+            if (_hasUnitTarget[offset >> 1] != 0)
+            {
+                _unitTargetsCm[offset] -= deltaXCm;
+                _unitTargetsCm[offset + 1] -= deltaYCm;
+            }
+        }
+
+        for (int teamIndex = 0; teamIndex < _teamStates.Count; teamIndex++)
+        {
+            TeamRuntimeState team = _teamStates[teamIndex];
+            team.TargetX -= deltaXCm;
+            team.TargetY -= deltaYCm;
+        }
+
+        MarkFlowDirty();
+    }
 
     public void Reset(ReadOnlySpan<int> teamIds, int unitsPerTeam)
     {
@@ -172,8 +259,9 @@ public sealed class MassNavWebParitySimState
 
         int offset = index << 1;
         bool wasInactive = _hasUnitTarget[index] == 0;
-        _unitTargetsCm[offset] = ClampPosition(xCm);
-        _unitTargetsCm[offset + 1] = ClampPosition(yCm);
+        ClampLocalToWorldBounds(ref xCm, ref yCm);
+        _unitTargetsCm[offset] = xCm;
+        _unitTargetsCm[offset + 1] = yCm;
         _hasUnitTarget[index] = 1;
         if (resetRecovery || wasInactive)
         {
@@ -181,7 +269,7 @@ public sealed class MassNavWebParitySimState
         }
     }
 
-    public void ClearUnitTarget(int index)
+    public void ReleaseUnitToTeamTarget(int index)
     {
         if ((uint)index >= (uint)UnitCount)
         {
@@ -190,6 +278,23 @@ public sealed class MassNavWebParitySimState
 
         ResetUnitArrivalState(index, clearRetryCount: true);
         _hasUnitTarget[index] = 0;
+    }
+
+    public void HoldUnitAtCurrentPosition(int index)
+    {
+        if ((uint)index >= (uint)UnitCount)
+        {
+            return;
+        }
+
+        int offset = index << 1;
+        float x = _positionsCm[offset];
+        float y = _positionsCm[offset + 1];
+        _unitTargetsCm[offset] = x;
+        _unitTargetsCm[offset + 1] = y;
+        _hasUnitTarget[index] = 1;
+        _unitRetryCounts[index] = 0;
+        EnterSettledState(index, x, y);
     }
 
     public void SetSelectedFlags(MassNavAgentState agentState, ReadOnlySpan<Entity> selectedEntities)
@@ -212,8 +317,16 @@ public sealed class MassNavWebParitySimState
 
     public Vector2 ResolveNavigableTarget(float xCm, float yCm, float hintX, float hintY, float extraClearanceCm = 0f)
     {
-        float resolvedX = ClampPosition(xCm);
-        float resolvedY = ClampPosition(yCm);
+        float resolvedX = xCm;
+        float resolvedY = yCm;
+        ClampLocalToWorldBounds(ref resolvedX, ref resolvedY);
+        if (!IsInsideTacticalField(resolvedX, resolvedY))
+        {
+            return new Vector2(resolvedX, resolvedY);
+        }
+
+        resolvedX = ClampPosition(resolvedX);
+        resolvedY = ClampPosition(resolvedY);
         float minDistancePadding = Semantics.Obstacle.AgentBodyRadiusCm + MathF.Max(0f, extraClearanceCm);
 
         for (int pass = 0; pass < 2; pass++)
@@ -256,6 +369,7 @@ public sealed class MassNavWebParitySimState
 
                 resolvedX = ClampPosition(_obsX[obstacleIndex] + nx * minDistance);
                 resolvedY = ClampPosition(_obsY[obstacleIndex] + ny * minDistance);
+                ClampLocalToWorldBounds(ref resolvedX, ref resolvedY);
                 adjusted = true;
             }
 
@@ -315,8 +429,10 @@ public sealed class MassNavWebParitySimState
             long steeringStart = System.Diagnostics.Stopwatch.GetTimestamp();
             StepRange(0, UnitCount, clampedDt, navGroupRuntime, speed, sepRadiusSq, invSepRadius, arrivalRadiusCm, arrivalRadiusSq, unitTargetStopThresholdSq, hwm1, hhm1, invHashCell, SeparationHashSearchRadius, _useCandidateGating);
             observeLocalSteering?.Invoke((System.Diagnostics.Stopwatch.GetTimestamp() - steeringStart) * 1000.0 / System.Diagnostics.Stopwatch.Frequency);
+            ClampAllPositionsToWorldBounds();
             long resolveStart = System.Diagnostics.Stopwatch.GetTimestamp();
             ResolveHardPenetration();
+            ClampAllPositionsToWorldBounds();
             observeHardResolve?.Invoke((System.Diagnostics.Stopwatch.GetTimestamp() - resolveStart) * 1000.0 / System.Diagnostics.Stopwatch.Frequency);
             UpdateSettledUnitCount();
             return;
@@ -359,8 +475,10 @@ public sealed class MassNavWebParitySimState
         }
         observeLocalSteering?.Invoke((System.Diagnostics.Stopwatch.GetTimestamp() - threadedSteeringStart) * 1000.0 / System.Diagnostics.Stopwatch.Frequency);
 
+        ClampAllPositionsToWorldBounds();
         long hardResolveStart = System.Diagnostics.Stopwatch.GetTimestamp();
         ResolveHardPenetration();
+        ClampAllPositionsToWorldBounds();
         observeHardResolve?.Invoke((System.Diagnostics.Stopwatch.GetTimestamp() - hardResolveStart) * 1000.0 / System.Diagnostics.Stopwatch.Frequency);
         UpdateSettledUnitCount();
     }
@@ -412,15 +530,47 @@ public sealed class MassNavWebParitySimState
             int i2 = i << 1;
             float xCm = _positionsCm[i2];
             float yCm = _positionsCm[i2 + 1];
+            float worldXCm = _worldOriginXCm + xCm;
+            float worldYCm = _worldOriginYCm + yCm;
             ref VisualTransform transform = ref world.Get<VisualTransform>(entity);
-            transform.Position = new Vector3(xCm * VisualMetersPerCm, 0.25f, yCm * VisualMetersPerCm);
+            transform.Position = new Vector3(worldXCm * VisualMetersPerCm, 0.25f, worldYCm * VisualMetersPerCm);
 
-            Fix64Vec2 worldValue = Fix64Vec2.FromInt((int)MathF.Round(xCm), (int)MathF.Round(yCm));
+            Fix64Vec2 worldValue = Fix64Vec2.FromInt((int)MathF.Round(worldXCm), (int)MathF.Round(worldYCm));
             ref WorldPositionCm worldPosition = ref world.Get<WorldPositionCm>(entity);
             worldPosition.Value = worldValue;
 
             ref PreviousWorldPositionCm previousPosition = ref world.Get<PreviousWorldPositionCm>(entity);
             previousPosition.Value = worldValue;
+        }
+    }
+
+    public void SyncCullStates(
+        World world,
+        MassNavAgentState agentState,
+        float localMinXCm,
+        float localMaxXCm,
+        float localMinYCm,
+        float localMaxYCm)
+    {
+        int count = Math.Min(UnitCount, agentState.ControllableCount);
+        for (int i = 0; i < count; i++)
+        {
+            Entity entity = agentState.ControllableAgents[i];
+            if (!world.IsAlive(entity) || !world.Has<CullState>(entity))
+            {
+                continue;
+            }
+
+            int i2 = i << 1;
+            float xCm = _positionsCm[i2];
+            float yCm = _positionsCm[i2 + 1];
+            bool visible = xCm >= localMinXCm &&
+                xCm <= localMaxXCm &&
+                yCm >= localMinYCm &&
+                yCm <= localMaxYCm;
+            ref CullState cull = ref world.Get<CullState>(entity);
+            cull.IsVisible = visible;
+            cull.LOD = visible ? LODLevel.High : LODLevel.Culled;
         }
     }
 
@@ -556,6 +706,8 @@ public sealed class MassNavWebParitySimState
 
     private void CacheObstacle(int index, float xCm, float yCm, float radiusCm)
     {
+        _obsWorldX[index] = _worldOriginXCm + xCm;
+        _obsWorldY[index] = _worldOriginYCm + yCm;
         _obsX[index] = xCm;
         _obsY[index] = yCm;
         _obsRadius[index] = radiusCm;
@@ -563,6 +715,15 @@ public sealed class MassNavWebParitySimState
         float pushRadius = Semantics.Obstacle.ResolveSoftPushRadiusCm(radiusCm);
         _obsPR[index] = pushRadius;
         _obsPR2[index] = pushRadius * pushRadius;
+    }
+
+    private void RefreshObstacleLocalFrame()
+    {
+        for (int i = 0; i < ObstacleCount; i++)
+        {
+            _obsX[i] = _obsWorldX[i] - _worldOriginXCm;
+            _obsY[i] = _obsWorldY[i] - _worldOriginYCm;
+        }
     }
 
     private void ComputeFlowFields()
@@ -794,8 +955,10 @@ public sealed class MassNavWebParitySimState
 
         for (int i = 0; i < UnitCount; i++)
         {
-            int cell = GetHashCell(positionsCm, i, invHashCell, hashWidthMinusOne, hashHeightMinusOne, hashWidth);
-            cellCounts[cell]++;
+            if (TryGetHashCell(positionsCm, i, invHashCell, hashWidthMinusOne, hashHeightMinusOne, hashWidth, out int cell))
+            {
+                cellCounts[cell]++;
+            }
         }
 
         int offset = 0;
@@ -808,8 +971,10 @@ public sealed class MassNavWebParitySimState
 
         for (int i = 0; i < UnitCount; i++)
         {
-            int cell = GetHashCell(positionsCm, i, invHashCell, hashWidthMinusOne, hashHeightMinusOne, hashWidth);
-            cellAgents[cellCursor[cell]++] = i;
+            if (TryGetHashCell(positionsCm, i, invHashCell, hashWidthMinusOne, hashHeightMinusOne, hashWidth, out int cell))
+            {
+                cellAgents[cellCursor[cell]++] = i;
+            }
         }
     }
 
@@ -839,14 +1004,19 @@ public sealed class MassNavWebParitySimState
         }
     }
 
-    private static int GetHashCell(float[] positionsCm, int index, float invHashCell, int hashWidthMinusOne, int hashHeightMinusOne, int hashWidth)
+    private static bool TryGetHashCell(float[] positionsCm, int index, float invHashCell, int hashWidthMinusOne, int hashHeightMinusOne, int hashWidth, out int cell)
     {
         int i2 = index << 1;
         int cellX = (int)(positionsCm[i2] * invHashCell);
         int cellY = (int)(positionsCm[i2 + 1] * invHashCell);
-        cellX = cellX < 0 ? 0 : (cellX > hashWidthMinusOne ? hashWidthMinusOne : cellX);
-        cellY = cellY < 0 ? 0 : (cellY > hashHeightMinusOne ? hashHeightMinusOne : cellY);
-        return (cellY * hashWidth) + cellX;
+        if ((uint)cellX > (uint)hashWidthMinusOne || (uint)cellY > (uint)hashHeightMinusOne)
+        {
+            cell = -1;
+            return false;
+        }
+
+        cell = (cellY * hashWidth) + cellX;
+        return true;
     }
 
     private void StepRange(
@@ -1160,8 +1330,41 @@ public sealed class MassNavWebParitySimState
 
             float nextX = px + velocityX * clampedDt;
             float nextY = py + velocityY * clampedDt;
-            _positionsCm[i2] = ClampPosition(nextX);
-            _positionsCm[i2 + 1] = ClampPosition(nextY);
+            _positionsCm[i2] = nextX;
+            _positionsCm[i2 + 1] = nextY;
+        }
+    }
+
+    private void ClampAllPositionsToWorldBounds()
+    {
+        if (!HasWorldBounds())
+        {
+            return;
+        }
+
+        for (int i = 0; i < UnitCount; i++)
+        {
+            int offset = i << 1;
+            float xCm = _positionsCm[offset];
+            float yCm = _positionsCm[offset + 1];
+            bool clampedX = ClampLocalXToWorldBounds(ref xCm);
+            bool clampedY = ClampLocalYToWorldBounds(ref yCm);
+            if (!clampedX && !clampedY)
+            {
+                continue;
+            }
+
+            _positionsCm[offset] = xCm;
+            _positionsCm[offset + 1] = yCm;
+            if (clampedX)
+            {
+                _velocitiesCm[offset] = 0f;
+            }
+
+            if (clampedY)
+            {
+                _velocitiesCm[offset + 1] = 0f;
+            }
         }
     }
 
@@ -1402,6 +1605,11 @@ public sealed class MassNavWebParitySimState
             int i2 = i << 1;
             float px = _positionsCm[i2];
             float py = _positionsCm[i2 + 1];
+            if (!IsInsideTacticalField(px, py))
+            {
+                continue;
+            }
+
             int cellX = (int)(px * invHashCell);
             int cellY = (int)(py * invHashCell);
             cellX = cellX < 0 ? 0 : (cellX > hwm1 ? hwm1 : cellX);
@@ -1472,10 +1680,10 @@ public sealed class MassNavWebParitySimState
         float shareJ = 1f - shareI;
         float correctionI = overlap * shareI;
         float correctionJ = overlap * shareJ;
-        _positionsCm[i2] = ClampPosition(_positionsCm[i2] + nx * correctionI);
-        _positionsCm[i2 + 1] = ClampPosition(_positionsCm[i2 + 1] + ny * correctionI);
-        _positionsCm[j2] = ClampPosition(_positionsCm[j2] - nx * correctionJ);
-        _positionsCm[j2 + 1] = ClampPosition(_positionsCm[j2 + 1] - ny * correctionJ);
+        _positionsCm[i2] += nx * correctionI;
+        _positionsCm[i2 + 1] += ny * correctionI;
+        _positionsCm[j2] -= nx * correctionJ;
+        _positionsCm[j2 + 1] -= ny * correctionJ;
 
         float relVelX = _velocitiesCm[i2] - _velocitiesCm[j2];
         float relVelY = _velocitiesCm[i2 + 1] - _velocitiesCm[j2 + 1];
@@ -1502,6 +1710,11 @@ public sealed class MassNavWebParitySimState
             int i2 = i << 1;
             float px = _positionsCm[i2];
             float py = _positionsCm[i2 + 1];
+            if (!IsInsideTacticalField(px, py))
+            {
+                continue;
+            }
+
             for (int obstacleIndex = 0; obstacleIndex < ObstacleCount; obstacleIndex++)
             {
                 float dx = px - _obsX[obstacleIndex];
@@ -1527,8 +1740,9 @@ public sealed class MassNavWebParitySimState
                     ny = 0f;
                 }
 
-                _positionsCm[i2] = ClampPosition(_obsX[obstacleIndex] + nx * minDistance);
-                _positionsCm[i2 + 1] = ClampPosition(_obsY[obstacleIndex] + ny * minDistance);
+                _positionsCm[i2] = _obsX[obstacleIndex] + nx * minDistance;
+                _positionsCm[i2 + 1] = _obsY[obstacleIndex] + ny * minDistance;
+                ClampLocalToWorldBounds(ref _positionsCm[i2], ref _positionsCm[i2 + 1]);
                 px = _positionsCm[i2];
                 py = _positionsCm[i2 + 1];
 
@@ -1585,6 +1799,68 @@ public sealed class MassNavWebParitySimState
     private static float ClampPosition(float value)
     {
         return Math.Clamp(value, MinPositionCm, MaxPositionCm);
+    }
+
+    private bool HasWorldBounds()
+    {
+        return _worldMinXCm <= _worldMaxXCm &&
+            _worldMinYCm <= _worldMaxYCm &&
+            !float.IsInfinity(_worldMinXCm) &&
+            !float.IsInfinity(_worldMaxXCm) &&
+            !float.IsInfinity(_worldMinYCm) &&
+            !float.IsInfinity(_worldMaxYCm);
+    }
+
+    private void ClampLocalToWorldBounds(ref float xCm, ref float yCm)
+    {
+        ClampLocalXToWorldBounds(ref xCm);
+        ClampLocalYToWorldBounds(ref yCm);
+    }
+
+    private bool ClampLocalXToWorldBounds(ref float xCm)
+    {
+        if (!HasWorldBounds())
+        {
+            return false;
+        }
+
+        float worldX = _worldOriginXCm + xCm;
+        float inset = Semantics.Obstacle.AgentBodyRadiusCm;
+        float clampedWorldX = Math.Clamp(worldX, _worldMinXCm + inset, _worldMaxXCm - inset);
+        if (clampedWorldX == worldX)
+        {
+            return false;
+        }
+
+        xCm = clampedWorldX - _worldOriginXCm;
+        return true;
+    }
+
+    private bool ClampLocalYToWorldBounds(ref float yCm)
+    {
+        if (!HasWorldBounds())
+        {
+            return false;
+        }
+
+        float worldY = _worldOriginYCm + yCm;
+        float inset = Semantics.Obstacle.AgentBodyRadiusCm;
+        float clampedWorldY = Math.Clamp(worldY, _worldMinYCm + inset, _worldMaxYCm - inset);
+        if (clampedWorldY == worldY)
+        {
+            return false;
+        }
+
+        yCm = clampedWorldY - _worldOriginYCm;
+        return true;
+    }
+
+    private static bool IsInsideTacticalField(float xCm, float yCm)
+    {
+        return xCm >= MinPositionCm &&
+            xCm <= MaxPositionCm &&
+            yCm >= MinPositionCm &&
+            yCm <= MaxPositionCm;
     }
 
     private sealed class UnitStepJob : IJob

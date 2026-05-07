@@ -60,7 +60,14 @@ internal sealed class MassNavCommandBridgeSystem : ISystem<float>
 
     private void EnqueueMoveCommand(Vector2 centerCm)
     {
+        if (!_simulation.ContainsWorldPoint(centerCm.X, centerCm.Y))
+        {
+            _simulation.RejectCommandOutsideWorld(centerCm.X, centerCm.Y);
+            return;
+        }
+
         ReadOnlySpan<Entity> selected = _simulation.SelectedEntities;
+        _simulation.FocusCommandTarget(centerCm, selected);
         if (selected.Length <= 0)
         {
             _simulation.Commands.EnqueueTeamMove(_simulation.SelectedTeamId, centerCm);

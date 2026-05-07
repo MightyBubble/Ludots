@@ -1,5 +1,53 @@
 {
   "mapId": "mass_nav_web_parity",
+  "world": {
+    "worldWidthCm": 6400000,
+    "worldHeightCm": 6400000,
+    "solverWindowWidthCm": 10000,
+    "solverWindowHeightCm": 10000,
+    "streamingChunkSizeCm": 6400,
+    "streamingRadiusCm": 16000,
+    "cameraFocusShiftThresholdCm": 3000,
+    "commandFocusHoldTicks": 90,
+    "workAreaPaddingCm": 4000,
+    "workAreaMaxWidthCm": 48000,
+    "workAreaMaxHeightCm": 48000,
+    "activeHotZoneId": "central",
+    "hotZones": [
+      {
+        "id": "central",
+        "label": "Central",
+        "centerXCm": 0,
+        "centerYCm": 0,
+        "widthCm": 10000,
+        "heightCm": 10000
+      },
+      {
+        "id": "east_front",
+        "label": "East Front",
+        "centerXCm": 1800000,
+        "centerYCm": 600000,
+        "widthCm": 10000,
+        "heightCm": 10000
+      },
+      {
+        "id": "southwest",
+        "label": "Southwest",
+        "centerXCm": -2100000,
+        "centerYCm": -1600000,
+        "widthCm": 10000,
+        "heightCm": 10000
+      },
+      {
+        "id": "northeast",
+        "label": "Northeast",
+        "centerXCm": 2400000,
+        "centerYCm": 2100000,
+        "widthCm": 10000,
+        "heightCm": 10000
+      }
+    ]
+  },
   "scenario": {
     "agentsPerTeam": 2500,
     "initialSelectedTeamId": 1,

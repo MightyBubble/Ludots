@@ -13,6 +13,8 @@ namespace MassNavWebParityMod.Systems;
 
 internal sealed class MassNavOrderBridgeSystem : ISystem<float>
 {
+    private const int IdleScanIntervalFrames = 6;
+
     private static readonly QueryDescription Query = new QueryDescription()
         .WithAll<MassNavAgentTag, MassNavAgentIndex, Team, OrderBuffer>();
 
@@ -23,6 +25,7 @@ internal sealed class MassNavOrderBridgeSystem : ISystem<float>
     private readonly HashSet<int> _activeTokens = new();
     private readonly List<int> _completedTokens = new();
     private int _moveOrderTypeId;
+    private int _lastIdleScanFrame = -IdleScanIntervalFrames;
 
     public MassNavOrderBridgeSystem(GameEngine engine, MassNavSimulationRuntime simulation)
     {
@@ -43,6 +46,13 @@ internal sealed class MassNavOrderBridgeSystem : ISystem<float>
         }
 
         if (!TryResolveMoveOrderType())
+        {
+            return;
+        }
+
+        if (_simulation.NavGroupRuntime.ActiveOrderGroupCount == 0 &&
+            _simulation.CommandCountFrame <= 0 &&
+            _simulation.FrameIndex - _lastIdleScanFrame < IdleScanIntervalFrames)
         {
             return;
         }
@@ -133,6 +143,10 @@ internal sealed class MassNavOrderBridgeSystem : ISystem<float>
         }
 
         _simulation.NavGroupRuntime.PruneInactiveOrderGroups(_simulation.WebParity, _activeTokens);
+        if (_simulation.NavGroupRuntime.ActiveOrderGroupCount == 0)
+        {
+            _lastIdleScanFrame = _simulation.FrameIndex;
+        }
     }
 
     private bool TryResolveMoveOrderType()

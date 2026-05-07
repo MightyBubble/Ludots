@@ -15,6 +15,7 @@ public sealed class MassNavAgentState
     public int TotalAgents => _allAgents.Count;
     public int ControllableCount => _controllableAgents.Count;
     public int BlockerCount { get; private set; }
+    public int WorldMarkerCount { get; private set; }
 
     public void Reset()
     {
@@ -23,6 +24,7 @@ public sealed class MassNavAgentState
         _controllableAgents.Clear();
         _controllableIndexByEntityId.Clear();
         BlockerCount = 0;
+        WorldMarkerCount = 0;
     }
 
     public void RegisterAgent(Entity entity, bool controllable)
@@ -40,6 +42,12 @@ public sealed class MassNavAgentState
     {
         _spawnedEntities.Add(entity);
         BlockerCount++;
+    }
+
+    public void RegisterWorldMarker(Entity entity)
+    {
+        _spawnedEntities.Add(entity);
+        WorldMarkerCount++;
     }
 
     public bool TryGetControllableIndex(Entity entity, out int index)

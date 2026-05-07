@@ -6,6 +6,7 @@ using Ludots.Core.Gameplay.GAS.Components;
 using Ludots.Core.Gameplay.Relationships;
 using Ludots.Core.Gameplay.Teams;
 using Ludots.Core.Input.Selection;
+using Ludots.Core.Map;
 using Ludots.Core.Mathematics.FixedPoint;
 using Ludots.Core.Presentation.Components;
 using MassNavWebParityMod.Runtime;
@@ -39,9 +40,11 @@ internal static class MassNavScenarioBootstrap
             int teamId = simulation.WebParity.GetTeam(i);
             float xCm = simulation.WebParity.GetPositionX(i);
             float yCm = simulation.WebParity.GetPositionY(i);
+            float worldXCm = simulation.ToWorldXCm(xCm);
+            float worldYCm = simulation.ToWorldYCm(yCm);
             float navMass = simulation.WebParity.GetNavMass(i);
             float visualScale = simulation.WebParity.GetVisualScale(i);
-            var worldPosition = Fix64Vec2.FromInt((int)xCm, (int)yCm);
+            var worldPosition = Fix64Vec2.FromInt((int)worldXCm, (int)worldYCm);
             Entity entity = world.Create(
                 new MassNavAgentTag(),
                 new MassNavControllable(),
@@ -53,7 +56,7 @@ internal static class MassNavScenarioBootstrap
                 new PreviousWorldPositionCm { Value = worldPosition },
                 new VisualTransform
                 {
-                    Position = new Vector3(xCm * MassNavWebParitySimState.VisualMetersPerCm, 0.25f, yCm * MassNavWebParitySimState.VisualMetersPerCm),
+                    Position = new Vector3(worldXCm * MassNavWebParitySimState.VisualMetersPerCm, 0.25f, worldYCm * MassNavWebParitySimState.VisualMetersPerCm),
                     Scale = new Vector3(visualScale, visualScale, visualScale),
                     Rotation = Quaternion.Identity,
                 },
@@ -66,25 +69,63 @@ internal static class MassNavScenarioBootstrap
         {
             float xCm = simulation.WebParity.GetObstacleX(i);
             float yCm = simulation.WebParity.GetObstacleY(i);
+            float worldXCm = simulation.ToWorldXCm(xCm);
+            float worldYCm = simulation.ToWorldYCm(yCm);
             float radiusCm = simulation.WebParity.GetObstacleRadius(i);
-            var worldPosition = Fix64Vec2.FromInt((int)xCm, (int)yCm);
+            var worldPosition = Fix64Vec2.FromInt((int)worldXCm, (int)worldYCm);
             Entity entity = world.Create(
                 new MassNavBlocker(),
                 new WorldPositionCm { Value = worldPosition },
                 new PreviousWorldPositionCm { Value = worldPosition },
                 new VisualTransform
                 {
-                    Position = new Vector3(xCm * MassNavWebParitySimState.VisualMetersPerCm, 0.15f, yCm * MassNavWebParitySimState.VisualMetersPerCm),
+                    Position = new Vector3(worldXCm * MassNavWebParitySimState.VisualMetersPerCm, 0.15f, worldYCm * MassNavWebParitySimState.VisualMetersPerCm),
                     Scale = new Vector3(radiusCm * MassNavWebParitySimState.VisualMetersPerCm * 2f, 0.3f, radiusCm * MassNavWebParitySimState.VisualMetersPerCm * 2f),
                     Rotation = Quaternion.Identity,
                 },
                 new CullState { IsVisible = true, LOD = LODLevel.High });
             simulation.AgentState.RegisterBlocker(entity);
         }
+
+        SpawnWorldHotZoneMarkers(world, simulation);
+        simulation.MarkScenarioSpawned();
     }
 
     private static void ConfigureRelationships(MassNavWebParityConfig config)
     {
         TeamManager.LoadConfig(config.TeamRelationships);
+    }
+
+    private static void SpawnWorldHotZoneMarkers(World world, MassNavSimulationRuntime simulation)
+    {
+        if (simulation.TeamIds.Length <= 0)
+        {
+            throw new InvalidOperationException("MassNav hotspot debug markers require at least one configured team.");
+        }
+
+        int markerTeamId = simulation.TeamIds[0];
+        var mapEntity = new MapEntity { MapId = new MapId(simulation.Config.MapId) };
+        ReadOnlySpan<MassNavHotZoneConfig> hotZones = simulation.HotZones;
+        for (int i = 0; i < hotZones.Length; i++)
+        {
+            MassNavHotZoneConfig zone = hotZones[i];
+            var worldPosition = Fix64Vec2.FromInt(zone.CenterXCm, zone.CenterYCm);
+            Entity entity = world.Create(
+                new Name { Value = $"Hotspot Debug {zone.Label}" },
+                mapEntity,
+                new Team { Id = markerTeamId },
+                new WorldPositionCm { Value = worldPosition },
+                new PreviousWorldPositionCm { Value = worldPosition },
+                new VisualTransform
+                {
+                    Position = new Vector3(
+                        zone.CenterXCm * MassNavWebParitySimState.VisualMetersPerCm,
+                        0.35f,
+                        zone.CenterYCm * MassNavWebParitySimState.VisualMetersPerCm),
+                    Scale = new Vector3(1.2f, 0.2f, 1.2f),
+                    Rotation = Quaternion.Identity,
+                });
+            simulation.AgentState.RegisterWorldMarker(entity);
+        }
     }
 }

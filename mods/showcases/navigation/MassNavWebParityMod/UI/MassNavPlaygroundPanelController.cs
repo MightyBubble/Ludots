@@ -4,6 +4,7 @@ using Ludots.Core.Engine;
 using Ludots.Core.Engine.Navigation2D;
 using Ludots.Core.Engine.Physics2D;
 using Ludots.Core.Presentation.Components;
+using Ludots.Core.Presentation.Camera;
 using Ludots.Core.Presentation.Hud;
 using Ludots.Core.Presentation.Rendering;
 using Ludots.Core.Scripting;
@@ -110,6 +111,16 @@ internal sealed class MassNavWebParityPanelController
                 .ZIndex(20);
         }
 
+        return Ui.Panel(
+                BuildDiagnosticsPanel(state),
+                BuildWorldDock(state),
+                BuildFormationDock(state))
+            .Absolute(0f, 0f)
+            .ZIndex(20);
+    }
+
+    private UiElementBuilder BuildDiagnosticsPanel(MassNavPanelState state)
+    {
         return Ui.Card(
                 Ui.Text("Mass Nav Web Parity").FontSize(20f).Bold().Color("#F8FBFF"),
                 Ui.Row(
@@ -211,15 +222,6 @@ internal sealed class MassNavWebParityPanelController
                 Ui.Text(state.YieldSemanticsText).FontSize(12f).Color("#D6E4F5").WhiteSpace(UiWhiteSpace.Normal),
                 Ui.Text("Team Target").FontSize(12f).Bold().Color("#F4C77D"),
                 BuildTeamTargetRow(),
-                Ui.Text("Formation").FontSize(12f).Bold().Color("#F4C77D"),
-                Ui.Row(
-                        BuildActionButton("None", () => SetFormationMode(MassNavFormationMode.None)),
-                        BuildActionButton("Line", () => SetFormationMode(MassNavFormationMode.Line)),
-                        BuildActionButton("Square", () => SetFormationMode(MassNavFormationMode.Square)),
-                        BuildActionButton("Circle", () => SetFormationMode(MassNavFormationMode.Circle)),
-                        BuildActionButton("Wedge", () => SetFormationMode(MassNavFormationMode.Wedge)))
-                    .Wrap()
-                    .Gap(8f),
                 Ui.Text("Diagnostics").FontSize(12f).Bold().Color("#F4C77D"),
                 Ui.Text($"Select {state.SelectionSyncMs:0.0} ms  Command {state.CommandApplyMs:0.0} ms  Group {state.FormationTargetMs:0.0} ms").FontSize(12f).Color("#F18C7F").WhiteSpace(UiWhiteSpace.Normal),
                 Ui.Text($"Prep {state.StepPrepMs:0.0} ms  Steer {state.LocalSteeringMs:0.0} ms  Resolve {state.HardResolveMs:0.0} ms  Sim {state.SimStepMs:0.0} ms").FontSize(12f).Color("#F18C7F").WhiteSpace(UiWhiteSpace.Normal),
@@ -231,7 +233,8 @@ internal sealed class MassNavWebParityPanelController
                 Ui.Text($"Render accounted {state.RenderAccountedMs:0.0} ms  leftover {state.RenderUnaccountedMs:0.0} ms  composite skip {state.CompositeSkipCountLastSecond}").FontSize(12f).Color("#D6E4F5").WhiteSpace(UiWhiteSpace.Normal),
                 Ui.Text($"Camera target ({state.CameraTargetX:0.0}, {state.CameraTargetY:0.0}) cm  distance {state.CameraDistanceCm:0.0} cm").FontSize(12f).Color("#D6E4F5").WhiteSpace(UiWhiteSpace.Normal),
                 Ui.Text($"Selection snapshots/frame {state.SelectionSnapshotsFrame}  commands/frame {state.CommandCountFrame}").FontSize(12f).Color("#DFAF6C"),
-                Ui.Text($"Structural changes/frame {state.StructuralChangesFrame}").FontSize(12f).Color("#F18C7F"),
+                Ui.Text($"Structural changes/frame {state.StructuralChangesFrame}  spawn/reset {state.ScenarioSpawnCount}/{state.SceneResetCount}").FontSize(12f).Color("#F18C7F"),
+                Ui.Text($"Camera budget {state.CameraBudgetUpdatesFrame}/{state.CameraBudgetUpdatesTotal}  solver move {state.SolverWindowMovesFrame}/{state.SolverWindowMovesTotal}").FontSize(12f).Color("#D6E4F5").WhiteSpace(UiWhiteSpace.Normal),
                 Ui.Text("Use Ludots box selection to grab any units. Right click with a selection issues a formation move. Right click with no selection redirects the chosen team target. Hold Q/E to rotate selected formations.").FontSize(12f).Color("#8EA2BD").WhiteSpace(UiWhiteSpace.Normal))
             .Width(460f)
             .Padding(14f)
@@ -242,10 +245,86 @@ internal sealed class MassNavWebParityPanelController
             .ZIndex(20);
     }
 
+    private UiElementBuilder BuildWorldDock(MassNavPanelState state)
+    {
+        const float width = 360f;
+        float left = MathF.Max(500f, state.ViewportWidth - width - 420f);
+        return Ui.Card(
+                Ui.Text("RTS Map").FontSize(13f).Bold().Color("#9FD8FF"),
+                Ui.Text($"Battlefield {state.WorldWidthCm / 100_000f:0.0}x{state.WorldHeightCm / 100_000f:0.0} km  debug landmarks {state.WorldMarkerCount}").FontSize(12f).Color("#D6E4F5").WhiteSpace(UiWhiteSpace.Normal),
+                Ui.Text($"Flow work area: {state.FlowWorkAreaWidthCm / 100f:0}x{state.FlowWorkAreaHeightCm / 100f:0} m at ({state.FlowWorkAreaCenterXCm},{state.FlowWorkAreaCenterYCm}) cm").FontSize(12f).Color("#D6E4F5").WhiteSpace(UiWhiteSpace.Normal),
+                Ui.Text($"Solver cache: {state.SolverWindowWidthCm / 100f:0}x{state.SolverWindowHeightCm / 100f:0} m at ({state.SolverWindowCenterXCm},{state.SolverWindowCenterYCm}) cm").FontSize(12f).Color("#9FD8FF").WhiteSpace(UiWhiteSpace.Normal),
+                Ui.Text($"Solver driver: {state.SolverWindowDriver}").FontSize(12f).Color("#9FD8FF").WhiteSpace(UiWhiteSpace.Normal),
+                Ui.Text($"Work driver: {state.FlowWorkAreaReason} rev {state.FlowWorkAreaRevision}  command focus {(state.CommandFocusActive ? "active" : "idle")} {state.CommandFocusTicksRemaining} tick(s)").FontSize(12f).Color("#D6E4F5").WhiteSpace(UiWhiteSpace.Normal),
+                Ui.Text($"Camera/stream window chunks {state.LoadedChunkCount} @ {state.StreamingChunkSizeCm} cm").FontSize(12f).Color("#D6E4F5").WhiteSpace(UiWhiteSpace.Normal),
+                Ui.Text($"Camera budget {state.CameraBudgetUpdatesFrame}/{state.CameraBudgetUpdatesTotal}; camera does not respawn or retarget units.").FontSize(11f).Color("#8EA2BD").WhiteSpace(UiWhiteSpace.Normal),
+                Ui.Text($"Camera target ({state.CameraTargetX:0},{state.CameraTargetY:0}) cm  distance {state.CameraDistanceCm:0}").FontSize(12f).Color("#F2D483").WhiteSpace(UiWhiteSpace.Normal),
+                Ui.Text($"Chunk updates/frame {state.StreamingWindowUpdatesFrame}  invalid orders {state.CommandRejectsFrame}/{state.CommandRejectsTotal}").FontSize(12f).Color(state.CommandRejectsFrame > 0 ? "#FF9A73" : "#9FD8FF").WhiteSpace(UiWhiteSpace.Normal),
+                Ui.Text($"Last command target ({state.CommandFocusX:0},{state.CommandFocusY:0}) cm  selected payload {state.LastCommandSelectionCount}").FontSize(11f).Color("#8EA2BD").WhiteSpace(UiWhiteSpace.Normal),
+                Ui.Text(state.StrategicWorldViewActive
+                        ? "Full-map camera active. Minimap still shows absolute 64km coordinates."
+                        : "Field camera active. Minimap still shows absolute 64km coordinates.")
+                    .FontSize(11f)
+                    .Color(state.StrategicWorldViewActive ? "#A4F07A" : "#8EA2BD")
+                    .WhiteSpace(UiWhiteSpace.Normal),
+                Ui.Row(
+                        BuildActionButton("Full Map", RequestStrategicWorldCamera),
+                        BuildActionButton("Field Camera", RequestCameraReset))
+                    .Wrap()
+                    .Gap(8f),
+                Ui.Text("Debug Landmarks").FontSize(12f).Bold().Color("#F4C77D"),
+                BuildKnownContactRow(),
+                Ui.Text("RTS minimap: CAM is your camera rectangle, green cells are active chunks, amber boxes are hotspots, blue is solver cache. Click any in-bounds absolute coordinate to move the camera. Press M to hide/show.").FontSize(11f).Color("#8EA2BD").WhiteSpace(UiWhiteSpace.Normal))
+            .Width(width)
+            .Padding(12f)
+            .Gap(7f)
+            .Radius(18f)
+            .Background("#111C2A")
+            .Absolute(left, 16f)
+            .ZIndex(23);
+    }
+
+    private UiElementBuilder BuildFormationDock(MassNavPanelState state)
+    {
+        const float width = 390f;
+        const float estimatedHeight = 190f;
+        float left = MathF.Max(16f, state.ViewportWidth - width - 16f);
+        float top = MathF.Max(16f, state.ViewportHeight - estimatedHeight - 16f);
+        return Ui.Card(
+                Ui.Text("Formation").FontSize(13f).Bold().Color("#F4C77D"),
+                Ui.Text($"Mode {state.FormationLabel}  Selected {state.SelectedCount}  Groups {state.FormationCount}").FontSize(12f).Color("#D6E4F5").WhiteSpace(UiWhiteSpace.Normal),
+                Ui.Text($"Rotation {state.FormationRotationDeg:0.0} deg").FontSize(12f).Color("#8EA2BD"),
+                Ui.Row(
+                        BuildFormationButton("None", MassNavFormationMode.None, state.FormationLabel),
+                        BuildFormationButton("Line", MassNavFormationMode.Line, state.FormationLabel),
+                        BuildFormationButton("Square", MassNavFormationMode.Square, state.FormationLabel),
+                        BuildFormationButton("Circle", MassNavFormationMode.Circle, state.FormationLabel),
+                        BuildFormationButton("Wedge", MassNavFormationMode.Wedge, state.FormationLabel))
+                    .Wrap()
+                    .Gap(8f))
+            .Width(width)
+            .Padding(12f)
+            .Gap(7f)
+            .Radius(18f)
+            .Background("#111C2A")
+            .Absolute(left, top)
+            .ZIndex(24);
+    }
+
     private static UiElementBuilder BuildActionButton(string label, Action onClick)
     {
         return Ui.Button(label, _ => onClick())
             .Background("#182436")
+            .Color("#F8FBFF")
+            .Padding(10f, 8f)
+            .Radius(10f);
+    }
+
+    private UiElementBuilder BuildFormationButton(string label, MassNavFormationMode mode, string currentLabel)
+    {
+        bool active = currentLabel.Equals(mode.ToString(), StringComparison.OrdinalIgnoreCase);
+        return Ui.Button(label, _ => SetFormationMode(mode))
+            .Background(active ? "#315D35" : "#182436")
             .Color("#F8FBFF")
             .Padding(10f, 8f)
             .Radius(10f);
@@ -265,7 +344,20 @@ internal sealed class MassNavWebParityPanelController
         }
 
         MassNavWebParityRuntime.RequestTacticalCameraReset(_engine);
-        SetActionFeedback("Hot apply: camera reset requested.");
+        MassNavWebParityRuntime.RequestMinimapTacticalWorldView(_engine);
+        SetActionFeedback("Hot apply: field camera requested; minimap remains full battlefield.");
+    }
+
+    private void RequestStrategicWorldCamera()
+    {
+        if (_engine == null || !MassNavWebParityIds.IsCurrentPlaygroundMap(_engine))
+        {
+            return;
+        }
+
+        MassNavWebParityRuntime.RequestStrategicCameraReset(_engine);
+        MassNavWebParityRuntime.RequestMinimapStrategicWorldView(_engine);
+        SetActionFeedback("Hot apply: full 64km map camera requested.");
     }
 
     private void AdjustTotalAgentsDown() => AdjustTotalAgents(-2_000);
@@ -306,6 +398,30 @@ internal sealed class MassNavWebParityPanelController
     {
         _simulation?.SetFormationMode(mode);
         SetActionFeedback($"Hot apply: formation = {mode}.");
+    }
+
+    private void JumpToKnownContact(string contactId)
+    {
+        if (_engine == null || _simulation == null)
+        {
+            return;
+        }
+
+        if (!_simulation.WorldConfig.TryGetHotZone(contactId, out MassNavHotZoneConfig? contact))
+        {
+            throw new InvalidOperationException($"MassNavWebParityMod contact '{contactId}' is not configured.");
+        }
+
+        var targetCm = new System.Numerics.Vector2(contact.CenterXCm, contact.CenterYCm);
+        _simulation.ObserveCameraFocus(targetCm);
+        MassNavWebParityRuntime.RequestCameraJump(_engine, targetCm, 18_000f);
+        if (_engine.GetService(MinimapControlMod.MinimapControlServiceKeys.Runtime) is { } minimap)
+        {
+            MassNavWebParityRuntime.SyncMinimapKnownContacts(_simulation, minimap);
+        }
+
+        MassNavWebParityRuntime.RequestMinimapStrategicWorldView(_engine);
+        SetActionFeedback($"Camera moved to debug landmark {contact.Label}; camera budget updated without respawn or retarget.");
     }
 
     private void AdjustSimulationBudget(int delta)
@@ -509,6 +625,9 @@ internal sealed class MassNavWebParityPanelController
         bool visible = engine.CurrentMapSession != null && MassNavWebParityIds.IsPlaygroundMap(engine.CurrentMapSession.MapId.Value);
         PresentationTimingDiagnostics? timing = engine.GetService(CoreServiceKeys.PresentationTimingDiagnostics);
         PrimitiveDrawBuffer? primitiveBuffer = engine.GetService(CoreServiceKeys.PresentationPrimitiveDrawBuffer);
+        var viewportResolution = engine.GetService(CoreServiceKeys.ViewController) is IViewController viewport
+            ? viewport.Resolution
+            : new System.Numerics.Vector2(1280f, 720f);
         int primitiveBufferCount = primitiveBuffer?.Count ?? 0;
         int primitiveDropped = primitiveBuffer?.DroppedSinceClear ?? 0;
         int ecsVisibleEntities = (engine.GetService(CoreServiceKeys.CameraCullingDebugState) as CameraCullingDebugState)?.VisibleEntityCount
@@ -571,6 +690,7 @@ internal sealed class MassNavWebParityPanelController
             TotalAgents: simulation.AgentState.TotalAgents,
             ControllableAgents: simulation.AgentState.ControllableCount,
             Blockers: simulation.AgentState.BlockerCount,
+            WorldMarkerCount: simulation.AgentState.WorldMarkerCount,
             SelectedTeamId: simulation.SelectedTeamId,
             SelectedCount: simulation.SelectedCount,
             SelectionRevision: simulation.SelectionRevision,
@@ -593,6 +713,8 @@ internal sealed class MassNavWebParityPanelController
             RenderFps: MathF.Round(timing?.RenderFps ?? 0f),
             RenderFrameMs: renderFrameMs,
             PrimitiveRenderMs: primitiveRenderMs,
+            ViewportWidth: viewportResolution.X,
+            ViewportHeight: viewportResolution.Y,
             SelectionSyncMs: MathF.Round(simulation.SelectionSyncMs, 1),
             CommandApplyMs: MathF.Round(simulation.CommandApplyMs, 1),
             FormationTargetMs: MathF.Round(simulation.FormationTargetMs, 1),
@@ -629,8 +751,40 @@ internal sealed class MassNavWebParityPanelController
             CrowdInViewEntities: simulation.CrowdInViewCount,
             CrowdSubmittedEntities: simulation.CrowdSubmittedCount,
             SubmittedObstacles: simulation.ObstacleSubmittedCount,
-            CompositeSkipCountLastSecond: timing?.CompositeSkipCountLastSecond ?? 0,
-            ObstacleSemanticsText: obstacleSemanticsText,
+                CompositeSkipCountLastSecond: timing?.CompositeSkipCountLastSecond ?? 0,
+                WorldWidthCm: simulation.WorldWidthCm,
+                WorldHeightCm: simulation.WorldHeightCm,
+                SolverWindowWidthCm: (int)MathF.Round(simulation.SolverWindowWidthCm),
+                SolverWindowHeightCm: (int)MathF.Round(simulation.SolverWindowHeightCm),
+                SolverWindowCenterXCm: (int)MathF.Round(simulation.SolverWindowCenterXCm),
+                SolverWindowCenterYCm: (int)MathF.Round(simulation.SolverWindowCenterYCm),
+                FlowWorkAreaWidthCm: (int)MathF.Round(simulation.FlowWorkAreaWidthCm),
+                FlowWorkAreaHeightCm: (int)MathF.Round(simulation.FlowWorkAreaHeightCm),
+                FlowWorkAreaCenterXCm: (int)MathF.Round(simulation.FlowWorkAreaCenterXCm),
+                FlowWorkAreaCenterYCm: (int)MathF.Round(simulation.FlowWorkAreaCenterYCm),
+                FlowWorkAreaRevision: simulation.FlowWorkAreaRevision,
+                FlowWorkAreaReason: simulation.FlowWorkAreaReason,
+                CommandFocusTicksRemaining: simulation.CommandFocusTicksRemaining,
+                LastCommandSelectionCount: simulation.LastCommandSelectionCount,
+                CommandFocusActive: simulation.HasCommandFocus,
+                CommandFocusX: simulation.CommandFocusXCm,
+                CommandFocusY: simulation.CommandFocusYCm,
+                StreamingChunkSizeCm: simulation.StreamingChunkSizeCm,
+                LoadedChunkCount: simulation.LoadedChunkCount,
+                StreamingWindowUpdatesFrame: simulation.StreamingWindowUpdatesFrame,
+                CameraBudgetUpdatesFrame: simulation.CameraBudgetUpdatesFrame,
+                CameraBudgetUpdatesTotal: simulation.CameraBudgetUpdatesTotal,
+                SolverWindowMovesFrame: simulation.SolverWindowMovesFrame,
+                SolverWindowMovesTotal: simulation.SolverWindowMovesTotal,
+                ScenarioSpawnCount: simulation.ScenarioSpawnCount,
+                SceneResetCount: simulation.SceneResetCount,
+                CommandRejectsFrame: simulation.CommandRejectsFrame,
+                CommandRejectsTotal: simulation.CommandRejectsTotal,
+                LastRejectedCommandX: simulation.LastRejectedCommandXCm,
+                LastRejectedCommandY: simulation.LastRejectedCommandYCm,
+                SolverWindowDriver: simulation.SolverWindowDriver,
+                StrategicWorldViewActive: MassNavWebParityRuntime.IsStrategicWorldCameraActive(engine),
+                ObstacleSemanticsText: obstacleSemanticsText,
             TargetSemanticsText: targetSemanticsText,
             ArrivalSemanticsText: arrivalSemanticsText,
             YieldSemanticsText: yieldSemanticsText,
@@ -664,6 +818,32 @@ internal sealed class MassNavWebParityPanelController
         {
             int teamId = teamIds[i];
             buttons[i] = BuildActionButton($"Team {teamId}", () => SetSelectedTeam(teamId));
+        }
+
+        return Ui.Row(buttons)
+            .Wrap()
+            .Gap(8f);
+    }
+
+    private UiElementBuilder BuildKnownContactRow()
+    {
+        if (_simulation == null)
+        {
+            return Ui.Text("No debug landmarks.").FontSize(12f).Color("#8EA2BD");
+        }
+
+        ReadOnlySpan<MassNavHotZoneConfig> hotZones = _simulation.HotZones;
+        if (hotZones.Length == 0)
+        {
+            return Ui.Text("No debug landmarks.").FontSize(12f).Color("#8EA2BD");
+        }
+
+        var buttons = new UiElementBuilder[hotZones.Length];
+        for (int i = 0; i < hotZones.Length; i++)
+        {
+            string contactId = hotZones[i].Id;
+            string label = hotZones[i].Label;
+            buttons[i] = BuildActionButton(label, () => JumpToKnownContact(contactId));
         }
 
         return Ui.Row(buttons)

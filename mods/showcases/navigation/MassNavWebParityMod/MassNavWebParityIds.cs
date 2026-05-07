@@ -2,7 +2,7 @@ using Ludots.Core.Engine;
 
 namespace MassNavWebParityMod;
 
-internal static class MassNavWebParityIds
+public static class MassNavWebParityIds
 {
     public const string LegacyMapId = "mass_nav_web_parity";
 

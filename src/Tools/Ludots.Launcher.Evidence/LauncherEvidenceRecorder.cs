@@ -1,6 +1,7 @@
 using System.Diagnostics;
 using System.Globalization;
 using System.Numerics;
+using System.Reflection;
 using System.Text;
 using System.Text.Json;
 using Arch.Core;
@@ -11,6 +12,10 @@ using Ludots.Core.Components;
 using Ludots.Core.Config;
 using Ludots.Core.Engine;
 using Ludots.Core.Gameplay.Camera;
+using Ludots.Core.Gameplay.Components;
+using Ludots.Core.Gameplay.GAS.Components;
+using Ludots.Core.Gameplay.GAS.Orders;
+using Ludots.Core.Gameplay.GAS.Systems;
 using Ludots.Core.Hosting;
 using Ludots.Core.Input.Config;
 using Ludots.Core.Input.Selection;
@@ -127,6 +132,76 @@ public static class LauncherEvidenceRecorder
     private const float RoadWorldMaxX = 22000f;
     private const float RoadWorldMinY = -13000f;
     private const float RoadWorldMaxY = 13000f;
+    private const int MassNavTraceStrideTicks = 60;
+    private const int MassNavCaptureStrideTicks = 120;
+    private const int MassNavCommandAdvanceTicks = 360;
+    private const int MassNavSoakTicks = 900;
+    private const int MassNavSteadyStateProbeTicks = 240;
+    private const int MassNavSelectedSampleCount = 96;
+    private const int MassNavMultiTeamSampleCount = 32;
+    private const int MassNavMultiTeamAdvanceTicks = 180;
+    private const int MassNavEdgeCommandAdvanceTicks = 90;
+    private const float MassNavMovementMinimumCm = 950f;
+    private const float MassNavEdgeMovementMinimumCm = 250f;
+    private const float MassNavMovingSpeedSquaredThreshold = 400f;
+    private const float MassNavCameraJumpToleranceCm = 25f;
+    private const long MassNavManagedMemoryGrowthLimitBytes = 64L * 1024L * 1024L;
+    private const long MassNavSteadyManagedGrowthLimitBytes = 8L * 1024L * 1024L;
+    private const long MassNavSteadyAllocatedBytesLimit = 32L * 1024L * 1024L;
+    private const string MassNavWebParityMapId = "mass_nav_web_parity";
+    private const string MassNavSimulationRuntimeServiceName = "MassNavWebParity_SimulationRuntime";
+    private const string MassNavMoveOrderKey = "massNavMove";
+    private const string MinimapRuntimeServiceName = "MinimapControlMod.Runtime";
+    private const string MinimapWorldClickRequestServiceName = "MinimapControlMod.WorldClickRequest";
+    private const int MassNavFormationLine = 1;
+    private const int MassNavFormationSquare = 2;
+    private static readonly Vector2[] MassNavCameraTargets =
+    [
+        new Vector2(0f, 0f),
+        new Vector2(1_800_000f, 600_000f),
+        new Vector2(-2_100_000f, -1_600_000f),
+        new Vector2(2_400_000f, 2_100_000f),
+        new Vector2(-3_000_000f, 2_850_000f),
+        new Vector2(3_000_000f, -2_850_000f),
+        new Vector2(0f, 3_000_000f),
+        new Vector2(-3_000_000f, 0f),
+        new Vector2(3_199_900f, 3_199_900f),
+        new Vector2(-3_199_900f, -3_199_900f),
+        new Vector2(3_199_900f, -3_199_900f),
+        new Vector2(-3_199_900f, 3_199_900f),
+    ];
+    private static readonly Vector2 MassNavFarCommandTarget = new(1_800_000f, 600_000f);
+    private static readonly Vector2 MassNavSecondCommandTarget = new(-2_100_000f, -1_600_000f);
+    private static readonly Vector2 MassNavEmptyWorldCommandTarget = new(1_250_000f, -2_450_000f);
+    private static readonly Vector2[] MassNavMultiTeamCommandTargets =
+    [
+        new Vector2(1_700_000f, 1_700_000f),
+        new Vector2(-1_700_000f, 1_700_000f),
+        new Vector2(-1_700_000f, -1_700_000f),
+        new Vector2(1_700_000f, -1_700_000f),
+    ];
+    private static readonly Vector2[] MassNavEdgeInsideCommandTargets =
+    [
+        new Vector2(3_199_900f, 3_199_900f),
+        new Vector2(-3_199_900f, -3_199_900f),
+        new Vector2(3_199_900f, -3_199_900f),
+        new Vector2(-3_199_900f, 3_199_900f),
+        new Vector2(3_199_900f, 0f),
+        new Vector2(-3_199_900f, 0f),
+        new Vector2(0f, 3_199_900f),
+        new Vector2(0f, -3_199_900f),
+    ];
+    private static readonly Vector2[] MassNavInvalidCommandTargets =
+    [
+        new Vector2(3_900_000f, 0f),
+        new Vector2(-3_900_000f, 0f),
+        new Vector2(0f, 3_900_000f),
+        new Vector2(0f, -3_900_000f),
+        new Vector2(3_200_001f, 0f),
+        new Vector2(-3_200_001f, 0f),
+        new Vector2(0f, 3_200_001f),
+        new Vector2(0f, -3_200_001f),
+    ];
 
     public static Task<LauncherRecordingResult> RecordAsync(LauncherRecordingRequest request, CancellationToken ct = default)
     {
@@ -140,6 +215,7 @@ public static class LauncherEvidenceRecorder
             EvidenceScenario.RoadNetworkShowcaseCommandAndChunking => Task.FromResult(RecordRoadNetworkShowcase(request)),
             EvidenceScenario.ChunkStreamingShowcaseCameraWindows => Task.FromResult(RecordChunkStreamingShowcase(request)),
             EvidenceScenario.Navigation2DPlaygroundTimedAvoidance => Task.FromResult(RecordNavigation2DTimedAvoidance(request)),
+            EvidenceScenario.MassNavWebParityLargeWorldRts => Task.FromResult(RecordMassNavWebParityLargeWorldRts(request)),
             _ => throw new InvalidOperationException($"No recording scenario is registered for root mods: {string.Join(", ", request.Plan.RootModIds)}")
         };
     }
@@ -154,6 +230,11 @@ public static class LauncherEvidenceRecorder
         if (plan.RootModIds.Any(id => string.Equals(id, "Navigation2DPlaygroundMod", StringComparison.OrdinalIgnoreCase)))
         {
             return EvidenceScenario.Navigation2DPlaygroundTimedAvoidance;
+        }
+
+        if (plan.RootModIds.Any(id => string.Equals(id, "MassNavWebParityMod", StringComparison.OrdinalIgnoreCase)))
+        {
+            return EvidenceScenario.MassNavWebParityLargeWorldRts;
         }
 
         if (plan.RootModIds.Any(id => string.Equals(id, "RoadNetworkShowcaseMod", StringComparison.OrdinalIgnoreCase)))
@@ -188,6 +269,8 @@ public static class LauncherEvidenceRecorder
         var uiRoot = new UIRoot(skiaRenderer);
         uiRoot.Resize(DefaultWidth, DefaultHeight);
         engine.SetService(CoreServiceKeys.UIRoot, uiRoot);
+        engine.SetService(CoreServiceKeys.UiTextMeasurer, (object)textMeasurer);
+        engine.SetService(CoreServiceKeys.UiImageSizeProvider, (object)imageSizeProvider);
         engine.SetService(CoreServiceKeys.UISystem, (Ludots.Core.UI.IUiSystem)new MarkupUiSystem(uiRoot, textMeasurer, imageSizeProvider));
 
         var inputBackend = new ScriptedInputBackend();
@@ -251,6 +334,8 @@ public static class LauncherEvidenceRecorder
         var uiRoot = new UIRoot(skiaRenderer);
         uiRoot.Resize(DefaultWidth, DefaultHeight);
         engine.SetService(CoreServiceKeys.UIRoot, uiRoot);
+        engine.SetService(CoreServiceKeys.UiTextMeasurer, (object)textMeasurer);
+        engine.SetService(CoreServiceKeys.UiImageSizeProvider, (object)imageSizeProvider);
         engine.SetService(CoreServiceKeys.UISystem, (Ludots.Core.UI.IUiSystem)new MarkupUiSystem(uiRoot, textMeasurer, imageSizeProvider));
 
         var inputBackend = new ScriptedInputBackend();
@@ -477,7 +562,7 @@ public static class LauncherEvidenceRecorder
         string fileName = $"{step}.png";
         string outputPath = Path.Combine(screensDir, fileName);
         WriteCameraSnapshotImage(snapshot, outputPath);
-        captureFrames.Add(new CaptureFrame(snapshot.Tick, step, fileName, snapshot.CueMarkerPresent ? 1 : 0, snapshot.DummyCount, 0f, 0f));
+        captureFrames.Add(new CaptureFrame(snapshot.Tick, step, fileName, snapshot.CueMarkerPresent ? 1 : 0, snapshot.DummyCount, Vector2.Zero, 0f, 0f));
     }
 
     private static CameraSnapshot SampleCameraSnapshot(RecordingRuntime runtime, string step, double tickMs, Vector2? clickTargetWorldCm)
@@ -921,7 +1006,7 @@ public static class LauncherEvidenceRecorder
         timeline.Add(snapshot);
         string fileName = $"{step}.png";
         WriteRoadSnapshotImage(snapshot, Path.Combine(screensDir, fileName));
-        captureFrames.Add(new CaptureFrame(snapshot.Tick, step, fileName, snapshot.LoadedChunkCount, snapshot.SelectedNames.Count, 0f, 0f));
+        captureFrames.Add(new CaptureFrame(snapshot.Tick, step, fileName, snapshot.LoadedChunkCount, snapshot.SelectedNames.Count, Vector2.Zero, 0f, 0f));
     }
 
     private static RoadSnapshot SampleRoadSnapshot(RecordingRuntime runtime, string step, double tickMs, Vector2? commandTargetWorldCm)
@@ -1579,7 +1664,7 @@ public static class LauncherEvidenceRecorder
         timeline.Add(snapshot);
         string fileName = $"{step}.png";
         WriteChunkSnapshotImage(snapshot, Path.Combine(screensDir, fileName));
-        captureFrames.Add(new CaptureFrame(snapshot.Tick, step, fileName, snapshot.LoadedChunkCount, snapshot.RoadSplineCount, 0f, 0f));
+        captureFrames.Add(new CaptureFrame(snapshot.Tick, step, fileName, snapshot.LoadedChunkCount, snapshot.RoadSplineCount, Vector2.Zero, 0f, 0f));
     }
 
     private static ChunkSnapshot SampleChunkSnapshot(RecordingRuntime runtime, string step, double tickMs)
@@ -2001,7 +2086,7 @@ public static class LauncherEvidenceRecorder
 
         string fileName = $"{step}.png";
         WriteNavigationSnapshotImage(snapshot, Path.Combine(screensDir, fileName));
-        captureFrames.Add(new CaptureFrame(snapshot.Tick, step, fileName, snapshot.CenterCount, snapshot.CenterStoppedAgents, snapshot.Team0CrossedFraction, snapshot.Team1CrossedFraction));
+        captureFrames.Add(new CaptureFrame(snapshot.Tick, step, fileName, snapshot.CenterCount, snapshot.CenterStoppedAgents, Vector2.Zero, snapshot.Team0CrossedFraction, snapshot.Team1CrossedFraction));
     }
 
     private static AvoidanceSnapshot SampleNavigationSnapshot(GameEngine engine, Navigation2DRuntime navRuntime, int tick, string step, double tickMs)
@@ -2353,6 +2438,1121 @@ public static class LauncherEvidenceRecorder
         }, new JsonSerializerOptions { WriteIndented = true });
     }
 
+    private static LauncherRecordingResult RecordMassNavWebParityLargeWorldRts(LauncherRecordingRequest request)
+    {
+        string screensDir = Path.Combine(request.OutputDirectory, "screens");
+        Directory.CreateDirectory(screensDir);
+
+        var timeline = new List<MassNavUatSnapshot>(96);
+        var captureFrames = new List<CaptureFrame>(64);
+        var frameTimesMs = new List<double>(4096);
+        var memorySamples = new List<MassNavMemorySample>(16);
+
+        using var runtime = CreateRuntime(request.Plan, request.BootstrapPath);
+        if (!string.Equals(runtime.Config.StartupMapId, MassNavWebParityMapId, StringComparison.OrdinalIgnoreCase))
+        {
+            runtime.Engine.LoadMap(MassNavWebParityMapId);
+        }
+
+        Tick(runtime, 8, frameTimesMs);
+        MassNavRuntimeProbe simulation = MassNavRuntimeProbe.Require(runtime.Engine);
+        MassNavMinimapProbe minimap = MassNavMinimapProbe.Require(runtime.Engine);
+        minimap.Refresh(runtime.Engine);
+        CaptureMassNavSnapshot(runtime.Engine, simulation, minimap, screensDir, frameTimesMs, timeline, captureFrames, tick: 0, step: "000_start", captureImage: true);
+        long managedMemoryBaselineBytes = GC.GetTotalMemory(forceFullCollection: true);
+        AddMassNavMemorySample(memorySamples, "warm-baseline", managedMemoryBaselineBytes, managedMemoryBaselineBytes);
+
+        for (int i = 0; i < MassNavCameraTargets.Length; i++)
+        {
+            Vector2 target = MassNavCameraTargets[i];
+            minimap.EnqueueWorldClick(runtime.Engine, target);
+            Tick(runtime, 12, frameTimesMs);
+            minimap.Refresh(runtime.Engine);
+            CaptureMassNavSnapshot(runtime.Engine, simulation, minimap, screensDir, frameTimesMs, timeline, captureFrames, 10 + i, $"{10 + i:000}_minimap_jump_{i}", captureImage: true);
+        }
+
+        Entity[] selected = SelectMassNavTeamSample(runtime.Engine, simulation, teamId: simulation.SelectedTeamId, MassNavSelectedSampleCount);
+        Tick(runtime, 4, frameTimesMs);
+        CaptureMassNavSnapshot(runtime.Engine, simulation, minimap, screensDir, frameTimesMs, timeline, captureFrames, 20, "020_selection_sample", captureImage: true);
+
+        SubmitMassNavSelectionMove(runtime.Engine, simulation, selected, MassNavFarCommandTarget, MassNavFormationSquare);
+        Tick(runtime, 6, frameTimesMs);
+        CaptureMassNavSnapshot(runtime.Engine, simulation, minimap, screensDir, frameTimesMs, timeline, captureFrames, 30, "030_command_accepted_far", captureImage: true);
+
+        for (int tick = 1; tick <= MassNavCommandAdvanceTicks; tick++)
+        {
+            Tick(runtime, 1, frameTimesMs);
+            if (tick % MassNavTraceStrideTicks == 0)
+            {
+                bool captureImage = tick % MassNavCaptureStrideTicks == 0 || tick == MassNavCommandAdvanceTicks;
+                CaptureMassNavSnapshot(
+                    runtime.Engine,
+                    simulation,
+                    minimap,
+                    screensDir,
+                    frameTimesMs,
+                    timeline,
+                    captureFrames,
+                    30 + tick,
+                    captureImage ? $"{30 + tick:000}_advance_t{tick:000}" : $"{30 + tick:000}_sample_t{tick:000}",
+                    captureImage);
+            }
+        }
+
+        int rejectsBefore = simulation.CommandRejectsTotal;
+        Vector2 firstInvalidTarget = MassNavInvalidCommandTargets[0];
+        if (simulation.ContainsWorldPoint(firstInvalidTarget.X, firstInvalidTarget.Y))
+        {
+            throw new InvalidOperationException($"MassNav UAT invalid command target {firstInvalidTarget} is inside the configured world.");
+        }
+
+        simulation.RejectCommandOutsideWorld(firstInvalidTarget.X, firstInvalidTarget.Y);
+        Tick(runtime, 3, frameTimesMs);
+        CaptureMassNavSnapshot(runtime.Engine, simulation, minimap, screensDir, frameTimesMs, timeline, captureFrames, 420, "420_invalid_command_rejected", captureImage: true);
+        AddMassNavMemorySample(memorySamples, "after-first-command-and-invalid-reject", managedMemoryBaselineBytes, GC.GetTotalMemory(forceFullCollection: true));
+
+        long managedMemoryBeforeResetBytes = GC.GetTotalMemory(forceFullCollection: true);
+        simulation.RequestSceneReset();
+        Tick(runtime, 12, frameTimesMs);
+        minimap.Refresh(runtime.Engine);
+        CaptureMassNavSnapshot(runtime.Engine, simulation, minimap, screensDir, frameTimesMs, timeline, captureFrames, 440, "440_after_reset", captureImage: true);
+        long managedMemoryAfterResetBytes = GC.GetTotalMemory(forceFullCollection: true);
+        AddMassNavMemorySample(memorySamples, "after-reset", managedMemoryBaselineBytes, managedMemoryAfterResetBytes);
+
+        Entity[] resetSelected = SelectMassNavTeamSample(runtime.Engine, simulation, teamId: simulation.SelectedTeamId, MassNavSelectedSampleCount);
+        Tick(runtime, 4, frameTimesMs);
+        SubmitMassNavSelectionMove(runtime.Engine, simulation, resetSelected, MassNavSecondCommandTarget, MassNavFormationLine);
+        Tick(runtime, 6, frameTimesMs);
+        CaptureMassNavSnapshot(runtime.Engine, simulation, minimap, screensDir, frameTimesMs, timeline, captureFrames, 460, "460_second_command_accepted", captureImage: true);
+
+        for (int tick = 1; tick <= MassNavSoakTicks; tick++)
+        {
+            Tick(runtime, 1, frameTimesMs);
+            if (tick % MassNavTraceStrideTicks == 0)
+            {
+                bool captureImage = tick % (MassNavCaptureStrideTicks * 2) == 0 || tick == MassNavSoakTicks;
+                CaptureMassNavSnapshot(
+                    runtime.Engine,
+                    simulation,
+                    minimap,
+                    screensDir,
+                    frameTimesMs,
+                    timeline,
+                    captureFrames,
+                    460 + tick,
+                    captureImage ? $"{460 + tick:000}_soak_t{tick:000}" : $"{460 + tick:000}_sample_t{tick:000}",
+                    captureImage);
+            }
+        }
+        AddMassNavMemorySample(memorySamples, "after-long-soak", managedMemoryBaselineBytes, GC.GetTotalMemory(forceFullCollection: true));
+
+        SubmitMassNavSelectionMove(runtime.Engine, simulation, resetSelected, MassNavEmptyWorldCommandTarget, MassNavFormationLine);
+        Tick(runtime, 6, frameTimesMs);
+        CaptureMassNavSnapshot(runtime.Engine, simulation, minimap, screensDir, frameTimesMs, timeline, captureFrames, 1500, "1500_empty_world_command_accepted", captureImage: true);
+        Tick(runtime, 180, frameTimesMs);
+        CaptureMassNavSnapshot(runtime.Engine, simulation, minimap, screensDir, frameTimesMs, timeline, captureFrames, 1680, "1680_empty_world_command_progress", captureImage: true);
+        AddMassNavMemorySample(memorySamples, "after-empty-world-command", managedMemoryBaselineBytes, GC.GetTotalMemory(forceFullCollection: true));
+
+        int multiTeamBaseTick = 1690;
+        int multiTeamRejectsBefore = simulation.CommandRejectsTotal;
+        for (int i = 0; i < Math.Min(MassNavMultiTeamCommandTargets.Length, simulation.TeamCount); i++)
+        {
+            int teamId = ResolveMassNavTeamIdByOrdinal(runtime.Engine, simulation, i);
+            Entity[] teamSelected = SelectMassNavTeamSample(runtime.Engine, simulation, teamId, MassNavMultiTeamSampleCount);
+            Vector2 teamTarget = MassNavMultiTeamCommandTargets[i];
+            SubmitMassNavSelectionMove(runtime.Engine, simulation, teamSelected, teamTarget, i % 2 == 0 ? MassNavFormationSquare : MassNavFormationLine);
+            Tick(runtime, 6, frameTimesMs);
+            CaptureMassNavSnapshot(runtime.Engine, simulation, minimap, screensDir, frameTimesMs, timeline, captureFrames, multiTeamBaseTick + (i * 20), $"169{i}_team_{teamId}_command_accepted", captureImage: true);
+            Tick(runtime, MassNavMultiTeamAdvanceTicks, frameTimesMs);
+            CaptureMassNavSnapshot(runtime.Engine, simulation, minimap, screensDir, frameTimesMs, timeline, captureFrames, multiTeamBaseTick + (i * 20) + 10, $"170{i}_team_{teamId}_command_progress", captureImage: true);
+        }
+
+        if (simulation.CommandRejectsTotal != multiTeamRejectsBefore)
+        {
+            throw new InvalidOperationException("MassNav UAT legal multi-team in-world commands unexpectedly increased reject count.");
+        }
+
+        AddMassNavMemorySample(memorySamples, "after-multi-team-commands", managedMemoryBaselineBytes, GC.GetTotalMemory(forceFullCollection: true));
+
+        Entity[] edgeSelected = SelectMassNavTeamSample(runtime.Engine, simulation, teamId: simulation.SelectedTeamId, MassNavSelectedSampleCount);
+        int edgeLegalRejectsBefore = simulation.CommandRejectsTotal;
+        for (int i = 0; i < MassNavEdgeInsideCommandTargets.Length; i++)
+        {
+            Vector2 target = MassNavEdgeInsideCommandTargets[i];
+            if (!simulation.ContainsWorldPoint(target.X, target.Y))
+            {
+                throw new InvalidOperationException($"MassNav UAT edge-inside target {target} is outside the configured world.");
+            }
+
+            SubmitMassNavSelectionMove(runtime.Engine, simulation, edgeSelected, target, MassNavFormationLine);
+            Tick(runtime, 6, frameTimesMs);
+            CaptureMassNavSnapshot(runtime.Engine, simulation, minimap, screensDir, frameTimesMs, timeline, captureFrames, 1800 + (i * 20), $"180{i}_edge_inside_command_accepted_{i}", captureImage: i == 0 || i == MassNavEdgeInsideCommandTargets.Length - 1);
+            Tick(runtime, MassNavEdgeCommandAdvanceTicks, frameTimesMs);
+            CaptureMassNavSnapshot(runtime.Engine, simulation, minimap, screensDir, frameTimesMs, timeline, captureFrames, 1800 + (i * 20) + 10, $"181{i}_edge_inside_command_progress_{i}", captureImage: i == 0 || i == MassNavEdgeInsideCommandTargets.Length - 1);
+        }
+
+        if (simulation.CommandRejectsTotal != edgeLegalRejectsBefore)
+        {
+            throw new InvalidOperationException("MassNav UAT legal edge in-world commands unexpectedly increased reject count.");
+        }
+
+        AddMassNavMemorySample(memorySamples, "after-edge-inside-commands", managedMemoryBaselineBytes, GC.GetTotalMemory(forceFullCollection: true));
+
+        int invalidRejectsBefore = simulation.CommandRejectsTotal;
+        for (int i = 0; i < MassNavInvalidCommandTargets.Length; i++)
+        {
+            Vector2 invalidTarget = MassNavInvalidCommandTargets[i];
+            if (simulation.ContainsWorldPoint(invalidTarget.X, invalidTarget.Y))
+            {
+                throw new InvalidOperationException($"MassNav UAT invalid command target {invalidTarget} is inside the configured world.");
+            }
+
+            simulation.RejectCommandOutsideWorld(invalidTarget.X, invalidTarget.Y);
+            Tick(runtime, 2, frameTimesMs);
+            CaptureMassNavSnapshot(
+                runtime.Engine,
+                simulation,
+                minimap,
+                screensDir,
+                    frameTimesMs,
+                    timeline,
+                    captureFrames,
+                    1980 + i,
+                    $"198{i}_invalid_boundary_rejected_{i}",
+                    captureImage: i == MassNavInvalidCommandTargets.Length - 1);
+        }
+
+        AddMassNavMemorySample(memorySamples, "after-boundary-rejects", managedMemoryBaselineBytes, GC.GetTotalMemory(forceFullCollection: true));
+        long steadyManagedBeforeBytes = GC.GetTotalMemory(forceFullCollection: true);
+        long steadyAllocatedBeforeBytes = GC.GetAllocatedBytesForCurrentThread();
+        Tick(runtime, MassNavSteadyStateProbeTicks, frameTimesMs);
+        long steadyAllocatedAfterBytes = GC.GetAllocatedBytesForCurrentThread();
+        long steadyManagedAfterBytes = GC.GetTotalMemory(forceFullCollection: true);
+        long steadyManagedGrowthBytes = Math.Max(0L, steadyManagedAfterBytes - steadyManagedBeforeBytes);
+        long steadyAllocatedBytes = Math.Max(0L, steadyAllocatedAfterBytes - steadyAllocatedBeforeBytes);
+        AddMassNavMemorySample(memorySamples, "after-steady-state-probe", managedMemoryBaselineBytes, steadyManagedAfterBytes);
+        CaptureMassNavSnapshot(runtime.Engine, simulation, minimap, screensDir, frameTimesMs, timeline, captureFrames, 2100, "2100_steady_state_probe", captureImage: true);
+
+        long managedMemoryEndBytes = GC.GetTotalMemory(forceFullCollection: true);
+        long managedMemoryGrowthBytes = Math.Max(0L, managedMemoryEndBytes - managedMemoryBaselineBytes);
+        long managedMemoryResetDeltaBytes = Math.Max(0L, managedMemoryAfterResetBytes - managedMemoryBeforeResetBytes);
+        WriteTimelineSheet("MassNavWebParity large-world RTS UAT timeline", captureFrames, screensDir, Path.Combine(screensDir, "timeline.png"));
+
+        MassNavUatAcceptance acceptance = EvaluateMassNavUat(
+            timeline,
+            rejectsBefore,
+            invalidRejectsBefore,
+            managedMemoryGrowthBytes,
+            managedMemoryResetDeltaBytes,
+            steadyManagedGrowthBytes,
+            steadyAllocatedBytes);
+        string battleReportPath = Path.Combine(request.OutputDirectory, "battle-report.md");
+        string tracePath = Path.Combine(request.OutputDirectory, "trace.jsonl");
+        string pathPath = Path.Combine(request.OutputDirectory, "path.mmd");
+        string visibleChecklistPath = Path.Combine(request.OutputDirectory, "visible-checklist.md");
+        string summaryPath = Path.Combine(request.OutputDirectory, "summary.json");
+
+        File.WriteAllText(battleReportPath, BuildMassNavBattleReport(request, timeline, captureFrames, frameTimesMs, acceptance, memorySamples));
+        File.WriteAllText(tracePath, BuildMassNavTraceJsonl(request.Plan.AdapterId, timeline));
+        File.WriteAllText(pathPath, BuildMassNavPathMermaid());
+        File.WriteAllText(visibleChecklistPath, BuildMassNavVisibleChecklist(captureFrames));
+        File.WriteAllText(summaryPath, BuildMassNavSummaryJson(request, acceptance, memorySamples));
+
+        if (!acceptance.Success)
+        {
+            throw new InvalidOperationException(acceptance.FailureSummary);
+        }
+
+        return new LauncherRecordingResult(
+            request.OutputDirectory,
+            battleReportPath,
+            tracePath,
+            pathPath,
+            summaryPath,
+            visibleChecklistPath,
+            captureFrames.Select(frame => Path.Combine(screensDir, frame.FileName)).Append(Path.Combine(screensDir, "timeline.png")).ToList(),
+            acceptance.NormalizedSignature);
+    }
+
+    private static Entity[] SelectMassNavTeamSample(GameEngine engine, MassNavRuntimeProbe simulation, int teamId, int maxCount)
+    {
+        if (!SelectionContextRuntime.TryGetRuntime(engine.GlobalContext, out SelectionRuntime selection))
+        {
+            throw new InvalidOperationException("MassNav UAT requires SelectionRuntime.");
+        }
+
+        if (!engine.GlobalContext.TryGetValue(CoreServiceKeys.LocalPlayerEntity.Name, out object? localObj) ||
+            localObj is not Entity owner ||
+            !engine.World.IsAlive(owner))
+        {
+            throw new InvalidOperationException("MassNav UAT requires a live local player entity.");
+        }
+
+        var selected = new List<Entity>(maxCount);
+        IReadOnlyList<Entity> controllableAgents = simulation.ControllableAgents;
+        for (int i = 0; i < controllableAgents.Count && selected.Count < maxCount; i++)
+        {
+            Entity entity = controllableAgents[i];
+            if (!engine.World.IsAlive(entity) ||
+                !engine.World.TryGet(entity, out Team team) ||
+                team.Id != teamId)
+            {
+                continue;
+            }
+
+            selected.Add(entity);
+        }
+
+        if (selected.Count <= 0)
+        {
+            throw new InvalidOperationException($"MassNav UAT could not select any agents for team {teamId}.");
+        }
+
+        Entity[] selectedArray = selected.ToArray();
+        selection.ReplaceSelection(owner, SelectionSetKeys.LivePrimary, selectedArray.AsSpan());
+        return selectedArray;
+    }
+
+    private static int ResolveMassNavTeamIdByOrdinal(GameEngine engine, MassNavRuntimeProbe simulation, int ordinal)
+    {
+        var teamIds = new SortedSet<int>();
+        IReadOnlyList<Entity> controllableAgents = simulation.ControllableAgents;
+        for (int i = 0; i < controllableAgents.Count; i++)
+        {
+            Entity entity = controllableAgents[i];
+            if (engine.World.IsAlive(entity) &&
+                engine.World.TryGet(entity, out Team team))
+            {
+                teamIds.Add(team.Id);
+            }
+        }
+
+        if (ordinal < 0 || ordinal >= teamIds.Count)
+        {
+            throw new InvalidOperationException($"MassNav UAT expected team ordinal {ordinal}, but only found {teamIds.Count} dynamic teams.");
+        }
+
+        return teamIds.ElementAt(ordinal);
+    }
+
+    private static void SubmitMassNavSelectionMove(GameEngine engine, MassNavRuntimeProbe simulation, Entity[] selected, Vector2 destinationCm, int formationMode)
+    {
+        if (selected.Length <= 0)
+        {
+            throw new InvalidOperationException("MassNav UAT cannot submit a selection move without selected agents.");
+        }
+
+        if (!simulation.ContainsWorldPoint(destinationCm.X, destinationCm.Y))
+        {
+            simulation.RejectCommandOutsideWorld(destinationCm.X, destinationCm.Y);
+            return;
+        }
+
+        OrderBufferSystem orderBufferSystem = engine.GetService(CoreServiceKeys.OrderBufferSystem)
+            ?? throw new InvalidOperationException("MassNav UAT requires OrderBufferSystem.");
+        var registry = engine.GetService(CoreServiceKeys.OrderTypeRegistry)
+            ?? throw new InvalidOperationException("MassNav UAT requires OrderTypeRegistry.");
+        if (!registry.TryGetId(MassNavMoveOrderKey, out int moveOrderTypeId))
+        {
+            throw new InvalidOperationException($"MassNav UAT requires order type '{MassNavMoveOrderKey}'.");
+        }
+
+        SelectionContextRuntime.TryGetCurrentContainer(engine.World, engine.GlobalContext, out Entity selectionContainer);
+        int sharedOrderId = simulation.AllocateSharedOrderId();
+        simulation.FocusCommandTarget(destinationCm, selected);
+
+        int submitted = 0;
+        for (int i = 0; i < selected.Length; i++)
+        {
+            Entity actor = selected[i];
+            if (!engine.World.IsAlive(actor))
+            {
+                continue;
+            }
+
+            var order = new Order
+            {
+                OrderId = sharedOrderId,
+                OrderTypeId = moveOrderTypeId,
+                PlayerId = 1,
+                Actor = actor,
+                SubmitMode = OrderSubmitMode.Immediate,
+                Args = new OrderArgs
+                {
+                    I0 = formationMode,
+                    F0 = simulation.SelectedRotationRadians,
+                    Spatial = new OrderSpatial
+                    {
+                        Kind = OrderSpatialKind.WorldCm,
+                        Mode = OrderCollectionMode.Single,
+                        WorldCm = new Vector3(destinationCm.X, 0f, destinationCm.Y),
+                    },
+                    Selection = new OrderSelectionReference
+                    {
+                        Container = selectionContainer
+                    }
+                }
+            };
+
+            if (orderBufferSystem.SubmitOrder(actor, in order) != OrderSubmitResult.InvalidEntity)
+            {
+                submitted++;
+            }
+        }
+
+        if (submitted <= 0)
+        {
+            throw new InvalidOperationException("MassNav UAT move command did not submit to any selected agent.");
+        }
+
+        simulation.MarkCommandApply();
+        simulation.MarkStructuralChange();
+    }
+
+    private static void CaptureMassNavSnapshot(
+        GameEngine engine,
+        MassNavRuntimeProbe simulation,
+        MassNavMinimapProbe minimap,
+        string screensDir,
+        IReadOnlyList<double> frameTimesMs,
+        List<MassNavUatSnapshot> timeline,
+        List<CaptureFrame> captureFrames,
+        int tick,
+        string step,
+        bool captureImage)
+    {
+        minimap.Refresh(engine);
+        MassNavUatSnapshot snapshot = SampleMassNavSnapshot(engine, simulation, minimap, tick, step, frameTimesMs.Count > 0 ? frameTimesMs[^1] : 0d);
+        timeline.Add(snapshot);
+        if (!captureImage)
+        {
+            return;
+        }
+
+        string fileName = $"{step}.png";
+        WriteMassNavSnapshotImage(snapshot, Path.Combine(screensDir, fileName));
+        captureFrames.Add(new CaptureFrame(snapshot.Tick, step, fileName, snapshot.SelectedCount, snapshot.ActiveGroups, snapshot.SelectedCenterCm, snapshot.SelectedMeanAdvanceCm, snapshot.AgentVisibleFraction));
+    }
+
+    private static MassNavUatSnapshot SampleMassNavSnapshot(GameEngine engine, MassNavRuntimeProbe simulation, MassNavMinimapProbe minimap, int tick, string step, double tickMs)
+    {
+        var teamCounts = new Dictionary<int, int>();
+        var teamCenters = new Dictionary<int, Vector2>();
+        int activeOrders = 0;
+        int selectedCount = 0;
+        int selectedMoving = 0;
+        int agentsOutsideWorld = 0;
+        Vector2 selectedCenter = Vector2.Zero;
+        Vector2 selectedVelocityCenter = Vector2.Zero;
+        Vector2 commandTarget = simulation.HasCommandFocus
+            ? new Vector2(simulation.CommandFocusXCm, simulation.CommandFocusYCm)
+            : Vector2.Zero;
+
+        IReadOnlyList<Entity> controllableAgents = simulation.ControllableAgents;
+        int unitCount = simulation.UnitCount;
+        for (int unitIndex = 0; unitIndex < controllableAgents.Count && unitIndex < unitCount; unitIndex++)
+        {
+            Entity entity = controllableAgents[unitIndex];
+            if (!engine.World.IsAlive(entity) ||
+                !engine.World.TryGet(entity, out Team team) ||
+                !engine.World.TryGet(entity, out WorldPositionCm position))
+            {
+                continue;
+            }
+
+            Vector2 world = position.Value.ToVector2();
+            if (!simulation.ContainsWorldPoint(world.X, world.Y))
+            {
+                agentsOutsideWorld++;
+            }
+
+            teamCounts.TryGetValue(team.Id, out int teamCount);
+            teamCounts[team.Id] = teamCount + 1;
+            teamCenters.TryGetValue(team.Id, out Vector2 teamCenter);
+            teamCenters[team.Id] = teamCenter + world;
+            if (engine.World.TryGet(entity, out OrderBuffer orders) && orders.HasActive)
+            {
+                activeOrders++;
+            }
+
+            if (!simulation.IsSelected(unitIndex))
+            {
+                continue;
+            }
+
+            selectedCount++;
+            selectedCenter += world;
+            Vector2 velocity = simulation.GetVelocityCmPerSecond(unitIndex);
+            selectedVelocityCenter += velocity;
+            if (velocity.LengthSquared() > MassNavMovingSpeedSquaredThreshold)
+            {
+                selectedMoving++;
+            }
+        }
+
+        var teamSummaries = new List<MassNavTeamSummary>(teamCounts.Count);
+        foreach (KeyValuePair<int, int> pair in teamCounts.OrderBy(pair => pair.Key))
+        {
+            Vector2 center = teamCenters[pair.Key] / Math.Max(1, pair.Value);
+            teamSummaries.Add(new MassNavTeamSummary(pair.Key, pair.Value, center));
+        }
+
+        if (selectedCount > 0)
+        {
+            selectedCenter /= selectedCount;
+            selectedVelocityCenter /= selectedCount;
+        }
+
+        MinimapProbeSnapshot minimapSnapshot = minimap.CaptureDebugSnapshot();
+        PresentationTimingDiagnostics? timing = engine.GetService(CoreServiceKeys.PresentationTimingDiagnostics);
+        Vector2 cameraTarget = engine.GameSession.Camera.State.TargetCm;
+        Vector2 cameraViewSize = Vector2.Zero;
+        if (engine.GetService(CoreServiceKeys.ViewController) is IViewController view)
+        {
+            var extent = CameraViewportUtil.ComputeViewportExtent(
+                engine.GameSession.Camera.State.DistanceCm,
+                engine.GameSession.Camera.State.FovYDeg,
+                engine.GameSession.Camera.State.Pitch,
+                view.AspectRatio);
+            cameraViewSize = new Vector2(extent.widthCm, extent.heightCm);
+        }
+
+        return new MassNavUatSnapshot(
+            Tick: tick,
+            Step: step,
+            TickMs: tickMs,
+            MapId: engine.CurrentMapSession?.MapId.Value ?? string.Empty,
+            WorldWidthCm: simulation.WorldWidthCm,
+            WorldHeightCm: simulation.WorldHeightCm,
+            AgentCount: simulation.TotalAgents,
+            UnitCount: simulation.UnitCount,
+            TeamCount: simulation.TeamCount,
+            TeamSummaries: teamSummaries,
+            SelectedCount: selectedCount,
+            SelectedMovingCount: selectedMoving,
+            SelectedCenterCm: selectedCenter,
+            SelectedVelocityCenterCm: selectedVelocityCenter,
+            SelectedMeanAdvanceCm: 0f,
+            ActiveGroups: simulation.ActiveGroupCount,
+            ActiveOrderGroups: simulation.ActiveOrderGroupCount,
+            ActiveOrders: activeOrders,
+            CommandTargetCm: commandTarget,
+            HasCommandFocus: simulation.HasCommandFocus,
+            CommandFocusTicksRemaining: simulation.CommandFocusTicksRemaining,
+            LastCommandSelectionCount: simulation.LastCommandSelectionCount,
+            CommandRejectsTotal: simulation.CommandRejectsTotal,
+            LastRejectedCommandCm: new Vector2(simulation.LastRejectedCommandXCm, simulation.LastRejectedCommandYCm),
+            SolverCenterCm: new Vector2(simulation.SolverWindowCenterXCm, simulation.SolverWindowCenterYCm),
+            SolverSizeCm: new Vector2(simulation.SolverWindowWidthCm, simulation.SolverWindowHeightCm),
+            FlowWorkAreaCenterCm: new Vector2(simulation.FlowWorkAreaCenterXCm, simulation.FlowWorkAreaCenterYCm),
+            FlowWorkAreaSizeCm: new Vector2(simulation.FlowWorkAreaWidthCm, simulation.FlowWorkAreaHeightCm),
+            FlowWorkAreaRevision: simulation.FlowWorkAreaRevision,
+            FlowWorkAreaReason: simulation.FlowWorkAreaReason,
+            LoadedChunkCount: simulation.LoadedChunkCount,
+            StreamingWindowUpdatesFrame: simulation.StreamingWindowUpdatesFrame,
+            CameraTargetCm: cameraTarget,
+            CameraViewSizeCm: cameraViewSize,
+            CameraDistanceCm: engine.GameSession.Camera.State.DistanceCm,
+            MinimapCenterCm: new Vector2(minimapSnapshot.CenterXcm, minimapSnapshot.CenterYcm),
+            MinimapHalfExtentCm: minimapSnapshot.HalfExtentCm,
+            MinimapVisibleSignals: minimapSnapshot.VisibleSignalCount,
+            MinimapStrategicCells: minimapSnapshot.StrategicCellCount,
+            MinimapZoomBand: minimapSnapshot.ZoomBand,
+            FrameMs: timing?.RenderFrameMs ?? 0f,
+            RenderFps: timing?.RenderFps ?? 0f,
+            StepPrepMs: simulation.StepPrepMs,
+            LocalSteeringMs: simulation.LocalSteeringMs,
+            HardResolveMs: simulation.HardResolveMs,
+            EntitySyncMs: simulation.EntitySyncMs,
+            PrimitiveEmitMs: simulation.PrimitiveEmitMs,
+            FlowFieldRebuildMs: simulation.FlowFieldRebuildMs,
+            AgentsOutsideWorld: agentsOutsideWorld,
+            AgentVisibleFraction: simulation.TotalAgents <= 0 ? 0f : simulation.CrowdSubmittedCount / (float)simulation.TotalAgents);
+    }
+
+    private static void WriteMassNavSnapshotImage(MassNavUatSnapshot snapshot, string path)
+    {
+        using var surface = SKSurface.Create(new SKImageInfo(NavImageWidth, NavImageHeight));
+        SKCanvas canvas = surface.Canvas;
+        canvas.Clear(new SKColor(8, 12, 18));
+
+        using var worldFill = new SKPaint { Color = new SKColor(20, 36, 48), Style = SKPaintStyle.Fill, IsAntialias = true };
+        using var worldStroke = new SKPaint { Color = new SKColor(88, 132, 160), Style = SKPaintStyle.Stroke, StrokeWidth = 2.2f, IsAntialias = true };
+        using var gridPaint = new SKPaint { Color = new SKColor(54, 76, 92), Style = SKPaintStyle.Stroke, StrokeWidth = 1.0f, IsAntialias = false };
+        using var cameraPaint = new SKPaint { Color = new SKColor(255, 210, 80), Style = SKPaintStyle.Stroke, StrokeWidth = 2.6f, IsAntialias = true };
+        using var flowPaint = new SKPaint { Color = new SKColor(94, 228, 92), Style = SKPaintStyle.Stroke, StrokeWidth = 2.6f, IsAntialias = true };
+        using var solverPaint = new SKPaint { Color = new SKColor(80, 190, 255), Style = SKPaintStyle.Stroke, StrokeWidth = 2.6f, IsAntialias = true };
+        using var commandPaint = new SKPaint { Color = new SKColor(255, 118, 78), Style = SKPaintStyle.Stroke, StrokeWidth = 3f, IsAntialias = true };
+        using var selectedPaint = new SKPaint { Color = new SKColor(120, 255, 80), Style = SKPaintStyle.Fill, IsAntialias = true };
+        using var textPaint = new SKPaint { Color = SKColors.White, IsAntialias = true, TextSize = 24f };
+        using var minorTextPaint = new SKPaint { Color = new SKColor(184, 198, 214), IsAntialias = true, TextSize = 17f };
+        using var failTextPaint = new SKPaint { Color = new SKColor(255, 138, 96), IsAntialias = true, TextSize = 17f };
+
+        SKRect worldRect = new(36, 78, 760, 802);
+        canvas.DrawRect(worldRect, worldFill);
+        canvas.DrawRect(worldRect, worldStroke);
+        DrawMassNavWorldGrid(canvas, worldRect, snapshot.WorldWidthCm, gridPaint);
+        DrawMassNavWorldRect(canvas, worldRect, snapshot.WorldWidthCm, snapshot.WorldHeightCm, snapshot.FlowWorkAreaCenterCm, snapshot.FlowWorkAreaSizeCm, flowPaint);
+        DrawMassNavWorldRect(canvas, worldRect, snapshot.WorldWidthCm, snapshot.WorldHeightCm, snapshot.SolverCenterCm, snapshot.SolverSizeCm, solverPaint);
+        DrawMassNavWorldRect(canvas, worldRect, snapshot.WorldWidthCm, snapshot.WorldHeightCm, snapshot.CameraTargetCm, snapshot.CameraViewSizeCm, cameraPaint);
+        foreach (MassNavTeamSummary team in snapshot.TeamSummaries)
+        {
+            using var teamPaint = new SKPaint { Color = ResolveMassNavTeamSkiaColor(team.TeamId), Style = SKPaintStyle.Fill, IsAntialias = true };
+            SKPoint p = ToMassNavWorldScreen(team.CenterCm, worldRect, snapshot.WorldWidthCm, snapshot.WorldHeightCm);
+            canvas.DrawCircle(p, 5.5f, teamPaint);
+            canvas.DrawText($"T{team.TeamId}", p.X + 8f, p.Y - 6f, minorTextPaint);
+        }
+
+        if (snapshot.SelectedCount > 0)
+        {
+            SKPoint selected = ToMassNavWorldScreen(snapshot.SelectedCenterCm, worldRect, snapshot.WorldWidthCm, snapshot.WorldHeightCm);
+            canvas.DrawCircle(selected, 7.5f, selectedPaint);
+        }
+
+        if (snapshot.HasCommandFocus)
+        {
+            DrawCrosshair(canvas, ToMassNavWorldScreen(snapshot.CommandTargetCm, worldRect, snapshot.WorldWidthCm, snapshot.WorldHeightCm), 13f, commandPaint);
+        }
+
+        float localMinX = snapshot.FlowWorkAreaCenterCm.X - MathF.Max(snapshot.FlowWorkAreaSizeCm.X, snapshot.SolverSizeCm.X) * 0.65f;
+        float localMaxX = snapshot.FlowWorkAreaCenterCm.X + MathF.Max(snapshot.FlowWorkAreaSizeCm.X, snapshot.SolverSizeCm.X) * 0.65f;
+        float localMinY = snapshot.FlowWorkAreaCenterCm.Y - MathF.Max(snapshot.FlowWorkAreaSizeCm.Y, snapshot.SolverSizeCm.Y) * 0.65f;
+        float localMaxY = snapshot.FlowWorkAreaCenterCm.Y + MathF.Max(snapshot.FlowWorkAreaSizeCm.Y, snapshot.SolverSizeCm.Y) * 0.65f;
+        SKRect localRect = new(816, 112, 1548, 804);
+        canvas.DrawRect(localRect, new SKPaint { Color = new SKColor(12, 24, 34), Style = SKPaintStyle.Fill });
+        canvas.DrawRect(localRect, worldStroke);
+        DrawWorldGrid(canvas, localMinX, localMaxX, localMinY, localMaxY, gridPaint, (int)localRect.Width, (int)localRect.Height);
+        DrawMassNavLocalRect(canvas, localRect, localMinX, localMaxX, localMinY, localMaxY, snapshot.FlowWorkAreaCenterCm, snapshot.FlowWorkAreaSizeCm, flowPaint);
+        DrawMassNavLocalRect(canvas, localRect, localMinX, localMaxX, localMinY, localMaxY, snapshot.SolverCenterCm, snapshot.SolverSizeCm, solverPaint);
+        DrawMassNavLocalRect(canvas, localRect, localMinX, localMaxX, localMinY, localMaxY, snapshot.CameraTargetCm, snapshot.CameraViewSizeCm, cameraPaint);
+        foreach (MassNavTeamSummary team in snapshot.TeamSummaries)
+        {
+            if (team.CenterCm.X < localMinX || team.CenterCm.X > localMaxX || team.CenterCm.Y < localMinY || team.CenterCm.Y > localMaxY)
+            {
+                continue;
+            }
+
+            using var teamPaint = new SKPaint { Color = ResolveMassNavTeamSkiaColor(team.TeamId), Style = SKPaintStyle.Fill, IsAntialias = true };
+            SKPoint p = ToMassNavLocalScreen(team.CenterCm, localRect, localMinX, localMaxX, localMinY, localMaxY);
+            canvas.DrawCircle(p, 6f, teamPaint);
+            canvas.DrawText($"T{team.TeamId} {team.Count}", p.X + 9f, p.Y - 6f, minorTextPaint);
+        }
+
+        if (snapshot.SelectedCount > 0 &&
+            snapshot.SelectedCenterCm.X >= localMinX && snapshot.SelectedCenterCm.X <= localMaxX &&
+            snapshot.SelectedCenterCm.Y >= localMinY && snapshot.SelectedCenterCm.Y <= localMaxY)
+        {
+            canvas.DrawCircle(ToMassNavLocalScreen(snapshot.SelectedCenterCm, localRect, localMinX, localMaxX, localMinY, localMaxY), 9f, selectedPaint);
+        }
+
+        canvas.DrawText($"MassNavWebParity Large-World RTS UAT | {snapshot.Step} | tick={snapshot.Tick}", 24, 34, textPaint);
+        canvas.DrawText($"64km world | agents={snapshot.AgentCount} teams={snapshot.TeamCount} selected={snapshot.SelectedCount} moving={snapshot.SelectedMovingCount} groups={snapshot.ActiveGroups}/{snapshot.ActiveOrderGroups}", 24, 62, minorTextPaint);
+        canvas.DrawText($"WorkArea {FormatPoint(snapshot.FlowWorkAreaCenterCm)} size={snapshot.FlowWorkAreaSizeCm.X / 100f:0}x{snapshot.FlowWorkAreaSizeCm.Y / 100f:0}m reason={snapshot.FlowWorkAreaReason} rev={snapshot.FlowWorkAreaRevision}", 816, 62, minorTextPaint);
+        canvas.DrawText($"Solver {FormatPoint(snapshot.SolverCenterCm)} size={snapshot.SolverSizeCm.X / 100f:0}x{snapshot.SolverSizeCm.Y / 100f:0}m chunks={snapshot.LoadedChunkCount} minimap={snapshot.MinimapZoomBand}", 816, 88, minorTextPaint);
+        canvas.DrawText($"Camera {FormatPoint(snapshot.CameraTargetCm)} view={snapshot.CameraViewSizeCm.X / 100f:0}x{snapshot.CameraViewSizeCm.Y / 100f:0}m command={(snapshot.HasCommandFocus ? FormatPoint(snapshot.CommandTargetCm) : "none")}", 816, 830, minorTextPaint);
+        canvas.DrawText($"timing headlessTick={snapshot.TickMs:0.00}ms liveFPS=not recorded steer={snapshot.LocalSteeringMs:0.00} resolve={snapshot.HardResolveMs:0.00} sync={snapshot.EntitySyncMs:0.00} prim={snapshot.PrimitiveEmitMs:0.00}", 816, 856, minorTextPaint);
+        canvas.DrawText($"rejects={snapshot.CommandRejectsTotal} lastReject={FormatPoint(snapshot.LastRejectedCommandCm)} activeOrders={snapshot.ActiveOrders} outsideWorld={snapshot.AgentsOutsideWorld} visibleFraction={snapshot.AgentVisibleFraction:P1}", 816, 882, snapshot.CommandRejectsTotal > 0 || snapshot.AgentsOutsideWorld > 0 ? failTextPaint : minorTextPaint);
+
+        using SKImage image = surface.Snapshot();
+        using SKData data = image.Encode(SKEncodedImageFormat.Png, 100);
+        using FileStream stream = File.Open(path, FileMode.Create, FileAccess.Write, FileShare.None);
+        data.SaveTo(stream);
+    }
+
+    private static void AddMassNavMemorySample(
+        List<MassNavMemorySample> samples,
+        string label,
+        long baselineBytes,
+        long currentBytes)
+    {
+        samples.Add(new MassNavMemorySample(label, currentBytes, currentBytes - baselineBytes));
+    }
+
+    private static MassNavUatAcceptance EvaluateMassNavUat(
+        IReadOnlyList<MassNavUatSnapshot> timeline,
+        int rejectsBeforeInvalidCase,
+        int rejectsBeforeBoundaryCases,
+        long managedMemoryGrowthBytes,
+        long managedMemoryResetDeltaBytes,
+        long steadyManagedGrowthBytes,
+        long steadyAllocatedBytes)
+    {
+        var failures = new List<string>();
+        MassNavUatSnapshot start = timeline.First(snapshot => snapshot.Step == "000_start");
+        MassNavUatSnapshot selection = timeline.First(snapshot => snapshot.Step == "020_selection_sample");
+        MassNavUatSnapshot commandAccepted = timeline.First(snapshot => snapshot.Step == "030_command_accepted_far");
+        MassNavUatSnapshot afterAdvance = timeline.Where(snapshot => snapshot.Step.Contains("_advance_", StringComparison.Ordinal)).Last();
+        MassNavUatSnapshot invalid = timeline.First(snapshot => snapshot.Step == "420_invalid_command_rejected");
+        MassNavUatSnapshot afterReset = timeline.First(snapshot => snapshot.Step == "440_after_reset");
+        MassNavUatSnapshot secondCommandAccepted = timeline.First(snapshot => snapshot.Step == "460_second_command_accepted");
+        MassNavUatSnapshot afterSecondSoak = timeline.Where(snapshot => snapshot.Step.Contains("_soak_", StringComparison.Ordinal)).Last();
+        MassNavUatSnapshot emptyWorldCommandAccepted = timeline.First(snapshot => snapshot.Step == "1500_empty_world_command_accepted");
+        MassNavUatSnapshot emptyWorldProgress = timeline.First(snapshot => snapshot.Step == "1680_empty_world_command_progress");
+        MassNavUatSnapshot final = timeline[^1];
+
+        float firstCommandAdvance = Vector2.Distance(afterAdvance.SelectedCenterCm, commandAccepted.SelectedCenterCm);
+        float secondCommandAdvance = Vector2.Distance(afterSecondSoak.SelectedCenterCm, secondCommandAccepted.SelectedCenterCm);
+        float emptyWorldAdvance = Vector2.Distance(emptyWorldProgress.SelectedCenterCm, emptyWorldCommandAccepted.SelectedCenterCm);
+        float[] multiTeamAdvance = ComputeMultiTeamAdvancePairs(timeline);
+        float[] edgeInsideAdvance = ComputeEdgeInsideAdvancePairs(timeline);
+        int boundaryRejectsAdded = final.CommandRejectsTotal - rejectsBeforeBoundaryCases;
+        int maxAgentsOutsideWorld = timeline.Count == 0 ? 0 : timeline.Max(snapshot => snapshot.AgentsOutsideWorld);
+
+        AddAcceptanceCheck(start.WorldWidthCm == 6_400_000 && start.WorldHeightCm == 6_400_000, $"World should be 64km x 64km in centimeters, got {start.WorldWidthCm}x{start.WorldHeightCm}.", failures);
+        AddAcceptanceCheck(start.AgentCount == start.UnitCount && start.AgentCount > 0, $"Agent ECS/runtime count mismatch or empty: agents={start.AgentCount} units={start.UnitCount}.", failures);
+        AddAcceptanceCheck(start.TeamCount >= 4, $"Expected at least four dynamic teams, got {start.TeamCount}.", failures);
+        AddAcceptanceCheck(maxAgentsOutsideWorld == 0, $"Agents must never leave the configured world; max outside count was {maxAgentsOutsideWorld}.", failures);
+        AddAcceptanceCheck(start.MinimapHalfExtentCm >= start.WorldWidthCm * 0.49f, $"Minimap should start as full-world RTS map, halfExtent={start.MinimapHalfExtentCm:F0}.", failures);
+        AddAcceptanceCheck(timeline.Count(snapshot => snapshot.Step.Contains("minimap_jump", StringComparison.Ordinal)) >= MassNavCameraTargets.Length, "Camera/minimap jump coverage did not record every configured target.", failures);
+        AddAcceptanceCheck(CameraJumpTargetsReached(timeline, out string cameraFailure), cameraFailure, failures);
+        AddAcceptanceCheck(WorldRectsStayInsideWorld(timeline, out string rectFailure), rectFailure, failures);
+        AddAcceptanceCheck(selection.SelectedCount > 0, "Selection sample did not populate the formal selection runtime.", failures);
+        AddAcceptanceCheck(commandAccepted.ActiveOrderGroups > 0 || commandAccepted.ActiveOrders > 0, "Selection move command did not become an active order/nav group.", failures);
+        AddAcceptanceCheck(commandAccepted.HasCommandFocus && commandAccepted.LastCommandSelectionCount == selection.SelectedCount, $"Command focus should retain the selected group count, got focus={commandAccepted.HasCommandFocus}, count={commandAccepted.LastCommandSelectionCount}/{selection.SelectedCount}.", failures);
+        AddAcceptanceCheck(firstCommandAdvance > MassNavMovementMinimumCm, $"Selected group advanced only {firstCommandAdvance:F0}cm after first far-world command.", failures);
+        AddAcceptanceCheck(invalid.CommandRejectsTotal > rejectsBeforeInvalidCase, "Out-of-world command should be rejected and diagnosed.", failures);
+        AddAcceptanceCheck(afterReset.SelectedCount == 0 && afterReset.ActiveGroups == 0 && afterReset.ActiveOrderGroups == 0, $"Reset should clear selection/groups, got selection={afterReset.SelectedCount}, groups={afterReset.ActiveGroups}/{afterReset.ActiveOrderGroups}.", failures);
+        AddAcceptanceCheck(final.FlowWorkAreaRevision >= commandAccepted.FlowWorkAreaRevision, "Flow work-area revision should remain monotonic across command/reset/soak.", failures);
+        AddAcceptanceCheck(final.LoadedChunkCount > 0, "Streaming chunk view should stay active after long soak.", failures);
+        AddAcceptanceCheck(secondCommandAdvance > MassNavMovementMinimumCm * 0.5f, $"Selected group advanced only {secondCommandAdvance:F0}cm after reset and second command.", failures);
+        AddAcceptanceCheck(emptyWorldCommandAccepted.HasCommandFocus && emptyWorldCommandAccepted.ActiveOrders > 0, "Empty-world command should be accepted as a normal in-bounds RTS destination.", failures);
+        AddAcceptanceCheck(emptyWorldAdvance > MassNavMovementMinimumCm * 0.5f, $"Selected group advanced only {emptyWorldAdvance:F0}cm after empty-world command.", failures);
+        AddAcceptanceCheck(multiTeamAdvance.Length >= Math.Min(MassNavMultiTeamCommandTargets.Length, start.TeamCount), $"Multi-team command coverage should include every configured dynamic team, got {multiTeamAdvance.Length}.", failures);
+        for (int i = 0; i < multiTeamAdvance.Length; i++)
+        {
+            AddAcceptanceCheck(multiTeamAdvance[i] > MassNavMovementMinimumCm * 0.5f, $"Team command {i} advanced only {multiTeamAdvance[i]:F0}cm.", failures);
+        }
+
+        AddAcceptanceCheck(edgeInsideAdvance.Length >= MassNavEdgeInsideCommandTargets.Length, $"Near-edge in-bounds command coverage should include {MassNavEdgeInsideCommandTargets.Length} legal world points, got {edgeInsideAdvance.Length}.", failures);
+        for (int i = 0; i < edgeInsideAdvance.Length; i++)
+        {
+            AddAcceptanceCheck(edgeInsideAdvance[i] > MassNavEdgeMovementMinimumCm, $"Near-edge legal command {i} advanced only {edgeInsideAdvance[i]:F0}cm.", failures);
+        }
+
+        AddAcceptanceCheck(boundaryRejectsAdded >= MassNavInvalidCommandTargets.Length, $"Boundary rejection coverage should diagnose {MassNavInvalidCommandTargets.Length} out-of-world commands, got {boundaryRejectsAdded}.", failures);
+        AddAcceptanceCheck(managedMemoryGrowthBytes <= MassNavManagedMemoryGrowthLimitBytes || steadyManagedGrowthBytes <= MassNavSteadyManagedGrowthLimitBytes, $"Managed memory grew by {managedMemoryGrowthBytes / 1024 / 1024}MB after warm baseline and {steadyManagedGrowthBytes / 1024 / 1024}MB during steady probe; limits are {MassNavManagedMemoryGrowthLimitBytes / 1024 / 1024}MB total or {MassNavSteadyManagedGrowthLimitBytes / 1024 / 1024}MB steady.", failures);
+        AddAcceptanceCheck(managedMemoryResetDeltaBytes <= MassNavManagedMemoryGrowthLimitBytes, $"Managed memory grew by {managedMemoryResetDeltaBytes / 1024 / 1024}MB across reset; limit is {MassNavManagedMemoryGrowthLimitBytes / 1024 / 1024}MB.", failures);
+        AddAcceptanceCheck(steadyAllocatedBytes <= MassNavSteadyAllocatedBytesLimit, $"Steady-state probe allocated {steadyAllocatedBytes / 1024 / 1024}MB over {MassNavSteadyStateProbeTicks} ticks; limit is {MassNavSteadyAllocatedBytesLimit / 1024 / 1024}MB.", failures);
+
+        string normalizedSignature = string.Join("|", new[]
+        {
+            "mass_nav_web_parity_large_world_rts_uat",
+            $"agents:{start.AgentCount}",
+            $"teams:{start.TeamCount}",
+            $"firstAdvance:{MathF.Round(firstCommandAdvance):F0}",
+            $"secondAdvance:{MathF.Round(secondCommandAdvance):F0}",
+            $"emptyAdvance:{MathF.Round(emptyWorldAdvance):F0}",
+            $"multiTeamMin:{MathF.Round(MinOrZero(multiTeamAdvance)):F0}",
+            $"edgeMin:{MathF.Round(MinOrZero(edgeInsideAdvance)):F0}",
+            $"workRev:{final.FlowWorkAreaRevision}",
+            $"rejects:{final.CommandRejectsTotal}",
+            $"boundaryRejects:{boundaryRejectsAdded}",
+            $"chunks:{final.LoadedChunkCount}"
+        });
+
+        string verdict = failures.Count == 0
+            ? $"MassNavWebParity large-world RTS UAT passes: 64km minimap/camera jumps are visible, formal selection/order moved agents, reset cleared runtime groups, and invalid world commands were diagnosed."
+            : "MassNavWebParity large-world RTS UAT fails: one or more player-facing RTS control guarantees did not hold.";
+        return new MassNavUatAcceptance(
+            Success: failures.Count == 0,
+            Verdict: verdict,
+            FailureSummary: failures.Count == 0 ? verdict : string.Join(Environment.NewLine, failures),
+            FailedChecks: failures,
+            FirstCommandAdvanceCm: firstCommandAdvance,
+            SecondCommandAdvanceCm: secondCommandAdvance,
+            EmptyWorldAdvanceCm: emptyWorldAdvance,
+            MultiTeamAdvanceCm: multiTeamAdvance,
+            EdgeInsideAdvanceCm: edgeInsideAdvance,
+            BoundaryRejectsAdded: boundaryRejectsAdded,
+            ManagedMemoryGrowthBytes: managedMemoryGrowthBytes,
+            ManagedMemoryResetDeltaBytes: managedMemoryResetDeltaBytes,
+            SteadyManagedGrowthBytes: steadyManagedGrowthBytes,
+            SteadyAllocatedBytes: steadyAllocatedBytes,
+            FinalLoadedChunks: final.LoadedChunkCount,
+            FinalWorkAreaRevision: final.FlowWorkAreaRevision,
+            FinalRejects: final.CommandRejectsTotal,
+            NormalizedSignature: normalizedSignature);
+    }
+
+    private static bool CameraJumpTargetsReached(IReadOnlyList<MassNavUatSnapshot> timeline, out string failure)
+    {
+        for (int i = 0; i < MassNavCameraTargets.Length; i++)
+        {
+            string step = $"{10 + i:000}_minimap_jump_{i}";
+            MassNavUatSnapshot snapshot = timeline.FirstOrDefault(item => item.Step == step);
+            if (string.IsNullOrEmpty(snapshot.Step))
+            {
+                failure = $"Missing camera jump snapshot '{step}'.";
+                return false;
+            }
+
+            float distanceCm = Vector2.Distance(snapshot.CameraTargetCm, MassNavCameraTargets[i]);
+            if (distanceCm > MassNavCameraJumpToleranceCm)
+            {
+                failure = $"Camera jump '{step}' landed {distanceCm:F0}cm away from target {FormatPoint(MassNavCameraTargets[i])}.";
+                return false;
+            }
+        }
+
+        failure = string.Empty;
+        return true;
+    }
+
+    private static float[] ComputeEdgeInsideAdvancePairs(IReadOnlyList<MassNavUatSnapshot> timeline)
+    {
+        var advances = new List<float>();
+        for (int i = 0; i < MassNavEdgeInsideCommandTargets.Length; i++)
+        {
+            string acceptedStep = $"180{i}_edge_inside_command_accepted_{i}";
+            string progressStep = $"181{i}_edge_inside_command_progress_{i}";
+            MassNavUatSnapshot accepted = timeline.FirstOrDefault(snapshot => snapshot.Step == acceptedStep);
+            MassNavUatSnapshot progress = timeline.FirstOrDefault(snapshot => snapshot.Step == progressStep);
+            if (string.IsNullOrEmpty(accepted.Step) || string.IsNullOrEmpty(progress.Step))
+            {
+                continue;
+            }
+
+            advances.Add(Vector2.Distance(progress.SelectedCenterCm, accepted.SelectedCenterCm));
+        }
+
+        return advances.ToArray();
+    }
+
+    private static float[] ComputeMultiTeamAdvancePairs(IReadOnlyList<MassNavUatSnapshot> timeline)
+    {
+        var advances = new List<float>();
+        for (int i = 0; i < MassNavMultiTeamCommandTargets.Length; i++)
+        {
+            string acceptedMarker = $"_team_";
+            string acceptedSuffix = "_command_accepted";
+            string progressPrefix = $"170{i}_team_";
+            MassNavUatSnapshot accepted = timeline.FirstOrDefault(snapshot =>
+                snapshot.Step.StartsWith($"169{i}_team_", StringComparison.Ordinal) &&
+                snapshot.Step.Contains(acceptedMarker, StringComparison.Ordinal) &&
+                snapshot.Step.EndsWith(acceptedSuffix, StringComparison.Ordinal));
+            MassNavUatSnapshot progress = timeline.FirstOrDefault(snapshot =>
+                snapshot.Step.StartsWith(progressPrefix, StringComparison.Ordinal) &&
+                snapshot.Step.EndsWith("_command_progress", StringComparison.Ordinal));
+            if (string.IsNullOrEmpty(accepted.Step) || string.IsNullOrEmpty(progress.Step))
+            {
+                continue;
+            }
+
+            advances.Add(Vector2.Distance(progress.SelectedCenterCm, accepted.SelectedCenterCm));
+        }
+
+        return advances.ToArray();
+    }
+
+    private static bool WorldRectsStayInsideWorld(IReadOnlyList<MassNavUatSnapshot> timeline, out string failure)
+    {
+        foreach (MassNavUatSnapshot snapshot in timeline)
+        {
+            if (!RectInsideWorld(snapshot.SolverCenterCm, snapshot.SolverSizeCm, snapshot.WorldWidthCm, snapshot.WorldHeightCm, toleranceCm: 2f))
+            {
+                failure = $"Solver window left world bounds at '{snapshot.Step}': center={FormatPoint(snapshot.SolverCenterCm)} size={snapshot.SolverSizeCm.X:F0}x{snapshot.SolverSizeCm.Y:F0}.";
+                return false;
+            }
+
+            if (!RectInsideWorld(snapshot.FlowWorkAreaCenterCm, snapshot.FlowWorkAreaSizeCm, snapshot.WorldWidthCm, snapshot.WorldHeightCm, toleranceCm: 2f))
+            {
+                failure = $"Flow work area left world bounds at '{snapshot.Step}': center={FormatPoint(snapshot.FlowWorkAreaCenterCm)} size={snapshot.FlowWorkAreaSizeCm.X:F0}x{snapshot.FlowWorkAreaSizeCm.Y:F0}.";
+                return false;
+            }
+        }
+
+        failure = string.Empty;
+        return true;
+    }
+
+    private static bool RectInsideWorld(Vector2 centerCm, Vector2 sizeCm, int worldWidthCm, int worldHeightCm, float toleranceCm)
+    {
+        float minX = -worldWidthCm * 0.5f - toleranceCm;
+        float maxX = worldWidthCm * 0.5f + toleranceCm;
+        float minY = -worldHeightCm * 0.5f - toleranceCm;
+        float maxY = worldHeightCm * 0.5f + toleranceCm;
+        return centerCm.X - sizeCm.X * 0.5f >= minX &&
+            centerCm.X + sizeCm.X * 0.5f <= maxX &&
+            centerCm.Y - sizeCm.Y * 0.5f >= minY &&
+            centerCm.Y + sizeCm.Y * 0.5f <= maxY;
+    }
+
+    private static float MinOrZero(IReadOnlyList<float> values)
+    {
+        return values.Count == 0 ? 0f : values.Min();
+    }
+
+    private static string FormatFloatList(IReadOnlyList<float> values)
+    {
+        return values.Count == 0
+            ? "none"
+            : string.Join(", ", values.Select(value => value.ToString("F0", CultureInfo.InvariantCulture)));
+    }
+
+    private static string BuildMassNavBattleReport(
+        LauncherRecordingRequest request,
+        IReadOnlyList<MassNavUatSnapshot> timeline,
+        IReadOnlyList<CaptureFrame> captureFrames,
+        IReadOnlyList<double> frameTimesMs,
+        MassNavUatAcceptance acceptance,
+        IReadOnlyList<MassNavMemorySample> memorySamples)
+    {
+        MassNavUatSnapshot final = timeline[^1];
+        double medianTickMs = Median(frameTimesMs.ToArray());
+        double maxTickMs = frameTimesMs.Count == 0 ? 0d : frameTimesMs.Max();
+        double warmTickMs = Median(frameTimesMs.Skip(Math.Min(120, frameTimesMs.Count)).ToArray());
+        if (double.IsNaN(warmTickMs))
+        {
+            warmTickMs = medianTickMs;
+        }
+
+        string evidenceImages = string.Join(", ", captureFrames.Select(frame => $"`screens/{frame.FileName}`").Append("`screens/timeline.png`"));
+
+        var sb = new StringBuilder();
+        sb.AppendLine("# Scenario Card: mass-nav-web-parity-large-world-rts-uat");
+        sb.AppendLine();
+        sb.AppendLine("## Intent");
+        sb.AppendLine("- Player goal: verify this behaves like a standard RTS minimap on a 64km battlefield: look anywhere, select units, command them to a far world point, and see the active work area instead of engine internals.");
+        sb.AppendLine("- Gameplay domain: real launcher bootstrap, real `MassNavWebParityMod`, formal Ludots selection runtime, GAS `OrderBuffer`, minimap runtime, camera service, and MassNav solver cache diagnostics.");
+        sb.AppendLine();
+        sb.AppendLine("## Determinism Inputs");
+        sb.AppendLine("- Seed: runtime default");
+        sb.AppendLine("- Map: `mods/showcases/navigation/MassNavWebParityMod/assets/Maps/mass_nav_web_parity.json`");
+        sb.AppendLine($"- Adapter: `{request.Plan.AdapterId}`");
+        sb.AppendLine($"- Launch command: `{request.CommandText}`");
+        sb.AppendLine($"- World size: `{timeline[0].WorldWidthCm / 100_000f:0.#}km x {timeline[0].WorldHeightCm / 100_000f:0.#}km`");
+        sb.AppendLine($"- Agents: `{timeline[0].AgentCount}` across `{timeline[0].TeamCount}` teams");
+        sb.AppendLine($"- Evidence images: {evidenceImages}");
+        sb.AppendLine();
+        sb.AppendLine("## Action Script");
+        sb.AppendLine("1. Boot MassNavWebParity through the launcher graph and confirm the full-world minimap is visible.");
+        sb.AppendLine("2. Jump the camera to center, east-front, southwest, and northeast world coordinates through the minimap request path.");
+        sb.AppendLine("3. Include far corners and empty world coordinates so the minimap behaves like a normal RTS map instead of named playable regions.");
+        sb.AppendLine("4. Populate the formal Ludots live selection set with a team sample, then submit a GAS `massNavMove` order to a far world target.");
+        sb.AppendLine("5. Run the sim long enough to prove selected units actually move and the flow work-area remains tied to camera/command focus.");
+        sb.AppendLine("6. Submit an out-of-world command and require a diagnostic rejection.");
+        sb.AppendLine("7. Reset the scene, verify selection/groups/orders are cleared, command again, command an empty in-bounds world point, then soak.");
+        sb.AppendLine("8. Select each dynamic team in turn and submit an independent move order.");
+        sb.AppendLine("9. Command all four near-edge corners and all four near-edge side midpoints as legal RTS destinations.");
+        sb.AppendLine("10. Probe every world boundary with invalid commands and require explicit rejects instead of clamp/fallback behavior.");
+        sb.AppendLine();
+        sb.AppendLine("## Expected Outcomes");
+        sb.AppendLine("- The designer sees one 64km RTS map, not a concept named nearest playable region.");
+        sb.AppendLine("- The minimap/camera can inspect any world coordinate.");
+        sb.AppendLine("- Selection and command use Ludots formal selection/order infrastructure.");
+        sb.AppendLine("- Flow work-area and solver cache are visibly distinct: work-area is the player/request envelope, solver cache is the current SoA window.");
+        sb.AppendLine("- Reset clears runtime group state and does not leave stale selection/order data.");
+        sb.AppendLine("- Every dynamic team can be selected and commanded independently through the same formal path.");
+        sb.AppendLine("- Invalid world commands are rejected as errors with diagnostics, not silently clamped.");
+        sb.AppendLine("- Near-edge in-bounds world coordinates on every side still accept normal camera and move commands.");
+        sb.AppendLine("- No agent, solver window, or flow work-area leaves the configured world bounds.");
+        sb.AppendLine("- This recorder is a headless launcher evidence run. It reports simulation tick and solver buckets; live render FPS must be measured in the Raylib window or a dedicated renderer benchmark.");
+        sb.AppendLine();
+        sb.AppendLine("## Timeline");
+        foreach (MassNavUatSnapshot snapshot in timeline.Where(item => item.Step.EndsWith("start", StringComparison.Ordinal) || item.Step.Contains("jump", StringComparison.Ordinal) || item.Step.Contains("command", StringComparison.Ordinal) || item.Step.Contains("reset", StringComparison.Ordinal) || item.Step.Contains("soak", StringComparison.Ordinal)))
+        {
+            sb.AppendLine($"- [T+{snapshot.Tick:000}] {snapshot.Step} | cam={FormatPoint(snapshot.CameraTargetCm)} | selected={snapshot.SelectedCount} moving={snapshot.SelectedMovingCount} | groups={snapshot.ActiveGroups}/{snapshot.ActiveOrderGroups} | work={FormatPoint(snapshot.FlowWorkAreaCenterCm)} {snapshot.FlowWorkAreaSizeCm.X / 100f:0}x{snapshot.FlowWorkAreaSizeCm.Y / 100f:0}m | solver={FormatPoint(snapshot.SolverCenterCm)} | chunks={snapshot.LoadedChunkCount} | tick={snapshot.TickMs:F3}ms");
+        }
+
+        sb.AppendLine();
+        sb.AppendLine("## Outcome");
+        sb.AppendLine($"- success: {(acceptance.Success ? "yes" : "no")}");
+        sb.AppendLine($"- verdict: {acceptance.Verdict}");
+        foreach (string failedCheck in acceptance.FailedChecks)
+        {
+            sb.AppendLine($"- failed-check: {failedCheck}");
+        }
+
+        sb.AppendLine($"- first command advance: `{acceptance.FirstCommandAdvanceCm:F0}cm`");
+        sb.AppendLine($"- second command advance: `{acceptance.SecondCommandAdvanceCm:F0}cm`");
+        sb.AppendLine($"- empty-world command advance: `{acceptance.EmptyWorldAdvanceCm:F0}cm`");
+        sb.AppendLine($"- multi-team command advances: `{FormatFloatList(acceptance.MultiTeamAdvanceCm)}cm`");
+        sb.AppendLine($"- near-edge in-bounds command advances: `{FormatFloatList(acceptance.EdgeInsideAdvanceCm)}cm`");
+        sb.AppendLine($"- final work-area revision: `{acceptance.FinalWorkAreaRevision}`");
+        sb.AppendLine($"- final loaded chunks: `{acceptance.FinalLoadedChunks}`");
+        sb.AppendLine($"- final invalid command rejects: `{acceptance.FinalRejects}`");
+        sb.AppendLine($"- boundary rejects added: `{acceptance.BoundaryRejectsAdded}`");
+        sb.AppendLine($"- managed memory growth after warm baseline: `{acceptance.ManagedMemoryGrowthBytes / 1024d / 1024d:F2}MB`");
+        sb.AppendLine($"- managed memory growth across reset: `{acceptance.ManagedMemoryResetDeltaBytes / 1024d / 1024d:F2}MB`");
+        sb.AppendLine($"- steady managed growth over {MassNavSteadyStateProbeTicks} ticks: `{acceptance.SteadyManagedGrowthBytes / 1024d / 1024d:F2}MB`");
+        sb.AppendLine($"- steady allocated bytes over {MassNavSteadyStateProbeTicks} ticks: `{acceptance.SteadyAllocatedBytes / 1024d / 1024d:F2}MB`");
+        sb.AppendLine();
+        sb.AppendLine("## Memory Timeline");
+        foreach (MassNavMemorySample sample in memorySamples)
+        {
+            sb.AppendLine($"- {sample.Label}: managed `{sample.ManagedBytes / 1024d / 1024d:F2}MB`, delta-from-warm `{sample.DeltaFromWarmBytes / 1024d / 1024d:F2}MB`");
+        }
+
+        sb.AppendLine();
+        sb.AppendLine("## Summary Stats");
+        sb.AppendLine($"- trace samples: `{timeline.Count}`");
+        sb.AppendLine($"- screenshot captures: `{captureFrames.Count}`");
+        sb.AppendLine($"- median headless tick: `{medianTickMs:F3}ms`");
+        sb.AppendLine($"- warm median headless tick: `{warmTickMs:F3}ms`");
+        sb.AppendLine($"- max headless tick: `{maxTickMs:F3}ms`");
+        sb.AppendLine("- render FPS sample: `not recorded in headless evidence mode`");
+        sb.AppendLine($"- final timing buckets: steer `{final.LocalSteeringMs:F3}ms`, resolve `{final.HardResolveMs:F3}ms`, sync `{final.EntitySyncMs:F3}ms`, primitive `{final.PrimitiveEmitMs:F3}ms`");
+        sb.AppendLine($"- normalized signature: `{acceptance.NormalizedSignature}`");
+        sb.AppendLine("- reusable wiring: `MassNavWebParityKeys.SimulationRuntime`, `SelectionRuntime`, `OrderBufferSystem`, `MinimapControlRuntime`, `CameraPoseRequest`");
+        return sb.ToString();
+    }
+
+    private static string BuildMassNavTraceJsonl(string adapterId, IReadOnlyList<MassNavUatSnapshot> timeline)
+    {
+        var lines = new List<string>(timeline.Count);
+        for (int index = 0; index < timeline.Count; index++)
+        {
+            MassNavUatSnapshot snapshot = timeline[index];
+            lines.Add(JsonSerializer.Serialize(new
+            {
+                event_id = $"mass-nav-{adapterId}-{index + 1:000}",
+                tick = snapshot.Tick,
+                step = snapshot.Step,
+                map_id = snapshot.MapId,
+                world_width_cm = snapshot.WorldWidthCm,
+                world_height_cm = snapshot.WorldHeightCm,
+                agents = snapshot.AgentCount,
+                teams = snapshot.TeamCount,
+                selected = snapshot.SelectedCount,
+                selected_moving = snapshot.SelectedMovingCount,
+                active_groups = snapshot.ActiveGroups,
+                active_order_groups = snapshot.ActiveOrderGroups,
+                active_orders = snapshot.ActiveOrders,
+                command_focus = snapshot.HasCommandFocus,
+                command_target_x = Math.Round(snapshot.CommandTargetCm.X, 2),
+                command_target_y = Math.Round(snapshot.CommandTargetCm.Y, 2),
+                command_focus_ticks = snapshot.CommandFocusTicksRemaining,
+                command_rejects_total = snapshot.CommandRejectsTotal,
+                camera_x = Math.Round(snapshot.CameraTargetCm.X, 2),
+                camera_y = Math.Round(snapshot.CameraTargetCm.Y, 2),
+                camera_view_width_cm = Math.Round(snapshot.CameraViewSizeCm.X, 2),
+                camera_view_height_cm = Math.Round(snapshot.CameraViewSizeCm.Y, 2),
+                work_area_x = Math.Round(snapshot.FlowWorkAreaCenterCm.X, 2),
+                work_area_y = Math.Round(snapshot.FlowWorkAreaCenterCm.Y, 2),
+                work_area_width_cm = Math.Round(snapshot.FlowWorkAreaSizeCm.X, 2),
+                work_area_height_cm = Math.Round(snapshot.FlowWorkAreaSizeCm.Y, 2),
+                work_area_revision = snapshot.FlowWorkAreaRevision,
+                work_area_reason = snapshot.FlowWorkAreaReason,
+                solver_x = Math.Round(snapshot.SolverCenterCm.X, 2),
+                solver_y = Math.Round(snapshot.SolverCenterCm.Y, 2),
+                loaded_chunks = snapshot.LoadedChunkCount,
+                minimap_center_x = Math.Round(snapshot.MinimapCenterCm.X, 2),
+                minimap_center_y = Math.Round(snapshot.MinimapCenterCm.Y, 2),
+                minimap_half_extent_cm = Math.Round(snapshot.MinimapHalfExtentCm, 2),
+                minimap_band = snapshot.MinimapZoomBand,
+                headless_tick_ms = Math.Round(snapshot.TickMs, 4),
+                live_render_fps_recorded = false,
+                render_fps = (double?)null,
+                step_prep_ms = Math.Round(snapshot.StepPrepMs, 4),
+                steering_ms = Math.Round(snapshot.LocalSteeringMs, 4),
+                hard_resolve_ms = Math.Round(snapshot.HardResolveMs, 4),
+                entity_sync_ms = Math.Round(snapshot.EntitySyncMs, 4),
+                primitive_emit_ms = Math.Round(snapshot.PrimitiveEmitMs, 4),
+                agents_outside_world = snapshot.AgentsOutsideWorld,
+                status = "done"
+            }));
+        }
+
+        return string.Join(Environment.NewLine, lines) + Environment.NewLine;
+    }
+
+    private static string BuildMassNavPathMermaid()
+    {
+        return string.Join(Environment.NewLine, new[]
+        {
+            "flowchart TD",
+            "    A[Boot launcher runtime for MassNavWebParityMod] --> B[Verify 64km minimap and visible work-area diagnostics]",
+            "    B --> C[Jump camera through minimap requests to contacts, corners, and empty coordinates]",
+            "    C --> D[Write formal Ludots live selection set]",
+            "    D --> E[Submit GAS massNavMove order to far world target]",
+            "    E --> F[Run movement window and capture work-area plus solver-cache state]",
+            "    F --> G[Reject out-of-world command with diagnostics]",
+            "    G --> H[Reset scene and verify selection/groups are cleared]",
+            "    H --> I[Submit second command and soak]",
+            "    I --> J[Submit empty in-bounds world command]",
+            "    J --> K[Command every dynamic team independently]",
+            "    K --> N[Command every near-edge in-bounds world point]",
+            "    N --> O[Reject every out-of-world boundary probe explicitly]",
+            "    O --> L{RTS control contract still holds?}",
+            "    L -->|yes| M[Write battle-report + trace + path + PNG timeline]",
+            "    L -->|no| X[Fail acceptance with player-facing reason]"
+        }) + Environment.NewLine;
+    }
+
+    private static string BuildMassNavVisibleChecklist(IReadOnlyList<CaptureFrame> frames)
+    {
+        var sb = new StringBuilder();
+        sb.AppendLine("# Visible Checklist: mass-nav-web-parity-large-world-rts-uat");
+        sb.AppendLine();
+        sb.AppendLine("- Left panel in every PNG is the 64km RTS map: yellow camera rectangle, green flow work-area, blue solver cache, and team centers.");
+        sb.AppendLine("- Right panel is the current tactical/local inspection window: work-area and solver cache must stay distinguishable.");
+        sb.AppendLine("- After command frames, selected center and command target should be visible and the group metrics should be non-zero.");
+        sb.AppendLine("- After reset frame, selected/groups should read zero before the second command starts.");
+        sb.AppendLine("- Empty-world command frames prove the player can command any in-bounds coordinate, not just named contacts.");
+        sb.AppendLine("- Multi-team command frames prove each dynamic team can own its own selected move order.");
+        sb.AppendLine("- Edge-inside command frames prove all four corners and four side midpoints remain legal RTS destinations.");
+        sb.AppendLine("- Boundary rejection frames prove invalid commands fail loudly instead of silently clamping to a fallback point.");
+        sb.AppendLine("- `screens/timeline.png` is the compact strip for side-by-side review.");
+        sb.AppendLine();
+        Vector2? previousSelectedCenter = null;
+        foreach (CaptureFrame frame in frames)
+        {
+            string visible = frame.Team1CrossedFraction > 0f ? "yes" : "no";
+            float selectedDelta = 0f;
+            if (previousSelectedCenter.HasValue && frame.CenterCount > 0)
+            {
+                selectedDelta = Vector2.Distance(previousSelectedCenter.Value, frame.SelectedCenterCm);
+            }
+
+            if (frame.CenterCount > 0)
+            {
+                previousSelectedCenter = frame.SelectedCenterCm;
+            }
+
+            sb.AppendLine($"- `{frame.FileName}`: selected={frame.CenterCount}, activeGroups={frame.CenterStoppedAgents}, selectedDeltaFromPriorCaptureCm={selectedDelta:0}, agentsVisibleInSolver={visible}");
+        }
+
+        return sb.ToString();
+    }
+
+    private static string BuildMassNavSummaryJson(
+        LauncherRecordingRequest request,
+        MassNavUatAcceptance acceptance,
+        IReadOnlyList<MassNavMemorySample> memorySamples)
+    {
+        return JsonSerializer.Serialize(new
+        {
+            scenario = "mass_nav_web_parity_large_world_rts_uat",
+            adapter = request.Plan.AdapterId,
+            selectors = request.Plan.Selectors,
+            root_mods = request.Plan.RootModIds,
+            success = acceptance.Success,
+            first_command_advance_cm = Math.Round(acceptance.FirstCommandAdvanceCm, 2),
+            second_command_advance_cm = Math.Round(acceptance.SecondCommandAdvanceCm, 2),
+            empty_world_command_advance_cm = Math.Round(acceptance.EmptyWorldAdvanceCm, 2),
+            multi_team_command_advance_cm = acceptance.MultiTeamAdvanceCm.Select(value => Math.Round(value, 2)).ToArray(),
+            edge_inside_command_advance_cm = acceptance.EdgeInsideAdvanceCm.Select(value => Math.Round(value, 2)).ToArray(),
+            multi_team_min_advance_cm = Math.Round(MinOrZero(acceptance.MultiTeamAdvanceCm), 2),
+            edge_inside_min_advance_cm = Math.Round(MinOrZero(acceptance.EdgeInsideAdvanceCm), 2),
+            final_loaded_chunks = acceptance.FinalLoadedChunks,
+            final_work_area_revision = acceptance.FinalWorkAreaRevision,
+            final_rejects = acceptance.FinalRejects,
+            boundary_rejects_added = acceptance.BoundaryRejectsAdded,
+            managed_memory_growth_bytes = acceptance.ManagedMemoryGrowthBytes,
+            managed_memory_reset_delta_bytes = acceptance.ManagedMemoryResetDeltaBytes,
+            steady_managed_growth_bytes = acceptance.SteadyManagedGrowthBytes,
+            steady_allocated_bytes = acceptance.SteadyAllocatedBytes,
+            memory_timeline = memorySamples.Select(sample => new
+            {
+                label = sample.Label,
+                managed_bytes = sample.ManagedBytes,
+                delta_from_warm_bytes = sample.DeltaFromWarmBytes
+            }).ToArray(),
+            normalized_signature = acceptance.NormalizedSignature,
+            failed_checks = acceptance.FailedChecks
+        }, new JsonSerializerOptions { WriteIndented = true });
+    }
+
     private static void AssertNavigationOverlay(ScreenOverlayBuffer overlay)
     {
         string dump = string.Join(" || ", ExtractOverlayText(overlay));
@@ -2507,6 +3707,82 @@ public static class LauncherEvidenceRecorder
         canvas.DrawCircle(point.X, point.Y, radiusPx, paint);
     }
 
+    private static void DrawMassNavWorldGrid(SKCanvas canvas, SKRect rect, int worldWidthCm, SKPaint paint)
+    {
+        const int lines = 8;
+        for (int i = 1; i < lines; i++)
+        {
+            float t = i / (float)lines;
+            float x = rect.Left + rect.Width * t;
+            float y = rect.Top + rect.Height * t;
+            canvas.DrawLine(x, rect.Top, x, rect.Bottom, paint);
+            canvas.DrawLine(rect.Left, y, rect.Right, y, paint);
+        }
+
+        using var labelPaint = new SKPaint { Color = new SKColor(118, 142, 158), IsAntialias = true, TextSize = 14f };
+        canvas.DrawText($"{worldWidthCm / 100_000f:0.#}km", rect.Left + 10f, rect.Bottom - 10f, labelPaint);
+    }
+
+    private static void DrawMassNavWorldRect(SKCanvas canvas, SKRect worldRect, int worldWidthCm, int worldHeightCm, Vector2 centerCm, Vector2 sizeCm, SKPaint paint)
+    {
+        if (sizeCm.X <= 0f || sizeCm.Y <= 0f)
+        {
+            return;
+        }
+
+        float minX = centerCm.X - sizeCm.X * 0.5f;
+        float maxX = centerCm.X + sizeCm.X * 0.5f;
+        float minY = centerCm.Y - sizeCm.Y * 0.5f;
+        float maxY = centerCm.Y + sizeCm.Y * 0.5f;
+        SKPoint a = ToMassNavWorldScreen(new Vector2(minX, minY), worldRect, worldWidthCm, worldHeightCm);
+        SKPoint b = ToMassNavWorldScreen(new Vector2(maxX, maxY), worldRect, worldWidthCm, worldHeightCm);
+        canvas.DrawRect(SKRect.Create(Math.Min(a.X, b.X), Math.Min(a.Y, b.Y), Math.Abs(b.X - a.X), Math.Abs(b.Y - a.Y)), paint);
+    }
+
+    private static void DrawMassNavLocalRect(SKCanvas canvas, SKRect localRect, float minX, float maxX, float minY, float maxY, Vector2 centerCm, Vector2 sizeCm, SKPaint paint)
+    {
+        if (sizeCm.X <= 0f || sizeCm.Y <= 0f)
+        {
+            return;
+        }
+
+        float rectMinX = centerCm.X - sizeCm.X * 0.5f;
+        float rectMaxX = centerCm.X + sizeCm.X * 0.5f;
+        float rectMinY = centerCm.Y - sizeCm.Y * 0.5f;
+        float rectMaxY = centerCm.Y + sizeCm.Y * 0.5f;
+        SKPoint a = ToMassNavLocalScreen(new Vector2(rectMinX, rectMinY), localRect, minX, maxX, minY, maxY);
+        SKPoint b = ToMassNavLocalScreen(new Vector2(rectMaxX, rectMaxY), localRect, minX, maxX, minY, maxY);
+        canvas.DrawRect(SKRect.Create(Math.Min(a.X, b.X), Math.Min(a.Y, b.Y), Math.Abs(b.X - a.X), Math.Abs(b.Y - a.Y)), paint);
+    }
+
+    private static SKPoint ToMassNavWorldScreen(Vector2 world, SKRect rect, int worldWidthCm, int worldHeightCm)
+    {
+        float minX = worldWidthCm * -0.5f;
+        float minY = worldHeightCm * -0.5f;
+        float x = rect.Left + ((world.X - minX) / MathF.Max(1f, worldWidthCm)) * rect.Width;
+        float y = rect.Bottom - ((world.Y - minY) / MathF.Max(1f, worldHeightCm)) * rect.Height;
+        return new SKPoint(x, y);
+    }
+
+    private static SKPoint ToMassNavLocalScreen(Vector2 world, SKRect rect, float minX, float maxX, float minY, float maxY)
+    {
+        float x = rect.Left + ((world.X - minX) / MathF.Max(1f, maxX - minX)) * rect.Width;
+        float y = rect.Bottom - ((world.Y - minY) / MathF.Max(1f, maxY - minY)) * rect.Height;
+        return new SKPoint(x, y);
+    }
+
+    private static SKColor ResolveMassNavTeamSkiaColor(int teamId)
+    {
+        return teamId switch
+        {
+            1 => new SKColor(70, 180, 255),
+            2 => new SKColor(255, 108, 92),
+            3 => new SKColor(255, 210, 75),
+            4 => new SKColor(160, 245, 120),
+            _ => new SKColor(210, 210, 220),
+        };
+    }
+
     private static float Fraction(IReadOnlyList<Vector2> values, Func<Vector2, bool> predicate)
     {
         if (values.Count == 0)
@@ -2561,7 +3837,8 @@ public static class LauncherEvidenceRecorder
         CameraAcceptanceProjectionClick,
         RoadNetworkShowcaseCommandAndChunking,
         ChunkStreamingShowcaseCameraWindows,
-        Navigation2DPlaygroundTimedAvoidance
+        Navigation2DPlaygroundTimedAvoidance,
+        MassNavWebParityLargeWorldRts
     }
 
     private sealed class RecordingRuntime : IDisposable
@@ -2631,6 +3908,239 @@ public static class LauncherEvidenceRecorder
             Engine.Dispose();
         }
     }
+
+    private sealed class MassNavRuntimeProbe
+    {
+        private readonly object _runtime;
+        private readonly object _agentState;
+        private readonly object _webParity;
+        private readonly object _navGroupRuntime;
+        private readonly Type _runtimeType;
+        private readonly Type _webParityType;
+
+        private MassNavRuntimeProbe(object runtime)
+        {
+            _runtime = runtime;
+            _runtimeType = runtime.GetType();
+            _agentState = GetRequired<object>(_runtime, "AgentState");
+            _webParity = GetRequired<object>(_runtime, "WebParity");
+            _navGroupRuntime = GetRequired<object>(_runtime, "NavGroupRuntime");
+            _webParityType = _webParity.GetType();
+        }
+
+        public static MassNavRuntimeProbe Require(GameEngine engine)
+        {
+            if (!engine.GlobalContext.TryGetValue(MassNavSimulationRuntimeServiceName, out object? runtime) || runtime == null)
+            {
+                throw new InvalidOperationException("MassNavWebParity simulation runtime is missing.");
+            }
+
+            return new MassNavRuntimeProbe(runtime);
+        }
+
+        public IReadOnlyList<Entity> ControllableAgents =>
+            GetRequired<IReadOnlyList<Entity>>(_agentState, "ControllableAgents");
+
+        public int SelectedTeamId => GetRequired<int>(_runtime, "SelectedTeamId");
+        public int WorldWidthCm => GetRequired<int>(_runtime, "WorldWidthCm");
+        public int WorldHeightCm => GetRequired<int>(_runtime, "WorldHeightCm");
+        public int TeamCount => GetRequired<int>(_runtime, "TeamCount");
+        public int TotalAgents => GetRequired<int>(_agentState, "TotalAgents");
+        public int UnitCount => GetRequired<int>(_webParity, "UnitCount");
+        public bool HasCommandFocus => GetRequired<bool>(_runtime, "HasCommandFocus");
+        public float CommandFocusXCm => GetRequired<float>(_runtime, "CommandFocusXCm");
+        public float CommandFocusYCm => GetRequired<float>(_runtime, "CommandFocusYCm");
+        public int CommandFocusTicksRemaining => GetRequired<int>(_runtime, "CommandFocusTicksRemaining");
+        public int LastCommandSelectionCount => GetRequired<int>(_runtime, "LastCommandSelectionCount");
+        public int CommandRejectsTotal => GetRequired<int>(_runtime, "CommandRejectsTotal");
+        public float LastRejectedCommandXCm => GetRequired<float>(_runtime, "LastRejectedCommandXCm");
+        public float LastRejectedCommandYCm => GetRequired<float>(_runtime, "LastRejectedCommandYCm");
+        public float SolverWindowCenterXCm => GetRequired<float>(_runtime, "SolverWindowCenterXCm");
+        public float SolverWindowCenterYCm => GetRequired<float>(_runtime, "SolverWindowCenterYCm");
+        public float SolverWindowWidthCm => GetRequired<float>(_runtime, "SolverWindowWidthCm");
+        public float SolverWindowHeightCm => GetRequired<float>(_runtime, "SolverWindowHeightCm");
+        public float FlowWorkAreaCenterXCm => GetRequired<float>(_runtime, "FlowWorkAreaCenterXCm");
+        public float FlowWorkAreaCenterYCm => GetRequired<float>(_runtime, "FlowWorkAreaCenterYCm");
+        public float FlowWorkAreaWidthCm => GetRequired<float>(_runtime, "FlowWorkAreaWidthCm");
+        public float FlowWorkAreaHeightCm => GetRequired<float>(_runtime, "FlowWorkAreaHeightCm");
+        public int FlowWorkAreaRevision => GetRequired<int>(_runtime, "FlowWorkAreaRevision");
+        public string FlowWorkAreaReason => GetRequired<string>(_runtime, "FlowWorkAreaReason");
+        public int LoadedChunkCount => GetRequired<int>(_runtime, "LoadedChunkCount");
+        public int StreamingWindowUpdatesFrame => GetRequired<int>(_runtime, "StreamingWindowUpdatesFrame");
+        public float StepPrepMs => GetRequired<float>(_runtime, "StepPrepMs");
+        public float LocalSteeringMs => GetRequired<float>(_runtime, "LocalSteeringMs");
+        public float HardResolveMs => GetRequired<float>(_runtime, "HardResolveMs");
+        public float EntitySyncMs => GetRequired<float>(_runtime, "EntitySyncMs");
+        public float PrimitiveEmitMs => GetRequired<float>(_runtime, "PrimitiveEmitMs");
+        public float FlowFieldRebuildMs => GetRequired<float>(_runtime, "FlowFieldRebuildMs");
+        public int CrowdSubmittedCount => GetRequired<int>(_runtime, "CrowdSubmittedCount");
+        public float SelectedRotationRadians => GetRequired<float>(_navGroupRuntime, "SelectedRotationRadians");
+        public int ActiveGroupCount => GetRequired<int>(_navGroupRuntime, "ActiveGroupCount");
+        public int ActiveOrderGroupCount => GetRequired<int>(_navGroupRuntime, "ActiveOrderGroupCount");
+
+        public bool ContainsWorldPoint(float xCm, float yCm) =>
+            InvokeRequired<bool>(_runtime, "ContainsWorldPoint", xCm, yCm);
+
+        public int AllocateSharedOrderId() =>
+            InvokeRequired<int>(_runtime, "AllocateSharedOrderId");
+
+        public void FocusCommandTarget(Vector2 destinationCm, Entity[] selected) =>
+            InvokeVoid(_runtime, "FocusCommandTargetForEntities", destinationCm, selected);
+
+        public void RejectCommandOutsideWorld(float xCm, float yCm) =>
+            InvokeVoid(_runtime, "RejectCommandOutsideWorld", xCm, yCm);
+
+        public void RequestSceneReset() =>
+            InvokeVoid(_runtime, "RequestSceneReset");
+
+        public void MarkCommandApply() =>
+            InvokeVoid(_runtime, "MarkCommandApply");
+
+        public void MarkStructuralChange() =>
+            InvokeVoid(_runtime, "MarkStructuralChange");
+
+        public bool IsSelected(int unitIndex) =>
+            InvokeRequired<bool>(_webParity, "IsSelected", unitIndex);
+
+        public Vector2 GetVelocityCmPerSecond(int unitIndex) =>
+            InvokeRequired<Vector2>(_webParity, "GetVelocityCmPerSecond", unitIndex);
+
+        private static T GetRequired<T>(object target, string propertyName)
+        {
+            object? value = target.GetType().GetProperty(propertyName, BindingFlags.Instance | BindingFlags.Public)?.GetValue(target);
+            if (value is T typed)
+            {
+                return typed;
+            }
+
+            throw new InvalidOperationException($"MassNav UAT expected property '{target.GetType().Name}.{propertyName}' to be {typeof(T).Name}.");
+        }
+
+        private static T InvokeRequired<T>(object target, string methodName, params object[] args)
+        {
+            object? value = Invoke(target, methodName, args);
+            if (value is T typed)
+            {
+                return typed;
+            }
+
+            throw new InvalidOperationException($"MassNav UAT expected method '{target.GetType().Name}.{methodName}' to return {typeof(T).Name}.");
+        }
+
+        private static void InvokeVoid(object target, string methodName, params object[] args)
+        {
+            Invoke(target, methodName, args);
+        }
+
+        private static object? Invoke(object target, string methodName, params object[] args)
+        {
+            MethodInfo method = target.GetType().GetMethod(methodName, BindingFlags.Instance | BindingFlags.Public)
+                ?? throw new InvalidOperationException($"MassNav UAT expected method '{target.GetType().Name}.{methodName}'.");
+            return method.Invoke(target, args);
+        }
+    }
+
+    private sealed class MassNavMinimapProbe
+    {
+        private readonly object _runtime;
+        private readonly Type _clickRequestType;
+
+        private MassNavMinimapProbe(object runtime)
+        {
+            _runtime = runtime;
+            _clickRequestType = runtime.GetType().Assembly.GetType("MinimapControlMod.Runtime.MinimapWorldClickRequest")
+                ?? throw new InvalidOperationException("MassNav UAT requires MinimapWorldClickRequest type in the loaded MinimapControlMod assembly.");
+        }
+
+        public static MassNavMinimapProbe Require(GameEngine engine)
+        {
+            if (!engine.GlobalContext.TryGetValue(MinimapRuntimeServiceName, out object? runtime) || runtime == null)
+            {
+                throw new InvalidOperationException("MassNavWebParity UAT requires MinimapControlMod runtime.");
+            }
+
+            return new MassNavMinimapProbe(runtime);
+        }
+
+        public void Refresh(GameEngine engine) => InvokeVoid(_runtime, "Refresh", engine);
+
+        public MinimapProbeSnapshot CaptureDebugSnapshot()
+        {
+            object snapshot = InvokeRequired<object>(_runtime, "CaptureDebugSnapshot");
+            return new MinimapProbeSnapshot(
+                GetRequired<float>(snapshot, "CenterXcm"),
+                GetRequired<float>(snapshot, "CenterYcm"),
+                GetRequired<float>(snapshot, "HalfExtentCm"),
+                GetCollectionCount(snapshot, "VisibleSignals"),
+                GetCollectionCount(snapshot, "StrategicCells"),
+                GetRequired<object>(snapshot, "ZoomBand").ToString() ?? string.Empty);
+        }
+
+        public void EnqueueWorldClick(GameEngine engine, Vector2 target)
+        {
+            object request = Activator.CreateInstance(_clickRequestType, string.Empty, target.X, target.Y)
+                ?? throw new InvalidOperationException("MassNav UAT could not create MinimapWorldClickRequest.");
+            engine.GlobalContext[MinimapWorldClickRequestServiceName] = request;
+        }
+
+        private static int GetCollectionCount(object target, string propertyName)
+        {
+            object value = GetRequired<object>(target, propertyName);
+            return value switch
+            {
+                System.Collections.ICollection collection => collection.Count,
+                System.Collections.IEnumerable enumerable => enumerable.Cast<object>().Count(),
+                _ => 0,
+            };
+        }
+
+        private static T GetRequired<T>(object target, string propertyName)
+        {
+            object? value = target.GetType().GetProperty(propertyName, BindingFlags.Instance | BindingFlags.Public)?.GetValue(target);
+            if (value is T typed)
+            {
+                return typed;
+            }
+
+            throw new InvalidOperationException($"MassNav UAT expected minimap property '{target.GetType().Name}.{propertyName}' to be {typeof(T).Name}.");
+        }
+
+        private static T InvokeRequired<T>(object target, string methodName, params object[] args)
+        {
+            object? value = Invoke(target, methodName, args);
+            if (value is T typed)
+            {
+                return typed;
+            }
+
+            throw new InvalidOperationException($"MassNav UAT expected minimap method '{target.GetType().Name}.{methodName}' to return {typeof(T).Name}.");
+        }
+
+        private static void InvokeVoid(object target, string methodName, params object[] args)
+        {
+            Invoke(target, methodName, args);
+        }
+
+        private static object? Invoke(object target, string methodName, params object[] args)
+        {
+            MethodInfo method = target.GetType().GetMethod(methodName, BindingFlags.Instance | BindingFlags.Public)
+                ?? throw new InvalidOperationException($"MassNav UAT expected minimap method '{target.GetType().Name}.{methodName}'.");
+            return method.Invoke(target, args);
+        }
+    }
+
+    private readonly record struct MinimapProbeSnapshot(
+        float CenterXcm,
+        float CenterYcm,
+        float HalfExtentCm,
+        int VisibleSignalCount,
+        int StrategicCellCount,
+        string ZoomBand);
+
+    private readonly record struct MassNavMemorySample(
+        string Label,
+        long ManagedBytes,
+        long DeltaFromWarmBytes);
 
     private sealed class ScriptedInputBackend : IInputBackend
     {
@@ -2757,6 +4267,83 @@ public static class LauncherEvidenceRecorder
         string ResetChunkSignature,
         string NormalizedSignature);
 
+    private readonly record struct MassNavTeamSummary(
+        int TeamId,
+        int Count,
+        Vector2 CenterCm);
+
+    private readonly record struct MassNavUatSnapshot(
+        int Tick,
+        string Step,
+        double TickMs,
+        string MapId,
+        int WorldWidthCm,
+        int WorldHeightCm,
+        int AgentCount,
+        int UnitCount,
+        int TeamCount,
+        IReadOnlyList<MassNavTeamSummary> TeamSummaries,
+        int SelectedCount,
+        int SelectedMovingCount,
+        Vector2 SelectedCenterCm,
+        Vector2 SelectedVelocityCenterCm,
+        float SelectedMeanAdvanceCm,
+        int ActiveGroups,
+        int ActiveOrderGroups,
+        int ActiveOrders,
+        Vector2 CommandTargetCm,
+        bool HasCommandFocus,
+        int CommandFocusTicksRemaining,
+        int LastCommandSelectionCount,
+        int CommandRejectsTotal,
+        Vector2 LastRejectedCommandCm,
+        Vector2 SolverCenterCm,
+        Vector2 SolverSizeCm,
+        Vector2 FlowWorkAreaCenterCm,
+        Vector2 FlowWorkAreaSizeCm,
+        int FlowWorkAreaRevision,
+        string FlowWorkAreaReason,
+        int LoadedChunkCount,
+        int StreamingWindowUpdatesFrame,
+        Vector2 CameraTargetCm,
+        Vector2 CameraViewSizeCm,
+        float CameraDistanceCm,
+        Vector2 MinimapCenterCm,
+        float MinimapHalfExtentCm,
+        int MinimapVisibleSignals,
+        int MinimapStrategicCells,
+        string MinimapZoomBand,
+        float FrameMs,
+        float RenderFps,
+        float StepPrepMs,
+        float LocalSteeringMs,
+        float HardResolveMs,
+        float EntitySyncMs,
+        float PrimitiveEmitMs,
+        float FlowFieldRebuildMs,
+        int AgentsOutsideWorld,
+        float AgentVisibleFraction);
+
+    private sealed record MassNavUatAcceptance(
+        bool Success,
+        string Verdict,
+        string FailureSummary,
+        IReadOnlyList<string> FailedChecks,
+        float FirstCommandAdvanceCm,
+        float SecondCommandAdvanceCm,
+        float EmptyWorldAdvanceCm,
+        IReadOnlyList<float> MultiTeamAdvanceCm,
+        IReadOnlyList<float> EdgeInsideAdvanceCm,
+        int BoundaryRejectsAdded,
+        long ManagedMemoryGrowthBytes,
+        long ManagedMemoryResetDeltaBytes,
+        long SteadyManagedGrowthBytes,
+        long SteadyAllocatedBytes,
+        int FinalLoadedChunks,
+        int FinalWorkAreaRevision,
+        int FinalRejects,
+        string NormalizedSignature);
+
     private readonly record struct AvoidanceSnapshot(
         int Tick,
         string Step,
@@ -2788,6 +4375,7 @@ public static class LauncherEvidenceRecorder
         string FileName,
         int CenterCount,
         int CenterStoppedAgents,
+        Vector2 SelectedCenterCm,
         float Team0CrossedFraction,
         float Team1CrossedFraction);
 

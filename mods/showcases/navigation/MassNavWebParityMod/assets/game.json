@@ -2,8 +2,8 @@
   "startupMapId": "mass_nav_web_parity",
   "windowTitle": "Ludots Engine - Mass Nav Web Parity",
   "targetFps": 60,
-  "worldWidthInTiles": 100,
-  "worldHeightInTiles": 100,
+  "worldWidthInTiles": 250,
+  "worldHeightInTiles": 250,
   "constants": {
     "orderTypeIds": {
       "massNavMove": 172

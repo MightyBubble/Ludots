@@ -83,7 +83,7 @@ public sealed class MassNavCommandRuntime
             switch (command.Kind)
             {
                 case MassNavQueuedCommandKind.TeamMove:
-                    simulation.WebParity.SetTeamTarget(command.TeamId, new Vector2(command.DestinationX, command.DestinationY));
+                    simulation.WebParity.SetTeamTarget(command.TeamId, simulation.ToLocalCm(new Vector2(command.DestinationX, command.DestinationY)));
                     simulation.MarkStructuralChange();
                     simulation.MarkFlowReconcile();
                     simulation.ObserveFlowFieldRebuild(simulation.WebParity.LastFlowFieldRebuildMs);

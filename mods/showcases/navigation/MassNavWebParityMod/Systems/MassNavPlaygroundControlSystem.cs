@@ -6,6 +6,8 @@ using Ludots.Core.Input.Selection;
 using Ludots.Core.Scripting;
 using MassNavWebParityMod.Input;
 using MassNavWebParityMod.Runtime;
+using MinimapControlMod;
+using MinimapControlMod.Runtime;
 
 namespace MassNavWebParityMod.Systems;
 
@@ -35,6 +37,7 @@ internal sealed class MassNavWebParityControlSystem : ISystem<float>
         }
 
         _simulation.ObserveControlTick();
+        ConsumeMinimapWorldClick();
 
         if (_engine.GetService(CoreServiceKeys.AuthoritativeInput) is IInputActionReader input)
         {
@@ -82,7 +85,38 @@ internal sealed class MassNavWebParityControlSystem : ISystem<float>
             _simulation,
             _engine.GetService(CoreServiceKeys.TeamEntityLookup));
         MassNavWebParityRuntime.RequestTacticalCameraReset(_engine);
+        if (_engine.GetService(MinimapControlServiceKeys.Runtime) is { } minimap)
+        {
+            MassNavWebParityRuntime.SyncMinimapKnownContacts(_simulation, minimap);
+            MassNavWebParityRuntime.RequestMinimapStrategicWorldView(_engine);
+        }
+
+        _simulation.MarkSceneResetExecuted();
         _simulation.MarkStructuralChange();
+    }
+
+    private void ConsumeMinimapWorldClick()
+    {
+        if (!_engine.GlobalContext.Remove(MinimapControlServiceKeys.WorldClickRequest.Name, out object? requestObj) ||
+            requestObj is not MinimapWorldClickRequest request)
+        {
+            return;
+        }
+
+        var targetCm = new System.Numerics.Vector2(request.WorldXcm, request.WorldYcm);
+        if (!_simulation.ContainsWorldPoint(targetCm.X, targetCm.Y))
+        {
+            _simulation.RejectCommandOutsideWorld(targetCm.X, targetCm.Y);
+            return;
+        }
+
+        _simulation.ObserveCameraFocus(targetCm);
+        MassNavWebParityRuntime.RequestCameraJump(_engine, targetCm, 18_000f);
+        if (_engine.GetService(MinimapControlServiceKeys.Runtime) is { } runtime)
+        {
+            MassNavWebParityRuntime.SyncMinimapKnownContacts(_simulation, runtime);
+            runtime.SetAbsoluteWorldOverview(true);
+        }
     }
 
     private void ClearSelection()

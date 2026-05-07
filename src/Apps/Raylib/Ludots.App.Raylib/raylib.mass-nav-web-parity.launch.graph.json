@@ -5,6 +5,7 @@
     "LudotsCoreMod",
     "CoreInputMod",
     "CameraProfilesMod",
+    "MinimapControlMod",
     "MassNavWebParityMod"
   ],
   "plannedMods": [
@@ -19,6 +20,10 @@
     {
       "id": "CameraProfilesMod",
       "rootPath": "../../../../../../../mods/capabilities/camera/CameraProfilesMod"
+    },
+    {
+      "id": "MinimapControlMod",
+      "rootPath": "../../../../../../../mods/capabilities/minimap/MinimapControlMod"
     },
     {
       "id": "MassNavWebParityMod",

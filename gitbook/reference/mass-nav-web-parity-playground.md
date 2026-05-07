@@ -1,349 +1,196 @@
-# Mass Nav Web Parity Playground 说明
+# Mass Nav Web Parity Playground
+
+`MassNavWebParityMod` is the current SSOT playground for the high-performance mass navigation path. It is a playable Raylib showcase, not a production `Navigation2D` replacement yet.
 
-这份文档讲的是 `MassNavWebParityMod` 目前已经落地的实现。它不是未来方案图，也不是理想设计稿，而是当前仓库里真的在跑的版本。
+The design goal is simple: from a designer or player point of view this is a standard RTS map, even when the battlefield is 64km x 64km. The user should not reason about implementation terms such as hot zones or solver pockets. They look somewhere with the camera, select units, and right-click any world point. The runtime then derives the internal flow/crowd working set from two player-visible signals:
 
-目标只有两个：
+- what the camera is currently observing
+- where the latest selected group or team command wants gameplay to happen
 
-1. 先把 external 参考项目里那种“大规模群体移动 playground”搬进 Ludots。
-2. 全程走 Ludots 现有正式基建，尤其是 UI、selection、presentation 这几条主链，不再单独造一套临时外壳。
+## Existing Infrastructure Reused
+
+- Launcher graph and `ConfigPipeline`: the mod is launched through `scripts/run-mod-launcher.cmd`, not by a private bootstrap.
+- Ludots UI runtime: panels and HUD use the existing UI/presentation services. Missing UI services are a launch/evidence error.
+- Formal selection: selection truth is `SelectionRuntime` / `SelectionSetKeys.LivePrimary`.
+- Formal orders: movement commands go through GAS `OrderBufferSystem` and order type `massNavMove`.
+- Minimap capability: world clicks and debug snapshots use `MinimapControlMod.Runtime`.
+- Camera services: camera jumps use the same camera request path as the playable Raylib showcase.
+- World streaming/spatial state: `WorldGridLoadedChunks` and `SpatialQueryService.SetLoadedChunks(...)` are reused for the active working set.
+
+No fallback path is valid for this playground. Missing minimap, selection, board, team lookup, presenter, order type, or world config must fail loudly.
+
+## Player-Facing Contract
+
+- The minimap represents the full configured world.
+- The minimap shows the current camera rectangle.
+- Clicking any minimap point moves the camera to that exact world coordinate.
+- Box-selected units can right-click move to any valid world coordinate.
+- Empty parts of the world are still valid world space; they show grid and coordinates instead of a black or invalid screen.
+- Known contacts are landmarks only. They are not playable boundaries and are not solver ownership.
+
+## Runtime Contract
+
+- `MassNavWorldConfig.WorldWidthCm` and `WorldHeightCm` define the 64km board-scale world.
+- `SolverWindowWidthCm` and `SolverWindowHeightCm` define the current SoA solver cache size. Today it must match `MassNavWebParitySimState.FieldWidthCm` and `FieldHeightCm`.
+- `MassNavSimulationRuntime` owns the runtime solver window center. It must not mutate configured known contacts.
+- Camera focus calls `ObserveCameraFocus(...)`; command targets call `FocusCommandTarget(...)`.
+- `FlowWorkArea` is the requested gameplay working set. It is built from the current camera rectangle, the latest command target, and the selected units that produced the command.
+- The current `SolverWindow` is the fixed-size SoA execution cache. It is allowed to be smaller than `FlowWorkArea`; this is the known single-window implementation limit, not a player-facing rule.
+- `WorldGridLoadedChunks` and `SpatialQueryService.SetLoadedChunks(...)` are reused for the streamed world working set.
+- Missing minimap, selection, board, team lookup, presenter, or world config is an error. There is no hidden bootstrap path.
+
+## Current Frame Flow
+
+1. Ludots input and selection systems update the official selection runtime.
+2. `MassNavSelectionSyncSystem` copies the current selection into the mass-nav runtime.
+3. `MassNavCommandBridgeSystem` reads right-click ground commands through the official order/input path.
+4. A command target updates `FlowWorkArea`, records command focus, and holds that focus for a configured number of ticks.
+5. `MassNavFormationSystem` observes the real camera rectangle every sim tick through Ludots camera utilities. Camera focus expands or moves `FlowWorkArea`; the solver cache only moves when the camera leaves the configured safe margin or a command target is active.
+6. `MassNavGroupRuntime` updates group and formation slots.
+7. `MassNavWebParitySimState` advances SoA positions, velocities, flow sampling, separation, and hard resolve.
+8. Entity `WorldPositionCm` and `VisualTransform` are synchronized back for Ludots presentation and selection.
+9. Primitive presentation draws the agents, solver window boundary, world grid, and minimap/HUD diagnostics.
+
+## Current Large-World Model
+
+This version is a moving single-window solver:
 
-## 这套东西现在是什么
+- World coordinates are authoritative.
+- The SoA grid is a high-performance local solver cache.
+- Camera focus, selected-unit bounds, and command targets dynamically request a `FlowWorkArea`.
+- The solver cache currently chooses one focus inside that work area: command target during command hold, otherwise camera/work-area focus.
+- Agents outside the local solver field are not clamped into the edge; they remain in world space and are skipped by local hash/obstacle work until the window reaches them.
 
-`MassNavWebParityMod` 是一个基于 Raylib runtime 的 mass navigation playground。
+This is enough to validate the intended UX and the 64km RTS interaction contract. It is not yet the final multi-window or multi-resolution flow allocator. If production needs several distant battles simulated at once, the next step is to generalize this into multiple explicit solver windows, not to expose implementation regions to players.
 
-它现在已经接好了这些能力：
+## Config
 
-- 使用 Ludots 的 `selection` 基建做框选
-- 使用 Ludots 的 `presentation` 路径画 agent primitive
-- 使用 Ludots 的 `UIRoot + ReactivePage` 挂右上角调试面板
-- 支持右键下达移动命令
-- 支持编队模式和 `Q / E` 旋转
-- 支持场景 reset、镜头 reset、agent 数量切换
-- 支持运行时热调 budget / slice / physics hz / navigation hz / flow 参数
-- 支持 `Arrival Fallback`：卡太久的 unit target 会超时停住，被推开后有限次重试
+Main config: `mods/showcases/navigation/MassNavWebParityMod/assets/MassNavWebParityConfig.json`
 
-对应入口在这些文件：
+Important fields:
 
-- `mods/showcases/navigation/MassNavWebParityMod/MassNavWebParityModEntry.cs`
-- `mods/showcases/navigation/MassNavWebParityMod/Runtime/MassNavPlaygroundRuntime.cs`
-- `mods/showcases/navigation/MassNavWebParityMod/Systems/`
-- `mods/showcases/navigation/MassNavWebParityMod/UI/`
-
-## 总体架构怎么分
-
-这套实现刻意分成 4 层。
-
-### 1. Mod runtime 层
-
-职责是“把系统装进去，把地图、镜头、panel、scenario 接起来”。
-
-核心文件：
-
-- `Runtime/MassNavPlaygroundRuntime.cs`
-
-它负责：
-
-- 在 `GameStart` 时安装 system 和 presentation system
-- 在 `MapLoaded / MapResumed` 时确保 playground 状态可玩
-- 在 `MapUnloaded` 时清掉自己持有的 panel
-- 通过 Ludots 正式服务拿 `SelectionRuntime`、`PresentationMeshAssetRegistry`、`UIRoot`、camera request
-
-这层不做具体模拟算法，只做装配。
-
-### 2. 交互与编排层
-
-职责是“把 Ludots 输入、选择、命令，翻译成 mass-nav playground 的内部操作”。
-
-核心文件：
-
-- `Systems/MassNavSelectionSyncSystem.cs`
-- `Systems/MassNavCommandBridgeSystem.cs`
-- `Systems/MassNavFormationSystem.cs`
-- `Systems/MassNavPanelPresentationSystem.cs`
-
-这层做的事：
-
-- 把 selection 基建中的选中集合同步到 simulation runtime
-- 把右键命令翻译成 team target 或 formation move
-- 每帧更新 formation target
-- 每帧刷新右上角 panel
-
-这一层的重点是“桥接”，不是自己重新实现 selection / UI / input。
-
-### 3. 运行时状态层
-
-职责是“保存 playground 运行态和调参状态”。
-
-核心文件：
-
-- `Runtime/MassNavSimulationRuntime.cs`
-- `Runtime/MassNavFlowTuning.cs`
-- `Runtime/MassNavArrivalTuning.cs`
-- `Runtime/MassNavFormationRuntime.cs`
-- `Runtime/MassNavAgentState.cs`
-
-可以把这一层理解成 playground 的内存中控台。
-
-它保存：
-
-- 当前 agent 数量
-- 当前选中集
-- 当前编队模式
-- flow 调参
-- arrival fallback 调参
-- 本帧性能观测值
-
-### 4. SoA 模拟层
-
-职责是“真的去推进 agent 的位置和速度”。
-
-核心文件：
-
-- `Runtime/MassNavWebParitySimState.cs`
-
-这层是整个 playground 的核心。当前实现走的是 SoA 数组，而不是把每个 agent 的临时仿真状态都塞回 ECS component 里逐个读写。
-
-它内部维护了这些主要数组：
-
-- position
-- velocity
-- team
-- unit target
-- selected flag
-- separation hash
-- hard-resolve hash
-- obstacle cache
-- flow field
-- arrival fallback 相关状态
-
-## 一帧是怎么跑的
-
-如果把一帧拆成人话，流程大概是这样：
-
-1. Ludots 输入系统先跑，selection 基建更新框选结果。
-2. `MassNavSelectionSyncSystem` 把当前选中单位同步进 `MassNavSimulationRuntime`。
-3. `MassNavCommandBridgeSystem` 读取右键命令。
-4. 如果当前有选中单位，就下 formation move。
-5. 如果当前没有选中单位，就改 team target。
-6. `MassNavFormationSystem` 根据当前编队状态更新每个 unit 的局部目标。
-7. `MassNavWebParitySimState.Step` 用 SoA 数组推进速度和位置。
-8. 仿真结果同步回实体的 `VisualTransform` 和 `WorldPositionCm`。
-9. presentation system 把 primitive 发给渲染层。
-10. panel presentation system 刷新右上角面板。
-
-## 移动算法现在怎么做
-
-当前移动不是直接用引擎主线的 `Navigation2D` agent 求解器来跑 20k crowd，而是保持了参考项目那种“单独 crowd sim core”的路线，再通过 Ludots 正式链路接输入、UI、presentation。
-
-具体分 4 段。
-
-### 1. flow field
-
-`MassNavWebParitySimState` 维护了两张 team flow field。
-
-- team 0 一张
-- team 1 一张
-
-flow 的生成方式比较直接：
-
-- 先按障碍物写 cost
-- 然后从每个 cell 指向 team target 的方向
-- 再叠一层障碍物附近的避让偏移
-
-这部分的重点不是“高精度导航”，而是给大团运动一个稳定的大方向。
-
-### 2. local steering
-
-每个 agent 每帧会组合几类速度来源：
-
-- 朝目标走的方向
-- 邻居 separation
-- 障碍物推开
-- 临近目标时的减速
-
-最后再做速度混合和限速。
-
-### 3. hard resolve
-
-light steering 不够的时候，agent 还是会挤进重叠。
-
-所以还有一层更硬的 penetration resolve：
-
-- 先建 hard-resolve spatial hash
-- 找近邻重叠对
-- 直接把两个 agent 沿法线推出去
-- 如果撞到圆障碍物，再做 obstacle penetration resolve
-
-这层很粗暴，但对 playground 很重要。没有它，群体很快就会压成一团。
-
-### 4. arrival fallback
-
-这是后来为了解决“到不了还一直抖”的问题加的。
-
-当前逻辑是：
-
-- 只对 `unit target` 这条链启用
-- 如果单位有目标，但在一段时间里几乎没有实质进展，就判定它卡住
-- 卡住后进入 settled 状态，当前位置视为暂时落点，停止继续死冲
-- 如果之后被别人推离 settled 位置足够远，允许重试
-- 重试次数有上限
-- 一旦用户重新下命令，会重置这套恢复状态
-
-它解决的不是“让所有单位都完美到达”，而是先解决“明显已经到不了，还在无穷尝试”这个体验问题。
-
-## 编队这层怎么做
-
-编队不直接操作 ECS world，而是先在 `MassNavFormationRuntime` 里维护 group。
-
-一个 group 里保存：
-
-- 成员索引
-- 基础 offset
-- 旋转后的 offset
-- 目标点
-- 当前中心
-- 当前旋转角
-
-当玩家右键下命令时：
-
-- 如果是 `None` 或者只选中 1 个单位，就直接给 unit target
-- 如果是 `Line / Square / Circle / Wedge`，就先建 group
-- group 记录目标中心和每个成员的 offset
-- 每帧 `UpdateTargets` 用 group 当前中心和目标中心重新计算每个单位的局部目标
-
-`Q / E` 旋转本质上改的是 group 的旋转角，再把 offset 重新算一遍。
-
-## 面板为什么之前老是看不到
-
-这是这次实现里一个很低级但很真实的坑。
-
-Ludots 当前的 `UIRoot` 只有一个 `Scene`。谁最后 `MountScene`，谁就把前一个 UI scene 顶掉。
-
-所以问题不是“panel 代码没写”，而是“panel 虽然在跑，但 scene 被别的 UI 路径顶掉了”。
-
-后来的处理方式是：
-
-- 把 panel 刷新路径对齐到仓里已经可工作的 `Navigation2DPlaygroundRuntime.RefreshPanel`
-- map 不匹配时主动 `ClearIfOwned`
-- 刷 panel 时强制保持 `DrawSkiaUi = true`
-
-这属于典型的 presentation 挂载问题，不是算法问题。
-
-## 右上角面板现在能干什么
-
-当前面板能做两类事。
-
-### 1. 看状态
-
-现在面板会显示：
-
-- render fps
-- render frame ms
-- primitive render ms
-- logic hz
-- simulation budget / slice
-- physics hz / max steps
-- navigation hz / max steps
-- flow 当前参数
-- arrival fallback 当前参数
-- settled 数量
-- 各阶段观测耗时
-- 选中数量、编队数量、镜头状态
-
-### 2. 热调参数
-
-现在可以直接热调：
-
-- `SimulationBudgetMsPerFrame`
-- `SimulationMaxSlicesPerLogicFrame`
-- `PhysicsHz`
-- `Physics MaxStepsPerFixedTick`
-- `NavigationHz`
-- `Navigation MaxStepsPerFixedTick`
-- `Flow Enabled`
-- `Flow Iterations`
-- `Flow StepInterval`
-- `Flow CrowdStampInterval`
-- `Flow ObstacleStampInterval`
-- `Arrival Enabled`
-- `Arrival Timeout`
-- `Arrival ProgressDistance`
-- `Arrival WakePushDistance`
-- `Arrival MaxRetries`
-
-当前只有 `LogicHz` 是只读展示，因为它走的是 engine fixed tick 配置路径，现有正式基建里没有安全的运行时热改链路。
-
-## 性能上做了哪些现实选择
-
-当前版本为了能在大规模数量下跑起来，做了这些非常务实的选择：
-
-- 仿真主数据使用 SoA 数组
-- separation 和 hard resolve 都走 spatial hash
-- 大规模时启用 candidate gating，减少 hard resolve 工作量
-- 优先在数组里推进，再批量同步回 ECS
-- panel 的性能采样不是每帧全量刷新，而是节流刷新
-- 尽量把真正重的工作留在仿真数组里，不把热路径拆成大量零碎 ECS 查询
-
-这套选择的核心思想是：
-
-“让 ECS 负责系统组织、正式管线接入、外部交互；让 crowd sim 热路径留在连续数组里。”
-
-## 这次踩过的典型坑
-
-这里单列出来，方便以后快速避坑。
-
-### 1. 以为 UI 没写，实际上是 scene 被顶掉
-
-这是 presentation 链问题，不是业务逻辑问题。
-
-### 2. 以为右键不动是导航问题，实际上是命令桥、组件同步、system 注册链某个环节没接上
-
-这类问题必须顺着“输入 -> selection -> command bridge -> runtime target -> sim -> entity sync -> presentation”整条链排。
-
-### 3. 只修底层避障，不修上层目标分配
-
-如果目标点本身不合理，比如直接塞到障碍物里，底层再努力也只会抖。
-
-### 4. 只看单个系统，不看正式基建接入
-
-在 Ludots 里，很多问题不是“代码没有”，而是“没有走正式入口”，最后就会出现能跑一点、但和主线系统脱节。
-
-## 当前已知限制
-
-这部分很重要。下面这些问题在当前版本里还没有算彻底解决：
-
-- 障碍物附近的目标点现在已经会先投影到可导航位置，但投影策略仍然是局部启发式，不是全局最优落点分配
-- 大团队共享目标现在已经会分配离散 slot，不再所有人死冲同一个点，但 slot 形状和密度还比较朴素
-- 20k 规模下性能仍然没有稳定达到理想目标
-- 这套 crowd sim 仍然与引擎主线 `Navigation2D` runtime 有职责重叠，后续需要继续收敛
-
-所以现在的状态更准确地说是：
-
-“playground 已经可玩、可调、可测，也能稳定复现问题，但离最终主线化方案还有距离。”
-
-## 如果以后要继续收敛，优先顺序是什么
-
-建议按下面顺序继续做。
-
-1. 继续提升目标分配层，让障碍物边缘和狭窄通道的落点更稳，而不是只做局部推出。
-2. 继续补强大团队 slot 分配策略，让不同 group size 下的分布更贴近 web 参考原型。
-3. 再决定哪些 crowd-specific 逻辑该沉到正式 navigation / physics / spatial 基建里。
-4. 最后才考虑进一步的主线化整合，而不是一边修 bug 一边大拆迁。
-
-这顺序的原因很简单：
-
-现在很多肉眼可见的问题，本质上是“目标分配错了”，不是“resolve 力还不够大”。
-
-## 代码索引
-
-如果要从代码里读实现，建议按这个顺序看：
-
-1. `mods/showcases/navigation/MassNavWebParityMod/MassNavWebParityModEntry.cs`
-2. `mods/showcases/navigation/MassNavWebParityMod/Runtime/MassNavPlaygroundRuntime.cs`
-3. `mods/showcases/navigation/MassNavWebParityMod/Systems/MassNavCommandBridgeSystem.cs`
-4. `mods/showcases/navigation/MassNavWebParityMod/Runtime/MassNavSimulationRuntime.cs`
-5. `mods/showcases/navigation/MassNavWebParityMod/Runtime/MassNavFormationRuntime.cs`
-6. `mods/showcases/navigation/MassNavWebParityMod/Runtime/MassNavWebParitySimState.cs`
-7. `mods/showcases/navigation/MassNavWebParityMod/UI/MassNavPlaygroundPanelController.cs`
-
-这样读，比较容易先看清装配关系，再看具体算法。
+- `world.worldWidthCm` / `world.worldHeightCm`: full battlefield size.
+- `world.solverWindowWidthCm` / `world.solverWindowHeightCm`: SoA solver cache size.
+- `world.streamingChunkSizeCm`: chunk size for the reused loaded-chunks service.
+- `world.streamingRadiusCm`: streamed chunk radius around camera/command focus.
+- `world.cameraFocusShiftThresholdCm`: safe inner margin before camera motion shifts the solver window.
+- `world.commandFocusHoldTicks`: ticks to keep the command target as solver focus before camera focus can take over again.
+- `world.workAreaPaddingCm`: padding applied around camera, selected units, and command target when building `FlowWorkArea`.
+- `world.workAreaMaxWidthCm` / `world.workAreaMaxHeightCm`: maximum requested work-area dimensions. This caps diagnostics and streaming demand while the current solver cache remains fixed-size.
+- `world.hotZones`: currently named legacy config field for known contacts. Treat these as landmarks, not gameplay boundaries.
+
+## UAT Checklist
+
+Manual Raylib UAT:
+
+- Launch `mass_nav_web_parity_raylib`.
+- Verify the minimap shows the full 64km battlefield and the `CAM` rectangle.
+- Click the minimap center, then a far corner, then an empty area. The camera should move to each coordinate and never black out.
+- Use the contact buttons only as camera shortcuts. The contact marker itself must not move.
+- Box-select units and right-click a far world coordinate. Units should receive a move order. The HUD/panel should report `FlowWorkArea` driven by `selection command`, including selected-unit bounds and the command target.
+- Confirm the blue 3D rectangle is the current solver cache and the green 3D rectangle is the larger requested flow work area. Neither rectangle is a player movement boundary.
+- Pan the camera away from the command target. The solver window should not instantly snap back until `commandFocusHoldTicks` expires.
+- After the hold expires, continue moving the camera; the dynamic flow window should follow only after crossing the safe threshold.
+- Check the HUD and left panel: they should show real render FPS, `FlowWorkArea` center/size/reason, solver cache center/size, chunk count, command rejects, and per-stage timings.
+- Reset scene. Agent count, group state, selection mirror, and runtime diagnostics should return to a clean state.
+
+Automated evidence UAT:
+
+```powershell
+.\scripts\run-mod-launcher.cmd cli launch mass_nav_web_parity --adapter raylib --record artifacts\acceptance\mass-nav-web-parity-large-world-rts
+```
+
+This recorder runs the real launcher graph and writes:
+
+- `artifacts/acceptance/mass-nav-web-parity-large-world-rts/battle-report.md`
+- `artifacts/acceptance/mass-nav-web-parity-large-world-rts/trace.jsonl`
+- `artifacts/acceptance/mass-nav-web-parity-large-world-rts/path.mmd`
+- `artifacts/acceptance/mass-nav-web-parity-large-world-rts/summary.json`
+- `artifacts/acceptance/mass-nav-web-parity-large-world-rts/visible-checklist.md`
+- `artifacts/acceptance/mass-nav-web-parity-large-world-rts/screens/timeline.png`
+
+The automated UAT must pass all of these player-facing checks:
+
+- 64km world dimensions are active.
+- At least four dynamic teams are present.
+- The minimap starts as the full world.
+- Camera jumps land on all configured test points, including all four near-edge corners and empty coordinates.
+- Formal selection is populated through `SelectionRuntime`.
+- A GAS `massNavMove` command creates active orders/groups and moves the selected units.
+- Reset clears selection and group state.
+- A second command after reset moves the selected units again.
+- An empty in-bounds world coordinate accepts a normal move command.
+- Every dynamic team can be selected and commanded independently through the same formal path.
+- Near-edge in-bounds world coordinates accept normal camera jumps and move commands on all four corners and all four side midpoints.
+- Every out-of-world boundary probe, including just-over-edge cases, is rejected and counted; commands are not clamped or silently redirected.
+- No agent, solver window, or flow work-area may leave the configured world bounds during camera jumps, movement, reset, legal edge commands, invalid boundary probes, or soak.
+- The long soak keeps streaming chunks active.
+- Memory evidence records both total managed-watermark growth and a steady-state probe. Total growth is allowed to reflect first-use capacity expansion only if the final steady-state probe stays bounded.
+
+The recorder is headless evidence. It records simulation tick cost, solver buckets, memory watermarks, and screenshots. It does not record real render FPS; use the live Raylib HUD or a dedicated renderer benchmark for FPS.
+
+Repeatable soak UAT:
+
+```powershell
+.\scripts\acceptance\run-mass-nav-web-parity-large-world-uat.ps1 -Iterations 3 -OutputRoot artifacts\acceptance\mass-nav-web-parity-large-world-soak
+```
+
+Overnight soak UAT:
+
+```powershell
+.\scripts\acceptance\run-mass-nav-web-parity-large-world-uat.ps1 -Iterations 0 -UntilLocalTime 06:00 -OutputRoot artifacts\acceptance\mass-nav-web-parity-large-world-overnight -StopOnFailure
+```
+
+The soak runner repeats the same launcher evidence contract and writes:
+
+- `soak-report.md`: designer-readable pass/fail summary, UAT matrix, links to each run timeline.
+- `soak-summary.jsonl`: one machine-readable row per run.
+- `run-000N/battle-report.md`: detailed scenario card for that run.
+- `run-000N/trace.jsonl`: per-snapshot diagnostics.
+- `run-000N/screens/timeline.png`: visual proof strip.
+
+Soak acceptance is not a different standard. It is the same Ludots evidence path repeated until a configured iteration count or local deadline. Missing `summary.json`, missing screenshots, missing selection/order/minimap services, or launcher failure is a failed run, not a fallback success.
+
+Enhanced boundary coverage currently records:
+
+- `multi_team_command_advance_cm`: one movement proof per dynamic team.
+- `edge_inside_command_advance_cm`: eight legal near-edge movement proofs, covering four corners and four side midpoints.
+- `agents_outside_world`: must stay `0` on every trace row.
+- `multi_team_min_advance_cm` and `edge_inside_min_advance_cm`: condensed soak columns for quick UAT scanning.
+
+Current acceptance artifact signature:
+
+```text
+mass_nav_web_parity_large_world_rts_uat|agents:10000|teams:4|firstAdvance:4739|secondAdvance:10598|emptyAdvance:2234|multiTeamMin:2293|edgeMin:867|workRev:69|rejects:9|boundaryRejects:8|chunks:36
+```
+
+Current evidence highlights:
+
+- `10,000` agents across `4` teams.
+- First command advance: about `47m`.
+- Second command advance after reset: about `106m`.
+- Empty-world command advance: about `22m`.
+- Multi-team command minimum advance: about `23m`.
+- Legal near-edge command minimum advance: about `9m`.
+- Invalid command rejects: `9`, including all eight boundary probes.
+- Steady managed growth over the final `240` ticks: about `0.55MB`.
+- Steady allocated bytes over the final `240` ticks: about `2.74MB`.
+- Warm median headless tick remains headless evidence only; live render FPS must be checked in the Raylib HUD.
+
+## Known Limits
+
+- The current solver cache size is fixed to the SoA grid constants. The config is explicit so this constraint is visible and fail-fast.
+- Flow allocation is dynamic by focus position, not yet dynamic by multiple simultaneous hotspots.
+- Known contacts still use legacy `HotZone` type names internally. They are not user-facing hot zones and should be renamed to `KnownContact` in a cleanup pass.
+- The crowd simulation still overlaps conceptually with production `Navigation2D`; this playground proves the high-performance strategy before deeper mainline convergence.
+- The automated evidence run still shows a roughly `97MB` managed memory watermark increase after warm baseline when it first exercises far commands and screenshots. The final steady-state probe is bounded, so this is tracked as capacity-watermark evidence rather than a confirmed leak. If the steady-state probe grows beyond the documented thresholds, the UAT must fail.
+
+## Read Order
+
+1. `mods/showcases/navigation/MassNavWebParityMod/Runtime/MassNavPlaygroundRuntime.cs`
+2. `mods/showcases/navigation/MassNavWebParityMod/Runtime/MassNavSimulationRuntime.cs`
+3. `mods/showcases/navigation/MassNavWebParityMod/Runtime/MassNavWebParitySimState.cs`
+4. `mods/showcases/navigation/MassNavWebParityMod/Systems/MassNavCommandBridgeSystem.cs`
+5. `mods/showcases/navigation/MassNavWebParityMod/Systems/MassNavFormationSystem.cs`
+6. `mods/showcases/navigation/MassNavWebParityMod/UI/MassNavPlaygroundPanelController.cs`
+7. `mods/capabilities/minimap/MinimapControlMod/Runtime/MinimapControlRuntime.cs`

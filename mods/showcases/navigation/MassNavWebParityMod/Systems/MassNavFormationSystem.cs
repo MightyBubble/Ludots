@@ -1,6 +1,8 @@
 using System.Diagnostics;
 using Arch.System;
 using Ludots.Core.Engine;
+using Ludots.Core.Gameplay.Camera;
+using Ludots.Core.Presentation.Camera;
 using Ludots.Core.Scripting;
 using MassNavWebParityMod.Runtime;
 
@@ -30,6 +32,7 @@ internal sealed class MassNavFormationSystem : ISystem<float>
         }
 
         _simulation.ObserveSimTick();
+        ObserveCameraFocus();
 
         long start = Stopwatch.GetTimestamp();
         _simulation.NavGroupRuntime.UpdateTargets(
@@ -56,5 +59,22 @@ internal sealed class MassNavFormationSystem : ISystem<float>
         start = Stopwatch.GetTimestamp();
         _simulation.WebParity.SyncEntities(_engine.World, _simulation.AgentState);
         _simulation.ObserveEntitySync((Stopwatch.GetTimestamp() - start) * 1000.0 / Stopwatch.Frequency);
+    }
+
+    private void ObserveCameraFocus()
+    {
+        var camera = _engine.GameSession.Camera.State;
+        if (_engine.GetService(CoreServiceKeys.ViewController) is not IViewController view)
+        {
+            _simulation.ObserveCameraFocus(camera.TargetCm);
+            return;
+        }
+
+        var extent = CameraViewportUtil.ComputeViewportExtent(
+            camera.DistanceCm,
+            camera.FovYDeg,
+            camera.Pitch,
+            view.AspectRatio);
+        _simulation.ObserveCameraFocus(camera.TargetCm, extent.widthCm, extent.heightCm);
     }
 }

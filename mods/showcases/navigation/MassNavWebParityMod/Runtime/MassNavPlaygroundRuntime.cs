@@ -6,21 +6,25 @@ using Ludots.Core.Engine;
 using Ludots.Core.Gameplay.Camera;
 using Ludots.Core.Gameplay.Components;
 using Ludots.Core.Input.Selection;
+using Ludots.Core.Map;
 using Ludots.Core.Modding;
 using Ludots.Core.Presentation.Assets;
 using Ludots.Core.Presentation.Hud;
 using Ludots.Core.Scripting;
+using Ludots.Core.Spatial;
 using Ludots.UI;
 using MassNavWebParityMod.Systems;
 using MassNavWebParityMod.UI;
+using MinimapControlMod;
 
 namespace MassNavWebParityMod.Runtime;
 
 internal sealed class MassNavWebParityRuntime
 {
-    private const string MassNavCameraProfileId = "Camera.Profile.MassNavWebParityTactical";
-    private static readonly Vector2 MassNavCameraTargetCm = new(5_000f, 5_000f);
-    private const float MassNavCameraDistanceCm = 7_000f;
+    private const string MassNavTacticalCameraProfileId = "Camera.Profile.MassNavWebParityTactical";
+    private const string MassNavStrategicCameraProfileId = "Camera.Profile.MassNavWebParityStrategic";
+    private const float MassNavTacticalCameraDistanceCm = 7_000f;
+    private const float MassNavStrategicCameraDistanceCm = 58_000f;
 
     private static readonly QueryDescription LocalPlayerQuery = new QueryDescription().WithAll<PlayerOwner>();
 
@@ -57,6 +61,7 @@ internal sealed class MassNavWebParityRuntime
         var meshes = engine.GetService(CoreServiceKeys.PresentationMeshAssetRegistry)
             ?? throw new System.InvalidOperationException("MassNavWebParityMod requires PresentationMeshAssetRegistry.");
         engine.RegisterPresentationSystem(new MassNavPrimitivePresentationSystem(engine, simulation, meshes));
+        engine.RegisterPresentationSystem(new MassNavMinimapDebugSyncSystem(engine, simulation));
         engine.RegisterPresentationSystem(new MassNavHudPresentationSystem(engine, simulation));
         engine.RegisterPresentationSystem(new MassNavPanelPresentationSystem(engine, this));
         _systemsInstalled = true;
@@ -77,8 +82,11 @@ internal sealed class MassNavWebParityRuntime
         }
 
         EnsureSystemsInstalled(engine);
+        ValidateBoardContract(engine);
+        BindMassNavLoadedChunks(engine);
         EnsureLocalPlayerEntity(engine);
         ConfigureRenderDebug(engine);
+        ConfigureMinimap(engine);
         EnsureTacticalCamera(engine);
         EnsureScenario(engine);
         RefreshPanel(engine);
@@ -137,6 +145,123 @@ internal sealed class MassNavWebParityRuntime
             engine.GetService(CoreServiceKeys.TeamEntityLookup)
                 ?? throw new System.InvalidOperationException("MassNavWebParityMod requires TeamEntityLookup."));
         _scenarioSpawned = true;
+    }
+
+    private void ValidateBoardContract(GameEngine engine)
+    {
+        MapSession session = engine.CurrentMapSession
+            ?? throw new System.InvalidOperationException("MassNavWebParityMod requires an active MapSession.");
+        var board = session.PrimaryBoard
+            ?? throw new System.InvalidOperationException("MassNavWebParityMod requires a primary board.");
+        var worldConfig = _config.World
+            ?? throw new System.InvalidOperationException("MassNavWebParityMod requires explicit world config.");
+        var bounds = board.WorldSize.Bounds;
+        if (bounds.Width != worldConfig.WorldWidthCm ||
+            bounds.Height != worldConfig.WorldHeightCm)
+        {
+            throw new System.InvalidOperationException(
+                $"MassNavWebParityMod board/world mismatch: board is {bounds.Width}x{bounds.Height} cm, config is {worldConfig.WorldWidthCm}x{worldConfig.WorldHeightCm} cm.");
+        }
+    }
+
+    private static void BindMassNavLoadedChunks(GameEngine engine)
+    {
+        MassNavSimulationRuntime simulation = engine.GetService(MassNavWebParityKeys.SimulationRuntime)
+            ?? throw new System.InvalidOperationException("MassNavWebParityMod requires simulation runtime.");
+        engine.SetService(CoreServiceKeys.LoadedChunks, (ILoadedChunks)simulation.LoadedChunks);
+        if (engine.SpatialQueries is SpatialQueryService spatialQueries)
+        {
+            spatialQueries.SetLoadedChunks(simulation.LoadedChunks);
+        }
+    }
+
+    private static void ConfigureMinimap(GameEngine engine)
+    {
+        MassNavSimulationRuntime simulation = engine.GetService(MassNavWebParityKeys.SimulationRuntime)
+            ?? throw new System.InvalidOperationException("MassNavWebParityMod requires simulation runtime.");
+        if (engine.GetService(MinimapControlServiceKeys.Runtime) is not { } minimap)
+        {
+            throw new System.InvalidOperationException("MassNavWebParityMod requires MinimapControlMod runtime because it is declared as a dependency.");
+        }
+
+        minimap.ConfigureWorldScale(
+            title: "64km Battlefield",
+            worldWidthCm: simulation.WorldWidthCm,
+            worldHeightCm: simulation.WorldHeightCm,
+            tacticalHalfExtentCm: simulation.SolverWindowWidthCm * 0.6f);
+        minimap.SetAbsoluteWorldOverview(true);
+        SyncMinimapKnownContacts(simulation, minimap);
+        RequestMinimapStrategicWorldView(engine);
+        minimap.Visible = true;
+    }
+
+    internal static void SyncMinimapKnownContacts(MassNavSimulationRuntime simulation, MinimapControlMod.Runtime.MinimapControlRuntime minimap)
+    {
+        minimap.ClearWorldRegions();
+        ReadOnlySpan<MassNavHotZoneConfig> hotZones = simulation.HotZones;
+        for (int i = 0; i < hotZones.Length; i++)
+        {
+            MassNavHotZoneConfig zone = hotZones[i];
+            minimap.AddWorldRegion(
+                zone.Id,
+                zone.Label,
+                zone.CenterXCm,
+                zone.CenterYCm,
+                zone.WidthCm,
+                zone.HeightCm,
+                active: false);
+        }
+    }
+
+    internal static void SyncMinimapHotZones(MassNavSimulationRuntime simulation, MinimapControlMod.Runtime.MinimapControlRuntime minimap)
+    {
+        SyncMinimapKnownContacts(simulation, minimap);
+    }
+
+    internal static void RequestMinimapStrategicWorldView(GameEngine engine)
+    {
+        MassNavSimulationRuntime simulation = engine.GetService(MassNavWebParityKeys.SimulationRuntime)
+            ?? throw new System.InvalidOperationException("MassNavWebParityMod requires simulation runtime before minimap strategic view.");
+        if (engine.GetService(MinimapControlServiceKeys.Runtime) is not { } minimap)
+        {
+            throw new System.InvalidOperationException("MassNavWebParityMod requires MinimapControlMod runtime because it is declared as a dependency.");
+        }
+
+        minimap.SetAbsoluteWorldOverview(true);
+        minimap.ShowFullWorld();
+    }
+
+    internal static void RequestMinimapTacticalWorldView(GameEngine engine)
+    {
+        if (engine.GetService(MinimapControlServiceKeys.Runtime) is not { } minimap)
+        {
+            throw new System.InvalidOperationException("MassNavWebParityMod requires MinimapControlMod runtime because it is declared as a dependency.");
+        }
+
+        minimap.SetAbsoluteWorldOverview(true);
+        minimap.ShowFullWorld();
+    }
+
+    internal static void RequestMinimapTacticalHotZoneView(GameEngine engine)
+    {
+        RequestMinimapTacticalWorldView(engine);
+    }
+
+    internal static void RequestCameraJump(GameEngine engine, Vector2 targetCm, float distanceCm)
+    {
+        engine.GlobalContext[CoreServiceKeys.VirtualCameraRequest.Name] = new VirtualCameraRequest
+        {
+            Id = MassNavTacticalCameraProfileId,
+            BlendDurationSeconds = 0f,
+            ResetRuntimeState = true,
+            SnapToFollowTargetWhenAvailable = false
+        };
+        engine.SetService(CoreServiceKeys.CameraPoseRequest, new CameraPoseRequest
+        {
+            VirtualCameraId = MassNavTacticalCameraProfileId,
+            TargetCm = targetCm,
+            DistanceCm = distanceCm
+        });
     }
 
     private static void EnsureLocalPlayerEntity(GameEngine engine)
@@ -246,19 +371,60 @@ internal sealed class MassNavWebParityRuntime
 
     internal static void RequestTacticalCameraReset(GameEngine engine)
     {
+        Vector2 targetCm = ResolveCameraTarget(engine);
         engine.GlobalContext[CoreServiceKeys.VirtualCameraRequest.Name] = new VirtualCameraRequest
         {
-            Id = MassNavCameraProfileId,
+            Id = MassNavTacticalCameraProfileId,
             BlendDurationSeconds = 0f,
             ResetRuntimeState = true,
             SnapToFollowTargetWhenAvailable = false
         };
         engine.SetService(CoreServiceKeys.CameraPoseRequest, new CameraPoseRequest
         {
-            VirtualCameraId = MassNavCameraProfileId,
-            TargetCm = MassNavCameraTargetCm,
-            DistanceCm = MassNavCameraDistanceCm
+            VirtualCameraId = MassNavTacticalCameraProfileId,
+            TargetCm = targetCm,
+            DistanceCm = MassNavTacticalCameraDistanceCm
         });
+    }
+
+    internal static void RequestStrategicCameraReset(GameEngine engine)
+    {
+        MassNavSimulationRuntime simulation = engine.GetService(MassNavWebParityKeys.SimulationRuntime)
+            ?? throw new System.InvalidOperationException("MassNavWebParityMod requires simulation runtime before strategic camera reset.");
+        engine.GlobalContext[CoreServiceKeys.VirtualCameraRequest.Name] = new VirtualCameraRequest
+        {
+            Id = MassNavStrategicCameraProfileId,
+            BlendDurationSeconds = 0f,
+            ResetRuntimeState = true,
+            SnapToFollowTargetWhenAvailable = false
+        };
+        engine.SetService(CoreServiceKeys.CameraPoseRequest, new CameraPoseRequest
+        {
+            VirtualCameraId = MassNavStrategicCameraProfileId,
+            TargetCm = new Vector2(0f, 0f),
+            DistanceCm = MassNavStrategicCameraDistanceCm,
+            Pitch = 68f,
+            Yaw = 225f,
+            FovYDeg = 70f
+        });
+    }
+
+    internal static bool IsStrategicWorldCameraActive(GameEngine engine)
+    {
+        return string.Equals(
+            engine.GameSession.Camera.VirtualCameraBrain?.ActiveCameraId,
+            MassNavStrategicCameraProfileId,
+            System.StringComparison.OrdinalIgnoreCase);
+    }
+
+    private static Vector2 ResolveCameraTarget(GameEngine engine)
+    {
+        if (engine.GetService(MassNavWebParityKeys.SimulationRuntime) is not MassNavSimulationRuntime simulation)
+        {
+            throw new System.InvalidOperationException("MassNavWebParityMod requires simulation runtime before camera reset.");
+        }
+
+        return new Vector2(simulation.SolverWindowCenterXCm, simulation.SolverWindowCenterYCm);
     }
 
     private readonly record struct RenderDebugSnapshot(
