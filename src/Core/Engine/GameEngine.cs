@@ -608,6 +608,7 @@ namespace Ludots.Core.Engine
             var interactionActionBindings = new InteractionActionBindings();
             var selectionRuleRegistry = SelectionRuleRegistry.CreateWithDefaults();
             var runtimeEntitySpawnQueue = new RuntimeEntitySpawnQueue(config.Presentation.GetEffectiveRuntimeEntitySpawnQueueCapacity());
+            var runtimeEntitySpawnReceiptQueue = new RuntimeEntitySpawnReceiptQueue(config.Presentation.GetEffectiveRuntimeEntitySpawnReceiptQueueCapacity());
             MapLoader.SetEffectRequestQueue(effectRequestQueue);
             var orderQueue = new OrderQueue();
             var chainOrderQueue = new OrderQueue();
@@ -888,6 +889,7 @@ namespace Ludots.Core.Engine
             SetService(CoreServiceKeys.InteractionActionBindings, interactionActionBindings);
             RemoveService(CoreServiceKeys.VisualHeightmap);
             SetService(CoreServiceKeys.RuntimeEntitySpawnQueue, runtimeEntitySpawnQueue);
+            SetService(CoreServiceKeys.RuntimeEntitySpawnReceiptQueue, runtimeEntitySpawnReceiptQueue);
             SetService(CoreServiceKeys.OrderQueue, orderQueue);
             SetService(CoreServiceKeys.OrderTypeRegistry, orderTypeRegistry);
             SetService(CoreServiceKeys.OrderRuleRegistry, orderRuleRegistry);
@@ -1082,6 +1084,7 @@ namespace Ludots.Core.Engine
                 MapLoader.EntityTemplateKeys,
                 presentationStableIds,
                 effectRequestQueue,
+                runtimeEntitySpawnReceiptQueue,
                 performerRuntime,
                 performerDefinitions,
                 presentationEventStream,
