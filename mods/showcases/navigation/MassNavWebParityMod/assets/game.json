@@ -1,0 +1,37 @@
+{
+  "startupMapId": "mass_nav_web_parity",
+  "windowTitle": "Ludots Engine - Mass Nav Web Parity",
+  "targetFps": 60,
+  "worldWidthInTiles": 250,
+  "worldHeightInTiles": 250,
+  "constants": {
+    "orderTypeIds": {
+      "massNavMove": 172
+    }
+  },
+  "presentation": {
+    "performerInstanceCapacity": 131072,
+    "presentationEventStreamCapacity": 131072,
+    "performerCommandCapacity": 262144,
+    "presentationRequestCapacity": 262144,
+    "minimapMarkerCapacity": 131072,
+    "runtimeEntitySpawnQueueCapacity": 131072,
+    "runtimeEntitySpawnReceiptQueueCapacity": 131072,
+    "minimap": {
+      "initialZoomNormalized": 1.0,
+      "wheelZoomNormalizedStep": 0.08,
+      "buttonZoomNormalizedStep": 0.18,
+      "zoomSliderEnabled": true,
+      "modeToggleEnabled": true,
+      "rotateToggleEnabled": true,
+      "debugMarkerSampleCapacity": 128,
+      "minZoomExtentMode": "OneChunk",
+      "maxZoomExtentMode": "FullMap",
+      "minZoomExplicitHalfExtentCm": 750.0,
+      "maxZoomExplicitHalfExtentCm": 0.0
+    }
+  },
+  "Navigation2D": {
+    "Enabled": false
+  }
+}

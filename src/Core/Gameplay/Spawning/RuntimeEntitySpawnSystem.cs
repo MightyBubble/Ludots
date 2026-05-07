@@ -25,6 +25,7 @@ namespace Ludots.Core.Gameplay.Spawning
     {
         private const int BatchEntityScratchCapacity = 32768;
         private readonly RuntimeEntitySpawnQueue _requests;
+        private readonly RuntimeEntitySpawnReceiptQueue? _receipts;
         private readonly EffectRequestQueue _effectRequests;
         private readonly DataRegistry<EntityTemplate> _templateRegistry;
         private readonly EntityTemplateKeyRegistry _templateKeys;
@@ -55,6 +56,7 @@ namespace Ludots.Core.Gameplay.Spawning
             EntityTemplateKeyRegistry templateKeys,
             PresentationStableIdAllocator stableIds,
             EffectRequestQueue effectRequests = null,
+            RuntimeEntitySpawnReceiptQueue? receipts = null,
             PerformerEntityRuntime? performerRuntime = null,
             PerformerDefinitionRegistry? performerDefinitions = null,
             PresentationEventStream? presentationEvents = null,
@@ -64,6 +66,7 @@ namespace Ludots.Core.Gameplay.Spawning
             : base(world)
         {
             _requests = requests ?? throw new ArgumentNullException(nameof(requests));
+            _receipts = receipts;
             _templateRegistry = templateRegistry ?? throw new ArgumentNullException(nameof(templateRegistry));
             _templateKeys = templateKeys ?? throw new ArgumentNullException(nameof(templateKeys));
             _effectRequests = effectRequests;
@@ -113,6 +116,7 @@ namespace Ludots.Core.Gameplay.Spawning
 
                     var singleRequest = _batchRequests[0];
                     var spawnedSingle = SpawnTemplate(singleRequest);
+                    PublishSpawnReceipt(in singleRequest, spawnedSingle);
                     PublishOnSpawnEffect(in singleRequest, spawnedSingle);
                     continue;
                 }
@@ -131,6 +135,7 @@ namespace Ludots.Core.Gameplay.Spawning
                 };
 
                 PublishOnSpawnEffect(in request, spawned);
+                PublishSpawnReceipt(in request, spawned);
             }
         }
 
@@ -242,6 +247,7 @@ namespace Ludots.Core.Gameplay.Spawning
             bool hasSourcePlayerOwnerWork = false;
             bool hasParentWork = false;
             bool hasRequestOnSpawnEffect = false;
+            bool hasReceiptWork = false;
             for (int i = 0; i < count; i++)
             {
                 ref readonly var request = ref _batchRequests[i];
@@ -249,6 +255,7 @@ namespace Ludots.Core.Gameplay.Spawning
                 hasSourcePlayerOwnerWork |= request.CopySourcePlayerOwner != 0;
                 hasParentWork |= request.LinkSourceAsParent != 0 || World.IsAlive(request.Parent);
                 hasRequestOnSpawnEffect |= request.OnSpawnEffectTemplateId > 0;
+                hasReceiptWork |= request.EmitReceipt != 0;
             }
 
             TemplateBatchSpawnFeatures features =
@@ -291,6 +298,7 @@ namespace Ludots.Core.Gameplay.Spawning
                 hasParentWork ||
                 publishSpawnedEvent ||
                 hasRequestOnSpawnEffect ||
+                hasReceiptWork ||
                 onSpawnEffectTemplateId > 0 ||
                 !allHaveMapEntity;
             if (requiresPostSpawnLoop)
@@ -324,6 +332,8 @@ namespace Ludots.Core.Gameplay.Spawning
                     {
                         PublishSpawnedPresentationEvent(entity);
                     }
+
+                    PublishSpawnReceipt(in request, entity);
 
                     if (hasRequestOnSpawnEffect || onSpawnEffectTemplateId > 0)
                     {
@@ -672,6 +682,32 @@ namespace Ludots.Core.Gameplay.Spawning
         private void PublishOnSpawnEffect(in RuntimeEntitySpawnRequest request, Entity spawned)
         {
             PublishOnSpawnEffect(in request, spawned, 0);
+        }
+
+        private void PublishSpawnReceipt(in RuntimeEntitySpawnRequest request, Entity spawned)
+        {
+            if (request.EmitReceipt == 0)
+            {
+                return;
+            }
+
+            if (_receipts == null)
+            {
+                throw new InvalidOperationException("RuntimeEntitySpawnRequest requested a receipt but RuntimeEntitySpawnReceiptQueue is not registered.");
+            }
+
+            if (!_receipts.TryEnqueue(new RuntimeEntitySpawnReceipt
+                {
+                    ReceiptChannelId = request.ReceiptChannelId,
+                    ReceiptId = request.ReceiptId,
+                    Kind = request.Kind,
+                    Entity = spawned,
+                    TemplateId = request.TemplateId,
+                    MapId = request.MapId,
+                }))
+            {
+                throw new InvalidOperationException("RuntimeEntitySpawnReceiptQueue capacity exceeded.");
+            }
         }
 
         private void PublishSpawnedPresentationEvent(Entity entity)

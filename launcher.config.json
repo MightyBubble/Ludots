@@ -80,6 +80,14 @@
         "value": "mods/showcases/performer_blacksmith_large_world_entry/PerformerBlacksmithLargeWorldEntryMod",
         "projectPath": "PerformerBlacksmithLargeWorldEntryMod.csproj"
       }
+    },
+    {
+      "name": "mass_nav_web_parity",
+      "target": {
+        "type": "path",
+        "value": "mods/showcases/navigation/MassNavWebParityMod",
+        "projectPath": "MassNavWebParityMod.csproj"
+      }
     }
   ],
   "adapters": {

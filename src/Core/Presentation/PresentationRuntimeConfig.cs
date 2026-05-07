@@ -22,6 +22,7 @@ namespace Ludots.Core.Presentation
         public int ScreenHudCapacity { get; set; } = 131072;
         public int MinimapMarkerCapacity { get; set; } = 131072;
         public int RuntimeEntitySpawnQueueCapacity { get; set; } = 131072;
+        public int RuntimeEntitySpawnReceiptQueueCapacity { get; set; } = 131072;
         public CameraCullingRuntimeConfig CameraCulling { get; set; } = new CameraCullingRuntimeConfig();
         public MinimapRuntimeConfig Minimap { get; set; } = new MinimapRuntimeConfig();
 
@@ -95,8 +96,19 @@ namespace Ludots.Core.Presentation
             return RuntimeEntitySpawnQueueCapacity > 0 ? RuntimeEntitySpawnQueueCapacity : 131072;
         }
 
+        public int GetEffectiveRuntimeEntitySpawnReceiptQueueCapacity()
+        {
+            return RuntimeEntitySpawnReceiptQueueCapacity;
+        }
+
         public void Validate()
         {
+            if (RuntimeEntitySpawnReceiptQueueCapacity <= 0)
+            {
+                throw new InvalidOperationException(
+                    "presentation.runtimeEntitySpawnReceiptQueueCapacity must be explicitly configured as > 0.");
+            }
+
             CameraCulling.Validate();
             Minimap.Validate();
         }

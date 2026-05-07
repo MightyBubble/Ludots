@@ -182,6 +182,7 @@ namespace Ludots.Core.Scripting
         public static readonly ServiceKey<SelectionRuntimeConfig> SelectionConfig = new("SelectionConfig");
         public static readonly ServiceKey<StringIntRegistry> SelectionSetKeyRegistry = new("SelectionSetKeyRegistry");
         public static readonly ServiceKey<InteractionActionBindings> InteractionActionBindings = new("InteractionActionBindings");
+        public static readonly ServiceKey<RuntimeEntitySpawnReceiptQueue> RuntimeEntitySpawnReceiptQueue = new("RuntimeEntitySpawnReceiptQueue");
         public static readonly ServiceKey<InputOrderMappingSystem> ActiveInputOrderMapping = new("ActiveInputOrderMapping");
         public static readonly ServiceKey<OrderQueue> OrderQueue = new("OrderQueue");
         public static readonly ServiceKey<OrderTypeRegistry> OrderTypeRegistry = new("OrderTypeRegistry");

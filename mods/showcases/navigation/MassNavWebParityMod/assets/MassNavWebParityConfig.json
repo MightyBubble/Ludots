@@ -1,0 +1,170 @@
+{
+  "mapId": "mass_nav_web_parity",
+  "world": {
+    "worldWidthCm": 6400000,
+    "worldHeightCm": 6400000,
+    "solverWindowWidthCm": 10000,
+    "solverWindowHeightCm": 10000,
+    "streamingChunkSizeCm": 6400,
+    "streamingRadiusCm": 16000,
+    "cameraFocusShiftThresholdCm": 3000,
+    "commandFocusHoldTicks": 90,
+    "workAreaPaddingCm": 4000,
+    "workAreaMaxWidthCm": 48000,
+    "workAreaMaxHeightCm": 48000,
+    "activeHotZoneId": "central",
+    "hotZones": [
+      {
+        "id": "central",
+        "label": "Central",
+        "centerXCm": 0,
+        "centerYCm": 0,
+        "widthCm": 10000,
+        "heightCm": 10000
+      },
+      {
+        "id": "east_front",
+        "label": "East Front",
+        "centerXCm": 1800000,
+        "centerYCm": 600000,
+        "widthCm": 10000,
+        "heightCm": 10000
+      },
+      {
+        "id": "southwest",
+        "label": "Southwest",
+        "centerXCm": -2100000,
+        "centerYCm": -1600000,
+        "widthCm": 10000,
+        "heightCm": 10000
+      },
+      {
+        "id": "northeast",
+        "label": "Northeast",
+        "centerXCm": 2400000,
+        "centerYCm": 2100000,
+        "widthCm": 10000,
+        "heightCm": 10000
+      }
+    ]
+  },
+  "presentation": {
+    "blockerPerformerId": "massnav_blocker",
+    "hotspotPerformerId": "massnav_hotspot_marker",
+    "blockerTemplateId": "massnav_blocker",
+    "hotspotTemplateId": "massnav_hotspot_marker",
+    "selectionVisibilityParamKey": 170001,
+    "teams": [
+      {
+        "teamId": 1,
+        "styleId": "blue",
+        "lightTemplateId": "massnav_agent_azure_light",
+        "heavyTemplateId": "massnav_agent_azure_heavy",
+        "lightPerformerId": "massnav_agent_azure_light",
+        "heavyPerformerId": "massnav_agent_azure_heavy"
+      },
+      {
+        "teamId": 2,
+        "styleId": "red",
+        "lightTemplateId": "massnav_agent_crimson_light",
+        "heavyTemplateId": "massnav_agent_crimson_heavy",
+        "lightPerformerId": "massnav_agent_crimson_light",
+        "heavyPerformerId": "massnav_agent_crimson_heavy"
+      },
+      {
+        "teamId": 3,
+        "styleId": "gold",
+        "lightTemplateId": "massnav_agent_amber_light",
+        "heavyTemplateId": "massnav_agent_amber_heavy",
+        "lightPerformerId": "massnav_agent_amber_light",
+        "heavyPerformerId": "massnav_agent_amber_heavy"
+      },
+      {
+        "teamId": 4,
+        "styleId": "green",
+        "lightTemplateId": "massnav_agent_emerald_light",
+        "heavyTemplateId": "massnav_agent_emerald_heavy",
+        "lightPerformerId": "massnav_agent_emerald_light",
+        "heavyPerformerId": "massnav_agent_emerald_heavy"
+      }
+    ]
+  },
+  "scenario": {
+    "agentsPerTeam": 2500,
+    "initialSelectedTeamId": 1,
+    "teams": [
+      { "id": 1, "name": "Azure Vanguard" },
+      { "id": 2, "name": "Crimson Column" },
+      { "id": 3, "name": "Amber Phalanx" },
+      { "id": 4, "name": "Emerald Guard" }
+    ]
+  },
+  "teamRelationships": {
+    "defaultRelationship": "Hostile",
+    "relationships": [
+      { "teamA": 3, "teamB": 4, "attitude": "Neutral", "symmetric": true }
+    ]
+  },
+  "flow": {
+    "enabled": false,
+    "iterationsPerStep": 4096,
+    "stepIntervalTicks": 1,
+    "crowdStampIntervalTicks": 1,
+    "obstacleStampIntervalTicks": 1
+  },
+  "arrival": {
+    "enabled": true,
+    "timeoutMs": 1500,
+    "progressDistanceCm": 60,
+    "wakePushDistanceCm": 80,
+    "maxRetryCount": 2
+  },
+  "avoidance": {
+    "lightNavMass": 1.0,
+    "heavyNavMass": 4.0,
+    "lightVisualScale": 0.22,
+    "heavyVisualScale": 0.34,
+    "dominantMassRatio": 2.25,
+    "friendlyResponseScale": 1.1,
+    "nonFriendlyResponseScale": 1.25,
+    "dominantPushResponseScale": 1.6
+  },
+  "semantics": {
+    "obstacle": {
+      "agentBodyRadiusCm": 20.0,
+      "hardResolveCandidateDistanceCm": 100.0,
+      "softPushPaddingCm": 350.0,
+      "softPushForceScale": 8.0
+    },
+    "targetProjection": {
+      "teamTargetClearanceCm": 60.0,
+      "groupCenterClearanceCm": 60.0,
+      "teamSlotClearanceCm": 45.0,
+      "groupSlotClearanceCm": 50.0,
+      "looseTargetClearanceCm": 50.0
+    },
+    "group": {
+      "spawnSpacingCm": 46.0,
+      "teamSlotSpacingCm": 90.0,
+      "pullDeadZoneCm": 50.0,
+      "pullClampCm": 2000.0,
+      "arrivedRadiusCm": 150.0,
+      "formationArriveThresholdCm": 200.0,
+      "looseArriveThresholdCm": 300.0,
+      "unitTargetStopThresholdCm": 50.0,
+      "formationFlowSlowRadiusCm": 400.0,
+      "nearSlotBlend": 0.82,
+      "farSlotBlend": 0.38,
+      "nearSlotBlendDistanceSq": 4000000.0
+    },
+    "steering": {
+      "speedCmPerSecond": 800.0,
+      "separationRadiusCm": 200.0,
+      "goalArrivalRadiusCm": 1200.0,
+      "flowObstacleAvoidanceScale": 1.2,
+      "formationSeparationScale": 2.0,
+      "looseSeparationScale": 4.0,
+      "velocityBlendPerSecond": 5.0
+    }
+  }
+}

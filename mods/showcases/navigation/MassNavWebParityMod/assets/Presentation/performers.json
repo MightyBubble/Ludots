@@ -1,0 +1,584 @@
+[
+  {
+    "id": "massnav_azure_light_bootstrap",
+    "rules": [
+      {
+        "event": { "kind": "EntitySpawned", "key": "massnav_agent_azure_light" },
+        "condition": { "inline": "SourceHasVisualTransform" },
+        "command": {
+          "kind": "CreatePerformer",
+          "definitionId": "massnav_agent_azure_light",
+          "scopeSource": "EventPayloadA"
+        }
+      },
+      {
+        "event": { "kind": "EntityDestroyed", "key": "massnav_agent_azure_light" },
+        "command": {
+          "kind": "DestroyPerformerScope",
+          "scopeSource": "EventPayloadA"
+        }
+      }
+    ]
+  },
+  {
+    "id": "massnav_azure_heavy_bootstrap",
+    "rules": [
+      {
+        "event": { "kind": "EntitySpawned", "key": "massnav_agent_azure_heavy" },
+        "condition": { "inline": "SourceHasVisualTransform" },
+        "command": {
+          "kind": "CreatePerformer",
+          "definitionId": "massnav_agent_azure_heavy",
+          "scopeSource": "EventPayloadA"
+        }
+      },
+      {
+        "event": { "kind": "EntityDestroyed", "key": "massnav_agent_azure_heavy" },
+        "command": {
+          "kind": "DestroyPerformerScope",
+          "scopeSource": "EventPayloadA"
+        }
+      }
+    ]
+  },
+  {
+    "id": "massnav_crimson_light_bootstrap",
+    "rules": [
+      {
+        "event": { "kind": "EntitySpawned", "key": "massnav_agent_crimson_light" },
+        "condition": { "inline": "SourceHasVisualTransform" },
+        "command": {
+          "kind": "CreatePerformer",
+          "definitionId": "massnav_agent_crimson_light",
+          "scopeSource": "EventPayloadA"
+        }
+      },
+      {
+        "event": { "kind": "EntityDestroyed", "key": "massnav_agent_crimson_light" },
+        "command": {
+          "kind": "DestroyPerformerScope",
+          "scopeSource": "EventPayloadA"
+        }
+      }
+    ]
+  },
+  {
+    "id": "massnav_crimson_heavy_bootstrap",
+    "rules": [
+      {
+        "event": { "kind": "EntitySpawned", "key": "massnav_agent_crimson_heavy" },
+        "condition": { "inline": "SourceHasVisualTransform" },
+        "command": {
+          "kind": "CreatePerformer",
+          "definitionId": "massnav_agent_crimson_heavy",
+          "scopeSource": "EventPayloadA"
+        }
+      },
+      {
+        "event": { "kind": "EntityDestroyed", "key": "massnav_agent_crimson_heavy" },
+        "command": {
+          "kind": "DestroyPerformerScope",
+          "scopeSource": "EventPayloadA"
+        }
+      }
+    ]
+  },
+  {
+    "id": "massnav_amber_light_bootstrap",
+    "rules": [
+      {
+        "event": { "kind": "EntitySpawned", "key": "massnav_agent_amber_light" },
+        "condition": { "inline": "SourceHasVisualTransform" },
+        "command": {
+          "kind": "CreatePerformer",
+          "definitionId": "massnav_agent_amber_light",
+          "scopeSource": "EventPayloadA"
+        }
+      },
+      {
+        "event": { "kind": "EntityDestroyed", "key": "massnav_agent_amber_light" },
+        "command": {
+          "kind": "DestroyPerformerScope",
+          "scopeSource": "EventPayloadA"
+        }
+      }
+    ]
+  },
+  {
+    "id": "massnav_amber_heavy_bootstrap",
+    "rules": [
+      {
+        "event": { "kind": "EntitySpawned", "key": "massnav_agent_amber_heavy" },
+        "condition": { "inline": "SourceHasVisualTransform" },
+        "command": {
+          "kind": "CreatePerformer",
+          "definitionId": "massnav_agent_amber_heavy",
+          "scopeSource": "EventPayloadA"
+        }
+      },
+      {
+        "event": { "kind": "EntityDestroyed", "key": "massnav_agent_amber_heavy" },
+        "command": {
+          "kind": "DestroyPerformerScope",
+          "scopeSource": "EventPayloadA"
+        }
+      }
+    ]
+  },
+  {
+    "id": "massnav_emerald_light_bootstrap",
+    "rules": [
+      {
+        "event": { "kind": "EntitySpawned", "key": "massnav_agent_emerald_light" },
+        "condition": { "inline": "SourceHasVisualTransform" },
+        "command": {
+          "kind": "CreatePerformer",
+          "definitionId": "massnav_agent_emerald_light",
+          "scopeSource": "EventPayloadA"
+        }
+      },
+      {
+        "event": { "kind": "EntityDestroyed", "key": "massnav_agent_emerald_light" },
+        "command": {
+          "kind": "DestroyPerformerScope",
+          "scopeSource": "EventPayloadA"
+        }
+      }
+    ]
+  },
+  {
+    "id": "massnav_emerald_heavy_bootstrap",
+    "rules": [
+      {
+        "event": { "kind": "EntitySpawned", "key": "massnav_agent_emerald_heavy" },
+        "condition": { "inline": "SourceHasVisualTransform" },
+        "command": {
+          "kind": "CreatePerformer",
+          "definitionId": "massnav_agent_emerald_heavy",
+          "scopeSource": "EventPayloadA"
+        }
+      },
+      {
+        "event": { "kind": "EntityDestroyed", "key": "massnav_agent_emerald_heavy" },
+        "command": {
+          "kind": "DestroyPerformerScope",
+          "scopeSource": "EventPayloadA"
+        }
+      }
+    ]
+  },
+  {
+    "id": "massnav_blocker_bootstrap",
+    "rules": [
+      {
+        "event": { "kind": "EntitySpawned", "key": "massnav_blocker" },
+        "condition": { "inline": "SourceHasVisualTransform" },
+        "command": {
+          "kind": "CreatePerformer",
+          "definitionId": "massnav_blocker",
+          "scopeSource": "EventPayloadA"
+        }
+      },
+      {
+        "event": { "kind": "EntityDestroyed", "key": "massnav_blocker" },
+        "command": {
+          "kind": "DestroyPerformerScope",
+          "scopeSource": "EventPayloadA"
+        }
+      }
+    ]
+  },
+  {
+    "id": "massnav_hotspot_bootstrap",
+    "rules": [
+      {
+        "event": { "kind": "EntitySpawned", "key": "massnav_hotspot_marker" },
+        "condition": { "inline": "SourceHasVisualTransform" },
+        "command": {
+          "kind": "CreatePerformer",
+          "definitionId": "massnav_hotspot_marker",
+          "scopeSource": "EventPayloadA"
+        }
+      },
+      {
+        "event": { "kind": "EntityDestroyed", "key": "massnav_hotspot_marker" },
+        "command": {
+          "kind": "DestroyPerformerScope",
+          "scopeSource": "EventPayloadA"
+        }
+      }
+    ]
+  },
+  {
+    "id": "massnav_agent_light",
+    "defaultColor": [0.38, 0.72, 1.0, 1.0],
+    "behaviors": [
+      {
+        "slot": 0,
+        "kind": "AssetBinding",
+        "activeByDefault": true,
+        "assetBinding": {
+          "assetKind": "Mesh",
+          "assetId": "sphere",
+          "materialId": "default_surface",
+          "renderPath": "InstancedStaticMesh",
+          "mobility": "Movable",
+          "localScale": [0.22, 0.22, 0.22]
+        }
+      },
+      {
+        "slot": 1,
+        "kind": "AssetBinding",
+        "activeByDefault": true,
+        "assetBinding": {
+          "assetKind": "Mesh",
+          "assetId": "cube",
+          "materialId": "default_surface",
+          "renderPath": "InstancedStaticMesh",
+          "mobility": "Movable",
+          "localOffset": [0.0, 0.06, 0.0],
+          "localScale": [0.42, 0.05, 0.42],
+          "visibilityParamKey": 170001
+        }
+      },
+      {
+        "slot": 2,
+        "kind": "MinimapMarker",
+        "activeByDefault": true,
+        "minimapMarker": {
+          "shape": "Circle",
+          "color": [0.38, 0.72, 1.0, 1.0],
+          "sizePx": 3.0,
+          "colorParamKey": -1,
+          "sizeParamKey": -1,
+          "visibilityParamKey": -1,
+          "orientationMode": "PerformerForward",
+          "orientationParamKey": -1,
+          "orientationOffsetRad": 0.0,
+          "orientationLengthPx": 4.0
+        }
+      }
+    ],
+    "paramDefaults": [
+      { "paramKey": 170001, "lane": "Int", "intValue": 0 }
+    ]
+  },
+  {
+    "id": "massnav_agent_heavy",
+    "defaultColor": [0.95, 0.58, 0.28, 1.0],
+    "behaviors": [
+      {
+        "slot": 0,
+        "kind": "AssetBinding",
+        "activeByDefault": true,
+        "assetBinding": {
+          "assetKind": "Mesh",
+          "assetId": "sphere",
+          "materialId": "default_surface",
+          "renderPath": "InstancedStaticMesh",
+          "mobility": "Movable",
+          "localScale": [0.34, 0.34, 0.34]
+        }
+      },
+      {
+        "slot": 1,
+        "kind": "AssetBinding",
+        "activeByDefault": true,
+        "assetBinding": {
+          "assetKind": "Mesh",
+          "assetId": "cube",
+          "materialId": "default_surface",
+          "renderPath": "InstancedStaticMesh",
+          "mobility": "Movable",
+          "localOffset": [0.0, 0.08, 0.0],
+          "localScale": [0.62, 0.06, 0.62],
+          "visibilityParamKey": 170001
+        }
+      },
+      {
+        "slot": 2,
+        "kind": "MinimapMarker",
+        "activeByDefault": true,
+        "minimapMarker": {
+          "shape": "Circle",
+          "color": [0.95, 0.58, 0.28, 1.0],
+          "sizePx": 4.5,
+          "colorParamKey": -1,
+          "sizeParamKey": -1,
+          "visibilityParamKey": -1,
+          "orientationMode": "PerformerForward",
+          "orientationParamKey": -1,
+          "orientationOffsetRad": 0.0,
+          "orientationLengthPx": 5.0
+        }
+      }
+    ],
+    "paramDefaults": [
+      { "paramKey": 170001, "lane": "Int", "intValue": 0 }
+    ]
+  },
+  {
+    "id": "massnav_agent_azure_light",
+    "extends": "massnav_agent_light",
+    "defaultColor": [0.28, 0.58, 1.0, 1.0],
+    "behaviors": [
+      {
+        "slot": 2,
+        "kind": "MinimapMarker",
+        "activeByDefault": true,
+        "minimapMarker": {
+          "shape": "Circle",
+          "color": [0.28, 0.58, 1.0, 1.0],
+          "sizePx": 3.0,
+          "colorParamKey": -1,
+          "sizeParamKey": -1,
+          "visibilityParamKey": -1,
+          "orientationMode": "PerformerForward",
+          "orientationParamKey": -1,
+          "orientationOffsetRad": 0.0,
+          "orientationLengthPx": 4.0
+        }
+      }
+    ]
+  },
+  {
+    "id": "massnav_agent_azure_heavy",
+    "extends": "massnav_agent_heavy",
+    "defaultColor": [0.48, 0.76, 1.0, 1.0],
+    "behaviors": [
+      {
+        "slot": 2,
+        "kind": "MinimapMarker",
+        "activeByDefault": true,
+        "minimapMarker": {
+          "shape": "Circle",
+          "color": [0.48, 0.76, 1.0, 1.0],
+          "sizePx": 4.5,
+          "colorParamKey": -1,
+          "sizeParamKey": -1,
+          "visibilityParamKey": -1,
+          "orientationMode": "PerformerForward",
+          "orientationParamKey": -1,
+          "orientationOffsetRad": 0.0,
+          "orientationLengthPx": 5.0
+        }
+      }
+    ]
+  },
+  {
+    "id": "massnav_agent_crimson_light",
+    "extends": "massnav_agent_light",
+    "defaultColor": [1.0, 0.26, 0.22, 1.0],
+    "behaviors": [
+      {
+        "slot": 2,
+        "kind": "MinimapMarker",
+        "activeByDefault": true,
+        "minimapMarker": {
+          "shape": "Circle",
+          "color": [1.0, 0.26, 0.22, 1.0],
+          "sizePx": 3.0,
+          "colorParamKey": -1,
+          "sizeParamKey": -1,
+          "visibilityParamKey": -1,
+          "orientationMode": "PerformerForward",
+          "orientationParamKey": -1,
+          "orientationOffsetRad": 0.0,
+          "orientationLengthPx": 4.0
+        }
+      }
+    ]
+  },
+  {
+    "id": "massnav_agent_crimson_heavy",
+    "extends": "massnav_agent_heavy",
+    "defaultColor": [1.0, 0.48, 0.34, 1.0],
+    "behaviors": [
+      {
+        "slot": 2,
+        "kind": "MinimapMarker",
+        "activeByDefault": true,
+        "minimapMarker": {
+          "shape": "Circle",
+          "color": [1.0, 0.48, 0.34, 1.0],
+          "sizePx": 4.5,
+          "colorParamKey": -1,
+          "sizeParamKey": -1,
+          "visibilityParamKey": -1,
+          "orientationMode": "PerformerForward",
+          "orientationParamKey": -1,
+          "orientationOffsetRad": 0.0,
+          "orientationLengthPx": 5.0
+        }
+      }
+    ]
+  },
+  {
+    "id": "massnav_agent_amber_light",
+    "extends": "massnav_agent_light",
+    "defaultColor": [1.0, 0.76, 0.22, 1.0],
+    "behaviors": [
+      {
+        "slot": 2,
+        "kind": "MinimapMarker",
+        "activeByDefault": true,
+        "minimapMarker": {
+          "shape": "Circle",
+          "color": [1.0, 0.76, 0.22, 1.0],
+          "sizePx": 3.0,
+          "colorParamKey": -1,
+          "sizeParamKey": -1,
+          "visibilityParamKey": -1,
+          "orientationMode": "PerformerForward",
+          "orientationParamKey": -1,
+          "orientationOffsetRad": 0.0,
+          "orientationLengthPx": 4.0
+        }
+      }
+    ]
+  },
+  {
+    "id": "massnav_agent_amber_heavy",
+    "extends": "massnav_agent_heavy",
+    "defaultColor": [1.0, 0.88, 0.38, 1.0],
+    "behaviors": [
+      {
+        "slot": 2,
+        "kind": "MinimapMarker",
+        "activeByDefault": true,
+        "minimapMarker": {
+          "shape": "Circle",
+          "color": [1.0, 0.88, 0.38, 1.0],
+          "sizePx": 4.5,
+          "colorParamKey": -1,
+          "sizeParamKey": -1,
+          "visibilityParamKey": -1,
+          "orientationMode": "PerformerForward",
+          "orientationParamKey": -1,
+          "orientationOffsetRad": 0.0,
+          "orientationLengthPx": 5.0
+        }
+      }
+    ]
+  },
+  {
+    "id": "massnav_agent_emerald_light",
+    "extends": "massnav_agent_light",
+    "defaultColor": [0.32, 0.92, 0.48, 1.0],
+    "behaviors": [
+      {
+        "slot": 2,
+        "kind": "MinimapMarker",
+        "activeByDefault": true,
+        "minimapMarker": {
+          "shape": "Circle",
+          "color": [0.32, 0.92, 0.48, 1.0],
+          "sizePx": 3.0,
+          "colorParamKey": -1,
+          "sizeParamKey": -1,
+          "visibilityParamKey": -1,
+          "orientationMode": "PerformerForward",
+          "orientationParamKey": -1,
+          "orientationOffsetRad": 0.0,
+          "orientationLengthPx": 4.0
+        }
+      }
+    ]
+  },
+  {
+    "id": "massnav_agent_emerald_heavy",
+    "extends": "massnav_agent_heavy",
+    "defaultColor": [0.58, 1.0, 0.62, 1.0],
+    "behaviors": [
+      {
+        "slot": 2,
+        "kind": "MinimapMarker",
+        "activeByDefault": true,
+        "minimapMarker": {
+          "shape": "Circle",
+          "color": [0.58, 1.0, 0.62, 1.0],
+          "sizePx": 4.5,
+          "colorParamKey": -1,
+          "sizeParamKey": -1,
+          "visibilityParamKey": -1,
+          "orientationMode": "PerformerForward",
+          "orientationParamKey": -1,
+          "orientationOffsetRad": 0.0,
+          "orientationLengthPx": 5.0
+        }
+      }
+    ]
+  },
+  {
+    "id": "massnav_blocker",
+    "defaultColor": [0.85, 0.88, 0.92, 1.0],
+    "behaviors": [
+      {
+        "slot": 0,
+        "kind": "AssetBinding",
+        "activeByDefault": true,
+        "assetBinding": {
+          "assetKind": "Mesh",
+          "assetId": "sphere",
+          "materialId": "default_surface",
+          "renderPath": "InstancedStaticMesh",
+          "mobility": "Static",
+          "localScale": [5.0, 0.6, 5.0]
+        }
+      },
+      {
+        "slot": 1,
+        "kind": "MinimapMarker",
+        "activeByDefault": true,
+        "minimapMarker": {
+          "shape": "Circle",
+          "color": [0.85, 0.88, 0.92, 1.0],
+          "sizePx": 7.0,
+          "colorParamKey": -1,
+          "sizeParamKey": -1,
+          "visibilityParamKey": -1,
+          "orientationMode": "None",
+          "orientationParamKey": -1,
+          "orientationOffsetRad": 0.0,
+          "orientationLengthPx": 0.0
+        }
+      }
+    ]
+  },
+  {
+    "id": "massnav_hotspot_marker",
+    "defaultColor": [1.0, 0.76, 0.26, 1.0],
+    "behaviors": [
+      {
+        "slot": 0,
+        "kind": "AssetBinding",
+        "activeByDefault": true,
+        "assetBinding": {
+          "assetKind": "Mesh",
+          "assetId": "cube",
+          "materialId": "default_surface",
+          "renderPath": "InstancedStaticMesh",
+          "mobility": "Static",
+          "localScale": [1.2, 0.2, 1.2]
+        }
+      },
+      {
+        "slot": 1,
+        "kind": "MinimapMarker",
+        "activeByDefault": true,
+        "minimapMarker": {
+          "shape": "Circle",
+          "color": [1.0, 0.76, 0.26, 1.0],
+          "sizePx": 8.0,
+          "colorParamKey": -1,
+          "sizeParamKey": -1,
+          "visibilityParamKey": -1,
+          "orientationMode": "None",
+          "orientationParamKey": -1,
+          "orientationOffsetRad": 0.0,
+          "orientationLengthPx": 0.0
+        }
+      }
+    ]
+  }
+]

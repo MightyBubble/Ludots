@@ -720,6 +720,114 @@ namespace Ludots.Tests.GAS
         }
 
         [Test]
+        public void RuntimeEntitySpawnSystem_SpawnTemplate_EmitsExplicitReceipt()
+        {
+            string templateJson = @"[
+              {
+                ""id"": ""test_receipt_template"",
+                ""components"": {
+                  ""Name"": { ""Value"": ""Template:Receipt"" },
+                  ""WorldPositionCm"": { ""Value"": { ""X"": 0, ""Y"": 0 } },
+                  ""FacingDirection"": { ""AngleRad"": 0.0 },
+                  ""AttributeBuffer"": { ""base"": {} },
+                  ""GameplayTagContainer"": {},
+                  ""TagCountContainer"": {}
+                }
+              }
+            ]";
+
+            var pipeline = CreateMinimalPipeline(@"{ ""id"": ""noop"", ""presetType"": ""None"" }", templateJson);
+            var templates = new DataRegistry<EntityTemplate>(pipeline);
+            templates.Load("Entities/templates.json");
+
+            using var world = World.Create();
+            var requests = new RuntimeEntitySpawnQueue(capacity: 4);
+            var receipts = new RuntimeEntitySpawnReceiptQueue(capacity: 4);
+            var templateKeys = new EntityTemplateKeyRegistry();
+            var stableIds = new Ludots.Core.Presentation.PresentationStableIdAllocator();
+            var system = new RuntimeEntitySpawnSystem(
+                world,
+                requests,
+                templates,
+                templateKeys,
+                stableIds,
+                receipts: receipts);
+
+            That(requests.TryEnqueue(new RuntimeEntitySpawnRequest
+            {
+                Kind = RuntimeEntitySpawnKind.Template,
+                TemplateId = "test_receipt_template",
+                WorldPositionCm = Fix64Vec2.FromInt(17, 23),
+                HasWorldPosition = 1,
+                ReceiptChannelId = 11,
+                ReceiptId = 701,
+                EmitReceipt = 1,
+            }), Is.True);
+
+            system.Update(0f);
+
+            That(receipts.TryDequeue(out RuntimeEntitySpawnReceipt receipt), Is.True);
+            That(receipt.ReceiptChannelId, Is.EqualTo(11));
+            That(receipt.ReceiptId, Is.EqualTo(701));
+            That(receipt.Kind, Is.EqualTo(RuntimeEntitySpawnKind.Template));
+            That(receipt.TemplateId, Is.EqualTo("test_receipt_template"));
+            That(world.IsAlive(receipt.Entity), Is.True);
+            That(world.Get<WorldPositionCm>(receipt.Entity).Value, Is.EqualTo(Fix64Vec2.FromInt(17, 23)));
+            That(receipts.Count, Is.EqualTo(0));
+        }
+
+        [Test]
+        public void RuntimeEntitySpawnReceiptQueue_ChannelOperations_DoNotConsumeOtherChannels()
+        {
+            var receipts = new RuntimeEntitySpawnReceiptQueue(capacity: 4);
+
+            That(receipts.TryEnqueue(new RuntimeEntitySpawnReceipt
+            {
+                ReceiptChannelId = 5,
+                ReceiptId = 1,
+                Kind = RuntimeEntitySpawnKind.Template,
+                Entity = Entity.Null,
+                TemplateId = "a",
+            }), Is.True);
+            That(receipts.TryEnqueue(new RuntimeEntitySpawnReceipt
+            {
+                ReceiptChannelId = 9,
+                ReceiptId = 2,
+                Kind = RuntimeEntitySpawnKind.Template,
+                Entity = Entity.Null,
+                TemplateId = "b",
+            }), Is.True);
+            That(receipts.TryEnqueue(new RuntimeEntitySpawnReceipt
+            {
+                ReceiptChannelId = 5,
+                ReceiptId = 3,
+                Kind = RuntimeEntitySpawnKind.Template,
+                Entity = Entity.Null,
+                TemplateId = "c",
+            }), Is.True);
+
+            That(receipts.Count, Is.EqualTo(3));
+            That(receipts.CountForChannel(5), Is.EqualTo(2));
+            That(receipts.CountForChannel(9), Is.EqualTo(1));
+
+            That(receipts.TryDequeueForChannel(5, out RuntimeEntitySpawnReceipt first), Is.True);
+            That(first.ReceiptId, Is.EqualTo(1));
+            That(receipts.Count, Is.EqualTo(2));
+            That(receipts.CountForChannel(5), Is.EqualTo(1));
+            That(receipts.CountForChannel(9), Is.EqualTo(1));
+
+            That(receipts.TryDequeueForChannel(5, out RuntimeEntitySpawnReceipt second), Is.True);
+            That(second.ReceiptId, Is.EqualTo(3));
+            That(receipts.TryDequeueForChannel(5, out _), Is.False);
+            That(receipts.Count, Is.EqualTo(1));
+
+            That(receipts.TryDequeue(out RuntimeEntitySpawnReceipt remaining), Is.True);
+            That(remaining.ReceiptChannelId, Is.EqualTo(9));
+            That(remaining.ReceiptId, Is.EqualTo(2));
+            That(receipts.Count, Is.EqualTo(0));
+        }
+
+        [Test]
         public void RuntimeEntitySpawnSystem_SpawnAssembly_CreatesProjectileEntity()
         {
             using var world = World.Create();
@@ -868,6 +976,7 @@ namespace Ludots.Tests.GAS
 
             using var world = World.Create();
             var requests = new RuntimeEntitySpawnQueue(capacity: 4);
+            var receipts = new RuntimeEntitySpawnReceiptQueue(capacity: 4);
             var templateKeys = new EntityTemplateKeyRegistry();
             var stableIds = new Ludots.Core.Presentation.PresentationStableIdAllocator();
             var system = new RuntimeEntitySpawnSystem(
@@ -875,7 +984,8 @@ namespace Ludots.Tests.GAS
                 requests,
                 templates,
                 templateKeys,
-                stableIds);
+                stableIds,
+                receipts: receipts);
 
             for (int i = 0; i < 2; i++)
             {
@@ -885,6 +995,9 @@ namespace Ludots.Tests.GAS
                     TemplateId = "test_attr_current_batch",
                     WorldPositionCm = Fix64Vec2.FromInt(i * 100, 0),
                     HasWorldPosition = 1,
+                    ReceiptChannelId = 12,
+                    ReceiptId = 800 + i,
+                    EmitReceipt = 1,
                 }), Is.True);
             }
 
@@ -913,6 +1026,15 @@ namespace Ludots.Tests.GAS
 
             That(count, Is.EqualTo(2));
             That(first, Is.Not.EqualTo(Entity.Null));
+            That(receipts.TryDequeueForChannel(12, out RuntimeEntitySpawnReceipt firstReceipt), Is.True);
+            That(firstReceipt.ReceiptId, Is.EqualTo(800));
+            That(firstReceipt.TemplateId, Is.EqualTo("test_attr_current_batch"));
+            That(world.IsAlive(firstReceipt.Entity), Is.True);
+            That(receipts.TryDequeueForChannel(12, out RuntimeEntitySpawnReceipt secondReceipt), Is.True);
+            That(secondReceipt.ReceiptId, Is.EqualTo(801));
+            That(secondReceipt.TemplateId, Is.EqualTo("test_attr_current_batch"));
+            That(world.IsAlive(secondReceipt.Entity), Is.True);
+            That(receipts.Count, Is.EqualTo(0));
 
             var queue = new DeferredTriggerQueue();
             using var deferred = new DeferredTriggerCollectionSystem(world, queue);
