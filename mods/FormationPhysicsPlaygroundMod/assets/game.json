@@ -1,0 +1,160 @@
+{
+  "startupMapId": "formation_physics_playground",
+  "worldWidthInTiles": 512,
+  "worldHeightInTiles": 512,
+  "Navigation2D": {
+    "Enabled": true,
+    "MaxAgents": 4096,
+    "FlowIterationsPerTick": 0,
+    "FlowStreaming": {
+      "Enabled": false,
+      "ActivationRadiusTiles": 3,
+      "MaxActiveTilesPerFlow": 512,
+      "UnloadGraceTicks": 12,
+      "MaxPotentialCells": 384,
+      "MaxActivationWindowWidthTiles": 96,
+      "MaxActivationWindowHeightTiles": 96,
+      "WorldBoundsEnabled": true,
+      "WorldMinTileX": -512,
+      "WorldMinTileY": -512,
+      "WorldMaxTileX": 511,
+      "WorldMaxTileY": 511
+    },
+    "Spatial": {
+      "UpdateMode": "Adaptive",
+      "RebuildCellMigrationsThreshold": 128,
+      "RebuildAccumulatedCellMigrationsThreshold": 1024
+    },
+    "Playground": {
+      "DefaultAgentsPerTeam": 24,
+      "AgentsPerTeamStep": 8,
+      "DefaultScenarioIndex": 5,
+      "DefaultSpawnBatch": 8,
+      "SpawnBatchStep": 8,
+      "CommandGoalRadiusCm": 140,
+      "CommandFormationSpacingCm": 180,
+      "DynamicSpawnSpacingCm": 180,
+      "DynamicBlockerRadiusCm": 140,
+      "Scenarios": [
+        {
+          "Id": "pass_through",
+          "Name": "Pass Through",
+          "Kind": "PassThrough",
+          "TeamCount": 2,
+          "FormationSpacingCm": 120,
+          "StartOffsetCm": 9000,
+          "GoalOffsetCm": 9000,
+          "GoalRadiusCm": 120
+        },
+        {
+          "Id": "orthogonal_cross",
+          "Name": "Orthogonal Cross",
+          "Kind": "OrthogonalCross",
+          "TeamCount": 2,
+          "FormationSpacingCm": 120,
+          "StartOffsetCm": 8200,
+          "GoalOffsetCm": 8200,
+          "GoalRadiusCm": 120
+        },
+        {
+          "Id": "bottleneck",
+          "Name": "Bottleneck",
+          "Kind": "Bottleneck",
+          "TeamCount": 2,
+          "FormationSpacingCm": 120,
+          "StartOffsetCm": 9200,
+          "GoalOffsetCm": 9200,
+          "CorridorHalfWidthCm": 320,
+          "GoalRadiusCm": 120,
+          "BlockerRadiusCm": 150,
+          "BlockerCount": 20,
+          "BlockerSpacingCm": 280
+        },
+        {
+          "Id": "lane_merge",
+          "Name": "Lane Merge",
+          "Kind": "LaneMerge",
+          "TeamCount": 2,
+          "FormationSpacingCm": 120,
+          "StartOffsetCm": 8800,
+          "GoalOffsetCm": 9200,
+          "LaneOffsetCm": 2400,
+          "GoalRadiusCm": 150
+        },
+        {
+          "Id": "circle_swap",
+          "Name": "Circle Swap",
+          "Kind": "CircleSwap",
+          "TeamCount": 2,
+          "FormationSpacingCm": 120,
+          "RingRadiusCm": 5400,
+          "GoalRadiusCm": 160
+        },
+        {
+          "Id": "goal_queue",
+          "Name": "Goal Queue",
+          "Kind": "GoalQueue",
+          "TeamCount": 1,
+          "FormationSpacingCm": 120,
+          "StartOffsetCm": 9200,
+          "GoalOffsetCm": 7200,
+          "GoalRadiusCm": 220,
+          "CorridorHalfWidthCm": 220,
+          "BlockerRadiusCm": 130,
+          "BlockerCount": 18,
+          "BlockerSpacingCm": 260
+        }
+      ]
+    },
+    "Steering": {
+      "Mode": "Orca",
+      "QueryBudget": {
+        "MaxNeighborsPerAgent": 12,
+        "MaxCandidateChecksPerAgent": 48
+      },
+      "Orca": {
+        "Enabled": true,
+        "FallbackToPreferredVelocity": true
+      },
+      "Sonar": {
+        "Enabled": false,
+        "MaxSteerAngleDeg": 280,
+        "BackwardPenaltyAngleDeg": 230,
+        "IgnoreBehindMovingAgents": true,
+        "BlockedStop": false,
+        "PredictionTimeScale": 0.9
+      },
+      "Hybrid": {
+        "Enabled": false,
+        "DenseNeighborThreshold": 6,
+        "MinSpeedForOrcaCmPerSec": 120,
+        "MinOpposingNeighborsForOrca": 1,
+        "OpposingVelocityDotThreshold": -0.25
+      },
+      "SmartStop": {
+        "Enabled": true,
+        "QueryRadiusCm": 100,
+        "MaxNeighbors": 6,
+        "SelfGoalDistanceLimitCm": 180,
+        "GoalToleranceCm": 80,
+        "ArrivedSlackCm": 20,
+        "StoppedSpeedThresholdCmPerSec": 5
+      },
+      "Separation": {
+        "Enabled": true,
+        "RadiusCm": 120,
+        "Weight": 0.75
+      },
+      "TemporalCoherence": {
+        "Enabled": false,
+        "RequireSteadyStateWorld": false,
+        "MaxReuseTicks": 12,
+        "PositionToleranceCm": 40,
+        "VelocityToleranceCmPerSec": 320,
+        "PreferredVelocityToleranceCmPerSec": 80,
+        "NeighborPositionQuantizationCm": 40,
+        "NeighborVelocityQuantizationCmPerSec": 320
+      }
+    }
+  }
+}

@@ -1,0 +1,49 @@
+{
+  "actions": [
+    { "id": "FormationPhysics_ToggleFlowEnabled", "name": "FormationPhysics_ToggleFlowEnabled", "type": "Button" },
+    { "id": "FormationPhysics_ToggleFlowDebug", "name": "FormationPhysics_ToggleFlowDebug", "type": "Button" },
+    { "id": "FormationPhysics_CycleFlowDebugMode", "name": "FormationPhysics_CycleFlowDebugMode", "type": "Button" },
+    { "id": "FormationPhysics_IncreaseFlowIterations", "name": "FormationPhysics_IncreaseFlowIterations", "type": "Button" },
+    { "id": "FormationPhysics_DecreaseFlowIterations", "name": "FormationPhysics_DecreaseFlowIterations", "type": "Button" },
+    { "id": "FormationPhysics_IncreaseAgentsPerTeam", "name": "FormationPhysics_IncreaseAgentsPerTeam", "type": "Button" },
+    { "id": "FormationPhysics_DecreaseAgentsPerTeam", "name": "FormationPhysics_DecreaseAgentsPerTeam", "type": "Button" },
+    { "id": "FormationPhysics_PreviousScenario", "name": "FormationPhysics_PreviousScenario", "type": "Button" },
+    { "id": "FormationPhysics_NextScenario", "name": "FormationPhysics_NextScenario", "type": "Button" },
+    { "id": "FormationPhysics_ResetScenario", "name": "FormationPhysics_ResetScenario", "type": "Button" },
+    { "id": "FormationPhysics_ToolMove", "name": "FormationPhysics_ToolMove", "type": "Button" },
+    { "id": "FormationPhysics_ToolSpawnTeam0", "name": "FormationPhysics_ToolSpawnTeam0", "type": "Button" },
+    { "id": "FormationPhysics_ToolSpawnTeam1", "name": "FormationPhysics_ToolSpawnTeam1", "type": "Button" },
+    { "id": "FormationPhysics_ToolSpawnBlocker", "name": "FormationPhysics_ToolSpawnBlocker", "type": "Button" },
+    { "id": "FormationPhysics_IncreaseSpawnBatch", "name": "FormationPhysics_IncreaseSpawnBatch", "type": "Button" },
+    { "id": "FormationPhysics_DecreaseSpawnBatch", "name": "FormationPhysics_DecreaseSpawnBatch", "type": "Button" },
+    { "id": "FormationPhysics_ViewModeCommand", "name": "FormationPhysics_ViewModeCommand", "type": "Button" },
+    { "id": "FormationPhysics_ViewModeFollow", "name": "FormationPhysics_ViewModeFollow", "type": "Button" }
+  ],
+  "contexts": [
+    {
+      "id": "FormationPhysics_Playground",
+      "name": "Formation Physics Playground",
+      "priority": 100,
+      "bindings": [
+        { "actionId": "FormationPhysics_ToggleFlowEnabled", "path": "<Keyboard>/g" },
+        { "actionId": "FormationPhysics_ToggleFlowDebug", "path": "<Keyboard>/h" },
+        { "actionId": "FormationPhysics_CycleFlowDebugMode", "path": "<Keyboard>/j" },
+        { "actionId": "FormationPhysics_IncreaseFlowIterations", "path": "<Keyboard>/u" },
+        { "actionId": "FormationPhysics_DecreaseFlowIterations", "path": "<Keyboard>/y" },
+        { "actionId": "FormationPhysics_IncreaseAgentsPerTeam", "path": "<Keyboard>/k" },
+        { "actionId": "FormationPhysics_DecreaseAgentsPerTeam", "path": "<Keyboard>/l" },
+        { "actionId": "FormationPhysics_PreviousScenario", "path": "<Keyboard>/n" },
+        { "actionId": "FormationPhysics_NextScenario", "path": "<Keyboard>/m" },
+        { "actionId": "FormationPhysics_ResetScenario", "path": "<Keyboard>/r" },
+        { "actionId": "FormationPhysics_ToolMove", "path": "<Keyboard>/1" },
+        { "actionId": "FormationPhysics_ToolSpawnTeam0", "path": "<Keyboard>/2" },
+        { "actionId": "FormationPhysics_ToolSpawnTeam1", "path": "<Keyboard>/3" },
+        { "actionId": "FormationPhysics_ToolSpawnBlocker", "path": "<Keyboard>/4" },
+        { "actionId": "FormationPhysics_IncreaseSpawnBatch", "path": "<Keyboard>/i" },
+        { "actionId": "FormationPhysics_DecreaseSpawnBatch", "path": "<Keyboard>/o" },
+        { "actionId": "FormationPhysics_ViewModeCommand", "path": "<Keyboard>/f1" },
+        { "actionId": "FormationPhysics_ViewModeFollow", "path": "<Keyboard>/f2" }
+      ]
+    }
+  ]
+}

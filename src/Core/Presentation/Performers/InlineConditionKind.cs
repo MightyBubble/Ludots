@@ -31,5 +31,8 @@ namespace Ludots.Core.Presentation.Performers
 
         /// <summary>True when the Owner entity's CullState.IsVisible is true.</summary>
         OwnerCullVisible = 7,
+
+        /// <summary>True when the event source has a VisualTransform component.</summary>
+        SourceHasVisualTransform = 8,
     }
 }

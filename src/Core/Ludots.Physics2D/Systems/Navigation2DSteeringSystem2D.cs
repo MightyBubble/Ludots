@@ -415,7 +415,13 @@ namespace Ludots.Core.Physics2D.Systems
         }
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        private static Vector2 ComputePointGoalPreferredVelocity(bool hasPointGoal, in Vector2 goalPosition, in Vector2 position, float maxSpeed)
+        private static Vector2 ComputePointGoalPreferredVelocity(
+            bool hasPointGoal,
+            in Vector2 goalPosition,
+            in Vector2 position,
+            float goalRadius,
+            float maxSpeed,
+            float maxAccel)
         {
             if (!hasPointGoal || maxSpeed <= 0f)
             {
@@ -429,7 +435,25 @@ namespace Ludots.Core.Physics2D.Systems
                 return Vector2.Zero;
             }
 
-            return toGoal * (maxSpeed / MathF.Sqrt(goalDistanceSq));
+            float goalDistance = MathF.Sqrt(goalDistanceSq);
+            float remainingDistance = goalDistance - MathF.Max(goalRadius, 0f);
+            if (remainingDistance <= 0f)
+            {
+                return Vector2.Zero;
+            }
+
+            float desiredSpeed = maxSpeed;
+            if (maxAccel > 1e-6f)
+            {
+                desiredSpeed = MathF.Min(maxSpeed, MathF.Sqrt(2f * maxAccel * remainingDistance));
+            }
+
+            if (desiredSpeed <= 1e-4f)
+            {
+                return Vector2.Zero;
+            }
+
+            return toGoal * (desiredSpeed / goalDistance);
         }
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
@@ -817,7 +841,13 @@ namespace Ludots.Core.Physics2D.Systems
                     float neighborDistance = neighborDistances[i];
                     float timeHorizon = timeHorizons[i];
                     int neighborLimit = GetEffectiveNeighborLimit(maxNeighborCounts[i], globalMaxNeighbors);
-                    Vector2 preferred = ComputePointGoalPreferredVelocity(hasPointGoals[i] != 0, goalPositions[i], pos, maxSpeed);
+                    Vector2 preferred = ComputePointGoalPreferredVelocity(
+                        hasPointGoals[i] != 0,
+                        goalPositions[i],
+                        pos,
+                        agentSoA.GoalRadii[i],
+                        maxSpeed,
+                        maxAccel);
 
                     if (hasFlowBinding)
                     {
@@ -995,7 +1025,13 @@ namespace Ludots.Core.Physics2D.Systems
                     float neighborDistance = neighborDistances[i];
                     float timeHorizon = timeHorizons[i];
                     int neighborLimit = GetEffectiveNeighborLimit(maxNeighborCounts[i], globalMaxNeighbors);
-                    Vector2 preferred = ComputePointGoalPreferredVelocity(hasPointGoals[i] != 0, goalPositions[i], pos, maxSpeed);
+                    Vector2 preferred = ComputePointGoalPreferredVelocity(
+                        hasPointGoals[i] != 0,
+                        goalPositions[i],
+                        pos,
+                        agentSoA.GoalRadii[i],
+                        maxSpeed,
+                        maxAccel);
 
                     if (hasFlowBinding)
                     {
@@ -1176,7 +1212,13 @@ namespace Ludots.Core.Physics2D.Systems
                     float neighborDistance = neighborDistances[i];
                     float timeHorizon = timeHorizons[i];
                     int neighborLimit = GetEffectiveNeighborLimit(maxNeighborCounts[i], globalMaxNeighbors);
-                    Vector2 preferred = ComputePointGoalPreferredVelocity(hasPointGoals[i] != 0, goalPositions[i], pos, maxSpeed);
+                    Vector2 preferred = ComputePointGoalPreferredVelocity(
+                        hasPointGoals[i] != 0,
+                        goalPositions[i],
+                        pos,
+                        agentSoA.GoalRadii[i],
+                        maxSpeed,
+                        maxAccel);
 
                     if (hasFlowBinding)
                     {

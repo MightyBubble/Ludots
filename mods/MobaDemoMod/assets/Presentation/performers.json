@@ -1,22 +1,5 @@
 [
   {
-    "_comment": "单位方块渲染 - entity-scoped, 查询所有有 VisualTransform 的实体",
-    "id": "moba_unit_marker",
-    "visualKind": "Marker3D",
-    "entityScope": "AllWithVisualTransform",
-    "meshOrShapeId": "cube",
-    "defaultScale": 0.35,
-    "maxVisibilityDistanceCm": 8000,
-    "positionOffset": [0, 0.25, 0],
-    "visibility": { "inline": "OwnerCullVisible" },
-    "bindings": [
-      { "paramKey": 4, "source": "entityColor", "sourceId": 0 },
-      { "paramKey": 5, "source": "entityColor", "sourceId": 1 },
-      { "paramKey": 6, "source": "entityColor", "sourceId": 2 },
-      { "paramKey": 7, "source": "entityColor", "sourceId": 3 }
-    ]
-  },
-  {
     "_comment": "选中指示器 - instance-scoped, 黄色球体悬浮在选中单位头顶",
     "id": "moba_selection_indicator",
     "visualKind": "Marker3D",

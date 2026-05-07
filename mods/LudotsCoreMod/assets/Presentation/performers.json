@@ -1,79 +1,155 @@
 [
   {
-    "id": "entity_health_bar",
-    "visualKind": "WorldBar",
-    "entityScope": "AllWithAttributes",
-    "visibility": { "inline": "OwnerCullVisible" },
-    "maxVisibilityDistanceCm": 5000,
-    "positionOffset": [0, 0.65, 0],
-    "defaultColor": [0.1, 0.85, 0.15, 1.0],
-    "bindings": [
+    "id": "core.character.hero_skinned",
+    "behaviors": [
       {
-        "paramKey": 0,
-        "source": "attributeRatio",
-        "attributeName": "Health"
+        "slot": 0,
+        "kind": "AssetBinding",
+        "activeByDefault": true,
+        "assetBinding": {
+          "assetKind": "SkinnedMesh",
+          "assetId": "sphere",
+          "materialId": "default_surface",
+          "renderPath": "SkinnedMesh",
+          "mobility": "Movable",
+          "localScale": [
+            0.9,
+            0.9,
+            0.9
+          ]
+        }
       },
       {
-        "paramKey": 1,
-        "source": "constant",
-        "constantValue": 50
+        "slot": 1,
+        "kind": "Animator",
+        "activeByDefault": true,
+        "animator": {
+          "animatorControllerId": "core.hero.locomotion",
+          "animationProfileId": "core.hero.profile.locomotion",
+          "speedParamKey": 0
+        }
+      }
+    ],
+    "rules": [
+      {
+        "event": {
+          "kind": "EntitySpawned",
+          "key": "moba_hero"
+        },
+        "condition": {
+          "inline": "SourceHasVisualTransform"
+        },
+        "command": {
+          "kind": "CreatePerformer",
+          "definitionId": "core.character.hero_skinned",
+          "scopeSource": "EventPayloadA"
+        }
       },
       {
-        "paramKey": 2,
-        "source": "constant",
-        "constantValue": 8
-      },
-      {
-        "paramKey": 8,
-        "source": "constant",
-        "constantValue": 0.3
-      },
-      {
-        "paramKey": 9,
-        "source": "constant",
-        "constantValue": 0.0
-      },
-      {
-        "paramKey": 10,
-        "source": "constant",
-        "constantValue": 0.0
-      },
-      {
-        "paramKey": 11,
-        "source": "constant",
-        "constantValue": 0.85
+        "event": {
+          "kind": "EntityDestroyed",
+          "key": "moba_hero"
+        },
+        "command": {
+          "kind": "DestroyPerformerScope",
+          "scopeSource": "EventPayloadA"
+        }
       }
     ]
   },
   {
-    "id": "entity_world_text",
-    "visualKind": "WorldText",
-    "entityScope": "AllWithAttributes",
-    "visibility": { "inline": "OwnerCullVisible" },
-    "maxVisibilityDistanceCm": 3000,
-    "positionOffset": [0, 0.80, 0],
-    "defaultColor": [1, 1, 1, 1],
-    "defaultFontSize": 12,
-    "bindings": [
+    "id": "core.prop.dummy_static",
+    "behaviors": [
       {
-        "paramKey": 0,
-        "source": "attribute",
-        "attributeName": "Health"
+        "slot": 0,
+        "kind": "AssetBinding",
+        "activeByDefault": true,
+        "assetBinding": {
+          "assetKind": "Mesh",
+          "assetId": "cube",
+          "materialId": "default_surface",
+          "renderPath": "StaticMesh",
+          "mobility": "Movable",
+          "localScale": [
+            0.8,
+            0.8,
+            0.8
+          ]
+        }
+      }
+    ],
+    "rules": [
+      {
+        "event": {
+          "kind": "EntitySpawned",
+          "key": "moba_dummy"
+        },
+        "condition": {
+          "inline": "SourceHasVisualTransform"
+        },
+        "command": {
+          "kind": "CreatePerformer",
+          "definitionId": "core.prop.dummy_static",
+          "scopeSource": "EventPayloadA"
+        }
       },
       {
-        "paramKey": 1,
-        "source": "attributeBase",
-        "attributeName": "Health"
+        "event": {
+          "kind": "EntityDestroyed",
+          "key": "moba_dummy"
+        },
+        "command": {
+          "kind": "DestroyPerformerScope",
+          "scopeSource": "EventPayloadA"
+        }
+      }
+    ]
+  },
+  {
+    "id": "core.foliage.tree_pine_hism",
+    "behaviors": [
+      {
+        "slot": 0,
+        "kind": "AssetBinding",
+        "activeByDefault": true,
+        "assetBinding": {
+          "assetKind": "Mesh",
+          "assetId": "sphere",
+          "materialId": "default_surface",
+          "renderPath": "HierarchicalInstancedStaticMesh",
+          "mobility": "Static",
+          "localScale": [
+            1.2,
+            1.2,
+            1.2
+          ]
+        }
+      }
+    ],
+    "rules": [
+      {
+        "event": {
+          "kind": "EntitySpawned",
+          "key": "tree_pine"
+        },
+        "condition": {
+          "inline": "SourceHasVisualTransform"
+        },
+        "command": {
+          "kind": "CreatePerformer",
+          "definitionId": "core.foliage.tree_pine_hism",
+          "scopeSource": "EventPayloadA"
+        }
       },
       {
-        "paramKey": 15,
-        "source": "textToken",
-        "textToken": "hud.attribute.current_over_base"
-      },
-      {
-        "paramKey": 16,
-        "source": "constant",
-        "constantValue": 1
+        "event": {
+          "kind": "EntityDestroyed",
+          "key": "tree_pine"
+        },
+        "command": {
+          "kind": "DestroyPerformerScope",
+          "scopeSource": "EventPayloadA"
+        }
       }
     ]
   }

@@ -47,10 +47,28 @@
       "buildMode": "auto"
     },
     {
+      "id": "formation_physics_playground_raylib",
+      "name": "Formation Physics Playground Raylib",
+      "selectors": [
+        "$formation_physics_playground"
+      ],
+      "adapterId": "raylib",
+      "buildMode": "auto"
+    },
+    {
       "id": "champion_skill_stress_raylib",
       "name": "Champion Skill Stress Raylib",
       "selectors": [
         "$champion_skill_stress"
+      ],
+      "adapterId": "raylib",
+      "buildMode": "auto"
+    },
+    {
+      "id": "spatial_bounds_showcase_raylib",
+      "name": "Spatial Bounds Showcase Raylib",
+      "selectors": [
+        "$spatial_bounds_showcase"
       ],
       "adapterId": "raylib",
       "buildMode": "auto"

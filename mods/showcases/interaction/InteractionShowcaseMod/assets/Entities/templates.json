@@ -7,7 +7,6 @@
       "SelectionSelectableTag": {},
       "WorldPositionCm": { "Value": { "X": 0, "Y": 0 } },
       "FacingDirection": { "AngleRad": 0.0 },
-      "Presentation": { "visualTemplateId": "interaction.character.hero_showcase" },
       "AttributeBuffer": { "base": { "Health": 160, "Shield": 20, "MoveSpeed": 360, "Armor": 4 } },
       "AbilityStateBuffer": {
         "abilityIds": [
@@ -36,7 +35,6 @@
       "SelectionSelectableTag": {},
       "WorldPositionCm": { "Value": { "X": 0, "Y": 0 } },
       "FacingDirection": { "AngleRad": 0.0 },
-      "Presentation": { "visualTemplateId": "interaction.character.hero_showcase" },
       "AttributeBuffer": { "base": { "Health": 220, "Shield": 35, "MoveSpeed": 300, "Armor": 16 } },
       "AbilityStateBuffer": {
         "abilityIds": [
@@ -65,7 +63,6 @@
       "SelectionSelectableTag": {},
       "WorldPositionCm": { "Value": { "X": 0, "Y": 0 } },
       "FacingDirection": { "AngleRad": 0.0 },
-      "Presentation": { "visualTemplateId": "interaction.character.hero_showcase" },
       "AttributeBuffer": { "base": { "Health": 160, "Shield": 20, "MoveSpeed": 360, "Armor": 4 } },
       "AbilityStateBuffer": {
         "abilityIds": [
@@ -93,7 +90,6 @@
       "SelectionSelectableTag": {},
       "WorldPositionCm": { "Value": { "X": 0, "Y": 0 } },
       "FacingDirection": { "AngleRad": 0.0 },
-      "Presentation": { "visualTemplateId": "interaction.character.hero_showcase" },
       "AttributeBuffer": { "base": { "Health": 170, "Shield": 40, "MoveSpeed": 320, "Armor": 8 } },
       "AbilityStateBuffer": {
         "abilityIds": [
@@ -122,7 +118,6 @@
       "SelectionSelectableTag": {},
       "WorldPositionCm": { "Value": { "X": 0, "Y": 0 } },
       "FacingDirection": { "AngleRad": 3.14159 },
-      "Presentation": { "visualTemplateId": "interaction.prop.dummy_showcase" },
       "AttributeBuffer": { "base": { "Health": 140, "Shield": 0, "MoveSpeed": 290, "Armor": 4 } },
       "GameplayTagContainer": {}
     }
@@ -135,7 +130,6 @@
       "SelectionSelectableTag": {},
       "WorldPositionCm": { "Value": { "X": 0, "Y": 0 } },
       "FacingDirection": { "AngleRad": 3.14159 },
-      "Presentation": { "visualTemplateId": "interaction.prop.dummy_showcase" },
       "AttributeBuffer": { "base": { "Health": 220, "Shield": 0, "MoveSpeed": 260, "Armor": 10 } },
       "GameplayTagContainer": {}
     }
@@ -148,7 +142,6 @@
       "SelectionSelectableTag": {},
       "WorldPositionCm": { "Value": { "X": 0, "Y": 0 } },
       "FacingDirection": { "AngleRad": 0.0 },
-      "Presentation": { "visualTemplateId": "interaction.character.hero_showcase" },
       "AttributeBuffer": { "base": { "Health": 9999, "Shield": 0, "MoveSpeed": 0, "Armor": 0 } },
       "AbilityStateBuffer": {
         "abilityIds": [
@@ -170,7 +163,6 @@
       "SelectionSelectableTag": {},
       "WorldPositionCm": { "Value": { "X": 0, "Y": 0 } },
       "FacingDirection": { "AngleRad": 3.14159 },
-      "Presentation": { "visualTemplateId": "interaction.character.hero_showcase" },
       "AttributeBuffer": { "base": { "Health": 9999, "Shield": 0, "MoveSpeed": 0, "Armor": 0 } },
       "AbilityStateBuffer": {
         "abilityIds": [
@@ -191,7 +183,6 @@
       "Team": { "Id": 1 },
       "SelectionSelectableTag": {},
       "WorldPositionCm": { "Value": { "X": 0, "Y": 0 } },
-      "Presentation": { "visualTemplateId": "interaction.prop.dummy_showcase" },
       "AttributeBuffer": { "base": { "Health": 500000, "Shield": 0, "MoveSpeed": 0, "Armor": 0 } },
       "GameplayTagContainer": {}
     }
@@ -203,7 +194,6 @@
       "Team": { "Id": 2 },
       "SelectionSelectableTag": {},
       "WorldPositionCm": { "Value": { "X": 0, "Y": 0 } },
-      "Presentation": { "visualTemplateId": "interaction.prop.dummy_showcase" },
       "AttributeBuffer": { "base": { "Health": 500000, "Shield": 0, "MoveSpeed": 0, "Armor": 0 } },
       "GameplayTagContainer": {}
     }

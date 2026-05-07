@@ -1,0 +1,20 @@
+[
+  {
+    "id": "formation_playground.agent",
+    "meshAssetId": "Cube",
+    "materialId": 0,
+    "baseScale": 1.0,
+    "renderPath": "StaticMesh",
+    "mobility": "Movable",
+    "visibleByDefault": true
+  },
+  {
+    "id": "formation_playground.blocker",
+    "meshAssetId": "Cube",
+    "materialId": 0,
+    "baseScale": 1.0,
+    "renderPath": "StaticMesh",
+    "mobility": "Static",
+    "visibleByDefault": true
+  }
+]

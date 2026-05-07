@@ -1,0 +1,21 @@
+{
+  "Id": "formation_physics_playground",
+  "Tags": [
+    "formation_physics_playground"
+  ],
+  "Boards": [
+    {
+      "Name": "default",
+      "SpatialType": "Grid",
+      "WidthInTiles": 4,
+      "HeightInTiles": 4,
+      "GridCellSizeCm": 100
+    }
+  ],
+  "DefaultCamera": {
+    "VirtualCameraId": "FormationPhysics.Playground.Camera.Command",
+    "TargetXCm": 0,
+    "TargetYCm": 0
+  },
+  "Entities": []
+}

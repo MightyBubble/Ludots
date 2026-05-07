@@ -6,6 +6,11 @@
       "Team": { "Id": 1 },
       "SelectionSelectableTag": {},
       "WorldPositionCm": { "Value": { "X": 0, "Y": 0 } },
+      "Presentation": {
+        "imageBindings": [
+          { "role": "Portrait", "state": "Default", "imageAsset": "genreinfo.portrait.governor" }
+        ]
+      },
       "AttributeBuffer": { "base": { "Health": 100, "Production": 0, "Gold": 0, "TechProgress": 0, "FoodProduction": 0 } },
       "AbilityStateBuffer": {
         "abilityIds": [

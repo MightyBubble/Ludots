@@ -1,0 +1,117 @@
+[
+  {
+    "id": "relationship.hero.peach_garden",
+    "behaviors": [
+      {
+        "slot": 0,
+        "kind": "AssetBinding",
+        "activeByDefault": true,
+        "assetBinding": {
+          "assetKind": "SkinnedMesh",
+          "assetId": "sphere",
+          "materialId": "default_surface",
+          "renderPath": "SkinnedMesh",
+          "mobility": "Movable",
+          "localScale": [2.3, 2.3, 2.3]
+        }
+      },
+      {
+        "slot": 1,
+        "kind": "Animator",
+        "activeByDefault": true,
+        "animator": {
+          "animatorControllerId": "core.hero.locomotion",
+          "animationProfileId": "core.hero.profile.locomotion",
+          "speedParamKey": 0
+        }
+      }
+    ],
+    "rules": [
+      {
+        "event": { "kind": "EntitySpawned", "key": "relationship_liu_bei" },
+        "condition": { "inline": "SourceHasVisualTransform" },
+        "command": {
+          "kind": "CreatePerformer",
+          "definitionId": "relationship.hero.peach_garden",
+          "scopeSource": "EventPayloadA"
+        }
+      },
+      {
+        "event": { "kind": "EntitySpawned", "key": "relationship_guan_yu" },
+        "condition": { "inline": "SourceHasVisualTransform" },
+        "command": {
+          "kind": "CreatePerformer",
+          "definitionId": "relationship.hero.peach_garden",
+          "scopeSource": "EventPayloadA"
+        }
+      },
+      {
+        "event": { "kind": "EntitySpawned", "key": "relationship_zhang_fei" },
+        "condition": { "inline": "SourceHasVisualTransform" },
+        "command": {
+          "kind": "CreatePerformer",
+          "definitionId": "relationship.hero.peach_garden",
+          "scopeSource": "EventPayloadA"
+        }
+      },
+      {
+        "event": { "kind": "EntityDestroyed", "key": "relationship_liu_bei" },
+        "command": { "kind": "DestroyPerformerScope", "scopeSource": "EventPayloadA" }
+      },
+      {
+        "event": { "kind": "EntityDestroyed", "key": "relationship_guan_yu" },
+        "command": { "kind": "DestroyPerformerScope", "scopeSource": "EventPayloadA" }
+      },
+      {
+        "event": { "kind": "EntityDestroyed", "key": "relationship_zhang_fei" },
+        "command": { "kind": "DestroyPerformerScope", "scopeSource": "EventPayloadA" }
+      }
+    ]
+  },
+  {
+    "id": "relationship.enemy.turban",
+    "behaviors": [
+      {
+        "slot": 0,
+        "kind": "AssetBinding",
+        "activeByDefault": true,
+        "assetBinding": {
+          "assetKind": "Mesh",
+          "assetId": "cube",
+          "materialId": "default_surface",
+          "renderPath": "StaticMesh",
+          "mobility": "Movable",
+          "localScale": [1.9, 1.9, 1.9]
+        }
+      }
+    ],
+    "rules": [
+      {
+        "event": { "kind": "EntitySpawned", "key": "relationship_rebel_captain" },
+        "condition": { "inline": "SourceHasVisualTransform" },
+        "command": {
+          "kind": "CreatePerformer",
+          "definitionId": "relationship.enemy.turban",
+          "scopeSource": "EventPayloadA"
+        }
+      },
+      {
+        "event": { "kind": "EntitySpawned", "key": "relationship_rebel_spearman" },
+        "condition": { "inline": "SourceHasVisualTransform" },
+        "command": {
+          "kind": "CreatePerformer",
+          "definitionId": "relationship.enemy.turban",
+          "scopeSource": "EventPayloadA"
+        }
+      },
+      {
+        "event": { "kind": "EntityDestroyed", "key": "relationship_rebel_captain" },
+        "command": { "kind": "DestroyPerformerScope", "scopeSource": "EventPayloadA" }
+      },
+      {
+        "event": { "kind": "EntityDestroyed", "key": "relationship_rebel_spearman" },
+        "command": { "kind": "DestroyPerformerScope", "scopeSource": "EventPayloadA" }
+      }
+    ]
+  }
+]

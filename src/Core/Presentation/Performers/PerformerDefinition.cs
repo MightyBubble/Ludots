@@ -14,6 +14,12 @@ namespace Ludots.Core.Presentation.Performers
         /// <summary>Unique definition ID.</summary>
         public int Id;
 
+        /// <summary>Stable authoring key used to register this definition.</summary>
+        public string Key = string.Empty;
+
+        /// <summary>Optional parent definition key expanded by the config loader.</summary>
+        public string Extends = string.Empty;
+
         /// <summary>Visual output category — determines which draw buffer to write to.</summary>
         public PerformerVisualKind VisualKind;
 
@@ -36,6 +42,18 @@ namespace Ludots.Core.Presentation.Performers
         /// Parameters not bound here fall through to the static defaults below.
         /// </summary>
         public PerformerParamBinding[] Bindings = System.Array.Empty<PerformerParamBinding>();
+
+        /// <summary>Authoring-only child performer refs expanded into rules at load time.</summary>
+        public ChildPerformerRef[] Children = System.Array.Empty<ChildPerformerRef>();
+
+        /// <summary>Authoring behavior slots parsed from performers.json.</summary>
+        public BehaviorSlot[] Behaviors = System.Array.Empty<BehaviorSlot>();
+
+        /// <summary>Typed authoring param defaults parsed from performers.json.</summary>
+        public ParamDefault[] ParamDefaults = System.Array.Empty<ParamDefault>();
+
+        /// <summary>Optional authored surface block for SurfaceSource performers.</summary>
+        public SurfaceAuthoringBlock Surface;
 
         // ── Entity-scoped mode ──
 

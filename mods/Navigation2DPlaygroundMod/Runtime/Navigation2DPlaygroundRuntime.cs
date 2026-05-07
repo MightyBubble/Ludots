@@ -10,7 +10,6 @@ using Ludots.Core.Input.Runtime;
 using Ludots.Core.Input.Selection;
 using Ludots.Core.Modding;
 using Ludots.Core.Navigation2D.Runtime;
-using Ludots.Core.Physics2D.Systems;
 using Ludots.Core.Presentation.Assets;
 using Ludots.Core.Presentation.DebugDraw;
 using Ludots.Core.Scripting;
@@ -56,8 +55,6 @@ namespace Navigation2DPlaygroundMod.Runtime
             var debugDrawBuffer = engine.GetService(CoreServiceKeys.DebugDrawCommandBuffer) ?? new DebugDrawCommandBuffer();
             engine.SetService(CoreServiceKeys.DebugDrawCommandBuffer, debugDrawBuffer);
 
-            engine.RegisterSystem(new Physics2DToWorldPositionSyncSystem(engine.World), SystemGroup.PostMovement);
-            engine.RegisterSystem(new IntegrationSystem2D(engine.World), SystemGroup.InputCollection);
             engine.RegisterSystem(new Navigation2DPlaygroundControlSystem(engine), SystemGroup.InputCollection);
             engine.RegisterSystem(new Navigation2DPlaygroundSelectionFilterSystem(engine), SystemGroup.InputCollection);
             engine.RegisterSystem(new Navigation2DPlaygroundCommandSystem(engine), SystemGroup.InputCollection);

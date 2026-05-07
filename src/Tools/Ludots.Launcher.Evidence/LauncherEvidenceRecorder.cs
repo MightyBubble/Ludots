@@ -86,6 +86,8 @@ public static class LauncherEvidenceRecorder
     private const int RoadImageHeight = 900;
     private const int NavImageWidth = 1600;
     private const int NavImageHeight = 900;
+    private const int FormationImageWidth = 1600;
+    private const int FormationImageHeight = 900;
     private const int NavAcceptanceAgentsPerTeam = 64;
     private const int NavFinalTick = 720;
     private const int NavTraceStrideTicks = 30;
@@ -140,6 +142,7 @@ public static class LauncherEvidenceRecorder
             EvidenceScenario.RoadNetworkShowcaseCommandAndChunking => Task.FromResult(RecordRoadNetworkShowcase(request)),
             EvidenceScenario.ChunkStreamingShowcaseCameraWindows => Task.FromResult(RecordChunkStreamingShowcase(request)),
             EvidenceScenario.Navigation2DPlaygroundTimedAvoidance => Task.FromResult(RecordNavigation2DTimedAvoidance(request)),
+            EvidenceScenario.FormationPhysicsPlaygroundBootstrap => Task.FromResult(RecordFormationPhysicsPlaygroundBootstrap(request)),
             _ => throw new InvalidOperationException($"No recording scenario is registered for root mods: {string.Join(", ", request.Plan.RootModIds)}")
         };
     }
@@ -154,6 +157,11 @@ public static class LauncherEvidenceRecorder
         if (plan.RootModIds.Any(id => string.Equals(id, "Navigation2DPlaygroundMod", StringComparison.OrdinalIgnoreCase)))
         {
             return EvidenceScenario.Navigation2DPlaygroundTimedAvoidance;
+        }
+
+        if (plan.RootModIds.Any(id => string.Equals(id, "FormationPhysicsPlaygroundMod", StringComparison.OrdinalIgnoreCase)))
+        {
+            return EvidenceScenario.FormationPhysicsPlaygroundBootstrap;
         }
 
         if (plan.RootModIds.Any(id => string.Equals(id, "RoadNetworkShowcaseMod", StringComparison.OrdinalIgnoreCase)))
@@ -188,6 +196,8 @@ public static class LauncherEvidenceRecorder
         var uiRoot = new UIRoot(skiaRenderer);
         uiRoot.Resize(DefaultWidth, DefaultHeight);
         engine.SetService(CoreServiceKeys.UIRoot, uiRoot);
+        engine.SetService(CoreServiceKeys.UiTextMeasurer, (object)textMeasurer);
+        engine.SetService(CoreServiceKeys.UiImageSizeProvider, (object)imageSizeProvider);
         engine.SetService(CoreServiceKeys.UISystem, (Ludots.Core.UI.IUiSystem)new MarkupUiSystem(uiRoot, textMeasurer, imageSizeProvider));
 
         var inputBackend = new ScriptedInputBackend();
@@ -251,6 +261,8 @@ public static class LauncherEvidenceRecorder
         var uiRoot = new UIRoot(skiaRenderer);
         uiRoot.Resize(DefaultWidth, DefaultHeight);
         engine.SetService(CoreServiceKeys.UIRoot, uiRoot);
+        engine.SetService(CoreServiceKeys.UiTextMeasurer, (object)textMeasurer);
+        engine.SetService(CoreServiceKeys.UiImageSizeProvider, (object)imageSizeProvider);
         engine.SetService(CoreServiceKeys.UISystem, (Ludots.Core.UI.IUiSystem)new MarkupUiSystem(uiRoot, textMeasurer, imageSizeProvider));
 
         var inputBackend = new ScriptedInputBackend();
@@ -1968,6 +1980,47 @@ public static class LauncherEvidenceRecorder
             acceptance.NormalizedSignature);
     }
 
+    private static LauncherRecordingResult RecordFormationPhysicsPlaygroundBootstrap(LauncherRecordingRequest request)
+    {
+        string screensDir = Path.Combine(request.OutputDirectory, "screens");
+        Directory.CreateDirectory(screensDir);
+
+        using var runtime = CreateRuntime(request.Plan, request.BootstrapPath);
+        if (!string.Equals(runtime.Config.StartupMapId, "formation_physics_playground", StringComparison.OrdinalIgnoreCase))
+        {
+            runtime.Engine.LoadMap("formation_physics_playground");
+        }
+
+        var frameTimesMs = new List<double>();
+        Tick(runtime, 3, frameTimesMs);
+
+        FormationSnapshot snapshot = SampleFormationSnapshot(runtime, "000_bootstrap", frameTimesMs.Count > 0 ? frameTimesMs[^1] : 0d);
+        string imagePath = Path.Combine(screensDir, "000_bootstrap.png");
+        WriteFormationSnapshotImage(snapshot, imagePath);
+
+        string battleReportPath = Path.Combine(request.OutputDirectory, "battle-report.md");
+        string tracePath = Path.Combine(request.OutputDirectory, "trace.jsonl");
+        string pathPath = Path.Combine(request.OutputDirectory, "path.mmd");
+        string visibleChecklistPath = Path.Combine(request.OutputDirectory, "visible-checklist.md");
+        string summaryPath = Path.Combine(request.OutputDirectory, "summary.json");
+
+        File.WriteAllText(battleReportPath, BuildFormationBattleReport(request, snapshot));
+        File.WriteAllText(tracePath, BuildFormationTraceJsonl(snapshot));
+        File.WriteAllText(pathPath, BuildFormationPathMermaid());
+        File.WriteAllText(visibleChecklistPath, BuildFormationVisibleChecklist(snapshot));
+        File.WriteAllText(summaryPath, BuildFormationSummaryJson(request, snapshot));
+
+        return new LauncherRecordingResult(
+            request.OutputDirectory,
+            battleReportPath,
+            tracePath,
+            pathPath,
+            summaryPath,
+            visibleChecklistPath,
+            new[] { imagePath },
+            snapshot.NormalizedSignature);
+    }
+
     private static void RespawnNavigationPlaygroundScenario(GameEngine engine, int scenarioIndex, int agentsPerTeam)
     {
         GameConfig? gameConfig = engine.GetService(CoreServiceKeys.GameConfig);
@@ -2353,6 +2406,186 @@ public static class LauncherEvidenceRecorder
         }, new JsonSerializerOptions { WriteIndented = true });
     }
 
+    private static FormationSnapshot SampleFormationSnapshot(RecordingRuntime runtime, string step, double tickMs)
+    {
+        var navAgentsQuery = new QueryDescription().WithAll<NavAgent2D>();
+        var obstaclesQuery = new QueryDescription().WithAll<NavObstacle2D>();
+        int navAgentCount = runtime.Engine.World.CountEntities(in navAgentsQuery);
+        int obstacleCount = runtime.Engine.World.CountEntities(in obstaclesQuery);
+        int primitiveCount = runtime.Engine.GetService(CoreServiceKeys.PresentationPrimitiveDrawBuffer)?.Count ?? 0;
+        int primitiveDropped = runtime.Engine.GetService(CoreServiceKeys.PresentationPrimitiveDrawBuffer)?.DroppedSinceClear ?? 0;
+
+        var overlayLines = ExtractOverlayText(runtime.Engine.GetService(CoreServiceKeys.ScreenOverlayBuffer));
+        var camera = runtime.Engine.GameSession.Camera.State;
+
+        return new FormationSnapshot(
+            Step: step,
+            Tick: runtime.Engine.GameSession.CurrentTick,
+            TickMs: tickMs,
+            ActiveMapId: runtime.Engine.CurrentMapSession?.MapId.ToString() ?? runtime.Config.StartupMapId,
+            CameraTargetCm: camera.TargetCm,
+            CameraDistanceCm: camera.DistanceCm,
+            CameraYaw: camera.Yaw,
+            CameraPitch: camera.Pitch,
+            CameraFovYDeg: camera.FovYDeg,
+            ActiveCameraId: runtime.Engine.GameSession.Camera.VirtualCameraBrain?.ActiveCameraId ?? "(none)",
+            NavAgentCount: navAgentCount,
+            ObstacleCount: obstacleCount,
+            PrimitiveCount: primitiveCount,
+            PrimitiveDroppedSinceClear: primitiveDropped,
+            OverlayLines: overlayLines,
+            NormalizedSignature: $"formation_physics_playground_bootstrap|agents:{navAgentCount}|obstacles:{obstacleCount}|primitives:{primitiveCount}|camera:{camera.DistanceCm:F0}");
+    }
+
+    private static void WriteFormationSnapshotImage(FormationSnapshot snapshot, string path)
+    {
+        using var surface = SKSurface.Create(new SKImageInfo(FormationImageWidth, FormationImageHeight));
+        SKCanvas canvas = surface.Canvas;
+        canvas.Clear(new SKColor(12, 16, 24));
+
+        using var titlePaint = new SKPaint { Color = SKColors.White, IsAntialias = true, TextSize = 30f };
+        using var textPaint = new SKPaint { Color = new SKColor(220, 230, 245), IsAntialias = true, TextSize = 22f };
+        using var minorTextPaint = new SKPaint { Color = new SKColor(170, 180, 196), IsAntialias = true, TextSize = 18f };
+        using var accentPaint = new SKPaint { Color = new SKColor(80, 180, 255), IsAntialias = true, Style = SKPaintStyle.Stroke, StrokeWidth = 2f };
+
+        canvas.DrawRect(SKRect.Create(20, 20, FormationImageWidth - 40, FormationImageHeight - 40), accentPaint);
+        canvas.DrawText("Formation Physics Playground Bootstrap", 40, 60, titlePaint);
+        canvas.DrawText($"Map={snapshot.ActiveMapId}  Camera={snapshot.ActiveCameraId}  Tick={snapshot.Tick}  TickMs={snapshot.TickMs:F3}", 40, 105, textPaint);
+        canvas.DrawText($"NavAgent2D={snapshot.NavAgentCount}  NavObstacle2D={snapshot.ObstacleCount}  PrimitiveDrawBuffer={snapshot.PrimitiveCount}  Dropped={snapshot.PrimitiveDroppedSinceClear}", 40, 145, textPaint);
+        canvas.DrawText($"Camera target={FormatPoint(snapshot.CameraTargetCm)}  dist={snapshot.CameraDistanceCm:F0}  yaw={snapshot.CameraYaw:F1}  pitch={snapshot.CameraPitch:F1}  fov={snapshot.CameraFovYDeg:F1}", 40, 185, textPaint);
+
+        float y = 240f;
+        if (snapshot.OverlayLines.Count == 0)
+        {
+            canvas.DrawText("Overlay: (empty)", 40, y, minorTextPaint);
+        }
+        else
+        {
+            canvas.DrawText("Overlay:", 40, y, minorTextPaint);
+            y += 28f;
+            for (int i = 0; i < snapshot.OverlayLines.Count && i < 20; i++)
+            {
+                canvas.DrawText(snapshot.OverlayLines[i], 40, y, minorTextPaint);
+                y += 24f;
+            }
+        }
+
+        using SKImage image = surface.Snapshot();
+        using SKData data = image.Encode(SKEncodedImageFormat.Png, 100);
+        using FileStream stream = File.Open(path, FileMode.Create, FileAccess.Write, FileShare.None);
+        data.SaveTo(stream);
+    }
+
+    private static string BuildFormationBattleReport(LauncherRecordingRequest request, FormationSnapshot snapshot)
+    {
+        var sb = new StringBuilder();
+        sb.AppendLine("# Scenario Card: formation-physics-playground-bootstrap");
+        sb.AppendLine();
+        sb.AppendLine("## Intent");
+        sb.AppendLine("- Player goal: verify the new formation physics playground boots into the intended map and emits visible runtime primitives instead of an empty grid-only scene.");
+        sb.AppendLine("- Gameplay domain: real launcher bootstrap, real FormationPhysicsPlaygroundMod runtime, real adapter presentation buffers.");
+        sb.AppendLine();
+        sb.AppendLine("## Determinism Inputs");
+        sb.AppendLine($"- Adapter: `{request.Plan.AdapterId}`");
+        sb.AppendLine($"- Launch command: `{request.CommandText}`");
+        sb.AppendLine("- Startup map: `formation_physics_playground`");
+        sb.AppendLine("- Evidence image: `screens/000_bootstrap.png`");
+        sb.AppendLine();
+        sb.AppendLine("## Snapshot");
+        sb.AppendLine($"- map: `{snapshot.ActiveMapId}`");
+        sb.AppendLine($"- active camera: `{snapshot.ActiveCameraId}`");
+        sb.AppendLine($"- camera target: `{FormatPoint(snapshot.CameraTargetCm)}`");
+        sb.AppendLine($"- camera distance: `{snapshot.CameraDistanceCm:F0}`");
+        sb.AppendLine($"- nav agents: `{snapshot.NavAgentCount}`");
+        sb.AppendLine($"- obstacles: `{snapshot.ObstacleCount}`");
+        sb.AppendLine($"- primitives: `{snapshot.PrimitiveCount}`");
+        sb.AppendLine($"- dropped primitives since clear: `{snapshot.PrimitiveDroppedSinceClear}`");
+        sb.AppendLine();
+        sb.AppendLine("## Overlay");
+        if (snapshot.OverlayLines.Count == 0)
+        {
+            sb.AppendLine("- overlay: `(empty)`");
+        }
+        else
+        {
+            foreach (string line in snapshot.OverlayLines)
+            {
+                sb.AppendLine($"- {line}");
+            }
+        }
+
+        return sb.ToString();
+    }
+
+    private static string BuildFormationTraceJsonl(FormationSnapshot snapshot)
+    {
+        return JsonSerializer.Serialize(new
+        {
+            event_id = "formation-physics-bootstrap-001",
+            step = snapshot.Step,
+            tick = snapshot.Tick,
+            map = snapshot.ActiveMapId,
+            active_camera = snapshot.ActiveCameraId,
+            camera_target_cm = new { x = snapshot.CameraTargetCm.X, y = snapshot.CameraTargetCm.Y },
+            camera_distance_cm = snapshot.CameraDistanceCm,
+            camera_yaw = snapshot.CameraYaw,
+            camera_pitch = snapshot.CameraPitch,
+            camera_fov_y_deg = snapshot.CameraFovYDeg,
+            nav_agents = snapshot.NavAgentCount,
+            obstacles = snapshot.ObstacleCount,
+            primitives = snapshot.PrimitiveCount,
+            primitive_dropped_since_clear = snapshot.PrimitiveDroppedSinceClear,
+            tick_ms = snapshot.TickMs
+        }) + Environment.NewLine;
+    }
+
+    private static string BuildFormationPathMermaid()
+    {
+        return string.Join(Environment.NewLine, new[]
+        {
+            "flowchart TD",
+            "    A[Boot launcher runtime for FormationPhysicsPlaygroundMod] --> B[Load formation_physics_playground]",
+            "    B --> C[Tick a few frames to settle map-loaded runtime]",
+            "    C --> D[Sample camera state, nav entity counts, primitive draw buffer, overlay text]",
+            "    D --> E[Write PNG + summary artifacts]"
+        }) + Environment.NewLine;
+    }
+
+    private static string BuildFormationVisibleChecklist(FormationSnapshot snapshot)
+    {
+        var sb = new StringBuilder();
+        sb.AppendLine("# Visible Checklist: formation-physics-playground-bootstrap");
+        sb.AppendLine();
+        sb.AppendLine($"- `screens/000_bootstrap.png`: navAgents={snapshot.NavAgentCount}, obstacles={snapshot.ObstacleCount}, primitives={snapshot.PrimitiveCount}, camera={snapshot.ActiveCameraId} dist={snapshot.CameraDistanceCm:F0}");
+        sb.AppendLine("- If navAgents > 0 but primitives = 0, the scene is spawning logic entities without presentation output.");
+        sb.AppendLine("- If primitives > 0 but the live client still shows only the grid, inspect runtime camera/view-mode parity next.");
+        return sb.ToString();
+    }
+
+    private static string BuildFormationSummaryJson(LauncherRecordingRequest request, FormationSnapshot snapshot)
+    {
+        return JsonSerializer.Serialize(new
+        {
+            scenario = "formation_physics_playground_bootstrap",
+            adapter = request.Plan.AdapterId,
+            selectors = request.Plan.Selectors,
+            root_mods = request.Plan.RootModIds,
+            active_map_id = snapshot.ActiveMapId,
+            active_camera_id = snapshot.ActiveCameraId,
+            camera_target_cm = new { x = snapshot.CameraTargetCm.X, y = snapshot.CameraTargetCm.Y },
+            camera_distance_cm = snapshot.CameraDistanceCm,
+            camera_yaw = snapshot.CameraYaw,
+            camera_pitch = snapshot.CameraPitch,
+            camera_fov_y_deg = snapshot.CameraFovYDeg,
+            nav_agent_count = snapshot.NavAgentCount,
+            obstacle_count = snapshot.ObstacleCount,
+            primitive_count = snapshot.PrimitiveCount,
+            primitive_dropped_since_clear = snapshot.PrimitiveDroppedSinceClear,
+            overlay_lines = snapshot.OverlayLines,
+            normalized_signature = snapshot.NormalizedSignature
+        }, new JsonSerializerOptions { WriteIndented = true });
+    }
+
     private static void AssertNavigationOverlay(ScreenOverlayBuffer overlay)
     {
         string dump = string.Join(" || ", ExtractOverlayText(overlay));
@@ -2561,7 +2794,8 @@ public static class LauncherEvidenceRecorder
         CameraAcceptanceProjectionClick,
         RoadNetworkShowcaseCommandAndChunking,
         ChunkStreamingShowcaseCameraWindows,
-        Navigation2DPlaygroundTimedAvoidance
+        Navigation2DPlaygroundTimedAvoidance,
+        FormationPhysicsPlaygroundBootstrap
     }
 
     private sealed class RecordingRuntime : IDisposable
@@ -2790,6 +3024,24 @@ public static class LauncherEvidenceRecorder
         int CenterStoppedAgents,
         float Team0CrossedFraction,
         float Team1CrossedFraction);
+
+    private readonly record struct FormationSnapshot(
+        string Step,
+        int Tick,
+        double TickMs,
+        string ActiveMapId,
+        Vector2 CameraTargetCm,
+        float CameraDistanceCm,
+        float CameraYaw,
+        float CameraPitch,
+        float CameraFovYDeg,
+        string ActiveCameraId,
+        int NavAgentCount,
+        int ObstacleCount,
+        int PrimitiveCount,
+        int PrimitiveDroppedSinceClear,
+        IReadOnlyList<string> OverlayLines,
+        string NormalizedSignature);
 
     private sealed record AvoidanceAcceptanceResult(
         bool Success,

@@ -15,6 +15,12 @@ namespace Ludots.Core.Presentation.Performers
         /// </summary>
         public PresentationCommandKind CommandKind;
 
+        public PresentationCommandKind LegacyCommandKind
+        {
+            readonly get => CommandKind;
+            set => CommandKind = value;
+        }
+
         /// <summary>
         /// The PerformerDefinition ID to instantiate (used with CreatePerformer).
         /// </summary>
@@ -26,6 +32,18 @@ namespace Ludots.Core.Presentation.Performers
         /// </summary>
         public int ScopeId;
 
+        public int ScopeTag
+        {
+            readonly get => ScopeId;
+            set => ScopeId = value;
+        }
+
+        public int ParentHandle;
+
+        public PerformerCommandScopeSource ScopeSource;
+
+        public int TargetBehaviorSlot;
+
         /// <summary>
         /// The parameter key for SetPerformerParam.
         /// </summary>
@@ -36,10 +54,24 @@ namespace Ludots.Core.Presentation.Performers
         /// </summary>
         public float ParamValue;
 
+        public ParamLane ParamLane;
+
+        public int IntValue;
+
+        public System.Numerics.Vector4 VectorValue;
+
         /// <summary>
         /// When > 0, execute this Graph program to compute the parameter value
         /// dynamically instead of using <see cref="ParamValue"/>.
         /// </summary>
         public int ParamGraphProgramId;
+    }
+
+    public enum PerformerCommandScopeSource : byte
+    {
+        Fixed = 0,
+        EventPayloadA = 1,
+        EventPayloadB = 2,
+        SourceStableId = 3,
     }
 }

@@ -34,11 +34,27 @@
       }
     },
     {
+      "name": "formation_physics_playground",
+      "target": {
+        "type": "path",
+        "value": "mods/FormationPhysicsPlaygroundMod",
+        "projectPath": "FormationPhysicsPlaygroundMod.csproj"
+      }
+    },
+    {
       "name": "champion_skill_stress",
       "target": {
         "type": "path",
         "value": "mods/showcases/champion_skill_stress_entry/ChampionSkillStressEntryMod",
         "projectPath": "ChampionSkillStressEntryMod.csproj"
+      }
+    },
+    {
+      "name": "spatial_bounds_showcase",
+      "target": {
+        "type": "path",
+        "value": "mods/showcases/spatial_bounds/SpatialBoundsShowcaseMod",
+        "projectPath": "SpatialBoundsShowcaseMod.csproj"
       }
     },
     {

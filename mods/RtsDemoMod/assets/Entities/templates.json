@@ -1,5 +1,119 @@
 ﻿[
   {
+    "id": "rts_barracks",
+    "components": {
+      "Name": { "Value": "Barracks" },
+      "Team": { "Id": 1 },
+      "SelectionSelectableTag": {},
+      "SelectionSelectableState": { "IsEnabled": true },
+      "WorldPositionCm": { "Value": { "X": 0, "Y": 0 } },
+      "Presentation": {
+        "imageBindings": [
+          { "role": "Portrait", "state": "Default", "imageAsset": "genreinfo.portrait.barracks" }
+        ]
+      },
+      "AttributeBuffer": { "base": { "Health": 1200 } },
+      "AbilityStateBuffer": {
+        "abilityIds": [
+          "Ability.Rts.TrainMarine",
+          "Ability.Rts.ResearchStim"
+        ]
+      },
+      "GameplayTagContainer": {},
+      "TagCountContainer": {},
+      "TimedTagBuffer": {},
+      "OrderBuffer": {},
+      "BlackboardSpatialBuffer": {},
+      "BlackboardEntityBuffer": {},
+      "BlackboardIntBuffer": {}
+    }
+  },
+  {
+    "id": "rts_marine",
+    "components": {
+      "Name": { "Value": "Marine" },
+      "Team": { "Id": 1 },
+      "SelectionSelectableTag": {},
+      "SelectionSelectableState": { "IsEnabled": true },
+      "WorldPositionCm": { "Value": { "X": 0, "Y": 0 } },
+      "Presentation": {
+        "imageBindings": [
+          { "role": "Portrait", "state": "Default", "imageAsset": "genreinfo.portrait.marine" }
+        ]
+      },
+      "AttributeBuffer": { "base": { "Health": 40, "AttackSpeed": 100 } },
+      "AbilityStateBuffer": {
+        "abilityIds": [
+          "Ability.Rts.StimPack"
+        ]
+      },
+      "GameplayTagContainer": {},
+      "TagCountContainer": {},
+      "TimedTagBuffer": {},
+      "OrderBuffer": {},
+      "BlackboardSpatialBuffer": {},
+      "BlackboardEntityBuffer": {},
+      "BlackboardIntBuffer": {}
+    }
+  },
+  {
+    "id": "rts_siege_tank",
+    "components": {
+      "Name": { "Value": "Siege Tank" },
+      "Team": { "Id": 1 },
+      "SelectionSelectableTag": {},
+      "SelectionSelectableState": { "IsEnabled": true },
+      "WorldPositionCm": { "Value": { "X": 0, "Y": 0 } },
+      "Presentation": {
+        "imageBindings": [
+          { "role": "Portrait", "state": "Default", "imageAsset": "genreinfo.portrait.tank" }
+        ]
+      },
+      "AttributeBuffer": { "base": { "Health": 150, "Shield": 0 } },
+      "AbilityStateBuffer": {
+        "abilityIds": [
+          "Ability.Rts.SiegeModeAoe"
+        ]
+      },
+      "GameplayTagContainer": {},
+      "TagCountContainer": {},
+      "TimedTagBuffer": {},
+      "OrderBuffer": {},
+      "BlackboardSpatialBuffer": {},
+      "BlackboardEntityBuffer": {},
+      "BlackboardIntBuffer": {}
+    }
+  },
+  {
+    "id": "rts_science_vessel",
+    "components": {
+      "Name": { "Value": "Science Vessel" },
+      "Team": { "Id": 1 },
+      "SelectionSelectableTag": {},
+      "SelectionSelectableState": { "IsEnabled": true },
+      "WorldPositionCm": { "Value": { "X": 0, "Y": 0 } },
+      "Presentation": {
+        "imageBindings": [
+          { "role": "Portrait", "state": "Default", "imageAsset": "genreinfo.portrait.vessel" }
+        ]
+      },
+      "AttributeBuffer": { "base": { "Health": 200, "Energy": 200 } },
+      "AbilityStateBuffer": {
+        "abilityIds": [
+          "Ability.Rts.ShieldAura",
+          "Ability.Rts.Irradiate"
+        ]
+      },
+      "GameplayTagContainer": {},
+      "TagCountContainer": {},
+      "TimedTagBuffer": {},
+      "OrderBuffer": {},
+      "BlackboardSpatialBuffer": {},
+      "BlackboardEntityBuffer": {},
+      "BlackboardIntBuffer": {}
+    }
+  },
+  {
     "id": "rts_war3_peasant",
     "components": {
       "Name": { "Value": "Peasant" },

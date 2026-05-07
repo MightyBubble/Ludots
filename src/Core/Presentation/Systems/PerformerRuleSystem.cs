@@ -218,6 +218,9 @@ namespace Ludots.Core.Presentation.Systems
                 case InlineConditionKind.OwnerCullVisible:
                     return IsOwnerCullVisible(evt.Source);
 
+                case InlineConditionKind.SourceHasVisualTransform:
+                    return World.IsAlive(evt.Source) && World.Has<VisualTransform>(evt.Source);
+
                 default:
                     return true;
             }
@@ -280,6 +283,7 @@ namespace Ludots.Core.Presentation.Systems
 
         private void EmitCommand(in PerformerCommand cmd, in PresentationEvent evt)
         {
+            int scopeId = ResolveScopeId(in cmd, in evt);
             _commands.TryAdd(new PresentationCommand
             {
                 LogicTickStamp = evt.LogicTickStamp,
@@ -287,7 +291,7 @@ namespace Ludots.Core.Presentation.Systems
                 IdA = cmd.CommandKind == PresentationCommandKind.CreatePerformer
                     ? cmd.PerformerDefinitionId
                     : 0,
-                IdB = cmd.ScopeId,
+                IdB = scopeId,
                 Source = evt.Source,
                 Target = evt.Target,
                 Param1 = cmd.ParamGraphProgramId > 0
@@ -295,6 +299,29 @@ namespace Ludots.Core.Presentation.Systems
                     : cmd.ParamValue,
                 Param2 = cmd.ParamKey,
             });
+        }
+
+        private int ResolveScopeId(in PerformerCommand cmd, in PresentationEvent evt)
+        {
+            return cmd.ScopeSource switch
+            {
+                PerformerCommandScopeSource.EventPayloadA => evt.PayloadA,
+                PerformerCommandScopeSource.EventPayloadB => evt.PayloadB,
+                PerformerCommandScopeSource.SourceStableId => TryGetStableId(evt.Source, out int stableId) ? stableId : 0,
+                _ => cmd.ScopeId,
+            };
+        }
+
+        private bool TryGetStableId(Entity entity, out int stableId)
+        {
+            if (World.IsAlive(entity) && World.Has<PresentationStableId>(entity))
+            {
+                stableId = World.Get<PresentationStableId>(entity).Value;
+                return stableId > 0;
+            }
+
+            stableId = 0;
+            return false;
         }
 
         /// <summary>

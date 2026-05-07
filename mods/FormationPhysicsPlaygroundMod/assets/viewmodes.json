@@ -1,0 +1,20 @@
+[
+  {
+    "Id": "FormationPhysics.Playground.Mode.Command",
+    "DisplayName": "Formation RTS",
+    "VirtualCameraId": "FormationPhysics.Playground.Camera.Command",
+    "FollowTargetKind": "None",
+    "InteractionMode": "SmartCast",
+    "SkillBarEnabled": false,
+    "SwitchActionId": "Nav2D_ViewModeCommand"
+  },
+  {
+    "Id": "FormationPhysics.Playground.Mode.Follow",
+    "DisplayName": "Formation Follow",
+    "VirtualCameraId": "FormationPhysics.Playground.Camera.Follow",
+    "FollowTargetKind": "SelectedEntity",
+    "InteractionMode": "SmartCast",
+    "SkillBarEnabled": false,
+    "SwitchActionId": "Nav2D_ViewModeFollow"
+  }
+]

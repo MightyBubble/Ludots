@@ -30,12 +30,12 @@
 - `artifacts/acceptance/navigation2d-playground-scenarios/path.mmd`
 
 ## Timeline
-- [T+001] Scenario#1 Pass Through [pass_through] | Teams=2 | Dynamic=192 | Blockers=0 | MovingDesired=192 | AvgSpeed=160.3cm/s
-- [T+002] Scenario#2 Orthogonal Cross [orthogonal_cross] | Teams=2 | Dynamic=192 | Blockers=0 | MovingDesired=192 | AvgSpeed=161.3cm/s
-- [T+003] Scenario#3 Bottleneck [bottleneck] | Teams=2 | Dynamic=192 | Blockers=20 | MovingDesired=192 | AvgSpeed=102.2cm/s
-- [T+004] Scenario#4 Lane Merge [lane_merge] | Teams=2 | Dynamic=192 | Blockers=0 | MovingDesired=192 | AvgSpeed=162.9cm/s
-- [T+005] Scenario#5 Circle Swap [circle_swap] | Teams=2 | Dynamic=192 | Blockers=0 | MovingDesired=179 | AvgSpeed=292.5cm/s
-- [T+006] Scenario#6 Goal Queue [goal_queue] | Teams=1 | Dynamic=96 | Blockers=18 | MovingDesired=80 | AvgSpeed=252.4cm/s
+- [T+001] Scenario#1 Pass Through [pass_through] | Teams=2 | Dynamic=192 | Blockers=0 | MovingDesired=192 | AvgSpeed=304.7cm/s
+- [T+002] Scenario#2 Orthogonal Cross [orthogonal_cross] | Teams=2 | Dynamic=192 | Blockers=0 | MovingDesired=192 | AvgSpeed=314.6cm/s
+- [T+003] Scenario#3 Bottleneck [bottleneck] | Teams=2 | Dynamic=192 | Blockers=20 | MovingDesired=192 | AvgSpeed=297.4cm/s
+- [T+004] Scenario#4 Lane Merge [lane_merge] | Teams=2 | Dynamic=192 | Blockers=0 | MovingDesired=190 | AvgSpeed=323.3cm/s
+- [T+005] Scenario#5 Circle Swap [circle_swap] | Teams=2 | Dynamic=192 | Blockers=0 | MovingDesired=179 | AvgSpeed=204.3cm/s
+- [T+006] Scenario#6 Goal Queue [goal_queue] | Teams=1 | Dynamic=96 | Blockers=18 | MovingDesired=87 | AvgSpeed=240.9cm/s
 
 ## Outcome
 - success: yes
@@ -48,7 +48,3 @@
 - total dynamic agents exercised across catalog: `1056`
 - total blockers exercised across catalog: `38`
 - reusable wiring: config via `Navigation2D.Playground`, input via `default_input.json`, view modes via `viewmodes.json`, camera via virtual camera registry, telemetry via `ScreenOverlayBuffer`
-
-## Open Tech Debt
-- `nav-playground-selection-boundaries` -> `artifacts/techdebt/2026-03-12-nav-playground-selection-boundaries.md`
-- `nav-playground-steering-60hz-gap` -> `artifacts/techdebt/2026-03-12-nav-playground-steering-60hz-gap.md`

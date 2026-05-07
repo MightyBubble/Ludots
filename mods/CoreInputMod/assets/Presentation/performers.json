@@ -7,8 +7,7 @@
     "defaultColor": [0.28, 0.82, 0.54, 0.32],
     "defaultScale": 1.0,
     "defaultLifetime": -1,
-    "positionOffset": [0.0, 0.35, 0.0],
-    "maxVisibilityDistanceCm": 30000
+    "positionOffset": [0.0, 0.35, 0.0]
   },
   {
     "_comment": "Warp-in ghost: rounded sphere that reads as an energy silhouette.",
@@ -18,8 +17,7 @@
     "defaultColor": [0.24, 0.78, 0.96, 0.34],
     "defaultScale": 1.0,
     "defaultLifetime": -1,
-    "positionOffset": [0.0, 0.55, 0.0],
-    "maxVisibilityDistanceCm": 30000
+    "positionOffset": [0.0, 0.55, 0.0]
   },
   {
     "_comment": "Morph ghost: dense organic sphere for transformation-style abilities.",
@@ -29,7 +27,6 @@
     "defaultColor": [0.58, 0.84, 0.22, 0.32],
     "defaultScale": 1.0,
     "defaultLifetime": -1,
-    "positionOffset": [0.0, 0.42, 0.0],
-    "maxVisibilityDistanceCm": 30000
+    "positionOffset": [0.0, 0.42, 0.0]
   }
 ]

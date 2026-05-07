@@ -8,6 +8,7 @@ using Ludots.Core.Mathematics;
 using Ludots.Core.Presentation.Components;
 using Ludots.Core.Registry;
 using Ludots.Core.Scripting;
+using Ludots.Core.Spatial;
 using Ludots.Platform.Abstractions;
 
 namespace Ludots.Core.Input.Selection
@@ -24,6 +25,7 @@ namespace Ludots.Core.Input.Selection
         private readonly Dictionary<string, object> _globals;
         private readonly SelectionRuntime _selection;
         private Entity[] _boxSelectionScratch = new Entity[16];
+        private Entity[] _selectionScratch = new Entity[16];
         private bool _suppressConfirmRelease;
 
         public Action<WorldCmInt2, Entity>? OnEntitySelected { get; set; }
@@ -92,7 +94,7 @@ namespace Ludots.Core.Input.Selection
 
             if (pointer.Confirm.PressedThisFrame)
             {
-                drag.Begin(pointer.Confirm.ResolvePressPointerOrCurrent());
+                drag.Begin(pointer.Confirm.ResolvePressPointerOrCurrent(), ResolveAcquisitionMode());
             }
             else if (drag.Active && pointer.Confirm.IsDown)
             {
@@ -102,15 +104,19 @@ namespace Ludots.Core.Input.Selection
             if (pointer.Confirm.ReleasedThisFrame && drag.Active)
             {
                 drag.CurrentScreen = pointer.Confirm.ResolveReleasePointerOrCurrent();
+                SelectionAcquisitionMode acquisitionMode = drag.AcquisitionMode;
 
                 if (drag.ExceedsThreshold(_selection.Config.DragThresholdPixels))
                 {
-                    ApplyBoxSelection(owner, in drag);
+                    ApplyBoxSelection(owner, in drag, acquisitionMode);
                 }
-                else if (pointer.HasGroundPoint)
+                else
                 {
-                    ApplyClickSelection(owner, hovered);
-                    OnEntitySelected?.Invoke(pointer.GroundWorldCm, hovered);
+                    ApplyClickSelection(owner, hovered, acquisitionMode);
+                    if (pointer.HasGroundPoint)
+                    {
+                        OnEntitySelected?.Invoke(pointer.GroundWorldCm, hovered);
+                    }
                 }
 
                 drag.Clear();
@@ -159,28 +165,30 @@ namespace Ludots.Core.Input.Selection
             }
         }
 
-        private void ApplyClickSelection(Entity owner, Entity clicked)
+        private void ApplyClickSelection(Entity owner, Entity clicked, SelectionAcquisitionMode acquisitionMode)
         {
             if (_world.IsAlive(clicked))
             {
-                Span<Entity> next = stackalloc Entity[1];
-                next[0] = clicked;
-                _selection.ReplaceSelection(owner, SelectionSetKeys.Ambient, next);
+                Span<Entity> hit = stackalloc Entity[1];
+                hit[0] = clicked;
+                ApplyAcquisition(owner, hit, acquisitionMode);
                 return;
             }
 
-            _selection.ClearSelection(owner, SelectionSetKeys.Ambient);
+            if (acquisitionMode == SelectionAcquisitionMode.Replace)
+            {
+                _selection.ClearSelection(owner, SelectionSetKeys.Ambient);
+            }
         }
 
-        private void ApplyBoxSelection(Entity owner, in SelectionDragState drag)
+        private void ApplyBoxSelection(Entity owner, in SelectionDragState drag, SelectionAcquisitionMode acquisitionMode)
         {
             if (!_globals.TryGetValue(CoreServiceKeys.ScreenProjector.Name, out var projectorObj) || projectorObj is not IScreenProjector projector)
             {
                 return;
             }
 
-            var min = Vector2.Min(drag.StartScreen, drag.CurrentScreen);
-            var max = Vector2.Max(drag.StartScreen, drag.CurrentScreen);
+            ScreenRect marquee = ScreenRect.FromPoints(drag.StartScreen, drag.CurrentScreen);
 
             int nextCount = 0;
             _world.Query(in SelectableQuery, (Entity entity, ref VisualTransform transform, ref CullState cull, ref SelectionSelectableTag selectable) =>
@@ -191,13 +199,7 @@ namespace Ludots.Core.Input.Selection
                     return;
                 }
 
-                Vector2 screen = projector.WorldToScreen(transform.Position);
-                if (float.IsNaN(screen.X) || float.IsNaN(screen.Y) || float.IsInfinity(screen.X) || float.IsInfinity(screen.Y))
-                {
-                    return;
-                }
-
-                if (screen.X < min.X || screen.X > max.X || screen.Y < min.Y || screen.Y > max.Y)
+                if (!SpatialBoundsUtility.EntityIntersectsScreenRect(_world, entity, projector, in marquee))
                 {
                     return;
                 }
@@ -207,7 +209,7 @@ namespace Ludots.Core.Input.Selection
             });
 
             SortByEntityId(_boxSelectionScratch, nextCount);
-            _selection.ReplaceSelection(owner, SelectionSetKeys.Ambient, _boxSelectionScratch.AsSpan(0, nextCount));
+            ApplyAcquisition(owner, _boxSelectionScratch.AsSpan(0, nextCount), acquisitionMode);
         }
 
         private void EnsureScratchCapacity(int required)
@@ -234,8 +236,8 @@ namespace Ludots.Core.Input.Selection
             }
 
             Entity best = default;
-            float bestD2 = float.MaxValue;
-            float maxD2 = radiusPixels * radiusPixels;
+            ScreenRect bestBounds = default;
+            bool hasBestBounds = false;
 
             _world.Query(in SelectableQuery, (Entity entity, ref VisualTransform transform, ref CullState cull, ref SelectionSelectableTag selectable) =>
             {
@@ -244,28 +246,137 @@ namespace Ludots.Core.Input.Selection
                     return;
                 }
 
-                Vector2 screen = projector.WorldToScreen(transform.Position);
-                if (float.IsNaN(screen.X) || float.IsNaN(screen.Y) || float.IsInfinity(screen.X) || float.IsInfinity(screen.Y))
+                if (!SpatialBoundsUtility.PointerHitsEntity(_world, entity, projector, pointer, radiusPixels))
                 {
                     return;
                 }
 
-                float dx = screen.X - pointer.X;
-                float dy = screen.Y - pointer.Y;
-                float d2 = dx * dx + dy * dy;
-                if (d2 > maxD2)
+                if (!SpatialBoundsUtility.TryProjectScreenBounds(_world, entity, projector, out ScreenRect candidateBounds))
                 {
                     return;
                 }
 
-                if (d2 < bestD2 || (d2 == bestD2 && (best == Entity.Null || Compare(entity, best) < 0)))
+                if (!hasBestBounds ||
+                    CompareProjectedBounds(candidateBounds, bestBounds, pointer) < 0 ||
+                    (CompareProjectedBounds(candidateBounds, bestBounds, pointer) == 0 && (best == Entity.Null || Compare(entity, best) < 0)))
                 {
-                    bestD2 = d2;
                     best = entity;
+                    bestBounds = candidateBounds;
+                    hasBestBounds = true;
                 }
             });
 
             return best;
+        }
+
+        private void ApplyAcquisition(Entity owner, ReadOnlySpan<Entity> hits, SelectionAcquisitionMode mode)
+        {
+            switch (mode)
+            {
+                case SelectionAcquisitionMode.Replace:
+                    _selection.ReplaceSelection(owner, SelectionSetKeys.Ambient, hits);
+                    return;
+
+                case SelectionAcquisitionMode.Additive:
+                    for (int i = 0; i < hits.Length; i++)
+                    {
+                        _selection.AddToSelection(owner, SelectionSetKeys.Ambient, hits[i]);
+                    }
+                    return;
+
+                case SelectionAcquisitionMode.Toggle:
+                    for (int i = 0; i < hits.Length; i++)
+                    {
+                        Entity target = hits[i];
+                        if (SelectionContains(owner, target))
+                        {
+                            _selection.RemoveFromSelection(owner, SelectionSetKeys.Ambient, target);
+                        }
+                        else
+                        {
+                            _selection.AddToSelection(owner, SelectionSetKeys.Ambient, target);
+                        }
+                    }
+                    return;
+
+                default:
+                    throw new InvalidOperationException($"Unsupported selection acquisition mode '{mode}'.");
+            }
+        }
+
+        private bool SelectionContains(Entity owner, Entity target)
+        {
+            int count = _selection.GetSelectionCount(owner, SelectionSetKeys.Ambient);
+            if (count <= 0)
+            {
+                return false;
+            }
+
+            EnsureSelectionScratchCapacity(count);
+            int written = _selection.CopySelection(owner, SelectionSetKeys.Ambient, _selectionScratch);
+            for (int i = 0; i < written; i++)
+            {
+                if (_selectionScratch[i] == target)
+                {
+                    return true;
+                }
+            }
+
+            return false;
+        }
+
+        private SelectionAcquisitionMode ResolveAcquisitionMode()
+        {
+            if (_globals.TryGetValue(CoreServiceKeys.AuthoritativeInput.Name, out var inputObj) &&
+                inputObj is Ludots.Core.Input.Runtime.IInputActionReader input)
+            {
+                bool additive = input.IsDown(SelectionModifierActionIds.Additive);
+                bool toggle = input.IsDown(SelectionModifierActionIds.Toggle);
+                if (toggle)
+                {
+                    return SelectionAcquisitionMode.Toggle;
+                }
+
+                if (additive)
+                {
+                    return SelectionAcquisitionMode.Additive;
+                }
+            }
+
+            return SelectionAcquisitionMode.Replace;
+        }
+
+        private void EnsureSelectionScratchCapacity(int required)
+        {
+            if (required <= _selectionScratch.Length)
+            {
+                return;
+            }
+
+            int nextSize = _selectionScratch.Length;
+            while (nextSize < required)
+            {
+                nextSize *= 2;
+            }
+
+            Array.Resize(ref _selectionScratch, nextSize);
+        }
+
+        private static int CompareProjectedBounds(in ScreenRect candidate, in ScreenRect best, Vector2 pointer)
+        {
+            float candidateArea = MathF.Max(0f, candidate.MaxX - candidate.MinX) * MathF.Max(0f, candidate.MaxY - candidate.MinY);
+            float bestArea = MathF.Max(0f, best.MaxX - best.MinX) * MathF.Max(0f, best.MaxY - best.MinY);
+            int areaComparison = candidateArea.CompareTo(bestArea);
+            if (areaComparison != 0)
+            {
+                return areaComparison;
+            }
+
+            Vector2 candidateCenter = new((candidate.MinX + candidate.MaxX) * 0.5f, (candidate.MinY + candidate.MaxY) * 0.5f);
+            Vector2 bestCenter = new((best.MinX + best.MaxX) * 0.5f, (best.MinY + best.MaxY) * 0.5f);
+            float candidateD2 = Vector2.DistanceSquared(candidateCenter, pointer);
+            float bestD2 = Vector2.DistanceSquared(bestCenter, pointer);
+            return candidateD2.CompareTo(bestD2);
         }
 
         private static void SortByEntityId(Span<Entity> entities, int count)
@@ -305,5 +416,18 @@ namespace Ludots.Core.Input.Selection
             throw new InvalidOperationException(
                 $"{nameof(CurrentSelectionApplySystem)} requires {CoreServiceKeys.SelectionRuntime.Name} to be registered before construction.");
         }
+    }
+
+    public enum SelectionAcquisitionMode : byte
+    {
+        Replace = 0,
+        Additive = 1,
+        Toggle = 2,
+    }
+
+    public static class SelectionModifierActionIds
+    {
+        public const string Additive = "QueueModifier";
+        public const string Toggle = "PrecisionModifier";
     }
 }

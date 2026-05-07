@@ -381,6 +381,8 @@ namespace Ludots.Core.Engine
 
             // 5. Setup Data Loaders
             MapLoader = new MapLoader(World, WorldMap, ConfigPipeline);
+            MapLoader.LoadTemplates();
+            SetService(CoreServiceKeys.EntityTemplateKeyRegistry, MapLoader.EntityTemplateKeys);
 
             // 6. Initialize Core Systems with merged config
             InitializeCoreSystems(MergedConfig);
@@ -391,8 +393,6 @@ namespace Ludots.Core.Engine
             SimulationMaxSlicesPerLogicFrame = MergedConfig.SimulationMaxSlicesPerLogicFrame;
             
             // 7. Post-Mod Load Initialization
-            MapLoader.LoadTemplates();
-            SetService(CoreServiceKeys.EntityTemplateKeyRegistry, MapLoader.EntityTemplateKeys);
 
             // 8. Print registration conflict summary
             ConflictReport?.PrintSummary();
@@ -478,6 +478,20 @@ namespace Ludots.Core.Engine
                 ref var pos = ref w.Get<WorldPositionCm>(entity);
                 return pos.Value.ToWorldCmInt2();
             });
+        }
+
+        private static int ResolvePerformerBehaviorAssetId(MeshAssetRegistry meshAssets, AssetKind kind, string key)
+        {
+            if (string.IsNullOrWhiteSpace(key))
+            {
+                return 0;
+            }
+
+            return kind switch
+            {
+                AssetKind.Mesh or AssetKind.SkinnedMesh => meshAssets.GetId(key),
+                _ => 0,
+            };
         }
 
         private void InitializeCoreSystems(GameConfig config)
@@ -664,7 +678,12 @@ namespace Ludots.Core.Engine
                 Ludots.Core.Gameplay.GAS.Registry.AttributeRegistry.Register,
                 meshAssets.GetId,
                 presentationTextCatalog.GetTokenId,
-                visualTemplates.GetId).Load();
+                MapLoader.EntityTemplateKeys.GetId,
+                EffectTemplateIdRegistry.GetId,
+                materialKey => 0,
+                animatorControllers.GetId,
+                animationProfiles.GetId,
+                (kind, key) => ResolvePerformerBehaviorAssetId(meshAssets, kind, key)).Load(ConfigCatalog, ConfigConflictReport);
             new ProjectilePresentationBindingConfigLoader(
                 ConfigPipeline,
                 projectilePresentationBindings,
@@ -943,6 +962,9 @@ namespace Ludots.Core.Engine
                     {
                         RegisterSystem(worldSyncSystem, SystemGroup.PostMovement);
                     }
+
+                    RegisterSystem(new Ludots.Core.Navigation2D.Systems.NavFacingFromVelocitySystem(World), SystemGroup.PostMovement);
+                    RegisterSystem(new Ludots.Core.Navigation2D.Systems.NavArrivalSystem(World, EventBus), SystemGroup.PostMovement);
                 }
             }
             

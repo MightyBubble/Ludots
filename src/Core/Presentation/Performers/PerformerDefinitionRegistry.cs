@@ -58,6 +58,21 @@ namespace Ludots.Core.Presentation.Performers
 
         public string GetName(int id) => _ids.GetName(id);
 
+        public bool Unregister(string key)
+        {
+            int id = _ids.GetId(key);
+            if (id <= 0 || id >= _has.Length || !_has[id])
+            {
+                return false;
+            }
+
+            _items[id] = null!;
+            _has[id] = false;
+            _registeredIds.Remove(id);
+            Version++;
+            return true;
+        }
+
         public bool TryGet(int id, out PerformerDefinition definition)
         {
             if (id >= 0 && id < _items.Length && _has[id])

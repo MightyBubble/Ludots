@@ -237,6 +237,72 @@ namespace Ludots.Tests.Navigation2D
         }
 
         [Test]
+        public void SteeringUpdate_PointGoalInsideRadius_OutputsZeroDesiredVelocity()
+        {
+            using var world = World.Create();
+            using var runtime = CreateRuntime(Navigation2DAvoidanceMode.Hybrid, smartStopEnabled: false);
+            var system = new Navigation2DSteeringSystem2D(world, runtime);
+
+            var actor = world.Create(
+                new NavAgent2D(),
+                new NavGoal2D { Kind = NavGoalKind2D.Point, TargetCm = Fix64Vec2.FromInt(100, 0), RadiusCm = Fix64.FromInt(20) },
+                new NavKinematics2D
+                {
+                    MaxSpeedCmPerSec = Fix64.FromInt(100),
+                    MaxAccelCmPerSec2 = Fix64.FromInt(5000),
+                    RadiusCm = Fix64.FromInt(20),
+                    NeighborDistCm = Fix64.FromInt(80),
+                    TimeHorizonSec = Fix64.FromInt(2),
+                    MaxNeighbors = 0
+                },
+                new Position2D { Value = Fix64Vec2.FromInt(90, 0) },
+                Velocity2D.Zero,
+                Mass2D.FromFloat(1f, 1f),
+                new ForceInput2D { Force = Fix64Vec2.Zero },
+                new NavDesiredVelocity2D { ValueCmPerSec = Fix64Vec2.Zero }
+            );
+
+            system.Update(1f / 60f);
+
+            var desired = world.Get<NavDesiredVelocity2D>(actor).ValueCmPerSec;
+            Assert.That(desired.X.ToFloat(), Is.EqualTo(0f).Within(0.01f));
+            Assert.That(desired.Y.ToFloat(), Is.EqualTo(0f).Within(0.01f));
+        }
+
+        [Test]
+        public void SteeringUpdate_PointGoalOutsideRadius_BrakesNearGoalInsteadOfRunningAtMaxSpeed()
+        {
+            using var world = World.Create();
+            using var runtime = CreateRuntime(Navigation2DAvoidanceMode.Hybrid, smartStopEnabled: false);
+            var system = new Navigation2DSteeringSystem2D(world, runtime);
+
+            var actor = world.Create(
+                new NavAgent2D(),
+                new NavGoal2D { Kind = NavGoalKind2D.Point, TargetCm = Fix64Vec2.FromInt(100, 0), RadiusCm = Fix64.FromInt(20) },
+                new NavKinematics2D
+                {
+                    MaxSpeedCmPerSec = Fix64.FromInt(100),
+                    MaxAccelCmPerSec2 = Fix64.FromInt(200),
+                    RadiusCm = Fix64.FromInt(20),
+                    NeighborDistCm = Fix64.FromInt(80),
+                    TimeHorizonSec = Fix64.FromInt(2),
+                    MaxNeighbors = 0
+                },
+                new Position2D { Value = Fix64Vec2.FromInt(70, 0) },
+                Velocity2D.Zero,
+                Mass2D.FromFloat(1f, 1f),
+                new ForceInput2D { Force = Fix64Vec2.Zero },
+                new NavDesiredVelocity2D { ValueCmPerSec = Fix64Vec2.Zero }
+            );
+
+            system.Update(1f / 60f);
+
+            float desiredX = world.Get<NavDesiredVelocity2D>(actor).ValueCmPerSec.X.ToFloat();
+            Assert.That(desiredX, Is.GreaterThan(0f));
+            Assert.That(desiredX, Is.LessThan(100f));
+        }
+
+        [Test]
         public void SteeringUpdate_SeparationBias_AddsLateralClearanceWithoutReversingProgress()
         {
             Fix64Vec2 desiredWithoutSeparation = RunParallelDesiredVelocity(separationEnabled: false);

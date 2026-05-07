@@ -516,6 +516,40 @@ namespace Ludots.Tests.ThreeC
         }
 
         [Test]
+        public void CoreScreenProjector_UnrenderableCamera_ReturnsNaNInsteadOfThrowing()
+        {
+            var manager = new CameraManager();
+            var view = new StubViewController
+            {
+                Resolution = new Vector2(1920f, 1080f),
+                AspectRatio = 1920f / 1080f,
+                Fov = 60f
+            };
+            var adapter = new StubCameraAdapter();
+            var presenter = new CameraPresenter(new StubSpatialCoordinateConverter(), adapter);
+            var projector = new CoreScreenProjector(manager, view);
+            projector.BindPresenter(presenter);
+
+            manager.PreviousState.Yaw = 45f;
+            manager.PreviousState.Pitch = 55f;
+            manager.PreviousState.DistanceCm = 2800f;
+            manager.PreviousState.FovYDeg = 0f;
+            manager.PreviousState.TargetCm = new Vector2(2500f, 1700f);
+            manager.State.Yaw = 45f;
+            manager.State.Pitch = 55f;
+            manager.State.DistanceCm = 2800f;
+            manager.State.FovYDeg = 0f;
+            manager.State.TargetCm = new Vector2(2500f, 1700f);
+
+            presenter.Update(manager, 1f);
+
+            Vector2 screen = default;
+            DoesNotThrow(() => screen = projector.WorldToScreen(new Vector3(1f, 0f, 1f)));
+            That(float.IsNaN(screen.X), Is.True);
+            That(float.IsNaN(screen.Y), Is.True);
+        }
+
+        [Test]
         public void Culling_NearEntity_HighLOD()
         {
             using var world = World.Create();

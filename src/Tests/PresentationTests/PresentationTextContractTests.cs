@@ -262,7 +262,7 @@ namespace Ludots.Tests.Presentation
         }
 
         [Test]
-        public void PerformerDefinitionConfigLoader_ResolvesTextTokenBindings_ToStableIds()
+        public void PerformerDefinitionConfigLoader_ResolvesDefaultTextId_ToStableId()
         {
             WriteFile("Core", "config_catalog.json",
                 @"[{ ""Path"": ""Presentation/performers.json"", ""Policy"": ""ArrayById"", ""IdField"": ""id"" }]");
@@ -271,8 +271,8 @@ namespace Ludots.Tests.Presentation
   {
     ""id"": ""entity_world_text"",
     ""visualKind"": ""WorldText"",
+    ""defaultTextId"": ""hud.current_over_base"",
     ""bindings"": [
-      { ""paramKey"": 15, ""source"": ""textToken"", ""textToken"": ""hud.current_over_base"" },
       { ""paramKey"": 16, ""source"": ""constant"", ""constantValue"": 1 }
     ]
   }
@@ -290,25 +290,63 @@ namespace Ludots.Tests.Presentation
             int defId = registry.GetId("entity_world_text");
             Assert.That(defId, Is.GreaterThan(0));
             Assert.That(registry.TryGet(defId, out var definition), Is.True);
-
-            bool found = false;
-            for (int i = 0; i < definition.Bindings.Length; i++)
-            {
-                if (definition.Bindings[i].ParamKey != 15)
-                {
-                    continue;
-                }
-
-                found = true;
-                Assert.That(definition.Bindings[i].Value.Source, Is.EqualTo(ValueSourceKind.Constant));
-                Assert.That(definition.Bindings[i].Value.ConstantValue, Is.EqualTo(42f));
-            }
-
-            Assert.That(found, Is.True, "Expected WorldText binding paramKey=15 to resolve into a stable text token id.");
+            Assert.That(definition.DefaultTextId, Is.EqualTo(42));
+            Assert.That(definition.Bindings.Length, Is.EqualTo(1));
+            Assert.That(definition.Bindings[0].ParamKey, Is.EqualTo(16));
+            Assert.That(definition.Bindings[0].Value.Source, Is.EqualTo(ValueSourceKind.Constant));
+            Assert.That(definition.Bindings[0].Value.ConstantValue, Is.EqualTo(1f));
         }
 
         [Test]
-        public void PerformerDefinitionConfigLoader_ParsesNewFilterFields()
+        public void PerformerDefinitionConfigLoader_RejectsRemovedTextTokenBindingSource()
+        {
+            WriteFile("Core", "config_catalog.json",
+                @"[{ ""Path"": ""Presentation/performers.json"", ""Policy"": ""ArrayById"", ""IdField"": ""id"" }]");
+            WriteFile("Core", "Presentation/performers.json",
+                @"[
+  {
+    ""id"": ""bad_world_text"",
+    ""visualKind"": ""WorldText"",
+    ""bindings"": [
+      { ""paramKey"": 15, ""source"": ""textToken"", ""textToken"": ""hud.current_over_base"" }
+    ]
+  }
+]");
+
+            var (_, _, pipeline, catalog) = BuildPipeline(_root);
+            var registry = new PerformerDefinitionRegistry();
+            var loader = new PerformerDefinitionConfigLoader(pipeline, registry);
+
+            var ex = Assert.Throws<InvalidOperationException>(() => loader.Load(catalog));
+            Assert.That(ex!.Message, Does.Contain("source 'textToken' has been removed"));
+        }
+
+        [Test]
+        public void PerformerDefinitionConfigLoader_RejectsUnsupportedGraphBindingSource()
+        {
+            WriteFile("Core", "config_catalog.json",
+                @"[{ ""Path"": ""Presentation/performers.json"", ""Policy"": ""ArrayById"", ""IdField"": ""id"" }]");
+            WriteFile("Core", "Presentation/performers.json",
+                @"[
+  {
+    ""id"": ""graph_bound_bar"",
+    ""visualKind"": ""WorldBar"",
+    ""bindings"": [
+      { ""paramKey"": 0, ""source"": ""graph"", ""sourceId"": 123 }
+    ]
+  }
+]");
+
+            var (_, _, pipeline, catalog) = BuildPipeline(_root);
+            var registry = new PerformerDefinitionRegistry();
+            var loader = new PerformerDefinitionConfigLoader(pipeline, registry);
+
+            var ex = Assert.Throws<InvalidOperationException>(() => loader.Load(catalog));
+            Assert.That(ex!.Message, Does.Contain("source 'graph' is not supported"));
+        }
+
+        [Test]
+        public void PerformerDefinitionConfigLoader_RejectsRemovedEntityFilterFields()
         {
             WriteFile("Core", "config_catalog.json",
                 @"[{ ""Path"": ""Presentation/performers.json"", ""Policy"": ""ArrayById"", ""IdField"": ""id"" }]");
@@ -324,17 +362,10 @@ namespace Ludots.Tests.Presentation
 
             var (_, _, pipeline, catalog) = BuildPipeline(_root);
             var registry = new PerformerDefinitionRegistry();
-            var loader = new PerformerDefinitionConfigLoader(
-                pipeline,
-                registry,
-                resolveTemplateId: key => string.Equals(key, "moba_hero", StringComparison.Ordinal) ? 42 : 0);
+            var loader = new PerformerDefinitionConfigLoader(pipeline, registry);
 
-            loader.Load(catalog);
-
-            int defId = registry.GetId("filtered_bar");
-            Assert.That(defId, Is.GreaterThan(0));
-            Assert.That(registry.TryGet(defId, out var def), Is.True);
-            Assert.That(def.RequiredTemplateId, Is.EqualTo(42));
+            var ex = Assert.Throws<InvalidOperationException>(() => loader.Load(catalog));
+            Assert.That(ex!.Message, Does.Contain("removed field 'entityScope'"));
         }
 
         [Test]
@@ -365,6 +396,185 @@ namespace Ludots.Tests.Presentation
             Assert.That(def.Bindings.Length, Is.EqualTo(1));
             Assert.That(def.Bindings[0].ParamKey, Is.EqualTo(3));
             Assert.That(def.Bindings[0].Value.Source, Is.EqualTo(ValueSourceKind.FacingRadians));
+        }
+
+        [Test]
+        public void PerformerDefinitionConfigLoader_ExpandsChildrenIntoPerformerCreatedRules()
+        {
+            WriteFile("Core", "config_catalog.json",
+                @"[{ ""Path"": ""Presentation/performers.json"", ""Policy"": ""ArrayById"", ""IdField"": ""id"" }]");
+            WriteFile("Core", "Presentation/performers.json",
+                @"[
+  { ""id"": ""child_a"", ""visualKind"": ""Marker3D"" },
+  {
+    ""id"": ""root"",
+    ""visualKind"": ""Marker3D"",
+    ""children"": [
+      { ""definitionId"": ""child_a"", ""scopeTag"": ""structure"" }
+    ]
+  }
+]");
+
+            PerformerScopeTagRegistry.Clear();
+
+            var (_, _, pipeline, catalog) = BuildPipeline(_root);
+            var registry = new PerformerDefinitionRegistry();
+            var loader = new PerformerDefinitionConfigLoader(pipeline, registry);
+
+            loader.Load(catalog);
+
+            int rootId = registry.GetId("root");
+            int childId = registry.GetId("child_a");
+            int structureScope = PerformerScopeTagRegistry.GetId("structure");
+
+            Assert.That(registry.TryGet(rootId, out var root), Is.True);
+            Assert.That(root.Children.Length, Is.EqualTo(1));
+            Assert.That(root.Children[0].DefinitionId, Is.EqualTo(childId));
+            Assert.That(root.Children[0].ScopeTag, Is.EqualTo(structureScope));
+            Assert.That(root.Rules.Length, Is.EqualTo(1));
+            Assert.That(root.Rules[0].Event.Kind, Is.EqualTo(PresentationEventKind.PerformerCreated));
+            Assert.That(root.Rules[0].Command.PerformerDefinitionId, Is.EqualTo(childId));
+            Assert.That(root.Rules[0].Command.ScopeTag, Is.EqualTo(structureScope));
+        }
+
+        [Test]
+        public void PerformerDefinitionConfigLoader_ExpandsExtendsChain_AndOverridesBySlotAndLane()
+        {
+            WriteFile("Core", "config_catalog.json",
+                @"[{ ""Path"": ""Presentation/performers.json"", ""Policy"": ""ArrayById"", ""IdField"": ""id"" }]");
+            WriteFile("Core", "Presentation/performers.json",
+                @"[
+  {
+    ""id"": ""base_unit"",
+    ""visualKind"": ""Marker3D"",
+    ""bindings"": [
+      { ""paramKey"": 1, ""source"": ""constant"", ""constantValue"": 5 }
+    ],
+    ""paramDefaults"": [
+      { ""paramKey"": 10, ""lane"": ""Int"", ""intValue"": 1 }
+    ],
+    ""behaviors"": [
+      {
+        ""slot"": 2,
+        ""kind"": ""Material"",
+        ""material"": { ""baseMaterialId"": ""knight_base"" }
+      }
+    ],
+    ""children"": [
+      { ""definitionId"": ""child_a"", ""scopeTag"": ""structure"" }
+    ]
+  },
+  { ""id"": ""child_a"", ""visualKind"": ""Marker3D"" },
+  {
+    ""id"": ""knight"",
+    ""extends"": ""base_unit"",
+    ""visualKind"": ""Marker3D"",
+    ""bindings"": [
+      { ""paramKey"": 1, ""source"": ""constant"", ""constantValue"": 9 }
+    ],
+    ""paramDefaults"": [
+      { ""paramKey"": 10, ""lane"": ""Int"", ""intValue"": 7 }
+    ],
+    ""behaviors"": [
+      {
+        ""slot"": 2,
+        ""kind"": ""Material"",
+        ""material"": { ""baseMaterialId"": ""knight_armor"" }
+      }
+    ]
+  }
+]");
+
+            PerformerScopeTagRegistry.Clear();
+
+            var (_, _, pipeline, catalog) = BuildPipeline(_root);
+            var registry = new PerformerDefinitionRegistry();
+            var loader = new PerformerDefinitionConfigLoader(pipeline, registry);
+
+            loader.Load(catalog);
+
+            int knightId = registry.GetId("knight");
+            Assert.That(registry.TryGet(knightId, out var knight), Is.True);
+            Assert.That(knight.Extends, Is.EqualTo("base_unit"));
+            Assert.That(knight.Bindings.Length, Is.EqualTo(1));
+            Assert.That(knight.Bindings[0].Value.ConstantValue, Is.EqualTo(9f));
+            Assert.That(knight.ParamDefaults.Length, Is.EqualTo(1));
+            Assert.That(knight.ParamDefaults[0].Lane, Is.EqualTo(ParamLane.Int));
+            Assert.That(knight.ParamDefaults[0].IntValue, Is.EqualTo(7));
+            Assert.That(knight.Behaviors.Length, Is.EqualTo(1));
+            Assert.That(knight.Behaviors[0].Kind, Is.EqualTo(BehaviorKind.Material));
+            Assert.That(knight.Children.Length, Is.EqualTo(1));
+            Assert.That(knight.Rules.Length, Is.EqualTo(1));
+        }
+
+        [Test]
+        public void PerformerDefinitionConfigLoader_ResolvesTagEffectiveChangedStringKeys()
+        {
+            WriteFile("Core", "config_catalog.json",
+                @"[{ ""Path"": ""Presentation/performers.json"", ""Policy"": ""ArrayById"", ""IdField"": ""id"" }]");
+            WriteFile("Core", "Presentation/performers.json",
+                @"[
+  {
+    ""id"": ""tag_test"",
+    ""visualKind"": ""Marker3D"",
+    ""rules"": [
+      {
+        ""event"": { ""kind"": ""TagEffectiveChanged"", ""keyId"": ""Status.Working"" },
+        ""command"": { ""kind"": ""DestroyPerformerScope"", ""scopeTag"": ""working"" }
+      }
+    ]
+  }
+]");
+
+            TagRegistry.Clear();
+            PerformerScopeTagRegistry.Clear();
+
+            var (_, _, pipeline, catalog) = BuildPipeline(_root);
+            var registry = new PerformerDefinitionRegistry();
+            var loader = new PerformerDefinitionConfigLoader(pipeline, registry);
+
+            loader.Load(catalog);
+
+            Assert.That(registry.TryGet(registry.GetId("tag_test"), out var def), Is.True);
+            Assert.That(def.Rules[0].Event.KeyId, Is.EqualTo(TagRegistry.GetId("Status.Working")));
+            Assert.That(def.Rules[0].Command.ScopeTag, Is.EqualTo(PerformerScopeTagRegistry.GetId("working")));
+        }
+
+        [Test]
+        public void PerformerDefinitionConfigLoader_FailsFast_OnInvalidDefinition()
+        {
+            WriteFile("Core", "config_catalog.json",
+                @"[{ ""Path"": ""Presentation/performers.json"", ""Policy"": ""ArrayById"", ""IdField"": ""id"" }]");
+            WriteFile("Core", "Presentation/performers.json",
+                @"[
+  {
+    ""id"": ""bad_performer"",
+    ""visualKind"": ""WorldBar"",
+    ""entityScope"": ""AllWithAttributes""
+  },
+  {
+    ""id"": ""good_performer"",
+    ""visualKind"": ""Marker3D"",
+    ""rules"": [
+      {
+        ""event"": { ""kind"": ""GameplayEvent"", ""keyId"": ""Event.Test"" },
+        ""command"": { ""kind"": ""DestroyPerformerScope"", ""scopeTag"": ""good"" }
+      }
+    ]
+  }
+]");
+
+            TagRegistry.Clear();
+            PerformerScopeTagRegistry.Clear();
+
+            var (_, _, pipeline, catalog) = BuildPipeline(_root);
+            var registry = new PerformerDefinitionRegistry();
+            var loader = new PerformerDefinitionConfigLoader(pipeline, registry);
+
+            var ex = Assert.Throws<InvalidOperationException>(() => loader.Load(catalog));
+            Assert.That(ex!.Message, Does.Contain("removed field 'entityScope'"));
+            Assert.That(registry.TryGet(registry.GetId("bad_performer"), out _), Is.False);
+            Assert.That(registry.TryGet(registry.GetId("good_performer"), out _), Is.False);
         }
 
         [Test]

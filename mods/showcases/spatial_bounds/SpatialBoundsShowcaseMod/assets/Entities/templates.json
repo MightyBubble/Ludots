@@ -1,0 +1,114 @@
+[
+  {
+    "id": "spatial_bounds_point_pin",
+    "components": {
+      "Name": { "Value": "PointPin" },
+      "SelectionSelectableTag": {},
+      "WorldPositionCm": { "Value": { "X": 0, "Y": 0 } },
+      "SpatialBounds": { "kind": "Point" }
+    }
+  },
+  {
+    "id": "spatial_bounds_rect_footprint",
+    "components": {
+      "Name": { "Value": "RectFootprint" },
+      "SelectionSelectableTag": {},
+      "WorldPositionCm": { "Value": { "X": 0, "Y": 0 } },
+      "SpatialBounds": { "kind": "Footprint2D" },
+      "SpatialFootprint2D": {
+        "vertices": [
+          { "x": -190, "y": -120 },
+          { "x": 190, "y": -120 },
+          { "x": 190, "y": 120 },
+          { "x": -190, "y": 120 }
+        ]
+      }
+    }
+  },
+  {
+    "id": "spatial_bounds_diamond_footprint",
+    "components": {
+      "Name": { "Value": "DiamondFootprint" },
+      "SelectionSelectableTag": {},
+      "WorldPositionCm": { "Value": { "X": 0, "Y": 0 } },
+      "FacingDirection": { "AngleRad": 0.0 },
+      "SpatialBounds": { "kind": "Footprint2D" },
+      "SpatialFootprint2D": {
+        "vertices": [
+          { "x": 0, "y": -220 },
+          { "x": 190, "y": 0 },
+          { "x": 0, "y": 220 },
+          { "x": -190, "y": 0 }
+        ]
+      }
+    }
+  },
+  {
+    "id": "spatial_bounds_multi_footprint",
+    "components": {
+      "Name": { "Value": "TwinPads" },
+      "SelectionSelectableTag": {},
+      "WorldPositionCm": { "Value": { "X": 0, "Y": 0 } },
+      "SpatialBounds": { "kind": "Footprint2D" },
+      "SpatialFootprint2D": {
+        "polygons": [
+          [
+            { "x": -250, "y": -120 },
+            { "x": -70, "y": -120 },
+            { "x": -70, "y": 120 },
+            { "x": -250, "y": 120 }
+          ],
+          [
+            { "x": 70, "y": -120 },
+            { "x": 250, "y": -120 },
+            { "x": 250, "y": 120 },
+            { "x": 70, "y": 120 }
+          ]
+        ]
+      }
+    }
+  },
+  {
+    "id": "spatial_bounds_box_tower",
+    "components": {
+      "Name": { "Value": "BoxTower" },
+      "SelectionSelectableTag": {},
+      "WorldPositionCm": { "Value": { "X": 0, "Y": 0 } },
+      "SpatialBounds": {
+        "kind": "Box3D",
+        "localCenterYCm": 150
+      },
+      "SpatialBox3D": {
+        "halfSizeXCm": 120,
+        "halfSizeYCm": 150,
+        "halfSizeZCm": 120
+      }
+    }
+  },
+  {
+    "id": "spatial_bounds_overlap_pad",
+    "components": {
+      "Name": { "Value": "OverlapPad" },
+      "SelectionSelectableTag": {},
+      "WorldPositionCm": { "Value": { "X": 0, "Y": 0 } },
+      "SpatialBounds": { "kind": "Footprint2D" },
+      "SpatialFootprint2D": {
+        "vertices": [
+          { "x": -210, "y": -150 },
+          { "x": 210, "y": -150 },
+          { "x": 210, "y": 150 },
+          { "x": -210, "y": 150 }
+        ]
+      }
+    }
+  },
+  {
+    "id": "spatial_bounds_overlap_point",
+    "components": {
+      "Name": { "Value": "OverlapPoint" },
+      "SelectionSelectableTag": {},
+      "WorldPositionCm": { "Value": { "X": 0, "Y": 0 } },
+      "SpatialBounds": { "kind": "Point" }
+    }
+  }
+]

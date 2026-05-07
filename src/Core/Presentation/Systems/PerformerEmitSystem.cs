@@ -338,6 +338,8 @@ namespace Ludots.Core.Presentation.Systems
                     if (!World.IsAlive(owner)) return false;
                     if (!World.Has<CullState>(owner)) return true;
                     return World.Get<CullState>(owner).IsVisible;
+                case InlineConditionKind.SourceHasVisualTransform:
+                    return World.IsAlive(owner) && World.Has<VisualTransform>(owner);
                 default: return true;
             }
         }

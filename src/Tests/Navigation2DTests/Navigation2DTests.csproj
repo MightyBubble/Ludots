@@ -22,6 +22,9 @@
     <ProjectReference Include="..\..\Core\Ludots.Core.csproj" />
     <ProjectReference Include="..\..\Core\Ludots.Physics2D\Ludots.Physics2D.csproj" />
     <ProjectReference Include="..\..\..\mods\LudotsCoreMod\LudotsCoreMod.csproj" />
+    <ProjectReference Include="..\..\..\mods\FormationPhysicsPlaygroundMod\FormationPhysicsPlaygroundMod.csproj">
+      <Aliases>formationplayground</Aliases>
+    </ProjectReference>
     <ProjectReference Include="..\..\..\mods\Navigation2DPlaygroundMod\Navigation2DPlaygroundMod.csproj" />
     <ProjectReference Include="..\..\Libraries\Ludots.UI\Ludots.UI.csproj" />
     <ProjectReference Include="..\..\Libraries\Ludots.UI.Skia\Ludots.UI.Skia.csproj" />
