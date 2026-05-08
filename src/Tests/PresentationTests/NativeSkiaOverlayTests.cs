@@ -261,6 +261,73 @@ public sealed class NativeSkiaOverlayTests
     }
 
     [Test]
+    public void SkiaOverlayRenderer_TopMostOpaquePanelOccludesUnderUiHud()
+    {
+        var scene = new PresentationOverlayScene(8);
+        scene.BeginBuild();
+        scene.TryAddBar(
+            PresentationOverlayLayer.UnderUi,
+            x: 32f,
+            y: 32f,
+            width: 112f,
+            height: 64f,
+            value: 1f,
+            background: new Vector4(0f, 0.15f, 0f, 1f),
+            foreground: new Vector4(0f, 1f, 0f, 1f));
+        scene.TryAddText(
+            PresentationOverlayLayer.UnderUi,
+            x: 48f,
+            y: 62f,
+            text: "999/999",
+            fontSize: 22,
+            color: new Vector4(1f, 1f, 1f, 1f));
+        scene.TryAddRect(
+            PresentationOverlayLayer.TopMost,
+            x: 40f,
+            y: 40f,
+            width: 104f,
+            height: 72f,
+            fill: new Vector4(0.02f, 0.05f, 0.07f, 1f),
+            border: new Vector4(0.48f, 0.70f, 0.86f, 1f));
+        scene.EndBuild();
+
+        using var renderer = new SkiaOverlayRenderer();
+        using var surface = SKSurface.Create(new SKImageInfo(180, 140));
+        surface.Canvas.Clear(SKColors.Transparent);
+
+        renderer.Render(scene, surface.Canvas, PresentationOverlayLayer.UnderUi);
+        renderer.Render(scene, surface.Canvas, PresentationOverlayLayer.TopMost);
+
+        using var image = surface.Snapshot();
+        using var bitmap = SKBitmap.FromImage(image);
+
+        SKColor overlapPixel = bitmap.GetPixel(92, 74);
+        Assert.That(IsPixelNear(overlapPixel, new SKColor(5, 13, 18, 255), tolerance: 3), Is.True,
+            $"Expected TopMost opaque minimap-style panel to cover UnderUi HUD, got {overlapPixel}.");
+        Assert.That(CountPixelsNear(bitmap, new SKColor(0, 255, 0, 255), 64, 58, 120, 92, tolerance: 12), Is.EqualTo(0));
+        Assert.That(CountPixelsNear(bitmap, new SKColor(255, 255, 255, 255), 64, 58, 120, 92, tolerance: 12), Is.EqualTo(0));
+    }
+
+    [Test]
+    public void MinimapRuntime_Render_SubmitsOpaquePanelAndFieldMasks()
+    {
+        var runtime = new MinimapRuntime();
+        var overlay = new ScreenOverlayBuffer();
+
+        runtime.Visible = true;
+        runtime.Render(overlay);
+
+        ReadOnlySpan<ScreenOverlayItem> span = overlay.GetSpan();
+        Assert.That(span.Length, Is.GreaterThanOrEqualTo(2));
+        Assert.That(span[0].Kind, Is.EqualTo(ScreenOverlayItemKind.Rect));
+        Assert.That(span[1].Kind, Is.EqualTo(ScreenOverlayItemKind.Rect));
+        Assert.That(span[0].BackgroundColor.W, Is.EqualTo(1f),
+            "Minimap panel must be an opaque TopMost mask so UnderUi world HUD cannot bleed through it.");
+        Assert.That(span[1].BackgroundColor.W, Is.EqualTo(1f),
+            "Minimap field must be an opaque TopMost mask so UnderUi world HUD cannot bleed through it.");
+    }
+
+    [Test]
     public void SkiaOverlayRenderer_DrawsLargeUnderUiHudLanesImmediately_WhenDirty()
     {
         var scene = new PresentationOverlayScene(256);
@@ -939,6 +1006,14 @@ public sealed class NativeSkiaOverlayTests
         }
 
         return count;
+    }
+
+    private static bool IsPixelNear(SKColor pixel, SKColor target, int tolerance)
+    {
+        return Math.Abs(pixel.Red - target.Red) <= tolerance &&
+            Math.Abs(pixel.Green - target.Green) <= tolerance &&
+            Math.Abs(pixel.Blue - target.Blue) <= tolerance &&
+            Math.Abs(pixel.Alpha - target.Alpha) <= tolerance;
     }
 
     private static PresentationTextCatalog CreateCatalog()

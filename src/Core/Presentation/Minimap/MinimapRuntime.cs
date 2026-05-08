@@ -354,14 +354,14 @@ namespace Ludots.Core.Presentation.Minimap
                 _panelY,
                 _panelWidth,
                 _panelHeight,
-                new Vector4(0.02f, 0.05f, 0.07f, 0.96f),
+                new Vector4(0.02f, 0.05f, 0.07f, 1f),
                 new Vector4(0.48f, 0.70f, 0.86f, 1f));
             overlay.AddRect(
                 _fieldX,
                 _fieldY,
                 _fieldSize,
                 _fieldSize,
-                new Vector4(0.01f, 0.04f, 0.06f, 0.99f),
+                new Vector4(0.01f, 0.04f, 0.06f, 1f),
                 new Vector4(0.42f, 0.65f, 0.80f, 1f));
             overlay.AddText(_panelX + PanelInset + 6, _panelY + 13, "Minimap", 18, new Vector4(0.98f, 0.99f, 1f, 1f));
             overlay.AddText(_panelX + _panelWidth - 118, _panelY + 14, BandLabels[(int)ZoomBand], 14, new Vector4(1f, 0.84f, 0.42f, 1f));
