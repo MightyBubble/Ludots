@@ -3823,6 +3823,32 @@ namespace Ludots.Core.Presentation.Performers
             return true;
         }
 
+        public void MarkTransformDrivenEmitDirty(Entity performer)
+        {
+            if (!_world.IsAlive(performer) ||
+                !_world.Has<PerformerEmitCache>(performer))
+            {
+                return;
+            }
+
+            ref PerformerEmitCache emitCache = ref _world.Get<PerformerEmitCache>(performer);
+            if (_world.Has<PerfStaticStableVisual>(performer))
+            {
+                MarkStaticDirty(ref emitCache);
+            }
+
+            if (_world.Has<PerfRetainedPresentationRequest>(performer) &&
+                MarkRetainedPresentationRequestDirty(ref emitCache))
+            {
+                AppendRetainedPresentationDirtyEntity(performer);
+            }
+
+            if (_world.Has<PerformerState>(performer))
+            {
+                EnsureRequestBackedEmitWorkScheduled(performer);
+            }
+        }
+
         private static bool DefinitionUsesRequestBackedEmitWork(PerformerDefinition definition, uint activeBehaviorMask)
         {
             if (definition == null ||

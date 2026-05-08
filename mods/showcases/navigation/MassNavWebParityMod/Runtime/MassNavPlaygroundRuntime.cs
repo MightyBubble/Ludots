@@ -26,7 +26,7 @@ internal sealed class MassNavWebParityRuntime
     private const float MassNavTacticalCameraDistanceCm = 7_000f;
     private const float MassNavStrategicCameraDistanceCm = 58_000f;
 
-    private static readonly QueryDescription LocalPlayerQuery = new QueryDescription().WithAll<PlayerOwner>();
+    private static readonly QueryDescription AuthoredPlayerOwnerQuery = new QueryDescription().WithAll<PlayerOwner>();
 
     private readonly IModContext _context;
     private readonly MassNavWebParityConfig _config;
@@ -80,9 +80,9 @@ internal sealed class MassNavWebParityRuntime
         }
 
         EnsureSystemsInstalled(engine);
-        ValidateBoardContract(engine);
+        BindBoardWorld(engine);
         BindMassNavLoadedChunks(engine);
-        EnsureLocalPlayerEntity(engine);
+        BindLocalSelectionOwner(engine);
         ConfigureRenderDebug(engine);
         ConfigureCoreMinimap(engine);
         EnsureTacticalCamera(engine);
@@ -145,21 +145,15 @@ internal sealed class MassNavWebParityRuntime
         _scenarioSpawned = true;
     }
 
-    private void ValidateBoardContract(GameEngine engine)
+    private static void BindBoardWorld(GameEngine engine)
     {
         MapSession session = engine.CurrentMapSession
             ?? throw new System.InvalidOperationException("MassNavWebParityMod requires an active MapSession.");
         var board = session.PrimaryBoard
             ?? throw new System.InvalidOperationException("MassNavWebParityMod requires a primary board.");
-        var worldConfig = _config.World
-            ?? throw new System.InvalidOperationException("MassNavWebParityMod requires explicit world config.");
-        var bounds = board.WorldSize.Bounds;
-        if (bounds.Width != worldConfig.WorldWidthCm ||
-            bounds.Height != worldConfig.WorldHeightCm)
-        {
-            throw new System.InvalidOperationException(
-                $"MassNavWebParityMod board/world mismatch: board is {bounds.Width}x{bounds.Height} cm, config is {worldConfig.WorldWidthCm}x{worldConfig.WorldHeightCm} cm.");
-        }
+        MassNavSimulationRuntime simulation = engine.GetService(MassNavWebParityKeys.SimulationRuntime)
+            ?? throw new System.InvalidOperationException("MassNavWebParityMod requires simulation runtime.");
+        simulation.BindBoardWorld(board.WorldSize);
     }
 
     private static void BindMassNavLoadedChunks(GameEngine engine)
@@ -213,42 +207,49 @@ internal sealed class MassNavWebParityRuntime
         });
     }
 
-    private static void EnsureLocalPlayerEntity(GameEngine engine)
+    private static void BindLocalSelectionOwner(GameEngine engine)
     {
         SelectionRuntime selection = engine.GetService(CoreServiceKeys.SelectionRuntime)
             ?? throw new System.InvalidOperationException("MassNavWebParityMod requires SelectionRuntime.");
-
-        if (engine.GlobalContext.TryGetValue(CoreServiceKeys.LocalPlayerEntity.Name, out var localObj) &&
-            localObj is Entity local &&
-            engine.World.IsAlive(local))
+        if (!engine.GlobalContext.TryGetValue(CoreServiceKeys.LocalPlayerEntity.Name, out var localObj) ||
+            localObj is not Entity owner ||
+            !engine.World.IsAlive(owner))
         {
-            EnsureSelectionOwner(engine.World, local, selection, engine.GlobalContext);
-            return;
+            owner = ResolveSingleAuthoredPlayerOwner(engine);
+            engine.GlobalContext[CoreServiceKeys.LocalPlayerEntity.Name] = owner;
         }
 
-        Entity owner = Entity.Null;
-        engine.World.Query(in LocalPlayerQuery, (Entity entity, ref PlayerOwner playerOwner) =>
+        if (!engine.World.Has<PlayerOwner>(owner))
         {
-            if (owner == Entity.Null && playerOwner.PlayerId == 1)
-            {
-                owner = entity;
-            }
+            throw new System.InvalidOperationException("MassNavWebParityMod LocalPlayerEntity must author PlayerOwner.");
+        }
+
+        EnsureSelectionOwner(engine.World, owner, selection, engine.GlobalContext);
+    }
+
+    private static Entity ResolveSingleAuthoredPlayerOwner(GameEngine engine)
+    {
+        Entity resolved = Entity.Null;
+        int count = 0;
+        engine.World.Query(in AuthoredPlayerOwnerQuery, (Entity entity, ref PlayerOwner _) =>
+        {
+            resolved = entity;
+            count++;
         });
 
-        if (owner == Entity.Null)
+        return count switch
         {
-            owner = engine.World.Create(new PlayerOwner { PlayerId = 1 }, default(SelectionDragState));
-        }
-
-        engine.GlobalContext[CoreServiceKeys.LocalPlayerEntity.Name] = owner;
-        EnsureSelectionOwner(engine.World, owner, selection, engine.GlobalContext);
+            1 => resolved,
+            0 => throw new System.InvalidOperationException("MassNavWebParityMod requires the map to author exactly one PlayerOwner local player entity."),
+            _ => throw new System.InvalidOperationException("MassNavWebParityMod found multiple PlayerOwner entities before LocalPlayerEntity was resolved; author one local player or bind CoreServiceKeys.LocalPlayerEntity explicitly.")
+        };
     }
 
     private static void EnsureSelectionOwner(World world, Entity owner, SelectionRuntime selection, System.Collections.Generic.Dictionary<string, object> globals)
     {
         if (!world.Has<SelectionDragState>(owner))
         {
-            world.Add(owner, default(SelectionDragState));
+            throw new System.InvalidOperationException("MassNavWebParityMod local player template must author SelectionDragState.");
         }
 
         selection.TryGetOrCreateSelectionEntity(owner, SelectionSetKeys.LivePrimary, out _);
@@ -283,9 +284,10 @@ internal sealed class MassNavWebParityRuntime
             _savedRenderDebugValid = true;
         }
 
-        renderDebug.DrawTerrain = false;
+        renderDebug.DrawTerrain = true;
         renderDebug.DrawDebugDraw = false;
-        renderDebug.DrawPrimitives = false;
+        // Raylib currently gates the official performer ISM/static-mesh lane behind this legacy-named toggle.
+        renderDebug.DrawPrimitives = true;
         renderDebug.DrawSkiaUi = true;
     }
 

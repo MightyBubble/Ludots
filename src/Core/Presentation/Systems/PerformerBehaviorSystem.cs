@@ -1756,6 +1756,7 @@ namespace Ludots.Core.Presentation.Systems
             in AttachmentConfig config,
             Chunk chunk)
         {
+            ref Entity entityFirst = ref chunk.Entity(0);
             foreach (int index in chunk)
             {
                 if (!IsBehaviorActive(states[index].BehaviorActiveMask, slotIndex))
@@ -1778,14 +1779,32 @@ namespace Ludots.Core.Presentation.Systems
                 Vector3 normalizedParentScale = WorldPlane2D.NormalizeScale(parentScale);
                 Vector3 scaledOffset = config.InheritScale ? normalizedParentScale * config.Offset : config.Offset;
                 Vector3 resolvedPosition = parentPos + Vector3.Transform(scaledOffset, normalizedParentRot);
-                sources[index].Value = TransformSource.AttachedToParent;
-                positions[index].Value = resolvedPosition;
-                planePositions[index].ValueCm = WorldPlane2D.VisualMetersToLogicCm(in resolvedPosition);
-                rotations[index].Value = WorldPlane2D.NormalizeOrIdentity(normalizedParentRot * WorldPlane2D.NormalizeOrIdentity(config.RotationOffset));
-                facings[index] = World.Has<PerformerWorldFacing>(parentEntity)
+                Vector2 resolvedPlanePosition = WorldPlane2D.VisualMetersToLogicCm(in resolvedPosition);
+                Quaternion resolvedRotation = WorldPlane2D.NormalizeOrIdentity(normalizedParentRot * WorldPlane2D.NormalizeOrIdentity(config.RotationOffset));
+                PerformerWorldFacing resolvedFacing = World.Has<PerformerWorldFacing>(parentEntity)
                     ? World.Get<PerformerWorldFacing>(parentEntity)
                     : default;
-                scales[index].Value = config.InheritScale ? normalizedParentScale : Vector3.One;
+                Vector3 resolvedScale = config.InheritScale ? normalizedParentScale : Vector3.One;
+                bool changed =
+                    sources[index].Value != TransformSource.AttachedToParent ||
+                    positions[index].Value != resolvedPosition ||
+                    planePositions[index].ValueCm != resolvedPlanePosition ||
+                    rotations[index].Value != resolvedRotation ||
+                    facings[index].AngleRad != resolvedFacing.AngleRad ||
+                    facings[index].HasValue != resolvedFacing.HasValue ||
+                    scales[index].Value != resolvedScale;
+                if (!changed)
+                {
+                    continue;
+                }
+
+                sources[index].Value = TransformSource.AttachedToParent;
+                positions[index].Value = resolvedPosition;
+                planePositions[index].ValueCm = resolvedPlanePosition;
+                rotations[index].Value = resolvedRotation;
+                facings[index] = resolvedFacing;
+                scales[index].Value = resolvedScale;
+                _runtime.MarkTransformDrivenEmitDirty(Unsafe.Add(ref entityFirst, index));
             }
         }
 
@@ -2060,7 +2079,7 @@ namespace Ludots.Core.Presentation.Systems
             Array.Resize(ref _groundingHeightsCm, capacity);
         }
 
-        private void SetTransform(
+        private bool SetTransform(
             Entity entity,
             TransformSource source,
             Vector3 position,
@@ -2068,19 +2087,61 @@ namespace Ludots.Core.Presentation.Systems
             Vector3 scale,
             in PerformerWorldFacing facing)
         {
+            bool changed = false;
             if (World.Has<PerformerTransformSource>(entity))
-                World.Get<PerformerTransformSource>(entity).Value = source;
+            {
+                ref PerformerTransformSource transformSource = ref World.Get<PerformerTransformSource>(entity);
+                if (transformSource.Value != source)
+                {
+                    transformSource.Value = source;
+                    changed = true;
+                }
+            }
             if (World.Has<PerformerWorldPosition>(entity))
             {
-                World.Get<PerformerWorldPosition>(entity).Value = position;
-                SyncPlanePosition(entity, in position);
+                ref PerformerWorldPosition worldPosition = ref World.Get<PerformerWorldPosition>(entity);
+                if (worldPosition.Value != position)
+                {
+                    worldPosition.Value = position;
+                    SyncPlanePosition(entity, in position);
+                    changed = true;
+                }
             }
             if (World.Has<PerformerWorldRotation>(entity))
-                World.Get<PerformerWorldRotation>(entity).Value = rotation;
+            {
+                ref PerformerWorldRotation worldRotation = ref World.Get<PerformerWorldRotation>(entity);
+                if (worldRotation.Value != rotation)
+                {
+                    worldRotation.Value = rotation;
+                    changed = true;
+                }
+            }
             if (World.Has<PerformerWorldFacing>(entity))
-                World.Get<PerformerWorldFacing>(entity) = facing;
+            {
+                ref PerformerWorldFacing worldFacing = ref World.Get<PerformerWorldFacing>(entity);
+                if (worldFacing.AngleRad != facing.AngleRad ||
+                    worldFacing.HasValue != facing.HasValue)
+                {
+                    worldFacing = facing;
+                    changed = true;
+                }
+            }
             if (World.Has<PerformerWorldScale>(entity))
-                World.Get<PerformerWorldScale>(entity).Value = scale;
+            {
+                ref PerformerWorldScale worldScale = ref World.Get<PerformerWorldScale>(entity);
+                if (worldScale.Value != scale)
+                {
+                    worldScale.Value = scale;
+                    changed = true;
+                }
+            }
+
+            if (changed)
+            {
+                _runtime.MarkTransformDrivenEmitDirty(entity);
+            }
+
+            return changed;
         }
 
         private void SetParam(Entity entity, int paramKey, ParamLane lane, float floatValue, int intValue, in Vector4 vectorValue)

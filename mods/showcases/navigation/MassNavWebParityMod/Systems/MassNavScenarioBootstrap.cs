@@ -34,7 +34,7 @@ internal static class MassNavScenarioBootstrap
         ReadOnlySpan<int> teamIds = simulation.TeamIds;
         simulation.ConfigureScenarioTeams(teamIds);
         ConfigureRelationships(simulation.Config);
-        simulation.WebParity.Reset(teamIds, simulation.AgentsPerTeam);
+        simulation.WebParity.Reset(teamIds, simulation.AgentsPerTeam, simulation.WorldConfig.Obstacles);
 
         for (int teamIndex = 0; teamIndex < teamIds.Length; teamIndex++)
         {

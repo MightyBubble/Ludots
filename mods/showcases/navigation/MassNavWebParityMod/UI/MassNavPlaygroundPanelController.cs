@@ -617,27 +617,27 @@ internal sealed class MassNavWebParityPanelController
     private MassNavPanelState CaptureState(GameEngine engine, MassNavSimulationRuntime simulation)
     {
         bool visible = engine.CurrentMapSession != null && MassNavWebParityIds.IsPlaygroundMap(engine.CurrentMapSession.MapId.Value);
-        PresentationTimingDiagnostics? timing = engine.GetService(CoreServiceKeys.PresentationTimingDiagnostics);
-        var viewportResolution = engine.GetService(CoreServiceKeys.ViewController) is IViewController viewport
-            ? viewport.Resolution
-            : new System.Numerics.Vector2(1280f, 720f);
+        PresentationTimingDiagnostics timing = engine.GetService(CoreServiceKeys.PresentationTimingDiagnostics)
+            ?? throw new InvalidOperationException("MassNavWebParityMod panel requires PresentationTimingDiagnostics.");
+        IViewController viewport = engine.GetService(CoreServiceKeys.ViewController)
+            ?? throw new InvalidOperationException("MassNavWebParityMod panel requires ViewController.");
+        var viewportResolution = viewport.Resolution;
         int ecsVisibleEntities = (engine.GetService(CoreServiceKeys.CameraCullingDebugState) as CameraCullingDebugState)?.VisibleEntityCount
-            ?? timing?.VisibleEntitiesLastFrame
-            ?? 0;
+            ?? timing.VisibleEntitiesLastFrame;
         float frameMs = MathF.Round(ResolveFrameMs(timing), 1);
         float fps = frameMs > 0.001f ? MathF.Round(1000f / frameMs) : 0f;
-        float performerEmitMs = MathF.Round(timing?.PerformerEmitMs ?? 0f, 1);
-        float performerTransformMs = MathF.Round(timing?.PerformerEntityTransformSyncMs ?? 0f, 1);
-        float performerMinimapMarkerMs = MathF.Round(timing?.PerformerMinimapMarkerMs ?? 0f, 1);
-        float minimapProjectionMs = MathF.Round(timing?.MinimapProjectionMs ?? 0f, 1);
-        float uiInputMs = MathF.Round(timing?.UiInputMs ?? 0f, 1);
-        float uiRenderMs = MathF.Round(timing?.UiRenderMs ?? 0f, 1);
-        float uiUploadMs = MathF.Round(timing?.UiUploadMs ?? 0f, 1);
-        float screenOverlayBuildMs = MathF.Round(timing?.ScreenOverlayBuildMs ?? 0f, 1);
-        float screenOverlayDrawMs = MathF.Round(timing?.ScreenOverlayDrawMs ?? 0f, 1);
-        float cameraCullingMs = MathF.Round(timing?.CameraCullingMs ?? 0f, 1);
-        float cameraPresenterMs = MathF.Round(timing?.CameraPresenterMs ?? 0f, 1);
-        float worldHudProjectionMs = MathF.Round(timing?.WorldHudProjectionMs ?? 0f, 1);
+        float performerEmitMs = MathF.Round(timing.PerformerEmitMs, 1);
+        float performerTransformMs = MathF.Round(timing.PerformerEntityTransformSyncMs, 1);
+        float performerMinimapMarkerMs = MathF.Round(timing.PerformerMinimapMarkerMs, 1);
+        float minimapProjectionMs = MathF.Round(timing.MinimapProjectionMs, 1);
+        float uiInputMs = MathF.Round(timing.UiInputMs, 1);
+        float uiRenderMs = MathF.Round(timing.UiRenderMs, 1);
+        float uiUploadMs = MathF.Round(timing.UiUploadMs, 1);
+        float screenOverlayBuildMs = MathF.Round(timing.ScreenOverlayBuildMs, 1);
+        float screenOverlayDrawMs = MathF.Round(timing.ScreenOverlayDrawMs, 1);
+        float cameraCullingMs = MathF.Round(timing.CameraCullingMs, 1);
+        float cameraPresenterMs = MathF.Round(timing.CameraPresenterMs, 1);
+        float worldHudProjectionMs = MathF.Round(timing.WorldHudProjectionMs, 1);
         float renderAccountedMs = MathF.Round(
             performerEmitMs +
             performerTransformMs +
@@ -668,8 +668,10 @@ internal sealed class MassNavWebParityPanelController
 
         var camera = engine.GameSession.Camera.State;
         int logicHz = Time.FixedDeltaTime > 0.000001f ? (int)MathF.Round(1f / Time.FixedDeltaTime) : 0;
-        var physicsPolicy = engine.GetService(CoreServiceKeys.Physics2DTickPolicy);
-        var navigationPolicy = engine.GetService(CoreServiceKeys.Navigation2DTickPolicy);
+        var physicsPolicy = engine.GetService(CoreServiceKeys.Physics2DTickPolicy)
+            ?? throw new InvalidOperationException("MassNavWebParityMod panel requires Physics2DTickPolicy.");
+        var navigationPolicy = engine.GetService(CoreServiceKeys.Navigation2DTickPolicy)
+            ?? throw new InvalidOperationException("MassNavWebParityMod panel requires Navigation2DTickPolicy.");
         string obstacleSemanticsText = $"Obstacle semantics: visible radius = authored obstacle. hard block = visible + body {simulation.WebParity.Semantics.Obstacle.AgentBodyRadiusCm:0} cm. soft push = visible + {simulation.WebParity.Semantics.Obstacle.SoftPushPaddingCm:0} cm.";
         string targetSemanticsText = $"Target semantics: team target clear {simulation.WebParity.Semantics.TargetProjection.TeamTargetClearanceCm:0} cm. group center clear {simulation.WebParity.Semantics.TargetProjection.GroupCenterClearanceCm:0} cm. team slot clear {simulation.WebParity.Semantics.TargetProjection.TeamSlotClearanceCm:0} cm. loose/group slot clear {simulation.WebParity.Semantics.TargetProjection.LooseTargetClearanceCm:0}/{simulation.WebParity.Semantics.TargetProjection.GroupSlotClearanceCm:0} cm.";
         string arrivalSemanticsText = $"Arrival semantics: stop threshold {simulation.WebParity.Semantics.Group.UnitTargetStopThresholdCm:0} cm. settle timeout/progress/wake/retry = {simulation.WebParity.ArrivalTuning.TimeoutMs}/{simulation.WebParity.ArrivalTuning.ProgressDistanceCm}/{simulation.WebParity.ArrivalTuning.WakePushDistanceCm}/{simulation.WebParity.ArrivalTuning.MaxRetryCount}. flow slow radius loose/group = {simulation.WebParity.Semantics.Steering.GoalArrivalRadiusCm:0}/{simulation.WebParity.Semantics.Group.FormationFlowSlowRadiusCm:0} cm.";
@@ -680,10 +682,10 @@ internal sealed class MassNavWebParityPanelController
             LogicHz: logicHz,
             SimulationBudgetMs: engine.SimulationBudgetMsPerFrame,
             SimulationSliceLimit: engine.SimulationMaxSlicesPerLogicFrame,
-            PhysicsHz: physicsPolicy?.TargetHz ?? 0,
-            PhysicsMaxStepsPerFixedTick: physicsPolicy?.MaxStepsPerFixedTick ?? 0,
-            NavigationHz: navigationPolicy?.TargetHz ?? 0,
-            NavigationMaxStepsPerFixedTick: navigationPolicy?.MaxStepsPerFixedTick ?? 0,
+            PhysicsHz: physicsPolicy.TargetHz,
+            PhysicsMaxStepsPerFixedTick: physicsPolicy.MaxStepsPerFixedTick,
+            NavigationHz: navigationPolicy.TargetHz,
+            NavigationMaxStepsPerFixedTick: navigationPolicy.MaxStepsPerFixedTick,
             TeamCount: simulation.TeamCount,
             AgentsPerTeam: simulation.AgentsPerTeam,
             TotalAgents: simulation.AgentState.TotalAgents,
@@ -745,15 +747,15 @@ internal sealed class MassNavWebParityPanelController
             WorldHudProjectionMs: worldHudProjectionMs,
             RenderAccountedMs: renderAccountedMs,
             RenderUnaccountedMs: renderUnaccountedMs,
-            PerformerMarkers: timing?.PerformerMinimapMarkersLastFrame ?? 0,
-            PerformerMarkersDropped: timing?.PerformerMinimapDroppedLastFrame ?? 0,
-            MinimapScreenMarkers: timing?.MinimapScreenMarkersLastFrame ?? 0,
-            MinimapScreenMarkersDropped: timing?.MinimapScreenMarkersDroppedLastFrame ?? 0,
+            PerformerMarkers: timing.PerformerMinimapMarkersLastFrame,
+            PerformerMarkersDropped: timing.PerformerMinimapDroppedLastFrame,
+            MinimapScreenMarkers: timing.MinimapScreenMarkersLastFrame,
+            MinimapScreenMarkersDropped: timing.MinimapScreenMarkersDroppedLastFrame,
             EcsVisibleEntities: ecsVisibleEntities,
             CrowdInViewEntities: simulation.CrowdInViewCount,
             CrowdSubmittedEntities: simulation.CrowdSubmittedCount,
             SubmittedObstacles: simulation.ObstacleSubmittedCount,
-                CompositeSkipCountLastSecond: timing?.CompositeSkipCountLastSecond ?? 0,
+                CompositeSkipCountLastSecond: timing.CompositeSkipCountLastSecond,
                 WorldWidthCm: simulation.WorldWidthCm,
                 WorldHeightCm: simulation.WorldHeightCm,
                 SolverWindowWidthCm: (int)MathF.Round(simulation.SolverWindowWidthCm),
@@ -805,13 +807,8 @@ internal sealed class MassNavWebParityPanelController
         return 40_000;
     }
 
-    private static float ResolveFrameMs(PresentationTimingDiagnostics? timing)
+    private static float ResolveFrameMs(PresentationTimingDiagnostics timing)
     {
-        if (timing == null)
-        {
-            return 0f;
-        }
-
         if (timing.WallFrameMs > 0.001f)
         {
             return timing.WallFrameMs;

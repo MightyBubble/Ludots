@@ -14,6 +14,7 @@
     "presentationEventStreamCapacity": 131072,
     "performerCommandCapacity": 262144,
     "presentationRequestCapacity": 262144,
+    "skinnedVisualBatchCapacity": 131072,
     "minimapMarkerCapacity": 131072,
     "runtimeEntitySpawnQueueCapacity": 131072,
     "runtimeEntitySpawnReceiptQueueCapacity": 131072,

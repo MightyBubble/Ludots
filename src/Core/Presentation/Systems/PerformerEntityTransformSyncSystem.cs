@@ -24,11 +24,16 @@ namespace Ludots.Core.Presentation.Systems
             .WithNone<PerformerBootstrapPending, PerfStaticStableVisual, PerfOwnerPayloadTransformSync>();
 
         private readonly PresentationTimingDiagnostics? _timingDiagnostics;
+        private readonly PerformerEntityRuntime _runtime;
 
-        public PerformerEntityTransformSyncSystem(World world, PresentationTimingDiagnostics? timingDiagnostics = null)
+        public PerformerEntityTransformSyncSystem(
+            World world,
+            PerformerEntityRuntime runtime,
+            PresentationTimingDiagnostics? timingDiagnostics = null)
             : base(world)
         {
             _timingDiagnostics = timingDiagnostics;
+            _runtime = runtime ?? throw new ArgumentNullException(nameof(runtime));
         }
 
         public override void Update(in float dt)
@@ -39,6 +44,7 @@ namespace Ludots.Core.Presentation.Systems
 
             foreach (ref var chunk in World.Query(in EntityAnchoredQuery))
             {
+                ref Entity entityFirst = ref chunk.Entity(0);
                 Span<PerformerState> states = chunk.GetSpan<PerformerState>();
                 Span<PerformerWorldPosition> positions = chunk.GetSpan<PerformerWorldPosition>();
                 Span<PerformerWorldPlanePosition> planePositions = chunk.GetSpan<PerformerWorldPlanePosition>();
@@ -83,7 +89,7 @@ namespace Ludots.Core.Presentation.Systems
                     rotations[index].Value = newRotation;
                     facings[index] = newFacing;
                     scales[index].Value = newScale;
-                    MarkEmitDirty(ref emitCaches[index]);
+                    MarkEmitDirty(Unsafe.Add(ref entityFirst, index));
                 }
             }
 
@@ -156,7 +162,7 @@ namespace Ludots.Core.Presentation.Systems
                     rotation.Value = newRotation;
                     facing = newFacing;
                     scale.Value = newScale;
-                    MarkEmitDirty(ref World.Get<PerformerEmitCache>(payload.SingleRootPerformer));
+                    MarkEmitDirty(payload.SingleRootPerformer);
                 }
             }
         }
@@ -179,17 +185,9 @@ namespace Ludots.Core.Presentation.Systems
         }
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        private static void MarkEmitDirty(ref PerformerEmitCache emitCache)
+        private void MarkEmitDirty(Entity performer)
         {
-            if (emitCache.StaticDirty == 0)
-            {
-                emitCache.StaticDirty = 1;
-            }
-
-            if (emitCache.RetainedDirty == 0)
-            {
-                emitCache.RetainedDirty = 1;
-            }
+            _runtime.MarkTransformDrivenEmitDirty(performer);
         }
 
     }

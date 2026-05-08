@@ -55,6 +55,7 @@ namespace Ludots.Core.Config
             Register("OrderBuffer", SetOrderBuffer);
             Register<SelectionSelectableTag>("SelectionSelectableTag");
             Register("SelectionSelectableState", SetSelectionSelectableState);
+            Register<SelectionDragState>("SelectionDragState");
             Register("SpatialBounds", SetSpatialBounds);
             Register("SpatialBox3D", SetSpatialBox3D);
             Register("SpatialFootprint2D", SetSpatialFootprint2D);

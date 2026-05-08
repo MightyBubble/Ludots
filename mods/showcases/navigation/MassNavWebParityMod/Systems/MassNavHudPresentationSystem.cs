@@ -36,18 +36,15 @@ internal sealed class MassNavHudPresentationSystem : ISystem<float>
 
         _simulation.ObserveHudTick();
 
-        if (_engine.GetService(CoreServiceKeys.ScreenOverlayBuffer) is not ScreenOverlayBuffer overlay)
-        {
-            return;
-        }
-
-        PresentationTimingDiagnostics? timing = _engine.GetService(CoreServiceKeys.PresentationTimingDiagnostics);
+        ScreenOverlayBuffer overlay = _engine.GetService(CoreServiceKeys.ScreenOverlayBuffer)
+            ?? throw new InvalidOperationException("MassNavWebParityMod requires ScreenOverlayBuffer for diagnostics HUD.");
+        PresentationTimingDiagnostics timing = _engine.GetService(CoreServiceKeys.PresentationTimingDiagnostics)
+            ?? throw new InvalidOperationException("MassNavWebParityMod requires PresentationTimingDiagnostics for real FPS HUD.");
+        IViewController viewport = _engine.GetService(CoreServiceKeys.ViewController)
+            ?? throw new InvalidOperationException("MassNavWebParityMod requires ViewController for diagnostics HUD layout.");
         int ecsVisible = (_engine.GetService(CoreServiceKeys.CameraCullingDebugState) as CameraCullingDebugState)?.VisibleEntityCount
-            ?? timing?.VisibleEntitiesLastFrame
-            ?? 0;
-        Vector2 resolution = _engine.GetService(CoreServiceKeys.ViewController) is IViewController viewport
-            ? viewport.Resolution
-            : new Vector2(1280f, 720f);
+            ?? timing.VisibleEntitiesLastFrame;
+        Vector2 resolution = viewport.Resolution;
         int left = Math.Max(16, (int)resolution.X - 260);
         float frameMs = ResolveFrameMs(timing);
         float fps = frameMs > 0.001f ? 1000f / frameMs : 0f;
@@ -55,8 +52,8 @@ internal sealed class MassNavHudPresentationSystem : ISystem<float>
         AddCachedText(overlay, 1, left, 42, 16, new Vector4(0.74f, 0.82f, 0.92f, 1f), (int)MathF.Round(frameMs * 10f), () => $"frame {frameMs:0.0} ms");
         AddCachedText(overlay, 2, left, 64, 16, new Vector4(0.56f, 0.96f, 0.48f, 1f), _simulation.SelectedCount, () => $"selected {_simulation.SelectedCount}");
         AddCachedText(overlay, 3, left, 86, 16, new Vector4(1f, 0.82f, 0.45f, 1f), _simulation.AgentState.TotalAgents + (_simulation.NavGroupRuntime.ActiveGroupCount << 20), () => $"agents {_simulation.AgentState.TotalAgents} groups {_simulation.NavGroupRuntime.ActiveGroupCount}");
-        AddCachedText(overlay, 4, left, 108, 16, new Vector4(1f, 0.56f, 0.46f, 1f), (int)MathF.Round((timing?.PerformerEmitMs ?? 0f) * 10f), () => $"performer {timing?.PerformerEmitMs ?? 0f:0.0} ms");
-        AddCachedText(overlay, 5, left, 130, 16, new Vector4(1f, 0.56f, 0.46f, 1f), (timing?.PerformerMinimapMarkersLastFrame ?? 0) ^ ((timing?.MinimapScreenMarkersLastFrame ?? 0) << 1) ^ ((timing?.PerformerMinimapDroppedLastFrame ?? 0) << 2), () => $"mini markers {timing?.PerformerMinimapMarkersLastFrame ?? 0} screen {timing?.MinimapScreenMarkersLastFrame ?? 0} drop {timing?.PerformerMinimapDroppedLastFrame ?? 0}");
+        AddCachedText(overlay, 4, left, 108, 16, new Vector4(1f, 0.56f, 0.46f, 1f), (int)MathF.Round(timing.PerformerEmitMs * 10f), () => $"performer {timing.PerformerEmitMs:0.0} ms");
+        AddCachedText(overlay, 5, left, 130, 16, new Vector4(1f, 0.56f, 0.46f, 1f), timing.PerformerMinimapMarkersLastFrame ^ (timing.MinimapScreenMarkersLastFrame << 1) ^ (timing.PerformerMinimapDroppedLastFrame << 2), () => $"mini markers {timing.PerformerMinimapMarkersLastFrame} screen {timing.MinimapScreenMarkersLastFrame} drop {timing.PerformerMinimapDroppedLastFrame}");
         AddCachedText(overlay, 6, left, 152, 16, new Vector4(1f, 0.56f, 0.46f, 1f), ((int)MathF.Round(_simulation.StepPrepMs * 10f) << 16) ^ (int)MathF.Round(_simulation.LocalSteeringMs * 10f), () => $"prep {_simulation.StepPrepMs:0.0} steer {_simulation.LocalSteeringMs:0.0}");
         AddCachedText(overlay, 7, left, 174, 16, new Vector4(1f, 0.56f, 0.46f, 1f), ((int)MathF.Round(_simulation.HardResolveMs * 10f) << 16) ^ (int)MathF.Round(_simulation.EntitySyncMs * 10f), () => $"resolve {_simulation.HardResolveMs:0.0} sync {_simulation.EntitySyncMs:0.0}");
         AddCachedText(overlay, 8, left, 196, 16, new Vector4(1f, 0.56f, 0.46f, 1f), _simulation.CrowdInViewCount ^ (_simulation.CrowdSubmittedCount << 1) ^ (ecsVisible << 2), () => $"crowd {_simulation.CrowdInViewCount}/{_simulation.CrowdSubmittedCount} ecs {ecsVisible}");
@@ -98,13 +95,8 @@ internal sealed class MassNavHudPresentationSystem : ISystem<float>
         overlay.AddText(x, y, cache.Text, fontSize, color, stableId: cacheIndex + 1, dirtySerial);
     }
 
-    private static float ResolveFrameMs(PresentationTimingDiagnostics? timing)
+    private static float ResolveFrameMs(PresentationTimingDiagnostics timing)
     {
-        if (timing == null)
-        {
-            return 0f;
-        }
-
         if (timing.WallFrameMs > 0.001f)
         {
             return timing.WallFrameMs;

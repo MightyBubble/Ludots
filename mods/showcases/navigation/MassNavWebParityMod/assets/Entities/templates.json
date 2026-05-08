@@ -1,6 +1,15 @@
 [
   {
+    "id": "massnav_local_player",
+    "components": {
+      "Name": { "Value": "MassNav.LocalPlayer" },
+      "PlayerOwner": { "PlayerId": 1 },
+      "SelectionDragState": {}
+    }
+  },
+  {
     "id": "massnav_agent_azure_light",
+    "onSpawnEffect": "Effect.Showcase.MassNav.Agent.HealthSeed",
     "components": {
       "Name": { "Value": "MassNav.Agent.Azure.Light" },
       "WorldPositionCm": { "Value": { "X": 0, "Y": 0 } },
@@ -10,7 +19,10 @@
       "OrderBuffer": {},
       "SelectionSelectableTag": {},
       "SelectionSelectableState": { "IsEnabled": true },
-      "AttributeBuffer": { "base": {} },
+      "AttributeBuffer": {
+        "base": { "Health": 100 },
+        "current": { "Health": 82 }
+      },
       "GameplayTagContainer": {},
       "TagCountContainer": {},
       "MassNavAgentTag": {},
@@ -19,6 +31,7 @@
   },
   {
     "id": "massnav_agent_azure_heavy",
+    "onSpawnEffect": "Effect.Showcase.MassNav.Agent.HealthSeed",
     "components": {
       "Name": { "Value": "MassNav.Agent.Azure.Heavy" },
       "WorldPositionCm": { "Value": { "X": 0, "Y": 0 } },
@@ -28,7 +41,10 @@
       "OrderBuffer": {},
       "SelectionSelectableTag": {},
       "SelectionSelectableState": { "IsEnabled": true },
-      "AttributeBuffer": { "base": {} },
+      "AttributeBuffer": {
+        "base": { "Health": 260 },
+        "current": { "Health": 236 }
+      },
       "GameplayTagContainer": {},
       "TagCountContainer": {},
       "MassNavAgentTag": {},
@@ -37,6 +53,7 @@
   },
   {
     "id": "massnav_agent_crimson_light",
+    "onSpawnEffect": "Effect.Showcase.MassNav.Agent.HealthSeed",
     "components": {
       "Name": { "Value": "MassNav.Agent.Crimson.Light" },
       "WorldPositionCm": { "Value": { "X": 0, "Y": 0 } },
@@ -46,7 +63,10 @@
       "OrderBuffer": {},
       "SelectionSelectableTag": {},
       "SelectionSelectableState": { "IsEnabled": true },
-      "AttributeBuffer": { "base": {} },
+      "AttributeBuffer": {
+        "base": { "Health": 100 },
+        "current": { "Health": 82 }
+      },
       "GameplayTagContainer": {},
       "TagCountContainer": {},
       "MassNavAgentTag": {},
@@ -55,6 +75,7 @@
   },
   {
     "id": "massnav_agent_crimson_heavy",
+    "onSpawnEffect": "Effect.Showcase.MassNav.Agent.HealthSeed",
     "components": {
       "Name": { "Value": "MassNav.Agent.Crimson.Heavy" },
       "WorldPositionCm": { "Value": { "X": 0, "Y": 0 } },
@@ -64,7 +85,10 @@
       "OrderBuffer": {},
       "SelectionSelectableTag": {},
       "SelectionSelectableState": { "IsEnabled": true },
-      "AttributeBuffer": { "base": {} },
+      "AttributeBuffer": {
+        "base": { "Health": 260 },
+        "current": { "Health": 236 }
+      },
       "GameplayTagContainer": {},
       "TagCountContainer": {},
       "MassNavAgentTag": {},
@@ -73,6 +97,7 @@
   },
   {
     "id": "massnav_agent_amber_light",
+    "onSpawnEffect": "Effect.Showcase.MassNav.Agent.HealthSeed",
     "components": {
       "Name": { "Value": "MassNav.Agent.Amber.Light" },
       "WorldPositionCm": { "Value": { "X": 0, "Y": 0 } },
@@ -82,7 +107,10 @@
       "OrderBuffer": {},
       "SelectionSelectableTag": {},
       "SelectionSelectableState": { "IsEnabled": true },
-      "AttributeBuffer": { "base": {} },
+      "AttributeBuffer": {
+        "base": { "Health": 100 },
+        "current": { "Health": 82 }
+      },
       "GameplayTagContainer": {},
       "TagCountContainer": {},
       "MassNavAgentTag": {},
@@ -91,6 +119,7 @@
   },
   {
     "id": "massnav_agent_amber_heavy",
+    "onSpawnEffect": "Effect.Showcase.MassNav.Agent.HealthSeed",
     "components": {
       "Name": { "Value": "MassNav.Agent.Amber.Heavy" },
       "WorldPositionCm": { "Value": { "X": 0, "Y": 0 } },
@@ -100,7 +129,10 @@
       "OrderBuffer": {},
       "SelectionSelectableTag": {},
       "SelectionSelectableState": { "IsEnabled": true },
-      "AttributeBuffer": { "base": {} },
+      "AttributeBuffer": {
+        "base": { "Health": 260 },
+        "current": { "Health": 236 }
+      },
       "GameplayTagContainer": {},
       "TagCountContainer": {},
       "MassNavAgentTag": {},
@@ -109,6 +141,7 @@
   },
   {
     "id": "massnav_agent_emerald_light",
+    "onSpawnEffect": "Effect.Showcase.MassNav.Agent.HealthSeed",
     "components": {
       "Name": { "Value": "MassNav.Agent.Emerald.Light" },
       "WorldPositionCm": { "Value": { "X": 0, "Y": 0 } },
@@ -118,7 +151,10 @@
       "OrderBuffer": {},
       "SelectionSelectableTag": {},
       "SelectionSelectableState": { "IsEnabled": true },
-      "AttributeBuffer": { "base": {} },
+      "AttributeBuffer": {
+        "base": { "Health": 100 },
+        "current": { "Health": 82 }
+      },
       "GameplayTagContainer": {},
       "TagCountContainer": {},
       "MassNavAgentTag": {},
@@ -127,6 +163,7 @@
   },
   {
     "id": "massnav_agent_emerald_heavy",
+    "onSpawnEffect": "Effect.Showcase.MassNav.Agent.HealthSeed",
     "components": {
       "Name": { "Value": "MassNav.Agent.Emerald.Heavy" },
       "WorldPositionCm": { "Value": { "X": 0, "Y": 0 } },
@@ -136,7 +173,10 @@
       "OrderBuffer": {},
       "SelectionSelectableTag": {},
       "SelectionSelectableState": { "IsEnabled": true },
-      "AttributeBuffer": { "base": {} },
+      "AttributeBuffer": {
+        "base": { "Health": 260 },
+        "current": { "Health": 236 }
+      },
       "GameplayTagContainer": {},
       "TagCountContainer": {},
       "MassNavAgentTag": {},

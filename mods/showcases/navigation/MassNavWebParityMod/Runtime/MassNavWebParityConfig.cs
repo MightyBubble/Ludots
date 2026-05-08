@@ -27,12 +27,14 @@ public sealed class MassNavWebParityConfig
             throw new ArgumentNullException(nameof(stream));
         }
 
+        using var document = JsonDocument.Parse(stream);
+        ValidateRequiredTopLevelProperties(document.RootElement);
         var options = new JsonSerializerOptions
         {
             PropertyNameCaseInsensitive = true,
         };
 
-        MassNavWebParityConfig? config = JsonSerializer.Deserialize<MassNavWebParityConfig>(stream, options);
+        MassNavWebParityConfig? config = document.RootElement.Deserialize<MassNavWebParityConfig>(options);
         if (config == null)
         {
             throw new InvalidOperationException("Failed to deserialize mass-nav web parity config.");
@@ -40,6 +42,35 @@ public sealed class MassNavWebParityConfig
 
         config.Validate();
         return config;
+    }
+
+    private static void ValidateRequiredTopLevelProperties(JsonElement root)
+    {
+        RequireProperty(root, "mapId");
+        RequireProperty(root, "world");
+        RequireProperty(root, "presentation");
+        RequireProperty(root, "scenario");
+        RequireProperty(root, "teamRelationships");
+        RequireProperty(root, "flow");
+        RequireProperty(root, "arrival");
+        RequireProperty(root, "avoidance");
+        RequireProperty(root, "semantics");
+
+        JsonElement world = RequireProperty(root, "world");
+        RequireProperty(world, "obstacles");
+        JsonElement relationships = RequireProperty(root, "teamRelationships");
+        RequireProperty(relationships, "defaultRelationship");
+        RequireProperty(relationships, "relationships");
+    }
+
+    private static JsonElement RequireProperty(JsonElement root, string propertyName)
+    {
+        if (!root.TryGetProperty(propertyName, out JsonElement value))
+        {
+            throw new InvalidOperationException($"Mass-nav config requires explicit '{propertyName}' property.");
+        }
+
+        return value;
     }
 
     private void Validate()
@@ -58,10 +89,7 @@ public sealed class MassNavWebParityConfig
 
         World.Validate();
 
-        if (TeamRelationships.Relationships == null)
-        {
-            TeamRelationships.Relationships = new List<RelationshipEntry>();
-        }
+        ValidateRelationships();
 
         var knownTeams = new HashSet<int>(Scenario.Teams.Select(team => team.Id));
         for (int i = 0; i < TeamRelationships.Relationships.Count; i++)
@@ -80,10 +108,31 @@ public sealed class MassNavWebParityConfig
             }
         }
     }
+
+    private void ValidateRelationships()
+    {
+        if (TeamRelationships == null)
+        {
+            throw new InvalidOperationException("Mass-nav config requires an explicit teamRelationships section.");
+        }
+
+        if (string.IsNullOrWhiteSpace(TeamRelationships.DefaultRelationship) ||
+            !Enum.TryParse<TeamRelationship>(TeamRelationships.DefaultRelationship, true, out _))
+        {
+            throw new InvalidOperationException(
+                $"Mass-nav config teamRelationships.defaultRelationship is invalid: '{TeamRelationships.DefaultRelationship}'.");
+        }
+
+        if (TeamRelationships.Relationships == null)
+        {
+            throw new InvalidOperationException("Mass-nav config requires teamRelationships.relationships as an explicit array.");
+        }
+    }
 }
 
 public sealed class MassNavPresentationConfig
 {
+    public string[] RequiredMeshAssetIds { get; set; } = Array.Empty<string>();
     public string BlockerPerformerId { get; set; } = string.Empty;
     public string HotspotPerformerId { get; set; } = string.Empty;
     public string BlockerTemplateId { get; set; } = string.Empty;
@@ -93,6 +142,22 @@ public sealed class MassNavPresentationConfig
 
     public void Validate(MassNavScenarioConfig scenario)
     {
+        if (RequiredMeshAssetIds.Length <= 0)
+        {
+            throw new InvalidOperationException("Mass-nav presentation requires at least one RequiredMeshAssetIds entry.");
+        }
+
+        var meshIds = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
+        for (int i = 0; i < RequiredMeshAssetIds.Length; i++)
+        {
+            string meshAssetId = RequiredMeshAssetIds[i];
+            RequireNonEmpty(meshAssetId, $"{nameof(RequiredMeshAssetIds)}[{i}]");
+            if (!meshIds.Add(meshAssetId))
+            {
+                throw new InvalidOperationException($"Mass-nav presentation contains duplicate required mesh asset '{meshAssetId}'.");
+            }
+        }
+
         RequireNonEmpty(BlockerPerformerId, nameof(BlockerPerformerId));
         RequireNonEmpty(HotspotPerformerId, nameof(HotspotPerformerId));
         RequireNonEmpty(BlockerTemplateId, nameof(BlockerTemplateId));
@@ -206,8 +271,6 @@ public sealed class MassNavWorldConfig
 {
     private int _activeHotZoneIndex = -1;
 
-    public int WorldWidthCm { get; set; }
-    public int WorldHeightCm { get; set; }
     public int SolverWindowWidthCm { get; set; }
     public int SolverWindowHeightCm { get; set; }
     public int StreamingChunkSizeCm { get; set; }
@@ -219,6 +282,7 @@ public sealed class MassNavWorldConfig
     public int WorkAreaMaxHeightCm { get; set; }
     public string ActiveHotZoneId { get; set; } = string.Empty;
     public MassNavHotZoneConfig[] HotZones { get; set; } = Array.Empty<MassNavHotZoneConfig>();
+    public MassNavObstacleConfig[] Obstacles { get; set; } = Array.Empty<MassNavObstacleConfig>();
 
     [JsonIgnore]
     public MassNavHotZoneConfig ActiveHotZone => _activeHotZoneIndex >= 0 && _activeHotZoneIndex < HotZones.Length
@@ -279,14 +343,20 @@ public sealed class MassNavWorldConfig
 
     public void Validate()
     {
-        if (WorldWidthCm <= 0 || WorldHeightCm <= 0)
-        {
-            throw new InvalidOperationException("Mass-nav world requires positive WorldWidthCm and WorldHeightCm.");
-        }
-
         if (HotZones.Length <= 0)
         {
             throw new InvalidOperationException("Mass-nav world requires at least one configured hotspot debug landmark.");
+        }
+
+        if (Obstacles.Length <= 0)
+        {
+            throw new InvalidOperationException("Mass-nav world requires explicitly authored obstacles.");
+        }
+
+        if (Obstacles.Length > MassNavWebParitySimState.MaxObstacleCount)
+        {
+            throw new InvalidOperationException(
+                $"Mass-nav world obstacle count {Obstacles.Length} exceeds solver capacity {MassNavWebParitySimState.MaxObstacleCount}.");
         }
 
         if (SolverWindowWidthCm != MassNavWebParitySimState.FieldWidthCm ||
@@ -296,10 +366,6 @@ public sealed class MassNavWorldConfig
                 $"Mass-nav world solver window must be explicit and match the current SoA solver cache ({MassNavWebParitySimState.FieldWidthCm}x{MassNavWebParitySimState.FieldHeightCm} cm).");
         }
 
-        float minWorldX = WorldWidthCm * -0.5f;
-        float maxWorldX = WorldWidthCm * 0.5f;
-        float minWorldY = WorldHeightCm * -0.5f;
-        float maxWorldY = WorldHeightCm * 0.5f;
         var ids = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
         for (int i = 0; i < HotZones.Length; i++)
         {
@@ -310,14 +376,27 @@ public sealed class MassNavWorldConfig
                 throw new InvalidOperationException($"Mass-nav world contains duplicate hot zone id '{zone.Id}'.");
             }
 
-            float zoneMinX = zone.CenterXCm - (zone.WidthCm * 0.5f);
-            float zoneMaxX = zone.CenterXCm + (zone.WidthCm * 0.5f);
-            float zoneMinY = zone.CenterYCm - (zone.HeightCm * 0.5f);
-            float zoneMaxY = zone.CenterYCm + (zone.HeightCm * 0.5f);
-            if (zoneMinX < minWorldX || zoneMaxX > maxWorldX ||
-                zoneMinY < minWorldY || zoneMaxY > maxWorldY)
+        }
+
+        var obstacleIds = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
+        for (int i = 0; i < Obstacles.Length; i++)
+        {
+            MassNavObstacleConfig obstacle = Obstacles[i];
+            obstacle.Validate();
+            if (!obstacleIds.Add(obstacle.Id))
             {
-                throw new InvalidOperationException($"Mass-nav hot zone '{zone.Id}' must be fully inside the configured world bounds.");
+                throw new InvalidOperationException($"Mass-nav world contains duplicate obstacle id '{obstacle.Id}'.");
+            }
+
+            float minX = obstacle.LocalXCm - obstacle.RadiusCm;
+            float maxX = obstacle.LocalXCm + obstacle.RadiusCm;
+            float minY = obstacle.LocalYCm - obstacle.RadiusCm;
+            float maxY = obstacle.LocalYCm + obstacle.RadiusCm;
+            if (minX < 0f || maxX > SolverWindowWidthCm ||
+                minY < 0f || maxY > SolverWindowHeightCm)
+            {
+                throw new InvalidOperationException(
+                    $"Mass-nav obstacle '{obstacle.Id}' must fit inside the authored solver window.");
             }
         }
 
@@ -364,16 +443,6 @@ public sealed class MassNavWorldConfig
         SetActiveHotZone(ActiveHotZoneId);
     }
 
-    public float ClampSolverWindowCenterX(float worldXCm)
-    {
-        return ClampWindowCenterX(worldXCm, SolverWindowWidthCm);
-    }
-
-    public float ClampSolverWindowCenterY(float worldYCm)
-    {
-        return ClampWindowCenterY(worldYCm, SolverWindowHeightCm);
-    }
-
     private int FindHotZoneIndex(string hotZoneId)
     {
         for (int i = 0; i < HotZones.Length; i++)
@@ -386,17 +455,26 @@ public sealed class MassNavWorldConfig
 
         return -1;
     }
+}
 
-    private int ClampWindowCenterX(float worldXCm, int widthCm)
-    {
-        float halfWidth = widthCm * 0.5f;
-        return (int)MathF.Round(Math.Clamp(worldXCm, (WorldWidthCm * -0.5f) + halfWidth, (WorldWidthCm * 0.5f) - halfWidth));
-    }
+public sealed class MassNavObstacleConfig
+{
+    public string Id { get; set; } = string.Empty;
+    public float LocalXCm { get; set; }
+    public float LocalYCm { get; set; }
+    public float RadiusCm { get; set; }
 
-    private int ClampWindowCenterY(float worldYCm, int heightCm)
+    public void Validate()
     {
-        float halfHeight = heightCm * 0.5f;
-        return (int)MathF.Round(Math.Clamp(worldYCm, (WorldHeightCm * -0.5f) + halfHeight, (WorldHeightCm * 0.5f) - halfHeight));
+        if (string.IsNullOrWhiteSpace(Id))
+        {
+            throw new InvalidOperationException("Mass-nav obstacle requires a non-empty id.");
+        }
+
+        if (RadiusCm <= 0f)
+        {
+            throw new InvalidOperationException($"Mass-nav obstacle '{Id}' requires RadiusCm > 0.");
+        }
     }
 }
 

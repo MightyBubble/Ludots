@@ -54,11 +54,14 @@ ConfigPipeline
 
 主要配置位于 `mods/showcases/navigation/MassNavWebParityMod/assets/`。
 
-- `MassNavWebParityConfig.json`：world、scenario、team relationship、flow、arrival、avoidance、crowd semantics、presentation id 引用。
+- `MassNavWebParityConfig.json`：solver window、hotspot/debug landmark、obstacle、scenario、team relationship、flow、arrival、avoidance、crowd semantics、presentation id 引用。它不拥有世界尺寸。
 - `Entities/templates.json`：agent、blocker、hotspot marker 的正式 entity template。
-- `Presentation/performers.json`：agent、blocker、hotspot marker 的 performer definition、instanced mesh、selection overlay、minimap marker。
+- `Presentation/mesh_assets.json`：MassNav 自有 blocker、hotspot、selection overlay 的正式 Model mesh id。
+- `Presentation/host_assets.json`：MassNav 自有 mesh 的 Raylib 后端文件绑定；缺 host sourceUri 必须 fail-fast。
+- `Presentation/performers.json`：agent、blocker、hotspot marker 的 performer definition、Blacksmith 正式角色素材引用、selection overlay、minimap marker。
 - `game.json`：presentation capacity、runtime spawn queue capacity、minimap capacity、启动 map、Navigation2D 开关。
-- `Maps/mass_nav_web_parity.json`：board/world bounds。必须和 `MassNavWebParityConfig.json` 的 world 尺寸一致。
+- `Maps/mass_nav_web_parity.json`：board/world bounds 和 map-owned `VisualHeightmapAsset`。`PrimaryBoard.WorldSizeSpec.Bounds` 是世界尺寸 SSOT，MassNav runtime 只读它。
+- `assets/terrain/mass_nav_web_parity_large_world_relief.vhtm`：MassNav 专属 64km visual heightmap。不要跨 mod 引用 showcase 私有地形资产。
 - `GAS/order_types.json`：`massNavMove` 订单类型。
 
 `MassNavWebParityConfig.presentation.teams[]` 把动态 team id 映射到 style/template/performer id。示例里的 `azure`、`crimson`、`amber`、`emerald` 是配置 style，不是 C# 逻辑写死的队伍语义。
@@ -102,12 +105,18 @@ hotspot/debug marker 必须声明：
 
 MassNav agent、blocker、hotspot marker 必须通过 performer 创建：
 
-- agent/body 使用 `AssetBinding(Mesh, InstancedStaticMesh)`。
+- agent/body 使用 Blacksmith 正式素材包的 `AssetBinding(SkinnedMesh, GpuSkinnedInstance)`，当前配置为 `blacksmith.worker.knight` + `blacksmith.worker.locomotion` + `blacksmith.worker.profile`。
+- `MassNavWebParityMod` 必须显式依赖 `PerformerBlacksmithShowcaseMod`，以复用其 `Knight.glb`、动画、mesh registry 与 host asset 绑定；不要把素材复制到 MassNav，也不要用临时 OBJ/primitive 替代。
+- selection overlay、blocker、hotspot 使用 MassNav 自有 `Presentation/mesh_assets.json` + `Presentation/host_assets.json` 中声明的 Model mesh。
+- agent performer 必须声明 `Grounding` behavior，并使用 map-owned `VisualHeightmapAsset` 吸地。
+- blocker 和 hotspot/debug marker 必须声明 `Grounding` behavior；静态对象可以 `updatePolicy=Once`。
 - selection overlay 使用 performer param，例如 `selectionVisibilityParamKey`。
 - minimap marker 使用 performer `MinimapMarker` behavior。
 - 颜色、尺寸、marker size、selection overlay 是否可见，都来自 performer config 或 performer param。
 
 禁止在 MassNav 中写 C# color switch、primitive draw loop、非 instanced fallback、按 `Team` 推断 marker 样式。
+禁止把 agent 主视觉改回 MassNav 临时 OBJ、内置 primitive 或任何未在配置中显式声明的素材。
+禁止缺 visual heightmap 后退到平面或黑背景；缺 `CoreServiceKeys.VisualHeightmap` 必须 fail-fast。
 
 ## 小地图合约
 
