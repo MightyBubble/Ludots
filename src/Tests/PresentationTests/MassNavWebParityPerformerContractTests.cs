@@ -99,6 +99,31 @@ namespace Ludots.Tests.Presentation
         }
 
         [Test]
+        public void AgentSelectionMarkers_AreSeparateScopedPerformers()
+        {
+            string modRoot = MassNavModRoot();
+            JsonObject config = ReadObject(Path.Combine(modRoot, "assets", "MassNavWebParityConfig.json"));
+            JsonArray performers = ReadArray(Path.Combine(modRoot, "assets", "Presentation", "performers.json"));
+
+            JsonObject presentation = config["presentation"]?.AsObject()
+                ?? throw new InvalidOperationException("MassNavWebParityConfig.presentation missing.");
+            Assert.That(presentation.ContainsKey("selectionVisibilityParamKey"), Is.False,
+                "Selection visibility must not keep a hidden mesh inside every agent root performer.");
+
+            string lightMarkerId = RequireString(presentation, "selectionMarkerLightPerformerId");
+            string heavyMarkerId = RequireString(presentation, "selectionMarkerHeavyPerformerId");
+            Assert.That(lightMarkerId, Is.EqualTo("massnav_agent_selection_marker_light"));
+            Assert.That(heavyMarkerId, Is.EqualTo("massnav_agent_selection_marker_heavy"));
+
+            AssertPerformerDoesNotBindMeshAsset(FindObjectById(performers, "massnav_agent_light"), "massnav_agent_light", "massnav.selection.marker");
+            AssertPerformerDoesNotBindMeshAsset(FindObjectById(performers, "massnav_agent_heavy"), "massnav_agent_heavy", "massnav.selection.marker");
+            AssertSelectionMarkerDefinition(FindObjectById(performers, lightMarkerId), lightMarkerId, expectedScaleX: 0.55f, expectedScaleY: 0.05f, expectedScaleZ: 0.55f);
+            JsonObject heavyMarker = FindObjectById(performers, heavyMarkerId);
+            Assert.That(RequireString(heavyMarker, "extends"), Is.EqualTo(lightMarkerId));
+            AssertSelectionMarkerDefinition(heavyMarker, heavyMarkerId, expectedScaleX: 0.78f, expectedScaleY: 0.06f, expectedScaleZ: 0.78f);
+        }
+
+        [Test]
         public void CoreHudDefinitions_AreDefinitionsOnly_NotGlobalAttributeWildcards()
         {
             string repoRoot = FindRepoRoot();
@@ -389,6 +414,36 @@ namespace Ludots.Tests.Presentation
             Assert.That(currentParamKey, Is.GreaterThan(0), $"Text performer '{definitionId}' must drive current value from a param.");
             Assert.That(baseParamKey, Is.GreaterThan(0), $"Text performer '{definitionId}' must drive base value from a param.");
             return (currentParamKey, baseParamKey);
+        }
+
+        private static void AssertPerformerDoesNotBindMeshAsset(JsonObject definition, string definitionId, string forbiddenAssetId)
+        {
+            JsonArray behaviors = definition["behaviors"]?.AsArray()
+                ?? throw new InvalidOperationException($"Performer '{definitionId}' must declare behaviors.");
+            foreach (JsonObject behavior in behaviors.Select(node => node?.AsObject() ?? throw new InvalidOperationException($"Performer '{definitionId}' behavior must be an object.")))
+            {
+                JsonObject? assetBinding = behavior["assetBinding"]?.AsObject();
+                string assetId = assetBinding?["assetId"]?.GetValue<string>() ?? string.Empty;
+                Assert.That(assetId, Is.Not.EqualTo(forbiddenAssetId),
+                    $"Performer '{definitionId}' must not carry always-present hidden asset '{forbiddenAssetId}'.");
+            }
+        }
+
+        private static void AssertSelectionMarkerDefinition(JsonObject definition, string definitionId, float expectedScaleX, float expectedScaleY, float expectedScaleZ)
+        {
+            JsonArray behaviors = definition["behaviors"]?.AsArray()
+                ?? throw new InvalidOperationException($"Selection marker '{definitionId}' must declare behaviors.");
+            Assert.That(behaviors.Count, Is.EqualTo(1), $"Selection marker '{definitionId}' should be a single mesh performer.");
+
+            JsonObject assetBinding = behaviors[0]?["assetBinding"]?.AsObject()
+                ?? throw new InvalidOperationException($"Selection marker '{definitionId}' must declare an AssetBinding behavior.");
+            Assert.That(assetBinding["assetKind"]?.GetValue<string>(), Is.EqualTo("Mesh"));
+            Assert.That(assetBinding["assetId"]?.GetValue<string>(), Is.EqualTo("massnav.selection.marker"));
+            Assert.That(assetBinding["renderPath"]?.GetValue<string>(), Is.EqualTo("InstancedStaticMesh"));
+            Assert.That(assetBinding["mobility"]?.GetValue<string>(), Is.EqualTo("Movable"));
+            Assert.That(assetBinding.ContainsKey("visibilityParamKey"), Is.False,
+                $"Selection marker '{definitionId}' visibility is controlled by scoped create/destroy, not a root visibility param.");
+            AssertVector3(assetBinding["localScale"]?.AsArray(), expectedScaleX, expectedScaleY, expectedScaleZ, $"Selection marker '{definitionId}' scale");
         }
 
         private static void AssertDefinitionHasNoRules(JsonObject definition, string definitionId)

@@ -1,10 +1,10 @@
 using System;
 using Arch.Core;
 using Arch.System;
-using Ludots.Core.Presentation.Components;
+using Ludots.Core.Engine;
+using Ludots.Core.Presentation.Commands;
 using Ludots.Core.Presentation.Performers;
 using Ludots.Core.Scripting;
-using Ludots.Core.Engine;
 using MassNavWebParityMod.Runtime;
 
 namespace MassNavWebParityMod.Systems;
@@ -13,9 +13,12 @@ internal sealed class MassNavSelectionPerformerSyncSystem : ISystem<float>
 {
     private readonly GameEngine _engine;
     private readonly MassNavSimulationRuntime _simulation;
+    private const int SelectionMarkerScopeBase = 0x3D10_0000;
     private bool[] _selectionCache = Array.Empty<bool>();
     private uint _lastSelectionRevision = uint.MaxValue;
     private int _lastStructuralRevision = -1;
+    private int _lightMarkerDefinitionId;
+    private int _heavyMarkerDefinitionId;
 
     public MassNavSelectionPerformerSyncSystem(GameEngine engine, MassNavSimulationRuntime simulation)
     {
@@ -43,7 +46,10 @@ internal sealed class MassNavSelectionPerformerSyncSystem : ISystem<float>
 
         PerformerCommandBuffer commands = _engine.GetService(CoreServiceKeys.PerformerCommandBuffer)
             ?? throw new InvalidOperationException("MassNavWebParityMod requires PerformerCommandBuffer for selection presentation.");
-        int paramKey = _simulation.Config.Presentation.SelectionVisibilityParamKey;
+        PerformerDefinitionRegistry definitions = _engine.GetService(CoreServiceKeys.PerformerDefinitionRegistry)
+            ?? throw new InvalidOperationException("MassNavWebParityMod requires PerformerDefinitionRegistry for selection marker presentation.");
+        ResolveMarkerDefinitions(definitions);
+
         EnsureSelectionCache(_simulation.AgentState.ControllableCount);
 
         for (int i = 0; i < _simulation.AgentState.ControllableCount; i++)
@@ -57,31 +63,19 @@ internal sealed class MassNavSelectionPerformerSyncSystem : ISystem<float>
             }
 
             _selectionCache[i] = selected;
-            if (!_engine.World.IsAlive(owner) ||
-                !_engine.World.Has<PresentationOwnerHasPerformerPayload>(owner))
+            if (!_engine.World.IsAlive(owner))
             {
+                DestroyMarkerIfPresent(commands, i);
                 continue;
             }
 
-            ref readonly PresentationOwnerHasPerformerPayload payload = ref _engine.World.Get<PresentationOwnerHasPerformerPayload>(owner);
-            if (payload.SingleRootPerformer == Entity.Null ||
-                !_engine.World.IsAlive(payload.SingleRootPerformer))
+            if (selected)
             {
+                CreateMarkerIfMissing(commands, owner, i);
                 continue;
             }
 
-            var command = new PerformerCommand
-            {
-                CommandKind = PerformerCommandKind.SetParam,
-                PerformerEntity = payload.SingleRootPerformer,
-                ParamKey = paramKey,
-                ParamLane = ParamLane.Int,
-                IntValue = selected ? 1 : 0,
-            };
-            if (!commands.TryAdd(command))
-            {
-                throw new InvalidOperationException("MassNavWebParityMod selection performer commands exceeded PerformerCommandBuffer capacity.");
-            }
+            DestroyMarkerIfPresent(commands, i);
         }
 
         _lastSelectionRevision = _simulation.SelectionRevision;
@@ -94,5 +88,75 @@ internal sealed class MassNavSelectionPerformerSyncSystem : ISystem<float>
         {
             Array.Resize(ref _selectionCache, required);
         }
+    }
+
+    private void ResolveMarkerDefinitions(PerformerDefinitionRegistry definitions)
+    {
+        if (_lightMarkerDefinitionId <= 0)
+        {
+            _lightMarkerDefinitionId = ResolveDefinitionId(
+                definitions,
+                _simulation.Config.Presentation.SelectionMarkerLightPerformerId);
+        }
+
+        if (_heavyMarkerDefinitionId <= 0)
+        {
+            _heavyMarkerDefinitionId = ResolveDefinitionId(
+                definitions,
+                _simulation.Config.Presentation.SelectionMarkerHeavyPerformerId);
+        }
+    }
+
+    private static int ResolveDefinitionId(PerformerDefinitionRegistry definitions, string definitionKey)
+    {
+        int definitionId = definitions.GetId(definitionKey);
+        if (definitionId <= 0 || !definitions.TryGet(definitionId, out _))
+        {
+            throw new InvalidOperationException($"MassNavWebParityMod requires performer definition '{definitionKey}' for selection markers.");
+        }
+
+        return definitionId;
+    }
+
+    private void CreateMarkerIfMissing(PerformerCommandBuffer commands, Entity owner, int index)
+    {
+        bool heavy = _engine.World.Has<MassNavAgentProfile>(owner) &&
+                     _engine.World.Get<MassNavAgentProfile>(owner).Heavy;
+        int definitionId = heavy ? _heavyMarkerDefinitionId : _lightMarkerDefinitionId;
+        var command = new PerformerCommand
+        {
+            CommandKind = PerformerCommandKind.CreatePerformer,
+            PerformerDefinitionId = definitionId,
+            ScopeTag = ComposeSelectionMarkerScope(index),
+            AnchorKind = PresentationAnchorKind.Entity,
+            Source = owner,
+        };
+        if (!commands.TryAdd(command))
+        {
+            throw new InvalidOperationException("MassNavWebParityMod selection marker create commands exceeded PerformerCommandBuffer capacity.");
+        }
+    }
+
+    private void DestroyMarkerIfPresent(PerformerCommandBuffer commands, int index)
+    {
+        var command = new PerformerCommand
+        {
+            CommandKind = PerformerCommandKind.DestroyPerformerScope,
+            ScopeTag = ComposeSelectionMarkerScope(index),
+        };
+        if (!commands.TryAdd(command))
+        {
+            throw new InvalidOperationException("MassNavWebParityMod selection marker destroy commands exceeded PerformerCommandBuffer capacity.");
+        }
+    }
+
+    private static int ComposeSelectionMarkerScope(int index)
+    {
+        if (index < 0 || index >= 0x000F_FFFF)
+        {
+            throw new InvalidOperationException($"MassNavWebParityMod selection marker index {index} is outside the authored scope range.");
+        }
+
+        return SelectionMarkerScopeBase + index + 1;
     }
 }

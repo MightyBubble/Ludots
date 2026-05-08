@@ -64,7 +64,8 @@
     "hotspotPerformerId": "massnav_hotspot_marker",
     "blockerTemplateId": "massnav_blocker",
     "hotspotTemplateId": "massnav_hotspot_marker",
-    "selectionVisibilityParamKey": 170001,
+    "selectionMarkerLightPerformerId": "massnav_agent_selection_marker_light",
+    "selectionMarkerHeavyPerformerId": "massnav_agent_selection_marker_heavy",
     "teams": [
       {
         "teamId": 1,
