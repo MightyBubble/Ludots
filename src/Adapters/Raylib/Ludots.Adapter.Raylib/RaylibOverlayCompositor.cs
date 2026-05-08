@@ -70,10 +70,10 @@ namespace Ludots.Adapter.Raylib
             bool hasUnderlay = scene != null && scene.ContainsLayer(PresentationOverlayLayer.UnderUi);
             bool hasTopOverlay = scene != null && scene.ContainsLayer(PresentationOverlayLayer.TopMost);
             bool hasUiLayer = !suppressHostDiagnosticUi && drawSkiaUi && uiRoot.Scene != null;
-            bool directTopOverlayComposite = hasTopOverlay && _useGpuDirectUnderlay;
-            bool framebufferDirectTopOverlay = directTopOverlayComposite && _useFramebufferDirectUnderlay;
-            bool gpuDirectTopOverlay = directTopOverlayComposite && !framebufferDirectTopOverlay;
-            bool rasterTopOverlay = hasTopOverlay && !directTopOverlayComposite;
+            bool directTopOverlayComposite = false;
+            bool framebufferDirectTopOverlay = false;
+            bool gpuDirectTopOverlay = false;
+            bool rasterTopOverlay = hasTopOverlay;
             bool directUnderlayComposite = hasUnderlay && !hasUiLayer && !hasTopOverlay;
             bool framebufferDirectUnderlay = directUnderlayComposite && _useGpuDirectUnderlay && _useFramebufferDirectUnderlay;
             bool gpuDirectUnderlay = directUnderlayComposite && _useGpuDirectUnderlay && !framebufferDirectUnderlay;
