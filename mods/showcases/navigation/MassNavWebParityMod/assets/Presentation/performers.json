@@ -213,7 +213,8 @@
     "id": "massnav_agent_light",
     "defaultColor": [0.38, 0.72, 1.0, 1.0],
     "children": [
-      { "definitionId": "massnav_agent_health_hud_light", "scopeTag": "structure" }
+      { "definitionId": "massnav_agent_health_hud_light", "scopeTag": "structure" },
+      { "definitionId": "massnav_agent_health_text_light", "scopeTag": "structure" }
     ],
     "behaviors": [
       {
@@ -292,7 +293,8 @@
     "id": "massnav_agent_heavy",
     "defaultColor": [0.95, 0.58, 0.28, 1.0],
     "children": [
-      { "definitionId": "massnav_agent_health_hud_heavy", "scopeTag": "structure" }
+      { "definitionId": "massnav_agent_health_hud_heavy", "scopeTag": "structure" },
+      { "definitionId": "massnav_agent_health_text_heavy", "scopeTag": "structure" }
     ],
     "behaviors": [
       {
@@ -427,6 +429,84 @@
           "inheritScale": false
         }
       }
+    ]
+  },
+  {
+    "id": "massnav_agent_health_text_light",
+    "defaultTextId": "hud.attribute.current_over_base",
+    "legacyWorldTextMode": "AttributeCurrentOverBase",
+    "defaultFontSize": 11,
+    "defaultColor": [1.0, 0.98, 0.92, 1.0],
+    "behaviors": [
+      {
+        "slot": 0,
+        "kind": "AssetBinding",
+        "activeByDefault": true,
+        "assetBinding": {
+          "assetKind": "WorldText",
+          "assetId": "hud.attribute.current_over_base",
+          "scaleParamKey": 170020,
+          "materialParamKey": 170021,
+          "mobility": "Movable",
+          "localScale": [1.0, 1.0, 1.0]
+        }
+      },
+      {
+        "slot": 1,
+        "kind": "Attachment",
+        "activeByDefault": true,
+        "attachment": {
+          "target": "Parent",
+          "offset": [0.0, 1.42, 0.0],
+          "rotationOffset": [0.0, 0.0, 0.0, 1.0],
+          "inheritScale": false
+        }
+      }
+    ],
+    "bindings": [
+      { "paramKey": 170020, "source": "attribute", "attributeName": "Health" },
+      { "paramKey": 170021, "source": "attributeBase", "attributeName": "Health" }
+    ],
+    "paramDefaults": [
+      { "paramKey": 170020, "lane": "Float", "floatValue": 100.0 },
+      { "paramKey": 170021, "lane": "Float", "floatValue": 100.0 }
+    ]
+  },
+  {
+    "id": "massnav_agent_health_text_heavy",
+    "extends": "massnav_agent_health_text_light",
+    "defaultTextId": "hud.attribute.current_over_base",
+    "legacyWorldTextMode": "AttributeCurrentOverBase",
+    "defaultFontSize": 12,
+    "behaviors": [
+      {
+        "slot": 0,
+        "kind": "AssetBinding",
+        "activeByDefault": true,
+        "assetBinding": {
+          "assetKind": "WorldText",
+          "assetId": "hud.attribute.current_over_base",
+          "scaleParamKey": 170020,
+          "materialParamKey": 170021,
+          "mobility": "Movable",
+          "localScale": [1.0, 1.0, 1.0]
+        }
+      },
+      {
+        "slot": 1,
+        "kind": "Attachment",
+        "activeByDefault": true,
+        "attachment": {
+          "target": "Parent",
+          "offset": [0.0, 1.76, 0.0],
+          "rotationOffset": [0.0, 0.0, 0.0, 1.0],
+          "inheritScale": false
+        }
+      }
+    ],
+    "paramDefaults": [
+      { "paramKey": 170020, "lane": "Float", "floatValue": 260.0 },
+      { "paramKey": 170021, "lane": "Float", "floatValue": 260.0 }
     ]
   },
   {

@@ -68,9 +68,17 @@ namespace Ludots.Tests.Presentation
                 "massnav_agent_light",
                 "massnav_agent_health_hud_light");
             AssertDefinitionHasChild(
+                FindObjectById(performers, "massnav_agent_light"),
+                "massnav_agent_light",
+                "massnav_agent_health_text_light");
+            AssertDefinitionHasChild(
                 FindObjectById(performers, "massnav_agent_heavy"),
                 "massnav_agent_heavy",
                 "massnav_agent_health_hud_heavy");
+            AssertDefinitionHasChild(
+                FindObjectById(performers, "massnav_agent_heavy"),
+                "massnav_agent_heavy",
+                "massnav_agent_health_text_heavy");
 
             JsonObject lightHud = FindObjectById(performers, "massnav_agent_health_hud_light");
             AssertHudDefinitionUsesHealthRatio(lightHud, "massnav_agent_health_hud_light", expectedWidth: 42f, expectedHeight: 5f);
@@ -79,6 +87,25 @@ namespace Ludots.Tests.Presentation
             Assert.That(RequireString(heavyHud, "extends"), Is.EqualTo("massnav_agent_health_hud_light"),
                 "Heavy HUD should inherit the same Health ratio binding instead of duplicating a second binding source.");
             AssertHudWorldHudBinding(heavyHud, "massnav_agent_health_hud_heavy", expectedWidth: 58f, expectedHeight: 6f);
+
+            AssertWorldTextDefinitionUsesHealthCurrentOverBase(
+                FindObjectById(performers, "massnav_agent_health_text_light"),
+                "massnav_agent_health_text_light",
+                expectedFontSize: 11);
+            JsonObject heavyText = FindObjectById(performers, "massnav_agent_health_text_heavy");
+            Assert.That(RequireString(heavyText, "extends"), Is.EqualTo("massnav_agent_health_text_light"),
+                "Heavy text should inherit the same Health current/base binding instead of duplicating a second binding source.");
+            AssertWorldTextBinding(heavyText, "massnav_agent_health_text_heavy", expectedFontSize: 12);
+        }
+
+        [Test]
+        public void CoreHudDefinitions_AreDefinitionsOnly_NotGlobalAttributeWildcards()
+        {
+            string repoRoot = FindRepoRoot();
+            JsonArray performers = ReadArray(Path.Combine(repoRoot, "mods", "LudotsCoreMod", "assets", "Presentation", "performers.json"));
+
+            AssertDefinitionHasNoRules(FindObjectById(performers, "entity_health_bar"), "entity_health_bar");
+            AssertDefinitionHasNoRules(FindObjectById(performers, "entity_world_text"), "entity_world_text");
         }
 
         [Test]
@@ -318,6 +345,56 @@ namespace Ludots.Tests.Presentation
             Assert.That(materialParamKey, Is.GreaterThan(0), $"HUD performer '{definitionId}' must drive a material param.");
             AssertVector3(assetBinding["localScale"]?.AsArray(), expectedWidth, expectedHeight, 1f, $"HUD performer '{definitionId}' scale");
             return materialParamKey;
+        }
+
+        private static void AssertWorldTextDefinitionUsesHealthCurrentOverBase(JsonObject definition, string definitionId, int expectedFontSize)
+        {
+            (int currentParamKey, int baseParamKey) = AssertWorldTextBinding(definition, definitionId, expectedFontSize);
+            JsonArray bindings = definition["bindings"]?.AsArray()
+                ?? throw new InvalidOperationException($"Text performer '{definitionId}' must declare param bindings.");
+
+            JsonObject currentBinding = bindings
+                .Select(node => node?.AsObject())
+                .FirstOrDefault(obj => obj?["paramKey"]?.GetValue<int>() == currentParamKey)
+                ?? throw new InvalidOperationException($"Text performer '{definitionId}' must bind its current Health param.");
+            Assert.That(currentBinding["source"]?.GetValue<string>(), Is.EqualTo("attribute"));
+            Assert.That(currentBinding["attributeName"]?.GetValue<string>(), Is.EqualTo(AgentHealthAttributeName));
+
+            JsonObject baseBinding = bindings
+                .Select(node => node?.AsObject())
+                .FirstOrDefault(obj => obj?["paramKey"]?.GetValue<int>() == baseParamKey)
+                ?? throw new InvalidOperationException($"Text performer '{definitionId}' must bind its base Health param.");
+            Assert.That(baseBinding["source"]?.GetValue<string>(), Is.EqualTo("attributeBase"));
+            Assert.That(baseBinding["attributeName"]?.GetValue<string>(), Is.EqualTo(AgentHealthAttributeName));
+        }
+
+        private static (int CurrentParamKey, int BaseParamKey) AssertWorldTextBinding(JsonObject definition, string definitionId, int expectedFontSize)
+        {
+            Assert.That(definition["defaultTextId"]?.GetValue<string>(), Is.EqualTo("hud.attribute.current_over_base"));
+            Assert.That(definition["legacyWorldTextMode"]?.GetValue<string>(), Is.EqualTo("AttributeCurrentOverBase"));
+            Assert.That(definition["defaultFontSize"]?.GetValue<int>(), Is.EqualTo(expectedFontSize));
+
+            JsonArray behaviors = definition["behaviors"]?.AsArray()
+                ?? throw new InvalidOperationException($"Text performer '{definitionId}' must declare behaviors.");
+            JsonObject assetBinding = behaviors
+                .Select(node => node?.AsObject())
+                .FirstOrDefault(obj => obj?["kind"]?.GetValue<string>() == "AssetBinding")?["assetBinding"]?.AsObject()
+                ?? throw new InvalidOperationException($"Text performer '{definitionId}' must declare an AssetBinding behavior.");
+
+            Assert.That(assetBinding["assetKind"]?.GetValue<string>(), Is.EqualTo("WorldText"));
+            Assert.That(assetBinding["assetId"]?.GetValue<string>(), Is.EqualTo("hud.attribute.current_over_base"));
+            Assert.That(assetBinding["mobility"]?.GetValue<string>(), Is.EqualTo("Movable"));
+            int currentParamKey = assetBinding["scaleParamKey"]?.GetValue<int>() ?? 0;
+            int baseParamKey = assetBinding["materialParamKey"]?.GetValue<int>() ?? 0;
+            Assert.That(currentParamKey, Is.GreaterThan(0), $"Text performer '{definitionId}' must drive current value from a param.");
+            Assert.That(baseParamKey, Is.GreaterThan(0), $"Text performer '{definitionId}' must drive base value from a param.");
+            return (currentParamKey, baseParamKey);
+        }
+
+        private static void AssertDefinitionHasNoRules(JsonObject definition, string definitionId)
+        {
+            Assert.That(definition.ContainsKey("rules"), Is.False,
+                $"Core performer '{definitionId}' must not auto-spawn for every AttributeBuffer entity; gameplay mods should attach HUD explicitly.");
         }
 
         private static JsonObject FindObjectById(JsonArray array, string id)

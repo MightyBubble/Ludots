@@ -69,30 +69,6 @@
           "materialParamKey": 0
         }
       }
-    ],
-    "rules": [
-      {
-        "event": {
-          "kind": "EntitySpawned"
-        },
-        "command": {
-          "kind": "CreatePerformer",
-          "scopeSource": "EventPayloadA",
-          "definitionId": "entity_health_bar"
-        },
-        "condition": {
-          "inline": "SourceHasAttributes"
-        }
-      },
-      {
-        "event": {
-          "kind": "EntityDestroyed"
-        },
-        "command": {
-          "kind": "DestroyPerformerScope",
-          "scopeSource": "EventPayloadA"
-        }
-      }
     ]
   },
   {
@@ -151,30 +127,6 @@
             1.0,
             1.0
           ]
-        }
-      }
-    ],
-    "rules": [
-      {
-        "event": {
-          "kind": "EntitySpawned"
-        },
-        "command": {
-          "kind": "CreatePerformer",
-          "scopeSource": "EventPayloadA",
-          "definitionId": "entity_world_text"
-        },
-        "condition": {
-          "inline": "SourceHasAttributes"
-        }
-      },
-      {
-        "event": {
-          "kind": "EntityDestroyed"
-        },
-        "command": {
-          "kind": "DestroyPerformerScope",
-          "scopeSource": "EventPayloadA"
         }
       }
     ]
