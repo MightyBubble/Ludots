@@ -1155,7 +1155,7 @@ namespace Ludots.Core.Engine
             // PerformerRuntimeSystem consumes commands, manages instance lifecycle.
             RegisterPresentationSystem(performerRuntimeSystem);
             // Entity-anchored performers follow owner VisualTransform before behavior/animator/emit reads them.
-            RegisterPresentationSystem(new PerformerEntityTransformSyncSystem(World, performerRuntime, presentationTimingDiagnostics));
+            RegisterPresentationSystem(new PerformerEntityTransformSyncSystem(World, performerRuntime, performerDefinitions, presentationTimingDiagnostics));
             // PerformerBehaviorSystem drives blackboard-bound behavior before animator and emit read it.
             RegisterPresentationSystem(performerBehaviorSystem);
             RegisterPresentationSystem(animatorRuntimeSystem);

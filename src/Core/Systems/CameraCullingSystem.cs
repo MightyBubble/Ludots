@@ -431,7 +431,7 @@ namespace Ludots.Core.Systems
                 return false;
             }
 
-            if (payload.Count != 1 ||
+            if (payload.RootCount != 1 ||
                 payload.SingleRootPerformer == Entity.Null)
             {
                 return false;
@@ -1635,7 +1635,7 @@ namespace Ludots.Core.Systems
         private void EnsureVisiblePayloadEmitWork(in PresentationOwnerHasPerformerPayload payload)
         {
             if (_performers == null ||
-                payload.Count != 1 ||
+                payload.RootCount != 1 ||
                 payload.SingleRootPerformer == Entity.Null)
             {
                 return;

@@ -9,6 +9,7 @@ namespace Ludots.Core.Presentation.Components
     public struct PresentationOwnerHasPerformerPayload
     {
         public int Count;
+        public int RootCount;
         public Entity SingleRootPerformer;
         public byte SingleRootTransformSync;
     }

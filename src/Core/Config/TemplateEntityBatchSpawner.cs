@@ -347,7 +347,9 @@ namespace Ludots.Core.Config
                         ownerPayloads[componentIndex] = new PresentationOwnerHasPerformerPayload
                         {
                             Count = 0,
+                            RootCount = 0,
                             SingleRootPerformer = Entity.Null,
+                            SingleRootTransformSync = 0,
                         };
                     }
                 }

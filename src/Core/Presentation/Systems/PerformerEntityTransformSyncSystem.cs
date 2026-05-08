@@ -25,15 +25,18 @@ namespace Ludots.Core.Presentation.Systems
 
         private readonly PresentationTimingDiagnostics? _timingDiagnostics;
         private readonly PerformerEntityRuntime _runtime;
+        private readonly PerformerDefinitionRegistry? _definitions;
 
         public PerformerEntityTransformSyncSystem(
             World world,
             PerformerEntityRuntime runtime,
+            PerformerDefinitionRegistry? definitions = null,
             PresentationTimingDiagnostics? timingDiagnostics = null)
             : base(world)
         {
             _timingDiagnostics = timingDiagnostics;
             _runtime = runtime ?? throw new ArgumentNullException(nameof(runtime));
+            _definitions = definitions;
         }
 
         public override void Update(in float dt)
@@ -113,7 +116,7 @@ namespace Ludots.Core.Presentation.Systems
                 foreach (int index in chunk)
                 {
                     ref readonly PresentationOwnerHasPerformerPayload payload = ref payloads[index];
-                    if (payload.Count != 1 ||
+                    if (payload.RootCount != 1 ||
                         payload.SingleRootTransformSync == 0 ||
                         payload.SingleRootPerformer == Entity.Null ||
                         !World.IsAlive(payload.SingleRootPerformer) ||
@@ -163,8 +166,118 @@ namespace Ludots.Core.Presentation.Systems
                     facing = newFacing;
                     scale.Value = newScale;
                     MarkEmitDirty(payload.SingleRootPerformer);
+                    SyncFastAttachedChildren(payload.SingleRootPerformer, in newPosition, in newRotation, in newFacing, in newScale);
                 }
             }
+        }
+
+        private void SyncFastAttachedChildren(
+            Entity parent,
+            in Vector3 parentPosition,
+            in Quaternion parentRotation,
+            in PerformerWorldFacing parentFacing,
+            in Vector3 parentScale)
+        {
+            if (_definitions == null ||
+                parent == Entity.Null ||
+                !World.IsAlive(parent) ||
+                !World.Has<PerformerChildren>(parent))
+            {
+                return;
+            }
+
+            ref PerformerChildren children = ref World.Get<PerformerChildren>(parent);
+            for (int i = 0; i < children.Count; i++)
+            {
+                Entity child = children.Get(i);
+                if (!World.IsAlive(child) ||
+                    !World.Has<PerfOwnerPayloadAttachedTransformSync>(child) ||
+                    !World.Has<PerformerState>(child) ||
+                    !World.Has<PerformerParent>(child) ||
+                    World.Get<PerformerParent>(child).Parent != parent)
+                {
+                    continue;
+                }
+
+                ref PerformerState state = ref World.Get<PerformerState>(child);
+                if (!_definitions.TryGet(state.DefId, out PerformerDefinition definition) ||
+                    !definition.SupportsFastParentAttachmentTick ||
+                    (uint)definition.FastParentAttachmentBehaviorIndex >= (uint)definition.Behaviors.Length)
+                {
+                    continue;
+                }
+
+                ref readonly BehaviorSlot slot = ref definition.Behaviors[definition.FastParentAttachmentBehaviorIndex];
+                if (!IsBehaviorActive(state.BehaviorActiveMask, slot.SlotIndex))
+                {
+                    continue;
+                }
+
+                ApplyFastParentAttachment(
+                    child,
+                    in slot.Attachment,
+                    in parentPosition,
+                    in parentRotation,
+                    in parentFacing,
+                    in parentScale);
+            }
+        }
+
+        private void ApplyFastParentAttachment(
+            Entity child,
+            in AttachmentConfig config,
+            in Vector3 parentPosition,
+            in Quaternion parentRotation,
+            in PerformerWorldFacing parentFacing,
+            in Vector3 parentScale)
+        {
+            if (!World.Has<PerformerTransformSource>(child) ||
+                !World.Has<PerformerWorldPosition>(child) ||
+                !World.Has<PerformerWorldPlanePosition>(child) ||
+                !World.Has<PerformerWorldRotation>(child) ||
+                !World.Has<PerformerWorldFacing>(child) ||
+                !World.Has<PerformerWorldScale>(child))
+            {
+                return;
+            }
+
+            Quaternion normalizedParentRotation = WorldPlane2D.NormalizeOrIdentity(parentRotation);
+            Vector3 normalizedParentScale = WorldPlane2D.NormalizeScale(parentScale);
+            Vector3 scaledOffset = config.InheritScale
+                ? normalizedParentScale * config.Offset
+                : config.Offset;
+            Vector3 nextPosition = parentPosition + Vector3.Transform(scaledOffset, normalizedParentRotation);
+            Vector2 nextPlanePosition = WorldPlane2D.VisualMetersToLogicCm(in nextPosition);
+            Quaternion nextRotation = WorldPlane2D.NormalizeOrIdentity(
+                normalizedParentRotation * WorldPlane2D.NormalizeOrIdentity(config.RotationOffset));
+            Vector3 nextScale = config.InheritScale ? normalizedParentScale : Vector3.One;
+
+            ref PerformerTransformSource source = ref World.Get<PerformerTransformSource>(child);
+            ref PerformerWorldPosition position = ref World.Get<PerformerWorldPosition>(child);
+            ref PerformerWorldPlanePosition planePosition = ref World.Get<PerformerWorldPlanePosition>(child);
+            ref PerformerWorldRotation rotation = ref World.Get<PerformerWorldRotation>(child);
+            ref PerformerWorldFacing facing = ref World.Get<PerformerWorldFacing>(child);
+            ref PerformerWorldScale scale = ref World.Get<PerformerWorldScale>(child);
+            bool changed =
+                source.Value != TransformSource.AttachedToParent ||
+                position.Value != nextPosition ||
+                planePosition.ValueCm != nextPlanePosition ||
+                rotation.Value != nextRotation ||
+                facing.AngleRad != parentFacing.AngleRad ||
+                facing.HasValue != parentFacing.HasValue ||
+                scale.Value != nextScale;
+            if (!changed)
+            {
+                return;
+            }
+
+            source.Value = TransformSource.AttachedToParent;
+            position.Value = nextPosition;
+            planePosition.ValueCm = nextPlanePosition;
+            rotation.Value = nextRotation;
+            facing = parentFacing;
+            scale.Value = nextScale;
+            MarkEmitDirty(child);
         }
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
@@ -188,6 +301,12 @@ namespace Ludots.Core.Presentation.Systems
         private void MarkEmitDirty(Entity performer)
         {
             _runtime.MarkTransformDrivenEmitDirty(performer);
+        }
+
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        private static bool IsBehaviorActive(uint mask, int slotIndex)
+        {
+            return slotIndex is >= 0 and < 32 && (mask & (1u << slotIndex)) != 0;
         }
 
     }

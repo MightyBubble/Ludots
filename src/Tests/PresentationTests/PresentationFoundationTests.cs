@@ -1228,13 +1228,18 @@ namespace Ludots.Tests.Presentation
             Entity ownerA = world.Create();
             Entity ownerB = world.Create();
             var instances = new PerformerEntityRuntime(world);
+            var definitions = new PerformerDefinitionRegistry();
+            int rootDefA = definitions.Register("runtime.payload.root.a", new PerformerDefinition());
+            int childDefA = definitions.Register("runtime.payload.child.a", new PerformerDefinition());
+            int rootDefB = definitions.Register("runtime.payload.root.b", new PerformerDefinition());
+            instances.BindDefinitions(definitions);
 
             Assert.That(instances.ActiveCount, Is.EqualTo(0));
             Assert.That(instances.HasOwnerPayload(ownerA), Is.False);
 
-            Entity rootA = instances.Create(defId: 11, ownerA, scopeId: 1);
-            Entity childA = instances.Create(defId: 12, ownerA, scopeId: 1, PresentationAnchorKind.Entity, Vector3.Zero, stableId: 1001, rootA, default);
-            Entity rootB = instances.Create(defId: 13, ownerB, scopeId: 2);
+            Entity rootA = instances.Create(rootDefA, ownerA, scopeId: 1);
+            Entity childA = instances.Create(childDefA, ownerA, scopeId: 1, PresentationAnchorKind.Entity, Vector3.Zero, stableId: 1001, rootA, definitions.Get(childDefA));
+            Entity rootB = instances.Create(rootDefB, ownerB, scopeId: 2);
 
             Assert.That(instances.ActiveCount, Is.EqualTo(3));
             Assert.That(instances.HasOwnerPayload(ownerA), Is.True);

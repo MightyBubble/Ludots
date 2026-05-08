@@ -241,12 +241,15 @@ namespace Ludots.Core.Presentation.Performers
             bool includeTransformSyncTick = BatchRequiresTransformSyncTick(definition, defaultBehaviorMask, owners);
             bool includeOwnerPayloadTransformSync = includeTransformSyncTick &&
                 CanBatchUseOwnerPayloadTransformSync(definition, defaultBehaviorMask, owners);
+            bool includeGroundingTick = BatchRequiresGroundingTick(definition, defaultBehaviorMask, owners);
             Signature signature = BuildBatchSignature(
                 definition,
                 defaultBehaviorMask,
                 includeTransformSyncTick,
                 includeOwnerPayloadTransformSync,
-                includeAttachmentTick: true);
+                includeOwnerPayloadAttachedTransformSync: false,
+                includeAttachmentTick: true,
+                includeGroundingTick);
             LastRootBatchSetupMs = ElapsedMs(setupStart);
             long worldCreateStart = Stopwatch.GetTimestamp();
             _world.Create(created, signature, owners.Length);
@@ -1143,12 +1146,14 @@ namespace Ludots.Core.Presentation.Performers
             }
 
             BehaviorSlot[] behaviors = definition.Behaviors;
-            if (behaviors == null)
+            if (behaviors == null ||
+                !_world.Has<PerformerState>(entity))
             {
                 RemoveTickBehaviorMarkers(entity);
                 return;
             }
 
+            ref readonly PerformerState state = ref _world.Get<PerformerState>(entity);
             bool hasSound = false;
             bool hasSpline = false;
             bool hasAttachment = false;
@@ -1172,8 +1177,7 @@ namespace Ludots.Core.Presentation.Performers
                     case BehaviorKind.Sound: hasSound = true; break;
                     case BehaviorKind.Spline: hasSpline = true; break;
                     case BehaviorKind.Grounding:
-                        hasGrounding = slot.Grounding.Mode != GroundingMode.None &&
-                                       slot.Grounding.UpdatePolicy == GroundingUpdatePolicy.EveryFrame;
+                        hasGrounding |= GroundingRequiresPerformerTick(entity, in state, in slot.Grounding);
                         break;
                     case BehaviorKind.Animator: hasAnimator = true; break;
                     case BehaviorKind.Attachment:
@@ -1188,6 +1192,12 @@ namespace Ludots.Core.Presentation.Performers
                 }
             }
 
+            bool canUseOwnerPayloadAttachedTransformSync =
+                CanUseOwnerPayloadAttachedTransformSync(entity, definition, activeBehaviorMask);
+            bool needsTransformSync = !canUseOwnerPayloadAttachedTransformSync &&
+                PerformerTransformRequiresTick(entity, depth: 0);
+            hasAttachmentTick &= !canUseOwnerPayloadAttachedTransformSync;
+
             SyncTickBehaviorMarker<PerfHasSound>(entity, hasSound);
             SyncTickBehaviorMarker<PerfHasSpline>(entity, hasSpline);
             SyncTickBehaviorMarker<PerfHasAttachment>(entity, hasAttachment);
@@ -1195,9 +1205,9 @@ namespace Ludots.Core.Presentation.Performers
             SyncTickBehaviorMarker<PerfHasGrounding>(entity, hasGrounding);
             SyncTickBehaviorMarker<PerfHasOwnerFacingBinding>(entity, hasOwnerFacingBinding);
             SyncTickBehaviorMarker<PerfHasMinimapMarker>(entity, hasMinimapMarker);
-            bool needsTransformSync = PerformerTransformRequiresTick(entity, depth: 0);
             SyncTickBehaviorMarker<PerfTransformSyncTick>(entity, needsTransformSync);
             SyncTickBehaviorMarker<PerfOwnerPayloadTransformSync>(entity, needsTransformSync && CanUseOwnerPayloadTransformSync(entity));
+            SyncTickBehaviorMarker<PerfOwnerPayloadAttachedTransformSync>(entity, canUseOwnerPayloadAttachedTransformSync);
             SyncTickBehaviorMarker<PerfHasAnimator>(entity, hasAnimator);
         }
 
@@ -1252,9 +1262,13 @@ namespace Ludots.Core.Presentation.Performers
                 MarkRetainedPresentationRequestDirty(entity);
             }
 
-            bool needsTransformSync = PerformerTransformRequiresTick(entity, depth: 0);
+            bool canUseOwnerPayloadAttachedTransformSync =
+                CanUseOwnerPayloadAttachedTransformSync(entity, definition, activeBehaviorMask);
+            bool needsTransformSync = !canUseOwnerPayloadAttachedTransformSync &&
+                PerformerTransformRequiresTick(entity, depth: 0);
             SyncTickBehaviorMarker<PerfTransformSyncTick>(entity, needsTransformSync);
             SyncTickBehaviorMarker<PerfOwnerPayloadTransformSync>(entity, needsTransformSync && CanUseOwnerPayloadTransformSync(entity));
+            SyncTickBehaviorMarker<PerfOwnerPayloadAttachedTransformSync>(entity, canUseOwnerPayloadAttachedTransformSync);
         }
 
         public bool SetBehaviorActive(Entity entity, PerformerDefinition definition, int slotIndex, bool active)
@@ -1349,6 +1363,11 @@ namespace Ludots.Core.Presentation.Performers
                 RemoveMarker<PerfOwnerPayloadTransformSync>(entity);
             }
 
+            if (_world.Has<PerfOwnerPayloadAttachedTransformSync>(entity))
+            {
+                RemoveMarker<PerfOwnerPayloadAttachedTransformSync>(entity);
+            }
+
             if (_world.Has<PerfHasAnimator>(entity))
             {
                 RemoveMarker<PerfHasAnimator>(entity);
@@ -1425,7 +1444,7 @@ namespace Ludots.Core.Presentation.Performers
 
             if (!DefinitionHasAttachmentTransformConsumers(definition))
             {
-                return false;
+                return true;
             }
 
             if (!_world.IsAlive(entity) || !_world.Has<PerformerState>(entity))
@@ -1446,6 +1465,83 @@ namespace Ludots.Core.Presentation.Performers
 
             Entity parent = _world.Get<PerformerParent>(entity).Parent;
             return PerformerTransformRequiresTick(parent, depth: 0);
+        }
+
+        private bool CanUseOwnerPayloadAttachedTransformSync(
+            Entity entity,
+            PerformerDefinition definition,
+            uint activeMask)
+        {
+            if (entity == Entity.Null ||
+                !_world.IsAlive(entity) ||
+                !_world.Has<PerformerState>(entity) ||
+                !_world.Has<PerformerParent>(entity) ||
+                !_world.Has<PerformerTransformSource>(entity) ||
+                !DefinitionHasAttachmentTransformConsumers(definition) ||
+                !definition.SupportsFastParentAttachmentTick ||
+                !TryGetInlineParentAttachment(definition, activeMask, out _))
+            {
+                return false;
+            }
+
+            ref readonly PerformerState state = ref _world.Get<PerformerState>(entity);
+            if (state.AnchorKind != PresentationAnchorKind.Entity)
+            {
+                return false;
+            }
+
+            Entity parent = _world.Get<PerformerParent>(entity).Parent;
+            return parent != Entity.Null &&
+                   _world.IsAlive(parent) &&
+                   _world.Has<PerfOwnerPayloadTransformSync>(parent);
+        }
+
+        private bool GroundingRequiresPerformerTick(
+            Entity entity,
+            in PerformerState state,
+            in GroundingConfig config)
+        {
+            if (config.Mode == GroundingMode.None ||
+                config.UpdatePolicy != GroundingUpdatePolicy.EveryFrame)
+            {
+                return false;
+            }
+
+            if (CanUseOwnerHeightmapSampleForSnapToGround(in state, entity, in config))
+            {
+                return false;
+            }
+
+            return true;
+        }
+
+        private bool CanUseOwnerHeightmapSampleForSnapToGround(
+            in PerformerState state,
+            Entity performer,
+            in GroundingConfig config)
+        {
+            if (!CanUseOwnerHeightmapSampleForSnapToGroundDefinition(definition: null, in config) ||
+                state.AnchorKind != PresentationAnchorKind.Entity ||
+                state.OwnerEntity == Entity.Null ||
+                !_world.IsAlive(state.OwnerEntity) ||
+                !_world.Has<VisualTransform>(state.OwnerEntity) ||
+                !_world.Has<VisualHeightmapSampleState>(state.OwnerEntity) ||
+                !_world.Has<PerformerTransformSource>(performer) ||
+                _world.Get<PerformerTransformSource>(performer).Value != TransformSource.EntityTransform)
+            {
+                return false;
+            }
+
+            return true;
+        }
+
+        private static bool CanUseOwnerHeightmapSampleForSnapToGroundDefinition(
+            PerformerDefinition? definition,
+            in GroundingConfig config)
+        {
+            return config.Mode == GroundingMode.SnapToGround &&
+                   config.Offset == 0f &&
+                   (definition == null || definition.PositionOffset == Vector3.Zero);
         }
 
         private static bool DefinitionHasAttachmentTransformConsumers(PerformerDefinition definition)
@@ -1480,6 +1576,64 @@ namespace Ludots.Core.Presentation.Performers
             return DefinitionRequiresTransformSyncForStaticOwner(definition, activeMask, depth: 0);
         }
 
+        private bool BatchRequiresGroundingTick(
+            PerformerDefinition definition,
+            uint activeMask,
+            ReadOnlySpan<Entity> owners)
+        {
+            if (definition == null ||
+                definition.Behaviors == null ||
+                definition.Behaviors.Length == 0 ||
+                owners.Length == 0)
+            {
+                return false;
+            }
+
+            bool hasGroundingWork = false;
+            BehaviorSlot[] behaviors = definition.Behaviors;
+            for (int i = 0; i < behaviors.Length; i++)
+            {
+                ref readonly BehaviorSlot slot = ref behaviors[i];
+                if (slot.SlotIndex is < 0 or >= 32 ||
+                    (activeMask & (1u << slot.SlotIndex)) == 0 ||
+                    slot.Kind != BehaviorKind.Grounding)
+                {
+                    continue;
+                }
+
+                if (slot.Grounding.Mode == GroundingMode.None ||
+                    slot.Grounding.UpdatePolicy != GroundingUpdatePolicy.EveryFrame)
+                {
+                    continue;
+                }
+
+                hasGroundingWork = true;
+                if (!CanUseOwnerHeightmapSampleForSnapToGroundDefinition(definition, in slot.Grounding))
+                {
+                    return true;
+                }
+            }
+
+            if (!hasGroundingWork)
+            {
+                return false;
+            }
+
+            for (int i = 0; i < owners.Length; i++)
+            {
+                Entity owner = owners[i];
+                if (owner == Entity.Null ||
+                    !_world.IsAlive(owner) ||
+                    !_world.Has<VisualTransform>(owner) ||
+                    !_world.Has<VisualHeightmapSampleState>(owner))
+                {
+                    return true;
+                }
+            }
+
+            return false;
+        }
+
         private bool CanBatchUseOwnerPayloadTransformSync(
             PerformerDefinition definition,
             uint activeMask,
@@ -1496,7 +1650,8 @@ namespace Ludots.Core.Presentation.Performers
                 Entity owner = owners[i];
                 if (owner == Entity.Null ||
                     !_world.IsAlive(owner) ||
-                    !_world.Has<PresentationOwnerHasPerformerPayload>(owner) ||
+                    !_world.Has<WorldPositionCm>(owner) ||
+                    !_world.Has<VisualTransform>(owner) ||
                     _world.Has<PresentationStaticTransform>(owner))
                 {
                     return false;
@@ -1511,7 +1666,7 @@ namespace Ludots.Core.Presentation.Performers
             uint activeMask,
             int depth)
         {
-            if (depth >= 8 || definition.Children.Length != 0)
+            if (depth >= 8)
             {
                 return false;
             }
@@ -1848,19 +2003,28 @@ namespace Ludots.Core.Presentation.Performers
 
                 long childSetupStart = Stopwatch.GetTimestamp();
                 uint defaultBehaviorMask = BuildDefaultBehaviorMask(childDefinition);
-                bool includeTransformSyncTick = !BatchCanInlineParentAttachmentWithoutTick(
+                bool needsTransformSync = !BatchCanInlineParentAttachmentWithoutTick(
                     childDefinition,
                     defaultBehaviorMask,
                     parentEntities,
                     depth: 0);
+                bool includeOwnerPayloadAttachedTransformSync = needsTransformSync &&
+                    BatchCanUseOwnerPayloadAttachedTransformSync(
+                        childDefinition,
+                        defaultBehaviorMask,
+                        parentEntities);
+                bool includeTransformSyncTick = needsTransformSync && !includeOwnerPayloadAttachedTransformSync;
                 bool includeOwnerPayloadTransformSync = false;
                 bool includeAttachmentTick = includeTransformSyncTick;
+                bool includeGroundingTick = BatchRequiresGroundingTick(childDefinition, defaultBehaviorMask, owners);
                 Signature signature = BuildBatchSignature(
                     childDefinition,
                     defaultBehaviorMask,
                     includeTransformSyncTick,
                     includeOwnerPayloadTransformSync,
-                    includeAttachmentTick);
+                    includeOwnerPayloadAttachedTransformSync,
+                    includeAttachmentTick,
+                    includeGroundingTick);
                 LastChildBatchSetupMs += ElapsedMs(childSetupStart);
 
                 long childWorldCreateStart = Stopwatch.GetTimestamp();
@@ -1935,6 +2099,33 @@ namespace Ludots.Core.Presentation.Performers
             return true;
         }
 
+        private bool BatchCanUseOwnerPayloadAttachedTransformSync(
+            PerformerDefinition definition,
+            uint activeMask,
+            ReadOnlySpan<Entity> parents)
+        {
+            if (parents.Length == 0 ||
+                !DefinitionHasAttachmentTransformConsumers(definition) ||
+                !definition.SupportsFastParentAttachmentTick ||
+                !TryGetInlineParentAttachment(definition, activeMask, out _))
+            {
+                return false;
+            }
+
+            for (int i = 0; i < parents.Length; i++)
+            {
+                Entity parent = parents[i];
+                if (parent == Entity.Null ||
+                    !_world.IsAlive(parent) ||
+                    !_world.Has<PerfOwnerPayloadTransformSync>(parent))
+                {
+                    return false;
+                }
+            }
+
+            return true;
+        }
+
         private static bool CanBatchCreateDirectChildren(
             PerformerDefinitionRegistry definitions,
             ChildPerformerRef[] children)
@@ -1996,7 +2187,9 @@ namespace Ludots.Core.Presentation.Performers
                 defaultBehaviorMask,
                 includeTransformSyncTick: true,
                 includeOwnerPayloadTransformSync: false,
-                includeAttachmentTick: true);
+                includeOwnerPayloadAttachedTransformSync: false,
+                includeAttachmentTick: true,
+                includeGroundingTick: true);
         }
 
         private static Signature BuildBatchSignature(
@@ -2004,7 +2197,9 @@ namespace Ludots.Core.Presentation.Performers
             uint defaultBehaviorMask,
             bool includeTransformSyncTick,
             bool includeOwnerPayloadTransformSync,
-            bool includeAttachmentTick)
+            bool includeOwnerPayloadAttachedTransformSync,
+            bool includeAttachmentTick,
+            bool includeGroundingTick)
         {
             Signature signature =
                 Component<PerformerState>.Signature +
@@ -2050,8 +2245,9 @@ namespace Ludots.Core.Presentation.Performers
                         case BehaviorKind.Sound: hasSound = true; break;
                         case BehaviorKind.Spline: hasSpline = true; break;
                         case BehaviorKind.Grounding:
-                            hasGrounding = slot.Grounding.Mode != GroundingMode.None &&
-                                           slot.Grounding.UpdatePolicy == GroundingUpdatePolicy.EveryFrame;
+                            hasGrounding |= includeGroundingTick &&
+                                            slot.Grounding.Mode != GroundingMode.None &&
+                                            slot.Grounding.UpdatePolicy == GroundingUpdatePolicy.EveryFrame;
                             break;
                         case BehaviorKind.Animator: hasAnimator = true; break;
                         case BehaviorKind.Attachment:
@@ -2105,6 +2301,11 @@ namespace Ludots.Core.Presentation.Performers
             if (includeOwnerPayloadTransformSync)
             {
                 signature += Component<PerfOwnerPayloadTransformSync>.Signature;
+            }
+
+            if (includeOwnerPayloadAttachedTransformSync)
+            {
+                signature += Component<PerfOwnerPayloadAttachedTransformSync>.Signature;
             }
 
             return signature;
@@ -2962,6 +3163,7 @@ namespace Ludots.Core.Presentation.Performers
                     payloads[row + offset] = new PresentationOwnerHasPerformerPayload
                     {
                         Count = 1,
+                        RootCount = 1,
                         SingleRootPerformer = performers[index],
                         SingleRootTransformSync = CanUseOwnerPayloadTransformSync(performers[index]) ? (byte)1 : (byte)0,
                     };
@@ -3391,8 +3593,9 @@ namespace Ludots.Core.Presentation.Performers
             var next = new PresentationOwnerHasPerformerPayload
             {
                 Count = bucket.Count,
-                SingleRootPerformer = bucket.TryGetSingle(out Entity single) ? single : Entity.Null,
-                SingleRootTransformSync = CanUseOwnerPayloadTransformSync(single) ? (byte)1 : (byte)0,
+                RootCount = TryGetSingleRoot(in bucket, out Entity singleRoot) ? 1 : CountRoots(in bucket),
+                SingleRootPerformer = singleRoot,
+                SingleRootTransformSync = CanUseOwnerPayloadTransformSync(singleRoot) ? (byte)1 : (byte)0,
             };
 
             if (_world.Has<PresentationOwnerHasPerformerPayload>(owner))
@@ -3420,15 +3623,76 @@ namespace Ludots.Core.Presentation.Performers
             if (performer == Entity.Null ||
                 !_world.IsAlive(performer) ||
                 !_world.Has<PerformerState>(performer) ||
-                !_world.Has<PerformerTransformSource>(performer) ||
-                !_world.Has<PerfOwnerPayloadTransformSync>(performer))
+                !_world.Has<PerformerTransformSource>(performer))
             {
                 return false;
             }
 
             ref readonly PerformerState state = ref _world.Get<PerformerState>(performer);
-            return state.AnchorKind == PresentationAnchorKind.Entity &&
-                _world.Get<PerformerTransformSource>(performer).Value == TransformSource.EntityTransform;
+            if (state.AnchorKind != PresentationAnchorKind.Entity ||
+                OwnerTransformIsStatic(in state) ||
+                state.OwnerEntity == Entity.Null ||
+                !_world.IsAlive(state.OwnerEntity) ||
+                !_world.Has<WorldPositionCm>(state.OwnerEntity) ||
+                !_world.Has<VisualTransform>(state.OwnerEntity) ||
+                _world.Get<PerformerTransformSource>(performer).Value != TransformSource.EntityTransform)
+            {
+                return false;
+            }
+
+            return _definitions == null ||
+                (_definitions.TryGet(state.DefId, out PerformerDefinition definition) &&
+                 DefinitionCanUseOwnerPayloadTransformSync(definition, state.BehaviorActiveMask, depth: 0));
+        }
+
+        private bool TryGetSingleRoot(in OwnerPerformerBucket bucket, out Entity root)
+        {
+            root = Entity.Null;
+            int rootCount = 0;
+            for (int i = 0; i < bucket.Count; i++)
+            {
+                Entity performer = bucket.GetAt(i);
+                if (!IsRootPerformer(performer))
+                {
+                    continue;
+                }
+
+                root = performer;
+                rootCount++;
+                if (rootCount > 1)
+                {
+                    root = Entity.Null;
+                    return false;
+                }
+            }
+
+            return rootCount == 1;
+        }
+
+        private int CountRoots(in OwnerPerformerBucket bucket)
+        {
+            int count = 0;
+            for (int i = 0; i < bucket.Count; i++)
+            {
+                if (IsRootPerformer(bucket.GetAt(i)))
+                {
+                    count++;
+                }
+            }
+
+            return count;
+        }
+
+        private bool IsRootPerformer(Entity performer)
+        {
+            if (performer == Entity.Null ||
+                !_world.IsAlive(performer))
+            {
+                return false;
+            }
+
+            return !_world.Has<PerformerParent>(performer) ||
+                   _world.Get<PerformerParent>(performer).Parent == Entity.Null;
         }
 
         private void ClearOwnerPayloadMarkers()

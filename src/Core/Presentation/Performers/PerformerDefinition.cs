@@ -130,6 +130,8 @@ namespace Ludots.Core.Presentation.Performers
         internal int SingleVisualProxyFastBehaviorIndex;
         internal bool SupportsSingleAnimatorFastUpdate;
         internal int SingleAnimatorFastBehaviorIndex;
+        internal bool SupportsFastParentAttachmentTick;
+        internal int FastParentAttachmentBehaviorIndex;
 
         internal void BuildBindingIndex()
         {
@@ -508,6 +510,9 @@ namespace Ludots.Core.Presentation.Performers
                 ? FindBehaviorIndexForSlot(Behaviors, TrailingZeroCount(AnimatorSlotMask), BehaviorKind.Animator)
                 : -1;
             SupportsSingleAnimatorFastUpdate &= SingleAnimatorFastBehaviorIndex >= 0;
+            SupportsFastParentAttachmentTick =
+                SupportsRetainedParentAttachmentFastTick(Behaviors, TickBehaviorIndices, out int fastParentAttachmentBehaviorIndex);
+            FastParentAttachmentBehaviorIndex = fastParentAttachmentBehaviorIndex;
         }
 
         private static int FindBehaviorIndexForSlot(BehaviorSlot[] behaviors, int slotIndex, BehaviorKind kind)
@@ -577,6 +582,36 @@ namespace Ludots.Core.Presentation.Performers
         private static bool SupportsReplayableSingleRequest(AssetKind kind)
         {
             return kind is AssetKind.WorldHud or AssetKind.WorldText or AssetKind.Spline or AssetKind.GroundOverlay;
+        }
+
+        private static bool SupportsRetainedParentAttachmentFastTick(
+            BehaviorSlot[] behaviors,
+            int[] tickBehaviorIndices,
+            out int behaviorIndex)
+        {
+            behaviorIndex = -1;
+            if (behaviors == null ||
+                tickBehaviorIndices == null ||
+                tickBehaviorIndices.Length != 1)
+            {
+                return false;
+            }
+
+            int candidateIndex = tickBehaviorIndices[0];
+            if ((uint)candidateIndex >= (uint)behaviors.Length)
+            {
+                return false;
+            }
+
+            ref readonly BehaviorSlot slot = ref behaviors[candidateIndex];
+            if (slot.Kind != BehaviorKind.Attachment ||
+                slot.Attachment.Target != AttachmentTarget.Parent)
+            {
+                return false;
+            }
+
+            behaviorIndex = candidateIndex;
+            return true;
         }
 
         private static int CountEveryFrameGroundingTickBehaviors(BehaviorSlot[] behaviors, int[] tickBehaviorIndices)

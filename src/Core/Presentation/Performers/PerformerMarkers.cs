@@ -15,6 +15,7 @@ namespace Ludots.Core.Presentation.Performers
     public struct PerfHasMinimapMarker {}
     public struct PerfTransformSyncTick {}
     public struct PerfOwnerPayloadTransformSync {}
+    public struct PerfOwnerPayloadAttachedTransformSync {}
     public struct PerfStaticStableVisual {}
     public struct PerfRetainedPresentationRequest {}
     public struct PerfRetainedPresentationRequestLifecycleTick {}

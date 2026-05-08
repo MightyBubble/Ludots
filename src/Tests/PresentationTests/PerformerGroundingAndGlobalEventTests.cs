@@ -715,7 +715,8 @@ namespace Ludots.Tests.Presentation
             {
                 world.Remove<PerformerBootstrapPending>(performer);
             }
-            Assert.That(world.Has<PerfHasGrounding>(performer), Is.True);
+            Assert.That(world.Has<PerfHasGrounding>(performer), Is.False,
+                "Entity-backed zero-offset snap-to-ground should reuse the owner's VisualHeightmapSampleState instead of entering the performer tick query.");
 
             using var system = new PerformerBehaviorSystem(
                 world,
@@ -780,6 +781,8 @@ namespace Ludots.Tests.Presentation
             {
                 world.Remove<PerformerBootstrapPending>(performer);
             }
+            Assert.That(world.Has<PerfHasGrounding>(performer), Is.True,
+                "Offset grounding still needs performer-side sampling.");
 
             using var system = new PerformerBehaviorSystem(
                 world,

@@ -798,6 +798,111 @@ namespace Ludots.Tests.Presentation
         }
 
         [Test]
+        public void Attachment_TargetParent_WorldHudChildUsesOwnerPayloadTransformSync()
+        {
+            using var world = World.Create();
+            var instances = new PerformerEntityRuntime(world);
+            var definitions = new PerformerDefinitionRegistry();
+            Entity owner = world.Create(
+                WorldPositionCm.FromCm(1000, 2000),
+                new VisualTransform
+                {
+                    Position = new Vector3(10f, 0f, 20f),
+                    Rotation = Quaternion.Identity,
+                    Scale = Vector3.One,
+                },
+                new CullState { IsVisible = true, LOD = LODLevel.High },
+                new PresentationOwnerHasPerformerPayload());
+
+            int hudDefId = definitions.Register("behavior.attachment.ownerpayload.hud", new PerformerDefinition
+            {
+                Behaviors =
+                [
+                    new BehaviorSlot
+                    {
+                        SlotIndex = 0,
+                        Kind = BehaviorKind.AssetBinding,
+                        ActiveByDefault = true,
+                        AssetBinding = new AssetBindingConfig
+                        {
+                            AssetKind = AssetKind.WorldHud,
+                            Mobility = VisualMobility.Movable,
+                            LocalScale = new Vector3(64f, 8f, 1f),
+                        },
+                    },
+                    new BehaviorSlot
+                    {
+                        SlotIndex = 1,
+                        Kind = BehaviorKind.Attachment,
+                        ActiveByDefault = true,
+                        Attachment = new AttachmentConfig
+                        {
+                            Target = AttachmentTarget.Parent,
+                            Offset = new Vector3(0f, 2f, 0f),
+                            RotationOffset = Quaternion.Identity,
+                            InheritScale = false,
+                        },
+                    },
+                ],
+            });
+            int parentDefId = definitions.Register("behavior.attachment.ownerpayload.parent", new PerformerDefinition
+            {
+                Children = [new ChildPerformerRef { DefinitionId = hudDefId, ScopeTag = 1 }],
+                Behaviors =
+                [
+                    new BehaviorSlot
+                    {
+                        SlotIndex = 0,
+                        Kind = BehaviorKind.AssetBinding,
+                        ActiveByDefault = true,
+                        AssetBinding = new AssetBindingConfig
+                        {
+                            AssetKind = AssetKind.Mesh,
+                            AssetId = 1,
+                            RenderPath = VisualRenderPath.StaticMesh,
+                            Mobility = VisualMobility.Movable,
+                        },
+                    },
+                ],
+            });
+            instances.BindDefinitions(definitions);
+
+            Span<Entity> created = stackalloc Entity[1];
+            int count = instances.CreateEntityAnchoredRootBatch(
+                definitions,
+                parentDefId,
+                new Entity[] { owner },
+                new[] { 1 },
+                new[] { 9101 },
+                new[] { world.Get<VisualTransform>(owner) },
+                new[] { world.Get<CullState>(owner) },
+                definitions.Get(parentDefId),
+                created,
+                allocateStableId: () => 9102);
+
+            Assert.That(count, Is.EqualTo(1));
+            Entity parent = created[0];
+            Entity hud = world.Get<PerformerChildren>(parent).Get(0);
+            ref readonly PresentationOwnerHasPerformerPayload payload = ref world.Get<PresentationOwnerHasPerformerPayload>(owner);
+            Assert.That(payload.Count, Is.EqualTo(2));
+            Assert.That(payload.RootCount, Is.EqualTo(1));
+            Assert.That(payload.SingleRootPerformer, Is.EqualTo(parent));
+            Assert.That(payload.SingleRootTransformSync, Is.EqualTo(1));
+            Assert.That(world.Has<PerfOwnerPayloadTransformSync>(parent), Is.True);
+            Assert.That(world.Has<PerfHasAttachmentTick>(hud), Is.False);
+            Assert.That(world.Has<PerfOwnerPayloadAttachedTransformSync>(hud), Is.True);
+
+            using var sync = new PerformerEntityTransformSyncSystem(world, instances, definitions);
+            world.Get<VisualTransform>(owner).Position = new Vector3(30f, 0f, 40f);
+            world.Get<WorldPositionCm>(owner).Value = WorldPositionCm.FromCm(3000, 4000).Value;
+            sync.Update(0.016f);
+
+            Assert.That(world.Get<PerformerWorldPosition>(parent).Value, Is.EqualTo(new Vector3(30f, 0f, 40f)));
+            Assert.That(world.Get<PerformerWorldPosition>(hud).Value, Is.EqualTo(new Vector3(30f, 2f, 40f)));
+            Assert.That(world.Get<PerformerTransformSource>(hud).Value, Is.EqualTo(TransformSource.AttachedToParent));
+        }
+
+        [Test]
         public void EntityTransform_InheritsOwnerScaleAndAppliesLocalScale()
         {
             using var world = World.Create();
