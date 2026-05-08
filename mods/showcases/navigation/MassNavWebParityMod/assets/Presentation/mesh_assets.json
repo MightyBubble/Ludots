@@ -1,0 +1,14 @@
+[
+  {
+    "id": "massnav.selection.marker",
+    "type": "Model"
+  },
+  {
+    "id": "massnav.blocker.rock",
+    "type": "Model"
+  },
+  {
+    "id": "massnav.hotspot.obelisk",
+    "type": "Model"
+  }
+]

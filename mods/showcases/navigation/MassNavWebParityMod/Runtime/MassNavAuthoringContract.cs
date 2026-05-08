@@ -3,7 +3,9 @@ using System.Collections.Generic;
 using Ludots.Core.Config;
 using Ludots.Core.Engine;
 using Ludots.Core.Gameplay.Spawning;
+using Ludots.Core.Presentation.Assets;
 using Ludots.Core.Presentation.Performers;
+using Ludots.Core.Presentation.Terrain;
 using Ludots.Core.Scripting;
 
 namespace MassNavWebParityMod.Runtime;
@@ -13,17 +15,20 @@ internal sealed class MassNavAuthoringContract
     private readonly Dictionary<string, EntityTemplate> _templates;
     private readonly EntityTemplateKeyRegistry _templateKeys;
     private readonly PerformerDefinitionRegistry _performers;
+    private readonly MeshAssetRegistry _meshAssets;
     private readonly MassNavWebParityConfig _config;
 
     private MassNavAuthoringContract(
         Dictionary<string, EntityTemplate> templates,
         EntityTemplateKeyRegistry templateKeys,
         PerformerDefinitionRegistry performers,
+        MeshAssetRegistry meshAssets,
         MassNavWebParityConfig config)
     {
         _templates = templates;
         _templateKeys = templateKeys;
         _performers = performers;
+        _meshAssets = meshAssets;
         _config = config;
     }
 
@@ -45,6 +50,14 @@ internal sealed class MassNavAuthoringContract
             ?? throw new InvalidOperationException("MassNavWebParityMod requires EntityTemplateKeyRegistry.");
         PerformerDefinitionRegistry performers = engine.GetService(CoreServiceKeys.PerformerDefinitionRegistry)
             ?? throw new InvalidOperationException("MassNavWebParityMod requires PerformerDefinitionRegistry.");
+        MeshAssetRegistry meshAssets = engine.GetService(CoreServiceKeys.PresentationMeshAssetRegistry)
+            ?? throw new InvalidOperationException("MassNavWebParityMod requires PresentationMeshAssetRegistry.");
+        IVisualHeightmap visualHeightmap = engine.GetService(CoreServiceKeys.VisualHeightmap)
+            ?? throw new InvalidOperationException("MassNavWebParityMod requires a map-owned VisualHeightmapAsset bound through CoreServiceKeys.VisualHeightmap.");
+        if (visualHeightmap is not IVisualHeightmapRenderSource)
+        {
+            throw new InvalidOperationException("MassNavWebParityMod requires VisualHeightmap to implement IVisualHeightmapRenderSource so the large-world terrain is visible.");
+        }
 
         var templates = new Dictionary<string, EntityTemplate>(StringComparer.Ordinal);
         foreach (EntityTemplate template in engine.MapLoader.TemplateRegistry.GetAll())
@@ -57,7 +70,7 @@ internal sealed class MassNavAuthoringContract
             templates[template.Id] = template;
         }
 
-        var contract = new MassNavAuthoringContract(templates, templateKeys, performers, config);
+        var contract = new MassNavAuthoringContract(templates, templateKeys, performers, meshAssets, config);
         contract.ValidateAll();
         return contract;
     }
@@ -89,6 +102,7 @@ internal sealed class MassNavAuthoringContract
 
     private void ValidateAll()
     {
+        ValidateRequiredMeshAssets();
         ValidatePerformer(_config.Presentation.BlockerPerformerId);
         ValidatePerformer(_config.Presentation.HotspotPerformerId);
         ValidateTemplate(_config.Presentation.BlockerTemplateId);
@@ -115,6 +129,39 @@ internal sealed class MassNavAuthoringContract
         if (performerDefinitionId <= 0 || !_performers.TryGet(performerDefinitionId, out _))
         {
             throw new InvalidOperationException($"MassNavWebParityMod requires configured performer definition '{performerId}'.");
+        }
+    }
+
+    private void ValidateRequiredMeshAssets()
+    {
+        for (int i = 0; i < _config.Presentation.RequiredMeshAssetIds.Length; i++)
+        {
+            string meshAssetId = _config.Presentation.RequiredMeshAssetIds[i];
+            int runtimeId = _meshAssets.GetId(meshAssetId);
+            if (runtimeId <= 0 ||
+                !_meshAssets.TryGetDescriptor(runtimeId, out MeshAssetDescriptor descriptor))
+            {
+                throw new InvalidOperationException($"MassNavWebParityMod requires configured mesh asset '{meshAssetId}'.");
+            }
+
+            if (descriptor.Type != MeshAssetType.Model && descriptor.Type != MeshAssetType.Billboard)
+            {
+                throw new InvalidOperationException(
+                    $"MassNavWebParityMod mesh asset '{meshAssetId}' must be a configured Model or Billboard asset, actual={descriptor.Type}.");
+            }
+
+            if (descriptor.SourceUris == null || descriptor.SourceUris.Length == 0)
+            {
+                throw new InvalidOperationException($"MassNavWebParityMod mesh asset '{meshAssetId}' must have backend sourceUris from Presentation/host_assets.json.");
+            }
+
+            for (int uriIndex = 0; uriIndex < descriptor.SourceUris.Length; uriIndex++)
+            {
+                if (string.IsNullOrWhiteSpace(descriptor.SourceUris[uriIndex]))
+                {
+                    throw new InvalidOperationException($"MassNavWebParityMod mesh asset '{meshAssetId}' has an empty sourceUri at index {uriIndex}.");
+                }
+            }
         }
     }
 }

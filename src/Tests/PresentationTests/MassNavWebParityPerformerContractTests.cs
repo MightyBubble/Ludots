@@ -1,0 +1,380 @@
+using System;
+using System.Collections.Generic;
+using System.IO;
+using System.Linq;
+using System.Text.Json;
+using System.Text.Json.Nodes;
+using Ludots.Core.NodeLibraries.GASGraph;
+using NUnit.Framework;
+
+namespace Ludots.Tests.Presentation
+{
+    [TestFixture]
+    public sealed class MassNavWebParityPerformerContractTests
+    {
+        private const string AgentHealthSeedEffectId = "Effect.Showcase.MassNav.Agent.HealthSeed";
+        private const string AgentHealthSeedGraphId = "Graph.Showcase.MassNav.Agent.HealthSeed";
+        private const string AgentHealthAttributeName = "Health";
+
+        [Test]
+        public void AgentPerformers_UseBlacksmithKnightGpuSkinnedAsset()
+        {
+            string modRoot = MassNavModRoot();
+            JsonArray performers = ReadArray(Path.Combine(modRoot, "assets", "Presentation", "performers.json"));
+
+            AssertAgentBodyUsesBlacksmithKnight(FindObjectById(performers, "massnav_agent_light"), "massnav_agent_light", expectedScale: 0.45f);
+            AssertAgentBodyUsesBlacksmithKnight(FindObjectById(performers, "massnav_agent_heavy"), "massnav_agent_heavy", expectedScale: 0.62f);
+
+            JsonObject manifest = ReadObject(Path.Combine(modRoot, "mod.json"));
+            JsonObject dependencies = manifest["dependencies"]?.AsObject()
+                ?? throw new InvalidOperationException("MassNavWebParityMod mod.json must declare dependencies.");
+            Assert.That(dependencies.ContainsKey("PerformerBlacksmithShowcaseMod"), Is.True,
+                "MassNav agent visuals consume the Blacksmith formal asset pack; the dependency must be explicit.");
+
+            JsonObject config = ReadObject(Path.Combine(modRoot, "assets", "MassNavWebParityConfig.json"));
+            JsonArray requiredMeshAssets = config["presentation"]?["requiredMeshAssetIds"]?.AsArray()
+                ?? throw new InvalidOperationException("MassNavWebParityConfig.presentation.requiredMeshAssetIds missing.");
+            Assert.That(requiredMeshAssets.Select(node => node?.GetValue<string>()).ToArray(), Does.Contain("blacksmith.worker.knight"));
+        }
+
+        [Test]
+        public void AgentTemplates_AuthorHealthAndOnSpawnGasEffect()
+        {
+            string modRoot = MassNavModRoot();
+            JsonObject config = ReadObject(Path.Combine(modRoot, "assets", "MassNavWebParityConfig.json"));
+            JsonArray templates = ReadArray(Path.Combine(modRoot, "assets", "Entities", "templates.json"));
+
+            foreach (JsonObject team in EnumeratePresentationTeams(config))
+            {
+                AssertAgentTemplateAuthorsHealth(
+                    FindObjectById(templates, RequireString(team, "lightTemplateId")),
+                    expectedBase: 100f,
+                    expectedCurrent: 82f);
+                AssertAgentTemplateAuthorsHealth(
+                    FindObjectById(templates, RequireString(team, "heavyTemplateId")),
+                    expectedBase: 260f,
+                    expectedCurrent: 236f);
+            }
+        }
+
+        [Test]
+        public void AgentHealthHud_UsesPerformerWorldHudAttributeRatio()
+        {
+            string modRoot = MassNavModRoot();
+            JsonArray performers = ReadArray(Path.Combine(modRoot, "assets", "Presentation", "performers.json"));
+
+            AssertDefinitionHasChild(
+                FindObjectById(performers, "massnav_agent_light"),
+                "massnav_agent_light",
+                "massnav_agent_health_hud_light");
+            AssertDefinitionHasChild(
+                FindObjectById(performers, "massnav_agent_heavy"),
+                "massnav_agent_heavy",
+                "massnav_agent_health_hud_heavy");
+
+            JsonObject lightHud = FindObjectById(performers, "massnav_agent_health_hud_light");
+            AssertHudDefinitionUsesHealthRatio(lightHud, "massnav_agent_health_hud_light", expectedWidth: 42f, expectedHeight: 5f);
+
+            JsonObject heavyHud = FindObjectById(performers, "massnav_agent_health_hud_heavy");
+            Assert.That(RequireString(heavyHud, "extends"), Is.EqualTo("massnav_agent_health_hud_light"),
+                "Heavy HUD should inherit the same Health ratio binding instead of duplicating a second binding source.");
+            AssertHudWorldHudBinding(heavyHud, "massnav_agent_health_hud_heavy", expectedWidth: 58f, expectedHeight: 6f);
+        }
+
+        [Test]
+        public void AgentGasAuthoring_UsesRegisteredEffectGraphOpsAndHealthConstraint()
+        {
+            string modRoot = MassNavModRoot();
+            JsonObject constraints = ReadObject(Path.Combine(modRoot, "assets", "GAS", "attribute_constraints.json"));
+            JsonArray effects = ReadArray(Path.Combine(modRoot, "assets", "GAS", "effects.json"));
+            JsonArray graphs = ReadArray(Path.Combine(modRoot, "assets", "GAS", "graphs.json"));
+
+            JsonObject healthConstraint = constraints[AgentHealthAttributeName]?.AsObject()
+                ?? throw new InvalidOperationException("MassNav agents must author a Health attribute constraint.");
+            Assert.That(healthConstraint["clampToBase"]?.GetValue<bool>(), Is.True);
+            Assert.That(healthConstraint["min"]?.GetValue<float>(), Is.EqualTo(0f));
+
+            JsonObject effect = FindObjectById(effects, AgentHealthSeedEffectId);
+            Assert.That(effect["presetType"]?.GetValue<string>(), Is.EqualTo("Buff"));
+            Assert.That(effect["lifetime"]?.GetValue<string>(), Is.EqualTo("After"));
+            Assert.That(
+                effect["phaseGraphs"]?["OnApply"]?["post"]?.GetValue<string>(),
+                Is.EqualTo(AgentHealthSeedGraphId));
+
+            JsonObject graph = FindObjectById(graphs, AgentHealthSeedGraphId);
+            JsonArray nodes = graph["nodes"]?.AsArray()
+                ?? throw new InvalidOperationException("MassNav HealthSeed graph must declare nodes.");
+            Assert.That(nodes.Count, Is.LessThanOrEqualTo(16), "Effect phase graph bindings have a fixed max-step budget.");
+
+            var ops = new HashSet<string>(StringComparer.Ordinal);
+            foreach (JsonObject node in nodes.Select(node => node?.AsObject() ?? throw new InvalidOperationException("Graph node must be an object.")))
+            {
+                string op = RequireString(node, "op");
+                Assert.That(GraphNodeOpParser.TryParse(op, out _), Is.True, $"Graph op '{op}' must be registered in GraphNodeOp.");
+                ops.Add(op);
+            }
+
+            Assert.That(ops, Does.Not.Contain("LoadAttributeBase"), "GAS Graph currently exposes AttributeBase to performer bindings, not as a graph op.");
+            Assert.That(ops, Does.Contain("ModifyAttributeAdd"));
+            JsonObject modifyNode = nodes
+                .Select(node => node?.AsObject())
+                .FirstOrDefault(node => string.Equals(node?["op"]?.GetValue<string>(), "ModifyAttributeAdd", StringComparison.Ordinal))
+                ?? throw new InvalidOperationException("HealthSeed graph must modify Health.");
+            Assert.That(modifyNode["attribute"]?.GetValue<string>(), Is.EqualTo(AgentHealthAttributeName));
+        }
+
+        [Test]
+        public void WorldBounds_AreAuthoredOnlyByBoardNotMassNavConfig()
+        {
+            string modRoot = MassNavModRoot();
+            JsonObject config = ReadObject(Path.Combine(modRoot, "assets", "MassNavWebParityConfig.json"));
+            JsonObject world = config["world"]?.AsObject()
+                ?? throw new InvalidOperationException("MassNavWebParityConfig.world missing.");
+
+            Assert.That(world.ContainsKey("worldWidthCm"), Is.False,
+                "MassNav world width must come from the active board WorldSizeSpec, not duplicated in MassNav config.");
+            Assert.That(world.ContainsKey("worldHeightCm"), Is.False,
+                "MassNav world height must come from the active board WorldSizeSpec, not duplicated in MassNav config.");
+
+            JsonObject map = ReadObject(Path.Combine(modRoot, "assets", "Maps", "mass_nav_web_parity.json"));
+            JsonObject board = map["Boards"]?.AsArray()?.FirstOrDefault()?.AsObject()
+                ?? throw new InvalidOperationException("MassNav map must author a primary board.");
+            Assert.That(board["WidthInTiles"]?.GetValue<int>(), Is.EqualTo(250));
+            Assert.That(board["HeightInTiles"]?.GetValue<int>(), Is.EqualTo(250));
+            Assert.That(board["GridCellSizeCm"]?.GetValue<int>(), Is.EqualTo(100));
+        }
+
+        [Test]
+        public void ScenarioContracts_AuthorLocalPlayerAndObstacles()
+        {
+            string modRoot = MassNavModRoot();
+            JsonObject config = ReadObject(Path.Combine(modRoot, "assets", "MassNavWebParityConfig.json"));
+            JsonObject world = config["world"]?.AsObject()
+                ?? throw new InvalidOperationException("MassNavWebParityConfig.world missing.");
+            JsonArray obstacles = world["obstacles"]?.AsArray()
+                ?? throw new InvalidOperationException("MassNav world must author obstacles.");
+            Assert.That(obstacles.Count, Is.GreaterThan(0), "Solver blockers must be config-authored, not hardcoded in C#.");
+            foreach (JsonObject obstacle in obstacles.Select(node => node?.AsObject() ?? throw new InvalidOperationException("Obstacle entries must be objects.")))
+            {
+                Assert.That(RequireString(obstacle, "id"), Is.Not.Empty);
+                Assert.That(obstacle["radiusCm"]?.GetValue<float>(), Is.GreaterThan(0f));
+            }
+
+            JsonArray templates = ReadArray(Path.Combine(modRoot, "assets", "Entities", "templates.json"));
+            JsonObject localPlayerTemplate = FindObjectById(templates, "massnav_local_player");
+            JsonObject localPlayerComponents = localPlayerTemplate["components"]?.AsObject()
+                ?? throw new InvalidOperationException("massnav_local_player must author components.");
+            Assert.That(localPlayerComponents.ContainsKey("PlayerOwner"), Is.True,
+                "MassNav must not create a hidden PlayerOwner at runtime.");
+            Assert.That(localPlayerComponents.ContainsKey("SelectionDragState"), Is.True,
+                "MassNav local selection owner must author SelectionDragState via the formal component registry.");
+
+            JsonObject map = ReadObject(Path.Combine(modRoot, "assets", "Maps", "mass_nav_web_parity.json"));
+            JsonArray entities = map["Entities"]?.AsArray()
+                ?? throw new InvalidOperationException("MassNav map must author entities.");
+            Assert.That(
+                entities.Select(node => node?["Template"]?.GetValue<string>()).ToArray(),
+                Does.Contain("massnav_local_player"),
+                "The local player must be a map-authored entity, not a runtime fallback.");
+        }
+
+        [Test]
+        public void SourceGuards_DoNotReintroduceFallbackPaths()
+        {
+            string repoRoot = FindRepoRoot();
+            string modRoot = MassNavModRoot();
+            AssertSourceDoesNotContain(Path.Combine(modRoot, "Runtime", "MassNavWebParitySimState.cs"), "CacheDefaultObstacles");
+            AssertSourceDoesNotContain(Path.Combine(modRoot, "Runtime", "MassNavPlaygroundRuntime.cs"), "new PlayerOwner");
+            AssertSourceDoesNotContain(Path.Combine(modRoot, "Runtime", "MassNavSimulationRuntime.cs"), "ValidateHotZonesInsideBoard");
+            AssertSourceDoesNotContain(Path.Combine(modRoot, "Runtime", "MassNavSimulationRuntime.cs"), "WorldConfig.WorldWidthCm");
+            AssertSourceDoesNotContain(Path.Combine(modRoot, "Runtime", "MassNavSimulationRuntime.cs"), "WorldConfig.WorldHeightCm");
+            AssertSourceDoesNotContain(Path.Combine(modRoot, "Runtime", "MassNavSimulationRuntime.cs"), "positive board world bounds");
+            AssertSourceDoesNotContain(Path.Combine(modRoot, "Systems", "MassNavOrderBridgeSystem.cs"), "TryResolveMoveOrderType");
+            AssertSourceDoesNotContain(Path.Combine(modRoot, "Systems", "MassNavHudPresentationSystem.cs"), "PresentationTimingDiagnostics? timing");
+            AssertSourceDoesNotContain(Path.Combine(modRoot, "UI", "MassNavPlaygroundPanelController.cs"), "PresentationTimingDiagnostics? timing");
+            AssertSourceContains(Path.Combine(repoRoot, "src", "Core", "Config", "ComponentRegistry.cs"), "Register<SelectionDragState>(\"SelectionDragState\")");
+        }
+
+        private static void AssertAgentBodyUsesBlacksmithKnight(JsonObject definition, string definitionId, float expectedScale)
+        {
+            JsonArray behaviors = definition["behaviors"]?.AsArray()
+                ?? throw new InvalidOperationException($"Performer '{definitionId}' must declare behaviors.");
+            JsonObject body = behaviors
+                .Select(node => node?.AsObject())
+                .FirstOrDefault(obj => obj?["slot"]?.GetValue<int>() == 0)
+                ?? throw new InvalidOperationException($"Performer '{definitionId}' must declare slot 0 body.");
+            JsonObject assetBinding = body["assetBinding"]?.AsObject()
+                ?? throw new InvalidOperationException($"Performer '{definitionId}' slot 0 must be AssetBinding.");
+
+            Assert.That(assetBinding["assetKind"]?.GetValue<string>(), Is.EqualTo("SkinnedMesh"));
+            Assert.That(assetBinding["assetId"]?.GetValue<string>(), Is.EqualTo("blacksmith.worker.knight"));
+            Assert.That(assetBinding["renderPath"]?.GetValue<string>(), Is.EqualTo("GpuSkinnedInstance"));
+            Assert.That(assetBinding["mobility"]?.GetValue<string>(), Is.EqualTo("Movable"));
+            AssertVector3(assetBinding["localScale"]?.AsArray(), expectedScale, $"Performer '{definitionId}' Blacksmith knight scale");
+
+            JsonObject animator = behaviors
+                .Select(node => node?.AsObject())
+                .FirstOrDefault(obj => obj?["kind"]?.GetValue<string>() == "Animator")?["animator"]?.AsObject()
+                ?? throw new InvalidOperationException($"Performer '{definitionId}' must declare Blacksmith animator behavior.");
+            Assert.That(animator["animatorControllerId"]?.GetValue<string>(), Is.EqualTo("blacksmith.worker.locomotion"));
+            Assert.That(animator["animationProfileId"]?.GetValue<string>(), Is.EqualTo("blacksmith.worker.profile"));
+        }
+
+        private static void AssertAgentTemplateAuthorsHealth(JsonObject template, float expectedBase, float expectedCurrent)
+        {
+            string templateId = RequireString(template, "id");
+            Assert.That(template["onSpawnEffect"]?.GetValue<string>(), Is.EqualTo(AgentHealthSeedEffectId),
+                $"Template '{templateId}' should use the configured GAS on-spawn effect path.");
+
+            JsonObject attributes = template["components"]?["AttributeBuffer"]?.AsObject()
+                ?? throw new InvalidOperationException($"Template '{templateId}' must author AttributeBuffer.");
+            Assert.That(
+                attributes["base"]?[AgentHealthAttributeName]?.GetValue<float>(),
+                Is.EqualTo(expectedBase),
+                $"Template '{templateId}' must author Health base.");
+            Assert.That(
+                attributes["current"]?[AgentHealthAttributeName]?.GetValue<float>(),
+                Is.EqualTo(expectedCurrent),
+                $"Template '{templateId}' must author Health current.");
+        }
+
+        private static void AssertDefinitionHasChild(JsonObject definition, string definitionId, string childDefinitionId)
+        {
+            JsonArray children = definition["children"]?.AsArray()
+                ?? throw new InvalidOperationException($"Performer '{definitionId}' must declare children.");
+            Assert.That(
+                children.Select(node => node?["definitionId"]?.GetValue<string>()).ToArray(),
+                Does.Contain(childDefinitionId),
+                $"Performer '{definitionId}' must attach '{childDefinitionId}' through performer children.");
+        }
+
+        private static void AssertHudDefinitionUsesHealthRatio(JsonObject definition, string definitionId, float expectedWidth, float expectedHeight)
+        {
+            int materialParamKey = AssertHudWorldHudBinding(definition, definitionId, expectedWidth, expectedHeight);
+            JsonArray bindings = definition["bindings"]?.AsArray()
+                ?? throw new InvalidOperationException($"HUD performer '{definitionId}' must declare param bindings.");
+            JsonObject binding = bindings
+                .Select(node => node?.AsObject())
+                .FirstOrDefault(obj => obj?["paramKey"]?.GetValue<int>() == materialParamKey)
+                ?? throw new InvalidOperationException($"HUD performer '{definitionId}' must bind its material param.");
+
+            Assert.That(binding["source"]?.GetValue<string>(), Is.EqualTo("attributeRatio"));
+            Assert.That(binding["attributeName"]?.GetValue<string>(), Is.EqualTo(AgentHealthAttributeName));
+        }
+
+        private static int AssertHudWorldHudBinding(JsonObject definition, string definitionId, float expectedWidth, float expectedHeight)
+        {
+            JsonArray behaviors = definition["behaviors"]?.AsArray()
+                ?? throw new InvalidOperationException($"HUD performer '{definitionId}' must declare behaviors.");
+            JsonObject assetBinding = behaviors
+                .Select(node => node?.AsObject())
+                .FirstOrDefault(obj => obj?["kind"]?.GetValue<string>() == "AssetBinding")?["assetBinding"]?.AsObject()
+                ?? throw new InvalidOperationException($"HUD performer '{definitionId}' must declare an AssetBinding behavior.");
+
+            Assert.That(assetBinding["assetKind"]?.GetValue<string>(), Is.EqualTo("WorldHud"));
+            Assert.That(assetBinding["mobility"]?.GetValue<string>(), Is.EqualTo("Movable"));
+            int materialParamKey = assetBinding["materialParamKey"]?.GetValue<int>() ?? 0;
+            Assert.That(materialParamKey, Is.GreaterThan(0), $"HUD performer '{definitionId}' must drive a material param.");
+            AssertVector3(assetBinding["localScale"]?.AsArray(), expectedWidth, expectedHeight, 1f, $"HUD performer '{definitionId}' scale");
+            return materialParamKey;
+        }
+
+        private static JsonObject FindObjectById(JsonArray array, string id)
+        {
+            return array
+                .Select(node => node?.AsObject())
+                .FirstOrDefault(obj => string.Equals(obj?["id"]?.GetValue<string>(), id, StringComparison.Ordinal))
+                ?? throw new InvalidOperationException($"JSON object id '{id}' not found.");
+        }
+
+        private static void AssertSourceDoesNotContain(string path, string forbidden)
+        {
+            string source = File.ReadAllText(path);
+            Assert.That(source, Does.Not.Contain(forbidden), $"{path} must not contain fallback marker '{forbidden}'.");
+        }
+
+        private static void AssertSourceContains(string path, string expected)
+        {
+            string source = File.ReadAllText(path);
+            Assert.That(source, Does.Contain(expected), $"{path} must contain '{expected}'.");
+        }
+
+        private static void AssertVector3(JsonArray? values, float expected, string label)
+        {
+            Assert.That(values, Is.Not.Null, $"{label} must be authored.");
+            Assert.That(values!.Count, Is.EqualTo(3), $"{label} must contain xyz.");
+            for (int i = 0; i < values.Count; i++)
+            {
+                Assert.That(values[i]?.GetValue<float>(), Is.EqualTo(expected).Within(0.0001f), $"{label}[{i}]");
+            }
+        }
+
+        private static void AssertVector3(JsonArray? values, float expectedX, float expectedY, float expectedZ, string label)
+        {
+            Assert.That(values, Is.Not.Null, $"{label} must be authored.");
+            Assert.That(values!.Count, Is.EqualTo(3), $"{label} must contain xyz.");
+            Assert.That(values[0]?.GetValue<float>(), Is.EqualTo(expectedX).Within(0.0001f), $"{label}[0]");
+            Assert.That(values[1]?.GetValue<float>(), Is.EqualTo(expectedY).Within(0.0001f), $"{label}[1]");
+            Assert.That(values[2]?.GetValue<float>(), Is.EqualTo(expectedZ).Within(0.0001f), $"{label}[2]");
+        }
+
+        private static IEnumerable<JsonObject> EnumeratePresentationTeams(JsonObject config)
+        {
+            JsonArray teams = config["presentation"]?["teams"]?.AsArray()
+                ?? throw new InvalidOperationException("MassNavWebParityConfig.presentation.teams missing.");
+            foreach (JsonNode? node in teams)
+            {
+                yield return node?.AsObject()
+                    ?? throw new InvalidOperationException("MassNavWebParityConfig.presentation.teams entries must be objects.");
+            }
+        }
+
+        private static string RequireString(JsonObject obj, string propertyName)
+        {
+            string value = obj[propertyName]?.GetValue<string>() ?? string.Empty;
+            if (string.IsNullOrWhiteSpace(value))
+            {
+                throw new InvalidOperationException($"JSON object requires non-empty '{propertyName}'.");
+            }
+
+            return value;
+        }
+
+        private static JsonArray ReadArray(string path)
+        {
+            using FileStream stream = File.OpenRead(path);
+            return JsonNode.Parse(stream)?.AsArray()
+                ?? throw new InvalidOperationException($"Expected JSON array at {path}.");
+        }
+
+        private static JsonObject ReadObject(string path)
+        {
+            using FileStream stream = File.OpenRead(path);
+            return JsonNode.Parse(stream)?.AsObject()
+                ?? throw new InvalidOperationException($"Expected JSON object at {path}.");
+        }
+
+        private static string MassNavModRoot()
+        {
+            string repoRoot = FindRepoRoot();
+            return Path.Combine(repoRoot, "mods", "showcases", "navigation", "MassNavWebParityMod");
+        }
+
+        private static string FindRepoRoot()
+        {
+            string current = TestContext.CurrentContext.WorkDirectory;
+            while (!string.IsNullOrEmpty(current))
+            {
+                if (Directory.Exists(Path.Combine(current, "mods")) &&
+                    File.Exists(Path.Combine(current, "AGENTS.md")))
+                {
+                    return current;
+                }
+
+                current = Path.GetDirectoryName(current)!;
+            }
+
+            throw new DirectoryNotFoundException("Repository root not found from test work directory.");
+        }
+    }
+}

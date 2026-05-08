@@ -26,6 +26,8 @@ using Ludots.Core.Navigation2D.Runtime;
 using Ludots.Core.Physics2D.Components;
 using Ludots.Core.Presentation.Camera;
 using Ludots.Core.Presentation.Components;
+using Ludots.Core.Presentation.Assets;
+using Ludots.Core.Presentation.Config;
 using Ludots.Core.Presentation.Hud;
 using Ludots.Core.Presentation.Minimap;
 using Ludots.Core.Presentation.Performers;
@@ -215,6 +217,7 @@ public static class LauncherEvidenceRecorder
         var bootstrap = GameBootstrapper.InitializeFromBaseDirectory(plan.AppOutputDirectory, bootstrapPath);
         var engine = bootstrap.Engine;
         var config = bootstrap.Config;
+        ApplyRaylibHostAssets(engine);
 
         var skiaRenderer = new SkiaUiRenderer();
         var textMeasurer = new SkiaTextMeasurer();
@@ -273,6 +276,17 @@ public static class LauncherEvidenceRecorder
 
         engine.LoadMap(config.StartupMapId);
         return new RecordingRuntime(plan.AdapterId, engine, config, inputBackend, screenProjector, cameraPresenter, renderCameraDebug, presentationFrameSetup, hudProjection);
+    }
+
+    private static void ApplyRaylibHostAssets(GameEngine engine)
+    {
+        if (!engine.TryGetService(CoreServiceKeys.PresentationMeshAssetRegistry, out MeshAssetRegistry meshAssets))
+        {
+            throw new InvalidOperationException("Raylib evidence recording requires PresentationMeshAssetRegistry before host asset binding.");
+        }
+
+        new PresentationHostAssetConfigLoader(engine.ConfigPipeline, meshAssets)
+            .Apply("raylib", engine.ConfigCatalog, engine.ConfigConflictReport);
     }
 
     private static RecordingRuntime CreateWebRuntime(LauncherLaunchPlan plan, string bootstrapPath)

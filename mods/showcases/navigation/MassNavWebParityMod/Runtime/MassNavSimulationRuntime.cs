@@ -3,6 +3,7 @@ using System.Diagnostics;
 using Arch.Core;
 using Ludots.Core.Mathematics;
 using Ludots.Core.Navigation.GraphWorld;
+using Ludots.Core.Spatial;
 
 namespace MassNavWebParityMod.Runtime;
 
@@ -25,6 +26,8 @@ public sealed class MassNavSimulationRuntime
     private int _streamingMinChunkY = int.MinValue;
     private int _streamingMaxChunkY = int.MinValue;
     private int _streamingRadiusCm = int.MinValue;
+    private WorldSizeSpec _boardWorldSize;
+    private bool _boardWorldBound;
     private float _simWindowCenterXCm;
     private float _simWindowCenterYCm;
     private float _simWindowWidthCm;
@@ -145,8 +148,9 @@ public sealed class MassNavSimulationRuntime
     public float HotZoneMaxXCm => SolverWindowMaxXCm;
     public float HotZoneMaxYCm => SolverWindowMaxYCm;
     public string SolverWindowDriver => _solverWindowDriver;
-    public int WorldWidthCm => WorldConfig.WorldWidthCm;
-    public int WorldHeightCm => WorldConfig.WorldHeightCm;
+    public int WorldWidthCm => RequireBoardWorldSize().Bounds.Width;
+    public int WorldHeightCm => RequireBoardWorldSize().Bounds.Height;
+    public WorldAabbCm WorldBounds => RequireBoardWorldSize().Bounds;
     public string ActiveHotZoneId => WorldConfig.ActiveHotZoneId;
     public string ActiveHotZoneLabel => WorldConfig.ActiveHotZoneLabel;
     public ReadOnlySpan<MassNavHotZoneConfig> HotZones => WorldConfig.HotZones;
@@ -161,7 +165,6 @@ public sealed class MassNavSimulationRuntime
         _simWindowHeightCm = WorldConfig.SolverWindowHeightCm;
         _simWindowCenterXCm = WorldConfig.ActiveHotZone.CenterXCm;
         _simWindowCenterYCm = WorldConfig.ActiveHotZone.CenterYCm;
-        ClampSolverWindowCenter(ref _simWindowCenterXCm, ref _simWindowCenterYCm);
         _lastCameraFocusXCm = _simWindowCenterXCm;
         _lastCameraFocusYCm = _simWindowCenterYCm;
         _lastCameraViewWidthCm = _simWindowWidthCm;
@@ -218,12 +221,24 @@ public sealed class MassNavSimulationRuntime
         WebParity.Semantics.Steering.FormationSeparationScale = config.Semantics.Steering.FormationSeparationScale;
         WebParity.Semantics.Steering.LooseSeparationScale = config.Semantics.Steering.LooseSeparationScale;
         WebParity.Semantics.Steering.VelocityBlendPerSecond = config.Semantics.Steering.VelocityBlendPerSecond;
+    }
+
+    public void BindBoardWorld(WorldSizeSpec boardWorldSize)
+    {
+        _boardWorldSize = boardWorldSize;
+        _boardWorldBound = true;
+        ClampSolverWindowCenter(ref _simWindowCenterXCm, ref _simWindowCenterYCm);
+        _lastCameraFocusXCm = _simWindowCenterXCm;
+        _lastCameraFocusYCm = _simWindowCenterYCm;
+        _flowWorkAreaCenterXCm = _simWindowCenterXCm;
+        _flowWorkAreaCenterYCm = _simWindowCenterYCm;
         WebParity.SetWorldBounds(
-            WorldWidthCm * -0.5f,
-            WorldWidthCm * 0.5f,
-            WorldHeightCm * -0.5f,
-            WorldHeightCm * 0.5f);
+            boardWorldSize.Bounds.Left,
+            boardWorldSize.Bounds.Right,
+            boardWorldSize.Bounds.Top,
+            boardWorldSize.Bounds.Bottom);
         WebParity.SetWorldOrigin(SolverWindowMinXCm, SolverWindowMinYCm);
+        InvalidateStreamingWindowCache();
         UpdateStreamingWindow(ToWorldCm(new System.Numerics.Vector2(
             MassNavWebParitySimState.FieldWidthCm * 0.5f,
             MassNavWebParitySimState.FieldHeightCm * 0.5f)));
@@ -513,10 +528,11 @@ public sealed class MassNavSimulationRuntime
 
     public bool ContainsWorldPoint(float worldXCm, float worldYCm)
     {
-        return worldXCm >= WorldWidthCm * -0.5f &&
-            worldXCm <= WorldWidthCm * 0.5f &&
-            worldYCm >= WorldHeightCm * -0.5f &&
-            worldYCm <= WorldHeightCm * 0.5f;
+        WorldAabbCm bounds = RequireBoardWorldSize().Bounds;
+        return worldXCm >= bounds.Left &&
+            worldXCm <= bounds.Right &&
+            worldYCm >= bounds.Top &&
+            worldYCm <= bounds.Bottom;
     }
 
     public void UpdateStreamingWindow(System.Numerics.Vector2 worldCenterCm)
@@ -574,8 +590,9 @@ public sealed class MassNavSimulationRuntime
 
     private void ClampSolverWindowCenter(ref float centerX, ref float centerY)
     {
-        centerX = WorldConfig.ClampSolverWindowCenterX(centerX);
-        centerY = WorldConfig.ClampSolverWindowCenterY(centerY);
+        WorldAabbCm bounds = RequireBoardWorldSize().Bounds;
+        centerX = ClampWindowCenterToBounds(centerX, bounds.Left, bounds.Right, _simWindowWidthCm);
+        centerY = ClampWindowCenterToBounds(centerY, bounds.Top, bounds.Bottom, _simWindowHeightCm);
     }
 
     private void ObserveFlowWorkArea(System.Numerics.Vector2 focusCm, ReadOnlySpan<Entity> selectedEntities, string reason)
@@ -644,14 +661,11 @@ public sealed class MassNavSimulationRuntime
 
     private void ClampWorkArea(ref float minX, ref float maxX, ref float minY, ref float maxY)
     {
-        float worldMinX = WorldWidthCm * -0.5f;
-        float worldMaxX = WorldWidthCm * 0.5f;
-        float worldMinY = WorldHeightCm * -0.5f;
-        float worldMaxY = WorldHeightCm * 0.5f;
-        minX = Math.Clamp(minX, worldMinX, worldMaxX);
-        maxX = Math.Clamp(maxX, worldMinX, worldMaxX);
-        minY = Math.Clamp(minY, worldMinY, worldMaxY);
-        maxY = Math.Clamp(maxY, worldMinY, worldMaxY);
+        WorldAabbCm bounds = RequireBoardWorldSize().Bounds;
+        minX = Math.Clamp(minX, bounds.Left, bounds.Right);
+        maxX = Math.Clamp(maxX, bounds.Left, bounds.Right);
+        minY = Math.Clamp(minY, bounds.Top, bounds.Bottom);
+        maxY = Math.Clamp(maxY, bounds.Top, bounds.Bottom);
         if (minX > maxX)
         {
             (minX, maxX) = (maxX, minX);
@@ -665,8 +679,9 @@ public sealed class MassNavSimulationRuntime
 
     private void ClampWorkAreaCenter(ref float centerX, ref float centerY, float width, float height)
     {
-        centerX = ClampWindowCenter(centerX, WorldWidthCm, width);
-        centerY = ClampWindowCenter(centerY, WorldHeightCm, height);
+        WorldAabbCm bounds = RequireBoardWorldSize().Bounds;
+        centerX = ClampWindowCenterToBounds(centerX, bounds.Left, bounds.Right, width);
+        centerY = ClampWindowCenterToBounds(centerY, bounds.Top, bounds.Bottom, height);
     }
 
     private System.Numerics.Vector2 ResolveSolverFocusForWorkArea()
@@ -689,12 +704,22 @@ public sealed class MassNavSimulationRuntime
         maxY = MathF.Max(maxY, y);
     }
 
-    private static float ClampWindowCenter(float worldCm, int worldSizeCm, float windowSizeCm)
+    private WorldSizeSpec RequireBoardWorldSize()
+    {
+        if (!_boardWorldBound)
+        {
+            throw new InvalidOperationException("MassNavSimulationRuntime requires PrimaryBoard.WorldSize to be bound before world operations.");
+        }
+
+        return _boardWorldSize;
+    }
+
+    private static float ClampWindowCenterToBounds(float worldCm, int minCm, int maxCm, float windowSizeCm)
     {
         float halfSize = windowSizeCm * 0.5f;
-        float min = (worldSizeCm * -0.5f) + halfSize;
-        float max = (worldSizeCm * 0.5f) - halfSize;
-        return min <= max ? Math.Clamp(worldCm, min, max) : 0f;
+        float min = minCm + halfSize;
+        float max = maxCm - halfSize;
+        return min <= max ? Math.Clamp(worldCm, min, max) : (minCm + maxCm) * 0.5f;
     }
 
     public bool ConsumeSceneResetRequest()

@@ -1,0 +1,29 @@
+[
+  {
+    "id": "massnav.selection.marker.raylib",
+    "assetKind": "Mesh",
+    "assetId": "massnav.selection.marker",
+    "backendId": "raylib",
+    "sourceUris": [
+      "MassNavWebParityMod:assets/Models/massnav_selection_marker.obj"
+    ]
+  },
+  {
+    "id": "massnav.blocker.rock.raylib",
+    "assetKind": "Mesh",
+    "assetId": "massnav.blocker.rock",
+    "backendId": "raylib",
+    "sourceUris": [
+      "MassNavWebParityMod:assets/Models/massnav_blocker_rock.obj"
+    ]
+  },
+  {
+    "id": "massnav.hotspot.obelisk.raylib",
+    "assetKind": "Mesh",
+    "assetId": "massnav.hotspot.obelisk",
+    "backendId": "raylib",
+    "sourceUris": [
+      "MassNavWebParityMod:assets/Models/massnav_hotspot_obelisk.obj"
+    ]
+  }
+]

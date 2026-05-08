@@ -1,5 +1,6 @@
 {
   "Id": "mass_nav_web_parity",
+  "VisualHeightmapAsset": "assets/terrain/mass_nav_web_parity_large_world_relief.vhtm",
   "Tags": [
     "mass_nav_web_parity"
   ],
@@ -13,5 +14,18 @@
       "ChunkSizeCells": 64
     }
   ],
-  "Entities": []
+  "DefaultCamera": {
+    "VirtualCameraId": "Camera.Profile.MassNavWebParityTactical",
+    "TargetXCm": 0,
+    "TargetYCm": 0,
+    "Yaw": 225,
+    "Pitch": 52,
+    "DistanceCm": 7000,
+    "FovYDeg": 46
+  },
+  "Entities": [
+    {
+      "Template": "massnav_local_player"
+    }
+  ]
 }

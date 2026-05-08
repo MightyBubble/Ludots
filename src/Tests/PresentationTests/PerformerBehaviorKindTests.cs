@@ -10,6 +10,7 @@ using Ludots.Core.Presentation.Rendering;
 using Ludots.Core.Presentation.Commands;
 using Ludots.Core.Presentation.Components;
 using Ludots.Core.Presentation.Events;
+using Ludots.Core.Presentation.Hud;
 using Ludots.Core.Presentation.Performers;
 using Ludots.Core.Presentation.Requests;
 using Ludots.Core.Presentation.Systems;
@@ -690,6 +691,110 @@ namespace Ludots.Tests.Presentation
             Assert.That(childTransform.Value, Is.EqualTo(TransformSource.AttachedToParent));
             Assert.That(childPos.Value, Is.EqualTo(new Vector3(10f, 6f, 6f)));
             Assert.That(childScale.Value, Is.EqualTo(Vector3.One));
+        }
+
+        [Test]
+        public void Attachment_TargetParent_WorldHudChildUpdatesRetainedPositionWhenParentMoves()
+        {
+            using var world = World.Create();
+            var instances = new PerformerEntityRuntime(world);
+            var definitions = new PerformerDefinitionRegistry();
+            var requests = new PresentationRequestBuffer();
+            var worldHud = new WorldHudBatchBuffer(8);
+            Entity owner = world.Create(new CullState { IsVisible = true, LOD = LODLevel.High });
+
+            int parentDefId = definitions.Register("behavior.attachment.hud.parent", new PerformerDefinition
+            {
+                Behaviors =
+                [
+                    new BehaviorSlot
+                    {
+                        SlotIndex = 0,
+                        Kind = BehaviorKind.AssetBinding,
+                        ActiveByDefault = true,
+                        AssetBinding = new AssetBindingConfig
+                        {
+                            AssetKind = AssetKind.Mesh,
+                            AssetId = 1,
+                            RenderPath = VisualRenderPath.StaticMesh,
+                            Mobility = VisualMobility.Movable,
+                        },
+                    },
+                ],
+            });
+
+            int hudDefId = definitions.Register("behavior.attachment.hud.child", new PerformerDefinition
+            {
+                Behaviors =
+                [
+                    new BehaviorSlot
+                    {
+                        SlotIndex = 0,
+                        Kind = BehaviorKind.AssetBinding,
+                        ActiveByDefault = true,
+                        AssetBinding = new AssetBindingConfig
+                        {
+                            AssetKind = AssetKind.WorldHud,
+                            Mobility = VisualMobility.Movable,
+                            LocalScale = new Vector3(64f, 8f, 1f),
+                            MaterialParamKey = 100,
+                        },
+                    },
+                    new BehaviorSlot
+                    {
+                        SlotIndex = 1,
+                        Kind = BehaviorKind.Attachment,
+                        ActiveByDefault = true,
+                        Attachment = new AttachmentConfig
+                        {
+                            Target = AttachmentTarget.Parent,
+                            Offset = new Vector3(0f, 2f, 0f),
+                            RotationOffset = Quaternion.Identity,
+                            InheritScale = false,
+                        },
+                    },
+                ],
+            });
+            instances.BindDefinitions(definitions);
+
+            Entity parent = instances.Create(parentDefId, owner, 0, PresentationAnchorKind.Entity, Vector3.Zero, 9101, Entity.Null, default);
+            Entity hud = instances.Create(hudDefId, owner, 0, PresentationAnchorKind.Entity, Vector3.Zero, 9102, parent, default);
+            world.Get<PerformerState>(parent).BehaviorActiveMask = 1u;
+            world.Get<PerformerState>(hud).BehaviorActiveMask = 0b11u;
+            world.Get<PerformerCullState>(parent).OwnerCullVisible = true;
+            world.Get<PerformerCullState>(hud).OwnerCullVisible = true;
+            world.Get<PerformerWorldPosition>(parent).Value = new Vector3(10f, 0f, 20f);
+            world.Get<PerformerWorldScale>(parent).Value = Vector3.One;
+            instances.SyncTickBehaviorMarkers(hud, definitions.Get(hudDefId), 0b11u);
+            instances.SyncEmitWorkMarkers(hud, definitions.Get(hudDefId), 0b11u);
+
+            using var behavior = new PerformerBehaviorSystem(
+                world,
+                instances,
+                definitions,
+                new PresentationEventStream(),
+                new SoundRequestBuffer());
+            using var emit = new PerformerEmitSystem(
+                world,
+                instances,
+                definitions,
+                requests,
+                new Dictionary<string, object>(),
+                worldHudBuffer: worldHud);
+
+            behavior.Update(0.016f);
+            emit.Update(0.016f);
+
+            int stableId = HudItemIdentity.ComposeStableId(9102, WorldHudItemKind.Bar, hudDefId);
+            Assert.That(worldHud.TryGetByStableId(stableId, out WorldHudItem first), Is.True);
+            Assert.That(first.WorldPosition, Is.EqualTo(new Vector3(10f, 2f, 20f)));
+
+            world.Get<PerformerWorldPosition>(parent).Value = new Vector3(30f, 0f, 40f);
+            behavior.Update(0.016f);
+            emit.Update(0.016f);
+
+            Assert.That(worldHud.TryGetByStableId(stableId, out WorldHudItem moved), Is.True);
+            Assert.That(moved.WorldPosition, Is.EqualTo(new Vector3(30f, 2f, 40f)));
         }
 
         [Test]

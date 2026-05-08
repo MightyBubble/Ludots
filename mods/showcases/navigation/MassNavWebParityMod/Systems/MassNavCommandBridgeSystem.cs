@@ -3,6 +3,7 @@ using System.Numerics;
 using Arch.Core;
 using Arch.System;
 using Ludots.Core.Engine;
+using Ludots.Core.Gameplay.Components;
 using Ludots.Core.Gameplay.GAS.Orders;
 using Ludots.Core.Gameplay.GAS.Systems;
 using Ludots.Core.Input.Interaction;
@@ -85,6 +86,7 @@ internal sealed class MassNavCommandBridgeSystem : ISystem<float>
         }
 
         int moveOrderTypeId = ResolveMoveOrderType();
+        int playerId = ResolveLocalPlayerId();
         SelectionContextRuntime.TryGetCurrentContainer(_engine.World, _engine.GlobalContext, out Entity selectionContainer);
         int sharedOrderId = _simulation.AllocateSharedOrderId();
         int submitted = 0;
@@ -101,7 +103,7 @@ internal sealed class MassNavCommandBridgeSystem : ISystem<float>
             {
                 OrderId = sharedOrderId,
                 OrderTypeId = moveOrderTypeId,
-                PlayerId = 1,
+                PlayerId = playerId,
                 Actor = actor,
                 SubmitMode = OrderSubmitMode.Immediate,
                 Args = new OrderArgs
@@ -150,5 +152,22 @@ internal sealed class MassNavCommandBridgeSystem : ISystem<float>
         }
 
         return _moveOrderTypeId;
+    }
+
+    private int ResolveLocalPlayerId()
+    {
+        if (!_engine.GlobalContext.TryGetValue(CoreServiceKeys.LocalPlayerEntity.Name, out object? localObj) ||
+            localObj is not Entity local ||
+            !_engine.World.IsAlive(local))
+        {
+            throw new InvalidOperationException("MassNavWebParityMod requires LocalPlayerEntity before submitting move orders.");
+        }
+
+        if (!_engine.World.TryGet(local, out PlayerOwner owner))
+        {
+            throw new InvalidOperationException("MassNavWebParityMod LocalPlayerEntity must author PlayerOwner.");
+        }
+
+        return owner.PlayerId;
     }
 }

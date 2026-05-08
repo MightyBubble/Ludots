@@ -1,0 +1,17 @@
+[
+  {
+    "id": "Effect.Showcase.MassNav.Agent.HealthSeed",
+    "tags": ["Effect.Showcase.MassNav.Agent.HealthSeed"],
+    "presetType": "Buff",
+    "lifetime": "After",
+    "participatesInResponse": false,
+    "duration": {
+      "durationTicks": 1
+    },
+    "phaseGraphs": {
+      "OnApply": {
+        "post": "Graph.Showcase.MassNav.Agent.HealthSeed"
+      }
+    }
+  }
+]

@@ -19,7 +19,7 @@ public sealed class MassNavWebParitySimState
     public const int GridHeight = FieldHeightCm / CellCm;
     public const float VisualMetersPerCm = 0.01f;
 
-    private const int MaxObstacles = 64;
+    public const int MaxObstacleCount = 64;
     private const int SeparationHashCellSizeCm = 100;
     private const int SeparationHashWidth = FieldWidthCm / SeparationHashCellSizeCm;
     private const int SeparationHashHeight = FieldHeightCm / SeparationHashCellSizeCm;
@@ -35,14 +35,14 @@ public sealed class MassNavWebParitySimState
 
     private readonly float[] _staticCost = new float[GridWidth * GridHeight];
     private readonly float[] _cost = new float[GridWidth * GridHeight];
-    private readonly float[] _obsX = new float[MaxObstacles];
-    private readonly float[] _obsY = new float[MaxObstacles];
-    private readonly float[] _obsWorldX = new float[MaxObstacles];
-    private readonly float[] _obsWorldY = new float[MaxObstacles];
-    private readonly float[] _obsRadius = new float[MaxObstacles];
-    private readonly float[] _obsR2 = new float[MaxObstacles];
-    private readonly float[] _obsPR = new float[MaxObstacles];
-    private readonly float[] _obsPR2 = new float[MaxObstacles];
+    private readonly float[] _obsX = new float[MaxObstacleCount];
+    private readonly float[] _obsY = new float[MaxObstacleCount];
+    private readonly float[] _obsWorldX = new float[MaxObstacleCount];
+    private readonly float[] _obsWorldY = new float[MaxObstacleCount];
+    private readonly float[] _obsRadius = new float[MaxObstacleCount];
+    private readonly float[] _obsR2 = new float[MaxObstacleCount];
+    private readonly float[] _obsPR = new float[MaxObstacleCount];
+    private readonly float[] _obsPR2 = new float[MaxObstacleCount];
     private readonly int[] _separationCellCounts = new int[SeparationHashWidth * SeparationHashHeight];
     private readonly int[] _separationCellOffsets = new int[SeparationHashWidth * SeparationHashHeight];
     private readonly int[] _separationCellCursor = new int[SeparationHashWidth * SeparationHashHeight];
@@ -194,14 +194,14 @@ public sealed class MassNavWebParitySimState
         MarkFlowDirty();
     }
 
-    public void Reset(ReadOnlySpan<int> teamIds, int unitsPerTeam)
+    public void Reset(ReadOnlySpan<int> teamIds, int unitsPerTeam, ReadOnlySpan<MassNavObstacleConfig> obstacles)
     {
         int safeUnitsPerTeam = Math.Max(0, unitsPerTeam);
         int safeTeamCount = Math.Max(0, teamIds.Length);
         UnitCount = safeUnitsPerTeam * safeTeamCount;
         EnsureCapacity(UnitCount);
         InitializeTeams(teamIds, safeUnitsPerTeam);
-        CacheDefaultObstacles();
+        CacheAuthoredObstacles(obstacles);
         InitializeUnits();
         ForceFlowRebuild();
         _frameCount = 0;
@@ -695,14 +695,25 @@ public sealed class MassNavWebParitySimState
         }
     }
 
-    private void CacheDefaultObstacles()
+    private void CacheAuthoredObstacles(ReadOnlySpan<MassNavObstacleConfig> obstacles)
     {
-        ObstacleCount = 5;
-        CacheObstacle(0, 3_000f, 5_000f, 500f);
-        CacheObstacle(1, 5_000f, 3_000f, 400f);
-        CacheObstacle(2, 5_000f, 7_000f, 400f);
-        CacheObstacle(3, 7_000f, 5_000f, 500f);
-        CacheObstacle(4, 5_000f, 5_000f, 300f);
+        if (obstacles.Length <= 0)
+        {
+            throw new InvalidOperationException("MassNavWebParitySimState requires authored obstacles.");
+        }
+
+        if (obstacles.Length > MaxObstacleCount)
+        {
+            throw new InvalidOperationException(
+                $"MassNavWebParitySimState obstacle count {obstacles.Length} exceeds solver capacity {MaxObstacleCount}.");
+        }
+
+        ObstacleCount = obstacles.Length;
+        for (int i = 0; i < obstacles.Length; i++)
+        {
+            MassNavObstacleConfig obstacle = obstacles[i];
+            CacheObstacle(i, obstacle.LocalXCm, obstacle.LocalYCm, obstacle.RadiusCm);
+        }
     }
 
     private void CacheObstacle(int index, float xCm, float yCm, float radiusCm)

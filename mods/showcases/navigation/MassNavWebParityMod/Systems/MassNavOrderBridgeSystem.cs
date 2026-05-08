@@ -45,10 +45,7 @@ internal sealed class MassNavOrderBridgeSystem : ISystem<float>
             return;
         }
 
-        if (!TryResolveMoveOrderType())
-        {
-            return;
-        }
+        ResolveMoveOrderType();
 
         if (_simulation.NavGroupRuntime.ActiveOrderGroupCount == 0 &&
             _simulation.CommandCountFrame <= 0 &&
@@ -109,10 +106,8 @@ internal sealed class MassNavOrderBridgeSystem : ISystem<float>
                 bucket.RotationRadians);
         }
 
-        if (_engine.GetService(CoreServiceKeys.OrderBufferSystem) is not OrderBufferSystem orderBufferSystem)
-        {
-            return;
-        }
+        OrderBufferSystem orderBufferSystem = _engine.GetService(CoreServiceKeys.OrderBufferSystem)
+            ?? throw new InvalidOperationException("MassNavWebParityMod requires OrderBufferSystem to complete MassNav move orders.");
 
         for (int bucketIndex = 0; bucketIndex < _buckets.Count; bucketIndex++)
         {
@@ -149,19 +144,20 @@ internal sealed class MassNavOrderBridgeSystem : ISystem<float>
         }
     }
 
-    private bool TryResolveMoveOrderType()
+    private int ResolveMoveOrderType()
     {
         if (_moveOrderTypeId > 0)
         {
-            return true;
+            return _moveOrderTypeId;
         }
 
-        if (_engine.GetService(CoreServiceKeys.OrderTypeRegistry) is not Ludots.Core.Gameplay.GAS.Orders.OrderTypeRegistry registry)
+        if (_engine.GetService(CoreServiceKeys.OrderTypeRegistry) is not Ludots.Core.Gameplay.GAS.Orders.OrderTypeRegistry registry ||
+            !registry.TryGetId(MassNavOrderKeys.Move, out _moveOrderTypeId))
         {
-            return false;
+            throw new InvalidOperationException($"MassNavWebParityMod requires GAS/order_types.json to define '{MassNavOrderKeys.Move}'.");
         }
 
-        return registry.TryGetId(MassNavOrderKeys.Move, out _moveOrderTypeId);
+        return _moveOrderTypeId;
     }
 
     private int GetOrCreateBucket(int token)
