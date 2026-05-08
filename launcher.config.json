@@ -82,6 +82,14 @@
       }
     },
     {
+      "name": "performer_blacksmith_large_world_nohud",
+      "target": {
+        "type": "path",
+        "value": "mods/showcases/performer_blacksmith_large_world_nohud_entry/PerformerBlacksmithLargeWorldNoHudEntryMod",
+        "projectPath": "PerformerBlacksmithLargeWorldNoHudEntryMod.csproj"
+      }
+    },
+    {
       "name": "mass_nav_web_parity",
       "target": {
         "type": "path",

@@ -1,0 +1,63 @@
+[
+  {
+    "id": "blacksmith_minimap_marker_ball",
+    "defaultColor": [1.0, 0.24, 0.06, 1.0],
+    "children": [],
+    "behaviors": [
+      {
+        "slot": 0,
+        "kind": "AssetBinding",
+        "activeByDefault": true,
+        "assetBinding": {
+          "assetKind": "SkinnedMesh",
+          "assetId": "blacksmith.worker.knight",
+          "materialId": "default_surface",
+          "renderPath": "GpuSkinnedInstance",
+          "mobility": "Movable",
+          "localScale": [0.45, 0.45, 0.45]
+        }
+      },
+      {
+        "slot": 1,
+        "kind": "Animator",
+        "activeByDefault": true,
+        "animator": {
+          "animatorControllerId": "blacksmith.worker.locomotion",
+          "animationProfileId": "blacksmith.worker.profile",
+          "speedParamKey": 105,
+          "stateParamKey": -1
+        }
+      },
+      {
+        "slot": 2,
+        "kind": "Grounding",
+        "activeByDefault": true,
+        "grounding": {
+          "mode": "SnapToGround",
+          "offset": 5.6,
+          "updatePolicy": "EveryFrame"
+        }
+      },
+      {
+        "slot": 3,
+        "kind": "MinimapMarker",
+        "activeByDefault": true,
+        "minimapMarker": {
+          "shape": "Circle",
+          "color": [1.0, 0.24, 0.06, 1.0],
+          "sizePx": 11.0,
+          "colorParamKey": -1,
+          "sizeParamKey": -1,
+          "visibilityParamKey": -1,
+          "orientationMode": "PerformerForward",
+          "orientationParamKey": -1,
+          "orientationOffsetRad": 0.0,
+          "orientationLengthPx": 15.0
+        }
+      }
+    ],
+    "paramDefaults": [
+      { "paramKey": 105, "lane": "Float", "floatValue": 1.0 }
+    ]
+  }
+]

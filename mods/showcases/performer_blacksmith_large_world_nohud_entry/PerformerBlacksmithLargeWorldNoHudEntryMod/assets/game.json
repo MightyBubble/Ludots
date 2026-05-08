@@ -1,0 +1,19 @@
+{
+  "startupMapId": "performer_blacksmith_minimap_marker_large_world_showcase",
+  "windowWidth": 1600,
+  "windowHeight": 900,
+  "windowResizable": true,
+  "presentation": {
+    "minimap": {
+      "initialZoomNormalized": 1.0,
+      "wheelZoomNormalizedStep": 0.08,
+      "buttonZoomNormalizedStep": 0.18,
+      "zoomSliderEnabled": true,
+      "minZoomExtentMode": "OneChunk",
+      "maxZoomExtentMode": "FullMap",
+      "modeToggleEnabled": true,
+      "rotateToggleEnabled": true,
+      "debugMarkerSampleCapacity": 64
+    }
+  }
+}
