@@ -2,6 +2,7 @@ using System;
 using System.Collections.Generic;
 using System.Diagnostics;
 using System.Numerics;
+using System.Text;
 using Arch.Buffer;
 using Arch.Core;
 using Arch.Core.Extensions.Dangerous;
@@ -74,6 +75,89 @@ namespace Ludots.Core.Presentation.Performers
         public double LastChildBatchIndexWriteMs { get; private set; }
         public double LastChildBatchStableIdMs { get; private set; }
 
+        public string BuildActiveDefinitionSummary(int maxEntries)
+        {
+            if (maxEntries <= 0 || _activeCount == 0)
+            {
+                return string.Empty;
+            }
+
+            var counts = new Dictionary<int, int>(Math.Min(_activeCount, 64));
+            var query = _world.Query(in _performerStateQuery);
+            foreach (ref readonly Chunk chunk in query)
+            {
+                Span<PerformerState> states = chunk.GetSpan<PerformerState>();
+                for (int i = 0; i < chunk.Count; i++)
+                {
+                    int defId = states[i].DefId;
+                    counts.TryGetValue(defId, out int count);
+                    counts[defId] = count + 1;
+                }
+            }
+
+            if (counts.Count == 0)
+            {
+                return string.Empty;
+            }
+
+            Span<DefinitionCount> top = maxEntries <= 16
+                ? stackalloc DefinitionCount[maxEntries]
+                : new DefinitionCount[maxEntries];
+            int topCount = 0;
+            foreach (KeyValuePair<int, int> pair in counts)
+            {
+                int count = pair.Value;
+                if (count <= 0)
+                {
+                    continue;
+                }
+
+                int insertAt = topCount;
+                while (insertAt > 0 && top[insertAt - 1].Count < count)
+                {
+                    if (insertAt < top.Length)
+                    {
+                        top[insertAt] = top[insertAt - 1];
+                    }
+
+                    insertAt--;
+                }
+
+                if (insertAt >= top.Length)
+                {
+                    continue;
+                }
+
+                top[insertAt] = new DefinitionCount(pair.Key, count);
+                if (topCount < top.Length)
+                {
+                    topCount++;
+                }
+            }
+
+            if (topCount == 0)
+            {
+                return string.Empty;
+            }
+
+            var builder = new StringBuilder(topCount * 48);
+            for (int i = 0; i < topCount; i++)
+            {
+                if (i > 0)
+                {
+                    builder.Append(',');
+                }
+
+                int defId = top[i].DefinitionId;
+                string name = _definitions != null ? _definitions.GetName(defId) : defId.ToString();
+                builder.Append(name);
+                builder.Append(':');
+                builder.Append(top[i].Count);
+            }
+
+            return builder.ToString();
+        }
+
         public PerformerEntityRuntime(World world)
         {
             _world = world ?? throw new ArgumentNullException(nameof(world));
@@ -97,6 +181,18 @@ namespace Ludots.Core.Presentation.Performers
         private static double ElapsedMs(long startTimestamp)
         {
             return (Stopwatch.GetTimestamp() - startTimestamp) * 1000d / Stopwatch.Frequency;
+        }
+
+        private readonly struct DefinitionCount
+        {
+            public readonly int DefinitionId;
+            public readonly int Count;
+
+            public DefinitionCount(int definitionId, int count)
+            {
+                DefinitionId = definitionId;
+                Count = count;
+            }
         }
 
         public void BindDefinitions(PerformerDefinitionRegistry definitions)
