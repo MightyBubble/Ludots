@@ -110,10 +110,7 @@ internal sealed class MassNavWebParityPanelController
                 .ZIndex(20);
         }
 
-        return Ui.Panel(
-                BuildDiagnosticsPanel(state),
-                BuildWorldDock(state),
-                BuildFormationDock(state))
+        return Ui.Panel(BuildDiagnosticsPanel(state))
             .Absolute(0f, 0f)
             .ZIndex(20);
     }
@@ -144,6 +141,28 @@ internal sealed class MassNavWebParityPanelController
                 Ui.Text($"InputCollection: select {state.SelectionSyncHzObserved:0.0} Hz  control {state.ControlHzObserved:0.0} Hz  capture {state.CommandHzObserved:0.0} Hz").FontSize(12f).Color("#D6E4F5").WhiteSpace(UiWhiteSpace.Normal),
                 Ui.Text($"PostMovement: command {state.CommandDispatchHzObserved:0.0} Hz  sim {state.SimHzObserved:0.0} Hz  Presentation: performer {state.PerformerHzObserved:0.0} Hz  hud {state.HudHzObserved:0.0} Hz  panel {state.PanelHzObserved:0.0} Hz").FontSize(12f).Color("#D6E4F5").WhiteSpace(UiWhiteSpace.Normal),
                 Ui.Text(state.LastActionText).FontSize(12f).Color("#8FE388").WhiteSpace(UiWhiteSpace.Normal),
+                Ui.Text("World Map").FontSize(12f).Bold().Color("#F4C77D"),
+                Ui.Text($"Battlefield {state.WorldWidthCm / 100_000f:0.0}x{state.WorldHeightCm / 100_000f:0.0} km  landmarks {state.WorldMarkerCount}  active chunks {state.LoadedChunkCount} @ {state.StreamingChunkSizeCm} cm").FontSize(12f).Color("#D6E4F5").WhiteSpace(UiWhiteSpace.Normal),
+                Ui.Text($"Flow area {state.FlowWorkAreaWidthCm / 100f:0}x{state.FlowWorkAreaHeightCm / 100f:0} m at ({state.FlowWorkAreaCenterXCm},{state.FlowWorkAreaCenterYCm}) cm  rev {state.FlowWorkAreaRevision}").FontSize(12f).Color("#D6E4F5").WhiteSpace(UiWhiteSpace.Normal),
+                Ui.Text($"Solver cache {state.SolverWindowWidthCm / 100f:0}x{state.SolverWindowHeightCm / 100f:0} m at ({state.SolverWindowCenterXCm},{state.SolverWindowCenterYCm}) cm  driver {state.SolverWindowDriver}").FontSize(12f).Color("#9FD8FF").WhiteSpace(UiWhiteSpace.Normal),
+                Ui.Text($"Camera target ({state.CameraTargetX:0},{state.CameraTargetY:0}) cm  distance {state.CameraDistanceCm:0}  chunk updates {state.StreamingWindowUpdatesFrame}").FontSize(12f).Color("#F2D483").WhiteSpace(UiWhiteSpace.Normal),
+                Ui.Text($"Last command target ({state.CommandFocusX:0},{state.CommandFocusY:0}) cm  selected payload {state.LastCommandSelectionCount}  invalid orders {state.CommandRejectsFrame}/{state.CommandRejectsTotal}").FontSize(11f).Color(state.CommandRejectsFrame > 0 ? "#FF9A73" : "#8EA2BD").WhiteSpace(UiWhiteSpace.Normal),
+                Ui.Row(
+                        BuildActionButton("Full Map", RequestStrategicWorldCamera),
+                        BuildActionButton("Field Camera", RequestCameraReset))
+                    .Wrap()
+                    .Gap(8f),
+                Ui.Text("Debug Landmarks").FontSize(12f).Bold().Color("#F4C77D"),
+                BuildKnownContactRow(),
+                Ui.Text("Formation").FontSize(12f).Bold().Color("#F4C77D"),
+                Ui.Row(
+                        BuildFormationButton("None", MassNavFormationMode.None, state.FormationLabel),
+                        BuildFormationButton("Line", MassNavFormationMode.Line, state.FormationLabel),
+                        BuildFormationButton("Square", MassNavFormationMode.Square, state.FormationLabel),
+                        BuildFormationButton("Circle", MassNavFormationMode.Circle, state.FormationLabel),
+                        BuildFormationButton("Wedge", MassNavFormationMode.Wedge, state.FormationLabel))
+                    .Wrap()
+                    .Gap(8f),
                 Ui.Text("MassNav Runtime").FontSize(12f).Bold().Color("#F4C77D"),
                 Ui.Text($"Immediate knobs: Logic {state.LogicHz} Hz  Budget {state.SimulationBudgetMs} ms  Slice {state.SimulationSliceLimit}  Recovery {(state.ArrivalRecoveryEnabled ? "On" : "Off")}").FontSize(12f).Color("#D6E4F5").WhiteSpace(UiWhiteSpace.Normal),
                 Ui.Row(
@@ -242,72 +261,6 @@ internal sealed class MassNavWebParityPanelController
             .Background("#111C2A")
             .Absolute(16f, 16f)
             .ZIndex(20);
-    }
-
-    private UiElementBuilder BuildWorldDock(MassNavPanelState state)
-    {
-        const float width = 360f;
-        float left = MathF.Max(500f, state.ViewportWidth - width - 420f);
-        return Ui.Card(
-                Ui.Text("RTS Map").FontSize(13f).Bold().Color("#9FD8FF"),
-                Ui.Text($"Battlefield {state.WorldWidthCm / 100_000f:0.0}x{state.WorldHeightCm / 100_000f:0.0} km  debug landmarks {state.WorldMarkerCount}").FontSize(12f).Color("#D6E4F5").WhiteSpace(UiWhiteSpace.Normal),
-                Ui.Text($"Flow work area: {state.FlowWorkAreaWidthCm / 100f:0}x{state.FlowWorkAreaHeightCm / 100f:0} m at ({state.FlowWorkAreaCenterXCm},{state.FlowWorkAreaCenterYCm}) cm").FontSize(12f).Color("#D6E4F5").WhiteSpace(UiWhiteSpace.Normal),
-                Ui.Text($"Solver cache: {state.SolverWindowWidthCm / 100f:0}x{state.SolverWindowHeightCm / 100f:0} m at ({state.SolverWindowCenterXCm},{state.SolverWindowCenterYCm}) cm").FontSize(12f).Color("#9FD8FF").WhiteSpace(UiWhiteSpace.Normal),
-                Ui.Text($"Solver driver: {state.SolverWindowDriver}").FontSize(12f).Color("#9FD8FF").WhiteSpace(UiWhiteSpace.Normal),
-                Ui.Text($"Work driver: {state.FlowWorkAreaReason} rev {state.FlowWorkAreaRevision}  command focus {(state.CommandFocusActive ? "active" : "idle")} {state.CommandFocusTicksRemaining} tick(s)").FontSize(12f).Color("#D6E4F5").WhiteSpace(UiWhiteSpace.Normal),
-                Ui.Text($"Camera/stream window chunks {state.LoadedChunkCount} @ {state.StreamingChunkSizeCm} cm").FontSize(12f).Color("#D6E4F5").WhiteSpace(UiWhiteSpace.Normal),
-                Ui.Text($"Camera budget {state.CameraBudgetUpdatesFrame}/{state.CameraBudgetUpdatesTotal}; camera does not respawn or retarget units.").FontSize(11f).Color("#8EA2BD").WhiteSpace(UiWhiteSpace.Normal),
-                Ui.Text($"Camera target ({state.CameraTargetX:0},{state.CameraTargetY:0}) cm  distance {state.CameraDistanceCm:0}").FontSize(12f).Color("#F2D483").WhiteSpace(UiWhiteSpace.Normal),
-                Ui.Text($"Chunk updates/frame {state.StreamingWindowUpdatesFrame}  invalid orders {state.CommandRejectsFrame}/{state.CommandRejectsTotal}").FontSize(12f).Color(state.CommandRejectsFrame > 0 ? "#FF9A73" : "#9FD8FF").WhiteSpace(UiWhiteSpace.Normal),
-                Ui.Text($"Last command target ({state.CommandFocusX:0},{state.CommandFocusY:0}) cm  selected payload {state.LastCommandSelectionCount}").FontSize(11f).Color("#8EA2BD").WhiteSpace(UiWhiteSpace.Normal),
-                Ui.Text(state.StrategicWorldViewActive
-                        ? "Full-map camera active. Minimap still shows absolute 64km coordinates."
-                        : "Field camera active. Minimap still shows absolute 64km coordinates.")
-                    .FontSize(11f)
-                    .Color(state.StrategicWorldViewActive ? "#A4F07A" : "#8EA2BD")
-                    .WhiteSpace(UiWhiteSpace.Normal),
-                Ui.Row(
-                        BuildActionButton("Full Map", RequestStrategicWorldCamera),
-                        BuildActionButton("Field Camera", RequestCameraReset))
-                    .Wrap()
-                    .Gap(8f),
-                Ui.Text("Debug Landmarks").FontSize(12f).Bold().Color("#F4C77D"),
-                BuildKnownContactRow(),
-                Ui.Text("RTS minimap: CAM is your camera rectangle, green cells are active chunks, amber boxes are hotspots, blue is solver cache. Click any in-bounds absolute coordinate to move the camera. Press M to hide/show.").FontSize(11f).Color("#8EA2BD").WhiteSpace(UiWhiteSpace.Normal))
-            .Width(width)
-            .Padding(12f)
-            .Gap(7f)
-            .Radius(18f)
-            .Background("#111C2A")
-            .Absolute(left, 16f)
-            .ZIndex(23);
-    }
-
-    private UiElementBuilder BuildFormationDock(MassNavPanelState state)
-    {
-        const float width = 390f;
-        const float estimatedHeight = 190f;
-        float left = MathF.Max(16f, state.ViewportWidth - width - 16f);
-        float top = MathF.Max(16f, state.ViewportHeight - estimatedHeight - 16f);
-        return Ui.Card(
-                Ui.Text("Formation").FontSize(13f).Bold().Color("#F4C77D"),
-                Ui.Text($"Mode {state.FormationLabel}  Selected {state.SelectedCount}  Groups {state.FormationCount}").FontSize(12f).Color("#D6E4F5").WhiteSpace(UiWhiteSpace.Normal),
-                Ui.Text($"Rotation {state.FormationRotationDeg:0.0} deg").FontSize(12f).Color("#8EA2BD"),
-                Ui.Row(
-                        BuildFormationButton("None", MassNavFormationMode.None, state.FormationLabel),
-                        BuildFormationButton("Line", MassNavFormationMode.Line, state.FormationLabel),
-                        BuildFormationButton("Square", MassNavFormationMode.Square, state.FormationLabel),
-                        BuildFormationButton("Circle", MassNavFormationMode.Circle, state.FormationLabel),
-                        BuildFormationButton("Wedge", MassNavFormationMode.Wedge, state.FormationLabel))
-                    .Wrap()
-                    .Gap(8f))
-            .Width(width)
-            .Padding(12f)
-            .Gap(7f)
-            .Radius(18f)
-            .Background("#111C2A")
-            .Absolute(left, top)
-            .ZIndex(24);
     }
 
     private static UiElementBuilder BuildActionButton(string label, Action onClick)
