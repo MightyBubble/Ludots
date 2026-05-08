@@ -1303,18 +1303,36 @@ namespace Ludots.Core.Presentation.Systems
                     continue;
                 }
 
+                ref readonly AssetBindingConfig asset = ref slot.AssetBinding;
+                if (TryEmitSkinnedVisualBatchFast(
+                        entity,
+                        in state,
+                        definition,
+                        slot.SlotIndex,
+                        in asset,
+                        lod,
+                        performerWorldPosition + definition.PositionOffset,
+                        performerWorldRotation,
+                        in performerWorldFacing,
+                        performerWorldScale,
+                        animatorSlot))
+                {
+                    emittedStableVisual = true;
+                    continue;
+                }
+
                 _assetEmitter.Emit(
                     entity,
                     in state,
                     in definition,
                     slot.SlotIndex,
-                    in slot.AssetBinding,
+                    in asset,
                     lod,
                     performerWorldPosition,
                     performerWorldRotation,
                     in performerWorldFacing,
                     performerWorldScale);
-                emittedStableVisual |= IsCacheableVisualKind(slot.AssetBinding.AssetKind);
+                emittedStableVisual |= IsCacheableVisualKind(asset.AssetKind);
             }
 
             return emittedStableVisual;
@@ -1406,7 +1424,8 @@ namespace Ludots.Core.Presentation.Systems
             if (_skinnedVisualBatchBuffer == null ||
                 asset.AssetKind != AssetKind.SkinnedMesh ||
                 lod == LODLevel.Culled ||
-                (asset.HasMaxLod && lod > asset.MaxLod))
+                (asset.HasMaxLod && lod > asset.MaxLod) ||
+                !ResolveAssetVisibility(entity, in asset))
             {
                 return false;
             }

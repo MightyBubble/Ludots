@@ -444,6 +444,7 @@ namespace Ludots.Tests.Presentation
                 },
                 new CullState { IsVisible = true, LOD = LODLevel.High });
 
+            instances.BindDefinitions(definitions);
             Entity performer = instances.Create(definitionId, owner, scopeId: 7, PresentationAnchorKind.Entity, Vector3.Zero, stableId: 3001, Entity.Null, default);
             world.Get<PerformerState>(performer).BehaviorActiveMask = (1u << 0) | (1u << 1);
 
@@ -488,6 +489,101 @@ namespace Ludots.Tests.Presentation
             Assert.That(skinnedBatchBuffer.GetSpan()[0].Animator.GetControllerId(), Is.EqualTo(controllerId));
             Assert.That(proxyBuffer.GetSpan()[1].StableId, Is.EqualTo(TransientMarkerIdentity.ComposeStableId(1)));
             Assert.That(proxyBuffer.GetSpan()[1].StableId, Is.GreaterThan(0));
+        }
+
+        [Test]
+        public void PerformerEmitSystem_MixedSkinnedAndSelectionMesh_UsesDirectSkinnedBatch()
+        {
+            using var world = World.Create();
+            var requests = new PresentationRequestBuffer();
+            var definitions = new PerformerDefinitionRegistry();
+            var skinnedBatch = new SkinnedVisualBatchBuffer(8);
+            const int selectionVisibleParam = 701;
+
+            int definitionId = definitions.Register(
+                "performer.massflow.agent",
+                new PerformerDefinition
+                {
+                    Behaviors =
+                    [
+                        new BehaviorSlot
+                        {
+                            SlotIndex = 0,
+                            Kind = BehaviorKind.AssetBinding,
+                            ActiveByDefault = true,
+                            AssetBinding = new AssetBindingConfig
+                            {
+                                AssetKind = AssetKind.SkinnedMesh,
+                                AssetId = 10,
+                                MaterialId = 20,
+                                RenderPath = VisualRenderPath.GpuSkinnedInstance,
+                                Mobility = VisualMobility.Movable,
+                                LocalScale = Vector3.One,
+                            },
+                        },
+                        new BehaviorSlot
+                        {
+                            SlotIndex = 1,
+                            Kind = BehaviorKind.AssetBinding,
+                            ActiveByDefault = true,
+                            AssetBinding = new AssetBindingConfig
+                            {
+                                AssetKind = AssetKind.Mesh,
+                                AssetId = 11,
+                                MaterialId = 21,
+                                RenderPath = VisualRenderPath.InstancedStaticMesh,
+                                Mobility = VisualMobility.Movable,
+                                LocalScale = Vector3.One,
+                                VisibilityParamKey = selectionVisibleParam,
+                            },
+                        },
+                    ],
+                    ParamDefaults =
+                    [
+                        new ParamDefault
+                        {
+                            ParamKey = selectionVisibleParam,
+                            Lane = ParamLane.Int,
+                            IntValue = 0,
+                        },
+                    ],
+                });
+
+            var instances = new PerformerEntityRuntime(world);
+            Entity owner = world.Create(
+                new PresentationStableId { Value = 901 },
+                new VisualTransform
+                {
+                    Position = new Vector3(2f, 0f, 4f),
+                    Rotation = Quaternion.Identity,
+                    Scale = Vector3.One,
+                },
+                new CullState { IsVisible = true, LOD = LODLevel.High });
+
+            instances.BindDefinitions(definitions);
+            Entity performer = instances.Create(definitionId, owner, scopeId: 1, PresentationAnchorKind.Entity, Vector3.Zero, stableId: 9001, Entity.Null, default);
+            world.Get<PerformerState>(performer).BehaviorActiveMask = (1u << 0) | (1u << 1);
+            instances.SetParam(performer, selectionVisibleParam, ParamLane.Int, 0f, 0, Vector4.Zero);
+
+            using var emitSystem = new PerformerEmitSystem(
+                world,
+                instances,
+                definitions,
+                requests,
+                new Dictionary<string, object>(),
+                animatorStates: null!,
+                soundRequests: null!,
+                skinnedVisualBatchBuffer: skinnedBatch);
+
+            emitSystem.Update(0.016f);
+
+            Assert.That(skinnedBatch.Count, Is.EqualTo(1), "Skinned body should use the production direct GPU skinned batch even when the same performer has a visibility-param selection mesh.");
+            Assert.That(requests.Count, Is.EqualTo(1), "Only the hidden selection mesh should need a visibility snapshot request.");
+            Assert.That(requests.Get(0).Kind, Is.EqualTo(PresentationRequestKind.VisualProxy));
+            Assert.That(requests.Get(0).VisualProxy.MeshAssetId, Is.EqualTo(11));
+            Assert.That(requests.Get(0).VisualProxy.Visibility, Is.EqualTo(VisualVisibility.Hidden));
+            Assert.That(skinnedBatch.GetSpan()[0].MeshAssetId, Is.EqualTo(10));
+            Assert.That(skinnedBatch.GetSpan()[0].RenderPath, Is.EqualTo(VisualRenderPath.GpuSkinnedInstance));
         }
 
         [Test]
