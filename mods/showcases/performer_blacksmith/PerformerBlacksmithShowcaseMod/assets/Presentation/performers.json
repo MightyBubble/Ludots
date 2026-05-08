@@ -128,32 +128,33 @@
   {
     "id": "blacksmith_minimap_marker_ball",
     "defaultColor": [1.0, 0.24, 0.06, 1.0],
+    "children": [
+      { "definitionId": "blacksmith_durability_hud_bar_benchmark", "scopeTag": "structure" },
+      { "definitionId": "blacksmith_durability_hud_text_benchmark", "scopeTag": "structure" }
+    ],
     "behaviors": [
       {
         "slot": 0,
         "kind": "AssetBinding",
         "activeByDefault": true,
         "assetBinding": {
-          "assetKind": "Mesh",
-          "assetId": "sphere",
+          "assetKind": "SkinnedMesh",
+          "assetId": "blacksmith.worker.knight",
           "materialId": "default_surface",
-          "renderPath": "InstancedStaticMesh",
+          "renderPath": "GpuSkinnedInstance",
           "mobility": "Movable",
-          "localScale": [2.8, 2.8, 2.8]
+          "localScale": [0.45, 0.45, 0.45]
         }
       },
       {
         "slot": 1,
-        "kind": "AssetBinding",
+        "kind": "Animator",
         "activeByDefault": true,
-        "assetBinding": {
-          "assetKind": "Mesh",
-          "assetId": "cube",
-          "materialId": "default_surface",
-          "renderPath": "InstancedStaticMesh",
-          "mobility": "Movable",
-          "localOffset": [2.15, 0.42, 0.0],
-          "localScale": [1.85, 0.28, 0.55]
+        "animator": {
+          "animatorControllerId": "blacksmith.worker.locomotion",
+          "animationProfileId": "blacksmith.worker.profile",
+          "speedParamKey": 105,
+          "stateParamKey": -1
         }
       },
       {
@@ -183,6 +184,9 @@
           "orientationLengthPx": 15.0
         }
       }
+    ],
+    "paramDefaults": [
+      { "paramKey": 105, "lane": "Float", "floatValue": 1.0 }
     ]
   },
   {

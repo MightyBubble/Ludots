@@ -1683,18 +1683,14 @@ namespace PerformerBlacksmithShowcaseMod.Runtime
             PresentationTimingDiagnostics? timings = engine.GetService(CoreServiceKeys.PresentationTimingDiagnostics);
             if (timings == null)
             {
-                return $"Runtime: timing diagnostics unavailable | world HUD {renderMetrics.WorldHudBarCount}/{renderMetrics.WorldHudTextCount} | screen HUD {renderMetrics.ScreenHudBarCount}/{renderMetrics.ScreenHudTextCount} @ blacksmiths {totalBlacksmiths}";
+                return "fps --.-";
             }
 
             float frameMs = timings.LastWallFrameMs > 0.001f
                 ? timings.LastWallFrameMs
                 : (timings.WallFrameMs > 0.001f ? timings.WallFrameMs : (timings.LastFrameMs > 0.001f ? timings.LastFrameMs : timings.FrameMs));
-            float tickMs = timings.LastTotalTickMs > 0.001f ? timings.LastTotalTickMs : timings.TotalTickMs;
-            float uiRenderMs = timings.LastUiRenderMs;
-            float uiUploadMs = timings.LastUiUploadMs;
-            float overlayTotalMs = timings.LastScreenOverlayDrawMs;
-            float overlayPaintMs = MathF.Max(0f, timings.LastScreenOverlayPaintMs - uiRenderMs);
-            return $"Runtime: wall {frameMs:F2} ms | tick {tickMs:F2} ms | sim {timings.LastSimulationMs:F2} ms | presentation {timings.LastPresentationMs:F2} ms | cull {timings.LastCameraCullingMs:F2} ms | hudProj {timings.LastWorldHudProjectionMs:F2} ms | primitive {timings.PrimitiveRenderMs:F2} ms | uiRender {uiRenderMs:F2} ms | uiUpload {uiUploadMs:F2} ms | overlayPaint {overlayPaintMs:F2} ms | overlayComposite {timings.LastScreenOverlayCompositeMs:F2} ms | overlayFinal {timings.LastScreenOverlayFinalDrawMs:F2} ms | overlayTotal {overlayTotalMs:F2} ms | world HUD {renderMetrics.WorldHudBarCount}/{renderMetrics.WorldHudTextCount} | screen HUD {renderMetrics.ScreenHudBarCount}/{renderMetrics.ScreenHudTextCount} @ blacksmiths {totalBlacksmiths}";
+            float fps = frameMs > 0.001f ? 1000f / frameMs : 0f;
+            return $"fps {fps:0.0}";
         }
 
         private string BuildCapacitySummary(in CapacityMetrics metrics, int totalBlacksmiths)

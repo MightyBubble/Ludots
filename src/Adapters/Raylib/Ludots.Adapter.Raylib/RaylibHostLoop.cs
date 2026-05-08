@@ -215,7 +215,7 @@ namespace Ludots.Adapter.Raylib
                 }
                 bool lightweightDiagnosticHudEnabled = ReadEnvBoolOrDefault(
                     "LUDOTS_RAYLIB_LIGHTWEIGHT_DIAGNOSTIC_HUD",
-                    defaultValue: false);
+                    defaultValue: true);
                 float autoOrbitDegPerSecond = float.TryParse(Environment.GetEnvironmentVariable("LUDOTS_RAYLIB_AUTO_ORBIT_DEG_PER_SEC"), out float parsedAutoOrbitDegPerSecond)
                     ? parsedAutoOrbitDegPerSecond
                     : 0f;
