@@ -133,13 +133,14 @@ internal sealed class MassNavWebParityPanelController
                     .Wrap()
                     .Gap(8f)
                     .Justify(UiJustifyContent.Start),
-                Ui.Text("Web parity baseline: SoA sim owns the hot path. Ludots owns selection, command ingress, presentation, and diagnostics.").FontSize(12f).Color("#C7D4E5").WhiteSpace(UiWhiteSpace.Normal),
+                Ui.Text("MassFlow uses a solver SoA as the hot-path workset; ECS owns authoring, commands, identity, gameplay truth, presentation handoff, and diagnostics.").FontSize(12f).Color("#C7D4E5").WhiteSpace(UiWhiteSpace.Normal),
                 Ui.Text($"Teams {state.TeamCount}  Agents/team {state.AgentsPerTeam}  Total {state.TotalAgents}  Selectable {state.ControllableAgents}  Obstacles {state.Blockers}").FontSize(13f).Color("#C7D4E5").WhiteSpace(UiWhiteSpace.Normal),
                 Ui.Text($"Selected {state.SelectedCount}  Rev {state.SelectionRevision}  Pending cmds {state.PendingCommandCount}").FontSize(13f).Color("#A4F07A"),
                 Ui.Text($"Team target {state.SelectedTeamId}  Formation {state.FormationLabel}  Groups {state.FormationCount}  Rotation {state.FormationRotationDeg:0.0} deg").FontSize(13f).Color("#F2D483").WhiteSpace(UiWhiteSpace.Normal),
                 Ui.Text($"FPS {state.Fps:0}  Frame {state.FrameMs:0.0} ms  Performer {state.PerformerEmitMs:0.0} ms  Minimap {state.MinimapProjectionMs:0.0} ms").FontSize(13f).Color("#F2D483").WhiteSpace(UiWhiteSpace.Normal),
                 Ui.Text($"InputCollection: select {state.SelectionSyncHzObserved:0.0} Hz  control {state.ControlHzObserved:0.0} Hz  capture {state.CommandHzObserved:0.0} Hz").FontSize(12f).Color("#D6E4F5").WhiteSpace(UiWhiteSpace.Normal),
-                Ui.Text($"PostMovement: command {state.CommandDispatchHzObserved:0.0} Hz  sim {state.SimHzObserved:0.0} Hz  Presentation: performer {state.PerformerHzObserved:0.0} Hz  hud {state.HudHzObserved:0.0} Hz  panel {state.PanelHzObserved:0.0} Hz").FontSize(12f).Color("#D6E4F5").WhiteSpace(UiWhiteSpace.Normal),
+                Ui.Text($"PostMovement: command {state.CommandDispatchHzObserved:0.0} Hz  mass {state.SimHzObserved:0.0}/{state.MassNavSimulationHz} Hz  Presentation: performer {state.PerformerHzObserved:0.0} Hz  hud {state.HudHzObserved:0.0} Hz  panel {state.PanelHzObserved:0.0} Hz").FontSize(12f).Color("#D6E4F5").WhiteSpace(UiWhiteSpace.Normal),
+                Ui.Text($"Mass cadence: target {state.MassNavTargetUpdateHz} Hz  flow {state.MassNavFlowStepHz}/{state.MassNavFlowCrowdStampHz}/{state.MassNavFlowObstacleStampHz} Hz  resolve {state.MassNavHardResolveHz} Hz  sync {state.MassNavEntitySyncHz} Hz").FontSize(12f).Color("#D6E4F5").WhiteSpace(UiWhiteSpace.Normal),
                 Ui.Text(state.LastActionText).FontSize(12f).Color("#8FE388").WhiteSpace(UiWhiteSpace.Normal),
                 Ui.Text("World Map").FontSize(12f).Bold().Color("#F4C77D"),
                 Ui.Text($"Battlefield {state.WorldWidthCm / 100_000f:0.0}x{state.WorldHeightCm / 100_000f:0.0} km  landmarks {state.WorldMarkerCount}  active chunks {state.LoadedChunkCount} @ {state.StreamingChunkSizeCm} cm").FontSize(12f).Color("#D6E4F5").WhiteSpace(UiWhiteSpace.Normal),
@@ -205,9 +206,9 @@ internal sealed class MassNavWebParityPanelController
                     .Wrap()
                     .Gap(8f),
                 Ui.Text("MassNav Flow").FontSize(12f).Bold().Color("#F4C77D"),
-                Ui.Text($"Flow {(state.FlowEnabled ? "On" : "Off")}  Iter {state.FlowIterations}  Step {state.FlowStepInterval}  Crowd {state.FlowCrowdInterval}  Obs {state.FlowObstacleInterval}").FontSize(12f).Color("#D6E4F5").WhiteSpace(UiWhiteSpace.Normal),
+                Ui.Text($"Flow {(state.FlowEnabled ? "On" : "Off")}  Crowd budget {state.FlowIterations}  Hz step/crowd/obs {state.MassNavFlowStepHz}/{state.MassNavFlowCrowdStampHz}/{state.MassNavFlowObstacleStampHz}  resolve {state.MassNavHardResolveHz}  sync {state.MassNavEntitySyncHz}").FontSize(12f).Color("#D6E4F5").WhiteSpace(UiWhiteSpace.Normal),
                 Ui.Text($"Flow rebuild(last) {state.FlowFieldRebuildMs:0.0} ms  target-driven  rebuild/frame {state.FlowReconcileFrame}").FontSize(12f).Color("#D6E4F5").WhiteSpace(UiWhiteSpace.Normal),
-                Ui.Text("Flow knobs now drive the custom sim directly: obstacle stamp, crowd stamp, and solve cadence all hot-apply on the next logic step.").FontSize(11f).Color("#8EA2BD").WhiteSpace(UiWhiteSpace.Normal),
+                Ui.Text("Cadence knobs hot-apply through the MassFlow config scheduler; entity writeback uses a solver dirty queue at the configured sync Hz.").FontSize(11f).Color("#8EA2BD").WhiteSpace(UiWhiteSpace.Normal),
                 Ui.Row(
                         BuildActionButton(state.FlowEnabled ? "Flow On" : "Flow Off", ToggleFlowEnabled),
                         BuildActionButton("Iter -512", () => AdjustFlowIterations(-512)),
@@ -215,12 +216,19 @@ internal sealed class MassNavWebParityPanelController
                     .Wrap()
                     .Gap(8f),
                 Ui.Row(
-                        BuildActionButton("Step -1", () => AdjustFlowStepInterval(-1)),
-                        BuildActionButton("Step +1", () => AdjustFlowStepInterval(1)),
-                        BuildActionButton("Crowd -1", () => AdjustFlowCrowdInterval(-1)),
-                        BuildActionButton("Crowd +1", () => AdjustFlowCrowdInterval(1)),
-                        BuildActionButton("Obs -1", () => AdjustFlowObstacleInterval(-1)),
-                        BuildActionButton("Obs +1", () => AdjustFlowObstacleInterval(1)))
+                        BuildActionButton("Step Hz -1", () => AdjustFlowStepHz(-1)),
+                        BuildActionButton("Step Hz +1", () => AdjustFlowStepHz(1)),
+                        BuildActionButton("Crowd Hz -1", () => AdjustFlowCrowdHz(-1)),
+                        BuildActionButton("Crowd Hz +1", () => AdjustFlowCrowdHz(1)),
+                        BuildActionButton("Obs Hz -1", () => AdjustFlowObstacleHz(-1)),
+                        BuildActionButton("Obs Hz +1", () => AdjustFlowObstacleHz(1)))
+                    .Wrap()
+                    .Gap(8f),
+                Ui.Row(
+                        BuildActionButton("Resolve Hz -1", () => AdjustHardResolveHz(-1)),
+                        BuildActionButton("Resolve Hz +1", () => AdjustHardResolveHz(1)),
+                        BuildActionButton("Sync Hz -1", () => AdjustEntitySyncHz(-1)),
+                        BuildActionButton("Sync Hz +1", () => AdjustEntitySyncHz(1)))
                     .Wrap()
                     .Gap(8f),
                 Ui.Text("Scene Rebuild Required").FontSize(12f).Bold().Color("#F4C77D"),
@@ -459,34 +467,56 @@ internal sealed class MassNavWebParityPanelController
         }
     }
 
-    private void AdjustFlowStepInterval(int delta)
+    private void AdjustFlowStepHz(int delta)
     {
-        _simulation?.FlowTuning.AdjustStepInterval(delta);
         if (_simulation != null)
         {
+            _simulation.Cadence.AdjustFlowStepHz(delta);
             _simulation.WebParity.RequestFlowRebuild();
-            SetActionFeedback($"Hot apply: flow solve interval = {_simulation.FlowTuning.StepIntervalTicks} tick(s).");
+            SetActionFeedback($"Hot apply: flow solve cadence = {_simulation.Cadence.FlowStepHz} Hz.");
         }
     }
 
-    private void AdjustFlowCrowdInterval(int delta)
+    private void AdjustFlowCrowdHz(int delta)
     {
-        _simulation?.FlowTuning.AdjustCrowdStampInterval(delta);
         if (_simulation != null)
         {
+            _simulation.Cadence.AdjustFlowCrowdStampHz(delta);
             _simulation.WebParity.RequestFlowRebuild();
-            SetActionFeedback($"Hot apply: flow crowd stamp interval = {_simulation.FlowTuning.CrowdStampIntervalTicks} tick(s).");
+            SetActionFeedback($"Hot apply: flow crowd stamp cadence = {_simulation.Cadence.FlowCrowdStampHz} Hz.");
         }
     }
 
-    private void AdjustFlowObstacleInterval(int delta)
+    private void AdjustFlowObstacleHz(int delta)
     {
-        _simulation?.FlowTuning.AdjustObstacleStampInterval(delta);
         if (_simulation != null)
         {
+            _simulation.Cadence.AdjustFlowObstacleStampHz(delta);
             _simulation.WebParity.RequestFlowRebuild();
-            SetActionFeedback($"Hot apply: flow obstacle stamp interval = {_simulation.FlowTuning.ObstacleStampIntervalTicks} tick(s).");
+            SetActionFeedback($"Hot apply: flow obstacle stamp cadence = {_simulation.Cadence.FlowObstacleStampHz} Hz.");
         }
+    }
+
+    private void AdjustHardResolveHz(int delta)
+    {
+        if (_simulation == null)
+        {
+            return;
+        }
+
+        _simulation.Cadence.AdjustHardResolveHz(delta);
+        SetActionFeedback($"Hot apply: hard resolve cadence = {_simulation.Cadence.HardResolveHz} Hz.");
+    }
+
+    private void AdjustEntitySyncHz(int delta)
+    {
+        if (_simulation == null)
+        {
+            return;
+        }
+
+        _simulation.Cadence.AdjustEntitySyncHz(delta);
+        SetActionFeedback($"Hot apply: ECS writeback cadence = {_simulation.Cadence.EntitySyncHz} Hz.");
     }
 
     private void ToggleArrivalRecovery()
@@ -639,6 +669,13 @@ internal sealed class MassNavWebParityPanelController
             PhysicsMaxStepsPerFixedTick: physicsPolicy.MaxStepsPerFixedTick,
             NavigationHz: navigationPolicy.TargetHz,
             NavigationMaxStepsPerFixedTick: navigationPolicy.MaxStepsPerFixedTick,
+            MassNavSimulationHz: simulation.Cadence.SimulationHz,
+            MassNavTargetUpdateHz: simulation.Cadence.TargetUpdateHz,
+            MassNavFlowStepHz: simulation.Cadence.FlowStepHz,
+            MassNavFlowCrowdStampHz: simulation.Cadence.FlowCrowdStampHz,
+            MassNavFlowObstacleStampHz: simulation.Cadence.FlowObstacleStampHz,
+            MassNavHardResolveHz: simulation.Cadence.HardResolveHz,
+            MassNavEntitySyncHz: simulation.Cadence.EntitySyncHz,
             TeamCount: simulation.TeamCount,
             AgentsPerTeam: simulation.AgentsPerTeam,
             TotalAgents: simulation.AgentState.TotalAgents,
@@ -655,9 +692,6 @@ internal sealed class MassNavWebParityPanelController
             FormationRotationDeg: simulation.NavGroupRuntime.SelectedRotationRadians * (180f / MathF.PI),
             FlowEnabled: simulation.FlowTuning.Enabled,
             FlowIterations: simulation.FlowTuning.IterationsPerStep,
-            FlowStepInterval: simulation.FlowTuning.StepIntervalTicks,
-            FlowCrowdInterval: simulation.FlowTuning.CrowdStampIntervalTicks,
-            FlowObstacleInterval: simulation.FlowTuning.ObstacleStampIntervalTicks,
             ArrivalRecoveryEnabled: simulation.WebParity.ArrivalTuning.Enabled,
             ArrivalTimeoutMs: simulation.WebParity.ArrivalTuning.TimeoutMs,
             ArrivalProgressCm: simulation.WebParity.ArrivalTuning.ProgressDistanceCm,

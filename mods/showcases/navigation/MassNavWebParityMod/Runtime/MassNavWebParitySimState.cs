@@ -65,11 +65,14 @@ public sealed class MassNavWebParitySimState
     private byte[] _hasUnitTarget = Array.Empty<byte>();
     private byte[] _selectedFlags = Array.Empty<byte>();
     private byte[] _hardResolveCandidates = Array.Empty<byte>();
+    private byte[] _heavyProfileFlags = Array.Empty<byte>();
+    private byte[] _entitySyncDirtyFlags = Array.Empty<byte>();
     private byte[] _unitSettledFlags = Array.Empty<byte>();
     private byte[] _unitRetryCounts = Array.Empty<byte>();
     private float[] _unitStuckSeconds = Array.Empty<float>();
     private int[] _separationAgents = Array.Empty<int>();
     private int[] _hardResolveAgents = Array.Empty<int>();
+    private int[] _entitySyncDirtyAgents = Array.Empty<int>();
     private readonly UnitStepJob[] _stepJobs = CreateStepJobs();
     private JobHandle[] _stepHandles = Array.Empty<JobHandle>();
 
@@ -78,6 +81,7 @@ public sealed class MassNavWebParitySimState
     private TeamRelationship[] _teamRelationshipMatrix = Array.Empty<TeamRelationship>();
     private int _frameCount;
     private bool _useCandidateGating;
+    private int _entitySyncDirtyCount;
     private bool _flowDirty = true;
     private int _lastFlowStepFrame = int.MinValue;
     private int _lastCrowdStampFrame = int.MinValue;
@@ -93,6 +97,7 @@ public sealed class MassNavWebParitySimState
     public int UnitCount { get; private set; }
     public int ObstacleCount { get; private set; }
     public int SettledUnitCount { get; private set; }
+    public int PendingEntitySyncCount => _entitySyncDirtyCount;
     public float LastFlowFieldRebuildMs { get; private set; }
     public MassNavArrivalTuning ArrivalTuning { get; } = new();
     public MassNavAvoidanceTuning AvoidanceTuning { get; } = new();
@@ -119,6 +124,7 @@ public sealed class MassNavWebParitySimState
     public int GetTeam(int index) => _teams[index];
     public float GetNavMass(int index) => _navMasses[index];
     public float GetVisualScale(int index) => _visualScales[index];
+    public bool IsHeavyProfile(int index) => _heavyProfileFlags[index] != 0;
     public bool IsSelected(int index) => _selectedFlags[index] != 0;
     public float GetObstacleX(int index) => _obsX[index];
     public float GetObstacleY(int index) => _obsY[index];
@@ -192,9 +198,19 @@ public sealed class MassNavWebParitySimState
         }
 
         MarkFlowDirty();
+        MarkAllEntitiesDirty();
     }
 
     public void Reset(ReadOnlySpan<int> teamIds, int unitsPerTeam, ReadOnlySpan<MassNavObstacleConfig> obstacles)
+    {
+        Reset(teamIds, unitsPerTeam, obstacles, null);
+    }
+
+    public void Reset(
+        ReadOnlySpan<int> teamIds,
+        int unitsPerTeam,
+        ReadOnlySpan<MassNavObstacleConfig> obstacles,
+        MassNavAgentProfileSetConfig? profileSet)
     {
         int safeUnitsPerTeam = Math.Max(0, unitsPerTeam);
         int safeTeamCount = Math.Max(0, teamIds.Length);
@@ -202,8 +218,9 @@ public sealed class MassNavWebParitySimState
         EnsureCapacity(UnitCount);
         InitializeTeams(teamIds, safeUnitsPerTeam);
         CacheAuthoredObstacles(obstacles);
-        InitializeUnits();
+        InitializeUnits(profileSet);
         ForceFlowRebuild();
+        MarkAllEntitiesDirty();
         _frameCount = 0;
         SettledUnitCount = 0;
     }
@@ -243,6 +260,16 @@ public sealed class MassNavWebParitySimState
         }
         _navMasses[index] = MathF.Max(0.001f, navMass);
         _visualScales[index] = MathF.Max(0.01f, visualScale);
+        MarkEntityDirty(index);
+    }
+
+    public void SetUnitRuntimeProfile(int index, int teamId, bool heavy, float navMass, float visualScale)
+    {
+        SetUnitRuntimeProfile(index, teamId, navMass, visualScale);
+        if ((uint)index < (uint)UnitCount)
+        {
+            _heavyProfileFlags[index] = heavy ? (byte)1 : (byte)0;
+        }
     }
 
     public void RequestFlowRebuild()
@@ -263,6 +290,7 @@ public sealed class MassNavWebParitySimState
         _unitTargetsCm[offset] = xCm;
         _unitTargetsCm[offset + 1] = yCm;
         _hasUnitTarget[index] = 1;
+        MarkEntityDirty(index);
         if (resetRecovery || wasInactive)
         {
             ResetUnitArrivalState(index, clearRetryCount: true);
@@ -278,6 +306,7 @@ public sealed class MassNavWebParitySimState
 
         ResetUnitArrivalState(index, clearRetryCount: true);
         _hasUnitTarget[index] = 0;
+        MarkEntityDirty(index);
     }
 
     public void HoldUnitAtCurrentPosition(int index)
@@ -295,6 +324,7 @@ public sealed class MassNavWebParitySimState
         _hasUnitTarget[index] = 1;
         _unitRetryCounts[index] = 0;
         EnterSettledState(index, x, y);
+        MarkEntityDirty(index);
     }
 
     public void SetSelectedFlags(MassNavAgentState agentState, ReadOnlySpan<Entity> selectedEntities)
@@ -385,6 +415,8 @@ public sealed class MassNavWebParitySimState
     public void Step(
         float dt,
         MassNavGroupRuntime navGroupRuntime,
+        bool runHardResolve,
+        int hardResolveCandidateThresholdAgents,
         Action<double>? observeStepPrep = null,
         Action<double>? observeLocalSteering = null,
         Action<double>? observeHardResolve = null)
@@ -402,7 +434,7 @@ public sealed class MassNavWebParitySimState
         int scalarCount = UnitCount * 2;
         Array.Copy(_positionsCm, _readPositionsCm, scalarCount);
         Array.Copy(_velocitiesCm, _readVelocitiesCm, scalarCount);
-        _useCandidateGating = UnitCount >= 16_000;
+        _useCandidateGating = UnitCount >= Math.Max(1, hardResolveCandidateThresholdAgents);
         if (_useCandidateGating)
         {
             Array.Clear(_hardResolveCandidates, 0, UnitCount);
@@ -431,10 +463,14 @@ public sealed class MassNavWebParitySimState
             observeLocalSteering?.Invoke((System.Diagnostics.Stopwatch.GetTimestamp() - steeringStart) * 1000.0 / System.Diagnostics.Stopwatch.Frequency);
             ClampAllPositionsToWorldBounds();
             long resolveStart = System.Diagnostics.Stopwatch.GetTimestamp();
-            ResolveHardPenetration();
-            ClampAllPositionsToWorldBounds();
+            if (runHardResolve)
+            {
+                ResolveHardPenetration();
+                ClampAllPositionsToWorldBounds();
+            }
             observeHardResolve?.Invoke((System.Diagnostics.Stopwatch.GetTimestamp() - resolveStart) * 1000.0 / System.Diagnostics.Stopwatch.Frequency);
             UpdateSettledUnitCount();
+            MarkMovedEntitiesDirty();
             return;
         }
 
@@ -477,17 +513,53 @@ public sealed class MassNavWebParitySimState
 
         ClampAllPositionsToWorldBounds();
         long hardResolveStart = System.Diagnostics.Stopwatch.GetTimestamp();
-        ResolveHardPenetration();
-        ClampAllPositionsToWorldBounds();
+        if (runHardResolve)
+        {
+            ResolveHardPenetration();
+            ClampAllPositionsToWorldBounds();
+        }
         observeHardResolve?.Invoke((System.Diagnostics.Stopwatch.GetTimestamp() - hardResolveStart) * 1000.0 / System.Diagnostics.Stopwatch.Frequency);
         UpdateSettledUnitCount();
+        MarkMovedEntitiesDirty();
+    }
+
+    public bool AdvanceFlowPipeline(
+        MassNavFlowTuning tuning,
+        bool refreshFlow,
+        bool refreshCrowd,
+        bool refreshObstacles,
+        Action<double>? observeFlowFieldRebuild = null)
+    {
+        return AdvanceFlowPipelineCore(tuning, 0, useLegacyIntervalCadence: false, refreshFlow, refreshCrowd, refreshObstacles, observeFlowFieldRebuild);
     }
 
     public bool AdvanceFlowPipeline(MassNavFlowTuning tuning, int frameIndex, Action<double>? observeFlowFieldRebuild = null)
     {
-        bool refreshObstacles = _flowDirty || ShouldRun(frameIndex, ref _lastObstacleStampFrame, tuning.ObstacleStampIntervalTicks);
-        bool refreshCrowd = _flowDirty || ShouldRun(frameIndex, ref _lastCrowdStampFrame, tuning.CrowdStampIntervalTicks);
-        bool refreshFlow = _flowDirty || ShouldRun(frameIndex, ref _lastFlowStepFrame, tuning.StepIntervalTicks);
+        return AdvanceFlowPipelineCore(
+            tuning,
+            frameIndex,
+            useLegacyIntervalCadence: true,
+            tuning.ForceRefreshFlow,
+            tuning.ForceRefreshCrowd,
+            tuning.ForceRefreshObstacles,
+            observeFlowFieldRebuild);
+    }
+
+    private bool AdvanceFlowPipelineCore(
+        MassNavFlowTuning tuning,
+        int frameIndex,
+        bool useLegacyIntervalCadence,
+        bool forceRefreshFlow,
+        bool forceRefreshCrowd,
+        bool forceRefreshObstacles,
+        Action<double>? observeFlowFieldRebuild)
+    {
+        bool refreshObstacles = _flowDirty || forceRefreshObstacles || (useLegacyIntervalCadence && ShouldRun(frameIndex, ref _lastObstacleStampFrame, tuning.ObstacleStampIntervalTicks));
+        bool refreshCrowd = _flowDirty || forceRefreshCrowd || (useLegacyIntervalCadence && ShouldRun(frameIndex, ref _lastCrowdStampFrame, tuning.CrowdStampIntervalTicks));
+        bool refreshFlow = _flowDirty || forceRefreshFlow || (useLegacyIntervalCadence && ShouldRun(frameIndex, ref _lastFlowStepFrame, tuning.StepIntervalTicks));
+        tuning.ForceRefreshFlow = false;
+        tuning.ForceRefreshCrowd = false;
+        tuning.ForceRefreshObstacles = false;
         if (!refreshObstacles && !refreshCrowd && !refreshFlow)
         {
             return false;
@@ -519,8 +591,26 @@ public sealed class MassNavWebParitySimState
     public void SyncEntities(World world, MassNavAgentState agentState)
     {
         int count = Math.Min(UnitCount, agentState.ControllableCount);
-        for (int i = 0; i < count; i++)
+        if (count <= 0 || _entitySyncDirtyCount <= 0)
         {
+            return;
+        }
+
+        int dirtyCount = _entitySyncDirtyCount;
+        for (int dirtyIndex = 0; dirtyIndex < dirtyCount; dirtyIndex++)
+        {
+            int i = _entitySyncDirtyAgents[dirtyIndex];
+            if ((uint)i >= (uint)count)
+            {
+                if ((uint)i < (uint)UnitCount)
+                {
+                    _entitySyncDirtyFlags[i] = 0;
+                }
+
+                continue;
+            }
+
+            _entitySyncDirtyFlags[i] = 0;
             Entity entity = agentState.ControllableAgents[i];
             if (!world.IsAlive(entity))
             {
@@ -542,7 +632,10 @@ public sealed class MassNavWebParitySimState
                 ref FacingDirection facing = ref world.Get<FacingDirection>(entity);
                 facing.AngleRad = MathF.Atan2(velocity.Y, velocity.X);
             }
+
         }
+
+        _entitySyncDirtyCount = 0;
     }
 
     public void SyncCullStates(
@@ -599,11 +692,14 @@ public sealed class MassNavWebParitySimState
             Array.Resize(ref _hasUnitTarget, unitCount);
             Array.Resize(ref _selectedFlags, unitCount);
             Array.Resize(ref _hardResolveCandidates, unitCount);
+            Array.Resize(ref _heavyProfileFlags, unitCount);
+            Array.Resize(ref _entitySyncDirtyFlags, unitCount);
             Array.Resize(ref _unitSettledFlags, unitCount);
             Array.Resize(ref _unitRetryCounts, unitCount);
             Array.Resize(ref _unitStuckSeconds, unitCount);
             Array.Resize(ref _separationAgents, unitCount);
             Array.Resize(ref _hardResolveAgents, unitCount);
+            Array.Resize(ref _entitySyncDirtyAgents, unitCount);
         }
     }
 
@@ -647,12 +743,13 @@ public sealed class MassNavWebParitySimState
         _teamRelationshipMatrix = new TeamRelationship[_teamStates.Count * _teamStates.Count];
     }
 
-    private void InitializeUnits()
+    private void InitializeUnits(MassNavAgentProfileSetConfig? profileSet)
     {
         Array.Clear(_velocitiesCm, 0, UnitCount * 2);
         Array.Clear(_unitTargetsCm, 0, UnitCount * 2);
         Array.Clear(_hasUnitTarget, 0, UnitCount);
         Array.Clear(_selectedFlags, 0, UnitCount);
+        Array.Clear(_heavyProfileFlags, 0, UnitCount);
         Array.Clear(_unitProgressAnchorCm, 0, UnitCount * 2);
         Array.Clear(_unitSettledAnchorCm, 0, UnitCount * 2);
         Array.Clear(_unitSettledFlags, 0, UnitCount);
@@ -679,12 +776,22 @@ public sealed class MassNavWebParitySimState
                 float xCm = team.SpawnCenterX + team.TangentX * (lateralOffset + jitterLateral) + team.DirectionX * (depthOffset + jitterDepth);
                 float yCm = team.SpawnCenterY + team.TangentY * (lateralOffset + jitterLateral) + team.DirectionY * (depthOffset + jitterDepth);
                 int i2 = unitIndex << 1;
-                bool heavy = (localIndex % 7) == 0;
+                MassNavAgentProfileConfig? profile = profileSet?.ResolveForLocalIndex(localIndex);
                 _teams[unitIndex] = team.TeamId;
                 _teamRuntimeIndices[unitIndex] = teamStateIndex;
                 _teamLocalIndices[unitIndex] = localIndex;
-                _navMasses[unitIndex] = heavy ? AvoidanceTuning.HeavyNavMass : AvoidanceTuning.LightNavMass;
-                _visualScales[unitIndex] = heavy ? AvoidanceTuning.HeavyVisualScale : AvoidanceTuning.LightVisualScale;
+                if (profile == null)
+                {
+                    _navMasses[unitIndex] = AvoidanceTuning.LightNavMass;
+                    _visualScales[unitIndex] = AvoidanceTuning.LightVisualScale;
+                    _heavyProfileFlags[unitIndex] = 0;
+                }
+                else
+                {
+                    _navMasses[unitIndex] = profile.NavMass;
+                    _visualScales[unitIndex] = profile.VisualScale;
+                    _heavyProfileFlags[unitIndex] = profile.Heavy ? (byte)1 : (byte)0;
+                }
                 _positionsCm[i2] = ClampPosition(xCm);
                 _positionsCm[i2 + 1] = ClampPosition(yCm);
                 _unitProgressAnchorCm[i2] = _positionsCm[i2];
@@ -828,6 +935,52 @@ public sealed class MassNavWebParitySimState
     private void MarkFlowDirty()
     {
         _flowDirty = true;
+    }
+
+    private void MarkEntityDirty(int index)
+    {
+        if ((uint)index >= (uint)UnitCount || _entitySyncDirtyFlags[index] != 0)
+        {
+            return;
+        }
+
+        _entitySyncDirtyFlags[index] = 1;
+        _entitySyncDirtyAgents[_entitySyncDirtyCount++] = index;
+    }
+
+    private void MarkAllEntitiesDirty()
+    {
+        _entitySyncDirtyCount = 0;
+        if (UnitCount <= 0)
+        {
+            return;
+        }
+
+        Array.Clear(_entitySyncDirtyFlags, 0, UnitCount);
+        for (int i = 0; i < UnitCount; i++)
+        {
+            _entitySyncDirtyFlags[i] = 1;
+            _entitySyncDirtyAgents[_entitySyncDirtyCount++] = i;
+        }
+    }
+
+    private void MarkMovedEntitiesDirty()
+    {
+        const float PositionEpsilonSq = 0.25f;
+        const float VelocityEpsilonSq = 0.01f;
+        for (int i = 0; i < UnitCount; i++)
+        {
+            int i2 = i << 1;
+            float dx = _positionsCm[i2] - _readPositionsCm[i2];
+            float dy = _positionsCm[i2 + 1] - _readPositionsCm[i2 + 1];
+            float dvx = _velocitiesCm[i2] - _readVelocitiesCm[i2];
+            float dvy = _velocitiesCm[i2 + 1] - _readVelocitiesCm[i2 + 1];
+            if ((dx * dx) + (dy * dy) > PositionEpsilonSq ||
+                (dvx * dvx) + (dvy * dvy) > VelocityEpsilonSq)
+            {
+                MarkEntityDirty(i);
+            }
+        }
     }
 
     private static bool ShouldRun(int frameIndex, ref int lastFrame, int intervalTicks)

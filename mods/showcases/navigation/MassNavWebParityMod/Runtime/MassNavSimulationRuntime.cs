@@ -101,6 +101,8 @@ public sealed class MassNavSimulationRuntime
     public MassNavAgentState AgentState { get; } = new();
     public MassNavCommandRuntime Commands { get; } = new();
     public MassNavFlowTuning FlowTuning { get; }
+    public MassNavCadenceConfig Cadence { get; }
+    internal MassNavCadenceScheduler CadenceScheduler { get; }
     public MassNavFormationRuntime FormationRuntime { get; }
     public MassNavGroupRuntime NavGroupRuntime { get; }
     internal MassNavSpawnReceiptRuntime SpawnReceipts { get; } = new();
@@ -160,6 +162,8 @@ public sealed class MassNavSimulationRuntime
         Config = config ?? throw new ArgumentNullException(nameof(config));
         WebParity = new MassNavWebParitySimState();
         WorldConfig = config.World ?? throw new InvalidOperationException("MassNavSimulationRuntime requires explicit world config.");
+        Cadence = config.Cadence;
+        CadenceScheduler = new MassNavCadenceScheduler(Cadence);
         _loadedChunks = new WorldGridLoadedChunks(WorldConfig.StreamingChunkSizeCm);
         _simWindowWidthCm = WorldConfig.SolverWindowWidthCm;
         _simWindowHeightCm = WorldConfig.SolverWindowHeightCm;

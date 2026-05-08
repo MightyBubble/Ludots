@@ -179,6 +179,43 @@ namespace Ludots.Tests.Presentation
         }
 
         [Test]
+        public void MassFlowRuntime_IsConfigDrivenForCadenceAndAgentProfiles()
+        {
+            string modRoot = MassNavModRoot();
+            JsonObject config = ReadObject(Path.Combine(modRoot, "assets", "MassNavWebParityConfig.json"));
+            JsonObject cadence = config["cadence"]?.AsObject()
+                ?? throw new InvalidOperationException("MassNavWebParityConfig.cadence missing.");
+            Assert.That(cadence["simulationHz"]?.GetValue<int>(), Is.GreaterThan(0));
+            Assert.That(cadence["targetUpdateHz"]?.GetValue<int>(), Is.GreaterThanOrEqualTo(0));
+            Assert.That(cadence["flowStepHz"]?.GetValue<int>(), Is.GreaterThanOrEqualTo(0));
+            Assert.That(cadence["flowCrowdStampHz"]?.GetValue<int>(), Is.GreaterThanOrEqualTo(0));
+            Assert.That(cadence["flowObstacleStampHz"]?.GetValue<int>(), Is.GreaterThanOrEqualTo(0));
+            Assert.That(cadence["hardResolveHz"]?.GetValue<int>(), Is.GreaterThanOrEqualTo(0));
+            Assert.That(cadence["entitySyncHz"]?.GetValue<int>(), Is.GreaterThanOrEqualTo(0));
+            Assert.That(cadence["maxStepsPerFixedTick"]?.GetValue<int>(), Is.GreaterThan(0));
+
+            JsonObject profiles = config["agentProfiles"]?.AsObject()
+                ?? throw new InvalidOperationException("MassNavWebParityConfig.agentProfiles missing.");
+            string defaultProfileId = profiles["defaultProfileId"]?.GetValue<string>() ?? string.Empty;
+            Assert.That(defaultProfileId, Is.Not.Empty);
+            JsonArray profileEntries = profiles["profiles"]?.AsArray()
+                ?? throw new InvalidOperationException("MassNavWebParityConfig.agentProfiles.profiles missing.");
+            Assert.That(profileEntries.Count, Is.GreaterThanOrEqualTo(2));
+            Assert.That(
+                profileEntries.Select(node => node?["id"]?.GetValue<string>()).ToArray(),
+                Does.Contain(defaultProfileId));
+
+            JsonObject heavy = profileEntries
+                .Select(node => node?.AsObject())
+                .FirstOrDefault(obj => obj?["heavy"]?.GetValue<bool>() == true)
+                ?? throw new InvalidOperationException("MassNav agentProfiles must author at least one heavy profile.");
+            Assert.That(heavy["everyNth"]?.GetValue<int>(), Is.GreaterThan(0),
+                "Heavy distribution is an authored profile rule, not a solver hardcode.");
+            Assert.That(heavy["navMass"]?.GetValue<float>(), Is.GreaterThan(1f));
+            Assert.That(heavy["visualScale"]?.GetValue<float>(), Is.GreaterThan(0f));
+        }
+
+        [Test]
         public void SourceGuards_DoNotReintroduceFallbackPaths()
         {
             string repoRoot = FindRepoRoot();
@@ -192,6 +229,10 @@ namespace Ludots.Tests.Presentation
             AssertSourceDoesNotContain(Path.Combine(modRoot, "Systems", "MassNavOrderBridgeSystem.cs"), "TryResolveMoveOrderType");
             AssertSourceDoesNotContain(Path.Combine(modRoot, "Systems", "MassNavHudPresentationSystem.cs"), "PresentationTimingDiagnostics? timing");
             AssertSourceDoesNotContain(Path.Combine(modRoot, "UI", "MassNavPlaygroundPanelController.cs"), "PresentationTimingDiagnostics? timing");
+            AssertSourceDoesNotContain(Path.Combine(modRoot, "Runtime", "MassNavWebParitySimState.cs"), "localIndex % 7");
+            AssertSourceContains(Path.Combine(modRoot, "Runtime", "MassNavWebParitySimState.cs"), "profileSet?.ResolveForLocalIndex(localIndex)");
+            AssertSourceContains(Path.Combine(modRoot, "Runtime", "MassNavWebParitySimState.cs"), "MarkMovedEntitiesDirty()");
+            AssertSourceContains(Path.Combine(modRoot, "Runtime", "MassNavWebParitySimState.cs"), "_entitySyncDirtyAgents");
             AssertSourceContains(Path.Combine(repoRoot, "src", "Core", "Config", "ComponentRegistry.cs"), "Register<SelectionDragState>(\"SelectionDragState\")");
         }
 

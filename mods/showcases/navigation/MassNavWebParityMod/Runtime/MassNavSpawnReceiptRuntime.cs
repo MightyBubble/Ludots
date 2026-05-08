@@ -16,6 +16,7 @@ internal readonly struct MassNavSpawnReceiptBinding
         MassNavSpawnReceiptKind kind,
         int unitIndex,
         int expectedTeamId,
+        bool heavy,
         float navMass,
         float visualScale,
         float blockerRadiusCm,
@@ -24,6 +25,7 @@ internal readonly struct MassNavSpawnReceiptBinding
         Kind = kind;
         UnitIndex = unitIndex;
         ExpectedTeamId = expectedTeamId;
+        Heavy = heavy;
         NavMass = navMass;
         VisualScale = visualScale;
         BlockerRadiusCm = blockerRadiusCm;
@@ -33,6 +35,7 @@ internal readonly struct MassNavSpawnReceiptBinding
     public MassNavSpawnReceiptKind Kind { get; }
     public int UnitIndex { get; }
     public int ExpectedTeamId { get; }
+    public bool Heavy { get; }
     public float NavMass { get; }
     public float VisualScale { get; }
     public float BlockerRadiusCm { get; }

@@ -34,7 +34,7 @@ internal static class MassNavScenarioBootstrap
         ReadOnlySpan<int> teamIds = simulation.TeamIds;
         simulation.ConfigureScenarioTeams(teamIds);
         ConfigureRelationships(simulation.Config);
-        simulation.WebParity.Reset(teamIds, simulation.AgentsPerTeam, simulation.WorldConfig.Obstacles);
+        simulation.WebParity.Reset(teamIds, simulation.AgentsPerTeam, simulation.WorldConfig.Obstacles, simulation.Config.AgentProfiles);
 
         for (int teamIndex = 0; teamIndex < teamIds.Length; teamIndex++)
         {
@@ -60,7 +60,7 @@ internal static class MassNavScenarioBootstrap
             float worldYCm = simulation.ToWorldYCm(yCm);
             float navMass = simulation.WebParity.GetNavMass(i);
             float visualScale = simulation.WebParity.GetVisualScale(i);
-            bool heavy = MathF.Abs(visualScale - simulation.WebParity.AvoidanceTuning.HeavyVisualScale) < 0.001f;
+            bool heavy = simulation.WebParity.IsHeavyProfile(i);
             string templateId = simulation.Config.Presentation.ResolveAgentTemplateId(teamId, heavy);
             authoring.ValidateTemplate(templateId);
             EnqueueSpawn(
@@ -73,6 +73,7 @@ internal static class MassNavScenarioBootstrap
                     MassNavSpawnReceiptKind.Agent,
                     i,
                     teamId,
+                    heavy,
                     navMass,
                     visualScale,
                     blockerRadiusCm: 0f,
@@ -98,6 +99,7 @@ internal static class MassNavScenarioBootstrap
                     MassNavSpawnReceiptKind.Blocker,
                     unitIndex: -1,
                     expectedTeamId: 0,
+                    heavy: false,
                     navMass: 0f,
                     visualScale: 0f,
                     radiusCm,
@@ -120,6 +122,7 @@ internal static class MassNavScenarioBootstrap
                     MassNavSpawnReceiptKind.WorldMarker,
                     unitIndex: -1,
                     expectedTeamId: 0,
+                    heavy: false,
                     navMass: 0f,
                     visualScale: 0f,
                     blockerRadiusCm: 0f,

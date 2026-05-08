@@ -110,6 +110,38 @@
       { "id": 4, "name": "Emerald Guard" }
     ]
   },
+  "cadence": {
+    "simulationHz": 15,
+    "targetUpdateHz": 15,
+    "flowStepHz": 5,
+    "flowCrowdStampHz": 5,
+    "flowObstacleStampHz": 2,
+    "hardResolveHz": 10,
+    "entitySyncHz": 15,
+    "maxStepsPerFixedTick": 1,
+    "hardResolveCandidateThresholdAgents": 1
+  },
+  "agentProfiles": {
+    "defaultProfileId": "light",
+    "profiles": [
+      {
+        "id": "heavy",
+        "heavy": true,
+        "navMass": 4.0,
+        "visualScale": 0.34,
+        "everyNth": 7,
+        "nthOffset": 0
+      },
+      {
+        "id": "light",
+        "heavy": false,
+        "navMass": 1.0,
+        "visualScale": 0.22,
+        "everyNth": 0,
+        "nthOffset": 0
+      }
+    ]
+  },
   "teamRelationships": {
     "defaultRelationship": "Hostile",
     "relationships": [

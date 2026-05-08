@@ -61,7 +61,6 @@ internal sealed class MassNavWebParityRuntime
         engine.RegisterSystem(new MassNavFormationSystem(engine, simulation), SystemGroup.PostMovement);
         engine.RegisterPresentationSystem(new MassNavSelectionPerformerSyncSystem(engine, simulation));
         engine.RegisterPresentationSystem(new MassNavHudPresentationSystem(engine, simulation));
-        engine.RegisterPresentationSystem(new MassNavPanelPresentationSystem(engine, this));
         _systemsInstalled = true;
         _context.Log("[MassNavWebParityMod] Installed mass-nav fa莽ade runtime skeleton.");
     }
@@ -87,7 +86,7 @@ internal sealed class MassNavWebParityRuntime
         ConfigureCoreMinimap(engine);
         EnsureTacticalCamera(engine);
         EnsureScenario(engine);
-        RefreshPanel(engine);
+        ClearPanelIfOwned(engine);
         return Task.CompletedTask;
     }
 
@@ -123,7 +122,7 @@ internal sealed class MassNavWebParityRuntime
 
         MassNavSimulationRuntime simulation = engine.GetService(MassNavWebParityKeys.SimulationRuntime)
             ?? throw new System.InvalidOperationException("MassNavWebParityMod requires simulation runtime.");
-        _panelController.MountOrSync(engine, simulation);
+        ClearPanelIfOwned(engine);
     }
 
     private void EnsureScenario(GameEngine engine)
@@ -289,6 +288,9 @@ internal sealed class MassNavWebParityRuntime
         // Raylib currently gates the official performer ISM/static-mesh lane behind this legacy-named toggle.
         renderDebug.DrawPrimitives = true;
         renderDebug.DrawSkiaUi = true;
+        renderDebug.DrawWorldHudBars = true;
+        renderDebug.DrawWorldHudText = true;
+        renderDebug.DrawCombatText = true;
     }
 
     private void RestoreRenderDebug(GameEngine engine)

@@ -31,34 +31,53 @@ internal sealed class MassNavFormationSystem : ISystem<float>
             return;
         }
 
-        _simulation.ObserveSimTick();
         ObserveCameraFocus();
 
-        long start = Stopwatch.GetTimestamp();
-        _simulation.NavGroupRuntime.UpdateTargets(
-            _simulation.WebParity,
-            _simulation.AgentState,
-            _simulation.SelectedEntities,
-            _simulation.FrameIndex);
-        _simulation.ObserveFormationTargets((Stopwatch.GetTimestamp() - start) * 1000.0 / Stopwatch.Frequency);
-
-        if (_simulation.WebParity.AdvanceFlowPipeline(_simulation.FlowTuning, _simulation.FrameIndex, _simulation.ObserveFlowFieldRebuild))
+        int stepsToRun = _simulation.CadenceScheduler.BeginFixedTick(dt);
+        for (int stepIndex = 0; stepIndex < stepsToRun; stepIndex++)
         {
-            _simulation.MarkFlowReconcile();
+            MassNavCadenceStep step = _simulation.CadenceScheduler.NextSimulationStep();
+            _simulation.ObserveSimTick();
+
+            if (step.UpdateTargets)
+            {
+                long targetStart = Stopwatch.GetTimestamp();
+                _simulation.NavGroupRuntime.UpdateTargets(
+                    _simulation.WebParity,
+                    _simulation.AgentState,
+                    _simulation.SelectedEntities,
+                    _simulation.FrameIndex);
+                _simulation.ObserveFormationTargets((Stopwatch.GetTimestamp() - targetStart) * 1000.0 / Stopwatch.Frequency);
+            }
+
+            if (_simulation.WebParity.AdvanceFlowPipeline(
+                    _simulation.FlowTuning,
+                    step.RefreshFlow,
+                    step.RefreshCrowd,
+                    step.RefreshObstacles,
+                    _simulation.ObserveFlowFieldRebuild))
+            {
+                _simulation.MarkFlowReconcile();
+            }
+
+            long start = Stopwatch.GetTimestamp();
+            _simulation.WebParity.Step(
+                step.SimulationDt,
+                _simulation.NavGroupRuntime,
+                step.RunHardResolve,
+                _simulation.Cadence.HardResolveCandidateThresholdAgents,
+                _simulation.ObserveStepPrep,
+                _simulation.ObserveLocalSteering,
+                _simulation.ObserveHardResolve);
+            _simulation.ObserveSimStep((Stopwatch.GetTimestamp() - start) * 1000.0 / Stopwatch.Frequency);
+
+            if (step.SyncEntities)
+            {
+                start = Stopwatch.GetTimestamp();
+                _simulation.WebParity.SyncEntities(_engine.World, _simulation.AgentState);
+                _simulation.ObserveEntitySync((Stopwatch.GetTimestamp() - start) * 1000.0 / Stopwatch.Frequency);
+            }
         }
-
-        start = Stopwatch.GetTimestamp();
-        _simulation.WebParity.Step(
-            dt,
-            _simulation.NavGroupRuntime,
-            _simulation.ObserveStepPrep,
-            _simulation.ObserveLocalSteering,
-            _simulation.ObserveHardResolve);
-        _simulation.ObserveSimStep((Stopwatch.GetTimestamp() - start) * 1000.0 / Stopwatch.Frequency);
-
-        start = Stopwatch.GetTimestamp();
-        _simulation.WebParity.SyncEntities(_engine.World, _simulation.AgentState);
-        _simulation.ObserveEntitySync((Stopwatch.GetTimestamp() - start) * 1000.0 / Stopwatch.Frequency);
     }
 
     private void ObserveCameraFocus()

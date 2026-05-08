@@ -23,6 +23,7 @@ public struct MassNavAgentIndex
 
 public struct MassNavAgentProfile
 {
+    public bool Heavy;
     public float NavMass;
     public float VisualScale;
 }

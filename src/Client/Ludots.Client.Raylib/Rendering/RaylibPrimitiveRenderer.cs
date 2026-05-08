@@ -2031,12 +2031,14 @@ namespace Ludots.Client.Raylib.Rendering
 
             _locColDiffuse = Rl.GetShaderLocation(_shader, "colDiffuse");
             _locTint = Rl.GetShaderLocation(_shader, "tint");
+            int locMapAlbedo = Rl.GetShaderLocation(_shader, "texture0");
             int locMvp = Rl.GetShaderLocation(_shader, "mvp");
             int locInstance = Rl.GetShaderLocationAttrib(_shader, "instanceTransform");
             int locVertexPosition = Rl.GetShaderLocationAttrib(_shader, "vertexPosition");
+            int locVertexTexCoord = Rl.GetShaderLocationAttrib(_shader, "vertexTexCoord");
 
             _shader.locs[(int)Rl.ShaderLocationIndex.SHADER_LOC_VERTEX_POSITION] = locVertexPosition;
-            _shader.locs[(int)Rl.ShaderLocationIndex.SHADER_LOC_VERTEX_TEXCOORD01] = -1;
+            _shader.locs[(int)Rl.ShaderLocationIndex.SHADER_LOC_VERTEX_TEXCOORD01] = locVertexTexCoord;
             _shader.locs[(int)Rl.ShaderLocationIndex.SHADER_LOC_VERTEX_TEXCOORD02] = -1;
             _shader.locs[(int)Rl.ShaderLocationIndex.SHADER_LOC_VERTEX_NORMAL] = -1;
             _shader.locs[(int)Rl.ShaderLocationIndex.SHADER_LOC_VERTEX_TANGENT] = -1;
@@ -2050,7 +2052,7 @@ namespace Ludots.Client.Raylib.Rendering
             _shader.locs[(int)Rl.ShaderLocationIndex.SHADER_LOC_COLOR_DIFFUSE] = _locColDiffuse;
             _shader.locs[(int)Rl.ShaderLocationIndex.SHADER_LOC_COLOR_SPECULAR] = -1;
             _shader.locs[(int)Rl.ShaderLocationIndex.SHADER_LOC_COLOR_AMBIENT] = -1;
-            _shader.locs[(int)Rl.ShaderLocationIndex.SHADER_LOC_MAP_ALBEDO] = -1;
+            _shader.locs[(int)Rl.ShaderLocationIndex.SHADER_LOC_MAP_ALBEDO] = locMapAlbedo;
             _shader.locs[(int)Rl.ShaderLocationIndex.SHADER_LOC_MAP_METALNESS] = -1;
             _shader.locs[(int)Rl.ShaderLocationIndex.SHADER_LOC_MAP_NORMAL] = -1;
             _shader.locs[(int)Rl.ShaderLocationIndex.SHADER_LOC_MAP_ROUGHNESS] = -1;
@@ -2063,10 +2065,12 @@ namespace Ludots.Client.Raylib.Rendering
             _shader.locs[(int)Rl.ShaderLocationIndex.SHADER_LOC_MAP_BRDF] = -1;
 
             if (locVertexPosition < 0) throw new InvalidOperationException("Shader attrib 'vertexPosition' not found.");
+            if (locVertexTexCoord < 0) throw new InvalidOperationException("Shader attrib 'vertexTexCoord' not found.");
             if (locMvp < 0) throw new InvalidOperationException("Shader uniform 'mvp' not found.");
             if (locInstance < 0) throw new InvalidOperationException("Shader attrib 'instanceTransform' not found.");
             if (_locColDiffuse < 0) throw new InvalidOperationException("Shader uniform 'colDiffuse' not found.");
             if (_locTint < 0) throw new InvalidOperationException("Shader uniform 'tint' not found.");
+            if (locMapAlbedo < 0) throw new InvalidOperationException("Shader uniform 'texture0' not found.");
 
             _initialized = true;
         }

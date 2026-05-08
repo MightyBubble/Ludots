@@ -47,7 +47,7 @@ internal sealed class MassNavAgentMetadataSyncSystem : ISystem<float>
         _engine.World.Query(in Query, (ref MassNavAgentIndex agentIndex, ref Team team, ref MassNavAgentProfile profile) =>
         {
             _teamSet.Add(team.Id);
-            _simulation.WebParity.SetUnitRuntimeProfile(agentIndex.Value, team.Id, profile.NavMass, profile.VisualScale);
+            _simulation.WebParity.SetUnitRuntimeProfile(agentIndex.Value, team.Id, profile.Heavy, profile.NavMass, profile.VisualScale);
         });
 
         if (_teamSet.Count <= 0)

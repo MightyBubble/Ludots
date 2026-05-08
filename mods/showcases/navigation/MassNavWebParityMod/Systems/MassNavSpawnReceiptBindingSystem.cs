@@ -120,6 +120,7 @@ internal sealed class MassNavSpawnReceiptBindingSystem : ISystem<float>
         _engine.World.Add(entity, new MassNavAgentIndex { Value = binding.UnitIndex });
         _engine.World.Add(entity, new MassNavAgentProfile
         {
+            Heavy = binding.Heavy,
             NavMass = binding.NavMass,
             VisualScale = binding.VisualScale,
         });

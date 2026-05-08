@@ -14,6 +14,8 @@ public sealed class MassNavWebParityConfig
     public MassNavWorldConfig? World { get; set; }
     public MassNavPresentationConfig Presentation { get; set; } = new();
     public MassNavScenarioConfig Scenario { get; set; } = new();
+    public MassNavCadenceConfig Cadence { get; set; } = new();
+    public MassNavAgentProfileSetConfig AgentProfiles { get; set; } = new();
     public TeamConfig TeamRelationships { get; set; } = new();
     public MassNavFlowTuning Flow { get; set; } = new();
     public MassNavArrivalTuning Arrival { get; set; } = new();
@@ -50,6 +52,8 @@ public sealed class MassNavWebParityConfig
         RequireProperty(root, "world");
         RequireProperty(root, "presentation");
         RequireProperty(root, "scenario");
+        RequireProperty(root, "cadence");
+        RequireProperty(root, "agentProfiles");
         RequireProperty(root, "teamRelationships");
         RequireProperty(root, "flow");
         RequireProperty(root, "arrival");
@@ -82,6 +86,8 @@ public sealed class MassNavWebParityConfig
 
         Scenario.Validate();
         Presentation.Validate(Scenario);
+        Cadence.Validate();
+        AgentProfiles.Validate();
         if (World == null)
         {
             throw new InvalidOperationException("Mass-nav config requires an explicit world section.");
