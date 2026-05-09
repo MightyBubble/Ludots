@@ -530,7 +530,7 @@ public sealed class MassNavWebParitySimState
         bool refreshObstacles,
         Action<double>? observeFlowFieldRebuild = null)
     {
-        return AdvanceFlowPipelineCore(tuning, 0, useLegacyIntervalCadence: false, refreshFlow, refreshCrowd, refreshObstacles, observeFlowFieldRebuild);
+        return AdvanceFlowPipelineCore(tuning, 0, useConfiguredIntervals: false, refreshFlow, refreshCrowd, refreshObstacles, observeFlowFieldRebuild);
     }
 
     public bool AdvanceFlowPipeline(MassNavFlowTuning tuning, int frameIndex, Action<double>? observeFlowFieldRebuild = null)
@@ -538,7 +538,7 @@ public sealed class MassNavWebParitySimState
         return AdvanceFlowPipelineCore(
             tuning,
             frameIndex,
-            useLegacyIntervalCadence: true,
+            useConfiguredIntervals: true,
             tuning.ForceRefreshFlow,
             tuning.ForceRefreshCrowd,
             tuning.ForceRefreshObstacles,
@@ -548,15 +548,15 @@ public sealed class MassNavWebParitySimState
     private bool AdvanceFlowPipelineCore(
         MassNavFlowTuning tuning,
         int frameIndex,
-        bool useLegacyIntervalCadence,
+        bool useConfiguredIntervals,
         bool forceRefreshFlow,
         bool forceRefreshCrowd,
         bool forceRefreshObstacles,
         Action<double>? observeFlowFieldRebuild)
     {
-        bool refreshObstacles = _flowDirty || forceRefreshObstacles || (useLegacyIntervalCadence && ShouldRun(frameIndex, ref _lastObstacleStampFrame, tuning.ObstacleStampIntervalTicks));
-        bool refreshCrowd = _flowDirty || forceRefreshCrowd || (useLegacyIntervalCadence && ShouldRun(frameIndex, ref _lastCrowdStampFrame, tuning.CrowdStampIntervalTicks));
-        bool refreshFlow = _flowDirty || forceRefreshFlow || (useLegacyIntervalCadence && ShouldRun(frameIndex, ref _lastFlowStepFrame, tuning.StepIntervalTicks));
+        bool refreshObstacles = _flowDirty || forceRefreshObstacles || (useConfiguredIntervals && ShouldRun(frameIndex, ref _lastObstacleStampFrame, tuning.ObstacleStampIntervalTicks));
+        bool refreshCrowd = _flowDirty || forceRefreshCrowd || (useConfiguredIntervals && ShouldRun(frameIndex, ref _lastCrowdStampFrame, tuning.CrowdStampIntervalTicks));
+        bool refreshFlow = _flowDirty || forceRefreshFlow || (useConfiguredIntervals && ShouldRun(frameIndex, ref _lastFlowStepFrame, tuning.StepIntervalTicks));
         tuning.ForceRefreshFlow = false;
         tuning.ForceRefreshCrowd = false;
         tuning.ForceRefreshObstacles = false;

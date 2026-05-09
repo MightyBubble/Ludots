@@ -940,7 +940,7 @@ internal sealed class VisualTerrainEditorRuntime
             DefaultColor = template.DefaultColor,
             DefaultFontSize = template.DefaultFontSize,
             DefaultTextId = template.DefaultTextId,
-            LegacyWorldTextMode = template.LegacyWorldTextMode,
+            WorldTextMode = template.WorldTextMode,
             VisibilityCondition = template.VisibilityCondition,
             Surface = template.Surface,
             Children = template.Children,

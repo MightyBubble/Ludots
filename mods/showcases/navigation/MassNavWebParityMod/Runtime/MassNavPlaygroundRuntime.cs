@@ -304,7 +304,7 @@ internal sealed class MassNavWebParityRuntime
 
         renderDebug.DrawTerrain = true;
         renderDebug.DrawDebugDraw = false;
-        // Raylib currently gates the official performer ISM/static-mesh lane behind this legacy-named toggle.
+        // Raylib currently routes the official performer ISM/static-mesh lane through this shared draw toggle.
         renderDebug.DrawPrimitives = true;
         renderDebug.DrawSkiaUi = true;
         renderDebug.DrawWorldHudBars = true;

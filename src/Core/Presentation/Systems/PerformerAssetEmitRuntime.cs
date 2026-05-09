@@ -418,7 +418,7 @@ namespace Ludots.Core.Presentation.Systems
 
             float value0 = asset.ScaleParamKey >= 0 ? _runtime.ResolveFloat(entity, asset.ScaleParamKey, 0f) : 0f;
             float value1 = asset.MaterialParamKey >= 0 ? _runtime.ResolveFloat(entity, asset.MaterialParamKey, 0f) : 0f;
-            WorldHudValueMode valueMode = definition.LegacyWorldTextMode;
+            WorldHudValueMode valueMode = definition.WorldTextMode;
             int fontSize = definition.DefaultFontSize > 0 ? definition.DefaultFontSize : 16;
             int legacyStringId = valueMode == WorldHudValueMode.None ? tokenId : 0;
             PresentationTextPacket packet = PresentationTextPacket.FromLegacyWorldHud(tokenId, valueMode, value0, value1);

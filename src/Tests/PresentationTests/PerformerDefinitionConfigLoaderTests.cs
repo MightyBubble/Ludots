@@ -697,6 +697,40 @@ namespace Ludots.Tests.Presentation
         }
 
         [Test]
+        public void Load_RejectsLegacyWorldTextModeField_AndAcceptsWorldTextMode()
+        {
+            WriteCatalog();
+            WritePerformers(
+                """
+                [
+                  {
+                    "id": "old_text",
+                    "defaultTextId": "hud.combat.delta",
+                    "legacyWorldTextMode": "AttributeCurrent"
+                  },
+                  {
+                    "id": "new_text",
+                    "defaultTextId": "hud.combat.delta",
+                    "worldTextMode": "AttributeCurrent"
+                  }
+                ]
+                """);
+
+            var (_, _, pipeline, catalog) = BuildPipeline();
+            var registry = new PerformerDefinitionRegistry();
+            var loader = new PerformerDefinitionConfigLoader(
+                pipeline,
+                registry,
+                resolveTextTokenId: key => key == "hud.combat.delta" ? 777 : 0);
+
+            Assert.DoesNotThrow(() => loader.Load(catalog));
+            Assert.That(registry.TryGet(registry.GetId("old_text"), out _), Is.False);
+            Assert.That(registry.TryGet(registry.GetId("new_text"), out var definition), Is.True);
+            Assert.That(definition.DefaultTextId, Is.EqualTo(777));
+            Assert.That(definition.WorldTextMode, Is.EqualTo(WorldHudValueMode.AttributeCurrent));
+        }
+
+        [Test]
         public void Load_WorldTextDefaultTextIdAndAssetId_ResolveThroughTextTokenRegistry()
         {
             WriteCatalog();
@@ -706,7 +740,7 @@ namespace Ludots.Tests.Presentation
                   {
                     "id": "floating_text",
                     "defaultTextId": "hud.combat.delta",
-                    "legacyWorldTextMode": "AttributeCurrent",
+                    "worldTextMode": "AttributeCurrent",
                     "behaviors": [
                       {
                         "slot": 0,
@@ -733,7 +767,7 @@ namespace Ludots.Tests.Presentation
 
             Assert.That(registry.TryGet(registry.GetId("floating_text"), out var definition), Is.True);
             Assert.That(definition.DefaultTextId, Is.EqualTo(777));
-            Assert.That(definition.LegacyWorldTextMode, Is.EqualTo(WorldHudValueMode.AttributeCurrent));
+            Assert.That(definition.WorldTextMode, Is.EqualTo(WorldHudValueMode.AttributeCurrent));
             Assert.That(definition.Behaviors[0].AssetBinding.AssetKind, Is.EqualTo(AssetKind.WorldText));
             Assert.That(definition.Behaviors[0].AssetBinding.AssetId, Is.EqualTo(777));
         }

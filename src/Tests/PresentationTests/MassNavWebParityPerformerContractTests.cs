@@ -461,7 +461,7 @@ namespace Ludots.Tests.Presentation
         private static (string CurrentParamKey, string BaseParamKey) AssertWorldTextBinding(JsonObject definition, string definitionId, int expectedFontSize)
         {
             Assert.That(definition["defaultTextId"]?.GetValue<string>(), Is.EqualTo("hud.attribute.current_over_base"));
-            Assert.That(definition["legacyWorldTextMode"]?.GetValue<string>(), Is.EqualTo("AttributeCurrentOverBase"));
+            Assert.That(definition["worldTextMode"]?.GetValue<string>(), Is.EqualTo("AttributeCurrentOverBase"));
             Assert.That(definition["defaultFontSize"]?.GetValue<int>(), Is.EqualTo(expectedFontSize));
 
             JsonArray behaviors = definition["behaviors"]?.AsArray()

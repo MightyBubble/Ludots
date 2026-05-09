@@ -338,7 +338,7 @@ namespace Ludots.Tests.Presentation
                 DefaultColor = new Vector4(1f, 0.3f, 0.2f, 1f),
                 DefaultFontSize = 18,
                 DefaultTextId = 4001,
-                LegacyWorldTextMode = WorldHudValueMode.AttributeCurrentOverBase,
+                WorldTextMode = WorldHudValueMode.AttributeCurrentOverBase,
             });
 
             Entity performer = instances.Create(defId, owner, 0, PresentationAnchorKind.WorldPosition, new Vector3(10f, 11f, 12f), 9401, Entity.Null, default);

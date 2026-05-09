@@ -837,7 +837,7 @@
   {
     "id": "blacksmith_durability_hud_text",
     "defaultTextId": "hud.attribute.current_over_base",
-    "legacyWorldTextMode": "AttributeCurrentOverBase",
+    "worldTextMode": "AttributeCurrentOverBase",
     "defaultFontSize": 16,
     "behaviors": [
       {
@@ -874,7 +874,7 @@
   {
     "id": "blacksmith_durability_hud_text_benchmark",
     "defaultTextId": "hud.attribute.current_over_base",
-    "legacyWorldTextMode": "AttributeCurrentOverBase",
+    "worldTextMode": "AttributeCurrentOverBase",
     "defaultFontSize": 11,
     "behaviors": [
       {

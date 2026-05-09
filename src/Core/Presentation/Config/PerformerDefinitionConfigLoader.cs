@@ -371,7 +371,7 @@ namespace Ludots.Core.Presentation.Config
                 DefaultLifetime = node["defaultLifetime"]?.GetValue<float>() ?? 0f,
                 DefaultFontSize = node["defaultFontSize"]?.GetValue<int>() ?? 16,
                 DefaultTextId = ResolveOptionalTextTokenId(node["defaultTextId"]),
-                LegacyWorldTextMode = ParseEnum(node["legacyWorldTextMode"]?.GetValue<string>(), WorldHudValueMode.None),
+                WorldTextMode = ParseEnum(node["worldTextMode"]?.GetValue<string>(), WorldHudValueMode.None),
                 PositionOffset = ParseVector3(node["positionOffset"]),
                 PositionYDriftPerSecond = node["positionYDriftPerSecond"]?.GetValue<float>() ?? 0f,
                 AlphaFadeOverLifetime = node["alphaFadeOverLifetime"]?.GetValue<bool>() ?? false,
@@ -413,6 +413,7 @@ namespace Ludots.Core.Presentation.Config
                 "visualKind",
                 "meshOrShapeId",
                 "defaultScale",
+                "legacyWorldTextMode",
             };
 
             for (int i = 0; i < removedVisualFields.Length; i++)

@@ -462,7 +462,7 @@
   {
     "id": "massnav_agent_health_text_light",
     "defaultTextId": "hud.attribute.current_over_base",
-    "legacyWorldTextMode": "AttributeCurrentOverBase",
+    "worldTextMode": "AttributeCurrentOverBase",
     "defaultFontSize": 11,
     "defaultColor": [1.0, 0.98, 0.92, 1.0],
     "behaviors": [
@@ -504,7 +504,7 @@
     "id": "massnav_agent_health_text_heavy",
     "extends": "massnav_agent_health_text_light",
     "defaultTextId": "hud.attribute.current_over_base",
-    "legacyWorldTextMode": "AttributeCurrentOverBase",
+    "worldTextMode": "AttributeCurrentOverBase",
     "defaultFontSize": 12,
     "behaviors": [
       {

@@ -249,7 +249,7 @@
     ],
     "defaultFontSize": 18,
     "defaultTextId": "hud.combat.delta",
-    "legacyWorldTextMode": "AttributeCurrent",
+    "worldTextMode": "AttributeCurrent",
     "defaultLifetime": 1.2,
     "positionOffset": [
       0.0,

@@ -86,7 +86,7 @@ namespace Ludots.Core.Presentation.Performers
         /// Transitional format hint for adapters that still consume Id1/Value0/Value1.
         /// The adapter-neutral runtime contract lives in <see cref="PresentationTextPacket"/>.
         /// </summary>
-        public WorldHudValueMode LegacyWorldTextMode = WorldHudValueMode.None;
+        public WorldHudValueMode WorldTextMode = WorldHudValueMode.None;
 
         internal int[] BindingIndex = System.Array.Empty<int>();
         internal uint AssetBindingSlotMask;
