@@ -137,6 +137,15 @@ namespace Ludots.Tests.Presentation
             AssertSourceContains(
                 Path.Combine(modRoot, "Systems", "MassNavSelectionPerformerSyncSystem.cs"),
                 "ParentEntity = rootPerformer");
+            AssertSourceContains(
+                Path.Combine(modRoot, "Systems", "MassNavSelectionPerformerSyncSystem.cs"),
+                "TryGetActiveScopedInstance");
+            AssertSourceContains(
+                Path.Combine(modRoot, "Systems", "MassNavSelectionPerformerSyncSystem.cs"),
+                "CommandKind = PerformerCommandKind.DestroyPerformer");
+            AssertSourceDoesNotContain(
+                Path.Combine(modRoot, "Systems", "MassNavSelectionPerformerSyncSystem.cs"),
+                "CommandKind = PerformerCommandKind.DestroyPerformerScope");
         }
 
         [Test]
@@ -290,6 +299,12 @@ namespace Ludots.Tests.Presentation
             string modRoot = MassNavModRoot();
             AssertSourceDoesNotContain(Path.Combine(modRoot, "Runtime", "MassNavWebParitySimState.cs"), "CacheDefaultObstacles");
             AssertSourceDoesNotContain(Path.Combine(modRoot, "Runtime", "MassNavPlaygroundRuntime.cs"), "new PlayerOwner");
+            AssertSourceDoesNotContain(Path.Combine(modRoot, "MassNavWebParityModEntry.cs"), "GetResource");
+            AssertSourceContains(Path.Combine(modRoot, "Runtime", "MassNavWebParityConfig.cs"), "MergeDeepObjectFromCatalog");
+            AssertSourceContains(Path.Combine(modRoot, "Runtime", "MassNavWebParityConfig.cs"), "config_catalog.json");
+            AssertSourceContains(Path.Combine(modRoot, "Runtime", "MassNavAgentState.cs"), "PresentationDestroyPending");
+            AssertSourceContains(Path.Combine(modRoot, "Runtime", "MassNavAgentState.cs"), "RemoveMassNavRuntimeTags");
+            AssertSourceContains(Path.Combine(modRoot, "Runtime", "MassNavAgentState.cs"), "PresentationOwnerHasPerformerPayload");
             AssertSourceDoesNotContain(Path.Combine(modRoot, "Runtime", "MassNavSimulationRuntime.cs"), "ValidateHotZonesInsideBoard");
             AssertSourceDoesNotContain(Path.Combine(modRoot, "Runtime", "MassNavSimulationRuntime.cs"), "WorldConfig.WorldWidthCm");
             AssertSourceDoesNotContain(Path.Combine(modRoot, "Runtime", "MassNavSimulationRuntime.cs"), "WorldConfig.WorldHeightCm");
@@ -298,10 +313,38 @@ namespace Ludots.Tests.Presentation
             AssertSourceDoesNotContain(Path.Combine(modRoot, "Systems", "MassNavHudPresentationSystem.cs"), "PresentationTimingDiagnostics? timing");
             AssertSourceDoesNotContain(Path.Combine(modRoot, "UI", "MassNavPlaygroundPanelController.cs"), "PresentationTimingDiagnostics? timing");
             AssertSourceDoesNotContain(Path.Combine(modRoot, "Runtime", "MassNavWebParitySimState.cs"), "localIndex % 7");
+            AssertSourceDoesNotContain(Path.Combine(repoRoot, "mods", "CoreInputMod", "Systems", "SelectedMovePathPresentationSystem.cs"), "massNavMove");
             AssertSourceContains(Path.Combine(modRoot, "Runtime", "MassNavWebParitySimState.cs"), "profileSet?.ResolveForLocalIndex(localIndex)");
             AssertSourceContains(Path.Combine(modRoot, "Runtime", "MassNavWebParitySimState.cs"), "MarkMovedEntitiesDirty()");
             AssertSourceContains(Path.Combine(modRoot, "Runtime", "MassNavWebParitySimState.cs"), "_entitySyncDirtyAgents");
+            AssertSourceContains(Path.Combine(modRoot, "Systems", "MassNavSelectionPerformerSyncSystem.cs"), "PresentationStableId");
+            AssertSourceDoesNotContain(Path.Combine(modRoot, "Systems", "MassNavSelectionPerformerSyncSystem.cs"), "SelectionMarkerScopeBase");
+            AssertSourceDoesNotContain(Path.Combine(modRoot, "assets", "GAS", "order_types.json"), "interruptsActiveOrderTypeIds");
+            AssertSourceContains(Path.Combine(modRoot, "assets", "GAS", "order_types.json"), "interruptsActiveOrderTypeKeys");
             AssertSourceContains(Path.Combine(repoRoot, "src", "Core", "Config", "ComponentRegistry.cs"), "Register<SelectionDragState>(\"SelectionDragState\")");
+            AssertSourceContains(Path.Combine(repoRoot, "mods", "CoreInputMod", "Systems", "SelectedMovePathPresentationSystem.cs"), "MovePathPreviewOrderTypeKeys");
+        }
+
+        [Test]
+        public void ConfigLoader_UsesConfigPipelineDeepObjectMerge()
+        {
+            string modRoot = MassNavModRoot();
+            var vfs = new Ludots.Core.Modding.VirtualFileSystem();
+            vfs.Mount("MassNavWebParityMod", modRoot);
+            var modLoader = new Ludots.Core.Modding.ModLoader(
+                vfs,
+                new Ludots.Core.Scripting.FunctionRegistry(),
+                new Ludots.Core.Scripting.TriggerManager());
+            modLoader.LoadedModIds.Add("MassNavWebParityMod");
+            var pipeline = new Ludots.Core.Config.ConfigPipeline(vfs, modLoader);
+            var catalog = Ludots.Core.Config.ConfigCatalogLoader.Load(pipeline);
+            var report = new Ludots.Core.Config.ConfigConflictReport();
+            var config = new MassNavWebParityMod.Runtime.MassNavWebParityConfigLoader(pipeline).Load(catalog, report);
+
+            Assert.That(config.MapId, Is.EqualTo("mass_nav_web_parity"));
+            Assert.That(config.World, Is.Not.Null);
+            Assert.That(config.World!.SolverWindowWidthCm, Is.EqualTo(10_000));
+            Assert.That(config.Presentation.ResolveAgentTemplateId(1, heavy: false), Is.EqualTo("massnav_agent_azure_light"));
         }
 
         private static void AssertAgentBodyUsesBlacksmithKnight(JsonObject definition, string definitionId, float expectedScale)

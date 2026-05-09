@@ -3,8 +3,9 @@ using System.IO;
 using System.Collections.Generic;
 using Ludots.Core.Config;
 using Ludots.Core.Engine;
-using Ludots.Core.Presentation.Events;
+using Ludots.Core.Gameplay.GAS.Orders;
 using Ludots.Core.Modding;
+using Ludots.Core.Presentation.Events;
 using Ludots.Core.Presentation.Assets;
 using Ludots.Core.Presentation.Config;
 using Ludots.Core.Scripting;
@@ -116,6 +117,94 @@ namespace Ludots.Tests.Architecture
             Assert.That(
                 stream.Capacity,
                 Is.EqualTo(engine.MergedConfig.Presentation.GetEffectivePresentationEventStreamCapacity()));
+        }
+
+        [Test]
+        public void GameEngine_MergesSelectionMovePathPreviewOrderKeys()
+        {
+            string repoRoot = FindRepoRoot();
+            using var coreEngine = new GameEngine();
+            coreEngine.InitializeWithConfigPipeline(
+                new List<string> { Path.Combine(repoRoot, "mods", "LudotsCoreMod") },
+                Path.Combine(repoRoot, "assets"));
+
+            Assert.That(
+                coreEngine.MergedConfig.Selection.MovePathPreviewOrderTypeKeys,
+                Is.EqualTo(new[] { "moveTo" }),
+                "LudotsCoreMod should author the generic move path preview contract.");
+            Assert.That(coreEngine.MergedConfig.Constants.OrderTypeIds.ContainsKey("moveTo"), Is.True);
+
+            using var massNavEngine = new GameEngine();
+            massNavEngine.InitializeWithConfigPipeline(
+                new List<string>
+                {
+                    Path.Combine(repoRoot, "mods", "LudotsCoreMod"),
+                    Path.Combine(repoRoot, "mods", "CoreInputMod"),
+                    Path.Combine(repoRoot, "mods", "capabilities", "camera", "CameraProfilesMod"),
+                    Path.Combine(repoRoot, "mods", "showcases", "performer_blacksmith", "PerformerBlacksmithShowcaseMod"),
+                    Path.Combine(repoRoot, "mods", "showcases", "navigation", "MassNavWebParityMod"),
+                },
+                Path.Combine(repoRoot, "assets"));
+
+            Assert.That(
+                massNavEngine.MergedConfig.Selection.MovePathPreviewOrderTypeKeys,
+                Is.EqualTo(new[] { "moveTo", "massNavMove" }),
+                "MassNavWebParityMod should extend the preview contract through game.json, not CoreInputMod source.");
+            Assert.That(massNavEngine.MergedConfig.Constants.OrderTypeIds.ContainsKey("moveTo"), Is.True);
+            Assert.That(
+                massNavEngine.MergedConfig.Constants.OrderTypeIds.ContainsKey("massNavMove"),
+                Is.False,
+                "MassNav move must not be double-authored in game.json constants; GAS/order_types.json owns order type definitions.");
+            OrderTypeRegistry orderTypes = massNavEngine.GetService(CoreServiceKeys.OrderTypeRegistry)
+                ?? throw new InvalidOperationException("OrderTypeRegistry missing.");
+            Assert.That(orderTypes.GetId("massNavMove"), Is.EqualTo(172));
+        }
+
+        [Test]
+        public void OrderTypeConfigLoader_ResolvesRuleReferencesByKey()
+        {
+            string root = Path.Combine(Path.GetTempPath(), "Ludots_OrderTypeKeyRules", Guid.NewGuid().ToString("N"));
+            string core = Path.Combine(root, "Core");
+            Directory.CreateDirectory(Path.Combine(core, "Configs", "GAS"));
+            File.WriteAllText(Path.Combine(core, "Configs", "GAS", "order_types.json"), """
+{
+  "orderTypes": {
+    "moveTo": {
+      "orderTypeId": 101,
+      "label": "Move To"
+    },
+    "attackTarget": {
+      "orderTypeId": 102,
+      "label": "Attack Target"
+    },
+    "massNavMove": {
+      "orderTypeId": 172,
+      "label": "Mass Nav Move"
+    }
+  },
+  "orderRules": {
+    "massNavMove": {
+      "orderTypeKey": "massNavMove",
+      "blockedActiveOrderTypeKeys": [],
+      "interruptsActiveOrderTypeKeys": [ "moveTo", "attackTarget" ]
+    }
+  }
+}
+""");
+
+            var vfs = new VirtualFileSystem();
+            vfs.Mount("Core", core);
+            var pipeline = new ConfigPipeline(vfs, modLoader: null!);
+            var orderTypes = new OrderTypeRegistry();
+            var orderRules = new OrderRuleRegistry();
+
+            new OrderTypeConfigLoader(pipeline).Load(orderTypes, orderRules);
+
+            int massNavMoveId = orderTypes.GetId("massNavMove");
+            ref readonly OrderRuleSet massNavRule = ref orderRules.Get(massNavMoveId);
+            Assert.That(massNavRule.InterruptsActiveCount, Is.EqualTo(2));
+            Assert.That(orderRules.Interrupts(massNavMoveId, orderTypes.GetId("moveTo")), Is.True);
+            Assert.That(orderRules.Interrupts(massNavMoveId, orderTypes.GetId("attackTarget")), Is.True);
         }
 
         [Test]

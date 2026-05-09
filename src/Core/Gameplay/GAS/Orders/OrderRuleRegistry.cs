@@ -98,5 +98,27 @@ namespace Ludots.Core.Gameplay.GAS.Orders
 
             return ref _rules[orderTypeId];
         }
+
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        public bool Interrupts(int orderTypeId, int activeOrderTypeId)
+        {
+            if (!HasRule(orderTypeId))
+            {
+                return false;
+            }
+
+            return _rules[orderTypeId].Interrupts(activeOrderTypeId);
+        }
+
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        public bool Blocks(int orderTypeId, int activeOrderTypeId)
+        {
+            if (!HasRule(orderTypeId))
+            {
+                return false;
+            }
+
+            return _rules[orderTypeId].Blocks(activeOrderTypeId);
+        }
     }
 }

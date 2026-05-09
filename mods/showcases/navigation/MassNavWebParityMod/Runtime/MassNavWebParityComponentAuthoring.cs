@@ -1,5 +1,4 @@
 using Ludots.Core.Config;
-using MassNavWebParityMod.Systems;
 
 namespace MassNavWebParityMod.Runtime;
 
@@ -12,5 +11,7 @@ internal static class MassNavWebParityComponentAuthoring
         ComponentRegistry.Register<MassNavBlocker>("MassNavBlocker");
         ComponentRegistry.Register<MassNavHotspotMarker>("MassNavHotspotMarker");
         ComponentRegistry.Register<MassNavBlockerProfile>("MassNavBlockerProfile");
+        ComponentRegistry.Register<MassNavAgentIndex>("MassNavAgentIndex");
+        ComponentRegistry.Register<MassNavAgentProfile>("MassNavAgentProfile");
     }
 }

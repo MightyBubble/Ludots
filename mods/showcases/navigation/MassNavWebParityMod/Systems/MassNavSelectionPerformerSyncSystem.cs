@@ -14,8 +14,8 @@ internal sealed class MassNavSelectionPerformerSyncSystem : ISystem<float>
 {
     private readonly GameEngine _engine;
     private readonly MassNavSimulationRuntime _simulation;
-    private const int SelectionMarkerScopeBase = 0x3D10_0000;
     private bool[] _selectionCache = Array.Empty<bool>();
+    private bool[] _markerCache = Array.Empty<bool>();
     private uint _lastSelectionRevision = uint.MaxValue;
     private int _lastStructuralRevision = -1;
     private bool _pendingMarkerRetry;
@@ -57,43 +57,54 @@ internal sealed class MassNavSelectionPerformerSyncSystem : ISystem<float>
             ?? throw new InvalidOperationException("MassNavWebParityMod requires PerformerEntityRuntime for selection marker ownership checks.");
         ResolveMarkerDefinitions(definitions);
 
-        EnsureSelectionCache(_simulation.AgentState.ControllableCount);
+        EnsureCaches(_simulation.AgentState.ControllableCount);
 
         for (int i = 0; i < _simulation.AgentState.ControllableCount; i++)
         {
             Entity owner = _simulation.AgentState.ControllableAgents[i];
             bool selected = i < _simulation.WebParity.SelectedFlags.Length && _simulation.WebParity.SelectedFlags[i] != 0;
             bool force = _lastStructuralRevision != _simulation.StructuralChangeRevision;
-            if (!force && _selectionCache[i] == selected)
+            bool wasSelected = _selectionCache[i];
+            if (!force && wasSelected == selected)
             {
                 continue;
             }
 
-            _selectionCache[i] = selected;
             if (!_engine.World.IsAlive(owner))
             {
-                DestroyMarkerIfPresent(commands, i);
+                _selectionCache[i] = false;
+                _markerCache[i] = false;
                 continue;
             }
 
             if (selected)
             {
-                SyncMarker(commands, runtime, owner, i);
+                _selectionCache[i] = SyncMarker(commands, runtime, owner, i);
                 continue;
             }
 
-            DestroyMarkerIfPresent(commands, i);
+            if (wasSelected || _markerCache[i])
+            {
+                DestroyMarkerIfPresent(commands, runtime, owner, i);
+            }
+
+            _selectionCache[i] = false;
         }
 
         _lastSelectionRevision = _simulation.SelectionRevision;
         _lastStructuralRevision = _simulation.StructuralChangeRevision;
     }
 
-    private void EnsureSelectionCache(int required)
+    private void EnsureCaches(int required)
     {
         if (_selectionCache.Length < required)
         {
             Array.Resize(ref _selectionCache, required);
+        }
+
+        if (_markerCache.Length < required)
+        {
+            Array.Resize(ref _markerCache, required);
         }
     }
 
@@ -125,19 +136,22 @@ internal sealed class MassNavSelectionPerformerSyncSystem : ISystem<float>
         return definitionId;
     }
 
-    private void SyncMarker(PerformerCommandBuffer commands, PerformerEntityRuntime runtime, Entity owner, int index)
+    private bool SyncMarker(PerformerCommandBuffer commands, PerformerEntityRuntime runtime, Entity owner, int index)
     {
         if (!TryGetRootPerformer(owner, out Entity rootPerformer))
         {
             _selectionCache[index] = false;
             _pendingMarkerRetry = true;
-            return;
+            return false;
         }
 
         bool heavy = _engine.World.Has<MassNavAgentProfile>(owner) &&
                      _engine.World.Get<MassNavAgentProfile>(owner).Heavy;
         int definitionId = heavy ? _heavyMarkerDefinitionId : _lightMarkerDefinitionId;
-        int scope = ComposeSelectionMarkerScope(index);
+        int staleDefinitionId = heavy ? _lightMarkerDefinitionId : _heavyMarkerDefinitionId;
+        int scope = ResolveSelectionMarkerScope(owner);
+        DestroyMarkerDefinitionIfPresent(commands, runtime, owner, staleDefinitionId, scope);
+
         if (runtime.TryGetActiveScopedInstance(
                 definitionId,
                 owner,
@@ -148,10 +162,11 @@ internal sealed class MassNavSelectionPerformerSyncSystem : ISystem<float>
         {
             if (IsAttachedToRoot(marker, rootPerformer))
             {
-                return;
+                _markerCache[index] = true;
+                return true;
             }
 
-            DestroyMarkerIfPresent(commands, index);
+            EnqueueDestroyMarker(commands, marker);
         }
 
         var command = new PerformerCommand
@@ -167,6 +182,9 @@ internal sealed class MassNavSelectionPerformerSyncSystem : ISystem<float>
         {
             throw new InvalidOperationException("MassNavWebParityMod selection marker create commands exceeded PerformerCommandBuffer capacity.");
         }
+
+        _markerCache[index] = true;
+        return true;
     }
 
     private bool IsAttachedToRoot(Entity marker, Entity rootPerformer)
@@ -196,12 +214,43 @@ internal sealed class MassNavSelectionPerformerSyncSystem : ISystem<float>
         return true;
     }
 
-    private void DestroyMarkerIfPresent(PerformerCommandBuffer commands, int index)
+    private void DestroyMarkerIfPresent(PerformerCommandBuffer commands, PerformerEntityRuntime runtime, Entity owner, int index)
+    {
+        int scope = ResolveSelectionMarkerScope(owner);
+        DestroyMarkerDefinitionIfPresent(commands, runtime, owner, _lightMarkerDefinitionId, scope);
+        DestroyMarkerDefinitionIfPresent(commands, runtime, owner, _heavyMarkerDefinitionId, scope);
+        _markerCache[index] = false;
+    }
+
+    private bool DestroyMarkerDefinitionIfPresent(
+        PerformerCommandBuffer commands,
+        PerformerEntityRuntime runtime,
+        Entity owner,
+        int definitionId,
+        int scope)
+    {
+        if (definitionId <= 0 ||
+            !runtime.TryGetActiveScopedInstance(
+                definitionId,
+                owner,
+                scope,
+                PresentationAnchorKind.Entity,
+                default,
+                out Entity marker))
+        {
+            return false;
+        }
+
+        EnqueueDestroyMarker(commands, marker);
+        return true;
+    }
+
+    private static void EnqueueDestroyMarker(PerformerCommandBuffer commands, Entity marker)
     {
         var command = new PerformerCommand
         {
-            CommandKind = PerformerCommandKind.DestroyPerformerScope,
-            ScopeTag = ComposeSelectionMarkerScope(index),
+            CommandKind = PerformerCommandKind.DestroyPerformer,
+            PerformerEntity = marker,
         };
         if (!commands.TryAdd(command))
         {
@@ -209,13 +258,19 @@ internal sealed class MassNavSelectionPerformerSyncSystem : ISystem<float>
         }
     }
 
-    private static int ComposeSelectionMarkerScope(int index)
+    private int ResolveSelectionMarkerScope(Entity owner)
     {
-        if (index < 0 || index >= 0x000F_FFFF)
+        if (!_engine.World.Has<PresentationStableId>(owner))
         {
-            throw new InvalidOperationException($"MassNavWebParityMod selection marker index {index} is outside the authored scope range.");
+            throw new InvalidOperationException("MassNavWebParityMod selection marker owner requires PresentationStableId.");
         }
 
-        return SelectionMarkerScopeBase + index + 1;
+        int stableId = _engine.World.Get<PresentationStableId>(owner).Value;
+        if (stableId <= 0)
+        {
+            throw new InvalidOperationException($"MassNavWebParityMod selection marker owner has invalid PresentationStableId {stableId}.");
+        }
+
+        return stableId;
     }
 }

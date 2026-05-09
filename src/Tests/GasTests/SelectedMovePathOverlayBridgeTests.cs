@@ -97,6 +97,63 @@ namespace Ludots.Tests.GAS
             Assert.That(pathService.Requests[0].Goal.Ycm, Is.EqualTo(250));
         }
 
+        [Test]
+        public void UpdateViewedSelection_PathSolveFailureDoesNotEmitFakeDirectLeg()
+        {
+            using var world = World.Create();
+            var overlays = new GroundOverlayBuffer();
+            var pathStore = new PathStore(maxPaths: 8, maxPointsPerPath: 8);
+            var pathService = new FailingPathService();
+            var bridge = new SelectedMovePathOverlayBridge(world, pathService, pathStore, overlays, MoveToOrderTypeId);
+
+            Entity actor = world.Create(
+                WorldPositionCm.FromCm(0, 0),
+                OrderBuffer.CreateEmpty());
+
+            ref var orders = ref world.Get<OrderBuffer>(actor);
+            orders.SetActiveDirect(CreateMoveOrder(actor, 300, 0, orderId: 1), priority: 60);
+
+            bridge.UpdateViewedSelection(new[] { actor });
+
+            Assert.That(overlays.Count, Is.EqualTo(0));
+            Assert.That(pathService.Requests.Count, Is.EqualTo(1));
+        }
+
+        [Test]
+        public void UpdateViewedSelection_AuthoredRoutePastScratchCapacityDoesNotOverflow()
+        {
+            using var world = World.Create();
+            var overlays = new GroundOverlayBuffer(capacity: 256);
+            var pathStore = new PathStore(maxPaths: 8, maxPointsPerPath: 8);
+            var pathService = new RecordingPathService(pathStore);
+            var bridge = new SelectedMovePathOverlayBridge(world, pathService, pathStore, overlays, MoveToOrderTypeId);
+
+            Entity actor = world.Create(
+                WorldPositionCm.FromCm(0, 0),
+                OrderBuffer.CreateEmpty());
+
+            ref var orders = ref world.Get<OrderBuffer>(actor);
+            orders.SetActiveDirect(CreateRouteOrder(actor, pointCount: OrderSpatial.MaxPoints + 1), priority: 60);
+
+            Assert.DoesNotThrow(() => bridge.UpdateViewedSelection(new[] { actor }));
+            Assert.That(Count(overlays.GetSpan(), GroundOverlayShape.Line), Is.EqualTo(OrderSpatial.MaxPoints));
+            Assert.That(Count(overlays.GetSpan(), GroundOverlayShape.Circle), Is.EqualTo(1));
+            Assert.That(pathService.Requests.Count, Is.EqualTo(0));
+        }
+
+        [Test]
+        public void GroundOverlayBuffer_ClearTransientRemovesTryAddItems()
+        {
+            var overlays = new GroundOverlayBuffer();
+
+            Assert.That(overlays.TryAdd(new GroundOverlayItem { Shape = GroundOverlayShape.Line }), Is.True);
+            Assert.That(overlays.Count, Is.EqualTo(1));
+
+            overlays.ClearTransient();
+
+            Assert.That(overlays.Count, Is.EqualTo(0));
+        }
+
         private static int Count(ReadOnlySpan<GroundOverlayItem> items, GroundOverlayShape shape)
         {
             int count = 0;
@@ -136,6 +193,33 @@ namespace Ludots.Tests.GAS
             };
         }
 
+        private static Order CreateRouteOrder(Entity actor, int pointCount)
+        {
+            var order = new Order
+            {
+                OrderId = 99,
+                OrderTypeId = MoveToOrderTypeId,
+                Actor = actor,
+                SubmitMode = OrderSubmitMode.Immediate,
+                Args = new OrderArgs
+                {
+                    Spatial = new OrderSpatial
+                    {
+                        Kind = OrderSpatialKind.WorldCm,
+                        Mode = OrderCollectionMode.List,
+                    }
+                }
+            };
+
+            for (int i = 0; i < pointCount; i++)
+            {
+                order.Args.Spatial.AddPointWorldCm((i + 1) * 100, 0, 0);
+            }
+            order.Args.Spatial.PointCount = pointCount;
+
+            return order;
+        }
+
         private sealed class RecordingPathService : IPathService
         {
             private readonly PathStore _store;
@@ -172,6 +256,24 @@ namespace Ludots.Tests.GAS
             public bool TryCopyPath(in PathHandle handle, Span<int> xcmOut, Span<int> ycmOut, out int count)
             {
                 return _store.TryCopy(in handle, xcmOut, ycmOut, out count);
+            }
+        }
+
+        private sealed class FailingPathService : IPathService
+        {
+            public System.Collections.Generic.List<PathRequest> Requests { get; } = new();
+
+            public bool TrySolve(in PathRequest request, out PathResult result)
+            {
+                Requests.Add(request);
+                result = new PathResult(request.RequestId, request.Actor, PathStatus.NoPath, default, 0, 0);
+                return true;
+            }
+
+            public bool TryCopyPath(in PathHandle handle, Span<int> xcmOut, Span<int> ycmOut, out int count)
+            {
+                count = 0;
+                return false;
             }
         }
     }

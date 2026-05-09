@@ -27,11 +27,13 @@ internal sealed class MassNavSelectionSyncSystem : ISystem<float>
 
     public void Update(in float dt)
     {
-        _simulation.BeginFrame(dt);
-        if (MassNavWebParityIds.IsCurrentPlaygroundMap(_engine))
+        if (!MassNavWebParityIds.IsCurrentPlaygroundMap(_engine))
         {
-            _simulation.ObserveSelectionSyncTick();
+            return;
         }
+
+        _simulation.BeginFrame(dt);
+        _simulation.ObserveSelectionSyncTick();
 
         if (!SelectionContextRuntime.TryGetRuntime(_engine.GlobalContext, out SelectionRuntime selection) ||
             !SelectionContextRuntime.TryDescribeCurrentView(_world, _engine.GlobalContext, out _))

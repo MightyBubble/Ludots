@@ -2,6 +2,8 @@
 
 `MassNavWebParityMod` is the acceptance showcase shell for the large-scale navigation work. It exists to prove the Ludots formal chains end to end: config pipeline, template spawn, selection, order bridge, ECS writeback, performer presentation, minimap, diagnostics, and UAT evidence.
 
+For a zero-context user guide, read `gitbook/reference/mass-nav-web-parity-user-book.md`. For the formal acceptance chain and UAT contract, read `gitbook/reference/mass-nav-web-parity-playground.md`.
+
 The reusable capability that should survive this showcase is named by responsibility, not by this mod:
 
 - `MassFlow`: the high-performance SoA flow-field and crowd solver capability.

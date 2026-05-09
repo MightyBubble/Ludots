@@ -39,8 +39,11 @@ namespace Ludots.Core.Gameplay.GAS.Orders
         public sealed class OrderRuleConfigJson
         {
             public int OrderTypeId { get; set; }
+            public string OrderTypeKey { get; set; } = string.Empty;
             public int[] BlockedActiveOrderTypeIds { get; set; } = Array.Empty<int>();
             public int[] InterruptsActiveOrderTypeIds { get; set; } = Array.Empty<int>();
+            public string[] BlockedActiveOrderTypeKeys { get; set; } = Array.Empty<string>();
+            public string[] InterruptsActiveOrderTypeKeys { get; set; } = Array.Empty<string>();
         }
 
         private sealed class OrderTypesRootJson
@@ -99,13 +102,14 @@ namespace Ludots.Core.Gameplay.GAS.Orders
             foreach (var kvp in root.OrderRules)
             {
                 var config = kvp.Value ?? throw new InvalidOperationException($"Order rule '{kvp.Key}' in '{relativePath}' is null.");
-                if (!orderTypeRegistry.IsRegistered(config.OrderTypeId))
+                int orderTypeId = ResolveOrderTypeReference(config.OrderTypeId, config.OrderTypeKey, kvp.Key, relativePath, orderTypeRegistry);
+                if (!orderTypeRegistry.IsRegistered(orderTypeId))
                 {
-                    throw new InvalidOperationException($"Order rule '{kvp.Key}' references unregistered order type {config.OrderTypeId}.");
+                    throw new InvalidOperationException($"Order rule '{kvp.Key}' references unregistered order type {orderTypeId}.");
                 }
 
                 var ruleSet = ConvertToRuleSet(config, kvp.Key, relativePath, orderTypeRegistry);
-                orderRuleRegistry.Register(config.OrderTypeId, in ruleSet);
+                orderRuleRegistry.Register(orderTypeId, in ruleSet);
             }
         }
 
@@ -148,51 +152,115 @@ namespace Ludots.Core.Gameplay.GAS.Orders
             string path,
             OrderTypeRegistry orderTypeRegistry)
         {
-            if (json.OrderTypeId <= 0)
-            {
-                throw new InvalidOperationException($"Order rule '{key}' in '{path}' must define a positive orderTypeId.");
-            }
+            ResolveOrderTypeReference(json.OrderTypeId, json.OrderTypeKey, key, path, orderTypeRegistry);
 
             var result = new OrderRuleSet();
-            result.BlockedActiveCount = ValidateOrderTypes(json.BlockedActiveOrderTypeIds, key, path, orderTypeRegistry, OrderRuleSet.MAX_BLOCKED_ACTIVE_ORDER_TYPES);
+            Span<int> blocked = stackalloc int[OrderRuleSet.MAX_BLOCKED_ACTIVE_ORDER_TYPES];
+            result.BlockedActiveCount = ResolveOrderTypeReferences(
+                json.BlockedActiveOrderTypeIds,
+                json.BlockedActiveOrderTypeKeys,
+                key,
+                path,
+                orderTypeRegistry,
+                blocked);
             for (int i = 0; i < result.BlockedActiveCount; i++)
             {
-                result.BlockedActiveOrderTypeIds[i] = json.BlockedActiveOrderTypeIds[i];
+                result.BlockedActiveOrderTypeIds[i] = blocked[i];
             }
 
-            result.InterruptsActiveCount = ValidateOrderTypes(json.InterruptsActiveOrderTypeIds, key, path, orderTypeRegistry, OrderRuleSet.MAX_INTERRUPTS_ACTIVE_ORDER_TYPES);
+            Span<int> interrupts = stackalloc int[OrderRuleSet.MAX_INTERRUPTS_ACTIVE_ORDER_TYPES];
+            result.InterruptsActiveCount = ResolveOrderTypeReferences(
+                json.InterruptsActiveOrderTypeIds,
+                json.InterruptsActiveOrderTypeKeys,
+                key,
+                path,
+                orderTypeRegistry,
+                interrupts);
             for (int i = 0; i < result.InterruptsActiveCount; i++)
             {
-                result.InterruptsActiveOrderTypeIds[i] = json.InterruptsActiveOrderTypeIds[i];
+                result.InterruptsActiveOrderTypeIds[i] = interrupts[i];
             }
 
             return result;
         }
 
-        private static int ValidateOrderTypes(
-            int[] source,
+        private static int ResolveOrderTypeReferences(
+            int[] ids,
+            string[] keys,
             string key,
             string path,
             OrderTypeRegistry orderTypeRegistry,
-            int maxCount)
+            Span<int> destination)
         {
-            source ??= Array.Empty<int>();
-            int count = Math.Min(source.Length, maxCount);
-            for (int i = 0; i < count; i++)
+            ids ??= Array.Empty<int>();
+            keys ??= Array.Empty<string>();
+            int count = ids.Length + keys.Length;
+            if (count > destination.Length)
             {
-                int orderTypeId = source[i];
-                if (orderTypeId <= 0)
-                {
-                    throw new InvalidOperationException($"Order rule '{key}' in '{path}' contains invalid order type id {orderTypeId}.");
-                }
+                throw new InvalidOperationException(
+                    $"Order rule '{key}' in '{path}' references {count} order types, max {destination.Length}.");
+            }
 
-                if (!orderTypeRegistry.IsRegistered(orderTypeId))
+            int cursor = 0;
+            for (int i = 0; i < ids.Length; i++)
+            {
+                int orderTypeId = ResolveOrderTypeReference(ids[i], string.Empty, key, path, orderTypeRegistry);
+                EnsureUniqueOrderRuleReference(destination.Slice(0, cursor), orderTypeId, key, path);
+                destination[cursor++] = orderTypeId;
+            }
+
+            for (int i = 0; i < keys.Length; i++)
+            {
+                int orderTypeId = ResolveOrderTypeReference(0, keys[i], key, path, orderTypeRegistry);
+                EnsureUniqueOrderRuleReference(destination.Slice(0, cursor), orderTypeId, key, path);
+                destination[cursor++] = orderTypeId;
+            }
+
+            return cursor;
+        }
+
+        private static int ResolveOrderTypeReference(
+            int orderTypeId,
+            string orderTypeKey,
+            string key,
+            string path,
+            OrderTypeRegistry orderTypeRegistry)
+        {
+            bool hasId = orderTypeId > 0;
+            bool hasKey = !string.IsNullOrWhiteSpace(orderTypeKey);
+            if (hasId == hasKey)
+            {
+                throw new InvalidOperationException(
+                    $"Order rule '{key}' in '{path}' must reference exactly one order type id or key.");
+            }
+
+            if (hasKey)
+            {
+                if (!orderTypeRegistry.TryGetId(orderTypeKey, out orderTypeId) || orderTypeId <= 0)
                 {
-                    throw new InvalidOperationException($"Order rule '{key}' in '{path}' references unknown order type {orderTypeId}.");
+                    throw new InvalidOperationException(
+                        $"Order rule '{key}' in '{path}' references unknown order type key '{orderTypeKey}'.");
                 }
             }
 
-            return count;
+            if (!orderTypeRegistry.IsRegistered(orderTypeId))
+            {
+                throw new InvalidOperationException($"Order rule '{key}' in '{path}' references unknown order type {orderTypeId}.");
+            }
+
+            return orderTypeId;
+        }
+
+        private static void EnsureUniqueOrderRuleReference(ReadOnlySpan<int> existing, int orderTypeId, string key, string path)
+        {
+            for (int i = 0; i < existing.Length; i++)
+            {
+                if (existing[i] == orderTypeId)
+                {
+                    throw new InvalidOperationException(
+                        $"Order rule '{key}' in '{path}' references duplicate order type {orderTypeId}.");
+                }
+            }
         }
 
         private static SameTypePolicy ParseSameTypePolicy(string value)

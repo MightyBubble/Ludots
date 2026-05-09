@@ -10,6 +10,7 @@ namespace Ludots.Core.Input.Selection
         public int MutationApplyBudgetPerFrame { get; set; } = 4096;
         public float ClickPickRadiusPixels { get; set; } = 20f;
         public float DragThresholdPixels { get; set; } = 8f;
+        public string[] MovePathPreviewOrderTypeKeys { get; set; } = Array.Empty<string>();
     }
 
     public sealed class SelectionRuntime

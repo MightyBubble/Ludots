@@ -54,7 +54,7 @@ ConfigPipeline
 
 主要配置位于 `mods/showcases/navigation/MassNavWebParityMod/assets/`。
 
-- `MassNavWebParityConfig.json`：solver window、hotspot/debug landmark、obstacle、scenario、team relationship、flow、arrival、avoidance、crowd semantics、presentation id 引用。它不拥有世界尺寸。
+- `MassNavWebParityConfig.json`：solver window、hotspot/debug landmark、obstacle、scenario、team relationship、flow、arrival、avoidance、crowd semantics、presentation id 引用。它通过 `ConfigPipeline` 合并加载，但不拥有世界尺寸。
 - `Entities/templates.json`：agent、blocker、hotspot marker 的正式 entity template。
 - `Presentation/mesh_assets.json`：MassNav 自有 blocker、hotspot、selection overlay 的正式 Model mesh id。
 - `Presentation/host_assets.json`：MassNav 自有 mesh 的 Raylib 后端文件绑定；缺 host sourceUri 必须 fail-fast。
@@ -75,31 +75,23 @@ ConfigPipeline
 - `SelectionSelectableTag`
 - `SelectionSelectableState`
 - `WorldPositionCm`
-- `PreviousWorldPositionCm`
 - `FacingDirection`
-- `VisualTransform`
-- `CullState`
 - `MassNavAgentTag`
 - `MassNavControllable`
+
+`WorldPositionCm` authoring 会通过正式 component registry 补齐 `PreviousWorldPositionCm`、`VisualTransform`、`CullState`；receipt binding 校验的是运行时实体最终具备这些组件，而不是要求用户在模板里重复写三遍。
 
 blocker 必须声明：
 
 - `WorldPositionCm`
-- `PreviousWorldPositionCm`
-- `FacingDirection`
-- `VisualTransform`
-- `CullState`
 - `MassNavBlocker`
 
 hotspot/debug marker 必须声明：
 
 - `WorldPositionCm`
-- `PreviousWorldPositionCm`
-- `FacingDirection`
-- `VisualTransform`
 - `MassNavHotspotMarker`
 
-缺任意正式组件都应 fail-fast。不要在业务系统里临时补组件，也不要让 order 或 selection 系统隐式补齐 MassNav 依赖。
+缺任意正式组件或运行时补齐失败都应 fail-fast。不要在业务系统里临时补组件，也不要让 order 或 selection 系统隐式补齐 MassNav 依赖。
 
 ## 表现合约
 
@@ -110,7 +102,7 @@ MassNav agent、blocker、hotspot marker 必须通过 performer 创建：
 - selection overlay、blocker、hotspot 使用 MassNav 自有 `Presentation/mesh_assets.json` + `Presentation/host_assets.json` 中声明的 Model mesh。
 - agent performer 必须声明 `Grounding` behavior，并使用 map-owned `VisualHeightmapAsset` 吸地。
 - blocker 和 hotspot/debug marker 必须声明 `Grounding` behavior；静态对象可以 `updatePolicy=Once`。
-- selection overlay 使用 performer param，例如 `selectionVisibilityParamKey`。
+- selection overlay 使用独立 scoped performer，选中时创建、取消选中或 reset 时销毁；scope 来自 owner `PresentationStableId`，不是 solver array index。
 - minimap marker 使用 performer `MinimapMarker` behavior。
 - 颜色、尺寸、marker size、selection overlay 是否可见，都来自 performer config 或 performer param。
 

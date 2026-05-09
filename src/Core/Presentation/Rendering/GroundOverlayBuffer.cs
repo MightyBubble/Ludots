@@ -52,6 +52,11 @@ namespace Ludots.Core.Presentation.Rendering
         {
             if (_count >= _items.Length) return false;
             _items[_count++] = item;
+            if (item.StableId <= 0)
+            {
+                _transientCount++;
+            }
+
             return true;
         }
 
@@ -59,13 +64,7 @@ namespace Ludots.Core.Presentation.Rendering
         {
             if (item.StableId <= 0)
             {
-                if (!TryAdd(in item))
-                {
-                    return false;
-                }
-
-                _transientCount++;
-                return true;
+                return TryAdd(in item);
             }
 
             if (_retainedIndexByStableId.TryGetValue(item.StableId, out int existingIndex))

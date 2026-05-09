@@ -1,4 +1,5 @@
 using Arch.Core;
+using Ludots.Core.Presentation.Components;
 
 namespace MassNavWebParityMod.Runtime;
 
@@ -60,12 +61,73 @@ public sealed class MassNavAgentState
         for (int i = 0; i < _spawnedEntities.Count; i++)
         {
             Entity entity = _spawnedEntities[i];
-            if (world.IsAlive(entity))
+            if (!world.IsAlive(entity))
+            {
+                continue;
+            }
+
+            if (world.Has<PresentationStableId>(entity))
+            {
+                if (!world.Has<PresentationDestroyPending>(entity))
+                {
+                    world.Add(entity, new PresentationDestroyPending());
+                }
+
+                if (world.Has<PresentationDestroyEventPublished>(entity))
+                {
+                    world.Remove<PresentationDestroyEventPublished>(entity);
+                }
+
+                RemoveMassNavRuntimeTags(world, entity);
+                if (world.Has<PresentationOwnerHasPerformerPayload>(entity))
+                {
+                    world.Remove<PresentationOwnerHasPerformerPayload>(entity);
+                }
+            }
+            else
             {
                 world.Destroy(entity);
             }
         }
 
         Reset();
+    }
+
+    private static void RemoveMassNavRuntimeTags(World world, Entity entity)
+    {
+        if (world.Has<MassNavAgentTag>(entity))
+        {
+            world.Remove<MassNavAgentTag>(entity);
+        }
+
+        if (world.Has<MassNavControllable>(entity))
+        {
+            world.Remove<MassNavControllable>(entity);
+        }
+
+        if (world.Has<MassNavAgentIndex>(entity))
+        {
+            world.Remove<MassNavAgentIndex>(entity);
+        }
+
+        if (world.Has<MassNavAgentProfile>(entity))
+        {
+            world.Remove<MassNavAgentProfile>(entity);
+        }
+
+        if (world.Has<MassNavBlocker>(entity))
+        {
+            world.Remove<MassNavBlocker>(entity);
+        }
+
+        if (world.Has<MassNavBlockerProfile>(entity))
+        {
+            world.Remove<MassNavBlockerProfile>(entity);
+        }
+
+        if (world.Has<MassNavHotspotMarker>(entity))
+        {
+            world.Remove<MassNavHotspotMarker>(entity);
+        }
     }
 }

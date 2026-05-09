@@ -21,9 +21,9 @@
   },
   "orderRules": {
     "massNavMove": {
-      "orderTypeId": 172,
+      "orderTypeKey": "massNavMove",
       "blockedActiveOrderTypeIds": [],
-      "interruptsActiveOrderTypeIds": [ 101, 102 ]
+      "interruptsActiveOrderTypeKeys": [ "moveTo", "attackTarget" ]
     }
   }
 }

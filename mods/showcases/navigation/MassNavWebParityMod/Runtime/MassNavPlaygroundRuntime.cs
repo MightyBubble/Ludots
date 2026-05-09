@@ -30,17 +30,16 @@ internal sealed class MassNavWebParityRuntime
     private static readonly QueryDescription AuthoredPlayerOwnerQuery = new QueryDescription().WithAll<PlayerOwner>();
 
     private readonly IModContext _context;
-    private readonly MassNavWebParityConfig _config;
+    private MassNavWebParityConfig? _config;
     private bool _systemsInstalled;
     private bool _scenarioSpawned;
     private RenderDebugSnapshot _savedRenderDebug;
     private bool _savedRenderDebugValid;
     private readonly MassNavWebParityPanelController _panelController = new();
 
-    public MassNavWebParityRuntime(IModContext context, MassNavWebParityConfig config)
+    public MassNavWebParityRuntime(IModContext context)
     {
         _context = context;
-        _config = config ?? throw new System.ArgumentNullException(nameof(config));
     }
 
     public void EnsureSystemsInstalled(GameEngine engine)
@@ -50,7 +49,8 @@ internal sealed class MassNavWebParityRuntime
             return;
         }
 
-        var simulation = new MassNavSimulationRuntime(_config);
+        MassNavWebParityConfig config = EnsureConfig(engine);
+        var simulation = new MassNavSimulationRuntime(config);
         engine.SetService(MassNavWebParityKeys.SimulationRuntime, simulation);
         engine.RegisterSystem(new MassNavAgentMetadataSyncSystem(engine, simulation), SystemGroup.InputCollection);
         engine.RegisterSystem(new MassNavSelectionSyncSystem(engine, simulation), SystemGroup.InputCollection);
@@ -64,6 +64,24 @@ internal sealed class MassNavWebParityRuntime
         engine.RegisterPresentationSystem(new MassNavHudPresentationSystem(engine, simulation));
         _systemsInstalled = true;
         _context.Log("[MassNavWebParityMod] Installed mass-nav fa莽ade runtime skeleton.");
+    }
+
+    private MassNavWebParityConfig EnsureConfig(GameEngine engine)
+    {
+        if (_config != null)
+        {
+            return _config;
+        }
+
+        if (engine.ConfigPipeline == null)
+        {
+            throw new System.InvalidOperationException("MassNavWebParityMod requires ConfigPipeline before loading MassNavWebParityConfig.");
+        }
+
+        _config = new MassNavWebParityConfigLoader(engine.ConfigPipeline).Load(
+            engine.ConfigCatalog,
+            engine.ConfigConflictReport);
+        return _config;
     }
 
     public Task HandleMapFocusedAsync(ScriptContext context)

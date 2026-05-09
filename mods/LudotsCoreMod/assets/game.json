@@ -25,5 +25,8 @@
     "attributes": {
       "health": "Health"
     }
+  },
+  "selection": {
+    "movePathPreviewOrderTypeKeys": [ "moveTo" ]
   }
 }

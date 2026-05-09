@@ -3,7 +3,9 @@ using System.Collections.Generic;
 using System.IO;
 using System.Linq;
 using System.Text.Json;
+using System.Text.Json.Nodes;
 using System.Text.Json.Serialization;
+using Ludots.Core.Config;
 using Ludots.Core.Gameplay.Teams;
 
 namespace MassNavWebParityMod.Runtime;
@@ -22,6 +24,17 @@ public sealed class MassNavWebParityConfig
     public MassNavAvoidanceTuning Avoidance { get; set; } = new();
     public MassNavCrowdSemantics Semantics { get; set; } = new();
 
+    public static MassNavWebParityConfig Load(JsonObject configObject)
+    {
+        if (configObject == null)
+        {
+            throw new ArgumentNullException(nameof(configObject));
+        }
+
+        using var document = JsonDocument.Parse(configObject.ToJsonString());
+        return Load(document.RootElement);
+    }
+
     public static MassNavWebParityConfig Load(Stream stream)
     {
         if (stream == null)
@@ -30,13 +43,18 @@ public sealed class MassNavWebParityConfig
         }
 
         using var document = JsonDocument.Parse(stream);
-        ValidateRequiredTopLevelProperties(document.RootElement);
+        return Load(document.RootElement);
+    }
+
+    private static MassNavWebParityConfig Load(JsonElement root)
+    {
+        ValidateRequiredTopLevelProperties(root);
         var options = new JsonSerializerOptions
         {
             PropertyNameCaseInsensitive = true,
         };
 
-        MassNavWebParityConfig? config = document.RootElement.Deserialize<MassNavWebParityConfig>(options);
+        MassNavWebParityConfig? config = root.Deserialize<MassNavWebParityConfig>(options);
         if (config == null)
         {
             throw new InvalidOperationException("Failed to deserialize mass-nav web parity config.");
@@ -133,6 +151,52 @@ public sealed class MassNavWebParityConfig
         {
             throw new InvalidOperationException("Mass-nav config requires teamRelationships.relationships as an explicit array.");
         }
+    }
+}
+
+public sealed class MassNavWebParityConfigLoader
+{
+    public const string DefaultRelativePath = "MassNavWebParityConfig.json";
+
+    private readonly ConfigPipeline _pipeline;
+
+    public MassNavWebParityConfigLoader(ConfigPipeline pipeline)
+    {
+        _pipeline = pipeline ?? throw new ArgumentNullException(nameof(pipeline));
+    }
+
+    public MassNavWebParityConfig Load(
+        ConfigCatalog catalog,
+        ConfigConflictReport report,
+        string relativePath = DefaultRelativePath)
+    {
+        if (catalog == null)
+        {
+            throw new ArgumentNullException(nameof(catalog));
+        }
+
+        if (report == null)
+        {
+            throw new ArgumentNullException(nameof(report));
+        }
+
+        if (!catalog.TryGet(relativePath, out ConfigCatalogEntry entry))
+        {
+            throw new InvalidOperationException($"MassNavWebParityMod config '{relativePath}' must be registered in config_catalog.json.");
+        }
+
+        if (entry.MergePolicy != ConfigMergePolicy.DeepObject)
+        {
+            throw new InvalidOperationException($"MassNavWebParityMod config '{relativePath}' must use DeepObject merge policy.");
+        }
+
+        JsonObject? merged = _pipeline.MergeDeepObjectFromCatalog(in entry, report);
+        if (merged == null)
+        {
+            throw new InvalidOperationException($"MassNavWebParityMod requires config '{relativePath}' through ConfigPipeline.");
+        }
+
+        return MassNavWebParityConfig.Load(merged);
     }
 }
 

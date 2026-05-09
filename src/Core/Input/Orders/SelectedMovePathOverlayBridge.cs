@@ -160,6 +160,10 @@ namespace Ludots.Core.Input.Orders
                 _pathYcm[writeCount] = (int)MathF.Round(pointWorldCm.Z);
                 writeCount++;
                 finalDestination = pointWorldCm;
+                if (writeCount == _pathXcm.Length)
+                {
+                    break;
+                }
             }
 
             if (writeCount == 0)
@@ -225,7 +229,6 @@ namespace Ludots.Core.Input.Orders
                 result.Status != PathStatus.Found ||
                 !result.Handle.IsValid)
             {
-                EmitDirectLeg(startWorldCm, goalWorldCm, isPrimary);
                 return;
             }
 
@@ -234,7 +237,6 @@ namespace Ludots.Core.Input.Orders
                 if (!_paths.TryCopyPath(in result.Handle, _pathXcm, _pathYcm, out int count) ||
                     count < 2)
                 {
-                    EmitDirectLeg(startWorldCm, goalWorldCm, isPrimary);
                     return;
                 }
 
@@ -247,15 +249,6 @@ namespace Ludots.Core.Input.Orders
                     _pathStore.Release(result.Handle);
                 }
             }
-        }
-
-        private void EmitDirectLeg(Vector3 startWorldCm, Vector3 goalWorldCm, bool isPrimary)
-        {
-            _pathXcm[0] = (int)MathF.Round(startWorldCm.X);
-            _pathYcm[0] = (int)MathF.Round(startWorldCm.Z);
-            _pathXcm[1] = (int)MathF.Round(goalWorldCm.X);
-            _pathYcm[1] = (int)MathF.Round(goalWorldCm.Z);
-            EmitPolyline(count: 2, isPrimary);
         }
 
         private void EmitPolyline(int count, bool isPrimary)

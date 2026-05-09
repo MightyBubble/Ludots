@@ -26,5 +26,7 @@
   - [Performer 编译式执行分层](architecture/performer-compiled-lanes.md)
 - [参考资料](reference/README.md)
   - [Launcher CLI Runbook](reference/cli-runbook.md)
+  - [MassNav Web Parity 用户教学书](reference/mass-nav-web-parity-user-book.md)
+  - [MassNavWebParity 正式链路手册](reference/mass-nav-web-parity-playground.md)
   - [项目地图](reference/project-map.md)
   - [发布与访问](reference/publishing-and-access.md)

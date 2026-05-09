@@ -7,6 +7,7 @@ using Ludots.Core.Components;
 using Ludots.Core.Config;
 using Ludots.Core.Engine;
 using Ludots.Core.Gameplay.GAS.Components;
+using Ludots.Core.Gameplay.GAS.Orders;
 using Ludots.Core.Input.Orders;
 using Ludots.Core.Input.Selection;
 using Ludots.Core.Navigation2D.Components;
@@ -23,7 +24,6 @@ namespace CoreInputMod.Systems
         public const string DebugSummaryKey = "CoreInputMod.SelectedMovePath.DebugSummary";
 
         private const string DebugEnvironmentVariable = "LUDOTS_DEBUG_SELECTED_MOVE_PATH";
-        private static readonly string[] MoveOrderTypeKeys = { "moveTo", "massNavMove" };
         private static readonly Vector4 DebugTextColor = new(0.92f, 0.97f, 1.0f, 1.0f);
         private static readonly Vector4 DebugPanelFill = new(0.04f, 0.08f, 0.12f, 0.92f);
         private static readonly Vector4 DebugPanelBorder = new(0.30f, 0.58f, 0.78f, 0.96f);
@@ -114,7 +114,14 @@ namespace CoreInputMod.Systems
                 return false;
             }
 
-            int[] moveOrderTypeIds = ResolveMoveOrderTypeIds(config);
+            if (!_globals.TryGetValue(CoreServiceKeys.OrderTypeRegistry.Name, out var orderTypesObj) ||
+                orderTypesObj is not OrderTypeRegistry orderTypes)
+            {
+                _lastBridgeFailureReason = "bridge=missing:OrderTypeRegistry";
+                return false;
+            }
+
+            int[] moveOrderTypeIds = ResolveMoveOrderTypeIds(config, orderTypes);
             if (moveOrderTypeIds.Length == 0)
             {
                 _lastBridgeFailureReason = "bridge=missing:moveOrderType";
@@ -287,29 +294,60 @@ namespace CoreInputMod.Systems
                 return false;
             }
 
-            moveOrderTypeIds = ResolveMoveOrderTypeIds(config);
+            if (!_globals.TryGetValue(CoreServiceKeys.OrderTypeRegistry.Name, out var orderTypesObj) ||
+                orderTypesObj is not OrderTypeRegistry orderTypes)
+            {
+                return false;
+            }
+
+            moveOrderTypeIds = ResolveMoveOrderTypeIds(config, orderTypes);
             _moveOrderTypeIds = moveOrderTypeIds;
             _moveOrderTypeIdsResolved = true;
             return moveOrderTypeIds.Length > 0;
         }
 
-        private static int[] ResolveMoveOrderTypeIds(GameConfig config)
+        private static int[] ResolveMoveOrderTypeIds(GameConfig config, OrderTypeRegistry orderTypes)
         {
-            Span<int> ids = stackalloc int[MoveOrderTypeKeys.Length];
-            int count = 0;
-            for (int i = 0; i < MoveOrderTypeKeys.Length; i++)
+            string[] orderTypeKeys = config.Selection.MovePathPreviewOrderTypeKeys;
+            if (orderTypeKeys.Length == 0)
             {
-                if (!config.Constants.OrderTypeIds.TryGetValue(MoveOrderTypeKeys[i], out int orderTypeId) ||
-                    orderTypeId <= 0 ||
-                    Contains(ids.Slice(0, count), orderTypeId))
+                throw new InvalidOperationException(
+                    "selection.movePathPreviewOrderTypeKeys must explicitly list order types that SelectedMovePathPresentationSystem may preview.");
+            }
+
+            int[] ids = new int[orderTypeKeys.Length];
+            int count = 0;
+            for (int i = 0; i < orderTypeKeys.Length; i++)
+            {
+                string orderTypeKey = orderTypeKeys[i];
+                if (string.IsNullOrWhiteSpace(orderTypeKey))
                 {
-                    continue;
+                    throw new InvalidOperationException(
+                        "selection.movePathPreviewOrderTypeKeys must not contain blank order type keys.");
+                }
+
+                if (!orderTypes.TryGetId(orderTypeKey, out int orderTypeId) ||
+                    orderTypeId <= 0)
+                {
+                    throw new InvalidOperationException(
+                        $"selection.movePathPreviewOrderTypeKeys references unknown OrderTypeRegistry key '{orderTypeKey}'.");
+                }
+
+                if (Contains(ids.AsSpan(0, count), orderTypeId))
+                {
+                    throw new InvalidOperationException(
+                        $"selection.movePathPreviewOrderTypeKeys resolves duplicate order type id {orderTypeId} from key '{orderTypeKey}'.");
                 }
 
                 ids[count++] = orderTypeId;
             }
 
-            return ids.Slice(0, count).ToArray();
+            if (count != ids.Length)
+            {
+                Array.Resize(ref ids, count);
+            }
+
+            return ids;
         }
 
         private static bool IsMoveOrderType(int orderTypeId, ReadOnlySpan<int> moveOrderTypeIds)

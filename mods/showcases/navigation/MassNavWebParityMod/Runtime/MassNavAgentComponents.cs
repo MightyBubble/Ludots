@@ -1,4 +1,4 @@
-namespace MassNavWebParityMod.Systems;
+namespace MassNavWebParityMod.Runtime;
 
 public struct MassNavAgentTag
 {
