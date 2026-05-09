@@ -41,6 +41,27 @@ namespace Ludots.Tests.Presentation
         }
 
         [Test]
+        public void Sync_IgnoresMovableInstancedMeshes()
+        {
+            var planner = new StaticMeshAdapterSyncPlanner();
+
+            planner.Sync(new[]
+            {
+                CreateItem(
+                    404,
+                    VisualRenderPath.InstancedStaticMesh,
+                    meshAssetId: 14,
+                    materialId: 4,
+                    posX: 3f,
+                    mobility: VisualMobility.Movable),
+            });
+
+            Assert.That(planner.ActiveBindings.Count, Is.EqualTo(0));
+            Assert.That(planner.Operations, Is.Empty);
+            Assert.That(planner.TryGetBinding(404, out _), Is.False);
+        }
+
+        [Test]
         public void Sync_ReorderedSnapshot_DoesNotEmitDirtyOps()
         {
             var planner = new StaticMeshAdapterSyncPlanner();

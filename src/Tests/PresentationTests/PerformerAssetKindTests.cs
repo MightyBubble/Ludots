@@ -884,6 +884,66 @@ namespace Ludots.Tests.Presentation
         }
 
         [Test]
+        public void MovableInstancedMesh_RemainsTransientAndReemitsMovedPosition()
+        {
+            using var world = World.Create();
+            Entity owner = world.Create(new CullState { IsVisible = true, LOD = LODLevel.High });
+            var instances = new PerformerEntityRuntime(world);
+            var definitions = new PerformerDefinitionRegistry();
+            var requests = new PresentationRequestBuffer();
+            var cache = new StableDrawCache(4);
+
+            int defId = definitions.Register("asset.mesh.movable.ism", new PerformerDefinition
+            {
+                Behaviors =
+                [
+                    new BehaviorSlot
+                    {
+                        SlotIndex = 0,
+                        Kind = BehaviorKind.AssetBinding,
+                        ActiveByDefault = true,
+                        AssetBinding = new AssetBindingConfig
+                        {
+                            AssetKind = AssetKind.Mesh,
+                            AssetId = 1201,
+                            MaterialId = 2201,
+                            RenderPath = VisualRenderPath.InstancedStaticMesh,
+                            Mobility = VisualMobility.Movable,
+                            LocalScale = Vector3.One,
+                        },
+                    },
+                ],
+            });
+
+            PerformerDefinition definition = definitions.Get(defId);
+            Entity performer = instances.Create(defId, owner, 0, PresentationAnchorKind.WorldPosition, Vector3.Zero, 9911, Entity.Null, definition);
+
+            using var system = new PerformerEmitSystem(
+                world,
+                instances,
+                definitions,
+                requests,
+                new Dictionary<string, object>(),
+                animatorStates: null!,
+                soundRequests: null!,
+                stableDrawCache: cache);
+
+            system.Update(0.016f);
+            Assert.That(requests.Count, Is.EqualTo(1));
+            Assert.That(requests.GetSpan()[0].VisualProxy.Position, Is.EqualTo(Vector3.Zero));
+            Assert.That(cache.Count, Is.EqualTo(0), "Movable ISM visuals must not be treated as stable static cache entries.");
+
+            requests.Clear();
+            world.Get<PerformerWorldPosition>(performer).Value = new Vector3(12f, 0f, 34f);
+            instances.MarkTransformDrivenEmitDirty(performer);
+            system.Update(0.016f);
+
+            Assert.That(requests.Count, Is.EqualTo(1));
+            Assert.That(requests.GetSpan()[0].VisualProxy.Position, Is.EqualTo(new Vector3(12f, 0f, 34f)));
+            Assert.That(cache.Count, Is.EqualTo(0));
+        }
+
+        [Test]
         public void SurfaceOnlyDefinition_AttributeBindingUpdatesParamsThroughProductionBehaviorPath()
         {
             using var world = World.Create();

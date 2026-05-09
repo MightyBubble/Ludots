@@ -3,6 +3,7 @@ using Arch.Core;
 using Arch.System;
 using Ludots.Core.Engine;
 using Ludots.Core.Presentation.Commands;
+using Ludots.Core.Presentation.Components;
 using Ludots.Core.Presentation.Performers;
 using Ludots.Core.Scripting;
 using MassNavWebParityMod.Runtime;
@@ -17,6 +18,7 @@ internal sealed class MassNavSelectionPerformerSyncSystem : ISystem<float>
     private bool[] _selectionCache = Array.Empty<bool>();
     private uint _lastSelectionRevision = uint.MaxValue;
     private int _lastStructuralRevision = -1;
+    private bool _pendingMarkerRetry;
     private int _lightMarkerDefinitionId;
     private int _heavyMarkerDefinitionId;
 
@@ -39,15 +41,20 @@ internal sealed class MassNavSelectionPerformerSyncSystem : ISystem<float>
         }
 
         if (_lastSelectionRevision == _simulation.SelectionRevision &&
-            _lastStructuralRevision == _simulation.StructuralChangeRevision)
+            _lastStructuralRevision == _simulation.StructuralChangeRevision &&
+            !_pendingMarkerRetry)
         {
             return;
         }
+
+        _pendingMarkerRetry = false;
 
         PerformerCommandBuffer commands = _engine.GetService(CoreServiceKeys.PerformerCommandBuffer)
             ?? throw new InvalidOperationException("MassNavWebParityMod requires PerformerCommandBuffer for selection presentation.");
         PerformerDefinitionRegistry definitions = _engine.GetService(CoreServiceKeys.PerformerDefinitionRegistry)
             ?? throw new InvalidOperationException("MassNavWebParityMod requires PerformerDefinitionRegistry for selection marker presentation.");
+        PerformerEntityRuntime runtime = _engine.GetService(CoreServiceKeys.PerformerEntityRuntime)
+            ?? throw new InvalidOperationException("MassNavWebParityMod requires PerformerEntityRuntime for selection marker ownership checks.");
         ResolveMarkerDefinitions(definitions);
 
         EnsureSelectionCache(_simulation.AgentState.ControllableCount);
@@ -71,7 +78,7 @@ internal sealed class MassNavSelectionPerformerSyncSystem : ISystem<float>
 
             if (selected)
             {
-                CreateMarkerIfMissing(commands, owner, i);
+                SyncMarker(commands, runtime, owner, i);
                 continue;
             }
 
@@ -118,16 +125,41 @@ internal sealed class MassNavSelectionPerformerSyncSystem : ISystem<float>
         return definitionId;
     }
 
-    private void CreateMarkerIfMissing(PerformerCommandBuffer commands, Entity owner, int index)
+    private void SyncMarker(PerformerCommandBuffer commands, PerformerEntityRuntime runtime, Entity owner, int index)
     {
+        if (!TryGetRootPerformer(owner, out Entity rootPerformer))
+        {
+            _selectionCache[index] = false;
+            _pendingMarkerRetry = true;
+            return;
+        }
+
         bool heavy = _engine.World.Has<MassNavAgentProfile>(owner) &&
                      _engine.World.Get<MassNavAgentProfile>(owner).Heavy;
         int definitionId = heavy ? _heavyMarkerDefinitionId : _lightMarkerDefinitionId;
+        int scope = ComposeSelectionMarkerScope(index);
+        if (runtime.TryGetActiveScopedInstance(
+                definitionId,
+                owner,
+                scope,
+                PresentationAnchorKind.Entity,
+                default,
+                out Entity marker))
+        {
+            if (IsAttachedToRoot(marker, rootPerformer))
+            {
+                return;
+            }
+
+            DestroyMarkerIfPresent(commands, index);
+        }
+
         var command = new PerformerCommand
         {
             CommandKind = PerformerCommandKind.CreatePerformer,
             PerformerDefinitionId = definitionId,
-            ScopeTag = ComposeSelectionMarkerScope(index),
+            ParentEntity = rootPerformer,
+            ScopeTag = scope,
             AnchorKind = PresentationAnchorKind.Entity,
             Source = owner,
         };
@@ -135,6 +167,33 @@ internal sealed class MassNavSelectionPerformerSyncSystem : ISystem<float>
         {
             throw new InvalidOperationException("MassNavWebParityMod selection marker create commands exceeded PerformerCommandBuffer capacity.");
         }
+    }
+
+    private bool IsAttachedToRoot(Entity marker, Entity rootPerformer)
+    {
+        return marker != Entity.Null &&
+               _engine.World.IsAlive(marker) &&
+               _engine.World.Has<PerformerParent>(marker) &&
+               _engine.World.Get<PerformerParent>(marker).Parent == rootPerformer;
+    }
+
+    private bool TryGetRootPerformer(Entity owner, out Entity rootPerformer)
+    {
+        rootPerformer = Entity.Null;
+        if (!_engine.World.Has<PresentationOwnerHasPerformerPayload>(owner))
+        {
+            return false;
+        }
+
+        ref readonly PresentationOwnerHasPerformerPayload payload = ref _engine.World.Get<PresentationOwnerHasPerformerPayload>(owner);
+        if (payload.SingleRootPerformer == Entity.Null ||
+            !_engine.World.IsAlive(payload.SingleRootPerformer))
+        {
+            return false;
+        }
+
+        rootPerformer = payload.SingleRootPerformer;
+        return true;
     }
 
     private void DestroyMarkerIfPresent(PerformerCommandBuffer commands, int index)

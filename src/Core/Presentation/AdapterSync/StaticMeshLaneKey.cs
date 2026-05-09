@@ -20,7 +20,8 @@ namespace Ludots.Core.Presentation.AdapterSync
                 || renderPath == VisualRenderPath.HierarchicalInstancedStaticMesh;
         }
 
-        public static bool Supports(in PrimitiveDrawItem item) => Supports(item.RenderPath);
+        public static bool Supports(in PrimitiveDrawItem item) =>
+            item.Mobility == VisualMobility.Static && Supports(item.RenderPath);
 
         public static StaticMeshLaneKey FromItem(in PrimitiveDrawItem item)
         {

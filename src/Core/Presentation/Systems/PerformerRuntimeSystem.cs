@@ -204,11 +204,6 @@ namespace Ludots.Core.Presentation.Systems
                 throw new InvalidOperationException($"Performer definition id={cmd.PerformerDefinitionId} is not registered.");
             }
 
-            if (ShouldSkipDuplicatePersistentScopedCreate(in cmd, definition))
-            {
-                return;
-            }
-
             if (ShouldSkipHandledRootBootstrapCreate(in cmd))
             {
                 return;
@@ -219,6 +214,11 @@ namespace Ludots.Core.Presentation.Systems
             {
                 throw new InvalidOperationException(
                     $"CreatePerformer defId={cmd.PerformerDefinitionId} references inactive parent entity.");
+            }
+
+            if (ShouldSkipDuplicatePersistentScopedCreate(in cmd, definition, parentEntity))
+            {
+                return;
             }
 
             Entity entity = _runtime.CreateHierarchy(
@@ -244,12 +244,44 @@ namespace Ludots.Core.Presentation.Systems
             return entity == default || entity.Id < 0 ? Entity.Null : entity;
         }
 
-        private bool ShouldSkipDuplicatePersistentScopedCreate(in PerformerCommand cmd, PerformerDefinition definition)
+        private bool ShouldSkipDuplicatePersistentScopedCreate(
+            in PerformerCommand cmd,
+            PerformerDefinition definition,
+            Entity parentEntity)
         {
             if (definition.DefaultLifetime > 0f || cmd.ScopeTag <= 0)
                 return false;
-            return _runtime.HasActiveScopedInstance(
-                cmd.PerformerDefinitionId, cmd.Source, cmd.ScopeTag, cmd.AnchorKind, cmd.Position);
+            if (!_runtime.TryGetActiveScopedInstance(
+                    cmd.PerformerDefinitionId,
+                    cmd.Source,
+                    cmd.ScopeTag,
+                    cmd.AnchorKind,
+                    cmd.Position,
+                    out Entity existing))
+            {
+                return false;
+            }
+
+            if (ScopedInstanceParentMatches(existing, parentEntity))
+            {
+                return true;
+            }
+
+            _runtime.Destroy(existing, EmitDestroyedEvent);
+            return false;
+        }
+
+        private bool ScopedInstanceParentMatches(Entity performer, Entity parentEntity)
+        {
+            if (!World.IsAlive(performer))
+            {
+                return false;
+            }
+
+            Entity existingParent = World.Has<PerformerParent>(performer)
+                ? World.Get<PerformerParent>(performer).Parent
+                : Entity.Null;
+            return existingParent == parentEntity;
         }
 
         private bool ShouldSkipHandledRootBootstrapCreate(in PerformerCommand cmd)

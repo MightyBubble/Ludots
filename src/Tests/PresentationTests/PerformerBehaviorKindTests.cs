@@ -903,6 +903,255 @@ namespace Ludots.Tests.Presentation
         }
 
         [Test]
+        public void Attachment_TargetParent_ChildFollowsEntityAnchoredParentTransformSync()
+        {
+            using var world = World.Create();
+            var instances = new PerformerEntityRuntime(world);
+            var definitions = new PerformerDefinitionRegistry();
+            Entity owner = world.Create(new VisualTransform
+            {
+                Position = new Vector3(10f, 0f, 20f),
+                Rotation = Quaternion.Identity,
+                Scale = Vector3.One,
+            });
+
+            int parentDefId = definitions.Register("behavior.attachment.transformsync.parent", new PerformerDefinition
+            {
+                Behaviors =
+                [
+                    new BehaviorSlot
+                    {
+                        SlotIndex = 0,
+                        Kind = BehaviorKind.AssetBinding,
+                        ActiveByDefault = true,
+                        AssetBinding = new AssetBindingConfig
+                        {
+                            AssetKind = AssetKind.Mesh,
+                            AssetId = 1,
+                            RenderPath = VisualRenderPath.StaticMesh,
+                            Mobility = VisualMobility.Movable,
+                        },
+                    },
+                ],
+            });
+            int markerDefId = definitions.Register("behavior.attachment.transformsync.marker", new PerformerDefinition
+            {
+                Behaviors =
+                [
+                    new BehaviorSlot
+                    {
+                        SlotIndex = 0,
+                        Kind = BehaviorKind.AssetBinding,
+                        ActiveByDefault = true,
+                        AssetBinding = new AssetBindingConfig
+                        {
+                            AssetKind = AssetKind.Mesh,
+                            AssetId = 2,
+                            RenderPath = VisualRenderPath.StaticMesh,
+                            Mobility = VisualMobility.Movable,
+                        },
+                    },
+                    new BehaviorSlot
+                    {
+                        SlotIndex = 1,
+                        Kind = BehaviorKind.Attachment,
+                        ActiveByDefault = true,
+                        Attachment = new AttachmentConfig
+                        {
+                            Target = AttachmentTarget.Parent,
+                            Offset = new Vector3(0f, 0.5f, 0f),
+                            RotationOffset = Quaternion.Identity,
+                            InheritScale = false,
+                        },
+                    },
+                ],
+            });
+            instances.BindDefinitions(definitions);
+
+            Entity parent = instances.CreateHierarchy(
+                definitions,
+                parentDefId,
+                owner,
+                scopeId: 1,
+                PresentationAnchorKind.Entity,
+                Vector3.Zero,
+                stableId: 9101,
+                Entity.Null,
+                definitions.Get(parentDefId));
+            Entity marker = instances.CreateHierarchy(
+                definitions,
+                markerDefId,
+                owner,
+                scopeId: 2,
+                PresentationAnchorKind.Entity,
+                Vector3.Zero,
+                stableId: 9102,
+                parent,
+                definitions.Get(markerDefId));
+
+            Assert.That(world.Has<PerfTransformSyncTick>(parent), Is.True);
+            Assert.That(world.Has<PerfOwnerPayloadTransformSync>(parent), Is.False);
+            world.Get<VisualTransform>(owner).Position = new Vector3(30f, 0f, 40f);
+
+            using var sync = new PerformerEntityTransformSyncSystem(world, instances, definitions);
+            sync.Update(0.016f);
+
+            Assert.That(world.Get<PerformerWorldPosition>(parent).Value, Is.EqualTo(new Vector3(30f, 0f, 40f)));
+            Assert.That(world.Get<PerformerWorldPosition>(marker).Value, Is.EqualTo(new Vector3(30f, 0.5f, 40f)));
+            Assert.That(world.Get<PerformerTransformSource>(marker).Value, Is.EqualTo(TransformSource.AttachedToParent));
+        }
+
+        [Test]
+        public void Attachment_TargetParent_DynamicScopedMarkerReemitsMovedMesh()
+        {
+            using var world = World.Create();
+            var instances = new PerformerEntityRuntime(world);
+            var definitions = new PerformerDefinitionRegistry();
+            var commands = new PerformerCommandBuffer();
+            var events = new PresentationEventStream();
+            var markers = new TransientMarkerBuffer();
+            var requests = new PresentationRequestBuffer();
+            var stableIds = new PresentationStableIdAllocator();
+            Entity owner = world.Create(new VisualTransform
+            {
+                Position = new Vector3(10f, 0f, 20f),
+                Rotation = Quaternion.Identity,
+                Scale = Vector3.One,
+            });
+
+            int parentDefId = definitions.Register("behavior.attachment.dynamic.parent", new PerformerDefinition
+            {
+                Behaviors =
+                [
+                    new BehaviorSlot
+                    {
+                        SlotIndex = 0,
+                        Kind = BehaviorKind.AssetBinding,
+                        ActiveByDefault = true,
+                        AssetBinding = new AssetBindingConfig
+                        {
+                            AssetKind = AssetKind.SkinnedMesh,
+                            AssetId = 1,
+                            RenderPath = VisualRenderPath.GpuSkinnedInstance,
+                            Mobility = VisualMobility.Movable,
+                        },
+                    },
+                    new BehaviorSlot
+                    {
+                        SlotIndex = 1,
+                        Kind = BehaviorKind.Grounding,
+                        ActiveByDefault = true,
+                        Grounding = new GroundingConfig
+                        {
+                            Mode = GroundingMode.SnapToGround,
+                            Offset = 0f,
+                            UpdatePolicy = GroundingUpdatePolicy.EveryFrame,
+                        },
+                    },
+                ],
+            });
+            int markerDefId = definitions.Register("behavior.attachment.dynamic.marker", new PerformerDefinition
+            {
+                Behaviors =
+                [
+                    new BehaviorSlot
+                    {
+                        SlotIndex = 0,
+                        Kind = BehaviorKind.AssetBinding,
+                        ActiveByDefault = true,
+                        AssetBinding = new AssetBindingConfig
+                        {
+                            AssetKind = AssetKind.Mesh,
+                            AssetId = 2,
+                            RenderPath = VisualRenderPath.InstancedStaticMesh,
+                            Mobility = VisualMobility.Movable,
+                        },
+                    },
+                    new BehaviorSlot
+                    {
+                        SlotIndex = 1,
+                        Kind = BehaviorKind.Attachment,
+                        ActiveByDefault = true,
+                        Attachment = new AttachmentConfig
+                        {
+                            Target = AttachmentTarget.Parent,
+                            Offset = new Vector3(0f, 0.5f, 0f),
+                            RotationOffset = Quaternion.Identity,
+                            InheritScale = false,
+                        },
+                    },
+                ],
+            });
+            using var runtimeSystem = new PerformerRuntimeSystem(
+                world,
+                commands,
+                events,
+                markers,
+                requests,
+                instances,
+                stableIds,
+                definitions);
+            using var transformSync = new PerformerEntityTransformSyncSystem(world, instances, definitions);
+            using var behavior = new PerformerBehaviorSystem(
+                world,
+                instances,
+                definitions,
+                events,
+                new SoundRequestBuffer());
+            using var emit = new PerformerEmitSystem(
+                world,
+                instances,
+                definitions,
+                requests,
+                new Dictionary<string, object>());
+
+            Assert.That(commands.TryAdd(new PerformerCommand
+            {
+                CommandKind = PerformerCommandKind.CreatePerformer,
+                PerformerDefinitionId = parentDefId,
+                ScopeTag = 100,
+                AnchorKind = PresentationAnchorKind.Entity,
+                Source = owner,
+            }), Is.True);
+            runtimeSystem.Update(0.016f);
+            behavior.Update(0.016f);
+            transformSync.Update(0.016f);
+
+            Assert.That(world.TryGet(owner, out PresentationOwnerHasPerformerPayload payload), Is.True);
+            Entity parent = payload.SingleRootPerformer;
+            Assert.That(commands.TryAdd(new PerformerCommand
+            {
+                CommandKind = PerformerCommandKind.CreatePerformer,
+                PerformerDefinitionId = markerDefId,
+                ScopeTag = 200,
+                AnchorKind = PresentationAnchorKind.Entity,
+                Source = owner,
+                ParentEntity = parent,
+            }), Is.True);
+            runtimeSystem.Update(0.016f);
+            behavior.Update(0.016f);
+            emit.Update(0.016f);
+
+            Assert.That(instances.TryGetActiveScopedInstance(
+                markerDefId,
+                owner,
+                200,
+                PresentationAnchorKind.Entity,
+                default,
+                out Entity marker), Is.True);
+            Assert.That(world.Get<PerformerParent>(marker).Parent, Is.EqualTo(parent));
+
+            requests.Clear();
+            world.Get<VisualTransform>(owner).Position = new Vector3(30f, 0f, 40f);
+            transformSync.Update(0.016f);
+            emit.Update(0.016f);
+
+            Assert.That(world.Get<PerformerWorldPosition>(marker).Value, Is.EqualTo(new Vector3(30f, 0.5f, 40f)));
+            Assert.That(TryFindVisualProxyRequest(requests, owner, markerDefId, out PresentationVisualProxy proxy), Is.True);
+            Assert.That(proxy.Position, Is.EqualTo(new Vector3(30f, 0.5f, 40f)));
+        }
+
+        [Test]
         public void EntityTransform_InheritsOwnerScaleAndAppliesLocalScale()
         {
             using var world = World.Create();
@@ -1090,6 +1339,31 @@ namespace Ludots.Tests.Presentation
             Assert.That(instances.ResolveFloat(performer, 140), Is.EqualTo(0.5f).Within(0.001f));
             Assert.That(transformSource.Value, Is.EqualTo(TransformSource.SplineDriven));
             Assert.That(worldPos.Value.X, Is.EqualTo(0.5f).Within(0.001f));
+        }
+
+        private static bool TryFindVisualProxyRequest(
+            PresentationRequestBuffer requests,
+            Entity owner,
+            int definitionId,
+            out PresentationVisualProxy proxy)
+        {
+            ReadOnlySpan<PresentationRequest> span = requests.GetSpan();
+            for (int i = 0; i < span.Length; i++)
+            {
+                ref readonly PresentationRequest request = ref span[i];
+                if (request.Kind != PresentationRequestKind.VisualProxy ||
+                    request.Owner != owner ||
+                    request.VisualProxy.TemplateId != definitionId)
+                {
+                    continue;
+                }
+
+                proxy = request.VisualProxy;
+                return true;
+            }
+
+            proxy = default;
+            return false;
         }
 
         private sealed class StubBoneTransformProvider : IBoneTransformProvider

@@ -92,7 +92,9 @@ namespace Ludots.Core.Presentation.Systems
                     rotations[index].Value = newRotation;
                     facings[index] = newFacing;
                     scales[index].Value = newScale;
-                    MarkEmitDirty(Unsafe.Add(ref entityFirst, index));
+                    Entity performer = Unsafe.Add(ref entityFirst, index);
+                    MarkEmitDirty(performer);
+                    SyncFastAttachedChildren(performer, in newPosition, in newRotation, in newFacing, in newScale);
                 }
             }
 
@@ -191,7 +193,8 @@ namespace Ludots.Core.Presentation.Systems
             {
                 Entity child = children.Get(i);
                 if (!World.IsAlive(child) ||
-                    !World.Has<PerfOwnerPayloadAttachedTransformSync>(child) ||
+                    (!World.Has<PerfOwnerPayloadAttachedTransformSync>(child) &&
+                     !World.Has<PerfHasAttachmentTick>(child)) ||
                     !World.Has<PerformerState>(child) ||
                     !World.Has<PerformerParent>(child) ||
                     World.Get<PerformerParent>(child).Parent != parent)

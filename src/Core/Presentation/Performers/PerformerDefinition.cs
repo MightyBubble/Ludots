@@ -343,9 +343,18 @@ namespace Ludots.Core.Presentation.Performers
                             case AssetKind.SkinnedMesh:
                             case AssetKind.Decal:
                             case AssetKind.VFX:
-                                hasCacheableVisual = true;
-                                cacheableAssetBehaviorIndices ??= new System.Collections.Generic.List<int>(4);
-                                cacheableAssetBehaviorIndices.Add(i);
+                                if (AssetBindingSupportsEventDrivenStaticEmit(slot.AssetBinding))
+                                {
+                                    hasCacheableVisual = true;
+                                    cacheableAssetBehaviorIndices ??= new System.Collections.Generic.List<int>(4);
+                                    cacheableAssetBehaviorIndices.Add(i);
+                                }
+                                else
+                                {
+                                    hasDynamicVisualLane = true;
+                                    hasStaticOnlyVisuals = false;
+                                }
+
                                 hasStaticOnlyVisuals &= AssetBindingSupportsEventDrivenStaticEmit(slot.AssetBinding);
                                 CollectStaticVisualParams(staticFloatParams, staticIntParams, staticVectorParams, slot.AssetBinding);
                                 break;

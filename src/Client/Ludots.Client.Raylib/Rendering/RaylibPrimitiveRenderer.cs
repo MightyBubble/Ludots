@@ -274,7 +274,7 @@ namespace Ludots.Client.Raylib.Rendering
         {
             if (!persistentStaticLanesActive ||
                 item.StableId <= 0 ||
-                !StaticMeshLaneKey.Supports(item.RenderPath))
+                !StaticMeshLaneKey.Supports(item))
             {
                 return false;
             }

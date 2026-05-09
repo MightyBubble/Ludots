@@ -117,10 +117,26 @@ namespace Ludots.Tests.Presentation
 
             AssertPerformerDoesNotBindMeshAsset(FindObjectById(performers, "massnav_agent_light"), "massnav_agent_light", "massnav.selection.marker");
             AssertPerformerDoesNotBindMeshAsset(FindObjectById(performers, "massnav_agent_heavy"), "massnav_agent_heavy", "massnav.selection.marker");
-            AssertSelectionMarkerDefinition(FindObjectById(performers, lightMarkerId), lightMarkerId, expectedScaleX: 0.55f, expectedScaleY: 0.05f, expectedScaleZ: 0.55f);
+            AssertSelectionMarkerDefinition(
+                FindObjectById(performers, lightMarkerId),
+                lightMarkerId,
+                expectedScaleX: 0.55f,
+                expectedScaleY: 0.05f,
+                expectedScaleZ: 0.55f,
+                expectedOffsetY: 0.035f);
             JsonObject heavyMarker = FindObjectById(performers, heavyMarkerId);
             Assert.That(RequireString(heavyMarker, "extends"), Is.EqualTo(lightMarkerId));
-            AssertSelectionMarkerDefinition(heavyMarker, heavyMarkerId, expectedScaleX: 0.78f, expectedScaleY: 0.06f, expectedScaleZ: 0.78f);
+            AssertSelectionMarkerDefinition(
+                heavyMarker,
+                heavyMarkerId,
+                expectedScaleX: 0.78f,
+                expectedScaleY: 0.06f,
+                expectedScaleZ: 0.78f,
+                expectedOffsetY: 0.04f);
+
+            AssertSourceContains(
+                Path.Combine(modRoot, "Systems", "MassNavSelectionPerformerSyncSystem.cs"),
+                "ParentEntity = rootPerformer");
         }
 
         [Test]
@@ -429,21 +445,38 @@ namespace Ludots.Tests.Presentation
             }
         }
 
-        private static void AssertSelectionMarkerDefinition(JsonObject definition, string definitionId, float expectedScaleX, float expectedScaleY, float expectedScaleZ)
+        private static void AssertSelectionMarkerDefinition(
+            JsonObject definition,
+            string definitionId,
+            float expectedScaleX,
+            float expectedScaleY,
+            float expectedScaleZ,
+            float expectedOffsetY)
         {
             JsonArray behaviors = definition["behaviors"]?.AsArray()
                 ?? throw new InvalidOperationException($"Selection marker '{definitionId}' must declare behaviors.");
-            Assert.That(behaviors.Count, Is.EqualTo(1), $"Selection marker '{definitionId}' should be a single mesh performer.");
 
-            JsonObject assetBinding = behaviors[0]?["assetBinding"]?.AsObject()
+            JsonObject assetBinding = behaviors
+                .Select(node => node?.AsObject())
+                .FirstOrDefault(obj => obj?["kind"]?.GetValue<string>() == "AssetBinding")?["assetBinding"]?.AsObject()
                 ?? throw new InvalidOperationException($"Selection marker '{definitionId}' must declare an AssetBinding behavior.");
             Assert.That(assetBinding["assetKind"]?.GetValue<string>(), Is.EqualTo("Mesh"));
             Assert.That(assetBinding["assetId"]?.GetValue<string>(), Is.EqualTo("massnav.selection.marker"));
             Assert.That(assetBinding["renderPath"]?.GetValue<string>(), Is.EqualTo("InstancedStaticMesh"));
             Assert.That(assetBinding["mobility"]?.GetValue<string>(), Is.EqualTo("Movable"));
+            Assert.That(assetBinding.ContainsKey("localOffset"), Is.False,
+                $"Selection marker '{definitionId}' position must come from parent Attachment, not duplicated mesh localOffset.");
             Assert.That(assetBinding.ContainsKey("visibilityParamKey"), Is.False,
                 $"Selection marker '{definitionId}' visibility is controlled by scoped create/destroy, not a root visibility param.");
             AssertVector3(assetBinding["localScale"]?.AsArray(), expectedScaleX, expectedScaleY, expectedScaleZ, $"Selection marker '{definitionId}' scale");
+
+            JsonObject attachment = behaviors
+                .Select(node => node?.AsObject())
+                .FirstOrDefault(obj => obj?["kind"]?.GetValue<string>() == "Attachment")?["attachment"]?.AsObject()
+                ?? throw new InvalidOperationException($"Selection marker '{definitionId}' must follow the agent root through an Attachment behavior.");
+            Assert.That(attachment["target"]?.GetValue<string>(), Is.EqualTo("Parent"));
+            AssertVector3(attachment["offset"]?.AsArray(), 0f, expectedOffsetY, 0f, $"Selection marker '{definitionId}' attachment offset");
+            Assert.That(attachment["inheritScale"]?.GetValue<bool>(), Is.False);
         }
 
         private static void AssertDefinitionHasNoRules(JsonObject definition, string definitionId)
