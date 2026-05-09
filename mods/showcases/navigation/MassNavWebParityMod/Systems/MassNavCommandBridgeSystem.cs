@@ -68,14 +68,19 @@ internal sealed class MassNavCommandBridgeSystem : ISystem<float>
         }
 
         ReadOnlySpan<Entity> selected = _simulation.SelectedEntities;
-        _simulation.FocusCommandTarget(centerCm, selected);
         if (selected.Length <= 0)
         {
-            _simulation.Commands.EnqueueTeamMove(_simulation.SelectedTeamId, centerCm);
+            _simulation.RejectCommandWithoutSelection(centerCm.X, centerCm.Y);
             return;
         }
 
+        _simulation.FocusCommandTarget(centerCm, selected);
         SubmitSelectionMoveOrders(selected, centerCm);
+    }
+
+    internal void SubmitMoveCommandForTests(Vector2 centerCm)
+    {
+        EnqueueMoveCommand(centerCm);
     }
 
     private void SubmitSelectionMoveOrders(ReadOnlySpan<Entity> selected, Vector2 centerCm)

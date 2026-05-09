@@ -13,6 +13,7 @@ using Ludots.Core.Input.Runtime;
 using Ludots.Core.Input.Interaction;
 using Ludots.Core.Input.Systems;
 using Ludots.Core.Mathematics;
+using Ludots.Core.Presentation;
 using Ludots.Core.Presentation.Camera;
 using Ludots.Core.Presentation.Minimap;
 using Ludots.Core.Presentation.Terrain;
@@ -372,6 +373,92 @@ namespace Ludots.Tests.GAS
         }
 
         [Test]
+        public void InputRuntimeSystem_MinimapCommandClickOverridesAuthoritativeGroundPointer()
+        {
+            using var engine = new GameEngine();
+            engine.InitializeWithConfigPipeline(
+                RepoModPaths.ResolveExplicit(FindRepoRoot(), new[] { "LudotsCoreMod", "CoreInputMod" }),
+                Path.Combine(FindRepoRoot(), "assets"));
+
+            var backend = new TestInputBackend();
+            var config = new InputConfigRoot
+            {
+                Actions = new List<InputActionDef>
+                {
+                    new() { Id = "Select", Type = InputActionType.Button },
+                    new() { Id = "Command", Type = InputActionType.Button },
+                    new() { Id = "Cancel", Type = InputActionType.Button },
+                    new() { Id = "PointerPos", Type = InputActionType.Axis2D },
+                },
+                Contexts = new List<InputContextDef>
+                {
+                    new()
+                    {
+                        Id = "Gameplay",
+                        Priority = 1,
+                        Bindings = new List<InputBindingDef>
+                        {
+                            new() { ActionId = "Select", Path = "<Mouse>/LeftButton", Processors = new() },
+                            new() { ActionId = "Command", Path = "<Mouse>/RightButton", Processors = new() },
+                            new() { ActionId = "Cancel", Path = "<Keyboard>/escape", Processors = new() },
+                            new() { ActionId = "PointerPos", Path = "<Mouse>/Pos", Processors = new() },
+                        }
+                    }
+                }
+            };
+
+            var handler = new PlayerInputHandler(backend, config);
+            handler.PushContext("Gameplay");
+
+            var minimap = new MinimapRuntime(new MinimapRuntimeConfig
+            {
+                MinZoomExtentMode = MinimapZoomExtentMode.ExplicitCm,
+                MinZoomExplicitHalfExtentCm = 750f,
+                MaxZoomExtentMode = MinimapZoomExtentMode.ExplicitCm,
+                MaxZoomExplicitHalfExtentCm = 22000f,
+            });
+            var markerBuffer = engine.GetService(CoreServiceKeys.MinimapMarkerBuffer)
+                ?? throw new InvalidOperationException("MinimapMarkerBuffer missing.");
+            var screenMarkers = engine.GetService(CoreServiceKeys.MinimapScreenMarkerBuffer)
+                ?? throw new InvalidOperationException("MinimapScreenMarkerBuffer missing.");
+            minimap.Visible = true;
+            minimap.UseRtsFullMapPreset();
+            minimap.Refresh(engine, markerBuffer, screenMarkers);
+
+            var rayProvider = new CountingScreenRayProvider();
+            engine.SetService(CoreServiceKeys.MinimapRuntime, minimap);
+            engine.SetService(CoreServiceKeys.InputHandler, handler);
+            engine.SetService(CoreServiceKeys.InputBackend, backend);
+            engine.SetService(CoreServiceKeys.InteractionActionBindings, new InteractionActionBindings());
+            engine.SetService(CoreServiceKeys.UiCaptured, false);
+            engine.SetService(CoreServiceKeys.PointerInputCaptured, false);
+            engine.SetService(CoreServiceKeys.InputFrameConsumers, new List<IInputFrameConsumer> { new MinimapInputConsumer(minimap) });
+            engine.SetService(CoreServiceKeys.ScreenRayProvider, rayProvider);
+            engine.SetService(CoreServiceKeys.VisualHeightmap, CreateFlatHeightmap());
+            engine.SetService(CoreServiceKeys.WorldSizeSpec, new WorldSizeSpec(new WorldAabbCm(-100000, -100000, 200000, 200000), 100));
+
+            var input = new AuthoritativeInputAccumulator();
+            var snapshot = new FrozenInputActionReader();
+            var pointerButtons = new AuthoritativePointerButtonAccumulator();
+            var system = new InputRuntimeSystem(engine.GlobalContext, input, pointerButtons);
+
+            Vector2 click = new(minimap.FieldX + (minimap.FieldSize * 0.80f), minimap.FieldY + (minimap.FieldSize * 0.20f));
+            Assert.That(minimap.TryScreenToWorld(click, out Vector2 expectedWorldCm), Is.True);
+
+            backend.MousePosition = click;
+            backend.Buttons["<Mouse>/RightButton"] = true;
+            system.Update(1f / 60f);
+            input.BuildTickSnapshot(snapshot);
+
+            Assert.That(snapshot.PressedThisFrame("Command"), Is.True, "Minimap command click must still enter the formal command action chain.");
+            Assert.That(AuthoritativeGroundPointerHelper.TryRead(snapshot, out var worldCm), Is.True);
+            Assert.That(worldCm.X, Is.EqualTo((int)MathF.Round(expectedWorldCm.X, MidpointRounding.AwayFromZero)));
+            Assert.That(worldCm.Y, Is.EqualTo((int)MathF.Round(expectedWorldCm.Y, MidpointRounding.AwayFromZero)));
+            Assert.That(rayProvider.CallCount, Is.EqualTo(0), "Minimap command click must not fall through to main viewport ground raycast.");
+            Assert.That(engine.GetService(CoreServiceKeys.AuthoritativeGroundPointerOverride)?.HasOverride, Is.False);
+        }
+
+        [Test]
         public void InputRuntimeSystem_MinimapConsumerScopesWheelDragAndRotationToggleToUnifiedInput()
         {
             using var engine = new GameEngine();
@@ -652,6 +739,19 @@ namespace Ludots.Tests.GAS
         {
             public ScreenRay GetRay(Vector2 screenPosition)
             {
+                return new ScreenRay(
+                    new Vector3(screenPosition.X, 10f, screenPosition.Y),
+                    new Vector3(0f, -1f, 0f));
+            }
+        }
+
+        private sealed class CountingScreenRayProvider : IScreenRayProvider
+        {
+            public int CallCount { get; private set; }
+
+            public ScreenRay GetRay(Vector2 screenPosition)
+            {
+                CallCount++;
                 return new ScreenRay(
                     new Vector3(screenPosition.X, 10f, screenPosition.Y),
                     new Vector3(0f, -1f, 0f));

@@ -15,6 +15,7 @@ namespace Ludots.Tests.GAS
     public sealed class SelectedMovePathOverlayBridgeTests
     {
         private const int MoveToOrderTypeId = 101;
+        private const int MassNavMoveOrderTypeId = 172;
 
         [Test]
         public void UpdateViewedSelection_EmitsPathLinesAndWaypointsForActiveAndQueuedMoveOrders()
@@ -65,6 +66,37 @@ namespace Ludots.Tests.GAS
             Assert.That(pathService.Requests.Count, Is.EqualTo(0));
         }
 
+        [Test]
+        public void UpdateViewedSelection_EmitsTargetMarkerForActiveMassNavMoveOrder()
+        {
+            using var world = World.Create();
+            var overlays = new GroundOverlayBuffer();
+            var pathStore = new PathStore(maxPaths: 8, maxPointsPerPath: 8);
+            var pathService = new RecordingPathService(pathStore);
+            var bridge = new SelectedMovePathOverlayBridge(
+                world,
+                pathService,
+                pathStore,
+                overlays,
+                new[] { MoveToOrderTypeId, MassNavMoveOrderTypeId });
+
+            Entity actor = world.Create(
+                WorldPositionCm.FromCm(0, 0),
+                OrderBuffer.CreateEmpty());
+
+            ref var orders = ref world.Get<OrderBuffer>(actor);
+            orders.SetActiveDirect(CreateMoveOrder(actor, MassNavMoveOrderTypeId, 450, 250, orderId: 7), priority: 70);
+
+            bridge.UpdateViewedSelection(new[] { actor });
+
+            ReadOnlySpan<GroundOverlayItem> span = overlays.GetSpan();
+            Assert.That(Count(span, GroundOverlayShape.Line), Is.EqualTo(1));
+            Assert.That(Count(span, GroundOverlayShape.Circle), Is.EqualTo(1));
+            Assert.That(pathService.Requests.Count, Is.EqualTo(1));
+            Assert.That(pathService.Requests[0].Goal.Xcm, Is.EqualTo(450));
+            Assert.That(pathService.Requests[0].Goal.Ycm, Is.EqualTo(250));
+        }
+
         private static int Count(ReadOnlySpan<GroundOverlayItem> items, GroundOverlayShape shape)
         {
             int count = 0;
@@ -81,10 +113,15 @@ namespace Ludots.Tests.GAS
 
         private static Order CreateMoveOrder(Entity actor, int xcm, int ycm, int orderId)
         {
+            return CreateMoveOrder(actor, MoveToOrderTypeId, xcm, ycm, orderId);
+        }
+
+        private static Order CreateMoveOrder(Entity actor, int orderTypeId, int xcm, int ycm, int orderId)
+        {
             return new Order
             {
                 OrderId = orderId,
-                OrderTypeId = MoveToOrderTypeId,
+                OrderTypeId = orderTypeId,
                 Actor = actor,
                 SubmitMode = OrderSubmitMode.Immediate,
                 Args = new OrderArgs

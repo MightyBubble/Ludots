@@ -790,6 +790,7 @@ namespace Ludots.Core.Engine
             var authoritativeInputAccumulator = new AuthoritativeInputAccumulator();
             var authoritativePointerButtons = new AuthoritativePointerButtonSnapshot();
             var authoritativePointerButtonsAccumulator = new AuthoritativePointerButtonAccumulator();
+            var authoritativeGroundPointerOverride = new AuthoritativeGroundPointerOverride();
             _inputRuntimeSystem = new InputRuntimeSystem(GlobalContext, authoritativeInputAccumulator, authoritativePointerButtonsAccumulator);
             _inputRuntimeSystem.Initialize();
             var clockStepPolicy = new GasClockStepPolicy(gasClockConfig.StepEveryFixedTicks, gasClockConfig.Mode);
@@ -915,6 +916,7 @@ namespace Ludots.Core.Engine
             SetService(CoreServiceKeys.TeamEntityLookup, teamEntityLookup);
             SetService(CoreServiceKeys.AuthoritativeInput, authoritativeInput);
             SetService(CoreServiceKeys.AuthoritativePointerButtons, authoritativePointerButtons);
+            SetService(CoreServiceKeys.AuthoritativeGroundPointerOverride, authoritativeGroundPointerOverride);
             SetService(CoreServiceKeys.PresentationEventStream, presentationEventStream);
             SetService(CoreServiceKeys.PresentationOwnerChangeBuffer, presentationOwnerChanges);
             SetService(CoreServiceKeys.PerformerCommandBuffer, performerCommandBuffer);

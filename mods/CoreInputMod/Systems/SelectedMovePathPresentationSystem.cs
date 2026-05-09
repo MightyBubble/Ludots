@@ -23,6 +23,7 @@ namespace CoreInputMod.Systems
         public const string DebugSummaryKey = "CoreInputMod.SelectedMovePath.DebugSummary";
 
         private const string DebugEnvironmentVariable = "LUDOTS_DEBUG_SELECTED_MOVE_PATH";
+        private static readonly string[] MoveOrderTypeKeys = { "moveTo", "massNavMove" };
         private static readonly Vector4 DebugTextColor = new(0.92f, 0.97f, 1.0f, 1.0f);
         private static readonly Vector4 DebugPanelFill = new(0.04f, 0.08f, 0.12f, 0.92f);
         private static readonly Vector4 DebugPanelBorder = new(0.30f, 0.58f, 0.78f, 0.96f);
@@ -35,6 +36,8 @@ namespace CoreInputMod.Systems
         private SelectedMovePathOverlayBridge? _bridge;
         private GroundOverlayBuffer? _groundOverlays;
         private string _lastBridgeFailureReason = "bridge=uninitialized";
+        private int[] _moveOrderTypeIds = Array.Empty<int>();
+        private bool _moveOrderTypeIdsResolved;
 
         public SelectedMovePathPresentationSystem(World world, Dictionary<string, object> globals, SelectionRuntime selection)
         {
@@ -111,10 +114,10 @@ namespace CoreInputMod.Systems
                 return false;
             }
 
-            if (!config.Constants.OrderTypeIds.TryGetValue("moveTo", out int moveToOrderTypeId) ||
-                moveToOrderTypeId <= 0)
+            int[] moveOrderTypeIds = ResolveMoveOrderTypeIds(config);
+            if (moveOrderTypeIds.Length == 0)
             {
-                _lastBridgeFailureReason = "bridge=missing:moveToOrderType";
+                _lastBridgeFailureReason = "bridge=missing:moveOrderType";
                 return false;
             }
 
@@ -140,8 +143,10 @@ namespace CoreInputMod.Systems
             }
 
             _groundOverlays = overlays;
-            _lastBridgeFailureReason = $"bridge=ready:path={pathService.GetType().Name}";
-            bridge = new SelectedMovePathOverlayBridge(_world, pathService, pathStore, overlays, moveToOrderTypeId);
+            _moveOrderTypeIds = moveOrderTypeIds;
+            _moveOrderTypeIdsResolved = true;
+            _lastBridgeFailureReason = $"bridge=ready:path={pathService.GetType().Name} moveTypes={moveOrderTypeIds.Length}";
+            bridge = new SelectedMovePathOverlayBridge(_world, pathService, pathStore, overlays, moveOrderTypeIds);
             return true;
         }
 
@@ -201,17 +206,17 @@ namespace CoreInputMod.Systems
             string navGoalSummary = "goal=(none)";
             string positionSummary = "pos2D=(none)";
             string worldSummary = "world=(none)";
-            if (hasOrderBuffer && TryResolveMoveToOrderTypeId(out int moveToOrderTypeId))
+            if (hasOrderBuffer && TryResolveMoveOrderTypeIds(out int[] moveOrderTypeIds))
             {
                 ref var buffer = ref _world.Get<OrderBuffer>(inspected);
-                if (buffer.HasActive && buffer.ActiveOrder.Order.OrderTypeId == moveToOrderTypeId)
+                if (buffer.HasActive && IsMoveOrderType(buffer.ActiveOrder.Order.OrderTypeId, moveOrderTypeIds))
                 {
                     activeMoveCount = 1;
                 }
 
                 for (int i = 0; i < buffer.QueuedCount; i++)
                 {
-                    if (buffer.GetQueued(i).Order.OrderTypeId == moveToOrderTypeId)
+                    if (IsMoveOrderType(buffer.GetQueued(i).Order.OrderTypeId, moveOrderTypeIds))
                     {
                         queuedMoveCount++;
                     }
@@ -267,13 +272,70 @@ namespace CoreInputMod.Systems
                 : "viewer=(none)";
         }
 
-        private bool TryResolveMoveToOrderTypeId(out int moveToOrderTypeId)
+        private bool TryResolveMoveOrderTypeIds(out int[] moveOrderTypeIds)
         {
-            moveToOrderTypeId = 0;
-            return _globals.TryGetValue(CoreServiceKeys.GameConfig.Name, out var configObj) &&
-                   configObj is GameConfig config &&
-                   config.Constants.OrderTypeIds.TryGetValue("moveTo", out moveToOrderTypeId) &&
-                   moveToOrderTypeId > 0;
+            if (_moveOrderTypeIdsResolved)
+            {
+                moveOrderTypeIds = _moveOrderTypeIds;
+                return moveOrderTypeIds.Length > 0;
+            }
+
+            moveOrderTypeIds = Array.Empty<int>();
+            if (!_globals.TryGetValue(CoreServiceKeys.GameConfig.Name, out var configObj) ||
+                configObj is not GameConfig config)
+            {
+                return false;
+            }
+
+            moveOrderTypeIds = ResolveMoveOrderTypeIds(config);
+            _moveOrderTypeIds = moveOrderTypeIds;
+            _moveOrderTypeIdsResolved = true;
+            return moveOrderTypeIds.Length > 0;
+        }
+
+        private static int[] ResolveMoveOrderTypeIds(GameConfig config)
+        {
+            Span<int> ids = stackalloc int[MoveOrderTypeKeys.Length];
+            int count = 0;
+            for (int i = 0; i < MoveOrderTypeKeys.Length; i++)
+            {
+                if (!config.Constants.OrderTypeIds.TryGetValue(MoveOrderTypeKeys[i], out int orderTypeId) ||
+                    orderTypeId <= 0 ||
+                    Contains(ids.Slice(0, count), orderTypeId))
+                {
+                    continue;
+                }
+
+                ids[count++] = orderTypeId;
+            }
+
+            return ids.Slice(0, count).ToArray();
+        }
+
+        private static bool IsMoveOrderType(int orderTypeId, ReadOnlySpan<int> moveOrderTypeIds)
+        {
+            for (int i = 0; i < moveOrderTypeIds.Length; i++)
+            {
+                if (moveOrderTypeIds[i] == orderTypeId)
+                {
+                    return true;
+                }
+            }
+
+            return false;
+        }
+
+        private static bool Contains(ReadOnlySpan<int> values, int value)
+        {
+            for (int i = 0; i < values.Length; i++)
+            {
+                if (values[i] == value)
+                {
+                    return true;
+                }
+            }
+
+            return false;
         }
 
         private int CountOverlayShape(GroundOverlayShape shape)

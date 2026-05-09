@@ -375,6 +375,14 @@ public sealed class MassNavSimulationRuntime
         CommandRejectsTotal++;
     }
 
+    public void RejectCommandWithoutSelection(float worldXCm, float worldYCm)
+    {
+        LastRejectedCommandXCm = worldXCm;
+        LastRejectedCommandYCm = worldYCm;
+        CommandRejectsFrame++;
+        CommandRejectsTotal++;
+    }
+
     public void SetAgentsPerTeam(int agentsPerTeam)
     {
         int next = Math.Max(0, agentsPerTeam);

@@ -120,13 +120,26 @@ namespace Ludots.Core.Input.Systems
             }
 
             var bindings = InteractionActionBindingsResolver.Require(_globals, nameof(InputRuntimeSystem));
+            bool preserveCommandAction = ShouldPreserveCapturedCommand(bindings.CommandActionId);
             Suppress(input, bindings.ConfirmActionId);
-            Suppress(input, bindings.CommandActionId);
+            if (!preserveCommandAction)
+            {
+                Suppress(input, bindings.CommandActionId);
+            }
             Suppress(input, bindings.CancelActionId);
             if (_globals is Dictionary<string, object> mutable)
             {
                 mutable[CoreServiceKeys.PointerInputCaptured.Name] = false;
             }
+        }
+
+        private bool ShouldPreserveCapturedCommand(string actionId)
+        {
+            return !string.IsNullOrWhiteSpace(actionId) &&
+                _globals.TryGetValue(CoreServiceKeys.AuthoritativeGroundPointerOverride.Name, out var overrideObj) &&
+                overrideObj is AuthoritativeGroundPointerOverride pointerOverride &&
+                pointerOverride.HasOverride &&
+                string.Equals(pointerOverride.ActionId, actionId, System.StringComparison.Ordinal);
         }
 
         private void Suppress(PlayerInputHandler input, string actionId)

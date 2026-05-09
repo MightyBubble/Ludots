@@ -177,6 +177,7 @@ namespace Ludots.Core.Presentation.Minimap
             bool confirmDown = input.IsDown(bindings.ConfirmActionId);
             bool confirmPressed = input.PressedThisFrame(bindings.ConfirmActionId);
             bool confirmReleased = input.ReleasedThisFrame(bindings.ConfirmActionId);
+            bool commandPressed = input.PressedThisFrame(bindings.CommandActionId);
             float wheelDelta = input.ReadAction<float>(MinimapInputActions.Zoom);
 
             if (insideInteractive)
@@ -187,6 +188,18 @@ namespace Ludots.Core.Presentation.Minimap
                     _runtime.ApplyWheelZoom(wheelDelta, pointer);
                     SuppressCameraZoom(engine, input);
                 }
+            }
+
+            if (commandPressed && insideField)
+            {
+                if (_runtime.TryScreenToWorldClamped(pointer, out Vector2 commandWorldCm) &&
+                    engine.GetService(CoreServiceKeys.AuthoritativeGroundPointerOverride) is AuthoritativeGroundPointerOverride groundOverride)
+                {
+                    groundOverride.Set(bindings.CommandActionId, commandWorldCm);
+                }
+
+                engine.SetService(CoreServiceKeys.PointerInputCaptured, true);
+                return;
             }
 
             if (confirmReleased)

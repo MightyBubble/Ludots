@@ -29,6 +29,17 @@ namespace Ludots.Core.Input.Runtime
             if (accumulator == null) throw new ArgumentNullException(nameof(accumulator));
 
             InteractionActionBindings bindings = InteractionActionBindingsResolver.Require(globals, nameof(AuthoritativeGroundPointerHelper));
+            if (TryConsumeOverride(globals, bindings.CommandActionId, out WorldCmInt2 overrideWorldCm))
+            {
+                accumulator.CaptureAction(
+                    ActionId,
+                    new Vector3(overrideWorldCm.X, 0f, overrideWorldCm.Y),
+                    isDown: true,
+                    pressedThisFrame: false,
+                    releasedThisFrame: false);
+                return;
+            }
+
             if (!TryResolveFromScreen(globals, input.ReadAction<Vector2>(bindings.PointerPositionActionId), out WorldCmInt2 worldCm))
             {
                 accumulator.CaptureAction(ActionId, Vector3.Zero, isDown: false, pressedThisFrame: false, releasedThisFrame: false);
@@ -41,6 +52,17 @@ namespace Ludots.Core.Input.Runtime
                 isDown: true,
                 pressedThisFrame: false,
                 releasedThisFrame: false);
+        }
+
+        public static bool TryConsumeOverride(
+            IReadOnlyDictionary<string, object> globals,
+            string actionId,
+            out WorldCmInt2 worldCm)
+        {
+            worldCm = default;
+            return globals.TryGetValue(CoreServiceKeys.AuthoritativeGroundPointerOverride.Name, out var overrideObj) &&
+                overrideObj is AuthoritativeGroundPointerOverride pointerOverride &&
+                pointerOverride.TryConsume(actionId, out worldCm);
         }
 
         public static bool TryRead(IInputActionReader input, out WorldCmInt2 worldCm)

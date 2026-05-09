@@ -1,0 +1,236 @@
+using System;
+using System.Collections.Generic;
+using System.IO;
+using System.Numerics;
+using Arch.Core;
+using Ludots.Core.Engine;
+using Ludots.Core.Gameplay.Components;
+using Ludots.Core.Gameplay.GAS.Components;
+using Ludots.Core.Gameplay.GAS.Orders;
+using Ludots.Core.Gameplay.GAS.Systems;
+using Ludots.Core.Input.Selection;
+using Ludots.Core.Mathematics;
+using Ludots.Core.Registry;
+using Ludots.Core.Scripting;
+using Ludots.Core.Spatial;
+using MassNavWebParityMod.Runtime;
+using MassNavWebParityMod.Systems;
+using NUnit.Framework;
+
+namespace Ludots.Tests.Presentation
+{
+    [TestFixture]
+    public sealed class MassNavCommandBridgeSystemTests
+    {
+        private const int MoveOrderTypeId = 37;
+
+        [Test]
+        public void RightClickMove_NoSelection_RejectsWithoutTeamMoveOrGroupTarget()
+        {
+            using TestContextScope context = CreateContext();
+            Vector2 target = new(1200f, 1400f);
+
+            context.Bridge.SubmitMoveCommandForTests(target);
+            int applied = context.Simulation.Commands.ApplyPending(context.Simulation);
+
+            Assert.That(applied, Is.EqualTo(0));
+            Assert.That(context.Simulation.PendingCommandCount, Is.EqualTo(0));
+            Assert.That(context.Simulation.CommandRejectsTotal, Is.EqualTo(1));
+            Assert.That(context.Simulation.CommandCountFrame, Is.EqualTo(0));
+            Assert.That(context.Simulation.NavGroupRuntime.ActiveGroupCount, Is.EqualTo(0));
+            Assert.That(context.Simulation.NavGroupRuntime.ActiveOrderGroupCount, Is.EqualTo(0));
+            Assert.That(context.Simulation.LastCommandSelectionCount, Is.EqualTo(0));
+
+            Assert.That(context.World.Get<OrderBuffer>(context.Agent).HasActive, Is.False);
+        }
+
+        [Test]
+        public void RightClickMove_WithSelection_SubmitsSharedOrder()
+        {
+            using TestContextScope context = CreateContext();
+            context.Select(context.Agent);
+            Vector2 target = new(1600f, 1800f);
+
+            context.Bridge.SubmitMoveCommandForTests(target);
+
+            ref OrderBuffer orders = ref context.World.Get<OrderBuffer>(context.Agent);
+            Assert.That(orders.HasActive, Is.True);
+            Assert.That(orders.ActiveOrder.Order.OrderTypeId, Is.EqualTo(MoveOrderTypeId));
+            Assert.That(orders.ActiveOrder.Order.OrderId, Is.GreaterThan(0));
+            Assert.That(orders.ActiveOrder.Order.PlayerId, Is.EqualTo(1));
+            Assert.That(orders.ActiveOrder.Order.Args.Spatial.WorldCm.X, Is.EqualTo(target.X));
+            Assert.That(orders.ActiveOrder.Order.Args.Spatial.WorldCm.Z, Is.EqualTo(target.Y));
+            Assert.That(orders.ActiveOrder.Order.Args.Selection.Container, Is.Not.EqualTo(Entity.Null));
+            Assert.That(context.Simulation.CommandCountFrame, Is.EqualTo(1));
+            Assert.That(context.Simulation.CommandRejectsTotal, Is.EqualTo(0));
+            Assert.That(context.Simulation.LastCommandSelectionCount, Is.EqualTo(1));
+            Assert.That(context.Simulation.PendingCommandCount, Is.EqualTo(0));
+        }
+
+        private static TestContextScope CreateContext()
+        {
+            var engine = new GameEngine();
+            string repoRoot = FindRepoRoot();
+            engine.InitializeWithConfigPipeline(
+                new List<string> { Path.Combine(repoRoot, "mods", "LudotsCoreMod") },
+                Path.Combine(repoRoot, "assets"));
+            World world = engine.World;
+            Entity localPlayer = world.Create(new PlayerOwner { PlayerId = 1 });
+            Entity agent = world.Create(
+                default(MassNavAgentTag),
+                new MassNavAgentIndex { Value = 0 },
+                new Team { Id = 1 },
+                OrderBuffer.CreateEmpty());
+
+            var config = CreateConfig();
+            var simulation = new MassNavSimulationRuntime(config);
+            simulation.BindBoardWorld(new WorldSizeSpec(new WorldAabbCm(0, 0, 25_000, 25_000), 100));
+            simulation.WebParity.Reset(new[] { 1, 2 }, unitsPerTeam: 1, config.World!.Obstacles);
+            simulation.AgentState.RegisterAgent(agent, controllable: true);
+
+            var selectionRegistry = new StringIntRegistry(32, 1, 0, StringComparer.Ordinal);
+            var selection = new SelectionRuntime(world, new SelectionRuntimeConfig(), selectionRegistry);
+            selection.TryBindView(localPlayer, SelectionViewKeys.Primary, localPlayer, SelectionSetKeys.LivePrimary);
+            engine.SetService(CoreServiceKeys.LocalPlayerEntity, localPlayer);
+            engine.SetService(CoreServiceKeys.SelectionRuntime, selection);
+            engine.SetService(CoreServiceKeys.SelectionViewViewerEntity, localPlayer);
+            engine.SetService(CoreServiceKeys.SelectionViewKey, SelectionViewKeys.Primary);
+
+            var orderTypes = new OrderTypeRegistry();
+            orderTypes.Register(new OrderTypeConfig
+            {
+                Key = MassNavOrderKeys.Move,
+                OrderTypeId = MoveOrderTypeId,
+                SameTypePolicy = SameTypePolicy.Replace,
+                ClearQueueOnActivate = true,
+                AllowQueuedMode = true,
+            });
+            var orderRules = new OrderRuleRegistry();
+            var orderBuffer = new OrderBufferSystem(world, new DiscreteClock(), orderTypes, orderRules);
+            engine.SetService(CoreServiceKeys.OrderTypeRegistry, orderTypes);
+            engine.SetService(CoreServiceKeys.OrderRuleRegistry, orderRules);
+            engine.SetService(CoreServiceKeys.OrderBufferSystem, orderBuffer);
+
+            MassNavSelectionSync.SyncIfChanged(world, engine.GlobalContext, selection, simulation);
+            var bridge = new MassNavCommandBridgeSystem(engine, simulation);
+            return new TestContextScope(engine, world, localPlayer, agent, selection, simulation, bridge);
+        }
+
+        private static string FindRepoRoot()
+        {
+            string current = TestContext.CurrentContext.WorkDirectory;
+            while (!string.IsNullOrEmpty(current))
+            {
+                if (Directory.Exists(Path.Combine(current, "mods")) &&
+                    File.Exists(Path.Combine(current, "AGENTS.md")))
+                {
+                    return current;
+                }
+
+                current = Path.GetDirectoryName(current)!;
+            }
+
+            throw new DirectoryNotFoundException("Repository root not found from test work directory.");
+        }
+
+        private static MassNavWebParityConfig CreateConfig()
+        {
+            var config = new MassNavWebParityConfig
+            {
+                MapId = "mass_nav_web_parity",
+                World = new MassNavWorldConfig
+                {
+                    SolverWindowWidthCm = MassNavWebParitySimState.FieldWidthCm,
+                    SolverWindowHeightCm = MassNavWebParitySimState.FieldHeightCm,
+                    StreamingChunkSizeCm = 500,
+                    StreamingRadiusCm = 1000,
+                    CameraFocusShiftThresholdCm = 100,
+                    CommandFocusHoldTicks = 3,
+                    WorkAreaPaddingCm = 100,
+                    WorkAreaMaxWidthCm = MassNavWebParitySimState.FieldWidthCm,
+                    WorkAreaMaxHeightCm = MassNavWebParitySimState.FieldHeightCm,
+                    ActiveHotZoneId = "center",
+                    HotZones = new[]
+                    {
+                        new MassNavHotZoneConfig
+                        {
+                            Id = "center",
+                            Label = "Center",
+                            CenterXCm = 5000,
+                            CenterYCm = 5000,
+                            WidthCm = 1000,
+                            HeightCm = 1000,
+                        },
+                    },
+                    Obstacles = new[]
+                    {
+                        new MassNavObstacleConfig
+                        {
+                            Id = "blocker",
+                            LocalXCm = 5000f,
+                            LocalYCm = 5000f,
+                            RadiusCm = 100f,
+                        },
+                    },
+                },
+                Scenario = new MassNavScenarioConfig
+                {
+                    AgentsPerTeam = 1,
+                    InitialSelectedTeamId = 1,
+                    Teams = new[]
+                    {
+                        new MassNavScenarioTeamConfig { Id = 1, Name = "Team 1" },
+                        new MassNavScenarioTeamConfig { Id = 2, Name = "Team 2" },
+                    },
+                },
+            };
+            config.World.Validate();
+            config.Scenario.Validate();
+            return config;
+        }
+
+        private sealed class TestContextScope : IDisposable
+        {
+            public TestContextScope(
+                GameEngine engine,
+                World world,
+                Entity localPlayer,
+                Entity agent,
+                SelectionRuntime selection,
+                MassNavSimulationRuntime simulation,
+                MassNavCommandBridgeSystem bridge)
+            {
+                Engine = engine;
+                World = world;
+                LocalPlayer = localPlayer;
+                Agent = agent;
+                Selection = selection;
+                Simulation = simulation;
+                Bridge = bridge;
+            }
+
+            public GameEngine Engine { get; }
+            public World World { get; }
+            public Entity LocalPlayer { get; }
+            public Entity Agent { get; }
+            public SelectionRuntime Selection { get; }
+            public MassNavSimulationRuntime Simulation { get; }
+            public MassNavCommandBridgeSystem Bridge { get; }
+
+            public void Select(Entity entity)
+            {
+                if (!Selection.ReplaceSelection(LocalPlayer, SelectionSetKeys.LivePrimary, new[] { entity }))
+                {
+                    throw new InvalidOperationException("Failed to write test selection.");
+                }
+
+                MassNavSelectionSync.SyncIfChanged(World, Engine.GlobalContext, Selection, Simulation);
+            }
+
+            public void Dispose()
+            {
+                Engine.Dispose();
+            }
+        }
+    }
+}

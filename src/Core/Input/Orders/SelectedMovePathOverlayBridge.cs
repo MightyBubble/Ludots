@@ -31,7 +31,7 @@ namespace Ludots.Core.Input.Orders
         private readonly IPathService _paths;
         private readonly PathStore _pathStore;
         private readonly GroundOverlayBuffer _overlays;
-        private readonly int _moveToOrderTypeId;
+        private readonly int[] _moveOrderTypeIds;
         private readonly int[] _pathXcm = new int[DefaultMaxPathPoints];
         private readonly int[] _pathYcm = new int[DefaultMaxPathPoints];
         private int _nextRequestId = 1;
@@ -42,12 +42,26 @@ namespace Ludots.Core.Input.Orders
             PathStore pathStore,
             GroundOverlayBuffer overlays,
             int moveToOrderTypeId)
+            : this(world, paths, pathStore, overlays, new[] { moveToOrderTypeId })
+        {
+        }
+
+        public SelectedMovePathOverlayBridge(
+            World world,
+            IPathService paths,
+            PathStore pathStore,
+            GroundOverlayBuffer overlays,
+            int[] moveOrderTypeIds)
         {
             _world = world ?? throw new ArgumentNullException(nameof(world));
             _paths = paths ?? throw new ArgumentNullException(nameof(paths));
             _pathStore = pathStore ?? throw new ArgumentNullException(nameof(pathStore));
             _overlays = overlays ?? throw new ArgumentNullException(nameof(overlays));
-            _moveToOrderTypeId = moveToOrderTypeId;
+            _moveOrderTypeIds = moveOrderTypeIds ?? throw new ArgumentNullException(nameof(moveOrderTypeIds));
+            if (_moveOrderTypeIds.Length == 0)
+            {
+                throw new ArgumentException("At least one move order type id is required.", nameof(moveOrderTypeIds));
+            }
         }
 
         public void UpdateViewedSelection(ReadOnlySpan<Entity> selected)
@@ -75,13 +89,13 @@ namespace Ludots.Core.Input.Orders
 
             ref var buffer = ref _world.Get<OrderBuffer>(entity);
             if (buffer.HasActive &&
-                buffer.ActiveOrder.Order.OrderTypeId == _moveToOrderTypeId &&
+                IsMoveOrderType(buffer.ActiveOrder.Order.OrderTypeId) &&
                 TryEmitAuthoredRoute(in buffer.ActiveOrder.Order, originWorldCm, isPrimary, consumeFromCurrentIndex: true, out var activeDestination))
             {
                 originWorldCm = activeDestination;
             }
             else if (buffer.HasActive &&
-                     buffer.ActiveOrder.Order.OrderTypeId == _moveToOrderTypeId &&
+                     IsMoveOrderType(buffer.ActiveOrder.Order.OrderTypeId) &&
                      OrderWorldSpatialResolver.TryResolveMoveDestination(in buffer.ActiveOrder.Order, out activeDestination))
             {
                 EmitSolvedLeg(entity, originWorldCm, activeDestination, isPrimary);
@@ -91,7 +105,7 @@ namespace Ludots.Core.Input.Orders
             for (int i = 0; i < buffer.QueuedCount; i++)
             {
                 Order queued = buffer.GetQueued(i).Order;
-                if (queued.OrderTypeId != _moveToOrderTypeId)
+                if (!IsMoveOrderType(queued.OrderTypeId))
                 {
                     continue;
                 }
@@ -155,6 +169,19 @@ namespace Ludots.Core.Input.Orders
 
             EmitPolylineFromOrigin(originWorldCm, writeCount, isPrimary);
             return true;
+        }
+
+        private bool IsMoveOrderType(int orderTypeId)
+        {
+            for (int i = 0; i < _moveOrderTypeIds.Length; i++)
+            {
+                if (_moveOrderTypeIds[i] == orderTypeId)
+                {
+                    return true;
+                }
+            }
+
+            return false;
         }
 
         private int ResolveActiveRouteStartIndex(Entity entity, in Order order, int pointCount)
