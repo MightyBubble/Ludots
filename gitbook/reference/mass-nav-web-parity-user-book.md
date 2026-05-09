@@ -95,18 +95,179 @@ MassNav 配置里有两类值。第一类是真实数值，例如 `agentsPerTeam
 
 单位 profile 不写在 C# switch 里。当前配置使用 `agentProfiles.profiles[]` 决定 light/heavy、`navMass`、`visualScale` 和每 N 个单位分配一次的规则。
 
-## 表现和选中 Marker
+## 玩家操作
 
-单位主体走 performer。当前 agent 使用 Blacksmith showcase 的 `blacksmith.worker.knight` skinned mesh 和动画 profile；MassNav 不复制这套素材。
+玩家不配置任何东西。玩家只需要知道这些操作：
 
-选中 marker 不是 agent 根 performer 里常驻隐藏 mesh。系统在选中时创建独立 scoped performer，取消选中时销毁它。marker scope 使用 owner 的 `PresentationStableId`，reset 时也走正式 presentation destroy pending 流程。
+- 鼠标框选单位。
+- 左键点空地取消选择。
+- 右键点地面下达移动命令。
+- 被选单位脚下出现 selection marker；取消选择后 marker 消失。
+
+玩家不需要知道 selection key、performer scope、entity template id 或任何运行时内部集合。
+
+## Mod 作者配置：单位选择反馈
+
+Mod 作者也不需要声明“当前框选集合”。当前框选集合由 `CoreInputMod` 和 `SelectionRuntime` 维护，是引擎运行时状态，不是 Mod 的业务配置对象。
+
+Mod 作者要配置的是“哪些实体能被选中”和“这些实体被选中时显示什么反馈”：
+
+- 在实体模板里声明 `SelectionSelectableTag` 和 `SelectionSelectableState`。
+- 在实体模板里声明正式位置/表现交接组件，例如 `WorldPositionCm`、`FacingDirection`、`VisualHeightmapSampleState`。
+- 在 `Presentation/performers.json` 中声明 selection marker performer，例如 mesh、材质、尺寸、offset、render path 和 mobility。
+- 在 selection feedback 配置中声明：当实体被玩家主选择选中时显示哪个 marker，取消选择时由引擎清理。
+- light/heavy 或其它类型差异应来自模板、tag、profile 或规则条件，不由 feature system 猜。
+
+目标配置形态如下。注意这是下一步要落地的正式 authoring contract；如果当前代码还没有完全支持某个字段，应该补 Core 基建，而不是让 MassNav 再写一个私有 system 绕过去。
+
+作者输入的是“这个单位被玩家主选择选中时，用哪个 performer 做反馈”。作者不输入、不创建、不管理运行时的框选集合。
+
+```json
+{
+  "selectionFeedback": [
+    {
+      "id": "my_unit_light_selected",
+      "when": "PlayerPrimarySelection",
+      "sourceTemplates": [ "my_unit_light" ],
+      "performerId": "my_unit_selection_marker_light",
+      "cleanupScope": "SelectionMember"
+    }
+  ],
+  "performers": [
+    {
+      "id": "my_unit_selection_marker_light",
+      "mesh": "my.selection.marker",
+      "renderPath": "InstancedStaticMesh",
+      "mobility": "Movable",
+      "localOffset": [0.0, 0.035, 0.0],
+      "localScale": [0.55, 0.05, 0.55]
+    }
+  ]
+}
+```
+
+字段含义：
+
+- `when: "PlayerPrimarySelection"`：玩家主选择。它是 CoreInput 提供的能力名，不是作者创建的集合。
+- `sourceTemplates`：哪些实体模板被选中时使用这条反馈规则。
+- `performerId`：要创建的 marker performer。
+- `cleanupScope: "SelectionMember"`：这份反馈归属当前进入选择集合的成员；同一成员重复进入选择不会创建第二个 marker，离开选择集合时只清理该成员的 marker。
+- `renderPath: "InstancedStaticMesh"`：marker 走 instancing，不回退到逐个 primitive draw。
+
+如果有 light/heavy 两种单位，作者写两条 `selectionFeedback`，分别指向 light/heavy 模板和不同 marker performer。不要在 C# 里通过 `MassNavAgentProfile.Heavy` 之类的组件手写分支。
+
+## 运行时输出
+
+玩家和 Mod 作者能观察到的结果应该是：
+
+- 框选符合 `sourceTemplates` 的单位时，每个被选单位脚下出现一个 marker。
+- 同一个单位重复进入选择时，不重复创建第二个 marker。
+- 左键点空地清空选择时，这批 marker 立即消失。
+- marker 跟随单位移动，不停在创建时的位置。
+- light/heavy 或其它模板差异按配置选择对应 marker。
+- 批量框选和批量清空不需要 Mod 写循环，也不需要 MassNav 私有 system 每帧扫描。
 
 这意味着你检查 marker 时应关注：
 
 - 选中后每个 live owner 只有一个 marker。
-- light/heavy profile 切换时旧 marker definition 会被销毁。
+- 取消选择后 marker 立即消失，不停在取消瞬间的位置。
 - reset 后旧 owner 的 performer 不应继续留在新场景选择集合里。
 - core performer 代码不包含 MassNav 专属分支。
+
+## 内部实现边界
+
+这部分给引擎和 Mod 开发者看，玩家不需要读。
+
+目标链路是：
+
+```text
+CoreInputMod
+  -> SelectionRuntime
+  -> selection mutation batch
+  -> presentation selection bridge
+  -> PresentationEvent(SelectionMemberAdded/Removed)
+  -> PerformerRuleSystem
+  -> PerformerRuntimeSystem
+  -> PerformerEntityRuntime batch create / scoped destroy
+```
+
+职责边界：
+
+- `SelectionRuntime` 是选择集合 SSOT。它只记录选择状态和成员变化，不知道 MassNav。
+- presentation selection bridge 只把通用 selection mutation 转成通用 presentation event，不创建 MassNav performer。
+- `PerformerRuleSystem` 只按配置匹配事件、条件和命令，不内置 showcase 名称。
+- `PerformerRuntimeSystem` 消费命令；同一帧同 definition、entity anchor、无 parent 的批量创建可以合并走 `CreateEntityAnchoredRootBatch`。
+- `MassNavWebParityMod` 只 author 模板、profile、performer、order 和场景配置。
+
+上面的作者配置会在加载期降低成 performer rule。内部形态可以类似这样，但这不是玩家文档，也不要求普通 Mod 作者手写：
+
+```json
+{
+  "event": { "kind": "SelectionMemberAdded", "key": "selection.live.primary" },
+  "condition": {
+    "inline": "SourceHasEntityTemplate",
+    "entityTemplateId": "my_unit_light"
+  },
+  "command": {
+    "kind": "CreatePerformer",
+    "definitionId": "my_unit_selection_marker_light",
+    "scopeSource": "EventPayloadA"
+  }
+}
+```
+
+禁止事项：
+
+- 不在 MassNav system 里读取 `SelectedFlags` 后手动创建 marker。
+- 不在 MassNav system 里解析 `selectionMarkerLightPerformerId` / `selectionMarkerHeavyPerformerId` 来驱动生命周期。
+- 不用 solver index、array index、team id 或其它临时数字当 selection marker scope。
+- 不给 performer behavior 写 MassNav 专属分支。
+- 不在配置里暴露 order type id、param key、behavior slot 这类内部 handle；配置写语义字符串，加载期编译。
+
+性能约束：
+
+- selection 变化应该是 mutation-driven，不做每帧全量 diff。
+- 框选万人时，事件和命令按 batch 处理，稳态帧不重复创建 marker。
+- marker 是 `InstancedStaticMesh` + `Movable` performer，跟随实体走既有 transform sync。
+- 清空选择时按 scope/definition 清理，不保留上一帧 transient projection。
+- 10k agents 验收必须记录 dropped performer/event/request 为 0，并比较 `performer_ms`、`presentation_ms`、`frame_ms`。
+
+## 开发迭代计划
+
+下面是把当前 showcase 清理成上述 contract 的开发顺序。每一步都应该有测试或 UAT 证据。
+
+1. 文档先行
+   先保持本文的玩家、Mod 作者、内部实现三层视角一致。玩家不需要 internal key；Mod 作者不声明 runtime selection set；内部实现才讨论 `SelectionRuntime`、mutation 和 performer rule。
+
+2. Core selection mutation
+   在 `SelectionRuntime` 的真实变更点记录成员 added/removed。`ReplaceSelection`、`AddToSelection`、`RemoveFromSelection`、`ClearSelection`、dangling sweep 都要产生精确 mutation。这里不能靠每帧扫描容器 diff。
+
+3. Presentation selection bridge
+   新增通用 bridge，把 selection mutation 转成 `SelectionMemberAdded` / `SelectionMemberRemoved` presentation event。event source 是被选实体，target 是 selection owner 或 container，key 是选择通道语义 id，payload 携带被选实体 `PresentationStableId`。
+
+4. Performer rule 扩展
+   `PresentationEventKind` 增加 selection 事件，performer config loader 允许用 selection 通道 key。条件只使用通用概念，例如 source template、source tag、source has visual transform；不能写 MassNav profile 分支。
+
+5. Performer runtime batch
+   `PerformerRuntimeSystem` 对同帧同 definition、entity anchored、无 parent 的 create 命令走 batch create。destroy 对 selection marker 需要能限定 definition/scope，避免用 owner stable id 清掉同 scope 下的 agent 主 performer。
+
+6. MassNav 配置迁移
+   在 `Presentation/performers.json` 给 light/heavy selection marker author rules。light/heavy 差异来自模板、tag 或 profile 配置条件。`MassNavWebParityConfig.presentation` 不再用 selection marker performer id 驱动生命周期。
+
+7. 移除 MassNav 私有 marker system
+   删除 `MassNavSelectionPerformerSyncSystem`，移除 `MassNavPlaygroundRuntime` 对它的 presentation system 注册。MassNav selection sync 可以继续只服务 solver selected flags，但不负责表现。
+
+8. 修复 projection 残留
+   `PresentationRequestFlushSystem` 要记住上一帧是否有 transient projection。上一帧有、这一帧没有时，也要清 projection targets 并重投 stable cache，防止取消选择后白色 marker 停在原地。
+
+9. 验证
+   必跑：配置 loader 测试、selection mutation 测试、performer rule selection 事件测试、presentation flush 残留测试、MassNav 10k UAT。验收点是框选、移动、取消选择、reset 后无 marker 残留，且没有 dropped performer/event/request。
+
+## 表现和选中 Marker
+
+单位主体走 performer。当前 agent 使用 Blacksmith showcase 的 `blacksmith.worker.knight` skinned mesh 和动画 profile；MassNav 不复制这套素材。
+
+选中 marker 不是 agent 根 performer 里常驻隐藏 mesh。它是独立 scoped performer，由通用 selection-to-performer 事件和 performer rules 创建/销毁。MassNav 只 author 模板和 performer 配置，不拥有 marker 生命周期代码。
 
 ## 命令链路
 

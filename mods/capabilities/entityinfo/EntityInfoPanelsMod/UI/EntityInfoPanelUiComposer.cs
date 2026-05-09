@@ -378,7 +378,7 @@ public static class EntityInfoPanelUiComposer
 
         return Ui.Column(
                 Ui.Text("Current viewed selection").FontSize(12f).Bold().Color("#F6E2AF"),
-                Ui.Text($"{service.GetEntityCollectionViewKey(slot)} -> {service.GetEntityCollectionAliasKey(slot)} | {count} entities | {service.GetEntityCollectionCategoryCount(slot)} categories | rows {FormatVisibleRange(window)}")
+                Ui.Text($"{service.GetEntityCollectionViewKey(slot)} -> {service.GetEntityCollectionSetKey(slot)} | {count} entities | {service.GetEntityCollectionCategoryCount(slot)} categories | rows {FormatVisibleRange(window)}")
                     .Id($"{hostId}-summary")
                     .FontSize(11f)
                     .Color("#9FB4C9")

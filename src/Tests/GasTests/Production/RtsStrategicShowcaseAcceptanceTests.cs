@@ -1106,8 +1106,8 @@ namespace Ludots.Tests.GAS.Production
 
             Span<Entity> next = stackalloc Entity[1];
             next[0] = target;
-            selection.ReplaceSelection(owner, SelectionSetKeys.Ambient, next);
-            selection.TryBindView(owner, SelectionViewKeys.Primary, owner, SelectionSetKeys.Ambient);
+            selection.ReplaceSelection(owner, SelectionSetKeys.LivePrimary, next);
+            selection.TryBindView(owner, SelectionViewKeys.Primary, owner, SelectionSetKeys.LivePrimary);
             engine.GlobalContext[CoreServiceKeys.SelectionViewViewerEntity.Name] = owner;
             engine.GlobalContext[CoreServiceKeys.SelectionViewKey.Name] = SelectionViewKeys.Primary;
         }

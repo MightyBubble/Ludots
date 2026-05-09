@@ -1020,7 +1020,7 @@ namespace Ludots.Tests.GAS.Production
 
             Span<Entity> next = stackalloc Entity[1];
             next[0] = target;
-            selection.ReplaceSelection(owner, SelectionSetKeys.Ambient, next);
+            selection.ReplaceSelection(owner, SelectionSetKeys.LivePrimary, next);
             Tick(engine, 1, frameTimesMs);
             TickUntil(
                 engine,

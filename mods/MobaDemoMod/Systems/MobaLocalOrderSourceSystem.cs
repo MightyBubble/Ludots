@@ -206,7 +206,7 @@ namespace MobaDemoMod.Systems
                 return default;
             if (!_world.IsAlive(localPlayer)) return default;
 
-            if (TryGetSelected(SelectionSetKeys.Ambient, out var selected))
+            if (TryGetSelected(SelectionSetKeys.LivePrimary, out var selected))
             {
                 if (_world.TryGet(selected, out Ludots.Core.Gameplay.Components.PlayerOwner owner) && owner.PlayerId == 1)
                     return selected;

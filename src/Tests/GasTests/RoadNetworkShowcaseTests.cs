@@ -539,12 +539,12 @@ namespace Ludots.Tests.GAS
             Assert.That(engine.GlobalContext.TryGetValue(CoreServiceKeys.SelectionViewKey.Name, out object? viewSetObj), Is.True);
             Assert.That(viewSetObj, Is.EqualTo(SelectionViewKeys.Primary));
             var selection = (SelectionRuntime)engine.GetService(CoreServiceKeys.SelectionRuntime)!;
-            Assert.That(selection.TryGetPrimary(owner, SelectionSetKeys.Ambient, out Entity primary), Is.True);
+            Assert.That(selection.TryGetPrimary(owner, SelectionSetKeys.LivePrimary, out Entity primary), Is.True);
             Assert.That(primary, Is.EqualTo(owner));
         }
 
         [Test]
-        public void RoadNetworkShowcaseRuntime_UpdateLoadedChunks_RepairsLocalPlayerAndSeedsAmbientSelectionWithoutReset()
+        public void RoadNetworkShowcaseRuntime_UpdateLoadedChunks_RepairsLocalPlayerAndSeedsLivePrimarySelectionWithoutReset()
         {
             using var engine = CreateRoadShowcaseEngine();
             engine.LoadMap(engine.MergedConfig.StartupMapId);
@@ -559,19 +559,19 @@ namespace Ludots.Tests.GAS
             Assert.That(engine.GetService(CoreServiceKeys.SelectionRuntime), Is.TypeOf<SelectionRuntime>());
             var selection = (SelectionRuntime)engine.GetService(CoreServiceKeys.SelectionRuntime)!;
 
-            selection.ReplaceSelection(owner, SelectionSetKeys.Ambient, System.Array.Empty<Entity>());
+            selection.ReplaceSelection(owner, SelectionSetKeys.LivePrimary, System.Array.Empty<Entity>());
             engine.GlobalContext.Remove(CoreServiceKeys.LocalPlayerEntity.Name);
 
             runtime.UpdateLoadedChunks(engine);
 
             Assert.That(engine.GlobalContext.TryGetValue(CoreServiceKeys.LocalPlayerEntity.Name, out object? localObj), Is.True);
             Assert.That(localObj, Is.EqualTo(owner));
-            Assert.That(selection.TryGetPrimary(owner, SelectionSetKeys.Ambient, out Entity repairedPrimary), Is.True);
+            Assert.That(selection.TryGetPrimary(owner, SelectionSetKeys.LivePrimary, out Entity repairedPrimary), Is.True);
             Assert.That(repairedPrimary, Is.EqualTo(owner));
         }
 
         [Test]
-        public void RoadNetworkShowcaseRuntime_UpdateLoadedChunks_DoesNotOverwriteValidAmbientSelection()
+        public void RoadNetworkShowcaseRuntime_UpdateLoadedChunks_DoesNotOverwriteValidLivePrimarySelection()
         {
             using var engine = CreateRoadShowcaseEngine();
             engine.LoadMap(engine.MergedConfig.StartupMapId);
@@ -589,19 +589,19 @@ namespace Ludots.Tests.GAS
 
             Span<Entity> selectedUnits = stackalloc Entity[1];
             selectedUnits[0] = selected;
-            Assert.That(selection.ReplaceSelection(owner, SelectionSetKeys.Ambient, selectedUnits), Is.True);
+            Assert.That(selection.ReplaceSelection(owner, SelectionSetKeys.LivePrimary, selectedUnits), Is.True);
             engine.GlobalContext.Remove(CoreServiceKeys.LocalPlayerEntity.Name);
 
             runtime.UpdateLoadedChunks(engine);
 
             Assert.That(engine.GlobalContext.TryGetValue(CoreServiceKeys.LocalPlayerEntity.Name, out object? localObj), Is.True);
             Assert.That(localObj, Is.EqualTo(owner));
-            Assert.That(selection.TryGetPrimary(owner, SelectionSetKeys.Ambient, out Entity preservedPrimary), Is.True);
+            Assert.That(selection.TryGetPrimary(owner, SelectionSetKeys.LivePrimary, out Entity preservedPrimary), Is.True);
             Assert.That(preservedPrimary, Is.EqualTo(selected));
         }
 
         [Test]
-        public void RoadNetworkShowcaseRuntime_BuildPanelState_FollowsAmbientSelectionPrimary()
+        public void RoadNetworkShowcaseRuntime_BuildPanelState_FollowsLivePrimarySelectionPrimary()
         {
             using var engine = CreateRoadShowcaseEngine();
             engine.LoadMap(engine.MergedConfig.StartupMapId);
@@ -619,7 +619,7 @@ namespace Ludots.Tests.GAS
             var selection = (SelectionRuntime)engine.GetService(CoreServiceKeys.SelectionRuntime)!;
             Span<Entity> selectedUnits = stackalloc Entity[1];
             selectedUnits[0] = selected;
-            Assert.That(selection.ReplaceSelection(owner, SelectionSetKeys.Ambient, selectedUnits), Is.True);
+            Assert.That(selection.ReplaceSelection(owner, SelectionSetKeys.LivePrimary, selectedUnits), Is.True);
 
             RoadNetworkShowcasePanelState panel = runtime.BuildPanelState(engine);
             Assert.That(panel.Selection, Does.Contain("Blue North Column"));
@@ -650,7 +650,7 @@ namespace Ludots.Tests.GAS
             selectedUnits[0] = vanguard;
             selectedUnits[1] = north;
             selectedUnits[2] = south;
-            Assert.That(selection.ReplaceSelection(owner, SelectionSetKeys.Ambient, selectedUnits), Is.True);
+            Assert.That(selection.ReplaceSelection(owner, SelectionSetKeys.LivePrimary, selectedUnits), Is.True);
             Tick(engine, 2);
             Assert.That(GetSelectionCount(engine), Is.EqualTo(3), BuildPlayableMoveDiagnostics(engine, "Blue Vanguard", "Blue North Column", "Blue South Column"));
 

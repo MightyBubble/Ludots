@@ -100,7 +100,7 @@ public sealed partial class EntityInfoPanelService
 
     private void RenderEntityCollectionOverlay(ScreenOverlayBuffer overlay, int slot, int x, ref int y, int bottom)
     {
-        string summary = $"[{_entityCollectionViewKeys[slot]} -> {_entityCollectionAliasKeys[slot]}] count={_entityCollectionCounts[slot]}";
+        string summary = $"[{_entityCollectionViewKeys[slot]} -> {_entityCollectionSetKeys[slot]}] count={_entityCollectionCounts[slot]}";
         overlay.AddText(x, y, summary, 13, new Vector4(0.965f, 0.886f, 0.686f, 1f), ComposeStableId(slot, 3000), ComposeTextSerial(summary, 13));
         y += 18;
 

@@ -134,7 +134,7 @@ namespace Ludots.Tests.GAS
                 world,
                 new SelectionRuntimeConfig(),
                 new StringIntRegistry(capacity: 8, startId: 1, invalidId: 0, comparer: StringComparer.Ordinal));
-            Assert.That(selection.ReplaceSelection(local, SelectionSetKeys.Ambient, new[] { target }), Is.True);
+            Assert.That(selection.ReplaceSelection(local, SelectionSetKeys.LivePrimary, new[] { target }), Is.True);
             var globals = new Dictionary<string, object>
             {
                 [CoreServiceKeys.InputHandler.Name] = liveInput,

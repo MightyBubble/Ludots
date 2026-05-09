@@ -15,7 +15,7 @@ namespace Ludots.Core.Input.Selection
 {
     /// <summary>
     /// Shared selection runtime for single-click and screen-space box selection.
-    /// Formal selection writes only to the selector's ambient selection set.
+    /// Formal selection writes only to the selector's live primary selection set.
     /// </summary>
     public sealed class CurrentSelectionApplySystem : ISystem<float>
     {
@@ -150,7 +150,25 @@ namespace Ludots.Core.Input.Selection
                 _world.Add(owner, default(SelectionDragState));
             }
 
-            _selection.TryGetOrCreateSelectionEntity(owner, SelectionSetKeys.Ambient, out _);
+            _selection.TryGetOrCreateSelectionEntity(owner, SelectionSetKeys.LivePrimary, out _);
+            _selection.TryBindView(owner, SelectionViewKeys.Primary, owner, SelectionSetKeys.LivePrimary);
+            EnsureLivePrimarySelectionView(owner);
+        }
+
+        private void EnsureLivePrimarySelectionView(Entity owner)
+        {
+            if (_globals.TryGetValue(CoreServiceKeys.SelectionViewViewerEntity.Name, out var viewerObj) &&
+                viewerObj is Entity viewer &&
+                _world.IsAlive(viewer) &&
+                _globals.TryGetValue(CoreServiceKeys.SelectionViewKey.Name, out var viewKeyObj) &&
+                viewKeyObj is string viewKey &&
+                !string.IsNullOrWhiteSpace(viewKey))
+            {
+                return;
+            }
+
+            _globals[CoreServiceKeys.SelectionViewViewerEntity.Name] = owner;
+            _globals[CoreServiceKeys.SelectionViewKey.Name] = SelectionViewKeys.Primary;
         }
 
         private void UpdateHoveredEntity(Entity hovered)
@@ -177,7 +195,7 @@ namespace Ludots.Core.Input.Selection
 
             if (acquisitionMode == SelectionAcquisitionMode.Replace)
             {
-                _selection.ClearSelection(owner, SelectionSetKeys.Ambient);
+                _selection.ClearSelection(owner, SelectionSetKeys.LivePrimary);
             }
         }
 
@@ -274,13 +292,13 @@ namespace Ludots.Core.Input.Selection
             switch (mode)
             {
                 case SelectionAcquisitionMode.Replace:
-                    _selection.ReplaceSelection(owner, SelectionSetKeys.Ambient, hits);
+                    _selection.ReplaceSelection(owner, SelectionSetKeys.LivePrimary, hits);
                     return;
 
                 case SelectionAcquisitionMode.Additive:
                     for (int i = 0; i < hits.Length; i++)
                     {
-                        _selection.AddToSelection(owner, SelectionSetKeys.Ambient, hits[i]);
+                        _selection.AddToSelection(owner, SelectionSetKeys.LivePrimary, hits[i]);
                     }
                     return;
 
@@ -290,11 +308,11 @@ namespace Ludots.Core.Input.Selection
                         Entity target = hits[i];
                         if (SelectionContains(owner, target))
                         {
-                            _selection.RemoveFromSelection(owner, SelectionSetKeys.Ambient, target);
+                            _selection.RemoveFromSelection(owner, SelectionSetKeys.LivePrimary, target);
                         }
                         else
                         {
-                            _selection.AddToSelection(owner, SelectionSetKeys.Ambient, target);
+                            _selection.AddToSelection(owner, SelectionSetKeys.LivePrimary, target);
                         }
                     }
                     return;
@@ -306,14 +324,14 @@ namespace Ludots.Core.Input.Selection
 
         private bool SelectionContains(Entity owner, Entity target)
         {
-            int count = _selection.GetSelectionCount(owner, SelectionSetKeys.Ambient);
+            int count = _selection.GetSelectionCount(owner, SelectionSetKeys.LivePrimary);
             if (count <= 0)
             {
                 return false;
             }
 
             EnsureSelectionScratchCapacity(count);
-            int written = _selection.CopySelection(owner, SelectionSetKeys.Ambient, _selectionScratch);
+            int written = _selection.CopySelection(owner, SelectionSetKeys.LivePrimary, _selectionScratch);
             for (int i = 0; i < written; i++)
             {
                 if (_selectionScratch[i] == target)

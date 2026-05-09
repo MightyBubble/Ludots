@@ -284,7 +284,7 @@ public sealed class EntityInfoPanelServiceTests
 
         Assert.That(service.GetEntityCollectionCount(handle.Slot), Is.EqualTo(3));
         Assert.That(service.GetEntityCollectionViewKey(handle.Slot), Is.EqualTo(SelectionViewKeys.Primary));
-        Assert.That(service.GetEntityCollectionAliasKey(handle.Slot), Is.EqualTo(SelectionSetKeys.LivePrimary));
+        Assert.That(service.GetEntityCollectionSetKey(handle.Slot), Is.EqualTo(SelectionSetKeys.LivePrimary));
         Assert.That(service.GetSubtitle(handle.Slot), Does.Contain("3 entities"));
         Assert.That(service.TryGetEntityCollectionRow(handle.Slot, 0, out EntityCollectionPanelRow firstRow), Is.True);
         Assert.That(firstRow.EntityId, Is.EqualTo(first.Id));

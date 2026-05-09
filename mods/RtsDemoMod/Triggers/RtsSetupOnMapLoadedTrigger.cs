@@ -84,7 +84,7 @@ namespace RtsDemoMod.Triggers
                 return;
             }
 
-            selection.TryBindView(owner, SelectionViewKeys.Primary, owner, SelectionSetKeys.Ambient);
+            selection.TryBindView(owner, SelectionViewKeys.Primary, owner, SelectionSetKeys.LivePrimary);
             engine.GlobalContext[CoreServiceKeys.SelectionViewViewerEntity.Name] = owner;
             engine.GlobalContext[CoreServiceKeys.SelectionViewKey.Name] = SelectionViewKeys.Primary;
         }
@@ -111,7 +111,7 @@ namespace RtsDemoMod.Triggers
 
             Span<Entity> next = stackalloc Entity[1];
             next[0] = target;
-            selection.ReplaceSelection(owner, SelectionSetKeys.Ambient, next);
+            selection.ReplaceSelection(owner, SelectionSetKeys.LivePrimary, next);
         }
 
         private static bool HasTag(List<string> tags, string t)

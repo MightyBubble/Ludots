@@ -195,15 +195,15 @@ namespace Ludots.Tests.ThreeC
                 new WorldPositionCm { Value = new Ludots.Core.Mathematics.FixedPoint.Fix64Vec2(4000, 5000) },
                 new CameraFollowWeight { Value = 3f });
 
-            Assert.That(selectionRuntime.ReplaceSelection(selector, SelectionSetKeys.Ambient, new[] { light, heavy }), Is.True);
-            Assert.That(selectionRuntime.TryBindView(selector, SelectionViewKeys.Primary, selector, SelectionSetKeys.Ambient), Is.True);
+            Assert.That(selectionRuntime.ReplaceSelection(selector, SelectionSetKeys.LivePrimary, new[] { light, heavy }), Is.True);
+            Assert.That(selectionRuntime.TryBindView(selector, SelectionViewKeys.Primary, selector, SelectionSetKeys.LivePrimary), Is.True);
 
             var target = new SelectedGroupFollowTarget(world, globals);
             Assert.That(target.TryGetPosition(out var centroid), Is.True);
             Assert.That(centroid.X, Is.EqualTo(3250f).Within(0.01f));
             Assert.That(centroid.Y, Is.EqualTo(4250f).Within(0.01f));
 
-            Assert.That(selectionRuntime.ReplaceSelection(selector, SelectionSetKeys.Ambient, new[] { light }), Is.True);
+            Assert.That(selectionRuntime.ReplaceSelection(selector, SelectionSetKeys.LivePrimary, new[] { light }), Is.True);
             Assert.That(SelectionContextRuntime.TryGetCurrentPrimary(world, globals, out var primary), Is.True);
             Assert.That(primary, Is.EqualTo(light));
 

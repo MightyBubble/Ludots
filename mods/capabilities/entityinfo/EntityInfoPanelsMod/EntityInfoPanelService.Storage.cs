@@ -41,7 +41,7 @@ public sealed partial class EntityInfoPanelService
         _entityCollectionContainers[slot] = Entity.Null;
         _entityCollectionPrimaries[slot] = Entity.Null;
         _entityCollectionViewKeys[slot] = string.Empty;
-        _entityCollectionAliasKeys[slot] = string.Empty;
+        _entityCollectionSetKeys[slot] = string.Empty;
         _entityCollectionCounts[slot] = 0;
         _entityCollectionRevisions[slot] = 0;
         _entityCollectionCategoryCounts[slot] = 0;

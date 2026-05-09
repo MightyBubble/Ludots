@@ -42,7 +42,7 @@ ConfigPipeline
 - `ConfigPipeline`：加载 mod config、template、performer、game presentation capacity。
 - `RuntimeEntitySpawnQueue`：所有 MassNav agent、blocker、hotspot marker 都通过 template spawn，不允许手写 `world.Create(...)` 拼表现组件。
 - `RuntimeEntitySpawnReceiptQueue`：MassNav 只消费自己的 receipt channel，不把共享队列当私有队列。
-- `SelectionRuntime`：框选真相是 `SelectionSetKeys.LivePrimary`，该 key 是正式 selection SSOT alias。
+- `SelectionRuntime`：框选真相是 `SelectionSetKeys.LivePrimary`，这是选择集合的正式 key，不是兼容别名。
 - `OrderBuffer`：右键移动进入 `massNavMove`，再绑定到底层 group command。
 - `Team` / `TeamEntityLookup` / `TeamManager`：队伍 id、关系、避让语义来自现有 team/relationship 基建。
 - `WorldPositionCm` / `FacingDirection`：ECS 中的正式位置和朝向是 gameplay/presentation 交接点。
@@ -111,7 +111,7 @@ MassNav agent、blocker、hotspot marker 必须通过 performer 创建：
 - selection overlay、blocker、hotspot 使用 MassNav 自有 `Presentation/mesh_assets.json` + `Presentation/host_assets.json` 中声明的 Model mesh。
 - agent performer 必须声明 `Grounding` behavior，并使用 map-owned `VisualHeightmapAsset` 吸地。
 - blocker 和 hotspot/debug marker 必须声明 `Grounding` behavior；静态对象可以 `updatePolicy=Once`。
-- selection overlay 使用独立 scoped performer，选中时创建、取消选中或 reset 时销毁；scope 来自 owner `PresentationStableId`，不是 solver array index。
+- selection overlay 使用独立 scoped performer，选中时创建、取消选中或 reset 时销毁；scope 来自 owner `PresentationStableId`，不是 solver array index。marker 生命周期应由通用 selection mutation -> presentation event -> performer rule 链路驱动，不由 MassNav 私有 system 扫 selection 状态。
 - minimap marker 使用 performer `MinimapMarker` behavior。
 - 颜色、尺寸、marker size、selection overlay 是否可见，都来自 performer config 或 performer param。
 
@@ -183,7 +183,7 @@ MassNav agent、blocker、hotspot marker 必须通过 performer 创建：
 | `Systems/MassNavAgentMetadataSyncSystem.cs` | `MassNavigation` sync | ECS/team/profile metadata 同步到 runtime。 |
 | `Systems/MassNavFormationSystem.cs` | `MassNavigation` formation | formation target allocation 和 group arrangement；若依赖 UI/scenario 则留在壳内。 |
 | `Systems/MassNavSelectionSyncSystem.cs` | `MassNavigation` selection adapter | 正式 `SelectionRuntime` 到 agent selected flags 的桥接。 |
-| `Systems/MassNavSelectionPerformerSyncSystem.cs` | showcase presentation adapter | selection overlay performer param 是验收表现，等通用 presentation contract 成熟后再抽。 |
+| `Systems/MassNavSelectionPerformerSyncSystem.cs` | 待移除的 showcase presentation adapter | 当前仍承担 selection overlay 生命周期，属于过渡实现。目标是迁移到通用 selection mutation -> performer rule 链路，MassNav 只保留 performer 配置。 |
 | `Systems/MassNavPanelPresentationSystem.cs` | showcase 壳 | 调参 UI presentation。 |
 | `Systems/MassNavHudPresentationSystem.cs` | showcase 壳 | 诊断 HUD 和 evidence 可见性。 |
 | `Systems/MassNavScenarioBootstrap.cs` | showcase 壳 | scenario spawn authoring。 |
@@ -201,6 +201,7 @@ MassNav agent、blocker、hotspot marker 必须通过 performer 创建：
 - 不把 `SelectionRuntime`、control group、formation 当成底层 `NavGroup` 真身。
 - 不把 `Mass2D` 当 crowd 的 `nav mass`。
 - 不把 `TryGet` 当 fallback。`TryGet` 只能用于检查后抛明确异常或合法的“没有数据”分支。
+- 不在 MassNav system 中硬编码 selection marker performer 创建/销毁。选中反馈如果是 performer，就必须走 performer rules、通用 batch create 和 scoped cleanup。
 
 ## 启动
 

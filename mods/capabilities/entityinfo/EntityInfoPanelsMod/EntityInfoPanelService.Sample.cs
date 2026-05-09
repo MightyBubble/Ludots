@@ -317,7 +317,7 @@ public sealed partial class EntityInfoPanelService
         Entity container = Entity.Null;
         Entity primary = Entity.Null;
         string viewKey = string.Empty;
-        string aliasKey = string.Empty;
+        string setKey = string.Empty;
         int count = 0;
         uint revision = 0;
 
@@ -326,10 +326,10 @@ public sealed partial class EntityInfoPanelService
             container = descriptor.Container.Container;
             primary = descriptor.Container.Primary;
             viewKey = descriptor.ViewKey;
-            aliasKey = descriptor.Container.AliasKey;
+            setKey = descriptor.Container.SetKey;
             count = descriptor.Container.MemberCount;
             revision = descriptor.Container.Revision;
-            dirty |= SetString(_subtitles, slot, $"{viewKey} -> {aliasKey} | {count} entities");
+            dirty |= SetString(_subtitles, slot, $"{viewKey} -> {setKey} | {count} entities");
         }
         else
         {
@@ -358,7 +358,7 @@ public sealed partial class EntityInfoPanelService
         }
 
         dirty |= SetString(_entityCollectionViewKeys, slot, viewKey);
-        dirty |= SetString(_entityCollectionAliasKeys, slot, aliasKey);
+        dirty |= SetString(_entityCollectionSetKeys, slot, setKey);
         dirty |= SetInt(_entityCollectionCounts, slot, count);
         if (_entityCollectionRevisions[slot] != revision)
         {

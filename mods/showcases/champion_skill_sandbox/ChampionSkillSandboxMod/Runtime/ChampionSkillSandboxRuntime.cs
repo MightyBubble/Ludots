@@ -304,7 +304,7 @@ namespace ChampionSkillSandboxMod.Runtime
             string members = BuildSelectionMemberPreview(engine.World, selection, current.Container.Container);
 
             overlay.AddText(x + 16, y + 54, $"View {ChampionSkillSandboxIds.ResolveSelectionViewLabel(ResolveSelectionViewChoice(engine))} | viewer={viewerLabel} | key={current.ViewKey}", 15, SelectionPanelText, stableId: 42103, dirtySerial: 1);
-            overlay.AddText(x + 16, y + 78, $"Container {current.Container.AliasKey} | kind={current.Container.Kind} | rev={current.Container.Revision} | count={current.Container.MemberCount}", 14, SelectionPanelText, stableId: 42104, dirtySerial: 1);
+            overlay.AddText(x + 16, y + 78, $"Container {current.Container.SetKey} | kind={current.Container.Kind} | rev={current.Container.Revision} | count={current.Container.MemberCount}", 14, SelectionPanelText, stableId: 42104, dirtySerial: 1);
             overlay.AddText(x + 16, y + 100, $"Primary {primaryLabel}", 14, SelectionPanelText, stableId: 42105, dirtySerial: 1);
             overlay.AddText(x + 16, y + 122, $"Members {members}", 13, SelectionPanelHint, stableId: 42106, dirtySerial: 1);
             overlay.AddText(x + 16, y + 146, "Buttons: P1/P1F | AI/AIF | CMD", 13, SelectionPanelHint, stableId: 42107, dirtySerial: 1);
@@ -338,10 +338,10 @@ namespace ChampionSkillSandboxMod.Runtime
                 return false;
             }
 
-            if (selection.TryGetPrimary(owner, SelectionSetKeys.Ambient, out Entity selected) &&
+            if (selection.TryGetPrimary(owner, SelectionSetKeys.LivePrimary, out Entity selected) &&
                 engine.World.IsAlive(selected))
             {
-                selection.TryBindView(owner, SelectionViewKeys.Primary, owner, SelectionSetKeys.Ambient);
+                selection.TryBindView(owner, SelectionViewKeys.Primary, owner, SelectionSetKeys.LivePrimary);
                 engine.GlobalContext[CoreServiceKeys.SelectionViewViewerEntity.Name] = owner;
                 engine.GlobalContext[CoreServiceKeys.SelectionViewKey.Name] = SelectionViewKeys.Primary;
                 return true;
@@ -354,8 +354,8 @@ namespace ChampionSkillSandboxMod.Runtime
 
             Span<Entity> selectionBuffer = stackalloc Entity[1];
             selectionBuffer[0] = fallback;
-            selection.ReplaceSelection(owner, SelectionSetKeys.Ambient, selectionBuffer);
-            selection.TryBindView(owner, SelectionViewKeys.Primary, owner, SelectionSetKeys.Ambient);
+            selection.ReplaceSelection(owner, SelectionSetKeys.LivePrimary, selectionBuffer);
+            selection.TryBindView(owner, SelectionViewKeys.Primary, owner, SelectionSetKeys.LivePrimary);
             engine.GlobalContext[CoreServiceKeys.SelectionViewViewerEntity.Name] = owner;
             engine.GlobalContext[CoreServiceKeys.SelectionViewKey.Name] = SelectionViewKeys.Primary;
             return true;

@@ -82,12 +82,12 @@ namespace Ludots.Tests.ThreeC.Acceptance
             Entity captain = FindEntityByName(engine.World, CameraShowcaseIds.CaptainName);
             Assert.That(captain, Is.Not.EqualTo(Entity.Null));
 
-            SetAmbientSelection(engine, captain);
+            SetLivePrimarySelection(engine, captain);
             Tick(engine, 3);
             Assert.That(engine.GameSession.Camera.FollowTargetPositionCm, Is.EqualTo(new Vector2(3200f, 2000f)));
             Assert.That(engine.GameSession.Camera.State.TargetCm, Is.EqualTo(new Vector2(3200f, 2000f)));
 
-            ClearAmbientSelection(engine);
+            ClearLivePrimarySelection(engine);
             Tick(engine, 3);
             Assert.That(engine.GameSession.Camera.FollowTargetPositionCm, Is.Null);
             Assert.That(engine.GameSession.Camera.State.IsFollowing, Is.False);
@@ -171,12 +171,12 @@ namespace Ludots.Tests.ThreeC.Acceptance
             Entity captain = FindEntityByName(engine.World, CameraShowcaseIds.CaptainName);
             Assert.That(captain, Is.Not.EqualTo(Entity.Null));
 
-            SetAmbientSelection(engine, captain);
+            SetLivePrimarySelection(engine, captain);
             TickCamera(engine, 3);
             Assert.That(engine.GameSession.Camera.FollowTargetPositionCm, Is.EqualTo(new Vector2(3400f, 2200f)));
             Assert.That(engine.GameSession.Camera.State.TargetCm, Is.EqualTo(new Vector2(3400f, 2200f)));
 
-            ClearAmbientSelection(engine);
+            ClearLivePrimarySelection(engine);
             TickCamera(engine, 3);
             Assert.That(engine.GameSession.Camera.FollowTargetPositionCm, Is.Null);
             Assert.That(engine.GameSession.Camera.State.IsFollowing, Is.False);
@@ -305,20 +305,20 @@ namespace Ludots.Tests.ThreeC.Acceptance
                 : throw new InvalidOperationException("LocalPlayerEntity is missing.");
         }
 
-        private static void SetAmbientSelection(GameEngine engine, params Entity[] entities)
+        private static void SetLivePrimarySelection(GameEngine engine, params Entity[] entities)
         {
             var selection = engine.GetService(CoreServiceKeys.SelectionRuntime)
                 ?? throw new InvalidOperationException("SelectionRuntime is missing.");
             Entity local = GetLocalPlayer(engine);
-            Assert.That(selection.ReplaceSelection(local, SelectionSetKeys.Ambient, entities), Is.True);
-            selection.TryBindView(local, SelectionViewKeys.Primary, local, SelectionSetKeys.Ambient);
+            Assert.That(selection.ReplaceSelection(local, SelectionSetKeys.LivePrimary, entities), Is.True);
+            selection.TryBindView(local, SelectionViewKeys.Primary, local, SelectionSetKeys.LivePrimary);
             engine.GlobalContext[CoreServiceKeys.SelectionViewViewerEntity.Name] = local;
             engine.GlobalContext[CoreServiceKeys.SelectionViewKey.Name] = SelectionViewKeys.Primary;
         }
 
-        private static void ClearAmbientSelection(GameEngine engine)
+        private static void ClearLivePrimarySelection(GameEngine engine)
         {
-            SetAmbientSelection(engine);
+            SetLivePrimarySelection(engine);
         }
 
         private static string FindRepoRoot()
