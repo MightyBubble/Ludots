@@ -26,6 +26,7 @@ namespace Ludots.Tests.Presentation
         {
             _root = Path.Combine(Path.GetTempPath(), "Ludots_PerformerDefinitionLoader", Guid.NewGuid().ToString("N"));
             Directory.CreateDirectory(_root);
+            PerformerParamKeyRegistry.ClearCustomKeysForTests();
             PerformerScopeTagRegistry.Clear();
             TagRegistry.Clear();
         }
@@ -33,6 +34,7 @@ namespace Ludots.Tests.Presentation
         [TearDown]
         public void TearDown()
         {
+            PerformerParamKeyRegistry.ClearCustomKeysForTests();
             PerformerScopeTagRegistry.Clear();
             TagRegistry.Clear();
 
@@ -175,6 +177,118 @@ namespace Ludots.Tests.Presentation
             Assert.That(knight.Behaviors[1].AssetBinding.Mobility, Is.EqualTo(VisualMobility.Static));
             Assert.That(knight.Behaviors[1].AssetBinding.LocalOffset, Is.EqualTo(new Vector3(1f, 2f, 3f)));
             Assert.That(knight.Behaviors[1].AssetBinding.LocalScale, Is.EqualTo(new Vector3(2f, 2f, 2f)));
+        }
+
+        [Test]
+        public void Load_CompilesSemanticParamKeysAndBehaviorSlots()
+        {
+            WriteCatalog();
+            WritePerformers(
+                """
+                [
+                  {
+                    "id": "semantic_actor",
+                    "rules": [
+                      {
+                        "event": { "kind": "GameplayEvent", "keyId": "Event.Semantic" },
+                        "command": { "kind": "SetParam", "paramKey": "semantic.health.ratio", "paramLane": "Float", "paramValue": 0.5 }
+                      }
+                    ],
+                    "bindings": [
+                      { "paramKey": "semantic.health.ratio", "source": "constant", "constantValue": 0.75 }
+                    ],
+                    "paramDefaults": [
+                      { "paramKey": "semantic.health.ratio", "lane": "Float", "floatValue": 1.0 }
+                    ],
+                    "behaviors": [
+                      {
+                        "slot": "body",
+                        "kind": "AssetBinding",
+                        "activeByDefault": true,
+                        "assetBinding": {
+                          "assetKind": "WorldHud",
+                          "materialParamKey": "semantic.health.ratio"
+                        }
+                      },
+                      {
+                        "slot": "minimap",
+                        "kind": "MinimapMarker",
+                        "activeByDefault": true,
+                        "minimapMarker": {
+                          "shape": "Circle",
+                          "sizePx": 6.0,
+                          "visibilityParamKey": "none"
+                        }
+                      }
+                    ]
+                  }
+                ]
+                """);
+
+            var (_, _, pipeline, catalog) = BuildPipeline();
+            var registry = new PerformerDefinitionRegistry();
+            var loader = new PerformerDefinitionConfigLoader(pipeline, registry);
+
+            loader.Load(catalog);
+
+            int semanticKey = PerformerParamKeyRegistry.Register("semantic.health.ratio");
+            Assert.That(registry.TryGet(registry.GetId("semantic_actor"), out var definition), Is.True);
+            Assert.That(definition.Rules[0].Command.ParamKey, Is.EqualTo(semanticKey));
+            Assert.That(definition.Bindings[0].ParamKey, Is.EqualTo(semanticKey));
+            Assert.That(definition.ParamDefaults[0].ParamKey, Is.EqualTo(semanticKey));
+            Assert.That(definition.Behaviors[0].SlotIndex, Is.EqualTo(0));
+            Assert.That(definition.Behaviors[0].AssetBinding.MaterialParamKey, Is.EqualTo(semanticKey));
+            Assert.That(definition.Behaviors[1].SlotIndex, Is.EqualTo(2));
+            Assert.That(definition.Behaviors[1].MinimapMarker.VisibilityParamKey, Is.EqualTo(-1));
+        }
+
+        [Test]
+        public void Load_RejectsNonCanonicalBehaviorSlotAliases()
+        {
+            WriteCatalog();
+            WritePerformers(
+                """
+                [
+                  {
+                    "id": "legacy_slot_alias",
+                    "behaviors": [
+                      {
+                        "slot": "staticMinimap",
+                        "kind": "MinimapMarker",
+                        "activeByDefault": true,
+                        "minimapMarker": {
+                          "shape": "Circle",
+                          "sizePx": 6.0
+                        }
+                      }
+                    ]
+                  },
+                  {
+                    "id": "canonical_slot",
+                    "behaviors": [
+                      {
+                        "slot": "minimap",
+                        "kind": "MinimapMarker",
+                        "activeByDefault": true,
+                        "minimapMarker": {
+                          "shape": "Circle",
+                          "sizePx": 6.0
+                        }
+                      }
+                    ]
+                  }
+                ]
+                """);
+
+            var (_, _, pipeline, catalog) = BuildPipeline();
+            var registry = new PerformerDefinitionRegistry();
+            var loader = new PerformerDefinitionConfigLoader(pipeline, registry);
+
+            Assert.DoesNotThrow(() => loader.Load(catalog));
+
+            Assert.That(registry.GetId("legacy_slot_alias"), Is.EqualTo(0));
+            Assert.That(registry.TryGet(registry.GetId("canonical_slot"), out var definition), Is.True);
+            Assert.That(definition.Behaviors[0].SlotIndex, Is.EqualTo(2));
         }
 
         [Test]

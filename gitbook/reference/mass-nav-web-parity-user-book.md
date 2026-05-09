@@ -64,6 +64,20 @@ Flow work area 是当前关注区域，由镜头、最近命令目标、选中�
 
 配置通过 `ConfigPipeline` 合并。不要在业务代码里新写私有 JSON 加载器。
 
+## 配置里的数字和语义名
+
+MassNav 配置里有两类值。第一类是真实数值，例如 `agentsPerTeam`、`simulationHz`、`radiusCm`、`speedCmPerSecond`、`sizePx`、颜色、scale、offset、queue size 和 timeout。它们就是调参值，应该继续写数字。
+
+第二类是运行时内部 handle，例如 performer `slot`、`paramKey`、`speedParamKey`、`orderTypeId`、order blackboard key、validation graph id。用户配置不应该记这些数字。现在 MassNav authoring 使用语义字符串：
+
+- performer 行为槽写 `"slot": "body"`、`"grounding"`、`"animator"`、`"minimap"`。
+- performer 参数写 `"massNav.agent.health.ratio"`、`"massNav.agent.health.current"`、`"blacksmith.worker.locomotion.speed"`。
+- 禁用可选参数写 `"none"`，加载后才编译成内部 `-1` 或 `0` 哨兵。
+- `massNavMove` 不手写 `orderTypeId`；`OrderTypeConfigLoader` 按 key 稳定分配 int，并在运行时继续走 `OrderTypeRegistry`。
+- order rule 引用写 `interruptsActiveOrderTypeKeys`，不要写其它 order 的数字 id。
+
+这些语义名只存在于加载期。真正的仿真、performer tick、order buffer 和 bitset 仍然使用 int、数组和 bitmask，不把字符串带进热路径。
+
 ## 最小单位模板
 
 一个可被 MassNav 控制的单位模板必须包含这些正式组件：

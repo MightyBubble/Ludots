@@ -66,6 +66,15 @@ ConfigPipeline
 
 `MassNavWebParityConfig.presentation.teams[]` 把动态 team id 映射到 style/template/performer id。示例里的 `azure`、`crimson`、`amber`、`emerald` 是配置 style，不是 C# 逻辑写死的队伍语义。
 
+配置 authoring 只允许用户记语义名，不要求记内部 handle：
+
+- performer `slot` 使用 `body`、`attachment`、`grounding`、`animator`、`minimap` 等 canonical 名称；不要增加 `staticMinimap` 这类按用例起的别名。
+- performer `paramKey` / `*ParamKey` 使用语义字符串；loader 编译到 `PerformerParamKeyRegistry` 的 int。
+- order type 以 `orderTypes` 对象 key 为 SSOT；省略 `orderTypeId` 时 loader 通过 key 稳定分配，不依赖 JSON 顺序。
+- order blackboard key 与 validation graph 使用语义字符串或 `none`；运行时仍是 int。
+
+真实调参值继续写数字，例如 cm、Hz、ms、px、颜色、scale、capacity、priority 和 queue size。这些不是魔法 ID。
+
 ## Authoring 合约
 
 一个可导航 MassNav 单位必须由 template 声明，并在 spawn receipt binding 时校验：

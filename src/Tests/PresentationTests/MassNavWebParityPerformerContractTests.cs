@@ -15,6 +15,10 @@ namespace Ludots.Tests.Presentation
         private const string AgentHealthSeedEffectId = "Effect.Showcase.MassNav.Agent.HealthSeed";
         private const string AgentHealthSeedGraphId = "Graph.Showcase.MassNav.Agent.HealthSeed";
         private const string AgentHealthAttributeName = "Health";
+        private const string LocomotionSpeedParamKey = "blacksmith.worker.locomotion.speed";
+        private const string HealthRatioParamKey = "massNav.agent.health.ratio";
+        private const string HealthCurrentParamKey = "massNav.agent.health.current";
+        private const string HealthBaseParamKey = "massNav.agent.health.base";
 
         [Test]
         public void AgentPerformers_UseBlacksmithKnightGpuSkinnedAsset()
@@ -353,10 +357,10 @@ namespace Ludots.Tests.Presentation
                 ?? throw new InvalidOperationException($"Performer '{definitionId}' must declare behaviors.");
             JsonObject body = behaviors
                 .Select(node => node?.AsObject())
-                .FirstOrDefault(obj => obj?["slot"]?.GetValue<int>() == 0)
-                ?? throw new InvalidOperationException($"Performer '{definitionId}' must declare slot 0 body.");
+                .FirstOrDefault(obj => obj?["slot"]?.GetValue<string>() == "body")
+                ?? throw new InvalidOperationException($"Performer '{definitionId}' must declare semantic body slot.");
             JsonObject assetBinding = body["assetBinding"]?.AsObject()
-                ?? throw new InvalidOperationException($"Performer '{definitionId}' slot 0 must be AssetBinding.");
+                ?? throw new InvalidOperationException($"Performer '{definitionId}' body slot must be AssetBinding.");
 
             Assert.That(assetBinding["assetKind"]?.GetValue<string>(), Is.EqualTo("SkinnedMesh"));
             Assert.That(assetBinding["assetId"]?.GetValue<string>(), Is.EqualTo("blacksmith.worker.knight"));
@@ -370,6 +374,8 @@ namespace Ludots.Tests.Presentation
                 ?? throw new InvalidOperationException($"Performer '{definitionId}' must declare Blacksmith animator behavior.");
             Assert.That(animator["animatorControllerId"]?.GetValue<string>(), Is.EqualTo("blacksmith.worker.locomotion"));
             Assert.That(animator["animationProfileId"]?.GetValue<string>(), Is.EqualTo("blacksmith.worker.profile"));
+            Assert.That(animator["speedParamKey"]?.GetValue<string>(), Is.EqualTo(LocomotionSpeedParamKey));
+            Assert.That(animator["stateParamKey"]?.GetValue<string>(), Is.EqualTo("none"));
         }
 
         private static void AssertAgentTemplateAuthorsHealth(JsonObject template, float expectedBase, float expectedCurrent)
@@ -402,19 +408,19 @@ namespace Ludots.Tests.Presentation
 
         private static void AssertHudDefinitionUsesHealthRatio(JsonObject definition, string definitionId, float expectedWidth, float expectedHeight)
         {
-            int materialParamKey = AssertHudWorldHudBinding(definition, definitionId, expectedWidth, expectedHeight);
+            string materialParamKey = AssertHudWorldHudBinding(definition, definitionId, expectedWidth, expectedHeight);
             JsonArray bindings = definition["bindings"]?.AsArray()
                 ?? throw new InvalidOperationException($"HUD performer '{definitionId}' must declare param bindings.");
             JsonObject binding = bindings
                 .Select(node => node?.AsObject())
-                .FirstOrDefault(obj => obj?["paramKey"]?.GetValue<int>() == materialParamKey)
+                .FirstOrDefault(obj => obj?["paramKey"]?.GetValue<string>() == materialParamKey)
                 ?? throw new InvalidOperationException($"HUD performer '{definitionId}' must bind its material param.");
 
             Assert.That(binding["source"]?.GetValue<string>(), Is.EqualTo("attributeRatio"));
             Assert.That(binding["attributeName"]?.GetValue<string>(), Is.EqualTo(AgentHealthAttributeName));
         }
 
-        private static int AssertHudWorldHudBinding(JsonObject definition, string definitionId, float expectedWidth, float expectedHeight)
+        private static string AssertHudWorldHudBinding(JsonObject definition, string definitionId, float expectedWidth, float expectedHeight)
         {
             JsonArray behaviors = definition["behaviors"]?.AsArray()
                 ?? throw new InvalidOperationException($"HUD performer '{definitionId}' must declare behaviors.");
@@ -425,34 +431,34 @@ namespace Ludots.Tests.Presentation
 
             Assert.That(assetBinding["assetKind"]?.GetValue<string>(), Is.EqualTo("WorldHud"));
             Assert.That(assetBinding["mobility"]?.GetValue<string>(), Is.EqualTo("Movable"));
-            int materialParamKey = assetBinding["materialParamKey"]?.GetValue<int>() ?? 0;
-            Assert.That(materialParamKey, Is.GreaterThan(0), $"HUD performer '{definitionId}' must drive a material param.");
+            string materialParamKey = assetBinding["materialParamKey"]?.GetValue<string>() ?? string.Empty;
+            Assert.That(materialParamKey, Is.EqualTo(HealthRatioParamKey), $"HUD performer '{definitionId}' must drive a semantic Health ratio param.");
             AssertVector3(assetBinding["localScale"]?.AsArray(), expectedWidth, expectedHeight, 1f, $"HUD performer '{definitionId}' scale");
             return materialParamKey;
         }
 
         private static void AssertWorldTextDefinitionUsesHealthCurrentOverBase(JsonObject definition, string definitionId, int expectedFontSize)
         {
-            (int currentParamKey, int baseParamKey) = AssertWorldTextBinding(definition, definitionId, expectedFontSize);
+            (string currentParamKey, string baseParamKey) = AssertWorldTextBinding(definition, definitionId, expectedFontSize);
             JsonArray bindings = definition["bindings"]?.AsArray()
                 ?? throw new InvalidOperationException($"Text performer '{definitionId}' must declare param bindings.");
 
             JsonObject currentBinding = bindings
                 .Select(node => node?.AsObject())
-                .FirstOrDefault(obj => obj?["paramKey"]?.GetValue<int>() == currentParamKey)
+                .FirstOrDefault(obj => obj?["paramKey"]?.GetValue<string>() == currentParamKey)
                 ?? throw new InvalidOperationException($"Text performer '{definitionId}' must bind its current Health param.");
             Assert.That(currentBinding["source"]?.GetValue<string>(), Is.EqualTo("attribute"));
             Assert.That(currentBinding["attributeName"]?.GetValue<string>(), Is.EqualTo(AgentHealthAttributeName));
 
             JsonObject baseBinding = bindings
                 .Select(node => node?.AsObject())
-                .FirstOrDefault(obj => obj?["paramKey"]?.GetValue<int>() == baseParamKey)
+                .FirstOrDefault(obj => obj?["paramKey"]?.GetValue<string>() == baseParamKey)
                 ?? throw new InvalidOperationException($"Text performer '{definitionId}' must bind its base Health param.");
             Assert.That(baseBinding["source"]?.GetValue<string>(), Is.EqualTo("attributeBase"));
             Assert.That(baseBinding["attributeName"]?.GetValue<string>(), Is.EqualTo(AgentHealthAttributeName));
         }
 
-        private static (int CurrentParamKey, int BaseParamKey) AssertWorldTextBinding(JsonObject definition, string definitionId, int expectedFontSize)
+        private static (string CurrentParamKey, string BaseParamKey) AssertWorldTextBinding(JsonObject definition, string definitionId, int expectedFontSize)
         {
             Assert.That(definition["defaultTextId"]?.GetValue<string>(), Is.EqualTo("hud.attribute.current_over_base"));
             Assert.That(definition["legacyWorldTextMode"]?.GetValue<string>(), Is.EqualTo("AttributeCurrentOverBase"));
@@ -468,10 +474,10 @@ namespace Ludots.Tests.Presentation
             Assert.That(assetBinding["assetKind"]?.GetValue<string>(), Is.EqualTo("WorldText"));
             Assert.That(assetBinding["assetId"]?.GetValue<string>(), Is.EqualTo("hud.attribute.current_over_base"));
             Assert.That(assetBinding["mobility"]?.GetValue<string>(), Is.EqualTo("Movable"));
-            int currentParamKey = assetBinding["scaleParamKey"]?.GetValue<int>() ?? 0;
-            int baseParamKey = assetBinding["materialParamKey"]?.GetValue<int>() ?? 0;
-            Assert.That(currentParamKey, Is.GreaterThan(0), $"Text performer '{definitionId}' must drive current value from a param.");
-            Assert.That(baseParamKey, Is.GreaterThan(0), $"Text performer '{definitionId}' must drive base value from a param.");
+            string currentParamKey = assetBinding["scaleParamKey"]?.GetValue<string>() ?? string.Empty;
+            string baseParamKey = assetBinding["materialParamKey"]?.GetValue<string>() ?? string.Empty;
+            Assert.That(currentParamKey, Is.EqualTo(HealthCurrentParamKey), $"Text performer '{definitionId}' must drive current value from a semantic param.");
+            Assert.That(baseParamKey, Is.EqualTo(HealthBaseParamKey), $"Text performer '{definitionId}' must drive base value from a semantic param.");
             return (currentParamKey, baseParamKey);
         }
 

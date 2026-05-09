@@ -24,7 +24,7 @@
         "animator": {
           "animatorControllerId": "blacksmith.worker.locomotion",
           "animationProfileId": "blacksmith.worker.profile",
-          "speedParamKey": 105,
+          "speedParamKey": "blacksmith.worker.locomotion.speed",
           "stateParamKey": -1
         }
       },
@@ -57,7 +57,7 @@
       }
     ],
     "paramDefaults": [
-      { "paramKey": 105, "lane": "Float", "floatValue": 1.0 }
+      { "paramKey": "blacksmith.worker.locomotion.speed", "lane": "Float", "floatValue": 1.0 }
     ]
   }
 ]

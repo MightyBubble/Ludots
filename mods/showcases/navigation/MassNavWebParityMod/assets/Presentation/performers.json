@@ -218,7 +218,7 @@
     ],
     "behaviors": [
       {
-        "slot": 0,
+        "slot": "body",
         "kind": "AssetBinding",
         "activeByDefault": true,
         "assetBinding": {
@@ -231,7 +231,7 @@
         }
       },
       {
-        "slot": 3,
+        "slot": "grounding",
         "kind": "Grounding",
         "activeByDefault": true,
         "grounding": {
@@ -241,36 +241,36 @@
         }
       },
       {
-        "slot": 4,
+        "slot": "animator",
         "kind": "Animator",
         "activeByDefault": true,
         "animator": {
           "animatorControllerId": "blacksmith.worker.locomotion",
           "animationProfileId": "blacksmith.worker.profile",
-          "speedParamKey": 105,
-          "stateParamKey": -1
+          "speedParamKey": "blacksmith.worker.locomotion.speed",
+          "stateParamKey": "none"
         }
       },
       {
-        "slot": 2,
+        "slot": "minimap",
         "kind": "MinimapMarker",
         "activeByDefault": true,
         "minimapMarker": {
           "shape": "Circle",
           "color": [0.38, 0.72, 1.0, 1.0],
           "sizePx": 3.0,
-          "colorParamKey": -1,
-          "sizeParamKey": -1,
-          "visibilityParamKey": -1,
+          "colorParamKey": "none",
+          "sizeParamKey": "none",
+          "visibilityParamKey": "none",
           "orientationMode": "PerformerForward",
-          "orientationParamKey": -1,
+          "orientationParamKey": "none",
           "orientationOffsetRad": 0.0,
           "orientationLengthPx": 4.0
         }
       }
     ],
     "paramDefaults": [
-      { "paramKey": 105, "lane": "Float", "floatValue": 1.0 }
+      { "paramKey": "blacksmith.worker.locomotion.speed", "lane": "Float", "floatValue": 1.0 }
     ]
   },
   {
@@ -282,7 +282,7 @@
     ],
     "behaviors": [
       {
-        "slot": 0,
+        "slot": "body",
         "kind": "AssetBinding",
         "activeByDefault": true,
         "assetBinding": {
@@ -295,7 +295,7 @@
         }
       },
       {
-        "slot": 3,
+        "slot": "grounding",
         "kind": "Grounding",
         "activeByDefault": true,
         "grounding": {
@@ -305,36 +305,36 @@
         }
       },
       {
-        "slot": 4,
+        "slot": "animator",
         "kind": "Animator",
         "activeByDefault": true,
         "animator": {
           "animatorControllerId": "blacksmith.worker.locomotion",
           "animationProfileId": "blacksmith.worker.profile",
-          "speedParamKey": 105,
-          "stateParamKey": -1
+          "speedParamKey": "blacksmith.worker.locomotion.speed",
+          "stateParamKey": "none"
         }
       },
       {
-        "slot": 2,
+        "slot": "minimap",
         "kind": "MinimapMarker",
         "activeByDefault": true,
         "minimapMarker": {
           "shape": "Circle",
           "color": [0.95, 0.58, 0.28, 1.0],
           "sizePx": 4.5,
-          "colorParamKey": -1,
-          "sizeParamKey": -1,
-          "visibilityParamKey": -1,
+          "colorParamKey": "none",
+          "sizeParamKey": "none",
+          "visibilityParamKey": "none",
           "orientationMode": "PerformerForward",
-          "orientationParamKey": -1,
+          "orientationParamKey": "none",
           "orientationOffsetRad": 0.0,
           "orientationLengthPx": 5.0
         }
       }
     ],
     "paramDefaults": [
-      { "paramKey": 105, "lane": "Float", "floatValue": 1.0 }
+      { "paramKey": "blacksmith.worker.locomotion.speed", "lane": "Float", "floatValue": 1.0 }
     ]
   },
   {
@@ -342,7 +342,7 @@
     "defaultColor": [0.72, 0.92, 1.0, 0.95],
     "behaviors": [
       {
-        "slot": 0,
+        "slot": "body",
         "kind": "AssetBinding",
         "activeByDefault": true,
         "assetBinding": {
@@ -355,7 +355,7 @@
         }
       },
       {
-        "slot": 1,
+        "slot": "attachment",
         "kind": "Attachment",
         "activeByDefault": true,
         "attachment": {
@@ -372,7 +372,7 @@
     "extends": "massnav_agent_selection_marker_light",
     "behaviors": [
       {
-        "slot": 0,
+        "slot": "body",
         "kind": "AssetBinding",
         "activeByDefault": true,
         "assetBinding": {
@@ -385,7 +385,7 @@
         }
       },
       {
-        "slot": 1,
+        "slot": "attachment",
         "kind": "Attachment",
         "activeByDefault": true,
         "attachment": {
@@ -402,18 +402,18 @@
     "defaultColor": [0.12, 0.92, 0.30, 0.96],
     "behaviors": [
       {
-        "slot": 0,
+        "slot": "body",
         "kind": "AssetBinding",
         "activeByDefault": true,
         "assetBinding": {
           "assetKind": "WorldHud",
-          "materialParamKey": 170010,
+          "materialParamKey": "massNav.agent.health.ratio",
           "mobility": "Movable",
           "localScale": [42.0, 5.0, 1.0]
         }
       },
       {
-        "slot": 1,
+        "slot": "attachment",
         "kind": "Attachment",
         "activeByDefault": true,
         "attachment": {
@@ -425,10 +425,10 @@
       }
     ],
     "bindings": [
-      { "paramKey": 170010, "source": "attributeRatio", "attributeName": "Health" }
+      { "paramKey": "massNav.agent.health.ratio", "source": "attributeRatio", "attributeName": "Health" }
     ],
     "paramDefaults": [
-      { "paramKey": 170010, "lane": "Float", "floatValue": 1.0 }
+      { "paramKey": "massNav.agent.health.ratio", "lane": "Float", "floatValue": 1.0 }
     ]
   },
   {
@@ -436,18 +436,18 @@
     "extends": "massnav_agent_health_hud_light",
     "behaviors": [
       {
-        "slot": 0,
+        "slot": "body",
         "kind": "AssetBinding",
         "activeByDefault": true,
         "assetBinding": {
           "assetKind": "WorldHud",
-          "materialParamKey": 170010,
+          "materialParamKey": "massNav.agent.health.ratio",
           "mobility": "Movable",
           "localScale": [58.0, 6.0, 1.0]
         }
       },
       {
-        "slot": 1,
+        "slot": "attachment",
         "kind": "Attachment",
         "activeByDefault": true,
         "attachment": {
@@ -467,20 +467,20 @@
     "defaultColor": [1.0, 0.98, 0.92, 1.0],
     "behaviors": [
       {
-        "slot": 0,
+        "slot": "body",
         "kind": "AssetBinding",
         "activeByDefault": true,
         "assetBinding": {
           "assetKind": "WorldText",
           "assetId": "hud.attribute.current_over_base",
-          "scaleParamKey": 170020,
-          "materialParamKey": 170021,
+          "scaleParamKey": "massNav.agent.health.current",
+          "materialParamKey": "massNav.agent.health.base",
           "mobility": "Movable",
           "localScale": [1.0, 1.0, 1.0]
         }
       },
       {
-        "slot": 1,
+        "slot": "attachment",
         "kind": "Attachment",
         "activeByDefault": true,
         "attachment": {
@@ -492,12 +492,12 @@
       }
     ],
     "bindings": [
-      { "paramKey": 170020, "source": "attribute", "attributeName": "Health" },
-      { "paramKey": 170021, "source": "attributeBase", "attributeName": "Health" }
+      { "paramKey": "massNav.agent.health.current", "source": "attribute", "attributeName": "Health" },
+      { "paramKey": "massNav.agent.health.base", "source": "attributeBase", "attributeName": "Health" }
     ],
     "paramDefaults": [
-      { "paramKey": 170020, "lane": "Float", "floatValue": 100.0 },
-      { "paramKey": 170021, "lane": "Float", "floatValue": 100.0 }
+      { "paramKey": "massNav.agent.health.current", "lane": "Float", "floatValue": 100.0 },
+      { "paramKey": "massNav.agent.health.base", "lane": "Float", "floatValue": 100.0 }
     ]
   },
   {
@@ -508,20 +508,20 @@
     "defaultFontSize": 12,
     "behaviors": [
       {
-        "slot": 0,
+        "slot": "body",
         "kind": "AssetBinding",
         "activeByDefault": true,
         "assetBinding": {
           "assetKind": "WorldText",
           "assetId": "hud.attribute.current_over_base",
-          "scaleParamKey": 170020,
-          "materialParamKey": 170021,
+          "scaleParamKey": "massNav.agent.health.current",
+          "materialParamKey": "massNav.agent.health.base",
           "mobility": "Movable",
           "localScale": [1.0, 1.0, 1.0]
         }
       },
       {
-        "slot": 1,
+        "slot": "attachment",
         "kind": "Attachment",
         "activeByDefault": true,
         "attachment": {
@@ -533,8 +533,8 @@
       }
     ],
     "paramDefaults": [
-      { "paramKey": 170020, "lane": "Float", "floatValue": 260.0 },
-      { "paramKey": 170021, "lane": "Float", "floatValue": 260.0 }
+      { "paramKey": "massNav.agent.health.current", "lane": "Float", "floatValue": 260.0 },
+      { "paramKey": "massNav.agent.health.base", "lane": "Float", "floatValue": 260.0 }
     ]
   },
   {
@@ -543,18 +543,18 @@
     "defaultColor": [0.28, 0.58, 1.0, 1.0],
     "behaviors": [
       {
-        "slot": 2,
+        "slot": "minimap",
         "kind": "MinimapMarker",
         "activeByDefault": true,
         "minimapMarker": {
           "shape": "Circle",
           "color": [0.28, 0.58, 1.0, 1.0],
           "sizePx": 3.0,
-          "colorParamKey": -1,
-          "sizeParamKey": -1,
-          "visibilityParamKey": -1,
+          "colorParamKey": "none",
+          "sizeParamKey": "none",
+          "visibilityParamKey": "none",
           "orientationMode": "PerformerForward",
-          "orientationParamKey": -1,
+          "orientationParamKey": "none",
           "orientationOffsetRad": 0.0,
           "orientationLengthPx": 4.0
         }
@@ -567,18 +567,18 @@
     "defaultColor": [0.48, 0.76, 1.0, 1.0],
     "behaviors": [
       {
-        "slot": 2,
+        "slot": "minimap",
         "kind": "MinimapMarker",
         "activeByDefault": true,
         "minimapMarker": {
           "shape": "Circle",
           "color": [0.48, 0.76, 1.0, 1.0],
           "sizePx": 4.5,
-          "colorParamKey": -1,
-          "sizeParamKey": -1,
-          "visibilityParamKey": -1,
+          "colorParamKey": "none",
+          "sizeParamKey": "none",
+          "visibilityParamKey": "none",
           "orientationMode": "PerformerForward",
-          "orientationParamKey": -1,
+          "orientationParamKey": "none",
           "orientationOffsetRad": 0.0,
           "orientationLengthPx": 5.0
         }
@@ -591,18 +591,18 @@
     "defaultColor": [1.0, 0.26, 0.22, 1.0],
     "behaviors": [
       {
-        "slot": 2,
+        "slot": "minimap",
         "kind": "MinimapMarker",
         "activeByDefault": true,
         "minimapMarker": {
           "shape": "Circle",
           "color": [1.0, 0.26, 0.22, 1.0],
           "sizePx": 3.0,
-          "colorParamKey": -1,
-          "sizeParamKey": -1,
-          "visibilityParamKey": -1,
+          "colorParamKey": "none",
+          "sizeParamKey": "none",
+          "visibilityParamKey": "none",
           "orientationMode": "PerformerForward",
-          "orientationParamKey": -1,
+          "orientationParamKey": "none",
           "orientationOffsetRad": 0.0,
           "orientationLengthPx": 4.0
         }
@@ -615,18 +615,18 @@
     "defaultColor": [1.0, 0.48, 0.34, 1.0],
     "behaviors": [
       {
-        "slot": 2,
+        "slot": "minimap",
         "kind": "MinimapMarker",
         "activeByDefault": true,
         "minimapMarker": {
           "shape": "Circle",
           "color": [1.0, 0.48, 0.34, 1.0],
           "sizePx": 4.5,
-          "colorParamKey": -1,
-          "sizeParamKey": -1,
-          "visibilityParamKey": -1,
+          "colorParamKey": "none",
+          "sizeParamKey": "none",
+          "visibilityParamKey": "none",
           "orientationMode": "PerformerForward",
-          "orientationParamKey": -1,
+          "orientationParamKey": "none",
           "orientationOffsetRad": 0.0,
           "orientationLengthPx": 5.0
         }
@@ -639,18 +639,18 @@
     "defaultColor": [1.0, 0.76, 0.22, 1.0],
     "behaviors": [
       {
-        "slot": 2,
+        "slot": "minimap",
         "kind": "MinimapMarker",
         "activeByDefault": true,
         "minimapMarker": {
           "shape": "Circle",
           "color": [1.0, 0.76, 0.22, 1.0],
           "sizePx": 3.0,
-          "colorParamKey": -1,
-          "sizeParamKey": -1,
-          "visibilityParamKey": -1,
+          "colorParamKey": "none",
+          "sizeParamKey": "none",
+          "visibilityParamKey": "none",
           "orientationMode": "PerformerForward",
-          "orientationParamKey": -1,
+          "orientationParamKey": "none",
           "orientationOffsetRad": 0.0,
           "orientationLengthPx": 4.0
         }
@@ -663,18 +663,18 @@
     "defaultColor": [1.0, 0.88, 0.38, 1.0],
     "behaviors": [
       {
-        "slot": 2,
+        "slot": "minimap",
         "kind": "MinimapMarker",
         "activeByDefault": true,
         "minimapMarker": {
           "shape": "Circle",
           "color": [1.0, 0.88, 0.38, 1.0],
           "sizePx": 4.5,
-          "colorParamKey": -1,
-          "sizeParamKey": -1,
-          "visibilityParamKey": -1,
+          "colorParamKey": "none",
+          "sizeParamKey": "none",
+          "visibilityParamKey": "none",
           "orientationMode": "PerformerForward",
-          "orientationParamKey": -1,
+          "orientationParamKey": "none",
           "orientationOffsetRad": 0.0,
           "orientationLengthPx": 5.0
         }
@@ -687,18 +687,18 @@
     "defaultColor": [0.32, 0.92, 0.48, 1.0],
     "behaviors": [
       {
-        "slot": 2,
+        "slot": "minimap",
         "kind": "MinimapMarker",
         "activeByDefault": true,
         "minimapMarker": {
           "shape": "Circle",
           "color": [0.32, 0.92, 0.48, 1.0],
           "sizePx": 3.0,
-          "colorParamKey": -1,
-          "sizeParamKey": -1,
-          "visibilityParamKey": -1,
+          "colorParamKey": "none",
+          "sizeParamKey": "none",
+          "visibilityParamKey": "none",
           "orientationMode": "PerformerForward",
-          "orientationParamKey": -1,
+          "orientationParamKey": "none",
           "orientationOffsetRad": 0.0,
           "orientationLengthPx": 4.0
         }
@@ -711,18 +711,18 @@
     "defaultColor": [0.58, 1.0, 0.62, 1.0],
     "behaviors": [
       {
-        "slot": 2,
+        "slot": "minimap",
         "kind": "MinimapMarker",
         "activeByDefault": true,
         "minimapMarker": {
           "shape": "Circle",
           "color": [0.58, 1.0, 0.62, 1.0],
           "sizePx": 4.5,
-          "colorParamKey": -1,
-          "sizeParamKey": -1,
-          "visibilityParamKey": -1,
+          "colorParamKey": "none",
+          "sizeParamKey": "none",
+          "visibilityParamKey": "none",
           "orientationMode": "PerformerForward",
-          "orientationParamKey": -1,
+          "orientationParamKey": "none",
           "orientationOffsetRad": 0.0,
           "orientationLengthPx": 5.0
         }
@@ -734,7 +734,7 @@
     "defaultColor": [0.85, 0.88, 0.92, 1.0],
     "behaviors": [
       {
-        "slot": 0,
+        "slot": "body",
         "kind": "AssetBinding",
         "activeByDefault": true,
         "assetBinding": {
@@ -747,7 +747,7 @@
         }
       },
       {
-        "slot": 2,
+        "slot": "grounding",
         "kind": "Grounding",
         "activeByDefault": true,
         "grounding": {
@@ -757,18 +757,18 @@
         }
       },
       {
-        "slot": 1,
+        "slot": "minimap",
         "kind": "MinimapMarker",
         "activeByDefault": true,
         "minimapMarker": {
           "shape": "Circle",
           "color": [0.85, 0.88, 0.92, 1.0],
           "sizePx": 7.0,
-          "colorParamKey": -1,
-          "sizeParamKey": -1,
-          "visibilityParamKey": -1,
+          "colorParamKey": "none",
+          "sizeParamKey": "none",
+          "visibilityParamKey": "none",
           "orientationMode": "None",
-          "orientationParamKey": -1,
+          "orientationParamKey": "none",
           "orientationOffsetRad": 0.0,
           "orientationLengthPx": 0.0
         }
@@ -780,7 +780,7 @@
     "defaultColor": [1.0, 0.76, 0.26, 1.0],
     "behaviors": [
       {
-        "slot": 0,
+        "slot": "body",
         "kind": "AssetBinding",
         "activeByDefault": true,
         "assetBinding": {
@@ -793,7 +793,7 @@
         }
       },
       {
-        "slot": 2,
+        "slot": "grounding",
         "kind": "Grounding",
         "activeByDefault": true,
         "grounding": {
@@ -803,18 +803,18 @@
         }
       },
       {
-        "slot": 1,
+        "slot": "minimap",
         "kind": "MinimapMarker",
         "activeByDefault": true,
         "minimapMarker": {
           "shape": "Circle",
           "color": [1.0, 0.76, 0.26, 1.0],
           "sizePx": 8.0,
-          "colorParamKey": -1,
-          "sizeParamKey": -1,
-          "visibilityParamKey": -1,
+          "colorParamKey": "none",
+          "sizeParamKey": "none",
+          "visibilityParamKey": "none",
           "orientationMode": "None",
-          "orientationParamKey": -1,
+          "orientationParamKey": "none",
           "orientationOffsetRad": 0.0,
           "orientationLengthPx": 0.0
         }

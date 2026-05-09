@@ -1,7 +1,9 @@
 using System;
 using System.Collections.Generic;
 using System.Text.Json;
+using System.Text.Json.Nodes;
 using Ludots.Core.Config;
+using Ludots.Core.NodeLibraries.GASGraph.Host;
 
 namespace Ludots.Core.Gameplay.GAS.Orders
 {
@@ -18,7 +20,7 @@ namespace Ludots.Core.Gameplay.GAS.Orders
 
         public sealed class OrderTypeConfigJson
         {
-            public int OrderTypeId { get; set; }
+            public JsonNode? OrderTypeId { get; set; }
             public string Label { get; set; } = string.Empty;
             public int MaxQueueSize { get; set; } = 3;
             public string SameTypePolicy { get; set; } = "Queue";
@@ -30,10 +32,11 @@ namespace Ludots.Core.Gameplay.GAS.Orders
             public int QueuedModeMaxSize { get; set; } = 16;
             public bool AllowQueuedMode { get; set; } = true;
             public bool ClearQueueOnActivate { get; set; } = true;
-            public int SpatialBlackboardKey { get; set; } = OrderBlackboardKeys.Generic_TargetPosition;
-            public int EntityBlackboardKey { get; set; } = OrderBlackboardKeys.Generic_TargetEntity;
-            public int IntArg0BlackboardKey { get; set; } = -1;
-            public int ValidationGraphId { get; set; }
+            public JsonNode? SpatialBlackboardKey { get; set; }
+            public JsonNode? EntityBlackboardKey { get; set; }
+            public JsonNode? IntArg0BlackboardKey { get; set; }
+            public JsonNode? ValidationGraphId { get; set; }
+            public string ValidationGraph { get; set; } = string.Empty;
         }
 
         public sealed class OrderRuleConfigJson
@@ -88,9 +91,30 @@ namespace Ludots.Core.Gameplay.GAS.Orders
                 throw new InvalidOperationException($"'{relativePath}' must define a non-empty orderTypes object.");
             }
 
-            foreach (var kvp in root.OrderTypes)
+            var orderTypeEntries = new List<KeyValuePair<string, OrderTypeConfigJson>>(root.OrderTypes);
+            var assignedIds = new HashSet<int>();
+            var allocatedIdsByKey = new Dictionary<string, int>(StringComparer.Ordinal);
+            var omittedKeys = new List<string>();
+            foreach (var kvp in orderTypeEntries)
             {
-                var config = ConvertToConfig(kvp.Value, kvp.Key, relativePath);
+                ReserveExplicitOrderTypeId(kvp.Value?.OrderTypeId, kvp.Key, relativePath, assignedIds);
+                if (kvp.Value?.OrderTypeId == null)
+                {
+                    omittedKeys.Add(kvp.Key);
+                }
+            }
+
+            omittedKeys.Sort(StringComparer.Ordinal);
+            foreach (string key in omittedKeys)
+            {
+                int id = AllocateStableOrderTypeId(key, assignedIds);
+                assignedIds.Add(id);
+                allocatedIdsByKey[key] = id;
+            }
+
+            foreach (var kvp in orderTypeEntries)
+            {
+                var config = ConvertToConfig(kvp.Value, kvp.Key, relativePath, allocatedIdsByKey);
                 orderTypeRegistry.Register(config);
             }
 
@@ -113,14 +137,19 @@ namespace Ludots.Core.Gameplay.GAS.Orders
             }
         }
 
-        private static OrderTypeConfig ConvertToConfig(OrderTypeConfigJson json, string key, string path)
+        private static OrderTypeConfig ConvertToConfig(
+            OrderTypeConfigJson json,
+            string key,
+            string path,
+            Dictionary<string, int> allocatedIdsByKey)
         {
             if (json == null)
             {
                 throw new InvalidOperationException($"Order type '{key}' in '{path}' is null.");
             }
 
-            if (json.OrderTypeId <= 0)
+            int orderTypeId = ResolveOrderTypeId(json.OrderTypeId, key, path, allocatedIdsByKey);
+            if (orderTypeId <= 0)
             {
                 throw new InvalidOperationException($"Order type '{key}' in '{path}' must define a positive orderTypeId.");
             }
@@ -128,7 +157,7 @@ namespace Ludots.Core.Gameplay.GAS.Orders
             return new OrderTypeConfig
             {
                 Key = key,
-                OrderTypeId = json.OrderTypeId,
+                OrderTypeId = orderTypeId,
                 Label = string.IsNullOrWhiteSpace(json.Label) ? key : json.Label,
                 MaxQueueSize = json.MaxQueueSize,
                 SameTypePolicy = ParseSameTypePolicy(json.SameTypePolicy),
@@ -140,12 +169,228 @@ namespace Ludots.Core.Gameplay.GAS.Orders
                 QueuedModeMaxSize = json.QueuedModeMaxSize,
                 AllowQueuedMode = json.AllowQueuedMode,
                 ClearQueueOnActivate = json.ClearQueueOnActivate,
-                SpatialBlackboardKey = json.SpatialBlackboardKey,
-                EntityBlackboardKey = json.EntityBlackboardKey,
-                IntArg0BlackboardKey = json.IntArg0BlackboardKey,
-                ValidationGraphId = json.ValidationGraphId
+                SpatialBlackboardKey = ResolveBlackboardKey(json.SpatialBlackboardKey, OrderBlackboardKeys.Generic_TargetPosition, key, path, nameof(json.SpatialBlackboardKey)),
+                EntityBlackboardKey = ResolveBlackboardKey(json.EntityBlackboardKey, OrderBlackboardKeys.Generic_TargetEntity, key, path, nameof(json.EntityBlackboardKey)),
+                IntArg0BlackboardKey = ResolveBlackboardKey(json.IntArg0BlackboardKey, -1, key, path, nameof(json.IntArg0BlackboardKey)),
+                ValidationGraphId = ResolveValidationGraph(json.ValidationGraphId, json.ValidationGraph, key, path)
             };
         }
+
+        private static int ResolveOrderTypeId(
+            JsonNode? node,
+            string key,
+            string path,
+            Dictionary<string, int> allocatedIdsByKey)
+        {
+            int id;
+            if (node == null)
+            {
+                if (allocatedIdsByKey.TryGetValue(key, out int allocatedId))
+                {
+                    return allocatedId;
+                }
+
+                throw new InvalidOperationException($"Order type '{key}' in '{path}' did not receive a key-based order type id allocation.");
+            }
+
+            if (node is JsonValue value && value.TryGetValue<int>(out id))
+            {
+                if (id <= 0)
+                {
+                    throw new InvalidOperationException($"Order type '{key}' in '{path}' must define a positive orderTypeId.");
+                }
+
+                if (id >= OrderTypeRegistry.MaxOrderTypes)
+                {
+                    throw new InvalidOperationException($"Order type '{key}' in '{path}' uses orderTypeId {id}, max is {OrderTypeRegistry.MaxOrderTypes - 1}.");
+                }
+
+                return id;
+            }
+
+            throw new InvalidOperationException($"Order type '{key}' in '{path}' orderTypeId must be an int when authored explicitly, or omitted for key-based allocation.");
+        }
+
+        private static void ReserveExplicitOrderTypeId(JsonNode? node, string key, string path, HashSet<int> assignedIds)
+        {
+            if (node == null)
+            {
+                return;
+            }
+
+            if (node is not JsonValue value || !value.TryGetValue<int>(out int id))
+            {
+                throw new InvalidOperationException($"Order type '{key}' in '{path}' orderTypeId must be an int when authored explicitly, or omitted for key-based allocation.");
+            }
+
+            if (id <= 0)
+            {
+                throw new InvalidOperationException($"Order type '{key}' in '{path}' must define a positive orderTypeId.");
+            }
+
+            if (id >= OrderTypeRegistry.MaxOrderTypes)
+            {
+                throw new InvalidOperationException($"Order type '{key}' in '{path}' uses orderTypeId {id}, max is {OrderTypeRegistry.MaxOrderTypes - 1}.");
+            }
+
+            if (!assignedIds.Add(id))
+            {
+                throw new InvalidOperationException($"Order type '{key}' in '{path}' duplicates orderTypeId {id}.");
+            }
+        }
+
+        private static int AllocateStableOrderTypeId(string key, HashSet<int> assignedIds)
+        {
+            int start = ComputeStableOrderTypeId(key);
+            int candidate = start;
+            for (int probe = 0; probe < OrderTypeRegistry.MaxOrderTypes - 1; probe++)
+            {
+                if (!assignedIds.Contains(candidate))
+                {
+                    return candidate;
+                }
+
+                candidate++;
+                if (candidate >= OrderTypeRegistry.MaxOrderTypes)
+                {
+                    candidate = 1;
+                }
+            }
+
+            throw new InvalidOperationException($"Order type id allocation exhausted the max {OrderTypeRegistry.MaxOrderTypes - 1} ids.");
+        }
+
+        private static int ComputeStableOrderTypeId(string key)
+        {
+            unchecked
+            {
+                uint hash = 2166136261u;
+                for (int i = 0; i < key.Length; i++)
+                {
+                    hash ^= key[i];
+                    hash *= 16777619u;
+                }
+
+                return 1 + (int)(hash % (OrderTypeRegistry.MaxOrderTypes - 1));
+            }
+        }
+
+        private static int ResolveBlackboardKey(JsonNode? node, int defaultValue, string key, string path, string fieldName)
+        {
+            if (node == null)
+            {
+                return defaultValue;
+            }
+
+            if (node is JsonValue value)
+            {
+                if (value.TryGetValue<int>(out int numericId))
+                {
+                    return numericId;
+                }
+
+                if (value.TryGetValue<string>(out string? text))
+                {
+                    if (string.IsNullOrWhiteSpace(text))
+                    {
+                        throw new InvalidOperationException($"Order type '{key}' in '{path}' {fieldName} must be a non-empty semantic string.");
+                    }
+
+                    text = text.Trim();
+                    if (string.Equals(text, "none", StringComparison.OrdinalIgnoreCase))
+                    {
+                        return -1;
+                    }
+
+                    return text switch
+                    {
+                        "Cast.SlotIndex" => OrderBlackboardKeys.Cast_SlotIndex,
+                        "Cast.TargetEntity" => OrderBlackboardKeys.Cast_TargetEntity,
+                        "Cast.TargetPosition" => OrderBlackboardKeys.Cast_TargetPosition,
+                        "Cast.AbilityId" => OrderBlackboardKeys.Cast_AbilityId,
+                        "Attack.TargetEntity" => OrderBlackboardKeys.Attack_TargetEntity,
+                        "Attack.MovePosition" => OrderBlackboardKeys.Attack_MovePosition,
+                        "Attack.IsAttackMove" => OrderBlackboardKeys.Attack_IsAttackMove,
+                        "Stop.Type" => OrderBlackboardKeys.Stop_Type,
+                        "Hold.Active" => OrderBlackboardKeys.Hold_Active,
+                        "Patrol.Waypoints" => OrderBlackboardKeys.Patrol_Waypoints,
+                        "Patrol.CurrentIndex" => OrderBlackboardKeys.Patrol_CurrentIndex,
+                        "Patrol.Direction" => OrderBlackboardKeys.Patrol_Direction,
+                        "Generic.TargetEntity" => OrderBlackboardKeys.Generic_TargetEntity,
+                        "Generic.TargetPosition" => OrderBlackboardKeys.Generic_TargetPosition,
+                        "Generic.IntParam" => OrderBlackboardKeys.Generic_IntParam,
+                        "Generic.FloatParam" => OrderBlackboardKeys.Generic_FloatParam,
+                        _ => throw new InvalidOperationException($"Order type '{key}' in '{path}' has unknown {fieldName} '{text}'.")
+                    };
+                }
+            }
+
+            throw new InvalidOperationException($"Order type '{key}' in '{path}' {fieldName} must be an int or semantic string.");
+        }
+
+        private static int ResolveValidationGraph(JsonNode? idNode, string graphName, string key, string path)
+        {
+            bool hasId = idNode != null;
+            bool hasGraph = !string.IsNullOrWhiteSpace(graphName);
+            if (hasId && hasGraph)
+            {
+                throw new InvalidOperationException(
+                    $"Order type '{key}' in '{path}' must define either validationGraphId or validationGraph, not both.");
+            }
+
+            if (hasGraph)
+            {
+                graphName = graphName.Trim();
+                if (string.Equals(graphName, "none", StringComparison.OrdinalIgnoreCase))
+                {
+                    return 0;
+                }
+
+                int graphId = GraphIdRegistry.GetId(graphName);
+                if (graphId <= 0)
+                {
+                    throw new InvalidOperationException(
+                        $"Order type '{key}' in '{path}' validationGraph references unknown graph '{graphName}'.");
+                }
+
+                return graphId;
+            }
+
+            if (idNode == null)
+            {
+                return 0;
+            }
+
+            if (idNode is JsonValue value)
+            {
+                if (value.TryGetValue<int>(out int numericId))
+                {
+                    if (numericId < 0)
+                    {
+                        throw new InvalidOperationException($"Order type '{key}' in '{path}' validationGraphId must be non-negative.");
+                    }
+
+                    return numericId;
+                }
+
+                if (value.TryGetValue<string>(out string? text))
+                {
+                    if (string.IsNullOrWhiteSpace(text))
+                    {
+                        throw new InvalidOperationException($"Order type '{key}' in '{path}' validationGraphId must be an int or 'none'.");
+                    }
+
+                    text = text.Trim();
+                    if (string.Equals(text, "none", StringComparison.OrdinalIgnoreCase))
+                    {
+                        return 0;
+                    }
+                }
+            }
+
+            throw new InvalidOperationException($"Order type '{key}' in '{path}' validationGraphId must be a non-negative int.");
+        }
+
         private static unsafe OrderRuleSet ConvertToRuleSet(
             OrderRuleConfigJson json,
             string key,

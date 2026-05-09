@@ -132,26 +132,43 @@ namespace Ludots.Core.Presentation.Performers
         internal int SingleAnimatorFastBehaviorIndex;
         internal bool SupportsFastParentAttachmentTick;
         internal int FastParentAttachmentBehaviorIndex;
+        internal int[] SparseBindingParamKeys = System.Array.Empty<int>();
+        internal int[] SparseBindingIndices = System.Array.Empty<int>();
 
         internal void BuildBindingIndex()
         {
             if (Bindings == null || Bindings.Length == 0)
             {
                 BindingIndex = System.Array.Empty<int>();
+                SparseBindingParamKeys = System.Array.Empty<int>();
+                SparseBindingIndices = System.Array.Empty<int>();
                 return;
             }
 
-            int maxKey = 0;
+            const int DenseBindingIndexLimit = 1024;
+            int maxDenseKey = -1;
+            int sparseCount = 0;
             for (int i = 0; i < Bindings.Length; i++)
             {
-                if (Bindings[i].ParamKey > maxKey)
+                int key = Bindings[i].ParamKey;
+                if (key is >= 0 and < DenseBindingIndexLimit)
                 {
-                    maxKey = Bindings[i].ParamKey;
+                    if (key > maxDenseKey)
+                    {
+                        maxDenseKey = key;
+                    }
+                }
+                else if (key >= DenseBindingIndexLimit)
+                {
+                    sparseCount++;
                 }
             }
 
-            int[] index = new int[maxKey + 1];
+            int[] index = maxDenseKey >= 0 ? new int[maxDenseKey + 1] : System.Array.Empty<int>();
             System.Array.Fill(index, -1);
+            int[] sparseKeys = sparseCount == 0 ? System.Array.Empty<int>() : new int[sparseCount];
+            int[] sparseIndices = sparseCount == 0 ? System.Array.Empty<int>() : new int[sparseCount];
+            int sparseCursor = 0;
             for (int i = 0; i < Bindings.Length; i++)
             {
                 int key = Bindings[i].ParamKey;
@@ -159,9 +176,56 @@ namespace Ludots.Core.Presentation.Performers
                 {
                     index[key] = i;
                 }
+                else if (key >= DenseBindingIndexLimit)
+                {
+                    sparseKeys[sparseCursor] = key;
+                    sparseIndices[sparseCursor] = i;
+                    sparseCursor++;
+                }
             }
 
+            SortSparseBindings(sparseKeys, sparseIndices);
             BindingIndex = index;
+            SparseBindingParamKeys = sparseKeys;
+            SparseBindingIndices = sparseIndices;
+        }
+
+        private static void SortSparseBindings(int[] keys, int[] indices)
+        {
+            for (int i = 1; i < keys.Length; i++)
+            {
+                int key = keys[i];
+                int index = indices[i];
+                int j = i - 1;
+                while (j >= 0 && keys[j] > key)
+                {
+                    keys[j + 1] = keys[j];
+                    indices[j + 1] = indices[j];
+                    j--;
+                }
+
+                keys[j + 1] = key;
+                indices[j + 1] = index;
+            }
+        }
+
+        internal bool TryGetBindingIndex(int paramKey, out int bindingIndex)
+        {
+            if (paramKey >= 0 && paramKey < BindingIndex.Length)
+            {
+                bindingIndex = BindingIndex[paramKey];
+                return bindingIndex >= 0;
+            }
+
+            int sparseIndex = System.Array.BinarySearch(SparseBindingParamKeys, paramKey);
+            if (sparseIndex >= 0)
+            {
+                bindingIndex = SparseBindingIndices[sparseIndex];
+                return true;
+            }
+
+            bindingIndex = -1;
+            return false;
         }
 
         internal void BuildRequiredAttributeIds()

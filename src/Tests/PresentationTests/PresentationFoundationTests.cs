@@ -4,6 +4,7 @@ using System.Numerics;
 using System.Text.Json.Nodes;
 using Arch.Core;
 using Arch.Core.Extensions;
+using Ludots.Core.Config;
 using Ludots.Core.Components;
 using Ludots.Core.Gameplay.Spawning;
 using Ludots.Core.Mathematics.FixedPoint;
@@ -277,6 +278,61 @@ namespace Ludots.Tests.Presentation
             Assert.That(registry.TryGet(humanoidId, out var humanoid), Is.True);
             Assert.That(tank.States.Length, Is.EqualTo(3));
             Assert.That(humanoid.Transitions.Length, Is.EqualTo(8));
+        }
+
+        [Test]
+        public void AnimatorControllerConfigLoader_CompilesSemanticParameterIndex()
+        {
+            string root = Path.Combine(Path.GetTempPath(), "Ludots_AnimatorSemanticParam", Guid.NewGuid().ToString("N"));
+            string core = Path.Combine(root, "Core");
+            Directory.CreateDirectory(Path.Combine(core, "Configs"));
+            Directory.CreateDirectory(Path.Combine(core, "Configs", "Presentation"));
+            File.WriteAllText(Path.Combine(core, "Configs", "config_catalog.json"), """
+[
+  { "Path": "Presentation/animator_controllers.json", "Policy": "ArrayById", "IdField": "id" }
+]
+""");
+            File.WriteAllText(Path.Combine(core, "Configs", "Presentation", "animator_controllers.json"), """
+[
+  {
+    "id": "semantic.controller",
+    "states": [
+      { "packedStateIndex": 1, "durationSeconds": 1.0, "playbackSpeed": 1.0, "loop": true },
+      { "packedStateIndex": 2, "durationSeconds": 1.0, "playbackSpeed": 1.0, "loop": true }
+    ],
+    "transitions": [
+      {
+        "fromStateIndex": 0,
+        "toStateIndex": 1,
+        "conditionKind": "FloatGreaterOrEqual",
+        "parameterIndex": "semantic.anim.speed",
+        "threshold": 0.2
+      }
+    ]
+  }
+]
+""");
+
+            PerformerParamKeyRegistry.ClearCustomKeysForTests();
+            var vfs = new Ludots.Core.Modding.VirtualFileSystem();
+            vfs.Mount("Core", core);
+            var pipeline = new ConfigPipeline(vfs, modLoader: null!);
+            var catalog = ConfigCatalogLoader.Load(pipeline);
+            var controllers = new Ludots.Core.Presentation.Assets.AnimatorControllerRegistry();
+
+            new AnimatorControllerConfigLoader(pipeline, controllers).Load(catalog);
+
+            Assert.That(controllers.TryGet(controllers.GetId("semantic.controller"), out var controller), Is.True);
+            Assert.That(controller.Transitions[0].ParameterIndex, Is.EqualTo(PerformerParamKeyRegistry.Register("semantic.anim.speed")));
+
+            try
+            {
+                Directory.Delete(root, recursive: true);
+            }
+            catch
+            {
+                // Ignore temp cleanup failures in test teardown.
+            }
         }
 
         [Test]

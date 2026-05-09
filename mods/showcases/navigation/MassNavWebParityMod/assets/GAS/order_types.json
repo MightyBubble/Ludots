@@ -1,7 +1,6 @@
 {
   "orderTypes": {
     "massNavMove": {
-      "orderTypeId": 172,
       "label": "Mass Nav Move",
       "maxQueueSize": 1,
       "sameTypePolicy": "Replace",
@@ -13,16 +12,15 @@
       "queuedModeMaxSize": 1,
       "allowQueuedMode": false,
       "clearQueueOnActivate": true,
-      "spatialBlackboardKey": -1,
-      "entityBlackboardKey": -1,
-      "intArg0BlackboardKey": -1,
-      "validationGraphId": 0
+      "spatialBlackboardKey": "none",
+      "entityBlackboardKey": "none",
+      "intArg0BlackboardKey": "none",
+      "validationGraph": "none"
     }
   },
   "orderRules": {
     "massNavMove": {
       "orderTypeKey": "massNavMove",
-      "blockedActiveOrderTypeIds": [],
       "interruptsActiveOrderTypeKeys": [ "moveTo", "attackTarget" ]
     }
   }

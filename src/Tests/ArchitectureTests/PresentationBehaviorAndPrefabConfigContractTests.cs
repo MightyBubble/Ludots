@@ -157,7 +157,9 @@ namespace Ludots.Tests.Architecture
                 "MassNav move must not be double-authored in game.json constants; GAS/order_types.json owns order type definitions.");
             OrderTypeRegistry orderTypes = massNavEngine.GetService(CoreServiceKeys.OrderTypeRegistry)
                 ?? throw new InvalidOperationException("OrderTypeRegistry missing.");
-            Assert.That(orderTypes.GetId("massNavMove"), Is.EqualTo(172));
+            int massNavMoveOrderTypeId = orderTypes.GetId("massNavMove");
+            Assert.That(massNavMoveOrderTypeId, Is.GreaterThan(0));
+            Assert.That(massNavMoveOrderTypeId, Is.Not.EqualTo(massNavEngine.MergedConfig.Constants.OrderTypeIds["moveTo"]));
         }
 
         [Test]
@@ -178,7 +180,6 @@ namespace Ludots.Tests.Architecture
       "label": "Attack Target"
     },
     "massNavMove": {
-      "orderTypeId": 172,
       "label": "Mass Nav Move"
     }
   },
@@ -205,6 +206,100 @@ namespace Ludots.Tests.Architecture
             Assert.That(massNavRule.InterruptsActiveCount, Is.EqualTo(2));
             Assert.That(orderRules.Interrupts(massNavMoveId, orderTypes.GetId("moveTo")), Is.True);
             Assert.That(orderRules.Interrupts(massNavMoveId, orderTypes.GetId("attackTarget")), Is.True);
+        }
+
+        [Test]
+        public void OrderTypeConfigLoader_AllocatesOmittedOrderTypeIdsWithoutCollidingWithExplicitIds()
+        {
+            string root = Path.Combine(Path.GetTempPath(), "Ludots_OrderTypeAllocatedIds", Guid.NewGuid().ToString("N"));
+            string core = Path.Combine(root, "Core");
+            Directory.CreateDirectory(Path.Combine(core, "Configs", "GAS"));
+            File.WriteAllText(Path.Combine(core, "Configs", "GAS", "order_types.json"), """
+{
+  "orderTypes": {
+    "explicitMove": {
+      "orderTypeId": 1,
+      "label": "Explicit Move"
+    },
+    "semanticMove": {
+      "label": "Semantic Move",
+      "spatialBlackboardKey": "Generic.TargetPosition",
+      "entityBlackboardKey": "none",
+      "intArg0BlackboardKey": "none"
+    }
+  },
+  "orderRules": {
+    "semanticMove": {
+      "orderTypeKey": "semanticMove",
+      "interruptsActiveOrderTypeKeys": [ "explicitMove" ]
+    }
+  }
+}
+""");
+
+            var vfs = new VirtualFileSystem();
+            vfs.Mount("Core", core);
+            var pipeline = new ConfigPipeline(vfs, modLoader: null!);
+            var orderTypes = new OrderTypeRegistry();
+            var orderRules = new OrderRuleRegistry();
+
+            new OrderTypeConfigLoader(pipeline).Load(orderTypes, orderRules);
+
+            Assert.That(orderTypes.GetId("explicitMove"), Is.EqualTo(1));
+            int semanticMoveId = orderTypes.GetId("semanticMove");
+            Assert.That(semanticMoveId, Is.GreaterThan(1));
+            Assert.That(semanticMoveId, Is.LessThan(OrderTypeRegistry.MaxOrderTypes));
+            var semanticMove = orderTypes.Get(semanticMoveId);
+            Assert.That(semanticMove.SpatialBlackboardKey, Is.EqualTo(OrderBlackboardKeys.Generic_TargetPosition));
+            Assert.That(semanticMove.EntityBlackboardKey, Is.EqualTo(-1));
+            Assert.That(semanticMove.IntArg0BlackboardKey, Is.EqualTo(-1));
+            Assert.That(semanticMove.ValidationGraphId, Is.EqualTo(0));
+            Assert.That(orderRules.Interrupts(semanticMoveId, orderTypes.GetId("explicitMove")), Is.True);
+        }
+
+        [Test]
+        public void OrderTypeConfigLoader_AllocatesOmittedOrderTypeIdsDeterministicallyByKey()
+        {
+            string root = Path.Combine(Path.GetTempPath(), "Ludots_OrderTypeDeterministicIds", Guid.NewGuid().ToString("N"));
+            string core = Path.Combine(root, "Core");
+            Directory.CreateDirectory(Path.Combine(core, "Configs", "GAS"));
+            string path = Path.Combine(core, "Configs", "GAS", "order_types.json");
+            File.WriteAllText(path, """
+{
+  "orderTypes": {
+    "explicitMove": { "orderTypeId": 1, "label": "Explicit Move" },
+    "alphaMove": { "label": "Alpha Move", "validationGraph": "none" },
+    "omegaMove": { "label": "Omega Move", "validationGraph": "none" }
+  }
+}
+""");
+
+            var vfs = new VirtualFileSystem();
+            vfs.Mount("Core", core);
+            var pipeline = new ConfigPipeline(vfs, modLoader: null!);
+            var orderTypes = new OrderTypeRegistry();
+            var orderRules = new OrderRuleRegistry();
+
+            new OrderTypeConfigLoader(pipeline).Load(orderTypes, orderRules);
+            int firstAlphaId = orderTypes.GetId("alphaMove");
+            int firstOmegaId = orderTypes.GetId("omegaMove");
+
+            File.WriteAllText(path, """
+{
+  "orderTypes": {
+    "omegaMove": { "label": "Omega Move", "validationGraph": "none" },
+    "alphaMove": { "label": "Alpha Move", "validationGraph": "none" },
+    "explicitMove": { "orderTypeId": 1, "label": "Explicit Move" }
+  }
+}
+""");
+            new OrderTypeConfigLoader(pipeline).Load(orderTypes, orderRules);
+
+            Assert.That(orderTypes.GetId("alphaMove"), Is.EqualTo(firstAlphaId));
+            Assert.That(orderTypes.GetId("omegaMove"), Is.EqualTo(firstOmegaId));
+            Assert.That(firstAlphaId, Is.Not.EqualTo(firstOmegaId));
+            Assert.That(firstAlphaId, Is.Not.EqualTo(1));
+            Assert.That(firstOmegaId, Is.Not.EqualTo(1));
         }
 
         [Test]

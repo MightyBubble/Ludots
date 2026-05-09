@@ -2,6 +2,7 @@ using System;
 using System.Text.Json.Nodes;
 using Ludots.Core.Config;
 using Ludots.Core.Presentation.Assets;
+using Ludots.Core.Presentation.Performers;
 
 namespace Ludots.Core.Presentation.Config
 {
@@ -80,7 +81,7 @@ namespace Ludots.Core.Presentation.Config
                     FromStateIndex = transitionNode["fromStateIndex"]?.GetValue<int>() ?? 0,
                     ToStateIndex = transitionNode["toStateIndex"]?.GetValue<int>() ?? 0,
                     ConditionKind = conditionKind,
-                    ParameterIndex = transitionNode["parameterIndex"]?.GetValue<int>() ?? 0,
+                    ParameterIndex = ParseParamKey(transitionNode["parameterIndex"], 0, $"Animator controller '{key}' transition[{i}].parameterIndex"),
                     Threshold = transitionNode["threshold"]?.GetValue<float>() ?? 0f,
                     DurationSeconds = transitionNode["durationSeconds"]?.GetValue<float>() ?? 0f,
                     ConsumeTrigger = transitionNode["consumeTrigger"]?.GetValue<bool>() ?? false,
@@ -93,6 +94,40 @@ namespace Ludots.Core.Presentation.Config
                 States = states,
                 Transitions = transitions,
             };
+        }
+
+        private static int ParseParamKey(JsonNode? node, int defaultValue, string context)
+        {
+            if (node == null)
+            {
+                return defaultValue;
+            }
+
+            if (node is JsonValue value)
+            {
+                if (value.TryGetValue<int>(out int numericId))
+                {
+                    return numericId;
+                }
+
+                if (value.TryGetValue<string>(out string? key))
+                {
+                    if (string.IsNullOrWhiteSpace(key))
+                    {
+                        throw new InvalidOperationException($"{context} must be a non-empty semantic string.");
+                    }
+
+                    key = key.Trim();
+                    if (string.Equals(key, "none", StringComparison.OrdinalIgnoreCase))
+                    {
+                        return -1;
+                    }
+
+                    return PerformerParamKeyRegistry.Register(key);
+                }
+            }
+
+            throw new InvalidOperationException($"{context} must be an int or non-empty semantic string.");
         }
     }
 }

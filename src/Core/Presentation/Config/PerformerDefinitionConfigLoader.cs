@@ -200,7 +200,7 @@ namespace Ludots.Core.Presentation.Config
             {
                 if (propertyName.Equals("bindings", StringComparison.OrdinalIgnoreCase))
                 {
-                    merged[propertyName] = MergeByIntKey(parent[propertyName], childValue, "paramKey");
+                    merged[propertyName] = MergeByValueKey(parent[propertyName], childValue, "paramKey");
                     continue;
                 }
 
@@ -212,7 +212,7 @@ namespace Ludots.Core.Presentation.Config
 
                 if (propertyName.Equals("behaviors", StringComparison.OrdinalIgnoreCase))
                 {
-                    merged[propertyName] = MergeByIntKey(parent[propertyName], childValue, "slot");
+                    merged[propertyName] = MergeByValueKey(parent[propertyName], childValue, "slot");
                     continue;
                 }
 
@@ -250,12 +250,12 @@ namespace Ludots.Core.Presentation.Config
             }
         }
 
-        private static JsonArray MergeByIntKey(JsonNode? existingNode, JsonNode? incomingNode, string keyField)
+        private static JsonArray MergeByValueKey(JsonNode? existingNode, JsonNode? incomingNode, string keyField)
         {
-            var byKey = new Dictionary<int, JsonNode>();
-            var order = new List<int>();
-            AppendByIntKey(existingNode, keyField, byKey, order);
-            AppendByIntKey(incomingNode, keyField, byKey, order);
+            var byKey = new Dictionary<string, JsonNode>(StringComparer.OrdinalIgnoreCase);
+            var order = new List<string>();
+            AppendByValueKey(existingNode, keyField, byKey, order);
+            AppendByValueKey(incomingNode, keyField, byKey, order);
 
             var merged = new JsonArray();
             for (int i = 0; i < order.Count; i++)
@@ -266,7 +266,7 @@ namespace Ludots.Core.Presentation.Config
             return merged;
         }
 
-        private static void AppendByIntKey(JsonNode? node, string keyField, Dictionary<int, JsonNode> byKey, List<int> order)
+        private static void AppendByValueKey(JsonNode? node, string keyField, Dictionary<string, JsonNode> byKey, List<string> order)
         {
             if (node is not JsonArray array)
             {
@@ -280,7 +280,7 @@ namespace Ludots.Core.Presentation.Config
                     continue;
                 }
 
-                int key = obj[keyField]?.GetValue<int>() ?? i;
+                string key = GetMergeKey(obj[keyField], i);
                 if (!byKey.ContainsKey(key))
                 {
                     order.Add(key);
@@ -288,6 +288,24 @@ namespace Ludots.Core.Presentation.Config
 
                 byKey[key] = obj;
             }
+        }
+
+        private static string GetMergeKey(JsonNode? node, int defaultIndex)
+        {
+            if (node is JsonValue value)
+            {
+                if (value.TryGetValue<int>(out int numericId))
+                {
+                    return numericId.ToString(System.Globalization.CultureInfo.InvariantCulture);
+                }
+
+                if (value.TryGetValue<string>(out string? text) && !string.IsNullOrWhiteSpace(text))
+                {
+                    return text.Trim();
+                }
+            }
+
+            return defaultIndex.ToString(System.Globalization.CultureInfo.InvariantCulture);
         }
 
         private static JsonArray MergeParamDefaultsJson(JsonNode? existingNode, JsonNode? incomingNode)
@@ -323,7 +341,7 @@ namespace Ludots.Core.Presentation.Config
                     continue;
                 }
 
-                int paramKey = obj["paramKey"]?.GetValue<int>() ?? 0;
+                int paramKey = ParseParamKey(obj["paramKey"], 0, $"paramDefaults[{i}].paramKey");
                 ParamLane lane = ParseRequiredParamLane(obj, $"paramDefaults[{i}]");
                 var compositeKey = (paramKey, lane);
                 if (!byKey.ContainsKey(compositeKey))
@@ -500,14 +518,14 @@ namespace Ludots.Core.Presentation.Config
                 ParentEntity = Entity.Null, // resolved at runtime
                 ScopeTag = ParseScopeTag(node["scopeTag"]),
                 ScopeSource = ParseEnum(node["scopeSource"]?.GetValue<string>(), PerformerCommandScopeSource.Fixed),
-                ParamKey = node["paramKey"]?.GetValue<int>() ?? 0,
+                ParamKey = ParseParamKey(node["paramKey"], 0, "Performer command paramKey"),
                 ParamLane = ParseEnum(node["paramLane"]?.GetValue<string>(), ParamLane.Float),
                 ParamValue = node["paramValue"]?.GetValue<float>() ?? 0f,
                 IntValue = node["intValue"]?.GetValue<int>() ?? 0,
                 VectorValue = ParseVector4(node["vectorValue"]),
                 ValueSource = ParseEnum(node["valueSource"]?.GetValue<string>(), PerformerCommandValueSource.Fixed),
                 ParamGraphProgramId = node["paramGraphProgramId"]?.GetValue<int>() ?? 0,
-                TargetBehaviorSlot = node["targetBehaviorSlot"]?.GetValue<int>() ?? -1,
+                TargetBehaviorSlot = ParseBehaviorSlot(node["targetBehaviorSlot"], -1, "Performer command targetBehaviorSlot"),
             };
         }
 
@@ -552,7 +570,7 @@ namespace Ludots.Core.Presentation.Config
             {
                 bindings[i] = new PerformerParamBinding
                 {
-                    ParamKey = arr[i]!["paramKey"]?.GetValue<int>() ?? 0,
+                    ParamKey = ParseParamKey(arr[i]!["paramKey"], 0, $"bindings[{i}].paramKey"),
                     Value = ParseValueRef(arr[i]!),
                 };
             }
@@ -835,7 +853,7 @@ namespace Ludots.Core.Presentation.Config
                 }
 
                 BehaviorKind kind = ParseRequiredEnum<BehaviorKind>(obj["kind"], $"Performer '{ownerKey}' behavior[{i}].kind");
-                int slotIndex = obj["slot"]?.GetValue<int>() ?? i;
+                int slotIndex = ParseBehaviorSlot(obj["slot"], i, $"Performer '{ownerKey}' behavior[{i}].slot");
                 if (slotIndex is < 0 or >= 32)
                 {
                     throw new InvalidOperationException($"Performer '{ownerKey}' behavior[{i}] uses slot {slotIndex}, but valid behavior slots are 0-31.");
@@ -909,7 +927,7 @@ namespace Ludots.Core.Presentation.Config
                 ParamLane lane = ParseRequiredParamLane(obj, $"paramDefaults[{i}]");
                 var paramDefault = new ParamDefault
                 {
-                    ParamKey = obj["paramKey"]?.GetValue<int>() ?? 0,
+                    ParamKey = ParseParamKey(obj["paramKey"], 0, $"paramDefaults[{i}].paramKey"),
                     Lane = lane,
                 };
 
@@ -973,12 +991,12 @@ namespace Ludots.Core.Presentation.Config
                 LocalOffset = ParseVector3(obj["localOffset"]),
                 LocalRotation = ParseQuaternion(obj["localRotation"]),
                 LocalScale = ParseVector3OrDefault(obj["localScale"], Vector3.One),
-                ScaleParamKey = obj["scaleParamKey"]?.GetValue<int>() ?? -1,
-                ColorParamKey = obj["colorParamKey"]?.GetValue<int>() ?? -1,
-                MaterialParamKey = obj["materialParamKey"]?.GetValue<int>() ?? -1,
-                AssetSwapParamKey = obj["assetSwapParamKey"]?.GetValue<int>() ?? -1,
+                ScaleParamKey = ParseOptionalParamKey(obj["scaleParamKey"], "AssetBinding.scaleParamKey"),
+                ColorParamKey = ParseOptionalParamKey(obj["colorParamKey"], "AssetBinding.colorParamKey"),
+                MaterialParamKey = ParseOptionalParamKey(obj["materialParamKey"], "AssetBinding.materialParamKey"),
+                AssetSwapParamKey = ParseOptionalParamKey(obj["assetSwapParamKey"], "AssetBinding.assetSwapParamKey"),
                 AssetSwapTable = ParseAssetSwapTable(assetKind, obj["assetSwapTable"]),
-                VisibilityParamKey = obj["visibilityParamKey"]?.GetValue<int>() ?? -1,
+                VisibilityParamKey = ParseOptionalParamKey(obj["visibilityParamKey"], "AssetBinding.visibilityParamKey"),
                 HasMaxLod = obj.ContainsKey("maxLod"),
                 MaxLod = ParseEnum(obj["maxLod"]?.GetValue<string>(), LODLevel.Low),
             };
@@ -994,7 +1012,7 @@ namespace Ludots.Core.Presentation.Config
             return new AttributeBindingConfig
             {
                 AttributeId = ResolveAttributeId(obj),
-                TargetParamKey = obj["targetParamKey"]?.GetValue<int>() ?? 0,
+                TargetParamKey = ParseParamKey(obj["targetParamKey"], 0, "AttributeBinding.targetParamKey"),
                 Mode = ParseEnum(obj["mode"]?.GetValue<string>(), ValueSourceKind.Attribute),
                 Thresholds = ParseThresholds(obj["thresholds"]),
             };
@@ -1016,7 +1034,7 @@ namespace Ludots.Core.Presentation.Config
             return new TagBindingConfig
             {
                 TagId = tagId,
-                TargetParamKey = obj["targetParamKey"]?.GetValue<int>() ?? 0,
+                TargetParamKey = ParseParamKey(obj["targetParamKey"], 0, "TagBinding.targetParamKey"),
                 InvertLogic = obj["invertLogic"]?.GetValue<bool>() ?? false,
             };
         }
@@ -1032,8 +1050,8 @@ namespace Ludots.Core.Presentation.Config
             {
                 AnimatorControllerId = ResolveRegisteredId(_resolveAnimatorControllerId, obj["animatorControllerId"], "animatorController"),
                 AnimationProfileId = ResolveRegisteredId(_resolveAnimationProfileId, obj["animationProfileId"], "animationProfile"),
-                SpeedParamKey = obj["speedParamKey"]?.GetValue<int>() ?? -1,
-                StateParamKey = obj["stateParamKey"]?.GetValue<int>() ?? -1,
+                SpeedParamKey = ParseOptionalParamKey(obj["speedParamKey"], "Animator.speedParamKey"),
+                StateParamKey = ParseOptionalParamKey(obj["stateParamKey"], "Animator.stateParamKey"),
             };
         }
 
@@ -1094,7 +1112,7 @@ namespace Ludots.Core.Presentation.Config
                 obj["orientationMode"],
                 MinimapMarkerOrientationMode.None,
                 "MinimapMarker.orientationMode");
-            int orientationParamKey = obj["orientationParamKey"]?.GetValue<int>() ?? -1;
+            int orientationParamKey = ParseOptionalParamKey(obj["orientationParamKey"], "MinimapMarker.orientationParamKey");
             float orientationOffsetRad = obj["orientationOffsetRad"]?.GetValue<float>() ?? 0f;
             float orientationLengthPx = obj["orientationLengthPx"]?.GetValue<float>() ?? 0f;
             if (!float.IsFinite(orientationOffsetRad))
@@ -1135,9 +1153,9 @@ namespace Ludots.Core.Presentation.Config
                 Shape = shape,
                 Color = ParseColor(obj["color"]),
                 SizePx = sizePx,
-                ColorParamKey = obj["colorParamKey"]?.GetValue<int>() ?? -1,
-                SizeParamKey = obj["sizeParamKey"]?.GetValue<int>() ?? -1,
-                VisibilityParamKey = obj["visibilityParamKey"]?.GetValue<int>() ?? -1,
+                ColorParamKey = ParseOptionalParamKey(obj["colorParamKey"], "MinimapMarker.colorParamKey"),
+                SizeParamKey = ParseOptionalParamKey(obj["sizeParamKey"], "MinimapMarker.sizeParamKey"),
+                VisibilityParamKey = ParseOptionalParamKey(obj["visibilityParamKey"], "MinimapMarker.visibilityParamKey"),
                 OrientationMode = orientationMode,
                 OrientationParamKey = orientationParamKey,
                 OrientationOffsetRad = orientationOffsetRad,
@@ -1157,7 +1175,7 @@ namespace Ludots.Core.Presentation.Config
                 SoundAssetId = ResolveBehaviorAssetId(AssetKind.Sound, obj["soundAssetId"]),
                 Loop = obj["loop"]?.GetValue<bool>() ?? false,
                 Volume = obj["volume"]?.GetValue<float>() ?? 1f,
-                VolumeParamKey = obj["volumeParamKey"]?.GetValue<int>() ?? -1,
+                VolumeParamKey = ParseOptionalParamKey(obj["volumeParamKey"], "Sound.volumeParamKey"),
             };
         }
 
@@ -1171,7 +1189,7 @@ namespace Ludots.Core.Presentation.Config
             return new MaterialConfig
             {
                 BaseMaterialId = ResolveRegisteredId(_resolveMaterialId, obj["baseMaterialId"], "material"),
-                MaterialSwapParamKey = obj["materialSwapParamKey"]?.GetValue<int>() ?? -1,
+                MaterialSwapParamKey = ParseOptionalParamKey(obj["materialSwapParamKey"], "Material.materialSwapParamKey"),
                 SwapTable = ParseMaterialSwapTable(obj["swapTable"]),
             };
         }
@@ -1187,14 +1205,107 @@ namespace Ludots.Core.Presentation.Config
             {
                 SplineAssetId = ResolveBehaviorAssetId(AssetKind.Spline, obj["splineAssetId"]),
                 Usage = ParseEnum(obj["usage"]?.GetValue<string>(), SplineUsage.Render),
-                WidthParamKey = obj["widthParamKey"]?.GetValue<int>() ?? -1,
-                ColorParamKey = obj["colorParamKey"]?.GetValue<int>() ?? -1,
-                SpeedParamKey = obj["speedParamKey"]?.GetValue<int>() ?? -1,
-                ProgressParamKey = obj["progressParamKey"]?.GetValue<int>() ?? -1,
+                WidthParamKey = ParseOptionalParamKey(obj["widthParamKey"], "Spline.widthParamKey"),
+                ColorParamKey = ParseOptionalParamKey(obj["colorParamKey"], "Spline.colorParamKey"),
+                SpeedParamKey = ParseOptionalParamKey(obj["speedParamKey"], "Spline.speedParamKey"),
+                ProgressParamKey = ParseOptionalParamKey(obj["progressParamKey"], "Spline.progressParamKey"),
                 Loop = obj["loop"]?.GetValue<bool>() ?? false,
                 PingPong = obj["pingPong"]?.GetValue<bool>() ?? false,
                 WaypointEventId = obj["waypointEventId"]?.GetValue<int>() ?? 0,
             };
+        }
+
+        private static int ParseOptionalParamKey(JsonNode? node, string context)
+        {
+            return ParseParamKey(node, -1, context);
+        }
+
+        private static int ParseParamKey(JsonNode? node, int defaultValue, string context)
+        {
+            if (node == null)
+            {
+                return defaultValue;
+            }
+
+            if (node is JsonValue value)
+            {
+                if (value.TryGetValue<int>(out int numericId))
+                {
+                    return numericId;
+                }
+
+                if (value.TryGetValue<string>(out string? key))
+                {
+                    if (string.IsNullOrWhiteSpace(key))
+                    {
+                        throw new InvalidOperationException($"{context} must be a non-empty semantic string.");
+                    }
+
+                    key = key.Trim();
+                    if (string.Equals(key, "none", StringComparison.OrdinalIgnoreCase))
+                    {
+                        return -1;
+                    }
+
+                    return PerformerParamKeyRegistry.Register(key);
+                }
+            }
+
+            throw new InvalidOperationException($"{context} must be an int or non-empty semantic string.");
+        }
+
+        private static int ParseBehaviorSlot(JsonNode? node, int defaultValue, string context)
+        {
+            if (node == null)
+            {
+                return defaultValue;
+            }
+
+            if (node is JsonValue value)
+            {
+                if (value.TryGetValue<int>(out int numericId))
+                {
+                    return numericId;
+                }
+
+                if (value.TryGetValue<string>(out string? key))
+                {
+                    if (string.IsNullOrWhiteSpace(key))
+                    {
+                        throw new InvalidOperationException($"{context} must be a non-empty semantic string.");
+                    }
+
+                    return PerformerBehaviorSlotRegistry.Register(key.Trim());
+                }
+            }
+
+            throw new InvalidOperationException($"{context} must be an int or non-empty semantic string.");
+        }
+
+        private static class PerformerBehaviorSlotRegistry
+        {
+            private static readonly Dictionary<string, int> Slots = new(StringComparer.OrdinalIgnoreCase)
+            {
+                ["body"] = 0,
+                ["attachment"] = 1,
+                ["minimap"] = 2,
+                ["grounding"] = 3,
+                ["animator"] = 4,
+                ["material"] = 5,
+                ["sound"] = 6,
+                ["spline"] = 7,
+            };
+
+            public static int Register(string key)
+            {
+                if (!Slots.TryGetValue(key, out int slot))
+                {
+                    throw new InvalidOperationException(
+                        $"Unknown performer behavior slot '{key}'. Register a semantic slot in PerformerBehaviorSlotRegistry instead of relying on load order.");
+                }
+
+                return slot;
+            }
         }
 
         private static ThresholdMapping[] ParseThresholds(JsonNode? node)
@@ -1215,7 +1326,7 @@ namespace Ludots.Core.Presentation.Config
                 thresholds[i] = new ThresholdMapping
                 {
                     Threshold = obj["threshold"]?.GetValue<float>() ?? 0f,
-                    OutputParamKey = obj["outputParamKey"]?.GetValue<int>() ?? 0,
+                    OutputParamKey = ParseParamKey(obj["outputParamKey"], 0, $"thresholds[{i}].outputParamKey"),
                     OutputValue = obj["outputValue"]?.GetValue<float>() ?? 0f,
                 };
             }
