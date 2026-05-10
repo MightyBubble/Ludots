@@ -1,20 +1,19 @@
-# MassNavWebParityMod Boundary
+# Formal Navigation Foundation Boundary
 
-`MassNavWebParityMod` is the acceptance showcase shell for the large-scale navigation work. It exists to prove the Ludots formal chains end to end: config pipeline, template spawn, selection, order bridge, ECS writeback, performer presentation, minimap, diagnostics, and UAT evidence.
+`MassNavWebParityMod` is the current transition label for the large-scale navigation foundation work. It exists to prove the Ludots formal chains end to end: config pipeline, template spawn, selection, order bridge, ECS writeback, performer presentation, minimap, diagnostics, and UAT evidence.
 
 For a zero-context user guide, read `gitbook/reference/mass-nav-web-parity-user-book.md`. For the formal acceptance chain and UAT contract, read `gitbook/reference/mass-nav-web-parity-playground.md`.
 
-The reusable capability that should survive this showcase is named by responsibility, not by this mod:
+The reusable capability that should survive this transition is named by responsibility, not by this mod:
 
 - `MassFlow`: the high-performance SoA flow-field and crowd solver capability.
 - `MassNavigation`: the reusable navigation-facing integration layer that binds commands, groups, authored agents, and ECS state to a mass solver.
-- `MassNavWebParity`: the showcase acceptance shell, scenario authoring, visual proof, and parity/UAT harness.
 
-Do not rename runtime IDs, config files, components, or systems in this step. Existing `MassNav*` names stay in place until the core extraction lands in a dedicated change. This README is the boundary marker for that extraction.
+Do not rename runtime IDs, config files, components, or systems in this step. Existing `MassNav*` names stay in place while the foundation is being formalized. This README marks the transition boundary, not the terminal architecture.
 
 ## Configuration Boundary
 
-Current showcase-owned files stay under `assets/` and remain named for `MassNavWebParity` until the generic runtime exists.
+Current transition-owned files stay under `assets/` and keep their historical names only until the formal runtime is in place; those names are not the final architecture names.
 
 | Current file | Current owner | Future owner | Extraction note |
 | --- | --- | --- | --- |
@@ -56,7 +55,7 @@ These files are the first-pass map for moving behavior out of the showcase later
 
 ## Rules For Follow-Up Work
 
-- Keep `MassNavWebParity` as the acceptance mod name until the extracted runtime compiles and the showcase consumes it.
+- Keep the historical `MassNavWebParity` labels only as migration artifacts until the formal runtime is in place; do not treat them as the final architecture name.
 - Do not move camera, minimap, or order marker behavior as part of naming cleanup.
 - Do not add fallback paths for missing services, config, templates, performers, or map bounds.
 - Do not create a parallel config loader, registry, spawn path, selection runtime, order runtime, performer runtime, or minimap runtime.

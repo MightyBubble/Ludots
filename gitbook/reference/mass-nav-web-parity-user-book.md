@@ -1,10 +1,10 @@
-# MassNav Web Parity 用户教学书
+# 正式寻路基建用户教学书
 
-本文从零开始介绍 `MassNavWebParityMod`。读者不需要知道 Ludots 内部历史，只要知道这是一个用 Ludots 正式链路演示“大世界万人导航、框选、右键移动、避障和表现同步”的 showcase。
+本文从零开始介绍 Ludots 的正式寻路基建；当前由 `MassNavWebParityMod` 这个试验场承载验收。读者不需要知道 Ludots 内部历史，只要知道这是一个用 Ludots 正式链路演示“大世界万人导航、框选、右键移动、避障和表现同步”的系统。
 
 ## 你会得到什么
 
-MassNav Web Parity 展示的是一张 RTS 风格的大地图：
+这套正式寻路基建展示的是一张 RTS 风格的大地图：
 
 - 地图/board 决定世界边界。
 - 配置决定队伍、单位模板、障碍、热点、表现资源和导航调参。
@@ -12,7 +12,7 @@ MassNav Web Parity 展示的是一张 RTS 风格的大地图：
 - 单位以高性能 SoA solver 移动、避让、写回 ECS 位置。
 - 视觉由 performer 管线渲染，选中 marker、小地图 marker、生命条都不是临时绘制。
 
-当前它是“验收 showcase”，不是已经抽成通用产品的 `MassNavigation` SDK。你可以学习和改配置，但还不能只随便给任何 Mod 写一个模板就自动得到完整大世界万人导航。
+当前它仍由 `MassNavWebParity` 这个过渡标签承载，但终局目标不是保留这个名字，而是把能力正式收束成 `MassFlow` 和 `MassNavigation`。你可以学习和改配置，但这套能力的正式名字已经不是 WebParity，而是寻路基础设施本身。
 
 ## 五分钟跑起来
 
@@ -106,6 +106,24 @@ MassNav 配置里有两类值。第一类是真实数值，例如 `agentsPerTeam
 
 玩家不需要知道 selection key、performer scope、entity template id 或任何运行时内部集合。
 
+## 为什么会有 selection 通道名
+
+selection 通道名不是给玩家输入的，也不是给 Mod 作者手写第二套集合的。它只是加载器和规则系统用来指向同一条选择事实的正式语义名。
+
+- 玩家看不到它。
+- Mod 作者通常也不用直接写它，只需要写 `when: "PlayerPrimarySelection"` 这类面向业务的语义。
+- 引擎内部需要它，是为了把“谁被选中”这条事实稳定送到表现层，而不是让 MassNav 或任何 showcase 私有 system 自己猜。
+
+当前这条通道在代码里有一个 canonical 常量 `SelectionSetKeys.LivePrimary`。配置层看到的 `selection.live.primary` 是同一概念的作者名，不是第二套集合，也不是 fallback alias。
+
+术语对照很简单：
+
+| 层 | 名字 | 含义 |
+| --- | --- | --- |
+| 玩家 | 不暴露 | 玩家不输入这类内部名 |
+| Mod 作者 | `selection.live.primary` | 配置里用的语义名，指向主选择通道 |
+| 引擎内部 | `SelectionSetKeys.LivePrimary` | 代码里的 canonical key |
+
 ## Mod 作者配置：单位选择反馈
 
 Mod 作者也不需要声明“当前框选集合”。当前框选集合由 `CoreInputMod` 和 `SelectionRuntime` 维护，是引擎运行时状态，不是 Mod 的业务配置对象。
@@ -115,12 +133,12 @@ Mod 作者要配置的是“哪些实体能被选中”和“这些实体被选�
 - 在实体模板里声明 `SelectionSelectableTag` 和 `SelectionSelectableState`。
 - 在实体模板里声明正式位置/表现交接组件，例如 `WorldPositionCm`、`FacingDirection`、`VisualHeightmapSampleState`。
 - 在 `Presentation/performers.json` 中声明 selection marker performer，例如 mesh、材质、尺寸、offset、render path 和 mobility。
-- 在 selection feedback 配置中声明：当实体被玩家主选择选中时显示哪个 marker，取消选择时由引擎清理。
+- 在 selection feedback 规则中声明：当实体被玩家主选择选中时显示哪个 marker，取消选择时由引擎清理。
 - light/heavy 或其它类型差异应来自模板、tag、profile 或规则条件，不由 feature system 猜。
 
 目标配置形态如下。注意这是下一步要落地的正式 authoring contract；如果当前代码还没有完全支持某个字段，应该补 Core 基建，而不是让 MassNav 再写一个私有 system 绕过去。
 
-作者输入的是“这个单位被玩家主选择选中时，用哪个 performer 做反馈”。作者不输入、不创建、不管理运行时的框选集合。
+作者输入的是“这个单位被玩家主选择选中时，用哪个 performer 做反馈”。作者不输入、不创建、不管理运行时的框选集合；那是 `SelectionRuntime` 的职责。
 
 ```json
 {
@@ -178,6 +196,29 @@ Mod 作者要配置的是“哪些实体能被选中”和“这些实体被选�
 
 这部分给引擎和 Mod 开发者看，玩家不需要读。
 
+### 谁在用这条链路
+
+| 层/系统 | 做什么 | 是否必要 |
+| --- | --- | --- |
+| `CoreInputMod` / `SelectionRuntime` | 维护选择 SSOT 和成员变化 | 必须 |
+| `SelectionPresentationEventSystem` | 把 selection mutation 变成通用 presentation event | 必须 |
+| `PerformerRuleSystem` | 只做事件、条件和命令匹配 | 必须 |
+| `PerformerRuntimeSystem` | 执行 batch create / scoped destroy | 必须 |
+| `MassNavWebParityMod` | 只 author marker definition 和 rules | 必须，但不拥有 lifecycle |
+
+```mermaid
+flowchart LR
+    Player["玩家框选 / 取消选择"] --> Input["CoreInputMod"]
+    Input --> Runtime["SelectionRuntime\n选择 SSOT"]
+    Runtime --> Bridge["SelectionPresentationEventSystem\nselection mutation bridge"]
+    Bridge --> Event["SelectionMemberAdded / Removed"]
+    Event --> Rule["PerformerRuleSystem"]
+    Rule --> Runtime2["PerformerRuntimeSystem"]
+    Runtime2 --> Marker["scoped selection marker performer"]
+
+    MassNav["MassNavWebParityMod"] -. authoring only .-> Marker
+```
+
 目标链路是：
 
 ```text
@@ -193,7 +234,7 @@ CoreInputMod
 
 职责边界：
 
-- `SelectionRuntime` 是选择集合 SSOT。它只记录选择状态和成员变化，不知道 MassNav。
+- `SelectionRuntime` 是选择集合 SSOT。它只记录选择状态和成员变化，不知道 MassNav。这里唯一的正式通道名是 `SelectionSetKeys.LivePrimary`；`selection.live.primary` 只是同一概念在配置层的作者名。
 - presentation selection bridge 只把通用 selection mutation 转成通用 presentation event，不创建 MassNav performer。
 - `PerformerRuleSystem` 只按配置匹配事件、条件和命令，不内置 showcase 名称。
 - `PerformerRuntimeSystem` 消费命令；同一帧同 definition、entity anchor、无 parent 的批量创建可以合并走 `CreateEntityAnchoredRootBatch`。
@@ -215,6 +256,8 @@ CoreInputMod
   }
 }
 ```
+
+`selection.live.primary` 是这条通道在 authoring 层的语义名；loader 会把它编译成 `SelectionSetKeys.LivePrimary`。它不是第二套集合，也不是兼容别名。
 
 禁止事项：
 
@@ -355,13 +398,13 @@ reset 后表现异常：
 
 当前 showcase 已经复用正式链路：`ConfigPipeline`、template spawn、`SelectionRuntime`、`OrderBuffer`、`OrderTypeRegistry`、performer、minimap 和 presentation lifecycle。
 
-当前还不是通用配置产品的原因：
+当前仍在向正式寻路基建收口的工程边界：
 
 - solver cache/grid/hash 仍固定在 C# 常量上。
 - spawn/formation layout 仍有 showcase 场景逻辑。
 - strategic/tactical camera 行为还有 showcase-coded reset 逻辑。
 - team relationship 会写入全局 `TeamManager`，需要后续正式分层。
-- 通用“只配置 entity 模板就接入万人导航”的 contract 尚未抽到 `MassNavigation`。
+- 通用“只配置 entity 模板就接入万人导航”的 contract 仍需要继续抽到 `MassNavigation`。
 
 因此，使用者应把它当作高性能大世界导航的学习和验收书，而不是最终公共 API。
 

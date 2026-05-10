@@ -1,6 +1,6 @@
-# MassNavWebParity 正式链路手册
+# 正式寻路基建链路手册
 
-`MassNavWebParityMod` 是当前 massflow 方向的唯一 SSOT showcase。它保留最高性能的 SoA massflow solver，但 gameplay 真相、选择、命令、表现、小地图都必须走 Ludots 正式链路。
+`MassNavWebParityMod` 是当前承载验收的试验场。它保留最高性能的 SoA massflow solver，但 gameplay 真相、选择、命令、表现、小地图都必须走 Ludots 正式链路，最终正式化为寻路基建。
 
 这不是旧 `Navigation2DPlaygroundMod` 的延续，也不是 primitive draw demo。任何缺配置、缺服务、缺 template、缺 performer、小地图未注册、容量不足、board/world 不一致，都应该 fail-fast，而不是 fallback 到另一条路径。
 
@@ -42,7 +42,7 @@ ConfigPipeline
 - `ConfigPipeline`：加载 mod config、template、performer、game presentation capacity。
 - `RuntimeEntitySpawnQueue`：所有 MassNav agent、blocker、hotspot marker 都通过 template spawn，不允许手写 `world.Create(...)` 拼表现组件。
 - `RuntimeEntitySpawnReceiptQueue`：MassNav 只消费自己的 receipt channel，不把共享队列当私有队列。
-- `SelectionRuntime`：框选真相是 `SelectionSetKeys.LivePrimary`，这是选择集合的正式 key，不是兼容别名。
+- `SelectionRuntime`：框选真相是 `SelectionSetKeys.LivePrimary`；`selection.live.primary` 只是 authoring 层的语义名，不是第二套集合，也不是兼容别名。
 - `OrderBuffer`：右键移动进入 `massNavMove`，再绑定到底层 group command。
 - `Team` / `TeamEntityLookup` / `TeamManager`：队伍 id、关系、避让语义来自现有 team/relationship 基建。
 - `WorldPositionCm` / `FacingDirection`：ECS 中的正式位置和朝向是 gameplay/presentation 交接点。
@@ -143,11 +143,11 @@ MassNav agent、blocker、hotspot marker 必须通过 performer 创建：
 
 ## 命名与抽取边界
 
-`MassNavWebParityMod` 是验收 showcase 壳，不是通用能力的最终命名。它负责证明正式链路完整可用：配置、template spawn、selection、order、ECS 写回、performer、小地图、诊断 HUD 和 UAT evidence。后续可复用能力按职责命名：
+`MassNavWebParityMod` 是过渡试验场，不是正式命名的终点。它负责证明正式链路完整可用：配置、template spawn、selection、order、ECS 写回、performer、小地图、诊断 HUD 和 UAT evidence。最终可复用能力按职责命名：
 
 - `MassFlow`：高性能 SoA flow-field / crowd solver、flow rebuild、arrival、avoidance、cadence 等热路径能力。
 - `MassNavigation`：面向 gameplay 的通用导航集成层，负责 command/group/agent binding、selection/order adapter、ECS state sync 和 runtime facade。
-- `MassNavWebParity`：验收壳、场景 authoring、表现证明、调参 UI 和 evidence harness。
+- `MassNavWebParity`：当前过渡标签，用于迁移和验收对照，不应成为最终架构名。
 
 本阶段不重命名现有 runtime id、config 文件、component、system 或 asset id。现有 `MassNav*` 命名在抽 core 前保持稳定，避免把验收清理和行为迁移混在同一个变更里。
 
@@ -155,17 +155,17 @@ MassNav agent、blocker、hotspot marker 必须通过 performer 创建：
 
 | 当前配置 | 当前归属 | 后续归属 | 边界 |
 | --- | --- | --- | --- |
-| `assets/MassNavWebParityConfig.json` | showcase 壳 | 拆分为 `MassFlow` tuning + showcase scenario config | solver window、cadence、flow、arrival、avoidance、crowd semantics 可复用；scenario、teams、obstacles、hotspots、presentation id 是验收 authoring。 |
-| `assets/GAS/order_types.json` | showcase 壳 | `MassNavigation` order contract + showcase binding | `massNavMove` 证明正式 `OrderBuffer` 链路；通用 order contract 不应依赖 WebParity 场景。 |
-| `assets/Entities/templates.json` | showcase 壳 | showcase 壳 | concrete agent/blocker/hotspot template 是验收 authoring；通用层只定义 required component contract。 |
-| `assets/Presentation/performers.json` | showcase 壳 | showcase 壳 | performer、style、marker 和视觉证明留在 mod 内；通用层只依赖正式 presentation handoff。 |
-| `assets/Maps/mass_nav_web_parity.json` | showcase 壳 | showcase 壳 | board/world bounds 仍由 map 持有；通用 runtime 只通过 core service 读取。 |
+| `assets/MassNavWebParityConfig.json` | 当前过渡承载 | 拆分为 `MassFlow` tuning + `MassNavigation` scenario config | solver window、cadence、flow、arrival、avoidance、crowd semantics 可复用；scenario、teams、obstacles、hotspots、presentation id 是场景 authoring。 |
+| `assets/GAS/order_types.json` | 当前过渡承载 | `MassNavigation` order contract + 场景绑定 | `massNavMove` 证明正式 `OrderBuffer` 链路；通用 order contract 不应依赖当前试验场名字。 |
+| `assets/Entities/templates.json` | 当前过渡承载 | 场景 authoring | concrete agent/blocker/hotspot template 是场景输入；通用层只定义 required component contract。 |
+| `assets/Presentation/performers.json` | 当前过渡承载 | 场景 authoring | performer、style、marker 和视觉证明留在 mod 内；通用层只依赖正式 presentation handoff。 |
+| `assets/Maps/mass_nav_web_parity.json` | 当前过渡承载 | 场景 authoring | board/world bounds 仍由 map 持有；通用 runtime 只通过 core service 读取。 |
 
 ### 后续抽取映射
 
 | 当前文件 | 后续目标 | 边界 |
 | --- | --- | --- |
-| `Runtime/MassNavWebParitySimState.cs` | `MassFlow` solver state | SoA grid/cache、flow rebuild、obstacle cache、pair avoidance 和 solver hot path；不得依赖 showcase UI/表现。 |
+| `Runtime/MassNavWebParitySimState.cs` | `MassFlow` solver state | SoA grid/cache、flow rebuild、obstacle cache、pair avoidance 和 solver hot path；不得依赖场景 UI/表现。 |
 | `Runtime/MassNavSimulationRuntime.cs` | `MassNavigation` runtime facade | agent/group/command/sync cadence/diagnostics 的可复用 runtime 外壳；只挂正式 core service。 |
 | `Runtime/MassNavFlowTuning.cs` | `MassFlow` config | flow-field scheduler 和 rebuild tuning。 |
 | `Runtime/MassNavArrivalTuning.cs` | `MassFlow` config | arrival tuning。 |
@@ -174,20 +174,20 @@ MassNav agent、blocker、hotspot marker 必须通过 performer 创建：
 | `Runtime/MassNavGroupRuntime.cs` | `MassNavigation` groups | group command state 和 formation target ownership。 |
 | `Runtime/MassNavCommandRuntime.cs` | `MassNavigation` commands | command intent、lifecycle 和 dirty state。 |
 | `Runtime/MassNavAgentState.cs` | `MassNavigation` agent index | ECS entity 到 solver agent 的 binding，以及 selection/order metadata。 |
-| `Runtime/MassNavAgentProfileConfig.cs` | 拆分 config | movement/mass profile schema 可通用；具体 profile authoring 留在 showcase。 |
-| `Runtime/MassNavAuthoringContract.cs` | 拆分 contract | required-component validation 可进入 `MassNavigation`；performer id 与 showcase template 校验留在壳内。 |
+| `Runtime/MassNavAgentProfileConfig.cs` | 拆分 config | movement/mass profile schema 可通用；具体 profile authoring 留在当前过渡承载内。 |
+| `Runtime/MassNavAuthoringContract.cs` | 拆分 contract | required-component validation 可进入 `MassNavigation`；performer id 与场景模板校验留在当前过渡承载内。 |
 | `Systems/MassNavCommandApplySystem.cs` | `MassNavigation` system | 把通用 command 应用到 runtime group 和 solver state。 |
 | `Systems/MassNavOrderBridgeSystem.cs` | `MassNavigation` order adapter | 从正式 `OrderBuffer` 桥接到通用 mass-navigation command intent。 |
-| `Systems/MassNavCommandBridgeSystem.cs` | showcase 或薄 adapter | 玩家输入 command collection 先保持壳内，除非形成可复用 input adapter。 |
-| `Systems/MassNavSpawnReceiptBindingSystem.cs` | 拆分 system | spawn receipt 到 agent binding 可通用；template/profile/style 假设留在 showcase。 |
+| `Systems/MassNavCommandBridgeSystem.cs` | 当前过渡承载或薄 adapter | 玩家输入 command collection 先保持本场景内，除非形成可复用 input adapter。 |
+| `Systems/MassNavSpawnReceiptBindingSystem.cs` | 拆分 system | spawn receipt 到 agent binding 可通用；template/profile/style 假设留在当前过渡承载内。 |
 | `Systems/MassNavAgentMetadataSyncSystem.cs` | `MassNavigation` sync | ECS/team/profile metadata 同步到 runtime。 |
 | `Systems/MassNavFormationSystem.cs` | `MassNavigation` formation | formation target allocation 和 group arrangement；若依赖 UI/scenario 则留在壳内。 |
 | `Systems/MassNavSelectionSyncSystem.cs` | `MassNavigation` selection adapter | 正式 `SelectionRuntime` 到 agent selected flags 的桥接。 |
 | `assets/Presentation/performers.json` selection rules | showcase presentation authoring | Selection marker 是 performer rule 驱动的 scoped performer。MassNav 只 author marker definition 和 light/heavy rules，不拥有 marker 生命周期 system。 |
-| `Systems/MassNavPanelPresentationSystem.cs` | showcase 壳 | 调参 UI presentation。 |
-| `Systems/MassNavHudPresentationSystem.cs` | showcase 壳 | 诊断 HUD 和 evidence 可见性。 |
-| `Systems/MassNavScenarioBootstrap.cs` | showcase 壳 | scenario spawn authoring。 |
-| `UI/MassNavPlaygroundPanelController.cs` | showcase 壳 | 调参 UI 证明 runtime controls，不定义 core API。 |
+| `Systems/MassNavPanelPresentationSystem.cs` | 当前过渡承载 | 调参 UI presentation。 |
+| `Systems/MassNavHudPresentationSystem.cs` | 当前过渡承载 | 诊断 HUD 和 evidence 可见性。 |
+| `Systems/MassNavScenarioBootstrap.cs` | 当前过渡承载 | scenario spawn authoring。 |
+| `UI/MassNavPlaygroundPanelController.cs` | 当前过渡承载 | 调参 UI 证明 runtime controls，不定义 core API。 |
 
 ## 禁止项
 
