@@ -90,11 +90,11 @@
       }
     },
     {
-      "name": "mass_nav_web_parity",
+      "name": "mass_navigation",
       "target": {
         "type": "path",
-        "value": "mods/showcases/navigation/MassNavWebParityMod",
-        "projectPath": "MassNavWebParityMod.csproj"
+        "value": "mods/capabilities/navigation/MassNavigationMod",
+        "projectPath": "MassNavigationMod.csproj"
       }
     }
   ],

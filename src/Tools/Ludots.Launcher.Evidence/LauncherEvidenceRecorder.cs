@@ -40,8 +40,8 @@ using Ludots.Platform.Abstractions;
 using Ludots.UI;
 using Ludots.UI.HtmlEngine.Markup;
 using Ludots.UI.Skia;
-using MassNavWebParityMod;
-using MassNavWebParityMod.Runtime;
+using MassNavigationMod;
+using MassNavigationMod.Runtime;
 using Navigation2DPlaygroundMod;
 using Navigation2DPlaygroundMod.Systems;
 using Raylib_cs;
@@ -87,17 +87,17 @@ public static class LauncherEvidenceRecorder
     private static readonly QueryDescription NavFlowGoalQuery = new QueryDescription()
         .WithAll<NavFlowGoal2D>();
 
-    private static readonly QueryDescription MassNavAgentQuery = new QueryDescription()
-        .WithAll<MassNavAgentTag, MassNavAgentIndex, WorldPositionCm>();
+    private static readonly QueryDescription MassNavigationAgentQuery = new QueryDescription()
+        .WithAll<MassNavigationAgentTag, MassNavigationAgentIndex, WorldPositionCm>();
 
-    private static readonly QueryDescription MassNavControllableQuery = new QueryDescription()
-        .WithAll<MassNavAgentTag, MassNavAgentIndex, MassNavControllable, Team, OrderBuffer, WorldPositionCm, SelectionSelectableTag, PresentationOwnerHasPerformerPayload>();
+    private static readonly QueryDescription MassNavigationControllableQuery = new QueryDescription()
+        .WithAll<MassNavigationAgentTag, MassNavigationAgentIndex, MassNavigationControllable, Team, OrderBuffer, WorldPositionCm, SelectionSelectableTag, PresentationOwnerHasPerformerPayload>();
 
-    private static readonly QueryDescription MassNavBlockerQuery = new QueryDescription()
-        .WithAll<MassNavBlocker, MassNavBlockerProfile, WorldPositionCm, PresentationOwnerHasPerformerPayload>();
+    private static readonly QueryDescription MassNavigationBlockerQuery = new QueryDescription()
+        .WithAll<MassNavigationBlocker, MassNavigationBlockerProfile, WorldPositionCm, PresentationOwnerHasPerformerPayload>();
 
-    private static readonly QueryDescription MassNavHotspotMarkerQuery = new QueryDescription()
-        .WithAll<MassNavHotspotMarker, WorldPositionCm, PresentationOwnerHasPerformerPayload>();
+    private static readonly QueryDescription MassNavigationHotspotMarkerQuery = new QueryDescription()
+        .WithAll<MassNavigationHotspotMarker, WorldPositionCm, PresentationOwnerHasPerformerPayload>();
 
     private const float DeltaTime = 1f / 60f;
     private const int DefaultWidth = 1920;
@@ -108,13 +108,13 @@ public static class LauncherEvidenceRecorder
     private const int RoadImageHeight = 900;
     private const int NavImageWidth = 1600;
     private const int NavImageHeight = 900;
-    private const int MassNavImageWidth = 1600;
-    private const int MassNavImageHeight = 900;
-    private const int MassNavInitialSettleTicks = 20;
-    private const int MassNavCommandSettleTicks = 90;
-    private const int MassNavRemoteSettleTicks = 20;
-    private const int MassNavReturnSettleTicks = 20;
-    private const int MassNavSelectionSampleCount = 128;
+    private const int MassNavigationImageWidth = 1600;
+    private const int MassNavigationImageHeight = 900;
+    private const int MassNavigationInitialSettleTicks = 20;
+    private const int MassNavigationCommandSettleTicks = 90;
+    private const int MassNavigationRemoteSettleTicks = 20;
+    private const int MassNavigationReturnSettleTicks = 20;
+    private const int MassNavigationSelectionSampleCount = 128;
     private const int NavAcceptanceAgentsPerTeam = 64;
     private const int NavFinalTick = 720;
     private const int NavTraceStrideTicks = 30;
@@ -169,7 +169,7 @@ public static class LauncherEvidenceRecorder
             EvidenceScenario.RoadNetworkShowcaseCommandAndChunking => Task.FromResult(RecordRoadNetworkShowcase(request)),
             EvidenceScenario.ChunkStreamingShowcaseCameraWindows => Task.FromResult(RecordChunkStreamingShowcase(request)),
             EvidenceScenario.Navigation2DPlaygroundTimedAvoidance => Task.FromResult(RecordNavigation2DTimedAvoidance(request)),
-            EvidenceScenario.MassNavWebParityLargeWorld => Task.FromResult(RecordMassNavWebParityLargeWorld(request)),
+            EvidenceScenario.MassNavigationLargeWorld => Task.FromResult(RecordMassNavigationLargeWorld(request)),
             _ => throw new InvalidOperationException($"No recording scenario is registered for root mods: {string.Join(", ", request.Plan.RootModIds)}")
         };
     }
@@ -186,9 +186,9 @@ public static class LauncherEvidenceRecorder
             return EvidenceScenario.Navigation2DPlaygroundTimedAvoidance;
         }
 
-        if (plan.RootModIds.Any(id => string.Equals(id, "MassNavWebParityMod", StringComparison.OrdinalIgnoreCase)))
+        if (plan.RootModIds.Any(id => string.Equals(id, "MassNavigationMod", StringComparison.OrdinalIgnoreCase)))
         {
-            return EvidenceScenario.MassNavWebParityLargeWorld;
+            return EvidenceScenario.MassNavigationLargeWorld;
         }
 
         if (plan.RootModIds.Any(id => string.Equals(id, "RoadNetworkShowcaseMod", StringComparison.OrdinalIgnoreCase)))
@@ -1944,66 +1944,66 @@ public static class LauncherEvidenceRecorder
         }
     }
 
-    private static LauncherRecordingResult RecordMassNavWebParityLargeWorld(LauncherRecordingRequest request)
+    private static LauncherRecordingResult RecordMassNavigationLargeWorld(LauncherRecordingRequest request)
     {
         string screensDir = Path.Combine(request.OutputDirectory, "screens");
         Directory.CreateDirectory(screensDir);
 
-        var timeline = new List<MassNavSnapshot>();
+        var timeline = new List<MassNavigationSnapshot>();
         var captureFrames = new List<CaptureFrame>();
         var frameTimesMs = new List<double>();
 
         using var runtime = CreateRuntime(request.Plan, request.BootstrapPath);
-        if (!string.Equals(runtime.Config.StartupMapId, MassNavWebParityIds.MapId, StringComparison.OrdinalIgnoreCase))
+        if (!string.Equals(runtime.Config.StartupMapId, MassNavigationIds.MapId, StringComparison.OrdinalIgnoreCase))
         {
-            runtime.Engine.LoadMap(MassNavWebParityIds.MapId);
+            runtime.Engine.LoadMap(MassNavigationIds.MapId);
         }
 
         PresentationTimingDiagnostics timings = runtime.Engine.GetService(CoreServiceKeys.PresentationTimingDiagnostics)
-            ?? throw new InvalidOperationException("MassNavWebParity UAT requires PresentationTimingDiagnostics.");
+            ?? throw new InvalidOperationException("MassNavigation UAT requires PresentationTimingDiagnostics.");
         timings.SystemBreakdownEnabled = true;
 
-        Tick(runtime, MassNavInitialSettleTicks, frameTimesMs);
-        MassNavSimulationRuntime simulation = runtime.Engine.GetService(MassNavWebParityKeys.SimulationRuntime)
-            ?? throw new InvalidOperationException("MassNavWebParity UAT requires MassNavSimulationRuntime.");
-        WaitForMassNavScenario(runtime, simulation, frameTimesMs, maxTicks: 240);
-        CaptureMassNavSnapshot(runtime, simulation, screensDir, frameTimesMs, timeline, captureFrames, 0, "000_boot", captureImage: true);
+        Tick(runtime, MassNavigationInitialSettleTicks, frameTimesMs);
+        MassNavigationSimulationRuntime simulation = runtime.Engine.GetService(MassNavigationKeys.SimulationRuntime)
+            ?? throw new InvalidOperationException("MassNavigation UAT requires MassNavigationSimulationRuntime.");
+        WaitForMassNavigationScenario(runtime, simulation, frameTimesMs, maxTicks: 240);
+        CaptureMassNavigationSnapshot(runtime, simulation, screensDir, frameTimesMs, timeline, captureFrames, 0, "000_boot", captureImage: true);
 
-        Entity[] selected = SelectFirstMassNavControllables(runtime.Engine, simulation, MassNavSelectionSampleCount);
+        Entity[] selected = SelectFirstMassNavigationControllables(runtime.Engine, simulation, MassNavigationSelectionSampleCount);
         Tick(runtime, 3, frameTimesMs);
         Vector2 commandTarget = new(
             simulation.FlowWorkAreaCenterXCm + (simulation.SolverWindowWidthCm * 0.34f),
             simulation.FlowWorkAreaCenterYCm + (simulation.SolverWindowHeightCm * 0.18f));
-        SubmitMassNavMoveOrder(runtime.Engine, simulation, selected, commandTarget);
-        Tick(runtime, MassNavCommandSettleTicks, frameTimesMs);
-        CaptureMassNavSnapshot(runtime, simulation, screensDir, frameTimesMs, timeline, captureFrames, MassNavCommandSettleTicks, "001_selection_order", captureImage: true);
+        SubmitMassNavigationMoveOrder(runtime.Engine, simulation, selected, commandTarget);
+        Tick(runtime, MassNavigationCommandSettleTicks, frameTimesMs);
+        CaptureMassNavigationSnapshot(runtime, simulation, screensDir, frameTimesMs, timeline, captureFrames, MassNavigationCommandSettleTicks, "001_selection_order", captureImage: true);
 
         Vector2 originalCameraTarget = runtime.Engine.GameSession.Camera.State.TargetCm;
-        MassNavHotZoneConfig remoteZone = ResolveRemoteHotZone(simulation);
+        MassNavigationHotZoneConfig remoteZone = ResolveRemoteHotZone(simulation);
         MinimapRuntime minimap = runtime.Engine.GetService(CoreServiceKeys.MinimapRuntime)
-            ?? throw new InvalidOperationException("MassNavWebParity UAT requires core MinimapRuntime.");
+            ?? throw new InvalidOperationException("MassNavigation UAT requires core MinimapRuntime.");
         minimap.JumpCameraTo(runtime.Engine, new Vector2(remoteZone.CenterXCm, remoteZone.CenterYCm));
-        Tick(runtime, MassNavRemoteSettleTicks, frameTimesMs);
-        CaptureMassNavSnapshot(runtime, simulation, screensDir, frameTimesMs, timeline, captureFrames, MassNavCommandSettleTicks + MassNavRemoteSettleTicks, "002_remote_minimap_jump", captureImage: true);
+        Tick(runtime, MassNavigationRemoteSettleTicks, frameTimesMs);
+        CaptureMassNavigationSnapshot(runtime, simulation, screensDir, frameTimesMs, timeline, captureFrames, MassNavigationCommandSettleTicks + MassNavigationRemoteSettleTicks, "002_remote_minimap_jump", captureImage: true);
 
         minimap.JumpCameraTo(runtime.Engine, originalCameraTarget);
-        Tick(runtime, MassNavReturnSettleTicks, frameTimesMs);
-        CaptureMassNavSnapshot(runtime, simulation, screensDir, frameTimesMs, timeline, captureFrames, MassNavCommandSettleTicks + MassNavRemoteSettleTicks + MassNavReturnSettleTicks, "003_return_original_area", captureImage: true);
+        Tick(runtime, MassNavigationReturnSettleTicks, frameTimesMs);
+        CaptureMassNavigationSnapshot(runtime, simulation, screensDir, frameTimesMs, timeline, captureFrames, MassNavigationCommandSettleTicks + MassNavigationRemoteSettleTicks + MassNavigationReturnSettleTicks, "003_return_original_area", captureImage: true);
 
-        WriteTimelineSheet("MassNavWebParity performer + minimap large-world UAT", captureFrames, screensDir, Path.Combine(screensDir, "timeline.png"));
+        WriteTimelineSheet("MassNavigation performer + minimap large-world UAT", captureFrames, screensDir, Path.Combine(screensDir, "timeline.png"));
 
-        MassNavAcceptanceResult acceptance = EvaluateMassNavAcceptance(timeline, simulation);
+        MassNavigationAcceptanceResult acceptance = EvaluateMassNavigationAcceptance(timeline, simulation);
         string battleReportPath = Path.Combine(request.OutputDirectory, "battle-report.md");
         string tracePath = Path.Combine(request.OutputDirectory, "trace.jsonl");
         string pathPath = Path.Combine(request.OutputDirectory, "path.mmd");
         string visibleChecklistPath = Path.Combine(request.OutputDirectory, "visible-checklist.md");
         string summaryPath = Path.Combine(request.OutputDirectory, "summary.json");
 
-        File.WriteAllText(battleReportPath, BuildMassNavBattleReport(request, timeline, captureFrames, frameTimesMs, acceptance));
-        File.WriteAllText(tracePath, BuildMassNavTraceJsonl(request.Plan.AdapterId, timeline));
-        File.WriteAllText(pathPath, BuildMassNavPathMermaid());
-        File.WriteAllText(visibleChecklistPath, BuildMassNavVisibleChecklist(captureFrames));
-        File.WriteAllText(summaryPath, BuildMassNavSummaryJson(request, acceptance, timeline));
+        File.WriteAllText(battleReportPath, BuildMassNavigationBattleReport(request, timeline, captureFrames, frameTimesMs, acceptance));
+        File.WriteAllText(tracePath, BuildMassNavigationTraceJsonl(request.Plan.AdapterId, timeline));
+        File.WriteAllText(pathPath, BuildMassNavigationPathMermaid());
+        File.WriteAllText(visibleChecklistPath, BuildMassNavigationVisibleChecklist(captureFrames));
+        File.WriteAllText(summaryPath, BuildMassNavigationSummaryJson(request, acceptance, timeline));
 
         if (!acceptance.Success)
         {
@@ -2021,14 +2021,14 @@ public static class LauncherEvidenceRecorder
             acceptance.NormalizedSignature);
     }
 
-    private static void WaitForMassNavScenario(
+    private static void WaitForMassNavigationScenario(
         RecordingRuntime runtime,
-        MassNavSimulationRuntime simulation,
+        MassNavigationSimulationRuntime simulation,
         List<double> frameTimesMs,
         int maxTicks)
     {
         int expectedAgents = checked(simulation.AgentsPerTeam * simulation.TeamCount);
-        int expectedBlockers = simulation.WebParity.ObstacleCount;
+        int expectedBlockers = simulation.MassFlow.ObstacleCount;
         int expectedMarkers = simulation.HotZones.Length;
         for (int i = 0; i < maxTicks; i++)
         {
@@ -2043,24 +2043,24 @@ public static class LauncherEvidenceRecorder
         }
 
         throw new InvalidOperationException(
-            $"MassNavWebParity scenario did not finish binding spawn receipts: agents={simulation.AgentState.TotalAgents}/{expectedAgents}, blockers={simulation.AgentState.BlockerCount}/{expectedBlockers}, markers={simulation.AgentState.WorldMarkerCount}/{expectedMarkers}.");
+            $"MassNavigation scenario did not finish binding spawn receipts: agents={simulation.AgentState.TotalAgents}/{expectedAgents}, blockers={simulation.AgentState.BlockerCount}/{expectedBlockers}, markers={simulation.AgentState.WorldMarkerCount}/{expectedMarkers}.");
     }
 
-    private static Entity[] SelectFirstMassNavControllables(GameEngine engine, MassNavSimulationRuntime simulation, int requestedCount)
+    private static Entity[] SelectFirstMassNavigationControllables(GameEngine engine, MassNavigationSimulationRuntime simulation, int requestedCount)
     {
         SelectionRuntime selection = engine.GetService(CoreServiceKeys.SelectionRuntime)
-            ?? throw new InvalidOperationException("MassNavWebParity UAT requires SelectionRuntime.");
+            ?? throw new InvalidOperationException("MassNavigation UAT requires SelectionRuntime.");
 
         Entity owner = engine.GetService(CoreServiceKeys.LocalPlayerEntity);
         if (owner == Entity.Null || !engine.World.IsAlive(owner))
         {
-            throw new InvalidOperationException("MassNavWebParity UAT requires a live LocalPlayerEntity.");
+            throw new InvalidOperationException("MassNavigation UAT requires a live LocalPlayerEntity.");
         }
 
         int count = Math.Min(requestedCount, simulation.AgentState.ControllableAgents.Count);
         if (count <= 0)
         {
-            throw new InvalidOperationException("MassNavWebParity UAT found no controllable MassNav agents.");
+            throw new InvalidOperationException("MassNavigation UAT found no controllable MassNavigation agents.");
         }
 
         var selected = new Entity[count];
@@ -2071,39 +2071,39 @@ public static class LauncherEvidenceRecorder
 
         if (!selection.ReplaceSelection(owner, SelectionSetKeys.LivePrimary, selected))
         {
-            throw new InvalidOperationException("MassNavWebParity UAT failed to write SelectionRuntime LivePrimary selection.");
+            throw new InvalidOperationException("MassNavigation UAT failed to write SelectionRuntime LivePrimary selection.");
         }
 
         return selected;
     }
 
-    private static void SubmitMassNavMoveOrder(GameEngine engine, MassNavSimulationRuntime simulation, ReadOnlySpan<Entity> selected, Vector2 targetCm)
+    private static void SubmitMassNavigationMoveOrder(GameEngine engine, MassNavigationSimulationRuntime simulation, ReadOnlySpan<Entity> selected, Vector2 targetCm)
     {
         if (selected.Length <= 0)
         {
-            throw new InvalidOperationException("MassNavWebParity UAT requires a non-empty selection before issuing order.");
+            throw new InvalidOperationException("MassNavigation UAT requires a non-empty selection before issuing order.");
         }
 
         if (!simulation.ContainsWorldPoint(targetCm.X, targetCm.Y))
         {
-            throw new InvalidOperationException($"MassNavWebParity UAT target is outside configured world bounds: {FormatPoint(targetCm)}.");
+            throw new InvalidOperationException($"MassNavigation UAT target is outside configured world bounds: {FormatPoint(targetCm)}.");
         }
 
         if (engine.GetService(CoreServiceKeys.OrderBufferSystem) is not OrderBufferSystem orderBufferSystem)
         {
-            throw new InvalidOperationException("MassNavWebParity UAT requires OrderBufferSystem.");
+            throw new InvalidOperationException("MassNavigation UAT requires OrderBufferSystem.");
         }
 
         if (engine.GetService(CoreServiceKeys.OrderTypeRegistry) is not Ludots.Core.Gameplay.GAS.Orders.OrderTypeRegistry registry ||
-            !registry.TryGetId(MassNavOrderKeys.Move, out int moveOrderTypeId))
+            !registry.TryGetId(MassNavigationOrderKeys.Move, out int moveOrderTypeId))
         {
-            throw new InvalidOperationException($"MassNavWebParity UAT requires order type '{MassNavOrderKeys.Move}'.");
+            throw new InvalidOperationException($"MassNavigation UAT requires order type '{MassNavigationOrderKeys.Move}'.");
         }
 
         SelectionContextRuntime.TryGetCurrentContainer(engine.World, engine.GlobalContext, out Entity selectionContainer);
         if (selectionContainer == Entity.Null)
         {
-            throw new InvalidOperationException("MassNavWebParity UAT requires a current SelectionRuntime container.");
+            throw new InvalidOperationException("MassNavigation UAT requires a current SelectionRuntime container.");
         }
 
         int sharedOrderId = simulation.AllocateSharedOrderId();
@@ -2125,7 +2125,7 @@ public static class LauncherEvidenceRecorder
                 SubmitMode = OrderSubmitMode.Immediate,
                 Args = new OrderArgs
                 {
-                    I0 = (int)MassNavFormationMode.Square,
+                    I0 = (int)MassNavigationFormationMode.Square,
                     F0 = 0f,
                     Spatial = new OrderSpatial
                     {
@@ -2148,26 +2148,26 @@ public static class LauncherEvidenceRecorder
 
         if (submitted <= 0)
         {
-            throw new InvalidOperationException("MassNavWebParity UAT failed to submit any massNavMove orders.");
+            throw new InvalidOperationException("MassNavigation UAT failed to submit any massNavigationMove orders.");
         }
 
         simulation.FocusCommandTarget(targetCm, selected);
     }
 
-    private static MassNavHotZoneConfig ResolveRemoteHotZone(MassNavSimulationRuntime simulation)
+    private static MassNavigationHotZoneConfig ResolveRemoteHotZone(MassNavigationSimulationRuntime simulation)
     {
-        ReadOnlySpan<MassNavHotZoneConfig> hotZones = simulation.HotZones;
+        ReadOnlySpan<MassNavigationHotZoneConfig> hotZones = simulation.HotZones;
         if (hotZones.Length < 2)
         {
-            throw new InvalidOperationException("MassNavWebParity UAT requires at least two configured hot zone debug landmarks.");
+            throw new InvalidOperationException("MassNavigation UAT requires at least two configured hot zone debug landmarks.");
         }
 
-        MassNavHotZoneConfig active = simulation.WorldConfig.ActiveHotZone;
-        MassNavHotZoneConfig best = hotZones[0];
+        MassNavigationHotZoneConfig active = simulation.WorldConfig.ActiveHotZone;
+        MassNavigationHotZoneConfig best = hotZones[0];
         long bestDistanceSq = -1;
         for (int i = 0; i < hotZones.Length; i++)
         {
-            MassNavHotZoneConfig zone = hotZones[i];
+            MassNavigationHotZoneConfig zone = hotZones[i];
             long dx = zone.CenterXCm - active.CenterXCm;
             long dy = zone.CenterYCm - active.CenterYCm;
             long distanceSq = (dx * dx) + (dy * dy);
@@ -2181,18 +2181,18 @@ public static class LauncherEvidenceRecorder
         return best;
     }
 
-    private static void CaptureMassNavSnapshot(
+    private static void CaptureMassNavigationSnapshot(
         RecordingRuntime runtime,
-        MassNavSimulationRuntime simulation,
+        MassNavigationSimulationRuntime simulation,
         string screensDir,
         IReadOnlyList<double> frameTimesMs,
-        List<MassNavSnapshot> timeline,
+        List<MassNavigationSnapshot> timeline,
         List<CaptureFrame> captureFrames,
         int tick,
         string step,
         bool captureImage)
     {
-        MassNavSnapshot snapshot = SampleMassNavSnapshot(runtime.Engine, simulation, tick, step, frameTimesMs.Count > 0 ? frameTimesMs[^1] : 0d);
+        MassNavigationSnapshot snapshot = SampleMassNavigationSnapshot(runtime.Engine, simulation, tick, step, frameTimesMs.Count > 0 ? frameTimesMs[^1] : 0d);
         timeline.Add(snapshot);
         if (!captureImage)
         {
@@ -2200,11 +2200,11 @@ public static class LauncherEvidenceRecorder
         }
 
         string fileName = $"{step}.png";
-        WriteMassNavSnapshotImage(snapshot, Path.Combine(screensDir, fileName));
+        WriteMassNavigationSnapshotImage(snapshot, Path.Combine(screensDir, fileName));
         captureFrames.Add(new CaptureFrame(snapshot.Tick, step, fileName, snapshot.AgentCount, snapshot.ActiveGroups, snapshot.MinimapVisibleMarkerCount, snapshot.FrameMs));
     }
 
-    private static MassNavSnapshot SampleMassNavSnapshot(GameEngine engine, MassNavSimulationRuntime simulation, int tick, string step, double tickMs)
+    private static MassNavigationSnapshot SampleMassNavigationSnapshot(GameEngine engine, MassNavigationSimulationRuntime simulation, int tick, string step, double tickMs)
     {
         int[] configuredTeamIds = simulation.TeamIds.ToArray();
         var teamCounts = new Dictionary<int, int>(configuredTeamIds.Length);
@@ -2215,8 +2215,8 @@ public static class LauncherEvidenceRecorder
 
         int ecsAgentCount = 0;
         int performerPayloadCount = 0;
-        var samplePositions = new List<MassNavAgentSample>(Math.Min(512, simulation.AgentState.TotalAgents));
-        engine.World.Query(in MassNavControllableQuery, (Entity entity, ref MassNavAgentIndex agentIndex, ref Team team, ref WorldPositionCm position, ref PresentationOwnerHasPerformerPayload payload) =>
+        var samplePositions = new List<MassNavigationAgentSample>(Math.Min(512, simulation.AgentState.TotalAgents));
+        engine.World.Query(in MassNavigationControllableQuery, (Entity entity, ref MassNavigationAgentIndex agentIndex, ref Team team, ref WorldPositionCm position, ref PresentationOwnerHasPerformerPayload payload) =>
         {
             ecsAgentCount++;
             teamCounts.TryGetValue(team.Id, out int current);
@@ -2228,13 +2228,13 @@ public static class LauncherEvidenceRecorder
 
             if (samplePositions.Count < 512)
             {
-                samplePositions.Add(new MassNavAgentSample(team.Id, position.Value.ToVector2()));
+                samplePositions.Add(new MassNavigationAgentSample(team.Id, position.Value.ToVector2()));
             }
         });
 
         int blockerCount = 0;
         int blockerPayloadCount = 0;
-        engine.World.Query(in MassNavBlockerQuery, (Entity entity, ref MassNavBlockerProfile blocker, ref WorldPositionCm position, ref PresentationOwnerHasPerformerPayload payload) =>
+        engine.World.Query(in MassNavigationBlockerQuery, (Entity entity, ref MassNavigationBlockerProfile blocker, ref WorldPositionCm position, ref PresentationOwnerHasPerformerPayload payload) =>
         {
             blockerCount++;
             if (payload.Count > 0)
@@ -2245,7 +2245,7 @@ public static class LauncherEvidenceRecorder
 
         int hotspotMarkerCount = 0;
         int hotspotPayloadCount = 0;
-        engine.World.Query(in MassNavHotspotMarkerQuery, (Entity entity, ref WorldPositionCm position, ref PresentationOwnerHasPerformerPayload payload) =>
+        engine.World.Query(in MassNavigationHotspotMarkerQuery, (Entity entity, ref WorldPositionCm position, ref PresentationOwnerHasPerformerPayload payload) =>
         {
             hotspotMarkerCount++;
             if (payload.Count > 0)
@@ -2255,16 +2255,16 @@ public static class LauncherEvidenceRecorder
         });
 
         MinimapRuntime minimap = engine.GetService(CoreServiceKeys.MinimapRuntime)
-            ?? throw new InvalidOperationException("MassNavWebParity UAT requires MinimapRuntime.");
+            ?? throw new InvalidOperationException("MassNavigation UAT requires MinimapRuntime.");
         MinimapMarkerBuffer markerBuffer = engine.GetService(CoreServiceKeys.MinimapMarkerBuffer)
-            ?? throw new InvalidOperationException("MassNavWebParity UAT requires MinimapMarkerBuffer.");
+            ?? throw new InvalidOperationException("MassNavigation UAT requires MinimapMarkerBuffer.");
         PerformerEntityRuntime performers = engine.GetService(CoreServiceKeys.PerformerEntityRuntime)
-            ?? throw new InvalidOperationException("MassNavWebParity UAT requires PerformerEntityRuntime.");
+            ?? throw new InvalidOperationException("MassNavigation UAT requires PerformerEntityRuntime.");
         PresentationTimingDiagnostics timings = engine.GetService(CoreServiceKeys.PresentationTimingDiagnostics)
-            ?? throw new InvalidOperationException("MassNavWebParity UAT requires PresentationTimingDiagnostics.");
+            ?? throw new InvalidOperationException("MassNavigation UAT requires PresentationTimingDiagnostics.");
         MinimapDebugSnapshot minimapSnapshot = minimap.CaptureDebugSnapshot();
 
-        return new MassNavSnapshot(
+        return new MassNavigationSnapshot(
             Tick: tick,
             Step: step,
             TickMs: tickMs,
@@ -2315,34 +2315,34 @@ public static class LauncherEvidenceRecorder
             PresentationMs: timings.LastPresentationMs,
             PerformerMs: timings.LastPerformerEmitMs + timings.LastPerformerBehaviorMs + timings.LastPerformerEntityTransformSyncMs,
             MinimapMs: timings.LastPerformerMinimapMarkerMs + timings.LastMinimapProjectionMs,
-            MassNavMs: simulation.SelectionSyncMs + simulation.CommandApplyMs + simulation.FormationTargetMs + simulation.FlowFieldRebuildMs + simulation.StepPrepMs + simulation.LocalSteeringMs + simulation.HardResolveMs + simulation.SimStepMs + simulation.EntitySyncMs,
+            MassNavigationMs: simulation.SelectionSyncMs + simulation.CommandApplyMs + simulation.FormationTargetMs + simulation.FlowFieldRebuildMs + simulation.StepPrepMs + simulation.LocalSteeringMs + simulation.HardResolveMs + simulation.SimStepMs + simulation.EntitySyncMs,
             SamplePositions: samplePositions);
     }
 
-    private static MassNavAcceptanceResult EvaluateMassNavAcceptance(IReadOnlyList<MassNavSnapshot> timeline, MassNavSimulationRuntime simulation)
+    private static MassNavigationAcceptanceResult EvaluateMassNavigationAcceptance(IReadOnlyList<MassNavigationSnapshot> timeline, MassNavigationSimulationRuntime simulation)
     {
         var failures = new List<string>();
-        MassNavSnapshot boot = timeline.First(snapshot => snapshot.Step == "000_boot");
-        MassNavSnapshot afterOrder = timeline.First(snapshot => snapshot.Step == "001_selection_order");
-        MassNavSnapshot remote = timeline.First(snapshot => snapshot.Step == "002_remote_minimap_jump");
-        MassNavSnapshot returned = timeline.First(snapshot => snapshot.Step == "003_return_original_area");
+        MassNavigationSnapshot boot = timeline.First(snapshot => snapshot.Step == "000_boot");
+        MassNavigationSnapshot afterOrder = timeline.First(snapshot => snapshot.Step == "001_selection_order");
+        MassNavigationSnapshot remote = timeline.First(snapshot => snapshot.Step == "002_remote_minimap_jump");
+        MassNavigationSnapshot returned = timeline.First(snapshot => snapshot.Step == "003_return_original_area");
 
-        AddAcceptanceCheck(boot.ActiveMapId == MassNavWebParityIds.MapId, $"Expected MassNav map '{MassNavWebParityIds.MapId}', got '{boot.ActiveMapId}'.", failures);
+        AddAcceptanceCheck(boot.ActiveMapId == MassNavigationIds.MapId, $"Expected MassNavigation map '{MassNavigationIds.MapId}', got '{boot.ActiveMapId}'.", failures);
         AddAcceptanceCheck(boot.WorldWidthCm == 6_400_000 && boot.WorldHeightCm == 6_400_000, $"Expected 64km x 64km config, got {boot.WorldWidthCm}x{boot.WorldHeightCm} cm.", failures);
         AddAcceptanceCheck(boot.TeamCount >= 4, $"Expected at least 4 configured teams, got {boot.TeamCount}.", failures);
         AddAcceptanceCheck(boot.AgentCount == simulation.AgentsPerTeam * simulation.TeamCount, $"Agent state count mismatch: {boot.AgentCount} vs configured {simulation.AgentsPerTeam * simulation.TeamCount}.", failures);
         AddAcceptanceCheck(boot.EcsAgentCount == boot.AgentCount, $"ECS controllable agent count mismatch: {boot.EcsAgentCount} vs runtime {boot.AgentCount}.", failures);
-        AddAcceptanceCheck(boot.BlockerCount == simulation.WebParity.ObstacleCount, $"Blocker count mismatch: {boot.BlockerCount} vs solver {simulation.WebParity.ObstacleCount}.", failures);
+        AddAcceptanceCheck(boot.BlockerCount == simulation.MassFlow.ObstacleCount, $"Blocker count mismatch: {boot.BlockerCount} vs solver {simulation.MassFlow.ObstacleCount}.", failures);
         AddAcceptanceCheck(boot.HotspotMarkerCount == simulation.HotZones.Length, $"Hotspot marker count mismatch: {boot.HotspotMarkerCount} vs config {simulation.HotZones.Length}.", failures);
-        AddAcceptanceCheck(boot.PerformerPayloadCount >= boot.AgentCount + boot.BlockerCount + boot.HotspotMarkerCount, $"Performer payloads missing: {boot.PerformerPayloadCount} for {boot.AgentCount + boot.BlockerCount + boot.HotspotMarkerCount} MassNav owners.", failures);
+        AddAcceptanceCheck(boot.PerformerPayloadCount >= boot.AgentCount + boot.BlockerCount + boot.HotspotMarkerCount, $"Performer payloads missing: {boot.PerformerPayloadCount} for {boot.AgentCount + boot.BlockerCount + boot.HotspotMarkerCount} MassNavigation owners.", failures);
         AddAcceptanceCheck(boot.PerformerActiveCount >= boot.AgentCount + boot.BlockerCount + boot.HotspotMarkerCount, $"Performer active count too low: {boot.PerformerActiveCount}.", failures);
         AddAcceptanceCheck(boot.MinimapVisible, "Core minimap should be visible.", failures);
         AddAcceptanceCheck(string.Equals(boot.MinimapPreset, MinimapPreset.RtsFullMap.ToString(), StringComparison.Ordinal), $"Expected core minimap RtsFullMap preset, got {boot.MinimapPreset}.", failures);
         AddAcceptanceCheck(boot.MinimapBufferCount >= boot.AgentCount + boot.BlockerCount + boot.HotspotMarkerCount, $"Minimap marker buffer too low: {boot.MinimapBufferCount}.", failures);
         AddAcceptanceCheck(boot.MinimapDroppedTotal == 0, $"Minimap markers dropped: {boot.MinimapDroppedTotal}.", failures);
-        AddAcceptanceCheck(afterOrder.SelectedCount > 0, "SelectionRuntime LivePrimary selection was not observed by MassNav.", failures);
-        AddAcceptanceCheck(afterOrder.ActiveOrderGroups > 0 || afterOrder.ActiveGroups > 0, "massNavMove order did not create an active NavGroup.", failures);
-        AddAcceptanceCheck(afterOrder.CommandRejectsTotal == 0, $"MassNav rejected commands unexpectedly: {afterOrder.CommandRejectsTotal}.", failures);
+        AddAcceptanceCheck(afterOrder.SelectedCount > 0, "SelectionRuntime LivePrimary selection was not observed by MassNavigation.", failures);
+        AddAcceptanceCheck(afterOrder.ActiveOrderGroups > 0 || afterOrder.ActiveGroups > 0, "massNavigationMove order did not create an active NavGroup.", failures);
+        AddAcceptanceCheck(afterOrder.CommandRejectsTotal == 0, $"MassNavigation rejected commands unexpectedly: {afterOrder.CommandRejectsTotal}.", failures);
         AddAcceptanceCheck(Vector2.Distance(remote.CameraTargetCm, boot.CameraTargetCm) > 500_000f, $"Remote minimap jump did not move the camera far enough: boot={FormatPoint(boot.CameraTargetCm)} remote={FormatPoint(remote.CameraTargetCm)}.", failures);
         AddAcceptanceCheck(returned.AgentCount == boot.AgentCount, $"Returning to original area changed agent count: {boot.AgentCount} -> {returned.AgentCount}.", failures);
         AddAcceptanceCheck(returned.ScenarioSpawnCount == boot.ScenarioSpawnCount, $"Returning to original area re-ran scenario spawn: {boot.ScenarioSpawnCount} -> {returned.ScenarioSpawnCount}.", failures);
@@ -2350,7 +2350,7 @@ public static class LauncherEvidenceRecorder
 
         string normalizedSignature = string.Join("|", new[]
         {
-            "mass_nav_web_parity_large_world",
+            "mass_navigation_large_world",
             $"agents:{boot.AgentCount}",
             $"teams:{boot.TeamCount}",
             $"performers:{boot.PerformerActiveCount}",
@@ -2361,10 +2361,10 @@ public static class LauncherEvidenceRecorder
         });
 
         string verdict = failures.Count == 0
-            ? $"MassNavWebParity passes large-world performer/minimap UAT with {boot.AgentCount} agents, {boot.PerformerActiveCount} performers and {boot.MinimapBufferCount} minimap markers."
-            : "MassNavWebParity large-world performer/minimap UAT failed.";
+            ? $"MassNavigation passes large-world performer/minimap UAT with {boot.AgentCount} agents, {boot.PerformerActiveCount} performers and {boot.MinimapBufferCount} minimap markers."
+            : "MassNavigation large-world performer/minimap UAT failed.";
 
-        return new MassNavAcceptanceResult(
+        return new MassNavigationAcceptanceResult(
             Success: failures.Count == 0,
             Verdict: verdict,
             FailureSummary: failures.Count == 0 ? verdict : string.Join(Environment.NewLine, failures),
@@ -2372,42 +2372,42 @@ public static class LauncherEvidenceRecorder
             NormalizedSignature: normalizedSignature);
     }
 
-    private static string BuildMassNavBattleReport(
+    private static string BuildMassNavigationBattleReport(
         LauncherRecordingRequest request,
-        IReadOnlyList<MassNavSnapshot> timeline,
+        IReadOnlyList<MassNavigationSnapshot> timeline,
         IReadOnlyList<CaptureFrame> captureFrames,
         IReadOnlyList<double> frameTimesMs,
-        MassNavAcceptanceResult acceptance)
+        MassNavigationAcceptanceResult acceptance)
     {
-        MassNavSnapshot boot = timeline[0];
-        MassNavSnapshot final = timeline[^1];
+        MassNavigationSnapshot boot = timeline[0];
+        MassNavigationSnapshot final = timeline[^1];
         double medianTickMs = Median(frameTimesMs.ToArray());
         double maxTickMs = frameTimesMs.Count == 0 ? 0d : frameTimesMs.Max();
         string evidenceImages = string.Join(", ", captureFrames.Select(frame => $"`screens/{frame.FileName}`").Append("`screens/timeline.png`"));
 
         var sb = new StringBuilder();
-        sb.AppendLine("# Scenario Card: mass-nav-web-parity-large-world");
+        sb.AppendLine("# Scenario Card: mass-navigation-large-world");
         sb.AppendLine();
         sb.AppendLine("## Intent");
-        sb.AppendLine("- Player goal: verify MassNavWebParity is the massflow SSOT and runs through performer + core minimap on a 64km RTS map.");
+        sb.AppendLine("- Player goal: verify MassNavigation is the massflow SSOT and runs through performer + core minimap on a 64km RTS map.");
         sb.AppendLine("- Gameplay domain: real launcher bootstrap, template spawn receipts, SelectionRuntime, OrderBuffer, performer runtime and core MinimapRuntime.");
         sb.AppendLine();
         sb.AppendLine("## Determinism Inputs");
-        sb.AppendLine("- Map: `mods/showcases/navigation/MassNavWebParityMod/assets/Maps/mass_nav_web_parity.json`");
+        sb.AppendLine("- Map: `mods/capabilities/navigation/MassNavigationMod/assets/Maps/mass_navigation.json`");
         sb.AppendLine($"- Adapter: `{request.Plan.AdapterId}`");
         sb.AppendLine($"- Launch command: `{request.CommandText}`");
         sb.AppendLine($"- Evidence images: {evidenceImages}");
         sb.AppendLine();
         sb.AppendLine("## Action Script");
-        sb.AppendLine("1. Boot the real MassNavWebParity launcher preset and wait for MassNav spawn receipts to bind.");
-        sb.AppendLine("2. Write LivePrimary selection through SelectionRuntime and submit a `massNavMove` order through OrderBufferSystem.");
+        sb.AppendLine("1. Boot the real MassNavigation launcher preset and wait for MassNavigation spawn receipts to bind.");
+        sb.AppendLine("2. Write LivePrimary selection through SelectionRuntime and submit a `massNavigationMove` order through OrderBufferSystem.");
         sb.AppendLine("3. Jump the core minimap camera to a remote 64km hot-zone landmark, then jump back to the original area.");
         sb.AppendLine("4. Fail if units are recreated/reset, performer payloads are missing, minimap markers drop, or core minimap is not the visible RTS full-map preset.");
         sb.AppendLine();
         sb.AppendLine("## Timeline");
-        foreach (MassNavSnapshot snapshot in timeline)
+        foreach (MassNavigationSnapshot snapshot in timeline)
         {
-            sb.AppendLine($"- [{snapshot.Step}] camera={FormatPoint(snapshot.CameraTargetCm)} agents={snapshot.AgentCount} teams={snapshot.TeamCount} selected={snapshot.SelectedCount} groups={snapshot.ActiveGroups}/{snapshot.ActiveOrderGroups} performers={snapshot.PerformerActiveCount} minimap={snapshot.MinimapVisibleMarkerCount}/{snapshot.MinimapMarkerCount} loadedChunks={snapshot.LoadedChunkCount} frame={snapshot.FrameMs:F3}ms sim={snapshot.SimulationMs:F3}ms pres={snapshot.PresentationMs:F3}ms massnav={snapshot.MassNavMs:F3}ms");
+            sb.AppendLine($"- [{snapshot.Step}] camera={FormatPoint(snapshot.CameraTargetCm)} agents={snapshot.AgentCount} teams={snapshot.TeamCount} selected={snapshot.SelectedCount} groups={snapshot.ActiveGroups}/{snapshot.ActiveOrderGroups} performers={snapshot.PerformerActiveCount} minimap={snapshot.MinimapVisibleMarkerCount}/{snapshot.MinimapMarkerCount} loadedChunks={snapshot.LoadedChunkCount} frame={snapshot.FrameMs:F3}ms sim={snapshot.SimulationMs:F3}ms pres={snapshot.PresentationMs:F3}ms mass_navigation={snapshot.MassNavigationMs:F3}ms");
         }
 
         sb.AppendLine();
@@ -2436,15 +2436,15 @@ public static class LauncherEvidenceRecorder
         return sb.ToString();
     }
 
-    private static string BuildMassNavTraceJsonl(string adapterId, IReadOnlyList<MassNavSnapshot> timeline)
+    private static string BuildMassNavigationTraceJsonl(string adapterId, IReadOnlyList<MassNavigationSnapshot> timeline)
     {
         var lines = new List<string>(timeline.Count);
         for (int index = 0; index < timeline.Count; index++)
         {
-            MassNavSnapshot snapshot = timeline[index];
+            MassNavigationSnapshot snapshot = timeline[index];
             lines.Add(JsonSerializer.Serialize(new
             {
-                event_id = $"massnav-{adapterId}-{index + 1:000}",
+                event_id = $"mass_navigation-{adapterId}-{index + 1:000}",
                 tick = snapshot.Tick,
                 step = snapshot.Step,
                 map = snapshot.ActiveMapId,
@@ -2478,7 +2478,7 @@ public static class LauncherEvidenceRecorder
                 presentation_ms = Math.Round(snapshot.PresentationMs, 4),
                 performer_ms = Math.Round(snapshot.PerformerMs, 4),
                 minimap_ms = Math.Round(snapshot.MinimapMs, 4),
-                massnav_ms = Math.Round(snapshot.MassNavMs, 4),
+                mass_navigation_ms = Math.Round(snapshot.MassNavigationMs, 4),
                 status = "done"
             }));
         }
@@ -2486,30 +2486,30 @@ public static class LauncherEvidenceRecorder
         return string.Join(Environment.NewLine, lines) + Environment.NewLine;
     }
 
-    private static string BuildMassNavPathMermaid()
+    private static string BuildMassNavigationPathMermaid()
     {
         return string.Join(Environment.NewLine, new[]
         {
             "flowchart TD",
-            "    A[Boot mass_nav_web_parity launcher] --> B[Bind template spawn receipts]",
+            "    A[Boot mass_navigation launcher] --> B[Bind template spawn receipts]",
             "    B --> C[Verify performer owners and minimap markers]",
             "    C --> D[Write LivePrimary selection]",
-            "    D --> E[Submit massNavMove through OrderBuffer]",
+            "    D --> E[Submit massNavigationMove through OrderBuffer]",
             "    E --> F[Jump core minimap camera to remote 64km coordinate]",
             "    F --> G[Jump back to original area]",
             "    G --> H{No respawn, reset, marker drop, or old minimap path?}",
             "    H -->|yes| I[Write battle-report + trace + path + PNG timeline]",
-            "    H -->|no| X[Fail MassNav UAT]"
+            "    H -->|no| X[Fail MassNavigation UAT]"
         }) + Environment.NewLine;
     }
 
-    private static string BuildMassNavVisibleChecklist(IReadOnlyList<CaptureFrame> frames)
+    private static string BuildMassNavigationVisibleChecklist(IReadOnlyList<CaptureFrame> frames)
     {
         var sb = new StringBuilder();
-        sb.AppendLine("# Visible Checklist: mass-nav-web-parity-large-world");
+        sb.AppendLine("# Visible Checklist: mass-navigation-large-world");
         sb.AppendLine();
-        sb.AppendLine("- `000_boot.png`: should show the configured 64km RTS world framing, MassNav unit samples, solver window, flow work area and minimap marker counts.");
-        sb.AppendLine("- `001_selection_order.png`: selection/order counts should be non-zero and group counts should prove the OrderBuffer path reached MassNav group runtime.");
+        sb.AppendLine("- `000_boot.png`: should show the configured 64km RTS world framing, MassNavigation unit samples, solver window, flow work area and minimap marker counts.");
+        sb.AppendLine("- `001_selection_order.png`: selection/order counts should be non-zero and group counts should prove the OrderBuffer path reached MassNavigation group runtime.");
         sb.AppendLine("- `002_remote_minimap_jump.png`: camera coordinates should be far from boot coordinates while agent counts remain unchanged.");
         sb.AppendLine("- `003_return_original_area.png`: agent count and scenario spawn/reset counters should match boot, proving camera movement did not recreate the scenario.");
         sb.AppendLine("- `screens/timeline.png` is the compact strip for side-by-side UAT review.");
@@ -2522,13 +2522,13 @@ public static class LauncherEvidenceRecorder
         return sb.ToString();
     }
 
-    private static string BuildMassNavSummaryJson(LauncherRecordingRequest request, MassNavAcceptanceResult acceptance, IReadOnlyList<MassNavSnapshot> timeline)
+    private static string BuildMassNavigationSummaryJson(LauncherRecordingRequest request, MassNavigationAcceptanceResult acceptance, IReadOnlyList<MassNavigationSnapshot> timeline)
     {
-        MassNavSnapshot boot = timeline[0];
-        MassNavSnapshot final = timeline[^1];
+        MassNavigationSnapshot boot = timeline[0];
+        MassNavigationSnapshot final = timeline[^1];
         return JsonSerializer.Serialize(new
         {
-            scenario = "mass_nav_web_parity_large_world",
+            scenario = "mass_navigation_large_world",
             adapter = request.Plan.AdapterId,
             selectors = request.Plan.Selectors,
             root_mods = request.Plan.RootModIds,
@@ -2551,9 +2551,9 @@ public static class LauncherEvidenceRecorder
         }, new JsonSerializerOptions { WriteIndented = true });
     }
 
-    private static void WriteMassNavSnapshotImage(MassNavSnapshot snapshot, string path)
+    private static void WriteMassNavigationSnapshotImage(MassNavigationSnapshot snapshot, string path)
     {
-        using var surface = SKSurface.Create(new SKImageInfo(MassNavImageWidth, MassNavImageHeight));
+        using var surface = SKSurface.Create(new SKImageInfo(MassNavigationImageWidth, MassNavigationImageHeight));
         SKCanvas canvas = surface.Canvas;
         canvas.Clear(new SKColor(8, 12, 18));
 
@@ -2572,19 +2572,19 @@ public static class LauncherEvidenceRecorder
         canvas.DrawRect(worldRect, worldFillPaint);
         canvas.DrawRect(worldRect, worldStrokePaint);
 
-        DrawMassNavRect(canvas, snapshot.FlowWorkAreaCenterCm, snapshot.FlowWorkAreaWidthCm, snapshot.FlowWorkAreaHeightCm, snapshot, worldRect, flowPaint);
-        DrawMassNavRect(canvas, snapshot.SolverWindowCenterCm, snapshot.SolverWindowWidthCm, snapshot.SolverWindowHeightCm, snapshot, worldRect, solverPaint);
-        DrawCrosshair(canvas, ToMassNavScreen(snapshot.CameraTargetCm, snapshot, worldRect), 12f, cameraPaint);
+        DrawMassNavigationRect(canvas, snapshot.FlowWorkAreaCenterCm, snapshot.FlowWorkAreaWidthCm, snapshot.FlowWorkAreaHeightCm, snapshot, worldRect, flowPaint);
+        DrawMassNavigationRect(canvas, snapshot.SolverWindowCenterCm, snapshot.SolverWindowWidthCm, snapshot.SolverWindowHeightCm, snapshot, worldRect, solverPaint);
+        DrawCrosshair(canvas, ToMassNavigationScreen(snapshot.CameraTargetCm, snapshot, worldRect), 12f, cameraPaint);
 
         for (int i = 0; i < snapshot.SamplePositions.Count; i++)
         {
-            MassNavAgentSample sample = snapshot.SamplePositions[i];
-            using var teamPaint = new SKPaint { Color = ResolveMassNavTeamColor(sample.TeamId), IsAntialias = true, Style = SKPaintStyle.Fill };
-            SKPoint point = ToMassNavScreen(sample.WorldCm, snapshot, worldRect);
+            MassNavigationAgentSample sample = snapshot.SamplePositions[i];
+            using var teamPaint = new SKPaint { Color = ResolveMassNavigationTeamColor(sample.TeamId), IsAntialias = true, Style = SKPaintStyle.Fill };
+            SKPoint point = ToMassNavigationScreen(sample.WorldCm, snapshot, worldRect);
             canvas.DrawCircle(point.X, point.Y, 2.5f, teamPaint);
         }
 
-        canvas.DrawText($"MassNavWebParity Large World | {snapshot.Step} | tick={snapshot.Tick}", 36, 38, textPaint);
+        canvas.DrawText($"MassNavigation Large World | {snapshot.Step} | tick={snapshot.Tick}", 36, 38, textPaint);
         canvas.DrawText($"World={snapshot.WorldWidthCm / 100000f:F1}km x {snapshot.WorldHeightCm / 100000f:F1}km  Camera={FormatPoint(snapshot.CameraTargetCm)}", 36, 68, minorTextPaint);
         canvas.DrawText($"Agents={snapshot.AgentCount} ECS={snapshot.EcsAgentCount} Teams={snapshot.TeamCount} Selected={snapshot.SelectedCount} Groups={snapshot.ActiveGroups}/{snapshot.ActiveOrderGroups}", 830, 130, minorTextPaint);
         canvas.DrawText($"Performers={snapshot.PerformerActiveCount} Payloads={snapshot.PerformerPayloadCount} Blockers={snapshot.BlockerCount} Hotspots={snapshot.HotspotMarkerCount}", 830, 160, minorTextPaint);
@@ -2592,12 +2592,12 @@ public static class LauncherEvidenceRecorder
         canvas.DrawText($"Solver center={FormatPoint(snapshot.SolverWindowCenterCm)} driver={snapshot.SolverWindowDriver}", 830, 220, minorTextPaint);
         canvas.DrawText($"Flow area={FormatPoint(snapshot.FlowWorkAreaCenterCm)} {snapshot.FlowWorkAreaWidthCm:F0}x{snapshot.FlowWorkAreaHeightCm:F0} reason={snapshot.FlowWorkAreaReason}", 830, 250, minorTextPaint);
         canvas.DrawText($"LoadedChunks={snapshot.LoadedChunkCount} SpawnCount={snapshot.ScenarioSpawnCount} ResetCount={snapshot.SceneResetCount} Rejects={snapshot.CommandRejectsTotal}", 830, 280, minorTextPaint);
-        canvas.DrawText($"Timing frame={snapshot.FrameMs:F3}ms sim={snapshot.SimulationMs:F3}ms pres={snapshot.PresentationMs:F3}ms performer={snapshot.PerformerMs:F3}ms minimap={snapshot.MinimapMs:F3}ms massnav={snapshot.MassNavMs:F3}ms", 830, 310, minorTextPaint);
+        canvas.DrawText($"Timing frame={snapshot.FrameMs:F3}ms sim={snapshot.SimulationMs:F3}ms pres={snapshot.PresentationMs:F3}ms performer={snapshot.PerformerMs:F3}ms minimap={snapshot.MinimapMs:F3}ms mass_navigation={snapshot.MassNavigationMs:F3}ms", 830, 310, minorTextPaint);
 
         int teamY = 354;
         foreach ((int teamId, int count) in snapshot.TeamCounts.OrderBy(pair => pair.Key))
         {
-            using var teamPaint = new SKPaint { Color = ResolveMassNavTeamColor(teamId), IsAntialias = true, Style = SKPaintStyle.Fill };
+            using var teamPaint = new SKPaint { Color = ResolveMassNavigationTeamColor(teamId), IsAntialias = true, Style = SKPaintStyle.Fill };
             canvas.DrawCircle(842, teamY - 6, 7f, teamPaint);
             canvas.DrawText($"Team {teamId}: {count}", 858, teamY, minorTextPaint);
             teamY += 26;
@@ -2609,17 +2609,17 @@ public static class LauncherEvidenceRecorder
         data.SaveTo(stream);
     }
 
-    private static void DrawMassNavRect(SKCanvas canvas, Vector2 center, float widthCm, float heightCm, MassNavSnapshot snapshot, SKRect worldRect, SKPaint paint)
+    private static void DrawMassNavigationRect(SKCanvas canvas, Vector2 center, float widthCm, float heightCm, MassNavigationSnapshot snapshot, SKRect worldRect, SKPaint paint)
     {
         Vector2 min = new(center.X - widthCm * 0.5f, center.Y - heightCm * 0.5f);
         Vector2 max = new(center.X + widthCm * 0.5f, center.Y + heightCm * 0.5f);
-        SKPoint a = ToMassNavScreen(min, snapshot, worldRect);
-        SKPoint b = ToMassNavScreen(max, snapshot, worldRect);
+        SKPoint a = ToMassNavigationScreen(min, snapshot, worldRect);
+        SKPoint b = ToMassNavigationScreen(max, snapshot, worldRect);
         SKRect rect = NormalizeRect(new SKRect(a.X, a.Y, b.X, b.Y));
         canvas.DrawRect(rect, paint);
     }
 
-    private static SKPoint ToMassNavScreen(Vector2 world, MassNavSnapshot snapshot, SKRect worldRect)
+    private static SKPoint ToMassNavigationScreen(Vector2 world, MassNavigationSnapshot snapshot, SKRect worldRect)
     {
         float minX = snapshot.WorldWidthCm * -0.5f;
         float maxX = snapshot.WorldWidthCm * 0.5f;
@@ -2630,7 +2630,7 @@ public static class LauncherEvidenceRecorder
         return new SKPoint(x, y);
     }
 
-    private static SKColor ResolveMassNavTeamColor(int teamId)
+    private static SKColor ResolveMassNavigationTeamColor(int teamId)
     {
         return teamId switch
         {
@@ -3311,7 +3311,7 @@ public static class LauncherEvidenceRecorder
         RoadNetworkShowcaseCommandAndChunking,
         ChunkStreamingShowcaseCameraWindows,
         Navigation2DPlaygroundTimedAvoidance,
-        MassNavWebParityLargeWorld
+        MassNavigationLargeWorld
     }
 
     private sealed class RecordingRuntime : IDisposable
@@ -3507,11 +3507,11 @@ public static class LauncherEvidenceRecorder
         string ResetChunkSignature,
         string NormalizedSignature);
 
-    private readonly record struct MassNavAgentSample(
+    private readonly record struct MassNavigationAgentSample(
         int TeamId,
         Vector2 WorldCm);
 
-    private readonly record struct MassNavSnapshot(
+    private readonly record struct MassNavigationSnapshot(
         int Tick,
         string Step,
         double TickMs,
@@ -3562,10 +3562,10 @@ public static class LauncherEvidenceRecorder
         float PresentationMs,
         float PerformerMs,
         float MinimapMs,
-        float MassNavMs,
-        IReadOnlyList<MassNavAgentSample> SamplePositions);
+        float MassNavigationMs,
+        IReadOnlyList<MassNavigationAgentSample> SamplePositions);
 
-    private sealed record MassNavAcceptanceResult(
+    private sealed record MassNavigationAcceptanceResult(
         bool Success,
         string Verdict,
         string FailureSummary,

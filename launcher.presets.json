@@ -92,10 +92,10 @@
       "buildMode": "auto"
     },
     {
-      "id": "mass_nav_web_parity_raylib",
-      "name": "Mass Nav Web Parity Raylib",
+      "id": "mass_navigation_raylib",
+      "name": "Mass Navigation Raylib",
       "selectors": [
-        "$mass_nav_web_parity"
+        "$mass_navigation"
       ],
       "adapterId": "raylib",
       "buildMode": "auto"

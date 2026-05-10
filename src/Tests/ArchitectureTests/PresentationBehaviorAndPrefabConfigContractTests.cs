@@ -134,32 +134,32 @@ namespace Ludots.Tests.Architecture
                 "LudotsCoreMod should author the generic move path preview contract.");
             Assert.That(coreEngine.MergedConfig.Constants.OrderTypeIds.ContainsKey("moveTo"), Is.True);
 
-            using var massNavEngine = new GameEngine();
-            massNavEngine.InitializeWithConfigPipeline(
+            using var massNavigationEngine = new GameEngine();
+            massNavigationEngine.InitializeWithConfigPipeline(
                 new List<string>
                 {
                     Path.Combine(repoRoot, "mods", "LudotsCoreMod"),
                     Path.Combine(repoRoot, "mods", "CoreInputMod"),
                     Path.Combine(repoRoot, "mods", "capabilities", "camera", "CameraProfilesMod"),
                     Path.Combine(repoRoot, "mods", "showcases", "performer_blacksmith", "PerformerBlacksmithShowcaseMod"),
-                    Path.Combine(repoRoot, "mods", "showcases", "navigation", "MassNavWebParityMod"),
+                    Path.Combine(repoRoot, "mods", "capabilities", "navigation", "MassNavigationMod"),
                 },
                 Path.Combine(repoRoot, "assets"));
 
             Assert.That(
-                massNavEngine.MergedConfig.Selection.MovePathPreviewOrderTypeKeys,
-                Is.EqualTo(new[] { "moveTo", "massNavMove" }),
-                "MassNavWebParityMod should extend the preview contract through game.json, not CoreInputMod source.");
-            Assert.That(massNavEngine.MergedConfig.Constants.OrderTypeIds.ContainsKey("moveTo"), Is.True);
+                massNavigationEngine.MergedConfig.Selection.MovePathPreviewOrderTypeKeys,
+                Is.EqualTo(new[] { "moveTo", "massNavigationMove" }),
+                "MassNavigationMod should extend the preview contract through game.json, not CoreInputMod source.");
+            Assert.That(massNavigationEngine.MergedConfig.Constants.OrderTypeIds.ContainsKey("moveTo"), Is.True);
             Assert.That(
-                massNavEngine.MergedConfig.Constants.OrderTypeIds.ContainsKey("massNavMove"),
+                massNavigationEngine.MergedConfig.Constants.OrderTypeIds.ContainsKey("massNavigationMove"),
                 Is.False,
-                "MassNav move must not be double-authored in game.json constants; GAS/order_types.json owns order type definitions.");
-            OrderTypeRegistry orderTypes = massNavEngine.GetService(CoreServiceKeys.OrderTypeRegistry)
+                "MassNavigation move must not be double-authored in game.json constants; GAS/order_types.json owns order type definitions.");
+            OrderTypeRegistry orderTypes = massNavigationEngine.GetService(CoreServiceKeys.OrderTypeRegistry)
                 ?? throw new InvalidOperationException("OrderTypeRegistry missing.");
-            int massNavMoveOrderTypeId = orderTypes.GetId("massNavMove");
-            Assert.That(massNavMoveOrderTypeId, Is.GreaterThan(0));
-            Assert.That(massNavMoveOrderTypeId, Is.Not.EqualTo(massNavEngine.MergedConfig.Constants.OrderTypeIds["moveTo"]));
+            int massNavigationMoveOrderTypeId = orderTypes.GetId("massNavigationMove");
+            Assert.That(massNavigationMoveOrderTypeId, Is.GreaterThan(0));
+            Assert.That(massNavigationMoveOrderTypeId, Is.Not.EqualTo(massNavigationEngine.MergedConfig.Constants.OrderTypeIds["moveTo"]));
         }
 
         [Test]
@@ -179,13 +179,13 @@ namespace Ludots.Tests.Architecture
       "orderTypeId": 102,
       "label": "Attack Target"
     },
-    "massNavMove": {
-      "label": "Mass Nav Move"
+    "massNavigationMove": {
+      "label": "Mass Navigation Move"
     }
   },
   "orderRules": {
-    "massNavMove": {
-      "orderTypeKey": "massNavMove",
+    "massNavigationMove": {
+      "orderTypeKey": "massNavigationMove",
       "blockedActiveOrderTypeKeys": [],
       "interruptsActiveOrderTypeKeys": [ "moveTo", "attackTarget" ]
     }
@@ -201,11 +201,11 @@ namespace Ludots.Tests.Architecture
 
             new OrderTypeConfigLoader(pipeline).Load(orderTypes, orderRules);
 
-            int massNavMoveId = orderTypes.GetId("massNavMove");
-            ref readonly OrderRuleSet massNavRule = ref orderRules.Get(massNavMoveId);
-            Assert.That(massNavRule.InterruptsActiveCount, Is.EqualTo(2));
-            Assert.That(orderRules.Interrupts(massNavMoveId, orderTypes.GetId("moveTo")), Is.True);
-            Assert.That(orderRules.Interrupts(massNavMoveId, orderTypes.GetId("attackTarget")), Is.True);
+            int massNavigationMoveId = orderTypes.GetId("massNavigationMove");
+            ref readonly OrderRuleSet massNavigationRule = ref orderRules.Get(massNavigationMoveId);
+            Assert.That(massNavigationRule.InterruptsActiveCount, Is.EqualTo(2));
+            Assert.That(orderRules.Interrupts(massNavigationMoveId, orderTypes.GetId("moveTo")), Is.True);
+            Assert.That(orderRules.Interrupts(massNavigationMoveId, orderTypes.GetId("attackTarget")), Is.True);
         }
 
         [Test]

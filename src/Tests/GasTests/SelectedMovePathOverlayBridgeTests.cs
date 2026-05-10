@@ -15,7 +15,7 @@ namespace Ludots.Tests.GAS
     public sealed class SelectedMovePathOverlayBridgeTests
     {
         private const int MoveToOrderTypeId = 101;
-        private const int MassNavMoveOrderTypeId = 172;
+        private const int MassNavigationMoveOrderTypeId = 172;
 
         [Test]
         public void UpdateViewedSelection_EmitsPathLinesAndWaypointsForActiveAndQueuedMoveOrders()
@@ -67,7 +67,7 @@ namespace Ludots.Tests.GAS
         }
 
         [Test]
-        public void UpdateViewedSelection_EmitsTargetMarkerForActiveMassNavMoveOrder()
+        public void UpdateViewedSelection_EmitsTargetMarkerForActiveMassNavigationMoveOrder()
         {
             using var world = World.Create();
             var overlays = new GroundOverlayBuffer();
@@ -78,14 +78,14 @@ namespace Ludots.Tests.GAS
                 pathService,
                 pathStore,
                 overlays,
-                new[] { MoveToOrderTypeId, MassNavMoveOrderTypeId });
+                new[] { MoveToOrderTypeId, MassNavigationMoveOrderTypeId });
 
             Entity actor = world.Create(
                 WorldPositionCm.FromCm(0, 0),
                 OrderBuffer.CreateEmpty());
 
             ref var orders = ref world.Get<OrderBuffer>(actor);
-            orders.SetActiveDirect(CreateMoveOrder(actor, MassNavMoveOrderTypeId, 450, 250, orderId: 7), priority: 70);
+            orders.SetActiveDirect(CreateMoveOrder(actor, MassNavigationMoveOrderTypeId, 450, 250, orderId: 7), priority: 70);
 
             bridge.UpdateViewedSelection(new[] { actor });
 

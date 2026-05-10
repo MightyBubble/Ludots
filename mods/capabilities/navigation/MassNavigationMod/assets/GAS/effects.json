@@ -1,0 +1,17 @@
+[
+  {
+    "id": "Effect.MassNavigation.Agent.HealthSeed",
+    "tags": ["Effect.MassNavigation.Agent.HealthSeed"],
+    "presetType": "Buff",
+    "lifetime": "After",
+    "participatesInResponse": false,
+    "duration": {
+      "durationTicks": 1
+    },
+    "phaseGraphs": {
+      "OnApply": {
+        "post": "Graph.MassNavigation.Agent.HealthSeed"
+      }
+    }
+  }
+]
