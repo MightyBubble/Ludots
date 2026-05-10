@@ -4,15 +4,18 @@ using System.Numerics;
 using Arch.Core;
 using Ludots.Core.Config;
 using Ludots.Core.Gameplay.GAS.Registry;
+using Ludots.Core.Input.Selection;
 using Ludots.Core.Modding;
 using Ludots.Core.Presentation;
 using Ludots.Core.Presentation.Commands;
+using Ludots.Core.Presentation.Components;
 using Ludots.Core.Presentation.Config;
 using Ludots.Core.Presentation.Events;
 using Ludots.Core.Presentation.Performers;
 using Ludots.Core.Presentation.Rendering;
 using Ludots.Core.Presentation.Requests;
 using Ludots.Core.Presentation.Systems;
+using Ludots.Core.Registry;
 using Ludots.Core.Scripting;
 using Ludots.Platform.Abstractions;
 using NUnit.Framework;
@@ -173,6 +176,97 @@ namespace Ludots.Tests.Presentation
             Assert.That(childParent.Parent, Is.EqualTo(rootEntity));
             Assert.That(childState.ScopeId, Is.EqualTo(500));
             Assert.That(childState.DefId, Is.EqualTo(childId));
+        }
+
+        [Test]
+        public void SelectionMemberRemoved_DestroysScopedMarker_WithoutDestroyingRoot()
+        {
+            using var fixture = PerformerTreeFixture.Create();
+            var selectionKeys = new StringIntRegistry(capacity: 32, startId: 1, invalidId: 0, comparer: StringComparer.Ordinal);
+            var selection = new SelectionRuntime(fixture.World, new SelectionRuntimeConfig(), selectionKeys);
+            int livePrimaryKeyId = selectionKeys.GetId(SelectionSetKeys.LivePrimary);
+            const int sourceStableId = 9001;
+
+            int markerId = fixture.Definitions.Register("selection_marker", new PerformerDefinition());
+            int rootId = fixture.Definitions.Register("agent_root", new PerformerDefinition
+            {
+                Rules =
+                [
+                    new PerformerRule
+                    {
+                        Event = new EventFilter
+                        {
+                            Kind = PresentationEventKind.SelectionMemberAdded,
+                            KeyId = livePrimaryKeyId,
+                        },
+                        Condition = ConditionRef.AlwaysTrue,
+                        Command = new PerformerCommand
+                        {
+                            CommandKind = PerformerCommandKind.CreatePerformer,
+                            PerformerDefinitionId = markerId,
+                            ScopeSource = PerformerCommandScopeSource.SourceStableId,
+                        },
+                    },
+                    new PerformerRule
+                    {
+                        Event = new EventFilter
+                        {
+                            Kind = PresentationEventKind.SelectionMemberRemoved,
+                            KeyId = livePrimaryKeyId,
+                        },
+                        Condition = ConditionRef.AlwaysTrue,
+                        Command = new PerformerCommand
+                        {
+                            CommandKind = PerformerCommandKind.DestroyScopedPerformer,
+                            PerformerDefinitionId = markerId,
+                            ScopeSource = PerformerCommandScopeSource.SourceStableId,
+                        },
+                    },
+                ],
+            });
+
+            fixture.World.Add(fixture.Owner, new PresentationStableId { Value = sourceStableId });
+            Entity rootEntity = fixture.CreateRoot(rootId, scopeTag: sourceStableId);
+            fixture.Events.Clear();
+
+            Entity player = fixture.World.Create();
+            using var selectionEvents = new SelectionPresentationEventSystem(fixture.World, selection, fixture.Events);
+            Assert.That(selection.ReplaceSelection(player, SelectionSetKeys.LivePrimary, new[] { fixture.Owner }), Is.True);
+
+            selectionEvents.Update(0.016f);
+            fixture.TickRuleThenRuntime();
+
+            Assert.That(
+                fixture.Instances.TryGetActiveScopedInstance(
+                    markerId,
+                    fixture.Owner,
+                    sourceStableId,
+                    PresentationAnchorKind.Entity,
+                    Vector3.Zero,
+                    out Entity markerEntity),
+                Is.True);
+            Assert.That(fixture.World.Get<PerformerState>(markerEntity).ScopeId, Is.EqualTo(sourceStableId));
+            Assert.That(fixture.World.Get<PerformerParent>(markerEntity).Parent, Is.EqualTo(rootEntity));
+            Assert.That(fixture.World.IsAlive(rootEntity), Is.True);
+
+            fixture.Events.Clear();
+            Assert.That(selection.ClearSelection(player, SelectionSetKeys.LivePrimary), Is.True);
+            selectionEvents.Update(0.016f);
+            fixture.TickRuleThenRuntime();
+
+            Assert.That(fixture.World.IsAlive(markerEntity), Is.False);
+            Assert.That(fixture.World.IsAlive(rootEntity), Is.True);
+            Assert.That(
+                fixture.Instances.TryGetActiveScopedInstance(
+                    markerId,
+                    fixture.Owner,
+                    sourceStableId,
+                    PresentationAnchorKind.Entity,
+                    Vector3.Zero,
+                    out _),
+                Is.False);
+            Assert.That(fixture.Instances.GetActiveByOwnerDefinition(rootId, fixture.Owner).Count, Is.EqualTo(1));
+            Assert.That(fixture.Instances.ActiveCount, Is.EqualTo(1));
         }
 
         [Test]

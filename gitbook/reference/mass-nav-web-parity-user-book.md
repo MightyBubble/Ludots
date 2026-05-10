@@ -211,7 +211,7 @@ CoreInputMod
   "command": {
     "kind": "CreatePerformer",
     "definitionId": "my_unit_selection_marker_light",
-    "scopeSource": "EventPayloadA"
+    "scopeSource": "SourceStableId"
   }
 }
 ```
@@ -219,7 +219,7 @@ CoreInputMod
 禁止事项：
 
 - 不在 MassNav system 里读取 `SelectedFlags` 后手动创建 marker。
-- 不在 MassNav system 里解析 `selectionMarkerLightPerformerId` / `selectionMarkerHeavyPerformerId` 来驱动生命周期。
+- 不在 MassNav config 里写 selection marker performer id 字段来驱动生命周期。
 - 不用 solver index、array index、team id 或其它临时数字当 selection marker scope。
 - 不给 performer behavior 写 MassNav 专属分支。
 - 不在配置里暴露 order type id、param key、behavior slot 这类内部 handle；配置写语义字符串，加载期编译。
@@ -239,28 +239,25 @@ CoreInputMod
 1. 文档先行
    先保持本文的玩家、Mod 作者、内部实现三层视角一致。玩家不需要 internal key；Mod 作者不声明 runtime selection set；内部实现才讨论 `SelectionRuntime`、mutation 和 performer rule。
 
-2. Core selection mutation
-   在 `SelectionRuntime` 的真实变更点记录成员 added/removed。`ReplaceSelection`、`AddToSelection`、`RemoveFromSelection`、`ClearSelection`、dangling sweep 都要产生精确 mutation。这里不能靠每帧扫描容器 diff。
+2. Core selection revision
+   `SelectionRuntime` 是选择集 SSOT。选择容器只在真实变更时递增 revision，presentation bridge 用 revision 跳过稳态帧。
 
 3. Presentation selection bridge
-   新增通用 bridge，把 selection mutation 转成 `SelectionMemberAdded` / `SelectionMemberRemoved` presentation event。event source 是被选实体，target 是 selection owner 或 container，key 是选择通道语义 id，payload 携带被选实体 `PresentationStableId`。
+   通用 bridge 把 selection 容器变更转成 `SelectionMemberAdded` / `SelectionMemberRemoved` presentation event。event source 是被选实体，target 是 selection container，key 是选择通道语义 id。
 
 4. Performer rule 扩展
    `PresentationEventKind` 增加 selection 事件，performer config loader 允许用 selection 通道 key。条件只使用通用概念，例如 source template、source tag、source has visual transform；不能写 MassNav profile 分支。
 
-5. Performer runtime batch
-   `PerformerRuntimeSystem` 对同帧同 definition、entity anchored、无 parent 的 create 命令走 batch create。destroy 对 selection marker 需要能限定 definition/scope，避免用 owner stable id 清掉同 scope 下的 agent 主 performer。
+5. Performer runtime cleanup
+   destroy 对 selection marker 限定 definition + source owner + source stable scope，避免用 owner stable id 清掉同 scope 下的 agent 主 performer。
 
 6. MassNav 配置迁移
    在 `Presentation/performers.json` 给 light/heavy selection marker author rules。light/heavy 差异来自模板、tag 或 profile 配置条件。`MassNavWebParityConfig.presentation` 不再用 selection marker performer id 驱动生命周期。
 
-7. 移除 MassNav 私有 marker system
-   删除 `MassNavSelectionPerformerSyncSystem`，移除 `MassNavPlaygroundRuntime` 对它的 presentation system 注册。MassNav selection sync 可以继续只服务 solver selected flags，但不负责表现。
+7. MassNav 私有 marker system 已移除
+   MassNav selection sync 只服务 solver selected flags，不负责表现生命周期。marker 的创建和清理由通用 selection presentation event 与 performer rule 驱动。
 
-8. 修复 projection 残留
-   `PresentationRequestFlushSystem` 要记住上一帧是否有 transient projection。上一帧有、这一帧没有时，也要清 projection targets 并重投 stable cache，防止取消选择后白色 marker 停在原地。
-
-9. 验证
+8. 验证
    必跑：配置 loader 测试、selection mutation 测试、performer rule selection 事件测试、presentation flush 残留测试、MassNav 10k UAT。验收点是框选、移动、取消选择、reset 后无 marker 残留，且没有 dropped performer/event/request。
 
 ## 表现和选中 Marker
@@ -374,5 +371,5 @@ reset 后表现异常：
 - Mod 边界说明：`mods/showcases/navigation/MassNavWebParityMod/README.md`
 - 关键 runtime：`Runtime/MassNavSimulationRuntime.cs`
 - 热路径 solver：`Runtime/MassNavWebParitySimState.cs`
-- 选择 marker：`Systems/MassNavSelectionPerformerSyncSystem.cs`
+- 选择 marker：`assets/Presentation/performers.json` 中的 selection performer rules
 - 命令桥：`Systems/MassNavOrderBridgeSystem.cs`

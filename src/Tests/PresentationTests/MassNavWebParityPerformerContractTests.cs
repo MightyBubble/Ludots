@@ -4,6 +4,7 @@ using System.IO;
 using System.Linq;
 using System.Text.Json;
 using System.Text.Json.Nodes;
+using Ludots.Core.Input.Selection;
 using Ludots.Core.NodeLibraries.GASGraph;
 using NUnit.Framework;
 
@@ -113,14 +114,20 @@ namespace Ludots.Tests.Presentation
                 ?? throw new InvalidOperationException("MassNavWebParityConfig.presentation missing.");
             Assert.That(presentation.ContainsKey("selectionVisibilityParamKey"), Is.False,
                 "Selection visibility must not keep a hidden mesh inside every agent root performer.");
+            Assert.That(presentation.ContainsKey("selectionMarkerLightPerformerId"), Is.False,
+                "Selection marker performer ownership belongs to performer rules, not MassNav presentation config fields.");
+            Assert.That(presentation.ContainsKey("selectionMarkerHeavyPerformerId"), Is.False,
+                "Selection marker performer ownership belongs to performer rules, not MassNav presentation config fields.");
 
-            string lightMarkerId = RequireString(presentation, "selectionMarkerLightPerformerId");
-            string heavyMarkerId = RequireString(presentation, "selectionMarkerHeavyPerformerId");
-            Assert.That(lightMarkerId, Is.EqualTo("massnav_agent_selection_marker_light"));
-            Assert.That(heavyMarkerId, Is.EqualTo("massnav_agent_selection_marker_heavy"));
+            const string lightMarkerId = "massnav_agent_selection_marker_light";
+            const string heavyMarkerId = "massnav_agent_selection_marker_heavy";
 
-            AssertPerformerDoesNotBindMeshAsset(FindObjectById(performers, "massnav_agent_light"), "massnav_agent_light", "massnav.selection.marker");
-            AssertPerformerDoesNotBindMeshAsset(FindObjectById(performers, "massnav_agent_heavy"), "massnav_agent_heavy", "massnav.selection.marker");
+            JsonObject lightAgent = FindObjectById(performers, "massnav_agent_light");
+            JsonObject heavyAgent = FindObjectById(performers, "massnav_agent_heavy");
+            AssertPerformerDoesNotBindMeshAsset(lightAgent, "massnav_agent_light", "massnav.selection.marker");
+            AssertPerformerDoesNotBindMeshAsset(heavyAgent, "massnav_agent_heavy", "massnav.selection.marker");
+            AssertSelectionMarkerLifecycleRules(lightAgent, "massnav_agent_light", lightMarkerId);
+            AssertSelectionMarkerLifecycleRules(heavyAgent, "massnav_agent_heavy", heavyMarkerId);
             AssertSelectionMarkerDefinition(
                 FindObjectById(performers, lightMarkerId),
                 lightMarkerId,
@@ -138,18 +145,10 @@ namespace Ludots.Tests.Presentation
                 expectedScaleZ: 0.78f,
                 expectedOffsetY: 0.04f);
 
-            AssertSourceContains(
-                Path.Combine(modRoot, "Systems", "MassNavSelectionPerformerSyncSystem.cs"),
-                "ParentEntity = rootPerformer");
-            AssertSourceContains(
-                Path.Combine(modRoot, "Systems", "MassNavSelectionPerformerSyncSystem.cs"),
-                "TryGetActiveScopedInstance");
-            AssertSourceContains(
-                Path.Combine(modRoot, "Systems", "MassNavSelectionPerformerSyncSystem.cs"),
-                "CommandKind = PerformerCommandKind.DestroyPerformer");
-            AssertSourceDoesNotContain(
-                Path.Combine(modRoot, "Systems", "MassNavSelectionPerformerSyncSystem.cs"),
-                "CommandKind = PerformerCommandKind.DestroyPerformerScope");
+            Assert.That(
+                File.Exists(Path.Combine(modRoot, "Systems", "MassNavSelectionPerformerSyncSystem.cs")),
+                Is.False,
+                "MassNav must not own selection marker lifecycle in a private presentation sync system.");
         }
 
         [Test]
@@ -321,8 +320,13 @@ namespace Ludots.Tests.Presentation
             AssertSourceContains(Path.Combine(modRoot, "Runtime", "MassNavWebParitySimState.cs"), "profileSet?.ResolveForLocalIndex(localIndex)");
             AssertSourceContains(Path.Combine(modRoot, "Runtime", "MassNavWebParitySimState.cs"), "MarkMovedEntitiesDirty()");
             AssertSourceContains(Path.Combine(modRoot, "Runtime", "MassNavWebParitySimState.cs"), "_entitySyncDirtyAgents");
-            AssertSourceContains(Path.Combine(modRoot, "Systems", "MassNavSelectionPerformerSyncSystem.cs"), "PresentationStableId");
-            AssertSourceDoesNotContain(Path.Combine(modRoot, "Systems", "MassNavSelectionPerformerSyncSystem.cs"), "SelectionMarkerScopeBase");
+            Assert.That(
+                File.Exists(Path.Combine(modRoot, "Systems", "MassNavSelectionPerformerSyncSystem.cs")),
+                Is.False,
+                "Selection marker lifecycle is now generic selection presentation events plus performer rules.");
+            AssertSourceContains(Path.Combine(repoRoot, "src", "Core", "Presentation", "Systems", "SelectionPresentationEventSystem.cs"), "SelectionRuntime remains the gameplay SSOT");
+            AssertSourceContains(Path.Combine(repoRoot, "src", "Core", "Presentation", "Systems", "PerformerRuntimeSystem.cs"), "DestroyScopedPerformer");
+            AssertSourceContains(Path.Combine(modRoot, "assets", "Presentation", "performers.json"), "SelectionMemberRemoved");
             AssertSourceDoesNotContain(Path.Combine(modRoot, "assets", "GAS", "order_types.json"), "interruptsActiveOrderTypeIds");
             AssertSourceContains(Path.Combine(modRoot, "assets", "GAS", "order_types.json"), "interruptsActiveOrderTypeKeys");
             AssertSourceContains(Path.Combine(repoRoot, "src", "Core", "Config", "ComponentRegistry.cs"), "Register<SelectionDragState>(\"SelectionDragState\")");
@@ -526,6 +530,51 @@ namespace Ludots.Tests.Presentation
             Assert.That(attachment["target"]?.GetValue<string>(), Is.EqualTo("Parent"));
             AssertVector3(attachment["offset"]?.AsArray(), 0f, expectedOffsetY, 0f, $"Selection marker '{definitionId}' attachment offset");
             Assert.That(attachment["inheritScale"]?.GetValue<bool>(), Is.False);
+        }
+
+        private static void AssertSelectionMarkerLifecycleRules(JsonObject definition, string definitionId, string markerDefinitionId)
+        {
+            JsonArray rules = definition["rules"]?.AsArray()
+                ?? throw new InvalidOperationException($"Performer '{definitionId}' must declare selection marker lifecycle rules.");
+
+            AssertSelectionMarkerLifecycleRule(
+                rules,
+                definitionId,
+                markerDefinitionId,
+                eventKind: "SelectionMemberAdded",
+                commandKind: "CreatePerformer");
+            AssertSelectionMarkerLifecycleRule(
+                rules,
+                definitionId,
+                markerDefinitionId,
+                eventKind: "SelectionMemberRemoved",
+                commandKind: "DestroyScopedPerformer");
+        }
+
+        private static void AssertSelectionMarkerLifecycleRule(
+            JsonArray rules,
+            string definitionId,
+            string markerDefinitionId,
+            string eventKind,
+            string commandKind)
+        {
+            JsonObject? match = rules
+                .Select(node => node?.AsObject())
+                .FirstOrDefault(rule =>
+                {
+                    JsonObject? evt = rule?["event"]?.AsObject();
+                    JsonObject? command = rule?["command"]?.AsObject();
+                    return string.Equals(evt?["kind"]?.GetValue<string>(), eventKind, StringComparison.Ordinal) &&
+                           string.Equals(evt?["key"]?.GetValue<string>(), SelectionSetKeys.LivePrimary, StringComparison.Ordinal) &&
+                           string.Equals(command?["kind"]?.GetValue<string>(), commandKind, StringComparison.Ordinal) &&
+                           string.Equals(command?["definitionId"]?.GetValue<string>(), markerDefinitionId, StringComparison.Ordinal);
+                });
+
+            Assert.That(match, Is.Not.Null,
+                $"Performer '{definitionId}' must map {eventKind} for {SelectionSetKeys.LivePrimary} to {commandKind} '{markerDefinitionId}'.");
+            JsonObject commandObj = match!["command"]!.AsObject();
+            Assert.That(commandObj["scopeSource"]?.GetValue<string>(), Is.EqualTo("SourceStableId"),
+                $"Performer '{definitionId}' must scope selection marker lifecycle by source stable id.");
         }
 
         private static void AssertDefinitionHasNoRules(JsonObject definition, string definitionId)

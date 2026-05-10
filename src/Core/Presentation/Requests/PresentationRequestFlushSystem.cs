@@ -21,6 +21,7 @@ namespace Ludots.Core.Presentation.Requests
         private readonly RoadSplineBuffer _roadSplines;
         private readonly PresentationTimingDiagnostics? _timingDiagnostics;
         private int _lastProjectedRevision = -1;
+        private bool _hadTransientVisualProjection;
 
         public PresentationRequestFlushSystem(
             World world,
@@ -61,11 +62,12 @@ namespace Ludots.Core.Presentation.Requests
             ReadOnlySpan<PresentationRequest> span = _requests.GetSpan();
             bool hasTransientVisualProxy = HasTransientVisualProxy(span);
             bool projectionTargetsCleared = false;
-            if (hasTransientVisualProxy)
+            if (hasTransientVisualProxy || _hadTransientVisualProjection)
             {
                 _visualProxyEmitter.ClearProjectionTargets();
                 projectionTargetsCleared = true;
             }
+            _hadTransientVisualProjection = hasTransientVisualProxy;
 
             for (int i = 0; i < span.Length; i++)
             {

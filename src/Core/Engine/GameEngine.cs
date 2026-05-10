@@ -752,7 +752,8 @@ namespace Ludots.Core.Engine
                     AssetKind.WorldText => presentationTextCatalog.GetTokenId(key),
                     AssetKind.GroundOverlay => ResolveGroundOverlayShapeId(key),
                     _ => 0,
-                }).Load(ConfigCatalog, ConfigConflictReport);
+                },
+                selectionSetKeyRegistry.Register).Load(ConfigCatalog, ConfigConflictReport);
             MapLoader.SetPresentationRuntime(
                 presentationStableIds,
                 performerRuntime,
@@ -1152,6 +1153,7 @@ namespace Ludots.Core.Engine
             RegisterPresentationSystem(new ResponseChainAiOrderSourceSystem(responseChainUiState, chainOrderQueue, cfgChainPass));
             RegisterPresentationSystem(new ResponseChainUiSyncSystem(GlobalContext, responseChainUiState, orderTypeRegistry));
             RegisterPresentationSystem(globalEventBridgeSystem);
+            RegisterPresentationSystem(new SelectionPresentationEventSystem(World, selectionRuntime, presentationEventStream));
             // PerformerRuleSystem reads events and produces commands.
             RegisterPresentationSystem(performerRuleSystem);
             // PerformerRuntimeSystem consumes commands, manages instance lifecycle.

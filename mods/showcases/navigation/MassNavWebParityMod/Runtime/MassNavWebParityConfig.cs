@@ -207,8 +207,6 @@ public sealed class MassNavPresentationConfig
     public string HotspotPerformerId { get; set; } = string.Empty;
     public string BlockerTemplateId { get; set; } = string.Empty;
     public string HotspotTemplateId { get; set; } = string.Empty;
-    public string SelectionMarkerLightPerformerId { get; set; } = string.Empty;
-    public string SelectionMarkerHeavyPerformerId { get; set; } = string.Empty;
     public MassNavTeamPresentationConfig[] Teams { get; set; } = Array.Empty<MassNavTeamPresentationConfig>();
 
     public void Validate(MassNavScenarioConfig scenario)
@@ -233,8 +231,6 @@ public sealed class MassNavPresentationConfig
         RequireNonEmpty(HotspotPerformerId, nameof(HotspotPerformerId));
         RequireNonEmpty(BlockerTemplateId, nameof(BlockerTemplateId));
         RequireNonEmpty(HotspotTemplateId, nameof(HotspotTemplateId));
-        RequireNonEmpty(SelectionMarkerLightPerformerId, nameof(SelectionMarkerLightPerformerId));
-        RequireNonEmpty(SelectionMarkerHeavyPerformerId, nameof(SelectionMarkerHeavyPerformerId));
 
         if (Teams.Length != scenario.Teams.Length)
         {

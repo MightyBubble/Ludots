@@ -212,6 +212,24 @@
   {
     "id": "massnav_agent_light",
     "defaultColor": [0.38, 0.72, 1.0, 1.0],
+    "rules": [
+      {
+        "event": { "kind": "SelectionMemberAdded", "key": "selection.live.primary" },
+        "command": {
+          "kind": "CreatePerformer",
+          "definitionId": "massnav_agent_selection_marker_light",
+          "scopeSource": "SourceStableId"
+        }
+      },
+      {
+        "event": { "kind": "SelectionMemberRemoved", "key": "selection.live.primary" },
+        "command": {
+          "kind": "DestroyScopedPerformer",
+          "definitionId": "massnav_agent_selection_marker_light",
+          "scopeSource": "SourceStableId"
+        }
+      }
+    ],
     "children": [
       { "definitionId": "massnav_agent_health_hud_light", "scopeTag": "structure" },
       { "definitionId": "massnav_agent_health_text_light", "scopeTag": "structure" }
@@ -276,6 +294,24 @@
   {
     "id": "massnav_agent_heavy",
     "defaultColor": [0.95, 0.58, 0.28, 1.0],
+    "rules": [
+      {
+        "event": { "kind": "SelectionMemberAdded", "key": "selection.live.primary" },
+        "command": {
+          "kind": "CreatePerformer",
+          "definitionId": "massnav_agent_selection_marker_heavy",
+          "scopeSource": "SourceStableId"
+        }
+      },
+      {
+        "event": { "kind": "SelectionMemberRemoved", "key": "selection.live.primary" },
+        "command": {
+          "kind": "DestroyScopedPerformer",
+          "definitionId": "massnav_agent_selection_marker_heavy",
+          "scopeSource": "SourceStableId"
+        }
+      }
+    ],
     "children": [
       { "definitionId": "massnav_agent_health_hud_heavy", "scopeTag": "structure" },
       { "definitionId": "massnav_agent_health_text_heavy", "scopeTag": "structure" }

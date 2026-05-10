@@ -11,7 +11,6 @@ using Ludots.Core.Modding;
 using Ludots.Core.Presentation.Minimap;
 using Ludots.Core.Presentation.Assets;
 using Ludots.Core.Presentation.Hud;
-using Ludots.Core.Presentation.Systems;
 using Ludots.Core.Scripting;
 using Ludots.Core.Spatial;
 using Ludots.UI;
@@ -60,7 +59,6 @@ internal sealed class MassNavWebParityRuntime
         engine.RegisterSystem(new MassNavCommandApplySystem(engine, simulation), SystemGroup.PostMovement);
         engine.RegisterSystem(new MassNavOrderBridgeSystem(engine, simulation), SystemGroup.PostMovement);
         engine.RegisterSystem(new MassNavFormationSystem(engine, simulation), SystemGroup.PostMovement);
-        engine.InsertPresentationSystemBefore<PerformerRuntimeSystem>(new MassNavSelectionPerformerSyncSystem(engine, simulation));
         engine.RegisterPresentationSystem(new MassNavHudPresentationSystem(engine, simulation));
         _systemsInstalled = true;
         _context.Log("[MassNavWebParityMod] Installed mass-nav fa莽ade runtime skeleton.");

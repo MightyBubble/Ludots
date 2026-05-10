@@ -11,5 +11,6 @@ namespace Ludots.Core.Presentation.Performers
         DeactivateBehavior = 6,
         SinkParamToAsset = 7,
         InitializeTransform = 8,
+        DestroyScopedPerformer = 9,
     }
 }

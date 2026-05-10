@@ -1580,6 +1580,58 @@ namespace Ludots.Tests.Presentation
         }
 
         [Test]
+        public void PresentationRequestFlushSystem_ClearsTransientProjection_WhenFrameStopsEmittingMovableProxy()
+        {
+            using var world = World.Create();
+            var requests = new PresentationRequestBuffer();
+            var drawBuffer = new PrimitiveDrawBuffer();
+            var snapshotBuffer = new PrimitiveDrawBuffer();
+            var proxyBuffer = new PresentationVisualProxyBuffer();
+            var stableDrawCache = new StableDrawCache();
+            using var flush = new PresentationRequestFlushSystem(
+                world,
+                requests,
+                new PrefabRegistry(),
+                new MeshAssetRegistry(),
+                stableDrawCache,
+                drawBuffer,
+                new GroundOverlayBuffer(),
+                new WorldHudBatchBuffer(),
+                new RoadSplineBuffer(),
+                snapshotBuffer,
+                proxyBuffer,
+                new SkinnedVisualBatchBuffer());
+
+            requests.Add(PresentationRequest.FromVisualProxy(Entity.Null, new PresentationVisualProxy
+            {
+                ProxyKind = PresentationVisualProxyKind.Performer,
+                MeshAssetId = 10,
+                MaterialId = 20,
+                StableId = 9100,
+                TemplateId = 200,
+                Position = new Vector3(1f, 2f, 3f),
+                Rotation = Quaternion.Identity,
+                Scale = Vector3.One,
+                Color = Vector4.One,
+                RenderPath = VisualRenderPath.InstancedStaticMesh,
+                Mobility = VisualMobility.Movable,
+                Visibility = VisualVisibility.Visible,
+                LOD = LODLevel.High,
+            }));
+
+            flush.Update(0.016f);
+            Assert.That(drawBuffer.Count, Is.EqualTo(1));
+            Assert.That(proxyBuffer.Count, Is.EqualTo(1));
+
+            flush.Update(0.016f);
+            Assert.That(drawBuffer.Count, Is.EqualTo(0),
+                "Movable performer projection must be cleared when the performer stops emitting.");
+            Assert.That(proxyBuffer.Count, Is.EqualTo(0),
+                "Proxy projection must not retain the previous movable performer frame.");
+            Assert.That(snapshotBuffer.Count, Is.EqualTo(0));
+        }
+
+        [Test]
         public void PerformerEmitSystem_StableCache_RemovesVisual_WhenOwnerBecomesCulled()
         {
             using var world = World.Create();

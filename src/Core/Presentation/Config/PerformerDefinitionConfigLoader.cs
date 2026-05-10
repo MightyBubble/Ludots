@@ -31,6 +31,7 @@ namespace Ludots.Core.Presentation.Config
         private readonly Func<string, int> _resolveAnimatorControllerId;
         private readonly Func<string, int> _resolveAnimationProfileId;
         private readonly Func<AssetKind, string, int> _resolveBehaviorAssetId;
+        private readonly Func<string, int> _resolveSelectionSetKeyId;
 
         public PerformerDefinitionConfigLoader(
             ConfigPipeline configs,
@@ -43,7 +44,8 @@ namespace Ludots.Core.Presentation.Config
             Func<string, int> resolveMaterialId = null,
             Func<string, int> resolveAnimatorControllerId = null,
             Func<string, int> resolveAnimationProfileId = null,
-            Func<AssetKind, string, int> resolveBehaviorAssetId = null)
+            Func<AssetKind, string, int> resolveBehaviorAssetId = null,
+            Func<string, int> resolveSelectionSetKeyId = null)
         {
             _configs = configs ?? throw new ArgumentNullException(nameof(configs));
             _registry = registry ?? throw new ArgumentNullException(nameof(registry));
@@ -56,6 +58,7 @@ namespace Ludots.Core.Presentation.Config
             _resolveAnimatorControllerId = resolveAnimatorControllerId ?? (_ => 0);
             _resolveAnimationProfileId = resolveAnimationProfileId ?? (_ => 0);
             _resolveBehaviorAssetId = resolveBehaviorAssetId ?? ((_, __) => 0);
+            _resolveSelectionSetKeyId = resolveSelectionSetKeyId ?? (_ => 0);
         }
 
         public void Load(ConfigCatalog catalog = null, ConfigConflictReport report = null)
@@ -491,6 +494,8 @@ namespace Ludots.Core.Presentation.Config
                 PresentationEventKind.ProjectileSpawned => ResolveRequired(_resolveEffectTemplateId(key), kind, "effect template", key),
                 PresentationEventKind.TagEffectiveChanged => TagRegistry.Register(key),
                 PresentationEventKind.GameplayEvent => TagRegistry.Register(key),
+                PresentationEventKind.SelectionMemberAdded => ResolveRequired(_resolveSelectionSetKeyId(key), kind, "selection set", key),
+                PresentationEventKind.SelectionMemberRemoved => ResolveRequired(_resolveSelectionSetKeyId(key), kind, "selection set", key),
                 _ => throw new InvalidOperationException($"Presentation event kind '{kind}' does not support string key '{key}'."),
             };
         }

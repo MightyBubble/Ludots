@@ -88,6 +88,10 @@ namespace Ludots.Core.Presentation.Systems
                         _runtime.DestroyScope(cmd.ScopeTag, EmitDestroyedEvent);
                         break;
 
+                    case PerformerCommandKind.DestroyScopedPerformer:
+                        HandleDestroyScopedPerformer(in cmd);
+                        break;
+
                     case PerformerCommandKind.SetParam:
                         if (World.IsAlive(cmd.PerformerEntity) && World.Has<PerformerState>(cmd.PerformerEntity))
                         {
@@ -195,6 +199,36 @@ namespace Ludots.Core.Presentation.Systems
             }
 
             _runtime.InitializeTransform(performer, definition);
+        }
+
+        private void HandleDestroyScopedPerformer(in PerformerCommand cmd)
+        {
+            if (cmd.PerformerDefinitionId <= 0)
+            {
+                throw new InvalidOperationException("DestroyScopedPerformer requires a positive performer definition id.");
+            }
+
+            if (cmd.ScopeTag <= 0)
+            {
+                throw new InvalidOperationException(
+                    $"DestroyScopedPerformer requires a positive scopeTag, got {cmd.ScopeTag}.");
+            }
+
+            if (!World.IsAlive(cmd.Source))
+            {
+                return;
+            }
+
+            if (_runtime.TryGetActiveScopedInstance(
+                    cmd.PerformerDefinitionId,
+                    cmd.Source,
+                    cmd.ScopeTag,
+                    PresentationAnchorKind.Entity,
+                    default,
+                    out Entity performer))
+            {
+                _runtime.Destroy(performer, EmitDestroyedEvent);
+            }
         }
 
         private void HandleCreatePerformer(in PerformerCommand cmd)

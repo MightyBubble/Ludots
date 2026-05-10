@@ -395,6 +395,7 @@ namespace Ludots.Core.Presentation.Systems
                 PerformerCommandScopeSource.EventPayloadA => evt.PayloadA,
                 PerformerCommandScopeSource.EventPayloadB => evt.PayloadB,
                 PerformerCommandScopeSource.EventKeyId => evt.KeyId,
+                PerformerCommandScopeSource.SourceStableId => ResolveSourceStableId(evt.Source),
                 _ => cmd.ScopeTag,
             };
 
@@ -409,7 +410,7 @@ namespace Ludots.Core.Presentation.Systems
             Entity normalizedParent = NormalizeOptionalEntity(cmd.ParentEntity);
             emitted.ParentEntity = normalizedParent != Entity.Null
                 ? normalizedParent
-                : (evt.Kind == PresentationEventKind.PerformerCreated ? NormalizeOptionalEntity(evt.PerformerEntity) : Entity.Null);
+                : ResolveImplicitParent(in evt);
             emitted.ParamValue = cmd.ParamGraphProgramId > 0
                 ? EvaluateGraphFloat(cmd.ParamGraphProgramId, evt.Source, evt.Target)
                 : ResolveParamFloatValue(in cmd, in evt);
@@ -433,13 +434,49 @@ namespace Ludots.Core.Presentation.Systems
             return entity == default || entity.Id < 0 ? Entity.Null : entity;
         }
 
+        private Entity ResolveImplicitParent(in PresentationEvent evt)
+        {
+            if (evt.Kind == PresentationEventKind.PerformerCreated)
+            {
+                return NormalizeOptionalEntity(evt.PerformerEntity);
+            }
+
+            if (evt.Kind is PresentationEventKind.SelectionMemberAdded or PresentationEventKind.SelectionMemberRemoved &&
+                World.IsAlive(evt.Source) &&
+                World.Has<PresentationOwnerHasPerformerPayload>(evt.Source))
+            {
+                Entity parent = World.Get<PresentationOwnerHasPerformerPayload>(evt.Source).SingleRootPerformer;
+                return NormalizeOptionalEntity(parent);
+            }
+
+            return Entity.Null;
+        }
+
         private static bool EventTargetsExistingPerformerInstances(PresentationEventKind kind)
         {
             return kind is PresentationEventKind.TagEffectiveChanged
+                or PresentationEventKind.SelectionMemberAdded
+                or PresentationEventKind.SelectionMemberRemoved
                 or PresentationEventKind.GlobalDayNight
                 or PresentationEventKind.GlobalRegionChanged
                 or PresentationEventKind.GlobalWeather
                 or PresentationEventKind.AttributeValueChanged;
+        }
+
+        private int ResolveSourceStableId(Entity source)
+        {
+            if (!World.IsAlive(source) || !World.Has<PresentationStableId>(source))
+            {
+                throw new InvalidOperationException("Performer command scopeSource=SourceStableId requires an alive source with PresentationStableId.");
+            }
+
+            int stableId = World.Get<PresentationStableId>(source).Value;
+            if (stableId <= 0)
+            {
+                throw new InvalidOperationException($"Performer command scopeSource=SourceStableId requires a positive PresentationStableId, got {stableId}.");
+            }
+
+            return stableId;
         }
 
         private static bool IsGlobalEvent(PresentationEventKind kind)

@@ -48,7 +48,7 @@ These files are the first-pass map for moving behavior out of the showcase later
 | `Systems/MassNavAgentMetadataSyncSystem.cs` | `MassNavigation` sync | Syncs ECS/team/profile metadata into reusable runtime state. |
 | `Systems/MassNavFormationSystem.cs` | `MassNavigation` formation | Reusable formation target allocation and group arrangement, if still independent from UI/scenario. |
 | `Systems/MassNavSelectionSyncSystem.cs` | `MassNavigation` selection adapter | Bridges `SelectionRuntime` to agent selected flags through formal selection keys. |
-| `Systems/MassNavSelectionPerformerSyncSystem.cs` | Showcase presentation adapter | Selection overlay performer params stay shell-owned until there is a generic presentation contract. |
+| `assets/Presentation/performers.json` selection rules | Showcase presentation authoring | Selection marker lifecycle is driven by generic selection presentation events and performer rules; MassNav only authors marker definitions and light/heavy rules. |
 | `Systems/MassNavPanelPresentationSystem.cs` | Showcase shell | UI presentation and tuning panel are acceptance-only. |
 | `Systems/MassNavHudPresentationSystem.cs` | Showcase shell | Diagnostics HUD is acceptance evidence, not core navigation. |
 | `Systems/MassNavScenarioBootstrap.cs` | Showcase shell | Scenario spawn authoring stays in the showcase. |

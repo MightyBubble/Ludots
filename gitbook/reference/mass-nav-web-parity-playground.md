@@ -183,7 +183,7 @@ MassNav agent、blocker、hotspot marker 必须通过 performer 创建：
 | `Systems/MassNavAgentMetadataSyncSystem.cs` | `MassNavigation` sync | ECS/team/profile metadata 同步到 runtime。 |
 | `Systems/MassNavFormationSystem.cs` | `MassNavigation` formation | formation target allocation 和 group arrangement；若依赖 UI/scenario 则留在壳内。 |
 | `Systems/MassNavSelectionSyncSystem.cs` | `MassNavigation` selection adapter | 正式 `SelectionRuntime` 到 agent selected flags 的桥接。 |
-| `Systems/MassNavSelectionPerformerSyncSystem.cs` | 待移除的 showcase presentation adapter | 当前仍承担 selection overlay 生命周期，属于过渡实现。目标是迁移到通用 selection mutation -> performer rule 链路，MassNav 只保留 performer 配置。 |
+| `assets/Presentation/performers.json` selection rules | showcase presentation authoring | Selection marker 是 performer rule 驱动的 scoped performer。MassNav 只 author marker definition 和 light/heavy rules，不拥有 marker 生命周期 system。 |
 | `Systems/MassNavPanelPresentationSystem.cs` | showcase 壳 | 调参 UI presentation。 |
 | `Systems/MassNavHudPresentationSystem.cs` | showcase 壳 | 诊断 HUD 和 evidence 可见性。 |
 | `Systems/MassNavScenarioBootstrap.cs` | showcase 壳 | scenario spawn authoring。 |
@@ -298,5 +298,5 @@ preset 启动：
 6. `mods/showcases/navigation/MassNavWebParityMod/Systems/MassNavCommandBridgeSystem.cs`
 7. `mods/showcases/navigation/MassNavWebParityMod/Systems/MassNavOrderBridgeSystem.cs`
 8. `mods/showcases/navigation/MassNavWebParityMod/Systems/MassNavFormationSystem.cs`
-9. `mods/showcases/navigation/MassNavWebParityMod/Systems/MassNavSelectionPerformerSyncSystem.cs`
+9. `mods/showcases/navigation/MassNavWebParityMod/assets/Presentation/performers.json`
 10. `mods/showcases/navigation/MassNavWebParityMod/UI/MassNavPlaygroundPanelController.cs`

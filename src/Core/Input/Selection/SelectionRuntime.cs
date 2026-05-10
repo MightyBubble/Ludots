@@ -834,6 +834,31 @@ namespace Ludots.Core.Input.Selection
             return true;
         }
 
+        public void CopyContainerEntities(List<Entity> destination)
+        {
+            if (destination == null)
+            {
+                throw new ArgumentNullException(nameof(destination));
+            }
+
+            destination.Clear();
+            foreach (KeyValuePair<SelectionOwnerSetKey, Entity> pair in _containers)
+            {
+                if (IsContainerAlive(pair.Value))
+                {
+                    destination.Add(pair.Value);
+                }
+            }
+        }
+
+        public bool TryGetSetKeyId(string setKey, out int setKeyId)
+        {
+            setKeyId = 0;
+            return TryResolveSetKey(setKey, out string resolvedSetKey) &&
+                   _setKeyRegistry.TryGetId(resolvedSetKey, out setKeyId) &&
+                   setKeyId > 0;
+        }
+
         private static bool TryResolveViewKey(string? viewKey, out string resolvedViewKey)
         {
             resolvedViewKey = string.Empty;

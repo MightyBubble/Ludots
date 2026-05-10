@@ -105,8 +105,6 @@ internal sealed class MassNavAuthoringContract
         ValidateRequiredMeshAssets();
         ValidatePerformer(_config.Presentation.BlockerPerformerId);
         ValidatePerformer(_config.Presentation.HotspotPerformerId);
-        ValidatePerformer(_config.Presentation.SelectionMarkerLightPerformerId);
-        ValidatePerformer(_config.Presentation.SelectionMarkerHeavyPerformerId);
         ValidateTemplate(_config.Presentation.BlockerTemplateId);
         ValidateTemplate(_config.Presentation.HotspotTemplateId);
 

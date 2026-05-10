@@ -6,5 +6,6 @@ namespace Ludots.Core.Presentation.Performers
         EventPayloadA = 1,
         EventPayloadB = 2,
         EventKeyId = 3,
+        SourceStableId = 4,
     }
 }
