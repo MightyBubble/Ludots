@@ -13,8 +13,8 @@ namespace Ludots.Tests.Presentation
     [TestFixture]
     public sealed class MassNavigationPerformerContractTests
     {
-        private const string AgentHealthSeedEffectId = "Effect.MassNavigation.Agent.HealthSeed";
-        private const string AgentHealthSeedGraphId = "Graph.MassNavigation.Agent.HealthSeed";
+        private const string AgentHealthDriftEffectId = "Effect.MassNavigation.Agent.HealthDrift";
+        private const string AgentHealthDriftGraphId = "Graph.MassNavigation.Agent.HealthDrift";
         private const string AgentHealthAttributeName = "Health";
         private const string LocomotionSpeedParamKey = "blacksmith.worker.locomotion.speed";
         private const string HealthRatioParamKey = "massNavigation.agent.health.ratio";
@@ -174,16 +174,20 @@ namespace Ludots.Tests.Presentation
             Assert.That(healthConstraint["clampToBase"]?.GetValue<bool>(), Is.True);
             Assert.That(healthConstraint["min"]?.GetValue<float>(), Is.EqualTo(0f));
 
-            JsonObject effect = FindObjectById(effects, AgentHealthSeedEffectId);
+            JsonObject effect = FindObjectById(effects, AgentHealthDriftEffectId);
             Assert.That(effect["presetType"]?.GetValue<string>(), Is.EqualTo("Buff"));
-            Assert.That(effect["lifetime"]?.GetValue<string>(), Is.EqualTo("After"));
+            Assert.That(effect["lifetime"]?.GetValue<string>(), Is.EqualTo("Infinite"));
+            Assert.That(effect["duration"]?["periodTicks"]?.GetValue<int>(), Is.EqualTo(60));
             Assert.That(
                 effect["phaseGraphs"]?["OnApply"]?["post"]?.GetValue<string>(),
-                Is.EqualTo(AgentHealthSeedGraphId));
+                Is.EqualTo(AgentHealthDriftGraphId));
+            Assert.That(
+                effect["phaseGraphs"]?["OnPeriod"]?["post"]?.GetValue<string>(),
+                Is.EqualTo(AgentHealthDriftGraphId));
 
-            JsonObject graph = FindObjectById(graphs, AgentHealthSeedGraphId);
+            JsonObject graph = FindObjectById(graphs, AgentHealthDriftGraphId);
             JsonArray nodes = graph["nodes"]?.AsArray()
-                ?? throw new InvalidOperationException("MassNavigation HealthSeed graph must declare nodes.");
+                ?? throw new InvalidOperationException("MassNavigation HealthDrift graph must declare nodes.");
             Assert.That(nodes.Count, Is.LessThanOrEqualTo(16), "Effect phase graph bindings have a fixed max-step budget.");
 
             var ops = new HashSet<string>(StringComparer.Ordinal);
@@ -199,7 +203,7 @@ namespace Ludots.Tests.Presentation
             JsonObject modifyNode = nodes
                 .Select(node => node?.AsObject())
                 .FirstOrDefault(node => string.Equals(node?["op"]?.GetValue<string>(), "ModifyAttributeAdd", StringComparison.Ordinal))
-                ?? throw new InvalidOperationException("HealthSeed graph must modify Health.");
+                ?? throw new InvalidOperationException("HealthDrift graph must modify Health.");
             Assert.That(modifyNode["attribute"]?.GetValue<string>(), Is.EqualTo(AgentHealthAttributeName));
         }
 
@@ -385,7 +389,7 @@ namespace Ludots.Tests.Presentation
         private static void AssertAgentTemplateAuthorsHealth(JsonObject template, float expectedBase, float expectedCurrent)
         {
             string templateId = RequireString(template, "id");
-            Assert.That(template["onSpawnEffect"]?.GetValue<string>(), Is.EqualTo(AgentHealthSeedEffectId),
+            Assert.That(template["onSpawnEffect"]?.GetValue<string>(), Is.EqualTo(AgentHealthDriftEffectId),
                 $"Template '{templateId}' should use the configured GAS on-spawn effect path.");
 
             JsonObject attributes = template["components"]?["AttributeBuffer"]?.AsObject()

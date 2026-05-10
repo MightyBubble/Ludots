@@ -1,16 +1,19 @@
 [
   {
-    "id": "Effect.MassNavigation.Agent.HealthSeed",
-    "tags": ["Effect.MassNavigation.Agent.HealthSeed"],
+    "id": "Effect.MassNavigation.Agent.HealthDrift",
+    "tags": ["Effect.MassNavigation.Agent.HealthDrift"],
     "presetType": "Buff",
-    "lifetime": "After",
+    "lifetime": "Infinite",
     "participatesInResponse": false,
     "duration": {
-      "durationTicks": 1
+      "periodTicks": 60
     },
     "phaseGraphs": {
       "OnApply": {
-        "post": "Graph.MassNavigation.Agent.HealthSeed"
+        "post": "Graph.MassNavigation.Agent.HealthDrift"
+      },
+      "OnPeriod": {
+        "post": "Graph.MassNavigation.Agent.HealthDrift"
       }
     }
   }

@@ -1,6 +1,6 @@
 [
   {
-    "id": "Graph.MassNavigation.Agent.HealthSeed",
+    "id": "Graph.MassNavigation.Agent.HealthDrift",
     "kind": "Effect",
     "entry": "target",
     "nodes": [
