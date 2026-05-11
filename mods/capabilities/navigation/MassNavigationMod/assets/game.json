@@ -30,8 +30,8 @@
       "maxZoomExplicitHalfExtentCm": 0.0
     }
   },
-  "Navigation2D": {
-    "Enabled": false
+  "navigation2D": {
+    "enabled": false
   }
 }
 

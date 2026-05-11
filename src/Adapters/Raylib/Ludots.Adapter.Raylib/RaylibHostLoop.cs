@@ -10,6 +10,7 @@ using Ludots.Core.Engine;
 using Ludots.Core.Gameplay.Camera;
 using Ludots.Core.Input.Runtime;
 using Ludots.Core.Input.Selection;
+using Ludots.Core.Map;
 using Ludots.Core.Mathematics;
 using Ludots.Core.Presentation;
 using Ludots.Core.Presentation.Camera;
@@ -123,6 +124,8 @@ namespace Ludots.Adapter.Raylib
                 screenRayProvider.BindPresenter(cameraPresenter);
                 engine.SetService(CoreServiceKeys.ScreenProjector, (IScreenProjector)screenProjector);
                 engine.SetService(CoreServiceKeys.ScreenRayProvider, (IScreenRayProvider)screenRayProvider);
+                var cullingFocusOverride = new CameraCullingFocusOverride();
+                engine.SetService(CoreServiceKeys.CameraCullingFocusOverride, cullingFocusOverride);
 
                 var performerInstances = engine.GetService(CoreServiceKeys.PerformerEntityRuntime);
                 var cullingSystem = new CameraCullingSystem(
@@ -131,6 +134,7 @@ namespace Ludots.Adapter.Raylib
                     engine.SpatialQueries,
                     viewController,
                     loadedChunks: null,
+                    focusOverride: cullingFocusOverride,
                     performers: performerInstances,
                     timingDiagnostics: presentationTiming,
                     cullingConfig: config.Presentation.CameraCulling);
@@ -253,11 +257,14 @@ namespace Ludots.Adapter.Raylib
                         float dt = Rl.GetFrameTime();
                         presentationTiming?.ObserveFrame(dt * 1000d);
                         var renderDebug = ResolveRenderDebugState(engine);
-                        string? activeMapId = engine.CurrentMapSession?.MapId.Value;
+                        bool activeMapRequestsDeepBackground = ActiveMapHasTag(engine, MapTags.RaylibDeepBackground);
+                        bool activeMapHidesDebugGuides = ActiveMapHasTag(engine, MapTags.RaylibHideDebugGuides);
                         IBenchmarkSceneController? benchmarkController = engine.GetService(CoreServiceKeys.BenchmarkSceneController);
                         bool cleanPerformanceMode = IsCleanPerformanceScene(benchmarkController);
                         bool hostDiagnosticUiSuppressed = benchmarkController is { IsActive: true, SuppressHostDiagnosticUi: true };
-                        bool hostDebugGuidesSuppressed = benchmarkController is { IsActive: true, SuppressHostDebugGuides: true };
+                        bool hostDebugGuidesSuppressed =
+                            activeMapHidesDebugGuides ||
+                            benchmarkController is { IsActive: true, SuppressHostDebugGuides: true };
                         bool drawTerrain = renderDebug.DrawTerrain && !cleanPerformanceMode;
                         bool drawVisualHeightmap = renderDebug.DrawTerrain;
                         bool hasVisualHeightmap = engine.TryGetService(
@@ -297,7 +304,6 @@ namespace Ludots.Adapter.Raylib
                         hudProjection?.Update(dt);
                         benchmarkRenderer?.PrepareFrame(presentationTiming, lastW, lastH);
 
-                        bool uxPrototypeMapActive = string.Equals(activeMapId, "ux_prototype_battle", StringComparison.OrdinalIgnoreCase);
                         if (overlaySceneBuilder != null && overlayScene != null)
                         {
                             long overlayBuildStart = Stopwatch.GetTimestamp();
@@ -317,7 +323,7 @@ namespace Ludots.Adapter.Raylib
                         Rl.BeginDrawing();
                         presentationTiming?.ObserveBeginDrawing(ElapsedMs(beginDrawingStart));
                         Restore3DDepthState();
-                        Rl.ClearBackground(uxPrototypeMapActive
+                        Rl.ClearBackground(activeMapRequestsDeepBackground
                             ? new Raylib_cs.Color(6, 10, 16, 255)
                             : new Raylib_cs.Color(0, 0, 0, 255));
 
@@ -330,7 +336,6 @@ namespace Ludots.Adapter.Raylib
 
                         if (drawDebugDraw &&
                             !(drawVisualHeightmap && hasVisualHeightmap) &&
-                            !uxPrototypeMapActive &&
                             !hostDebugGuidesSuppressed)
                         {
                             DrawInfiniteGrid(activeCamera.target, 300, 1.0f, 10);
@@ -640,6 +645,27 @@ namespace Ludots.Adapter.Raylib
         private static bool IsCleanPerformanceScene(IBenchmarkSceneController? benchmarkController)
         {
             return benchmarkController is { IsActive: true, IsCleanPerformanceScene: true };
+        }
+
+        private static bool ActiveMapHasTag(GameEngine engine, MapTag tag)
+        {
+            MapSession? session = engine.CurrentMapSession;
+            IReadOnlyList<string>? tags = session?.MapConfig?.Tags;
+            if (tags == null || tags.Count == 0)
+            {
+                return false;
+            }
+
+            string required = tag.Name;
+            for (int i = 0; i < tags.Count; i++)
+            {
+                if (string.Equals(tags[i], required, StringComparison.Ordinal))
+                {
+                    return true;
+                }
+            }
+
+            return false;
         }
 
         private static bool ReadEnvBoolOrDefault(string key, bool defaultValue)

@@ -27,7 +27,7 @@ namespace Ludots.Core.Gameplay.GAS.Config
             ConfigConflictReport report = null,
             string relativePath = "GAS/clock.json")
         {
-            var entry = ConfigPipeline.GetEntryOrDefault(catalog, relativePath, ConfigMergePolicy.DeepObject);
+            var entry = ConfigPipeline.RequireEntry(catalog, relativePath, ConfigMergePolicy.DeepObject);
             var mergedObject = _pipeline.MergeDeepObjectFromCatalog(in entry, report);
 
             if (mergedObject == null)

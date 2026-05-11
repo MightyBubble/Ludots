@@ -23,7 +23,7 @@ namespace Ludots.Core.Presentation.Config
 
         public void Load(ConfigCatalog catalog = null, ConfigConflictReport report = null)
         {
-            var entry = ConfigPipeline.GetEntryOrDefault(catalog, "Presentation/presentation_behaviors.json", ConfigMergePolicy.ArrayById, "id");
+            var entry = ConfigPipeline.RequireEntry(catalog, "Presentation/presentation_behaviors.json", ConfigMergePolicy.ArrayById, "id");
             var merged = _configs.MergeArrayByIdFromCatalog(in entry, report);
             for (int i = 0; i < merged.Count; i++)
             {

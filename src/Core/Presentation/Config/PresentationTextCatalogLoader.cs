@@ -23,10 +23,10 @@ namespace Ludots.Core.Presentation.Config
         public PresentationTextCatalog Load(ConfigCatalog catalog = null, ConfigConflictReport report = null)
         {
             ValidateTokenIdsAreUnique(TokenPath);
-            var tokenEntry = ConfigPipeline.GetEntryOrDefault(catalog, TokenPath, ConfigMergePolicy.ArrayById, "id");
+            var tokenEntry = ConfigPipeline.RequireEntry(catalog, TokenPath, ConfigMergePolicy.ArrayById, "id");
             var tokenNodes = _configs.MergeArrayByIdFromCatalog(in tokenEntry, report);
 
-            var localeEntry = ConfigPipeline.GetEntryOrDefault(catalog, LocalePath, ConfigMergePolicy.DeepObject);
+            var localeEntry = ConfigPipeline.RequireEntry(catalog, LocalePath, ConfigMergePolicy.DeepObject);
             JsonObject localeRoot = _configs.MergeDeepObjectFromCatalog(in localeEntry, report);
 
             if (tokenNodes.Count == 0 && (localeRoot == null || localeRoot.Count == 0))

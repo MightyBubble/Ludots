@@ -426,7 +426,11 @@ namespace Ludots.Core.Presentation.Systems
                 emitted.ParentEntity = performerEntity;
             }
 
-            _commands.TryAdd(in emitted);
+            if (!_commands.TryAdd(in emitted))
+            {
+                throw new InvalidOperationException(
+                    $"PerformerCommandBuffer overflowed while emitting {emitted.CommandKind} from {evt.Kind}; capacity={_commands.Capacity}.");
+            }
         }
 
         private static Entity NormalizeOptionalEntity(Entity entity)

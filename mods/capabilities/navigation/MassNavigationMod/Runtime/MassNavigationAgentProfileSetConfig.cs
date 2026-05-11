@@ -18,7 +18,7 @@ public sealed class MassNavigationAgentProfileSetConfig
         for (int i = 0; i < Profiles.Length; i++)
         {
             Profiles[i].Validate(i);
-            if (string.Equals(Profiles[i].Id, DefaultProfileId, StringComparison.OrdinalIgnoreCase))
+            if (string.Equals(Profiles[i].Id, DefaultProfileId, StringComparison.Ordinal))
             {
                 foundDefault = true;
             }
@@ -54,7 +54,7 @@ public sealed class MassNavigationAgentProfileSetConfig
     {
         for (int i = 0; i < Profiles.Length; i++)
         {
-            if (string.Equals(Profiles[i].Id, id, StringComparison.OrdinalIgnoreCase))
+            if (string.Equals(Profiles[i].Id, id, StringComparison.Ordinal))
             {
                 return Profiles[i];
             }

@@ -4,18 +4,27 @@ namespace MassNavigationMod;
 
 public static class MassNavigationIds
 {
-    public const string MapId = "mass_navigation";
-    public const int RuntimeSpawnReceiptChannelId = 170_201;
+    public const string RuntimeSpawnReceiptChannelKey = "massNavigation.runtimeSpawnReceipts";
 
-    public static bool IsNavigationMap(string? mapId)
+    public static bool IsNavigationMap(GameEngine engine, string? mapId)
     {
-        return string.Equals(mapId, MapId, System.StringComparison.OrdinalIgnoreCase);
+        if (engine == null)
+        {
+            throw new System.ArgumentNullException(nameof(engine));
+        }
+
+        if (engine.GetService(MassNavigationKeys.SimulationRuntime) is not Runtime.MassNavigationSimulationRuntime simulation)
+        {
+            return false;
+        }
+
+        return string.Equals(mapId, simulation.Config.MapId, System.StringComparison.Ordinal);
     }
 
     public static bool IsCurrentNavigationMap(GameEngine engine)
     {
         return engine.CurrentMapSession != null &&
-               IsNavigationMap(engine.CurrentMapSession.MapId.Value);
+               IsNavigationMap(engine, engine.CurrentMapSession.MapId.Value);
     }
 }
 

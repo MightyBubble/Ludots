@@ -21,7 +21,7 @@ namespace Ludots.Core.Navigation.Pathing.Config
             ConfigConflictReport report = null,
             string relativePath = "Navigation/pathing.json")
         {
-            var entry = ConfigPipeline.GetEntryOrDefault(catalog, relativePath, ConfigMergePolicy.DeepObject);
+            var entry = ConfigPipeline.RequireEntry(catalog, relativePath, ConfigMergePolicy.DeepObject);
             var mergedObject = _pipeline.MergeDeepObjectFromCatalog(in entry, report);
             if (mergedObject == null) throw new InvalidOperationException("PathingConfig not found in any source.");
 

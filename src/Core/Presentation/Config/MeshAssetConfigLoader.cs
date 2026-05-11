@@ -40,7 +40,7 @@ namespace Ludots.Core.Presentation.Config
 
         private void LoadMeshAssets(ConfigCatalog catalog, ConfigConflictReport report)
         {
-            var entry = ConfigPipeline.GetEntryOrDefault(catalog, "Presentation/mesh_assets.json", ConfigMergePolicy.ArrayById, "id");
+            var entry = ConfigPipeline.RequireEntry(catalog, "Presentation/mesh_assets.json", ConfigMergePolicy.ArrayById, "id");
             var merged = _configs.MergeArrayByIdFromCatalog(in entry, report);
 
             for (int i = 0; i < merged.Count; i++)
@@ -64,7 +64,7 @@ namespace Ludots.Core.Presentation.Config
 
         private void LoadPrefabs(ConfigCatalog catalog, ConfigConflictReport report)
         {
-            var entry = ConfigPipeline.GetEntryOrDefault(catalog, "Presentation/prefabs.json", ConfigMergePolicy.ArrayById, "id");
+            var entry = ConfigPipeline.RequireEntry(catalog, "Presentation/prefabs.json", ConfigMergePolicy.ArrayById, "id");
             var merged = _configs.MergeArrayByIdFromCatalog(in entry, report);
 
             for (int i = 0; i < merged.Count; i++)

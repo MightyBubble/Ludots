@@ -8,7 +8,7 @@ namespace Ludots.Core.Config
 {
     public class DataRegistry<T> where T : class, IIdentifiable
     {
-        private readonly Dictionary<string, T> _data = new Dictionary<string, T>(StringComparer.OrdinalIgnoreCase);
+        private readonly Dictionary<string, T> _data = new Dictionary<string, T>(StringComparer.Ordinal);
         private readonly ConfigPipeline _pipeline;
 
         public DataRegistry(ConfigPipeline pipeline)
@@ -20,11 +20,11 @@ namespace Ludots.Core.Config
         {
             Log.Info(in LogChannels.Config, $"Loading DataRegistry<{typeof(T).Name}> from {relativePath}...");
 
-            var entry = ConfigPipeline.GetEntryOrDefault(catalog, relativePath, ConfigMergePolicy.ArrayById, "id");
+            var entry = ConfigPipeline.RequireEntry(catalog, relativePath, ConfigMergePolicy.ArrayById, "id");
             var merged = _pipeline.MergeArrayByIdFromCatalog(in entry, report);
 
             int count = 0;
-            var options = new JsonSerializerOptions { PropertyNameCaseInsensitive = true, IncludeFields = true };
+            var options = new JsonSerializerOptions { PropertyNameCaseInsensitive = false, IncludeFields = true };
 
             for (int i = 0; i < merged.Count; i++)
             {
@@ -33,13 +33,33 @@ namespace Ludots.Core.Config
                     var item = merged[i].Node.Deserialize<T>(options);
                     if (item != null)
                     {
+                        if (string.IsNullOrWhiteSpace(item.Id))
+                        {
+                            throw new InvalidOperationException(
+                                $"DataRegistry<{typeof(T).Name}> entry '{merged[i].Id}' from {relativePath} deserialized without an exact Id property.");
+                        }
+
+                        if (!string.Equals(item.Id, merged[i].Id, StringComparison.Ordinal))
+                        {
+                            throw new InvalidOperationException(
+                                $"DataRegistry<{typeof(T).Name}> id mismatch in {relativePath}: catalog entry '{merged[i].Id}' vs item Id '{item.Id}'.");
+                        }
+
+                        if (_data.ContainsKey(item.Id))
+                        {
+                            throw new InvalidOperationException(
+                                $"DataRegistry<{typeof(T).Name}> duplicate id '{item.Id}' after merge.");
+                        }
+
                         _data[item.Id] = item;
                         count++;
                     }
                 }
                 catch (Exception ex)
                 {
-                    Log.Error(in LogChannels.Config, $"Error deserializing item {merged[i].Id}: {ex.Message}");
+                    throw new InvalidOperationException(
+                        $"Error deserializing DataRegistry<{typeof(T).Name}> item '{merged[i].Id}' from {relativePath}: {ex.Message}",
+                        ex);
                 }
             }
 

@@ -27,7 +27,7 @@ namespace Ludots.Core.Gameplay.Camera
 
         public void Load(ConfigCatalog catalog = null, ConfigConflictReport report = null)
         {
-            var entry = ConfigPipeline.GetEntryOrDefault(catalog, "Camera/virtual_cameras.json", ConfigMergePolicy.ArrayById, "id");
+            var entry = ConfigPipeline.RequireEntry(catalog, "Camera/virtual_cameras.json", ConfigMergePolicy.ArrayById, "id");
             var merged = _pipeline.MergeArrayByIdFromCatalog(in entry, report);
             if (merged == null || merged.Count == 0)
             {

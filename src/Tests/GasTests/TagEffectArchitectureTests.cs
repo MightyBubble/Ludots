@@ -526,46 +526,56 @@ namespace Ludots.Tests.GAS
         [Test]
         public void ProjectileRuntimeSystem_DestroyOnFirstHit_PublishesHitEffectAndDespawns()
         {
-            using var world = World.Create();
-            var requests = new EffectRequestQueue();
-            var caster = world.Create(
-                WorldPositionCm.FromCm(0, 0),
-                new Team { Id = 1 });
-            var hostile = world.Create(
-                WorldPositionCm.FromCm(260, 0),
-                new Team { Id = 2 });
-            var bystander = world.Create(
-                WorldPositionCm.FromCm(520, 0),
-                new Team { Id = 2 });
-            var projectile = world.Create(
-                new ProjectileState
-                {
-                    Speed = Fix64.FromInt(1200),
-                    Range = 900,
-                    HitEffectTemplateId = 88,
-                    PresentationEffectTemplateId = 88,
-                    TravelMode = ProjectileTravelMode.Direction,
-                    ImpactPolicy = ProjectileImpactPolicy.DestroyOnFirstHit,
-                    CollisionHalfWidthCm = 60,
-                    CollisionRelationFilter = RelationshipFilter.Hostile,
-                    CollisionExcludeSource = 1,
-                    MaxHitCount = 1,
-                    Source = caster,
-                    LaunchOriginCm = Fix64Vec2.Zero,
-                    HasLaunchOrigin = 1,
-                    Direction = Fix64Vec2.UnitX,
-                    HasDirection = 1,
-                },
-                WorldPositionCm.FromCm(0, 0),
-                new PreviousWorldPositionCm { Value = WorldPositionCm.FromCm(0, 0).Value });
+            TeamManager.Clear();
+            TeamManager.SetRelationshipSymmetric(1, 2, TeamRelationship.Hostile);
 
-            using var system = new ProjectileRuntimeSystem(world, requests, new TestLineQueryService(hostile, bystander));
-            system.Update(0.3f);
+            try
+            {
+                using var world = World.Create();
+                var requests = new EffectRequestQueue();
+                var caster = world.Create(
+                    WorldPositionCm.FromCm(0, 0),
+                    new Team { Id = 1 });
+                var hostile = world.Create(
+                    WorldPositionCm.FromCm(260, 0),
+                    new Team { Id = 2 });
+                var bystander = world.Create(
+                    WorldPositionCm.FromCm(520, 0),
+                    new Team { Id = 2 });
+                var projectile = world.Create(
+                    new ProjectileState
+                    {
+                        Speed = Fix64.FromInt(1200),
+                        Range = 900,
+                        HitEffectTemplateId = 88,
+                        PresentationEffectTemplateId = 88,
+                        TravelMode = ProjectileTravelMode.Direction,
+                        ImpactPolicy = ProjectileImpactPolicy.DestroyOnFirstHit,
+                        CollisionHalfWidthCm = 60,
+                        CollisionRelationFilter = RelationshipFilter.Hostile,
+                        CollisionExcludeSource = 1,
+                        MaxHitCount = 1,
+                        Source = caster,
+                        LaunchOriginCm = Fix64Vec2.Zero,
+                        HasLaunchOrigin = 1,
+                        Direction = Fix64Vec2.UnitX,
+                        HasDirection = 1,
+                    },
+                    WorldPositionCm.FromCm(0, 0),
+                    new PreviousWorldPositionCm { Value = WorldPositionCm.FromCm(0, 0).Value });
 
-            That(world.IsAlive(projectile), Is.False);
-            That(requests.Count, Is.EqualTo(1));
-            That(requests[0].TemplateId, Is.EqualTo(88));
-            That(requests[0].Target, Is.EqualTo(hostile));
+                using var system = new ProjectileRuntimeSystem(world, requests, new TestLineQueryService(hostile, bystander));
+                system.Update(0.3f);
+
+                That(world.IsAlive(projectile), Is.False);
+                That(requests.Count, Is.EqualTo(1));
+                That(requests[0].TemplateId, Is.EqualTo(88));
+                That(requests[0].Target, Is.EqualTo(hostile));
+            }
+            finally
+            {
+                TeamManager.Clear();
+            }
         }
 
         [Test]
@@ -698,8 +708,8 @@ namespace Ludots.Tests.GAS
                 That(position.Value, Is.EqualTo(Fix64Vec2.FromInt(420, 840)));
                 That(previous.Value, Is.EqualTo(Fix64Vec2.FromInt(420, 840)));
                 That(transform.Scale, Is.EqualTo(System.Numerics.Vector3.One));
-                That(cull.IsVisible, Is.True);
-                That(cull.LOD, Is.EqualTo(Ludots.Core.Presentation.Components.LODLevel.High));
+                That(cull.IsVisible, Is.False);
+                That(cull.LOD, Is.EqualTo(Ludots.Core.Presentation.Components.LODLevel.Low));
             });
 
             That(spawnCount, Is.EqualTo(1));
@@ -738,7 +748,7 @@ namespace Ludots.Tests.GAS
 
             var pipeline = CreateMinimalPipeline(@"{ ""id"": ""noop"", ""presetType"": ""None"" }", templateJson);
             var templates = new DataRegistry<EntityTemplate>(pipeline);
-            templates.Load("Entities/templates.json");
+            templates.Load("Entities/templates.json", ConfigCatalogLoader.Load(pipeline));
 
             using var world = World.Create();
             var requests = new RuntimeEntitySpawnQueue(capacity: 4);
@@ -893,7 +903,7 @@ namespace Ludots.Tests.GAS
 
             var pipeline = CreateMinimalPipeline(@"{ ""id"": ""noop"", ""presetType"": ""None"" }", templateJson);
             var templates = new DataRegistry<EntityTemplate>(pipeline);
-            templates.Load("Entities/templates.json");
+            templates.Load("Entities/templates.json", ConfigCatalogLoader.Load(pipeline));
 
             using var world = World.Create();
             var source = world.Create(
@@ -972,7 +982,7 @@ namespace Ludots.Tests.GAS
 
             var pipeline = CreateMinimalPipeline(@"{ ""id"": ""noop"", ""presetType"": ""None"" }", templateJson);
             var templates = new DataRegistry<EntityTemplate>(pipeline);
-            templates.Load("Entities/templates.json");
+            templates.Load("Entities/templates.json", ConfigCatalogLoader.Load(pipeline));
 
             using var world = World.Create();
             var requests = new RuntimeEntitySpawnQueue(capacity: 4);
@@ -1126,7 +1136,7 @@ namespace Ludots.Tests.GAS
                 }");
 
             var loader = new EffectTemplateLoader(pipeline, templates, conditions);
-            loader.Load(relativePath: "GAS/effects.json");
+            loader.Load(ConfigCatalogLoader.Load(pipeline), relativePath: "GAS/effects.json");
 
             int tplId = EffectTemplateIdRegistry.GetId("test_buff");
             That(tplId, Is.GreaterThan(0));
@@ -1157,7 +1167,7 @@ namespace Ludots.Tests.GAS
                 }");
 
             var loader = new EffectTemplateLoader(pipeline, templates, conditions);
-            loader.Load(relativePath: "GAS/effects.json");
+            loader.Load(ConfigCatalogLoader.Load(pipeline), relativePath: "GAS/effects.json");
 
             int tplId = EffectTemplateIdRegistry.GetId("test_attach");
             That(tplId, Is.GreaterThan(0));
@@ -1193,7 +1203,7 @@ namespace Ludots.Tests.GAS
                 }");
 
             var loader = new EffectTemplateLoader(pipeline, templates, conditions);
-            loader.Load(relativePath: "GAS/effects.json");
+            loader.Load(ConfigCatalogLoader.Load(pipeline), relativePath: "GAS/effects.json");
 
             int tplId = EffectTemplateIdRegistry.GetId("test_slow");
             That(tplId, Is.GreaterThan(0));
@@ -1230,7 +1240,7 @@ namespace Ludots.Tests.GAS
                 }");
 
             var loader = new EffectTemplateLoader(pipeline, templates, conditions);
-            loader.Load(relativePath: "GAS/effects.json");
+            loader.Load(ConfigCatalogLoader.Load(pipeline), relativePath: "GAS/effects.json");
 
             int tplId = EffectTemplateIdRegistry.GetId("test_stackable");
             That(tplId, Is.GreaterThan(0));
@@ -1424,6 +1434,12 @@ namespace Ludots.Tests.GAS
             var gasDir = Path.Combine(root, "Configs", "GAS");
             Directory.CreateDirectory(gasDir);
             File.WriteAllText(Path.Combine(gasDir, "effects.json"), json);
+            File.WriteAllText(
+                Path.Combine(root, "Configs", "config_catalog.json"),
+                @"[
+  { ""Path"": ""GAS/effects.json"", ""Policy"": ""ArrayById"", ""IdField"": ""id"" },
+  { ""Path"": ""Entities/templates.json"", ""Policy"": ""ArrayById"", ""IdField"": ""id"" }
+]");
 
             if (!string.IsNullOrWhiteSpace(templatesJson))
             {

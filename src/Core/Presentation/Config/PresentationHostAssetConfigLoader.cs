@@ -25,7 +25,7 @@ namespace Ludots.Core.Presentation.Config
                 throw new ArgumentException("Host asset backendId must not be empty.", nameof(backendId));
             }
 
-            var entry = ConfigPipeline.GetEntryOrDefault(catalog, DefaultRelativePath, ConfigMergePolicy.ArrayById, "id");
+            var entry = ConfigPipeline.RequireEntry(catalog, DefaultRelativePath, ConfigMergePolicy.ArrayById, "id");
             var merged = _configs.MergeArrayByIdFromCatalog(in entry, report);
 
             for (int i = 0; i < merged.Count; i++)

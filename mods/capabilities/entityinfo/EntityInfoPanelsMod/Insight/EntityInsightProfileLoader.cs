@@ -28,7 +28,7 @@ public sealed class EntityInsightProfileLoader
         ArgumentNullException.ThrowIfNull(templateKeys);
         ArgumentNullException.ThrowIfNull(textCatalog);
 
-        var entry = ConfigPipeline.GetEntryOrDefault(catalog, ProfilePath, ConfigMergePolicy.ArrayById, "id");
+        var entry = ConfigPipeline.RequireEntry(catalog, ProfilePath, ConfigMergePolicy.ArrayById, "id");
         IReadOnlyList<MergedConfigEntry> nodes = _configs.MergeArrayByIdFromCatalog(in entry, report);
         if (nodes.Count == 0)
         {

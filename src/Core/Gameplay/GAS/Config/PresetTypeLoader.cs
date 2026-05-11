@@ -26,7 +26,7 @@ namespace Ludots.Core.Gameplay.GAS.Config
             ConfigConflictReport report = null,
             string relativePath = "GAS/preset_types.json")
         {
-            var entry = ConfigPipeline.GetEntryOrDefault(catalog, relativePath, ConfigMergePolicy.ArrayById, "id");
+            var entry = ConfigPipeline.RequireEntry(catalog, relativePath, ConfigMergePolicy.ArrayById, "id");
             var merged = _pipeline.MergeArrayByIdFromCatalog(in entry, report);
 
             for (int i = 0; i < merged.Count; i++)
@@ -58,11 +58,11 @@ namespace Ludots.Core.Gameplay.GAS.Config
         {
             var def = new PresetTypeDefinition();
 
-            // id â†’ EffectPresetType enum
+            // id â†?EffectPresetType enum
             string idStr = obj["id"]?.GetValue<string>() ?? "";
             def.Type = GasEnumParser.ParsePresetType(idStr);
 
-            // components â†’ ComponentFlags
+            // components â†?ComponentFlags
             var comps = obj["components"]?.AsArray();
             if (comps != null)
             {
@@ -73,7 +73,7 @@ namespace Ludots.Core.Gameplay.GAS.Config
                 }
             }
 
-            // activePhases â†’ PhaseFlags
+            // activePhases â†?PhaseFlags
             var phases = obj["activePhases"]?.AsArray();
             if (phases != null)
             {
@@ -84,7 +84,7 @@ namespace Ludots.Core.Gameplay.GAS.Config
                 }
             }
 
-            // allowedLifetimes â†’ LifetimeFlags
+            // allowedLifetimes â†?LifetimeFlags
             var lifetimes = obj["allowedLifetimes"]?.AsArray();
             if (lifetimes != null)
             {
@@ -95,7 +95,7 @@ namespace Ludots.Core.Gameplay.GAS.Config
                 }
             }
 
-            // defaultPhaseHandlers â†’ PhaseHandlerMap
+            // defaultPhaseHandlers â†?PhaseHandlerMap
             var handlersObj = obj["defaultPhaseHandlers"]?.AsObject();
             if (handlersObj != null)
             {

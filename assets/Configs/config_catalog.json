@@ -12,6 +12,9 @@
   { "Path": "GAS/attribute_bindings.json", "Policy": "ArrayById", "IdField": "id" },
   { "Path": "GAS/graphs.json", "Policy": "ArrayById", "IdField": "id" },
   { "Path": "GAS/preset_types.json", "Policy": "ArrayById", "IdField": "id" },
+  { "Path": "GAS/target_dispatch_presets.json", "Policy": "ArrayById", "IdField": "id" },
+  { "Path": "GAS/ability_form_sets.json", "Policy": "ArrayById", "IdField": "id" },
+  { "Path": "GAS/context_groups.json", "Policy": "ArrayById", "IdField": "id" },
   { "Path": "GAS/attribute_constraints.json", "Policy": "DeepObject" },
   { "Path": "GAS/clock.json", "Policy": "DeepObject" },
   { "Path": "GAS/order_types.json", "Policy": "DeepObject" },
@@ -20,12 +23,17 @@
   { "Path": "Physics2D/clock.json", "Policy": "DeepObject" },
   { "Path": "Navigation2D/clock.json", "Policy": "DeepObject" },
   { "Path": "Navigation/pathing.json", "Policy": "DeepObject" },
+  { "Path": "Navigation/navmesh.json", "Policy": "DeepObject" },
 
   { "Path": "Entities/templates.json", "Policy": "ArrayById", "IdField": "id" },
   { "Path": "Presentation/performers.json", "Policy": "ArrayById", "IdField": "id" },
   { "Path": "Presentation/mesh_assets.json", "Policy": "ArrayById", "IdField": "id" },
   { "Path": "Presentation/host_assets.json", "Policy": "ArrayById", "IdField": "id" },
   { "Path": "Presentation/prefabs.json", "Policy": "ArrayById", "IdField": "id" },
+  { "Path": "Presentation/presentation_behaviors.json", "Policy": "ArrayById", "IdField": "id" },
+  { "Path": "Presentation/animator_controllers.json", "Policy": "ArrayById", "IdField": "id" },
+  { "Path": "Presentation/animation_clips.json", "Policy": "ArrayById", "IdField": "id" },
+  { "Path": "Presentation/animation_profiles.json", "Policy": "ArrayById", "IdField": "id" },
   { "Path": "Presentation/text_tokens.json", "Policy": "ArrayById", "IdField": "id" },
   { "Path": "Presentation/text_locales.json", "Policy": "DeepObject" },
 
@@ -36,5 +44,12 @@
   { "Path": "Input/default_input.json", "Policy": "DeepObject" },
   { "Path": "Input/input_order_mappings.json", "Policy": "DeepObject" },
 
-  { "Path": "Camera/virtual_cameras.json", "Policy": "ArrayById", "IdField": "id" }
+  { "Path": "Camera/virtual_cameras.json", "Policy": "ArrayById", "IdField": "id" },
+
+  { "Path": "Narrative/variables.json", "Policy": "ArrayById", "IdField": "id" },
+  { "Path": "Narrative/quests.json", "Policy": "ArrayById", "IdField": "id" },
+  { "Path": "Narrative/dialogues.json", "Policy": "ArrayById", "IdField": "id" },
+  { "Path": "Narrative/cinematics.json", "Policy": "ArrayById", "IdField": "id" },
+
+  { "Path": "EntityInfo/insight_profiles.json", "Policy": "ArrayById", "IdField": "id" }
 ]

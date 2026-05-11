@@ -1,0 +1,12 @@
+[
+  {
+    "id": "mass_navigation_total_war_formation_anchor",
+    "components": {
+      "Name": { "Value": "MassNavigation.TotalWar.FormationAnchor" },
+      "WorldPositionCm": { "Value": { "X": 0, "Y": 0 } },
+      "VisualHeightmapSampleState": {},
+      "FacingDirection": { "AngleRad": 0.0 },
+      "SpatialPartitionExcluded": {}
+    }
+  }
+]

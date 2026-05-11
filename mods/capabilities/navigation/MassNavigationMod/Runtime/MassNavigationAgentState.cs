@@ -86,11 +86,50 @@ public sealed class MassNavigationAgentState
             }
             else
             {
-                world.Destroy(entity);
+                throw new System.InvalidOperationException(
+                    $"MassNavigationAgentState tracked entity {entity.Id} cannot be destroyed without PresentationStableId.");
             }
         }
 
         Reset();
+    }
+
+    public void RegisterAgentAtIndex(Entity entity, int controllableIndex, bool controllable)
+    {
+        _spawnedEntities.Add(entity);
+        if (controllableIndex < 0)
+        {
+            throw new System.InvalidOperationException("MassNavigationAgentState requires non-negative agent indices.");
+        }
+
+        while (_allAgents.Count <= controllableIndex)
+        {
+            _allAgents.Add(Entity.Null);
+        }
+
+        if (_allAgents[controllableIndex] != Entity.Null)
+        {
+            throw new System.InvalidOperationException($"MassNavigationAgentState agent index {controllableIndex} is already registered.");
+        }
+
+        _allAgents[controllableIndex] = entity;
+        if (!controllable)
+        {
+            return;
+        }
+
+        while (_controllableAgents.Count <= controllableIndex)
+        {
+            _controllableAgents.Add(Entity.Null);
+        }
+
+        if (_controllableAgents[controllableIndex] != Entity.Null)
+        {
+            throw new System.InvalidOperationException($"MassNavigationAgentState controllable index {controllableIndex} is already registered.");
+        }
+
+        _controllableAgents[controllableIndex] = entity;
+        _controllableIndexByEntityId[entity.Id] = controllableIndex;
     }
 
     private static void RemoveMassNavigationRuntimeTags(World world, Entity entity)

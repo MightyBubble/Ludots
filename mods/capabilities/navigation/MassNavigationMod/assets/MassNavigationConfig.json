@@ -55,7 +55,7 @@
   },
   "presentation": {
     "requiredMeshAssetIds": [
-      "blacksmith.worker.knight",
+      "mass_navigation.agent.soldier",
       "mass_navigation.selection.marker",
       "mass_navigation.blocker.rock",
       "mass_navigation.hotspot.obelisk"
@@ -109,6 +109,9 @@
       { "id": 4, "name": "Emerald Guard" }
     ]
   },
+  "scenarioRuntime": {
+    "autoSpawnConfiguredScenario": true
+  },
   "cadence": {
     "simulationHz": 15,
     "targetUpdateHz": 15,
@@ -141,6 +144,10 @@
       }
     ]
   },
+  "cameraProfiles": {
+    "tacticalProfileId": "Camera.Profile.MassNavigationTactical",
+    "strategicProfileId": "Camera.Profile.MassNavigationStrategic"
+  },
   "teamRelationships": {
     "defaultRelationship": "Hostile",
     "relationships": [
@@ -152,14 +159,53 @@
     "iterationsPerStep": 4096,
     "stepIntervalTicks": 1,
     "crowdStampIntervalTicks": 1,
-    "obstacleStampIntervalTicks": 1
+    "obstacleStampIntervalTicks": 1,
+    "forceRefreshFlow": false,
+    "forceRefreshCrowd": false,
+    "forceRefreshObstacles": false
   },
   "arrival": {
     "enabled": true,
     "timeoutMs": 1500,
+    "timeoutMinMs": 250,
+    "timeoutMaxMs": 10000,
     "progressDistanceCm": 60,
+    "progressDistanceMinCm": 10,
+    "progressDistanceMaxCm": 500,
     "wakePushDistanceCm": 80,
+    "wakePushDistanceMinCm": 10,
+    "wakePushDistanceMaxCm": 500,
+    "maxRetryCountMin": 0,
+    "maxRetryCountMax": 16,
     "maxRetryCount": 2
+  },
+  "viewResidency": {
+    "mode": "Camera",
+    "retainSeconds": 6.0,
+    "radiusCm": 16000,
+    "initialProbeId": "central_overlook",
+    "cameraProbes": [
+      {
+        "id": "central_overlook",
+        "label": "Central Overlook",
+        "targetXCm": 0,
+        "targetYCm": 0,
+        "distanceCm": 18000,
+        "yaw": 225,
+        "pitch": 58,
+        "fovYDeg": 52
+      },
+      {
+        "id": "east_front",
+        "label": "East Front",
+        "targetXCm": 1800000,
+        "targetYCm": 600000,
+        "distanceCm": 18000,
+        "yaw": 225,
+        "pitch": 58,
+        "fovYDeg": 52
+      }
+    ]
   },
   "avoidance": {
     "lightNavMass": 1.0,
@@ -168,8 +214,22 @@
     "heavyVisualScale": 0.34,
     "dominantMassRatio": 2.25,
     "friendlyResponseScale": 1.1,
+    "friendlyResponseMin": 0.35,
+    "friendlyResponseMax": 2.75,
     "nonFriendlyResponseScale": 1.25,
-    "dominantPushResponseScale": 1.6
+    "nonFriendlyResponseMin": 0.25,
+    "nonFriendlyResponseMax": 3.25,
+    "dominantPushResponseScale": 1.6,
+    "dominantPushResponseMin": 0.15,
+    "dominantPushResponseMax": 4.5,
+    "friendlyCorrectionShareMin": 0.18,
+    "friendlyCorrectionShareMax": 0.82,
+    "dominantCorrectionOtherMassWeight": 1.8,
+    "dominantCorrectionShareMin": 0.05,
+    "dominantCorrectionShareMax": 0.95,
+    "nonFriendlyCorrectionOtherMassWeight": 1.2,
+    "nonFriendlyCorrectionShareMin": 0.08,
+    "nonFriendlyCorrectionShareMax": 0.92
   },
   "semantics": {
     "obstacle": {
@@ -187,7 +247,15 @@
     },
     "group": {
       "spawnSpacingCm": 46.0,
+      "spawnJitterCm": 12.0,
       "teamSlotSpacingCm": 90.0,
+      "formationLineSpacingCm": 180.0,
+      "formationSquareSpacingCm": 80.0,
+      "formationCircleSpacingCm": 180.0,
+      "formationCircleMinRadiusCm": 200.0,
+      "formationWedgeSpacingCm": 180.0,
+      "formationRotationEpsilonRadians": 0.00001,
+      "formationRotationSpeedRadiansPerSecond": 2.5,
       "pullDeadZoneCm": 50.0,
       "pullClampCm": 2000.0,
       "arrivedRadiusCm": 150.0,
@@ -207,6 +275,27 @@
       "formationSeparationScale": 2.0,
       "looseSeparationScale": 4.0,
       "velocityBlendPerSecond": 5.0
+    },
+    "solver": {
+      "minNavMass": 0.001,
+      "minVisualScale": 0.01,
+      "maxStepDtSeconds": 0.05,
+      "parallelStepMinAgents": 2048,
+      "directionEpsilonSq": 0.0001,
+      "normalizationEpsilonSq": 0.000001,
+      "inverseSqrtMinValue": 0.00000001,
+      "entitySyncPositionEpsilonSq": 0.25,
+      "entitySyncVelocityEpsilonSq": 0.01,
+      "facingVelocityEpsilonSq": 0.01,
+      "flowBlockedCellCost": 99999.0,
+      "flowBlockedCellThreshold": 9999.0,
+      "flowTargetStopDistanceSq": 1.0,
+      "flowObstacleNeighborRadiusCells": 4,
+      "flowObstacleNeighborWeight": 5.0,
+      "flowObstacleAvoidanceWeight": 1.5,
+      "coincidentPairHashBucketCount": 1024,
+      "coincidentPairHashPrimeA": 73856093,
+      "coincidentPairHashPrimeB": 19349663
     }
   }
 }

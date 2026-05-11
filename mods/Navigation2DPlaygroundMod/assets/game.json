@@ -2,158 +2,158 @@
   "startupMapId": "nav2d_playground",
   "worldWidthInTiles": 512,
   "worldHeightInTiles": 512,
-  "Navigation2D": {
-    "Enabled": true,
-    "MaxAgents": 50000,
-    "FlowIterationsPerTick": 8192,
-    "FlowStreaming": {
-      "Enabled": true,
-      "ActivationRadiusTiles": 3,
-      "MaxActiveTilesPerFlow": 512,
-      "UnloadGraceTicks": 12,
-      "MaxPotentialCells": 384,
-      "MaxActivationWindowWidthTiles": 96,
-      "MaxActivationWindowHeightTiles": 96,
-      "WorldBoundsEnabled": true,
-      "WorldMinTileX": -512,
-      "WorldMinTileY": -512,
-      "WorldMaxTileX": 511,
-      "WorldMaxTileY": 511
+  "navigation2D": {
+    "enabled": true,
+    "maxAgents": 50000,
+    "flowIterationsPerTick": 8192,
+    "flowStreaming": {
+      "enabled": true,
+      "activationRadiusTiles": 3,
+      "maxActiveTilesPerFlow": 512,
+      "unloadGraceTicks": 12,
+      "maxPotentialCells": 384,
+      "maxActivationWindowWidthTiles": 96,
+      "maxActivationWindowHeightTiles": 96,
+      "worldBoundsEnabled": true,
+      "worldMinTileX": -512,
+      "worldMinTileY": -512,
+      "worldMaxTileX": 511,
+      "worldMaxTileY": 511
     },
-    "Spatial": {
-      "UpdateMode": "Adaptive",
-      "RebuildCellMigrationsThreshold": 128,
-      "RebuildAccumulatedCellMigrationsThreshold": 1024
+    "spatial": {
+      "updateMode": "Adaptive",
+      "rebuildCellMigrationsThreshold": 128,
+      "rebuildAccumulatedCellMigrationsThreshold": 1024
     },
-    "Playground": {
-      "DefaultAgentsPerTeam": 64,
-      "AgentsPerTeamStep": 64,
-      "DefaultScenarioIndex": 0,
-      "DefaultSpawnBatch": 16,
-      "SpawnBatchStep": 16,
-      "CommandGoalRadiusCm": 120,
-      "CommandFormationSpacingCm": 140,
-      "DynamicSpawnSpacingCm": 120,
-      "DynamicBlockerRadiusCm": 140,
-      "Scenarios": [
+    "playground": {
+      "defaultAgentsPerTeam": 64,
+      "agentsPerTeamStep": 64,
+      "defaultScenarioIndex": 0,
+      "defaultSpawnBatch": 16,
+      "spawnBatchStep": 16,
+      "commandGoalRadiusCm": 120,
+      "commandFormationSpacingCm": 140,
+      "dynamicSpawnSpacingCm": 120,
+      "dynamicBlockerRadiusCm": 140,
+      "scenarios": [
         {
-          "Id": "pass_through",
-          "Name": "Pass Through",
-          "Kind": "PassThrough",
-          "TeamCount": 2,
-          "FormationSpacingCm": 120,
-          "StartOffsetCm": 9000,
-          "GoalOffsetCm": 9000,
-          "GoalRadiusCm": 120
+          "id": "pass_through",
+          "name": "Pass Through",
+          "kind": "PassThrough",
+          "teamCount": 2,
+          "formationSpacingCm": 120,
+          "startOffsetCm": 9000,
+          "goalOffsetCm": 9000,
+          "goalRadiusCm": 120
         },
         {
-          "Id": "orthogonal_cross",
-          "Name": "Orthogonal Cross",
-          "Kind": "OrthogonalCross",
-          "TeamCount": 2,
-          "FormationSpacingCm": 120,
-          "StartOffsetCm": 8200,
-          "GoalOffsetCm": 8200,
-          "GoalRadiusCm": 120
+          "id": "orthogonal_cross",
+          "name": "Orthogonal Cross",
+          "kind": "OrthogonalCross",
+          "teamCount": 2,
+          "formationSpacingCm": 120,
+          "startOffsetCm": 8200,
+          "goalOffsetCm": 8200,
+          "goalRadiusCm": 120
         },
         {
-          "Id": "bottleneck",
-          "Name": "Bottleneck",
-          "Kind": "Bottleneck",
-          "TeamCount": 2,
-          "FormationSpacingCm": 120,
-          "StartOffsetCm": 9200,
-          "GoalOffsetCm": 9200,
-          "CorridorHalfWidthCm": 320,
-          "GoalRadiusCm": 120,
-          "BlockerRadiusCm": 150,
-          "BlockerCount": 20,
-          "BlockerSpacingCm": 280
+          "id": "bottleneck",
+          "name": "Bottleneck",
+          "kind": "Bottleneck",
+          "teamCount": 2,
+          "formationSpacingCm": 120,
+          "startOffsetCm": 9200,
+          "goalOffsetCm": 9200,
+          "corridorHalfWidthCm": 320,
+          "goalRadiusCm": 120,
+          "blockerRadiusCm": 150,
+          "blockerCount": 20,
+          "blockerSpacingCm": 280
         },
         {
-          "Id": "lane_merge",
-          "Name": "Lane Merge",
-          "Kind": "LaneMerge",
-          "TeamCount": 2,
-          "FormationSpacingCm": 120,
-          "StartOffsetCm": 8800,
-          "GoalOffsetCm": 9200,
-          "LaneOffsetCm": 2400,
-          "GoalRadiusCm": 150
+          "id": "lane_merge",
+          "name": "Lane Merge",
+          "kind": "LaneMerge",
+          "teamCount": 2,
+          "formationSpacingCm": 120,
+          "startOffsetCm": 8800,
+          "goalOffsetCm": 9200,
+          "laneOffsetCm": 2400,
+          "goalRadiusCm": 150
         },
         {
-          "Id": "circle_swap",
-          "Name": "Circle Swap",
-          "Kind": "CircleSwap",
-          "TeamCount": 2,
-          "FormationSpacingCm": 120,
-          "RingRadiusCm": 5400,
-          "GoalRadiusCm": 160
+          "id": "circle_swap",
+          "name": "Circle Swap",
+          "kind": "CircleSwap",
+          "teamCount": 2,
+          "formationSpacingCm": 120,
+          "ringRadiusCm": 5400,
+          "goalRadiusCm": 160
         },
         {
-          "Id": "goal_queue",
-          "Name": "Goal Queue",
-          "Kind": "GoalQueue",
-          "TeamCount": 1,
-          "FormationSpacingCm": 120,
-          "StartOffsetCm": 9200,
-          "GoalOffsetCm": 7200,
-          "GoalRadiusCm": 220,
-          "CorridorHalfWidthCm": 220,
-          "BlockerRadiusCm": 130,
-          "BlockerCount": 18,
-          "BlockerSpacingCm": 260
+          "id": "goal_queue",
+          "name": "Goal Queue",
+          "kind": "GoalQueue",
+          "teamCount": 1,
+          "formationSpacingCm": 120,
+          "startOffsetCm": 9200,
+          "goalOffsetCm": 7200,
+          "goalRadiusCm": 220,
+          "corridorHalfWidthCm": 220,
+          "blockerRadiusCm": 130,
+          "blockerCount": 18,
+          "blockerSpacingCm": 260
         }
       ]
     },
-    "Steering": {
-      "Mode": "Hybrid",
-      "QueryBudget": {
-        "MaxNeighborsPerAgent": 12,
-        "MaxCandidateChecksPerAgent": 48
+    "steering": {
+      "mode": "Hybrid",
+      "queryBudget": {
+        "maxNeighborsPerAgent": 12,
+        "maxCandidateChecksPerAgent": 48
       },
-      "Orca": {
-        "Enabled": true,
-        "FallbackToPreferredVelocity": true
+      "orca": {
+        "enabled": true,
+        "fallbackToPreferredVelocity": true
       },
-      "Sonar": {
-        "Enabled": true,
-        "MaxSteerAngleDeg": 280,
-        "BackwardPenaltyAngleDeg": 230,
-        "IgnoreBehindMovingAgents": true,
-        "BlockedStop": false,
-        "PredictionTimeScale": 0.9
+      "sonar": {
+        "enabled": true,
+        "maxSteerAngleDeg": 280,
+        "backwardPenaltyAngleDeg": 230,
+        "ignoreBehindMovingAgents": true,
+        "blockedStop": false,
+        "predictionTimeScale": 0.9
       },
-      "Hybrid": {
-        "Enabled": true,
-        "DenseNeighborThreshold": 6,
-        "MinSpeedForOrcaCmPerSec": 120,
-        "MinOpposingNeighborsForOrca": 1,
-        "OpposingVelocityDotThreshold": -0.25
+      "hybrid": {
+        "enabled": true,
+        "denseNeighborThreshold": 6,
+        "minSpeedForOrcaCmPerSec": 120,
+        "minOpposingNeighborsForOrca": 1,
+        "opposingVelocityDotThreshold": -0.25
       },
-      "SmartStop": {
-        "Enabled": true,
-        "QueryRadiusCm": 100,
-        "MaxNeighbors": 6,
-        "SelfGoalDistanceLimitCm": 180,
-        "GoalToleranceCm": 80,
-        "ArrivedSlackCm": 20,
-        "StoppedSpeedThresholdCmPerSec": 5
+      "smartStop": {
+        "enabled": true,
+        "queryRadiusCm": 100,
+        "maxNeighbors": 6,
+        "selfGoalDistanceLimitCm": 180,
+        "goalToleranceCm": 80,
+        "arrivedSlackCm": 20,
+        "stoppedSpeedThresholdCmPerSec": 5
       },
-      "Separation": {
-        "Enabled": true,
-        "RadiusCm": 120,
-        "Weight": 0.75
+      "separation": {
+        "enabled": true,
+        "radiusCm": 120,
+        "weight": 0.75
       },
-      "TemporalCoherence": {
-        "Enabled": true,
-        "RequireSteadyStateWorld": false,
-        "MaxReuseTicks": 12,
-        "PositionToleranceCm": 40,
-        "VelocityToleranceCmPerSec": 320,
-        "PreferredVelocityToleranceCmPerSec": 80,
-        "NeighborPositionQuantizationCm": 40,
-        "NeighborVelocityQuantizationCmPerSec": 320
+      "temporalCoherence": {
+        "enabled": true,
+        "requireSteadyStateWorld": false,
+        "maxReuseTicks": 12,
+        "positionToleranceCm": 40,
+        "velocityToleranceCmPerSec": 320,
+        "preferredVelocityToleranceCmPerSec": 80,
+        "neighborPositionQuantizationCm": 40,
+        "neighborVelocityQuantizationCmPerSec": 320
       }
     }
   }

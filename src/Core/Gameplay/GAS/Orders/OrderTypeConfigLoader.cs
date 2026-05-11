@@ -13,9 +13,9 @@ namespace Ludots.Core.Gameplay.GAS.Orders
 
         private static readonly JsonSerializerOptions JsonOptions = new()
         {
-            PropertyNameCaseInsensitive = true,
-            ReadCommentHandling = JsonCommentHandling.Skip,
-            AllowTrailingCommas = true
+            PropertyNameCaseInsensitive = false,
+            PropertyNamingPolicy = JsonNamingPolicy.CamelCase,
+            UnmappedMemberHandling = System.Text.Json.Serialization.JsonUnmappedMemberHandling.Disallow
         };
 
         public sealed class OrderTypeConfigJson
@@ -73,7 +73,7 @@ namespace Ludots.Core.Gameplay.GAS.Orders
             orderTypeRegistry.Clear();
             orderRuleRegistry.Clear();
 
-            var entry = ConfigPipeline.GetEntryOrDefault(catalog, relativePath, ConfigMergePolicy.DeepObject);
+            var entry = ConfigPipeline.RequireEntry(catalog, relativePath, ConfigMergePolicy.DeepObject);
             var mergedObject = _pipeline.MergeDeepObjectFromCatalog(in entry, report);
             if (mergedObject == null)
             {
@@ -91,30 +91,32 @@ namespace Ludots.Core.Gameplay.GAS.Orders
                 throw new InvalidOperationException($"'{relativePath}' must define a non-empty orderTypes object.");
             }
 
-            var orderTypeEntries = new List<KeyValuePair<string, OrderTypeConfigJson>>(root.OrderTypes);
             var assignedIds = new HashSet<int>();
-            var allocatedIdsByKey = new Dictionary<string, int>(StringComparer.Ordinal);
-            var omittedKeys = new List<string>();
+            var orderTypeEntries = new List<KeyValuePair<string, OrderTypeConfigJson>>(root.OrderTypes);
+            var semanticOrderTypeKeys = new List<string>();
+            var resolvedOrderTypeIds = new Dictionary<string, int>(StringComparer.Ordinal);
             foreach (var kvp in orderTypeEntries)
             {
-                ReserveExplicitOrderTypeId(kvp.Value?.OrderTypeId, kvp.Key, relativePath, assignedIds);
-                if (kvp.Value?.OrderTypeId == null)
-                {
-                    omittedKeys.Add(kvp.Key);
-                }
+                ReserveAuthoredOrderTypeId(
+                    kvp.Value?.OrderTypeId,
+                    kvp.Key,
+                    relativePath,
+                    assignedIds,
+                    semanticOrderTypeKeys,
+                    resolvedOrderTypeIds);
             }
 
-            omittedKeys.Sort(StringComparer.Ordinal);
-            foreach (string key in omittedKeys)
+            semanticOrderTypeKeys.Sort(StringComparer.Ordinal);
+            for (int i = 0; i < semanticOrderTypeKeys.Count; i++)
             {
-                int id = AllocateStableOrderTypeId(key, assignedIds);
-                assignedIds.Add(id);
-                allocatedIdsByKey[key] = id;
+                string key = semanticOrderTypeKeys[i];
+                int orderTypeId = AssignNextFreeRuntimeOrderTypeId(key, relativePath, assignedIds);
+                resolvedOrderTypeIds[key] = orderTypeId;
             }
 
             foreach (var kvp in orderTypeEntries)
             {
-                var config = ConvertToConfig(kvp.Value, kvp.Key, relativePath, allocatedIdsByKey);
+                var config = ConvertToConfig(kvp.Value, kvp.Key, relativePath, resolvedOrderTypeIds);
                 orderTypeRegistry.Register(config);
             }
 
@@ -141,14 +143,14 @@ namespace Ludots.Core.Gameplay.GAS.Orders
             OrderTypeConfigJson json,
             string key,
             string path,
-            Dictionary<string, int> allocatedIdsByKey)
+            IReadOnlyDictionary<string, int> resolvedOrderTypeIds)
         {
             if (json == null)
             {
                 throw new InvalidOperationException($"Order type '{key}' in '{path}' is null.");
             }
 
-            int orderTypeId = ResolveOrderTypeId(json.OrderTypeId, key, path, allocatedIdsByKey);
+            int orderTypeId = ResolveOrderTypeId(json.OrderTypeId, key, path, resolvedOrderTypeIds);
             if (orderTypeId <= 0)
             {
                 throw new InvalidOperationException($"Order type '{key}' in '{path}' must define a positive orderTypeId.");
@@ -180,17 +182,12 @@ namespace Ludots.Core.Gameplay.GAS.Orders
             JsonNode? node,
             string key,
             string path,
-            Dictionary<string, int> allocatedIdsByKey)
+            IReadOnlyDictionary<string, int> resolvedOrderTypeIds)
         {
             int id;
             if (node == null)
             {
-                if (allocatedIdsByKey.TryGetValue(key, out int allocatedId))
-                {
-                    return allocatedId;
-                }
-
-                throw new InvalidOperationException($"Order type '{key}' in '{path}' did not receive a key-based order type id allocation.");
+                throw new InvalidOperationException($"Order type '{key}' in '{path}' must explicitly define orderTypeId.");
             }
 
             if (node is JsonValue value && value.TryGetValue<int>(out id))
@@ -208,19 +205,48 @@ namespace Ludots.Core.Gameplay.GAS.Orders
                 return id;
             }
 
-            throw new InvalidOperationException($"Order type '{key}' in '{path}' orderTypeId must be an int when authored explicitly, or omitted for key-based allocation.");
+            if (node is JsonValue textValue && textValue.TryGetValue<string>(out string? text))
+            {
+                ValidateSemanticOrderTypeId(text, key, path);
+                if (resolvedOrderTypeIds.TryGetValue(key, out int semanticId))
+                {
+                    return semanticId;
+                }
+
+                throw new InvalidOperationException($"Order type '{key}' in '{path}' semantic orderTypeId was not resolved.");
+            }
+
+            throw new InvalidOperationException($"Order type '{key}' in '{path}' orderTypeId must be an int or exact semantic key string.");
         }
 
-        private static void ReserveExplicitOrderTypeId(JsonNode? node, string key, string path, HashSet<int> assignedIds)
+        private static void ReserveAuthoredOrderTypeId(
+            JsonNode? node,
+            string key,
+            string path,
+            HashSet<int> assignedIds,
+            List<string> semanticOrderTypeKeys,
+            Dictionary<string, int> resolvedOrderTypeIds)
         {
             if (node == null)
             {
+                throw new InvalidOperationException($"Order type '{key}' in '{path}' must explicitly define orderTypeId.");
+            }
+
+            if (node is not JsonValue value)
+            {
+                throw new InvalidOperationException($"Order type '{key}' in '{path}' orderTypeId must be an int or exact semantic key string.");
+            }
+
+            if (value.TryGetValue<string>(out string? semanticKey))
+            {
+                ValidateSemanticOrderTypeId(semanticKey, key, path);
+                semanticOrderTypeKeys.Add(key);
                 return;
             }
 
-            if (node is not JsonValue value || !value.TryGetValue<int>(out int id))
+            if (!value.TryGetValue<int>(out int id))
             {
-                throw new InvalidOperationException($"Order type '{key}' in '{path}' orderTypeId must be an int when authored explicitly, or omitted for key-based allocation.");
+                throw new InvalidOperationException($"Order type '{key}' in '{path}' orderTypeId must be an int or exact semantic key string.");
             }
 
             if (id <= 0)
@@ -237,42 +263,36 @@ namespace Ludots.Core.Gameplay.GAS.Orders
             {
                 throw new InvalidOperationException($"Order type '{key}' in '{path}' duplicates orderTypeId {id}.");
             }
+
+            resolvedOrderTypeIds[key] = id;
         }
 
-        private static int AllocateStableOrderTypeId(string key, HashSet<int> assignedIds)
+        private static void ValidateSemanticOrderTypeId(string? semanticKey, string key, string path)
         {
-            int start = ComputeStableOrderTypeId(key);
-            int candidate = start;
-            for (int probe = 0; probe < OrderTypeRegistry.MaxOrderTypes - 1; probe++)
+            if (string.IsNullOrWhiteSpace(semanticKey))
             {
-                if (!assignedIds.Contains(candidate))
-                {
-                    return candidate;
-                }
+                throw new InvalidOperationException($"Order type '{key}' in '{path}' orderTypeId semantic key must be non-empty.");
+            }
 
-                candidate++;
-                if (candidate >= OrderTypeRegistry.MaxOrderTypes)
+            semanticKey = semanticKey.Trim();
+            if (!string.Equals(semanticKey, key, StringComparison.Ordinal))
+            {
+                throw new InvalidOperationException(
+                    $"Order type '{key}' in '{path}' orderTypeId semantic key must exactly match the order type key.");
+            }
+        }
+
+        private static int AssignNextFreeRuntimeOrderTypeId(string key, string path, HashSet<int> assignedIds)
+        {
+            for (int id = 1; id < OrderTypeRegistry.MaxOrderTypes; id++)
+            {
+                if (assignedIds.Add(id))
                 {
-                    candidate = 1;
+                    return id;
                 }
             }
 
-            throw new InvalidOperationException($"Order type id allocation exhausted the max {OrderTypeRegistry.MaxOrderTypes - 1} ids.");
-        }
-
-        private static int ComputeStableOrderTypeId(string key)
-        {
-            unchecked
-            {
-                uint hash = 2166136261u;
-                for (int i = 0; i < key.Length; i++)
-                {
-                    hash ^= key[i];
-                    hash *= 16777619u;
-                }
-
-                return 1 + (int)(hash % (OrderTypeRegistry.MaxOrderTypes - 1));
-            }
+            throw new InvalidOperationException($"Order type '{key}' in '{path}' cannot resolve a free runtime orderTypeId.");
         }
 
         private static int ResolveBlackboardKey(JsonNode? node, int defaultValue, string key, string path, string fieldName)
@@ -297,7 +317,7 @@ namespace Ludots.Core.Gameplay.GAS.Orders
                     }
 
                     text = text.Trim();
-                    if (string.Equals(text, "none", StringComparison.OrdinalIgnoreCase))
+                    if (string.Equals(text, "none", StringComparison.Ordinal))
                     {
                         return -1;
                     }
@@ -341,7 +361,7 @@ namespace Ludots.Core.Gameplay.GAS.Orders
             if (hasGraph)
             {
                 graphName = graphName.Trim();
-                if (string.Equals(graphName, "none", StringComparison.OrdinalIgnoreCase))
+                if (string.Equals(graphName, "none", StringComparison.Ordinal))
                 {
                     return 0;
                 }
@@ -381,7 +401,7 @@ namespace Ludots.Core.Gameplay.GAS.Orders
                     }
 
                     text = text.Trim();
-                    if (string.Equals(text, "none", StringComparison.OrdinalIgnoreCase))
+                    if (string.Equals(text, "none", StringComparison.Ordinal))
                     {
                         return 0;
                     }
@@ -510,21 +530,21 @@ namespace Ludots.Core.Gameplay.GAS.Orders
 
         private static SameTypePolicy ParseSameTypePolicy(string value)
         {
-            return value?.ToLowerInvariant() switch
+            return value switch
             {
-                "queue" => SameTypePolicy.Queue,
-                "replace" => SameTypePolicy.Replace,
-                "ignore" => SameTypePolicy.Ignore,
+                "Queue" => SameTypePolicy.Queue,
+                "Replace" => SameTypePolicy.Replace,
+                "Ignore" => SameTypePolicy.Ignore,
                 _ => throw new InvalidOperationException($"Unknown SameTypePolicy '{value}'."),
             };
         }
 
         private static QueueFullPolicy ParseQueueFullPolicy(string value)
         {
-            return value?.ToLowerInvariant() switch
+            return value switch
             {
-                "dropoldest" => QueueFullPolicy.DropOldest,
-                "rejectnew" => QueueFullPolicy.RejectNew,
+                "DropOldest" => QueueFullPolicy.DropOldest,
+                "RejectNew" => QueueFullPolicy.RejectNew,
                 _ => throw new InvalidOperationException($"Unknown QueueFullPolicy '{value}'."),
             };
         }

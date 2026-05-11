@@ -1,6 +1,7 @@
 using System;
 using Arch.System;
 using Ludots.Core.Engine;
+using Ludots.Core.Gameplay.Spawning;
 using Ludots.Core.Input.Runtime;
 using Ludots.Core.Input.Selection;
 using Ludots.Core.Scripting;
@@ -11,8 +12,6 @@ namespace MassNavigationMod.Systems;
 
 internal sealed class MassNavigationControlSystem : ISystem<float>
 {
-    private const float RotationSpeedRadiansPerSecond = 2.5f;
-
     private readonly GameEngine _engine;
     private readonly MassNavigationSimulationRuntime _simulation;
 
@@ -46,15 +45,15 @@ internal sealed class MassNavigationControlSystem : ISystem<float>
             float deltaRadians = 0f;
             if (input.IsDown(MassNavigationInputActions.RotateLeft))
             {
-                deltaRadians -= RotationSpeedRadiansPerSecond * dt;
+                deltaRadians -= _simulation.Config.Semantics.Group.FormationRotationSpeedRadiansPerSecond * dt;
             }
 
             if (input.IsDown(MassNavigationInputActions.RotateRight))
             {
-                deltaRadians += RotationSpeedRadiansPerSecond * dt;
+                deltaRadians += _simulation.Config.Semantics.Group.FormationRotationSpeedRadiansPerSecond * dt;
             }
 
-            if (MathF.Abs(deltaRadians) > 1e-5f)
+            if (MathF.Abs(deltaRadians) > _simulation.Config.Semantics.Group.FormationRotationEpsilonRadians)
             {
                 _simulation.Commands.EnqueueSelectionRotate(_simulation.SelectedEntities, deltaRadians);
             }
@@ -62,7 +61,16 @@ internal sealed class MassNavigationControlSystem : ISystem<float>
 
         if (_simulation.ConsumeSceneResetRequest())
         {
-            ResetScenario();
+            if (_simulation.Config.ScenarioRuntime.AutoSpawnConfiguredScenario)
+            {
+                ResetConfiguredScenario();
+            }
+            else
+            {
+                ResetRuntimeState();
+                _simulation.MarkSceneResetExecuted();
+                _simulation.MarkStructuralChange();
+            }
         }
         else
         {
@@ -70,13 +78,9 @@ internal sealed class MassNavigationControlSystem : ISystem<float>
         }
     }
 
-    private void ResetScenario()
+    private void ResetConfiguredScenario()
     {
-        ClearSelection();
-        _simulation.ClearSelection();
-        _simulation.Commands.Reset();
-        _simulation.NavGroupRuntime.Reset();
-        _simulation.AgentState.DestroyTracked(_engine.World);
+        ResetRuntimeState();
         MassNavigationScenarioBootstrap.SpawnDefaultScenario(
             _engine,
             _simulation,
@@ -87,6 +91,23 @@ internal sealed class MassNavigationControlSystem : ISystem<float>
 
         _simulation.MarkSceneResetExecuted();
         _simulation.MarkStructuralChange();
+    }
+
+    private void ResetRuntimeState()
+    {
+        ClearSelection();
+        RemovePendingScenarioSpawns();
+        _simulation.ResetRuntimeState(_engine.World);
+    }
+
+    private void RemovePendingScenarioSpawns()
+    {
+        RuntimeEntitySpawnQueue spawnQueue = _engine.GetService(CoreServiceKeys.RuntimeEntitySpawnQueue)
+            ?? throw new InvalidOperationException("MassNavigationMod requires RuntimeEntitySpawnQueue.");
+        RuntimeEntitySpawnReceiptChannelRegistry channels = _engine.GetService(CoreServiceKeys.RuntimeEntitySpawnReceiptChannelRegistry)
+            ?? throw new InvalidOperationException("MassNavigationMod requires RuntimeEntitySpawnReceiptChannelRegistry.");
+        int receiptChannelId = channels.Register(MassNavigationIds.RuntimeSpawnReceiptChannelKey);
+        spawnQueue.RemoveForReceiptChannel(receiptChannelId);
     }
 
     private void ClearSelection()

@@ -225,6 +225,21 @@ public sealed class MassFlowSimulationState
         SettledUnitCount = 0;
     }
 
+    internal void Reset(
+        ReadOnlySpan<MassNavigationAgentSeed> agentSeeds,
+        ReadOnlySpan<MassNavigationObstacleConfig> obstacles)
+    {
+        UnitCount = agentSeeds.Length;
+        EnsureCapacity(UnitCount);
+        InitializeTeams(agentSeeds);
+        CacheAuthoredObstacles(obstacles);
+        InitializeUnits(agentSeeds);
+        ForceFlowRebuild();
+        MarkAllEntitiesDirty();
+        _frameCount = 0;
+        SettledUnitCount = 0;
+    }
+
     public void SetTeamTarget(int teamId, Vector2 targetCm)
     {
         if (!TryGetTeamState(teamId, out TeamRuntimeState team))
@@ -258,8 +273,8 @@ public sealed class MassFlowSimulationState
         {
             _teamRuntimeIndices[index] = teamStateIndex;
         }
-        _navMasses[index] = MathF.Max(0.001f, navMass);
-        _visualScales[index] = MathF.Max(0.01f, visualScale);
+        _navMasses[index] = MathF.Max(Semantics.Solver.MinNavMass, navMass);
+        _visualScales[index] = MathF.Max(Semantics.Solver.MinVisualScale, visualScale);
         MarkEntityDirty(index);
     }
 
@@ -375,7 +390,7 @@ public sealed class MassFlowSimulationState
 
                 float nx;
                 float ny;
-                if (d2 > 0.0001f)
+                if (d2 > Semantics.Solver.DirectionEpsilonSq)
                 {
                     float invD = FastInvSqrt(d2);
                     nx = dx * invD;
@@ -384,7 +399,7 @@ public sealed class MassFlowSimulationState
                 else
                 {
                     float hintLenSq = hintX * hintX + hintY * hintY;
-                    if (hintLenSq > 0.0001f)
+                    if (hintLenSq > Semantics.Solver.DirectionEpsilonSq)
                     {
                         float invHint = FastInvSqrt(hintLenSq);
                         nx = hintX * invHint;
@@ -429,7 +444,7 @@ public sealed class MassFlowSimulationState
         long prepStart = System.Diagnostics.Stopwatch.GetTimestamp();
         RefreshTeamRelationshipMatrix();
 
-        float clampedDt = Math.Clamp(dt, 0f, 0.05f);
+        float clampedDt = Math.Clamp(dt, 0f, Semantics.Solver.MaxStepDtSeconds);
         _frameCount++;
         int scalarCount = UnitCount * 2;
         Array.Copy(_positionsCm, _readPositionsCm, scalarCount);
@@ -456,7 +471,7 @@ public sealed class MassFlowSimulationState
         int hhm1 = SeparationHashHeight - 1;
         float invHashCell = 1f / SeparationHashCellSizeCm;
 
-        if (World.SharedJobScheduler == null || UnitCount < 2048)
+        if (World.SharedJobScheduler == null || UnitCount < Semantics.Solver.ParallelStepMinAgents)
         {
             long steeringStart = System.Diagnostics.Stopwatch.GetTimestamp();
             StepRange(0, UnitCount, clampedDt, navGroupRuntime, speed, sepRadiusSq, invSepRadius, arrivalRadiusCm, arrivalRadiusSq, unitTargetStopThresholdSq, hwm1, hhm1, invHashCell, SeparationHashSearchRadius, _useCandidateGating);
@@ -627,7 +642,7 @@ public sealed class MassFlowSimulationState
             worldPosition.Value = worldValue;
 
             Vector2 velocity = GetVelocityCmPerSecond(i);
-            if ((velocity.X * velocity.X) + (velocity.Y * velocity.Y) > 0.01f)
+            if ((velocity.X * velocity.X) + (velocity.Y * velocity.Y) > Semantics.Solver.FacingVelocityEpsilonSq)
             {
                 ref FacingDirection facing = ref world.Get<FacingDirection>(entity);
                 facing.AngleRad = MathF.Atan2(velocity.Y, velocity.X);
@@ -743,6 +758,32 @@ public sealed class MassFlowSimulationState
         _teamRelationshipMatrix = new TeamRelationship[_teamStates.Count * _teamStates.Count];
     }
 
+    private void InitializeTeams(ReadOnlySpan<MassNavigationAgentSeed> agentSeeds)
+    {
+        _teamStates.Clear();
+        _teamStateIndexById.Clear();
+        for (int i = 0; i < agentSeeds.Length; i++)
+        {
+            int teamId = agentSeeds[i].TeamId;
+            if (_teamStateIndexById.TryGetValue(teamId, out int teamStateIndex))
+            {
+                _teamStates[teamStateIndex].UnitCount++;
+                continue;
+            }
+
+            var state = new TeamRuntimeState(teamId)
+            {
+                UnitCount = 1,
+                TargetX = agentSeeds[i].LocalPositionXCm,
+                TargetY = agentSeeds[i].LocalPositionYCm,
+            };
+            _teamStateIndexById[teamId] = _teamStates.Count;
+            _teamStates.Add(state);
+        }
+
+        _teamRelationshipMatrix = new TeamRelationship[_teamStates.Count * _teamStates.Count];
+    }
+
     private void InitializeUnits(MassNavigationAgentProfileSetConfig? profileSet)
     {
         Array.Clear(_velocitiesCm, 0, UnitCount * 2);
@@ -771,8 +812,8 @@ public sealed class MassFlowSimulationState
                 int col = localIndex % cols;
                 float lateralOffset = (col - colCenter) * spacingCm;
                 float depthOffset = (row - rowCenter) * spacingCm;
-                float jitterLateral = (_random.NextSingle() - 0.5f) * 12f;
-                float jitterDepth = (_random.NextSingle() - 0.5f) * 12f;
+                float jitterLateral = (_random.NextSingle() - 0.5f) * Semantics.Group.SpawnJitterCm;
+                float jitterDepth = (_random.NextSingle() - 0.5f) * Semantics.Group.SpawnJitterCm;
                 float xCm = team.SpawnCenterX + team.TangentX * (lateralOffset + jitterLateral) + team.DirectionX * (depthOffset + jitterDepth);
                 float yCm = team.SpawnCenterY + team.TangentY * (lateralOffset + jitterLateral) + team.DirectionY * (depthOffset + jitterDepth);
                 int i2 = unitIndex << 1;
@@ -875,7 +916,7 @@ public sealed class MassFlowSimulationState
             {
                 float wx = (x + 0.5f) * CellCm;
                 float wy = (y + 0.5f) * CellCm;
-                _staticCost[(y * GridWidth) + x] = IsObstacle(wx, wy) ? 99_999f : 1f;
+                _staticCost[(y * GridWidth) + x] = IsObstacle(wx, wy) ? Semantics.Solver.FlowBlockedCellCost : 1f;
             }
         }
     }
@@ -921,7 +962,7 @@ public sealed class MassFlowSimulationState
                 }
 
                 int idx = rowBase + nx;
-                if (_cost[idx] > 9_999f)
+                if (_cost[idx] > Semantics.Solver.FlowBlockedCellThreshold)
                 {
                     continue;
                 }
@@ -964,10 +1005,48 @@ public sealed class MassFlowSimulationState
         }
     }
 
+    private void InitializeUnits(ReadOnlySpan<MassNavigationAgentSeed> agentSeeds)
+    {
+        Array.Clear(_velocitiesCm, 0, UnitCount * 2);
+        Array.Clear(_unitTargetsCm, 0, UnitCount * 2);
+        Array.Clear(_hasUnitTarget, 0, UnitCount);
+        Array.Clear(_selectedFlags, 0, UnitCount);
+        Array.Clear(_heavyProfileFlags, 0, UnitCount);
+        Array.Clear(_unitProgressAnchorCm, 0, UnitCount * 2);
+        Array.Clear(_unitSettledAnchorCm, 0, UnitCount * 2);
+        Array.Clear(_unitSettledFlags, 0, UnitCount);
+        Array.Clear(_unitRetryCounts, 0, UnitCount);
+        Array.Clear(_unitStuckSeconds, 0, UnitCount);
+
+        int[] teamLocalWriteCursor = new int[_teamStates.Count];
+        for (int unitIndex = 0; unitIndex < agentSeeds.Length; unitIndex++)
+        {
+            MassNavigationAgentSeed seed = agentSeeds[unitIndex];
+            if (!_teamStateIndexById.TryGetValue(seed.TeamId, out int teamStateIndex))
+            {
+                throw new InvalidOperationException($"MassFlow agent seed references unregistered team {seed.TeamId}.");
+            }
+
+            int i2 = unitIndex << 1;
+            _teams[unitIndex] = seed.TeamId;
+            _teamRuntimeIndices[unitIndex] = teamStateIndex;
+            _teamLocalIndices[unitIndex] = teamLocalWriteCursor[teamStateIndex]++;
+            _navMasses[unitIndex] = MathF.Max(Semantics.Solver.MinNavMass, seed.NavMass);
+            _visualScales[unitIndex] = MathF.Max(Semantics.Solver.MinVisualScale, seed.VisualScale);
+            _heavyProfileFlags[unitIndex] = seed.Heavy ? (byte)1 : (byte)0;
+            _positionsCm[i2] = ClampPosition(seed.LocalPositionXCm);
+            _positionsCm[i2 + 1] = ClampPosition(seed.LocalPositionYCm);
+            _unitProgressAnchorCm[i2] = _positionsCm[i2];
+            _unitProgressAnchorCm[i2 + 1] = _positionsCm[i2 + 1];
+            _unitSettledAnchorCm[i2] = _positionsCm[i2];
+            _unitSettledAnchorCm[i2 + 1] = _positionsCm[i2 + 1];
+        }
+    }
+
     private void MarkMovedEntitiesDirty()
     {
-        const float PositionEpsilonSq = 0.25f;
-        const float VelocityEpsilonSq = 0.01f;
+        float positionEpsilonSq = Semantics.Solver.EntitySyncPositionEpsilonSq;
+        float velocityEpsilonSq = Semantics.Solver.EntitySyncVelocityEpsilonSq;
         for (int i = 0; i < UnitCount; i++)
         {
             int i2 = i << 1;
@@ -975,8 +1054,8 @@ public sealed class MassFlowSimulationState
             float dy = _positionsCm[i2 + 1] - _readPositionsCm[i2 + 1];
             float dvx = _velocitiesCm[i2] - _readVelocitiesCm[i2];
             float dvy = _velocitiesCm[i2 + 1] - _readVelocitiesCm[i2 + 1];
-            if ((dx * dx) + (dy * dy) > PositionEpsilonSq ||
-                (dvx * dvx) + (dvy * dvy) > VelocityEpsilonSq)
+            if ((dx * dx) + (dy * dy) > positionEpsilonSq ||
+                (dvx * dvx) + (dvy * dvy) > velocityEpsilonSq)
             {
                 MarkEntityDirty(i);
             }
@@ -1003,7 +1082,7 @@ public sealed class MassFlowSimulationState
             {
                 int idx = (y * GridWidth) + x;
                 int flowIndex = idx << 1;
-                if (_cost[idx] > 9_999f)
+                if (_cost[idx] > Semantics.Solver.FlowBlockedCellThreshold)
                 {
                     flow[flowIndex] = 0f;
                     flow[flowIndex + 1] = 0f;
@@ -1015,7 +1094,7 @@ public sealed class MassFlowSimulationState
                 float dx = targetX - wx;
                 float dy = targetY - wy;
                 float distSq = dx * dx + dy * dy;
-                if (distSq < 1f)
+                if (distSq < Semantics.Solver.FlowTargetStopDistanceSq)
                 {
                     flow[flowIndex] = 0f;
                     flow[flowIndex + 1] = 0f;
@@ -1028,9 +1107,10 @@ public sealed class MassFlowSimulationState
 
                 float avoidX = 0f;
                 float avoidY = 0f;
-                for (int offsetY = -4; offsetY <= 4; offsetY++)
+                int obstacleNeighborRadiusCells = Semantics.Solver.FlowObstacleNeighborRadiusCells;
+                for (int offsetY = -obstacleNeighborRadiusCells; offsetY <= obstacleNeighborRadiusCells; offsetY++)
                 {
-                    for (int offsetX = -4; offsetX <= 4; offsetX++)
+                    for (int offsetX = -obstacleNeighborRadiusCells; offsetX <= obstacleNeighborRadiusCells; offsetX++)
                     {
                         if (offsetX == 0 && offsetY == 0)
                         {
@@ -1044,26 +1124,27 @@ public sealed class MassFlowSimulationState
                             continue;
                         }
 
-                        if (_cost[(ny * GridWidth) + nx] > 9_999f)
+                        if (_cost[(ny * GridWidth) + nx] > Semantics.Solver.FlowBlockedCellThreshold)
                         {
                             float ovx = -offsetX;
                             float ovy = -offsetY;
                             float obstacleDistSq = (ovx * ovx) + (ovy * ovy);
-                            if (obstacleDistSq > 0.01f)
+                            if (obstacleDistSq > Semantics.Solver.EntitySyncVelocityEpsilonSq)
                             {
                                 float invObstacleDist = FastInvSqrt(obstacleDistSq);
                                 float obstacleDist = obstacleDistSq * invObstacleDist;
-                                avoidX += (ovx * invObstacleDist) * (5f / (obstacleDist * obstacleDist));
-                                avoidY += (ovy * invObstacleDist) * (5f / (obstacleDist * obstacleDist));
+                                float obstacleWeight = Semantics.Solver.FlowObstacleNeighborWeight / (obstacleDist * obstacleDist);
+                                avoidX += (ovx * invObstacleDist) * obstacleWeight;
+                                avoidY += (ovy * invObstacleDist) * obstacleWeight;
                             }
                         }
                     }
                 }
 
-                float flowX = dx + (avoidX * 1.5f);
-                float flowY = dy + (avoidY * 1.5f);
+                float flowX = dx + (avoidX * Semantics.Solver.FlowObstacleAvoidanceWeight);
+                float flowY = dy + (avoidY * Semantics.Solver.FlowObstacleAvoidanceWeight);
                 float flowLengthSq = flowX * flowX + flowY * flowY;
-                if (flowLengthSq < 0.000001f)
+                if (flowLengthSq < Semantics.Solver.NormalizationEpsilonSq)
                 {
                     flow[flowIndex] = 0f;
                     flow[flowIndex + 1] = 0f;
@@ -1284,13 +1365,13 @@ public sealed class MassFlowSimulationState
                                 continue;
                             }
 
-                            if (_cost[rowOffset + nx] > 9_999f)
+                            if (_cost[rowOffset + nx] > Semantics.Solver.FlowBlockedCellThreshold)
                             {
                                 float obstacleDistanceSq = ox * ox + oy * oy;
                                 float invObstacleDistance = FastInvSqrt(obstacleDistanceSq);
                                 float invObstacleDistanceSq = invObstacleDistance * invObstacleDistance;
-                                avoidX += (-ox * invObstacleDistance) * (4f * invObstacleDistanceSq);
-                                avoidY += (-oy * invObstacleDistance) * (4f * invObstacleDistanceSq);
+                                avoidX += (-ox * invObstacleDistance) * (Semantics.Solver.FlowObstacleNeighborWeight * invObstacleDistanceSq);
+                                avoidY += (-oy * invObstacleDistance) * (Semantics.Solver.FlowObstacleNeighborWeight * invObstacleDistanceSq);
                             }
                         }
                     }
@@ -1298,7 +1379,7 @@ public sealed class MassFlowSimulationState
                     desiredX += avoidX * Semantics.Steering.FlowObstacleAvoidanceScale;
                     desiredY += avoidY * Semantics.Steering.FlowObstacleAvoidanceScale;
                     float flowLengthSq = desiredX * desiredX + desiredY * desiredY;
-                    if (flowLengthSq > 0.000001f)
+                    if (flowLengthSq > Semantics.Solver.NormalizationEpsilonSq)
                     {
                         float invFlow = FastInvSqrt(flowLengthSq);
                         desiredX *= invFlow;
@@ -1363,7 +1444,7 @@ public sealed class MassFlowSimulationState
                     ResetUnitProgressAnchor(i, px, py);
                 }
 
-                if (!suppressTargetMotion && slotDistSq > 0.0001f)
+                if (!suppressTargetMotion && slotDistSq > Semantics.Solver.DirectionEpsilonSq)
                 {
                     float invSlot = FastInvSqrt(slotDistSq);
                     float slotDirX = toSlotX * invSlot;
@@ -1374,7 +1455,7 @@ public sealed class MassFlowSimulationState
                     desiredX = (flowX * (1f - slotBlend)) + (slotDirX * slotBlend);
                     desiredY = (flowY * (1f - slotBlend)) + (slotDirY * slotBlend);
                     float desiredLengthSq = desiredX * desiredX + desiredY * desiredY;
-                    if (desiredLengthSq > 0.000001f)
+                    if (desiredLengthSq > Semantics.Solver.NormalizationEpsilonSq)
                     {
                         float invDesired = FastInvSqrt(desiredLengthSq);
                         desiredX *= invDesired;
@@ -1435,7 +1516,7 @@ public sealed class MassFlowSimulationState
                                 _hardResolveCandidates[i] = 1;
                             }
 
-                            if (d2 < sepRadiusSq && d2 > 0.0001f)
+                            if (d2 < sepRadiusSq && d2 > Semantics.Solver.DirectionEpsilonSq)
                             {
                                 float invD = FastInvSqrt(d2);
                                 float d = d2 * invD;
@@ -1462,7 +1543,7 @@ public sealed class MassFlowSimulationState
                     _hardResolveCandidates[i] = 1;
                 }
 
-                if (d2 < _obsPR2[obstacleIndex] && d2 > 0.0001f)
+                if (d2 < _obsPR2[obstacleIndex] && d2 > Semantics.Solver.DirectionEpsilonSq)
                 {
                     float invD = FastInvSqrt(d2);
                     float d = d2 * invD;
@@ -1576,9 +1657,18 @@ public sealed class MassFlowSimulationState
         MassFlowPairAvoidancePolicy policy = ResolvePolicy(selfToOther, selfMass, otherMass);
         return policy switch
         {
-            MassFlowPairAvoidancePolicy.FriendlyCooperativeYield => Math.Clamp((selfMass / MathF.Max(0.001f, otherMass)) * AvoidanceTuning.FriendlyResponseScale, 0.35f, 2.75f),
-            MassFlowPairAvoidancePolicy.DominantPush => Math.Clamp((otherMass / MathF.Max(0.001f, selfMass)) * AvoidanceTuning.DominantPushResponseScale, 0.15f, 4.5f),
-            _ => Math.Clamp((otherMass / MathF.Max(0.001f, selfMass)) * AvoidanceTuning.NonFriendlyResponseScale, 0.25f, 3.25f),
+            MassFlowPairAvoidancePolicy.FriendlyCooperativeYield => Math.Clamp(
+                (selfMass / MathF.Max(Semantics.Solver.MinNavMass, otherMass)) * AvoidanceTuning.FriendlyResponseScale,
+                AvoidanceTuning.FriendlyResponseMin,
+                AvoidanceTuning.FriendlyResponseMax),
+            MassFlowPairAvoidancePolicy.DominantPush => Math.Clamp(
+                (otherMass / MathF.Max(Semantics.Solver.MinNavMass, selfMass)) * AvoidanceTuning.DominantPushResponseScale,
+                AvoidanceTuning.DominantPushResponseMin,
+                AvoidanceTuning.DominantPushResponseMax),
+            _ => Math.Clamp(
+                (otherMass / MathF.Max(Semantics.Solver.MinNavMass, selfMass)) * AvoidanceTuning.NonFriendlyResponseScale,
+                AvoidanceTuning.NonFriendlyResponseMin,
+                AvoidanceTuning.NonFriendlyResponseMax),
         };
     }
 
@@ -1604,7 +1694,7 @@ public sealed class MassFlowSimulationState
 
         float selfMass = _navMasses[selfUnitIndex];
         float otherMass = _navMasses[otherUnitIndex];
-        float minMass = MathF.Max(0.001f, MathF.Min(selfMass, otherMass));
+        float minMass = MathF.Max(Semantics.Solver.MinNavMass, MathF.Min(selfMass, otherMass));
         float maxMass = MathF.Max(selfMass, otherMass);
         return (maxMass / minMass) >= AvoidanceTuning.DominantMassRatio
             ? MassFlowPairAvoidancePolicy.DominantPush
@@ -1618,7 +1708,7 @@ public sealed class MassFlowSimulationState
             return MassFlowPairAvoidancePolicy.FriendlyCooperativeYield;
         }
 
-        float minMass = MathF.Max(0.001f, MathF.Min(selfMass, otherMass));
+        float minMass = MathF.Max(Semantics.Solver.MinNavMass, MathF.Min(selfMass, otherMass));
         float maxMass = MathF.Max(selfMass, otherMass);
         return (maxMass / minMass) >= AvoidanceTuning.DominantMassRatio
             ? MassFlowPairAvoidancePolicy.DominantPush
@@ -1627,13 +1717,24 @@ public sealed class MassFlowSimulationState
 
     private float ComputeCorrectionShare(MassFlowPairAvoidancePolicy policy, float selfMass, float otherMass)
     {
-        float safeSelf = MathF.Max(0.001f, selfMass);
-        float safeOther = MathF.Max(0.001f, otherMass);
+        float safeSelf = MathF.Max(Semantics.Solver.MinNavMass, selfMass);
+        float safeOther = MathF.Max(Semantics.Solver.MinNavMass, otherMass);
+        float dominantOtherMass = safeOther * AvoidanceTuning.DominantCorrectionOtherMassWeight;
+        float nonFriendlyOtherMass = safeOther * AvoidanceTuning.NonFriendlyCorrectionOtherMassWeight;
         return policy switch
         {
-            MassFlowPairAvoidancePolicy.FriendlyCooperativeYield => Math.Clamp(safeSelf / (safeSelf + safeOther), 0.18f, 0.82f),
-            MassFlowPairAvoidancePolicy.DominantPush => Math.Clamp((safeOther * 1.8f) / (safeSelf + (safeOther * 1.8f)), 0.05f, 0.95f),
-            _ => Math.Clamp((safeOther * 1.2f) / (safeSelf + (safeOther * 1.2f)), 0.08f, 0.92f),
+            MassFlowPairAvoidancePolicy.FriendlyCooperativeYield => Math.Clamp(
+                safeSelf / (safeSelf + safeOther),
+                AvoidanceTuning.FriendlyCorrectionShareMin,
+                AvoidanceTuning.FriendlyCorrectionShareMax),
+            MassFlowPairAvoidancePolicy.DominantPush => Math.Clamp(
+                dominantOtherMass / (safeSelf + dominantOtherMass),
+                AvoidanceTuning.DominantCorrectionShareMin,
+                AvoidanceTuning.DominantCorrectionShareMax),
+            _ => Math.Clamp(
+                nonFriendlyOtherMass / (safeSelf + nonFriendlyOtherMass),
+                AvoidanceTuning.NonFriendlyCorrectionShareMin,
+                AvoidanceTuning.NonFriendlyCorrectionShareMax),
         };
     }
 
@@ -1823,7 +1924,7 @@ public sealed class MassFlowSimulationState
         float nx;
         float ny;
         float overlap;
-        if (d2 > 0.0001f)
+        if (d2 > Semantics.Solver.DirectionEpsilonSq)
         {
             float invD = FastInvSqrt(d2);
             float distance = d2 * invD;
@@ -1833,8 +1934,9 @@ public sealed class MassFlowSimulationState
         }
         else
         {
-            float angle = ((i * 73856093) ^ (j * 19349663)) & 1023;
-            float radians = angle * (MathF.PI * 2f / 1024f);
+            int hashMask = Semantics.Solver.CoincidentPairHashBucketCount - 1;
+            float angle = ((i * Semantics.Solver.CoincidentPairHashPrimeA) ^ (j * Semantics.Solver.CoincidentPairHashPrimeB)) & hashMask;
+            float radians = angle * (MathF.PI * 2f / Semantics.Solver.CoincidentPairHashBucketCount);
             nx = MathF.Cos(radians);
             ny = MathF.Sin(radians);
             overlap = Semantics.Obstacle.AgentBodyDiameterCm;
@@ -1893,7 +1995,7 @@ public sealed class MassFlowSimulationState
 
                 float nx;
                 float ny;
-                if (d2 > 0.0001f)
+                if (d2 > Semantics.Solver.DirectionEpsilonSq)
                 {
                     float invD = FastInvSqrt(d2);
                     nx = dx * invD;
@@ -1956,9 +2058,9 @@ public sealed class MassFlowSimulationState
         return false;
     }
 
-    private static float FastInvSqrt(float value)
+    private float FastInvSqrt(float value)
     {
-        return value < 0.00000001f ? 0f : 1f / MathF.Sqrt(value);
+        return value < Semantics.Solver.InverseSqrtMinValue ? 0f : 1f / MathF.Sqrt(value);
     }
 
     private static float ClampPosition(float value)
@@ -2091,8 +2193,14 @@ public sealed class MassFlowSimulationState
             Flow = new float[GridWidth * GridHeight * 2];
         }
 
+        public TeamRuntimeState(int teamId)
+        {
+            TeamId = teamId;
+            Flow = new float[GridWidth * GridHeight * 2];
+        }
+
         public int TeamId { get; }
-        public int UnitCount { get; }
+        public int UnitCount { get; set; }
         public float SpawnCenterX { get; }
         public float SpawnCenterY { get; }
         public float DirectionX { get; }

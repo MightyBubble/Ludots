@@ -64,30 +64,53 @@ namespace Ludots.Core.Gameplay.Teams
         public static void LoadConfig(TeamConfig config)
         {
             Clear();
-            if (config == null) return;
-
-            // Parse configurable default
-            if (Enum.TryParse<TeamRelationship>(config.DefaultRelationship, true, out var defaultRel))
+            if (config == null)
             {
-                DefaultRelationship = defaultRel;
+                throw new ArgumentNullException(nameof(config));
             }
 
-            if (config.Relationships == null) return;
+            if (!TryParseRelationship(config.DefaultRelationship, out var defaultRel))
+            {
+                throw new InvalidOperationException(
+                    $"TeamConfig.DefaultRelationship is invalid: '{config.DefaultRelationship}'.");
+            }
+
+            DefaultRelationship = defaultRel;
+
+            if (config.Relationships == null)
+            {
+                throw new InvalidOperationException("TeamConfig.Relationships must be an explicit collection.");
+            }
 
             foreach (var entry in config.Relationships)
             {
-                if (Enum.TryParse<TeamRelationship>(entry.Attitude, true, out var rel))
+                if (!TryParseRelationship(entry.Attitude, out var rel))
                 {
-                    if (entry.Symmetric)
-                    {
-                        SetRelationshipSymmetric(entry.TeamA, entry.TeamB, rel);
-                    }
-                    else
-                    {
-                        SetRelationship(entry.TeamA, entry.TeamB, rel);
-                    }
+                    throw new InvalidOperationException(
+                        $"TeamConfig relationship [{entry.TeamA},{entry.TeamB}] is invalid: '{entry.Attitude}'.");
+                }
+
+                if (entry.Symmetric)
+                {
+                    SetRelationshipSymmetric(entry.TeamA, entry.TeamB, rel);
+                }
+                else
+                {
+                    SetRelationship(entry.TeamA, entry.TeamB, rel);
                 }
             }
+        }
+
+        public static bool TryParseRelationship(string value, out TeamRelationship relationship)
+        {
+            relationship = default;
+            if (string.IsNullOrWhiteSpace(value))
+            {
+                return false;
+            }
+
+            return Enum.TryParse(value, ignoreCase: false, out relationship) &&
+                   string.Equals(relationship.ToString(), value, StringComparison.Ordinal);
         }
 
         /// <summary>

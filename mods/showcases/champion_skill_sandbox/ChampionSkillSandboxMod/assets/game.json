@@ -1,21 +1,21 @@
 {
   "startupMapId": "champion_skill_sandbox",
-  "Navigation2D": {
-    "Enabled": true,
-    "Steering": {
-      "QueryBudget": {
-        "MaxNeighborsPerAgent": 16,
-        "MaxCandidateChecksPerAgent": 64
+  "navigation2D": {
+    "enabled": true,
+    "steering": {
+      "queryBudget": {
+        "maxNeighborsPerAgent": 16,
+        "maxCandidateChecksPerAgent": 64
       },
-      "TemporalCoherence": {
-        "Enabled": true,
-        "RequireSteadyStateWorld": false,
-        "MaxReuseTicks": 12,
-        "PositionToleranceCm": 40,
-        "VelocityToleranceCmPerSec": 320,
-        "PreferredVelocityToleranceCmPerSec": 80,
-        "NeighborPositionQuantizationCm": 40,
-        "NeighborVelocityQuantizationCmPerSec": 320
+      "temporalCoherence": {
+        "enabled": true,
+        "requireSteadyStateWorld": false,
+        "maxReuseTicks": 12,
+        "positionToleranceCm": 40,
+        "velocityToleranceCmPerSec": 320,
+        "preferredVelocityToleranceCmPerSec": 80,
+        "neighborPositionQuantizationCm": 40,
+        "neighborVelocityQuantizationCmPerSec": 320
       }
     }
   }

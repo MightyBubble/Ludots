@@ -22,7 +22,15 @@ internal static class MassNavigationScenarioBootstrap
             ?? throw new InvalidOperationException("MassNavigationMod requires RuntimeEntitySpawnQueue.");
         RuntimeEntitySpawnReceiptQueue receiptQueue = engine.GetService(CoreServiceKeys.RuntimeEntitySpawnReceiptQueue)
             ?? throw new InvalidOperationException("MassNavigationMod requires RuntimeEntitySpawnReceiptQueue.");
-        int pendingMassNavigationReceipts = receiptQueue.CountForChannel(MassNavigationIds.RuntimeSpawnReceiptChannelId);
+        int receiptChannelId = ResolveReceiptChannelId(engine);
+        int pendingMassNavigationRequests = spawnQueue.CountForReceiptChannel(receiptChannelId);
+        if (pendingMassNavigationRequests != 0)
+        {
+            throw new InvalidOperationException(
+                $"MassNavigationMod requires its runtime spawn request channel to be empty before scenario bootstrap; pending={pendingMassNavigationRequests}.");
+        }
+
+        int pendingMassNavigationReceipts = receiptQueue.CountForChannel(receiptChannelId);
         if (pendingMassNavigationReceipts != 0)
         {
             throw new InvalidOperationException(
@@ -50,7 +58,7 @@ internal static class MassNavigationScenarioBootstrap
                 $"MassNavigationMod requires RuntimeEntitySpawnQueue free capacity {requested}, actual {spawnQueue.FreeCapacity}.");
         }
 
-        MapId mapId = engine.CurrentMapSession?.MapId ?? default;
+        MapId mapId = RequireCurrentMapId(engine, simulation.Config.MapId);
         for (int i = 0; i < simulation.MassFlow.UnitCount; i++)
         {
             int teamId = simulation.MassFlow.GetTeam(i);
@@ -67,6 +75,7 @@ internal static class MassNavigationScenarioBootstrap
                 spawnQueue,
                 simulation,
                 mapId,
+                receiptChannelId,
                 templateId,
                 Fix64Vec2.FromInt((int)MathF.Round(worldXCm), (int)MathF.Round(worldYCm)),
                 new MassNavigationSpawnReceiptBinding(
@@ -93,6 +102,7 @@ internal static class MassNavigationScenarioBootstrap
                 spawnQueue,
                 simulation,
                 mapId,
+                receiptChannelId,
                 templateId,
                 Fix64Vec2.FromInt((int)MathF.Round(worldXCm), (int)MathF.Round(worldYCm)),
                 new MassNavigationSpawnReceiptBinding(
@@ -116,6 +126,7 @@ internal static class MassNavigationScenarioBootstrap
                 spawnQueue,
                 simulation,
                 mapId,
+                receiptChannelId,
                 hotspotTemplateId,
                 Fix64Vec2.FromInt(zone.CenterXCm, zone.CenterYCm),
                 new MassNavigationSpawnReceiptBinding(
@@ -142,6 +153,7 @@ internal static class MassNavigationScenarioBootstrap
         RuntimeEntitySpawnQueue spawnQueue,
         MassNavigationSimulationRuntime simulation,
         MapId mapId,
+        int receiptChannelId,
         string templateId,
         Fix64Vec2 worldPosition,
         in MassNavigationSpawnReceiptBinding binding)
@@ -155,7 +167,7 @@ internal static class MassNavigationScenarioBootstrap
             WorldPositionCm = worldPosition,
             HasWorldPosition = 1,
             EmitReceipt = 1,
-            ReceiptChannelId = MassNavigationIds.RuntimeSpawnReceiptChannelId,
+            ReceiptChannelId = receiptChannelId,
             ReceiptId = receiptId,
         };
 
@@ -163,6 +175,26 @@ internal static class MassNavigationScenarioBootstrap
         {
             throw new InvalidOperationException("MassNavigationMod failed to enqueue runtime entity spawn request.");
         }
+    }
+
+    private static int ResolveReceiptChannelId(GameEngine engine)
+    {
+        RuntimeEntitySpawnReceiptChannelRegistry channels = engine.GetService(CoreServiceKeys.RuntimeEntitySpawnReceiptChannelRegistry)
+            ?? throw new InvalidOperationException("MassNavigationMod requires RuntimeEntitySpawnReceiptChannelRegistry.");
+        return channels.Register(MassNavigationIds.RuntimeSpawnReceiptChannelKey);
+    }
+
+    private static MapId RequireCurrentMapId(GameEngine engine, string configuredMapId)
+    {
+        MapSession session = engine.CurrentMapSession
+            ?? throw new InvalidOperationException("MassNavigationMod requires an active map session before scenario bootstrap.");
+        if (!string.Equals(session.MapId.Value, configuredMapId, StringComparison.Ordinal))
+        {
+            throw new InvalidOperationException(
+                $"MassNavigationMod scenario bootstrap requires active map '{configuredMapId}', got '{session.MapId.Value}'.");
+        }
+
+        return session.MapId;
     }
 }
 

@@ -63,6 +63,7 @@ namespace Ludots.Core.Engine
             CurrentMapSession = session;
             if (session == null)
             {
+                RemoveService(CoreServiceKeys.MapId);
                 RemoveService(CoreServiceKeys.MapSession);
                 RemoveService(CoreServiceKeys.MapFeatureFlags);
                 RemoveService(CoreServiceKeys.MapLoadStatus);
@@ -71,6 +72,7 @@ namespace Ludots.Core.Engine
                 return;
             }
 
+            SetService(CoreServiceKeys.MapId, session.MapId);
             SetService(CoreServiceKeys.MapSession, session);
             SetService(CoreServiceKeys.MapFeatureFlags, MapFeatureFlags.FromTags(session.MapConfig?.Tags));
             SetService(CoreServiceKeys.MapLoadStatus, GetMapLoadStatus(session.MapId));

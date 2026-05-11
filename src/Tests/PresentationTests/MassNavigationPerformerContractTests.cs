@@ -16,30 +16,30 @@ namespace Ludots.Tests.Presentation
         private const string AgentHealthDriftEffectId = "Effect.MassNavigation.Agent.HealthDrift";
         private const string AgentHealthDriftGraphId = "Graph.MassNavigation.Agent.HealthDrift";
         private const string AgentHealthAttributeName = "Health";
-        private const string LocomotionSpeedParamKey = "blacksmith.worker.locomotion.speed";
+        private const string LocomotionSpeedParamKey = "mass_navigation.agent.locomotion.speed";
         private const string HealthRatioParamKey = "massNavigation.agent.health.ratio";
         private const string HealthCurrentParamKey = "massNavigation.agent.health.current";
         private const string HealthBaseParamKey = "massNavigation.agent.health.base";
 
         [Test]
-        public void AgentPerformers_UseBlacksmithKnightGpuSkinnedAsset()
+        public void AgentPerformers_UseMassNavigationOwnedGpuSkinnedAsset()
         {
             string modRoot = MassNavigationModRoot();
             JsonArray performers = ReadArray(Path.Combine(modRoot, "assets", "Presentation", "performers.json"));
 
-            AssertAgentBodyUsesBlacksmithKnight(FindObjectById(performers, "mass_navigation_agent_light"), "mass_navigation_agent_light", expectedScale: 0.45f);
-            AssertAgentBodyUsesBlacksmithKnight(FindObjectById(performers, "mass_navigation_agent_heavy"), "mass_navigation_agent_heavy", expectedScale: 0.62f);
+            AssertAgentBodyUsesMassNavigationSoldier(FindObjectById(performers, "mass_navigation_agent_light"), "mass_navigation_agent_light", expectedScale: 0.45f);
+            AssertAgentBodyUsesMassNavigationSoldier(FindObjectById(performers, "mass_navigation_agent_heavy"), "mass_navigation_agent_heavy", expectedScale: 0.62f);
 
             JsonObject manifest = ReadObject(Path.Combine(modRoot, "mod.json"));
             JsonObject dependencies = manifest["dependencies"]?.AsObject()
                 ?? throw new InvalidOperationException("MassNavigationMod mod.json must declare dependencies.");
-            Assert.That(dependencies.ContainsKey("PerformerBlacksmithShowcaseMod"), Is.True,
-                "MassNavigation agent visuals consume the Blacksmith formal asset pack; the dependency must be explicit.");
+            Assert.That(dependencies.ContainsKey("PerformerBlacksmithShowcaseMod"), Is.False,
+                "MassNavigation capability visuals must be owned by MassNavigation, not a showcase asset pack.");
 
             JsonObject config = ReadObject(Path.Combine(modRoot, "assets", "MassNavigationConfig.json"));
             JsonArray requiredMeshAssets = config["presentation"]?["requiredMeshAssetIds"]?.AsArray()
                 ?? throw new InvalidOperationException("MassNavigationConfig.presentation.requiredMeshAssetIds missing.");
-            Assert.That(requiredMeshAssets.Select(node => node?.GetValue<string>()).ToArray(), Does.Contain("blacksmith.worker.knight"));
+            Assert.That(requiredMeshAssets.Select(node => node?.GetValue<string>()).ToArray(), Does.Contain("mass_navigation.agent.soldier"));
         }
 
         [Test]
@@ -307,7 +307,8 @@ namespace Ludots.Tests.Presentation
             AssertSourceDoesNotContain(Path.Combine(modRoot, "Runtime", "MassFlowSimulationState.cs"), "CacheDefaultObstacles");
             AssertSourceDoesNotContain(Path.Combine(modRoot, "Runtime", "MassNavigationRuntime.cs"), "new PlayerOwner");
             AssertSourceDoesNotContain(Path.Combine(modRoot, "MassNavigationModEntry.cs"), "GetResource");
-            AssertSourceContains(Path.Combine(modRoot, "Runtime", "MassNavigationConfig.cs"), "MergeDeepObjectFromCatalog");
+            AssertSourceContains(Path.Combine(modRoot, "Runtime", "MassNavigationConfig.cs"), "must use Replace merge policy");
+            AssertSourceDoesNotContain(Path.Combine(modRoot, "Runtime", "MassNavigationConfig.cs"), "MergeDeepObjectFromCatalog");
             AssertSourceContains(Path.Combine(modRoot, "Runtime", "MassNavigationConfig.cs"), "config_catalog.json");
             AssertSourceContains(Path.Combine(modRoot, "Runtime", "MassNavigationAgentState.cs"), "PresentationDestroyPending");
             AssertSourceContains(Path.Combine(modRoot, "Runtime", "MassNavigationAgentState.cs"), "RemoveMassNavigationRuntimeTags");
@@ -338,7 +339,7 @@ namespace Ludots.Tests.Presentation
         }
 
         [Test]
-        public void ConfigLoader_UsesConfigPipelineDeepObjectMerge()
+        public void ConfigLoader_UsesConfigPipelineReplaceMerge()
         {
             string modRoot = MassNavigationModRoot();
             var vfs = new Ludots.Core.Modding.VirtualFileSystem();
@@ -350,6 +351,8 @@ namespace Ludots.Tests.Presentation
             modLoader.LoadedModIds.Add("MassNavigationMod");
             var pipeline = new Ludots.Core.Config.ConfigPipeline(vfs, modLoader);
             var catalog = Ludots.Core.Config.ConfigCatalogLoader.Load(pipeline);
+            Assert.That(catalog.TryGet("MassNavigationConfig.json", out Ludots.Core.Config.ConfigCatalogEntry entry), Is.True);
+            Assert.That(entry.MergePolicy, Is.EqualTo(Ludots.Core.Config.ConfigMergePolicy.Replace));
             var report = new Ludots.Core.Config.ConfigConflictReport();
             var config = new MassNavigationMod.Runtime.MassNavigationConfigLoader(pipeline).Load(catalog, report);
 
@@ -359,7 +362,7 @@ namespace Ludots.Tests.Presentation
             Assert.That(config.Presentation.ResolveAgentTemplateId(1, heavy: false), Is.EqualTo("mass_navigation_agent_azure_light"));
         }
 
-        private static void AssertAgentBodyUsesBlacksmithKnight(JsonObject definition, string definitionId, float expectedScale)
+        private static void AssertAgentBodyUsesMassNavigationSoldier(JsonObject definition, string definitionId, float expectedScale)
         {
             JsonArray behaviors = definition["behaviors"]?.AsArray()
                 ?? throw new InvalidOperationException($"Performer '{definitionId}' must declare behaviors.");
@@ -371,17 +374,17 @@ namespace Ludots.Tests.Presentation
                 ?? throw new InvalidOperationException($"Performer '{definitionId}' body slot must be AssetBinding.");
 
             Assert.That(assetBinding["assetKind"]?.GetValue<string>(), Is.EqualTo("SkinnedMesh"));
-            Assert.That(assetBinding["assetId"]?.GetValue<string>(), Is.EqualTo("blacksmith.worker.knight"));
+            Assert.That(assetBinding["assetId"]?.GetValue<string>(), Is.EqualTo("mass_navigation.agent.soldier"));
             Assert.That(assetBinding["renderPath"]?.GetValue<string>(), Is.EqualTo("GpuSkinnedInstance"));
             Assert.That(assetBinding["mobility"]?.GetValue<string>(), Is.EqualTo("Movable"));
-            AssertVector3(assetBinding["localScale"]?.AsArray(), expectedScale, $"Performer '{definitionId}' Blacksmith knight scale");
+            AssertVector3(assetBinding["localScale"]?.AsArray(), expectedScale, $"Performer '{definitionId}' MassNavigation soldier scale");
 
             JsonObject animator = behaviors
                 .Select(node => node?.AsObject())
                 .FirstOrDefault(obj => obj?["kind"]?.GetValue<string>() == "Animator")?["animator"]?.AsObject()
-                ?? throw new InvalidOperationException($"Performer '{definitionId}' must declare Blacksmith animator behavior.");
-            Assert.That(animator["animatorControllerId"]?.GetValue<string>(), Is.EqualTo("blacksmith.worker.locomotion"));
-            Assert.That(animator["animationProfileId"]?.GetValue<string>(), Is.EqualTo("blacksmith.worker.profile"));
+                ?? throw new InvalidOperationException($"Performer '{definitionId}' must declare MassNavigation animator behavior.");
+            Assert.That(animator["animatorControllerId"]?.GetValue<string>(), Is.EqualTo("mass_navigation.agent.locomotion"));
+            Assert.That(animator["animationProfileId"]?.GetValue<string>(), Is.EqualTo("mass_navigation.agent.profile"));
             Assert.That(animator["speedParamKey"]?.GetValue<string>(), Is.EqualTo(LocomotionSpeedParamKey));
             Assert.That(animator["stateParamKey"]?.GetValue<string>(), Is.EqualTo("none"));
         }

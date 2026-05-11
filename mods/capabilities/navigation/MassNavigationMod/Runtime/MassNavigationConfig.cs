@@ -16,13 +16,16 @@ public sealed class MassNavigationConfig
     public MassNavigationWorldConfig? World { get; set; }
     public MassNavigationPresentationConfig Presentation { get; set; } = new();
     public MassNavigationScenarioConfig Scenario { get; set; } = new();
+    public MassNavigationScenarioRuntimeConfig ScenarioRuntime { get; set; } = new();
     public MassNavigationCadenceConfig Cadence { get; set; } = new();
     public MassNavigationAgentProfileSetConfig AgentProfiles { get; set; } = new();
+    public MassNavigationCameraProfilesConfig CameraProfiles { get; set; } = new();
     public TeamConfig TeamRelationships { get; set; } = new();
     public MassFlowTuning Flow { get; set; } = new();
     public MassFlowArrivalTuning Arrival { get; set; } = new();
     public MassFlowAvoidanceTuning Avoidance { get; set; } = new();
     public MassNavigationCrowdSemantics Semantics { get; set; } = new();
+    public MassNavigationViewResidencyConfig ViewResidency { get; set; } = new();
 
     public static MassNavigationConfig Load(JsonObject configObject)
     {
@@ -49,10 +52,7 @@ public sealed class MassNavigationConfig
     private static MassNavigationConfig Load(JsonElement root)
     {
         ValidateRequiredTopLevelProperties(root);
-        var options = new JsonSerializerOptions
-        {
-            PropertyNameCaseInsensitive = true,
-        };
+        var options = StrictJsonOptions.CreateCamelCase();
 
         MassNavigationConfig? config = root.Deserialize<MassNavigationConfig>(options);
         if (config == null)
@@ -70,19 +70,240 @@ public sealed class MassNavigationConfig
         RequireProperty(root, "world");
         RequireProperty(root, "presentation");
         RequireProperty(root, "scenario");
+        RequireProperty(root, "scenarioRuntime");
         RequireProperty(root, "cadence");
         RequireProperty(root, "agentProfiles");
+        RequireProperty(root, "cameraProfiles");
         RequireProperty(root, "teamRelationships");
         RequireProperty(root, "flow");
         RequireProperty(root, "arrival");
         RequireProperty(root, "avoidance");
         RequireProperty(root, "semantics");
+        RequireProperty(root, "viewResidency");
 
         JsonElement world = RequireProperty(root, "world");
-        RequireProperty(world, "obstacles");
+        RequireProperties(
+            world,
+            "solverWindowWidthCm",
+            "solverWindowHeightCm",
+            "streamingChunkSizeCm",
+            "streamingRadiusCm",
+            "cameraFocusShiftThresholdCm",
+            "commandFocusHoldTicks",
+            "workAreaPaddingCm",
+            "workAreaMaxWidthCm",
+            "workAreaMaxHeightCm",
+            "activeHotZoneId",
+            "hotZones",
+            "obstacles");
+        JsonElement presentation = RequireProperty(root, "presentation");
+        RequireProperties(
+            presentation,
+            "requiredMeshAssetIds",
+            "blockerPerformerId",
+            "hotspotPerformerId",
+            "blockerTemplateId",
+            "hotspotTemplateId",
+            "teams");
+        JsonElement scenario = RequireProperty(root, "scenario");
+        RequireProperties(
+            scenario,
+            "agentsPerTeam",
+            "initialSelectedTeamId",
+            "teams");
+        JsonElement cadence = RequireProperty(root, "cadence");
+        RequireProperties(
+            cadence,
+            "simulationHz",
+            "targetUpdateHz",
+            "flowStepHz",
+            "flowCrowdStampHz",
+            "flowObstacleStampHz",
+            "hardResolveHz",
+            "entitySyncHz",
+            "maxStepsPerFixedTick",
+            "hardResolveCandidateThresholdAgents");
+        JsonElement agentProfiles = RequireProperty(root, "agentProfiles");
+        RequireProperties(agentProfiles, "defaultProfileId", "profiles");
+        JsonElement profiles = RequireProperty(agentProfiles, "profiles");
+        if (profiles.ValueKind != JsonValueKind.Array)
+        {
+            throw new InvalidOperationException("Mass-nav agentProfiles.profiles must be an explicit array.");
+        }
+
+        int profileIndex = 0;
+        foreach (JsonElement profile in profiles.EnumerateArray())
+        {
+            RequireProperties(
+                profile,
+                "id",
+                "heavy",
+                "navMass",
+                "visualScale",
+                "everyNth",
+                "nthOffset");
+            profileIndex++;
+        }
+
+        if (profileIndex <= 0)
+        {
+            throw new InvalidOperationException("Mass-nav agentProfiles.profiles requires at least one explicit profile.");
+        }
+
         JsonElement relationships = RequireProperty(root, "teamRelationships");
         RequireProperty(relationships, "defaultRelationship");
         RequireProperty(relationships, "relationships");
+        RequireProperties(RequireProperty(root, "cameraProfiles"), "tacticalProfileId", "strategicProfileId");
+        RequireProperties(RequireProperty(root, "scenarioRuntime"), "autoSpawnConfiguredScenario");
+        RequireProperties(
+            RequireProperty(root, "flow"),
+            "enabled",
+            "iterationsPerStep",
+            "stepIntervalTicks",
+            "crowdStampIntervalTicks",
+            "obstacleStampIntervalTicks",
+            "forceRefreshFlow",
+            "forceRefreshCrowd",
+            "forceRefreshObstacles");
+        RequireProperties(
+            RequireProperty(root, "arrival"),
+            "enabled",
+            "timeoutMs",
+            "timeoutMinMs",
+            "timeoutMaxMs",
+            "progressDistanceCm",
+            "progressDistanceMinCm",
+            "progressDistanceMaxCm",
+            "wakePushDistanceCm",
+            "wakePushDistanceMinCm",
+            "wakePushDistanceMaxCm",
+            "maxRetryCountMin",
+            "maxRetryCountMax",
+            "maxRetryCount");
+        RequireProperties(
+            RequireProperty(root, "avoidance"),
+            "lightNavMass",
+            "heavyNavMass",
+            "lightVisualScale",
+            "heavyVisualScale",
+            "dominantMassRatio",
+            "friendlyResponseScale",
+            "friendlyResponseMin",
+            "friendlyResponseMax",
+            "nonFriendlyResponseScale",
+            "nonFriendlyResponseMin",
+            "nonFriendlyResponseMax",
+            "dominantPushResponseScale",
+            "dominantPushResponseMin",
+            "dominantPushResponseMax",
+            "friendlyCorrectionShareMin",
+            "friendlyCorrectionShareMax",
+            "dominantCorrectionOtherMassWeight",
+            "dominantCorrectionShareMin",
+            "dominantCorrectionShareMax",
+            "nonFriendlyCorrectionOtherMassWeight",
+            "nonFriendlyCorrectionShareMin",
+            "nonFriendlyCorrectionShareMax");
+        JsonElement semantics = RequireProperty(root, "semantics");
+        RequireProperties(
+            RequireProperty(semantics, "obstacle"),
+            "agentBodyRadiusCm",
+            "hardResolveCandidateDistanceCm",
+            "softPushPaddingCm",
+            "softPushForceScale");
+        RequireProperties(
+            RequireProperty(semantics, "targetProjection"),
+            "teamTargetClearanceCm",
+            "groupCenterClearanceCm",
+            "teamSlotClearanceCm",
+            "groupSlotClearanceCm",
+            "looseTargetClearanceCm");
+        RequireProperties(
+            RequireProperty(semantics, "group"),
+            "spawnSpacingCm",
+            "spawnJitterCm",
+            "teamSlotSpacingCm",
+            "formationLineSpacingCm",
+            "formationSquareSpacingCm",
+            "formationCircleSpacingCm",
+            "formationCircleMinRadiusCm",
+            "formationWedgeSpacingCm",
+            "formationRotationEpsilonRadians",
+            "formationRotationSpeedRadiansPerSecond",
+            "pullDeadZoneCm",
+            "pullClampCm",
+            "arrivedRadiusCm",
+            "formationArriveThresholdCm",
+            "looseArriveThresholdCm",
+            "unitTargetStopThresholdCm",
+            "formationFlowSlowRadiusCm",
+            "nearSlotBlend",
+            "farSlotBlend",
+            "nearSlotBlendDistanceSq");
+        RequireProperties(
+            RequireProperty(semantics, "steering"),
+            "speedCmPerSecond",
+            "separationRadiusCm",
+            "goalArrivalRadiusCm",
+            "flowObstacleAvoidanceScale",
+            "formationSeparationScale",
+            "looseSeparationScale",
+            "velocityBlendPerSecond");
+        RequireProperties(
+            RequireProperty(semantics, "solver"),
+            "minNavMass",
+            "minVisualScale",
+            "maxStepDtSeconds",
+            "parallelStepMinAgents",
+            "directionEpsilonSq",
+            "normalizationEpsilonSq",
+            "inverseSqrtMinValue",
+            "entitySyncPositionEpsilonSq",
+            "entitySyncVelocityEpsilonSq",
+            "facingVelocityEpsilonSq",
+            "flowBlockedCellCost",
+            "flowBlockedCellThreshold",
+            "flowTargetStopDistanceSq",
+            "flowObstacleNeighborRadiusCells",
+            "flowObstacleNeighborWeight",
+            "flowObstacleAvoidanceWeight",
+            "coincidentPairHashBucketCount",
+            "coincidentPairHashPrimeA",
+            "coincidentPairHashPrimeB");
+        JsonElement viewResidency = RequireProperty(root, "viewResidency");
+        RequireProperties(
+            viewResidency,
+            "mode",
+            "retainSeconds",
+            "radiusCm",
+            "initialProbeId",
+            "cameraProbes");
+        JsonElement cameraProbes = RequireProperty(viewResidency, "cameraProbes");
+        if (cameraProbes.ValueKind != JsonValueKind.Array)
+        {
+            throw new InvalidOperationException("Mass-nav viewResidency.cameraProbes must be an explicit array.");
+        }
+
+        int probeIndex = 0;
+        foreach (JsonElement probe in cameraProbes.EnumerateArray())
+        {
+            RequireProperties(
+                probe,
+                "id",
+                "label",
+                "targetXCm",
+                "targetYCm",
+                "distanceCm",
+                "yaw",
+                "pitch",
+                "fovYDeg");
+            probeIndex++;
+        }
+
+        if (probeIndex <= 0)
+        {
+            throw new InvalidOperationException("Mass-nav viewResidency.cameraProbes requires at least one explicit probe.");
+        }
     }
 
     private static JsonElement RequireProperty(JsonElement root, string propertyName)
@@ -95,6 +316,14 @@ public sealed class MassNavigationConfig
         return value;
     }
 
+    private static void RequireProperties(JsonElement root, params string[] propertyNames)
+    {
+        for (int i = 0; i < propertyNames.Length; i++)
+        {
+            RequireProperty(root, propertyNames[i]);
+        }
+    }
+
     private void Validate()
     {
         if (string.IsNullOrWhiteSpace(MapId))
@@ -103,9 +332,16 @@ public sealed class MassNavigationConfig
         }
 
         Scenario.Validate();
+        ScenarioRuntime.Validate();
         Presentation.Validate(Scenario);
         Cadence.Validate();
         AgentProfiles.Validate();
+        CameraProfiles.Validate();
+        ViewResidency.Validate();
+        Flow.Validate();
+        Arrival.Validate();
+        Avoidance.Validate();
+        Semantics.Validate();
         if (World == null)
         {
             throw new InvalidOperationException("Mass-nav config requires an explicit world section.");
@@ -125,7 +361,7 @@ public sealed class MassNavigationConfig
                     $"Mass-nav config relationship [{relation.TeamA},{relation.TeamB}] references an unknown team.");
             }
 
-            if (!Enum.TryParse<TeamRelationship>(relation.Attitude, true, out _))
+            if (!TeamManager.TryParseRelationship(relation.Attitude, out _))
             {
                 throw new InvalidOperationException(
                     $"Mass-nav config relationship [{relation.TeamA},{relation.TeamB}] has invalid attitude '{relation.Attitude}'.");
@@ -141,7 +377,7 @@ public sealed class MassNavigationConfig
         }
 
         if (string.IsNullOrWhiteSpace(TeamRelationships.DefaultRelationship) ||
-            !Enum.TryParse<TeamRelationship>(TeamRelationships.DefaultRelationship, true, out _))
+            !TeamManager.TryParseRelationship(TeamRelationships.DefaultRelationship, out _))
         {
             throw new InvalidOperationException(
                 $"Mass-nav config teamRelationships.defaultRelationship is invalid: '{TeamRelationships.DefaultRelationship}'.");
@@ -151,6 +387,15 @@ public sealed class MassNavigationConfig
         {
             throw new InvalidOperationException("Mass-nav config requires teamRelationships.relationships as an explicit array.");
         }
+    }
+}
+
+public sealed class MassNavigationScenarioRuntimeConfig
+{
+    public bool AutoSpawnConfiguredScenario { get; set; }
+
+    public void Validate()
+    {
     }
 }
 
@@ -185,18 +430,42 @@ public sealed class MassNavigationConfigLoader
             throw new InvalidOperationException($"MassNavigationMod config '{relativePath}' must be registered in config_catalog.json.");
         }
 
-        if (entry.MergePolicy != ConfigMergePolicy.DeepObject)
+        if (entry.MergePolicy != ConfigMergePolicy.Replace)
         {
-            throw new InvalidOperationException($"MassNavigationMod config '{relativePath}' must use DeepObject merge policy.");
+            throw new InvalidOperationException($"MassNavigationMod config '{relativePath}' must use Replace merge policy.");
         }
 
-        JsonObject? merged = _pipeline.MergeDeepObjectFromCatalog(in entry, report);
+        JsonObject? merged = _pipeline.MergeFromCatalog(in entry, report) as JsonObject;
         if (merged == null)
         {
             throw new InvalidOperationException($"MassNavigationMod requires config '{relativePath}' through ConfigPipeline.");
         }
 
         return MassNavigationConfig.Load(merged);
+    }
+}
+
+public sealed class MassNavigationCameraProfilesConfig
+{
+    public string TacticalProfileId { get; set; } = string.Empty;
+    public string StrategicProfileId { get; set; } = string.Empty;
+
+    public void Validate()
+    {
+        if (string.IsNullOrWhiteSpace(TacticalProfileId))
+        {
+            throw new InvalidOperationException("Mass-nav cameraProfiles requires non-empty TacticalProfileId.");
+        }
+
+        if (string.IsNullOrWhiteSpace(StrategicProfileId))
+        {
+            throw new InvalidOperationException("Mass-nav cameraProfiles requires non-empty StrategicProfileId.");
+        }
+
+        if (string.Equals(TacticalProfileId, StrategicProfileId, StringComparison.Ordinal))
+        {
+            throw new InvalidOperationException("Mass-nav cameraProfiles tactical and strategic profile ids must be distinct.");
+        }
     }
 }
 
@@ -216,7 +485,7 @@ public sealed class MassNavigationPresentationConfig
             throw new InvalidOperationException("Mass-nav presentation requires at least one RequiredMeshAssetIds entry.");
         }
 
-        var meshIds = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
+        var meshIds = new HashSet<string>(StringComparer.Ordinal);
         for (int i = 0; i < RequiredMeshAssetIds.Length; i++)
         {
             string meshAssetId = RequiredMeshAssetIds[i];
@@ -431,7 +700,7 @@ public sealed class MassNavigationWorldConfig
                 $"Mass-nav world solver window must be explicit and match the current SoA solver cache ({MassFlowSimulationState.FieldWidthCm}x{MassFlowSimulationState.FieldHeightCm} cm).");
         }
 
-        var ids = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
+        var ids = new HashSet<string>(StringComparer.Ordinal);
         for (int i = 0; i < HotZones.Length; i++)
         {
             MassNavigationHotZoneConfig zone = HotZones[i];
@@ -443,7 +712,7 @@ public sealed class MassNavigationWorldConfig
 
         }
 
-        var obstacleIds = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
+        var obstacleIds = new HashSet<string>(StringComparer.Ordinal);
         for (int i = 0; i < Obstacles.Length; i++)
         {
             MassNavigationObstacleConfig obstacle = Obstacles[i];
@@ -512,13 +781,147 @@ public sealed class MassNavigationWorldConfig
     {
         for (int i = 0; i < HotZones.Length; i++)
         {
-            if (string.Equals(HotZones[i].Id, hotZoneId, StringComparison.OrdinalIgnoreCase))
+            if (string.Equals(HotZones[i].Id, hotZoneId, StringComparison.Ordinal))
             {
                 return i;
             }
         }
 
         return -1;
+    }
+}
+
+public sealed class MassNavigationViewResidencyConfig
+{
+    private int _activeProbeIndex = -1;
+
+    public string Mode { get; set; } = "Camera";
+    public float RetainSeconds { get; set; }
+    public int RadiusCm { get; set; }
+    public string InitialProbeId { get; set; } = string.Empty;
+    public MassNavigationCameraProbeConfig[] CameraProbes { get; set; } = Array.Empty<MassNavigationCameraProbeConfig>();
+
+    [JsonIgnore]
+    public bool UsesProbeFocus => string.Equals(Mode, "Probe", StringComparison.Ordinal);
+
+    [JsonIgnore]
+    public MassNavigationCameraProbeConfig ActiveProbe => _activeProbeIndex >= 0 && _activeProbeIndex < CameraProbes.Length
+        ? CameraProbes[_activeProbeIndex]
+        : throw new InvalidOperationException("Mass-nav view residency active probe was not validated.");
+
+    public void SetActiveProbe(string probeId)
+    {
+        int index = FindProbeIndex(probeId);
+        if (index < 0)
+        {
+            throw new InvalidOperationException($"Mass-nav view residency probe '{probeId}' is not configured.");
+        }
+
+        _activeProbeIndex = index;
+        InitialProbeId = CameraProbes[index].Id;
+    }
+
+    public bool TryGetProbe(string probeId, out MassNavigationCameraProbeConfig probe)
+    {
+        int index = FindProbeIndex(probeId);
+        if (index < 0)
+        {
+            probe = null!;
+            return false;
+        }
+
+        probe = CameraProbes[index];
+        return true;
+    }
+
+    public void Validate()
+    {
+        if (!string.Equals(Mode, "Camera", StringComparison.Ordinal) &&
+            !string.Equals(Mode, "Probe", StringComparison.Ordinal))
+        {
+            throw new InvalidOperationException($"Mass-nav viewResidency.mode must be 'Camera' or 'Probe', got '{Mode}'.");
+        }
+
+        if (RetainSeconds < 0f)
+        {
+            throw new InvalidOperationException("Mass-nav viewResidency.retainSeconds must be >= 0.");
+        }
+
+        if (RadiusCm <= 0)
+        {
+            throw new InvalidOperationException("Mass-nav viewResidency.radiusCm must be > 0.");
+        }
+
+        if (CameraProbes.Length <= 0)
+        {
+            throw new InvalidOperationException("Mass-nav viewResidency.cameraProbes requires at least one explicit probe.");
+        }
+
+        var ids = new HashSet<string>(StringComparer.Ordinal);
+        for (int i = 0; i < CameraProbes.Length; i++)
+        {
+            MassNavigationCameraProbeConfig probe = CameraProbes[i];
+            probe.Validate();
+            if (!ids.Add(probe.Id))
+            {
+                throw new InvalidOperationException($"Mass-nav viewResidency contains duplicate camera probe id '{probe.Id}'.");
+            }
+        }
+
+        if (string.IsNullOrWhiteSpace(InitialProbeId))
+        {
+            throw new InvalidOperationException("Mass-nav viewResidency.initialProbeId must be explicit.");
+        }
+
+        SetActiveProbe(InitialProbeId);
+    }
+
+    private int FindProbeIndex(string probeId)
+    {
+        for (int i = 0; i < CameraProbes.Length; i++)
+        {
+            if (string.Equals(CameraProbes[i].Id, probeId, StringComparison.Ordinal))
+            {
+                return i;
+            }
+        }
+
+        return -1;
+    }
+}
+
+public sealed class MassNavigationCameraProbeConfig
+{
+    public string Id { get; set; } = string.Empty;
+    public string Label { get; set; } = string.Empty;
+    public float TargetXCm { get; set; }
+    public float TargetYCm { get; set; }
+    public float DistanceCm { get; set; }
+    public float Yaw { get; set; }
+    public float Pitch { get; set; }
+    public float FovYDeg { get; set; }
+
+    public void Validate()
+    {
+        if (string.IsNullOrWhiteSpace(Id))
+        {
+            throw new InvalidOperationException("Mass-nav camera probe requires a non-empty id.");
+        }
+
+        if (string.IsNullOrWhiteSpace(Label))
+        {
+            throw new InvalidOperationException($"Mass-nav camera probe '{Id}' requires a non-empty label.");
+        }
+
+        if (DistanceCm <= 0f)
+        {
+            throw new InvalidOperationException($"Mass-nav camera probe '{Id}' requires DistanceCm > 0.");
+        }
+
+        if (FovYDeg <= 0f || FovYDeg >= 180f)
+        {
+            throw new InvalidOperationException($"Mass-nav camera probe '{Id}' requires 0 < FovYDeg < 180.");
+        }
     }
 }
 

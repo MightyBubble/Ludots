@@ -6,11 +6,11 @@
       "roadMoveFollow": 171
     }
   },
-  "Navigation2D": {
-    "Enabled": true,
-    "Steering": {
-      "SmartStop": {
-        "Enabled": false
+  "navigation2D": {
+    "enabled": true,
+    "steering": {
+      "smartStop": {
+        "enabled": false
       }
     }
   },

@@ -1,5 +1,9 @@
 [
   {
+    "id": "mass_navigation.agent.soldier",
+    "type": "Model"
+  },
+  {
     "id": "mass_navigation.selection.marker",
     "type": "Model"
   },

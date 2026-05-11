@@ -1,14 +1,14 @@
 {
-  "StartupMapId": "entry",
-  "StartupInputContexts": [
+  "startupMapId": "entry",
+  "startupInputContexts": [
     "Default_Gameplay",
     "Moba_Gameplay"
   ],
-  "WindowWidth": 1280,
-  "WindowHeight": 720,
-  "WindowTitle": "Ludots Engine",
-  "TargetFps": 60,
-  "ModPaths": [
+  "windowWidth": 1280,
+  "windowHeight": 720,
+  "windowTitle": "Ludots Engine",
+  "targetFps": 60,
+  "modPaths": [
     "../../../../../../mods/MobaDemoMod",
     "../../../../../../mods/PerformanceVisualizationMod",
     "../../../../../../mods/TerrainBenchmarkMod",

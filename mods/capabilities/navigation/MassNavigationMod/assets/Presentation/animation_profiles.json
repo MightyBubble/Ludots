@@ -1,0 +1,10 @@
+[
+  {
+    "id": "mass_navigation.agent.profile",
+    "animatorControllerId": "mass_navigation.agent.locomotion",
+    "stateClips": [
+      { "packedStateIndex": 41, "clipAssetId": "mass_navigation.agent.clip.idle" },
+      { "packedStateIndex": 42, "clipAssetId": "mass_navigation.agent.clip.walk" }
+    ]
+  }
+]

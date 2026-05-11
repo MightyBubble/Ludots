@@ -6,10 +6,16 @@ namespace MassNavigationMod.Runtime;
 
 public sealed class MassNavigationCommandRuntime
 {
+    private readonly MassNavigationGroupSemantics _groupSemantics;
     private MassNavigationQueuedCommand[] _commands = new MassNavigationQueuedCommand[8];
     private Entity[] _selectionPayload = new Entity[128];
     private int _commandCount;
     private int _payloadCount;
+
+    public MassNavigationCommandRuntime(MassNavigationGroupSemantics groupSemantics)
+    {
+        _groupSemantics = groupSemantics ?? throw new ArgumentNullException(nameof(groupSemantics));
+    }
 
     public int PendingCommandCount => _commandCount;
 
@@ -55,7 +61,7 @@ public sealed class MassNavigationCommandRuntime
 
     public bool EnqueueSelectionRotate(ReadOnlySpan<Entity> selected, float deltaRadians)
     {
-        if (selected.Length <= 0 || !(MathF.Abs(deltaRadians) > 1e-5f))
+        if (selected.Length <= 0 || !(MathF.Abs(deltaRadians) > _groupSemantics.FormationRotationEpsilonRadians))
         {
             return false;
         }

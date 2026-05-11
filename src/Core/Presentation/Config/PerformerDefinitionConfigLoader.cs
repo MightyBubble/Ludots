@@ -1,6 +1,5 @@
 using System;
 using System.Collections.Generic;
-using System.Diagnostics;
 using System.Numerics;
 using System.Text.Json.Nodes;
 using Arch.Core;
@@ -63,7 +62,7 @@ namespace Ludots.Core.Presentation.Config
 
         public void Load(ConfigCatalog catalog = null, ConfigConflictReport report = null)
         {
-            var entry = ConfigPipeline.GetEntryOrDefault(catalog, "Presentation/performers.json", ConfigMergePolicy.ArrayById, "id");
+            var entry = ConfigPipeline.RequireEntry(catalog, "Presentation/performers.json", ConfigMergePolicy.ArrayById, "id");
             var merged = _configs.MergeArrayByIdFromCatalog(in entry, report);
             if (report != null)
             {
@@ -79,20 +78,22 @@ namespace Ludots.Core.Presentation.Config
                 return;
             }
 
-            var mergedByKey = new Dictionary<string, JsonObject>(StringComparer.OrdinalIgnoreCase);
-            var parsedByKey = new Dictionary<string, PerformerDefinition>(StringComparer.OrdinalIgnoreCase);
+            var mergedByKey = new Dictionary<string, JsonObject>(StringComparer.Ordinal);
+            var parsedByKey = new Dictionary<string, PerformerDefinition>(StringComparer.Ordinal);
             var parsedOrder = new List<string>(merged.Count);
             for (int i = 0; i < merged.Count; i++)
             {
                 if (merged[i].Node is not JsonObject obj)
                 {
-                    continue;
+                    throw new InvalidOperationException(
+                        $"Presentation/performers.json entry '{merged[i].Id}' must merge to a JSON object.");
                 }
 
                 string key = obj["id"]?.GetValue<string>() ?? string.Empty;
                 if (string.IsNullOrWhiteSpace(key))
                 {
-                    continue;
+                    throw new InvalidOperationException(
+                        "Presentation/performers.json entries must declare non-empty id.");
                 }
 
                 mergedByKey[key] = obj;
@@ -101,61 +102,30 @@ namespace Ludots.Core.Presentation.Config
 
             foreach ((string key, JsonObject _) in mergedByKey)
             {
-                try
+                JsonObject expanded = ExpandDefinition(key, mergedByKey, new HashSet<string>(StringComparer.Ordinal));
+                var (_, def) = ParseDefinition(expanded);
+                if (def == null)
                 {
-                    JsonObject expanded = ExpandDefinition(key, mergedByKey, new HashSet<string>(StringComparer.OrdinalIgnoreCase));
-                    var (_, def) = ParseDefinition(expanded);
-                    if (def != null)
-                    {
-                        parsedByKey[key] = def;
-                        parsedOrder.Add(key);
-                    }
+                    throw new InvalidOperationException($"Performer '{key}' failed to parse.");
                 }
-                catch (Exception ex)
-                {
-                    _registry.Unregister(key);
-                    Trace.WriteLine($"[PerformerDefinitionConfigLoader] Skipping performer '{key}': {ex.Message}");
-                }
+
+                parsedByKey[key] = def;
+                parsedOrder.Add(key);
             }
 
-            var validByKey = new Dictionary<string, PerformerDefinition>(parsedByKey, StringComparer.OrdinalIgnoreCase);
-            bool removedInvalidDefinition;
-            do
+            var validByKey = new Dictionary<string, PerformerDefinition>(parsedByKey, StringComparer.Ordinal);
+            for (int i = 0; i < parsedOrder.Count; i++)
             {
-                removedInvalidDefinition = false;
-                for (int i = 0; i < parsedOrder.Count; i++)
-                {
-                    string key = parsedOrder[i];
-                    if (!validByKey.TryGetValue(key, out PerformerDefinition? definition))
-                    {
-                        continue;
-                    }
-
-                    try
-                    {
-                        ValidateRuleReferences(key, definition, validByKey);
-                        ValidateChildGraph(key, validByKey, new HashSet<int>(), new List<string>());
-                    }
-                    catch (Exception ex)
-                    {
-                        validByKey.Remove(key);
-                        _registry.Unregister(key);
-                        Trace.WriteLine($"[PerformerDefinitionConfigLoader] Skipping performer '{key}': {ex.Message}");
-                        removedInvalidDefinition = true;
-                    }
-                }
+                string key = parsedOrder[i];
+                PerformerDefinition definition = validByKey[key];
+                ValidateRuleReferences(key, definition, validByKey);
+                ValidateChildGraph(key, validByKey, new HashSet<int>(), new List<string>());
             }
-            while (removedInvalidDefinition);
 
             for (int i = 0; i < parsedOrder.Count; i++)
             {
                 string key = parsedOrder[i];
-                if (!validByKey.TryGetValue(key, out PerformerDefinition? definition))
-                {
-                    continue;
-                }
-
-                _registry.Register(key, definition);
+                _registry.Register(key, validByKey[key]);
             }
         }
 
@@ -201,26 +171,26 @@ namespace Ludots.Core.Presentation.Config
             var merged = (JsonObject)parent.DeepClone();
             foreach ((string propertyName, JsonNode? childValue) in child)
             {
-                if (propertyName.Equals("bindings", StringComparison.OrdinalIgnoreCase))
+                if (propertyName.Equals("bindings", StringComparison.Ordinal))
                 {
                     merged[propertyName] = MergeByValueKey(parent[propertyName], childValue, "paramKey");
                     continue;
                 }
 
-                if (propertyName.Equals("paramDefaults", StringComparison.OrdinalIgnoreCase))
+                if (propertyName.Equals("paramDefaults", StringComparison.Ordinal))
                 {
                     merged[propertyName] = MergeParamDefaultsJson(parent[propertyName], childValue);
                     continue;
                 }
 
-                if (propertyName.Equals("behaviors", StringComparison.OrdinalIgnoreCase))
+                if (propertyName.Equals("behaviors", StringComparison.Ordinal))
                 {
                     merged[propertyName] = MergeByValueKey(parent[propertyName], childValue, "slot");
                     continue;
                 }
 
-                if (propertyName.Equals("rules", StringComparison.OrdinalIgnoreCase) ||
-                    propertyName.Equals("children", StringComparison.OrdinalIgnoreCase))
+                if (propertyName.Equals("rules", StringComparison.Ordinal) ||
+                    propertyName.Equals("children", StringComparison.Ordinal))
                 {
                     merged[propertyName] = AppendArrays(parent[propertyName], childValue);
                     continue;
@@ -255,7 +225,7 @@ namespace Ludots.Core.Presentation.Config
 
         private static JsonArray MergeByValueKey(JsonNode? existingNode, JsonNode? incomingNode, string keyField)
         {
-            var byKey = new Dictionary<string, JsonNode>(StringComparer.OrdinalIgnoreCase);
+            var byKey = new Dictionary<string, JsonNode>(StringComparer.Ordinal);
             var order = new List<string>();
             AppendByValueKey(existingNode, keyField, byKey, order);
             AppendByValueKey(incomingNode, keyField, byKey, order);
@@ -587,18 +557,20 @@ namespace Ludots.Core.Presentation.Config
         private ValueRef ParseValueRef(JsonNode node)
         {
             string source = node["source"]?.GetValue<string>();
-            return source?.ToLowerInvariant() switch
+            return source switch
             {
                 "attribute" => ValueRef.FromAttribute(ResolveAttributeId(node)),
-                "attributeratio" => ValueRef.FromAttributeRatio(ResolveAttributeId(node)),
-                "attributebase" => ValueRef.FromAttributeBase(ResolveAttributeId(node)),
+                "attributeRatio" => ValueRef.FromAttributeRatio(ResolveAttributeId(node)),
+                "attributeBase" => ValueRef.FromAttributeBase(ResolveAttributeId(node)),
                 "graph" => ValueRef.FromGraph(node["sourceId"]?.GetValue<int>() ?? 0),
-                "entitycolor" => ValueRef.FromEntityColor(node["sourceId"]?.GetValue<int>() ?? 0),
-                "entitycolorvector" => ValueRef.FromEntityColorVector(),
-                "facingradians" => ValueRef.FromFacingRadians(),
-                "facingdegrees" => ValueRef.FromFacingDegrees(),
-                "texttoken" => ValueRef.FromConstant(ResolveTextTokenId(node)),
-                _ => ValueRef.FromConstant(node["constantValue"]?.GetValue<float>() ?? 0f),
+                "entityColor" => ValueRef.FromEntityColor(node["sourceId"]?.GetValue<int>() ?? 0),
+                "entityColorVector" => ValueRef.FromEntityColorVector(),
+                "facingRadians" => ValueRef.FromFacingRadians(),
+                "facingDegrees" => ValueRef.FromFacingDegrees(),
+                "textToken" => ValueRef.FromConstant(ResolveTextTokenId(node)),
+                "constant" => ValueRef.FromConstant(node["constantValue"]?.GetValue<float>() ?? 0f),
+                null or "" => throw new InvalidOperationException("Performer binding must declare explicit source."),
+                _ => throw new InvalidOperationException($"Performer binding source has invalid value '{source}'."),
             };
         }
 
@@ -1248,7 +1220,7 @@ namespace Ludots.Core.Presentation.Config
                     }
 
                     key = key.Trim();
-                    if (string.Equals(key, "none", StringComparison.OrdinalIgnoreCase))
+                    if (string.Equals(key, "none", StringComparison.Ordinal))
                     {
                         return -1;
                     }
@@ -1290,7 +1262,7 @@ namespace Ludots.Core.Presentation.Config
 
         private static class PerformerBehaviorSlotRegistry
         {
-            private static readonly Dictionary<string, int> Slots = new(StringComparer.OrdinalIgnoreCase)
+            private static readonly Dictionary<string, int> Slots = new(StringComparer.Ordinal)
             {
                 ["body"] = 0,
                 ["attachment"] = 1,
@@ -1442,7 +1414,7 @@ namespace Ludots.Core.Presentation.Config
 
                 if (value.TryGetValue<string>(out string key) && !string.IsNullOrWhiteSpace(key))
                 {
-                    if (Enum.TryParse(key, ignoreCase: true, out GroundOverlayShape shape))
+                    if (Enum.TryParse(key, ignoreCase: false, out GroundOverlayShape shape))
                     {
                         return (int)shape;
                     }
@@ -1513,7 +1485,7 @@ namespace Ludots.Core.Presentation.Config
                 throw new InvalidOperationException($"{context} requires explicit string field 'lane'.");
             }
 
-            if (!Enum.TryParse(laneText, ignoreCase: true, out ParamLane lane))
+            if (!Enum.TryParse(laneText, ignoreCase: false, out ParamLane lane))
             {
                 throw new InvalidOperationException($"{context} has invalid lane '{laneText}'.");
             }
@@ -1727,7 +1699,12 @@ namespace Ludots.Core.Presentation.Config
                 return defaultValue;
             }
 
-            return Enum.TryParse<T>(s, ignoreCase: true, out var parsed) ? parsed : defaultValue;
+            if (!Enum.TryParse<T>(s, ignoreCase: false, out var parsed))
+            {
+                throw new InvalidOperationException($"Enum {typeof(T).Name} has invalid value '{s}'.");
+            }
+
+            return parsed;
         }
 
         private static T ParseRequiredEnum<T>(JsonNode? node, string context) where T : struct, Enum
@@ -1737,7 +1714,7 @@ namespace Ludots.Core.Presentation.Config
                 throw new InvalidOperationException($"{context} requires a non-empty enum string.");
             }
 
-            if (!Enum.TryParse<T>(text, ignoreCase: true, out T parsed))
+            if (!Enum.TryParse<T>(text, ignoreCase: false, out T parsed))
             {
                 throw new InvalidOperationException($"{context} has invalid value '{text}'.");
             }

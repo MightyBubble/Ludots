@@ -226,6 +226,29 @@ namespace Ludots.Core.Engine
             system.Initialize();
         }
 
+        public void InsertSystemBeforeRequired<TAnchor>(ISystem<float> system, SystemGroup group)
+            where TAnchor : class
+        {
+            if (!_systemGroups.TryGetValue(group, out var systems))
+            {
+                throw new InvalidOperationException(
+                    $"Cannot insert system before required anchor '{typeof(TAnchor).Name}' because group '{group}' has not been registered.");
+            }
+
+            for (int i = 0; i < systems.Count; i++)
+            {
+                if (systems[i] is TAnchor)
+                {
+                    systems.Insert(i, system);
+                    system.Initialize();
+                    return;
+                }
+            }
+
+            throw new InvalidOperationException(
+                $"Cannot insert system before required anchor '{typeof(TAnchor).Name}' in group '{group}' because the anchor is missing.");
+        }
+
         public void RegisterPresentationSystem(ISystem<float> system)
         {
             _presentationSystems.Add(system);
@@ -399,7 +422,7 @@ namespace Ludots.Core.Engine
 
             // 5. Setup Data Loaders
             MapLoader = new MapLoader(World, WorldMap, ConfigPipeline);
-            MapLoader.LoadTemplates();
+            MapLoader.LoadTemplates(ConfigCatalog, ConfigConflictReport);
             SetService(CoreServiceKeys.EntityTemplateKeyRegistry, MapLoader.EntityTemplateKeys);
 
             // 6. Initialize Core Systems with merged config
@@ -500,7 +523,7 @@ namespace Ludots.Core.Engine
             Diagnostics.Log.Info(in LogChannels.Engine, "Initializing Core GAS Systems...");
             // Instantiate GAS Systems
             var engineClockConfigLoader = new EngineClockConfigLoader(ConfigPipeline);
-            var engineClockConfig = engineClockConfigLoader.Load();
+            var engineClockConfig = engineClockConfigLoader.Load(ConfigCatalog, ConfigConflictReport);
             Time.FixedDeltaTime = 1f / engineClockConfig.FixedHz;
             _timeFlow = new TimeFlowService();
             Time.TimeScale = _timeFlow.GetEffectiveScalePermille(TimeFlowDomainIds.Simulation) / 1000f;
@@ -536,14 +559,14 @@ namespace Ludots.Core.Engine
             targetDispatchPresetLoader.Load(ConfigCatalog, ConfigConflictReport);
             _effectTemplateLoader = new EffectTemplateLoader(ConfigPipeline, effectTemplateRegistry, gasConditions, targetDispatchPresetRegistry);
             var gasClockConfigLoader = new GasClockConfigLoader(ConfigPipeline);
-            var gasClockConfig = gasClockConfigLoader.Load();
+            var gasClockConfig = gasClockConfigLoader.Load(ConfigCatalog, ConfigConflictReport);
             var physics2dClockConfigLoader = new Physics2DClockConfigLoader(ConfigPipeline);
-            var physics2dClockConfig = physics2dClockConfigLoader.Load();
+            var physics2dClockConfig = physics2dClockConfigLoader.Load(ConfigCatalog, ConfigConflictReport);
             var navigation2dClockConfigLoader = new Navigation2DClockConfigLoader(ConfigPipeline);
-            var navigation2dClockConfig = navigation2dClockConfigLoader.Load();
+            var navigation2dClockConfig = navigation2dClockConfigLoader.Load(ConfigCatalog, ConfigConflictReport);
             _physics2DBaseHz = physics2dClockConfig.PhysicsHz;
             _navigation2DBaseHz = navigation2dClockConfig.NavigationHz;
-            new AttributeConstraintsLoader(ConfigPipeline).Load();
+            new AttributeConstraintsLoader(ConfigPipeline).Load(ConfigCatalog, ConfigConflictReport);
             var graphProgramRegistry = new GraphProgramRegistry();
             var graphSymbolResolver = new GasGraphSymbolResolver(
                 relationshipTypeRegistry,
@@ -552,7 +575,7 @@ namespace Ludots.Core.Engine
                 relationshipReasonRegistry,
                 targetDispatchPresetRegistry);
             var graphConfigLoader = new GraphProgramConfigLoader(ConfigPipeline, graphProgramRegistry, graphSymbolResolver);
-            var graphPackages = graphConfigLoader.LoadIdsAndCompile();
+            var graphPackages = graphConfigLoader.LoadIdsAndCompile(ConfigCatalog, ConfigConflictReport);
             var presetTypes = new PresetTypeRegistry();
             var presetTypeLoader = new PresetTypeLoader(ConfigPipeline, presetTypes);
             presetTypeLoader.Load(ConfigCatalog, ConfigConflictReport);
@@ -571,7 +594,7 @@ namespace Ludots.Core.Engine
             EffectParamKeys.Initialize();
             AbilityFormSetIdRegistry.Clear();
             ContextGroupIdRegistry.Clear();
-            _effectTemplateLoader.Load();
+            _effectTemplateLoader.Load(ConfigCatalog, ConfigConflictReport);
             new AbilityExecLoader(ConfigPipeline, abilityDefinitions).Load(ConfigCatalog, ConfigConflictReport);
             new AbilityFormSetConfigLoader(ConfigPipeline, abilityFormSets).Load(ConfigCatalog, ConfigConflictReport);
             graphConfigLoader.PatchAndRegister(graphPackages);
@@ -592,7 +615,7 @@ namespace Ludots.Core.Engine
                 relationshipReasonRegistry,
                 targetDispatchPresetRegistry);
             var phaseExecutor = new EffectPhaseExecutor(graphProgramRegistry, presetTypes, builtinHandlers, GasGraphOpHandlerTable.Instance, effectTemplateRegistry, eventBus: EventBus, budget: gasBudget);
-            var tagRules = new TagRuleSetLoader(ConfigPipeline).Load();
+            var tagRules = new TagRuleSetLoader(ConfigPipeline).Load(ConfigCatalog, ConfigConflictReport);
             for (int i = 0; i < tagRules.Count; i++)
             {
                 tagOps.RegisterTagRuleSet(tagRules[i].TagId, tagRules[i].RuleSet);
@@ -609,6 +632,7 @@ namespace Ludots.Core.Engine
             var selectionRuleRegistry = SelectionRuleRegistry.CreateWithDefaults();
             var runtimeEntitySpawnQueue = new RuntimeEntitySpawnQueue(config.Presentation.GetEffectiveRuntimeEntitySpawnQueueCapacity());
             var runtimeEntitySpawnReceiptQueue = new RuntimeEntitySpawnReceiptQueue(config.Presentation.GetEffectiveRuntimeEntitySpawnReceiptQueueCapacity());
+            var runtimeEntitySpawnReceiptChannels = new RuntimeEntitySpawnReceiptChannelRegistry();
             MapLoader.SetEffectRequestQueue(effectRequestQueue);
             var orderQueue = new OrderQueue();
             var chainOrderQueue = new OrderQueue();
@@ -783,7 +807,7 @@ namespace Ludots.Core.Engine
             var attributeSinks = new AttributeSinkRegistry();
             GasAttributeSinks.RegisterBuiltins(attributeSinks);
             var attributeBindings = new AttributeBindingRegistry();
-            new AttributeBindingLoader(ConfigPipeline, attributeSinks, attributeBindings).Load();
+            new AttributeBindingLoader(ConfigPipeline, attributeSinks, attributeBindings).Load(ConfigCatalog, ConfigConflictReport);
             var bindingSystem = new AttributeBindingSystem(World, attributeSinks, attributeBindings);
             var aggSystem = new AttributeAggregatorSystem(World);
             var sessionSystem = new GameSessionSystem(GameSession);
@@ -892,6 +916,7 @@ namespace Ludots.Core.Engine
             RemoveService(CoreServiceKeys.VisualHeightmap);
             SetService(CoreServiceKeys.RuntimeEntitySpawnQueue, runtimeEntitySpawnQueue);
             SetService(CoreServiceKeys.RuntimeEntitySpawnReceiptQueue, runtimeEntitySpawnReceiptQueue);
+            SetService(CoreServiceKeys.RuntimeEntitySpawnReceiptChannelRegistry, runtimeEntitySpawnReceiptChannels);
             SetService(CoreServiceKeys.OrderQueue, orderQueue);
             SetService(CoreServiceKeys.OrderTypeRegistry, orderTypeRegistry);
             SetService(CoreServiceKeys.OrderRuleRegistry, orderRuleRegistry);

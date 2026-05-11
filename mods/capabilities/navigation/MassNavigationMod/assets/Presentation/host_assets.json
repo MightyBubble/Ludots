@@ -1,5 +1,14 @@
 [
   {
+    "id": "mass_navigation.agent.soldier.raylib",
+    "assetKind": "Mesh",
+    "assetId": "mass_navigation.agent.soldier",
+    "backendId": "raylib",
+    "sourceUris": [
+      "MassNavigationMod:assets/Models/mass_navigation_agent_soldier.glb"
+    ]
+  },
+  {
     "id": "mass_navigation.selection.marker.raylib",
     "assetKind": "Mesh",
     "assetId": "mass_navigation.selection.marker",

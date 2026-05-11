@@ -1,0 +1,161 @@
+{
+  "mapId": "mass_navigation_total_war",
+  "runtimeSpawnReceiptChannelKey": "massNavigation.totalWar.runtimeSpawnReceipts",
+  "formationAnchorTemplateId": "mass_navigation_total_war_formation_anchor",
+  "initialSelectionFormationId": "shu_left_vanguard",
+  "formationSync": {
+    "facingVelocityEpsilonCmPerSecond": 0.1
+  },
+  "formations": [
+    {
+      "id": "shu_left_vanguard",
+      "label": "Shu Left Vanguard",
+      "teamId": 1,
+      "templateId": "mass_navigation_agent_azure_light",
+      "heavy": false,
+      "navMass": 1.0,
+      "visualScale": 0.22,
+      "centerXCm": -2600,
+      "centerYCm": -2200,
+      "facingDeg": 78,
+      "slots": {
+        "layout": "Grid",
+        "grid": { "columns": 20, "rows": 12, "spacingXCm": 46, "spacingYCm": 50 }
+      },
+      "outline": {
+        "shape": "Rectangle",
+        "rectangle": { "widthCm": 1100, "depthCm": 760, "edgeLineWidthCm": 18 },
+        "heightOffsetM": 0.08,
+        "frontIndicatorLengthCm": 260,
+        "frontIndicatorLineWidthCm": 28,
+        "fillColor": [0.18, 0.54, 0.88, 0.24],
+        "borderColor": [0.54, 0.86, 1.0, 0.96]
+      }
+    },
+    {
+      "id": "shu_center_guard",
+      "label": "Shu Center Guard",
+      "teamId": 1,
+      "templateId": "mass_navigation_agent_azure_heavy",
+      "heavy": true,
+      "navMass": 4.0,
+      "visualScale": 0.34,
+      "centerXCm": 0,
+      "centerYCm": -2500,
+      "facingDeg": 90,
+      "slots": {
+        "layout": "Disc",
+        "disc": { "count": 160, "ringSpacingCm": 56 }
+      },
+      "outline": {
+        "shape": "Circle",
+        "circle": { "radiusCm": 720, "ringWidthCm": 28 },
+        "heightOffsetM": 0.08,
+        "frontIndicatorLengthCm": 300,
+        "frontIndicatorLineWidthCm": 30,
+        "fillColor": [0.16, 0.46, 0.82, 0.18],
+        "borderColor": [0.64, 0.9, 1.0, 0.98]
+      }
+    },
+    {
+      "id": "shu_right_vanguard",
+      "label": "Shu Right Vanguard",
+      "teamId": 1,
+      "templateId": "mass_navigation_agent_azure_light",
+      "heavy": false,
+      "navMass": 1.0,
+      "visualScale": 0.22,
+      "centerXCm": 2600,
+      "centerYCm": -2200,
+      "facingDeg": 102,
+      "slots": {
+        "layout": "Grid",
+        "grid": { "columns": 20, "rows": 12, "spacingXCm": 46, "spacingYCm": 50 }
+      },
+      "outline": {
+        "shape": "Rectangle",
+        "rectangle": { "widthCm": 1100, "depthCm": 760, "edgeLineWidthCm": 18 },
+        "heightOffsetM": 0.08,
+        "frontIndicatorLengthCm": 260,
+        "frontIndicatorLineWidthCm": 28,
+        "fillColor": [0.18, 0.54, 0.88, 0.24],
+        "borderColor": [0.54, 0.86, 1.0, 0.96]
+      }
+    },
+    {
+      "id": "wei_left_column",
+      "label": "Wei Left Column",
+      "teamId": 2,
+      "templateId": "mass_navigation_agent_crimson_light",
+      "heavy": false,
+      "navMass": 1.0,
+      "visualScale": 0.22,
+      "centerXCm": -2600,
+      "centerYCm": 2500,
+      "facingDeg": 258,
+      "slots": {
+        "layout": "Grid",
+        "grid": { "columns": 20, "rows": 12, "spacingXCm": 46, "spacingYCm": 50 }
+      },
+      "outline": {
+        "shape": "Rectangle",
+        "rectangle": { "widthCm": 1100, "depthCm": 760, "edgeLineWidthCm": 18 },
+        "heightOffsetM": 0.08,
+        "frontIndicatorLengthCm": 260,
+        "frontIndicatorLineWidthCm": 28,
+        "fillColor": [0.82, 0.22, 0.18, 0.22],
+        "borderColor": [1.0, 0.52, 0.42, 0.96]
+      }
+    },
+    {
+      "id": "wei_center_column",
+      "label": "Wei Center Column",
+      "teamId": 2,
+      "templateId": "mass_navigation_agent_crimson_heavy",
+      "heavy": true,
+      "navMass": 4.0,
+      "visualScale": 0.34,
+      "centerXCm": 0,
+      "centerYCm": 2800,
+      "facingDeg": 270,
+      "slots": {
+        "layout": "Disc",
+        "disc": { "count": 160, "ringSpacingCm": 56 }
+      },
+      "outline": {
+        "shape": "Circle",
+        "circle": { "radiusCm": 720, "ringWidthCm": 28 },
+        "heightOffsetM": 0.08,
+        "frontIndicatorLengthCm": 300,
+        "frontIndicatorLineWidthCm": 30,
+        "fillColor": [0.78, 0.16, 0.14, 0.18],
+        "borderColor": [1.0, 0.56, 0.48, 0.98]
+      }
+    },
+    {
+      "id": "wei_right_column",
+      "label": "Wei Right Column",
+      "teamId": 2,
+      "templateId": "mass_navigation_agent_crimson_light",
+      "heavy": false,
+      "navMass": 1.0,
+      "visualScale": 0.22,
+      "centerXCm": 2600,
+      "centerYCm": 2500,
+      "facingDeg": 282,
+      "slots": {
+        "layout": "Grid",
+        "grid": { "columns": 20, "rows": 12, "spacingXCm": 46, "spacingYCm": 50 }
+      },
+      "outline": {
+        "shape": "Rectangle",
+        "rectangle": { "widthCm": 1100, "depthCm": 760, "edgeLineWidthCm": 18 },
+        "heightOffsetM": 0.08,
+        "frontIndicatorLengthCm": 260,
+        "frontIndicatorLineWidthCm": 28,
+        "fillColor": [0.82, 0.22, 0.18, 0.22],
+        "borderColor": [1.0, 0.52, 0.42, 0.96]
+      }
+    }
+  ]
+}

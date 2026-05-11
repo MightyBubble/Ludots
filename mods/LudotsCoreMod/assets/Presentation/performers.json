@@ -175,7 +175,7 @@
           "kind": "CastCommitted"
         },
         "condition": {
-          "inline": "AlwaysTrue"
+          "inline": "None"
         },
         "command": {
           "kind": "CreatePerformer",
@@ -229,7 +229,7 @@
           "kind": "CastFailed"
         },
         "condition": {
-          "inline": "AlwaysTrue"
+          "inline": "None"
         },
         "command": {
           "kind": "CreatePerformer",
@@ -286,7 +286,7 @@
           "kind": "EffectApplied"
         },
         "condition": {
-          "inline": "AlwaysTrue"
+          "inline": "None"
         },
         "command": {
           "kind": "CreatePerformer",

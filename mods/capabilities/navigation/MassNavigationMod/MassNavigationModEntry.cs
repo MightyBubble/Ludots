@@ -22,6 +22,7 @@ public sealed class MassNavigationModEntry : IMod
         });
         context.OnEvent(GameEvents.MapLoaded, runtime.HandleMapFocusedAsync);
         context.OnEvent(GameEvents.MapResumed, runtime.HandleMapFocusedAsync);
+        context.OnEvent(GameEvents.MapSuspended, runtime.HandleMapSuspendedAsync);
         context.OnEvent(GameEvents.MapUnloaded, runtime.HandleMapUnloadedAsync);
     }
 

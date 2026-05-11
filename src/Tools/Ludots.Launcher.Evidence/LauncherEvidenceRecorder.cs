@@ -1954,9 +1954,14 @@ public static class LauncherEvidenceRecorder
         var frameTimesMs = new List<double>();
 
         using var runtime = CreateRuntime(request.Plan, request.BootstrapPath);
-        if (!string.Equals(runtime.Config.StartupMapId, MassNavigationIds.MapId, StringComparison.OrdinalIgnoreCase))
+        if (!MassNavigationIds.IsCurrentNavigationMap(runtime.Engine))
         {
-            runtime.Engine.LoadMap(MassNavigationIds.MapId);
+            if (string.IsNullOrWhiteSpace(runtime.Config.StartupMapId))
+            {
+                throw new InvalidOperationException("MassNavigation UAT requires a configured startup map.");
+            }
+
+            runtime.Engine.LoadMap(runtime.Config.StartupMapId);
         }
 
         PresentationTimingDiagnostics timings = runtime.Engine.GetService(CoreServiceKeys.PresentationTimingDiagnostics)
@@ -2326,8 +2331,9 @@ public static class LauncherEvidenceRecorder
         MassNavigationSnapshot afterOrder = timeline.First(snapshot => snapshot.Step == "001_selection_order");
         MassNavigationSnapshot remote = timeline.First(snapshot => snapshot.Step == "002_remote_minimap_jump");
         MassNavigationSnapshot returned = timeline.First(snapshot => snapshot.Step == "003_return_original_area");
+        string expectedMapId = simulation.Config.MapId;
 
-        AddAcceptanceCheck(boot.ActiveMapId == MassNavigationIds.MapId, $"Expected MassNavigation map '{MassNavigationIds.MapId}', got '{boot.ActiveMapId}'.", failures);
+        AddAcceptanceCheck(boot.ActiveMapId == expectedMapId, $"Expected MassNavigation map '{expectedMapId}', got '{boot.ActiveMapId}'.", failures);
         AddAcceptanceCheck(boot.WorldWidthCm == 6_400_000 && boot.WorldHeightCm == 6_400_000, $"Expected 64km x 64km config, got {boot.WorldWidthCm}x{boot.WorldHeightCm} cm.", failures);
         AddAcceptanceCheck(boot.TeamCount >= 4, $"Expected at least 4 configured teams, got {boot.TeamCount}.", failures);
         AddAcceptanceCheck(boot.AgentCount == simulation.AgentsPerTeam * simulation.TeamCount, $"Agent state count mismatch: {boot.AgentCount} vs configured {simulation.AgentsPerTeam * simulation.TeamCount}.", failures);

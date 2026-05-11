@@ -17,6 +17,7 @@ internal sealed class MassNavigationSpawnReceiptBindingSystem : ISystem<float>
 {
     private readonly GameEngine _engine;
     private readonly MassNavigationSimulationRuntime _simulation;
+    private int _receiptChannelId;
 
     public MassNavigationSpawnReceiptBindingSystem(GameEngine engine, MassNavigationSimulationRuntime simulation)
     {
@@ -38,8 +39,9 @@ internal sealed class MassNavigationSpawnReceiptBindingSystem : ISystem<float>
 
         RuntimeEntitySpawnReceiptQueue receipts = _engine.GetService(CoreServiceKeys.RuntimeEntitySpawnReceiptQueue)
             ?? throw new InvalidOperationException("MassNavigationMod requires RuntimeEntitySpawnReceiptQueue.");
+        int receiptChannelId = ResolveReceiptChannelId();
         bool boundAny = false;
-        while (receipts.TryDequeueForChannel(MassNavigationIds.RuntimeSpawnReceiptChannelId, out RuntimeEntitySpawnReceipt receipt))
+        while (receipts.TryDequeueForChannel(receiptChannelId, out RuntimeEntitySpawnReceipt receipt))
         {
             if (!_simulation.SpawnReceipts.TryConsume(receipt.ReceiptId, out MassNavigationSpawnReceiptBinding binding))
             {
@@ -54,6 +56,19 @@ internal sealed class MassNavigationSpawnReceiptBindingSystem : ISystem<float>
         {
             _simulation.MarkStructuralChange();
         }
+    }
+
+    private int ResolveReceiptChannelId()
+    {
+        if (_receiptChannelId > 0)
+        {
+            return _receiptChannelId;
+        }
+
+        RuntimeEntitySpawnReceiptChannelRegistry channels = _engine.GetService(CoreServiceKeys.RuntimeEntitySpawnReceiptChannelRegistry)
+            ?? throw new InvalidOperationException("MassNavigationMod requires RuntimeEntitySpawnReceiptChannelRegistry.");
+        _receiptChannelId = channels.Register(MassNavigationIds.RuntimeSpawnReceiptChannelKey);
+        return _receiptChannelId;
     }
 
     private void BindReceipt(in RuntimeEntitySpawnReceipt receipt, in MassNavigationSpawnReceiptBinding binding)

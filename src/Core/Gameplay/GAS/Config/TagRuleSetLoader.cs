@@ -21,7 +21,7 @@ namespace Ludots.Core.Gameplay.GAS.Config
             ConfigConflictReport report = null,
             string relativePath = "GAS/tag_rules.json")
         {
-            var entry = ConfigPipeline.GetEntryOrDefault(catalog, relativePath, ConfigMergePolicy.ArrayById, "id");
+            var entry = ConfigPipeline.RequireEntry(catalog, relativePath, ConfigMergePolicy.ArrayById, "id");
             var merged = _pipeline.MergeArrayByIdFromCatalog(in entry, report);
 
             var errors = new List<string>();

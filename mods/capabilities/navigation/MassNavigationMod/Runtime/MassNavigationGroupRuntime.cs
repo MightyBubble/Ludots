@@ -243,7 +243,7 @@ public sealed class MassNavigationGroupRuntime
 
     public void RotateSelected(MassNavigationAgentState agentState, ReadOnlySpan<Entity> selected, float deltaRadians)
     {
-        if (!(MathF.Abs(deltaRadians) > 1e-5f))
+        if (!(MathF.Abs(deltaRadians) > _formationLayout.RotationEpsilonRadians))
         {
             return;
         }

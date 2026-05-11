@@ -11,10 +11,14 @@ namespace Ludots.Tests.Presentation
 {
     internal static class HeadlessPresentationTestHost
     {
-        internal static void Install(GameEngine engine)
+        internal static void Install(GameEngine engine, CameraCullingFocusOverride? focusOverride = null)
         {
             var view = new FixedViewController();
             engine.SetService(CoreServiceKeys.ViewController, view);
+            if (focusOverride != null)
+            {
+                engine.SetService(CoreServiceKeys.CameraCullingFocusOverride, focusOverride);
+            }
 
             var cameraAdapter = new NullCameraAdapter();
             var timings = engine.GetService(CoreServiceKeys.PresentationTimingDiagnostics);
@@ -33,6 +37,7 @@ namespace Ludots.Tests.Presentation
                 engine.SpatialQueries,
                 view,
                 loadedChunks: null,
+                focusOverride: focusOverride,
                 performers: engine.GetService(CoreServiceKeys.PerformerEntityRuntime),
                 timingDiagnostics: timings,
                 cullingConfig: engine.MergedConfig.Presentation.CameraCulling);

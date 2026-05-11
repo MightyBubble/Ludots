@@ -29,7 +29,7 @@ namespace Ludots.Core.Gameplay.Spawning
         private readonly EffectRequestQueue _effectRequests;
         private readonly DataRegistry<EntityTemplate> _templateRegistry;
         private readonly EntityTemplateKeyRegistry _templateKeys;
-        private readonly Dictionary<string, EntityTemplate> _cachedTemplates = new(StringComparer.OrdinalIgnoreCase);
+        private readonly Dictionary<string, EntityTemplate> _cachedTemplates = new(StringComparer.Ordinal);
         private readonly EntityBuilder _builder;
         private readonly PresentationStableIdAllocator _stableIds;
         private readonly RuntimeEntitySpawnRequest[] _batchRequests = new RuntimeEntitySpawnRequest[BatchEntityScratchCapacity];
@@ -485,6 +485,12 @@ namespace Ludots.Core.Gameplay.Spawning
             if (template == null)
             {
                 throw new InvalidOperationException($"Runtime template spawn references unknown template '{templateId}'.");
+            }
+
+            if (!string.Equals(template.Id, templateId, StringComparison.Ordinal))
+            {
+                throw new InvalidOperationException(
+                    $"Runtime template spawn requires exact template id '{template.Id}', got '{templateId}'.");
             }
 
             _cachedTemplates[templateId] = template;

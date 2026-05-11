@@ -241,7 +241,7 @@
         "activeByDefault": true,
         "assetBinding": {
           "assetKind": "SkinnedMesh",
-          "assetId": "blacksmith.worker.knight",
+          "assetId": "mass_navigation.agent.soldier",
           "materialId": "default_surface",
           "renderPath": "GpuSkinnedInstance",
           "mobility": "Movable",
@@ -263,9 +263,9 @@
         "kind": "Animator",
         "activeByDefault": true,
         "animator": {
-          "animatorControllerId": "blacksmith.worker.locomotion",
-          "animationProfileId": "blacksmith.worker.profile",
-          "speedParamKey": "blacksmith.worker.locomotion.speed",
+          "animatorControllerId": "mass_navigation.agent.locomotion",
+          "animationProfileId": "mass_navigation.agent.profile",
+          "speedParamKey": "mass_navigation.agent.locomotion.speed",
           "stateParamKey": "none"
         }
       },
@@ -288,7 +288,7 @@
       }
     ],
     "paramDefaults": [
-      { "paramKey": "blacksmith.worker.locomotion.speed", "lane": "Float", "floatValue": 1.0 }
+      { "paramKey": "mass_navigation.agent.locomotion.speed", "lane": "Float", "floatValue": 1.0 }
     ]
   },
   {
@@ -323,7 +323,7 @@
         "activeByDefault": true,
         "assetBinding": {
           "assetKind": "SkinnedMesh",
-          "assetId": "blacksmith.worker.knight",
+          "assetId": "mass_navigation.agent.soldier",
           "materialId": "default_surface",
           "renderPath": "GpuSkinnedInstance",
           "mobility": "Movable",
@@ -345,9 +345,9 @@
         "kind": "Animator",
         "activeByDefault": true,
         "animator": {
-          "animatorControllerId": "blacksmith.worker.locomotion",
-          "animationProfileId": "blacksmith.worker.profile",
-          "speedParamKey": "blacksmith.worker.locomotion.speed",
+          "animatorControllerId": "mass_navigation.agent.locomotion",
+          "animationProfileId": "mass_navigation.agent.profile",
+          "speedParamKey": "mass_navigation.agent.locomotion.speed",
           "stateParamKey": "none"
         }
       },
@@ -370,7 +370,7 @@
       }
     ],
     "paramDefaults": [
-      { "paramKey": "blacksmith.worker.locomotion.speed", "lane": "Float", "floatValue": 1.0 }
+      { "paramKey": "mass_navigation.agent.locomotion.speed", "lane": "Float", "floatValue": 1.0 }
     ]
   },
   {

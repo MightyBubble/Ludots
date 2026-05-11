@@ -23,6 +23,7 @@ namespace Ludots.Tests.Architecture
             string root = Path.Combine(Path.GetTempPath(), "Ludots_PresentationConfigContracts", Guid.NewGuid().ToString("N"));
             string core = Path.Combine(root, "Core");
             Directory.CreateDirectory(Path.Combine(core, "Configs", "Presentation"));
+            WriteCatalog(core, "Presentation/mesh_assets.json", "ArrayById", "id", "Presentation/prefabs.json", "ArrayById", "id");
             File.WriteAllText(Path.Combine(core, "Configs", "Presentation", "mesh_assets.json"), """
 [
   { "id": "cube", "type": "Primitive", "primitiveKind": "Cube" }
@@ -44,11 +45,12 @@ namespace Ludots.Tests.Architecture
             var vfs = new VirtualFileSystem();
             vfs.Mount("Core", core);
             var pipeline = new ConfigPipeline(vfs, modLoader: null!);
+            var catalog = ConfigCatalogLoader.Load(pipeline);
             var meshes = new MeshAssetRegistry();
             var prefabs = new PrefabRegistry();
 
             var ex = Assert.Throws<InvalidOperationException>(() =>
-                new MeshAssetConfigLoader(pipeline, meshes, prefabs).Load());
+                new MeshAssetConfigLoader(pipeline, meshes, prefabs).Load(catalog));
             Assert.That(ex!.Message, Does.Contain("must declare an explicit kind"));
         }
 
@@ -58,6 +60,11 @@ namespace Ludots.Tests.Architecture
             string root = Path.Combine(Path.GetTempPath(), "Ludots_PresentationBehaviorConfig", Guid.NewGuid().ToString("N"));
             string core = Path.Combine(root, "Core");
             Directory.CreateDirectory(Path.Combine(core, "Configs", "Presentation"));
+            WriteCatalog(
+                core,
+                "Presentation/mesh_assets.json", "ArrayById", "id",
+                "Presentation/prefabs.json", "ArrayById", "id",
+                "Presentation/presentation_behaviors.json", "ArrayById", "id");
             File.WriteAllText(Path.Combine(core, "Configs", "Presentation", "mesh_assets.json"), """
 [
   { "id": "cube", "type": "Primitive", "primitiveKind": "Cube" },
@@ -78,12 +85,13 @@ namespace Ludots.Tests.Architecture
             var vfs = new VirtualFileSystem();
             vfs.Mount("Core", core);
             var pipeline = new ConfigPipeline(vfs, modLoader: null!);
+            var catalog = ConfigCatalogLoader.Load(pipeline);
             var meshes = new MeshAssetRegistry();
             var prefabs = new PrefabRegistry();
-            new MeshAssetConfigLoader(pipeline, meshes, prefabs).Load();
+            new MeshAssetConfigLoader(pipeline, meshes, prefabs).Load(catalog);
 
             var behaviors = new PresentationBehaviorRegistry();
-            new PresentationBehaviorConfigLoader(pipeline, behaviors, meshes).Load();
+            new PresentationBehaviorConfigLoader(pipeline, behaviors, meshes).Load(catalog);
 
             int behaviorId = behaviors.GetId("behavior.crop");
             Assert.That(behaviorId, Is.GreaterThan(0));
@@ -168,6 +176,7 @@ namespace Ludots.Tests.Architecture
             string root = Path.Combine(Path.GetTempPath(), "Ludots_OrderTypeKeyRules", Guid.NewGuid().ToString("N"));
             string core = Path.Combine(root, "Core");
             Directory.CreateDirectory(Path.Combine(core, "Configs", "GAS"));
+            WriteCatalog(core, "GAS/order_types.json", "DeepObject", string.Empty);
             File.WriteAllText(Path.Combine(core, "Configs", "GAS", "order_types.json"), """
 {
   "orderTypes": {
@@ -180,6 +189,7 @@ namespace Ludots.Tests.Architecture
       "label": "Attack Target"
     },
     "massNavigationMove": {
+      "orderTypeId": "massNavigationMove",
       "label": "Mass Navigation Move"
     }
   },
@@ -196,10 +206,11 @@ namespace Ludots.Tests.Architecture
             var vfs = new VirtualFileSystem();
             vfs.Mount("Core", core);
             var pipeline = new ConfigPipeline(vfs, modLoader: null!);
+            var catalog = ConfigCatalogLoader.Load(pipeline);
             var orderTypes = new OrderTypeRegistry();
             var orderRules = new OrderRuleRegistry();
 
-            new OrderTypeConfigLoader(pipeline).Load(orderTypes, orderRules);
+            new OrderTypeConfigLoader(pipeline).Load(orderTypes, orderRules, catalog);
 
             int massNavigationMoveId = orderTypes.GetId("massNavigationMove");
             ref readonly OrderRuleSet massNavigationRule = ref orderRules.Get(massNavigationMoveId);
@@ -209,11 +220,12 @@ namespace Ludots.Tests.Architecture
         }
 
         [Test]
-        public void OrderTypeConfigLoader_AllocatesOmittedOrderTypeIdsWithoutCollidingWithExplicitIds()
+        public void OrderTypeConfigLoader_RequiresExplicitOrderTypeIds()
         {
             string root = Path.Combine(Path.GetTempPath(), "Ludots_OrderTypeAllocatedIds", Guid.NewGuid().ToString("N"));
             string core = Path.Combine(root, "Core");
             Directory.CreateDirectory(Path.Combine(core, "Configs", "GAS"));
+            WriteCatalog(core, "GAS/order_types.json", "DeepObject", string.Empty);
             File.WriteAllText(Path.Combine(core, "Configs", "GAS", "order_types.json"), """
 {
   "orderTypes": {
@@ -240,36 +252,30 @@ namespace Ludots.Tests.Architecture
             var vfs = new VirtualFileSystem();
             vfs.Mount("Core", core);
             var pipeline = new ConfigPipeline(vfs, modLoader: null!);
+            var catalog = ConfigCatalogLoader.Load(pipeline);
             var orderTypes = new OrderTypeRegistry();
             var orderRules = new OrderRuleRegistry();
 
-            new OrderTypeConfigLoader(pipeline).Load(orderTypes, orderRules);
-
-            Assert.That(orderTypes.GetId("explicitMove"), Is.EqualTo(1));
-            int semanticMoveId = orderTypes.GetId("semanticMove");
-            Assert.That(semanticMoveId, Is.GreaterThan(1));
-            Assert.That(semanticMoveId, Is.LessThan(OrderTypeRegistry.MaxOrderTypes));
-            var semanticMove = orderTypes.Get(semanticMoveId);
-            Assert.That(semanticMove.SpatialBlackboardKey, Is.EqualTo(OrderBlackboardKeys.Generic_TargetPosition));
-            Assert.That(semanticMove.EntityBlackboardKey, Is.EqualTo(-1));
-            Assert.That(semanticMove.IntArg0BlackboardKey, Is.EqualTo(-1));
-            Assert.That(semanticMove.ValidationGraphId, Is.EqualTo(0));
-            Assert.That(orderRules.Interrupts(semanticMoveId, orderTypes.GetId("explicitMove")), Is.True);
+            InvalidOperationException ex = Assert.Throws<InvalidOperationException>(
+                () => new OrderTypeConfigLoader(pipeline).Load(orderTypes, orderRules, catalog))!;
+            Assert.That(ex.Message, Does.Contain("semanticMove"));
+            Assert.That(ex.Message, Does.Contain("orderTypeId"));
         }
 
         [Test]
-        public void OrderTypeConfigLoader_AllocatesOmittedOrderTypeIdsDeterministicallyByKey()
+        public void OrderTypeConfigLoader_LoadsSemanticOrderTypeIdsDeterministically()
         {
             string root = Path.Combine(Path.GetTempPath(), "Ludots_OrderTypeDeterministicIds", Guid.NewGuid().ToString("N"));
             string core = Path.Combine(root, "Core");
             Directory.CreateDirectory(Path.Combine(core, "Configs", "GAS"));
+            WriteCatalog(core, "GAS/order_types.json", "DeepObject", string.Empty);
             string path = Path.Combine(core, "Configs", "GAS", "order_types.json");
             File.WriteAllText(path, """
 {
   "orderTypes": {
     "explicitMove": { "orderTypeId": 1, "label": "Explicit Move" },
-    "alphaMove": { "label": "Alpha Move", "validationGraph": "none" },
-    "omegaMove": { "label": "Omega Move", "validationGraph": "none" }
+    "alphaMove": { "orderTypeId": "alphaMove", "label": "Alpha Move", "validationGraph": "none" },
+    "omegaMove": { "orderTypeId": "omegaMove", "label": "Omega Move", "validationGraph": "none" }
   }
 }
 """);
@@ -277,29 +283,30 @@ namespace Ludots.Tests.Architecture
             var vfs = new VirtualFileSystem();
             vfs.Mount("Core", core);
             var pipeline = new ConfigPipeline(vfs, modLoader: null!);
+            var catalog = ConfigCatalogLoader.Load(pipeline);
             var orderTypes = new OrderTypeRegistry();
             var orderRules = new OrderRuleRegistry();
 
-            new OrderTypeConfigLoader(pipeline).Load(orderTypes, orderRules);
-            int firstAlphaId = orderTypes.GetId("alphaMove");
-            int firstOmegaId = orderTypes.GetId("omegaMove");
+            new OrderTypeConfigLoader(pipeline).Load(orderTypes, orderRules, catalog);
+            int alphaMoveId = orderTypes.GetId("alphaMove");
+            int omegaMoveId = orderTypes.GetId("omegaMove");
+            Assert.That(alphaMoveId, Is.GreaterThan(0));
+            Assert.That(omegaMoveId, Is.GreaterThan(0));
+            Assert.That(alphaMoveId, Is.Not.EqualTo(omegaMoveId));
 
             File.WriteAllText(path, """
 {
   "orderTypes": {
-    "omegaMove": { "label": "Omega Move", "validationGraph": "none" },
-    "alphaMove": { "label": "Alpha Move", "validationGraph": "none" },
+    "omegaMove": { "orderTypeId": "omegaMove", "label": "Omega Move", "validationGraph": "none" },
+    "alphaMove": { "orderTypeId": "alphaMove", "label": "Alpha Move", "validationGraph": "none" },
     "explicitMove": { "orderTypeId": 1, "label": "Explicit Move" }
   }
 }
 """);
-            new OrderTypeConfigLoader(pipeline).Load(orderTypes, orderRules);
+            new OrderTypeConfigLoader(pipeline).Load(orderTypes, orderRules, catalog);
 
-            Assert.That(orderTypes.GetId("alphaMove"), Is.EqualTo(firstAlphaId));
-            Assert.That(orderTypes.GetId("omegaMove"), Is.EqualTo(firstOmegaId));
-            Assert.That(firstAlphaId, Is.Not.EqualTo(firstOmegaId));
-            Assert.That(firstAlphaId, Is.Not.EqualTo(1));
-            Assert.That(firstOmegaId, Is.Not.EqualTo(1));
+            Assert.That(orderTypes.GetId("alphaMove"), Is.EqualTo(alphaMoveId));
+            Assert.That(orderTypes.GetId("omegaMove"), Is.EqualTo(omegaMoveId));
         }
 
         [Test]
@@ -480,6 +487,37 @@ namespace Ludots.Tests.Architecture
             }
 
             throw new DirectoryNotFoundException("Could not locate repo root containing src/Core/Ludots.Core.csproj");
+        }
+
+        private static void WriteCatalog(string coreRoot, params string[] triples)
+        {
+            if (triples.Length % 3 != 0)
+            {
+                throw new ArgumentException("Catalog entries must be path/policy/idField triples.", nameof(triples));
+            }
+
+            Directory.CreateDirectory(Path.Combine(coreRoot, "Configs"));
+            using var writer = new StringWriter();
+            writer.WriteLine("[");
+            for (int i = 0; i < triples.Length; i += 3)
+            {
+                if (i > 0)
+                {
+                    writer.WriteLine(",");
+                }
+
+                writer.Write($"  {{ \"Path\": \"{triples[i]}\", \"Policy\": \"{triples[i + 1]}\"");
+                if (!string.IsNullOrWhiteSpace(triples[i + 2]))
+                {
+                    writer.Write($", \"IdField\": \"{triples[i + 2]}\"");
+                }
+
+                writer.Write(" }");
+            }
+
+            writer.WriteLine();
+            writer.WriteLine("]");
+            File.WriteAllText(Path.Combine(coreRoot, "Configs", "config_catalog.json"), writer.ToString());
         }
     }
 }

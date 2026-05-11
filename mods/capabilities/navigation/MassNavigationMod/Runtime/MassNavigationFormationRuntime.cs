@@ -4,6 +4,15 @@ namespace MassNavigationMod.Runtime;
 
 public sealed class MassNavigationFormationRuntime
 {
+    private readonly MassNavigationGroupSemantics _groupSemantics;
+
+    public MassNavigationFormationRuntime(MassNavigationGroupSemantics groupSemantics)
+    {
+        _groupSemantics = groupSemantics ?? throw new ArgumentNullException(nameof(groupSemantics));
+    }
+
+    public float RotationEpsilonRadians => _groupSemantics.FormationRotationEpsilonRadians;
+
     public void BuildOffsets(
         float[] baseOffsetX,
         float[] baseOffsetY,
@@ -13,16 +22,12 @@ public sealed class MassNavigationFormationRuntime
         MassNavigationFormationMode mode,
         float rotationRadians)
     {
-        const float lineSpacingCm = 180f;
-        const float squareSpacingCm = 80f;
-        const float wedgeSpacingCm = 180f;
-
         switch (mode)
         {
             case MassNavigationFormationMode.Line:
                 for (int i = 0; i < count; i++)
                 {
-                    baseOffsetX[i] = (i - ((count - 1) * 0.5f)) * lineSpacingCm;
+                    baseOffsetX[i] = (i - ((count - 1) * 0.5f)) * _groupSemantics.FormationLineSpacingCm;
                     baseOffsetY[i] = 0f;
                     offsetX[i] = baseOffsetX[i];
                     offsetY[i] = 0f;
@@ -30,7 +35,9 @@ public sealed class MassNavigationFormationRuntime
                 break;
 
             case MassNavigationFormationMode.Circle:
-                float radius = MathF.Max(200f, count * lineSpacingCm / (MathF.PI * 2f));
+                float radius = MathF.Max(
+                    _groupSemantics.FormationCircleMinRadiusCm,
+                    count * _groupSemantics.FormationCircleSpacingCm / (MathF.PI * 2f));
                 for (int i = 0; i < count; i++)
                 {
                     float angle = (i / (float)count) * MathF.PI * 2f;
@@ -53,8 +60,8 @@ public sealed class MassNavigationFormationRuntime
                     {
                         int row = (int)Math.Ceiling(i / 2f);
                         int side = (i & 1) == 1 ? 1 : -1;
-                        baseOffsetX[i] = side * row * wedgeSpacingCm;
-                        baseOffsetY[i] = row * wedgeSpacingCm;
+                        baseOffsetX[i] = side * row * _groupSemantics.FormationWedgeSpacingCm;
+                        baseOffsetY[i] = row * _groupSemantics.FormationWedgeSpacingCm;
                     }
 
                     offsetX[i] = baseOffsetX[i];
@@ -72,15 +79,15 @@ public sealed class MassNavigationFormationRuntime
                 {
                     int row = i / cols;
                     int col = i % cols;
-                    baseOffsetX[i] = (col - colCenter) * squareSpacingCm;
-                    baseOffsetY[i] = (row - rowCenter) * squareSpacingCm;
+                    baseOffsetX[i] = (col - colCenter) * _groupSemantics.FormationSquareSpacingCm;
+                    baseOffsetY[i] = (row - rowCenter) * _groupSemantics.FormationSquareSpacingCm;
                     offsetX[i] = baseOffsetX[i];
                     offsetY[i] = baseOffsetY[i];
                 }
                 break;
         }
 
-        if (MathF.Abs(rotationRadians) > 1e-5f)
+        if (MathF.Abs(rotationRadians) > _groupSemantics.FormationRotationEpsilonRadians)
         {
             ApplyRotation(offsetX, offsetY, baseOffsetX, baseOffsetY, count, rotationRadians);
         }

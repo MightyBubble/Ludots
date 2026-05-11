@@ -147,14 +147,24 @@ internal sealed class MassNavigationPanelController
                 Ui.Text($"Flow area {state.FlowWorkAreaWidthCm / 100f:0}x{state.FlowWorkAreaHeightCm / 100f:0} m at ({state.FlowWorkAreaCenterXCm},{state.FlowWorkAreaCenterYCm}) cm  rev {state.FlowWorkAreaRevision}").FontSize(12f).Color("#D6E4F5").WhiteSpace(UiWhiteSpace.Normal),
                 Ui.Text($"Solver cache {state.SolverWindowWidthCm / 100f:0}x{state.SolverWindowHeightCm / 100f:0} m at ({state.SolverWindowCenterXCm},{state.SolverWindowCenterYCm}) cm  driver {state.SolverWindowDriver}").FontSize(12f).Color("#9FD8FF").WhiteSpace(UiWhiteSpace.Normal),
                 Ui.Text($"Camera target ({state.CameraTargetX:0},{state.CameraTargetY:0}) cm  distance {state.CameraDistanceCm:0}  chunk updates {state.StreamingWindowUpdatesFrame}").FontSize(12f).Color("#F2D483").WhiteSpace(UiWhiteSpace.Normal),
+                Ui.Text($"Culling focus {state.ViewResidencyMode}  probe {state.ActiveProbeLabel}  TTL {state.ViewResidencyRetainSeconds:0.0}s  radius {state.ViewResidencyRadiusCm / 100f:0}m  override {(state.CullingProbeActive ? "On" : "Off")}").FontSize(12f).Color("#9FD8FF").WhiteSpace(UiWhiteSpace.Normal),
                 Ui.Text($"Last command target ({state.CommandFocusX:0},{state.CommandFocusY:0}) cm  selected payload {state.LastCommandSelectionCount}  invalid orders {state.CommandRejectsFrame}/{state.CommandRejectsTotal}").FontSize(11f).Color(state.CommandRejectsFrame > 0 ? "#FF9A73" : "#8EA2BD").WhiteSpace(UiWhiteSpace.Normal),
                 Ui.Row(
                         BuildActionButton("Full Map", RequestStrategicWorldCamera),
                         BuildActionButton("Field Camera", RequestCameraReset))
                     .Wrap()
                     .Gap(8f),
+                Ui.Row(
+                        BuildActionButton("Cull Camera", UseCameraCullingFocus),
+                        BuildActionButton("Cull Probe", UseProbeCullingFocus),
+                        BuildActionButton("TTL -2s", () => AdjustCullingRetainSeconds(-2f)),
+                        BuildActionButton("TTL +2s", () => AdjustCullingRetainSeconds(2f)))
+                    .Wrap()
+                    .Gap(8f),
                 Ui.Text("Debug Landmarks").FontSize(12f).Bold().Color("#F4C77D"),
                 BuildKnownContactRow(),
+                Ui.Text("Culling Probes").FontSize(12f).Bold().Color("#F4C77D"),
+                BuildCameraProbeRow(),
                 Ui.Text("Formation").FontSize(12f).Bold().Color("#F4C77D"),
                 Ui.Row(
                         BuildFormationButton("None", MassNavigationFormationMode.None, state.FormationLabel),
@@ -232,15 +242,7 @@ internal sealed class MassNavigationPanelController
                     .Wrap()
                     .Gap(8f),
                 Ui.Text("Scene Rebuild Required").FontSize(12f).Bold().Color("#F4C77D"),
-                Ui.Row(
-                        BuildActionButton("-2k", AdjustTotalAgentsDown),
-                        BuildActionButton("5k", () => SetTotalAgents(5_000)),
-                        BuildActionButton("10k", () => SetTotalAgents(10_000)),
-                        BuildActionButton("20k", () => SetTotalAgents(20_000)),
-                        BuildActionButton("40k", () => SetTotalAgents(40_000)),
-                        BuildActionButton("+2k", AdjustTotalAgentsUp))
-                    .Wrap()
-                    .Gap(8f),
+                BuildSceneRebuildControls(),
                 Ui.Text("Semantic Contract").FontSize(12f).Bold().Color("#F4C77D"),
                 Ui.Text(state.ObstacleSemanticsText).FontSize(12f).Color("#D6E4F5").WhiteSpace(UiWhiteSpace.Normal),
                 Ui.Text(state.TargetSemanticsText).FontSize(12f).Color("#D6E4F5").WhiteSpace(UiWhiteSpace.Normal),
@@ -282,7 +284,7 @@ internal sealed class MassNavigationPanelController
 
     private UiElementBuilder BuildFormationButton(string label, MassNavigationFormationMode mode, string currentLabel)
     {
-        bool active = currentLabel.Equals(mode.ToString(), StringComparison.OrdinalIgnoreCase);
+        bool active = currentLabel.Equals(mode.ToString(), StringComparison.Ordinal);
         return Ui.Button(label, _ => SetFormationMode(mode))
             .Background(active ? "#315D35" : "#182436")
             .Color("#F8FBFF")
@@ -374,9 +376,58 @@ internal sealed class MassNavigationPanelController
 
         var targetCm = new System.Numerics.Vector2(contact.CenterXCm, contact.CenterYCm);
         _simulation.ObserveCameraFocus(targetCm);
-        MassNavigationRuntime.RequestCameraJump(_engine, targetCm, 18_000f);
+        MassNavigationRuntime.RequestCameraJump(_engine, targetCm);
         MassNavigationRuntime.RequestMinimapStrategicWorldView(_engine);
         SetActionFeedback($"Camera moved to debug landmark {contact.Label}; camera budget updated without respawn or retarget.");
+    }
+
+    private void UseCameraCullingFocus()
+    {
+        if (_engine == null || _simulation == null)
+        {
+            return;
+        }
+
+        _simulation.SetViewResidencyMode("Camera");
+        MassNavigationRuntime.ApplyCullingFocusOverride(_engine);
+        SetActionFeedback("Hot apply: culling focus follows the real camera.");
+    }
+
+    private void UseProbeCullingFocus()
+    {
+        if (_engine == null || _simulation == null)
+        {
+            return;
+        }
+
+        _simulation.SetViewResidencyMode("Probe");
+        MassNavigationRuntime.ApplyCullingFocusOverride(_engine);
+        SetActionFeedback($"Hot apply: culling focus uses probe {_simulation.ViewResidency.ActiveProbe.Label}.");
+    }
+
+    private void JumpToCameraProbe(string probeId)
+    {
+        if (_engine == null || _simulation == null)
+        {
+            return;
+        }
+
+        _simulation.SetViewResidencyProbe(probeId);
+        _simulation.SetViewResidencyMode("Probe");
+        MassNavigationRuntime.ApplyCullingFocusOverride(_engine);
+        MassNavigationCameraProbeConfig probe = _simulation.ViewResidency.ActiveProbe;
+        SetActionFeedback($"Hot apply: culling probe = {probe.Label}. Real camera was not moved.");
+    }
+
+    private void AdjustCullingRetainSeconds(float deltaSeconds)
+    {
+        if (_simulation == null)
+        {
+            return;
+        }
+
+        _simulation.AdjustViewResidencyRetainSeconds(deltaSeconds);
+        SetActionFeedback($"Hot apply: culling chunk retention = {_simulation.ViewResidency.RetainSeconds:0.0}s.");
     }
 
     private void AdjustSimulationBudget(int delta)
@@ -599,7 +650,7 @@ internal sealed class MassNavigationPanelController
 
     private MassNavigationPanelState CaptureState(GameEngine engine, MassNavigationSimulationRuntime simulation)
     {
-        bool visible = engine.CurrentMapSession != null && MassNavigationIds.IsNavigationMap(engine.CurrentMapSession.MapId.Value);
+        bool visible = engine.CurrentMapSession != null && MassNavigationIds.IsNavigationMap(engine, engine.CurrentMapSession.MapId.Value);
         PresentationTimingDiagnostics timing = engine.GetService(CoreServiceKeys.PresentationTimingDiagnostics)
             ?? throw new InvalidOperationException("MassNavigationMod panel requires PresentationTimingDiagnostics.");
         IViewController viewport = engine.GetService(CoreServiceKeys.ViewController)
@@ -775,6 +826,12 @@ internal sealed class MassNavigationPanelController
                 LastRejectedCommandY: simulation.LastRejectedCommandYCm,
                 SolverWindowDriver: simulation.SolverWindowDriver,
                 StrategicWorldViewActive: MassNavigationRuntime.IsStrategicWorldCameraActive(engine),
+                ViewResidencyMode: simulation.ViewResidency.Mode,
+                ActiveProbeId: simulation.ViewResidency.ActiveProbe.Id,
+                ActiveProbeLabel: simulation.ViewResidency.ActiveProbe.Label,
+                ViewResidencyRetainSeconds: simulation.ViewResidency.RetainSeconds,
+                ViewResidencyRadiusCm: simulation.ViewResidency.RadiusCm,
+                CullingProbeActive: simulation.ViewResidency.UsesProbeFocus,
                 ObstacleSemanticsText: obstacleSemanticsText,
             TargetSemanticsText: targetSemanticsText,
             ArrivalSemanticsText: arrivalSemanticsText,
@@ -858,6 +915,53 @@ internal sealed class MassNavigationPanelController
         }
 
         return Ui.Row(buttons)
+            .Wrap()
+            .Gap(8f);
+    }
+
+    private UiElementBuilder BuildCameraProbeRow()
+    {
+        if (_simulation == null)
+        {
+            return Ui.Text("No culling probes.").FontSize(12f).Color("#8EA2BD");
+        }
+
+        MassNavigationCameraProbeConfig[] probes = _simulation.ViewResidency.CameraProbes;
+        if (probes.Length == 0)
+        {
+            return Ui.Text("No culling probes.").FontSize(12f).Color("#8EA2BD");
+        }
+
+        var buttons = new UiElementBuilder[probes.Length];
+        for (int i = 0; i < probes.Length; i++)
+        {
+            string probeId = probes[i].Id;
+            string label = probes[i].Label;
+            buttons[i] = BuildActionButton(label, () => JumpToCameraProbe(probeId));
+        }
+
+        return Ui.Row(buttons)
+            .Wrap()
+            .Gap(8f);
+    }
+
+    private UiElementBuilder BuildSceneRebuildControls()
+    {
+        if (_simulation == null || !_simulation.Config.ScenarioRuntime.AutoSpawnConfiguredScenario)
+        {
+            return Ui.Text("Formation-owned scenarios use their own authored formation config for unit counts.")
+                .FontSize(11f)
+                .Color("#8EA2BD")
+                .WhiteSpace(UiWhiteSpace.Normal);
+        }
+
+        return Ui.Row(
+                BuildActionButton("-2k", AdjustTotalAgentsDown),
+                BuildActionButton("5k", () => SetTotalAgents(5_000)),
+                BuildActionButton("10k", () => SetTotalAgents(10_000)),
+                BuildActionButton("20k", () => SetTotalAgents(20_000)),
+                BuildActionButton("40k", () => SetTotalAgents(40_000)),
+                BuildActionButton("+2k", AdjustTotalAgentsUp))
             .Wrap()
             .Gap(8f);
     }

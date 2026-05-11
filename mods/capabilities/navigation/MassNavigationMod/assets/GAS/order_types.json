@@ -1,6 +1,7 @@
 {
   "orderTypes": {
     "massNavigationMove": {
+      "orderTypeId": "massNavigationMove",
       "label": "Mass Navigation Move",
       "maxQueueSize": 1,
       "sameTypePolicy": "Replace",

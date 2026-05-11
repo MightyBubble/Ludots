@@ -392,6 +392,62 @@ namespace Ludots.Tests.Presentation
         }
 
         [Test]
+        public void PerformerRuleSystem_Throws_WhenCommandBufferOverflows()
+        {
+            using var world = World.Create();
+            var commands = new PerformerCommandBuffer(capacity: 1);
+            var events = new PresentationEventStream();
+            var instances = new PerformerEntityRuntime(world);
+            var definitions = new PerformerDefinitionRegistry();
+            definitions.Register("command_buffer_limit_probe", new PerformerDefinition
+            {
+                Rules =
+                [
+                    new PerformerRule
+                    {
+                        Event = new EventFilter { Kind = PresentationEventKind.GlobalRegionChanged, KeyId = -1 },
+                        Condition = ConditionRef.AlwaysTrue,
+                        Command = new PerformerCommand
+                        {
+                            CommandKind = PerformerCommandKind.SetParam,
+                            ParamKey = 300,
+                            ParamLane = ParamLane.Int,
+                            ValueSource = PerformerCommandValueSource.EventKeyId,
+                        },
+                    },
+                ],
+            });
+            instances.BindDefinitions(definitions);
+
+            Entity ownerA = world.Create();
+            Entity ownerB = world.Create();
+            instances.Create(1, ownerA, scopeId: 1);
+            instances.Create(1, ownerB, scopeId: 2);
+
+            using var rules = new PerformerRuleSystem(
+                world,
+                events,
+                commands,
+                definitions,
+                instances,
+                new GraphProgramRegistry(),
+                new GasGraphRuntimeApi(world, spatialQueries: null, coords: null, eventBus: null),
+                new Dictionary<string, object>());
+
+            Assert.That(events.TryAdd(new PresentationEvent
+            {
+                Kind = PresentationEventKind.GlobalRegionChanged,
+                KeyId = 17,
+                Source = Entity.Null,
+                Target = Entity.Null,
+            }), Is.True);
+
+            InvalidOperationException? ex = Assert.Throws<InvalidOperationException>(() => rules.Update(0.016f));
+            Assert.That(ex!.Message, Does.Contain("PerformerCommandBuffer overflowed"));
+            Assert.That(commands.DroppedSinceClear, Is.EqualTo(1));
+        }
+
+        [Test]
         public void PerformerBehaviorSystem_AttributeTagMaterialAndSound_WriteBlackboardAndRequests()
         {
             using var world = World.Create();

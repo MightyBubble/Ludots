@@ -79,11 +79,11 @@ namespace Ludots.Core.Systems
                 TemplateBatchScratchCapacity);
         }
 
-        public void LoadTemplates()
+        public void LoadTemplates(ConfigCatalog catalog, ConfigConflictReport report = null)
         {
             // This loads "Entities/templates.json" from Core and all Mods
             // Merging them with priority
-            TemplateRegistry.Load("Entities/templates.json");
+            TemplateRegistry.Load("Entities/templates.json", catalog, report);
             EntityTemplateKeys.Clear();
             foreach (var template in TemplateRegistry.GetAll())
             {

@@ -30,7 +30,7 @@ namespace Ludots.Core.NodeLibraries.GASGraph.Host
             _registry.Clear();
             GraphIdRegistry.Clear();
 
-            var entry = ConfigPipeline.GetEntryOrDefault(catalog, relativePath, ConfigMergePolicy.ArrayById, "id");
+            var entry = ConfigPipeline.RequireEntry(catalog, relativePath, ConfigMergePolicy.ArrayById, "id");
             var merged = _pipeline.MergeArrayByIdFromCatalog(in entry, report);
 
             var sorted = new List<(string Id, JsonObject Node)>(merged.Count);

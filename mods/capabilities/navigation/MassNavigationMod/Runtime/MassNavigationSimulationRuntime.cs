@@ -1,5 +1,6 @@
 using System;
 using System.Diagnostics;
+using System.Collections.Generic;
 using Arch.Core;
 using Ludots.Core.Mathematics;
 using Ludots.Core.Navigation.GraphWorld;
@@ -21,6 +22,9 @@ public sealed class MassNavigationSimulationRuntime
     private int _frameIndex;
     private int _nextSharedOrderId = 1;
     private readonly WorldGridLoadedChunks _loadedChunks;
+    private readonly Dictionary<long, float> _loadedChunkLastTouchedSeconds = new();
+    private readonly List<long> _loadedChunksToEvict = new();
+    private float _viewResidencyClockSeconds;
     private int _streamingMinChunkX = int.MinValue;
     private int _streamingMaxChunkX = int.MinValue;
     private int _streamingMinChunkY = int.MinValue;
@@ -99,7 +103,7 @@ public sealed class MassNavigationSimulationRuntime
     public float LastRejectedCommandYCm { get; private set; }
     public MassNavigationConfig Config { get; }
     public MassNavigationAgentState AgentState { get; } = new();
-    public MassNavigationCommandRuntime Commands { get; } = new();
+    public MassNavigationCommandRuntime Commands { get; }
     public MassFlowTuning FlowTuning { get; }
     public MassNavigationCadenceConfig Cadence { get; }
     internal MassNavigationCadenceScheduler CadenceScheduler { get; }
@@ -109,6 +113,7 @@ public sealed class MassNavigationSimulationRuntime
     public MassFlowSimulationState MassFlow { get; }
     public MassNavigationWorldConfig WorldConfig { get; }
     public WorldGridLoadedChunks LoadedChunks => _loadedChunks;
+    public MassNavigationViewResidencyConfig ViewResidency => Config.ViewResidency;
 
     public int SelectedCount => _selectedCount;
     public uint SelectionRevision => _selectionRevision;
@@ -178,7 +183,8 @@ public sealed class MassNavigationSimulationRuntime
         _flowWorkAreaWidthCm = _simWindowWidthCm;
         _flowWorkAreaHeightCm = _simWindowHeightCm;
         FlowTuning = config.Flow;
-        FormationRuntime = new MassNavigationFormationRuntime();
+        Commands = new MassNavigationCommandRuntime(config.Semantics.Group);
+        FormationRuntime = new MassNavigationFormationRuntime(config.Semantics.Group);
         NavGroupRuntime = new MassNavigationGroupRuntime(FormationRuntime);
         AgentsPerTeam = config.Scenario.AgentsPerTeam;
         _initialSelectedTeamId = config.Scenario.InitialSelectedTeamId;
@@ -186,8 +192,16 @@ public sealed class MassNavigationSimulationRuntime
         SelectedTeamId = _initialSelectedTeamId;
         MassFlow.ArrivalTuning.Enabled = config.Arrival.Enabled;
         MassFlow.ArrivalTuning.TimeoutMs = config.Arrival.TimeoutMs;
+        MassFlow.ArrivalTuning.TimeoutMinMs = config.Arrival.TimeoutMinMs;
+        MassFlow.ArrivalTuning.TimeoutMaxMs = config.Arrival.TimeoutMaxMs;
         MassFlow.ArrivalTuning.ProgressDistanceCm = config.Arrival.ProgressDistanceCm;
+        MassFlow.ArrivalTuning.ProgressDistanceMinCm = config.Arrival.ProgressDistanceMinCm;
+        MassFlow.ArrivalTuning.ProgressDistanceMaxCm = config.Arrival.ProgressDistanceMaxCm;
         MassFlow.ArrivalTuning.WakePushDistanceCm = config.Arrival.WakePushDistanceCm;
+        MassFlow.ArrivalTuning.WakePushDistanceMinCm = config.Arrival.WakePushDistanceMinCm;
+        MassFlow.ArrivalTuning.WakePushDistanceMaxCm = config.Arrival.WakePushDistanceMaxCm;
+        MassFlow.ArrivalTuning.MaxRetryCountMin = config.Arrival.MaxRetryCountMin;
+        MassFlow.ArrivalTuning.MaxRetryCountMax = config.Arrival.MaxRetryCountMax;
         MassFlow.ArrivalTuning.MaxRetryCount = config.Arrival.MaxRetryCount;
         MassFlow.AvoidanceTuning.LightNavMass = config.Avoidance.LightNavMass;
         MassFlow.AvoidanceTuning.HeavyNavMass = config.Avoidance.HeavyNavMass;
@@ -195,8 +209,22 @@ public sealed class MassNavigationSimulationRuntime
         MassFlow.AvoidanceTuning.HeavyVisualScale = config.Avoidance.HeavyVisualScale;
         MassFlow.AvoidanceTuning.DominantMassRatio = config.Avoidance.DominantMassRatio;
         MassFlow.AvoidanceTuning.FriendlyResponseScale = config.Avoidance.FriendlyResponseScale;
+        MassFlow.AvoidanceTuning.FriendlyResponseMin = config.Avoidance.FriendlyResponseMin;
+        MassFlow.AvoidanceTuning.FriendlyResponseMax = config.Avoidance.FriendlyResponseMax;
         MassFlow.AvoidanceTuning.NonFriendlyResponseScale = config.Avoidance.NonFriendlyResponseScale;
+        MassFlow.AvoidanceTuning.NonFriendlyResponseMin = config.Avoidance.NonFriendlyResponseMin;
+        MassFlow.AvoidanceTuning.NonFriendlyResponseMax = config.Avoidance.NonFriendlyResponseMax;
         MassFlow.AvoidanceTuning.DominantPushResponseScale = config.Avoidance.DominantPushResponseScale;
+        MassFlow.AvoidanceTuning.DominantPushResponseMin = config.Avoidance.DominantPushResponseMin;
+        MassFlow.AvoidanceTuning.DominantPushResponseMax = config.Avoidance.DominantPushResponseMax;
+        MassFlow.AvoidanceTuning.FriendlyCorrectionShareMin = config.Avoidance.FriendlyCorrectionShareMin;
+        MassFlow.AvoidanceTuning.FriendlyCorrectionShareMax = config.Avoidance.FriendlyCorrectionShareMax;
+        MassFlow.AvoidanceTuning.DominantCorrectionOtherMassWeight = config.Avoidance.DominantCorrectionOtherMassWeight;
+        MassFlow.AvoidanceTuning.DominantCorrectionShareMin = config.Avoidance.DominantCorrectionShareMin;
+        MassFlow.AvoidanceTuning.DominantCorrectionShareMax = config.Avoidance.DominantCorrectionShareMax;
+        MassFlow.AvoidanceTuning.NonFriendlyCorrectionOtherMassWeight = config.Avoidance.NonFriendlyCorrectionOtherMassWeight;
+        MassFlow.AvoidanceTuning.NonFriendlyCorrectionShareMin = config.Avoidance.NonFriendlyCorrectionShareMin;
+        MassFlow.AvoidanceTuning.NonFriendlyCorrectionShareMax = config.Avoidance.NonFriendlyCorrectionShareMax;
         MassFlow.Semantics.Obstacle.AgentBodyRadiusCm = config.Semantics.Obstacle.AgentBodyRadiusCm;
         MassFlow.Semantics.Obstacle.HardResolveCandidateDistanceCm = config.Semantics.Obstacle.HardResolveCandidateDistanceCm;
         MassFlow.Semantics.Obstacle.SoftPushPaddingCm = config.Semantics.Obstacle.SoftPushPaddingCm;
@@ -207,6 +235,7 @@ public sealed class MassNavigationSimulationRuntime
         MassFlow.Semantics.TargetProjection.GroupSlotClearanceCm = config.Semantics.TargetProjection.GroupSlotClearanceCm;
         MassFlow.Semantics.TargetProjection.LooseTargetClearanceCm = config.Semantics.TargetProjection.LooseTargetClearanceCm;
         MassFlow.Semantics.Group.SpawnSpacingCm = config.Semantics.Group.SpawnSpacingCm;
+        MassFlow.Semantics.Group.SpawnJitterCm = config.Semantics.Group.SpawnJitterCm;
         MassFlow.Semantics.Group.TeamSlotSpacingCm = config.Semantics.Group.TeamSlotSpacingCm;
         MassFlow.Semantics.Group.PullDeadZoneCm = config.Semantics.Group.PullDeadZoneCm;
         MassFlow.Semantics.Group.PullClampCm = config.Semantics.Group.PullClampCm;
@@ -225,6 +254,25 @@ public sealed class MassNavigationSimulationRuntime
         MassFlow.Semantics.Steering.FormationSeparationScale = config.Semantics.Steering.FormationSeparationScale;
         MassFlow.Semantics.Steering.LooseSeparationScale = config.Semantics.Steering.LooseSeparationScale;
         MassFlow.Semantics.Steering.VelocityBlendPerSecond = config.Semantics.Steering.VelocityBlendPerSecond;
+        MassFlow.Semantics.Solver.MinNavMass = config.Semantics.Solver.MinNavMass;
+        MassFlow.Semantics.Solver.MinVisualScale = config.Semantics.Solver.MinVisualScale;
+        MassFlow.Semantics.Solver.MaxStepDtSeconds = config.Semantics.Solver.MaxStepDtSeconds;
+        MassFlow.Semantics.Solver.ParallelStepMinAgents = config.Semantics.Solver.ParallelStepMinAgents;
+        MassFlow.Semantics.Solver.DirectionEpsilonSq = config.Semantics.Solver.DirectionEpsilonSq;
+        MassFlow.Semantics.Solver.NormalizationEpsilonSq = config.Semantics.Solver.NormalizationEpsilonSq;
+        MassFlow.Semantics.Solver.InverseSqrtMinValue = config.Semantics.Solver.InverseSqrtMinValue;
+        MassFlow.Semantics.Solver.EntitySyncPositionEpsilonSq = config.Semantics.Solver.EntitySyncPositionEpsilonSq;
+        MassFlow.Semantics.Solver.EntitySyncVelocityEpsilonSq = config.Semantics.Solver.EntitySyncVelocityEpsilonSq;
+        MassFlow.Semantics.Solver.FacingVelocityEpsilonSq = config.Semantics.Solver.FacingVelocityEpsilonSq;
+        MassFlow.Semantics.Solver.FlowBlockedCellCost = config.Semantics.Solver.FlowBlockedCellCost;
+        MassFlow.Semantics.Solver.FlowBlockedCellThreshold = config.Semantics.Solver.FlowBlockedCellThreshold;
+        MassFlow.Semantics.Solver.FlowTargetStopDistanceSq = config.Semantics.Solver.FlowTargetStopDistanceSq;
+        MassFlow.Semantics.Solver.FlowObstacleNeighborRadiusCells = config.Semantics.Solver.FlowObstacleNeighborRadiusCells;
+        MassFlow.Semantics.Solver.FlowObstacleNeighborWeight = config.Semantics.Solver.FlowObstacleNeighborWeight;
+        MassFlow.Semantics.Solver.FlowObstacleAvoidanceWeight = config.Semantics.Solver.FlowObstacleAvoidanceWeight;
+        MassFlow.Semantics.Solver.CoincidentPairHashBucketCount = config.Semantics.Solver.CoincidentPairHashBucketCount;
+        MassFlow.Semantics.Solver.CoincidentPairHashPrimeA = config.Semantics.Solver.CoincidentPairHashPrimeA;
+        MassFlow.Semantics.Solver.CoincidentPairHashPrimeB = config.Semantics.Solver.CoincidentPairHashPrimeB;
     }
 
     public void BindBoardWorld(WorldSizeSpec boardWorldSize)
@@ -261,6 +309,7 @@ public sealed class MassNavigationSimulationRuntime
         SolverWindowMovesFrame = 0;
         FrameMs = dt > 0f ? dt * 1000f : 0f;
         Fps = FrameMs > 0.001f ? 1000f / FrameMs : 0f;
+        _viewResidencyClockSeconds += MathF.Max(0f, dt);
     }
 
     public void ObserveSelectionSync(double sampleMs) => SelectionSyncMs = Smooth(SelectionSyncMs, (float)sampleMs);
@@ -466,6 +515,21 @@ public sealed class MassNavigationSimulationRuntime
         _sceneResetRequested = true;
     }
 
+    public void ResetRuntimeState(World world)
+    {
+        ArgumentNullException.ThrowIfNull(world);
+        ClearSelection();
+        Commands.Reset();
+        NavGroupRuntime.Reset();
+        AgentState.DestroyTracked(world);
+    }
+
+    public void ResetRuntimeState(World world, ReadOnlySpan<MassNavigationAgentSeed> agentSeeds)
+    {
+        ResetRuntimeState(world);
+        MassFlow.Reset(agentSeeds, WorldConfig.Obstacles);
+    }
+
     public void FocusSimulationWindow(System.Numerics.Vector2 worldCenterCm)
     {
         ObserveFlowWorkArea(worldCenterCm, ReadOnlySpan<Entity>.Empty, "manual focus");
@@ -515,12 +579,12 @@ public sealed class MassNavigationSimulationRuntime
                 _hasCommandFocus = false;
             }
 
-            UpdateStreamingWindow(ResolveStreamingFocus());
+            UpdateStreamingWindow(ResolveViewResidencyFocus(cameraCenterCm));
             return;
         }
 
         _hasCommandFocus = false;
-        UpdateStreamingWindow(ResolveStreamingFocus());
+        UpdateStreamingWindow(ResolveViewResidencyFocus(cameraCenterCm));
     }
 
     public System.Numerics.Vector2 ToLocalCm(System.Numerics.Vector2 worldCm)
@@ -551,18 +615,24 @@ public sealed class MassNavigationSimulationRuntime
     {
         int centerX = (int)MathF.Round(worldCenterCm.X);
         int centerY = (int)MathF.Round(worldCenterCm.Y);
-        int radius = WorldConfig.StreamingRadiusCm;
+        int radius = ViewResidency.RadiusCm;
         int chunkSize = _loadedChunks.ChunkSizeCm;
         int minChunkX = MathUtil.FloorDiv(centerX - radius, chunkSize);
         int maxChunkX = MathUtil.FloorDiv(centerX + radius, chunkSize);
         int minChunkY = MathUtil.FloorDiv(centerY - radius, chunkSize);
         int maxChunkY = MathUtil.FloorDiv(centerY + radius, chunkSize);
+        bool changed = minChunkX != _streamingMinChunkX ||
+            maxChunkX != _streamingMaxChunkX ||
+            minChunkY != _streamingMinChunkY ||
+            maxChunkY != _streamingMaxChunkY ||
+            radius != _streamingRadiusCm;
         if (minChunkX == _streamingMinChunkX &&
             maxChunkX == _streamingMaxChunkX &&
             minChunkY == _streamingMinChunkY &&
             maxChunkY == _streamingMaxChunkY &&
             radius == _streamingRadiusCm)
         {
+            EvictExpiredStreamingChunks();
             return;
         }
 
@@ -571,8 +641,86 @@ public sealed class MassNavigationSimulationRuntime
         _streamingMinChunkY = minChunkY;
         _streamingMaxChunkY = maxChunkY;
         _streamingRadiusCm = radius;
-        _loadedChunks.Update(centerX, centerY, radius);
-        StreamingWindowUpdatesFrame++;
+        for (int chunkY = minChunkY; chunkY <= maxChunkY; chunkY++)
+        {
+            for (int chunkX = minChunkX; chunkX <= maxChunkX; chunkX++)
+            {
+                long chunkKey = GraphChunkKey.Pack(chunkX, chunkY);
+                _loadedChunkLastTouchedSeconds[chunkKey] = _viewResidencyClockSeconds;
+                _loadedChunks.SetLoaded(chunkKey, true);
+            }
+        }
+
+        EvictExpiredStreamingChunks();
+        if (changed)
+        {
+            StreamingWindowUpdatesFrame++;
+        }
+    }
+
+    public void SetViewResidencyProbe(string probeId)
+    {
+        ViewResidency.SetActiveProbe(probeId);
+        InvalidateStreamingWindowCache();
+    }
+
+    public void SetViewResidencyMode(string mode)
+    {
+        if (!string.Equals(mode, "Camera", StringComparison.Ordinal) &&
+            !string.Equals(mode, "Probe", StringComparison.Ordinal))
+        {
+            throw new InvalidOperationException($"MassNavigation view residency mode '{mode}' is not configured.");
+        }
+
+        ViewResidency.Mode = mode;
+        InvalidateStreamingWindowCache();
+    }
+
+    public void AdjustViewResidencyRetainSeconds(float deltaSeconds)
+    {
+        ViewResidency.RetainSeconds = MathF.Max(0f, ViewResidency.RetainSeconds + deltaSeconds);
+    }
+
+    public void AdjustViewResidencyRadiusCm(int deltaCm)
+    {
+        ViewResidency.RadiusCm = Math.Max(WorldConfig.StreamingChunkSizeCm, ViewResidency.RadiusCm + deltaCm);
+        InvalidateStreamingWindowCache();
+    }
+
+    public System.Numerics.Vector2 ResolveViewResidencyFocus(System.Numerics.Vector2 cameraCenterCm)
+    {
+        if (!ViewResidency.UsesProbeFocus)
+        {
+            return cameraCenterCm;
+        }
+
+        MassNavigationCameraProbeConfig probe = ViewResidency.ActiveProbe;
+        return new System.Numerics.Vector2(probe.TargetXCm, probe.TargetYCm);
+    }
+
+    private void EvictExpiredStreamingChunks()
+    {
+        float retainSeconds = ViewResidency.RetainSeconds;
+        if (retainSeconds < 0f)
+        {
+            return;
+        }
+
+        _loadedChunksToEvict.Clear();
+        foreach (KeyValuePair<long, float> pair in _loadedChunkLastTouchedSeconds)
+        {
+            if (_viewResidencyClockSeconds - pair.Value > retainSeconds)
+            {
+                _loadedChunksToEvict.Add(pair.Key);
+            }
+        }
+
+        for (int i = 0; i < _loadedChunksToEvict.Count; i++)
+        {
+            long chunkKey = _loadedChunksToEvict[i];
+            _loadedChunkLastTouchedSeconds.Remove(chunkKey);
+            _loadedChunks.SetLoaded(chunkKey, false);
+        }
     }
 
     private void MoveSolverWindow(System.Numerics.Vector2 requestedCenterCm, string reason)

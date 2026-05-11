@@ -21,11 +21,6 @@ namespace MassNavigationMod.Runtime;
 
 internal sealed class MassNavigationRuntime
 {
-    private const string MassNavigationTacticalCameraProfileId = "Camera.Profile.MassNavigationTactical";
-    private const string MassNavigationStrategicCameraProfileId = "Camera.Profile.MassNavigationStrategic";
-    private const float MassNavigationTacticalCameraDistanceCm = 7_000f;
-    private const float MassNavigationStrategicCameraDistanceCm = 58_000f;
-
     private static readonly QueryDescription AuthoredPlayerOwnerQuery = new QueryDescription().WithAll<PlayerOwner>();
 
     private readonly IModContext _context;
@@ -55,10 +50,16 @@ internal sealed class MassNavigationRuntime
         engine.RegisterSystem(new MassNavigationSelectionSyncSystem(engine, simulation), SystemGroup.InputCollection);
         engine.RegisterSystem(new MassNavigationControlSystem(engine, simulation), SystemGroup.InputCollection);
         engine.RegisterSystem(new MassNavigationCommandBridgeSystem(engine, simulation), SystemGroup.InputCollection);
-        engine.RegisterSystem(new MassNavigationSpawnReceiptBindingSystem(engine, simulation), SystemGroup.PostMovement);
-        engine.RegisterSystem(new MassNavigationCommandApplySystem(engine, simulation), SystemGroup.PostMovement);
-        engine.RegisterSystem(new MassNavigationOrderBridgeSystem(engine, simulation), SystemGroup.PostMovement);
         engine.RegisterSystem(new MassNavigationFormationSystem(engine, simulation), SystemGroup.PostMovement);
+        engine.InsertSystemBeforeRequired<MassNavigationFormationSystem>(
+            new MassNavigationOrderBridgeSystem(engine, simulation),
+            SystemGroup.PostMovement);
+        engine.InsertSystemBeforeRequired<MassNavigationOrderBridgeSystem>(
+            new MassNavigationCommandApplySystem(engine, simulation),
+            SystemGroup.PostMovement);
+        engine.InsertSystemBeforeRequired<MassNavigationCommandApplySystem>(
+            new MassNavigationSpawnReceiptBindingSystem(engine, simulation),
+            SystemGroup.PostMovement);
         engine.RegisterPresentationSystem(new MassNavigationHudPresentationSystem(engine, simulation));
         _systemsInstalled = true;
         _context.Log("[MassNavigationMod] Installed mass-navigation runtime.");
@@ -90,7 +91,8 @@ internal sealed class MassNavigationRuntime
             return Task.CompletedTask;
         }
 
-        if (!MassNavigationIds.IsNavigationMap(context.Get(CoreServiceKeys.MapId).Value))
+        MassNavigationConfig config = EnsureConfig(engine);
+        if (!string.Equals(context.Get(CoreServiceKeys.MapId).Value, config.MapId, System.StringComparison.Ordinal))
         {
             return Task.CompletedTask;
         }
@@ -101,21 +103,54 @@ internal sealed class MassNavigationRuntime
         BindLocalSelectionOwner(engine);
         ConfigureRenderDebug(engine);
         ConfigureCoreMinimap(engine);
+        ApplyCullingFocusOverride(engine);
         EnsureTacticalCamera(engine);
-        EnsureScenario(engine);
+        if (config.ScenarioRuntime.AutoSpawnConfiguredScenario)
+        {
+            EnsureScenario(engine);
+        }
         ClearPanelIfOwned(engine);
         return Task.CompletedTask;
     }
 
     public Task HandleMapUnloadedAsync(ScriptContext context)
     {
-        _scenarioSpawned = false;
-        if (context.GetEngine() is { } engine)
+        var engine = context.GetEngine();
+        if (engine == null)
         {
-            RestoreRenderDebug(engine);
-            ClearPanelIfOwned(engine);
+            return Task.CompletedTask;
         }
 
+        MassNavigationConfig config = EnsureConfig(engine);
+        if (!string.Equals(context.Get(CoreServiceKeys.MapId).Value, config.MapId, System.StringComparison.Ordinal))
+        {
+            return Task.CompletedTask;
+        }
+
+        _scenarioSpawned = false;
+        RestoreRenderDebug(engine);
+        ClearCullingFocusOverride(engine);
+        ClearPanelIfOwned(engine);
+        return Task.CompletedTask;
+    }
+
+    public Task HandleMapSuspendedAsync(ScriptContext context)
+    {
+        var engine = context.GetEngine();
+        if (engine == null)
+        {
+            return Task.CompletedTask;
+        }
+
+        MassNavigationConfig config = EnsureConfig(engine);
+        if (!string.Equals(context.Get(CoreServiceKeys.MapId).Value, config.MapId, System.StringComparison.Ordinal))
+        {
+            return Task.CompletedTask;
+        }
+
+        RestoreRenderDebug(engine);
+        ClearCullingFocusOverride(engine);
+        ClearPanelIfOwned(engine);
         return Task.CompletedTask;
     }
 
@@ -191,6 +226,48 @@ internal sealed class MassNavigationRuntime
         minimap.Visible = true;
     }
 
+    internal static void ApplyCullingFocusOverride(GameEngine engine)
+    {
+        MassNavigationSimulationRuntime simulation = engine.GetService(MassNavigationKeys.SimulationRuntime)
+            ?? throw new System.InvalidOperationException("MassNavigationMod requires simulation runtime before culling focus override.");
+        if (engine.GetService(CoreServiceKeys.CameraCullingFocusOverride) is not Ludots.Core.Presentation.Camera.CameraCullingFocusOverride focus)
+        {
+            if (simulation.ViewResidency.UsesProbeFocus)
+            {
+                throw new System.InvalidOperationException("MassNavigationMod viewResidency mode 'Probe' requires CameraCullingFocusOverride service.");
+            }
+
+            return;
+        }
+
+        if (!simulation.ViewResidency.UsesProbeFocus)
+        {
+            focus.Enabled = false;
+            focus.SourceId = string.Empty;
+            return;
+        }
+
+        MassNavigationCameraProbeConfig probe = simulation.ViewResidency.ActiveProbe;
+        focus.Enabled = true;
+        focus.SourceId = probe.Id;
+        focus.TargetCm = new Vector2(probe.TargetXCm, probe.TargetYCm);
+        focus.DistanceCm = probe.DistanceCm;
+        focus.Yaw = probe.Yaw;
+        focus.Pitch = probe.Pitch;
+        focus.FovYDeg = probe.FovYDeg;
+    }
+
+    internal static void ClearCullingFocusOverride(GameEngine engine)
+    {
+        if (engine.GetService(CoreServiceKeys.CameraCullingFocusOverride) is not Ludots.Core.Presentation.Camera.CameraCullingFocusOverride focus)
+        {
+            return;
+        }
+
+        focus.Enabled = false;
+        focus.SourceId = string.Empty;
+    }
+
     internal static void RequestMinimapStrategicWorldView(GameEngine engine)
     {
         ConfigureCoreMinimap(engine);
@@ -206,20 +283,20 @@ internal sealed class MassNavigationRuntime
         RequestMinimapTacticalWorldView(engine);
     }
 
-    internal static void RequestCameraJump(GameEngine engine, Vector2 targetCm, float distanceCm)
+    internal static void RequestCameraJump(GameEngine engine, Vector2 targetCm)
     {
+        string tacticalProfileId = RequireCameraProfiles(engine).TacticalProfileId;
         engine.GlobalContext[CoreServiceKeys.VirtualCameraRequest.Name] = new VirtualCameraRequest
         {
-            Id = MassNavigationTacticalCameraProfileId,
+            Id = tacticalProfileId,
             BlendDurationSeconds = 0f,
             ResetRuntimeState = true,
             SnapToFollowTargetWhenAvailable = false
         };
         engine.SetService(CoreServiceKeys.CameraPoseRequest, new CameraPoseRequest
         {
-            VirtualCameraId = MassNavigationTacticalCameraProfileId,
-            TargetCm = targetCm,
-            DistanceCm = distanceCm
+            VirtualCameraId = tacticalProfileId,
+            TargetCm = targetCm
         });
     }
 
@@ -342,18 +419,18 @@ internal sealed class MassNavigationRuntime
     internal static void RequestTacticalCameraReset(GameEngine engine)
     {
         Vector2 targetCm = ResolveCameraTarget(engine);
+        string tacticalProfileId = RequireCameraProfiles(engine).TacticalProfileId;
         engine.GlobalContext[CoreServiceKeys.VirtualCameraRequest.Name] = new VirtualCameraRequest
         {
-            Id = MassNavigationTacticalCameraProfileId,
+            Id = tacticalProfileId,
             BlendDurationSeconds = 0f,
             ResetRuntimeState = true,
             SnapToFollowTargetWhenAvailable = false
         };
         engine.SetService(CoreServiceKeys.CameraPoseRequest, new CameraPoseRequest
         {
-            VirtualCameraId = MassNavigationTacticalCameraProfileId,
-            TargetCm = targetCm,
-            DistanceCm = MassNavigationTacticalCameraDistanceCm
+            VirtualCameraId = tacticalProfileId,
+            TargetCm = targetCm
         });
     }
 
@@ -361,21 +438,18 @@ internal sealed class MassNavigationRuntime
     {
         MassNavigationSimulationRuntime simulation = engine.GetService(MassNavigationKeys.SimulationRuntime)
             ?? throw new System.InvalidOperationException("MassNavigationMod requires simulation runtime before strategic camera reset.");
+        string strategicProfileId = simulation.Config.CameraProfiles.StrategicProfileId;
         engine.GlobalContext[CoreServiceKeys.VirtualCameraRequest.Name] = new VirtualCameraRequest
         {
-            Id = MassNavigationStrategicCameraProfileId,
+            Id = strategicProfileId,
             BlendDurationSeconds = 0f,
             ResetRuntimeState = true,
             SnapToFollowTargetWhenAvailable = false
         };
         engine.SetService(CoreServiceKeys.CameraPoseRequest, new CameraPoseRequest
         {
-            VirtualCameraId = MassNavigationStrategicCameraProfileId,
-            TargetCm = new Vector2(0f, 0f),
-            DistanceCm = MassNavigationStrategicCameraDistanceCm,
-            Pitch = 68f,
-            Yaw = 225f,
-            FovYDeg = 70f
+            VirtualCameraId = strategicProfileId,
+            TargetCm = new Vector2(0f, 0f)
         });
     }
 
@@ -383,8 +457,15 @@ internal sealed class MassNavigationRuntime
     {
         return string.Equals(
             engine.GameSession.Camera.VirtualCameraBrain?.ActiveCameraId,
-            MassNavigationStrategicCameraProfileId,
-            System.StringComparison.OrdinalIgnoreCase);
+            RequireCameraProfiles(engine).StrategicProfileId,
+            System.StringComparison.Ordinal);
+    }
+
+    private static MassNavigationCameraProfilesConfig RequireCameraProfiles(GameEngine engine)
+    {
+        MassNavigationSimulationRuntime simulation = engine.GetService(MassNavigationKeys.SimulationRuntime)
+            ?? throw new System.InvalidOperationException("MassNavigationMod requires simulation runtime before resolving camera profile ids.");
+        return simulation.Config.CameraProfiles;
     }
 
     private static Vector2 ResolveCameraTarget(GameEngine engine)

@@ -40,7 +40,7 @@ namespace Ludots.Core.Gameplay.GAS.Config
             EffectTemplateIdRegistry.Clear();
             UnitTypeRegistry.Clear();
 
-            var entry = ConfigPipeline.GetEntryOrDefault(catalog, relativePath, ConfigMergePolicy.ArrayById, "id");
+            var entry = ConfigPipeline.RequireEntry(catalog, relativePath, ConfigMergePolicy.ArrayById, "id");
             var mergedEntries = _pipeline.MergeArrayByIdFromCatalog(in entry, report);
 
             var merged = new List<(string Id, JsonObject Node)>(mergedEntries.Count);
@@ -609,7 +609,7 @@ namespace Ludots.Core.Gameplay.GAS.Config
         }
 
         // ── TeamFilter vocabulary mapping ──
-        // Mapping table: teamFilter vocabulary → canonical RelationshipFilter names.
+        // Mapping table: teamFilter vocabulary �?canonical RelationshipFilter names.
         // Lives in the Loader (migration boundary), NOT in RelationshipFilterUtil (clean API).
         private static RelationEntitySlot ParseRelationEntitySlot(
             string slot,

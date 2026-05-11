@@ -1,0 +1,28 @@
+[
+  {
+    "id": "mass_navigation.agent.locomotion",
+    "defaultStateIndex": 0,
+    "states": [
+      { "packedStateIndex": 41, "durationSeconds": 1.0, "playbackSpeed": 1.0, "loop": true },
+      { "packedStateIndex": 42, "durationSeconds": 0.6, "playbackSpeed": 1.0, "loop": true }
+    ],
+    "transitions": [
+      {
+        "fromStateIndex": 0,
+        "toStateIndex": 1,
+        "conditionKind": "FloatGreaterOrEqual",
+        "parameterIndex": "mass_navigation.agent.locomotion.speed",
+        "threshold": 0.2,
+        "durationSeconds": 0.08
+      },
+      {
+        "fromStateIndex": 1,
+        "toStateIndex": 0,
+        "conditionKind": "FloatLessOrEqual",
+        "parameterIndex": "mass_navigation.agent.locomotion.speed",
+        "threshold": 0.1,
+        "durationSeconds": 0.08
+      }
+    ]
+  }
+]

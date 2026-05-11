@@ -5,7 +5,7 @@ namespace Ludots.Core.Config
 {
     public sealed class ConfigCatalog
     {
-        private readonly Dictionary<string, ConfigCatalogEntry> _entries = new(StringComparer.OrdinalIgnoreCase);
+        private readonly Dictionary<string, ConfigCatalogEntry> _entries = new(StringComparer.Ordinal);
 
         public IEnumerable<ConfigCatalogEntry> Entries => _entries.Values;
 

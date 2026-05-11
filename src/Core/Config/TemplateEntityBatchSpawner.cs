@@ -38,7 +38,7 @@ namespace Ludots.Core.Config
         private readonly ISpatialPartitionWorld? _partition;
         private readonly WorldSizeSpec _worldSizeSpec;
         private readonly Entity[] _scratchEntities;
-        private readonly Dictionary<string, TemplateSpawnDescriptor> _descriptors = new(StringComparer.OrdinalIgnoreCase);
+        private readonly Dictionary<string, TemplateSpawnDescriptor> _descriptors = new(StringComparer.Ordinal);
 
         public TemplateEntityBatchSpawner(
             World world,

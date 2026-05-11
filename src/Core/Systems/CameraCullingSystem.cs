@@ -147,6 +147,7 @@ namespace Ludots.Core.Systems
         private readonly ISpatialQueryService _spatial;
         private readonly IViewController _view;
         private readonly ILoadedChunks? _loadedChunks;
+        private readonly CameraCullingFocusOverride? _focusOverride;
         private readonly PresentationTimingDiagnostics? _timingDiagnostics;
         private readonly PerformerEntityRuntime? _performers;
         private List<Entity> _changedOwners = new List<Entity>(32768);
@@ -197,6 +198,7 @@ namespace Ludots.Core.Systems
             IViewController view,
             CameraCullingRuntimeConfig cullingConfig,
             ILoadedChunks? loadedChunks = null,
+            CameraCullingFocusOverride? focusOverride = null,
             PerformerEntityRuntime? performers = null,
             PresentationTimingDiagnostics? timingDiagnostics = null)
             : base(world)
@@ -205,6 +207,7 @@ namespace Ludots.Core.Systems
             _spatial = spatial ?? throw new ArgumentNullException(nameof(spatial));
             _view = view ?? throw new ArgumentNullException(nameof(view));
             _loadedChunks = loadedChunks;
+            _focusOverride = focusOverride;
             _performers = performers;
             _timingDiagnostics = timingDiagnostics;
             cullingConfig = cullingConfig ?? throw new ArgumentNullException(nameof(cullingConfig));
@@ -218,6 +221,11 @@ namespace Ludots.Core.Systems
         {
             long start = Stopwatch.GetTimestamp();
             CameraStateSnapshot cameraState = _cameraManager.GetInterpolatedState(ReadPresentationAlpha());
+            if (_focusOverride != null)
+            {
+                cameraState = _focusOverride.Apply(in cameraState);
+            }
+
             var target = cameraState.TargetCm;
             float distanceCm = cameraState.DistanceCm;
 

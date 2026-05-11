@@ -284,11 +284,8 @@ namespace Ludots.Tests.Presentation
             var registry = new PerformerDefinitionRegistry();
             var loader = new PerformerDefinitionConfigLoader(pipeline, registry);
 
-            Assert.DoesNotThrow(() => loader.Load(catalog));
-
-            Assert.That(registry.GetId("legacy_slot_alias"), Is.EqualTo(0));
-            Assert.That(registry.TryGet(registry.GetId("canonical_slot"), out var definition), Is.True);
-            Assert.That(definition.Behaviors[0].SlotIndex, Is.EqualTo(2));
+            InvalidOperationException ex = Assert.Throws<InvalidOperationException>(() => loader.Load(catalog))!;
+            Assert.That(ex.Message, Does.Contain("staticMinimap"));
         }
 
         [Test]
@@ -349,11 +346,8 @@ namespace Ludots.Tests.Presentation
                 resolveBehaviorAssetId: (kind, key) =>
                     kind == AssetKind.Mesh && string.Equals(key, "cube", StringComparison.Ordinal) ? 42 : 0);
 
-            loader.Load(catalog);
-
-            Assert.That(registry.TryGet(registry.GetId("bad_asset_grounding"), out _), Is.False);
-            Assert.That(registry.TryGet(registry.GetId("good_mesh"), out var good), Is.True);
-            Assert.That(good.Behaviors[1].Grounding.UpdatePolicy, Is.EqualTo(GroundingUpdatePolicy.Once));
+            InvalidOperationException ex = Assert.Throws<InvalidOperationException>(() => loader.Load(catalog))!;
+            Assert.That(ex.Message, Does.Contain("AssetBinding must not declare grounding"));
         }
 
         [Test]
@@ -452,7 +446,7 @@ namespace Ludots.Tests.Presentation
         }
 
         [Test]
-        public void Load_SkipsInvalidMinimapMarkerShapeWithoutDefaultingToAssetBinding()
+        public void Load_RejectsInvalidMinimapMarkerShapeWithoutDefaultingToAssetBinding()
         {
             WriteCatalog();
             WritePerformers(
@@ -493,15 +487,12 @@ namespace Ludots.Tests.Presentation
             var registry = new PerformerDefinitionRegistry();
             var loader = new PerformerDefinitionConfigLoader(pipeline, registry);
 
-            Assert.DoesNotThrow(() => loader.Load(catalog));
-
-            Assert.That(registry.GetId("bad_marker"), Is.EqualTo(0));
-            Assert.That(registry.TryGet(registry.GetId("good_marker"), out var good), Is.True);
-            Assert.That(good.Behaviors[0].Kind, Is.EqualTo(BehaviorKind.MinimapMarker));
+            InvalidOperationException ex = Assert.Throws<InvalidOperationException>(() => loader.Load(catalog))!;
+            Assert.That(ex.Message, Does.Contain("Square"));
         }
 
         [Test]
-        public void Load_SkipsInvalidMinimapMarkerOrientationWithoutDefaultingToAssetBinding()
+        public void Load_RejectsInvalidMinimapMarkerOrientationWithoutDefaultingToAssetBinding()
         {
             WriteCatalog();
             WritePerformers(
@@ -561,12 +552,8 @@ namespace Ludots.Tests.Presentation
             var registry = new PerformerDefinitionRegistry();
             var loader = new PerformerDefinitionConfigLoader(pipeline, registry);
 
-            Assert.DoesNotThrow(() => loader.Load(catalog));
-
-            Assert.That(registry.GetId("bad_orientation"), Is.EqualTo(0));
-            Assert.That(registry.GetId("bad_missing_key"), Is.EqualTo(0));
-            Assert.That(registry.TryGet(registry.GetId("good_marker"), out var good), Is.True);
-            Assert.That(good.Behaviors[0].Kind, Is.EqualTo(BehaviorKind.MinimapMarker));
+            InvalidOperationException ex = Assert.Throws<InvalidOperationException>(() => loader.Load(catalog))!;
+            Assert.That(ex.Message, Does.Contain("EntityYaw"));
         }
 
         [Test]
@@ -661,7 +648,7 @@ namespace Ludots.Tests.Presentation
         }
 
         [Test]
-        public void Load_SkipsLegacyInvalidFields_AndKeepsValidDefinitions()
+        public void Load_RejectsLegacyInvalidFields()
         {
             WriteCatalog();
             WritePerformers(
@@ -689,11 +676,8 @@ namespace Ludots.Tests.Presentation
             var registry = new PerformerDefinitionRegistry();
             var loader = new PerformerDefinitionConfigLoader(pipeline, registry);
 
-            Assert.DoesNotThrow(() => loader.Load(catalog));
-            Assert.That(registry.TryGet(registry.GetId("bad_performer"), out _), Is.False);
-            Assert.That(registry.TryGet(registry.GetId("good_performer"), out var good), Is.True);
-            Assert.That(good.Rules[0].Event.KeyId, Is.EqualTo(TagRegistry.GetId("Status.Working")));
-            Assert.That(good.Rules[0].Command.ScopeTag, Is.EqualTo(PerformerScopeTagRegistry.GetId("working")));
+            InvalidOperationException ex = Assert.Throws<InvalidOperationException>(() => loader.Load(catalog))!;
+            Assert.That(ex.Message, Does.Contain("entityScope"));
         }
 
         [Test]
@@ -723,11 +707,8 @@ namespace Ludots.Tests.Presentation
                 registry,
                 resolveTextTokenId: key => key == "hud.combat.delta" ? 777 : 0);
 
-            Assert.DoesNotThrow(() => loader.Load(catalog));
-            Assert.That(registry.TryGet(registry.GetId("old_text"), out _), Is.False);
-            Assert.That(registry.TryGet(registry.GetId("new_text"), out var definition), Is.True);
-            Assert.That(definition.DefaultTextId, Is.EqualTo(777));
-            Assert.That(definition.WorldTextMode, Is.EqualTo(WorldHudValueMode.AttributeCurrent));
+            InvalidOperationException ex = Assert.Throws<InvalidOperationException>(() => loader.Load(catalog))!;
+            Assert.That(ex.Message, Does.Contain("legacyWorldTextMode"));
         }
 
         [Test]
@@ -773,7 +754,7 @@ namespace Ludots.Tests.Presentation
         }
 
         [Test]
-        public void Load_SkipsDefinitionWithInheritanceCycle_AndKeepsIndependentDefinitions()
+        public void Load_RejectsDefinitionWithInheritanceCycle()
         {
             WriteCatalog();
             WritePerformers(
@@ -789,14 +770,12 @@ namespace Ludots.Tests.Presentation
             var registry = new PerformerDefinitionRegistry();
             var loader = new PerformerDefinitionConfigLoader(pipeline, registry);
 
-            Assert.DoesNotThrow(() => loader.Load(catalog));
-            Assert.That(registry.TryGet(registry.GetId("cycle_a"), out _), Is.False);
-            Assert.That(registry.TryGet(registry.GetId("cycle_b"), out _), Is.False);
-            Assert.That(registry.TryGet(registry.GetId("ok_root"), out _), Is.True);
+            InvalidOperationException ex = Assert.Throws<InvalidOperationException>(() => loader.Load(catalog))!;
+            Assert.That(ex.Message, Does.Contain("inheritance cycle"));
         }
 
         [Test]
-        public void Load_SkipsDefinitionUsingRemovedSchemaAliases_AndKeepsCanonicalDefinition()
+        public void Load_RejectsDefinitionUsingRemovedSchemaAliases()
         {
             WriteCatalog();
             WritePerformers(
@@ -851,17 +830,12 @@ namespace Ludots.Tests.Presentation
                 registry,
                 resolveTextTokenId: key => key == "hud.current_over_base" ? 42 : 0);
 
-            Assert.DoesNotThrow(() => loader.Load(catalog));
-            Assert.That(registry.TryGet(registry.GetId("legacy_aliases"), out _), Is.False);
-            Assert.That(registry.TryGet(registry.GetId("canonical"), out var canonical), Is.True);
-            Assert.That(canonical.Bindings[0].Value.ConstantValue, Is.EqualTo(42f));
-            Assert.That(canonical.ParamDefaults[0].Lane, Is.EqualTo(ParamLane.Int));
-            Assert.That(canonical.ParamDefaults[0].IntValue, Is.EqualTo(7));
-            Assert.That(canonical.Behaviors[0].TagBinding.TagId, Is.EqualTo(TagRegistry.GetId("Status.Working")));
+            InvalidOperationException ex = Assert.Throws<InvalidOperationException>(() => loader.Load(catalog))!;
+            Assert.That(ex.Message, Does.Contain("visualKind"));
         }
 
         [Test]
-        public void Load_RemovesFailedDefinitionIdMappings_AndSkipsParentsThatReferenceThem()
+        public void Load_RejectsFailedDefinitionAndParentsThatReferenceThem()
         {
             WriteCatalog();
             WritePerformers(
@@ -903,10 +877,8 @@ namespace Ludots.Tests.Presentation
                 registry,
                 resolveTextTokenId: _ => 0);
 
-            Assert.DoesNotThrow(() => loader.Load(catalog));
-            Assert.That(registry.GetId("broken_child"), Is.EqualTo(0), "Failed definitions must not leave ghost ids behind.");
-            Assert.That(registry.GetId("root"), Is.EqualTo(0), "Parents that reference failed child definitions must also be rejected.");
-            Assert.That(registry.TryGet(registry.GetId("ok_root"), out _), Is.True);
+            InvalidOperationException ex = Assert.Throws<InvalidOperationException>(() => loader.Load(catalog))!;
+            Assert.That(ex.Message, Does.Contain("hud.missing.token"));
         }
 
         [Test]
@@ -955,11 +927,8 @@ namespace Ludots.Tests.Presentation
                 registry,
                 resolveTextTokenId: _ => 0);
 
-            Assert.DoesNotThrow(() => loader.Load(catalog));
-            Assert.That(registry.GetId("bad_leaf"), Is.EqualTo(0), "Failed leaf definitions must not leave ghost ids behind.");
-            Assert.That(registry.GetId("mid_node"), Is.EqualTo(0), "Parents that auto-expand children into failed leaf definitions must also be rejected.");
-            Assert.That(registry.GetId("top_root"), Is.EqualTo(0), "Transitive parents must be removed when a downstream child definition fails validation.");
-            Assert.That(registry.TryGet(registry.GetId("ok_root"), out _), Is.True);
+            InvalidOperationException ex = Assert.Throws<InvalidOperationException>(() => loader.Load(catalog))!;
+            Assert.That(ex.Message, Does.Contain("hud.missing.token"));
         }
 
         private (VirtualFileSystem Vfs, ModLoader ModLoader, ConfigPipeline Pipeline, ConfigCatalog Catalog) BuildPipeline()
