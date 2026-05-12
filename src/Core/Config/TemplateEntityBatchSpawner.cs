@@ -1,6 +1,7 @@
 using System;
 using System.Collections.Generic;
 using System.Diagnostics;
+using System.Text.Json;
 using System.Text.Json.Nodes;
 using Arch.Core;
 using Arch.Core.Extensions.Dangerous;
@@ -507,7 +508,7 @@ namespace Ludots.Core.Config
             {
                 if (template == null)
                 {
-                    return default;
+                    throw new InvalidOperationException($"Entity template '{templateId}' requires a non-null template.");
                 }
 
                 int onSpawnEffectTemplateId = 0;
@@ -523,27 +524,10 @@ namespace Ludots.Core.Config
 
                 if (template.Components == null)
                 {
-                    return new TemplateSpawnDescriptor(
-                        isCompatible: false,
-                        default,
-                        false,
-                        false,
-                        default,
-                        default,
-                        default,
-                        default,
-                        default,
-                        default,
-                        default,
-                        default,
-                        onSpawnEffectTemplateId,
-                        Array.Empty<ComponentType>(),
-                        Array.Empty<AttributeSeed>());
+                    throw new InvalidOperationException($"Entity template '{templateId}' requires an explicit components object.");
                 }
 
-                if (!TryParseName(template.Components, out var name) ||
-                    !TryParseAttributeSeeds(template.Components, out var attributeSeeds) ||
-                    !TryCollectTagComponentTypes(template.Components, out ComponentType[] tagComponentTypes))
+                if (!IsBatchCandidate(template.Components))
                 {
                     return new TemplateSpawnDescriptor(
                         isCompatible: false,
@@ -583,18 +567,20 @@ namespace Ludots.Core.Config
                         Array.Empty<AttributeSeed>());
                 }
 
+                Name name = ParseName(templateId, template.Components);
+                AttributeSeed[] attributeSeeds = ParseAttributeSeeds(templateId, template.Components);
+                ComponentType[] tagComponentTypes = CollectTagComponentTypes(templateId, template.Components);
+
                 var defaultWorldPosition = default(Ludots.Core.Mathematics.FixedPoint.Fix64Vec2);
-                if (template.Components.TryGetValue("WorldPositionCm", out JsonNode worldPositionNode) &&
-                    !TryParseWorldPosition(worldPositionNode, out defaultWorldPosition))
+                if (template.Components.TryGetValue("WorldPositionCm", out JsonNode worldPositionNode))
                 {
-                    return default;
+                    defaultWorldPosition = ParseWorldPosition(templateId, worldPositionNode);
                 }
 
                 float facingAngle = 0f;
-                if (template.Components.TryGetValue("FacingDirection", out JsonNode facingNode) &&
-                    !TryParseFacing(facingNode, out facingAngle))
+                if (template.Components.TryGetValue("FacingDirection", out JsonNode facingNode))
                 {
-                    return default;
+                    facingAngle = ParseFacing(templateId, facingNode);
                 }
 
                 int templateKeyId = templateKeys.GetId(templateId);
@@ -607,6 +593,28 @@ namespace Ludots.Core.Config
                 bool hasStaticHeightPending = template.Components.ContainsKey("PresentationStaticHeightPending");
                 bool hasDynamicHeightSampling = template.Components.ContainsKey("VisualHeightmapSampleState");
                 bool hasSpatialPartitionExcluded = template.Components.ContainsKey("SpatialPartitionExcluded");
+
+                RequireEmptyObject(templateId, template.Components, "GameplayTagContainer");
+                RequireEmptyObject(templateId, template.Components, "TagCountContainer");
+                if (hasStaticTransform)
+                {
+                    RequireEmptyObject(templateId, template.Components, "PresentationStaticTransform");
+                }
+
+                if (hasStaticHeightPending)
+                {
+                    RequireEmptyObject(templateId, template.Components, "PresentationStaticHeightPending");
+                }
+
+                if (hasDynamicHeightSampling)
+                {
+                    RequireEmptyObject(templateId, template.Components, "VisualHeightmapSampleState");
+                }
+
+                if (hasSpatialPartitionExcluded)
+                {
+                    RequireEmptyObject(templateId, template.Components, "SpatialPartitionExcluded");
+                }
 
                 Signature signature =
                     Component<Name>.Signature +
@@ -629,6 +637,7 @@ namespace Ludots.Core.Config
                 if (hasStaticTransform)
                 {
                     signature += Component<PresentationStaticTransform>.Signature;
+                    signature += Component<PresentationStaticVisualPending>.Signature;
                     signature += Component<PresentationStaticCullPending>.Signature;
                 }
 
@@ -665,6 +674,16 @@ namespace Ludots.Core.Config
                     attributeSeeds);
             }
 
+            private static bool IsBatchCandidate(IReadOnlyDictionary<string, JsonNode> components)
+            {
+                return components.ContainsKey("Name") &&
+                       components.ContainsKey("WorldPositionCm") &&
+                       components.ContainsKey("FacingDirection") &&
+                       components.ContainsKey("AttributeBuffer") &&
+                       components.ContainsKey("GameplayTagContainer") &&
+                       components.ContainsKey("TagCountContainer");
+            }
+
             private static bool TryValidateSupportedComponents(IReadOnlyDictionary<string, JsonNode> components)
             {
                 foreach (string componentName in components.Keys)
@@ -694,11 +713,10 @@ namespace Ludots.Core.Config
                 return true;
             }
 
-            private static bool TryCollectTagComponentTypes(
-                IReadOnlyDictionary<string, JsonNode> components,
-                out ComponentType[] tagComponentTypes)
+            private static ComponentType[] CollectTagComponentTypes(
+                string templateId,
+                IReadOnlyDictionary<string, JsonNode> components)
             {
-                tagComponentTypes = Array.Empty<ComponentType>();
                 List<ComponentType>? collected = null;
                 foreach ((string componentName, JsonNode node) in components)
                 {
@@ -710,19 +728,17 @@ namespace Ludots.Core.Config
                     if (!IsEmptyJsonObject(node) ||
                         !ComponentRegistry.TryGetComponentType(componentName, out ComponentType componentType))
                     {
-                        return false;
+                        throw new InvalidOperationException(
+                            $"Entity template '{templateId}' component '{componentName}' is not supported by the template batch path.");
                     }
 
                     collected ??= new List<ComponentType>(2);
                     collected.Add(componentType);
                 }
 
-                if (collected != null && collected.Count > 0)
-                {
-                    tagComponentTypes = collected.ToArray();
-                }
-
-                return true;
+                return collected != null && collected.Count > 0
+                    ? collected.ToArray()
+                    : Array.Empty<ComponentType>();
             }
 
             private static bool IsBuiltInBatchComponent(string componentName)
@@ -745,106 +761,170 @@ namespace Ludots.Core.Config
                 return node is JsonObject obj && obj.Count == 0;
             }
 
-            private static bool TryParseName(IReadOnlyDictionary<string, JsonNode> components, out Name name)
+            private static void RequireEmptyObject(
+                string templateId,
+                IReadOnlyDictionary<string, JsonNode> components,
+                string componentName)
             {
-                name = default;
+                if (!components.TryGetValue(componentName, out JsonNode node) || node is not JsonObject obj)
+                {
+                    throw new InvalidOperationException(
+                        $"Entity template '{templateId}' component '{componentName}' requires an empty object payload.");
+                }
+
+                if (obj.Count != 0)
+                {
+                    throw new InvalidOperationException(
+                        $"Entity template '{templateId}' component '{componentName}' does not accept authored fields.");
+                }
+            }
+
+            private static void ValidateProperties(JsonObject obj, string context, params string[] allowedNames)
+            {
+                foreach (var kvp in obj)
+                {
+                    bool allowed = false;
+                    for (int i = 0; i < allowedNames.Length; i++)
+                    {
+                        if (string.Equals(kvp.Key, allowedNames[i], StringComparison.Ordinal))
+                        {
+                            allowed = true;
+                            break;
+                        }
+                    }
+
+                    if (!allowed)
+                    {
+                        throw new InvalidOperationException($"{context} contains unsupported property '{kvp.Key}'.");
+                    }
+                }
+            }
+
+            private static JsonNode RequireProperty(JsonObject obj, string name, string context)
+            {
+                if (!obj.TryGetPropertyValue(name, out JsonNode node) || node == null)
+                {
+                    throw new InvalidOperationException($"{context} requires explicit '{name}'.");
+                }
+
+                return node;
+            }
+
+            private static Name ParseName(string templateId, IReadOnlyDictionary<string, JsonNode> components)
+            {
                 if (!components.TryGetValue("Name", out JsonNode node) || node is not JsonObject obj)
                 {
-                    return false;
+                    throw new InvalidOperationException($"Entity template '{templateId}' Name requires an object payload.");
                 }
 
-                JsonNode valueNode = obj["Value"] ?? obj["value"];
-                string value = valueNode?.GetValue<string>() ?? string.Empty;
+                ValidateProperties(obj, $"Entity template '{templateId}' Name", "Value");
+                JsonNode valueNode = RequireProperty(obj, "Value", $"Entity template '{templateId}' Name");
+                if (valueNode.GetValueKind() != JsonValueKind.String)
+                {
+                    throw new InvalidOperationException($"Entity template '{templateId}' Name.Value requires a string value.");
+                }
+
+                string value = valueNode.GetValue<string>();
                 if (string.IsNullOrWhiteSpace(value))
                 {
-                    return false;
+                    throw new InvalidOperationException($"Entity template '{templateId}' Name.Value requires a non-empty string value.");
                 }
 
-                name = new Name { Value = value };
-                return true;
+                return new Name { Value = value };
             }
 
-            private static bool TryParseFacing(JsonNode node, out float angleRad)
+            private static float ParseFacing(string templateId, JsonNode node)
             {
-                angleRad = 0f;
                 if (node is not JsonObject obj)
                 {
-                    return false;
+                    throw new InvalidOperationException($"Entity template '{templateId}' FacingDirection requires an object payload.");
                 }
 
-                JsonNode angleNode = obj["AngleRad"] ?? obj["angleRad"];
-                if (angleNode == null)
+                ValidateProperties(obj, $"Entity template '{templateId}' FacingDirection", "AngleRad");
+                JsonNode angleNode = RequireProperty(obj, "AngleRad", $"Entity template '{templateId}' FacingDirection");
+                if (angleNode.GetValueKind() != JsonValueKind.Number)
                 {
-                    return false;
+                    throw new InvalidOperationException($"Entity template '{templateId}' FacingDirection.AngleRad requires a numeric value.");
                 }
 
-                angleRad = angleNode.GetValue<float>();
-                return true;
+                return angleNode.GetValue<float>();
             }
 
-            private static bool TryParseWorldPosition(JsonNode node, out Ludots.Core.Mathematics.FixedPoint.Fix64Vec2 worldPosition)
+            private static Ludots.Core.Mathematics.FixedPoint.Fix64Vec2 ParseWorldPosition(string templateId, JsonNode node)
             {
-                worldPosition = default;
                 if (node is not JsonObject obj)
                 {
-                    return false;
+                    throw new InvalidOperationException($"Entity template '{templateId}' WorldPositionCm requires an object payload.");
                 }
 
-                JsonNode valueNode = obj["Value"] ?? obj["value"] ?? node;
+                ValidateProperties(obj, $"Entity template '{templateId}' WorldPositionCm", "Value");
+                JsonNode valueNode = RequireProperty(obj, "Value", $"Entity template '{templateId}' WorldPositionCm");
                 if (valueNode is not JsonObject valueObj)
                 {
-                    return false;
+                    throw new InvalidOperationException($"Entity template '{templateId}' WorldPositionCm.Value requires an object payload.");
                 }
 
-                int x = 0;
-                int y = 0;
-                if (valueObj.TryGetPropertyValue("X", out JsonNode xNode) && xNode != null)
+                ValidateProperties(valueObj, $"Entity template '{templateId}' WorldPositionCm.Value", "X", "Y");
+                JsonNode xNode = RequireProperty(valueObj, "X", $"Entity template '{templateId}' WorldPositionCm.Value");
+                JsonNode yNode = RequireProperty(valueObj, "Y", $"Entity template '{templateId}' WorldPositionCm.Value");
+                if (xNode.GetValueKind() != JsonValueKind.Number)
                 {
-                    x = xNode.GetValue<int>();
+                    throw new InvalidOperationException($"Entity template '{templateId}' WorldPositionCm.Value.X requires an integer value.");
                 }
 
-                if (valueObj.TryGetPropertyValue("Y", out JsonNode yNode) && yNode != null)
+                if (yNode.GetValueKind() != JsonValueKind.Number)
                 {
-                    y = yNode.GetValue<int>();
+                    throw new InvalidOperationException($"Entity template '{templateId}' WorldPositionCm.Value.Y requires an integer value.");
                 }
 
-                worldPosition = Ludots.Core.Mathematics.FixedPoint.Fix64Vec2.FromInt(x, y);
-                return true;
+                return Ludots.Core.Mathematics.FixedPoint.Fix64Vec2.FromInt(
+                    xNode.GetValue<int>(),
+                    yNode.GetValue<int>());
             }
 
-            private static bool TryParseAttributeSeeds(IReadOnlyDictionary<string, JsonNode> components, out AttributeSeed[] seeds)
+            private static AttributeSeed[] ParseAttributeSeeds(string templateId, IReadOnlyDictionary<string, JsonNode> components)
             {
-                seeds = Array.Empty<AttributeSeed>();
                 if (!components.TryGetValue("AttributeBuffer", out JsonNode node))
                 {
-                    return false;
+                    throw new InvalidOperationException($"Entity template '{templateId}' requires AttributeBuffer for batch spawning.");
                 }
 
                 if (node is not JsonObject obj)
                 {
-                    return false;
+                    throw new InvalidOperationException($"Entity template '{templateId}' AttributeBuffer requires an object payload.");
                 }
 
+                ValidateProperties(obj, $"Entity template '{templateId}' AttributeBuffer", "base", "current");
                 JsonObject baseObj = null;
-                if (obj.TryGetPropertyValue("base", out JsonNode baseNode) && baseNode is JsonObject parsedBase)
+                if (obj.TryGetPropertyValue("base", out JsonNode baseNode))
                 {
+                    if (baseNode is not JsonObject parsedBase)
+                    {
+                        throw new InvalidOperationException($"Entity template '{templateId}' AttributeBuffer.base requires an object payload.");
+                    }
+
                     baseObj = parsedBase;
                 }
 
                 JsonObject currentObj = null;
-                if (obj.TryGetPropertyValue("current", out JsonNode currentNode) && currentNode is JsonObject parsedCurrent)
+                if (obj.TryGetPropertyValue("current", out JsonNode currentNode))
                 {
+                    if (currentNode is not JsonObject parsedCurrent)
+                    {
+                        throw new InvalidOperationException($"Entity template '{templateId}' AttributeBuffer.current requires an object payload.");
+                    }
+
                     currentObj = parsedCurrent;
                 }
 
                 if ((baseObj == null || baseObj.Count == 0) &&
                     (currentObj == null || currentObj.Count == 0))
                 {
-                    return true;
+                    return Array.Empty<AttributeSeed>();
                 }
 
                 int capacity = (baseObj?.Count ?? 0) + (currentObj?.Count ?? 0);
-                seeds = new AttributeSeed[capacity];
+                AttributeSeed[] seeds = new AttributeSeed[capacity];
                 int count = 0;
 
                 if (baseObj != null)
@@ -853,7 +933,14 @@ namespace Ludots.Core.Config
                     {
                         if (kvp.Value == null)
                         {
-                            continue;
+                            throw new InvalidOperationException(
+                                $"Entity template '{templateId}' AttributeBuffer.base.{kvp.Key} requires a non-null numeric value.");
+                        }
+
+                        if (kvp.Value.GetValueKind() != JsonValueKind.Number)
+                        {
+                            throw new InvalidOperationException(
+                                $"Entity template '{templateId}' AttributeBuffer.base.{kvp.Key} requires a numeric value.");
                         }
 
                         int attributeId = ResolveAttributeId(kvp.Key);
@@ -874,7 +961,14 @@ namespace Ludots.Core.Config
                     {
                         if (kvp.Value == null)
                         {
-                            continue;
+                            throw new InvalidOperationException(
+                                $"Entity template '{templateId}' AttributeBuffer.current.{kvp.Key} requires a non-null numeric value.");
+                        }
+
+                        if (kvp.Value.GetValueKind() != JsonValueKind.Number)
+                        {
+                            throw new InvalidOperationException(
+                                $"Entity template '{templateId}' AttributeBuffer.current.{kvp.Key} requires a numeric value.");
                         }
 
                         int attributeId = ResolveAttributeId(kvp.Key);
@@ -894,7 +988,7 @@ namespace Ludots.Core.Config
                     Array.Resize(ref seeds, count);
                 }
 
-                return true;
+                return seeds;
             }
 
             private static int ResolveAttributeId(string attributeName)

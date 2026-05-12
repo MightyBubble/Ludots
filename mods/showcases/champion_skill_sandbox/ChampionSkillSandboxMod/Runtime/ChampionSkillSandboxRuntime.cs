@@ -102,7 +102,7 @@ namespace ChampionSkillSandboxMod.Runtime
         private void EnsureScenarioState(GameEngine engine)
         {
             string mapId = engine.CurrentMapSession?.MapId.Value ?? string.Empty;
-            if (!string.Equals(_lastMapId, mapId, StringComparison.OrdinalIgnoreCase))
+            if (!string.Equals(_lastMapId, mapId, StringComparison.Ordinal))
             {
                 _lastMapId = mapId;
                 _scenarioTagsApplied = false;
@@ -177,7 +177,7 @@ namespace ChampionSkillSandboxMod.Runtime
             string mapId = engine.CurrentMapSession?.MapId.Value ?? string.Empty;
             engine.World.Query(in StressSelectableQuery, (Entity entity, ref Name _, ref Team team, ref MapEntity mapEntity, ref AbilityStateBuffer _) =>
             {
-                if (!string.Equals(mapEntity.MapId.Value, mapId, StringComparison.OrdinalIgnoreCase))
+                if (!string.Equals(mapEntity.MapId.Value, mapId, StringComparison.Ordinal))
                 {
                     return;
                 }
@@ -198,7 +198,7 @@ namespace ChampionSkillSandboxMod.Runtime
             var uniqueTargets = new HashSet<int>();
             engine.World.Query(in StressOrderBufferQuery, (Entity _, ref Team team, ref MapEntity mapEntity, ref OrderBuffer orders) =>
             {
-                if (team.Id != 2 || !string.Equals(mapEntity.MapId.Value, mapId, StringComparison.OrdinalIgnoreCase))
+                if (team.Id != 2 || !string.Equals(mapEntity.MapId.Value, mapId, StringComparison.Ordinal))
                 {
                     return;
                 }
@@ -327,12 +327,8 @@ namespace ChampionSkillSandboxMod.Runtime
         private static bool SeedInitialSelection(GameEngine engine)
         {
             SelectionRuntime? selection = engine.GetService(CoreServiceKeys.SelectionRuntime);
-            Entity fallback = ResolveChampionEntity(engine, ChampionSkillSandboxIds.EzrealAlphaName);
-            if (fallback == Entity.Null)
-            {
-                fallback = ResolveFirstControllableChampion(engine);
-            }
-            Entity owner = ResolveOrAssignLocalPlayer(engine, fallback);
+            Entity initialSelection = ResolveChampionEntity(engine, ChampionSkillSandboxIds.EzrealAlphaName);
+            Entity owner = ResolveOrAssignLocalPlayer(engine, initialSelection);
             if (selection == null || owner == Entity.Null || !engine.World.IsAlive(owner))
             {
                 return false;
@@ -347,13 +343,13 @@ namespace ChampionSkillSandboxMod.Runtime
                 return true;
             }
 
-            if (fallback == Entity.Null)
+            if (initialSelection == Entity.Null)
             {
                 return false;
             }
 
             Span<Entity> selectionBuffer = stackalloc Entity[1];
-            selectionBuffer[0] = fallback;
+            selectionBuffer[0] = initialSelection;
             selection.ReplaceSelection(owner, SelectionSetKeys.LivePrimary, selectionBuffer);
             selection.TryBindView(owner, SelectionViewKeys.Primary, owner, SelectionSetKeys.LivePrimary);
             engine.GlobalContext[CoreServiceKeys.SelectionViewViewerEntity.Name] = owner;
@@ -361,7 +357,7 @@ namespace ChampionSkillSandboxMod.Runtime
             return true;
         }
 
-        private static Entity ResolveOrAssignLocalPlayer(GameEngine engine, Entity fallback)
+        private static Entity ResolveOrAssignLocalPlayer(GameEngine engine, Entity preferredLocalPlayer)
         {
             Entity local = engine.GetService(CoreServiceKeys.LocalPlayerEntity);
             if (engine.World.IsAlive(local))
@@ -369,8 +365,8 @@ namespace ChampionSkillSandboxMod.Runtime
                 return local;
             }
 
-            Entity resolved = IsControllableChampion(engine, fallback)
-                ? fallback
+            Entity resolved = IsControllableChampion(engine, preferredLocalPlayer)
+                ? preferredLocalPlayer
                 : ResolveFirstControllableChampion(engine);
             if (resolved != Entity.Null)
             {
@@ -490,9 +486,9 @@ namespace ChampionSkillSandboxMod.Runtime
 
             ICameraFollowTarget? followTarget = followModeId switch
             {
-                var id when string.Equals(id, ChampionSkillSandboxIds.FollowSelectionToolbarButtonId, StringComparison.OrdinalIgnoreCase)
+                var id when string.Equals(id, ChampionSkillSandboxIds.FollowSelectionToolbarButtonId, StringComparison.Ordinal)
                     => CameraFollowTargetFactory.Build(engine.World, engine.GlobalContext, CameraFollowTargetKind.SelectedEntity),
-                var id when string.Equals(id, ChampionSkillSandboxIds.FollowSelectionGroupToolbarButtonId, StringComparison.OrdinalIgnoreCase)
+                var id when string.Equals(id, ChampionSkillSandboxIds.FollowSelectionGroupToolbarButtonId, StringComparison.Ordinal)
                     => CameraFollowTargetFactory.Build(engine.World, engine.GlobalContext, CameraFollowTargetKind.SelectedGroup),
                 _ => null
             };
@@ -709,7 +705,7 @@ namespace ChampionSkillSandboxMod.Runtime
         {
             string leftName = ResolveEntityLabel(world, left) ?? string.Empty;
             string rightName = ResolveEntityLabel(world, right) ?? string.Empty;
-            int byName = string.Compare(leftName, rightName, StringComparison.OrdinalIgnoreCase);
+            int byName = string.Compare(leftName, rightName, StringComparison.Ordinal);
             return byName != 0 ? byName : left.Id.CompareTo(right.Id);
         }
 
@@ -754,7 +750,7 @@ namespace ChampionSkillSandboxMod.Runtime
             var query = new QueryDescription().WithAll<Name>();
             engine.World.Query(in query, (Entity entity, ref Name name) =>
             {
-                if (string.Equals(name.Value, entityName, StringComparison.OrdinalIgnoreCase))
+                if (string.Equals(name.Value, entityName, StringComparison.Ordinal))
                 {
                     result = entity;
                 }
@@ -827,53 +823,17 @@ namespace ChampionSkillSandboxMod.Runtime
 
         private void SyncSelectionIndicator(GameEngine engine, Entity target)
         {
-            if (_selectionIndicatorTarget == target)
-            {
-                return;
-            }
-
-            DestroySelectionIndicator(engine);
-            _selectionIndicatorTarget = target;
-            if (target == Entity.Null)
-            {
-                return;
-            }
-
-            PerformerCommandBuffer? commands = engine.GetService(CoreServiceKeys.PerformerCommandBuffer);
-            PerformerDefinitionRegistry? performers = engine.GetService(CoreServiceKeys.PerformerDefinitionRegistry);
-            if (commands == null || performers == null)
-            {
-                return;
-            }
-
-            int definitionId = performers.GetId(ChampionSkillSandboxIds.SelectionIndicatorPerformerKey);
-            if (definitionId <= 0)
-            {
-                throw new InvalidOperationException(
-                    $"Performer '{ChampionSkillSandboxIds.SelectionIndicatorPerformerKey}' is required by ChampionSkillSandboxMod.");
-            }
-
-            commands.TryAdd(new PerformerCommand
-            {
-                CommandKind = PerformerCommandKind.CreatePerformer,
-                PerformerDefinitionId = definitionId,
-                ScopeTag = ChampionSkillSandboxIds.SelectionIndicatorScopeId,
-                Source = target,
-            });
+            SyncIndicator(
+                engine,
+                target,
+                ref _selectionIndicatorTarget,
+                ChampionSkillSandboxIds.SelectionIndicatorPerformerKey,
+                ChampionSkillSandboxIds.SelectionIndicatorScopeId);
         }
 
         private void DestroySelectionIndicator(GameEngine engine)
         {
-            if (engine.GetService(CoreServiceKeys.PerformerCommandBuffer) is not PerformerCommandBuffer commands)
-            {
-                return;
-            }
-
-            commands.TryAdd(new PerformerCommand
-            {
-                CommandKind = PerformerCommandKind.DestroyPerformerScope,
-                ScopeTag = ChampionSkillSandboxIds.SelectionIndicatorScopeId,
-            });
+            DestroyIndicator(engine, ChampionSkillSandboxIds.SelectionIndicatorScopeId);
         }
 
         private void SyncHoverIndicator(GameEngine engine)
@@ -952,30 +912,12 @@ namespace ChampionSkillSandboxMod.Runtime
 
         private void DestroyHoverIndicator(GameEngine engine)
         {
-            if (engine.GetService(CoreServiceKeys.PerformerCommandBuffer) is not PerformerCommandBuffer commands)
-            {
-                return;
-            }
-
-            commands.TryAdd(new PerformerCommand
-            {
-                CommandKind = PerformerCommandKind.DestroyPerformerScope,
-                ScopeTag = ChampionSkillSandboxIds.HoverIndicatorScopeId,
-            });
+            DestroyIndicator(engine, ChampionSkillSandboxIds.HoverIndicatorScopeId);
         }
 
         private void DestroyAimHoverIndicator(GameEngine engine)
         {
-            if (engine.GetService(CoreServiceKeys.PerformerCommandBuffer) is not PerformerCommandBuffer commands)
-            {
-                return;
-            }
-
-            commands.TryAdd(new PerformerCommand
-            {
-                CommandKind = PerformerCommandKind.DestroyPerformerScope,
-                ScopeTag = ChampionSkillSandboxIds.AimHoverIndicatorScopeId,
-            });
+            DestroyIndicator(engine, ChampionSkillSandboxIds.AimHoverIndicatorScopeId);
         }
 
         private void SyncIndicator(
@@ -990,20 +932,15 @@ namespace ChampionSkillSandboxMod.Runtime
                 return;
             }
 
-            DestroyIndicator(engine, scopeId);
-            currentTarget = target;
+            PerformerCommandBuffer commands = RequirePerformerCommandBuffer(engine);
+            EnqueueDestroyPerformerScope(commands, scopeId);
             if (target == Entity.Null)
             {
+                currentTarget = Entity.Null;
                 return;
             }
 
-            PerformerCommandBuffer? commands = engine.GetService(CoreServiceKeys.PerformerCommandBuffer);
-            PerformerDefinitionRegistry? performers = engine.GetService(CoreServiceKeys.PerformerDefinitionRegistry);
-            if (commands == null || performers == null)
-            {
-                return;
-            }
-
+            PerformerDefinitionRegistry performers = RequirePerformerDefinitionRegistry(engine);
             int definitionId = performers.GetId(performerKey);
             if (definitionId <= 0)
             {
@@ -1011,27 +948,49 @@ namespace ChampionSkillSandboxMod.Runtime
                     $"Performer '{performerKey}' is required by ChampionSkillSandboxMod.");
             }
 
-            commands.TryAdd(new PerformerCommand
+            EnqueuePerformerCommand(commands, new PerformerCommand
             {
                 CommandKind = PerformerCommandKind.CreatePerformer,
                 PerformerDefinitionId = definitionId,
                 ScopeTag = scopeId,
                 Source = target,
             });
+            currentTarget = target;
         }
 
         private static void DestroyIndicator(GameEngine engine, int scopeId)
         {
-            if (engine.GetService(CoreServiceKeys.PerformerCommandBuffer) is not PerformerCommandBuffer commands)
-            {
-                return;
-            }
+            EnqueueDestroyPerformerScope(RequirePerformerCommandBuffer(engine), scopeId);
+        }
 
-            commands.TryAdd(new PerformerCommand
+        private static PerformerCommandBuffer RequirePerformerCommandBuffer(GameEngine engine)
+        {
+            return engine.GetService(CoreServiceKeys.PerformerCommandBuffer)
+                ?? throw new InvalidOperationException("ChampionSkillSandboxMod requires PerformerCommandBuffer.");
+        }
+
+        private static PerformerDefinitionRegistry RequirePerformerDefinitionRegistry(GameEngine engine)
+        {
+            return engine.GetService(CoreServiceKeys.PerformerDefinitionRegistry)
+                ?? throw new InvalidOperationException("ChampionSkillSandboxMod requires PerformerDefinitionRegistry.");
+        }
+
+        private static void EnqueueDestroyPerformerScope(PerformerCommandBuffer commands, int scopeId)
+        {
+            EnqueuePerformerCommand(commands, new PerformerCommand
             {
                 CommandKind = PerformerCommandKind.DestroyPerformerScope,
                 ScopeTag = scopeId,
             });
+        }
+
+        private static void EnqueuePerformerCommand(PerformerCommandBuffer commands, in PerformerCommand command)
+        {
+            if (!commands.TryAdd(in command))
+            {
+                throw new InvalidOperationException(
+                    $"ChampionSkillSandboxMod performer command buffer overflowed while enqueuing {command.CommandKind}.");
+            }
         }
     }
 }

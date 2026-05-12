@@ -4,10 +4,10 @@ namespace PerformerBlacksmithShowcaseMod.Runtime
 {
     internal static class PerformerBlacksmithShowcaseComponentAuthoring
     {
-        public static void Register()
+        public static void Register(string modId)
         {
-            ComponentRegistry.Register<DynamicWorkerCrowdTag>("DynamicWorkerCrowdTag");
-            ComponentRegistry.Register<MinimapMarkerBallMovementTag>("MinimapMarkerBallMovementTag");
+            ComponentRegistry.Register<DynamicWorkerCrowdTag>("DynamicWorkerCrowdTag", modId);
+            ComponentRegistry.Register<MinimapMarkerBallMovementTag>("MinimapMarkerBallMovementTag", modId);
         }
     }
 }

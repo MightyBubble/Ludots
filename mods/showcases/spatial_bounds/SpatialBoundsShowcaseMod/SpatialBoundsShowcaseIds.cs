@@ -8,7 +8,7 @@ namespace SpatialBoundsShowcaseMod
 
         public static bool IsShowcaseMap(string? mapId)
         {
-            return string.Equals(mapId, ShowcaseMapId, StringComparison.OrdinalIgnoreCase);
+            return string.Equals(mapId, ShowcaseMapId, StringComparison.Ordinal);
         }
 
         public static readonly ShowcaseEntityDescriptor[] Descriptors =

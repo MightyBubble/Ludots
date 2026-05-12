@@ -37,12 +37,6 @@ namespace Ludots.Core.Layers
                 }
 
                 int index = LayerRegistry.GetIndex(layerName);
-                if (index < 0)
-                {
-                    throw new InvalidOperationException(
-                        $"{diagnosticLabel} EntityLayer.{propertyName}[{i}] references unregistered layer '{layerName}'.");
-                }
-
                 mask |= 1u << index;
             }
 

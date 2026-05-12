@@ -10,8 +10,8 @@ namespace Ludots.Core.Modding
     internal sealed class ModLoadContext : AssemblyLoadContext
     {
         private readonly List<AssemblyDependencyResolver> _resolvers = new();
-        private readonly Dictionary<string, Assembly> _managedAssembliesByPath = new(StringComparer.OrdinalIgnoreCase);
-        private readonly HashSet<string> _registeredMainAssemblyPaths = new(StringComparer.OrdinalIgnoreCase);
+        private readonly Dictionary<string, Assembly> _managedAssembliesByPath = new(StringComparer.Ordinal);
+        private readonly HashSet<string> _registeredMainAssemblyPaths = new(StringComparer.Ordinal);
         private readonly Func<AssemblyName, Assembly> _sharedAssemblyResolver;
 
         public ModLoadContext(Func<AssemblyName, Assembly> sharedAssemblyResolver) : base(isCollectible: true)
@@ -41,14 +41,14 @@ namespace Ludots.Core.Modding
         protected override Assembly Load(AssemblyName assemblyName)
         {
             var alreadyLoaded = Assemblies.FirstOrDefault(a =>
-                string.Equals(a.GetName().Name, assemblyName.Name, StringComparison.OrdinalIgnoreCase));
+                string.Equals(a.GetName().Name, assemblyName.Name, StringComparison.Ordinal));
             if (alreadyLoaded != null)
             {
                 return alreadyLoaded;
             }
 
             var shared = AssemblyLoadContext.Default.Assemblies.FirstOrDefault(a =>
-                string.Equals(a.GetName().Name, assemblyName.Name, StringComparison.OrdinalIgnoreCase));
+                string.Equals(a.GetName().Name, assemblyName.Name, StringComparison.Ordinal));
 
             if (shared != null)
             {
@@ -59,7 +59,7 @@ namespace Ludots.Core.Modding
             if (hostAlc != null && hostAlc != AssemblyLoadContext.Default)
             {
                 var hostShared = hostAlc.Assemblies.FirstOrDefault(a =>
-                    string.Equals(a.GetName().Name, assemblyName.Name, StringComparison.OrdinalIgnoreCase));
+                    string.Equals(a.GetName().Name, assemblyName.Name, StringComparison.Ordinal));
                 if (hostShared != null)
                 {
                     return hostShared;

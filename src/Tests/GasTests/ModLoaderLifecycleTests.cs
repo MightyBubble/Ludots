@@ -57,6 +57,134 @@ namespace GasTests
             }
         }
 
+        [Test]
+        public void LoadResolvedPlan_RejectsManifestNameCaseAliases()
+        {
+            var tempRoot = CreateTempDir();
+            try
+            {
+                var modDir = CreateModDir(tempRoot, "StrictCaseMod");
+                var vfs = new VirtualFileSystem();
+                var loader = new ModLoader(vfs, new FunctionRegistry(), new TriggerManager());
+
+                var ex = Assert.Throws<InvalidOperationException>(() =>
+                    loader.LoadResolvedPlan(new[]
+                    {
+                        new Ludots.Core.Hosting.ResolvedModLoadEntry("strictcasemod", modDir)
+                    }));
+
+                Assert.That(ex!.Message, Does.Contain("does not match manifest 'StrictCaseMod'"));
+                Assert.That(loader.LoadedModIds, Is.Empty);
+                Assert.That(vfs.TryResolveFullPath("StrictCaseMod:mod.json", out _), Is.False);
+            }
+            finally
+            {
+                TryDelete(tempRoot);
+            }
+        }
+
+        [Test]
+        public void ModDiscovery_RequiresExactManifestFileName()
+        {
+            var tempRoot = CreateTempDir();
+            try
+            {
+                var modDir = Path.Combine(tempRoot, "CaseAliasMod");
+                Directory.CreateDirectory(modDir);
+                File.WriteAllText(Path.Combine(modDir, "Mod.json"), """
+                {
+                  "name": "CaseAliasMod",
+                  "version": "1.0.0"
+                }
+                """);
+
+                var directories = ModDiscovery.DiscoverModDirectories(new[] { tempRoot });
+
+                Assert.That(directories, Is.Empty);
+            }
+            finally
+            {
+                TryDelete(tempRoot);
+            }
+        }
+
+        [Test]
+        public void ModDiscovery_RejectsInvalidDiscoveredManifest()
+        {
+            var tempRoot = CreateTempDir();
+            try
+            {
+                var modDir = Path.Combine(tempRoot, "BadMod");
+                Directory.CreateDirectory(modDir);
+                File.WriteAllText(Path.Combine(modDir, "mod.json"), """
+                {
+                  "Name": "BadMod",
+                  "version": "1.0.0"
+                }
+                """);
+
+                Assert.That(() => ModDiscovery.DiscoverMods(new[] { tempRoot }), Throws.Exception);
+            }
+            finally
+            {
+                TryDelete(tempRoot);
+            }
+        }
+
+        [Test]
+        public void LoadMods_RejectsInvalidManifestInsteadOfSkipping()
+        {
+            var tempRoot = CreateTempDir();
+            try
+            {
+                var bad = Path.Combine(tempRoot, "BadMod");
+                Directory.CreateDirectory(bad);
+                File.WriteAllText(Path.Combine(bad, "mod.json"), """
+                {
+                  "Name": "BadMod",
+                  "version": "1.0.0"
+                }
+                """);
+
+                var vfs = new VirtualFileSystem();
+                var loader = new ModLoader(vfs, new FunctionRegistry(), new TriggerManager());
+
+                Assert.That(() => loader.LoadMods(new[] { bad }), Throws.Exception);
+                Assert.That(loader.LoadedModIds, Is.Empty);
+            }
+            finally
+            {
+                TryDelete(tempRoot);
+            }
+        }
+
+        [Test]
+        public void LoadMods_RejectsExplicitDirectoryWithoutExactManifest()
+        {
+            var tempRoot = CreateTempDir();
+            try
+            {
+                var bad = Path.Combine(tempRoot, "CaseAliasMod");
+                Directory.CreateDirectory(bad);
+                File.WriteAllText(Path.Combine(bad, "Mod.json"), """
+                {
+                  "name": "CaseAliasMod",
+                  "version": "1.0.0"
+                }
+                """);
+
+                var vfs = new VirtualFileSystem();
+                var loader = new ModLoader(vfs, new FunctionRegistry(), new TriggerManager());
+
+                Assert.That(() => loader.LoadMods(new[] { bad }), Throws.TypeOf<FileNotFoundException>());
+                Assert.That(loader.LoadedModIds, Is.Empty);
+            }
+            finally
+            {
+                TryDelete(tempRoot);
+            }
+        }
+
         private static string CreateModDir(string root, string modName)
         {
             var modDir = Path.Combine(root, modName);
@@ -66,7 +194,6 @@ namespace GasTests
               "name": "{{modName}}",
               "version": "1.0.0",
               "description": "test",
-              "main": "bin/Release/net8.0/{{modName}}.dll",
               "priority": 0,
               "dependencies": {}
             }

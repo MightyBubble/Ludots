@@ -1059,6 +1059,104 @@ namespace Ludots.Tests.GAS
         }
 
         [Test]
+        public void RuntimeEntitySpawnSystem_BatchTemplate_RejectsFieldCaseAliases()
+        {
+            string templateJson = @"[
+              {
+                ""id"": ""test_batch_bad_case"",
+                ""components"": {
+                  ""Name"": { ""value"": ""Template:BadCase"" },
+                  ""WorldPositionCm"": { ""Value"": { ""X"": 0, ""Y"": 0 } },
+                  ""FacingDirection"": { ""AngleRad"": 0.0 },
+                  ""AttributeBuffer"": { ""base"": {} },
+                  ""GameplayTagContainer"": {},
+                  ""TagCountContainer"": {}
+                }
+              }
+            ]";
+
+            var pipeline = CreateMinimalPipeline(@"{ ""id"": ""noop"", ""presetType"": ""None"" }", templateJson);
+            var templates = new DataRegistry<EntityTemplate>(pipeline);
+            templates.Load("Entities/templates.json", ConfigCatalogLoader.Load(pipeline));
+
+            using var world = World.Create();
+            var requests = new RuntimeEntitySpawnQueue(capacity: 4);
+            var templateKeys = new EntityTemplateKeyRegistry();
+            var stableIds = new Ludots.Core.Presentation.PresentationStableIdAllocator();
+            var system = new RuntimeEntitySpawnSystem(world, requests, templates, templateKeys, stableIds);
+
+            for (int i = 0; i < 2; i++)
+            {
+                That(requests.TryEnqueue(new RuntimeEntitySpawnRequest
+                {
+                    Kind = RuntimeEntitySpawnKind.Template,
+                    TemplateId = "test_batch_bad_case",
+                    WorldPositionCm = Fix64Vec2.FromInt(i * 100, 0),
+                    HasWorldPosition = 1,
+                }), Is.True);
+            }
+
+            InvalidOperationException ex = Throws<InvalidOperationException>(() => system.Update(0f))!;
+            That(ex.Message, Does.Contain("unsupported property 'value'"));
+        }
+
+        [Test]
+        public void RuntimeEntitySpawnSystem_BatchTemplate_StaticTransformMatchesComponentRegistryMarkers()
+        {
+            string templateJson = @"[
+              {
+                ""id"": ""test_static_batch"",
+                ""components"": {
+                  ""Name"": { ""Value"": ""Template:StaticBatch"" },
+                  ""WorldPositionCm"": { ""Value"": { ""X"": 0, ""Y"": 0 } },
+                  ""FacingDirection"": { ""AngleRad"": 0.0 },
+                  ""PresentationStaticTransform"": {},
+                  ""AttributeBuffer"": { ""base"": {} },
+                  ""GameplayTagContainer"": {},
+                  ""TagCountContainer"": {}
+                }
+              }
+            ]";
+
+            var pipeline = CreateMinimalPipeline(@"{ ""id"": ""noop"", ""presetType"": ""None"" }", templateJson);
+            var templates = new DataRegistry<EntityTemplate>(pipeline);
+            templates.Load("Entities/templates.json", ConfigCatalogLoader.Load(pipeline));
+
+            using var world = World.Create();
+            var requests = new RuntimeEntitySpawnQueue(capacity: 4);
+            var templateKeys = new EntityTemplateKeyRegistry();
+            var stableIds = new Ludots.Core.Presentation.PresentationStableIdAllocator();
+            var system = new RuntimeEntitySpawnSystem(world, requests, templates, templateKeys, stableIds);
+
+            for (int i = 0; i < 2; i++)
+            {
+                That(requests.TryEnqueue(new RuntimeEntitySpawnRequest
+                {
+                    Kind = RuntimeEntitySpawnKind.Template,
+                    TemplateId = "test_static_batch",
+                    WorldPositionCm = Fix64Vec2.FromInt(i * 100, 0),
+                    HasWorldPosition = 1,
+                }), Is.True);
+            }
+
+            system.Update(0f);
+
+            int count = 0;
+            var query = new QueryDescription().WithAll<Name, PresentationStaticTransform, PresentationStaticVisualPending, PresentationStaticCullPending>();
+            world.Query(in query, (Entity entity, ref Name name, ref PresentationStaticTransform transform, ref PresentationStaticVisualPending visualPending, ref PresentationStaticCullPending cullPending) =>
+            {
+                if (!string.Equals(name.Value, "Template:StaticBatch", StringComparison.Ordinal))
+                {
+                    return;
+                }
+
+                count++;
+            });
+
+            That(count, Is.EqualTo(2));
+        }
+
+        [Test]
         public void RuntimeEntitySpawnSystem_SpawnUnitType_CopiesPlayerOwnerAndLinksParentWhenRequested()
         {
             UnitTypeRegistry.Clear();

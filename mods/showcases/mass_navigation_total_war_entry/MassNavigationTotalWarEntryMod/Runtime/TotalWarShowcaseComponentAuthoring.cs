@@ -5,14 +5,14 @@ namespace MassNavigationTotalWarEntryMod.Runtime;
 
 internal static class TotalWarShowcaseComponentAuthoring
 {
-    public static void Register()
+    public static void Register(string modId)
     {
         LayerRegistry.Register(TotalWarShowcaseLayerNames.FormationAgent);
         LayerRegistry.Register(TotalWarShowcaseLayerNames.SoldierAgent);
-        ComponentRegistry.Register<TotalWarFormationSoldier>("TotalWarFormationSoldier");
-        ComponentRegistry.Register<TotalWarFormationAgent>("TotalWarFormationAgent");
-        ComponentRegistry.Register<TotalWarFormationState>("TotalWarFormationState");
-        ComponentRegistry.Register<TotalWarFormationOutline>("TotalWarFormationOutline");
-        ComponentRegistry.Register<TotalWarObstacleOverlay>("TotalWarObstacleOverlay");
+        ComponentRegistry.Register<TotalWarFormationSoldier>("TotalWarFormationSoldier", modId);
+        ComponentRegistry.Register<TotalWarFormationAgent>("TotalWarFormationAgent", modId);
+        ComponentRegistry.Register<TotalWarFormationState>("TotalWarFormationState", modId);
+        ComponentRegistry.Register<TotalWarFormationOutline>("TotalWarFormationOutline", modId);
+        ComponentRegistry.Register<TotalWarObstacleOverlay>("TotalWarObstacleOverlay", modId);
     }
 }

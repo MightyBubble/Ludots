@@ -13,7 +13,12 @@
         }
       },
       "SpatialBounds": {
-        "kind": "Point"
+        "kind": "Point",
+        "localCenterCm": {
+          "x": 0,
+          "y": 0
+        },
+        "localCenterYCm": 0
       }
     }
   },
@@ -31,7 +36,12 @@
         }
       },
       "SpatialBounds": {
-        "kind": "Footprint2D"
+        "kind": "Footprint2D",
+        "localCenterCm": {
+          "x": 0,
+          "y": 0
+        },
+        "localCenterYCm": 0
       },
       "SpatialFootprint2D": {
         "vertices": [
@@ -72,7 +82,12 @@
         "AngleRad": 0.0
       },
       "SpatialBounds": {
-        "kind": "Footprint2D"
+        "kind": "Footprint2D",
+        "localCenterCm": {
+          "x": 0,
+          "y": 0
+        },
+        "localCenterYCm": 0
       },
       "SpatialFootprint2D": {
         "vertices": [
@@ -110,7 +125,12 @@
         }
       },
       "SpatialBounds": {
-        "kind": "Footprint2D"
+        "kind": "Footprint2D",
+        "localCenterCm": {
+          "x": 0,
+          "y": 0
+        },
+        "localCenterYCm": 0
       },
       "SpatialFootprint2D": {
         "polygons": [
@@ -169,7 +189,9 @@
       },
       "SpatialBounds": {
         "kind": "Box3D",
-        "localCenterYCm": 150
+        "localCenterXCm": 0,
+        "localCenterYCm": 150,
+        "localCenterZCm": 0
       },
       "SpatialBox3D": {
         "halfSizeXCm": 120,
@@ -192,7 +214,12 @@
         }
       },
       "SpatialBounds": {
-        "kind": "Footprint2D"
+        "kind": "Footprint2D",
+        "localCenterCm": {
+          "x": 0,
+          "y": 0
+        },
+        "localCenterYCm": 0
       },
       "SpatialFootprint2D": {
         "vertices": [
@@ -230,7 +257,12 @@
         }
       },
       "SpatialBounds": {
-        "kind": "Point"
+        "kind": "Point",
+        "localCenterCm": {
+          "x": 0,
+          "y": 0
+        },
+        "localCenterYCm": 0
       }
     }
   }

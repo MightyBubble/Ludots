@@ -2,6 +2,7 @@ using System.Collections.Generic;
 using System.IO;
 using System.Text.Json;
 using System.Text.Json.Serialization;
+using Ludots.Core.Config;
 
 namespace Ludots.Core.Modding.Workspace
 {
@@ -30,71 +31,83 @@ namespace Ludots.Core.Modding.Workspace
         public static List<GamePreset> DiscoverPresets(string directory)
         {
             var presets = new List<GamePreset>();
-            if (!Directory.Exists(directory)) return presets;
+            if (string.IsNullOrWhiteSpace(directory))
+                throw new System.ArgumentException("Preset directory is required.", nameof(directory));
+            if (!Directory.Exists(directory))
+                throw new DirectoryNotFoundException($"Preset directory not found: {Path.GetFullPath(directory)}");
 
-            foreach (var file in Directory.GetFiles(directory, "game.*.json"))
+            foreach (var file in Directory.EnumerateFiles(directory))
             {
-                var preset = TryLoad(file);
-                if (preset != null) presets.Add(preset);
-            }
-
-            var defaultFile = Path.Combine(directory, "game.json");
-            if (File.Exists(defaultFile))
-            {
-                var preset = TryLoad(defaultFile);
-                if (preset != null)
+                var fileName = Path.GetFileName(file);
+                if (fileName.StartsWith("game.", System.StringComparison.Ordinal) &&
+                    fileName.EndsWith(".json", System.StringComparison.Ordinal) &&
+                    fileName.Length > "game..json".Length)
                 {
-                    preset.Id = "default";
-                    presets.Insert(0, preset);
+                    presets.Add(Load(file, ExtractPresetId(file)));
                 }
             }
 
-            presets.Sort((a, b) => string.Compare(a.Id, b.Id, System.StringComparison.OrdinalIgnoreCase));
+            if (TryGetExactChildFile(directory, "game.json", out var defaultFile))
+            {
+                presets.Insert(0, Load(defaultFile, "default"));
+            }
+
+            presets.Sort((a, b) => string.Compare(a.Id, b.Id, System.StringComparison.Ordinal));
             return presets;
         }
 
-        private static GamePreset? TryLoad(string filePath)
+        private static GamePreset Load(string filePath, string id)
         {
-            try
+            var fullPath = Path.GetFullPath(filePath);
+            var json = File.ReadAllText(fullPath);
+            var contract = JsonSerializer.Deserialize<PresetContract>(json, SerializerOptions)
+                ?? throw new InvalidDataException($"Failed to deserialize game preset: {fullPath}");
+
+            if (contract.ModPaths == null)
             {
-                var json = File.ReadAllText(filePath);
-                using var doc = JsonDocument.Parse(json);
-                var root = doc.RootElement;
-
-                var preset = new GamePreset
-                {
-                    FilePath = Path.GetFullPath(filePath),
-                    Id = ExtractPresetId(filePath)
-                };
-
-                if (root.TryGetProperty("WindowTitle", out var title) && title.ValueKind == JsonValueKind.String)
-                    preset.WindowTitle = title.GetString() ?? "";
-
-                if (root.TryGetProperty("ModPaths", out var paths) && paths.ValueKind == JsonValueKind.Array)
-                {
-                    foreach (var p in paths.EnumerateArray())
-                    {
-                        if (p.ValueKind == JsonValueKind.String)
-                            preset.ModPaths.Add(p.GetString() ?? "");
-                    }
-                }
-
-                return preset;
+                throw new InvalidDataException($"Game preset must declare ModPaths: {fullPath}");
             }
-            catch
+
+            return new GamePreset
             {
-                return null;
-            }
+                FilePath = fullPath,
+                Id = id,
+                WindowTitle = contract.WindowTitle ?? "",
+                ModPaths = contract.ModPaths
+            };
         }
 
         private static string ExtractPresetId(string filePath)
         {
             var fileName = Path.GetFileNameWithoutExtension(filePath);
-            if (fileName.StartsWith("game.", System.StringComparison.OrdinalIgnoreCase) && fileName.Length > 5)
+            if (fileName.StartsWith("game.", System.StringComparison.Ordinal) && fileName.Length > 5)
                 return fileName.Substring(5);
-            if (string.Equals(fileName, "game", System.StringComparison.OrdinalIgnoreCase))
+            if (string.Equals(fileName, "game", System.StringComparison.Ordinal))
                 return "default";
             return fileName;
         }
+
+        private static bool TryGetExactChildFile(string directory, string fileName, out string fullPath)
+        {
+            foreach (var candidate in Directory.EnumerateFiles(directory))
+            {
+                if (string.Equals(Path.GetFileName(candidate), fileName, System.StringComparison.Ordinal))
+                {
+                    fullPath = Path.GetFullPath(candidate);
+                    return true;
+                }
+            }
+
+            fullPath = string.Empty;
+            return false;
+        }
+
+        private sealed class PresetContract
+        {
+            public string? WindowTitle { get; set; }
+            public List<string>? ModPaths { get; set; }
+        }
+
+        private static readonly JsonSerializerOptions SerializerOptions = StrictJsonOptions.CreateExact();
     }
 }

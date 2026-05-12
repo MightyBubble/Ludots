@@ -706,7 +706,7 @@ namespace ChampionSkillSandboxMod.Runtime
         {
             if (projectile.HasDirection != 0)
             {
-                return NormalizeOrFallback(new Vector2(
+                return NormalizeOrUnitX(new Vector2(
                     projectile.Direction.X.ToFloat(),
                     projectile.Direction.Y.ToFloat()));
             }
@@ -714,19 +714,19 @@ namespace ChampionSkillSandboxMod.Runtime
             if (world.IsAlive(projectile.Target) && world.Has<WorldPositionCm>(projectile.Target))
             {
                 Vector2 delta = world.Get<WorldPositionCm>(projectile.Target).Value.ToVector2() - positionCm.Value.ToVector2();
-                return NormalizeOrFallback(delta);
+                return NormalizeOrUnitX(delta);
             }
 
             if (world.IsAlive(projectile.Source) && world.Has<WorldPositionCm>(projectile.Source))
             {
                 Vector2 delta = positionCm.Value.ToVector2() - world.Get<WorldPositionCm>(projectile.Source).Value.ToVector2();
-                return NormalizeOrFallback(delta);
+                return NormalizeOrUnitX(delta);
             }
 
             return Vector2.UnitX;
         }
 
-        private static Vector2 NormalizeOrFallback(Vector2 value)
+        private static Vector2 NormalizeOrUnitX(Vector2 value)
         {
             float lengthSquared = value.LengthSquared();
             if (lengthSquared <= 0.0001f)

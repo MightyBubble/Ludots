@@ -15,5 +15,15 @@ namespace Ludots.Core.Config
                 IncludeFields = includeFields
             };
         }
+
+        public static JsonSerializerOptions CreateExact(bool includeFields = false)
+        {
+            return new JsonSerializerOptions
+            {
+                PropertyNameCaseInsensitive = false,
+                UnmappedMemberHandling = JsonUnmappedMemberHandling.Disallow,
+                IncludeFields = includeFields
+            };
+        }
     }
 }

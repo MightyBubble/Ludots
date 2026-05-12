@@ -5,16 +5,16 @@ namespace MassNavigationMod.Runtime;
 
 internal static class MassNavigationComponentAuthoring
 {
-    public static void Register()
+    public static void Register(string modId)
     {
         LayerRegistry.Register(MassNavigationLayerNames.Agent);
-        ComponentRegistry.Register<MassNavigationAgentTag>("MassNavigationAgentTag");
-        ComponentRegistry.Register<MassNavigationControllable>("MassNavigationControllable");
-        ComponentRegistry.Register<MassNavigationBlocker>("MassNavigationBlocker");
-        ComponentRegistry.Register<MassNavigationHotspotMarker>("MassNavigationHotspotMarker");
-        ComponentRegistry.Register<MassNavigationBlockerProfile>("MassNavigationBlockerProfile");
-        ComponentRegistry.Register<MassNavigationAgentIndex>("MassNavigationAgentIndex");
-        ComponentRegistry.Register<MassNavigationAgentProfile>("MassNavigationAgentProfile");
+        ComponentRegistry.Register<MassNavigationAgentTag>("MassNavigationAgentTag", modId);
+        ComponentRegistry.Register<MassNavigationControllable>("MassNavigationControllable", modId);
+        ComponentRegistry.Register<MassNavigationBlocker>("MassNavigationBlocker", modId);
+        ComponentRegistry.Register<MassNavigationHotspotMarker>("MassNavigationHotspotMarker", modId);
+        ComponentRegistry.Register<MassNavigationBlockerProfile>("MassNavigationBlockerProfile", modId);
+        ComponentRegistry.Register<MassNavigationAgentIndex>("MassNavigationAgentIndex", modId);
+        ComponentRegistry.Register<MassNavigationAgentProfile>("MassNavigationAgentProfile", modId);
     }
 }
 

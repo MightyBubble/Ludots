@@ -68,56 +68,56 @@ namespace ChampionSkillSandboxMod
 
         public static bool IsSandboxMap(string? mapId)
         {
-            return string.Equals(mapId, MapId, StringComparison.OrdinalIgnoreCase) ||
-                   string.Equals(mapId, StressMapId, StringComparison.OrdinalIgnoreCase);
+            return string.Equals(mapId, MapId, StringComparison.Ordinal) ||
+                   string.Equals(mapId, StressMapId, StringComparison.Ordinal);
         }
 
         public static bool IsStressMap(string? mapId)
         {
-            return string.Equals(mapId, StressMapId, StringComparison.OrdinalIgnoreCase);
+            return string.Equals(mapId, StressMapId, StringComparison.Ordinal);
         }
 
         public static bool IsSandboxMode(string? modeId)
         {
-            return string.Equals(modeId, SmartCastModeId, StringComparison.OrdinalIgnoreCase) ||
-                   string.Equals(modeId, IndicatorModeId, StringComparison.OrdinalIgnoreCase) ||
-                   string.Equals(modeId, PressReleaseModeId, StringComparison.OrdinalIgnoreCase);
+            return string.Equals(modeId, SmartCastModeId, StringComparison.Ordinal) ||
+                   string.Equals(modeId, IndicatorModeId, StringComparison.Ordinal) ||
+                   string.Equals(modeId, PressReleaseModeId, StringComparison.Ordinal);
         }
 
         public static bool IsCameraFollowMode(string? buttonId)
         {
-            return string.Equals(buttonId, FreeCameraToolbarButtonId, StringComparison.OrdinalIgnoreCase) ||
-                   string.Equals(buttonId, FollowSelectionToolbarButtonId, StringComparison.OrdinalIgnoreCase) ||
-                   string.Equals(buttonId, FollowSelectionGroupToolbarButtonId, StringComparison.OrdinalIgnoreCase);
+            return string.Equals(buttonId, FreeCameraToolbarButtonId, StringComparison.Ordinal) ||
+                   string.Equals(buttonId, FollowSelectionToolbarButtonId, StringComparison.Ordinal) ||
+                   string.Equals(buttonId, FollowSelectionGroupToolbarButtonId, StringComparison.Ordinal);
         }
 
         public static bool IsSelectionViewButton(string? buttonId)
         {
-            return string.Equals(buttonId, PlayerSelectionToolbarButtonId, StringComparison.OrdinalIgnoreCase) ||
-                   string.Equals(buttonId, PlayerFormationToolbarButtonId, StringComparison.OrdinalIgnoreCase) ||
-                   string.Equals(buttonId, AiTargetToolbarButtonId, StringComparison.OrdinalIgnoreCase) ||
-                   string.Equals(buttonId, AiFormationToolbarButtonId, StringComparison.OrdinalIgnoreCase) ||
-                   string.Equals(buttonId, CommandSnapshotToolbarButtonId, StringComparison.OrdinalIgnoreCase);
+            return string.Equals(buttonId, PlayerSelectionToolbarButtonId, StringComparison.Ordinal) ||
+                   string.Equals(buttonId, PlayerFormationToolbarButtonId, StringComparison.Ordinal) ||
+                   string.Equals(buttonId, AiTargetToolbarButtonId, StringComparison.Ordinal) ||
+                   string.Equals(buttonId, AiFormationToolbarButtonId, StringComparison.Ordinal) ||
+                   string.Equals(buttonId, CommandSnapshotToolbarButtonId, StringComparison.Ordinal);
         }
 
         public static string ResolveSelectionViewLabel(string? buttonId)
         {
-            if (string.Equals(buttonId, PlayerFormationToolbarButtonId, StringComparison.OrdinalIgnoreCase))
+            if (string.Equals(buttonId, PlayerFormationToolbarButtonId, StringComparison.Ordinal))
             {
                 return "P1 Formation";
             }
 
-            if (string.Equals(buttonId, AiTargetToolbarButtonId, StringComparison.OrdinalIgnoreCase))
+            if (string.Equals(buttonId, AiTargetToolbarButtonId, StringComparison.Ordinal))
             {
                 return "AI Targets";
             }
 
-            if (string.Equals(buttonId, AiFormationToolbarButtonId, StringComparison.OrdinalIgnoreCase))
+            if (string.Equals(buttonId, AiFormationToolbarButtonId, StringComparison.Ordinal))
             {
                 return "AI Formation";
             }
 
-            if (string.Equals(buttonId, CommandSnapshotToolbarButtonId, StringComparison.OrdinalIgnoreCase))
+            if (string.Equals(buttonId, CommandSnapshotToolbarButtonId, StringComparison.Ordinal))
             {
                 return "Command Snapshot";
             }

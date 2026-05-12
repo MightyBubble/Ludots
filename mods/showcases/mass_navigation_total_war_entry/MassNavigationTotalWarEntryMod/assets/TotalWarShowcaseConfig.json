@@ -10,12 +10,9 @@
     "speedCmPerSecond": 360.0
   },
   "initialSelectionFormationId": "shu_left_vanguard",
-  "formationSync": {},
   "soldierTargetSync": {
     "targetChangeEpsilonCm": 12.0,
-    "facingChangeEpsilonRadians": 0.035,
-    "orderPathLookaheadCm": 500.0,
-    "orderPathAnchorUpdateEpsilonCm": 360.0
+    "facingChangeEpsilonRadians": 0.035
   },
   "obstacleOverlay": {
     "templateId": "mass_navigation_total_war_obstacle_overlay",

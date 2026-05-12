@@ -10,13 +10,13 @@
       "OrderBuffer": {},
       "SelectionSelectableTag": {},
       "SelectionSelectableState": { "IsEnabled": true },
-      "SpatialBounds": { "kind": "Footprint2D", "localCenterCm": { "X": 0, "Y": 0 }, "localCenterYCm": 0 },
+      "SpatialBounds": { "kind": "Footprint2D", "localCenterCm": { "x": 0, "y": 0 }, "localCenterYCm": 0 },
       "SpatialFootprint2D": {
         "vertices": [
-          { "X": -650, "Y": -480 },
-          { "X": 650, "Y": -480 },
-          { "X": 650, "Y": 480 },
-          { "X": -650, "Y": 480 }
+          { "x": -650, "y": -480 },
+          { "x": 650, "y": -480 },
+          { "x": 650, "y": 480 },
+          { "x": -650, "y": 480 }
         ]
       },
       "AttributeBuffer": {

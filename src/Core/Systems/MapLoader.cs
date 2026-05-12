@@ -93,8 +93,15 @@ namespace Ludots.Core.Systems
 
         public void LoadEntities(MapConfig mapConfig)
         {
-            if (mapConfig == null) return;
-            if (mapConfig.Entities == null) return;
+            if (mapConfig == null)
+            {
+                throw new ArgumentNullException(nameof(mapConfig));
+            }
+
+            if (mapConfig.Entities == null)
+            {
+                throw new InvalidOperationException($"Map '{mapConfig.Id}' requires an explicit entities list.");
+            }
 
             // We need to extract the dictionary from the registry to pass to EntityBuilder
             // Or better, update EntityBuilder to accept DataRegistry or just the Interface.
@@ -146,7 +153,7 @@ namespace Ludots.Core.Systems
                 Span<VisualTransform> ownerTransforms = hasDirectBootstrap ? _ownerBatchTransforms.AsSpan(0, batchCount) : default;
                 Span<CullState> ownerCulls = hasDirectBootstrap ? _ownerBatchCulls.AsSpan(0, batchCount) : default;
 
-                if (_templateBatchSpawner.TryCreateBatch(
+                if (!_templateBatchSpawner.TryCreateBatch(
                     activeBatchTemplateId,
                     templates[activeBatchTemplateId],
                     CollectionsMarshal.AsSpan(pendingBatchRequests),
@@ -156,36 +163,23 @@ namespace Ludots.Core.Systems
                     ownerTransforms,
                     ownerCulls))
                 {
-                    for (int i = 0; i < created.Length; i++)
-                    {
-                        PublishTemplateOnSpawnEffect(created[i], activeBatchTemplateId);
-                    }
-
-                    if (hasDirectBootstrap)
-                    {
-                        TryBootstrapPerformerBatch(
-                            templateKeyId,
-                            created,
-                            stableIds,
-                            ownerTransforms,
-                            ownerCulls);
-                    }
+                    throw new InvalidOperationException(
+                        $"Map template batch spawn failed after template '{activeBatchTemplateId}' was classified as batch-compatible.");
                 }
-                else
-                {
-                    for (int i = 0; i < pendingBatchRequests.Count; i++)
-                    {
-                        builder.UseTemplate(activeBatchTemplateId);
-                        if (pendingBatchRequests[i].HasWorldPosition)
-                        {
-                            builder.WithOverride("WorldPositionCm", BuildWorldPositionNode(pendingBatchRequests[i].WorldPositionCm));
-                        }
 
-                        var entity = builder.Build();
-                        TryApplyTemplateKey(entity, activeBatchTemplateId);
-                        _world.Add(entity, pendingBatchRequests[i].MapEntity);
-                        PublishTemplateOnSpawnEffect(entity, activeBatchTemplateId);
-                    }
+                for (int i = 0; i < created.Length; i++)
+                {
+                    PublishTemplateOnSpawnEffect(created[i], activeBatchTemplateId);
+                }
+
+                if (hasDirectBootstrap)
+                {
+                    TryBootstrapPerformerBatch(
+                        templateKeyId,
+                        created,
+                        stableIds,
+                        ownerTransforms,
+                        ownerCulls);
                 }
 
                 pendingBatchRequests.Clear();
@@ -196,22 +190,21 @@ namespace Ludots.Core.Systems
             {
                 if (entityData == null)
                 {
-                    Log.Warn(in LogChannels.Map, $"Null entity entry in map '{mapConfig.Id}', skipping.");
-                    continue;
+                    throw new InvalidOperationException($"Map '{mapConfig.Id}' contains a null entity entry.");
                 }
                 if (string.IsNullOrWhiteSpace(entityData.Template))
                 {
-                    Log.Warn(in LogChannels.Map, $"Entity entry missing template in map '{mapConfig.Id}', skipping.");
-                    continue;
+                    throw new InvalidOperationException($"Map '{mapConfig.Id}' contains an entity entry without a template.");
                 }
 
                 if (!templates.ContainsKey(entityData.Template))
                 {
-                    Log.Warn(in LogChannels.Map, $"Unknown entity template '{entityData.Template}' in map '{mapConfig.Id}', skipping.");
-                    continue;
+                    throw new InvalidOperationException(
+                        $"Map '{mapConfig.Id}' references unknown entity template '{entityData.Template}'.");
                 }
 
-                if (TryBuildBatchRequest(entityData, mapEntityTag, out var batchRequest))
+                if (_templateBatchSpawner.IsBatchCompatible(entityData.Template, templates[entityData.Template]) &&
+                    TryBuildBatchRequest(mapConfig.Id, entityData, mapEntityTag, out var batchRequest))
                 {
                     if (!string.Equals(activeBatchTemplateId, entityData.Template, StringComparison.Ordinal) ||
                         pendingBatchRequests.Count >= _templateBatchSpawner.ScratchCapacity)
@@ -246,6 +239,7 @@ namespace Ludots.Core.Systems
         }
 
         private static bool TryBuildBatchRequest(
+            string mapId,
             EntitySpawnData entityData,
             in MapEntity mapEntity,
             out TemplateEntityBatchSpawner.TemplateBatchSpawnRequest request)
@@ -262,20 +256,51 @@ namespace Ludots.Core.Systems
             }
 
             if (entityData.Overrides.Count != 1 ||
-                !entityData.Overrides.TryGetValue("WorldPositionCm", out var worldPositionNode) ||
-                worldPositionNode is not JsonObject obj)
+                !entityData.Overrides.TryGetValue("WorldPositionCm", out var worldPositionNode))
             {
                 return false;
             }
 
-            JsonNode valueNode = obj["Value"] ?? obj["value"] ?? worldPositionNode;
+            if (worldPositionNode is not JsonObject obj)
+            {
+                throw new InvalidOperationException(
+                    $"Map '{mapId}' entity template '{entityData.Template}' WorldPositionCm override requires an object payload.");
+            }
+
+            ValidateProperties(obj, $"Map '{mapId}' entity template '{entityData.Template}' WorldPositionCm", "Value");
+            JsonNode valueNode = RequireProperty(
+                obj,
+                "Value",
+                $"Map '{mapId}' entity template '{entityData.Template}' WorldPositionCm");
             if (valueNode is not JsonObject valueObj)
             {
-                return false;
+                throw new InvalidOperationException(
+                    $"Map '{mapId}' entity template '{entityData.Template}' WorldPositionCm.Value requires an object payload.");
             }
 
-            int x = valueObj["X"]?.GetValue<int>() ?? 0;
-            int y = valueObj["Y"]?.GetValue<int>() ?? 0;
+            ValidateProperties(valueObj, $"Map '{mapId}' entity template '{entityData.Template}' WorldPositionCm.Value", "X", "Y");
+            JsonNode xNode = RequireProperty(
+                valueObj,
+                "X",
+                $"Map '{mapId}' entity template '{entityData.Template}' WorldPositionCm.Value");
+            JsonNode yNode = RequireProperty(
+                valueObj,
+                "Y",
+                $"Map '{mapId}' entity template '{entityData.Template}' WorldPositionCm.Value");
+            if (xNode.GetValueKind() != System.Text.Json.JsonValueKind.Number)
+            {
+                throw new InvalidOperationException(
+                    $"Map '{mapId}' entity template '{entityData.Template}' WorldPositionCm.Value.X requires an integer value.");
+            }
+
+            if (yNode.GetValueKind() != System.Text.Json.JsonValueKind.Number)
+            {
+                throw new InvalidOperationException(
+                    $"Map '{mapId}' entity template '{entityData.Template}' WorldPositionCm.Value.Y requires an integer value.");
+            }
+
+            int x = xNode.GetValue<int>();
+            int y = yNode.GetValue<int>();
             request = new TemplateEntityBatchSpawner.TemplateBatchSpawnRequest(
                 Ludots.Core.Mathematics.FixedPoint.Fix64Vec2.FromInt(x, y),
                 hasWorldPosition: true,
@@ -284,17 +309,35 @@ namespace Ludots.Core.Systems
             return true;
         }
 
-        private static JsonObject BuildWorldPositionNode(in Ludots.Core.Mathematics.FixedPoint.Fix64Vec2 worldPositionCm)
+        private static void ValidateProperties(JsonObject obj, string context, params string[] allowedNames)
         {
-            var vector = worldPositionCm.ToWorldCmInt2();
-            return new JsonObject
+            foreach (var kvp in obj)
             {
-                ["Value"] = new JsonObject
+                bool allowed = false;
+                for (int i = 0; i < allowedNames.Length; i++)
                 {
-                    ["X"] = vector.X,
-                    ["Y"] = vector.Y,
+                    if (string.Equals(kvp.Key, allowedNames[i], StringComparison.Ordinal))
+                    {
+                        allowed = true;
+                        break;
+                    }
                 }
-            };
+
+                if (!allowed)
+                {
+                    throw new InvalidOperationException($"{context} contains unsupported property '{kvp.Key}'.");
+                }
+            }
+        }
+
+        private static JsonNode RequireProperty(JsonObject obj, string name, string context)
+        {
+            if (!obj.TryGetPropertyValue(name, out JsonNode node) || node == null)
+            {
+                throw new InvalidOperationException($"{context} requires explicit '{name}'.");
+            }
+
+            return node;
         }
 
         private void TryApplyTemplateKey(Entity entity, string templateId)
@@ -302,7 +345,7 @@ namespace Ludots.Core.Systems
             int templateKeyId = EntityTemplateKeys.GetId(templateId);
             if (templateKeyId <= 0)
             {
-                return;
+                throw new InvalidOperationException($"Entity template key '{templateId}' is not registered.");
             }
 
             var templateKey = new EntityTemplateKeyCm { TemplateKeyId = templateKeyId };
@@ -514,27 +557,5 @@ namespace Ludots.Core.Systems
             });
         }
         
-        public void LoadMapBinary(byte[] data)
-        {
-             // Same as before
-             if (data == null || data.Length < 16) return;
-             
-             using (var reader = new BinaryReader(new MemoryStream(data)))
-             {
-                 string magic = new string(reader.ReadChars(4));
-                 if (magic != "LMAP") return;
-                 
-                 int version = reader.ReadInt32();
-                 int width = reader.ReadInt32();
-                 int height = reader.ReadInt32();
-                 
-                 if (width != _worldMap.WidthInTiles || height != _worldMap.HeightInTiles)
-                 {
-                     Log.Warn(in LogChannels.Map, $"Map dimensions mismatch. Expected {_worldMap.WidthInTiles}x{_worldMap.HeightInTiles}, got {width}x{height}");
-                 }
-                 
-                 // Skip content for now as per previous implementation
-             }
-        }
     }
 }

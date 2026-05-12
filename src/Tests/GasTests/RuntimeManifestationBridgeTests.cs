@@ -3,6 +3,7 @@ using System.Text.Json.Nodes;
 using Arch.Core;
 using Ludots.Core.Components;
 using Ludots.Core.Config;
+using Ludots.Core.Gameplay.Components;
 using Ludots.Core.Gameplay.Spawning;
 using Ludots.Core.Mathematics.FixedPoint;
 using Ludots.Core.Navigation2D.Components;
@@ -89,7 +90,9 @@ namespace Ludots.Tests.GAS
                 {
                   "shape": "Polygon",
                   "sinkPhysicsCollider": true,
-                  "sinkNavigationObstacle": true
+                  "sinkNavigationObstacle": true,
+                  "navRadiusCm": 160,
+                  "localOffsetCm": { "x": 0, "y": 0 }
                 }
                 """)!);
             Ludots.Core.Config.ComponentRegistry.Apply(
@@ -129,7 +132,7 @@ namespace Ludots.Tests.GAS
             Ludots.Core.Config.ComponentRegistry.Apply(
                 entity,
                 "SpatialBounds",
-                JsonNode.Parse("""{ "kind": "Footprint2D" }""")!);
+                JsonNode.Parse("""{ "kind": "Footprint2D", "localCenterCm": { "x": 0, "y": 0 }, "localCenterYCm": 0 }""")!);
 
             That(world.Get<SpatialBounds>(entity).Kind, Is.EqualTo(SpatialBoundsKind.Footprint2D));
 
@@ -141,5 +144,174 @@ namespace Ludots.Tests.GAS
                     JsonNode.Parse("""{ "kind": "footprint2d" }""")!))!;
             That(ex.Message, Does.Contain("Unsupported SpatialBounds kind"));
         }
+
+        [Test]
+        public void ComponentRegistry_RejectsCaseAliasesUnknownComponentsAndExtraFields()
+        {
+            using var world = World.Create();
+
+            AssertRejects(
+                world,
+                "WorldPositionCm",
+                """{ "value": { "X": 1, "Y": 2 } }""",
+                "unsupported property 'value'");
+            AssertRejects(
+                world,
+                "WorldPositionCm",
+                """{ "Value": { "x": 1, "Y": 2 } }""",
+                "unsupported property 'x'");
+            AssertRejects(
+                world,
+                "SpatialBounds",
+                """{ "Kind": "Footprint2D" }""",
+                "unsupported property 'Kind'");
+            AssertRejects(
+                world,
+                "SpatialFootprint2D",
+                """{ "vertices": [ { "X": 0, "y": 0 }, { "x": 1, "y": 0 }, { "x": 0, "y": 1 } ] }""",
+                "requires explicit 'x'");
+            AssertRejects(
+                world,
+                "ManifestationObstacleIntent2D",
+                """{ "Shape": "Circle", "sinkPhysicsCollider": true, "sinkNavigationObstacle": true, "navRadiusCm": 10 }""",
+                "unsupported property 'Shape'");
+            AssertRejects(
+                world,
+                "SelectionSelectableState",
+                """{ "isEnabled": true }""",
+                "unsupported property 'isEnabled'");
+            AssertRejects(
+                world,
+                "SelectionSelectableState",
+                """true""",
+                "requires an object payload");
+            AssertRejects(
+                world,
+                "ManifestationObstacleIntent2D",
+                """{ "shape": "Circle", "sinkPhysicsCollider": 1, "sinkNavigationObstacle": true, "navRadiusCm": 10 }""",
+                "requires a boolean value");
+            AssertRejects(
+                world,
+                "AbilityFormSetRef",
+                """
+                "legacy_form_set"
+                """,
+                "requires an object payload");
+            AssertRejects(
+                world,
+                "AttributeBuffer",
+                """{ "base": null }""",
+                "AttributeBuffer.base requires an object payload");
+            AssertRejects(
+                world,
+                "AttributeBuffer",
+                """{ "base": { "Health": null } }""",
+                "requires a non-null numeric value");
+            AssertRejects(
+                world,
+                "AbilityStateBuffer",
+                """{ "abilityIds": [1, 2, 3, 4, 5, 6, 7, 8, 9] }""",
+                "accepts at most");
+            AssertRejects(
+                world,
+                "OrderBuffer",
+                """{ "ignored": true }""",
+                "does not accept authored fields");
+            AssertRejects(
+                world,
+                "UnknownComponent",
+                """{}""",
+                "Unknown component");
+        }
+
+        [Test]
+        public void ComponentRegistry_GenericComponentsRequireExactPascalCaseFields()
+        {
+            using var world = World.Create();
+            Entity entity = world.Create();
+
+            Ludots.Core.Config.ComponentRegistry.Apply(
+                entity,
+                "Team",
+                JsonNode.Parse("""{ "Id": 7 }""")!);
+
+            That(world.Get<Team>(entity).Id, Is.EqualTo(7));
+
+            AssertRejects(
+                world,
+                "Team",
+                """{ "id": 7 }""",
+                "failed strict deserialization");
+        }
+
+        [Test]
+        public void ComponentRegistry_UnregisterSource_RemovesOnlyThatModRegistrations()
+        {
+            const string modId = "RuntimeManifestationBridgeTests.ModAuthoring";
+            Ludots.Core.Config.ComponentRegistry.UnregisterSource(modId);
+
+            Ludots.Core.Config.ComponentRegistry.Register<RuntimeManifestationBridgeTestTag>(
+                "RuntimeManifestationBridgeTestTag",
+                modId);
+            That(Ludots.Core.Config.ComponentRegistry.TryGetComponentType(
+                "RuntimeManifestationBridgeTestTag",
+                out _),
+                Is.True);
+
+            That(Ludots.Core.Config.ComponentRegistry.UnregisterSource(modId), Is.EqualTo(1));
+            That(Ludots.Core.Config.ComponentRegistry.TryGetComponentType(
+                "RuntimeManifestationBridgeTestTag",
+                out _),
+                Is.False);
+
+            using var world = World.Create();
+            Entity entity = world.Create();
+            DoesNotThrow(() => Ludots.Core.Config.ComponentRegistry.Apply(
+                entity,
+                "Team",
+                JsonNode.Parse("""{ "Id": 3 }""")!));
+            That(world.Get<Team>(entity).Id, Is.EqualTo(3));
+        }
+
+        [Test]
+        public void EntityBuilder_RejectsUnknownTemplatesAndNullOverrides()
+        {
+            using var world = World.Create();
+            var templates = new System.Collections.Generic.Dictionary<string, EntityTemplate>(StringComparer.Ordinal)
+            {
+                ["known"] = new EntityTemplate
+                {
+                    Id = "known",
+                    Components = new System.Collections.Generic.Dictionary<string, JsonNode>(StringComparer.Ordinal)
+                    {
+                        ["Name"] = JsonNode.Parse("""{ "Value": "Known" }""")!
+                    }
+                }
+            };
+
+            var builder = new EntityBuilder(world, templates);
+            Assert.That(
+                Throws<InvalidOperationException>(() => builder.UseTemplate("KNOWN"))!.Message,
+                Does.Contain("Unknown entity template"));
+            Assert.That(
+                Throws<InvalidOperationException>(() => builder.WithOverride("Name", null!))!.Message,
+                Does.Contain("requires non-null data"));
+            Assert.That(
+                Throws<InvalidOperationException>(() => builder.WithOverride("name", JsonNode.Parse("""{ "Value": "Wrong" }""")!).Build())!.Message,
+                Does.Contain("Unknown component"));
+        }
+
+        private static void AssertRejects(World world, string componentName, string json, string expectedMessage)
+        {
+            Entity entity = world.Create();
+            InvalidOperationException ex = Throws<InvalidOperationException>(() =>
+                Ludots.Core.Config.ComponentRegistry.Apply(
+                    entity,
+                    componentName,
+                    JsonNode.Parse(json)!))!;
+            That(ex.Message, Does.Contain(expectedMessage));
+        }
+
+        private struct RuntimeManifestationBridgeTestTag { }
     }
 }

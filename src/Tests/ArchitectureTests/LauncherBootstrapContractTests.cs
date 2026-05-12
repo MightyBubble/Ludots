@@ -270,6 +270,48 @@ namespace Ludots.Tests.Architecture
             }
         }
 
+        [Test]
+        public void GameBootstrapper_RejectsLaunchGraphModIdCaseAliases()
+        {
+            var repoRoot = FindRepoRoot();
+            var tempDirectory = Path.Combine(repoRoot, "artifacts", "tests", $"bootstrap-case-alias-{Guid.NewGuid():N}");
+            Directory.CreateDirectory(tempDirectory);
+
+            try
+            {
+                var coreMod = Path.Combine(repoRoot, "mods", "LudotsCoreMod");
+                var graphPath = Path.Combine(tempDirectory, "raylib.launch.graph.json");
+                var bootstrapPath = Path.Combine(tempDirectory, "launcher.runtime.json");
+
+                WriteLaunchGraph(
+                    graphPath,
+                    planFingerprint: "graph-case-alias-fingerprint",
+                    orderedModIds: new[] { "ludotscoremod" },
+                    plannedModsJson: $$"""
+                    [
+                      {
+                        "id": "LudotsCoreMod",
+                        "rootPath": "{{coreMod.Replace("\\", "\\\\")}}"
+                      }
+                    ]
+                    """);
+
+                WriteBootstrap(bootstrapPath, "graph-case-alias-fingerprint");
+
+                var ex = Assert.Throws<Exception>(
+                    () => GameBootstrapper.InitializeFromBaseDirectory(tempDirectory, "launcher.runtime.json"));
+
+                Assert.That(ex!.Message, Does.Contain("does not match plannedMods"));
+            }
+            finally
+            {
+                if (Directory.Exists(tempDirectory))
+                {
+                    Directory.Delete(tempDirectory, recursive: true);
+                }
+            }
+        }
+
         private static string CreateTestMod(string root, string modName, int priority, string? dependenciesJson = null)
         {
             var modDir = Path.Combine(root, modName);

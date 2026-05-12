@@ -13,7 +13,6 @@ internal sealed class TotalWarShowcaseConfig
     public string RuntimeSpawnReceiptChannelKey { get; set; } = string.Empty;
     public TotalWarAgentAuthoringConfig FormationAgent { get; set; } = new();
     public string InitialSelectionFormationId { get; set; } = string.Empty;
-    public TotalWarFormationSyncConfig FormationSync { get; set; } = new();
     public TotalWarSoldierTargetSyncConfig SoldierTargetSync { get; set; } = new();
     public TotalWarObstacleOverlayConfig ObstacleOverlay { get; set; } = new();
     public TotalWarFormationConfig[] Formations { get; set; } = Array.Empty<TotalWarFormationConfig>();
@@ -39,14 +38,11 @@ internal sealed class TotalWarShowcaseConfig
         RequireProperty(root, "runtimeSpawnReceiptChannelKey");
         RequireAgentAuthoring(RequireProperty(root, "formationAgent"), "formationAgent");
         RequireProperty(root, "initialSelectionFormationId");
-        RequireProperty(root, "formationSync");
         JsonElement soldierTargetSync = RequireProperty(root, "soldierTargetSync");
         RequireProperties(
             soldierTargetSync,
             "targetChangeEpsilonCm",
-            "facingChangeEpsilonRadians",
-            "orderPathLookaheadCm",
-            "orderPathAnchorUpdateEpsilonCm");
+            "facingChangeEpsilonRadians");
         JsonElement obstacleOverlay = RequireProperty(root, "obstacleOverlay");
         RequireProperties(obstacleOverlay, "templateId", "heightOffsetM", "borderWidthCm", "fillColor", "borderColor");
         JsonElement formations = RequireProperty(root, "formations");
@@ -156,7 +152,6 @@ internal sealed class TotalWarShowcaseConfig
         RequireNonEmpty(RuntimeSpawnReceiptChannelKey, nameof(RuntimeSpawnReceiptChannelKey));
         FormationAgent.Validate(nameof(FormationAgent));
         RequireNonEmpty(InitialSelectionFormationId, nameof(InitialSelectionFormationId));
-        FormationSync.Validate();
         SoldierTargetSync.Validate();
         ObstacleOverlay.Validate();
         if (Formations.Length <= 0)
@@ -203,17 +198,10 @@ internal sealed class TotalWarShowcaseConfig
     }
 }
 
-internal sealed class TotalWarFormationSyncConfig
-{
-    public void Validate() { }
-}
-
 internal sealed class TotalWarSoldierTargetSyncConfig
 {
     public float TargetChangeEpsilonCm { get; set; }
     public float FacingChangeEpsilonRadians { get; set; }
-    public float OrderPathLookaheadCm { get; set; }
-    public float OrderPathAnchorUpdateEpsilonCm { get; set; }
 
     public void Validate()
     {
@@ -225,16 +213,6 @@ internal sealed class TotalWarSoldierTargetSyncConfig
         if (!(FacingChangeEpsilonRadians > 0f))
         {
             throw new InvalidOperationException("Total War showcase soldierTargetSync requires FacingChangeEpsilonRadians > 0.");
-        }
-
-        if (!(OrderPathLookaheadCm > 0f))
-        {
-            throw new InvalidOperationException("Total War showcase soldierTargetSync requires OrderPathLookaheadCm > 0.");
-        }
-
-        if (!(OrderPathAnchorUpdateEpsilonCm > 0f))
-        {
-            throw new InvalidOperationException("Total War showcase soldierTargetSync requires OrderPathAnchorUpdateEpsilonCm > 0.");
         }
     }
 }

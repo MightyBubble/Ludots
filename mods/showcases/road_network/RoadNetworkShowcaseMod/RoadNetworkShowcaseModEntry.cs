@@ -10,7 +10,7 @@ namespace RoadNetworkShowcaseMod
         public void OnLoad(IModContext context)
         {
             context.Log("[RoadNetworkShowcaseMod] Loaded");
-            RoadNetworkShowcaseComponentAuthoring.Register();
+            RoadNetworkShowcaseComponentAuthoring.Register(context.ModId);
 
             var runtime = new RoadNetworkShowcaseRuntime();
             context.OnEvent(GameEvents.GameStart, new InstallRoadNetworkShowcaseOnGameStartTrigger(context, runtime).ExecuteAsync);

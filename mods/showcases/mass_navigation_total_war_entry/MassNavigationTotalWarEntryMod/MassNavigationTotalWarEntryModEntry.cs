@@ -9,7 +9,7 @@ public sealed class MassNavigationTotalWarEntryModEntry : IMod
     public void OnLoad(IModContext context)
     {
         context.Log("[MassNavigationTotalWarEntryMod] Loaded");
-        TotalWarShowcaseComponentAuthoring.Register();
+        TotalWarShowcaseComponentAuthoring.Register(context.ModId);
         var runtime = new TotalWarShowcaseRuntime();
         context.OnEvent(GameEvents.MapLoaded, runtime.HandleMapFocusedAsync);
         context.OnEvent(GameEvents.MapResumed, runtime.HandleMapFocusedAsync);

@@ -34,6 +34,36 @@ namespace GasTests
             }
         }
 
+        [Test]
+        public void Mount_RejectsMissingContractData()
+        {
+            var vfs = new VirtualFileSystem();
+
+            Assert.That(() => vfs.Mount("", CreateTempDir()), Throws.TypeOf<ArgumentException>());
+            Assert.That(() => vfs.Mount("ModA", ""), Throws.TypeOf<ArgumentException>());
+            Assert.That(() => vfs.Mount("ModA", Path.Combine(Path.GetTempPath(), "ludots_missing_" + Guid.NewGuid().ToString("N"))), Throws.TypeOf<DirectoryNotFoundException>());
+        }
+
+        [Test]
+        public void Mount_UsesCaseExactModIds()
+        {
+            var root = CreateTempDir();
+            try
+            {
+                File.WriteAllText(Path.Combine(root, "inside.txt"), "ok");
+
+                var vfs = new VirtualFileSystem();
+                vfs.Mount("ModA", root);
+
+                Assert.That(vfs.TryResolveFullPath("ModA:inside.txt", out _), Is.True);
+                Assert.That(vfs.TryResolveFullPath("moda:inside.txt", out _), Is.False);
+            }
+            finally
+            {
+                TryDelete(root);
+            }
+        }
+
         private static string CreateTempDir()
         {
             var path = Path.Combine(Path.GetTempPath(), "ludots_vfs_" + Guid.NewGuid().ToString("N"));

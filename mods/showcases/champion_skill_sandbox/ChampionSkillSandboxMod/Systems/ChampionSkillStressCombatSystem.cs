@@ -99,7 +99,7 @@ namespace ChampionSkillSandboxMod.Systems
             string mapId = _engine.CurrentMapSession!.MapId.Value;
             _engine.World.Query(in StressUnitQuery, (Entity entity, ref Name name, ref Team team, ref MapEntity mapEntity, ref AbilityStateBuffer _, ref WorldPositionCm position, ref AttributeBuffer attributes, ref OrderBuffer orders) =>
             {
-                if (!string.Equals(mapEntity.MapId.Value, mapId, StringComparison.OrdinalIgnoreCase))
+                if (!string.Equals(mapEntity.MapId.Value, mapId, StringComparison.Ordinal))
                 {
                     return;
                 }

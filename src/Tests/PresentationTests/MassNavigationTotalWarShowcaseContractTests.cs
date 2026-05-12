@@ -86,8 +86,12 @@ namespace Ludots.Tests.Presentation
                 ?? throw new InvalidOperationException("TotalWar config must author soldierTargetSync.");
             AssertPositive(soldierTargetSync, "targetChangeEpsilonCm");
             AssertPositive(soldierTargetSync, "facingChangeEpsilonRadians");
-            AssertPositive(soldierTargetSync, "orderPathLookaheadCm");
-            AssertPositive(soldierTargetSync, "orderPathAnchorUpdateEpsilonCm");
+            Assert.That(config.ContainsKey("formationSync"), Is.False,
+                "TotalWar config must not keep empty sync sections without runtime semantics.");
+            Assert.That(soldierTargetSync.ContainsKey("orderPathLookaheadCm"), Is.False,
+                "TotalWar carrier-mode soldier sync must not author stale order-path knobs.");
+            Assert.That(soldierTargetSync.ContainsKey("orderPathAnchorUpdateEpsilonCm"), Is.False,
+                "TotalWar carrier-mode soldier sync must not author stale order-path knobs.");
             JsonObject obstacleOverlay = config["obstacleOverlay"]?.AsObject()
                 ?? throw new InvalidOperationException("TotalWar config must author obstacleOverlay.");
             AssertPositive(obstacleOverlay, "borderWidthCm");
@@ -344,9 +348,9 @@ namespace Ludots.Tests.Presentation
             Assert.That(syncBody, Does.Contain("soldierAgentPlan.SlotOffsetYCm"));
             Assert.That(syncBody, Does.Not.Contain("TryGetGroupMemberOrderTarget"),
                 "Soldier target sync must use the MassNavigation order-path anchor SSOT without repeating order target lookups in the showcase hot path.");
-            Assert.That(syncBody, Does.Not.Contain("targetSync.OrderPathLookaheadCm"),
+            Assert.That(syncBody, Does.Not.Contain("OrderPathLookaheadCm"),
                 "Carrier-mode soldiers must not chase the formation order-path lookahead; the formation's resolved displacement carries them through macro obstacles.");
-            Assert.That(syncBody, Does.Not.Contain("targetSync.OrderPathAnchorUpdateEpsilonCm"));
+            Assert.That(syncBody, Does.Not.Contain("OrderPathAnchorUpdateEpsilonCm"));
             Assert.That(syncBody, Does.Not.Contain("TryUpdateGroupMemberFollowerAnchor"));
             Assert.That(syncBody, Does.Not.Contain("TryUpdateGroupMemberOrderPathAnchor"),
                 "TotalWar soldiers must not consume the pure order-path anchor in carrier mode.");

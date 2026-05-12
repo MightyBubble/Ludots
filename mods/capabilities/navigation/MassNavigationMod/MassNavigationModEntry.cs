@@ -9,7 +9,7 @@ public sealed class MassNavigationModEntry : IMod
 {
     public void OnLoad(IModContext context)
     {
-        MassNavigationComponentAuthoring.Register();
+        MassNavigationComponentAuthoring.Register(context.ModId);
         var runtime = new MassNavigationRuntime(context);
         context.OnEvent(GameEvents.GameStart, ctx =>
         {

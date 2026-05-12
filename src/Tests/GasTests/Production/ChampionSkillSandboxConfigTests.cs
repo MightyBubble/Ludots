@@ -22,15 +22,18 @@ using Ludots.Core.Input.Runtime;
 using Ludots.Core.Input.Selection;
 using Ludots.Core.Navigation2D.Components;
 using Ludots.Core.Navigation2D.Systems;
+using Ludots.Core.Presentation.Camera;
 using Ludots.Core.Presentation.Commands;
 using Ludots.Core.Presentation.Components;
 using Ludots.Core.Presentation.Performers;
 using Ludots.Core.Presentation.Events;
 using Ludots.Core.Presentation.Hud;
 using Ludots.Core.Presentation.Rendering;
+using Ludots.Core.Presentation.Systems;
 using Ludots.Core.Physics2D;
 using Ludots.Core.Physics2D.Components;
 using Ludots.Core.Scripting;
+using Ludots.Core.Systems;
 using Ludots.Core.UI.EntityCommandPanels;
 using Ludots.Platform.Abstractions;
 using Ludots.UI;
@@ -60,6 +63,7 @@ namespace Ludots.Tests.GAS.Production
         private const string AiTargetToolbarButtonId = "ChampionSkillSandbox.Selection.AI.Targets";
         private const string AiFormationToolbarButtonId = "ChampionSkillSandbox.Selection.AI.Formation";
         private const string CommandSnapshotToolbarButtonId = "ChampionSkillSandbox.Selection.Command.Snapshot";
+        private const string HeadlessCameraKey = "Tests.ChampionSkillSandboxConfig.HeadlessCamera";
         private static readonly string[] SandboxMods =
         {
             "LudotsCoreMod",
@@ -859,6 +863,7 @@ namespace Ludots.Tests.GAS.Production
             engine.InitializeWithConfigPipeline(modPaths, assetsRoot);
             InstallInput(engine);
             InstallUi(engine);
+            InstallHeadlessPresentation(engine);
             engine.Start();
             return engine;
         }
@@ -885,6 +890,37 @@ namespace Ludots.Tests.GAS.Production
             engine.SetService(CoreServiceKeys.UIRoot, uiRoot);
             engine.SetService(CoreServiceKeys.UiTextMeasurer, (object)new SkiaTextMeasurer());
             engine.SetService(CoreServiceKeys.UiImageSizeProvider, (object)new SkiaImageSizeProvider());
+        }
+
+        private static void InstallHeadlessPresentation(GameEngine engine)
+        {
+            var view = new StubViewController(1920f, 1080f);
+            engine.SetService(CoreServiceKeys.ViewController, view);
+            var cameraAdapter = new StubCameraAdapter();
+            var timingDiagnostics = engine.GetService(CoreServiceKeys.PresentationTimingDiagnostics);
+            var cameraPresenter = new CameraPresenter(engine.SpatialCoords, cameraAdapter, timingDiagnostics);
+            var screenProjector = new CoreScreenProjector(engine.GameSession.Camera, view);
+            var screenRayProvider = new CoreScreenRayProvider(engine.GameSession.Camera, view);
+            screenProjector.BindPresenter(cameraPresenter);
+            screenRayProvider.BindPresenter(cameraPresenter);
+            engine.SetService(CoreServiceKeys.ScreenProjector, screenProjector);
+            engine.SetService(CoreServiceKeys.ScreenRayProvider, screenRayProvider);
+
+            var culling = new CameraCullingSystem(
+                engine.World,
+                engine.GameSession.Camera,
+                engine.SpatialQueries,
+                view,
+                loadedChunks: null,
+                focusOverride: null,
+                performers: engine.GetService(CoreServiceKeys.PerformerEntityRuntime),
+                timingDiagnostics: timingDiagnostics,
+                cullingConfig: engine.MergedConfig.Presentation.CameraCulling);
+            engine.InsertPresentationSystemBefore<PresentationEntityLifecycleSystem>(culling);
+            engine.SetService(CoreServiceKeys.CameraCullingDebugState, culling.DebugState);
+            engine.GlobalContext[HeadlessCameraKey] = new HeadlessCameraRuntime(
+                cameraPresenter,
+                engine.GetService(CoreServiceKeys.PresentationFrameSetup));
         }
 
         private static void LoadMap(GameEngine engine, string mapId, int frames = 12)
@@ -915,8 +951,21 @@ namespace Ludots.Tests.GAS.Production
         {
             for (int i = 0; i < frames; i++)
             {
+                UpdateHeadlessCamera(engine);
                 engine.Tick(DeltaTime);
             }
+        }
+
+        private static void UpdateHeadlessCamera(GameEngine engine)
+        {
+            if (!engine.GlobalContext.TryGetValue(HeadlessCameraKey, out object? runtimeObj) ||
+                runtimeObj is not HeadlessCameraRuntime runtime)
+            {
+                throw new InvalidOperationException("ChampionSkillSandboxConfigTests headless camera runtime was not installed.");
+            }
+
+            float alpha = runtime.PresentationFrameSetup?.GetInterpolationAlpha() ?? 1f;
+            runtime.CameraPresenter.Update(engine.GameSession.Camera, alpha);
         }
 
         private static void TickUntil(GameEngine engine, Func<bool> predicate, int maxFrames)
@@ -1063,7 +1112,7 @@ namespace Ludots.Tests.GAS.Production
             var query = new QueryDescription().WithAll<Name, Team, MapEntity, AbilityStateBuffer>();
             world.Query(in query, (Entity _, ref Name name, ref Team team, ref MapEntity mapEntity, ref AbilityStateBuffer __) =>
             {
-                if (!string.Equals(mapEntity.MapId.Value, StressMapId, StringComparison.OrdinalIgnoreCase))
+                if (!string.Equals(mapEntity.MapId.Value, StressMapId, StringComparison.Ordinal))
                 {
                     return;
                 }
@@ -1145,6 +1194,40 @@ namespace Ludots.Tests.GAS.Production
             return found;
         }
 
+        private sealed class StubViewController : IViewController
+        {
+            public StubViewController(float width, float height)
+            {
+                Resolution = new Vector2(width, height);
+            }
+
+            public Vector2 Resolution { get; }
+            public float Fov => 60f;
+            public float AspectRatio => Resolution.Y <= 0f ? 1f : Resolution.X / Resolution.Y;
+        }
+
+        private sealed class StubCameraAdapter : ICameraAdapter
+        {
+            public CameraRenderState3D LastState { get; private set; }
+
+            public void UpdateCamera(in CameraRenderState3D state)
+            {
+                LastState = state;
+            }
+        }
+
+        private sealed class HeadlessCameraRuntime
+        {
+            public HeadlessCameraRuntime(CameraPresenter cameraPresenter, PresentationFrameSetupSystem? presentationFrameSetup)
+            {
+                CameraPresenter = cameraPresenter;
+                PresentationFrameSetup = presentationFrameSetup;
+            }
+
+            public CameraPresenter CameraPresenter { get; }
+            public PresentationFrameSetupSystem? PresentationFrameSetup { get; }
+        }
+
         private static float ComputeMinimumStressTeamClearance(World world, string mapId, int teamId)
         {
             var units = new List<StressBodySample>(128);
@@ -1152,7 +1235,7 @@ namespace Ludots.Tests.GAS.Production
             world.Query(in query, (Entity _, ref Team team, ref MapEntity mapEntity, ref AbilityStateBuffer __, ref WorldPositionCm position, ref Collider2D collider) =>
             {
                 if (team.Id != teamId ||
-                    !string.Equals(mapEntity.MapId.Value, mapId, StringComparison.OrdinalIgnoreCase) ||
+                    !string.Equals(mapEntity.MapId.Value, mapId, StringComparison.Ordinal) ||
                     collider.Type != ColliderType2D.Circle ||
                     !ShapeDataStorage2D.TryGetCircle(collider.ShapeDataIndex, out var circle))
                 {

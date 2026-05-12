@@ -12,7 +12,7 @@ namespace PerformerBlacksmithShowcaseMod
         public void OnLoad(IModContext context)
         {
             context.Log("[PerformerBlacksmithShowcaseMod] Loaded");
-            PerformerBlacksmithShowcaseComponentAuthoring.Register();
+            PerformerBlacksmithShowcaseComponentAuthoring.Register(context.ModId);
             var runtime = new PerformerBlacksmithShowcaseRuntime();
 
             context.OnEvent(GameEvents.GameStart, ctx =>
