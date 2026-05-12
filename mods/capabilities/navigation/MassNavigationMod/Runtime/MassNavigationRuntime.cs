@@ -1,6 +1,7 @@
 using System.Threading.Tasks;
 using System.Numerics;
 using Arch.Core;
+using Arch.System;
 using CoreInputMod;
 using Ludots.Core.Engine;
 using Ludots.Core.Gameplay.Camera;
@@ -59,6 +60,9 @@ internal sealed class MassNavigationRuntime
             SystemGroup.PostMovement);
         engine.InsertSystemBeforeRequired<MassNavigationCommandApplySystem>(
             new MassNavigationSpawnReceiptBindingSystem(engine, simulation),
+            SystemGroup.PostMovement);
+        engine.InsertSystemBeforeRequired<MassNavigationFormationSystem>(
+            new MassNavigationPreSimulationStepSystem(),
             SystemGroup.PostMovement);
         engine.RegisterPresentationSystem(new MassNavigationHudPresentationSystem(engine, simulation));
         _systemsInstalled = true;
@@ -188,7 +192,7 @@ internal sealed class MassNavigationRuntime
 
         MassNavigationSimulationRuntime simulation = engine.GetService(MassNavigationKeys.SimulationRuntime)
             ?? throw new System.InvalidOperationException("MassNavigationMod requires simulation runtime.");
-        MassNavigationScenarioBootstrap.SpawnDefaultScenario(
+        MassNavigationScenarioBootstrap.SpawnConfiguredScenario(
             engine,
             simulation,
             engine.GetService(CoreServiceKeys.TeamEntityLookup)
@@ -345,10 +349,18 @@ internal sealed class MassNavigationRuntime
             throw new System.InvalidOperationException("MassNavigationMod local player template must author SelectionDragState.");
         }
 
-        selection.TryGetOrCreateSelectionEntity(owner, SelectionSetKeys.LivePrimary, out _);
-        selection.TryBindView(owner, SelectionViewKeys.Primary, owner, SelectionSetKeys.LivePrimary);
-        globals[CoreServiceKeys.SelectionViewViewerEntity.Name] = owner;
-        globals[CoreServiceKeys.SelectionViewKey.Name] = SelectionViewKeys.Primary;
+        if (!SelectionContextRuntime.TrySetCurrentView(
+                world,
+                globals,
+                selection,
+                owner,
+                SelectionViewKeys.Primary,
+                owner,
+                SelectionSetKeys.LivePrimary,
+                out _))
+        {
+            throw new System.InvalidOperationException("MassNavigationMod failed to bind LivePrimary as the primary selection view.");
+        }
     }
 
     private static void EnsureTacticalCamera(GameEngine engine)
@@ -487,5 +499,14 @@ internal sealed class MassNavigationRuntime
         bool DrawWorldHudText,
         bool DrawCombatText,
         float AcceptanceScaleMultiplier);
+}
+
+public sealed class MassNavigationPreSimulationStepSystem : ISystem<float>
+{
+    public void Initialize() { }
+    public void BeforeUpdate(in float dt) { }
+    public void Update(in float dt) { }
+    public void AfterUpdate(in float dt) { }
+    public void Dispose() { }
 }
 

@@ -7,36 +7,38 @@ using Ludots.Core.Components;
 using Ludots.Core.Engine;
 using Ludots.Core.Mathematics;
 using Ludots.Core.Presentation.Components;
+using Ludots.Core.Presentation.Performers;
 using Ludots.Core.Presentation.Rendering;
+using Ludots.Core.Presentation.Terrain;
 using Ludots.Core.Scripting;
 
 namespace MassNavigationTotalWarEntryMod.Runtime;
 
 internal sealed class TotalWarFormationOutlinePresentationSystem : ISystem<float>
 {
-    private const int OverlayStableIdStride = 32;
-    private const int RectangleFrontSegmentIndex = 1;
-    private const int RectangleBackSegmentIndex = 2;
-    private const int RectangleLeftSegmentIndex = 3;
-    private const int RectangleRightSegmentIndex = 4;
-    private const int CircleRingSegmentIndex = 1;
-    private const int FrontIndicatorSegmentIndex = 16;
-
     private static readonly QueryDescription FormationOutlineQuery = new QueryDescription()
-        .WithAll<TotalWarFormationAnchor, TotalWarFormationState, TotalWarFormationOutline, VisualTransform, PresentationStableId>();
+        .WithAll<TotalWarFormationAgent, TotalWarFormationState, TotalWarFormationOutline, VisualTransform, PresentationStableId>()
+        .WithNone<PresentationDestroyPending>();
 
     private readonly GameEngine _engine;
     private readonly TotalWarShowcaseRuntime _runtime;
-    private readonly GroundOverlayBuffer _overlays;
+    private readonly RoadSplineBuffer _splines;
+    private readonly IVisualHeightmap _heightmap;
     private readonly List<int> _currentStableIds = new();
     private readonly List<int> _previousStableIds = new();
+    private readonly HashSet<int> _currentStableIdSet = new();
+    private readonly HashSet<int> _currentOwnerStableIds = new();
+    private readonly List<int> _staleOwnerStableIds = new();
+    private readonly Dictionary<int, OutlineEmissionState> _emittedStateByOwnerStableId = new();
 
     public TotalWarFormationOutlinePresentationSystem(GameEngine engine, TotalWarShowcaseRuntime runtime)
     {
         _engine = engine ?? throw new ArgumentNullException(nameof(engine));
         _runtime = runtime ?? throw new ArgumentNullException(nameof(runtime));
-        _overlays = engine.GetService(CoreServiceKeys.GroundOverlayBuffer)
-            ?? throw new InvalidOperationException("Total War formation outline requires GroundOverlayBuffer.");
+        _splines = engine.GetService(CoreServiceKeys.RoadSplineBuffer)
+            ?? throw new InvalidOperationException("Total War formation outline requires RoadSplineBuffer.");
+        _heightmap = engine.GetService(CoreServiceKeys.VisualHeightmap)
+            ?? throw new InvalidOperationException("Total War formation outline requires VisualHeightmap.");
     }
 
     public void Initialize() { }
@@ -48,21 +50,24 @@ internal sealed class TotalWarFormationOutlinePresentationSystem : ISystem<float
     {
         if (!_runtime.IsCurrentShowcaseMap(_engine))
         {
-            RemovePreviousOverlays();
+            RemovePreviousSplines();
             return;
         }
 
         _currentStableIds.Clear();
+        _currentStableIdSet.Clear();
+        _currentOwnerStableIds.Clear();
         int emitted = 0;
         _engine.World.Query(
             in FormationOutlineQuery,
-            (Entity entity, ref TotalWarFormationAnchor _, ref TotalWarFormationState state, ref TotalWarFormationOutline outline, ref VisualTransform transform, ref PresentationStableId stableId) =>
+            (Entity entity, ref TotalWarFormationAgent _, ref TotalWarFormationState state, ref TotalWarFormationOutline outline, ref VisualTransform transform, ref PresentationStableId stableId) =>
             {
                 emitted += EmitOutline(entity, in state, in outline, in transform, stableId.Value);
             });
 
-        RemoveStaleOverlays();
-        _engine.GlobalContext["MassNavigation.TotalWar.FormationOutlineCount"] = emitted;
+        RemoveStaleSplines();
+        RemoveStaleEmissionStates();
+        _engine.GlobalContext[TotalWarShowcaseContextKeys.FormationOutlineCount] = emitted;
     }
 
     private int EmitOutline(
@@ -77,6 +82,16 @@ internal sealed class TotalWarFormationOutlinePresentationSystem : ISystem<float
             throw new InvalidOperationException("Total War formation outline requires a positive PresentationStableId.");
         }
 
+        _currentOwnerStableIds.Add(ownerStableId);
+        OutlineEmissionState nextState = OutlineEmissionState.From(in state, in outline, in transform);
+        if (_emittedStateByOwnerStableId.TryGetValue(ownerStableId, out OutlineEmissionState previousState) &&
+            previousState.Equals(nextState, outline.EmissionPositionEpsilonM, outline.EmissionFacingEpsilonRadians))
+        {
+            TrackExistingStableIds(ownerStableId, in outline);
+            return OutlineStableIdCount(in outline);
+        }
+
+        _emittedStateByOwnerStableId[ownerStableId] = nextState;
         return outline.Shape switch
         {
             TotalWarFormationOutlineShape.Rectangle => EmitRectangle(entity, ownerStableId, in state, in outline, in transform),
@@ -106,10 +121,38 @@ internal sealed class TotalWarFormationOutlinePresentationSystem : ISystem<float
         Vector3 rightCenter = center + (lateral3 * (widthM * 0.5f));
 
         int count = 0;
-        count += AddLine(entity, ownerStableId, RectangleFrontSegmentIndex, frontCenter - (lateral3 * (widthM * 0.5f)), lateral, widthM, edgeWidthM, in outline);
-        count += AddLine(entity, ownerStableId, RectangleBackSegmentIndex, backCenter - (lateral3 * (widthM * 0.5f)), lateral, widthM, edgeWidthM, in outline);
-        count += AddLine(entity, ownerStableId, RectangleLeftSegmentIndex, leftCenter - (forward3 * (depthM * 0.5f)), forward, depthM, edgeWidthM, in outline);
-        count += AddLine(entity, ownerStableId, RectangleRightSegmentIndex, rightCenter - (forward3 * (depthM * 0.5f)), forward, depthM, edgeWidthM, in outline);
+        count += AddSampledLine(
+            entity,
+            ownerStableId,
+            TotalWarFormationOutlineSegment.RectangleFront,
+            frontCenter - (lateral3 * (widthM * 0.5f)),
+            frontCenter + (lateral3 * (widthM * 0.5f)),
+            edgeWidthM,
+            in outline);
+        count += AddSampledLine(
+            entity,
+            ownerStableId,
+            TotalWarFormationOutlineSegment.RectangleBack,
+            backCenter - (lateral3 * (widthM * 0.5f)),
+            backCenter + (lateral3 * (widthM * 0.5f)),
+            edgeWidthM,
+            in outline);
+        count += AddSampledLine(
+            entity,
+            ownerStableId,
+            TotalWarFormationOutlineSegment.RectangleLeft,
+            leftCenter - (forward3 * (depthM * 0.5f)),
+            leftCenter + (forward3 * (depthM * 0.5f)),
+            edgeWidthM,
+            in outline);
+        count += AddSampledLine(
+            entity,
+            ownerStableId,
+            TotalWarFormationOutlineSegment.RectangleRight,
+            rightCenter - (forward3 * (depthM * 0.5f)),
+            rightCenter + (forward3 * (depthM * 0.5f)),
+            edgeWidthM,
+            in outline);
         count += EmitFrontIndicator(entity, ownerStableId, center, forward, in outline);
         return count;
     }
@@ -128,28 +171,8 @@ internal sealed class TotalWarFormationOutlinePresentationSystem : ISystem<float
             throw new InvalidOperationException("Total War circle formation outline requires positive radius and ring width.");
         }
 
-        float innerRadius = MathF.Max(0f, radiusM - ringWidthM);
         Vector3 center = ResolveCenter(in transform, outline.HeightOffsetM);
-        int stableId = CreateOverlayStableId(ownerStableId, CircleRingSegmentIndex);
-        var item = new GroundOverlayItem
-        {
-            StableId = stableId,
-            Shape = GroundOverlayShape.Ring,
-            Center = center,
-            Radius = radiusM,
-            InnerRadius = innerRadius,
-            FillColor = outline.FillColor,
-            BorderColor = outline.BorderColor,
-            BorderWidth = ringWidthM,
-        };
-
-        if (!_overlays.Upsert(in item))
-        {
-            throw new InvalidOperationException("GroundOverlayBuffer overflowed while emitting Total War circle formation outline.");
-        }
-
-        _currentStableIds.Add(stableId);
-        int count = 1;
+        int count = EmitSampledCircle(entity, ownerStableId, center, radiusM, ringWidthM, in outline);
         count += EmitFrontIndicator(entity, ownerStableId, center, ResolveForward(state.FacingRad), in outline);
         return count;
     }
@@ -169,66 +192,115 @@ internal sealed class TotalWarFormationOutlinePresentationSystem : ISystem<float
 
         float widthM = WorldUnits.CmToM(outline.FrontIndicatorLineWidthCm);
         Vector3 start = center;
-        return AddLine(entity, ownerStableId, FrontIndicatorSegmentIndex, start, forward, lengthM, widthM, in outline);
+        Vector3 end = center + (ToVisualVector(forward) * lengthM);
+        return AddSampledLine(entity, ownerStableId, TotalWarFormationOutlineSegment.FrontIndicator, start, end, widthM, in outline);
     }
 
-    private int AddLine(
+    private int AddSampledLine(
         Entity entity,
         int ownerStableId,
-        int segmentIndex,
+        TotalWarFormationOutlineSegment segment,
         Vector3 start,
-        Vector2 direction,
-        float lengthM,
+        Vector3 end,
         float widthM,
         in TotalWarFormationOutline outline)
     {
-        if (lengthM <= 0f || widthM <= 0f)
+        if (widthM <= 0f)
         {
-            throw new InvalidOperationException("Total War formation outline line segments require positive length and width.");
+            throw new InvalidOperationException("Total War formation outline line segments require positive width.");
         }
 
-        int stableId = CreateOverlayStableId(ownerStableId, segmentIndex);
-        var item = new GroundOverlayItem
+        int count = 0;
+        Vector3 previous = ProjectToGround(start, outline.HeightOffsetM);
+        int sampleCount = outline.CurveSampleCount;
+        for (int sample = 1; sample <= sampleCount; sample++)
         {
-            StableId = stableId,
-            Shape = GroundOverlayShape.Line,
-            Center = start,
-            Rotation = MathF.Atan2(direction.Y, direction.X),
-            Length = lengthM,
-            Width = widthM,
-            FillColor = outline.FillColor,
-            BorderColor = outline.BorderColor,
-            BorderWidth = widthM,
-        };
+            float t = sample / (float)sampleCount;
+            Vector3 current = ProjectToGround(Vector3.Lerp(start, end, t), outline.HeightOffsetM);
+            int stableId = CreateSegmentStableId(ownerStableId, segment, sample - 1, sampleCount);
+            if (!_splines.TryAddLine(
+                    stableId,
+                    previous,
+                    current,
+                    widthM,
+                    outline.FillColor,
+                    outline.BorderColor,
+                    widthM))
+            {
+                throw new InvalidOperationException($"RoadSplineBuffer overflowed while emitting Total War formation outline for entity {entity.Id}.");
+            }
 
-        if (!_overlays.Upsert(in item))
-        {
-            throw new InvalidOperationException($"GroundOverlayBuffer overflowed while emitting Total War formation outline for entity {entity.Id}.");
+            _currentStableIds.Add(stableId);
+            _currentStableIdSet.Add(stableId);
+            previous = current;
+            count++;
         }
 
-        _currentStableIds.Add(stableId);
-        return 1;
+        return count;
     }
 
-    private void RemovePreviousOverlays()
+    private int EmitSampledCircle(
+        Entity entity,
+        int ownerStableId,
+        Vector3 center,
+        float radiusM,
+        float widthM,
+        in TotalWarFormationOutline outline)
+    {
+        int count = 0;
+        Vector3 previous = ProjectToGround(center + new Vector3(radiusM, 0f, 0f), outline.HeightOffsetM);
+        int sampleCount = outline.CurveSampleCount;
+        for (int sample = 1; sample <= sampleCount; sample++)
+        {
+            float angle = MathF.Tau * sample / sampleCount;
+            Vector3 current = ProjectToGround(
+                center + new Vector3(MathF.Cos(angle) * radiusM, 0f, MathF.Sin(angle) * radiusM),
+                outline.HeightOffsetM);
+            int stableId = CreateSegmentStableId(ownerStableId, TotalWarFormationOutlineSegment.CircleRing, sample - 1, sampleCount);
+            if (!_splines.TryAddLine(
+                    stableId,
+                    previous,
+                    current,
+                    widthM,
+                    outline.FillColor,
+                    outline.BorderColor,
+                    widthM))
+            {
+                throw new InvalidOperationException($"RoadSplineBuffer overflowed while emitting Total War circle formation outline for entity {entity.Id}.");
+            }
+
+            _currentStableIds.Add(stableId);
+            _currentStableIdSet.Add(stableId);
+            previous = current;
+            count++;
+        }
+
+        return count;
+    }
+
+    private void RemovePreviousSplines()
     {
         for (int i = 0; i < _previousStableIds.Count; i++)
         {
-            _overlays.Remove(_previousStableIds[i]);
+            _splines.Remove(_previousStableIds[i]);
         }
 
         _previousStableIds.Clear();
         _currentStableIds.Clear();
+        _currentStableIdSet.Clear();
+        _currentOwnerStableIds.Clear();
+        _staleOwnerStableIds.Clear();
+        _emittedStateByOwnerStableId.Clear();
     }
 
-    private void RemoveStaleOverlays()
+    private void RemoveStaleSplines()
     {
         for (int i = 0; i < _previousStableIds.Count; i++)
         {
             int stableId = _previousStableIds[i];
-            if (!_currentStableIds.Contains(stableId))
+            if (!_currentStableIdSet.Contains(stableId))
             {
-                _overlays.Remove(stableId);
+                _splines.Remove(stableId);
             }
         }
 
@@ -236,20 +308,115 @@ internal sealed class TotalWarFormationOutlinePresentationSystem : ISystem<float
         _previousStableIds.AddRange(_currentStableIds);
     }
 
-    private static int CreateOverlayStableId(int ownerStableId, int segmentIndex)
+    private void RemoveStaleEmissionStates()
     {
-        long stableId = ((long)ownerStableId * OverlayStableIdStride) + segmentIndex;
-        if (stableId > int.MaxValue)
+        if (_emittedStateByOwnerStableId.Count == 0)
         {
-            throw new InvalidOperationException($"Total War formation outline stable id overflow for owner {ownerStableId}.");
+            return;
         }
 
-        return (int)stableId;
+        _staleOwnerStableIds.Clear();
+        foreach (int ownerStableId in _emittedStateByOwnerStableId.Keys)
+        {
+            if (!_currentOwnerStableIds.Contains(ownerStableId))
+            {
+                _staleOwnerStableIds.Add(ownerStableId);
+            }
+        }
+
+        for (int i = 0; i < _staleOwnerStableIds.Count; i++)
+        {
+            _emittedStateByOwnerStableId.Remove(_staleOwnerStableIds[i]);
+        }
+    }
+
+    private void TrackExistingStableIds(int ownerStableId, in TotalWarFormationOutline outline)
+    {
+        if (outline.Shape == TotalWarFormationOutlineShape.Rectangle)
+        {
+            TrackSegmentStableIds(ownerStableId, TotalWarFormationOutlineSegment.RectangleFront, in outline);
+            TrackSegmentStableIds(ownerStableId, TotalWarFormationOutlineSegment.RectangleBack, in outline);
+            TrackSegmentStableIds(ownerStableId, TotalWarFormationOutlineSegment.RectangleLeft, in outline);
+            TrackSegmentStableIds(ownerStableId, TotalWarFormationOutlineSegment.RectangleRight, in outline);
+        }
+        else if (outline.Shape == TotalWarFormationOutlineShape.Circle)
+        {
+            TrackSegmentStableIds(ownerStableId, TotalWarFormationOutlineSegment.CircleRing, in outline);
+        }
+        else
+        {
+            throw new InvalidOperationException($"Total War formation outline has unsupported shape {outline.Shape}.");
+        }
+
+        if (outline.FrontIndicatorLengthCm > 0f)
+        {
+            TrackSegmentStableIds(ownerStableId, TotalWarFormationOutlineSegment.FrontIndicator, in outline);
+        }
+    }
+
+    private void TrackSegmentStableIds(int ownerStableId, TotalWarFormationOutlineSegment segment, in TotalWarFormationOutline outline)
+    {
+        int sampleCount = outline.CurveSampleCount;
+        for (int sample = 0; sample < sampleCount; sample++)
+        {
+            int stableId = CreateSegmentStableId(ownerStableId, segment, sample, sampleCount);
+            _currentStableIds.Add(stableId);
+            _currentStableIdSet.Add(stableId);
+        }
+    }
+
+    private static int OutlineStableIdCount(in TotalWarFormationOutline outline)
+    {
+        int segmentCount = outline.Shape switch
+        {
+            TotalWarFormationOutlineShape.Rectangle => 4,
+            TotalWarFormationOutlineShape.Circle => 1,
+            _ => throw new InvalidOperationException($"Total War formation outline has unsupported shape {outline.Shape}."),
+        };
+
+        if (outline.FrontIndicatorLengthCm > 0f)
+        {
+            segmentCount++;
+        }
+
+        return segmentCount * outline.CurveSampleCount;
+    }
+
+    private static int CreateSegmentStableId(int ownerStableId, TotalWarFormationOutlineSegment segment, int sampleIndex, int sampleCount)
+    {
+        if (sampleCount <= 0)
+        {
+            throw new InvalidOperationException("Total War formation outline requires configured CurveSampleCount > 0.");
+        }
+
+        if (sampleIndex < 0 || sampleIndex >= sampleCount)
+        {
+            throw new InvalidOperationException($"Total War formation outline sample index {sampleIndex} is outside configured curve samples {sampleCount}.");
+        }
+
+        return PerformerBehaviorRuntimeUtility.ComposeVisualStableId(
+            ownerStableId,
+            ((int)segment * sampleCount) + sampleIndex,
+            AssetKind.Spline,
+            (int)segment);
     }
 
     private static Vector3 ResolveCenter(in VisualTransform transform, float heightOffsetM)
     {
         return new Vector3(transform.Position.X, transform.Position.Y + heightOffsetM, transform.Position.Z);
+    }
+
+    private Vector3 ProjectToGround(in Vector3 position, float heightOffsetM)
+    {
+        float worldXCm = WorldUnits.MToCm(position.X);
+        float worldYCm = WorldUnits.MToCm(position.Z);
+        if (!_heightmap.TrySampleHeightCm(worldXCm, worldYCm, out float heightCm))
+        {
+            throw new InvalidOperationException(
+                $"Total War formation outline requires visual heightmap coverage at world cm ({worldXCm:0.##}, {worldYCm:0.##}).");
+        }
+
+        return new Vector3(position.X, WorldUnits.CmToM(heightCm) + heightOffsetM, position.Z);
     }
 
     private static Vector2 ResolveForward(float facingRad)
@@ -262,4 +429,127 @@ internal sealed class TotalWarFormationOutlinePresentationSystem : ISystem<float
         return new Vector3(logicVector.X, 0f, logicVector.Y);
     }
 
+    private readonly struct OutlineEmissionState
+    {
+        public readonly TotalWarFormationOutlineShape Shape;
+        public readonly float CenterX;
+        public readonly float CenterY;
+        public readonly float CenterZ;
+        public readonly float FacingRad;
+        public readonly float WidthCm;
+        public readonly float DepthCm;
+        public readonly float RadiusCm;
+        public readonly float HeightOffsetM;
+        public readonly int CurveSampleCount;
+        public readonly float EdgeLineWidthCm;
+        public readonly float CircleRingWidthCm;
+        public readonly float FrontIndicatorLengthCm;
+        public readonly float FrontIndicatorLineWidthCm;
+        public readonly Vector4 FillColor;
+        public readonly Vector4 BorderColor;
+
+        private OutlineEmissionState(
+            TotalWarFormationOutlineShape shape,
+            float centerX,
+            float centerY,
+            float centerZ,
+            float facingRad,
+            in TotalWarFormationOutline outline)
+        {
+            Shape = shape;
+            CenterX = centerX;
+            CenterY = centerY;
+            CenterZ = centerZ;
+            FacingRad = facingRad;
+            WidthCm = outline.WidthCm;
+            DepthCm = outline.DepthCm;
+            RadiusCm = outline.RadiusCm;
+            HeightOffsetM = outline.HeightOffsetM;
+            CurveSampleCount = outline.CurveSampleCount;
+            EdgeLineWidthCm = outline.EdgeLineWidthCm;
+            CircleRingWidthCm = outline.CircleRingWidthCm;
+            FrontIndicatorLengthCm = outline.FrontIndicatorLengthCm;
+            FrontIndicatorLineWidthCm = outline.FrontIndicatorLineWidthCm;
+            FillColor = outline.FillColor;
+            BorderColor = outline.BorderColor;
+        }
+
+        public static OutlineEmissionState From(
+            in TotalWarFormationState state,
+            in TotalWarFormationOutline outline,
+            in VisualTransform transform)
+        {
+            return new OutlineEmissionState(
+                outline.Shape,
+                transform.Position.X,
+                transform.Position.Y,
+                transform.Position.Z,
+                state.FacingRad,
+                in outline);
+        }
+
+        public bool Equals(
+            OutlineEmissionState other,
+            float positionEpsilonM,
+            float facingEpsilonRadians)
+        {
+            if (!(positionEpsilonM > 0f))
+            {
+                throw new InvalidOperationException("Total War formation outline requires EmissionPositionEpsilonM > 0.");
+            }
+
+            if (!(facingEpsilonRadians > 0f))
+            {
+                throw new InvalidOperationException("Total War formation outline requires EmissionFacingEpsilonRadians > 0.");
+            }
+
+            return Shape == other.Shape &&
+                Within(CenterX, other.CenterX, positionEpsilonM) &&
+                Within(CenterY, other.CenterY, positionEpsilonM) &&
+                Within(CenterZ, other.CenterZ, positionEpsilonM) &&
+                MathF.Abs(NormalizeAngleRadians(FacingRad - other.FacingRad)) < facingEpsilonRadians &&
+                WidthCm.Equals(other.WidthCm) &&
+                DepthCm.Equals(other.DepthCm) &&
+                RadiusCm.Equals(other.RadiusCm) &&
+                HeightOffsetM.Equals(other.HeightOffsetM) &&
+                CurveSampleCount == other.CurveSampleCount &&
+                EdgeLineWidthCm.Equals(other.EdgeLineWidthCm) &&
+                CircleRingWidthCm.Equals(other.CircleRingWidthCm) &&
+                FrontIndicatorLengthCm.Equals(other.FrontIndicatorLengthCm) &&
+                FrontIndicatorLineWidthCm.Equals(other.FrontIndicatorLineWidthCm) &&
+                FillColor.Equals(other.FillColor) &&
+                BorderColor.Equals(other.BorderColor);
+        }
+
+        private static bool Within(float left, float right, float epsilon)
+        {
+            return MathF.Abs(left - right) < epsilon;
+        }
+
+        private static float NormalizeAngleRadians(float angle)
+        {
+            while (angle > MathF.PI)
+            {
+                angle -= MathF.Tau;
+            }
+
+            while (angle < -MathF.PI)
+            {
+                angle += MathF.Tau;
+            }
+
+            return angle;
+        }
+    }
+}
+
+internal enum TotalWarFormationOutlineSegment : byte
+{
+    CircleRing = 1,
+    RectangleFront = 2,
+    RectangleBack = 3,
+    RectangleLeft = 4,
+    RectangleRight = 5,
+    FrontIndicator = 6,
+    ReservedMax = FrontIndicator,
 }

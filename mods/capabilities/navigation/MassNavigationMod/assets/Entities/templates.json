@@ -26,6 +26,10 @@
       "GameplayTagContainer": {},
       "TagCountContainer": {},
       "MassNavigationAgentTag": {},
+      "EntityLayer": {
+        "category": [ "massNavigation.agent" ],
+        "mask": [ "massNavigation.agent" ]
+      },
       "MassNavigationControllable": {}
     }
   },
@@ -48,6 +52,10 @@
       "GameplayTagContainer": {},
       "TagCountContainer": {},
       "MassNavigationAgentTag": {},
+      "EntityLayer": {
+        "category": [ "massNavigation.agent" ],
+        "mask": [ "massNavigation.agent" ]
+      },
       "MassNavigationControllable": {}
     }
   },
@@ -70,6 +78,10 @@
       "GameplayTagContainer": {},
       "TagCountContainer": {},
       "MassNavigationAgentTag": {},
+      "EntityLayer": {
+        "category": [ "massNavigation.agent" ],
+        "mask": [ "massNavigation.agent" ]
+      },
       "MassNavigationControllable": {}
     }
   },
@@ -92,6 +104,10 @@
       "GameplayTagContainer": {},
       "TagCountContainer": {},
       "MassNavigationAgentTag": {},
+      "EntityLayer": {
+        "category": [ "massNavigation.agent" ],
+        "mask": [ "massNavigation.agent" ]
+      },
       "MassNavigationControllable": {}
     }
   },
@@ -114,6 +130,10 @@
       "GameplayTagContainer": {},
       "TagCountContainer": {},
       "MassNavigationAgentTag": {},
+      "EntityLayer": {
+        "category": [ "massNavigation.agent" ],
+        "mask": [ "massNavigation.agent" ]
+      },
       "MassNavigationControllable": {}
     }
   },
@@ -136,6 +156,10 @@
       "GameplayTagContainer": {},
       "TagCountContainer": {},
       "MassNavigationAgentTag": {},
+      "EntityLayer": {
+        "category": [ "massNavigation.agent" ],
+        "mask": [ "massNavigation.agent" ]
+      },
       "MassNavigationControllable": {}
     }
   },
@@ -158,6 +182,10 @@
       "GameplayTagContainer": {},
       "TagCountContainer": {},
       "MassNavigationAgentTag": {},
+      "EntityLayer": {
+        "category": [ "massNavigation.agent" ],
+        "mask": [ "massNavigation.agent" ]
+      },
       "MassNavigationControllable": {}
     }
   },
@@ -180,6 +208,10 @@
       "GameplayTagContainer": {},
       "TagCountContainer": {},
       "MassNavigationAgentTag": {},
+      "EntityLayer": {
+        "category": [ "massNavigation.agent" ],
+        "mask": [ "massNavigation.agent" ]
+      },
       "MassNavigationControllable": {}
     }
   },

@@ -307,22 +307,13 @@ namespace Ludots.Core.Config
 
         private static SpatialBoundsKind ParseSpatialBoundsKind(string value)
         {
-            if (string.Equals(value, "Point", StringComparison.OrdinalIgnoreCase))
+            return value switch
             {
-                return SpatialBoundsKind.Point;
-            }
-
-            if (string.Equals(value, "Footprint2D", StringComparison.OrdinalIgnoreCase))
-            {
-                return SpatialBoundsKind.Footprint2D;
-            }
-
-            if (string.Equals(value, "Box3D", StringComparison.OrdinalIgnoreCase))
-            {
-                return SpatialBoundsKind.Box3D;
-            }
-
-            throw new InvalidOperationException($"Unsupported SpatialBounds kind '{value}'. Expected Point, Footprint2D, or Box3D.");
+                "Point" => SpatialBoundsKind.Point,
+                "Footprint2D" => SpatialBoundsKind.Footprint2D,
+                "Box3D" => SpatialBoundsKind.Box3D,
+                _ => throw new InvalidOperationException($"Unsupported SpatialBounds kind '{value}'. Expected Point, Footprint2D, or Box3D."),
+            };
         }
 
         private static void SetFootprintPolygon(ref SpatialFootprint2D footprint, int polygonIndex, JsonArray vertices)
@@ -417,37 +408,8 @@ namespace Ludots.Core.Config
 
         private static void SetEntityLayer(Entity entity, JsonNode data)
         {
-            uint category = 0;
-            uint mask = uint.MaxValue; // default: interact with all layers
-            if (data is JsonObject obj)
-            {
-                if (obj.TryGetPropertyValue("category", out var catNode) && catNode is JsonArray catArr)
-                {
-                    foreach (var item in catArr)
-                    {
-                        string name = item?.GetValue<string>();
-                        if (!string.IsNullOrEmpty(name))
-                        {
-                            int idx = LayerRegistry.GetIndex(name);
-                            if (idx >= 0) category |= 1u << idx;
-                        }
-                    }
-                }
-                if (obj.TryGetPropertyValue("mask", out var maskNode) && maskNode is JsonArray maskArr)
-                {
-                    mask = 0;
-                    foreach (var item in maskArr)
-                    {
-                        string name = item?.GetValue<string>();
-                        if (!string.IsNullOrEmpty(name))
-                        {
-                            int idx = LayerRegistry.GetIndex(name);
-                            if (idx >= 0) mask |= 1u << idx;
-                        }
-                    }
-                }
-            }
-            entity.Add(new Ludots.Core.Gameplay.Components.EntityLayer(category, mask));
+            LayerMask layerMask = EntityLayerAuthoring.ReadLayerMask(data, "EntityLayer component");
+            entity.Add(new Ludots.Core.Gameplay.Components.EntityLayer(layerMask));
         }
 
         private static unsafe void SetAttributeBuffer(Entity entity, JsonNode data)

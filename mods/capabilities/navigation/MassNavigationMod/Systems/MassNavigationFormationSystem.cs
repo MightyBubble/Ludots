@@ -32,6 +32,10 @@ internal sealed class MassNavigationFormationSystem : ISystem<float>
         }
 
         ObserveCameraFocus();
+        if (!_simulation.AgentState.HasBoundAgents(_simulation.MassFlow.UnitCount))
+        {
+            return;
+        }
 
         int stepsToRun = _simulation.CadenceScheduler.BeginFixedTick(dt);
         for (int stepIndex = 0; stepIndex < stepsToRun; stepIndex++)
@@ -43,6 +47,7 @@ internal sealed class MassNavigationFormationSystem : ISystem<float>
             {
                 long targetStart = Stopwatch.GetTimestamp();
                 _simulation.NavGroupRuntime.UpdateTargets(
+                    _engine.World,
                     _simulation.MassFlow,
                     _simulation.AgentState,
                     _simulation.SelectedEntities,
@@ -63,6 +68,7 @@ internal sealed class MassNavigationFormationSystem : ISystem<float>
             long start = Stopwatch.GetTimestamp();
             _simulation.MassFlow.Step(
                 step.SimulationDt,
+                _engine.World,
                 _simulation.NavGroupRuntime,
                 step.RunHardResolve,
                 _simulation.Cadence.HardResolveCandidateThresholdAgents,

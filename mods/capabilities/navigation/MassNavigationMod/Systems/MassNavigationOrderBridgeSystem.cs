@@ -16,7 +16,7 @@ internal sealed class MassNavigationOrderBridgeSystem : ISystem<float>
     private const int IdleScanIntervalFrames = 6;
 
     private static readonly QueryDescription Query = new QueryDescription()
-        .WithAll<MassNavigationAgentTag, MassNavigationAgentIndex, Team, OrderBuffer>();
+        .WithAll<MassNavigationAgentTag, MassNavigationAgentIndex, MassNavigationControllable, Team, OrderBuffer>();
 
     private readonly GameEngine _engine;
     private readonly MassNavigationSimulationRuntime _simulation;
@@ -81,9 +81,7 @@ internal sealed class MassNavigationOrderBridgeSystem : ISystem<float>
             OrderBucket bucket = _buckets[bucketIndex];
             bucket.TeamId = team.Id;
             bucket.Destination = new Vector2(order.Args.Spatial.WorldCm.X, order.Args.Spatial.WorldCm.Z);
-            bucket.FormationMode = System.Enum.IsDefined(typeof(MassNavigationFormationMode), order.Args.I0)
-                ? (MassNavigationFormationMode)order.Args.I0
-                : MassNavigationFormationMode.None;
+            bucket.FormationMode = ResolveFormationMode(order.Args.I0, token);
             bucket.RotationRadians = order.Args.F0;
             bucket.Members.Add(agentIndex.Value);
         });
@@ -98,6 +96,7 @@ internal sealed class MassNavigationOrderBridgeSystem : ISystem<float>
 
             _simulation.NavGroupRuntime.UpsertOrderMoveCommand(
                 _simulation.MassFlow,
+                _simulation.AgentState,
                 bucket.Token,
                 System.Runtime.InteropServices.CollectionsMarshal.AsSpan(bucket.Members),
                 bucket.TeamId,
@@ -123,12 +122,8 @@ internal sealed class MassNavigationOrderBridgeSystem : ISystem<float>
             for (int i = 0; i < bucket.Members.Count; i++)
             {
                 int memberIndex = bucket.Members[i];
-                if ((uint)memberIndex >= (uint)_simulation.AgentState.ControllableCount)
-                {
-                    continue;
-                }
-
-                orderBufferSystem.NotifyOrderComplete(_simulation.AgentState.ControllableAgents[memberIndex]);
+                Entity member = ResolveControllableAgent(memberIndex, bucket.Token);
+                orderBufferSystem.NotifyOrderComplete(member);
             }
         }
 
@@ -158,6 +153,40 @@ internal sealed class MassNavigationOrderBridgeSystem : ISystem<float>
         }
 
         return _moveOrderTypeId;
+    }
+
+    private static MassNavigationFormationMode ResolveFormationMode(int rawValue, int orderToken)
+    {
+        if (!System.Enum.IsDefined(typeof(MassNavigationFormationMode), rawValue))
+        {
+            throw new InvalidOperationException(
+                $"MassNavigationMod move order {orderToken} references unsupported formation mode value {rawValue}.");
+        }
+
+        return (MassNavigationFormationMode)rawValue;
+    }
+
+    private Entity ResolveControllableAgent(int agentIndex, int orderToken)
+    {
+        if (!_simulation.AgentState.TryGetControllableEntity(agentIndex, out Entity entity))
+        {
+            throw new InvalidOperationException(
+                $"MassNavigationMod order {orderToken} references controllable agent index {agentIndex}, but no controllable entity is bound at that MassNavigation agent index.");
+        }
+
+        if (!_engine.World.IsAlive(entity))
+        {
+            throw new InvalidOperationException(
+                $"MassNavigationMod order {orderToken} references controllable agent index {agentIndex}, but the bound entity is not alive.");
+        }
+
+        if (!_engine.World.Has<OrderBuffer>(entity))
+        {
+            throw new InvalidOperationException(
+                $"MassNavigationMod order {orderToken} references controllable agent index {agentIndex}, but the bound entity does not author OrderBuffer.");
+        }
+
+        return entity;
     }
 
     private int GetOrCreateBucket(int token)

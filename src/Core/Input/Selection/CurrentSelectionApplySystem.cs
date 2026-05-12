@@ -151,7 +151,6 @@ namespace Ludots.Core.Input.Selection
             }
 
             _selection.TryGetOrCreateSelectionEntity(owner, SelectionSetKeys.LivePrimary, out _);
-            _selection.TryBindView(owner, SelectionViewKeys.Primary, owner, SelectionSetKeys.LivePrimary);
             EnsureLivePrimarySelectionView(owner);
         }
 
@@ -162,13 +161,24 @@ namespace Ludots.Core.Input.Selection
                 _world.IsAlive(viewer) &&
                 _globals.TryGetValue(CoreServiceKeys.SelectionViewKey.Name, out var viewKeyObj) &&
                 viewKeyObj is string viewKey &&
-                !string.IsNullOrWhiteSpace(viewKey))
+                !string.IsNullOrWhiteSpace(viewKey) &&
+                SelectionContextRuntime.TryDescribeCurrentView(_world, _globals, out _))
             {
                 return;
             }
 
-            _globals[CoreServiceKeys.SelectionViewViewerEntity.Name] = owner;
-            _globals[CoreServiceKeys.SelectionViewKey.Name] = SelectionViewKeys.Primary;
+            if (!SelectionContextRuntime.TrySetCurrentView(
+                    _world,
+                    _globals,
+                    _selection,
+                    owner,
+                    SelectionViewKeys.Primary,
+                    owner,
+                    SelectionSetKeys.LivePrimary,
+                    out _))
+            {
+                throw new InvalidOperationException("CurrentSelectionApplySystem failed to bind LivePrimary as the primary selection view.");
+            }
         }
 
         private void UpdateHoveredEntity(Entity hovered)

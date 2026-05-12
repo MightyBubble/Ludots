@@ -11,7 +11,7 @@ namespace MassNavigationMod.Systems;
 
 internal static class MassNavigationScenarioBootstrap
 {
-    public static void SpawnDefaultScenario(GameEngine engine, MassNavigationSimulationRuntime simulation, TeamEntityLookup teamLookup)
+    public static void SpawnConfiguredScenario(GameEngine engine, MassNavigationSimulationRuntime simulation, TeamEntityLookup teamLookup)
     {
         ArgumentNullException.ThrowIfNull(engine);
         ArgumentNullException.ThrowIfNull(simulation);
@@ -42,7 +42,13 @@ internal static class MassNavigationScenarioBootstrap
         ReadOnlySpan<int> teamIds = simulation.TeamIds;
         simulation.ConfigureScenarioTeams(teamIds);
         ConfigureRelationships(simulation.Config);
-        simulation.MassFlow.Reset(teamIds, simulation.AgentsPerTeam, simulation.WorldConfig.Obstacles, simulation.Config.AgentProfiles);
+        MassNavigationAgentLayer scenarioAgentLayer = ResolveScenarioAgentLayer(authoring, simulation.Config);
+        simulation.MassFlow.Reset(
+            teamIds,
+            simulation.AgentsPerTeam,
+            simulation.WorldConfig.Obstacles,
+            simulation.Config.AgentProfiles,
+            scenarioAgentLayer);
 
         for (int teamIndex = 0; teamIndex < teamIds.Length; teamIndex++)
         {
@@ -68,6 +74,8 @@ internal static class MassNavigationScenarioBootstrap
             float worldYCm = simulation.ToWorldYCm(yCm);
             float navMass = simulation.MassFlow.GetNavMass(i);
             float visualScale = simulation.MassFlow.GetVisualScale(i);
+            float bodyRadiusCm = simulation.MassFlow.GetBodyRadiusCm(i);
+            float speedCmPerSecond = simulation.MassFlow.GetSpeedCmPerSecond(i);
             bool heavy = simulation.MassFlow.IsHeavyProfile(i);
             string templateId = simulation.Config.Presentation.ResolveAgentTemplateId(teamId, heavy);
             authoring.ValidateTemplate(templateId);
@@ -78,14 +86,14 @@ internal static class MassNavigationScenarioBootstrap
                 receiptChannelId,
                 templateId,
                 Fix64Vec2.FromInt((int)MathF.Round(worldXCm), (int)MathF.Round(worldYCm)),
-                new MassNavigationSpawnReceiptBinding(
-                    MassNavigationSpawnReceiptKind.Agent,
-                    i,
-                    teamId,
+                MassNavigationSpawnReceiptBinding.ForAgent(
+                    agentIndex: i,
+                    expectedTeamId: teamId,
                     heavy,
                     navMass,
                     visualScale,
-                    blockerRadiusCm: 0f,
+                    bodyRadiusCm,
+                    speedCmPerSecond,
                     templateId));
         }
 
@@ -105,15 +113,7 @@ internal static class MassNavigationScenarioBootstrap
                 receiptChannelId,
                 templateId,
                 Fix64Vec2.FromInt((int)MathF.Round(worldXCm), (int)MathF.Round(worldYCm)),
-                new MassNavigationSpawnReceiptBinding(
-                    MassNavigationSpawnReceiptKind.Blocker,
-                    unitIndex: -1,
-                    expectedTeamId: 0,
-                    heavy: false,
-                    navMass: 0f,
-                    visualScale: 0f,
-                    radiusCm,
-                    templateId));
+                MassNavigationSpawnReceiptBinding.ForBlocker(radiusCm, templateId));
         }
 
         string hotspotTemplateId = simulation.Config.Presentation.HotspotTemplateId;
@@ -129,15 +129,7 @@ internal static class MassNavigationScenarioBootstrap
                 receiptChannelId,
                 hotspotTemplateId,
                 Fix64Vec2.FromInt(zone.CenterXCm, zone.CenterYCm),
-                new MassNavigationSpawnReceiptBinding(
-                    MassNavigationSpawnReceiptKind.WorldMarker,
-                    unitIndex: -1,
-                    expectedTeamId: 0,
-                    heavy: false,
-                    navMass: 0f,
-                    visualScale: 0f,
-                    blockerRadiusCm: 0f,
-                    hotspotTemplateId));
+                MassNavigationSpawnReceiptBinding.ForWorldMarker(hotspotTemplateId));
         }
 
         simulation.MarkScenarioSpawned();
@@ -147,6 +139,47 @@ internal static class MassNavigationScenarioBootstrap
     private static void ConfigureRelationships(MassNavigationConfig config)
     {
         TeamManager.LoadConfig(config.TeamRelationships);
+    }
+
+    private static MassNavigationAgentLayer ResolveScenarioAgentLayer(
+        MassNavigationAuthoringContract authoring,
+        MassNavigationConfig config)
+    {
+        MassNavigationAgentLayer? resolved = null;
+        for (int i = 0; i < config.Presentation.Teams.Length; i++)
+        {
+            MassNavigationTeamPresentationConfig team = config.Presentation.Teams[i];
+            MassNavigationAgentLayer lightLayer = authoring.RequireAgentLayer(team.LightTemplateId);
+            MassNavigationAgentLayer heavyLayer = authoring.RequireAgentLayer(team.HeavyTemplateId);
+            RequireSameLayer(lightLayer, heavyLayer, team.LightTemplateId, team.HeavyTemplateId);
+
+            if (resolved.HasValue)
+            {
+                RequireSameLayer(resolved.Value, lightLayer, "MassNavigation scenario agent layer", team.LightTemplateId);
+            }
+            else
+            {
+                resolved = lightLayer;
+            }
+        }
+
+        return resolved ?? throw new InvalidOperationException("MassNavigationMod requires at least one configured presentation team.");
+    }
+
+    private static void RequireSameLayer(
+        MassNavigationAgentLayer expected,
+        MassNavigationAgentLayer actual,
+        string expectedLabel,
+        string actualLabel)
+    {
+        if (expected.CategoryMask == actual.CategoryMask &&
+            expected.InteractionMask == actual.InteractionMask)
+        {
+            return;
+        }
+
+        throw new InvalidOperationException(
+            $"MassNavigationMod scenario auto-spawn requires one explicit agent layer across generated agent templates; '{actualLabel}' differs from '{expectedLabel}'.");
     }
 
     private static void EnqueueSpawn(

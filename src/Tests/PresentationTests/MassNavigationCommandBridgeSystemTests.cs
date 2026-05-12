@@ -8,11 +8,13 @@ using Ludots.Core.Gameplay.Components;
 using Ludots.Core.Gameplay.GAS.Components;
 using Ludots.Core.Gameplay.GAS.Orders;
 using Ludots.Core.Gameplay.GAS.Systems;
+using Ludots.Core.Layers;
 using Ludots.Core.Input.Selection;
 using Ludots.Core.Mathematics;
 using Ludots.Core.Registry;
 using Ludots.Core.Scripting;
 using Ludots.Core.Spatial;
+using MassNavigationMod;
 using MassNavigationMod.Runtime;
 using MassNavigationMod.Systems;
 using NUnit.Framework;
@@ -31,7 +33,7 @@ namespace Ludots.Tests.Presentation
             Vector2 target = new(1200f, 1400f);
 
             context.Bridge.SubmitMoveCommandForTests(target);
-            int applied = context.Simulation.Commands.ApplyPending(context.Simulation);
+            int applied = context.Simulation.Commands.ApplyPending(context.World, context.Simulation);
 
             Assert.That(applied, Is.EqualTo(0));
             Assert.That(context.Simulation.PendingCommandCount, Is.EqualTo(0));
@@ -67,6 +69,20 @@ namespace Ludots.Tests.Presentation
             Assert.That(context.Simulation.PendingCommandCount, Is.EqualTo(0));
         }
 
+        [Test]
+        public void RightClickMove_WithSelectionRequiresCurrentSelectionContainer()
+        {
+            using TestContextScope context = CreateContext();
+            context.Select(context.Agent);
+            context.Engine.GlobalContext.Remove(CoreServiceKeys.SelectionViewKey.Name);
+
+            InvalidOperationException ex = Assert.Throws<InvalidOperationException>(
+                () => context.Bridge.SubmitMoveCommandForTests(new Vector2(1600f, 1800f)))!;
+
+            Assert.That(ex.Message, Does.Contain("current selection container"));
+            Assert.That(context.World.Get<OrderBuffer>(context.Agent).HasActive, Is.False);
+        }
+
         private static TestContextScope CreateContext()
         {
             var engine = new GameEngine();
@@ -85,8 +101,10 @@ namespace Ludots.Tests.Presentation
             var config = CreateConfig();
             var simulation = new MassNavigationSimulationRuntime(config);
             simulation.BindBoardWorld(new WorldSizeSpec(new WorldAabbCm(0, 0, 25_000, 25_000), 100));
-            simulation.MassFlow.Reset(new[] { 1, 2 }, unitsPerTeam: 1, config.World!.Obstacles);
-            simulation.AgentState.RegisterAgent(agent, controllable: true);
+            int layerIndex = LayerRegistry.Register(MassNavigationLayerNames.Agent);
+            var agentLayer = new MassNavigationAgentLayer(1u << layerIndex, 1u << layerIndex);
+            simulation.MassFlow.Reset(new[] { 1, 2 }, unitsPerTeam: 1, config.World!.Obstacles, config.AgentProfiles, agentLayer);
+            simulation.AgentState.RegisterAgentAtIndex(agent, agentIndex: 0, controllable: true);
 
             var selectionRegistry = new StringIntRegistry(32, 1, 0, StringComparer.Ordinal);
             var selection = new SelectionRuntime(world, new SelectionRuntimeConfig(), selectionRegistry);
@@ -183,9 +201,28 @@ namespace Ludots.Tests.Presentation
                         new MassNavigationScenarioTeamConfig { Id = 2, Name = "Team 2" },
                     },
                 },
+                AgentProfiles = new MassNavigationAgentProfileSetConfig
+                {
+                    DefaultProfileId = "light",
+                    Profiles = new[]
+                    {
+                        new MassNavigationAgentProfileConfig
+                        {
+                            Id = "light",
+                            Heavy = false,
+                            NavMass = 1f,
+                            VisualScale = 0.22f,
+                            BodyRadiusCm = 20f,
+                            SpeedCmPerSecond = 800f,
+                            EveryNth = 0,
+                            NthOffset = 0,
+                        },
+                    },
+                },
             };
             config.World.Validate();
             config.Scenario.Validate();
+            config.AgentProfiles.Validate();
             return config;
         }
 

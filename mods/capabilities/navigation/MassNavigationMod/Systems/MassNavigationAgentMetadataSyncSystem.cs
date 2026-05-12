@@ -44,10 +44,25 @@ internal sealed class MassNavigationAgentMetadataSyncSystem : ISystem<float>
         _lastSyncedStructuralChangeFrame = _simulation.StructuralChangeRevision;
 
         _teamSet.Clear();
-        _engine.World.Query(in Query, (ref MassNavigationAgentIndex agentIndex, ref Team team, ref MassNavigationAgentProfile profile) =>
+        _engine.World.Query(in Query, (Entity entity, ref MassNavigationAgentIndex agentIndex, ref Team team, ref MassNavigationAgentProfile profile) =>
         {
             _teamSet.Add(team.Id);
-            _simulation.MassFlow.SetUnitRuntimeProfile(agentIndex.Value, team.Id, profile.Heavy, profile.NavMass, profile.VisualScale);
+            if (!_engine.World.Has<EntityLayer>(entity))
+            {
+                throw new System.InvalidOperationException(
+                    $"MassNavigation agent entity {entity.Id} requires an explicit EntityLayer component.");
+            }
+
+            EntityLayer layer = _engine.World.Get<EntityLayer>(entity);
+            _simulation.MassFlow.SetUnitRuntimeProfile(
+                agentIndex.Value,
+                team.Id,
+                profile.Heavy,
+                profile.NavMass,
+                profile.VisualScale,
+                profile.BodyRadiusCm,
+                profile.SpeedCmPerSecond,
+                new MassNavigationAgentLayer(layer.Value.Category, layer.Value.Mask));
         });
 
         if (_teamSet.Count <= 0)

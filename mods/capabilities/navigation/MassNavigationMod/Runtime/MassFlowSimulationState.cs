@@ -23,11 +23,11 @@ public sealed class MassFlowSimulationState
     private const int SeparationHashCellSizeCm = 100;
     private const int SeparationHashWidth = FieldWidthCm / SeparationHashCellSizeCm;
     private const int SeparationHashHeight = FieldHeightCm / SeparationHashCellSizeCm;
-    private const int SeparationHashSearchRadius = 2;
+    private const int DefaultSeparationHashSearchRadiusCells = 2;
     private const int HardResolveHashCellSizeCm = 50;
     private const int HardResolveHashWidth = FieldWidthCm / HardResolveHashCellSizeCm;
     private const int HardResolveHashHeight = FieldHeightCm / HardResolveHashCellSizeCm;
-    private const int HardResolveHashSearchRadius = 1;
+    private const int DefaultHardResolveHashSearchRadiusCells = 1;
     private const float MinPositionCm = 50f;
     private const float MaxPositionCm = 9_950f;
 
@@ -59,8 +59,15 @@ public sealed class MassFlowSimulationState
     private int[] _teams = Array.Empty<int>();
     private int[] _teamRuntimeIndices = Array.Empty<int>();
     private int[] _teamLocalIndices = Array.Empty<int>();
+    private int[] _flowRuntimeIndices = Array.Empty<int>();
+    private uint[] _layerCategoryMasks = Array.Empty<uint>();
+    private uint[] _layerInteractionMasks = Array.Empty<uint>();
     private float[] _navMasses = Array.Empty<float>();
     private float[] _visualScales = Array.Empty<float>();
+    private float[] _bodyRadiiCm = Array.Empty<float>();
+    private float[] _speedsCmPerSecond = Array.Empty<float>();
+    private int[] _separationHashSearchRadiusCellsByAgent = Array.Empty<int>();
+    private int[] _hardResolveHashSearchRadiusCellsByAgent = Array.Empty<int>();
     private float[] _unitTargetsCm = Array.Empty<float>();
     private byte[] _hasUnitTarget = Array.Empty<byte>();
     private byte[] _selectedFlags = Array.Empty<byte>();
@@ -77,12 +84,17 @@ public sealed class MassFlowSimulationState
     private JobHandle[] _stepHandles = Array.Empty<JobHandle>();
 
     private readonly List<TeamRuntimeState> _teamStates = new();
+    private readonly List<FlowRuntimeState> _flowStates = new();
     private readonly Dictionary<int, int> _teamStateIndexById = new();
     private TeamRelationship[] _teamRelationshipMatrix = Array.Empty<TeamRelationship>();
+    private readonly float[] _maxBodyRadiusByCategoryBit = new float[32];
     private int _frameCount;
     private bool _useCandidateGating;
     private int _entitySyncDirtyCount;
     private bool _flowDirty = true;
+    private float _maxBodyRadiusCm;
+    private float[] _maxInteractingBodyRadiiCm = Array.Empty<float>();
+    private bool _maxInteractingBodyRadiiDirty = true;
     private int _lastFlowStepFrame = int.MinValue;
     private int _lastCrowdStampFrame = int.MinValue;
     private int _lastObstacleStampFrame = int.MinValue;
@@ -124,6 +136,8 @@ public sealed class MassFlowSimulationState
     public int GetTeam(int index) => _teams[index];
     public float GetNavMass(int index) => _navMasses[index];
     public float GetVisualScale(int index) => _visualScales[index];
+    public float GetBodyRadiusCm(int index) => _bodyRadiiCm[index];
+    public float GetSpeedCmPerSecond(int index) => _speedsCmPerSecond[index];
     public bool IsHeavyProfile(int index) => _heavyProfileFlags[index] != 0;
     public bool IsSelected(int index) => _selectedFlags[index] != 0;
     public float GetObstacleX(int index) => _obsX[index];
@@ -201,16 +215,12 @@ public sealed class MassFlowSimulationState
         MarkAllEntitiesDirty();
     }
 
-    public void Reset(ReadOnlySpan<int> teamIds, int unitsPerTeam, ReadOnlySpan<MassNavigationObstacleConfig> obstacles)
-    {
-        Reset(teamIds, unitsPerTeam, obstacles, null);
-    }
-
     public void Reset(
         ReadOnlySpan<int> teamIds,
         int unitsPerTeam,
         ReadOnlySpan<MassNavigationObstacleConfig> obstacles,
-        MassNavigationAgentProfileSetConfig? profileSet)
+        MassNavigationAgentProfileSetConfig profileSet,
+        MassNavigationAgentLayer layer)
     {
         int safeUnitsPerTeam = Math.Max(0, unitsPerTeam);
         int safeTeamCount = Math.Max(0, teamIds.Length);
@@ -218,7 +228,7 @@ public sealed class MassFlowSimulationState
         EnsureCapacity(UnitCount);
         InitializeTeams(teamIds, safeUnitsPerTeam);
         CacheAuthoredObstacles(obstacles);
-        InitializeUnits(profileSet);
+        InitializeUnits(profileSet, layer);
         ForceFlowRebuild();
         MarkAllEntitiesDirty();
         _frameCount = 0;
@@ -261,30 +271,132 @@ public sealed class MassFlowSimulationState
         MarkFlowDirty();
     }
 
-    public void SetUnitRuntimeProfile(int index, int teamId, float navMass, float visualScale)
+    public bool SetUnitRuntimeProfile(
+        int index,
+        int teamId,
+        float navMass,
+        float visualScale,
+        float bodyRadiusCm,
+        float speedCmPerSecond,
+        MassNavigationAgentLayer layer)
     {
         if ((uint)index >= (uint)UnitCount)
         {
-            return;
+            throw new InvalidOperationException(
+                $"MassFlow runtime profile agent index {index} exceeds current unit count {UnitCount}.");
         }
 
+        ValidateRuntimeProfile(index, navMass, visualScale, bodyRadiusCm, speedCmPerSecond);
+        uint categoryMask = layer.CategoryMask;
+        uint interactionMask = layer.InteractionMask;
+        bool changed =
+            _teams[index] != teamId ||
+            MathF.Abs(_navMasses[index] - navMass) > float.Epsilon ||
+            MathF.Abs(_visualScales[index] - visualScale) > float.Epsilon ||
+            MathF.Abs(_bodyRadiiCm[index] - bodyRadiusCm) > float.Epsilon ||
+            MathF.Abs(_speedsCmPerSecond[index] - speedCmPerSecond) > float.Epsilon ||
+            _layerCategoryMasks[index] != categoryMask ||
+            _layerInteractionMasks[index] != interactionMask;
+        if (!changed)
+        {
+            return false;
+        }
+
+        float previousBodyRadiusCm = _bodyRadiiCm[index];
+        bool teamOrLayerChanged =
+            _teams[index] != teamId ||
+            _layerCategoryMasks[index] != categoryMask ||
+            _layerInteractionMasks[index] != interactionMask;
         _teams[index] = teamId;
         if (_teamStateIndexById.TryGetValue(teamId, out int teamStateIndex))
         {
             _teamRuntimeIndices[index] = teamStateIndex;
         }
-        _navMasses[index] = MathF.Max(Semantics.Solver.MinNavMass, navMass);
-        _visualScales[index] = MathF.Max(Semantics.Solver.MinVisualScale, visualScale);
+
+        _navMasses[index] = navMass;
+        _visualScales[index] = visualScale;
+        _bodyRadiiCm[index] = bodyRadiusCm;
+        _speedsCmPerSecond[index] = speedCmPerSecond;
+        if (bodyRadiusCm >= _maxBodyRadiusCm)
+        {
+            _maxBodyRadiusCm = bodyRadiusCm;
+        }
+        else if (MathF.Abs(previousBodyRadiusCm - _maxBodyRadiusCm) <= float.Epsilon)
+        {
+            RecomputeMaxBodyRadiusCm();
+        }
+
+        _layerCategoryMasks[index] = categoryMask;
+        _layerInteractionMasks[index] = interactionMask;
+        _maxInteractingBodyRadiiDirty = true;
+        if ((uint)_teamRuntimeIndices[index] < (uint)_teamStates.Count)
+        {
+            _flowRuntimeIndices[index] = ResolveFlowStateIndex(_teamRuntimeIndices[index], layer);
+            if (teamOrLayerChanged || MathF.Abs(previousBodyRadiusCm - bodyRadiusCm) > float.Epsilon)
+            {
+                MarkFlowDirty();
+            }
+        }
+
         MarkEntityDirty(index);
+        return true;
     }
 
-    public void SetUnitRuntimeProfile(int index, int teamId, bool heavy, float navMass, float visualScale)
+    private void ValidateRuntimeProfile(
+        int index,
+        float navMass,
+        float visualScale,
+        float bodyRadiusCm,
+        float speedCmPerSecond)
     {
-        SetUnitRuntimeProfile(index, teamId, navMass, visualScale);
+        if (!(navMass >= Semantics.Solver.MinNavMass))
+        {
+            throw new InvalidOperationException(
+                $"MassFlow runtime profile for agent index {index} requires navMass >= configured semantics.solver.minNavMass {Semantics.Solver.MinNavMass}.");
+        }
+
+        if (!(visualScale >= Semantics.Solver.MinVisualScale))
+        {
+            throw new InvalidOperationException(
+                $"MassFlow runtime profile for agent index {index} requires visualScale >= configured semantics.solver.minVisualScale {Semantics.Solver.MinVisualScale}.");
+        }
+
+        if (!(bodyRadiusCm > 0f))
+        {
+            throw new InvalidOperationException(
+                $"MassFlow runtime profile for agent index {index} requires bodyRadiusCm > 0.");
+        }
+
+        if (!(speedCmPerSecond > 0f))
+        {
+            throw new InvalidOperationException(
+                $"MassFlow runtime profile for agent index {index} requires speedCmPerSecond > 0.");
+        }
+    }
+
+    public bool SetUnitRuntimeProfile(
+        int index,
+        int teamId,
+        bool heavy,
+        float navMass,
+        float visualScale,
+        float bodyRadiusCm,
+        float speedCmPerSecond,
+        MassNavigationAgentLayer layer)
+    {
+        bool changed = SetUnitRuntimeProfile(index, teamId, navMass, visualScale, bodyRadiusCm, speedCmPerSecond, layer);
         if ((uint)index < (uint)UnitCount)
         {
-            _heavyProfileFlags[index] = heavy ? (byte)1 : (byte)0;
+            byte heavyFlag = heavy ? (byte)1 : (byte)0;
+            if (_heavyProfileFlags[index] != heavyFlag)
+            {
+                _heavyProfileFlags[index] = heavyFlag;
+                MarkEntityDirty(index);
+                changed = true;
+            }
         }
+
+        return changed;
     }
 
     public void RequestFlowRebuild()
@@ -292,23 +404,108 @@ public sealed class MassFlowSimulationState
         MarkFlowDirty();
     }
 
-    public void SetUnitTarget(int index, float xCm, float yCm, bool resetRecovery = false)
+    public bool SetUnitTarget(int index, float xCm, float yCm, bool resetRecovery = false)
     {
         if ((uint)index >= (uint)UnitCount)
         {
-            return;
+            throw new InvalidOperationException(
+                $"MassFlow unit target index {index} exceeds current unit count {UnitCount}.");
         }
 
         int offset = index << 1;
         bool wasInactive = _hasUnitTarget[index] == 0;
         ClampLocalToWorldBounds(ref xCm, ref yCm);
+        bool targetChanged = wasInactive || _unitTargetsCm[offset] != xCm || _unitTargetsCm[offset + 1] != yCm;
+        if (!targetChanged && !resetRecovery)
+        {
+            return false;
+        }
+
         _unitTargetsCm[offset] = xCm;
         _unitTargetsCm[offset + 1] = yCm;
         _hasUnitTarget[index] = 1;
-        MarkEntityDirty(index);
+        if (targetChanged)
+        {
+            MarkEntityDirty(index);
+        }
+
         if (resetRecovery || wasInactive)
         {
             ResetUnitArrivalState(index, clearRetryCount: true);
+        }
+
+        return targetChanged;
+    }
+
+    public bool TryGetUnitTarget(int index, out float xCm, out float yCm)
+    {
+        if ((uint)index >= (uint)UnitCount)
+        {
+            throw new InvalidOperationException(
+                $"MassFlow unit target index {index} exceeds current unit count {UnitCount}.");
+        }
+
+        if (_hasUnitTarget[index] == 0)
+        {
+            xCm = 0f;
+            yCm = 0f;
+            return false;
+        }
+
+        int offset = index << 1;
+        xCm = _unitTargetsCm[offset];
+        yCm = _unitTargetsCm[offset + 1];
+        return true;
+    }
+
+    public void ApplyExternalDisplacementRange(
+        int startIndex,
+        int count,
+        float deltaXCm,
+        float deltaYCm)
+    {
+        if (startIndex < 0)
+        {
+            throw new InvalidOperationException("MassFlow external displacement requires startIndex >= 0.");
+        }
+
+        if (count < 0)
+        {
+            throw new InvalidOperationException("MassFlow external displacement requires count >= 0.");
+        }
+
+        if (count == 0 || (deltaXCm == 0f && deltaYCm == 0f))
+        {
+            return;
+        }
+
+        int endIndex = startIndex + count;
+        if (endIndex < startIndex || endIndex > UnitCount)
+        {
+            throw new InvalidOperationException(
+                $"MassFlow external displacement range [{startIndex}, {endIndex}) exceeds current unit count {UnitCount}.");
+        }
+
+        for (int index = startIndex; index < endIndex; index++)
+        {
+            int offset = index << 1;
+            _positionsCm[offset] += deltaXCm;
+            _positionsCm[offset + 1] += deltaYCm;
+            _readPositionsCm[offset] += deltaXCm;
+            _readPositionsCm[offset + 1] += deltaYCm;
+            _unitProgressAnchorCm[offset] += deltaXCm;
+            _unitProgressAnchorCm[offset + 1] += deltaYCm;
+            _unitSettledAnchorCm[offset] += deltaXCm;
+            _unitSettledAnchorCm[offset + 1] += deltaYCm;
+            if (_hasUnitTarget[index] != 0)
+            {
+                _unitTargetsCm[offset] += deltaXCm;
+                _unitTargetsCm[offset + 1] += deltaYCm;
+            }
+
+            ClampLocalToWorldBounds(ref _positionsCm[offset], ref _positionsCm[offset + 1]);
+            ClampLocalToWorldBounds(ref _readPositionsCm[offset], ref _readPositionsCm[offset + 1]);
+            MarkEntityDirty(index);
         }
     }
 
@@ -316,7 +513,8 @@ public sealed class MassFlowSimulationState
     {
         if ((uint)index >= (uint)UnitCount)
         {
-            return;
+            throw new InvalidOperationException(
+                $"MassFlow release target index {index} exceeds current unit count {UnitCount}.");
         }
 
         ResetUnitArrivalState(index, clearRetryCount: true);
@@ -328,7 +526,8 @@ public sealed class MassFlowSimulationState
     {
         if ((uint)index >= (uint)UnitCount)
         {
-            return;
+            throw new InvalidOperationException(
+                $"MassFlow hold target index {index} exceeds current unit count {UnitCount}.");
         }
 
         int offset = index << 1;
@@ -360,6 +559,24 @@ public sealed class MassFlowSimulationState
         }
     }
 
+    public Vector2 ResolveUnitNavigableTarget(
+        int index,
+        float xCm,
+        float yCm,
+        float hintX,
+        float hintY,
+        float minimumClearanceCm)
+    {
+        if ((uint)index >= (uint)UnitCount)
+        {
+            throw new InvalidOperationException(
+                $"MassFlow unit target projection index {index} exceeds current unit count {UnitCount}.");
+        }
+
+        float clearanceCm = MathF.Max(minimumClearanceCm, _bodyRadiiCm[index]);
+        return ResolveNavigableTarget(xCm, yCm, hintX, hintY, clearanceCm);
+    }
+
     public Vector2 ResolveNavigableTarget(float xCm, float yCm, float hintX, float hintY, float extraClearanceCm = 0f)
     {
         float resolvedX = xCm;
@@ -372,7 +589,7 @@ public sealed class MassFlowSimulationState
 
         resolvedX = ClampPosition(resolvedX);
         resolvedY = ClampPosition(resolvedY);
-        float minDistancePadding = Semantics.Obstacle.AgentBodyRadiusCm + MathF.Max(0f, extraClearanceCm);
+        float minDistancePadding = MathF.Max(Semantics.Obstacle.AgentBodyRadiusCm, extraClearanceCm);
 
         for (int pass = 0; pass < 2; pass++)
         {
@@ -429,6 +646,7 @@ public sealed class MassFlowSimulationState
 
     public void Step(
         float dt,
+        World world,
         MassNavigationGroupRuntime navGroupRuntime,
         bool runHardResolve,
         int hardResolveCandidateThresholdAgents,
@@ -455,26 +673,26 @@ public sealed class MassFlowSimulationState
             Array.Clear(_hardResolveCandidates, 0, UnitCount);
         }
 
-        float speed = Semantics.Steering.SpeedCmPerSecond;
         float sepRadiusCm = Semantics.Steering.SeparationRadiusCm;
         float sepRadiusSq = sepRadiusCm * sepRadiusCm;
-        float invSepRadius = 1f / sepRadiusCm;
         float arrivalRadiusCm = Semantics.Steering.GoalArrivalRadiusCm;
         float arrivalRadiusSq = arrivalRadiusCm * arrivalRadiusCm;
         float unitTargetStopThresholdCm = Semantics.Group.UnitTargetStopThresholdCm;
         float unitTargetStopThresholdSq = unitTargetStopThresholdCm * unitTargetStopThresholdCm;
 
+        RecomputeMaxInteractingBodyRadiiCmIfDirty();
         BuildSeparationHash(_readPositionsCm);
         observeStepPrep?.Invoke((System.Diagnostics.Stopwatch.GetTimestamp() - prepStart) * 1000.0 / System.Diagnostics.Stopwatch.Frequency);
 
         int hwm1 = SeparationHashWidth - 1;
         int hhm1 = SeparationHashHeight - 1;
         float invHashCell = 1f / SeparationHashCellSizeCm;
+        int flowObstacleNeighborRadiusCells = Semantics.Solver.FlowObstacleNeighborRadiusCells;
 
         if (World.SharedJobScheduler == null || UnitCount < Semantics.Solver.ParallelStepMinAgents)
         {
             long steeringStart = System.Diagnostics.Stopwatch.GetTimestamp();
-            StepRange(0, UnitCount, clampedDt, navGroupRuntime, speed, sepRadiusSq, invSepRadius, arrivalRadiusCm, arrivalRadiusSq, unitTargetStopThresholdSq, hwm1, hhm1, invHashCell, SeparationHashSearchRadius, _useCandidateGating);
+            StepRange(0, UnitCount, clampedDt, navGroupRuntime, sepRadiusSq, sepRadiusCm, arrivalRadiusCm, arrivalRadiusSq, unitTargetStopThresholdSq, hwm1, hhm1, invHashCell, flowObstacleNeighborRadiusCells, _useCandidateGating);
             observeLocalSteering?.Invoke((System.Diagnostics.Stopwatch.GetTimestamp() - steeringStart) * 1000.0 / System.Diagnostics.Stopwatch.Frequency);
             ClampAllPositionsToWorldBounds();
             long resolveStart = System.Diagnostics.Stopwatch.GetTimestamp();
@@ -504,16 +722,15 @@ public sealed class MassFlowSimulationState
             job.EndIndex = startIndex + length;
             job.Dt = clampedDt;
             job.NavGroupRuntime = navGroupRuntime;
-            job.Speed = speed;
             job.SepRadiusSq = sepRadiusSq;
-            job.InvSepRadius = invSepRadius;
+            job.SepRadiusCm = sepRadiusCm;
             job.ArrivalRadiusCm = arrivalRadiusCm;
             job.ArrivalRadiusSq = arrivalRadiusSq;
             job.UnitTargetStopThresholdSq = unitTargetStopThresholdSq;
             job.HashWidthMinusOne = hwm1;
             job.HashHeightMinusOne = hhm1;
             job.InvHashCell = invHashCell;
-            job.HashSearchRadius = SeparationHashSearchRadius;
+            job.FlowObstacleNeighborRadiusCells = flowObstacleNeighborRadiusCells;
             job.UseCandidateGating = _useCandidateGating;
             _stepHandles[workerIndex] = World.SharedJobScheduler!.Schedule(job);
             startIndex += length;
@@ -588,13 +805,12 @@ public sealed class MassFlowSimulationState
 
         if (refreshCrowd || refreshObstacles)
         {
-            RebuildDynamicCost(tuning.Enabled ? tuning.IterationsPerStep : 0);
             refreshFlow = true;
         }
 
         if (refreshFlow)
         {
-            ComputeFlowFields();
+            ComputeFlowFields(tuning.Enabled ? tuning.IterationsPerStep : 0);
             _flowDirty = false;
         }
 
@@ -605,8 +821,7 @@ public sealed class MassFlowSimulationState
 
     public void SyncEntities(World world, MassNavigationAgentState agentState)
     {
-        int count = Math.Min(UnitCount, agentState.ControllableCount);
-        if (count <= 0 || _entitySyncDirtyCount <= 0)
+        if (UnitCount <= 0 || _entitySyncDirtyCount <= 0)
         {
             return;
         }
@@ -615,21 +830,23 @@ public sealed class MassFlowSimulationState
         for (int dirtyIndex = 0; dirtyIndex < dirtyCount; dirtyIndex++)
         {
             int i = _entitySyncDirtyAgents[dirtyIndex];
-            if ((uint)i >= (uint)count)
+            if ((uint)i >= (uint)UnitCount)
             {
-                if ((uint)i < (uint)UnitCount)
-                {
-                    _entitySyncDirtyFlags[i] = 0;
-                }
-
-                continue;
+                throw new InvalidOperationException(
+                    $"MassFlowSimulationState dirty agent index {i} exceeds unit count {UnitCount}.");
             }
 
             _entitySyncDirtyFlags[i] = 0;
-            Entity entity = agentState.ControllableAgents[i];
+            if (!agentState.TryGetAgentEntity(i, out Entity entity))
+            {
+                throw new InvalidOperationException(
+                    $"MassFlowSimulationState cannot sync unit {i} because no tracked agent entity is registered.");
+            }
+
             if (!world.IsAlive(entity))
             {
-                continue;
+                throw new InvalidOperationException(
+                    $"MassFlowSimulationState cannot sync unit {i} because tracked entity {entity.Id} is not alive.");
             }
 
             int i2 = i << 1;
@@ -640,13 +857,6 @@ public sealed class MassFlowSimulationState
             Fix64Vec2 worldValue = Fix64Vec2.FromInt((int)MathF.Round(worldXCm), (int)MathF.Round(worldYCm));
             ref WorldPositionCm worldPosition = ref world.Get<WorldPositionCm>(entity);
             worldPosition.Value = worldValue;
-
-            Vector2 velocity = GetVelocityCmPerSecond(i);
-            if ((velocity.X * velocity.X) + (velocity.Y * velocity.Y) > Semantics.Solver.FacingVelocityEpsilonSq)
-            {
-                ref FacingDirection facing = ref world.Get<FacingDirection>(entity);
-                facing.AngleRad = MathF.Atan2(velocity.Y, velocity.X);
-            }
 
         }
 
@@ -661,10 +871,14 @@ public sealed class MassFlowSimulationState
         float localMinYCm,
         float localMaxYCm)
     {
-        int count = Math.Min(UnitCount, agentState.ControllableCount);
+        int count = Math.Min(UnitCount, agentState.ControllableAgentSlotCount);
         for (int i = 0; i < count; i++)
         {
-            Entity entity = agentState.ControllableAgents[i];
+            if (!agentState.TryGetControllableEntity(i, out Entity entity))
+            {
+                continue;
+            }
+
             if (!world.IsAlive(entity) || !world.Has<CullState>(entity))
             {
                 continue;
@@ -702,8 +916,16 @@ public sealed class MassFlowSimulationState
             Array.Resize(ref _teams, unitCount);
             Array.Resize(ref _teamRuntimeIndices, unitCount);
             Array.Resize(ref _teamLocalIndices, unitCount);
+            Array.Resize(ref _flowRuntimeIndices, unitCount);
+            Array.Resize(ref _layerCategoryMasks, unitCount);
+            Array.Resize(ref _layerInteractionMasks, unitCount);
+            Array.Resize(ref _maxInteractingBodyRadiiCm, unitCount);
             Array.Resize(ref _navMasses, unitCount);
             Array.Resize(ref _visualScales, unitCount);
+            Array.Resize(ref _bodyRadiiCm, unitCount);
+            Array.Resize(ref _speedsCmPerSecond, unitCount);
+            Array.Resize(ref _separationHashSearchRadiusCellsByAgent, unitCount);
+            Array.Resize(ref _hardResolveHashSearchRadiusCellsByAgent, unitCount);
             Array.Resize(ref _hasUnitTarget, unitCount);
             Array.Resize(ref _selectedFlags, unitCount);
             Array.Resize(ref _hardResolveCandidates, unitCount);
@@ -721,6 +943,7 @@ public sealed class MassFlowSimulationState
     private void InitializeTeams(ReadOnlySpan<int> teamIds, int unitsPerTeam)
     {
         _teamStates.Clear();
+        _flowStates.Clear();
         _teamStateIndexById.Clear();
         if (teamIds.Length <= 0)
         {
@@ -761,6 +984,7 @@ public sealed class MassFlowSimulationState
     private void InitializeTeams(ReadOnlySpan<MassNavigationAgentSeed> agentSeeds)
     {
         _teamStates.Clear();
+        _flowStates.Clear();
         _teamStateIndexById.Clear();
         for (int i = 0; i < agentSeeds.Length; i++)
         {
@@ -784,13 +1008,19 @@ public sealed class MassFlowSimulationState
         _teamRelationshipMatrix = new TeamRelationship[_teamStates.Count * _teamStates.Count];
     }
 
-    private void InitializeUnits(MassNavigationAgentProfileSetConfig? profileSet)
+    private void InitializeUnits(MassNavigationAgentProfileSetConfig profileSet, MassNavigationAgentLayer layer)
     {
+        _maxBodyRadiusCm = 0f;
         Array.Clear(_velocitiesCm, 0, UnitCount * 2);
         Array.Clear(_unitTargetsCm, 0, UnitCount * 2);
         Array.Clear(_hasUnitTarget, 0, UnitCount);
         Array.Clear(_selectedFlags, 0, UnitCount);
         Array.Clear(_heavyProfileFlags, 0, UnitCount);
+        Array.Clear(_bodyRadiiCm, 0, UnitCount);
+        Array.Clear(_speedsCmPerSecond, 0, UnitCount);
+        Array.Clear(_maxInteractingBodyRadiiCm, 0, UnitCount);
+        Array.Clear(_separationHashSearchRadiusCellsByAgent, 0, UnitCount);
+        Array.Clear(_hardResolveHashSearchRadiusCellsByAgent, 0, UnitCount);
         Array.Clear(_unitProgressAnchorCm, 0, UnitCount * 2);
         Array.Clear(_unitSettledAnchorCm, 0, UnitCount * 2);
         Array.Clear(_unitSettledFlags, 0, UnitCount);
@@ -802,6 +1032,7 @@ public sealed class MassFlowSimulationState
         for (int teamStateIndex = 0; teamStateIndex < _teamStates.Count; teamStateIndex++)
         {
             TeamRuntimeState team = _teamStates[teamStateIndex];
+            int flowStateIndex = ResolveFlowStateIndex(teamStateIndex, layer);
             int cols = Math.Max(1, (int)Math.Ceiling(Math.Sqrt(team.UnitCount)));
             int rows = Math.Max(1, (int)Math.Ceiling(team.UnitCount / (double)cols));
             float colCenter = (cols - 1) * 0.5f;
@@ -817,22 +1048,19 @@ public sealed class MassFlowSimulationState
                 float xCm = team.SpawnCenterX + team.TangentX * (lateralOffset + jitterLateral) + team.DirectionX * (depthOffset + jitterDepth);
                 float yCm = team.SpawnCenterY + team.TangentY * (lateralOffset + jitterLateral) + team.DirectionY * (depthOffset + jitterDepth);
                 int i2 = unitIndex << 1;
-                MassNavigationAgentProfileConfig? profile = profileSet?.ResolveForLocalIndex(localIndex);
+                MassNavigationAgentProfileConfig profile = profileSet.ResolveForLocalIndex(localIndex);
                 _teams[unitIndex] = team.TeamId;
                 _teamRuntimeIndices[unitIndex] = teamStateIndex;
                 _teamLocalIndices[unitIndex] = localIndex;
-                if (profile == null)
-                {
-                    _navMasses[unitIndex] = AvoidanceTuning.LightNavMass;
-                    _visualScales[unitIndex] = AvoidanceTuning.LightVisualScale;
-                    _heavyProfileFlags[unitIndex] = 0;
-                }
-                else
-                {
-                    _navMasses[unitIndex] = profile.NavMass;
-                    _visualScales[unitIndex] = profile.VisualScale;
-                    _heavyProfileFlags[unitIndex] = profile.Heavy ? (byte)1 : (byte)0;
-                }
+                _flowRuntimeIndices[unitIndex] = flowStateIndex;
+                _layerCategoryMasks[unitIndex] = layer.CategoryMask;
+                _layerInteractionMasks[unitIndex] = layer.InteractionMask;
+                _navMasses[unitIndex] = profile.NavMass;
+                _visualScales[unitIndex] = profile.VisualScale;
+                _bodyRadiiCm[unitIndex] = profile.BodyRadiusCm;
+                _speedsCmPerSecond[unitIndex] = profile.SpeedCmPerSecond;
+                _maxBodyRadiusCm = MathF.Max(_maxBodyRadiusCm, profile.BodyRadiusCm);
+                _heavyProfileFlags[unitIndex] = profile.Heavy ? (byte)1 : (byte)0;
                 _positionsCm[i2] = ClampPosition(xCm);
                 _positionsCm[i2 + 1] = ClampPosition(yCm);
                 _unitProgressAnchorCm[i2] = _positionsCm[i2];
@@ -841,6 +1069,8 @@ public sealed class MassFlowSimulationState
                 _unitSettledAnchorCm[i2 + 1] = _positionsCm[i2 + 1];
             }
         }
+
+        _maxInteractingBodyRadiiDirty = true;
     }
 
     private void CacheAuthoredObstacles(ReadOnlySpan<MassNavigationObstacleConfig> obstacles)
@@ -886,21 +1116,28 @@ public sealed class MassFlowSimulationState
         }
     }
 
-    private void ComputeFlowFields()
+    private void ComputeFlowFields(int crowdStampBudgetUnits)
     {
-        for (int i = 0; i < _teamStates.Count; i++)
+        for (int i = 0; i < _flowStates.Count; i++)
         {
-            TeamRuntimeState team = _teamStates[i];
-            ComputeFlow(team.Flow, team.TargetX, team.TargetY);
+            FlowRuntimeState flowState = _flowStates[i];
+            TeamRuntimeState team = _teamStates[flowState.TeamStateIndex];
+            RebuildFlowCostForState(flowState, crowdStampBudgetUnits);
+            ComputeFlow(flowState.Flow, team.TargetX, team.TargetY);
+        }
+
+        if (crowdStampBudgetUnits > 0 && UnitCount > 0)
+        {
+            int budget = Math.Min(UnitCount, crowdStampBudgetUnits);
+            _crowdStampCursor = (_crowdStampCursor + budget) % UnitCount;
         }
     }
 
     private void ForceFlowRebuild()
     {
         RebuildStaticObstacleCost();
-        RebuildDynamicCost(crowdStampBudgetUnits: 0);
         long start = System.Diagnostics.Stopwatch.GetTimestamp();
-        ComputeFlowFields();
+        ComputeFlowFields(crowdStampBudgetUnits: 0);
         LastFlowFieldRebuildMs = (System.Diagnostics.Stopwatch.GetTimestamp() - start) * 1000f / System.Diagnostics.Stopwatch.Frequency;
         _flowDirty = false;
         _lastFlowStepFrame = 0;
@@ -921,7 +1158,7 @@ public sealed class MassFlowSimulationState
         }
     }
 
-    private void RebuildDynamicCost(int crowdStampBudgetUnits)
+    private void RebuildFlowCostForState(FlowRuntimeState flowState, int crowdStampBudgetUnits)
     {
         Array.Copy(_staticCost, _cost, _staticCost.Length);
         if (crowdStampBudgetUnits <= 0 || UnitCount <= 0)
@@ -933,11 +1170,21 @@ public sealed class MassFlowSimulationState
         for (int sample = 0; sample < budget; sample++)
         {
             int unitIndex = (_crowdStampCursor + sample) % UnitCount;
-            int i2 = unitIndex << 1;
-            StampCrowdCost(_positionsCm[i2], _positionsCm[i2 + 1]);
-        }
+            if (!CanFlowStateObserveAgent(flowState, unitIndex))
+            {
+                continue;
+            }
 
-        _crowdStampCursor = (_crowdStampCursor + budget) % Math.Max(1, UnitCount);
+            int offset = unitIndex << 1;
+            StampCrowdCost(_positionsCm[offset], _positionsCm[offset + 1]);
+        }
+    }
+
+    private bool CanFlowStateObserveAgent(FlowRuntimeState flowState, int agentIndex)
+    {
+        uint otherCategory = _layerCategoryMasks[agentIndex];
+        return (flowState.InteractionMask & otherCategory) != 0u &&
+            (_layerInteractionMasks[agentIndex] & flowState.CategoryMask) != 0u;
     }
 
     private void StampCrowdCost(float xCm, float yCm)
@@ -1007,11 +1254,17 @@ public sealed class MassFlowSimulationState
 
     private void InitializeUnits(ReadOnlySpan<MassNavigationAgentSeed> agentSeeds)
     {
+        _maxBodyRadiusCm = 0f;
         Array.Clear(_velocitiesCm, 0, UnitCount * 2);
         Array.Clear(_unitTargetsCm, 0, UnitCount * 2);
         Array.Clear(_hasUnitTarget, 0, UnitCount);
         Array.Clear(_selectedFlags, 0, UnitCount);
         Array.Clear(_heavyProfileFlags, 0, UnitCount);
+        Array.Clear(_bodyRadiiCm, 0, UnitCount);
+        Array.Clear(_speedsCmPerSecond, 0, UnitCount);
+        Array.Clear(_maxInteractingBodyRadiiCm, 0, UnitCount);
+        Array.Clear(_separationHashSearchRadiusCellsByAgent, 0, UnitCount);
+        Array.Clear(_hardResolveHashSearchRadiusCellsByAgent, 0, UnitCount);
         Array.Clear(_unitProgressAnchorCm, 0, UnitCount * 2);
         Array.Clear(_unitSettledAnchorCm, 0, UnitCount * 2);
         Array.Clear(_unitSettledFlags, 0, UnitCount);
@@ -1028,11 +1281,18 @@ public sealed class MassFlowSimulationState
             }
 
             int i2 = unitIndex << 1;
+            ValidateRuntimeProfile(unitIndex, seed.NavMass, seed.VisualScale, seed.BodyRadiusCm, seed.SpeedCmPerSecond);
             _teams[unitIndex] = seed.TeamId;
             _teamRuntimeIndices[unitIndex] = teamStateIndex;
             _teamLocalIndices[unitIndex] = teamLocalWriteCursor[teamStateIndex]++;
-            _navMasses[unitIndex] = MathF.Max(Semantics.Solver.MinNavMass, seed.NavMass);
-            _visualScales[unitIndex] = MathF.Max(Semantics.Solver.MinVisualScale, seed.VisualScale);
+            _flowRuntimeIndices[unitIndex] = ResolveFlowStateIndex(teamStateIndex, seed.Layer);
+            _layerCategoryMasks[unitIndex] = seed.Layer.CategoryMask;
+            _layerInteractionMasks[unitIndex] = seed.Layer.InteractionMask;
+            _navMasses[unitIndex] = seed.NavMass;
+            _visualScales[unitIndex] = seed.VisualScale;
+            _bodyRadiiCm[unitIndex] = seed.BodyRadiusCm;
+            _speedsCmPerSecond[unitIndex] = seed.SpeedCmPerSecond;
+            _maxBodyRadiusCm = MathF.Max(_maxBodyRadiusCm, seed.BodyRadiusCm);
             _heavyProfileFlags[unitIndex] = seed.Heavy ? (byte)1 : (byte)0;
             _positionsCm[i2] = ClampPosition(seed.LocalPositionXCm);
             _positionsCm[i2 + 1] = ClampPosition(seed.LocalPositionYCm);
@@ -1041,6 +1301,8 @@ public sealed class MassFlowSimulationState
             _unitSettledAnchorCm[i2] = _positionsCm[i2];
             _unitSettledAnchorCm[i2 + 1] = _positionsCm[i2 + 1];
         }
+
+        _maxInteractingBodyRadiiDirty = true;
     }
 
     private void MarkMovedEntitiesDirty()
@@ -1270,18 +1532,18 @@ public sealed class MassFlowSimulationState
         int endIndex,
         float clampedDt,
         MassNavigationGroupRuntime navGroupRuntime,
-        float speed,
         float sepRadiusSq,
-        float invSepRadius,
+        float sepRadiusCm,
         float arrivalRadiusCm,
         float arrivalRadiusSq,
         float unitTargetStopThresholdSq,
         int hashWidthMinusOne,
         int hashHeightMinusOne,
         float invHashCell,
-        int hashSearchRadius,
+        int flowObstacleNeighborRadiusCells,
         bool useCandidateGating)
     {
+        _ = sepRadiusSq;
         for (int i = startIndex; i < endIndex; i++)
         {
             int i2 = i << 1;
@@ -1289,6 +1551,7 @@ public sealed class MassFlowSimulationState
             float py = _readPositionsCm[i2 + 1];
             int teamStateIndex = _teamRuntimeIndices[i];
             TeamRuntimeState team = _teamStates[teamStateIndex];
+            FlowRuntimeState flowState = _flowStates[_flowRuntimeIndices[i]];
             bool inFormation = navGroupRuntime.HasGroup(i);
 
             float desiredX = 0f;
@@ -1298,6 +1561,7 @@ public sealed class MassFlowSimulationState
             float unitArrivalFactor = 1f;
             bool suppressTargetMotion = false;
             bool hasGoalTarget = false;
+            float speed = _speedsCmPerSecond[i];
 
             if (_hasUnitTarget[i] != 0)
             {
@@ -1343,7 +1607,7 @@ public sealed class MassFlowSimulationState
                     int gy = (int)(py / CellCm);
                     float avoidX = 0f;
                     float avoidY = 0f;
-                    for (int oy = -2; oy <= 2; oy++)
+                    for (int oy = -flowObstacleNeighborRadiusCells; oy <= flowObstacleNeighborRadiusCells; oy++)
                     {
                         int ny = gy + oy;
                         if ((uint)ny >= (uint)GridHeight)
@@ -1352,7 +1616,7 @@ public sealed class MassFlowSimulationState
                         }
 
                         int rowOffset = ny * GridWidth;
-                        for (int ox = -2; ox <= 2; ox++)
+                        for (int ox = -flowObstacleNeighborRadiusCells; ox <= flowObstacleNeighborRadiusCells; ox++)
                         {
                             if (ox == 0 && oy == 0)
                             {
@@ -1365,7 +1629,7 @@ public sealed class MassFlowSimulationState
                                 continue;
                             }
 
-                            if (_cost[rowOffset + nx] > Semantics.Solver.FlowBlockedCellThreshold)
+                            if (_staticCost[rowOffset + nx] > Semantics.Solver.FlowBlockedCellThreshold)
                             {
                                 float obstacleDistanceSq = ox * ox + oy * oy;
                                 float invObstacleDistance = FastInvSqrt(obstacleDistanceSq);
@@ -1410,8 +1674,8 @@ public sealed class MassFlowSimulationState
                 if ((uint)gx < (uint)GridWidth && (uint)gy < (uint)GridHeight)
                 {
                     int flowOffset = ((gy * GridWidth) + gx) << 1;
-                    flowX = team.Flow[flowOffset];
-                    flowY = team.Flow[flowOffset + 1];
+                    flowX = flowState.Flow[flowOffset];
+                    flowY = flowState.Flow[flowOffset + 1];
                 }
 
                 ComputeTeamSlotTarget(i, team, out targetX, out targetY);
@@ -1489,10 +1753,11 @@ public sealed class MassFlowSimulationState
             cellX = cellX < 0 ? 0 : (cellX > hashWidthMinusOne ? hashWidthMinusOne : cellX);
             cellY = cellY < 0 ? 0 : (cellY > hashHeightMinusOne ? hashHeightMinusOne : cellY);
 
-            int minY = Math.Max(0, cellY - hashSearchRadius);
-            int maxY = Math.Min(hashHeightMinusOne, cellY + hashSearchRadius);
-            int minX = Math.Max(0, cellX - hashSearchRadius);
-            int maxX = Math.Min(hashWidthMinusOne, cellX + hashSearchRadius);
+            int separationHashSearchRadius = _separationHashSearchRadiusCellsByAgent[i];
+            int minY = Math.Max(0, cellY - separationHashSearchRadius);
+            int maxY = Math.Min(hashHeightMinusOne, cellY + separationHashSearchRadius);
+            int minX = Math.Max(0, cellX - separationHashSearchRadius);
+            int maxX = Math.Min(hashWidthMinusOne, cellX + separationHashSearchRadius);
 
             for (int neighborY = minY; neighborY <= maxY; neighborY++)
             {
@@ -1503,24 +1768,31 @@ public sealed class MassFlowSimulationState
                     int start = _separationCellOffsets[cell];
                     int end = start + _separationCellCounts[cell];
                     for (int hashIndex = start; hashIndex < end; hashIndex++)
+                    {
+                        int j = _separationAgents[hashIndex];
+                        if (j != i)
                         {
-                            int j = _separationAgents[hashIndex];
-                            if (j != i)
+                            if (!CanAgentsInteract(i, j))
                             {
-                                int j2 = j << 1;
+                                continue;
+                            }
+
+                            int j2 = j << 1;
                             float dx = px - _readPositionsCm[j2];
                             float dy = py - _readPositionsCm[j2 + 1];
                             float d2 = dx * dx + dy * dy;
-                            if (useCandidateGating && d2 < Semantics.Obstacle.HardResolveCandidateDistanceCm * Semantics.Obstacle.HardResolveCandidateDistanceCm)
+                            float pairHardCandidateDistance = ResolvePairHardCandidateDistanceCm(i, j);
+                            if (useCandidateGating && d2 < pairHardCandidateDistance * pairHardCandidateDistance)
                             {
                                 _hardResolveCandidates[i] = 1;
                             }
 
-                            if (d2 < sepRadiusSq && d2 > Semantics.Solver.DirectionEpsilonSq)
+                            float pairSeparationRadius = ResolvePairSeparationRadiusCm(i, j, sepRadiusCm);
+                            if (d2 < pairSeparationRadius * pairSeparationRadius && d2 > Semantics.Solver.DirectionEpsilonSq)
                             {
                                 float invD = FastInvSqrt(d2);
                                 float d = d2 * invD;
-                                float force = 1f - (d * invSepRadius);
+                                float force = 1f - (d / pairSeparationRadius);
                                 float response = ComputeSeparationResponse(teamStateIndex, _teamRuntimeIndices[j], i, j);
                                 separationX += dx * invD * force * response;
                                 separationY += dy * invD * force * response;
@@ -1537,17 +1809,17 @@ public sealed class MassFlowSimulationState
                 float dx = px - _obsX[obstacleIndex];
                 float dy = py - _obsY[obstacleIndex];
                 float d2 = dx * dx + dy * dy;
-                float minDistance = _obsRadius[obstacleIndex] + Semantics.Obstacle.HardResolveCandidateDistanceCm;
+                float minDistance = _obsRadius[obstacleIndex] + _bodyRadiiCm[i] + Semantics.Obstacle.HardResolveCandidateDistanceCm;
                 if (useCandidateGating && d2 < minDistance * minDistance)
                 {
                     _hardResolveCandidates[i] = 1;
                 }
 
-                if (d2 < _obsPR2[obstacleIndex] && d2 > Semantics.Solver.DirectionEpsilonSq)
+                float pushRadius = _obsRadius[obstacleIndex] + _bodyRadiiCm[i] + Semantics.Obstacle.SoftPushPaddingCm;
+                if (d2 < pushRadius * pushRadius && d2 > Semantics.Solver.DirectionEpsilonSq)
                 {
                     float invD = FastInvSqrt(d2);
                     float d = d2 * invD;
-                    float pushRadius = _obsPR[obstacleIndex];
                     float pushStrength = (pushRadius - d) / pushRadius;
                     float pushForce = pushStrength * pushStrength * Semantics.Obstacle.SoftPushForceScale;
                     obstaclePushX += dx * invD * pushForce;
@@ -1701,6 +1973,43 @@ public sealed class MassFlowSimulationState
             : MassFlowPairAvoidancePolicy.NonFriendlyBlocker;
     }
 
+    private bool CanAgentsInteract(int selfUnitIndex, int otherUnitIndex)
+    {
+        uint selfCategory = _layerCategoryMasks[selfUnitIndex];
+        uint otherCategory = _layerCategoryMasks[otherUnitIndex];
+        return (_layerInteractionMasks[selfUnitIndex] & otherCategory) != 0u &&
+            (_layerInteractionMasks[otherUnitIndex] & selfCategory) != 0u;
+    }
+
+    private float ResolvePairBodyRadiusSumCm(int selfUnitIndex, int otherUnitIndex)
+    {
+        return _bodyRadiiCm[selfUnitIndex] + _bodyRadiiCm[otherUnitIndex];
+    }
+
+    private float ResolvePairSeparationRadiusCm(int selfUnitIndex, int otherUnitIndex, float configuredSeparationRadiusCm)
+    {
+        return MathF.Max(configuredSeparationRadiusCm, ResolvePairBodyRadiusSumCm(selfUnitIndex, otherUnitIndex));
+    }
+
+    private float ResolvePairHardCandidateDistanceCm(int selfUnitIndex, int otherUnitIndex)
+    {
+        return ResolvePairBodyRadiusSumCm(selfUnitIndex, otherUnitIndex) + Semantics.Obstacle.HardResolveCandidateDistanceCm;
+    }
+
+    private int ResolveSeparationHashSearchRadiusCells(int selfUnitIndex)
+    {
+        float maxPairDistanceCm = MathF.Max(
+            Semantics.Steering.SeparationRadiusCm,
+            _bodyRadiiCm[selfUnitIndex] + ResolveMaxInteractingBodyRadiusCm(selfUnitIndex) + Semantics.Obstacle.HardResolveCandidateDistanceCm);
+        return Math.Max(DefaultSeparationHashSearchRadiusCells, (int)MathF.Ceiling(maxPairDistanceCm / SeparationHashCellSizeCm));
+    }
+
+    private int ResolveHardResolveHashSearchRadiusCells(int selfUnitIndex)
+    {
+        float maxCandidateDistanceCm = _bodyRadiiCm[selfUnitIndex] + ResolveMaxInteractingBodyRadiusCm(selfUnitIndex) + Semantics.Obstacle.HardResolveCandidateDistanceCm;
+        return Math.Max(DefaultHardResolveHashSearchRadiusCells, (int)MathF.Ceiling(maxCandidateDistanceCm / HardResolveHashCellSizeCm));
+    }
+
     private MassFlowPairAvoidancePolicy ResolvePolicy(TeamRelationship relationship, float selfMass, float otherMass)
     {
         if (relationship == TeamRelationship.Friendly)
@@ -1834,6 +2143,68 @@ public sealed class MassFlowSimulationState
         _unitStuckSeconds[index] = 0f;
     }
 
+    private void RecomputeMaxBodyRadiusCm()
+    {
+        float max = 0f;
+        for (int i = 0; i < UnitCount; i++)
+        {
+            max = MathF.Max(max, _bodyRadiiCm[i]);
+        }
+
+        _maxBodyRadiusCm = max;
+    }
+
+    private float ResolveMaxInteractingBodyRadiusCm(int selfUnitIndex)
+    {
+        float radius = _maxInteractingBodyRadiiCm[selfUnitIndex];
+        return radius > 0f ? radius : _maxBodyRadiusCm;
+    }
+
+    private void RecomputeMaxInteractingBodyRadiiCmIfDirty()
+    {
+        if (!_maxInteractingBodyRadiiDirty)
+        {
+            return;
+        }
+
+        RecomputeMaxInteractingBodyRadiiCm();
+    }
+
+    private void RecomputeMaxInteractingBodyRadiiCm()
+    {
+        Array.Clear(_maxBodyRadiusByCategoryBit, 0, _maxBodyRadiusByCategoryBit.Length);
+        for (int i = 0; i < UnitCount; i++)
+        {
+            uint categories = _layerCategoryMasks[i];
+            while (categories != 0u)
+            {
+                int bitIndex = BitOperations.TrailingZeroCount(categories);
+                _maxBodyRadiusByCategoryBit[bitIndex] = MathF.Max(
+                    _maxBodyRadiusByCategoryBit[bitIndex],
+                    _bodyRadiiCm[i]);
+                categories &= categories - 1u;
+            }
+        }
+
+        for (int i = 0; i < UnitCount; i++)
+        {
+            uint mask = _layerInteractionMasks[i];
+            float maxInteractingRadiusCm = 0f;
+            while (mask != 0u)
+            {
+                int bitIndex = BitOperations.TrailingZeroCount(mask);
+                maxInteractingRadiusCm = MathF.Max(maxInteractingRadiusCm, _maxBodyRadiusByCategoryBit[bitIndex]);
+                mask &= mask - 1u;
+            }
+
+            _maxInteractingBodyRadiiCm[i] = maxInteractingRadiusCm;
+            _separationHashSearchRadiusCellsByAgent[i] = ResolveSeparationHashSearchRadiusCells(i);
+            _hardResolveHashSearchRadiusCellsByAgent[i] = ResolveHardResolveHashSearchRadiusCells(i);
+        }
+
+        _maxInteractingBodyRadiiDirty = false;
+    }
+
     private void UpdateSettledUnitCount()
     {
         int settled = 0;
@@ -1881,10 +2252,11 @@ public sealed class MassFlowSimulationState
             cellX = cellX < 0 ? 0 : (cellX > hwm1 ? hwm1 : cellX);
             cellY = cellY < 0 ? 0 : (cellY > hhm1 ? hhm1 : cellY);
 
-            int minY = Math.Max(0, cellY - HardResolveHashSearchRadius);
-            int maxY = Math.Min(hhm1, cellY + HardResolveHashSearchRadius);
-            int minX = Math.Max(0, cellX - HardResolveHashSearchRadius);
-            int maxX = Math.Min(hwm1, cellX + HardResolveHashSearchRadius);
+            int hardResolveSearchRadius = _hardResolveHashSearchRadiusCellsByAgent[i];
+            int minY = Math.Max(0, cellY - hardResolveSearchRadius);
+            int maxY = Math.Min(hhm1, cellY + hardResolveSearchRadius);
+            int minX = Math.Max(0, cellX - hardResolveSearchRadius);
+            int maxX = Math.Min(hwm1, cellX + hardResolveSearchRadius);
 
             for (int neighborY = minY; neighborY <= maxY; neighborY++)
             {
@@ -1899,6 +2271,11 @@ public sealed class MassFlowSimulationState
                         int j = _hardResolveAgents[hashIndex];
                         if (j > i)
                         {
+                            if (!CanAgentsInteract(i, j))
+                            {
+                                continue;
+                            }
+
                             SeparateAgents(i, j);
                         }
                     }
@@ -1916,7 +2293,8 @@ public sealed class MassFlowSimulationState
         float dx = _positionsCm[i2] - _positionsCm[j2];
         float dy = _positionsCm[i2 + 1] - _positionsCm[j2 + 1];
         float d2 = dx * dx + dy * dy;
-        if (d2 >= Semantics.Obstacle.AgentBodyDiameterSq)
+        float minDistance = ResolvePairBodyRadiusSumCm(i, j);
+        if (d2 >= minDistance * minDistance)
         {
             return;
         }
@@ -1930,7 +2308,7 @@ public sealed class MassFlowSimulationState
             float distance = d2 * invD;
             nx = dx * invD;
             ny = dy * invD;
-            overlap = Semantics.Obstacle.AgentBodyDiameterCm - distance;
+            overlap = minDistance - distance;
         }
         else
         {
@@ -1939,7 +2317,7 @@ public sealed class MassFlowSimulationState
             float radians = angle * (MathF.PI * 2f / Semantics.Solver.CoincidentPairHashBucketCount);
             nx = MathF.Cos(radians);
             ny = MathF.Sin(radians);
-            overlap = Semantics.Obstacle.AgentBodyDiameterCm;
+            overlap = minDistance;
         }
 
         MassFlowPairAvoidancePolicy policy = ResolveBidirectionalPolicy(_teamRuntimeIndices[i], _teamRuntimeIndices[j], i, j);
@@ -1986,7 +2364,7 @@ public sealed class MassFlowSimulationState
             {
                 float dx = px - _obsX[obstacleIndex];
                 float dy = py - _obsY[obstacleIndex];
-                float minDistance = Semantics.Obstacle.ResolveHardBlockRadiusCm(_obsRadius[obstacleIndex]);
+                float minDistance = _obsRadius[obstacleIndex] + _bodyRadiiCm[i];
                 float d2 = dx * dx + dy * dy;
                 if (d2 >= minDistance * minDistance)
                 {
@@ -2029,6 +2407,23 @@ public sealed class MassFlowSimulationState
         {
             Array.Resize(ref _stepHandles, required);
         }
+    }
+
+    private int ResolveFlowStateIndex(int teamStateIndex, MassNavigationAgentLayer layer)
+    {
+        for (int i = 0; i < _flowStates.Count; i++)
+        {
+            FlowRuntimeState existing = _flowStates[i];
+            if (existing.TeamStateIndex == teamStateIndex &&
+                existing.CategoryMask == layer.CategoryMask &&
+                existing.InteractionMask == layer.InteractionMask)
+            {
+                return i;
+            }
+        }
+
+        _flowStates.Add(new FlowRuntimeState(teamStateIndex, layer.CategoryMask, layer.InteractionMask));
+        return _flowStates.Count - 1;
     }
 
     private static UnitStepJob[] CreateStepJobs()
@@ -2137,16 +2532,15 @@ public sealed class MassFlowSimulationState
         public int EndIndex { get; set; }
         public float Dt { get; set; }
         public MassNavigationGroupRuntime? NavGroupRuntime { get; set; }
-        public float Speed { get; set; }
         public float SepRadiusSq { get; set; }
-        public float InvSepRadius { get; set; }
+        public float SepRadiusCm { get; set; }
         public float ArrivalRadiusCm { get; set; }
         public float ArrivalRadiusSq { get; set; }
         public float UnitTargetStopThresholdSq { get; set; }
         public int HashWidthMinusOne { get; set; }
         public int HashHeightMinusOne { get; set; }
         public float InvHashCell { get; set; }
-        public int HashSearchRadius { get; set; }
+        public int FlowObstacleNeighborRadiusCells { get; set; }
         public bool UseCandidateGating { get; set; }
 
         public void Execute()
@@ -2156,16 +2550,15 @@ public sealed class MassFlowSimulationState
                 EndIndex,
                 Dt,
                 NavGroupRuntime!,
-                Speed,
                 SepRadiusSq,
-                InvSepRadius,
+                SepRadiusCm,
                 ArrivalRadiusCm,
                 ArrivalRadiusSq,
                 UnitTargetStopThresholdSq,
                 HashWidthMinusOne,
                 HashHeightMinusOne,
                 InvHashCell,
-                HashSearchRadius,
+                FlowObstacleNeighborRadiusCells,
                 UseCandidateGating);
         }
     }
@@ -2190,13 +2583,11 @@ public sealed class MassFlowSimulationState
             DirectionY = directionY;
             TangentX = tangentX;
             TangentY = tangentY;
-            Flow = new float[GridWidth * GridHeight * 2];
         }
 
         public TeamRuntimeState(int teamId)
         {
             TeamId = teamId;
-            Flow = new float[GridWidth * GridHeight * 2];
         }
 
         public int TeamId { get; }
@@ -2209,6 +2600,21 @@ public sealed class MassFlowSimulationState
         public float TangentY { get; }
         public float TargetX { get; set; }
         public float TargetY { get; set; }
+    }
+
+    private sealed class FlowRuntimeState
+    {
+        public FlowRuntimeState(int teamStateIndex, uint categoryMask, uint interactionMask)
+        {
+            TeamStateIndex = teamStateIndex;
+            CategoryMask = categoryMask;
+            InteractionMask = interactionMask;
+            Flow = new float[GridWidth * GridHeight * 2];
+        }
+
+        public int TeamStateIndex { get; }
+        public uint CategoryMask { get; }
+        public uint InteractionMask { get; }
         public float[] Flow { get; }
     }
 }

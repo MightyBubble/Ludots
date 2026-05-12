@@ -26,6 +26,8 @@ public struct MassNavigationAgentProfile
     public bool Heavy;
     public float NavMass;
     public float VisualScale;
+    public float BodyRadiusCm;
+    public float SpeedCmPerSecond;
 }
 
 public struct MassNavigationBlockerProfile

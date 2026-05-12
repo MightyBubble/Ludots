@@ -36,7 +36,7 @@ internal sealed class MassNavigationCommandApplySystem : ISystem<float>
         }
 
         long start = Stopwatch.GetTimestamp();
-        _simulation.Commands.ApplyPending(_simulation);
+        _simulation.Commands.ApplyPending(_engine.World, _simulation);
         _simulation.ObserveCommandApply((Stopwatch.GetTimestamp() - start) * 1000.0 / Stopwatch.Frequency);
     }
 }

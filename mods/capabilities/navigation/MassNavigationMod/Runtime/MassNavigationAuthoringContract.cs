@@ -100,6 +100,12 @@ internal sealed class MassNavigationAuthoringContract
         RequireTemplateKey(templateId);
     }
 
+    public MassNavigationAgentLayer RequireAgentLayer(string templateId)
+    {
+        ValidateTemplate(templateId);
+        return MassNavigationTemplateLayerResolver.RequireAgentLayer(_templates[templateId], templateId);
+    }
+
     private void ValidateAll()
     {
         ValidateRequiredMeshAssets();
@@ -108,11 +114,18 @@ internal sealed class MassNavigationAuthoringContract
         ValidateTemplate(_config.Presentation.BlockerTemplateId);
         ValidateTemplate(_config.Presentation.HotspotTemplateId);
 
+        if (!_config.ScenarioRuntime.AutoSpawnConfiguredScenario)
+        {
+            return;
+        }
+
         for (int i = 0; i < _config.Presentation.Teams.Length; i++)
         {
             MassNavigationTeamPresentationConfig team = _config.Presentation.Teams[i];
             ValidateTemplate(team.LightTemplateId);
             ValidateTemplate(team.HeavyTemplateId);
+            MassNavigationTemplateLayerResolver.RequireAgentLayer(_templates[team.LightTemplateId], team.LightTemplateId);
+            MassNavigationTemplateLayerResolver.RequireAgentLayer(_templates[team.HeavyTemplateId], team.HeavyTemplateId);
             ValidatePerformer(team.LightPerformerId);
             ValidatePerformer(team.HeavyPerformerId);
         }

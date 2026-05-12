@@ -132,14 +132,16 @@ internal sealed class MassNavigationSpawnReceiptBindingSystem : ISystem<float>
             throw new InvalidOperationException($"MassNavigationMod entity from template '{binding.TemplateId}' was already bound as an agent.");
         }
 
-        _engine.World.Add(entity, new MassNavigationAgentIndex { Value = binding.UnitIndex });
+        _engine.World.Add(entity, new MassNavigationAgentIndex { Value = binding.AgentIndex });
         _engine.World.Add(entity, new MassNavigationAgentProfile
         {
             Heavy = binding.Heavy,
             NavMass = binding.NavMass,
             VisualScale = binding.VisualScale,
+            BodyRadiusCm = binding.BodyRadiusCm,
+            SpeedCmPerSecond = binding.SpeedCmPerSecond,
         });
-        _simulation.AgentState.RegisterAgent(entity, controllable: true);
+        _simulation.AgentState.RegisterAgentAtIndex(entity, binding.AgentIndex, controllable: true);
     }
 
     private void BindBlocker(Entity entity, in MassNavigationSpawnReceiptBinding binding)

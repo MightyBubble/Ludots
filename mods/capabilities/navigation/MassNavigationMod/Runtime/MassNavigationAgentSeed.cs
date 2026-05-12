@@ -8,7 +8,10 @@ public readonly struct MassNavigationAgentSeed
         float localPositionYCm,
         bool heavy,
         float navMass,
-        float visualScale)
+        float visualScale,
+        float bodyRadiusCm,
+        float speedCmPerSecond,
+        MassNavigationAgentLayer layer)
     {
         TeamId = teamId;
         LocalPositionXCm = localPositionXCm;
@@ -16,6 +19,9 @@ public readonly struct MassNavigationAgentSeed
         Heavy = heavy;
         NavMass = navMass;
         VisualScale = visualScale;
+        BodyRadiusCm = bodyRadiusCm;
+        SpeedCmPerSecond = speedCmPerSecond;
+        Layer = layer;
     }
 
     public int TeamId { get; }
@@ -24,4 +30,7 @@ public readonly struct MassNavigationAgentSeed
     public bool Heavy { get; }
     public float NavMass { get; }
     public float VisualScale { get; }
+    public float BodyRadiusCm { get; }
+    public float SpeedCmPerSecond { get; }
+    public MassNavigationAgentLayer Layer { get; }
 }

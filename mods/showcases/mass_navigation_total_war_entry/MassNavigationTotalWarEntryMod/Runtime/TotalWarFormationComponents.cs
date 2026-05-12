@@ -32,7 +32,7 @@ internal struct TotalWarFormationSoldier
     public int SlotIndex;
 }
 
-internal struct TotalWarFormationAnchor
+internal struct TotalWarFormationAgent
 {
     public int FormationIndex;
 }
@@ -53,10 +53,22 @@ internal struct TotalWarFormationOutline
     public float DepthCm;
     public float RadiusCm;
     public float HeightOffsetM;
+    public int CurveSampleCount;
+    public float EmissionPositionEpsilonM;
+    public float EmissionFacingEpsilonRadians;
     public float EdgeLineWidthCm;
     public float CircleRingWidthCm;
     public float FrontIndicatorLengthCm;
     public float FrontIndicatorLineWidthCm;
+    public Vector4 FillColor;
+    public Vector4 BorderColor;
+}
+
+internal struct TotalWarObstacleOverlay
+{
+    public float RadiusCm;
+    public float HeightOffsetM;
+    public float BorderWidthCm;
     public Vector4 FillColor;
     public Vector4 BorderColor;
 }

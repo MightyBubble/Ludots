@@ -78,8 +78,9 @@ public sealed class MassNavigationCommandRuntime
         return true;
     }
 
-    public int ApplyPending(MassNavigationSimulationRuntime simulation)
+    public int ApplyPending(World world, MassNavigationSimulationRuntime simulation)
     {
+        ArgumentNullException.ThrowIfNull(world);
         ArgumentNullException.ThrowIfNull(simulation);
 
         int appliedCount = 0;
@@ -90,7 +91,6 @@ public sealed class MassNavigationCommandRuntime
             {
                 case MassNavigationQueuedCommandKind.TeamMove:
                     simulation.MassFlow.SetTeamTarget(command.TeamId, simulation.ToLocalCm(new Vector2(command.DestinationX, command.DestinationY)));
-                    simulation.MarkStructuralChange();
                     simulation.MarkFlowReconcile();
                     simulation.ObserveFlowFieldRebuild(simulation.MassFlow.LastFlowFieldRebuildMs);
                     simulation.MarkCommandApply();
@@ -101,13 +101,13 @@ public sealed class MassNavigationCommandRuntime
                     ReadOnlySpan<Entity> selected = _selectionPayload.AsSpan(command.SelectionStart, command.SelectionLength);
                     int assigned = simulation.NavGroupRuntime.IssueSelectionMoveCommand(
                         simulation.MassFlow,
+                        world,
                         simulation.AgentState,
                         selected,
                         new Vector2(command.DestinationX, command.DestinationY),
                         command.FormationMode);
                     if (assigned > 0)
                     {
-                        simulation.MarkStructuralChange();
                         simulation.MarkCommandApply();
                         appliedCount++;
                     }
@@ -117,7 +117,7 @@ public sealed class MassNavigationCommandRuntime
                 case MassNavigationQueuedCommandKind.SelectionRotate:
                 {
                     ReadOnlySpan<Entity> selected = _selectionPayload.AsSpan(command.SelectionStart, command.SelectionLength);
-                    simulation.NavGroupRuntime.RotateSelected(simulation.AgentState, selected, command.RotationDeltaRadians);
+                    simulation.NavGroupRuntime.RotateSelected(world, simulation.AgentState, selected, command.RotationDeltaRadians);
                     simulation.MarkCommandApply();
                     appliedCount++;
                     break;

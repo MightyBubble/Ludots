@@ -1,4 +1,5 @@
 using Arch.Core;
+using Ludots.Core.Presentation;
 using Ludots.Core.Presentation.Components;
 
 namespace MassNavigationMod.Runtime;
@@ -12,9 +13,28 @@ public sealed class MassNavigationAgentState
 
     public IReadOnlyList<Entity> SpawnedEntities => _spawnedEntities;
     public IReadOnlyList<Entity> AllAgents => _allAgents;
-    public IReadOnlyList<Entity> ControllableAgents => _controllableAgents;
+    public IReadOnlyList<Entity> ControllableAgentSlots => _controllableAgents;
     public int TotalAgents => _allAgents.Count;
-    public int ControllableCount => _controllableAgents.Count;
+    public int ControllableAgentSlotCount => _controllableAgents.Count;
+    public int ControllableAgentCount => _controllableIndexByEntityId.Count;
+    public bool HasBoundAgents(int expectedCount)
+    {
+        if (expectedCount < 0 || _allAgents.Count != expectedCount)
+        {
+            return false;
+        }
+
+        for (int i = 0; i < _allAgents.Count; i++)
+        {
+            if (_allAgents[i] == Entity.Null)
+            {
+                return false;
+            }
+        }
+
+        return true;
+    }
+
     public int BlockerCount { get; private set; }
     public int WorldMarkerCount { get; private set; }
 
@@ -26,17 +46,6 @@ public sealed class MassNavigationAgentState
         _controllableIndexByEntityId.Clear();
         BlockerCount = 0;
         WorldMarkerCount = 0;
-    }
-
-    public void RegisterAgent(Entity entity, bool controllable)
-    {
-        _spawnedEntities.Add(entity);
-        _allAgents.Add(entity);
-        if (controllable)
-        {
-            _controllableIndexByEntityId[entity.Id] = _controllableAgents.Count;
-            _controllableAgents.Add(entity);
-        }
     }
 
     public void RegisterBlocker(Entity entity)
@@ -56,6 +65,30 @@ public sealed class MassNavigationAgentState
         return _controllableIndexByEntityId.TryGetValue(entity.Id, out index);
     }
 
+    public bool TryGetControllableEntity(int agentIndex, out Entity entity)
+    {
+        if ((uint)agentIndex >= (uint)_controllableAgents.Count)
+        {
+            entity = Entity.Null;
+            return false;
+        }
+
+        entity = _controllableAgents[agentIndex];
+        return entity != Entity.Null;
+    }
+
+    public bool TryGetAgentEntity(int agentIndex, out Entity entity)
+    {
+        if ((uint)agentIndex >= (uint)_allAgents.Count)
+        {
+            entity = Entity.Null;
+            return false;
+        }
+
+        entity = _allAgents[agentIndex];
+        return entity != Entity.Null;
+    }
+
     public void DestroyTracked(World world)
     {
         for (int i = 0; i < _spawnedEntities.Count; i++)
@@ -66,70 +99,55 @@ public sealed class MassNavigationAgentState
                 continue;
             }
 
-            if (world.Has<PresentationStableId>(entity))
-            {
-                if (!world.Has<PresentationDestroyPending>(entity))
-                {
-                    world.Add(entity, new PresentationDestroyPending());
-                }
-
-                if (world.Has<PresentationDestroyEventPublished>(entity))
-                {
-                    world.Remove<PresentationDestroyEventPublished>(entity);
-                }
-
-                RemoveMassNavigationRuntimeTags(world, entity);
-                if (world.Has<PresentationOwnerHasPerformerPayload>(entity))
-                {
-                    world.Remove<PresentationOwnerHasPerformerPayload>(entity);
-                }
-            }
-            else
-            {
-                throw new System.InvalidOperationException(
-                    $"MassNavigationAgentState tracked entity {entity.Id} cannot be destroyed without PresentationStableId.");
-            }
+            PresentationEntityLifecycle.RequestDestroy(
+                world,
+                entity,
+                $"MassNavigationAgentState tracked entity {entity.Id}");
+            RemoveMassNavigationRuntimeTags(world, entity);
         }
 
         Reset();
     }
 
-    public void RegisterAgentAtIndex(Entity entity, int controllableIndex, bool controllable)
+    public void RegisterAgentAtIndex(Entity entity, int agentIndex, bool controllable)
     {
-        _spawnedEntities.Add(entity);
-        if (controllableIndex < 0)
+        if (agentIndex < 0)
         {
             throw new System.InvalidOperationException("MassNavigationAgentState requires non-negative agent indices.");
         }
 
-        while (_allAgents.Count <= controllableIndex)
+        if ((uint)agentIndex < (uint)_allAgents.Count &&
+            _allAgents[agentIndex] != Entity.Null)
+        {
+            throw new System.InvalidOperationException($"MassNavigationAgentState agent index {agentIndex} is already registered.");
+        }
+
+        if (controllable &&
+            (uint)agentIndex < (uint)_controllableAgents.Count &&
+            _controllableAgents[agentIndex] != Entity.Null)
+        {
+            throw new System.InvalidOperationException($"MassNavigationAgentState controllable index {agentIndex} is already registered.");
+        }
+
+        _spawnedEntities.Add(entity);
+        while (_allAgents.Count <= agentIndex)
         {
             _allAgents.Add(Entity.Null);
         }
 
-        if (_allAgents[controllableIndex] != Entity.Null)
-        {
-            throw new System.InvalidOperationException($"MassNavigationAgentState agent index {controllableIndex} is already registered.");
-        }
-
-        _allAgents[controllableIndex] = entity;
+        _allAgents[agentIndex] = entity;
         if (!controllable)
         {
             return;
         }
 
-        while (_controllableAgents.Count <= controllableIndex)
+        while (_controllableAgents.Count <= agentIndex)
         {
             _controllableAgents.Add(Entity.Null);
         }
 
-        if (_controllableAgents[controllableIndex] != Entity.Null)
-        {
-            throw new System.InvalidOperationException($"MassNavigationAgentState controllable index {controllableIndex} is already registered.");
-        }
-
-        _controllableAgents[controllableIndex] = entity;
-        _controllableIndexByEntityId[entity.Id] = controllableIndex;
+        _controllableAgents[agentIndex] = entity;
+        _controllableIndexByEntityId[entity.Id] = agentIndex;
     }
 
     private static void RemoveMassNavigationRuntimeTags(World world, Entity entity)

@@ -11,9 +11,11 @@ internal sealed class TotalWarShowcaseConfig
 {
     public string MapId { get; set; } = string.Empty;
     public string RuntimeSpawnReceiptChannelKey { get; set; } = string.Empty;
-    public string FormationAnchorTemplateId { get; set; } = string.Empty;
+    public TotalWarAgentAuthoringConfig FormationAgent { get; set; } = new();
     public string InitialSelectionFormationId { get; set; } = string.Empty;
     public TotalWarFormationSyncConfig FormationSync { get; set; } = new();
+    public TotalWarSoldierTargetSyncConfig SoldierTargetSync { get; set; } = new();
+    public TotalWarObstacleOverlayConfig ObstacleOverlay { get; set; } = new();
     public TotalWarFormationConfig[] Formations { get; set; } = Array.Empty<TotalWarFormationConfig>();
 
     public static TotalWarShowcaseConfig Load(JsonObject configObject)
@@ -35,10 +37,18 @@ internal sealed class TotalWarShowcaseConfig
     {
         RequireProperty(root, "mapId");
         RequireProperty(root, "runtimeSpawnReceiptChannelKey");
-        RequireProperty(root, "formationAnchorTemplateId");
+        RequireAgentAuthoring(RequireProperty(root, "formationAgent"), "formationAgent");
         RequireProperty(root, "initialSelectionFormationId");
-        JsonElement formationSync = RequireProperty(root, "formationSync");
-        RequireProperty(formationSync, "facingVelocityEpsilonCmPerSecond");
+        RequireProperty(root, "formationSync");
+        JsonElement soldierTargetSync = RequireProperty(root, "soldierTargetSync");
+        RequireProperties(
+            soldierTargetSync,
+            "targetChangeEpsilonCm",
+            "facingChangeEpsilonRadians",
+            "orderPathLookaheadCm",
+            "orderPathAnchorUpdateEpsilonCm");
+        JsonElement obstacleOverlay = RequireProperty(root, "obstacleOverlay");
+        RequireProperties(obstacleOverlay, "templateId", "heightOffsetM", "borderWidthCm", "fillColor", "borderColor");
         JsonElement formations = RequireProperty(root, "formations");
         if (formations.ValueKind != JsonValueKind.Array)
         {
@@ -51,10 +61,7 @@ internal sealed class TotalWarShowcaseConfig
             RequireProperty(formation, "id");
             RequireProperty(formation, "label");
             RequireProperty(formation, "teamId");
-            RequireProperty(formation, "templateId");
-            RequireProperty(formation, "heavy");
-            RequireProperty(formation, "navMass");
-            RequireProperty(formation, "visualScale");
+            RequireAgentAuthoring(RequireProperty(formation, "soldierAgent"), $"formations[{index}].soldierAgent");
             RequireProperty(formation, "centerXCm");
             RequireProperty(formation, "centerYCm");
             RequireProperty(formation, "facingDeg");
@@ -91,6 +98,9 @@ internal sealed class TotalWarShowcaseConfig
             }
 
             RequireProperty(outline, "heightOffsetM");
+            RequireProperty(outline, "curveSampleCount");
+            RequireProperty(outline, "emissionPositionEpsilonM");
+            RequireProperty(outline, "emissionFacingEpsilonRadians");
             RequireProperty(outline, "frontIndicatorLengthCm");
             RequireProperty(outline, "frontIndicatorLineWidthCm");
             RequireProperty(outline, "fillColor");
@@ -122,6 +132,16 @@ internal sealed class TotalWarShowcaseConfig
         }
     }
 
+    private static void RequireAgentAuthoring(JsonElement root, string label)
+    {
+        RequireProperty(root, "templateId");
+        RequireProperty(root, "heavy");
+        RequireProperty(root, "navMass");
+        RequireProperty(root, "visualScale");
+        RequireProperty(root, "bodyRadiusCm");
+        RequireProperty(root, "speedCmPerSecond");
+    }
+
     private static string RequireString(JsonElement root, string propertyName)
     {
         JsonElement value = RequireProperty(root, propertyName);
@@ -134,9 +154,11 @@ internal sealed class TotalWarShowcaseConfig
     {
         RequireNonEmpty(MapId, nameof(MapId));
         RequireNonEmpty(RuntimeSpawnReceiptChannelKey, nameof(RuntimeSpawnReceiptChannelKey));
-        RequireNonEmpty(FormationAnchorTemplateId, nameof(FormationAnchorTemplateId));
+        FormationAgent.Validate(nameof(FormationAgent));
         RequireNonEmpty(InitialSelectionFormationId, nameof(InitialSelectionFormationId));
         FormationSync.Validate();
+        SoldierTargetSync.Validate();
+        ObstacleOverlay.Validate();
         if (Formations.Length <= 0)
         {
             throw new InvalidOperationException("Total War showcase config requires at least one formation.");
@@ -147,6 +169,7 @@ internal sealed class TotalWarShowcaseConfig
         for (int i = 0; i < Formations.Length; i++)
         {
             Formations[i].Validate(i);
+            ValidateSoldierFormationSpeedContract(Formations[i], i);
             if (!formationIds.Add(Formations[i].Id))
             {
                 throw new InvalidOperationException($"Total War showcase config contains duplicate formation id '{Formations[i].Id}'.");
@@ -162,6 +185,15 @@ internal sealed class TotalWarShowcaseConfig
         }
     }
 
+    private void ValidateSoldierFormationSpeedContract(TotalWarFormationConfig formation, int index)
+    {
+        if (!(formation.SoldierAgent.SpeedCmPerSecond > FormationAgent.SpeedCmPerSecond))
+        {
+            throw new InvalidOperationException(
+                $"Total War formation '{formation.Id}' at formations[{index}] requires soldierAgent.speedCmPerSecond ({formation.SoldierAgent.SpeedCmPerSecond}) > formationAgent.speedCmPerSecond ({FormationAgent.SpeedCmPerSecond}).");
+        }
+    }
+
     private static void RequireNonEmpty(string value, string fieldName)
     {
         if (string.IsNullOrWhiteSpace(value))
@@ -173,13 +205,142 @@ internal sealed class TotalWarShowcaseConfig
 
 internal sealed class TotalWarFormationSyncConfig
 {
-    public float FacingVelocityEpsilonCmPerSecond { get; set; }
+    public void Validate() { }
+}
+
+internal sealed class TotalWarSoldierTargetSyncConfig
+{
+    public float TargetChangeEpsilonCm { get; set; }
+    public float FacingChangeEpsilonRadians { get; set; }
+    public float OrderPathLookaheadCm { get; set; }
+    public float OrderPathAnchorUpdateEpsilonCm { get; set; }
 
     public void Validate()
     {
-        if (!(FacingVelocityEpsilonCmPerSecond > 0f))
+        if (!(TargetChangeEpsilonCm > 0f))
         {
-            throw new InvalidOperationException("Total War showcase formationSync requires FacingVelocityEpsilonCmPerSecond > 0.");
+            throw new InvalidOperationException("Total War showcase soldierTargetSync requires TargetChangeEpsilonCm > 0.");
+        }
+
+        if (!(FacingChangeEpsilonRadians > 0f))
+        {
+            throw new InvalidOperationException("Total War showcase soldierTargetSync requires FacingChangeEpsilonRadians > 0.");
+        }
+
+        if (!(OrderPathLookaheadCm > 0f))
+        {
+            throw new InvalidOperationException("Total War showcase soldierTargetSync requires OrderPathLookaheadCm > 0.");
+        }
+
+        if (!(OrderPathAnchorUpdateEpsilonCm > 0f))
+        {
+            throw new InvalidOperationException("Total War showcase soldierTargetSync requires OrderPathAnchorUpdateEpsilonCm > 0.");
+        }
+    }
+}
+
+internal sealed class TotalWarObstacleOverlayConfig
+{
+    public string TemplateId { get; set; } = string.Empty;
+    public float HeightOffsetM { get; set; }
+    public float BorderWidthCm { get; set; }
+    public float[] FillColor { get; set; } = Array.Empty<float>();
+    public float[] BorderColor { get; set; } = Array.Empty<float>();
+
+    public void Validate()
+    {
+        if (string.IsNullOrWhiteSpace(TemplateId))
+        {
+            throw new InvalidOperationException("Total War obstacleOverlay requires non-empty templateId.");
+        }
+
+        if (!(BorderWidthCm > 0f))
+        {
+            throw new InvalidOperationException("Total War obstacleOverlay requires BorderWidthCm > 0.");
+        }
+
+        ValidateColor(FillColor, nameof(FillColor));
+        ValidateColor(BorderColor, nameof(BorderColor));
+    }
+
+    public TotalWarObstacleOverlay ToComponent(float radiusCm)
+    {
+        if (!(radiusCm > 0f))
+        {
+            throw new InvalidOperationException("Total War obstacle overlay requires obstacle radiusCm > 0.");
+        }
+
+        return new TotalWarObstacleOverlay
+        {
+            RadiusCm = radiusCm,
+            HeightOffsetM = HeightOffsetM,
+            BorderWidthCm = BorderWidthCm,
+            FillColor = ToVector4(FillColor),
+            BorderColor = ToVector4(BorderColor),
+        };
+    }
+
+    private static void ValidateColor(float[] values, string fieldName)
+    {
+        if (values.Length != 4)
+        {
+            throw new InvalidOperationException($"Total War obstacleOverlay requires {fieldName} as [r,g,b,a].");
+        }
+
+        for (int i = 0; i < values.Length; i++)
+        {
+            if (values[i] < 0f || values[i] > 1f)
+            {
+                throw new InvalidOperationException(
+                    $"Total War obstacleOverlay.{fieldName}[{i}] must be between 0 and 1.");
+            }
+        }
+    }
+
+    private static Vector4 ToVector4(float[] values)
+    {
+        return new Vector4(values[0], values[1], values[2], values[3]);
+    }
+}
+
+internal sealed class TotalWarAgentAuthoringConfig
+{
+    public string TemplateId { get; set; } = string.Empty;
+    public bool Heavy { get; set; }
+    public float NavMass { get; set; }
+    public float VisualScale { get; set; }
+    public float BodyRadiusCm { get; set; }
+    public float SpeedCmPerSecond { get; set; }
+
+    public void Validate(string label)
+    {
+        RequireNonEmpty(TemplateId, $"{label}.templateId");
+        if (!(NavMass > 0f))
+        {
+            throw new InvalidOperationException($"Total War showcase config requires {label}.navMass > 0.");
+        }
+
+        if (!(VisualScale > 0f))
+        {
+            throw new InvalidOperationException($"Total War showcase config requires {label}.visualScale > 0.");
+        }
+
+        if (!(BodyRadiusCm > 0f))
+        {
+            throw new InvalidOperationException($"Total War showcase config requires {label}.bodyRadiusCm > 0.");
+        }
+
+        if (!(SpeedCmPerSecond > 0f))
+        {
+            throw new InvalidOperationException($"Total War showcase config requires {label}.speedCmPerSecond > 0.");
+        }
+    }
+
+    private static void RequireNonEmpty(string value, string fieldName)
+    {
+        if (string.IsNullOrWhiteSpace(value))
+        {
+            throw new InvalidOperationException($"Total War showcase config requires non-empty {fieldName}.");
         }
     }
 }
@@ -189,10 +350,7 @@ internal sealed class TotalWarFormationConfig
     public string Id { get; set; } = string.Empty;
     public string Label { get; set; } = string.Empty;
     public int TeamId { get; set; }
-    public string TemplateId { get; set; } = string.Empty;
-    public bool Heavy { get; set; }
-    public float NavMass { get; set; }
-    public float VisualScale { get; set; }
+    public TotalWarAgentAuthoringConfig SoldierAgent { get; set; } = new();
     public int CenterXCm { get; set; }
     public int CenterYCm { get; set; }
     public float FacingDeg { get; set; }
@@ -205,20 +363,10 @@ internal sealed class TotalWarFormationConfig
     {
         RequireNonEmpty(Id, $"formations[{index}].id");
         RequireNonEmpty(Label, $"formations[{index}].label");
-        RequireNonEmpty(TemplateId, $"formations[{index}].templateId");
+        SoldierAgent.Validate($"formations[{index}].soldierAgent");
         if (TeamId <= 0)
         {
             throw new InvalidOperationException($"Total War formation '{Id}' requires TeamId > 0.");
-        }
-
-        if (!(NavMass > 0f))
-        {
-            throw new InvalidOperationException($"Total War formation '{Id}' requires NavMass > 0.");
-        }
-
-        if (!(VisualScale > 0f))
-        {
-            throw new InvalidOperationException($"Total War formation '{Id}' requires VisualScale > 0.");
         }
 
         Slots.Validate(Id);
@@ -382,6 +530,9 @@ internal sealed class TotalWarFormationOutlineConfig
     public TotalWarFormationRectangleOutlineConfig? Rectangle { get; set; }
     public TotalWarFormationCircleOutlineConfig? Circle { get; set; }
     public float HeightOffsetM { get; set; }
+    public int CurveSampleCount { get; set; }
+    public float EmissionPositionEpsilonM { get; set; }
+    public float EmissionFacingEpsilonRadians { get; set; }
     public float FrontIndicatorLengthCm { get; set; }
     public float FrontIndicatorLineWidthCm { get; set; }
     public float[] FillColor { get; set; } = Array.Empty<float>();
@@ -418,6 +569,13 @@ internal sealed class TotalWarFormationOutlineConfig
         }
 
         RequirePositive(FrontIndicatorLineWidthCm, formationId, nameof(FrontIndicatorLineWidthCm));
+        if (CurveSampleCount <= 0)
+        {
+            throw new InvalidOperationException($"Total War formation '{formationId}' requires outline.CurveSampleCount > 0.");
+        }
+
+        RequirePositive(EmissionPositionEpsilonM, formationId, nameof(EmissionPositionEpsilonM));
+        RequirePositive(EmissionFacingEpsilonRadians, formationId, nameof(EmissionFacingEpsilonRadians));
         if (FrontIndicatorLengthCm < 0f)
         {
             throw new InvalidOperationException($"Total War formation '{formationId}' requires outline.FrontIndicatorLengthCm >= 0.");
@@ -429,20 +587,52 @@ internal sealed class TotalWarFormationOutlineConfig
 
     public TotalWarFormationOutline ToComponent(string formationId)
     {
-        return new TotalWarFormationOutline
+        TotalWarFormationOutlineShape shape = ResolveShape(Shape, formationId);
+        if (shape == TotalWarFormationOutlineShape.Rectangle)
         {
-            Shape = ResolveShape(Shape, formationId),
-            WidthCm = Rectangle?.WidthCm ?? 0f,
-            DepthCm = Rectangle?.DepthCm ?? 0f,
-            RadiusCm = Circle?.RadiusCm ?? 0f,
-            HeightOffsetM = HeightOffsetM,
-            EdgeLineWidthCm = Rectangle?.EdgeLineWidthCm ?? 0f,
-            CircleRingWidthCm = Circle?.RingWidthCm ?? 0f,
-            FrontIndicatorLengthCm = FrontIndicatorLengthCm,
-            FrontIndicatorLineWidthCm = FrontIndicatorLineWidthCm,
-            FillColor = ToVector4(FillColor),
-            BorderColor = ToVector4(BorderColor),
-        };
+            TotalWarFormationRectangleOutlineConfig rectangle = RequiredRectangle;
+            return new TotalWarFormationOutline
+            {
+                Shape = shape,
+                WidthCm = rectangle.WidthCm,
+                DepthCm = rectangle.DepthCm,
+                RadiusCm = 0f,
+                HeightOffsetM = HeightOffsetM,
+                CurveSampleCount = CurveSampleCount,
+                EmissionPositionEpsilonM = EmissionPositionEpsilonM,
+                EmissionFacingEpsilonRadians = EmissionFacingEpsilonRadians,
+                EdgeLineWidthCm = rectangle.EdgeLineWidthCm,
+                CircleRingWidthCm = 0f,
+                FrontIndicatorLengthCm = FrontIndicatorLengthCm,
+                FrontIndicatorLineWidthCm = FrontIndicatorLineWidthCm,
+                FillColor = ToVector4(FillColor),
+                BorderColor = ToVector4(BorderColor),
+            };
+        }
+
+        if (shape == TotalWarFormationOutlineShape.Circle)
+        {
+            TotalWarFormationCircleOutlineConfig circle = RequiredCircle;
+            return new TotalWarFormationOutline
+            {
+                Shape = shape,
+                WidthCm = 0f,
+                DepthCm = 0f,
+                RadiusCm = circle.RadiusCm,
+                HeightOffsetM = HeightOffsetM,
+                CurveSampleCount = CurveSampleCount,
+                EmissionPositionEpsilonM = EmissionPositionEpsilonM,
+                EmissionFacingEpsilonRadians = EmissionFacingEpsilonRadians,
+                EdgeLineWidthCm = 0f,
+                CircleRingWidthCm = circle.RingWidthCm,
+                FrontIndicatorLengthCm = FrontIndicatorLengthCm,
+                FrontIndicatorLineWidthCm = FrontIndicatorLineWidthCm,
+                FillColor = ToVector4(FillColor),
+                BorderColor = ToVector4(BorderColor),
+            };
+        }
+
+        throw new InvalidOperationException($"Total War formation '{formationId}' has unsupported outline shape '{Shape}'.");
     }
 
     private static TotalWarFormationOutlineShape ResolveShape(string shape, string formationId)

@@ -131,6 +131,8 @@
         "heavy": true,
         "navMass": 4.0,
         "visualScale": 0.34,
+        "bodyRadiusCm": 28.0,
+        "speedCmPerSecond": 800.0,
         "everyNth": 7,
         "nthOffset": 0
       },
@@ -139,6 +141,8 @@
         "heavy": false,
         "navMass": 1.0,
         "visualScale": 0.22,
+        "bodyRadiusCm": 20.0,
+        "speedCmPerSecond": 800.0,
         "everyNth": 0,
         "nthOffset": 0
       }
@@ -268,7 +272,6 @@
       "nearSlotBlendDistanceSq": 4000000.0
     },
     "steering": {
-      "speedCmPerSecond": 800.0,
       "separationRadiusCm": 200.0,
       "goalArrivalRadiusCm": 1200.0,
       "flowObstacleAvoidanceScale": 1.2,

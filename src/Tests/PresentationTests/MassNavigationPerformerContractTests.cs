@@ -310,9 +310,9 @@ namespace Ludots.Tests.Presentation
             AssertSourceContains(Path.Combine(modRoot, "Runtime", "MassNavigationConfig.cs"), "must use Replace merge policy");
             AssertSourceDoesNotContain(Path.Combine(modRoot, "Runtime", "MassNavigationConfig.cs"), "MergeDeepObjectFromCatalog");
             AssertSourceContains(Path.Combine(modRoot, "Runtime", "MassNavigationConfig.cs"), "config_catalog.json");
-            AssertSourceContains(Path.Combine(modRoot, "Runtime", "MassNavigationAgentState.cs"), "PresentationDestroyPending");
+            AssertSourceContains(Path.Combine(modRoot, "Runtime", "MassNavigationAgentState.cs"), "PresentationEntityLifecycle.RequestDestroy");
             AssertSourceContains(Path.Combine(modRoot, "Runtime", "MassNavigationAgentState.cs"), "RemoveMassNavigationRuntimeTags");
-            AssertSourceContains(Path.Combine(modRoot, "Runtime", "MassNavigationAgentState.cs"), "PresentationOwnerHasPerformerPayload");
+            AssertSourceDoesNotContain(Path.Combine(modRoot, "Runtime", "MassNavigationAgentState.cs"), "PresentationOwnerHasPerformerPayload");
             AssertSourceDoesNotContain(Path.Combine(modRoot, "Runtime", "MassNavigationSimulationRuntime.cs"), "ValidateHotZonesInsideBoard");
             AssertSourceDoesNotContain(Path.Combine(modRoot, "Runtime", "MassNavigationSimulationRuntime.cs"), "WorldConfig.WorldWidthCm");
             AssertSourceDoesNotContain(Path.Combine(modRoot, "Runtime", "MassNavigationSimulationRuntime.cs"), "WorldConfig.WorldHeightCm");
@@ -322,7 +322,7 @@ namespace Ludots.Tests.Presentation
             AssertSourceDoesNotContain(Path.Combine(modRoot, "UI", "MassNavigationPanelController.cs"), "PresentationTimingDiagnostics? timing");
             AssertSourceDoesNotContain(Path.Combine(modRoot, "Runtime", "MassFlowSimulationState.cs"), "localIndex % 7");
             AssertSourceDoesNotContain(Path.Combine(repoRoot, "mods", "CoreInputMod", "Systems", "SelectedMovePathPresentationSystem.cs"), "massNavigationMove");
-            AssertSourceContains(Path.Combine(modRoot, "Runtime", "MassFlowSimulationState.cs"), "profileSet?.ResolveForLocalIndex(localIndex)");
+            AssertSourceContains(Path.Combine(modRoot, "Runtime", "MassFlowSimulationState.cs"), "profileSet.ResolveForLocalIndex(localIndex)");
             AssertSourceContains(Path.Combine(modRoot, "Runtime", "MassFlowSimulationState.cs"), "MarkMovedEntitiesDirty()");
             AssertSourceContains(Path.Combine(modRoot, "Runtime", "MassFlowSimulationState.cs"), "_entitySyncDirtyAgents");
             Assert.That(
@@ -360,6 +360,26 @@ namespace Ludots.Tests.Presentation
             Assert.That(config.World, Is.Not.Null);
             Assert.That(config.World!.SolverWindowWidthCm, Is.EqualTo(10_000));
             Assert.That(config.Presentation.ResolveAgentTemplateId(1, heavy: false), Is.EqualTo("mass_navigation_agent_azure_light"));
+        }
+
+        [Test]
+        public void PresentationTeams_AreRequiredOnlyForAutoSpawnScenarios()
+        {
+            JsonObject config = ReadObject(Path.Combine(MassNavigationModRoot(), "assets", "MassNavigationConfig.json"));
+            JsonArray teams = config["presentation"]?["teams"]?.AsArray()
+                ?? throw new InvalidOperationException("MassNavigationConfig.presentation.teams missing.");
+            teams.Clear();
+
+            InvalidOperationException ex = Assert.Throws<InvalidOperationException>(() => MassNavigationMod.Runtime.MassNavigationConfig.Load(config))!;
+            Assert.That(ex.Message, Does.Contain("presentation team style count must match scenario teams"));
+
+            config["scenarioRuntime"]!["autoSpawnConfiguredScenario"] = false;
+            config["scenario"]!["agentsPerTeam"] = 0;
+            MassNavigationMod.Runtime.MassNavigationConfig formationOwnedConfig =
+                MassNavigationMod.Runtime.MassNavigationConfig.Load(config);
+
+            Assert.That(formationOwnedConfig.ScenarioRuntime.AutoSpawnConfiguredScenario, Is.False);
+            Assert.That(formationOwnedConfig.Presentation.Teams, Is.Empty);
         }
 
         private static void AssertAgentBodyUsesMassNavigationSoldier(JsonObject definition, string definitionId, float expectedScale)

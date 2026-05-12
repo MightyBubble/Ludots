@@ -74,14 +74,14 @@ internal sealed class MassNavigationControlSystem : ISystem<float>
         }
         else
         {
-            _simulation.NavGroupRuntime.RefreshSelectedRotation(_simulation.AgentState, _simulation.SelectedEntities);
+            _simulation.NavGroupRuntime.RefreshSelectedRotation(_engine.World, _simulation.AgentState, _simulation.SelectedEntities);
         }
     }
 
     private void ResetConfiguredScenario()
     {
         ResetRuntimeState();
-        MassNavigationScenarioBootstrap.SpawnDefaultScenario(
+        MassNavigationScenarioBootstrap.SpawnConfiguredScenario(
             _engine,
             _simulation,
             _engine.GetService(CoreServiceKeys.TeamEntityLookup)

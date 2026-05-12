@@ -44,24 +44,34 @@ namespace Ludots.Tests.Presentation
     public sealed class MassNavigationTotalWarShowcaseContractTests
     {
         [Test]
-        public void TotalWarConfig_AuthorsFormationAnchorTemplateAndSquareCircleOutlines()
+        public void TotalWarConfig_AuthorsFormationAndSoldierMassNavAgents()
         {
             string modRoot = TotalWarModRoot();
             JsonObject config = ReadObject(Path.Combine(modRoot, "assets", "TotalWarShowcaseConfig.json"));
-            string anchorTemplateId = RequireString(config, "formationAnchorTemplateId");
-            Assert.That(anchorTemplateId, Is.EqualTo("mass_navigation_total_war_formation_anchor"));
+            JsonObject formationAgent = config["formationAgent"]?.AsObject()
+                ?? throw new InvalidOperationException("TotalWar config must author formationAgent.");
+            string formationTemplateId = RequireString(formationAgent, "templateId");
+            Assert.That(formationTemplateId, Is.EqualTo("mass_navigation_total_war_formation_agent"));
+            float formationSpeedCmPerSecond = formationAgent["speedCmPerSecond"]?.GetValue<float>()
+                ?? throw new InvalidOperationException("TotalWar formationAgent.speedCmPerSecond must be numeric.");
 
             JsonArray templates = ReadArray(Path.Combine(modRoot, "assets", "Entities", "templates.json"));
-            JsonObject anchorTemplate = FindObjectById(templates, anchorTemplateId);
-            JsonObject components = anchorTemplate["components"]?.AsObject()
-                ?? throw new InvalidOperationException("TotalWar formation anchor template must author components.");
+            JsonObject formationTemplate = FindObjectById(templates, formationTemplateId);
+            JsonObject components = formationTemplate["components"]?.AsObject()
+                ?? throw new InvalidOperationException("TotalWar formation agent template must author components.");
             Assert.That(components.ContainsKey("Name"), Is.True);
             Assert.That(components.ContainsKey("WorldPositionCm"), Is.True);
             Assert.That(components.ContainsKey("VisualHeightmapSampleState"), Is.True,
-                "Formation outline height must follow the visual-heightmap SSOT through the anchor visual transform.");
+                "Formation outline height must follow the visual-heightmap SSOT through the agent visual transform.");
             Assert.That(components.ContainsKey("FacingDirection"), Is.True);
-            Assert.That(components.ContainsKey("SpatialPartitionExcluded"), Is.True,
-                "Formation anchors are presentation owners, not navigation obstacles or spatial-query participants.");
+            Assert.That(components.ContainsKey("MassNavigationAgentTag"), Is.True);
+            Assert.That(components.ContainsKey("MassNavigationControllable"), Is.True);
+            Assert.That(components.ContainsKey("OrderBuffer"), Is.True);
+            Assert.That(components.ContainsKey("SelectionSelectableTag"), Is.True);
+            Assert.That(components.ContainsKey("SelectionSelectableState"), Is.True);
+            Assert.That(components.ContainsKey("AttributeBuffer"), Is.True);
+            Assert.That(components.ContainsKey("SpatialBounds"), Is.True);
+            Assert.That(components.ContainsKey("SpatialFootprint2D"), Is.True);
 
             JsonArray formations = config["formations"]?.AsArray()
                 ?? throw new InvalidOperationException("TotalWar config must author formations.");
@@ -72,8 +82,36 @@ namespace Ludots.Tests.Presentation
             Assert.That(shapes, Does.Contain("Rectangle"));
             Assert.That(shapes, Does.Contain("Circle"));
 
+            JsonObject soldierTargetSync = config["soldierTargetSync"]?.AsObject()
+                ?? throw new InvalidOperationException("TotalWar config must author soldierTargetSync.");
+            AssertPositive(soldierTargetSync, "targetChangeEpsilonCm");
+            AssertPositive(soldierTargetSync, "facingChangeEpsilonRadians");
+            AssertPositive(soldierTargetSync, "orderPathLookaheadCm");
+            AssertPositive(soldierTargetSync, "orderPathAnchorUpdateEpsilonCm");
+            JsonObject obstacleOverlay = config["obstacleOverlay"]?.AsObject()
+                ?? throw new InvalidOperationException("TotalWar config must author obstacleOverlay.");
+            AssertPositive(obstacleOverlay, "borderWidthCm");
+
             foreach (JsonObject formation in formations.Select(node => node?.AsObject() ?? throw new InvalidOperationException("Formation must be an object.")))
             {
+                JsonObject soldierAgent = formation["soldierAgent"]?.AsObject()
+                    ?? throw new InvalidOperationException("Every formation must author soldierAgent.");
+                float soldierSpeedCmPerSecond = soldierAgent["speedCmPerSecond"]?.GetValue<float>()
+                    ?? throw new InvalidOperationException("Every formation soldierAgent.speedCmPerSecond must be numeric.");
+                Assert.That(soldierSpeedCmPerSecond, Is.GreaterThan(formationSpeedCmPerSecond),
+                    "TotalWar soldier MassNavigation agents must be configured faster than formation MassNavigation agents.");
+                JsonObject soldierTemplate = FindObjectById(templates, RequireString(soldierAgent, "templateId"));
+                JsonObject soldierComponents = soldierTemplate["components"]?.AsObject()
+                    ?? throw new InvalidOperationException("TotalWar soldier template must author components.");
+                Assert.That(soldierComponents.ContainsKey("MassNavigationAgentTag"), Is.True);
+                Assert.That(soldierComponents.ContainsKey("Team"), Is.False,
+                    "Soldier team is owned by the formation config and applied through spawn receipt binding; templates must not author a second team SSOT.");
+                Assert.That(soldierComponents.ContainsKey("MassNavigationControllable"), Is.False);
+                Assert.That(soldierComponents.ContainsKey("OrderBuffer"), Is.False);
+                Assert.That(soldierComponents.ContainsKey("SelectionSelectableTag"), Is.False);
+                Assert.That(soldierComponents.ContainsKey("SelectionSelectableState"), Is.False);
+                Assert.That(soldierComponents.ContainsKey("AttributeBuffer"), Is.False);
+
                 JsonObject slots = formation["slots"]?.AsObject()
                     ?? throw new InvalidOperationException("Every formation must author slots.");
                 string slotLayout = RequireString(slots, "layout");
@@ -93,6 +131,9 @@ namespace Ludots.Tests.Presentation
                     Is.AnyOf(("Grid", "Rectangle"), ("Disc", "Circle")),
                     "Formation slot layout and outline shape must describe the same gameplay shape.");
                 AssertPositive(outline, "heightOffsetM", allowZero: true);
+                AssertPositive(outline, "curveSampleCount");
+                AssertPositive(outline, "emissionPositionEpsilonM");
+                AssertPositive(outline, "emissionFacingEpsilonRadians");
                 AssertPositive(outline, "frontIndicatorLineWidthCm");
                 AssertColor(outline["fillColor"]?.AsArray(), "fillColor");
                 AssertColor(outline["borderColor"]?.AsArray(), "borderColor");
@@ -164,6 +205,21 @@ namespace Ludots.Tests.Presentation
 
             Assert.That(RequireString(config, "mapId"), Is.EqualTo("mass_navigation_total_war"));
             Assert.That(config["scenarioRuntime"]?["autoSpawnConfiguredScenario"]?.GetValue<bool>(), Is.False);
+            JsonObject scenario = config["scenario"]?.AsObject()
+                ?? throw new InvalidOperationException("scenario must be authored.");
+            Assert.That(scenario["agentsPerTeam"]?.GetValue<int>(), Is.EqualTo(0),
+                "TotalWar runtime owns formation/soldier spawning; the shared MassNavigation config must not auto-author generic scenario agents.");
+            JsonArray scenarioTeams = scenario["teams"]?.AsArray()
+                ?? throw new InvalidOperationException("scenario.teams must be authored.");
+            Assert.That(scenarioTeams.Select(node => node?["id"]?.GetValue<int>()).ToArray(),
+                Is.EquivalentTo(new[] { 1, 2 }));
+            JsonObject presentation = config["presentation"]?.AsObject()
+                ?? throw new InvalidOperationException("presentation must be authored.");
+            JsonArray presentationTeams = presentation["teams"]?.AsArray()
+                ?? throw new InvalidOperationException("presentation.teams must be authored.");
+            Assert.That(presentationTeams.Count, Is.EqualTo(0),
+                "TotalWar owns formation/soldier spawning through TotalWarShowcaseConfig; MassNavigation generic auto-spawn team mappings must stay empty to avoid a second template SSOT.");
+
             JsonObject residency = config["viewResidency"]?.AsObject()
                 ?? throw new InvalidOperationException("viewResidency must be authored.");
             Assert.That(RequireString(residency, "mode"), Is.EqualTo("Probe"));
@@ -194,6 +250,45 @@ namespace Ludots.Tests.Presentation
         }
 
         [Test]
+        public void TotalWarShowcaseConfig_RejectsSoldierSpeedNotGreaterThanFormationSpeed()
+        {
+            JsonObject config = ReadObject(Path.Combine(TotalWarModRoot(), "assets", "TotalWarShowcaseConfig.json"));
+            JsonObject formationAgent = config["formationAgent"]?.AsObject()
+                ?? throw new InvalidOperationException("TotalWar config must author formationAgent.");
+            float formationSpeedCmPerSecond = formationAgent["speedCmPerSecond"]?.GetValue<float>()
+                ?? throw new InvalidOperationException("TotalWar formationAgent.speedCmPerSecond must be numeric.");
+
+            JsonArray formations = config["formations"]?.AsArray()
+                ?? throw new InvalidOperationException("TotalWar config must author formations.");
+            JsonObject firstFormation = formations[0]?.AsObject()
+                ?? throw new InvalidOperationException("TotalWar formation must be an object.");
+            JsonObject soldierAgent = firstFormation["soldierAgent"]?.AsObject()
+                ?? throw new InvalidOperationException("TotalWar formation must author soldierAgent.");
+
+            soldierAgent["speedCmPerSecond"] = formationSpeedCmPerSecond;
+            InvalidOperationException equalSpeed = Assert.Throws<InvalidOperationException>(() => TotalWarShowcaseConfig.Load(config))!;
+            Assert.That(equalSpeed.Message, Does.Contain("soldierAgent.speedCmPerSecond"));
+            Assert.That(equalSpeed.Message, Does.Contain("formationAgent.speedCmPerSecond"));
+
+            config = ReadObject(Path.Combine(TotalWarModRoot(), "assets", "TotalWarShowcaseConfig.json"));
+            formationAgent = config["formationAgent"]?.AsObject()
+                ?? throw new InvalidOperationException("TotalWar config must author formationAgent.");
+            formationSpeedCmPerSecond = formationAgent["speedCmPerSecond"]?.GetValue<float>()
+                ?? throw new InvalidOperationException("TotalWar formationAgent.speedCmPerSecond must be numeric.");
+            formations = config["formations"]?.AsArray()
+                ?? throw new InvalidOperationException("TotalWar config must author formations.");
+            firstFormation = formations[0]?.AsObject()
+                ?? throw new InvalidOperationException("TotalWar formation must be an object.");
+            soldierAgent = firstFormation["soldierAgent"]?.AsObject()
+                ?? throw new InvalidOperationException("TotalWar formation must author soldierAgent.");
+            soldierAgent["speedCmPerSecond"] = formationSpeedCmPerSecond - 1f;
+
+            InvalidOperationException slowerSoldier = Assert.Throws<InvalidOperationException>(() => TotalWarShowcaseConfig.Load(config))!;
+            Assert.That(slowerSoldier.Message, Does.Contain("soldierAgent.speedCmPerSecond"));
+            Assert.That(slowerSoldier.Message, Does.Contain("formationAgent.speedCmPerSecond"));
+        }
+
+        [Test]
         public void TeamRelationshipConfig_RejectsCaseAliases()
         {
             JsonObject config = ReadObject(Path.Combine(TotalWarModRoot(), "assets", "MassNavigationConfig.json"));
@@ -217,13 +312,242 @@ namespace Ludots.Tests.Presentation
             string source = File.ReadAllText(runtimePath);
 
             Assert.That(source, Does.Contain("RuntimeEntitySpawnQueue"));
-            Assert.That(source, Does.Contain("TotalWarSpawnReceiptBinding.ForFormationAnchor"));
-            Assert.That(source, Does.Contain("RegisterSpawnedFormationAnchor(GameEngine engine"));
+            Assert.That(source, Does.Contain("TotalWarSpawnReceiptBinding.ForFormationAgent"));
+            Assert.That(source, Does.Contain("RegisterSpawnedFormationAgent(GameEngine engine"));
+            Assert.That(source, Does.Contain("RegisterSpawnedObstacleOverlay"));
+            Assert.That(source, Does.Contain("DestroyShowcaseOwnedEntities"));
             Assert.That(source, Does.Contain("PresentationDestroyPending"));
             Assert.That(source, Does.Not.Contain("World.Create("),
-                "TotalWar formation anchors must be spawned through the runtime template spawn path.");
+                "TotalWar formation agents must be spawned through the runtime template spawn path.");
             Assert.That(source, Does.Not.Contain("World.Destroy("),
-                "TotalWar formation anchors must enter presentation destroy lifecycle instead of direct ECS destroy.");
+                "TotalWar formation agents must enter presentation destroy lifecycle instead of direct ECS destroy.");
+        }
+
+        [Test]
+        public void TotalWarRuntime_CachesSlotOffsetsAndSyncsSoldierTargetsFromFormationOrders()
+        {
+            string source = File.ReadAllText(Path.Combine(TotalWarModRoot(), "Runtime", "TotalWarShowcaseRuntime.cs"));
+            string syncBody = ExtractMethodBody(source, "private void SyncSoldierTargetsFromFormationAgents");
+
+            Assert.That(syncBody, Does.Contain("targetSync.TargetChangeEpsilonCm"));
+            Assert.That(syncBody, Does.Contain("targetSync.FacingChangeEpsilonRadians"));
+            Assert.That(syncBody, Does.Not.Contain("IntervalTicks"),
+                "Soldier slot orders must be derived from formation order/target changes, not a tick cadence chase loop.");
+            Assert.That(syncBody, Does.Contain("formationWorldX"));
+            Assert.That(syncBody, Does.Contain("LastCarrierCenterWorldXCm"),
+                "Carrier snapshots must use world coordinates; MassFlow local coordinates are rebased when the solver window moves.");
+            Assert.That(syncBody, Does.Contain("_formationPlans[formationIndex] = plan;"),
+                "Carrier snapshots must be committed even when soldier slot target writes are skipped by the epsilon gate.");
+            Assert.That(syncBody, Does.Contain("ApplyExternalDisplacementRange"),
+                "Soldiers must inherit the formation agent's resolved MassFlow displacement before local slot steering.");
+            Assert.That(syncBody, Does.Contain("soldierAgentPlan.SlotOffsetXCm"));
+            Assert.That(syncBody, Does.Contain("soldierAgentPlan.SlotOffsetYCm"));
+            Assert.That(syncBody, Does.Not.Contain("TryGetGroupMemberOrderTarget"),
+                "Soldier target sync must use the MassNavigation order-path anchor SSOT without repeating order target lookups in the showcase hot path.");
+            Assert.That(syncBody, Does.Not.Contain("targetSync.OrderPathLookaheadCm"),
+                "Carrier-mode soldiers must not chase the formation order-path lookahead; the formation's resolved displacement carries them through macro obstacles.");
+            Assert.That(syncBody, Does.Not.Contain("targetSync.OrderPathAnchorUpdateEpsilonCm"));
+            Assert.That(syncBody, Does.Not.Contain("TryUpdateGroupMemberFollowerAnchor"));
+            Assert.That(syncBody, Does.Not.Contain("TryUpdateGroupMemberOrderPathAnchor"),
+                "TotalWar soldiers must not consume the pure order-path anchor in carrier mode.");
+            Assert.That(syncBody, Does.Not.Contain("ResolveOrderPathLookaheadAnchor"),
+                "TotalWar must not recompute its own chase anchor.");
+            Assert.That(syncBody, Does.Contain("ResolveUnitNavigableTarget"),
+                "Soldier slot targets must use MassFlow's per-agent navigable projection before SetUnitTarget.");
+            Assert.That(syncBody, Does.Not.Contain("TryGetUnitTarget"),
+                "Soldier target sync must not fallback to raw MassFlow unit targets; order slot targets are the MassNavigation SSOT.");
+            Assert.That(syncBody, Does.Not.Contain("TryGetGroupDestination"),
+                "Soldier target sync must not collapse all soldiers to a group destination.");
+            Assert.That(syncBody, Does.Contain("ResolveFormationFacing"),
+                "Soldier slot rotation must come from the formation entity's explicit FacingDirection.");
+            Assert.That(syncBody, Does.Not.Contain("GetVelocityCmPerSecond"),
+                "Soldier target sync must not infer formation facing from movement velocity.");
+            Assert.That(syncBody, Does.Contain("ShouldWriteSoldierTarget"),
+                "Soldier target sync must avoid re-writing unchanged per-soldier targets into MassFlow hot state.");
+            Assert.That(syncBody, Does.Contain("resolvedTargetWorldX"),
+                "Target write de-duplication must compare world coordinates so solver-window rebases do not stale the cache.");
+            Assert.That(syncBody, Does.Contain("resetRecovery: targetChanged"),
+                "Soldier agents must only reset arrival recovery when formation-derived orders actually change.");
+            Assert.That(syncBody, Does.Contain("if (facingChanged)"),
+                "Soldier facing writes must be split from anchor-only target updates.");
+            Assert.That(syncBody, Does.Not.Contain("ResolveSlotOffset"),
+                "Soldier target sync must use BuildScenarioPlans cached slot offsets instead of reparsing formation layout every tick.");
+            Assert.That(syncBody, Does.Not.Contain("ActiveConfig"),
+                "Soldier target sync must be driven by explicit method inputs, not hidden runtime config lookups.");
+        }
+
+        [Test]
+        public void TotalWarSoldierBinding_DerivesTeamFromFormationConfigNotTemplate()
+        {
+            string modRoot = TotalWarModRoot();
+            string bindingSource = File.ReadAllText(Path.Combine(modRoot, "Runtime", "TotalWarSpawnReceiptBindingSystem.cs"));
+            string bindSoldier = ExtractMethodBody(bindingSource, "private void BindSoldier");
+
+            Assert.That(bindSoldier, Does.Contain("RejectComponent<Team>"));
+            Assert.That(bindSoldier, Does.Contain("new Team { Id = binding.TeamId }"));
+            Assert.That(bindSoldier, Does.Not.Contain("RequireComponent<Team>"));
+            Assert.That(bindSoldier, Does.Not.Contain("RequireTeam("));
+        }
+
+        [Test]
+        public void TotalWarObstacleOverlayPlans_AreBuiltAfterMassFlowLoadsObstacleSsot()
+        {
+            string runtimeSource = File.ReadAllText(Path.Combine(TotalWarModRoot(), "Runtime", "TotalWarShowcaseRuntime.cs"));
+            string spawnBody = ExtractMethodBody(runtimeSource, "private void SpawnScenario");
+
+            int resetIndex = spawnBody.IndexOf("simulation.ResetRuntimeState(engine.World, _agentSeeds)", StringComparison.Ordinal);
+            int obstaclePlanIndex = spawnBody.IndexOf("BuildObstacleOverlayPlans(simulation)", StringComparison.Ordinal);
+            int enqueueIndex = spawnBody.IndexOf("EnqueueObstacleOverlaySpawns(engine", StringComparison.Ordinal);
+
+            Assert.That(resetIndex, Is.GreaterThanOrEqualTo(0));
+            Assert.That(obstaclePlanIndex, Is.GreaterThan(resetIndex),
+                "Obstacle overlays must be planned from MassFlow after ResetRuntimeState has loaded WorldConfig.Obstacles.");
+            Assert.That(enqueueIndex, Is.GreaterThan(obstaclePlanIndex));
+        }
+
+        [Test]
+        public void TotalWarObstacleOverlayPresentation_UsesConfiguredWidthAndFormalStableId()
+        {
+            string source = File.ReadAllText(Path.Combine(
+                TotalWarModRoot(),
+                "Runtime",
+                "TotalWarObstacleOverlayPresentationSystem.cs"));
+
+            Assert.That(source, Does.Contain("PerformerBehaviorRuntimeUtility.ComposeVisualStableId"));
+            Assert.That(source, Does.Contain("AssetKind.GroundOverlay"));
+            Assert.That(source, Does.Contain("overlay.BorderWidthCm"));
+            Assert.That(source, Does.Not.Contain("OverlayStableIdOffset"));
+            Assert.That(source, Does.Not.Contain("MathF.Max"));
+            Assert.That(source, Does.Not.Contain("0.08f"));
+        }
+
+        [Test]
+        public void TotalWarFormationOutlines_UseRoadSplinesSampledFromVisualHeightmap()
+        {
+            string outlineSource = File.ReadAllText(Path.Combine(
+                TotalWarModRoot(),
+                "Runtime",
+                "TotalWarFormationOutlinePresentationSystem.cs"));
+
+            Assert.That(outlineSource, Does.Contain("RoadSplineBuffer"));
+            Assert.That(outlineSource, Does.Contain("TryAddLine"));
+            Assert.That(outlineSource, Does.Contain("ProjectToGround"));
+            Assert.That(outlineSource, Does.Contain("CurveSampleCount"));
+            Assert.That(outlineSource, Does.Contain("EmissionPositionEpsilonM"));
+            Assert.That(outlineSource, Does.Contain("EmissionFacingEpsilonRadians"));
+            Assert.That(outlineSource, Does.Contain("NormalizeAngleRadians"));
+            Assert.That(outlineSource, Does.Not.Contain("CenterX.Equals(other.CenterX)"),
+                "Formation outline dirty checks must use configured epsilon instead of exact transform floats.");
+            Assert.That(outlineSource, Does.Not.Contain("OutlineCurveSamples"));
+            Assert.That(outlineSource, Does.Contain("OutlineEmissionState"),
+                "Formation outlines must cache emitted state so static formations do not resample terrain and upsert splines every frame.");
+            Assert.That(outlineSource, Does.Not.Contain("GroundOverlayBuffer"),
+                "Formation outlines must not be long flat GroundOverlay shapes; they need per-segment visual-heightmap samples.");
+            Assert.That(outlineSource, Does.Not.Contain("GroundOverlayShape"));
+        }
+
+        [Test]
+        public void MassFlowCrowdCost_UsesAgentLayerWorldsInsteadOfTeamWideLayerUnion()
+        {
+            string source = File.ReadAllText(Path.Combine(
+                FindRepoRoot(),
+                "mods",
+                "capabilities",
+                "navigation",
+                "MassNavigationMod",
+                "Runtime",
+                "MassFlowSimulationState.cs"));
+
+            Assert.That(source, Does.Contain("FlowRuntimeState"));
+            Assert.That(source, Does.Contain("_flowRuntimeIndices"));
+            Assert.That(source, Does.Contain("ResolveFlowStateIndex"));
+            Assert.That(source, Does.Contain("CanFlowStateObserveAgent"));
+            Assert.That(source, Does.Contain("flowState.Flow"));
+            Assert.That(source, Does.Not.Contain("LayerInteractionMask"),
+                "Flow crowd cost must be keyed by each agent world's layer pair, not a team-wide layer union.");
+        }
+
+        [Test]
+        public void TotalWarOutlinePresentation_IgnoresDestroyPendingFormationAgents()
+        {
+            string source = File.ReadAllText(Path.Combine(
+                TotalWarModRoot(),
+                "Runtime",
+                "TotalWarFormationOutlinePresentationSystem.cs"));
+
+            Assert.That(source, Does.Contain("WithNone<PresentationDestroyPending>"),
+                "Formation outlines must not render entities that are already in presentation destroy lifecycle.");
+        }
+
+        [Test]
+        public void GroundOverlayAssetIds_DoNotAcceptCaseAliases()
+        {
+            string source = File.ReadAllText(Path.Combine(FindRepoRoot(), "src", "Core", "Engine", "GameEngine.cs"));
+            string body = ExtractMethodBody(source, "private static int ResolveGroundOverlayShapeId");
+
+            Assert.That(body, Does.Contain("ignoreCase: false"));
+            Assert.That(body, Does.Not.Contain("ignoreCase: true"));
+        }
+
+        [Test]
+        public void MassNavigationOrderBridge_ConsumesOnlyControllableAgents()
+        {
+            string source = File.ReadAllText(Path.Combine(
+                FindRepoRoot(),
+                "mods",
+                "capabilities",
+                "navigation",
+                "MassNavigationMod",
+                "Systems",
+                "MassNavigationOrderBridgeSystem.cs"));
+
+            Assert.That(source, Does.Contain("MassNavigationControllable"),
+                "OrderBridge must make controllability a MassNavigation contract, not a showcase template accident.");
+            Assert.That(source, Does.Contain("ResolveControllableAgent"),
+                "Order completion must fail fast when a move order references an unbound controllable agent slot.");
+            Assert.That(source, Does.Contain("TryGetControllableEntity"),
+                "Order completion must resolve sparse controllable slots through AgentState instead of reading the list directly.");
+            Assert.That(source, Does.Not.Contain("ControllableAgentSlots["),
+                "OrderBridge must not treat the exposed sparse slot list as an indexing API.");
+            Assert.That(source, Does.Not.Contain("TotalWar"),
+                "OrderBridge must stay generic and not know the TotalWar showcase.");
+        }
+
+        [Test]
+        public void TotalWarMapUnload_DestroysAllTrackedMassNavigationAgents()
+        {
+            string source = File.ReadAllText(Path.Combine(
+                TotalWarModRoot(),
+                "Runtime",
+                "TotalWarShowcaseRuntime.cs"));
+            string unloadBody = ExtractMethodBody(source, "public Task HandleMapUnloadedAsync");
+
+            Assert.That(unloadBody, Does.Contain("simulation.ResetRuntimeState(engine.World)"));
+            Assert.That(unloadBody, Does.Not.Contain("DestroyFormationAgents"),
+                "Map unload must destroy the complete tracked MassNavigation agent set, including soldiers.");
+        }
+
+        [Test]
+        public void MassNavigationVisualScale_IsNavigationProfileMetadataNotPerformerSizeSsot()
+        {
+            string flowSource = File.ReadAllText(Path.Combine(
+                FindRepoRoot(),
+                "mods",
+                "capabilities",
+                "navigation",
+                "MassNavigationMod",
+                "Runtime",
+                "MassFlowSimulationState.cs"));
+            string performerSource = File.ReadAllText(Path.Combine(
+                TotalWarModRoot(),
+                "assets",
+                "Presentation",
+                "performers.json"));
+
+            Assert.That(flowSource, Does.Contain("_visualScales"));
+            Assert.That(flowSource, Does.Not.Contain("AgentBodyRadiusCm * _visualScales"));
+            Assert.That(performerSource, Does.Contain("\"localScale\""),
+                "Performer size is currently authored by performer definitions; MassNavigation visualScale remains solver/profile metadata.");
         }
 
         [Test]
@@ -249,24 +573,24 @@ namespace Ludots.Tests.Presentation
                 new MassNavigationAgentTag(),
                 new MassNavigationControllable(),
                 new MassNavigationAgentIndex { Value = 0 },
-                new MassNavigationAgentProfile { Heavy = false, NavMass = 1f, VisualScale = 0.2f },
+                new MassNavigationAgentProfile { Heavy = false, NavMass = 1f, VisualScale = 0.2f, BodyRadiusCm = 20f },
                 new PresentationStableId { Value = 1001 },
                 new PresentationDestroyEventPublished(),
                 new PresentationOwnerHasPerformerPayload { Count = 1, RootCount = 1, SingleRootPerformer = performerRoot });
 
-            state.RegisterAgent(agent, controllable: true);
+            state.RegisterAgentAtIndex(agent, agentIndex: 0, controllable: true);
             state.DestroyTracked(world);
 
             Assert.That(world.IsAlive(agent), Is.True);
             Assert.That(world.Has<PresentationDestroyPending>(agent), Is.True);
             Assert.That(world.Has<PresentationDestroyEventPublished>(agent), Is.False);
-            Assert.That(world.Has<PresentationOwnerHasPerformerPayload>(agent), Is.False);
             Assert.That(world.Has<MassNavigationAgentTag>(agent), Is.False);
             Assert.That(world.Has<MassNavigationControllable>(agent), Is.False);
             Assert.That(world.Has<MassNavigationAgentIndex>(agent), Is.False);
             Assert.That(world.Has<MassNavigationAgentProfile>(agent), Is.False);
             Assert.That(state.TotalAgents, Is.EqualTo(0));
-            Assert.That(state.ControllableCount, Is.EqualTo(0));
+            Assert.That(state.ControllableAgentCount, Is.EqualTo(0));
+            Assert.That(state.ControllableAgentSlotCount, Is.EqualTo(0));
         }
 
         [Test]
@@ -276,10 +600,10 @@ namespace Ludots.Tests.Presentation
             var state = new MassNavigationAgentState();
             Entity agent = world.Create(new MassNavigationAgentTag());
 
-            state.RegisterAgent(agent, controllable: true);
+            state.RegisterAgentAtIndex(agent, agentIndex: 0, controllable: true);
 
             InvalidOperationException ex = Assert.Throws<InvalidOperationException>(() => state.DestroyTracked(world))!;
-            Assert.That(ex.Message, Does.Contain("cannot be destroyed without PresentationStableId"));
+            Assert.That(ex.Message, Does.Contain("without PresentationStableId"));
             Assert.That(world.IsAlive(agent), Is.True);
         }
 
@@ -291,17 +615,472 @@ namespace Ludots.Tests.Presentation
             Entity first = world.Create();
             Entity second = world.Create();
 
-            state.RegisterAgentAtIndex(first, controllableIndex: 5, controllable: true);
+            state.RegisterAgentAtIndex(first, agentIndex: 5, controllable: true);
 
             Assert.That(state.TotalAgents, Is.EqualTo(6));
-            Assert.That(state.ControllableCount, Is.EqualTo(6));
+            Assert.That(state.ControllableAgentCount, Is.EqualTo(1));
+            Assert.That(state.ControllableAgentSlotCount, Is.EqualTo(6));
             Assert.That(state.AllAgents[0], Is.EqualTo(Entity.Null));
             Assert.That(state.AllAgents[5], Is.EqualTo(first));
-            Assert.That(state.ControllableAgents[5], Is.EqualTo(first));
+            Assert.That(state.ControllableAgentSlots[5], Is.EqualTo(first));
             Assert.That(state.TryGetControllableIndex(first, out int index), Is.True);
             Assert.That(index, Is.EqualTo(5));
 
-            Assert.Throws<InvalidOperationException>(() => state.RegisterAgentAtIndex(second, controllableIndex: 5, controllable: true));
+            Assert.Throws<InvalidOperationException>(() => state.RegisterAgentAtIndex(second, agentIndex: 5, controllable: true));
+        }
+
+        [Test]
+        public void MassNavigationAgentState_RegisterAgentAtIndexRejectsInvalidInputWithoutStateMutation()
+        {
+            var world = World.Create();
+            var state = new MassNavigationAgentState();
+            Entity agent = world.Create();
+
+            Assert.Throws<InvalidOperationException>(() => state.RegisterAgentAtIndex(agent, agentIndex: -1, controllable: true));
+
+            Assert.That(state.SpawnedEntities, Is.Empty);
+            Assert.That(state.AllAgents, Is.Empty);
+            Assert.That(state.ControllableAgentSlots, Is.Empty);
+            Assert.That(state.TryGetControllableIndex(agent, out _), Is.False);
+        }
+
+        [Test]
+        public void MassFlowRuntimeProfile_RejectsBelowSemanticMinimumInsteadOfClamping()
+        {
+            var flow = new MassFlowSimulationState();
+            var layer = new MassNavigationAgentLayer(categoryMask: 1u, interactionMask: 1u);
+            var seeds = new[]
+            {
+                new MassNavigationAgentSeed(
+                    teamId: 1,
+                    localPositionXCm: 100f,
+                    localPositionYCm: 100f,
+                    heavy: false,
+                    navMass: 1f,
+                    visualScale: 1f,
+                    bodyRadiusCm: 20f,
+                    speedCmPerSecond: 800f,
+                    layer),
+            };
+            var obstacles = new[]
+            {
+                new MassNavigationObstacleConfig { LocalXCm = 5_000f, LocalYCm = 5_000f, RadiusCm = 100f },
+            };
+
+            flow.Reset(seeds, obstacles);
+
+            Assert.Throws<InvalidOperationException>(() => flow.SetUnitRuntimeProfile(0, 1, 0f, 1f, 20f, 800f, layer));
+            Assert.That(flow.GetNavMass(0), Is.EqualTo(1f));
+
+            Assert.Throws<InvalidOperationException>(() => flow.SetUnitRuntimeProfile(0, 1, 1f, 0f, 20f, 800f, layer));
+            Assert.That(flow.GetVisualScale(0), Is.EqualTo(1f));
+
+            Assert.Throws<InvalidOperationException>(() => flow.SetUnitRuntimeProfile(0, 1, 1f, 1f, 0f, 800f, layer));
+            Assert.That(flow.GetBodyRadiusCm(0), Is.EqualTo(20f));
+        }
+
+        [Test]
+        public void MassFlowUnitTargetApis_RejectOutOfRangeAgentIndex()
+        {
+            var flow = new MassFlowSimulationState();
+            var layer = new MassNavigationAgentLayer(categoryMask: 1u, interactionMask: 1u);
+            var seeds = new[]
+            {
+                new MassNavigationAgentSeed(
+                    teamId: 1,
+                    localPositionXCm: 100f,
+                    localPositionYCm: 100f,
+                    heavy: false,
+                    navMass: 1f,
+                    visualScale: 1f,
+                    bodyRadiusCm: 20f,
+                    speedCmPerSecond: 800f,
+                    layer),
+            };
+
+            var obstacles = new[]
+            {
+                new MassNavigationObstacleConfig { LocalXCm = 5_000f, LocalYCm = 5_000f, RadiusCm = 100f },
+            };
+
+            flow.Reset(seeds, obstacles);
+
+            Assert.Throws<InvalidOperationException>(() => flow.SetUnitTarget(flow.UnitCount, 100f, 100f));
+            Assert.Throws<InvalidOperationException>(() => flow.ReleaseUnitToTeamTarget(flow.UnitCount));
+            Assert.Throws<InvalidOperationException>(() => flow.HoldUnitAtCurrentPosition(flow.UnitCount));
+        }
+
+        [Test]
+        public void MassFlowExternalDisplacementRange_CarriesPositionAndUnitTarget()
+        {
+            var flow = new MassFlowSimulationState();
+            var layer = new MassNavigationAgentLayer(categoryMask: 1u, interactionMask: 1u);
+            var seeds = new[]
+            {
+                new MassNavigationAgentSeed(
+                    teamId: 1,
+                    localPositionXCm: 100f,
+                    localPositionYCm: 100f,
+                    heavy: false,
+                    navMass: 1f,
+                    visualScale: 1f,
+                    bodyRadiusCm: 20f,
+                    speedCmPerSecond: 800f,
+                    layer),
+                new MassNavigationAgentSeed(
+                    teamId: 1,
+                    localPositionXCm: 200f,
+                    localPositionYCm: 200f,
+                    heavy: false,
+                    navMass: 1f,
+                    visualScale: 1f,
+                    bodyRadiusCm: 20f,
+                    speedCmPerSecond: 800f,
+                    layer),
+            };
+            flow.Reset(seeds, new[]
+            {
+                new MassNavigationObstacleConfig { LocalXCm = 5_000f, LocalYCm = 5_000f, RadiusCm = 100f },
+            });
+
+            Assert.That(flow.SetUnitTarget(1, 400f, 500f), Is.True);
+            flow.ApplyExternalDisplacementRange(startIndex: 1, count: 1, deltaXCm: 30f, deltaYCm: -20f);
+
+            Assert.That(flow.GetPositionX(0), Is.EqualTo(100f));
+            Assert.That(flow.GetPositionY(0), Is.EqualTo(100f));
+            Assert.That(flow.GetPositionX(1), Is.EqualTo(230f));
+            Assert.That(flow.GetPositionY(1), Is.EqualTo(180f));
+            Assert.That(flow.TryGetUnitTarget(1, out float targetX, out float targetY), Is.True);
+            Assert.That(targetX, Is.EqualTo(430f));
+            Assert.That(targetY, Is.EqualTo(480f));
+            Assert.That(flow.PendingEntitySyncCount, Is.EqualTo(2),
+                "External displacement must mark carried agents dirty without clearing existing pending target-sync dirtiness.");
+        }
+
+        [Test]
+        public void MassNavigationOrderPathAnchor_AdvancesAlongAuthoredOrderPathNotCurrentOffsetChase()
+        {
+            var flow = new MassFlowSimulationState();
+            var layer = new MassNavigationAgentLayer(categoryMask: 1u, interactionMask: 1u);
+            var seeds = new[]
+            {
+                new MassNavigationAgentSeed(
+                    teamId: 1,
+                    localPositionXCm: 1000f,
+                    localPositionYCm: 1000f,
+                    heavy: false,
+                    navMass: 1f,
+                    visualScale: 1f,
+                    bodyRadiusCm: 20f,
+                    speedCmPerSecond: 800f,
+                    layer),
+            };
+            flow.Reset(seeds, new[]
+            {
+                new MassNavigationObstacleConfig { Id = "anchor-test-obstacle", LocalXCm = 9000f, LocalYCm = 9000f, RadiusCm = 100f },
+            });
+
+            var world = World.Create();
+            try
+            {
+                Entity agent = world.Create(new FacingDirection { AngleRad = 0f });
+                var agentState = new MassNavigationAgentState();
+                agentState.RegisterAgentAtIndex(agent, agentIndex: 0, controllable: true);
+                var runtime = new MassNavigationGroupRuntime(new MassNavigationFormationRuntime(new MassNavigationGroupSemantics()));
+
+                runtime.UpsertOrderMoveCommand(
+                    flow,
+                    agentState,
+                    orderToken: 1,
+                    memberIndices: new[] { 0 },
+                    teamId: 1,
+                    destinationWorldCm: new Vector2(5000f, 1000f),
+                    formationMode: MassNavigationFormationMode.None,
+                    rotationRadians: 0f);
+
+                var positions = (float[])typeof(MassFlowSimulationState)
+                    .GetField("_positionsCm", BindingFlags.Instance | BindingFlags.NonPublic)!
+                    .GetValue(flow)!;
+                positions[1] = 1800f;
+
+                Assert.That(runtime.TryUpdateGroupMemberOrderPathAnchor(
+                        flow,
+                        unitIndex: 0,
+                        lookaheadCm: 500f,
+                        updateEpsilonCm: 1f,
+                        out float anchorWorldX,
+                        out float anchorWorldY,
+                        out _),
+                    Is.True);
+
+                Assert.That(anchorWorldX, Is.EqualTo(1500f).Within(1f));
+                Assert.That(anchorWorldY, Is.EqualTo(1000f).Within(1f),
+                    "Order path anchors must stay on the authored order path; lateral avoidance drift must not become a follower chase target.");
+            }
+            finally
+            {
+                World.Destroy(world);
+            }
+        }
+
+        [Test]
+        public void MassNavigationFollowerAnchor_IncludesPassiveDisplacementFromAuthoredOrderPath()
+        {
+            var flow = new MassFlowSimulationState();
+            var layer = new MassNavigationAgentLayer(categoryMask: 1u, interactionMask: 1u);
+            var seeds = new[]
+            {
+                new MassNavigationAgentSeed(
+                    teamId: 1,
+                    localPositionXCm: 1000f,
+                    localPositionYCm: 1000f,
+                    heavy: false,
+                    navMass: 1f,
+                    visualScale: 1f,
+                    bodyRadiusCm: 20f,
+                    speedCmPerSecond: 800f,
+                    layer),
+            };
+            flow.Reset(seeds, new[]
+            {
+                new MassNavigationObstacleConfig { Id = "follower-anchor-test-obstacle", LocalXCm = 9000f, LocalYCm = 9000f, RadiusCm = 100f },
+            });
+
+            var world = World.Create();
+            try
+            {
+                Entity agent = world.Create(new FacingDirection { AngleRad = 0f });
+                var agentState = new MassNavigationAgentState();
+                agentState.RegisterAgentAtIndex(agent, agentIndex: 0, controllable: true);
+                var runtime = new MassNavigationGroupRuntime(new MassNavigationFormationRuntime(new MassNavigationGroupSemantics()));
+
+                runtime.UpsertOrderMoveCommand(
+                    flow,
+                    agentState,
+                    orderToken: 1,
+                    memberIndices: new[] { 0 },
+                    teamId: 1,
+                    destinationWorldCm: new Vector2(5000f, 1000f),
+                    formationMode: MassNavigationFormationMode.None,
+                    rotationRadians: 0f);
+
+                var positions = (float[])typeof(MassFlowSimulationState)
+                    .GetField("_positionsCm", BindingFlags.Instance | BindingFlags.NonPublic)!
+                    .GetValue(flow)!;
+                positions[0] = 1800f;
+                positions[1] = 1220f;
+
+                Assert.That(runtime.TryUpdateGroupMemberOrderPathAnchor(
+                        flow,
+                        unitIndex: 0,
+                        lookaheadCm: 500f,
+                        updateEpsilonCm: 1f,
+                        out float pathAnchorWorldX,
+                        out float pathAnchorWorldY,
+                        out _),
+                    Is.True);
+                Assert.That(runtime.TryUpdateGroupMemberFollowerAnchor(
+                        flow,
+                        unitIndex: 0,
+                        lookaheadCm: 500f,
+                        updateEpsilonCm: 1f,
+                        out float followerAnchorWorldX,
+                        out float followerAnchorWorldY,
+                        out _),
+                    Is.True);
+
+                Assert.That(pathAnchorWorldX, Is.EqualTo(2300f).Within(1f));
+                Assert.That(pathAnchorWorldY, Is.EqualTo(1000f).Within(1f));
+                Assert.That(followerAnchorWorldX, Is.EqualTo(pathAnchorWorldX).Within(1f));
+                Assert.That(followerAnchorWorldY, Is.EqualTo(1220f).Within(1f),
+                    "Follower anchors must add passive avoidance displacement back onto the authored order-path lookahead.");
+            }
+            finally
+            {
+                World.Destroy(world);
+            }
+        }
+
+        [Test]
+        public void MassNavigationOrderMove_RotationChangeRefreshesOrderSlotTargets()
+        {
+            using MassNavigationGroupRuntimeFixture fixture = CreateGroupRuntimeFixture(
+                new Vector2(1000f, 1000f),
+                new Vector2(1180f, 1000f));
+
+            fixture.Runtime.UpsertOrderMoveCommand(
+                fixture.Flow,
+                fixture.AgentState,
+                orderToken: 11,
+                memberIndices: new[] { 0, 1 },
+                teamId: 1,
+                destinationWorldCm: new Vector2(3000f, 3000f),
+                formationMode: MassNavigationFormationMode.Line,
+                rotationRadians: 0f);
+            Assert.That(fixture.Runtime.TryGetGroupMemberOrderTarget(0, out float beforeX, out float beforeY), Is.True);
+
+            fixture.Runtime.UpsertOrderMoveCommand(
+                fixture.Flow,
+                fixture.AgentState,
+                orderToken: 11,
+                memberIndices: new[] { 0, 1 },
+                teamId: 1,
+                destinationWorldCm: new Vector2(3000f, 3000f),
+                formationMode: MassNavigationFormationMode.Line,
+                rotationRadians: MathF.PI * 0.5f);
+            Assert.That(fixture.Runtime.TryGetGroupMemberOrderTarget(0, out float afterX, out float afterY), Is.True);
+
+            Assert.That((afterX - beforeX) * (afterX - beforeX) + (afterY - beforeY) * (afterY - beforeY),
+                Is.GreaterThan(1f),
+                "MassNavigation order groups must treat explicit rotation as slot-layout input, not ignore it behind a same-destination early return.");
+        }
+
+        [Test]
+        public void MassNavigationGroupMemberRemoval_RewritesRemainingMemberOrderTargetsAndAnchors()
+        {
+            using MassNavigationGroupRuntimeFixture fixture = CreateGroupRuntimeFixture(
+                new Vector2(1000f, 1000f),
+                new Vector2(1180f, 1000f),
+                new Vector2(1360f, 1000f),
+                new Vector2(7000f, 7000f));
+
+            fixture.Runtime.UpsertOrderMoveCommand(
+                fixture.Flow,
+                fixture.AgentState,
+                orderToken: 21,
+                memberIndices: new[] { 0, 1, 2 },
+                teamId: 1,
+                destinationWorldCm: new Vector2(3000f, 3000f),
+                formationMode: MassNavigationFormationMode.Line,
+                rotationRadians: 0f);
+            Assert.That(fixture.Runtime.TryGetGroupMemberOrderTarget(2, out float beforeX, out float beforeY), Is.True);
+            Assert.That(fixture.Runtime.TryUpdateGroupMemberOrderPathAnchor(
+                    fixture.Flow,
+                    unitIndex: 2,
+                    lookaheadCm: 500f,
+                    updateEpsilonCm: 1f,
+                    out _,
+                    out _,
+                    out int beforeAnchorRevision),
+                Is.True);
+
+            fixture.Runtime.UpsertOrderMoveCommand(
+                fixture.Flow,
+                fixture.AgentState,
+                orderToken: 22,
+                memberIndices: new[] { 1, 3 },
+                teamId: 1,
+                destinationWorldCm: new Vector2(6000f, 3000f),
+                formationMode: MassNavigationFormationMode.Line,
+                rotationRadians: 0f);
+            Assert.That(fixture.Runtime.TryGetGroupMemberOrderTarget(2, out float afterX, out float afterY), Is.True);
+            Assert.That(fixture.Runtime.TryUpdateGroupMemberOrderPathAnchor(
+                    fixture.Flow,
+                    unitIndex: 2,
+                    lookaheadCm: 500f,
+                    updateEpsilonCm: 1f,
+                    out _,
+                    out _,
+                    out int afterAnchorRevision),
+                Is.True);
+
+            Assert.That((afterX - beforeX) * (afterX - beforeX) + (afterY - beforeY) * (afterY - beforeY),
+                Is.GreaterThan(1f),
+                "Removing a member from an order group must immediately rewrite the surviving slot targets.");
+            Assert.That(afterAnchorRevision, Is.GreaterThan(beforeAnchorRevision),
+                "Rewritten order targets must invalidate and advance order-path anchors instead of retaining stale copied anchors.");
+        }
+
+        [Test]
+        public void MassFlowHardResolve_SeparatesLargeAgentsByConfiguredBodyRadius()
+        {
+            var flow = new MassFlowSimulationState();
+            var layer = new MassNavigationAgentLayer(categoryMask: 1u, interactionMask: 1u);
+            var seeds = new[]
+            {
+                new MassNavigationAgentSeed(
+                    teamId: 1,
+                    localPositionXCm: 4_500f,
+                    localPositionYCm: 5_000f,
+                    heavy: true,
+                    navMass: 12f,
+                    visualScale: 1f,
+                    bodyRadiusCm: 720f,
+                    speedCmPerSecond: 360f,
+                    layer),
+                new MassNavigationAgentSeed(
+                    teamId: 2,
+                    localPositionXCm: 5_500f,
+                    localPositionYCm: 5_000f,
+                    heavy: true,
+                    navMass: 12f,
+                    visualScale: 1f,
+                    bodyRadiusCm: 720f,
+                    speedCmPerSecond: 360f,
+                    layer),
+            };
+
+            TeamManager.LoadConfig(new TeamConfig
+            {
+                DefaultRelationship = "Hostile",
+                Relationships = new List<RelationshipEntry>(),
+            });
+            flow.Reset(seeds, new[]
+            {
+                new MassNavigationObstacleConfig { Id = "far_contract_obstacle", LocalXCm = 9_000f, LocalYCm = 9_000f, RadiusCm = 100f },
+            });
+            flow.Step(
+                dt: 0f,
+                world: World.Create(),
+                navGroupRuntime: new MassNavigationGroupRuntime(new MassNavigationFormationRuntime(new MassNavigationGroupSemantics())),
+                runHardResolve: true,
+                hardResolveCandidateThresholdAgents: 1);
+
+            float dx = flow.GetPositionX(0) - flow.GetPositionX(1);
+            float dy = flow.GetPositionY(0) - flow.GetPositionY(1);
+            float distance = MathF.Sqrt((dx * dx) + (dy * dy));
+            Assert.That(distance, Is.GreaterThanOrEqualTo(1_439f),
+                "Large formation agents must use configured bodyRadiusCm in hard resolve instead of the old small-agent hash neighborhood.");
+        }
+
+        [Test]
+        public void MassFlowResolveUnitNavigableTarget_UsesUnitBodyRadiusBeforeSetUnitTarget()
+        {
+            var flow = new MassFlowSimulationState();
+            var layer = new MassNavigationAgentLayer(categoryMask: 1u, interactionMask: 1u);
+            var seeds = new[]
+            {
+                new MassNavigationAgentSeed(
+                    teamId: 1,
+                    localPositionXCm: 4_000f,
+                    localPositionYCm: 5_000f,
+                    heavy: false,
+                    navMass: 1f,
+                    visualScale: 1f,
+                    bodyRadiusCm: 120f,
+                    speedCmPerSecond: 800f,
+                    layer),
+            };
+
+            flow.Reset(seeds, new[]
+            {
+                new MassNavigationObstacleConfig { Id = "target-projection-obstacle", LocalXCm = 5_000f, LocalYCm = 5_000f, RadiusCm = 200f },
+            });
+
+            Vector2 resolved = flow.ResolveUnitNavigableTarget(
+                index: 0,
+                xCm: 5_000f,
+                yCm: 5_000f,
+                hintX: 1f,
+                hintY: 0f,
+                minimumClearanceCm: 50f);
+            Assert.That(flow.SetUnitTarget(0, resolved.X, resolved.Y, resetRecovery: true), Is.True);
+
+            float dx = resolved.X - flow.GetObstacleX(0);
+            float dy = resolved.Y - flow.GetObstacleY(0);
+            float distance = MathF.Sqrt((dx * dx) + (dy * dy));
+            Assert.That(distance, Is.GreaterThanOrEqualTo(flow.GetObstacleRadius(0) + flow.GetBodyRadiusCm(0) - 0.5f),
+                "MassFlow target writes that represent agent slots must resolve through the unit's authored body radius before SetUnitTarget.");
         }
 
         [Test]
@@ -325,7 +1104,7 @@ namespace Ludots.Tests.Presentation
                 ReceiptChannelId = totalWarChannel,
                 ReceiptId = 11,
                 Kind = RuntimeEntitySpawnKind.Template,
-                TemplateId = "mass_navigation_total_war_formation_anchor",
+                TemplateId = "mass_navigation_total_war_formation_agent",
                 MapId = new Ludots.Core.Map.MapId("mass_navigation_total_war"),
             }), Is.True);
             Assert.That(queue.TryEnqueue(new RuntimeEntitySpawnReceipt
@@ -333,7 +1112,7 @@ namespace Ludots.Tests.Presentation
                 ReceiptChannelId = totalWarChannel,
                 ReceiptId = 12,
                 Kind = RuntimeEntitySpawnKind.Template,
-                TemplateId = "mass_navigation_agent_azure_light",
+                TemplateId = "mass_navigation_total_war_soldier_azure_light",
                 MapId = new Ludots.Core.Map.MapId("mass_navigation_total_war"),
             }), Is.True);
 
@@ -369,7 +1148,7 @@ namespace Ludots.Tests.Presentation
             Assert.That(spawnQueue.TryEnqueue(new RuntimeEntitySpawnRequest
             {
                 Kind = RuntimeEntitySpawnKind.Template,
-                TemplateId = "mass_navigation_total_war_formation_anchor",
+                TemplateId = "mass_navigation_total_war_formation_agent",
                 EmitReceipt = 1,
                 ReceiptChannelId = totalWarChannel,
                 ReceiptId = 11,
@@ -387,7 +1166,7 @@ namespace Ludots.Tests.Presentation
                 ReceiptChannelId = totalWarChannel,
                 ReceiptId = 1,
                 Kind = RuntimeEntitySpawnKind.Template,
-                TemplateId = "mass_navigation_total_war_formation_anchor",
+                TemplateId = "mass_navigation_total_war_formation_agent",
                 MapId = new MapId(config.MapId),
             }), Is.True);
             Assert.That(receipts.TryEnqueue(new RuntimeEntitySpawnReceipt
@@ -530,22 +1309,16 @@ namespace Ludots.Tests.Presentation
         }
 
         [Test]
-        public void GroundOverlayBuffer_TransientFormationOutlinesDoNotAccumulate()
+        public void RoadSplineBuffer_TransientFormationOutlinesDoNotAccumulate()
         {
-            var buffer = new GroundOverlayBuffer(capacity: 8);
-            var item = new GroundOverlayItem
-            {
-                StableId = 0,
-                Shape = GroundOverlayShape.Line,
-                Center = new System.Numerics.Vector3(1f, 0f, 1f),
-                Length = 4f,
-                Width = 0.1f,
-            };
+            var buffer = new RoadSplineBuffer(capacity: 8);
+            var start = new System.Numerics.Vector3(1f, 0f, 1f);
+            var end = new System.Numerics.Vector3(2f, 0f, 1f);
 
             for (int frame = 0; frame < 4; frame++)
             {
-                Assert.That(buffer.TryAdd(in item), Is.True);
-                Assert.That(buffer.TryAdd(in item), Is.True);
+                Assert.That(buffer.TryAddLine(0, in start, in end, 0.1f, Vector4.One, Vector4.One, 0.1f), Is.True);
+                Assert.That(buffer.TryAddLine(0, in start, in end, 0.1f, Vector4.One, Vector4.One, 0.1f), Is.True);
                 Assert.That(buffer.Count, Is.EqualTo(2));
                 buffer.ClearTransient();
                 Assert.That(buffer.Count, Is.EqualTo(0));
@@ -562,18 +1335,23 @@ namespace Ludots.Tests.Presentation
             MassNavigationSimulationRuntime simulation = RequireSimulation(engine);
             TickUntil(
                 engine,
-                () => simulation.AgentState.TotalAgents == TotalWarAcceptance.ExpectedTotalSoldiers &&
+                () => simulation.AgentState.TotalAgents == TotalWarAcceptance.ExpectedTotalAgents &&
                       simulation.SelectedCount == TotalWarAcceptance.ExpectedInitialSelection,
                 maxFrames: TotalWarAcceptance.FrameBudgetForScenarioReady,
-                failureMessage: "Total War scenario should spawn soldiers, bind receipts, and seed the authored initial selection.");
+                failureMessage: "Total War scenario should spawn formation and soldier agents, bind receipts, and seed the authored formation selection.");
 
-            Assert.That(simulation.AgentState.TotalAgents, Is.EqualTo(TotalWarAcceptance.ExpectedTotalSoldiers));
+            Assert.That(simulation.AgentState.TotalAgents, Is.EqualTo(TotalWarAcceptance.ExpectedTotalAgents));
+            Assert.That(simulation.AgentState.ControllableAgentCount, Is.EqualTo(TotalWarAcceptance.ExpectedTotalFormations));
+            Assert.That(simulation.AgentState.ControllableAgentSlotCount, Is.EqualTo(TotalWarAcceptance.ExpectedTotalFormations));
+            AssertFormationAgentsDoNotOverlap(engine, simulation);
             Assert.That(SelectionContextRuntime.SnapshotCurrentSelection(engine.World, engine.GlobalContext).Length,
                 Is.EqualTo(TotalWarAcceptance.ExpectedInitialSelection));
+            AssertInitialSelectionTargetsFormationAgents(engine);
             Assert.That(CountSelectionMarkerPerformers(engine), Is.EqualTo(TotalWarAcceptance.ExpectedInitialSelection),
                 "Initial selection markers must be created by performer rules from SelectionMemberAdded events.");
 
             AssertFormationOutlines(engine);
+            AssertObstacleOverlays(engine, simulation);
             AssertCullingProbeAndDebugDraw(engine);
 
             Entity[] initialSelection = SelectionContextRuntime.SnapshotCurrentSelection(engine.World, engine.GlobalContext);
@@ -621,6 +1399,155 @@ namespace Ludots.Tests.Presentation
         }
 
         [Test]
+        public void TotalWarPlayable_MoveOrdersPreserveFacingAndRotateOrdersDriveSoldierSlots()
+        {
+            using GameEngine engine = CreatePlayableTotalWarEngine();
+            engine.LoadMap("mass_navigation_total_war");
+            Tick(engine, TotalWarAcceptance.FrameBudgetForMapEntry);
+
+            MassNavigationSimulationRuntime simulation = RequireSimulation(engine);
+            TickUntil(
+                engine,
+                () => simulation.AgentState.TotalAgents == TotalWarAcceptance.ExpectedTotalAgents &&
+                      simulation.SelectedCount == TotalWarAcceptance.ExpectedInitialSelection,
+                maxFrames: TotalWarAcceptance.FrameBudgetForScenarioReady,
+                failureMessage: "Total War scenario should be fully spawned and selected before movement/facing verification.");
+
+            Entity formation = SelectionContextRuntime.SnapshotCurrentSelection(engine.World, engine.GlobalContext)[0];
+            Assert.That(engine.World.TryGet(formation, out MassNavigationAgentIndex formationAgentIndex), Is.True);
+            Assert.That(engine.World.TryGet(formation, out TotalWarFormationAgent formationAgent), Is.True);
+            float initialFacing = engine.World.Get<FacingDirection>(formation).AngleRad;
+            int soldierAgentIndex = FindFirstSoldierAgentIndex(engine, formationAgent.FormationIndex);
+            Assert.That(simulation.MassFlow.TryGetUnitTarget(soldierAgentIndex, out float soldierTargetBeforeX, out float soldierTargetBeforeY), Is.True);
+            float soldierBeforeX = simulation.MassFlow.GetPositionX(soldierAgentIndex);
+            float soldierBeforeY = simulation.MassFlow.GetPositionY(soldierAgentIndex);
+
+            Vector2 moveTargetScreen = WorldToScreen(engine, TotalWarAcceptance.MoveTargetWorldCm);
+            RightClick(engine, GetInputBackend(engine), moveTargetScreen);
+            TickUntil(
+                engine,
+                () => CountActiveMoveOrders(engine, simulation) > 0,
+                maxFrames: TotalWarAcceptance.FrameBudgetForInteraction,
+                failureMessage: "Right-click move should submit a MassNavigation order before facing verification.");
+
+            Assert.That(simulation.NavGroupRuntime.TryGetGroupMemberOrderTarget(
+                    formationAgentIndex.Value,
+                    out float formationOrderWorldX,
+                    out float formationOrderWorldY),
+                Is.True);
+            Assert.That(simulation.MassFlow.TryGetUnitTarget(soldierAgentIndex, out float soldierTargetAfterOrderX, out float soldierTargetAfterOrderY), Is.True);
+            float currentFormationDx = soldierTargetAfterOrderX - simulation.MassFlow.GetPositionX(formationAgentIndex.Value);
+            float currentFormationDy = soldierTargetAfterOrderY - simulation.MassFlow.GetPositionY(formationAgentIndex.Value);
+            Assert.That((currentFormationDx * currentFormationDx) + (currentFormationDy * currentFormationDy),
+                Is.LessThan(2_500_000f),
+                "Carrier-mode soldier targets must stay near the formation's current resolved MassFlow center, not jump toward the final formation order path.");
+
+            Tick(engine, TotalWarAcceptance.FrameBudgetForInteraction);
+            float facingAfterMove = engine.World.Get<FacingDirection>(formation).AngleRad;
+            Assert.That(facingAfterMove, Is.EqualTo(initialFacing).Within(0.0001f),
+                "Moving a formation must not implicitly rotate it toward the destination.");
+            float soldierMoveDeltaX = simulation.MassFlow.GetPositionX(soldierAgentIndex) - soldierBeforeX;
+            float soldierMoveDeltaY = simulation.MassFlow.GetPositionY(soldierAgentIndex) - soldierBeforeY;
+            Assert.That((soldierMoveDeltaX * soldierMoveDeltaX) + (soldierMoveDeltaY * soldierMoveDeltaY), Is.GreaterThan(1f),
+                "Soldier MassNavigation agents must actually move after a formation move order, not just receive stale slot targets.");
+            AssertMassFlowEntityPositionSynced(engine, simulation, formationAgentIndex.Value);
+            AssertMassFlowEntityPositionSynced(engine, simulation, soldierAgentIndex);
+
+            var input = engine.GetService(CoreServiceKeys.InputHandler)
+                ?? throw new InvalidOperationException("InputHandler is missing.");
+            input.InjectButtonPress(TotalWarAcceptance.RotateRightActionId);
+            Tick(engine);
+            input.InjectButtonRelease(TotalWarAcceptance.RotateRightActionId);
+            Tick(engine, TotalWarAcceptance.FrameBudgetForInputRelease);
+            TickUntil(
+                engine,
+                () => MathF.Abs(NormalizeAngleRadians(engine.World.Get<FacingDirection>(formation).AngleRad - initialFacing)) > 0.0001f,
+                maxFrames: TotalWarAcceptance.FrameBudgetForInteraction,
+                failureMessage: "Explicit rotate input should change the selected formation FacingDirection.");
+
+            Assert.That(simulation.MassFlow.TryGetUnitTarget(soldierAgentIndex, out float soldierTargetAfterX, out float soldierTargetAfterY), Is.True);
+            float targetDeltaX = soldierTargetAfterX - soldierTargetBeforeX;
+            float targetDeltaY = soldierTargetAfterY - soldierTargetBeforeY;
+            Assert.That((targetDeltaX * targetDeltaX) + (targetDeltaY * targetDeltaY), Is.GreaterThan(1f),
+                "Soldier slot targets must follow explicit formation facing changes.");
+            Assert.That(float.IsFinite(formationOrderWorldX), Is.True);
+            Assert.That(float.IsFinite(formationOrderWorldY), Is.True);
+        }
+
+        [Test]
+        public void TotalWarPlayable_SolverWindowRebaseDoesNotCarrySoldiersAwayFromFormation()
+        {
+            using GameEngine engine = CreatePlayableTotalWarEngine();
+            engine.LoadMap("mass_navigation_total_war");
+            Tick(engine, TotalWarAcceptance.FrameBudgetForMapEntry);
+
+            MassNavigationSimulationRuntime simulation = RequireSimulation(engine);
+            TickUntil(
+                engine,
+                () => simulation.AgentState.TotalAgents == TotalWarAcceptance.ExpectedTotalAgents &&
+                      simulation.SelectedCount == TotalWarAcceptance.ExpectedInitialSelection,
+                maxFrames: TotalWarAcceptance.FrameBudgetForScenarioReady,
+                failureMessage: "Total War scenario should be ready before solver-window rebase verification.");
+
+            Entity formation = SelectionContextRuntime.SnapshotCurrentSelection(engine.World, engine.GlobalContext)[0];
+            Assert.That(engine.World.TryGet(formation, out MassNavigationAgentIndex formationAgentIndex), Is.True);
+            Assert.That(engine.World.TryGet(formation, out TotalWarFormationAgent formationAgent), Is.True);
+            int soldierAgentIndex = FindFirstSoldierAgentIndex(engine, formationAgent.FormationIndex);
+            Tick(engine, TotalWarAcceptance.FrameBudgetForInteraction);
+
+            Vector2 beforeOffset = AgentWorldOffset(simulation, soldierAgentIndex, formationAgentIndex.Value);
+            simulation.FocusSimulationWindow(TotalWarAcceptance.SolverWindowRebaseFocusWorldCm);
+            Tick(engine, TotalWarAcceptance.FrameBudgetForInteraction);
+            Vector2 afterOffset = AgentWorldOffset(simulation, soldierAgentIndex, formationAgentIndex.Value);
+
+            Assert.That(simulation.SolverWindowMovesTotal, Is.GreaterThan(0));
+            Assert.That(Vector2.DistanceSquared(afterOffset, beforeOffset),
+                Is.LessThan(TotalWarAcceptance.SoldierFormationOffsetRebaseToleranceSq),
+                "Moving the solver window must not be interpreted as formation displacement by Total War soldier carrier sync.");
+            AssertMassFlowEntityPositionSynced(engine, simulation, formationAgentIndex.Value);
+            AssertMassFlowEntityPositionSynced(engine, simulation, soldierAgentIndex);
+        }
+
+        [Test]
+        public void TotalWarPlayable_MultipleFormationMoveOrdersPreserveRelativeFormationSpacing()
+        {
+            using GameEngine engine = CreatePlayableTotalWarEngine();
+            engine.LoadMap("mass_navigation_total_war");
+            Tick(engine, TotalWarAcceptance.FrameBudgetForMapEntry);
+
+            MassNavigationSimulationRuntime simulation = RequireSimulation(engine);
+            TickUntil(
+                engine,
+                () => simulation.AgentState.TotalAgents == TotalWarAcceptance.ExpectedTotalAgents &&
+                      simulation.SelectedCount == TotalWarAcceptance.ExpectedInitialSelection,
+                maxFrames: TotalWarAcceptance.FrameBudgetForScenarioReady,
+                failureMessage: "Total War scenario should be fully spawned before multi-formation order verification.");
+
+            Entity[] formations = CaptureFormationAgents(engine, expectedCount: 3);
+            float initialMinDistanceSq = MinPairDistanceSq(engine, simulation, formations, useOrderTargets: false);
+            SelectFormations(engine, formations);
+            TickUntil(
+                engine,
+                () => simulation.SelectedCount == formations.Length,
+                maxFrames: TotalWarAcceptance.FrameBudgetForInteraction,
+                failureMessage: "Test-authored selection should contain the chosen formation agents.");
+
+            Vector2 moveTargetScreen = WorldToScreen(engine, TotalWarAcceptance.MultiFormationMoveTargetWorldCm);
+            RightClick(engine, GetInputBackend(engine), moveTargetScreen);
+            TickUntil(
+                engine,
+                () => CountActiveMoveOrders(engine, simulation) == formations.Length,
+                maxFrames: TotalWarAcceptance.FrameBudgetForInteraction,
+                failureMessage: "Multi-formation right-click should submit one shared MassNavigation order per selected formation.");
+
+            float orderMinDistanceSq = MinPairDistanceSq(engine, simulation, formations, useOrderTargets: true);
+            Assert.That(
+                orderMinDistanceSq,
+                Is.GreaterThanOrEqualTo(initialMinDistanceSq * TotalWarAcceptance.MultiFormationSpacingRetentionRatio),
+                "Multiple formation agents must translate their current relative shape to the move target instead of being repacked into a compact fallback layout.");
+        }
+
+        [Test]
         public void TotalWarPlayable_ResetClearsSelectedMarkersAndDestroysTrackedAgentsThroughPresentationLifecycle()
         {
             using GameEngine engine = CreatePlayableTotalWarEngine();
@@ -630,13 +1557,14 @@ namespace Ludots.Tests.Presentation
             MassNavigationSimulationRuntime simulation = RequireSimulation(engine);
             TickUntil(
                 engine,
-                () => simulation.AgentState.TotalAgents == TotalWarAcceptance.ExpectedTotalSoldiers &&
+                () => simulation.AgentState.TotalAgents == TotalWarAcceptance.ExpectedTotalAgents &&
                       simulation.SelectedCount == TotalWarAcceptance.ExpectedInitialSelection &&
                       CountSelectionMarkerPerformers(engine) == TotalWarAcceptance.ExpectedInitialSelection,
                 maxFrames: TotalWarAcceptance.FrameBudgetForScenarioReady,
                 failureMessage: "Total War scenario should be fully spawned and selected before reset.");
 
             Entity[] previousAgents = CaptureTrackedAgents(simulation);
+            Entity[] previousObstacleOverlays = CaptureObstacleOverlays(engine, simulation.MassFlow.ObstacleCount);
 
             simulation.RequestSceneReset();
             TickUntil(
@@ -652,10 +1580,11 @@ namespace Ludots.Tests.Presentation
             TickUntil(
                 engine,
                 () => CountAlive(engine, previousAgents) == 0 &&
+                      CountAlive(engine, previousObstacleOverlays) == 0 &&
                       CountPresentationDestroyPending(engine) == 0 &&
                       CountSelectionMarkerPerformers(engine) == 0,
                 maxFrames: TotalWarAcceptance.FrameBudgetForPresentationDestroy,
-                failureMessage: "Presentation lifecycle should finalize previously tracked soldiers and scoped markers after reset.");
+                failureMessage: "Presentation lifecycle should finalize previously tracked soldiers, obstacle overlays, and scoped markers after reset.");
         }
 
         [Test]
@@ -862,7 +1791,7 @@ namespace Ludots.Tests.Presentation
             Assert.That(spawnQueue.TryEnqueue(new RuntimeEntitySpawnRequest
             {
                 Kind = RuntimeEntitySpawnKind.Template,
-                TemplateId = "mass_navigation_agent_azure_light",
+                TemplateId = "mass_navigation_total_war_soldier_azure_light",
                 EmitReceipt = 1,
                 ReceiptChannelId = massNavChannel,
             }), Is.True);
@@ -1005,6 +1934,120 @@ namespace Ludots.Tests.Presentation
             Assert.That(runtimeSource, Does.Contain("InsertSystemBeforeRequired<MassNavigationCommandApplySystem>"));
             Assert.That(runtimeSource.IndexOf("new MassNavigationFormationSystem", StringComparison.Ordinal),
                 Is.LessThan(runtimeSource.IndexOf("InsertSystemBeforeRequired<MassNavigationFormationSystem>", StringComparison.Ordinal)));
+        }
+
+        [Test]
+        public void MassNavigationRuntimeBoundaries_UseExplicitAgentTermsAndKindSpecificReceipts()
+        {
+            string repoRoot = FindRepoRoot();
+            string agentStateSource = File.ReadAllText(Path.Combine(
+                repoRoot,
+                "mods",
+                "capabilities",
+                "navigation",
+                "MassNavigationMod",
+                "Runtime",
+                "MassNavigationAgentState.cs"));
+            string receiptSource = File.ReadAllText(Path.Combine(
+                repoRoot,
+                "mods",
+                "capabilities",
+                "navigation",
+                "MassNavigationMod",
+                "Runtime",
+                "MassNavigationSpawnReceiptKind.cs"));
+            string bootstrapSource = File.ReadAllText(Path.Combine(
+                repoRoot,
+                "mods",
+                "capabilities",
+                "navigation",
+                "MassNavigationMod",
+                "Systems",
+                "MassNavigationScenarioBootstrap.cs"));
+            string orderBridgeSource = File.ReadAllText(Path.Combine(
+                repoRoot,
+                "mods",
+                "capabilities",
+                "navigation",
+                "MassNavigationMod",
+                "Systems",
+                "MassNavigationOrderBridgeSystem.cs"));
+
+            Assert.That(agentStateSource, Does.Contain("ControllableAgentCount"));
+            Assert.That(agentStateSource, Does.Contain("ControllableAgentSlotCount"));
+            Assert.That(agentStateSource, Does.Not.Contain("ControllableCount"));
+            Assert.That(receiptSource, Does.Contain("ForAgent"));
+            Assert.That(receiptSource, Does.Contain("ForBlocker"));
+            Assert.That(receiptSource, Does.Contain("ForWorldMarker"));
+            Assert.That(receiptSource, Does.Not.Contain("?? string.Empty"));
+            Assert.That(bootstrapSource, Does.Contain("SpawnConfiguredScenario"));
+            Assert.That(bootstrapSource, Does.Not.Contain("SpawnDefaultScenario"));
+            Assert.That(orderBridgeSource, Does.Contain("ResolveFormationMode"));
+            Assert.That(orderBridgeSource, Does.Not.Contain(": MassNavigationFormationMode.None"));
+        }
+
+        [Test]
+        public void MassNavigationGroupRuntime_ExposesOrderSlotTargetsAndDoesNotCollapseNoneFormationOrders()
+        {
+            string repoRoot = FindRepoRoot();
+            string groupRuntimeSource = File.ReadAllText(Path.Combine(
+                repoRoot,
+                "mods",
+                "capabilities",
+                "navigation",
+                "MassNavigationMod",
+                "Runtime",
+                "MassNavigationGroupRuntime.cs"));
+            string orderUpsertBody = ExtractMethodBody(groupRuntimeSource, "public int UpsertOrderMoveCommand");
+
+            Assert.That(groupRuntimeSource, Does.Contain("TryGetGroupMemberOrderTarget"));
+            Assert.That(groupRuntimeSource, Does.Contain("TryUpdateGroupMemberOrderPathAnchor"));
+            Assert.That(groupRuntimeSource, Does.Not.Contain("TryGetGroupMemberTarget"));
+            Assert.That(groupRuntimeSource, Does.Not.Contain("TryGetGroupDestination"));
+            Assert.That(orderUpsertBody, Does.Contain("bool singleMemberOrder = memberIndices.Length == 1"));
+            Assert.That(orderUpsertBody, Does.Not.Contain("formationMode == MassNavigationFormationMode.None || memberIndices.Length == 1"));
+            Assert.That(groupRuntimeSource, Does.Contain("BuildCurrentRelativeOffsets"));
+            Assert.That(groupRuntimeSource, Does.Contain("_groupIdsByAgentIndex"));
+            Assert.That(groupRuntimeSource, Does.Not.Contain("_groupIdsByControllableIndex"));
+            Assert.That(groupRuntimeSource, Does.Not.Contain("EnsureMembershipCapacity(agentState.ControllableAgentSlotCount)"));
+            Assert.That(groupRuntimeSource, Does.Contain("EnsureMembershipCapacityForMembers(memberIndices[..assignedCount])"));
+            Assert.That(groupRuntimeSource, Does.Contain("EnsureMembershipCapacityForMembers(memberIndices[..memberCount])"));
+            Assert.That(groupRuntimeSource, Does.Not.Contain("ResolveLayoutMode"));
+            Assert.That(groupRuntimeSource, Does.Not.Contain("? MassNavigationFormationMode.Square"));
+            Assert.That(groupRuntimeSource, Does.Contain("ResolveBodyRadiusSpacingScale"));
+        }
+
+        [Test]
+        public void MassFlowNeighborSearch_UsesLayerScopedBodyRadiusNotGlobalLargestAgent()
+        {
+            string repoRoot = FindRepoRoot();
+            string flowSource = File.ReadAllText(Path.Combine(
+                repoRoot,
+                "mods",
+                "capabilities",
+                "navigation",
+                "MassNavigationMod",
+                "Runtime",
+                "MassFlowSimulationState.cs"));
+            string separationBody = ExtractMethodBody(flowSource, "private int ResolveSeparationHashSearchRadiusCells");
+            string hardResolveBody = ExtractMethodBody(flowSource, "private int ResolveHardResolveHashSearchRadiusCells");
+
+            Assert.That(flowSource, Does.Contain("_maxInteractingBodyRadiiCm"));
+            Assert.That(flowSource, Does.Contain("_separationHashSearchRadiusCellsByAgent"));
+            Assert.That(flowSource, Does.Contain("_hardResolveHashSearchRadiusCellsByAgent"));
+            Assert.That(flowSource, Does.Contain("RecomputeMaxInteractingBodyRadiiCm"));
+            Assert.That(flowSource, Does.Contain("TrailingZeroCount"));
+            Assert.That(flowSource, Does.Contain("flowObstacleNeighborRadiusCells"));
+            Assert.That(flowSource, Does.Not.Contain("oy = -2"));
+            Assert.That(flowSource, Does.Not.Contain("ox = -2"));
+            Assert.That(flowSource, Does.Not.Contain("_hardResolveCandidates[j] = 1"),
+                "Parallel steering workers must only write candidate flags owned by their own unit index.");
+            Assert.That(separationBody, Does.Contain("ResolveMaxInteractingBodyRadiusCm(selfUnitIndex)"));
+            Assert.That(hardResolveBody, Does.Contain("ResolveMaxInteractingBodyRadiusCm(selfUnitIndex)"));
+            Assert.That(flowSource, Does.Contain("int separationHashSearchRadius = _separationHashSearchRadiusCellsByAgent[i]"));
+            Assert.That(flowSource, Does.Contain("int hardResolveSearchRadius = _hardResolveHashSearchRadiusCellsByAgent[i]"));
+            Assert.That(separationBody, Does.Not.Contain("_maxBodyRadiusCm * 2f"));
+            Assert.That(hardResolveBody, Does.Not.Contain("+ _maxBodyRadiusCm +"));
         }
 
         private static bool PathHasSegment(string path, string segment)
@@ -1242,13 +2285,12 @@ namespace Ludots.Tests.Presentation
         {
             PerformerDefinitionRegistry definitions = engine.GetService(CoreServiceKeys.PerformerDefinitionRegistry)
                 ?? throw new InvalidOperationException("PerformerDefinitionRegistry is missing.");
-            int light = definitions.GetId("mass_navigation_agent_selection_marker_light");
-            int heavy = definitions.GetId("mass_navigation_agent_selection_marker_heavy");
+            int formation = definitions.GetId("mass_navigation_total_war_formation_selection_marker");
             int count = 0;
             var query = new QueryDescription().WithAll<PerformerState>();
             engine.World.Query(in query, (ref PerformerState state) =>
             {
-                if (state.DefId == light || state.DefId == heavy)
+                if (state.DefId == formation)
                 {
                     count++;
                 }
@@ -1265,10 +2307,157 @@ namespace Ludots.Tests.Presentation
             return count;
         }
 
+        private static int FindFirstSoldierAgentIndex(GameEngine engine, int formationIndex)
+        {
+            int agentIndex = -1;
+            var query = new QueryDescription().WithAll<TotalWarFormationSoldier, MassNavigationAgentIndex>();
+            engine.World.Query(in query, (ref TotalWarFormationSoldier soldier, ref MassNavigationAgentIndex index) =>
+            {
+                if (agentIndex < 0 && soldier.FormationIndex == formationIndex)
+                {
+                    agentIndex = index.Value;
+                }
+            });
+
+            if (agentIndex < 0)
+            {
+                throw new InvalidOperationException($"No Total War soldier was bound for formation index {formationIndex}.");
+            }
+
+            return agentIndex;
+        }
+
+        private static Entity[] CaptureFormationAgents(GameEngine engine, int expectedCount)
+        {
+            var formations = new List<(int FormationIndex, Entity Entity)>(expectedCount);
+            var query = new QueryDescription().WithAll<TotalWarFormationAgent>();
+            engine.World.Query(in query, (Entity entity, ref TotalWarFormationAgent formation) =>
+            {
+                formations.Add((formation.FormationIndex, entity));
+            });
+
+            formations.Sort(static (left, right) => left.FormationIndex.CompareTo(right.FormationIndex));
+            Assert.That(formations.Count, Is.GreaterThanOrEqualTo(expectedCount));
+            Entity[] result = new Entity[expectedCount];
+            for (int i = 0; i < expectedCount; i++)
+            {
+                result[i] = formations[i].Entity;
+            }
+
+            return result;
+        }
+
+        private static void SelectFormations(GameEngine engine, ReadOnlySpan<Entity> formations)
+        {
+            SelectionRuntime selection = engine.GetService(CoreServiceKeys.SelectionRuntime)
+                ?? throw new InvalidOperationException("SelectionRuntime is missing.");
+            Entity owner = ResolveLocalPlayerEntity(engine);
+            Assert.That(selection.ReplaceSelection(owner, SelectionSetKeys.LivePrimary, formations), Is.True);
+            if (!SelectionContextRuntime.TrySetCurrentView(
+                    engine.World,
+                    engine.GlobalContext,
+                    selection,
+                    owner,
+                    SelectionViewKeys.Primary,
+                    owner,
+                    SelectionSetKeys.LivePrimary,
+                    out _))
+            {
+                throw new InvalidOperationException("Could not bind LivePrimary as current Total War selection view.");
+            }
+
+            Tick(engine);
+        }
+
+        private static Entity ResolveLocalPlayerEntity(GameEngine engine)
+        {
+            if (!engine.GlobalContext.TryGetValue(CoreServiceKeys.LocalPlayerEntity.Name, out object? localObj) ||
+                localObj is not Entity local ||
+                !engine.World.IsAlive(local))
+            {
+                throw new InvalidOperationException("LocalPlayerEntity is missing.");
+            }
+
+            return local;
+        }
+
+        private static float MinPairDistanceSq(
+            GameEngine engine,
+            MassNavigationSimulationRuntime simulation,
+            ReadOnlySpan<Entity> formations,
+            bool useOrderTargets)
+        {
+            float minDistanceSq = float.PositiveInfinity;
+            for (int i = 0; i < formations.Length; i++)
+            {
+                Vector2 left = ResolveFormationPoint(engine, simulation, formations[i], useOrderTargets);
+                for (int j = i + 1; j < formations.Length; j++)
+                {
+                    Vector2 right = ResolveFormationPoint(engine, simulation, formations[j], useOrderTargets);
+                    float dx = left.X - right.X;
+                    float dy = left.Y - right.Y;
+                    minDistanceSq = MathF.Min(minDistanceSq, (dx * dx) + (dy * dy));
+                }
+            }
+
+            Assert.That(float.IsFinite(minDistanceSq), Is.True);
+            return minDistanceSq;
+        }
+
+        private static Vector2 ResolveFormationPoint(
+            GameEngine engine,
+            MassNavigationSimulationRuntime simulation,
+            Entity formation,
+            bool useOrderTarget)
+        {
+            Assert.That(engine.World.TryGet(formation, out MassNavigationAgentIndex agentIndex), Is.True);
+            if (useOrderTarget)
+            {
+                Assert.That(simulation.NavGroupRuntime.TryGetGroupMemberOrderTarget(
+                        agentIndex.Value,
+                        out float targetWorldX,
+                        out float targetWorldY),
+                    Is.True);
+                return new Vector2(targetWorldX, targetWorldY);
+            }
+
+            return new Vector2(
+                simulation.ToWorldXCm(simulation.MassFlow.GetPositionX(agentIndex.Value)),
+                simulation.ToWorldYCm(simulation.MassFlow.GetPositionY(agentIndex.Value)));
+        }
+
+        private static Vector2 AgentWorldOffset(
+            MassNavigationSimulationRuntime simulation,
+            int agentIndex,
+            int anchorAgentIndex)
+        {
+            return AgentWorldPosition(simulation, agentIndex) - AgentWorldPosition(simulation, anchorAgentIndex);
+        }
+
+        private static Vector2 AgentWorldPosition(MassNavigationSimulationRuntime simulation, int agentIndex)
+        {
+            return new Vector2(
+                simulation.ToWorldXCm(simulation.MassFlow.GetPositionX(agentIndex)),
+                simulation.ToWorldYCm(simulation.MassFlow.GetPositionY(agentIndex)));
+        }
+
+        private static void AssertMassFlowEntityPositionSynced(
+            GameEngine engine,
+            MassNavigationSimulationRuntime simulation,
+            int agentIndex)
+        {
+            Assert.That(simulation.AgentState.TryGetAgentEntity(agentIndex, out Entity entity), Is.True);
+            Assert.That(engine.World.TryGet(entity, out WorldPositionCm worldPosition), Is.True);
+            int expectedWorldX = (int)MathF.Round(simulation.ToWorldXCm(simulation.MassFlow.GetPositionX(agentIndex)));
+            int expectedWorldY = (int)MathF.Round(simulation.ToWorldYCm(simulation.MassFlow.GetPositionY(agentIndex)));
+            Assert.That(worldPosition.Value.X.RawValue, Is.EqualTo(Fix64.FromInt(expectedWorldX).RawValue));
+            Assert.That(worldPosition.Value.Y.RawValue, Is.EqualTo(Fix64.FromInt(expectedWorldY).RawValue));
+        }
+
         private static Entity[] CaptureTrackedAgents(MassNavigationSimulationRuntime simulation)
         {
             IReadOnlyList<Entity> agents = simulation.AgentState.AllAgents;
-            Assert.That(agents.Count, Is.EqualTo(TotalWarAcceptance.ExpectedTotalSoldiers));
+            Assert.That(agents.Count, Is.EqualTo(TotalWarAcceptance.ExpectedTotalAgents));
             var snapshot = new Entity[agents.Count];
             for (int i = 0; i < agents.Count; i++)
             {
@@ -1277,6 +2466,19 @@ namespace Ludots.Tests.Presentation
             }
 
             return snapshot;
+        }
+
+        private static Entity[] CaptureObstacleOverlays(GameEngine engine, int expectedCount)
+        {
+            var overlays = new List<Entity>(expectedCount);
+            var query = new QueryDescription().WithAll<TotalWarObstacleOverlay>();
+            engine.World.Query(in query, (Entity entity, ref TotalWarObstacleOverlay _) =>
+            {
+                overlays.Add(entity);
+            });
+
+            Assert.That(overlays.Count, Is.EqualTo(expectedCount));
+            return overlays.ToArray();
         }
 
         private static int CountAlive(GameEngine engine, ReadOnlySpan<Entity> entities)
@@ -1327,6 +2529,67 @@ namespace Ludots.Tests.Presentation
             return count;
         }
 
+        private static float NormalizeAngleRadians(float angle)
+        {
+            while (angle > MathF.PI)
+            {
+                angle -= MathF.Tau;
+            }
+
+            while (angle < -MathF.PI)
+            {
+                angle += MathF.Tau;
+            }
+
+            return angle;
+        }
+
+        private static void AssertInitialSelectionTargetsFormationAgents(GameEngine engine)
+        {
+            Entity[] selected = SelectionContextRuntime.SnapshotCurrentSelection(engine.World, engine.GlobalContext);
+            Assert.That(selected.Length, Is.EqualTo(TotalWarAcceptance.ExpectedInitialSelection));
+            for (int i = 0; i < selected.Length; i++)
+            {
+                Entity entity = selected[i];
+                Assert.That(engine.World.Get<Name>(entity).Value, Is.EqualTo("MassNavigation.TotalWar.FormationAgent"));
+                Assert.That(engine.World.Has<OrderBuffer>(entity), Is.True);
+                Assert.That(engine.World.Has<AttributeBuffer>(entity), Is.True);
+                Assert.That(engine.World.Has<MassNavigationControllable>(entity), Is.True);
+            }
+        }
+
+        private static void AssertFormationAgentsDoNotOverlap(GameEngine engine, MassNavigationSimulationRuntime simulation)
+        {
+            int[] agentIndices = new int[TotalWarAcceptance.ExpectedTotalFormations];
+            int count = 0;
+            var query = new QueryDescription().WithAll<TotalWarFormationAgent, MassNavigationAgentIndex>();
+            engine.World.Query(in query, (ref TotalWarFormationAgent _, ref MassNavigationAgentIndex agentIndex) =>
+            {
+                if (count >= agentIndices.Length)
+                {
+                    throw new InvalidOperationException("Total War playable test found more formation agents than expected.");
+                }
+
+                agentIndices[count++] = agentIndex.Value;
+            });
+
+            Assert.That(count, Is.EqualTo(TotalWarAcceptance.ExpectedTotalFormations));
+            for (int i = 0; i < count; i++)
+            {
+                for (int j = i + 1; j < count; j++)
+                {
+                    int left = agentIndices[i];
+                    int right = agentIndices[j];
+                    float dx = simulation.MassFlow.GetPositionX(left) - simulation.MassFlow.GetPositionX(right);
+                    float dy = simulation.MassFlow.GetPositionY(left) - simulation.MassFlow.GetPositionY(right);
+                    float distance = MathF.Sqrt((dx * dx) + (dy * dy));
+                    float required = simulation.MassFlow.GetBodyRadiusCm(left) + simulation.MassFlow.GetBodyRadiusCm(right);
+                    Assert.That(distance, Is.GreaterThanOrEqualTo(required - 1f),
+                        $"Formation agents {left} and {right} must not overlap in MassFlow.");
+                }
+            }
+        }
+
         private static int ResolveMassNavigationMoveOrderTypeId(GameEngine engine)
         {
             OrderTypeRegistry registry = engine.GetService(CoreServiceKeys.OrderTypeRegistry)
@@ -1341,28 +2604,49 @@ namespace Ludots.Tests.Presentation
 
         private static void AssertFormationOutlines(GameEngine engine)
         {
-            GroundOverlayBuffer overlays = engine.GetService(CoreServiceKeys.GroundOverlayBuffer)
-                ?? throw new InvalidOperationException("GroundOverlayBuffer is missing.");
-            ReadOnlySpan<GroundOverlayItem> items = overlays.GetSpan();
-            int lineCount = 0;
-            int ringCount = 0;
-            for (int i = 0; i < items.Length; i++)
+            RoadSplineBuffer splines = engine.GetService(CoreServiceKeys.RoadSplineBuffer)
+                ?? throw new InvalidOperationException("RoadSplineBuffer is missing.");
+            Assert.That(splines.Count, Is.EqualTo(TotalWarAcceptance.ExpectedOutlineSplineSegments));
+            Assert.That(engine.GlobalContext.TryGetValue(TotalWarShowcaseContextKeys.FormationOutlineCount, out object? outlineCount), Is.True);
+            Assert.That(outlineCount, Is.EqualTo(TotalWarAcceptance.ExpectedOutlineSplineSegments));
+
+            ReadOnlySpan<float> p0Y = splines.P0Y;
+            ReadOnlySpan<float> p3Y = splines.P3Y;
+            bool hasTerrainHeightChange = false;
+            for (int i = 0; i < splines.Count; i++)
             {
-                if (items[i].Shape == GroundOverlayShape.Line)
+                if (MathF.Abs(p0Y[i] - p3Y[i]) > 0.0001f)
                 {
-                    lineCount++;
-                }
-                else if (items[i].Shape == GroundOverlayShape.Ring)
-                {
-                    ringCount++;
+                    hasTerrainHeightChange = true;
+                    break;
                 }
             }
 
-            Assert.That(lineCount, Is.EqualTo(TotalWarAcceptance.ExpectedOutlineLines));
-            Assert.That(ringCount, Is.EqualTo(TotalWarAcceptance.ExpectedOutlineRings));
-            Assert.That(items.Length, Is.EqualTo(TotalWarAcceptance.ExpectedOutlineItems));
-            Assert.That(engine.GlobalContext.TryGetValue("MassNavigation.TotalWar.FormationOutlineCount", out object? outlineCount), Is.True);
-            Assert.That(outlineCount, Is.EqualTo(TotalWarAcceptance.ExpectedOutlineItems));
+            Assert.That(hasTerrainHeightChange, Is.True,
+                "Formation outline spline segments should use per-endpoint visual heightmap samples instead of a single flat overlay height.");
+        }
+
+        private static void AssertObstacleOverlays(GameEngine engine, MassNavigationSimulationRuntime simulation)
+        {
+            JsonObject config = ReadObject(Path.Combine(TotalWarModRoot(), "assets", "TotalWarShowcaseConfig.json"));
+            JsonObject obstacleOverlay = config["obstacleOverlay"]?.AsObject()
+                ?? throw new InvalidOperationException("Total War showcase config requires obstacleOverlay.");
+            float expectedBorderWidthM = WorldUnits.CmToM(obstacleOverlay["borderWidthCm"]?.GetValue<float>()
+                ?? throw new InvalidOperationException("Total War obstacleOverlay.borderWidthCm must be numeric."));
+            GroundOverlayBuffer overlays = engine.GetService(CoreServiceKeys.GroundOverlayBuffer)
+                ?? throw new InvalidOperationException("GroundOverlayBuffer is missing.");
+            ReadOnlySpan<GroundOverlayItem> items = overlays.GetSpan();
+            int ringCount = 0;
+            for (int i = 0; i < items.Length; i++)
+            {
+                if (items[i].Shape == GroundOverlayShape.Ring)
+                {
+                    ringCount++;
+                    Assert.That(items[i].BorderWidth, Is.EqualTo(expectedBorderWidthM).Within(0.0001f));
+                }
+            }
+
+            Assert.That(ringCount, Is.GreaterThanOrEqualTo(simulation.MassFlow.ObstacleCount));
         }
 
         private static void AssertCullingProbeAndDebugDraw(GameEngine engine)
@@ -1503,6 +2787,47 @@ namespace Ludots.Tests.Presentation
                 ?? throw new InvalidOperationException($"Expected JSON object at {path}.");
         }
 
+        private static MassNavigationGroupRuntimeFixture CreateGroupRuntimeFixture(params Vector2[] localPositions)
+        {
+            if (localPositions.Length <= 0)
+            {
+                throw new InvalidOperationException("MassNavigation group runtime fixture requires at least one position.");
+            }
+
+            var flow = new MassFlowSimulationState();
+            var layer = new MassNavigationAgentLayer(categoryMask: 1u, interactionMask: 1u);
+            var seeds = new MassNavigationAgentSeed[localPositions.Length];
+            for (int i = 0; i < localPositions.Length; i++)
+            {
+                seeds[i] = new MassNavigationAgentSeed(
+                    teamId: 1,
+                    localPositionXCm: localPositions[i].X,
+                    localPositionYCm: localPositions[i].Y,
+                    heavy: false,
+                    navMass: 1f,
+                    visualScale: 1f,
+                    bodyRadiusCm: 20f,
+                    speedCmPerSecond: 800f,
+                    layer);
+            }
+
+            flow.Reset(seeds, new[]
+            {
+                new MassNavigationObstacleConfig { Id = "group-fixture-obstacle", LocalXCm = 9000f, LocalYCm = 9000f, RadiusCm = 100f },
+            });
+
+            var world = World.Create();
+            var agentState = new MassNavigationAgentState();
+            for (int i = 0; i < localPositions.Length; i++)
+            {
+                Entity entity = world.Create(new FacingDirection { AngleRad = 0f });
+                agentState.RegisterAgentAtIndex(entity, i, controllable: true);
+            }
+
+            var runtime = new MassNavigationGroupRuntime(new MassNavigationFormationRuntime(new MassNavigationGroupSemantics()));
+            return new MassNavigationGroupRuntimeFixture(world, flow, agentState, runtime);
+        }
+
         private static string TotalWarModRoot()
         {
             return Path.Combine(FindRepoRoot(), "mods", "showcases", "mass_navigation_total_war_entry", "MassNavigationTotalWarEntryMod");
@@ -1523,6 +2848,31 @@ namespace Ludots.Tests.Presentation
             }
 
             throw new DirectoryNotFoundException("Repository root not found from test work directory.");
+        }
+
+        private sealed class MassNavigationGroupRuntimeFixture : IDisposable
+        {
+            public MassNavigationGroupRuntimeFixture(
+                World world,
+                MassFlowSimulationState flow,
+                MassNavigationAgentState agentState,
+                MassNavigationGroupRuntime runtime)
+            {
+                World = world;
+                Flow = flow;
+                AgentState = agentState;
+                Runtime = runtime;
+            }
+
+            public World World { get; }
+            public MassFlowSimulationState Flow { get; }
+            public MassNavigationAgentState AgentState { get; }
+            public MassNavigationGroupRuntime Runtime { get; }
+
+            public void Dispose()
+            {
+                World.Destroy(World);
+            }
         }
 
         private sealed class NullModContext : Ludots.Core.Modding.IModContext
@@ -1553,23 +2903,28 @@ namespace Ludots.Tests.Presentation
             public const string WorldScreenMappingKey = "Tests.TotalWar.WorldScreenMapping";
             public const string LeftMousePath = "<Mouse>/LeftButton";
             public const string RightMousePath = "<Mouse>/RightButton";
+            public const string RotateRightActionId = "MassNavigation_RotateRight";
             public const float FrameSeconds = 1f / 20f;
             public const float PixelsPerCm = 0.08f;
             public const float HeadlessRayOriginHeightM = 2000f;
+            public const float SoldierFormationOffsetRebaseToleranceSq = 40_000f;
             public const int FrameBudgetForMapEntry = 4;
             public const int FrameBudgetForScenarioReady = 220;
             public const int FrameBudgetForInteraction = 40;
             public const int FrameBudgetForInputRelease = 2;
             public const int FrameBudgetForPresentationDestroy = 80;
             public const int ExpectedTotalSoldiers = 1280;
-            public const int ExpectedInitialSelection = 240;
-            public const int ExpectedOutlineLines = 22;
-            public const int ExpectedOutlineRings = 2;
-            public const int ExpectedOutlineItems = 24;
+            public const int ExpectedTotalFormations = 6;
+            public const int ExpectedTotalAgents = ExpectedTotalSoldiers + ExpectedTotalFormations;
+            public const int ExpectedInitialSelection = 1;
+            public const int ExpectedOutlineSplineSegments = 576;
+            public const float MultiFormationSpacingRetentionRatio = 0.8f;
             public const float SelectionDragPaddingPixels = 24f;
             public static readonly Vector2 ScreenCenter = new(960f, 540f);
             public static readonly Vector2 EmptyGroundWorldCm = new(18000f, 18000f);
             public static readonly Vector2 MoveTargetWorldCm = new(-3600f, -400f);
+            public static readonly Vector2 MultiFormationMoveTargetWorldCm = new(3200f, 200f);
+            public static readonly Vector2 SolverWindowRebaseFocusWorldCm = new(1_200_000f, 400_000f);
         }
 
         private sealed class TestInputBackend : IInputBackend

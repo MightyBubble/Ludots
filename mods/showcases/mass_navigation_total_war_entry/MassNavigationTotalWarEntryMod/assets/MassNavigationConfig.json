@@ -64,49 +64,14 @@
     "hotspotPerformerId": "mass_navigation_hotspot_marker",
     "blockerTemplateId": "mass_navigation_blocker",
     "hotspotTemplateId": "mass_navigation_hotspot_marker",
-    "teams": [
-      {
-        "teamId": 1,
-        "styleId": "blue",
-        "lightTemplateId": "mass_navigation_agent_azure_light",
-        "heavyTemplateId": "mass_navigation_agent_azure_heavy",
-        "lightPerformerId": "mass_navigation_agent_azure_light",
-        "heavyPerformerId": "mass_navigation_agent_azure_heavy"
-      },
-      {
-        "teamId": 2,
-        "styleId": "red",
-        "lightTemplateId": "mass_navigation_agent_crimson_light",
-        "heavyTemplateId": "mass_navigation_agent_crimson_heavy",
-        "lightPerformerId": "mass_navigation_agent_crimson_light",
-        "heavyPerformerId": "mass_navigation_agent_crimson_heavy"
-      },
-      {
-        "teamId": 3,
-        "styleId": "gold",
-        "lightTemplateId": "mass_navigation_agent_amber_light",
-        "heavyTemplateId": "mass_navigation_agent_amber_heavy",
-        "lightPerformerId": "mass_navigation_agent_amber_light",
-        "heavyPerformerId": "mass_navigation_agent_amber_heavy"
-      },
-      {
-        "teamId": 4,
-        "styleId": "green",
-        "lightTemplateId": "mass_navigation_agent_emerald_light",
-        "heavyTemplateId": "mass_navigation_agent_emerald_heavy",
-        "lightPerformerId": "mass_navigation_agent_emerald_light",
-        "heavyPerformerId": "mass_navigation_agent_emerald_heavy"
-      }
-    ]
+    "teams": []
   },
   "scenario": {
-    "agentsPerTeam": 2500,
+    "agentsPerTeam": 0,
     "initialSelectedTeamId": 1,
     "teams": [
       { "id": 1, "name": "Azure Vanguard" },
-      { "id": 2, "name": "Crimson Column" },
-      { "id": 3, "name": "Amber Phalanx" },
-      { "id": 4, "name": "Emerald Guard" }
+      { "id": 2, "name": "Crimson Column" }
     ]
   },
   "scenarioRuntime": {
@@ -131,6 +96,8 @@
         "heavy": true,
         "navMass": 4.0,
         "visualScale": 0.34,
+        "bodyRadiusCm": 28.0,
+        "speedCmPerSecond": 780.0,
         "everyNth": 7,
         "nthOffset": 0
       },
@@ -139,6 +106,8 @@
         "heavy": false,
         "navMass": 1.0,
         "visualScale": 0.22,
+        "bodyRadiusCm": 20.0,
+        "speedCmPerSecond": 920.0,
         "everyNth": 0,
         "nthOffset": 0
       }
@@ -150,9 +119,7 @@
   },
   "teamRelationships": {
     "defaultRelationship": "Hostile",
-    "relationships": [
-      { "teamA": 3, "teamB": 4, "attitude": "Neutral", "symmetric": true }
-    ]
+    "relationships": []
   },
   "flow": {
     "enabled": false,
@@ -278,7 +245,6 @@
       "nearSlotBlendDistanceSq": 4000000.0
     },
     "steering": {
-      "speedCmPerSecond": 800.0,
       "separationRadiusCm": 200.0,
       "goalArrivalRadiusCm": 1200.0,
       "flowObstacleAvoidanceScale": 1.2,

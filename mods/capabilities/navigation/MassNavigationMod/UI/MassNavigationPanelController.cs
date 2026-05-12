@@ -134,7 +134,7 @@ internal sealed class MassNavigationPanelController
                     .Gap(8f)
                     .Justify(UiJustifyContent.Start),
                 Ui.Text("MassFlow uses a solver SoA as the hot-path workset; ECS owns authoring, commands, identity, gameplay truth, presentation handoff, and diagnostics.").FontSize(12f).Color("#C7D4E5").WhiteSpace(UiWhiteSpace.Normal),
-                Ui.Text($"Teams {state.TeamCount}  Agents/team {state.AgentsPerTeam}  Total {state.TotalAgents}  Selectable {state.ControllableAgents}  Obstacles {state.Blockers}").FontSize(13f).Color("#C7D4E5").WhiteSpace(UiWhiteSpace.Normal),
+                Ui.Text($"Teams {state.TeamCount}  Agents/team {state.AgentsPerTeam}  Total {state.TotalAgents}  Selectable {state.SelectableAgents}  Obstacles {state.Blockers}").FontSize(13f).Color("#C7D4E5").WhiteSpace(UiWhiteSpace.Normal),
                 Ui.Text($"Selected {state.SelectedCount}  Rev {state.SelectionRevision}  Pending cmds {state.PendingCommandCount}").FontSize(13f).Color("#A4F07A"),
                 Ui.Text($"Team target {state.SelectedTeamId}  Formation {state.FormationLabel}  Groups {state.FormationCount}  Rotation {state.FormationRotationDeg:0.0} deg").FontSize(13f).Color("#F2D483").WhiteSpace(UiWhiteSpace.Normal),
                 Ui.Text($"FPS {state.Fps:0}  Frame {state.FrameMs:0.0} ms  Performer {state.PerformerEmitMs:0.0} ms  Minimap {state.MinimapProjectionMs:0.0} ms").FontSize(13f).Color("#F2D483").WhiteSpace(UiWhiteSpace.Normal),
@@ -166,6 +166,11 @@ internal sealed class MassNavigationPanelController
                 Ui.Text("Culling Probes").FontSize(12f).Bold().Color("#F4C77D"),
                 BuildCameraProbeRow(),
                 Ui.Text("Formation").FontSize(12f).Bold().Color("#F4C77D"),
+                Ui.Row(
+                        BuildActionButton("Rotate Left", () => QueueSelectionRotate(-1f)),
+                        BuildActionButton("Rotate Right", () => QueueSelectionRotate(1f)))
+                    .Wrap()
+                    .Gap(8f),
                 Ui.Row(
                         BuildFormationButton("None", MassNavigationFormationMode.None, state.FormationLabel),
                         BuildFormationButton("Line", MassNavigationFormationMode.Line, state.FormationLabel),
@@ -360,6 +365,20 @@ internal sealed class MassNavigationPanelController
     {
         _simulation?.SetFormationMode(mode);
         SetActionFeedback($"Hot apply: formation = {mode}.");
+    }
+
+    private void QueueSelectionRotate(float direction)
+    {
+        if (_simulation == null)
+        {
+            return;
+        }
+
+        float deltaRadians = direction * _simulation.Config.Semantics.Group.FormationRotationSpeedRadiansPerSecond;
+        if (_simulation.Commands.EnqueueSelectionRotate(_simulation.SelectedEntities, deltaRadians))
+        {
+            SetActionFeedback($"Queued rotate: selected formation rotation {deltaRadians * 180f / MathF.PI:0.0} deg.");
+        }
     }
 
     private void JumpToKnownContact(string contactId)
@@ -689,9 +708,8 @@ internal sealed class MassNavigationPanelController
         float renderUnaccountedMs = MathF.Max(0f, MathF.Round(frameMs - renderAccountedMs, 1));
         float firstAgentX = 0f;
         float firstAgentZ = 0f;
-        if (simulation.AgentState.ControllableCount > 0)
+        if (simulation.AgentState.TryGetControllableEntity(0, out var first))
         {
-            var first = simulation.AgentState.ControllableAgents[0];
             if (engine.World.IsAlive(first) && engine.World.TryGet(first, out WorldPositionCm position))
             {
                 var cm = position.Value.ToWorldCmInt2();
@@ -730,7 +748,7 @@ internal sealed class MassNavigationPanelController
             TeamCount: simulation.TeamCount,
             AgentsPerTeam: simulation.AgentsPerTeam,
             TotalAgents: simulation.AgentState.TotalAgents,
-            ControllableAgents: simulation.AgentState.ControllableCount,
+            SelectableAgents: simulation.AgentState.ControllableAgentCount,
             Blockers: simulation.AgentState.BlockerCount,
             WorldMarkerCount: simulation.AgentState.WorldMarkerCount,
             SelectedTeamId: simulation.SelectedTeamId,

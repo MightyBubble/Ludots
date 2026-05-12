@@ -247,7 +247,6 @@ public sealed class MassNavigationSimulationRuntime
         MassFlow.Semantics.Group.NearSlotBlend = config.Semantics.Group.NearSlotBlend;
         MassFlow.Semantics.Group.FarSlotBlend = config.Semantics.Group.FarSlotBlend;
         MassFlow.Semantics.Group.NearSlotBlendDistanceSq = config.Semantics.Group.NearSlotBlendDistanceSq;
-        MassFlow.Semantics.Steering.SpeedCmPerSecond = config.Semantics.Steering.SpeedCmPerSecond;
         MassFlow.Semantics.Steering.SeparationRadiusCm = config.Semantics.Steering.SeparationRadiusCm;
         MassFlow.Semantics.Steering.GoalArrivalRadiusCm = config.Semantics.Steering.GoalArrivalRadiusCm;
         MassFlow.Semantics.Steering.FlowObstacleAvoidanceScale = config.Semantics.Steering.FlowObstacleAvoidanceScale;

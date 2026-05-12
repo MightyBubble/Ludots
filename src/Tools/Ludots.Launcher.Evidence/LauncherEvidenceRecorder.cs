@@ -2062,7 +2062,7 @@ public static class LauncherEvidenceRecorder
             throw new InvalidOperationException("MassNavigation UAT requires a live LocalPlayerEntity.");
         }
 
-        int count = Math.Min(requestedCount, simulation.AgentState.ControllableAgents.Count);
+        int count = Math.Min(requestedCount, simulation.AgentState.ControllableAgentSlotCount);
         if (count <= 0)
         {
             throw new InvalidOperationException("MassNavigation UAT found no controllable MassNavigation agents.");
@@ -2071,7 +2071,7 @@ public static class LauncherEvidenceRecorder
         var selected = new Entity[count];
         for (int i = 0; i < count; i++)
         {
-            selected[i] = simulation.AgentState.ControllableAgents[i];
+            selected[i] = simulation.AgentState.ControllableAgentSlots[i];
         }
 
         if (!selection.ReplaceSelection(owner, SelectionSetKeys.LivePrimary, selected))
@@ -2292,7 +2292,7 @@ public static class LauncherEvidenceRecorder
             TeamCounts: teamCounts,
             AgentCount: simulation.AgentState.TotalAgents,
             EcsAgentCount: ecsAgentCount,
-            ControllableCount: simulation.AgentState.ControllableCount,
+            ControllableCount: simulation.AgentState.ControllableAgentCount,
             BlockerCount: blockerCount,
             HotspotMarkerCount: hotspotMarkerCount,
             PerformerPayloadCount: performerPayloadCount + blockerPayloadCount + hotspotPayloadCount,

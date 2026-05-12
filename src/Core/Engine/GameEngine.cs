@@ -1867,7 +1867,7 @@ namespace Ludots.Core.Engine
 
         private static int ResolveGroundOverlayShapeId(string key)
         {
-            if (Enum.TryParse<Ludots.Core.Presentation.Rendering.GroundOverlayShape>(key, ignoreCase: true, out var shape))
+            if (Enum.TryParse<Ludots.Core.Presentation.Rendering.GroundOverlayShape>(key, ignoreCase: false, out var shape))
             {
                 return (int)shape;
             }

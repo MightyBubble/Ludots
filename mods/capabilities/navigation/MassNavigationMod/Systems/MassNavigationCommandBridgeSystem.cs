@@ -92,7 +92,11 @@ internal sealed class MassNavigationCommandBridgeSystem : ISystem<float>
 
         int moveOrderTypeId = ResolveMoveOrderType();
         int playerId = ResolveLocalPlayerId();
-        SelectionContextRuntime.TryGetCurrentContainer(_engine.World, _engine.GlobalContext, out Entity selectionContainer);
+        if (!SelectionContextRuntime.TryGetCurrentContainer(_engine.World, _engine.GlobalContext, out Entity selectionContainer))
+        {
+            throw new InvalidOperationException("MassNavigationMod requires a current selection container before submitting move orders.");
+        }
+
         int sharedOrderId = _simulation.AllocateSharedOrderId();
         int submitted = 0;
         float rotationRadians = _simulation.NavGroupRuntime.SelectedRotationRadians;
@@ -140,7 +144,6 @@ internal sealed class MassNavigationCommandBridgeSystem : ISystem<float>
         }
 
         _simulation.MarkCommandApply();
-        _simulation.MarkStructuralChange();
     }
 
     private int ResolveMoveOrderType()

@@ -156,7 +156,6 @@ public sealed class MassNavigationGroupSemantics
 
 public sealed class MassNavigationSteeringSemantics
 {
-    public float SpeedCmPerSecond { get; set; } = 800f;
     public float SeparationRadiusCm { get; set; } = 200f;
     public float GoalArrivalRadiusCm { get; set; } = 1_200f;
     public float FlowObstacleAvoidanceScale { get; set; } = 1.2f;
@@ -166,7 +165,6 @@ public sealed class MassNavigationSteeringSemantics
 
     public void Validate()
     {
-        RequirePositive(SpeedCmPerSecond, nameof(SpeedCmPerSecond));
         RequirePositive(SeparationRadiusCm, nameof(SeparationRadiusCm));
         RequirePositive(GoalArrivalRadiusCm, nameof(GoalArrivalRadiusCm));
         RequireNonNegative(FlowObstacleAvoidanceScale, nameof(FlowObstacleAvoidanceScale));

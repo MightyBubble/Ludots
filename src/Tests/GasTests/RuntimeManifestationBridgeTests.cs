@@ -9,6 +9,7 @@ using Ludots.Core.Navigation2D.Components;
 using Ludots.Core.Physics2D;
 using Ludots.Core.Physics2D.Components;
 using Ludots.Core.Physics2D.Systems;
+using Ludots.Core.Spatial;
 using NUnit.Framework;
 using static NUnit.Framework.Assert;
 
@@ -117,6 +118,28 @@ namespace Ludots.Tests.GAS
             var obstacle = world.Get<NavObstacle2D>(entity);
             That(obstacle.Shape, Is.EqualTo(NavObstacleShape2D.Polygon));
             That(obstacle.ShapeDataIndex, Is.EqualTo(collider.ShapeDataIndex));
+        }
+
+        [Test]
+        public void ComponentRegistry_RequiresExactSpatialBoundsKind()
+        {
+            using var world = World.Create();
+            Entity entity = world.Create();
+
+            Ludots.Core.Config.ComponentRegistry.Apply(
+                entity,
+                "SpatialBounds",
+                JsonNode.Parse("""{ "kind": "Footprint2D" }""")!);
+
+            That(world.Get<SpatialBounds>(entity).Kind, Is.EqualTo(SpatialBoundsKind.Footprint2D));
+
+            Entity invalid = world.Create();
+            InvalidOperationException ex = Throws<InvalidOperationException>(() =>
+                Ludots.Core.Config.ComponentRegistry.Apply(
+                    invalid,
+                    "SpatialBounds",
+                    JsonNode.Parse("""{ "kind": "footprint2d" }""")!))!;
+            That(ex.Message, Does.Contain("Unsupported SpatialBounds kind"));
         }
     }
 }

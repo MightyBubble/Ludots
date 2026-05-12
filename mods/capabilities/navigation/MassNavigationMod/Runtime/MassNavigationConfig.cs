@@ -140,6 +140,8 @@ public sealed class MassNavigationConfig
                 "heavy",
                 "navMass",
                 "visualScale",
+                "bodyRadiusCm",
+                "speedCmPerSecond",
                 "everyNth",
                 "nthOffset");
             profileIndex++;
@@ -242,7 +244,6 @@ public sealed class MassNavigationConfig
             "nearSlotBlendDistanceSq");
         RequireProperties(
             RequireProperty(semantics, "steering"),
-            "speedCmPerSecond",
             "separationRadiusCm",
             "goalArrivalRadiusCm",
             "flowObstacleAvoidanceScale",
@@ -333,7 +334,7 @@ public sealed class MassNavigationConfig
 
         Scenario.Validate();
         ScenarioRuntime.Validate();
-        Presentation.Validate(Scenario);
+        Presentation.Validate(Scenario, ScenarioRuntime);
         Cadence.Validate();
         AgentProfiles.Validate();
         CameraProfiles.Validate();
@@ -478,8 +479,13 @@ public sealed class MassNavigationPresentationConfig
     public string HotspotTemplateId { get; set; } = string.Empty;
     public MassNavigationTeamPresentationConfig[] Teams { get; set; } = Array.Empty<MassNavigationTeamPresentationConfig>();
 
-    public void Validate(MassNavigationScenarioConfig scenario)
+    public void Validate(MassNavigationScenarioConfig scenario, MassNavigationScenarioRuntimeConfig scenarioRuntime)
     {
+        if (scenarioRuntime == null)
+        {
+            throw new InvalidOperationException("Mass-nav presentation requires an explicit scenarioRuntime section.");
+        }
+
         if (RequiredMeshAssetIds.Length <= 0)
         {
             throw new InvalidOperationException("Mass-nav presentation requires at least one RequiredMeshAssetIds entry.");
@@ -500,6 +506,17 @@ public sealed class MassNavigationPresentationConfig
         RequireNonEmpty(HotspotPerformerId, nameof(HotspotPerformerId));
         RequireNonEmpty(BlockerTemplateId, nameof(BlockerTemplateId));
         RequireNonEmpty(HotspotTemplateId, nameof(HotspotTemplateId));
+
+        if (!scenarioRuntime.AutoSpawnConfiguredScenario)
+        {
+            if (Teams.Length != 0)
+            {
+                throw new InvalidOperationException(
+                    "Mass-nav presentation.teams must be empty when scenarioRuntime.autoSpawnConfiguredScenario is false; formation-owned scenarios must author agent templates in their own config.");
+            }
+
+            return;
+        }
 
         if (Teams.Length != scenario.Teams.Length)
         {

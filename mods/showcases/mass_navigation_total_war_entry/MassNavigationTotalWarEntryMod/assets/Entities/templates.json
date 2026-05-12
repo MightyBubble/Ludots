@@ -1,12 +1,108 @@
 [
   {
-    "id": "mass_navigation_total_war_formation_anchor",
+    "id": "mass_navigation_total_war_formation_agent",
+    "onSpawnEffect": "Effect.MassNavigation.Agent.HealthDrift",
     "components": {
-      "Name": { "Value": "MassNavigation.TotalWar.FormationAnchor" },
+      "Name": { "Value": "MassNavigation.TotalWar.FormationAgent" },
       "WorldPositionCm": { "Value": { "X": 0, "Y": 0 } },
       "VisualHeightmapSampleState": {},
       "FacingDirection": { "AngleRad": 0.0 },
-      "SpatialPartitionExcluded": {}
+      "OrderBuffer": {},
+      "SelectionSelectableTag": {},
+      "SelectionSelectableState": { "IsEnabled": true },
+      "SpatialBounds": { "kind": "Footprint2D", "localCenterCm": { "X": 0, "Y": 0 }, "localCenterYCm": 0 },
+      "SpatialFootprint2D": {
+        "vertices": [
+          { "X": -650, "Y": -480 },
+          { "X": 650, "Y": -480 },
+          { "X": 650, "Y": 480 },
+          { "X": -650, "Y": 480 }
+        ]
+      },
+      "AttributeBuffer": {
+        "base": { "Health": 1200 },
+        "current": { "Health": 1080 }
+      },
+      "GameplayTagContainer": {},
+      "TagCountContainer": {},
+      "MassNavigationAgentTag": {},
+      "EntityLayer": {
+        "category": [ "massNavigation.totalWar.formationAgent" ],
+        "mask": [ "massNavigation.totalWar.formationAgent" ]
+      },
+      "MassNavigationControllable": {}
+    }
+  },
+  {
+    "id": "mass_navigation_total_war_soldier_azure_light",
+    "components": {
+      "Name": { "Value": "MassNavigation.TotalWar.Soldier.Azure.Light" },
+      "WorldPositionCm": { "Value": { "X": 0, "Y": 0 } },
+      "VisualHeightmapSampleState": {},
+      "FacingDirection": { "AngleRad": 0.0 },
+      "EntityLayer": {
+        "category": [ "massNavigation.totalWar.soldierAgent" ],
+        "mask": [ "massNavigation.totalWar.soldierAgent" ]
+      },
+      "MassNavigationAgentTag": {}
+    }
+  },
+  {
+    "id": "mass_navigation_total_war_soldier_azure_heavy",
+    "components": {
+      "Name": { "Value": "MassNavigation.TotalWar.Soldier.Azure.Heavy" },
+      "WorldPositionCm": { "Value": { "X": 0, "Y": 0 } },
+      "VisualHeightmapSampleState": {},
+      "FacingDirection": { "AngleRad": 0.0 },
+      "EntityLayer": {
+        "category": [ "massNavigation.totalWar.soldierAgent" ],
+        "mask": [ "massNavigation.totalWar.soldierAgent" ]
+      },
+      "MassNavigationAgentTag": {}
+    }
+  },
+  {
+    "id": "mass_navigation_total_war_soldier_crimson_light",
+    "components": {
+      "Name": { "Value": "MassNavigation.TotalWar.Soldier.Crimson.Light" },
+      "WorldPositionCm": { "Value": { "X": 0, "Y": 0 } },
+      "VisualHeightmapSampleState": {},
+      "FacingDirection": { "AngleRad": 0.0 },
+      "EntityLayer": {
+        "category": [ "massNavigation.totalWar.soldierAgent" ],
+        "mask": [ "massNavigation.totalWar.soldierAgent" ]
+      },
+      "MassNavigationAgentTag": {}
+    }
+  },
+  {
+    "id": "mass_navigation_total_war_soldier_crimson_heavy",
+    "components": {
+      "Name": { "Value": "MassNavigation.TotalWar.Soldier.Crimson.Heavy" },
+      "WorldPositionCm": { "Value": { "X": 0, "Y": 0 } },
+      "VisualHeightmapSampleState": {},
+      "FacingDirection": { "AngleRad": 0.0 },
+      "EntityLayer": {
+        "category": [ "massNavigation.totalWar.soldierAgent" ],
+        "mask": [ "massNavigation.totalWar.soldierAgent" ]
+      },
+      "MassNavigationAgentTag": {}
+    }
+  },
+  {
+    "id": "mass_navigation_total_war_obstacle_overlay",
+    "components": {
+      "Name": { "Value": "MassNavigation.TotalWar.ObstacleOverlay" },
+      "WorldPositionCm": { "Value": { "X": 0, "Y": 0 } },
+      "VisualHeightmapSampleState": {},
+      "FacingDirection": { "AngleRad": 0.0 },
+      "TotalWarObstacleOverlay": {
+        "RadiusCm": 300.0,
+        "HeightOffsetM": 0.1,
+        "BorderWidthCm": 24.0,
+        "FillColor": { "X": 0.16, "Y": 0.16, "Z": 0.12, "W": 0.24 },
+        "BorderColor": { "X": 0.95, "Y": 0.78, "Z": 0.38, "W": 0.95 }
+      }
     }
   }
 ]

@@ -1,0 +1,338 @@
+[
+  {
+    "id": "mass_navigation_total_war_formation_agent_bootstrap",
+    "rules": [
+      {
+        "event": { "kind": "EntitySpawned", "key": "mass_navigation_total_war_formation_agent" },
+        "condition": { "inline": "SourceHasVisualTransform" },
+        "command": {
+          "kind": "CreatePerformer",
+          "definitionId": "mass_navigation_total_war_formation_agent",
+          "scopeSource": "EventPayloadA"
+        }
+      },
+      {
+        "event": { "kind": "EntityDestroyed", "key": "mass_navigation_total_war_formation_agent" },
+        "command": {
+          "kind": "DestroyPerformerScope",
+          "scopeSource": "EventPayloadA"
+        }
+      }
+    ]
+  },
+  {
+    "id": "mass_navigation_total_war_soldier_azure_light_bootstrap",
+    "rules": [
+      {
+        "event": { "kind": "EntitySpawned", "key": "mass_navigation_total_war_soldier_azure_light" },
+        "condition": { "inline": "SourceHasVisualTransform" },
+        "command": {
+          "kind": "CreatePerformer",
+          "definitionId": "mass_navigation_total_war_soldier_azure_light",
+          "scopeSource": "EventPayloadA"
+        }
+      },
+      {
+        "event": { "kind": "EntityDestroyed", "key": "mass_navigation_total_war_soldier_azure_light" },
+        "command": {
+          "kind": "DestroyPerformerScope",
+          "scopeSource": "EventPayloadA"
+        }
+      }
+    ]
+  },
+  {
+    "id": "mass_navigation_total_war_soldier_azure_heavy_bootstrap",
+    "rules": [
+      {
+        "event": { "kind": "EntitySpawned", "key": "mass_navigation_total_war_soldier_azure_heavy" },
+        "condition": { "inline": "SourceHasVisualTransform" },
+        "command": {
+          "kind": "CreatePerformer",
+          "definitionId": "mass_navigation_total_war_soldier_azure_heavy",
+          "scopeSource": "EventPayloadA"
+        }
+      },
+      {
+        "event": { "kind": "EntityDestroyed", "key": "mass_navigation_total_war_soldier_azure_heavy" },
+        "command": {
+          "kind": "DestroyPerformerScope",
+          "scopeSource": "EventPayloadA"
+        }
+      }
+    ]
+  },
+  {
+    "id": "mass_navigation_total_war_soldier_crimson_light_bootstrap",
+    "rules": [
+      {
+        "event": { "kind": "EntitySpawned", "key": "mass_navigation_total_war_soldier_crimson_light" },
+        "condition": { "inline": "SourceHasVisualTransform" },
+        "command": {
+          "kind": "CreatePerformer",
+          "definitionId": "mass_navigation_total_war_soldier_crimson_light",
+          "scopeSource": "EventPayloadA"
+        }
+      },
+      {
+        "event": { "kind": "EntityDestroyed", "key": "mass_navigation_total_war_soldier_crimson_light" },
+        "command": {
+          "kind": "DestroyPerformerScope",
+          "scopeSource": "EventPayloadA"
+        }
+      }
+    ]
+  },
+  {
+    "id": "mass_navigation_total_war_soldier_crimson_heavy_bootstrap",
+    "rules": [
+      {
+        "event": { "kind": "EntitySpawned", "key": "mass_navigation_total_war_soldier_crimson_heavy" },
+        "condition": { "inline": "SourceHasVisualTransform" },
+        "command": {
+          "kind": "CreatePerformer",
+          "definitionId": "mass_navigation_total_war_soldier_crimson_heavy",
+          "scopeSource": "EventPayloadA"
+        }
+      },
+      {
+        "event": { "kind": "EntityDestroyed", "key": "mass_navigation_total_war_soldier_crimson_heavy" },
+        "command": {
+          "kind": "DestroyPerformerScope",
+          "scopeSource": "EventPayloadA"
+        }
+      }
+    ]
+  },
+  {
+    "id": "mass_navigation_total_war_formation_agent",
+    "defaultColor": [0.92, 0.94, 0.86, 1.0],
+    "rules": [
+      {
+        "event": { "kind": "SelectionMemberAdded", "key": "selection.live.primary" },
+        "command": {
+          "kind": "CreatePerformer",
+          "definitionId": "mass_navigation_total_war_formation_selection_marker",
+          "scopeSource": "SourceStableId"
+        }
+      },
+      {
+        "event": { "kind": "SelectionMemberRemoved", "key": "selection.live.primary" },
+        "command": {
+          "kind": "DestroyScopedPerformer",
+          "definitionId": "mass_navigation_total_war_formation_selection_marker",
+          "scopeSource": "SourceStableId"
+        }
+      }
+    ],
+    "children": [
+      { "definitionId": "mass_navigation_total_war_formation_health_hud", "scopeTag": "structure" },
+      { "definitionId": "mass_navigation_total_war_formation_health_text", "scopeTag": "structure" }
+    ],
+    "behaviors": [
+      {
+        "slot": "minimap",
+        "kind": "MinimapMarker",
+        "activeByDefault": true,
+        "minimapMarker": {
+          "shape": "Circle",
+          "color": [0.92, 0.94, 0.86, 1.0],
+          "sizePx": 7.0,
+          "colorParamKey": "none",
+          "sizeParamKey": "none",
+          "visibilityParamKey": "none",
+          "orientationMode": "PerformerForward",
+          "orientationParamKey": "none",
+          "orientationOffsetRad": 0.0,
+          "orientationLengthPx": 8.0
+        }
+      }
+    ]
+  },
+  {
+    "id": "mass_navigation_total_war_soldier_azure_light",
+    "defaultColor": [0.38, 0.72, 1.0, 1.0],
+    "behaviors": [
+      {
+        "slot": "body",
+        "kind": "AssetBinding",
+        "activeByDefault": true,
+        "assetBinding": {
+          "assetKind": "SkinnedMesh",
+          "assetId": "mass_navigation.agent.soldier",
+          "materialId": "default_surface",
+          "renderPath": "GpuSkinnedInstance",
+          "mobility": "Movable",
+          "localScale": [0.45, 0.45, 0.45]
+        }
+      },
+      {
+        "slot": "grounding",
+        "kind": "Grounding",
+        "activeByDefault": true,
+        "grounding": {
+          "mode": "SnapToGround",
+          "offset": 0.0,
+          "updatePolicy": "EveryFrame"
+        }
+      },
+      {
+        "slot": "animator",
+        "kind": "Animator",
+        "activeByDefault": true,
+        "animator": {
+          "animatorControllerId": "mass_navigation.agent.locomotion",
+          "animationProfileId": "mass_navigation.agent.profile",
+          "speedParamKey": "mass_navigation.agent.locomotion.speed",
+          "stateParamKey": "none"
+        }
+      },
+      {
+        "slot": "minimap",
+        "kind": "MinimapMarker",
+        "activeByDefault": true,
+        "minimapMarker": {
+          "shape": "Circle",
+          "color": [0.38, 0.72, 1.0, 1.0],
+          "sizePx": 3.0,
+          "colorParamKey": "none",
+          "sizeParamKey": "none",
+          "visibilityParamKey": "none",
+          "orientationMode": "PerformerForward",
+          "orientationParamKey": "none",
+          "orientationOffsetRad": 0.0,
+          "orientationLengthPx": 4.0
+        }
+      }
+    ],
+    "paramDefaults": [
+      { "paramKey": "mass_navigation.agent.locomotion.speed", "lane": "Float", "floatValue": 1.0 }
+    ]
+  },
+  {
+    "id": "mass_navigation_total_war_soldier_azure_heavy",
+    "extends": "mass_navigation_total_war_soldier_azure_light",
+    "defaultColor": [0.50, 0.78, 1.0, 1.0],
+    "behaviors": [
+      {
+        "slot": "body",
+        "kind": "AssetBinding",
+        "activeByDefault": true,
+        "assetBinding": {
+          "assetKind": "SkinnedMesh",
+          "assetId": "mass_navigation.agent.soldier",
+          "materialId": "default_surface",
+          "renderPath": "GpuSkinnedInstance",
+          "mobility": "Movable",
+          "localScale": [0.62, 0.62, 0.62]
+        }
+      },
+      {
+        "slot": "minimap",
+        "kind": "MinimapMarker",
+        "activeByDefault": true,
+        "minimapMarker": {
+          "shape": "Circle",
+          "color": [0.50, 0.78, 1.0, 1.0],
+          "sizePx": 4.5,
+          "colorParamKey": "none",
+          "sizeParamKey": "none",
+          "visibilityParamKey": "none",
+          "orientationMode": "PerformerForward",
+          "orientationParamKey": "none",
+          "orientationOffsetRad": 0.0,
+          "orientationLengthPx": 5.0
+        }
+      }
+    ]
+  },
+  {
+    "id": "mass_navigation_total_war_soldier_crimson_light",
+    "extends": "mass_navigation_total_war_soldier_azure_light",
+    "defaultColor": [1.0, 0.34, 0.28, 1.0],
+    "behaviors": [
+      {
+        "slot": "minimap",
+        "kind": "MinimapMarker",
+        "activeByDefault": true,
+        "minimapMarker": {
+          "shape": "Circle",
+          "color": [1.0, 0.34, 0.28, 1.0],
+          "sizePx": 3.0,
+          "colorParamKey": "none",
+          "sizeParamKey": "none",
+          "visibilityParamKey": "none",
+          "orientationMode": "PerformerForward",
+          "orientationParamKey": "none",
+          "orientationOffsetRad": 0.0,
+          "orientationLengthPx": 4.0
+        }
+      }
+    ]
+  },
+  {
+    "id": "mass_navigation_total_war_soldier_crimson_heavy",
+    "extends": "mass_navigation_total_war_soldier_azure_heavy",
+    "defaultColor": [1.0, 0.46, 0.34, 1.0],
+    "behaviors": [
+      {
+        "slot": "minimap",
+        "kind": "MinimapMarker",
+        "activeByDefault": true,
+        "minimapMarker": {
+          "shape": "Circle",
+          "color": [1.0, 0.46, 0.34, 1.0],
+          "sizePx": 4.5,
+          "colorParamKey": "none",
+          "sizeParamKey": "none",
+          "visibilityParamKey": "none",
+          "orientationMode": "PerformerForward",
+          "orientationParamKey": "none",
+          "orientationOffsetRad": 0.0,
+          "orientationLengthPx": 5.0
+        }
+      }
+    ]
+  },
+  {
+    "id": "mass_navigation_total_war_formation_selection_marker",
+    "extends": "mass_navigation_agent_selection_marker_heavy",
+    "behaviors": [
+      {
+        "slot": "body",
+        "kind": "AssetBinding",
+        "activeByDefault": true,
+        "assetBinding": {
+          "assetKind": "Mesh",
+          "assetId": "mass_navigation.selection.marker",
+          "materialId": "default_surface",
+          "renderPath": "InstancedStaticMesh",
+          "mobility": "Movable",
+          "localScale": [1.35, 0.07, 1.35]
+        }
+      }
+    ]
+  },
+  {
+    "id": "mass_navigation_total_war_formation_health_hud",
+    "extends": "mass_navigation_agent_health_hud_heavy",
+    "behaviors": [
+      {
+        "slot": "body",
+        "kind": "AssetBinding",
+        "activeByDefault": true,
+        "assetBinding": {
+          "assetKind": "WorldHud",
+          "materialParamKey": "massNavigation.agent.health.ratio",
+          "mobility": "Movable",
+          "localScale": [118.0, 8.0, 1.0]
+        }
+      }
+    ]
+  },
+  {
+    "id": "mass_navigation_total_war_formation_health_text",
+    "extends": "mass_navigation_agent_health_text_heavy",
+    "defaultFontSize": 13
+  }
+]

@@ -4,7 +4,7 @@ namespace MassNavigationMod.Runtime;
 
 public sealed class MassNavigationAgentProfileSetConfig
 {
-    public string DefaultProfileId { get; set; } = "light";
+    public string DefaultProfileId { get; set; } = string.Empty;
     public MassNavigationAgentProfileConfig[] Profiles { get; set; } = Array.Empty<MassNavigationAgentProfileConfig>();
 
     public void Validate()
@@ -68,8 +68,10 @@ public sealed class MassNavigationAgentProfileConfig
 {
     public string Id { get; set; } = string.Empty;
     public bool Heavy { get; set; }
-    public float NavMass { get; set; } = 1f;
-    public float VisualScale { get; set; } = 0.22f;
+    public float NavMass { get; set; }
+    public float VisualScale { get; set; }
+    public float BodyRadiusCm { get; set; }
+    public float SpeedCmPerSecond { get; set; }
     public int EveryNth { get; set; }
     public int NthOffset { get; set; }
 
@@ -88,6 +90,16 @@ public sealed class MassNavigationAgentProfileConfig
         if (!(VisualScale > 0f))
         {
             throw new InvalidOperationException($"Mass-nav agent profile '{Id}' requires VisualScale > 0.");
+        }
+
+        if (!(BodyRadiusCm > 0f))
+        {
+            throw new InvalidOperationException($"Mass-nav agent profile '{Id}' requires BodyRadiusCm > 0.");
+        }
+
+        if (!(SpeedCmPerSecond > 0f))
+        {
+            throw new InvalidOperationException($"Mass-nav agent profile '{Id}' requires SpeedCmPerSecond > 0.");
         }
 
         if (EveryNth < 0)
