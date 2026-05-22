@@ -29,6 +29,8 @@
              Exclude="External\AngleSharp\src\AngleSharp.Benchmarks\**;
                       External\AngleSharp\src\AngleSharp.Core.Tests\**;
                       External\AngleSharp\src\AngleSharp.Core.Docs\**;
-                      External\AngleSharp\src\nuke\**" />
+                      External\AngleSharp\src\nuke\**;
+                      External\AngleSharp\src\**\obj\**;
+                      External\AngleSharp\src\**\bin\**" />
   </ItemGroup>
 </Project>
