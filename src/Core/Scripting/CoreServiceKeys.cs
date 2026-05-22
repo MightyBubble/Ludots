@@ -4,6 +4,7 @@ using Arch.Core;
 using Ludots.Core.Config;
 using Ludots.Core.Diagnostics;
 using Ludots.Core.Engine;
+using Ludots.Core.Gameplay.Audio;
 using Ludots.Core.Engine.Navigation2D;
 using Ludots.Core.Engine.Pacemaker;
 using Ludots.Core.Engine.Physics2D;
@@ -267,6 +268,9 @@ namespace Ludots.Core.Scripting
         public static readonly ServiceKey<RegistrationConflictReport> RegistrationConflictReport = new("RegistrationConflictReport");
         public static readonly ServiceKey<ResolvedModLoadPlan> ModLoadPlan = new("ModLoadPlan");
         public static readonly ServiceKey<AiCompiledRuntime> AiRuntime = new("AiRuntime");
+
+        // --- Audio ---
+        public static readonly ServiceKey<IAudioService> AudioService = new("AudioService");
 
         // --- Diagnostics ---
         public static readonly ServiceKey<ILogBackend> LogBackend = new("LogBackend");
