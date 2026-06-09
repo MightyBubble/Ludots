@@ -278,10 +278,13 @@ namespace Ludots.Tests.Presentation
                 ?? throw new InvalidOperationException("ScreenOverlayBuffer missing.");
             var ground = engine.GetService(CoreServiceKeys.GroundOverlayBuffer)
                 ?? throw new InvalidOperationException("GroundOverlayBuffer missing.");
+            var splines = engine.GetService(CoreServiceKeys.RoadSplineBuffer)
+                ?? throw new InvalidOperationException("RoadSplineBuffer missing.");
 
             guide.RunPathPreview(simulation);
             MassNavigationRuntime.RequestCameraJump(engine, ResolvePathMidpoint(simulation), ResolvePathCameraDistanceCm(simulation));
             PerformerBlacksmithShowcaseTestHarness.Tick(engine, 2);
+            engine.SetService(CoreServiceKeys.VisualHeightmap, new SlopedVisualHeightmap());
             system.Update(0.016f);
             string[] strings = GetOverlayStrings(screen);
             Assert.That(strings.Any(text => text.Contains("U4 Path Preview", StringComparison.Ordinal)), Is.True, DumpStrings(strings));
@@ -300,8 +303,14 @@ namespace Ludots.Tests.Presentation
             Assert.That(screen.GetSpan().ToArray().Count(item => item.Kind == ScreenOverlayItemKind.Line), Is.GreaterThan(0),
                 "U04 route must be readable as one projected route line, not as waypoint/corridor debug clutter.");
             Assert.That(ground.Count, Is.GreaterThan(0));
-            Assert.That(ground.GetSpan().ToArray().Count(item => item.Shape == GroundOverlayShape.Line), Is.GreaterThan(0),
-                "U04 must render the actual pathpoints as a visible ground route band; corridor and portal semantics belong to NavMesh/Bake/Waypoint showcases.");
+            Assert.That(CountSplineBorderColor(splines, 1.0f, 0.96f, 1.0f, 1.0f), Is.GreaterThan(0),
+                "U04 must render the actual pathpoints as a visible purple/white terrain-following route spline; corridor and portal semantics belong to NavMesh/Bake/Waypoint showcases.");
+            Assert.That(HasSplineWithVaryingHeight(splines), Is.True,
+                "U04 route spline must sample VisualHeightmap heights instead of drawing a flat start-height line.");
+            Assert.That(CountGroundCircleBorderColor(ground, 0.44f, 1.0f, 0.58f, 1.0f), Is.GreaterThan(0),
+                "Path start marker should be green, not the same color as NavMesh wires.");
+            Assert.That(CountGroundCircleBorderColor(ground, 1.0f, 0.42f, 0.30f, 1.0f), Is.GreaterThan(0),
+                "Path goal marker should be red, not the same color as NavMesh wires.");
             Assert.That(ground.GetSpan().ToArray().Count(item => item.Shape == GroundOverlayShape.Circle), Is.GreaterThan(0));
         }
 
@@ -432,6 +441,8 @@ namespace Ludots.Tests.Presentation
                 ?? throw new InvalidOperationException("ScreenOverlayBuffer missing.");
             var ground = engine.GetService(CoreServiceKeys.GroundOverlayBuffer)
                 ?? throw new InvalidOperationException("GroundOverlayBuffer missing.");
+            var splines = engine.GetService(CoreServiceKeys.RoadSplineBuffer)
+                ?? throw new InvalidOperationException("RoadSplineBuffer missing.");
 
             int navChunkX = guide.NavMeshSample.Available ? guide.NavMeshSample.ChunkX : bake.MacroChunkColumns / 2;
             int navChunkY = guide.NavMeshSample.Available ? guide.NavMeshSample.ChunkY : bake.MacroChunkRows / 2;
@@ -465,6 +476,8 @@ namespace Ludots.Tests.Presentation
             Assert.That(guide.ActiveWindowNavMeshEdges.Length, Is.GreaterThan(0));
             Assert.That(guide.ActiveWindowNavMeshEdges.Length, Is.GreaterThan(216),
                 "U16 must render a real active-window NavMesh wire, not the old 12-tile x 6-triangle sparse sample.");
+            Assert.That(splines.Capacity, Is.GreaterThanOrEqualTo(guide.ActiveWindowNavMeshEdges.Length + 2_048),
+                "U16 full-world NavMesh debug must have explicit RoadSplineBuffer headroom so debug wires do not silently fall back to flat GroundOverlay lines.");
             AssertNavMeshCoverageMatchesBakeDiagnostics(simulation, guide);
             AssertNavMeshSampleEdgesUseWorldCoordinates(bake, guide, beforeTile);
             Assert.That(rightWindowTile.TriangleCount, Is.GreaterThan(0),
@@ -545,6 +558,7 @@ namespace Ludots.Tests.Presentation
             Assert.That(simulation.CommandCountFrame + simulation.PendingCommandCount, Is.EqualTo(0));
             AssertRuntimeDirtyTilesUseNavTileWorldBounds(bake, guide.RuntimeBakeAuthoring.DirtyChunks, afterTile);
 
+            engine.SetService(CoreServiceKeys.VisualHeightmap, new SlopedVisualHeightmap());
             presentation.Update(0.016f);
             string[] strings = GetOverlayStrings(screen);
             Assert.That(strings.Any(text => text.Contains("runtime obstacle polygons=1", StringComparison.Ordinal) ||
@@ -558,7 +572,16 @@ namespace Ludots.Tests.Presentation
                 text.Contains("full-world", StringComparison.Ordinal)), Is.True, DumpStrings(strings));
             Assert.That(strings.Any(text => text.Contains("source=", StringComparison.Ordinal) &&
                 text.Contains("RecastNavTileBaker", StringComparison.Ordinal)), Is.True, DumpStrings(strings));
-            Assert.That(ground.GetSpan().ToArray().Count(item => item.Shape == GroundOverlayShape.Line), Is.GreaterThan(0));
+            Assert.That(CountSplineBorderColor(splines, 0.08f, 0.70f, 1.0f, 0.74f), Is.GreaterThan(0),
+                "U16 must render the loaded NavMesh as blue terrain-following spline wires.");
+            Assert.That(CountSplineBorderColor(splines, 1.0f, 0.74f, 0.14f, 0.98f), Is.GreaterThan(0),
+                "U16 dirty chunks must render as yellow terrain-following outlines.");
+            Assert.That(CountSplineBorderColor(splines, 1.0f, 0.38f, 0.32f, 0.96f), Is.GreaterThan(0),
+                "U16 authored runtime obstacle polygon must render as a red terrain-following outline.");
+            Assert.That(CountSplineBorderColor(splines, 1.0f, 0.96f, 1.0f, 1.0f), Is.GreaterThan(0),
+                "U16 route query must render as purple/white and remain visually distinct from NavMesh wires.");
+            Assert.That(HasSplineWithVaryingHeight(splines), Is.True,
+                "U16 debug lines must sample terrain height instead of drawing flat start-height segments.");
             Assert.That(ground.GetSpan().ToArray().Count(item => item.Shape == GroundOverlayShape.Circle), Is.GreaterThan(0));
         }
 
@@ -1818,6 +1841,79 @@ namespace Ludots.Tests.Presentation
                 .Select(item => overlay.GetString(item.StringId) ?? string.Empty)
                 .Where(text => !string.IsNullOrEmpty(text))
                 .ToArray();
+        }
+
+        private static int CountGroundCircleBorderColor(
+            GroundOverlayBuffer ground,
+            float r,
+            float g,
+            float b,
+            float a)
+        {
+            ReadOnlySpan<GroundOverlayItem> items = ground.GetSpan();
+            int count = 0;
+            for (int i = 0; i < items.Length; i++)
+            {
+                if (items[i].Shape == GroundOverlayShape.Circle &&
+                    ColorMatches(items[i].BorderColor, r, g, b, a))
+                {
+                    count++;
+                }
+            }
+
+            return count;
+        }
+
+        private static int CountSplineBorderColor(
+            RoadSplineBuffer splines,
+            float r,
+            float g,
+            float b,
+            float a)
+        {
+            ReadOnlySpan<float> borderR = splines.BorderR;
+            ReadOnlySpan<float> borderG = splines.BorderG;
+            ReadOnlySpan<float> borderB = splines.BorderB;
+            ReadOnlySpan<float> borderA = splines.BorderA;
+            int count = 0;
+            for (int i = 0; i < splines.Count; i++)
+            {
+                if (ColorMatches(borderR[i], borderG[i], borderB[i], borderA[i], r, g, b, a))
+                {
+                    count++;
+                }
+            }
+
+            return count;
+        }
+
+        private static bool HasSplineWithVaryingHeight(RoadSplineBuffer splines)
+        {
+            ReadOnlySpan<float> p0y = splines.P0Y;
+            ReadOnlySpan<float> p3y = splines.P3Y;
+            for (int i = 0; i < splines.Count; i++)
+            {
+                if (MathF.Abs(p0y[i] - p3y[i]) > 0.0001f)
+                {
+                    return true;
+                }
+            }
+
+            return false;
+        }
+
+        private static bool ColorMatches(Vector4 actual, float r, float g, float b, float a)
+        {
+            return ColorMatches(actual.X, actual.Y, actual.Z, actual.W, r, g, b, a);
+        }
+
+        private static bool ColorMatches(float actualR, float actualG, float actualB, float actualA, float r, float g, float b, float a)
+        {
+            const float tolerance = 0.001f;
+            return MathF.Abs(actualR - r) <= tolerance &&
+                MathF.Abs(actualG - g) <= tolerance &&
+                MathF.Abs(actualB - b) <= tolerance &&
+                MathF.Abs(actualA - a) <= tolerance;
         }
 
         private static string ExtractUiSceneText(UIRoot root)
@@ -3095,6 +3191,75 @@ namespace Ludots.Tests.Presentation
                         0, 0,
                         0, 0,
                     }));
+        }
+
+        private sealed class SlopedVisualHeightmap : IVisualHeightmap
+        {
+            public bool TrySampleHeightCm(float worldXCm, float worldYCm, out float heightCm, int layerIndex = 0)
+            {
+                if (layerIndex != 0 || !float.IsFinite(worldXCm) || !float.IsFinite(worldYCm))
+                {
+                    heightCm = 0f;
+                    return false;
+                }
+
+                heightCm = ResolveHeightCm(worldXCm, worldYCm);
+                return true;
+            }
+
+            public bool SampleHeightsCm(ReadOnlySpan<float> worldXCm, ReadOnlySpan<float> worldYCm, Span<float> outHeightCm, int layerIndex = 0)
+            {
+                if (worldXCm.Length != worldYCm.Length || worldXCm.Length != outHeightCm.Length)
+                {
+                    throw new ArgumentException("SlopedVisualHeightmap batch spans must have identical lengths.");
+                }
+
+                if (layerIndex != 0)
+                {
+                    outHeightCm.Clear();
+                    return false;
+                }
+
+                for (int i = 0; i < worldXCm.Length; i++)
+                {
+                    outHeightCm[i] = ResolveHeightCm(worldXCm[i], worldYCm[i]);
+                }
+
+                return true;
+            }
+
+            public bool TryRaycastGround(in ScreenRay ray, out VisualGroundHit hit, int layerIndex = 0)
+            {
+                hit = default;
+                return false;
+            }
+
+            public bool RaycastGroundBatch(
+                ReadOnlySpan<float> originXMeters,
+                ReadOnlySpan<float> originYMeters,
+                ReadOnlySpan<float> originZMeters,
+                ReadOnlySpan<float> directionX,
+                ReadOnlySpan<float> directionY,
+                ReadOnlySpan<float> directionZ,
+                Span<float> outWorldXCm,
+                Span<float> outWorldYCm,
+                Span<float> outHeightCm,
+                Span<float> outDistanceMeters,
+                Span<float> outNormalX,
+                Span<float> outNormalY,
+                Span<float> outNormalZ,
+                Span<int> outLayerIndex,
+                Span<byte> outHitMask,
+                int layerIndex = 0)
+            {
+                outHitMask.Clear();
+                return false;
+            }
+
+            private static float ResolveHeightCm(float worldXCm, float worldYCm)
+            {
+                return (worldXCm * 0.0013f) + (worldYCm * 0.0007f);
+            }
         }
     }
 }

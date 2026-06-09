@@ -18,6 +18,10 @@ internal sealed class MassNavigationShowcasePresentationSystem : ISystem<float>
 {
     private const float OverlayY = 0.075f;
     private const float GroundOverlayLiftMeters = 0.45f;
+    private const float NavMeshLineLiftMeters = 0.62f;
+    private const float RuntimeDirtyLineLiftMeters = 0.84f;
+    private const float RuntimeObstacleLineLiftMeters = 1.02f;
+    private const float PathLineLiftMeters = 1.22f;
     private const float ScreenRouteLiftMeters = 2.2f;
     private const float GroundOverlaySegmentLengthCm = 2_000f;
     private const int MaxGroundOverlayLineSegments = 64;
@@ -42,10 +46,17 @@ internal sealed class MassNavigationShowcasePresentationSystem : ISystem<float>
     private static readonly Vector4 Muted = new(0.62f, 0.72f, 0.80f, 1f);
     private static readonly Vector4 Warn = new(1.0f, 0.70f, 0.42f, 1f);
     private static readonly Vector4 Good = new(0.52f, 0.96f, 0.62f, 1f);
-    private static readonly Vector4 PathFill = new(0.20f, 0.92f, 0.76f, 0.18f);
-    private static readonly Vector4 PathBorder = new(0.35f, 1.0f, 0.86f, 0.95f);
-    private static readonly Vector4 RouteOnlyPathFill = new(0.20f, 0.96f, 0.82f, 0.36f);
-    private static readonly Vector4 RouteOnlyPathBorder = new(0.62f, 1.0f, 0.92f, 1.0f);
+    private static readonly Vector4 PathFill = new(0.88f, 0.08f, 1.0f, 0.26f);
+    private static readonly Vector4 PathBorder = new(1.0f, 0.92f, 1.0f, 0.98f);
+    private static readonly Vector4 RouteOnlyPathFill = new(0.94f, 0.06f, 1.0f, 0.46f);
+    private static readonly Vector4 RouteOnlyPathBorder = new(1.0f, 0.96f, 1.0f, 1.0f);
+    private static readonly Vector4 PathStartFill = new(0.06f, 0.95f, 0.32f, 0.46f);
+    private static readonly Vector4 PathStartBorder = new(0.44f, 1.0f, 0.58f, 1.0f);
+    private static readonly Vector4 PathGoalFill = new(1.0f, 0.13f, 0.10f, 0.48f);
+    private static readonly Vector4 PathGoalBorder = new(1.0f, 0.42f, 0.30f, 1.0f);
+    private static readonly Vector4 PathNodeFill = new(1.0f, 1.0f, 1.0f, 0.34f);
+    private static readonly Vector4 PathNodeBorder = new(1.0f, 0.92f, 1.0f, 0.98f);
+    private static readonly Vector4 PathScreenShadow = new(0.08f, 0.0f, 0.12f, 0.88f);
     private static readonly Vector4 CorridorFill = new(0.16f, 0.72f, 1.0f, 0.11f);
     private static readonly Vector4 CorridorBorder = new(0.20f, 0.76f, 1.0f, 0.45f);
     private static readonly Vector4 WaypointFill = new(1.0f, 0.84f, 0.28f, 0.36f);
@@ -64,10 +75,14 @@ internal sealed class MassNavigationShowcasePresentationSystem : ISystem<float>
     private static readonly Vector4 BlockedBorder = new(1.0f, 0.35f, 0.34f, 0.80f);
     private static readonly Vector4 RuntimeObstacleFill = new(1.0f, 0.18f, 0.14f, 0.18f);
     private static readonly Vector4 RuntimeObstacleBorder = new(1.0f, 0.38f, 0.32f, 0.96f);
-    private static readonly Vector4 RuntimeDirtyChunkFill = new(1.0f, 0.82f, 0.18f, 0.12f);
-    private static readonly Vector4 RuntimeDirtyChunkBorder = new(1.0f, 0.86f, 0.32f, 0.92f);
+    private static readonly Vector4 RuntimeDirtyChunkFill = new(1.0f, 0.78f, 0.12f, 0.10f);
+    private static readonly Vector4 RuntimeDirtyChunkBorder = new(1.0f, 0.74f, 0.14f, 0.98f);
+    private static readonly Vector4 RuntimeDirtyChunkShadow = new(0.12f, 0.07f, 0.01f, 0.78f);
     private static readonly Vector4 NavMeshCoverageFill = new(0.06f, 0.72f, 0.92f, 0.06f);
     private static readonly Vector4 NavMeshCoverageBorder = new(0.12f, 0.90f, 1.0f, 0.92f);
+    private static readonly Vector4 NavMeshWireFill = new(0.08f, 0.32f, 0.92f, 0.0f);
+    private static readonly Vector4 NavMeshWireBorder = new(0.20f, 0.58f, 1.0f, 0.58f);
+    private static readonly Vector4 NavMeshRuntimeWireBorder = new(0.08f, 0.70f, 1.0f, 0.74f);
     private static readonly Vector4 WorldCoverageBorder = new(1.0f, 0.70f, 0.26f, 0.48f);
     private static readonly Vector4 AirFill = new(0.78f, 0.90f, 1.0f, 0.09f);
     private static readonly Vector4 AirBorder = new(0.78f, 0.92f, 1.0f, 0.66f);
@@ -77,6 +92,7 @@ internal sealed class MassNavigationShowcasePresentationSystem : ISystem<float>
     private readonly GameEngine _engine;
     private readonly MassNavigationSimulationRuntime _simulation;
     private readonly MassNavigationShowcaseGuideRuntime _guide;
+    private RoadSplineBuffer? _groundLineSplines;
 
     private enum PathDebugVisualMode
     {
@@ -111,7 +127,15 @@ internal sealed class MassNavigationShowcasePresentationSystem : ISystem<float>
 
         if (_engine.GetService(CoreServiceKeys.GroundOverlayBuffer) is GroundOverlayBuffer ground)
         {
-            RenderGroundOverlays(ground);
+            _groundLineSplines = _engine.GetService(CoreServiceKeys.RoadSplineBuffer);
+            try
+            {
+                RenderGroundOverlays(ground);
+            }
+            finally
+            {
+                _groundLineSplines = null;
+            }
         }
 
         if (_engine.GetService(CoreServiceKeys.ScreenOverlayBuffer) is ScreenOverlayBuffer overlay)
@@ -909,12 +933,12 @@ internal sealed class MassNavigationShowcasePresentationSystem : ISystem<float>
         Vector2 goal = ResolveVisiblePathPreviewGoal(query);
         if (_guide.HasPathPreviewStart || (query.Available && IsFinite(query.StartWorldCm)))
         {
-            AddWorldLabel(overlay, projector, start, "S picked start", 45300, serial, PathBorder);
+            AddWorldLabel(overlay, projector, start, "S picked start", 45300, serial, PathStartBorder);
         }
 
         if (_guide.HasPathPreviewGoal || (query.Available && IsFinite(query.GoalWorldCm)))
         {
-            AddWorldLabel(overlay, projector, goal, "G picked goal", 45301, serial, PathBorder);
+            AddWorldLabel(overlay, projector, goal, "G picked goal", 45301, serial, PathGoalBorder);
         }
 
         Vector2 instructionAnchor = IsFinite(start) && IsFinite(goal)
@@ -934,7 +958,7 @@ internal sealed class MassNavigationShowcasePresentationSystem : ISystem<float>
                 "pathpoints: immutable query result",
                 45302,
                 serial,
-                PathBorder);
+                RouteOnlyPathBorder);
         }
 
         if (_guide.CurrentStepId == MassNavigationShowcaseStepId.WaypointAuthoring)
@@ -980,7 +1004,15 @@ internal sealed class MassNavigationShowcasePresentationSystem : ISystem<float>
         for (int i = 0; i < max; i++)
         {
             Vector2 point = new(pathPoints[i].Xcm, pathPoints[i].Ycm);
-            AddProjectedRouteNode(overlay, projector, point, 46300 + i, serial, i == 0 || i == max - 1);
+            AddProjectedRouteNode(
+                overlay,
+                projector,
+                point,
+                46300 + i,
+                serial,
+                i == 0 || i == max - 1,
+                i == 0 ? PathStartFill : i == max - 1 ? PathGoalFill : PathNodeFill,
+                i == 0 ? PathStartBorder : i == max - 1 ? PathGoalBorder : PathNodeBorder);
         }
     }
 
@@ -988,12 +1020,12 @@ internal sealed class MassNavigationShowcasePresentationSystem : ISystem<float>
     {
         if (_guide.HasPathPreviewStart)
         {
-            AddProjectedRouteNode(overlay, projector, _guide.PathPreviewStartWorldCm, 46380, serial, endpoint: true);
+            AddProjectedRouteNode(overlay, projector, _guide.PathPreviewStartWorldCm, 46380, serial, endpoint: true, PathStartFill, PathStartBorder);
         }
 
         if (_guide.HasPathPreviewGoal)
         {
-            AddProjectedRouteNode(overlay, projector, _guide.PathPreviewGoalWorldCm, 46381, serial, endpoint: true);
+            AddProjectedRouteNode(overlay, projector, _guide.PathPreviewGoalWorldCm, 46381, serial, endpoint: true, PathGoalFill, PathGoalBorder);
         }
     }
 
@@ -1025,7 +1057,7 @@ internal sealed class MassNavigationShowcasePresentationSystem : ISystem<float>
         AddWorldLabel(overlay, projector, tileCenter + new Vector2(-4_200f, 3_300f), $"blocked cells {sample.BlockedCellCount}", 45402, serial, BlockedBorder);
         AddWorldLabel(overlay, projector, tileCenter + new Vector2(4_100f, -3_000f), $"high-cost cells {sample.HighCostCellCount}", 45403, serial, Warn);
         AddWorldLabel(overlay, projector, tileCenter + new Vector2(3_600f, 3_600f), $"border portals; off-mesh: {sample.OffMeshLinkSource}", 45404, serial, PortalBorder);
-        AddWorldLabel(overlay, projector, tileCenter + new Vector2(0f, 4_800f), "cyan corridor + orange portals come from the path query", 45405, serial, PathBorder);
+        AddWorldLabel(overlay, projector, tileCenter + new Vector2(0f, 4_800f), "purple route + orange portals come from the path query", 45405, serial, RouteOnlyPathBorder);
 
         int portalLabels = Math.Min(MaxProjectedPortalLabels, sample.Portals.Length);
         for (int i = 0; i < portalLabels; i++)
@@ -1442,9 +1474,9 @@ internal sealed class MassNavigationShowcasePresentationSystem : ISystem<float>
                 overlay.AddText(x + 14, y + 54, "Purple=sampled global macro route; green=loaded active window; orange=portal sample inside loaded data.", 12, Muted, 45103, serial);
                 break;
             case MassNavigationShowcaseStepId.NavMeshBake:
-                overlay.AddText(x + 14, y + 34, "Walkable=green/cyan triangle edges  Non-walkable=blocked source count  High-cost=area ids 2/3/5/6  Portal=orange segment  Agent radius=yellow circle", 12, Good, 45102, serial);
+                overlay.AddText(x + 14, y + 34, "NavMesh=blue terrain-following wire  Route=purple/white  S=green  G=red  Portal=orange  Agent radius=yellow circle", 12, Good, 45102, serial);
                 overlay.AddText(x + 14, y + 54, BuildNavMeshSemanticLine(), 12, Muted, 45103, serial);
-                overlay.AddText(x + 14, y + 74, $"Portal clearance min={_guide.NavMeshSample.MinPortalClearanceCm}cm vs agent radius={_guide.NavMeshSample.AgentRadiusCm}cm; cyan corridor/orange portals are overlaid here from the path query.", 12, Muted, 45104, serial);
+                overlay.AddText(x + 14, y + 74, $"Portal clearance min={_guide.NavMeshSample.MinPortalClearanceCm}cm vs agent radius={_guide.NavMeshSample.AgentRadiusCm}cm; purple route/orange portals are overlaid from the path query.", 12, Muted, 45104, serial);
                 overlay.AddText(x + 14, y + 94, $"Border portals are loaded from .ntil; authored off-mesh links: {_guide.NavMeshSample.OffMeshLinkSource}", 12, Muted, 45105, serial);
                 break;
             case MassNavigationShowcaseStepId.LayerCosts:
@@ -1454,7 +1486,7 @@ internal sealed class MassNavigationShowcasePresentationSystem : ISystem<float>
                 overlay.AddText(x + 14, y + 94, "Different unit layers consume different profile/layer/cost rows without changing the player order model.", 12, Muted, 45105, serial);
                 break;
             case MassNavigationShowcaseStepId.TenKFlow:
-                overlay.AddText(x + 14, y + 34, "10k flow: gold slots are sampled target allocation; cyan path/flow remains separate from the player waypoint order.", 12, Good, 45102, serial);
+                overlay.AddText(x + 14, y + 34, "10k flow: gold slots are sampled target allocation; purple path/flow remains separate from the player waypoint order.", 12, Good, 45102, serial);
                 overlay.AddText(x + 14, y + 54, BuildTenKFlowLine(), 12, Muted, 45103, serial);
                 break;
             case MassNavigationShowcaseStepId.TargetAllocation:
@@ -1469,11 +1501,11 @@ internal sealed class MassNavigationShowcasePresentationSystem : ISystem<float>
             case MassNavigationShowcaseStepId.WaypointAuthoring:
                 overlay.AddText(x + 14, y + 34, "Pick endpoints directly or on minimap: left=start, right=goal. U4 queries NavMesh only and does not move units.", 12, Good, 45102, serial);
                 overlay.AddText(x + 14, y + 54, $"source={_simulation.AcceptanceDiagnostics.PathOnlyQuery.RouteProvenance}; NoOrderSubmitted={_simulation.AcceptanceDiagnostics.PathOnlyQuery.NoOrderSubmitted}; orderDelta={_guide.LastActionOrderDelta}; pathpoints={_simulation.AcceptanceDiagnostics.PathOnlyQuery.PathPointCount}", 12, Muted, 45103, serial);
-                overlay.AddText(x + 14, y + 74, _guide.CurrentStepId == MassNavigationShowcaseStepId.WaypointAuthoring ? BuildWaypointLine() : "S/G markers persist while the camera moves; cyan line is the immutable navmesh pathpoint result.", 12, Muted, 45104, serial);
+                overlay.AddText(x + 14, y + 74, _guide.CurrentStepId == MassNavigationShowcaseStepId.WaypointAuthoring ? BuildWaypointLine() : "S/G markers persist while the camera moves; purple line is the immutable navmesh pathpoint result.", 12, Muted, 45104, serial);
                 break;
             case MassNavigationShowcaseStepId.BakeToolQuery:
                 overlay.AddText(x + 14, y + 34, "Runtime bake/update: draw polygon -> dirty chunks -> Recast tile bake -> NavMesh/query refresh.", 12, Good, 45102, serial);
-                overlay.AddText(x + 14, y + 114, "Cyan mesh shows sampled loaded NavMesh plus dirty runtime tiles; coverage frame comes from bake diagnostics.", 12, Warn, 45106, serial);
+                overlay.AddText(x + 14, y + 114, "Blue mesh=loaded NavMesh, yellow=dirty chunks, red=authored obstacle, purple/white=queried route.", 12, Warn, 45106, serial);
                 overlay.AddText(x + 14, y + 54, BuildBakeSourceLine("vtxm/vhtm/lhtm"), 12, Muted, 45103, serial);
                 overlay.AddText(x + 14, y + 74, BuildNavMeshCoverageLine(), 12, Warn, 45104, serial);
                 overlay.AddText(x + 14, y + 94, BuildRuntimeBakeUpdateLine(), 12, Muted, 45105, serial);
@@ -1497,7 +1529,7 @@ internal sealed class MassNavigationShowcasePresentationSystem : ISystem<float>
             MassNavigationPathOnlyQueryDiagnostics query = _simulation.AcceptanceDiagnostics.PathOnlyQuery;
             if (visualMode != PathDebugVisualMode.RouteOnly)
             {
-                DrawHeightSampledLine(ground, query.StartWorldCm, query.GoalWorldCm, PathWidthCm, PathFill, PathBorder);
+                DrawHeightSampledLine(ground, query.StartWorldCm, query.GoalWorldCm, PathWidthCm, PathFill, PathBorder, PathLineLiftMeters);
             }
 
             DrawRouteOnlyEndpointMarkers(ground, query.StartWorldCm, query.GoalWorldCm);
@@ -1516,13 +1548,13 @@ internal sealed class MassNavigationShowcasePresentationSystem : ISystem<float>
         {
             if (visualMode != PathDebugVisualMode.RouteOnly)
             {
-                DrawHeightSampledLine(ground, points[i], points[i + 1], CorridorWidthCm, CorridorFill, CorridorBorder);
+                DrawHeightSampledLine(ground, points[i], points[i + 1], CorridorWidthCm, CorridorFill, CorridorBorder, PathLineLiftMeters - 0.12f);
             }
 
             float pathWidthCm = visualMode == PathDebugVisualMode.RouteOnly ? RouteOnlyPathWidthCm : PathWidthCm;
             Vector4 pathFill = visualMode == PathDebugVisualMode.RouteOnly ? RouteOnlyPathFill : PathFill;
             Vector4 pathBorder = visualMode == PathDebugVisualMode.RouteOnly ? RouteOnlyPathBorder : PathBorder;
-            DrawHeightSampledLine(ground, points[i], points[i + 1], pathWidthCm, pathFill, pathBorder);
+            DrawHeightSampledLine(ground, points[i], points[i + 1], pathWidthCm, pathFill, pathBorder, PathLineLiftMeters);
         }
 
         if (visualMode == PathDebugVisualMode.RouteOnly)
@@ -1533,7 +1565,7 @@ internal sealed class MassNavigationShowcasePresentationSystem : ISystem<float>
         {
             for (int i = 0; i < max; i++)
             {
-                DrawCircle(ground, points[i], radiusCm: i == 0 || i == max - 1 ? 95f : 42f, PathFill, PathBorder);
+                DrawCircle(ground, points[i], radiusCm: i == 0 || i == max - 1 ? 95f : 42f, PathFill, PathBorder, PathLineLiftMeters + 0.10f);
             }
         }
 
@@ -1552,12 +1584,12 @@ internal sealed class MassNavigationShowcasePresentationSystem : ISystem<float>
     {
         if (IsFinite(start))
         {
-            DrawCircle(ground, start, 95f, PathFill, PathBorder);
+            DrawCircle(ground, start, 125f, PathStartFill, PathStartBorder, PathLineLiftMeters + 0.16f);
         }
 
         if (IsFinite(goal))
         {
-            DrawCircle(ground, goal, 95f, PathFill, PathBorder);
+            DrawCircle(ground, goal, 125f, PathGoalFill, PathGoalBorder, PathLineLiftMeters + 0.16f);
         }
     }
 
@@ -1565,12 +1597,12 @@ internal sealed class MassNavigationShowcasePresentationSystem : ISystem<float>
     {
         if (_guide.HasPathPreviewStart)
         {
-            DrawCircle(ground, _guide.PathPreviewStartWorldCm, 135f, PathFill, PathBorder);
+            DrawCircle(ground, _guide.PathPreviewStartWorldCm, 155f, PathStartFill, PathStartBorder, PathLineLiftMeters + 0.20f);
         }
 
         if (_guide.HasPathPreviewGoal)
         {
-            DrawCircle(ground, _guide.PathPreviewGoalWorldCm, 135f, PathFill, PathBorder);
+            DrawCircle(ground, _guide.PathPreviewGoalWorldCm, 155f, PathGoalFill, PathGoalBorder, PathLineLiftMeters + 0.20f);
         }
     }
 
@@ -1594,7 +1626,18 @@ internal sealed class MassNavigationShowcasePresentationSystem : ISystem<float>
                 continue;
             }
 
-            DrawCircle(ground, points[i], endpoint ? 95f : 54f, PathFill, PathBorder);
+            if (i == 0)
+            {
+                DrawCircle(ground, points[i], 125f, PathStartFill, PathStartBorder, PathLineLiftMeters + 0.16f);
+            }
+            else if (i == last)
+            {
+                DrawCircle(ground, points[i], 125f, PathGoalFill, PathGoalBorder, PathLineLiftMeters + 0.16f);
+            }
+            else
+            {
+                DrawCircle(ground, points[i], 62f, PathNodeFill, PathNodeBorder, PathLineLiftMeters + 0.14f);
+            }
         }
     }
 
@@ -1758,13 +1801,13 @@ internal sealed class MassNavigationShowcasePresentationSystem : ISystem<float>
             MassNavigationGuideSegment edge = sample.TriangleEdges[i];
             Vector4 border = edge.AreaId switch
             {
-                1 => new Vector4(0.28f, 0.95f, 1.0f, 0.72f),
-                2 => new Vector4(0.50f, 0.95f, 0.42f, 0.72f),
-                3 => new Vector4(0.92f, 0.76f, 0.36f, 0.72f),
-                4 => new Vector4(0.34f, 0.58f, 1.0f, 0.72f),
-                _ => new Vector4(0.46f, 0.96f, 0.68f, 0.72f)
+                1 => new Vector4(0.18f, 0.70f, 1.0f, 0.68f),
+                2 => new Vector4(0.24f, 0.82f, 1.0f, 0.62f),
+                3 => new Vector4(0.72f, 0.58f, 1.0f, 0.62f),
+                4 => new Vector4(0.18f, 0.45f, 1.0f, 0.62f),
+                _ => NavMeshWireBorder
             };
-            DrawLine(ground, new Vector2(edge.Axcm, edge.Aycm), new Vector2(edge.Bxcm, edge.Bycm), 18f, border with { W = 0.08f }, border);
+            DrawLine(ground, new Vector2(edge.Axcm, edge.Aycm), new Vector2(edge.Bxcm, edge.Bycm), 16f, border with { W = 0.04f }, border, NavMeshLineLiftMeters);
         }
 
         DrawNavMeshSemanticSamples(ground, sample);
@@ -1772,8 +1815,8 @@ internal sealed class MassNavigationShowcasePresentationSystem : ISystem<float>
         for (int i = 0; i < sample.Portals.Length; i++)
         {
             MassNavigationGuideSegment portal = sample.Portals[i];
-            DrawLine(ground, new Vector2(portal.Axcm, portal.Aycm), new Vector2(portal.Bxcm, portal.Bycm), 120f, PortalFill, PortalBorder);
-            DrawCircle(ground, (new Vector2(portal.Axcm, portal.Aycm) + new Vector2(portal.Bxcm, portal.Bycm)) * 0.5f, MathF.Max(60f, portal.ClearanceCm * 0.25f), PortalFill, PortalBorder);
+            DrawLine(ground, new Vector2(portal.Axcm, portal.Aycm), new Vector2(portal.Bxcm, portal.Bycm), 120f, PortalFill, PortalBorder, NavMeshLineLiftMeters + 0.12f);
+            DrawCircle(ground, (new Vector2(portal.Axcm, portal.Aycm) + new Vector2(portal.Bxcm, portal.Bycm)) * 0.5f, MathF.Max(60f, portal.ClearanceCm * 0.25f), PortalFill, PortalBorder, NavMeshLineLiftMeters + 0.14f);
         }
 
         Vector2 tileCenter = ChunkCenter(sample.ChunkX, sample.ChunkY);
@@ -1788,12 +1831,12 @@ internal sealed class MassNavigationShowcasePresentationSystem : ISystem<float>
         ReadOnlySpan<MassNavigationGuideSegment> edges = _guide.ActiveWindowNavMeshEdges;
         bool runtimeBakeView = _guide.CurrentStepId == MassNavigationShowcaseStepId.BakeToolQuery;
         Vector4 fill = runtimeBakeView
-            ? new Vector4(0.08f, 0.90f, 1f, 0.10f)
-            : new Vector4(0.30f, 0.95f, 0.72f, 0.04f);
+            ? NavMeshWireFill with { W = 0.05f }
+            : NavMeshWireFill;
         Vector4 border = runtimeBakeView
-            ? new Vector4(0.08f, 0.96f, 1f, 0.78f)
-            : new Vector4(0.36f, 1f, 0.78f, 0.38f);
-        float widthCm = runtimeBakeView ? 24f : 12f;
+            ? NavMeshRuntimeWireBorder
+            : NavMeshWireBorder;
+        float widthCm = runtimeBakeView ? 18f : 12f;
         for (int i = 0; i < edges.Length; i++)
         {
             MassNavigationGuideSegment edge = edges[i];
@@ -1803,7 +1846,8 @@ internal sealed class MassNavigationShowcasePresentationSystem : ISystem<float>
                 new Vector2(edge.Bxcm, edge.Bycm),
                 widthCm,
                 fill,
-                border);
+                border,
+                NavMeshLineLiftMeters);
         }
     }
 
@@ -2128,13 +2172,15 @@ internal sealed class MassNavigationShowcasePresentationSystem : ISystem<float>
 
         Vector2 min = new(chunk.MinWorldXCm, chunk.MinWorldYCm);
         Vector2 max = new(chunk.MaxWorldXCm, chunk.MaxWorldYCm);
-        DrawRectOutline(ground, min, max, 96f, RuntimeDirtyChunkFill, RuntimeDirtyChunkBorder);
+        DrawRectOutline(ground, min, max, 150f, RuntimeDirtyChunkFill, RuntimeDirtyChunkShadow, RuntimeDirtyLineLiftMeters - 0.04f);
+        DrawRectOutline(ground, min, max, 96f, RuntimeDirtyChunkFill, RuntimeDirtyChunkBorder, RuntimeDirtyLineLiftMeters);
         DrawCircle(
             ground,
             chunk.CenterWorldCm,
             MathF.Max(120f, MathF.Min(chunk.SizeXCm, chunk.SizeYCm) * 0.08f),
             RuntimeDirtyChunkFill,
-            RuntimeDirtyChunkBorder);
+            RuntimeDirtyChunkBorder,
+            RuntimeDirtyLineLiftMeters + 0.08f);
     }
 
     private void DrawRuntimeObstaclePolygon(GroundOverlayBuffer ground, IReadOnlyList<Vector2> points, bool closed)
@@ -2148,22 +2194,22 @@ internal sealed class MassNavigationShowcasePresentationSystem : ISystem<float>
         for (int i = 0; i < points.Count; i++)
         {
             centroid += points[i];
-            DrawCircle(ground, points[i], i == 0 ? 130f : 92f, RuntimeObstacleFill, RuntimeObstacleBorder);
+            DrawCircle(ground, points[i], i == 0 ? 130f : 92f, RuntimeObstacleFill, RuntimeObstacleBorder, RuntimeObstacleLineLiftMeters + 0.08f);
             if (i > 0)
             {
-                DrawHeightSampledLine(ground, points[i - 1], points[i], 120f, RuntimeObstacleFill, RuntimeObstacleBorder);
+                DrawHeightSampledLine(ground, points[i - 1], points[i], 120f, RuntimeObstacleFill, RuntimeObstacleBorder, RuntimeObstacleLineLiftMeters);
             }
         }
 
         centroid /= points.Count;
         if (closed && points.Count >= 3)
         {
-            DrawHeightSampledLine(ground, points[points.Count - 1], points[0], 120f, RuntimeObstacleFill, RuntimeObstacleBorder);
-            DrawCircle(ground, centroid, 220f, RuntimeObstacleFill, RuntimeObstacleBorder);
+            DrawHeightSampledLine(ground, points[points.Count - 1], points[0], 120f, RuntimeObstacleFill, RuntimeObstacleBorder, RuntimeObstacleLineLiftMeters);
+            DrawCircle(ground, centroid, 220f, RuntimeObstacleFill, RuntimeObstacleBorder, RuntimeObstacleLineLiftMeters + 0.08f);
         }
         else
         {
-            DrawCircle(ground, centroid, 150f, RuntimeDirtyChunkFill, RuntimeDirtyChunkBorder);
+            DrawCircle(ground, centroid, 150f, RuntimeDirtyChunkFill, RuntimeDirtyChunkBorder, RuntimeObstacleLineLiftMeters + 0.08f);
         }
     }
 
@@ -2180,16 +2226,23 @@ internal sealed class MassNavigationShowcasePresentationSystem : ISystem<float>
         DrawCircle(ground, center, MathF.Min(widthCm, heightCm) * 0.22f, fill, border);
     }
 
-    private void DrawRectOutline(GroundOverlayBuffer ground, Vector2 min, Vector2 max, float widthCm, Vector4 fill, Vector4 border)
+    private void DrawRectOutline(
+        GroundOverlayBuffer ground,
+        Vector2 min,
+        Vector2 max,
+        float widthCm,
+        Vector4 fill,
+        Vector4 border,
+        float liftMeters = GroundOverlayLiftMeters)
     {
         Vector2 a = new(min.X, min.Y);
         Vector2 b = new(max.X, min.Y);
         Vector2 c = new(max.X, max.Y);
         Vector2 d = new(min.X, max.Y);
-        DrawLine(ground, a, b, widthCm, fill, border);
-        DrawLine(ground, b, c, widthCm, fill, border);
-        DrawLine(ground, c, d, widthCm, fill, border);
-        DrawLine(ground, d, a, widthCm, fill, border);
+        DrawLine(ground, a, b, widthCm, fill, border, liftMeters);
+        DrawLine(ground, b, c, widthCm, fill, border, liftMeters);
+        DrawLine(ground, c, d, widthCm, fill, border, liftMeters);
+        DrawLine(ground, d, a, widthCm, fill, border, liftMeters);
     }
 
     private Vector2 ResolveGoal()
@@ -2419,12 +2472,18 @@ internal sealed class MassNavigationShowcasePresentationSystem : ISystem<float>
         return value[..Math.Max(0, maxCharacters - 3)] + "...";
     }
 
-    private void DrawCircle(GroundOverlayBuffer ground, Vector2 centerCm, float radiusCm, Vector4 fill, Vector4 border)
+    private void DrawCircle(
+        GroundOverlayBuffer ground,
+        Vector2 centerCm,
+        float radiusCm,
+        Vector4 fill,
+        Vector4 border,
+        float liftMeters = GroundOverlayLiftMeters)
     {
         ground.TryAdd(new GroundOverlayItem
         {
             Shape = GroundOverlayShape.Circle,
-            Center = ToVisualMeters(centerCm),
+            Center = ToVisualMeters(centerCm, liftMeters),
             Radius = WorldUnits.CmToM(radiusCm),
             FillColor = fill,
             BorderColor = border,
@@ -2432,7 +2491,14 @@ internal sealed class MassNavigationShowcasePresentationSystem : ISystem<float>
         });
     }
 
-    private void DrawLine(GroundOverlayBuffer ground, Vector2 startCm, Vector2 endCm, float widthCm, Vector4 fill, Vector4 border)
+    private void DrawLine(
+        GroundOverlayBuffer ground,
+        Vector2 startCm,
+        Vector2 endCm,
+        float widthCm,
+        Vector4 fill,
+        Vector4 border,
+        float liftMeters = GroundOverlayLiftMeters)
     {
         Vector2 deltaCm = endCm - startCm;
         float lengthCm = deltaCm.Length();
@@ -2441,10 +2507,17 @@ internal sealed class MassNavigationShowcasePresentationSystem : ISystem<float>
             return;
         }
 
-        DrawLineSegment(ground, startCm, endCm, widthCm, fill, border);
+        DrawHeightSampledLine(ground, startCm, endCm, widthCm, fill, border, liftMeters);
     }
 
-    private void DrawHeightSampledLine(GroundOverlayBuffer ground, Vector2 startCm, Vector2 endCm, float widthCm, Vector4 fill, Vector4 border)
+    private void DrawHeightSampledLine(
+        GroundOverlayBuffer ground,
+        Vector2 startCm,
+        Vector2 endCm,
+        float widthCm,
+        Vector4 fill,
+        Vector4 border,
+        float liftMeters = GroundOverlayLiftMeters)
     {
         Vector2 deltaCm = endCm - startCm;
         float lengthCm = deltaCm.Length();
@@ -2461,17 +2534,24 @@ internal sealed class MassNavigationShowcasePresentationSystem : ISystem<float>
             {
                 float t = i / (float)segmentCount;
                 Vector2 current = startCm + (deltaCm * t);
-                DrawLineSegment(ground, previous, current, widthCm, fill, border);
+                DrawLineSegment(ground, previous, current, widthCm, fill, border, liftMeters);
                 previous = current;
             }
 
             return;
         }
 
-        DrawLineSegment(ground, startCm, endCm, widthCm, fill, border);
+        DrawLineSegment(ground, startCm, endCm, widthCm, fill, border, liftMeters);
     }
 
-    private void DrawLineSegment(GroundOverlayBuffer ground, Vector2 startCm, Vector2 endCm, float widthCm, Vector4 fill, Vector4 border)
+    private void DrawLineSegment(
+        GroundOverlayBuffer ground,
+        Vector2 startCm,
+        Vector2 endCm,
+        float widthCm,
+        Vector4 fill,
+        Vector4 border,
+        float liftMeters)
     {
         Vector2 deltaCm = endCm - startCm;
         float lengthCm = deltaCm.Length();
@@ -2480,10 +2560,27 @@ internal sealed class MassNavigationShowcasePresentationSystem : ISystem<float>
             return;
         }
 
+        if (_groundLineSplines != null)
+        {
+            Vector3 start = ToVisualMeters(startCm, liftMeters);
+            Vector3 end = ToVisualMeters(endCm, liftMeters);
+            if (_groundLineSplines.TryAddLine(
+                stableId: 0,
+                start: start,
+                end: end,
+                width: WorldUnits.CmToM(widthCm),
+                fillColor: fill,
+                borderColor: border,
+                borderWidth: 0.025f))
+            {
+                return;
+            }
+        }
+
         ground.TryAdd(new GroundOverlayItem
         {
             Shape = GroundOverlayShape.Line,
-            Center = ToVisualMeters(startCm),
+            Center = ToVisualMeters(startCm, liftMeters),
             Length = WorldUnits.CmToM(lengthCm),
             Width = WorldUnits.CmToM(widthCm),
             Rotation = WorldPlane2D.FacingRadFromDirection(deltaCm.X, deltaCm.Y),
@@ -2495,7 +2592,12 @@ internal sealed class MassNavigationShowcasePresentationSystem : ISystem<float>
 
     private Vector3 ToVisualMeters(Vector2 worldCm)
     {
-        return new Vector3(WorldUnits.CmToM(worldCm.X), ResolveOverlayHeightMeters(worldCm, GroundOverlayLiftMeters), WorldUnits.CmToM(worldCm.Y));
+        return ToVisualMeters(worldCm, GroundOverlayLiftMeters);
+    }
+
+    private Vector3 ToVisualMeters(Vector2 worldCm, float liftMeters)
+    {
+        return new Vector3(WorldUnits.CmToM(worldCm.X), ResolveOverlayHeightMeters(worldCm, liftMeters), WorldUnits.CmToM(worldCm.Y));
     }
 
     private float ResolveOverlayHeightMeters(Vector2 worldCm, float liftMeters)
@@ -2596,8 +2698,8 @@ internal sealed class MassNavigationShowcasePresentationSystem : ISystem<float>
         int y0 = (int)MathF.Round(start.Y);
         int x1 = (int)MathF.Round(end.X);
         int y1 = (int)MathF.Round(end.Y);
-        overlay.AddLine(x0, y0, x1, y1, 8, new Vector4(0.02f, 0.05f, 0.06f, 0.82f), stableId, serial);
-        overlay.AddLine(x0, y0, x1, y1, 4, PathBorder, stableId + 500, serial);
+        overlay.AddLine(x0, y0, x1, y1, 10, PathScreenShadow, stableId, serial);
+        overlay.AddLine(x0, y0, x1, y1, 5, RouteOnlyPathBorder, stableId + 500, serial);
     }
 
     private void AddProjectedRouteNode(
@@ -2606,7 +2708,9 @@ internal sealed class MassNavigationShowcasePresentationSystem : ISystem<float>
         Vector2 worldCm,
         int stableId,
         int serial,
-        bool endpoint)
+        bool endpoint,
+        Vector4 fill,
+        Vector4 border)
     {
         if (!TryProjectWorldPoint(projector, worldCm, ResolveOverlayHeightMeters(worldCm, ScreenRouteLiftMeters + 0.05f), out Vector2 screen))
         {
@@ -2617,8 +2721,8 @@ internal sealed class MassNavigationShowcasePresentationSystem : ISystem<float>
         int x = (int)MathF.Round(screen.X) - radius;
         int y = (int)MathF.Round(screen.Y) - radius;
         int size = radius * 2;
-        overlay.AddRect(x - 2, y - 2, size + 4, size + 4, new Vector4(0.02f, 0.05f, 0.06f, 0.84f), PathBorder, stableId, serial);
-        overlay.AddRect(x, y, size, size, PathBorder with { W = endpoint ? 0.96f : 0.78f }, PathBorder, stableId + 500, serial);
+        overlay.AddRect(x - 2, y - 2, size + 4, size + 4, PathScreenShadow, border, stableId, serial);
+        overlay.AddRect(x, y, size, size, fill with { W = endpoint ? 0.96f : 0.78f }, border, stableId + 500, serial);
     }
 
     private static bool TryProjectWorldPoint(
