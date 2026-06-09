@@ -4,6 +4,7 @@ public sealed class MassFlowTuning
 {
     public bool Enabled { get; set; }
     public int IterationsPerStep { get; set; } = 4096;
+    public int MaxIterationsPerStep { get; set; }
     public int StepIntervalTicks { get; set; } = 1;
     public int CrowdStampIntervalTicks { get; set; } = 1;
     public int ObstacleStampIntervalTicks { get; set; } = 1;
@@ -18,6 +19,16 @@ public sealed class MassFlowTuning
             throw new System.InvalidOperationException("Mass-nav flow requires IterationsPerStep >= 0.");
         }
 
+        if (MaxIterationsPerStep < 0)
+        {
+            throw new System.InvalidOperationException("Mass-nav flow requires MaxIterationsPerStep >= 0.");
+        }
+
+        if (IterationsPerStep > MaxIterationsPerStep)
+        {
+            throw new System.InvalidOperationException("Mass-nav flow requires IterationsPerStep <= MaxIterationsPerStep.");
+        }
+
         RequirePositive(StepIntervalTicks, nameof(StepIntervalTicks));
         RequirePositive(CrowdStampIntervalTicks, nameof(CrowdStampIntervalTicks));
         RequirePositive(ObstacleStampIntervalTicks, nameof(ObstacleStampIntervalTicks));
@@ -25,7 +36,7 @@ public sealed class MassFlowTuning
 
     public void AdjustIterations(int delta)
     {
-        IterationsPerStep = System.Math.Clamp(IterationsPerStep + delta, 0, 131072);
+        IterationsPerStep = System.Math.Clamp(IterationsPerStep + delta, 0, MaxIterationsPerStep);
     }
 
     private static void RequirePositive(int value, string name)

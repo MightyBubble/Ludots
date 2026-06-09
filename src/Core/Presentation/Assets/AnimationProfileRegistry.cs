@@ -13,7 +13,7 @@ namespace Ludots.Core.Presentation.Assets
         public AnimationProfileRegistry(int capacity = 256)
         {
             if (capacity <= 0) throw new ArgumentOutOfRangeException(nameof(capacity));
-            _ids = new StringIntRegistry(capacity, startId: 1, invalidId: 0, comparer: StringComparer.OrdinalIgnoreCase);
+            _ids = new StringIntRegistry(capacity, startId: 1, invalidId: 0, comparer: StringComparer.Ordinal);
             _definitions = new AnimationProfileDefinition[capacity];
             _hasDefinitions = new bool[capacity];
         }

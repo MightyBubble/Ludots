@@ -25,8 +25,8 @@ namespace VisualTerrainEditorMod.Runtime;
 
 internal sealed class VisualTerrainEditorRuntime
 {
-    private const int ChunkMeshAssetParamKey = 701;
-    private const int ChunkMaterialParamKey = 702;
+    private const string ChunkMeshAssetParamKey = "visual_terrain_editor.chunkMesh.asset";
+    private const string ChunkMaterialParamKey = "visual_terrain_editor.chunkMesh.material";
     private const string TerrainMeshAssetKeyPrefix = "visual_terrain_editor.runtime_terrain";
     private const string TerrainChunkPerformerKeyPrefix = "visual_terrain_editor.runtime_chunk";
     private static readonly int DefaultChunkMaterialAssetId = 1;
@@ -939,7 +939,6 @@ internal sealed class VisualTerrainEditorRuntime
             AlphaFadeOverLifetime = template.AlphaFadeOverLifetime,
             DefaultColor = template.DefaultColor,
             DefaultFontSize = template.DefaultFontSize,
-            DefaultTextId = template.DefaultTextId,
             WorldTextMode = template.WorldTextMode,
             VisibilityCondition = template.VisibilityCondition,
             Surface = template.Surface,
@@ -951,13 +950,13 @@ internal sealed class VisualTerrainEditorRuntime
             {
                 new ParamDefault
                 {
-                    ParamKey = ChunkMeshAssetParamKey,
+                    ParamKey = PerformerParamKeyRegistry.Register(ChunkMeshAssetParamKey),
                     Lane = ParamLane.Int,
                     IntValue = meshAssetId,
                 },
                 new ParamDefault
                 {
-                    ParamKey = ChunkMaterialParamKey,
+                    ParamKey = PerformerParamKeyRegistry.Register(ChunkMaterialParamKey),
                     Lane = ParamLane.Int,
                     IntValue = materialAssetId,
                 },

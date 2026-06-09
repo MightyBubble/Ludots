@@ -36,8 +36,8 @@ namespace Ludots.Core.Presentation.Hud
 
         public static int ComposeTextDirtySerial(
             int fontSize,
-            int legacyStringId,
-            int legacyModeId,
+            int stringTableId,
+            int valueModeId,
             float value0,
             float value1,
             in Vector4 color,
@@ -45,8 +45,8 @@ namespace Ludots.Core.Presentation.Hud
         {
             int hash = 29;
             hash = Mix(hash, fontSize);
-            hash = Mix(hash, legacyStringId);
-            hash = Mix(hash, legacyModeId);
+            hash = Mix(hash, stringTableId);
+            hash = Mix(hash, valueModeId);
             hash = Mix(hash, color);
             hash = Mix(hash, packet.TokenId);
             hash = Mix(hash, packet.ArgCount);
@@ -56,15 +56,15 @@ namespace Ludots.Core.Presentation.Hud
             hash = Mix(hash, packet.Arg3);
             if (!packet.HasValue)
             {
-                hash = MixLegacyTextValues(hash, legacyModeId, value0, value1);
+                hash = MixWorldHudValueModeText(hash, valueModeId, value0, value1);
             }
 
             return Finalize(hash);
         }
 
-        private static int MixLegacyTextValues(int hash, int legacyModeId, float value0, float value1)
+        private static int MixWorldHudValueModeText(int hash, int valueModeId, float value0, float value1)
         {
-            WorldHudValueMode mode = (WorldHudValueMode)legacyModeId;
+            WorldHudValueMode mode = (WorldHudValueMode)valueModeId;
             switch (mode)
             {
                 case WorldHudValueMode.AttributeCurrentOverBase:

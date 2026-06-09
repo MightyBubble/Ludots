@@ -88,11 +88,14 @@ namespace Ludots.Tests.Presentation
                             RenderPath = renderPath,
                             Mobility = VisualMobility.Movable,
                             LocalScale = Vector3.One,
+                            AssetIdParamKey = -1,
+                            AssetSwapParamKey = -1,
                         },
                     },
                 ],
             });
 
+            instances.BindDefinitions(definitions);
             Entity performer = instances.Create(defId, owner, 0, PresentationAnchorKind.WorldPosition, new Vector3(4f, 5f, 6f), 9100 + (int)assetKind, Entity.Null, default);
             ref var state = ref world.Get<PerformerState>(performer);
             state.BehaviorActiveMask = 1u;
@@ -145,13 +148,17 @@ namespace Ludots.Tests.Presentation
                             AssetKind = AssetKind.Spline,
                             AssetId = 3001,
                             Mobility = VisualMobility.Movable,
+                            RenderPath = VisualRenderPath.None,
                             LocalScale = Vector3.One,
                             ScaleParamKey = 41,
+                            AssetIdParamKey = -1,
+                            AssetSwapParamKey = -1,
                         },
                     },
                 ],
             });
 
+            instances.BindDefinitions(definitions);
             Entity performer = instances.Create(defId, owner, 0, PresentationAnchorKind.WorldPosition, new Vector3(2f, 3f, 4f), 9201, Entity.Null, default);
             ref var state = ref world.Get<PerformerState>(performer);
             state.BehaviorActiveMask = 1u;
@@ -204,12 +211,16 @@ namespace Ludots.Tests.Presentation
                             AssetKind = AssetKind.Sound,
                             AssetId = 3501,
                             Mobility = VisualMobility.Movable,
+                            RenderPath = VisualRenderPath.None,
                             LocalScale = Vector3.One,
+                            AssetIdParamKey = -1,
+                            AssetSwapParamKey = -1,
                         },
                     },
                 ],
             });
 
+            instances.BindDefinitions(definitions);
             Entity performer = instances.Create(defId, owner, 0, PresentationAnchorKind.WorldPosition, new Vector3(5f, 6f, 7f), 9251, Entity.Null, default);
             ref var state = ref world.Get<PerformerState>(performer);
             state.BehaviorActiveMask = 1u;
@@ -244,7 +255,7 @@ namespace Ludots.Tests.Presentation
             var instances = new PerformerEntityRuntime(world);
             var definitions = new PerformerDefinitionRegistry();
             var requests = new PresentationRequestBuffer();
-            var events = new PresentationEventStream();
+            var events = new PresentationEventStream(PresentationTestConstants.EventStreamCapacity);
             var soundRequests = new SoundRequestBuffer();
 
             int defId = definitions.Register("asset.world_hud", new PerformerDefinition
@@ -260,14 +271,18 @@ namespace Ludots.Tests.Presentation
                         {
                             AssetKind = AssetKind.WorldHud,
                             Mobility = VisualMobility.Movable,
+                            RenderPath = VisualRenderPath.None,
                             LocalScale = new Vector3(60f, 8f, 1f),
                             MaterialParamKey = 51,
+                            AssetIdParamKey = -1,
+                            AssetSwapParamKey = -1,
                         },
                     },
                 ],
                 DefaultColor = new Vector4(0.2f, 0.8f, 0.2f, 1f),
             });
 
+            instances.BindDefinitions(definitions);
             Entity performer = instances.Create(defId, owner, 0, PresentationAnchorKind.WorldPosition, new Vector3(7f, 8f, 9f), 9301, Entity.Null, default);
             ref var state = ref world.Get<PerformerState>(performer);
             state.BehaviorActiveMask = 1u;
@@ -280,6 +295,7 @@ namespace Ludots.Tests.Presentation
                        instances,
                        definitions,
                        events,
+                       new PresentationOwnerChangeBuffer(8),
                        soundRequests))
             {
                 behaviorSystem.Update(0.016f);
@@ -329,18 +345,21 @@ namespace Ludots.Tests.Presentation
                             AssetKind = AssetKind.WorldText,
                             AssetId = 4001,
                             Mobility = VisualMobility.Movable,
+                            RenderPath = VisualRenderPath.None,
                             LocalScale = Vector3.One,
                             ScaleParamKey = 61,
                             MaterialParamKey = 62,
+                            AssetIdParamKey = -1,
+                            AssetSwapParamKey = -1,
                         },
                     },
                 ],
                 DefaultColor = new Vector4(1f, 0.3f, 0.2f, 1f),
                 DefaultFontSize = 18,
-                DefaultTextId = 4001,
                 WorldTextMode = WorldHudValueMode.AttributeCurrentOverBase,
             });
 
+            instances.BindDefinitions(definitions);
             Entity performer = instances.Create(defId, owner, 0, PresentationAnchorKind.WorldPosition, new Vector3(10f, 11f, 12f), 9401, Entity.Null, default);
             ref var state = ref world.Get<PerformerState>(performer);
             state.BehaviorActiveMask = 1u;
@@ -393,13 +412,17 @@ namespace Ludots.Tests.Presentation
                             AssetKind = AssetKind.GroundOverlay,
                             AssetId = (int)GroundOverlayShape.Ring,
                             Mobility = VisualMobility.Movable,
+                            RenderPath = VisualRenderPath.None,
                             LocalScale = Vector3.One,
+                            AssetIdParamKey = -1,
+                            AssetSwapParamKey = -1,
                         },
                     },
                 ],
                 DefaultColor = new Vector4(0.2f, 0.6f, 1f, 0.4f),
             });
 
+            instances.BindDefinitions(definitions);
             Entity performer = instances.Create(defId, owner, 0, PresentationAnchorKind.WorldPosition, new Vector3(3f, 0.1f, 4f), 9501, Entity.Null, default);
             ref var state = ref world.Get<PerformerState>(performer);
             state.BehaviorActiveMask = 1u;
@@ -450,12 +473,16 @@ namespace Ludots.Tests.Presentation
                             AssetKind = AssetKind.GroundOverlay,
                             AssetId = 99,
                             Mobility = VisualMobility.Movable,
+                            RenderPath = VisualRenderPath.None,
                             LocalScale = Vector3.One,
+                            AssetIdParamKey = -1,
+                            AssetSwapParamKey = -1,
                         },
                     },
                 ],
             });
 
+            instances.BindDefinitions(definitions);
             Entity performer = instances.Create(defId, owner, 0, PresentationAnchorKind.WorldPosition, Vector3.Zero, 9502, Entity.Null, default);
             world.Get<PerformerState>(performer).BehaviorActiveMask = 1u;
 
@@ -500,15 +527,18 @@ namespace Ludots.Tests.Presentation
                             AssetKind = assetKind,
                             AssetId = ResolveRetainedAssetId(assetKind),
                             Mobility = VisualMobility.Movable,
+                            RenderPath = VisualRenderPath.None,
                             LocalScale = Vector3.One,
                             ScaleParamKey = scaleKey,
                             MaterialParamKey = assetKind == AssetKind.WorldHud ? scaleKey : -1,
+                            AssetIdParamKey = -1,
+                            AssetSwapParamKey = -1,
                         },
                     },
                 ],
-                DefaultTextId = 1,
             });
 
+            instances.BindDefinitions(definitions);
             Entity performer = instances.Create(defId, owner, 0, PresentationAnchorKind.WorldPosition, new Vector3(1f, 0f, 2f), 9601, Entity.Null, default);
             world.Get<PerformerState>(performer).BehaviorActiveMask = 1u;
             instances.SetParam(performer, scaleKey, ParamLane.Float, 1.5f, 0, default);
@@ -564,13 +594,16 @@ namespace Ludots.Tests.Presentation
                             AssetKind = assetKind,
                             AssetId = ResolveRetainedAssetId(assetKind),
                             Mobility = VisualMobility.Movable,
+                            RenderPath = VisualRenderPath.None,
                             LocalScale = Vector3.One,
+                            AssetIdParamKey = -1,
+                            AssetSwapParamKey = -1,
                         },
                     },
                 ],
-                DefaultTextId = 1,
             });
 
+            instances.BindDefinitions(definitions);
             Entity performer = instances.Create(defId, owner, 0, PresentationAnchorKind.Entity, Vector3.Zero, 9651, Entity.Null, default);
             world.Get<PerformerState>(performer).BehaviorActiveMask = 1u;
 
@@ -607,7 +640,7 @@ namespace Ludots.Tests.Presentation
             Entity owner = world.Create(new CullState { IsVisible = true, LOD = LODLevel.High });
             var instances = new PerformerEntityRuntime(world);
             var definitions = new PerformerDefinitionRegistry();
-            var events = new PresentationEventStream();
+            var events = new PresentationEventStream(PresentationTestConstants.EventStreamCapacity);
             var commands = new PerformerCommandBuffer();
             var markers = new TransientMarkerBuffer();
             var requests = new PresentationRequestBuffer();
@@ -627,11 +660,13 @@ namespace Ludots.Tests.Presentation
                             AssetKind = assetKind,
                             AssetId = ResolveRetainedAssetId(assetKind),
                             Mobility = VisualMobility.Movable,
+                            RenderPath = VisualRenderPath.None,
                             LocalScale = Vector3.One,
+                            AssetIdParamKey = -1,
+                            AssetSwapParamKey = -1,
                         },
                     },
                 ],
-                DefaultTextId = 1,
             });
 
             Entity performer = instances.Create(defId, owner, 0, PresentationAnchorKind.Entity, Vector3.Zero, 9661, Entity.Null, definitions.Get(defId));
@@ -680,7 +715,7 @@ namespace Ludots.Tests.Presentation
             Entity owner = world.Create(new CullState { IsVisible = true, LOD = LODLevel.High });
             var instances = new PerformerEntityRuntime(world);
             var definitions = new PerformerDefinitionRegistry();
-            var events = new PresentationEventStream();
+            var events = new PresentationEventStream(PresentationTestConstants.EventStreamCapacity);
             var commands = new PerformerCommandBuffer();
             var markers = new TransientMarkerBuffer();
             var requests = new PresentationRequestBuffer();
@@ -765,8 +800,13 @@ namespace Ludots.Tests.Presentation
                             AssetId = 1004,
                             MaterialId = 2004,
                             Mobility = VisualMobility.Static,
+                            RenderPath = assetKind == AssetKind.SkinnedMesh
+                                ? VisualRenderPath.SkinnedMesh
+                                : VisualRenderPath.StaticMesh,
                             LocalScale = Vector3.One,
                             MaterialParamKey = materialKey,
+                            AssetIdParamKey = -1,
+                            AssetSwapParamKey = -1,
                         },
                     },
                 ],
@@ -775,6 +815,7 @@ namespace Ludots.Tests.Presentation
             PerformerDefinition definition = definitions.Get(defId);
             Entity performer = instances.Create(defId, owner, 0, PresentationAnchorKind.WorldPosition, Vector3.Zero, 9801, Entity.Null, definition);
             world.Get<PerformerState>(performer).BehaviorActiveMask = 1u;
+            instances.SetParam(performer, materialKey, ParamLane.Int, 0f, 2004, default);
 
             using var system = new PerformerEmitSystem(
                 world,
@@ -834,6 +875,8 @@ namespace Ludots.Tests.Presentation
                             RenderPath = VisualRenderPath.SkinnedMesh,
                             Mobility = VisualMobility.Movable,
                             LocalScale = Vector3.One,
+                            AssetIdParamKey = -1,
+                            AssetSwapParamKey = -1,
                         },
                     },
                     new BehaviorSlot
@@ -910,6 +953,8 @@ namespace Ludots.Tests.Presentation
                             RenderPath = VisualRenderPath.InstancedStaticMesh,
                             Mobility = VisualMobility.Movable,
                             LocalScale = Vector3.One,
+                            AssetIdParamKey = -1,
+                            AssetSwapParamKey = -1,
                         },
                     },
                 ],
@@ -953,9 +998,9 @@ namespace Ludots.Tests.Presentation
             Entity owner = world.Create(attributes);
             var instances = new PerformerEntityRuntime(world);
             var definitions = new PerformerDefinitionRegistry();
-            var events = new PresentationEventStream();
+            var events = new PresentationEventStream(PresentationTestConstants.EventStreamCapacity);
             var soundRequests = new SoundRequestBuffer();
-            var ownerChanges = new PresentationOwnerChangeBuffer();
+            var ownerChanges = new PresentationOwnerChangeBuffer(8);
             int attributeId = 17;
             int paramKey = 101;
 
@@ -1032,8 +1077,15 @@ namespace Ludots.Tests.Presentation
                             AssetKind = AssetKind.Mesh,
                             AssetId = 1001,
                             AssetSwapParamKey = swapParamKey,
+                            AssetSwapTable =
+                            [
+                                new AssetSwapEntry { ParamValue = 0f, AssetId = 1001 },
+                                new AssetSwapEntry { ParamValue = 1f, AssetId = 1001 },
+                            ],
                             Mobility = VisualMobility.Static,
+                            RenderPath = VisualRenderPath.StaticMesh,
                             LocalScale = Vector3.One,
+                            AssetIdParamKey = -1,
                         },
                     },
                 ],
@@ -1056,7 +1108,9 @@ namespace Ludots.Tests.Presentation
                             AssetKind = AssetKind.Mesh,
                             AssetId = 1002,
                             Mobility = VisualMobility.Static,
+                            RenderPath = VisualRenderPath.StaticMesh,
                             LocalScale = Vector3.One,
+                            AssetIdParamKey = -1,
                         },
                     },
                 ],
@@ -1103,8 +1157,8 @@ namespace Ludots.Tests.Presentation
             Entity owner = world.Create(attributes, new CullState { IsVisible = true, LOD = LODLevel.High });
             var instances = new PerformerEntityRuntime(world);
             var definitions = new PerformerDefinitionRegistry();
-            var events = new PresentationEventStream();
-            var ownerChanges = new PresentationOwnerChangeBuffer();
+            var events = new PresentationEventStream(PresentationTestConstants.EventStreamCapacity);
+            var ownerChanges = new PresentationOwnerChangeBuffer(8);
             var soundRequests = new SoundRequestBuffer();
             var commands = new PerformerCommandBuffer();
             var markers = new TransientMarkerBuffer();
@@ -1152,8 +1206,14 @@ namespace Ludots.Tests.Presentation
                             AssetKind = AssetKind.Mesh,
                             AssetId = 1001,
                             AssetSwapParamKey = swapParamKey,
+                            AssetSwapTable =
+                            [
+                                new AssetSwapEntry { ParamValue = 2f, AssetId = 1001 },
+                            ],
                             Mobility = VisualMobility.Static,
+                            RenderPath = VisualRenderPath.StaticMesh,
                             LocalScale = Vector3.One,
+                            AssetIdParamKey = -1,
                         },
                     },
                 ],
@@ -1208,7 +1268,7 @@ namespace Ludots.Tests.Presentation
             Entity owner = world.Create(new CullState { IsVisible = true, LOD = LODLevel.High });
             var instances = new PerformerEntityRuntime(world);
             var definitions = new PerformerDefinitionRegistry();
-            var events = new PresentationEventStream();
+            var events = new PresentationEventStream(PresentationTestConstants.EventStreamCapacity);
             var commands = new PerformerCommandBuffer();
             var markers = new TransientMarkerBuffer();
             var requests = new PresentationRequestBuffer();
@@ -1242,6 +1302,8 @@ namespace Ludots.Tests.Presentation
                             Mobility = VisualMobility.Static,
                             RenderPath = VisualRenderPath.StaticMesh,
                             LocalScale = Vector3.One,
+                            AssetIdParamKey = -1,
+                            AssetSwapParamKey = -1,
                         },
                     },
                     new BehaviorSlot
@@ -1288,7 +1350,7 @@ namespace Ludots.Tests.Presentation
                 stableIds,
                 definitions,
                 stableDrawCache: stableDrawCache);
-            using var behavior = new PerformerBehaviorSystem(world, instances, definitions, events, soundRequests);
+            using var behavior = new PerformerBehaviorSystem(world, instances, definitions, events, new PresentationOwnerChangeBuffer(8), soundRequests);
             using var emit = new PerformerEmitSystem(
                 world,
                 instances,

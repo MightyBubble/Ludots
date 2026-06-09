@@ -1,3 +1,4 @@
+using System;
 using System.Numerics;
 using Ludots.Core.Presentation.Components;
 
@@ -37,6 +38,27 @@ namespace Ludots.Core.Presentation.Performers
 
     public struct AssetBindingConfig
     {
+        public AssetBindingConfig()
+        {
+            AssetKind = default;
+            AssetId = 0;
+            MaterialId = 0;
+            RenderPath = VisualRenderPath.None;
+            Mobility = default;
+            LocalOffset = Vector3.Zero;
+            LocalRotation = Quaternion.Identity;
+            LocalScale = Vector3.One;
+            ScaleParamKey = PerformerParamKeyRegistry.UnsetParamKey;
+            ColorParamKey = PerformerParamKeyRegistry.UnsetParamKey;
+            MaterialParamKey = PerformerParamKeyRegistry.UnsetParamKey;
+            AssetIdParamKey = PerformerParamKeyRegistry.UnsetParamKey;
+            AssetSwapParamKey = PerformerParamKeyRegistry.UnsetParamKey;
+            AssetSwapTable = Array.Empty<AssetSwapEntry>();
+            VisibilityParamKey = PerformerParamKeyRegistry.UnsetParamKey;
+            HasMaxLod = false;
+            MaxLod = LODLevel.Low;
+        }
+
         public AssetKind AssetKind;
         public int AssetId;
         public int MaterialId;
@@ -48,6 +70,7 @@ namespace Ludots.Core.Presentation.Performers
         public int ScaleParamKey;
         public int ColorParamKey;
         public int MaterialParamKey;
+        public int AssetIdParamKey;
         public int AssetSwapParamKey;
         public AssetSwapEntry[] AssetSwapTable;
         public int VisibilityParamKey;
@@ -85,6 +108,14 @@ namespace Ludots.Core.Presentation.Performers
 
     public struct AnimatorConfig
     {
+        public AnimatorConfig()
+        {
+            AnimatorControllerId = 0;
+            AnimationProfileId = 0;
+            SpeedParamKey = PerformerParamKeyRegistry.UnsetParamKey;
+            StateParamKey = PerformerParamKeyRegistry.UnsetParamKey;
+        }
+
         public int AnimatorControllerId;
         public int AnimationProfileId;
         public int SpeedParamKey;
@@ -108,6 +139,14 @@ namespace Ludots.Core.Presentation.Performers
 
     public struct SoundConfig
     {
+        public SoundConfig()
+        {
+            SoundAssetId = 0;
+            Loop = false;
+            Volume = 1f;
+            VolumeParamKey = PerformerParamKeyRegistry.UnsetParamKey;
+        }
+
         public int SoundAssetId;
         public bool Loop;
         public float Volume;
@@ -116,6 +155,13 @@ namespace Ludots.Core.Presentation.Performers
 
     public struct MaterialConfig
     {
+        public MaterialConfig()
+        {
+            BaseMaterialId = 0;
+            MaterialSwapParamKey = PerformerParamKeyRegistry.UnsetParamKey;
+            SwapTable = Array.Empty<MaterialSwapEntry>();
+        }
+
         public int BaseMaterialId;
         public int MaterialSwapParamKey;
         public MaterialSwapEntry[] SwapTable;
@@ -129,6 +175,19 @@ namespace Ludots.Core.Presentation.Performers
 
     public struct SplineConfig
     {
+        public SplineConfig()
+        {
+            SplineAssetId = 0;
+            Usage = SplineUsage.Render;
+            WidthParamKey = PerformerParamKeyRegistry.UnsetParamKey;
+            ColorParamKey = PerformerParamKeyRegistry.UnsetParamKey;
+            SpeedParamKey = PerformerParamKeyRegistry.UnsetParamKey;
+            ProgressParamKey = PerformerParamKeyRegistry.UnsetParamKey;
+            Loop = false;
+            PingPong = false;
+            WaypointEventId = 0;
+        }
+
         public int SplineAssetId;
         public SplineUsage Usage;
         public int WidthParamKey;
@@ -181,6 +240,20 @@ namespace Ludots.Core.Presentation.Performers
 
     public struct MinimapMarkerConfig
     {
+        public MinimapMarkerConfig()
+        {
+            Shape = MinimapMarkerShape.Circle;
+            Color = Vector4.One;
+            SizePx = 6f;
+            ColorParamKey = PerformerParamKeyRegistry.UnsetParamKey;
+            SizeParamKey = PerformerParamKeyRegistry.UnsetParamKey;
+            VisibilityParamKey = PerformerParamKeyRegistry.UnsetParamKey;
+            OrientationMode = MinimapMarkerOrientationMode.None;
+            OrientationParamKey = PerformerParamKeyRegistry.UnsetParamKey;
+            OrientationOffsetRad = 0f;
+            OrientationLengthPx = 0f;
+        }
+
         public MinimapMarkerShape Shape;
         public Vector4 Color;
         public float SizePx;

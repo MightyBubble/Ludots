@@ -96,7 +96,7 @@ namespace Ludots.Core.Presentation.Assets
 
             for (int i = 0; i < states.Length; i++)
             {
-                if (string.Equals(states[i].StateId, stateId, StringComparison.OrdinalIgnoreCase))
+                if (string.Equals(states[i].StateId, stateId, StringComparison.Ordinal))
                 {
                     return states[i];
                 }

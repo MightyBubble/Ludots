@@ -7,6 +7,7 @@ using System.Text.Json.Nodes;
 using System.Text.Json.Serialization;
 using Ludots.Core.Config;
 using Ludots.Core.Gameplay.Teams;
+using Ludots.Core.Presentation.Minimap;
 
 namespace MassNavigationMod.Runtime;
 
@@ -14,12 +15,14 @@ public sealed class MassNavigationConfig
 {
     public string MapId { get; set; } = string.Empty;
     public MassNavigationWorldConfig? World { get; set; }
+    public MassFlowSolverConfig Solver { get; set; } = new();
     public MassNavigationPresentationConfig Presentation { get; set; } = new();
     public MassNavigationScenarioConfig Scenario { get; set; } = new();
     public MassNavigationScenarioRuntimeConfig ScenarioRuntime { get; set; } = new();
     public MassNavigationCadenceConfig Cadence { get; set; } = new();
     public MassNavigationAgentProfileSetConfig AgentProfiles { get; set; } = new();
     public MassNavigationCameraProfilesConfig CameraProfiles { get; set; } = new();
+    public MassNavigationMinimapConfig Minimap { get; set; } = new();
     public TeamConfig TeamRelationships { get; set; } = new();
     public MassFlowTuning Flow { get; set; } = new();
     public MassFlowArrivalTuning Arrival { get; set; } = new();
@@ -68,18 +71,63 @@ public sealed class MassNavigationConfig
     {
         RequireProperty(root, "mapId");
         RequireProperty(root, "world");
+        RequireProperty(root, "solver");
         RequireProperty(root, "presentation");
         RequireProperty(root, "scenario");
         RequireProperty(root, "scenarioRuntime");
         RequireProperty(root, "cadence");
         RequireProperty(root, "agentProfiles");
         RequireProperty(root, "cameraProfiles");
+        RequireProperty(root, "minimap");
         RequireProperty(root, "teamRelationships");
         RequireProperty(root, "flow");
         RequireProperty(root, "arrival");
         RequireProperty(root, "avoidance");
         RequireProperty(root, "semantics");
         RequireProperty(root, "viewResidency");
+        JsonElement scenarioRuntime = RequireProperty(root, "scenarioRuntime");
+        bool autoSpawnConfiguredScenario = RequireBooleanProperty(scenarioRuntime, "autoSpawnConfiguredScenario");
+        RequireProperties(
+            scenarioRuntime,
+            "initialSelectionScratchCapacity",
+            "initialSelectedEntityCapacity",
+            "runtimeCapacity",
+            "panelControls");
+        RequireProperties(
+            RequireProperty(scenarioRuntime, "runtimeCapacity"),
+            "navigationGroupCapacity",
+            "groupMembershipAgentCapacity",
+            "selectionMemberScratchCapacity",
+            "groupMemberCapacity",
+            "orderIngestionTokenCapacity",
+            "orderIngestionMemberCapacity",
+            "loadedChunkCapacity",
+            "metadataTeamCapacity");
+        RequireProperties(
+            RequireProperty(scenarioRuntime, "panelControls"),
+            "maxAgentsPerTeam",
+            "totalAgentStep",
+            "totalAgentPresets",
+            "panelRefreshIntervalSeconds",
+            "viewResidencyRetainSecondsStep",
+            "simulationBudgetStepMs",
+            "simulationBudgetMinMs",
+            "simulationBudgetMaxMs",
+            "simulationSliceStep",
+            "simulationSliceMin",
+            "simulationSliceMax",
+            "enginePolicyHzStep",
+            "enginePolicyHzMin",
+            "enginePolicyHzMax",
+            "enginePolicyMaxStepsStep",
+            "enginePolicyMaxStepsMin",
+            "enginePolicyMaxStepsMax",
+            "arrivalTimeoutStepMs",
+            "arrivalProgressStepCm",
+            "arrivalWakePushStepCm",
+            "arrivalRetryStep",
+            "flowIterationStep",
+            "flowCadenceHzStep");
 
         JsonElement world = RequireProperty(root, "world");
         RequireProperties(
@@ -96,21 +144,51 @@ public sealed class MassNavigationConfig
             "activeHotZoneId",
             "hotZones",
             "obstacles");
+        RequireProperties(
+            RequireProperty(root, "solver"),
+            "fieldWidthCm",
+            "fieldHeightCm",
+            "flowCellSizeCm",
+            "maxObstacleCount",
+            "parallelWorkerCount",
+            "separationHashCellSizeCm",
+            "separationHashMinSearchRadiusCells",
+            "hardResolveHashCellSizeCm",
+            "hardResolveHashMinSearchRadiusCells",
+            "playAreaMinXCm",
+            "playAreaMaxXCm",
+            "playAreaMinYCm",
+            "playAreaMaxYCm");
         JsonElement presentation = RequireProperty(root, "presentation");
         RequireProperties(
             presentation,
             "requiredMeshAssetIds",
-            "blockerPerformerId",
-            "hotspotPerformerId",
-            "blockerTemplateId",
-            "hotspotTemplateId",
             "teams");
+        if (autoSpawnConfiguredScenario)
+        {
+            RequireProperties(
+                presentation,
+                "blockerPerformerId",
+                "hotspotPerformerId",
+                "blockerTemplateId",
+                "hotspotTemplateId");
+        }
+
         JsonElement scenario = RequireProperty(root, "scenario");
         RequireProperties(
             scenario,
             "agentsPerTeam",
             "initialSelectedTeamId",
             "teams");
+        if (autoSpawnConfiguredScenario)
+        {
+            RequireProperties(
+                RequireProperty(scenario, "spawnLayout"),
+                "kind",
+                "orbitRadiusCm",
+                "randomSeed");
+        }
+
         JsonElement cadence = RequireProperty(root, "cadence");
         RequireProperties(
             cadence,
@@ -122,7 +200,8 @@ public sealed class MassNavigationConfig
             "hardResolveHz",
             "entitySyncHz",
             "maxStepsPerFixedTick",
-            "hardResolveCandidateThresholdAgents");
+            "hardResolveCandidateThresholdAgents",
+            "orderIdleScanIntervalFrames");
         JsonElement agentProfiles = RequireProperty(root, "agentProfiles");
         RequireProperties(agentProfiles, "defaultProfileId", "profiles");
         JsonElement profiles = RequireProperty(agentProfiles, "profiles");
@@ -155,12 +234,26 @@ public sealed class MassNavigationConfig
         JsonElement relationships = RequireProperty(root, "teamRelationships");
         RequireProperty(relationships, "defaultRelationship");
         RequireProperty(relationships, "relationships");
-        RequireProperties(RequireProperty(root, "cameraProfiles"), "tacticalProfileId", "strategicProfileId");
-        RequireProperties(RequireProperty(root, "scenarioRuntime"), "autoSpawnConfiguredScenario");
+        JsonElement cameraProfiles = RequireProperty(root, "cameraProfiles");
+        RequireProperties(cameraProfiles, "tacticalProfileId", "strategicProfileId", "requestPolicy");
+        RequireProperties(
+            RequireProperty(cameraProfiles, "requestPolicy"),
+            "blendDurationSeconds",
+            "resetRuntimeState",
+            "snapToFollowTargetWhenAvailable",
+            "strategicTargetXCm",
+            "strategicTargetYCm");
+        RequireProperties(
+            RequireProperty(root, "minimap"),
+            "visible",
+            "initialPreset",
+            "followCameraHalfExtentCm",
+            "rotateWithCamera");
         RequireProperties(
             RequireProperty(root, "flow"),
             "enabled",
             "iterationsPerStep",
+            "maxIterationsPerStep",
             "stepIntervalTicks",
             "crowdStampIntervalTicks",
             "obstacleStampIntervalTicks",
@@ -184,10 +277,6 @@ public sealed class MassNavigationConfig
             "maxRetryCount");
         RequireProperties(
             RequireProperty(root, "avoidance"),
-            "lightNavMass",
-            "heavyNavMass",
-            "lightVisualScale",
-            "heavyVisualScale",
             "dominantMassRatio",
             "friendlyResponseScale",
             "friendlyResponseMin",
@@ -209,7 +298,6 @@ public sealed class MassNavigationConfig
         JsonElement semantics = RequireProperty(root, "semantics");
         RequireProperties(
             RequireProperty(semantics, "obstacle"),
-            "agentBodyRadiusCm",
             "hardResolveCandidateDistanceCm",
             "softPushPaddingCm",
             "softPushForceScale");
@@ -317,6 +405,17 @@ public sealed class MassNavigationConfig
         return value;
     }
 
+    private static bool RequireBooleanProperty(JsonElement root, string propertyName)
+    {
+        JsonElement value = RequireProperty(root, propertyName);
+        return value.ValueKind switch
+        {
+            JsonValueKind.True => true,
+            JsonValueKind.False => false,
+            _ => throw new InvalidOperationException($"Mass-nav config requires explicit boolean '{propertyName}' property.")
+        };
+    }
+
     private static void RequireProperties(JsonElement root, params string[] propertyNames)
     {
         for (int i = 0; i < propertyNames.Length; i++)
@@ -332,12 +431,14 @@ public sealed class MassNavigationConfig
             throw new InvalidOperationException("Mass-nav config requires a non-empty map id.");
         }
 
-        Scenario.Validate();
+        Solver.Validate();
         ScenarioRuntime.Validate();
+        Scenario.Validate(ScenarioRuntime);
         Presentation.Validate(Scenario, ScenarioRuntime);
         Cadence.Validate();
         AgentProfiles.Validate();
         CameraProfiles.Validate();
+        Minimap.Validate();
         ViewResidency.Validate();
         Flow.Validate();
         Arrival.Validate();
@@ -348,11 +449,17 @@ public sealed class MassNavigationConfig
             throw new InvalidOperationException("Mass-nav config requires an explicit world section.");
         }
 
-        World.Validate();
+        World.Validate(Solver);
+        ScenarioRuntime.RuntimeCapacity.ValidateForStreaming(World, ViewResidency);
 
         ValidateRelationships();
 
-        var knownTeams = new HashSet<int>(Scenario.Teams.Select(team => team.Id));
+        var knownTeams = new HashSet<int>(Scenario.Teams.Length);
+        for (int i = 0; i < Scenario.Teams.Length; i++)
+        {
+            knownTeams.Add(Scenario.Teams[i].Id);
+        }
+
         for (int i = 0; i < TeamRelationships.Relationships.Count; i++)
         {
             RelationshipEntry relation = TeamRelationships.Relationships[i];
@@ -394,9 +501,321 @@ public sealed class MassNavigationConfig
 public sealed class MassNavigationScenarioRuntimeConfig
 {
     public bool AutoSpawnConfiguredScenario { get; set; }
+    public int InitialSelectionScratchCapacity { get; set; }
+    public int InitialSelectedEntityCapacity { get; set; }
+    public MassNavigationRuntimeCapacityConfig RuntimeCapacity { get; set; } = new();
+    public MassNavigationPanelControlsConfig PanelControls { get; set; } = new();
 
     public void Validate()
     {
+        if (InitialSelectionScratchCapacity <= 0)
+        {
+            throw new InvalidOperationException("Mass-nav scenarioRuntime.initialSelectionScratchCapacity must be > 0.");
+        }
+
+        if (InitialSelectedEntityCapacity <= 0)
+        {
+            throw new InvalidOperationException("Mass-nav scenarioRuntime.initialSelectedEntityCapacity must be > 0.");
+        }
+
+        if (RuntimeCapacity == null)
+        {
+            throw new InvalidOperationException("Mass-nav scenarioRuntime.runtimeCapacity must be explicitly configured.");
+        }
+
+        if (PanelControls == null)
+        {
+            throw new InvalidOperationException("Mass-nav scenarioRuntime.panelControls must be explicitly configured.");
+        }
+
+        RuntimeCapacity.Validate(this);
+        PanelControls.Validate();
+    }
+}
+
+public sealed class MassNavigationRuntimeCapacityConfig
+{
+    public int NavigationGroupCapacity { get; set; }
+    public int GroupMembershipAgentCapacity { get; set; }
+    public int SelectionMemberScratchCapacity { get; set; }
+    public int GroupMemberCapacity { get; set; }
+    public int OrderIngestionTokenCapacity { get; set; }
+    public int OrderIngestionMemberCapacity { get; set; }
+    public int LoadedChunkCapacity { get; set; }
+    public int MetadataTeamCapacity { get; set; }
+
+    public void Validate(MassNavigationScenarioRuntimeConfig scenarioRuntime)
+    {
+        if (scenarioRuntime == null)
+        {
+            throw new InvalidOperationException("Mass-nav runtimeCapacity validation requires scenarioRuntime.");
+        }
+
+        RequirePositive(NavigationGroupCapacity, "navigationGroupCapacity");
+        RequirePositive(GroupMembershipAgentCapacity, "groupMembershipAgentCapacity");
+        RequirePositive(SelectionMemberScratchCapacity, "selectionMemberScratchCapacity");
+        RequirePositive(GroupMemberCapacity, "groupMemberCapacity");
+        RequirePositive(OrderIngestionTokenCapacity, "orderIngestionTokenCapacity");
+        RequirePositive(OrderIngestionMemberCapacity, "orderIngestionMemberCapacity");
+        RequirePositive(LoadedChunkCapacity, "loadedChunkCapacity");
+        RequirePositive(MetadataTeamCapacity, "metadataTeamCapacity");
+
+        if (SelectionMemberScratchCapacity < scenarioRuntime.InitialSelectedEntityCapacity)
+        {
+            throw new InvalidOperationException(
+                "Mass-nav scenarioRuntime.runtimeCapacity.selectionMemberScratchCapacity must be >= scenarioRuntime.initialSelectedEntityCapacity.");
+        }
+
+        if (GroupMemberCapacity < scenarioRuntime.InitialSelectedEntityCapacity)
+        {
+            throw new InvalidOperationException(
+                "Mass-nav scenarioRuntime.runtimeCapacity.groupMemberCapacity must be >= scenarioRuntime.initialSelectedEntityCapacity.");
+        }
+
+        if (OrderIngestionTokenCapacity < NavigationGroupCapacity)
+        {
+            throw new InvalidOperationException(
+                "Mass-nav scenarioRuntime.runtimeCapacity.orderIngestionTokenCapacity must be >= scenarioRuntime.runtimeCapacity.navigationGroupCapacity.");
+        }
+
+        if (OrderIngestionMemberCapacity < scenarioRuntime.InitialSelectedEntityCapacity)
+        {
+            throw new InvalidOperationException(
+                "Mass-nav scenarioRuntime.runtimeCapacity.orderIngestionMemberCapacity must be >= scenarioRuntime.initialSelectedEntityCapacity.");
+        }
+    }
+
+    public void ValidateForScenario(int teamCount, int agentsPerTeam)
+    {
+        if (teamCount <= 0)
+        {
+            throw new InvalidOperationException("Mass-nav runtimeCapacity scenario validation requires a positive team count.");
+        }
+
+        long authoredAgentCount = (long)teamCount * agentsPerTeam;
+        if (authoredAgentCount > GroupMembershipAgentCapacity)
+        {
+            throw new InvalidOperationException(
+                $"Mass-nav scenarioRuntime.runtimeCapacity.groupMembershipAgentCapacity {GroupMembershipAgentCapacity} is smaller than authored scenario agent count {authoredAgentCount}.");
+        }
+
+        if (teamCount > MetadataTeamCapacity)
+        {
+            throw new InvalidOperationException(
+                $"Mass-nav scenarioRuntime.runtimeCapacity.metadataTeamCapacity {MetadataTeamCapacity} is smaller than authored scenario team count {teamCount}.");
+        }
+    }
+
+    public void ValidateForStreaming(MassNavigationWorldConfig world, MassNavigationViewResidencyConfig viewResidency)
+    {
+        if (world == null)
+        {
+            throw new InvalidOperationException("Mass-nav runtimeCapacity streaming validation requires world config.");
+        }
+
+        if (viewResidency == null)
+        {
+            throw new InvalidOperationException("Mass-nav runtimeCapacity streaming validation requires viewResidency config.");
+        }
+
+        int minimumWindowChunkCapacity = CountSquareChunksForRadius(
+            viewResidency.RadiusCm,
+            world.StreamingChunkSizeCm);
+        if (LoadedChunkCapacity < minimumWindowChunkCapacity)
+        {
+            throw new InvalidOperationException(
+                $"Mass-nav scenarioRuntime.runtimeCapacity.loadedChunkCapacity {LoadedChunkCapacity} is smaller than one view-residency window chunk count {minimumWindowChunkCapacity}.");
+        }
+    }
+
+    public void ValidateForPanelControls(int teamCount, MassNavigationPanelControlsConfig panelControls)
+    {
+        if (teamCount <= 0)
+        {
+            throw new InvalidOperationException("Mass-nav runtimeCapacity panel validation requires a positive team count.");
+        }
+
+        if (panelControls == null)
+        {
+            throw new InvalidOperationException("Mass-nav runtimeCapacity panel validation requires panelControls.");
+        }
+
+        long maxPanelAgentCount = (long)teamCount * panelControls.MaxAgentsPerTeam;
+        if (maxPanelAgentCount > GroupMembershipAgentCapacity)
+        {
+            throw new InvalidOperationException(
+                $"Mass-nav scenarioRuntime.runtimeCapacity.groupMembershipAgentCapacity {GroupMembershipAgentCapacity} is smaller than panel max agent count {maxPanelAgentCount}.");
+        }
+    }
+
+    private static void RequirePositive(int value, string fieldName)
+    {
+        if (value <= 0)
+        {
+            throw new InvalidOperationException($"Mass-nav scenarioRuntime.runtimeCapacity.{fieldName} must be > 0.");
+        }
+    }
+
+    private static int CountSquareChunksForRadius(int radiusCm, int chunkSizeCm)
+    {
+        if (radiusCm <= 0 || chunkSizeCm <= 0)
+        {
+            throw new InvalidOperationException("Mass-nav streaming chunk capacity validation requires positive radius and chunk size.");
+        }
+
+        int chunkRadius = (radiusCm + chunkSizeCm - 1) / chunkSizeCm;
+        int span = checked((chunkRadius * 2) + 1);
+        return checked(span * span);
+    }
+}
+
+public sealed class MassNavigationPanelControlsConfig
+{
+    public int MaxAgentsPerTeam { get; set; }
+    public int TotalAgentStep { get; set; }
+    public int[] TotalAgentPresets { get; set; } = Array.Empty<int>();
+    public float PanelRefreshIntervalSeconds { get; set; }
+    public float ViewResidencyRetainSecondsStep { get; set; }
+    public int SimulationBudgetStepMs { get; set; }
+    public int SimulationBudgetMinMs { get; set; }
+    public int SimulationBudgetMaxMs { get; set; }
+    public int SimulationSliceStep { get; set; }
+    public int SimulationSliceMin { get; set; }
+    public int SimulationSliceMax { get; set; }
+    public int EnginePolicyHzStep { get; set; }
+    public int EnginePolicyHzMin { get; set; }
+    public int EnginePolicyHzMax { get; set; }
+    public int EnginePolicyMaxStepsStep { get; set; }
+    public int EnginePolicyMaxStepsMin { get; set; }
+    public int EnginePolicyMaxStepsMax { get; set; }
+    public int ArrivalTimeoutStepMs { get; set; }
+    public int ArrivalProgressStepCm { get; set; }
+    public int ArrivalWakePushStepCm { get; set; }
+    public int ArrivalRetryStep { get; set; }
+    public int FlowIterationStep { get; set; }
+    public int FlowCadenceHzStep { get; set; }
+
+    public void Validate()
+    {
+        if (MaxAgentsPerTeam <= 0)
+        {
+            throw new InvalidOperationException("Mass-nav scenarioRuntime.panelControls.maxAgentsPerTeam must be > 0.");
+        }
+
+        if (TotalAgentStep <= 0)
+        {
+            throw new InvalidOperationException("Mass-nav scenarioRuntime.panelControls.totalAgentStep must be > 0.");
+        }
+
+        if (TotalAgentPresets == null || TotalAgentPresets.Length == 0)
+        {
+            throw new InvalidOperationException("Mass-nav scenarioRuntime.panelControls.totalAgentPresets must declare at least one value.");
+        }
+
+        var seen = new HashSet<int>(TotalAgentPresets.Length);
+        for (int i = 0; i < TotalAgentPresets.Length; i++)
+        {
+            int preset = TotalAgentPresets[i];
+            if (preset <= 0)
+            {
+                throw new InvalidOperationException(
+                    $"Mass-nav scenarioRuntime.panelControls.totalAgentPresets[{i}] must be > 0.");
+            }
+
+            if (!seen.Add(preset))
+            {
+                throw new InvalidOperationException(
+                    $"Mass-nav scenarioRuntime.panelControls.totalAgentPresets contains duplicate total {preset}.");
+            }
+        }
+
+        RequirePositive(PanelRefreshIntervalSeconds, "panelRefreshIntervalSeconds");
+        RequirePositive(ViewResidencyRetainSecondsStep, "viewResidencyRetainSecondsStep");
+        RequirePositive(SimulationBudgetStepMs, "simulationBudgetStepMs");
+        RequireRange(SimulationBudgetMinMs, SimulationBudgetMaxMs, "simulationBudget");
+        RequirePositive(SimulationSliceStep, "simulationSliceStep");
+        RequireRange(SimulationSliceMin, SimulationSliceMax, "simulationSlice");
+        RequirePositive(EnginePolicyHzStep, "enginePolicyHzStep");
+        RequireNonNegativeRange(EnginePolicyHzMin, EnginePolicyHzMax, "enginePolicyHz");
+        RequirePositive(EnginePolicyMaxStepsStep, "enginePolicyMaxStepsStep");
+        RequireRange(EnginePolicyMaxStepsMin, EnginePolicyMaxStepsMax, "enginePolicyMaxSteps");
+        RequirePositive(ArrivalTimeoutStepMs, "arrivalTimeoutStepMs");
+        RequirePositive(ArrivalProgressStepCm, "arrivalProgressStepCm");
+        RequirePositive(ArrivalWakePushStepCm, "arrivalWakePushStepCm");
+        RequirePositive(ArrivalRetryStep, "arrivalRetryStep");
+        RequirePositive(FlowIterationStep, "flowIterationStep");
+        RequirePositive(FlowCadenceHzStep, "flowCadenceHzStep");
+    }
+
+    public void ValidateForTeamCount(int teamCount, int agentsPerTeam)
+    {
+        if (teamCount <= 0)
+        {
+            throw new InvalidOperationException("Mass-nav panelControls validation requires a positive team count.");
+        }
+
+        if (agentsPerTeam > MaxAgentsPerTeam)
+        {
+            throw new InvalidOperationException(
+                $"Mass-nav scenario.agentsPerTeam {agentsPerTeam} exceeds scenarioRuntime.panelControls.maxAgentsPerTeam {MaxAgentsPerTeam}.");
+        }
+
+        if (TotalAgentStep % teamCount != 0)
+        {
+            throw new InvalidOperationException(
+                $"Mass-nav scenarioRuntime.panelControls.totalAgentStep {TotalAgentStep} must divide evenly across {teamCount} teams.");
+        }
+
+        long maxTotal = (long)MaxAgentsPerTeam * teamCount;
+        for (int i = 0; i < TotalAgentPresets.Length; i++)
+        {
+            int preset = TotalAgentPresets[i];
+            if (preset % teamCount != 0)
+            {
+                throw new InvalidOperationException(
+                    $"Mass-nav scenarioRuntime.panelControls.totalAgentPresets[{i}] {preset} must divide evenly across {teamCount} teams.");
+            }
+
+            if (preset > maxTotal)
+            {
+                throw new InvalidOperationException(
+                    $"Mass-nav scenarioRuntime.panelControls.totalAgentPresets[{i}] {preset} exceeds max total {maxTotal}.");
+            }
+        }
+    }
+
+    private static void RequirePositive(int value, string fieldName)
+    {
+        if (value <= 0)
+        {
+            throw new InvalidOperationException($"Mass-nav scenarioRuntime.panelControls.{fieldName} must be > 0.");
+        }
+    }
+
+    private static void RequirePositive(float value, string fieldName)
+    {
+        if (!(value > 0f))
+        {
+            throw new InvalidOperationException($"Mass-nav scenarioRuntime.panelControls.{fieldName} must be > 0.");
+        }
+    }
+
+    private static void RequireRange(int min, int max, string fieldName)
+    {
+        if (min <= 0 || max < min)
+        {
+            throw new InvalidOperationException(
+                $"Mass-nav scenarioRuntime.panelControls.{fieldName} range must have min > 0 and max >= min.");
+        }
+    }
+
+    private static void RequireNonNegativeRange(int min, int max, string fieldName)
+    {
+        if (min < 0 || max < min)
+        {
+            throw new InvalidOperationException(
+                $"Mass-nav scenarioRuntime.panelControls.{fieldName} range must have min >= 0 and max >= min.");
+        }
     }
 }
 
@@ -450,6 +869,7 @@ public sealed class MassNavigationCameraProfilesConfig
 {
     public string TacticalProfileId { get; set; } = string.Empty;
     public string StrategicProfileId { get; set; } = string.Empty;
+    public MassNavigationCameraRequestPolicyConfig RequestPolicy { get; set; } = new();
 
     public void Validate()
     {
@@ -466,6 +886,57 @@ public sealed class MassNavigationCameraProfilesConfig
         if (string.Equals(TacticalProfileId, StrategicProfileId, StringComparison.Ordinal))
         {
             throw new InvalidOperationException("Mass-nav cameraProfiles tactical and strategic profile ids must be distinct.");
+        }
+
+        RequestPolicy.Validate();
+    }
+}
+
+public sealed class MassNavigationCameraRequestPolicyConfig
+{
+    public float BlendDurationSeconds { get; set; }
+    public bool ResetRuntimeState { get; set; }
+    public bool SnapToFollowTargetWhenAvailable { get; set; }
+    public float StrategicTargetXCm { get; set; }
+    public float StrategicTargetYCm { get; set; }
+
+    public void Validate()
+    {
+        if (BlendDurationSeconds < 0f)
+        {
+            throw new InvalidOperationException("Mass-nav cameraProfiles.requestPolicy.blendDurationSeconds must be >= 0.");
+        }
+    }
+}
+
+public sealed class MassNavigationMinimapConfig
+{
+    private MinimapPreset _parsedInitialPreset;
+
+    public bool Visible { get; set; }
+    public string InitialPreset { get; set; } = string.Empty;
+    public float FollowCameraHalfExtentCm { get; set; }
+    public bool RotateWithCamera { get; set; }
+
+    [JsonIgnore]
+    public MinimapPreset ParsedInitialPreset => _parsedInitialPreset;
+
+    public void Validate()
+    {
+        _parsedInitialPreset = InitialPreset switch
+        {
+            "RtsFullMap" => MinimapPreset.RtsFullMap,
+            "FollowCamera" => MinimapPreset.FollowCamera,
+            "FollowEntity" => throw new InvalidOperationException(
+                "Mass-nav minimap.initialPreset cannot be FollowEntity without an authored follow entity."),
+            "" => throw new InvalidOperationException("Mass-nav minimap.initialPreset must be a non-empty semantic string."),
+            _ => throw new InvalidOperationException(
+                $"Mass-nav minimap.initialPreset '{InitialPreset}' is not configured. Use RtsFullMap or FollowCamera.")
+        };
+
+        if (FollowCameraHalfExtentCm <= 0f)
+        {
+            throw new InvalidOperationException("Mass-nav minimap.followCameraHalfExtentCm must be > 0.");
         }
     }
 }
@@ -502,29 +973,34 @@ public sealed class MassNavigationPresentationConfig
             }
         }
 
-        RequireNonEmpty(BlockerPerformerId, nameof(BlockerPerformerId));
-        RequireNonEmpty(HotspotPerformerId, nameof(HotspotPerformerId));
-        RequireNonEmpty(BlockerTemplateId, nameof(BlockerTemplateId));
-        RequireNonEmpty(HotspotTemplateId, nameof(HotspotTemplateId));
-
         if (!scenarioRuntime.AutoSpawnConfiguredScenario)
         {
             if (Teams.Length != 0)
             {
                 throw new InvalidOperationException(
-                    "Mass-nav presentation.teams must be empty when scenarioRuntime.autoSpawnConfiguredScenario is false; formation-owned scenarios must author agent templates in their own config.");
+                    "Mass-nav presentation.teams must be empty when scenarioRuntime.autoSpawnConfiguredScenario is false; externally-authored scenarios must author agent templates in their own config.");
             }
 
             return;
         }
+
+        RequireNonEmpty(BlockerPerformerId, nameof(BlockerPerformerId));
+        RequireNonEmpty(HotspotPerformerId, nameof(HotspotPerformerId));
+        RequireNonEmpty(BlockerTemplateId, nameof(BlockerTemplateId));
+        RequireNonEmpty(HotspotTemplateId, nameof(HotspotTemplateId));
 
         if (Teams.Length != scenario.Teams.Length)
         {
             throw new InvalidOperationException("Mass-nav presentation team style count must match scenario teams.");
         }
 
-        var scenarioTeamIds = new HashSet<int>(scenario.Teams.Select(team => team.Id));
-        var seenIds = new HashSet<int>();
+        var scenarioTeamIds = new HashSet<int>(scenario.Teams.Length);
+        for (int i = 0; i < scenario.Teams.Length; i++)
+        {
+            scenarioTeamIds.Add(scenario.Teams[i].Id);
+        }
+
+        var seenIds = new HashSet<int>(Teams.Length);
         for (int i = 0; i < Teams.Length; i++)
         {
             MassNavigationTeamPresentationConfig team = Teams[i];
@@ -571,6 +1047,106 @@ public sealed class MassNavigationPresentationConfig
         if (string.IsNullOrWhiteSpace(value))
         {
             throw new InvalidOperationException($"Mass-nav presentation requires non-empty {fieldName}.");
+        }
+    }
+}
+
+public sealed class MassFlowSolverConfig
+{
+    public int FieldWidthCm { get; set; }
+    public int FieldHeightCm { get; set; }
+    public int FlowCellSizeCm { get; set; }
+    public int MaxObstacleCount { get; set; }
+    public int ParallelWorkerCount { get; set; }
+    public int SeparationHashCellSizeCm { get; set; }
+    public int SeparationHashMinSearchRadiusCells { get; set; }
+    public int HardResolveHashCellSizeCm { get; set; }
+    public int HardResolveHashMinSearchRadiusCells { get; set; }
+    public float PlayAreaMinXCm { get; set; }
+    public float PlayAreaMaxXCm { get; set; }
+    public float PlayAreaMinYCm { get; set; }
+    public float PlayAreaMaxYCm { get; set; }
+
+    [JsonIgnore]
+    public int FlowGridWidth => FieldWidthCm / FlowCellSizeCm;
+
+    [JsonIgnore]
+    public int FlowGridHeight => FieldHeightCm / FlowCellSizeCm;
+
+    [JsonIgnore]
+    public int SeparationHashWidth => FieldWidthCm / SeparationHashCellSizeCm;
+
+    [JsonIgnore]
+    public int SeparationHashHeight => FieldHeightCm / SeparationHashCellSizeCm;
+
+    [JsonIgnore]
+    public int HardResolveHashWidth => FieldWidthCm / HardResolveHashCellSizeCm;
+
+    [JsonIgnore]
+    public int HardResolveHashHeight => FieldHeightCm / HardResolveHashCellSizeCm;
+
+    public void Validate()
+    {
+        RequirePositive(FieldWidthCm, nameof(FieldWidthCm));
+        RequirePositive(FieldHeightCm, nameof(FieldHeightCm));
+        RequirePositive(FlowCellSizeCm, nameof(FlowCellSizeCm));
+        RequirePositive(MaxObstacleCount, nameof(MaxObstacleCount));
+        RequirePositive(ParallelWorkerCount, nameof(ParallelWorkerCount));
+        RequirePositive(SeparationHashCellSizeCm, nameof(SeparationHashCellSizeCm));
+        RequireNonNegative(SeparationHashMinSearchRadiusCells, nameof(SeparationHashMinSearchRadiusCells));
+        RequirePositive(HardResolveHashCellSizeCm, nameof(HardResolveHashCellSizeCm));
+        RequireNonNegative(HardResolveHashMinSearchRadiusCells, nameof(HardResolveHashMinSearchRadiusCells));
+        RequireDivisible(FieldWidthCm, FlowCellSizeCm, nameof(FieldWidthCm), nameof(FlowCellSizeCm));
+        RequireDivisible(FieldHeightCm, FlowCellSizeCm, nameof(FieldHeightCm), nameof(FlowCellSizeCm));
+        RequireDivisible(FieldWidthCm, SeparationHashCellSizeCm, nameof(FieldWidthCm), nameof(SeparationHashCellSizeCm));
+        RequireDivisible(FieldHeightCm, SeparationHashCellSizeCm, nameof(FieldHeightCm), nameof(SeparationHashCellSizeCm));
+        RequireDivisible(FieldWidthCm, HardResolveHashCellSizeCm, nameof(FieldWidthCm), nameof(HardResolveHashCellSizeCm));
+        RequireDivisible(FieldHeightCm, HardResolveHashCellSizeCm, nameof(FieldHeightCm), nameof(HardResolveHashCellSizeCm));
+        RequireGridCapacity(FlowGridWidth, FlowGridHeight, "flow grid");
+        RequireGridCapacity(SeparationHashWidth, SeparationHashHeight, "separation hash");
+        RequireGridCapacity(HardResolveHashWidth, HardResolveHashHeight, "hard-resolve hash");
+        RequireOrderedPlayArea(PlayAreaMinXCm, PlayAreaMaxXCm, FieldWidthCm, nameof(PlayAreaMinXCm), nameof(PlayAreaMaxXCm));
+        RequireOrderedPlayArea(PlayAreaMinYCm, PlayAreaMaxYCm, FieldHeightCm, nameof(PlayAreaMinYCm), nameof(PlayAreaMaxYCm));
+    }
+
+    private static void RequirePositive(int value, string name)
+    {
+        if (value <= 0)
+        {
+            throw new InvalidOperationException($"Mass-nav solver requires {name} > 0.");
+        }
+    }
+
+    private static void RequireNonNegative(int value, string name)
+    {
+        if (value < 0)
+        {
+            throw new InvalidOperationException($"Mass-nav solver requires {name} >= 0.");
+        }
+    }
+
+    private static void RequireDivisible(int value, int divisor, string valueName, string divisorName)
+    {
+        if (value % divisor != 0)
+        {
+            throw new InvalidOperationException($"Mass-nav solver requires {valueName} to be divisible by {divisorName}.");
+        }
+    }
+
+    private static void RequireGridCapacity(int width, int height, string label)
+    {
+        if ((long)width * height > int.MaxValue)
+        {
+            throw new InvalidOperationException($"Mass-nav solver {label} is too large for managed SoA arrays.");
+        }
+    }
+
+    private static void RequireOrderedPlayArea(float min, float max, int fieldSize, string minName, string maxName)
+    {
+        if (!(min >= 0f) || !(max <= fieldSize) || !(min <= max))
+        {
+            throw new InvalidOperationException(
+                $"Mass-nav solver requires ordered {minName}/{maxName} inside the configured field.");
         }
     }
 }
@@ -692,8 +1268,13 @@ public sealed class MassNavigationWorldConfig
         return true;
     }
 
-    public void Validate()
+    public void Validate(MassFlowSolverConfig solver)
     {
+        if (solver == null)
+        {
+            throw new InvalidOperationException("Mass-nav world validation requires an explicit solver section.");
+        }
+
         if (HotZones.Length <= 0)
         {
             throw new InvalidOperationException("Mass-nav world requires at least one configured hotspot debug landmark.");
@@ -704,17 +1285,17 @@ public sealed class MassNavigationWorldConfig
             throw new InvalidOperationException("Mass-nav world requires explicitly authored obstacles.");
         }
 
-        if (Obstacles.Length > MassFlowSimulationState.MaxObstacleCount)
+        if (Obstacles.Length > solver.MaxObstacleCount)
         {
             throw new InvalidOperationException(
-                $"Mass-nav world obstacle count {Obstacles.Length} exceeds solver capacity {MassFlowSimulationState.MaxObstacleCount}.");
+                $"Mass-nav world obstacle count {Obstacles.Length} exceeds configured solver capacity {solver.MaxObstacleCount}.");
         }
 
-        if (SolverWindowWidthCm != MassFlowSimulationState.FieldWidthCm ||
-            SolverWindowHeightCm != MassFlowSimulationState.FieldHeightCm)
+        if (SolverWindowWidthCm != solver.FieldWidthCm ||
+            SolverWindowHeightCm != solver.FieldHeightCm)
         {
             throw new InvalidOperationException(
-                $"Mass-nav world solver window must be explicit and match the current SoA solver cache ({MassFlowSimulationState.FieldWidthCm}x{MassFlowSimulationState.FieldHeightCm} cm).");
+                $"Mass-nav world solver window must match solver field size ({solver.FieldWidthCm}x{solver.FieldHeightCm} cm).");
         }
 
         var ids = new HashSet<string>(StringComparer.Ordinal);
@@ -996,9 +1577,15 @@ public sealed class MassNavigationScenarioConfig
     public int AgentsPerTeam { get; set; }
     public int InitialSelectedTeamId { get; set; }
     public MassNavigationScenarioTeamConfig[] Teams { get; set; } = Array.Empty<MassNavigationScenarioTeamConfig>();
+    public MassNavigationScenarioSpawnLayoutConfig SpawnLayout { get; set; } = new();
 
-    public void Validate()
+    public void Validate(MassNavigationScenarioRuntimeConfig scenarioRuntime)
     {
+        if (scenarioRuntime == null)
+        {
+            throw new InvalidOperationException("Mass-nav scenario validation requires an explicit scenarioRuntime section.");
+        }
+
         if (AgentsPerTeam < 0)
         {
             throw new InvalidOperationException("Mass-nav config requires AgentsPerTeam >= 0.");
@@ -1009,7 +1596,7 @@ public sealed class MassNavigationScenarioConfig
             throw new InvalidOperationException("Mass-nav config requires at least one team.");
         }
 
-        var seenIds = new HashSet<int>();
+        var seenIds = new HashSet<int>(Teams.Length);
         for (int i = 0; i < Teams.Length; i++)
         {
             MassNavigationScenarioTeamConfig team = Teams[i];
@@ -1033,6 +1620,48 @@ public sealed class MassNavigationScenarioConfig
         {
             throw new InvalidOperationException(
                 $"Mass-nav config InitialSelectedTeamId {InitialSelectedTeamId} is not present in Scenario.Teams.");
+        }
+
+        scenarioRuntime.RuntimeCapacity.ValidateForScenario(Teams.Length, AgentsPerTeam);
+        scenarioRuntime.PanelControls.ValidateForTeamCount(Teams.Length, AgentsPerTeam);
+        scenarioRuntime.RuntimeCapacity.ValidateForPanelControls(Teams.Length, scenarioRuntime.PanelControls);
+
+        if (scenarioRuntime.AutoSpawnConfiguredScenario)
+        {
+            SpawnLayout.Validate();
+        }
+    }
+}
+
+public enum MassNavigationScenarioSpawnLayoutKind : byte
+{
+    OrbitOpposedTargets = 1,
+}
+
+public sealed class MassNavigationScenarioSpawnLayoutConfig
+{
+    private MassNavigationScenarioSpawnLayoutKind _parsedKind;
+
+    public string Kind { get; set; } = string.Empty;
+    public float OrbitRadiusCm { get; set; }
+    public int RandomSeed { get; set; }
+
+    [JsonIgnore]
+    public MassNavigationScenarioSpawnLayoutKind ParsedKind => _parsedKind;
+
+    public void Validate()
+    {
+        _parsedKind = Kind switch
+        {
+            "OrbitOpposedTargets" => MassNavigationScenarioSpawnLayoutKind.OrbitOpposedTargets,
+            "" => throw new InvalidOperationException("Mass-nav scenario.spawnLayout.kind must be a non-empty semantic string."),
+            _ => throw new InvalidOperationException(
+                $"Mass-nav scenario.spawnLayout.kind '{Kind}' is not configured.")
+        };
+
+        if (OrbitRadiusCm <= 0f)
+        {
+            throw new InvalidOperationException("Mass-nav scenario.spawnLayout.orbitRadiusCm must be > 0.");
         }
     }
 }

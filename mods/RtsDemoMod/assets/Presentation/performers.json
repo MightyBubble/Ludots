@@ -20,32 +20,32 @@
     },
     "bindings": [
       {
-        "paramKey": 1,
+        "paramKey": "groundOverlay.innerRadius",
         "source": "constant",
         "constantValue": 0.84
       },
       {
-        "paramKey": 8,
+        "paramKey": "groundOverlay.border.r",
         "source": "entityColor",
         "sourceId": 0
       },
       {
-        "paramKey": 9,
+        "paramKey": "groundOverlay.border.g",
         "source": "entityColor",
         "sourceId": 1
       },
       {
-        "paramKey": 10,
+        "paramKey": "groundOverlay.border.b",
         "source": "entityColor",
         "sourceId": 2
       },
       {
-        "paramKey": 11,
+        "paramKey": "groundOverlay.border.a",
         "source": "constant",
-        "constantValue": 1.0
+        "constantValue": 1
       },
       {
-        "paramKey": 12,
+        "paramKey": "groundOverlay.border.width",
         "source": "constant",
         "constantValue": 0.08
       }
@@ -53,7 +53,8 @@
     "rules": [
       {
         "event": {
-          "kind": "EntitySpawned"
+          "kind": "EntitySpawned",
+          "key": "*"
         },
         "command": {
           "kind": "CreatePerformer",
@@ -66,7 +67,8 @@
       },
       {
         "event": {
-          "kind": "EntityDestroyed"
+          "kind": "EntityDestroyed",
+          "key": "*"
         },
         "command": {
           "kind": "DestroyPerformerScope",
@@ -76,12 +78,13 @@
     ],
     "behaviors": [
       {
-        "slot": 0,
+        "slot": "body",
         "kind": "AssetBinding",
         "activeByDefault": true,
         "assetBinding": {
           "assetKind": "GroundOverlay",
           "assetId": "Ring",
+          "renderPath": "None",
           "mobility": "Movable",
           "localScale": [
             1.5,
@@ -98,7 +101,7 @@
     "defaultColor": [
       0.92,
       0.96,
-      1.0,
+      1,
       0.98
     ],
     "defaultLifetime": -1,
@@ -113,45 +116,46 @@
     },
     "bindings": [
       {
-        "paramKey": 1,
+        "paramKey": "marker3d.scale.x",
         "source": "constant",
         "constantValue": 1.18
       },
       {
-        "paramKey": 2,
+        "paramKey": "marker3d.scale.y",
         "source": "constant",
         "constantValue": 1.38
       },
       {
-        "paramKey": 3,
+        "paramKey": "marker3d.scale.z",
         "source": "constant",
         "constantValue": 1.18
       },
       {
-        "paramKey": 4,
+        "paramKey": "marker3d.color.r",
         "source": "entityColor",
         "sourceId": 0
       },
       {
-        "paramKey": 5,
+        "paramKey": "marker3d.color.g",
         "source": "entityColor",
         "sourceId": 1
       },
       {
-        "paramKey": 6,
+        "paramKey": "marker3d.color.b",
         "source": "entityColor",
         "sourceId": 2
       },
       {
-        "paramKey": 7,
+        "paramKey": "marker3d.color.a",
         "source": "constant",
-        "constantValue": 1.0
+        "constantValue": 1
       }
     ],
     "rules": [
       {
         "event": {
-          "kind": "EntitySpawned"
+          "kind": "EntitySpawned",
+          "key": "*"
         },
         "command": {
           "kind": "CreatePerformer",
@@ -164,7 +168,8 @@
       },
       {
         "event": {
-          "kind": "EntityDestroyed"
+          "kind": "EntityDestroyed",
+          "key": "*"
         },
         "command": {
           "kind": "DestroyPerformerScope",
@@ -174,7 +179,7 @@
     ],
     "behaviors": [
       {
-        "slot": 0,
+        "slot": "body",
         "kind": "AssetBinding",
         "activeByDefault": true,
         "assetBinding": {

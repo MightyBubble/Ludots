@@ -6,13 +6,13 @@ using Ludots.Core.Presentation.Events;
 
 namespace Ludots.Core.Presentation.Systems
 {
-    public sealed class GlobalEventBridgeSystem : BaseSystem<World, float>
+    public sealed class GlobalPresentationEventProjectionSystem : BaseSystem<World, float>
     {
         private readonly GlobalPresentationEventBuffer _globalEvents;
         private readonly PresentationEventStream _stream;
         private readonly GameSession _session;
 
-        public GlobalEventBridgeSystem(
+        public GlobalPresentationEventProjectionSystem(
             World world,
             GlobalPresentationEventBuffer globalEvents,
             PresentationEventStream stream,
@@ -42,7 +42,7 @@ namespace Ludots.Core.Presentation.Systems
                         PayloadB = evt.PayloadB,
                     }))
                 {
-                    throw new InvalidOperationException($"PresentationEventStream is full while bridging global event kind={evt.Kind}, keyId={evt.KeyId}.");
+                    throw new InvalidOperationException($"PresentationEventStream is full while projecting global event kind={evt.Kind}, keyId={evt.KeyId}.");
                 }
             }
 

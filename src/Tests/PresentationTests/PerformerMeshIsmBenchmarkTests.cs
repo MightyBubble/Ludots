@@ -32,6 +32,7 @@ namespace Ludots.Tests.Presentation
         private const string BenchmarkEntityName = "BlacksmithMeshBenchmark";
         private const int MeasuredTickFrames = 60;
         private const int StableWarmupFrames = 8;
+        private const int SpawnSettleFrameBudget = 12;
 
         private static readonly int[] Counts = { 3_000, 10_000, 30_000 };
 
@@ -81,15 +82,18 @@ namespace Ludots.Tests.Presentation
             int ruinedMeshId = meshes.GetId("blacksmith.building.ruined");
 
             EnqueueBenchmarkTemplates(queue, engine.CurrentMapSession?.MapId ?? default, 1, out _);
-            PerformerBlacksmithShowcaseTestHarness.Tick(engine, 4);
 
             PrimitiveDrawItem? emitted = null;
-            foreach (ref readonly PrimitiveDrawItem item in snapshot.GetSpan())
+            for (int frame = 0; frame < SpawnSettleFrameBudget && !emitted.HasValue; frame++)
             {
-                if (item.TemplateId == benchmarkPerformerDefId)
+                PerformerBlacksmithShowcaseTestHarness.Tick(engine, 1);
+                foreach (ref readonly PrimitiveDrawItem item in snapshot.GetSpan())
                 {
-                    emitted = item;
-                    break;
+                    if (item.TemplateId == benchmarkPerformerDefId)
+                    {
+                        emitted = item;
+                        break;
+                    }
                 }
             }
 
@@ -213,7 +217,7 @@ namespace Ludots.Tests.Presentation
             string initSimulationTop3Name = string.Empty;
             float initSimulationTop3Ms = 0f;
             int settleFrames = 0;
-            for (int settleAttempt = 0; settleAttempt < 12; settleAttempt++)
+            for (int settleAttempt = 0; settleAttempt < SpawnSettleFrameBudget; settleAttempt++)
             {
                 long firstTickStart = Stopwatch.GetTimestamp();
                 PerformerBlacksmithShowcaseTestHarness.Tick(engine, 1);
@@ -472,7 +476,7 @@ namespace Ludots.Tests.Presentation
             var query = new Arch.Core.QueryDescription().WithAll<Name>();
             engine.World.Query(in query, (ref Name name) =>
             {
-                if (string.Equals(name.Value, BenchmarkEntityName, StringComparison.OrdinalIgnoreCase))
+                if (string.Equals(name.Value, BenchmarkEntityName, StringComparison.Ordinal))
                 {
                     count++;
                 }

@@ -53,6 +53,21 @@
       { "id": "central_blocker", "localXCm": 5000.0, "localYCm": 5000.0, "radiusCm": 300.0 }
     ]
   },
+  "solver": {
+    "fieldWidthCm": 10000,
+    "fieldHeightCm": 10000,
+    "flowCellSizeCm": 100,
+    "maxObstacleCount": 64,
+    "parallelWorkerCount": 8,
+    "separationHashCellSizeCm": 100,
+    "separationHashMinSearchRadiusCells": 2,
+    "hardResolveHashCellSizeCm": 50,
+    "hardResolveHashMinSearchRadiusCells": 1,
+    "playAreaMinXCm": 50.0,
+    "playAreaMaxXCm": 9950.0,
+    "playAreaMinYCm": 50.0,
+    "playAreaMaxYCm": 9950.0
+  },
   "presentation": {
     "requiredMeshAssetIds": [
       "mass_navigation.agent.soldier",
@@ -107,10 +122,52 @@
       { "id": 2, "name": "Crimson Column" },
       { "id": 3, "name": "Amber Phalanx" },
       { "id": 4, "name": "Emerald Guard" }
-    ]
+    ],
+    "spawnLayout": {
+      "kind": "OrbitOpposedTargets",
+      "orbitRadiusCm": 3650.0,
+      "randomSeed": 12648430
+    }
   },
   "scenarioRuntime": {
-    "autoSpawnConfiguredScenario": true
+    "autoSpawnConfiguredScenario": true,
+    "initialSelectionScratchCapacity": 256,
+    "initialSelectedEntityCapacity": 64,
+    "runtimeCapacity": {
+      "navigationGroupCapacity": 256,
+      "groupMembershipAgentCapacity": 160000,
+      "selectionMemberScratchCapacity": 256,
+      "groupMemberCapacity": 256,
+      "orderIngestionTokenCapacity": 256,
+      "orderIngestionMemberCapacity": 256,
+      "loadedChunkCapacity": 256,
+      "metadataTeamCapacity": 4
+    },
+    "panelControls": {
+      "maxAgentsPerTeam": 40000,
+      "totalAgentStep": 2000,
+      "totalAgentPresets": [5000, 10000, 20000, 40000],
+      "panelRefreshIntervalSeconds": 0.25,
+      "viewResidencyRetainSecondsStep": 2.0,
+      "simulationBudgetStepMs": 1,
+      "simulationBudgetMinMs": 1,
+      "simulationBudgetMaxMs": 64,
+      "simulationSliceStep": 30,
+      "simulationSliceMin": 1,
+      "simulationSliceMax": 2048,
+      "enginePolicyHzStep": 5,
+      "enginePolicyHzMin": 0,
+      "enginePolicyHzMax": 240,
+      "enginePolicyMaxStepsStep": 1,
+      "enginePolicyMaxStepsMin": 1,
+      "enginePolicyMaxStepsMax": 32,
+      "arrivalTimeoutStepMs": 250,
+      "arrivalProgressStepCm": 10,
+      "arrivalWakePushStepCm": 10,
+      "arrivalRetryStep": 1,
+      "flowIterationStep": 512,
+      "flowCadenceHzStep": 1
+    }
   },
   "cadence": {
     "simulationHz": 15,
@@ -121,7 +178,8 @@
     "hardResolveHz": 10,
     "entitySyncHz": 15,
     "maxStepsPerFixedTick": 1,
-    "hardResolveCandidateThresholdAgents": 1
+    "hardResolveCandidateThresholdAgents": 1,
+    "orderIdleScanIntervalFrames": 6
   },
   "agentProfiles": {
     "defaultProfileId": "light",
@@ -150,7 +208,20 @@
   },
   "cameraProfiles": {
     "tacticalProfileId": "Camera.Profile.MassNavigationTactical",
-    "strategicProfileId": "Camera.Profile.MassNavigationStrategic"
+    "strategicProfileId": "Camera.Profile.MassNavigationStrategic",
+    "requestPolicy": {
+      "blendDurationSeconds": 0.0,
+      "resetRuntimeState": true,
+      "snapToFollowTargetWhenAvailable": false,
+      "strategicTargetXCm": 0.0,
+      "strategicTargetYCm": 0.0
+    }
+  },
+  "minimap": {
+    "visible": true,
+    "initialPreset": "RtsFullMap",
+    "followCameraHalfExtentCm": 7000.0,
+    "rotateWithCamera": true
   },
   "teamRelationships": {
     "defaultRelationship": "Hostile",
@@ -161,6 +232,7 @@
   "flow": {
     "enabled": false,
     "iterationsPerStep": 4096,
+    "maxIterationsPerStep": 131072,
     "stepIntervalTicks": 1,
     "crowdStampIntervalTicks": 1,
     "obstacleStampIntervalTicks": 1,
@@ -212,10 +284,6 @@
     ]
   },
   "avoidance": {
-    "lightNavMass": 1.0,
-    "heavyNavMass": 4.0,
-    "lightVisualScale": 0.22,
-    "heavyVisualScale": 0.34,
     "dominantMassRatio": 2.25,
     "friendlyResponseScale": 1.1,
     "friendlyResponseMin": 0.35,
@@ -237,7 +305,6 @@
   },
   "semantics": {
     "obstacle": {
-      "agentBodyRadiusCm": 20.0,
       "hardResolveCandidateDistanceCm": 100.0,
       "softPushPaddingCm": 350.0,
       "softPushForceScale": 8.0

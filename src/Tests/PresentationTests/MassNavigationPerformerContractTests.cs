@@ -4,6 +4,7 @@ using System.IO;
 using System.Linq;
 using System.Text.Json;
 using System.Text.Json.Nodes;
+using Ludots.Core.Gameplay.GAS.Orders;
 using Ludots.Core.Input.Selection;
 using Ludots.Core.NodeLibraries.GASGraph;
 using NUnit.Framework;
@@ -297,6 +298,35 @@ namespace Ludots.Tests.Presentation
                 "Heavy distribution is an authored profile rule, not a solver hardcode.");
             Assert.That(heavy["navMass"]?.GetValue<float>(), Is.GreaterThan(1f));
             Assert.That(heavy["visualScale"]?.GetValue<float>(), Is.GreaterThan(0f));
+
+            JsonObject avoidance = config["avoidance"]?.AsObject()
+                ?? throw new InvalidOperationException("MassNavigationConfig.avoidance missing.");
+            Assert.That(avoidance.ContainsKey("lightNavMass"), Is.False,
+                "Agent navMass must be owned only by agentProfiles, not duplicated in avoidance.");
+            Assert.That(avoidance.ContainsKey("heavyNavMass"), Is.False,
+                "Agent navMass must be owned only by agentProfiles, not duplicated in avoidance.");
+            Assert.That(avoidance.ContainsKey("lightVisualScale"), Is.False,
+                "Agent visualScale must be owned only by agentProfiles, not duplicated in avoidance.");
+            Assert.That(avoidance.ContainsKey("heavyVisualScale"), Is.False,
+                "Agent visualScale must be owned only by agentProfiles, not duplicated in avoidance.");
+            Assert.That(avoidance["dominantMassRatio"]?.GetValue<float>(), Is.GreaterThan(0f));
+
+            JsonObject obstacle = config["semantics"]?["obstacle"]?.AsObject()
+                ?? throw new InvalidOperationException("MassNavigationConfig.semantics.obstacle missing.");
+            Assert.That(obstacle.ContainsKey("agentBodyRadiusCm"), Is.False,
+                "Obstacle hard-block radius must use each agent profile bodyRadiusCm, not a global obstacle body radius.");
+
+            JsonObject legacyAvoidanceConfig = ReadObject(Path.Combine(modRoot, "assets", "MassNavigationConfig.json"));
+            legacyAvoidanceConfig["avoidance"]!["lightNavMass"] = 1.0f;
+            JsonException legacyAvoidanceField = Assert.Throws<JsonException>(
+                () => MassNavigationMod.Runtime.MassNavigationConfig.Load(legacyAvoidanceConfig))!;
+            Assert.That(legacyAvoidanceField.Message, Does.Contain("lightNavMass"));
+
+            JsonObject legacyObstacleConfig = ReadObject(Path.Combine(modRoot, "assets", "MassNavigationConfig.json"));
+            legacyObstacleConfig["semantics"]!["obstacle"]!["agentBodyRadiusCm"] = 20.0f;
+            JsonException legacyObstacleField = Assert.Throws<JsonException>(
+                () => MassNavigationMod.Runtime.MassNavigationConfig.Load(legacyObstacleConfig))!;
+            Assert.That(legacyObstacleField.Message, Does.Contain("agentBodyRadiusCm"));
         }
 
         [Test]
@@ -317,10 +347,14 @@ namespace Ludots.Tests.Presentation
             AssertSourceDoesNotContain(Path.Combine(modRoot, "Runtime", "MassNavigationSimulationRuntime.cs"), "WorldConfig.WorldWidthCm");
             AssertSourceDoesNotContain(Path.Combine(modRoot, "Runtime", "MassNavigationSimulationRuntime.cs"), "WorldConfig.WorldHeightCm");
             AssertSourceDoesNotContain(Path.Combine(modRoot, "Runtime", "MassNavigationSimulationRuntime.cs"), "positive board world bounds");
-            AssertSourceDoesNotContain(Path.Combine(modRoot, "Systems", "MassNavigationOrderBridgeSystem.cs"), "TryResolveMoveOrderType");
+            AssertSourceDoesNotContain(Path.Combine(modRoot, "Systems", "MassNavigationOrderIngestionSystem.cs"), "TryResolveMoveOrderType");
             AssertSourceDoesNotContain(Path.Combine(modRoot, "Systems", "MassNavigationHudPresentationSystem.cs"), "PresentationTimingDiagnostics? timing");
             AssertSourceDoesNotContain(Path.Combine(modRoot, "UI", "MassNavigationPanelController.cs"), "PresentationTimingDiagnostics? timing");
             AssertSourceDoesNotContain(Path.Combine(modRoot, "Runtime", "MassFlowSimulationState.cs"), "localIndex % 7");
+            AssertSourceDoesNotContain(Path.Combine(modRoot, "Runtime", "MassNavigationCrowdSemantics.cs"), "AgentBodyRadiusCm");
+            AssertSourceDoesNotContain(Path.Combine(modRoot, "Runtime", "MassNavigationCrowdSemantics.cs"), "ResolveHardBlockRadiusCm");
+            AssertSourceDoesNotContain(Path.Combine(modRoot, "Runtime", "MassFlowSimulationState.cs"), "GetObstacleHardBlockRadius");
+            AssertSourceDoesNotContain(Path.Combine(modRoot, "Runtime", "MassNavigationSimulationRuntime.cs"), "ObstacleAgentBodyRadiusCm");
             AssertSourceDoesNotContain(Path.Combine(repoRoot, "mods", "CoreInputMod", "Systems", "SelectedMovePathPresentationSystem.cs"), "massNavigationMove");
             AssertSourceContains(Path.Combine(modRoot, "Runtime", "MassFlowSimulationState.cs"), "profileSet.ResolveForLocalIndex(localIndex)");
             AssertSourceContains(Path.Combine(modRoot, "Runtime", "MassFlowSimulationState.cs"), "MarkMovedEntitiesDirty()");
@@ -334,8 +368,54 @@ namespace Ludots.Tests.Presentation
             AssertSourceContains(Path.Combine(modRoot, "assets", "Presentation", "performers.json"), "SelectionMemberRemoved");
             AssertSourceDoesNotContain(Path.Combine(modRoot, "assets", "GAS", "order_types.json"), "interruptsActiveOrderTypeIds");
             AssertSourceContains(Path.Combine(modRoot, "assets", "GAS", "order_types.json"), "interruptsActiveOrderTypeKeys");
+            AssertSourceContains(Path.Combine(modRoot, "assets", "GAS", "order_types.json"), "\"orderBlackboardKeys\"");
+            AssertSourceContains(Path.Combine(modRoot, "assets", "GAS", "order_types.json"), "\"MassNavigation.FormationMode\": true");
+            AssertSourceDoesNotContain(Path.Combine(modRoot, "assets", "GAS", "order_types.json"), "10100");
+            AssertSourceContains(Path.Combine(modRoot, "assets", "GAS", "order_types.json"), "\"intArg0BlackboardKey\": \"MassNavigation.FormationMode\"");
+            AssertSourceDoesNotContain(Path.Combine(modRoot, "assets", "GAS", "order_types.json"), "Generic.IntParam");
+            AssertSourceDoesNotContain(Path.Combine(modRoot, "assets", "GAS", "order_types.json"), "\"moveTo\"");
+            AssertSourceDoesNotContain(Path.Combine(modRoot, "assets", "game.json"), "\"moveTo\"");
+            AssertSourceDoesNotContain(Path.Combine(modRoot, "Runtime", "MassNavigationComponentAuthoring.cs"), "RegisterOrderBlackboardKeys");
+            AssertSourceDoesNotContain(Path.Combine(modRoot, "Runtime", "MassNavigationComponentAuthoring.cs"), "OrderBlackboardKeyRegistry.Register");
+            AssertSourceDoesNotContain(Path.Combine(modRoot, "MassNavigationMod.csproj"), "CoreInputMod");
+            AssertSourceDoesNotContain(Path.Combine(modRoot, "mod.json"), "CoreInputMod");
             AssertSourceContains(Path.Combine(repoRoot, "src", "Core", "Config", "ComponentRegistry.cs"), "Register<SelectionDragState>(\"SelectionDragState\")");
             AssertSourceContains(Path.Combine(repoRoot, "mods", "CoreInputMod", "Systems", "SelectedMovePathPresentationSystem.cs"), "MovePathPreviewOrderTypeKeys");
+        }
+
+        [Test]
+        public void OrderBlackboardKeys_LoadMassNavigationFormationModeFromConfigOnly()
+        {
+            string repoRoot = FindRepoRoot();
+            string modRoot = MassNavigationModRoot();
+            OrderBlackboardKeyRegistry.ResetToBuiltins();
+            Assert.That(OrderBlackboardKeyRegistry.TryGetId("MassNavigation.FormationMode", out _), Is.False);
+
+            var vfs = new Ludots.Core.Modding.VirtualFileSystem();
+            vfs.Mount("Core", Path.Combine(repoRoot, "assets"));
+            vfs.Mount("LudotsCoreMod", Path.Combine(repoRoot, "mods", "LudotsCoreMod"));
+            vfs.Mount("MassNavigationMod", modRoot);
+            var modLoader = new Ludots.Core.Modding.ModLoader(
+                vfs,
+                new Ludots.Core.Scripting.FunctionRegistry(),
+                new Ludots.Core.Scripting.TriggerManager());
+            modLoader.LoadedModIds.Add("LudotsCoreMod");
+            modLoader.LoadedModIds.Add("MassNavigationMod");
+            var pipeline = new Ludots.Core.Config.ConfigPipeline(vfs, modLoader);
+            var catalog = Ludots.Core.Config.ConfigCatalogLoader.Load(pipeline);
+            var orderTypes = new OrderTypeRegistry();
+            var orderRules = new OrderRuleRegistry();
+
+            new OrderTypeConfigLoader(pipeline).Load(orderTypes, orderRules, catalog);
+
+            Assert.That(
+                OrderBlackboardKeyRegistry.TryGetId("MassNavigation.FormationMode", out int keyId),
+                Is.True);
+            Assert.That(keyId, Is.GreaterThan(0));
+            Assert.That(OrderBlackboardKeyRegistry.GetKey(keyId), Is.EqualTo("MassNavigation.FormationMode"));
+            Assert.That(orderTypes.Get(orderTypes.GetId("massNavigationMove")).IntArg0BlackboardKey, Is.EqualTo(keyId));
+
+            OrderBlackboardKeyRegistry.ResetToBuiltins();
         }
 
         [Test]
@@ -365,6 +445,14 @@ namespace Ludots.Tests.Presentation
         [Test]
         public void PresentationTeams_AreRequiredOnlyForAutoSpawnScenarios()
         {
+            JsonObject missingAutoSpawnTemplateConfig = ReadObject(Path.Combine(MassNavigationModRoot(), "assets", "MassNavigationConfig.json"));
+            JsonObject autoSpawnPresentation = missingAutoSpawnTemplateConfig["presentation"]?.AsObject()
+                ?? throw new InvalidOperationException("MassNavigationConfig.presentation missing.");
+            autoSpawnPresentation.Remove("blockerTemplateId");
+
+            InvalidOperationException missingTemplate = Assert.Throws<InvalidOperationException>(() => MassNavigationMod.Runtime.MassNavigationConfig.Load(missingAutoSpawnTemplateConfig))!;
+            Assert.That(missingTemplate.Message, Does.Contain("blockerTemplateId"));
+
             JsonObject config = ReadObject(Path.Combine(MassNavigationModRoot(), "assets", "MassNavigationConfig.json"));
             JsonArray teams = config["presentation"]?["teams"]?.AsArray()
                 ?? throw new InvalidOperationException("MassNavigationConfig.presentation.teams missing.");
@@ -375,11 +463,19 @@ namespace Ludots.Tests.Presentation
 
             config["scenarioRuntime"]!["autoSpawnConfiguredScenario"] = false;
             config["scenario"]!["agentsPerTeam"] = 0;
+            JsonObject presentation = config["presentation"]?.AsObject()
+                ?? throw new InvalidOperationException("MassNavigationConfig.presentation missing.");
+            presentation.Remove("blockerPerformerId");
+            presentation.Remove("hotspotPerformerId");
+            presentation.Remove("blockerTemplateId");
+            presentation.Remove("hotspotTemplateId");
             MassNavigationMod.Runtime.MassNavigationConfig formationOwnedConfig =
                 MassNavigationMod.Runtime.MassNavigationConfig.Load(config);
 
             Assert.That(formationOwnedConfig.ScenarioRuntime.AutoSpawnConfiguredScenario, Is.False);
             Assert.That(formationOwnedConfig.Presentation.Teams, Is.Empty);
+            Assert.That(formationOwnedConfig.Presentation.BlockerTemplateId, Is.EqualTo(string.Empty));
+            Assert.That(formationOwnedConfig.Presentation.HotspotTemplateId, Is.EqualTo(string.Empty));
         }
 
         private static void AssertAgentBodyUsesMassNavigationSoldier(JsonObject definition, string definitionId, float expectedScale)
@@ -448,7 +544,7 @@ namespace Ludots.Tests.Presentation
                 ?? throw new InvalidOperationException($"HUD performer '{definitionId}' must bind its material param.");
 
             Assert.That(binding["source"]?.GetValue<string>(), Is.EqualTo("attributeRatio"));
-            Assert.That(binding["attributeName"]?.GetValue<string>(), Is.EqualTo(AgentHealthAttributeName));
+            Assert.That(binding["attributeId"]?.GetValue<string>(), Is.EqualTo(AgentHealthAttributeName));
         }
 
         private static string AssertHudWorldHudBinding(JsonObject definition, string definitionId, float expectedWidth, float expectedHeight)
@@ -479,19 +575,18 @@ namespace Ludots.Tests.Presentation
                 .FirstOrDefault(obj => obj?["paramKey"]?.GetValue<string>() == currentParamKey)
                 ?? throw new InvalidOperationException($"Text performer '{definitionId}' must bind its current Health param.");
             Assert.That(currentBinding["source"]?.GetValue<string>(), Is.EqualTo("attribute"));
-            Assert.That(currentBinding["attributeName"]?.GetValue<string>(), Is.EqualTo(AgentHealthAttributeName));
+            Assert.That(currentBinding["attributeId"]?.GetValue<string>(), Is.EqualTo(AgentHealthAttributeName));
 
             JsonObject baseBinding = bindings
                 .Select(node => node?.AsObject())
                 .FirstOrDefault(obj => obj?["paramKey"]?.GetValue<string>() == baseParamKey)
                 ?? throw new InvalidOperationException($"Text performer '{definitionId}' must bind its base Health param.");
             Assert.That(baseBinding["source"]?.GetValue<string>(), Is.EqualTo("attributeBase"));
-            Assert.That(baseBinding["attributeName"]?.GetValue<string>(), Is.EqualTo(AgentHealthAttributeName));
+            Assert.That(baseBinding["attributeId"]?.GetValue<string>(), Is.EqualTo(AgentHealthAttributeName));
         }
 
         private static (string CurrentParamKey, string BaseParamKey) AssertWorldTextBinding(JsonObject definition, string definitionId, int expectedFontSize)
         {
-            Assert.That(definition["defaultTextId"]?.GetValue<string>(), Is.EqualTo("hud.attribute.current_over_base"));
             Assert.That(definition["worldTextMode"]?.GetValue<string>(), Is.EqualTo("AttributeCurrentOverBase"));
             Assert.That(definition["defaultFontSize"]?.GetValue<int>(), Is.EqualTo(expectedFontSize));
 

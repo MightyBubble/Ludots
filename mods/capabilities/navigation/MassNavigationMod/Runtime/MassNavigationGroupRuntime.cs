@@ -9,20 +9,49 @@ namespace MassNavigationMod.Runtime;
 public sealed class MassNavigationGroupRuntime
 {
     private readonly MassNavigationFormationRuntime _formationLayout;
-    private readonly List<NavGroupState?> _groups = new();
-    private readonly HashSet<int> _visitedGroupIds = new();
-    private readonly Dictionary<int, int> _orderTokenToGroupId = new();
-    private readonly List<int> _orderTokensToRemove = new();
-    private int[] _groupIdsByAgentIndex = Array.Empty<int>();
-    private int[] _selectionMemberScratch = Array.Empty<int>();
-    private float[] _looseBaseOffsetX = Array.Empty<float>();
-    private float[] _looseBaseOffsetY = Array.Empty<float>();
-    private float[] _looseOffsetX = Array.Empty<float>();
-    private float[] _looseOffsetY = Array.Empty<float>();
+    private readonly List<NavGroupState?> _groups;
+    private readonly HashSet<int> _visitedGroupIds;
+    private readonly Dictionary<int, int> _orderTokenToGroupId;
+    private readonly List<int> _orderTokensToRemove;
+    private readonly int[] _groupIdsByAgentIndex;
+    private readonly int[] _selectionMemberScratch;
+    private readonly float[] _looseBaseOffsetX;
+    private readonly float[] _looseBaseOffsetY;
+    private readonly float[] _looseOffsetX;
+    private readonly float[] _looseOffsetY;
+    private readonly NavGroupState[] _groupPool;
+    private readonly int _groupMemberCapacity;
 
-    public MassNavigationGroupRuntime(MassNavigationFormationRuntime formationLayout)
+    public MassNavigationGroupRuntime(
+        MassNavigationFormationRuntime formationLayout,
+        MassNavigationRuntimeCapacityConfig capacity)
     {
         _formationLayout = formationLayout ?? throw new ArgumentNullException(nameof(formationLayout));
+        ArgumentNullException.ThrowIfNull(capacity);
+
+        _groupMemberCapacity = capacity.GroupMemberCapacity;
+        _groups = new List<NavGroupState?>(capacity.NavigationGroupCapacity);
+        for (int i = 0; i < capacity.NavigationGroupCapacity; i++)
+        {
+            _groups.Add(null);
+        }
+
+        _groupPool = new NavGroupState[capacity.NavigationGroupCapacity];
+        for (int i = 0; i < _groupPool.Length; i++)
+        {
+            _groupPool[i] = new NavGroupState(capacity.GroupMemberCapacity, teamId: 0);
+        }
+
+        _visitedGroupIds = new HashSet<int>(capacity.NavigationGroupCapacity);
+        _orderTokenToGroupId = new Dictionary<int, int>(capacity.NavigationGroupCapacity);
+        _orderTokensToRemove = new List<int>(capacity.NavigationGroupCapacity);
+        _groupIdsByAgentIndex = new int[capacity.GroupMembershipAgentCapacity];
+        Array.Fill(_groupIdsByAgentIndex, -1);
+        _selectionMemberScratch = new int[capacity.SelectionMemberScratchCapacity];
+        _looseBaseOffsetX = new float[capacity.GroupMemberCapacity];
+        _looseBaseOffsetY = new float[capacity.GroupMemberCapacity];
+        _looseOffsetX = new float[capacity.GroupMemberCapacity];
+        _looseOffsetY = new float[capacity.GroupMemberCapacity];
     }
 
     public int ActiveGroupCount { get; private set; }
@@ -31,13 +60,15 @@ public sealed class MassNavigationGroupRuntime
 
     public void Reset()
     {
-        _groups.Clear();
-        _orderTokenToGroupId.Clear();
-        if (_groupIdsByAgentIndex.Length > 0)
+        for (int i = 0; i < _groups.Count; i++)
         {
-            Array.Fill(_groupIdsByAgentIndex, -1);
+            _groups[i] = null;
         }
 
+        _orderTokenToGroupId.Clear();
+        _orderTokensToRemove.Clear();
+        _visitedGroupIds.Clear();
+        Array.Fill(_groupIdsByAgentIndex, -1);
         ActiveGroupCount = 0;
         SelectedRotationRadians = 0f;
     }
@@ -274,7 +305,7 @@ public sealed class MassNavigationGroupRuntime
             centerClearanceCm);
 
         int groupId = AllocateGroupId();
-        var group = CreateGroup(simulation, agentState, memberIndices[..assignedCount], teamId, formationMode, previousRotation);
+        var group = CreateGroup(groupId, simulation, agentState, memberIndices[..assignedCount], teamId, formationMode, previousRotation);
         Vector2 resolvedWorldDestination = simulation.LocalToWorldCm(resolvedDestination);
         group.DestinationWorldX = resolvedWorldDestination.X;
         group.DestinationWorldY = resolvedWorldDestination.Y;
@@ -312,7 +343,7 @@ public sealed class MassNavigationGroupRuntime
             DetachMembersFromOtherGroups(simulation, memberIndices, keepGroupId: -1);
             EnsureMembershipCapacityForMembers(memberIndices);
             groupId = AllocateGroupId();
-            var created = CreateGroup(simulation, agentState, memberIndices, teamId, formationMode, rotationRadians);
+            var created = CreateGroup(groupId, simulation, agentState, memberIndices, teamId, formationMode, rotationRadians);
             created.CommandToken = orderToken;
             created.RequestedDestinationWorldX = destinationWorldCm.X;
             created.RequestedDestinationWorldY = destinationWorldCm.Y;
@@ -651,12 +682,8 @@ public sealed class MassNavigationGroupRuntime
             return;
         }
 
-        int previousLength = _groupIdsByAgentIndex.Length;
-        Array.Resize(ref _groupIdsByAgentIndex, count);
-        for (int i = previousLength; i < _groupIdsByAgentIndex.Length; i++)
-        {
-            _groupIdsByAgentIndex[i] = -1;
-        }
+        throw new InvalidOperationException(
+            $"MassNavigation group membership required {count} agent slots, exceeding configured scenarioRuntime.runtimeCapacity.groupMembershipAgentCapacity {_groupIdsByAgentIndex.Length}.");
     }
 
     private void EnsureMembershipCapacityForMembers(ReadOnlySpan<int> members)
@@ -677,13 +704,8 @@ public sealed class MassNavigationGroupRuntime
     {
         if (_selectionMemberScratch.Length < count)
         {
-            int next = Math.Max(16, _selectionMemberScratch.Length);
-            while (next < count)
-            {
-                next *= 2;
-            }
-
-            Array.Resize(ref _selectionMemberScratch, next);
+            throw new InvalidOperationException(
+                $"MassNavigation selection member scratch required {count} entries, exceeding configured scenarioRuntime.runtimeCapacity.selectionMemberScratchCapacity {_selectionMemberScratch.Length}.");
         }
 
         return _selectionMemberScratch.AsSpan(0, count);
@@ -755,8 +777,8 @@ public sealed class MassNavigationGroupRuntime
             }
         }
 
-        _groups.Add(null);
-        return _groups.Count - 1;
+        throw new InvalidOperationException(
+            $"MassNavigation navigation group allocation exceeded configured scenarioRuntime.runtimeCapacity.navigationGroupCapacity {_groups.Count}.");
     }
 
     private void RemoveFromExistingGroup(MassFlowSimulationState simulation, int unitIndex)
@@ -909,16 +931,8 @@ public sealed class MassNavigationGroupRuntime
             return;
         }
 
-        int next = Math.Max(1, _looseOffsetX.Length);
-        while (next < required)
-        {
-            next *= 2;
-        }
-
-        Array.Resize(ref _looseBaseOffsetX, next);
-        Array.Resize(ref _looseBaseOffsetY, next);
-        Array.Resize(ref _looseOffsetX, next);
-        Array.Resize(ref _looseOffsetY, next);
+        throw new InvalidOperationException(
+            $"MassNavigation loose group layout required {required} members, exceeding configured scenarioRuntime.runtimeCapacity.groupMemberCapacity {_looseOffsetX.Length}.");
     }
 
     private void ScaleLooseLayoutForMemberBodyRadius(
@@ -957,6 +971,7 @@ public sealed class MassNavigationGroupRuntime
     }
 
     private NavGroupState CreateGroup(
+        int groupId,
         MassFlowSimulationState simulation,
         MassNavigationAgentState agentState,
         ReadOnlySpan<int> members,
@@ -964,7 +979,14 @@ public sealed class MassNavigationGroupRuntime
         MassNavigationFormationMode formationMode,
         float rotationRadians)
     {
-        var group = new NavGroupState(Math.Max(1, members.Length), teamId);
+        if ((uint)groupId >= (uint)_groupPool.Length)
+        {
+            throw new InvalidOperationException(
+                $"MassNavigation group id {groupId} exceeds configured scenarioRuntime.runtimeCapacity.navigationGroupCapacity {_groupPool.Length}.");
+        }
+
+        NavGroupState group = _groupPool[groupId];
+        group.Reset(teamId);
         CopyMembersAndRebuildLayout(simulation, agentState, group, members, formationMode, rotationRadians);
         return group;
     }
@@ -1497,6 +1519,22 @@ public sealed class MassNavigationGroupRuntime
         public float RotationRadians { get; set; }
         public bool Arrived { get; set; }
 
+        public void Reset(int teamId)
+        {
+            MemberCount = 0;
+            TeamId = teamId;
+            CommandToken = 0;
+            FormationMode = MassNavigationFormationMode.None;
+            RequestedDestinationWorldX = 0f;
+            RequestedDestinationWorldY = 0f;
+            DestinationWorldX = 0f;
+            DestinationWorldY = 0f;
+            CenterX = 0f;
+            CenterY = 0f;
+            RotationRadians = 0f;
+            Arrived = false;
+        }
+
         public void EnsureCapacity(int required)
         {
             if (required <= MemberIndices.Length)
@@ -1504,54 +1542,8 @@ public sealed class MassNavigationGroupRuntime
                 return;
             }
 
-            int next = MemberIndices.Length;
-            while (next < required)
-            {
-                next *= 2;
-            }
-
-            int[] memberIndices = MemberIndices;
-            Entity[] memberEntities = MemberEntities;
-            float[] memberOrderTargetWorldX = MemberOrderTargetWorldX;
-            float[] memberOrderTargetWorldY = MemberOrderTargetWorldY;
-            float[] memberOrderPathStartWorldX = MemberOrderPathStartWorldX;
-            float[] memberOrderPathStartWorldY = MemberOrderPathStartWorldY;
-            float[] memberOrderPathAnchorWorldX = MemberOrderPathAnchorWorldX;
-            float[] memberOrderPathAnchorWorldY = MemberOrderPathAnchorWorldY;
-            int[] memberOrderPathAnchorRevision = MemberOrderPathAnchorRevision;
-            byte[] memberOrderPathAnchorInitialized = MemberOrderPathAnchorInitialized;
-            float[] baseOffsetX = BaseOffsetX;
-            float[] baseOffsetY = BaseOffsetY;
-            float[] offsetX = OffsetX;
-            float[] offsetY = OffsetY;
-            Array.Resize(ref memberIndices, next);
-            Array.Resize(ref memberEntities, next);
-            Array.Resize(ref memberOrderTargetWorldX, next);
-            Array.Resize(ref memberOrderTargetWorldY, next);
-            Array.Resize(ref memberOrderPathStartWorldX, next);
-            Array.Resize(ref memberOrderPathStartWorldY, next);
-            Array.Resize(ref memberOrderPathAnchorWorldX, next);
-            Array.Resize(ref memberOrderPathAnchorWorldY, next);
-            Array.Resize(ref memberOrderPathAnchorRevision, next);
-            Array.Resize(ref memberOrderPathAnchorInitialized, next);
-            Array.Resize(ref baseOffsetX, next);
-            Array.Resize(ref baseOffsetY, next);
-            Array.Resize(ref offsetX, next);
-            Array.Resize(ref offsetY, next);
-            MemberIndices = memberIndices;
-            MemberEntities = memberEntities;
-            MemberOrderTargetWorldX = memberOrderTargetWorldX;
-            MemberOrderTargetWorldY = memberOrderTargetWorldY;
-            MemberOrderPathStartWorldX = memberOrderPathStartWorldX;
-            MemberOrderPathStartWorldY = memberOrderPathStartWorldY;
-            MemberOrderPathAnchorWorldX = memberOrderPathAnchorWorldX;
-            MemberOrderPathAnchorWorldY = memberOrderPathAnchorWorldY;
-            MemberOrderPathAnchorRevision = memberOrderPathAnchorRevision;
-            MemberOrderPathAnchorInitialized = memberOrderPathAnchorInitialized;
-            BaseOffsetX = baseOffsetX;
-            BaseOffsetY = baseOffsetY;
-            OffsetX = offsetX;
-            OffsetY = offsetY;
+            throw new InvalidOperationException(
+                $"MassNavigation group state required {required} members, exceeding configured scenarioRuntime.runtimeCapacity.groupMemberCapacity {MemberIndices.Length}.");
         }
     }
 }

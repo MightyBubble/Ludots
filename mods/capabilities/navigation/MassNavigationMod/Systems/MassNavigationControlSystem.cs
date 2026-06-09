@@ -55,7 +55,7 @@ internal sealed class MassNavigationControlSystem : ISystem<float>
 
             if (MathF.Abs(deltaRadians) > _simulation.Config.Semantics.Group.FormationRotationEpsilonRadians)
             {
-                _simulation.Commands.EnqueueSelectionRotate(_simulation.SelectedEntities, deltaRadians);
+                _simulation.RotateSelectedFormation(_engine.World, deltaRadians, ResolveLocalPlayerId());
             }
         }
 
@@ -128,6 +128,23 @@ internal sealed class MassNavigationControlSystem : ISystem<float>
         selection.ClearSelection(owner, SelectionSetKeys.FormationPrimary);
         selection.ClearSelection(owner, SelectionSetKeys.CommandPreview);
         selection.ClearSelection(owner, SelectionSetKeys.CommandSnapshot);
+    }
+
+    private int ResolveLocalPlayerId()
+    {
+        if (!_engine.GlobalContext.TryGetValue(CoreServiceKeys.LocalPlayerEntity.Name, out object? localObj) ||
+            localObj is not Arch.Core.Entity local ||
+            !_engine.World.IsAlive(local))
+        {
+            throw new InvalidOperationException("MassNavigationMod requires LocalPlayerEntity before rotating formations.");
+        }
+
+        if (!_engine.World.TryGet(local, out Ludots.Core.Gameplay.Components.PlayerOwner owner))
+        {
+            throw new InvalidOperationException("MassNavigationMod LocalPlayerEntity must author PlayerOwner before rotating formations.");
+        }
+
+        return owner.PlayerId;
     }
 }
 

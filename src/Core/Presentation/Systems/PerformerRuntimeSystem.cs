@@ -56,14 +56,13 @@ namespace Ludots.Core.Presentation.Systems
             bool hasCommands = _commands.Count != 0;
             bool hasEvents = _events.Count != 0;
             bool hasMarkers = _markers.Count != 0;
+            ReleaseDestroyedOwnerAnchors();
+            int releasedDeadOwners = _runtime.ReleaseDeadOwners(EmitDestroyedEvent);
             bool needsCullSync = _lastCullSyncStructureVersion != _runtime.StructureVersion;
-            if (!hasCommands && !hasEvents && !hasMarkers && !needsCullSync)
+            if (!hasCommands && !hasEvents && !hasMarkers && !needsCullSync && releasedDeadOwners == 0)
             {
                 return;
             }
-
-            ReleaseDestroyedOwnerAnchors();
-            _runtime.ReleaseDeadOwners(EmitDestroyedEvent);
 
             var cmdSpan = _commands.GetSpan();
             for (int i = 0; i < cmdSpan.Length; i++)

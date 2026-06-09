@@ -17,6 +17,7 @@ using Ludots.Core.Presentation.Rendering;
 using Ludots.Core.Presentation;
 using Ludots.Core.Presentation.Components;
 using Ludots.Core.Scripting;
+using Ludots.Core.Spatial;
 using MassNavigationMod;
 using MassNavigationMod.Runtime;
 
@@ -57,6 +58,7 @@ internal sealed class TotalWarShowcaseRuntime
         }
 
         TotalWarShowcaseConfig config = EnsureConfig(engine);
+        EnsureInitialSelectionScratch(config);
         string mapId = context.Get(CoreServiceKeys.MapId).Value;
         if (!string.Equals(mapId, config.MapId, StringComparison.Ordinal))
         {
@@ -127,8 +129,9 @@ internal sealed class TotalWarShowcaseRuntime
         engine.InsertSystemBeforeRequired<MassNavigationPreSimulationStepSystem>(
             new TotalWarFormationRuntimeSystem(engine, this, simulation),
             SystemGroup.PostMovement);
-        engine.RegisterPresentationSystem(new TotalWarFormationOutlinePresentationSystem(engine, this));
-        engine.RegisterPresentationSystem(new TotalWarObstacleOverlayPresentationSystem(engine, this));
+        TotalWarShowcaseConfig config = EnsureConfig(engine);
+        engine.RegisterPresentationSystem(new TotalWarFormationOutlinePresentationSystem(engine, this, config));
+        engine.RegisterPresentationSystem(new TotalWarObstacleOverlayPresentationSystem(engine, this, simulation.WorldConfig.Obstacles.Length));
         _systemsInstalled = true;
     }
 
@@ -212,7 +215,7 @@ internal sealed class TotalWarShowcaseRuntime
 
         TeamEntityLookup teamLookup = engine.GetService(CoreServiceKeys.TeamEntityLookup)
             ?? throw new InvalidOperationException("Total War showcase requires TeamEntityLookup.");
-        var registeredTeamIds = new HashSet<int>();
+        var registeredTeamIds = new HashSet<int>(_formationPlans.Length);
         for (int i = 0; i < _formationPlans.Length; i++)
         {
             MassNavigationScenarioTeamConfig team = ResolveScenarioTeam(simulation.Config.Scenario, _formationPlans[i].TeamId);
@@ -238,12 +241,6 @@ internal sealed class TotalWarShowcaseRuntime
                 plan.MassNavAgentIndex,
                 plan.FormationIndex,
                 plan.SlotIndex,
-                plan.TeamId,
-                plan.Heavy,
-                plan.NavMass,
-                plan.VisualScale,
-                plan.BodyRadiusCm,
-                plan.SpeedCmPerSecond,
                 plan.TemplateId));
 
             var request = new RuntimeEntitySpawnRequest
@@ -356,6 +353,15 @@ internal sealed class TotalWarShowcaseRuntime
             FacingRad = plan.FacingRad,
         });
         UpsertComponent(engine.World, entity, formation.Outline.ToComponent(plan.Id));
+        UpsertComponent(engine.World, entity, formation.Outline.ToSpatialBounds());
+        UpsertComponent(engine.World, entity, formation.Outline.ToSpatialFootprint(plan.Id));
+        UpsertComponent(engine.World, entity, ActiveConfig.Selection.IsFormationSelectable(plan.TeamId, ActiveConfig.LocalPlayerTeamId)
+            ? SelectionSelectableState.EnabledByDefault
+            : SelectionSelectableState.Disabled);
+        if (plan.TeamId == ActiveConfig.LocalPlayerTeamId)
+        {
+            UpsertComponent(engine.World, entity, new PlayerOwner { PlayerId = ResolveLocalPlayerId(engine) });
+        }
     }
 
     public void RegisterSpawnedObstacleOverlay(Entity entity, in TotalWarSpawnReceiptBinding binding)
@@ -406,6 +412,9 @@ internal sealed class TotalWarShowcaseRuntime
 
     private void BuildAgentPlans(GameEngine engine, MassNavigationSimulationRuntime simulation, TotalWarShowcaseConfig config)
     {
+        MassNavigationAgentProfileSetConfig profileSet = simulation.Config.AgentProfiles;
+        config.ValidateAgentProfileReferences(profileSet);
+
         int agentCount = config.Formations.Length;
         int soldierCount = 0;
         for (int i = 0; i < config.Formations.Length; i++)
@@ -432,6 +441,7 @@ internal sealed class TotalWarShowcaseRuntime
 
         int agentIndex = 0;
         MassNavigationAgentLayer formationLayer = RequireTemplateLayer(engine, config.FormationAgent.TemplateId);
+        MassNavigationAgentProfileConfig formationProfile = config.ResolveFormationAgentProfile(profileSet);
         for (int formationIndex = 0; formationIndex < config.Formations.Length; formationIndex++)
         {
             TotalWarFormationConfig formation = config.Formations[formationIndex];
@@ -441,11 +451,11 @@ internal sealed class TotalWarShowcaseRuntime
                 formation.TeamId,
                 local.X,
                 local.Y,
-                config.FormationAgent.Heavy,
-                config.FormationAgent.NavMass,
-                config.FormationAgent.VisualScale,
-                config.FormationAgent.BodyRadiusCm,
-                config.FormationAgent.SpeedCmPerSecond,
+                formationProfile.Heavy,
+                formationProfile.NavMass,
+                formationProfile.VisualScale,
+                formationProfile.BodyRadiusCm,
+                formationProfile.SpeedCmPerSecond,
                 formationLayer);
             _formationPlans[formationIndex] = new TotalWarFormationPlan(
                 formationIndex,
@@ -478,6 +488,7 @@ internal sealed class TotalWarShowcaseRuntime
             int firstSoldierPlanIndex = soldierPlanIndex;
             float facingRad = formation.FacingDeg * (MathF.PI / 180f);
             MassNavigationAgentLayer soldierLayer = RequireTemplateLayer(engine, formation.SoldierAgent.TemplateId);
+            MassNavigationAgentProfileConfig soldierProfile = config.ResolveSoldierAgentProfile(profileSet, formationIndex);
             float forwardX = MathF.Cos(facingRad);
             float forwardY = MathF.Sin(facingRad);
             float lateralX = -forwardY;
@@ -496,11 +507,11 @@ internal sealed class TotalWarShowcaseRuntime
                     formation.TeamId,
                     local.X,
                     local.Y,
-                    formation.SoldierAgent.Heavy,
-                    formation.SoldierAgent.NavMass,
-                    formation.SoldierAgent.VisualScale,
-                    formation.SoldierAgent.BodyRadiusCm,
-                    formation.SoldierAgent.SpeedCmPerSecond,
+                    soldierProfile.Heavy,
+                    soldierProfile.NavMass,
+                    soldierProfile.VisualScale,
+                    soldierProfile.BodyRadiusCm,
+                    soldierProfile.SpeedCmPerSecond,
                     soldierLayer);
                 _soldierAgentPlans[soldierPlanIndex] = new TotalWarSoldierAgentSpawnPlan(
                     agentIndex,
@@ -508,11 +519,11 @@ internal sealed class TotalWarShowcaseRuntime
                     slotIndex,
                     formation.TeamId,
                     formation.SoldierAgent.TemplateId,
-                    formation.SoldierAgent.Heavy,
-                    formation.SoldierAgent.NavMass,
-                    formation.SoldierAgent.VisualScale,
-                    formation.SoldierAgent.BodyRadiusCm,
-                    formation.SoldierAgent.SpeedCmPerSecond,
+                    soldierProfile.Heavy,
+                    soldierProfile.NavMass,
+                    soldierProfile.VisualScale,
+                    soldierProfile.BodyRadiusCm,
+                    soldierProfile.SpeedCmPerSecond,
                     worldX,
                     worldY,
                     facingRad,
@@ -547,7 +558,7 @@ internal sealed class TotalWarShowcaseRuntime
 
     private void BuildObstacleOverlayPlans(MassNavigationSimulationRuntime simulation)
     {
-        int obstacleCount = simulation.MassFlow.ObstacleCount;
+        int obstacleCount = simulation.NavigationObstacleCount;
         if (_obstacleOverlayPlans.Length != obstacleCount)
         {
             _obstacleOverlayPlans = new TotalWarObstacleOverlayPlan[obstacleCount];
@@ -555,12 +566,11 @@ internal sealed class TotalWarShowcaseRuntime
 
         for (int obstacleIndex = 0; obstacleIndex < obstacleCount; obstacleIndex++)
         {
-            float localX = simulation.MassFlow.GetObstacleX(obstacleIndex);
-            float localY = simulation.MassFlow.GetObstacleY(obstacleIndex);
+            MassNavigationObstacleSnapshot obstacle = simulation.GetObstacleWorldSnapshot(obstacleIndex);
             _obstacleOverlayPlans[obstacleIndex] = new TotalWarObstacleOverlayPlan(
-                simulation.ToWorldXCm(localX),
-                simulation.ToWorldYCm(localY),
-                simulation.MassFlow.GetObstacleRadius(obstacleIndex));
+                obstacle.WorldXCm,
+                obstacle.WorldYCm,
+                obstacle.RadiusCm);
         }
     }
 
@@ -626,19 +636,12 @@ internal sealed class TotalWarShowcaseRuntime
         }
 
         Array.Fill(_formationEntities, Entity.Null);
-
         for (int i = 0; i < _formationPlans.Length; i++)
         {
             TotalWarFormationPlan plan = _formationPlans[i];
             int receiptId = _spawnReceipts.Allocate(TotalWarSpawnReceiptBinding.ForFormationAgent(
                 plan.MassNavAgentIndex,
                 plan.FormationIndex,
-                plan.TeamId,
-                config.FormationAgent.Heavy,
-                config.FormationAgent.NavMass,
-                config.FormationAgent.VisualScale,
-                config.FormationAgent.BodyRadiusCm,
-                config.FormationAgent.SpeedCmPerSecond,
                 config.FormationAgent.TemplateId));
             var request = new RuntimeEntitySpawnRequest
             {
@@ -709,35 +712,33 @@ internal sealed class TotalWarShowcaseRuntime
         for (int formationIndex = 0; formationIndex < _formationPlans.Length; formationIndex++)
         {
             TotalWarFormationPlan plan = _formationPlans[formationIndex];
-            if ((uint)plan.MassNavAgentIndex >= (uint)simulation.MassFlow.UnitCount)
+            if ((uint)plan.MassNavAgentIndex >= (uint)simulation.NavigationAgentCount)
             {
                 throw new InvalidOperationException(
-                    $"Total War showcase formation agent MassNav index {plan.MassNavAgentIndex} exceeds MassFlow unit count {simulation.MassFlow.UnitCount}.");
+                    $"Total War showcase formation agent MassNav index {plan.MassNavAgentIndex} exceeds MassNavigation agent count {simulation.NavigationAgentCount}.");
             }
 
-            float formationLocalX = simulation.MassFlow.GetPositionX(plan.MassNavAgentIndex);
-            float formationLocalY = simulation.MassFlow.GetPositionY(plan.MassNavAgentIndex);
-            float formationWorldX = simulation.ToWorldXCm(formationLocalX);
-            float formationWorldY = simulation.ToWorldYCm(formationLocalY);
-            if (plan.CarrierSnapshotInitialized)
+            MassNavigationCarriedRangeSyncResult carrierSync = simulation.SyncCarriedAgentRangeToCarrier(
+                plan.MassNavAgentIndex,
+                plan.FirstSoldierAgentIndex,
+                plan.SoldierCount,
+                plan.CarrierSnapshotInitialized,
+                plan.LastCarrierCenterWorldXCm,
+                plan.LastCarrierCenterWorldYCm);
+            float formationWorldX = carrierSync.CarrierWorldXCm;
+            float formationWorldY = carrierSync.CarrierWorldYCm;
+            if (carrierSync.AppliedDisplacement)
             {
-                float carrierDeltaX = formationWorldX - plan.LastCarrierCenterWorldXCm;
-                float carrierDeltaY = formationWorldY - plan.LastCarrierCenterWorldYCm;
-                simulation.MassFlow.ApplyExternalDisplacementRange(
-                    plan.FirstSoldierAgentIndex,
-                    plan.SoldierCount,
-                    carrierDeltaX,
-                    carrierDeltaY);
                 TranslateSoldierTargetCacheRange(
                     plan.FirstSoldierAgentIndex,
                     plan.SoldierCount,
-                    carrierDeltaX,
-                    carrierDeltaY);
+                    carrierSync.DisplacementWorldXCm,
+                    carrierSync.DisplacementWorldYCm);
             }
 
             plan = plan.WithCarrierSnapshot(formationWorldX, formationWorldY);
-            float anchorLocalX = formationLocalX;
-            float anchorLocalY = formationLocalY;
+            float anchorLocalX = carrierSync.CarrierLocalXCm;
+            float anchorLocalY = carrierSync.CarrierLocalYCm;
 
             float facingRad = ResolveFormationFacing(engine, plan.FormationIndex);
 
@@ -764,10 +765,10 @@ internal sealed class TotalWarShowcaseRuntime
             for (int slotIndex = 0; slotIndex < plan.SoldierCount; slotIndex++)
             {
                 int soldierAgentIndex = plan.FirstSoldierAgentIndex + slotIndex;
-                if ((uint)soldierAgentIndex >= (uint)simulation.MassFlow.UnitCount)
+                if ((uint)soldierAgentIndex >= (uint)simulation.NavigationAgentCount)
                 {
                     throw new InvalidOperationException(
-                        $"Total War showcase soldier agent MassNav index {soldierAgentIndex} exceeds MassFlow unit count {simulation.MassFlow.UnitCount}.");
+                        $"Total War showcase soldier agent MassNav index {soldierAgentIndex} exceeds MassNavigation agent count {simulation.NavigationAgentCount}.");
                 }
 
                 int soldierPlanIndex = plan.FirstSoldierPlanIndex + slotIndex;
@@ -780,18 +781,15 @@ internal sealed class TotalWarShowcaseRuntime
                 TotalWarSoldierAgentSpawnPlan soldierAgentPlan = _soldierAgentPlans[soldierPlanIndex];
                 float slotOffsetX = (lateralX * soldierAgentPlan.SlotOffsetXCm) + (forwardX * soldierAgentPlan.SlotOffsetYCm);
                 float slotOffsetY = (lateralY * soldierAgentPlan.SlotOffsetXCm) + (forwardY * soldierAgentPlan.SlotOffsetYCm);
-                Vector2 resolvedTarget = simulation.MassFlow.ResolveUnitNavigableTarget(
+                MassNavigationCarriedSlotTarget resolvedTarget = simulation.ResolveCarriedAgentSlotTarget(
                     soldierAgentIndex,
-                    anchorLocalX + slotOffsetX,
-                    anchorLocalY + slotOffsetY,
+                    anchorLocalX,
+                    anchorLocalY,
                     slotOffsetX,
-                    slotOffsetY,
-                    simulation.MassFlow.Semantics.TargetProjection.GroupSlotClearanceCm);
-                float resolvedTargetWorldX = simulation.ToWorldXCm(resolvedTarget.X);
-                float resolvedTargetWorldY = simulation.ToWorldYCm(resolvedTarget.Y);
-                if (ShouldWriteSoldierTarget(soldierAgentIndex, resolvedTargetWorldX, resolvedTargetWorldY, targetChangeEpsilonSq))
+                    slotOffsetY);
+                if (ShouldWriteSoldierTarget(soldierAgentIndex, resolvedTarget.WorldXCm, resolvedTarget.WorldYCm, targetChangeEpsilonSq))
                 {
-                    simulation.MassFlow.SetUnitTarget(soldierAgentIndex, resolvedTarget.X, resolvedTarget.Y, resetRecovery: targetChanged);
+                    simulation.ApplyCarriedAgentSlotTarget(soldierAgentIndex, in resolvedTarget, resetRecovery: targetChanged);
                 }
 
                 if (facingChanged)
@@ -904,14 +902,15 @@ internal sealed class TotalWarShowcaseRuntime
             }
 
             TotalWarFormationPlan plan = _formationPlans[i];
-            if ((uint)plan.MassNavAgentIndex >= (uint)simulation.MassFlow.UnitCount)
+            if ((uint)plan.MassNavAgentIndex >= (uint)simulation.NavigationAgentCount)
             {
                 throw new InvalidOperationException(
-                    $"Total War showcase formation agent MassNav index {plan.MassNavAgentIndex} exceeds MassFlow unit count {simulation.MassFlow.UnitCount}.");
+                    $"Total War showcase formation agent MassNav index {plan.MassNavAgentIndex} exceeds MassNavigation agent count {simulation.NavigationAgentCount}.");
             }
 
-            float centerX = simulation.ToWorldXCm(simulation.MassFlow.GetPositionX(plan.MassNavAgentIndex));
-            float centerY = simulation.ToWorldYCm(simulation.MassFlow.GetPositionY(plan.MassNavAgentIndex));
+            Vector2 centerWorld = simulation.GetAgentWorldPositionCm(plan.MassNavAgentIndex);
+            float centerX = centerWorld.X;
+            float centerY = centerWorld.Y;
             float facingRad = ResolveFormationFacing(engine, plan.FormationIndex);
 
             var center = Fix64Vec2.FromInt((int)MathF.Round(centerX), (int)MathF.Round(centerY));
@@ -1000,10 +999,7 @@ internal sealed class TotalWarShowcaseRuntime
             ?? throw new InvalidOperationException("Total War showcase requires SelectionRuntime before applying configured initial selection.");
         Entity owner = ResolveLocalSelectionOwner(engine);
         int formationIndex = ResolveFormationIndex(config.InitialSelectionFormationId);
-        if (_initialSelectionScratch.Length < 1)
-        {
-            _initialSelectionScratch = new Entity[1];
-        }
+        EnsureInitialSelectionScratch(config);
 
         if ((uint)formationIndex >= (uint)_formationEntities.Length)
         {
@@ -1048,6 +1044,16 @@ internal sealed class TotalWarShowcaseRuntime
         }
 
         _initialSelectionApplied = true;
+    }
+
+    private void EnsureInitialSelectionScratch(TotalWarShowcaseConfig config)
+    {
+        if (_initialSelectionScratch.Length == config.InitialSelectionEntityCapacity)
+        {
+            return;
+        }
+
+        _initialSelectionScratch = new Entity[config.InitialSelectionEntityCapacity];
     }
 
     private int ResolveFormationIndex(string formationId)
@@ -1125,14 +1131,13 @@ internal sealed class TotalWarShowcaseRuntime
 
     private static void ConfigureScenarioTeams(MassNavigationSimulationRuntime simulation, TotalWarShowcaseConfig config)
     {
-        var uniqueTeamIds = new SortedSet<int>();
-        for (int i = 0; i < config.Formations.Length; i++)
+        MassNavigationScenarioTeamConfig[] configuredTeams = simulation.Config.Scenario.Teams;
+        int[] teamIds = new int[configuredTeams.Length];
+        for (int i = 0; i < configuredTeams.Length; i++)
         {
-            uniqueTeamIds.Add(config.Formations[i].TeamId);
+            teamIds[i] = configuredTeams[i].Id;
         }
 
-        int[] teamIds = new int[uniqueTeamIds.Count];
-        uniqueTeamIds.CopyTo(teamIds);
         simulation.ConfigureScenarioTeams(teamIds);
         simulation.SetSelectedTeam(ResolveInitialSelectionTeamId(config));
     }
@@ -1268,6 +1273,23 @@ internal sealed class TotalWarShowcaseRuntime
         }
 
         return local;
+    }
+
+    private static int ResolveLocalPlayerId(GameEngine engine)
+    {
+        if (!engine.GlobalContext.TryGetValue(CoreServiceKeys.LocalPlayerEntity.Name, out object? localObj) ||
+            localObj is not Entity local ||
+            !engine.World.IsAlive(local))
+        {
+            throw new InvalidOperationException("Total War showcase requires LocalPlayerEntity before binding local formation ownership.");
+        }
+
+        if (!engine.World.TryGet(local, out PlayerOwner owner))
+        {
+            throw new InvalidOperationException("Total War showcase LocalPlayerEntity must author PlayerOwner before binding local formation ownership.");
+        }
+
+        return owner.PlayerId;
     }
 
     private readonly struct TotalWarFormationPlan

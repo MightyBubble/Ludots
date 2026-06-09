@@ -105,7 +105,7 @@ namespace Ludots.Core.Presentation.Requests
 
                     case PresentationRequestKind.SurfaceSource:
                         // SurfaceSource requests are consumed by the dedicated performer-surface runtime
-                        // before the legacy request flush reaches adapter-facing buffers.
+                        // before request flush reaches adapter-facing buffers.
                         break;
 
                     case PresentationRequestKind.RemoveSurfaceSource:
@@ -199,15 +199,24 @@ namespace Ludots.Core.Presentation.Requests
             for (int i = 0; i < requests.Length; i++)
             {
                 ref readonly PresentationRequest request = ref requests[i];
-                if (request.Kind == PresentationRequestKind.ClearTransientVisualProjection ||
-                    (request.Kind == PresentationRequestKind.VisualProxy &&
-                     IsTransientVisualProxy(in request.VisualProxy)))
+                if (IsTransientPresentationRequest(in request))
                 {
                     return true;
                 }
             }
 
             return false;
+        }
+
+        private static bool IsTransientPresentationRequest(in PresentationRequest request)
+        {
+            return request.Kind switch
+            {
+                PresentationRequestKind.ClearTransientVisualProjection => true,
+                PresentationRequestKind.Prefab => true,
+                PresentationRequestKind.VisualProxy => IsTransientVisualProxy(in request.VisualProxy),
+                _ => false,
+            };
         }
 
         private static bool IsTransientVisualProxy(in PresentationVisualProxy proxy)

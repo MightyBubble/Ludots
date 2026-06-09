@@ -169,13 +169,14 @@ namespace Ludots.Core.Presentation.Minimap
         private string _cachedMarkerFooter = "Markers 0/0";
 
         public MinimapRuntime()
-            : this(null)
         {
+            throw new InvalidOperationException("MinimapRuntime requires explicit presentation.minimap configuration.");
         }
 
         public MinimapRuntime(MinimapRuntimeConfig? config)
         {
-            _config = config ?? new MinimapRuntimeConfig();
+            _config = config ?? throw new InvalidOperationException(
+                "MinimapRuntime requires explicit presentation.minimap configuration.");
             _config.Validate();
             _debugMarkerSampleCapacity = _config.DebugMarkerSampleCapacity;
             _debugVisibleMarkers = _debugMarkerSampleCapacity > 0
@@ -1570,7 +1571,7 @@ namespace Ludots.Core.Presentation.Minimap
             var board = boards.Count == 1 ? boards[0] : null;
             for (int i = 0; i < boards.Count; i++)
             {
-                if (string.Equals(boards[i]?.Name, "default", StringComparison.OrdinalIgnoreCase))
+                if (string.Equals(boards[i]?.Name, "default", StringComparison.Ordinal))
                 {
                     board = boards[i];
                     break;

@@ -11,84 +11,103 @@ internal enum TotalWarSpawnReceiptKind : byte
 
 internal readonly struct TotalWarSpawnReceiptBinding
 {
+    private readonly SoldierSpawnReceiptPayload? _soldierPayload;
+    private readonly FormationAgentSpawnReceiptPayload? _formationAgentPayload;
+    private readonly ObstacleOverlaySpawnReceiptPayload? _obstacleOverlayPayload;
+
     private TotalWarSpawnReceiptBinding(
         TotalWarSpawnReceiptKind kind,
-        int massNavAgentIndex,
-        int formationIndex,
-        int slotIndex,
-        int teamId,
-        bool heavy,
-        float navMass,
-        float visualScale,
-        float bodyRadiusCm,
-        float speedCmPerSecond,
-        float obstacleRadiusCm,
+        SoldierSpawnReceiptPayload? soldierPayload,
+        FormationAgentSpawnReceiptPayload? formationAgentPayload,
+        ObstacleOverlaySpawnReceiptPayload? obstacleOverlayPayload,
         string templateId)
     {
         Kind = kind;
-        MassNavAgentIndex = massNavAgentIndex;
-        FormationIndex = formationIndex;
-        SlotIndex = slotIndex;
-        TeamId = teamId;
-        Heavy = heavy;
-        NavMass = navMass;
-        VisualScale = visualScale;
-        BodyRadiusCm = bodyRadiusCm;
-        SpeedCmPerSecond = speedCmPerSecond;
-        ObstacleRadiusCm = obstacleRadiusCm;
+        _soldierPayload = soldierPayload;
+        _formationAgentPayload = formationAgentPayload;
+        _obstacleOverlayPayload = obstacleOverlayPayload;
         TemplateId = templateId;
     }
+
+    public TotalWarSpawnReceiptKind Kind { get; }
+    public int MassNavAgentIndex => Kind switch
+    {
+        TotalWarSpawnReceiptKind.Soldier => RequireSoldierPayload().MassNavAgentIndex,
+        TotalWarSpawnReceiptKind.FormationAgent => RequireFormationAgentPayload().MassNavAgentIndex,
+        _ => throw InvalidMemberForKind(nameof(MassNavAgentIndex)),
+    };
+
+    public int FormationIndex => Kind switch
+    {
+        TotalWarSpawnReceiptKind.Soldier => RequireSoldierPayload().FormationIndex,
+        TotalWarSpawnReceiptKind.FormationAgent => RequireFormationAgentPayload().FormationIndex,
+        _ => throw InvalidMemberForKind(nameof(FormationIndex)),
+    };
+
+    public int SlotIndex
+    {
+        get
+        {
+            RequireKind(TotalWarSpawnReceiptKind.Soldier, nameof(SlotIndex));
+            return RequireSoldierPayload().SlotIndex;
+        }
+    }
+
+    public float ObstacleRadiusCm
+    {
+        get
+        {
+            RequireKind(TotalWarSpawnReceiptKind.ObstacleOverlay, nameof(ObstacleRadiusCm));
+            return RequireObstacleOverlayPayload().ObstacleRadiusCm;
+        }
+    }
+
+    public string TemplateId { get; }
 
     public static TotalWarSpawnReceiptBinding ForSoldier(
         int massNavAgentIndex,
         int formationIndex,
         int slotIndex,
-        int teamId,
-        bool heavy,
-        float navMass,
-        float visualScale,
-        float bodyRadiusCm,
-        float speedCmPerSecond,
         string templateId)
     {
-        return new TotalWarSpawnReceiptBinding(
-            TotalWarSpawnReceiptKind.Soldier,
+        ValidateAgentPayload(
             massNavAgentIndex,
             formationIndex,
-            slotIndex,
-            teamId,
-            heavy,
-            navMass,
-            visualScale,
-            bodyRadiusCm,
-            speedCmPerSecond,
-            obstacleRadiusCm: 0f,
+            templateId,
+            "soldier");
+        if (slotIndex < 0)
+        {
+            throw new System.InvalidOperationException("Total War soldier spawn receipt requires non-negative slotIndex.");
+        }
+
+        return new TotalWarSpawnReceiptBinding(
+            TotalWarSpawnReceiptKind.Soldier,
+            new SoldierSpawnReceiptPayload(
+                massNavAgentIndex,
+                formationIndex,
+                slotIndex),
+            formationAgentPayload: null,
+            obstacleOverlayPayload: null,
             templateId);
     }
 
     public static TotalWarSpawnReceiptBinding ForFormationAgent(
         int massNavAgentIndex,
         int formationIndex,
-        int teamId,
-        bool heavy,
-        float navMass,
-        float visualScale,
-        float bodyRadiusCm,
-        float speedCmPerSecond,
         string templateId)
     {
-        return new TotalWarSpawnReceiptBinding(
-            TotalWarSpawnReceiptKind.FormationAgent,
+        ValidateAgentPayload(
             massNavAgentIndex,
             formationIndex,
-            slotIndex: 0,
-            teamId,
-            heavy,
-            navMass,
-            visualScale,
-            bodyRadiusCm,
-            speedCmPerSecond,
-            obstacleRadiusCm: 0f,
+            templateId,
+            "formation agent");
+        return new TotalWarSpawnReceiptBinding(
+            TotalWarSpawnReceiptKind.FormationAgent,
+            soldierPayload: null,
+            new FormationAgentSpawnReceiptPayload(
+                massNavAgentIndex,
+                formationIndex),
+            obstacleOverlayPayload: null,
             templateId);
     }
 
@@ -96,33 +115,89 @@ internal readonly struct TotalWarSpawnReceiptBinding
         float obstacleRadiusCm,
         string templateId)
     {
+        if (!(obstacleRadiusCm > 0f))
+        {
+            throw new System.InvalidOperationException("Total War obstacle overlay spawn receipt requires obstacleRadiusCm > 0.");
+        }
+
+        RequireTemplateId(templateId);
         return new TotalWarSpawnReceiptBinding(
             TotalWarSpawnReceiptKind.ObstacleOverlay,
-            massNavAgentIndex: 0,
-            formationIndex: 0,
-            slotIndex: 0,
-            teamId: 0,
-            heavy: false,
-            navMass: 0f,
-            visualScale: 0f,
-            bodyRadiusCm: 0f,
-            speedCmPerSecond: 0f,
-            obstacleRadiusCm,
+            soldierPayload: null,
+            formationAgentPayload: null,
+            new ObstacleOverlaySpawnReceiptPayload(obstacleRadiusCm),
             templateId);
     }
 
-    public TotalWarSpawnReceiptKind Kind { get; }
-    public int MassNavAgentIndex { get; }
-    public int FormationIndex { get; }
-    public int SlotIndex { get; }
-    public int TeamId { get; }
-    public bool Heavy { get; }
-    public float NavMass { get; }
-    public float VisualScale { get; }
-    public float BodyRadiusCm { get; }
-    public float SpeedCmPerSecond { get; }
-    public float ObstacleRadiusCm { get; }
-    public string TemplateId { get; }
+    private static void ValidateAgentPayload(
+        int massNavAgentIndex,
+        int formationIndex,
+        string templateId,
+        string label)
+    {
+        if (massNavAgentIndex < 0)
+        {
+            throw new System.InvalidOperationException($"Total War {label} spawn receipt requires non-negative massNavAgentIndex.");
+        }
+
+        if (formationIndex < 0)
+        {
+            throw new System.InvalidOperationException($"Total War {label} spawn receipt requires non-negative formationIndex.");
+        }
+
+        RequireTemplateId(templateId);
+    }
+
+    private void RequireKind(TotalWarSpawnReceiptKind expected, string memberName)
+    {
+        if (Kind != expected)
+        {
+            throw InvalidMemberForKind(memberName);
+        }
+    }
+
+    private System.InvalidOperationException InvalidMemberForKind(string memberName)
+    {
+        return new System.InvalidOperationException(
+            $"Total War spawn receipt member {memberName} is not valid for {Kind} receipts.");
+    }
+
+    private static void RequireTemplateId(string templateId)
+    {
+        if (string.IsNullOrWhiteSpace(templateId))
+        {
+            throw new System.InvalidOperationException("Total War spawn receipt requires a non-empty templateId.");
+        }
+    }
+
+    private SoldierSpawnReceiptPayload RequireSoldierPayload()
+    {
+        return _soldierPayload
+            ?? throw new System.InvalidOperationException("Total War soldier spawn receipt requires a soldier payload.");
+    }
+
+    private FormationAgentSpawnReceiptPayload RequireFormationAgentPayload()
+    {
+        return _formationAgentPayload
+            ?? throw new System.InvalidOperationException("Total War formation agent spawn receipt requires a formation agent payload.");
+    }
+
+    private ObstacleOverlaySpawnReceiptPayload RequireObstacleOverlayPayload()
+    {
+        return _obstacleOverlayPayload
+            ?? throw new System.InvalidOperationException("Total War obstacle overlay spawn receipt requires an obstacle overlay payload.");
+    }
+
+    private readonly record struct SoldierSpawnReceiptPayload(
+        int MassNavAgentIndex,
+        int FormationIndex,
+        int SlotIndex);
+
+    private readonly record struct FormationAgentSpawnReceiptPayload(
+        int MassNavAgentIndex,
+        int FormationIndex);
+
+    private readonly record struct ObstacleOverlaySpawnReceiptPayload(float ObstacleRadiusCm);
 }
 
 internal sealed class TotalWarSpawnReceiptRuntime

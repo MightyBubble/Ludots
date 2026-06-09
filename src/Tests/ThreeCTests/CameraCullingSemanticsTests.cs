@@ -64,7 +64,17 @@ namespace Ludots.Tests.ThreeC
             var spatial = new StubSpatialQueryService(entity);
             var view = new StubViewController();
 
-            using var system = new CameraCullingSystem(world, camera, spatial, view, cullingConfig: new CameraCullingRuntimeConfig());
+            using var system = new CameraCullingSystem(
+                world,
+                camera,
+                spatial,
+                view,
+                cullingConfig: new CameraCullingRuntimeConfig
+                {
+                    HighLodDistanceCm = 4000f,
+                    MediumLodDistanceCm = 10000f,
+                    LowLodDistanceCm = 20000f,
+                });
             system.Update(0.016f);
 
             ref CullState cull = ref world.Get<CullState>(entity);

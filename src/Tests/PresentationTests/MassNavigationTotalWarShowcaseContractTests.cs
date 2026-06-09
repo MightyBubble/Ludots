@@ -9,6 +9,7 @@ using Arch.Core;
 using Ludots.Core.Components;
 using Ludots.Core.Config;
 using Ludots.Core.Engine;
+using Ludots.Core.Gameplay.Components;
 using Ludots.Core.Gameplay.GAS.Components;
 using Ludots.Core.Gameplay.GAS.Orders;
 using Ludots.Core.Gameplay.Spawning;
@@ -48,12 +49,24 @@ namespace Ludots.Tests.Presentation
         {
             string modRoot = TotalWarModRoot();
             JsonObject config = ReadObject(Path.Combine(modRoot, "assets", "TotalWarShowcaseConfig.json"));
+            JsonObject massNavConfig = ReadObject(Path.Combine(modRoot, "assets", "MassNavigationConfig.json"));
+            JsonObject agentProfiles = massNavConfig["agentProfiles"]?.AsObject()
+                ?? throw new InvalidOperationException("MassNavigationConfig must author agentProfiles.");
             JsonObject formationAgent = config["formationAgent"]?.AsObject()
                 ?? throw new InvalidOperationException("TotalWar config must author formationAgent.");
+            AssertAgentAuthoringReferencesProfileOnly(formationAgent, "formationAgent");
             string formationTemplateId = RequireString(formationAgent, "templateId");
             Assert.That(formationTemplateId, Is.EqualTo("mass_navigation_total_war_formation_agent"));
-            float formationSpeedCmPerSecond = formationAgent["speedCmPerSecond"]?.GetValue<float>()
-                ?? throw new InvalidOperationException("TotalWar formationAgent.speedCmPerSecond must be numeric.");
+            string formationProfileId = RequireString(formationAgent, "profileId");
+            Assert.That(formationProfileId, Is.EqualTo("formation"));
+            Assert.That(config["localPlayerTeamId"]?.GetValue<int>(), Is.EqualTo(1));
+            JsonObject selection = config["selection"]?.AsObject()
+                ?? throw new InvalidOperationException("TotalWar config must author selection.");
+            Assert.That(RequireString(selection, "formationSelectableTeamScope"), Is.EqualTo("LocalPlayerTeam"),
+                "Player box selection in the Total War showcase must be explicitly scoped to locally commandable formations.");
+            JsonObject formationProfile = FindAgentProfileById(agentProfiles, formationProfileId);
+            float formationSpeedCmPerSecond = formationProfile["speedCmPerSecond"]?.GetValue<float>()
+                ?? throw new InvalidOperationException("MassNavigation formation agent profile speedCmPerSecond must be numeric.");
 
             JsonArray templates = ReadArray(Path.Combine(modRoot, "assets", "Entities", "templates.json"));
             JsonObject formationTemplate = FindObjectById(templates, formationTemplateId);
@@ -70,8 +83,10 @@ namespace Ludots.Tests.Presentation
             Assert.That(components.ContainsKey("SelectionSelectableTag"), Is.True);
             Assert.That(components.ContainsKey("SelectionSelectableState"), Is.True);
             Assert.That(components.ContainsKey("AttributeBuffer"), Is.True);
-            Assert.That(components.ContainsKey("SpatialBounds"), Is.True);
-            Assert.That(components.ContainsKey("SpatialFootprint2D"), Is.True);
+            Assert.That(components.ContainsKey("SpatialBounds"), Is.False,
+                "Formation footprint is derived from TotalWarShowcaseConfig outline at receipt binding time, not authored in the template.");
+            Assert.That(components.ContainsKey("SpatialFootprint2D"), Is.False,
+                "Formation footprint vertices must not drift away from the configured outline.");
 
             JsonArray formations = config["formations"]?.AsArray()
                 ?? throw new InvalidOperationException("TotalWar config must author formations.");
@@ -98,12 +113,24 @@ namespace Ludots.Tests.Presentation
 
             foreach (JsonObject formation in formations.Select(node => node?.AsObject() ?? throw new InvalidOperationException("Formation must be an object.")))
             {
+                JsonObject formationOutline = formation["outline"]?.AsObject()
+                    ?? throw new InvalidOperationException("Every formation must author outline.");
+                if (RequireString(formationOutline, "shape") == "Circle")
+                {
+                    JsonObject circle = formationOutline["circle"]?.AsObject()
+                        ?? throw new InvalidOperationException("Circle formation must author outline.circle.");
+                    Assert.That(circle["footprintVertexCount"]?.GetValue<int>(), Is.EqualTo(SpatialFootprint2D.MaxVerticesPerPolygon));
+                }
+
                 JsonObject soldierAgent = formation["soldierAgent"]?.AsObject()
                     ?? throw new InvalidOperationException("Every formation must author soldierAgent.");
-                float soldierSpeedCmPerSecond = soldierAgent["speedCmPerSecond"]?.GetValue<float>()
-                    ?? throw new InvalidOperationException("Every formation soldierAgent.speedCmPerSecond must be numeric.");
+                AssertAgentAuthoringReferencesProfileOnly(soldierAgent, "soldierAgent");
+                string soldierProfileId = RequireString(soldierAgent, "profileId");
+                JsonObject soldierProfile = FindAgentProfileById(agentProfiles, soldierProfileId);
+                float soldierSpeedCmPerSecond = soldierProfile["speedCmPerSecond"]?.GetValue<float>()
+                    ?? throw new InvalidOperationException("Every formation soldier agent profile speedCmPerSecond must be numeric.");
                 Assert.That(soldierSpeedCmPerSecond, Is.GreaterThan(formationSpeedCmPerSecond),
-                    "TotalWar soldier MassNavigation agents must be configured faster than formation MassNavigation agents.");
+                    "TotalWar soldier MassNavigation agents must use agentProfiles configured faster than formation MassNavigation agents.");
                 JsonObject soldierTemplate = FindObjectById(templates, RequireString(soldierAgent, "templateId"));
                 JsonObject soldierComponents = soldierTemplate["components"]?.AsObject()
                     ?? throw new InvalidOperationException("TotalWar soldier template must author components.");
@@ -186,15 +213,27 @@ namespace Ludots.Tests.Presentation
                 "TotalWar showcase authoring is a complete scenario SSOT; it must not rely on DeepObject field fill.");
 
             JsonObject config = ReadObject(Path.Combine(modRoot, "assets", "MassNavigationConfig.json"));
+            JsonObject showcaseConfig = ReadObject(Path.Combine(modRoot, "assets", "TotalWarShowcaseConfig.json"));
+            Assert.That(showcaseConfig.ContainsKey("localPlayerTeamId"), Is.True,
+                "TotalWarShowcaseConfig must explicitly author which Team receives local PlayerOwner command ownership.");
+            JsonObject selection = showcaseConfig["selection"]?.AsObject()
+                ?? throw new InvalidOperationException("TotalWarShowcaseConfig must explicitly author selection.");
+            Assert.That(RequireString(selection, "formationSelectableTeamScope"), Is.EqualTo("LocalPlayerTeam"),
+                "TotalWarShowcaseConfig must explicitly author which formations can enter player box selection.");
+            Assert.That(showcaseConfig["initialSelectionEntityCapacity"]?.GetValue<int>(), Is.GreaterThan(0),
+                "TotalWarShowcaseConfig must explicitly author initial selection scratch capacity.");
             string[] required =
             {
                 "mapId",
                 "world",
+                "solver",
                 "presentation",
                 "scenario",
                 "scenarioRuntime",
                 "cadence",
                 "agentProfiles",
+                "cameraProfiles",
+                "minimap",
                 "teamRelationships",
                 "flow",
                 "arrival",
@@ -208,11 +247,32 @@ namespace Ludots.Tests.Presentation
             }
 
             Assert.That(RequireString(config, "mapId"), Is.EqualTo("mass_navigation_total_war"));
-            Assert.That(config["scenarioRuntime"]?["autoSpawnConfiguredScenario"]?.GetValue<bool>(), Is.False);
+            JsonObject agentProfiles = config["agentProfiles"]?.AsObject()
+                ?? throw new InvalidOperationException("agentProfiles must be authored.");
+            JsonArray profiles = agentProfiles["profiles"]?.AsArray()
+                ?? throw new InvalidOperationException("agentProfiles.profiles must be authored.");
+            Assert.That(profiles.Select(node => node?["id"]?.GetValue<string>()).ToArray(),
+                Is.EquivalentTo(new[] { "formation", "heavy", "light" }));
+            JsonObject formationProfile = FindAgentProfileById(agentProfiles, "formation");
+            Assert.That(formationProfile["bodyRadiusCm"]?.GetValue<float>(), Is.EqualTo(720f));
+            Assert.That(formationProfile["speedCmPerSecond"]?.GetValue<float>(), Is.EqualTo(360f));
+            JsonObject scenarioRuntime = config["scenarioRuntime"]?.AsObject()
+                ?? throw new InvalidOperationException("scenarioRuntime must be authored.");
+            Assert.That(scenarioRuntime["autoSpawnConfiguredScenario"]?.GetValue<bool>(), Is.False);
+            Assert.That(scenarioRuntime["initialSelectionScratchCapacity"]?.GetValue<int>(), Is.GreaterThan(0));
+            Assert.That(scenarioRuntime["initialSelectedEntityCapacity"]?.GetValue<int>(), Is.GreaterThan(0));
+            JsonObject panelControls = scenarioRuntime["panelControls"]?.AsObject()
+                ?? throw new InvalidOperationException("scenarioRuntime.panelControls must be authored.");
+            Assert.That(panelControls["maxAgentsPerTeam"]?.GetValue<int>(), Is.GreaterThan(0));
+            Assert.That(panelControls["totalAgentStep"]?.GetValue<int>(), Is.GreaterThan(0));
+            Assert.That(panelControls["totalAgentPresets"]?.AsArray().Count, Is.GreaterThan(0));
+            Assert.That(panelControls["panelRefreshIntervalSeconds"]?.GetValue<float>(), Is.GreaterThan(0f));
             JsonObject scenario = config["scenario"]?.AsObject()
                 ?? throw new InvalidOperationException("scenario must be authored.");
             Assert.That(scenario["agentsPerTeam"]?.GetValue<int>(), Is.EqualTo(0),
                 "TotalWar runtime owns formation/soldier spawning; the shared MassNavigation config must not auto-author generic scenario agents.");
+            Assert.That(scenario.ContainsKey("spawnLayout"), Is.False,
+                "TotalWar does not use MassNavigation generic auto-spawn, so it must not author a generic spawn layout SSOT.");
             JsonArray scenarioTeams = scenario["teams"]?.AsArray()
                 ?? throw new InvalidOperationException("scenario.teams must be authored.");
             Assert.That(scenarioTeams.Select(node => node?["id"]?.GetValue<int>()).ToArray(),
@@ -223,6 +283,63 @@ namespace Ludots.Tests.Presentation
                 ?? throw new InvalidOperationException("presentation.teams must be authored.");
             Assert.That(presentationTeams.Count, Is.EqualTo(0),
                 "TotalWar owns formation/soldier spawning through TotalWarShowcaseConfig; MassNavigation generic auto-spawn team mappings must stay empty to avoid a second template SSOT.");
+            Assert.That(presentation.ContainsKey("blockerPerformerId"), Is.False);
+            Assert.That(presentation.ContainsKey("hotspotPerformerId"), Is.False);
+            Assert.That(presentation.ContainsKey("blockerTemplateId"), Is.False);
+            Assert.That(presentation.ContainsKey("hotspotTemplateId"), Is.False);
+            JsonArray requiredMeshAssetIds = presentation["requiredMeshAssetIds"]?.AsArray()
+                ?? throw new InvalidOperationException("presentation.requiredMeshAssetIds must be authored.");
+            string[] requiredMeshIds = requiredMeshAssetIds.Select(node => node?.GetValue<string>() ?? string.Empty).ToArray();
+            Assert.That(requiredMeshIds, Does.Contain("mass_navigation.agent.soldier"));
+            Assert.That(requiredMeshIds, Does.Contain("mass_navigation.selection.marker"));
+            Assert.That(requiredMeshIds, Does.Not.Contain("mass_navigation.blocker.rock"));
+            Assert.That(requiredMeshIds, Does.Not.Contain("mass_navigation.hotspot.obelisk"));
+
+            JsonObject solver = config["solver"]?.AsObject()
+                ?? throw new InvalidOperationException("solver must be authored.");
+            string[] solverProperties =
+            {
+                "fieldWidthCm",
+                "fieldHeightCm",
+                "flowCellSizeCm",
+                "maxObstacleCount",
+                "separationHashCellSizeCm",
+                "separationHashMinSearchRadiusCells",
+                "hardResolveHashCellSizeCm",
+                "hardResolveHashMinSearchRadiusCells",
+                "playAreaMinXCm",
+                "playAreaMaxXCm",
+                "playAreaMinYCm",
+                "playAreaMaxYCm",
+            };
+            foreach (string property in solverProperties)
+            {
+                Assert.That(solver.ContainsKey(property), Is.True, $"TotalWar MassNavigationConfig must author solver.{property}.");
+            }
+
+            JsonObject world = config["world"]?.AsObject()
+                ?? throw new InvalidOperationException("world must be authored.");
+            Assert.That(solver["fieldWidthCm"]!.GetValue<int>(), Is.EqualTo(world["solverWindowWidthCm"]!.GetValue<int>()));
+            Assert.That(solver["fieldHeightCm"]!.GetValue<int>(), Is.EqualTo(world["solverWindowHeightCm"]!.GetValue<int>()));
+
+            JsonObject cameraProfiles = config["cameraProfiles"]?.AsObject()
+                ?? throw new InvalidOperationException("cameraProfiles must be authored.");
+            Assert.That(RequireString(cameraProfiles, "tacticalProfileId"), Is.EqualTo("Camera.Profile.MassNavigationTactical"));
+            Assert.That(RequireString(cameraProfiles, "strategicProfileId"), Is.EqualTo("Camera.Profile.MassNavigationStrategic"));
+            JsonObject cameraRequestPolicy = cameraProfiles["requestPolicy"]?.AsObject()
+                ?? throw new InvalidOperationException("cameraProfiles.requestPolicy must be authored.");
+            Assert.That(cameraRequestPolicy.ContainsKey("blendDurationSeconds"), Is.True);
+            Assert.That(cameraRequestPolicy.ContainsKey("resetRuntimeState"), Is.True);
+            Assert.That(cameraRequestPolicy.ContainsKey("snapToFollowTargetWhenAvailable"), Is.True);
+            Assert.That(cameraRequestPolicy.ContainsKey("strategicTargetXCm"), Is.True);
+            Assert.That(cameraRequestPolicy.ContainsKey("strategicTargetYCm"), Is.True);
+
+            JsonObject minimap = config["minimap"]?.AsObject()
+                ?? throw new InvalidOperationException("minimap must be authored.");
+            Assert.That(minimap.ContainsKey("visible"), Is.True);
+            Assert.That(RequireString(minimap, "initialPreset"), Is.EqualTo("RtsFullMap"));
+            Assert.That(minimap["followCameraHalfExtentCm"]?.GetValue<float>(), Is.GreaterThan(0f));
+            Assert.That(minimap.ContainsKey("rotateWithCamera"), Is.True);
 
             JsonObject residency = config["viewResidency"]?.AsObject()
                 ?? throw new InvalidOperationException("viewResidency must be authored.");
@@ -234,6 +351,24 @@ namespace Ludots.Tests.Presentation
                 ?? throw new InvalidOperationException("viewResidency.cameraProbes must be authored.");
             Assert.That(probes.Select(node => node?["id"]?.GetValue<string>()).ToArray(),
                 Is.EquivalentTo(new[] { "battlefield_overview", "left_flank", "right_flank" }));
+
+            JsonObject avoidance = config["avoidance"]?.AsObject()
+                ?? throw new InvalidOperationException("avoidance must be authored.");
+            Assert.That(avoidance.ContainsKey("lightNavMass"), Is.False,
+                "TotalWar agent navMass must be owned only by MassNavigationConfig.agentProfiles.");
+            Assert.That(avoidance.ContainsKey("heavyNavMass"), Is.False,
+                "TotalWar agent navMass must be owned only by MassNavigationConfig.agentProfiles.");
+            Assert.That(avoidance.ContainsKey("lightVisualScale"), Is.False,
+                "TotalWar agent visualScale must be owned only by MassNavigationConfig.agentProfiles.");
+            Assert.That(avoidance.ContainsKey("heavyVisualScale"), Is.False,
+                "TotalWar agent visualScale must be owned only by MassNavigationConfig.agentProfiles.");
+            Assert.That(avoidance["dominantMassRatio"]?.GetValue<float>(), Is.GreaterThan(0f));
+            Assert.That(avoidance["friendlyResponseScale"]?.GetValue<float>(), Is.GreaterThan(0f));
+            JsonObject legacyAvoidanceConfig = ReadObject(Path.Combine(modRoot, "assets", "MassNavigationConfig.json"));
+            legacyAvoidanceConfig["avoidance"]!["heavyVisualScale"] = 0.34f;
+            System.Text.Json.JsonException legacyAvoidanceField = Assert.Throws<System.Text.Json.JsonException>(
+                () => MassNavigationConfig.Load(legacyAvoidanceConfig))!;
+            Assert.That(legacyAvoidanceField.Message, Does.Contain("heavyVisualScale"));
 
             JsonObject group = config["semantics"]?["group"]?.AsObject()
                 ?? throw new InvalidOperationException("semantics.group must be authored.");
@@ -254,42 +389,110 @@ namespace Ludots.Tests.Presentation
         }
 
         [Test]
-        public void TotalWarShowcaseConfig_RejectsSoldierSpeedNotGreaterThanFormationSpeed()
+        public void MassNavigationSolverConfig_IsRequiredAndUsedByRuntime()
+        {
+            JsonObject missingSolver = ReadObject(Path.Combine(TotalWarModRoot(), "assets", "MassNavigationConfig.json"));
+            missingSolver.Remove("solver");
+            InvalidOperationException missing = Assert.Throws<InvalidOperationException>(() => MassNavigationConfig.Load(missingSolver))!;
+            Assert.That(missing.Message, Does.Contain("solver"));
+
+            JsonObject invalidSolver = ReadObject(Path.Combine(TotalWarModRoot(), "assets", "MassNavigationConfig.json"));
+            invalidSolver["solver"]!["flowCellSizeCm"] = 96;
+            InvalidOperationException invalid = Assert.Throws<InvalidOperationException>(() => MassNavigationConfig.Load(invalidSolver))!;
+            Assert.That(invalid.Message, Does.Contain("solver"));
+            Assert.That(invalid.Message, Does.Contain("FlowCellSizeCm"));
+
+            JsonObject configJson = ReadObject(Path.Combine(TotalWarModRoot(), "assets", "MassNavigationConfig.json"));
+            MassNavigationConfig config = MassNavigationConfig.Load(configJson);
+            var simulation = new MassNavigationSimulationRuntime(config);
+            MassNavigationSolverRuntimeConfigSnapshot solver = simulation.CaptureSolverRuntimeConfig();
+            Assert.That(solver.FieldWidthCm, Is.EqualTo(config.Solver.FieldWidthCm));
+            Assert.That(solver.FieldHeightCm, Is.EqualTo(config.Solver.FieldHeightCm));
+            Assert.That(solver.FlowCellSizeCm, Is.EqualTo(config.Solver.FlowCellSizeCm));
+            Assert.That(solver.MaxObstacleCount, Is.EqualTo(config.Solver.MaxObstacleCount));
+            Assert.That(solver.ParallelWorkerCount, Is.EqualTo(config.Solver.ParallelWorkerCount));
+            Assert.That(solver.SeparationHashCellSizeCm, Is.EqualTo(config.Solver.SeparationHashCellSizeCm));
+            Assert.That(solver.HardResolveHashCellSizeCm, Is.EqualTo(config.Solver.HardResolveHashCellSizeCm));
+            Assert.That(solver.PlayAreaMinXCm, Is.EqualTo(config.Solver.PlayAreaMinXCm));
+            Assert.That(solver.PlayAreaMaxXCm, Is.EqualTo(config.Solver.PlayAreaMaxXCm));
+        }
+
+        [Test]
+        public void TotalWarShowcaseConfig_RejectsMissingProfilesAndLegacyAgentRuntimeFields()
         {
             JsonObject config = ReadObject(Path.Combine(TotalWarModRoot(), "assets", "TotalWarShowcaseConfig.json"));
+            JsonObject massNavConfig = ReadObject(Path.Combine(TotalWarModRoot(), "assets", "MassNavigationConfig.json"));
+            TotalWarShowcaseConfig loaded = TotalWarShowcaseConfig.Load(config);
+            MassNavigationConfig loadedMassNav = MassNavigationConfig.Load(massNavConfig);
+            Assert.DoesNotThrow(() => loaded.ValidateAgentProfileReferences(loadedMassNav.AgentProfiles));
+
             JsonObject formationAgent = config["formationAgent"]?.AsObject()
                 ?? throw new InvalidOperationException("TotalWar config must author formationAgent.");
-            float formationSpeedCmPerSecond = formationAgent["speedCmPerSecond"]?.GetValue<float>()
-                ?? throw new InvalidOperationException("TotalWar formationAgent.speedCmPerSecond must be numeric.");
+            formationAgent["profileId"] = "missing_formation_profile";
+            loaded = TotalWarShowcaseConfig.Load(config);
+            InvalidOperationException missingFormationProfile = Assert.Throws<InvalidOperationException>(
+                () => loaded.ValidateAgentProfileReferences(loadedMassNav.AgentProfiles))!;
+            Assert.That(missingFormationProfile.Message, Does.Contain("formationAgent.profileId"));
+            Assert.That(missingFormationProfile.Message, Does.Contain("missing_formation_profile"));
 
+            config = ReadObject(Path.Combine(TotalWarModRoot(), "assets", "TotalWarShowcaseConfig.json"));
             JsonArray formations = config["formations"]?.AsArray()
                 ?? throw new InvalidOperationException("TotalWar config must author formations.");
             JsonObject firstFormation = formations[0]?.AsObject()
                 ?? throw new InvalidOperationException("TotalWar formation must be an object.");
             JsonObject soldierAgent = firstFormation["soldierAgent"]?.AsObject()
                 ?? throw new InvalidOperationException("TotalWar formation must author soldierAgent.");
-
-            soldierAgent["speedCmPerSecond"] = formationSpeedCmPerSecond;
-            InvalidOperationException equalSpeed = Assert.Throws<InvalidOperationException>(() => TotalWarShowcaseConfig.Load(config))!;
-            Assert.That(equalSpeed.Message, Does.Contain("soldierAgent.speedCmPerSecond"));
-            Assert.That(equalSpeed.Message, Does.Contain("formationAgent.speedCmPerSecond"));
+            soldierAgent["profileId"] = "missing_soldier_profile";
+            loaded = TotalWarShowcaseConfig.Load(config);
+            InvalidOperationException missingSoldierProfile = Assert.Throws<InvalidOperationException>(
+                () => loaded.ValidateAgentProfileReferences(loadedMassNav.AgentProfiles))!;
+            Assert.That(missingSoldierProfile.Message, Does.Contain("soldierAgent.profileId"));
+            Assert.That(missingSoldierProfile.Message, Does.Contain("missing_soldier_profile"));
 
             config = ReadObject(Path.Combine(TotalWarModRoot(), "assets", "TotalWarShowcaseConfig.json"));
             formationAgent = config["formationAgent"]?.AsObject()
                 ?? throw new InvalidOperationException("TotalWar config must author formationAgent.");
-            formationSpeedCmPerSecond = formationAgent["speedCmPerSecond"]?.GetValue<float>()
-                ?? throw new InvalidOperationException("TotalWar formationAgent.speedCmPerSecond must be numeric.");
+            formationAgent["navMass"] = 12f;
+            System.Text.Json.JsonException legacyFormationField = Assert.Throws<System.Text.Json.JsonException>(
+                () => TotalWarShowcaseConfig.Load(config))!;
+            Assert.That(legacyFormationField.Message, Does.Contain("navMass"));
+
+            config = ReadObject(Path.Combine(TotalWarModRoot(), "assets", "TotalWarShowcaseConfig.json"));
             formations = config["formations"]?.AsArray()
                 ?? throw new InvalidOperationException("TotalWar config must author formations.");
             firstFormation = formations[0]?.AsObject()
                 ?? throw new InvalidOperationException("TotalWar formation must be an object.");
             soldierAgent = firstFormation["soldierAgent"]?.AsObject()
                 ?? throw new InvalidOperationException("TotalWar formation must author soldierAgent.");
-            soldierAgent["speedCmPerSecond"] = formationSpeedCmPerSecond - 1f;
+            soldierAgent["speedCmPerSecond"] = 920f;
+            System.Text.Json.JsonException legacySoldierField = Assert.Throws<System.Text.Json.JsonException>(
+                () => TotalWarShowcaseConfig.Load(config))!;
+            Assert.That(legacySoldierField.Message, Does.Contain("speedCmPerSecond"));
 
-            InvalidOperationException slowerSoldier = Assert.Throws<InvalidOperationException>(() => TotalWarShowcaseConfig.Load(config))!;
-            Assert.That(slowerSoldier.Message, Does.Contain("soldierAgent.speedCmPerSecond"));
-            Assert.That(slowerSoldier.Message, Does.Contain("formationAgent.speedCmPerSecond"));
+            config = ReadObject(Path.Combine(TotalWarModRoot(), "assets", "TotalWarShowcaseConfig.json"));
+            loaded = TotalWarShowcaseConfig.Load(config);
+            massNavConfig = ReadObject(Path.Combine(TotalWarModRoot(), "assets", "MassNavigationConfig.json"));
+            JsonObject profiles = massNavConfig["agentProfiles"]?.AsObject()
+                ?? throw new InvalidOperationException("MassNavigationConfig must author agentProfiles.");
+            JsonObject profile = FindAgentProfileById(profiles, "light");
+            profile["speedCmPerSecond"] = FindAgentProfileById(profiles, "formation")["speedCmPerSecond"]?.GetValue<float>()
+                ?? throw new InvalidOperationException("formation profile speed must be numeric.");
+            loadedMassNav = MassNavigationConfig.Load(massNavConfig);
+            InvalidOperationException equalSpeed = Assert.Throws<InvalidOperationException>(
+                () => loaded.ValidateAgentProfileReferences(loadedMassNav.AgentProfiles))!;
+            Assert.That(equalSpeed.Message, Does.Contain("soldierAgent.profileId"));
+            Assert.That(equalSpeed.Message, Does.Contain("formationAgent.profileId"));
+
+            massNavConfig = ReadObject(Path.Combine(TotalWarModRoot(), "assets", "MassNavigationConfig.json"));
+            profiles = massNavConfig["agentProfiles"]?.AsObject()
+                ?? throw new InvalidOperationException("MassNavigationConfig must author agentProfiles.");
+            profile = FindAgentProfileById(profiles, "light");
+            profile["speedCmPerSecond"] = FindAgentProfileById(profiles, "formation")["speedCmPerSecond"]!.GetValue<float>() - 1f;
+            loadedMassNav = MassNavigationConfig.Load(massNavConfig);
+            InvalidOperationException slowerSoldier = Assert.Throws<InvalidOperationException>(
+                () => loaded.ValidateAgentProfileReferences(loadedMassNav.AgentProfiles))!;
+            Assert.That(slowerSoldier.Message, Does.Contain("soldierAgent.profileId"));
+            Assert.That(slowerSoldier.Message, Does.Contain("formationAgent.profileId"));
         }
 
         [Test]
@@ -339,11 +542,13 @@ namespace Ludots.Tests.Presentation
                 "Soldier slot orders must be derived from formation order/target changes, not a tick cadence chase loop.");
             Assert.That(syncBody, Does.Contain("formationWorldX"));
             Assert.That(syncBody, Does.Contain("LastCarrierCenterWorldXCm"),
-                "Carrier snapshots must use world coordinates; MassFlow local coordinates are rebased when the solver window moves.");
+                "Carrier snapshots must use world coordinates; solver local coordinates are rebased when the navigation window moves.");
             Assert.That(syncBody, Does.Contain("_formationPlans[formationIndex] = plan;"),
                 "Carrier snapshots must be committed even when soldier slot target writes are skipped by the epsilon gate.");
-            Assert.That(syncBody, Does.Contain("ApplyExternalDisplacementRange"),
-                "Soldiers must inherit the formation agent's resolved MassFlow displacement before local slot steering.");
+            Assert.That(syncBody, Does.Contain("SyncCarriedAgentRangeToCarrier"),
+                "Soldiers must inherit the formation agent's resolved MassNavigation displacement through the core carrier/member API.");
+            Assert.That(syncBody, Does.Not.Contain("ApplyAgentWorldDisplacementRange"),
+                "TotalWar must not directly drive raw solver displacement.");
             Assert.That(syncBody, Does.Contain("soldierAgentPlan.SlotOffsetXCm"));
             Assert.That(syncBody, Does.Contain("soldierAgentPlan.SlotOffsetYCm"));
             Assert.That(syncBody, Does.Not.Contain("TryGetGroupMemberOrderTarget"),
@@ -356,10 +561,16 @@ namespace Ludots.Tests.Presentation
                 "TotalWar soldiers must not consume the pure order-path anchor in carrier mode.");
             Assert.That(syncBody, Does.Not.Contain("ResolveOrderPathLookaheadAnchor"),
                 "TotalWar must not recompute its own chase anchor.");
-            Assert.That(syncBody, Does.Contain("ResolveUnitNavigableTarget"),
-                "Soldier slot targets must use MassFlow's per-agent navigable projection before SetUnitTarget.");
+            Assert.That(syncBody, Does.Contain("ResolveCarriedAgentSlotTarget"),
+                "Soldier slot targets must use MassNavigation's carrier/member slot projection before writing navigation targets.");
+            Assert.That(syncBody, Does.Contain("ApplyCarriedAgentSlotTarget"),
+                "Soldier target writes must go through the core carrier/member API.");
+            Assert.That(syncBody, Does.Not.Contain("ResolveAgentGroupSlotTargetLocalCm"),
+                "TotalWar must not call raw MassNavigation slot target projection helpers.");
+            Assert.That(syncBody, Does.Not.Contain("SetAgentTargetLocalCm"),
+                "TotalWar must not directly write raw solver targets.");
             Assert.That(syncBody, Does.Not.Contain("TryGetUnitTarget"),
-                "Soldier target sync must not fallback to raw MassFlow unit targets; order slot targets are the MassNavigation SSOT.");
+                "Soldier target sync must not read raw solver unit targets; order slot targets are the MassNavigation SSOT.");
             Assert.That(syncBody, Does.Not.Contain("TryGetGroupDestination"),
                 "Soldier target sync must not collapse all soldiers to a group destination.");
             Assert.That(syncBody, Does.Contain("ResolveFormationFacing"),
@@ -367,8 +578,8 @@ namespace Ludots.Tests.Presentation
             Assert.That(syncBody, Does.Not.Contain("GetVelocityCmPerSecond"),
                 "Soldier target sync must not infer formation facing from movement velocity.");
             Assert.That(syncBody, Does.Contain("ShouldWriteSoldierTarget"),
-                "Soldier target sync must avoid re-writing unchanged per-soldier targets into MassFlow hot state.");
-            Assert.That(syncBody, Does.Contain("resolvedTargetWorldX"),
+                "Soldier target sync must avoid re-writing unchanged per-soldier targets into navigation hot state.");
+            Assert.That(syncBody, Does.Contain("resolvedTarget.WorldXCm"),
                 "Target write de-duplication must compare world coordinates so solver-window rebases do not stale the cache.");
             Assert.That(syncBody, Does.Contain("resetRecovery: targetChanged"),
                 "Soldier agents must only reset arrival recovery when formation-derived orders actually change.");
@@ -378,23 +589,55 @@ namespace Ludots.Tests.Presentation
                 "Soldier target sync must use BuildScenarioPlans cached slot offsets instead of reparsing formation layout every tick.");
             Assert.That(syncBody, Does.Not.Contain("ActiveConfig"),
                 "Soldier target sync must be driven by explicit method inputs, not hidden runtime config lookups.");
+            Assert.That(syncBody, Does.Not.Contain("MassFlow"),
+                "TotalWar must use MassNavigationSimulationRuntime's public navigation API instead of piercing solver internals.");
         }
 
         [Test]
-        public void TotalWarSoldierBinding_DerivesTeamFromFormationConfigNotTemplate()
+        public void TotalWarSoldierBinding_UsesMassFlowAgentProfileSsot()
         {
             string modRoot = TotalWarModRoot();
             string bindingSource = File.ReadAllText(Path.Combine(modRoot, "Runtime", "TotalWarSpawnReceiptBindingSystem.cs"));
             string bindSoldier = ExtractMethodBody(bindingSource, "private void BindSoldier");
 
             Assert.That(bindSoldier, Does.Contain("RejectComponent<Team>"));
-            Assert.That(bindSoldier, Does.Contain("new Team { Id = binding.TeamId }"));
+            Assert.That(bindSoldier, Does.Contain("_simulation.BindSpawnedAgent"));
+            Assert.That(bindSoldier, Does.Contain("binding.MassNavAgentIndex"));
+            Assert.That(bindSoldier, Does.Not.Contain("binding.TeamId"));
+            Assert.That(bindSoldier, Does.Not.Contain("binding.NavMass"));
+            Assert.That(bindSoldier, Does.Not.Contain("binding.VisualScale"));
+            Assert.That(bindSoldier, Does.Not.Contain("binding.BodyRadiusCm"));
+            Assert.That(bindSoldier, Does.Not.Contain("binding.SpeedCmPerSecond"));
+            Assert.That(bindSoldier, Does.Not.Contain("new Team"));
             Assert.That(bindSoldier, Does.Not.Contain("RequireComponent<Team>"));
             Assert.That(bindSoldier, Does.Not.Contain("RequireTeam("));
         }
 
         [Test]
-        public void TotalWarObstacleOverlayPlans_AreBuiltAfterMassFlowLoadsObstacleSsot()
+        public void TotalWarSpawnReceiptBinding_HasKindGuardedPayloadWithoutAgentProfileSentinels()
+        {
+            string source = File.ReadAllText(Path.Combine(
+                TotalWarModRoot(),
+                "Runtime",
+                "TotalWarSpawnReceiptRuntime.cs"));
+
+            Assert.That(source, Does.Contain("SoldierSpawnReceiptPayload"));
+            Assert.That(source, Does.Contain("FormationAgentSpawnReceiptPayload"));
+            Assert.That(source, Does.Contain("ObstacleOverlaySpawnReceiptPayload"));
+            Assert.That(source, Does.Contain("RequireKind"));
+            Assert.That(source, Does.Not.Contain("TeamId"));
+            Assert.That(source, Does.Not.Contain("Heavy"));
+            Assert.That(source, Does.Not.Contain("NavMass"));
+            Assert.That(source, Does.Not.Contain("VisualScale"));
+            Assert.That(source, Does.Not.Contain("BodyRadiusCm"));
+            Assert.That(source, Does.Not.Contain("SpeedCmPerSecond"));
+            Assert.That(source, Does.Not.Contain("obstacleRadiusCm: 0f"));
+            Assert.That(source, Does.Not.Contain("massNavAgentIndex: 0"));
+            Assert.That(source, Does.Not.Contain("slotIndex: 0"));
+        }
+
+        [Test]
+        public void TotalWarObstacleOverlayPlans_AreBuiltAfterMassNavigationLoadsObstacleSsot()
         {
             string runtimeSource = File.ReadAllText(Path.Combine(TotalWarModRoot(), "Runtime", "TotalWarShowcaseRuntime.cs"));
             string spawnBody = ExtractMethodBody(runtimeSource, "private void SpawnScenario");
@@ -405,8 +648,30 @@ namespace Ludots.Tests.Presentation
 
             Assert.That(resetIndex, Is.GreaterThanOrEqualTo(0));
             Assert.That(obstaclePlanIndex, Is.GreaterThan(resetIndex),
-                "Obstacle overlays must be planned from MassFlow after ResetRuntimeState has loaded WorldConfig.Obstacles.");
+                "Obstacle overlays must be planned from MassNavigation after ResetRuntimeState has loaded WorldConfig.Obstacles.");
             Assert.That(enqueueIndex, Is.GreaterThan(obstaclePlanIndex));
+        }
+
+        [Test]
+        public void TotalWarObstacleOverlayTemplate_DoesNotAuthorConfigOwnedValues()
+        {
+            string modRoot = TotalWarModRoot();
+            JsonObject config = ReadObject(Path.Combine(modRoot, "assets", "TotalWarShowcaseConfig.json"));
+            JsonObject obstacleOverlay = config["obstacleOverlay"]?.AsObject()
+                ?? throw new InvalidOperationException("TotalWar config must author obstacleOverlay.");
+
+            JsonArray templates = ReadArray(Path.Combine(modRoot, "assets", "Entities", "templates.json"));
+            JsonObject overlayTemplate = FindObjectById(templates, RequireString(obstacleOverlay, "templateId"));
+            JsonObject components = overlayTemplate["components"]?.AsObject()
+                ?? throw new InvalidOperationException("TotalWar obstacle overlay template must author components.");
+
+            Assert.That(components.ContainsKey("TotalWarObstacleOverlay"), Is.False,
+                "Obstacle overlay values come from TotalWarShowcaseConfig and MassNavigation obstacle radius.");
+
+            string bindingSource = File.ReadAllText(Path.Combine(modRoot, "Runtime", "TotalWarSpawnReceiptBindingSystem.cs"));
+            string bindObstacle = ExtractMethodBody(bindingSource, "private void BindObstacleOverlay");
+            Assert.That(bindObstacle, Does.Contain("must not author component"));
+            Assert.That(bindObstacle, Does.Contain("ActiveConfig.ObstacleOverlay.ToComponent"));
         }
 
         [Test]
@@ -448,6 +713,63 @@ namespace Ludots.Tests.Presentation
             Assert.That(outlineSource, Does.Not.Contain("GroundOverlayBuffer"),
                 "Formation outlines must not be long flat GroundOverlay shapes; they need per-segment visual-heightmap samples.");
             Assert.That(outlineSource, Does.Not.Contain("GroundOverlayShape"));
+        }
+
+        [Test]
+        public void TotalWarPresentationHotPathCollections_UseConfigDerivedCapacities()
+        {
+            string modRoot = TotalWarModRoot();
+            string configSource = File.ReadAllText(Path.Combine(modRoot, "Runtime", "TotalWarShowcaseConfig.cs"));
+            string runtimeSource = File.ReadAllText(Path.Combine(modRoot, "Runtime", "TotalWarShowcaseRuntime.cs"));
+            string componentsSource = File.ReadAllText(Path.Combine(modRoot, "Runtime", "TotalWarFormationComponents.cs"));
+            string outlineSource = File.ReadAllText(Path.Combine(modRoot, "Runtime", "TotalWarFormationOutlinePresentationSystem.cs"));
+            string obstacleSource = File.ReadAllText(Path.Combine(modRoot, "Runtime", "TotalWarObstacleOverlayPresentationSystem.cs"));
+
+            Assert.That(configSource, Does.Contain("FormationOutlineOwnerCapacity => Formations.Length"));
+            Assert.That(configSource, Does.Contain("FormationOutlineSplineCapacity"));
+            Assert.That(componentsSource, Does.Contain("TotalWarFormationOutlineSegments"));
+            Assert.That(configSource, Does.Contain("TotalWarFormationOutlineSegments.CountSplineSegments"));
+            Assert.That(outlineSource, Does.Contain("TotalWarFormationOutlineSegments.CountSplineSegments"));
+            Assert.That(outlineSource, Does.Not.Contain("TotalWarFormationOutlineShape.Rectangle => 4"));
+            Assert.That(outlineSource, Does.Not.Contain("TotalWarFormationOutlineShape.Circle => 1"));
+            Assert.That(runtimeSource, Does.Contain("new TotalWarFormationOutlinePresentationSystem(engine, this, config)"));
+            Assert.That(runtimeSource, Does.Contain("new TotalWarObstacleOverlayPresentationSystem(engine, this, simulation.WorldConfig.Obstacles.Length)"));
+            Assert.That(configSource, Does.Contain("InitialSelectionEntityCapacity { get; set; }"));
+            Assert.That(runtimeSource, Does.Contain("config.InitialSelectionEntityCapacity"));
+            Assert.That(runtimeSource, Does.Not.Contain("config.InitialSelectionScratchCapacity"));
+            Assert.That(runtimeSource, Does.Not.Contain("new Entity[1]"));
+            Assert.That(runtimeSource, Does.Contain("new HashSet<int>(_formationPlans.Length)"));
+            Assert.That(runtimeSource, Does.Contain("simulation.Config.Scenario.Teams"));
+            Assert.That(runtimeSource, Does.Not.Contain("new HashSet<int>()"));
+            Assert.That(runtimeSource, Does.Not.Contain("new SortedSet<int>"));
+            Assert.That(runtimeSource, Does.Not.Contain("SortedSet<int>"));
+
+            Assert.That(outlineSource, Does.Contain("new List<int>(_stableIdCapacity)"));
+            Assert.That(outlineSource, Does.Contain("new HashSet<int>(_stableIdCapacity)"));
+            Assert.That(outlineSource, Does.Contain("new HashSet<int>(_ownerCapacity)"));
+            Assert.That(outlineSource, Does.Contain("new Dictionary<int, OutlineEmissionState>(_ownerCapacity)"));
+            Assert.That(outlineSource, Does.Contain("TrackStableId"));
+            Assert.That(outlineSource, Does.Contain("RequireEmissionStateCapacity"));
+            Assert.That(outlineSource, Does.Contain("foreach (ref var chunk in _engine.World.Query(in FormationOutlineQuery))"));
+            Assert.That(outlineSource, Does.Contain("PublishFormationOutlineCountIfChanged"));
+            Assert.That(outlineSource, Does.Contain("_lastPublishedFormationOutlineCount"));
+            Assert.That(outlineSource, Does.Not.Contain("_engine.World.Query(\r\n            in FormationOutlineQuery,"));
+            Assert.That(outlineSource, Does.Not.Contain("private readonly List<int> _currentStableIds = new();"));
+            Assert.That(outlineSource, Does.Not.Contain("private readonly HashSet<int> _currentStableIdSet = new();"));
+            Assert.That(outlineSource, Does.Not.Contain("private readonly Dictionary<int, OutlineEmissionState> _emittedStateByOwnerStableId = new();"));
+            Assert.That(outlineSource, Does.Not.Contain("AddRange(_currentStableIds)"));
+
+            Assert.That(obstacleSource, Does.Contain("new List<int>(_overlayCapacity)"));
+            Assert.That(obstacleSource, Does.Contain("new HashSet<int>(_overlayCapacity)"));
+            Assert.That(obstacleSource, Does.Contain("new Dictionary<int, ObstacleOverlayEmissionState>(_overlayCapacity)"));
+            Assert.That(obstacleSource, Does.Contain("TrackStableId"));
+            Assert.That(obstacleSource, Does.Contain("RequireEmissionStateCapacity"));
+            Assert.That(obstacleSource, Does.Contain("foreach (ref var chunk in _engine.World.Query(in ObstacleOverlayQuery))"));
+            Assert.That(obstacleSource, Does.Not.Contain("_engine.World.Query(\r\n            in ObstacleOverlayQuery,"));
+            Assert.That(obstacleSource, Does.Not.Contain("private readonly List<int> _currentStableIds = new();"));
+            Assert.That(obstacleSource, Does.Not.Contain("private readonly HashSet<int> _currentStableIdSet = new();"));
+            Assert.That(obstacleSource, Does.Not.Contain("private readonly Dictionary<int, ObstacleOverlayEmissionState> _emittedStateByStableId = new();"));
+            Assert.That(obstacleSource, Does.Not.Contain("AddRange(_currentStableIds)"));
         }
 
         [Test]
@@ -494,7 +816,7 @@ namespace Ludots.Tests.Presentation
         }
 
         [Test]
-        public void MassNavigationOrderBridge_ConsumesOnlyControllableAgents()
+        public void MassNavigationOrderIngestion_ConsumesOnlyControllableAgents()
         {
             string source = File.ReadAllText(Path.Combine(
                 FindRepoRoot(),
@@ -503,18 +825,75 @@ namespace Ludots.Tests.Presentation
                 "navigation",
                 "MassNavigationMod",
                 "Systems",
-                "MassNavigationOrderBridgeSystem.cs"));
+                "MassNavigationOrderIngestionSystem.cs"));
 
             Assert.That(source, Does.Contain("MassNavigationControllable"),
-                "OrderBridge must make controllability a MassNavigation contract, not a showcase template accident.");
+                "OrderIngestion must make controllability a MassNavigation contract, not a showcase template accident.");
             Assert.That(source, Does.Contain("ResolveControllableAgent"),
                 "Order completion must fail fast when a move order references an unbound controllable agent slot.");
             Assert.That(source, Does.Contain("TryGetControllableEntity"),
                 "Order completion must resolve sparse controllable slots through AgentState instead of reading the list directly.");
             Assert.That(source, Does.Not.Contain("ControllableAgentSlots["),
-                "OrderBridge must not treat the exposed sparse slot list as an indexing API.");
+                "OrderIngestion must not treat the exposed sparse slot list as an indexing API.");
             Assert.That(source, Does.Not.Contain("TotalWar"),
-                "OrderBridge must stay generic and not know the TotalWar showcase.");
+                "OrderIngestion must stay generic and not know the TotalWar showcase.");
+        }
+
+        [Test]
+        public void MassNavigationOrderIngestion_PreallocatesCommandBucketsFromConfiguredRuntimeCapacity()
+        {
+            string source = File.ReadAllText(Path.Combine(
+                FindRepoRoot(),
+                "mods",
+                "capabilities",
+                "navigation",
+                "MassNavigationMod",
+                "Systems",
+                "MassNavigationOrderIngestionSystem.cs"));
+
+            Assert.That(source, Does.Contain("capacity.OrderIngestionTokenCapacity"),
+                "OrderIngestion token storage must use the explicit runtimeCapacity token capacity.");
+            Assert.That(source, Does.Contain("capacity.OrderIngestionMemberCapacity"),
+                "OrderIngestion member storage must use the explicit runtimeCapacity member capacity.");
+            Assert.That(source, Does.Contain("new Dictionary<int, int>(_orderTokenCapacity)"));
+            Assert.That(source, Does.Contain("new HashSet<int>(_orderTokenCapacity)"));
+            Assert.That(source, Does.Contain("new List<int>(_orderTokenCapacity)"));
+            Assert.That(source, Does.Contain("new List<OrderBucket>(_orderTokenCapacity)"));
+            Assert.That(source, Does.Contain("_buckets.Add(new OrderBucket(_bucketMemberCapacity))"));
+            Assert.That(source, Does.Contain("new List<int>(memberCapacity)"));
+            Assert.That(source, Does.Contain("foreach (ref var chunk in _engine.World.Query(in Query))"));
+            Assert.That(source, Does.Contain("scenarioRuntime.runtimeCapacity.orderIngestionTokenCapacity"));
+            Assert.That(source, Does.Contain("scenarioRuntime.runtimeCapacity.orderIngestionMemberCapacity"));
+            Assert.That(source, Does.Not.Contain("InitialSelectedEntityCapacity"),
+                "OrderIngestion must not use selection capacity as a hidden alias for order token/member capacity.");
+            Assert.That(source, Does.Not.Contain("_engine.World.Query(in Query,"),
+                "OrderIngestion hot path must use chunk/span iteration instead of query lambdas.");
+            Assert.That(source, Does.Not.Contain("private readonly Dictionary<int, int> _bucketIndexByToken = new();"),
+                "OrderIngestion must not rely on Dictionary first-use resizing during large selection move frames.");
+            Assert.That(source, Does.Not.Contain("public List<int> Members { get; } = new();"),
+                "Order bucket member storage must be preallocated from explicit configuration.");
+        }
+
+        [Test]
+        public void MassNavigationMetadataSync_UsesScenarioTeamOrderAsSsot()
+        {
+            string source = File.ReadAllText(Path.Combine(
+                FindRepoRoot(),
+                "mods",
+                "capabilities",
+                "navigation",
+                "MassNavigationMod",
+                "Systems",
+                "MassNavigationAgentMetadataSyncSystem.cs"));
+
+            Assert.That(source, Does.Contain("simulation.Config.Scenario.Teams"));
+            Assert.That(source, Does.Contain("_configuredTeamIds"));
+            Assert.That(source, Does.Contain("ConfigureScenarioTeams(_configuredTeamIds)"));
+            Assert.That(source, Does.Contain("MissingEntityLayerQuery"));
+            Assert.That(source, Does.Contain("foreach (ref var chunk in _engine.World.Query(in Query))"));
+            Assert.That(source, Does.Not.Contain("Array.Sort"));
+            Assert.That(source, Does.Not.Contain("_teamScratch"));
+            Assert.That(source, Does.Not.Contain("_engine.World.Query(in Query,"));
         }
 
         [Test]
@@ -651,7 +1030,7 @@ namespace Ludots.Tests.Presentation
         [Test]
         public void MassFlowRuntimeProfile_RejectsBelowSemanticMinimumInsteadOfClamping()
         {
-            var flow = new MassFlowSimulationState();
+            var flow = new MassFlowSimulationState(CreateTestSolverConfig());
             var layer = new MassNavigationAgentLayer(categoryMask: 1u, interactionMask: 1u);
             var seeds = new[]
             {
@@ -686,7 +1065,7 @@ namespace Ludots.Tests.Presentation
         [Test]
         public void MassFlowUnitTargetApis_RejectOutOfRangeAgentIndex()
         {
-            var flow = new MassFlowSimulationState();
+            var flow = new MassFlowSimulationState(CreateTestSolverConfig());
             var layer = new MassNavigationAgentLayer(categoryMask: 1u, interactionMask: 1u);
             var seeds = new[]
             {
@@ -717,7 +1096,7 @@ namespace Ludots.Tests.Presentation
         [Test]
         public void MassFlowExternalDisplacementRange_CarriesPositionAndUnitTarget()
         {
-            var flow = new MassFlowSimulationState();
+            var flow = new MassFlowSimulationState(CreateTestSolverConfig());
             var layer = new MassNavigationAgentLayer(categoryMask: 1u, interactionMask: 1u);
             var seeds = new[]
             {
@@ -764,7 +1143,7 @@ namespace Ludots.Tests.Presentation
         [Test]
         public void MassNavigationOrderPathAnchor_AdvancesAlongAuthoredOrderPathNotCurrentOffsetChase()
         {
-            var flow = new MassFlowSimulationState();
+            var flow = new MassFlowSimulationState(CreateTestSolverConfig());
             var layer = new MassNavigationAgentLayer(categoryMask: 1u, interactionMask: 1u);
             var seeds = new[]
             {
@@ -790,7 +1169,7 @@ namespace Ludots.Tests.Presentation
                 Entity agent = world.Create(new FacingDirection { AngleRad = 0f });
                 var agentState = new MassNavigationAgentState();
                 agentState.RegisterAgentAtIndex(agent, agentIndex: 0, controllable: true);
-                var runtime = new MassNavigationGroupRuntime(new MassNavigationFormationRuntime(new MassNavigationGroupSemantics()));
+                var runtime = CreateTestNavGroupRuntime(agentCapacity: 1, groupMemberCapacity: 1);
 
                 runtime.UpsertOrderMoveCommand(
                     flow,
@@ -830,7 +1209,7 @@ namespace Ludots.Tests.Presentation
         [Test]
         public void MassNavigationFollowerAnchor_IncludesPassiveDisplacementFromAuthoredOrderPath()
         {
-            var flow = new MassFlowSimulationState();
+            var flow = new MassFlowSimulationState(CreateTestSolverConfig());
             var layer = new MassNavigationAgentLayer(categoryMask: 1u, interactionMask: 1u);
             var seeds = new[]
             {
@@ -856,7 +1235,7 @@ namespace Ludots.Tests.Presentation
                 Entity agent = world.Create(new FacingDirection { AngleRad = 0f });
                 var agentState = new MassNavigationAgentState();
                 agentState.RegisterAgentAtIndex(agent, agentIndex: 0, controllable: true);
-                var runtime = new MassNavigationGroupRuntime(new MassNavigationFormationRuntime(new MassNavigationGroupSemantics()));
+                var runtime = CreateTestNavGroupRuntime(agentCapacity: 1, groupMemberCapacity: 1);
 
                 runtime.UpsertOrderMoveCommand(
                     flow,
@@ -998,7 +1377,7 @@ namespace Ludots.Tests.Presentation
         [Test]
         public void MassFlowHardResolve_SeparatesLargeAgentsByConfiguredBodyRadius()
         {
-            var flow = new MassFlowSimulationState();
+            var flow = new MassFlowSimulationState(CreateTestSolverConfig());
             var layer = new MassNavigationAgentLayer(categoryMask: 1u, interactionMask: 1u);
             var seeds = new[]
             {
@@ -1036,7 +1415,7 @@ namespace Ludots.Tests.Presentation
             flow.Step(
                 dt: 0f,
                 world: World.Create(),
-                navGroupRuntime: new MassNavigationGroupRuntime(new MassNavigationFormationRuntime(new MassNavigationGroupSemantics())),
+                navGroupRuntime: CreateTestNavGroupRuntime(agentCapacity: seeds.Length, groupMemberCapacity: seeds.Length),
                 runHardResolve: true,
                 hardResolveCandidateThresholdAgents: 1);
 
@@ -1050,7 +1429,7 @@ namespace Ludots.Tests.Presentation
         [Test]
         public void MassFlowResolveUnitNavigableTarget_UsesUnitBodyRadiusBeforeSetUnitTarget()
         {
-            var flow = new MassFlowSimulationState();
+            var flow = new MassFlowSimulationState(CreateTestSolverConfig());
             var layer = new MassNavigationAgentLayer(categoryMask: 1u, interactionMask: 1u);
             var seeds = new[]
             {
@@ -1395,7 +1774,7 @@ namespace Ludots.Tests.Presentation
                       simulation.CommandRejectsTotal == rejectsBeforeMove &&
                       CountActiveMoveOrders(engine, simulation) > 0,
                 maxFrames: TotalWarAcceptance.FrameBudgetForInteraction,
-                failureMessage: "Right-click command should flow through PlayerInputHandler, MassNavigationCommandBridgeSystem, and OrderBuffer.");
+                failureMessage: "Right-click command should flow through PlayerInputHandler, MassNavigationLocalCommandInputSystem, and OrderBuffer.");
 
             Assert.That(simulation.HasCommandFocus, Is.True);
             Assert.That(simulation.CommandFocusXCm, Is.EqualTo(expectedMoveTarget.X).Within(1f));
@@ -1422,9 +1801,8 @@ namespace Ludots.Tests.Presentation
             Assert.That(engine.World.TryGet(formation, out TotalWarFormationAgent formationAgent), Is.True);
             float initialFacing = engine.World.Get<FacingDirection>(formation).AngleRad;
             int soldierAgentIndex = FindFirstSoldierAgentIndex(engine, formationAgent.FormationIndex);
-            Assert.That(simulation.MassFlow.TryGetUnitTarget(soldierAgentIndex, out float soldierTargetBeforeX, out float soldierTargetBeforeY), Is.True);
-            float soldierBeforeX = simulation.MassFlow.GetPositionX(soldierAgentIndex);
-            float soldierBeforeY = simulation.MassFlow.GetPositionY(soldierAgentIndex);
+            Assert.That(simulation.TryGetAgentNavigationTargetLocalCm(soldierAgentIndex, out float soldierTargetBeforeX, out float soldierTargetBeforeY), Is.True);
+            Vector2 soldierBefore = simulation.GetAgentLocalPositionCm(soldierAgentIndex);
 
             Vector2 moveTargetScreen = WorldToScreen(engine, TotalWarAcceptance.MoveTargetWorldCm);
             RightClick(engine, GetInputBackend(engine), moveTargetScreen);
@@ -1439,19 +1817,21 @@ namespace Ludots.Tests.Presentation
                     out float formationOrderWorldX,
                     out float formationOrderWorldY),
                 Is.True);
-            Assert.That(simulation.MassFlow.TryGetUnitTarget(soldierAgentIndex, out float soldierTargetAfterOrderX, out float soldierTargetAfterOrderY), Is.True);
-            float currentFormationDx = soldierTargetAfterOrderX - simulation.MassFlow.GetPositionX(formationAgentIndex.Value);
-            float currentFormationDy = soldierTargetAfterOrderY - simulation.MassFlow.GetPositionY(formationAgentIndex.Value);
+            Assert.That(simulation.TryGetAgentNavigationTargetLocalCm(soldierAgentIndex, out float soldierTargetAfterOrderX, out float soldierTargetAfterOrderY), Is.True);
+            Vector2 formationLocal = simulation.GetAgentLocalPositionCm(formationAgentIndex.Value);
+            float currentFormationDx = soldierTargetAfterOrderX - formationLocal.X;
+            float currentFormationDy = soldierTargetAfterOrderY - formationLocal.Y;
             Assert.That((currentFormationDx * currentFormationDx) + (currentFormationDy * currentFormationDy),
                 Is.LessThan(2_500_000f),
-                "Carrier-mode soldier targets must stay near the formation's current resolved MassFlow center, not jump toward the final formation order path.");
+                "Carrier-mode soldier targets must stay near the formation's current resolved MassNavigation center, not jump toward the final formation order path.");
 
             Tick(engine, TotalWarAcceptance.FrameBudgetForInteraction);
             float facingAfterMove = engine.World.Get<FacingDirection>(formation).AngleRad;
             Assert.That(facingAfterMove, Is.EqualTo(initialFacing).Within(0.0001f),
                 "Moving a formation must not implicitly rotate it toward the destination.");
-            float soldierMoveDeltaX = simulation.MassFlow.GetPositionX(soldierAgentIndex) - soldierBeforeX;
-            float soldierMoveDeltaY = simulation.MassFlow.GetPositionY(soldierAgentIndex) - soldierBeforeY;
+            Vector2 soldierAfterMove = simulation.GetAgentLocalPositionCm(soldierAgentIndex);
+            float soldierMoveDeltaX = soldierAfterMove.X - soldierBefore.X;
+            float soldierMoveDeltaY = soldierAfterMove.Y - soldierBefore.Y;
             Assert.That((soldierMoveDeltaX * soldierMoveDeltaX) + (soldierMoveDeltaY * soldierMoveDeltaY), Is.GreaterThan(1f),
                 "Soldier MassNavigation agents must actually move after a formation move order, not just receive stale slot targets.");
             AssertMassFlowEntityPositionSynced(engine, simulation, formationAgentIndex.Value);
@@ -1469,13 +1849,167 @@ namespace Ludots.Tests.Presentation
                 maxFrames: TotalWarAcceptance.FrameBudgetForInteraction,
                 failureMessage: "Explicit rotate input should change the selected formation FacingDirection.");
 
-            Assert.That(simulation.MassFlow.TryGetUnitTarget(soldierAgentIndex, out float soldierTargetAfterX, out float soldierTargetAfterY), Is.True);
+            Assert.That(simulation.TryGetAgentNavigationTargetLocalCm(soldierAgentIndex, out float soldierTargetAfterX, out float soldierTargetAfterY), Is.True);
             float targetDeltaX = soldierTargetAfterX - soldierTargetBeforeX;
             float targetDeltaY = soldierTargetAfterY - soldierTargetBeforeY;
             Assert.That((targetDeltaX * targetDeltaX) + (targetDeltaY * targetDeltaY), Is.GreaterThan(1f),
                 "Soldier slot targets must follow explicit formation facing changes.");
             Assert.That(float.IsFinite(formationOrderWorldX), Is.True);
             Assert.That(float.IsFinite(formationOrderWorldY), Is.True);
+        }
+
+        [Test]
+        public void TotalWarPlayable_NonLocalTeamFormationSelectionRejectsRightClickMoveOrder()
+        {
+            using GameEngine engine = CreatePlayableTotalWarEngine();
+            engine.LoadMap("mass_navigation_total_war");
+            Tick(engine, TotalWarAcceptance.FrameBudgetForMapEntry);
+
+            MassNavigationSimulationRuntime simulation = RequireSimulation(engine);
+            TotalWarShowcaseConfig config = TotalWarShowcaseConfig.Load(
+                ReadObject(Path.Combine(TotalWarModRoot(), "assets", "TotalWarShowcaseConfig.json")));
+            TickUntil(
+                engine,
+                () => simulation.AgentState.TotalAgents == TotalWarAcceptance.ExpectedTotalAgents &&
+                      simulation.SelectedCount == TotalWarAcceptance.ExpectedInitialSelection,
+                maxFrames: TotalWarAcceptance.FrameBudgetForScenarioReady,
+                failureMessage: "Total War scenario should be fully spawned before non-local formation command verification.");
+
+            AssertLocalTeamFormationsOwnLocalPlayer(engine, config.LocalPlayerTeamId);
+            Entity enemyFormation = FindNonLocalTeamFormation(engine, config.LocalPlayerTeamId);
+            Assert.That(engine.World.TryGet(enemyFormation, out MassNavigationAgentIndex enemyAgentIndex), Is.True);
+            Assert.That(engine.World.TryGet(enemyFormation, out PlayerOwner enemyOwner), Is.False);
+            Assert.That(simulation.NavGroupRuntime.TryGetGroupMemberOrderTarget(
+                    enemyAgentIndex.Value,
+                    out float _,
+                    out float _),
+                Is.False);
+
+            SelectFormations(engine, new[] { enemyFormation });
+            TickUntil(
+                engine,
+                () => simulation.SelectedCount == 1,
+                maxFrames: TotalWarAcceptance.FrameBudgetForInteraction,
+                failureMessage: "Test-authored selection should contain the non-local formation agent.");
+
+            int rejectsBeforeMove = simulation.CommandRejectsTotal;
+            Vector2 moveTargetScreen = WorldToScreen(engine, TotalWarAcceptance.MoveTargetWorldCm);
+            RightClick(engine, GetInputBackend(engine), moveTargetScreen);
+            TickUntil(
+                engine,
+                () => simulation.CommandRejectsTotal == rejectsBeforeMove + 1,
+                maxFrames: TotalWarAcceptance.FrameBudgetForInteraction,
+                failureMessage: "Right-clicking a selected non-local formation must be rejected at the MassNavigation command boundary.");
+
+            Assert.That(CountActiveMoveOrders(engine, simulation), Is.EqualTo(0));
+            Assert.That(engine.World.TryGet(enemyFormation, out enemyOwner), Is.False);
+            Assert.That(simulation.NavGroupRuntime.TryGetGroupMemberOrderTarget(
+                    enemyAgentIndex.Value,
+                    out float _,
+                    out float _),
+                Is.False);
+
+            float enemyFacingBeforeRotate = engine.World.Get<FacingDirection>(enemyFormation).AngleRad;
+            int rejectsBeforeRotate = simulation.CommandRejectsTotal;
+            var input = engine.GetService(CoreServiceKeys.InputHandler)
+                ?? throw new InvalidOperationException("InputHandler is missing.");
+            input.InjectButtonPress(TotalWarAcceptance.RotateRightActionId);
+            Tick(engine);
+            input.InjectButtonRelease(TotalWarAcceptance.RotateRightActionId);
+            Tick(engine, TotalWarAcceptance.FrameBudgetForInputRelease);
+
+            Assert.That(
+                NormalizeAngleRadians(engine.World.Get<FacingDirection>(enemyFormation).AngleRad - enemyFacingBeforeRotate),
+                Is.EqualTo(0f).Within(0.0001f),
+                "Q/E rotation must use the same local PlayerOwner command boundary as right-click move orders.");
+            Assert.That(simulation.CommandRejectsTotal, Is.GreaterThanOrEqualTo(rejectsBeforeRotate + 1));
+        }
+
+        [Test]
+        public void TotalWarPlayable_BoxSelectionOnlySelectsLocalCommandableFormations()
+        {
+            using GameEngine engine = CreatePlayableTotalWarEngine();
+            engine.LoadMap("mass_navigation_total_war");
+            Tick(engine, TotalWarAcceptance.FrameBudgetForMapEntry);
+
+            MassNavigationSimulationRuntime simulation = RequireSimulation(engine);
+            TotalWarShowcaseConfig config = TotalWarShowcaseConfig.Load(
+                ReadObject(Path.Combine(TotalWarModRoot(), "assets", "TotalWarShowcaseConfig.json")));
+            TickUntil(
+                engine,
+                () => simulation.AgentState.TotalAgents == TotalWarAcceptance.ExpectedTotalAgents &&
+                      simulation.SelectedCount == TotalWarAcceptance.ExpectedInitialSelection,
+                maxFrames: TotalWarAcceptance.FrameBudgetForScenarioReady,
+                failureMessage: "Total War scenario should be fully spawned before box selection ownership verification.");
+
+            AssertFormationSelectionScopes(engine, config.LocalPlayerTeamId);
+            Entity[] formations = CaptureFormationAgents(engine, TotalWarAcceptance.ExpectedTotalFormations);
+            DragSelect(engine, GetInputBackend(engine), ProjectEntitiesDragRect(engine, formations));
+            TickUntil(
+                engine,
+                () => simulation.SelectedCount == CountLocalTeamFormations(engine, config.LocalPlayerTeamId),
+                maxFrames: TotalWarAcceptance.FrameBudgetForInteraction,
+                failureMessage: "Player box selection should include only locally commandable Total War formations.");
+
+            Entity[] selected = SelectionContextRuntime.SnapshotCurrentSelection(engine.World, engine.GlobalContext);
+            Assert.That(selected.Length, Is.EqualTo(CountLocalTeamFormations(engine, config.LocalPlayerTeamId)));
+            int localPlayerId = ResolveLocalPlayerOwnerId(engine);
+            for (int i = 0; i < selected.Length; i++)
+            {
+                Entity entity = selected[i];
+                Assert.That(engine.World.Has<TotalWarFormationAgent>(entity), Is.True);
+                Assert.That(engine.World.TryGet(entity, out Team team), Is.True);
+                Assert.That(team.Id, Is.EqualTo(config.LocalPlayerTeamId));
+                Assert.That(engine.World.TryGet(entity, out PlayerOwner owner), Is.True);
+                Assert.That(owner.PlayerId, Is.EqualTo(localPlayerId));
+            }
+        }
+
+        [Test]
+        public void TotalWarPlayable_MixedLocalAndNonLocalSelectionRejectsRotateForWholeSelection()
+        {
+            using GameEngine engine = CreatePlayableTotalWarEngine();
+            engine.LoadMap("mass_navigation_total_war");
+            Tick(engine, TotalWarAcceptance.FrameBudgetForMapEntry);
+
+            MassNavigationSimulationRuntime simulation = RequireSimulation(engine);
+            TotalWarShowcaseConfig config = TotalWarShowcaseConfig.Load(
+                ReadObject(Path.Combine(TotalWarModRoot(), "assets", "TotalWarShowcaseConfig.json")));
+            TickUntil(
+                engine,
+                () => simulation.AgentState.TotalAgents == TotalWarAcceptance.ExpectedTotalAgents &&
+                      simulation.SelectedCount == TotalWarAcceptance.ExpectedInitialSelection,
+                maxFrames: TotalWarAcceptance.FrameBudgetForScenarioReady,
+                failureMessage: "Total War scenario should be fully spawned before mixed selection rotate verification.");
+
+            Entity localFormation = FindLocalTeamFormation(engine, config.LocalPlayerTeamId);
+            Entity enemyFormation = FindNonLocalTeamFormation(engine, config.LocalPlayerTeamId);
+            float localFacingBefore = engine.World.Get<FacingDirection>(localFormation).AngleRad;
+            float enemyFacingBefore = engine.World.Get<FacingDirection>(enemyFormation).AngleRad;
+            SelectFormations(engine, new[] { localFormation, enemyFormation });
+            TickUntil(
+                engine,
+                () => simulation.SelectedCount == 2,
+                maxFrames: TotalWarAcceptance.FrameBudgetForInteraction,
+                failureMessage: "Test-authored mixed selection should enter MassNavigation's selected snapshot.");
+
+            int rejectsBeforeRotate = simulation.CommandRejectsTotal;
+            var input = engine.GetService(CoreServiceKeys.InputHandler)
+                ?? throw new InvalidOperationException("InputHandler is missing.");
+            input.InjectButtonPress(TotalWarAcceptance.RotateRightActionId);
+            Tick(engine);
+            input.InjectButtonRelease(TotalWarAcceptance.RotateRightActionId);
+            Tick(engine, TotalWarAcceptance.FrameBudgetForInputRelease);
+
+            Assert.That(
+                NormalizeAngleRadians(engine.World.Get<FacingDirection>(localFormation).AngleRad - localFacingBefore),
+                Is.EqualTo(0f).Within(0.0001f),
+                "Mixed local/non-local selection must not partially rotate local formations.");
+            Assert.That(
+                NormalizeAngleRadians(engine.World.Get<FacingDirection>(enemyFormation).AngleRad - enemyFacingBefore),
+                Is.EqualTo(0f).Within(0.0001f),
+                "Mixed local/non-local selection must not rotate enemy formations.");
+            Assert.That(simulation.CommandRejectsTotal, Is.GreaterThanOrEqualTo(rejectsBeforeRotate + 1));
         }
 
         [Test]
@@ -1568,7 +2102,7 @@ namespace Ludots.Tests.Presentation
                 failureMessage: "Total War scenario should be fully spawned and selected before reset.");
 
             Entity[] previousAgents = CaptureTrackedAgents(simulation);
-            Entity[] previousObstacleOverlays = CaptureObstacleOverlays(engine, simulation.MassFlow.ObstacleCount);
+            Entity[] previousObstacleOverlays = CaptureObstacleOverlays(engine, simulation.NavigationObstacleCount);
 
             simulation.RequestSceneReset();
             TickUntil(
@@ -1599,7 +2133,7 @@ namespace Ludots.Tests.Presentation
             {
                 var selectionKeys = new StringIntRegistry(capacity: 16, startId: 1, invalidId: 0, comparer: StringComparer.Ordinal);
                 var selection = new SelectionRuntime(world, new SelectionRuntimeConfig(), selectionKeys);
-                var events = new PresentationEventStream();
+                var events = new PresentationEventStream(PresentationTestConstants.EventStreamCapacity);
                 var commands = new PerformerCommandBuffer();
                 var definitions = new PerformerDefinitionRegistry();
                 int markerDefId = definitions.Register("test_selection_marker", new PerformerDefinition());
@@ -1856,7 +2390,55 @@ namespace Ludots.Tests.Presentation
                 "MassNavigationPanelController.cs"));
 
             Assert.That(panelSource, Does.Contain("AutoSpawnConfiguredScenario"));
-            Assert.That(panelSource, Does.Contain("Formation-owned scenarios use their own authored formation config for unit counts."));
+            Assert.That(panelSource, Does.Contain("Externally-authored scenarios use their own authored agent config for unit counts."));
+        }
+
+        [Test]
+        public void MassNavigationPanel_UsesConfiguredPresentationCadenceAndMountsOnMap()
+        {
+            string repoRoot = FindRepoRoot();
+            string runtimeSource = File.ReadAllText(Path.Combine(
+                repoRoot,
+                "mods",
+                "capabilities",
+                "navigation",
+                "MassNavigationMod",
+                "Runtime",
+                "MassNavigationRuntime.cs"));
+            string systemSource = File.ReadAllText(Path.Combine(
+                repoRoot,
+                "mods",
+                "capabilities",
+                "navigation",
+                "MassNavigationMod",
+                "Systems",
+                "MassNavigationPanelPresentationSystem.cs"));
+            string controllerSource = File.ReadAllText(Path.Combine(
+                repoRoot,
+                "mods",
+                "capabilities",
+                "navigation",
+                "MassNavigationMod",
+                "UI",
+                "MassNavigationPanelController.cs"));
+
+            Assert.That(runtimeSource, Does.Contain("new MassNavigationPanelPresentationSystem("));
+            Assert.That(runtimeSource, Does.Contain("PanelRefreshIntervalSeconds"));
+            Assert.That(systemSource, Does.Contain("_refreshIntervalSeconds"));
+            Assert.That(controllerSource, Does.Contain("PanelRefreshIntervalSeconds"));
+            Assert.That(controllerSource, Does.Not.Contain("TimeSpan.TicksPerSecond / 4"));
+            Assert.That(systemSource, Does.Not.Contain("PanelRefreshIntervalSeconds = 0.25f"));
+
+            string refreshBody = ExtractMethodBody(runtimeSource, "public void RefreshPanel");
+            Assert.That(refreshBody, Does.Contain("_panelController.MountOrSync(engine, simulation)"));
+            Assert.That(refreshBody, Does.Not.Contain("ClearPanelIfOwned(engine)"));
+            string updateBody = ExtractMethodBody(systemSource, "public void Update");
+            int resetIndex = updateBody.IndexOf("_refreshAccumulatorSeconds = _refreshIntervalSeconds;", StringComparison.Ordinal);
+            int returnIndex = updateBody.IndexOf("return;", resetIndex, StringComparison.Ordinal);
+            Assert.That(resetIndex, Is.GreaterThanOrEqualTo(0));
+            Assert.That(returnIndex, Is.GreaterThan(resetIndex));
+            string nonNavigationMapBranch = updateBody.Substring(resetIndex, returnIndex - resetIndex);
+            Assert.That(nonNavigationMapBranch, Does.Not.Contain("_runtime.RefreshPanel(_engine)"));
         }
 
         [Test]
@@ -1934,8 +2516,8 @@ namespace Ludots.Tests.Presentation
 
             Assert.That(engineSource, Does.Contain("InsertSystemBeforeRequired"));
             Assert.That(runtimeSource, Does.Contain("InsertSystemBeforeRequired<MassNavigationFormationSystem>"));
-            Assert.That(runtimeSource, Does.Contain("InsertSystemBeforeRequired<MassNavigationOrderBridgeSystem>"));
-            Assert.That(runtimeSource, Does.Contain("InsertSystemBeforeRequired<MassNavigationCommandApplySystem>"));
+            Assert.That(runtimeSource, Does.Contain("InsertSystemBeforeRequired<MassNavigationOrderIngestionSystem>"));
+            Assert.That(runtimeSource, Does.Not.Contain("CommandApply"));
             Assert.That(runtimeSource.IndexOf("new MassNavigationFormationSystem", StringComparison.Ordinal),
                 Is.LessThan(runtimeSource.IndexOf("InsertSystemBeforeRequired<MassNavigationFormationSystem>", StringComparison.Ordinal)));
         }
@@ -1968,14 +2550,22 @@ namespace Ludots.Tests.Presentation
                 "MassNavigationMod",
                 "Systems",
                 "MassNavigationScenarioBootstrap.cs"));
-            string orderBridgeSource = File.ReadAllText(Path.Combine(
+            string orderIngestionSource = File.ReadAllText(Path.Combine(
                 repoRoot,
                 "mods",
                 "capabilities",
                 "navigation",
                 "MassNavigationMod",
                 "Systems",
-                "MassNavigationOrderBridgeSystem.cs"));
+                "MassNavigationOrderIngestionSystem.cs"));
+            string moveOrderArgsSource = File.ReadAllText(Path.Combine(
+                repoRoot,
+                "mods",
+                "capabilities",
+                "navigation",
+                "MassNavigationMod",
+                "Runtime",
+                "MassNavigationMoveOrderArgs.cs"));
 
             Assert.That(agentStateSource, Does.Contain("ControllableAgentCount"));
             Assert.That(agentStateSource, Does.Contain("ControllableAgentSlotCount"));
@@ -1986,8 +2576,11 @@ namespace Ludots.Tests.Presentation
             Assert.That(receiptSource, Does.Not.Contain("?? string.Empty"));
             Assert.That(bootstrapSource, Does.Contain("SpawnConfiguredScenario"));
             Assert.That(bootstrapSource, Does.Not.Contain("SpawnDefaultScenario"));
-            Assert.That(orderBridgeSource, Does.Contain("ResolveFormationMode"));
-            Assert.That(orderBridgeSource, Does.Not.Contain(": MassNavigationFormationMode.None"));
+            Assert.That(orderIngestionSource, Does.Contain("MassNavigationMoveOrderArgs.Decode"));
+            Assert.That(orderIngestionSource, Does.Not.Contain(".Args.I0"));
+            Assert.That(orderIngestionSource, Does.Not.Contain(".Args.F0"));
+            Assert.That(moveOrderArgsSource, Does.Contain("DecodeFormationMode"));
+            Assert.That(orderIngestionSource, Does.Not.Contain(": MassNavigationFormationMode.None"));
         }
 
         [Test]
@@ -2351,6 +2944,131 @@ namespace Ludots.Tests.Presentation
             return result;
         }
 
+        private static Entity FindNonLocalTeamFormation(GameEngine engine, int localTeamId)
+        {
+            Entity result = Entity.Null;
+            int formationIndex = int.MaxValue;
+            int formationsWithoutTeam = 0;
+            var query = new QueryDescription().WithAll<TotalWarFormationAgent>();
+            engine.World.Query(in query, (Entity entity, ref TotalWarFormationAgent formation) =>
+            {
+                if (!engine.World.TryGet(entity, out Team team))
+                {
+                    formationsWithoutTeam++;
+                    return;
+                }
+
+                if (team.Id == localTeamId || formation.FormationIndex >= formationIndex)
+                {
+                    return;
+                }
+
+                formationIndex = formation.FormationIndex;
+                result = entity;
+            });
+
+            Assert.That(result, Is.Not.EqualTo(Entity.Null),
+                $"Total War command authorization test requires at least one non-local team formation; formations without Team={formationsWithoutTeam}.");
+            return result;
+        }
+
+        private static Entity FindLocalTeamFormation(GameEngine engine, int localTeamId)
+        {
+            Entity result = Entity.Null;
+            int formationIndex = int.MaxValue;
+            int formationsWithoutTeam = 0;
+            var query = new QueryDescription().WithAll<TotalWarFormationAgent>();
+            engine.World.Query(in query, (Entity entity, ref TotalWarFormationAgent formation) =>
+            {
+                if (!engine.World.TryGet(entity, out Team team))
+                {
+                    formationsWithoutTeam++;
+                    return;
+                }
+
+                if (team.Id != localTeamId || formation.FormationIndex >= formationIndex)
+                {
+                    return;
+                }
+
+                formationIndex = formation.FormationIndex;
+                result = entity;
+            });
+
+            Assert.That(result, Is.Not.EqualTo(Entity.Null),
+                $"Total War command authorization test requires at least one local team formation; formations without Team={formationsWithoutTeam}.");
+            return result;
+        }
+
+        private static int CountLocalTeamFormations(GameEngine engine, int localTeamId)
+        {
+            int count = 0;
+            var query = new QueryDescription().WithAll<TotalWarFormationAgent, Team>();
+            engine.World.Query(in query, (ref TotalWarFormationAgent _, ref Team team) =>
+            {
+                if (team.Id == localTeamId)
+                {
+                    count++;
+                }
+            });
+
+            return count;
+        }
+
+        private static void AssertFormationSelectionScopes(GameEngine engine, int localTeamId)
+        {
+            int localPlayerId = ResolveLocalPlayerOwnerId(engine);
+            int localFormationCount = 0;
+            int nonLocalFormationCount = 0;
+            var query = new QueryDescription().WithAll<TotalWarFormationAgent, Team, SelectionSelectableState>();
+            engine.World.Query(in query, (Entity entity, ref TotalWarFormationAgent _, ref Team team, ref SelectionSelectableState selectable) =>
+            {
+                if (team.Id == localTeamId)
+                {
+                    localFormationCount++;
+                    Assert.That(selectable.Enabled, Is.True,
+                        "Local Total War team formations must be selectable by the player.");
+                    Assert.That(engine.World.TryGet(entity, out PlayerOwner owner), Is.True,
+                        "Local Total War team formations must receive formal PlayerOwner command ownership.");
+                    Assert.That(owner.PlayerId, Is.EqualTo(localPlayerId));
+                }
+                else
+                {
+                    nonLocalFormationCount++;
+                    Assert.That(selectable.Enabled, Is.False,
+                        "Non-local Total War formations must not enter player box selection.");
+                    Assert.That(engine.World.Has<PlayerOwner>(entity), Is.False,
+                        "Non-local Total War formations must not receive local PlayerOwner command ownership.");
+                }
+            });
+
+            Assert.That(localFormationCount, Is.GreaterThan(0));
+            Assert.That(nonLocalFormationCount, Is.GreaterThan(0));
+        }
+
+        private static void AssertLocalTeamFormationsOwnLocalPlayer(GameEngine engine, int localTeamId)
+        {
+            int localPlayerId = ResolveLocalPlayerOwnerId(engine);
+            int localFormationCount = 0;
+            var query = new QueryDescription().WithAll<TotalWarFormationAgent>();
+            engine.World.Query(in query, (Entity entity, ref TotalWarFormationAgent _) =>
+            {
+                if (!engine.World.TryGet(entity, out Team team) ||
+                    team.Id != localTeamId)
+                {
+                    return;
+                }
+
+                localFormationCount++;
+                Assert.That(engine.World.TryGet(entity, out PlayerOwner owner), Is.True,
+                    "Local Total War team formations must receive formal PlayerOwner command ownership.");
+                Assert.That(owner.PlayerId, Is.EqualTo(localPlayerId));
+            });
+
+            Assert.That(localFormationCount, Is.GreaterThan(0),
+                "Total War command authorization test requires at least one local team formation.");
+        }
+
         private static void SelectFormations(GameEngine engine, ReadOnlySpan<Entity> formations)
         {
             SelectionRuntime selection = engine.GetService(CoreServiceKeys.SelectionRuntime)
@@ -2383,6 +3101,13 @@ namespace Ludots.Tests.Presentation
             }
 
             return local;
+        }
+
+        private static int ResolveLocalPlayerOwnerId(GameEngine engine)
+        {
+            Entity local = ResolveLocalPlayerEntity(engine);
+            Assert.That(engine.World.TryGet(local, out PlayerOwner owner), Is.True);
+            return owner.PlayerId;
         }
 
         private static float MinPairDistanceSq(
@@ -2425,9 +3150,7 @@ namespace Ludots.Tests.Presentation
                 return new Vector2(targetWorldX, targetWorldY);
             }
 
-            return new Vector2(
-                simulation.ToWorldXCm(simulation.MassFlow.GetPositionX(agentIndex.Value)),
-                simulation.ToWorldYCm(simulation.MassFlow.GetPositionY(agentIndex.Value)));
+            return simulation.GetAgentWorldPositionCm(agentIndex.Value);
         }
 
         private static Vector2 AgentWorldOffset(
@@ -2440,9 +3163,7 @@ namespace Ludots.Tests.Presentation
 
         private static Vector2 AgentWorldPosition(MassNavigationSimulationRuntime simulation, int agentIndex)
         {
-            return new Vector2(
-                simulation.ToWorldXCm(simulation.MassFlow.GetPositionX(agentIndex)),
-                simulation.ToWorldYCm(simulation.MassFlow.GetPositionY(agentIndex)));
+            return simulation.GetAgentWorldPositionCm(agentIndex);
         }
 
         private static void AssertMassFlowEntityPositionSynced(
@@ -2450,10 +3171,12 @@ namespace Ludots.Tests.Presentation
             MassNavigationSimulationRuntime simulation,
             int agentIndex)
         {
+            simulation.SyncAgentEntitiesNow(engine.World);
             Assert.That(simulation.AgentState.TryGetAgentEntity(agentIndex, out Entity entity), Is.True);
             Assert.That(engine.World.TryGet(entity, out WorldPositionCm worldPosition), Is.True);
-            int expectedWorldX = (int)MathF.Round(simulation.ToWorldXCm(simulation.MassFlow.GetPositionX(agentIndex)));
-            int expectedWorldY = (int)MathF.Round(simulation.ToWorldYCm(simulation.MassFlow.GetPositionY(agentIndex)));
+            Vector2 expectedWorld = simulation.GetAgentWorldPositionCm(agentIndex);
+            int expectedWorldX = (int)MathF.Round(expectedWorld.X);
+            int expectedWorldY = (int)MathF.Round(expectedWorld.Y);
             Assert.That(worldPosition.Value.X.RawValue, Is.EqualTo(Fix64.FromInt(expectedWorldX).RawValue));
             Assert.That(worldPosition.Value.Y.RawValue, Is.EqualTo(Fix64.FromInt(expectedWorldY).RawValue));
         }
@@ -2584,12 +3307,14 @@ namespace Ludots.Tests.Presentation
                 {
                     int left = agentIndices[i];
                     int right = agentIndices[j];
-                    float dx = simulation.MassFlow.GetPositionX(left) - simulation.MassFlow.GetPositionX(right);
-                    float dy = simulation.MassFlow.GetPositionY(left) - simulation.MassFlow.GetPositionY(right);
+                    Vector2 leftPosition = simulation.GetAgentLocalPositionCm(left);
+                    Vector2 rightPosition = simulation.GetAgentLocalPositionCm(right);
+                    float dx = leftPosition.X - rightPosition.X;
+                    float dy = leftPosition.Y - rightPosition.Y;
                     float distance = MathF.Sqrt((dx * dx) + (dy * dy));
-                    float required = simulation.MassFlow.GetBodyRadiusCm(left) + simulation.MassFlow.GetBodyRadiusCm(right);
+                    float required = simulation.GetAgentBodyRadiusCm(left) + simulation.GetAgentBodyRadiusCm(right);
                     Assert.That(distance, Is.GreaterThanOrEqualTo(required - 1f),
-                        $"Formation agents {left} and {right} must not overlap in MassFlow.");
+                        $"Formation agents {left} and {right} must not overlap in MassNavigation.");
                 }
             }
         }
@@ -2650,7 +3375,7 @@ namespace Ludots.Tests.Presentation
                 }
             }
 
-            Assert.That(ringCount, Is.GreaterThanOrEqualTo(simulation.MassFlow.ObstacleCount));
+            Assert.That(ringCount, Is.GreaterThanOrEqualTo(simulation.NavigationObstacleCount));
         }
 
         private static void AssertCullingProbeAndDebugDraw(GameEngine engine)
@@ -2722,6 +3447,33 @@ namespace Ludots.Tests.Presentation
                 .Select(node => node?.AsObject())
                 .FirstOrDefault(obj => string.Equals(obj?["Path"]?.GetValue<string>(), path, StringComparison.Ordinal))
                 ?? throw new InvalidOperationException($"JSON object Path '{path}' not found.");
+        }
+
+        private static JsonObject FindAgentProfileById(JsonObject agentProfiles, string id)
+        {
+            JsonArray profiles = agentProfiles["profiles"]?.AsArray()
+                ?? throw new InvalidOperationException("agentProfiles.profiles must be authored.");
+            return FindObjectById(profiles, id);
+        }
+
+        private static void AssertAgentAuthoringReferencesProfileOnly(JsonObject agentAuthoring, string label)
+        {
+            Assert.That(RequireString(agentAuthoring, "templateId"), Is.Not.Empty);
+            Assert.That(RequireString(agentAuthoring, "profileId"), Is.Not.Empty);
+            string[] forbiddenProfileFields =
+            {
+                "heavy",
+                "navMass",
+                "visualScale",
+                "bodyRadiusCm",
+                "speedCmPerSecond",
+            };
+
+            foreach (string field in forbiddenProfileFields)
+            {
+                Assert.That(agentAuthoring.ContainsKey(field), Is.False,
+                    $"{label}.{field} must be owned by MassNavigationConfig.agentProfiles.");
+            }
         }
 
         private static string RequireString(JsonObject obj, string propertyName)
@@ -2798,7 +3550,7 @@ namespace Ludots.Tests.Presentation
                 throw new InvalidOperationException("MassNavigation group runtime fixture requires at least one position.");
             }
 
-            var flow = new MassFlowSimulationState();
+            var flow = new MassFlowSimulationState(CreateTestSolverConfig());
             var layer = new MassNavigationAgentLayer(categoryMask: 1u, interactionMask: 1u);
             var seeds = new MassNavigationAgentSeed[localPositions.Length];
             for (int i = 0; i < localPositions.Length; i++)
@@ -2828,8 +3580,36 @@ namespace Ludots.Tests.Presentation
                 agentState.RegisterAgentAtIndex(entity, i, controllable: true);
             }
 
-            var runtime = new MassNavigationGroupRuntime(new MassNavigationFormationRuntime(new MassNavigationGroupSemantics()));
+            var runtime = CreateTestNavGroupRuntime(
+                agentCapacity: localPositions.Length,
+                groupMemberCapacity: localPositions.Length);
             return new MassNavigationGroupRuntimeFixture(world, flow, agentState, runtime);
+        }
+
+        private static MassNavigationGroupRuntime CreateTestNavGroupRuntime(
+            int agentCapacity = 16,
+            int groupMemberCapacity = 16)
+        {
+            return new MassNavigationGroupRuntime(
+                new MassNavigationFormationRuntime(new MassNavigationGroupSemantics()),
+                CreateRuntimeCapacity(agentCapacity, groupMemberCapacity));
+        }
+
+        private static MassNavigationRuntimeCapacityConfig CreateRuntimeCapacity(
+            int agentCapacity,
+            int groupMemberCapacity)
+        {
+            return new MassNavigationRuntimeCapacityConfig
+            {
+                NavigationGroupCapacity = 8,
+                GroupMembershipAgentCapacity = agentCapacity,
+                SelectionMemberScratchCapacity = groupMemberCapacity,
+                GroupMemberCapacity = groupMemberCapacity,
+                OrderIngestionTokenCapacity = 8,
+                OrderIngestionMemberCapacity = groupMemberCapacity,
+                LoadedChunkCapacity = 16,
+                MetadataTeamCapacity = 4,
+            };
         }
 
         private static string TotalWarModRoot()
@@ -2852,6 +3632,26 @@ namespace Ludots.Tests.Presentation
             }
 
             throw new DirectoryNotFoundException("Repository root not found from test work directory.");
+        }
+
+        private static MassFlowSolverConfig CreateTestSolverConfig()
+        {
+            return new MassFlowSolverConfig
+            {
+                FieldWidthCm = 10_000,
+                FieldHeightCm = 10_000,
+                FlowCellSizeCm = 100,
+                MaxObstacleCount = 64,
+                ParallelWorkerCount = 1,
+                SeparationHashCellSizeCm = 100,
+                SeparationHashMinSearchRadiusCells = 2,
+                HardResolveHashCellSizeCm = 50,
+                HardResolveHashMinSearchRadiusCells = 1,
+                PlayAreaMinXCm = 50f,
+                PlayAreaMaxXCm = 9_950f,
+                PlayAreaMinYCm = 50f,
+                PlayAreaMaxYCm = 9_950f,
+            };
         }
 
         private sealed class MassNavigationGroupRuntimeFixture : IDisposable

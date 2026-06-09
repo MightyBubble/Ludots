@@ -1,4 +1,7 @@
 {
+  "orderBlackboardKeys": {
+    "MassNavigation.FormationMode": true
+  },
   "orderTypes": {
     "massNavigationMove": {
       "orderTypeId": "massNavigationMove",
@@ -15,14 +18,15 @@
       "clearQueueOnActivate": true,
       "spatialBlackboardKey": "none",
       "entityBlackboardKey": "none",
-      "intArg0BlackboardKey": "none",
+      "intArg0BlackboardKey": "MassNavigation.FormationMode",
       "validationGraph": "none"
     }
   },
   "orderRules": {
     "massNavigationMove": {
       "orderTypeKey": "massNavigationMove",
-      "interruptsActiveOrderTypeKeys": [ "moveTo", "attackTarget" ]
+      "blockedActiveOrderTypeKeys": [],
+      "interruptsActiveOrderTypeKeys": [ "attackTarget" ]
     }
   }
 }

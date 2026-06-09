@@ -4,6 +4,9 @@ using System.Numerics;
 using System.Text.Json;
 using System.Text.Json.Nodes;
 using Ludots.Core.Config;
+using Ludots.Core.Mathematics;
+using Ludots.Core.Spatial;
+using MassNavigationMod.Runtime;
 
 namespace MassNavigationTotalWarEntryMod.Runtime;
 
@@ -13,9 +16,29 @@ internal sealed class TotalWarShowcaseConfig
     public string RuntimeSpawnReceiptChannelKey { get; set; } = string.Empty;
     public TotalWarAgentAuthoringConfig FormationAgent { get; set; } = new();
     public string InitialSelectionFormationId { get; set; } = string.Empty;
+    public int InitialSelectionEntityCapacity { get; set; }
+    public int LocalPlayerTeamId { get; set; }
+    public TotalWarSelectionConfig Selection { get; set; } = new();
     public TotalWarSoldierTargetSyncConfig SoldierTargetSync { get; set; } = new();
     public TotalWarObstacleOverlayConfig ObstacleOverlay { get; set; } = new();
     public TotalWarFormationConfig[] Formations { get; set; } = Array.Empty<TotalWarFormationConfig>();
+    public int FormationOutlineOwnerCapacity => Formations.Length;
+    public int FormationOutlineSplineCapacity
+    {
+        get
+        {
+            int capacity = 0;
+            for (int i = 0; i < Formations.Length; i++)
+            {
+                capacity += TotalWarFormationOutlineSegments.CountSplineSegments(
+                    Formations[i].Outline.ResolvedShape,
+                    Formations[i].Outline.FrontIndicatorLengthCm > 0f,
+                    Formations[i].Outline.CurveSampleCount);
+            }
+
+            return capacity;
+        }
+    }
 
     public static TotalWarShowcaseConfig Load(JsonObject configObject)
     {
@@ -38,6 +61,10 @@ internal sealed class TotalWarShowcaseConfig
         RequireProperty(root, "runtimeSpawnReceiptChannelKey");
         RequireAgentAuthoring(RequireProperty(root, "formationAgent"), "formationAgent");
         RequireProperty(root, "initialSelectionFormationId");
+        RequireProperty(root, "initialSelectionEntityCapacity");
+        RequireProperty(root, "localPlayerTeamId");
+        JsonElement selection = RequireProperty(root, "selection");
+        RequireProperties(selection, "formationSelectableTeamScope");
         JsonElement soldierTargetSync = RequireProperty(root, "soldierTargetSync");
         RequireProperties(
             soldierTargetSync,
@@ -85,7 +112,7 @@ internal sealed class TotalWarShowcaseConfig
             }
             else if (string.Equals(outlineShape, TotalWarFormationOutlineShapeNames.Circle, StringComparison.Ordinal))
             {
-                RequireProperties(RequireProperty(outline, "circle"), "radiusCm", "ringWidthCm");
+                RequireProperties(RequireProperty(outline, "circle"), "radiusCm", "ringWidthCm", "footprintVertexCount");
             }
             else
             {
@@ -131,19 +158,19 @@ internal sealed class TotalWarShowcaseConfig
     private static void RequireAgentAuthoring(JsonElement root, string label)
     {
         RequireProperty(root, "templateId");
-        RequireProperty(root, "heavy");
-        RequireProperty(root, "navMass");
-        RequireProperty(root, "visualScale");
-        RequireProperty(root, "bodyRadiusCm");
-        RequireProperty(root, "speedCmPerSecond");
+        RequireProperty(root, "profileId");
     }
 
     private static string RequireString(JsonElement root, string propertyName)
     {
         JsonElement value = RequireProperty(root, propertyName);
-        return value.ValueKind == JsonValueKind.String
-            ? value.GetString() ?? string.Empty
-            : throw new InvalidOperationException($"Total War showcase config requires '{propertyName}' as a string.");
+        if (value.ValueKind != JsonValueKind.String)
+        {
+            throw new InvalidOperationException($"Total War showcase config requires '{propertyName}' as a string.");
+        }
+
+        return value.GetString()
+            ?? throw new InvalidOperationException($"Total War showcase config requires non-null '{propertyName}' string.");
     }
 
     private void Validate()
@@ -152,6 +179,17 @@ internal sealed class TotalWarShowcaseConfig
         RequireNonEmpty(RuntimeSpawnReceiptChannelKey, nameof(RuntimeSpawnReceiptChannelKey));
         FormationAgent.Validate(nameof(FormationAgent));
         RequireNonEmpty(InitialSelectionFormationId, nameof(InitialSelectionFormationId));
+        if (InitialSelectionEntityCapacity <= 0)
+        {
+            throw new InvalidOperationException("Total War showcase config requires initialSelectionEntityCapacity > 0.");
+        }
+
+        if (LocalPlayerTeamId <= 0)
+        {
+            throw new InvalidOperationException("Total War showcase config requires localPlayerTeamId > 0.");
+        }
+
+        Selection.Validate();
         SoldierTargetSync.Validate();
         ObstacleOverlay.Validate();
         if (Formations.Length <= 0)
@@ -161,16 +199,23 @@ internal sealed class TotalWarShowcaseConfig
 
         var formationIds = new HashSet<string>(StringComparer.Ordinal);
         bool foundInitialSelection = false;
+        bool foundLocalPlayerTeam = false;
         for (int i = 0; i < Formations.Length; i++)
         {
             Formations[i].Validate(i);
-            ValidateSoldierFormationSpeedContract(Formations[i], i);
             if (!formationIds.Add(Formations[i].Id))
             {
                 throw new InvalidOperationException($"Total War showcase config contains duplicate formation id '{Formations[i].Id}'.");
             }
 
             foundInitialSelection |= string.Equals(Formations[i].Id, InitialSelectionFormationId, StringComparison.Ordinal);
+            foundLocalPlayerTeam |= Formations[i].TeamId == LocalPlayerTeamId;
+            if (string.Equals(Formations[i].Id, InitialSelectionFormationId, StringComparison.Ordinal) &&
+                !Selection.IsFormationSelectable(Formations[i].TeamId, LocalPlayerTeamId))
+            {
+                throw new InvalidOperationException(
+                    $"Total War showcase initial selection formation '{InitialSelectionFormationId}' must be selectable by selection.formationSelectableTeamScope '{Selection.FormationSelectableTeamScope}'.");
+            }
         }
 
         if (!foundInitialSelection)
@@ -178,15 +223,70 @@ internal sealed class TotalWarShowcaseConfig
             throw new InvalidOperationException(
                 $"Total War showcase initial selection formation '{InitialSelectionFormationId}' is not configured.");
         }
-    }
 
-    private void ValidateSoldierFormationSpeedContract(TotalWarFormationConfig formation, int index)
-    {
-        if (!(formation.SoldierAgent.SpeedCmPerSecond > FormationAgent.SpeedCmPerSecond))
+        if (!foundLocalPlayerTeam)
         {
             throw new InvalidOperationException(
-                $"Total War formation '{formation.Id}' at formations[{index}] requires soldierAgent.speedCmPerSecond ({formation.SoldierAgent.SpeedCmPerSecond}) > formationAgent.speedCmPerSecond ({FormationAgent.SpeedCmPerSecond}).");
+                $"Total War showcase localPlayerTeamId {LocalPlayerTeamId} is not used by any formation.");
         }
+    }
+
+    public void ValidateAgentProfileReferences(MassNavigationAgentProfileSetConfig profileSet)
+    {
+        MassNavigationAgentProfileConfig formationProfile = ResolveFormationAgentProfile(profileSet);
+        for (int i = 0; i < Formations.Length; i++)
+        {
+            TotalWarFormationConfig formation = Formations[i];
+            MassNavigationAgentProfileConfig soldierProfile = ResolveSoldierAgentProfile(profileSet, i);
+            if (!(soldierProfile.SpeedCmPerSecond > formationProfile.SpeedCmPerSecond))
+            {
+                throw new InvalidOperationException(
+                    $"Total War formation '{formation.Id}' at formations[{i}] requires soldierAgent.profileId '{formation.SoldierAgent.ProfileId}' speedCmPerSecond ({soldierProfile.SpeedCmPerSecond}) > formationAgent.profileId '{FormationAgent.ProfileId}' speedCmPerSecond ({formationProfile.SpeedCmPerSecond}).");
+            }
+        }
+    }
+
+    public MassNavigationAgentProfileConfig ResolveFormationAgentProfile(MassNavigationAgentProfileSetConfig profileSet)
+    {
+        return ResolveAgentProfile(profileSet, FormationAgent.ProfileId, "formationAgent.profileId");
+    }
+
+    public MassNavigationAgentProfileConfig ResolveSoldierAgentProfile(MassNavigationAgentProfileSetConfig profileSet, int formationIndex)
+    {
+        if ((uint)formationIndex >= (uint)Formations.Length)
+        {
+            throw new InvalidOperationException(
+                $"Total War formation index {formationIndex} exceeds configured formations length {Formations.Length}.");
+        }
+
+        return ResolveAgentProfile(
+            profileSet,
+            Formations[formationIndex].SoldierAgent.ProfileId,
+            $"formations[{formationIndex}].soldierAgent.profileId");
+    }
+
+    private static MassNavigationAgentProfileConfig ResolveAgentProfile(
+        MassNavigationAgentProfileSetConfig profileSet,
+        string profileId,
+        string label)
+    {
+        if (profileSet == null)
+        {
+            throw new ArgumentNullException(nameof(profileSet));
+        }
+
+        RequireNonEmpty(profileId, label);
+        for (int i = 0; i < profileSet.Profiles.Length; i++)
+        {
+            MassNavigationAgentProfileConfig profile = profileSet.Profiles[i];
+            if (string.Equals(profile.Id, profileId, StringComparison.Ordinal))
+            {
+                return profile;
+            }
+        }
+
+        throw new InvalidOperationException(
+            $"Total War showcase config {label} references MassNavigation agent profile '{profileId}', but that profile is not configured.");
     }
 
     private static void RequireNonEmpty(string value, string fieldName)
@@ -196,6 +296,37 @@ internal sealed class TotalWarShowcaseConfig
             throw new InvalidOperationException($"Total War showcase config requires non-empty {fieldName}.");
         }
     }
+
+}
+
+internal sealed class TotalWarSelectionConfig
+{
+    public string FormationSelectableTeamScope { get; set; } = string.Empty;
+
+    public void Validate()
+    {
+        if (!string.Equals(FormationSelectableTeamScope, TotalWarSelectionTeamScopeNames.LocalPlayerTeam, StringComparison.Ordinal))
+        {
+            throw new InvalidOperationException(
+                $"Total War showcase selection.formationSelectableTeamScope must be '{TotalWarSelectionTeamScopeNames.LocalPlayerTeam}', got '{FormationSelectableTeamScope}'.");
+        }
+    }
+
+    public bool IsFormationSelectable(int formationTeamId, int localPlayerTeamId)
+    {
+        if (string.Equals(FormationSelectableTeamScope, TotalWarSelectionTeamScopeNames.LocalPlayerTeam, StringComparison.Ordinal))
+        {
+            return formationTeamId == localPlayerTeamId;
+        }
+
+        throw new InvalidOperationException(
+            $"Total War showcase selection.formationSelectableTeamScope '{FormationSelectableTeamScope}' was not validated.");
+    }
+}
+
+internal static class TotalWarSelectionTeamScopeNames
+{
+    public const string LocalPlayerTeam = "LocalPlayerTeam";
 }
 
 internal sealed class TotalWarSoldierTargetSyncConfig
@@ -284,34 +415,12 @@ internal sealed class TotalWarObstacleOverlayConfig
 internal sealed class TotalWarAgentAuthoringConfig
 {
     public string TemplateId { get; set; } = string.Empty;
-    public bool Heavy { get; set; }
-    public float NavMass { get; set; }
-    public float VisualScale { get; set; }
-    public float BodyRadiusCm { get; set; }
-    public float SpeedCmPerSecond { get; set; }
+    public string ProfileId { get; set; } = string.Empty;
 
     public void Validate(string label)
     {
         RequireNonEmpty(TemplateId, $"{label}.templateId");
-        if (!(NavMass > 0f))
-        {
-            throw new InvalidOperationException($"Total War showcase config requires {label}.navMass > 0.");
-        }
-
-        if (!(VisualScale > 0f))
-        {
-            throw new InvalidOperationException($"Total War showcase config requires {label}.visualScale > 0.");
-        }
-
-        if (!(BodyRadiusCm > 0f))
-        {
-            throw new InvalidOperationException($"Total War showcase config requires {label}.bodyRadiusCm > 0.");
-        }
-
-        if (!(SpeedCmPerSecond > 0f))
-        {
-            throw new InvalidOperationException($"Total War showcase config requires {label}.speedCmPerSecond > 0.");
-        }
+        RequireNonEmpty(ProfileId, $"{label}.profileId");
     }
 
     private static void RequireNonEmpty(string value, string fieldName)
@@ -613,6 +722,64 @@ internal sealed class TotalWarFormationOutlineConfig
         throw new InvalidOperationException($"Total War formation '{formationId}' has unsupported outline shape '{Shape}'.");
     }
 
+    public SpatialBounds ToSpatialBounds()
+    {
+        return new SpatialBounds
+        {
+            Kind = SpatialBoundsKind.Footprint2D,
+            LocalCenterXCm = 0,
+            LocalCenterYCm = 0,
+            LocalCenterZCm = 0,
+        };
+    }
+
+    public SpatialFootprint2D ToSpatialFootprint(string formationId)
+    {
+        TotalWarFormationOutlineShape shape = ResolveShape(Shape, formationId);
+        var footprint = new SpatialFootprint2D();
+        if (shape == TotalWarFormationOutlineShape.Rectangle)
+        {
+            TotalWarFormationRectangleOutlineConfig rectangle = RequiredRectangle;
+            int halfWidthCm = CheckedRoundToInt(rectangle.WidthCm * 0.5f, formationId, "outline.rectangle.widthCm");
+            int halfDepthCm = CheckedRoundToInt(rectangle.DepthCm * 0.5f, formationId, "outline.rectangle.depthCm");
+            footprint.SetPolygonVertexCount(0, 4);
+            footprint.SetVertex(0, 0, new WorldCmInt2(-halfWidthCm, -halfDepthCm));
+            footprint.SetVertex(0, 1, new WorldCmInt2(halfWidthCm, -halfDepthCm));
+            footprint.SetVertex(0, 2, new WorldCmInt2(halfWidthCm, halfDepthCm));
+            footprint.SetVertex(0, 3, new WorldCmInt2(-halfWidthCm, halfDepthCm));
+            return footprint;
+        }
+
+        if (shape == TotalWarFormationOutlineShape.Circle)
+        {
+            TotalWarFormationCircleOutlineConfig circle = RequiredCircle;
+            int vertexCount = circle.FootprintVertexCount;
+            int radiusCm = CheckedRoundToInt(circle.RadiusCm, formationId, "outline.circle.radiusCm");
+            footprint.SetPolygonVertexCount(0, vertexCount);
+            for (int i = 0; i < vertexCount; i++)
+            {
+                float angle = (MathF.Tau * i) / vertexCount;
+                int xCm = CheckedRoundToInt(MathF.Cos(angle) * radiusCm, formationId, "outline.circle.radiusCm");
+                int zCm = CheckedRoundToInt(MathF.Sin(angle) * radiusCm, formationId, "outline.circle.radiusCm");
+                footprint.SetVertex(0, i, new WorldCmInt2(xCm, zCm));
+            }
+
+            return footprint;
+        }
+
+        throw new InvalidOperationException($"Total War formation '{formationId}' has unsupported outline shape '{Shape}'.");
+    }
+
+    private static int CheckedRoundToInt(float value, string formationId, string fieldName)
+    {
+        if (!float.IsFinite(value) || value < int.MinValue || value > int.MaxValue)
+        {
+            throw new InvalidOperationException($"Total War formation '{formationId}' {fieldName} cannot be represented as integer cm.");
+        }
+
+        return (int)MathF.Round(value);
+    }
+
     private static TotalWarFormationOutlineShape ResolveShape(string shape, string formationId)
     {
         return shape switch
@@ -689,11 +856,17 @@ internal sealed class TotalWarFormationCircleOutlineConfig
 {
     public float RadiusCm { get; set; }
     public float RingWidthCm { get; set; }
+    public int FootprintVertexCount { get; set; }
 
     public void Validate(string formationId)
     {
         RequirePositive(RadiusCm, formationId, nameof(RadiusCm));
         RequirePositive(RingWidthCm, formationId, nameof(RingWidthCm));
+        if (FootprintVertexCount < 3 || FootprintVertexCount > SpatialFootprint2D.MaxVerticesPerPolygon)
+        {
+            throw new InvalidOperationException(
+                $"Total War formation '{formationId}' requires outline.circle.FootprintVertexCount between 3 and {SpatialFootprint2D.MaxVerticesPerPolygon}.");
+        }
     }
 
     private static void RequirePositive(float value, string formationId, string fieldName)

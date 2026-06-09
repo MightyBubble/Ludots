@@ -33,19 +33,24 @@ namespace Ludots.Tests.Presentation
     [NonParallelizable]
     public sealed class BlacksmithPerformerUatTests
     {
-        private const int DurabilityAttributeId = 1;
-        private const int WorkingTagId = 1;
-        private const int BlacksmithTemplateKeyId = 1;
+        private const string DurabilityAttributeKey = "durability";
+        private const string HealthAttributeKey = "Health";
+        private const string WorkingTagKey = "working";
+        private const string BlacksmithTemplateId = "blacksmith";
 
-        private const int WorkshopIntactAssetId = 1001;
-        private const int WorkshopDamagedAssetId = 1002;
-        private const int WorkshopRuinedAssetId = 1003;
-        private const int FurnaceAssetId = 1100;
-        private const int SmokeAssetId = 1200;
-        private const int WorkerAssetId = 1300;
         private const int HammerSoundAssetId = 1400;
-        private const int BrickNorthMaterialId = 5001;
-        private const int BrickSouthMaterialId = 5002;
+        private const int PatrolSplineAssetId = 1500;
+
+        private const string WorkshopIntactAssetKey = "blacksmith.fixture.workshop.intact";
+        private const string WorkshopDamagedAssetKey = "blacksmith.fixture.workshop.damaged";
+        private const string WorkshopRuinedAssetKey = "blacksmith.fixture.workshop.ruined";
+        private const string FurnaceAssetKey = "blacksmith.fixture.furnace";
+        private const string SmokeAssetKey = "blacksmith.fixture.smoke";
+        private const string WorkerAssetKey = "blacksmith.fixture.worker";
+        private const string HammerSoundAssetKey = "blacksmith.fixture.anvil_hammering";
+        private const string PatrolSplineAssetKey = "blacksmith.fixture.patrol";
+        private const string BrickNorthMaterialKey = "blacksmith.fixture.brick.north";
+        private const string BrickSouthMaterialKey = "blacksmith.fixture.brick.south";
 
         private const string BlacksmithRootKey = "blacksmith_root";
         private const string BlacksmithWorkshop1Key = "blacksmith_workshop_1";
@@ -53,6 +58,7 @@ namespace Ludots.Tests.Presentation
         private const string BlacksmithFurnaceKey = "blacksmith_furnace";
         private const string BlacksmithSmokeKey = "blacksmith_smoke";
         private const string BlacksmithWorkerKey = "blacksmith_worker";
+        private const string DayNightParamKey = "blacksmith.fixture.dayNight";
 
         private string _repoRoot = string.Empty;
         private string _tempRoot = string.Empty;
@@ -73,8 +79,9 @@ namespace Ludots.Tests.Presentation
             TagRegistry.Clear();
             PerformerScopeTagRegistry.Clear();
             AttributeRegistry.Clear();
-            AttributeRegistry.Register("durability");
-            TagRegistry.Register("working");
+            AttributeRegistry.Register(HealthAttributeKey);
+            AttributeRegistry.Register(DurabilityAttributeKey);
+            TagRegistry.Register(WorkingTagKey);
         }
 
         [TearDown]
@@ -102,8 +109,8 @@ namespace Ludots.Tests.Presentation
             Assert.That(fixture.CountActiveByDefinition(BlacksmithWorkshop1Key), Is.EqualTo(1));
             Assert.That(fixture.CountActiveByDefinition(BlacksmithWorkshop2Key), Is.EqualTo(1));
             Assert.That(fixture.CountActiveByDefinition(BlacksmithFurnaceKey), Is.EqualTo(1));
-            Assert.That(fixture.CountVisualByAsset(WorkshopIntactAssetId), Is.EqualTo(2));
-            Assert.That(fixture.CountVisualByAsset(FurnaceAssetId), Is.EqualTo(1));
+            Assert.That(fixture.CountVisualByAssetKey(WorkshopIntactAssetKey), Is.EqualTo(2));
+            Assert.That(fixture.CountVisualByAssetKey(FurnaceAssetKey), Is.EqualTo(1));
         }
 
         [Test]
@@ -157,9 +164,9 @@ namespace Ludots.Tests.Presentation
 
             Assert.That(fixture.CountActiveByDefinition(BlacksmithSmokeKey), Is.EqualTo(1));
             Assert.That(fixture.CountActiveByDefinition(BlacksmithWorkerKey), Is.EqualTo(1));
-            Assert.That(fixture.CountVisualByAsset(SmokeAssetId), Is.EqualTo(1));
-            Assert.That(fixture.CountVisualByAsset(WorkerAssetId), Is.EqualTo(1));
-            Assert.That(fixture.HasSoundRequest(SoundRequestKind.PlayOrUpdate, HammerSoundAssetId), Is.True);
+            Assert.That(fixture.CountVisualByAssetKey(SmokeAssetKey), Is.EqualTo(1));
+            Assert.That(fixture.CountVisualByAssetKey(WorkerAssetKey), Is.EqualTo(1));
+            Assert.That(fixture.HasSoundRequestByAssetKey(SoundRequestKind.PlayOrUpdate, HammerSoundAssetKey), Is.True);
         }
 
         [Test]
@@ -177,9 +184,9 @@ namespace Ludots.Tests.Presentation
 
             Assert.That(fixture.CountActiveByDefinition(BlacksmithSmokeKey), Is.EqualTo(0));
             Assert.That(fixture.CountActiveByDefinition(BlacksmithWorkerKey), Is.EqualTo(0));
-            Assert.That(fixture.CountVisualByAsset(SmokeAssetId), Is.EqualTo(0));
-            Assert.That(fixture.CountVisualByAsset(WorkerAssetId), Is.EqualTo(0));
-            Assert.That(fixture.HasSoundRequest(SoundRequestKind.Stop, HammerSoundAssetId), Is.True);
+            Assert.That(fixture.CountVisualByAssetKey(SmokeAssetKey), Is.EqualTo(0));
+            Assert.That(fixture.CountVisualByAssetKey(WorkerAssetKey), Is.EqualTo(0));
+            Assert.That(fixture.HasSoundRequestByAssetKey(SoundRequestKind.Stop, HammerSoundAssetKey), Is.True);
         }
 
         [Test]
@@ -192,7 +199,7 @@ namespace Ludots.Tests.Presentation
             fixture.Tick();
 
             Entity rootEntity = fixture.RequireHandle(BlacksmithRootKey);
-            Assert.That(fixture.Instances.ResolveFloat(rootEntity, 200), Is.EqualTo(1f).Within(0.0001f));
+            Assert.That(fixture.Instances.ResolveFloat(rootEntity, fixture.DayNightParamKeyId), Is.EqualTo(1f).Within(0.0001f));
         }
 
         [Test]
@@ -201,8 +208,8 @@ namespace Ludots.Tests.Presentation
             using var fixture = BlacksmithPipelineFixture.Create(_repoRoot, _coreRoot);
             fixture.SpawnBlacksmithAndWarmup();
 
-            Assert.That(fixture.CountVisualByMaterial(BrickNorthMaterialId), Is.EqualTo(2));
-            Assert.That(fixture.CountVisualByMaterial(BrickSouthMaterialId), Is.EqualTo(0));
+            Assert.That(fixture.CountVisualByMaterialKey(BrickNorthMaterialKey), Is.EqualTo(2));
+            Assert.That(fixture.CountVisualByMaterialKey(BrickSouthMaterialKey), Is.EqualTo(0));
         }
 
         [Test]
@@ -214,8 +221,8 @@ namespace Ludots.Tests.Presentation
             fixture.PublishGlobalRegionChanged(blacksmith, regionId: 1);
             fixture.Tick();
 
-            Assert.That(fixture.CountVisualByMaterial(BrickSouthMaterialId), Is.EqualTo(2));
-            Assert.That(fixture.CountVisualByMaterial(BrickNorthMaterialId), Is.EqualTo(0));
+            Assert.That(fixture.CountVisualByMaterialKey(BrickSouthMaterialKey), Is.EqualTo(2));
+            Assert.That(fixture.CountVisualByMaterialKey(BrickNorthMaterialKey), Is.EqualTo(0));
         }
 
         [Test]
@@ -227,9 +234,9 @@ namespace Ludots.Tests.Presentation
             fixture.SetDurability(blacksmith, current: 50f, max: 100f);
             fixture.Tick();
 
-            Assert.That(fixture.CountVisualByAsset(WorkshopDamagedAssetId), Is.EqualTo(2));
-            Assert.That(fixture.CountVisualByAsset(WorkshopIntactAssetId), Is.EqualTo(0));
-            Assert.That(fixture.CountVisualByAsset(WorkshopRuinedAssetId), Is.EqualTo(0));
+            Assert.That(fixture.CountVisualByAssetKey(WorkshopDamagedAssetKey), Is.EqualTo(2));
+            Assert.That(fixture.CountVisualByAssetKey(WorkshopIntactAssetKey), Is.EqualTo(0));
+            Assert.That(fixture.CountVisualByAssetKey(WorkshopRuinedAssetKey), Is.EqualTo(0));
         }
 
         [Test]
@@ -241,9 +248,9 @@ namespace Ludots.Tests.Presentation
             fixture.SetDurability(blacksmith, current: 0f, max: 100f);
             fixture.Tick();
 
-            Assert.That(fixture.CountVisualByAsset(WorkshopRuinedAssetId), Is.EqualTo(2));
-            Assert.That(fixture.CountVisualByAsset(WorkshopIntactAssetId), Is.EqualTo(0));
-            Assert.That(fixture.CountVisualByAsset(WorkshopDamagedAssetId), Is.EqualTo(0));
+            Assert.That(fixture.CountVisualByAssetKey(WorkshopRuinedAssetKey), Is.EqualTo(2));
+            Assert.That(fixture.CountVisualByAssetKey(WorkshopIntactAssetKey), Is.EqualTo(0));
+            Assert.That(fixture.CountVisualByAssetKey(WorkshopDamagedAssetKey), Is.EqualTo(0));
         }
 
         [Test]
@@ -259,10 +266,10 @@ namespace Ludots.Tests.Presentation
             fixture.Tick();
 
             Assert.That(fixture.Instances.ActiveCount, Is.EqualTo(0));
-            Assert.That(fixture.CountVisualByAsset(WorkshopIntactAssetId), Is.EqualTo(0));
-            Assert.That(fixture.CountVisualByAsset(FurnaceAssetId), Is.EqualTo(0));
-            Assert.That(fixture.CountVisualByAsset(SmokeAssetId), Is.EqualTo(0));
-            Assert.That(fixture.CountVisualByAsset(WorkerAssetId), Is.EqualTo(0));
+            Assert.That(fixture.CountVisualByAssetKey(WorkshopIntactAssetKey), Is.EqualTo(0));
+            Assert.That(fixture.CountVisualByAssetKey(FurnaceAssetKey), Is.EqualTo(0));
+            Assert.That(fixture.CountVisualByAssetKey(SmokeAssetKey), Is.EqualTo(0));
+            Assert.That(fixture.CountVisualByAssetKey(WorkerAssetKey), Is.EqualTo(0));
         }
 
         private static string FindRepoRoot()
@@ -286,8 +293,15 @@ namespace Ludots.Tests.Presentation
         {
             private readonly World _world;
             private readonly ModLoader _modLoader;
+            private readonly MeshAssetRegistry _meshAssets;
+            private readonly PresentationMaterialRegistry _materialAssets;
+            private readonly int _blacksmithTemplateKeyId;
+            private readonly int _durabilityAttributeId;
+            private readonly int _workingTagId;
+            private readonly int _dayNightParamKeyId;
             private readonly PerformerDefinitionRegistry _definitions;
             private readonly PresentationEventStream _events;
+            private readonly PresentationOwnerChangeBuffer _ownerChanges;
             private readonly PerformerCommandBuffer _commands;
             private readonly PerformerEntityRuntime _instances;
             private readonly PerformerAnimatorStateBuffer _animatorStates;
@@ -304,7 +318,7 @@ namespace Ludots.Tests.Presentation
             private readonly GlobalPresentationEventBuffer _globalEvents;
 
             private readonly PresentationEntityLifecycleSystem _entityLifecycle;
-            private readonly GlobalEventBridgeSystem _globalBridge;
+            private readonly GlobalPresentationEventProjectionSystem _globalProjection;
             private readonly PerformerRuleSystem _rules;
             private readonly PerformerRuntimeSystem _runtime;
             private readonly AnimatorRuntimeSystem _animator;
@@ -317,8 +331,15 @@ namespace Ludots.Tests.Presentation
             private BlacksmithPipelineFixture(
                 World world,
                 ModLoader modLoader,
+                MeshAssetRegistry meshAssets,
+                PresentationMaterialRegistry materialAssets,
+                int blacksmithTemplateKeyId,
+                int durabilityAttributeId,
+                int workingTagId,
+                int dayNightParamKeyId,
                 PerformerDefinitionRegistry definitions,
                 PresentationEventStream events,
+                PresentationOwnerChangeBuffer ownerChanges,
                 PerformerCommandBuffer commands,
                 PerformerEntityRuntime instances,
                 PerformerAnimatorStateBuffer animatorStates,
@@ -334,7 +355,7 @@ namespace Ludots.Tests.Presentation
                 SkinnedVisualBatchBuffer skinnedBatchBuffer,
                 GlobalPresentationEventBuffer globalEvents,
                 PresentationEntityLifecycleSystem entityLifecycle,
-                GlobalEventBridgeSystem globalBridge,
+                GlobalPresentationEventProjectionSystem globalProjection,
                 PerformerRuleSystem rules,
                 PerformerRuntimeSystem runtime,
                 AnimatorRuntimeSystem animator,
@@ -344,8 +365,15 @@ namespace Ludots.Tests.Presentation
             {
                 _world = world;
                 _modLoader = modLoader;
+                _meshAssets = meshAssets;
+                _materialAssets = materialAssets;
+                _blacksmithTemplateKeyId = blacksmithTemplateKeyId;
+                _durabilityAttributeId = durabilityAttributeId;
+                _workingTagId = workingTagId;
+                _dayNightParamKeyId = dayNightParamKeyId;
                 _definitions = definitions;
                 _events = events;
+                _ownerChanges = ownerChanges;
                 _commands = commands;
                 _instances = instances;
                 _animatorStates = animatorStates;
@@ -361,7 +389,7 @@ namespace Ludots.Tests.Presentation
                 _skinnedBatchBuffer = skinnedBatchBuffer;
                 _globalEvents = globalEvents;
                 _entityLifecycle = entityLifecycle;
-                _globalBridge = globalBridge;
+                _globalProjection = globalProjection;
                 _rules = rules;
                 _runtime = runtime;
                 _animator = animator;
@@ -371,6 +399,7 @@ namespace Ludots.Tests.Presentation
             }
 
             public PerformerEntityRuntime Instances => _instances;
+            public int DayNightParamKeyId => _dayNightParamKeyId;
 
             public static BlacksmithPipelineFixture Create(string repoRoot, string coreRoot)
             {
@@ -385,14 +414,20 @@ namespace Ludots.Tests.Presentation
 
                 var pipeline = new ConfigPipeline(vfs, modLoader);
                 ConfigCatalog catalog = ConfigCatalogLoader.Load(pipeline);
+                var mapLoader = new Ludots.Core.Systems.MapLoader(world, new Ludots.Core.Map.WorldMap(), pipeline);
+                mapLoader.LoadTemplates(catalog);
+                int blacksmithTemplateKeyId = mapLoader.EntityTemplateKeys.GetId(BlacksmithTemplateId);
+                Assert.That(blacksmithTemplateKeyId, Is.GreaterThan(0));
 
                 var meshAssets = new MeshAssetRegistry();
                 var presentationPrefabs = new PrefabRegistry();
                 new MeshAssetConfigLoader(pipeline, meshAssets, presentationPrefabs).Load(catalog);
                 var materialAssets = new PresentationMaterialRegistry();
+                RegisterFixtureAssets(meshAssets, materialAssets);
 
                 var textCatalog = new PresentationTextCatalogLoader(pipeline).Load(catalog);
                 var animatorControllers = new AnimatorControllerRegistry();
+                new AnimatorControllerConfigLoader(pipeline, animatorControllers).Load(catalog);
                 animatorControllers.Register("worker_anim", new AnimatorControllerDefinition
                 {
                     DefaultStateIndex = 0,
@@ -404,6 +439,7 @@ namespace Ludots.Tests.Presentation
                 });
 
                 var animationClips = new AnimationClipRegistry();
+                new AnimationClipConfigLoader(pipeline, animationClips).Load(catalog);
                 animationClips.Register(
                     "worker_loop",
                     new AnimationClipDefinition
@@ -413,6 +449,7 @@ namespace Ludots.Tests.Presentation
                     });
 
                 var animationProfiles = new AnimationProfileRegistry();
+                new AnimationProfileConfigLoader(pipeline, animationProfiles, animatorControllers, animationClips).Load(catalog);
                 animationProfiles.Register(
                     "worker_profile",
                     new AnimationProfileDefinition
@@ -428,14 +465,21 @@ namespace Ludots.Tests.Presentation
                     resolveAttributeName: AttributeRegistry.GetId,
                     resolveMeshId: meshAssets.GetId,
                     resolveTextTokenId: textCatalog.GetTokenId,
-                    resolveEntityTemplateKey: key => string.Equals(key, "blacksmith", StringComparison.Ordinal) ? BlacksmithTemplateKeyId : 0,
-                    resolveEffectTemplateId: _ => 0,
+                    resolveEntityTemplateKey: mapLoader.EntityTemplateKeys.GetId,
+                    resolveEffectTemplateId: ResolveUnsupportedEffectTemplateId,
                     resolveMaterialId: ResolveFixtureMaterialId,
                     resolveAnimatorControllerId: animatorControllers.GetId,
                     resolveAnimationProfileId: animationProfiles.GetId,
                     resolveBehaviorAssetId: ResolveBehaviorAssetId).Load(catalog);
+                int durabilityAttributeId = AttributeRegistry.GetId(DurabilityAttributeKey);
+                int workingTagId = TagRegistry.GetId(WorkingTagKey);
+                int dayNightParamKeyId = PerformerParamKeyRegistry.Register(DayNightParamKey);
+                Assert.That(durabilityAttributeId, Is.Not.EqualTo(AttributeRegistry.InvalidId));
+                Assert.That(workingTagId, Is.Not.EqualTo(TagRegistry.InvalidId));
+                Assert.That(dayNightParamKeyId, Is.GreaterThan(0));
 
                 var events = new PresentationEventStream(512);
+                var ownerChanges = new PresentationOwnerChangeBuffer(512);
                 var commands = new PerformerCommandBuffer(512);
                 var instances = new PerformerEntityRuntime(world);
                 var animatorStates = new PerformerAnimatorStateBuffer(64);
@@ -456,8 +500,8 @@ namespace Ludots.Tests.Presentation
                 var graphApi = new GasGraphRuntimeApi(world);
                 var stableIds = new PresentationStableIdAllocator();
 
-                var entityLifecycle = new PresentationEntityLifecycleSystem(world, events, instances, definitions);
-                var globalBridge = new GlobalEventBridgeSystem(world, globalEvents, events, gameSession);
+                var entityLifecycle = new PresentationEntityLifecycleSystem(world, events, instances, definitions, stableIds);
+                var globalProjection = new GlobalPresentationEventProjectionSystem(world, globalEvents, events, gameSession);
                 var rules = new PerformerRuleSystem(world, events, commands, definitions, instances, graphPrograms, graphApi, new Dictionary<string, object>());
                 var runtime = new PerformerRuntimeSystem(
                     world,
@@ -471,7 +515,7 @@ namespace Ludots.Tests.Presentation
                     animatorStates,
                     stableDrawCache);
                 var animator = new AnimatorRuntimeSystem(world, animatorControllers, instances, definitions, animatorStates);
-                var behavior = new PerformerBehaviorSystem(world, instances, definitions, events, soundRequests, new FlatHeightmap());
+                var behavior = new PerformerBehaviorSystem(world, instances, definitions, events, ownerChanges, soundRequests, new FlatHeightmap());
                 var emit = new PerformerEmitSystem(
                     world,
                     instances,
@@ -501,8 +545,15 @@ namespace Ludots.Tests.Presentation
                 return new BlacksmithPipelineFixture(
                     world,
                     modLoader,
+                    meshAssets,
+                    materialAssets,
+                    blacksmithTemplateKeyId,
+                    durabilityAttributeId,
+                    workingTagId,
+                    dayNightParamKeyId,
                     definitions,
                     events,
+                    ownerChanges,
                     commands,
                     instances,
                     animatorStates,
@@ -518,7 +569,7 @@ namespace Ludots.Tests.Presentation
                     skinnedBatchBuffer,
                     globalEvents,
                     entityLifecycle,
-                    globalBridge,
+                    globalProjection,
                     rules,
                     runtime,
                     animator,
@@ -526,37 +577,67 @@ namespace Ludots.Tests.Presentation
                     emit,
                     flush);
 
-                static int ResolveBehaviorAssetId(AssetKind kind, string key)
+                int ResolveBehaviorAssetId(AssetKind kind, string key)
                 {
-                    return (kind, key) switch
+                    return kind switch
                     {
-                        (AssetKind.VFX, "chimney_smoke") => SmokeAssetId,
-                        (AssetKind.Spline, "blacksmith_patrol") => 1500,
-                        (AssetKind.Sound, "anvil_hammering") => HammerSoundAssetId,
-                        _ => 0,
+                        AssetKind.Mesh or AssetKind.SkinnedMesh or AssetKind.VFX => meshAssets.GetId(key),
+                        AssetKind.Spline when string.Equals(key, PatrolSplineAssetKey, StringComparison.Ordinal) => PatrolSplineAssetId,
+                        AssetKind.Sound when string.Equals(key, HammerSoundAssetKey, StringComparison.Ordinal) => HammerSoundAssetId,
+                        _ => throw new InvalidOperationException(
+                            $"Blacksmith performer UAT has no fixture asset registered for {kind} '{key}'."),
                     };
+                }
+
+                int ResolveUnsupportedEffectTemplateId(string key)
+                {
+                    throw new InvalidOperationException(
+                        $"Blacksmith performer UAT does not load effect templates; performer event references '{key}'.");
                 }
 
                 int ResolveFixtureMaterialId(string key)
                 {
-                    if (int.TryParse(key, out int numericId))
-                    {
-                        return numericId;
-                    }
-
                     return materialAssets.GetId(key);
                 }
+            }
+
+            private static void RegisterFixtureAssets(
+                MeshAssetRegistry meshAssets,
+                PresentationMaterialRegistry materialAssets)
+            {
+                RegisterPrimitiveMesh(meshAssets, WorkshopIntactAssetKey);
+                RegisterPrimitiveMesh(meshAssets, WorkshopDamagedAssetKey);
+                RegisterPrimitiveMesh(meshAssets, WorkshopRuinedAssetKey);
+                RegisterPrimitiveMesh(meshAssets, FurnaceAssetKey);
+                RegisterPrimitiveMesh(meshAssets, SmokeAssetKey);
+                RegisterPrimitiveMesh(meshAssets, WorkerAssetKey);
+                materialAssets.Register(
+                    BrickNorthMaterialKey,
+                    MaterialAssetDomain.Surface,
+                    new[] { "materials/blacksmith_fixture_brick_north.mat" },
+                    MaterialAssetFlags.None);
+                materialAssets.Register(
+                    BrickSouthMaterialKey,
+                    MaterialAssetDomain.Surface,
+                    new[] { "materials/blacksmith_fixture_brick_south.mat" },
+                    MaterialAssetFlags.None);
+            }
+
+            private static void RegisterPrimitiveMesh(MeshAssetRegistry meshAssets, string key)
+            {
+                MeshAssetDescriptor descriptor = MeshAssetDescriptor.Primitive(0, PrimitiveMeshKind.Cube);
+                meshAssets.Register(key, in descriptor);
             }
 
             public Entity SpawnBlacksmith()
             {
                 var attributes = default(AttributeBuffer);
-                attributes.SetBase(DurabilityAttributeId, 100f);
-                attributes.SetCurrent(DurabilityAttributeId, 100f);
+                attributes.SetBase(_durabilityAttributeId, 100f);
+                attributes.SetCurrent(_durabilityAttributeId, 100f);
 
                 return _world.Create(
                     new PresentationStableId { Value = _stableSeed++ },
-                    new EntityTemplateKeyCm { TemplateKeyId = BlacksmithTemplateKeyId },
+                    new EntityTemplateKeyCm { TemplateKeyId = _blacksmithTemplateKeyId },
                     new VisualTransform { Position = new Vector3(10f, 0f, 20f), Rotation = Quaternion.Identity, Scale = Vector3.One },
                     new CullState { IsVisible = true, LOD = LODLevel.High },
                     attributes,
@@ -573,18 +654,20 @@ namespace Ludots.Tests.Presentation
             public void SetDurability(Entity owner, float current, float max)
             {
                 ref AttributeBuffer attributes = ref _world.Get<AttributeBuffer>(owner);
-                attributes.SetBase(DurabilityAttributeId, max);
-                attributes.SetCurrent(DurabilityAttributeId, current);
+                attributes.SetBase(_durabilityAttributeId, max);
+                attributes.SetCurrent(_durabilityAttributeId, current);
 
-                int durabilityBandEventKey = current <= 0f ? 9102 : current <= 66f ? 9101 : 9100;
                 Assert.That(_events.TryAdd(new PresentationEvent
                 {
                     Kind = PresentationEventKind.AttributeValueChanged,
-                    KeyId = durabilityBandEventKey,
+                    KeyId = _durabilityAttributeId,
                     Source = owner,
                     Target = owner,
                     Magnitude = max <= 0f ? 0f : current / max,
                 }), Is.True);
+                Assert.That(
+                    _ownerChanges.TryAdd(new PresentationOwnerChange(owner, PresentationOwnerChangeKind.Attribute, _durabilityAttributeId)),
+                    Is.True);
             }
 
             public void SetWorking(Entity owner, bool enabled)
@@ -592,11 +675,11 @@ namespace Ludots.Tests.Presentation
                 ref GameplayTagContainer tags = ref _world.Get<GameplayTagContainer>(owner);
                 if (enabled)
                 {
-                    tags.AddTag(WorkingTagId);
+                    tags.AddTag(_workingTagId);
                 }
                 else
                 {
-                    tags.RemoveTag(WorkingTagId);
+                    tags.RemoveTag(_workingTagId);
                 }
             }
 
@@ -606,11 +689,14 @@ namespace Ludots.Tests.Presentation
                     _events.TryAdd(new PresentationEvent
                     {
                         Kind = PresentationEventKind.TagEffectiveChanged,
-                        KeyId = WorkingTagId,
+                        KeyId = _workingTagId,
                         Source = owner,
                         Target = owner,
                         Magnitude = gained ? 1f : 0f,
                     }),
+                    Is.True);
+                Assert.That(
+                    _ownerChanges.TryAdd(new PresentationOwnerChange(owner, PresentationOwnerChangeKind.Tag, _workingTagId, gained ? (byte)1 : (byte)0)),
                     Is.True);
             }
 
@@ -661,7 +747,7 @@ namespace Ludots.Tests.Presentation
                 _soundRequests.Clear();
 
                 _entityLifecycle.Update(dt);
-                _globalBridge.Update(dt);
+                _globalProjection.Update(dt);
                 for (int i = 0; i < 4; i++)
                 {
                     _rules.Update(dt);
@@ -739,6 +825,11 @@ namespace Ludots.Tests.Presentation
                 return count;
             }
 
+            public int CountVisualByAssetKey(string assetKey)
+            {
+                return CountVisualByAsset(_meshAssets.GetId(assetKey));
+            }
+
             public int CountVisualByMaterial(int materialId)
             {
                 int count = 0;
@@ -754,6 +845,11 @@ namespace Ludots.Tests.Presentation
                 return count;
             }
 
+            public int CountVisualByMaterialKey(string materialKey)
+            {
+                return CountVisualByMaterial(_materialAssets.GetId(materialKey));
+            }
+
             public bool HasSoundRequest(SoundRequestKind kind, int soundAssetId)
             {
                 foreach (ref readonly SoundRequest request in _soundRequests.GetSpan())
@@ -767,6 +863,17 @@ namespace Ludots.Tests.Presentation
                 return false;
             }
 
+            public bool HasSoundRequestByAssetKey(SoundRequestKind kind, string soundAssetKey)
+            {
+                if (!string.Equals(soundAssetKey, HammerSoundAssetKey, StringComparison.Ordinal))
+                {
+                    throw new InvalidOperationException(
+                        $"Blacksmith performer UAT has no fixture sound asset registered for '{soundAssetKey}'.");
+                }
+
+                return HasSoundRequest(kind, HammerSoundAssetId);
+            }
+
             public void Dispose()
             {
                 _flush.Dispose();
@@ -775,7 +882,7 @@ namespace Ludots.Tests.Presentation
                 _animator.Dispose();
                 _runtime.Dispose();
                 _rules.Dispose();
-                _globalBridge.Dispose();
+                _globalProjection.Dispose();
                 _entityLifecycle.Dispose();
                 _modLoader.UnloadAll();
                 _world.Dispose();

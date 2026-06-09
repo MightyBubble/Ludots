@@ -1,12 +1,79 @@
 using System;
 using System.Diagnostics;
 using System.Collections.Generic;
+using System.Runtime.CompilerServices;
+using System.Runtime.InteropServices;
 using Arch.Core;
 using Ludots.Core.Mathematics;
+using Ludots.Core.Gameplay.Components;
 using Ludots.Core.Navigation.GraphWorld;
 using Ludots.Core.Spatial;
 
 namespace MassNavigationMod.Runtime;
+
+public readonly struct MassNavigationObstacleSnapshot
+{
+    public MassNavigationObstacleSnapshot(float worldXCm, float worldYCm, float radiusCm)
+    {
+        WorldXCm = worldXCm;
+        WorldYCm = worldYCm;
+        RadiusCm = radiusCm;
+    }
+
+    public float WorldXCm { get; }
+    public float WorldYCm { get; }
+    public float RadiusCm { get; }
+}
+
+public readonly record struct MassNavigationCarriedRangeSyncResult(
+    float CarrierLocalXCm,
+    float CarrierLocalYCm,
+    float CarrierWorldXCm,
+    float CarrierWorldYCm,
+    float DisplacementWorldXCm,
+    float DisplacementWorldYCm,
+    bool AppliedDisplacement);
+
+public readonly record struct MassNavigationCarriedSlotTarget(
+    float LocalXCm,
+    float LocalYCm,
+    float WorldXCm,
+    float WorldYCm);
+
+public readonly record struct MassNavigationSolverDiagnostics(
+    bool FlowEnabled,
+    int FlowIterationsPerStep,
+    float FlowFieldRebuildMs,
+    bool ArrivalRecoveryEnabled,
+    int ArrivalTimeoutMs,
+    int ArrivalProgressDistanceCm,
+    int ArrivalWakePushDistanceCm,
+    int ArrivalMaxRetryCount,
+    int ArrivalSettledUnitCount,
+    float ObstacleSoftPushPaddingCm,
+    float TeamTargetClearanceCm,
+    float GroupCenterClearanceCm,
+    float TeamSlotClearanceCm,
+    float LooseTargetClearanceCm,
+    float GroupSlotClearanceCm,
+    float UnitTargetStopThresholdCm,
+    float GoalArrivalRadiusCm,
+    float FormationFlowSlowRadiusCm,
+    float DominantMassRatio,
+    float FriendlyResponseScale,
+    float NonFriendlyResponseScale,
+    float DominantPushResponseScale);
+
+public readonly record struct MassNavigationSolverRuntimeConfigSnapshot(
+    int FieldWidthCm,
+    int FieldHeightCm,
+    int FlowCellSizeCm,
+    int MaxObstacleCount,
+    int ParallelWorkerCount,
+    int SeparationHashCellSizeCm,
+    int HardResolveHashCellSizeCm,
+    float PlayAreaMinXCm,
+    float PlayAreaMaxXCm);
 
 public sealed class MassNavigationSimulationRuntime
 {
@@ -14,16 +81,17 @@ public sealed class MassNavigationSimulationRuntime
 
     private readonly int _initialSelectedTeamId;
     private int[] _teamIds = Array.Empty<int>();
-    private Entity[] _selectionScratch = new Entity[256];
-    private Entity[] _selectedEntities = new Entity[64];
+    private Entity[] _selectionScratch = Array.Empty<Entity>();
+    private Entity[] _selectedEntities = Array.Empty<Entity>();
     private int _selectedCount;
     private uint _selectionRevision;
     private bool _sceneResetRequested;
     private int _frameIndex;
     private int _nextSharedOrderId = 1;
     private readonly WorldGridLoadedChunks _loadedChunks;
-    private readonly Dictionary<long, float> _loadedChunkLastTouchedSeconds = new();
-    private readonly List<long> _loadedChunksToEvict = new();
+    private readonly Dictionary<long, float> _loadedChunkLastTouchedSeconds;
+    private readonly List<long> _loadedChunksToEvict;
+    private readonly int _loadedChunkCapacity;
     private float _viewResidencyClockSeconds;
     private int _streamingMinChunkX = int.MinValue;
     private int _streamingMaxChunkX = int.MinValue;
@@ -54,7 +122,6 @@ public sealed class MassNavigationSimulationRuntime
     private long _selectionSyncTick;
     private long _controlTick;
     private long _commandTick;
-    private long _commandDispatchTick;
     private long _simTick;
     private long _performerTick;
     private long _hudTick;
@@ -71,7 +138,6 @@ public sealed class MassNavigationSimulationRuntime
     public float FrameMs { get; private set; }
     public float Fps { get; private set; }
     public float SelectionSyncMs { get; private set; }
-    public float CommandApplyMs { get; private set; }
     public float FormationTargetMs { get; private set; }
     public float FlowFieldRebuildMs { get; private set; }
     public float StepPrepMs { get; private set; }
@@ -83,7 +149,6 @@ public sealed class MassNavigationSimulationRuntime
     public float SelectionSyncHzObserved { get; private set; }
     public float ControlHzObserved { get; private set; }
     public float CommandHzObserved { get; private set; }
-    public float CommandDispatchHzObserved { get; private set; }
     public float SimHzObserved { get; private set; }
     public float PerformerHzObserved { get; private set; }
     public float HudHzObserved { get; private set; }
@@ -103,25 +168,25 @@ public sealed class MassNavigationSimulationRuntime
     public float LastRejectedCommandYCm { get; private set; }
     public MassNavigationConfig Config { get; }
     public MassNavigationAgentState AgentState { get; } = new();
-    public MassNavigationCommandRuntime Commands { get; }
     public MassFlowTuning FlowTuning { get; }
     public MassNavigationCadenceConfig Cadence { get; }
     internal MassNavigationCadenceScheduler CadenceScheduler { get; }
     public MassNavigationFormationRuntime FormationRuntime { get; }
     public MassNavigationGroupRuntime NavGroupRuntime { get; }
     internal MassNavigationSpawnReceiptRuntime SpawnReceipts { get; } = new();
-    public MassFlowSimulationState MassFlow { get; }
+    internal MassFlowSimulationState MassFlow { get; }
     public MassNavigationWorldConfig WorldConfig { get; }
     public WorldGridLoadedChunks LoadedChunks => _loadedChunks;
     public MassNavigationViewResidencyConfig ViewResidency => Config.ViewResidency;
 
+    public int NavigationAgentCount => MassFlow.UnitCount;
+    public int NavigationObstacleCount => MassFlow.ObstacleCount;
     public int SelectedCount => _selectedCount;
     public uint SelectionRevision => _selectionRevision;
     public ReadOnlySpan<Entity> SelectedEntities => _selectedEntities.AsSpan(0, _selectedCount);
     public ReadOnlySpan<int> TeamIds => _teamIds;
     public int TeamCount => _teamIds.Length;
     public int FrameIndex => _frameIndex;
-    public int PendingCommandCount => Commands.PendingCommandCount;
     public int AgentsPerTeam { get; private set; }
     public int SelectedTeamId { get; private set; }
     public MassNavigationFormationMode FormationMode { get; private set; } = MassNavigationFormationMode.None;
@@ -165,11 +230,16 @@ public sealed class MassNavigationSimulationRuntime
     public MassNavigationSimulationRuntime(MassNavigationConfig config)
     {
         Config = config ?? throw new ArgumentNullException(nameof(config));
-        MassFlow = new MassFlowSimulationState();
+        MassFlow = new MassFlowSimulationState(config.Solver);
         WorldConfig = config.World ?? throw new InvalidOperationException("MassNavigationSimulationRuntime requires explicit world config.");
         Cadence = config.Cadence;
         CadenceScheduler = new MassNavigationCadenceScheduler(Cadence);
-        _loadedChunks = new WorldGridLoadedChunks(WorldConfig.StreamingChunkSizeCm);
+        _selectionScratch = new Entity[config.ScenarioRuntime.InitialSelectionScratchCapacity];
+        _selectedEntities = new Entity[config.ScenarioRuntime.InitialSelectedEntityCapacity];
+        _loadedChunkCapacity = config.ScenarioRuntime.RuntimeCapacity.LoadedChunkCapacity;
+        _loadedChunkLastTouchedSeconds = new Dictionary<long, float>(_loadedChunkCapacity);
+        _loadedChunksToEvict = new List<long>(_loadedChunkCapacity);
+        _loadedChunks = new WorldGridLoadedChunks(WorldConfig.StreamingChunkSizeCm, _loadedChunkCapacity);
         _simWindowWidthCm = WorldConfig.SolverWindowWidthCm;
         _simWindowHeightCm = WorldConfig.SolverWindowHeightCm;
         _simWindowCenterXCm = WorldConfig.ActiveHotZone.CenterXCm;
@@ -183,9 +253,8 @@ public sealed class MassNavigationSimulationRuntime
         _flowWorkAreaWidthCm = _simWindowWidthCm;
         _flowWorkAreaHeightCm = _simWindowHeightCm;
         FlowTuning = config.Flow;
-        Commands = new MassNavigationCommandRuntime(config.Semantics.Group);
         FormationRuntime = new MassNavigationFormationRuntime(config.Semantics.Group);
-        NavGroupRuntime = new MassNavigationGroupRuntime(FormationRuntime);
+        NavGroupRuntime = new MassNavigationGroupRuntime(FormationRuntime, config.ScenarioRuntime.RuntimeCapacity);
         AgentsPerTeam = config.Scenario.AgentsPerTeam;
         _initialSelectedTeamId = config.Scenario.InitialSelectedTeamId;
         ConfigureScenarioTeams(CreateTeamIdArray(config.Scenario.Teams));
@@ -203,10 +272,6 @@ public sealed class MassNavigationSimulationRuntime
         MassFlow.ArrivalTuning.MaxRetryCountMin = config.Arrival.MaxRetryCountMin;
         MassFlow.ArrivalTuning.MaxRetryCountMax = config.Arrival.MaxRetryCountMax;
         MassFlow.ArrivalTuning.MaxRetryCount = config.Arrival.MaxRetryCount;
-        MassFlow.AvoidanceTuning.LightNavMass = config.Avoidance.LightNavMass;
-        MassFlow.AvoidanceTuning.HeavyNavMass = config.Avoidance.HeavyNavMass;
-        MassFlow.AvoidanceTuning.LightVisualScale = config.Avoidance.LightVisualScale;
-        MassFlow.AvoidanceTuning.HeavyVisualScale = config.Avoidance.HeavyVisualScale;
         MassFlow.AvoidanceTuning.DominantMassRatio = config.Avoidance.DominantMassRatio;
         MassFlow.AvoidanceTuning.FriendlyResponseScale = config.Avoidance.FriendlyResponseScale;
         MassFlow.AvoidanceTuning.FriendlyResponseMin = config.Avoidance.FriendlyResponseMin;
@@ -225,7 +290,6 @@ public sealed class MassNavigationSimulationRuntime
         MassFlow.AvoidanceTuning.NonFriendlyCorrectionOtherMassWeight = config.Avoidance.NonFriendlyCorrectionOtherMassWeight;
         MassFlow.AvoidanceTuning.NonFriendlyCorrectionShareMin = config.Avoidance.NonFriendlyCorrectionShareMin;
         MassFlow.AvoidanceTuning.NonFriendlyCorrectionShareMax = config.Avoidance.NonFriendlyCorrectionShareMax;
-        MassFlow.Semantics.Obstacle.AgentBodyRadiusCm = config.Semantics.Obstacle.AgentBodyRadiusCm;
         MassFlow.Semantics.Obstacle.HardResolveCandidateDistanceCm = config.Semantics.Obstacle.HardResolveCandidateDistanceCm;
         MassFlow.Semantics.Obstacle.SoftPushPaddingCm = config.Semantics.Obstacle.SoftPushPaddingCm;
         MassFlow.Semantics.Obstacle.SoftPushForceScale = config.Semantics.Obstacle.SoftPushForceScale;
@@ -237,6 +301,13 @@ public sealed class MassNavigationSimulationRuntime
         MassFlow.Semantics.Group.SpawnSpacingCm = config.Semantics.Group.SpawnSpacingCm;
         MassFlow.Semantics.Group.SpawnJitterCm = config.Semantics.Group.SpawnJitterCm;
         MassFlow.Semantics.Group.TeamSlotSpacingCm = config.Semantics.Group.TeamSlotSpacingCm;
+        MassFlow.Semantics.Group.FormationLineSpacingCm = config.Semantics.Group.FormationLineSpacingCm;
+        MassFlow.Semantics.Group.FormationSquareSpacingCm = config.Semantics.Group.FormationSquareSpacingCm;
+        MassFlow.Semantics.Group.FormationCircleSpacingCm = config.Semantics.Group.FormationCircleSpacingCm;
+        MassFlow.Semantics.Group.FormationCircleMinRadiusCm = config.Semantics.Group.FormationCircleMinRadiusCm;
+        MassFlow.Semantics.Group.FormationWedgeSpacingCm = config.Semantics.Group.FormationWedgeSpacingCm;
+        MassFlow.Semantics.Group.FormationRotationEpsilonRadians = config.Semantics.Group.FormationRotationEpsilonRadians;
+        MassFlow.Semantics.Group.FormationRotationSpeedRadiansPerSecond = config.Semantics.Group.FormationRotationSpeedRadiansPerSecond;
         MassFlow.Semantics.Group.PullDeadZoneCm = config.Semantics.Group.PullDeadZoneCm;
         MassFlow.Semantics.Group.PullClampCm = config.Semantics.Group.PullClampCm;
         MassFlow.Semantics.Group.ArrivedRadiusCm = config.Semantics.Group.ArrivedRadiusCm;
@@ -276,9 +347,9 @@ public sealed class MassNavigationSimulationRuntime
 
     public void BindBoardWorld(WorldSizeSpec boardWorldSize)
     {
+        ValidateInitialSolverWindow(boardWorldSize);
         _boardWorldSize = boardWorldSize;
         _boardWorldBound = true;
-        ClampSolverWindowCenter(ref _simWindowCenterXCm, ref _simWindowCenterYCm);
         _lastCameraFocusXCm = _simWindowCenterXCm;
         _lastCameraFocusYCm = _simWindowCenterYCm;
         _flowWorkAreaCenterXCm = _simWindowCenterXCm;
@@ -291,8 +362,8 @@ public sealed class MassNavigationSimulationRuntime
         MassFlow.SetWorldOrigin(SolverWindowMinXCm, SolverWindowMinYCm);
         InvalidateStreamingWindowCache();
         UpdateStreamingWindow(ToWorldCm(new System.Numerics.Vector2(
-            MassFlowSimulationState.FieldWidthCm * 0.5f,
-            MassFlowSimulationState.FieldHeightCm * 0.5f)));
+            MassFlow.FieldWidthCm * 0.5f,
+            MassFlow.FieldHeightCm * 0.5f)));
     }
 
     public void BeginFrame(float dt)
@@ -312,7 +383,6 @@ public sealed class MassNavigationSimulationRuntime
     }
 
     public void ObserveSelectionSync(double sampleMs) => SelectionSyncMs = Smooth(SelectionSyncMs, (float)sampleMs);
-    public void ObserveCommandApply(double sampleMs) => CommandApplyMs = Smooth(CommandApplyMs, (float)sampleMs);
     public void ObserveFormationTargets(double sampleMs) => FormationTargetMs = Smooth(FormationTargetMs, (float)sampleMs);
     public void ObserveFlowFieldRebuild(double sampleMs) => FlowFieldRebuildMs = Smooth(FlowFieldRebuildMs, (float)sampleMs);
     public void ObserveStepPrep(double sampleMs) => StepPrepMs = Smooth(StepPrepMs, (float)sampleMs);
@@ -321,6 +391,112 @@ public sealed class MassNavigationSimulationRuntime
     public void ObserveHardResolve(double sampleMs) => HardResolveMs = Smooth(HardResolveMs, (float)sampleMs);
     public void ObserveEntitySync(double sampleMs) => EntitySyncMs = Smooth(EntitySyncMs, (float)sampleMs);
     public void ObservePerformerCommand(double sampleMs) => PerformerCommandMs = Smooth(PerformerCommandMs, (float)sampleMs);
+
+    public bool ToggleFlowEnabled()
+    {
+        FlowTuning.Enabled = !FlowTuning.Enabled;
+        MassFlow.RequestFlowRebuild();
+        return FlowTuning.Enabled;
+    }
+
+    public int AdjustFlowIterations(int delta)
+    {
+        FlowTuning.AdjustIterations(delta);
+        MassFlow.RequestFlowRebuild();
+        return FlowTuning.IterationsPerStep;
+    }
+
+    public int AdjustFlowStepHz(int delta)
+    {
+        Cadence.AdjustFlowStepHz(delta);
+        MassFlow.RequestFlowRebuild();
+        return Cadence.FlowStepHz;
+    }
+
+    public int AdjustFlowCrowdStampHz(int delta)
+    {
+        Cadence.AdjustFlowCrowdStampHz(delta);
+        MassFlow.RequestFlowRebuild();
+        return Cadence.FlowCrowdStampHz;
+    }
+
+    public int AdjustFlowObstacleStampHz(int delta)
+    {
+        Cadence.AdjustFlowObstacleStampHz(delta);
+        MassFlow.RequestFlowRebuild();
+        return Cadence.FlowObstacleStampHz;
+    }
+
+    public bool ToggleArrivalRecovery()
+    {
+        MassFlow.ArrivalTuning.Enabled = !MassFlow.ArrivalTuning.Enabled;
+        return MassFlow.ArrivalTuning.Enabled;
+    }
+
+    public int AdjustArrivalTimeoutMs(int delta)
+    {
+        MassFlow.ArrivalTuning.AdjustTimeoutMs(delta);
+        return MassFlow.ArrivalTuning.TimeoutMs;
+    }
+
+    public int AdjustArrivalProgressDistanceCm(int delta)
+    {
+        MassFlow.ArrivalTuning.AdjustProgressDistanceCm(delta);
+        return MassFlow.ArrivalTuning.ProgressDistanceCm;
+    }
+
+    public int AdjustArrivalWakePushDistanceCm(int delta)
+    {
+        MassFlow.ArrivalTuning.AdjustWakePushDistanceCm(delta);
+        return MassFlow.ArrivalTuning.WakePushDistanceCm;
+    }
+
+    public int AdjustArrivalMaxRetryCount(int delta)
+    {
+        MassFlow.ArrivalTuning.AdjustMaxRetryCount(delta);
+        return MassFlow.ArrivalTuning.MaxRetryCount;
+    }
+
+    public MassNavigationSolverDiagnostics CaptureSolverDiagnostics()
+    {
+        return new MassNavigationSolverDiagnostics(
+            FlowEnabled: FlowTuning.Enabled,
+            FlowIterationsPerStep: FlowTuning.IterationsPerStep,
+            FlowFieldRebuildMs: FlowFieldRebuildMs > 0.001f ? FlowFieldRebuildMs : MassFlow.LastFlowFieldRebuildMs,
+            ArrivalRecoveryEnabled: MassFlow.ArrivalTuning.Enabled,
+            ArrivalTimeoutMs: MassFlow.ArrivalTuning.TimeoutMs,
+            ArrivalProgressDistanceCm: MassFlow.ArrivalTuning.ProgressDistanceCm,
+            ArrivalWakePushDistanceCm: MassFlow.ArrivalTuning.WakePushDistanceCm,
+            ArrivalMaxRetryCount: MassFlow.ArrivalTuning.MaxRetryCount,
+            ArrivalSettledUnitCount: MassFlow.SettledUnitCount,
+            ObstacleSoftPushPaddingCm: MassFlow.Semantics.Obstacle.SoftPushPaddingCm,
+            TeamTargetClearanceCm: MassFlow.Semantics.TargetProjection.TeamTargetClearanceCm,
+            GroupCenterClearanceCm: MassFlow.Semantics.TargetProjection.GroupCenterClearanceCm,
+            TeamSlotClearanceCm: MassFlow.Semantics.TargetProjection.TeamSlotClearanceCm,
+            LooseTargetClearanceCm: MassFlow.Semantics.TargetProjection.LooseTargetClearanceCm,
+            GroupSlotClearanceCm: MassFlow.Semantics.TargetProjection.GroupSlotClearanceCm,
+            UnitTargetStopThresholdCm: MassFlow.Semantics.Group.UnitTargetStopThresholdCm,
+            GoalArrivalRadiusCm: MassFlow.Semantics.Steering.GoalArrivalRadiusCm,
+            FormationFlowSlowRadiusCm: MassFlow.Semantics.Group.FormationFlowSlowRadiusCm,
+            DominantMassRatio: MassFlow.AvoidanceTuning.DominantMassRatio,
+            FriendlyResponseScale: MassFlow.AvoidanceTuning.FriendlyResponseScale,
+            NonFriendlyResponseScale: MassFlow.AvoidanceTuning.NonFriendlyResponseScale,
+            DominantPushResponseScale: MassFlow.AvoidanceTuning.DominantPushResponseScale);
+    }
+
+    public MassNavigationSolverRuntimeConfigSnapshot CaptureSolverRuntimeConfig()
+    {
+        return new MassNavigationSolverRuntimeConfigSnapshot(
+            FieldWidthCm: MassFlow.FieldWidthCm,
+            FieldHeightCm: MassFlow.FieldHeightCm,
+            FlowCellSizeCm: MassFlow.FlowCellSizeCm,
+            MaxObstacleCount: MassFlow.MaxObstacleCount,
+            ParallelWorkerCount: MassFlow.ParallelWorkerCount,
+            SeparationHashCellSizeCm: MassFlow.SeparationHashCellSizeCm,
+            HardResolveHashCellSizeCm: MassFlow.HardResolveHashCellSizeCm,
+            PlayAreaMinXCm: MassFlow.PlayAreaMinXCm,
+            PlayAreaMaxXCm: MassFlow.PlayAreaMaxXCm);
+    }
 
     public void ObservePerformerCoverage(int crowdInViewCount, int crowdSubmittedCount, int obstacleSubmittedCount, int performerDroppedCount)
     {
@@ -333,7 +509,6 @@ public sealed class MassNavigationSimulationRuntime
     public void ObserveSelectionSyncTick() => SelectionSyncHzObserved = ObserveHz(ref _selectionSyncTick, SelectionSyncHzObserved);
     public void ObserveControlTick() => ControlHzObserved = ObserveHz(ref _controlTick, ControlHzObserved);
     public void ObserveCommandTick() => CommandHzObserved = ObserveHz(ref _commandTick, CommandHzObserved);
-    public void ObserveCommandDispatchTick() => CommandDispatchHzObserved = ObserveHz(ref _commandDispatchTick, CommandDispatchHzObserved);
     public void ObserveSimTick() => SimHzObserved = ObserveHz(ref _simTick, SimHzObserved);
     public void ObservePerformerTick() => PerformerHzObserved = ObserveHz(ref _performerTick, PerformerHzObserved);
     public void ObserveHudTick() => HudHzObserved = ObserveHz(ref _hudTick, HudHzObserved);
@@ -343,13 +518,8 @@ public sealed class MassNavigationSimulationRuntime
     {
         if (required > _selectionScratch.Length)
         {
-            int next = _selectionScratch.Length;
-            while (next < required)
-            {
-                next *= 2;
-            }
-
-            Array.Resize(ref _selectionScratch, next);
+            throw new InvalidOperationException(
+                $"MassNavigation selection scratch required {required} entities, exceeding configured scenarioRuntime.initialSelectionScratchCapacity {_selectionScratch.Length}.");
         }
 
         return _selectionScratch.AsSpan(0, required);
@@ -359,13 +529,8 @@ public sealed class MassNavigationSimulationRuntime
     {
         if (entities.Length > _selectedEntities.Length)
         {
-            int next = _selectedEntities.Length;
-            while (next < entities.Length)
-            {
-                next *= 2;
-            }
-
-            Array.Resize(ref _selectedEntities, next);
+            throw new InvalidOperationException(
+                $"MassNavigation selected entity snapshot required {entities.Length} entities, exceeding configured scenarioRuntime.initialSelectedEntityCapacity {_selectedEntities.Length}.");
         }
 
         entities.CopyTo(_selectedEntities.AsSpan(0, entities.Length));
@@ -400,6 +565,50 @@ public sealed class MassNavigationSimulationRuntime
         CommandCountFrame++;
     }
 
+    public bool RotateSelectedFormation(World world, float deltaRadians, int localPlayerId)
+    {
+        ArgumentNullException.ThrowIfNull(world);
+        if (_selectedCount <= 0 ||
+            !(MathF.Abs(deltaRadians) > Config.Semantics.Group.FormationRotationEpsilonRadians))
+        {
+            return false;
+        }
+
+        if (!CanLocalPlayerCommandSelection(world, SelectedEntities, localPlayerId))
+        {
+            CommandRejectsFrame++;
+            CommandRejectsTotal++;
+            return false;
+        }
+
+        NavGroupRuntime.RotateSelected(world, AgentState, SelectedEntities, deltaRadians);
+        MarkCommandApply();
+        return true;
+    }
+
+    private static bool CanLocalPlayerCommandSelection(World world, ReadOnlySpan<Entity> selected, int localPlayerId)
+    {
+        int liveCommandableActors = 0;
+        for (int i = 0; i < selected.Length; i++)
+        {
+            Entity actor = selected[i];
+            if (!world.IsAlive(actor))
+            {
+                continue;
+            }
+
+            if (!world.TryGet(actor, out PlayerOwner owner) ||
+                owner.PlayerId != localPlayerId)
+            {
+                return false;
+            }
+
+            liveCommandableActors++;
+        }
+
+        return liveCommandableActors > 0;
+    }
+
     public void MarkScenarioSpawned()
     {
         ScenarioSpawnCount++;
@@ -431,24 +640,46 @@ public sealed class MassNavigationSimulationRuntime
         CommandRejectsTotal++;
     }
 
+    public void RejectCommandUnauthorizedSelection(float worldXCm, float worldYCm)
+    {
+        LastRejectedCommandXCm = worldXCm;
+        LastRejectedCommandYCm = worldYCm;
+        CommandRejectsFrame++;
+        CommandRejectsTotal++;
+    }
+
+    public void RejectCommandOrderSubmit(float worldXCm, float worldYCm)
+    {
+        LastRejectedCommandXCm = worldXCm;
+        LastRejectedCommandYCm = worldYCm;
+        CommandRejectsFrame++;
+        CommandRejectsTotal++;
+    }
+
     public void SetAgentsPerTeam(int agentsPerTeam)
     {
-        int next = Math.Max(0, agentsPerTeam);
-        if (AgentsPerTeam == next)
+        if (agentsPerTeam < 0)
+        {
+            throw new InvalidOperationException("MassNavigationSimulationRuntime.SetAgentsPerTeam requires agentsPerTeam >= 0.");
+        }
+
+        if (AgentsPerTeam == agentsPerTeam)
         {
             return;
         }
 
-        AgentsPerTeam = next;
+        AgentsPerTeam = agentsPerTeam;
         RequestSceneReset();
     }
 
     public void SetSelectedTeam(int teamId)
     {
-        if (Array.IndexOf(_teamIds, teamId) >= 0)
+        if (Array.IndexOf(_teamIds, teamId) < 0)
         {
-            SelectedTeamId = teamId;
+            throw new InvalidOperationException($"MassNavigationSimulationRuntime selected team {teamId} is not configured.");
         }
+
+        SelectedTeamId = teamId;
     }
 
     public void ConfigureScenarioTeams(ReadOnlySpan<int> teamIds)
@@ -506,6 +737,11 @@ public sealed class MassNavigationSimulationRuntime
 
     public void SetFormationMode(MassNavigationFormationMode mode)
     {
+        if (!Enum.IsDefined(typeof(MassNavigationFormationMode), mode))
+        {
+            throw new ArgumentOutOfRangeException(nameof(mode), mode, "MassNavigation formation mode is not defined.");
+        }
+
         FormationMode = mode;
     }
 
@@ -518,7 +754,6 @@ public sealed class MassNavigationSimulationRuntime
     {
         ArgumentNullException.ThrowIfNull(world);
         ClearSelection();
-        Commands.Reset();
         NavGroupRuntime.Reset();
         AgentState.DestroyTracked(world);
     }
@@ -601,6 +836,146 @@ public sealed class MassNavigationSimulationRuntime
     public float ToLocalXCm(float worldXCm) => worldXCm - SolverWindowMinXCm;
     public float ToLocalYCm(float worldYCm) => worldYCm - SolverWindowMinYCm;
 
+    public System.Numerics.Vector2 GetAgentLocalPositionCm(int agentIndex)
+    {
+        RequireAgentIndex(agentIndex);
+        return new System.Numerics.Vector2(
+            MassFlow.GetPositionX(agentIndex),
+            MassFlow.GetPositionY(agentIndex));
+    }
+
+    public System.Numerics.Vector2 GetAgentWorldPositionCm(int agentIndex)
+    {
+        return ToWorldCm(GetAgentLocalPositionCm(agentIndex));
+    }
+
+    public float GetAgentBodyRadiusCm(int agentIndex)
+    {
+        RequireAgentIndex(agentIndex);
+        return MassFlow.GetBodyRadiusCm(agentIndex);
+    }
+
+    public MassNavigationObstacleSnapshot GetObstacleWorldSnapshot(int obstacleIndex)
+    {
+        RequireObstacleIndex(obstacleIndex);
+        return new MassNavigationObstacleSnapshot(
+            ToWorldXCm(MassFlow.GetObstacleX(obstacleIndex)),
+            ToWorldYCm(MassFlow.GetObstacleY(obstacleIndex)),
+            MassFlow.GetObstacleRadius(obstacleIndex));
+    }
+
+    public MassNavigationCarriedRangeSyncResult SyncCarriedAgentRangeToCarrier(
+        int carrierAgentIndex,
+        int firstMemberAgentIndex,
+        int memberAgentCount,
+        bool previousCarrierSnapshotInitialized,
+        float previousCarrierWorldXCm,
+        float previousCarrierWorldYCm)
+    {
+        RequireAgentIndex(carrierAgentIndex);
+        RequireAgentRange(firstMemberAgentIndex, memberAgentCount, nameof(firstMemberAgentIndex));
+
+        System.Numerics.Vector2 carrierLocal = GetAgentLocalPositionCm(carrierAgentIndex);
+        float carrierWorldX = ToWorldXCm(carrierLocal.X);
+        float carrierWorldY = ToWorldYCm(carrierLocal.Y);
+        float deltaX = previousCarrierSnapshotInitialized ? carrierWorldX - previousCarrierWorldXCm : 0f;
+        float deltaY = previousCarrierSnapshotInitialized ? carrierWorldY - previousCarrierWorldYCm : 0f;
+        bool applied = previousCarrierSnapshotInitialized && (deltaX != 0f || deltaY != 0f);
+        if (applied)
+        {
+            MassFlow.ApplyExternalDisplacementRange(firstMemberAgentIndex, memberAgentCount, deltaX, deltaY);
+        }
+
+        return new MassNavigationCarriedRangeSyncResult(
+            carrierLocal.X,
+            carrierLocal.Y,
+            carrierWorldX,
+            carrierWorldY,
+            deltaX,
+            deltaY,
+            applied);
+    }
+
+    public void SyncAgentEntitiesNow(World world)
+    {
+        MassFlow.SyncEntities(world, AgentState);
+    }
+
+    public MassNavigationCarriedSlotTarget ResolveCarriedAgentSlotTarget(
+        int memberAgentIndex,
+        float carrierLocalXCm,
+        float carrierLocalYCm,
+        float slotOffsetLocalXCm,
+        float slotOffsetLocalYCm)
+    {
+        RequireAgentIndex(memberAgentIndex);
+        System.Numerics.Vector2 resolvedLocal = MassFlow.ResolveUnitNavigableTarget(
+            memberAgentIndex,
+            carrierLocalXCm + slotOffsetLocalXCm,
+            carrierLocalYCm + slotOffsetLocalYCm,
+            slotOffsetLocalXCm,
+            slotOffsetLocalYCm,
+            MassFlow.Semantics.TargetProjection.GroupSlotClearanceCm);
+        System.Numerics.Vector2 resolvedWorld = ToWorldCm(resolvedLocal);
+        return new MassNavigationCarriedSlotTarget(
+            resolvedLocal.X,
+            resolvedLocal.Y,
+            resolvedWorld.X,
+            resolvedWorld.Y);
+    }
+
+    public bool TryGetAgentNavigationTargetLocalCm(int agentIndex, out float xCm, out float yCm)
+    {
+        RequireAgentIndex(agentIndex);
+        return MassFlow.TryGetUnitTarget(agentIndex, out xCm, out yCm);
+    }
+
+    public bool ApplyCarriedAgentSlotTarget(
+        int memberAgentIndex,
+        in MassNavigationCarriedSlotTarget target,
+        bool resetRecovery)
+    {
+        RequireAgentIndex(memberAgentIndex);
+        return MassFlow.SetUnitTarget(memberAgentIndex, target.LocalXCm, target.LocalYCm, resetRecovery);
+    }
+
+    public void BindSpawnedAgent(
+        World world,
+        Entity entity,
+        int agentIndex,
+        bool controllable)
+    {
+        ArgumentNullException.ThrowIfNull(world);
+        if (!world.IsAlive(entity))
+        {
+            throw new InvalidOperationException("MassNavigation cannot bind a spawned agent on a dead entity.");
+        }
+
+        if ((uint)agentIndex >= (uint)MassFlow.UnitCount)
+        {
+            throw new InvalidOperationException(
+                $"MassNavigation spawned agent index {agentIndex} exceeds current agent count {MassFlow.UnitCount}.");
+        }
+
+        if (world.Has<MassNavigationAgentIndex>(entity) || world.Has<MassNavigationAgentProfile>(entity))
+        {
+            throw new InvalidOperationException($"MassNavigation entity {entity.Id} was already bound as an agent.");
+        }
+
+        int teamId = MassFlow.GetTeam(agentIndex);
+        UpsertComponent(world, entity, new Team { Id = teamId });
+        world.Add(entity, new MassNavigationAgentIndex { Value = agentIndex });
+        world.Add(entity, new MassNavigationAgentProfile
+        {
+            Heavy = MassFlow.IsHeavyProfile(agentIndex),
+            NavMass = MassFlow.GetNavMass(agentIndex),
+            VisualScale = MassFlow.GetVisualScale(agentIndex),
+            BodyRadiusCm = MassFlow.GetBodyRadiusCm(agentIndex),
+            SpeedCmPerSecond = MassFlow.GetSpeedCmPerSecond(agentIndex),
+        });
+        AgentState.RegisterAgentAtIndex(entity, agentIndex, controllable);
+    }
+
     public bool ContainsWorldPoint(float worldXCm, float worldYCm)
     {
         WorldAabbCm bounds = RequireBoardWorldSize().Bounds;
@@ -645,8 +1020,7 @@ public sealed class MassNavigationSimulationRuntime
             for (int chunkX = minChunkX; chunkX <= maxChunkX; chunkX++)
             {
                 long chunkKey = GraphChunkKey.Pack(chunkX, chunkY);
-                _loadedChunkLastTouchedSeconds[chunkKey] = _viewResidencyClockSeconds;
-                _loadedChunks.SetLoaded(chunkKey, true);
+                TouchStreamingChunk(chunkKey);
             }
         }
 
@@ -677,12 +1051,26 @@ public sealed class MassNavigationSimulationRuntime
 
     public void AdjustViewResidencyRetainSeconds(float deltaSeconds)
     {
-        ViewResidency.RetainSeconds = MathF.Max(0f, ViewResidency.RetainSeconds + deltaSeconds);
+        float next = ViewResidency.RetainSeconds + deltaSeconds;
+        if (next < 0f)
+        {
+            throw new InvalidOperationException(
+                $"MassNavigation viewResidency.retainSeconds adjustment would produce invalid value {next:0.###}.");
+        }
+
+        ViewResidency.RetainSeconds = next;
     }
 
     public void AdjustViewResidencyRadiusCm(int deltaCm)
     {
-        ViewResidency.RadiusCm = Math.Max(WorldConfig.StreamingChunkSizeCm, ViewResidency.RadiusCm + deltaCm);
+        int next = ViewResidency.RadiusCm + deltaCm;
+        if (next < WorldConfig.StreamingChunkSizeCm)
+        {
+            throw new InvalidOperationException(
+                $"MassNavigation viewResidency.radiusCm adjustment would produce {next}, below streaming chunk size {WorldConfig.StreamingChunkSizeCm}.");
+        }
+
+        ViewResidency.RadiusCm = next;
         InvalidateStreamingWindowCache();
     }
 
@@ -722,6 +1110,25 @@ public sealed class MassNavigationSimulationRuntime
         }
     }
 
+    private void TouchStreamingChunk(long chunkKey)
+    {
+        ref float lastTouchedSeconds = ref CollectionsMarshal.GetValueRefOrNullRef(_loadedChunkLastTouchedSeconds, chunkKey);
+        if (Unsafe.IsNullRef(ref lastTouchedSeconds))
+        {
+            if (_loadedChunkLastTouchedSeconds.Count >= _loadedChunkCapacity)
+            {
+                throw new InvalidOperationException(
+                    $"MassNavigation streaming required more than configured scenarioRuntime.runtimeCapacity.loadedChunkCapacity {_loadedChunkCapacity} chunks.");
+            }
+
+            _loadedChunkLastTouchedSeconds.Add(chunkKey, _viewResidencyClockSeconds);
+            _loadedChunks.SetLoaded(chunkKey, true);
+            return;
+        }
+
+        lastTouchedSeconds = _viewResidencyClockSeconds;
+    }
+
     private void MoveSolverWindow(System.Numerics.Vector2 requestedCenterCm, string reason)
     {
         float nextCenterX = requestedCenterCm.X;
@@ -752,6 +1159,27 @@ public sealed class MassNavigationSimulationRuntime
         WorldAabbCm bounds = RequireBoardWorldSize().Bounds;
         centerX = ClampWindowCenterToBounds(centerX, bounds.Left, bounds.Right, _simWindowWidthCm);
         centerY = ClampWindowCenterToBounds(centerY, bounds.Top, bounds.Bottom, _simWindowHeightCm);
+    }
+
+    private void ValidateInitialSolverWindow(WorldSizeSpec boardWorldSize)
+    {
+        WorldAabbCm bounds = boardWorldSize.Bounds;
+        EnsureWindowFitsBoard(_simWindowWidthCm, bounds.Width, "solver window width");
+        EnsureWindowFitsBoard(_simWindowHeightCm, bounds.Height, "solver window height");
+        EnsurePointInsideWindowCenterBounds(
+            _simWindowCenterXCm,
+            bounds.Left,
+            bounds.Right,
+            _simWindowWidthCm,
+            WorldConfig.ActiveHotZoneId,
+            "x");
+        EnsurePointInsideWindowCenterBounds(
+            _simWindowCenterYCm,
+            bounds.Top,
+            bounds.Bottom,
+            _simWindowHeightCm,
+            WorldConfig.ActiveHotZoneId,
+            "y");
     }
 
     private void ObserveFlowWorkArea(System.Numerics.Vector2 focusCm, ReadOnlySpan<Entity> selectedEntities, string reason)
@@ -863,6 +1291,18 @@ public sealed class MassNavigationSimulationRuntime
         maxY = MathF.Max(maxY, y);
     }
 
+    private static void UpsertComponent<T>(World world, Entity entity, T component)
+    {
+        if (world.Has<T>(entity))
+        {
+            world.Set(entity, component);
+        }
+        else
+        {
+            world.Add(entity, component);
+        }
+    }
+
     private WorldSizeSpec RequireBoardWorldSize()
     {
         if (!_boardWorldBound)
@@ -873,12 +1313,76 @@ public sealed class MassNavigationSimulationRuntime
         return _boardWorldSize;
     }
 
+    private void RequireAgentIndex(int agentIndex)
+    {
+        if ((uint)agentIndex >= (uint)MassFlow.UnitCount)
+        {
+            throw new InvalidOperationException(
+                $"MassNavigation agent index {agentIndex} exceeds current agent count {MassFlow.UnitCount}.");
+        }
+    }
+
+    private void RequireAgentRange(int firstAgentIndex, int agentCount, string fieldName)
+    {
+        int end = firstAgentIndex + agentCount;
+        if (firstAgentIndex < 0 ||
+            agentCount <= 0 ||
+            end < firstAgentIndex ||
+            end > MassFlow.UnitCount)
+        {
+            throw new InvalidOperationException(
+                $"MassNavigation agent range '{fieldName}' [{firstAgentIndex}, {end}) must be within current agent count {MassFlow.UnitCount}.");
+        }
+    }
+
+    private void RequireObstacleIndex(int obstacleIndex)
+    {
+        if ((uint)obstacleIndex >= (uint)MassFlow.ObstacleCount)
+        {
+            throw new InvalidOperationException(
+                $"MassNavigation obstacle index {obstacleIndex} exceeds current obstacle count {MassFlow.ObstacleCount}.");
+        }
+    }
+
     private static float ClampWindowCenterToBounds(float worldCm, int minCm, int maxCm, float windowSizeCm)
     {
         float halfSize = windowSizeCm * 0.5f;
         float min = minCm + halfSize;
         float max = maxCm - halfSize;
-        return min <= max ? Math.Clamp(worldCm, min, max) : (minCm + maxCm) * 0.5f;
+        if (min > max)
+        {
+            throw new InvalidOperationException(
+                $"MassNavigation solver/work area window {windowSizeCm:0.###} cm exceeds board span {maxCm - minCm} cm.");
+        }
+
+        return Math.Clamp(worldCm, min, max);
+    }
+
+    private static void EnsureWindowFitsBoard(float windowSizeCm, int boardSpanCm, string windowName)
+    {
+        if (windowSizeCm > boardSpanCm)
+        {
+            throw new InvalidOperationException(
+                $"MassNavigation initial {windowName} {windowSizeCm:0.###} cm exceeds board span {boardSpanCm} cm.");
+        }
+    }
+
+    private static void EnsurePointInsideWindowCenterBounds(
+        float centerCm,
+        int minCm,
+        int maxCm,
+        float windowSizeCm,
+        string hotZoneId,
+        string axisName)
+    {
+        float halfSize = windowSizeCm * 0.5f;
+        float minCenter = minCm + halfSize;
+        float maxCenter = maxCm - halfSize;
+        if (centerCm < minCenter || centerCm > maxCenter)
+        {
+            throw new InvalidOperationException(
+                $"MassNavigation active hot zone '{hotZoneId}' center {axisName}={centerCm:0.###} cannot host solver window {windowSizeCm:0.###} cm inside board center range [{minCenter:0.###}, {maxCenter:0.###}].");
+        }
     }
 
     public bool ConsumeSceneResetRequest()

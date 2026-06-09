@@ -26,11 +26,7 @@ namespace Ludots.Core.Presentation.Config
             for (int i = 0; i < merged.Count; i++)
             {
                 var node = merged[i].Node;
-                string key = node["id"]?.GetValue<string>() ?? string.Empty;
-                if (string.IsNullOrWhiteSpace(key))
-                {
-                    throw new InvalidOperationException("Animator controller is missing required 'id'.");
-                }
+                string key = RequireString(node["id"], "Animator controller id");
 
                 _controllers.Register(key, ParseController(node, key));
             }
@@ -53,61 +49,71 @@ namespace Ludots.Core.Presentation.Config
 
                 states[i] = new AnimatorStateDefinition
                 {
-                    PackedStateIndex = stateNode["packedStateIndex"]?.GetValue<int>() ?? 0,
-                    DurationSeconds = stateNode["durationSeconds"]?.GetValue<float>() ?? 1f,
-                    PlaybackSpeed = stateNode["playbackSpeed"]?.GetValue<float>() ?? 1f,
-                    Loop = stateNode["loop"]?.GetValue<bool>() ?? false,
+                    PackedStateIndex = RequireInt(stateNode["packedStateIndex"], $"Animator controller '{key}' state[{i}].packedStateIndex"),
+                    DurationSeconds = RequirePositiveFloat(stateNode["durationSeconds"], $"Animator controller '{key}' state[{i}].durationSeconds"),
+                    PlaybackSpeed = RequirePositiveFloat(stateNode["playbackSpeed"], $"Animator controller '{key}' state[{i}].playbackSpeed"),
+                    Loop = RequireBool(stateNode["loop"], $"Animator controller '{key}' state[{i}].loop"),
                 };
+
+                if (states[i].PackedStateIndex < 0)
+                {
+                    throw new InvalidOperationException($"Animator controller '{key}' state[{i}].packedStateIndex cannot be negative.");
+                }
             }
 
-            JsonArray? transitionsArray = node["transitions"] as JsonArray;
-            var transitions = transitionsArray == null ? Array.Empty<AnimatorTransitionDefinition>() : new AnimatorTransitionDefinition[transitionsArray.Count];
+            if (node["transitions"] is not JsonArray transitionsArray)
+            {
+                throw new InvalidOperationException($"Animator controller '{key}' must declare explicit transitions array. Use [] when there are no transitions.");
+            }
+
+            var transitions = new AnimatorTransitionDefinition[transitionsArray.Count];
             for (int i = 0; i < transitions.Length; i++)
             {
-                if (transitionsArray![i] is not JsonObject transitionNode)
+                if (transitionsArray[i] is not JsonObject transitionNode)
                 {
                     throw new InvalidOperationException($"Animator controller '{key}' transition[{i}] must be an object.");
                 }
 
-                string conditionKindText = transitionNode["conditionKind"]?.GetValue<string>() ?? nameof(AnimatorConditionKind.None);
-                if (!Enum.TryParse(conditionKindText, ignoreCase: true, out AnimatorConditionKind conditionKind))
-                {
-                    throw new InvalidOperationException(
-                        $"Animator controller '{key}' transition[{i}] has invalid conditionKind '{conditionKindText}'.");
-                }
+                AnimatorConditionKind conditionKind = RequireEnum<AnimatorConditionKind>(
+                    transitionNode["conditionKind"],
+                    $"Animator controller '{key}' transition[{i}].conditionKind");
 
                 transitions[i] = new AnimatorTransitionDefinition
                 {
-                    FromStateIndex = transitionNode["fromStateIndex"]?.GetValue<int>() ?? 0,
-                    ToStateIndex = transitionNode["toStateIndex"]?.GetValue<int>() ?? 0,
+                    FromStateIndex = RequireInt(transitionNode["fromStateIndex"], $"Animator controller '{key}' transition[{i}].fromStateIndex"),
+                    ToStateIndex = RequireInt(transitionNode["toStateIndex"], $"Animator controller '{key}' transition[{i}].toStateIndex"),
                     ConditionKind = conditionKind,
-                    ParameterIndex = ParseParamKey(transitionNode["parameterIndex"], 0, $"Animator controller '{key}' transition[{i}].parameterIndex"),
-                    Threshold = transitionNode["threshold"]?.GetValue<float>() ?? 0f,
-                    DurationSeconds = transitionNode["durationSeconds"]?.GetValue<float>() ?? 0f,
-                    ConsumeTrigger = transitionNode["consumeTrigger"]?.GetValue<bool>() ?? false,
+                    ParameterIndex = ParseParamKey(transitionNode["parameterIndex"], $"Animator controller '{key}' transition[{i}].parameterIndex"),
+                    Threshold = RequireFiniteFloat(transitionNode["threshold"], $"Animator controller '{key}' transition[{i}].threshold"),
+                    DurationSeconds = RequireNonNegativeFloat(transitionNode["durationSeconds"], $"Animator controller '{key}' transition[{i}].durationSeconds"),
+                    ConsumeTrigger = RequireBool(transitionNode["consumeTrigger"], $"Animator controller '{key}' transition[{i}].consumeTrigger"),
                 };
+
+                ValidateTransition(key, i, states.Length, in transitions[i]);
+            }
+
+            int defaultStateIndex = RequireInt(node["defaultStateIndex"], $"Animator controller '{key}'.defaultStateIndex");
+            if ((uint)defaultStateIndex >= (uint)states.Length)
+            {
+                throw new InvalidOperationException(
+                    $"Animator controller '{key}' defaultStateIndex {defaultStateIndex} is outside states length {states.Length}.");
             }
 
             return new AnimatorControllerDefinition
             {
-                DefaultStateIndex = node["defaultStateIndex"]?.GetValue<int>() ?? 0,
+                DefaultStateIndex = defaultStateIndex,
                 States = states,
                 Transitions = transitions,
             };
         }
 
-        private static int ParseParamKey(JsonNode? node, int defaultValue, string context)
+        private static int ParseParamKey(JsonNode? node, string context)
         {
-            if (node == null)
-            {
-                return defaultValue;
-            }
-
             if (node is JsonValue value)
             {
                 if (value.TryGetValue<int>(out int numericId))
                 {
-                    return numericId;
+                    throw new InvalidOperationException($"{context} must be a semantic string, not numeric id {numericId}.");
                 }
 
                 if (value.TryGetValue<string>(out string? key))
@@ -117,17 +123,162 @@ namespace Ludots.Core.Presentation.Config
                         throw new InvalidOperationException($"{context} must be a non-empty semantic string.");
                     }
 
-                    key = key.Trim();
-                    if (string.Equals(key, "none", StringComparison.OrdinalIgnoreCase))
+                    RequireNoBoundaryWhitespace(key, context);
+                    if (string.Equals(key, "none", StringComparison.Ordinal))
                     {
                         return -1;
+                    }
+
+                    if (IsNonCanonicalNoneSentinel(key))
+                    {
+                        throw new InvalidOperationException($"{context} uses invalid sentinel '{key}'. Use lowercase 'none'.");
                     }
 
                     return PerformerParamKeyRegistry.Register(key);
                 }
             }
 
-            throw new InvalidOperationException($"{context} must be an int or non-empty semantic string.");
+            throw new InvalidOperationException($"{context} must be a non-empty semantic string. Field must be explicit.");
+        }
+
+        private static void ValidateTransition(
+            string key,
+            int transitionIndex,
+            int stateCount,
+            in AnimatorTransitionDefinition transition)
+        {
+            if ((uint)transition.FromStateIndex >= (uint)stateCount)
+            {
+                throw new InvalidOperationException(
+                    $"Animator controller '{key}' transition[{transitionIndex}].fromStateIndex {transition.FromStateIndex} is outside states length {stateCount}.");
+            }
+
+            if ((uint)transition.ToStateIndex >= (uint)stateCount)
+            {
+                throw new InvalidOperationException(
+                    $"Animator controller '{key}' transition[{transitionIndex}].toStateIndex {transition.ToStateIndex} is outside states length {stateCount}.");
+            }
+
+            bool requiresParameter = transition.ConditionKind is AnimatorConditionKind.Trigger
+                or AnimatorConditionKind.BoolTrue
+                or AnimatorConditionKind.BoolFalse
+                or AnimatorConditionKind.FloatGreaterOrEqual
+                or AnimatorConditionKind.FloatLessOrEqual;
+            if (requiresParameter && transition.ParameterIndex < 0)
+            {
+                throw new InvalidOperationException(
+                    $"Animator controller '{key}' transition[{transitionIndex}] conditionKind '{transition.ConditionKind}' requires a concrete parameterIndex.");
+            }
+
+            bool forbidsParameter = transition.ConditionKind is AnimatorConditionKind.None
+                or AnimatorConditionKind.AutoOnNormalizedTime;
+            if (forbidsParameter && transition.ParameterIndex >= 0)
+            {
+                throw new InvalidOperationException(
+                    $"Animator controller '{key}' transition[{transitionIndex}] conditionKind '{transition.ConditionKind}' requires parameterIndex 'none'.");
+            }
+
+            if (transition.ConditionKind != AnimatorConditionKind.Trigger && transition.ConsumeTrigger)
+            {
+                throw new InvalidOperationException(
+                    $"Animator controller '{key}' transition[{transitionIndex}].consumeTrigger can be true only when conditionKind is Trigger.");
+            }
+        }
+
+        private static string RequireString(JsonNode? node, string context)
+        {
+            if (node is JsonValue value && value.TryGetValue<string>(out string? text) && !string.IsNullOrWhiteSpace(text))
+            {
+                RequireNoBoundaryWhitespace(text, context);
+                return text;
+            }
+
+            throw new InvalidOperationException($"{context} requires a non-empty semantic string. Field must be explicit.");
+        }
+
+        private static int RequireInt(JsonNode? node, string context)
+        {
+            if (node is JsonValue value && value.TryGetValue<int>(out int result))
+            {
+                return result;
+            }
+
+            throw new InvalidOperationException($"{context} requires an explicit integer.");
+        }
+
+        private static bool RequireBool(JsonNode? node, string context)
+        {
+            if (node is JsonValue value && value.TryGetValue<bool>(out bool result))
+            {
+                return result;
+            }
+
+            throw new InvalidOperationException($"{context} requires an explicit boolean.");
+        }
+
+        private static float RequireFiniteFloat(JsonNode? node, string context)
+        {
+            if (node is JsonValue value && value.TryGetValue<float>(out float result) && float.IsFinite(result))
+            {
+                return result;
+            }
+
+            throw new InvalidOperationException($"{context} requires an explicit finite number.");
+        }
+
+        private static float RequirePositiveFloat(JsonNode? node, string context)
+        {
+            float result = RequireFiniteFloat(node, context);
+            if (result <= 0f)
+            {
+                throw new InvalidOperationException($"{context} must be positive.");
+            }
+
+            return result;
+        }
+
+        private static float RequireNonNegativeFloat(JsonNode? node, string context)
+        {
+            float result = RequireFiniteFloat(node, context);
+            if (result < 0f)
+            {
+                throw new InvalidOperationException($"{context} cannot be negative.");
+            }
+
+            return result;
+        }
+
+        private static T RequireEnum<T>(JsonNode? node, string context) where T : struct, Enum
+        {
+            string text = RequireString(node, context);
+            if (int.TryParse(text, out _))
+            {
+                throw new InvalidOperationException($"{context} must be an enum string, not numeric value '{text}'.");
+            }
+
+            if (!Enum.TryParse(text, ignoreCase: false, out T result) || !Enum.IsDefined(typeof(T), result))
+            {
+                throw new InvalidOperationException($"{context} has invalid value '{text}'.");
+            }
+
+            return result;
+        }
+
+        private static void RequireNoBoundaryWhitespace(string text, string context)
+        {
+            if (!string.Equals(text, text.Trim(), StringComparison.Ordinal))
+            {
+                throw new InvalidOperationException($"{context} must not include leading or trailing whitespace.");
+            }
+        }
+
+        private static bool IsNonCanonicalNoneSentinel(string key)
+        {
+            return key.Length == 4 &&
+                   (key[0] == 'n' || key[0] == 'N') &&
+                   (key[1] == 'o' || key[1] == 'O') &&
+                   (key[2] == 'n' || key[2] == 'N') &&
+                   (key[3] == 'e' || key[3] == 'E');
         }
     }
 }

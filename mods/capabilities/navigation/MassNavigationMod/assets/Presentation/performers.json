@@ -444,6 +444,7 @@
         "assetBinding": {
           "assetKind": "WorldHud",
           "materialParamKey": "massNavigation.agent.health.ratio",
+          "renderPath": "None",
           "mobility": "Movable",
           "localScale": [42.0, 5.0, 1.0]
         }
@@ -461,7 +462,7 @@
       }
     ],
     "bindings": [
-      { "paramKey": "massNavigation.agent.health.ratio", "source": "attributeRatio", "attributeName": "Health" }
+      { "paramKey": "massNavigation.agent.health.ratio", "source": "attributeRatio", "attributeId": "Health" }
     ],
     "paramDefaults": [
       { "paramKey": "massNavigation.agent.health.ratio", "lane": "Float", "floatValue": 1.0 }
@@ -478,6 +479,7 @@
         "assetBinding": {
           "assetKind": "WorldHud",
           "materialParamKey": "massNavigation.agent.health.ratio",
+          "renderPath": "None",
           "mobility": "Movable",
           "localScale": [58.0, 6.0, 1.0]
         }
@@ -497,7 +499,6 @@
   },
   {
     "id": "mass_navigation_agent_health_text_light",
-    "defaultTextId": "hud.attribute.current_over_base",
     "worldTextMode": "AttributeCurrentOverBase",
     "defaultFontSize": 11,
     "defaultColor": [1.0, 0.98, 0.92, 1.0],
@@ -511,6 +512,7 @@
           "assetId": "hud.attribute.current_over_base",
           "scaleParamKey": "massNavigation.agent.health.current",
           "materialParamKey": "massNavigation.agent.health.base",
+          "renderPath": "None",
           "mobility": "Movable",
           "localScale": [1.0, 1.0, 1.0]
         }
@@ -528,8 +530,8 @@
       }
     ],
     "bindings": [
-      { "paramKey": "massNavigation.agent.health.current", "source": "attribute", "attributeName": "Health" },
-      { "paramKey": "massNavigation.agent.health.base", "source": "attributeBase", "attributeName": "Health" }
+      { "paramKey": "massNavigation.agent.health.current", "source": "attribute", "attributeId": "Health" },
+      { "paramKey": "massNavigation.agent.health.base", "source": "attributeBase", "attributeId": "Health" }
     ],
     "paramDefaults": [
       { "paramKey": "massNavigation.agent.health.current", "lane": "Float", "floatValue": 100.0 },
@@ -539,7 +541,6 @@
   {
     "id": "mass_navigation_agent_health_text_heavy",
     "extends": "mass_navigation_agent_health_text_light",
-    "defaultTextId": "hud.attribute.current_over_base",
     "worldTextMode": "AttributeCurrentOverBase",
     "defaultFontSize": 12,
     "behaviors": [
@@ -552,6 +553,7 @@
           "assetId": "hud.attribute.current_over_base",
           "scaleParamKey": "massNavigation.agent.health.current",
           "materialParamKey": "massNavigation.agent.health.base",
+          "renderPath": "None",
           "mobility": "Movable",
           "localScale": [1.0, 1.0, 1.0]
         }

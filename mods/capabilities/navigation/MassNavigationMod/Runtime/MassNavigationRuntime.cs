@@ -2,7 +2,6 @@ using System.Threading.Tasks;
 using System.Numerics;
 using Arch.Core;
 using Arch.System;
-using CoreInputMod;
 using Ludots.Core.Engine;
 using Ludots.Core.Gameplay.Camera;
 using Ludots.Core.Gameplay.Components;
@@ -30,6 +29,11 @@ internal sealed class MassNavigationRuntime
     private bool _scenarioSpawned;
     private RenderDebugSnapshot _savedRenderDebug;
     private bool _savedRenderDebugValid;
+    private ILoadedChunks? _savedLoadedChunks;
+    private ILoadedChunks? _savedSpatialLoadedChunks;
+    private ILoadedChunks? _activeLoadedChunksOverride;
+    private bool _savedLoadedChunksValid;
+    private bool _loadedChunksOverrideActive;
     private readonly MassNavigationPanelController _panelController = new();
 
     public MassNavigationRuntime(IModContext context)
@@ -50,21 +54,22 @@ internal sealed class MassNavigationRuntime
         engine.RegisterSystem(new MassNavigationAgentMetadataSyncSystem(engine, simulation), SystemGroup.InputCollection);
         engine.RegisterSystem(new MassNavigationSelectionSyncSystem(engine, simulation), SystemGroup.InputCollection);
         engine.RegisterSystem(new MassNavigationControlSystem(engine, simulation), SystemGroup.InputCollection);
-        engine.RegisterSystem(new MassNavigationCommandBridgeSystem(engine, simulation), SystemGroup.InputCollection);
+        engine.RegisterSystem(new MassNavigationLocalCommandInputSystem(engine, simulation), SystemGroup.InputCollection);
         engine.RegisterSystem(new MassNavigationFormationSystem(engine, simulation), SystemGroup.PostMovement);
         engine.InsertSystemBeforeRequired<MassNavigationFormationSystem>(
-            new MassNavigationOrderBridgeSystem(engine, simulation),
+            new MassNavigationOrderIngestionSystem(engine, simulation),
             SystemGroup.PostMovement);
-        engine.InsertSystemBeforeRequired<MassNavigationOrderBridgeSystem>(
-            new MassNavigationCommandApplySystem(engine, simulation),
-            SystemGroup.PostMovement);
-        engine.InsertSystemBeforeRequired<MassNavigationCommandApplySystem>(
+        engine.InsertSystemBeforeRequired<MassNavigationOrderIngestionSystem>(
             new MassNavigationSpawnReceiptBindingSystem(engine, simulation),
             SystemGroup.PostMovement);
         engine.InsertSystemBeforeRequired<MassNavigationFormationSystem>(
             new MassNavigationPreSimulationStepSystem(),
             SystemGroup.PostMovement);
         engine.RegisterPresentationSystem(new MassNavigationHudPresentationSystem(engine, simulation));
+        engine.RegisterPresentationSystem(new MassNavigationPanelPresentationSystem(
+            engine,
+            this,
+            config.ScenarioRuntime.PanelControls.PanelRefreshIntervalSeconds));
         _systemsInstalled = true;
         _context.Log("[MassNavigationMod] Installed mass-navigation runtime.");
     }
@@ -132,6 +137,7 @@ internal sealed class MassNavigationRuntime
         }
 
         _scenarioSpawned = false;
+        ReleaseMassNavigationLoadedChunks(engine);
         RestoreRenderDebug(engine);
         ClearCullingFocusOverride(engine);
         ClearPanelIfOwned(engine);
@@ -152,6 +158,7 @@ internal sealed class MassNavigationRuntime
             return Task.CompletedTask;
         }
 
+        ReleaseMassNavigationLoadedChunks(engine);
         RestoreRenderDebug(engine);
         ClearCullingFocusOverride(engine);
         ClearPanelIfOwned(engine);
@@ -167,7 +174,6 @@ internal sealed class MassNavigationRuntime
 
         if (!MassNavigationIds.IsCurrentNavigationMap(engine))
         {
-            ClearPanelIfOwned(engine);
             return;
         }
 
@@ -178,7 +184,7 @@ internal sealed class MassNavigationRuntime
 
         MassNavigationSimulationRuntime simulation = engine.GetService(MassNavigationKeys.SimulationRuntime)
             ?? throw new System.InvalidOperationException("MassNavigationMod requires simulation runtime.");
-        ClearPanelIfOwned(engine);
+        _panelController.MountOrSync(engine, simulation);
     }
 
     private void EnsureScenario(GameEngine engine)
@@ -211,10 +217,40 @@ internal sealed class MassNavigationRuntime
         simulation.BindBoardWorld(board.WorldSize);
     }
 
-    private static void BindMassNavigationLoadedChunks(GameEngine engine)
+    private void BindMassNavigationLoadedChunks(GameEngine engine)
     {
         MassNavigationSimulationRuntime simulation = engine.GetService(MassNavigationKeys.SimulationRuntime)
             ?? throw new System.InvalidOperationException("MassNavigationMod requires simulation runtime.");
+        if (_loadedChunksOverrideActive &&
+            engine.GetService(CoreServiceKeys.LoadedChunks) is ILoadedChunks current &&
+            ReferenceEquals(current, simulation.LoadedChunks) &&
+            engine.SpatialQueries is SpatialQueryService activeSpatialQueries &&
+            ReferenceEquals(activeSpatialQueries.LoadedChunks, simulation.LoadedChunks))
+        {
+            return;
+        }
+
+        if (_loadedChunksOverrideActive)
+        {
+            _savedLoadedChunks = null;
+            _savedSpatialLoadedChunks = null;
+            _activeLoadedChunksOverride = null;
+            _savedLoadedChunksValid = false;
+            _loadedChunksOverrideActive = false;
+        }
+
+        _savedLoadedChunksValid = engine.GlobalContext.TryGetValue(CoreServiceKeys.LoadedChunks.Name, out object? savedRaw);
+        if (savedRaw != null && savedRaw is not ILoadedChunks)
+        {
+            throw new System.InvalidOperationException("MassNavigationMod loaded chunks override found a non-ILoadedChunks service value.");
+        }
+
+        _savedLoadedChunks = savedRaw as ILoadedChunks;
+        _savedSpatialLoadedChunks = engine.SpatialQueries is SpatialQueryService savedSpatialQueries
+            ? savedSpatialQueries.LoadedChunks
+            : null;
+        _activeLoadedChunksOverride = simulation.LoadedChunks;
+        _loadedChunksOverrideActive = true;
         engine.SetService(CoreServiceKeys.LoadedChunks, (ILoadedChunks)simulation.LoadedChunks);
         if (engine.SpatialQueries is SpatialQueryService spatialQueries)
         {
@@ -222,12 +258,65 @@ internal sealed class MassNavigationRuntime
         }
     }
 
+    private void ReleaseMassNavigationLoadedChunks(GameEngine engine)
+    {
+        if (!_loadedChunksOverrideActive)
+        {
+            return;
+        }
+
+        if (_activeLoadedChunksOverride != null &&
+            engine.GetService(CoreServiceKeys.LoadedChunks) is ILoadedChunks loadedChunks &&
+            ReferenceEquals(loadedChunks, _activeLoadedChunksOverride))
+        {
+            if (_savedLoadedChunksValid)
+            {
+                engine.SetService(CoreServiceKeys.LoadedChunks, _savedLoadedChunks!);
+            }
+            else
+            {
+                engine.RemoveService(CoreServiceKeys.LoadedChunks);
+            }
+        }
+
+        if (_activeLoadedChunksOverride != null &&
+            engine.SpatialQueries is SpatialQueryService spatialQueries &&
+            ReferenceEquals(spatialQueries.LoadedChunks, _activeLoadedChunksOverride))
+        {
+            spatialQueries.SetLoadedChunks(_savedSpatialLoadedChunks);
+        }
+
+        _savedLoadedChunks = null;
+        _savedSpatialLoadedChunks = null;
+        _activeLoadedChunksOverride = null;
+        _savedLoadedChunksValid = false;
+        _loadedChunksOverrideActive = false;
+    }
+
     private static void ConfigureCoreMinimap(GameEngine engine)
     {
+        MassNavigationSimulationRuntime simulation = RequireSimulationRuntime(engine, "configuring minimap");
         MinimapRuntime minimap = engine.GetService(CoreServiceKeys.MinimapRuntime)
             ?? throw new System.InvalidOperationException("MassNavigationMod requires core MinimapRuntime.");
-        minimap.UseRtsFullMapPreset();
-        minimap.Visible = true;
+        ApplyConfiguredMinimapPreset(minimap, simulation.Config.Minimap);
+        minimap.Visible = simulation.Config.Minimap.Visible;
+    }
+
+    private static void ApplyConfiguredMinimapPreset(MinimapRuntime minimap, MassNavigationMinimapConfig config)
+    {
+        switch (config.ParsedInitialPreset)
+        {
+            case MinimapPreset.RtsFullMap:
+                minimap.UseRtsFullMapPreset();
+                minimap.SetRotateWithCamera(config.RotateWithCamera);
+                return;
+            case MinimapPreset.FollowCamera:
+                minimap.UseFollowCameraPreset(config.FollowCameraHalfExtentCm, config.RotateWithCamera);
+                return;
+            default:
+                throw new System.InvalidOperationException(
+                    $"MassNavigationMod minimap preset '{config.InitialPreset}' was not validated.");
+        }
     }
 
     internal static void ApplyCullingFocusOverride(GameEngine engine)
@@ -282,21 +371,13 @@ internal sealed class MassNavigationRuntime
         ConfigureCoreMinimap(engine);
     }
 
-    internal static void RequestMinimapTacticalHotZoneView(GameEngine engine)
-    {
-        RequestMinimapTacticalWorldView(engine);
-    }
-
     internal static void RequestCameraJump(GameEngine engine, Vector2 targetCm)
     {
-        string tacticalProfileId = RequireCameraProfiles(engine).TacticalProfileId;
-        engine.GlobalContext[CoreServiceKeys.VirtualCameraRequest.Name] = new VirtualCameraRequest
-        {
-            Id = tacticalProfileId,
-            BlendDurationSeconds = 0f,
-            ResetRuntimeState = true,
-            SnapToFollowTargetWhenAvailable = false
-        };
+        MassNavigationCameraProfilesConfig cameraProfiles = RequireCameraProfiles(engine);
+        string tacticalProfileId = cameraProfiles.TacticalProfileId;
+        engine.GlobalContext[CoreServiceKeys.VirtualCameraRequest.Name] = CreateCameraRequest(
+            tacticalProfileId,
+            cameraProfiles.RequestPolicy);
         engine.SetService(CoreServiceKeys.CameraPoseRequest, new CameraPoseRequest
         {
             VirtualCameraId = tacticalProfileId,
@@ -431,14 +512,11 @@ internal sealed class MassNavigationRuntime
     internal static void RequestTacticalCameraReset(GameEngine engine)
     {
         Vector2 targetCm = ResolveCameraTarget(engine);
-        string tacticalProfileId = RequireCameraProfiles(engine).TacticalProfileId;
-        engine.GlobalContext[CoreServiceKeys.VirtualCameraRequest.Name] = new VirtualCameraRequest
-        {
-            Id = tacticalProfileId,
-            BlendDurationSeconds = 0f,
-            ResetRuntimeState = true,
-            SnapToFollowTargetWhenAvailable = false
-        };
+        MassNavigationCameraProfilesConfig cameraProfiles = RequireCameraProfiles(engine);
+        string tacticalProfileId = cameraProfiles.TacticalProfileId;
+        engine.GlobalContext[CoreServiceKeys.VirtualCameraRequest.Name] = CreateCameraRequest(
+            tacticalProfileId,
+            cameraProfiles.RequestPolicy);
         engine.SetService(CoreServiceKeys.CameraPoseRequest, new CameraPoseRequest
         {
             VirtualCameraId = tacticalProfileId,
@@ -448,20 +526,16 @@ internal sealed class MassNavigationRuntime
 
     internal static void RequestStrategicCameraReset(GameEngine engine)
     {
-        MassNavigationSimulationRuntime simulation = engine.GetService(MassNavigationKeys.SimulationRuntime)
-            ?? throw new System.InvalidOperationException("MassNavigationMod requires simulation runtime before strategic camera reset.");
+        MassNavigationSimulationRuntime simulation = RequireSimulationRuntime(engine, "strategic camera reset");
+        MassNavigationCameraRequestPolicyConfig requestPolicy = simulation.Config.CameraProfiles.RequestPolicy;
         string strategicProfileId = simulation.Config.CameraProfiles.StrategicProfileId;
-        engine.GlobalContext[CoreServiceKeys.VirtualCameraRequest.Name] = new VirtualCameraRequest
-        {
-            Id = strategicProfileId,
-            BlendDurationSeconds = 0f,
-            ResetRuntimeState = true,
-            SnapToFollowTargetWhenAvailable = false
-        };
+        engine.GlobalContext[CoreServiceKeys.VirtualCameraRequest.Name] = CreateCameraRequest(
+            strategicProfileId,
+            requestPolicy);
         engine.SetService(CoreServiceKeys.CameraPoseRequest, new CameraPoseRequest
         {
             VirtualCameraId = strategicProfileId,
-            TargetCm = new Vector2(0f, 0f)
+            TargetCm = new Vector2(requestPolicy.StrategicTargetXCm, requestPolicy.StrategicTargetYCm)
         });
     }
 
@@ -475,9 +549,26 @@ internal sealed class MassNavigationRuntime
 
     private static MassNavigationCameraProfilesConfig RequireCameraProfiles(GameEngine engine)
     {
-        MassNavigationSimulationRuntime simulation = engine.GetService(MassNavigationKeys.SimulationRuntime)
-            ?? throw new System.InvalidOperationException("MassNavigationMod requires simulation runtime before resolving camera profile ids.");
-        return simulation.Config.CameraProfiles;
+        return RequireSimulationRuntime(engine, "resolving camera profile ids").Config.CameraProfiles;
+    }
+
+    private static MassNavigationSimulationRuntime RequireSimulationRuntime(GameEngine engine, string action)
+    {
+        return engine.GetService(MassNavigationKeys.SimulationRuntime) as MassNavigationSimulationRuntime
+            ?? throw new System.InvalidOperationException($"MassNavigationMod requires simulation runtime before {action}.");
+    }
+
+    private static VirtualCameraRequest CreateCameraRequest(
+        string profileId,
+        MassNavigationCameraRequestPolicyConfig policy)
+    {
+        return new VirtualCameraRequest
+        {
+            Id = profileId,
+            BlendDurationSeconds = policy.BlendDurationSeconds,
+            ResetRuntimeState = policy.ResetRuntimeState,
+            SnapToFollowTargetWhenAvailable = policy.SnapToFollowTargetWhenAvailable
+        };
     }
 
     private static Vector2 ResolveCameraTarget(GameEngine engine)

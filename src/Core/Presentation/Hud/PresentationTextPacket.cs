@@ -25,7 +25,7 @@ namespace Ludots.Core.Presentation.Hud
             };
         }
 
-        public static PresentationTextPacket FromLegacyWorldHud(int tokenId, WorldHudValueMode mode, float value0, float value1)
+        public static PresentationTextPacket FromWorldHudValueMode(int tokenId, WorldHudValueMode mode, float value0, float value1)
         {
             if (tokenId <= 0)
             {

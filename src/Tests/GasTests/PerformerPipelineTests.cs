@@ -10,6 +10,7 @@ using Ludots.Core.Gameplay.GAS;
 using Ludots.Core.Gameplay.GAS.Components;
 using Ludots.Core.Gameplay.GAS.Presentation;
 using Ludots.Core.Gameplay.GAS.Registry;
+using Ludots.Core.Gameplay.Spawning;
 using Ludots.Core.GraphRuntime;
 using Ludots.Core.NodeLibraries.GASGraph;
 using Ludots.Core.NodeLibraries.GASGraph.Host;
@@ -287,7 +288,7 @@ namespace Ludots.Tests.Presentation
         public void Setup()
         {
             _world = World.Create();
-            _events = new PresentationEventStream();
+            _events = new PresentationEventStream(PresentationTestConstants.EventStreamCapacity);
             _commands = new PerformerCommandBuffer();
             _defs = new PerformerDefinitionRegistry();
             _programs = new GraphProgramRegistry();
@@ -392,6 +393,107 @@ namespace Ludots.Tests.Presentation
 
             Assert.That(_events.Count, Is.EqualTo(0));
         }
+
+        [Test]
+        public void UnsupportedInlineCondition_Throws()
+        {
+            _defs.Register("test.rule.unsupported_inline", new PerformerDefinition
+            {
+                Rules = new[]
+                {
+                    new PerformerRule
+                    {
+                        Event = new EventFilter { Kind = PresentationEventKind.CastCommitted, KeyId = -1 },
+                        Condition = new ConditionRef { Inline = (InlineConditionKind)byte.MaxValue },
+                        Command = new PerformerCommand
+                        {
+                            CommandKind = PerformerCommandKind.CreatePerformer,
+                            PerformerDefinitionId = 1,
+                            ScopeTag = 1,
+                        },
+                    },
+                },
+            });
+
+            var actor = _world.Create();
+            _events.TryAdd(new PresentationEvent
+            {
+                Kind = PresentationEventKind.CastCommitted,
+                Source = actor,
+                Target = actor,
+            });
+
+            InvalidOperationException? ex = Assert.Throws<InvalidOperationException>(() => TickAndFlush(0.016f));
+            Assert.That(ex!.Message, Does.Contain("Unsupported performer rule inline condition"));
+        }
+
+        [Test]
+        public void MissingConditionGraphProgram_Throws()
+        {
+            _defs.Register("test.rule.missing_condition_graph", new PerformerDefinition
+            {
+                Rules = new[]
+                {
+                    new PerformerRule
+                    {
+                        Event = new EventFilter { Kind = PresentationEventKind.CastCommitted, KeyId = -1 },
+                        Condition = new ConditionRef { GraphProgramId = 9001 },
+                        Command = new PerformerCommand
+                        {
+                            CommandKind = PerformerCommandKind.CreatePerformer,
+                            PerformerDefinitionId = 1,
+                            ScopeTag = 1,
+                        },
+                    },
+                },
+            });
+
+            var actor = _world.Create();
+            _events.TryAdd(new PresentationEvent
+            {
+                Kind = PresentationEventKind.CastCommitted,
+                Source = actor,
+                Target = actor,
+            });
+
+            InvalidOperationException? ex = Assert.Throws<InvalidOperationException>(() => TickAndFlush(0.016f));
+            Assert.That(ex!.Message, Does.Contain("unknown graphProgramId=9001"));
+        }
+
+        [Test]
+        public void MissingParamGraphProgram_Throws()
+        {
+            _defs.Register("test.rule.missing_param_graph", new PerformerDefinition
+            {
+                Rules = new[]
+                {
+                    new PerformerRule
+                    {
+                        Event = new EventFilter { Kind = PresentationEventKind.CastCommitted, KeyId = -1 },
+                        Condition = ConditionRef.AlwaysTrue,
+                        Command = new PerformerCommand
+                        {
+                            CommandKind = PerformerCommandKind.SetParam,
+                            ParamKey = 11,
+                            ParamLane = ParamLane.Float,
+                            ValueSource = PerformerCommandValueSource.Fixed,
+                            ParamGraphProgramId = 9002,
+                        },
+                    },
+                },
+            });
+
+            var actor = _world.Create();
+            _events.TryAdd(new PresentationEvent
+            {
+                Kind = PresentationEventKind.CastCommitted,
+                Source = actor,
+                Target = actor,
+            });
+
+            InvalidOperationException? ex = Assert.Throws<InvalidOperationException>(() => TickAndFlush(0.016f));
+            Assert.That(ex!.Message, Does.Contain("paramGraphProgramId=9002"));
+        }
     }
 
     [TestFixture]
@@ -410,7 +512,7 @@ namespace Ludots.Tests.Presentation
         {
             _world = World.Create();
             _commands = new PerformerCommandBuffer();
-            _events = new PresentationEventStream();
+            _events = new PresentationEventStream(PresentationTestConstants.EventStreamCapacity);
             _instances = new PerformerEntityRuntime(_world);
             _definitions = new PerformerDefinitionRegistry();
             var markers = new TransientMarkerBuffer();
@@ -684,33 +786,34 @@ namespace Ludots.Tests.Presentation
     }
 
     [TestFixture]
-    public class PresentationBridgeGasTests
+    public class GameplayPresentationProjectionGasTests
     {
         private World _world;
         private GasPresentationEventBuffer _gasEvents;
         private PresentationEventStream _stream;
-        private PresentationBridgeSystem _bridge;
+        private GameplayPresentationProjectionSystem _projection;
 
         [SetUp]
         public void Setup()
         {
             _world = World.Create();
-            _gasEvents = new GasPresentationEventBuffer();
-            _stream = new PresentationEventStream();
+            _gasEvents = new GasPresentationEventBuffer(8);
+            _stream = new PresentationEventStream(PresentationTestConstants.EventStreamCapacity);
             var eventBus = new GameplayEventBus();
             var session = new GameSession();
-            _bridge = new PresentationBridgeSystem(_world, eventBus, _stream, session, _gasEvents);
+            var ownerChanges = new PresentationOwnerChangeBuffer(8);
+            _projection = new GameplayPresentationProjectionSystem(_world, eventBus, _stream, session, _gasEvents, ownerChanges);
         }
 
         [TearDown]
         public void TearDown()
         {
-            _bridge?.Dispose();
+            _projection?.Dispose();
             _world?.Dispose();
         }
 
         [Test]
-        public void EffectApplied_BridgedToStream()
+        public void EffectApplied_ProjectedToStream()
         {
             var actor = _world.Create();
             _gasEvents.Publish(new GasPresentationEvent
@@ -722,7 +825,7 @@ namespace Ludots.Tests.Presentation
                 EffectTemplateId = 10,
             });
 
-            _bridge.Update(0.016f);
+            _projection.Update(0.016f);
 
             var span = _stream.GetSpan();
             Assert.That(span.Length, Is.GreaterThanOrEqualTo(1));
@@ -741,11 +844,11 @@ namespace Ludots.Tests.Presentation
                 break;
             }
 
-            Assert.That(found, Is.True, "EffectApplied event not bridged");
+            Assert.That(found, Is.True, "EffectApplied event not projected");
         }
 
         [Test]
-        public void CastCommitted_BridgedToStream()
+        public void CastCommitted_ProjectedToStream()
         {
             var actor = _world.Create();
             _gasEvents.Publish(new GasPresentationEvent
@@ -756,7 +859,7 @@ namespace Ludots.Tests.Presentation
                 AbilityId = 42,
             });
 
-            _bridge.Update(0.016f);
+            _projection.Update(0.016f);
 
             var span = _stream.GetSpan();
             bool found = false;
@@ -773,11 +876,11 @@ namespace Ludots.Tests.Presentation
                 break;
             }
 
-            Assert.That(found, Is.True, "CastCommitted event not bridged");
+            Assert.That(found, Is.True, "CastCommitted event not projected");
         }
 
         [Test]
-        public void CastFailed_BridgedToStream()
+        public void CastFailed_ProjectedToStream()
         {
             var actor = _world.Create();
             _gasEvents.Publish(new GasPresentationEvent
@@ -789,7 +892,7 @@ namespace Ludots.Tests.Presentation
                 FailReason = AbilityCastFailReason.OnCooldown,
             });
 
-            _bridge.Update(0.016f);
+            _projection.Update(0.016f);
 
             var span = _stream.GetSpan();
             bool found = false;
@@ -805,7 +908,7 @@ namespace Ludots.Tests.Presentation
                 break;
             }
 
-            Assert.That(found, Is.True, "CastFailed event not bridged");
+            Assert.That(found, Is.True, "CastFailed event not projected");
         }
     }
 
@@ -860,7 +963,24 @@ namespace Ludots.Tests.Presentation
             var pipeline = new ConfigPipeline(vfs, modLoader);
             var catalog = ConfigCatalogLoader.Load(pipeline);
             var meshes = new MeshAssetRegistry();
+            var prefabs = new PrefabRegistry();
+            new MeshAssetConfigLoader(pipeline, meshes, prefabs).Load(catalog);
+            var materialAssets = new PresentationMaterialRegistry();
             var textCatalog = new PresentationTextCatalogLoader(pipeline).Load(catalog);
+            var templateRegistry = new DataRegistry<EntityTemplate>(pipeline);
+            templateRegistry.Load("Entities/templates.json", catalog);
+            var templateKeys = new EntityTemplateKeyRegistry();
+            foreach (EntityTemplate template in templateRegistry.GetAll())
+            {
+                templateKeys.Register(template.Id);
+            }
+
+            var animatorControllers = new AnimatorControllerRegistry();
+            new AnimatorControllerConfigLoader(pipeline, animatorControllers).Load(catalog);
+            var animationClips = new AnimationClipRegistry();
+            new AnimationClipConfigLoader(pipeline, animationClips).Load(catalog);
+            var animationProfiles = new AnimationProfileRegistry();
+            new AnimationProfileConfigLoader(pipeline, animationProfiles, animatorControllers, animationClips).Load(catalog);
 
             new PerformerDefinitionConfigLoader(
                 pipeline,
@@ -868,10 +988,15 @@ namespace Ludots.Tests.Presentation
                 resolveAttributeName: name => string.Equals(name, "Health", StringComparison.Ordinal) ? healthAttrId : 0,
                 resolveMeshId: meshes.GetId,
                 resolveTextTokenId: textCatalog.GetTokenId,
+                resolveEntityTemplateKey: templateKeys.GetId,
+                resolveMaterialId: materialAssets.GetId,
+                resolveAnimatorControllerId: animatorControllers.GetId,
+                resolveAnimationProfileId: animationProfiles.GetId,
                 resolveBehaviorAssetId: (kind, key) => kind switch
                 {
-                    AssetKind.Mesh => meshes.GetId(key),
+                    AssetKind.Mesh or AssetKind.SkinnedMesh or AssetKind.Decal or AssetKind.VFX or AssetKind.Spline or AssetKind.Sound => meshes.GetId(key),
                     AssetKind.WorldText => textCatalog.GetTokenId(key),
+                    AssetKind.GroundOverlay => Enum.TryParse<GroundOverlayShape>(key, ignoreCase: false, out var shape) ? (int)shape : 0,
                     _ => 0,
                 }).Load(catalog);
         }
@@ -908,7 +1033,7 @@ namespace Ludots.Tests.Presentation
         public void Setup()
         {
             _world = World.Create();
-            _events = new PresentationEventStream();
+            _events = new PresentationEventStream(PresentationTestConstants.EventStreamCapacity);
             _commands = new PerformerCommandBuffer();
             _defs = new PerformerDefinitionRegistry();
             _programs = new GraphProgramRegistry();
@@ -1069,7 +1194,6 @@ namespace Ludots.Tests.Presentation
             Assert.That(WellKnownPerformerParamKeys.TextFontSize, Is.EqualTo(3));
             Assert.That(WellKnownPerformerParamKeys.TextColorR, Is.EqualTo(4));
             Assert.That(WellKnownPerformerParamKeys.TextTokenId, Is.EqualTo(15));
-            Assert.That(WellKnownPerformerParamKeys.TextValueMode, Is.EqualTo(16));
         }
 
         [Test]

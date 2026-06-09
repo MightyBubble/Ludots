@@ -104,7 +104,7 @@ namespace Ludots.Core.Presentation.Config
         private MeshAssetDescriptor ParseDescriptor(JsonNode node, string key)
         {
             string typeStr = node["type"]?.GetValue<string>();
-            if (!Enum.TryParse<MeshAssetType>(typeStr, ignoreCase: true, out var type))
+            if (!Enum.TryParse<MeshAssetType>(typeStr, ignoreCase: false, out var type))
             {
                 throw new InvalidOperationException($"Presentation/mesh_assets.json asset '{key}' has invalid or missing type '{typeStr}'.");
             }
@@ -114,7 +114,7 @@ namespace Ludots.Core.Presentation.Config
                 case MeshAssetType.Primitive:
                 {
                     string kindStr = node["primitiveKind"]?.GetValue<string>();
-                    if (!Enum.TryParse<PrimitiveMeshKind>(kindStr, ignoreCase: true, out var kind))
+                    if (!Enum.TryParse<PrimitiveMeshKind>(kindStr, ignoreCase: false, out var kind))
                     {
                         throw new InvalidOperationException($"Presentation/mesh_assets.json primitive asset '{key}' has invalid or missing primitiveKind '{kindStr}'.");
                     }
@@ -159,7 +159,7 @@ namespace Ludots.Core.Presentation.Config
                     throw new InvalidOperationException($"Prefab part at index {j} must declare an explicit kind.");
                 }
 
-                if (!Enum.TryParse(kindText, ignoreCase: true, out PrefabVisualPartKind kind))
+                if (!Enum.TryParse(kindText, ignoreCase: false, out PrefabVisualPartKind kind))
                 {
                     throw new InvalidOperationException($"Prefab part has invalid kind '{kindText}'.");
                 }
@@ -207,7 +207,7 @@ namespace Ludots.Core.Presentation.Config
             string resolved = string.IsNullOrWhiteSpace(spawnModeText)
                 ? nameof(PrefabVfxSpawnMode.Once)
                 : spawnModeText;
-            if (!Enum.TryParse(resolved, ignoreCase: true, out PrefabVfxSpawnMode spawnMode))
+            if (!Enum.TryParse(resolved, ignoreCase: false, out PrefabVfxSpawnMode spawnMode))
             {
                 throw new InvalidOperationException($"Prefab part VFX spawnMode has invalid value '{resolved}'.");
             }
@@ -228,7 +228,7 @@ namespace Ludots.Core.Presentation.Config
             }
 
             string modeText = obj["mode"]?.GetValue<string>() ?? nameof(PrefabPartGroundingMode.None);
-            if (!Enum.TryParse(modeText, ignoreCase: true, out PrefabPartGroundingMode mode))
+            if (!Enum.TryParse(modeText, ignoreCase: false, out PrefabPartGroundingMode mode))
             {
                 throw new InvalidOperationException($"Prefab part grounding has invalid mode '{modeText}'.");
             }
@@ -292,11 +292,24 @@ namespace Ludots.Core.Presentation.Config
 
             if (node is JsonObject obj)
             {
+                foreach (var property in obj)
+                {
+                    string propertyName = property.Key;
+                    if (propertyName != "x" &&
+                        propertyName != "y" &&
+                        propertyName != "z" &&
+                        propertyName != "w")
+                    {
+                        throw new InvalidOperationException(
+                            $"Prefab part localRotation object uses unsupported field '{propertyName}'. Expected exact fields x, y, z, w.");
+                    }
+                }
+
                 return new Quaternion(
-                    obj["x"]?.GetValue<float>() ?? obj["X"]?.GetValue<float>() ?? defaultValue.X,
-                    obj["y"]?.GetValue<float>() ?? obj["Y"]?.GetValue<float>() ?? defaultValue.Y,
-                    obj["z"]?.GetValue<float>() ?? obj["Z"]?.GetValue<float>() ?? defaultValue.Z,
-                    obj["w"]?.GetValue<float>() ?? obj["W"]?.GetValue<float>() ?? defaultValue.W);
+                    obj["x"]?.GetValue<float>() ?? defaultValue.X,
+                    obj["y"]?.GetValue<float>() ?? defaultValue.Y,
+                    obj["z"]?.GetValue<float>() ?? defaultValue.Z,
+                    obj["w"]?.GetValue<float>() ?? defaultValue.W);
             }
 
             return defaultValue;

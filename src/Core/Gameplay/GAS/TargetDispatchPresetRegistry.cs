@@ -9,7 +9,7 @@ namespace Ludots.Core.Gameplay.GAS
     /// </summary>
     public sealed class TargetDispatchPresetRegistry
     {
-        private readonly Dictionary<string, int> _nameToId = new(StringComparer.OrdinalIgnoreCase);
+        private readonly Dictionary<string, int> _nameToId = new(StringComparer.Ordinal);
         private readonly List<TargetResolverContextMapping> _mappings = new() { default };
 
         public int Count => _mappings.Count - 1;
@@ -26,6 +26,10 @@ namespace Ludots.Core.Gameplay.GAS
             if (string.IsNullOrWhiteSpace(id))
             {
                 throw new ArgumentException("Target dispatch preset id must not be null or whitespace.", nameof(id));
+            }
+            if (!string.Equals(id, id.Trim(), StringComparison.Ordinal))
+            {
+                throw new ArgumentException("Target dispatch preset id must not include leading or trailing whitespace.", nameof(id));
             }
 
             if (_nameToId.TryGetValue(id, out int existingId))

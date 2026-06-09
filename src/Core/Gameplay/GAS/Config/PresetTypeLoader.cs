@@ -1,3 +1,4 @@
+using System;
 using System.Collections.Generic;
 using System.Text.Json.Nodes;
 using Ludots.Core.Config;
@@ -7,8 +8,7 @@ namespace Ludots.Core.Gameplay.GAS.Config
     /// <summary>
     /// Loads PresetTypeDefinition entries from preset_types.json.
     /// Each entry declares components, active phases, lifetime constraints,
-    /// and default phase handlers (builtin or graph).
-    /// Must be called before EffectTemplateLoader.Load().
+    /// and default phase handlers. All semantic strings must use exact casing.
     /// </summary>
     public sealed class PresetTypeLoader
     {
@@ -17,8 +17,8 @@ namespace Ludots.Core.Gameplay.GAS.Config
 
         public PresetTypeLoader(ConfigPipeline pipeline, PresetTypeRegistry registry)
         {
-            _pipeline = pipeline;
-            _registry = registry;
+            _pipeline = pipeline ?? throw new ArgumentNullException(nameof(pipeline));
+            _registry = registry ?? throw new ArgumentNullException(nameof(registry));
         }
 
         public void Load(
@@ -36,102 +36,135 @@ namespace Ludots.Core.Gameplay.GAS.Config
             }
         }
 
-        /// <summary>
-        /// Load preset type definitions from a raw JSON string.
-        /// Used by tests and scenarios without a ConfigPipeline.
-        /// </summary>
         public static void LoadFromJson(PresetTypeRegistry registry, string json)
         {
-            var array = JsonNode.Parse(json)?.AsArray();
-            if (array == null) throw new System.InvalidOperationException("PresetTypeLoader: JSON root must be an array.");
+            if (registry == null) throw new ArgumentNullException(nameof(registry));
+            var array = JsonNode.Parse(json)?.AsArray()
+                ?? throw new InvalidOperationException("PresetTypeLoader: JSON root must be an array.");
 
             foreach (var node in array)
             {
-                if (node == null) continue;
-                var obj = node.AsObject();
-                var def = ParseDefinition(obj);
+                if (node == null)
+                {
+                    throw new InvalidOperationException("PresetTypeLoader: preset type entry must not be null.");
+                }
+
+                var def = ParseDefinition(node.AsObject());
                 registry.Register(in def);
             }
         }
 
-        private static PresetTypeDefinition ParseDefinition(JsonObject obj)
+        private static PresetTypeDefinition ParseDefinition(JsonObject? obj)
         {
-            var def = new PresetTypeDefinition();
-
-            // id â†?EffectPresetType enum
-            string idStr = obj["id"]?.GetValue<string>() ?? "";
-            def.Type = GasEnumParser.ParsePresetType(idStr);
-
-            // components â†?ComponentFlags
-            var comps = obj["components"]?.AsArray();
-            if (comps != null)
+            if (obj == null)
             {
-                foreach (var c in comps)
-                {
-                    string name = c?.GetValue<string>() ?? "";
-                    def.Components |= GasEnumParser.ParseComponentFlag(name);
-                }
+                throw new InvalidOperationException("PresetTypeLoader: preset type entry must be an object.");
             }
 
-            // activePhases â†?PhaseFlags
-            var phases = obj["activePhases"]?.AsArray();
-            if (phases != null)
+            string idStr = RequireString(obj, "id", "PresetTypeLoader");
+            var def = new PresetTypeDefinition
             {
-                foreach (var p in phases)
-                {
-                    string name = p?.GetValue<string>() ?? "";
-                    def.ActivePhases |= GasEnumParser.ParsePhaseFlag(name);
-                }
+                Type = GasEnumParser.ParsePresetType(idStr)
+            };
+
+            JsonArray comps = RequireArray(obj, "components", idStr);
+            foreach (var c in comps)
+            {
+                string name = RequireArrayString(c, idStr, "components");
+                def.Components |= GasEnumParser.ParseComponentFlag(name);
             }
 
-            // allowedLifetimes â†?LifetimeFlags
-            var lifetimes = obj["allowedLifetimes"]?.AsArray();
-            if (lifetimes != null)
+            JsonArray phases = RequireArray(obj, "activePhases", idStr);
+            foreach (var p in phases)
             {
-                foreach (var l in lifetimes)
-                {
-                    string name = l?.GetValue<string>() ?? "";
-                    def.AllowedLifetimes |= GasEnumParser.ParseLifetimeFlag(name);
-                }
+                string name = RequireArrayString(p, idStr, "activePhases");
+                def.ActivePhases |= GasEnumParser.ParsePhaseFlag(name);
             }
 
-            // defaultPhaseHandlers â†?PhaseHandlerMap
-            var handlersObj = obj["defaultPhaseHandlers"]?.AsObject();
-            if (handlersObj != null)
+            JsonArray lifetimes = RequireArray(obj, "allowedLifetimes", idStr);
+            foreach (var l in lifetimes)
             {
-                foreach (var kvp in handlersObj)
+                string name = RequireArrayString(l, idStr, "allowedLifetimes");
+                def.AllowedLifetimes |= GasEnumParser.ParseLifetimeFlag(name);
+            }
+
+            JsonObject handlersObj = obj["defaultPhaseHandlers"]?.AsObject()
+                ?? throw new InvalidOperationException($"Preset type '{idStr}' must explicitly define defaultPhaseHandlers.");
+            foreach (var kvp in handlersObj)
+            {
+                if (!GasEnumParser.TryParsePhaseId(kvp.Key, out var phaseId))
                 {
-                    if (!GasEnumParser.TryParsePhaseId(kvp.Key, out var phaseIdEnum)) continue;
-                    var phaseId = (int)phaseIdEnum;
-                    var handler = ParsePhaseHandler(kvp.Value?.AsObject());
-                    def.DefaultPhaseHandlers[(EffectPhaseId)phaseId] = handler;
+                    throw new InvalidOperationException($"Preset type '{idStr}' defaultPhaseHandlers has unsupported phase '{kvp.Key}'.");
                 }
+
+                var handler = ParsePhaseHandler(idStr, kvp.Key, kvp.Value?.AsObject());
+                def.DefaultPhaseHandlers[phaseId] = handler;
             }
 
             return def;
         }
 
-        private static PhaseHandler ParsePhaseHandler(JsonObject obj)
+        private static PhaseHandler ParsePhaseHandler(string presetTypeId, string phaseName, JsonObject? obj)
         {
-            if (obj == null) return PhaseHandler.None;
+            if (obj == null)
+            {
+                throw new InvalidOperationException($"Preset type '{presetTypeId}' handler '{phaseName}' must be an object.");
+            }
 
-            string type = obj["type"]?.GetValue<string>() ?? "";
-            string id = obj["id"]?.GetValue<string>() ?? "";
+            string type = RequireString(obj, "type", $"Preset type '{presetTypeId}' handler '{phaseName}'");
+            string id = RequireString(obj, "id", $"Preset type '{presetTypeId}' handler '{phaseName}'");
 
             if (type == "builtin")
             {
-                var builtinId = GasEnumParser.ParseBuiltinHandlerId(id);
-                return PhaseHandler.Builtin(builtinId);
+                return PhaseHandler.Builtin(GasEnumParser.ParseBuiltinHandlerId(id));
             }
 
             if (type == "graph")
             {
-                if (int.TryParse(id, out int graphId))
+                if (int.TryParse(id, out int graphId) && graphId > 0)
+                {
                     return PhaseHandler.Graph(graphId);
-                throw new System.InvalidOperationException($"PresetTypeLoader: Cannot resolve named graph '{id}'. Graph names must be pre-registered as numeric IDs.");
+                }
+
+                throw new InvalidOperationException($"Preset type '{presetTypeId}' handler '{phaseName}' graph id '{id}' must be a positive numeric graph id.");
             }
 
-            return PhaseHandler.None;
+            throw new InvalidOperationException($"Preset type '{presetTypeId}' handler '{phaseName}' has unsupported type '{type}'. Supported: builtin, graph.");
+        }
+
+        private static JsonArray RequireArray(JsonObject obj, string propertyName, string presetTypeId)
+        {
+            return obj[propertyName]?.AsArray()
+                ?? throw new InvalidOperationException($"Preset type '{presetTypeId}' must explicitly define {propertyName}.");
+        }
+
+        private static string RequireArrayString(JsonNode? node, string presetTypeId, string propertyName)
+        {
+            if (node == null)
+            {
+                throw new InvalidOperationException($"Preset type '{presetTypeId}' {propertyName} contains a null entry.");
+            }
+
+            string value = node.GetValue<string>();
+            if (string.IsNullOrWhiteSpace(value))
+            {
+                throw new InvalidOperationException($"Preset type '{presetTypeId}' {propertyName} contains an empty entry.");
+            }
+
+            return value;
+        }
+
+        private static string RequireString(JsonObject obj, string propertyName, string context)
+        {
+            JsonNode? node = obj[propertyName]
+                ?? throw new InvalidOperationException($"{context}: required property '{propertyName}' is missing.");
+            string value = node.GetValue<string>();
+            if (string.IsNullOrWhiteSpace(value))
+            {
+                throw new InvalidOperationException($"{context}: required property '{propertyName}' is empty.");
+            }
+
+            return value;
         }
     }
 }

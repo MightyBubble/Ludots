@@ -15,13 +15,13 @@ using MassNavigationMod.Runtime;
 
 namespace MassNavigationMod.Systems;
 
-internal sealed class MassNavigationCommandBridgeSystem : ISystem<float>
+internal sealed class MassNavigationLocalCommandInputSystem : ISystem<float>
 {
     private readonly GameEngine _engine;
     private readonly MassNavigationSimulationRuntime _simulation;
     private int _moveOrderTypeId;
 
-    public MassNavigationCommandBridgeSystem(GameEngine engine, MassNavigationSimulationRuntime simulation)
+    public MassNavigationLocalCommandInputSystem(GameEngine engine, MassNavigationSimulationRuntime simulation)
     {
         _engine = engine;
         _simulation = simulation;
@@ -49,7 +49,7 @@ internal sealed class MassNavigationCommandBridgeSystem : ISystem<float>
 
         InteractionActionBindings bindings = InteractionActionBindingsResolver.Require(
             _engine.GlobalContext,
-            nameof(MassNavigationCommandBridgeSystem));
+            nameof(MassNavigationLocalCommandInputSystem));
         if (!input.PressedThisFrame(bindings.CommandActionId) ||
             !AuthoritativeGroundPointerHelper.TryRead(input, out WorldCmInt2 worldCm))
         {
@@ -74,8 +74,14 @@ internal sealed class MassNavigationCommandBridgeSystem : ISystem<float>
             return;
         }
 
-        _simulation.FocusCommandTarget(centerCm, selected);
-        SubmitSelectionMoveOrders(selected, centerCm);
+        int playerId = ResolveLocalPlayerId();
+        if (!CanSubmitSelectionMoveOrders(selected, playerId))
+        {
+            _simulation.RejectCommandUnauthorizedSelection(centerCm.X, centerCm.Y);
+            return;
+        }
+
+        SubmitSelectionMoveOrders(selected, centerCm, playerId);
     }
 
     internal void SubmitMoveCommandForTests(Vector2 centerCm)
@@ -83,7 +89,7 @@ internal sealed class MassNavigationCommandBridgeSystem : ISystem<float>
         EnqueueMoveCommand(centerCm);
     }
 
-    private void SubmitSelectionMoveOrders(ReadOnlySpan<Entity> selected, Vector2 centerCm)
+    private void SubmitSelectionMoveOrders(ReadOnlySpan<Entity> selected, Vector2 centerCm, int playerId)
     {
         if (_engine.GetService(CoreServiceKeys.OrderBufferSystem) is not OrderBufferSystem orderBufferSystem)
         {
@@ -91,7 +97,6 @@ internal sealed class MassNavigationCommandBridgeSystem : ISystem<float>
         }
 
         int moveOrderTypeId = ResolveMoveOrderType();
-        int playerId = ResolveLocalPlayerId();
         if (!SelectionContextRuntime.TryGetCurrentContainer(_engine.World, _engine.GlobalContext, out Entity selectionContainer))
         {
             throw new InvalidOperationException("MassNavigationMod requires a current selection container before submitting move orders.");
@@ -115,24 +120,15 @@ internal sealed class MassNavigationCommandBridgeSystem : ISystem<float>
                 PlayerId = playerId,
                 Actor = actor,
                 SubmitMode = OrderSubmitMode.Immediate,
-                Args = new OrderArgs
-                {
-                    I0 = (int)_simulation.FormationMode,
-                    F0 = rotationRadians,
-                    Spatial = new OrderSpatial
-                    {
-                        Kind = OrderSpatialKind.WorldCm,
-                        Mode = OrderCollectionMode.Single,
-                        WorldCm = new Vector3(centerCm.X, 0f, centerCm.Y),
-                    },
-                    Selection = new OrderSelectionReference
-                    {
-                        Container = selectionContainer
-                    }
-                }
+                Args = MassNavigationMoveOrderArgs.Encode(
+                    centerCm,
+                    _simulation.FormationMode,
+                    rotationRadians,
+                    selectionContainer)
             };
 
-            if (orderBufferSystem.SubmitOrder(actor, in order) != OrderSubmitResult.InvalidEntity)
+            OrderSubmitResult result = orderBufferSystem.SubmitOrder(actor, in order);
+            if (IsAcceptedOrderSubmit(result))
             {
                 submitted++;
             }
@@ -140,10 +136,46 @@ internal sealed class MassNavigationCommandBridgeSystem : ISystem<float>
 
         if (submitted <= 0)
         {
+            _simulation.RejectCommandOrderSubmit(centerCm.X, centerCm.Y);
             return;
         }
 
+        _simulation.FocusCommandTarget(centerCm, selected);
         _simulation.MarkCommandApply();
+    }
+
+    private static bool IsAcceptedOrderSubmit(OrderSubmitResult result)
+    {
+        return result == OrderSubmitResult.Activated ||
+               result == OrderSubmitResult.Queued;
+    }
+
+    private bool CanSubmitSelectionMoveOrders(ReadOnlySpan<Entity> selected, int localPlayerId)
+    {
+        int liveCommandableActors = 0;
+        for (int i = 0; i < selected.Length; i++)
+        {
+            Entity actor = selected[i];
+            if (!_engine.World.IsAlive(actor))
+            {
+                continue;
+            }
+
+            if (!CanLocalPlayerCommand(actor, localPlayerId))
+            {
+                return false;
+            }
+
+            liveCommandableActors++;
+        }
+
+        return liveCommandableActors > 0;
+    }
+
+    private bool CanLocalPlayerCommand(Entity actor, int localPlayerId)
+    {
+        return _engine.World.TryGet(actor, out PlayerOwner owner) &&
+               owner.PlayerId == localPlayerId;
     }
 
     private int ResolveMoveOrderType()

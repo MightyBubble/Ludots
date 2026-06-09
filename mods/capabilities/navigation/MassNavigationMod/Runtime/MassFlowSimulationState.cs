@@ -12,43 +12,46 @@ namespace MassNavigationMod.Runtime;
 
 public sealed class MassFlowSimulationState
 {
-    public const int FieldWidthCm = 10_000;
-    public const int FieldHeightCm = 10_000;
-    public const int CellCm = 100;
-    public const int GridWidth = FieldWidthCm / CellCm;
-    public const int GridHeight = FieldHeightCm / CellCm;
     public const float VisualMetersPerCm = 0.01f;
 
-    public const int MaxObstacleCount = 64;
-    private const int SeparationHashCellSizeCm = 100;
-    private const int SeparationHashWidth = FieldWidthCm / SeparationHashCellSizeCm;
-    private const int SeparationHashHeight = FieldHeightCm / SeparationHashCellSizeCm;
-    private const int DefaultSeparationHashSearchRadiusCells = 2;
-    private const int HardResolveHashCellSizeCm = 50;
-    private const int HardResolveHashWidth = FieldWidthCm / HardResolveHashCellSizeCm;
-    private const int HardResolveHashHeight = FieldHeightCm / HardResolveHashCellSizeCm;
-    private const int DefaultHardResolveHashSearchRadiusCells = 1;
-    private const float MinPositionCm = 50f;
-    private const float MaxPositionCm = 9_950f;
+    private readonly int _fieldWidthCm;
+    private readonly int _fieldHeightCm;
+    private readonly int _flowCellSizeCm;
+    private readonly int _gridWidth;
+    private readonly int _gridHeight;
+    private readonly int _gridCellCount;
+    private readonly int _maxObstacleCount;
+    private readonly int _separationHashCellSizeCm;
+    private readonly int _separationHashWidth;
+    private readonly int _separationHashHeight;
+    private readonly int _separationHashMinSearchRadiusCells;
+    private readonly int _hardResolveHashCellSizeCm;
+    private readonly int _hardResolveHashWidth;
+    private readonly int _hardResolveHashHeight;
+    private readonly int _hardResolveHashMinSearchRadiusCells;
+    private readonly float _playAreaMinXCm;
+    private readonly float _playAreaMaxXCm;
+    private readonly float _playAreaMinYCm;
+    private readonly float _playAreaMaxYCm;
 
-    private readonly Random _random = new();
+    private readonly int _parallelWorkerCount;
 
-    private readonly float[] _staticCost = new float[GridWidth * GridHeight];
-    private readonly float[] _cost = new float[GridWidth * GridHeight];
-    private readonly float[] _obsX = new float[MaxObstacleCount];
-    private readonly float[] _obsY = new float[MaxObstacleCount];
-    private readonly float[] _obsWorldX = new float[MaxObstacleCount];
-    private readonly float[] _obsWorldY = new float[MaxObstacleCount];
-    private readonly float[] _obsRadius = new float[MaxObstacleCount];
-    private readonly float[] _obsR2 = new float[MaxObstacleCount];
-    private readonly float[] _obsPR = new float[MaxObstacleCount];
-    private readonly float[] _obsPR2 = new float[MaxObstacleCount];
-    private readonly int[] _separationCellCounts = new int[SeparationHashWidth * SeparationHashHeight];
-    private readonly int[] _separationCellOffsets = new int[SeparationHashWidth * SeparationHashHeight];
-    private readonly int[] _separationCellCursor = new int[SeparationHashWidth * SeparationHashHeight];
-    private readonly int[] _hardResolveCellCounts = new int[HardResolveHashWidth * HardResolveHashHeight];
-    private readonly int[] _hardResolveCellOffsets = new int[HardResolveHashWidth * HardResolveHashHeight];
-    private readonly int[] _hardResolveCellCursor = new int[HardResolveHashWidth * HardResolveHashHeight];
+    private readonly float[] _staticCost;
+    private readonly float[] _cost;
+    private readonly float[] _obsX;
+    private readonly float[] _obsY;
+    private readonly float[] _obsWorldX;
+    private readonly float[] _obsWorldY;
+    private readonly float[] _obsRadius;
+    private readonly float[] _obsR2;
+    private readonly float[] _obsPR;
+    private readonly float[] _obsPR2;
+    private readonly int[] _separationCellCounts;
+    private readonly int[] _separationCellOffsets;
+    private readonly int[] _separationCellCursor;
+    private readonly int[] _hardResolveCellCounts;
+    private readonly int[] _hardResolveCellOffsets;
+    private readonly int[] _hardResolveCellCursor;
 
     private float[] _positionsCm = Array.Empty<float>();
     private float[] _velocitiesCm = Array.Empty<float>();
@@ -80,13 +83,14 @@ public sealed class MassFlowSimulationState
     private int[] _separationAgents = Array.Empty<int>();
     private int[] _hardResolveAgents = Array.Empty<int>();
     private int[] _entitySyncDirtyAgents = Array.Empty<int>();
-    private readonly UnitStepJob[] _stepJobs = CreateStepJobs();
-    private JobHandle[] _stepHandles = Array.Empty<JobHandle>();
+    private readonly UnitStepJob[] _stepJobs;
+    private readonly JobHandle[] _stepHandles;
 
     private readonly List<TeamRuntimeState> _teamStates = new();
     private readonly List<FlowRuntimeState> _flowStates = new();
     private readonly Dictionary<int, int> _teamStateIndexById = new();
     private TeamRelationship[] _teamRelationshipMatrix = Array.Empty<TeamRelationship>();
+    private int _teamRelationshipRevision = int.MinValue;
     private readonly float[] _maxBodyRadiusByCategoryBit = new float[32];
     private int _frameCount;
     private bool _useCandidateGating;
@@ -115,11 +119,76 @@ public sealed class MassFlowSimulationState
     public MassFlowAvoidanceTuning AvoidanceTuning { get; } = new();
     public MassNavigationCrowdSemantics Semantics { get; } = new();
 
+    public int FieldWidthCm => _fieldWidthCm;
+    public int FieldHeightCm => _fieldHeightCm;
+    public int FlowCellSizeCm => _flowCellSizeCm;
+    public int GridWidth => _gridWidth;
+    public int GridHeight => _gridHeight;
+    public int MaxObstacleCount => _maxObstacleCount;
+    public int ParallelWorkerCount => _parallelWorkerCount;
+    public int SeparationHashCellSizeCm => _separationHashCellSizeCm;
+    public int SeparationHashWidth => _separationHashWidth;
+    public int SeparationHashHeight => _separationHashHeight;
+    public int HardResolveHashCellSizeCm => _hardResolveHashCellSizeCm;
+    public int HardResolveHashWidth => _hardResolveHashWidth;
+    public int HardResolveHashHeight => _hardResolveHashHeight;
+    public float PlayAreaMinXCm => _playAreaMinXCm;
+    public float PlayAreaMaxXCm => _playAreaMaxXCm;
+    public float PlayAreaMinYCm => _playAreaMinYCm;
+    public float PlayAreaMaxYCm => _playAreaMaxYCm;
     public ReadOnlySpan<float> PositionsCm => _positionsCm.AsSpan(0, UnitCount * 2);
     public ReadOnlySpan<int> Teams => _teams.AsSpan(0, UnitCount);
     public ReadOnlySpan<byte> SelectedFlags => _selectedFlags.AsSpan(0, UnitCount);
     public float WorldOriginXCm => _worldOriginXCm;
     public float WorldOriginYCm => _worldOriginYCm;
+
+    public MassFlowSimulationState(MassFlowSolverConfig solver)
+    {
+        ArgumentNullException.ThrowIfNull(solver);
+        solver.Validate();
+
+        _fieldWidthCm = solver.FieldWidthCm;
+        _fieldHeightCm = solver.FieldHeightCm;
+        _flowCellSizeCm = solver.FlowCellSizeCm;
+        _gridWidth = solver.FlowGridWidth;
+        _gridHeight = solver.FlowGridHeight;
+        _gridCellCount = _gridWidth * _gridHeight;
+        _maxObstacleCount = solver.MaxObstacleCount;
+        _parallelWorkerCount = solver.ParallelWorkerCount;
+        _separationHashCellSizeCm = solver.SeparationHashCellSizeCm;
+        _separationHashWidth = solver.SeparationHashWidth;
+        _separationHashHeight = solver.SeparationHashHeight;
+        _separationHashMinSearchRadiusCells = solver.SeparationHashMinSearchRadiusCells;
+        _hardResolveHashCellSizeCm = solver.HardResolveHashCellSizeCm;
+        _hardResolveHashWidth = solver.HardResolveHashWidth;
+        _hardResolveHashHeight = solver.HardResolveHashHeight;
+        _hardResolveHashMinSearchRadiusCells = solver.HardResolveHashMinSearchRadiusCells;
+        _playAreaMinXCm = solver.PlayAreaMinXCm;
+        _playAreaMaxXCm = solver.PlayAreaMaxXCm;
+        _playAreaMinYCm = solver.PlayAreaMinYCm;
+        _playAreaMaxYCm = solver.PlayAreaMaxYCm;
+
+        _staticCost = new float[_gridCellCount];
+        _cost = new float[_gridCellCount];
+        _obsX = new float[_maxObstacleCount];
+        _obsY = new float[_maxObstacleCount];
+        _obsWorldX = new float[_maxObstacleCount];
+        _obsWorldY = new float[_maxObstacleCount];
+        _obsRadius = new float[_maxObstacleCount];
+        _obsR2 = new float[_maxObstacleCount];
+        _obsPR = new float[_maxObstacleCount];
+        _obsPR2 = new float[_maxObstacleCount];
+        int separationHashCellCount = _separationHashWidth * _separationHashHeight;
+        _separationCellCounts = new int[separationHashCellCount];
+        _separationCellOffsets = new int[separationHashCellCount];
+        _separationCellCursor = new int[separationHashCellCount];
+        int hardResolveHashCellCount = _hardResolveHashWidth * _hardResolveHashHeight;
+        _hardResolveCellCounts = new int[hardResolveHashCellCount];
+        _hardResolveCellOffsets = new int[hardResolveHashCellCount];
+        _hardResolveCellCursor = new int[hardResolveHashCellCount];
+        _stepJobs = CreateStepJobs(_parallelWorkerCount);
+        _stepHandles = new JobHandle[_parallelWorkerCount];
+    }
 
     public Vector2 WorldToLocalCm(Vector2 worldCm)
     {
@@ -145,7 +214,6 @@ public sealed class MassFlowSimulationState
     public float GetObstacleWorldX(int index) => _obsWorldX[index];
     public float GetObstacleWorldY(int index) => _obsWorldY[index];
     public float GetObstacleRadius(int index) => _obsRadius[index];
-    public float GetObstacleHardBlockRadius(int index) => Semantics.Obstacle.ResolveHardBlockRadiusCm(_obsRadius[index]);
     public float GetObstacleSoftPushRadius(int index) => _obsPR[index];
     public bool IsObstaclePoint(float xCm, float yCm) => IsObstacle(xCm, yCm);
     public Vector2 GetVelocityCmPerSecond(int index)
@@ -220,15 +288,29 @@ public sealed class MassFlowSimulationState
         int unitsPerTeam,
         ReadOnlySpan<MassNavigationObstacleConfig> obstacles,
         MassNavigationAgentProfileSetConfig profileSet,
-        MassNavigationAgentLayer layer)
+        MassNavigationAgentLayer layer,
+        MassNavigationScenarioSpawnLayoutConfig spawnLayout)
     {
-        int safeUnitsPerTeam = Math.Max(0, unitsPerTeam);
-        int safeTeamCount = Math.Max(0, teamIds.Length);
-        UnitCount = safeUnitsPerTeam * safeTeamCount;
+        if (unitsPerTeam < 0)
+        {
+            throw new InvalidOperationException("MassFlowSimulationState scenario reset requires unitsPerTeam >= 0.");
+        }
+
+        if (teamIds.Length <= 0)
+        {
+            throw new InvalidOperationException("MassFlowSimulationState scenario reset requires at least one team id.");
+        }
+
+        if (spawnLayout == null)
+        {
+            throw new InvalidOperationException("MassFlowSimulationState scenario reset requires explicit spawn layout config.");
+        }
+
+        UnitCount = checked(unitsPerTeam * teamIds.Length);
         EnsureCapacity(UnitCount);
-        InitializeTeams(teamIds, safeUnitsPerTeam);
+        InitializeTeams(teamIds, unitsPerTeam, spawnLayout);
         CacheAuthoredObstacles(obstacles);
-        InitializeUnits(profileSet, layer);
+        InitializeUnits(profileSet, layer, spawnLayout.RandomSeed);
         ForceFlowRebuild();
         MarkAllEntitiesDirty();
         _frameCount = 0;
@@ -414,7 +496,7 @@ public sealed class MassFlowSimulationState
 
         int offset = index << 1;
         bool wasInactive = _hasUnitTarget[index] == 0;
-        ClampLocalToWorldBounds(ref xCm, ref yCm);
+        ClampLocalToWorldBounds(ref xCm, ref yCm, _bodyRadiiCm[index]);
         bool targetChanged = wasInactive || _unitTargetsCm[offset] != xCm || _unitTargetsCm[offset + 1] != yCm;
         if (!targetChanged && !resetRecovery)
         {
@@ -503,8 +585,8 @@ public sealed class MassFlowSimulationState
                 _unitTargetsCm[offset + 1] += deltaYCm;
             }
 
-            ClampLocalToWorldBounds(ref _positionsCm[offset], ref _positionsCm[offset + 1]);
-            ClampLocalToWorldBounds(ref _readPositionsCm[offset], ref _readPositionsCm[offset + 1]);
+            ClampLocalToWorldBounds(ref _positionsCm[offset], ref _positionsCm[offset + 1], _bodyRadiiCm[index]);
+            ClampLocalToWorldBounds(ref _readPositionsCm[offset], ref _readPositionsCm[offset + 1], _bodyRadiiCm[index]);
             MarkEntityDirty(index);
         }
     }
@@ -577,19 +659,24 @@ public sealed class MassFlowSimulationState
         return ResolveNavigableTarget(xCm, yCm, hintX, hintY, clearanceCm);
     }
 
-    public Vector2 ResolveNavigableTarget(float xCm, float yCm, float hintX, float hintY, float extraClearanceCm = 0f)
+    public Vector2 ResolveNavigableTarget(float xCm, float yCm, float hintX, float hintY, float extraClearanceCm)
     {
+        if (extraClearanceCm < 0f)
+        {
+            throw new InvalidOperationException("MassFlow navigable target projection requires extraClearanceCm >= 0.");
+        }
+
         float resolvedX = xCm;
         float resolvedY = yCm;
-        ClampLocalToWorldBounds(ref resolvedX, ref resolvedY);
+        ClampLocalToWorldBounds(ref resolvedX, ref resolvedY, extraClearanceCm);
         if (!IsInsideTacticalField(resolvedX, resolvedY))
         {
             return new Vector2(resolvedX, resolvedY);
         }
 
-        resolvedX = ClampPosition(resolvedX);
-        resolvedY = ClampPosition(resolvedY);
-        float minDistancePadding = MathF.Max(Semantics.Obstacle.AgentBodyRadiusCm, extraClearanceCm);
+        resolvedX = ClampXPosition(resolvedX);
+        resolvedY = ClampYPosition(resolvedY);
+        float minDistancePadding = extraClearanceCm;
 
         for (int pass = 0; pass < 2; pass++)
         {
@@ -629,9 +716,9 @@ public sealed class MassFlowSimulationState
                     }
                 }
 
-                resolvedX = ClampPosition(_obsX[obstacleIndex] + nx * minDistance);
-                resolvedY = ClampPosition(_obsY[obstacleIndex] + ny * minDistance);
-                ClampLocalToWorldBounds(ref resolvedX, ref resolvedY);
+                resolvedX = ClampXPosition(_obsX[obstacleIndex] + nx * minDistance);
+                resolvedY = ClampYPosition(_obsY[obstacleIndex] + ny * minDistance);
+                ClampLocalToWorldBounds(ref resolvedX, ref resolvedY, extraClearanceCm);
                 adjusted = true;
             }
 
@@ -660,7 +747,7 @@ public sealed class MassFlowSimulationState
         }
 
         long prepStart = System.Diagnostics.Stopwatch.GetTimestamp();
-        RefreshTeamRelationshipMatrix();
+        RefreshTeamRelationshipMatrixIfStale();
 
         float clampedDt = Math.Clamp(dt, 0f, Semantics.Solver.MaxStepDtSeconds);
         _frameCount++;
@@ -684,12 +771,13 @@ public sealed class MassFlowSimulationState
         BuildSeparationHash(_readPositionsCm);
         observeStepPrep?.Invoke((System.Diagnostics.Stopwatch.GetTimestamp() - prepStart) * 1000.0 / System.Diagnostics.Stopwatch.Frequency);
 
-        int hwm1 = SeparationHashWidth - 1;
-        int hhm1 = SeparationHashHeight - 1;
-        float invHashCell = 1f / SeparationHashCellSizeCm;
+        int hwm1 = _separationHashWidth - 1;
+        int hhm1 = _separationHashHeight - 1;
+        float invHashCell = 1f / _separationHashCellSizeCm;
         int flowObstacleNeighborRadiusCells = Semantics.Solver.FlowObstacleNeighborRadiusCells;
 
-        if (World.SharedJobScheduler == null || UnitCount < Semantics.Solver.ParallelStepMinAgents)
+        int workerCount = Math.Min(_parallelWorkerCount, UnitCount);
+        if (workerCount <= 1 || UnitCount < Semantics.Solver.ParallelStepMinAgents)
         {
             long steeringStart = System.Diagnostics.Stopwatch.GetTimestamp();
             StepRange(0, UnitCount, clampedDt, navGroupRuntime, sepRadiusSq, sepRadiusCm, arrivalRadiusCm, arrivalRadiusSq, unitTargetStopThresholdSq, hwm1, hhm1, invHashCell, flowObstacleNeighborRadiusCells, _useCandidateGating);
@@ -707,8 +795,8 @@ public sealed class MassFlowSimulationState
             return;
         }
 
-        EnsureJobHandleCapacity(_stepJobs.Length);
-        int workerCount = Math.Min(_stepJobs.Length, UnitCount);
+        var scheduler = World.SharedJobScheduler ?? throw new InvalidOperationException(
+            "MassFlowSimulationState requires World.SharedJobScheduler when solver.parallelWorkerCount requests parallel stepping.");
         int baseCount = UnitCount / workerCount;
         int remainder = UnitCount % workerCount;
         int startIndex = 0;
@@ -732,11 +820,11 @@ public sealed class MassFlowSimulationState
             job.InvHashCell = invHashCell;
             job.FlowObstacleNeighborRadiusCells = flowObstacleNeighborRadiusCells;
             job.UseCandidateGating = _useCandidateGating;
-            _stepHandles[workerIndex] = World.SharedJobScheduler!.Schedule(job);
+            _stepHandles[workerIndex] = scheduler.Schedule(job);
             startIndex += length;
         }
 
-        World.SharedJobScheduler!.Flush();
+        scheduler.Flush();
         for (int workerIndex = 0; workerIndex < workerCount; workerIndex++)
         {
             _stepHandles[workerIndex].Complete();
@@ -940,19 +1028,28 @@ public sealed class MassFlowSimulationState
         }
     }
 
-    private void InitializeTeams(ReadOnlySpan<int> teamIds, int unitsPerTeam)
+    private void InitializeTeams(
+        ReadOnlySpan<int> teamIds,
+        int unitsPerTeam,
+        MassNavigationScenarioSpawnLayoutConfig spawnLayout)
     {
         _teamStates.Clear();
         _flowStates.Clear();
         _teamStateIndexById.Clear();
         if (teamIds.Length <= 0)
         {
-            return;
+            throw new InvalidOperationException("MassFlowSimulationState requires at least one team id for scenario team initialization.");
         }
 
-        const float centerX = FieldWidthCm * 0.5f;
-        const float centerY = FieldHeightCm * 0.5f;
-        const float orbitRadiusCm = 3_650f;
+        if (spawnLayout.ParsedKind != MassNavigationScenarioSpawnLayoutKind.OrbitOpposedTargets)
+        {
+            throw new InvalidOperationException(
+                $"MassFlowSimulationState does not support scenario spawn layout '{spawnLayout.Kind}'.");
+        }
+
+        float centerX = _fieldWidthCm * 0.5f;
+        float centerY = _fieldHeightCm * 0.5f;
+        float orbitRadiusCm = spawnLayout.OrbitRadiusCm;
         for (int teamIndex = 0; teamIndex < teamIds.Length; teamIndex++)
         {
             int teamId = teamIds[teamIndex];
@@ -979,6 +1076,7 @@ public sealed class MassFlowSimulationState
         }
 
         _teamRelationshipMatrix = new TeamRelationship[_teamStates.Count * _teamStates.Count];
+        _teamRelationshipRevision = int.MinValue;
     }
 
     private void InitializeTeams(ReadOnlySpan<MassNavigationAgentSeed> agentSeeds)
@@ -1006,9 +1104,10 @@ public sealed class MassFlowSimulationState
         }
 
         _teamRelationshipMatrix = new TeamRelationship[_teamStates.Count * _teamStates.Count];
+        _teamRelationshipRevision = int.MinValue;
     }
 
-    private void InitializeUnits(MassNavigationAgentProfileSetConfig profileSet, MassNavigationAgentLayer layer)
+    private void InitializeUnits(MassNavigationAgentProfileSetConfig profileSet, MassNavigationAgentLayer layer, int spawnRandomSeed)
     {
         _maxBodyRadiusCm = 0f;
         Array.Clear(_velocitiesCm, 0, UnitCount * 2);
@@ -1043,8 +1142,8 @@ public sealed class MassFlowSimulationState
                 int col = localIndex % cols;
                 float lateralOffset = (col - colCenter) * spacingCm;
                 float depthOffset = (row - rowCenter) * spacingCm;
-                float jitterLateral = (_random.NextSingle() - 0.5f) * Semantics.Group.SpawnJitterCm;
-                float jitterDepth = (_random.NextSingle() - 0.5f) * Semantics.Group.SpawnJitterCm;
+                float jitterLateral = DeterministicSpawnJitterCm(spawnRandomSeed, team.TeamId, localIndex, 0u, Semantics.Group.SpawnJitterCm);
+                float jitterDepth = DeterministicSpawnJitterCm(spawnRandomSeed, team.TeamId, localIndex, 1u, Semantics.Group.SpawnJitterCm);
                 float xCm = team.SpawnCenterX + team.TangentX * (lateralOffset + jitterLateral) + team.DirectionX * (depthOffset + jitterDepth);
                 float yCm = team.SpawnCenterY + team.TangentY * (lateralOffset + jitterLateral) + team.DirectionY * (depthOffset + jitterDepth);
                 int i2 = unitIndex << 1;
@@ -1061,8 +1160,8 @@ public sealed class MassFlowSimulationState
                 _speedsCmPerSecond[unitIndex] = profile.SpeedCmPerSecond;
                 _maxBodyRadiusCm = MathF.Max(_maxBodyRadiusCm, profile.BodyRadiusCm);
                 _heavyProfileFlags[unitIndex] = profile.Heavy ? (byte)1 : (byte)0;
-                _positionsCm[i2] = ClampPosition(xCm);
-                _positionsCm[i2 + 1] = ClampPosition(yCm);
+                _positionsCm[i2] = ClampXPosition(xCm);
+                _positionsCm[i2 + 1] = ClampYPosition(yCm);
                 _unitProgressAnchorCm[i2] = _positionsCm[i2];
                 _unitProgressAnchorCm[i2 + 1] = _positionsCm[i2 + 1];
                 _unitSettledAnchorCm[i2] = _positionsCm[i2];
@@ -1080,10 +1179,10 @@ public sealed class MassFlowSimulationState
             throw new InvalidOperationException("MassFlowSimulationState requires authored obstacles.");
         }
 
-        if (obstacles.Length > MaxObstacleCount)
+        if (obstacles.Length > _maxObstacleCount)
         {
             throw new InvalidOperationException(
-                $"MassFlowSimulationState obstacle count {obstacles.Length} exceeds solver capacity {MaxObstacleCount}.");
+                $"MassFlowSimulationState obstacle count {obstacles.Length} exceeds solver capacity {_maxObstacleCount}.");
         }
 
         ObstacleCount = obstacles.Length;
@@ -1147,13 +1246,13 @@ public sealed class MassFlowSimulationState
 
     private void RebuildStaticObstacleCost()
     {
-        for (int y = 0; y < GridHeight; y++)
+        for (int y = 0; y < _gridHeight; y++)
         {
-            for (int x = 0; x < GridWidth; x++)
+            for (int x = 0; x < _gridWidth; x++)
             {
-                float wx = (x + 0.5f) * CellCm;
-                float wy = (y + 0.5f) * CellCm;
-                _staticCost[(y * GridWidth) + x] = IsObstacle(wx, wy) ? Semantics.Solver.FlowBlockedCellCost : 1f;
+                float wx = (x + 0.5f) * _flowCellSizeCm;
+                float wy = (y + 0.5f) * _flowCellSizeCm;
+                _staticCost[(y * _gridWidth) + x] = IsObstacle(wx, wy) ? Semantics.Solver.FlowBlockedCellCost : 1f;
             }
         }
     }
@@ -1189,21 +1288,21 @@ public sealed class MassFlowSimulationState
 
     private void StampCrowdCost(float xCm, float yCm)
     {
-        int gx = Math.Clamp((int)(xCm / CellCm), 0, GridWidth - 1);
-        int gy = Math.Clamp((int)(yCm / CellCm), 0, GridHeight - 1);
+        int gx = Math.Clamp((int)(xCm / _flowCellSizeCm), 0, _gridWidth - 1);
+        int gy = Math.Clamp((int)(yCm / _flowCellSizeCm), 0, _gridHeight - 1);
         for (int oy = -1; oy <= 1; oy++)
         {
             int ny = gy + oy;
-            if ((uint)ny >= (uint)GridHeight)
+            if ((uint)ny >= (uint)_gridHeight)
             {
                 continue;
             }
 
-            int rowBase = ny * GridWidth;
+            int rowBase = ny * _gridWidth;
             for (int ox = -1; ox <= 1; ox++)
             {
                 int nx = gx + ox;
-                if ((uint)nx >= (uint)GridWidth)
+                if ((uint)nx >= (uint)_gridWidth)
                 {
                     continue;
                 }
@@ -1294,8 +1393,8 @@ public sealed class MassFlowSimulationState
             _speedsCmPerSecond[unitIndex] = seed.SpeedCmPerSecond;
             _maxBodyRadiusCm = MathF.Max(_maxBodyRadiusCm, seed.BodyRadiusCm);
             _heavyProfileFlags[unitIndex] = seed.Heavy ? (byte)1 : (byte)0;
-            _positionsCm[i2] = ClampPosition(seed.LocalPositionXCm);
-            _positionsCm[i2 + 1] = ClampPosition(seed.LocalPositionYCm);
+            _positionsCm[i2] = ClampXPosition(seed.LocalPositionXCm);
+            _positionsCm[i2 + 1] = ClampYPosition(seed.LocalPositionYCm);
             _unitProgressAnchorCm[i2] = _positionsCm[i2];
             _unitProgressAnchorCm[i2 + 1] = _positionsCm[i2 + 1];
             _unitSettledAnchorCm[i2] = _positionsCm[i2];
@@ -1338,11 +1437,11 @@ public sealed class MassFlowSimulationState
 
     private void ComputeFlow(float[] flow, float targetX, float targetY)
     {
-        for (int y = 0; y < GridHeight; y++)
+        for (int y = 0; y < _gridHeight; y++)
         {
-            for (int x = 0; x < GridWidth; x++)
+            for (int x = 0; x < _gridWidth; x++)
             {
-                int idx = (y * GridWidth) + x;
+                int idx = (y * _gridWidth) + x;
                 int flowIndex = idx << 1;
                 if (_cost[idx] > Semantics.Solver.FlowBlockedCellThreshold)
                 {
@@ -1351,8 +1450,8 @@ public sealed class MassFlowSimulationState
                     continue;
                 }
 
-                float wx = (x + 0.5f) * CellCm;
-                float wy = (y + 0.5f) * CellCm;
+                float wx = (x + 0.5f) * _flowCellSizeCm;
+                float wy = (y + 0.5f) * _flowCellSizeCm;
                 float dx = targetX - wx;
                 float dy = targetY - wy;
                 float distSq = dx * dx + dy * dy;
@@ -1381,12 +1480,12 @@ public sealed class MassFlowSimulationState
 
                         int nx = x + offsetX;
                         int ny = y + offsetY;
-                        if ((uint)nx >= (uint)GridWidth || (uint)ny >= (uint)GridHeight)
+                        if ((uint)nx >= (uint)_gridWidth || (uint)ny >= (uint)_gridHeight)
                         {
                             continue;
                         }
 
-                        if (_cost[(ny * GridWidth) + nx] > Semantics.Solver.FlowBlockedCellThreshold)
+                        if (_cost[(ny * _gridWidth) + nx] > Semantics.Solver.FlowBlockedCellThreshold)
                         {
                             float ovx = -offsetX;
                             float ovy = -offsetY;
@@ -1425,9 +1524,9 @@ public sealed class MassFlowSimulationState
     {
         BuildBucketHash(
             positionsCm,
-            SeparationHashWidth,
-            SeparationHashHeight,
-            1f / SeparationHashCellSizeCm,
+            _separationHashWidth,
+            _separationHashHeight,
+            1f / _separationHashCellSizeCm,
             _separationCellCounts,
             _separationCellOffsets,
             _separationCellCursor,
@@ -1438,9 +1537,9 @@ public sealed class MassFlowSimulationState
     {
         BuildBucketHash(
             positionsCm,
-            HardResolveHashWidth,
-            HardResolveHashHeight,
-            1f / HardResolveHashCellSizeCm,
+            _hardResolveHashWidth,
+            _hardResolveHashHeight,
+            1f / _hardResolveHashCellSizeCm,
             _hardResolveCellCounts,
             _hardResolveCellOffsets,
             _hardResolveCellCursor,
@@ -1486,11 +1585,18 @@ public sealed class MassFlowSimulationState
         }
     }
 
-    private void RefreshTeamRelationshipMatrix()
+    private void RefreshTeamRelationshipMatrixIfStale()
     {
+        int currentRevision = TeamManager.Revision;
+        if (_teamRelationshipRevision == currentRevision)
+        {
+            return;
+        }
+
         int teamCount = _teamStates.Count;
         if (teamCount <= 0)
         {
+            _teamRelationshipRevision = currentRevision;
             return;
         }
 
@@ -1510,6 +1616,8 @@ public sealed class MassFlowSimulationState
                 _teamRelationshipMatrix[rowOffset + b] = TeamManager.GetRelationship(teamA, teamB);
             }
         }
+
+        _teamRelationshipRevision = currentRevision;
     }
 
     private static bool TryGetHashCell(float[] positionsCm, int index, float invHashCell, int hashWidthMinusOne, int hashHeightMinusOne, int hashWidth, out int cell)
@@ -1603,19 +1711,19 @@ public sealed class MassFlowSimulationState
                     desiredX = toTargetX * invDist;
                     desiredY = toTargetY * invDist;
 
-                    int gx = (int)(px / CellCm);
-                    int gy = (int)(py / CellCm);
+                    int gx = (int)(px / _flowCellSizeCm);
+                    int gy = (int)(py / _flowCellSizeCm);
                     float avoidX = 0f;
                     float avoidY = 0f;
                     for (int oy = -flowObstacleNeighborRadiusCells; oy <= flowObstacleNeighborRadiusCells; oy++)
                     {
                         int ny = gy + oy;
-                        if ((uint)ny >= (uint)GridHeight)
+                        if ((uint)ny >= (uint)_gridHeight)
                         {
                             continue;
                         }
 
-                        int rowOffset = ny * GridWidth;
+                        int rowOffset = ny * _gridWidth;
                         for (int ox = -flowObstacleNeighborRadiusCells; ox <= flowObstacleNeighborRadiusCells; ox++)
                         {
                             if (ox == 0 && oy == 0)
@@ -1624,7 +1732,7 @@ public sealed class MassFlowSimulationState
                             }
 
                             int nx = gx + ox;
-                            if ((uint)nx >= (uint)GridWidth)
+                            if ((uint)nx >= (uint)_gridWidth)
                             {
                                 continue;
                             }
@@ -1667,13 +1775,13 @@ public sealed class MassFlowSimulationState
             else
             {
                 hasGoalTarget = true;
-                int gx = (int)(px / CellCm);
-                int gy = (int)(py / CellCm);
+                int gx = (int)(px / _flowCellSizeCm);
+                int gy = (int)(py / _flowCellSizeCm);
                 float flowX = 0f;
                 float flowY = 0f;
-                if ((uint)gx < (uint)GridWidth && (uint)gy < (uint)GridHeight)
+                if ((uint)gx < (uint)_gridWidth && (uint)gy < (uint)_gridHeight)
                 {
-                    int flowOffset = ((gy * GridWidth) + gx) << 1;
+                    int flowOffset = ((gy * _gridWidth) + gx) << 1;
                     flowX = flowState.Flow[flowOffset];
                     flowY = flowState.Flow[flowOffset + 1];
                 }
@@ -1761,7 +1869,7 @@ public sealed class MassFlowSimulationState
 
             for (int neighborY = minY; neighborY <= maxY; neighborY++)
             {
-                int rowBase = neighborY * SeparationHashWidth;
+                int rowBase = neighborY * _separationHashWidth;
                 for (int neighborX = minX; neighborX <= maxX; neighborX++)
                 {
                     int cell = rowBase + neighborX;
@@ -1865,8 +1973,9 @@ public sealed class MassFlowSimulationState
             int offset = i << 1;
             float xCm = _positionsCm[offset];
             float yCm = _positionsCm[offset + 1];
-            bool clampedX = ClampLocalXToWorldBounds(ref xCm);
-            bool clampedY = ClampLocalYToWorldBounds(ref yCm);
+            float bodyRadiusCm = _bodyRadiiCm[i];
+            bool clampedX = ClampLocalXToWorldBounds(ref xCm, bodyRadiusCm);
+            bool clampedY = ClampLocalYToWorldBounds(ref yCm, bodyRadiusCm);
             if (!clampedX && !clampedY)
             {
                 continue;
@@ -1949,7 +2058,8 @@ public sealed class MassFlowSimulationState
         int teamCount = _teamStates.Count;
         if ((uint)sourceTeamStateIndex >= (uint)teamCount || (uint)targetTeamStateIndex >= (uint)teamCount)
         {
-            return TeamRelationship.Hostile;
+            throw new InvalidOperationException(
+                $"MassFlow team relationship index out of range: source={sourceTeamStateIndex}, target={targetTeamStateIndex}, teamCount={teamCount}.");
         }
 
         return _teamRelationshipMatrix[(sourceTeamStateIndex * teamCount) + targetTeamStateIndex];
@@ -2001,13 +2111,13 @@ public sealed class MassFlowSimulationState
         float maxPairDistanceCm = MathF.Max(
             Semantics.Steering.SeparationRadiusCm,
             _bodyRadiiCm[selfUnitIndex] + ResolveMaxInteractingBodyRadiusCm(selfUnitIndex) + Semantics.Obstacle.HardResolveCandidateDistanceCm);
-        return Math.Max(DefaultSeparationHashSearchRadiusCells, (int)MathF.Ceiling(maxPairDistanceCm / SeparationHashCellSizeCm));
+        return Math.Max(_separationHashMinSearchRadiusCells, (int)MathF.Ceiling(maxPairDistanceCm / _separationHashCellSizeCm));
     }
 
     private int ResolveHardResolveHashSearchRadiusCells(int selfUnitIndex)
     {
         float maxCandidateDistanceCm = _bodyRadiiCm[selfUnitIndex] + ResolveMaxInteractingBodyRadiusCm(selfUnitIndex) + Semantics.Obstacle.HardResolveCandidateDistanceCm;
-        return Math.Max(DefaultHardResolveHashSearchRadiusCells, (int)MathF.Ceiling(maxCandidateDistanceCm / HardResolveHashCellSizeCm));
+        return Math.Max(_hardResolveHashMinSearchRadiusCells, (int)MathF.Ceiling(maxCandidateDistanceCm / _hardResolveHashCellSizeCm));
     }
 
     private MassFlowPairAvoidancePolicy ResolvePolicy(TeamRelationship relationship, float selfMass, float otherMass)
@@ -2228,9 +2338,9 @@ public sealed class MassFlowSimulationState
         }
 
         BuildHardResolveHash(_positionsCm);
-        float invHashCell = 1f / HardResolveHashCellSizeCm;
-        int hwm1 = HardResolveHashWidth - 1;
-        int hhm1 = HardResolveHashHeight - 1;
+        float invHashCell = 1f / _hardResolveHashCellSizeCm;
+        int hwm1 = _hardResolveHashWidth - 1;
+        int hhm1 = _hardResolveHashHeight - 1;
 
         for (int i = 0; i < UnitCount; i++)
         {
@@ -2260,7 +2370,7 @@ public sealed class MassFlowSimulationState
 
             for (int neighborY = minY; neighborY <= maxY; neighborY++)
             {
-                int rowBase = neighborY * HardResolveHashWidth;
+                int rowBase = neighborY * _hardResolveHashWidth;
                 for (int neighborX = minX; neighborX <= maxX; neighborX++)
                 {
                     int cell = rowBase + neighborX;
@@ -2387,7 +2497,7 @@ public sealed class MassFlowSimulationState
 
                 _positionsCm[i2] = _obsX[obstacleIndex] + nx * minDistance;
                 _positionsCm[i2 + 1] = _obsY[obstacleIndex] + ny * minDistance;
-                ClampLocalToWorldBounds(ref _positionsCm[i2], ref _positionsCm[i2 + 1]);
+                ClampLocalToWorldBounds(ref _positionsCm[i2], ref _positionsCm[i2 + 1], _bodyRadiiCm[i]);
                 px = _positionsCm[i2];
                 py = _positionsCm[i2 + 1];
 
@@ -2398,14 +2508,6 @@ public sealed class MassFlowSimulationState
                     _velocitiesCm[i2 + 1] -= ny * inwardSpeed;
                 }
             }
-        }
-    }
-
-    private void EnsureJobHandleCapacity(int required)
-    {
-        if (_stepHandles.Length < required)
-        {
-            Array.Resize(ref _stepHandles, required);
         }
     }
 
@@ -2422,13 +2524,12 @@ public sealed class MassFlowSimulationState
             }
         }
 
-        _flowStates.Add(new FlowRuntimeState(teamStateIndex, layer.CategoryMask, layer.InteractionMask));
+        _flowStates.Add(new FlowRuntimeState(teamStateIndex, layer.CategoryMask, layer.InteractionMask, _gridCellCount));
         return _flowStates.Count - 1;
     }
 
-    private static UnitStepJob[] CreateStepJobs()
+    private static UnitStepJob[] CreateStepJobs(int count)
     {
-        int count = Math.Max(1, Environment.ProcessorCount);
         var jobs = new UnitStepJob[count];
         for (int i = 0; i < count; i++)
         {
@@ -2436,6 +2537,36 @@ public sealed class MassFlowSimulationState
         }
 
         return jobs;
+    }
+
+    private static float DeterministicSpawnJitterCm(int seed, int teamId, int localIndex, uint axis, float jitterCm)
+    {
+        if (jitterCm == 0f)
+        {
+            return 0f;
+        }
+
+        uint hash = MixSpawnJitterHash(seed, teamId, localIndex, axis);
+        float unit = ((hash >> 8) * (1f / 16_777_216f)) - 0.5f;
+        return unit * jitterCm;
+    }
+
+    private static uint MixSpawnJitterHash(int seed, int teamId, int localIndex, uint axis)
+    {
+        unchecked
+        {
+            uint hash = 2_166_136_261u;
+            hash = (hash ^ (uint)seed) * 16_777_619u;
+            hash = (hash ^ (uint)teamId) * 16_777_619u;
+            hash = (hash ^ (uint)localIndex) * 16_777_619u;
+            hash = (hash ^ axis) * 16_777_619u;
+            hash ^= hash >> 16;
+            hash *= 2_246_822_519u;
+            hash ^= hash >> 13;
+            hash *= 3_266_489_917u;
+            hash ^= hash >> 16;
+            return hash;
+        }
     }
 
     private bool IsObstacle(float wx, float wy)
@@ -2458,9 +2589,14 @@ public sealed class MassFlowSimulationState
         return value < Semantics.Solver.InverseSqrtMinValue ? 0f : 1f / MathF.Sqrt(value);
     }
 
-    private static float ClampPosition(float value)
+    private float ClampXPosition(float value)
     {
-        return Math.Clamp(value, MinPositionCm, MaxPositionCm);
+        return Math.Clamp(value, _playAreaMinXCm, _playAreaMaxXCm);
+    }
+
+    private float ClampYPosition(float value)
+    {
+        return Math.Clamp(value, _playAreaMinYCm, _playAreaMaxYCm);
     }
 
     private bool HasWorldBounds()
@@ -2473,22 +2609,34 @@ public sealed class MassFlowSimulationState
             !float.IsInfinity(_worldMaxYCm);
     }
 
-    private void ClampLocalToWorldBounds(ref float xCm, ref float yCm)
+    private void ClampLocalToWorldBounds(ref float xCm, ref float yCm, float insetCm)
     {
-        ClampLocalXToWorldBounds(ref xCm);
-        ClampLocalYToWorldBounds(ref yCm);
+        ClampLocalXToWorldBounds(ref xCm, insetCm);
+        ClampLocalYToWorldBounds(ref yCm, insetCm);
     }
 
-    private bool ClampLocalXToWorldBounds(ref float xCm)
+    private bool ClampLocalXToWorldBounds(ref float xCm, float insetCm)
     {
         if (!HasWorldBounds())
         {
             return false;
         }
 
+        if (insetCm < 0f)
+        {
+            throw new InvalidOperationException("MassFlow world-bound clamp requires insetCm >= 0.");
+        }
+
         float worldX = _worldOriginXCm + xCm;
-        float inset = Semantics.Obstacle.AgentBodyRadiusCm;
-        float clampedWorldX = Math.Clamp(worldX, _worldMinXCm + inset, _worldMaxXCm - inset);
+        float min = _worldMinXCm + insetCm;
+        float max = _worldMaxXCm - insetCm;
+        if (min > max)
+        {
+            throw new InvalidOperationException(
+                $"MassFlow world bounds cannot contain inset {insetCm:0.###} cm on X axis.");
+        }
+
+        float clampedWorldX = Math.Clamp(worldX, min, max);
         if (clampedWorldX == worldX)
         {
             return false;
@@ -2498,16 +2646,28 @@ public sealed class MassFlowSimulationState
         return true;
     }
 
-    private bool ClampLocalYToWorldBounds(ref float yCm)
+    private bool ClampLocalYToWorldBounds(ref float yCm, float insetCm)
     {
         if (!HasWorldBounds())
         {
             return false;
         }
 
+        if (insetCm < 0f)
+        {
+            throw new InvalidOperationException("MassFlow world-bound clamp requires insetCm >= 0.");
+        }
+
         float worldY = _worldOriginYCm + yCm;
-        float inset = Semantics.Obstacle.AgentBodyRadiusCm;
-        float clampedWorldY = Math.Clamp(worldY, _worldMinYCm + inset, _worldMaxYCm - inset);
+        float min = _worldMinYCm + insetCm;
+        float max = _worldMaxYCm - insetCm;
+        if (min > max)
+        {
+            throw new InvalidOperationException(
+                $"MassFlow world bounds cannot contain inset {insetCm:0.###} cm on Y axis.");
+        }
+
+        float clampedWorldY = Math.Clamp(worldY, min, max);
         if (clampedWorldY == worldY)
         {
             return false;
@@ -2517,12 +2677,12 @@ public sealed class MassFlowSimulationState
         return true;
     }
 
-    private static bool IsInsideTacticalField(float xCm, float yCm)
+    private bool IsInsideTacticalField(float xCm, float yCm)
     {
-        return xCm >= MinPositionCm &&
-            xCm <= MaxPositionCm &&
-            yCm >= MinPositionCm &&
-            yCm <= MaxPositionCm;
+        return xCm >= _playAreaMinXCm &&
+            xCm <= _playAreaMaxXCm &&
+            yCm >= _playAreaMinYCm &&
+            yCm <= _playAreaMaxYCm;
     }
 
     private sealed class UnitStepJob : IJob
@@ -2604,12 +2764,12 @@ public sealed class MassFlowSimulationState
 
     private sealed class FlowRuntimeState
     {
-        public FlowRuntimeState(int teamStateIndex, uint categoryMask, uint interactionMask)
+        public FlowRuntimeState(int teamStateIndex, uint categoryMask, uint interactionMask, int gridCellCount)
         {
             TeamStateIndex = teamStateIndex;
             CategoryMask = categoryMask;
             InteractionMask = interactionMask;
-            Flow = new float[GridWidth * GridHeight * 2];
+            Flow = new float[gridCellCount * 2];
         }
 
         public int TeamStateIndex { get; }

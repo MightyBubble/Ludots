@@ -12,7 +12,7 @@ namespace Ludots.Core.Presentation.Events
         public int DroppedSinceClear { get; private set; }
         public int DroppedTotal { get; private set; }
 
-        public PresentationEventStream(int capacity = 8192)
+        public PresentationEventStream(int capacity)
         {
             if (capacity <= 0) throw new ArgumentOutOfRangeException(nameof(capacity));
             _buffer = new PresentationEvent[capacity];

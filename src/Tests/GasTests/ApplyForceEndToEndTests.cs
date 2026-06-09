@@ -36,6 +36,13 @@ namespace Ludots.Tests.GAS
             try
             {
                 Directory.CreateDirectory(Path.Combine(root, "Configs", "GAS"));
+                File.WriteAllText(Path.Combine(root, "Configs", "config_catalog.json"),
+                    """
+                    [
+                      { "Path": "GAS/effects.json", "Policy": "ArrayById", "IdField": "id" },
+                      { "Path": "GAS/attribute_bindings.json", "Policy": "ArrayById", "IdField": "id" }
+                    ]
+                    """);
                 File.WriteAllText(Path.Combine(root, "Configs", "GAS", "effects.json"),
                     """
                     [
@@ -44,10 +51,10 @@ namespace Ludots.Tests.GAS
                         "tags": ["Effect.ApplyForce"],
                         "presetType": "ApplyForce2D",
                         "lifetime": "Instant",
-                        "excludeFromChain": true,
+                        "participatesInResponse": true,
                         "configParams": {
-                          "_ep.forceXTargetAttrId": { "type": "attribute", "value": "Physics.ForceRequestX" },
-                          "_ep.forceYTargetAttrId": { "type": "attribute", "value": "Physics.ForceRequestY" }
+                          "_ep.forceXTargetAttrId": { "type": "Attribute", "value": "Physics.ForceRequestX" },
+                          "_ep.forceYTargetAttrId": { "type": "Attribute", "value": "Physics.ForceRequestY" }
                         }
                       }
                     ]
@@ -80,16 +87,17 @@ namespace Ludots.Tests.GAS
                 vfs.Mount("Core", root);
                 var modLoader = new ModLoader(vfs, new FunctionRegistry(), new TriggerManager());
                 var pipeline = new ConfigPipeline(vfs, modLoader);
+                var catalog = ConfigCatalogLoader.Load(pipeline);
 
                 var templates = new EffectTemplateRegistry();
                 var templateLoader = new EffectTemplateLoader(pipeline, templates);
-                templateLoader.Load(relativePath: "GAS/effects.json");
+                templateLoader.Load(catalog, relativePath: "GAS/effects.json");
 
                 var sinks = new AttributeSinkRegistry();
                 GasAttributeSinks.RegisterBuiltins(sinks);
                 var bindings = new AttributeBindingRegistry();
                 var bindingLoader = new AttributeBindingLoader(pipeline, sinks, bindings);
-                bindingLoader.Load(relativePath: "GAS/attribute_bindings.json");
+                bindingLoader.Load(catalog, relativePath: "GAS/attribute_bindings.json");
 
                 var graphCfg = new GraphConfig
                 {

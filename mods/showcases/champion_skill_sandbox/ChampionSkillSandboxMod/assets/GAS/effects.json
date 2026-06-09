@@ -1,7 +1,9 @@
 [
   {
     "id": "Effect.Champion.Ezreal.ArcaneShift",
-    "tags": ["Effect.Champion.Movement"],
+    "tags": [
+      "Effect.Champion.Movement"
+    ],
     "presetType": "Displacement",
     "lifetime": "Instant",
     "participatesInResponse": false,
@@ -14,7 +16,9 @@
   },
   {
     "id": "Effect.Champion.Ezreal.ArcaneShiftBolt",
-    "tags": ["Effect.Champion.Damage"],
+    "tags": [
+      "Effect.Champion.Damage"
+    ],
     "presetType": "LaunchProjectile",
     "lifetime": "Instant",
     "participatesInResponse": true,
@@ -34,17 +38,25 @@
   },
   {
     "id": "Effect.Champion.Ezreal.ArcaneShiftBoltHit",
-    "tags": ["Effect.Champion.Damage"],
+    "tags": [
+      "Effect.Champion.Damage"
+    ],
     "presetType": "InstantDamage",
     "lifetime": "Instant",
     "participatesInResponse": true,
     "modifiers": [
-      { "attribute": "Health", "op": "Add", "value": -14.0 }
+      {
+        "attribute": "Health",
+        "op": "Add",
+        "value": -14
+      }
     ]
   },
   {
     "id": "Effect.Champion.Ezreal.EssenceFlux",
-    "tags": ["Effect.Champion.Damage"],
+    "tags": [
+      "Effect.Champion.Damage"
+    ],
     "presetType": "LaunchProjectile",
     "lifetime": "Instant",
     "participatesInResponse": true,
@@ -64,34 +76,74 @@
   },
   {
     "id": "Effect.Champion.Ezreal.EssenceFluxHit",
-    "tags": ["Effect.Champion.Buff"],
+    "tags": [
+      "Effect.Champion.Buff"
+    ],
     "presetType": "Buff",
     "lifetime": "After",
     "participatesInResponse": false,
-    "duration": { "durationTicks": 240 },
-    "stack": { "limit": 1, "policy": "RefreshDuration", "overflowPolicy": "RejectNew" },
+    "duration": {
+      "durationTicks": 240,
+      "periodTicks": 0,
+      "clockId": "FixedFrame"
+    },
+    "stack": {
+      "limit": 1,
+      "policy": "RefreshDuration",
+      "overflowPolicy": "RejectNew"
+    },
     "grantedTags": [
-      { "tag": "State.Champion.Ezreal.WMark", "formula": "Fixed", "amount": 1 }
+      {
+        "tag": "State.Champion.Ezreal.WMark",
+        "formula": "Fixed",
+        "amount": 1
+      }
     ],
     "phaseListeners": [
-      { "phase": "OnApply", "scope": "Target", "action": "graph", "listenEffectId": "Effect.Champion.Ezreal.MysticShotHit", "graphProgram": "Graph.Champion.Ezreal.PopEssenceFlux" },
-      { "phase": "OnApply", "scope": "Target", "action": "graph", "listenEffectId": "Effect.Champion.Ezreal.ArcaneShiftBoltHit", "graphProgram": "Graph.Champion.Ezreal.PopEssenceFlux" },
-      { "phase": "OnApply", "scope": "Target", "action": "graph", "listenEffectId": "Effect.Champion.Ezreal.TrueshotBarrageHit", "graphProgram": "Graph.Champion.Ezreal.PopEssenceFlux" }
+      {
+        "phase": "OnApply",
+        "scope": "Target",
+        "action": "graph",
+        "listenEffectId": "Effect.Champion.Ezreal.MysticShotHit",
+        "graphProgram": "Graph.Champion.Ezreal.PopEssenceFlux"
+      },
+      {
+        "phase": "OnApply",
+        "scope": "Target",
+        "action": "graph",
+        "listenEffectId": "Effect.Champion.Ezreal.ArcaneShiftBoltHit",
+        "graphProgram": "Graph.Champion.Ezreal.PopEssenceFlux"
+      },
+      {
+        "phase": "OnApply",
+        "scope": "Target",
+        "action": "graph",
+        "listenEffectId": "Effect.Champion.Ezreal.TrueshotBarrageHit",
+        "graphProgram": "Graph.Champion.Ezreal.PopEssenceFlux"
+      }
     ]
   },
   {
     "id": "Effect.Champion.Ezreal.EssenceFluxPop",
-    "tags": ["Effect.Champion.Damage"],
+    "tags": [
+      "Effect.Champion.Damage"
+    ],
     "presetType": "InstantDamage",
     "lifetime": "Instant",
     "participatesInResponse": true,
     "modifiers": [
-      { "attribute": "Health", "op": "Add", "value": -12.0 }
+      {
+        "attribute": "Health",
+        "op": "Add",
+        "value": -12
+      }
     ]
   },
   {
     "id": "Effect.Champion.Ezreal.MysticShot",
-    "tags": ["Effect.Champion.Damage"],
+    "tags": [
+      "Effect.Champion.Damage"
+    ],
     "presetType": "LaunchProjectile",
     "lifetime": "Instant",
     "participatesInResponse": true,
@@ -111,17 +163,25 @@
   },
   {
     "id": "Effect.Champion.Ezreal.MysticShotHit",
-    "tags": ["Effect.Champion.Damage"],
+    "tags": [
+      "Effect.Champion.Damage"
+    ],
     "presetType": "InstantDamage",
     "lifetime": "Instant",
     "participatesInResponse": true,
     "modifiers": [
-      { "attribute": "Health", "op": "Add", "value": -15.0 }
+      {
+        "attribute": "Health",
+        "op": "Add",
+        "value": -15
+      }
     ]
   },
   {
     "id": "Effect.Champion.Ezreal.TrueshotBarrage",
-    "tags": ["Effect.Champion.Damage"],
+    "tags": [
+      "Effect.Champion.Damage"
+    ],
     "presetType": "LaunchProjectile",
     "lifetime": "Instant",
     "participatesInResponse": true,
@@ -141,80 +201,148 @@
   },
   {
     "id": "Effect.Champion.Ezreal.TrueshotBarrageHit",
-    "tags": ["Effect.Champion.Damage"],
+    "tags": [
+      "Effect.Champion.Damage"
+    ],
     "presetType": "InstantDamage",
     "lifetime": "Instant",
     "participatesInResponse": true,
     "modifiers": [
-      { "attribute": "Health", "op": "Add", "value": -24.0 }
+      {
+        "attribute": "Health",
+        "op": "Add",
+        "value": -24
+      }
     ]
   },
   {
     "id": "Effect.Champion.Garen.CourageAura",
-    "tags": ["Effect.Champion.Toggle"],
+    "tags": [
+      "Effect.Champion.Toggle"
+    ],
     "presetType": "Buff",
     "lifetime": "Infinite",
     "participatesInResponse": false,
     "modifiers": [
-      { "attribute": "Shield", "op": "Add", "value": 28.0 },
-      { "attribute": "Armor", "op": "Add", "value": 12.0 }
+      {
+        "attribute": "Shield",
+        "op": "Add",
+        "value": 28
+      },
+      {
+        "attribute": "Armor",
+        "op": "Add",
+        "value": 12
+      }
     ],
-    "expireCondition": { "kind": "TagPresent", "tag": "State.Champion.Garen.Courage" }
+    "expireCondition": {
+      "kind": "TagPresent",
+      "tag": "State.Champion.Garen.Courage"
+    }
   },
   {
     "id": "Effect.Champion.Garen.DecisiveStrike",
-    "tags": ["Effect.Champion.Buff"],
+    "tags": [
+      "Effect.Champion.Buff"
+    ],
     "presetType": "Buff",
     "lifetime": "After",
     "participatesInResponse": false,
-    "duration": { "durationTicks": 72 },
+    "duration": {
+      "durationTicks": 72,
+      "periodTicks": 0,
+      "clockId": "FixedFrame"
+    },
     "modifiers": [
-      { "attribute": "MoveSpeed", "op": "Add", "value": 55.0 }
+      {
+        "attribute": "MoveSpeed",
+        "op": "Add",
+        "value": 55
+      }
     ]
   },
   {
     "id": "Effect.Champion.Garen.Judgment",
-    "tags": ["Effect.Champion.Damage"],
+    "tags": [
+      "Effect.Champion.Damage"
+    ],
     "presetType": "Search",
     "lifetime": "Instant",
     "participatesInResponse": true,
-    "targetQuery": { "kind": "BuiltinSpatial", "shape": "Circle", "radius": 260 },
-    "targetFilter": { "relationFilter": "Hostile", "excludeSource": true, "maxTargets": 12 },
-    "targetDispatch": { "payloadEffect": "Effect.Champion.Garen.JudgmentHit" }
+    "targetQuery": {
+      "kind": "BuiltinSpatial",
+      "shape": "Circle",
+      "radius": 260
+    },
+    "targetFilter": {
+      "relationFilter": "Hostile",
+      "excludeSource": true,
+      "maxTargets": 12
+    },
+    "targetDispatch": {
+      "payloadEffect": "Effect.Champion.Garen.JudgmentHit"
+    }
   },
   {
     "id": "Effect.Champion.Garen.JudgmentHit",
-    "tags": ["Effect.Champion.Damage"],
+    "tags": [
+      "Effect.Champion.Damage"
+    ],
     "presetType": "InstantDamage",
     "lifetime": "Instant",
     "participatesInResponse": true,
     "modifiers": [
-      { "attribute": "Health", "op": "Add", "value": -14.0 }
+      {
+        "attribute": "Health",
+        "op": "Add",
+        "value": -14
+      }
     ]
   },
   {
     "id": "Effect.Champion.Garen.DemacianJustice",
-    "tags": ["Effect.Champion.Damage"],
+    "tags": [
+      "Effect.Champion.Damage"
+    ],
     "presetType": "Search",
     "lifetime": "Instant",
     "participatesInResponse": true,
-    "targetQuery": { "kind": "BuiltinSpatial", "shape": "Circle", "radius": 150 },
-    "targetFilter": { "relationFilter": "Hostile", "excludeSource": true, "maxTargets": 6 },
-    "targetDispatch": { "payloadEffect": "Effect.Champion.Garen.DemacianJusticeHit" }
+    "targetQuery": {
+      "kind": "BuiltinSpatial",
+      "shape": "Circle",
+      "radius": 150
+    },
+    "targetFilter": {
+      "relationFilter": "Hostile",
+      "excludeSource": true,
+      "maxTargets": 6
+    },
+    "targetDispatch": {
+      "payloadEffect": "Effect.Champion.Garen.DemacianJusticeHit"
+    }
   },
   {
     "id": "Effect.Champion.Garen.DemacianJusticeHit",
-    "tags": ["Effect.Champion.Damage"],
+    "tags": [
+      "Effect.Champion.Damage"
+    ],
     "presetType": "InstantDamage",
     "lifetime": "Instant",
     "participatesInResponse": true,
     "modifiers": [
-      { "attribute": "Health", "op": "Add", "value": -26.0 }
+      {
+        "attribute": "Health",
+        "op": "Add",
+        "value": -26
+      }
     ]
   },
   {
     "id": "Effect.Champion.Geomancer.RunicBeacon",
-    "tags": ["Effect.Champion.Manifestation", "Effect.Champion.Summon"],
+    "tags": [
+      "Effect.Champion.Manifestation",
+      "Effect.Champion.Summon"
+    ],
     "presetType": "CreateUnit",
     "lifetime": "Instant",
     "participatesInResponse": false,
@@ -227,7 +355,10 @@
   },
   {
     "id": "Effect.Champion.Geomancer.RuneField",
-    "tags": ["Effect.Champion.Manifestation", "Effect.Champion.Zone"],
+    "tags": [
+      "Effect.Champion.Manifestation",
+      "Effect.Champion.Zone"
+    ],
     "presetType": "CreateUnit",
     "lifetime": "Instant",
     "participatesInResponse": false,
@@ -241,13 +372,16 @@
   },
   {
     "id": "Effect.Champion.Geomancer.RuneFieldPersistent",
-    "tags": ["Effect.Champion.Zone"],
+    "tags": [
+      "Effect.Champion.Zone"
+    ],
     "presetType": "PeriodicSearch",
     "lifetime": "After",
     "participatesInResponse": false,
     "duration": {
       "durationTicks": 120,
-      "periodTicks": 15
+      "periodTicks": 15,
+      "clockId": "FixedFrame"
     },
     "targetQuery": {
       "kind": "BuiltinSpatial",
@@ -265,17 +399,26 @@
   },
   {
     "id": "Effect.Champion.Geomancer.RuneFieldHit",
-    "tags": ["Effect.Champion.Damage"],
+    "tags": [
+      "Effect.Champion.Damage"
+    ],
     "presetType": "InstantDamage",
     "lifetime": "Instant",
     "participatesInResponse": true,
     "modifiers": [
-      { "attribute": "Health", "op": "Add", "value": -6.0 }
+      {
+        "attribute": "Health",
+        "op": "Add",
+        "value": -6
+      }
     ]
   },
   {
     "id": "Effect.Champion.Geomancer.StonePillar",
-    "tags": ["Effect.Champion.Manifestation", "Effect.Champion.Blocker"],
+    "tags": [
+      "Effect.Champion.Manifestation",
+      "Effect.Champion.Blocker"
+    ],
     "presetType": "CreateUnit",
     "lifetime": "Instant",
     "participatesInResponse": false,
@@ -288,49 +431,91 @@
   },
   {
     "id": "Effect.Champion.Geomancer.PrismaticBeam",
-    "tags": ["Effect.Champion.Damage", "Effect.Champion.Beam"],
+    "tags": [
+      "Effect.Champion.Damage",
+      "Effect.Champion.Beam"
+    ],
     "presetType": "Search",
     "lifetime": "Instant",
     "participatesInResponse": true,
-    "targetQuery": { "kind": "BuiltinSpatial", "shape": "Line", "length": 920, "halfWidth": 80 },
-    "targetFilter": { "relationFilter": "Hostile", "excludeSource": true, "maxTargets": 16 },
-    "targetDispatch": { "payloadEffect": "Effect.Champion.Geomancer.PrismaticBeamHit" }
+    "targetQuery": {
+      "kind": "BuiltinSpatial",
+      "shape": "Line",
+      "length": 920,
+      "halfWidth": 80
+    },
+    "targetFilter": {
+      "relationFilter": "Hostile",
+      "excludeSource": true,
+      "maxTargets": 16
+    },
+    "targetDispatch": {
+      "payloadEffect": "Effect.Champion.Geomancer.PrismaticBeamHit"
+    }
   },
   {
     "id": "Effect.Champion.Geomancer.PrismaticBeamHit",
-    "tags": ["Effect.Champion.Damage"],
+    "tags": [
+      "Effect.Champion.Damage"
+    ],
     "presetType": "InstantDamage",
     "lifetime": "Instant",
     "participatesInResponse": true,
     "modifiers": [
-      { "attribute": "Health", "op": "Add", "value": -20.0 }
+      {
+        "attribute": "Health",
+        "op": "Add",
+        "value": -20
+      }
     ]
   },
   {
     "id": "Effect.Champion.Jayce.Cannon.AccelerationGate",
-    "tags": ["Effect.Champion.Buff"],
+    "tags": [
+      "Effect.Champion.Buff"
+    ],
     "presetType": "Buff",
     "lifetime": "After",
     "participatesInResponse": false,
-    "duration": { "durationTicks": 90 },
+    "duration": {
+      "durationTicks": 90,
+      "periodTicks": 0,
+      "clockId": "FixedFrame"
+    },
     "modifiers": [
-      { "attribute": "MoveSpeed", "op": "Add", "value": 40.0 }
+      {
+        "attribute": "MoveSpeed",
+        "op": "Add",
+        "value": 40
+      }
     ]
   },
   {
     "id": "Effect.Champion.Jayce.Cannon.HyperCharge",
-    "tags": ["Effect.Champion.Buff"],
+    "tags": [
+      "Effect.Champion.Buff"
+    ],
     "presetType": "Buff",
     "lifetime": "After",
     "participatesInResponse": false,
-    "duration": { "durationTicks": 72 },
+    "duration": {
+      "durationTicks": 72,
+      "periodTicks": 0,
+      "clockId": "FixedFrame"
+    },
     "modifiers": [
-      { "attribute": "MoveSpeed", "op": "Add", "value": 25.0 }
+      {
+        "attribute": "MoveSpeed",
+        "op": "Add",
+        "value": 25
+      }
     ]
   },
   {
     "id": "Effect.Champion.Jayce.Cannon.ShockBlast",
-    "tags": ["Effect.Champion.Damage"],
+    "tags": [
+      "Effect.Champion.Damage"
+    ],
     "presetType": "LaunchProjectile",
     "lifetime": "Instant",
     "participatesInResponse": true,
@@ -338,112 +523,208 @@
       "speed": 1900,
       "range": 880,
       "arcHeight": 0,
-      "impactEffect": "Effect.Champion.Jayce.Cannon.ShockBlastResolve"
+      "impactEffect": "Effect.Champion.Jayce.Cannon.ShockBlastResolve",
+      "collisionRelationFilter": "All"
     }
   },
   {
     "id": "Effect.Champion.Jayce.Cannon.ShockBlastResolve",
-    "tags": ["Effect.Champion.Damage"],
+    "tags": [
+      "Effect.Champion.Damage"
+    ],
     "presetType": "Search",
     "lifetime": "Instant",
     "participatesInResponse": true,
-    "targetQuery": { "kind": "BuiltinSpatial", "shape": "Line", "length": 880, "halfWidth": 90 },
-    "targetFilter": { "relationFilter": "Hostile", "excludeSource": true, "maxTargets": 12 },
-    "targetDispatch": { "payloadEffect": "Effect.Champion.Jayce.Cannon.ShockBlastHit" }
+    "targetQuery": {
+      "kind": "BuiltinSpatial",
+      "shape": "Line",
+      "length": 880,
+      "halfWidth": 90
+    },
+    "targetFilter": {
+      "relationFilter": "Hostile",
+      "excludeSource": true,
+      "maxTargets": 12
+    },
+    "targetDispatch": {
+      "payloadEffect": "Effect.Champion.Jayce.Cannon.ShockBlastHit"
+    }
   },
   {
     "id": "Effect.Champion.Jayce.Cannon.ShockBlastHit",
-    "tags": ["Effect.Champion.Damage"],
+    "tags": [
+      "Effect.Champion.Damage"
+    ],
     "presetType": "InstantDamage",
     "lifetime": "Instant",
     "participatesInResponse": true,
     "modifiers": [
-      { "attribute": "Health", "op": "Add", "value": -17.0 }
+      {
+        "attribute": "Health",
+        "op": "Add",
+        "value": -17
+      }
     ]
   },
   {
     "id": "Effect.Champion.Jayce.Hammer.LightningField",
-    "tags": ["Effect.Champion.Damage"],
+    "tags": [
+      "Effect.Champion.Damage"
+    ],
     "presetType": "Search",
     "lifetime": "Instant",
     "participatesInResponse": true,
-    "targetQuery": { "kind": "BuiltinSpatial", "shape": "Ring", "radius": 280, "innerRadius": 90 },
-    "targetFilter": { "relationFilter": "Hostile", "excludeSource": true, "maxTargets": 12 },
-    "targetDispatch": { "payloadEffect": "Effect.Champion.Jayce.Hammer.LightningFieldHit" }
+    "targetQuery": {
+      "kind": "BuiltinSpatial",
+      "shape": "Ring",
+      "radius": 280,
+      "innerRadius": 90
+    },
+    "targetFilter": {
+      "relationFilter": "Hostile",
+      "excludeSource": true,
+      "maxTargets": 12
+    },
+    "targetDispatch": {
+      "payloadEffect": "Effect.Champion.Jayce.Hammer.LightningFieldHit"
+    }
   },
   {
     "id": "Effect.Champion.Jayce.Hammer.LightningFieldHit",
-    "tags": ["Effect.Champion.Damage"],
+    "tags": [
+      "Effect.Champion.Damage"
+    ],
     "presetType": "InstantDamage",
     "lifetime": "Instant",
     "participatesInResponse": true,
     "modifiers": [
-      { "attribute": "Health", "op": "Add", "value": -13.0 }
+      {
+        "attribute": "Health",
+        "op": "Add",
+        "value": -13
+      }
     ]
   },
   {
     "id": "Effect.Champion.Jayce.Hammer.ThunderingBlow",
-    "tags": ["Effect.Champion.Damage"],
+    "tags": [
+      "Effect.Champion.Damage"
+    ],
     "presetType": "Search",
     "lifetime": "Instant",
     "participatesInResponse": true,
-    "targetQuery": { "kind": "BuiltinSpatial", "shape": "Cone", "radius": 300, "halfAngle": 40 },
-    "targetFilter": { "relationFilter": "Hostile", "excludeSource": true, "maxTargets": 10 },
-    "targetDispatch": { "payloadEffect": "Effect.Champion.Jayce.Hammer.ThunderingBlowHit" }
+    "targetQuery": {
+      "kind": "BuiltinSpatial",
+      "shape": "Cone",
+      "radius": 300,
+      "halfAngle": 40
+    },
+    "targetFilter": {
+      "relationFilter": "Hostile",
+      "excludeSource": true,
+      "maxTargets": 10
+    },
+    "targetDispatch": {
+      "payloadEffect": "Effect.Champion.Jayce.Hammer.ThunderingBlowHit"
+    }
   },
   {
     "id": "Effect.Champion.Jayce.Hammer.ThunderingBlowHit",
-    "tags": ["Effect.Champion.Damage"],
+    "tags": [
+      "Effect.Champion.Damage"
+    ],
     "presetType": "InstantDamage",
     "lifetime": "Instant",
     "participatesInResponse": true,
     "modifiers": [
-      { "attribute": "Health", "op": "Add", "value": -15.0 }
+      {
+        "attribute": "Health",
+        "op": "Add",
+        "value": -15
+      }
     ]
   },
   {
     "id": "Effect.Champion.Jayce.Hammer.ToTheSkies",
-    "tags": ["Effect.Champion.Damage"],
+    "tags": [
+      "Effect.Champion.Damage"
+    ],
     "presetType": "Search",
     "lifetime": "Instant",
     "participatesInResponse": true,
-    "targetQuery": { "kind": "BuiltinSpatial", "shape": "Circle", "radius": 170 },
-    "targetFilter": { "relationFilter": "Hostile", "excludeSource": true, "maxTargets": 10 },
-    "targetDispatch": { "payloadEffect": "Effect.Champion.Jayce.Hammer.ToTheSkiesHit" }
+    "targetQuery": {
+      "kind": "BuiltinSpatial",
+      "shape": "Circle",
+      "radius": 170
+    },
+    "targetFilter": {
+      "relationFilter": "Hostile",
+      "excludeSource": true,
+      "maxTargets": 10
+    },
+    "targetDispatch": {
+      "payloadEffect": "Effect.Champion.Jayce.Hammer.ToTheSkiesHit"
+    }
   },
   {
     "id": "Effect.Champion.Jayce.Hammer.ToTheSkiesHit",
-    "tags": ["Effect.Champion.Damage"],
+    "tags": [
+      "Effect.Champion.Damage"
+    ],
     "presetType": "InstantDamage",
     "lifetime": "Instant",
     "participatesInResponse": true,
     "modifiers": [
-      { "attribute": "Health", "op": "Add", "value": -19.0 }
+      {
+        "attribute": "Health",
+        "op": "Add",
+        "value": -19
+      }
     ]
   },
   {
     "id": "Effect.ChampionStress.Warrior.Cleave",
-    "tags": ["Effect.ChampionStress.Damage"],
+    "tags": [
+      "Effect.ChampionStress.Damage"
+    ],
     "presetType": "Search",
     "lifetime": "Instant",
     "participatesInResponse": true,
-    "targetQuery": { "kind": "BuiltinSpatial", "shape": "Circle", "radius": 180 },
-    "targetFilter": { "relationFilter": "Hostile", "excludeSource": true, "maxTargets": 4 },
-    "targetDispatch": { "payloadEffect": "Effect.ChampionStress.Warrior.CleaveHit" }
+    "targetQuery": {
+      "kind": "BuiltinSpatial",
+      "shape": "Circle",
+      "radius": 180
+    },
+    "targetFilter": {
+      "relationFilter": "Hostile",
+      "excludeSource": true,
+      "maxTargets": 4
+    },
+    "targetDispatch": {
+      "payloadEffect": "Effect.ChampionStress.Warrior.CleaveHit"
+    }
   },
   {
     "id": "Effect.ChampionStress.Warrior.CleaveHit",
-    "tags": ["Effect.ChampionStress.Damage"],
+    "tags": [
+      "Effect.ChampionStress.Damage"
+    ],
     "presetType": "InstantDamage",
     "lifetime": "Instant",
     "participatesInResponse": true,
     "modifiers": [
-      { "attribute": "Health", "op": "Add", "value": -8.0 }
+      {
+        "attribute": "Health",
+        "op": "Add",
+        "value": -8
+      }
     ]
   },
   {
     "id": "Effect.ChampionStress.FireMage.Fireball",
-    "tags": ["Effect.ChampionStress.Damage"],
+    "tags": [
+      "Effect.ChampionStress.Damage"
+    ],
     "presetType": "LaunchProjectile",
     "lifetime": "Instant",
     "participatesInResponse": true,
@@ -451,32 +732,53 @@
       "speed": 1300,
       "range": 1400,
       "arcHeight": 0,
-      "impactEffect": "Effect.ChampionStress.FireMage.FireballResolve"
+      "impactEffect": "Effect.ChampionStress.FireMage.FireballResolve",
+      "collisionRelationFilter": "All"
     }
   },
   {
     "id": "Effect.ChampionStress.FireMage.FireballResolve",
-    "tags": ["Effect.ChampionStress.Damage"],
+    "tags": [
+      "Effect.ChampionStress.Damage"
+    ],
     "presetType": "Search",
     "lifetime": "Instant",
     "participatesInResponse": true,
-    "targetQuery": { "kind": "BuiltinSpatial", "shape": "Circle", "radius": 180 },
-    "targetFilter": { "relationFilter": "Hostile", "excludeSource": true, "maxTargets": 16 },
-    "targetDispatch": { "payloadEffect": "Effect.ChampionStress.FireMage.FireballHit" }
+    "targetQuery": {
+      "kind": "BuiltinSpatial",
+      "shape": "Circle",
+      "radius": 180
+    },
+    "targetFilter": {
+      "relationFilter": "Hostile",
+      "excludeSource": true,
+      "maxTargets": 16
+    },
+    "targetDispatch": {
+      "payloadEffect": "Effect.ChampionStress.FireMage.FireballHit"
+    }
   },
   {
     "id": "Effect.ChampionStress.FireMage.FireballHit",
-    "tags": ["Effect.ChampionStress.Damage"],
+    "tags": [
+      "Effect.ChampionStress.Damage"
+    ],
     "presetType": "InstantDamage",
     "lifetime": "Instant",
     "participatesInResponse": true,
     "modifiers": [
-      { "attribute": "Health", "op": "Add", "value": -12.0 }
+      {
+        "attribute": "Health",
+        "op": "Add",
+        "value": -12
+      }
     ]
   },
   {
     "id": "Effect.ChampionStress.LaserMage.Laser",
-    "tags": ["Effect.ChampionStress.Damage"],
+    "tags": [
+      "Effect.ChampionStress.Damage"
+    ],
     "presetType": "LaunchProjectile",
     "lifetime": "Instant",
     "participatesInResponse": true,
@@ -484,42 +786,70 @@
       "speed": 2600,
       "range": 1500,
       "arcHeight": 0,
-      "impactEffect": "Effect.ChampionStress.LaserMage.LaserResolve"
+      "impactEffect": "Effect.ChampionStress.LaserMage.LaserResolve",
+      "collisionRelationFilter": "All"
     }
   },
   {
     "id": "Effect.ChampionStress.LaserMage.LaserResolve",
-    "tags": ["Effect.ChampionStress.Damage"],
+    "tags": [
+      "Effect.ChampionStress.Damage"
+    ],
     "presetType": "Search",
     "lifetime": "Instant",
     "participatesInResponse": true,
-    "targetQuery": { "kind": "BuiltinSpatial", "shape": "Circle", "radius": 110 },
-    "targetFilter": { "relationFilter": "Hostile", "excludeSource": true, "maxTargets": 4 },
-    "targetDispatch": { "payloadEffect": "Effect.ChampionStress.LaserMage.LaserHit" }
+    "targetQuery": {
+      "kind": "BuiltinSpatial",
+      "shape": "Circle",
+      "radius": 110
+    },
+    "targetFilter": {
+      "relationFilter": "Hostile",
+      "excludeSource": true,
+      "maxTargets": 4
+    },
+    "targetDispatch": {
+      "payloadEffect": "Effect.ChampionStress.LaserMage.LaserHit"
+    }
   },
   {
     "id": "Effect.ChampionStress.LaserMage.LaserHit",
-    "tags": ["Effect.ChampionStress.Damage"],
+    "tags": [
+      "Effect.ChampionStress.Damage"
+    ],
     "presetType": "InstantDamage",
     "lifetime": "Instant",
     "participatesInResponse": true,
     "modifiers": [
-      { "attribute": "Health", "op": "Add", "value": -10.0 }
+      {
+        "attribute": "Health",
+        "op": "Add",
+        "value": -10
+      }
     ]
   },
   {
     "id": "Effect.ChampionStress.Priest.Heal",
-    "tags": ["Effect.ChampionStress.Heal"],
+    "tags": [
+      "Effect.ChampionStress.Heal"
+    ],
     "presetType": "Heal",
     "lifetime": "Instant",
     "participatesInResponse": true,
     "modifiers": [
-      { "attribute": "Health", "op": "Add", "value": 9.0 }
+      {
+        "attribute": "Health",
+        "op": "Add",
+        "value": 9
+      }
     ]
   },
   {
     "id": "Effect.Champion.SpellEngineer.SpellBeacon",
-    "tags": ["Effect.Champion.Manifestation", "Effect.Champion.Summon"],
+    "tags": [
+      "Effect.Champion.Manifestation",
+      "Effect.Champion.Summon"
+    ],
     "presetType": "CreateUnit",
     "lifetime": "Instant",
     "participatesInResponse": false,
@@ -532,7 +862,10 @@
   },
   {
     "id": "Effect.Champion.SpellEngineer.GravityWell",
-    "tags": ["Effect.Champion.Manifestation", "Effect.Champion.Zone"],
+    "tags": [
+      "Effect.Champion.Manifestation",
+      "Effect.Champion.Zone"
+    ],
     "presetType": "CreateUnit",
     "lifetime": "Instant",
     "participatesInResponse": false,
@@ -546,13 +879,16 @@
   },
   {
     "id": "Effect.Champion.SpellEngineer.GravityWellPersistent",
-    "tags": ["Effect.Champion.Zone"],
+    "tags": [
+      "Effect.Champion.Zone"
+    ],
     "presetType": "PeriodicSearch",
     "lifetime": "After",
     "participatesInResponse": false,
     "duration": {
       "durationTicks": 135,
-      "periodTicks": 15
+      "periodTicks": 15,
+      "clockId": "FixedFrame"
     },
     "targetQuery": {
       "kind": "BuiltinSpatial",
@@ -570,17 +906,26 @@
   },
   {
     "id": "Effect.Champion.SpellEngineer.GravityWellHit",
-    "tags": ["Effect.Champion.Damage"],
+    "tags": [
+      "Effect.Champion.Damage"
+    ],
     "presetType": "InstantDamage",
     "lifetime": "Instant",
     "participatesInResponse": true,
     "modifiers": [
-      { "attribute": "Health", "op": "Add", "value": -8.0 }
+      {
+        "attribute": "Health",
+        "op": "Add",
+        "value": -8
+      }
     ]
   },
   {
     "id": "Effect.Champion.SpellEngineer.CataclysmRing",
-    "tags": ["Effect.Champion.Manifestation", "Effect.Champion.Blocker"],
+    "tags": [
+      "Effect.Champion.Manifestation",
+      "Effect.Champion.Blocker"
+    ],
     "presetType": "CreateUnit",
     "lifetime": "Instant",
     "participatesInResponse": false,
@@ -597,7 +942,10 @@
   },
   {
     "id": "Effect.Champion.SpellEngineer.GuidedLaser",
-    "tags": ["Effect.Champion.Manifestation", "Effect.Champion.Beam"],
+    "tags": [
+      "Effect.Champion.Manifestation",
+      "Effect.Champion.Beam"
+    ],
     "presetType": "CreateUnit",
     "lifetime": "Instant",
     "participatesInResponse": false,
@@ -611,13 +959,16 @@
   },
   {
     "id": "Effect.Champion.SpellEngineer.GuidedLaserPersistent",
-    "tags": ["Effect.Champion.Beam"],
+    "tags": [
+      "Effect.Champion.Beam"
+    ],
     "presetType": "PeriodicSearch",
     "lifetime": "After",
     "participatesInResponse": false,
     "duration": {
       "durationTicks": 1800,
-      "periodTicks": 4
+      "periodTicks": 4,
+      "clockId": "FixedFrame"
     },
     "targetQuery": {
       "kind": "BuiltinSpatial",
@@ -636,12 +987,18 @@
   },
   {
     "id": "Effect.Champion.SpellEngineer.GuidedLaserHit",
-    "tags": ["Effect.Champion.Damage"],
+    "tags": [
+      "Effect.Champion.Damage"
+    ],
     "presetType": "InstantDamage",
     "lifetime": "Instant",
     "participatesInResponse": true,
     "modifiers": [
-      { "attribute": "Health", "op": "Add", "value": -5.0 }
+      {
+        "attribute": "Health",
+        "op": "Add",
+        "value": -5
+      }
     ]
   }
 ]

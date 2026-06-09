@@ -3,7 +3,7 @@
     "id": "ux.structure.city",
     "behaviors": [
       {
-        "slot": 0,
+        "slot": "body",
         "kind": "AssetBinding",
         "activeByDefault": true,
         "assetBinding": {
@@ -25,7 +25,7 @@
     "id": "ux.structure.barracks",
     "behaviors": [
       {
-        "slot": 0,
+        "slot": "body",
         "kind": "AssetBinding",
         "activeByDefault": true,
         "assetBinding": {
@@ -47,7 +47,7 @@
     "id": "ux.structure.stable",
     "behaviors": [
       {
-        "slot": 0,
+        "slot": "body",
         "kind": "AssetBinding",
         "activeByDefault": true,
         "assetBinding": {
@@ -69,7 +69,7 @@
     "id": "ux.structure.workshop",
     "behaviors": [
       {
-        "slot": 0,
+        "slot": "body",
         "kind": "AssetBinding",
         "activeByDefault": true,
         "assetBinding": {
@@ -91,7 +91,7 @@
     "id": "ux.structure.farm",
     "behaviors": [
       {
-        "slot": 0,
+        "slot": "body",
         "kind": "AssetBinding",
         "activeByDefault": true,
         "assetBinding": {
@@ -113,7 +113,7 @@
     "id": "ux.structure.mine",
     "behaviors": [
       {
-        "slot": 0,
+        "slot": "body",
         "kind": "AssetBinding",
         "activeByDefault": true,
         "assetBinding": {
@@ -135,7 +135,7 @@
     "id": "ux.structure.tower",
     "behaviors": [
       {
-        "slot": 0,
+        "slot": "body",
         "kind": "AssetBinding",
         "activeByDefault": true,
         "assetBinding": {
@@ -145,9 +145,9 @@
           "renderPath": "StaticMesh",
           "mobility": "Static",
           "localScale": [
-            3.0,
-            3.0,
-            3.0
+            3,
+            3,
+            3
           ]
         }
       }
@@ -157,7 +157,7 @@
     "id": "ux.structure.watchtower",
     "behaviors": [
       {
-        "slot": 0,
+        "slot": "body",
         "kind": "AssetBinding",
         "activeByDefault": true,
         "assetBinding": {
@@ -167,9 +167,9 @@
           "renderPath": "StaticMesh",
           "mobility": "Static",
           "localScale": [
-            3.0,
-            3.0,
-            3.0
+            3,
+            3,
+            3
           ]
         }
       }
@@ -179,7 +179,7 @@
     "id": "ux.structure.fort",
     "behaviors": [
       {
-        "slot": 0,
+        "slot": "body",
         "kind": "AssetBinding",
         "activeByDefault": true,
         "assetBinding": {
@@ -201,7 +201,7 @@
     "id": "ux.unit.worker",
     "behaviors": [
       {
-        "slot": 0,
+        "slot": "body",
         "kind": "AssetBinding",
         "activeByDefault": true,
         "assetBinding": {
@@ -223,7 +223,7 @@
     "id": "ux.unit.soldier",
     "behaviors": [
       {
-        "slot": 0,
+        "slot": "body",
         "kind": "AssetBinding",
         "activeByDefault": true,
         "assetBinding": {
@@ -245,7 +245,7 @@
     "id": "ux.unit.archer",
     "behaviors": [
       {
-        "slot": 0,
+        "slot": "body",
         "kind": "AssetBinding",
         "activeByDefault": true,
         "assetBinding": {
@@ -267,7 +267,7 @@
     "id": "ux.unit.mage",
     "behaviors": [
       {
-        "slot": 0,
+        "slot": "body",
         "kind": "AssetBinding",
         "activeByDefault": true,
         "assetBinding": {
@@ -289,7 +289,7 @@
     "id": "ux.unit.medic",
     "behaviors": [
       {
-        "slot": 0,
+        "slot": "body",
         "kind": "AssetBinding",
         "activeByDefault": true,
         "assetBinding": {
@@ -311,7 +311,7 @@
     "id": "ux.unit.heavy_cavalry",
     "behaviors": [
       {
-        "slot": 0,
+        "slot": "body",
         "kind": "AssetBinding",
         "activeByDefault": true,
         "assetBinding": {
@@ -333,7 +333,7 @@
     "id": "ux.unit.horse_archer",
     "behaviors": [
       {
-        "slot": 0,
+        "slot": "body",
         "kind": "AssetBinding",
         "activeByDefault": true,
         "assetBinding": {
@@ -355,7 +355,7 @@
     "id": "ux.unit.ram",
     "behaviors": [
       {
-        "slot": 0,
+        "slot": "body",
         "kind": "AssetBinding",
         "activeByDefault": true,
         "assetBinding": {
@@ -377,7 +377,7 @@
     "id": "ux.unit.catapult",
     "behaviors": [
       {
-        "slot": 0,
+        "slot": "body",
         "kind": "AssetBinding",
         "activeByDefault": true,
         "assetBinding": {
@@ -399,7 +399,7 @@
     "id": "ux.unit.well_column",
     "behaviors": [
       {
-        "slot": 0,
+        "slot": "body",
         "kind": "AssetBinding",
         "activeByDefault": true,
         "assetBinding": {
@@ -421,7 +421,7 @@
     "id": "ux.resource.deposit",
     "behaviors": [
       {
-        "slot": 0,
+        "slot": "body",
         "kind": "AssetBinding",
         "activeByDefault": true,
         "assetBinding": {
@@ -443,7 +443,7 @@
     "id": "ux.unit.enemy_raider",
     "behaviors": [
       {
-        "slot": 0,
+        "slot": "body",
         "kind": "AssetBinding",
         "activeByDefault": true,
         "assetBinding": {

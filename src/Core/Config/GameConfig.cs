@@ -50,7 +50,7 @@ namespace Ludots.Core.Config
 
         public SelectionRuntimeConfig Selection { get; set; } = new SelectionRuntimeConfig();
 
-        public PresentationRuntimeConfig Presentation { get; set; } = new PresentationRuntimeConfig();
+        public PresentationRuntimeConfig Presentation { get; set; } = null!;
 
         public LogConfig Logging { get; set; } = new LogConfig();
 

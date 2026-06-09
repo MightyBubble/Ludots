@@ -70,7 +70,6 @@ public sealed class MassNavigationFormationRuntime
                 break;
 
             case MassNavigationFormationMode.Square:
-            default:
                 int cols = (int)Math.Ceiling(Math.Sqrt(count));
                 int rows = (int)Math.Ceiling(count / (double)cols);
                 float rowCenter = (rows - 1) * 0.5f;
@@ -85,6 +84,9 @@ public sealed class MassNavigationFormationRuntime
                     offsetY[i] = baseOffsetY[i];
                 }
                 break;
+
+            default:
+                throw new InvalidOperationException($"MassNavigation formation mode '{mode}' is not supported.");
         }
 
         if (MathF.Abs(rotationRadians) > _groupSemantics.FormationRotationEpsilonRadians)

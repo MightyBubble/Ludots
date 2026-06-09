@@ -9,10 +9,6 @@ internal enum MassFlowPairAvoidancePolicy : byte
 
 public sealed class MassFlowAvoidanceTuning
 {
-    public float LightNavMass { get; set; } = 1f;
-    public float HeavyNavMass { get; set; } = 4f;
-    public float LightVisualScale { get; set; } = 0.22f;
-    public float HeavyVisualScale { get; set; } = 0.34f;
     public float DominantMassRatio { get; set; } = 2.25f;
     public float FriendlyResponseScale { get; set; } = 1.1f;
     public float FriendlyResponseMin { get; set; } = 0.35f;
@@ -34,10 +30,6 @@ public sealed class MassFlowAvoidanceTuning
 
     public void Validate()
     {
-        RequirePositive(LightNavMass, nameof(LightNavMass));
-        RequirePositive(HeavyNavMass, nameof(HeavyNavMass));
-        RequirePositive(LightVisualScale, nameof(LightVisualScale));
-        RequirePositive(HeavyVisualScale, nameof(HeavyVisualScale));
         RequirePositive(DominantMassRatio, nameof(DominantMassRatio));
         RequirePositive(FriendlyResponseScale, nameof(FriendlyResponseScale));
         RequirePositive(NonFriendlyResponseScale, nameof(NonFriendlyResponseScale));

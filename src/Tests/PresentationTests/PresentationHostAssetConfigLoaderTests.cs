@@ -29,10 +29,11 @@ namespace Ludots.Tests.Presentation
                 """);
 
             var pipeline = BuildCorePipeline(root);
+            var catalog = BuildPresentationCatalog();
             var meshes = new MeshAssetRegistry();
 
             var ex = Assert.Throws<InvalidOperationException>(() =>
-                new MeshAssetConfigLoader(pipeline, meshes).Load());
+                new MeshAssetConfigLoader(pipeline, meshes).Load(catalog));
             Assert.That(ex!.Message, Does.Contain("Presentation/host_assets.json"));
         }
 
@@ -78,10 +79,11 @@ namespace Ludots.Tests.Presentation
                 """);
 
             var pipeline = BuildCorePipeline(root);
+            var catalog = BuildPresentationCatalog();
             var meshes = new MeshAssetRegistry();
-            new MeshAssetConfigLoader(pipeline, meshes).Load();
+            new MeshAssetConfigLoader(pipeline, meshes).Load(catalog);
 
-            new PresentationHostAssetConfigLoader(pipeline, meshes).Apply("raylib");
+            new PresentationHostAssetConfigLoader(pipeline, meshes).Apply("raylib", catalog);
 
             int modelId = meshes.GetId("test.model");
             Assert.That(meshes.TryGetDescriptor(modelId, out var model), Is.True);
@@ -119,12 +121,86 @@ namespace Ludots.Tests.Presentation
                 """);
 
             var pipeline = BuildCorePipeline(root);
+            var catalog = BuildPresentationCatalog();
             var meshes = new MeshAssetRegistry();
-            new MeshAssetConfigLoader(pipeline, meshes).Load();
+            new MeshAssetConfigLoader(pipeline, meshes).Load(catalog);
 
             var ex = Assert.Throws<InvalidOperationException>(() =>
-                new PresentationHostAssetConfigLoader(pipeline, meshes).Apply("raylib"));
+                new PresentationHostAssetConfigLoader(pipeline, meshes).Apply("raylib", catalog));
             Assert.That(ex!.Message, Does.Contain("unknown mesh asset 'missing.model'"));
+        }
+
+        [TestCase(
+            "{ \"id\": \"test.model.raylib\", \"assetId\": \"test.model\", \"backendId\": \"raylib\", \"sourceUris\": [ \"TestMod:assets/Models/test.glb\" ] }",
+            "assetKind")]
+        [TestCase(
+            "{ \"id\": \"test.model.raylib\", \"assetKind\": \"mesh\", \"assetId\": \"test.model\", \"backendId\": \"raylib\", \"sourceUris\": [ \"TestMod:assets/Models/test.glb\" ] }",
+            "unsupported assetKind 'mesh'")]
+        [TestCase(
+            "{ \"id\": \"test.model.raylib\", \"assetKind\": \"Mesh\", \"assetId\": \"test.model\", \"backendId\": \"raylib \", \"sourceUris\": [ \"TestMod:assets/Models/test.glb\" ] }",
+            "backendId")]
+        [TestCase(
+            "{ \"id\": \"test.model.raylib\", \"assetKind\": \"Mesh\", \"assetId\": \"test.model\", \"backendId\": \"raylib\", \"sourceUris\": [ \" TestMod:assets/Models/test.glb\" ] }",
+            "sourceUris[0]")]
+        public void Apply_WhenHostAssetSchemaIsNotCanonical_Throws(string hostAssetRowJson, string expectedMessage)
+        {
+            string root = CreateTempCoreRoot();
+            Directory.CreateDirectory(Path.Combine(root, "Configs", "Presentation"));
+            File.WriteAllText(
+                Path.Combine(root, "Configs", "Presentation", "mesh_assets.json"),
+                """
+                [
+                  { "id": "test.model", "type": "Model" }
+                ]
+                """);
+            File.WriteAllText(
+                Path.Combine(root, "Configs", "Presentation", "host_assets.json"),
+                $"[ {hostAssetRowJson} ]");
+
+            var pipeline = BuildCorePipeline(root);
+            var catalog = BuildPresentationCatalog();
+            var meshes = new MeshAssetRegistry();
+            new MeshAssetConfigLoader(pipeline, meshes).Load(catalog);
+
+            var ex = Assert.Throws<InvalidOperationException>(() =>
+                new PresentationHostAssetConfigLoader(pipeline, meshes).Apply("raylib", catalog));
+            Assert.That(ex!.Message, Does.Contain(expectedMessage));
+        }
+
+        [Test]
+        public void Apply_WhenRequestedBackendHasBoundaryWhitespace_Throws()
+        {
+            string root = CreateTempCoreRoot();
+            Directory.CreateDirectory(Path.Combine(root, "Configs", "Presentation"));
+            File.WriteAllText(
+                Path.Combine(root, "Configs", "Presentation", "mesh_assets.json"),
+                """
+                [
+                  { "id": "test.model", "type": "Model" }
+                ]
+                """);
+            File.WriteAllText(
+                Path.Combine(root, "Configs", "Presentation", "host_assets.json"),
+                """
+                [
+                  {
+                    "id": "test.model.raylib",
+                    "assetKind": "Mesh",
+                    "assetId": "test.model",
+                    "backendId": "raylib",
+                    "sourceUris": [ "TestMod:assets/Models/test.glb" ]
+                  }
+                ]
+                """);
+
+            var pipeline = BuildCorePipeline(root);
+            var catalog = BuildPresentationCatalog();
+            var meshes = new MeshAssetRegistry();
+            new MeshAssetConfigLoader(pipeline, meshes).Load(catalog);
+
+            Assert.That(
+                () => new PresentationHostAssetConfigLoader(pipeline, meshes).Apply("raylib ", catalog),
+                Throws.InvalidOperationException.With.Message.Contains("backendId"));
         }
 
         private static string CreateTempCoreRoot()
@@ -137,6 +213,14 @@ namespace Ludots.Tests.Presentation
             var vfs = new VirtualFileSystem();
             vfs.Mount("Core", coreRoot);
             return new ConfigPipeline(vfs, modLoader: null!);
+        }
+
+        private static ConfigCatalog BuildPresentationCatalog()
+        {
+            var catalog = new ConfigCatalog();
+            catalog.Add(new ConfigCatalogEntry("Presentation/mesh_assets.json", ConfigMergePolicy.ArrayById, "id"));
+            catalog.Add(new ConfigCatalogEntry("Presentation/host_assets.json", ConfigMergePolicy.ArrayById, "id"));
+            return catalog;
         }
     }
 }

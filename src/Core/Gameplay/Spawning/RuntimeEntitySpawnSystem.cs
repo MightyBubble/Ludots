@@ -434,21 +434,12 @@ namespace Ludots.Core.Gameplay.Spawning
 
         private static bool TemplateSatisfiesBootstrapCondition(EntityTemplate template, InlineConditionKind condition)
         {
-            if (condition == InlineConditionKind.None)
-            {
-                return true;
-            }
-
-            if (template?.Components == null)
-            {
-                return false;
-            }
-
             return condition switch
             {
+                InlineConditionKind.None => true,
                 InlineConditionKind.SourceHasVisualTransform => true,
-                InlineConditionKind.SourceHasAttributes => template.Components.ContainsKey("AttributeBuffer"),
-                _ => false,
+                InlineConditionKind.SourceHasAttributes => template.Components != null && template.Components.ContainsKey("AttributeBuffer"),
+                _ => throw new InvalidOperationException($"Unsupported performer bootstrap inline condition '{condition}'."),
             };
         }
 
@@ -1028,7 +1019,7 @@ namespace Ludots.Core.Gameplay.Spawning
                 InlineConditionKind.None => true,
                 InlineConditionKind.SourceHasVisualTransform => World.Has<VisualTransform>(owner),
                 InlineConditionKind.SourceHasAttributes => World.Has<AttributeBuffer>(owner),
-                _ => false,
+                _ => throw new InvalidOperationException($"Unsupported performer bootstrap inline condition '{rule.InlineCondition}'."),
             };
         }
 

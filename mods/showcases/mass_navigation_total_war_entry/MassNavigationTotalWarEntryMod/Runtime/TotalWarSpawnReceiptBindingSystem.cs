@@ -128,22 +128,16 @@ internal sealed class TotalWarSpawnReceiptBindingSystem : ISystem<float>
             throw new InvalidOperationException($"Total War showcase entity from template '{binding.TemplateId}' was already bound.");
         }
 
-        _engine.World.Add(entity, new Team { Id = binding.TeamId });
-        _engine.World.Add(entity, new MassNavigationAgentIndex { Value = binding.MassNavAgentIndex });
-        _engine.World.Add(entity, new MassNavigationAgentProfile
-        {
-            Heavy = binding.Heavy,
-            NavMass = binding.NavMass,
-            VisualScale = binding.VisualScale,
-            BodyRadiusCm = binding.BodyRadiusCm,
-            SpeedCmPerSecond = binding.SpeedCmPerSecond,
-        });
+        _simulation.BindSpawnedAgent(
+            _engine.World,
+            entity,
+            binding.MassNavAgentIndex,
+            controllable: false);
         _engine.World.Add(entity, new TotalWarFormationSoldier
         {
             FormationIndex = binding.FormationIndex,
             SlotIndex = binding.SlotIndex,
         });
-        _simulation.AgentState.RegisterAgentAtIndex(entity, binding.MassNavAgentIndex, controllable: false);
         _runtime.RegisterSpawnedSoldier(entity, in binding);
     }
 
@@ -155,6 +149,7 @@ internal sealed class TotalWarSpawnReceiptBindingSystem : ISystem<float>
         RequireComponent<SelectionSelectableTag>(entity, binding.TemplateId);
         RequireComponent<SelectionSelectableState>(entity, binding.TemplateId);
         RequireComponent<AttributeBuffer>(entity, binding.TemplateId);
+        RejectComponent<PlayerOwner>(entity, binding.TemplateId);
         RequireWorldPresentationComponents(entity, binding.TemplateId);
 
         if (_engine.World.Has<MassNavigationAgentIndex>(entity) ||
@@ -166,26 +161,20 @@ internal sealed class TotalWarSpawnReceiptBindingSystem : ISystem<float>
             throw new InvalidOperationException($"Total War showcase formation agent template '{binding.TemplateId}' was already bound.");
         }
 
-        UpsertComponent(_engine.World, entity, new Team { Id = binding.TeamId });
-        _engine.World.Add(entity, new MassNavigationAgentIndex { Value = binding.MassNavAgentIndex });
-        _engine.World.Add(entity, new MassNavigationAgentProfile
-        {
-            Heavy = binding.Heavy,
-            NavMass = binding.NavMass,
-            VisualScale = binding.VisualScale,
-            BodyRadiusCm = binding.BodyRadiusCm,
-            SpeedCmPerSecond = binding.SpeedCmPerSecond,
-        });
-        _simulation.AgentState.RegisterAgentAtIndex(entity, binding.MassNavAgentIndex, controllable: true);
+        _simulation.BindSpawnedAgent(
+            _engine.World,
+            entity,
+            binding.MassNavAgentIndex,
+            controllable: true);
         _runtime.RegisterSpawnedFormationAgent(_engine, entity, in binding);
     }
 
     private void BindObstacleOverlay(Entity entity, in TotalWarSpawnReceiptBinding binding)
     {
         RequireWorldPresentationComponents(entity, binding.TemplateId);
-        if (!_engine.World.Has<TotalWarObstacleOverlay>(entity))
+        if (_engine.World.Has<TotalWarObstacleOverlay>(entity))
         {
-            throw new InvalidOperationException($"Total War showcase template '{binding.TemplateId}' must author component {nameof(TotalWarObstacleOverlay)}.");
+            throw new InvalidOperationException($"Total War showcase template '{binding.TemplateId}' must not author component {nameof(TotalWarObstacleOverlay)}; obstacle overlay values come from TotalWarShowcaseConfig.");
         }
 
         TotalWarObstacleOverlay configured = _runtime.ActiveConfig.ObstacleOverlay.ToComponent(binding.ObstacleRadiusCm);

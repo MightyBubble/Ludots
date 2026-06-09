@@ -7,23 +7,29 @@ namespace Ludots.Core.Presentation.Performers
     {
         public static float ResolveFloat(World world, Entity performer, int paramKey, float defaultValue = 0f)
         {
+            return TryResolveFloat(world, performer, paramKey, out float value) ? value : defaultValue;
+        }
+
+        public static bool TryResolveFloat(World world, Entity performer, int paramKey, out float value)
+        {
             Entity current = performer;
             while (world.IsAlive(current))
             {
                 if (world.Has<PerformerFloatParams>(current))
                 {
                     ref var overrides = ref world.Get<PerformerFloatParams>(current);
-                    if (overrides.TryGet(paramKey, out float val)) return val;
+                    if (overrides.TryGet(paramKey, out value)) return true;
                 }
                 if (world.Has<PerformerFloatDefaults>(current))
                 {
                     ref var defaults = ref world.Get<PerformerFloatDefaults>(current);
-                    if (defaults.TryGet(paramKey, out float val)) return val;
+                    if (defaults.TryGet(paramKey, out value)) return true;
                 }
                 if (!world.Has<PerformerParent>(current)) break;
                 current = world.Get<PerformerParent>(current).Parent;
             }
-            return defaultValue;
+            value = default;
+            return false;
         }
 
         public static int ResolveInt(World world, Entity performer, int paramKey, int defaultValue = 0)
@@ -55,23 +61,29 @@ namespace Ludots.Core.Presentation.Performers
 
         public static Vector4 ResolveVector(World world, Entity performer, int paramKey, Vector4 defaultValue)
         {
+            return TryResolveVector(world, performer, paramKey, out Vector4 value) ? value : defaultValue;
+        }
+
+        public static bool TryResolveVector(World world, Entity performer, int paramKey, out Vector4 value)
+        {
             Entity current = performer;
             while (world.IsAlive(current))
             {
                 if (world.Has<PerformerVectorParams>(current))
                 {
                     ref var overrides = ref world.Get<PerformerVectorParams>(current);
-                    if (overrides.TryGet(paramKey, out Vector4 val)) return val;
+                    if (overrides.TryGet(paramKey, out value)) return true;
                 }
                 if (world.Has<PerformerVectorDefaults>(current))
                 {
                     ref var defaults = ref world.Get<PerformerVectorDefaults>(current);
-                    if (defaults.TryGet(paramKey, out Vector4 val)) return val;
+                    if (defaults.TryGet(paramKey, out value)) return true;
                 }
                 if (!world.Has<PerformerParent>(current)) break;
                 current = world.Get<PerformerParent>(current).Parent;
             }
-            return defaultValue;
+            value = default;
+            return false;
         }
     }
 }

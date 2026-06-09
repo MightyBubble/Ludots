@@ -123,7 +123,7 @@ namespace Ludots.Tests.Presentation
             var query = new QueryDescription().WithAll<Name>();
             engine.World.Query(in query, (Entity entity, ref Name name) =>
             {
-                if (string.Equals(name.Value, PerformerBlacksmithShowcaseIds.EntityName, StringComparison.OrdinalIgnoreCase))
+                if (string.Equals(name.Value, PerformerBlacksmithShowcaseIds.EntityName, StringComparison.Ordinal))
                 {
                     found = entity;
                 }
@@ -272,9 +272,9 @@ namespace Ludots.Tests.Presentation
             Assert.That(sounds.Count, Is.GreaterThanOrEqualTo(1), "Worker sound loop should emit when working.");
             Assert.That((engine.World.Get<PerformerState>(smokeEntity).BehaviorActiveMask & (1u << 0)) != 0u, Is.True, "Smoke asset binding slot should be active.");
             Assert.That((engine.World.Get<PerformerState>(workerEntity).BehaviorActiveMask & (1u << 0)) != 0u, Is.True, "Worker skinned mesh slot should be active.");
-            Assert.That((engine.World.Get<PerformerState>(workerEntity).BehaviorActiveMask & (1u << 1)) != 0u, Is.True, "Worker animator slot should be active.");
-            Assert.That((engine.World.Get<PerformerState>(workerEntity).BehaviorActiveMask & (1u << 2)) != 0u, Is.True, "Worker sound slot should be active.");
-            Assert.That((engine.World.Get<PerformerState>(workerEntity).BehaviorActiveMask & (1u << 3)) != 0u, Is.True, "Worker spline slot should be active.");
+            Assert.That((engine.World.Get<PerformerState>(workerEntity).BehaviorActiveMask & (1u << 4)) != 0u, Is.True, "Worker animator slot should be active.");
+            Assert.That((engine.World.Get<PerformerState>(workerEntity).BehaviorActiveMask & (1u << 6)) != 0u, Is.True, "Worker sound slot should be active.");
+            Assert.That((engine.World.Get<PerformerState>(workerEntity).BehaviorActiveMask & (1u << 7)) != 0u, Is.True, "Worker spline slot should be active.");
 
             SetWorkingTag(engine, building, active: false);
             PerformerBlacksmithShowcaseTestHarness.Tick(engine, 8);
@@ -282,7 +282,7 @@ namespace Ludots.Tests.Presentation
             Assert.That(CountVisiblePrimitivesByMesh(engine, smokeMeshId), Is.EqualTo(0), "Smoke should hide when working tag is removed.");
             Assert.That(CountVisibleSkinnedByMesh(engine, workerMeshId), Is.EqualTo(0), "Worker should hide when working tag is removed.");
             Assert.That((engine.World.Get<PerformerState>(smokeEntity).BehaviorActiveMask & (1u << 0)) == 0u, Is.True);
-            Assert.That((engine.World.Get<PerformerState>(workerEntity).BehaviorActiveMask & 0b1111u) == 0u, Is.True, "Worker behavior slots should all deactivate.");
+            Assert.That((engine.World.Get<PerformerState>(workerEntity).BehaviorActiveMask & ((1u << 0) | (1u << 4) | (1u << 6) | (1u << 7))) == 0u, Is.True, "Worker behavior slots should all deactivate.");
         }
 
         [Test]
@@ -378,6 +378,8 @@ namespace Ludots.Tests.Presentation
             Assert.That(runtime.GetActiveByOwnerDefinition(leftDefId, building).Count, Is.EqualTo(1));
             Assert.That(runtime.GetActiveByOwnerDefinition(rightDefId, building).Count, Is.EqualTo(1));
             var q = new QueryDescription().WithAll<PerformerState>();
+            int durabilityParamKey = PerformerBlacksmithShowcaseIds.ParamDurability;
+            int workshopAssetStateParamKey = PerformerBlacksmithShowcaseIds.ParamWorkshopAssetState;
             int damagedWorkshopParamCount = 0;
             string workshopParamSummary = string.Empty;
             engine.World.Query(in q, (Entity entity, ref PerformerState state) =>
@@ -386,10 +388,10 @@ namespace Ludots.Tests.Presentation
                 {
                     var ints = engine.World.Get<PerformerIntParams>(entity);
                     var floats = engine.World.Get<PerformerFloatParams>(entity);
-                    ints.TryGet(104, out int p104);
-                    floats.TryGet(101, out float p101);
-                    workshopParamSummary += $"def={state.DefId} p101={p101:0.###} p104={p104};";
-                    if (p104 == 2 && MathF.Abs(p101 - 0.5f) <= 0.001f)
+                    ints.TryGet(workshopAssetStateParamKey, out int assetState);
+                    floats.TryGet(durabilityParamKey, out float durabilityRatio);
+                    workshopParamSummary += $"def={state.DefId} durability={durabilityRatio:0.###} assetState={assetState};";
+                    if (assetState == 2 && MathF.Abs(durabilityRatio - 0.5f) <= 0.001f)
                     {
                         damagedWorkshopParamCount++;
                     }
@@ -493,7 +495,7 @@ namespace Ludots.Tests.Presentation
                 ref readonly BehaviorSlot slot = ref definition.Behaviors[i];
                 if (slot.Kind == BehaviorKind.AttributeBinding &&
                     slot.AttributeBinding.AttributeId == durabilityId &&
-                    slot.AttributeBinding.TargetParamKey == 101)
+                    slot.AttributeBinding.TargetParamKey == PerformerBlacksmithShowcaseIds.ParamDurability)
                 {
                     return true;
                 }

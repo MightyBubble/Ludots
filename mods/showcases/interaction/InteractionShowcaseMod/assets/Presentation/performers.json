@@ -15,44 +15,45 @@
     ],
     "bindings": [
       {
-        "paramKey": 1,
+        "paramKey": "groundOverlay.innerRadius",
         "source": "constant",
         "constantValue": 0.95
       },
       {
-        "paramKey": 8,
+        "paramKey": "groundOverlay.border.r",
         "source": "constant",
         "constantValue": 0.45
       },
       {
-        "paramKey": 9,
+        "paramKey": "groundOverlay.border.g",
         "source": "constant",
         "constantValue": 0.86
       },
       {
-        "paramKey": 10,
+        "paramKey": "groundOverlay.border.b",
         "source": "constant",
-        "constantValue": 1.0
+        "constantValue": 1
       },
       {
-        "paramKey": 11,
+        "paramKey": "groundOverlay.border.a",
         "source": "constant",
         "constantValue": 0.95
       },
       {
-        "paramKey": 12,
+        "paramKey": "groundOverlay.border.width",
         "source": "constant",
         "constantValue": 0.03
       }
     ],
     "behaviors": [
       {
-        "slot": 0,
+        "slot": "body",
         "kind": "AssetBinding",
         "activeByDefault": true,
         "assetBinding": {
           "assetKind": "GroundOverlay",
           "assetId": "Ring",
+          "renderPath": "None",
           "mobility": "Movable",
           "localScale": [
             1.3,
@@ -65,9 +66,16 @@
   },
   {
     "id": "interaction.character.hero_showcase",
+    "paramDefaults": [
+      {
+        "paramKey": "core.hero.locomotion.speed",
+        "lane": "Float",
+        "floatValue": 1
+      }
+    ],
     "behaviors": [
       {
-        "slot": 0,
+        "slot": "body",
         "kind": "AssetBinding",
         "activeByDefault": true,
         "assetBinding": {
@@ -84,14 +92,14 @@
         }
       },
       {
-        "slot": 1,
+        "slot": "animator",
         "kind": "Animator",
         "activeByDefault": true,
         "animator": {
           "animatorControllerId": "core.hero.locomotion",
           "animationProfileId": "core.hero.profile.locomotion",
-          "speedParamKey": 0,
-          "stateParamKey": -1
+          "speedParamKey": "core.hero.locomotion.speed",
+          "stateParamKey": "none"
         }
       }
     ],
@@ -246,7 +254,7 @@
     "id": "interaction.prop.dummy_showcase",
     "behaviors": [
       {
-        "slot": 0,
+        "slot": "body",
         "kind": "AssetBinding",
         "activeByDefault": true,
         "assetBinding": {

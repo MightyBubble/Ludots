@@ -488,7 +488,7 @@ namespace Ludots.Core.Systems
                 InlineConditionKind.None => true,
                 InlineConditionKind.SourceHasVisualTransform => _world.Has<VisualTransform>(owner),
                 InlineConditionKind.SourceHasAttributes => _world.Has<AttributeBuffer>(owner),
-                _ => false,
+                _ => throw new InvalidOperationException($"Unsupported performer bootstrap inline condition '{rule.InlineCondition}'."),
             };
         }
 

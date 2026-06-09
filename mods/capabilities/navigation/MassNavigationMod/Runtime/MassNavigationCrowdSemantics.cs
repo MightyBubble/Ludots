@@ -29,19 +29,14 @@ public sealed class MassNavigationCrowdSemantics
 
 public sealed class MassNavigationObstacleSemantics
 {
-    public float AgentBodyRadiusCm { get; set; } = 20f;
     public float HardResolveCandidateDistanceCm { get; set; } = 100f;
     public float SoftPushPaddingCm { get; set; } = 350f;
     public float SoftPushForceScale { get; set; } = 8f;
 
-    public float AgentBodyDiameterCm => AgentBodyRadiusCm * 2f;
-    public float AgentBodyDiameterSq => AgentBodyDiameterCm * AgentBodyDiameterCm;
-    public float ResolveHardBlockRadiusCm(float obstacleRadiusCm) => obstacleRadiusCm + AgentBodyRadiusCm;
     public float ResolveSoftPushRadiusCm(float obstacleRadiusCm) => obstacleRadiusCm + SoftPushPaddingCm;
 
     public void Validate()
     {
-        RequirePositive(AgentBodyRadiusCm, nameof(AgentBodyRadiusCm));
         RequirePositive(HardResolveCandidateDistanceCm, nameof(HardResolveCandidateDistanceCm));
         RequirePositive(SoftPushPaddingCm, nameof(SoftPushPaddingCm));
         RequirePositive(SoftPushForceScale, nameof(SoftPushForceScale));

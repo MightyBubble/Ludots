@@ -199,10 +199,10 @@ namespace Ludots.Core.Presentation.Hud
             if (stableId > 0 && !_stableIndexValid)
             {
                 EnsureStableIndex();
-                if (TryGetBarStableIndex(stableId, preferredIndex: -1, out int fallbackIndex))
+                if (TryGetBarStableIndex(stableId, preferredIndex: -1, out int resolvedIndex))
                 {
-                    _barProjectedBuildStamps[fallbackIndex] = _projectedBuildStamp;
-                    ref ScreenHudBarItem current = ref _bars[fallbackIndex];
+                    _barProjectedBuildStamps[resolvedIndex] = _projectedBuildStamp;
+                    ref ScreenHudBarItem current = ref _bars[resolvedIndex];
                     if (current.DirtySerial == dirtySerial)
                     {
                         if (current.ScreenX == screenX && current.ScreenY == screenY)
@@ -212,7 +212,7 @@ namespace Ludots.Core.Presentation.Hud
 
                         current.ScreenX = screenX;
                         current.ScreenY = screenY;
-                        AddPositionOnlyBar(fallbackIndex, in current);
+                        AddPositionOnlyBar(resolvedIndex, in current);
                         _flattenedDirty = true;
                         _bulkProjectedBuildChanged = _bulkProjectedBuildActive;
                         if (!_bulkProjectedBuildActive)
@@ -344,10 +344,10 @@ namespace Ludots.Core.Presentation.Hud
             if (stableId > 0 && !_stableIndexValid)
             {
                 EnsureStableIndex();
-                if (TryGetTextStableIndex(stableId, preferredIndex: -1, out int fallbackIndex))
+                if (TryGetTextStableIndex(stableId, preferredIndex: -1, out int resolvedIndex))
                 {
-                    _textProjectedBuildStamps[fallbackIndex] = _projectedBuildStamp;
-                    ref ScreenHudTextItem current = ref _texts[fallbackIndex];
+                    _textProjectedBuildStamps[resolvedIndex] = _projectedBuildStamp;
+                    ref ScreenHudTextItem current = ref _texts[resolvedIndex];
                     if (current.DirtySerial == dirtySerial)
                     {
                         if (current.ScreenX == screenX && current.ScreenY == screenY)
@@ -357,7 +357,7 @@ namespace Ludots.Core.Presentation.Hud
 
                         current.ScreenX = screenX;
                         current.ScreenY = screenY;
-                        AddPositionOnlyText(fallbackIndex, in current);
+                        AddPositionOnlyText(resolvedIndex, in current);
                         _flattenedDirty = true;
                         _bulkProjectedBuildChanged = _bulkProjectedBuildActive;
                         if (!_bulkProjectedBuildActive)

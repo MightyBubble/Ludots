@@ -1,98 +1,248 @@
 [
   {
     "id": "ref_base_definition",
-    "defaultColor": [1.0, 0.8, 0.2, 1.0],
-    "defaultLifetime": 5.0,
+    "defaultColor": [
+      1,
+      0.8,
+      0.2,
+      1
+    ],
+    "defaultLifetime": 5,
     "defaultFontSize": 18,
-    "positionOffset": [0, 1.5, 0],
+    "positionOffset": [
+      0,
+      1.5,
+      0
+    ],
     "positionYDriftPerSecond": 0.3,
     "alphaFadeOverLifetime": true,
-    "visibility": { "inline": "None" },
+    "visibility": {
+      "inline": "None"
+    },
     "behaviors": [
       {
-        "slot": 0, "kind": "AssetBinding", "activeByDefault": true,
-        "activationCondition": { "inline": "None", "graphProgramId": 0 },
+        "slot": "body",
+        "kind": "AssetBinding",
+        "activeByDefault": true,
+        "activationCondition": {
+          "inline": "None",
+          "graphProgramId": 0
+        },
         "assetBinding": {
-          "assetKind": "Mesh", "assetId": "ref_mesh_cube",
-          "renderPath": "StaticMesh", "mobility": "Static",
-          "localOffset": [0, 0, 0], "localRotation": [0, 0, 0, 1], "localScale": [1, 1, 1],
-          "scaleParamKey": 200, "colorParamKey": 201, "materialParamKey": 202,
-          "assetSwapParamKey": 203, "visibilityParamKey": 204
+          "assetKind": "Mesh",
+          "assetId": "ref_mesh_cube",
+          "renderPath": "StaticMesh",
+          "mobility": "Static",
+          "localOffset": [
+            0,
+            0,
+            0
+          ],
+          "localRotation": [
+            0,
+            0,
+            0,
+            1
+          ],
+          "localScale": [
+            1,
+            1,
+            1
+          ],
+          "scaleParamKey": "performer_schema_reference.asset.scale",
+          "colorParamKey": "performer_schema_reference.asset.color",
+          "materialParamKey": "performer_schema_reference.asset.material",
+          "assetSwapParamKey": "performer_schema_reference.asset.swap",
+          "assetSwapTable": [
+            {
+              "paramValue": 0,
+              "assetId": "cube"
+            },
+            {
+              "paramValue": 1,
+              "assetId": "sphere"
+            }
+          ],
+          "visibilityParamKey": "performer_schema_reference.asset.visibility"
         }
       },
       {
-        "slot": 1, "kind": "AttributeBinding", "activeByDefault": true,
+        "slot": "attribute",
+        "kind": "AttributeBinding",
+        "activeByDefault": true,
         "attributeBinding": {
-          "attributeName": "Health", "targetParamKey": 210, "mode": "AttributeRatio",
+          "attributeId": "Health",
+          "targetParamKey": "performer_schema_reference.attribute.health.ratio",
+          "mode": "AttributeRatio",
           "thresholds": [
-            { "threshold": 0.5, "outputParamKey": 211, "outputValue": 1.0 },
-            { "threshold": 0.0, "outputParamKey": 211, "outputValue": 2.0 }
+            {
+              "threshold": 0.5,
+              "outputParamKey": "performer_schema_reference.attribute.health.thresholdState",
+              "outputValue": 1
+            },
+            {
+              "threshold": 0,
+              "outputParamKey": "performer_schema_reference.attribute.health.thresholdState",
+              "outputValue": 2
+            }
           ]
         }
       },
       {
-        "slot": 2, "kind": "TagBinding", "activeByDefault": true,
-        "tagBinding": { "tagId": "Tag.Burning", "targetParamKey": 220, "invertLogic": false }
+        "slot": "tag",
+        "kind": "TagBinding",
+        "activeByDefault": true,
+        "tagBinding": {
+          "tagId": "Tag.Burning",
+          "targetParamKey": "performer_schema_reference.tag.burning.active",
+          "invertLogic": false
+        }
       },
       {
-        "slot": 3, "kind": "Animator", "activeByDefault": true,
+        "slot": "animator",
+        "kind": "Animator",
+        "activeByDefault": true,
         "animator": {
           "animatorControllerId": "ref_anim_ctrl",
           "animationProfileId": "ref_anim_profile",
-          "speedParamKey": 230, "stateParamKey": 231
+          "speedParamKey": "performer_schema_reference.animator.speed",
+          "stateParamKey": "performer_schema_reference.animator.state"
         }
       },
       {
-        "slot": 4, "kind": "Attachment", "activeByDefault": true,
+        "slot": "attachment",
+        "kind": "Attachment",
+        "activeByDefault": true,
         "attachment": {
-          "boneId": 1, "offset": [0, 0.5, 0],
-          "rotationOffset": [0, 0, 0, 1], "inheritScale": true
+          "boneId": 1,
+          "offset": [
+            0,
+            0.5,
+            0
+          ],
+          "rotationOffset": [
+            0,
+            0,
+            0,
+            1
+          ],
+          "inheritScale": true
         }
       },
       {
-        "slot": 5, "kind": "Sound", "activeByDefault": true,
+        "slot": "sound",
+        "kind": "Sound",
+        "activeByDefault": true,
         "sound": {
-          "soundAssetId": "ref_sound_hit", "loop": true,
-          "volume": 0.8, "volumeParamKey": 250
+          "soundAssetId": "ref_sound_hit",
+          "loop": true,
+          "volume": 0.8,
+          "volumeParamKey": "performer_schema_reference.sound.volume"
         }
       },
       {
-        "slot": 6, "kind": "Material", "activeByDefault": true,
+        "slot": "material",
+        "kind": "Material",
+        "activeByDefault": true,
         "material": {
-          "baseMaterialId": "ref_mat_stone", "materialSwapParamKey": 260,
+          "baseMaterialId": "ref_mat_stone",
+          "materialSwapParamKey": "performer_schema_reference.material.swapState",
           "swapTable": [
-            { "paramValue": 1.0, "materialId": "ref_mat_brick" },
-            { "paramValue": 2.0, "materialId": "ref_mat_wood" }
+            {
+              "paramValue": 1,
+              "materialId": "ref_mat_brick"
+            },
+            {
+              "paramValue": 2,
+              "materialId": "ref_mat_wood"
+            }
           ]
         }
       },
       {
-        "slot": 7, "kind": "Spline", "activeByDefault": true,
+        "slot": "spline",
+        "kind": "Spline",
+        "activeByDefault": true,
         "spline": {
-          "splineAssetId": "ref_spline_path", "usage": "Patrol",
-          "widthParamKey": 270, "colorParamKey": 271,
-          "speedParamKey": 272, "progressParamKey": 273,
-          "loop": true, "pingPong": false, "waypointEventId": 42
+          "splineAssetId": "ref_spline_path",
+          "usage": "Patrol",
+          "widthParamKey": "performer_schema_reference.spline.width",
+          "colorParamKey": "performer_schema_reference.spline.color",
+          "speedParamKey": "performer_schema_reference.spline.speed",
+          "progressParamKey": "performer_schema_reference.spline.progress",
+          "loop": true,
+          "pingPong": false,
+          "waypointEventId": 42
         }
       }
     ],
     "paramDefaults": [
-      { "paramKey": 200, "lane": "Float", "floatValue": 1.0 },
-      { "paramKey": 201, "lane": "Vector", "vectorValue": [1.0, 1.0, 1.0, 1.0] },
-      { "paramKey": 211, "lane": "Int", "intValue": 0 }
+      {
+        "paramKey": "performer_schema_reference.asset.scale",
+        "lane": "Float",
+        "floatValue": 1
+      },
+      {
+        "paramKey": "performer_schema_reference.asset.color",
+        "lane": "Vector",
+        "vectorValue": [
+          1,
+          1,
+          1,
+          1
+        ]
+      },
+      {
+        "paramKey": "performer_schema_reference.attribute.health.thresholdState",
+        "lane": "Int",
+        "intValue": 0
+      },
+      {
+        "paramKey": "performer_schema_reference.animator.speed",
+        "lane": "Float",
+        "floatValue": 1
+      }
     ],
     "bindings": [
-      { "paramKey": 210, "source": "attributeRatio", "attributeName": "Health" },
-      { "paramKey": 220, "source": "constant", "constantValue": 0.0 }
+      {
+        "paramKey": "performer_schema_reference.attribute.health.ratio",
+        "source": "attributeRatio",
+        "attributeId": "Health"
+      },
+      {
+        "paramKey": "performer_schema_reference.tag.burning.active",
+        "source": "constant",
+        "constantValue": 0
+      }
     ],
     "rules": [
       {
-        "event": { "kind": "TagEffectiveChanged", "keyId": "Tag.Working", "gained": true },
-        "command": { "kind": "SetParam", "paramKey": 260, "paramLane": "Float", "paramValue": 1.0 }
+        "event": {
+          "kind": "TagEffectiveChanged",
+          "keyId": "Tag.Working",
+          "gained": true
+        },
+        "command": {
+          "kind": "SetParam",
+          "paramKey": "performer_schema_reference.material.swapState",
+          "paramLane": "Float",
+          "valueSource": "Fixed",
+          "paramValue": 1
+        }
       },
       {
-        "event": { "kind": "TagEffectiveChanged", "keyId": "Tag.Working", "gained": false },
-        "command": { "kind": "SetParam", "paramKey": 260, "paramLane": "Float", "paramValue": 0.0 }
+        "event": {
+          "kind": "TagEffectiveChanged",
+          "keyId": "Tag.Working",
+          "gained": false
+        },
+        "command": {
+          "kind": "SetParam",
+          "paramKey": "performer_schema_reference.material.swapState",
+          "paramLane": "Float",
+          "valueSource": "Fixed",
+          "paramValue": 0
+        }
       }
     ]
   },
@@ -101,27 +251,57 @@
     "extends": "ref_base_definition",
     "behaviors": [
       {
-        "slot": 0, "kind": "AssetBinding", "activeByDefault": true,
+        "slot": "body",
+        "kind": "AssetBinding",
+        "activeByDefault": true,
         "assetBinding": {
-          "assetKind": "Mesh", "assetId": "ref_mesh_sphere",
-          "renderPath": "StaticMesh", "mobility": "Movable",
-          "localOffset": [2, 0, 0], "localScale": [0.5, 0.5, 0.5]
+          "assetKind": "Mesh",
+          "assetId": "ref_mesh_sphere",
+          "renderPath": "StaticMesh",
+          "mobility": "Movable",
+          "localOffset": [
+            2,
+            0,
+            0
+          ],
+          "localScale": [
+            0.5,
+            0.5,
+            0.5
+          ]
         }
       }
     ],
     "paramDefaults": [
-      { "paramKey": 200, "lane": "Float", "floatValue": 0.5 }
+      {
+        "paramKey": "performer_schema_reference.asset.scale",
+        "lane": "Float",
+        "floatValue": 0.5
+      }
     ]
   },
   {
     "id": "ref_skinned_mesh",
     "behaviors": [
       {
-        "slot": 0, "kind": "AssetBinding", "activeByDefault": true,
+        "slot": "body",
+        "kind": "AssetBinding",
+        "activeByDefault": true,
         "assetBinding": {
-          "assetKind": "SkinnedMesh", "assetId": "ref_knight",
-          "renderPath": "SkinnedMesh", "mobility": "Movable",
-          "localOffset": [0, 0, 0], "localScale": [1, 1, 1]
+          "assetKind": "SkinnedMesh",
+          "assetId": "ref_knight",
+          "renderPath": "SkinnedMesh",
+          "mobility": "Movable",
+          "localOffset": [
+            0,
+            0,
+            0
+          ],
+          "localScale": [
+            1,
+            1,
+            1
+          ]
         }
       }
     ]
@@ -130,10 +310,24 @@
     "id": "ref_decal",
     "behaviors": [
       {
-        "slot": 0, "kind": "AssetBinding", "activeByDefault": true,
+        "slot": "body",
+        "kind": "AssetBinding",
+        "activeByDefault": true,
         "assetBinding": {
-          "assetKind": "Decal", "assetId": "ref_decal_blood",
-          "mobility": "Static", "localOffset": [0, 0.01, 0], "localScale": [2, 2, 2]
+          "assetKind": "Decal",
+          "assetId": "ref_decal_blood",
+          "renderPath": "StaticMesh",
+          "mobility": "Static",
+          "localOffset": [
+            0,
+            0.01,
+            0
+          ],
+          "localScale": [
+            2,
+            2,
+            2
+          ]
         }
       }
     ]
@@ -142,10 +336,19 @@
     "id": "ref_vfx",
     "behaviors": [
       {
-        "slot": 0, "kind": "AssetBinding", "activeByDefault": true,
+        "slot": "body",
+        "kind": "AssetBinding",
+        "activeByDefault": true,
         "assetBinding": {
-          "assetKind": "VFX", "assetId": "ref_vfx_smoke",
-          "mobility": "Movable", "localOffset": [0, 3, 0]
+          "assetKind": "VFX",
+          "assetId": "ref_vfx_smoke",
+          "renderPath": "StaticMesh",
+          "mobility": "Movable",
+          "localOffset": [
+            0,
+            3,
+            0
+          ]
         }
       }
     ]
@@ -154,9 +357,13 @@
     "id": "ref_sound_standalone",
     "behaviors": [
       {
-        "slot": 0, "kind": "AssetBinding", "activeByDefault": true,
+        "slot": "body",
+        "kind": "AssetBinding",
+        "activeByDefault": true,
         "assetBinding": {
-          "assetKind": "Sound", "assetId": "ref_sound_ambient",
+          "assetKind": "Sound",
+          "assetId": "ref_sound_ambient",
+          "renderPath": "None",
           "mobility": "Static"
         }
       }
@@ -166,9 +373,13 @@
     "id": "ref_spline_visual",
     "behaviors": [
       {
-        "slot": 0, "kind": "AssetBinding", "activeByDefault": true,
+        "slot": "body",
+        "kind": "AssetBinding",
+        "activeByDefault": true,
         "assetBinding": {
-          "assetKind": "Spline", "assetId": "ref_spline_river",
+          "assetKind": "Spline",
+          "assetId": "ref_spline_river",
+          "renderPath": "None",
           "mobility": "Static"
         }
       }
@@ -178,22 +389,40 @@
     "id": "ref_world_hud",
     "behaviors": [
       {
-        "slot": 0, "kind": "AssetBinding", "activeByDefault": true,
+        "slot": "body",
+        "kind": "AssetBinding",
+        "activeByDefault": true,
         "assetBinding": {
-          "assetKind": "WorldHud", "assetId": "ref_hud_healthbar",
-          "mobility": "Movable", "localOffset": [0, 2.5, 0]
+          "assetKind": "WorldHud",
+          "renderPath": "None",
+          "mobility": "Movable",
+          "localOffset": [
+            0,
+            2.5,
+            0
+          ]
         }
       }
     ]
   },
   {
     "id": "ref_world_text",
+    "worldTextMode": "None",
     "behaviors": [
       {
-        "slot": 0, "kind": "AssetBinding", "activeByDefault": true,
+        "slot": "body",
+        "kind": "AssetBinding",
+        "activeByDefault": true,
         "assetBinding": {
-          "assetKind": "WorldText", "assetId": "ref_text_damage",
-          "mobility": "Movable", "localOffset": [0, 2, 0]
+          "assetKind": "WorldText",
+          "assetId": "ref_text_damage",
+          "renderPath": "None",
+          "mobility": "Movable",
+          "localOffset": [
+            0,
+            2,
+            0
+          ]
         }
       }
     ]
@@ -202,46 +431,115 @@
     "id": "ref_ground_overlay",
     "behaviors": [
       {
-        "slot": 0, "kind": "AssetBinding", "activeByDefault": true,
+        "slot": "body",
+        "kind": "AssetBinding",
+        "activeByDefault": true,
         "assetBinding": {
-          "assetKind": "GroundOverlay", "assetId": "Circle",
-          "mobility": "Movable", "localScale": [5, 5, 1],
-          "colorParamKey": 300
+          "assetKind": "GroundOverlay",
+          "assetId": "Circle",
+          "renderPath": "None",
+          "mobility": "Movable",
+          "localScale": [
+            5,
+            5,
+            1
+          ],
+          "colorParamKey": "performer_schema_reference.groundOverlay.color"
         }
       }
     ],
     "paramDefaults": [
-      { "paramKey": 300, "lane": "Vector", "vectorValue": [0.2, 0.8, 0.2, 0.5] }
+      {
+        "paramKey": "performer_schema_reference.groundOverlay.color",
+        "lane": "Vector",
+        "vectorValue": [
+          0.2,
+          0.8,
+          0.2,
+          0.5
+        ]
+      }
     ]
   },
   {
     "id": "ref_composite_root",
     "children": [
-      { "definitionId": "ref_child_inherited", "scopeTag": "structure" },
-      { "definitionId": "ref_skinned_mesh", "scopeTag": "character",
-        "paramOverrides": [{ "paramKey": 200, "lane": "Float", "floatValue": 2.0 }] }
+      {
+        "definitionId": "ref_child_inherited",
+        "scopeTag": "structure"
+      },
+      {
+        "definitionId": "ref_skinned_mesh",
+        "scopeTag": "character",
+        "paramOverrides": [
+          {
+            "paramKey": "performer_schema_reference.asset.scale",
+            "lane": "Float",
+            "floatValue": 2
+          }
+        ]
+      }
     ],
     "rules": [
       {
-        "event": { "kind": "TagEffectiveChanged", "keyId": "Tag.Working", "gained": true },
-        "command": { "kind": "CreatePerformer", "definitionId": "ref_vfx", "scopeTag": "working" }
+        "event": {
+          "kind": "TagEffectiveChanged",
+          "keyId": "Tag.Working",
+          "gained": true
+        },
+        "command": {
+          "kind": "CreatePerformer",
+          "definitionId": "ref_vfx",
+          "scopeSource": "Fixed",
+          "scopeTag": "working"
+        }
       },
       {
-        "event": { "kind": "TagEffectiveChanged", "keyId": "Tag.Working", "gained": false },
-        "command": { "kind": "DestroyPerformerScope", "scopeTag": "working" }
+        "event": {
+          "kind": "TagEffectiveChanged",
+          "keyId": "Tag.Working",
+          "gained": false
+        },
+        "command": {
+          "kind": "DestroyPerformerScope",
+          "scopeSource": "Fixed",
+          "scopeTag": "working"
+        }
       },
       {
-        "event": { "kind": "TagEffectiveChanged", "keyId": "Tag.Burning", "gained": true },
-        "command": { "kind": "ActivateBehavior", "targetBehaviorSlot": 5 }
+        "event": {
+          "kind": "TagEffectiveChanged",
+          "keyId": "Tag.Burning",
+          "gained": true
+        },
+        "command": {
+          "kind": "ActivateBehavior",
+          "targetBehaviorSlot": "sound"
+        }
       },
       {
-        "event": { "kind": "TagEffectiveChanged", "keyId": "Tag.Burning", "gained": false },
-        "command": { "kind": "DeactivateBehavior", "targetBehaviorSlot": 5 }
+        "event": {
+          "kind": "TagEffectiveChanged",
+          "keyId": "Tag.Burning",
+          "gained": false
+        },
+        "command": {
+          "kind": "DeactivateBehavior",
+          "targetBehaviorSlot": "sound"
+        }
       }
     ],
     "paramDefaults": [
-      { "paramKey": 200, "lane": "Float", "floatValue": 1.0 },
-      { "paramKey": 260, "lane": "Float", "floatValue": 0.0 }
+      {
+        "paramKey": "performer_schema_reference.asset.scale",
+        "lane": "Float",
+        "floatValue": 1
+      },
+      {
+        "paramKey": "performer_schema_reference.material.swapState",
+        "lane": "Float",
+        "floatValue": 0
+      }
     ]
   }
 ]

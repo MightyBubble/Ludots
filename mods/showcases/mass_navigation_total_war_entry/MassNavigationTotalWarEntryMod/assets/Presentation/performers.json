@@ -324,6 +324,7 @@
         "assetBinding": {
           "assetKind": "WorldHud",
           "materialParamKey": "massNavigation.agent.health.ratio",
+          "renderPath": "None",
           "mobility": "Movable",
           "localScale": [118.0, 8.0, 1.0]
         }

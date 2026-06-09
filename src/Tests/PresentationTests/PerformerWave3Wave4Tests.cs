@@ -27,7 +27,7 @@ namespace Ludots.Tests.Presentation
         {
             using var world = World.Create();
             var commands = new PerformerCommandBuffer();
-            var events = new PresentationEventStream();
+            var events = new PresentationEventStream(PresentationTestConstants.EventStreamCapacity);
             var instances = new PerformerEntityRuntime(world);
             var stableIds = new PresentationStableIdAllocator();
             var definitions = new PerformerDefinitionRegistry();
@@ -97,7 +97,7 @@ namespace Ludots.Tests.Presentation
             using var runtime = new PerformerRuntimeSystem(
                 world,
                 commands,
-                new PresentationEventStream(),
+                new PresentationEventStream(PresentationTestConstants.EventStreamCapacity),
                 new TransientMarkerBuffer(),
                 new PresentationRequestBuffer(),
                 new PerformerEntityRuntime(world),
@@ -128,7 +128,7 @@ namespace Ludots.Tests.Presentation
         {
             using var world = World.Create();
             var commands = new PerformerCommandBuffer();
-            var events = new PresentationEventStream();
+            var events = new PresentationEventStream(PresentationTestConstants.EventStreamCapacity);
             var instances = new PerformerEntityRuntime(world);
             var definitions = new PerformerDefinitionRegistry();
             int defId = definitions.Register("actor", new PerformerDefinition
@@ -199,7 +199,7 @@ namespace Ludots.Tests.Presentation
         {
             using var world = World.Create();
             var commands = new PerformerCommandBuffer();
-            var events = new PresentationEventStream();
+            var events = new PresentationEventStream(PresentationTestConstants.EventStreamCapacity);
             var instances = new PerformerEntityRuntime(world);
             var definitions = new PerformerDefinitionRegistry();
             int defId = definitions.Register("scoped", new PerformerDefinition());
@@ -256,7 +256,7 @@ namespace Ludots.Tests.Presentation
         public void PerformerRuleSystem_GlobalRegionChanged_BroadcastsToMatchingDefinitionInstances()
         {
             using var world = World.Create();
-            var events = new PresentationEventStream();
+            var events = new PresentationEventStream(PresentationTestConstants.EventStreamCapacity);
             var commands = new PerformerCommandBuffer();
             var instances = new PerformerEntityRuntime(world);
             var definitions = new PerformerDefinitionRegistry();
@@ -321,7 +321,7 @@ namespace Ludots.Tests.Presentation
         {
             using var world = World.Create();
             var commands = new PerformerCommandBuffer();
-            var events = new PresentationEventStream();
+            var events = new PresentationEventStream(PresentationTestConstants.EventStreamCapacity);
             var instances = new PerformerEntityRuntime(world);
             var definitions = new PerformerDefinitionRegistry();
             int defId = definitions.Register("region_params", new PerformerDefinition
@@ -396,7 +396,7 @@ namespace Ludots.Tests.Presentation
         {
             using var world = World.Create();
             var commands = new PerformerCommandBuffer(capacity: 1);
-            var events = new PresentationEventStream();
+            var events = new PresentationEventStream(PresentationTestConstants.EventStreamCapacity);
             var instances = new PerformerEntityRuntime(world);
             var definitions = new PerformerDefinitionRegistry();
             definitions.Register("command_buffer_limit_probe", new PerformerDefinition
@@ -522,7 +522,8 @@ namespace Ludots.Tests.Presentation
                 world,
                 instances,
                 definitions,
-                new PresentationEventStream(),
+                new PresentationEventStream(PresentationTestConstants.EventStreamCapacity),
+                new PresentationOwnerChangeBuffer(8),
                 soundRequests);
 
             system.Update(0.016f);
@@ -621,7 +622,8 @@ namespace Ludots.Tests.Presentation
                 world,
                 instances,
                 definitions,
-                new PresentationEventStream(),
+                new PresentationEventStream(PresentationTestConstants.EventStreamCapacity),
+                new PresentationOwnerChangeBuffer(8),
                 new SoundRequestBuffer());
 
             system.Update(0.016f);
@@ -633,7 +635,7 @@ namespace Ludots.Tests.Presentation
         public void PerformerBehaviorSystem_TagBinding_WritesZeroWhenTagMissing_AndInvertsWhenConfigured()
         {
             using var world = World.Create();
-            var events = new PresentationEventStream();
+            var events = new PresentationEventStream(PresentationTestConstants.EventStreamCapacity);
             var instances = new PerformerEntityRuntime(world);
             Entity owner = world.Create();
             Entity performer = instances.Create(1, owner, 10, PresentationAnchorKind.Entity, Vector3.Zero, stableId: 701, Entity.Null, default);
@@ -666,6 +668,7 @@ namespace Ludots.Tests.Presentation
                 instances,
                 definitions,
                 events,
+                new PresentationOwnerChangeBuffer(8),
                 new SoundRequestBuffer());
 
             system.Update(0.016f);
@@ -678,7 +681,7 @@ namespace Ludots.Tests.Presentation
         public void PerformerBehaviorSystem_SoundStop_EmitsWhenBehaviorBecomesInactive()
         {
             using var world = World.Create();
-            var events = new PresentationEventStream();
+            var events = new PresentationEventStream(PresentationTestConstants.EventStreamCapacity);
             var soundRequests = new SoundRequestBuffer();
             var instances = new PerformerEntityRuntime(world);
             Entity owner = world.Create();
@@ -705,6 +708,7 @@ namespace Ludots.Tests.Presentation
                 instances,
                 definitions,
                 events,
+                new PresentationOwnerChangeBuffer(8),
                 soundRequests);
 
             system.Update(0.016f);
@@ -724,7 +728,7 @@ namespace Ludots.Tests.Presentation
         public void PerformerBehaviorSystem_SoundStop_EmitsWhenPerformerDestroyed()
         {
             using var world = World.Create();
-            var events = new PresentationEventStream();
+            var events = new PresentationEventStream(PresentationTestConstants.EventStreamCapacity);
             var soundRequests = new SoundRequestBuffer();
             var instances = new PerformerEntityRuntime(world);
             var definitions = new PerformerDefinitionRegistry();
@@ -751,6 +755,7 @@ namespace Ludots.Tests.Presentation
                 instances,
                 definitions,
                 events,
+                new PresentationOwnerChangeBuffer(8),
                 soundRequests);
 
             system.Update(0.016f);
@@ -785,8 +790,8 @@ namespace Ludots.Tests.Presentation
                     DefaultStateIndex = 0,
                     States =
                     [
-                        new AnimatorStateDefinition { PackedStateIndex = 5, DurationSeconds = 1f, Loop = true },
-                        new AnimatorStateDefinition { PackedStateIndex = 9, DurationSeconds = 0.4f, Loop = false },
+                        new AnimatorStateDefinition { PackedStateIndex = 5, DurationSeconds = 1f, PlaybackSpeed = 1f, Loop = true },
+                        new AnimatorStateDefinition { PackedStateIndex = 9, DurationSeconds = 0.4f, PlaybackSpeed = 1f, Loop = false },
                     ],
                     Transitions =
                     [
@@ -796,6 +801,8 @@ namespace Ludots.Tests.Presentation
                             ToStateIndex = 1,
                             ConditionKind = AnimatorConditionKind.Trigger,
                             ParameterIndex = 12,
+                            Threshold = 0f,
+                            DurationSeconds = 0f,
                             ConsumeTrigger = true,
                         },
                     ],
@@ -821,6 +828,7 @@ namespace Ludots.Tests.Presentation
                 ],
             });
             var instances = new PerformerEntityRuntime(world);
+            instances.BindDefinitions(definitions);
             Entity performer = instances.Create(defId, world.Create(), 0);
             ref var performerState = ref world.Get<PerformerState>(performer);
             performerState.BehaviorActiveMask = 1u;

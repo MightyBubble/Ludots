@@ -1,6 +1,7 @@
 using System;
 using System.Collections.Generic;
 using System.Numerics;
+using System.Runtime.CompilerServices;
 using Arch.Core;
 using Arch.System;
 using Ludots.Core.Components;
@@ -24,15 +25,26 @@ internal sealed class TotalWarObstacleOverlayPresentationSystem : ISystem<float>
     private readonly TotalWarShowcaseRuntime _runtime;
     private readonly GroundOverlayBuffer _overlays;
     private readonly IVisualHeightmap _heightmap;
-    private readonly List<int> _currentStableIds = new();
-    private readonly List<int> _previousStableIds = new();
-    private readonly HashSet<int> _currentStableIdSet = new();
-    private readonly Dictionary<int, ObstacleOverlayEmissionState> _emittedStateByStableId = new();
+    private readonly int _overlayCapacity;
+    private readonly List<int> _currentStableIds;
+    private readonly List<int> _previousStableIds;
+    private readonly HashSet<int> _currentStableIdSet;
+    private readonly Dictionary<int, ObstacleOverlayEmissionState> _emittedStateByStableId;
 
-    public TotalWarObstacleOverlayPresentationSystem(GameEngine engine, TotalWarShowcaseRuntime runtime)
+    public TotalWarObstacleOverlayPresentationSystem(GameEngine engine, TotalWarShowcaseRuntime runtime, int overlayCapacity)
     {
         _engine = engine ?? throw new ArgumentNullException(nameof(engine));
         _runtime = runtime ?? throw new ArgumentNullException(nameof(runtime));
+        if (overlayCapacity < 0)
+        {
+            throw new InvalidOperationException("Total War obstacle overlay requires config-derived overlay capacity >= 0.");
+        }
+
+        _overlayCapacity = overlayCapacity;
+        _currentStableIds = new List<int>(_overlayCapacity);
+        _previousStableIds = new List<int>(_overlayCapacity);
+        _currentStableIdSet = new HashSet<int>(_overlayCapacity);
+        _emittedStateByStableId = new Dictionary<int, ObstacleOverlayEmissionState>(_overlayCapacity);
         _overlays = engine.GetService(CoreServiceKeys.GroundOverlayBuffer)
             ?? throw new InvalidOperationException("Total War obstacle overlay requires GroundOverlayBuffer.");
         _heightmap = engine.GetService(CoreServiceKeys.VisualHeightmap)
@@ -54,12 +66,19 @@ internal sealed class TotalWarObstacleOverlayPresentationSystem : ISystem<float>
 
         _currentStableIds.Clear();
         _currentStableIdSet.Clear();
-        _engine.World.Query(
-            in ObstacleOverlayQuery,
-            (Entity entity, ref TotalWarObstacleOverlay overlay, ref VisualTransform transform, ref PresentationStableId stableId) =>
+        foreach (ref var chunk in _engine.World.Query(in ObstacleOverlayQuery))
+        {
+            ref Entity entityFirst = ref chunk.Entity(0);
+            Span<TotalWarObstacleOverlay> overlays = chunk.GetSpan<TotalWarObstacleOverlay>();
+            Span<VisualTransform> transforms = chunk.GetSpan<VisualTransform>();
+            Span<PresentationStableId> stableIds = chunk.GetSpan<PresentationStableId>();
+
+            foreach (int index in chunk)
             {
-                EmitOverlay(entity, in overlay, in transform, stableId.Value);
-            });
+                Entity entity = Unsafe.Add(ref entityFirst, index);
+                EmitOverlay(entity, in overlays[index], in transforms[index], stableIds[index].Value);
+            }
+        }
 
         RemoveStaleOverlays();
     }
@@ -94,13 +113,14 @@ internal sealed class TotalWarObstacleOverlayPresentationSystem : ISystem<float>
         if (_emittedStateByStableId.TryGetValue(stableId, out ObstacleOverlayEmissionState previousState) &&
             previousState.Equals(nextState))
         {
-            _currentStableIds.Add(stableId);
-            _currentStableIdSet.Add(stableId);
+            TrackStableId(stableId);
             return;
         }
 
+        RequireEmissionStateCapacity(stableId);
         _emittedStateByStableId[stableId] = nextState;
         Vector3 center = ProjectToGround(transform.Position, overlay.HeightOffsetM);
+        RequireStableIdCapacity();
         var item = new GroundOverlayItem
         {
             StableId = stableId,
@@ -118,8 +138,7 @@ internal sealed class TotalWarObstacleOverlayPresentationSystem : ISystem<float>
             throw new InvalidOperationException("GroundOverlayBuffer overflowed while emitting Total War obstacle overlay.");
         }
 
-        _currentStableIds.Add(stableId);
-        _currentStableIdSet.Add(stableId);
+        TrackStableId(stableId);
     }
 
     private Vector3 ProjectToGround(in Vector3 position, float heightOffsetM)
@@ -161,7 +180,46 @@ internal sealed class TotalWarObstacleOverlayPresentationSystem : ISystem<float>
         }
 
         _previousStableIds.Clear();
-        _previousStableIds.AddRange(_currentStableIds);
+        CopyCurrentStableIdsToPrevious();
+    }
+
+    private void TrackStableId(int stableId)
+    {
+        RequireStableIdCapacity();
+        _currentStableIds.Add(stableId);
+        _currentStableIdSet.Add(stableId);
+    }
+
+    private void RequireStableIdCapacity()
+    {
+        if (_currentStableIds.Count >= _overlayCapacity)
+        {
+            throw new InvalidOperationException(
+                $"Total War obstacle overlay stable id count exceeds config-derived obstacle overlay capacity {_overlayCapacity}.");
+        }
+    }
+
+    private void RequireEmissionStateCapacity(int stableId)
+    {
+        if (!_emittedStateByStableId.ContainsKey(stableId) && _emittedStateByStableId.Count >= _overlayCapacity)
+        {
+            throw new InvalidOperationException(
+                $"Total War obstacle overlay emission-state count exceeds config-derived obstacle overlay capacity {_overlayCapacity}.");
+        }
+    }
+
+    private void CopyCurrentStableIdsToPrevious()
+    {
+        for (int i = 0; i < _currentStableIds.Count; i++)
+        {
+            if (_previousStableIds.Count >= _overlayCapacity)
+            {
+                throw new InvalidOperationException(
+                    $"Total War obstacle overlay previous stable id count exceeds config-derived obstacle overlay capacity {_overlayCapacity}.");
+            }
+
+            _previousStableIds.Add(_currentStableIds[i]);
+        }
     }
 
     private readonly struct ObstacleOverlayEmissionState : IEquatable<ObstacleOverlayEmissionState>

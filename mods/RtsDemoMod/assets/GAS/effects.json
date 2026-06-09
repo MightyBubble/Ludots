@@ -1,7 +1,9 @@
 [
   {
     "id": "Effect.Rts.Shared.EnterGarrison",
-    "tags": ["Effect.Rts.Shared.Garrison"],
+    "tags": [
+      "Effect.Rts.Shared.Garrison"
+    ],
     "presetType": "Relation",
     "lifetime": "Instant",
     "participatesInResponse": false,
@@ -14,88 +16,148 @@
   },
   {
     "id": "Effect.Rts.Shared.Construction.War3",
-    "tags": ["Effect.Rts.Shared.Construction"],
+    "tags": [
+      "Effect.Rts.Shared.Construction"
+    ],
     "presetType": "Buff",
     "lifetime": "After",
     "participatesInResponse": false,
     "duration": {
-      "durationTicks": 180
+      "durationTicks": 180,
+      "periodTicks": 0,
+      "clockId": "FixedFrame"
     },
     "grantedTags": [
-      { "tag": "State.Rts.Constructing", "formula": "Fixed", "amount": 1 }
+      {
+        "tag": "State.Rts.Constructing",
+        "formula": "Fixed",
+        "amount": 1
+      }
     ]
   },
   {
     "id": "Effect.Rts.Shared.Construction.Cnc",
-    "tags": ["Effect.Rts.Shared.Construction"],
+    "tags": [
+      "Effect.Rts.Shared.Construction"
+    ],
     "presetType": "Buff",
     "lifetime": "After",
     "participatesInResponse": false,
     "duration": {
-      "durationTicks": 45
+      "durationTicks": 45,
+      "periodTicks": 0,
+      "clockId": "FixedFrame"
     },
     "grantedTags": [
-      { "tag": "State.Rts.Constructing", "formula": "Fixed", "amount": 1 }
+      {
+        "tag": "State.Rts.Constructing",
+        "formula": "Fixed",
+        "amount": 1
+      }
     ]
   },
   {
     "id": "Effect.Rts.Shared.Construction.Zerg",
-    "tags": ["Effect.Rts.Shared.Construction"],
+    "tags": [
+      "Effect.Rts.Shared.Construction"
+    ],
     "presetType": "Buff",
     "lifetime": "After",
     "participatesInResponse": false,
     "duration": {
-      "durationTicks": 210
+      "durationTicks": 210,
+      "periodTicks": 0,
+      "clockId": "FixedFrame"
     },
     "grantedTags": [
-      { "tag": "State.Rts.Constructing", "formula": "Fixed", "amount": 1 }
+      {
+        "tag": "State.Rts.Constructing",
+        "formula": "Fixed",
+        "amount": 1
+      }
     ]
   },
   {
     "id": "Effect.Rts.Shared.WarpIn",
-    "tags": ["Effect.Rts.Shared.Warp"],
+    "tags": [
+      "Effect.Rts.Shared.Warp"
+    ],
     "presetType": "Buff",
     "lifetime": "After",
     "participatesInResponse": false,
     "duration": {
-      "durationTicks": 90
+      "durationTicks": 90,
+      "periodTicks": 0,
+      "clockId": "FixedFrame"
     },
     "grantedTags": [
-      { "tag": "State.Rts.Warping", "formula": "Fixed", "amount": 1 }
+      {
+        "tag": "State.Rts.Warping",
+        "formula": "Fixed",
+        "amount": 1
+      }
     ]
   },
   {
     "id": "Effect.Rts.War3.CostLumberMill",
-    "tags": ["Effect.Rts.War3.Cost"],
+    "tags": [
+      "Effect.Rts.War3.Cost"
+    ],
     "presetType": "InstantDamage",
     "lifetime": "Instant",
     "modifiers": [
-      { "attribute": "Minerals", "op": "Add", "value": -160 },
-      { "attribute": "Lumber", "op": "Add", "value": -60 }
+      {
+        "attribute": "Minerals",
+        "op": "Add",
+        "value": -160
+      },
+      {
+        "attribute": "Lumber",
+        "op": "Add",
+        "value": -60
+      }
     ]
   },
   {
     "id": "Effect.Rts.War3.CostGuardTower",
-    "tags": ["Effect.Rts.War3.Cost"],
+    "tags": [
+      "Effect.Rts.War3.Cost"
+    ],
     "presetType": "InstantDamage",
     "lifetime": "Instant",
     "modifiers": [
-      { "attribute": "Minerals", "op": "Add", "value": -140 },
-      { "attribute": "Lumber", "op": "Add", "value": -80 }
+      {
+        "attribute": "Minerals",
+        "op": "Add",
+        "value": -140
+      },
+      {
+        "attribute": "Lumber",
+        "op": "Add",
+        "value": -80
+      }
     ]
   },
   {
     "id": "Effect.Rts.War3.CostTrainFootman",
-    "tags": ["Effect.Rts.War3.Cost"],
+    "tags": [
+      "Effect.Rts.War3.Cost"
+    ],
     "presetType": "InstantDamage",
     "lifetime": "Instant",
     "modifiers": [
-      { "attribute": "Minerals", "op": "Add", "value": -135 }
+      {
+        "attribute": "Minerals",
+        "op": "Add",
+        "value": -135
+      }
     ]
   },
   {
     "id": "Effect.Rts.War3.CreateLumberMillSite",
-    "tags": ["Effect.Rts.War3.Build"],
+    "tags": [
+      "Effect.Rts.War3.Build"
+    ],
     "presetType": "CreateUnit",
     "lifetime": "Instant",
     "participatesInResponse": false,
@@ -108,7 +170,9 @@
   },
   {
     "id": "Effect.Rts.War3.CreateGuardTowerSite",
-    "tags": ["Effect.Rts.War3.Build"],
+    "tags": [
+      "Effect.Rts.War3.Build"
+    ],
     "presetType": "CreateUnit",
     "lifetime": "Instant",
     "participatesInResponse": false,
@@ -121,7 +185,9 @@
   },
   {
     "id": "Effect.Rts.War3.TrainFootman",
-    "tags": ["Effect.Rts.War3.Train"],
+    "tags": [
+      "Effect.Rts.War3.Train"
+    ],
     "presetType": "CreateUnit",
     "lifetime": "Instant",
     "participatesInResponse": false,
@@ -133,43 +199,69 @@
   },
   {
     "id": "Effect.Rts.Cnc.CostPowerPlant",
-    "tags": ["Effect.Rts.Cnc.Cost"],
+    "tags": [
+      "Effect.Rts.Cnc.Cost"
+    ],
     "presetType": "InstantDamage",
     "lifetime": "Instant",
     "modifiers": [
-      { "attribute": "Credits", "op": "Add", "value": -500 }
+      {
+        "attribute": "Credits",
+        "op": "Add",
+        "value": -500
+      }
     ]
   },
   {
     "id": "Effect.Rts.Cnc.CostRefinery",
-    "tags": ["Effect.Rts.Cnc.Cost"],
+    "tags": [
+      "Effect.Rts.Cnc.Cost"
+    ],
     "presetType": "InstantDamage",
     "lifetime": "Instant",
     "modifiers": [
-      { "attribute": "Credits", "op": "Add", "value": -1400 }
+      {
+        "attribute": "Credits",
+        "op": "Add",
+        "value": -1400
+      }
     ]
   },
   {
     "id": "Effect.Rts.Cnc.CostTrainRhino",
-    "tags": ["Effect.Rts.Cnc.Cost"],
+    "tags": [
+      "Effect.Rts.Cnc.Cost"
+    ],
     "presetType": "InstantDamage",
     "lifetime": "Instant",
     "modifiers": [
-      { "attribute": "Credits", "op": "Add", "value": -900 }
+      {
+        "attribute": "Credits",
+        "op": "Add",
+        "value": -900
+      }
     ]
   },
   {
     "id": "Effect.Rts.Cnc.CostTrainRhinoStep",
-    "tags": ["Effect.Rts.Cnc.Cost"],
+    "tags": [
+      "Effect.Rts.Cnc.Cost"
+    ],
     "presetType": "InstantDamage",
     "lifetime": "Instant",
     "modifiers": [
-      { "attribute": "Credits", "op": "Add", "value": -100 }
+      {
+        "attribute": "Credits",
+        "op": "Add",
+        "value": -100
+      }
     ]
   },
   {
     "id": "Effect.Rts.Cnc.PlacePowerPlant",
-    "tags": ["Effect.Rts.Cnc.Build"],
+    "tags": [
+      "Effect.Rts.Cnc.Build"
+    ],
     "presetType": "CreateUnit",
     "lifetime": "Instant",
     "participatesInResponse": false,
@@ -182,7 +274,9 @@
   },
   {
     "id": "Effect.Rts.Cnc.PlaceRefinery",
-    "tags": ["Effect.Rts.Cnc.Build"],
+    "tags": [
+      "Effect.Rts.Cnc.Build"
+    ],
     "presetType": "CreateUnit",
     "lifetime": "Instant",
     "participatesInResponse": false,
@@ -195,7 +289,9 @@
   },
   {
     "id": "Effect.Rts.Cnc.TrainRhino",
-    "tags": ["Effect.Rts.Cnc.Train"],
+    "tags": [
+      "Effect.Rts.Cnc.Train"
+    ],
     "presetType": "CreateUnit",
     "lifetime": "Instant",
     "participatesInResponse": false,
@@ -207,35 +303,59 @@
   },
   {
     "id": "Effect.Rts.Sc2.CostTrainZealot",
-    "tags": ["Effect.Rts.Sc2.Cost"],
+    "tags": [
+      "Effect.Rts.Sc2.Cost"
+    ],
     "presetType": "InstantDamage",
     "lifetime": "Instant",
     "modifiers": [
-      { "attribute": "Minerals", "op": "Add", "value": -100 }
+      {
+        "attribute": "Minerals",
+        "op": "Add",
+        "value": -100
+      }
     ]
   },
   {
     "id": "Effect.Rts.Sc2.CostResearchWarpGate",
-    "tags": ["Effect.Rts.Sc2.Cost"],
+    "tags": [
+      "Effect.Rts.Sc2.Cost"
+    ],
     "presetType": "InstantDamage",
     "lifetime": "Instant",
     "modifiers": [
-      { "attribute": "Minerals", "op": "Add", "value": -50 },
-      { "attribute": "Gas", "op": "Add", "value": -50 }
+      {
+        "attribute": "Minerals",
+        "op": "Add",
+        "value": -50
+      },
+      {
+        "attribute": "Gas",
+        "op": "Add",
+        "value": -50
+      }
     ]
   },
   {
     "id": "Effect.Rts.Sc2.CostWarpZealot",
-    "tags": ["Effect.Rts.Sc2.Cost"],
+    "tags": [
+      "Effect.Rts.Sc2.Cost"
+    ],
     "presetType": "InstantDamage",
     "lifetime": "Instant",
     "modifiers": [
-      { "attribute": "Minerals", "op": "Add", "value": -100 }
+      {
+        "attribute": "Minerals",
+        "op": "Add",
+        "value": -100
+      }
     ]
   },
   {
     "id": "Effect.Rts.Sc2.TrainZealot",
-    "tags": ["Effect.Rts.Sc2.Train"],
+    "tags": [
+      "Effect.Rts.Sc2.Train"
+    ],
     "presetType": "CreateUnit",
     "lifetime": "Instant",
     "participatesInResponse": false,
@@ -247,17 +367,25 @@
   },
   {
     "id": "Effect.Rts.Sc2.ResearchWarpGateComplete",
-    "tags": ["Effect.Rts.Sc2.Research"],
+    "tags": [
+      "Effect.Rts.Sc2.Research"
+    ],
     "presetType": "Buff",
     "lifetime": "Infinite",
     "participatesInResponse": false,
     "grantedTags": [
-      { "tag": "Tech.Rts.WarpGate", "formula": "Fixed", "amount": 1 }
+      {
+        "tag": "Tech.Rts.WarpGate",
+        "formula": "Fixed",
+        "amount": 1
+      }
     ]
   },
   {
     "id": "Effect.Rts.Sc2.WarpZealot",
-    "tags": ["Effect.Rts.Sc2.Warp"],
+    "tags": [
+      "Effect.Rts.Sc2.Warp"
+    ],
     "presetType": "CreateUnit",
     "lifetime": "Instant",
     "participatesInResponse": false,
@@ -270,16 +398,24 @@
   },
   {
     "id": "Effect.Rts.Zerg.CostMorphSpawningPool",
-    "tags": ["Effect.Rts.Zerg.Cost"],
+    "tags": [
+      "Effect.Rts.Zerg.Cost"
+    ],
     "presetType": "InstantDamage",
     "lifetime": "Instant",
     "modifiers": [
-      { "attribute": "Minerals", "op": "Add", "value": -200 }
+      {
+        "attribute": "Minerals",
+        "op": "Add",
+        "value": -200
+      }
     ]
   },
   {
     "id": "Effect.Rts.Zerg.MorphSpawningPool",
-    "tags": ["Effect.Rts.Zerg.Build"],
+    "tags": [
+      "Effect.Rts.Zerg.Build"
+    ],
     "presetType": "CreateUnit",
     "lifetime": "Instant",
     "participatesInResponse": false,

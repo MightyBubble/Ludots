@@ -11,26 +11,42 @@ using MassNavigationMod.Runtime;
 
 namespace MassNavigationMod.Systems;
 
-internal sealed class MassNavigationOrderBridgeSystem : ISystem<float>
+internal sealed class MassNavigationOrderIngestionSystem : ISystem<float>
 {
-    private const int IdleScanIntervalFrames = 6;
-
     private static readonly QueryDescription Query = new QueryDescription()
         .WithAll<MassNavigationAgentTag, MassNavigationAgentIndex, MassNavigationControllable, Team, OrderBuffer>();
 
     private readonly GameEngine _engine;
     private readonly MassNavigationSimulationRuntime _simulation;
-    private readonly Dictionary<int, int> _bucketIndexByToken = new();
-    private readonly List<OrderBucket> _buckets = new();
-    private readonly HashSet<int> _activeTokens = new();
-    private readonly List<int> _completedTokens = new();
+    private readonly int _idleScanIntervalFrames;
+    private readonly int _orderTokenCapacity;
+    private readonly int _bucketMemberCapacity;
+    private readonly Dictionary<int, int> _bucketIndexByToken;
+    private readonly List<OrderBucket> _buckets;
+    private readonly HashSet<int> _activeTokens;
+    private readonly List<int> _completedTokens;
+    private int _usedBucketCount;
     private int _moveOrderTypeId;
-    private int _lastIdleScanFrame = -IdleScanIntervalFrames;
+    private int _lastIdleScanFrame;
 
-    public MassNavigationOrderBridgeSystem(GameEngine engine, MassNavigationSimulationRuntime simulation)
+    public MassNavigationOrderIngestionSystem(GameEngine engine, MassNavigationSimulationRuntime simulation)
     {
         _engine = engine;
         _simulation = simulation;
+        _idleScanIntervalFrames = simulation.Cadence.OrderIdleScanIntervalFrames;
+        MassNavigationRuntimeCapacityConfig capacity = simulation.Config.ScenarioRuntime.RuntimeCapacity;
+        _orderTokenCapacity = capacity.OrderIngestionTokenCapacity;
+        _bucketMemberCapacity = capacity.OrderIngestionMemberCapacity;
+        _bucketIndexByToken = new Dictionary<int, int>(_orderTokenCapacity);
+        _buckets = new List<OrderBucket>(_orderTokenCapacity);
+        _activeTokens = new HashSet<int>(_orderTokenCapacity);
+        _completedTokens = new List<int>(_orderTokenCapacity);
+        for (int i = 0; i < _orderTokenCapacity; i++)
+        {
+            _buckets.Add(new OrderBucket(_bucketMemberCapacity));
+        }
+
+        _lastIdleScanFrame = -_idleScanIntervalFrames;
     }
 
     public void Initialize() { }
@@ -49,7 +65,7 @@ internal sealed class MassNavigationOrderBridgeSystem : ISystem<float>
 
         if (_simulation.NavGroupRuntime.ActiveOrderGroupCount == 0 &&
             _simulation.CommandCountFrame <= 0 &&
-            _simulation.FrameIndex - _lastIdleScanFrame < IdleScanIntervalFrames)
+            _simulation.FrameIndex - _lastIdleScanFrame < _idleScanIntervalFrames)
         {
             return;
         }
@@ -57,36 +73,52 @@ internal sealed class MassNavigationOrderBridgeSystem : ISystem<float>
         _bucketIndexByToken.Clear();
         _activeTokens.Clear();
         _completedTokens.Clear();
-        for (int i = 0; i < _buckets.Count; i++)
+        for (int i = 0; i < _usedBucketCount; i++)
         {
-            _buckets[i].Members.Clear();
+            _buckets[i].Reset();
         }
 
-        _engine.World.Query(in Query, (Entity entity, ref MassNavigationAgentIndex agentIndex, ref Team team, ref OrderBuffer orders) =>
+        _usedBucketCount = 0;
+        foreach (ref var chunk in _engine.World.Query(in Query))
         {
-            if (!orders.HasActive || orders.ActiveOrder.Order.OrderTypeId != _moveOrderTypeId)
+            Span<MassNavigationAgentIndex> agentIndices = chunk.GetSpan<MassNavigationAgentIndex>();
+            Span<Team> teams = chunk.GetSpan<Team>();
+            Span<OrderBuffer> orderBuffers = chunk.GetSpan<OrderBuffer>();
+
+            foreach (int index in chunk)
             {
-                return;
+                ref OrderBuffer orders = ref orderBuffers[index];
+                if (!orders.HasActive || orders.ActiveOrder.Order.OrderTypeId != _moveOrderTypeId)
+                {
+                    continue;
+                }
+
+                ref readonly var order = ref orders.ActiveOrder.Order;
+                int token = order.OrderId;
+                if (token <= 0)
+                {
+                    continue;
+                }
+
+                int bucketIndex = GetOrCreateBucket(token);
+                _activeTokens.Add(token);
+                MassNavigationMoveOrderArgs moveArgs = MassNavigationMoveOrderArgs.Decode(in order);
+                OrderBucket bucket = _buckets[bucketIndex];
+                bucket.TeamId = teams[index].Id;
+                bucket.Destination = moveArgs.DestinationCm;
+                bucket.FormationMode = moveArgs.FormationMode;
+                bucket.RotationRadians = moveArgs.RotationRadians;
+                if (bucket.Members.Count >= _bucketMemberCapacity)
+                {
+                    throw new InvalidOperationException(
+                        $"MassNavigation order ingestion token {token} required more than configured scenarioRuntime.runtimeCapacity.orderIngestionMemberCapacity {_bucketMemberCapacity} members.");
+                }
+
+                bucket.Members.Add(agentIndices[index].Value);
             }
+        }
 
-            ref readonly var order = ref orders.ActiveOrder.Order;
-            int token = order.OrderId;
-            if (token <= 0)
-            {
-                return;
-            }
-
-            _activeTokens.Add(token);
-            int bucketIndex = GetOrCreateBucket(token);
-            OrderBucket bucket = _buckets[bucketIndex];
-            bucket.TeamId = team.Id;
-            bucket.Destination = new Vector2(order.Args.Spatial.WorldCm.X, order.Args.Spatial.WorldCm.Z);
-            bucket.FormationMode = ResolveFormationMode(order.Args.I0, token);
-            bucket.RotationRadians = order.Args.F0;
-            bucket.Members.Add(agentIndex.Value);
-        });
-
-        for (int bucketIndex = 0; bucketIndex < _buckets.Count; bucketIndex++)
+        for (int bucketIndex = 0; bucketIndex < _usedBucketCount; bucketIndex++)
         {
             OrderBucket bucket = _buckets[bucketIndex];
             if (bucket.Members.Count <= 0)
@@ -108,7 +140,7 @@ internal sealed class MassNavigationOrderBridgeSystem : ISystem<float>
         OrderBufferSystem orderBufferSystem = _engine.GetService(CoreServiceKeys.OrderBufferSystem)
             ?? throw new InvalidOperationException("MassNavigationMod requires OrderBufferSystem to complete MassNavigation move orders.");
 
-        for (int bucketIndex = 0; bucketIndex < _buckets.Count; bucketIndex++)
+        for (int bucketIndex = 0; bucketIndex < _usedBucketCount; bucketIndex++)
         {
             OrderBucket bucket = _buckets[bucketIndex];
             if (bucket.Members.Count <= 0 ||
@@ -155,17 +187,6 @@ internal sealed class MassNavigationOrderBridgeSystem : ISystem<float>
         return _moveOrderTypeId;
     }
 
-    private static MassNavigationFormationMode ResolveFormationMode(int rawValue, int orderToken)
-    {
-        if (!System.Enum.IsDefined(typeof(MassNavigationFormationMode), rawValue))
-        {
-            throw new InvalidOperationException(
-                $"MassNavigationMod move order {orderToken} references unsupported formation mode value {rawValue}.");
-        }
-
-        return (MassNavigationFormationMode)rawValue;
-    }
-
     private Entity ResolveControllableAgent(int agentIndex, int orderToken)
     {
         if (!_simulation.AgentState.TryGetControllableEntity(agentIndex, out Entity entity))
@@ -196,25 +217,24 @@ internal sealed class MassNavigationOrderBridgeSystem : ISystem<float>
             return index;
         }
 
-        index = _bucketIndexByToken.Count;
+        if (_usedBucketCount >= _orderTokenCapacity)
+        {
+            throw new InvalidOperationException(
+                $"MassNavigation order ingestion required more than configured scenarioRuntime.runtimeCapacity.orderIngestionTokenCapacity {_orderTokenCapacity} active order tokens.");
+        }
+
+        index = _usedBucketCount++;
         _bucketIndexByToken[token] = index;
-        if (index == _buckets.Count)
-        {
-            _buckets.Add(new OrderBucket(token));
-        }
-        else
-        {
-            _buckets[index].Reset(token);
-        }
+        _buckets[index].Reset(token);
 
         return index;
     }
 
     private sealed class OrderBucket
     {
-        public OrderBucket(int token)
+        public OrderBucket(int memberCapacity)
         {
-            Token = token;
+            Members = new List<int>(memberCapacity);
         }
 
         public int Token { get; private set; }
@@ -222,7 +242,17 @@ internal sealed class MassNavigationOrderBridgeSystem : ISystem<float>
         public Vector2 Destination { get; set; }
         public MassNavigationFormationMode FormationMode { get; set; }
         public float RotationRadians { get; set; }
-        public List<int> Members { get; } = new();
+        public List<int> Members { get; }
+
+        public void Reset()
+        {
+            Token = 0;
+            TeamId = 0;
+            Destination = default;
+            FormationMode = MassNavigationFormationMode.None;
+            RotationRadians = 0f;
+            Members.Clear();
+        }
 
         public void Reset(int token)
         {

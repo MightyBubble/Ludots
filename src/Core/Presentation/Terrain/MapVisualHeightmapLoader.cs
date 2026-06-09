@@ -56,7 +56,7 @@ namespace Ludots.Core.Presentation.Terrain
                     continue;
                 }
 
-                if (!string.Equals(resolved, boardAssetPath, StringComparison.OrdinalIgnoreCase))
+                if (!string.Equals(resolved, boardAssetPath, StringComparison.Ordinal))
                 {
                     throw new InvalidOperationException(
                         $"Map '{mapConfig.Id}' declares conflicting visual heightmap assets. Map and board contracts must resolve to a single shared asset path.");

@@ -2,6 +2,15 @@
   "Id": "performer_blacksmith_showcase",
   "Tags": ["showcase", "performer"],
   "VisualHeightmapAsset": "assets/terrain/performer_blacksmith_showcase_flat.vhtm",
+  "Metadata": {
+    "performerBlacksmith": {
+      "scatterInitialTarget": 30000,
+      "scatterSeed": 271828,
+      "scatterMinRadiusCm": 750.0,
+      "scatterMaxRadiusCm": 2400.0,
+      "scatterJitterCm": 140.0
+    }
+  },
   "Boards": [
     {
       "Name": "default",

@@ -270,21 +270,23 @@ namespace Ludots.Tests.Presentation
                 @"[
   {
     ""id"": ""entity_world_text"",
+    ""worldTextMode"": ""AttributeCurrentOverBase"",
     ""behaviors"": [
       {
-        ""slot"": 0,
+        ""slot"": ""body"",
         ""kind"": ""AssetBinding"",
         ""activeByDefault"": true,
         ""assetBinding"": {
           ""assetKind"": ""WorldText"",
           ""assetId"": ""hud.current_over_base"",
+          ""renderPath"": ""None"",
+          ""mobility"": ""Movable"",
           ""localScale"": [1, 1, 1]
         }
       }
     ],
     ""bindings"": [
-      { ""paramKey"": 15, ""source"": ""textToken"", ""textToken"": ""hud.current_over_base"" },
-      { ""paramKey"": 16, ""source"": ""constant"", ""constantValue"": 1 }
+      { ""paramKey"": ""worldText.tokenId"", ""source"": ""textToken"", ""textToken"": ""hud.current_over_base"" }
     ]
   }
 ]");
@@ -303,9 +305,10 @@ namespace Ludots.Tests.Presentation
             Assert.That(registry.TryGet(defId, out var definition), Is.True);
 
             bool found = false;
+            int textTokenParamKey = PerformerParamKeyRegistry.Register("worldText.tokenId");
             for (int i = 0; i < definition.Bindings.Length; i++)
             {
-                if (definition.Bindings[i].ParamKey != 15)
+                if (definition.Bindings[i].ParamKey != textTokenParamKey)
                 {
                     continue;
                 }
@@ -315,7 +318,7 @@ namespace Ludots.Tests.Presentation
                 Assert.That(definition.Bindings[i].Value.ConstantValue, Is.EqualTo(42f));
             }
 
-            Assert.That(found, Is.True, "Expected WorldText binding paramKey=15 to resolve into a stable text token id.");
+            Assert.That(found, Is.True, "Expected WorldText token binding to resolve into a stable text token id.");
         }
 
         [Test]
@@ -347,14 +350,14 @@ namespace Ludots.Tests.Presentation
             var loader = new PresentationTextCatalogLoader(pipeline);
             PresentationTextCatalog textCatalog = loader.Load(catalog);
             var selection = new PresentationTextLocaleSelection(textCatalog);
-            var strings = new WorldHudStringTable(textCatalog, selection, legacyCapacity: 4);
+            var strings = new WorldHudStringTable(textCatalog, selection, runtimeStringCapacity: 4);
 
             int tokenId = textCatalog.GetTokenId("hud.static_label");
-            int legacyId = strings.Register("runtime-only");
+            int runtimeStringId = strings.Register("runtime-only");
 
             Assert.That(strings.TryGet(tokenId), Is.EqualTo("Static Label"));
-            Assert.That(legacyId, Is.GreaterThan(tokenId));
-            Assert.That(strings.TryGet(legacyId), Is.EqualTo("runtime-only"));
+            Assert.That(runtimeStringId, Is.GreaterThan(tokenId));
+            Assert.That(strings.TryGet(runtimeStringId), Is.EqualTo("runtime-only"));
 
             selection.SetActiveLocale("zh-CN");
             Assert.That(strings.TryGet(tokenId), Is.EqualTo("Static Label ZH"));
@@ -368,7 +371,7 @@ namespace Ludots.Tests.Presentation
             {
                 var worldHud = new WorldHudBatchBuffer(4);
                 var screenHud = new ScreenHudBatchBuffer(4);
-                var expectedText = PresentationTextPacket.FromLegacyWorldHud(
+                var expectedText = PresentationTextPacket.FromWorldHudValueMode(
                     tokenId: 17,
                     mode: WorldHudValueMode.AttributeCurrentOverBase,
                     value0: 100f,

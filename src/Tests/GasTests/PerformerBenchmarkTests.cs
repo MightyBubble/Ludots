@@ -10,6 +10,7 @@ using Ludots.Core.Gameplay.GAS;
 using Ludots.Core.Gameplay.GAS.Components;
 using Ludots.Core.Gameplay.GAS.Presentation;
 using Ludots.Core.Gameplay.GAS.Registry;
+using Ludots.Core.Gameplay.Spawning;
 using Ludots.Core.GraphRuntime;
 using Ludots.Core.Modding;
 using Ludots.Core.NodeLibraries.GASGraph.Host;
@@ -51,8 +52,9 @@ namespace Ludots.Tests.Presentation
         private RoadSplineBuffer _roadSplines;
         private PresentationRequestBuffer _requests;
         private SoundRequestBuffer _soundRequests;
+        private PresentationOwnerChangeBuffer _ownerChanges;
         private PresentationRequestFlushSystem _flush;
-        private PresentationBridgeSystem _bridge;
+        private GameplayPresentationProjectionSystem _projection;
         private PerformerRuleSystem _ruleSystem;
         private PerformerRuntimeSystem _runtimeSystem;
         private PerformerBehaviorSystem _behaviorSystem;
@@ -83,6 +85,7 @@ namespace Ludots.Tests.Presentation
             _roadSplines = new RoadSplineBuffer();
             _requests = new PresentationRequestBuffer();
             _soundRequests = new SoundRequestBuffer();
+            _ownerChanges = new PresentationOwnerChangeBuffer(16384);
             _stableIds = new PresentationStableIdAllocator();
 
             _healthAttrId = AttributeRegistry.Register("Health");
@@ -92,10 +95,10 @@ namespace Ludots.Tests.Presentation
 
             var session = new GameSession();
             var graphApi = new GasGraphRuntimeApi(_world, null, null, null);
-            _bridge = new PresentationBridgeSystem(_world, _eventBus, _presEvents, session, _gasEvents);
+            _projection = new GameplayPresentationProjectionSystem(_world, _eventBus, _presEvents, session, _gasEvents, _ownerChanges);
             _ruleSystem = new PerformerRuleSystem(_world, _presEvents, _commands, _defs, _instances, _programs, graphApi, _globals);
             _runtimeSystem = new PerformerRuntimeSystem(_world, _commands, _presEvents, new TransientMarkerBuffer(), _requests, _instances, _stableIds, _defs);
-            _behaviorSystem = new PerformerBehaviorSystem(_world, _instances, _defs, _presEvents, _soundRequests);
+            _behaviorSystem = new PerformerBehaviorSystem(_world, _instances, _defs, _presEvents, _ownerChanges, _soundRequests);
             _emitSystem = new PerformerEmitSystem(_world, _instances, _defs, _requests, _globals);
             _flush = new PresentationRequestFlushSystem(_world, _requests, new PrefabRegistry(), new MeshAssetRegistry(), stableDrawCache, _primitives, _overlays, _hud, _roadSplines, snapshotBuffer, proxyBuffer, skinnedBatchBuffer);
         }
@@ -108,7 +111,7 @@ namespace Ludots.Tests.Presentation
             _flush?.Dispose();
             _runtimeSystem?.Dispose();
             _ruleSystem?.Dispose();
-            _bridge?.Dispose();
+            _projection?.Dispose();
             _world?.Dispose();
         }
 
@@ -143,7 +146,7 @@ namespace Ludots.Tests.Presentation
         private void TickPipeline(float dt)
         {
             ClearOutputBuffers();
-            _bridge.Update(dt);
+            _projection.Update(dt);
             _ruleSystem.Update(dt);
             _runtimeSystem.Update(dt);
             _behaviorSystem.Update(0f);
@@ -302,6 +305,9 @@ namespace Ludots.Tests.Presentation
         {
             var benchWorld = World.Create();
             var buf = new PerformerEntityRuntime(benchWorld);
+            var definitions = new PerformerDefinitionRegistry();
+            int defId = definitions.Register("bench.runtime.instance", new PerformerDefinition());
+            buf.BindDefinitions(definitions);
             var entity = CreateOwner(benchWorld, Vector3.Zero);
 
             WarmUpGC();
@@ -314,7 +320,7 @@ namespace Ludots.Tests.Presentation
                 var created = new Entity[INSTANCE_COUNT];
                 for (int i = 0; i < INSTANCE_COUNT; i++)
                 {
-                    created[i] = buf.Create(1, entity, i % 10);
+                    created[i] = buf.Create(defId, entity, i % 10);
                     totalOps++;
                 }
 
@@ -342,11 +348,14 @@ namespace Ludots.Tests.Presentation
         {
             var benchWorld = World.Create();
             var buf = new PerformerEntityRuntime(benchWorld);
+            var definitions = new PerformerDefinitionRegistry();
+            int defId = definitions.Register("bench.runtime.instance", new PerformerDefinition());
+            buf.BindDefinitions(definitions);
             var entity = CreateOwner(benchWorld, Vector3.Zero);
             var created = new Entity[2000];
             for (int i = 0; i < 2000; i++)
             {
-                created[i] = buf.Create(1, entity, 1);
+                created[i] = buf.Create(defId, entity, 1);
             }
             for (int i = 0; i < 2000; i += 2)
             {
@@ -470,7 +479,7 @@ namespace Ludots.Tests.Presentation
         }
 
         [Test]
-        public void Benchmark_BridgeSystem_TagChangedBits()
+        public void Benchmark_GameplayPresentationProjectionSystem_TagChangedBits()
         {
             for (int i = 0; i < ENTITY_COUNT; i++)
             {
@@ -491,13 +500,14 @@ namespace Ludots.Tests.Presentation
 
             for (int frame = 0; frame < FRAMES; frame++)
             {
-                _bridge.Update(0.016f);
+                _projection.Update(0.016f);
                 _presEvents.Clear();
+                _ownerChanges.Clear();
             }
 
             sw.Stop();
             long endAlloc = GC.GetAllocatedBytesForCurrentThread();
-            PrintResult("PresentationBridgeSystem.TagChangedBits", sw, startAlloc, endAlloc, ENTITY_COUNT * FRAMES);
+            PrintResult("GameplayPresentationProjectionSystem.TagChangedBits", sw, startAlloc, endAlloc, ENTITY_COUNT * FRAMES);
         }
 
         [Test]
@@ -649,6 +659,7 @@ namespace Ludots.Tests.Presentation
                             ScaleParamKey = -1,
                             ColorParamKey = -1,
                             MaterialParamKey = WellKnownPerformerParamKeys.BarFillRatio,
+                            AssetIdParamKey = -1,
                             AssetSwapParamKey = -1,
                             VisibilityParamKey = -1,
                         }
@@ -673,7 +684,24 @@ namespace Ludots.Tests.Presentation
             var pipeline = new ConfigPipeline(vfs, modLoader);
             var catalog = ConfigCatalogLoader.Load(pipeline);
             var meshes = new MeshAssetRegistry();
+            var prefabs = new PrefabRegistry();
+            new MeshAssetConfigLoader(pipeline, meshes, prefabs).Load(catalog);
+            var materialAssets = new PresentationMaterialRegistry();
             var textCatalog = new PresentationTextCatalogLoader(pipeline).Load(catalog);
+            var templateRegistry = new DataRegistry<EntityTemplate>(pipeline);
+            templateRegistry.Load("Entities/templates.json", catalog);
+            var templateKeys = new EntityTemplateKeyRegistry();
+            foreach (EntityTemplate template in templateRegistry.GetAll())
+            {
+                templateKeys.Register(template.Id);
+            }
+
+            var animatorControllers = new AnimatorControllerRegistry();
+            new AnimatorControllerConfigLoader(pipeline, animatorControllers).Load(catalog);
+            var animationClips = new AnimationClipRegistry();
+            new AnimationClipConfigLoader(pipeline, animationClips).Load(catalog);
+            var animationProfiles = new AnimationProfileRegistry();
+            new AnimationProfileConfigLoader(pipeline, animationProfiles, animatorControllers, animationClips).Load(catalog);
 
             new PerformerDefinitionConfigLoader(
                 pipeline,
@@ -681,10 +709,15 @@ namespace Ludots.Tests.Presentation
                 resolveAttributeName: name => string.Equals(name, "Health", StringComparison.Ordinal) ? healthAttrId : 0,
                 resolveMeshId: meshes.GetId,
                 resolveTextTokenId: textCatalog.GetTokenId,
+                resolveEntityTemplateKey: templateKeys.GetId,
+                resolveMaterialId: materialAssets.GetId,
+                resolveAnimatorControllerId: animatorControllers.GetId,
+                resolveAnimationProfileId: animationProfiles.GetId,
                 resolveBehaviorAssetId: (kind, key) => kind switch
                 {
-                    AssetKind.Mesh => meshes.GetId(key),
+                    AssetKind.Mesh or AssetKind.SkinnedMesh or AssetKind.Decal or AssetKind.VFX or AssetKind.Spline or AssetKind.Sound => meshes.GetId(key),
                     AssetKind.WorldText => textCatalog.GetTokenId(key),
+                    AssetKind.GroundOverlay => Enum.TryParse<GroundOverlayShape>(key, ignoreCase: false, out var shape) ? (int)shape : 0,
                     _ => 0,
                 }).Load(catalog);
         }

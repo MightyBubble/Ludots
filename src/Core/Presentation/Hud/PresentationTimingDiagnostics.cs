@@ -142,7 +142,7 @@ namespace Ludots.Core.Presentation.Hud
         public float LastPerformerEmitRetainedProcessMs { get; private set; }
         public int PerformerEmitRetainedCountLastFrame { get; private set; }
         public int PerformerEmitRetainedDirectHitsLastFrame { get; private set; }
-        public int PerformerEmitRetainedFallbacksLastFrame { get; private set; }
+        public int PerformerEmitRetainedFullPathLastFrame { get; private set; }
         public int PerformerEmitRetainedDirectMissesLastFrame { get; private set; }
         public float PresentationRequestFlushMs { get; private set; }
         public float LastPresentationRequestFlushMs { get; private set; }
@@ -513,10 +513,10 @@ namespace Ludots.Core.Presentation.Hud
             PerformerEmitRetainedCountLastFrame = dirtyCount;
         }
 
-        public void ObservePerformerEmitRetainedDirectPath(int directHits, int fallbacks, int directMisses)
+        public void ObservePerformerEmitRetainedDirectPath(int directHits, int fullPathCount, int directMisses)
         {
             PerformerEmitRetainedDirectHitsLastFrame = directHits;
-            PerformerEmitRetainedFallbacksLastFrame = fallbacks;
+            PerformerEmitRetainedFullPathLastFrame = fullPathCount;
             PerformerEmitRetainedDirectMissesLastFrame = directMisses;
         }
 

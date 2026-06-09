@@ -3,6 +3,10 @@ using Arch.Core;
 
 namespace Ludots.Core.Presentation.Events
 {
+    /// <summary>
+    /// Per-tick projected owner fact change consumed by performer owner bindings.
+    /// The record is an index entry only: gameplay values remain owned by their gameplay components.
+    /// </summary>
     public readonly struct PresentationOwnerChange
     {
         public readonly Entity Owner;
@@ -32,6 +36,11 @@ namespace Ludots.Core.Presentation.Events
         Tag = 2,
     }
 
+    /// <summary>
+    /// Bounded per-tick projection index for owner tag/attribute changes.
+    /// Producers must project from gameplay SSOT components, consumers must resolve current values
+    /// from those SSOT components instead of treating this buffer as cached gameplay state.
+    /// </summary>
     public sealed class PresentationOwnerChangeBuffer
     {
         private readonly PresentationOwnerChange[] _buffer;
@@ -42,7 +51,7 @@ namespace Ludots.Core.Presentation.Events
         public int DroppedSinceClear { get; private set; }
         public int DroppedTotal { get; private set; }
 
-        public PresentationOwnerChangeBuffer(int capacity = 8192)
+        public PresentationOwnerChangeBuffer(int capacity)
         {
             if (capacity <= 0) throw new ArgumentOutOfRangeException(nameof(capacity));
             _buffer = new PresentationOwnerChange[capacity];

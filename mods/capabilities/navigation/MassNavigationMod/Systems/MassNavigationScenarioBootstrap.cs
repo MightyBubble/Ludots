@@ -48,7 +48,8 @@ internal static class MassNavigationScenarioBootstrap
             simulation.AgentsPerTeam,
             simulation.WorldConfig.Obstacles,
             simulation.Config.AgentProfiles,
-            scenarioAgentLayer);
+            scenarioAgentLayer,
+            simulation.Config.Scenario.SpawnLayout);
 
         for (int teamIndex = 0; teamIndex < teamIds.Length; teamIndex++)
         {

@@ -25,7 +25,7 @@ using Schedulers; // Added for JobScheduler
 using Ludots.Core.Systems;
 using Ludots.Core.Engine.Pacemaker;
 using Ludots.Core.Physics;
-using Ludots.Core.Gameplay.GAS; // Added for GameplayEventBus
+using Ludots.Core.Gameplay.GAS;
 using Ludots.Core.Gameplay.GAS.Config;
 using Ludots.Core.GraphRuntime;
 using Ludots.Core.NodeLibraries.GASGraph.Host;
@@ -162,7 +162,7 @@ namespace Ludots.Core.Engine
         private static readonly QueryDescription _mapEntitySuspendQuery = new QueryDescription().WithAll<MapEntity>();
         
         // GAS
-        public GameplayEventBus EventBus { get; private set; } // Added EventBus
+        public GameplayEventBus EventBus { get; private set; }
 
         private readonly TypedServiceScope _engineServices = new("engine");
 
@@ -268,7 +268,8 @@ namespace Ludots.Core.Engine
                 }
             }
 
-            RegisterPresentationSystem(system);
+            throw new InvalidOperationException(
+                $"Cannot insert presentation system before required anchor '{typeof(TAnchor).Name}' because the anchor is missing.");
         }
 
         public ScriptContext CreateContext()
@@ -350,6 +351,7 @@ namespace Ludots.Core.Engine
             ModLoader.MapManager = MapManager;
             SetService(CoreServiceKeys.SystemFactoryRegistry, SystemFactoryRegistry);
             SetService(CoreServiceKeys.TriggerDecoratorRegistry, TriggerDecoratorRegistry);
+            OrderBlackboardKeyRegistry.ResetToBuiltins();
 
             // 2. Load Mods first (so ConfigPipeline can access their game.json)
             if (modPlan != null && modPlan.OrderedMods.Count > 0)
@@ -377,7 +379,8 @@ namespace Ludots.Core.Engine
             ConfigPipeline = new ConfigPipeline((VirtualFileSystem)VFS, ModLoader);
             ((MapManager)MapManager).SetConfigPipeline(ConfigPipeline);
             MergedConfig = ConfigPipeline.MergeGameConfig();
-            MergedConfig.Presentation.Validate();
+            (MergedConfig.Presentation
+                ?? throw new InvalidOperationException("game.json presentation must be explicitly configured.")).Validate();
 
             ConfigCatalog = Ludots.Core.Config.ConfigCatalogLoader.Load(ConfigPipeline);
             ConfigConflictReport = new Ludots.Core.Config.ConfigConflictReport();
@@ -630,8 +633,10 @@ namespace Ludots.Core.Engine
             var selectionRuntime = new SelectionRuntime(World, selectionConfig, selectionSetKeyRegistry);
             var interactionActionBindings = new InteractionActionBindings();
             var selectionRuleRegistry = SelectionRuleRegistry.CreateWithDefaults();
-            var runtimeEntitySpawnQueue = new RuntimeEntitySpawnQueue(config.Presentation.GetEffectiveRuntimeEntitySpawnQueueCapacity());
-            var runtimeEntitySpawnReceiptQueue = new RuntimeEntitySpawnReceiptQueue(config.Presentation.GetEffectiveRuntimeEntitySpawnReceiptQueueCapacity());
+            var presentationConfig = config.Presentation
+                ?? throw new InvalidOperationException("game.json presentation must be explicitly configured.");
+            var runtimeEntitySpawnQueue = new RuntimeEntitySpawnQueue(presentationConfig.RuntimeEntitySpawnQueueCapacity);
+            var runtimeEntitySpawnReceiptQueue = new RuntimeEntitySpawnReceiptQueue(presentationConfig.RuntimeEntitySpawnReceiptQueueCapacity);
             var runtimeEntitySpawnReceiptChannels = new RuntimeEntitySpawnReceiptChannelRegistry();
             MapLoader.SetEffectRequestQueue(effectRequestQueue);
             var orderQueue = new OrderQueue();
@@ -646,20 +651,19 @@ namespace Ludots.Core.Engine
             var deferredTriggerCollectionSystem = new DeferredTriggerCollectionSystem(World, deferredTriggerQueue, tagOps);
             var deferredTriggerProcessSystem = new DeferredTriggerProcessSystem(World, deferredTriggerQueue, EventBus);
             var clearPresentationFlagsSystem = new ClearPresentationFlagsSystem(World);
-            var gasPresentationEvents = new GasPresentationEventBuffer();
+            var gasPresentationEvents = new GasPresentationEventBuffer(presentationConfig.GasPresentationEventCapacity);
             var globalPresentationEvents = new GlobalPresentationEventBuffer();
-            var presentationConfig = config.Presentation ?? new PresentationRuntimeConfig();
-            var presentationEventStream = new PresentationEventStream(presentationConfig.GetEffectivePresentationEventStreamCapacity());
-            var presentationOwnerChanges = new PresentationOwnerChangeBuffer(presentationConfig.GetEffectivePresentationEventStreamCapacity());
-            var presentationBridgeSystem = new PresentationBridgeSystem(
+            var presentationEventStream = new PresentationEventStream(presentationConfig.PresentationEventStreamCapacity);
+            var presentationOwnerChanges = new PresentationOwnerChangeBuffer(presentationConfig.PresentationOwnerChangeCapacity);
+            var gameplayPresentationProjectionSystem = new GameplayPresentationProjectionSystem(
                 World,
                 EventBus,
                 presentationEventStream,
                 GameSession,
                 gasPresentationEvents,
                 presentationOwnerChanges);
-            var globalEventBridgeSystem = new GlobalEventBridgeSystem(World, globalPresentationEvents, presentationEventStream, GameSession);
-            var performerCommandBuffer = new PerformerCommandBuffer(presentationConfig.GetEffectivePerformerCommandCapacity());
+            var globalPresentationEventProjectionSystem = new GlobalPresentationEventProjectionSystem(World, globalPresentationEvents, presentationEventStream, GameSession);
+            var performerCommandBuffer = new PerformerCommandBuffer(presentationConfig.PerformerCommandCapacity);
             var presentationPrefabs = new PrefabRegistry();
             var meshAssets = new MeshAssetRegistry();
             var materialAssets = new PresentationMaterialRegistry();
@@ -667,21 +671,21 @@ namespace Ludots.Core.Engine
             var animationClips = new AnimationClipRegistry();
             var animationProfiles = new AnimationProfileRegistry();
             var presentationStableIds = new PresentationStableIdAllocator();
-            var primitiveDrawBuffer = new PrimitiveDrawBuffer(presentationConfig.GetEffectivePrimitiveDrawBufferCapacity());
-            var visualSnapshotBuffer = new PrimitiveDrawBuffer(presentationConfig.GetEffectiveVisualSnapshotBufferCapacity());
-            var visualProxyBuffer = new PresentationVisualProxyBuffer(presentationConfig.GetEffectiveVisualProxyBufferCapacity());
-            var skinnedVisualBatchBuffer = new SkinnedVisualBatchBuffer(presentationConfig.GetEffectiveSkinnedVisualBatchCapacity());
-            var stableDrawCache = new StableDrawCache(presentationConfig.GetEffectiveVisualSnapshotBufferCapacity());
-            var presentationRequestBuffer = new PresentationRequestBuffer(presentationConfig.GetEffectivePresentationRequestCapacity());
+            var primitiveDrawBuffer = new PrimitiveDrawBuffer(presentationConfig.PrimitiveDrawBufferCapacity);
+            var visualSnapshotBuffer = new PrimitiveDrawBuffer(presentationConfig.VisualSnapshotBufferCapacity);
+            var visualProxyBuffer = new PresentationVisualProxyBuffer(presentationConfig.VisualProxyBufferCapacity);
+            var skinnedVisualBatchBuffer = new SkinnedVisualBatchBuffer(presentationConfig.SkinnedVisualBatchCapacity);
+            var stableDrawCache = new StableDrawCache(presentationConfig.VisualSnapshotBufferCapacity);
+            var presentationRequestBuffer = new PresentationRequestBuffer(presentationConfig.PresentationRequestCapacity);
             var transientMarkerBuffer = new TransientMarkerBuffer();
-            var groundOverlayBuffer = new GroundOverlayBuffer(presentationConfig.GetEffectiveGroundOverlayCapacity());
-            var roadSplineBuffer = new RoadSplineBuffer(presentationConfig.GetEffectiveRoadSplineCapacity());
+            var groundOverlayBuffer = new GroundOverlayBuffer(presentationConfig.GroundOverlayCapacity);
+            var roadSplineBuffer = new RoadSplineBuffer(presentationConfig.RoadSplineCapacity);
             var soundRequestBuffer = new SoundRequestBuffer();
-            var worldHudBuffer = new WorldHudBatchBuffer(presentationConfig.GetEffectiveWorldHudCapacity());
+            var worldHudBuffer = new WorldHudBatchBuffer(presentationConfig.WorldHudCapacity);
             var presentationTimingDiagnostics = new PresentationTimingDiagnostics();
             var performerDefinitions = new PerformerDefinitionRegistry();
             var performerRuntime = new PerformerEntityRuntime(World);
-            var performerAnimatorStates = new PerformerAnimatorStateBuffer(presentationConfig.GetEffectivePerformerInstanceCapacity());
+            var performerAnimatorStates = new PerformerAnimatorStateBuffer(presentationConfig.PerformerInstanceCapacity);
             performerRuntime.BindAnimatorStates(performerAnimatorStates);
             var surfacePayloads = new SurfaceSourcePayloadRegistry();
             var surfaceRuntime = new SurfaceSourceRuntimeRegistry();
@@ -759,7 +763,7 @@ namespace Ludots.Core.Engine
             new PerformerDefinitionConfigLoader(
                 ConfigPipeline,
                 performerDefinitions,
-                Ludots.Core.Gameplay.GAS.Registry.AttributeRegistry.Register,
+                Ludots.Core.Gameplay.GAS.Registry.AttributeRegistry.GetId,
                 meshAssets.GetId,
                 presentationTextCatalog.GetTokenId,
                 MapLoader.EntityTemplateKeys.GetId,
@@ -773,6 +777,8 @@ namespace Ludots.Core.Engine
                     AssetKind.SkinnedMesh => meshAssets.GetId(key),
                     AssetKind.Decal => meshAssets.GetId(key),
                     AssetKind.VFX => meshAssets.GetId(key),
+                    AssetKind.Spline => meshAssets.GetId(key),
+                    AssetKind.Sound => meshAssets.GetId(key),
                     AssetKind.WorldText => presentationTextCatalog.GetTokenId(key),
                     AssetKind.GroundOverlay => ResolveGroundOverlayShapeId(key),
                     _ => 0,
@@ -795,8 +801,8 @@ namespace Ludots.Core.Engine
             var worldHudStrings = new WorldHudStringTable(presentationTextCatalog, presentationTextLocaleSelection);
             var minimapRuntime = new MinimapRuntime(presentationConfig.Minimap);
             var chunkDebugPanelRuntime = new ChunkDebugPanelRuntime();
-            var minimapMarkerBuffer = new MinimapMarkerBuffer(presentationConfig.GetEffectiveMinimapMarkerCapacity());
-            var minimapScreenMarkerBuffer = new MinimapScreenMarkerBuffer(presentationConfig.GetEffectiveMinimapMarkerCapacity());
+            var minimapMarkerBuffer = new MinimapMarkerBuffer(presentationConfig.MinimapMarkerCapacity);
+            var minimapScreenMarkerBuffer = new MinimapScreenMarkerBuffer(presentationConfig.MinimapMarkerCapacity);
             var inputFrameConsumers = new List<IInputFrameConsumer>
             {
                 new MinimapInputConsumer(minimapRuntime)
@@ -837,11 +843,6 @@ namespace Ludots.Core.Engine
                     "game.json constants.orderTypeIds must define all required keys: castAbility, moveTo, attackTarget, stop. " +
                     "These are the single source of truth for order type ids.");
             }
-            int cfgCastAbility = orderTypeIds["castAbility"];
-            int cfgMoveTo = orderTypeIds["moveTo"];
-            int cfgAttackTarget = orderTypeIds["attackTarget"];
-            int cfgStop = orderTypeIds["stop"];
-            
             // respondChainOrderTagId = -1 (invalid sentinel): chain orders are routed directly
             // to chainOrderQueue by ResponseChain*Systems, not through the dispatch system.
             // Using -1 prevents accidental match with default OrderTagId == 0.
@@ -851,24 +852,15 @@ namespace Ludots.Core.Engine
             var orderTypeRegistry = new OrderTypeRegistry();
             new OrderTypeConfigLoader(ConfigPipeline).Load(orderTypeRegistry, orderRuleRegistry, ConfigCatalog, ConfigConflictReport);
             
-            // Register chain order types (response chain) into OrderTypeRegistry
-            int cfgChainPass = responseChainOrderTypeIds.GetValueOrDefault("chainPass", 1);
-            int cfgChainNegate = responseChainOrderTypeIds.GetValueOrDefault("chainNegate", 2);
-            int cfgChainActivateEffect = responseChainOrderTypeIds.GetValueOrDefault("chainActivateEffect", 3);
-            int cfgCastAbilityStart = orderTypeRegistry.TryGetId("castAbility.Start", out int resolvedCastAbilityStart) ? resolvedCastAbilityStart : 0;
-            int cfgCastAbilityEnd = orderTypeRegistry.TryGetId("castAbility.End", out int resolvedCastAbilityEnd) ? resolvedCastAbilityEnd : 0;
-            if (!orderTypeRegistry.IsRegistered(cfgCastAbility) ||
-                !orderTypeRegistry.IsRegistered(cfgMoveTo) ||
-                !orderTypeRegistry.IsRegistered(cfgAttackTarget) ||
-                !orderTypeRegistry.IsRegistered(cfgStop) ||
-                !orderTypeRegistry.IsRegistered(cfgChainPass) ||
-                !orderTypeRegistry.IsRegistered(cfgChainNegate) ||
-                !orderTypeRegistry.IsRegistered(cfgChainActivateEffect))
-            {
-                throw new InvalidOperationException(
-                    "GAS/order_types.json must define castAbility, moveTo, attackTarget, stop, chainPass, chainNegate, and chainActivateEffect order types. " +
-                    "Order runtime is configured from merged config and does not provide code defaults.");
-            }
+            int cfgCastAbility = RequireConfiguredOrderTypeId(orderTypeIds, orderTypeRegistry, "castAbility", "constants.orderTypeIds");
+            int cfgMoveTo = RequireConfiguredOrderTypeId(orderTypeIds, orderTypeRegistry, "moveTo", "constants.orderTypeIds");
+            int cfgAttackTarget = RequireConfiguredOrderTypeId(orderTypeIds, orderTypeRegistry, "attackTarget", "constants.orderTypeIds");
+            int cfgStop = RequireConfiguredOrderTypeId(orderTypeIds, orderTypeRegistry, "stop", "constants.orderTypeIds");
+            int cfgChainPass = RequireConfiguredOrderTypeId(responseChainOrderTypeIds, orderTypeRegistry, "chainPass", "constants.responseChainOrderTypeIds");
+            int cfgChainNegate = RequireConfiguredOrderTypeId(responseChainOrderTypeIds, orderTypeRegistry, "chainNegate", "constants.responseChainOrderTypeIds");
+            int cfgChainActivateEffect = RequireConfiguredOrderTypeId(responseChainOrderTypeIds, orderTypeRegistry, "chainActivateEffect", "constants.responseChainOrderTypeIds");
+            int cfgCastAbilityStart = RequireRegisteredOrderTypeId(orderTypeRegistry, "castAbility.Start");
+            int cfgCastAbilityEnd = RequireRegisteredOrderTypeId(orderTypeRegistry, "castAbility.End");
             int stepRateHz = engineClockConfig.FixedHz / Math.Max(1, gasClockConfig.StepEveryFixedTicks);
             var orderBufferSystem = new OrderBufferSystem(
                 World, clock, orderTypeRegistry, orderRuleRegistry,
@@ -975,7 +967,7 @@ namespace Ludots.Core.Engine
             SetService(CoreServiceKeys.PresentationWorldHudStrings, worldHudStrings);
             SetService(CoreServiceKeys.PresentationTextCatalog, presentationTextCatalog);
             SetService(CoreServiceKeys.PresentationTextLocaleSelection, presentationTextLocaleSelection);
-            var screenHudBuffer = new ScreenHudBatchBuffer(presentationConfig.GetEffectiveScreenHudCapacity());
+            var screenHudBuffer = new ScreenHudBatchBuffer(presentationConfig.ScreenHudCapacity);
             SetService(CoreServiceKeys.PresentationScreenHudBuffer, screenHudBuffer);
             SetService(CoreServiceKeys.ScreenOverlayBuffer, new ScreenOverlayBuffer());
             SetService(CoreServiceKeys.MinimapRuntime, minimapRuntime);
@@ -1148,10 +1140,11 @@ namespace Ludots.Core.Engine
             RegisterSystem(new GameplayEventDispatchSystem(EventBus, gasBudget), SystemGroup.EventDispatch);
             RegisterSystem(new GasBudgetReportSystem(gasBudget), SystemGroup.EventDispatch);
             
-            // Phase 7.1: Bridge gameplay-side presentation facts into the presentation stream.
+            // Phase 7.1: Project gameplay-side presentation facts into the presentation stream
+            // and owner-change index consumed by performer owner bindings.
             // Changed-bit components must remain readable until presentation systems consume them,
             // so the actual clear runs at the tail of the presentation pipeline.
-            RegisterSystem(presentationBridgeSystem, SystemGroup.ClearPresentationFlags);
+            RegisterSystem(gameplayPresentationProjectionSystem, SystemGroup.ClearPresentationFlags);
             _cooperativeSimulation = new PhaseOrderedCooperativeSimulation(
                 _systemGroups,
                 OnFixedStepCompleted,
@@ -1177,7 +1170,7 @@ namespace Ludots.Core.Engine
             RegisterPresentationSystem(new ResponseChainHumanOrderSourceSystem(GlobalContext, responseChainUiState, chainOrderQueue));
             RegisterPresentationSystem(new ResponseChainAiOrderSourceSystem(responseChainUiState, chainOrderQueue, cfgChainPass));
             RegisterPresentationSystem(new ResponseChainUiSyncSystem(GlobalContext, responseChainUiState, orderTypeRegistry));
-            RegisterPresentationSystem(globalEventBridgeSystem);
+            RegisterPresentationSystem(globalPresentationEventProjectionSystem);
             RegisterPresentationSystem(new SelectionPresentationEventSystem(World, selectionRuntime, presentationEventStream));
             // PerformerRuleSystem reads events and produces commands.
             RegisterPresentationSystem(performerRuleSystem);
@@ -1242,6 +1235,41 @@ namespace Ludots.Core.Engine
             long scaled = (long)baseHz * scalePermille;
             int targetHz = (int)((scaled + 999) / 1000);
             return Math.Max(1, targetHz);
+        }
+
+        private static int RequireConfiguredOrderTypeId(
+            IReadOnlyDictionary<string, int> configuredIds,
+            OrderTypeRegistry orderTypeRegistry,
+            string orderTypeKey,
+            string configPath)
+        {
+            if (!configuredIds.TryGetValue(orderTypeKey, out int configuredId) || configuredId <= 0)
+            {
+                throw new InvalidOperationException(
+                    $"game.json {configPath} must explicitly define positive order type id for '{orderTypeKey}'.");
+            }
+
+            int registeredId = RequireRegisteredOrderTypeId(orderTypeRegistry, orderTypeKey);
+            if (configuredId != registeredId)
+            {
+                throw new InvalidOperationException(
+                    $"game.json {configPath}.{orderTypeKey} id {configuredId} does not match GAS/order_types.json orderTypeId {registeredId}.");
+            }
+
+            return configuredId;
+        }
+
+        private static int RequireRegisteredOrderTypeId(OrderTypeRegistry orderTypeRegistry, string orderTypeKey)
+        {
+            if (!orderTypeRegistry.TryGetId(orderTypeKey, out int orderTypeId) ||
+                orderTypeId <= 0 ||
+                !orderTypeRegistry.IsRegistered(orderTypeId))
+            {
+                throw new InvalidOperationException(
+                    $"GAS/order_types.json must explicitly define order type '{orderTypeKey}'.");
+            }
+
+            return orderTypeId;
         }
 
         public void LoadMap(string mapId)
@@ -1960,35 +1988,53 @@ namespace Ludots.Core.Engine
             var pathingConfig = new PathingConfigLoader(ConfigPipeline).Load(ConfigCatalog, ConfigConflictReport);
             var pathStore = new PathStore(PathStoreMaxPaths, PathStoreMaxPointsPerPath);
             LoadedGraphRuntime loadedGraphRuntime = null;
-            IPathService nodeGraphService;
-            NodeGraph emptyGraph = null;
+            IPathService nodeGraphService = null;
 
             if (session.PrimaryBoard is INodeGraphBoard nodeGraphBoard)
             {
                 loadedGraphRuntime = nodeGraphBoard.GraphRuntime;
                 nodeGraphService = new NodeGraphPathServiceAdapter(loadedGraphRuntime, pathStore);
             }
-            else
-            {
-                emptyGraph = new NodeGraphBuilder(0, 0).Build();
-                nodeGraphService = new NodeGraphPathServiceAdapter(emptyGraph, pathStore);
-            }
 
             IPathService pathService = nodeGraphService;
 
             var navRegistry = GetService(CoreServiceKeys.NavQueryServices);
             var navProfiles = GetService(CoreServiceKeys.NavMeshProfiles);
+            bool hasNavServices = navRegistry != null && navProfiles != null;
+            bool requiresGraphPathing = RequiresGraphPathing(pathingConfig);
+            bool requiresNavMeshPathing = RequiresNavMeshPathing(pathingConfig);
 
-            if (navRegistry != null && navProfiles != null)
+            if (loadedGraphRuntime == null && !hasNavServices)
             {
-                IPathService autoPathService = loadedGraphRuntime != null
-                    ? new AutoPathService(loadedGraphRuntime, navRegistry, navProfiles, pathStore, pathingConfig)
-                    : new AutoPathService(emptyGraph ?? new NodeGraphBuilder(0, 0).Build(), navRegistry, navProfiles, pathStore, pathingConfig);
-                pathService = autoPathService;
+                Diagnostics.Log.Info(
+                    in LogChannels.Engine,
+                    $"Pathing bootstrap skipped for map '{session.MapId.Value}': no node-graph board or navmesh query service is loaded.");
+                return;
+            }
 
-                if (TryCreateDefaultNavMeshPathService(pathingConfig, navRegistry, navProfiles, pathStore, out var navMeshService))
+            if (loadedGraphRuntime == null && requiresGraphPathing)
+            {
+                throw new InvalidOperationException(
+                    $"Map '{session.MapId.Value}' pathing config selects graph-capable routing but the primary board is not a node graph.");
+            }
+
+            if (!hasNavServices && requiresNavMeshPathing)
+            {
+                throw new InvalidOperationException(
+                    $"Map '{session.MapId.Value}' pathing config selects mesh-capable routing but navmesh query services are not loaded.");
+            }
+
+            if (hasNavServices)
+            {
+                IPathService navMeshService = CreateDefaultNavMeshPathService(pathingConfig, navRegistry, navProfiles, pathStore);
+                if (loadedGraphRuntime != null)
                 {
+                    IPathService autoPathService = new AutoPathService(loadedGraphRuntime, navRegistry, navProfiles, pathStore, pathingConfig);
                     pathService = new PathServiceRouter(nodeGraphService, navMeshService, autoPathService, pathStore);
+                }
+                else
+                {
+                    pathService = navMeshService;
                 }
             }
             else if (loadedGraphRuntime != null)
@@ -2013,43 +2059,82 @@ namespace Ludots.Core.Engine
             RemoveService(CoreServiceKeys.LoadedGraphRuntime);
         }
 
-        private static NodeGraph BuildPathingGraph(IBoard board)
+        private static bool RequiresGraphPathing(PathingConfig pathingConfig)
         {
-            if (board is INodeGraphBoard nodeGraphBoard)
+            if (pathingConfig?.AgentTypes == null)
             {
-                return nodeGraphBoard.GraphStore.BuildLoadedView().Graph;
+                return false;
             }
 
-            return new NodeGraphBuilder(0, 0).Build();
+            for (int i = 0; i < pathingConfig.AgentTypes.Count; i++)
+            {
+                var agent = pathingConfig.AgentTypes[i];
+                if (agent == null)
+                {
+                    continue;
+                }
+
+                if (agent.Selection?.Mode == PathSelectionMode.AutoCheapest ||
+                    agent.Selection?.Mode == PathSelectionMode.PreferGraph)
+                {
+                    return true;
+                }
+            }
+
+            return false;
         }
 
-        private static bool TryCreateDefaultNavMeshPathService(
+        private static bool RequiresNavMeshPathing(PathingConfig pathingConfig)
+        {
+            if (pathingConfig?.AgentTypes == null)
+            {
+                return false;
+            }
+
+            for (int i = 0; i < pathingConfig.AgentTypes.Count; i++)
+            {
+                var agent = pathingConfig.AgentTypes[i];
+                if (agent == null)
+                {
+                    continue;
+                }
+
+                if (agent.Selection?.Mode == PathSelectionMode.AutoCheapest ||
+                    agent.Selection?.Mode == PathSelectionMode.PreferMesh)
+                {
+                    return true;
+                }
+            }
+
+            return false;
+        }
+
+        private static IPathService CreateDefaultNavMeshPathService(
             PathingConfig pathingConfig,
             NavQueryServiceRegistry navRegistry,
             NavMeshProfileRegistry navProfiles,
-            PathStore pathStore,
-            out IPathService navMeshService)
+            PathStore pathStore)
         {
-            navMeshService = null;
             if (pathingConfig?.AgentTypes == null || pathingConfig.AgentTypes.Count == 0)
             {
-                return false;
+                throw new InvalidOperationException("PathingConfig.agentTypes must define at least one agent type for navmesh path service bootstrap.");
             }
 
             var agent = pathingConfig.AgentTypes[0];
             if (agent == null || !navProfiles.TryGetIndex(agent.ProfileId, out int profileIndex))
             {
-                return false;
+                throw new InvalidOperationException(
+                    $"PathingConfig default agent profileId '{agent?.ProfileId ?? "<null>"}' is not registered in navmesh profiles.");
             }
 
             var areaCosts = BuildPathNavAreaCosts(agent.NavMesh);
             if (!navRegistry.TryCreateQuery(agent.Layer, profileIndex, areaCosts, out var query))
             {
-                return false;
+                throw new InvalidOperationException(
+                    $"PathingConfig default agent '{agent.Id}' cannot create navmesh query for layer {agent.Layer}, profile '{agent.ProfileId}'.");
             }
 
-            navMeshService = new NavMeshPathServiceAdapter(query, pathStore);
-            return true;
+            return new NavMeshPathServiceAdapter(query, pathStore);
         }
 
         private static NavAreaCostTable BuildPathNavAreaCosts(PathingNavMeshConfig cfg)

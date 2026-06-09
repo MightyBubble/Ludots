@@ -4,6 +4,7 @@
   "windowHeight": 900,
   "windowResizable": true,
   "presentation": {
+    "gasPresentationEventCapacity": 65536,
     "minimap": {
       "initialZoomNormalized": 1.0,
       "wheelZoomNormalizedStep": 0.08,

@@ -64,8 +64,8 @@ namespace Ludots.Tests.Presentation
                   {
                     "id": "root",
                     "children": [
-                      { "definitionId": "child_a", "scopeTag": 101 },
-                      { "definitionId": "child_b", "scopeTag": 102 }
+                      { "definitionId": "child_a", "scopeTag": "childA" },
+                      { "definitionId": "child_b", "scopeTag": "childB" }
                     ]
                   }
                 ]
@@ -455,7 +455,7 @@ namespace Ludots.Tests.Presentation
             {
                 World = Arch.Core.World.Create();
                 Commands = new PerformerCommandBuffer();
-                Events = new PresentationEventStream();
+                Events = new PresentationEventStream(PresentationTestConstants.EventStreamCapacity);
                 Instances = new PerformerEntityRuntime(World);
                 Definitions = new PerformerDefinitionRegistry();
                 Owner = this.World.Create();

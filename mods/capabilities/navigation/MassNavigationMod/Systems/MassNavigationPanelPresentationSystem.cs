@@ -1,3 +1,4 @@
+using System;
 using Arch.System;
 using Ludots.Core.Engine;
 using MassNavigationMod.Runtime;
@@ -7,16 +8,26 @@ namespace MassNavigationMod.Systems;
 
 internal sealed class MassNavigationPanelPresentationSystem : ISystem<float>
 {
-    private const float PanelRefreshIntervalSeconds = 0.25f;
-
     private readonly GameEngine _engine;
     private readonly MassNavigationRuntime _runtime;
-    private float _refreshAccumulatorSeconds = PanelRefreshIntervalSeconds;
+    private readonly float _refreshIntervalSeconds;
+    private float _refreshAccumulatorSeconds;
 
-    public MassNavigationPanelPresentationSystem(GameEngine engine, MassNavigationRuntime runtime)
+    public MassNavigationPanelPresentationSystem(
+        GameEngine engine,
+        MassNavigationRuntime runtime,
+        float refreshIntervalSeconds)
     {
         _engine = engine;
         _runtime = runtime;
+        if (!(refreshIntervalSeconds > 0f))
+        {
+            throw new InvalidOperationException(
+                "MassNavigation panel presentation requires scenarioRuntime.panelControls.panelRefreshIntervalSeconds > 0.");
+        }
+
+        _refreshIntervalSeconds = refreshIntervalSeconds;
+        _refreshAccumulatorSeconds = refreshIntervalSeconds;
     }
 
     public void Initialize() { }
@@ -28,13 +39,12 @@ internal sealed class MassNavigationPanelPresentationSystem : ISystem<float>
     {
         if (!MassNavigationIds.IsCurrentNavigationMap(_engine))
         {
-            _refreshAccumulatorSeconds = PanelRefreshIntervalSeconds;
-            _runtime.RefreshPanel(_engine);
+            _refreshAccumulatorSeconds = _refreshIntervalSeconds;
             return;
         }
 
         _refreshAccumulatorSeconds += dt;
-        if (_refreshAccumulatorSeconds < PanelRefreshIntervalSeconds)
+        if (_refreshAccumulatorSeconds < _refreshIntervalSeconds)
         {
             return;
         }

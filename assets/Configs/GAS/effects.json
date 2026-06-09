@@ -6,10 +6,10 @@
     "lifetime": "Instant",
     "participatesInResponse": true,
     "configParams": {
-      "_ep.forceXTargetAttrId": { "type": "attribute", "value": "Physics.ForceRequestX" },
-      "_ep.forceYTargetAttrId": { "type": "attribute", "value": "Physics.ForceRequestY" },
-      "_ep.forceXAttribute": { "type": "int", "value": 0 },
-      "_ep.forceYAttribute": { "type": "int", "value": 0 }
+      "_ep.forceXTargetAttrId": { "type": "Attribute", "value": "Physics.ForceRequestX" },
+      "_ep.forceYTargetAttrId": { "type": "Attribute", "value": "Physics.ForceRequestY" },
+      "_ep.forceXAttribute": { "type": "Int", "value": 0 },
+      "_ep.forceYAttribute": { "type": "Int", "value": 0 }
     }
   }
 ]

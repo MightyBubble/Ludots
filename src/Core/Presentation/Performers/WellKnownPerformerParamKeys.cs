@@ -50,9 +50,6 @@ namespace Ludots.Core.Presentation.Performers
         public const int TextColorA = 7;
         /// <summary>Stable text token ID for localization.</summary>
         public const int TextTokenId = 15;
-        /// <summary>WorldHudValueMode ordinal for legacy adapters.</summary>
-        public const int TextValueMode = 16;
-
         // ── GroundOverlay ──
 
         /// <summary>Outer radius (or uniform scale).</summary>

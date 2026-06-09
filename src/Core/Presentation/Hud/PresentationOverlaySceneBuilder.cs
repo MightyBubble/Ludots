@@ -402,9 +402,9 @@ namespace Ludots.Core.Presentation.Hud
 
             if (item.Id0 != 0 && _worldHudStrings != null)
             {
-                string? legacyText = _worldHudStrings.TryGet(item.Id0);
-                CacheResolvedScreenHudText(item, legacyText, allowResolvedCache: true);
-                return legacyText;
+                string? stringTableText = _worldHudStrings.TryGet(item.Id0);
+                CacheResolvedScreenHudText(item, stringTableText, allowResolvedCache: true);
+                return stringTableText;
             }
 
             string? numericText = ResolveCachedNumericHudText(item.Id1, item.Value0, item.Value1);
@@ -460,7 +460,7 @@ namespace Ludots.Core.Presentation.Hud
                 return cached;
             }
 
-            string? formatted = ResolveLegacyHudText(modeId, value0, value1);
+            string? formatted = ResolveWorldHudValueModeText(modeId, value0, value1);
             if (formatted == null)
             {
                 return null;
@@ -475,7 +475,7 @@ namespace Ludots.Core.Presentation.Hud
             return formatted;
         }
 
-        private static string? ResolveLegacyHudText(int modeId, float value0, float value1)
+        private static string? ResolveWorldHudValueModeText(int modeId, float value0, float value1)
         {
             WorldHudValueMode mode = (WorldHudValueMode)modeId;
             return mode switch

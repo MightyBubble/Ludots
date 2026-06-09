@@ -36,7 +36,7 @@ namespace Ludots.Core.Presentation.Config
         private static AnimationClipDefinition ParseClip(JsonNode node, string key)
         {
             string assetKindText = node["assetKind"]?.GetValue<string>() ?? nameof(AnimationClipAssetKind.Clip);
-            if (!Enum.TryParse(assetKindText, ignoreCase: true, out AnimationClipAssetKind assetKind))
+            if (!Enum.TryParse(assetKindText, ignoreCase: false, out AnimationClipAssetKind assetKind))
             {
                 throw new InvalidOperationException($"Animation clip '{key}' has invalid assetKind '{assetKindText}'.");
             }
@@ -87,7 +87,7 @@ namespace Ludots.Core.Presentation.Config
             }
 
             string value = node.GetValue<string>();
-            if (!Enum.TryParse(value, ignoreCase: true, out AnimationBlendInputSource input))
+            if (!Enum.TryParse(value, ignoreCase: false, out AnimationBlendInputSource input))
             {
                 throw new InvalidOperationException(
                     $"Animation clip '{key}' has invalid blendInputs.{axisLabel} '{value}'.");
@@ -102,7 +102,7 @@ namespace Ludots.Core.Presentation.Config
             {
                 for (int j = i + 1; j < locators.Length; j++)
                 {
-                    if (string.Equals(locators[i].BackendId, locators[j].BackendId, StringComparison.OrdinalIgnoreCase))
+                    if (string.Equals(locators[i].BackendId, locators[j].BackendId, StringComparison.Ordinal))
                     {
                         throw new InvalidOperationException(
                             $"Animation clip '{key}' defines duplicate locator backend '{locators[i].BackendId}'.");

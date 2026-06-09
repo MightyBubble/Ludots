@@ -13,7 +13,8 @@
         "conditionKind": "FloatGreaterOrEqual",
         "parameterIndex": "mass_navigation.agent.locomotion.speed",
         "threshold": 0.2,
-        "durationSeconds": 0.08
+        "durationSeconds": 0.08,
+        "consumeTrigger": false
       },
       {
         "fromStateIndex": 1,
@@ -21,7 +22,8 @@
         "conditionKind": "FloatLessOrEqual",
         "parameterIndex": "mass_navigation.agent.locomotion.speed",
         "threshold": 0.1,
-        "durationSeconds": 0.08
+        "durationSeconds": 0.08,
+        "consumeTrigger": false
       }
     ]
   }

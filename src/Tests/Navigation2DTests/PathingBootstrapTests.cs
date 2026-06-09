@@ -1,7 +1,6 @@
 using System.Collections.Generic;
 using System.IO;
 using Ludots.Core.Engine;
-using Ludots.Core.Navigation.Pathing;
 using Ludots.Core.Scripting;
 using NUnit.Framework;
 
@@ -18,16 +17,16 @@ public sealed class PathingBootstrapTests
     };
 
     [Test]
-    public void LoadMap_Registers_MapScopedPathingServices()
+    public void LoadMap_SkipsMapScopedPathingServices_WhenMapHasNoGraphOrNavMesh()
     {
         using var engine = CreateEngine();
 
         engine.LoadMap(engine.MergedConfig.StartupMapId);
 
         Assert.That(engine.CurrentMapSession, Is.Not.Null);
-        Assert.That(engine.GetService(CoreServiceKeys.PathingConfig), Is.Not.Null);
-        Assert.That(engine.GetService(CoreServiceKeys.PathStore), Is.Not.Null);
-        Assert.That(engine.GetService(CoreServiceKeys.PathService), Is.Not.Null);
+        Assert.That(engine.GetService(CoreServiceKeys.PathingConfig), Is.Null);
+        Assert.That(engine.GetService(CoreServiceKeys.PathStore), Is.Null);
+        Assert.That(engine.GetService(CoreServiceKeys.PathService), Is.Null);
     }
 
     [Test]

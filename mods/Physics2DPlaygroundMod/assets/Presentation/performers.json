@@ -4,7 +4,7 @@
     "defaultLifetime": -1,
     "behaviors": [
       {
-        "slot": 0,
+        "slot": "body",
         "kind": "AssetBinding",
         "activeByDefault": true,
         "assetBinding": {
@@ -14,9 +14,9 @@
           "renderPath": "StaticMesh",
           "mobility": "Movable",
           "localScale": [
-            1.0,
+            1,
             0.5,
-            1.0
+            1
           ]
         }
       }

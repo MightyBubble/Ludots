@@ -221,15 +221,16 @@ namespace Ludots.Core.Presentation.Systems
                 }
             }
 
-            if (!runtime.Initialized || !definition.TryGetState(runtime.CurrentStateIndex, out AnimatorStateDefinition currentState))
+            if (!runtime.Initialized)
+            {
                 return;
+            }
 
-            float speed = config.SpeedParamKey >= 0
-                ? ResolveFloatFast(entity, config.SpeedParamKey, 0f, ref floatParams, ref floatDefaults, in parent)
-                : 1f;
-            if (speed <= 0f) speed = currentState.PlaybackSpeed <= 0f ? 1f : currentState.PlaybackSpeed;
+            AnimatorStateDefinition currentState = RequireState(definition, runtime.CurrentStateIndex, controllerId, "current");
+
+            float speed = ResolvePlaybackSpeed(entity, config, currentState, ref floatParams, ref floatDefaults, in parent);
             runtime.StateElapsedSeconds += dt * speed;
-            float duration = ResolveDuration(currentState.DurationSeconds);
+            float duration = currentState.DurationSeconds;
             float normalizedTime = ResolveNormalizedTime(runtime.StateElapsedSeconds, duration, currentState.Loop);
 
             TryStartTransition(
@@ -242,18 +243,19 @@ namespace Ludots.Core.Presentation.Systems
                 ref floatDefaults,
                 in parent,
                 normalizedTime);
-            if (!runtime.IsTransitioning && definition.TryGetState(runtime.CurrentStateIndex, out AnimatorStateDefinition resolvedState))
+            if (!runtime.IsTransitioning)
             {
-                currentState = resolvedState;
-                duration = ResolveDuration(currentState.DurationSeconds);
+                currentState = RequireState(definition, runtime.CurrentStateIndex, controllerId, "current");
+                duration = currentState.DurationSeconds;
                 normalizedTime = ResolveNormalizedTime(runtime.StateElapsedSeconds, duration, currentState.Loop);
             }
-            if (runtime.IsTransitioning && definition.TryGetState(runtime.NextStateIndex, out AnimatorStateDefinition nextState))
+            if (runtime.IsTransitioning)
             {
+                AnimatorStateDefinition nextState = RequireState(definition, runtime.NextStateIndex, controllerId, "next");
                 runtime.TransitionElapsedSeconds += dt;
-                float transitionDuration = runtime.TransitionDurationSeconds <= 0f ? 0f : runtime.TransitionDurationSeconds;
+                float transitionDuration = runtime.TransitionDurationSeconds;
                 float transitionProgress = transitionDuration <= 0f ? 1f : Math.Clamp(runtime.TransitionElapsedSeconds / transitionDuration, 0f, 1f);
-                packed.SetSecondaryStateIndex(ClampPackedStateIndex(nextState.PackedStateIndex));
+                packed.SetSecondaryStateIndex(nextState.PackedStateIndex);
                 packed.SetTransitionProgress01(transitionProgress);
                 if (transitionProgress >= 1f)
                 {
@@ -293,7 +295,7 @@ namespace Ludots.Core.Presentation.Systems
                 WriteFeedbackToBlackboard(entity, config, evt);
             }
 
-            packed.SetPrimaryStateIndex(ClampPackedStateIndex(currentState.PackedStateIndex));
+            packed.SetPrimaryStateIndex(currentState.PackedStateIndex);
             packed.SetNormalizedTime01(normalizedTime);
             AnimatorPackedStateFlags flags = AnimatorPackedStateFlags.Active;
             if (currentState.Loop) flags |= AnimatorPackedStateFlags.Looping;
@@ -322,15 +324,15 @@ namespace Ludots.Core.Presentation.Systems
                 bool matches = transition.ConditionKind switch
                 {
                     AnimatorConditionKind.None => true,
-                    AnimatorConditionKind.Trigger => transition.ParameterIndex >= 0 && _runtime.ResolveInt(entity, transition.ParameterIndex, 0) != 0,
-                    AnimatorConditionKind.BoolTrue => transition.ParameterIndex >= 0 && _runtime.ResolveInt(entity, transition.ParameterIndex, 0) != 0,
-                    AnimatorConditionKind.BoolFalse => transition.ParameterIndex < 0 || _runtime.ResolveInt(entity, transition.ParameterIndex, 0) == 0,
-                    AnimatorConditionKind.FloatGreaterOrEqual => transition.ParameterIndex >= 0 &&
-                        ResolveFloatFast(entity, transition.ParameterIndex, 0f, ref floatParams, ref floatDefaults, in parent) >= transition.Threshold,
-                    AnimatorConditionKind.FloatLessOrEqual => transition.ParameterIndex >= 0 &&
-                        ResolveFloatFast(entity, transition.ParameterIndex, 0f, ref floatParams, ref floatDefaults, in parent) <= transition.Threshold,
+                    AnimatorConditionKind.Trigger => ResolveRequiredIntParam(entity, transition.ParameterIndex, "Trigger") != 0,
+                    AnimatorConditionKind.BoolTrue => ResolveRequiredIntParam(entity, transition.ParameterIndex, "BoolTrue") != 0,
+                    AnimatorConditionKind.BoolFalse => ResolveRequiredIntParam(entity, transition.ParameterIndex, "BoolFalse") == 0,
+                    AnimatorConditionKind.FloatGreaterOrEqual =>
+                        ResolveRequiredFloatParam(entity, transition.ParameterIndex, ref floatParams, ref floatDefaults, in parent, "FloatGreaterOrEqual") >= transition.Threshold,
+                    AnimatorConditionKind.FloatLessOrEqual =>
+                        ResolveRequiredFloatParam(entity, transition.ParameterIndex, ref floatParams, ref floatDefaults, in parent, "FloatLessOrEqual") <= transition.Threshold,
                     AnimatorConditionKind.AutoOnNormalizedTime => normalizedTime >= transition.Threshold,
-                    _ => false,
+                    _ => throw new InvalidOperationException($"Animator controller {definition.ControllerId} has unsupported condition kind '{transition.ConditionKind}'."),
                 };
                 if (!matches) continue;
                 if (transition.ConditionKind == AnimatorConditionKind.Trigger && transition.ConsumeTrigger && transition.ParameterIndex >= 0)
@@ -343,7 +345,7 @@ namespace Ludots.Core.Presentation.Systems
                 };
                 feedback.Push(evt);
                 WriteFeedbackToBlackboard(entity, config, evt);
-                if (transition.DurationSeconds <= 0f)
+                if (transition.DurationSeconds == 0f)
                 {
                     runtime.CurrentStateIndex = transition.ToStateIndex;
                     runtime.NextStateIndex = AnimatorRuntimeState.NoState;
@@ -362,23 +364,124 @@ namespace Ludots.Core.Presentation.Systems
         }
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        private float ResolveFloatFast(
+        private float ResolvePlaybackSpeed(
             Entity performer,
-            int paramKey,
-            float defaultValue,
+            in AnimatorConfig config,
+            in AnimatorStateDefinition currentState,
             ref PerformerFloatParams floatParams,
             ref PerformerFloatDefaults floatDefaults,
             in PerformerParent parent)
         {
-            if (floatParams.TryGet(paramKey, out float value) ||
-                floatDefaults.TryGet(paramKey, out value))
+            if (config.SpeedParamKey < 0)
             {
-                return value;
+                return currentState.PlaybackSpeed;
             }
 
-            return parent.Parent == Entity.Null
-                ? defaultValue
-                : _runtime.ResolveFloat(performer, paramKey, defaultValue);
+            float multiplier = ResolveRequiredFloatParam(
+                performer,
+                config.SpeedParamKey,
+                ref floatParams,
+                ref floatDefaults,
+                in parent,
+                "speedParamKey");
+            if (multiplier < 0f)
+            {
+                throw new InvalidOperationException(
+                    $"Animator speedParamKey {config.SpeedParamKey} resolved to negative multiplier {multiplier}.");
+            }
+
+            return currentState.PlaybackSpeed * multiplier;
+        }
+
+        private float ResolveRequiredFloatParam(
+            Entity performer,
+            int paramKey,
+            ref PerformerFloatParams floatParams,
+            ref PerformerFloatDefaults floatDefaults,
+            in PerformerParent parent,
+            string context)
+        {
+            if (paramKey < 0)
+            {
+                throw new InvalidOperationException($"Animator {context} requires a concrete float parameter key.");
+            }
+
+            if (!TryResolveFloatFast(performer, paramKey, ref floatParams, ref floatDefaults, in parent, out float value))
+            {
+                throw new InvalidOperationException(
+                    $"Animator {context} requires float parameter key {paramKey}, but it is missing from performer {performer.Id} and its performer parent chain.");
+            }
+
+            if (!float.IsFinite(value))
+            {
+                throw new InvalidOperationException(
+                    $"Animator {context} float parameter key {paramKey} resolved non-finite value {value}.");
+            }
+
+            return value;
+        }
+
+        private int ResolveRequiredIntParam(Entity performer, int paramKey, string context)
+        {
+            if (paramKey < 0)
+            {
+                throw new InvalidOperationException($"Animator {context} requires a concrete int parameter key.");
+            }
+
+            if (!_runtime.TryResolveInt(performer, paramKey, out int value))
+            {
+                throw new InvalidOperationException(
+                    $"Animator {context} requires int parameter key {paramKey}, but it is missing from performer {performer.Id} and its performer parent chain.");
+            }
+
+            return value;
+        }
+
+        private bool TryResolveFloatFast(
+            Entity performer,
+            int paramKey,
+            ref PerformerFloatParams floatParams,
+            ref PerformerFloatDefaults floatDefaults,
+            in PerformerParent parent,
+            out float value)
+        {
+            if (floatParams.TryGet(paramKey, out value) ||
+                floatDefaults.TryGet(paramKey, out value))
+            {
+                return true;
+            }
+
+            Entity current = parent.Parent;
+            while (current != Entity.Null && World.IsAlive(current))
+            {
+                if (World.Has<PerformerFloatParams>(current))
+                {
+                    ref PerformerFloatParams parentParams = ref World.Get<PerformerFloatParams>(current);
+                    if (parentParams.TryGet(paramKey, out value))
+                    {
+                        return true;
+                    }
+                }
+
+                if (World.Has<PerformerFloatDefaults>(current))
+                {
+                    ref PerformerFloatDefaults parentDefaults = ref World.Get<PerformerFloatDefaults>(current);
+                    if (parentDefaults.TryGet(paramKey, out value))
+                    {
+                        return true;
+                    }
+                }
+
+                if (!World.Has<PerformerParent>(current))
+                {
+                    break;
+                }
+
+                current = World.Get<PerformerParent>(current).Parent;
+            }
+
+            value = default;
+            return false;
         }
 
         private void WriteFeedbackToBlackboard(Entity entity, in AnimatorConfig config, in AnimatorFeedbackEvent feedback)
@@ -391,20 +494,26 @@ namespace Ludots.Core.Presentation.Systems
             _runtime.SetParam(entity, config.StateParamKey + FeedbackValue0Offset, ParamLane.Float, feedback.Value0, 0, default);
         }
 
-        private static float ResolveDuration(float durationSeconds) => durationSeconds <= 0f ? 1f : durationSeconds;
-
         private static float ResolveNormalizedTime(float elapsedSeconds, float durationSeconds, bool loop)
         {
-            if (durationSeconds <= 0f) return 0f;
             if (!loop) return Math.Clamp(elapsedSeconds / durationSeconds, 0f, 1f);
             float cycles = elapsedSeconds / durationSeconds;
             return cycles - MathF.Floor(cycles);
         }
 
-        private static int ClampPackedStateIndex(int packedStateIndex)
+        private static AnimatorStateDefinition RequireState(
+            AnimatorControllerDefinition definition,
+            int stateIndex,
+            int controllerId,
+            string context)
         {
-            if (packedStateIndex < 0) return 0;
-            return Math.Min(packedStateIndex, AnimatorPackedState.MaxStateIndex);
+            if (definition.TryGetState(stateIndex, out AnimatorStateDefinition state))
+            {
+                return state;
+            }
+
+            throw new InvalidOperationException(
+                $"Animator controller {controllerId} runtime referenced invalid {context} state index {stateIndex}.");
         }
 
         private static bool IsBehaviorActive(uint mask, int slotIndex)

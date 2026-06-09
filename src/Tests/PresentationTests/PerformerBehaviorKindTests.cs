@@ -66,10 +66,7 @@ namespace Ludots.Tests.Presentation
 
             var instances = new PerformerEntityRuntime(world);
             var definitions = new PerformerDefinitionRegistry();
-            Entity performer = instances.Create(1, owner, 0, PresentationAnchorKind.Entity, Vector3.Zero, 7001, Entity.Null, default);
-            world.Get<PerformerState>(performer).BehaviorActiveMask = 1u;
-
-            definitions.Register("behavior.attribute", new PerformerDefinition
+            int defId = definitions.Register("behavior.attribute", new PerformerDefinition
             {
                 Behaviors =
                 [
@@ -92,12 +89,17 @@ namespace Ludots.Tests.Presentation
                 ],
             });
 
+            instances.BindDefinitions(definitions);
+            Entity performer = instances.Create(defId, owner, 0, PresentationAnchorKind.Entity, Vector3.Zero, 7001, Entity.Null, default);
+            world.Add(performer, new PerformerBootstrapPending());
+            world.Get<PerformerState>(performer).BehaviorActiveMask = 1u;
+
             var ownerChanges = new PresentationOwnerChangeBuffer(8);
             using var system = new PerformerBehaviorSystem(
                 world,
                 instances,
                 definitions,
-                new PresentationEventStream(),
+                new PresentationEventStream(PresentationTestConstants.EventStreamCapacity),
                 ownerChanges,
                 new SoundRequestBuffer());
 
@@ -165,7 +167,7 @@ namespace Ludots.Tests.Presentation
                 world,
                 instances,
                 definitions,
-                new PresentationEventStream(),
+                new PresentationEventStream(PresentationTestConstants.EventStreamCapacity),
                 ownerChanges,
                 new SoundRequestBuffer());
 
@@ -239,14 +241,16 @@ namespace Ludots.Tests.Presentation
                 ],
             });
 
+            instances.BindDefinitions(definitions);
             Entity performer = instances.Create(defId, owner, 0, PresentationAnchorKind.Entity, Vector3.Zero, 7102, Entity.Null, default);
+            world.Add(performer, new PerformerBootstrapPending());
 
             var ownerChanges = new PresentationOwnerChangeBuffer(8);
             using var system = new PerformerBehaviorSystem(
                 world,
                 instances,
                 definitions,
-                new PresentationEventStream(),
+                new PresentationEventStream(PresentationTestConstants.EventStreamCapacity),
                 ownerChanges,
                 new SoundRequestBuffer());
 
@@ -267,11 +271,9 @@ namespace Ludots.Tests.Presentation
             Entity owner = world.Create();
             var instances = new PerformerEntityRuntime(world);
             var definitions = new PerformerDefinitionRegistry();
-            Entity performer = instances.Create(1, owner, 0, PresentationAnchorKind.Entity, Vector3.Zero, 7002, Entity.Null, default);
-            world.Get<PerformerState>(performer).BehaviorActiveMask = 0b11u;
 
             int workingTagId = TagRegistry.Register("working");
-            definitions.Register("behavior.tag", new PerformerDefinition
+            int defId = definitions.Register("behavior.tag", new PerformerDefinition
             {
                 Behaviors =
                 [
@@ -301,12 +303,17 @@ namespace Ludots.Tests.Presentation
                 ],
             });
 
+            instances.BindDefinitions(definitions);
+            Entity performer = instances.Create(defId, owner, 0, PresentationAnchorKind.Entity, Vector3.Zero, 7002, Entity.Null, default);
+            world.Add(performer, new PerformerBootstrapPending());
+            world.Get<PerformerState>(performer).BehaviorActiveMask = 0b11u;
+
             var ownerChanges = new PresentationOwnerChangeBuffer(8);
             using var system = new PerformerBehaviorSystem(
                 world,
                 instances,
                 definitions,
-                new PresentationEventStream(),
+                new PresentationEventStream(PresentationTestConstants.EventStreamCapacity),
                 ownerChanges,
                 new SoundRequestBuffer());
 
@@ -372,7 +379,7 @@ namespace Ludots.Tests.Presentation
                 world,
                 instances,
                 definitions,
-                new PresentationEventStream(),
+                new PresentationEventStream(PresentationTestConstants.EventStreamCapacity),
                 ownerChanges,
                 new SoundRequestBuffer());
 
@@ -566,6 +573,7 @@ namespace Ludots.Tests.Presentation
             });
 
             var instances = new PerformerEntityRuntime(world);
+            instances.BindDefinitions(definitions);
             Entity performer = instances.Create(defId, world.Create(), 0, PresentationAnchorKind.Entity, Vector3.Zero, 7003, Entity.Null, default);
             world.Get<PerformerState>(performer).BehaviorActiveMask = 1u;
             instances.SetParam(performer, 120, ParamLane.Float, 1f, 0, default);
@@ -617,7 +625,8 @@ namespace Ludots.Tests.Presentation
                 world,
                 instances,
                 definitions,
-                new PresentationEventStream(),
+                new PresentationEventStream(PresentationTestConstants.EventStreamCapacity),
+                new PresentationOwnerChangeBuffer(8),
                 new SoundRequestBuffer(),
                 heightmap: null,
                 boneTransformProvider: new StubBoneTransformProvider(
@@ -680,7 +689,8 @@ namespace Ludots.Tests.Presentation
                 world,
                 instances,
                 definitions,
-                new PresentationEventStream(),
+                new PresentationEventStream(PresentationTestConstants.EventStreamCapacity),
+                new PresentationOwnerChangeBuffer(8),
                 new SoundRequestBuffer());
 
             system.Update(0.016f);
@@ -718,6 +728,7 @@ namespace Ludots.Tests.Presentation
                             AssetId = 1,
                             RenderPath = VisualRenderPath.StaticMesh,
                             Mobility = VisualMobility.Movable,
+                            AssetIdParamKey = -1,
                         },
                     },
                 ],
@@ -738,6 +749,7 @@ namespace Ludots.Tests.Presentation
                             Mobility = VisualMobility.Movable,
                             LocalScale = new Vector3(64f, 8f, 1f),
                             MaterialParamKey = 100,
+                            AssetIdParamKey = -1,
                         },
                     },
                     new BehaviorSlot
@@ -765,6 +777,7 @@ namespace Ludots.Tests.Presentation
             world.Get<PerformerCullState>(hud).OwnerCullVisible = true;
             world.Get<PerformerWorldPosition>(parent).Value = new Vector3(10f, 0f, 20f);
             world.Get<PerformerWorldScale>(parent).Value = Vector3.One;
+            instances.SetParam(hud, 100, ParamLane.Float, 1f, 0, default);
             instances.SyncTickBehaviorMarkers(hud, definitions.Get(hudDefId), 0b11u);
             instances.SyncEmitWorkMarkers(hud, definitions.Get(hudDefId), 0b11u);
 
@@ -772,7 +785,8 @@ namespace Ludots.Tests.Presentation
                 world,
                 instances,
                 definitions,
-                new PresentationEventStream(),
+                new PresentationEventStream(PresentationTestConstants.EventStreamCapacity),
+                new PresentationOwnerChangeBuffer(8),
                 new SoundRequestBuffer());
             using var emit = new PerformerEmitSystem(
                 world,
@@ -828,6 +842,7 @@ namespace Ludots.Tests.Presentation
                             AssetKind = AssetKind.WorldHud,
                             Mobility = VisualMobility.Movable,
                             LocalScale = new Vector3(64f, 8f, 1f),
+                            AssetIdParamKey = -1,
                         },
                     },
                     new BehaviorSlot
@@ -861,6 +876,7 @@ namespace Ludots.Tests.Presentation
                             AssetId = 1,
                             RenderPath = VisualRenderPath.StaticMesh,
                             Mobility = VisualMobility.Movable,
+                            AssetIdParamKey = -1,
                         },
                     },
                 ],
@@ -930,6 +946,7 @@ namespace Ludots.Tests.Presentation
                             AssetId = 1,
                             RenderPath = VisualRenderPath.StaticMesh,
                             Mobility = VisualMobility.Movable,
+                            AssetIdParamKey = -1,
                         },
                     },
                 ],
@@ -949,6 +966,7 @@ namespace Ludots.Tests.Presentation
                             AssetId = 2,
                             RenderPath = VisualRenderPath.StaticMesh,
                             Mobility = VisualMobility.Movable,
+                            AssetIdParamKey = -1,
                         },
                     },
                     new BehaviorSlot
@@ -1008,7 +1026,7 @@ namespace Ludots.Tests.Presentation
             var instances = new PerformerEntityRuntime(world);
             var definitions = new PerformerDefinitionRegistry();
             var commands = new PerformerCommandBuffer();
-            var events = new PresentationEventStream();
+            var events = new PresentationEventStream(PresentationTestConstants.EventStreamCapacity);
             var markers = new TransientMarkerBuffer();
             var requests = new PresentationRequestBuffer();
             var stableIds = new PresentationStableIdAllocator();
@@ -1034,6 +1052,7 @@ namespace Ludots.Tests.Presentation
                             AssetId = 1,
                             RenderPath = VisualRenderPath.GpuSkinnedInstance,
                             Mobility = VisualMobility.Movable,
+                            AssetIdParamKey = -1,
                         },
                     },
                     new BehaviorSlot
@@ -1065,6 +1084,7 @@ namespace Ludots.Tests.Presentation
                             AssetId = 2,
                             RenderPath = VisualRenderPath.InstancedStaticMesh,
                             Mobility = VisualMobility.Movable,
+                            AssetIdParamKey = -1,
                         },
                     },
                     new BehaviorSlot
@@ -1097,6 +1117,7 @@ namespace Ludots.Tests.Presentation
                 instances,
                 definitions,
                 events,
+                new PresentationOwnerChangeBuffer(8),
                 new SoundRequestBuffer());
             using var emit = new PerformerEmitSystem(
                 world,
@@ -1180,19 +1201,23 @@ namespace Ludots.Tests.Presentation
                             RenderPath = VisualRenderPath.StaticMesh,
                             Mobility = VisualMobility.Movable,
                             LocalScale = new Vector3(0.5f, 2f, 0.25f),
+                            AssetIdParamKey = -1,
                         },
                     },
                 ],
             });
 
+            instances.BindDefinitions(definitions);
             Entity performer = instances.Create(defId, owner, 0, PresentationAnchorKind.Entity, Vector3.Zero, 7201, Entity.Null, default);
+            world.Add(performer, new PerformerBootstrapPending());
             world.Get<PerformerState>(performer).BehaviorActiveMask = 1u;
 
             using var system = new PerformerBehaviorSystem(
                 world,
                 instances,
                 definitions,
-                new PresentationEventStream(),
+                new PresentationEventStream(PresentationTestConstants.EventStreamCapacity),
+                new PresentationOwnerChangeBuffer(8),
                 new SoundRequestBuffer());
 
             system.Update(0.016f);
@@ -1211,7 +1236,7 @@ namespace Ludots.Tests.Presentation
             using var world = World.Create();
             var instances = new PerformerEntityRuntime(world);
             var definitions = new PerformerDefinitionRegistry();
-            var events = new PresentationEventStream();
+            var events = new PresentationEventStream(PresentationTestConstants.EventStreamCapacity);
             var soundRequests = new SoundRequestBuffer();
             Entity owner = world.Create();
 
@@ -1234,10 +1259,11 @@ namespace Ludots.Tests.Presentation
                 ],
             });
 
+            instances.BindDefinitions(definitions);
             Entity performer = instances.Create(defId, owner, 0, PresentationAnchorKind.Entity, Vector3.Zero, 7004, Entity.Null, default);
             world.Get<PerformerState>(performer).BehaviorActiveMask = 1u;
 
-            using var system = new PerformerBehaviorSystem(world, instances, definitions, events, soundRequests);
+            using var system = new PerformerBehaviorSystem(world, instances, definitions, events, new PresentationOwnerChangeBuffer(8), soundRequests);
             system.Update(0.016f);
             Assert.That(soundRequests.Count, Is.EqualTo(1));
             Assert.That(soundRequests.GetSpan()[0].Kind, Is.EqualTo(SoundRequestKind.PlayOrUpdate));
@@ -1255,11 +1281,8 @@ namespace Ludots.Tests.Presentation
             using var world = World.Create();
             var instances = new PerformerEntityRuntime(world);
             var definitions = new PerformerDefinitionRegistry();
-            Entity performer = instances.Create(1, world.Create(), 0, PresentationAnchorKind.Entity, Vector3.Zero, 7005, Entity.Null, default);
-            world.Get<PerformerState>(performer).BehaviorActiveMask = 1u;
-            instances.SetParam(performer, 130, ParamLane.Float, 1f, 0, default);
 
-            definitions.Register("behavior.material", new PerformerDefinition
+            int defId = definitions.Register("behavior.material", new PerformerDefinition
             {
                 Behaviors =
                 [
@@ -1281,15 +1304,115 @@ namespace Ludots.Tests.Presentation
                 ],
             });
 
+            instances.BindDefinitions(definitions);
+            Entity performer = instances.Create(defId, world.Create(), 0, PresentationAnchorKind.Entity, Vector3.Zero, 7005, Entity.Null, default);
+            world.Get<PerformerState>(performer).BehaviorActiveMask = 1u;
+            instances.SetParam(performer, 130, ParamLane.Float, 1f, 0, default);
+
             using var system = new PerformerBehaviorSystem(
                 world,
                 instances,
                 definitions,
-                new PresentationEventStream(),
+                new PresentationEventStream(PresentationTestConstants.EventStreamCapacity),
+                new PresentationOwnerChangeBuffer(8),
                 new SoundRequestBuffer());
 
             system.Update(0.016f);
             Assert.That(instances.ResolveInt(performer, 130), Is.EqualTo(9002));
+        }
+
+        [Test]
+        public void Material_ThrowsWhenSwapParamDoesNotResolve()
+        {
+            using var world = World.Create();
+            var instances = new PerformerEntityRuntime(world);
+            var definitions = new PerformerDefinitionRegistry();
+
+            int defId = definitions.Register("behavior.material.missing_source", new PerformerDefinition
+            {
+                Behaviors =
+                [
+                    new BehaviorSlot
+                    {
+                        SlotIndex = 0,
+                        Kind = BehaviorKind.Material,
+                        ActiveByDefault = true,
+                        Material = new MaterialConfig
+                        {
+                            BaseMaterialId = 9001,
+                            MaterialSwapParamKey = 130,
+                            SwapTable =
+                            [
+                                new MaterialSwapEntry { ParamValue = 1f, MaterialId = 9002 },
+                            ],
+                        },
+                    },
+                ],
+            });
+
+            instances.BindDefinitions(definitions);
+            Entity performer = instances.Create(defId, world.Create(), 0, PresentationAnchorKind.Entity, Vector3.Zero, 7006, Entity.Null, default);
+            world.Add(performer, new PerformerBootstrapPending());
+            world.Get<PerformerState>(performer).BehaviorActiveMask = 1u;
+
+            using var system = new PerformerBehaviorSystem(
+                world,
+                instances,
+                definitions,
+                new PresentationEventStream(PresentationTestConstants.EventStreamCapacity),
+                new PresentationOwnerChangeBuffer(8),
+                new SoundRequestBuffer());
+
+            InvalidOperationException ex = Assert.Throws<InvalidOperationException>(() => system.Update(0.016f))!;
+            Assert.That(ex.Message, Does.Contain("materialSwapParamKey 130 did not resolve"));
+        }
+
+        [Test]
+        public void Material_ThrowsWhenSwapParamHasNoMatchingTableEntry()
+        {
+            using var world = World.Create();
+            var instances = new PerformerEntityRuntime(world);
+            var definitions = new PerformerDefinitionRegistry();
+
+            int defId = definitions.Register("behavior.material.missing_entry", new PerformerDefinition
+            {
+                Behaviors =
+                [
+                    new BehaviorSlot
+                    {
+                        SlotIndex = 0,
+                        Kind = BehaviorKind.Material,
+                        ActiveByDefault = true,
+                        Material = new MaterialConfig
+                        {
+                            BaseMaterialId = 9001,
+                            MaterialSwapParamKey = 130,
+                            SwapTable =
+                            [
+                                new MaterialSwapEntry { ParamValue = 1f, MaterialId = 9002 },
+                            ],
+                        },
+                    },
+                ],
+            });
+
+            instances.BindDefinitions(definitions);
+            Entity performer = instances.Create(defId, world.Create(), 0, PresentationAnchorKind.Entity, Vector3.Zero, 7007, Entity.Null, default);
+            world.Add(performer, new PerformerBootstrapPending());
+            world.Get<PerformerState>(performer).BehaviorActiveMask = 1u;
+            instances.SetParam(performer, 130, ParamLane.Float, 2f, 0, default);
+
+            using var system = new PerformerBehaviorSystem(
+                world,
+                instances,
+                definitions,
+                new PresentationEventStream(PresentationTestConstants.EventStreamCapacity),
+                new PresentationOwnerChangeBuffer(8),
+                new SoundRequestBuffer());
+
+            InvalidOperationException ex = Assert.Throws<InvalidOperationException>(() => system.Update(0.016f))!;
+            Assert.That(ex.Message, Does.Contain("materialSwapParamKey 130 resolved value 2"));
+            Assert.That(ex.Message, Does.Contain("no matching swapTable entry"));
         }
 
         [Test]
@@ -1321,15 +1444,18 @@ namespace Ludots.Tests.Presentation
                 ],
             });
 
+            instances.BindDefinitions(definitions);
             Entity performer = instances.Create(defId, owner, 0, PresentationAnchorKind.WorldPosition, Vector3.Zero, 7006, Entity.Null, default);
             world.Get<PerformerState>(performer).BehaviorActiveMask = 1u;
+            instances.SetParam(performer, 140, ParamLane.Float, 0f, 0, default);
             instances.SetParam(performer, 141, ParamLane.Float, 2f, 0, default);
 
             using var system = new PerformerBehaviorSystem(
                 world,
                 instances,
                 definitions,
-                new PresentationEventStream(),
+                new PresentationEventStream(PresentationTestConstants.EventStreamCapacity),
+                new PresentationOwnerChangeBuffer(8),
                 new SoundRequestBuffer());
 
             system.Update(0.25f);

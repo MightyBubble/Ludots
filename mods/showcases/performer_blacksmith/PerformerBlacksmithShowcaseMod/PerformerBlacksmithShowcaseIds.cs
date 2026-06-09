@@ -1,4 +1,5 @@
 using System;
+using Ludots.Core.Presentation.Performers;
 
 namespace PerformerBlacksmithShowcaseMod
 {
@@ -29,10 +30,6 @@ namespace PerformerBlacksmithShowcaseMod
         public const string MinimapMarkerBallEntityName = "BlacksmithMinimapMarkerBall";
         public const string MinimapMarkerBallTemplateId = "blacksmith_minimap_marker_ball_entity";
         public const string MinimapMarkerBallDefinitionId = "blacksmith_minimap_marker_ball";
-        public const int ScatterBenchmarkDefaultTotal = 30_000;
-        public const int MeshBenchmarkDefaultTotal = 30_000;
-        public const int DynamicWorkerBenchmarkDefaultTotal = 10_000;
-        public const int MinimapMarkerShowcaseDefaultTotal = 30_000;
         public const string RootDefinitionId = "blacksmith_root";
         public const string WorkshopLeftDefinitionId = "blacksmith_workshop_left_mesh";
         public const string WorkshopRightDefinitionId = "blacksmith_workshop_right_mesh";
@@ -44,17 +41,29 @@ namespace PerformerBlacksmithShowcaseMod
         public const string DurabilityBarDefinitionId = "blacksmith_durability_hud_bar";
         public const string DurabilityTextDefinitionId = "blacksmith_durability_hud_text";
 
-        public const int ParamRegion = 100;
-        public const int ParamDurability = 101;
-        public const int ParamWorkingVisible = 102;
-        public const int ParamDayNight = 103;
-        public const int ParamWorkshopAssetState = 104;
-        public const int ParamWorkerSpeed = 105;
-        public const int ParamDurabilityRatio = 106;
-        public const int ParamDurabilityCurrent = 107;
-        public const int ParamDurabilityBase = 108;
-        public const int ParamWorkerProgress = 109;
-        public const int ParamMinimapFacing = 110;
+        public const string ParamRegionKey = "blacksmith.region";
+        public const string ParamDurabilityKey = "blacksmith.durability.ratio";
+        public const string ParamWorkingVisibleKey = "blacksmith.working.visible";
+        public const string ParamDayNightKey = "blacksmith.dayNight";
+        public const string ParamWorkshopAssetStateKey = "blacksmith.workshop.assetState";
+        public const string ParamWorkerSpeedKey = "blacksmith.worker.locomotion.speed";
+        public const string ParamDurabilityRatioKey = "blacksmith.durability.hud.ratio";
+        public const string ParamDurabilityCurrentKey = "blacksmith.durability.current";
+        public const string ParamDurabilityBaseKey = "blacksmith.durability.base";
+        public const string ParamWorkerProgressKey = "blacksmith.worker.route.progress";
+        public const string ParamMinimapFacingKey = "blacksmith.minimap.facing";
+
+        public static int ParamRegion => PerformerParamKeyRegistry.Register(ParamRegionKey);
+        public static int ParamDurability => PerformerParamKeyRegistry.Register(ParamDurabilityKey);
+        public static int ParamWorkingVisible => PerformerParamKeyRegistry.Register(ParamWorkingVisibleKey);
+        public static int ParamDayNight => PerformerParamKeyRegistry.Register(ParamDayNightKey);
+        public static int ParamWorkshopAssetState => PerformerParamKeyRegistry.Register(ParamWorkshopAssetStateKey);
+        public static int ParamWorkerSpeed => PerformerParamKeyRegistry.Register(ParamWorkerSpeedKey);
+        public static int ParamDurabilityRatio => PerformerParamKeyRegistry.Register(ParamDurabilityRatioKey);
+        public static int ParamDurabilityCurrent => PerformerParamKeyRegistry.Register(ParamDurabilityCurrentKey);
+        public static int ParamDurabilityBase => PerformerParamKeyRegistry.Register(ParamDurabilityBaseKey);
+        public static int ParamWorkerProgress => PerformerParamKeyRegistry.Register(ParamWorkerProgressKey);
+        public static int ParamMinimapFacing => PerformerParamKeyRegistry.Register(ParamMinimapFacingKey);
 
         public const string EffectSetDurabilityIntact = "Effect.Showcase.Blacksmith.SetDurabilityIntact";
         public const string EffectSetDurabilityDamaged = "Effect.Showcase.Blacksmith.SetDurabilityDamaged";
@@ -73,38 +82,38 @@ namespace PerformerBlacksmithShowcaseMod
 
         public static bool IsInteractiveShowcaseMap(string? mapId)
         {
-            return string.Equals(mapId, ShowcaseMapId, StringComparison.OrdinalIgnoreCase);
+            return string.Equals(mapId, ShowcaseMapId, StringComparison.Ordinal);
         }
 
         public static bool IsScatterBenchmarkMap(string? mapId)
         {
-            return string.Equals(mapId, ScatterBenchmarkMapId, StringComparison.OrdinalIgnoreCase);
+            return string.Equals(mapId, ScatterBenchmarkMapId, StringComparison.Ordinal);
         }
 
         public static bool IsScatterHudBarBenchmarkMap(string? mapId)
         {
-            return string.Equals(mapId, ScatterHudBarBenchmarkMapId, StringComparison.OrdinalIgnoreCase);
+            return string.Equals(mapId, ScatterHudBarBenchmarkMapId, StringComparison.Ordinal);
         }
 
         public static bool IsScatterHudTextBenchmarkMap(string? mapId)
         {
-            return string.Equals(mapId, ScatterHudTextBenchmarkMapId, StringComparison.OrdinalIgnoreCase);
+            return string.Equals(mapId, ScatterHudTextBenchmarkMapId, StringComparison.Ordinal);
         }
 
         public static bool IsMeshBenchmarkMap(string? mapId)
         {
-            return string.Equals(mapId, MeshBenchmarkMapId, StringComparison.OrdinalIgnoreCase);
+            return string.Equals(mapId, MeshBenchmarkMapId, StringComparison.Ordinal);
         }
 
         public static bool IsDynamicWorkerBenchmarkMap(string? mapId)
         {
-            return string.Equals(mapId, DynamicWorkerBenchmarkMapId, StringComparison.OrdinalIgnoreCase) ||
-                   string.Equals(mapId, DynamicWorkerLargeWorldBenchmarkMapId, StringComparison.OrdinalIgnoreCase);
+            return string.Equals(mapId, DynamicWorkerBenchmarkMapId, StringComparison.Ordinal) ||
+                   string.Equals(mapId, DynamicWorkerLargeWorldBenchmarkMapId, StringComparison.Ordinal);
         }
 
         public static bool IsMinimapMarkerLargeWorldShowcaseMap(string? mapId)
         {
-            return string.Equals(mapId, MinimapMarkerLargeWorldShowcaseMapId, StringComparison.OrdinalIgnoreCase);
+            return string.Equals(mapId, MinimapMarkerLargeWorldShowcaseMapId, StringComparison.Ordinal);
         }
     }
 }

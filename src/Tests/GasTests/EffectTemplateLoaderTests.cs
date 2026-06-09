@@ -32,7 +32,9 @@ namespace Ludots.Tests.GAS
                       {
                         "id": "Effect_A",
                         "tags": ["Event.TestA"],
+                        "presetType": "None",
                         "lifetime": "Instant",
+                        "participatesInResponse": true,
                         "modifiers": [
                           { "attribute": "Health", "op": "Add", "value": -5 }
                         ]
@@ -40,8 +42,10 @@ namespace Ludots.Tests.GAS
                       {
                         "id": "Effect_B",
                         "tags": ["Event.TestB"],
+                        "presetType": "None",
                         "lifetime": "After",
-                        "duration": { "durationTicks": 10 }
+                        "duration": { "durationTicks": 10, "periodTicks": 0, "clockId": "FixedFrame" },
+                        "participatesInResponse": true
                       }
                     ]
                     """);
@@ -53,7 +57,7 @@ namespace Ludots.Tests.GAS
 
                 var registry = new EffectTemplateRegistry();
                 var loader = new EffectTemplateLoader(pipeline, registry);
-                loader.Load(relativePath: "GAS/effects.json");
+                loader.Load(CreateEffectsCatalog(), relativePath: "GAS/effects.json");
 
                 That(EffectTemplateIdRegistry.GetId("Effect_A"), Is.EqualTo(1));
                 That(EffectTemplateIdRegistry.GetId("Effect_B"), Is.EqualTo(2));
@@ -101,7 +105,100 @@ namespace Ludots.Tests.GAS
                 var registry = new EffectTemplateRegistry();
                 var loader = new EffectTemplateLoader(pipeline, registry);
 
-                Throws<InvalidOperationException>(() => loader.Load(relativePath: "GAS/effects.json"));
+                Throws<InvalidOperationException>(() => loader.Load(CreateEffectsCatalog(), relativePath: "GAS/effects.json"));
+            }
+            finally
+            {
+                TryDeleteDirectory(root);
+            }
+        }
+
+        [Test]
+        public void Load_TargetFilterWithoutRelationFilter_IsRejected()
+        {
+            string root = CreateTempRoot();
+            try
+            {
+                Directory.CreateDirectory(Path.Combine(root, "Configs", "GAS"));
+                File.WriteAllText(Path.Combine(root, "Configs", "GAS", "effects.json"),
+                    """
+                    [
+                      {
+                        "id": "Effect_Search",
+                        "tags": ["Event.Search"],
+                        "presetType": "Search",
+                        "lifetime": "Instant",
+                        "participatesInResponse": true,
+                        "targetQuery": {
+                          "kind": "BuiltinSpatial",
+                          "shape": "Circle",
+                          "radius": 100,
+                          "innerRadius": 0,
+                          "halfAngle": 0,
+                          "halfWidth": 0,
+                          "halfHeight": 0,
+                          "rotation": 0,
+                          "length": 0,
+                          "graphProgramId": 0
+                        },
+                        "targetFilter": { "excludeSource": true, "maxTargets": 4 }
+                      }
+                    ]
+                    """);
+
+                var loader = CreateLoader(root, out _);
+
+                Throws<InvalidOperationException>(() => loader.Load(CreateEffectsCatalog(), relativePath: "GAS/effects.json"));
+            }
+            finally
+            {
+                TryDeleteDirectory(root);
+            }
+        }
+
+        [Test]
+        public void Load_ProjectileWithoutCollisionRelationFilter_IsRejected()
+        {
+            string root = CreateTempRoot();
+            try
+            {
+                Directory.CreateDirectory(Path.Combine(root, "Configs", "GAS"));
+                File.WriteAllText(Path.Combine(root, "Configs", "GAS", "effects.json"),
+                    """
+                    [
+                      {
+                        "id": "Effect_Projectile",
+                        "tags": ["Event.Projectile"],
+                        "presetType": "LaunchProjectile",
+                        "lifetime": "Instant",
+                        "participatesInResponse": true,
+                        "projectile": {
+                          "speed": 1000,
+                          "range": 1200,
+                          "arcHeight": 0,
+                          "impactEffect": "Effect_Hit",
+                          "hitEffect": "Effect_Hit",
+                          "presentationEffect": "Effect_Hit",
+                          "travelMode": "Legacy",
+                          "impactPolicy": "Legacy",
+                          "collisionHalfWidth": 0,
+                          "collisionExcludeSource": true,
+                          "maxHitCount": 0
+                        }
+                      },
+                      {
+                        "id": "Effect_Hit",
+                        "tags": ["Event.Hit"],
+                        "presetType": "InstantDamage",
+                        "lifetime": "Instant",
+                        "participatesInResponse": true
+                      }
+                    ]
+                    """);
+
+                var loader = CreateLoader(root, out _);
+
+                Throws<InvalidOperationException>(() => loader.Load(CreateEffectsCatalog(), relativePath: "GAS/effects.json"));
             }
             finally
             {
@@ -124,9 +221,10 @@ namespace Ludots.Tests.GAS
                         "tags": ["Effect.ApplyForce"],
                         "presetType": "ApplyForce2D",
                         "lifetime": "Instant",
+                        "participatesInResponse": true,
                         "configParams": {
-                          "_ep.forceXTargetAttrId": { "type": "attribute", "value": "Physics.ForceRequestX" },
-                          "_ep.forceYTargetAttrId": { "type": "attribute", "value": "Physics.ForceRequestY" }
+                          "_ep.forceXTargetAttrId": { "type": "Attribute", "value": "Physics.ForceRequestX" },
+                          "_ep.forceYTargetAttrId": { "type": "Attribute", "value": "Physics.ForceRequestY" }
                         }
                       }
                     ]
@@ -139,7 +237,7 @@ namespace Ludots.Tests.GAS
 
                 var registry = new EffectTemplateRegistry();
                 var loader = new EffectTemplateLoader(pipeline, registry);
-                loader.Load(relativePath: "GAS/effects.json");
+                loader.Load(CreateEffectsCatalog(), relativePath: "GAS/effects.json");
 
                 int tplId = EffectTemplateIdRegistry.GetId("Effect_Preset_Force");
                 That(tplId, Is.GreaterThan(0));
@@ -159,6 +257,24 @@ namespace Ludots.Tests.GAS
             string root = Path.Combine(Path.GetTempPath(), "Ludots_EffectTemplateLoaderTests", Guid.NewGuid().ToString("N"));
             Directory.CreateDirectory(root);
             return root;
+        }
+
+        private static EffectTemplateLoader CreateLoader(string root, out EffectTemplateRegistry registry)
+        {
+            var vfs = new VirtualFileSystem();
+            vfs.Mount("Core", root);
+            var modLoader = new ModLoader(vfs, new FunctionRegistry(), new TriggerManager());
+            var pipeline = new ConfigPipeline(vfs, modLoader);
+
+            registry = new EffectTemplateRegistry();
+            return new EffectTemplateLoader(pipeline, registry);
+        }
+
+        private static ConfigCatalog CreateEffectsCatalog()
+        {
+            var catalog = new ConfigCatalog();
+            catalog.Add(new ConfigCatalogEntry("GAS/effects.json", ConfigMergePolicy.ArrayById, "id"));
+            return catalog;
         }
 
         private static void TryDeleteDirectory(string path)

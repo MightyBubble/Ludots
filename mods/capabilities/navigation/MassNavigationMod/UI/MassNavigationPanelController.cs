@@ -18,13 +18,12 @@ namespace MassNavigationMod.UI;
 
 internal sealed class MassNavigationPanelController
 {
-    private const long PerfRefreshTicks = TimeSpan.TicksPerSecond / 4;
-
     private ReactivePage<MassNavigationPanelState>? _page;
     private MassNavigationPanelState _lastState = MassNavigationPanelState.Empty;
     private GameEngine? _engine;
     private MassNavigationSimulationRuntime? _simulation;
     private long _lastPerfCaptureTicks;
+    private long _perfRefreshStopwatchTicks;
     private string _lastActionText = "MassNavigation runtime, flow, and arrival knobs hot-apply now. Physics/Nav buttons only touch engine policies. Agent count and Reset rebuild the scene.";
 
     public bool MountOrSync(GameEngine engine, MassNavigationSimulationRuntime simulation)
@@ -36,6 +35,7 @@ internal sealed class MassNavigationPanelController
 
         _engine = engine;
         _simulation = simulation;
+        _perfRefreshStopwatchTicks = ResolvePerfRefreshStopwatchTicks(simulation);
         var page = EnsurePage(engine);
         bool changed = false;
         if (!ReferenceEquals(root.Scene, page.Scene))
@@ -46,8 +46,7 @@ internal sealed class MassNavigationPanelController
         }
 
         long nowTicks = Stopwatch.GetTimestamp();
-        long refreshTicks = (long)(PerfRefreshTicks * (Stopwatch.Frequency / (double)TimeSpan.TicksPerSecond));
-        if (_lastPerfCaptureTicks != 0 && nowTicks - _lastPerfCaptureTicks < refreshTicks)
+        if (_lastPerfCaptureTicks != 0 && nowTicks - _lastPerfCaptureTicks < _perfRefreshStopwatchTicks)
         {
             return changed;
         }
@@ -92,8 +91,30 @@ internal sealed class MassNavigationPanelController
         _simulation = null;
         _lastState = MassNavigationPanelState.Empty;
         _lastPerfCaptureTicks = 0;
+        _perfRefreshStopwatchTicks = 0;
         _lastActionText = "MassNavigation runtime, flow, and arrival knobs hot-apply now. Physics/Nav buttons only touch engine policies. Agent count and Reset rebuild the scene.";
         _page?.SetState(_ => MassNavigationPanelState.Empty);
+    }
+
+    private static long ResolvePerfRefreshStopwatchTicks(MassNavigationSimulationRuntime simulation)
+    {
+        MassNavigationPanelControlsConfig controls = simulation.Config.ScenarioRuntime.PanelControls
+            ?? throw new InvalidOperationException("MassNavigation config requires scenarioRuntime.panelControls.");
+        float intervalSeconds = controls.PanelRefreshIntervalSeconds;
+        if (!(intervalSeconds > 0f))
+        {
+            throw new InvalidOperationException(
+                "MassNavigation config requires scenarioRuntime.panelControls.panelRefreshIntervalSeconds > 0.");
+        }
+
+        double stopwatchTicks = Math.Ceiling(intervalSeconds * Stopwatch.Frequency);
+        if (stopwatchTicks < 1d || stopwatchTicks > long.MaxValue)
+        {
+            throw new InvalidOperationException(
+                "MassNavigation config scenarioRuntime.panelControls.panelRefreshIntervalSeconds cannot be represented by Stopwatch ticks.");
+        }
+
+        return (long)stopwatchTicks;
     }
 
     private UiElementBuilder BuildRoot(ReactiveContext<MassNavigationPanelState> context)
@@ -117,6 +138,7 @@ internal sealed class MassNavigationPanelController
 
     private UiElementBuilder BuildDiagnosticsPanel(MassNavigationPanelState state)
     {
+        MassNavigationPanelControlsConfig controls = RequirePanelControls();
         return Ui.Card(
                 Ui.Text("Mass Navigation").FontSize(20f).Bold().Color("#F8FBFF"),
                 Ui.Row(
@@ -135,11 +157,11 @@ internal sealed class MassNavigationPanelController
                     .Justify(UiJustifyContent.Start),
                 Ui.Text("MassFlow uses a solver SoA as the hot-path workset; ECS owns authoring, commands, identity, gameplay truth, presentation handoff, and diagnostics.").FontSize(12f).Color("#C7D4E5").WhiteSpace(UiWhiteSpace.Normal),
                 Ui.Text($"Teams {state.TeamCount}  Agents/team {state.AgentsPerTeam}  Total {state.TotalAgents}  Selectable {state.SelectableAgents}  Obstacles {state.Blockers}").FontSize(13f).Color("#C7D4E5").WhiteSpace(UiWhiteSpace.Normal),
-                Ui.Text($"Selected {state.SelectedCount}  Rev {state.SelectionRevision}  Pending cmds {state.PendingCommandCount}").FontSize(13f).Color("#A4F07A"),
+                Ui.Text($"Selected {state.SelectedCount}  Rev {state.SelectionRevision}  Commands/frame {state.CommandCountFrame}").FontSize(13f).Color("#A4F07A"),
                 Ui.Text($"Team target {state.SelectedTeamId}  Formation {state.FormationLabel}  Groups {state.FormationCount}  Rotation {state.FormationRotationDeg:0.0} deg").FontSize(13f).Color("#F2D483").WhiteSpace(UiWhiteSpace.Normal),
                 Ui.Text($"FPS {state.Fps:0}  Frame {state.FrameMs:0.0} ms  Performer {state.PerformerEmitMs:0.0} ms  Minimap {state.MinimapProjectionMs:0.0} ms").FontSize(13f).Color("#F2D483").WhiteSpace(UiWhiteSpace.Normal),
                 Ui.Text($"InputCollection: select {state.SelectionSyncHzObserved:0.0} Hz  control {state.ControlHzObserved:0.0} Hz  capture {state.CommandHzObserved:0.0} Hz").FontSize(12f).Color("#D6E4F5").WhiteSpace(UiWhiteSpace.Normal),
-                Ui.Text($"PostMovement: command {state.CommandDispatchHzObserved:0.0} Hz  mass {state.SimHzObserved:0.0}/{state.MassNavigationSimulationHz} Hz  Presentation: performer {state.PerformerHzObserved:0.0} Hz  hud {state.HudHzObserved:0.0} Hz  panel {state.PanelHzObserved:0.0} Hz").FontSize(12f).Color("#D6E4F5").WhiteSpace(UiWhiteSpace.Normal),
+                Ui.Text($"PostMovement: mass {state.SimHzObserved:0.0}/{state.MassNavigationSimulationHz} Hz  Presentation: performer {state.PerformerHzObserved:0.0} Hz  hud {state.HudHzObserved:0.0} Hz  panel {state.PanelHzObserved:0.0} Hz").FontSize(12f).Color("#D6E4F5").WhiteSpace(UiWhiteSpace.Normal),
                 Ui.Text($"Mass cadence: target {state.MassNavigationTargetUpdateHz} Hz  flow {state.MassNavigationFlowStepHz}/{state.MassNavigationFlowCrowdStampHz}/{state.MassNavigationFlowObstacleStampHz} Hz  resolve {state.MassNavigationHardResolveHz} Hz  sync {state.MassNavigationEntitySyncHz} Hz").FontSize(12f).Color("#D6E4F5").WhiteSpace(UiWhiteSpace.Normal),
                 Ui.Text(state.LastActionText).FontSize(12f).Color("#8FE388").WhiteSpace(UiWhiteSpace.Normal),
                 Ui.Text("World Map").FontSize(12f).Bold().Color("#F4C77D"),
@@ -157,8 +179,8 @@ internal sealed class MassNavigationPanelController
                 Ui.Row(
                         BuildActionButton("Cull Camera", UseCameraCullingFocus),
                         BuildActionButton("Cull Probe", UseProbeCullingFocus),
-                        BuildActionButton("TTL -2s", () => AdjustCullingRetainSeconds(-2f)),
-                        BuildActionButton("TTL +2s", () => AdjustCullingRetainSeconds(2f)))
+                        BuildActionButton($"TTL -{controls.ViewResidencyRetainSecondsStep:0.##}s", () => AdjustCullingRetainSeconds(-controls.ViewResidencyRetainSecondsStep)),
+                        BuildActionButton($"TTL +{controls.ViewResidencyRetainSecondsStep:0.##}s", () => AdjustCullingRetainSeconds(controls.ViewResidencyRetainSecondsStep)))
                     .Wrap()
                     .Gap(8f),
                 Ui.Text("Debug Landmarks").FontSize(12f).Bold().Color("#F4C77D"),
@@ -182,42 +204,42 @@ internal sealed class MassNavigationPanelController
                 Ui.Text("MassNavigation Runtime").FontSize(12f).Bold().Color("#F4C77D"),
                 Ui.Text($"Immediate knobs: Logic {state.LogicHz} Hz  Budget {state.SimulationBudgetMs} ms  Slice {state.SimulationSliceLimit}  Recovery {(state.ArrivalRecoveryEnabled ? "On" : "Off")}").FontSize(12f).Color("#D6E4F5").WhiteSpace(UiWhiteSpace.Normal),
                 Ui.Row(
-                        BuildActionButton("-1 ms", () => AdjustSimulationBudget(-1)),
-                        BuildActionButton("+1 ms", () => AdjustSimulationBudget(1)),
-                        BuildActionButton("-30 slice", () => AdjustSimulationSlices(-30)),
-                        BuildActionButton("+30 slice", () => AdjustSimulationSlices(30)))
+                        BuildActionButton($"-{controls.SimulationBudgetStepMs} ms", () => AdjustSimulationBudget(-controls.SimulationBudgetStepMs)),
+                        BuildActionButton($"+{controls.SimulationBudgetStepMs} ms", () => AdjustSimulationBudget(controls.SimulationBudgetStepMs)),
+                        BuildActionButton($"-{controls.SimulationSliceStep} slice", () => AdjustSimulationSlices(-controls.SimulationSliceStep)),
+                        BuildActionButton($"+{controls.SimulationSliceStep} slice", () => AdjustSimulationSlices(controls.SimulationSliceStep)))
                     .Wrap()
                     .Gap(8f),
                 Ui.Row(
                         BuildActionButton(state.ArrivalRecoveryEnabled ? "Recovery On" : "Recovery Off", ToggleArrivalRecovery),
-                        BuildActionButton("Timeout -250", () => AdjustArrivalTimeoutMs(-250)),
-                        BuildActionButton("Timeout +250", () => AdjustArrivalTimeoutMs(250)))
+                        BuildActionButton($"Timeout -{controls.ArrivalTimeoutStepMs}", () => AdjustArrivalTimeoutMs(-controls.ArrivalTimeoutStepMs)),
+                        BuildActionButton($"Timeout +{controls.ArrivalTimeoutStepMs}", () => AdjustArrivalTimeoutMs(controls.ArrivalTimeoutStepMs)))
                     .Wrap()
                     .Gap(8f),
                 Ui.Row(
-                        BuildActionButton("Progress -10", () => AdjustArrivalProgressCm(-10)),
-                        BuildActionButton("Progress +10", () => AdjustArrivalProgressCm(10)),
-                        BuildActionButton("Wake -10", () => AdjustArrivalWakePushCm(-10)),
-                        BuildActionButton("Wake +10", () => AdjustArrivalWakePushCm(10)),
-                        BuildActionButton("Retry -1", () => AdjustArrivalMaxRetries(-1)),
-                        BuildActionButton("Retry +1", () => AdjustArrivalMaxRetries(1)))
+                        BuildActionButton($"Progress -{controls.ArrivalProgressStepCm}", () => AdjustArrivalProgressCm(-controls.ArrivalProgressStepCm)),
+                        BuildActionButton($"Progress +{controls.ArrivalProgressStepCm}", () => AdjustArrivalProgressCm(controls.ArrivalProgressStepCm)),
+                        BuildActionButton($"Wake -{controls.ArrivalWakePushStepCm}", () => AdjustArrivalWakePushCm(-controls.ArrivalWakePushStepCm)),
+                        BuildActionButton($"Wake +{controls.ArrivalWakePushStepCm}", () => AdjustArrivalWakePushCm(controls.ArrivalWakePushStepCm)),
+                        BuildActionButton($"Retry -{controls.ArrivalRetryStep}", () => AdjustArrivalMaxRetries(-controls.ArrivalRetryStep)),
+                        BuildActionButton($"Retry +{controls.ArrivalRetryStep}", () => AdjustArrivalMaxRetries(controls.ArrivalRetryStep)))
                     .Wrap()
                     .Gap(8f),
                 Ui.Text("Engine Policy Only").FontSize(12f).Bold().Color("#F4C77D"),
                 Ui.Text($"Physics {state.PhysicsHz} Hz / max {state.PhysicsMaxStepsPerFixedTick}  Nav {state.NavigationHz} Hz / max {state.NavigationMaxStepsPerFixedTick}").FontSize(12f).Color("#D6E4F5").WhiteSpace(UiWhiteSpace.Normal),
                 Ui.Text("LogicHz follows Engine/clock.json and drives the MassNavigation simulation. Physics/Nav buttons apply engine policy, while this mass crowd runtime uses its own configured cadence.").FontSize(11f).Color("#8EA2BD").WhiteSpace(UiWhiteSpace.Normal),
                 Ui.Row(
-                        BuildActionButton("Phys -5", () => AdjustPhysicsHz(-5)),
-                        BuildActionButton("Phys +5", () => AdjustPhysicsHz(5)),
-                        BuildActionButton("Phys Max-1", () => AdjustPhysicsMaxSteps(-1)),
-                        BuildActionButton("Phys Max+1", () => AdjustPhysicsMaxSteps(1)))
+                        BuildActionButton($"Phys -{controls.EnginePolicyHzStep}", () => AdjustPhysicsHz(-controls.EnginePolicyHzStep)),
+                        BuildActionButton($"Phys +{controls.EnginePolicyHzStep}", () => AdjustPhysicsHz(controls.EnginePolicyHzStep)),
+                        BuildActionButton($"Phys Max-{controls.EnginePolicyMaxStepsStep}", () => AdjustPhysicsMaxSteps(-controls.EnginePolicyMaxStepsStep)),
+                        BuildActionButton($"Phys Max+{controls.EnginePolicyMaxStepsStep}", () => AdjustPhysicsMaxSteps(controls.EnginePolicyMaxStepsStep)))
                     .Wrap()
                     .Gap(8f),
                 Ui.Row(
-                        BuildActionButton("Nav -5", () => AdjustNavigationHz(-5)),
-                        BuildActionButton("Nav +5", () => AdjustNavigationHz(5)),
-                        BuildActionButton("Nav Max-1", () => AdjustNavigationMaxSteps(-1)),
-                        BuildActionButton("Nav Max+1", () => AdjustNavigationMaxSteps(1)))
+                        BuildActionButton($"Nav -{controls.EnginePolicyHzStep}", () => AdjustNavigationHz(-controls.EnginePolicyHzStep)),
+                        BuildActionButton($"Nav +{controls.EnginePolicyHzStep}", () => AdjustNavigationHz(controls.EnginePolicyHzStep)),
+                        BuildActionButton($"Nav Max-{controls.EnginePolicyMaxStepsStep}", () => AdjustNavigationMaxSteps(-controls.EnginePolicyMaxStepsStep)),
+                        BuildActionButton($"Nav Max+{controls.EnginePolicyMaxStepsStep}", () => AdjustNavigationMaxSteps(controls.EnginePolicyMaxStepsStep)))
                     .Wrap()
                     .Gap(8f),
                 Ui.Text("MassNavigation Flow").FontSize(12f).Bold().Color("#F4C77D"),
@@ -226,24 +248,24 @@ internal sealed class MassNavigationPanelController
                 Ui.Text("Cadence knobs hot-apply through the MassFlow config scheduler; entity writeback uses a solver dirty queue at the configured sync Hz.").FontSize(11f).Color("#8EA2BD").WhiteSpace(UiWhiteSpace.Normal),
                 Ui.Row(
                         BuildActionButton(state.FlowEnabled ? "Flow On" : "Flow Off", ToggleFlowEnabled),
-                        BuildActionButton("Iter -512", () => AdjustFlowIterations(-512)),
-                        BuildActionButton("Iter +512", () => AdjustFlowIterations(512)))
+                        BuildActionButton($"Iter -{controls.FlowIterationStep}", () => AdjustFlowIterations(-controls.FlowIterationStep)),
+                        BuildActionButton($"Iter +{controls.FlowIterationStep}", () => AdjustFlowIterations(controls.FlowIterationStep)))
                     .Wrap()
                     .Gap(8f),
                 Ui.Row(
-                        BuildActionButton("Step Hz -1", () => AdjustFlowStepHz(-1)),
-                        BuildActionButton("Step Hz +1", () => AdjustFlowStepHz(1)),
-                        BuildActionButton("Crowd Hz -1", () => AdjustFlowCrowdHz(-1)),
-                        BuildActionButton("Crowd Hz +1", () => AdjustFlowCrowdHz(1)),
-                        BuildActionButton("Obs Hz -1", () => AdjustFlowObstacleHz(-1)),
-                        BuildActionButton("Obs Hz +1", () => AdjustFlowObstacleHz(1)))
+                        BuildActionButton($"Step Hz -{controls.FlowCadenceHzStep}", () => AdjustFlowStepHz(-controls.FlowCadenceHzStep)),
+                        BuildActionButton($"Step Hz +{controls.FlowCadenceHzStep}", () => AdjustFlowStepHz(controls.FlowCadenceHzStep)),
+                        BuildActionButton($"Crowd Hz -{controls.FlowCadenceHzStep}", () => AdjustFlowCrowdHz(-controls.FlowCadenceHzStep)),
+                        BuildActionButton($"Crowd Hz +{controls.FlowCadenceHzStep}", () => AdjustFlowCrowdHz(controls.FlowCadenceHzStep)),
+                        BuildActionButton($"Obs Hz -{controls.FlowCadenceHzStep}", () => AdjustFlowObstacleHz(-controls.FlowCadenceHzStep)),
+                        BuildActionButton($"Obs Hz +{controls.FlowCadenceHzStep}", () => AdjustFlowObstacleHz(controls.FlowCadenceHzStep)))
                     .Wrap()
                     .Gap(8f),
                 Ui.Row(
-                        BuildActionButton("Resolve Hz -1", () => AdjustHardResolveHz(-1)),
-                        BuildActionButton("Resolve Hz +1", () => AdjustHardResolveHz(1)),
-                        BuildActionButton("Sync Hz -1", () => AdjustEntitySyncHz(-1)),
-                        BuildActionButton("Sync Hz +1", () => AdjustEntitySyncHz(1)))
+                        BuildActionButton($"Resolve Hz -{controls.FlowCadenceHzStep}", () => AdjustHardResolveHz(-controls.FlowCadenceHzStep)),
+                        BuildActionButton($"Resolve Hz +{controls.FlowCadenceHzStep}", () => AdjustHardResolveHz(controls.FlowCadenceHzStep)),
+                        BuildActionButton($"Sync Hz -{controls.FlowCadenceHzStep}", () => AdjustEntitySyncHz(-controls.FlowCadenceHzStep)),
+                        BuildActionButton($"Sync Hz +{controls.FlowCadenceHzStep}", () => AdjustEntitySyncHz(controls.FlowCadenceHzStep)))
                     .Wrap()
                     .Gap(8f),
                 Ui.Text("Scene Rebuild Required").FontSize(12f).Bold().Color("#F4C77D"),
@@ -256,7 +278,7 @@ internal sealed class MassNavigationPanelController
                 Ui.Text("Team Target").FontSize(12f).Bold().Color("#F4C77D"),
                 BuildTeamTargetRow(),
                 Ui.Text("Diagnostics").FontSize(12f).Bold().Color("#F4C77D"),
-                Ui.Text($"Select {state.SelectionSyncMs:0.0} ms  Command {state.CommandApplyMs:0.0} ms  Group {state.FormationTargetMs:0.0} ms").FontSize(12f).Color("#F18C7F").WhiteSpace(UiWhiteSpace.Normal),
+                Ui.Text($"Select {state.SelectionSyncMs:0.0} ms  Group {state.FormationTargetMs:0.0} ms").FontSize(12f).Color("#F18C7F").WhiteSpace(UiWhiteSpace.Normal),
                 Ui.Text($"Prep {state.StepPrepMs:0.0} ms  Steer {state.LocalSteeringMs:0.0} ms  Resolve {state.HardResolveMs:0.0} ms  Sim {state.SimStepMs:0.0} ms").FontSize(12f).Color("#F18C7F").WhiteSpace(UiWhiteSpace.Normal),
                 Ui.Text($"Entity sync {state.EntitySyncMs:0.0} ms  Performer cmd {state.PerformerCommandMs:0.0} ms  xform {state.PerformerTransformMs:0.0} ms").FontSize(12f).Color("#F18C7F").WhiteSpace(UiWhiteSpace.Normal),
                 Ui.Text($"Performer minimap {state.PerformerMinimapMarkerMs:0.0} ms  markers {state.PerformerMarkers} drop {state.PerformerMarkersDropped}  screen {state.MinimapScreenMarkers} drop {state.MinimapScreenMarkersDropped}").FontSize(12f).Color("#D6E4F5").WhiteSpace(UiWhiteSpace.Normal),
@@ -327,8 +349,8 @@ internal sealed class MassNavigationPanelController
         SetActionFeedback("Hot apply: full 64km map camera requested.");
     }
 
-    private void AdjustTotalAgentsDown() => AdjustTotalAgents(-2_000);
-    private void AdjustTotalAgentsUp() => AdjustTotalAgents(2_000);
+    private void AdjustTotalAgentsDown() => AdjustTotalAgents(-RequirePanelControls().TotalAgentStep);
+    private void AdjustTotalAgentsUp() => AdjustTotalAgents(RequirePanelControls().TotalAgentStep);
 
     private void AdjustTotalAgents(int delta)
     {
@@ -337,7 +359,7 @@ internal sealed class MassNavigationPanelController
             return;
         }
 
-        int currentTotal = _simulation.AgentsPerTeam * _simulation.TeamCount;
+        int currentTotal = checked(_simulation.AgentsPerTeam * _simulation.TeamCount);
         SetTotalAgents(currentTotal + delta);
     }
 
@@ -348,9 +370,32 @@ internal sealed class MassNavigationPanelController
             return;
         }
 
-        int teamCount = Math.Max(1, _simulation.TeamCount);
-        int maxPerTeam = ResolveMaxAgentsPerTeam(_engine);
-        int perTeam = Math.Clamp(Math.Max(0, totalAgents / teamCount), 0, maxPerTeam);
+        if (totalAgents < 0)
+        {
+            throw new InvalidOperationException(
+                $"MassNavigation panel requested negative totalAgents {totalAgents}; configure scenarioRuntime.panelControls.totalAgentStep for reachable values.");
+        }
+
+        int teamCount = _simulation.TeamCount;
+        if (teamCount <= 0)
+        {
+            throw new InvalidOperationException("MassNavigation panel requires at least one configured team.");
+        }
+
+        MassNavigationPanelControlsConfig panelControls = RequirePanelControls();
+        if (totalAgents % teamCount != 0)
+        {
+            throw new InvalidOperationException(
+                $"MassNavigation panel requested totalAgents {totalAgents}, which does not divide evenly across {teamCount} teams.");
+        }
+
+        int perTeam = totalAgents / teamCount;
+        if (perTeam > panelControls.MaxAgentsPerTeam)
+        {
+            throw new InvalidOperationException(
+                $"MassNavigation panel requested agents/team {perTeam}, exceeding configured scenarioRuntime.panelControls.maxAgentsPerTeam {panelControls.MaxAgentsPerTeam}.");
+        }
+
         _simulation.SetAgentsPerTeam(perTeam);
         SetActionFeedback($"Queued reset: agents/team = {perTeam}, teams = {teamCount}, total target = {perTeam * teamCount}.");
     }
@@ -369,16 +414,38 @@ internal sealed class MassNavigationPanelController
 
     private void QueueSelectionRotate(float direction)
     {
-        if (_simulation == null)
+        if (_engine == null || _simulation == null)
         {
             return;
         }
 
         float deltaRadians = direction * _simulation.Config.Semantics.Group.FormationRotationSpeedRadiansPerSecond;
-        if (_simulation.Commands.EnqueueSelectionRotate(_simulation.SelectedEntities, deltaRadians))
+        if (_simulation.RotateSelectedFormation(_engine.World, deltaRadians, ResolveLocalPlayerId()))
         {
-            SetActionFeedback($"Queued rotate: selected formation rotation {deltaRadians * 180f / MathF.PI:0.0} deg.");
+            SetActionFeedback($"Applied rotate: selected formation rotation {deltaRadians * 180f / MathF.PI:0.0} deg.");
         }
+    }
+
+    private int ResolveLocalPlayerId()
+    {
+        if (_engine == null)
+        {
+            throw new InvalidOperationException("MassNavigation panel requires GameEngine before resolving local player ownership.");
+        }
+
+        if (!_engine.GlobalContext.TryGetValue(CoreServiceKeys.LocalPlayerEntity.Name, out object? localObj) ||
+            localObj is not Arch.Core.Entity local ||
+            !_engine.World.IsAlive(local))
+        {
+            throw new InvalidOperationException("MassNavigation panel requires LocalPlayerEntity before rotating formations.");
+        }
+
+        if (!_engine.World.TryGet(local, out Ludots.Core.Gameplay.Components.PlayerOwner owner))
+        {
+            throw new InvalidOperationException("MassNavigation panel LocalPlayerEntity must author PlayerOwner before rotating formations.");
+        }
+
+        return owner.PlayerId;
     }
 
     private void JumpToKnownContact(string contactId)
@@ -456,7 +523,11 @@ internal sealed class MassNavigationPanelController
             return;
         }
 
-        _engine.SimulationBudgetMsPerFrame = Math.Clamp(_engine.SimulationBudgetMsPerFrame + delta, 1, 64);
+        MassNavigationPanelControlsConfig controls = RequirePanelControls();
+        _engine.SimulationBudgetMsPerFrame = Math.Clamp(
+            _engine.SimulationBudgetMsPerFrame + delta,
+            controls.SimulationBudgetMinMs,
+            controls.SimulationBudgetMaxMs);
         SetActionFeedback($"Hot apply: simulation budget = {_engine.SimulationBudgetMsPerFrame} ms/frame.");
     }
 
@@ -467,7 +538,11 @@ internal sealed class MassNavigationPanelController
             return;
         }
 
-        _engine.SimulationMaxSlicesPerLogicFrame = Math.Clamp(_engine.SimulationMaxSlicesPerLogicFrame + delta, 1, 2048);
+        MassNavigationPanelControlsConfig controls = RequirePanelControls();
+        _engine.SimulationMaxSlicesPerLogicFrame = Math.Clamp(
+            _engine.SimulationMaxSlicesPerLogicFrame + delta,
+            controls.SimulationSliceMin,
+            controls.SimulationSliceMax);
         SetActionFeedback($"Hot apply: simulation slice limit = {_engine.SimulationMaxSlicesPerLogicFrame}.");
     }
 
@@ -478,7 +553,8 @@ internal sealed class MassNavigationPanelController
             return;
         }
 
-        policy.SetTargetHz(Math.Clamp(policy.TargetHz + delta, 0, 240));
+        MassNavigationPanelControlsConfig controls = RequirePanelControls();
+        policy.SetTargetHz(Math.Clamp(policy.TargetHz + delta, controls.EnginePolicyHzMin, controls.EnginePolicyHzMax));
         SetActionFeedback($"Engine policy hot apply: physics = {policy.TargetHz} Hz. Current mass-navigation custom sim still runs on LogicHz/InputCollection.");
     }
 
@@ -489,7 +565,11 @@ internal sealed class MassNavigationPanelController
             return;
         }
 
-        policy.SetMaxStepsPerFixedTick(Math.Clamp(policy.MaxStepsPerFixedTick + delta, 1, 32));
+        MassNavigationPanelControlsConfig controls = RequirePanelControls();
+        policy.SetMaxStepsPerFixedTick(Math.Clamp(
+            policy.MaxStepsPerFixedTick + delta,
+            controls.EnginePolicyMaxStepsMin,
+            controls.EnginePolicyMaxStepsMax));
         SetActionFeedback($"Engine policy hot apply: physics max steps = {policy.MaxStepsPerFixedTick}. Current mass-navigation custom sim is not consuming Physics2D ticks.");
     }
 
@@ -500,7 +580,8 @@ internal sealed class MassNavigationPanelController
             return;
         }
 
-        policy.SetTargetHz(Math.Clamp(policy.TargetHz + delta, 0, 240));
+        MassNavigationPanelControlsConfig controls = RequirePanelControls();
+        policy.SetTargetHz(Math.Clamp(policy.TargetHz + delta, controls.EnginePolicyHzMin, controls.EnginePolicyHzMax));
         SetActionFeedback($"Engine policy hot apply: navigation = {policy.TargetHz} Hz. Current mass-navigation custom sim still runs on LogicHz/InputCollection.");
     }
 
@@ -511,7 +592,11 @@ internal sealed class MassNavigationPanelController
             return;
         }
 
-        policy.SetMaxStepsPerFixedTick(Math.Clamp(policy.MaxStepsPerFixedTick + delta, 1, 32));
+        MassNavigationPanelControlsConfig controls = RequirePanelControls();
+        policy.SetMaxStepsPerFixedTick(Math.Clamp(
+            policy.MaxStepsPerFixedTick + delta,
+            controls.EnginePolicyMaxStepsMin,
+            controls.EnginePolicyMaxStepsMax));
         SetActionFeedback($"Engine policy hot apply: navigation max steps = {policy.MaxStepsPerFixedTick}. Current mass-navigation custom sim is not consuming Navigation2D ticks.");
     }
 
@@ -522,49 +607,52 @@ internal sealed class MassNavigationPanelController
             return;
         }
 
-        _simulation.FlowTuning.Enabled = !_simulation.FlowTuning.Enabled;
-        _simulation.MassFlow.RequestFlowRebuild();
-        SetActionFeedback($"Hot apply: flow dynamic crowd stamp = {(_simulation.FlowTuning.Enabled ? "On" : "Off")}.");
+        bool enabled = _simulation.ToggleFlowEnabled();
+        SetActionFeedback($"Hot apply: flow dynamic crowd stamp = {(enabled ? "On" : "Off")}.");
     }
 
     private void AdjustFlowIterations(int delta)
     {
-        _simulation?.FlowTuning.AdjustIterations(delta);
-        if (_simulation != null)
+        if (_simulation == null)
         {
-            _simulation.MassFlow.RequestFlowRebuild();
-            SetActionFeedback($"Hot apply: flow crowd stamp budget = {_simulation.FlowTuning.IterationsPerStep}.");
+            return;
         }
+
+        int iterations = _simulation.AdjustFlowIterations(delta);
+        SetActionFeedback($"Hot apply: flow crowd stamp budget = {iterations}.");
     }
 
     private void AdjustFlowStepHz(int delta)
     {
-        if (_simulation != null)
+        if (_simulation == null)
         {
-            _simulation.Cadence.AdjustFlowStepHz(delta);
-            _simulation.MassFlow.RequestFlowRebuild();
-            SetActionFeedback($"Hot apply: flow solve cadence = {_simulation.Cadence.FlowStepHz} Hz.");
+            return;
         }
+
+        int hz = _simulation.AdjustFlowStepHz(delta);
+        SetActionFeedback($"Hot apply: flow solve cadence = {hz} Hz.");
     }
 
     private void AdjustFlowCrowdHz(int delta)
     {
-        if (_simulation != null)
+        if (_simulation == null)
         {
-            _simulation.Cadence.AdjustFlowCrowdStampHz(delta);
-            _simulation.MassFlow.RequestFlowRebuild();
-            SetActionFeedback($"Hot apply: flow crowd stamp cadence = {_simulation.Cadence.FlowCrowdStampHz} Hz.");
+            return;
         }
+
+        int hz = _simulation.AdjustFlowCrowdStampHz(delta);
+        SetActionFeedback($"Hot apply: flow crowd stamp cadence = {hz} Hz.");
     }
 
     private void AdjustFlowObstacleHz(int delta)
     {
-        if (_simulation != null)
+        if (_simulation == null)
         {
-            _simulation.Cadence.AdjustFlowObstacleStampHz(delta);
-            _simulation.MassFlow.RequestFlowRebuild();
-            SetActionFeedback($"Hot apply: flow obstacle stamp cadence = {_simulation.Cadence.FlowObstacleStampHz} Hz.");
+            return;
         }
+
+        int hz = _simulation.AdjustFlowObstacleStampHz(delta);
+        SetActionFeedback($"Hot apply: flow obstacle stamp cadence = {hz} Hz.");
     }
 
     private void AdjustHardResolveHz(int delta)
@@ -596,8 +684,8 @@ internal sealed class MassNavigationPanelController
             return;
         }
 
-        _simulation.MassFlow.ArrivalTuning.Enabled = !_simulation.MassFlow.ArrivalTuning.Enabled;
-        SetActionFeedback($"Hot apply: arrival recovery = {(_simulation.MassFlow.ArrivalTuning.Enabled ? "On" : "Off")}.");
+        bool enabled = _simulation.ToggleArrivalRecovery();
+        SetActionFeedback($"Hot apply: arrival recovery = {(enabled ? "On" : "Off")}.");
     }
 
     private void AdjustArrivalTimeoutMs(int delta)
@@ -607,8 +695,8 @@ internal sealed class MassNavigationPanelController
             return;
         }
 
-        _simulation.MassFlow.ArrivalTuning.AdjustTimeoutMs(delta);
-        SetActionFeedback($"Hot apply: arrival timeout = {_simulation.MassFlow.ArrivalTuning.TimeoutMs} ms.");
+        int timeoutMs = _simulation.AdjustArrivalTimeoutMs(delta);
+        SetActionFeedback($"Hot apply: arrival timeout = {timeoutMs} ms.");
     }
 
     private void AdjustArrivalProgressCm(int delta)
@@ -618,8 +706,8 @@ internal sealed class MassNavigationPanelController
             return;
         }
 
-        _simulation.MassFlow.ArrivalTuning.AdjustProgressDistanceCm(delta);
-        SetActionFeedback($"Hot apply: arrival progress = {_simulation.MassFlow.ArrivalTuning.ProgressDistanceCm} cm.");
+        int distanceCm = _simulation.AdjustArrivalProgressDistanceCm(delta);
+        SetActionFeedback($"Hot apply: arrival progress = {distanceCm} cm.");
     }
 
     private void AdjustArrivalWakePushCm(int delta)
@@ -629,8 +717,8 @@ internal sealed class MassNavigationPanelController
             return;
         }
 
-        _simulation.MassFlow.ArrivalTuning.AdjustWakePushDistanceCm(delta);
-        SetActionFeedback($"Hot apply: arrival wake push = {_simulation.MassFlow.ArrivalTuning.WakePushDistanceCm} cm.");
+        int distanceCm = _simulation.AdjustArrivalWakePushDistanceCm(delta);
+        SetActionFeedback($"Hot apply: arrival wake push = {distanceCm} cm.");
     }
 
     private void AdjustArrivalMaxRetries(int delta)
@@ -640,8 +728,8 @@ internal sealed class MassNavigationPanelController
             return;
         }
 
-        _simulation.MassFlow.ArrivalTuning.AdjustMaxRetryCount(delta);
-        SetActionFeedback($"Hot apply: arrival max retries = {_simulation.MassFlow.ArrivalTuning.MaxRetryCount}.");
+        int retryCount = _simulation.AdjustArrivalMaxRetryCount(delta);
+        SetActionFeedback($"Hot apply: arrival max retries = {retryCount}.");
     }
 
     private void SetActionFeedback(string text)
@@ -724,10 +812,11 @@ internal sealed class MassNavigationPanelController
             ?? throw new InvalidOperationException("MassNavigationMod panel requires Physics2DTickPolicy.");
         var navigationPolicy = engine.GetService(CoreServiceKeys.Navigation2DTickPolicy)
             ?? throw new InvalidOperationException("MassNavigationMod panel requires Navigation2DTickPolicy.");
-        string obstacleSemanticsText = $"Obstacle semantics: visible radius = authored obstacle. hard block = visible + body {simulation.MassFlow.Semantics.Obstacle.AgentBodyRadiusCm:0} cm. soft push = visible + {simulation.MassFlow.Semantics.Obstacle.SoftPushPaddingCm:0} cm.";
-        string targetSemanticsText = $"Target semantics: team target clear {simulation.MassFlow.Semantics.TargetProjection.TeamTargetClearanceCm:0} cm. group center clear {simulation.MassFlow.Semantics.TargetProjection.GroupCenterClearanceCm:0} cm. team slot clear {simulation.MassFlow.Semantics.TargetProjection.TeamSlotClearanceCm:0} cm. loose/group slot clear {simulation.MassFlow.Semantics.TargetProjection.LooseTargetClearanceCm:0}/{simulation.MassFlow.Semantics.TargetProjection.GroupSlotClearanceCm:0} cm.";
-        string arrivalSemanticsText = $"Arrival semantics: stop threshold {simulation.MassFlow.Semantics.Group.UnitTargetStopThresholdCm:0} cm. settle timeout/progress/wake/retry = {simulation.MassFlow.ArrivalTuning.TimeoutMs}/{simulation.MassFlow.ArrivalTuning.ProgressDistanceCm}/{simulation.MassFlow.ArrivalTuning.WakePushDistanceCm}/{simulation.MassFlow.ArrivalTuning.MaxRetryCount}. flow slow radius loose/group = {simulation.MassFlow.Semantics.Steering.GoalArrivalRadiusCm:0}/{simulation.MassFlow.Semantics.Group.FormationFlowSlowRadiusCm:0} cm.";
-        string yieldSemanticsText = $"Yield semantics: nav mass light/heavy = {simulation.MassFlow.AvoidanceTuning.LightNavMass:0.##}/{simulation.MassFlow.AvoidanceTuning.HeavyNavMass:0.##}. dominant ratio {simulation.MassFlow.AvoidanceTuning.DominantMassRatio:0.##}. response friendly/non-friendly/push = {simulation.MassFlow.AvoidanceTuning.FriendlyResponseScale:0.##}/{simulation.MassFlow.AvoidanceTuning.NonFriendlyResponseScale:0.##}/{simulation.MassFlow.AvoidanceTuning.DominantPushResponseScale:0.##}.";
+        MassNavigationSolverDiagnostics solver = simulation.CaptureSolverDiagnostics();
+        string obstacleSemanticsText = $"Obstacle semantics: visible radius = authored obstacle. hard block = visible + each agent body radius. soft push = visible + each agent body radius + {solver.ObstacleSoftPushPaddingCm:0} cm.";
+        string targetSemanticsText = $"Target semantics: team target clear {solver.TeamTargetClearanceCm:0} cm. group center clear {solver.GroupCenterClearanceCm:0} cm. team slot clear {solver.TeamSlotClearanceCm:0} cm. loose/group slot clear {solver.LooseTargetClearanceCm:0}/{solver.GroupSlotClearanceCm:0} cm.";
+        string arrivalSemanticsText = $"Arrival semantics: stop threshold {solver.UnitTargetStopThresholdCm:0} cm. settle timeout/progress/wake/retry = {solver.ArrivalTimeoutMs}/{solver.ArrivalProgressDistanceCm}/{solver.ArrivalWakePushDistanceCm}/{solver.ArrivalMaxRetryCount}. flow slow radius loose/group = {solver.GoalArrivalRadiusCm:0}/{solver.FormationFlowSlowRadiusCm:0} cm.";
+        string yieldSemanticsText = $"Yield semantics: profile nav mass comes from agentProfiles. dominant ratio {solver.DominantMassRatio:0.##}. response friendly/non-friendly/push = {solver.FriendlyResponseScale:0.##}/{solver.NonFriendlyResponseScale:0.##}/{solver.DominantPushResponseScale:0.##}.";
         return new MassNavigationPanelState(
             Visible: visible,
             LastActionText: _lastActionText,
@@ -754,19 +843,18 @@ internal sealed class MassNavigationPanelController
             SelectedTeamId: simulation.SelectedTeamId,
             SelectedCount: simulation.SelectedCount,
             SelectionRevision: simulation.SelectionRevision,
-            PendingCommandCount: simulation.PendingCommandCount,
             CommandCountFrame: simulation.CommandCountFrame,
             FormationCount: simulation.NavGroupRuntime.ActiveGroupCount,
             FormationLabel: simulation.FormationMode.ToString(),
             FormationRotationDeg: simulation.NavGroupRuntime.SelectedRotationRadians * (180f / MathF.PI),
-            FlowEnabled: simulation.FlowTuning.Enabled,
-            FlowIterations: simulation.FlowTuning.IterationsPerStep,
-            ArrivalRecoveryEnabled: simulation.MassFlow.ArrivalTuning.Enabled,
-            ArrivalTimeoutMs: simulation.MassFlow.ArrivalTuning.TimeoutMs,
-            ArrivalProgressCm: simulation.MassFlow.ArrivalTuning.ProgressDistanceCm,
-            ArrivalWakePushCm: simulation.MassFlow.ArrivalTuning.WakePushDistanceCm,
-            ArrivalMaxRetries: simulation.MassFlow.ArrivalTuning.MaxRetryCount,
-            ArrivalSettledUnits: simulation.MassFlow.SettledUnitCount,
+            FlowEnabled: solver.FlowEnabled,
+            FlowIterations: solver.FlowIterationsPerStep,
+            ArrivalRecoveryEnabled: solver.ArrivalRecoveryEnabled,
+            ArrivalTimeoutMs: solver.ArrivalTimeoutMs,
+            ArrivalProgressCm: solver.ArrivalProgressDistanceCm,
+            ArrivalWakePushCm: solver.ArrivalWakePushDistanceCm,
+            ArrivalMaxRetries: solver.ArrivalMaxRetryCount,
+            ArrivalSettledUnits: solver.ArrivalSettledUnitCount,
             Fps: fps,
             FrameMs: frameMs,
             PerformerEmitMs: performerEmitMs,
@@ -776,9 +864,8 @@ internal sealed class MassNavigationPanelController
             ViewportWidth: viewportResolution.X,
             ViewportHeight: viewportResolution.Y,
             SelectionSyncMs: MathF.Round(simulation.SelectionSyncMs, 1),
-            CommandApplyMs: MathF.Round(simulation.CommandApplyMs, 1),
             FormationTargetMs: MathF.Round(simulation.FormationTargetMs, 1),
-            FlowFieldRebuildMs: MathF.Round(simulation.FlowFieldRebuildMs > 0.001f ? simulation.FlowFieldRebuildMs : simulation.MassFlow.LastFlowFieldRebuildMs, 1),
+            FlowFieldRebuildMs: MathF.Round(solver.FlowFieldRebuildMs, 1),
             StepPrepMs: MathF.Round(simulation.StepPrepMs, 1),
             LocalSteeringMs: MathF.Round(simulation.LocalSteeringMs, 1),
             SimStepMs: MathF.Round(simulation.SimStepMs, 1),
@@ -788,7 +875,6 @@ internal sealed class MassNavigationPanelController
             SelectionSyncHzObserved: MathF.Round(simulation.SelectionSyncHzObserved, 1),
             ControlHzObserved: MathF.Round(simulation.ControlHzObserved, 1),
             CommandHzObserved: MathF.Round(simulation.CommandHzObserved, 1),
-            CommandDispatchHzObserved: MathF.Round(simulation.CommandDispatchHzObserved, 1),
             SimHzObserved: MathF.Round(simulation.SimHzObserved, 1),
             PerformerHzObserved: MathF.Round(simulation.PerformerHzObserved, 1),
             HudHzObserved: MathF.Round(simulation.HudHzObserved, 1),
@@ -862,11 +948,6 @@ internal sealed class MassNavigationPanelController
             SelectionSnapshotsFrame: simulation.SelectionSnapshotCountFrame,
             StructuralChangesFrame: simulation.StructuralChangesFrame,
             FlowReconcileFrame: simulation.FlowReconcileCountFrame);
-    }
-
-    private static int ResolveMaxAgentsPerTeam(GameEngine engine)
-    {
-        return 40_000;
     }
 
     private static float ResolveFrameMs(PresentationTimingDiagnostics timing)
@@ -967,22 +1048,48 @@ internal sealed class MassNavigationPanelController
     {
         if (_simulation == null || !_simulation.Config.ScenarioRuntime.AutoSpawnConfiguredScenario)
         {
-            return Ui.Text("Formation-owned scenarios use their own authored formation config for unit counts.")
+            return Ui.Text("Externally-authored scenarios use their own authored agent config for unit counts.")
                 .FontSize(11f)
                 .Color("#8EA2BD")
                 .WhiteSpace(UiWhiteSpace.Normal);
         }
 
-        return Ui.Row(
-                BuildActionButton("-2k", AdjustTotalAgentsDown),
-                BuildActionButton("5k", () => SetTotalAgents(5_000)),
-                BuildActionButton("10k", () => SetTotalAgents(10_000)),
-                BuildActionButton("20k", () => SetTotalAgents(20_000)),
-                BuildActionButton("40k", () => SetTotalAgents(40_000)),
-                BuildActionButton("+2k", AdjustTotalAgentsUp))
+        MassNavigationPanelControlsConfig panelControls = RequirePanelControls();
+        int[] presets = panelControls.TotalAgentPresets;
+        var buttons = new UiElementBuilder[presets.Length + 2];
+        int nextButton = 0;
+        buttons[nextButton++] = BuildActionButton(
+            $"-{FormatAgentCount(panelControls.TotalAgentStep)}",
+            AdjustTotalAgentsDown);
+        for (int i = 0; i < presets.Length; i++)
+        {
+            int totalAgents = presets[i];
+            buttons[nextButton++] = BuildActionButton(
+                FormatAgentCount(totalAgents),
+                () => SetTotalAgents(totalAgents));
+        }
+
+        buttons[nextButton] = BuildActionButton(
+            $"+{FormatAgentCount(panelControls.TotalAgentStep)}",
+            AdjustTotalAgentsUp);
+
+        return Ui.Row(buttons)
             .Wrap()
             .Gap(8f);
     }
+
+    private MassNavigationPanelControlsConfig RequirePanelControls()
+    {
+        if (_simulation == null)
+        {
+            throw new InvalidOperationException("MassNavigation panel controls require an active simulation.");
+        }
+
+        return _simulation.Config.ScenarioRuntime.PanelControls
+            ?? throw new InvalidOperationException("MassNavigation config requires scenarioRuntime.panelControls.");
+    }
+
+    private static string FormatAgentCount(int totalAgents) => totalAgents.ToString();
 }
 
 

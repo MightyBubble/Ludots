@@ -112,7 +112,7 @@ namespace Ludots.Core.Presentation.Config
                 }
 
                 string builtinClipText = bindingNode["builtinClipId"]?.GetValue<string>() ?? string.Empty;
-                if (!Enum.TryParse(builtinClipText, ignoreCase: true, out AnimatorBuiltinClipId builtinClipId) ||
+                if (!Enum.TryParse(builtinClipText, ignoreCase: false, out AnimatorBuiltinClipId builtinClipId) ||
                     builtinClipId == AnimatorBuiltinClipId.None)
                 {
                     throw new InvalidOperationException(

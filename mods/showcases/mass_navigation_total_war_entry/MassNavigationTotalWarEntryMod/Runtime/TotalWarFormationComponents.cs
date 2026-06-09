@@ -1,3 +1,4 @@
+using System;
 using System.Numerics;
 
 namespace MassNavigationTotalWarEntryMod.Runtime;
@@ -24,6 +25,46 @@ internal static class TotalWarFormationSlotLayoutNames
 {
     public const string Grid = nameof(Grid);
     public const string Disc = nameof(Disc);
+}
+
+internal static class TotalWarFormationOutlineSegments
+{
+    private const int RectangleEdgeSegmentCount = 4;
+    private const int CircleRingSegmentCount = 1;
+    private const int FrontIndicatorSegmentCount = 1;
+
+    public static int CountSplineSegments(
+        TotalWarFormationOutlineShape shape,
+        bool hasFrontIndicator,
+        int curveSampleCount)
+    {
+        if (curveSampleCount <= 0)
+        {
+            throw new InvalidOperationException("Total War formation outline requires configured curveSampleCount > 0.");
+        }
+
+        int segmentCount = shape switch
+        {
+            TotalWarFormationOutlineShape.Rectangle => RectangleEdgeSegmentCount,
+            TotalWarFormationOutlineShape.Circle => CircleRingSegmentCount,
+            _ => throw new InvalidOperationException($"Total War formation outline has unsupported shape '{shape}'."),
+        };
+
+        if (hasFrontIndicator)
+        {
+            segmentCount += FrontIndicatorSegmentCount;
+        }
+
+        return checked(segmentCount * curveSampleCount);
+    }
+
+    public static int CountSplineSegments(in TotalWarFormationOutline outline)
+    {
+        return CountSplineSegments(
+            outline.Shape,
+            outline.FrontIndicatorLengthCm > 0f,
+            outline.CurveSampleCount);
+    }
 }
 
 internal struct TotalWarFormationSoldier

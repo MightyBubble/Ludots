@@ -5,7 +5,6 @@ using Ludots.Core.Engine;
 using Ludots.Core.Presentation.Camera;
 using Ludots.Core.Presentation.Hud;
 using Ludots.Core.Scripting;
-using Ludots.Core.Systems;
 using MassNavigationMod.Runtime;
 
 namespace MassNavigationMod.Systems;
@@ -42,22 +41,20 @@ internal sealed class MassNavigationHudPresentationSystem : ISystem<float>
             ?? throw new InvalidOperationException("MassNavigationMod requires PresentationTimingDiagnostics for real FPS HUD.");
         IViewController viewport = _engine.GetService(CoreServiceKeys.ViewController)
             ?? throw new InvalidOperationException("MassNavigationMod requires ViewController for diagnostics HUD layout.");
-        int ecsVisible = (_engine.GetService(CoreServiceKeys.CameraCullingDebugState) as CameraCullingDebugState)?.VisibleEntityCount
-            ?? timing.VisibleEntitiesLastFrame;
         Vector2 resolution = viewport.Resolution;
         int left = Math.Max(16, (int)resolution.X - 260);
         float frameMs = ResolveFrameMs(timing);
         float fps = frameMs > 0.001f ? 1000f / frameMs : 0f;
-        AddCachedText(overlay, 0, left, 16, 20, new Vector4(0.92f, 0.96f, 1f, 1f), (int)MathF.Round(fps * 10f), () => $"fps {fps:0.0}");
+        AddCachedFpsText(overlay, 0, left, 16, 20, new Vector4(0.92f, 0.96f, 1f, 1f), (int)MathF.Round(fps * 10f), fps);
     }
 
-    private void AddCachedText(ScreenOverlayBuffer overlay, int cacheIndex, int x, int y, int fontSize, Vector4 color, int dirtySerial, Func<string> factory)
+    private void AddCachedFpsText(ScreenOverlayBuffer overlay, int cacheIndex, int x, int y, int fontSize, Vector4 color, int dirtySerial, float fps)
     {
         ref CachedHudLine cache = ref _cachedLines[cacheIndex];
         if (cache.DirtySerial != dirtySerial || cache.Text == null)
         {
             cache.DirtySerial = dirtySerial;
-            cache.Text = factory();
+            cache.Text = $"fps {fps:0.0}";
         }
 
         overlay.AddText(x, y, cache.Text, fontSize, color, stableId: cacheIndex + 1, dirtySerial);

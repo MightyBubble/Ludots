@@ -237,7 +237,7 @@ namespace Ludots.Core.Presentation.Systems
                     return World.IsAlive(evt.Source) && World.Has<VisualTransform>(evt.Source);
 
                 default:
-                    return true;
+                    throw new InvalidOperationException($"Unsupported performer rule inline condition '{kind}'.");
             }
         }
 
@@ -312,8 +312,15 @@ namespace Ludots.Core.Presentation.Systems
         /// </summary>
         private bool EvaluateGraph(int graphProgramId, Entity source, Entity target)
         {
-            if (!_programs.TryGetProgram(graphProgramId, out var program)) return false;
-            if (program.Length == 0) return false;
+            if (!_programs.TryGetProgram(graphProgramId, out var program))
+            {
+                throw new InvalidOperationException($"Performer rule condition references unknown graphProgramId={graphProgramId}.");
+            }
+
+            if (program.Length == 0)
+            {
+                throw new InvalidOperationException($"Performer rule condition graphProgramId={graphProgramId} has no instructions.");
+            }
 
             Array.Clear(_floatRegs, 0, _floatRegs.Length);
             Array.Clear(_intRegs, 0, _intRegs.Length);
@@ -519,8 +526,15 @@ namespace Ludots.Core.Presentation.Systems
         /// </summary>
         private float EvaluateGraphFloat(int graphProgramId, Entity source, Entity target)
         {
-            if (!_programs.TryGetProgram(graphProgramId, out var program)) return 0f;
-            if (program.Length == 0) return 0f;
+            if (!_programs.TryGetProgram(graphProgramId, out var program))
+            {
+                throw new InvalidOperationException($"Performer command paramGraphProgramId={graphProgramId} references an unknown graph program.");
+            }
+
+            if (program.Length == 0)
+            {
+                throw new InvalidOperationException($"Performer command paramGraphProgramId={graphProgramId} has no instructions.");
+            }
 
             Array.Clear(_floatRegs, 0, _floatRegs.Length);
             Array.Clear(_intRegs, 0, _intRegs.Length);

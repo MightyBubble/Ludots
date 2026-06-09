@@ -29,6 +29,13 @@ namespace Ludots.Tests.GAS
     [TestFixture]
     public sealed class AuthoritativeInputConvergenceTests
     {
+        private const float InputConvergenceInitialZoomNormalized = 1f;
+        private const float InputConvergenceWheelZoomNormalizedStep = 0.08f;
+        private const float InputConvergenceButtonZoomNormalizedStep = 0.18f;
+        private const int InputConvergenceDebugMarkerSampleCapacity = 64;
+        private const float InputConvergenceMinZoomHalfExtentCm = 750f;
+        private const float InputConvergenceMaxZoomHalfExtentCm = 22000f;
+
         [Test]
         public void AuthoritativeInputAccumulator_PreservesEdgesUntilConsumed()
         {
@@ -330,12 +337,12 @@ namespace Ludots.Tests.GAS
             var handler = new PlayerInputHandler(backend, config);
             handler.PushContext("Gameplay");
 
-            var minimap = engine.GetService(CoreServiceKeys.MinimapRuntime)
-                ?? throw new InvalidOperationException("MinimapRuntime missing.");
+            var minimap = CreateInputConvergenceMinimap();
             var markerBuffer = engine.GetService(CoreServiceKeys.MinimapMarkerBuffer)
                 ?? throw new InvalidOperationException("MinimapMarkerBuffer missing.");
             var screenMarkers = engine.GetService(CoreServiceKeys.MinimapScreenMarkerBuffer)
                 ?? throw new InvalidOperationException("MinimapScreenMarkerBuffer missing.");
+            engine.SetService(CoreServiceKeys.MinimapRuntime, minimap);
             minimap.Visible = true;
             minimap.UseRtsFullMapPreset();
             minimap.Refresh(engine, markerBuffer, screenMarkers);
@@ -410,23 +417,17 @@ namespace Ludots.Tests.GAS
             var handler = new PlayerInputHandler(backend, config);
             handler.PushContext("Gameplay");
 
-            var minimap = new MinimapRuntime(new MinimapRuntimeConfig
-            {
-                MinZoomExtentMode = MinimapZoomExtentMode.ExplicitCm,
-                MinZoomExplicitHalfExtentCm = 750f,
-                MaxZoomExtentMode = MinimapZoomExtentMode.ExplicitCm,
-                MaxZoomExplicitHalfExtentCm = 22000f,
-            });
+            var minimap = CreateInputConvergenceMinimap();
             var markerBuffer = engine.GetService(CoreServiceKeys.MinimapMarkerBuffer)
                 ?? throw new InvalidOperationException("MinimapMarkerBuffer missing.");
             var screenMarkers = engine.GetService(CoreServiceKeys.MinimapScreenMarkerBuffer)
                 ?? throw new InvalidOperationException("MinimapScreenMarkerBuffer missing.");
+            engine.SetService(CoreServiceKeys.MinimapRuntime, minimap);
             minimap.Visible = true;
             minimap.UseRtsFullMapPreset();
             minimap.Refresh(engine, markerBuffer, screenMarkers);
 
             var rayProvider = new CountingScreenRayProvider();
-            engine.SetService(CoreServiceKeys.MinimapRuntime, minimap);
             engine.SetService(CoreServiceKeys.InputHandler, handler);
             engine.SetService(CoreServiceKeys.InputBackend, backend);
             engine.SetService(CoreServiceKeys.InteractionActionBindings, new InteractionActionBindings());
@@ -502,12 +503,12 @@ namespace Ludots.Tests.GAS
             var handler = new PlayerInputHandler(backend, config);
             handler.PushContext("Gameplay");
 
-            var minimap = engine.GetService(CoreServiceKeys.MinimapRuntime)
-                ?? throw new InvalidOperationException("MinimapRuntime missing.");
+            var minimap = CreateInputConvergenceMinimap();
             var markerBuffer = engine.GetService(CoreServiceKeys.MinimapMarkerBuffer)
                 ?? throw new InvalidOperationException("MinimapMarkerBuffer missing.");
             var screenMarkers = engine.GetService(CoreServiceKeys.MinimapScreenMarkerBuffer)
                 ?? throw new InvalidOperationException("MinimapScreenMarkerBuffer missing.");
+            engine.SetService(CoreServiceKeys.MinimapRuntime, minimap);
             minimap.Visible = true;
             minimap.UseRtsFullMapPreset();
             engine.GameSession.Camera.ApplyPose(new CameraPoseRequest { Yaw = 90f });
@@ -632,6 +633,24 @@ namespace Ludots.Tests.GAS
             var handler = new PlayerInputHandler(backend, config);
             handler.PushContext("Gameplay");
             return (backend, handler);
+        }
+
+        private static MinimapRuntime CreateInputConvergenceMinimap()
+        {
+            return new MinimapRuntime(new MinimapRuntimeConfig
+            {
+                InitialZoomNormalized = InputConvergenceInitialZoomNormalized,
+                WheelZoomNormalizedStep = InputConvergenceWheelZoomNormalizedStep,
+                ButtonZoomNormalizedStep = InputConvergenceButtonZoomNormalizedStep,
+                ZoomSliderEnabled = true,
+                ModeToggleEnabled = true,
+                RotateToggleEnabled = true,
+                DebugMarkerSampleCapacity = InputConvergenceDebugMarkerSampleCapacity,
+                MinZoomExtentMode = MinimapZoomExtentMode.ExplicitCm,
+                MinZoomExplicitHalfExtentCm = InputConvergenceMinZoomHalfExtentCm,
+                MaxZoomExtentMode = MinimapZoomExtentMode.ExplicitCm,
+                MaxZoomExplicitHalfExtentCm = InputConvergenceMaxZoomHalfExtentCm,
+            });
         }
 
         private static (TestInputBackend backend, PlayerInputHandler handler) BuildCameraHandler()

@@ -4,113 +4,122 @@ namespace Ludots.Core.Presentation
 {
     /// <summary>
     /// Engine-level presentation runtime capacity knobs merged from game.json.
-    /// Defaults are sized for production-scale presentation scenes rather than tiny unit-test maps.
+    /// LudotsCoreMod owns the shared baseline values; feature mods override only the values they intentionally change.
     /// </summary>
     public sealed class PresentationRuntimeConfig
     {
-        public int PerformerInstanceCapacity { get; set; } = 32768;
-        public int PresentationEventStreamCapacity { get; set; } = 65536;
-        public int PerformerCommandCapacity { get; set; } = 262144;
-        public int PrimitiveDrawBufferCapacity { get; set; } = 131072;
-        public int VisualSnapshotBufferCapacity { get; set; } = 131072;
-        public int VisualProxyBufferCapacity { get; set; } = 131072;
-        public int SkinnedVisualBatchCapacity { get; set; } = 65536;
-        public int PresentationRequestCapacity { get; set; } = 262144;
-        public int GroundOverlayCapacity { get; set; } = 65536;
-        public int RoadSplineCapacity { get; set; } = 65536;
-        public int WorldHudCapacity { get; set; } = 131072;
-        public int ScreenHudCapacity { get; set; } = 131072;
-        public int MinimapMarkerCapacity { get; set; } = 131072;
-        public int RuntimeEntitySpawnQueueCapacity { get; set; } = 131072;
-        public int RuntimeEntitySpawnReceiptQueueCapacity { get; set; } = 131072;
-        public CameraCullingRuntimeConfig CameraCulling { get; set; } = new CameraCullingRuntimeConfig();
-        public MinimapRuntimeConfig Minimap { get; set; } = new MinimapRuntimeConfig();
+        private int? _performerInstanceCapacity;
+        private int? _gasPresentationEventCapacity;
+        private int? _presentationEventStreamCapacity;
+        private int? _presentationOwnerChangeCapacity;
+        private int? _performerCommandCapacity;
+        private int? _primitiveDrawBufferCapacity;
+        private int? _visualSnapshotBufferCapacity;
+        private int? _visualProxyBufferCapacity;
+        private int? _skinnedVisualBatchCapacity;
+        private int? _presentationRequestCapacity;
+        private int? _groundOverlayCapacity;
+        private int? _roadSplineCapacity;
+        private int? _worldHudCapacity;
+        private int? _screenHudCapacity;
+        private int? _minimapMarkerCapacity;
+        private int? _runtimeEntitySpawnQueueCapacity;
+        private int? _runtimeEntitySpawnReceiptQueueCapacity;
+        private CameraCullingRuntimeConfig? _cameraCulling;
+        private MinimapRuntimeConfig? _minimap;
 
-        public int GetEffectivePerformerInstanceCapacity()
+        public int PerformerInstanceCapacity { get => _performerInstanceCapacity ?? 0; set => _performerInstanceCapacity = value; }
+        public int GasPresentationEventCapacity { get => _gasPresentationEventCapacity ?? 0; set => _gasPresentationEventCapacity = value; }
+        public int PresentationEventStreamCapacity { get => _presentationEventStreamCapacity ?? 0; set => _presentationEventStreamCapacity = value; }
+        public int PresentationOwnerChangeCapacity { get => _presentationOwnerChangeCapacity ?? 0; set => _presentationOwnerChangeCapacity = value; }
+        public int PerformerCommandCapacity { get => _performerCommandCapacity ?? 0; set => _performerCommandCapacity = value; }
+        public int PrimitiveDrawBufferCapacity { get => _primitiveDrawBufferCapacity ?? 0; set => _primitiveDrawBufferCapacity = value; }
+        public int VisualSnapshotBufferCapacity { get => _visualSnapshotBufferCapacity ?? 0; set => _visualSnapshotBufferCapacity = value; }
+        public int VisualProxyBufferCapacity { get => _visualProxyBufferCapacity ?? 0; set => _visualProxyBufferCapacity = value; }
+        public int SkinnedVisualBatchCapacity { get => _skinnedVisualBatchCapacity ?? 0; set => _skinnedVisualBatchCapacity = value; }
+        public int PresentationRequestCapacity { get => _presentationRequestCapacity ?? 0; set => _presentationRequestCapacity = value; }
+        public int GroundOverlayCapacity { get => _groundOverlayCapacity ?? 0; set => _groundOverlayCapacity = value; }
+        public int RoadSplineCapacity { get => _roadSplineCapacity ?? 0; set => _roadSplineCapacity = value; }
+        public int WorldHudCapacity { get => _worldHudCapacity ?? 0; set => _worldHudCapacity = value; }
+        public int ScreenHudCapacity { get => _screenHudCapacity ?? 0; set => _screenHudCapacity = value; }
+        public int MinimapMarkerCapacity { get => _minimapMarkerCapacity ?? 0; set => _minimapMarkerCapacity = value; }
+        public int RuntimeEntitySpawnQueueCapacity { get => _runtimeEntitySpawnQueueCapacity ?? 0; set => _runtimeEntitySpawnQueueCapacity = value; }
+        public int RuntimeEntitySpawnReceiptQueueCapacity { get => _runtimeEntitySpawnReceiptQueueCapacity ?? 0; set => _runtimeEntitySpawnReceiptQueueCapacity = value; }
+
+        public CameraCullingRuntimeConfig CameraCulling
         {
-            return PerformerInstanceCapacity > 0 ? PerformerInstanceCapacity : 32768;
+            get => _cameraCulling ?? throw new InvalidOperationException("presentation.cameraCulling must be explicitly configured.");
+            set => _cameraCulling = value;
         }
 
-        public int GetEffectivePresentationEventStreamCapacity()
+        public MinimapRuntimeConfig Minimap
         {
-            return PresentationEventStreamCapacity > 0 ? PresentationEventStreamCapacity : 65536;
-        }
-
-        public int GetEffectivePerformerCommandCapacity()
-        {
-            return PerformerCommandCapacity > 0 ? PerformerCommandCapacity : 262144;
-        }
-
-        public int GetEffectivePrimitiveDrawBufferCapacity()
-        {
-            return PrimitiveDrawBufferCapacity > 0 ? PrimitiveDrawBufferCapacity : 131072;
-        }
-
-        public int GetEffectiveVisualSnapshotBufferCapacity()
-        {
-            return VisualSnapshotBufferCapacity > 0 ? VisualSnapshotBufferCapacity : 131072;
-        }
-
-        public int GetEffectiveVisualProxyBufferCapacity()
-        {
-            return VisualProxyBufferCapacity > 0 ? VisualProxyBufferCapacity : 131072;
-        }
-
-        public int GetEffectiveSkinnedVisualBatchCapacity()
-        {
-            return SkinnedVisualBatchCapacity > 0 ? SkinnedVisualBatchCapacity : 65536;
-        }
-
-        public int GetEffectivePresentationRequestCapacity()
-        {
-            return PresentationRequestCapacity > 0 ? PresentationRequestCapacity : 262144;
-        }
-
-        public int GetEffectiveGroundOverlayCapacity()
-        {
-            return GroundOverlayCapacity > 0 ? GroundOverlayCapacity : 65536;
-        }
-
-        public int GetEffectiveRoadSplineCapacity()
-        {
-            return RoadSplineCapacity > 0 ? RoadSplineCapacity : 65536;
-        }
-
-        public int GetEffectiveWorldHudCapacity()
-        {
-            return WorldHudCapacity > 0 ? WorldHudCapacity : 131072;
-        }
-
-        public int GetEffectiveScreenHudCapacity()
-        {
-            return ScreenHudCapacity > 0 ? ScreenHudCapacity : 131072;
-        }
-
-        public int GetEffectiveMinimapMarkerCapacity()
-        {
-            return MinimapMarkerCapacity > 0 ? MinimapMarkerCapacity : 131072;
-        }
-
-        public int GetEffectiveRuntimeEntitySpawnQueueCapacity()
-        {
-            return RuntimeEntitySpawnQueueCapacity > 0 ? RuntimeEntitySpawnQueueCapacity : 131072;
-        }
-
-        public int GetEffectiveRuntimeEntitySpawnReceiptQueueCapacity()
-        {
-            return RuntimeEntitySpawnReceiptQueueCapacity;
+            get => _minimap ?? throw new InvalidOperationException("presentation.minimap must be explicitly configured.");
+            set => _minimap = value;
         }
 
         public void Validate()
         {
-            if (RuntimeEntitySpawnReceiptQueueCapacity <= 0)
+            RequirePositive(_performerInstanceCapacity, "presentation.performerInstanceCapacity");
+            RequirePositive(_gasPresentationEventCapacity, "presentation.gasPresentationEventCapacity");
+            RequirePositive(_presentationEventStreamCapacity, "presentation.presentationEventStreamCapacity");
+            RequirePositive(_presentationOwnerChangeCapacity, "presentation.presentationOwnerChangeCapacity");
+            RequirePositive(_performerCommandCapacity, "presentation.performerCommandCapacity");
+            RequirePositive(_primitiveDrawBufferCapacity, "presentation.primitiveDrawBufferCapacity");
+            RequirePositive(_visualSnapshotBufferCapacity, "presentation.visualSnapshotBufferCapacity");
+            RequirePositive(_visualProxyBufferCapacity, "presentation.visualProxyBufferCapacity");
+            RequirePositive(_skinnedVisualBatchCapacity, "presentation.skinnedVisualBatchCapacity");
+            RequirePositive(_presentationRequestCapacity, "presentation.presentationRequestCapacity");
+            RequirePositive(_groundOverlayCapacity, "presentation.groundOverlayCapacity");
+            RequirePositive(_roadSplineCapacity, "presentation.roadSplineCapacity");
+            RequirePositive(_worldHudCapacity, "presentation.worldHudCapacity");
+            RequirePositive(_screenHudCapacity, "presentation.screenHudCapacity");
+            RequirePositive(_minimapMarkerCapacity, "presentation.minimapMarkerCapacity");
+            RequirePositive(_runtimeEntitySpawnQueueCapacity, "presentation.runtimeEntitySpawnQueueCapacity");
+            RequirePositive(_runtimeEntitySpawnReceiptQueueCapacity, "presentation.runtimeEntitySpawnReceiptQueueCapacity");
+
+            if (_cameraCulling == null)
             {
-                throw new InvalidOperationException(
-                    "presentation.runtimeEntitySpawnReceiptQueueCapacity must be explicitly configured as > 0.");
+                throw new InvalidOperationException("presentation.cameraCulling must be explicitly configured.");
             }
 
-            CameraCulling.Validate();
-            Minimap.Validate();
+            if (_minimap == null)
+            {
+                throw new InvalidOperationException("presentation.minimap must be explicitly configured.");
+            }
+
+            _cameraCulling.Validate();
+            _minimap.Validate();
+        }
+
+        internal static int RequirePositive(int? value, string path)
+        {
+            if (!value.HasValue || value.Value <= 0)
+            {
+                throw new InvalidOperationException($"{path} must be explicitly configured as > 0.");
+            }
+
+            return value.Value;
+        }
+
+        internal static float RequireFinite(float? value, string path)
+        {
+            if (!value.HasValue || !float.IsFinite(value.Value))
+            {
+                throw new InvalidOperationException($"{path} must be explicitly configured as a finite value.");
+            }
+
+            return value.Value;
+        }
+
+        internal static bool RequireBool(bool? value, string path)
+        {
+            if (!value.HasValue)
+            {
+                throw new InvalidOperationException($"{path} must be explicitly configured.");
+            }
+
+            return value.Value;
         }
     }
 
@@ -123,76 +132,129 @@ namespace Ludots.Core.Presentation
 
     public sealed class MinimapRuntimeConfig
     {
-        public float InitialZoomNormalized { get; set; } = 1f;
-        public float WheelZoomNormalizedStep { get; set; } = 0.08f;
-        public float ButtonZoomNormalizedStep { get; set; } = 0.18f;
-        public bool ZoomSliderEnabled { get; set; } = true;
-        public bool ModeToggleEnabled { get; set; } = true;
-        public bool RotateToggleEnabled { get; set; } = true;
-        public int DebugMarkerSampleCapacity { get; set; } = 64;
-        public MinimapZoomExtentMode MinZoomExtentMode { get; set; } = MinimapZoomExtentMode.OneChunk;
-        public MinimapZoomExtentMode MaxZoomExtentMode { get; set; } = MinimapZoomExtentMode.FullMap;
-        public float MinZoomExplicitHalfExtentCm { get; set; } = 750f;
-        public float MaxZoomExplicitHalfExtentCm { get; set; } = 0f;
+        private float? _initialZoomNormalized;
+        private float? _wheelZoomNormalizedStep;
+        private float? _buttonZoomNormalizedStep;
+        private bool? _zoomSliderEnabled;
+        private bool? _modeToggleEnabled;
+        private bool? _rotateToggleEnabled;
+        private int? _debugMarkerSampleCapacity;
+        private MinimapZoomExtentMode? _minZoomExtentMode;
+        private MinimapZoomExtentMode? _maxZoomExtentMode;
+        private float? _minZoomExplicitHalfExtentCm;
+        private float? _maxZoomExplicitHalfExtentCm;
+
+        public float InitialZoomNormalized { get => _initialZoomNormalized ?? 0f; set => _initialZoomNormalized = value; }
+        public float WheelZoomNormalizedStep { get => _wheelZoomNormalizedStep ?? 0f; set => _wheelZoomNormalizedStep = value; }
+        public float ButtonZoomNormalizedStep { get => _buttonZoomNormalizedStep ?? 0f; set => _buttonZoomNormalizedStep = value; }
+        public bool ZoomSliderEnabled { get => _zoomSliderEnabled ?? false; set => _zoomSliderEnabled = value; }
+        public bool ModeToggleEnabled { get => _modeToggleEnabled ?? false; set => _modeToggleEnabled = value; }
+        public bool RotateToggleEnabled { get => _rotateToggleEnabled ?? false; set => _rotateToggleEnabled = value; }
+        public int DebugMarkerSampleCapacity { get => _debugMarkerSampleCapacity ?? 0; set => _debugMarkerSampleCapacity = value; }
+        public MinimapZoomExtentMode MinZoomExtentMode { get => _minZoomExtentMode ?? MinimapZoomExtentMode.OneChunk; set => _minZoomExtentMode = value; }
+        public MinimapZoomExtentMode MaxZoomExtentMode { get => _maxZoomExtentMode ?? MinimapZoomExtentMode.FullMap; set => _maxZoomExtentMode = value; }
+        public float MinZoomExplicitHalfExtentCm { get => _minZoomExplicitHalfExtentCm ?? 0f; set => _minZoomExplicitHalfExtentCm = value; }
+        public float MaxZoomExplicitHalfExtentCm { get => _maxZoomExplicitHalfExtentCm ?? 0f; set => _maxZoomExplicitHalfExtentCm = value; }
 
         public void Validate()
         {
-            if (!float.IsFinite(InitialZoomNormalized) ||
-                InitialZoomNormalized < 0f ||
-                InitialZoomNormalized > 1f)
+            float initialZoom = PresentationRuntimeConfig.RequireFinite(_initialZoomNormalized, "presentation.minimap.initialZoomNormalized");
+            if (initialZoom < 0f || initialZoom > 1f)
             {
                 throw new InvalidOperationException(
-                    "presentation.minimap.initialZoomNormalized must be finite and in [0, 1].");
+                    "presentation.minimap.initialZoomNormalized must be in [0, 1].");
             }
 
-            if (!float.IsFinite(WheelZoomNormalizedStep) || WheelZoomNormalizedStep <= 0f)
+            float wheelStep = PresentationRuntimeConfig.RequireFinite(_wheelZoomNormalizedStep, "presentation.minimap.wheelZoomNormalizedStep");
+            if (wheelStep <= 0f)
             {
                 throw new InvalidOperationException(
-                    "presentation.minimap.wheelZoomNormalizedStep must be finite and > 0.");
+                    "presentation.minimap.wheelZoomNormalizedStep must be > 0.");
             }
 
-            if (!float.IsFinite(ButtonZoomNormalizedStep) || ButtonZoomNormalizedStep <= 0f)
+            float buttonStep = PresentationRuntimeConfig.RequireFinite(_buttonZoomNormalizedStep, "presentation.minimap.buttonZoomNormalizedStep");
+            if (buttonStep <= 0f)
             {
                 throw new InvalidOperationException(
-                    "presentation.minimap.buttonZoomNormalizedStep must be finite and > 0.");
+                    "presentation.minimap.buttonZoomNormalizedStep must be > 0.");
             }
 
-            if (DebugMarkerSampleCapacity < 0)
+            PresentationRuntimeConfig.RequireBool(_zoomSliderEnabled, "presentation.minimap.zoomSliderEnabled");
+            PresentationRuntimeConfig.RequireBool(_modeToggleEnabled, "presentation.minimap.modeToggleEnabled");
+            PresentationRuntimeConfig.RequireBool(_rotateToggleEnabled, "presentation.minimap.rotateToggleEnabled");
+
+            if (!_debugMarkerSampleCapacity.HasValue || _debugMarkerSampleCapacity.Value < 0)
             {
                 throw new InvalidOperationException(
-                    "presentation.minimap.debugMarkerSampleCapacity must be >= 0.");
+                    "presentation.minimap.debugMarkerSampleCapacity must be explicitly configured as >= 0.");
             }
 
-            if (MinZoomExtentMode == MinimapZoomExtentMode.ExplicitCm &&
-                (!float.IsFinite(MinZoomExplicitHalfExtentCm) || MinZoomExplicitHalfExtentCm <= 0f))
+            if (!_minZoomExtentMode.HasValue)
             {
-                throw new InvalidOperationException(
-                    "presentation.minimap.minZoomExplicitHalfExtentCm must be finite and > 0 when minZoomExtentMode is ExplicitCm.");
+                throw new InvalidOperationException("presentation.minimap.minZoomExtentMode must be explicitly configured.");
             }
 
-            if (MaxZoomExtentMode == MinimapZoomExtentMode.ExplicitCm &&
-                (!float.IsFinite(MaxZoomExplicitHalfExtentCm) || MaxZoomExplicitHalfExtentCm <= 0f))
+            if (!_maxZoomExtentMode.HasValue)
+            {
+                throw new InvalidOperationException("presentation.minimap.maxZoomExtentMode must be explicitly configured.");
+            }
+
+            float minExplicit = PresentationRuntimeConfig.RequireFinite(
+                _minZoomExplicitHalfExtentCm,
+                "presentation.minimap.minZoomExplicitHalfExtentCm");
+            float maxExplicit = PresentationRuntimeConfig.RequireFinite(
+                _maxZoomExplicitHalfExtentCm,
+                "presentation.minimap.maxZoomExplicitHalfExtentCm");
+
+            if (minExplicit < 0f)
             {
                 throw new InvalidOperationException(
-                    "presentation.minimap.maxZoomExplicitHalfExtentCm must be finite and > 0 when maxZoomExtentMode is ExplicitCm.");
+                    "presentation.minimap.minZoomExplicitHalfExtentCm must be >= 0.");
+            }
+
+            if (maxExplicit < 0f)
+            {
+                throw new InvalidOperationException(
+                    "presentation.minimap.maxZoomExplicitHalfExtentCm must be >= 0.");
+            }
+
+            if (_minZoomExtentMode.Value == MinimapZoomExtentMode.ExplicitCm && minExplicit <= 0f)
+            {
+                throw new InvalidOperationException(
+                    "presentation.minimap.minZoomExplicitHalfExtentCm must be > 0 when minZoomExtentMode is ExplicitCm.");
+            }
+
+            if (_maxZoomExtentMode.Value == MinimapZoomExtentMode.ExplicitCm && maxExplicit <= 0f)
+            {
+                throw new InvalidOperationException(
+                    "presentation.minimap.maxZoomExplicitHalfExtentCm must be > 0 when maxZoomExtentMode is ExplicitCm.");
             }
         }
     }
 
     public sealed class CameraCullingRuntimeConfig
     {
-        public float HighLodDistanceCm { get; set; } = 4000f;
-        public float MediumLodDistanceCm { get; set; } = 10000f;
-        public float LowLodDistanceCm { get; set; } = 20000f;
+        private float? _highLodDistanceCm;
+        private float? _mediumLodDistanceCm;
+        private float? _lowLodDistanceCm;
+
+        public float HighLodDistanceCm { get => _highLodDistanceCm ?? 0f; set => _highLodDistanceCm = value; }
+        public float MediumLodDistanceCm { get => _mediumLodDistanceCm ?? 0f; set => _mediumLodDistanceCm = value; }
+        public float LowLodDistanceCm { get => _lowLodDistanceCm ?? 0f; set => _lowLodDistanceCm = value; }
 
         public void Validate()
         {
-            if (!float.IsFinite(HighLodDistanceCm) ||
-                !float.IsFinite(MediumLodDistanceCm) ||
-                !float.IsFinite(LowLodDistanceCm) ||
-                HighLodDistanceCm <= 0f ||
-                MediumLodDistanceCm <= HighLodDistanceCm ||
-                LowLodDistanceCm <= MediumLodDistanceCm)
+            float high = PresentationRuntimeConfig.RequireFinite(
+                _highLodDistanceCm,
+                "presentation.cameraCulling.highLodDistanceCm");
+            float medium = PresentationRuntimeConfig.RequireFinite(
+                _mediumLodDistanceCm,
+                "presentation.cameraCulling.mediumLodDistanceCm");
+            float low = PresentationRuntimeConfig.RequireFinite(
+                _lowLodDistanceCm,
+                "presentation.cameraCulling.lowLodDistanceCm");
+
+            if (high <= 0f || medium <= high || low <= medium)
             {
                 throw new InvalidOperationException(
                     "presentation.cameraCulling requires positive lod distances with high < medium < low.");

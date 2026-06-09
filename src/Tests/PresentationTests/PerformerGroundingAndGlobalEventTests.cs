@@ -124,9 +124,9 @@ namespace Ludots.Tests.Presentation
                 hasOwnerTransform: false,
                 asset);
 
-            Assert.That(resolved.Position.X, Is.EqualTo(3f).Within(0.001f));
+            Assert.That(resolved.Position.X, Is.EqualTo(5f).Within(0.001f));
             Assert.That(resolved.Position.Y, Is.EqualTo(5f).Within(0.001f));
-            Assert.That(resolved.Position.Z, Is.EqualTo(7f).Within(0.001f));
+            Assert.That(resolved.Position.Z, Is.EqualTo(5f).Within(0.001f));
             Assert.That(resolved.Scale, Is.EqualTo(new Vector3(1.5f, 2f, 2.5f)));
         }
 
@@ -341,7 +341,7 @@ namespace Ludots.Tests.Presentation
         {
             using var world = World.Create();
             var commands = new PerformerCommandBuffer();
-            var events = new PresentationEventStream();
+            var events = new PresentationEventStream(PresentationTestConstants.EventStreamCapacity);
             var runtime = new PerformerEntityRuntime(world);
             var stableIds = new PresentationStableIdAllocator();
             var definitions = new PerformerDefinitionRegistry();
@@ -373,6 +373,7 @@ namespace Ludots.Tests.Presentation
                             ScaleParamKey = -1,
                             ColorParamKey = -1,
                             MaterialParamKey = -1,
+                            AssetIdParamKey = -1,
                             AssetSwapParamKey = -1,
                             VisibilityParamKey = -1,
                         },
@@ -420,7 +421,7 @@ namespace Ludots.Tests.Presentation
         {
             using var world = World.Create();
             var commands = new PerformerCommandBuffer();
-            var events = new PresentationEventStream();
+            var events = new PresentationEventStream(PresentationTestConstants.EventStreamCapacity);
             var runtime = new PerformerEntityRuntime(world);
             var stableIds = new PresentationStableIdAllocator();
             var definitions = new PerformerDefinitionRegistry();
@@ -453,6 +454,7 @@ namespace Ludots.Tests.Presentation
                             ScaleParamKey = -1,
                             ColorParamKey = -1,
                             MaterialParamKey = -1,
+                            AssetIdParamKey = -1,
                             AssetSwapParamKey = -1,
                             VisibilityParamKey = -1,
                         },
@@ -514,8 +516,8 @@ namespace Ludots.Tests.Presentation
             using var world = World.Create();
             var runtime = new PerformerEntityRuntime(world);
             var definitions = new PerformerDefinitionRegistry();
-            var events = new PresentationEventStream();
-            var ownerChanges = new PresentationOwnerChangeBuffer();
+            var events = new PresentationEventStream(PresentationTestConstants.EventStreamCapacity);
+            var ownerChanges = new PresentationOwnerChangeBuffer(8);
             var sounds = new SoundRequestBuffer();
             int durabilityId = 7;
             Entity owner = world.Create(new AttributeBuffer());
@@ -584,7 +586,7 @@ namespace Ludots.Tests.Presentation
             using var world = World.Create();
             var runtime = new PerformerEntityRuntime(world);
             var definitions = new PerformerDefinitionRegistry();
-            var events = new PresentationEventStream();
+            var events = new PresentationEventStream(PresentationTestConstants.EventStreamCapacity);
             var sounds = new SoundRequestBuffer();
             Entity owner = world.Create(
                 new VisualTransform
@@ -652,6 +654,7 @@ namespace Ludots.Tests.Presentation
                 runtime,
                 definitions,
                 events,
+                new PresentationOwnerChangeBuffer(8),
                 sounds,
                 new StubHeightmap(heightCm: 250f));
 
@@ -671,7 +674,7 @@ namespace Ludots.Tests.Presentation
             using var world = World.Create();
             var runtime = new PerformerEntityRuntime(world);
             var definitions = new PerformerDefinitionRegistry();
-            var events = new PresentationEventStream();
+            var events = new PresentationEventStream(PresentationTestConstants.EventStreamCapacity);
             var sounds = new SoundRequestBuffer();
             Entity frame = world.Create(new PresentationFrameState { FrameId = 7 }, new PresentationFrameStateTag());
             Entity owner = world.Create(
@@ -723,6 +726,7 @@ namespace Ludots.Tests.Presentation
                 runtime,
                 definitions,
                 events,
+                new PresentationOwnerChangeBuffer(8),
                 sounds,
                 new ThrowingHeightmap());
 
@@ -737,7 +741,7 @@ namespace Ludots.Tests.Presentation
             using var world = World.Create();
             var runtime = new PerformerEntityRuntime(world);
             var definitions = new PerformerDefinitionRegistry();
-            var events = new PresentationEventStream();
+            var events = new PresentationEventStream(PresentationTestConstants.EventStreamCapacity);
             var sounds = new SoundRequestBuffer();
             world.Create(new PresentationFrameState { FrameId = 7 }, new PresentationFrameStateTag());
             Entity owner = world.Create(
@@ -789,6 +793,7 @@ namespace Ludots.Tests.Presentation
                 runtime,
                 definitions,
                 events,
+                new PresentationOwnerChangeBuffer(8),
                 sounds,
                 new StubHeightmap(heightCm: 250f));
 
@@ -803,7 +808,7 @@ namespace Ludots.Tests.Presentation
             using var world = World.Create();
             var runtime = new PerformerEntityRuntime(world);
             var definitions = new PerformerDefinitionRegistry();
-            var events = new PresentationEventStream();
+            var events = new PresentationEventStream(PresentationTestConstants.EventStreamCapacity);
             var sounds = new SoundRequestBuffer();
             Entity owner = world.Create(
                 new VisualTransform
@@ -851,6 +856,7 @@ namespace Ludots.Tests.Presentation
                 runtime,
                 definitions,
                 events,
+                new PresentationOwnerChangeBuffer(8),
                 sounds,
                 heightmap: null);
 
@@ -889,13 +895,13 @@ namespace Ludots.Tests.Presentation
         }
 
         [Test]
-        public void GlobalEventBridgeSystem_BridgesQueuedEventsIntoPresentationStream()
+        public void GlobalPresentationEventProjectionSystem_ProjectsQueuedEventsIntoPresentationStream()
         {
             using var world = World.Create();
             var globals = new GlobalPresentationEventBuffer();
-            var stream = new PresentationEventStream();
+            var stream = new PresentationEventStream(PresentationTestConstants.EventStreamCapacity);
             var session = new GameSession();
-            using var system = new GlobalEventBridgeSystem(world, globals, stream, session);
+            using var system = new GlobalPresentationEventProjectionSystem(world, globals, stream, session);
 
             globals.AddDayNight(keyId: 7, phase01: 0.75f);
             globals.AddRegionChanged(regionId: 42, previousRegionId: 11);

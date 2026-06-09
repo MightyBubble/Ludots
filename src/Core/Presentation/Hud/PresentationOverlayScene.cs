@@ -1049,25 +1049,25 @@ namespace Ludots.Core.Presentation.Hud
                 ref readonly ScreenHudBarItem source = ref items[i];
                 if ((uint)i >= (uint)lane.Count)
                 {
-                    if (!TryResolveStableLaneIndex(lane, i, source.StableId, out int fallbackIndex))
+                    if (!TryResolveStableLaneIndex(lane, i, source.StableId, out int resolvedIndex))
                     {
                         continue;
                     }
 
-                    ref PresentationOverlayItem fallbackItem = ref lane.Items[fallbackIndex];
-                    TrackPositionUpdate(ref fallbackItem, source.ScreenX, source.ScreenY, ref changedCount, ref translationX, ref translationY, ref uniformSet, ref uniform, ref uniformX, ref uniformY);
+                    ref PresentationOverlayItem resolvedItem = ref lane.Items[resolvedIndex];
+                    TrackPositionUpdate(ref resolvedItem, source.ScreenX, source.ScreenY, ref changedCount, ref translationX, ref translationY, ref uniformSet, ref uniform, ref uniformX, ref uniformY);
                     continue;
                 }
 
                 ref PresentationOverlayItem item = ref lane.Items[i];
                 if (item.StableId != source.StableId)
                 {
-                    if (!TryResolveStableLaneIndex(lane, i, source.StableId, out int fallbackIndex))
+                    if (!TryResolveStableLaneIndex(lane, i, source.StableId, out int resolvedIndex))
                     {
                         continue;
                     }
 
-                    item = ref lane.Items[fallbackIndex];
+                    item = ref lane.Items[resolvedIndex];
                 }
 
                 TrackPositionUpdate(ref item, source.ScreenX, source.ScreenY, ref changedCount, ref translationX, ref translationY, ref uniformSet, ref uniform, ref uniformX, ref uniformY);
@@ -1129,25 +1129,25 @@ namespace Ludots.Core.Presentation.Hud
                 ref readonly ScreenHudTextItem source = ref items[i];
                 if ((uint)i >= (uint)lane.Count)
                 {
-                    if (!TryResolveStableLaneIndex(lane, i, source.StableId, out int fallbackIndex))
+                    if (!TryResolveStableLaneIndex(lane, i, source.StableId, out int resolvedIndex))
                     {
                         continue;
                     }
 
-                    ref PresentationOverlayItem fallbackItem = ref lane.Items[fallbackIndex];
-                    TrackPositionUpdate(ref fallbackItem, source.ScreenX, source.ScreenY, ref changedCount, ref translationX, ref translationY, ref uniformSet, ref uniform, ref uniformX, ref uniformY);
+                    ref PresentationOverlayItem resolvedItem = ref lane.Items[resolvedIndex];
+                    TrackPositionUpdate(ref resolvedItem, source.ScreenX, source.ScreenY, ref changedCount, ref translationX, ref translationY, ref uniformSet, ref uniform, ref uniformX, ref uniformY);
                     continue;
                 }
 
                 ref PresentationOverlayItem item = ref lane.Items[i];
                 if (item.StableId != source.StableId)
                 {
-                    if (!TryResolveStableLaneIndex(lane, i, source.StableId, out int fallbackIndex))
+                    if (!TryResolveStableLaneIndex(lane, i, source.StableId, out int resolvedIndex))
                     {
                         continue;
                     }
 
-                    item = ref lane.Items[fallbackIndex];
+                    item = ref lane.Items[resolvedIndex];
                 }
 
                 TrackPositionUpdate(ref item, source.ScreenX, source.ScreenY, ref changedCount, ref translationX, ref translationY, ref uniformSet, ref uniform, ref uniformX, ref uniformY);

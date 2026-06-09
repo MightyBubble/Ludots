@@ -65,10 +65,12 @@ namespace Ludots.Core.Spatial
         /// Set an optional ILoadedChunks reference. When set, queries may check
         /// whether entities belong to a loaded chunk (future optimization point).
         /// </summary>
-        public void SetLoadedChunks(ILoadedChunks loadedChunks)
+        public void SetLoadedChunks(ILoadedChunks? loadedChunks)
         {
             _loadedChunks = loadedChunks;
         }
+
+        public ILoadedChunks? LoadedChunks => _loadedChunks;
 
         /// <summary>
         /// Set the hex metrics for parameterized hex cell bounding box calculations.

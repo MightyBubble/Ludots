@@ -7,11 +7,11 @@
       "profileId": "uat_road_surface",
       "geometrySource": {
         "controlPointSource": {
-          "kind": "constant",
+          "kind": "Constant",
           "id": "uat_road_control_points"
         },
         "widthSource": {
-          "kind": "constant",
+          "kind": "Constant",
           "id": "uat_road_width"
         },
         "segmentationPolicy": "Bezier12"
@@ -42,15 +42,15 @@
       "profileId": "uat_river_surface",
       "geometrySource": {
         "controlPointSource": {
-          "kind": "constant",
+          "kind": "Constant",
           "id": "uat_river_control_points"
         },
         "widthSource": {
-          "kind": "constant",
+          "kind": "Constant",
           "id": "uat_river_width"
         },
         "flowDirectionSource": {
-          "kind": "constant",
+          "kind": "Constant",
           "id": "uat_river_flow"
         },
         "segmentationPolicy": "Bezier12"
@@ -81,7 +81,7 @@
       "profileId": "uat_lake_surface",
       "geometrySource": {
         "boundaryPointSource": {
-          "kind": "constant",
+          "kind": "Constant",
           "id": "uat_lake_boundary"
         },
         "triangulationPolicy": "Fan"
@@ -112,7 +112,7 @@
       "profileId": "uat_raw_mesh_surface",
       "geometrySource": {
         "meshPayloadSource": {
-          "kind": "constant",
+          "kind": "Constant",
           "id": "uat_raw_mesh_payload"
         }
       },

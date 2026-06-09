@@ -652,6 +652,11 @@ namespace Ludots.Core.Presentation.Performers
             return PerformerParamResolver.ResolveFloat(_world, performer, paramKey, defaultValue);
         }
 
+        public bool TryResolveFloat(Entity performer, int paramKey, out float value)
+        {
+            return PerformerParamResolver.TryResolveFloat(_world, performer, paramKey, out value);
+        }
+
         public int ResolveInt(Entity performer, int paramKey, int defaultValue = 0)
         {
             return PerformerParamResolver.ResolveInt(_world, performer, paramKey, defaultValue);
@@ -665,6 +670,11 @@ namespace Ludots.Core.Presentation.Performers
         public Vector4 ResolveVector(Entity performer, int paramKey, Vector4 defaultValue)
         {
             return PerformerParamResolver.ResolveVector(_world, performer, paramKey, defaultValue);
+        }
+
+        public bool TryResolveVector(Entity performer, int paramKey, out Vector4 value)
+        {
+            return PerformerParamResolver.TryResolveVector(_world, performer, paramKey, out value);
         }
 
         public void ClearParam(Entity performer, int paramKey, ParamLane lane)
@@ -875,6 +885,7 @@ namespace Ludots.Core.Presentation.Performers
             }
 
             int released = 0;
+            _entityScratch.Clear();
             for (int i = 0; i < _deadOwnerKeys.Count; i++)
             {
                 OwnerKey ownerKey = _deadOwnerKeys[i];
@@ -887,8 +898,7 @@ namespace Ludots.Core.Presentation.Performers
                 {
                     if (_world.IsAlive(single) && _world.Has<PerformerState>(single))
                     {
-                        Destroy(single, onDestroyed);
-                        released++;
+                        _entityScratch.Add(single);
                     }
 
                     continue;
@@ -899,12 +909,22 @@ namespace Ludots.Core.Presentation.Performers
                     Entity performer = bucket.GetAt(performerIndex);
                     if (_world.IsAlive(performer) && _world.Has<PerformerState>(performer))
                     {
-                        Destroy(performer, onDestroyed);
-                        released++;
+                        _entityScratch.Add(performer);
                     }
                 }
             }
 
+            for (int i = 0; i < _entityScratch.Count; i++)
+            {
+                Entity performer = _entityScratch[i];
+                if (_world.IsAlive(performer) && _world.Has<PerformerState>(performer))
+                {
+                    Destroy(performer, onDestroyed);
+                    released++;
+                }
+            }
+
+            _entityScratch.Clear();
             _deadOwnerKeys.Clear();
             return released;
         }
@@ -913,6 +933,7 @@ namespace Ludots.Core.Presentation.Performers
         {
             foreach (ref var chunk in _world.Query(in _performerCullQuery))
             {
+                ref Entity entityFirst = ref chunk.Entity(0);
                 var states = chunk.GetSpan<PerformerState>();
                 var culls = chunk.GetSpan<PerformerCullState>();
                 foreach (var index in chunk)
@@ -920,8 +941,13 @@ namespace Ludots.Core.Presentation.Performers
                     ref PerformerState state = ref states[index];
                     ref PerformerCullState cull = ref culls[index];
                     ResolveOwnerCull(in state, out bool ownerCullVisible, out LODLevel ownerLod);
+                    bool changed = cull.OwnerCullVisible != ownerCullVisible || cull.LOD != ownerLod;
                     cull.OwnerCullVisible = ownerCullVisible;
                     cull.LOD = ownerLod;
+                    if (changed)
+                    {
+                        MarkStaticDirty(Unsafe.Add(ref entityFirst, index));
+                    }
                 }
             }
 
@@ -949,7 +975,13 @@ namespace Ludots.Core.Presentation.Performers
                     }
 
                     ref PerformerCullState cull = ref culls[index];
-                    cull.OwnerCullVisible = cull.OwnerCullVisible && _world.Get<PerformerCullState>(parent).OwnerCullVisible;
+                    bool ownerCullVisible = cull.OwnerCullVisible && _world.Get<PerformerCullState>(parent).OwnerCullVisible;
+                    bool changed = cull.OwnerCullVisible != ownerCullVisible;
+                    cull.OwnerCullVisible = ownerCullVisible;
+                    if (changed)
+                    {
+                        MarkStaticDirty(entity);
+                    }
                 }
             }
         }

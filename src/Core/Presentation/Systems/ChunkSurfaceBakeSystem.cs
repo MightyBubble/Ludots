@@ -258,7 +258,7 @@ namespace Ludots.Core.Presentation.Systems
                             LocalOffset = Vector3.Zero,
                             LocalRotation = Quaternion.Identity,
                             LocalScale = Vector3.One,
-                            AssetSwapParamKey = SurfaceMeshParamKey,
+                            AssetIdParamKey = SurfaceMeshParamKey,
                             MaterialParamKey = SurfaceMaterialParamKey,
                             VisibilityParamKey = SurfaceVisibilityParamKey,
                         },

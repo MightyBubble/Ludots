@@ -14,13 +14,18 @@ namespace Ludots.Core.Presentation.Systems
     /// </summary>
     public sealed class SelectionPresentationEventSystem : BaseSystem<World, float>
     {
+        private const int InitialContainerCapacity = 32;
+        private const int InitialMemberCapacity = 128;
+        private const int InitialStaleKeyCapacity = 16;
+
         private readonly SelectionRuntime _selection;
         private readonly PresentationEventStream _events;
-        private readonly List<Entity> _containers = new(32);
-        private readonly List<Entity> _members = new(128);
+        private readonly List<Entity> _containers = new(InitialContainerCapacity);
+        private readonly List<Entity> _members = new(InitialMemberCapacity);
         private readonly Dictionary<ContainerKey, ContainerSnapshot> _snapshots = new();
         private readonly HashSet<Entity> _currentMembers = new();
-        private readonly List<ContainerKey> _staleKeys = new(16);
+        private readonly List<ContainerKey> _staleKeys = new(InitialStaleKeyCapacity);
+        private Entity[] _selectionCopyBuffer = Array.Empty<Entity>();
 
         public SelectionPresentationEventSystem(World world, SelectionRuntime selection, PresentationEventStream events)
             : base(world)
@@ -78,11 +83,13 @@ namespace Ludots.Core.Presentation.Systems
             _members.Clear();
             int count = _selection.GetSelectionCount(descriptor.Container);
             EnsureMemberCapacity(count);
-            Entity[] buffer = count <= 0 ? Array.Empty<Entity>() : new Entity[count];
-            int written = count > 0 ? _selection.CopySelection(descriptor.Container, buffer) : 0;
+            EnsureSelectionCopyCapacity(count);
+            int written = count > 0
+                ? _selection.CopySelection(descriptor.Container, _selectionCopyBuffer.AsSpan(0, count))
+                : 0;
             for (int i = 0; i < written; i++)
             {
-                Entity target = buffer[i];
+                Entity target = _selectionCopyBuffer[i];
                 if (target != Entity.Null && World.IsAlive(target))
                 {
                     _members.Add(target);
@@ -90,6 +97,7 @@ namespace Ludots.Core.Presentation.Systems
             }
 
             _currentMembers.Clear();
+            _currentMembers.EnsureCapacity(_members.Count);
             for (int i = 0; i < _members.Count; i++)
             {
                 _currentMembers.Add(_members[i]);
@@ -97,9 +105,9 @@ namespace Ludots.Core.Presentation.Systems
 
             if (previous != null)
             {
-                for (int i = 0; i < previous.Members.Length; i++)
+                for (int i = 0; i < previous.Count; i++)
                 {
-                    Entity oldMember = previous.Members[i];
+                    Entity oldMember = previous.GetMember(i);
                     if (!_currentMembers.Contains(oldMember))
                     {
                         PublishOne(PresentationEventKind.SelectionMemberRemoved, oldMember, descriptor.Container, previous.SetKeyId);
@@ -116,14 +124,21 @@ namespace Ludots.Core.Presentation.Systems
                 }
             }
 
-            _snapshots[key] = new ContainerSnapshot(descriptor.Revision, setKeyId, _members.ToArray());
+            if (previous != null)
+            {
+                previous.Replace(descriptor.Revision, setKeyId, _members);
+            }
+            else
+            {
+                _snapshots.Add(key, new ContainerSnapshot(descriptor.Revision, setKeyId, _members));
+            }
         }
 
         private void PublishRemoved(ContainerSnapshot snapshot, Entity container)
         {
-            for (int i = 0; i < snapshot.Members.Length; i++)
+            for (int i = 0; i < snapshot.Count; i++)
             {
-                PublishOne(PresentationEventKind.SelectionMemberRemoved, snapshot.Members[i], container, snapshot.SetKeyId);
+                PublishOne(PresentationEventKind.SelectionMemberRemoved, snapshot.GetMember(i), container, snapshot.SetKeyId);
             }
         }
 
@@ -157,6 +172,19 @@ namespace Ludots.Core.Presentation.Systems
             {
                 _members.Capacity = count;
             }
+        }
+
+        private void EnsureSelectionCopyCapacity(int count)
+        {
+            if (_selectionCopyBuffer.Length >= count)
+            {
+                return;
+            }
+
+            int nextCapacity = Math.Max(
+                count,
+                _selectionCopyBuffer.Length == 0 ? InitialMemberCapacity : _selectionCopyBuffer.Length * 2);
+            Array.Resize(ref _selectionCopyBuffer, nextCapacity);
         }
 
         private readonly struct ContainerKey : IEquatable<ContainerKey>
@@ -194,23 +222,56 @@ namespace Ludots.Core.Presentation.Systems
 
         private sealed class ContainerSnapshot
         {
-            private readonly HashSet<Entity> _memberSet;
+            private readonly HashSet<Entity> _memberSet = new();
+            private Entity[] _members = Array.Empty<Entity>();
 
-            public ContainerSnapshot(uint revision, int setKeyId, Entity[] members)
+            public ContainerSnapshot(uint revision, int setKeyId, List<Entity> members)
             {
-                Revision = revision;
-                SetKeyId = setKeyId;
-                Members = members;
-                _memberSet = new HashSet<Entity>(members);
+                Replace(revision, setKeyId, members);
             }
 
-            public uint Revision { get; }
-            public int SetKeyId { get; }
-            public Entity[] Members { get; }
+            public uint Revision { get; private set; }
+            public int SetKeyId { get; private set; }
+            public int Count { get; private set; }
 
             public bool Contains(Entity member)
             {
                 return _memberSet.Contains(member);
+            }
+
+            public Entity GetMember(int index)
+            {
+                return _members[index];
+            }
+
+            public void Replace(uint revision, int setKeyId, List<Entity> members)
+            {
+                Revision = revision;
+                SetKeyId = setKeyId;
+                Count = members.Count;
+                EnsureMemberCapacity(members.Count);
+                _memberSet.Clear();
+                _memberSet.EnsureCapacity(members.Count);
+
+                for (int i = 0; i < members.Count; i++)
+                {
+                    Entity member = members[i];
+                    _members[i] = member;
+                    _memberSet.Add(member);
+                }
+            }
+
+            private void EnsureMemberCapacity(int count)
+            {
+                if (_members.Length >= count)
+                {
+                    return;
+                }
+
+                int nextCapacity = Math.Max(
+                    count,
+                    _members.Length == 0 ? InitialMemberCapacity : _members.Length * 2);
+                Array.Resize(ref _members, nextCapacity);
             }
         }
     }

@@ -54,7 +54,7 @@ namespace Ludots.Core.Presentation.Systems
         private readonly PerformerEntityRuntime _runtime;
         private readonly PerformerDefinitionRegistry _definitions;
         private readonly PresentationEventStream _events;
-        private readonly PresentationOwnerChangeBuffer? _ownerChanges;
+        private readonly PresentationOwnerChangeBuffer _ownerChanges;
         private readonly SoundRequestBuffer _soundRequests;
         private readonly Func<IVisualHeightmap?> _heightmapProvider;
         private readonly IBoneTransformProvider? _boneTransformProvider;
@@ -65,10 +65,6 @@ namespace Ludots.Core.Presentation.Systems
         private readonly PresentationTimingDiagnostics? _timingDiagnostics;
         private readonly QueryDescription _bootstrapPendingQuery = new QueryDescription()
             .WithAll<PerformerState, PerformerBootstrapPending>();
-        private readonly QueryDescription _dirtyOwnerAttributeQuery = new QueryDescription()
-            .WithAll<GameplayAttributeChangedBits>();
-        private readonly QueryDescription _dirtyOwnerTagQuery = new QueryDescription()
-            .WithAll<GameplayTagEffectiveChangedBits>();
         private readonly QueryDescription _tickDrivenQuery = new QueryDescription()
             .WithAll<PerformerState, PerformerWorldPosition, PerformerWorldPlanePosition>()
             .WithAny<PerfHasSpline, PerfHasAttachmentTick, PerfHasGrounding, PerfHasSound, PerfHasOwnerFacingBinding>()
@@ -105,21 +101,7 @@ namespace Ludots.Core.Presentation.Systems
             PerformerEntityRuntime runtime,
             PerformerDefinitionRegistry definitions,
             PresentationEventStream events,
-            SoundRequestBuffer soundRequests,
-            IVisualHeightmap? heightmap = null,
-            IBoneTransformProvider? boneTransformProvider = null,
-            PresentationTimingDiagnostics? timingDiagnostics = null)
-            : this(world, runtime, definitions, events, null, soundRequests,
-                () => heightmap, boneTransformProvider, timingDiagnostics)
-        {
-        }
-
-        public PerformerBehaviorSystem(
-            World world,
-            PerformerEntityRuntime runtime,
-            PerformerDefinitionRegistry definitions,
-            PresentationEventStream events,
-            PresentationOwnerChangeBuffer? ownerChanges,
+            PresentationOwnerChangeBuffer ownerChanges,
             SoundRequestBuffer soundRequests,
             IVisualHeightmap? heightmap = null,
             IBoneTransformProvider? boneTransformProvider = null,
@@ -134,7 +116,7 @@ namespace Ludots.Core.Presentation.Systems
             PerformerEntityRuntime runtime,
             PerformerDefinitionRegistry definitions,
             PresentationEventStream events,
-            PresentationOwnerChangeBuffer? ownerChanges,
+            PresentationOwnerChangeBuffer ownerChanges,
             SoundRequestBuffer soundRequests,
             Func<IVisualHeightmap?> heightmapProvider,
             IBoneTransformProvider? boneTransformProvider = null,
@@ -144,7 +126,7 @@ namespace Ludots.Core.Presentation.Systems
             _runtime = runtime ?? throw new ArgumentNullException(nameof(runtime));
             _definitions = definitions ?? throw new ArgumentNullException(nameof(definitions));
             _events = events ?? throw new ArgumentNullException(nameof(events));
-            _ownerChanges = ownerChanges;
+            _ownerChanges = ownerChanges ?? throw new ArgumentNullException(nameof(ownerChanges));
             _soundRequests = soundRequests ?? throw new ArgumentNullException(nameof(soundRequests));
             _heightmapProvider = heightmapProvider ?? throw new ArgumentNullException(nameof(heightmapProvider));
             _boneTransformProvider = boneTransformProvider;
@@ -177,7 +159,7 @@ namespace Ludots.Core.Presentation.Systems
 
             PlaybackStructuralChanges();
             int destroyEventScanCount = StopDestroyedSounds();
-            _ownerChanges?.Clear();
+            _ownerChanges.Clear();
 
             if (_timingDiagnostics != null)
             {
@@ -340,10 +322,6 @@ namespace Ludots.Core.Presentation.Systems
         {
             _lastOwnerAttributeChangeCount = 0;
             _lastOwnerTagChangeCount = 0;
-            if (_ownerChanges == null)
-            {
-                return ProcessDirtyOwnersFromComponents();
-            }
 
             int processed = 0;
             ReadOnlySpan<PresentationOwnerChange> changes = _ownerChanges.GetSpan();
@@ -373,66 +351,6 @@ namespace Ludots.Core.Presentation.Systems
             return processed;
         }
 
-        private int ProcessDirtyOwnersFromComponents()
-        {
-            int processed = 0;
-            foreach (ref Chunk chunk in World.Query(in _dirtyOwnerAttributeQuery))
-            {
-                ref Entity entityFirst = ref chunk.Entity(0);
-                Span<GameplayAttributeChangedBits> changedBits = chunk.GetSpan<GameplayAttributeChangedBits>();
-                foreach (int index in chunk)
-                {
-                    Entity owner = Unsafe.Add(ref entityFirst, index);
-                    ref GameplayAttributeChangedBits bits = ref changedBits[index];
-                    for (int attributeId = 0; attributeId < AttributeBuffer.MAX_ATTRS; attributeId++)
-                    {
-                        if (bits.IsSet(attributeId))
-                        {
-                            ProcessOwnerAttributeChange(owner, attributeId);
-                            _lastOwnerAttributeChangeCount++;
-                            processed++;
-                        }
-                    }
-                }
-            }
-
-            foreach (ref Chunk chunk in World.Query(in _dirtyOwnerTagQuery))
-            {
-                ref Entity entityFirst = ref chunk.Entity(0);
-                Span<GameplayTagEffectiveChangedBits> changedBits = chunk.GetSpan<GameplayTagEffectiveChangedBits>();
-                Span<GameplayTagContainer> tagContainers = chunk.Has<GameplayTagContainer>()
-                    ? chunk.GetSpan<GameplayTagContainer>()
-                    : Span<GameplayTagContainer>.Empty;
-                foreach (int index in chunk)
-                {
-                    Entity owner = Unsafe.Add(ref entityFirst, index);
-                    ref GameplayTagEffectiveChangedBits bits = ref changedBits[index];
-                    unsafe
-                    {
-                        fixed (ulong* words = bits.Bits)
-                        {
-                            for (int wordIndex = 0; wordIndex < 4; wordIndex++)
-                            {
-                                ulong word = words[wordIndex];
-                                while (word != 0)
-                                {
-                                    int bit = BitOperations.TrailingZeroCount(word);
-                                    word &= word - 1;
-                                    int tagId = (wordIndex << 6) + bit;
-                                    bool tagActive = !tagContainers.IsEmpty && tagContainers[index].HasTag(tagId);
-                                    ProcessOwnerTagChange(owner, tagId, tagActive);
-                                    _lastOwnerTagChangeCount++;
-                                    processed++;
-                                }
-                            }
-                        }
-                    }
-                }
-            }
-
-            return processed;
-        }
-
         private void ProcessOwnerAttributeChange(Entity owner, int attributeId)
         {
             if (!World.IsAlive(owner) ||
@@ -456,7 +374,7 @@ namespace Ludots.Core.Presentation.Systems
             }
         }
 
-        private void ProcessOwnerTagChange(Entity owner, int tagId, bool? tagActiveOverride = null)
+        private void ProcessOwnerTagChange(Entity owner, int tagId, bool tagActive)
         {
             if (!World.IsAlive(owner) ||
                 !_runtime.TryGetActiveByOwner(owner, out PerformerEntityRuntime.OwnerPerformerBucket performers))
@@ -464,8 +382,6 @@ namespace Ludots.Core.Presentation.Systems
                 return;
             }
 
-            bool tagActive = tagActiveOverride ??
-                (World.Has<GameplayTagContainer>(owner) && World.Get<GameplayTagContainer>(owner).HasTag(tagId));
             if (performers.TryGetSingle(out Entity single))
             {
                 ProcessOwnerTagWorkForPerformer(single, tagId, tagActive);
@@ -1023,33 +939,37 @@ namespace Ludots.Core.Presentation.Systems
 
         private void ApplyMaterialBinding(Entity entity, in MaterialConfig config)
         {
-            int materialId = config.BaseMaterialId;
-            if (config.MaterialSwapParamKey >= 0)
+            if (config.MaterialSwapParamKey < 0)
             {
-                float paramValue = _runtime.ResolveFloat(entity, config.MaterialSwapParamKey, float.NaN);
-                MaterialSwapEntry[] swapTable = config.SwapTable ?? Array.Empty<MaterialSwapEntry>();
-                if (!float.IsNaN(paramValue))
+                return;
+            }
+
+            if (!_runtime.TryResolveFloat(entity, config.MaterialSwapParamKey, out float paramValue))
+            {
+                throw new InvalidOperationException(
+                    $"Material behavior materialSwapParamKey {config.MaterialSwapParamKey} did not resolve to a swap value.");
+            }
+
+            MaterialSwapEntry[] swapTable = config.SwapTable ?? Array.Empty<MaterialSwapEntry>();
+            for (int i = 0; i < swapTable.Length; i++)
+            {
+                ref readonly MaterialSwapEntry entry = ref swapTable[i];
+                if (MathF.Abs(entry.ParamValue - paramValue) <= 0.0001f)
                 {
-                    for (int i = 0; i < swapTable.Length; i++)
-                    {
-                        ref readonly MaterialSwapEntry entry = ref swapTable[i];
-                        if (MathF.Abs(entry.ParamValue - paramValue) <= 0.0001f)
-                        {
-                            materialId = entry.MaterialId;
-                            break;
-                        }
-                    }
+                    SetParam(entity, config.MaterialSwapParamKey, ParamLane.Int, 0f, entry.MaterialId, Vector4.Zero);
+                    return;
                 }
             }
-            if (materialId > 0 && config.MaterialSwapParamKey >= 0)
-                SetParam(entity, config.MaterialSwapParamKey, ParamLane.Int, 0f, materialId, Vector4.Zero);
+
+            throw new InvalidOperationException(
+                $"Material behavior materialSwapParamKey {config.MaterialSwapParamKey} resolved value {paramValue} with no matching swapTable entry.");
         }
         private void ApplySound(Entity entity, in PerformerState state, in BehaviorSlot slot)
         {
             if (slot.Sound.SoundAssetId <= 0) return;
             float volume = slot.Sound.Volume;
             if (slot.Sound.VolumeParamKey >= 0)
-                volume = _runtime.ResolveFloat(entity, slot.Sound.VolumeParamKey, volume);
+                volume = RequireFloatParam(entity, slot.Sound.VolumeParamKey, "Sound.volumeParamKey");
             Vector3 worldPos = World.Has<PerformerWorldPosition>(entity) ? World.Get<PerformerWorldPosition>(entity).Value : Vector3.Zero;
             _soundRequests.Add(new SoundRequest
             {
@@ -1215,11 +1135,33 @@ namespace Ludots.Core.Presentation.Systems
         {
             return _soundTracking.Count;
         }
+
+        private float RequireFloatParam(Entity entity, int paramKey, string context)
+        {
+            if (!_runtime.TryResolveFloat(entity, paramKey, out float value))
+            {
+                throw new InvalidOperationException($"{context} {paramKey} did not resolve to a float param value.");
+            }
+
+            return value;
+        }
+
         private void ApplySpline(Entity entity, ref PerformerState state, in SplineConfig config, float dt)
         {
-            if (config.Usage != SplineUsage.Patrol || config.ProgressParamKey < 0) return;
-            float progress = _runtime.ResolveFloat(entity, config.ProgressParamKey, 0f);
-            float speed = config.SpeedParamKey >= 0 ? _runtime.ResolveFloat(entity, config.SpeedParamKey, 0f) : 0f;
+            if (config.Usage != SplineUsage.Patrol)
+            {
+                return;
+            }
+
+            if (config.ProgressParamKey < 0)
+            {
+                throw new InvalidOperationException("Spline usage 'Patrol' requires explicit progressParamKey.");
+            }
+
+            float progress = RequireFloatParam(entity, config.ProgressParamKey, "Spline.progressParamKey");
+            float speed = config.SpeedParamKey >= 0
+                ? RequireFloatParam(entity, config.SpeedParamKey, "Spline.speedParamKey")
+                : 0f;
             progress += dt * speed;
             if (config.Loop) progress = progress - MathF.Floor(progress);
             else progress = Math.Clamp(progress, 0f, 1f);

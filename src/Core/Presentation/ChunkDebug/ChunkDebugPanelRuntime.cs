@@ -298,7 +298,7 @@ namespace Ludots.Core.Presentation.ChunkDebug
             for (int i = 0; i < engine.CurrentMapSession.MapConfig.Boards.Count; i++)
             {
                 BoardConfig candidate = engine.CurrentMapSession.MapConfig.Boards[i];
-                if (string.Equals(candidate.Name, board.Name, StringComparison.OrdinalIgnoreCase))
+                if (string.Equals(candidate.Name, board.Name, StringComparison.Ordinal))
                 {
                     return candidate;
                 }

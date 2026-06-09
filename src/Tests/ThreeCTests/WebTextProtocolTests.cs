@@ -167,7 +167,7 @@ namespace Ludots.Tests.ThreeC
 
             var catalog = new PresentationTextCatalog(tokenIds, tokens, localeIds, locales, defaultLocaleId: 1);
             var selection = new PresentationTextLocaleSelection(catalog);
-            return new WorldHudStringTable(catalog, selection, legacyCapacity: 4);
+            return new WorldHudStringTable(catalog, selection, runtimeStringCapacity: 4);
         }
     }
 }

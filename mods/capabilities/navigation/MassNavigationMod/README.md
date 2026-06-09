@@ -1,61 +1,84 @@
 # MassNavigation Foundation
 
-`MassNavigationMod` is the official large-scale navigation foundation mod. It owns the Ludots formal chains end to end: config pipeline, template spawn, selection, order bridge, ECS writeback, performer presentation, minimap, diagnostics, and UAT evidence.
+`MassNavigationMod` is the reusable large-scale navigation foundation. It is not the Total War scenario itself. It provides the formal navigation chain that a game mod can build on: config loading, MassFlow simulation, agent profiles, formal move order ingestion, ECS writeback, selection metadata sync, performer handoff, minimap handoff, diagnostics, and tests.
 
-For a zero-context user guide, read `gitbook/reference/mass-navigation-user-book.md`. For the formal acceptance chain and UAT contract, read `gitbook/reference/mass-navigation-formal-chain.md`.
+Start here if you are new:
 
-The reusable capability is named by responsibility:
+- Beginner Total War-like RTS guide: `gitbook/reference/mass-navigation-user-book.md`
+- Formal chain and boundary audit: `gitbook/reference/mass-navigation-formal-chain.md`
+- Reference game mod: `mods/showcases/mass_navigation_total_war_entry/MassNavigationTotalWarEntryMod/`
 
-- `MassFlow`: the high-performance SoA flow-field and crowd solver capability.
-- `MassNavigation`: the reusable navigation-facing integration layer that binds commands, groups, authored agents, and ECS state to a mass solver.
+## Responsibility Split
 
-`MassNavigation*` names are the formal runtime surface for this foundation. Do not add alternate names for old experiment labels.
+| Layer | Responsibility |
+| --- | --- |
+| `MassFlow` | Hot-path SoA solver data, flow/crowd/avoidance calculations, cadence-sensitive simulation. |
+| `MassNavigation` | Gameplay-facing navigation integration: agents, profiles, groups, orders, ECS state, authoring contracts. |
+| Game/showcase mod | Product rules such as formations owning soldiers, army names, formation outlines, obstacle overlay style, initial scenario setup. |
 
-## Configuration Boundary
+Do not add alternate names for old experiment labels. `MassNavigation*` is the formal runtime surface for this foundation.
 
-Foundation-owned files stay under `assets/` and use single-source identifiers. Runtime loads them through the normal config pipeline; missing or inconsistent data must fail fast.
+## Foundation Config
 
-| File | Owner | Responsibility |
-| --- | --- | --- |
-| `assets/MassNavigationConfig.json` | MassNavigation | Solver window, cadence, flow, arrival, avoidance, crowd semantics, scenario teams, obstacles, hotspots, and presentation references. |
-| `assets/GAS/order_types.json` | MassNavigation | `massNavigationMove` order registration and rule authoring. |
-| `assets/Entities/templates.json` | MassNavigation | Agent, blocker, hotspot, and local-player templates that demonstrate the required component contract. |
-| `assets/Presentation/performers.json` | MassNavigation presentation authoring | Agent visuals, health HUD, selection markers, minimap markers, and world props. |
-| `assets/Maps/mass_navigation.json` | MassNavigation | Board/world bounds, authored entities, and visual terrain binding. |
+Foundation-owned files stay under `assets/` and are loaded through the normal config pipeline.
+
+| File | Responsibility |
+| --- | --- |
+| `assets/MassNavigationConfig.json` | Solver window, cadence, flow, arrival, avoidance, crowd semantics, scenario teams, obstacles, camera profiles, and view residency. |
+| `assets/GAS/order_types.json` | `massNavigationMove` order registration and rule authoring. |
+| `assets/Entities/templates.json` | Foundation example templates and required component contract examples. |
+| `assets/Presentation/performers.json` | Foundation example performer authoring. |
+| `assets/Maps/mass_navigation.json` | Foundation example map, board bounds, and visual terrain binding. |
+
+Game-specific mods can provide their own files with the same kinds of data. They should not create a private loader.
+
+## Order Authoring
+
+Order config is authored with semantic keys:
+
+```json
+{
+  "orderBlackboardKeys": {
+    "MassNavigation.FormationMode": true
+  },
+  "orderTypes": {
+    "massNavigationMove": {
+      "intArg0BlackboardKey": "MassNavigation.FormationMode"
+    }
+  }
+}
+```
+
+Do not write numeric order blackboard ids in JSON. The loader resolves strings once at startup; hot-path buffers use compiled runtime ids.
 
 ## Runtime Map
 
-These files define the current foundation split. Solver hot-path data stays in `MassFlow`; ECS, orders, selection, authoring, and presentation handoff stay in `MassNavigation`.
-
 | File | Boundary |
 | --- | --- |
-| `Runtime/MassFlowSimulationState.cs` | SoA grid/cache, flow rebuild, obstacle cache, pair avoidance, and solver hot path. No presentation or UI dependencies. |
-| `Runtime/MassNavigationSimulationRuntime.cs` | Runtime facade for agents, groups, command application, sync cadence, diagnostics, and ECS writeback. |
+| `Runtime/MassFlowSimulationState.cs` | SoA grid/cache, flow rebuild, obstacle cache, pair avoidance, and solver hot path. |
+| `Runtime/MassNavigationSimulationRuntime.cs` | Runtime facade for agents, groups, order ingestion, sync cadence, diagnostics, and ECS writeback. |
 | `Runtime/MassFlowTuning.cs` | Flow-field scheduler and rebuild tuning. |
 | `Runtime/MassFlowArrivalTuning.cs` | Arrival behavior tuning. |
 | `Runtime/MassFlowAvoidanceTuning.cs` | Pair/crowd avoidance tuning. |
-| `Runtime/MassNavigationCrowdSemantics.cs` | Team relationship to navigation policy mapping; gameplay relationship source remains core team infrastructure. |
-| `Runtime/MassNavigationGroupRuntime.cs` | Group command state and formation target ownership. |
-| `Runtime/MassNavigationCommandRuntime.cs` | Command intent, lifecycle, and dirty state. |
+| `Runtime/MassNavigationCrowdSemantics.cs` | Team relationship to navigation policy mapping. |
+| `Runtime/MassNavigationGroupRuntime.cs` | Formal order group state and target ownership. |
 | `Runtime/MassNavigationAgentState.cs` | ECS entity to solver-agent binding and selection/order metadata. |
-| `Runtime/MassNavigationAgentProfileConfig.cs` | Movement/mass profile schema and concrete profile authoring. |
+| `Runtime/MassNavigationAgentProfileSetConfig.cs` | Movement/mass profile schema and concrete profile authoring. |
 | `Runtime/MassNavigationAuthoringContract.cs` | Required-component validation for authored navigation entities. |
-| `Systems/MassNavigationCommandApplySystem.cs` | Applies commands to runtime groups and solver state. |
-| `Systems/MassNavigationOrderBridgeSystem.cs` | Bridges formal `OrderBuffer` to MassNavigation command intent. |
-| `Systems/MassNavigationCommandBridgeSystem.cs` | Bridges local player input into the formal command path. |
+| `Systems/MassNavigationOrderIngestionSystem.cs` | Consumes formal `OrderBuffer` move orders into MassNavigation groups. |
+| `Systems/MassNavigationLocalCommandInputSystem.cs` | Reads local player command input and submits formal move orders. |
 | `Systems/MassNavigationSpawnReceiptBindingSystem.cs` | Binds template spawn receipts to MassNavigation agents. |
 | `Systems/MassNavigationAgentMetadataSyncSystem.cs` | Syncs ECS/team/profile metadata into runtime state. |
-| `Systems/MassNavigationFormationSystem.cs` | Formation target allocation and group arrangement. |
-| `Systems/MassNavigationSelectionSyncSystem.cs` | Bridges `SelectionRuntime` to agent selected flags through formal selection keys. |
-| `assets/Presentation/performers.json` selection rules | Selection marker lifecycle is driven by generic selection presentation events and performer rules. |
-| `Systems/MassNavigationPanelPresentationSystem.cs` | Tuning panel and runtime controls for the mod. |
+| `Systems/MassNavigationFormationSystem.cs` | Updates foundation formation/group target arrangement. |
+| `Systems/MassNavigationSelectionSyncSystem.cs` | Projects `SelectionRuntime` membership into agent selected flags. |
+| `Systems/MassNavigationPanelPresentationSystem.cs` | Foundation tuning panel presentation. |
 | `Systems/MassNavigationHudPresentationSystem.cs` | Diagnostics HUD and UAT evidence output. |
-| `Systems/MassNavigationScenarioBootstrap.cs` | Scenario spawn authoring. |
-| `UI/MassNavigationPanelController.cs` | Runtime tuning panel UI. |
+| `Systems/MassNavigationScenarioBootstrap.cs` | Foundation example scenario spawn. |
 
 ## Rules For Follow-Up Work
 
-- Do not move camera, minimap, or order marker behavior as part of naming cleanup.
-- Do not add fallback paths for missing services, config, templates, performers, or map bounds.
-- Do not create a parallel config loader, registry, spawn path, selection runtime, order runtime, performer runtime, or minimap runtime.
-- When a file becomes reusable for two or more mods, move that capability to `MassFlow`, `MassNavigation`, core, or another formal reusable infrastructure in the same change that updates callers.
+- No fallback paths for missing services, config, templates, performers, map bounds, or visual heightmap.
+- No parallel config loader, registry, spawn path, selection runtime, order runtime, performer runtime, or minimap runtime.
+- No Total War formation ownership inside the MassNavigation foundation.
+- No private MassNavigation marker lifecycle system when performer rules can express the lifecycle.
+- Move reusable behavior into `MassFlow`, `MassNavigation`, Core, or another formal reusable mod when two or more mods need it.

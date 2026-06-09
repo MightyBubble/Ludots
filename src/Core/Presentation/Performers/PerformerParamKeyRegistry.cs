@@ -11,6 +11,7 @@ namespace Ludots.Core.Presentation.Performers
     /// </summary>
     public static class PerformerParamKeyRegistry
     {
+        public const int UnsetParamKey = -1;
         private const int CustomStartId = 200_000;
         private static readonly object Sync = new();
         private static readonly Dictionary<string, int> WellKnown = CreateWellKnown();
@@ -24,7 +25,11 @@ namespace Ludots.Core.Presentation.Performers
                 throw new ArgumentException("Performer param key must not be null or whitespace.", nameof(key));
             }
 
-            key = key.Trim();
+            if (!string.Equals(key, key.Trim(), StringComparison.Ordinal))
+            {
+                throw new ArgumentException("Performer param key must not include leading or trailing whitespace.", nameof(key));
+            }
+
             if (WellKnown.TryGetValue(key, out int wellKnownId))
             {
                 return wellKnownId;
@@ -44,7 +49,12 @@ namespace Ludots.Core.Presentation.Performers
                 return false;
             }
 
-            key = key.Trim();
+            if (!string.Equals(key, key.Trim(), StringComparison.Ordinal))
+            {
+                id = 0;
+                return false;
+            }
+
             if (WellKnown.TryGetValue(key, out id))
             {
                 return true;
@@ -82,13 +92,13 @@ namespace Ludots.Core.Presentation.Performers
             return new StringIntRegistry(
                 capacity: 256,
                 startId: CustomStartId,
-                invalidId: -1,
-                comparer: StringComparer.OrdinalIgnoreCase);
+                invalidId: UnsetParamKey,
+                comparer: StringComparer.Ordinal);
         }
 
         private static Dictionary<string, int> CreateWellKnown()
         {
-            return new Dictionary<string, int>(StringComparer.OrdinalIgnoreCase)
+            return new Dictionary<string, int>(StringComparer.Ordinal)
             {
                 ["worldBar.fillRatio"] = WellKnownPerformerParamKeys.BarFillRatio,
                 ["worldBar.width"] = WellKnownPerformerParamKeys.BarWidth,
@@ -109,7 +119,6 @@ namespace Ludots.Core.Presentation.Performers
                 ["worldText.color.b"] = WellKnownPerformerParamKeys.TextColorB,
                 ["worldText.color.a"] = WellKnownPerformerParamKeys.TextColorA,
                 ["worldText.tokenId"] = WellKnownPerformerParamKeys.TextTokenId,
-                ["worldText.valueMode"] = WellKnownPerformerParamKeys.TextValueMode,
                 ["groundOverlay.radius"] = WellKnownPerformerParamKeys.OverlayRadius,
                 ["groundOverlay.innerRadius"] = WellKnownPerformerParamKeys.OverlayInnerRadius,
                 ["groundOverlay.angle"] = WellKnownPerformerParamKeys.OverlayAngle,

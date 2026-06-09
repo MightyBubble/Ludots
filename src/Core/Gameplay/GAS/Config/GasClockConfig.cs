@@ -1,7 +1,5 @@
 using System;
-using System.Text.Json;
 using System.Text.Json.Nodes;
-using System.Text.Json.Serialization;
 using Ludots.Core.Config;
 using Ludots.Core.Gameplay.GAS;
 
@@ -9,8 +7,8 @@ namespace Ludots.Core.Gameplay.GAS.Config
 {
     public sealed class GasClockConfig
     {
-        public int StepEveryFixedTicks { get; set; } = 1;
-        public GasStepMode Mode { get; set; } = GasStepMode.Auto;
+        public int StepEveryFixedTicks { get; set; }
+        public GasStepMode Mode { get; set; }
     }
 
     public sealed class GasClockConfigLoader
@@ -32,32 +30,61 @@ namespace Ludots.Core.Gameplay.GAS.Config
 
             if (mergedObject == null)
             {
-                return new GasClockConfig();
+                throw new InvalidOperationException($"{relativePath} must provide an explicit GAS clock object.");
             }
 
-            var options = new JsonSerializerOptions
+            var config = new GasClockConfig
             {
-                PropertyNameCaseInsensitive = true,
-                Converters = { new JsonStringEnumConverter() }
+                Mode = ParseMode(RequireCanonicalString(mergedObject["mode"], $"{relativePath}.mode")),
+                StepEveryFixedTicks = RequireStepEveryFixedTicks(mergedObject["stepEveryFixedTicks"], relativePath),
             };
-
-            var config = mergedObject.Deserialize<GasClockConfig>(options);
-            if (config == null)
-            {
-                throw new InvalidOperationException("Failed to deserialize GasClockConfig.");
-            }
 
             if (config.StepEveryFixedTicks < 1)
             {
-                throw new InvalidOperationException("GasClockConfig.StepEveryFixedTicks must be >= 1.");
-            }
-
-            if (!Enum.IsDefined(typeof(GasStepMode), config.Mode))
-            {
-                throw new InvalidOperationException("GasClockConfig.Mode is invalid.");
+                throw new InvalidOperationException($"{relativePath}.stepEveryFixedTicks must be >= 1.");
             }
 
             return config;
+        }
+
+        private static string RequireCanonicalString(JsonNode? node, string context)
+        {
+            if (node is not JsonValue value ||
+                !value.TryGetValue<string>(out string? text) ||
+                string.IsNullOrWhiteSpace(text))
+            {
+                throw new InvalidOperationException($"{context} requires an explicit semantic string.");
+            }
+
+            string trimmed = text.Trim();
+            if (!string.Equals(text, trimmed, StringComparison.Ordinal))
+            {
+                throw new InvalidOperationException($"{context} must not include leading or trailing whitespace.");
+            }
+
+            return text;
+        }
+
+        private static int RequireStepEveryFixedTicks(JsonNode? node, string relativePath)
+        {
+            if (node is not JsonValue value || !value.TryGetValue<int>(out int ticks))
+            {
+                throw new InvalidOperationException($"{relativePath}.stepEveryFixedTicks requires an explicit integer field.");
+            }
+
+            return ticks;
+        }
+
+        private static GasStepMode ParseMode(string mode)
+        {
+            return mode switch
+            {
+                "Auto" => GasStepMode.Auto,
+                "Manual" => GasStepMode.Manual,
+                "Paused" => GasStepMode.Paused,
+                _ => throw new InvalidOperationException(
+                    $"GAS clock mode '{mode}' is invalid. Supported: Auto, Manual, Paused."),
+            };
         }
     }
 }

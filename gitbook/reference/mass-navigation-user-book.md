@@ -1,257 +1,419 @@
-# 正式寻路基建用户教学�?
-本文从零开始介绍 Ludots 的正式寻路基建。`MassNavigationMod` 是当前正式的大世界导航能力入口，读者不需要知道 Ludots 内部历史，只要知道这是一个用 Ludots 正式链路提供“大世界万人导航、框选、右键移动、避障和表现同步”的系统。
-## 你会得到什�?
-这套正式寻路基建展示的是一�?RTS 风格的大地图�?
-- 地图/board 决定世界边界�?- 配置决定队伍、单位模板、障碍、热点、表现资源和导航调参�?- 玩家框选单位后右键下达移动命令�?- 单位以高性能 SoA solver 移动、避让、写�?ECS 位置�?- 视觉�?performer 管线渲染，选中 marker、小地图 marker、生命条都不是临时绘制�?
-当前能力由 `MassFlow` 和 `MassNavigation` 两层组成：`MassFlow` 负责高性能 SoA solver 热路径，`MassNavigation` 负责 gameplay 命令、选择、实体模板、ECS 写回和表现交接。你可以把这里当作正式寻路基础设施的学习入口和配置范本。
-## 五分钟跑起来
+# MassNavigation RTS 上手书
 
-在仓库根目录执行�?
+这份文档写给第一次接触 Ludots 的 Mod 作者：你想做一个类似《全面战争》的 RTS 战场，玩家选择的是方阵，方阵有血量、能接移动命令；方阵里的士兵也是 MassNavigation agent，但士兵由方阵驱动，不能被玩家单独框选。
+
+先把三个视角分清：
+
+- 玩家：只玩游戏。框选方阵、右键移动、看血条、看 marker、移动相机。
+- Mod 作者：改 JSON 配置和自己的业务 runtime。你配置模板、方阵、士兵、表现、地图、障碍和调参。
+- 引擎开发者：维护 Core、Selection、Order、Performer、MassNavigation 基建。
+
+玩家不需要输入 `selection.live.primary`、`SelectionSetKeys.LivePrimary`、template id、performer id 或 order blackboard key。看到文档让玩家输入这些，就是文档写错了。
+
+## 先跑起来
+
+当前参考战场是：
+
+`mods/showcases/mass_navigation_total_war_entry/MassNavigationTotalWarEntryMod/`
+
+从仓库根目录启动：
+
 ```powershell
-.\scripts\run-mod-launcher.cmd cli launch mass_navigation --adapter raylib --build auto
+.\scripts\run-mod-launcher.cmd cli launch MassNavigationTotalWarEntryMod --adapter raylib --build auto
 ```
 
-也可以使�?preset�?
-```powershell
-.\scripts\run-mod-launcher.cmd cli launch mass_navigation_raylib
-```
+Raylib launch graph 在：
 
-启动后检查这些画面：
+- `src/Apps/Raylib/Ludots.App.Raylib/launcher.mass-navigation-total-war.runtime.json`
+- `src/Apps/Raylib/Ludots.App.Raylib/raylib.mass-navigation-total-war.launch.graph.json`
 
-- 大量单位分布在地图上�?- 左侧�?MassNavigation 调参面板�?- 右上角有诊断 HUD�?- 小地图显示全图和视窗�?- 框选单位后，单位脚下出�?selection marker�?- 右键地面后，单位移动而不是重置回出生点�?
-## 核心概念
+玩家视角应该看到：
 
-世界边界来自 map �?board，不来自 MassNavigation 私有配置。当前地图在 `mods/capabilities/navigation/MassNavigationMod/assets/Maps/mass_navigation.json` �?author board；运行时通过 `PrimaryBoard.WorldSizeSpec.Bounds` 读取�?
-ECS 坐标是权威世界坐标。MassNavigation solver 使用本地 SoA cache 工作，然后把结果写回 `WorldPositionCm`、`PreviousWorldPositionCm` �?`FacingDirection`�?
-Solver window 是当前高精度求解窗口。现在固定为 10,000 x 10,000 cm，因为底�?`MassFlowSimulationState` 的网格、hash 和数组容量仍是固�?cache。`MassNavigationConfig.world.solverWindowWidthCm/HeightCm` 必须匹配这个 cache�?
-Flow work area 是当前关注区域，由镜头、最近命令目标、选中单位范围共同驱动。它可以�?solver window 大，用来描述下一步该优先处理的区域�?
-`flow.enabled=false` 不代表不能移动。当�?showcase 主要使用本地 steering、formation target �?avoidance；flow field 管线是可选能力，在这份验收配置里默认关闭�?
-## 文件地图
+- Shu / Wei 两边方阵在战场上。
+- 只有方阵能被选中。
+- 选中方阵后，脚下有 selection marker，界面有血量表现。
+- 右键地面后，方阵移动。
+- 士兵跟随所属方阵移动，但不是玩家直接操作对象。
+- 障碍物可见。
+- 方阵轮廓贴地，不插进地形。
+- 相机移动影响表现裁剪和驻留，不会让逻辑方阵消失。
 
-主要入口�?`mods/capabilities/navigation/MassNavigationMod/assets/`�?
-- `MassNavigationConfig.json`：队伍、agent profiles、障碍、热点、cadence、arrival、avoidance、crowd semantics、presentation id 引用�?- `Entities/templates.json`：agent、blocker、hotspot、local player 等实体模板�?- `GAS/order_types.json`：`massNavigationMove` 订单类型和它的规则�?- `Presentation/performers.json`：单位主体、生命条、选中 marker、小地图 marker、障碍、热�?performer�?- `Presentation/mesh_assets.json` �?`Presentation/host_assets.json`：模型资源和后端文件绑定�?- `Maps/mass_navigation.json`：地图、board、局部玩�?entity、视觉地形�?- `Configs/Camera/virtual_cameras.json`：战�?战略镜头 profile�?- `game.json`：启�?map、presentation capacity、selection preview 订单列表、Navigation2D 开关等全局配置片段�?
-配置通过 `ConfigPipeline` 合并。不要在业务代码里新写私�?JSON 加载器�?
-## 配置里的数字和语义名
+## 你真正要改哪些文件
 
-MassNavigation 配置里有两类值。第一类是真实数值，例如 `agentsPerTeam`、`simulationHz`、`radiusCm`、`speedCmPerSecond`、`sizePx`、颜色、scale、offset、queue size �?timeout。它们就是调参值，应该继续写数字�?
-第二类是运行时内�?handle，例�?performer `slot`、`paramKey`、`speedParamKey`、`orderTypeId`、order blackboard key、validation graph id。用户配置不应该记这些数字。现�?MassNavigation authoring 使用语义字符串：
+Total War 示例的文件入口：
 
-- performer 行为槽写 `"slot": "body"`、`"grounding"`、`"animator"`、`"minimap"`�?- performer 参数�?`"massNavigation.agent.health.ratio"`、`"massNavigation.agent.health.current"`、`"blacksmith.worker.locomotion.speed"`�?- 禁用可选参数写 `"none"`，加载后才编译成内部 `-1` �?`0` 哨兵�?- `massNavigationMove` 不手�?`orderTypeId`；`OrderTypeConfigLoader` �?key 稳定分配 int，并在运行时继续�?`OrderTypeRegistry`�?- order rule 引用�?`interruptsActiveOrderTypeKeys`，不要写其它 order 的数�?id�?
-这些语义名只存在于加载期。真正的仿真、performer tick、order buffer �?bitset 仍然使用 int、数组和 bitmask，不把字符串带进热路径�?
-## 最小单位模�?
-一个可�?MassNavigation 控制的单位模板必须包含这些正式组件：
+| 文件 | 你在这里做什么 |
+| --- | --- |
+| `assets/game.json` | 配启动地图、presentation capacity、相机裁剪距离、小地图、selection 路径预览订单。 |
+| `assets/Maps/mass_navigation_total_war.json` | 配地图 id、visual heightmap、board/world 数据。 |
+| `assets/MassNavigationConfig.json` | 配导航世界、solver、agent profiles、障碍、cadence、arrival、avoidance、camera profiles、view residency。 |
+| `assets/TotalWarShowcaseConfig.json` | 配业务战场：方阵、士兵模板、slot 排列、轮廓、障碍物 overlay、初始选中。 |
+| `assets/Entities/templates.json` | 配方阵、士兵、障碍物 overlay 的 entity template。 |
+| `assets/Presentation/performers.json` | 配模型、marker、血条、小地图 marker、performer 生命周期规则。 |
+| `assets/Configs/config_catalog.json` | 告诉 ConfigPipeline 加载哪些 showcase 配置。 |
 
-- `Team`
-- `OrderBuffer`
-- `SelectionSelectableTag`
-- `SelectionSelectableState`
-- `WorldPositionCm`
-- `FacingDirection`
-- `MassNavigationAgentTag`
-- `MassNavigationControllable`
+业务 runtime 入口：
 
-`WorldPositionCm` 会通过 component registry authoring 补齐 `PreviousWorldPositionCm`、`VisualTransform`、`CullState`。模板读者不需要手动把这三个全写出来，�?spawn receipt binding 会校验运行时实体最终具备它们�?
-单位 profile 不写�?C# switch 里。当前配置使�?`agentProfiles.profiles[]` 决定 light/heavy、`navMass`、`visualScale` 和每 N 个单位分配一次的规则�?
-## 玩家操作
+| 文件 | 职责 |
+| --- | --- |
+| `MassNavigationTotalWarEntryModEntry.cs` | 注册 showcase runtime 和组件。 |
+| `Runtime/TotalWarShowcaseConfig.cs` | `TotalWarShowcaseConfig.json` 的强类型配置。 |
+| `Runtime/TotalWarShowcaseRuntime.cs` | 建方阵计划、士兵计划、障碍 overlay 计划、spawn 请求、士兵目标同步。 |
+| `Runtime/TotalWarSpawnReceiptRuntime.cs` | 记录 showcase 的 spawn receipt 绑定。 |
+| `Runtime/TotalWarSpawnReceiptBindingSystem.cs` | 把 spawn 出来的实体绑定回方阵、士兵和障碍 runtime。 |
+| `Runtime/TotalWarFormationRuntimeSystem.cs` | 跑方阵业务状态。 |
+| `Runtime/TotalWarFormationOutlinePresentationSystem.cs` | 发射贴地的方阵轮廓表现。 |
+| `Runtime/TotalWarObstacleOverlayPresentationSystem.cs` | 发射障碍物 overlay 表现。 |
+| `Runtime/TotalWarFormationComponents.cs` | showcase 专属组件，以及严格大小写的 layout/outline 名称。 |
 
-玩家不配置任何东西。玩家只需要知道这些操作：
+通用基建入口：
 
-- 鼠标框选单位�?- 左键点空地取消选择�?- 右键点地面下达移动命令�?- 被选单位脚下出�?selection marker；取消选择�?marker 消失�?
-玩家不需要知�?selection key、performer scope、entity template id 或任何运行时内部集合�?
-## 为什么会�?selection 通道�?
-selection 通道名不是给玩家输入的，也不是给 Mod 作者手写第二套集合的。它只是加载器和规则系统用来指向同一条选择事实的正式语义名�?
-- 玩家看不到它�?- Mod 作者通常也不用直接写它，只需要写 `when: "PlayerPrimarySelection"` 这类面向业务的语义�?- 引擎内部需要它，是为了把“谁被选中”这条事实稳定送到表现层，而不是让 MassNavigation 或任�?showcase 私有 system 自己猜�?
-当前这条通道在代码里有一�?canonical 常量 `SelectionSetKeys.LivePrimary`。配置层看到�?`selection.live.primary` 是同一概念的作者名，不是第二套集合，也不是兼容入口�?
-术语对照很简单：
+`mods/capabilities/navigation/MassNavigationMod/`
 
-| �?| 名字 | 含义 |
-| --- | --- | --- |
-| 玩家 | 不暴�?| 玩家不输入这类内部名 |
-| Mod 作�?| `selection.live.primary` | 配置里用的语义名，指向主选择通道 |
-| 引擎内部 | `SelectionSetKeys.LivePrimary` | 代码里的 canonical key |
+这里放的是可复用导航能力，不放“蜀国左翼方阵”“方阵拥有士兵”这种产品业务。
 
-## Mod 作者配置：单位选择反馈
+## 模块上手路线
 
-Mod 作者也不需要声明“当前框选集合”。当前框选集合由 `CoreInputMod` �?`SelectionRuntime` 维护，是引擎运行时状态，不是 Mod 的业务配置对象�?
-Mod 作者要配置的是“哪些实体能被选中”和“这些实体被选中时显示什么反馈”：
+第一次做自己的 RTS，不要从 Core 源码开始啃。按这个顺序看：
 
-- 在实体模板里声明 `SelectionSelectableTag` �?`SelectionSelectableState`�?- 在实体模板里声明正式位置/表现交接组件，例�?`WorldPositionCm`、`FacingDirection`、`VisualHeightmapSampleState`�?- �?`Presentation/performers.json` 中声�?selection marker performer，例�?mesh、材质、尺寸、offset、render path �?mobility�?- �?selection feedback 规则中声明：当实体被玩家主选择选中时显示哪�?marker，取消选择时由引擎清理�?- light/heavy 或其它类型差异应来自模板、tag、profile 或规则条件，不由 feature system 猜�?
-目标配置形态如下。注意这是下一步要落地的正�?authoring contract；如果当前代码还没有完全支持某个字段，应该补 Core 基建，而不是让 MassNavigation 再写一个私�?system 绕过去�?
-作者输入的是“这个单位被玩家主选择选中时，用哪�?performer 做反馈”。作者不输入、不创建、不管理运行时的框选集合；那是 `SelectionRuntime` 的职责�?
+| 模块 | 你要怎么用 |
+| --- | --- |
+| `LudotsCoreMod` | 提供 entity template、spawn、selection、order、presentation、minimap 等基础链路。先复用，不要复制。 |
+| `CoreInputMod` | 提供玩家框选、右键命令等输入入口。你的 Mod 通常只配置可选实体和订单类型。 |
+| `CameraProfilesMod` | 提供相机 profile。你的 Mod 通过配置选择或扩展 profile。 |
+| `MassNavigationMod` | 提供大规模导航基建。你配置 profiles、cadence、avoidance、order 和 agent contract。 |
+| `MassNavigationTotalWarEntryMod` | Total War-like 业务示例。重点看方阵如何生成士兵、士兵如何跟随方阵、轮廓和障碍如何表现。 |
+
+如果你要做自己的游戏，通常复制的是 `MassNavigationTotalWarEntryMod` 的结构，然后换成你的业务命名和配置；`MassNavigationMod` 是被依赖的基建，不是放游戏规则的地方。
+
+## 玩家模型
+
+玩家只理解这些：
+
+- 选择方阵。
+- 右键地面移动。
+- 用游戏提供的旋转按钮或快捷键调整朝向。
+- 看血条、选中 marker、方阵轮廓、小地图。
+- 切相机观察不同战区。
+
+玩家不理解、也不应该被要求理解：
+
+- runtime selection set
+- performer scope
+- spawn receipt channel
+- MassFlow solver index
+- entity template id
+- order blackboard key
+
+## Mod 作者模型
+
+Mod 作者描述内容和规则：
+
+1. 地图和视觉高度图。
+2. 导航 profile 和 solver 调参。
+3. 方阵业务配置。
+4. entity template。
+5. performer 表现。
+6. 必要时写自己的业务 runtime。
+
+Mod 作者不新建这些基础设施：
+
+- selection runtime
+- order runtime
+- spawn queue
+- performer runtime
+- minimap runtime
+- JSON loader
+
+缺能力时先补正式基建，不在 showcase 里绕一条私有链。
+
+## 方阵怎么配置
+
+方阵在 `assets/TotalWarShowcaseConfig.json` 的 `formations[]` 里。
+
+示例：
+
 ```json
 {
-  "selectionFeedback": [
-    {
-      "id": "my_unit_light_selected",
-      "when": "PlayerPrimarySelection",
-      "sourceTemplates": [ "my_unit_light" ],
-      "performerId": "my_unit_selection_marker_light",
-      "cleanupScope": "SelectionMember"
-    }
-  ],
-  "performers": [
-    {
-      "id": "my_unit_selection_marker_light",
-      "mesh": "my.selection.marker",
-      "renderPath": "InstancedStaticMesh",
-      "mobility": "Movable",
-      "localOffset": [0.0, 0.035, 0.0],
-      "localScale": [0.55, 0.05, 0.55]
-    }
-  ]
+  "id": "shu_left_vanguard",
+  "label": "Shu Left Vanguard",
+  "teamId": 1,
+  "soldierAgent": {
+    "templateId": "mass_navigation_total_war_soldier_azure_light",
+    "profileId": "light"
+  },
+  "centerXCm": -2600,
+  "centerYCm": -2200,
+  "facingDeg": 78,
+  "slots": {
+    "layout": "Grid",
+    "grid": { "columns": 20, "rows": 12, "spacingXCm": 46, "spacingYCm": 50 }
+  },
+  "outline": {
+    "shape": "Rectangle",
+    "rectangle": { "widthCm": 1100, "depthCm": 760, "edgeLineWidthCm": 18 }
+  }
 }
 ```
 
-字段含义�?
-- `when: "PlayerPrimarySelection"`：玩家主选择。它�?CoreInput 提供的能力名，不是作者创建的集合�?- `sourceTemplates`：哪些实体模板被选中时使用这条反馈规则�?- `performerId`：要创建�?marker performer�?- `cleanupScope: "SelectionMember"`：这份反馈归属当前进入选择集合的成员；同一成员重复进入选择不会创建第二�?marker，离开选择集合时只清理该成员的 marker�?- `renderPath: "InstancedStaticMesh"`：marker �?instancing，不回退到逐个 primitive draw�?
-如果�?light/heavy 两种单位，作者写两条 `selectionFeedback`，分别指�?light/heavy 模板和不�?marker performer。不要在 C# 里通过 `MassNavigationAgentProfile.Heavy` 之类的组件手写分支�?
-## 运行时输�?
-玩家�?Mod 作者能观察到的结果应该是：
+字段怎么读：
 
-- 框选符�?`sourceTemplates` 的单位时，每个被选单位脚下出现一�?marker�?- 同一个单位重复进入选择时，不重复创建第二个 marker�?- 左键点空地清空选择时，这批 marker 立即消失�?- marker 跟随单位移动，不停在创建时的位置�?- light/heavy 或其它模板差异按配置选择对应 marker�?- 批量框选和批量清空不需�?Mod 写循环，也不需�?MassNavigation 私有 system 每帧扫描�?
-这意味着你检�?marker 时应关注�?
-- 选中后每�?live owner 只有一�?marker�?- 取消选择�?marker 立即消失，不停在取消瞬间的位置�?- reset 后旧 owner �?performer 不应继续留在新场景选择集合里�?- core performer 代码不包�?MassNavigation 专属分支�?
-## 内部实现边界
+- `id`：方阵稳定配置 id。
+- `teamId`：队伍归属。
+- `soldierAgent.templateId`：这个方阵生成哪种士兵模板。
+- `soldierAgent.profileId`：士兵使用哪个 MassNavigation profile。
+- `centerXCm` / `centerYCm`：初始位置，单位是厘米。
+- `facingDeg`：初始朝向，单位是角度。
+- `slots.layout`：士兵排列方式。当前支持 `Grid` 和 `Disc`。
+- `outline.shape`：方阵轮廓。当前支持 `Rectangle` 和 `Circle`。
 
-这部分给引擎�?Mod 开发者看，玩家不需要读�?
-### 谁在用这条链�?
-| �?系统 | 做什�?| 是否必要 |
-| --- | --- | --- |
-| `CoreInputMod` / `SelectionRuntime` | 维护选择 SSOT 和成员变�?| 必须 |
-| `SelectionPresentationEventSystem` | �?selection mutation 变成通用 presentation event | 必须 |
-| `PerformerRuleSystem` | 只做事件、条件和命令匹配 | 必须 |
-| `PerformerRuntimeSystem` | 执行 batch create / scoped destroy | 必须 |
-| `MassNavigationMod` | �?author marker definition �?rules | 必须，但不拥�?lifecycle |
+大小写必须严格。`Grid` 不是 `grid`，`Rectangle` 不是 `rectangle`。
 
-```mermaid
-flowchart LR
-    Player["玩家框�?/ 取消选择"] --> Input["CoreInputMod"]
-    Input --> Runtime["SelectionRuntime\n选择 SSOT"]
-    Runtime --> Bridge["SelectionPresentationEventSystem\nselection mutation bridge"]
-    Bridge --> Event["SelectionMemberAdded / Removed"]
-    Event --> Rule["PerformerRuleSystem"]
-    Rule --> Runtime2["PerformerRuntimeSystem"]
-    Runtime2 --> Marker["scoped selection marker performer"]
+## Agent Profile 怎么配
 
-    MassNavigation["MassNavigationMod"] -. authoring only .-> Marker
-```
+agent profile 在 `assets/MassNavigationConfig.json` 的 `agentProfiles.profiles[]`。
 
-目标链路是：
+当前示例有三类：
 
-```text
-CoreInputMod
-  -> SelectionRuntime
-  -> selection mutation batch
-  -> presentation selection bridge
-  -> PresentationEvent(SelectionMemberAdded/Removed)
-  -> PerformerRuleSystem
-  -> PerformerRuntimeSystem
-  -> PerformerEntityRuntime batch create / scoped destroy
-```
+- `formation`：方阵 agent。半径大、质量高、速度慢。
+- `heavy`：重装士兵。比方阵快。
+- `light`：轻装士兵。比重装士兵更快。
 
-职责边界�?
-- `SelectionRuntime` 是选择集合 SSOT。它只记录选择状态和成员变化，不知道 MassNavigation。这里唯一的正式通道名是 `SelectionSetKeys.LivePrimary`；`selection.live.primary` 只是同一概念在配置层的作者名�?- presentation selection bridge 只把通用 selection mutation 转成通用 presentation event，不创建 MassNavigation performer�?- `PerformerRuleSystem` 只按配置匹配事件、条件和命令，不内置 showcase 名称�?- `PerformerRuntimeSystem` 消费命令；同一帧同 definition、entity anchor、无 parent 的批量创建可以合并走 `CreateEntityAnchoredRootBatch`�?- `MassNavigationMod` �?author 模板、profile、performer、order 和场景配置�?
-上面的作者配置会在加载期降低�?performer rule。内部形态可以类似这样，但这不是玩家文档，也不要求普�?Mod 作者手写：
+现在的配置里：
+
+- formation speed 是 `360` cm/s。
+- heavy soldier speed 是 `780` cm/s。
+- light soldier speed 是 `920` cm/s。
+
+产品规则很直接：士兵速度必须大于方阵速度，否则方阵被推挤、绕障、转移战区时，士兵会追不上。
+
+这些数字是调参值，不是 magic id。速度、半径、Hz、容量、颜色、线宽、秒数都应该继续显式写数字。
+
+## Entity Template 怎么配
+
+模板在 `assets/Entities/templates.json`。
+
+方阵模板当前包含：
+
+- `WorldPositionCm`
+- `VisualHeightmapSampleState`
+- `FacingDirection`
+- `OrderBuffer`
+- `SelectionSelectableTag`
+- `SelectionSelectableState`
+- `AttributeBuffer`
+- `GameplayTagContainer`
+- `TagCountContainer`
+- `MassNavigationAgentTag`
+- `EntityLayer`
+- `MassNavigationControllable`
+
+这表示方阵能被选中、能接订单、有血量、能进入 MassNavigation。
+
+士兵模板当前包含：
+
+- `WorldPositionCm`
+- `VisualHeightmapSampleState`
+- `FacingDirection`
+- `EntityLayer`
+- `MassNavigationAgentTag`
+
+这表示士兵也是 MassNavigation agent，但玩家不能直接选中或下令。士兵由方阵业务 runtime 生成并同步目标。
+
+## Performer 怎么配
+
+表现写在 `assets/Presentation/performers.json`。
+
+当前 showcase 的生命周期规则是：
+
+- `EntitySpawned` 创建方阵或士兵 performer。
+- `EntityDestroyed` 销毁 performer scope。
+- `SelectionMemberAdded` 创建方阵 selection marker。
+- `SelectionMemberRemoved` 销毁方阵 selection marker。
+
+选中 marker 的规则类似：
 
 ```json
 {
   "event": { "kind": "SelectionMemberAdded", "key": "selection.live.primary" },
-  "condition": {
-    "inline": "SourceHasEntityTemplate",
-    "entityTemplateId": "my_unit_light"
-  },
   "command": {
     "kind": "CreatePerformer",
-    "definitionId": "my_unit_selection_marker_light",
+    "definitionId": "mass_navigation_total_war_formation_selection_marker",
     "scopeSource": "SourceStableId"
   }
 }
 ```
 
-`selection.live.primary` 是这条通道�?authoring 层的语义名；loader 会把它编译成 `SelectionSetKeys.LivePrimary`。它不是第二套集合，也不是兼容别名�?
-禁止事项�?
-- 不在 MassNavigation system 里读�?`SelectedFlags` 后手动创�?marker�?- 不在 MassNavigation config 里写 selection marker performer id 字段来驱动生命周期�?- 不用 solver index、array index、team id 或其它临时数字当 selection marker scope�?- 不给 performer behavior �?MassNavigation 专属分支�?- 不在配置里暴�?order type id、param key、behavior slot 这类内部 handle；配置写语义字符串，加载期编译�?
-性能约束�?
-- selection 变化应该�?mutation-driven，不做每帧全�?diff�?- 框选万人时，事件和命令�?batch 处理，稳态帧不重复创�?marker�?- marker �?`InstancedStaticMesh` + `Movable` performer，跟随实体走既有 transform sync�?- 清空选择时按 scope/definition 清理，不保留上一�?transient projection�?- 10k agents 验收必须记录 dropped performer/event/request �?0，并比较 `performer_ms`、`presentation_ms`、`frame_ms`�?
-## 开发迭代计�?
-下面是把当前 showcase 清理成上�?contract 的开发顺序。每一步都应该有测试或 UAT 证据�?
-1. 文档先行
-   先保持本文的玩家、Mod 作者、内部实现三层视角一致。玩家不需�?internal key；Mod 作者不声明 runtime selection set；内部实现才讨论 `SelectionRuntime`、mutation �?performer rule�?
-2. Core selection revision
-   `SelectionRuntime` 是选择�?SSOT。选择容器只在真实变更时递增 revision，presentation bridge �?revision 跳过稳态帧�?
-3. Presentation selection bridge
-   通用 bridge �?selection 容器变更转成 `SelectionMemberAdded` / `SelectionMemberRemoved` presentation event。event source 是被选实体，target �?selection container，key 是选择通道语义 id�?
-4. Performer rule 扩展
-   `PresentationEventKind` 增加 selection 事件，performer config loader 允许�?selection 通道 key。条件只使用通用概念，例�?source template、source tag、source has visual transform；不能写 MassNavigation profile 分支�?
-5. Performer runtime cleanup
-   destroy �?selection marker 限定 definition + source owner + source stable scope，避免用 owner stable id 清掉�?scope 下的 agent �?performer�?
-6. MassNavigation 配置迁移
-   �?`Presentation/performers.json` �?light/heavy selection marker author rules。light/heavy 差异来自模板、tag �?profile 配置条件。`MassNavigationConfig.presentation` 不再�?selection marker performer id 驱动生命周期�?
-7. MassNavigation 私有 marker system 已移�?   MassNavigation selection sync 只服�?solver selected flags，不负责表现生命周期。marker 的创建和清理由通用 selection presentation event �?performer rule 驱动�?
-8. 验证
-   必跑：配�?loader 测试、selection mutation 测试、performer rule selection 事件测试、presentation flush 残留测试、MassNavigation 10k UAT。验收点是框选、移动、取消选择、reset 后无 marker 残留，且没有 dropped performer/event/request�?
-## 表现和选中 Marker
+给 Mod 作者的人话解释是：
 
-单位主体�?performer。当�?agent 使用 Blacksmith showcase �?`blacksmith.worker.knight` skinned mesh 和动�?profile；MassNavigation 不复制这套素材�?
-选中 marker 不是 agent �?performer 里常驻隐�?mesh。它是独�?scoped performer，由通用 selection-to-performer 事件�?performer rules 创建/销毁。MassNavigation �?author 模板�?performer 配置，不拥有 marker 生命周期代码�?
-## 命令链路
+“当一个方阵进入玩家主选择时，为这个方阵创建这个 marker performer。”
 
-右键移动的链路是�?
+清理规则类似：
+
+```json
+{
+  "event": { "kind": "SelectionMemberRemoved", "key": "selection.live.primary" },
+  "command": {
+    "kind": "DestroyScopedPerformer",
+    "definitionId": "mass_navigation_total_war_formation_selection_marker",
+    "scopeSource": "SourceStableId"
+  }
+}
+```
+
+这说明 marker 生命周期属于通用 Selection -> PresentationEvent -> PerformerRule -> PerformerRuntime 链路，不属于 MassNavigation 私有 system。
+
+## selection.live.primary 到底是什么
+
+只有一个“玩家当前主选择”概念。
+
+| 视角 | 名字 | 含义 |
+| --- | --- | --- |
+| 玩家 | 没有名字 | 玩家只是框选和取消选中。 |
+| Mod 作者 | `selection.live.primary` | performer 规则里写的事件 key，表示玩家主选择流。 |
+| 引擎开发者 | `SelectionSetKeys.LivePrimary` | 代码里的 canonical key。 |
+
+这不是两套选择集，也不是兼容 alias。配置字符串和代码常量必须解析到同一个正式概念。不要再加第二个拼法。
+
+## 订单和移动
+
+右键移动链路：
+
 ```text
-Input
+Local input
   -> SelectionRuntime
   -> OrderBuffer(massNavigationMove)
-  -> MassNavigationOrderBridgeSystem
+  -> MassNavigationOrderIngestionSystem
   -> MassNavigationGroupRuntime
   -> MassFlowSimulationState
-  -> ECS position/facing writeback
+  -> WorldPositionCm / FacingDirection
   -> performer transform sync
 ```
 
-`massNavigationMove` �?id �?`GAS/order_types.json` 注册�?`OrderTypeRegistry`。selection move path preview 允许预览哪些订单，由 `selection.movePathPreviewOrderTypeKeys` 配置，不应在 CoreInput 源码里硬编码 showcase 订单名�?
-## 如何改成自己的场�?
-保守做法是先复制 MassNavigation showcase 的配置形状，然后逐项改：
+订单类型用语义字符串配置，不在 JSON 里写数字 id。
 
-1. �?`MassNavigationConfig.json` 修改 `scenario.teams` �?`agentsPerTeam`�?2. �?`presentation.teams` 为每�?team 绑定 light/heavy template �?performer�?3. �?`agentProfiles.profiles` 调整 `navMass`、`visualScale`、heavy 分布规则�?4. �?`world.obstacles` author 障碍，坐标是 solver window 内的本地 cm�?5. �?map �?board �?author 世界尺寸�?visual heightmap�?6. �?`Presentation/performers.json` 调整模型、颜色、生命条、小地图 marker �?selection marker�?
-注意当前 solver window 仍是固定 cache。可以移动热点和大世界窗口，但不能把 solver cache 配成任意尺寸�?
-## 调参指南
+移动和朝向是两件事。方阵移动不应该自动改朝向，除非你显式配置了 auto-facing 策略。玩家要旋转方阵，就提供旋转命令或按钮。
 
-`cadence` 控制各子系统频率�?
-- `simulationHz`：仿真步频�?- `targetUpdateHz`：formation/group target 刷新频率�?- `hardResolveHz`：硬穿透修正频率�?- `entitySyncHz`：写�?ECS 的频率�?- `maxStepsPerFixedTick`：单�?fixed tick 最多补几步�?
-`arrival` 控制到达和卡住恢复：
+## 方阵和士兵是什么关系
 
-- `timeoutMs`：停滞多久触发恢复�?- `progressDistanceCm`：认为“有进展”的距离�?- `wakePushDistanceCm`：被推离后重新唤醒的距离�?- `maxRetryCount`：最多重试次数�?
-`avoidance` 控制不同质量单位之间的推挤策略：
+在这个 showcase 里，业务 runtime 会创建：
 
-- `dominantMassRatio`：质量差达到多少认为�?dominant push�?- `friendlyResponseScale`：友军协作避让强度�?- `nonFriendlyResponseScale`：非友军阻挡响应�?- `dominantPushResponseScale`：重单位推开轻单位的响应�?
-`semantics` 控制更细�?gameplay 语义，例如障碍硬半径、目标投�?clearance、阵�?slot 间距、速度、分离半径和速度平滑�?
-## 常见问题
+- 方阵 MassNavigation agent。
+- 归属这个方阵的士兵 MassNavigation agents。
 
-看不到单位：
+士兵目标来自方阵当前 carried position 和方阵朝向。这样方阵因为避障、推挤产生的被动位移，也会同步影响士兵的目标。
 
-- 检�?`PerformerBlacksmithShowcaseMod` 是否�?`mod.json` dependencies 中�?- 检�?`Presentation/host_assets.json` 是否能解析模型源文件�?- 检�?map 是否绑定 visual heightmap�?
-框选没�?marker�?
-- 检查本地玩家模板是�?author `PlayerOwner` �?`SelectionDragState`�?- 检�?agent 模板是否 author selection 组件�?- 检�?performer definition 是否存在 `mass_navigation_agent_selection_marker_light/heavy`�?
-右键不移动：
+这个“方阵拥有士兵”的规则是业务逻辑，应该放在 `MassNavigationTotalWarEntryMod` 或你的游戏 Mod。它不属于 MassNavigation foundation。
 
-- 检�?`massNavigationMove` 是否注册�?`OrderTypeRegistry`�?- 检�?`selection.movePathPreviewOrderTypeKeys` 只是预览配置，不等于命令提交配置�?- 检�?agent 是否�?`OrderBuffer` �?`MassNavigationAgentIndex`�?
-reset 后表现异常：
+## 障碍物
 
-- �?MassNavigation 实体应标�?`PresentationDestroyPending`，等�?presentation 生命周期发布 destroy 事件并最终销毁�?- 新场�?spawn 通过 `RuntimeEntitySpawnQueue` �?receipt channel 绑定，不直接 `world.Create` 业务实体�?
-改了 solver window 尺寸后失败：
+障碍在 `assets/MassNavigationConfig.json` 的 `world.obstacles[]`。
 
-- 这是当前限制。配置必须匹配固�?10,000 x 10,000 cm SoA cache。通用可变尺寸 solver 需要后续提�?`MassFlow`/`MassNavigation` 后再做�?
-## 架构边界
+示例：
 
-MassNavigation 已经复用正式链路：`ConfigPipeline`、template spawn、`SelectionRuntime`、`OrderBuffer`、`OrderTypeRegistry`、performer、minimap 和 presentation lifecycle。
-当前仍需继续强化的工程边界：
-- solver cache/grid/hash 仍固定在 C# 常量上；spawn/formation layout 仍有具体示例场景逻辑；strategic/tactical camera reset 仍是 MassNavigation 本 mod 的运行时策略；team relationship 会写入全局 `TeamManager`，需要后续正式分层；通用“只配置 entity 模板就接入万人导航”的 contract 仍需要继续沉淀到 `MassNavigation`。
-因此，使用者可以把它当作高性能大世界导航的正式学习入口；其中仍标明的限制就是后续基础设施演进清单。
-## 下一步学�?
-- 正式链路手册：`gitbook/reference/mass-navigation-formal-chain.md`
-- Mod 边界说明：`mods/capabilities/navigation/MassNavigationMod/README.md`
-- 关键 runtime：`Runtime/MassNavigationSimulationRuntime.cs`
-- 热路�?solver：`Runtime/MassFlowSimulationState.cs`
-- 选择 marker：`assets/Presentation/performers.json` 中的 selection performer rules
-- 命令桥：`Systems/MassNavigationOrderBridgeSystem.cs`
+```json
+{ "id": "central_blocker", "localXCm": 5000.0, "localYCm": 5000.0, "radiusCm": 300.0 }
+```
 
+玩家要看见障碍，所以 showcase 还配置了：
+
+- `assets/Entities/templates.json` 里的 obstacle overlay template。
+- `assets/TotalWarShowcaseConfig.json` 里的 `obstacleOverlay` 外观参数。
+- `Runtime/TotalWarObstacleOverlayPresentationSystem.cs` 发射 overlay 表现。
+
+不要用隐藏 debug draw 假装障碍可见。玩家要看的东西必须走明确表现链路。
+
+## 相机和裁剪
+
+相机相关配置分两处：
+
+- `assets/game.json`：presentation culling distance 和 capacity。
+- `assets/MassNavigationConfig.json`：`cameraProfiles` 和 `viewResidency`。
+
+当前 `viewResidency.mode` 是 `Probe`，并且有 `retainSeconds` 和 `cameraProbes`。这对应产品需求：镜头离开一个地区后，表演单位可以保留一段时间；超过配置时间，再按表现预算处理。
+
+逻辑方阵不应该因为镜头离开而消失。表现驻留不是 gameplay 存活。
+
+## Visual Heightmap
+
+Total War 地图引用：
+
+`assets/terrain/mass_navigation_total_war_relief.vhtm`
+
+地图文件：
+
+`assets/Maps/mass_navigation_total_war.json`
+
+士兵、方阵轮廓、marker、障碍 overlay 都应该贴这个 visual heightmap。缺 heightmap service 应该 fail-fast，不应该静默退回平面。
+
+## 数字和语义字符串
+
+继续用数字配置真实调参：
+
+- cm
+- 秒
+- Hz
+- capacity
+- radius
+- speed
+- color
+- line width
+- sample count
+
+用字符串配置语义 id：
+
+- template id
+- performer id
+- order key
+- parameter key
+- selection event key
+- profile id
+- map id
+- spawn receipt channel key
+
+运行时可以把字符串编译成 int 走热路径。作者侧不要暴露不透明数字 handle。
+
+## 做自己的 RTS Mod
+
+复制结构，不要复制业务名字：
+
+1. 新建你的 entry mod。
+2. 给 Raylib launch graph 加你的 mod。
+3. 配地图和 visual heightmap。
+4. 配 `MassNavigationConfig.json`：profiles、cadence、obstacles、camera probes、view residency。
+5. 配你的业务 config：军团、方阵、 squad 或你产品里的控制单位。
+6. 配 selectable control unit 模板。
+7. 配 lower-level agent 模板。
+8. 配 performer definitions 和 performer rules。
+9. 只有真正属于你游戏的规则才写业务 runtime，比如“方阵生成士兵并同步 slot 目标”。
+10. Selection、Order、Spawn、Performer、Minimap、ConfigPipeline 都复用现有链路。
+
+## 不要做
+
+- 不要让玩家输入 runtime key。
+- 不要新建第二套 selection runtime。
+- 不要为 selection marker 写 MassNavigation 私有生命周期 system。
+- 如果士兵需要避障和碰撞，不要把士兵做成非 MassNavigation 对象。
+- 不要把 Total War 方阵业务塞进 MassNavigation core。
+- 不要在 JSON 里写 order blackboard 数字 id 或 performer param 数字 id。
+- 不要给缺失模板、performer、mesh、material、map、heightmap 加 fallback。
+- 不要做大小写宽容解析。
+- 不要把移动和朝向偷偷耦合。
+
+## 验收清单
+
+上线前至少检查：
+
+- launch graph 包含 Total War entry mod 和 MassNavigation foundation。
+- `game.json` 启动目标 map。
+- map 引用目标 visual heightmap。
+- 所有 template id 存在。
+- 所有 performer id 存在。
+- 方阵可选中、可下令、有血量。
+- 士兵是 MassNavigation agent，但不能直接选中。
+- 士兵 profile 速度大于方阵 profile 速度。
+- selection marker 的创建和销毁由 performer rule 驱动。
+- 取消选中或销毁实体后 marker 不残留。
+- 障碍物可见并参与导航。
+- 相机裁剪和驻留都在文件里配置。
+- layout/outline 名称大小写错误会失败，而不是静默兼容。

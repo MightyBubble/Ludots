@@ -26,5 +26,13 @@
   {
     "id": "blacksmith.smoke.billboard",
     "type": "Billboard"
+  },
+  {
+    "id": "blacksmith.worker.patrol",
+    "type": "Model"
+  },
+  {
+    "id": "blacksmith.sound.anvil_hammering",
+    "type": "Model"
   }
 ]

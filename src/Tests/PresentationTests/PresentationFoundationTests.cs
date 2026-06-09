@@ -142,6 +142,7 @@ namespace Ludots.Tests.Presentation
                                 RenderPath = VisualRenderPath.SkinnedMesh,
                                 Mobility = VisualMobility.Movable,
                                 LocalScale = Vector3.One,
+                                AssetIdParamKey = -1,
                             },
                         },
                     ],
@@ -160,6 +161,7 @@ namespace Ludots.Tests.Presentation
                 },
                 new CullState { IsVisible = true, LOD = LODLevel.High });
 
+            instances.BindDefinitions(definitions);
             Entity performer = instances.Create(defId, owner, scopeId: 42, PresentationAnchorKind.Entity, Vector3.Zero, stableId: 7001, Entity.Null, default);
             world.Get<PerformerState>(performer).BehaviorActiveMask = (1u << 0) | (1u << 1);
             instances.SetParam(performer, 91, ParamLane.Int, 0f, 1, default);
@@ -214,6 +216,7 @@ namespace Ludots.Tests.Presentation
                                 RenderPath = VisualRenderPath.StaticMesh,
                                 Mobility = VisualMobility.Movable,
                                 LocalScale = Vector3.One,
+                                AssetIdParamKey = -1,
                             },
                         },
                     ],
@@ -225,6 +228,7 @@ namespace Ludots.Tests.Presentation
                 new PresentationStableId { Value = 1 },
                 new CullState { IsVisible = true, LOD = LODLevel.High });
 
+            instances.BindDefinitions(definitions);
             Entity performer = instances.Create(defId, owner, scopeId: 0, PresentationAnchorKind.WorldPosition, new Vector3(4f, 5f, 6f), stableId: 2001, Entity.Null, default);
             ref var state = ref world.Get<PerformerState>(performer);
             state.BehaviorActiveMask = 1u;
@@ -296,6 +300,7 @@ namespace Ludots.Tests.Presentation
 [
   {
     "id": "semantic.controller",
+    "defaultStateIndex": 0,
     "states": [
       { "packedStateIndex": 1, "durationSeconds": 1.0, "playbackSpeed": 1.0, "loop": true },
       { "packedStateIndex": 2, "durationSeconds": 1.0, "playbackSpeed": 1.0, "loop": true }
@@ -306,7 +311,9 @@ namespace Ludots.Tests.Presentation
         "toStateIndex": 1,
         "conditionKind": "FloatGreaterOrEqual",
         "parameterIndex": "semantic.anim.speed",
-        "threshold": 0.2
+        "threshold": 0.2,
+        "durationSeconds": 0.1,
+        "consumeTrigger": false
       }
     ]
   }
@@ -333,6 +340,101 @@ namespace Ludots.Tests.Presentation
             {
                 // Ignore temp cleanup failures in test teardown.
             }
+        }
+
+        [Test]
+        public void AnimatorControllerConfigLoader_RejectsWrongCaseConditionKind()
+        {
+            string root = Path.Combine(Path.GetTempPath(), "Ludots_AnimatorStrictCondition", Guid.NewGuid().ToString("N"));
+            string core = Path.Combine(root, "Core");
+            Directory.CreateDirectory(Path.Combine(core, "Configs"));
+            Directory.CreateDirectory(Path.Combine(core, "Configs", "Presentation"));
+            File.WriteAllText(Path.Combine(core, "Configs", "config_catalog.json"), """
+[
+  { "Path": "Presentation/animator_controllers.json", "Policy": "ArrayById", "IdField": "id" }
+]
+""");
+            File.WriteAllText(Path.Combine(core, "Configs", "Presentation", "animator_controllers.json"), """
+[
+  {
+    "id": "strict.controller",
+    "defaultStateIndex": 0,
+    "states": [
+      { "packedStateIndex": 1, "durationSeconds": 1.0, "playbackSpeed": 1.0, "loop": true },
+      { "packedStateIndex": 2, "durationSeconds": 1.0, "playbackSpeed": 1.0, "loop": true }
+    ],
+    "transitions": [
+      {
+        "fromStateIndex": 0,
+        "toStateIndex": 1,
+        "conditionKind": "floatGreaterOrEqual",
+        "parameterIndex": "semantic.anim.speed",
+        "threshold": 0.2,
+        "durationSeconds": 0.1,
+        "consumeTrigger": false
+      }
+    ]
+  }
+]
+""");
+
+            var vfs = new Ludots.Core.Modding.VirtualFileSystem();
+            vfs.Mount("Core", core);
+            var pipeline = new ConfigPipeline(vfs, modLoader: null!);
+            var catalog = ConfigCatalogLoader.Load(pipeline);
+            var controllers = new Ludots.Core.Presentation.Assets.AnimatorControllerRegistry();
+
+            InvalidOperationException ex = Assert.Throws<InvalidOperationException>(
+                () => new AnimatorControllerConfigLoader(pipeline, controllers).Load(catalog))!;
+            Assert.That(ex.Message, Does.Contain("conditionKind"));
+            Assert.That(ex.Message, Does.Contain("floatGreaterOrEqual"));
+        }
+
+        [Test]
+        public void AnimatorControllerConfigLoader_RejectsNumericParameterIndex()
+        {
+            string root = Path.Combine(Path.GetTempPath(), "Ludots_AnimatorNumericParam", Guid.NewGuid().ToString("N"));
+            string core = Path.Combine(root, "Core");
+            Directory.CreateDirectory(Path.Combine(core, "Configs"));
+            Directory.CreateDirectory(Path.Combine(core, "Configs", "Presentation"));
+            File.WriteAllText(Path.Combine(core, "Configs", "config_catalog.json"), """
+[
+  { "Path": "Presentation/animator_controllers.json", "Policy": "ArrayById", "IdField": "id" }
+]
+""");
+            File.WriteAllText(Path.Combine(core, "Configs", "Presentation", "animator_controllers.json"), """
+[
+  {
+    "id": "numeric.controller",
+    "defaultStateIndex": 0,
+    "states": [
+      { "packedStateIndex": 1, "durationSeconds": 1.0, "playbackSpeed": 1.0, "loop": true },
+      { "packedStateIndex": 2, "durationSeconds": 1.0, "playbackSpeed": 1.0, "loop": true }
+    ],
+    "transitions": [
+      {
+        "fromStateIndex": 0,
+        "toStateIndex": 1,
+        "conditionKind": "FloatGreaterOrEqual",
+        "parameterIndex": 0,
+        "threshold": 0.2,
+        "durationSeconds": 0.1,
+        "consumeTrigger": false
+      }
+    ]
+  }
+]
+""");
+
+            var vfs = new Ludots.Core.Modding.VirtualFileSystem();
+            vfs.Mount("Core", core);
+            var pipeline = new ConfigPipeline(vfs, modLoader: null!);
+            var catalog = ConfigCatalogLoader.Load(pipeline);
+            var controllers = new Ludots.Core.Presentation.Assets.AnimatorControllerRegistry();
+
+            Assert.That(
+                () => new AnimatorControllerConfigLoader(pipeline, controllers).Load(catalog),
+                Throws.InvalidOperationException.With.Message.Contains("must be a semantic string"));
         }
 
         [Test]
@@ -483,6 +585,7 @@ namespace Ludots.Tests.Presentation
                                 RenderPath = VisualRenderPath.SkinnedMesh,
                                 Mobility = VisualMobility.Movable,
                                 LocalScale = Vector3.One,
+                                AssetIdParamKey = -1,
                             },
                         },
                     ],
@@ -575,6 +678,7 @@ namespace Ludots.Tests.Presentation
                                 RenderPath = VisualRenderPath.GpuSkinnedInstance,
                                 Mobility = VisualMobility.Movable,
                                 LocalScale = Vector3.One,
+                                AssetIdParamKey = -1,
                             },
                         },
                         new BehaviorSlot
@@ -591,6 +695,7 @@ namespace Ludots.Tests.Presentation
                                 Mobility = VisualMobility.Movable,
                                 LocalScale = Vector3.One,
                                 VisibilityParamKey = selectionVisibleParam,
+                                AssetIdParamKey = -1,
                             },
                         },
                     ],
@@ -676,6 +781,7 @@ namespace Ludots.Tests.Presentation
                                 RenderPath = VisualRenderPath.StaticMesh,
                                 Mobility = VisualMobility.Movable,
                                 LocalScale = Vector3.One,
+                                AssetIdParamKey = -1,
                             },
                         },
                     ],
@@ -689,6 +795,7 @@ namespace Ludots.Tests.Presentation
                     Rotation = Quaternion.Identity,
                     Scale = Vector3.One,
                 });
+            instances.BindDefinitions(definitions);
             Entity performer = instances.Create(
                     definitionId,
                     owner,
@@ -704,7 +811,8 @@ namespace Ludots.Tests.Presentation
                 world,
                 instances,
                 definitions,
-                new PresentationEventStream(),
+                new PresentationEventStream(PresentationTestConstants.EventStreamCapacity),
+                new PresentationOwnerChangeBuffer(8),
                 soundRequests);
             using var system = new PerformerEmitSystem(
                 world,
@@ -819,6 +927,7 @@ namespace Ludots.Tests.Presentation
                                     AssetKind = AssetKind.WorldHud,
                                     Mobility = VisualMobility.Movable,
                                     LocalScale = new Vector3(40f, 6f, 1f),
+                                    AssetIdParamKey = -1,
                                 },
                             },
                         ],
@@ -845,7 +954,8 @@ namespace Ludots.Tests.Presentation
 
                 TeamManager.SetRelationshipSymmetric(10, 20, TeamRelationship.Hostile);
 
-                    Entity performer = instances.Create(definitionId, owner, scopeId: 9101, PresentationAnchorKind.Entity, Vector3.Zero, stableId: 8101, Entity.Null, default);
+                instances.BindDefinitions(definitions);
+                Entity performer = instances.Create(definitionId, owner, scopeId: 9101, PresentationAnchorKind.Entity, Vector3.Zero, stableId: 8101, Entity.Null, default);
                 world.Get<PerformerState>(performer).BehaviorActiveMask = 1u;
 
                 var ownerGlobals = new Dictionary<string, object>
@@ -856,7 +966,8 @@ namespace Ludots.Tests.Presentation
                     world,
                     instances,
                     definitions,
-                    new PresentationEventStream(),
+                    new PresentationEventStream(PresentationTestConstants.EventStreamCapacity),
+                    new PresentationOwnerChangeBuffer(8),
                     soundRequests);
                 behaviorSystem.Update(0f);
 
@@ -1034,7 +1145,7 @@ namespace Ludots.Tests.Presentation
         public void PresentationEntityLifecycleSystem_PublishesSpawnAndDestroyFacts_AndFinalizesEntity()
         {
             using var world = World.Create();
-            var events = new PresentationEventStream();
+            var events = new PresentationEventStream(PresentationTestConstants.EventStreamCapacity);
             Entity entity = world.Create(
                 new PresentationStableId { Value = 99 },
                 new EntityTemplateKeyCm { TemplateKeyId = 1234 });
@@ -1075,6 +1186,7 @@ namespace Ludots.Tests.Presentation
             var definitions = new PerformerDefinitionRegistry();
             int definitionId = RegisterStaticVisualDefinition(definitions, "performer.synced.static", assetId: 7, materialId: 9);
             var instances = new PerformerEntityRuntime(world);
+            instances.BindDefinitions(definitions);
 
             Entity owner = world.Create(
                 WorldPositionCm.FromCm(250, 500),
@@ -1301,6 +1413,7 @@ namespace Ludots.Tests.Presentation
             int hiddenDef = RegisterStaticVisualDefinition(definitions, "hidden", assetId: 11, materialId: 21, visibilityParamKey: 500);
             int culledDef = RegisterStaticVisualDefinition(definitions, "culled", assetId: 12, materialId: 22, renderPath: VisualRenderPath.InstancedStaticMesh);
             var instances = new PerformerEntityRuntime(world);
+            instances.BindDefinitions(definitions);
 
             Quaternion visibleRotation = Quaternion.CreateFromAxisAngle(Vector3.UnitY, 0.25f);
             Quaternion hiddenRotation = Quaternion.CreateFromAxisAngle(Vector3.UnitX, 0.5f);
@@ -1646,6 +1759,7 @@ namespace Ludots.Tests.Presentation
                 materialId: 41,
                 renderPath: VisualRenderPath.InstancedStaticMesh);
             var instances = new PerformerEntityRuntime(world);
+            instances.BindDefinitions(definitions);
             var stableDrawCache = new StableDrawCache();
             Entity owner = world.Create(new CullState { IsVisible = true, LOD = LODLevel.High });
             Entity performer = instances.Create(
@@ -1684,6 +1798,7 @@ namespace Ludots.Tests.Presentation
                 new SkinnedVisualBatchBuffer());
 
             emit.Update(0.016f);
+            Assert.That(stableDrawCache.Count, Is.EqualTo(1));
             flush.Update(0.016f);
             Assert.That(snapshotBuffer.Count, Is.EqualTo(1));
             Assert.That(drawBuffer.Count, Is.EqualTo(1));
@@ -1694,6 +1809,9 @@ namespace Ludots.Tests.Presentation
             instances.SyncCullVisibility();
 
             emit.Update(0.016f);
+            Assert.That(stableDrawCache.Count, Is.EqualTo(0));
+            drawBuffer.Clear();
+            snapshotBuffer.Clear();
             flush.Update(0.016f);
             Assert.That(snapshotBuffer.Count, Is.EqualTo(0));
             Assert.That(drawBuffer.Count, Is.EqualTo(0));
@@ -1714,6 +1832,7 @@ namespace Ludots.Tests.Presentation
                 materialId: 71,
                 renderPath: VisualRenderPath.InstancedStaticMesh);
             var instances = new PerformerEntityRuntime(world);
+            instances.BindDefinitions(definitions);
             var stableDrawCache = new StableDrawCache();
             Entity owner = world.Create(new CullState { IsVisible = true, LOD = LODLevel.High });
             Entity performer = instances.Create(
@@ -1752,11 +1871,14 @@ namespace Ludots.Tests.Presentation
                 new SkinnedVisualBatchBuffer());
 
             emit.Update(0.016f);
-            Assert.That(requests.Count, Is.EqualTo(1));
+            Assert.That(requests.Count, Is.EqualTo(0));
+            Assert.That(stableDrawCache.Count, Is.EqualTo(1));
+            int revisionAfterFirstEmit = stableDrawCache.ContentRevision;
             flush.Update(0.016f);
 
             emit.Update(0.016f);
             Assert.That(requests.Count, Is.EqualTo(0), "Unchanged stable visuals should not enqueue fresh visual proxies every tick.");
+            Assert.That(stableDrawCache.ContentRevision, Is.EqualTo(revisionAfterFirstEmit), "Unchanged stable visuals should not rewrite stable cache content every tick.");
             flush.Update(0.016f);
 
             Assert.That(snapshotBuffer.Count, Is.EqualTo(1));
@@ -1788,9 +1910,12 @@ namespace Ludots.Tests.Presentation
                                 AssetId = assetId,
                                 MaterialId = materialId,
                                 RenderPath = renderPath,
-                                Mobility = VisualMobility.Movable,
+                                Mobility = renderPath == VisualRenderPath.InstancedStaticMesh
+                                    ? VisualMobility.Static
+                                    : VisualMobility.Movable,
                                 LocalScale = Vector3.One,
                                 VisibilityParamKey = visibilityParamKey,
+                                AssetIdParamKey = -1,
                             },
                         },
                     ],

@@ -12,23 +12,26 @@
         "fromStateIndex": 0,
         "toStateIndex": 1,
         "conditionKind": "FloatGreaterOrEqual",
-        "parameterIndex": 0,
+        "parameterIndex": "animation_acceptance.tank.locomotion.speed",
         "threshold": 0.25,
-        "durationSeconds": 0.12
+        "durationSeconds": 0.12,
+        "consumeTrigger": false
       },
       {
         "fromStateIndex": 1,
         "toStateIndex": 0,
         "conditionKind": "FloatLessOrEqual",
-        "parameterIndex": 0,
+        "parameterIndex": "animation_acceptance.tank.locomotion.speed",
         "threshold": 0.15,
-        "durationSeconds": 0.15
+        "durationSeconds": 0.15,
+        "consumeTrigger": false
       },
       {
         "fromStateIndex": 0,
         "toStateIndex": 2,
         "conditionKind": "Trigger",
-        "parameterIndex": 2,
+        "parameterIndex": "animation_acceptance.tank.fire.trigger",
+        "threshold": 0.0,
         "durationSeconds": 0.03,
         "consumeTrigger": true
       },
@@ -36,7 +39,8 @@
         "fromStateIndex": 1,
         "toStateIndex": 2,
         "conditionKind": "Trigger",
-        "parameterIndex": 2,
+        "parameterIndex": "animation_acceptance.tank.fire.trigger",
+        "threshold": 0.0,
         "durationSeconds": 0.02,
         "consumeTrigger": true
       },
@@ -44,8 +48,10 @@
         "fromStateIndex": 2,
         "toStateIndex": 0,
         "conditionKind": "AutoOnNormalizedTime",
+        "parameterIndex": "none",
         "threshold": 0.92,
-        "durationSeconds": 0.0
+        "durationSeconds": 0.0,
+        "consumeTrigger": false
       }
     ]
   },
@@ -63,39 +69,44 @@
         "fromStateIndex": 0,
         "toStateIndex": 1,
         "conditionKind": "FloatGreaterOrEqual",
-        "parameterIndex": 0,
+        "parameterIndex": "animation_acceptance.humanoid.locomotion.speed",
         "threshold": 0.20,
-        "durationSeconds": 0.08
+        "durationSeconds": 0.08,
+        "consumeTrigger": false
       },
       {
         "fromStateIndex": 1,
         "toStateIndex": 0,
         "conditionKind": "FloatLessOrEqual",
-        "parameterIndex": 0,
+        "parameterIndex": "animation_acceptance.humanoid.locomotion.speed",
         "threshold": 0.10,
-        "durationSeconds": 0.08
+        "durationSeconds": 0.08,
+        "consumeTrigger": false
       },
       {
         "fromStateIndex": 1,
         "toStateIndex": 2,
         "conditionKind": "FloatGreaterOrEqual",
-        "parameterIndex": 0,
+        "parameterIndex": "animation_acceptance.humanoid.locomotion.speed",
         "threshold": 0.75,
-        "durationSeconds": 0.06
+        "durationSeconds": 0.06,
+        "consumeTrigger": false
       },
       {
         "fromStateIndex": 2,
         "toStateIndex": 1,
         "conditionKind": "FloatLessOrEqual",
-        "parameterIndex": 0,
+        "parameterIndex": "animation_acceptance.humanoid.locomotion.speed",
         "threshold": 0.55,
-        "durationSeconds": 0.06
+        "durationSeconds": 0.06,
+        "consumeTrigger": false
       },
       {
         "fromStateIndex": 0,
         "toStateIndex": 3,
         "conditionKind": "Trigger",
-        "parameterIndex": 4,
+        "parameterIndex": "animation_acceptance.humanoid.fire.trigger",
+        "threshold": 0.0,
         "durationSeconds": 0.02,
         "consumeTrigger": true
       },
@@ -103,7 +114,8 @@
         "fromStateIndex": 1,
         "toStateIndex": 3,
         "conditionKind": "Trigger",
-        "parameterIndex": 4,
+        "parameterIndex": "animation_acceptance.humanoid.fire.trigger",
+        "threshold": 0.0,
         "durationSeconds": 0.02,
         "consumeTrigger": true
       },
@@ -111,7 +123,8 @@
         "fromStateIndex": 2,
         "toStateIndex": 3,
         "conditionKind": "Trigger",
-        "parameterIndex": 4,
+        "parameterIndex": "animation_acceptance.humanoid.fire.trigger",
+        "threshold": 0.0,
         "durationSeconds": 0.02,
         "consumeTrigger": true
       },
@@ -119,8 +132,10 @@
         "fromStateIndex": 3,
         "toStateIndex": 0,
         "conditionKind": "AutoOnNormalizedTime",
+        "parameterIndex": "none",
         "threshold": 0.92,
-        "durationSeconds": 0.0
+        "durationSeconds": 0.0,
+        "consumeTrigger": false
       }
     ]
   }

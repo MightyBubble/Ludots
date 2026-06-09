@@ -140,6 +140,8 @@ namespace Ludots.Tests.Presentation
                             Mobility = VisualMobility.Static,
                             RenderPath = VisualRenderPath.StaticMesh,
                             LocalScale = Vector3.One,
+                            AssetIdParamKey = -1,
+                            AssetSwapParamKey = -1,
                         },
                     },
                 ],
@@ -166,11 +168,13 @@ namespace Ludots.Tests.Presentation
                             AssetKind = kind,
                             AssetId = assetId,
                             Mobility = VisualMobility.Movable,
+                            RenderPath = VisualRenderPath.None,
                             LocalScale = Vector3.One,
+                            AssetIdParamKey = -1,
+                            AssetSwapParamKey = -1,
                         },
                     },
                 ],
-                DefaultTextId = 1,
             });
         }
 

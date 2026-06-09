@@ -3,13 +3,14 @@
   "runtimeSpawnReceiptChannelKey": "massNavigation.totalWar.runtimeSpawnReceipts",
   "formationAgent": {
     "templateId": "mass_navigation_total_war_formation_agent",
-    "heavy": true,
-    "navMass": 12.0,
-    "visualScale": 1.0,
-    "bodyRadiusCm": 720.0,
-    "speedCmPerSecond": 360.0
+    "profileId": "formation"
   },
   "initialSelectionFormationId": "shu_left_vanguard",
+  "initialSelectionEntityCapacity": 1,
+  "localPlayerTeamId": 1,
+  "selection": {
+    "formationSelectableTeamScope": "LocalPlayerTeam"
+  },
   "soldierTargetSync": {
     "targetChangeEpsilonCm": 12.0,
     "facingChangeEpsilonRadians": 0.035
@@ -28,11 +29,7 @@
       "teamId": 1,
       "soldierAgent": {
         "templateId": "mass_navigation_total_war_soldier_azure_light",
-        "heavy": false,
-        "navMass": 1.0,
-        "visualScale": 0.22,
-        "bodyRadiusCm": 20.0,
-        "speedCmPerSecond": 920.0
+        "profileId": "light"
       },
       "centerXCm": -2600,
       "centerYCm": -2200,
@@ -60,11 +57,7 @@
       "teamId": 1,
       "soldierAgent": {
         "templateId": "mass_navigation_total_war_soldier_azure_heavy",
-        "heavy": true,
-        "navMass": 4.0,
-        "visualScale": 0.34,
-        "bodyRadiusCm": 28.0,
-        "speedCmPerSecond": 780.0
+        "profileId": "heavy"
       },
       "centerXCm": 0,
       "centerYCm": -2500,
@@ -75,7 +68,7 @@
       },
       "outline": {
         "shape": "Circle",
-        "circle": { "radiusCm": 720, "ringWidthCm": 28 },
+        "circle": { "radiusCm": 720, "ringWidthCm": 28, "footprintVertexCount": 8 },
         "heightOffsetM": 0.22,
         "curveSampleCount": 24,
         "emissionPositionEpsilonM": 0.025,
@@ -92,11 +85,7 @@
       "teamId": 1,
       "soldierAgent": {
         "templateId": "mass_navigation_total_war_soldier_azure_light",
-        "heavy": false,
-        "navMass": 1.0,
-        "visualScale": 0.22,
-        "bodyRadiusCm": 20.0,
-        "speedCmPerSecond": 920.0
+        "profileId": "light"
       },
       "centerXCm": 2600,
       "centerYCm": -2200,
@@ -124,11 +113,7 @@
       "teamId": 2,
       "soldierAgent": {
         "templateId": "mass_navigation_total_war_soldier_crimson_light",
-        "heavy": false,
-        "navMass": 1.0,
-        "visualScale": 0.22,
-        "bodyRadiusCm": 20.0,
-        "speedCmPerSecond": 920.0
+        "profileId": "light"
       },
       "centerXCm": -2600,
       "centerYCm": 2500,
@@ -156,11 +141,7 @@
       "teamId": 2,
       "soldierAgent": {
         "templateId": "mass_navigation_total_war_soldier_crimson_heavy",
-        "heavy": true,
-        "navMass": 4.0,
-        "visualScale": 0.34,
-        "bodyRadiusCm": 28.0,
-        "speedCmPerSecond": 780.0
+        "profileId": "heavy"
       },
       "centerXCm": 0,
       "centerYCm": 2800,
@@ -171,7 +152,7 @@
       },
       "outline": {
         "shape": "Circle",
-        "circle": { "radiusCm": 720, "ringWidthCm": 28 },
+        "circle": { "radiusCm": 720, "ringWidthCm": 28, "footprintVertexCount": 8 },
         "heightOffsetM": 0.22,
         "curveSampleCount": 24,
         "emissionPositionEpsilonM": 0.025,
@@ -188,11 +169,7 @@
       "teamId": 2,
       "soldierAgent": {
         "templateId": "mass_navigation_total_war_soldier_crimson_light",
-        "heavy": false,
-        "navMass": 1.0,
-        "visualScale": 0.22,
-        "bodyRadiusCm": 20.0,
-        "speedCmPerSecond": 920.0
+        "profileId": "light"
       },
       "centerXCm": 2600,
       "centerYCm": 2500,

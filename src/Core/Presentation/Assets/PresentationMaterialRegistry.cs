@@ -18,7 +18,7 @@ namespace Ludots.Core.Presentation.Assets
                 throw new ArgumentOutOfRangeException(nameof(capacity));
             }
 
-            _ids = new StringIntRegistry(capacity, startId: 1, invalidId: 0, StringComparer.OrdinalIgnoreCase);
+            _ids = new StringIntRegistry(capacity, startId: 1, invalidId: 0, comparer: StringComparer.Ordinal);
             _data = new MaterialAssetDescriptor[capacity];
             _has = new bool[capacity];
 

@@ -1,7 +1,9 @@
 [
   {
     "id": "Effect.4X.BuildOutpost",
-    "tags": ["Effect.4X.BuildOutpost"],
+    "tags": [
+      "Effect.4X.BuildOutpost"
+    ],
     "presetType": "CreateUnit",
     "lifetime": "Instant",
     "unitCreation": {
@@ -13,66 +15,110 @@
   },
   {
     "id": "Effect.4X.OutpostComplete",
-    "tags": ["Effect.4X.OutpostComplete"],
+    "tags": [
+      "Effect.4X.OutpostComplete"
+    ],
     "presetType": "Buff",
     "lifetime": "After",
     "duration": {
-      "durationTicks": 1
+      "durationTicks": 1,
+      "periodTicks": 0,
+      "clockId": "FixedFrame"
     },
     "modifiers": [
-      { "attribute": "Production", "op": "Add", "value": 5 }
+      {
+        "attribute": "Production",
+        "op": "Add",
+        "value": 5
+      }
     ]
   },
   {
     "id": "Effect.4X.TechResearch",
-    "tags": ["Effect.4X.Tech"],
+    "tags": [
+      "Effect.4X.Tech"
+    ],
     "presetType": "Buff",
     "lifetime": "After",
     "participatesInResponse": false,
     "duration": {
-      "durationTicks": 300
+      "durationTicks": 300,
+      "periodTicks": 0,
+      "clockId": "FixedFrame"
     },
     "modifiers": [
-      { "attribute": "TechProgress", "op": "Add", "value": 1 }
+      {
+        "attribute": "TechProgress",
+        "op": "Add",
+        "value": 1
+      }
     ],
     "grantedTags": [
-      { "tag": "Status.Researching", "formula": "Fixed", "amount": 1 }
+      {
+        "tag": "Status.Researching",
+        "formula": "Fixed",
+        "amount": 1
+      }
     ]
   },
   {
     "id": "Effect.4X.TechComplete",
-    "tags": ["Effect.4X.Tech"],
+    "tags": [
+      "Effect.4X.Tech"
+    ],
     "presetType": "Buff",
     "lifetime": "Infinite",
     "participatesInResponse": false,
     "grantedTags": [
-      { "tag": "Tech.Agriculture", "formula": "Fixed", "amount": 1 }
+      {
+        "tag": "Tech.Agriculture",
+        "formula": "Fixed",
+        "amount": 1
+      }
     ],
     "modifiers": [
-      { "attribute": "FoodProduction", "op": "Add", "value": 10 }
+      {
+        "attribute": "FoodProduction",
+        "op": "Add",
+        "value": 10
+      }
     ]
   },
   {
     "id": "Effect.4X.DiplomacyPact",
-    "tags": ["Effect.4X.Diplomacy"],
+    "tags": [
+      "Effect.4X.Diplomacy"
+    ],
     "presetType": "Buff",
     "lifetime": "Infinite",
     "participatesInResponse": false,
     "grantedTags": [
-      { "tag": "Status.Allied", "formula": "Fixed", "amount": 1 }
+      {
+        "tag": "Status.Allied",
+        "formula": "Fixed",
+        "amount": 1
+      }
     ]
   },
   {
     "id": "Effect.4X.TradeRoute",
-    "tags": ["Effect.4X.Economy"],
+    "tags": [
+      "Effect.4X.Economy"
+    ],
     "presetType": "Buff",
     "lifetime": "After",
     "participatesInResponse": false,
     "duration": {
-      "durationTicks": 600
+      "durationTicks": 600,
+      "periodTicks": 0,
+      "clockId": "FixedFrame"
     },
     "modifiers": [
-      { "attribute": "Gold", "op": "Add", "value": 3 }
+      {
+        "attribute": "Gold",
+        "op": "Add",
+        "value": 3
+      }
     ],
     "stack": {
       "limit": 5,

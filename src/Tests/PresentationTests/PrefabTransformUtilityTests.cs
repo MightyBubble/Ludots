@@ -115,5 +115,85 @@ namespace Ludots.Tests.Presentation
             Assert.That(part.Grounding.AlignToGroundNormal, Is.True);
             Assert.That(part.Grounding.LayerIndex, Is.EqualTo(2));
         }
+
+        [Test]
+        public void MeshAssetConfigLoader_RejectsWrongCaseMeshAssetType()
+        {
+            string root = Path.Combine(Path.GetTempPath(), "Ludots_PrefabStrictCasingTests", Guid.NewGuid().ToString("N"));
+            string mod = Path.Combine(root, "PrefabStrictCaseMod");
+            Directory.CreateDirectory(Path.Combine(mod, "assets", "Presentation"));
+
+            File.WriteAllText(
+                Path.Combine(mod, "assets", "Presentation", "mesh_assets.json"),
+                """
+                [
+                  {
+                    "id": "test.mesh.base",
+                    "type": "model"
+                  }
+                ]
+                """);
+
+            var vfs = new VirtualFileSystem();
+            vfs.Mount("PrefabStrictCaseMod", mod);
+            var modLoader = new ModLoader(vfs, new FunctionRegistry(), new TriggerManager());
+            modLoader.LoadedModIds.Add("PrefabStrictCaseMod");
+
+            var pipeline = new ConfigPipeline(vfs, modLoader);
+            var meshRegistry = new MeshAssetRegistry();
+            var loader = new MeshAssetConfigLoader(pipeline, meshRegistry);
+
+            Assert.That(
+                () => loader.Load(),
+                Throws.InvalidOperationException.With.Message.Contains("invalid or missing type 'model'"));
+        }
+
+        [Test]
+        public void MeshAssetConfigLoader_RejectsWrongCaseQuaternionFields()
+        {
+            string root = Path.Combine(Path.GetTempPath(), "Ludots_PrefabStrictQuaternionTests", Guid.NewGuid().ToString("N"));
+            string mod = Path.Combine(root, "PrefabStrictQuaternionMod");
+            Directory.CreateDirectory(Path.Combine(mod, "assets", "Presentation"));
+
+            File.WriteAllText(
+                Path.Combine(mod, "assets", "Presentation", "mesh_assets.json"),
+                """
+                [
+                  {
+                    "id": "test.mesh.base",
+                    "type": "Model"
+                  }
+                ]
+                """);
+            File.WriteAllText(
+                Path.Combine(mod, "assets", "Presentation", "prefabs.json"),
+                """
+                [
+                  {
+                    "id": "test.prefab.rotated",
+                    "parts": [
+                      {
+                        "meshAssetId": "test.mesh.base",
+                        "localRotation": { "X": 0, "Y": 0.70710677, "Z": 0, "W": 0.70710677 }
+                      }
+                    ]
+                  }
+                ]
+                """);
+
+            var vfs = new VirtualFileSystem();
+            vfs.Mount("PrefabStrictQuaternionMod", mod);
+            var modLoader = new ModLoader(vfs, new FunctionRegistry(), new TriggerManager());
+            modLoader.LoadedModIds.Add("PrefabStrictQuaternionMod");
+
+            var pipeline = new ConfigPipeline(vfs, modLoader);
+            var meshRegistry = new MeshAssetRegistry();
+            var prefabRegistry = new PrefabRegistry();
+            var loader = new MeshAssetConfigLoader(pipeline, meshRegistry, prefabRegistry);
+
+            Assert.That(
+                () => loader.Load(),
+                Throws.InvalidOperationException.With.Message.Contains("unsupported field 'X'"));
+        }
     }
 }

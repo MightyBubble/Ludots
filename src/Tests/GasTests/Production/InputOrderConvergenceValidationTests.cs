@@ -2,6 +2,7 @@ using System;
 using System.Collections.Generic;
 using System.IO;
 using System.Reflection;
+using System.Text.RegularExpressions;
 using Arch.System;
 using Ludots.Core.Engine;
 using Ludots.Core.Gameplay.GAS.Orders;
@@ -126,6 +127,27 @@ namespace Ludots.Tests.GAS.Production
             Assert.That(chainActivateEffect.PendingBufferWindowMs, Is.EqualTo(0));
             Assert.That(chainActivateEffect.AllowQueuedMode, Is.False);
             Assert.That(chainActivateEffect.QueueFullPolicy, Is.EqualTo(QueueFullPolicy.RejectNew));
+        }
+
+        [Test]
+        public void GameEngine_OrderTypeBootstrap_HasNoImplicitOrderTypeFallbacks()
+        {
+            string repoRoot = FindRepoRoot();
+            string source = File.ReadAllText(Path.Combine(repoRoot, "src", "Core", "Engine", "GameEngine.cs"));
+
+            Assert.That(source, Does.Not.Contain("GetValueOrDefault(\"chainPass\""));
+            Assert.That(source, Does.Not.Contain("GetValueOrDefault(\"chainNegate\""));
+            Assert.That(source, Does.Not.Contain("GetValueOrDefault(\"chainActivateEffect\""));
+            Assert.That(
+                Regex.IsMatch(source, @"TryGetId\(\s*""castAbility\.Start""[\s\S]*\?\s*[\w]+\s*:\s*0"),
+                Is.False);
+            Assert.That(
+                Regex.IsMatch(source, @"TryGetId\(\s*""castAbility\.End""[\s\S]*\?\s*[\w]+\s*:\s*0"),
+                Is.False);
+
+            Assert.That(source, Does.Contain("RequireConfiguredOrderTypeId(responseChainOrderTypeIds, orderTypeRegistry, \"chainPass\""));
+            Assert.That(source, Does.Contain("RequireRegisteredOrderTypeId(orderTypeRegistry, \"castAbility.Start\")"));
+            Assert.That(source, Does.Contain("RequireRegisteredOrderTypeId(orderTypeRegistry, \"castAbility.End\")"));
         }
 
         private static List<ISystem<float>> GetSystems(GameEngine engine, SystemGroup group)

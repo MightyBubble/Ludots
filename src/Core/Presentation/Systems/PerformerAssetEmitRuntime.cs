@@ -227,6 +227,18 @@ namespace Ludots.Core.Presentation.Systems
             return _animatorStates.GetOverlayBySlot(slot);
         }
 
+        public bool TryGetAnimationOverlay(Entity entity, out AnimationOverlayRequest overlay)
+        {
+            if (_animatorStates == null || !_animatorStates.IsAllocated(entity))
+            {
+                overlay = default;
+                return false;
+            }
+
+            overlay = _animatorStates.GetOverlay(entity);
+            return true;
+        }
+
         private void EmitVisualAsset(
             Entity entity,
             in PerformerState state,
@@ -341,7 +353,7 @@ namespace Ludots.Core.Presentation.Systems
             float alpha)
         {
             float width = asset.ScaleParamKey >= 0
-                ? _runtime.ResolveFloat(entity, asset.ScaleParamKey, 1f)
+                ? RequireFloatParam(entity, asset.ScaleParamKey, "AssetBinding.scaleParamKey")
                 : MathF.Max(ResolveScale(entity, in asset, performerWorldScale).X, 0.001f);
             Vector4 color = ApplyAlpha(ResolveColor(entity, in asset, definition.DefaultColor), alpha);
             Vector3 p0 = position;
@@ -379,7 +391,9 @@ namespace Ludots.Core.Presentation.Systems
             Vector3 scale = ResolveScale(entity, in asset, performerWorldScale);
             Vector4 foreground = ApplyAlpha(ResolveColor(entity, in asset, definition.DefaultColor), alpha);
             Vector4 background = new Vector4(0.2f, 0.2f, 0.2f, foreground.W);
-            float value = asset.MaterialParamKey >= 0 ? _runtime.ResolveFloat(entity, asset.MaterialParamKey, 1f) : 1f;
+            float value = asset.MaterialParamKey >= 0
+                ? ResolveWorldHudFloatParam(entity, asset.MaterialParamKey, "AssetBinding.materialParamKey")
+                : 1f;
             float width = scale.X > 0f ? scale.X : 40f;
             float height = scale.Y > 0f ? scale.Y : 6f;
 
@@ -413,25 +427,30 @@ namespace Ludots.Core.Presentation.Systems
             int tokenId = ResolveAssetId(entity, in asset);
             if (tokenId <= 0)
             {
-                tokenId = definition.DefaultTextId;
+                throw new InvalidOperationException(
+                    $"WorldText AssetBinding for performer definition '{definition.Key}' resolved invalid asset id {tokenId}.");
             }
 
-            float value0 = asset.ScaleParamKey >= 0 ? _runtime.ResolveFloat(entity, asset.ScaleParamKey, 0f) : 0f;
-            float value1 = asset.MaterialParamKey >= 0 ? _runtime.ResolveFloat(entity, asset.MaterialParamKey, 0f) : 0f;
+            float value0 = asset.ScaleParamKey >= 0
+                ? ResolveWorldHudFloatParam(entity, asset.ScaleParamKey, "AssetBinding.scaleParamKey")
+                : 0f;
+            float value1 = asset.MaterialParamKey >= 0
+                ? ResolveWorldHudFloatParam(entity, asset.MaterialParamKey, "AssetBinding.materialParamKey")
+                : 0f;
             WorldHudValueMode valueMode = definition.WorldTextMode;
             int fontSize = definition.DefaultFontSize > 0 ? definition.DefaultFontSize : 16;
-            int legacyStringId = valueMode == WorldHudValueMode.None ? tokenId : 0;
-            PresentationTextPacket packet = PresentationTextPacket.FromLegacyWorldHud(tokenId, valueMode, value0, value1);
+            int stringTableId = valueMode == WorldHudValueMode.None ? tokenId : 0;
+            PresentationTextPacket packet = PresentationTextPacket.FromWorldHudValueMode(tokenId, valueMode, value0, value1);
 
             _requests.Add(PresentationRequest.FromWorldHud(state.OwnerEntity, new WorldHudItem
             {
                 StableId = HudItemIdentity.ComposeStableId(state.StableId, WorldHudItemKind.Text, definitionId),
-                DirtySerial = HudItemIdentity.ComposeTextDirtySerial(fontSize, legacyStringId, (int)valueMode, value0, value1, color, packet),
+                DirtySerial = HudItemIdentity.ComposeTextDirtySerial(fontSize, stringTableId, (int)valueMode, value0, value1, color, packet),
                 Kind = WorldHudItemKind.Text,
                 WorldPosition = position,
                 Value0 = value0,
                 Value1 = value1,
-                Id0 = legacyStringId,
+                Id0 = stringTableId,
                 Id1 = (int)valueMode,
                 FontSize = fontSize,
                 Color0 = color,
@@ -478,28 +497,63 @@ namespace Ludots.Core.Presentation.Systems
 
         private bool ResolveAssetVisibility(Entity entity, in AssetBindingConfig asset)
         {
-            return asset.VisibilityParamKey < 0 || _runtime.ResolveInt(entity, asset.VisibilityParamKey, 1) != 0;
+            return asset.VisibilityParamKey < 0 ||
+                RequireIntParam(entity, asset.VisibilityParamKey, "AssetBinding.visibilityParamKey") != 0;
         }
 
         private int ResolveAssetId(Entity entity, in AssetBindingConfig asset)
         {
-            if (asset.AssetSwapParamKey < 0) return asset.AssetId;
-            if (!_runtime.TryResolveInt(entity, asset.AssetSwapParamKey, out int resolved)) return asset.AssetId;
+            if (asset.AssetIdParamKey >= 0)
+            {
+                if (!_runtime.TryResolveInt(entity, asset.AssetIdParamKey, out int assetId) || assetId <= 0)
+                {
+                    throw new InvalidOperationException(
+                        $"Performer AssetBinding assetIdParamKey {asset.AssetIdParamKey} did not resolve to a registered asset id.");
+                }
+
+                return assetId;
+            }
+
+            if (asset.AssetSwapParamKey < 0)
+            {
+                return asset.AssetId;
+            }
+
+            if (!_runtime.TryResolveInt(entity, asset.AssetSwapParamKey, out int resolved))
+            {
+                throw new InvalidOperationException(
+                    $"Performer AssetBinding assetSwapParamKey {asset.AssetSwapParamKey} did not resolve to a swap value.");
+            }
+
             AssetSwapEntry[] table = asset.AssetSwapTable ?? Array.Empty<AssetSwapEntry>();
-            if (table.Length == 0) return resolved;
             for (int i = 0; i < table.Length; i++)
             {
                 ref readonly AssetSwapEntry entry = ref table[i];
-                if (MathF.Abs(entry.ParamValue - resolved) <= 0.0001f) return entry.AssetId;
+                if (MathF.Abs(entry.ParamValue - resolved) <= 0.0001f)
+                {
+                    return entry.AssetId;
+                }
             }
-            return asset.AssetId;
+
+            throw new InvalidOperationException(
+                $"Performer AssetBinding assetSwapParamKey {asset.AssetSwapParamKey} resolved value {resolved} with no matching assetSwapTable entry.");
         }
 
         private int ResolveMaterialId(Entity entity, in AssetBindingConfig asset)
         {
-            return asset.MaterialParamKey >= 0
-                ? _runtime.ResolveInt(entity, asset.MaterialParamKey, asset.MaterialId)
-                : asset.MaterialId;
+            if (asset.MaterialParamKey < 0)
+            {
+                return asset.MaterialId;
+            }
+
+            int materialId = RequireIntParam(entity, asset.MaterialParamKey, "AssetBinding.materialParamKey");
+            if (materialId <= 0)
+            {
+                throw new InvalidOperationException(
+                    $"AssetBinding.materialParamKey {asset.MaterialParamKey} resolved invalid material id {materialId}.");
+            }
+
+            return materialId;
         }
 
         private Vector3 ResolveScale(Entity entity, in AssetBindingConfig asset, Vector3 performerWorldScale)
@@ -508,7 +562,7 @@ namespace Ludots.Core.Presentation.Systems
             scale = scale == Vector3.Zero ? Vector3.One : scale;
             scale *= asset.LocalScale == Vector3.Zero ? Vector3.One : asset.LocalScale;
             if (asset.ScaleParamKey >= 0)
-                scale *= _runtime.ResolveFloat(entity, asset.ScaleParamKey, 1f);
+                scale *= RequireFloatParam(entity, asset.ScaleParamKey, "AssetBinding.scaleParamKey");
             return scale;
         }
 
@@ -533,8 +587,43 @@ namespace Ludots.Core.Presentation.Systems
         private Vector4 ResolveColor(Entity entity, in AssetBindingConfig asset, Vector4 defaultColor)
         {
             return asset.ColorParamKey >= 0
-                ? _runtime.ResolveVector(entity, asset.ColorParamKey, defaultColor)
+                ? RequireVectorParam(entity, asset.ColorParamKey, "AssetBinding.colorParamKey")
                 : defaultColor;
+        }
+
+        private float ResolveWorldHudFloatParam(Entity entity, int paramKey, string context)
+        {
+            return RequireFloatParam(entity, paramKey, context);
+        }
+
+        private int RequireIntParam(Entity entity, int paramKey, string context)
+        {
+            if (!_runtime.TryResolveInt(entity, paramKey, out int value))
+            {
+                throw new InvalidOperationException($"{context} {paramKey} did not resolve to an int param value.");
+            }
+
+            return value;
+        }
+
+        private float RequireFloatParam(Entity entity, int paramKey, string context)
+        {
+            if (!_runtime.TryResolveFloat(entity, paramKey, out float value))
+            {
+                throw new InvalidOperationException($"{context} {paramKey} did not resolve to a float param value.");
+            }
+
+            return value;
+        }
+
+        private Vector4 RequireVectorParam(Entity entity, int paramKey, string context)
+        {
+            if (!_runtime.TryResolveVector(entity, paramKey, out Vector4 value))
+            {
+                throw new InvalidOperationException($"{context} {paramKey} did not resolve to a vector param value.");
+            }
+
+            return value;
         }
 
         private AnimatorPackedState ResolveAnimator(Entity entity, VisualRenderPath renderPath)
@@ -565,14 +654,13 @@ namespace Ludots.Core.Presentation.Systems
 
         private static VisualRenderPath ResolveRenderPath(in AssetBindingConfig asset)
         {
-            if (asset.RenderPath != VisualRenderPath.None)
+            if (asset.RenderPath == VisualRenderPath.None)
             {
-                return asset.RenderPath;
+                throw new InvalidOperationException(
+                    $"Visual AssetBinding assetKind '{asset.AssetKind}' requires an explicit renderPath.");
             }
 
-            return asset.AssetKind == AssetKind.SkinnedMesh
-                ? VisualRenderPath.SkinnedMesh
-                : VisualRenderPath.StaticMesh;
+            return asset.RenderPath;
         }
 
         private static bool IsWithinMaxLod(LODLevel lod, in AssetBindingConfig asset)

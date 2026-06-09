@@ -109,15 +109,16 @@ internal sealed class MassNavigationAuthoringContract
     private void ValidateAll()
     {
         ValidateRequiredMeshAssets();
-        ValidatePerformer(_config.Presentation.BlockerPerformerId);
-        ValidatePerformer(_config.Presentation.HotspotPerformerId);
-        ValidateTemplate(_config.Presentation.BlockerTemplateId);
-        ValidateTemplate(_config.Presentation.HotspotTemplateId);
 
         if (!_config.ScenarioRuntime.AutoSpawnConfiguredScenario)
         {
             return;
         }
+
+        ValidatePerformer(_config.Presentation.BlockerPerformerId);
+        ValidatePerformer(_config.Presentation.HotspotPerformerId);
+        ValidateTemplate(_config.Presentation.BlockerTemplateId);
+        ValidateTemplate(_config.Presentation.HotspotTemplateId);
 
         for (int i = 0; i < _config.Presentation.Teams.Length; i++)
         {

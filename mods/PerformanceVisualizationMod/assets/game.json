@@ -2,6 +2,7 @@
   "startupMapId": "visual_benchmark",
   "presentation": {
     "performerInstanceCapacity": 65536,
+    "gasPresentationEventCapacity": 65536,
     "screenHudCapacity": 262144,
     "worldHudCapacity": 262144
   }

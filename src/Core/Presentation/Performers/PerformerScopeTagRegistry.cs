@@ -7,9 +7,9 @@ namespace Ludots.Core.Presentation.Performers
     {
         private static StringIntRegistry _ids = CreateRegistry();
 
-        public static int Register(string name) => _ids.Register(name);
+        public static int Register(string name) => _ids.Register(Canonicalize(name));
 
-        public static int GetId(string name) => _ids.GetId(name);
+        public static int GetId(string name) => string.IsNullOrWhiteSpace(name) ? 0 : _ids.GetId(Canonicalize(name));
 
         public static string GetName(int id) => _ids.GetName(id);
 
@@ -24,7 +24,23 @@ namespace Ludots.Core.Presentation.Performers
                 capacity: 128,
                 startId: 1,
                 invalidId: 0,
-                comparer: StringComparer.OrdinalIgnoreCase);
+                comparer: StringComparer.Ordinal);
+        }
+
+        private static string Canonicalize(string name)
+        {
+            if (string.IsNullOrWhiteSpace(name))
+            {
+                throw new ArgumentException("Performer scope tag must not be null or whitespace.", nameof(name));
+            }
+
+            string trimmed = name.Trim();
+            if (!string.Equals(name, trimmed, StringComparison.Ordinal))
+            {
+                throw new ArgumentException("Performer scope tag must not include leading or trailing whitespace.", nameof(name));
+            }
+
+            return name;
         }
     }
 }

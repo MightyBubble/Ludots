@@ -1,0 +1,306 @@
+using System;
+using System.IO;
+using Arch.Core;
+using Ludots.Core.Config;
+using Ludots.Core.Gameplay.GAS;
+using Ludots.Core.Gameplay.GAS.Bindings;
+using Ludots.Core.Gameplay.GAS.Components;
+using Ludots.Core.Gameplay.GAS.Config;
+using Ludots.Core.Gameplay.Teams;
+using Ludots.Core.Modding;
+using Ludots.Core.NodeLibraries.GASGraph;
+using Ludots.Core.Scripting;
+using NUnit.Framework;
+using static NUnit.Framework.Assert;
+
+namespace Ludots.Tests.GAS
+{
+    [TestFixture]
+    public class GasStrictnessTests
+    {
+        private readonly TagOps _tagOps = new();
+
+        [Test]
+        public void RelationshipFilter_Parse_RejectsAliasesCasingWhitespaceAndNumericValues()
+        {
+            That(RelationshipFilterUtil.Parse("Hostile"), Is.EqualTo(RelationshipFilter.Hostile));
+
+            Throws<InvalidOperationException>(() => RelationshipFilterUtil.Parse("hostile"));
+            Throws<InvalidOperationException>(() => RelationshipFilterUtil.Parse(" Hostile"));
+            Throws<InvalidOperationException>(() => RelationshipFilterUtil.Parse("1"));
+            Throws<ArgumentException>(() => RelationshipFilterUtil.Parse(null!));
+        }
+
+        [Test]
+        public void RelationshipFilter_Passes_RejectsUnsupportedEnumValue()
+        {
+            Throws<ArgumentOutOfRangeException>(() =>
+                RelationshipFilterUtil.Passes((RelationshipFilter)255, sourceTeamId: 1, targetTeamId: 2));
+        }
+
+        [Test]
+        public void GasConditionEvaluator_RejectsNoneAndUnsupportedKind()
+        {
+            using var world = World.Create();
+            var target = world.Create(new GameplayTagContainer());
+
+            var none = new GasCondition(GasConditionKind.None, tagId: 1, TagSense.Present);
+            Throws<InvalidOperationException>(() =>
+                GasConditionEvaluator.ShouldExpire(world, target, in none, _tagOps));
+
+            var unsupported = new GasCondition((GasConditionKind)255, tagId: 1, TagSense.Present);
+            Throws<ArgumentOutOfRangeException>(() =>
+                GasConditionEvaluator.ShouldExpire(world, target, in unsupported, _tagOps));
+        }
+
+        [Test]
+        public void GraphTargetList_FilterRelationship_RejectsUnsupportedModeBeforeApiUse()
+        {
+            using var world = World.Create();
+
+            Throws<ArgumentOutOfRangeException>(() => ExecuteInvalidRelationshipFilterMode(world));
+        }
+
+        [TestCase(
+            """
+            [
+              {
+                "Id": "Bind.Physics.ForceInput2D.X",
+                "attribute": "Physics.ForceRequestX",
+                "sink": "Physics.ForceInput2D",
+                "channel": 0,
+                "mode": "Override",
+                "scale": 1.0,
+                "resetPolicy": "None"
+              }
+            ]
+            """,
+            "exact string field 'id'")]
+        [TestCase(
+            """
+            [
+              {
+                "id": "Bind.Physics.ForceInput2D.X",
+                "attribute": "Physics.ForceRequestX",
+                "sink": "Physics.ForceInput2D",
+                "channel": 0,
+                "mode": "override",
+                "scale": 1.0,
+                "resetPolicy": "None"
+              }
+            ]
+            """,
+            "unsupported mode 'override'")]
+        [TestCase(
+            """
+            [
+              {
+                "id": "Bind.Physics.ForceInput2D.X",
+                "attribute": "Physics.ForceRequestX",
+                "sink": "Physics.ForceInput2D",
+                "channel": 0,
+                "mode": "Override",
+                "resetPolicy": "None"
+              }
+            ]
+            """,
+            "scale requires an explicit finite number")]
+        [TestCase(
+            """
+            [
+              {
+                "id": "Bind.Physics.ForceInput2D.X",
+                "attribute": " Physics.ForceRequestX",
+                "sink": "Physics.ForceInput2D",
+                "channel": 0,
+                "mode": "Override",
+                "scale": 1.0,
+                "resetPolicy": "None"
+              }
+            ]
+            """,
+            "attribute must not include")]
+        public void AttributeBindingLoader_RejectsAliasesImplicitFieldsAndNonCanonicalStrings(
+            string bindingsJson,
+            string expectedMessage)
+        {
+            string root = CreateTempRoot("Ludots_GasStrictness_AttributeBindings");
+            try
+            {
+                Directory.CreateDirectory(Path.Combine(root, "Configs", "GAS"));
+                File.WriteAllText(Path.Combine(root, "Configs", "GAS", "attribute_bindings.json"), bindingsJson);
+
+                var pipeline = BuildCorePipeline(root);
+                var catalog = BuildCatalog("GAS/attribute_bindings.json");
+                var sinks = new AttributeSinkRegistry();
+                GasAttributeSinks.RegisterBuiltins(sinks);
+                var registry = new AttributeBindingRegistry();
+                var loader = new AttributeBindingLoader(pipeline, sinks, registry);
+
+                InvalidOperationException ex = Throws<InvalidOperationException>(() =>
+                    loader.Load(catalog, relativePath: "GAS/attribute_bindings.json"))!;
+                That(ex.Message, Does.Contain(expectedMessage));
+            }
+            finally
+            {
+                TryDeleteDirectory(root);
+            }
+        }
+
+        [TestCase(
+            """
+            [
+              {
+                "Id": "SourceToResolved",
+                "payloadSource": "OriginalSource",
+                "payloadTarget": "ResolvedEntity",
+                "payloadTargetContext": "OriginalTarget"
+              }
+            ]
+            """,
+            "exact string field 'id'")]
+        [TestCase(
+            """
+            [
+              {
+                "id": "SourceToResolved",
+                "payloadSource": "originalsource",
+                "payloadTarget": "ResolvedEntity",
+                "payloadTargetContext": "OriginalTarget"
+              }
+            ]
+            """,
+            "unsupported payloadSource 'originalsource'")]
+        [TestCase(
+            """
+            [
+              {
+                "id": "SourceToResolved",
+                "payloadSource": "OriginalSource",
+                "payloadTarget": "ResolvedEntity",
+                "payloadTargetContext": "OriginalTarget "
+              }
+            ]
+            """,
+            "payloadTargetContext must not include")]
+        public void TargetDispatchPresetLoader_RejectsAliasesAndNonCanonicalStrings(
+            string presetsJson,
+            string expectedMessage)
+        {
+            string root = CreateTempRoot("Ludots_GasStrictness_TargetDispatch");
+            try
+            {
+                Directory.CreateDirectory(Path.Combine(root, "Configs", "GAS"));
+                File.WriteAllText(Path.Combine(root, "Configs", "GAS", "target_dispatch_presets.json"), presetsJson);
+
+                var pipeline = BuildCorePipeline(root);
+                var catalog = BuildCatalog("GAS/target_dispatch_presets.json");
+                var registry = new TargetDispatchPresetRegistry();
+                var loader = new TargetDispatchPresetLoader(pipeline, registry);
+
+                InvalidOperationException ex = Throws<InvalidOperationException>(() =>
+                    loader.Load(catalog, relativePath: "GAS/target_dispatch_presets.json"))!;
+                That(ex.Message, Does.Contain(expectedMessage));
+            }
+            finally
+            {
+                TryDeleteDirectory(root);
+            }
+        }
+
+        [TestCase(
+            """{ "Mode": "Auto", "stepEveryFixedTicks": 1 }""",
+            "mode requires an explicit semantic string")]
+        [TestCase(
+            """{ "mode": "auto", "stepEveryFixedTicks": 1 }""",
+            "mode 'auto' is invalid")]
+        [TestCase(
+            """{ "mode": "Auto" }""",
+            "stepEveryFixedTicks requires an explicit integer field")]
+        public void GasClockConfigLoader_RejectsImplicitDefaultsAndLooseCasing(
+            string clockJson,
+            string expectedMessage)
+        {
+            string root = CreateTempRoot("Ludots_GasStrictness_Clock");
+            try
+            {
+                Directory.CreateDirectory(Path.Combine(root, "Configs", "GAS"));
+                File.WriteAllText(Path.Combine(root, "Configs", "GAS", "clock.json"), clockJson);
+
+                var pipeline = BuildCorePipeline(root);
+                var catalog = new ConfigCatalog();
+                catalog.Add(new ConfigCatalogEntry("GAS/clock.json", ConfigMergePolicy.DeepObject));
+                var loader = new GasClockConfigLoader(pipeline);
+
+                InvalidOperationException ex = Throws<InvalidOperationException>(() =>
+                    loader.Load(catalog, relativePath: "GAS/clock.json"))!;
+                That(ex.Message, Does.Contain(expectedMessage));
+            }
+            finally
+            {
+                TryDeleteDirectory(root);
+            }
+        }
+
+        [Test]
+        public void GasSemanticRegistries_DoNotProvideCaseInsensitiveAliases()
+        {
+            var sinks = new AttributeSinkRegistry();
+            GasAttributeSinks.RegisterBuiltins(sinks);
+            That(sinks.GetId("Physics.ForceInput2D"), Is.GreaterThanOrEqualTo(0));
+            That(sinks.GetId("physics.forceinput2d"), Is.EqualTo(-1));
+
+            var presets = new TargetDispatchPresetRegistry();
+            presets.Register("SourceToResolved", new TargetResolverContextMapping
+            {
+                PayloadSource = ContextSlot.OriginalSource,
+                PayloadTarget = ContextSlot.ResolvedEntity,
+                PayloadTargetContext = ContextSlot.OriginalTarget,
+            });
+
+            That(presets.GetId("SourceToResolved"), Is.GreaterThan(0));
+            That(presets.TryGetId("sourcetoresolved", out _), Is.False);
+            Throws<InvalidOperationException>(() => presets.GetId("sourcetoresolved"));
+        }
+
+        private static void ExecuteInvalidRelationshipFilterMode(World world)
+        {
+            Span<Entity> buffer = stackalloc Entity[1];
+            var targets = new GraphTargetList(buffer);
+            targets.FilterRelationship(world, null!, Entity.Null, mode: 255);
+        }
+
+        private static string CreateTempRoot(string prefix)
+        {
+            string root = Path.Combine(Path.GetTempPath(), prefix, Guid.NewGuid().ToString("N"));
+            Directory.CreateDirectory(root);
+            return root;
+        }
+
+        private static ConfigPipeline BuildCorePipeline(string coreRoot)
+        {
+            var vfs = new VirtualFileSystem();
+            vfs.Mount("Core", coreRoot);
+            var modLoader = new ModLoader(vfs, new FunctionRegistry(), new TriggerManager());
+            return new ConfigPipeline(vfs, modLoader);
+        }
+
+        private static ConfigCatalog BuildCatalog(string path)
+        {
+            var catalog = new ConfigCatalog();
+            catalog.Add(new ConfigCatalogEntry(path, ConfigMergePolicy.ArrayById, "id"));
+            return catalog;
+        }
+
+        private static void TryDeleteDirectory(string path)
+        {
+            try
+            {
+                if (Directory.Exists(path)) Directory.Delete(path, recursive: true);
+            }
+            catch
+            {
+            }
+        }
+    }
+}

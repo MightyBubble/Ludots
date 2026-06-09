@@ -15,9 +15,15 @@ public sealed class MassNavigationAgentProfileSetConfig
         }
 
         bool foundDefault = false;
+        var profileIds = new HashSet<string>(StringComparer.Ordinal);
         for (int i = 0; i < Profiles.Length; i++)
         {
             Profiles[i].Validate(i);
+            if (!profileIds.Add(Profiles[i].Id))
+            {
+                throw new InvalidOperationException($"Mass-nav agentProfiles contains duplicate profile id '{Profiles[i].Id}'.");
+            }
+
             if (string.Equals(Profiles[i].Id, DefaultProfileId, StringComparison.Ordinal))
             {
                 foundDefault = true;

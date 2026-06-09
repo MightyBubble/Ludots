@@ -254,8 +254,8 @@ namespace Ludots.Tests.Presentation
                         StableId = HudItemIdentity.ComposeStableId(i + 1, WorldHudItemKind.Text, discriminator: 2),
                         DirtySerial = HudItemIdentity.ComposeTextDirtySerial(
                             fontSize,
-                            legacyStringId: 0,
-                            legacyModeId: (int)WorldHudValueMode.AttributeCurrent,
+                            stringTableId: 0,
+                            valueModeId: (int)WorldHudValueMode.AttributeCurrent,
                             value0: numericValue,
                             value1: 0f,
                             color: textColor,

@@ -31,7 +31,12 @@ namespace Ludots.Tests.ThreeC
     [TestFixture]
     public class ThreeCSystemTests
     {
-        private static CameraCullingRuntimeConfig TestCameraCullingConfig => new CameraCullingRuntimeConfig();
+        private static CameraCullingRuntimeConfig TestCameraCullingConfig => new CameraCullingRuntimeConfig
+        {
+            HighLodDistanceCm = 4000f,
+            MediumLodDistanceCm = 10000f,
+            LowLodDistanceCm = 20000f,
+        };
 
         // 鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨�?
         //  Test Doubles

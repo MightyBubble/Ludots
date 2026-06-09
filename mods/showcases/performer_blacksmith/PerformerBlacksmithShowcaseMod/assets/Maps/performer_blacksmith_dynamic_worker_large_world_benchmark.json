@@ -5,6 +5,7 @@
   "Metadata": {
     "performerBlacksmith": {
       "dynamicWorkerBenchmarkTotal": 30000,
+      "dynamicWorkerScatterSeed": 91543,
       "dynamicWorkerScatterPaddingCm": 32000.0,
       "dynamicWorkerScatterJitterCm": 1400.0,
       "dynamicWorkerMovementPaddingCm": 32000.0,

@@ -17,4 +17,3 @@ internal static class MassNavigationComponentAuthoring
         ComponentRegistry.Register<MassNavigationAgentProfile>("MassNavigationAgentProfile", modId);
     }
 }
-

@@ -10,15 +10,6 @@
       "OrderBuffer": {},
       "SelectionSelectableTag": {},
       "SelectionSelectableState": { "IsEnabled": true },
-      "SpatialBounds": { "kind": "Footprint2D", "localCenterCm": { "x": 0, "y": 0 }, "localCenterYCm": 0 },
-      "SpatialFootprint2D": {
-        "vertices": [
-          { "x": -650, "y": -480 },
-          { "x": 650, "y": -480 },
-          { "x": 650, "y": 480 },
-          { "x": -650, "y": 480 }
-        ]
-      },
       "AttributeBuffer": {
         "base": { "Health": 1200 },
         "current": { "Health": 1080 }
@@ -95,14 +86,7 @@
       "Name": { "Value": "MassNavigation.TotalWar.ObstacleOverlay" },
       "WorldPositionCm": { "Value": { "X": 0, "Y": 0 } },
       "VisualHeightmapSampleState": {},
-      "FacingDirection": { "AngleRad": 0.0 },
-      "TotalWarObstacleOverlay": {
-        "RadiusCm": 300.0,
-        "HeightOffsetM": 0.1,
-        "BorderWidthCm": 24.0,
-        "FillColor": { "X": 0.16, "Y": 0.16, "Z": 0.12, "W": 0.24 },
-        "BorderColor": { "X": 0.95, "Y": 0.78, "Z": 0.38, "W": 0.95 }
-      }
+      "FacingDirection": { "AngleRad": 0.0 }
     }
   }
 ]

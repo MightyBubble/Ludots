@@ -21,7 +21,7 @@ namespace Ludots.Core.Presentation.Performers
 
     /// <summary>
     /// Declarative performer definition. Visual output is authored through behavior slots,
-    /// not through legacy visual-kind fields.
+    /// not through visual-kind side channels.
     /// </summary>
     public sealed class PerformerDefinition
     {
@@ -79,7 +79,6 @@ namespace Ludots.Core.Presentation.Performers
         public Vector4 DefaultColor = new(1f, 1f, 1f, 1f);
         public float DefaultLifetime;
         public int DefaultFontSize = 16;
-        public int DefaultTextId;
         public int[] RequiredAttributeIds = System.Array.Empty<int>();
 
         /// <summary>
@@ -362,9 +361,7 @@ namespace Ludots.Core.Presentation.Performers
                     DefaultLifetime <= 0f &&
                     PositionYDriftPerSecond == 0f &&
                     VisibilityCondition.GraphProgramId <= 0;
-                NeedsRetainedPresentationRequestLifecycleTick =
-                    UsesRetainedPresentationRequest &&
-                    (DefaultLifetime > 0f || VisibilityCondition.Inline != InlineConditionKind.None || VisibilityCondition.GraphProgramId > 0);
+                NeedsRetainedPresentationRequestLifecycleTick = UsesRetainedPresentationRequest;
                 return;
             }
 
@@ -563,9 +560,7 @@ namespace Ludots.Core.Presentation.Performers
                 DefaultLifetime <= 0f &&
                 PositionYDriftPerSecond == 0f &&
                 VisibilityCondition.GraphProgramId <= 0;
-            NeedsRetainedPresentationRequestLifecycleTick =
-                UsesRetainedPresentationRequest &&
-                (DefaultLifetime > 0f || VisibilityCondition.Inline != InlineConditionKind.None || VisibilityCondition.GraphProgramId > 0);
+            NeedsRetainedPresentationRequestLifecycleTick = UsesRetainedPresentationRequest;
             SupportsSingleVisualProxyFastEmit =
                 AssetBehaviorIndices.Length == 1 &&
                 SupportsVisualProxyFastEmitFor(Behaviors[AssetBehaviorIndices[0]].AssetBinding);
@@ -642,6 +637,7 @@ namespace Ludots.Core.Presentation.Performers
                    asset.ScaleParamKey < 0 &&
                    asset.ColorParamKey < 0 &&
                    asset.MaterialParamKey < 0 &&
+                   asset.AssetIdParamKey < 0 &&
                    asset.AssetSwapParamKey < 0 &&
                    asset.VisibilityParamKey < 0 &&
                    !HasAssetSwapTable(asset);
@@ -763,6 +759,7 @@ namespace Ludots.Core.Presentation.Performers
         {
             AddIfValid(floatParams, asset.ScaleParamKey);
             AddIfValid(intParams, asset.MaterialParamKey);
+            AddIfValid(intParams, asset.AssetIdParamKey);
             AddIfValid(intParams, asset.AssetSwapParamKey);
             AddIfValid(intParams, asset.VisibilityParamKey);
             AddIfValid(vectorParams, asset.ColorParamKey);
@@ -776,6 +773,7 @@ namespace Ludots.Core.Presentation.Performers
         {
             AddIfValid(floatParams, asset.ScaleParamKey);
             AddIfValid(floatParams, asset.MaterialParamKey);
+            AddIfValid(intParams, asset.AssetIdParamKey);
             AddIfValid(intParams, asset.AssetSwapParamKey);
             AddIfValid(intParams, asset.VisibilityParamKey);
             AddIfValid(vectorParams, asset.ColorParamKey);

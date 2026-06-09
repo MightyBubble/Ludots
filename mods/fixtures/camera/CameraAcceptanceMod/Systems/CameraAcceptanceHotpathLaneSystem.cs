@@ -341,8 +341,8 @@ namespace CameraAcceptanceMod.Systems
                         StableId = HudItemIdentity.ComposeStableId(entity.Id, WorldHudItemKind.Text, discriminator: 2),
                         DirtySerial = HudItemIdentity.ComposeTextDirtySerial(
                             fontSize: 14,
-                            legacyStringId: 0,
-                            legacyModeId: (int)WorldHudValueMode.Constant,
+                            stringTableId: 0,
+                            valueModeId: (int)WorldHudValueMode.Constant,
                             value0: 100 + (entity.Id % 900),
                             value1: 0f,
                             color: TextColor,

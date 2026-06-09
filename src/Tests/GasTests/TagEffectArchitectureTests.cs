@@ -1229,8 +1229,9 @@ namespace Ludots.Tests.GAS
                     ""tags"": [""Test.Buff""],
                     ""presetType"": ""None"",
                     ""lifetime"": ""After"",
-                    ""duration"": { ""durationTicks"": 100 },
-                    ""expireCondition"": { ""kind"": ""TagPresent"", ""tag"": ""Status.Shield"" }
+                    ""duration"": { ""durationTicks"": 100, ""periodTicks"": 0, ""clockId"": ""FixedFrame"" },
+                    ""participatesInResponse"": true,
+                    ""expireCondition"": { ""kind"": ""TagPresent"", ""tag"": ""Status.Shield"", ""sense"": ""Effective"" }
                 }");
 
             var loader = new EffectTemplateLoader(pipeline, templates, conditions);
@@ -1256,6 +1257,7 @@ namespace Ludots.Tests.GAS
                     ""id"": ""test_attach"",
                     ""presetType"": ""Relation"",
                     ""lifetime"": ""Instant"",
+                    ""participatesInResponse"": true,
                     ""relation"": {
                         ""operation"": ""SetParent"",
                         ""subject"": ""Source"",
@@ -1293,10 +1295,11 @@ namespace Ludots.Tests.GAS
                     ""tags"": [""Test.Slow""],
                     ""presetType"": ""None"",
                     ""lifetime"": ""After"",
-                    ""duration"": { ""durationTicks"": 60 },
+                    ""duration"": { ""durationTicks"": 60, ""periodTicks"": 0, ""clockId"": ""FixedFrame"" },
+                    ""participatesInResponse"": true,
                     ""grantedTags"": [
-                        { ""tag"": ""Status.Slow"", ""formula"": ""Linear"", ""amount"": 6 },
-                        { ""tag"": ""Status.Weak"", ""formula"": ""Fixed"", ""amount"": 1 }
+                        { ""tag"": ""Status.Slow"", ""formula"": ""Linear"", ""amount"": 6, ""base"": 0 },
+                        { ""tag"": ""Status.Weak"", ""formula"": ""Fixed"", ""amount"": 1, ""base"": 0 }
                     ]
                 }");
 
@@ -1333,7 +1336,8 @@ namespace Ludots.Tests.GAS
                     ""tags"": [""Test.Stackable""],
                     ""presetType"": ""None"",
                     ""lifetime"": ""After"",
-                    ""duration"": { ""durationTicks"": 120 },
+                    ""duration"": { ""durationTicks"": 120, ""periodTicks"": 0, ""clockId"": ""FixedFrame"" },
+                    ""participatesInResponse"": true,
                     ""stack"": { ""limit"": 10, ""policy"": ""RefreshDuration"", ""overflowPolicy"": ""RejectNew"" }
                 }");
 

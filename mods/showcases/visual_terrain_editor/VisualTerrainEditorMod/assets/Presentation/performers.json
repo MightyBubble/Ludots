@@ -4,19 +4,19 @@
     "defaultLifetime": -1,
     "paramDefaults": [
       {
-        "paramKey": 701,
+        "paramKey": "visual_terrain_editor.chunkMesh.asset",
         "lane": "Int",
         "intValue": 1
       },
       {
-        "paramKey": 702,
+        "paramKey": "visual_terrain_editor.chunkMesh.material",
         "lane": "Int",
         "intValue": 1
       }
     ],
     "behaviors": [
       {
-        "slot": 0,
+        "slot": "body",
         "kind": "AssetBinding",
         "activeByDefault": true,
         "assetBinding": {
@@ -25,8 +25,8 @@
           "materialId": "default_surface",
           "renderPath": "StaticMesh",
           "mobility": "Static",
-          "assetSwapParamKey": 701,
-          "materialParamKey": 702
+          "assetIdParamKey": "visual_terrain_editor.chunkMesh.asset",
+          "materialParamKey": "visual_terrain_editor.chunkMesh.material"
         }
       }
     ]

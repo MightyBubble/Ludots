@@ -1,5 +1,6 @@
 using System;
 using System.Collections.Generic;
+using System.Globalization;
 using System.Numerics;
 using System.Text.Json.Nodes;
 using Arch.Core;
@@ -48,7 +49,7 @@ namespace Ludots.Core.Presentation.Config
         {
             _configs = configs ?? throw new ArgumentNullException(nameof(configs));
             _registry = registry ?? throw new ArgumentNullException(nameof(registry));
-            _resolveAttributeName = resolveAttributeName ?? (_ => 0);
+            _resolveAttributeName = resolveAttributeName ?? (_ => AttributeRegistry.InvalidId);
             _resolveMeshId = resolveMeshId ?? (_ => 0);
             _resolveTextTokenId = resolveTextTokenId ?? (_ => 0);
             _resolveEntityTemplateKey = resolveEntityTemplateKey ?? (_ => 0);
@@ -63,7 +64,9 @@ namespace Ludots.Core.Presentation.Config
         public void Load(ConfigCatalog catalog = null, ConfigConflictReport report = null)
         {
             var entry = ConfigPipeline.RequireEntry(catalog, "Presentation/performers.json", ConfigMergePolicy.ArrayById, "id");
-            var merged = _configs.MergeArrayByIdFromCatalog(in entry, report);
+            var fragments = _configs.CollectFragmentsWithSources(entry.RelativePath);
+            ValidateRawDefinitionIds(fragments, entry.RelativePath);
+            var merged = ConfigMerger.MergeArrayByIdToEntries(fragments, in entry, report);
             if (report != null)
             {
                 var deletions = report.GetDeletions(entry.RelativePath);
@@ -89,12 +92,9 @@ namespace Ludots.Core.Presentation.Config
                         $"Presentation/performers.json entry '{merged[i].Id}' must merge to a JSON object.");
                 }
 
-                string key = obj["id"]?.GetValue<string>() ?? string.Empty;
-                if (string.IsNullOrWhiteSpace(key))
-                {
-                    throw new InvalidOperationException(
-                        "Presentation/performers.json entries must declare non-empty id.");
-                }
+                string key = RequireCanonicalString(
+                    obj["id"]?.GetValue<string>() ?? string.Empty,
+                    "Presentation/performers.json entry id");
 
                 mergedByKey[key] = obj;
                 _registry.GetOrRegisterId(key);
@@ -129,6 +129,35 @@ namespace Ludots.Core.Presentation.Config
             }
         }
 
+        private static void ValidateRawDefinitionIds(IReadOnlyList<ConfigFragment> fragments, string relativePath)
+        {
+            for (int fragmentIndex = 0; fragmentIndex < fragments.Count; fragmentIndex++)
+            {
+                if (fragments[fragmentIndex].Node is not JsonArray arr)
+                {
+                    continue;
+                }
+
+                for (int entryIndex = 0; entryIndex < arr.Count; entryIndex++)
+                {
+                    if (arr[entryIndex] is not JsonObject obj)
+                    {
+                        continue;
+                    }
+
+                    if (!obj.TryGetPropertyValue("id", out JsonNode? idNode) ||
+                        idNode is not JsonValue idValue ||
+                        !idValue.TryGetValue<string>(out string? id))
+                    {
+                        throw new InvalidOperationException(
+                            $"{relativePath} entry at index {entryIndex} must declare explicit string id.");
+                    }
+
+                    RequireCanonicalString(id, $"{relativePath} entry id");
+                }
+            }
+        }
+
         private JsonObject ExpandDefinition(
             string key,
             IReadOnlyDictionary<string, JsonObject> mergedByKey,
@@ -146,8 +175,8 @@ namespace Ludots.Core.Presentation.Config
 
             try
             {
-                string parentKey = node["extends"]?.GetValue<string>() ?? string.Empty;
-                if (string.IsNullOrWhiteSpace(parentKey))
+                string parentKey = ParseOptionalCanonicalString(node["extends"], $"Performer '{key}' extends");
+                if (parentKey.Length == 0)
                 {
                     return (JsonObject)node.DeepClone();
                 }
@@ -173,7 +202,7 @@ namespace Ludots.Core.Presentation.Config
             {
                 if (propertyName.Equals("bindings", StringComparison.Ordinal))
                 {
-                    merged[propertyName] = MergeByValueKey(parent[propertyName], childValue, "paramKey");
+                    merged[propertyName] = MergeByValueKey(parent[propertyName], childValue, "paramKey", "bindings");
                     continue;
                 }
 
@@ -185,7 +214,7 @@ namespace Ludots.Core.Presentation.Config
 
                 if (propertyName.Equals("behaviors", StringComparison.Ordinal))
                 {
-                    merged[propertyName] = MergeByValueKey(parent[propertyName], childValue, "slot");
+                    merged[propertyName] = MergeByValueKey(parent[propertyName], childValue, "slot", "behaviors");
                     continue;
                 }
 
@@ -223,12 +252,12 @@ namespace Ludots.Core.Presentation.Config
             }
         }
 
-        private static JsonArray MergeByValueKey(JsonNode? existingNode, JsonNode? incomingNode, string keyField)
+        private static JsonArray MergeByValueKey(JsonNode? existingNode, JsonNode? incomingNode, string keyField, string arrayName)
         {
             var byKey = new Dictionary<string, JsonNode>(StringComparer.Ordinal);
             var order = new List<string>();
-            AppendByValueKey(existingNode, keyField, byKey, order);
-            AppendByValueKey(incomingNode, keyField, byKey, order);
+            AppendByValueKey(existingNode, keyField, arrayName, byKey, order);
+            AppendByValueKey(incomingNode, keyField, arrayName, byKey, order);
 
             var merged = new JsonArray();
             for (int i = 0; i < order.Count; i++)
@@ -239,7 +268,12 @@ namespace Ludots.Core.Presentation.Config
             return merged;
         }
 
-        private static void AppendByValueKey(JsonNode? node, string keyField, Dictionary<string, JsonNode> byKey, List<string> order)
+        private static void AppendByValueKey(
+            JsonNode? node,
+            string keyField,
+            string arrayName,
+            Dictionary<string, JsonNode> byKey,
+            List<string> order)
         {
             if (node is not JsonArray array)
             {
@@ -253,7 +287,7 @@ namespace Ludots.Core.Presentation.Config
                     continue;
                 }
 
-                string key = GetMergeKey(obj[keyField], i);
+                string key = GetSemanticMergeKey(obj[keyField], $"{arrayName}[{i}].{keyField}");
                 if (!byKey.ContainsKey(key))
                 {
                     order.Add(key);
@@ -263,22 +297,25 @@ namespace Ludots.Core.Presentation.Config
             }
         }
 
-        private static string GetMergeKey(JsonNode? node, int defaultIndex)
+        private static string GetSemanticMergeKey(JsonNode? node, string context)
         {
-            if (node is JsonValue value)
+            if (node is not JsonValue value)
             {
-                if (value.TryGetValue<int>(out int numericId))
-                {
-                    return numericId.ToString(System.Globalization.CultureInfo.InvariantCulture);
-                }
-
-                if (value.TryGetValue<string>(out string? text) && !string.IsNullOrWhiteSpace(text))
-                {
-                    return text.Trim();
-                }
+                throw new InvalidOperationException($"{context} requires an explicit semantic string.");
             }
 
-            return defaultIndex.ToString(System.Globalization.CultureInfo.InvariantCulture);
+            if (value.TryGetValue<int>(out int numericId))
+            {
+                throw new InvalidOperationException(
+                    $"{context} uses numeric authoring value {numericId}. Use a semantic string instead.");
+            }
+
+            if (value.TryGetValue<string>(out string? text) && !string.IsNullOrWhiteSpace(text))
+            {
+                return RequireCanonicalString(text, context);
+            }
+
+            throw new InvalidOperationException($"{context} requires a non-empty semantic string.");
         }
 
         private static JsonArray MergeParamDefaultsJson(JsonNode? existingNode, JsonNode? incomingNode)
@@ -314,7 +351,7 @@ namespace Ludots.Core.Presentation.Config
                     continue;
                 }
 
-                int paramKey = ParseParamKey(obj["paramKey"], 0, $"paramDefaults[{i}].paramKey");
+                int paramKey = ParseRequiredParamKey(obj["paramKey"], $"paramDefaults[{i}].paramKey");
                 ParamLane lane = ParseRequiredParamLane(obj, $"paramDefaults[{i}]");
                 var compositeKey = (paramKey, lane);
                 if (!byKey.ContainsKey(compositeKey))
@@ -328,23 +365,21 @@ namespace Ludots.Core.Presentation.Config
 
         private (string key, PerformerDefinition def) ParseDefinition(JsonNode node)
         {
-            string key = node["id"]?.GetValue<string>() ?? string.Empty;
-            if (string.IsNullOrWhiteSpace(key))
-            {
-                return (null, null);
-            }
+            string key = RequireCanonicalString(node["id"]?.GetValue<string>() ?? string.Empty, "Performer id");
 
-            RejectLegacyFields(node, key);
+            RejectRemovedFields(node, key);
+
+            BehaviorSlot[] behaviors = ParseBehaviors(node["behaviors"], key);
+            WorldHudValueMode worldTextMode = ParseWorldTextMode(node, key, behaviors);
 
             var def = new PerformerDefinition
             {
                 Key = key,
-                Extends = node["extends"]?.GetValue<string>() ?? string.Empty,
+                Extends = ParseOptionalCanonicalString(node["extends"], $"Performer '{key}' extends"),
                 DefaultColor = ParseColor(node["defaultColor"]),
                 DefaultLifetime = node["defaultLifetime"]?.GetValue<float>() ?? 0f,
                 DefaultFontSize = node["defaultFontSize"]?.GetValue<int>() ?? 16,
-                DefaultTextId = ResolveOptionalTextTokenId(node["defaultTextId"]),
-                WorldTextMode = ParseEnum(node["worldTextMode"]?.GetValue<string>(), WorldHudValueMode.None),
+                WorldTextMode = worldTextMode,
                 PositionOffset = ParseVector3(node["positionOffset"]),
                 PositionYDriftPerSecond = node["positionYDriftPerSecond"]?.GetValue<float>() ?? 0f,
                 AlphaFadeOverLifetime = node["alphaFadeOverLifetime"]?.GetValue<bool>() ?? false,
@@ -352,7 +387,7 @@ namespace Ludots.Core.Presentation.Config
                 Rules = ParseRules(node["rules"]),
                 Bindings = ParseBindings(node["bindings"]),
                 Children = ParseChildren(node["children"]),
-                Behaviors = ParseBehaviors(node["behaviors"], key),
+                Behaviors = behaviors,
                 ParamDefaults = ParseParamDefaults(node["paramDefaults"]),
             };
 
@@ -367,7 +402,7 @@ namespace Ludots.Core.Presentation.Config
             return (key, def);
         }
 
-        private static void RejectLegacyFields(JsonNode node, string key)
+        private static void RejectRemovedFields(JsonNode node, string key)
         {
             if (node["entityScope"] != null)
             {
@@ -386,6 +421,7 @@ namespace Ludots.Core.Presentation.Config
                 "visualKind",
                 "meshOrShapeId",
                 "defaultScale",
+                "defaultTextId",
                 "legacyWorldTextMode",
             };
 
@@ -412,51 +448,77 @@ namespace Ludots.Core.Presentation.Config
             {
                 rules[i] = new PerformerRule
                 {
-                    Event = ParseEventFilter(arr[i]!["event"]),
+                    Event = ParseEventFilter(arr[i]!["event"], $"rules[{i}].event"),
                     Condition = ParseConditionRef(arr[i]!["condition"]),
-                    Command = ParsePerformerCommand(arr[i]!["command"]),
+                    Command = ParsePerformerCommand(arr[i]!["command"], $"rules[{i}].command"),
                 };
             }
 
             return rules;
         }
 
-        private EventFilter ParseEventFilter(JsonNode? node)
+        private EventFilter ParseEventFilter(JsonNode? node, string context)
         {
-            if (node == null)
+            if (node is not JsonObject obj)
             {
-                return default;
+                throw new InvalidOperationException($"{context} requires an object with explicit field 'kind'.");
             }
 
-            PresentationEventKind kind = ParseEnum(node["kind"]?.GetValue<string>(), PresentationEventKind.None);
+            PresentationEventKind kind = ParseRequiredNonNoneEnum<PresentationEventKind>(obj["kind"], $"{context}.kind");
             return new EventFilter
             {
                 Kind = kind,
-                KeyId = ResolveEventKey(kind, node),
+                KeyId = ResolveEventKey(kind, obj),
             };
         }
 
         private int ResolveEventKey(PresentationEventKind kind, JsonNode node)
         {
+            bool hasKey = node["key"] != null;
+            bool hasKeyId = node["keyId"] != null;
+            if (hasKey && hasKeyId)
+            {
+                throw new InvalidOperationException(
+                    $"Presentation event '{kind}' must declare only one of 'key' or 'keyId'.");
+            }
+
             if (node["keyId"] is JsonValue keyIdValue)
             {
                 if (keyIdValue.TryGetValue<int>(out int numericId))
                 {
-                    return numericId;
+                    throw new InvalidOperationException(
+                        $"Presentation event '{kind}' keyId must be a semantic string, not numeric id {numericId}.");
                 }
 
                 if (keyIdValue.TryGetValue<string>(out string textKey))
                 {
-                    return ResolveEventKey(kind, textKey);
+                    return ResolveEventKey(kind, textKey, "keyId");
                 }
             }
 
-            string key = node["key"]?.GetValue<string>() ?? string.Empty;
-            return string.IsNullOrWhiteSpace(key) ? -1 : ResolveEventKey(kind, key);
+            if (node["key"] is JsonValue keyValue && keyValue.TryGetValue<string>(out string key))
+            {
+                return ResolveEventKey(kind, key, "key");
+            }
+
+            if (node["key"] is JsonValue numericKeyValue && numericKeyValue.TryGetValue<int>(out int numericKey))
+            {
+                throw new InvalidOperationException(
+                    $"Presentation event '{kind}' key must be a semantic string, not numeric id {numericKey}.");
+            }
+
+            throw new InvalidOperationException(
+                $"Presentation event '{kind}' requires explicit key or keyId. Use key \"*\" for wildcard.");
         }
 
-        private int ResolveEventKey(PresentationEventKind kind, string key)
+        private int ResolveEventKey(PresentationEventKind kind, string key, string fieldName)
         {
+            key = RequireCanonicalString(key, $"Presentation event '{kind}' {fieldName}");
+            if (string.Equals(key, "*", StringComparison.Ordinal))
+            {
+                return -1;
+            }
+
             return kind switch
             {
                 PresentationEventKind.EntitySpawned => ResolveRequired(_resolveEntityTemplateKey(key), kind, "entity template", key),
@@ -480,47 +542,237 @@ namespace Ludots.Core.Presentation.Config
             return id;
         }
 
-        private PerformerCommand ParsePerformerCommand(JsonNode? node)
+        private PerformerCommand ParsePerformerCommand(JsonNode? node, string context)
         {
-            if (node == null)
+            if (node is not JsonObject obj)
             {
-                return default;
+                throw new InvalidOperationException($"{context} requires an object with explicit field 'kind'.");
             }
 
+            PerformerCommandKind commandKind = ParseRequiredNonNoneEnum<PerformerCommandKind>(obj["kind"], $"{context}.kind");
+            ParamLane paramLane = ParseCommandParamLane(obj, commandKind, context);
+            PerformerCommandValueSource valueSource = ParseCommandValueSource(obj, commandKind, context);
+            int paramGraphProgramId = ParseCommandParamGraphProgramId(obj, commandKind, valueSource, context);
+            int performerDefinitionId = ParseCommandDefinitionId(obj, commandKind, context);
             return new PerformerCommand
             {
-                CommandKind = ParseEnum(node["kind"]?.GetValue<string>(), PerformerCommandKind.None),
-                PerformerDefinitionId = ResolvePerformerDefinitionId(node["definitionId"]),
+                CommandKind = commandKind,
+                PerformerDefinitionId = performerDefinitionId,
                 ParentEntity = Entity.Null, // resolved at runtime
-                ScopeTag = ParseScopeTag(node["scopeTag"]),
-                ScopeSource = ParseEnum(node["scopeSource"]?.GetValue<string>(), PerformerCommandScopeSource.Fixed),
-                ParamKey = ParseParamKey(node["paramKey"], 0, "Performer command paramKey"),
-                ParamLane = ParseEnum(node["paramLane"]?.GetValue<string>(), ParamLane.Float),
-                ParamValue = node["paramValue"]?.GetValue<float>() ?? 0f,
-                IntValue = node["intValue"]?.GetValue<int>() ?? 0,
-                VectorValue = ParseVector4(node["vectorValue"]),
-                ValueSource = ParseEnum(node["valueSource"]?.GetValue<string>(), PerformerCommandValueSource.Fixed),
-                ParamGraphProgramId = node["paramGraphProgramId"]?.GetValue<int>() ?? 0,
-                TargetBehaviorSlot = ParseBehaviorSlot(node["targetBehaviorSlot"], -1, "Performer command targetBehaviorSlot"),
+                ScopeTag = ParseScopeTag(obj["scopeTag"]),
+                ScopeSource = ParseCommandScopeSource(obj, commandKind, context),
+                ParamKey = commandKind == PerformerCommandKind.SetParam
+                    ? ParseRequiredParamKey(obj["paramKey"], "Performer command paramKey")
+                    : ParseOptionalCommandParamKey(obj["paramKey"], "Performer command paramKey"),
+                ParamLane = paramLane,
+                ParamValue = ParseCommandParamValue(obj, commandKind, paramLane, valueSource, paramGraphProgramId, context),
+                IntValue = ParseCommandIntValue(obj, commandKind, paramLane, valueSource, paramGraphProgramId, context),
+                VectorValue = ParseCommandVectorValue(obj, commandKind, paramLane, valueSource, paramGraphProgramId, context),
+                ValueSource = valueSource,
+                ParamGraphProgramId = paramGraphProgramId,
+                TargetBehaviorSlot = commandKind is PerformerCommandKind.ActivateBehavior or PerformerCommandKind.DeactivateBehavior
+                    ? ParseRequiredBehaviorSlot(obj["targetBehaviorSlot"], "Performer command targetBehaviorSlot")
+                    : ParseOptionalBehaviorSlot(obj["targetBehaviorSlot"], "Performer command targetBehaviorSlot"),
             };
         }
 
-        private int ResolvePerformerDefinitionId(JsonNode? node)
+        private static PerformerCommandScopeSource ParseCommandScopeSource(
+            JsonObject obj,
+            PerformerCommandKind commandKind,
+            string context)
         {
+            JsonNode? node = obj["scopeSource"];
+            if (CommandRequiresScopeSource(commandKind) || node != null)
+            {
+                return ParseRequiredEnum<PerformerCommandScopeSource>(node, $"{context}.scopeSource");
+            }
+
+            return PerformerCommandScopeSource.Fixed;
+        }
+
+        private static ParamLane ParseCommandParamLane(JsonObject obj, PerformerCommandKind commandKind, string context)
+        {
+            JsonNode? node = obj["paramLane"];
+            if (commandKind == PerformerCommandKind.SetParam || node != null)
+            {
+                return ParseRequiredEnum<ParamLane>(node, $"{context}.paramLane");
+            }
+
+            return ParamLane.Float;
+        }
+
+        private static PerformerCommandValueSource ParseCommandValueSource(
+            JsonObject obj,
+            PerformerCommandKind commandKind,
+            string context)
+        {
+            JsonNode? node = obj["valueSource"];
+            if (commandKind == PerformerCommandKind.SetParam || node != null)
+            {
+                return ParseRequiredEnum<PerformerCommandValueSource>(node, $"{context}.valueSource");
+            }
+
+            return PerformerCommandValueSource.Fixed;
+        }
+
+        private static int ParseCommandParamGraphProgramId(
+            JsonObject obj,
+            PerformerCommandKind commandKind,
+            PerformerCommandValueSource valueSource,
+            string context)
+        {
+            JsonNode? node = obj["paramGraphProgramId"];
             if (node == null)
             {
                 return 0;
+            }
+
+            if (commandKind != PerformerCommandKind.SetParam)
+            {
+                throw new InvalidOperationException($"{context}.paramGraphProgramId is only valid for SetParam commands.");
+            }
+
+            if (valueSource != PerformerCommandValueSource.Fixed)
+            {
+                throw new InvalidOperationException($"{context}.paramGraphProgramId requires valueSource '{PerformerCommandValueSource.Fixed}'.");
+            }
+
+            int graphProgramId = ParseRequiredInt(node, $"{context}.paramGraphProgramId");
+            if (graphProgramId <= 0)
+            {
+                throw new InvalidOperationException($"{context}.paramGraphProgramId must be positive.");
+            }
+
+            return graphProgramId;
+        }
+
+        private static float ParseCommandParamValue(
+            JsonObject obj,
+            PerformerCommandKind commandKind,
+            ParamLane lane,
+            PerformerCommandValueSource valueSource,
+            int paramGraphProgramId,
+            string context)
+        {
+            JsonNode? node = obj["paramValue"];
+            if (node == null)
+            {
+                if (commandKind == PerformerCommandKind.SetParam &&
+                    valueSource == PerformerCommandValueSource.Fixed &&
+                    lane == ParamLane.Float &&
+                    paramGraphProgramId == 0)
+                {
+                    throw new InvalidOperationException($"{context}.paramValue requires an explicit numeric field for Fixed Float SetParam.");
+                }
+
+                return 0f;
+            }
+
+            return ParseRequiredFloat(node, $"{context}.paramValue");
+        }
+
+        private static int ParseCommandIntValue(
+            JsonObject obj,
+            PerformerCommandKind commandKind,
+            ParamLane lane,
+            PerformerCommandValueSource valueSource,
+            int paramGraphProgramId,
+            string context)
+        {
+            JsonNode? node = obj["intValue"];
+            if (node == null)
+            {
+                if (commandKind == PerformerCommandKind.SetParam &&
+                    valueSource == PerformerCommandValueSource.Fixed &&
+                    lane == ParamLane.Int &&
+                    paramGraphProgramId == 0)
+                {
+                    throw new InvalidOperationException($"{context}.intValue requires an explicit integer field for Fixed Int SetParam.");
+                }
+
+                return 0;
+            }
+
+            return ParseRequiredInt(node, $"{context}.intValue");
+        }
+
+        private static Vector4 ParseCommandVectorValue(
+            JsonObject obj,
+            PerformerCommandKind commandKind,
+            ParamLane lane,
+            PerformerCommandValueSource valueSource,
+            int paramGraphProgramId,
+            string context)
+        {
+            JsonNode? node = obj["vectorValue"];
+            if (node == null)
+            {
+                if (commandKind == PerformerCommandKind.SetParam &&
+                    lane == ParamLane.Vector &&
+                    paramGraphProgramId == 0)
+                {
+                    if (valueSource != PerformerCommandValueSource.Fixed)
+                    {
+                        throw new InvalidOperationException($"{context}.vectorValue requires valueSource '{PerformerCommandValueSource.Fixed}' for Vector SetParam.");
+                    }
+
+                    throw new InvalidOperationException($"{context}.vectorValue requires an explicit 4-component array field for Fixed Vector SetParam.");
+                }
+
+                return Vector4.Zero;
+            }
+
+            return ParseRequiredVector4(node, $"{context}.vectorValue");
+        }
+
+        private static bool CommandRequiresScopeSource(PerformerCommandKind commandKind)
+        {
+            return commandKind is PerformerCommandKind.CreatePerformer
+                or PerformerCommandKind.DestroyPerformerScope
+                or PerformerCommandKind.DestroyScopedPerformer;
+        }
+
+        private int ParseCommandDefinitionId(JsonObject obj, PerformerCommandKind commandKind, string context)
+        {
+            JsonNode? node = obj["definitionId"];
+            if (CommandRequiresDefinitionId(commandKind))
+            {
+                return ResolveRequiredPerformerDefinitionId(node, $"{context}.definitionId");
+            }
+
+            if (node != null)
+            {
+                throw new InvalidOperationException(
+                    $"{context}.definitionId is only valid for CreatePerformer and DestroyScopedPerformer commands.");
+            }
+
+            return 0;
+        }
+
+        private static bool CommandRequiresDefinitionId(PerformerCommandKind commandKind)
+        {
+            return commandKind is PerformerCommandKind.CreatePerformer
+                or PerformerCommandKind.DestroyScopedPerformer;
+        }
+
+        private int ResolveRequiredPerformerDefinitionId(JsonNode? node, string context)
+        {
+            if (node == null)
+            {
+                throw new InvalidOperationException($"{context} requires an explicit semantic string.");
             }
 
             if (node is JsonValue value)
             {
                 if (value.TryGetValue<int>(out int numericId))
                 {
-                    return numericId;
+                    throw new InvalidOperationException(
+                        $"Performer command definitionId must be a semantic string, not numeric id {numericId}.");
                 }
 
                 if (value.TryGetValue<string>(out string key) && !string.IsNullOrWhiteSpace(key))
                 {
+                    key = RequireCanonicalString(key, context);
                     int id = _registry.GetId(key);
                     if (id <= 0)
                     {
@@ -531,7 +783,7 @@ namespace Ludots.Core.Presentation.Config
                 }
             }
 
-            return 0;
+            throw new InvalidOperationException($"{context} must be a non-empty semantic string.");
         }
 
         private PerformerParamBinding[] ParseBindings(JsonNode? node)
@@ -546,32 +798,80 @@ namespace Ludots.Core.Presentation.Config
             {
                 bindings[i] = new PerformerParamBinding
                 {
-                    ParamKey = ParseParamKey(arr[i]!["paramKey"], 0, $"bindings[{i}].paramKey"),
-                    Value = ParseValueRef(arr[i]!),
+                    ParamKey = ParseRequiredParamKey(arr[i]!["paramKey"], $"bindings[{i}].paramKey"),
+                    Value = ParseValueRef(arr[i]!, $"bindings[{i}]"),
                 };
             }
 
             return bindings;
         }
 
-        private ValueRef ParseValueRef(JsonNode node)
+        private ValueRef ParseValueRef(JsonNode node, string context)
         {
+            RejectRemovedBindingFields(node, context);
             string source = node["source"]?.GetValue<string>();
             return source switch
             {
                 "attribute" => ValueRef.FromAttribute(ResolveAttributeId(node)),
                 "attributeRatio" => ValueRef.FromAttributeRatio(ResolveAttributeId(node)),
                 "attributeBase" => ValueRef.FromAttributeBase(ResolveAttributeId(node)),
-                "graph" => ValueRef.FromGraph(node["sourceId"]?.GetValue<int>() ?? 0),
-                "entityColor" => ValueRef.FromEntityColor(node["sourceId"]?.GetValue<int>() ?? 0),
+                "graph" => ValueRef.FromGraph(ParseRequiredInt(node["sourceId"], "Performer binding graph.sourceId")),
+                "entityColor" => ValueRef.FromEntityColor(ParseRequiredInt(node["sourceId"], "Performer binding entityColor.sourceId")),
                 "entityColorVector" => ValueRef.FromEntityColorVector(),
                 "facingRadians" => ValueRef.FromFacingRadians(),
                 "facingDegrees" => ValueRef.FromFacingDegrees(),
                 "textToken" => ValueRef.FromConstant(ResolveTextTokenId(node)),
-                "constant" => ValueRef.FromConstant(node["constantValue"]?.GetValue<float>() ?? 0f),
+                "constant" => ValueRef.FromConstant(ParseRequiredFloat(node["constantValue"], "Performer binding constant.constantValue")),
                 null or "" => throw new InvalidOperationException("Performer binding must declare explicit source."),
                 _ => throw new InvalidOperationException($"Performer binding source has invalid value '{source}'."),
             };
+        }
+
+        private static void RejectRemovedBindingFields(JsonNode node, string context)
+        {
+            if (node["sourceKey"] != null)
+            {
+                throw new InvalidOperationException(
+                    $"{context} uses removed field 'sourceKey'. Use the canonical source-specific field.");
+            }
+        }
+
+        private static WorldHudValueMode ParseWorldTextMode(JsonNode node, string key, BehaviorSlot[] behaviors)
+        {
+            bool hasWorldText = HasWorldTextAssetBinding(behaviors);
+            if (!hasWorldText)
+            {
+                if (node["worldTextMode"] != null)
+                {
+                    throw new InvalidOperationException(
+                        $"Performer '{key}' declares worldTextMode without a WorldText AssetBinding behavior.");
+                }
+
+                return WorldHudValueMode.None;
+            }
+
+            return ParseRequiredEnum<WorldHudValueMode>(
+                node["worldTextMode"],
+                $"Performer '{key}' worldTextMode");
+        }
+
+        private static bool HasWorldTextAssetBinding(BehaviorSlot[] behaviors)
+        {
+            if (behaviors == null)
+            {
+                return false;
+            }
+
+            for (int i = 0; i < behaviors.Length; i++)
+            {
+                if (behaviors[i].Kind == BehaviorKind.AssetBinding &&
+                    behaviors[i].AssetBinding.AssetKind == AssetKind.WorldText)
+                {
+                    return true;
+                }
+            }
+
+            return false;
         }
 
         private int ResolveTextTokenId(JsonNode node)
@@ -591,43 +891,31 @@ namespace Ludots.Core.Presentation.Config
             return tokenId;
         }
 
-        private int ResolveOptionalTextTokenId(JsonNode? node)
-        {
-            if (node == null)
-            {
-                return 0;
-            }
-
-            if (node is JsonValue textValue && textValue.TryGetValue<string>(out string? tokenKey))
-            {
-                if (string.IsNullOrWhiteSpace(tokenKey))
-                {
-                    return 0;
-                }
-
-                int tokenId = _resolveTextTokenId(tokenKey);
-                if (tokenId < 0)
-                {
-                    throw new InvalidOperationException($"Performer defaultTextId references unknown text token '{tokenKey}'.");
-                }
-
-                return tokenId;
-            }
-
-            throw new InvalidOperationException("Performer defaultTextId must be a text token string.");
-        }
-
         private int ResolveAttributeId(JsonNode node)
         {
+            if (node["attributeName"] != null)
+            {
+                throw new InvalidOperationException(
+                    "Performer attribute binding uses removed field 'attributeName'; use canonical semantic field 'attributeId'.");
+            }
+
             JsonNode? idNode = node["attributeId"];
             if (idNode is JsonValue value && value.TryGetValue<int>(out int numericId))
             {
-                return numericId;
+                throw new InvalidOperationException(
+                    $"Performer attribute binding attributeId must be a semantic string, not numeric id {numericId}.");
             }
 
-            string name = node["attributeName"]?.GetValue<string>() ?? string.Empty;
+            string name = string.Empty;
+            if (node["attributeId"] is JsonValue attributeIdValue &&
+                attributeIdValue.TryGetValue<string>(out string? attributeIdText))
+            {
+                name = attributeIdText;
+            }
+
             if (!string.IsNullOrWhiteSpace(name))
             {
+                name = RequireCanonicalString(name, "Performer attribute binding attribute id");
                 int id = _resolveAttributeName(name);
                 if (id >= 0)
                 {
@@ -635,7 +923,7 @@ namespace Ludots.Core.Presentation.Config
                 }
             }
 
-            throw new InvalidOperationException("Performer attribute binding requires 'attributeId' or non-empty 'attributeName'.");
+            throw new InvalidOperationException("Performer attribute binding requires non-empty semantic field 'attributeId'.");
         }
 
         private static int ParseScopeTag(JsonNode? node)
@@ -649,26 +937,29 @@ namespace Ludots.Core.Presentation.Config
             {
                 if (value.TryGetValue<int>(out int numericId))
                 {
-                    return numericId;
+                    throw new InvalidOperationException(
+                        $"Performer scopeTag must be a semantic string, not numeric id {numericId}.");
                 }
 
                 if (value.TryGetValue<string>(out string text))
                 {
                     if (string.IsNullOrWhiteSpace(text))
                     {
-                        return -1;
+                        throw new InvalidOperationException("Performer scopeTag must be omitted or a non-empty semantic string.");
                     }
 
+                    text = RequireCanonicalString(text, "Performer scopeTag");
                     if (int.TryParse(text, out int parsed))
                     {
-                        return parsed;
+                        throw new InvalidOperationException(
+                            $"Performer scopeTag must be a semantic string, not numeric string '{parsed}'.");
                     }
 
                     return PerformerScopeTagRegistry.Register(text);
                 }
             }
 
-            throw new InvalidOperationException("Performer scopeTag must be an int or non-empty string.");
+            throw new InvalidOperationException("Performer scopeTag must be a non-empty semantic string.");
         }
 
         private ChildPerformerRef[] ParseChildren(JsonNode? node)
@@ -688,7 +979,7 @@ namespace Ludots.Core.Presentation.Config
 
                 children[i] = new ChildPerformerRef
                 {
-                    DefinitionId = ResolvePerformerDefinitionId(obj["definitionId"]),
+                    DefinitionId = ResolveRequiredPerformerDefinitionId(obj["definitionId"], $"children[{i}].definitionId"),
                     ScopeTag = ParseScopeTag(obj["scopeTag"]),
                     ParamOverrides = ParseParamDefaults(obj["paramOverrides"]),
                 };
@@ -775,7 +1066,7 @@ namespace Ludots.Core.Presentation.Config
             for (int i = 0; i < rules.Length; i++)
             {
                 ref readonly PerformerRule rule = ref rules[i];
-                if (rule.Command.CommandKind != PerformerCommandKind.CreatePerformer)
+                if (!CommandRequiresDefinitionId(rule.Command.CommandKind))
                 {
                     continue;
                 }
@@ -784,7 +1075,7 @@ namespace Ludots.Core.Presentation.Config
                 if (referencedDefinitionId <= 0)
                 {
                     throw new InvalidOperationException(
-                        $"Performer '{key}' rule[{i}] references an unknown child definition.");
+                        $"Performer '{key}' rule[{i}] references an unknown performer definition.");
                 }
 
                 if (!ContainsDefinitionId(parsedByKey, referencedDefinitionId))
@@ -823,6 +1114,7 @@ namespace Ludots.Core.Presentation.Config
             }
 
             var slots = new BehaviorSlot[arr.Count];
+            uint seenSlots = 0u;
             for (int i = 0; i < arr.Count; i++)
             {
                 if (arr[i] is not JsonObject obj)
@@ -831,12 +1123,19 @@ namespace Ludots.Core.Presentation.Config
                 }
 
                 BehaviorKind kind = ParseRequiredEnum<BehaviorKind>(obj["kind"], $"Performer '{ownerKey}' behavior[{i}].kind");
-                int slotIndex = ParseBehaviorSlot(obj["slot"], i, $"Performer '{ownerKey}' behavior[{i}].slot");
+                int slotIndex = ParseRequiredBehaviorSlot(obj["slot"], $"Performer '{ownerKey}' behavior[{i}].slot");
                 if (slotIndex is < 0 or >= 32)
                 {
                     throw new InvalidOperationException($"Performer '{ownerKey}' behavior[{i}] uses slot {slotIndex}, but valid behavior slots are 0-31.");
                 }
 
+                uint slotBit = 1u << slotIndex;
+                if ((seenSlots & slotBit) != 0u)
+                {
+                    throw new InvalidOperationException($"Performer '{ownerKey}' defines duplicate behavior slot '{obj["slot"]?.GetValue<string>()}'.");
+                }
+
+                seenSlots |= slotBit;
                 var slot = new BehaviorSlot
                 {
                     SlotIndex = slotIndex,
@@ -902,10 +1201,16 @@ namespace Ludots.Core.Presentation.Config
                     throw new InvalidOperationException($"paramDefaults[{i}] must be an object.");
                 }
 
+                if (obj["value"] != null)
+                {
+                    throw new InvalidOperationException(
+                        $"paramDefaults[{i}] uses removed field 'value'. Use explicit lane-specific fields 'floatValue', 'intValue', or 'vectorValue'.");
+                }
+
                 ParamLane lane = ParseRequiredParamLane(obj, $"paramDefaults[{i}]");
                 var paramDefault = new ParamDefault
                 {
-                    ParamKey = ParseParamKey(obj["paramKey"], 0, $"paramDefaults[{i}].paramKey"),
+                    ParamKey = ParseRequiredParamKey(obj["paramKey"], $"paramDefaults[{i}].paramKey"),
                     Lane = lane,
                 };
 
@@ -956,24 +1261,51 @@ namespace Ludots.Core.Presentation.Config
                     "AssetBinding must not declare grounding or groundingOffset. Use a Grounding behavior with an explicit updatePolicy.");
             }
 
-            AssetKind assetKind = ParseEnum(obj["assetKind"]?.GetValue<string>(), AssetKind.Mesh);
+            AssetKind assetKind = ParseRequiredEnum<AssetKind>(obj["assetKind"], "AssetBinding.assetKind");
+            VisualRenderPath renderPath = ParseRequiredEnum<VisualRenderPath>(obj["renderPath"], "AssetBinding.renderPath");
+            ValidateAssetBindingRenderPath(assetKind, renderPath);
+            int assetIdParamKey = ParseOptionalParamKey(obj["assetIdParamKey"], "AssetBinding.assetIdParamKey");
+            int assetSwapParamKey = ParseOptionalParamKey(obj["assetSwapParamKey"], "AssetBinding.assetSwapParamKey");
+            if (assetKind == AssetKind.WorldHud &&
+                (obj.ContainsKey("assetId") || assetIdParamKey >= 0 || assetSwapParamKey >= 0 || obj.ContainsKey("assetSwapTable")))
+            {
+                throw new InvalidOperationException("WorldHud AssetBinding must not declare assetId, assetIdParamKey, assetSwapParamKey, or assetSwapTable.");
+            }
+
+            AssetSwapEntry[] assetSwapTable = assetKind == AssetKind.WorldHud
+                ? Array.Empty<AssetSwapEntry>()
+                : ParseAssetSwapTable(assetKind, obj["assetSwapTable"]);
+            if (assetIdParamKey >= 0 && assetSwapParamKey >= 0)
+            {
+                throw new InvalidOperationException("AssetBinding must not declare both assetIdParamKey and assetSwapParamKey.");
+            }
+
+            if (assetSwapParamKey < 0 && assetSwapTable.Length != 0)
+            {
+                throw new InvalidOperationException("AssetBinding.assetSwapTable requires explicit assetSwapParamKey.");
+            }
+
+            if (assetSwapParamKey >= 0 && assetSwapTable.Length == 0)
+            {
+                throw new InvalidOperationException("AssetBinding.assetSwapParamKey requires a non-empty assetSwapTable.");
+            }
+
             return new AssetBindingConfig
             {
                 AssetKind = assetKind,
-                AssetId = assetKind == AssetKind.GroundOverlay
-                    ? ResolveGroundOverlayShapeId(obj["assetId"])
-                    : ResolveBehaviorAssetId(assetKind, obj["assetId"]),
+                AssetId = ResolveAssetBindingAssetId(assetKind, obj["assetId"]),
                 MaterialId = ResolveRegisteredId(_resolveMaterialId, obj["materialId"], "material"),
-                RenderPath = ParseEnum(obj["renderPath"]?.GetValue<string>(), VisualRenderPath.None),
-                Mobility = ParseEnum(obj["mobility"]?.GetValue<string>(), VisualMobility.Movable),
+                RenderPath = renderPath,
+                Mobility = ParseRequiredEnum<VisualMobility>(obj["mobility"], "AssetBinding.mobility"),
                 LocalOffset = ParseVector3(obj["localOffset"]),
                 LocalRotation = ParseQuaternion(obj["localRotation"]),
                 LocalScale = ParseVector3OrDefault(obj["localScale"], Vector3.One),
                 ScaleParamKey = ParseOptionalParamKey(obj["scaleParamKey"], "AssetBinding.scaleParamKey"),
                 ColorParamKey = ParseOptionalParamKey(obj["colorParamKey"], "AssetBinding.colorParamKey"),
                 MaterialParamKey = ParseOptionalParamKey(obj["materialParamKey"], "AssetBinding.materialParamKey"),
-                AssetSwapParamKey = ParseOptionalParamKey(obj["assetSwapParamKey"], "AssetBinding.assetSwapParamKey"),
-                AssetSwapTable = ParseAssetSwapTable(assetKind, obj["assetSwapTable"]),
+                AssetIdParamKey = assetIdParamKey,
+                AssetSwapParamKey = assetSwapParamKey,
+                AssetSwapTable = assetSwapTable,
                 VisibilityParamKey = ParseOptionalParamKey(obj["visibilityParamKey"], "AssetBinding.visibilityParamKey"),
                 HasMaxLod = obj.ContainsKey("maxLod"),
                 MaxLod = ParseEnum(obj["maxLod"]?.GetValue<string>(), LODLevel.Low),
@@ -990,7 +1322,7 @@ namespace Ludots.Core.Presentation.Config
             return new AttributeBindingConfig
             {
                 AttributeId = ResolveAttributeId(obj),
-                TargetParamKey = ParseParamKey(obj["targetParamKey"], 0, "AttributeBinding.targetParamKey"),
+                TargetParamKey = ParseRequiredParamKey(obj["targetParamKey"], "AttributeBinding.targetParamKey"),
                 Mode = ParseEnum(obj["mode"]?.GetValue<string>(), ValueSourceKind.Attribute),
                 Thresholds = ParseThresholds(obj["thresholds"]),
             };
@@ -1003,6 +1335,12 @@ namespace Ludots.Core.Presentation.Config
                 throw new InvalidOperationException("TagBinding behavior requires object field 'tagBinding'.");
             }
 
+            if (obj["tag"] != null)
+            {
+                throw new InvalidOperationException(
+                    "TagBinding behavior uses removed field 'tag'; use canonical semantic field 'tagBinding.tagId'.");
+            }
+
             int tagId = ResolveTagId(obj["tagId"]);
             if (tagId <= 0)
             {
@@ -1012,7 +1350,7 @@ namespace Ludots.Core.Presentation.Config
             return new TagBindingConfig
             {
                 TagId = tagId,
-                TargetParamKey = ParseParamKey(obj["targetParamKey"], 0, "TagBinding.targetParamKey"),
+                TargetParamKey = ParseRequiredParamKey(obj["targetParamKey"], "TagBinding.targetParamKey"),
                 InvertLogic = obj["invertLogic"]?.GetValue<bool>() ?? false,
             };
         }
@@ -1059,10 +1397,49 @@ namespace Ludots.Core.Presentation.Config
 
             return new GroundingConfig
             {
-                Mode = ParseEnum(obj["mode"]?.GetValue<string>(), GroundingMode.SnapToGround),
+                Mode = ParseRequiredEnum<GroundingMode>(obj["mode"], "Grounding.mode"),
                 Offset = obj["offset"]?.GetValue<float>() ?? 0f,
-                UpdatePolicy = ParseEnum(obj["updatePolicy"]?.GetValue<string>(), GroundingUpdatePolicy.Once),
+                UpdatePolicy = ParseRequiredEnum<GroundingUpdatePolicy>(obj["updatePolicy"], "Grounding.updatePolicy"),
             };
+        }
+
+        private static void ValidateAssetBindingRenderPath(AssetKind assetKind, VisualRenderPath renderPath)
+        {
+            switch (assetKind)
+            {
+                case AssetKind.Mesh:
+                case AssetKind.Decal:
+                case AssetKind.VFX:
+                    if (!renderPath.IsStaticInstanceLane())
+                    {
+                        throw new InvalidOperationException(
+                            $"AssetBinding assetKind '{assetKind}' requires a static visual renderPath, not '{renderPath}'.");
+                    }
+
+                    break;
+                case AssetKind.SkinnedMesh:
+                    if (!renderPath.IsSkinnedLane())
+                    {
+                        throw new InvalidOperationException(
+                            $"AssetBinding assetKind '{assetKind}' requires a skinned visual renderPath, not '{renderPath}'.");
+                    }
+
+                    break;
+                case AssetKind.WorldHud:
+                case AssetKind.WorldText:
+                case AssetKind.Sound:
+                case AssetKind.Spline:
+                case AssetKind.GroundOverlay:
+                    if (renderPath != VisualRenderPath.None)
+                    {
+                        throw new InvalidOperationException(
+                            $"AssetBinding assetKind '{assetKind}' requires renderPath 'None', not '{renderPath}'.");
+                    }
+
+                    break;
+                default:
+                    throw new InvalidOperationException($"AssetBinding assetKind '{assetKind}' has no renderPath contract.");
+            }
         }
 
         private static MinimapMarkerConfig ParseMinimapMarker(JsonNode? node)
@@ -1164,11 +1541,23 @@ namespace Ludots.Core.Presentation.Config
                 throw new InvalidOperationException("Material behavior requires object field 'material'.");
             }
 
+            int materialSwapParamKey = ParseOptionalParamKey(obj["materialSwapParamKey"], "Material.materialSwapParamKey");
+            MaterialSwapEntry[] swapTable = ParseMaterialSwapTable(obj["swapTable"]);
+            if (materialSwapParamKey < 0 && swapTable.Length != 0)
+            {
+                throw new InvalidOperationException("Material.swapTable requires explicit materialSwapParamKey.");
+            }
+
+            if (materialSwapParamKey >= 0 && swapTable.Length == 0)
+            {
+                throw new InvalidOperationException("Material.materialSwapParamKey requires a non-empty swapTable.");
+            }
+
             return new MaterialConfig
             {
                 BaseMaterialId = ResolveRegisteredId(_resolveMaterialId, obj["baseMaterialId"], "material"),
-                MaterialSwapParamKey = ParseOptionalParamKey(obj["materialSwapParamKey"], "Material.materialSwapParamKey"),
-                SwapTable = ParseMaterialSwapTable(obj["swapTable"]),
+                MaterialSwapParamKey = materialSwapParamKey,
+                SwapTable = swapTable,
             };
         }
 
@@ -1179,14 +1568,22 @@ namespace Ludots.Core.Presentation.Config
                 throw new InvalidOperationException("Spline behavior requires object field 'spline'.");
             }
 
+            SplineUsage usage = ParseEnum(obj["usage"]?.GetValue<string>(), SplineUsage.Render);
+            int speedParamKey = ParseOptionalParamKey(obj["speedParamKey"], "Spline.speedParamKey");
+            int progressParamKey = ParseOptionalParamKey(obj["progressParamKey"], "Spline.progressParamKey");
+            if (usage == SplineUsage.Patrol && progressParamKey < 0)
+            {
+                throw new InvalidOperationException("Spline usage 'Patrol' requires explicit progressParamKey.");
+            }
+
             return new SplineConfig
             {
                 SplineAssetId = ResolveBehaviorAssetId(AssetKind.Spline, obj["splineAssetId"]),
-                Usage = ParseEnum(obj["usage"]?.GetValue<string>(), SplineUsage.Render),
+                Usage = usage,
                 WidthParamKey = ParseOptionalParamKey(obj["widthParamKey"], "Spline.widthParamKey"),
                 ColorParamKey = ParseOptionalParamKey(obj["colorParamKey"], "Spline.colorParamKey"),
-                SpeedParamKey = ParseOptionalParamKey(obj["speedParamKey"], "Spline.speedParamKey"),
-                ProgressParamKey = ParseOptionalParamKey(obj["progressParamKey"], "Spline.progressParamKey"),
+                SpeedParamKey = speedParamKey,
+                ProgressParamKey = progressParamKey,
                 Loop = obj["loop"]?.GetValue<bool>() ?? false,
                 PingPong = obj["pingPong"]?.GetValue<bool>() ?? false,
                 WaypointEventId = obj["waypointEventId"]?.GetValue<int>() ?? 0,
@@ -1195,13 +1592,33 @@ namespace Ludots.Core.Presentation.Config
 
         private static int ParseOptionalParamKey(JsonNode? node, string context)
         {
-            return ParseParamKey(node, -1, context);
+            return ParseParamKey(node, -1, context, allowMissing: true, allowNone: true);
         }
 
-        private static int ParseParamKey(JsonNode? node, int defaultValue, string context)
+        private static int ParseOptionalCommandParamKey(JsonNode? node, string context)
+        {
+            return ParseParamKey(node, 0, context, allowMissing: true, allowNone: false);
+        }
+
+        private static int ParseRequiredParamKey(JsonNode? node, string context)
+        {
+            return ParseParamKey(node, 0, context, allowMissing: false, allowNone: false);
+        }
+
+        private static int ParseParamKey(
+            JsonNode? node,
+            int defaultValue,
+            string context,
+            bool allowMissing,
+            bool allowNone)
         {
             if (node == null)
             {
+                if (!allowMissing)
+                {
+                    throw new InvalidOperationException($"{context} requires an explicit semantic string.");
+                }
+
                 return defaultValue;
             }
 
@@ -1209,7 +1626,8 @@ namespace Ludots.Core.Presentation.Config
             {
                 if (value.TryGetValue<int>(out int numericId))
                 {
-                    return numericId;
+                    throw new InvalidOperationException(
+                        $"{context} uses numeric authoring value {numericId}. Use a semantic string instead.");
                 }
 
                 if (value.TryGetValue<string>(out string? key))
@@ -1219,23 +1637,88 @@ namespace Ludots.Core.Presentation.Config
                         throw new InvalidOperationException($"{context} must be a non-empty semantic string.");
                     }
 
-                    key = key.Trim();
+                    key = RequireCanonicalString(key, context);
                     if (string.Equals(key, "none", StringComparison.Ordinal))
                     {
+                        if (!allowNone)
+                        {
+                            throw new InvalidOperationException($"{context} does not allow the 'none' sentinel.");
+                        }
+
                         return -1;
+                    }
+
+                    if (IsNonCanonicalNoneSentinel(key))
+                    {
+                        throw new InvalidOperationException($"{context} uses invalid sentinel '{key}'. Use lowercase 'none'.");
                     }
 
                     return PerformerParamKeyRegistry.Register(key);
                 }
             }
 
-            throw new InvalidOperationException($"{context} must be an int or non-empty semantic string.");
+            throw new InvalidOperationException($"{context} must be a non-empty semantic string.");
         }
 
-        private static int ParseBehaviorSlot(JsonNode? node, int defaultValue, string context)
+        private static bool IsNonCanonicalNoneSentinel(string key)
+        {
+            return key.Length == 4 &&
+                   (key[0] == 'n' || key[0] == 'N') &&
+                   (key[1] == 'o' || key[1] == 'O') &&
+                   (key[2] == 'n' || key[2] == 'N') &&
+                   (key[3] == 'e' || key[3] == 'E');
+        }
+
+        private static string RequireCanonicalString(string text, string context)
+        {
+            if (string.IsNullOrWhiteSpace(text))
+            {
+                throw new InvalidOperationException($"{context} must be a non-empty semantic string.");
+            }
+
+            string trimmed = text.Trim();
+            if (!string.Equals(text, trimmed, StringComparison.Ordinal))
+            {
+                throw new InvalidOperationException($"{context} must not include leading or trailing whitespace.");
+            }
+
+            return text;
+        }
+
+        private static string ParseOptionalCanonicalString(JsonNode? node, string context)
         {
             if (node == null)
             {
+                return string.Empty;
+            }
+
+            if (node is JsonValue value && value.TryGetValue<string>(out string? text))
+            {
+                return RequireCanonicalString(text, context);
+            }
+
+            throw new InvalidOperationException($"{context} must be a non-empty semantic string.");
+        }
+
+        private static int ParseOptionalBehaviorSlot(JsonNode? node, string context)
+        {
+            return ParseBehaviorSlot(node, -1, context, allowMissing: true);
+        }
+
+        private static int ParseRequiredBehaviorSlot(JsonNode? node, string context)
+        {
+            return ParseBehaviorSlot(node, -1, context, allowMissing: false);
+        }
+
+        private static int ParseBehaviorSlot(JsonNode? node, int defaultValue, string context, bool allowMissing)
+        {
+            if (node == null)
+            {
+                if (!allowMissing)
+                {
+                    throw new InvalidOperationException($"{context} requires an explicit semantic string.");
+                }
+
                 return defaultValue;
             }
 
@@ -1243,7 +1726,8 @@ namespace Ludots.Core.Presentation.Config
             {
                 if (value.TryGetValue<int>(out int numericId))
                 {
-                    return numericId;
+                    throw new InvalidOperationException(
+                        $"{context} uses numeric authoring value {numericId}. Use a semantic string instead.");
                 }
 
                 if (value.TryGetValue<string>(out string? key))
@@ -1253,11 +1737,12 @@ namespace Ludots.Core.Presentation.Config
                         throw new InvalidOperationException($"{context} must be a non-empty semantic string.");
                     }
 
-                    return PerformerBehaviorSlotRegistry.Register(key.Trim());
+                    key = RequireCanonicalString(key, context);
+                    return PerformerBehaviorSlotRegistry.Register(key);
                 }
             }
 
-            throw new InvalidOperationException($"{context} must be an int or non-empty semantic string.");
+            throw new InvalidOperationException($"{context} must be a non-empty semantic string.");
         }
 
         private static class PerformerBehaviorSlotRegistry
@@ -1272,6 +1757,9 @@ namespace Ludots.Core.Presentation.Config
                 ["material"] = 5,
                 ["sound"] = 6,
                 ["spline"] = 7,
+                ["attribute"] = 8,
+                ["tag"] = 9,
+                ["orientation"] = 10,
             };
 
             public static int Register(string key)
@@ -1304,7 +1792,7 @@ namespace Ludots.Core.Presentation.Config
                 thresholds[i] = new ThresholdMapping
                 {
                     Threshold = obj["threshold"]?.GetValue<float>() ?? 0f,
-                    OutputParamKey = ParseParamKey(obj["outputParamKey"], 0, $"thresholds[{i}].outputParamKey"),
+                    OutputParamKey = ParseRequiredParamKey(obj["outputParamKey"], $"thresholds[{i}].outputParamKey"),
                     OutputValue = obj["outputValue"]?.GetValue<float>() ?? 0f,
                 };
             }
@@ -1329,9 +1817,11 @@ namespace Ludots.Core.Presentation.Config
 
                 table[i] = new MaterialSwapEntry
                 {
-                    ParamValue = obj["paramValue"]?.GetValue<float>() ?? 0f,
+                    ParamValue = ParseRequiredFiniteFloat(obj["paramValue"], $"swapTable[{i}].paramValue"),
                     MaterialId = ResolveRegisteredId(_resolveMaterialId, obj["materialId"], "material"),
                 };
+
+                ValidateUniqueParamValue(table, i, table[i].ParamValue, $"swapTable[{i}].paramValue");
             }
 
             return table;
@@ -1354,30 +1844,44 @@ namespace Ludots.Core.Presentation.Config
 
                 table[i] = new AssetSwapEntry
                 {
-                    ParamValue = obj["paramValue"]?.GetValue<float>() ?? 0f,
-                    AssetId = ResolveBehaviorAssetId(assetKind, obj["assetId"]),
+                    ParamValue = ParseRequiredFiniteFloat(obj["paramValue"], $"assetSwapTable[{i}].paramValue"),
+                    AssetId = ResolveAssetBindingAssetId(assetKind, obj["assetId"]),
                 };
+
+                ValidateUniqueParamValue(table, i, table[i].ParamValue, $"assetSwapTable[{i}].paramValue");
             }
 
             return table;
+        }
+
+        private int ResolveAssetBindingAssetId(AssetKind kind, JsonNode? node)
+        {
+            return kind switch
+            {
+                AssetKind.WorldHud => 0,
+                AssetKind.GroundOverlay => ResolveGroundOverlayShapeId(node),
+                _ => ResolveBehaviorAssetId(kind, node),
+            };
         }
 
         private int ResolveBehaviorAssetId(AssetKind kind, JsonNode? node)
         {
             if (node == null)
             {
-                return 0;
+                throw new InvalidOperationException($"Performer behavior {kind} assetId requires an explicit semantic string.");
             }
 
             if (node is JsonValue value)
             {
                 if (value.TryGetValue<int>(out int numericId))
                 {
-                    return numericId;
+                    throw new InvalidOperationException(
+                        $"Performer behavior {kind} assetId must be a semantic string, not numeric id {numericId}.");
                 }
 
                 if (value.TryGetValue<string>(out string key) && !string.IsNullOrWhiteSpace(key))
                 {
+                    key = RequireCanonicalString(key, $"Performer behavior {kind} assetId");
                     int id = kind == AssetKind.WorldText
                         ? _resolveTextTokenId(key)
                         : _resolveBehaviorAssetId(kind, key);
@@ -1390,7 +1894,7 @@ namespace Ludots.Core.Presentation.Config
                 }
             }
 
-            return 0;
+            throw new InvalidOperationException($"Performer behavior {kind} assetId must be a semantic string.");
         }
 
         private static int ResolveGroundOverlayShapeId(JsonNode? node)
@@ -1404,17 +1908,14 @@ namespace Ludots.Core.Presentation.Config
             {
                 if (value.TryGetValue<int>(out int numericId))
                 {
-                    if (numericId is >= 0 and <= 3)
-                    {
-                        return numericId;
-                    }
-
-                    throw new InvalidOperationException($"GroundOverlay AssetBinding assetId '{numericId}' is invalid. Use 0=Circle, 1=Cone, 2=Line, or 3=Ring.");
+                    throw new InvalidOperationException(
+                        $"GroundOverlay AssetBinding assetId must be a shape string, not numeric id {numericId}.");
                 }
 
                 if (value.TryGetValue<string>(out string key) && !string.IsNullOrWhiteSpace(key))
                 {
-                    if (Enum.TryParse(key, ignoreCase: false, out GroundOverlayShape shape))
+                    key = RequireCanonicalString(key, "GroundOverlay AssetBinding assetId");
+                    if (TryParseDefinedEnum(key, out GroundOverlayShape shape))
                     {
                         return (int)shape;
                     }
@@ -1423,7 +1924,7 @@ namespace Ludots.Core.Presentation.Config
                 }
             }
 
-            throw new InvalidOperationException("GroundOverlay AssetBinding assetId must be a shape string or numeric shape id.");
+            throw new InvalidOperationException("GroundOverlay AssetBinding assetId must be a shape string.");
         }
 
         private static int ResolveRegisteredId(Func<string, int> resolver, JsonNode? node, string subject)
@@ -1437,11 +1938,13 @@ namespace Ludots.Core.Presentation.Config
             {
                 if (value.TryGetValue<int>(out int numericId))
                 {
-                    return numericId;
+                    throw new InvalidOperationException(
+                        $"Performer behavior {subject} must be a semantic string, not numeric id {numericId}.");
                 }
 
                 if (value.TryGetValue<string>(out string key) && !string.IsNullOrWhiteSpace(key))
                 {
+                    key = RequireCanonicalString(key, $"Performer behavior {subject}");
                     int id = resolver(key);
                     if (id <= 0)
                     {
@@ -1466,11 +1969,13 @@ namespace Ludots.Core.Presentation.Config
             {
                 if (value.TryGetValue<int>(out int numericId))
                 {
-                    return numericId;
+                    throw new InvalidOperationException(
+                        $"Performer behavior tagId must be a semantic string, not numeric id {numericId}.");
                 }
 
                 if (value.TryGetValue<string>(out string key) && !string.IsNullOrWhiteSpace(key))
                 {
+                    key = RequireCanonicalString(key, "Performer behavior tagId");
                     return TagRegistry.Register(key);
                 }
             }
@@ -1485,7 +1990,7 @@ namespace Ludots.Core.Presentation.Config
                 throw new InvalidOperationException($"{context} requires explicit string field 'lane'.");
             }
 
-            if (!Enum.TryParse(laneText, ignoreCase: false, out ParamLane lane))
+            if (!TryParseDefinedEnum(laneText, out ParamLane lane))
             {
                 throw new InvalidOperationException($"{context} has invalid lane '{laneText}'.");
             }
@@ -1601,10 +2106,9 @@ namespace Ludots.Core.Presentation.Config
             }
 
             var cond = new ConditionRef();
-            string inline = node["inline"]?.GetValue<string>() ?? string.Empty;
-            if (!string.IsNullOrWhiteSpace(inline))
+            if (node["inline"] != null)
             {
-                cond.Inline = ParseEnum(inline, InlineConditionKind.None);
+                cond.Inline = ParseRequiredEnumOrDefault(node["inline"], InlineConditionKind.None, "Performer visibility.inline");
             }
 
             cond.GraphProgramId = node["graphProgramId"]?.GetValue<int>() ?? 0;
@@ -1678,6 +2182,73 @@ namespace Ludots.Core.Presentation.Config
             return Vector4.Zero;
         }
 
+        private static Vector4 ParseRequiredVector4(JsonNode? node, string context)
+        {
+            if (node is not JsonArray arr || arr.Count < 4)
+            {
+                throw new InvalidOperationException($"{context} requires an explicit 4-component array field.");
+            }
+
+            return new Vector4(
+                ParseRequiredFloat(arr[0], $"{context}[0]"),
+                ParseRequiredFloat(arr[1], $"{context}[1]"),
+                ParseRequiredFloat(arr[2], $"{context}[2]"),
+                ParseRequiredFloat(arr[3], $"{context}[3]"));
+        }
+
+        private static float ParseRequiredFloat(JsonNode? node, string context)
+        {
+            if (node is not JsonValue value || !value.TryGetValue<float>(out float parsed))
+            {
+                throw new InvalidOperationException($"{context} requires an explicit numeric field.");
+            }
+
+            return parsed;
+        }
+
+        private static float ParseRequiredFiniteFloat(JsonNode? node, string context)
+        {
+            float parsed = ParseRequiredFloat(node, context);
+            if (!float.IsFinite(parsed))
+            {
+                throw new InvalidOperationException($"{context} must be finite.");
+            }
+
+            return parsed;
+        }
+
+        private static void ValidateUniqueParamValue(MaterialSwapEntry[] table, int count, float value, string context)
+        {
+            for (int i = 0; i < count; i++)
+            {
+                if (MathF.Abs(table[i].ParamValue - value) <= 0.0001f)
+                {
+                    throw new InvalidOperationException($"{context} duplicates swapTable[{i}].paramValue.");
+                }
+            }
+        }
+
+        private static void ValidateUniqueParamValue(AssetSwapEntry[] table, int count, float value, string context)
+        {
+            for (int i = 0; i < count; i++)
+            {
+                if (MathF.Abs(table[i].ParamValue - value) <= 0.0001f)
+                {
+                    throw new InvalidOperationException($"{context} duplicates assetSwapTable[{i}].paramValue.");
+                }
+            }
+        }
+
+        private static int ParseRequiredInt(JsonNode? node, string context)
+        {
+            if (node is not JsonValue value || !value.TryGetValue<int>(out int parsed))
+            {
+                throw new InvalidOperationException($"{context} requires an explicit integer field.");
+            }
+
+            return parsed;
+        }
+
         private static Vector4 ParseColor(JsonNode? node)
         {
             if (node is JsonArray arr && arr.Count >= 4)
@@ -1694,12 +2265,17 @@ namespace Ludots.Core.Presentation.Config
 
         private static T ParseEnum<T>(string? s, T defaultValue) where T : struct, Enum
         {
-            if (string.IsNullOrWhiteSpace(s))
+            if (s == null)
             {
                 return defaultValue;
             }
 
-            if (!Enum.TryParse<T>(s, ignoreCase: false, out var parsed))
+            if (string.IsNullOrWhiteSpace(s))
+            {
+                throw new InvalidOperationException($"Enum {typeof(T).Name} requires a non-empty value when explicitly configured.");
+            }
+
+            if (!TryParseDefinedEnum(s, out T parsed))
             {
                 throw new InvalidOperationException($"Enum {typeof(T).Name} has invalid value '{s}'.");
             }
@@ -1709,14 +2285,36 @@ namespace Ludots.Core.Presentation.Config
 
         private static T ParseRequiredEnum<T>(JsonNode? node, string context) where T : struct, Enum
         {
-            if (node is not JsonValue value || !value.TryGetValue<string>(out string? text) || string.IsNullOrWhiteSpace(text))
+            if (node is not JsonValue value)
             {
-                throw new InvalidOperationException($"{context} requires a non-empty enum string.");
+                throw new InvalidOperationException($"{context} requires a non-empty enum string. Field must be explicit.");
             }
 
-            if (!Enum.TryParse<T>(text, ignoreCase: false, out T parsed))
+            if (value.TryGetValue<int>(out int numericValue))
+            {
+                throw new InvalidOperationException(
+                    $"{context} must be an enum string, not numeric value {numericValue}.");
+            }
+
+            if (!value.TryGetValue<string>(out string? text) || string.IsNullOrWhiteSpace(text))
+            {
+                throw new InvalidOperationException($"{context} requires a non-empty enum string. Field must be explicit.");
+            }
+
+            if (!TryParseDefinedEnum(text, out T parsed))
             {
                 throw new InvalidOperationException($"{context} has invalid value '{text}'.");
+            }
+
+            return parsed;
+        }
+
+        private static T ParseRequiredNonNoneEnum<T>(JsonNode? node, string context) where T : struct, Enum
+        {
+            T parsed = ParseRequiredEnum<T>(node, context);
+            if (EqualityComparer<T>.Default.Equals(parsed, default))
+            {
+                throw new InvalidOperationException($"{context} must not be '{parsed}'.");
             }
 
             return parsed;
@@ -1730,6 +2328,22 @@ namespace Ludots.Core.Presentation.Config
             }
 
             return ParseRequiredEnum<T>(node, context);
+        }
+
+        private static bool TryParseDefinedEnum<T>(string text, out T parsed) where T : struct, Enum
+        {
+            parsed = default;
+            if (!string.Equals(text, text.Trim(), StringComparison.Ordinal))
+            {
+                return false;
+            }
+
+            if (int.TryParse(text, NumberStyles.Integer, CultureInfo.InvariantCulture, out _))
+            {
+                return false;
+            }
+
+            return Enum.TryParse(text, ignoreCase: false, out parsed) && Enum.IsDefined(typeof(T), parsed);
         }
     }
 }

@@ -177,17 +177,17 @@ namespace Ludots.Tests.GAS
             WriteFile("Core", "config_catalog.json",
                 @"[{ ""Path"": ""GAS/clock.json"", ""Policy"": ""DeepObject"" }]");
             WriteFile("Core", "GAS/clock.json",
-                @"{ ""StepEveryFixedTicks"": 1, ""Mode"": ""Auto"" }");
+                @"{ ""stepEveryFixedTicks"": 1, ""mode"": ""Auto"" }");
             WriteAssetFile("ModA", "GAS/clock.json",
-                @"{ ""StepEveryFixedTicks"": 2 }");
+                @"{ ""stepEveryFixedTicks"": 2 }");
 
             var (_, _, pipeline, catalog) = BuildPipeline(_root, new[] { "ModA" });
             var entry = ConfigPipeline.RequireEntry(catalog, "GAS/clock.json", ConfigMergePolicy.DeepObject);
             var merged = pipeline.MergeDeepObjectFromCatalog(in entry);
 
             That(merged, Is.Not.Null);
-            That(merged["StepEveryFixedTicks"]?.GetValue<int>(), Is.EqualTo(2), "Mod overrides tick count");
-            That(merged["Mode"]?.GetValue<string>(), Is.EqualTo("Auto"), "Core field preserved");
+            That(merged["stepEveryFixedTicks"]?.GetValue<int>(), Is.EqualTo(2), "Mod overrides tick count");
+            That(merged["mode"]?.GetValue<string>(), Is.EqualTo("Auto"), "Core field preserved");
         }
 
         // ══════════════════════════════════════════════════════════════════�?
@@ -346,7 +346,10 @@ namespace Ludots.Tests.GAS
                     ""id"": ""InstantDamage"",
                     ""components"": [""ModifierParams""],
                     ""activePhases"": [""OnApply""],
-                    ""allowedLifetimes"": [""Instant""]
+                    ""allowedLifetimes"": [""Instant""],
+                    ""defaultPhaseHandlers"": {
+                      ""OnApply"": { ""type"": ""builtin"", ""id"": ""ApplyModifiers"" }
+                    }
                 }
             ]");
             WriteAssetFile("ModA", "GAS/preset_types.json", @"[
@@ -376,9 +379,9 @@ namespace Ludots.Tests.GAS
             WriteFile("Core", "config_catalog.json",
                 @"[{ ""Path"": ""GAS/clock.json"", ""Policy"": ""DeepObject"" }]");
             WriteFile("Core", "GAS/clock.json",
-                @"{ ""StepEveryFixedTicks"": 1, ""Mode"": ""Auto"" }");
+                @"{ ""stepEveryFixedTicks"": 1, ""mode"": ""Auto"" }");
             WriteAssetFile("ModA", "GAS/clock.json",
-                @"{ ""StepEveryFixedTicks"": 3 }");
+                @"{ ""stepEveryFixedTicks"": 3 }");
 
             var (_, _, pipeline, catalog) = BuildPipeline(_root, new[] { "ModA" });
             var loader = new GasClockConfigLoader(pipeline);
@@ -497,3 +500,5 @@ namespace Ludots.Tests.GAS
         }
     }
 }
+
+

@@ -14,6 +14,7 @@ public sealed class MassNavigationCadenceConfig
     public int EntitySyncHz { get; set; } = 15;
     public int MaxStepsPerFixedTick { get; set; } = 1;
     public int HardResolveCandidateThresholdAgents { get; set; } = 1;
+    public int OrderIdleScanIntervalFrames { get; set; } = 6;
 
     public void Validate()
     {
@@ -33,6 +34,11 @@ public sealed class MassNavigationCadenceConfig
         if (HardResolveCandidateThresholdAgents < 1)
         {
             throw new InvalidOperationException("Mass-nav cadence requires HardResolveCandidateThresholdAgents >= 1.");
+        }
+
+        if (OrderIdleScanIntervalFrames < 1)
+        {
+            throw new InvalidOperationException("Mass-nav cadence requires OrderIdleScanIntervalFrames >= 1.");
         }
     }
 

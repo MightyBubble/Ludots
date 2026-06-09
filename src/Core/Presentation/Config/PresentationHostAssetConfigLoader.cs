@@ -25,6 +25,7 @@ namespace Ludots.Core.Presentation.Config
                 throw new ArgumentException("Host asset backendId must not be empty.", nameof(backendId));
             }
 
+            RequireNoBoundaryWhitespace(backendId, "Host asset backendId");
             var entry = ConfigPipeline.RequireEntry(catalog, DefaultRelativePath, ConfigMergePolicy.ArrayById, "id");
             var merged = _configs.MergeArrayByIdFromCatalog(in entry, report);
 
@@ -32,13 +33,13 @@ namespace Ludots.Core.Presentation.Config
             {
                 JsonNode node = merged[i].Node;
                 string rowBackendId = RequireString(node, "backendId", "host asset row");
-                if (!string.Equals(rowBackendId, backendId, StringComparison.OrdinalIgnoreCase))
+                if (!string.Equals(rowBackendId, backendId, StringComparison.Ordinal))
                 {
                     continue;
                 }
 
-                string assetKind = node["assetKind"]?.GetValue<string>() ?? "Mesh";
-                if (!string.Equals(assetKind, "Mesh", StringComparison.OrdinalIgnoreCase))
+                string assetKind = RequireString(node, "assetKind", rowBackendId);
+                if (!string.Equals(assetKind, "Mesh", StringComparison.Ordinal))
                 {
                     throw new InvalidOperationException(
                         $"Presentation host asset '{RequireString(node, "id", "host asset row")}' has unsupported assetKind '{assetKind}'.");
@@ -87,6 +88,7 @@ namespace Ludots.Core.Presentation.Config
                         $"Presentation host asset '{rowId}' has an empty sourceUris entry at index {i}.");
                 }
 
+                RequireNoBoundaryWhitespace(uri, $"Presentation host asset '{rowId}' sourceUris[{i}]");
                 uris[i] = uri;
             }
 
@@ -102,7 +104,16 @@ namespace Ludots.Core.Presentation.Config
                     $"Presentation host asset '{rowLabel}' must declare '{fieldName}'.");
             }
 
+            RequireNoBoundaryWhitespace(value, $"Presentation host asset '{rowLabel}' field '{fieldName}'");
             return value;
+        }
+
+        private static void RequireNoBoundaryWhitespace(string value, string label)
+        {
+            if (!string.Equals(value, value.Trim(), StringComparison.Ordinal))
+            {
+                throw new InvalidOperationException($"{label} must not include leading or trailing whitespace.");
+            }
         }
     }
 }

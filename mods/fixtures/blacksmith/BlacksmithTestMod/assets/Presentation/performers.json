@@ -2,14 +2,28 @@
   {
     "id": "blacksmith_root",
     "children": [
-      { "definitionId": "blacksmith_workshop_1", "scopeTag": "structure" },
-      { "definitionId": "blacksmith_workshop_2", "scopeTag": "structure" },
-      { "definitionId": "blacksmith_furnace", "scopeTag": "structure" }
+      {
+        "definitionId": "blacksmith_workshop_1",
+        "scopeTag": "structure"
+      },
+      {
+        "definitionId": "blacksmith_workshop_2",
+        "scopeTag": "structure"
+      },
+      {
+        "definitionId": "blacksmith_furnace",
+        "scopeTag": "structure"
+      }
     ],
     "rules": [
       {
-        "event": { "kind": "EntitySpawned", "key": "blacksmith" },
-        "condition": { "inline": "SourceHasVisualTransform" },
+        "event": {
+          "kind": "EntitySpawned",
+          "key": "blacksmith"
+        },
+        "condition": {
+          "inline": "SourceHasVisualTransform"
+        },
         "command": {
           "kind": "CreatePerformer",
           "definitionId": "blacksmith_root",
@@ -17,132 +31,181 @@
         }
       },
       {
-        "event": { "kind": "EntityDestroyed" },
+        "event": {
+          "kind": "EntityDestroyed",
+          "key": "*"
+        },
         "command": {
           "kind": "DestroyPerformerScope",
           "scopeSource": "EventPayloadA"
         }
       },
       {
-        "event": { "kind": "TagEffectiveChanged", "keyId": "working" },
-        "condition": { "inline": "TagGained" },
+        "event": {
+          "kind": "TagEffectiveChanged",
+          "keyId": "working"
+        },
+        "condition": {
+          "inline": "TagGained"
+        },
         "command": {
           "kind": "CreatePerformer",
           "definitionId": "blacksmith_smoke",
+          "scopeSource": "Fixed",
           "scopeTag": "working"
         }
       },
       {
-        "event": { "kind": "TagEffectiveChanged", "keyId": "working" },
-        "condition": { "inline": "TagGained" },
+        "event": {
+          "kind": "TagEffectiveChanged",
+          "keyId": "working"
+        },
+        "condition": {
+          "inline": "TagGained"
+        },
         "command": {
           "kind": "CreatePerformer",
           "definitionId": "blacksmith_worker",
+          "scopeSource": "Fixed",
           "scopeTag": "working"
         }
       },
       {
-        "event": { "kind": "TagEffectiveChanged", "keyId": "working" },
-        "condition": { "inline": "TagLost" },
+        "event": {
+          "kind": "TagEffectiveChanged",
+          "keyId": "working"
+        },
+        "condition": {
+          "inline": "TagLost"
+        },
         "command": {
           "kind": "DestroyPerformerScope",
+          "scopeSource": "Fixed",
           "scopeTag": "working"
         }
       },
       {
-        "event": { "kind": "GlobalDayNight" },
+        "event": {
+          "kind": "GlobalDayNight",
+          "key": "*"
+        },
         "command": {
           "kind": "SetParam",
-          "paramKey": 200,
+          "paramKey": "blacksmith.fixture.dayNight",
           "paramLane": "Float",
-          "paramValue": 1.0
+          "valueSource": "Fixed",
+          "paramValue": 1
         }
       },
       {
-        "event": { "kind": "GlobalRegionChanged" },
+        "event": {
+          "kind": "GlobalRegionChanged",
+          "key": "*"
+        },
         "command": {
           "kind": "SetParam",
-          "paramKey": 300,
+          "paramKey": "blacksmith.fixture.region",
           "paramLane": "Float",
           "valueSource": "EventKeyId"
-        }
-      },
-      {
-        "event": { "kind": "AttributeValueChanged", "keyId": 9100 },
-        "command": {
-          "kind": "SetParam",
-          "paramKey": 101,
-          "paramLane": "Int",
-          "intValue": 1001
-        }
-      },
-      {
-        "event": { "kind": "AttributeValueChanged", "keyId": 9101 },
-        "command": {
-          "kind": "SetParam",
-          "paramKey": 101,
-          "paramLane": "Int",
-          "intValue": 1002
-        }
-      },
-      {
-        "event": { "kind": "AttributeValueChanged", "keyId": 9102 },
-        "command": {
-          "kind": "SetParam",
-          "paramKey": 101,
-          "paramLane": "Int",
-          "intValue": 1003
         }
       }
     ],
     "paramDefaults": [
-      { "paramKey": 100, "lane": "Float", "floatValue": 1.0 },
-      { "paramKey": 101, "lane": "Int", "intValue": 1001 },
-      { "paramKey": 200, "lane": "Float", "floatValue": 0.0 },
-      { "paramKey": 300, "lane": "Float", "floatValue": 0.0 }
+      {
+        "paramKey": "blacksmith.fixture.durability.ratio",
+        "lane": "Float",
+        "floatValue": 1
+      },
+      {
+        "paramKey": "blacksmith.fixture.workshop.assetState",
+        "lane": "Int",
+        "intValue": 0
+      },
+      {
+        "paramKey": "blacksmith.fixture.dayNight",
+        "lane": "Float",
+        "floatValue": 0
+      },
+      {
+        "paramKey": "blacksmith.fixture.region",
+        "lane": "Float",
+        "floatValue": 0
+      }
     ]
   },
   {
     "id": "blacksmith_workshop_base",
     "behaviors": [
       {
-        "slot": 0,
+        "slot": "body",
         "kind": "AssetBinding",
         "activeByDefault": true,
         "assetBinding": {
           "assetKind": "Mesh",
-          "assetId": 1001,
+          "assetId": "blacksmith.fixture.workshop.intact",
           "renderPath": "StaticMesh",
           "mobility": "Static",
-          "assetSwapParamKey": 101,
-          "materialParamKey": 300,
-          "localScale": [1, 1, 1]
-        }
-      },
-      {
-        "slot": 1,
-        "kind": "Material",
-        "activeByDefault": true,
-        "material": {
-          "baseMaterialId": 5001,
-          "materialSwapParamKey": 300,
-          "swapTable": [
-            { "paramValue": 0.0, "materialId": 5001 },
-            { "paramValue": 1.0, "materialId": 5002 }
+          "assetSwapParamKey": "blacksmith.fixture.workshop.assetState",
+          "assetSwapTable": [
+            {
+              "paramValue": 0,
+              "assetId": "blacksmith.fixture.workshop.intact"
+            },
+            {
+              "paramValue": 1,
+              "assetId": "blacksmith.fixture.workshop.damaged"
+            },
+            {
+              "paramValue": 2,
+              "assetId": "blacksmith.fixture.workshop.ruined"
+            }
+          ],
+          "materialParamKey": "blacksmith.fixture.region",
+          "localScale": [
+            1,
+            1,
+            1
           ]
         }
       },
       {
-        "slot": 2,
+        "slot": "material",
+        "kind": "Material",
+        "activeByDefault": true,
+        "material": {
+          "baseMaterialId": "blacksmith.fixture.brick.north",
+          "materialSwapParamKey": "blacksmith.fixture.region",
+          "swapTable": [
+            {
+              "paramValue": 0,
+              "materialId": "blacksmith.fixture.brick.north"
+            },
+            {
+              "paramValue": 1,
+              "materialId": "blacksmith.fixture.brick.south"
+            }
+          ]
+        }
+      },
+      {
+        "slot": "attribute",
         "kind": "AttributeBinding",
         "activeByDefault": true,
         "attributeBinding": {
-          "attributeId": 1,
-          "targetParamKey": 100,
+          "attributeId": "durability",
+          "targetParamKey": "blacksmith.fixture.durability.ratio",
           "mode": "AttributeRatio",
           "thresholds": [
-            { "threshold": 0.0, "outputParamKey": 101, "outputValue": 1003 },
-            { "threshold": 0.66, "outputParamKey": 101, "outputValue": 1002 }
+            {
+              "threshold": 0,
+              "outputParamKey": "blacksmith.fixture.workshop.assetState",
+              "outputValue": 2
+            },
+            {
+              "threshold": 0.66,
+              "outputParamKey": "blacksmith.fixture.workshop.assetState",
+              "outputValue": 1
+            }
           ]
         }
       }
@@ -153,18 +216,40 @@
     "extends": "blacksmith_workshop_base",
     "behaviors": [
       {
-        "slot": 0,
+        "slot": "body",
         "kind": "AssetBinding",
         "activeByDefault": true,
         "assetBinding": {
           "assetKind": "Mesh",
-          "assetId": 1001,
+          "assetId": "blacksmith.fixture.workshop.intact",
           "renderPath": "StaticMesh",
           "mobility": "Static",
-          "assetSwapParamKey": 101,
-          "materialParamKey": 300,
-          "localOffset": [2.0, 0.0, 0.0],
-          "localScale": [1, 1, 1]
+          "assetSwapParamKey": "blacksmith.fixture.workshop.assetState",
+          "assetSwapTable": [
+            {
+              "paramValue": 0,
+              "assetId": "blacksmith.fixture.workshop.intact"
+            },
+            {
+              "paramValue": 1,
+              "assetId": "blacksmith.fixture.workshop.damaged"
+            },
+            {
+              "paramValue": 2,
+              "assetId": "blacksmith.fixture.workshop.ruined"
+            }
+          ],
+          "materialParamKey": "blacksmith.fixture.region",
+          "localOffset": [
+            2,
+            0,
+            0
+          ],
+          "localScale": [
+            1,
+            1,
+            1
+          ]
         }
       }
     ]
@@ -174,18 +259,40 @@
     "extends": "blacksmith_workshop_base",
     "behaviors": [
       {
-        "slot": 0,
+        "slot": "body",
         "kind": "AssetBinding",
         "activeByDefault": true,
         "assetBinding": {
           "assetKind": "Mesh",
-          "assetId": 1001,
+          "assetId": "blacksmith.fixture.workshop.intact",
           "renderPath": "StaticMesh",
           "mobility": "Static",
-          "assetSwapParamKey": 101,
-          "materialParamKey": 300,
-          "localOffset": [-2.0, 0.0, 0.0],
-          "localScale": [1, 1, 1]
+          "assetSwapParamKey": "blacksmith.fixture.workshop.assetState",
+          "assetSwapTable": [
+            {
+              "paramValue": 0,
+              "assetId": "blacksmith.fixture.workshop.intact"
+            },
+            {
+              "paramValue": 1,
+              "assetId": "blacksmith.fixture.workshop.damaged"
+            },
+            {
+              "paramValue": 2,
+              "assetId": "blacksmith.fixture.workshop.ruined"
+            }
+          ],
+          "materialParamKey": "blacksmith.fixture.region",
+          "localOffset": [
+            -2,
+            0,
+            0
+          ],
+          "localScale": [
+            1,
+            1,
+            1
+          ]
         }
       }
     ]
@@ -194,16 +301,24 @@
     "id": "blacksmith_furnace",
     "behaviors": [
       {
-        "slot": 0,
+        "slot": "body",
         "kind": "AssetBinding",
         "activeByDefault": true,
         "assetBinding": {
           "assetKind": "Mesh",
-          "assetId": 1100,
+          "assetId": "blacksmith.fixture.furnace",
           "renderPath": "StaticMesh",
           "mobility": "Static",
-          "localOffset": [0.0, 0.0, 3.0],
-          "localScale": [1, 1, 1]
+          "localOffset": [
+            0,
+            0,
+            3
+          ],
+          "localScale": [
+            1,
+            1,
+            1
+          ]
         }
       }
     ]
@@ -212,16 +327,24 @@
     "id": "blacksmith_smoke",
     "behaviors": [
       {
-        "slot": 0,
+        "slot": "body",
         "kind": "AssetBinding",
         "activeByDefault": true,
         "assetBinding": {
           "assetKind": "VFX",
-          "assetId": 1200,
+          "assetId": "blacksmith.fixture.smoke",
           "renderPath": "StaticMesh",
           "mobility": "Movable",
-          "localOffset": [0.0, 5.0, 0.0],
-          "localScale": [1, 1, 1]
+          "localOffset": [
+            0,
+            5,
+            0
+          ],
+          "localScale": [
+            1,
+            1,
+            1
+          ]
         }
       }
     ]
@@ -229,52 +352,69 @@
   {
     "id": "blacksmith_worker",
     "paramDefaults": [
-      { "paramKey": 10, "lane": "Float", "floatValue": 1.0 }
+      {
+        "paramKey": "blacksmith.fixture.worker.locomotion.speed",
+        "lane": "Float",
+        "floatValue": 1
+      },
+      {
+        "paramKey": "blacksmith.fixture.worker.route.progress",
+        "lane": "Float",
+        "floatValue": 0
+      }
     ],
     "behaviors": [
       {
-        "slot": 0,
+        "slot": "body",
         "kind": "AssetBinding",
         "activeByDefault": true,
         "assetBinding": {
           "assetKind": "SkinnedMesh",
-          "assetId": 1300,
+          "assetId": "blacksmith.fixture.worker",
           "renderPath": "SkinnedMesh",
           "mobility": "Movable",
-          "localOffset": [0.0, 0.0, -2.0],
-          "localScale": [1, 1, 1]
+          "localOffset": [
+            0,
+            0,
+            -2
+          ],
+          "localScale": [
+            1,
+            1,
+            1
+          ]
         }
       },
       {
-        "slot": 1,
+        "slot": "animator",
         "kind": "Animator",
         "activeByDefault": true,
         "animator": {
-          "animatorControllerId": 1,
-          "animationProfileId": 1,
-          "speedParamKey": 10,
-          "stateParamKey": 20
+          "animatorControllerId": "worker_anim",
+          "animationProfileId": "worker_profile",
+          "speedParamKey": "blacksmith.fixture.worker.locomotion.speed",
+          "stateParamKey": "blacksmith.fixture.worker.animation.state"
         }
       },
       {
-        "slot": 2,
+        "slot": "sound",
         "kind": "Sound",
         "activeByDefault": true,
         "sound": {
-          "soundAssetId": 1400,
+          "soundAssetId": "blacksmith.fixture.anvil_hammering",
           "loop": true,
-          "volume": 1.0
+          "volume": 1
         }
       },
       {
-        "slot": 3,
+        "slot": "spline",
         "kind": "Spline",
         "activeByDefault": true,
         "spline": {
-          "splineAssetId": 1500,
+          "splineAssetId": "blacksmith.fixture.patrol",
           "usage": "Patrol",
-          "speedParamKey": 10,
-          "progressParamKey": 11,
+          "speedParamKey": "blacksmith.fixture.worker.locomotion.speed",
+          "progressParamKey": "blacksmith.fixture.worker.route.progress",
           "loop": true
         }
       }

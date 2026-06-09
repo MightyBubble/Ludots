@@ -30,7 +30,6 @@ namespace PerformerBlacksmithShowcaseMod.Runtime
         private const float RootSearchRadiusCm = 50f;
         private const int ScatterMinTotal = 1;
         private const int ScatterUiHardMaxTotal = 300_000;
-        private const int ScatterDefaultTarget = 30_000;
         private const int BenchmarkSampleFrames = 60;
         private const int DetailedPanelCrowdThreshold = 2048;
         private const int PerformerCountPerBlacksmith = 9;
@@ -45,12 +44,21 @@ namespace PerformerBlacksmithShowcaseMod.Runtime
         private const int GroundOverlayCountPerBlacksmith = 1;
         private const int SkinnedCountPerBlacksmith = 1;
         private const string AutoScatterTotalEnvKey = "LUDOTS_BLACKSMITH_AUTO_SCATTER_TOTAL";
-        private const string AutoScatterMinRadiusEnvKey = "LUDOTS_BLACKSMITH_AUTO_SCATTER_MIN_RADIUS_CM";
-        private const string AutoScatterMaxRadiusEnvKey = "LUDOTS_BLACKSMITH_AUTO_SCATTER_MAX_RADIUS_CM";
         private const string AutoMeshBenchmarkTotalEnvKey = "LUDOTS_BLACKSMITH_MESH_BENCHMARK_TOTAL";
         private const string AutoDynamicWorkerBenchmarkTotalEnvKey = "LUDOTS_BLACKSMITH_DYNAMIC_WORKER_BENCHMARK_TOTAL";
         private const string MetadataSectionKey = "performerBlacksmith";
+        private const string ScatterInitialTargetMetadataKey = "scatterInitialTarget";
+        private const string ScatterSeedMetadataKey = "scatterSeed";
+        private const string ScatterMinRadiusMetadataKey = "scatterMinRadiusCm";
+        private const string ScatterMaxRadiusMetadataKey = "scatterMaxRadiusCm";
+        private const string ScatterJitterMetadataKey = "scatterJitterCm";
+        private const string MeshBenchmarkTotalMetadataKey = "meshBenchmarkTotal";
+        private const string MeshBenchmarkScatterSeedMetadataKey = "meshBenchmarkScatterSeed";
+        private const string MeshBenchmarkScatterMinRadiusMetadataKey = "meshBenchmarkScatterMinRadiusCm";
+        private const string MeshBenchmarkScatterMaxRadiusMetadataKey = "meshBenchmarkScatterMaxRadiusCm";
+        private const string MeshBenchmarkScatterJitterMetadataKey = "meshBenchmarkScatterJitterCm";
         private const string DynamicWorkerBenchmarkTotalMetadataKey = "dynamicWorkerBenchmarkTotal";
+        private const string DynamicWorkerScatterSeedMetadataKey = "dynamicWorkerScatterSeed";
         private const string DynamicWorkerScatterJitterMetadataKey = "dynamicWorkerScatterJitterCm";
         private const string DynamicWorkerScatterPaddingMetadataKey = "dynamicWorkerScatterPaddingCm";
         private const string MinimapMarkerShowcaseTotalMetadataKey = "minimapMarkerShowcaseTotal";
@@ -82,9 +90,8 @@ namespace PerformerBlacksmithShowcaseMod.Runtime
         private float _changeFlashTimer;
         private string _lastChangedField = string.Empty;
         private int _scatterRequestedTotal = 1;
-        private int _scatterTargetTotal = ScatterDefaultTarget;
+        private int _scatterTargetTotal = ScatterMinTotal;
         private int _lastScatterSeed;
-        private int _scatterGeneration;
         private int _lastQueuedScatterExtras;
         private bool _autoScatterApplied;
         private bool _autoMeshBenchmarkApplied;
@@ -103,7 +110,7 @@ namespace PerformerBlacksmithShowcaseMod.Runtime
 
         public bool SuppressHostDiagnosticUi => _activeEngine != null &&
             PerformerBlacksmithShowcaseIds.IsShowcaseMap(_activeEngine.CurrentMapSession?.MapId.Value) &&
-            !ReadEnvBool(ForceBenchmarkUiEnvKey);
+            !ReadStrictBoolEnv(ForceBenchmarkUiEnvKey);
 
         public bool SuppressHostDebugGuides => _activeEngine != null &&
             PerformerBlacksmithShowcaseIds.IsShowcaseMap(_activeEngine.CurrentMapSession?.MapId.Value) &&
@@ -141,7 +148,7 @@ namespace PerformerBlacksmithShowcaseMod.Runtime
             _durabilityDamagedEffectId = EffectTemplateIdRegistry.GetId(PerformerBlacksmithShowcaseIds.EffectSetDurabilityDamaged);
             _durabilityRuinedEffectId = EffectTemplateIdRegistry.GetId(PerformerBlacksmithShowcaseIds.EffectSetDurabilityRuined);
             _activeEngine = engine;
-            ResetControlState();
+            ResetControlState(engine);
             _buildingEntity = IsInteractiveMode(engine)
                 ? FindRootBuildingEntity(engine)
                 : Entity.Null;
@@ -351,8 +358,8 @@ namespace PerformerBlacksmithShowcaseMod.Runtime
                 return;
             }
 
-            int seed = unchecked(Environment.TickCount ^ (clampedTotal * 7919) ^ (++_scatterGeneration * 104729));
-            _lastScatterSeed = seed;
+            BlacksmithScatterConfig scatter = ReadScatterConfig(engine);
+            _lastScatterSeed = scatter.Seed;
             string templateId = ResolveScatterTemplateId(engine);
             int requestedEntityCount = cleanHudTextScatter || meshOnlyScatter || meshHudBarScatter || meshHudTextScatter
                 ? clampedTotal
@@ -362,12 +369,12 @@ namespace PerformerBlacksmithShowcaseMod.Runtime
                 engine.CurrentMapSession?.MapId ?? default,
                 templateId,
                 requestedEntityCount,
-                seed,
-                ResolveAutoScatterMinRadiusCm(),
-                ResolveAutoScatterMaxRadiusCm(),
-                PerformerBlacksmithScatterPlanner.DefaultJitterCm);
+                scatter.Seed,
+                scatter.MinRadiusCm,
+                scatter.MaxRadiusCm,
+                scatter.JitterCm);
             _lastQueuedScatterExtras = queued;
-            Flash($"Scatter total => {clampedTotal} (seed {seed}, queued {queued})");
+            Flash($"Scatter total => {clampedTotal} (seed {scatter.Seed}, queued {queued})");
         }
 
         internal void AdjustScatterTarget(int delta)
@@ -571,7 +578,8 @@ namespace PerformerBlacksmithShowcaseMod.Runtime
                 return;
             }
 
-            int requested = ReadEnvInt(AutoMeshBenchmarkTotalEnvKey, PerformerBlacksmithShowcaseIds.MeshBenchmarkDefaultTotal);
+            int configured = ReadRequiredMapMetadataInt(engine, MetadataSectionKey, MeshBenchmarkTotalMetadataKey);
+            int requested = ReadPositiveIntEnvOverride(AutoMeshBenchmarkTotalEnvKey, configured);
             int total = Math.Clamp(requested, ScatterMinTotal, ScatterUiHardMaxTotal);
             int enqueued = EnqueueMeshBenchmark(spawnQueue, engine, total);
             _scatterRequestedTotal = total;
@@ -622,7 +630,7 @@ namespace PerformerBlacksmithShowcaseMod.Runtime
                 engine,
                 MetadataSectionKey,
                 DynamicWorkerBenchmarkTotalMetadataKey);
-            return ReadEnvInt(AutoDynamicWorkerBenchmarkTotalEnvKey, metadataTotal);
+            return ReadPositiveIntEnvOverride(AutoDynamicWorkerBenchmarkTotalEnvKey, metadataTotal);
         }
 
         private static int EnqueueMeshBenchmark(RuntimeEntitySpawnQueue queue, GameEngine engine, int total)
@@ -633,18 +641,15 @@ namespace PerformerBlacksmithShowcaseMod.Runtime
                 return 0;
             }
 
-            int seed = unchecked(Environment.TickCount ^ (count * 48611));
-            var config = engine.GetService(CoreServiceKeys.GameConfig)
-                ?? throw new InvalidOperationException("GameConfig service missing.");
-            float halfWorldWidthCm = config.WorldWidthInTiles * config.GridCellSizeCm * 0.5f;
-            float halfWorldHeightCm = config.WorldHeightInTiles * config.GridCellSizeCm * 0.5f;
-            float maxWorldRadiusCm = MathF.Max(1000f, MathF.Min(halfWorldWidthCm, halfWorldHeightCm) - 600f);
-            float minRadiusCm = MathF.Min(
-                PerformerBlacksmithScatterPlanner.DefaultMinRadiusCm * 2.5f,
-                MathF.Max(750f, maxWorldRadiusCm * 0.28f));
-            float requestedRadiusCm = PerformerBlacksmithScatterPlanner.DefaultMaxRadiusCm * MathF.Max(3.5f, MathF.Sqrt(count / 220f));
-            float maxRadiusCm = MathF.Max(minRadiusCm + 500f, MathF.Min(maxWorldRadiusCm, requestedRadiusCm));
-            float jitterCm = PerformerBlacksmithScatterPlanner.DefaultJitterCm * 1.5f;
+            int seed = ReadRequiredMapMetadataInt(engine, MetadataSectionKey, MeshBenchmarkScatterSeedMetadataKey);
+            float minRadiusCm = ReadRequiredPositiveMapMetadataFloat(engine, MetadataSectionKey, MeshBenchmarkScatterMinRadiusMetadataKey);
+            float maxRadiusCm = ReadRequiredPositiveMapMetadataFloat(engine, MetadataSectionKey, MeshBenchmarkScatterMaxRadiusMetadataKey);
+            float jitterCm = ReadRequiredNonNegativeMapMetadataFloat(engine, MetadataSectionKey, MeshBenchmarkScatterJitterMetadataKey);
+            if (maxRadiusCm <= minRadiusCm)
+            {
+                throw new InvalidOperationException(
+                    $"metadata.{MetadataSectionKey}.{MeshBenchmarkScatterMaxRadiusMetadataKey} must be greater than {MeshBenchmarkScatterMinRadiusMetadataKey}.");
+            }
 
             return PerformerBlacksmithScatterPlanner.EnqueueTemplateScatter(
                 queue,
@@ -665,22 +670,16 @@ namespace PerformerBlacksmithShowcaseMod.Runtime
                 return 0;
             }
 
-            int seed = unchecked(Environment.TickCount ^ (count * 61543));
+            int seed = ReadRequiredMapMetadataInt(engine, MetadataSectionKey, DynamicWorkerScatterSeedMetadataKey);
             IVisualHeightmapRenderSource heightmap = RequireVisualHeightmapRenderSource(engine);
-            float jitterCm = ReadRequiredMapMetadataFloat(
+            float jitterCm = ReadRequiredNonNegativeMapMetadataFloat(
                 engine,
                 MetadataSectionKey,
                 DynamicWorkerScatterJitterMetadataKey);
-            float paddingCm = ReadRequiredMapMetadataFloat(
+            float paddingCm = ReadRequiredNonNegativeMapMetadataFloat(
                 engine,
                 MetadataSectionKey,
                 DynamicWorkerScatterPaddingMetadataKey);
-            if (jitterCm < 0f || paddingCm < 0f)
-            {
-                throw new InvalidOperationException(
-                    $"Map '{engine.CurrentMapSession?.MapId.Value ?? "<none>"}' has invalid dynamic worker scatter metadata. " +
-                    $"{DynamicWorkerScatterJitterMetadataKey} and {DynamicWorkerScatterPaddingMetadataKey} must be >= 0.");
-            }
 
             float leftCm = heightmap.Bounds.Left + paddingCm + jitterCm;
             float rightCm = heightmap.Bounds.Right - paddingCm - jitterCm;
@@ -742,14 +741,8 @@ namespace PerformerBlacksmithShowcaseMod.Runtime
                 return 0;
             }
 
-            float jitterCm = ReadRequiredMapMetadataFloat(engine, MetadataSectionKey, MinimapMarkerScatterJitterMetadataKey);
-            float paddingCm = ReadRequiredMapMetadataFloat(engine, MetadataSectionKey, MinimapMarkerScatterPaddingMetadataKey);
-            if (jitterCm < 0f || paddingCm < 0f)
-            {
-                throw new InvalidOperationException(
-                    $"Map '{engine.CurrentMapSession?.MapId.Value ?? "<none>"}' has invalid minimap marker scatter metadata. " +
-                    $"{MinimapMarkerScatterJitterMetadataKey} and {MinimapMarkerScatterPaddingMetadataKey} must be >= 0.");
-            }
+            float jitterCm = ReadRequiredNonNegativeMapMetadataFloat(engine, MetadataSectionKey, MinimapMarkerScatterJitterMetadataKey);
+            float paddingCm = ReadRequiredNonNegativeMapMetadataFloat(engine, MetadataSectionKey, MinimapMarkerScatterPaddingMetadataKey);
 
             var bounds = engine.WorldSizeSpec.Bounds;
             float leftCm = bounds.Left + paddingCm + jitterCm;
@@ -762,22 +755,17 @@ namespace PerformerBlacksmithShowcaseMod.Runtime
                     $"Map '{engine.CurrentMapSession?.MapId.Value ?? "<none>"}' minimap marker scatter padding leaves no valid world spawn area.");
             }
 
-            int seed = ReadOptionalMapMetadataInt(engine, MetadataSectionKey, MinimapMarkerScatterSeedMetadataKey, unchecked(Environment.TickCount ^ (count * 31991)));
+            int seed = ReadRequiredMapMetadataInt(engine, MetadataSectionKey, MinimapMarkerScatterSeedMetadataKey);
             int clusterCount = Math.Clamp(
-                ReadOptionalMapMetadataInt(engine, MetadataSectionKey, MinimapMarkerVisibleClusterCountMetadataKey, 0),
+                ReadRequiredMapMetadataInt(engine, MetadataSectionKey, MinimapMarkerVisibleClusterCountMetadataKey),
                 0,
                 count);
             int queued = 0;
             if (clusterCount > 0)
             {
-                float clusterCenterXCm = ReadOptionalMapMetadataFloat(engine, MetadataSectionKey, MinimapMarkerVisibleClusterCenterXMetadataKey, 0f);
-                float clusterCenterYCm = ReadOptionalMapMetadataFloat(engine, MetadataSectionKey, MinimapMarkerVisibleClusterCenterYMetadataKey, 0f);
-                float clusterRadiusCm = ReadRequiredMapMetadataFloat(engine, MetadataSectionKey, MinimapMarkerVisibleClusterRadiusMetadataKey);
-                if (clusterRadiusCm <= 0f)
-                {
-                    throw new InvalidOperationException(
-                        $"metadata.{MetadataSectionKey}.{MinimapMarkerVisibleClusterRadiusMetadataKey} must be > 0 for the minimap marker showcase.");
-                }
+                float clusterCenterXCm = ReadRequiredMapMetadataFloat(engine, MetadataSectionKey, MinimapMarkerVisibleClusterCenterXMetadataKey);
+                float clusterCenterYCm = ReadRequiredMapMetadataFloat(engine, MetadataSectionKey, MinimapMarkerVisibleClusterCenterYMetadataKey);
+                float clusterRadiusCm = ReadRequiredPositiveMapMetadataFloat(engine, MetadataSectionKey, MinimapMarkerVisibleClusterRadiusMetadataKey);
 
                 queued += PerformerBlacksmithScatterPlanner.EnqueueTemplateClusterScatter(
                     queue,
@@ -832,7 +820,7 @@ namespace PerformerBlacksmithShowcaseMod.Runtime
             var query = new QueryDescription().WithAll<Name, WorldPositionCm>();
             engine.World.Query(in query, (Entity entity, ref Name name, ref WorldPositionCm position) =>
             {
-                if (!string.Equals(name.Value, PerformerBlacksmithShowcaseIds.EntityName, StringComparison.OrdinalIgnoreCase))
+                if (!string.Equals(name.Value, PerformerBlacksmithShowcaseIds.EntityName, StringComparison.Ordinal))
                 {
                     return;
                 }
@@ -874,7 +862,7 @@ namespace PerformerBlacksmithShowcaseMod.Runtime
                 return;
             }
 
-            ResetControlState();
+            ResetControlState(engine);
             _destroyed = false;
             Flash("Root respawn queued");
         }
@@ -890,10 +878,10 @@ namespace PerformerBlacksmithShowcaseMod.Runtime
             float rootDistanceSq = RootSearchRadiusCm * RootSearchRadiusCm;
             engine.World.Query(in query, (Entity entity, ref Name name, ref WorldPositionCm position) =>
             {
-                bool isBlacksmith = string.Equals(name.Value, PerformerBlacksmithShowcaseIds.EntityName, StringComparison.OrdinalIgnoreCase);
-                bool isMeshBenchmark = string.Equals(name.Value, PerformerBlacksmithShowcaseIds.MeshBenchmarkEntityName, StringComparison.OrdinalIgnoreCase);
-                bool isMeshHudBarBenchmark = string.Equals(name.Value, PerformerBlacksmithShowcaseIds.MeshHudBarBenchmarkEntityName, StringComparison.OrdinalIgnoreCase);
-                bool isMeshHudTextBenchmark = string.Equals(name.Value, PerformerBlacksmithShowcaseIds.MeshHudTextBenchmarkEntityName, StringComparison.OrdinalIgnoreCase);
+                bool isBlacksmith = string.Equals(name.Value, PerformerBlacksmithShowcaseIds.EntityName, StringComparison.Ordinal);
+                bool isMeshBenchmark = string.Equals(name.Value, PerformerBlacksmithShowcaseIds.MeshBenchmarkEntityName, StringComparison.Ordinal);
+                bool isMeshHudBarBenchmark = string.Equals(name.Value, PerformerBlacksmithShowcaseIds.MeshHudBarBenchmarkEntityName, StringComparison.Ordinal);
+                bool isMeshHudTextBenchmark = string.Equals(name.Value, PerformerBlacksmithShowcaseIds.MeshHudTextBenchmarkEntityName, StringComparison.Ordinal);
                 if (!isBlacksmith && !isMeshBenchmark && !isMeshHudBarBenchmark && !isMeshHudTextBenchmark)
                 {
                     return;
@@ -931,7 +919,7 @@ namespace PerformerBlacksmithShowcaseMod.Runtime
                 return;
             }
 
-            bool forcePanel = ReadEnvBool(ForcePanelEnvKey);
+            bool forcePanel = ReadStrictBoolEnv(ForcePanelEnvKey);
             bool benchmarkPanelSuppressed = IsBenchmarkMode(engine) && !forcePanel;
             if (benchmarkPanelSuppressed)
             {
@@ -1306,7 +1294,8 @@ namespace PerformerBlacksmithShowcaseMod.Runtime
 
         private CapacityMetrics CaptureCapacityMetrics(GameEngine engine)
         {
-            PresentationRuntimeConfig runtimeConfig = engine.MergedConfig?.Presentation ?? new PresentationRuntimeConfig();
+            PresentationRuntimeConfig runtimeConfig = engine.MergedConfig?.Presentation
+                ?? throw new InvalidOperationException("game.json presentation must be explicitly configured.");
             var performers = engine.GetService(CoreServiceKeys.PerformerEntityRuntime);
             var events = engine.GetService(CoreServiceKeys.PresentationEventStream);
             var worldHud = engine.GetService(CoreServiceKeys.PresentationWorldHudBuffer);
@@ -1318,28 +1307,28 @@ namespace PerformerBlacksmithShowcaseMod.Runtime
             var spawnQueue = engine.GetService(CoreServiceKeys.RuntimeEntitySpawnQueue);
 
             return new CapacityMetrics(
-                PerformerCapacity: runtimeConfig.GetEffectivePerformerInstanceCapacity(),
+                PerformerCapacity: runtimeConfig.PerformerInstanceCapacity,
                 PerformerActive: performers?.ActiveCount ?? 0,
-                PresentationEventCapacity: events?.Capacity ?? runtimeConfig.GetEffectivePresentationEventStreamCapacity(),
+                PresentationEventCapacity: events?.Capacity ?? runtimeConfig.PresentationEventStreamCapacity,
                 PresentationEventCount: events?.Count ?? 0,
                 PresentationEventDrops: events?.DroppedSinceClear ?? 0,
-                PrimitiveCapacity: primitives?.Capacity ?? runtimeConfig.GetEffectivePrimitiveDrawBufferCapacity(),
+                PrimitiveCapacity: primitives?.Capacity ?? runtimeConfig.PrimitiveDrawBufferCapacity,
                 PrimitiveCount: primitives?.Count ?? 0,
                 PrimitiveDrops: primitives?.DroppedSinceClear ?? 0,
-                WorldHudCapacity: worldHud?.Capacity ?? runtimeConfig.GetEffectiveWorldHudCapacity(),
+                WorldHudCapacity: worldHud?.Capacity ?? runtimeConfig.WorldHudCapacity,
                 WorldHudCount: worldHud?.Count ?? 0,
                 WorldHudDrops: worldHud?.DroppedSinceClear ?? 0,
-                ScreenHudCapacity: screenHud?.Capacity ?? runtimeConfig.GetEffectiveScreenHudCapacity(),
+                ScreenHudCapacity: screenHud?.Capacity ?? runtimeConfig.ScreenHudCapacity,
                 ScreenHudCount: screenHud?.Count ?? 0,
                 ScreenHudDrops: screenHud?.DroppedSinceClear ?? 0,
-                SkinnedCapacity: skinned?.Capacity ?? runtimeConfig.GetEffectiveSkinnedVisualBatchCapacity(),
+                SkinnedCapacity: skinned?.Capacity ?? runtimeConfig.SkinnedVisualBatchCapacity,
                 SkinnedCount: skinned?.Count ?? 0,
                 SkinnedDrops: skinned?.DroppedSinceClear ?? 0,
-                RoadSplineCapacity: roadSplines?.Capacity ?? runtimeConfig.GetEffectiveRoadSplineCapacity(),
+                RoadSplineCapacity: roadSplines?.Capacity ?? runtimeConfig.RoadSplineCapacity,
                 RoadSplineCount: roadSplines?.Count ?? 0,
-                GroundOverlayCapacity: overlays?.Capacity ?? runtimeConfig.GetEffectiveGroundOverlayCapacity(),
+                GroundOverlayCapacity: overlays?.Capacity ?? runtimeConfig.GroundOverlayCapacity,
                 GroundOverlayCount: overlays?.Count ?? 0,
-                SpawnQueueCapacity: spawnQueue?.Capacity ?? runtimeConfig.GetEffectiveRuntimeEntitySpawnQueueCapacity(),
+                SpawnQueueCapacity: spawnQueue?.Capacity ?? runtimeConfig.RuntimeEntitySpawnQueueCapacity,
                 SpawnQueueCount: spawnQueue?.Count ?? 0);
         }
 
@@ -1351,7 +1340,7 @@ namespace PerformerBlacksmithShowcaseMod.Runtime
             var query = new QueryDescription().WithAll<Name, WorldPositionCm>();
             engine.World.Query(in query, (Entity _, ref Name name, ref WorldPositionCm position) =>
             {
-                if (!string.Equals(name.Value, PerformerBlacksmithShowcaseIds.EntityName, StringComparison.OrdinalIgnoreCase))
+                if (!string.Equals(name.Value, PerformerBlacksmithShowcaseIds.EntityName, StringComparison.Ordinal))
                 {
                     return;
                 }
@@ -1375,7 +1364,7 @@ namespace PerformerBlacksmithShowcaseMod.Runtime
             var query = new QueryDescription().WithAll<Name>();
             engine.World.Query(in query, (ref Name name) =>
             {
-                if (string.Equals(name.Value, PerformerBlacksmithShowcaseIds.MeshBenchmarkEntityName, StringComparison.OrdinalIgnoreCase))
+                if (string.Equals(name.Value, PerformerBlacksmithShowcaseIds.MeshBenchmarkEntityName, StringComparison.Ordinal))
                 {
                     total++;
                 }
@@ -1390,7 +1379,7 @@ namespace PerformerBlacksmithShowcaseMod.Runtime
             var query = new QueryDescription().WithAll<Name>();
             engine.World.Query(in query, (ref Name name) =>
             {
-                if (string.Equals(name.Value, PerformerBlacksmithShowcaseIds.MeshHudBarBenchmarkEntityName, StringComparison.OrdinalIgnoreCase))
+                if (string.Equals(name.Value, PerformerBlacksmithShowcaseIds.MeshHudBarBenchmarkEntityName, StringComparison.Ordinal))
                 {
                     total++;
                 }
@@ -1405,7 +1394,7 @@ namespace PerformerBlacksmithShowcaseMod.Runtime
             var query = new QueryDescription().WithAll<Name>();
             engine.World.Query(in query, (ref Name name) =>
             {
-                if (string.Equals(name.Value, PerformerBlacksmithShowcaseIds.MeshHudTextBenchmarkEntityName, StringComparison.OrdinalIgnoreCase))
+                if (string.Equals(name.Value, PerformerBlacksmithShowcaseIds.MeshHudTextBenchmarkEntityName, StringComparison.Ordinal))
                 {
                     total++;
                 }
@@ -1420,7 +1409,7 @@ namespace PerformerBlacksmithShowcaseMod.Runtime
             var query = new QueryDescription().WithAll<Name>();
             engine.World.Query(in query, (ref Name name) =>
             {
-                if (string.Equals(name.Value, PerformerBlacksmithShowcaseIds.DynamicWorkerEntityName, StringComparison.OrdinalIgnoreCase))
+                if (string.Equals(name.Value, PerformerBlacksmithShowcaseIds.DynamicWorkerEntityName, StringComparison.Ordinal))
                 {
                     total++;
                 }
@@ -1435,7 +1424,7 @@ namespace PerformerBlacksmithShowcaseMod.Runtime
             var query = new QueryDescription().WithAll<Name>();
             engine.World.Query(in query, (ref Name name) =>
             {
-                if (string.Equals(name.Value, PerformerBlacksmithShowcaseIds.MinimapMarkerBallEntityName, StringComparison.OrdinalIgnoreCase))
+                if (string.Equals(name.Value, PerformerBlacksmithShowcaseIds.MinimapMarkerBallEntityName, StringComparison.Ordinal))
                 {
                     total++;
                 }
@@ -1544,11 +1533,7 @@ namespace PerformerBlacksmithShowcaseMod.Runtime
                 return;
             }
 
-            // Auto scatter is an explicit benchmark/debug opt-in. The showcase should
-            // boot into its authored single-root baseline unless a launch env requests
-            // a larger crowd. Tests and normal UAT then stay on the same baseline path.
-            int requested = ReadEnvInt(AutoScatterTotalEnvKey, 0);
-            if (requested > 1)
+            if (TryReadPositiveIntEnv(AutoScatterTotalEnvKey, out int requested) && requested > 1)
             {
                 ApplyScatterLayout(requested);
             }
@@ -1556,14 +1541,16 @@ namespace PerformerBlacksmithShowcaseMod.Runtime
             _autoScatterApplied = true;
         }
 
-        private void ResetControlState()
+        private void ResetControlState(GameEngine engine)
         {
             _isWorking = false;
             _isNight = false;
             _regionIndex = 0;
             _destroyed = false;
             _scatterRequestedTotal = 1;
-            _scatterTargetTotal = ScatterDefaultTarget;
+            _scatterTargetTotal = SupportsBlacksmithScatter(engine)
+                ? ReadRequiredMapMetadataInt(engine, MetadataSectionKey, ScatterInitialTargetMetadataKey)
+                : ScatterMinTotal;
             _autoMeshBenchmarkApplied = false;
             _autoDynamicWorkerBenchmarkApplied = false;
             _autoMinimapMarkerShowcaseApplied = false;
@@ -1771,14 +1758,6 @@ namespace PerformerBlacksmithShowcaseMod.Runtime
             _panelRefreshCooldown = 0f;
         }
 
-        private static int ReadEnvInt(string key, int defaultValue)
-        {
-            string? raw = Environment.GetEnvironmentVariable(key);
-            return int.TryParse(raw, out int parsed) && parsed > 0
-                ? parsed
-                : defaultValue;
-        }
-
         private static int ReadRequiredMapMetadataInt(GameEngine engine, string section, string key)
         {
             JsonNode valueNode = ReadRequiredMapMetadataValue(engine, section, key);
@@ -1789,7 +1768,7 @@ namespace PerformerBlacksmithShowcaseMod.Runtime
                 if (value <= 0)
                 {
                     throw new InvalidOperationException(
-                        $"metadata.{section}.{key} must be > 0 for the dynamic worker benchmark production path.");
+                        $"metadata.{section}.{key} must be > 0 for the performer blacksmith showcase path.");
                 }
 
                 return value;
@@ -1797,13 +1776,13 @@ namespace PerformerBlacksmithShowcaseMod.Runtime
             catch (FormatException ex)
             {
                 throw new InvalidOperationException(
-                    $"metadata.{section}.{key} must be an integer for the dynamic worker benchmark production path.",
+                    $"metadata.{section}.{key} must be an integer for the performer blacksmith showcase path.",
                     ex);
             }
             catch (InvalidOperationException ex) when (!ex.Message.Contains("metadata.", StringComparison.Ordinal))
             {
                 throw new InvalidOperationException(
-                    $"metadata.{section}.{key} must be an integer for the dynamic worker benchmark production path.",
+                    $"metadata.{section}.{key} must be an integer for the performer blacksmith showcase path.",
                     ex);
             }
         }
@@ -1818,7 +1797,7 @@ namespace PerformerBlacksmithShowcaseMod.Runtime
                 if (!float.IsFinite(value))
                 {
                     throw new InvalidOperationException(
-                        $"metadata.{section}.{key} must be finite for the dynamic worker benchmark production path.");
+                        $"metadata.{section}.{key} must be finite for the performer blacksmith showcase path.");
                 }
 
                 return value;
@@ -1826,15 +1805,39 @@ namespace PerformerBlacksmithShowcaseMod.Runtime
             catch (FormatException ex)
             {
                 throw new InvalidOperationException(
-                    $"metadata.{section}.{key} must be a number for the dynamic worker benchmark production path.",
+                    $"metadata.{section}.{key} must be a number for the performer blacksmith showcase path.",
                     ex);
             }
             catch (InvalidOperationException ex) when (!ex.Message.Contains("metadata.", StringComparison.Ordinal))
             {
                 throw new InvalidOperationException(
-                    $"metadata.{section}.{key} must be a number for the dynamic worker benchmark production path.",
+                    $"metadata.{section}.{key} must be a number for the performer blacksmith showcase path.",
                     ex);
             }
+        }
+
+        private static float ReadRequiredPositiveMapMetadataFloat(GameEngine engine, string section, string key)
+        {
+            float value = ReadRequiredMapMetadataFloat(engine, section, key);
+            if (value <= 0f)
+            {
+                throw new InvalidOperationException(
+                    $"metadata.{section}.{key} must be > 0 for the performer blacksmith showcase path.");
+            }
+
+            return value;
+        }
+
+        private static float ReadRequiredNonNegativeMapMetadataFloat(GameEngine engine, string section, string key)
+        {
+            float value = ReadRequiredMapMetadataFloat(engine, section, key);
+            if (value < 0f)
+            {
+                throw new InvalidOperationException(
+                    $"metadata.{section}.{key} must be >= 0 for the performer blacksmith showcase path.");
+            }
+
+            return value;
         }
 
         private static JsonNode ReadRequiredMapMetadataValue(GameEngine engine, string section, string key)
@@ -1847,106 +1850,54 @@ namespace PerformerBlacksmithShowcaseMod.Runtime
             {
                 string mapId = engine.CurrentMapSession?.MapId.Value ?? "<none>";
                 throw new InvalidOperationException(
-                    $"Map '{mapId}' must declare metadata.{section}.{key} for the dynamic worker benchmark production path.");
+                    $"Map '{mapId}' must declare metadata.{section}.{key} for the performer blacksmith showcase path.");
             }
 
             return valueNode;
         }
 
-        private static int ReadOptionalMapMetadataInt(GameEngine engine, string section, string key, int defaultValue)
+        private static BlacksmithScatterConfig ReadScatterConfig(GameEngine engine)
         {
-            if (!TryReadMapMetadataValue(engine, section, key, out JsonNode? valueNode) ||
-                valueNode == null)
-            {
-                return defaultValue;
-            }
-
-            try
-            {
-                return valueNode.GetValue<int>();
-            }
-            catch (FormatException ex)
+            int seed = ReadRequiredMapMetadataInt(engine, MetadataSectionKey, ScatterSeedMetadataKey);
+            float minRadiusCm = ReadRequiredPositiveMapMetadataFloat(engine, MetadataSectionKey, ScatterMinRadiusMetadataKey);
+            float maxRadiusCm = ReadRequiredPositiveMapMetadataFloat(engine, MetadataSectionKey, ScatterMaxRadiusMetadataKey);
+            float jitterCm = ReadRequiredNonNegativeMapMetadataFloat(engine, MetadataSectionKey, ScatterJitterMetadataKey);
+            if (maxRadiusCm <= minRadiusCm)
             {
                 throw new InvalidOperationException(
-                    $"metadata.{section}.{key} must be an integer for the minimap marker showcase.",
-                    ex);
+                    $"metadata.{MetadataSectionKey}.{ScatterMaxRadiusMetadataKey} must be greater than {ScatterMinRadiusMetadataKey}.");
             }
-            catch (InvalidOperationException ex) when (!ex.Message.Contains("metadata.", StringComparison.Ordinal))
-            {
-                throw new InvalidOperationException(
-                    $"metadata.{section}.{key} must be an integer for the minimap marker showcase.",
-                    ex);
-            }
+
+            return new BlacksmithScatterConfig(seed, minRadiusCm, maxRadiusCm, jitterCm);
         }
 
-        private static float ReadOptionalMapMetadataFloat(GameEngine engine, string section, string key, float defaultValue)
+        private static int ReadPositiveIntEnvOverride(string key, int configuredValue)
         {
-            if (!TryReadMapMetadataValue(engine, section, key, out JsonNode? valueNode) ||
-                valueNode == null)
-            {
-                return defaultValue;
-            }
-
-            try
-            {
-                float value = valueNode.GetValue<float>();
-                if (!float.IsFinite(value))
-                {
-                    throw new InvalidOperationException(
-                        $"metadata.{section}.{key} must be finite for the minimap marker showcase.");
-                }
-
-                return value;
-            }
-            catch (FormatException ex)
-            {
-                throw new InvalidOperationException(
-                    $"metadata.{section}.{key} must be a number for the minimap marker showcase.",
-                    ex);
-            }
-            catch (InvalidOperationException ex) when (!ex.Message.Contains("metadata.", StringComparison.Ordinal))
-            {
-                throw new InvalidOperationException(
-                    $"metadata.{section}.{key} must be a number for the minimap marker showcase.",
-                    ex);
-            }
-        }
-
-        private static bool TryReadMapMetadataValue(GameEngine engine, string section, string key, out JsonNode? valueNode)
-        {
-            valueNode = null;
-            return engine.CurrentMapSession?.MapConfig?.Metadata != null &&
-                   engine.CurrentMapSession.MapConfig.Metadata.TryGetValue(section, out JsonNode? sectionNode) &&
-                   sectionNode is JsonObject sectionObject &&
-                   sectionObject.TryGetPropertyValue(key, out valueNode);
-        }
-
-        private static float ResolveAutoScatterMinRadiusCm()
-        {
-            return ReadEnvFloat(
-                AutoScatterMinRadiusEnvKey,
-                PerformerBlacksmithScatterPlanner.DefaultMinRadiusCm);
-        }
-
-        private static float ResolveAutoScatterMaxRadiusCm()
-        {
-            float minRadius = ResolveAutoScatterMinRadiusCm();
-            float defaultMax = MathF.Max(
-                minRadius + 1f,
-                PerformerBlacksmithScatterPlanner.DefaultMaxRadiusCm);
-            float maxRadius = ReadEnvFloat(AutoScatterMaxRadiusEnvKey, defaultMax);
-            return MathF.Max(minRadius + 1f, maxRadius);
-        }
-
-        private static float ReadEnvFloat(string key, float defaultValue)
-        {
-            string? raw = Environment.GetEnvironmentVariable(key);
-            return float.TryParse(raw, out float parsed) && parsed > 0f
+            return TryReadPositiveIntEnv(key, out int parsed)
                 ? parsed
-                : defaultValue;
+                : configuredValue;
         }
 
-        private static bool ReadEnvBool(string key)
+        private static bool TryReadPositiveIntEnv(string key, out int value)
+        {
+            value = 0;
+            string? raw = Environment.GetEnvironmentVariable(key);
+            if (string.IsNullOrWhiteSpace(raw))
+            {
+                return false;
+            }
+
+            if (!int.TryParse(raw, out int parsed) || parsed <= 0)
+            {
+                throw new InvalidOperationException(
+                    $"Environment variable {key} must be an integer > 0 when declared.");
+            }
+
+            value = parsed;
+            return true;
+        }
+
+        private static bool ReadStrictBoolEnv(string key)
         {
             string? raw = Environment.GetEnvironmentVariable(key);
             if (string.IsNullOrWhiteSpace(raw))
@@ -1954,11 +1905,25 @@ namespace PerformerBlacksmithShowcaseMod.Runtime
                 return false;
             }
 
-            return raw.Equals("1", StringComparison.OrdinalIgnoreCase) ||
-                   raw.Equals("true", StringComparison.OrdinalIgnoreCase) ||
-                   raw.Equals("yes", StringComparison.OrdinalIgnoreCase) ||
-                   raw.Equals("on", StringComparison.OrdinalIgnoreCase);
+            if (string.Equals(raw, "true", StringComparison.Ordinal))
+            {
+                return true;
+            }
+
+            if (string.Equals(raw, "false", StringComparison.Ordinal))
+            {
+                return false;
+            }
+
+            throw new InvalidOperationException(
+                $"Environment variable {key} must be exactly 'true' or 'false' when declared.");
         }
+
+        private readonly record struct BlacksmithScatterConfig(
+            int Seed,
+            float MinRadiusCm,
+            float MaxRadiusCm,
+            float JitterCm);
 
         private readonly record struct PerformerMetrics(
             int BufferActiveCount,

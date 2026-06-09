@@ -37,6 +37,9 @@ namespace Ludots.Tests.Presentation
         private const int MinimapHotPathWarmupFrames = 12;
         private const int MinimapHotPathMeasuredFrames = 90;
         private const string DynamicWorkerBenchmarkTotalEnvKey = "LUDOTS_BLACKSMITH_DYNAMIC_WORKER_BENCHMARK_TOTAL";
+        private const string MetadataSectionKey = "performerBlacksmith";
+        private const string DynamicWorkerBenchmarkTotalMetadataKey = "dynamicWorkerBenchmarkTotal";
+        private const string MinimapMarkerShowcaseTotalMetadataKey = "minimapMarkerShowcaseTotal";
         private static readonly int[] Counts = { 3_000, 10_000, 30_000 };
 
         [Test]
@@ -81,7 +84,7 @@ namespace Ludots.Tests.Presentation
         }
 
         [Test]
-        public void DynamicWorkerBenchmarkMap_DeclaresProductionVisualHeightmapAndDefaultTotal()
+        public void DynamicWorkerBenchmarkMap_DeclaresProductionVisualHeightmapAndConfiguredTotal()
         {
             using GameEngine engine = PerformerBlacksmithShowcaseTestHarness.CreateEngine();
             PerformerBlacksmithShowcaseTestHarness.LoadMap(
@@ -92,7 +95,7 @@ namespace Ludots.Tests.Presentation
             Assert.That(engine.CurrentMapSession?.MapConfig.VisualHeightmapAsset, Is.EqualTo("assets/terrain/performer_blacksmith_dynamic_worker_hills.vhtm"));
             Assert.That(
                 engine.CurrentMapSession!.MapConfig.Metadata["performerBlacksmith"]!["dynamicWorkerBenchmarkTotal"]!.GetValue<int>(),
-                Is.EqualTo(PerformerBlacksmithShowcaseIds.DynamicWorkerBenchmarkDefaultTotal));
+                Is.EqualTo(ReadBlacksmithMetadataInt(engine, DynamicWorkerBenchmarkTotalMetadataKey)));
             Assert.That(engine.CurrentMapSession.MapConfig.Metadata["performerBlacksmith"]!["dynamicWorkerScatterPaddingCm"]!.GetValue<float>(), Is.EqualTo(6000f));
             Assert.That(engine.CurrentMapSession.MapConfig.Metadata["performerBlacksmith"]!["dynamicWorkerMovementPaddingCm"]!.GetValue<float>(), Is.EqualTo(6000f));
             Assert.That(engine.GetService(CoreServiceKeys.VisualHeightmap), Is.AssignableTo<IVisualHeightmapRenderSource>());
@@ -163,14 +166,7 @@ namespace Ludots.Tests.Presentation
                 "performer_blacksmith_minimap_marker_large_world_relief.vhtm");
             using FileStream stream = File.OpenRead(assetPath);
             VisualHeightmapAsset asset = VisualHeightmapBinary.Read(stream);
-            short minHeight = short.MaxValue;
-            short maxHeight = short.MinValue;
-            for (int i = 0; i < asset.HeightSamplesCm.Length; i++)
-            {
-                short sample = asset.HeightSamplesCm[i];
-                minHeight = Math.Min(minHeight, sample);
-                maxHeight = Math.Max(maxHeight, sample);
-            }
+            ReadHeightRange(asset, out float minHeight, out float maxHeight);
 
             Assert.Multiple(() =>
             {
@@ -185,12 +181,12 @@ namespace Ludots.Tests.Presentation
         [Test]
         public void MinimapMarkerLargeWorldShowcase_ProducesAuthoredPerformerMarkersForFullMapAndZoom()
         {
-            const int expectedMarkers = PerformerBlacksmithShowcaseIds.MinimapMarkerShowcaseDefaultTotal;
             using GameEngine engine = PerformerBlacksmithShowcaseTestHarness.CreateEngine();
             PerformerBlacksmithShowcaseTestHarness.LoadMap(
                 engine,
                 PerformerBlacksmithShowcaseIds.MinimapMarkerLargeWorldShowcaseMapId,
                 frames: 0);
+            int expectedMarkers = ReadBlacksmithMetadataInt(engine, MinimapMarkerShowcaseTotalMetadataKey);
 
             RuntimeEntitySpawnQueue queue = engine.GetService(CoreServiceKeys.RuntimeEntitySpawnQueue)
                 ?? throw new InvalidOperationException("RuntimeEntitySpawnQueue missing.");
@@ -257,12 +253,12 @@ namespace Ludots.Tests.Presentation
         [Test]
         public void MinimapMarkerLargeWorldShowcase_SubmitsVisibleWorldSpheres()
         {
-            const int expectedMarkers = PerformerBlacksmithShowcaseIds.MinimapMarkerShowcaseDefaultTotal;
             using GameEngine engine = PerformerBlacksmithShowcaseTestHarness.CreateEngine();
             PerformerBlacksmithShowcaseTestHarness.LoadMap(
                 engine,
                 PerformerBlacksmithShowcaseIds.MinimapMarkerLargeWorldShowcaseMapId,
                 frames: 0);
+            int expectedMarkers = ReadBlacksmithMetadataInt(engine, MinimapMarkerShowcaseTotalMetadataKey);
 
             WaitForMinimapMarkerBalls(engine, expectedMarkers, maxFrames: 240);
             PerformerBlacksmithShowcaseTestHarness.Tick(engine, 4);
@@ -392,12 +388,12 @@ namespace Ludots.Tests.Presentation
         [Test]
         public void MinimapMarkerLargeWorldShowcase_PerformerForwardOrientationMatchesWorldPrimitive()
         {
-            const int expectedMarkers = PerformerBlacksmithShowcaseIds.MinimapMarkerShowcaseDefaultTotal;
             using GameEngine engine = PerformerBlacksmithShowcaseTestHarness.CreateEngine();
             PerformerBlacksmithShowcaseTestHarness.LoadMap(
                 engine,
                 PerformerBlacksmithShowcaseIds.MinimapMarkerLargeWorldShowcaseMapId,
                 frames: 0);
+            int expectedMarkers = ReadBlacksmithMetadataInt(engine, MinimapMarkerShowcaseTotalMetadataKey);
 
             WaitForMinimapMarkerBalls(engine, expectedMarkers, maxFrames: 240);
             PerformerBlacksmithShowcaseTestHarness.Tick(engine, 90);
@@ -406,6 +402,7 @@ namespace Ludots.Tests.Presentation
                 ?? throw new InvalidOperationException("PerformerDefinitionRegistry missing.");
             int markerDefinitionId = definitions.GetId(PerformerBlacksmithShowcaseIds.MinimapMarkerBallDefinitionId);
             Assert.That(markerDefinitionId, Is.GreaterThan(0));
+            int minimapMarkerSlot = FindRequiredMinimapMarkerSlot(definitions.Get(markerDefinitionId));
 
             MinimapMarkerBuffer markers = engine.GetService(CoreServiceKeys.MinimapMarkerBuffer)
                 ?? throw new InvalidOperationException("MinimapMarkerBuffer missing.");
@@ -422,7 +419,7 @@ namespace Ludots.Tests.Presentation
 
                 Assert.That(WorldPlane2D.TryExtractFacingRadFromVisualYRotation(rotation.Value, out float expectedFacing), Is.True);
 
-                int markerStableId = PerformerBehaviorRuntimeUtility.ComposeBehaviorStableId(state.StableId, 3);
+                int markerStableId = PerformerBehaviorRuntimeUtility.ComposeBehaviorStableId(state.StableId, minimapMarkerSlot);
                 Assert.That(TryFindMarkerOrientation(markers, markerStableId, out float markerOrientation), Is.True);
                 Assert.That(WorldPlane2D.AngleDistanceRad(markerOrientation, expectedFacing), Is.LessThan(0.0005f));
 
@@ -435,12 +432,12 @@ namespace Ludots.Tests.Presentation
         [Test]
         public void Benchmark_MinimapMarkerLargeWorldShowcase_ThirtyThousandHotPath_WritesReport()
         {
-            const int expectedMarkers = PerformerBlacksmithShowcaseIds.MinimapMarkerShowcaseDefaultTotal;
             using GameEngine engine = PerformerBlacksmithShowcaseTestHarness.CreateEngine();
             PerformerBlacksmithShowcaseTestHarness.LoadMap(
                 engine,
                 PerformerBlacksmithShowcaseIds.MinimapMarkerLargeWorldShowcaseMapId,
                 frames: 0);
+            int expectedMarkers = ReadBlacksmithMetadataInt(engine, MinimapMarkerShowcaseTotalMetadataKey);
 
             PresentationTimingDiagnostics timings = engine.GetService(CoreServiceKeys.PresentationTimingDiagnostics)
                 ?? throw new InvalidOperationException("PresentationTimingDiagnostics missing.");
@@ -652,7 +649,17 @@ namespace Ludots.Tests.Presentation
         private static void AssertMinimapMarkerBallAuthoring(PerformerDefinition definition)
         {
             Assert.That(definition.Behaviors, Has.Length.GreaterThanOrEqualTo(4));
-            BehaviorSlot orientationPrimitive = definition.Behaviors[1];
+            BehaviorSlot bodyPrimitive = FindRequiredBehavior(definition, BehaviorKind.AssetBinding, slot =>
+                slot.AssetBinding.AssetKind == AssetKind.Mesh &&
+                slot.AssetBinding.LocalOffset.X == 0f &&
+                slot.AssetBinding.LocalScale.X >= 2.5f &&
+                MathF.Abs(slot.AssetBinding.LocalScale.X - slot.AssetBinding.LocalScale.Z) <= MathF.Max(0.5f, slot.AssetBinding.LocalScale.X * 0.12f));
+            Assert.That(bodyPrimitive.AssetBinding.LocalOffset.Y, Is.GreaterThan(0f), "World marker sphere height must be authored on the visual mesh so Grounding can use the owner-backed heightmap fast path.");
+
+            BehaviorSlot orientationPrimitive = FindRequiredBehavior(definition, BehaviorKind.AssetBinding, slot =>
+                slot.AssetBinding.AssetKind == AssetKind.Mesh &&
+                slot.AssetBinding.LocalOffset.X > 0f &&
+                slot.AssetBinding.LocalScale.X > slot.AssetBinding.LocalScale.Z * 2f);
             Assert.That(orientationPrimitive.Kind, Is.EqualTo(BehaviorKind.AssetBinding));
             Assert.That(orientationPrimitive.AssetBinding.AssetKind, Is.EqualTo(AssetKind.Mesh));
             Assert.That(orientationPrimitive.AssetBinding.LocalOffset.X, Is.GreaterThan(0f), "World orientation primitive must sit on local +X, matching FacingDirection 0 = +X.");
@@ -660,12 +667,58 @@ namespace Ludots.Tests.Presentation
             Assert.That(orientationPrimitive.AssetBinding.LocalScale.X, Is.GreaterThan(orientationPrimitive.AssetBinding.LocalScale.Z * 2f), "World orientation primitive must use local +X as its long authored forward axis.");
             Assert.That(orientationPrimitive.AssetBinding.LocalRotation, Is.EqualTo(Quaternion.Identity));
 
-            BehaviorSlot minimapMarker = definition.Behaviors[3];
+            BehaviorSlot minimapMarker = FindRequiredBehavior(definition, BehaviorKind.MinimapMarker, static _ => true);
             Assert.That(minimapMarker.Kind, Is.EqualTo(BehaviorKind.MinimapMarker));
             Assert.That(minimapMarker.MinimapMarker.OrientationMode, Is.EqualTo(MinimapMarkerOrientationMode.PerformerForward));
             Assert.That(minimapMarker.MinimapMarker.OrientationParamKey, Is.EqualTo(-1));
             Assert.That(minimapMarker.MinimapMarker.OrientationOffsetRad, Is.EqualTo(0f), "Minimap marker orientation must consume the same performer forward as the 3D primitive without authored correction.");
             Assert.That(minimapMarker.MinimapMarker.OrientationLengthPx, Is.GreaterThan(0f));
+        }
+
+        private static void ReadHeightRange(VisualHeightmapAsset asset, out float minHeight, out float maxHeight)
+        {
+            minHeight = float.PositiveInfinity;
+            maxHeight = float.NegativeInfinity;
+            if (asset.UsesRawUInt16Samples)
+            {
+                for (int i = 0; i < asset.HeightSamplesRaw.Length; i++)
+                {
+                    float sample = asset.SampleScale.Decode(asset.HeightSamplesRaw[i]);
+                    minHeight = MathF.Min(minHeight, sample);
+                    maxHeight = MathF.Max(maxHeight, sample);
+                }
+
+                return;
+            }
+
+            for (int i = 0; i < asset.HeightSamplesCm.Length; i++)
+            {
+                float sample = asset.HeightSamplesCm[i];
+                minHeight = MathF.Min(minHeight, sample);
+                maxHeight = MathF.Max(maxHeight, sample);
+            }
+        }
+
+        private static int FindRequiredMinimapMarkerSlot(PerformerDefinition definition)
+        {
+            return FindRequiredBehavior(definition, BehaviorKind.MinimapMarker, static _ => true).SlotIndex;
+        }
+
+        private static BehaviorSlot FindRequiredBehavior(
+            PerformerDefinition definition,
+            BehaviorKind kind,
+            Predicate<BehaviorSlot> predicate)
+        {
+            for (int i = 0; i < definition.Behaviors.Length; i++)
+            {
+                BehaviorSlot slot = definition.Behaviors[i];
+                if (slot.Kind == kind && predicate(slot))
+                {
+                    return slot;
+                }
+            }
+
+            throw new InvalidOperationException($"Performer '{definition.Key}' must declare a {kind} behavior matching the test contract.");
         }
 
         private static Vector2 ResolveDefaultCameraTargetMeters(GameEngine engine)
@@ -675,6 +728,11 @@ namespace Ludots.Tests.Presentation
             float targetYCm = engine.CurrentMapSession?.MapConfig?.DefaultCamera?.TargetYCm
                 ?? engine.GameSession.Camera.State.TargetCm.Y;
             return new Vector2(targetXCm * 0.01f, targetYCm * 0.01f);
+        }
+
+        private static int ReadBlacksmithMetadataInt(GameEngine engine, string key)
+        {
+            return engine.CurrentMapSession!.MapConfig.Metadata[MetadataSectionKey]![key]!.GetValue<int>();
         }
 
         [Test]
@@ -688,8 +746,9 @@ namespace Ludots.Tests.Presentation
 
             RuntimeEntitySpawnQueue queue = engine.GetService(CoreServiceKeys.RuntimeEntitySpawnQueue)
                 ?? throw new InvalidOperationException("RuntimeEntitySpawnQueue missing.");
-            Assert.That(queue.Count, Is.EqualTo(PerformerBlacksmithShowcaseIds.DynamicWorkerBenchmarkDefaultTotal));
-            WaitForDynamicWorkers(engine, PerformerBlacksmithShowcaseIds.DynamicWorkerBenchmarkDefaultTotal, maxFrames: 180);
+            int expectedWorkers = ReadBlacksmithMetadataInt(engine, DynamicWorkerBenchmarkTotalMetadataKey);
+            Assert.That(queue.Count, Is.EqualTo(expectedWorkers));
+            WaitForDynamicWorkers(engine, expectedWorkers, maxFrames: 180);
 
             IVisualHeightmap heightmap = engine.GetService(CoreServiceKeys.VisualHeightmap)
                 ?? throw new InvalidOperationException("VisualHeightmap missing.");
@@ -727,7 +786,7 @@ namespace Ludots.Tests.Presentation
                 }
             });
 
-            Assert.That(count, Is.EqualTo(PerformerBlacksmithShowcaseIds.DynamicWorkerBenchmarkDefaultTotal));
+            Assert.That(count, Is.EqualTo(expectedWorkers));
             Assert.That(sampled, Is.EqualTo(count));
             Assert.That(centralSpawnCount, Is.GreaterThan(0), "Dynamic worker scatter must fill the VisualHeightmap area, not leave a ring-shaped center hole.");
         }
@@ -1020,7 +1079,7 @@ namespace Ludots.Tests.Presentation
 
         private static void RemoveMapEntityFromMinimapMarkerBalls(GameEngine engine)
         {
-            var entities = new List<Entity>(PerformerBlacksmithShowcaseIds.MinimapMarkerShowcaseDefaultTotal);
+            var entities = new List<Entity>();
             var query = new QueryDescription().WithAll<Name, MapEntity>();
             engine.World.Query(in query, (Entity entity, ref Name name, ref MapEntity _) =>
             {
@@ -1364,7 +1423,7 @@ namespace Ludots.Tests.Presentation
             sb.AppendLine("- source: authored performer `MinimapMarker` behavior");
             sb.AppendLine("- world: 256x256 chunks, visual heightmap scene, 30k moving marker balls");
             sb.AppendLine("- path: `PerformerWorldPlanePosition/PerformerWorldFacing -> MinimapMarkerBuffer -> MinimapScreenMarkerBuffer -> SkiaOverlayRenderer`");
-            sb.AppendLine("- fallback: none; no `Name`, `Team`, or `MapEntity` minimap signal");
+            sb.AppendLine("- secondary path: none; no `Name`, `Team`, or `MapEntity` minimap signal");
             sb.AppendLine("- timing note: `Avg Tick FPS` is computed from the engine tick only; offscreen CPU Skia marker raster is measured separately and is not part of that FPS.");
             sb.AppendLine();
             sb.AppendLine("## Summary");
@@ -1616,6 +1675,10 @@ namespace Ludots.Tests.Presentation
                 {
                     groundedPerformers++;
                 }
+                else if (HasOwnerBackedGrounding(engine, in state))
+                {
+                    groundedPerformers++;
+                }
 
             });
 
@@ -1642,6 +1705,19 @@ namespace Ludots.Tests.Presentation
             movedEntityCount = movedEntities;
             gpuSkinnedCount = gpuSkinned;
             walkingSkinnedStateCount = walkingSkinned;
+        }
+
+        private static bool HasOwnerBackedGrounding(GameEngine engine, in PerformerState state)
+        {
+            if (state.OwnerEntity == Entity.Null ||
+                !engine.World.IsAlive(state.OwnerEntity) ||
+                !engine.World.Has<VisualHeightmapSampleState>(state.OwnerEntity))
+            {
+                return false;
+            }
+
+            VisualHeightmapSampleState sampleState = engine.World.Get<VisualHeightmapSampleState>(state.OwnerEntity);
+            return sampleState.Sampled != 0;
         }
 
         private static string BuildReport(DynamicWorkerBenchmarkResult[] results)

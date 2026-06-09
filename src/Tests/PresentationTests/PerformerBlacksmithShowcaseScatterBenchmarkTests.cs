@@ -21,8 +21,11 @@ namespace Ludots.Tests.Presentation
     [NonParallelizable]
     public sealed class PerformerBlacksmithShowcaseScatterBenchmarkTests
     {
-        private static int WarmupFrames => ReadEnvInt("LUDOTS_BLACKSMITH_BENCH_WARMUP_FRAMES", 12);
-        private static int MeasuredFrames => ReadEnvInt("LUDOTS_BLACKSMITH_BENCH_MEASURED_FRAMES", 120);
+        private const int DeclaredWarmupFrames = 12;
+        private const int DeclaredMeasuredFrames = 120;
+
+        private static int WarmupFrames => ReadPositiveEnvIntOrDeclaredDefault("LUDOTS_BLACKSMITH_BENCH_WARMUP_FRAMES", DeclaredWarmupFrames);
+        private static int MeasuredFrames => ReadPositiveEnvIntOrDeclaredDefault("LUDOTS_BLACKSMITH_BENCH_MEASURED_FRAMES", DeclaredMeasuredFrames);
 
         private static readonly ScatterScenario[] Scenarios =
         {
@@ -169,7 +172,7 @@ namespace Ludots.Tests.Presentation
             var attributeQuery = new QueryDescription().WithAll<Name, AttributeBuffer>();
             engine.World.Query(in attributeQuery, (Entity entity, ref Name name, ref AttributeBuffer attributes) =>
             {
-                if (!string.Equals(name.Value, PerformerBlacksmithShowcaseIds.EntityName, StringComparison.OrdinalIgnoreCase))
+                if (!string.Equals(name.Value, PerformerBlacksmithShowcaseIds.EntityName, StringComparison.Ordinal))
                 {
                     return;
                 }
@@ -283,7 +286,7 @@ namespace Ludots.Tests.Presentation
             var attributeQuery = new QueryDescription().WithAll<Name, AttributeBuffer>();
             engine.World.Query(in attributeQuery, (Entity entity, ref Name name, ref AttributeBuffer _) =>
             {
-                if (!string.Equals(name.Value, PerformerBlacksmithShowcaseIds.EntityName, StringComparison.OrdinalIgnoreCase))
+                if (!string.Equals(name.Value, PerformerBlacksmithShowcaseIds.EntityName, StringComparison.Ordinal))
                 {
                     return;
                 }
@@ -317,6 +320,31 @@ namespace Ludots.Tests.Presentation
             Assert.That(blacksmithCount, Is.EqualTo(30000));
             Assert.That(blacksmithWithRandomDrift, Is.EqualTo(30000));
             Assert.That(effectQueue.DroppedCount, Is.EqualTo(0));
+        }
+
+        [Test]
+        public void BenchmarkFrameEnvOverride_UnsetUsesDeclaredDefault_InvalidValueFailsFast()
+        {
+            const string key = "LUDOTS_BLACKSMITH_BENCH_WARMUP_FRAMES";
+            string? previous = Environment.GetEnvironmentVariable(key);
+            try
+            {
+                Environment.SetEnvironmentVariable(key, null);
+                Assert.That(WarmupFrames, Is.EqualTo(DeclaredWarmupFrames));
+
+                Environment.SetEnvironmentVariable(key, " ");
+                Assert.Throws<InvalidOperationException>(() => { _ = WarmupFrames; });
+
+                Environment.SetEnvironmentVariable(key, "0");
+                Assert.Throws<InvalidOperationException>(() => { _ = WarmupFrames; });
+
+                Environment.SetEnvironmentVariable(key, "abc");
+                Assert.Throws<InvalidOperationException>(() => { _ = WarmupFrames; });
+            }
+            finally
+            {
+                Environment.SetEnvironmentVariable(key, previous);
+            }
         }
 
         private static ScatterScenarioResult RunScenario(ScatterScenario scenario)
@@ -631,7 +659,7 @@ namespace Ludots.Tests.Presentation
             var query = new QueryDescription().WithAll<Name>();
             engine.World.Query(in query, (Entity entity, ref Name name) =>
             {
-                if (string.Equals(name.Value, PerformerBlacksmithShowcaseIds.EntityName, StringComparison.OrdinalIgnoreCase))
+                if (string.Equals(name.Value, PerformerBlacksmithShowcaseIds.EntityName, StringComparison.Ordinal))
                 {
                     blacksmithEntityCount++;
                     if (engine.World.Has<CullState>(entity) && engine.World.Get<CullState>(entity).IsVisible)
@@ -1225,7 +1253,7 @@ namespace Ludots.Tests.Presentation
             var filtered = new System.Collections.Generic.List<ScatterScenario>(Scenarios.Length);
             for (int i = 0; i < Scenarios.Length; i++)
             {
-                if (Scenarios[i].Name.IndexOf(filter, StringComparison.OrdinalIgnoreCase) >= 0)
+                if (string.Equals(Scenarios[i].Name, filter, StringComparison.Ordinal))
                 {
                     filtered.Add(Scenarios[i]);
                 }
@@ -1239,12 +1267,21 @@ namespace Ludots.Tests.Presentation
             return filtered.ToArray();
         }
 
-        private static int ReadEnvInt(string key, int fallback)
+        private static int ReadPositiveEnvIntOrDeclaredDefault(string key, int declaredDefault)
         {
             string? raw = Environment.GetEnvironmentVariable(key);
-            return int.TryParse(raw, NumberStyles.Integer, CultureInfo.InvariantCulture, out int parsed) && parsed > 0
-                ? parsed
-                : fallback;
+            if (raw is null)
+            {
+                return declaredDefault;
+            }
+
+            if (int.TryParse(raw, NumberStyles.Integer, CultureInfo.InvariantCulture, out int parsed) && parsed > 0)
+            {
+                return parsed;
+            }
+
+            throw new InvalidOperationException(
+                $"Environment variable {key} must be an integer > 0 when declared.");
         }
     }
 }

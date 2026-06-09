@@ -41,6 +41,7 @@ namespace Ludots.Tests.Presentation
                             ParameterIndex = 10,
                             Threshold = 0.5f,
                             DurationSeconds = 0.2f,
+                            ConsumeTrigger = false,
                         },
                     ],
                 });
@@ -48,6 +49,7 @@ namespace Ludots.Tests.Presentation
             var definitions = new PerformerDefinitionRegistry();
             int defId = RegisterAnimatorDefinition(definitions, controllerId, stateParamKey: 20);
             var instances = new PerformerEntityRuntime(world);
+            instances.BindDefinitions(definitions);
             var animatorStates = new PerformerAnimatorStateBuffer(4);
             Entity performer = AllocateActiveAnimator(instances, world, world.Create(), defId);
             instances.SetParam(performer, 10, ParamLane.Float, 0.75f, 0, default);
@@ -100,6 +102,7 @@ namespace Ludots.Tests.Presentation
                             ToStateIndex = 1,
                             ConditionKind = AnimatorConditionKind.Trigger,
                             ParameterIndex = 12,
+                            Threshold = 0f,
                             DurationSeconds = 0f,
                             ConsumeTrigger = true,
                         },
@@ -108,8 +111,10 @@ namespace Ludots.Tests.Presentation
                             FromStateIndex = 1,
                             ToStateIndex = 0,
                             ConditionKind = AnimatorConditionKind.AutoOnNormalizedTime,
+                            ParameterIndex = -1,
                             Threshold = 1f,
                             DurationSeconds = 0f,
+                            ConsumeTrigger = false,
                         },
                     ],
                 });
@@ -117,6 +122,7 @@ namespace Ludots.Tests.Presentation
             var definitions = new PerformerDefinitionRegistry();
             int defId = RegisterAnimatorDefinition(definitions, controllerId, stateParamKey: 20);
             var instances = new PerformerEntityRuntime(world);
+            instances.BindDefinitions(definitions);
             var animatorStates = new PerformerAnimatorStateBuffer(4);
             Entity performer = AllocateActiveAnimator(instances, world, world.Create(), defId);
             instances.SetParam(performer, 12, ParamLane.Int, 0f, 1, default);
@@ -176,6 +182,7 @@ namespace Ludots.Tests.Presentation
                             ToStateIndex = 1,
                             ConditionKind = AnimatorConditionKind.Trigger,
                             ParameterIndex = 12,
+                            Threshold = 0f,
                             DurationSeconds = 0.25f,
                             ConsumeTrigger = true,
                         },
@@ -186,6 +193,7 @@ namespace Ludots.Tests.Presentation
             int stateParamKey = 20;
             int defId = RegisterAnimatorDefinition(definitions, controllerId, stateParamKey);
             var instances = new PerformerEntityRuntime(world);
+            instances.BindDefinitions(definitions);
             var animatorStates = new PerformerAnimatorStateBuffer(4);
             Entity performer = AllocateActiveAnimator(instances, world, world.Create(), defId);
             instances.SetParam(performer, 12, ParamLane.Int, 0f, 1, default);

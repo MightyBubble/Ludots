@@ -1,120 +1,134 @@
-﻿[
-    {
-        "id":  "acceptance.vehicle.tank_skinned",
-        "behaviors":  [
-                          {
-                              "slot":  0,
-                              "kind":  "AssetBinding",
-                              "activeByDefault":  true,
-                              "assetBinding":  {
-                                                   "assetKind":  "SkinnedMesh",
-                                                   "assetId":  "cube",
-                                                   "materialId":  "default_surface",
-                                                   "renderPath":  "SkinnedMesh",
-                                                   "mobility":  "Movable",
-                                                   "localScale":  [
-                                                                      1.15,
-                                                                      1.15,
-                                                                      1.15
-                                                                  ]
-                                               }
-                          },
-                          {
-                              "slot":  1,
-                              "kind":  "Animator",
-                              "activeByDefault":  true,
-                              "animator":  {
-                                               "animatorControllerId":  "acceptance.tank.layered",
-                                               "animationProfileId":  "acceptance.profile.tank.layered",
-                                               "speedParamKey":  0,
-                                               "stateParamKey":  -1
-                                           }
-                          }
-                      ],
-        "rules":  [
-                      {
-                          "event":  {
-                                        "kind":  "EntitySpawned",
-                                        "key":  "animation_acceptance_tank"
-                                    },
-                          "command":  {
-                                          "kind":  "CreatePerformer",
-                                          "scopeSource":  "EventPayloadA",
-                                          "definitionId":  "acceptance.vehicle.tank_skinned"
-                                      },
-                          "condition":  {
-                                            "inline":  "SourceHasVisualTransform"
-                                        }
-                      },
-                      {
-                          "event":  {
-                                        "kind":  "EntityDestroyed",
-                                        "key":  "animation_acceptance_tank"
-                                    },
-                          "command":  {
-                                          "kind":  "DestroyPerformerScope",
-                                          "scopeSource":  "EventPayloadA"
-                                      }
-                      }
-                  ]
-    },
-    {
-        "id":  "acceptance.character.layered_skinned",
-        "behaviors":  [
-                          {
-                              "slot":  0,
-                              "kind":  "AssetBinding",
-                              "activeByDefault":  true,
-                              "assetBinding":  {
-                                                   "assetKind":  "SkinnedMesh",
-                                                   "assetId":  "sphere",
-                                                   "materialId":  "default_surface",
-                                                   "renderPath":  "SkinnedMesh",
-                                                   "mobility":  "Movable",
-                                                   "localScale":  [
-                                                                      1,
-                                                                      1,
-                                                                      1
-                                                                  ]
-                                               }
-                          },
-                          {
-                              "slot":  1,
-                              "kind":  "Animator",
-                              "activeByDefault":  true,
-                              "animator":  {
-                                               "animatorControllerId":  "acceptance.humanoid.layered",
-                                               "animationProfileId":  "acceptance.profile.humanoid.layered",
-                                               "speedParamKey":  0,
-                                               "stateParamKey":  -1
-                                           }
-                          }
-                      ],
-        "rules":  [
-                      {
-                          "event":  {
-                                        "kind":  "EntitySpawned",
-                                        "key":  "animation_acceptance_humanoid"
-                                    },
-                          "command":  {
-                                          "kind":  "CreatePerformer",
-                                          "scopeSource":  "EventPayloadA",
-                                          "definitionId":  "acceptance.character.layered_skinned"
-                                      },
-                          "condition":  {
-                                            "inline":  "SourceHasVisualTransform"
-                                        }
-                      },
-                      {
-                          "event":  {
-                                        "kind":  "EntityDestroyed",
-                                        "key":  "animation_acceptance_humanoid"
-                                    },
-                          "command":  {
-                                          "kind":  "DestroyPerformerScope",
-                                          "scopeSource":  "EventPayloadA"
-                                      }
-                      }
-                  ]
-    }
+[
+  {
+    "id": "acceptance.vehicle.tank_skinned",
+    "paramDefaults": [
+      {
+        "paramKey": "animation_acceptance.tank.locomotion.speed",
+        "lane": "Float",
+        "floatValue": 1
+      }
+    ],
+    "behaviors": [
+      {
+        "slot": "body",
+        "kind": "AssetBinding",
+        "activeByDefault": true,
+        "assetBinding": {
+          "assetKind": "SkinnedMesh",
+          "assetId": "cube",
+          "materialId": "default_surface",
+          "renderPath": "SkinnedMesh",
+          "mobility": "Movable",
+          "localScale": [
+            1.15,
+            1.15,
+            1.15
+          ]
+        }
+      },
+      {
+        "slot": "animator",
+        "kind": "Animator",
+        "activeByDefault": true,
+        "animator": {
+          "animatorControllerId": "acceptance.tank.layered",
+          "animationProfileId": "acceptance.profile.tank.layered",
+          "speedParamKey": "animation_acceptance.tank.locomotion.speed",
+          "stateParamKey": "none"
+        }
+      }
+    ],
+    "rules": [
+      {
+        "event": {
+          "kind": "EntitySpawned",
+          "key": "animation_acceptance_tank"
+        },
+        "command": {
+          "kind": "CreatePerformer",
+          "scopeSource": "EventPayloadA",
+          "definitionId": "acceptance.vehicle.tank_skinned"
+        },
+        "condition": {
+          "inline": "SourceHasVisualTransform"
+        }
+      },
+      {
+        "event": {
+          "kind": "EntityDestroyed",
+          "key": "animation_acceptance_tank"
+        },
+        "command": {
+          "kind": "DestroyPerformerScope",
+          "scopeSource": "EventPayloadA"
+        }
+      }
+    ]
+  },
+  {
+    "id": "acceptance.character.layered_skinned",
+    "paramDefaults": [
+      {
+        "paramKey": "animation_acceptance.humanoid.locomotion.speed",
+        "lane": "Float",
+        "floatValue": 1
+      }
+    ],
+    "behaviors": [
+      {
+        "slot": "body",
+        "kind": "AssetBinding",
+        "activeByDefault": true,
+        "assetBinding": {
+          "assetKind": "SkinnedMesh",
+          "assetId": "sphere",
+          "materialId": "default_surface",
+          "renderPath": "SkinnedMesh",
+          "mobility": "Movable",
+          "localScale": [
+            1,
+            1,
+            1
+          ]
+        }
+      },
+      {
+        "slot": "animator",
+        "kind": "Animator",
+        "activeByDefault": true,
+        "animator": {
+          "animatorControllerId": "acceptance.humanoid.layered",
+          "animationProfileId": "acceptance.profile.humanoid.layered",
+          "speedParamKey": "animation_acceptance.humanoid.locomotion.speed",
+          "stateParamKey": "none"
+        }
+      }
+    ],
+    "rules": [
+      {
+        "event": {
+          "kind": "EntitySpawned",
+          "key": "animation_acceptance_humanoid"
+        },
+        "command": {
+          "kind": "CreatePerformer",
+          "scopeSource": "EventPayloadA",
+          "definitionId": "acceptance.character.layered_skinned"
+        },
+        "condition": {
+          "inline": "SourceHasVisualTransform"
+        }
+      },
+      {
+        "event": {
+          "kind": "EntityDestroyed",
+          "key": "animation_acceptance_humanoid"
+        },
+        "command": {
+          "kind": "DestroyPerformerScope",
+          "scopeSource": "EventPayloadA"
+        }
+      }
+    ]
+  }
 ]

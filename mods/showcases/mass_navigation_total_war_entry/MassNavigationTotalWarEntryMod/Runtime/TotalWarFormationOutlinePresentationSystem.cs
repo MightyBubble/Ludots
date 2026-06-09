@@ -1,6 +1,7 @@
 using System;
 using System.Collections.Generic;
 using System.Numerics;
+using System.Runtime.CompilerServices;
 using Arch.Core;
 using Arch.System;
 using Ludots.Core.Components;
@@ -24,17 +25,39 @@ internal sealed class TotalWarFormationOutlinePresentationSystem : ISystem<float
     private readonly TotalWarShowcaseRuntime _runtime;
     private readonly RoadSplineBuffer _splines;
     private readonly IVisualHeightmap _heightmap;
-    private readonly List<int> _currentStableIds = new();
-    private readonly List<int> _previousStableIds = new();
-    private readonly HashSet<int> _currentStableIdSet = new();
-    private readonly HashSet<int> _currentOwnerStableIds = new();
-    private readonly List<int> _staleOwnerStableIds = new();
-    private readonly Dictionary<int, OutlineEmissionState> _emittedStateByOwnerStableId = new();
+    private readonly int _stableIdCapacity;
+    private readonly int _ownerCapacity;
+    private readonly List<int> _currentStableIds;
+    private readonly List<int> _previousStableIds;
+    private readonly HashSet<int> _currentStableIdSet;
+    private readonly HashSet<int> _currentOwnerStableIds;
+    private readonly List<int> _staleOwnerStableIds;
+    private readonly Dictionary<int, OutlineEmissionState> _emittedStateByOwnerStableId;
+    private int _lastPublishedFormationOutlineCount = -1;
 
-    public TotalWarFormationOutlinePresentationSystem(GameEngine engine, TotalWarShowcaseRuntime runtime)
+    public TotalWarFormationOutlinePresentationSystem(GameEngine engine, TotalWarShowcaseRuntime runtime, TotalWarShowcaseConfig config)
     {
         _engine = engine ?? throw new ArgumentNullException(nameof(engine));
         _runtime = runtime ?? throw new ArgumentNullException(nameof(runtime));
+        ArgumentNullException.ThrowIfNull(config);
+        _stableIdCapacity = config.FormationOutlineSplineCapacity;
+        _ownerCapacity = config.FormationOutlineOwnerCapacity;
+        if (_stableIdCapacity <= 0)
+        {
+            throw new InvalidOperationException("Total War formation outline requires config-derived FormationOutlineSplineCapacity > 0.");
+        }
+
+        if (_ownerCapacity <= 0)
+        {
+            throw new InvalidOperationException("Total War formation outline requires config-derived FormationOutlineOwnerCapacity > 0.");
+        }
+
+        _currentStableIds = new List<int>(_stableIdCapacity);
+        _previousStableIds = new List<int>(_stableIdCapacity);
+        _currentStableIdSet = new HashSet<int>(_stableIdCapacity);
+        _currentOwnerStableIds = new HashSet<int>(_ownerCapacity);
+        _staleOwnerStableIds = new List<int>(_ownerCapacity);
+        _emittedStateByOwnerStableId = new Dictionary<int, OutlineEmissionState>(_ownerCapacity);
         _splines = engine.GetService(CoreServiceKeys.RoadSplineBuffer)
             ?? throw new InvalidOperationException("Total War formation outline requires RoadSplineBuffer.");
         _heightmap = engine.GetService(CoreServiceKeys.VisualHeightmap)
@@ -58,15 +81,39 @@ internal sealed class TotalWarFormationOutlinePresentationSystem : ISystem<float
         _currentStableIdSet.Clear();
         _currentOwnerStableIds.Clear();
         int emitted = 0;
-        _engine.World.Query(
-            in FormationOutlineQuery,
-            (Entity entity, ref TotalWarFormationAgent _, ref TotalWarFormationState state, ref TotalWarFormationOutline outline, ref VisualTransform transform, ref PresentationStableId stableId) =>
+        foreach (ref var chunk in _engine.World.Query(in FormationOutlineQuery))
+        {
+            ref Entity entityFirst = ref chunk.Entity(0);
+            Span<TotalWarFormationState> states = chunk.GetSpan<TotalWarFormationState>();
+            Span<TotalWarFormationOutline> outlines = chunk.GetSpan<TotalWarFormationOutline>();
+            Span<VisualTransform> transforms = chunk.GetSpan<VisualTransform>();
+            Span<PresentationStableId> stableIds = chunk.GetSpan<PresentationStableId>();
+
+            foreach (int index in chunk)
             {
-                emitted += EmitOutline(entity, in state, in outline, in transform, stableId.Value);
-            });
+                Entity entity = Unsafe.Add(ref entityFirst, index);
+                emitted += EmitOutline(
+                    entity,
+                    in states[index],
+                    in outlines[index],
+                    in transforms[index],
+                    stableIds[index].Value);
+            }
+        }
 
         RemoveStaleSplines();
         RemoveStaleEmissionStates();
+        PublishFormationOutlineCountIfChanged(emitted);
+    }
+
+    private void PublishFormationOutlineCountIfChanged(int emitted)
+    {
+        if (_lastPublishedFormationOutlineCount == emitted)
+        {
+            return;
+        }
+
+        _lastPublishedFormationOutlineCount = emitted;
         _engine.GlobalContext[TotalWarShowcaseContextKeys.FormationOutlineCount] = emitted;
     }
 
@@ -82,7 +129,7 @@ internal sealed class TotalWarFormationOutlinePresentationSystem : ISystem<float
             throw new InvalidOperationException("Total War formation outline requires a positive PresentationStableId.");
         }
 
-        _currentOwnerStableIds.Add(ownerStableId);
+        TrackOwnerStableId(ownerStableId);
         OutlineEmissionState nextState = OutlineEmissionState.From(in state, in outline, in transform);
         if (_emittedStateByOwnerStableId.TryGetValue(ownerStableId, out OutlineEmissionState previousState) &&
             previousState.Equals(nextState, outline.EmissionPositionEpsilonM, outline.EmissionFacingEpsilonRadians))
@@ -91,6 +138,7 @@ internal sealed class TotalWarFormationOutlinePresentationSystem : ISystem<float
             return OutlineStableIdCount(in outline);
         }
 
+        RequireEmissionStateCapacity(ownerStableId);
         _emittedStateByOwnerStableId[ownerStableId] = nextState;
         return outline.Shape switch
         {
@@ -218,6 +266,7 @@ internal sealed class TotalWarFormationOutlinePresentationSystem : ISystem<float
             float t = sample / (float)sampleCount;
             Vector3 current = ProjectToGround(Vector3.Lerp(start, end, t), outline.HeightOffsetM);
             int stableId = CreateSegmentStableId(ownerStableId, segment, sample - 1, sampleCount);
+            RequireStableIdCapacity();
             if (!_splines.TryAddLine(
                     stableId,
                     previous,
@@ -230,8 +279,7 @@ internal sealed class TotalWarFormationOutlinePresentationSystem : ISystem<float
                 throw new InvalidOperationException($"RoadSplineBuffer overflowed while emitting Total War formation outline for entity {entity.Id}.");
             }
 
-            _currentStableIds.Add(stableId);
-            _currentStableIdSet.Add(stableId);
+            TrackStableId(stableId);
             previous = current;
             count++;
         }
@@ -257,6 +305,7 @@ internal sealed class TotalWarFormationOutlinePresentationSystem : ISystem<float
                 center + new Vector3(MathF.Cos(angle) * radiusM, 0f, MathF.Sin(angle) * radiusM),
                 outline.HeightOffsetM);
             int stableId = CreateSegmentStableId(ownerStableId, TotalWarFormationOutlineSegment.CircleRing, sample - 1, sampleCount);
+            RequireStableIdCapacity();
             if (!_splines.TryAddLine(
                     stableId,
                     previous,
@@ -269,8 +318,7 @@ internal sealed class TotalWarFormationOutlinePresentationSystem : ISystem<float
                 throw new InvalidOperationException($"RoadSplineBuffer overflowed while emitting Total War circle formation outline for entity {entity.Id}.");
             }
 
-            _currentStableIds.Add(stableId);
-            _currentStableIdSet.Add(stableId);
+            TrackStableId(stableId);
             previous = current;
             count++;
         }
@@ -305,7 +353,7 @@ internal sealed class TotalWarFormationOutlinePresentationSystem : ISystem<float
         }
 
         _previousStableIds.Clear();
-        _previousStableIds.AddRange(_currentStableIds);
+        CopyCurrentStableIdsToPrevious();
     }
 
     private void RemoveStaleEmissionStates()
@@ -360,26 +408,63 @@ internal sealed class TotalWarFormationOutlinePresentationSystem : ISystem<float
         for (int sample = 0; sample < sampleCount; sample++)
         {
             int stableId = CreateSegmentStableId(ownerStableId, segment, sample, sampleCount);
-            _currentStableIds.Add(stableId);
-            _currentStableIdSet.Add(stableId);
+            TrackStableId(stableId);
+        }
+    }
+
+    private void TrackStableId(int stableId)
+    {
+        RequireStableIdCapacity();
+        _currentStableIds.Add(stableId);
+        _currentStableIdSet.Add(stableId);
+    }
+
+    private void RequireStableIdCapacity()
+    {
+        if (_currentStableIds.Count >= _stableIdCapacity)
+        {
+            throw new InvalidOperationException(
+                $"Total War formation outline stable id count exceeds config-derived FormationOutlineSplineCapacity {_stableIdCapacity}.");
+        }
+    }
+
+    private void TrackOwnerStableId(int ownerStableId)
+    {
+        if (!_currentOwnerStableIds.Contains(ownerStableId) && _currentOwnerStableIds.Count >= _ownerCapacity)
+        {
+            throw new InvalidOperationException(
+                $"Total War formation outline owner count exceeds config-derived FormationOutlineOwnerCapacity {_ownerCapacity}.");
+        }
+
+        _currentOwnerStableIds.Add(ownerStableId);
+    }
+
+    private void RequireEmissionStateCapacity(int ownerStableId)
+    {
+        if (!_emittedStateByOwnerStableId.ContainsKey(ownerStableId) && _emittedStateByOwnerStableId.Count >= _ownerCapacity)
+        {
+            throw new InvalidOperationException(
+                $"Total War formation outline emission-state count exceeds config-derived FormationOutlineOwnerCapacity {_ownerCapacity}.");
+        }
+    }
+
+    private void CopyCurrentStableIdsToPrevious()
+    {
+        for (int i = 0; i < _currentStableIds.Count; i++)
+        {
+            if (_previousStableIds.Count >= _stableIdCapacity)
+            {
+                throw new InvalidOperationException(
+                    $"Total War formation outline previous stable id count exceeds config-derived FormationOutlineSplineCapacity {_stableIdCapacity}.");
+            }
+
+            _previousStableIds.Add(_currentStableIds[i]);
         }
     }
 
     private static int OutlineStableIdCount(in TotalWarFormationOutline outline)
     {
-        int segmentCount = outline.Shape switch
-        {
-            TotalWarFormationOutlineShape.Rectangle => 4,
-            TotalWarFormationOutlineShape.Circle => 1,
-            _ => throw new InvalidOperationException($"Total War formation outline has unsupported shape {outline.Shape}."),
-        };
-
-        if (outline.FrontIndicatorLengthCm > 0f)
-        {
-            segmentCount++;
-        }
-
-        return segmentCount * outline.CurveSampleCount;
+        return TotalWarFormationOutlineSegments.CountSplineSegments(in outline);
     }
 
     private static int CreateSegmentStableId(int ownerStableId, TotalWarFormationOutlineSegment segment, int sampleIndex, int sampleCount)

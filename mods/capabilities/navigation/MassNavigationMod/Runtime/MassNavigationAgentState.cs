@@ -10,6 +10,7 @@ public sealed class MassNavigationAgentState
     private readonly System.Collections.Generic.List<Entity> _allAgents = new();
     private readonly System.Collections.Generic.List<Entity> _controllableAgents = new();
     private readonly System.Collections.Generic.Dictionary<int, int> _controllableIndexByEntityId = new();
+    private int _boundAgentCount;
 
     public IReadOnlyList<Entity> SpawnedEntities => _spawnedEntities;
     public IReadOnlyList<Entity> AllAgents => _allAgents;
@@ -19,20 +20,12 @@ public sealed class MassNavigationAgentState
     public int ControllableAgentCount => _controllableIndexByEntityId.Count;
     public bool HasBoundAgents(int expectedCount)
     {
-        if (expectedCount < 0 || _allAgents.Count != expectedCount)
+        if (expectedCount < 0)
         {
             return false;
         }
 
-        for (int i = 0; i < _allAgents.Count; i++)
-        {
-            if (_allAgents[i] == Entity.Null)
-            {
-                return false;
-            }
-        }
-
-        return true;
+        return _allAgents.Count == expectedCount && _boundAgentCount == expectedCount;
     }
 
     public int BlockerCount { get; private set; }
@@ -44,6 +37,7 @@ public sealed class MassNavigationAgentState
         _allAgents.Clear();
         _controllableAgents.Clear();
         _controllableIndexByEntityId.Clear();
+        _boundAgentCount = 0;
         BlockerCount = 0;
         WorldMarkerCount = 0;
     }
@@ -136,6 +130,7 @@ public sealed class MassNavigationAgentState
         }
 
         _allAgents[agentIndex] = entity;
+        _boundAgentCount++;
         if (!controllable)
         {
             return;

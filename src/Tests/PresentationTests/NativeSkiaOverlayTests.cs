@@ -1,6 +1,7 @@
 using System;
 using System.Numerics;
 using Ludots.Core.Mathematics;
+using Ludots.Core.Presentation;
 using Ludots.Core.Presentation.Config;
 using Ludots.Core.Presentation.Hud;
 using Ludots.Core.Presentation.Minimap;
@@ -20,7 +21,7 @@ public sealed class NativeSkiaOverlayTests
         var screenHud = new ScreenHudBatchBuffer(8);
         var catalog = CreateCatalog();
         var locale = new PresentationTextLocaleSelection(catalog);
-        var worldHudStrings = new WorldHudStringTable(catalog, locale, legacyCapacity: 4);
+        var worldHudStrings = new WorldHudStringTable(catalog, locale, runtimeStringCapacity: 4);
         var overlayBuffer = new ScreenOverlayBuffer();
         var minimapMarkers = new MinimapScreenMarkerBuffer(8);
 
@@ -311,7 +312,20 @@ public sealed class NativeSkiaOverlayTests
     [Test]
     public void MinimapRuntime_Render_SubmitsOpaquePanelAndFieldMasks()
     {
-        var runtime = new MinimapRuntime();
+        var runtime = new MinimapRuntime(new MinimapRuntimeConfig
+        {
+            InitialZoomNormalized = 1f,
+            WheelZoomNormalizedStep = 0.08f,
+            ButtonZoomNormalizedStep = 0.18f,
+            ZoomSliderEnabled = true,
+            ModeToggleEnabled = true,
+            RotateToggleEnabled = true,
+            DebugMarkerSampleCapacity = 64,
+            MinZoomExtentMode = MinimapZoomExtentMode.OneChunk,
+            MaxZoomExtentMode = MinimapZoomExtentMode.FullMap,
+            MinZoomExplicitHalfExtentCm = 750f,
+            MaxZoomExplicitHalfExtentCm = 0f,
+        });
         var overlay = new ScreenOverlayBuffer();
 
         runtime.Visible = true;

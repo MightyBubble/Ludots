@@ -290,8 +290,8 @@ namespace ChampionSkillSandboxMod.Runtime
                     StableId = entry.StableId,
                     DirtySerial = HudItemIdentity.ComposeTextDirtySerial(
                         fontSize: 22,
-                        legacyStringId: 0,
-                        legacyModeId: 0,
+                        stringTableId: 0,
+                        valueModeId: 0,
                         value0: 0f,
                         value1: 0f,
                         color,

@@ -9,22 +9,22 @@
     ],
     "bindings": [
       {
-        "paramKey": 4,
+        "paramKey": "marker3d.color.r",
         "source": "entityColor",
         "sourceId": 0
       },
       {
-        "paramKey": 5,
+        "paramKey": "marker3d.color.g",
         "source": "entityColor",
         "sourceId": 1
       },
       {
-        "paramKey": 6,
+        "paramKey": "marker3d.color.b",
         "source": "entityColor",
         "sourceId": 2
       },
       {
-        "paramKey": 7,
+        "paramKey": "marker3d.color.a",
         "source": "entityColor",
         "sourceId": 3
       }
@@ -32,7 +32,8 @@
     "rules": [
       {
         "event": {
-          "kind": "EntitySpawned"
+          "kind": "EntitySpawned",
+          "key": "*"
         },
         "command": {
           "kind": "CreatePerformer",
@@ -45,7 +46,8 @@
       },
       {
         "event": {
-          "kind": "EntityDestroyed"
+          "kind": "EntityDestroyed",
+          "key": "*"
         },
         "command": {
           "kind": "DestroyPerformerScope",
@@ -55,7 +57,7 @@
     ],
     "behaviors": [
       {
-        "slot": 0,
+        "slot": "body",
         "kind": "AssetBinding",
         "activeByDefault": true,
         "assetBinding": {
@@ -64,9 +66,9 @@
           "renderPath": "StaticMesh",
           "mobility": "Movable",
           "localScale": [
-            1.0,
-            1.0,
-            1.0
+            1,
+            1,
+            1
           ]
         }
       }

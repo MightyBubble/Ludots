@@ -21,38 +21,35 @@ namespace Ludots.Core.Gameplay.GAS.Orders
         public sealed class OrderTypeConfigJson
         {
             public JsonNode? OrderTypeId { get; set; }
-            public string Label { get; set; } = string.Empty;
-            public int MaxQueueSize { get; set; } = 3;
-            public string SameTypePolicy { get; set; } = "Queue";
-            public string QueueFullPolicy { get; set; } = "DropOldest";
-            public int Priority { get; set; } = 100;
-            public int BufferWindowMs { get; set; } = 500;
-            public int PendingBufferWindowMs { get; set; } = 400;
-            public bool CanInterruptSelf { get; set; }
-            public int QueuedModeMaxSize { get; set; } = 16;
-            public bool AllowQueuedMode { get; set; } = true;
-            public bool ClearQueueOnActivate { get; set; } = true;
+            public string? Label { get; set; }
+            public int? MaxQueueSize { get; set; }
+            public string? SameTypePolicy { get; set; }
+            public string? QueueFullPolicy { get; set; }
+            public int? Priority { get; set; }
+            public int? BufferWindowMs { get; set; }
+            public int? PendingBufferWindowMs { get; set; }
+            public bool? CanInterruptSelf { get; set; }
+            public int? QueuedModeMaxSize { get; set; }
+            public bool? AllowQueuedMode { get; set; }
+            public bool? ClearQueueOnActivate { get; set; }
             public JsonNode? SpatialBlackboardKey { get; set; }
             public JsonNode? EntityBlackboardKey { get; set; }
             public JsonNode? IntArg0BlackboardKey { get; set; }
-            public JsonNode? ValidationGraphId { get; set; }
-            public string ValidationGraph { get; set; } = string.Empty;
+            public JsonNode? ValidationGraph { get; set; }
         }
 
         public sealed class OrderRuleConfigJson
         {
-            public int OrderTypeId { get; set; }
-            public string OrderTypeKey { get; set; } = string.Empty;
-            public int[] BlockedActiveOrderTypeIds { get; set; } = Array.Empty<int>();
-            public int[] InterruptsActiveOrderTypeIds { get; set; } = Array.Empty<int>();
-            public string[] BlockedActiveOrderTypeKeys { get; set; } = Array.Empty<string>();
-            public string[] InterruptsActiveOrderTypeKeys { get; set; } = Array.Empty<string>();
+            public string? OrderTypeKey { get; set; }
+            public string[]? BlockedActiveOrderTypeKeys { get; set; }
+            public string[]? InterruptsActiveOrderTypeKeys { get; set; }
         }
 
         private sealed class OrderTypesRootJson
         {
-            public Dictionary<string, OrderTypeConfigJson> OrderTypes { get; set; } = new();
-            public Dictionary<string, OrderRuleConfigJson> OrderRules { get; set; } = new();
+            public Dictionary<string, JsonNode?>? OrderBlackboardKeys { get; set; }
+            public Dictionary<string, OrderTypeConfigJson>? OrderTypes { get; set; }
+            public Dictionary<string, OrderRuleConfigJson>? OrderRules { get; set; }
         }
 
         public OrderTypeConfigLoader(ConfigPipeline pipeline)
@@ -86,10 +83,22 @@ namespace Ludots.Core.Gameplay.GAS.Orders
                 throw new InvalidOperationException($"Failed to deserialize '{relativePath}'.");
             }
 
+            if (root.OrderBlackboardKeys == null)
+            {
+                throw new InvalidOperationException($"'{relativePath}' must explicitly define orderBlackboardKeys, even when empty.");
+            }
+
             if (root.OrderTypes == null || root.OrderTypes.Count == 0)
             {
                 throw new InvalidOperationException($"'{relativePath}' must define a non-empty orderTypes object.");
             }
+
+            if (root.OrderRules == null)
+            {
+                throw new InvalidOperationException($"'{relativePath}' must explicitly define orderRules, even when empty.");
+            }
+
+            RegisterConfiguredBlackboardKeys(root.OrderBlackboardKeys, relativePath);
 
             var assignedIds = new HashSet<int>();
             var orderTypeEntries = new List<KeyValuePair<string, OrderTypeConfigJson>>(root.OrderTypes);
@@ -120,15 +129,10 @@ namespace Ludots.Core.Gameplay.GAS.Orders
                 orderTypeRegistry.Register(config);
             }
 
-            if (root.OrderRules == null)
-            {
-                return;
-            }
-
             foreach (var kvp in root.OrderRules)
             {
                 var config = kvp.Value ?? throw new InvalidOperationException($"Order rule '{kvp.Key}' in '{relativePath}' is null.");
-                int orderTypeId = ResolveOrderTypeReference(config.OrderTypeId, config.OrderTypeKey, kvp.Key, relativePath, orderTypeRegistry);
+                int orderTypeId = ResolveOrderTypeReference(config.OrderTypeKey, kvp.Key, relativePath, orderTypeRegistry);
                 if (!orderTypeRegistry.IsRegistered(orderTypeId))
                 {
                     throw new InvalidOperationException($"Order rule '{kvp.Key}' references unregistered order type {orderTypeId}.");
@@ -160,22 +164,52 @@ namespace Ludots.Core.Gameplay.GAS.Orders
             {
                 Key = key,
                 OrderTypeId = orderTypeId,
-                Label = string.IsNullOrWhiteSpace(json.Label) ? key : json.Label,
-                MaxQueueSize = json.MaxQueueSize,
-                SameTypePolicy = ParseSameTypePolicy(json.SameTypePolicy),
-                QueueFullPolicy = ParseQueueFullPolicy(json.QueueFullPolicy),
-                Priority = json.Priority,
-                BufferWindowMs = json.BufferWindowMs,
-                PendingBufferWindowMs = json.PendingBufferWindowMs,
-                CanInterruptSelf = json.CanInterruptSelf,
-                QueuedModeMaxSize = json.QueuedModeMaxSize,
-                AllowQueuedMode = json.AllowQueuedMode,
-                ClearQueueOnActivate = json.ClearQueueOnActivate,
-                SpatialBlackboardKey = ResolveBlackboardKey(json.SpatialBlackboardKey, OrderBlackboardKeys.Generic_TargetPosition, key, path, nameof(json.SpatialBlackboardKey)),
-                EntityBlackboardKey = ResolveBlackboardKey(json.EntityBlackboardKey, OrderBlackboardKeys.Generic_TargetEntity, key, path, nameof(json.EntityBlackboardKey)),
-                IntArg0BlackboardKey = ResolveBlackboardKey(json.IntArg0BlackboardKey, -1, key, path, nameof(json.IntArg0BlackboardKey)),
-                ValidationGraphId = ResolveValidationGraph(json.ValidationGraphId, json.ValidationGraph, key, path)
+                Label = RequireString(json.Label, key, path, "label"),
+                MaxQueueSize = RequireInt(json.MaxQueueSize, key, path, "maxQueueSize"),
+                SameTypePolicy = ParseSameTypePolicy(RequireString(json.SameTypePolicy, key, path, "sameTypePolicy")),
+                QueueFullPolicy = ParseQueueFullPolicy(RequireString(json.QueueFullPolicy, key, path, "queueFullPolicy")),
+                Priority = RequireInt(json.Priority, key, path, "priority"),
+                BufferWindowMs = RequireInt(json.BufferWindowMs, key, path, "bufferWindowMs"),
+                PendingBufferWindowMs = RequireInt(json.PendingBufferWindowMs, key, path, "pendingBufferWindowMs"),
+                CanInterruptSelf = RequireBool(json.CanInterruptSelf, key, path, "canInterruptSelf"),
+                QueuedModeMaxSize = RequireInt(json.QueuedModeMaxSize, key, path, "queuedModeMaxSize"),
+                AllowQueuedMode = RequireBool(json.AllowQueuedMode, key, path, "allowQueuedMode"),
+                ClearQueueOnActivate = RequireBool(json.ClearQueueOnActivate, key, path, "clearQueueOnActivate"),
+                SpatialBlackboardKey = ResolveBlackboardKey(json.SpatialBlackboardKey, key, path, "spatialBlackboardKey"),
+                EntityBlackboardKey = ResolveBlackboardKey(json.EntityBlackboardKey, key, path, "entityBlackboardKey"),
+                IntArg0BlackboardKey = ResolveBlackboardKey(json.IntArg0BlackboardKey, key, path, "intArg0BlackboardKey"),
+                ValidationGraphId = ResolveValidationGraph(json.ValidationGraph, key, path)
             };
+        }
+
+        private static int RequireInt(int? value, string key, string path, string fieldName)
+        {
+            if (!value.HasValue)
+            {
+                throw new InvalidOperationException($"Order type '{key}' in '{path}' must explicitly define {fieldName}.");
+            }
+
+            return value.Value;
+        }
+
+        private static bool RequireBool(bool? value, string key, string path, string fieldName)
+        {
+            if (!value.HasValue)
+            {
+                throw new InvalidOperationException($"Order type '{key}' in '{path}' must explicitly define {fieldName}.");
+            }
+
+            return value.Value;
+        }
+
+        private static string RequireString(string? value, string key, string path, string fieldName)
+        {
+            if (string.IsNullOrWhiteSpace(value))
+            {
+                throw new InvalidOperationException($"Order type '{key}' in '{path}' must explicitly define non-empty {fieldName}.");
+            }
+
+            return RequireCanonicalString(value, $"Order type '{key}' in '{path}' {fieldName}");
         }
 
         private static int ResolveOrderTypeId(
@@ -274,12 +308,68 @@ namespace Ludots.Core.Gameplay.GAS.Orders
                 throw new InvalidOperationException($"Order type '{key}' in '{path}' orderTypeId semantic key must be non-empty.");
             }
 
-            semanticKey = semanticKey.Trim();
+            semanticKey = RequireCanonicalString(semanticKey, $"Order type '{key}' in '{path}' orderTypeId semantic key");
             if (!string.Equals(semanticKey, key, StringComparison.Ordinal))
             {
                 throw new InvalidOperationException(
                     $"Order type '{key}' in '{path}' orderTypeId semantic key must exactly match the order type key.");
             }
+        }
+
+        private static void RegisterConfiguredBlackboardKeys(
+            IReadOnlyDictionary<string, JsonNode?> configuredKeys,
+            string path)
+        {
+            var keys = new List<string>(configuredKeys.Count);
+            foreach (var kvp in configuredKeys)
+            {
+                string key = RequireConfiguredBlackboardKey(kvp.Key, path);
+                RequireConfiguredBlackboardKeyDeclaration(kvp.Value, key, path);
+                keys.Add(key);
+            }
+
+            keys.Sort(StringComparer.Ordinal);
+            for (int i = 0; i < keys.Count; i++)
+            {
+                OrderBlackboardKeyRegistry.Register(keys[i]);
+            }
+        }
+
+        private static string RequireConfiguredBlackboardKey(string? value, string path)
+        {
+            if (string.IsNullOrWhiteSpace(value))
+            {
+                throw new InvalidOperationException(
+                    $"Order blackboard key in '{path}' must be a non-empty semantic string.");
+            }
+
+            return RequireCanonicalString(value, $"Order blackboard key in '{path}'");
+        }
+
+        private static void RequireConfiguredBlackboardKeyDeclaration(JsonNode? node, string key, string path)
+        {
+            if (node is JsonValue value)
+            {
+                if (value.TryGetValue<int>(out int numericId))
+                {
+                    throw new InvalidOperationException(
+                        $"Order blackboard key '{key}' in '{path}' must be declared with boolean true, not numeric id {numericId}.");
+                }
+
+                if (value.TryGetValue<bool>(out bool declared))
+                {
+                    if (declared)
+                    {
+                        return;
+                    }
+
+                    throw new InvalidOperationException(
+                        $"Order blackboard key '{key}' in '{path}' must be declared with boolean true; remove the key when it is not used.");
+                }
+            }
+
+            throw new InvalidOperationException(
+                $"Order blackboard key '{key}' in '{path}' must be declared with boolean true.");
         }
 
         private static int AssignNextFreeRuntimeOrderTypeId(string key, string path, HashSet<int> assignedIds)
@@ -295,18 +385,18 @@ namespace Ludots.Core.Gameplay.GAS.Orders
             throw new InvalidOperationException($"Order type '{key}' in '{path}' cannot resolve a free runtime orderTypeId.");
         }
 
-        private static int ResolveBlackboardKey(JsonNode? node, int defaultValue, string key, string path, string fieldName)
+        private static int ResolveBlackboardKey(JsonNode? node, string key, string path, string fieldName)
         {
             if (node == null)
             {
-                return defaultValue;
+                throw new InvalidOperationException($"Order type '{key}' in '{path}' must explicitly define {fieldName}.");
             }
 
             if (node is JsonValue value)
             {
                 if (value.TryGetValue<int>(out int numericId))
                 {
-                    return numericId;
+                    throw new InvalidOperationException($"Order type '{key}' in '{path}' {fieldName} must be an exact semantic string, not numeric id {numericId}.");
                 }
 
                 if (value.TryGetValue<string>(out string? text))
@@ -316,99 +406,64 @@ namespace Ludots.Core.Gameplay.GAS.Orders
                         throw new InvalidOperationException($"Order type '{key}' in '{path}' {fieldName} must be a non-empty semantic string.");
                     }
 
-                    text = text.Trim();
+                    text = RequireCanonicalString(text, $"Order type '{key}' in '{path}' {fieldName}");
                     if (string.Equals(text, "none", StringComparison.Ordinal))
                     {
                         return -1;
                     }
 
-                    return text switch
+                    if (OrderBlackboardKeyRegistry.TryGetId(text, out int blackboardKey))
                     {
-                        "Cast.SlotIndex" => OrderBlackboardKeys.Cast_SlotIndex,
-                        "Cast.TargetEntity" => OrderBlackboardKeys.Cast_TargetEntity,
-                        "Cast.TargetPosition" => OrderBlackboardKeys.Cast_TargetPosition,
-                        "Cast.AbilityId" => OrderBlackboardKeys.Cast_AbilityId,
-                        "Attack.TargetEntity" => OrderBlackboardKeys.Attack_TargetEntity,
-                        "Attack.MovePosition" => OrderBlackboardKeys.Attack_MovePosition,
-                        "Attack.IsAttackMove" => OrderBlackboardKeys.Attack_IsAttackMove,
-                        "Stop.Type" => OrderBlackboardKeys.Stop_Type,
-                        "Hold.Active" => OrderBlackboardKeys.Hold_Active,
-                        "Patrol.Waypoints" => OrderBlackboardKeys.Patrol_Waypoints,
-                        "Patrol.CurrentIndex" => OrderBlackboardKeys.Patrol_CurrentIndex,
-                        "Patrol.Direction" => OrderBlackboardKeys.Patrol_Direction,
-                        "Generic.TargetEntity" => OrderBlackboardKeys.Generic_TargetEntity,
-                        "Generic.TargetPosition" => OrderBlackboardKeys.Generic_TargetPosition,
-                        "Generic.IntParam" => OrderBlackboardKeys.Generic_IntParam,
-                        "Generic.FloatParam" => OrderBlackboardKeys.Generic_FloatParam,
-                        _ => throw new InvalidOperationException($"Order type '{key}' in '{path}' has unknown {fieldName} '{text}'.")
-                    };
+                        return blackboardKey;
+                    }
+
+                    throw new InvalidOperationException($"Order type '{key}' in '{path}' has unknown {fieldName} '{text}'.");
                 }
             }
 
-            throw new InvalidOperationException($"Order type '{key}' in '{path}' {fieldName} must be an int or semantic string.");
+            throw new InvalidOperationException($"Order type '{key}' in '{path}' {fieldName} must be an exact semantic string.");
         }
 
-        private static int ResolveValidationGraph(JsonNode? idNode, string graphName, string key, string path)
+        private static int ResolveValidationGraph(JsonNode? graphNode, string key, string path)
         {
-            bool hasId = idNode != null;
-            bool hasGraph = !string.IsNullOrWhiteSpace(graphName);
-            if (hasId && hasGraph)
+            if (graphNode == null)
             {
-                throw new InvalidOperationException(
-                    $"Order type '{key}' in '{path}' must define either validationGraphId or validationGraph, not both.");
+                throw new InvalidOperationException($"Order type '{key}' in '{path}' must explicitly define validationGraph.");
             }
 
-            if (hasGraph)
-            {
-                graphName = graphName.Trim();
-                if (string.Equals(graphName, "none", StringComparison.Ordinal))
-                {
-                    return 0;
-                }
-
-                int graphId = GraphIdRegistry.GetId(graphName);
-                if (graphId <= 0)
-                {
-                    throw new InvalidOperationException(
-                        $"Order type '{key}' in '{path}' validationGraph references unknown graph '{graphName}'.");
-                }
-
-                return graphId;
-            }
-
-            if (idNode == null)
-            {
-                return 0;
-            }
-
-            if (idNode is JsonValue value)
+            if (graphNode is JsonValue value)
             {
                 if (value.TryGetValue<int>(out int numericId))
                 {
-                    if (numericId < 0)
-                    {
-                        throw new InvalidOperationException($"Order type '{key}' in '{path}' validationGraphId must be non-negative.");
-                    }
-
-                    return numericId;
+                    throw new InvalidOperationException(
+                        $"Order type '{key}' in '{path}' validationGraph must be an exact semantic string, not numeric id {numericId}.");
                 }
 
-                if (value.TryGetValue<string>(out string? text))
+                if (value.TryGetValue<string>(out string? graphName))
                 {
-                    if (string.IsNullOrWhiteSpace(text))
+                    if (string.IsNullOrWhiteSpace(graphName))
                     {
-                        throw new InvalidOperationException($"Order type '{key}' in '{path}' validationGraphId must be an int or 'none'.");
+                        throw new InvalidOperationException($"Order type '{key}' in '{path}' validationGraph must be a non-empty semantic string.");
                     }
 
-                    text = text.Trim();
-                    if (string.Equals(text, "none", StringComparison.Ordinal))
+                    graphName = RequireCanonicalString(graphName, $"Order type '{key}' in '{path}' validationGraph");
+                    if (string.Equals(graphName, "none", StringComparison.Ordinal))
                     {
                         return 0;
                     }
+
+                    int graphId = GraphIdRegistry.GetId(graphName);
+                    if (graphId <= 0)
+                    {
+                        throw new InvalidOperationException(
+                            $"Order type '{key}' in '{path}' validationGraph references unknown graph '{graphName}'.");
+                    }
+
+                    return graphId;
                 }
             }
 
-            throw new InvalidOperationException($"Order type '{key}' in '{path}' validationGraphId must be a non-negative int.");
+            throw new InvalidOperationException($"Order type '{key}' in '{path}' validationGraph must be an exact semantic string.");
         }
 
         private static unsafe OrderRuleSet ConvertToRuleSet(
@@ -417,13 +472,13 @@ namespace Ludots.Core.Gameplay.GAS.Orders
             string path,
             OrderTypeRegistry orderTypeRegistry)
         {
-            ResolveOrderTypeReference(json.OrderTypeId, json.OrderTypeKey, key, path, orderTypeRegistry);
+            ResolveOrderTypeReference(json.OrderTypeKey, key, path, orderTypeRegistry);
 
             var result = new OrderRuleSet();
             Span<int> blocked = stackalloc int[OrderRuleSet.MAX_BLOCKED_ACTIVE_ORDER_TYPES];
             result.BlockedActiveCount = ResolveOrderTypeReferences(
-                json.BlockedActiveOrderTypeIds,
                 json.BlockedActiveOrderTypeKeys,
+                "blockedActiveOrderTypeKeys",
                 key,
                 path,
                 orderTypeRegistry,
@@ -435,8 +490,8 @@ namespace Ludots.Core.Gameplay.GAS.Orders
 
             Span<int> interrupts = stackalloc int[OrderRuleSet.MAX_INTERRUPTS_ACTIVE_ORDER_TYPES];
             result.InterruptsActiveCount = ResolveOrderTypeReferences(
-                json.InterruptsActiveOrderTypeIds,
                 json.InterruptsActiveOrderTypeKeys,
+                "interruptsActiveOrderTypeKeys",
                 key,
                 path,
                 orderTypeRegistry,
@@ -450,16 +505,19 @@ namespace Ludots.Core.Gameplay.GAS.Orders
         }
 
         private static int ResolveOrderTypeReferences(
-            int[] ids,
-            string[] keys,
+            string[]? keys,
+            string fieldName,
             string key,
             string path,
             OrderTypeRegistry orderTypeRegistry,
             Span<int> destination)
         {
-            ids ??= Array.Empty<int>();
-            keys ??= Array.Empty<string>();
-            int count = ids.Length + keys.Length;
+            if (keys == null)
+            {
+                throw new InvalidOperationException($"Order rule '{key}' in '{path}' must explicitly define {fieldName}.");
+            }
+
+            int count = keys.Length;
             if (count > destination.Length)
             {
                 throw new InvalidOperationException(
@@ -467,16 +525,9 @@ namespace Ludots.Core.Gameplay.GAS.Orders
             }
 
             int cursor = 0;
-            for (int i = 0; i < ids.Length; i++)
-            {
-                int orderTypeId = ResolveOrderTypeReference(ids[i], string.Empty, key, path, orderTypeRegistry);
-                EnsureUniqueOrderRuleReference(destination.Slice(0, cursor), orderTypeId, key, path);
-                destination[cursor++] = orderTypeId;
-            }
-
             for (int i = 0; i < keys.Length; i++)
             {
-                int orderTypeId = ResolveOrderTypeReference(0, keys[i], key, path, orderTypeRegistry);
+                int orderTypeId = ResolveOrderTypeReference(keys[i], key, path, orderTypeRegistry);
                 EnsureUniqueOrderRuleReference(destination.Slice(0, cursor), orderTypeId, key, path);
                 destination[cursor++] = orderTypeId;
             }
@@ -485,27 +536,22 @@ namespace Ludots.Core.Gameplay.GAS.Orders
         }
 
         private static int ResolveOrderTypeReference(
-            int orderTypeId,
-            string orderTypeKey,
+            string? orderTypeKey,
             string key,
             string path,
             OrderTypeRegistry orderTypeRegistry)
         {
-            bool hasId = orderTypeId > 0;
-            bool hasKey = !string.IsNullOrWhiteSpace(orderTypeKey);
-            if (hasId == hasKey)
+            if (string.IsNullOrWhiteSpace(orderTypeKey))
             {
                 throw new InvalidOperationException(
-                    $"Order rule '{key}' in '{path}' must reference exactly one order type id or key.");
+                    $"Order rule '{key}' in '{path}' must reference a non-empty orderTypeKey.");
             }
 
-            if (hasKey)
+            string resolvedKey = RequireCanonicalString(orderTypeKey, $"Order rule '{key}' in '{path}' orderTypeKey");
+            if (!orderTypeRegistry.TryGetId(resolvedKey, out int orderTypeId) || orderTypeId <= 0)
             {
-                if (!orderTypeRegistry.TryGetId(orderTypeKey, out orderTypeId) || orderTypeId <= 0)
-                {
-                    throw new InvalidOperationException(
-                        $"Order rule '{key}' in '{path}' references unknown order type key '{orderTypeKey}'.");
-                }
+                throw new InvalidOperationException(
+                    $"Order rule '{key}' in '{path}' references unknown order type key '{resolvedKey}'.");
             }
 
             if (!orderTypeRegistry.IsRegistered(orderTypeId))
@@ -514,6 +560,16 @@ namespace Ludots.Core.Gameplay.GAS.Orders
             }
 
             return orderTypeId;
+        }
+
+        private static string RequireCanonicalString(string value, string context)
+        {
+            if (value.Length != value.Trim().Length)
+            {
+                throw new InvalidOperationException($"{context} must not contain leading or trailing whitespace.");
+            }
+
+            return value;
         }
 
         private static void EnsureUniqueOrderRuleReference(ReadOnlySpan<int> existing, int orderTypeId, string key, string path)

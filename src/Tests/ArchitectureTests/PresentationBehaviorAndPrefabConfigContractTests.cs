@@ -4,6 +4,7 @@ using System.Collections.Generic;
 using Ludots.Core.Config;
 using Ludots.Core.Engine;
 using Ludots.Core.Gameplay.GAS.Orders;
+using Ludots.Core.Gameplay.GAS.Presentation;
 using Ludots.Core.Modding;
 using Ludots.Core.Presentation.Events;
 using Ludots.Core.Presentation.Assets;
@@ -121,10 +122,20 @@ namespace Ludots.Tests.Architecture
 
             PresentationEventStream stream = engine.GetService(CoreServiceKeys.PresentationEventStream)
                 ?? throw new InvalidOperationException("PresentationEventStream service missing.");
+            PresentationOwnerChangeBuffer ownerChanges = engine.GetService(CoreServiceKeys.PresentationOwnerChangeBuffer)
+                ?? throw new InvalidOperationException("PresentationOwnerChangeBuffer service missing.");
+            GasPresentationEventBuffer gasEvents = engine.GetService(CoreServiceKeys.GasPresentationEventBuffer)
+                ?? throw new InvalidOperationException("GasPresentationEventBuffer service missing.");
 
             Assert.That(
+                gasEvents.Capacity,
+                Is.EqualTo(engine.MergedConfig.Presentation.GasPresentationEventCapacity));
+            Assert.That(
                 stream.Capacity,
-                Is.EqualTo(engine.MergedConfig.Presentation.GetEffectivePresentationEventStreamCapacity()));
+                Is.EqualTo(engine.MergedConfig.Presentation.PresentationEventStreamCapacity));
+            Assert.That(
+                ownerChanges.Capacity,
+                Is.EqualTo(engine.MergedConfig.Presentation.PresentationOwnerChangeCapacity));
         }
 
         [Test]
@@ -156,8 +167,8 @@ namespace Ludots.Tests.Architecture
 
             Assert.That(
                 massNavigationEngine.MergedConfig.Selection.MovePathPreviewOrderTypeKeys,
-                Is.EqualTo(new[] { "moveTo", "massNavigationMove" }),
-                "MassNavigationMod should extend the preview contract through game.json, not CoreInputMod source.");
+                Is.EqualTo(new[] { "massNavigationMove" }),
+                "MassNavigationMod should author only its formal order key for selected move path preview.");
             Assert.That(massNavigationEngine.MergedConfig.Constants.OrderTypeIds.ContainsKey("moveTo"), Is.True);
             Assert.That(
                 massNavigationEngine.MergedConfig.Constants.OrderTypeIds.ContainsKey("massNavigationMove"),
@@ -168,6 +179,9 @@ namespace Ludots.Tests.Architecture
             int massNavigationMoveOrderTypeId = orderTypes.GetId("massNavigationMove");
             Assert.That(massNavigationMoveOrderTypeId, Is.GreaterThan(0));
             Assert.That(massNavigationMoveOrderTypeId, Is.Not.EqualTo(massNavigationEngine.MergedConfig.Constants.OrderTypeIds["moveTo"]));
+            Assert.That(orderTypes.TryGetId("moveTo", out int coreMoveToOrderTypeId), Is.True);
+            Assert.That(coreMoveToOrderTypeId, Is.Not.EqualTo(massNavigationMoveOrderTypeId));
+            Assert.That(orderTypes.TryGetId("MassNavigationMove", out _), Is.False);
         }
 
         [Test]
@@ -179,25 +193,68 @@ namespace Ludots.Tests.Architecture
             WriteCatalog(core, "GAS/order_types.json", "DeepObject", string.Empty);
             File.WriteAllText(Path.Combine(core, "Configs", "GAS", "order_types.json"), """
 {
+  "orderBlackboardKeys": {},
   "orderTypes": {
     "moveTo": {
       "orderTypeId": 101,
-      "label": "Move To"
+      "label": "Move To",
+      "maxQueueSize": 8,
+      "sameTypePolicy": "Queue",
+      "queueFullPolicy": "DropOldest",
+      "priority": 60,
+      "bufferWindowMs": 300,
+      "pendingBufferWindowMs": 0,
+      "canInterruptSelf": false,
+      "queuedModeMaxSize": 8,
+      "allowQueuedMode": true,
+      "clearQueueOnActivate": true,
+      "spatialBlackboardKey": "Generic.TargetPosition",
+      "entityBlackboardKey": "none",
+      "intArg0BlackboardKey": "none",
+      "validationGraph": "none"
     },
     "attackTarget": {
       "orderTypeId": 102,
-      "label": "Attack Target"
+      "label": "Attack Target",
+      "maxQueueSize": 1,
+      "sameTypePolicy": "Replace",
+      "queueFullPolicy": "DropOldest",
+      "priority": 75,
+      "bufferWindowMs": 300,
+      "pendingBufferWindowMs": 400,
+      "canInterruptSelf": false,
+      "queuedModeMaxSize": 1,
+      "allowQueuedMode": false,
+      "clearQueueOnActivate": true,
+      "spatialBlackboardKey": "Attack.MovePosition",
+      "entityBlackboardKey": "Attack.TargetEntity",
+      "intArg0BlackboardKey": "none",
+      "validationGraph": "none"
     },
     "massNavigationMove": {
       "orderTypeId": "massNavigationMove",
-      "label": "Mass Navigation Move"
+      "label": "Mass Navigation Move",
+      "maxQueueSize": 1,
+      "sameTypePolicy": "Replace",
+      "queueFullPolicy": "DropOldest",
+      "priority": 70,
+      "bufferWindowMs": 0,
+      "pendingBufferWindowMs": 0,
+      "canInterruptSelf": true,
+      "queuedModeMaxSize": 1,
+      "allowQueuedMode": false,
+      "clearQueueOnActivate": true,
+      "spatialBlackboardKey": "none",
+      "entityBlackboardKey": "none",
+      "intArg0BlackboardKey": "none",
+      "validationGraph": "none"
     }
   },
   "orderRules": {
     "massNavigationMove": {
       "orderTypeKey": "massNavigationMove",
       "blockedActiveOrderTypeKeys": [],
-      "interruptsActiveOrderTypeKeys": [ "moveTo", "attackTarget" ]
+      "interruptsActiveOrderTypeKeys": [ "attackTarget" ]
     }
   }
 }
@@ -214,9 +271,232 @@ namespace Ludots.Tests.Architecture
 
             int massNavigationMoveId = orderTypes.GetId("massNavigationMove");
             ref readonly OrderRuleSet massNavigationRule = ref orderRules.Get(massNavigationMoveId);
-            Assert.That(massNavigationRule.InterruptsActiveCount, Is.EqualTo(2));
-            Assert.That(orderRules.Interrupts(massNavigationMoveId, orderTypes.GetId("moveTo")), Is.True);
+            Assert.That(massNavigationRule.InterruptsActiveCount, Is.EqualTo(1));
+            Assert.That(orderRules.Interrupts(massNavigationMoveId, orderTypes.GetId("moveTo")), Is.False);
             Assert.That(orderRules.Interrupts(massNavigationMoveId, orderTypes.GetId("attackTarget")), Is.True);
+        }
+
+        [Test]
+        public void OrderTypeConfigLoader_RejectsCaseMismatchedRuleReferenceKeys()
+        {
+            string root = Path.Combine(Path.GetTempPath(), "Ludots_OrderTypeKeyCaseStrict", Guid.NewGuid().ToString("N"));
+            string core = Path.Combine(root, "Core");
+            Directory.CreateDirectory(Path.Combine(core, "Configs", "GAS"));
+            WriteCatalog(core, "GAS/order_types.json", "DeepObject", string.Empty);
+            File.WriteAllText(Path.Combine(core, "Configs", "GAS", "order_types.json"), """
+{
+  "orderBlackboardKeys": {},
+  "orderTypes": {
+    "massNavigationMove": {
+      "orderTypeId": "massNavigationMove",
+      "label": "Mass Navigation Move",
+      "maxQueueSize": 1,
+      "sameTypePolicy": "Replace",
+      "queueFullPolicy": "DropOldest",
+      "priority": 70,
+      "bufferWindowMs": 0,
+      "pendingBufferWindowMs": 0,
+      "canInterruptSelf": true,
+      "queuedModeMaxSize": 1,
+      "allowQueuedMode": false,
+      "clearQueueOnActivate": true,
+      "spatialBlackboardKey": "none",
+      "entityBlackboardKey": "none",
+      "intArg0BlackboardKey": "none",
+      "validationGraph": "none"
+    }
+  },
+  "orderRules": {
+    "massNavigationMove": {
+      "orderTypeKey": "MassNavigationMove"
+    }
+  }
+}
+""");
+
+            var vfs = new VirtualFileSystem();
+            vfs.Mount("Core", core);
+            var pipeline = new ConfigPipeline(vfs, modLoader: null!);
+            var catalog = ConfigCatalogLoader.Load(pipeline);
+            var orderTypes = new OrderTypeRegistry();
+            var orderRules = new OrderRuleRegistry();
+
+            InvalidOperationException ex = Assert.Throws<InvalidOperationException>(
+                () => new OrderTypeConfigLoader(pipeline).Load(orderTypes, orderRules, catalog))!;
+            Assert.That(ex.Message, Does.Contain("MassNavigationMove"));
+            Assert.That(ex.Message, Does.Contain("unknown order type key"));
+        }
+
+        [Test]
+        public void OrderTypeConfigLoader_RejectsWhitespacePaddedPolicyStrings()
+        {
+            InvalidOperationException ex = LoadInvalidOrderTypesJson("""
+{
+  "orderBlackboardKeys": {},
+  "orderTypes": {
+    "moveTo": {
+      "orderTypeId": 101,
+      "label": "Move To",
+      "maxQueueSize": 8,
+      "sameTypePolicy": " Queue ",
+      "queueFullPolicy": "DropOldest",
+      "priority": 60,
+      "bufferWindowMs": 300,
+      "pendingBufferWindowMs": 0,
+      "canInterruptSelf": false,
+      "queuedModeMaxSize": 8,
+      "allowQueuedMode": true,
+      "clearQueueOnActivate": true,
+      "spatialBlackboardKey": "Generic.TargetPosition",
+      "entityBlackboardKey": "none",
+      "intArg0BlackboardKey": "none",
+      "validationGraph": "none"
+    }
+  },
+  "orderRules": {}
+}
+""");
+
+            Assert.That(ex.Message, Does.Contain("sameTypePolicy"));
+            Assert.That(ex.Message, Does.Contain("leading or trailing whitespace"));
+        }
+
+        [Test]
+        public void OrderTypeConfigLoader_RejectsWhitespacePaddedOrderTypeIdSemanticKey()
+        {
+            InvalidOperationException ex = LoadInvalidOrderTypesJson("""
+{
+  "orderBlackboardKeys": {},
+  "orderTypes": {
+    "massNavigationMove": {
+      "orderTypeId": " massNavigationMove ",
+      "label": "Mass Navigation Move",
+      "maxQueueSize": 1,
+      "sameTypePolicy": "Replace",
+      "queueFullPolicy": "DropOldest",
+      "priority": 70,
+      "bufferWindowMs": 0,
+      "pendingBufferWindowMs": 0,
+      "canInterruptSelf": true,
+      "queuedModeMaxSize": 1,
+      "allowQueuedMode": false,
+      "clearQueueOnActivate": true,
+      "spatialBlackboardKey": "none",
+      "entityBlackboardKey": "none",
+      "intArg0BlackboardKey": "none",
+      "validationGraph": "none"
+    }
+  },
+  "orderRules": {}
+}
+""");
+
+            Assert.That(ex.Message, Does.Contain("orderTypeId semantic key"));
+            Assert.That(ex.Message, Does.Contain("leading or trailing whitespace"));
+        }
+
+        [Test]
+        public void OrderTypeConfigLoader_RejectsWhitespacePaddedRuleReferenceKey()
+        {
+            InvalidOperationException ex = LoadInvalidOrderTypesJson("""
+{
+  "orderBlackboardKeys": {},
+  "orderTypes": {
+    "massNavigationMove": {
+      "orderTypeId": "massNavigationMove",
+      "label": "Mass Navigation Move",
+      "maxQueueSize": 1,
+      "sameTypePolicy": "Replace",
+      "queueFullPolicy": "DropOldest",
+      "priority": 70,
+      "bufferWindowMs": 0,
+      "pendingBufferWindowMs": 0,
+      "canInterruptSelf": true,
+      "queuedModeMaxSize": 1,
+      "allowQueuedMode": false,
+      "clearQueueOnActivate": true,
+      "spatialBlackboardKey": "none",
+      "entityBlackboardKey": "none",
+      "intArg0BlackboardKey": "none",
+      "validationGraph": "none"
+    }
+  },
+  "orderRules": {
+    "massNavigationMove": {
+      "orderTypeKey": " massNavigationMove ",
+      "blockedActiveOrderTypeKeys": [],
+      "interruptsActiveOrderTypeKeys": []
+    }
+  }
+}
+""");
+
+            Assert.That(ex.Message, Does.Contain("orderTypeKey"));
+            Assert.That(ex.Message, Does.Contain("leading or trailing whitespace"));
+        }
+
+        [Test]
+        public void OrderTypeConfigLoader_RejectsWhitespacePaddedBlackboardAndValidationGraphKeys()
+        {
+            InvalidOperationException blackboard = LoadInvalidOrderTypesJson("""
+{
+  "orderBlackboardKeys": {},
+  "orderTypes": {
+    "moveTo": {
+      "orderTypeId": 101,
+      "label": "Move To",
+      "maxQueueSize": 8,
+      "sameTypePolicy": "Queue",
+      "queueFullPolicy": "DropOldest",
+      "priority": 60,
+      "bufferWindowMs": 300,
+      "pendingBufferWindowMs": 0,
+      "canInterruptSelf": false,
+      "queuedModeMaxSize": 8,
+      "allowQueuedMode": true,
+      "clearQueueOnActivate": true,
+      "spatialBlackboardKey": "Generic.TargetPosition",
+      "entityBlackboardKey": " none ",
+      "intArg0BlackboardKey": "none",
+      "validationGraph": "none"
+    }
+  },
+  "orderRules": {}
+}
+""");
+
+            Assert.That(blackboard.Message, Does.Contain("entityBlackboardKey"));
+            Assert.That(blackboard.Message, Does.Contain("leading or trailing whitespace"));
+
+            InvalidOperationException validationGraph = LoadInvalidOrderTypesJson("""
+{
+  "orderBlackboardKeys": {},
+  "orderTypes": {
+    "moveTo": {
+      "orderTypeId": 101,
+      "label": "Move To",
+      "maxQueueSize": 8,
+      "sameTypePolicy": "Queue",
+      "queueFullPolicy": "DropOldest",
+      "priority": 60,
+      "bufferWindowMs": 300,
+      "pendingBufferWindowMs": 0,
+      "canInterruptSelf": false,
+      "queuedModeMaxSize": 8,
+      "allowQueuedMode": true,
+      "clearQueueOnActivate": true,
+      "spatialBlackboardKey": "Generic.TargetPosition",
+      "entityBlackboardKey": "none",
+      "intArg0BlackboardKey": "none",
+      "validationGraph": " none "
+    }
+  },
+  "orderRules": {}
+}
+""");
+
+            Assert.That(validationGraph.Message, Does.Contain("validationGraph"));
+            Assert.That(validationGraph.Message, Does.Contain("leading or trailing whitespace"));
         }
 
         [Test]
@@ -228,21 +508,48 @@ namespace Ludots.Tests.Architecture
             WriteCatalog(core, "GAS/order_types.json", "DeepObject", string.Empty);
             File.WriteAllText(Path.Combine(core, "Configs", "GAS", "order_types.json"), """
 {
+  "orderBlackboardKeys": {},
   "orderTypes": {
     "explicitMove": {
       "orderTypeId": 1,
-      "label": "Explicit Move"
+      "label": "Explicit Move",
+      "maxQueueSize": 8,
+      "sameTypePolicy": "Queue",
+      "queueFullPolicy": "DropOldest",
+      "priority": 60,
+      "bufferWindowMs": 300,
+      "pendingBufferWindowMs": 0,
+      "canInterruptSelf": false,
+      "queuedModeMaxSize": 8,
+      "allowQueuedMode": true,
+      "clearQueueOnActivate": true,
+      "spatialBlackboardKey": "Generic.TargetPosition",
+      "entityBlackboardKey": "none",
+      "intArg0BlackboardKey": "none",
+      "validationGraph": "none"
     },
     "semanticMove": {
       "label": "Semantic Move",
+      "maxQueueSize": 8,
+      "sameTypePolicy": "Queue",
+      "queueFullPolicy": "DropOldest",
+      "priority": 60,
+      "bufferWindowMs": 300,
+      "pendingBufferWindowMs": 0,
+      "canInterruptSelf": false,
+      "queuedModeMaxSize": 8,
+      "allowQueuedMode": true,
+      "clearQueueOnActivate": true,
       "spatialBlackboardKey": "Generic.TargetPosition",
       "entityBlackboardKey": "none",
-      "intArg0BlackboardKey": "none"
+      "intArg0BlackboardKey": "none",
+      "validationGraph": "none"
     }
   },
   "orderRules": {
     "semanticMove": {
       "orderTypeKey": "semanticMove",
+      "blockedActiveOrderTypeKeys": [],
       "interruptsActiveOrderTypeKeys": [ "explicitMove" ]
     }
   }
@@ -272,11 +579,64 @@ namespace Ludots.Tests.Architecture
             string path = Path.Combine(core, "Configs", "GAS", "order_types.json");
             File.WriteAllText(path, """
 {
+  "orderBlackboardKeys": {},
   "orderTypes": {
-    "explicitMove": { "orderTypeId": 1, "label": "Explicit Move" },
-    "alphaMove": { "orderTypeId": "alphaMove", "label": "Alpha Move", "validationGraph": "none" },
-    "omegaMove": { "orderTypeId": "omegaMove", "label": "Omega Move", "validationGraph": "none" }
-  }
+    "explicitMove": {
+      "orderTypeId": 1,
+      "label": "Explicit Move",
+      "maxQueueSize": 8,
+      "sameTypePolicy": "Queue",
+      "queueFullPolicy": "DropOldest",
+      "priority": 60,
+      "bufferWindowMs": 300,
+      "pendingBufferWindowMs": 0,
+      "canInterruptSelf": false,
+      "queuedModeMaxSize": 8,
+      "allowQueuedMode": true,
+      "clearQueueOnActivate": true,
+      "spatialBlackboardKey": "Generic.TargetPosition",
+      "entityBlackboardKey": "none",
+      "intArg0BlackboardKey": "none",
+      "validationGraph": "none"
+    },
+    "alphaMove": {
+      "orderTypeId": "alphaMove",
+      "label": "Alpha Move",
+      "maxQueueSize": 8,
+      "sameTypePolicy": "Queue",
+      "queueFullPolicy": "DropOldest",
+      "priority": 60,
+      "bufferWindowMs": 300,
+      "pendingBufferWindowMs": 0,
+      "canInterruptSelf": false,
+      "queuedModeMaxSize": 8,
+      "allowQueuedMode": true,
+      "clearQueueOnActivate": true,
+      "spatialBlackboardKey": "Generic.TargetPosition",
+      "entityBlackboardKey": "none",
+      "intArg0BlackboardKey": "none",
+      "validationGraph": "none"
+    },
+    "omegaMove": {
+      "orderTypeId": "omegaMove",
+      "label": "Omega Move",
+      "maxQueueSize": 8,
+      "sameTypePolicy": "Queue",
+      "queueFullPolicy": "DropOldest",
+      "priority": 60,
+      "bufferWindowMs": 300,
+      "pendingBufferWindowMs": 0,
+      "canInterruptSelf": false,
+      "queuedModeMaxSize": 8,
+      "allowQueuedMode": true,
+      "clearQueueOnActivate": true,
+      "spatialBlackboardKey": "Generic.TargetPosition",
+      "entityBlackboardKey": "none",
+      "intArg0BlackboardKey": "none",
+      "validationGraph": "none"
+    }
+  },
+  "orderRules": {}
 }
 """);
 
@@ -296,17 +656,334 @@ namespace Ludots.Tests.Architecture
 
             File.WriteAllText(path, """
 {
+  "orderBlackboardKeys": {},
   "orderTypes": {
-    "omegaMove": { "orderTypeId": "omegaMove", "label": "Omega Move", "validationGraph": "none" },
-    "alphaMove": { "orderTypeId": "alphaMove", "label": "Alpha Move", "validationGraph": "none" },
-    "explicitMove": { "orderTypeId": 1, "label": "Explicit Move" }
-  }
+    "omegaMove": {
+      "orderTypeId": "omegaMove",
+      "label": "Omega Move",
+      "maxQueueSize": 8,
+      "sameTypePolicy": "Queue",
+      "queueFullPolicy": "DropOldest",
+      "priority": 60,
+      "bufferWindowMs": 300,
+      "pendingBufferWindowMs": 0,
+      "canInterruptSelf": false,
+      "queuedModeMaxSize": 8,
+      "allowQueuedMode": true,
+      "clearQueueOnActivate": true,
+      "spatialBlackboardKey": "Generic.TargetPosition",
+      "entityBlackboardKey": "none",
+      "intArg0BlackboardKey": "none",
+      "validationGraph": "none"
+    },
+    "alphaMove": {
+      "orderTypeId": "alphaMove",
+      "label": "Alpha Move",
+      "maxQueueSize": 8,
+      "sameTypePolicy": "Queue",
+      "queueFullPolicy": "DropOldest",
+      "priority": 60,
+      "bufferWindowMs": 300,
+      "pendingBufferWindowMs": 0,
+      "canInterruptSelf": false,
+      "queuedModeMaxSize": 8,
+      "allowQueuedMode": true,
+      "clearQueueOnActivate": true,
+      "spatialBlackboardKey": "Generic.TargetPosition",
+      "entityBlackboardKey": "none",
+      "intArg0BlackboardKey": "none",
+      "validationGraph": "none"
+    },
+    "explicitMove": {
+      "orderTypeId": 1,
+      "label": "Explicit Move",
+      "maxQueueSize": 8,
+      "sameTypePolicy": "Queue",
+      "queueFullPolicy": "DropOldest",
+      "priority": 60,
+      "bufferWindowMs": 300,
+      "pendingBufferWindowMs": 0,
+      "canInterruptSelf": false,
+      "queuedModeMaxSize": 8,
+      "allowQueuedMode": true,
+      "clearQueueOnActivate": true,
+      "spatialBlackboardKey": "Generic.TargetPosition",
+      "entityBlackboardKey": "none",
+      "intArg0BlackboardKey": "none",
+      "validationGraph": "none"
+    }
+  },
+  "orderRules": {}
 }
 """);
             new OrderTypeConfigLoader(pipeline).Load(orderTypes, orderRules, catalog);
 
             Assert.That(orderTypes.GetId("alphaMove"), Is.EqualTo(alphaMoveId));
             Assert.That(orderTypes.GetId("omegaMove"), Is.EqualTo(omegaMoveId));
+        }
+
+        [Test]
+        public void OrderTypeConfigLoader_RequiresExplicitOrderTypeRuntimeFields()
+        {
+            InvalidOperationException ex = LoadInvalidOrderTypesJson("""
+{
+  "orderBlackboardKeys": {},
+  "orderTypes": {
+    "moveTo": {
+      "orderTypeId": 101,
+      "label": "Move To",
+      "maxQueueSize": 8,
+      "sameTypePolicy": "Queue",
+      "queueFullPolicy": "DropOldest",
+      "bufferWindowMs": 300,
+      "pendingBufferWindowMs": 0,
+      "spatialBlackboardKey": "Generic.TargetPosition",
+      "entityBlackboardKey": "none",
+      "intArg0BlackboardKey": "none",
+      "validationGraph": "none"
+    }
+  },
+  "orderRules": {}
+}
+""");
+
+            Assert.That(ex.Message, Does.Contain("moveTo"));
+            Assert.That(ex.Message, Does.Contain("priority"));
+        }
+
+        [Test]
+        public void OrderTypeConfigLoader_RejectsNumericBlackboardKeys()
+        {
+            InvalidOperationException ex = LoadInvalidOrderTypesJson("""
+{
+  "orderBlackboardKeys": {},
+  "orderTypes": {
+    "moveTo": {
+      "orderTypeId": 101,
+      "label": "Move To",
+      "maxQueueSize": 8,
+      "sameTypePolicy": "Queue",
+      "queueFullPolicy": "DropOldest",
+      "priority": 60,
+      "bufferWindowMs": 300,
+      "pendingBufferWindowMs": 0,
+      "canInterruptSelf": false,
+      "queuedModeMaxSize": 8,
+      "allowQueuedMode": true,
+      "clearQueueOnActivate": true,
+      "spatialBlackboardKey": 201,
+      "entityBlackboardKey": "none",
+      "intArg0BlackboardKey": "none",
+      "validationGraph": "none"
+    }
+  },
+  "orderRules": {}
+}
+""");
+
+            Assert.That(ex.Message, Does.Contain("spatialBlackboardKey"));
+            Assert.That(ex.Message, Does.Contain("numeric id"));
+        }
+
+        [Test]
+        public void OrderTypeConfigLoader_RejectsNumericBlackboardKeyDeclarations()
+        {
+            InvalidOperationException ex = LoadInvalidOrderTypesJson("""
+{
+  "orderBlackboardKeys": {
+    "Test.Order.CustomInt": 9001
+  },
+  "orderTypes": {
+    "moveTo": {
+      "orderTypeId": 101,
+      "label": "Move To",
+      "maxQueueSize": 8,
+      "sameTypePolicy": "Queue",
+      "queueFullPolicy": "DropOldest",
+      "priority": 60,
+      "bufferWindowMs": 300,
+      "pendingBufferWindowMs": 0,
+      "canInterruptSelf": false,
+      "queuedModeMaxSize": 8,
+      "allowQueuedMode": true,
+      "clearQueueOnActivate": true,
+      "spatialBlackboardKey": "Generic.TargetPosition",
+      "entityBlackboardKey": "none",
+      "intArg0BlackboardKey": "none",
+      "validationGraph": "none"
+    }
+  },
+  "orderRules": {}
+}
+""");
+
+            Assert.That(ex.Message, Does.Contain("Order blackboard key"));
+            Assert.That(ex.Message, Does.Contain("numeric id"));
+        }
+
+        [Test]
+        public void OrderTypeConfigLoader_ResolvesRegisteredSemanticBlackboardKeys()
+        {
+            OrderBlackboardKeyRegistry.ResetToBuiltins();
+            const string customKey = "Test.Order.CustomInt";
+
+            try
+            {
+                string root = Path.Combine(Path.GetTempPath(), "Ludots_OrderTypeCustomBlackboardKey", Guid.NewGuid().ToString("N"));
+                string core = Path.Combine(root, "Core");
+                Directory.CreateDirectory(Path.Combine(core, "Configs", "GAS"));
+                WriteCatalog(core, "GAS/order_types.json", "DeepObject", string.Empty);
+                File.WriteAllText(Path.Combine(core, "Configs", "GAS", "order_types.json"), """
+{
+  "orderBlackboardKeys": {
+    "Test.Order.CustomInt": true
+  },
+  "orderTypes": {
+    "moveTo": {
+      "orderTypeId": 101,
+      "label": "Move To",
+      "maxQueueSize": 8,
+      "sameTypePolicy": "Queue",
+      "queueFullPolicy": "DropOldest",
+      "priority": 60,
+      "bufferWindowMs": 300,
+      "pendingBufferWindowMs": 0,
+      "canInterruptSelf": false,
+      "queuedModeMaxSize": 8,
+      "allowQueuedMode": true,
+      "clearQueueOnActivate": true,
+      "spatialBlackboardKey": "Generic.TargetPosition",
+      "entityBlackboardKey": "none",
+      "intArg0BlackboardKey": "Test.Order.CustomInt",
+      "validationGraph": "none"
+    }
+  },
+  "orderRules": {}
+}
+""");
+
+                var vfs = new VirtualFileSystem();
+                vfs.Mount("Core", core);
+                var pipeline = new ConfigPipeline(vfs, modLoader: null!);
+                var catalog = ConfigCatalogLoader.Load(pipeline);
+                var orderTypes = new OrderTypeRegistry();
+                var orderRules = new OrderRuleRegistry();
+
+                new OrderTypeConfigLoader(pipeline).Load(orderTypes, orderRules, catalog);
+
+                Assert.That(OrderBlackboardKeyRegistry.TryGetId(customKey, out int customKeyId), Is.True);
+                Assert.That(customKeyId, Is.GreaterThan(0));
+                Assert.That(OrderBlackboardKeyRegistry.GetKey(customKeyId), Is.EqualTo(customKey));
+                Assert.That(orderTypes.Get(101).IntArg0BlackboardKey, Is.EqualTo(customKeyId));
+            }
+            finally
+            {
+                OrderBlackboardKeyRegistry.ResetToBuiltins();
+            }
+        }
+
+        [Test]
+        public void OrderTypeConfigLoader_RejectsUnknownSemanticBlackboardKeys()
+        {
+            OrderBlackboardKeyRegistry.ResetToBuiltins();
+            InvalidOperationException ex = LoadInvalidOrderTypesJson("""
+{
+  "orderBlackboardKeys": {},
+  "orderTypes": {
+    "moveTo": {
+      "orderTypeId": 101,
+      "label": "Move To",
+      "maxQueueSize": 8,
+      "sameTypePolicy": "Queue",
+      "queueFullPolicy": "DropOldest",
+      "priority": 60,
+      "bufferWindowMs": 300,
+      "pendingBufferWindowMs": 0,
+      "canInterruptSelf": false,
+      "queuedModeMaxSize": 8,
+      "allowQueuedMode": true,
+      "clearQueueOnActivate": true,
+      "spatialBlackboardKey": "Generic.TargetPosition",
+      "entityBlackboardKey": "none",
+      "intArg0BlackboardKey": "Test.Order.UnknownInt",
+      "validationGraph": "none"
+    }
+  },
+  "orderRules": {}
+}
+""");
+
+            Assert.That(ex.Message, Does.Contain("intArg0BlackboardKey"));
+            Assert.That(ex.Message, Does.Contain("Test.Order.UnknownInt"));
+        }
+
+        [Test]
+        public void OrderTypeConfigLoader_RejectsCaseMismatchedSemanticBlackboardKeys()
+        {
+            OrderBlackboardKeyRegistry.ResetToBuiltins();
+            InvalidOperationException ex = LoadInvalidOrderTypesJson("""
+{
+  "orderBlackboardKeys": {},
+  "orderTypes": {
+    "moveTo": {
+      "orderTypeId": 101,
+      "label": "Move To",
+      "maxQueueSize": 8,
+      "sameTypePolicy": "Queue",
+      "queueFullPolicy": "DropOldest",
+      "priority": 60,
+      "bufferWindowMs": 300,
+      "pendingBufferWindowMs": 0,
+      "canInterruptSelf": false,
+      "queuedModeMaxSize": 8,
+      "allowQueuedMode": true,
+      "clearQueueOnActivate": true,
+      "spatialBlackboardKey": "generic.TargetPosition",
+      "entityBlackboardKey": "none",
+      "intArg0BlackboardKey": "none",
+      "validationGraph": "none"
+    }
+  },
+  "orderRules": {}
+}
+""");
+
+            Assert.That(ex.Message, Does.Contain("spatialBlackboardKey"));
+            Assert.That(ex.Message, Does.Contain("generic.TargetPosition"));
+        }
+
+        [Test]
+        public void OrderTypeConfigLoader_RejectsNumericValidationGraph()
+        {
+            InvalidOperationException ex = LoadInvalidOrderTypesJson("""
+{
+  "orderBlackboardKeys": {},
+  "orderTypes": {
+    "moveTo": {
+      "orderTypeId": 101,
+      "label": "Move To",
+      "maxQueueSize": 8,
+      "sameTypePolicy": "Queue",
+      "queueFullPolicy": "DropOldest",
+      "priority": 60,
+      "bufferWindowMs": 300,
+      "pendingBufferWindowMs": 0,
+      "canInterruptSelf": false,
+      "queuedModeMaxSize": 8,
+      "allowQueuedMode": true,
+      "clearQueueOnActivate": true,
+      "spatialBlackboardKey": "Generic.TargetPosition",
+      "entityBlackboardKey": "none",
+      "intArg0BlackboardKey": "none",
+      "validationGraph": 0
+    }
+  },
+  "orderRules": {}
+}
+""");
+
+            Assert.That(ex.Message, Does.Contain("validationGraph"));
+            Assert.That(ex.Message, Does.Contain("numeric id"));
         }
 
         [Test]
@@ -322,7 +999,9 @@ namespace Ludots.Tests.Architecture
 {
   "presentation": {
     "performerInstanceCapacity": 2048,
+    "gasPresentationEventCapacity": 16384,
     "presentationEventStreamCapacity": 32768,
+    "presentationOwnerChangeCapacity": 12288,
     "performerCommandCapacity": 4096,
     "primitiveDrawBufferCapacity": 8192,
     "visualSnapshotBufferCapacity": 16384,
@@ -333,7 +1012,27 @@ namespace Ludots.Tests.Architecture
     "roadSplineCapacity": 2048,
     "worldHudCapacity": 4096,
     "screenHudCapacity": 4096,
-    "runtimeEntitySpawnQueueCapacity": 8192
+    "minimapMarkerCapacity": 4096,
+    "runtimeEntitySpawnQueueCapacity": 8192,
+    "runtimeEntitySpawnReceiptQueueCapacity": 8192,
+    "cameraCulling": {
+      "highLodDistanceCm": 4000.0,
+      "mediumLodDistanceCm": 10000.0,
+      "lowLodDistanceCm": 20000.0
+    },
+    "minimap": {
+      "initialZoomNormalized": 1.0,
+      "wheelZoomNormalizedStep": 0.08,
+      "buttonZoomNormalizedStep": 0.18,
+      "zoomSliderEnabled": true,
+      "modeToggleEnabled": true,
+      "rotateToggleEnabled": true,
+      "debugMarkerSampleCapacity": 64,
+      "minZoomExtentMode": "OneChunk",
+      "maxZoomExtentMode": "FullMap",
+      "minZoomExplicitHalfExtentCm": 750.0,
+      "maxZoomExplicitHalfExtentCm": 0.0
+    }
   }
 }
 """);
@@ -341,7 +1040,9 @@ namespace Ludots.Tests.Architecture
 {
   "presentation": {
     "performerInstanceCapacity": 8192,
+    "gasPresentationEventCapacity": 32768,
     "presentationEventStreamCapacity": 65536,
+    "presentationOwnerChangeCapacity": 24576,
     "performerCommandCapacity": 32768,
     "primitiveDrawBufferCapacity": 65536,
     "visualSnapshotBufferCapacity": 131072,
@@ -352,7 +1053,9 @@ namespace Ludots.Tests.Architecture
     "roadSplineCapacity": 32768,
     "worldHudCapacity": 65536,
     "screenHudCapacity": 65536,
-    "runtimeEntitySpawnQueueCapacity": 65536
+    "minimapMarkerCapacity": 65536,
+    "runtimeEntitySpawnQueueCapacity": 65536,
+    "runtimeEntitySpawnReceiptQueueCapacity": 32768
   }
 }
 """);
@@ -367,7 +1070,9 @@ namespace Ludots.Tests.Architecture
             var config = pipeline.MergeGameConfig();
 
             Assert.That(config.Presentation.PerformerInstanceCapacity, Is.EqualTo(8192));
+            Assert.That(config.Presentation.GasPresentationEventCapacity, Is.EqualTo(32768));
             Assert.That(config.Presentation.PresentationEventStreamCapacity, Is.EqualTo(65536));
+            Assert.That(config.Presentation.PresentationOwnerChangeCapacity, Is.EqualTo(24576));
             Assert.That(config.Presentation.PerformerCommandCapacity, Is.EqualTo(32768));
             Assert.That(config.Presentation.PrimitiveDrawBufferCapacity, Is.EqualTo(65536));
             Assert.That(config.Presentation.VisualSnapshotBufferCapacity, Is.EqualTo(131072));
@@ -378,20 +1083,12 @@ namespace Ludots.Tests.Architecture
             Assert.That(config.Presentation.RoadSplineCapacity, Is.EqualTo(32768));
             Assert.That(config.Presentation.WorldHudCapacity, Is.EqualTo(65536));
             Assert.That(config.Presentation.ScreenHudCapacity, Is.EqualTo(65536));
+            Assert.That(config.Presentation.MinimapMarkerCapacity, Is.EqualTo(65536));
             Assert.That(config.Presentation.RuntimeEntitySpawnQueueCapacity, Is.EqualTo(65536));
-            Assert.That(config.Presentation.GetEffectivePerformerInstanceCapacity(), Is.EqualTo(8192));
-            Assert.That(config.Presentation.GetEffectivePresentationEventStreamCapacity(), Is.EqualTo(65536));
-            Assert.That(config.Presentation.GetEffectivePerformerCommandCapacity(), Is.EqualTo(32768));
-            Assert.That(config.Presentation.GetEffectivePrimitiveDrawBufferCapacity(), Is.EqualTo(65536));
-            Assert.That(config.Presentation.GetEffectiveVisualSnapshotBufferCapacity(), Is.EqualTo(131072));
-            Assert.That(config.Presentation.GetEffectiveVisualProxyBufferCapacity(), Is.EqualTo(131072));
-            Assert.That(config.Presentation.GetEffectiveSkinnedVisualBatchCapacity(), Is.EqualTo(32768));
-            Assert.That(config.Presentation.GetEffectivePresentationRequestCapacity(), Is.EqualTo(131072));
-            Assert.That(config.Presentation.GetEffectiveGroundOverlayCapacity(), Is.EqualTo(16384));
-            Assert.That(config.Presentation.GetEffectiveRoadSplineCapacity(), Is.EqualTo(32768));
-            Assert.That(config.Presentation.GetEffectiveWorldHudCapacity(), Is.EqualTo(65536));
-            Assert.That(config.Presentation.GetEffectiveScreenHudCapacity(), Is.EqualTo(65536));
-            Assert.That(config.Presentation.GetEffectiveRuntimeEntitySpawnQueueCapacity(), Is.EqualTo(65536));
+            Assert.That(config.Presentation.RuntimeEntitySpawnReceiptQueueCapacity, Is.EqualTo(32768));
+            Assert.That(config.Presentation.CameraCulling.HighLodDistanceCm, Is.EqualTo(4000.0f));
+            Assert.That(config.Presentation.Minimap.DebugMarkerSampleCapacity, Is.EqualTo(64));
+            config.Presentation.Validate();
         }
 
         [Test]
@@ -518,6 +1215,25 @@ namespace Ludots.Tests.Architecture
             writer.WriteLine();
             writer.WriteLine("]");
             File.WriteAllText(Path.Combine(coreRoot, "Configs", "config_catalog.json"), writer.ToString());
+        }
+
+        private static InvalidOperationException LoadInvalidOrderTypesJson(string json)
+        {
+            string root = Path.Combine(Path.GetTempPath(), "Ludots_OrderTypeStrictness", Guid.NewGuid().ToString("N"));
+            string core = Path.Combine(root, "Core");
+            Directory.CreateDirectory(Path.Combine(core, "Configs", "GAS"));
+            WriteCatalog(core, "GAS/order_types.json", "DeepObject", string.Empty);
+            File.WriteAllText(Path.Combine(core, "Configs", "GAS", "order_types.json"), json);
+
+            var vfs = new VirtualFileSystem();
+            vfs.Mount("Core", core);
+            var pipeline = new ConfigPipeline(vfs, modLoader: null!);
+            var catalog = ConfigCatalogLoader.Load(pipeline);
+            var orderTypes = new OrderTypeRegistry();
+            var orderRules = new OrderRuleRegistry();
+
+            return Assert.Throws<InvalidOperationException>(
+                () => new OrderTypeConfigLoader(pipeline).Load(orderTypes, orderRules, catalog))!;
         }
     }
 }
