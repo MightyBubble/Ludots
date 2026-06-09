@@ -1,0 +1,14 @@
+{
+  "scenario": {
+    "agentsPerTeam": 64
+  },
+  "showcase": {
+    "id": "mass_navigation_u09_layer_costs",
+    "title": "U9 Layer and Cost Profiles Showcase",
+    "panelMode": "Focused",
+    "initialStepId": "LayerCosts",
+    "visibleStepIds": [ "LayerCosts" ],
+    "playerPerspective": "Use Layer Cost Matrix. Ground, water, air, and mountain profiles must show different reachability/cost behavior against colored forbidden and high-cost regions.",
+    "modAuthorPerspective": "Movement layer is gameplay reachability, not presentation; validate profile costs, forbidden areas, and active-window mesh status together."
+  }
+}

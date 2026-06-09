@@ -1,0 +1,9 @@
+{
+  "name": "MassNavigationU07OrderReuseShowcaseMod",
+  "version": "1.0.0",
+  "description": "Focused U7 entry for same-point and near-point order route reuse.",
+  "priority": 0,
+  "dependencies": {
+    "MassNavigationMod": "^1.0.0"
+  }
+}

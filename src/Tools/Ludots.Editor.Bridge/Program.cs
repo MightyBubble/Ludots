@@ -1,10 +1,9 @@
-using Ludots.Core.Map.Hex;
 using Ludots.Core.Map.Board;
 using Ludots.Core.Modding;
 using Ludots.Launcher.Backend;
 using Ludots.Core.Navigation.NavMesh;
-using Ludots.Core.Navigation.NavMesh.Bake;
 using Ludots.Core.Navigation.NavMesh.Config;
+using Ludots.Core.Navigation.NavMesh.LogicHeightmap;
 using Ludots.NavBake.Recast;
 using Ludots.Tool;
 using Microsoft.AspNetCore.Http.Features;
@@ -427,126 +426,14 @@ app.MapPut("/api/mods/{modId}/maps/{mapId}/terrain-react", async (string modId, 
     return Results.Ok(new { ok = true, path = outFile });
 });
 
-app.MapPost("/api/nav/bake-react", async (HttpRequest req) =>
+app.MapPost("/api/nav/bake-react", (HttpRequest _) =>
 {
-    if (!req.HasFormContentType) return Results.BadRequest(new { error = "Expected multipart/form-data" });
-    var form = await req.ReadFormAsync();
-    var mapFile = form.Files.GetFile("map");
-    if (mapFile == null) return Results.BadRequest(new { error = "Missing form file 'map' (map_data.bin)" });
-
-    var dirtyJson = form.TryGetValue("dirty", out var dirtyVal) ? dirtyVal.ToString() : null;
-    var dirtyOnly = ParseBool(form.TryGetValue("dirtyOnly", out var dirtyOnlyVal) ? dirtyOnlyVal.ToString() : null, defaultValue: false);
-    var includeNeighbors = ParseBool(form.TryGetValue("includeNeighbors", out var inclVal) ? inclVal.ToString() : null, defaultValue: true);
-    var heightScale = ParseFloat(form.TryGetValue("heightScale", out var hsVal) ? hsVal.ToString() : null, 2.0f);
-    var minUpDot = ParseFloat(form.TryGetValue("minUpDot", out var mudVal) ? mudVal.ToString() : null, 0.6f);
-    var cliffThreshold = ParseInt(form.TryGetValue("cliffThreshold", out var ctVal) ? ctVal.ToString() : null, 1);
-    var tileVersion = ParseInt(form.TryGetValue("tileVersion", out var tvVal) ? tvVal.ToString() : null, 1);
-    var writeArtifact = ParseBool(form.TryGetValue("artifact", out var artVal) ? artVal.ToString() : null, defaultValue: true);
-    var parallel = ParseBool(form.TryGetValue("parallel", out var parVal) ? parVal.ToString() : null, defaultValue: true);
-    var maxDegree = ParseInt(form.TryGetValue("maxDegree", out var mdVal) ? mdVal.ToString() : null, Math.Max(1, Environment.ProcessorCount));
-
-    string tempPath = Path.Combine(Path.GetTempPath(), $"ludots_map_{Guid.NewGuid():N}.bin");
-    try
+    return Results.BadRequest(new
     {
-        await using (var fs = File.Create(tempPath))
-        {
-            await mapFile.CopyToAsync(fs);
-        }
-
-        using var vtxmStream = new MemoryStream();
-        _ = ReactMapDataBinConverter.ConvertToVertexMapBinary(tempPath, vtxmStream);
-        vtxmStream.Position = 0;
-        var map = VertexMapBinary.Read(vtxmStream);
-
-        var targets = ResolveTargets(map, dirtyJson, includeNeighbors, fallbackToFullWhenNoTargets: !dirtyOnly);
-        if (targets.Count == 0)
-        {
-            return Results.Ok(new
-            {
-                ok = true,
-                okCount = 0,
-                failCount = 0,
-                tiles = Array.Empty<object>(),
-                artifacts = Array.Empty<object>(),
-                message = "No targets to bake (dirtyOnly=true and dirty set is empty).",
-                config = new { dirtyOnly, includeNeighbors, heightScale, minUpDot, cliffThreshold, tileVersion }
-            });
-        }
-        var cfg = new NavBuildConfig(heightScale, minUpDot, cliffThreshold);
-
-        var results = new TileBakeResult[targets.Count];
-
-        void BakeOne(int i)
-        {
-            var t = targets[i];
-            
-            // Use new CDT pipeline
-            var pipelineResult = BakePipeline.Execute(map, t.cx, t.cy, (uint)tileVersion, cfg);
-            
-            // Log debug info to console
-            if (pipelineResult.Artifact.DebugLog != null)
-            {
-                Console.WriteLine($"[Bake ({t.cx},{t.cy})] Debug log:");
-                foreach (var line in pipelineResult.Artifact.DebugLog)
-                {
-                    Console.WriteLine($"  {line}");
-                }
-            }
-            
-            if (pipelineResult.Success && pipelineResult.Tile != null)
-            {
-                using var ms = new MemoryStream();
-                NavTileBinary.Write(ms, pipelineResult.Tile);
-                results[i] = new TileBakeResult(t.cx, t.cy, Ok: true, Convert.ToBase64String(ms.ToArray()), writeArtifact ? SerializeArtifact(pipelineResult.Artifact) : null);
-            }
-            else
-            {
-                results[i] = new TileBakeResult(t.cx, t.cy, Ok: false, null, writeArtifact ? SerializeArtifact(pipelineResult.Artifact) : null);
-            }
-        }
-
-        if (parallel)
-        {
-            Parallel.For(0, targets.Count, new ParallelOptions { MaxDegreeOfParallelism = Math.Max(1, maxDegree) }, BakeOne);
-        }
-        else
-        {
-            for (int i = 0; i < targets.Count; i++) BakeOne(i);
-        }
-
-        int okCount = 0;
-        int failCount = 0;
-        var tiles = new List<object>(results.Length);
-        var artifacts = new List<object>();
-        for (int i = 0; i < results.Length; i++)
-        {
-            var r = results[i];
-            if (r.Ok) okCount++; else failCount++;
-            if (!string.IsNullOrEmpty(r.NavTileBase64))
-            {
-                tiles.Add(new { cx = r.Cx, cy = r.Cy, layer = 0, base64 = r.NavTileBase64 });
-            }
-            if (!string.IsNullOrEmpty(r.ArtifactJson))
-            {
-                artifacts.Add(new { cx = r.Cx, cy = r.Cy, json = r.ArtifactJson });
-            }
-        }
-
-        return Results.Ok(new
-        {
-            ok = true,
-            okCount,
-            failCount,
-            tiles,
-            artifacts,
-            targetsCount = targets.Count,
-            config = new { dirtyOnly, includeNeighbors, heightScale, minUpDot, cliffThreshold, tileVersion }
-        });
-    }
-    finally
-    {
-        try { if (File.Exists(tempPath)) File.Delete(tempPath); } catch { }
-    }
+        ok = false,
+        error = "/api/nav/bake-react is disabled because NavMesh bake sources must first become LogicHeightmap (.lhtm).",
+        replacement = "/api/nav/bake-recast-react"
+    });
 });
 
 app.MapPost("/api/nav/bake-recast-react", async (HttpRequest req) =>
@@ -570,6 +457,7 @@ app.MapPost("/api/nav/bake-recast-react", async (HttpRequest req) =>
     var maxDegree = ParseInt(form.TryGetValue("maxDegree", out var mdVal) ? mdVal.ToString() : null, Math.Max(1, Environment.ProcessorCount));
 
     string tempPath = Path.Combine(Path.GetTempPath(), $"ludots_map_{Guid.NewGuid():N}.bin");
+    string lhtmTempPath = Path.Combine(Path.GetTempPath(), $"ludots_map_{Guid.NewGuid():N}.lhtm");
     try
     {
         await using (var fs = File.Create(tempPath))
@@ -580,7 +468,13 @@ app.MapPost("/api/nav/bake-recast-react", async (HttpRequest req) =>
         using var vtxmStream = new MemoryStream();
         _ = ReactMapDataBinConverter.ConvertToVertexMapBinary(tempPath, vtxmStream);
         vtxmStream.Position = 0;
-        var map = VertexMapBinary.Read(vtxmStream);
+        var legacyCfg = new NavBuildConfig(heightScale, minUpDot, cliffThreshold);
+        await using (var lhtmOutput = File.Create(lhtmTempPath))
+        {
+            LogicHeightmapVertexMapAdapter.WriteVertexMap(lhtmOutput, vtxmStream, legacyCfg);
+        }
+
+        using var logicReader = LogicHeightmapFileReader.Open(lhtmTempPath);
 
         string repoRoot = FindAssetsRoot();
         NavMeshBakeConfig bakeConfig;
@@ -603,7 +497,7 @@ app.MapPost("/api/nav/bake-recast-react", async (HttpRequest req) =>
             obstacles = JsonSerializer.Deserialize<NavObstacleSet>(File.ReadAllText(obsPath), new JsonSerializerOptions { PropertyNameCaseInsensitive = true }) ?? new NavObstacleSet();
         }
 
-        var targets = ResolveTargets(map, dirtyJson, includeNeighbors, fallbackToFullWhenNoTargets: !dirtyOnly);
+        var targets = ResolveTargetsByDimensions(logicReader.WidthInChunks, logicReader.HeightInChunks, dirtyJson, includeNeighbors, fallbackToFullWhenNoTargets: !dirtyOnly);
         if (targets.Count == 0)
         {
             return Results.Ok(new
@@ -617,7 +511,6 @@ app.MapPost("/api/nav/bake-recast-react", async (HttpRequest req) =>
                 config = new { mapId, dirtyOnly, includeNeighbors, heightScale, minUpDot, cliffThreshold, tileVersion }
             });
         }
-        var legacyCfg = new NavBuildConfig(heightScale, minUpDot, cliffThreshold);
 
         var results = new TileBakeResult[targets.Count];
 
@@ -627,13 +520,23 @@ app.MapPost("/api/nav/bake-recast-react", async (HttpRequest req) =>
             bool okAny = false;
             string? base64 = null;
             string? artJson = null;
+            LogicHeightmap tileWindow;
+            try
+            {
+                tileWindow = logicReader.ReadTileWindow(t.cx, t.cy);
+            }
+            catch (Exception ex)
+            {
+                results[i] = new TileBakeResult(t.cx, t.cy, okAny, base64, writeArtifact ? SerializeArtifact(new NavBakeArtifact(new NavTileId(t.cx, t.cy, 0), (uint)tileVersion, NavBakeStage.None, NavBakeErrorCode.InvalidInput, ex.Message, 0, 0, 0, 0)) : null);
+                return;
+            }
 
             for (int li = 0; li < bakeConfig.Layers.Count; li++)
             {
                 int layer = bakeConfig.Layers[li].Layer;
                 for (int pi = 0; pi < profiles.Count; pi++)
                 {
-                    if (RecastNavTileBaker.TryBake(map, t.cx, t.cy, (uint)tileVersion, legacyCfg, profiles[pi], layer, obstacles, out var tile, out var artifact))
+                    if (RecastNavTileBaker.TryBake(tileWindow, t.cx, t.cy, (uint)tileVersion, legacyCfg, profiles[pi], layer, obstacles, out var tile, out var artifact))
                     {
                         string profileId = profiles[pi].Id ?? throw new InvalidOperationException("NavMeshBakeConfig.profiles.id is required.");
                         string rel = NavAssetPaths.GetNavTileRelativePath(mapId, layer, profileId, t.cx, t.cy);
@@ -704,6 +607,7 @@ app.MapPost("/api/nav/bake-recast-react", async (HttpRequest req) =>
     finally
     {
         try { if (File.Exists(tempPath)) File.Delete(tempPath); } catch { }
+        try { if (File.Exists(lhtmTempPath)) File.Delete(lhtmTempPath); } catch { }
     }
 });
 
@@ -1039,14 +943,14 @@ static string NormalizeBindingName(string raw)
     return raw.Trim().TrimStart('$');
 }
 
-static List<(int cx, int cy)> ResolveTargets(VertexMap map, string? dirtyJson, bool includeNeighbors, bool fallbackToFullWhenNoTargets)
+static List<(int cx, int cy)> ResolveTargetsByDimensions(int widthInChunks, int heightInChunks, string? dirtyJson, bool includeNeighbors, bool fallbackToFullWhenNoTargets)
 {
     if (string.IsNullOrWhiteSpace(dirtyJson))
     {
         if (!fallbackToFullWhenNoTargets) return new List<(int cx, int cy)>(0);
-        var all = new List<(int cx, int cy)>(map.WidthInChunks * map.HeightInChunks);
-        for (int cy = 0; cy < map.HeightInChunks; cy++)
-            for (int cx = 0; cx < map.WidthInChunks; cx++)
+        var all = new List<(int cx, int cy)>(widthInChunks * heightInChunks);
+        for (int cy = 0; cy < heightInChunks; cy++)
+            for (int cx = 0; cx < widthInChunks; cx++)
                 all.Add((cx, cy));
         return all;
     }
@@ -1082,14 +986,14 @@ static List<(int cx, int cy)> ResolveTargets(VertexMap map, string? dirtyJson, b
     var targets = new List<(int cx, int cy)>(set.Count);
     foreach (var t in set)
     {
-        if (t.cx < 0 || t.cy < 0 || t.cx >= map.WidthInChunks || t.cy >= map.HeightInChunks) continue;
+        if (t.cx < 0 || t.cy < 0 || t.cx >= widthInChunks || t.cy >= heightInChunks) continue;
         targets.Add(t);
     }
     if (targets.Count == 0)
     {
         if (!fallbackToFullWhenNoTargets) return targets;
-        for (int cy = 0; cy < map.HeightInChunks; cy++)
-            for (int cx = 0; cx < map.WidthInChunks; cx++)
+        for (int cy = 0; cy < heightInChunks; cy++)
+            for (int cx = 0; cx < widthInChunks; cx++)
                 targets.Add((cx, cy));
     }
     return targets;

@@ -29,7 +29,8 @@ namespace Ludots.Core.Input.Runtime
             if (accumulator == null) throw new ArgumentNullException(nameof(accumulator));
 
             InteractionActionBindings bindings = InteractionActionBindingsResolver.Require(globals, nameof(AuthoritativeGroundPointerHelper));
-            if (TryConsumeOverride(globals, bindings.CommandActionId, out WorldCmInt2 overrideWorldCm))
+            if (TryConsumeOverride(globals, bindings.ConfirmActionId, out WorldCmInt2 overrideWorldCm) ||
+                TryConsumeOverride(globals, bindings.CommandActionId, out overrideWorldCm))
             {
                 accumulator.CaptureAction(
                     ActionId,

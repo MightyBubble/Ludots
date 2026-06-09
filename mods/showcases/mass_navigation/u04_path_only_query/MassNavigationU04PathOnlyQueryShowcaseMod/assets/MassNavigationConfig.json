@@ -1,0 +1,14 @@
+{
+  "scenario": {
+    "agentsPerTeam": 64
+  },
+  "showcase": {
+    "id": "mass_navigation_u04_path_only_query",
+    "title": "U4 Path-Only Query Showcase",
+    "panelMode": "Focused",
+    "initialStepId": "PathOnly",
+    "visibleStepIds": [ "PathOnly" ],
+    "playerPerspective": "Use Pick Path Preview. Start/goal query highlights a route, submits no unit move order, and keeps immutable pathpoints separate from editable waypoints.",
+    "modAuthorPerspective": "Use the path-only query surface to validate reachability, corridor, portals, and immutable pathpoints before issuing any gameplay order."
+  }
+}

@@ -23,6 +23,8 @@ public sealed class MassNavigationConfig
     public MassFlowArrivalTuning Arrival { get; set; } = new();
     public MassFlowAvoidanceTuning Avoidance { get; set; } = new();
     public MassNavigationCrowdSemantics Semantics { get; set; } = new();
+    public MassNavigationBakeDataConfig BakeData { get; set; } = new();
+    public MassNavigationShowcaseConfig Showcase { get; set; } = new();
 
     public static MassNavigationConfig Load(JsonObject configObject)
     {
@@ -77,6 +79,7 @@ public sealed class MassNavigationConfig
         RequireProperty(root, "arrival");
         RequireProperty(root, "avoidance");
         RequireProperty(root, "semantics");
+        RequireProperty(root, "bakeData");
 
         JsonElement world = RequireProperty(root, "world");
         RequireProperty(world, "obstacles");
@@ -112,6 +115,9 @@ public sealed class MassNavigationConfig
         }
 
         World.Validate();
+        Semantics.Validate();
+        BakeData.Validate();
+        Showcase.Validate();
 
         ValidateRelationships();
 
@@ -519,6 +525,67 @@ public sealed class MassNavigationWorldConfig
         }
 
         return -1;
+    }
+}
+
+public sealed class MassNavigationBakeDataConfig
+{
+    public int MacroChunkColumns { get; set; }
+    public int MacroChunkRows { get; set; }
+    public int TargetStaticObstacleCount { get; set; }
+    public bool HpaOverlayRequired { get; set; }
+    public bool PathInspectorRequired { get; set; }
+    public bool BakeOverlayRequired { get; set; }
+
+    public void Validate()
+    {
+        if (MacroChunkColumns <= 0 || MacroChunkRows <= 0)
+        {
+            throw new InvalidOperationException("Mass-nav bakeData requires positive MacroChunkColumns and MacroChunkRows.");
+        }
+
+        if (TargetStaticObstacleCount < 0)
+        {
+            throw new InvalidOperationException("Mass-nav bakeData requires TargetStaticObstacleCount >= 0.");
+        }
+    }
+}
+
+public sealed class MassNavigationShowcaseConfig
+{
+    public string Id { get; set; } = "full_acceptance";
+    public string Title { get; set; } = "Mass Navigation full acceptance cockpit";
+    public string PanelMode { get; set; } = "Full";
+    public string InitialStepId { get; set; } = string.Empty;
+    public string[] VisibleStepIds { get; set; } = Array.Empty<string>();
+    public string PlayerPerspective { get; set; } = "Open the guided showcase, run the current objective, and verify the visible pass signal.";
+    public string ModAuthorPerspective { get; set; } = "Use MassNavigationConfig.json, Navigation/navmesh.json, Navigation/pathing.json, and baked Data/Navigation artifacts as the SDK contract.";
+
+    [JsonIgnore]
+    public bool FocusedPanel => string.Equals(PanelMode, "Focused", StringComparison.OrdinalIgnoreCase);
+
+    public void Validate()
+    {
+        if (string.IsNullOrWhiteSpace(Id))
+        {
+            throw new InvalidOperationException("Mass-nav showcase config requires a non-empty Id.");
+        }
+
+        if (string.IsNullOrWhiteSpace(Title))
+        {
+            throw new InvalidOperationException($"Mass-nav showcase '{Id}' requires a non-empty Title.");
+        }
+
+        if (string.IsNullOrWhiteSpace(PanelMode))
+        {
+            throw new InvalidOperationException($"Mass-nav showcase '{Id}' requires a non-empty PanelMode.");
+        }
+
+        if (!string.Equals(PanelMode, "Full", StringComparison.OrdinalIgnoreCase) &&
+            !string.Equals(PanelMode, "Focused", StringComparison.OrdinalIgnoreCase))
+        {
+            throw new InvalidOperationException($"Mass-nav showcase '{Id}' has unsupported PanelMode '{PanelMode}'.");
+        }
     }
 }
 

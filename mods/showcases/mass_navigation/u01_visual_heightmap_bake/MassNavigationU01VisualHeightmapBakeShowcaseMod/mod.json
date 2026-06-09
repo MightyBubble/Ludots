@@ -1,0 +1,9 @@
+{
+  "name": "MassNavigationU01VisualHeightmapBakeShowcaseMod",
+  "version": "1.0.0",
+  "description": "Focused U1 entry for visual heightmap to LogicHeightmap to NavMesh bake validation.",
+  "priority": 0,
+  "dependencies": {
+    "MassNavigationMod": "^1.0.0"
+  }
+}

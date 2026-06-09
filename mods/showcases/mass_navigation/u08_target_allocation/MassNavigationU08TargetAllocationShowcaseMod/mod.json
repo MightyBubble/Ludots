@@ -1,0 +1,9 @@
+{
+  "name": "MassNavigationU08TargetAllocationShowcaseMod",
+  "version": "1.0.0",
+  "description": "Focused U8 entry for large-selection target slot allocation.",
+  "priority": 0,
+  "dependencies": {
+    "MassNavigationMod": "^1.0.0"
+  }
+}

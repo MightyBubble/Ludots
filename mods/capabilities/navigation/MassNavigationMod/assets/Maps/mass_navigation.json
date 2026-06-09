@@ -2,12 +2,13 @@
   "Id": "mass_navigation",
   "VisualHeightmapAsset": "assets/terrain/mass_navigation_large_world_relief.vhtm",
   "Tags": [
-    "mass_navigation"
+    "mass_navigation",
+    "Feature.NavMesh:On"
   ],
   "Boards": [
     {
       "Name": "default",
-      "SpatialType": "Grid",
+      "SpatialType": "NodeGraph",
       "WidthInTiles": 250,
       "HeightInTiles": 250,
       "GridCellSizeCm": 100,

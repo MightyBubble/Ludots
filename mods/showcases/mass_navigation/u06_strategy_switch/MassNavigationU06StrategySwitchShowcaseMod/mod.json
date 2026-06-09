@@ -1,0 +1,9 @@
+{
+  "name": "MassNavigationU06StrategySwitchShowcaseMod",
+  "version": "1.0.0",
+  "description": "Focused U6 entry for road graph, NavMesh, and hybrid strategy switching.",
+  "priority": 0,
+  "dependencies": {
+    "MassNavigationMod": "^1.0.0"
+  }
+}

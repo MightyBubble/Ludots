@@ -35,6 +35,7 @@ internal static class MassNavigationScenarioBootstrap
         simulation.ConfigureScenarioTeams(teamIds);
         ConfigureRelationships(simulation.Config);
         simulation.MassFlow.Reset(teamIds, simulation.AgentsPerTeam, simulation.WorldConfig.Obstacles, simulation.Config.AgentProfiles);
+        simulation.RefreshObstacleRuntimeDiagnostics();
 
         for (int teamIndex = 0; teamIndex < teamIds.Length; teamIndex++)
         {

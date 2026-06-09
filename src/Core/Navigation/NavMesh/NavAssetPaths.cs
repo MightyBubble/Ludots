@@ -1,5 +1,6 @@
 using System;
 using System.Globalization;
+using Ludots.Core.Navigation.NavMesh.Config;
 
 namespace Ludots.Core.Navigation.NavMesh
 {
@@ -18,6 +19,12 @@ namespace Ludots.Core.Navigation.NavMesh
         {
             if (string.IsNullOrWhiteSpace(mapId)) throw new ArgumentException("mapId is required.", nameof(mapId));
             return $"assets/Data/Maps/{mapId}.obstacles.json";
+        }
+
+        public static string GetBakeDiagnosticsRelativePath(string mapId)
+        {
+            if (string.IsNullOrWhiteSpace(mapId)) throw new ArgumentException("mapId is required.", nameof(mapId));
+            return $"assets/Data/Nav/{mapId}/{NavMeshConfigPaths.BakeDiagnosticsFileName}";
         }
 
         private static string SanitizePathSegment(string raw)

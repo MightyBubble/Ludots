@@ -1,0 +1,36 @@
+{
+  "SchemaVersion": "ludots.nav-bake-diagnostics.v1",
+  "MapId": "mass_navigation",
+  "Tool": "ludots nav bake-recast-lhtm",
+  "SourceMapPath": "C:\\001_AI\\LudotsProd_massnav_bake_data\\artifacts\\massnav-full-world\\mass_navigation_full_256x256.lhtm",
+  "GeneratedAtUtc": "2026-06-08T13:51:56.7342341Z",
+  "TargetChunkCount": 65536,
+  "WorldChunkCount": 65536,
+  "ActiveWindowMinChunkX": 0,
+  "ActiveWindowMinChunkY": 0,
+  "ActiveWindowMaxChunkX": 255,
+  "ActiveWindowMaxChunkY": 255,
+  "ActiveWindowChunkCount": 65536,
+  "IsPartialCoverage": false,
+  "LayerCount": 1,
+  "ProfileCount": 1,
+  "TotalExpectedTileBakes": 65536,
+  "TotalBakedTiles": 65536,
+  "TotalFailedTiles": 0,
+  "LayerProfiles": [
+    {
+      "Layer": 0,
+      "LayerId": "Ground",
+      "ProfileId": "GroundLight",
+      "TargetChunks": 65536,
+      "BakedTiles": 65536,
+      "FailedTiles": 0,
+      "MissingTiles": 0,
+      "DirtyTiles": 0,
+      "NotLoadedTiles": 0,
+      "CoveragePercent": 100,
+      "IsComplete": true
+    }
+  ],
+  "FailureSamples": []
+}

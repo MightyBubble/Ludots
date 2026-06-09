@@ -6,7 +6,9 @@ using Ludots.Core.Gameplay.GAS.Registry;
 using Ludots.Core.Gameplay.Spawning;
 using Ludots.Core.Input.Config;
 using Ludots.Core.Input.Runtime;
+using Ludots.Core.Presentation.Assets;
 using Ludots.Core.Presentation.Camera;
+using Ludots.Core.Presentation.Config;
 using Ludots.Core.Presentation.Hud;
 using Ludots.Core.Presentation.Systems;
 using Ludots.Core.Scripting;
@@ -38,10 +40,19 @@ namespace Ludots.Tests.Presentation
 
             var engine = new GameEngine();
             engine.InitializeWithConfigPipeline(modPaths, assetsRoot);
+            ApplyHeadlessHostAssets(engine);
             InstallInput(engine);
             InstallHeadlessPresentation(engine);
             engine.Start();
             return engine;
+        }
+
+        private static void ApplyHeadlessHostAssets(GameEngine engine)
+        {
+            MeshAssetRegistry meshAssets = engine.GetService(CoreServiceKeys.PresentationMeshAssetRegistry)
+                ?? throw new InvalidOperationException("Headless presentation tests require PresentationMeshAssetRegistry before host asset binding.");
+            new PresentationHostAssetConfigLoader(engine.ConfigPipeline, meshAssets)
+                .Apply("raylib", engine.ConfigCatalog, engine.ConfigConflictReport);
         }
 
         private static void ResetGlobalRegistries()

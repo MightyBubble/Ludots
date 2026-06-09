@@ -210,6 +210,174 @@
     ]
   },
   {
+    "id": "mass_navigation_azure_high_scale_light_bootstrap",
+    "rules": [
+      {
+        "event": { "kind": "EntitySpawned", "key": "mass_navigation_agent_azure_high_scale_light" },
+        "condition": { "inline": "SourceHasVisualTransform" },
+        "command": {
+          "kind": "CreatePerformer",
+          "definitionId": "mass_navigation_agent_azure_high_scale_light",
+          "scopeSource": "EventPayloadA"
+        }
+      },
+      {
+        "event": { "kind": "EntityDestroyed", "key": "mass_navigation_agent_azure_high_scale_light" },
+        "command": {
+          "kind": "DestroyPerformerScope",
+          "scopeSource": "EventPayloadA"
+        }
+      }
+    ]
+  },
+  {
+    "id": "mass_navigation_azure_high_scale_heavy_bootstrap",
+    "rules": [
+      {
+        "event": { "kind": "EntitySpawned", "key": "mass_navigation_agent_azure_high_scale_heavy" },
+        "condition": { "inline": "SourceHasVisualTransform" },
+        "command": {
+          "kind": "CreatePerformer",
+          "definitionId": "mass_navigation_agent_azure_high_scale_heavy",
+          "scopeSource": "EventPayloadA"
+        }
+      },
+      {
+        "event": { "kind": "EntityDestroyed", "key": "mass_navigation_agent_azure_high_scale_heavy" },
+        "command": {
+          "kind": "DestroyPerformerScope",
+          "scopeSource": "EventPayloadA"
+        }
+      }
+    ]
+  },
+  {
+    "id": "mass_navigation_crimson_high_scale_light_bootstrap",
+    "rules": [
+      {
+        "event": { "kind": "EntitySpawned", "key": "mass_navigation_agent_crimson_high_scale_light" },
+        "condition": { "inline": "SourceHasVisualTransform" },
+        "command": {
+          "kind": "CreatePerformer",
+          "definitionId": "mass_navigation_agent_crimson_high_scale_light",
+          "scopeSource": "EventPayloadA"
+        }
+      },
+      {
+        "event": { "kind": "EntityDestroyed", "key": "mass_navigation_agent_crimson_high_scale_light" },
+        "command": {
+          "kind": "DestroyPerformerScope",
+          "scopeSource": "EventPayloadA"
+        }
+      }
+    ]
+  },
+  {
+    "id": "mass_navigation_crimson_high_scale_heavy_bootstrap",
+    "rules": [
+      {
+        "event": { "kind": "EntitySpawned", "key": "mass_navigation_agent_crimson_high_scale_heavy" },
+        "condition": { "inline": "SourceHasVisualTransform" },
+        "command": {
+          "kind": "CreatePerformer",
+          "definitionId": "mass_navigation_agent_crimson_high_scale_heavy",
+          "scopeSource": "EventPayloadA"
+        }
+      },
+      {
+        "event": { "kind": "EntityDestroyed", "key": "mass_navigation_agent_crimson_high_scale_heavy" },
+        "command": {
+          "kind": "DestroyPerformerScope",
+          "scopeSource": "EventPayloadA"
+        }
+      }
+    ]
+  },
+  {
+    "id": "mass_navigation_amber_high_scale_light_bootstrap",
+    "rules": [
+      {
+        "event": { "kind": "EntitySpawned", "key": "mass_navigation_agent_amber_high_scale_light" },
+        "condition": { "inline": "SourceHasVisualTransform" },
+        "command": {
+          "kind": "CreatePerformer",
+          "definitionId": "mass_navigation_agent_amber_high_scale_light",
+          "scopeSource": "EventPayloadA"
+        }
+      },
+      {
+        "event": { "kind": "EntityDestroyed", "key": "mass_navigation_agent_amber_high_scale_light" },
+        "command": {
+          "kind": "DestroyPerformerScope",
+          "scopeSource": "EventPayloadA"
+        }
+      }
+    ]
+  },
+  {
+    "id": "mass_navigation_amber_high_scale_heavy_bootstrap",
+    "rules": [
+      {
+        "event": { "kind": "EntitySpawned", "key": "mass_navigation_agent_amber_high_scale_heavy" },
+        "condition": { "inline": "SourceHasVisualTransform" },
+        "command": {
+          "kind": "CreatePerformer",
+          "definitionId": "mass_navigation_agent_amber_high_scale_heavy",
+          "scopeSource": "EventPayloadA"
+        }
+      },
+      {
+        "event": { "kind": "EntityDestroyed", "key": "mass_navigation_agent_amber_high_scale_heavy" },
+        "command": {
+          "kind": "DestroyPerformerScope",
+          "scopeSource": "EventPayloadA"
+        }
+      }
+    ]
+  },
+  {
+    "id": "mass_navigation_emerald_high_scale_light_bootstrap",
+    "rules": [
+      {
+        "event": { "kind": "EntitySpawned", "key": "mass_navigation_agent_emerald_high_scale_light" },
+        "condition": { "inline": "SourceHasVisualTransform" },
+        "command": {
+          "kind": "CreatePerformer",
+          "definitionId": "mass_navigation_agent_emerald_high_scale_light",
+          "scopeSource": "EventPayloadA"
+        }
+      },
+      {
+        "event": { "kind": "EntityDestroyed", "key": "mass_navigation_agent_emerald_high_scale_light" },
+        "command": {
+          "kind": "DestroyPerformerScope",
+          "scopeSource": "EventPayloadA"
+        }
+      }
+    ]
+  },
+  {
+    "id": "mass_navigation_emerald_high_scale_heavy_bootstrap",
+    "rules": [
+      {
+        "event": { "kind": "EntitySpawned", "key": "mass_navigation_agent_emerald_high_scale_heavy" },
+        "condition": { "inline": "SourceHasVisualTransform" },
+        "command": {
+          "kind": "CreatePerformer",
+          "definitionId": "mass_navigation_agent_emerald_high_scale_heavy",
+          "scopeSource": "EventPayloadA"
+        }
+      },
+      {
+        "event": { "kind": "EntityDestroyed", "key": "mass_navigation_agent_emerald_high_scale_heavy" },
+        "command": {
+          "kind": "DestroyPerformerScope",
+          "scopeSource": "EventPayloadA"
+        }
+      }
+    ]
+  },
+  {
     "id": "mass_navigation_agent_light",
     "defaultColor": [0.38, 0.72, 1.0, 1.0],
     "rules": [
@@ -371,6 +539,44 @@
     ],
     "paramDefaults": [
       { "paramKey": "blacksmith.worker.locomotion.speed", "lane": "Float", "floatValue": 1.0 }
+    ]
+  },
+  {
+    "id": "mass_navigation_agent_high_scale_light",
+    "defaultColor": [0.38, 0.72, 1.0, 1.0],
+    "behaviors": [
+      {
+        "slot": "body",
+        "kind": "AssetBinding",
+        "activeByDefault": true,
+        "assetBinding": {
+          "assetKind": "Mesh",
+          "assetId": "mass_navigation.agent.lod",
+          "materialId": "default_surface",
+          "renderPath": "InstancedStaticMesh",
+          "mobility": "Movable",
+          "localScale": [0.52, 0.52, 0.52]
+        }
+      }
+    ]
+  },
+  {
+    "id": "mass_navigation_agent_high_scale_heavy",
+    "defaultColor": [0.95, 0.58, 0.28, 1.0],
+    "behaviors": [
+      {
+        "slot": "body",
+        "kind": "AssetBinding",
+        "activeByDefault": true,
+        "assetBinding": {
+          "assetKind": "Mesh",
+          "assetId": "mass_navigation.agent.lod",
+          "materialId": "default_surface",
+          "renderPath": "InstancedStaticMesh",
+          "mobility": "Movable",
+          "localScale": [0.72, 0.72, 0.72]
+        }
+      }
     ]
   },
   {
@@ -764,6 +970,46 @@
         }
       }
     ]
+  },
+  {
+    "id": "mass_navigation_agent_azure_high_scale_light",
+    "extends": "mass_navigation_agent_high_scale_light",
+    "defaultColor": [0.28, 0.58, 1.0, 1.0]
+  },
+  {
+    "id": "mass_navigation_agent_azure_high_scale_heavy",
+    "extends": "mass_navigation_agent_high_scale_heavy",
+    "defaultColor": [0.48, 0.76, 1.0, 1.0]
+  },
+  {
+    "id": "mass_navigation_agent_crimson_high_scale_light",
+    "extends": "mass_navigation_agent_high_scale_light",
+    "defaultColor": [1.0, 0.26, 0.22, 1.0]
+  },
+  {
+    "id": "mass_navigation_agent_crimson_high_scale_heavy",
+    "extends": "mass_navigation_agent_high_scale_heavy",
+    "defaultColor": [1.0, 0.48, 0.34, 1.0]
+  },
+  {
+    "id": "mass_navigation_agent_amber_high_scale_light",
+    "extends": "mass_navigation_agent_high_scale_light",
+    "defaultColor": [1.0, 0.76, 0.22, 1.0]
+  },
+  {
+    "id": "mass_navigation_agent_amber_high_scale_heavy",
+    "extends": "mass_navigation_agent_high_scale_heavy",
+    "defaultColor": [1.0, 0.88, 0.38, 1.0]
+  },
+  {
+    "id": "mass_navigation_agent_emerald_high_scale_light",
+    "extends": "mass_navigation_agent_high_scale_light",
+    "defaultColor": [0.32, 0.92, 0.48, 1.0]
+  },
+  {
+    "id": "mass_navigation_agent_emerald_high_scale_heavy",
+    "extends": "mass_navigation_agent_high_scale_heavy",
+    "defaultColor": [0.58, 1.0, 0.62, 1.0]
   },
   {
     "id": "mass_navigation_blocker",

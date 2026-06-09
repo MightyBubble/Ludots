@@ -58,7 +58,8 @@
       "blacksmith.worker.knight",
       "mass_navigation.selection.marker",
       "mass_navigation.blocker.rock",
-      "mass_navigation.hotspot.obelisk"
+      "mass_navigation.hotspot.obelisk",
+      "mass_navigation.agent.lod"
     ],
     "blockerPerformerId": "mass_navigation_blocker",
     "hotspotPerformerId": "mass_navigation_hotspot_marker",
@@ -148,7 +149,7 @@
     ]
   },
   "flow": {
-    "enabled": false,
+    "enabled": true,
     "iterationsPerStep": 4096,
     "stepIntervalTicks": 1,
     "crowdStampIntervalTicks": 1,
@@ -171,6 +172,14 @@
     "nonFriendlyResponseScale": 1.25,
     "dominantPushResponseScale": 1.6
   },
+  "bakeData": {
+    "macroChunkColumns": 256,
+    "macroChunkRows": 256,
+    "targetStaticObstacleCount": 40000,
+    "hpaOverlayRequired": true,
+    "pathInspectorRequired": true,
+    "bakeOverlayRequired": true
+  },
   "semantics": {
     "obstacle": {
       "agentBodyRadiusCm": 20.0,
@@ -188,6 +197,7 @@
     "group": {
       "spawnSpacingCm": 46.0,
       "teamSlotSpacingCm": 90.0,
+      "targetRefreshBudgetPerUpdate": 192,
       "pullDeadZoneCm": 50.0,
       "pullClampCm": 2000.0,
       "arrivedRadiusCm": 150.0,
@@ -202,12 +212,22 @@
     "steering": {
       "speedCmPerSecond": 800.0,
       "separationRadiusCm": 200.0,
+      "maxSeparationNeighborsPerUnit": 24,
       "goalArrivalRadiusCm": 1200.0,
       "flowObstacleAvoidanceScale": 1.2,
       "formationSeparationScale": 2.0,
       "looseSeparationScale": 4.0,
       "velocityBlendPerSecond": 5.0
     }
+  },
+  "showcase": {
+    "id": "full_acceptance",
+    "title": "Mass Navigation full acceptance cockpit",
+    "panelMode": "Full",
+    "initialStepId": "VisualHeightmapBake",
+    "visibleStepIds": [],
+    "playerPerspective": "Use this root only for full-suite UAT; it exposes every U1-U16 objective in one cockpit.",
+    "modAuthorPerspective": "MassNavigationMod is the SDK foundation: config, bake data, runtime diagnostics, and all generated evidence stay here."
   }
 }
 

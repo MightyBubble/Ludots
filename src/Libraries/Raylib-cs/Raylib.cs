@@ -437,6 +437,12 @@ namespace Raylib_cs
         public static extern void DrawRectangleLines(int posX, int posY, int width, int height, Color color);
 
         [DllImport(NativeLib, CallingConvention = CallingConvention.Cdecl)]
+        public static extern void DrawLineEx(Vector2 startPos, Vector2 endPos, float thick, Color color);
+
+        [DllImport(NativeLib, CallingConvention = CallingConvention.Cdecl)]
+        public static extern void DrawTriangle(Vector2 v1, Vector2 v2, Vector2 v3, Color color);
+
+        [DllImport(NativeLib, CallingConvention = CallingConvention.Cdecl)]
         [return: MarshalAs(UnmanagedType.I1)]
         public static extern bool IsKeyDown(KeyboardKey key);
 

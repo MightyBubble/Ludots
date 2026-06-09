@@ -1,0 +1,145 @@
+{
+  "agentTypes": [
+    {
+      "id": "Infantry",
+      "profileId": "GroundLight",
+      "layer": 0,
+      "selection": {
+        "mode": "AutoCheapest",
+        "graphBias": -0.2,
+        "meshBias": 0.0,
+        "graphCostWeight": 1.0,
+        "meshCostWeight": 1.0
+      },
+      "navMesh": {
+        "areaCosts": [
+          { "areaId": 0, "cost": 1.0 },
+          { "areaId": 1, "cost": 0.6 },
+          { "areaId": 2, "cost": 1.3 },
+          { "areaId": 3, "cost": 2.4 },
+          { "areaId": 4, "cost": 3.5 }
+        ]
+      },
+      "nodeGraph": {
+        "projectionMaxRadiusCm": 200000,
+        "forbiddenTagsAny": [],
+        "requiredTagsAll": [],
+        "tagCostRules": [
+          { "tag": "road", "costMul": 0.55, "costAdd": 0.0, "block": false }
+        ]
+      }
+    },
+    {
+      "id": "LargeVehicle",
+      "profileId": "GroundLarge",
+      "layer": 0,
+      "selection": {
+        "mode": "PreferGraph",
+        "graphBias": -0.4,
+        "meshBias": 0.25,
+        "graphCostWeight": 0.9,
+        "meshCostWeight": 1.2
+      },
+      "navMesh": {
+        "areaCosts": [
+          { "areaId": 0, "cost": 1.2 },
+          { "areaId": 1, "cost": 0.5 },
+          { "areaId": 2, "cost": 2.0 },
+          { "areaId": 3, "cost": 4.0 },
+          { "areaId": 4, "cost": 8.0 }
+        ]
+      },
+      "nodeGraph": {
+        "projectionMaxRadiusCm": 300000,
+        "forbiddenTagsAny": ["narrow"],
+        "requiredTagsAll": [],
+        "tagCostRules": [
+          { "tag": "road", "costMul": 0.45, "costAdd": 0.0, "block": false },
+          { "tag": "bridge", "costMul": 1.2, "costAdd": 0.0, "block": false }
+        ]
+      }
+    },
+    {
+      "id": "Mountain",
+      "profileId": "Mountain",
+      "layer": 3,
+      "selection": {
+        "mode": "AutoCheapest",
+        "graphBias": 0.0,
+        "meshBias": -0.15,
+        "graphCostWeight": 1.0,
+        "meshCostWeight": 0.95
+      },
+      "navMesh": {
+        "areaCosts": [
+          { "areaId": 0, "cost": 1.1 },
+          { "areaId": 1, "cost": 0.75 },
+          { "areaId": 2, "cost": 1.15 },
+          { "areaId": 3, "cost": 0.85 },
+          { "areaId": 4, "cost": 4.0 }
+        ]
+      },
+      "nodeGraph": {
+        "projectionMaxRadiusCm": 160000,
+        "forbiddenTagsAny": ["deep_water"],
+        "requiredTagsAll": [],
+        "tagCostRules": [
+          { "tag": "mountain_pass", "costMul": 0.7, "costAdd": 0.0, "block": false }
+        ]
+      }
+    },
+    {
+      "id": "Naval",
+      "profileId": "Naval",
+      "layer": 1,
+      "selection": {
+        "mode": "PreferMesh",
+        "graphBias": 0.25,
+        "meshBias": -0.2,
+        "graphCostWeight": 1.2,
+        "meshCostWeight": 0.9
+      },
+      "navMesh": {
+        "areaCosts": [
+          { "areaId": 4, "cost": 1.2 },
+          { "areaId": 5, "cost": 0.75 },
+          { "areaId": 6, "cost": 5.0 }
+        ]
+      },
+      "nodeGraph": {
+        "projectionMaxRadiusCm": 250000,
+        "forbiddenTagsAny": ["land_only"],
+        "requiredTagsAll": [],
+        "tagCostRules": [
+          { "tag": "shipping_lane", "costMul": 0.65, "costAdd": 0.0, "block": false }
+        ]
+      }
+    },
+    {
+      "id": "Air",
+      "profileId": "Air",
+      "layer": 2,
+      "selection": {
+        "mode": "PreferMesh",
+        "graphBias": 0.5,
+        "meshBias": -0.3,
+        "graphCostWeight": 1.0,
+        "meshCostWeight": 0.7
+      },
+      "navMesh": {
+        "areaCosts": [
+          { "areaId": 0, "cost": 0.8 },
+          { "areaId": 6, "cost": 12.0 }
+        ]
+      },
+      "nodeGraph": {
+        "projectionMaxRadiusCm": 400000,
+        "forbiddenTagsAny": [],
+        "requiredTagsAll": [],
+        "tagCostRules": [
+          { "tag": "air_corridor", "costMul": 0.5, "costAdd": 0.0, "block": false }
+        ]
+      }
+    }
+  ]
+}

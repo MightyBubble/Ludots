@@ -64,6 +64,7 @@ using Ludots.Core.Engine.Physics2D;
 using Ludots.Core.Engine.TimeFlow;
 using Ludots.Core.Navigation.NavMesh;
 using Ludots.Core.Navigation.NavMesh.Config;
+using Ludots.Core.Navigation.NavMesh.Diagnostics;
 using Ludots.Core.Navigation.AOI;
 using Ludots.Core.Engine.Navigation2D;
 using Ludots.Core.Diagnostics;
@@ -117,7 +118,7 @@ namespace Ludots.Core.Engine
     public partial class GameEngine : IDisposable // Implement IDisposable
     {
         private const int PathStoreMaxPaths = 512;
-        private const int PathStoreMaxPointsPerPath = 256;
+        private const int PathStoreMaxPointsPerPath = 1024;
         private const string SkipDefaultCameraOnLoadTag = "camera.skip_default_on_load";
 
         private bool _isRunning;
@@ -1867,8 +1868,6 @@ namespace Ludots.Core.Engine
             }
             if (!navEnabled) return;
 
-            if (VertexMap == null) throw new InvalidOperationException($"NavMesh enabled but VertexMap is not loaded for map '{mapId}'.");
-
             var bakeConfig = LoadNavMeshBakeConfig();
             SetService(CoreServiceKeys.NavMeshBakeConfig, bakeConfig);
 
@@ -1877,9 +1876,18 @@ namespace Ludots.Core.Engine
             var areaCosts = BuildAreaCostTable(bakeConfig);
             if (bakeConfig.Layers == null || bakeConfig.Layers.Count == 0) throw new InvalidOperationException("NavMeshBakeConfig.layers is empty.");
 
+            if (TryLoadNavServicesFromBakeDiagnostics(mapId, bakeConfig, profileRegistry))
+            {
+                return;
+            }
+
+            if (VertexMap == null) throw new InvalidOperationException($"NavMesh enabled but VertexMap is not loaded for map '{mapId}' and no complete nav-bake diagnostics asset was found.");
+
             var stores = new Dictionary<NavQueryServiceKey, NavTileStore>(bakeConfig.Layers.Count * profileRegistry.Count);
             int widthChunks = VertexMap.WidthInChunks;
             int heightChunks = VertexMap.HeightInChunks;
+            int runtimeTileWidthCm = ResolveRuntimeTileStride(WorldSizeSpec.Bounds.Width, widthChunks);
+            int runtimeTileHeightCm = ResolveRuntimeTileStride(WorldSizeSpec.Bounds.Height, heightChunks);
 
             for (int li = 0; li < bakeConfig.Layers.Count; li++)
             {
@@ -1908,12 +1916,283 @@ namespace Ludots.Core.Engine
                         }
                     }
 
-                    var store = new NavTileStore(id => VFS.GetStream(ResolveTileUri(id)));
+                    var store = new NavTileStore(
+                        id => VFS.GetStream(ResolveTileUri(id)),
+                        runtimeTileWidthCm,
+                        runtimeTileHeightCm,
+                        worldMinXcm: WorldSizeSpec.Bounds.Left,
+                        worldMinZcm: WorldSizeSpec.Bounds.Top);
                     stores[new NavQueryServiceKey(layer, profileIndex)] = store;
                 }
             }
 
             SetService(CoreServiceKeys.NavQueryServices, new NavQueryServiceRegistry(stores));
+        }
+
+        private bool TryLoadNavServicesFromBakeDiagnostics(
+            string mapId,
+            NavMeshBakeConfig bakeConfig,
+            NavMeshProfileRegistry profileRegistry)
+        {
+            NavBakeDiagnosticsDocument diagnostics = NavBakeDiagnosticsLoader.TryLoad(VFS, ModLoader?.LoadedModIds, mapId);
+            if (diagnostics == null || diagnostics.LayerProfiles == null || diagnostics.LayerProfiles.Count == 0)
+            {
+                return false;
+            }
+
+            int minX = diagnostics.ActiveWindowMinChunkX >= 0 ? diagnostics.ActiveWindowMinChunkX : 0;
+            int minY = diagnostics.ActiveWindowMinChunkY >= 0 ? diagnostics.ActiveWindowMinChunkY : 0;
+            int maxX = diagnostics.ActiveWindowMaxChunkX >= minX ? diagnostics.ActiveWindowMaxChunkX : minX;
+            int maxY = diagnostics.ActiveWindowMaxChunkY >= minY ? diagnostics.ActiveWindowMaxChunkY : minY;
+            var stores = new Dictionary<NavQueryServiceKey, NavTileStore>(diagnostics.LayerProfiles.Count);
+            foreach (NavBakeLayerProfileSummary summary in diagnostics.LayerProfiles)
+            {
+                if (summary.BakedTiles <= 0 || string.IsNullOrWhiteSpace(summary.ProfileId))
+                {
+                    continue;
+                }
+
+                if (!TryResolveProfileIndex(profileRegistry, summary.ProfileId, out int profileIndex))
+                {
+                    throw new InvalidOperationException(
+                        $"Nav bake diagnostics for map '{mapId}' references profile '{summary.ProfileId}' that is not present in navmesh config.");
+                }
+
+                var uriCache = new Dictionary<NavTileId, string>(32);
+                string ResolveTileUri(NavTileId id)
+                {
+                    if (id.Layer != summary.Layer)
+                    {
+                        throw new InvalidOperationException($"NavTileId.Layer mismatch. Expected={summary.Layer}, actual={id.Layer}.");
+                    }
+
+                    if (uriCache.TryGetValue(id, out string cached))
+                    {
+                        return cached;
+                    }
+
+                    string rel = NavAssetPaths.GetNavTileRelativePath(mapId, summary.Layer, summary.ProfileId, id.ChunkX, id.ChunkY);
+                    string uri = ResolveSingleExistingUri(rel);
+                    uriCache[id] = uri;
+                    return uri;
+                }
+
+                int tileWidthCm = 0;
+                int tileHeightCm = 0;
+                if (!TryPrimeNavTileUriCache(mapId, summary, minX, minY, maxX, maxY, uriCache))
+                {
+                    continue;
+                }
+
+                ResolveTileStrideFromCachedUris(uriCache, out tileWidthCm, out tileHeightCm);
+                ResolveRuntimeTileStrideFromDiagnostics(
+                    diagnostics,
+                    out int runtimeTileWidthCm,
+                    out int runtimeTileHeightCm);
+                stores[new NavQueryServiceKey(summary.Layer, profileIndex)] = new NavTileStore(
+                    id => VFS.GetStream(ResolveTileUri(id)),
+                    runtimeTileWidthCm,
+                    runtimeTileHeightCm,
+                    WorldSizeSpec.Bounds.Left,
+                    WorldSizeSpec.Bounds.Top,
+                    tileWidthCm,
+                    tileHeightCm);
+            }
+
+            if (stores.Count == 0)
+            {
+                return false;
+            }
+
+            SetService(CoreServiceKeys.NavQueryServices, new NavQueryServiceRegistry(stores));
+            Diagnostics.Log.Info(
+                in LogChannels.Engine,
+                $"NavMesh services loaded from baked nav diagnostics for map '{mapId}': profiles={stores.Count}, activeWindow={minX},{minY}->{maxX},{maxY}.");
+            return true;
+        }
+
+        private bool TryPrimeNavTileUriCache(
+            string mapId,
+            NavBakeLayerProfileSummary summary,
+            int minX,
+            int minY,
+            int maxX,
+            int maxY,
+            Dictionary<NavTileId, string> uriCache)
+        {
+            if (uriCache == null)
+            {
+                throw new ArgumentNullException(nameof(uriCache));
+            }
+
+            int centerX = minX + ((maxX - minX) / 2);
+            int centerY = minY + ((maxY - minY) / 2);
+            Span<(int X, int Y)> samples = stackalloc (int X, int Y)[7]
+            {
+                (minX, minY),
+                (Math.Min(maxX, minX + 1), minY),
+                (minX, Math.Min(maxY, minY + 1)),
+                (centerX, centerY),
+                (Math.Min(maxX, centerX + 1), centerY),
+                (centerX, Math.Min(maxY, centerY + 1)),
+                (maxX, maxY)
+            };
+
+            bool found = false;
+            for (int i = 0; i < samples.Length; i++)
+            {
+                (int x, int y) = samples[i];
+                NavTileId id = new(x, y, summary.Layer);
+                if (uriCache.ContainsKey(id))
+                {
+                    continue;
+                }
+
+                string rel = NavAssetPaths.GetNavTileRelativePath(mapId, summary.Layer, summary.ProfileId, x, y);
+                if (TryResolveSingleExistingUri(rel, out string uri))
+                {
+                    uriCache[id] = uri;
+                    found = true;
+                }
+            }
+
+            return found;
+        }
+
+        private void ResolveTileStrideFromCachedUris(
+            IReadOnlyDictionary<NavTileId, string> uriCache,
+            out int tileWidthCm,
+            out int tileHeightCm)
+        {
+            tileWidthCm = 0;
+            tileHeightCm = 0;
+            if (uriCache == null || uriCache.Count == 0)
+            {
+                return;
+            }
+
+            using IEnumerator<KeyValuePair<NavTileId, string>> enumerator = uriCache.GetEnumerator();
+            if (!enumerator.MoveNext() || !TryReadNavTileUri(enumerator.Current.Value, out NavTile anchor))
+            {
+                return;
+            }
+
+            int bestX = int.MaxValue;
+            int bestY = int.MaxValue;
+            foreach (KeyValuePair<NavTileId, string> pair in uriCache)
+            {
+                NavTileId id = pair.Key;
+                if (id.Equals(anchor.TileId))
+                {
+                    continue;
+                }
+
+                if (bestX == int.MaxValue &&
+                    id.ChunkY == anchor.TileId.ChunkY &&
+                    TryReadNavTileUri(pair.Value, out NavTile xTile))
+                {
+                    int delta = Math.Abs(anchor.OriginXcm - xTile.OriginXcm);
+                    if (delta > 0)
+                    {
+                        bestX = delta;
+                    }
+                }
+
+                if (bestY == int.MaxValue &&
+                    id.ChunkX == anchor.TileId.ChunkX &&
+                    TryReadNavTileUri(pair.Value, out NavTile yTile))
+                {
+                    int delta = Math.Abs(anchor.OriginZcm - yTile.OriginZcm);
+                    if (delta > 0)
+                    {
+                        bestY = delta;
+                    }
+                }
+
+                if (bestX != int.MaxValue && bestY != int.MaxValue)
+                {
+                    break;
+                }
+            }
+
+            tileWidthCm = bestX == int.MaxValue ? 0 : bestX;
+            tileHeightCm = bestY == int.MaxValue ? 0 : bestY;
+        }
+
+        private void ResolveRuntimeTileStrideFromDiagnostics(
+            NavBakeDiagnosticsDocument diagnostics,
+            out int tileWidthCm,
+            out int tileHeightCm)
+        {
+            int columns = ResolveDiagnosticsChunkAxisCount(diagnostics, xAxis: true);
+            int rows = ResolveDiagnosticsChunkAxisCount(diagnostics, xAxis: false);
+            tileWidthCm = ResolveRuntimeTileStride(WorldSizeSpec.Bounds.Width, columns);
+            tileHeightCm = ResolveRuntimeTileStride(WorldSizeSpec.Bounds.Height, rows);
+        }
+
+        private static int ResolveDiagnosticsChunkAxisCount(NavBakeDiagnosticsDocument diagnostics, bool xAxis)
+        {
+            int worldChunkCount = diagnostics.WorldChunkCount > 0 ? diagnostics.WorldChunkCount : diagnostics.TargetChunkCount;
+            if (worldChunkCount > 0)
+            {
+                int square = (int)MathF.Round(MathF.Sqrt(worldChunkCount));
+                if (square > 0 && square * square == worldChunkCount)
+                {
+                    return square;
+                }
+            }
+
+            int max = xAxis ? diagnostics.ActiveWindowMaxChunkX : diagnostics.ActiveWindowMaxChunkY;
+            if (max >= 0)
+            {
+                return max + 1;
+            }
+
+            return 0;
+        }
+
+        private static int ResolveRuntimeTileStride(int worldExtentCm, int chunkCount)
+        {
+            if (worldExtentCm <= 0 || chunkCount <= 0)
+            {
+                return 0;
+            }
+
+            return Math.Max(1, worldExtentCm / chunkCount);
+        }
+
+        private bool TryReadNavTileUri(string uri, out NavTile tile)
+        {
+            tile = null;
+            try
+            {
+                using Stream stream = VFS.GetStream(uri);
+                tile = NavTileBinary.Read(stream);
+                return true;
+            }
+            catch (IOException)
+            {
+                return false;
+            }
+            catch (InvalidDataException)
+            {
+                return false;
+            }
+        }
+
+        private static bool TryResolveProfileIndex(NavMeshProfileRegistry registry, string profileId, out int profileIndex)
+        {
+            for (int i = 0; i < registry.Count; i++)
+            {
+                if (string.Equals(registry.GetId(i), profileId, StringComparison.OrdinalIgnoreCase))
+                {
+                    profileIndex = i;
+                    return true;
+                }
+            }
+
+            profileIndex = -1;
+            return false;
         }
 
         private void ClearNavServices()
@@ -1963,7 +2242,7 @@ namespace Ludots.Core.Engine
 
                 if (TryCreateDefaultNavMeshPathService(pathingConfig, navRegistry, navProfiles, pathStore, out var navMeshService))
                 {
-                    pathService = new PathServiceRouter(nodeGraphService, navMeshService, autoPathService, pathStore);
+                    pathService = new PathServiceRouter(nodeGraphService, navMeshService, autoPathService, pathStore, loadedGraphRuntime);
                 }
             }
             else if (loadedGraphRuntime != null)
@@ -2083,6 +2362,12 @@ namespace Ludots.Core.Engine
             {
                 foundCore = $"Core:{rel}";
             }
+            else if (TryStripAssetsPrefix(rel, out string coreRel) &&
+                VFS.TryResolveFullPath($"Core:{coreRel}", out var fullCoreWithoutAssetsPrefix) &&
+                File.Exists(fullCoreWithoutAssetsPrefix))
+            {
+                foundCore = $"Core:{coreRel}";
+            }
 
             string foundMod = null;
             int modCount = 0;
@@ -2108,6 +2393,20 @@ namespace Ludots.Core.Engine
             }
             uri = null;
             return false;
+        }
+
+        private static bool TryStripAssetsPrefix(string rel, out string stripped)
+        {
+            stripped = string.Empty;
+            const string prefix = "assets/";
+            string normalized = rel.Replace('\\', '/').TrimStart('/');
+            if (!normalized.StartsWith(prefix, StringComparison.OrdinalIgnoreCase))
+            {
+                return false;
+            }
+
+            stripped = normalized.Substring(prefix.Length);
+            return stripped.Length > 0;
         }
 
         private static NavAreaCostTable BuildAreaCostTable(NavMeshBakeConfig cfg)

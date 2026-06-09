@@ -12,7 +12,8 @@ namespace Ludots.Tool
             Flat,
             Stripes,
             Cliffs,
-            Lake
+            Lake,
+            MountainRiver
         }
 
         public static void GenerateV2(string outFile, int widthChunks, int heightChunks, int chunkSize, Preset preset, bool overwrite)
@@ -43,12 +44,13 @@ namespace Ludots.Tool
 
             var packed = new byte[chunkSize * chunkSize];
             var layer2 = new byte[chunkSize * chunkSize];
-            var flagsZeros = new byte[(chunkSize * chunkSize / 64) * sizeof(ulong)];
-            var rampsBytes = new byte[flagsZeros.Length];
+            int flagByteLength = (chunkSize * chunkSize / 64) * sizeof(ulong);
+            var flagsBytes = new byte[flagByteLength];
+            var rampsBytes = new byte[flagByteLength];
             var factions = new byte[chunkSize * chunkSize];
-            var extraFlags0 = new byte[flagsZeros.Length];
-            var extraFlags1 = new byte[flagsZeros.Length];
-            var extraFlags2 = new byte[flagsZeros.Length];
+            var extraFlags0 = new byte[flagByteLength];
+            var extraFlags1 = new byte[flagByteLength];
+            var extraFlags2 = new byte[flagByteLength];
             var extraBytes0 = new byte[chunkSize * chunkSize];
             var cliffStraighten = new byte[(chunkSize * chunkSize * 3) / 8];
 
@@ -67,6 +69,7 @@ namespace Ludots.Tool
                     Array.Clear(packed, 0, packed.Length);
                     Array.Clear(layer2, 0, layer2.Length);
                     Array.Clear(rampsU, 0, rampsU.Length);
+                    Array.Clear(flagsBytes, 0, flagsBytes.Length);
                     Array.Clear(factions, 0, factions.Length);
                     Array.Clear(ef0U, 0, ef0U.Length);
                     Array.Clear(ef1U, 0, ef1U.Length);
@@ -92,6 +95,9 @@ namespace Ludots.Tool
                             int ulongIndex = cell >> 6;
                             int bitIndex = cell & 0x3F;
                             ulong mask = 1UL << bitIndex;
+
+                            bool blocked = IsBlockedMask(preset, mapWidth, mapHeight, globalC, globalR, h);
+                            if (blocked) flagsBytes[ulongIndex * sizeof(ulong) + (bitIndex >> 3)] |= (byte)(1 << (bitIndex & 7));
 
                             bool flag0 = h >= 10;
                             bool flag1 = h <= 2;
@@ -137,7 +143,7 @@ namespace Ludots.Tool
 
                     bw.Write(packed);
                     bw.Write(layer2);
-                    bw.Write(flagsZeros);
+                    bw.Write(flagsBytes);
                     bw.Write(rampsBytes);
                     bw.Write(factions);
                     bw.Write(extraFlags0);
@@ -159,12 +165,18 @@ namespace Ludots.Tool
                 Preset.Stripes => (byte)(((c / 8) % 12) & 0x0F),
                 Preset.Cliffs => (byte)((((c / 16) & 1) == 0 ? 2 : 12) & 0x0F),
                 Preset.Lake => (byte)((6 + ((r / 32) % 4)) & 0x0F),
+                Preset.MountainRiver => MountainRiverHeight(mapW, mapH, c, r),
                 _ => (byte)((((c / 16) % 12) + (((r / 128) & 1) * 3)) & 0x0F)
             };
         }
 
         private static byte WaterAt(Preset preset, int mapW, int mapH, int c, int r, byte h)
         {
+            if (preset == Preset.MountainRiver)
+            {
+                return MountainRiverWater(mapW, mapH, c, r, h);
+            }
+
             if (preset == Preset.Lake || preset == Preset.Bench)
             {
                 int centerC = mapW / 2;
@@ -181,6 +193,14 @@ namespace Ludots.Tool
         private static byte BiomeAt(Preset preset, int c, int r, byte h, byte w)
         {
             if (w > h) return 5;
+            if (preset == Preset.MountainRiver)
+            {
+                if (h >= 15) return 6;
+                if (h >= 12) return 2;
+                if (h >= 9) return 3;
+                return 0;
+            }
+
             if (preset == Preset.Cliffs) return 2;
             if (h <= 2) return 1;
             if (h <= 5) return 0;
@@ -236,6 +256,24 @@ namespace Ludots.Tool
             bool lowIsContinuous = lUp == lowH && lDown == lowH;
 
             return highIsContinuous && lowIsContinuous;
+        }
+
+        private static byte MountainRiverHeight(int mapW, int mapH, int c, int r)
+        {
+            return MountainRiverFixtureTerrain.ToVertexHeightByte(
+                MountainRiverFixtureTerrain.Sample(mapW, mapH, c, r).HeightCm);
+        }
+
+        private static byte MountainRiverWater(int mapW, int mapH, int c, int r, byte h)
+        {
+            return MountainRiverFixtureTerrain.ToVertexWaterByte(
+                MountainRiverFixtureTerrain.Sample(mapW, mapH, c, r).WaterHeightCm);
+        }
+
+        private static bool IsBlockedMask(Preset preset, int mapW, int mapH, int c, int r, byte h)
+        {
+            return preset == Preset.MountainRiver &&
+                MountainRiverFixtureTerrain.Sample(mapW, mapH, c, r).Blocked;
         }
     }
 }

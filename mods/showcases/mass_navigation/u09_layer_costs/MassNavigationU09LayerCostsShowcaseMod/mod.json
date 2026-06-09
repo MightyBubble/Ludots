@@ -1,0 +1,9 @@
+{
+  "name": "MassNavigationU09LayerCostsShowcaseMod",
+  "version": "1.0.0",
+  "description": "Focused U9 entry for ground, water, air, and mountain layer cost profiles.",
+  "priority": 0,
+  "dependencies": {
+    "MassNavigationMod": "^1.0.0"
+  }
+}

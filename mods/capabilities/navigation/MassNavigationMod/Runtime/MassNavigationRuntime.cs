@@ -7,7 +7,12 @@ using Ludots.Core.Gameplay.Camera;
 using Ludots.Core.Gameplay.Components;
 using Ludots.Core.Input.Selection;
 using Ludots.Core.Map;
+using Ludots.Core.Map.Board;
 using Ludots.Core.Modding;
+using Ludots.Core.Navigation.GraphWorld;
+using Ludots.Core.Navigation.NavMesh.Config;
+using Ludots.Core.Navigation.NavMesh.Diagnostics;
+using Ludots.Core.Navigation.Pathing.Config;
 using Ludots.Core.Presentation.Minimap;
 using Ludots.Core.Presentation.Assets;
 using Ludots.Core.Presentation.Hud;
@@ -23,8 +28,12 @@ internal sealed class MassNavigationRuntime
 {
     private const string MassNavigationTacticalCameraProfileId = "Camera.Profile.MassNavigationTactical";
     private const string MassNavigationStrategicCameraProfileId = "Camera.Profile.MassNavigationStrategic";
+    private const string MassNavigationMeshViewCameraProfileId = "Camera.Profile.MassNavigationMeshView";
     private const float MassNavigationTacticalCameraDistanceCm = 7_000f;
     private const float MassNavigationStrategicCameraDistanceCm = 58_000f;
+    private const float MassNavigationMeshViewCameraDistanceCm = 42_000f;
+    private const float MassNavigationMeshViewCameraMinDistanceCm = 18_000f;
+    private const float MassNavigationMeshViewCameraMaxDistanceCm = 68_000f;
 
     private static readonly QueryDescription AuthoredPlayerOwnerQuery = new QueryDescription().WithAll<PlayerOwner>();
 
@@ -34,6 +43,11 @@ internal sealed class MassNavigationRuntime
     private bool _scenarioSpawned;
     private RenderDebugSnapshot _savedRenderDebug;
     private bool _savedRenderDebugValid;
+    private NodeGraphBoard? _roadGraphBoard;
+    private MassNavigationSimulationRuntime? _roadGraphSimulation;
+    private MassNavigationRoadGraphDiagnostics? _roadGraphDiagnostics;
+    private System.Action<long>? _roadGraphChunkLoaded;
+    private System.Action<long>? _roadGraphChunkUnloaded;
     private readonly MassNavigationPanelController _panelController = new();
 
     public MassNavigationRuntime(IModContext context)
@@ -50,16 +64,26 @@ internal sealed class MassNavigationRuntime
 
         MassNavigationConfig config = EnsureConfig(engine);
         var simulation = new MassNavigationSimulationRuntime(config);
+        var showcaseGuide = new MassNavigationShowcaseGuideRuntime(config.Showcase);
         engine.SetService(MassNavigationKeys.SimulationRuntime, simulation);
+        engine.SetService(MassNavigationKeys.ShowcaseGuideRuntime, showcaseGuide);
         engine.RegisterSystem(new MassNavigationAgentMetadataSyncSystem(engine, simulation), SystemGroup.InputCollection);
         engine.RegisterSystem(new MassNavigationSelectionSyncSystem(engine, simulation), SystemGroup.InputCollection);
+        if (MassNavigationShowcaseReplaySystem.TryCreate(engine, simulation, showcaseGuide, out MassNavigationShowcaseReplaySystem replaySystem))
+        {
+            engine.RegisterSystem(replaySystem, SystemGroup.InputCollection);
+        }
+
         engine.RegisterSystem(new MassNavigationControlSystem(engine, simulation), SystemGroup.InputCollection);
+        engine.RegisterSystem(new MassNavigationRuntimeBakeAuthoringInputSystem(engine, simulation, showcaseGuide), SystemGroup.InputCollection);
+        engine.RegisterSystem(new MassNavigationPathPreviewInputSystem(engine, simulation, showcaseGuide), SystemGroup.InputCollection);
         engine.RegisterSystem(new MassNavigationCommandBridgeSystem(engine, simulation), SystemGroup.InputCollection);
         engine.RegisterSystem(new MassNavigationSpawnReceiptBindingSystem(engine, simulation), SystemGroup.PostMovement);
-        engine.RegisterSystem(new MassNavigationCommandApplySystem(engine, simulation), SystemGroup.PostMovement);
         engine.RegisterSystem(new MassNavigationOrderBridgeSystem(engine, simulation), SystemGroup.PostMovement);
         engine.RegisterSystem(new MassNavigationFormationSystem(engine, simulation), SystemGroup.PostMovement);
+        engine.RegisterPresentationSystem(new MassNavigationShowcasePresentationSystem(engine, simulation, showcaseGuide));
         engine.RegisterPresentationSystem(new MassNavigationHudPresentationSystem(engine, simulation));
+        engine.RegisterPresentationSystem(new MassNavigationPanelPresentationSystem(engine, this));
         _systemsInstalled = true;
         _context.Log("[MassNavigationMod] Installed mass-navigation runtime.");
     }
@@ -97,13 +121,15 @@ internal sealed class MassNavigationRuntime
 
         EnsureSystemsInstalled(engine);
         BindBoardWorld(engine);
+        BindMassNavigationRoadGraph(engine);
+        BindBakeDataDiagnostics(engine);
         BindMassNavigationLoadedChunks(engine);
         BindLocalSelectionOwner(engine);
         ConfigureRenderDebug(engine);
         ConfigureCoreMinimap(engine);
-        EnsureTacticalCamera(engine);
+        EnsureInitialShowcaseCamera(engine);
         EnsureScenario(engine);
-        ClearPanelIfOwned(engine);
+        RefreshPanel(engine);
         return Task.CompletedTask;
     }
 
@@ -114,6 +140,7 @@ internal sealed class MassNavigationRuntime
         {
             RestoreRenderDebug(engine);
             ClearPanelIfOwned(engine);
+            UnbindMassNavigationRoadGraph();
         }
 
         return Task.CompletedTask;
@@ -139,7 +166,7 @@ internal sealed class MassNavigationRuntime
 
         MassNavigationSimulationRuntime simulation = engine.GetService(MassNavigationKeys.SimulationRuntime)
             ?? throw new System.InvalidOperationException("MassNavigationMod requires simulation runtime.");
-        ClearPanelIfOwned(engine);
+        _panelController.MountOrSync(engine, simulation);
     }
 
     private void EnsureScenario(GameEngine engine)
@@ -170,6 +197,108 @@ internal sealed class MassNavigationRuntime
         MassNavigationSimulationRuntime simulation = engine.GetService(MassNavigationKeys.SimulationRuntime)
             ?? throw new System.InvalidOperationException("MassNavigationMod requires simulation runtime.");
         simulation.BindBoardWorld(board.WorldSize);
+    }
+
+    private void BindMassNavigationRoadGraph(GameEngine engine)
+    {
+        if (engine.CurrentMapSession?.PrimaryBoard is not NodeGraphBoard board)
+        {
+            UnbindMassNavigationRoadGraph();
+            return;
+        }
+
+        MassNavigationSimulationRuntime simulation = engine.GetService(MassNavigationKeys.SimulationRuntime)
+            ?? throw new System.InvalidOperationException("MassNavigationMod requires simulation runtime.");
+        if (!ReferenceEquals(_roadGraphBoard, board) || !ReferenceEquals(_roadGraphSimulation, simulation))
+        {
+            UnbindMassNavigationRoadGraph();
+            _roadGraphBoard = board;
+            _roadGraphSimulation = simulation;
+            _roadGraphDiagnostics = new MassNavigationRoadGraphDiagnostics(simulation.StreamingChunkSizeCm);
+            _roadGraphChunkLoaded = chunkKey => LoadMassNavigationRoadGraphChunk(board, _roadGraphDiagnostics, chunkKey);
+            _roadGraphChunkUnloaded = chunkKey => board.LoadedChunksSource.SetLoaded(chunkKey, loaded: false);
+            simulation.LoadedChunks.ChunkLoaded += _roadGraphChunkLoaded;
+            simulation.LoadedChunks.ChunkUnloaded += _roadGraphChunkUnloaded;
+        }
+
+        foreach (long chunkKey in simulation.LoadedChunks.ActiveChunkKeys)
+        {
+            LoadMassNavigationRoadGraphChunk(board, _roadGraphDiagnostics!, chunkKey);
+        }
+
+        _ = board.GraphRuntime.CurrentGraph;
+    }
+
+    private static void LoadMassNavigationRoadGraphChunk(
+        NodeGraphBoard board,
+        MassNavigationRoadGraphDiagnostics diagnostics,
+        long chunkKey)
+    {
+        board.LoadedChunksSource.SetLoaded(chunkKey, loaded: true);
+        if (diagnostics.TryGetChunk(chunkKey, out GraphChunkData chunk))
+        {
+            board.GraphStore.AddOrReplace(chunkKey, chunk);
+        }
+    }
+
+    private void UnbindMassNavigationRoadGraph()
+    {
+        if (_roadGraphSimulation != null)
+        {
+            if (_roadGraphChunkLoaded != null)
+            {
+                _roadGraphSimulation.LoadedChunks.ChunkLoaded -= _roadGraphChunkLoaded;
+            }
+
+            if (_roadGraphChunkUnloaded != null)
+            {
+                _roadGraphSimulation.LoadedChunks.ChunkUnloaded -= _roadGraphChunkUnloaded;
+            }
+        }
+
+        _roadGraphBoard?.LoadedChunksSource.Reset();
+        _roadGraphBoard = null;
+        _roadGraphSimulation = null;
+        _roadGraphDiagnostics = null;
+        _roadGraphChunkLoaded = null;
+        _roadGraphChunkUnloaded = null;
+    }
+
+    private static void BindBakeDataDiagnostics(GameEngine engine)
+    {
+        MassNavigationSimulationRuntime simulation = engine.GetService(MassNavigationKeys.SimulationRuntime)
+            ?? throw new System.InvalidOperationException("MassNavigationMod requires simulation runtime.");
+        var pathService = engine.GetService(CoreServiceKeys.PathService);
+        var pathStore = engine.GetService(CoreServiceKeys.PathStore);
+        var navMeshConfig = engine.GetService(CoreServiceKeys.NavMeshBakeConfig)
+            ?? new NavMeshBakeConfigLoader(engine.ConfigPipeline).Load(engine.ConfigCatalog, engine.ConfigConflictReport);
+        var pathingConfig = engine.GetService(CoreServiceKeys.PathingConfig)
+            ?? new PathingConfigLoader(engine.ConfigPipeline).Load(engine.ConfigCatalog, engine.ConfigConflictReport);
+        var navBakeDiagnostics = NavBakeDiagnosticsLoader.TryLoad(
+            engine.VFS,
+            engine.ModLoader?.LoadedModIds,
+            simulation.Config.MapId);
+        var hpaGraphDiagnostics = MassNavigationHpaGraphDiagnosticsBuilder.Build(
+            engine.VFS,
+            engine.ModLoader?.LoadedModIds,
+            simulation.Config.MapId,
+            navMeshConfig,
+            navBakeDiagnostics);
+        simulation.BindBakeDataDiagnostics(
+            navMeshConfig,
+            pathingConfig,
+            navBakeDiagnostics,
+            pathService,
+            pathStore,
+            hpaGraphDiagnostics,
+            engine.VFS,
+            engine.ModLoader?.LoadedModIds);
+        engine.GetService(MassNavigationKeys.ShowcaseGuideRuntime)?.BindNavMeshSample(
+            simulation.BakeDataDiagnostics,
+            navBakeDiagnostics,
+            engine.VFS,
+            engine.ModLoader?.LoadedModIds,
+            simulation.Config.MapId);
     }
 
     private static void BindMassNavigationLoadedChunks(GameEngine engine)
@@ -208,19 +337,23 @@ internal sealed class MassNavigationRuntime
 
     internal static void RequestCameraJump(GameEngine engine, Vector2 targetCm, float distanceCm)
     {
-        engine.GlobalContext[CoreServiceKeys.VirtualCameraRequest.Name] = new VirtualCameraRequest
-        {
-            Id = MassNavigationTacticalCameraProfileId,
-            BlendDurationSeconds = 0f,
-            ResetRuntimeState = true,
-            SnapToFollowTargetWhenAvailable = false
-        };
-        engine.SetService(CoreServiceKeys.CameraPoseRequest, new CameraPoseRequest
-        {
-            VirtualCameraId = MassNavigationTacticalCameraProfileId,
-            TargetCm = targetCm,
-            DistanceCm = distanceCm
-        });
+        RequestCameraPose(engine, MassNavigationTacticalCameraProfileId, targetCm, distanceCm);
+    }
+
+    internal static void RequestNavMeshInspectionCamera(GameEngine engine)
+    {
+        MassNavigationSimulationRuntime simulation = engine.GetService(MassNavigationKeys.SimulationRuntime)
+            ?? throw new System.InvalidOperationException("MassNavigationMod requires simulation runtime before navmesh inspection camera reset.");
+        MassNavigationShowcaseGuideRuntime? guide = engine.GetService(MassNavigationKeys.ShowcaseGuideRuntime);
+        Vector2 targetCm = ResolveNavMeshInspectionTarget(simulation, guide, out float distanceCm);
+        RequestCameraPose(
+            engine,
+            MassNavigationMeshViewCameraProfileId,
+            targetCm,
+            distanceCm,
+            pitch: 64f,
+            yaw: 225f,
+            fovYDeg: 62f);
     }
 
     private static void BindLocalSelectionOwner(GameEngine engine)
@@ -274,9 +407,101 @@ internal sealed class MassNavigationRuntime
         globals[CoreServiceKeys.SelectionViewKey.Name] = SelectionViewKeys.Primary;
     }
 
-    private static void EnsureTacticalCamera(GameEngine engine)
+    private static void EnsureInitialShowcaseCamera(GameEngine engine)
     {
+        if (engine.GetService(MassNavigationKeys.ShowcaseGuideRuntime) is { FocusedPanel: true, CurrentStepId: MassNavigationShowcaseStepId.BakeToolQuery })
+        {
+            RequestNavMeshInspectionCamera(engine);
+            return;
+        }
+
         RequestTacticalCameraReset(engine);
+    }
+
+    private static Vector2 ResolveNavMeshInspectionTarget(
+        MassNavigationSimulationRuntime simulation,
+        MassNavigationShowcaseGuideRuntime? guide,
+        out float distanceCm)
+    {
+        if (TryResolveGuideSegmentBounds(guide, out float minX, out float minY, out float maxX, out float maxY))
+        {
+            float spanX = MathF.Max(1f, maxX - minX);
+            float spanY = MathF.Max(1f, maxY - minY);
+            distanceCm = Math.Clamp(
+                MathF.Max(spanX, spanY) * 1.35f,
+                MassNavigationMeshViewCameraDistanceCm,
+                MassNavigationMeshViewCameraMaxDistanceCm);
+            return new Vector2((minX + maxX) * 0.5f, (minY + maxY) * 0.5f);
+        }
+
+        if (guide?.NavMeshSample.Available == true && simulation.BakeDataDiagnostics != null)
+        {
+            MassNavigationBakeDataDiagnostics bake = simulation.BakeDataDiagnostics;
+            distanceCm = MassNavigationMeshViewCameraDistanceCm;
+            return new Vector2(
+                bake.WorldMinXCm + (guide.NavMeshSample.ChunkX * bake.MacroChunkSizeXCm) + (bake.MacroChunkSizeXCm * 0.5f),
+                bake.WorldMinYCm + (guide.NavMeshSample.ChunkY * bake.MacroChunkSizeYCm) + (bake.MacroChunkSizeYCm * 0.5f));
+        }
+
+        distanceCm = MassNavigationMeshViewCameraDistanceCm;
+        return new Vector2(simulation.SolverWindowCenterXCm, simulation.SolverWindowCenterYCm);
+    }
+
+    private static bool TryResolveGuideSegmentBounds(
+        MassNavigationShowcaseGuideRuntime? guide,
+        out float minX,
+        out float minY,
+        out float maxX,
+        out float maxY)
+    {
+        minX = float.PositiveInfinity;
+        minY = float.PositiveInfinity;
+        maxX = float.NegativeInfinity;
+        maxY = float.NegativeInfinity;
+
+        if (guide == null)
+        {
+            return false;
+        }
+
+        bool any = false;
+        ReadOnlySpan<MassNavigationGuideSegment> activeEdges = guide.ActiveWindowNavMeshEdges;
+        for (int i = 0; i < activeEdges.Length; i++)
+        {
+            IncludeSegment(activeEdges[i], ref minX, ref minY, ref maxX, ref maxY);
+            any = true;
+        }
+
+        if (!any)
+        {
+            ReadOnlySpan<MassNavigationGuideSegment> sampleEdges = guide.NavMeshSample.TriangleEdges;
+            for (int i = 0; i < sampleEdges.Length; i++)
+            {
+                IncludeSegment(sampleEdges[i], ref minX, ref minY, ref maxX, ref maxY);
+                any = true;
+            }
+        }
+
+        return any &&
+            float.IsFinite(minX) &&
+            float.IsFinite(minY) &&
+            float.IsFinite(maxX) &&
+            float.IsFinite(maxY) &&
+            maxX > minX &&
+            maxY > minY;
+    }
+
+    private static void IncludeSegment(
+        MassNavigationGuideSegment segment,
+        ref float minX,
+        ref float minY,
+        ref float maxX,
+        ref float maxY)
+    {
+        minX = MathF.Min(minX, MathF.Min(segment.Axcm, segment.Bxcm));
+        minY = MathF.Min(minY, MathF.Min(segment.Aycm, segment.Bycm));
+        maxX = MathF.Max(maxX, MathF.Max(segment.Axcm, segment.Bxcm));
+        maxY = MathF.Max(maxY, MathF.Max(segment.Aycm, segment.Bycm));
     }
 
     private void ConfigureRenderDebug(GameEngine engine)
@@ -285,6 +510,9 @@ internal sealed class MassNavigationRuntime
         {
             return;
         }
+
+        MassNavigationConfig config = EnsureConfig(engine);
+        bool focusedShowcase = config.Showcase.FocusedPanel;
 
         if (!_savedRenderDebugValid)
         {
@@ -305,8 +533,8 @@ internal sealed class MassNavigationRuntime
         // Raylib currently routes the official performer ISM/static-mesh lane through this shared draw toggle.
         renderDebug.DrawPrimitives = true;
         renderDebug.DrawSkiaUi = true;
-        renderDebug.DrawWorldHudBars = true;
-        renderDebug.DrawWorldHudText = true;
+        renderDebug.DrawWorldHudBars = !focusedShowcase;
+        renderDebug.DrawWorldHudText = !focusedShowcase;
         renderDebug.DrawCombatText = true;
     }
 
@@ -342,40 +570,56 @@ internal sealed class MassNavigationRuntime
     internal static void RequestTacticalCameraReset(GameEngine engine)
     {
         Vector2 targetCm = ResolveCameraTarget(engine);
-        engine.GlobalContext[CoreServiceKeys.VirtualCameraRequest.Name] = new VirtualCameraRequest
-        {
-            Id = MassNavigationTacticalCameraProfileId,
-            BlendDurationSeconds = 0f,
-            ResetRuntimeState = true,
-            SnapToFollowTargetWhenAvailable = false
-        };
-        engine.SetService(CoreServiceKeys.CameraPoseRequest, new CameraPoseRequest
-        {
-            VirtualCameraId = MassNavigationTacticalCameraProfileId,
-            TargetCm = targetCm,
-            DistanceCm = MassNavigationTacticalCameraDistanceCm
-        });
+        RequestCameraPose(engine, MassNavigationTacticalCameraProfileId, targetCm, MassNavigationTacticalCameraDistanceCm);
     }
 
     internal static void RequestStrategicCameraReset(GameEngine engine)
     {
         MassNavigationSimulationRuntime simulation = engine.GetService(MassNavigationKeys.SimulationRuntime)
             ?? throw new System.InvalidOperationException("MassNavigationMod requires simulation runtime before strategic camera reset.");
+        _ = simulation;
+        RequestCameraPose(
+            engine,
+            MassNavigationStrategicCameraProfileId,
+            new Vector2(0f, 0f),
+            MassNavigationStrategicCameraDistanceCm,
+            pitch: 68f,
+            yaw: 225f,
+            fovYDeg: 70f);
+    }
+
+    private static void RequestCameraPose(
+        GameEngine engine,
+        string virtualCameraId,
+        Vector2 targetCm,
+        float distanceCm,
+        float? pitch = null,
+        float? yaw = null,
+        float? fovYDeg = null)
+    {
+        if (string.Equals(virtualCameraId, MassNavigationMeshViewCameraProfileId, System.StringComparison.OrdinalIgnoreCase))
+        {
+            distanceCm = Math.Clamp(
+                distanceCm,
+                MassNavigationMeshViewCameraMinDistanceCm,
+                MassNavigationMeshViewCameraMaxDistanceCm);
+        }
+
         engine.GlobalContext[CoreServiceKeys.VirtualCameraRequest.Name] = new VirtualCameraRequest
         {
-            Id = MassNavigationStrategicCameraProfileId,
+            Id = virtualCameraId,
             BlendDurationSeconds = 0f,
             ResetRuntimeState = true,
             SnapToFollowTargetWhenAvailable = false
         };
         engine.SetService(CoreServiceKeys.CameraPoseRequest, new CameraPoseRequest
         {
-            VirtualCameraId = MassNavigationStrategicCameraProfileId,
-            TargetCm = new Vector2(0f, 0f),
-            DistanceCm = MassNavigationStrategicCameraDistanceCm,
-            Pitch = 68f,
-            Yaw = 225f,
-            FovYDeg = 70f
+            VirtualCameraId = virtualCameraId,
+            TargetCm = targetCm,
+            DistanceCm = distanceCm,
+            Pitch = pitch,
+            Yaw = yaw,
+            FovYDeg = fovYDeg
         });
     }
 

@@ -28,5 +28,8 @@
   - [Launcher CLI Runbook](reference/cli-runbook.md)
   - [MassNavigation 用户教学书](reference/mass-navigation-user-book.md)
   - [MassNavigation 正式链路手册](reference/mass-navigation-formal-chain.md)
+  - [Mass Navigation 尺寸、精度与 Runtime Bake 说明](reference/mass-navigation-scale-and-runtime-bake.md)
+  - [Mass Navigation Showcase 验收指南](reference/mass-navigation-showcase-acceptance.md)
+  - [Mass Navigation Showcase 进度说明](reference/mass-navigation-showcase-progress.md)
   - [项目地图](reference/project-map.md)
   - [发布与访问](reference/publishing-and-access.md)

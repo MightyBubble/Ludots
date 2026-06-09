@@ -1,0 +1,14 @@
+{
+  "scenario": {
+    "agentsPerTeam": 64
+  },
+  "showcase": {
+    "id": "mass_navigation_u07_order_reuse",
+    "title": "U7 Same/Near Order Reuse Showcase",
+    "panelMode": "Focused",
+    "initialStepId": "OrderReuse",
+    "visibleStepIds": [ "OrderReuse" ],
+    "playerPerspective": "Use Select Reuse Squad, then right-click the same destination twice and a nearby destination once. Repeated or nearby RTS commands must reuse a normalized route bucket and route id instead of solving duplicate paths.",
+    "modAuthorPerspective": "Validate command bucketing and cache signatures before scaling RTS orders; one player click should not trigger redundant large-world path solves."
+  }
+}

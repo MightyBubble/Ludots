@@ -1,0 +1,9 @@
+{
+  "name": "MassNavigationU11LargeWorldStreamingShowcaseMod",
+  "version": "1.0.0",
+  "description": "Focused U11 entry for 64km world active-window streaming validation.",
+  "priority": 0,
+  "dependencies": {
+    "MassNavigationMod": "^1.0.0"
+  }
+}

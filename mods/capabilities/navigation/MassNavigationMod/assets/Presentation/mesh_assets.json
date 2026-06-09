@@ -10,6 +10,10 @@
   {
     "id": "mass_navigation.hotspot.obelisk",
     "type": "Model"
+  },
+  {
+    "id": "mass_navigation.agent.lod",
+    "type": "Model"
   }
 ]
 

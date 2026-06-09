@@ -1,4 +1,6 @@
 [
-  { "Path": "MassNavigationConfig.json", "Policy": "DeepObject" }
+  { "Path": "MassNavigationConfig.json", "Policy": "DeepObject" },
+  { "Path": "Navigation/navmesh.json", "Policy": "DeepObject" },
+  { "Path": "Navigation/pathing.json", "Policy": "DeepObject" }
 ]
 

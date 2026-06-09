@@ -1,0 +1,9 @@
+{
+  "name": "MassNavigationU13StaticObstacleWorldShowcaseMod",
+  "version": "1.0.0",
+  "description": "Focused U13 entry for 40k static obstacle baked world validation.",
+  "priority": 0,
+  "dependencies": {
+    "MassNavigationMod": "^1.0.0"
+  }
+}

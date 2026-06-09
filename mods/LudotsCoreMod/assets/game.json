@@ -27,6 +27,7 @@
     }
   },
   "selection": {
-    "movePathPreviewOrderTypeKeys": [ "moveTo" ]
+    "movePathPreviewOrderTypeKeys": [ "moveTo" ],
+    "movePathPreviewMaxSelectedEntities": 4
   }
 }

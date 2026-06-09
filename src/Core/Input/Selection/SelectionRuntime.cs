@@ -10,7 +10,9 @@ namespace Ludots.Core.Input.Selection
         public int MutationApplyBudgetPerFrame { get; set; } = 4096;
         public float ClickPickRadiusPixels { get; set; } = 20f;
         public float DragThresholdPixels { get; set; } = 8f;
+        public int PassiveHoverRefreshIntervalFrames { get; set; } = 6;
         public string[] MovePathPreviewOrderTypeKeys { get; set; } = Array.Empty<string>();
+        public int MovePathPreviewMaxSelectedEntities { get; set; } = 4;
     }
 
     public sealed class SelectionRuntime
@@ -22,6 +24,10 @@ namespace Ludots.Core.Input.Selection
         private readonly Dictionary<SelectionOwnerSetKey, Entity> _containers = new();
         private readonly Dictionary<SelectionViewKey, Entity> _viewBindings = new();
         private readonly Dictionary<Entity, List<Entity>> _membersByContainer = new();
+        private readonly Dictionary<Entity, int> _memberSweepCursorByContainer = new();
+        private readonly List<SelectionOwnerSetKey> _deadContainerScratch = new();
+        private readonly List<SelectionViewKey> _deadViewScratch = new();
+        private readonly List<Entity> _deadMemberContainerScratch = new();
 
         public SelectionRuntime(World world, SelectionRuntimeConfig config, StringIntRegistry setKeyRegistry)
         {
@@ -592,12 +598,12 @@ namespace Ludots.Core.Input.Selection
         {
             bool changed = false;
 
-            var deadContainers = new List<SelectionOwnerSetKey>();
+            _deadContainerScratch.Clear();
             foreach (var pair in _containers)
             {
                 if (!IsContainerAlive(pair.Value))
                 {
-                    deadContainers.Add(pair.Key);
+                    _deadContainerScratch.Add(pair.Key);
                     continue;
                 }
 
@@ -608,15 +614,17 @@ namespace Ludots.Core.Input.Selection
                 }
 
                 DestroyContainer(pair.Value);
-                deadContainers.Add(pair.Key);
+                _deadContainerScratch.Add(pair.Key);
                 changed = true;
             }
 
-            for (int i = 0; i < deadContainers.Count; i++)
+            for (int i = 0; i < _deadContainerScratch.Count; i++)
             {
-                _containers.Remove(deadContainers[i]);
+                _containers.Remove(_deadContainerScratch[i]);
             }
 
+            _deadMemberContainerScratch.Clear();
+            int memberBudget = Math.Max(1, _config.MutationApplyBudgetPerFrame);
             foreach (var pair in _membersByContainer)
             {
                 Entity container = pair.Key;
@@ -625,46 +633,91 @@ namespace Ludots.Core.Input.Selection
 
                 if (!IsContainerAlive(container))
                 {
+                    _deadMemberContainerScratch.Add(container);
                     continue;
                 }
 
-                for (int i = members.Count - 1; i >= 0; i--)
+                if (members.Count == 0 || memberBudget <= 0)
                 {
-                    Entity relation = members[i];
+                    continue;
+                }
+
+                int cursor = _memberSweepCursorByContainer.TryGetValue(container, out int savedCursor)
+                    ? Math.Clamp(savedCursor, 0, Math.Max(0, members.Count - 1))
+                    : members.Count - 1;
+                int checkedCount = 0;
+                int maxChecks = members.Count;
+                while (members.Count > 0 && memberBudget > 0 && checkedCount < maxChecks)
+                {
+                    if ((uint)cursor >= (uint)members.Count)
+                    {
+                        cursor = members.Count - 1;
+                    }
+
+                    Entity relation = members[cursor];
                     if (!_world.IsAlive(relation) || !_world.Has<SelectionMemberTarget>(relation))
                     {
-                        members.RemoveAt(i);
+                        members.RemoveAt(cursor);
                         containerChanged = true;
+                        cursor--;
+                        memberBudget--;
+                        checkedCount++;
                         continue;
                     }
 
                     Entity target = _world.Get<SelectionMemberTarget>(relation).Value;
-                    if (_world.IsAlive(target))
+                    if (!_world.IsAlive(target))
                     {
+                        _world.Destroy(relation);
+                        members.RemoveAt(cursor);
+                        containerChanged = true;
+                        cursor--;
+                        memberBudget--;
+                        checkedCount++;
                         continue;
                     }
 
-                    _world.Destroy(relation);
-                    members.RemoveAt(i);
-                    containerChanged = true;
+                    cursor--;
+                    if (cursor < 0)
+                    {
+                        cursor = members.Count - 1;
+                    }
+
+                    memberBudget--;
+                    checkedCount++;
                 }
 
                 if (!containerChanged)
                 {
+                    _memberSweepCursorByContainer[container] = cursor < 0 ? Math.Max(0, members.Count - 1) : cursor;
                     continue;
                 }
 
                 NormalizeOrdinals(members);
                 UpdateContainerMetadata(container, members.Count, changed: true);
+                if (members.Count == 0)
+                {
+                    _memberSweepCursorByContainer.Remove(container);
+                }
+                else
+                {
+                    _memberSweepCursorByContainer[container] = Math.Clamp(cursor, 0, members.Count - 1);
+                }
+
                 changed = true;
             }
 
-            var deadViews = new List<SelectionViewKey>();
+            for (int i = 0; i < _deadMemberContainerScratch.Count; i++)
+            {
+                _memberSweepCursorByContainer.Remove(_deadMemberContainerScratch[i]);
+            }
+
+            _deadViewScratch.Clear();
             foreach (var pair in _viewBindings)
             {
                 if (!TryResolveViewBindingEntity(pair.Key, out Entity binding))
                 {
-                    deadViews.Add(pair.Key);
+                    _deadViewScratch.Add(pair.Key);
                     continue;
                 }
 
@@ -680,13 +733,13 @@ namespace Ludots.Core.Input.Selection
                     _world.Destroy(binding);
                 }
 
-                deadViews.Add(pair.Key);
+                _deadViewScratch.Add(pair.Key);
                 changed = true;
             }
 
-            for (int i = 0; i < deadViews.Count; i++)
+            for (int i = 0; i < _deadViewScratch.Count; i++)
             {
-                _viewBindings.Remove(deadViews[i]);
+                _viewBindings.Remove(_deadViewScratch[i]);
             }
 
             return changed;
@@ -704,6 +757,7 @@ namespace Ludots.Core.Input.Selection
             {
                 _containers.Remove(key);
                 _membersByContainer.Remove(cached);
+                _memberSweepCursorByContainer.Remove(cached);
                 return false;
             }
 
@@ -814,6 +868,7 @@ namespace Ludots.Core.Input.Selection
                 }
 
                 _membersByContainer.Remove(container);
+                _memberSweepCursorByContainer.Remove(container);
             }
 
             if (_world.IsAlive(container))

@@ -1,0 +1,14 @@
+{
+  "scenario": {
+    "agentsPerTeam": 64
+  },
+  "showcase": {
+    "id": "mass_navigation_u02_logic_heightmap_bake",
+    "title": "U2 LogicHeightmap Unification Showcase",
+    "panelMode": "Focused",
+    "initialStepId": "LogicHeightmapBake",
+    "visibleStepIds": [ "LogicHeightmapBake" ],
+    "playerPerspective": "Use Inspect Logic Bake. The editor-style tool must prove vtxm, vhtm, quad grid, and hex vertex inputs converge to one LogicHeightmap contract before bake.",
+    "modAuthorPerspective": "Use LogicHeightmap as the shared bake substrate; this entry proves source-specific authoring does not drift before NavMesh generation."
+  }
+}

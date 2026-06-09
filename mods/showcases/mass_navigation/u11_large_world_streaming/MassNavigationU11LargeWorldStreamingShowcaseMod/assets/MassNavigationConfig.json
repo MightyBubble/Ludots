@@ -1,0 +1,14 @@
+{
+  "scenario": {
+    "agentsPerTeam": 64
+  },
+  "showcase": {
+    "id": "mass_navigation_u11_large_world_streaming",
+    "title": "U11 64km Active-Window World Showcase",
+    "panelMode": "Focused",
+    "initialStepId": "LargeWorldStreaming",
+    "visibleStepIds": [ "LargeWorldStreaming" ],
+    "playerPerspective": "Use Active Window. The large-world view must show 64km scale, 256x256 macro chunks, loaded hot data, and explicit streamed-out data counts.",
+    "modAuthorPerspective": "Keep full-world baked data separate from the hot active window; inspect loaded versus notLoaded counters before performance claims."
+  }
+}

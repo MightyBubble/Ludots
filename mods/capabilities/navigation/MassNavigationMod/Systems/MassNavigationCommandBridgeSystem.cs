@@ -47,6 +47,11 @@ internal sealed class MassNavigationCommandBridgeSystem : ISystem<float>
             return;
         }
 
+        if (IsPathPreviewCapturingCommands())
+        {
+            return;
+        }
+
         InteractionActionBindings bindings = InteractionActionBindingsResolver.Require(
             _engine.GlobalContext,
             nameof(MassNavigationCommandBridgeSystem));
@@ -57,6 +62,14 @@ internal sealed class MassNavigationCommandBridgeSystem : ISystem<float>
         }
 
         EnqueueMoveCommand(new Vector2(worldCm.X, worldCm.Y));
+    }
+
+    private bool IsPathPreviewCapturingCommands()
+    {
+        MassNavigationShowcaseGuideRuntime? guide = _engine.GetService(MassNavigationKeys.ShowcaseGuideRuntime);
+        return guide != null &&
+            guide.FocusedPanel &&
+            MassNavigationShowcaseGuideRuntime.IsPathDrivenStep(guide.CurrentStepId);
     }
 
     private void EnqueueMoveCommand(Vector2 centerCm)
@@ -139,6 +152,19 @@ internal sealed class MassNavigationCommandBridgeSystem : ISystem<float>
             return;
         }
 
+        _simulation.AcceptanceDiagnostics.RecordSubmittedOrder(
+            sharedOrderId,
+            submitted,
+            centerCm,
+            _simulation.FormationMode,
+            _simulation.AcceptanceDiagnostics.ResolveDefaultStrategy());
+        _simulation.AcceptanceDiagnostics.RecordTargetAllocation(
+            selected.Length,
+            submitted,
+            blockedSlotCount: Math.Max(0, selected.Length - submitted),
+            fallbackSlotCount: 0,
+            centerCm,
+            _simulation.FormationMode);
         _simulation.MarkCommandApply();
         _simulation.MarkStructuralChange();
     }

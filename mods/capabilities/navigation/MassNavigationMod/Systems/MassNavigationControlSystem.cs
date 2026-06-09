@@ -56,7 +56,10 @@ internal sealed class MassNavigationControlSystem : ISystem<float>
 
             if (MathF.Abs(deltaRadians) > 1e-5f)
             {
-                _simulation.Commands.EnqueueSelectionRotate(_simulation.SelectedEntities, deltaRadians);
+                _simulation.NavGroupRuntime.RotateSelected(
+                    _simulation.AgentState,
+                    _simulation.SelectedEntities,
+                    deltaRadians);
             }
         }
 
@@ -74,7 +77,6 @@ internal sealed class MassNavigationControlSystem : ISystem<float>
     {
         ClearSelection();
         _simulation.ClearSelection();
-        _simulation.Commands.Reset();
         _simulation.NavGroupRuntime.Reset();
         _simulation.AgentState.DestroyTracked(_engine.World);
         MassNavigationScenarioBootstrap.SpawnDefaultScenario(

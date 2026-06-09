@@ -5,7 +5,8 @@
   "worldWidthInTiles": 250,
   "worldHeightInTiles": 250,
   "selection": {
-    "movePathPreviewOrderTypeKeys": [ "moveTo", "massNavigationMove" ]
+    "movePathPreviewOrderTypeKeys": [ "moveTo", "massNavigationMove" ],
+    "movePathPreviewMaxSelectedEntities": 4
   },
   "presentation": {
     "performerInstanceCapacity": 131072,
@@ -20,10 +21,13 @@
       "initialZoomNormalized": 1.0,
       "wheelZoomNormalizedStep": 0.08,
       "buttonZoomNormalizedStep": 0.18,
-      "zoomSliderEnabled": true,
-      "modeToggleEnabled": true,
-      "rotateToggleEnabled": true,
+      "zoomSliderEnabled": false,
+      "modeToggleEnabled": false,
+      "rotateToggleEnabled": false,
       "debugMarkerSampleCapacity": 128,
+      "fieldSizeViewportShortEdgeRatio": 0.18,
+      "minFieldSizePx": 120,
+      "maxFieldSizePx": 660,
       "minZoomExtentMode": "OneChunk",
       "maxZoomExtentMode": "FullMap",
       "minZoomExplicitHalfExtentCm": 750.0,

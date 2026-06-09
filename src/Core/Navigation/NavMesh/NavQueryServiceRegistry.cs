@@ -33,6 +33,23 @@ namespace Ludots.Core.Navigation.NavMesh
             return _stores.TryGetValue(new NavQueryServiceKey(layer, profile), out store);
         }
 
+        public int DataRevision
+        {
+            get
+            {
+                int revision = 0;
+                foreach (NavTileStore store in _stores.Values)
+                {
+                    unchecked
+                    {
+                        revision = (revision * 397) ^ store.Revision;
+                    }
+                }
+
+                return revision;
+            }
+        }
+
         public bool TryCreateQuery(int layer, int profile, NavAreaCostTable areaCosts, out NavQueryService service)
         {
             if (TryGetStore(layer, profile, out var store))

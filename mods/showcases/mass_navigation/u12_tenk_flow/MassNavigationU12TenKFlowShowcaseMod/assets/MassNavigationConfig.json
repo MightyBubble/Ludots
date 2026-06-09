@@ -1,0 +1,55 @@
+{
+  "presentation": {
+    "teams": [
+      {
+        "teamId": 1,
+        "styleId": "blue",
+        "lightTemplateId": "mass_navigation_agent_azure_high_scale_light",
+        "heavyTemplateId": "mass_navigation_agent_azure_high_scale_heavy",
+        "lightPerformerId": "mass_navigation_agent_azure_high_scale_light",
+        "heavyPerformerId": "mass_navigation_agent_azure_high_scale_heavy"
+      },
+      {
+        "teamId": 2,
+        "styleId": "red",
+        "lightTemplateId": "mass_navigation_agent_crimson_high_scale_light",
+        "heavyTemplateId": "mass_navigation_agent_crimson_high_scale_heavy",
+        "lightPerformerId": "mass_navigation_agent_crimson_high_scale_light",
+        "heavyPerformerId": "mass_navigation_agent_crimson_high_scale_heavy"
+      },
+      {
+        "teamId": 3,
+        "styleId": "gold",
+        "lightTemplateId": "mass_navigation_agent_amber_high_scale_light",
+        "heavyTemplateId": "mass_navigation_agent_amber_high_scale_heavy",
+        "lightPerformerId": "mass_navigation_agent_amber_high_scale_light",
+        "heavyPerformerId": "mass_navigation_agent_amber_high_scale_heavy"
+      },
+      {
+        "teamId": 4,
+        "styleId": "green",
+        "lightTemplateId": "mass_navigation_agent_emerald_high_scale_light",
+        "heavyTemplateId": "mass_navigation_agent_emerald_high_scale_heavy",
+        "lightPerformerId": "mass_navigation_agent_emerald_high_scale_light",
+        "heavyPerformerId": "mass_navigation_agent_emerald_high_scale_heavy"
+      }
+    ]
+  },
+  "semantics": {
+    "group": {
+      "targetRefreshBudgetPerUpdate": 384
+    },
+    "steering": {
+      "maxSeparationNeighborsPerUnit": 12
+    }
+  },
+  "showcase": {
+    "id": "mass_navigation_u12_tenk_flow",
+    "title": "U12 10k Commanded Flow Showcase",
+    "panelMode": "Focused",
+    "initialStepId": "TenKFlow",
+    "visibleStepIds": [ "TenKFlow" ],
+    "playerPerspective": "Use Command 10k Flow. A large selection should receive shared command data, allocated slots, and flow movement evidence without flooding the overlay.",
+    "modAuthorPerspective": "Separate order, slot allocation, path query, and flow-field steering diagnostics; the sampled overlay must prove the full logical 10k load."
+  }
+}

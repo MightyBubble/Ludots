@@ -1,0 +1,14 @@
+{
+  "scenario": {
+    "agentsPerTeam": 64
+  },
+  "showcase": {
+    "id": "mass_navigation_u01_visual_heightmap_bake",
+    "title": "U1 VisualHeightmap Bake Showcase",
+    "panelMode": "Focused",
+    "initialStepId": "VisualHeightmapBake",
+    "visibleStepIds": [ "VisualHeightmapBake" ],
+    "playerPerspective": "Use Bake VHTM Window. The editor-style tool must show visual heightmap input, LogicHeightmap output, and the loaded active-window .ntil NavMesh tile.",
+    "modAuthorPerspective": "This entry only overrides the showcase preset; MassNavigationMod owns the reusable bake SDK, Navigation configs, and Data/Nav artifacts."
+  }
+}

@@ -1,0 +1,9 @@
+{
+  "name": "MassNavigationU05WorldHpaRouteShowcaseMod",
+  "version": "1.0.0",
+  "description": "Focused U5 entry for 64km world HPA route chunk visualization.",
+  "priority": 0,
+  "dependencies": {
+    "MassNavigationMod": "^1.0.0"
+  }
+}

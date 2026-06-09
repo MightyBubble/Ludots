@@ -120,8 +120,12 @@ namespace Ludots.Core.Input.Systems
             }
 
             var bindings = InteractionActionBindingsResolver.Require(_globals, nameof(InputRuntimeSystem));
-            bool preserveCommandAction = ShouldPreserveCapturedCommand(bindings.CommandActionId);
-            Suppress(input, bindings.ConfirmActionId);
+            bool preserveConfirmAction = ShouldPreserveCapturedAction(bindings.ConfirmActionId);
+            bool preserveCommandAction = ShouldPreserveCapturedAction(bindings.CommandActionId);
+            if (!preserveConfirmAction)
+            {
+                Suppress(input, bindings.ConfirmActionId);
+            }
             if (!preserveCommandAction)
             {
                 Suppress(input, bindings.CommandActionId);
@@ -133,7 +137,7 @@ namespace Ludots.Core.Input.Systems
             }
         }
 
-        private bool ShouldPreserveCapturedCommand(string actionId)
+        private bool ShouldPreserveCapturedAction(string actionId)
         {
             return !string.IsNullOrWhiteSpace(actionId) &&
                 _globals.TryGetValue(CoreServiceKeys.AuthoritativeGroundPointerOverride.Name, out var overrideObj) &&

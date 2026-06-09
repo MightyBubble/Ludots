@@ -38,6 +38,7 @@ namespace CoreInputMod.Systems
         private string _lastBridgeFailureReason = "bridge=uninitialized";
         private int[] _moveOrderTypeIds = Array.Empty<int>();
         private bool _moveOrderTypeIdsResolved;
+        private int _previewSampleLimit = SelectedMovePathOverlayBridge.DefaultMaxSelectedEntities;
 
         public SelectedMovePathPresentationSystem(World world, Dictionary<string, object> globals, SelectionRuntime selection)
         {
@@ -78,8 +79,9 @@ namespace CoreInputMod.Systems
             int lineCountBefore = CountOverlayShape(GroundOverlayShape.Line);
             int circleCountBefore = CountOverlayShape(GroundOverlayShape.Circle);
             int viewedCount = SelectionViewRuntime.GetViewedSelectionCount(_world, _globals, _selection);
-            EnsureSelectedCapacity(viewedCount);
-            int count = SelectionViewRuntime.CopyViewedSelection(_world, _globals, _selection, _selected);
+            int copyLimit = Math.Min(viewedCount, Math.Max(0, _previewSampleLimit));
+            EnsureSelectedCapacity(copyLimit);
+            int count = SelectionViewRuntime.CopyViewedSelection(_world, _globals, _selection, _selected.AsSpan(0, copyLimit));
             if (count <= 0)
             {
                 PublishDebugState(
@@ -152,8 +154,9 @@ namespace CoreInputMod.Systems
             _groundOverlays = overlays;
             _moveOrderTypeIds = moveOrderTypeIds;
             _moveOrderTypeIdsResolved = true;
-            _lastBridgeFailureReason = $"bridge=ready:path={pathService.GetType().Name} moveTypes={moveOrderTypeIds.Length}";
-            bridge = new SelectedMovePathOverlayBridge(_world, pathService, pathStore, overlays, moveOrderTypeIds);
+            _previewSampleLimit = Math.Max(0, config.Selection.MovePathPreviewMaxSelectedEntities);
+            _lastBridgeFailureReason = $"bridge=ready:path={pathService.GetType().Name} moveTypes={moveOrderTypeIds.Length} sample={_previewSampleLimit}";
+            bridge = new SelectedMovePathOverlayBridge(_world, pathService, pathStore, overlays, moveOrderTypeIds, _previewSampleLimit);
             return true;
         }
 

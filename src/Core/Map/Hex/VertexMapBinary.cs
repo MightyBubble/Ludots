@@ -8,6 +8,98 @@ namespace Ludots.Core.Map.Hex
     {
         private const string Magic = "VTXM";
         private const int Version = 2;
+        private static readonly int FlagBytes = (VertexChunk.TotalCells / 64) * sizeof(ulong);
+
+        public sealed class ChunkReader : IDisposable
+        {
+            private readonly BinaryReader _reader;
+            private readonly byte[] _packed = new byte[VertexChunk.TotalCells];
+            private readonly byte[] _layer2 = new byte[VertexChunk.TotalCells];
+            private readonly byte[] _flags = new byte[FlagBytes];
+            private readonly byte[] _ramps = new byte[FlagBytes];
+            private readonly byte[] _factions = new byte[VertexChunk.TotalCells];
+            private readonly byte[] _extraFlags0 = new byte[FlagBytes];
+            private readonly byte[] _extraFlags1 = new byte[FlagBytes];
+            private readonly byte[] _extraFlags2 = new byte[FlagBytes];
+            private readonly byte[] _extraBytes0 = new byte[VertexChunk.TotalCells];
+            private readonly byte[] _cliffStraighten = new byte[VertexChunk.DerivedCliffStraightenBytes];
+            private bool _disposed;
+
+            private ChunkReader(Stream stream)
+            {
+                if (stream == null) throw new ArgumentNullException(nameof(stream));
+                _reader = new BinaryReader(stream, Encoding.UTF8, leaveOpen: true);
+                ReadHeader();
+            }
+
+            public int WidthInChunks { get; private set; }
+
+            public int HeightInChunks { get; private set; }
+
+            public static ChunkReader Open(Stream stream)
+            {
+                return new ChunkReader(stream);
+            }
+
+            public bool TryReadNextChunk(out int chunkX, out int chunkY, VertexChunk chunk)
+            {
+                if (_disposed) throw new ObjectDisposedException(nameof(ChunkReader));
+                if (chunk == null) throw new ArgumentNullException(nameof(chunk));
+
+                int chunkIndex = CurrentChunkIndex;
+                if (chunkIndex >= WidthInChunks * HeightInChunks)
+                {
+                    chunkX = -1;
+                    chunkY = -1;
+                    return false;
+                }
+
+                chunkX = chunkIndex % WidthInChunks;
+                chunkY = chunkIndex / WidthInChunks;
+                CurrentChunkIndex++;
+
+                ReadExact(_reader, _packed);
+                ReadExact(_reader, _layer2);
+                ReadExact(_reader, _flags);
+                ReadExact(_reader, _ramps);
+                ReadExact(_reader, _factions);
+                ReadExact(_reader, _extraFlags0);
+                ReadExact(_reader, _extraFlags1);
+                ReadExact(_reader, _extraFlags2);
+                ReadExact(_reader, _extraBytes0);
+                ReadExact(_reader, _cliffStraighten);
+                chunk.LoadRaw(_packed, _layer2, _flags, _ramps, _factions, _extraFlags0, _extraFlags1, _extraFlags2, _extraBytes0, _cliffStraighten);
+                return true;
+            }
+
+            public void Dispose()
+            {
+                if (_disposed) return;
+                _reader.Dispose();
+                _disposed = true;
+            }
+
+            private int CurrentChunkIndex { get; set; }
+
+            private void ReadHeader()
+            {
+                var magicBytes = _reader.ReadBytes(4);
+                if (magicBytes.Length != 4) throw new EndOfStreamException();
+                string magic = Encoding.ASCII.GetString(magicBytes);
+                if (!string.Equals(magic, Magic, StringComparison.Ordinal)) throw new InvalidDataException("Invalid VertexMap binary magic.");
+
+                int version = _reader.ReadInt32();
+                if (version != Version) throw new InvalidDataException($"Unsupported VertexMap binary version: {version}.");
+
+                WidthInChunks = _reader.ReadInt32();
+                HeightInChunks = _reader.ReadInt32();
+                int chunkSize = _reader.ReadInt32();
+                _reader.ReadInt32();
+
+                if (WidthInChunks <= 0 || HeightInChunks <= 0) throw new InvalidDataException("Invalid chunk dimensions.");
+                if (chunkSize != VertexChunk.ChunkSize) throw new InvalidDataException($"Unsupported chunk size: {chunkSize}.");
+            }
+        }
 
         public static VertexMap Read(Stream stream)
         {

@@ -10,8 +10,10 @@ using Ludots.Core.Navigation.Pathing.Config;
 
 namespace Ludots.Core.Navigation.Pathing
 {
-    public sealed class AutoPathService : IPathService
+    public sealed class AutoPathService : IPathService, IPathDataRevisionProvider
     {
+        private const int DefaultNavMeshSearchBudget = 16_384;
+
         private readonly NodeGraph _graph;
         private readonly INodeGraphSpatialIndex _graphIndex;
         private readonly LoadedGraphRuntime _graphRuntime;
@@ -27,6 +29,17 @@ namespace Ludots.Core.Navigation.Pathing
         private int[] _nodeIdsScratch = Array.Empty<int>();
         private int[] _xScratch = Array.Empty<int>();
         private int[] _yScratch = Array.Empty<int>();
+
+        public int DataRevision
+        {
+            get
+            {
+                unchecked
+                {
+                    return ((_graphRuntime?.Revision ?? 0) * 397) ^ (_navRegistry?.DataRevision ?? 0);
+                }
+            }
+        }
 
         public AutoPathService(NodeGraph graph, NavQueryServiceRegistry navRegistry, NavMeshProfileRegistry navProfiles, PathStore store, PathingConfig config)
         {
@@ -306,8 +319,12 @@ namespace Ludots.Core.Navigation.Pathing
                 return false;
             }
 
-            int maxPoints = request.Budget.MaxPoints > 0 ? request.Budget.MaxPoints : _store.MaxPointsPerPath;
-            int maxPortals = Math.Max(0, maxPoints - 2);
+            int maxPoints = Math.Min(
+                request.Budget.MaxPoints > 0 ? request.Budget.MaxPoints : _store.MaxPointsPerPath,
+                _store.MaxPointsPerPath);
+            int maxPortals = request.Budget.MaxExpanded > 0
+                ? request.Budget.MaxExpanded
+                : DefaultNavMeshSearchBudget;
 
             var r = query.TryFindPath(request.Start.Xcm, request.Start.Ycm, request.Goal.Xcm, request.Goal.Ycm, maxPortals);
             if (r.Status != NavPathStatus.Ok)
@@ -323,6 +340,12 @@ namespace Ludots.Core.Navigation.Pathing
                 return false;
             }
 
+            if (maxPoints <= 0)
+            {
+                result = new PathResult(request.RequestId, request.Actor, PathStatus.BudgetExceeded, default, 0, errorCode: 4);
+                return true;
+            }
+
             int count = Math.Min(r.PathXcm.Length, maxPoints);
             if (!_store.TryAllocate(count, out var handle))
             {
@@ -330,7 +353,7 @@ namespace Ludots.Core.Navigation.Pathing
                 return true;
             }
 
-            _store.TryWrite(in handle, r.PathXcm, r.PathZcm, count);
+            PathOutputSampler.WritePreservingEndpoints(_store, in handle, r.PathXcm, r.PathZcm, count);
             travelCost = r.TravelCost.ToFloat();
             result = new PathResult(request.RequestId, request.Actor, PathStatus.Found, handle, expanded: 0, errorCode: 0);
             return true;

@@ -1,0 +1,94 @@
+{
+  "profiles": [
+    {
+      "id": "GroundLight",
+      "radiusCm": 30,
+      "heightCm": 180,
+      "maxClimbCm": 45,
+      "maxSlopeDeg": 45
+    },
+    {
+      "id": "GroundLarge",
+      "radiusCm": 80,
+      "heightCm": 240,
+      "maxClimbCm": 50,
+      "maxSlopeDeg": 40
+    },
+    {
+      "id": "Mountain",
+      "radiusCm": 35,
+      "heightCm": 180,
+      "maxClimbCm": 85,
+      "maxSlopeDeg": 60
+    },
+    {
+      "id": "Naval",
+      "radiusCm": 140,
+      "heightCm": 260,
+      "maxClimbCm": 20,
+      "maxSlopeDeg": 8
+    },
+    {
+      "id": "Air",
+      "radiusCm": 60,
+      "heightCm": 220,
+      "maxClimbCm": 200,
+      "maxSlopeDeg": 89
+    }
+  ],
+  "layers": [
+    {
+      "id": "Ground",
+      "layer": 0
+    },
+    {
+      "id": "Water",
+      "layer": 1
+    },
+    {
+      "id": "Air",
+      "layer": 2
+    },
+    {
+      "id": "Mountain",
+      "layer": 3
+    }
+  ],
+  "areas": [
+    {
+      "id": "Default",
+      "areaId": 0,
+      "cost": 1.0
+    },
+    {
+      "id": "Road",
+      "areaId": 1,
+      "cost": 0.55
+    },
+    {
+      "id": "Forest",
+      "areaId": 2,
+      "cost": 1.35
+    },
+    {
+      "id": "MountainSlope",
+      "areaId": 3,
+      "cost": 1.8
+    },
+    {
+      "id": "ShallowWater",
+      "areaId": 4,
+      "cost": 1.1
+    },
+    {
+      "id": "DeepWater",
+      "areaId": 5,
+      "cost": 0.8
+    },
+    {
+      "id": "NoFlyZone",
+      "areaId": 6,
+      "cost": 12.0
+    }
+  ]
+}

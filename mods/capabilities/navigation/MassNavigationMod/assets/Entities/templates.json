@@ -184,6 +184,150 @@
     }
   },
   {
+    "id": "mass_navigation_agent_azure_high_scale_light",
+    "components": {
+      "Name": { "Value": "MassNavigation.Agent.Azure.HighScale.Light" },
+      "WorldPositionCm": { "Value": { "X": 0, "Y": 0 } },
+      "SpatialPartitionExcluded": {},
+      "FacingDirection": { "AngleRad": 0.0 },
+      "Team": { "Id": 1 },
+      "OrderBuffer": {},
+      "SelectionSelectableTag": {},
+      "SelectionSelectableState": { "IsEnabled": true },
+      "AttributeBuffer": { "base": {} },
+      "GameplayTagContainer": {},
+      "TagCountContainer": {},
+      "MassNavigationAgentTag": {},
+      "MassNavigationControllable": {}
+    }
+  },
+  {
+    "id": "mass_navigation_agent_azure_high_scale_heavy",
+    "components": {
+      "Name": { "Value": "MassNavigation.Agent.Azure.HighScale.Heavy" },
+      "WorldPositionCm": { "Value": { "X": 0, "Y": 0 } },
+      "SpatialPartitionExcluded": {},
+      "FacingDirection": { "AngleRad": 0.0 },
+      "Team": { "Id": 1 },
+      "OrderBuffer": {},
+      "SelectionSelectableTag": {},
+      "SelectionSelectableState": { "IsEnabled": true },
+      "AttributeBuffer": { "base": {} },
+      "GameplayTagContainer": {},
+      "TagCountContainer": {},
+      "MassNavigationAgentTag": {},
+      "MassNavigationControllable": {}
+    }
+  },
+  {
+    "id": "mass_navigation_agent_crimson_high_scale_light",
+    "components": {
+      "Name": { "Value": "MassNavigation.Agent.Crimson.HighScale.Light" },
+      "WorldPositionCm": { "Value": { "X": 0, "Y": 0 } },
+      "SpatialPartitionExcluded": {},
+      "FacingDirection": { "AngleRad": 0.0 },
+      "Team": { "Id": 2 },
+      "OrderBuffer": {},
+      "SelectionSelectableTag": {},
+      "SelectionSelectableState": { "IsEnabled": true },
+      "AttributeBuffer": { "base": {} },
+      "GameplayTagContainer": {},
+      "TagCountContainer": {},
+      "MassNavigationAgentTag": {},
+      "MassNavigationControllable": {}
+    }
+  },
+  {
+    "id": "mass_navigation_agent_crimson_high_scale_heavy",
+    "components": {
+      "Name": { "Value": "MassNavigation.Agent.Crimson.HighScale.Heavy" },
+      "WorldPositionCm": { "Value": { "X": 0, "Y": 0 } },
+      "SpatialPartitionExcluded": {},
+      "FacingDirection": { "AngleRad": 0.0 },
+      "Team": { "Id": 2 },
+      "OrderBuffer": {},
+      "SelectionSelectableTag": {},
+      "SelectionSelectableState": { "IsEnabled": true },
+      "AttributeBuffer": { "base": {} },
+      "GameplayTagContainer": {},
+      "TagCountContainer": {},
+      "MassNavigationAgentTag": {},
+      "MassNavigationControllable": {}
+    }
+  },
+  {
+    "id": "mass_navigation_agent_amber_high_scale_light",
+    "components": {
+      "Name": { "Value": "MassNavigation.Agent.Amber.HighScale.Light" },
+      "WorldPositionCm": { "Value": { "X": 0, "Y": 0 } },
+      "SpatialPartitionExcluded": {},
+      "FacingDirection": { "AngleRad": 0.0 },
+      "Team": { "Id": 3 },
+      "OrderBuffer": {},
+      "SelectionSelectableTag": {},
+      "SelectionSelectableState": { "IsEnabled": true },
+      "AttributeBuffer": { "base": {} },
+      "GameplayTagContainer": {},
+      "TagCountContainer": {},
+      "MassNavigationAgentTag": {},
+      "MassNavigationControllable": {}
+    }
+  },
+  {
+    "id": "mass_navigation_agent_amber_high_scale_heavy",
+    "components": {
+      "Name": { "Value": "MassNavigation.Agent.Amber.HighScale.Heavy" },
+      "WorldPositionCm": { "Value": { "X": 0, "Y": 0 } },
+      "SpatialPartitionExcluded": {},
+      "FacingDirection": { "AngleRad": 0.0 },
+      "Team": { "Id": 3 },
+      "OrderBuffer": {},
+      "SelectionSelectableTag": {},
+      "SelectionSelectableState": { "IsEnabled": true },
+      "AttributeBuffer": { "base": {} },
+      "GameplayTagContainer": {},
+      "TagCountContainer": {},
+      "MassNavigationAgentTag": {},
+      "MassNavigationControllable": {}
+    }
+  },
+  {
+    "id": "mass_navigation_agent_emerald_high_scale_light",
+    "components": {
+      "Name": { "Value": "MassNavigation.Agent.Emerald.HighScale.Light" },
+      "WorldPositionCm": { "Value": { "X": 0, "Y": 0 } },
+      "SpatialPartitionExcluded": {},
+      "FacingDirection": { "AngleRad": 0.0 },
+      "Team": { "Id": 4 },
+      "OrderBuffer": {},
+      "SelectionSelectableTag": {},
+      "SelectionSelectableState": { "IsEnabled": true },
+      "AttributeBuffer": { "base": {} },
+      "GameplayTagContainer": {},
+      "TagCountContainer": {},
+      "MassNavigationAgentTag": {},
+      "MassNavigationControllable": {}
+    }
+  },
+  {
+    "id": "mass_navigation_agent_emerald_high_scale_heavy",
+    "components": {
+      "Name": { "Value": "MassNavigation.Agent.Emerald.HighScale.Heavy" },
+      "WorldPositionCm": { "Value": { "X": 0, "Y": 0 } },
+      "SpatialPartitionExcluded": {},
+      "FacingDirection": { "AngleRad": 0.0 },
+      "Team": { "Id": 4 },
+      "OrderBuffer": {},
+      "SelectionSelectableTag": {},
+      "SelectionSelectableState": { "IsEnabled": true },
+      "AttributeBuffer": { "base": {} },
+      "GameplayTagContainer": {},
+      "TagCountContainer": {},
+      "MassNavigationAgentTag": {},
+      "MassNavigationControllable": {}
+    }
+  },
+  {
     "id": "mass_navigation_blocker",
     "components": {
       "Name": { "Value": "MassNavigation.Blocker" },

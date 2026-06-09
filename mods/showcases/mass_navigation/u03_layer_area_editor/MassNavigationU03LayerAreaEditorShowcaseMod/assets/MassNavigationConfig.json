@@ -1,0 +1,14 @@
+{
+  "scenario": {
+    "agentsPerTeam": 64
+  },
+  "showcase": {
+    "id": "mass_navigation_u03_layer_area_editor",
+    "title": "U3 Mountain River Layer Editor Showcase",
+    "panelMode": "Focused",
+    "initialStepId": "LayerAreaEditor",
+    "visibleStepIds": [ "LayerAreaEditor" ],
+    "playerPerspective": "Use Layer Paint Inspect. The editor must expose mountain, river, blocked, NoFly, and high-cost areas against the mesh sample and layer/cost rows.",
+    "modAuthorPerspective": "Author layer and area semantics in the bake configs first, then trust the generated layer/cost diagnostics rather than visual terrain alone."
+  }
+}

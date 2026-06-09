@@ -1,0 +1,9 @@
+{
+  "name": "MassNavigationU02LogicHeightmapBakeShowcaseMod",
+  "version": "1.0.0",
+  "description": "Focused U2 entry for LogicHeightmap source unification validation.",
+  "priority": 0,
+  "dependencies": {
+    "MassNavigationMod": "^1.0.0"
+  }
+}

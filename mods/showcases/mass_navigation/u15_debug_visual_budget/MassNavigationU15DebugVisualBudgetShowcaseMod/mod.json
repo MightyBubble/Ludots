@@ -1,0 +1,9 @@
+{
+  "name": "MassNavigationU15DebugVisualBudgetShowcaseMod",
+  "version": "1.0.0",
+  "description": "Focused U15 entry for bounded low-cost debug visual validation.",
+  "priority": 0,
+  "dependencies": {
+    "MassNavigationMod": "^1.0.0"
+  }
+}

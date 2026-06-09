@@ -1,0 +1,9 @@
+{
+  "name": "MassNavigationU12TenKFlowShowcaseMod",
+  "version": "1.0.0",
+  "description": "Focused U12 entry for 10k commanded flow-field movement validation.",
+  "priority": 0,
+  "dependencies": {
+    "MassNavigationMod": "^1.0.0"
+  }
+}

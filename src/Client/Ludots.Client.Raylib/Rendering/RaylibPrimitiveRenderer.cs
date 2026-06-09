@@ -43,6 +43,7 @@ namespace Ludots.Client.Raylib.Rendering
         private readonly List<Batch> _cubeBatches = new List<Batch>(16);
         private readonly List<Batch> _sphereBatches = new List<Batch>(16);
         private readonly Dictionary<long, ModelInstanceBatch> _modelInstanceBatches = new Dictionary<long, ModelInstanceBatch>();
+        private readonly Dictionary<long, DynamicModelInstanceBucket> _dynamicModelInstanceBuckets = new Dictionary<long, DynamicModelInstanceBucket>();
         private readonly Dictionary<RaylibIsmRenderBridge.Bucket, ModelInstanceBatch> _staticModelInstanceBatches = new();
         private readonly Dictionary<GpuSkinnedInstanceBatchKey, GpuSkinnedInstanceBatch> _gpuSkinnedInstanceBatches = new();
         private readonly List<GpuSkinnedInstanceBatch> _activeGpuSkinnedInstanceBatches = new(64);
@@ -256,6 +257,11 @@ namespace Ludots.Client.Raylib.Rendering
                     continue;
                 }
 
+                if (TrySubmitDirectDynamicInstancedModel(in item, meshes, scaleMul))
+                {
+                    continue;
+                }
+
                 SubmitAssetRecursive(
                     item.MeshAssetId,
                     item.Position,
@@ -264,7 +270,9 @@ namespace Ludots.Client.Raylib.Rendering
                     item.Color,
                     camera,
                     meshes,
-                    in finalizationContext);
+                    in finalizationContext,
+                    item.RenderPath,
+                    item.Mobility);
             }
 
             FlushInstancedBatches();
@@ -294,6 +302,11 @@ namespace Ludots.Client.Raylib.Rendering
                     continue;
                 }
 
+                if (TrySubmitDirectDynamicInstancedModel(in item, meshes, scaleMul))
+                {
+                    continue;
+                }
+
                 SubmitAssetRecursive(
                     item.MeshAssetId,
                     item.Position,
@@ -302,13 +315,25 @@ namespace Ludots.Client.Raylib.Rendering
                     item.Color,
                     camera,
                     meshes,
-                    in finalizationContext);
+                    in finalizationContext,
+                    item.RenderPath,
+                    item.Mobility);
             }
 
             FlushInstancedBatches();
         }
 
-        private void SubmitAssetRecursive(int meshAssetId, Vector3 position, Quaternion rotation, Vector3 scale, Vector4 color, Camera3D camera, MeshAssetRegistry meshes, in PrefabFinalizationContext finalizationContext)
+        private void SubmitAssetRecursive(
+            int meshAssetId,
+            Vector3 position,
+            Quaternion rotation,
+            Vector3 scale,
+            Vector4 color,
+            Camera3D camera,
+            MeshAssetRegistry meshes,
+            in PrefabFinalizationContext finalizationContext,
+            VisualRenderPath renderPath = VisualRenderPath.None,
+            VisualMobility mobility = VisualMobility.None)
         {
             _prefabVisuals.Clear();
             PrefabFinalizationPipeline.FinalizeVisuals(
@@ -324,18 +349,22 @@ namespace Ludots.Client.Raylib.Rendering
 
             foreach (ref readonly var visual in _prefabVisuals.GetSpan())
             {
-                SubmitFinalizedVisual(in visual, camera);
+                SubmitFinalizedVisual(in visual, camera, renderPath, mobility);
             }
         }
 
-        private void SubmitFinalizedVisual(in PrefabFinalizedVisual visual, Camera3D camera)
+        private void SubmitFinalizedVisual(
+            in PrefabFinalizedVisual visual,
+            Camera3D camera,
+            VisualRenderPath renderPath = VisualRenderPath.None,
+            VisualMobility mobility = VisualMobility.None)
         {
             TrackVisualKind(visual.Kind);
 
             switch (visual.Kind)
             {
                 case PrefabVisualPartKind.Mesh:
-                    SubmitMeshVisual(in visual, camera);
+                    SubmitMeshVisual(in visual, camera, renderPath, mobility);
                     break;
                 case PrefabVisualPartKind.ProceduralMesh:
                     DrawProceduralMesh(in visual);
@@ -652,7 +681,11 @@ namespace Ludots.Client.Raylib.Rendering
             return $"primitive-lane bucketCount={bucketCount} firstBucketItems={itemCount} mesh={mesh} meshAssetId={item.MeshAssetId} stable={item.StableId} renderPath={item.RenderPath} mobility={item.Mobility} visibility={item.Visibility} pos=({item.Position.X:F2},{item.Position.Y:F2},{item.Position.Z:F2}) scale=({item.Scale.X:F2},{item.Scale.Y:F2},{item.Scale.Z:F2}) color=({item.Color.X:F2},{item.Color.Y:F2},{item.Color.Z:F2},{item.Color.W:F2})";
         }
 
-        private void SubmitMeshVisual(in PrefabFinalizedVisual visual, Camera3D camera)
+        private void SubmitMeshVisual(
+            in PrefabFinalizedVisual visual,
+            Camera3D camera,
+            VisualRenderPath renderPath = VisualRenderPath.None,
+            VisualMobility mobility = VisualMobility.None)
         {
             switch (visual.MeshDescriptor.Type)
             {
@@ -660,6 +693,11 @@ namespace Ludots.Client.Raylib.Rendering
                     SubmitPrimitive(visual.MeshDescriptor.PrimitiveKind, visual.Position, visual.Rotation, visual.Scale, visual.Color);
                     break;
                 case MeshAssetType.Model:
+                    if (TrySubmitDynamicInstancedModel(in visual, renderPath, mobility))
+                    {
+                        break;
+                    }
+
                     DrawModel(visual.MeshAssetId, visual.MeshDescriptor, visual.Position, visual.Rotation, visual.Scale, visual.Color);
                     break;
                 case MeshAssetType.Billboard:
@@ -1087,6 +1125,61 @@ namespace Ludots.Client.Raylib.Rendering
             ToAxisAngleDegrees(rotation, out Vector3 axis, out float angleDegrees);
             RestoreOpaqueModelState();
             Rl.DrawModelEx(model, position, axis, angleDegrees, scale, tint);
+        }
+
+        private bool TrySubmitDynamicInstancedModel(
+            in PrefabFinalizedVisual visual,
+            VisualRenderPath renderPath,
+            VisualMobility mobility)
+        {
+            if (mobility != VisualMobility.Movable ||
+                renderPath is not VisualRenderPath.InstancedStaticMesh and not VisualRenderPath.HierarchicalInstancedStaticMesh)
+            {
+                return false;
+            }
+
+            uint colorKey = PackRgba(visual.Color);
+            long batchKey = BuildModelInstanceBatchKey(visual.MeshAssetId, colorKey);
+            if (!_dynamicModelInstanceBuckets.TryGetValue(batchKey, out DynamicModelInstanceBucket? bucket))
+            {
+                bucket = new DynamicModelInstanceBucket(visual.MeshAssetId, visual.MeshDescriptor, colorKey);
+                _dynamicModelInstanceBuckets.Add(batchKey, bucket);
+            }
+
+            bucket.Batch.Add(RaylibMatrix.FromSystemNumerics(
+                Matrix4x4.CreateScale(visual.Scale) *
+                Matrix4x4.CreateFromQuaternion(WorldPlane2D.NormalizeOrIdentity(visual.Rotation)) *
+                Matrix4x4.CreateTranslation(visual.Position)));
+            return true;
+        }
+
+        private bool TrySubmitDirectDynamicInstancedModel(
+            in PrimitiveDrawItem item,
+            MeshAssetRegistry meshes,
+            float scaleMul)
+        {
+            if (item.Mobility != VisualMobility.Movable ||
+                item.RenderPath is not VisualRenderPath.InstancedStaticMesh and not VisualRenderPath.HierarchicalInstancedStaticMesh ||
+                !meshes.TryGetDescriptor(item.MeshAssetId, out MeshAssetDescriptor descriptor) ||
+                descriptor.Type != MeshAssetType.Model)
+            {
+                return false;
+            }
+
+            TrackVisualKind(PrefabVisualPartKind.Mesh);
+            uint colorKey = PackRgba(item.Color);
+            long batchKey = BuildModelInstanceBatchKey(item.MeshAssetId, colorKey);
+            if (!_dynamicModelInstanceBuckets.TryGetValue(batchKey, out DynamicModelInstanceBucket? bucket))
+            {
+                bucket = new DynamicModelInstanceBucket(item.MeshAssetId, descriptor, colorKey);
+                _dynamicModelInstanceBuckets.Add(batchKey, bucket);
+            }
+
+            bucket.Batch.Add(RaylibMatrix.FromSystemNumerics(
+                Matrix4x4.CreateScale(item.Scale * scaleMul) *
+                Matrix4x4.CreateFromQuaternion(WorldPlane2D.NormalizeOrIdentity(item.Rotation)) *
+                Matrix4x4.CreateTranslation(item.Position)));
+            return true;
         }
 
         private void DrawBillboard(int meshAssetId, in MeshAssetDescriptor desc, Vector3 position, Vector3 scale, Vector4 color, Camera3D camera)
@@ -1954,9 +2047,33 @@ namespace Ludots.Client.Raylib.Rendering
 
             FlushMeshBatches(_cubeBatches, ref totalInstances, ref batches, ref _cubeMesh);
             FlushMeshBatches(_sphereBatches, ref totalInstances, ref batches, ref _sphereMesh);
+            FlushDynamicModelInstanceBatches(ref totalInstances, ref batches);
 
             LastInstancedInstances += totalInstances;
             LastInstancedBatches += batches;
+        }
+
+        private void FlushDynamicModelInstanceBatches(ref int totalInstances, ref int batchCount)
+        {
+            foreach (DynamicModelInstanceBucket bucket in _dynamicModelInstanceBuckets.Values)
+            {
+                if (bucket.Batch.Count == 0)
+                {
+                    continue;
+                }
+
+                if (TryGetOrLoadModel(bucket.MeshAssetId, bucket.MeshDescriptor, out CachedModel cached))
+                {
+                    batchCount += DrawModelInstanceBatch(cached.Model, bucket.Batch, bucket.ColorKey);
+                    totalInstances += bucket.Batch.Count;
+                }
+                else
+                {
+                    WarnMissingModelSkipped(bucket.MeshAssetId, stableId: 0, "dynamic instanced model bucket");
+                }
+
+                bucket.Batch.Count = 0;
+            }
         }
 
         private void FlushMeshBatches(List<Batch> batches, ref int totalInstances, ref int batchCount, ref Mesh mesh)
@@ -2195,6 +2312,22 @@ namespace Ludots.Client.Raylib.Rendering
                 }
 
                 Transforms[Count++] = matrix;
+            }
+        }
+
+        private sealed class DynamicModelInstanceBucket
+        {
+            public readonly int MeshAssetId;
+            public readonly MeshAssetDescriptor MeshDescriptor;
+            public readonly uint ColorKey;
+            public ModelInstanceBatch Batch;
+
+            public DynamicModelInstanceBucket(int meshAssetId, in MeshAssetDescriptor meshDescriptor, uint colorKey)
+            {
+                MeshAssetId = meshAssetId;
+                MeshDescriptor = meshDescriptor;
+                ColorKey = colorKey;
+                Batch = new ModelInstanceBatch(colorKey);
             }
         }
 

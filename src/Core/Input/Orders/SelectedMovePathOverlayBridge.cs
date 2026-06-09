@@ -15,7 +15,7 @@ namespace Ludots.Core.Input.Orders
     /// </summary>
     public sealed class SelectedMovePathOverlayBridge
     {
-        private const int MaxSelectedEntities = 4;
+        public const int DefaultMaxSelectedEntities = 4;
         private const int DefaultMaxPathPoints = 64;
         private const float OverlayY = 0.035f;
         private const float PrimaryLineWidthCm = 28f;
@@ -32,6 +32,7 @@ namespace Ludots.Core.Input.Orders
         private readonly PathStore _pathStore;
         private readonly GroundOverlayBuffer _overlays;
         private readonly int[] _moveOrderTypeIds;
+        private readonly int _maxSelectedEntities;
         private readonly int[] _pathXcm = new int[DefaultMaxPathPoints];
         private readonly int[] _pathYcm = new int[DefaultMaxPathPoints];
         private int _nextRequestId = 1;
@@ -42,7 +43,7 @@ namespace Ludots.Core.Input.Orders
             PathStore pathStore,
             GroundOverlayBuffer overlays,
             int moveToOrderTypeId)
-            : this(world, paths, pathStore, overlays, new[] { moveToOrderTypeId })
+            : this(world, paths, pathStore, overlays, new[] { moveToOrderTypeId }, DefaultMaxSelectedEntities)
         {
         }
 
@@ -51,13 +52,15 @@ namespace Ludots.Core.Input.Orders
             IPathService paths,
             PathStore pathStore,
             GroundOverlayBuffer overlays,
-            int[] moveOrderTypeIds)
+            int[] moveOrderTypeIds,
+            int maxSelectedEntities = DefaultMaxSelectedEntities)
         {
             _world = world ?? throw new ArgumentNullException(nameof(world));
             _paths = paths ?? throw new ArgumentNullException(nameof(paths));
             _pathStore = pathStore ?? throw new ArgumentNullException(nameof(pathStore));
             _overlays = overlays ?? throw new ArgumentNullException(nameof(overlays));
             _moveOrderTypeIds = moveOrderTypeIds ?? throw new ArgumentNullException(nameof(moveOrderTypeIds));
+            _maxSelectedEntities = Math.Max(0, maxSelectedEntities);
             if (_moveOrderTypeIds.Length == 0)
             {
                 throw new ArgumentException("At least one move order type id is required.", nameof(moveOrderTypeIds));
@@ -67,7 +70,7 @@ namespace Ludots.Core.Input.Orders
         public void UpdateViewedSelection(ReadOnlySpan<Entity> selected)
         {
             int emittedEntities = 0;
-            for (int i = 0; i < selected.Length && emittedEntities < MaxSelectedEntities; i++)
+            for (int i = 0; i < selected.Length && emittedEntities < _maxSelectedEntities; i++)
             {
                 Entity entity = selected[i];
                 if (!_world.IsAlive(entity) || !_world.Has<OrderBuffer>(entity))

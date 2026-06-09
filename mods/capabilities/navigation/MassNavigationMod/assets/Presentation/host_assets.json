@@ -25,6 +25,15 @@
     "sourceUris": [
       "MassNavigationMod:assets/Models/mass_navigation_hotspot_obelisk.obj"
     ]
+  },
+  {
+    "id": "mass_navigation.agent.lod.raylib",
+    "assetKind": "Mesh",
+    "assetId": "mass_navigation.agent.lod",
+    "backendId": "raylib",
+    "sourceUris": [
+      "MassNavigationMod:assets/Models/mass_navigation_agent_lod.obj"
+    ]
   }
 ]
 

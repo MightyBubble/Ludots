@@ -1,0 +1,9 @@
+{
+  "name": "MassNavigationU03LayerAreaEditorShowcaseMod",
+  "version": "1.0.0",
+  "description": "Focused U3 entry for mountain, river, blocked, and high-cost layer authoring validation.",
+  "priority": 0,
+  "dependencies": {
+    "MassNavigationMod": "^1.0.0"
+  }
+}

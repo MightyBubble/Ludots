@@ -1,0 +1,16 @@
+{
+  "TileId": {
+    "ChunkX": 53,
+    "ChunkY": 90,
+    "Layer": 0
+  },
+  "TileVersion": 4,
+  "Stage": 9,
+  "ErrorCode": 0,
+  "Message": "Empty layer-domain tile.",
+  "WalkableTriangleCount": 0,
+  "VertexCount": 0,
+  "TriangleCount": 0,
+  "PortalCount": 0,
+  "DebugLog": null
+}

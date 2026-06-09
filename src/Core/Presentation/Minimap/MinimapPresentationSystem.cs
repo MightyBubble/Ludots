@@ -179,6 +179,7 @@ namespace Ludots.Core.Presentation.Minimap
             bool confirmReleased = input.ReleasedThisFrame(bindings.ConfirmActionId);
             bool commandPressed = input.PressedThisFrame(bindings.CommandActionId);
             float wheelDelta = input.ReadAction<float>(MinimapInputActions.Zoom);
+            bool confirmGroundOverrideSet = false;
 
             if (insideInteractive)
             {
@@ -192,11 +193,7 @@ namespace Ludots.Core.Presentation.Minimap
 
             if (commandPressed && insideField)
             {
-                if (_runtime.TryScreenToWorldClamped(pointer, out Vector2 commandWorldCm) &&
-                    engine.GetService(CoreServiceKeys.AuthoritativeGroundPointerOverride) is AuthoritativeGroundPointerOverride groundOverride)
-                {
-                    groundOverride.Set(bindings.CommandActionId, commandWorldCm);
-                }
+                SetGroundPointerOverride(engine, bindings.CommandActionId, pointer);
 
                 engine.SetService(CoreServiceKeys.PointerInputCaptured, true);
                 return;
@@ -231,6 +228,8 @@ namespace Ludots.Core.Presentation.Minimap
             }
             else if (insideField && confirmPressed)
             {
+                SetGroundPointerOverride(engine, bindings.ConfirmActionId, pointer);
+                confirmGroundOverrideSet = true;
                 _dragging = true;
             }
 
@@ -266,7 +265,19 @@ namespace Ludots.Core.Presentation.Minimap
 
             _runtime.JumpCameraTo(engine, worldCm);
             engine.SetService(CoreServiceKeys.PointerInputCaptured, true);
-            SuppressConfirm(engine, input, bindings.ConfirmActionId);
+            if (!confirmGroundOverrideSet)
+            {
+                SuppressConfirm(engine, input, bindings.ConfirmActionId);
+            }
+        }
+
+        private void SetGroundPointerOverride(GameEngine engine, string actionId, Vector2 pointer)
+        {
+            if (_runtime.TryScreenToWorldClamped(pointer, out Vector2 worldCm) &&
+                engine.GetService(CoreServiceKeys.AuthoritativeGroundPointerOverride) is AuthoritativeGroundPointerOverride groundOverride)
+            {
+                groundOverride.Set(actionId, worldCm);
+            }
         }
 
         private static void SuppressConfirm(PlayerInputHandler input, string actionId)

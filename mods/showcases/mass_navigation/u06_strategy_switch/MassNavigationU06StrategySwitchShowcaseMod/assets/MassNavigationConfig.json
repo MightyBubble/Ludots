@@ -1,0 +1,14 @@
+{
+  "scenario": {
+    "agentsPerTeam": 64
+  },
+  "showcase": {
+    "id": "mass_navigation_u06_strategy_switch",
+    "title": "U6 Road/NavMesh/Hybrid Switch Showcase",
+    "panelMode": "Focused",
+    "initialStepId": "StrategySwitch",
+    "visibleStepIds": [ "StrategySwitch" ],
+    "playerPerspective": "Use Compare Strategies. One start/goal query must show road graph, NavMesh, and hybrid candidates with their selected strategy and cost evidence.",
+    "modAuthorPerspective": "Configure pathing profiles by strategy; the order model stays the same while the query layer chooses graph, mesh, or hybrid evidence."
+  }
+}

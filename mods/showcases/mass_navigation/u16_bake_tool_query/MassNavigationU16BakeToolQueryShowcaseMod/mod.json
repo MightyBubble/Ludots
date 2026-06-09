@@ -1,0 +1,9 @@
+{
+  "name": "MassNavigationU16BakeToolQueryShowcaseMod",
+  "version": "1.0.0",
+  "description": "Focused U16 entry for runtime NavData update, polygon obstacle authoring, NavMesh, HPA, and layer diagnostics.",
+  "priority": 0,
+  "dependencies": {
+    "MassNavigationMod": "^1.0.0"
+  }
+}

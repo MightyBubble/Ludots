@@ -1,0 +1,9 @@
+{
+  "name": "MassNavigationU14PerformanceDebugShowcaseMod",
+  "version": "1.0.0",
+  "description": "Focused U14 entry for 80/100 FPS performance evidence scope.",
+  "priority": 0,
+  "dependencies": {
+    "MassNavigationMod": "^1.0.0"
+  }
+}

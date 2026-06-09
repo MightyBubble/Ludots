@@ -27,6 +27,15 @@ public sealed class MassNavigationGroupRuntime
     public int ActiveGroupCount { get; private set; }
     public int ActiveOrderGroupCount => _orderTokenToGroupId.Count;
     public float SelectedRotationRadians { get; private set; }
+    public int PendingTargetRefreshCount { get; private set; }
+    public int AppliedTargetRefreshCountFrame { get; private set; }
+    public int TargetRefreshBudget { get; private set; } = 192;
+
+    public void Configure(MassNavigationGroupSemantics semantics)
+    {
+        ArgumentNullException.ThrowIfNull(semantics);
+        TargetRefreshBudget = Math.Max(1, semantics.TargetRefreshBudgetPerUpdate);
+    }
 
     public void Reset()
     {
@@ -39,6 +48,8 @@ public sealed class MassNavigationGroupRuntime
 
         ActiveGroupCount = 0;
         SelectedRotationRadians = 0f;
+        PendingTargetRefreshCount = 0;
+        AppliedTargetRefreshCountFrame = 0;
     }
 
     public bool HasGroup(int unitIndex)
@@ -153,7 +164,20 @@ public sealed class MassNavigationGroupRuntime
         }
 
         NavGroupState group = _groups[groupId]!;
-        bool rebuildLayout = group.FormationMode != formationMode || !HaveSameMembers(group, memberIndices);
+        int memberSignature = ComputeMemberSignature(memberIndices);
+        bool sameMembers = group.MemberCount == memberIndices.Length && group.MemberSignature == memberSignature;
+        bool sameOrderShape = sameMembers &&
+            group.FormationMode == formationMode &&
+            group.TeamId == teamId &&
+            MathF.Abs(group.RotationRadians - rotationRadians) <= 0.0001f &&
+            MathF.Abs(group.DestinationWorldX - resolvedWorldDestination.X) <= 0.5f &&
+            MathF.Abs(group.DestinationWorldY - resolvedWorldDestination.Y) <= 0.5f;
+        if (sameOrderShape)
+        {
+            return group.MemberCount;
+        }
+
+        bool rebuildLayout = group.FormationMode != formationMode || !sameMembers || !HaveSameMembers(group, memberIndices);
         if (rebuildLayout)
         {
             DetachMembersFromOtherGroups(simulation, memberIndices, groupId);
@@ -277,6 +301,7 @@ public sealed class MassNavigationGroupRuntime
                 group.BaseOffsetY,
                 group.MemberCount,
                 group.RotationRadians);
+            QueueGroupTargetRefresh(group);
         }
 
         RefreshSelectedRotation(agentState, selected);
@@ -314,12 +339,14 @@ public sealed class MassNavigationGroupRuntime
         ReadOnlySpan<Entity> selected,
         int frameIndex)
     {
+        AppliedTargetRefreshCountFrame = 0;
         if ((frameIndex & 1) == 0)
         {
             RefreshSelectedRotation(agentState, selected);
             return;
         }
 
+        int remainingBudget = TargetRefreshBudget;
         for (int groupId = 0; groupId < _groups.Count; groupId++)
         {
             NavGroupState? group = _groups[groupId];
@@ -328,34 +355,14 @@ public sealed class MassNavigationGroupRuntime
                 continue;
             }
 
-            int liveCount = 0;
-            float centerX = 0f;
-            float centerY = 0f;
-            for (int i = 0; i < group.MemberCount; i++)
+            if (!RefreshGroupCenter(simulation, groupId, group))
             {
-                int unitIndex = group.MemberIndices[i];
-                if ((uint)unitIndex >= (uint)simulation.UnitCount)
-                {
-                    continue;
-                }
-
-                centerX += simulation.GetPositionX(unitIndex);
-                centerY += simulation.GetPositionY(unitIndex);
-                liveCount++;
-            }
-
-            if (liveCount <= 0)
-            {
-                DissolveGroup(groupId, group);
                 continue;
             }
 
-            float invLive = 1f / liveCount;
-            centerX *= invLive;
-            centerY *= invLive;
             Vector2 destinationLocalCm = simulation.WorldToLocalCm(new Vector2(group.DestinationWorldX, group.DestinationWorldY));
-            float toDestX = destinationLocalCm.X - centerX;
-            float toDestY = destinationLocalCm.Y - centerY;
+            float toDestX = destinationLocalCm.X - group.CenterX;
+            float toDestY = destinationLocalCm.Y - group.CenterY;
             float distSq = (toDestX * toDestX) + (toDestY * toDestY);
             float distance = MathF.Sqrt(distSq);
             float pullStrength = distance > simulation.Semantics.Group.PullDeadZoneCm
@@ -370,26 +377,22 @@ public sealed class MassNavigationGroupRuntime
                 pullY = toDestY * invDistance * pullStrength;
             }
 
-            for (int i = 0; i < group.MemberCount; i++)
+            if (group.TargetRefreshPendingCount > 0 && remainingBudget > 0)
             {
-                int unitIndex = group.MemberIndices[i];
-                float rawTargetX = centerX + group.OffsetX[i] + pullX;
-                float rawTargetY = centerY + group.OffsetY[i] + pullY;
-                Vector2 resolvedTarget = simulation.ResolveNavigableTarget(
-                    rawTargetX,
-                    rawTargetY,
-                    group.OffsetX[i],
-                    group.OffsetY[i],
-                    simulation.Semantics.TargetProjection.GroupSlotClearanceCm);
-                simulation.SetUnitTarget(unitIndex, resolvedTarget.X, resolvedTarget.Y);
+                int applied = ApplyGroupTargetRefreshBudget(simulation, group, remainingBudget, pullX, pullY, resetRecovery: false);
+                remainingBudget -= applied;
+                AppliedTargetRefreshCountFrame += applied;
             }
 
-            group.CenterX = centerX;
-            group.CenterY = centerY;
             group.Arrived = distance < simulation.Semantics.Group.ArrivedRadiusCm;
+            if (remainingBudget <= 0)
+            {
+                break;
+            }
         }
 
         ActiveGroupCount = CountActiveGroups();
+        PendingTargetRefreshCount = CountPendingTargetRefreshes();
         RefreshSelectedRotation(agentState, selected);
     }
 
@@ -538,6 +541,7 @@ public sealed class MassNavigationGroupRuntime
         }
 
         RebuildGroupLayout(group);
+        QueueGroupTargetRefresh(group);
     }
 
     private void DissolveGroup(int groupId, NavGroupState group)
@@ -648,6 +652,21 @@ public sealed class MassNavigationGroupRuntime
         return count;
     }
 
+    private int CountPendingTargetRefreshes()
+    {
+        int count = 0;
+        for (int i = 0; i < _groups.Count; i++)
+        {
+            NavGroupState? group = _groups[i];
+            if (group != null)
+            {
+                count += group.TargetRefreshPendingCount;
+            }
+        }
+
+        return count;
+    }
+
     private NavGroupState CreateGroup(ReadOnlySpan<int> members, int teamId, MassNavigationFormationMode formationMode, float rotationRadians)
     {
         var group = new NavGroupState(Math.Max(1, members.Length), teamId);
@@ -677,6 +696,7 @@ public sealed class MassNavigationGroupRuntime
 
         group.TeamId = teamId;
         CopyMembersAndRebuildLayout(group, nextMembers, formationMode, rotationRadians);
+        QueueGroupTargetRefresh(group);
     }
 
     private void AssignGroupTargets(MassFlowSimulationState simulation, int groupId, NavGroupState group, bool resetRecovery)
@@ -685,15 +705,107 @@ public sealed class MassNavigationGroupRuntime
         {
             int unitIndex = group.MemberIndices[i];
             _groupIdsByControllableIndex[unitIndex] = groupId;
-            Vector2 destinationLocalCm = simulation.WorldToLocalCm(new Vector2(group.DestinationWorldX, group.DestinationWorldY));
-            Vector2 resolvedTarget = simulation.ResolveNavigableTarget(
-                destinationLocalCm.X + group.OffsetX[i],
-                destinationLocalCm.Y + group.OffsetY[i],
-                group.OffsetX[i],
-                group.OffsetY[i],
-                simulation.Semantics.TargetProjection.GroupSlotClearanceCm);
-            simulation.SetUnitTarget(unitIndex, resolvedTarget.X, resolvedTarget.Y, resetRecovery);
         }
+
+        AppliedTargetRefreshCountFrame = 0;
+        if (!RefreshGroupCenter(simulation, groupId, group))
+        {
+            return;
+        }
+
+        group.TargetRefreshCursor = 0;
+        group.TargetRefreshPendingCount = group.MemberCount;
+        int applied = ApplyGroupTargetRefreshBudget(
+            simulation,
+            group,
+            TargetRefreshBudget,
+            pullX: 0f,
+            pullY: 0f,
+            resetRecovery);
+        AppliedTargetRefreshCountFrame += applied;
+        PendingTargetRefreshCount = CountPendingTargetRefreshes();
+    }
+
+    private bool RefreshGroupCenter(MassFlowSimulationState simulation, int groupId, NavGroupState group)
+    {
+        int liveCount = 0;
+        float centerX = 0f;
+        float centerY = 0f;
+        for (int i = 0; i < group.MemberCount; i++)
+        {
+            int unitIndex = group.MemberIndices[i];
+            if ((uint)unitIndex >= (uint)simulation.UnitCount)
+            {
+                continue;
+            }
+
+            centerX += simulation.GetPositionX(unitIndex);
+            centerY += simulation.GetPositionY(unitIndex);
+            liveCount++;
+        }
+
+        if (liveCount <= 0)
+        {
+            DissolveGroup(groupId, group);
+            return false;
+        }
+
+        float invLive = 1f / liveCount;
+        group.CenterX = centerX * invLive;
+        group.CenterY = centerY * invLive;
+        return true;
+    }
+
+    private int ApplyGroupTargetRefreshBudget(
+        MassFlowSimulationState simulation,
+        NavGroupState group,
+        int budget,
+        float pullX,
+        float pullY,
+        bool resetRecovery)
+    {
+        if (budget <= 0 || group.TargetRefreshPendingCount <= 0 || group.MemberCount <= 0)
+        {
+            return 0;
+        }
+
+        int applied = 0;
+        int cursor = Math.Clamp(group.TargetRefreshCursor, 0, Math.Max(0, group.MemberCount - 1));
+        int remainingMembers = group.MemberCount;
+        while (budget > 0 && group.TargetRefreshPendingCount > 0 && remainingMembers > 0)
+        {
+            if (cursor >= group.MemberCount)
+            {
+                cursor = 0;
+            }
+
+            int unitIndex = group.MemberIndices[cursor];
+            if ((uint)unitIndex < (uint)simulation.UnitCount)
+            {
+                float rawTargetX = group.CenterX + group.OffsetX[cursor] + pullX;
+                float rawTargetY = group.CenterY + group.OffsetY[cursor] + pullY;
+                Vector2 resolvedTarget = simulation.ResolveNavigableTarget(
+                    rawTargetX,
+                    rawTargetY,
+                    group.OffsetX[cursor],
+                    group.OffsetY[cursor],
+                    simulation.Semantics.TargetProjection.GroupSlotClearanceCm);
+                simulation.SetUnitTarget(unitIndex, resolvedTarget.X, resolvedTarget.Y, resetRecovery);
+                group.TargetRefreshPendingCount--;
+                applied++;
+                budget--;
+            }
+            else
+            {
+                group.TargetRefreshPendingCount--;
+            }
+
+            cursor++;
+            remainingMembers--;
+        }
+
+        group.TargetRefreshCursor = cursor >= group.MemberCount ? 0 : cursor;
+        return applied;
     }
 
     private void CopyMembersAndRebuildLayout(
@@ -705,9 +817,17 @@ public sealed class MassNavigationGroupRuntime
         group.EnsureCapacity(Math.Max(1, members.Length));
         members.CopyTo(group.MemberIndices);
         group.MemberCount = members.Length;
+        group.MemberSignature = ComputeMemberSignature(members);
         group.FormationMode = formationMode;
         group.RotationRadians = rotationRadians;
         RebuildGroupLayout(group);
+        QueueGroupTargetRefresh(group);
+    }
+
+    private static void QueueGroupTargetRefresh(NavGroupState group)
+    {
+        group.TargetRefreshCursor = 0;
+        group.TargetRefreshPendingCount = group.MemberCount;
     }
 
     private void RebuildGroupLayout(NavGroupState group)
@@ -758,6 +878,18 @@ public sealed class MassNavigationGroupRuntime
         return true;
     }
 
+    private static int ComputeMemberSignature(ReadOnlySpan<int> members)
+    {
+        var hash = new HashCode();
+        hash.Add(members.Length);
+        for (int i = 0; i < members.Length; i++)
+        {
+            hash.Add(members[i]);
+        }
+
+        return hash.ToHashCode();
+    }
+
     private sealed class NavGroupState
     {
         public NavGroupState(int initialCapacity, int teamId)
@@ -772,6 +904,7 @@ public sealed class MassNavigationGroupRuntime
         }
 
         public int MemberCount { get; set; }
+        public int MemberSignature { get; set; }
         public int TeamId { get; set; }
         public int CommandToken { get; set; }
         public MassNavigationFormationMode FormationMode { get; set; }
@@ -786,6 +919,8 @@ public sealed class MassNavigationGroupRuntime
         public float CenterY { get; set; }
         public float RotationRadians { get; set; }
         public bool Arrived { get; set; }
+        public int TargetRefreshCursor { get; set; }
+        public int TargetRefreshPendingCount { get; set; }
 
         public void EnsureCapacity(int required)
         {

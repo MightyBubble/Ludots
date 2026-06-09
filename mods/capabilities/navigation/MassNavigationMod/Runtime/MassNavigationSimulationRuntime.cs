@@ -3,6 +3,11 @@ using System.Diagnostics;
 using Arch.Core;
 using Ludots.Core.Mathematics;
 using Ludots.Core.Navigation.GraphWorld;
+using Ludots.Core.Navigation.NavMesh.Config;
+using Ludots.Core.Navigation.NavMesh.Diagnostics;
+using Ludots.Core.Navigation.Pathing;
+using Ludots.Core.Navigation.Pathing.Config;
+using Ludots.Core.Modding;
 using Ludots.Core.Spatial;
 
 namespace MassNavigationMod.Runtime;
@@ -69,12 +74,19 @@ public sealed class MassNavigationSimulationRuntime
     public float SelectionSyncMs { get; private set; }
     public float CommandApplyMs { get; private set; }
     public float FormationTargetMs { get; private set; }
+    public float LastFormationTargetMs { get; private set; }
     public float FlowFieldRebuildMs { get; private set; }
+    public float LastFlowFieldRebuildMs { get; private set; }
     public float StepPrepMs { get; private set; }
+    public float LastStepPrepMs { get; private set; }
     public float LocalSteeringMs { get; private set; }
+    public float LastLocalSteeringMs { get; private set; }
     public float SimStepMs { get; private set; }
+    public float LastSimStepMs { get; private set; }
     public float HardResolveMs { get; private set; }
+    public float LastHardResolveMs { get; private set; }
     public float EntitySyncMs { get; private set; }
+    public float LastEntitySyncMs { get; private set; }
     public float PerformerCommandMs { get; private set; }
     public float SelectionSyncHzObserved { get; private set; }
     public float ControlHzObserved { get; private set; }
@@ -99,16 +111,17 @@ public sealed class MassNavigationSimulationRuntime
     public float LastRejectedCommandYCm { get; private set; }
     public MassNavigationConfig Config { get; }
     public MassNavigationAgentState AgentState { get; } = new();
-    public MassNavigationCommandRuntime Commands { get; } = new();
     public MassFlowTuning FlowTuning { get; }
     public MassNavigationCadenceConfig Cadence { get; }
     internal MassNavigationCadenceScheduler CadenceScheduler { get; }
     public MassNavigationFormationRuntime FormationRuntime { get; }
     public MassNavigationGroupRuntime NavGroupRuntime { get; }
+    public MassNavigationAcceptanceDiagnostics AcceptanceDiagnostics { get; } = new();
     internal MassNavigationSpawnReceiptRuntime SpawnReceipts { get; } = new();
     public MassFlowSimulationState MassFlow { get; }
     public MassNavigationWorldConfig WorldConfig { get; }
     public WorldGridLoadedChunks LoadedChunks => _loadedChunks;
+    public MassNavigationBakeDataDiagnostics? BakeDataDiagnostics { get; private set; }
 
     public int SelectedCount => _selectedCount;
     public uint SelectionRevision => _selectionRevision;
@@ -116,7 +129,7 @@ public sealed class MassNavigationSimulationRuntime
     public ReadOnlySpan<int> TeamIds => _teamIds;
     public int TeamCount => _teamIds.Length;
     public int FrameIndex => _frameIndex;
-    public int PendingCommandCount => Commands.PendingCommandCount;
+    public int PendingCommandCount => 0;
     public int AgentsPerTeam { get; private set; }
     public int SelectedTeamId { get; private set; }
     public MassNavigationFormationMode FormationMode { get; private set; } = MassNavigationFormationMode.None;
@@ -180,6 +193,7 @@ public sealed class MassNavigationSimulationRuntime
         FlowTuning = config.Flow;
         FormationRuntime = new MassNavigationFormationRuntime();
         NavGroupRuntime = new MassNavigationGroupRuntime(FormationRuntime);
+        NavGroupRuntime.Configure(config.Semantics.Group);
         AgentsPerTeam = config.Scenario.AgentsPerTeam;
         _initialSelectedTeamId = config.Scenario.InitialSelectedTeamId;
         ConfigureScenarioTeams(CreateTeamIdArray(config.Scenario.Teams));
@@ -208,6 +222,7 @@ public sealed class MassNavigationSimulationRuntime
         MassFlow.Semantics.TargetProjection.LooseTargetClearanceCm = config.Semantics.TargetProjection.LooseTargetClearanceCm;
         MassFlow.Semantics.Group.SpawnSpacingCm = config.Semantics.Group.SpawnSpacingCm;
         MassFlow.Semantics.Group.TeamSlotSpacingCm = config.Semantics.Group.TeamSlotSpacingCm;
+        MassFlow.Semantics.Group.TargetRefreshBudgetPerUpdate = config.Semantics.Group.TargetRefreshBudgetPerUpdate;
         MassFlow.Semantics.Group.PullDeadZoneCm = config.Semantics.Group.PullDeadZoneCm;
         MassFlow.Semantics.Group.PullClampCm = config.Semantics.Group.PullClampCm;
         MassFlow.Semantics.Group.ArrivedRadiusCm = config.Semantics.Group.ArrivedRadiusCm;
@@ -220,6 +235,7 @@ public sealed class MassNavigationSimulationRuntime
         MassFlow.Semantics.Group.NearSlotBlendDistanceSq = config.Semantics.Group.NearSlotBlendDistanceSq;
         MassFlow.Semantics.Steering.SpeedCmPerSecond = config.Semantics.Steering.SpeedCmPerSecond;
         MassFlow.Semantics.Steering.SeparationRadiusCm = config.Semantics.Steering.SeparationRadiusCm;
+        MassFlow.Semantics.Steering.MaxSeparationNeighborsPerUnit = config.Semantics.Steering.MaxSeparationNeighborsPerUnit;
         MassFlow.Semantics.Steering.GoalArrivalRadiusCm = config.Semantics.Steering.GoalArrivalRadiusCm;
         MassFlow.Semantics.Steering.FlowObstacleAvoidanceScale = config.Semantics.Steering.FlowObstacleAvoidanceScale;
         MassFlow.Semantics.Steering.FormationSeparationScale = config.Semantics.Steering.FormationSeparationScale;
@@ -248,6 +264,38 @@ public sealed class MassNavigationSimulationRuntime
             MassFlowSimulationState.FieldHeightCm * 0.5f)));
     }
 
+    public void BindBakeDataDiagnostics(
+        NavMeshBakeConfig? navMeshConfig,
+        PathingConfig? pathingConfig,
+        NavBakeDiagnosticsDocument? navBakeDiagnostics = null,
+        IPathService? pathService = null,
+        PathStore? pathStore = null,
+        MassNavigationHpaGraphAssetDiagnostics? hpaGraphDiagnostics = null,
+        IVirtualFileSystem? vfs = null,
+        System.Collections.Generic.IEnumerable<string>? loadedModIds = null)
+    {
+        BakeDataDiagnostics = MassNavigationBakeDataDiagnostics.Create(
+            Config.MapId,
+            RequireBoardWorldSize(),
+            Config.BakeData,
+            WorldConfig,
+            navMeshConfig,
+            pathingConfig,
+            navBakeDiagnostics,
+            vfs,
+            loadedModIds);
+        MassNavigationActiveWindowNavMeshProbe? navMeshProbe = vfs != null
+            ? new MassNavigationActiveWindowNavMeshProbe(vfs, loadedModIds, Config.MapId, navBakeDiagnostics, BakeDataDiagnostics)
+            : null;
+        AcceptanceDiagnostics.BindBakeDataDiagnostics(BakeDataDiagnostics, pathService, pathStore, hpaGraphDiagnostics, navMeshProbe);
+        AcceptanceDiagnostics.RecordObstacleRuntime(MassFlow.ObstacleCount, MassFlow.SolverStaticObstacleCapacity);
+    }
+
+    public void RefreshObstacleRuntimeDiagnostics()
+    {
+        AcceptanceDiagnostics.RecordObstacleRuntime(MassFlow.ObstacleCount, MassFlow.SolverStaticObstacleCapacity);
+    }
+
     public void BeginFrame(float dt)
     {
         _frameIndex++;
@@ -265,13 +313,47 @@ public sealed class MassNavigationSimulationRuntime
 
     public void ObserveSelectionSync(double sampleMs) => SelectionSyncMs = Smooth(SelectionSyncMs, (float)sampleMs);
     public void ObserveCommandApply(double sampleMs) => CommandApplyMs = Smooth(CommandApplyMs, (float)sampleMs);
-    public void ObserveFormationTargets(double sampleMs) => FormationTargetMs = Smooth(FormationTargetMs, (float)sampleMs);
-    public void ObserveFlowFieldRebuild(double sampleMs) => FlowFieldRebuildMs = Smooth(FlowFieldRebuildMs, (float)sampleMs);
-    public void ObserveStepPrep(double sampleMs) => StepPrepMs = Smooth(StepPrepMs, (float)sampleMs);
-    public void ObserveLocalSteering(double sampleMs) => LocalSteeringMs = Smooth(LocalSteeringMs, (float)sampleMs);
-    public void ObserveSimStep(double sampleMs) => SimStepMs = Smooth(SimStepMs, (float)sampleMs);
-    public void ObserveHardResolve(double sampleMs) => HardResolveMs = Smooth(HardResolveMs, (float)sampleMs);
-    public void ObserveEntitySync(double sampleMs) => EntitySyncMs = Smooth(EntitySyncMs, (float)sampleMs);
+    public void ObserveFormationTargets(double sampleMs)
+    {
+        LastFormationTargetMs = (float)sampleMs;
+        FormationTargetMs = Smooth(FormationTargetMs, LastFormationTargetMs);
+    }
+
+    public void ObserveFlowFieldRebuild(double sampleMs)
+    {
+        LastFlowFieldRebuildMs = (float)sampleMs;
+        FlowFieldRebuildMs = Smooth(FlowFieldRebuildMs, LastFlowFieldRebuildMs);
+    }
+
+    public void ObserveStepPrep(double sampleMs)
+    {
+        LastStepPrepMs = (float)sampleMs;
+        StepPrepMs = Smooth(StepPrepMs, LastStepPrepMs);
+    }
+
+    public void ObserveLocalSteering(double sampleMs)
+    {
+        LastLocalSteeringMs = (float)sampleMs;
+        LocalSteeringMs = Smooth(LocalSteeringMs, LastLocalSteeringMs);
+    }
+
+    public void ObserveSimStep(double sampleMs)
+    {
+        LastSimStepMs = (float)sampleMs;
+        SimStepMs = Smooth(SimStepMs, LastSimStepMs);
+    }
+
+    public void ObserveHardResolve(double sampleMs)
+    {
+        LastHardResolveMs = (float)sampleMs;
+        HardResolveMs = Smooth(HardResolveMs, LastHardResolveMs);
+    }
+
+    public void ObserveEntitySync(double sampleMs)
+    {
+        LastEntitySyncMs = (float)sampleMs;
+        EntitySyncMs = Smooth(EntitySyncMs, LastEntitySyncMs);
+    }
     public void ObservePerformerCommand(double sampleMs) => PerformerCommandMs = Smooth(PerformerCommandMs, (float)sampleMs);
 
     public void ObservePerformerCoverage(int crowdInViewCount, int crowdSubmittedCount, int obstacleSubmittedCount, int performerDroppedCount)
@@ -437,6 +519,11 @@ public sealed class MassNavigationSimulationRuntime
         }
 
         return next;
+    }
+
+    public int PeekNextSharedOrderId()
+    {
+        return _nextSharedOrderId;
     }
 
     public void CycleSelectedTeam()

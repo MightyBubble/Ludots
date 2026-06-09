@@ -1,0 +1,14 @@
+{
+  "scenario": {
+    "agentsPerTeam": 64
+  },
+  "showcase": {
+    "id": "mass_navigation_u05_world_hpa_route",
+    "title": "U5 World and HPA Route Showcase",
+    "panelMode": "Focused",
+    "initialStepId": "WorldHpa",
+    "visibleStepIds": [ "WorldHpa" ],
+    "playerPerspective": "Use Show HPA Chunks. The player-facing route review must show the 64km world, active data window, start/goal chunks, numbered crossed chunks, and portal crossings.",
+    "modAuthorPerspective": "HPA is the macro route contract; inspect chunk IDs and portal crossings before judging any low-level NavMesh path or unit movement."
+  }
+}

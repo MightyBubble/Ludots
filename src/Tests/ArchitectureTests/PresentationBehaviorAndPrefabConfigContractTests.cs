@@ -132,6 +132,7 @@ namespace Ludots.Tests.Architecture
                 coreEngine.MergedConfig.Selection.MovePathPreviewOrderTypeKeys,
                 Is.EqualTo(new[] { "moveTo" }),
                 "LudotsCoreMod should author the generic move path preview contract.");
+            Assert.That(coreEngine.MergedConfig.Selection.MovePathPreviewMaxSelectedEntities, Is.EqualTo(4));
             Assert.That(coreEngine.MergedConfig.Constants.OrderTypeIds.ContainsKey("moveTo"), Is.True);
 
             using var massNavigationEngine = new GameEngine();
@@ -150,6 +151,7 @@ namespace Ludots.Tests.Architecture
                 massNavigationEngine.MergedConfig.Selection.MovePathPreviewOrderTypeKeys,
                 Is.EqualTo(new[] { "moveTo", "massNavigationMove" }),
                 "MassNavigationMod should extend the preview contract through game.json, not CoreInputMod source.");
+            Assert.That(massNavigationEngine.MergedConfig.Selection.MovePathPreviewMaxSelectedEntities, Is.EqualTo(4));
             Assert.That(massNavigationEngine.MergedConfig.Constants.OrderTypeIds.ContainsKey("moveTo"), Is.True);
             Assert.That(
                 massNavigationEngine.MergedConfig.Constants.OrderTypeIds.ContainsKey("massNavigationMove"),

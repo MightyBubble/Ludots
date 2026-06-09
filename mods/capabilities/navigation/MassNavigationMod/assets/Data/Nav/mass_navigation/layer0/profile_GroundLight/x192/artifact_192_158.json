@@ -1,0 +1,16 @@
+{
+  "TileId": {
+    "ChunkX": 192,
+    "ChunkY": 158,
+    "Layer": 0
+  },
+  "TileVersion": 4,
+  "Stage": 9,
+  "ErrorCode": 0,
+  "Message": "",
+  "WalkableTriangleCount": 4884,
+  "VertexCount": 42,
+  "TriangleCount": 32,
+  "PortalCount": 3,
+  "DebugLog": null
+}

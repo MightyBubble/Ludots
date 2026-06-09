@@ -1,0 +1,9 @@
+{
+  "name": "MassNavigationU04PathOnlyQueryShowcaseMod",
+  "version": "1.0.0",
+  "description": "Focused U4 entry for path-only route preview without unit movement.",
+  "priority": 0,
+  "dependencies": {
+    "MassNavigationMod": "^1.0.0"
+  }
+}

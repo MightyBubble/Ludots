@@ -1,4 +1,6 @@
+using System;
 using System.Collections.Generic;
+using System.Diagnostics;
 using System.Numerics;
 using Arch.Core;
 using Arch.System;
@@ -14,9 +16,8 @@ namespace MassNavigationMod.Systems;
 internal sealed class MassNavigationOrderBridgeSystem : ISystem<float>
 {
     private const int IdleScanIntervalFrames = 6;
-
-    private static readonly QueryDescription Query = new QueryDescription()
-        .WithAll<MassNavigationAgentTag, MassNavigationAgentIndex, Team, OrderBuffer>();
+    private const int ActiveScanIntervalFrames = 12;
+    private const int ScanBudgetPerFrame = 1024;
 
     private readonly GameEngine _engine;
     private readonly MassNavigationSimulationRuntime _simulation;
@@ -26,6 +27,9 @@ internal sealed class MassNavigationOrderBridgeSystem : ISystem<float>
     private readonly List<int> _completedTokens = new();
     private int _moveOrderTypeId;
     private int _lastIdleScanFrame = -IdleScanIntervalFrames;
+    private int _lastActiveScanFrame = -ActiveScanIntervalFrames;
+    private bool _scanActive;
+    private int _scanCursor;
 
     public MassNavigationOrderBridgeSystem(GameEngine engine, MassNavigationSimulationRuntime simulation)
     {
@@ -45,15 +49,65 @@ internal sealed class MassNavigationOrderBridgeSystem : ISystem<float>
             return;
         }
 
+        long start = Stopwatch.GetTimestamp();
         ResolveMoveOrderType();
 
-        if (_simulation.NavGroupRuntime.ActiveOrderGroupCount == 0 &&
-            _simulation.CommandCountFrame <= 0 &&
-            _simulation.FrameIndex - _lastIdleScanFrame < IdleScanIntervalFrames)
+        bool hasNewCommand = _simulation.CommandCountFrame > 0;
+        bool hasActiveOrderGroups = _simulation.NavGroupRuntime.ActiveOrderGroupCount > 0;
+        if (!_scanActive && !ShouldStartScan(hasNewCommand, hasActiveOrderGroups))
         {
             return;
         }
 
+        if (!_scanActive)
+        {
+            BeginScan();
+        }
+
+        bool scanCompleted = ContinueScan();
+        if (!scanCompleted)
+        {
+            _simulation.ObserveCommandApply((Stopwatch.GetTimestamp() - start) * 1000.0 / Stopwatch.Frequency);
+            return;
+        }
+
+        SubmitBuckets();
+        CompleteArrivedOrders();
+        PruneInactiveOrders();
+
+        if (_simulation.NavGroupRuntime.ActiveOrderGroupCount == 0)
+        {
+            _lastIdleScanFrame = _simulation.FrameIndex;
+        }
+        else
+        {
+            _lastActiveScanFrame = _simulation.FrameIndex;
+        }
+
+        _simulation.ObserveCommandApply((Stopwatch.GetTimestamp() - start) * 1000.0 / Stopwatch.Frequency);
+    }
+
+    private bool ShouldStartScan(bool hasNewCommand, bool hasActiveOrderGroups)
+    {
+        if (!hasNewCommand &&
+            !hasActiveOrderGroups &&
+            _simulation.FrameIndex - _lastIdleScanFrame < IdleScanIntervalFrames)
+        {
+            return false;
+        }
+
+        if (!hasNewCommand &&
+            hasActiveOrderGroups &&
+            _simulation.FrameIndex - _lastActiveScanFrame < ActiveScanIntervalFrames)
+        {
+            return false;
+        }
+
+        return true;
+    }
+
+    private void BeginScan()
+    {
         _bucketIndexByToken.Clear();
         _activeTokens.Clear();
         _completedTokens.Clear();
@@ -62,32 +116,76 @@ internal sealed class MassNavigationOrderBridgeSystem : ISystem<float>
             _buckets[i].Members.Clear();
         }
 
-        _engine.World.Query(in Query, (Entity entity, ref MassNavigationAgentIndex agentIndex, ref Team team, ref OrderBuffer orders) =>
+        _scanCursor = 0;
+        _scanActive = true;
+    }
+
+    private bool ContinueScan()
+    {
+        IReadOnlyList<Entity> agents = _simulation.AgentState.ControllableAgents;
+        int count = agents.Count;
+        int budget = Math.Max(1, ScanBudgetPerFrame);
+        int processed = 0;
+        while (_scanCursor < count && processed < budget)
         {
-            if (!orders.HasActive || orders.ActiveOrder.Order.OrderTypeId != _moveOrderTypeId)
+            Entity entity = agents[_scanCursor++];
+            processed++;
+            if (!_engine.World.IsAlive(entity) ||
+                !_engine.World.Has<MassNavigationAgentIndex>(entity) ||
+                !_engine.World.Has<Team>(entity) ||
+                !_engine.World.Has<OrderBuffer>(entity))
             {
-                return;
+                continue;
             }
 
-            ref readonly var order = ref orders.ActiveOrder.Order;
-            int token = order.OrderId;
-            if (token <= 0)
-            {
-                return;
-            }
+            ref MassNavigationAgentIndex agentIndex = ref _engine.World.Get<MassNavigationAgentIndex>(entity);
+            ref Team team = ref _engine.World.Get<Team>(entity);
+            ref OrderBuffer orders = ref _engine.World.Get<OrderBuffer>(entity);
+            CollectActiveOrder(in agentIndex, in team, in orders);
+        }
 
-            _activeTokens.Add(token);
-            int bucketIndex = GetOrCreateBucket(token);
-            OrderBucket bucket = _buckets[bucketIndex];
-            bucket.TeamId = team.Id;
-            bucket.Destination = new Vector2(order.Args.Spatial.WorldCm.X, order.Args.Spatial.WorldCm.Z);
-            bucket.FormationMode = System.Enum.IsDefined(typeof(MassNavigationFormationMode), order.Args.I0)
-                ? (MassNavigationFormationMode)order.Args.I0
-                : MassNavigationFormationMode.None;
-            bucket.RotationRadians = order.Args.F0;
-            bucket.Members.Add(agentIndex.Value);
-        });
+        if (_scanCursor < count)
+        {
+            return false;
+        }
 
+        _scanActive = false;
+        _scanCursor = 0;
+        return true;
+    }
+
+    private void CollectActiveOrder(
+        in MassNavigationAgentIndex agentIndex,
+        in Team team,
+        in OrderBuffer orders)
+    {
+        if (!orders.HasActive || orders.ActiveOrder.Order.OrderTypeId != _moveOrderTypeId)
+        {
+            return;
+        }
+
+        ref readonly var order = ref orders.ActiveOrder.Order;
+        int token = order.OrderId;
+        if (token <= 0)
+        {
+            return;
+        }
+
+        _activeTokens.Add(token);
+        int bucketIndex = GetOrCreateBucket(token);
+        OrderBucket bucket = _buckets[bucketIndex];
+        bucket.TeamId = team.Id;
+        bucket.Destination = new Vector2(order.Args.Spatial.WorldCm.X, order.Args.Spatial.WorldCm.Z);
+        bucket.FormationMode = Enum.IsDefined(typeof(MassNavigationFormationMode), order.Args.I0)
+            ? (MassNavigationFormationMode)order.Args.I0
+            : MassNavigationFormationMode.None;
+        bucket.RotationRadians = order.Args.F0;
+        bucket.Members.Add(agentIndex.Value);
+    }
+
+    private void SubmitBuckets()
+    {
+        bool submittedAny = false;
         for (int bucketIndex = 0; bucketIndex < _buckets.Count; bucketIndex++)
         {
             OrderBucket bucket = _buckets[bucketIndex];
@@ -96,7 +194,7 @@ internal sealed class MassNavigationOrderBridgeSystem : ISystem<float>
                 continue;
             }
 
-            _simulation.NavGroupRuntime.UpsertOrderMoveCommand(
+            int assigned = _simulation.NavGroupRuntime.UpsertOrderMoveCommand(
                 _simulation.MassFlow,
                 bucket.Token,
                 System.Runtime.InteropServices.CollectionsMarshal.AsSpan(bucket.Members),
@@ -104,8 +202,35 @@ internal sealed class MassNavigationOrderBridgeSystem : ISystem<float>
                 bucket.Destination,
                 bucket.FormationMode,
                 bucket.RotationRadians);
+            if (assigned > 0)
+            {
+                _simulation.AcceptanceDiagnostics.RecordSubmittedOrder(
+                    bucket.Token,
+                    assigned,
+                    bucket.Destination,
+                    bucket.FormationMode,
+                    _simulation.AcceptanceDiagnostics.ResolveDefaultStrategy());
+                _simulation.AcceptanceDiagnostics.RecordTargetAllocation(
+                    bucket.Members.Count,
+                    assigned,
+                    blockedSlotCount: Math.Max(0, bucket.Members.Count - assigned),
+                    fallbackSlotCount: 0,
+                    bucket.Destination,
+                    bucket.FormationMode,
+                    _simulation.MassFlow,
+                    System.Runtime.InteropServices.CollectionsMarshal.AsSpan(bucket.Members));
+                submittedAny = true;
+            }
         }
 
+        if (submittedAny)
+        {
+            _simulation.MarkStructuralChange();
+        }
+    }
+
+    private void CompleteArrivedOrders()
+    {
         OrderBufferSystem orderBufferSystem = _engine.GetService(CoreServiceKeys.OrderBufferSystem)
             ?? throw new InvalidOperationException("MassNavigationMod requires OrderBufferSystem to complete MassNavigation move orders.");
 
@@ -136,12 +261,11 @@ internal sealed class MassNavigationOrderBridgeSystem : ISystem<float>
         {
             _simulation.NavGroupRuntime.CompleteOrderGroup(_simulation.MassFlow, _completedTokens[i]);
         }
+    }
 
+    private void PruneInactiveOrders()
+    {
         _simulation.NavGroupRuntime.PruneInactiveOrderGroups(_simulation.MassFlow, _activeTokens);
-        if (_simulation.NavGroupRuntime.ActiveOrderGroupCount == 0)
-        {
-            _lastIdleScanFrame = _simulation.FrameIndex;
-        }
     }
 
     private int ResolveMoveOrderType()
@@ -206,5 +330,3 @@ internal sealed class MassNavigationOrderBridgeSystem : ISystem<float>
         }
     }
 }
-
-

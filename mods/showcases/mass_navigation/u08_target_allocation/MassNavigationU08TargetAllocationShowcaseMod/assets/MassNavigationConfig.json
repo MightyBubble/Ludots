@@ -1,0 +1,47 @@
+{
+  "presentation": {
+    "teams": [
+      {
+        "teamId": 1,
+        "styleId": "blue",
+        "lightTemplateId": "mass_navigation_agent_azure_high_scale_light",
+        "heavyTemplateId": "mass_navigation_agent_azure_high_scale_heavy",
+        "lightPerformerId": "mass_navigation_agent_azure_high_scale_light",
+        "heavyPerformerId": "mass_navigation_agent_azure_high_scale_heavy"
+      },
+      {
+        "teamId": 2,
+        "styleId": "red",
+        "lightTemplateId": "mass_navigation_agent_crimson_high_scale_light",
+        "heavyTemplateId": "mass_navigation_agent_crimson_high_scale_heavy",
+        "lightPerformerId": "mass_navigation_agent_crimson_high_scale_light",
+        "heavyPerformerId": "mass_navigation_agent_crimson_high_scale_heavy"
+      },
+      {
+        "teamId": 3,
+        "styleId": "gold",
+        "lightTemplateId": "mass_navigation_agent_amber_high_scale_light",
+        "heavyTemplateId": "mass_navigation_agent_amber_high_scale_heavy",
+        "lightPerformerId": "mass_navigation_agent_amber_high_scale_light",
+        "heavyPerformerId": "mass_navigation_agent_amber_high_scale_heavy"
+      },
+      {
+        "teamId": 4,
+        "styleId": "green",
+        "lightTemplateId": "mass_navigation_agent_emerald_high_scale_light",
+        "heavyTemplateId": "mass_navigation_agent_emerald_high_scale_heavy",
+        "lightPerformerId": "mass_navigation_agent_emerald_high_scale_light",
+        "heavyPerformerId": "mass_navigation_agent_emerald_high_scale_heavy"
+      }
+    ]
+  },
+  "showcase": {
+    "id": "mass_navigation_u08_target_allocation",
+    "title": "U8 Large Selection Target Allocation Showcase",
+    "panelMode": "Focused",
+    "initialStepId": "TargetAllocation",
+    "visibleStepIds": [ "TargetAllocation" ],
+    "playerPerspective": "Click Select 10k Army, then right-click one destination. The formal RTS order must expand into reachable unit/group slots, with full counts in diagnostics and a sampled slot cloud on screen.",
+    "modAuthorPerspective": "Treat destination clicks as placement plus routing; inspect reachable, blocked, fallback, slot count, and route reuse key separately."
+  }
+}

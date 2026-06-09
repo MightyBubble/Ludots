@@ -1,0 +1,9 @@
+{
+  "name": "MassNavigationU10WaypointAuthoringShowcaseMod",
+  "version": "1.0.0",
+  "description": "Focused U10 entry for waypoint intent versus immutable pathpoints.",
+  "priority": 0,
+  "dependencies": {
+    "MassNavigationMod": "^1.0.0"
+  }
+}

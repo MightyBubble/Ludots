@@ -104,6 +104,61 @@ namespace Ludots.Tests.Presentation
         }
 
         [Test]
+        public void HighScaleAgentPerformers_Keep10kShowcasesOutOfPerAgentHudAndMinimapFanout()
+        {
+            string modRoot = MassNavigationModRoot();
+            JsonArray performers = ReadArray(Path.Combine(modRoot, "assets", "Presentation", "performers.json"));
+            JsonArray templates = ReadArray(Path.Combine(modRoot, "assets", "Entities", "templates.json"));
+
+            foreach (string performerId in HighScalePerformerIds())
+            {
+                JsonObject performer = FindObjectById(performers, performerId);
+                Assert.That(RequireString(performer, "extends"), Does.Contain("mass_navigation_agent_high_scale_"), performerId);
+                AssertDefinitionHasNoChildren(performer, performerId);
+                AssertDefinitionHasNoRules(performer, performerId);
+            }
+
+            AssertHighScaleRootPerformer(FindObjectById(performers, "mass_navigation_agent_high_scale_light"), "mass_navigation_agent_high_scale_light", expectedScale: 0.52f);
+            AssertHighScaleRootPerformer(FindObjectById(performers, "mass_navigation_agent_high_scale_heavy"), "mass_navigation_agent_high_scale_heavy", expectedScale: 0.72f);
+
+            foreach (string templateId in HighScaleTemplateIds())
+            {
+                JsonObject template = FindObjectById(templates, templateId);
+                Assert.That(template.ContainsKey("onSpawnEffect"), Is.False,
+                    $"High-scale template '{templateId}' must not attach per-agent HealthDrift GAS work.");
+                JsonObject components = template["components"]?.AsObject()
+                    ?? throw new InvalidOperationException($"High-scale template '{templateId}' must author components.");
+                Assert.That(components.ContainsKey("MassNavigationAgentTag"), Is.True, templateId);
+                Assert.That(components.ContainsKey("MassNavigationControllable"), Is.True, templateId);
+                Assert.That(components.ContainsKey("SelectionSelectableTag"), Is.True, templateId);
+                Assert.That(components.ContainsKey("AttributeBuffer"), Is.True, templateId);
+                Assert.That(components.ContainsKey("VisualHeightmapSampleState"), Is.False,
+                    $"High-scale template '{templateId}' must not request per-agent visual-heightmap sampling.");
+            }
+        }
+
+        [Test]
+        public void TenKFocusedEntryMods_SelectHighScalePresentationProfileThroughConfig()
+        {
+            string repoRoot = FindRepoRoot();
+            foreach (string relativePath in new[]
+            {
+                Path.Combine("mods", "showcases", "mass_navigation", "u08_target_allocation", "MassNavigationU08TargetAllocationShowcaseMod", "assets", "MassNavigationConfig.json"),
+                Path.Combine("mods", "showcases", "mass_navigation", "u12_tenk_flow", "MassNavigationU12TenKFlowShowcaseMod", "assets", "MassNavigationConfig.json")
+            })
+            {
+                JsonObject config = ReadObject(Path.Combine(repoRoot, relativePath));
+                foreach (JsonObject team in EnumeratePresentationTeams(config))
+                {
+                    Assert.That(RequireString(team, "lightTemplateId"), Does.Contain("_high_scale_"), relativePath);
+                    Assert.That(RequireString(team, "heavyTemplateId"), Does.Contain("_high_scale_"), relativePath);
+                    Assert.That(RequireString(team, "lightPerformerId"), Does.Contain("_high_scale_"), relativePath);
+                    Assert.That(RequireString(team, "heavyPerformerId"), Does.Contain("_high_scale_"), relativePath);
+                }
+            }
+        }
+
+        [Test]
         public void AgentSelectionMarkers_AreSeparateScopedPerformers()
         {
             string modRoot = MassNavigationModRoot();
@@ -223,9 +278,13 @@ namespace Ludots.Tests.Presentation
             JsonObject map = ReadObject(Path.Combine(modRoot, "assets", "Maps", "mass_navigation.json"));
             JsonObject board = map["Boards"]?.AsArray()?.FirstOrDefault()?.AsObject()
                 ?? throw new InvalidOperationException("MassNavigation map must author a primary board.");
+            Assert.That(RequireString(board, "SpatialType"), Is.EqualTo("NodeGraph"),
+                "MassNavigation must keep a formal NodeGraph board so path-only diagnostics use the shared PathService instead of a private route sketch.");
             Assert.That(board["WidthInTiles"]?.GetValue<int>(), Is.EqualTo(250));
             Assert.That(board["HeightInTiles"]?.GetValue<int>(), Is.EqualTo(250));
             Assert.That(board["GridCellSizeCm"]?.GetValue<int>(), Is.EqualTo(100));
+            Assert.That(board["WidthInTiles"]!.GetValue<int>() * 256 * board["GridCellSizeCm"]!.GetValue<int>(), Is.EqualTo(6_400_000));
+            Assert.That(board["HeightInTiles"]!.GetValue<int>() * 256 * board["GridCellSizeCm"]!.GetValue<int>(), Is.EqualTo(6_400_000));
         }
 
         [Test]
@@ -277,6 +336,23 @@ namespace Ludots.Tests.Presentation
             Assert.That(cadence["hardResolveHz"]?.GetValue<int>(), Is.GreaterThanOrEqualTo(0));
             Assert.That(cadence["entitySyncHz"]?.GetValue<int>(), Is.GreaterThanOrEqualTo(0));
             Assert.That(cadence["maxStepsPerFixedTick"]?.GetValue<int>(), Is.GreaterThan(0));
+
+            JsonObject flow = config["flow"]?.AsObject()
+                ?? throw new InvalidOperationException("MassNavigationConfig.flow missing.");
+            Assert.That(flow["enabled"]?.GetValue<bool>(), Is.True,
+                "The showcase must boot with MassFlow enabled so the 10k UAT proves the flow/avoidance execution path.");
+            Assert.That(flow["iterationsPerStep"]?.GetValue<int>(), Is.GreaterThan(0));
+
+            JsonObject semantics = config["semantics"]?.AsObject()
+                ?? throw new InvalidOperationException("MassNavigationConfig.semantics missing.");
+            JsonObject group = semantics["group"]?.AsObject()
+                ?? throw new InvalidOperationException("MassNavigationConfig.semantics.group missing.");
+            Assert.That(group["targetRefreshBudgetPerUpdate"]?.GetValue<int>(), Is.GreaterThan(0),
+                "Large selection slot projection must be an authored runtime budget, not a hidden constant.");
+            JsonObject steering = semantics["steering"]?.AsObject()
+                ?? throw new InvalidOperationException("MassNavigationConfig.semantics.steering missing.");
+            Assert.That(steering["maxSeparationNeighborsPerUnit"]?.GetValue<int>(), Is.GreaterThan(0),
+                "10k local avoidance must keep a real but bounded neighbor sample per agent.");
 
             JsonObject profiles = config["agentProfiles"]?.AsObject()
                 ?? throw new InvalidOperationException("MassNavigationConfig.agentProfiles missing.");
@@ -412,6 +488,47 @@ namespace Ludots.Tests.Presentation
                 children.Select(node => node?["definitionId"]?.GetValue<string>()).ToArray(),
                 Does.Contain(childDefinitionId),
                 $"Performer '{definitionId}' must attach '{childDefinitionId}' through performer children.");
+        }
+
+        private static void AssertDefinitionHasNoChildren(JsonObject definition, string definitionId)
+        {
+            Assert.That(definition.ContainsKey("children"), Is.False,
+                $"Performer '{definitionId}' must not attach per-agent child performers in high-scale mode.");
+        }
+
+        private static void AssertHighScaleRootPerformer(JsonObject definition, string definitionId, float expectedScale)
+        {
+            JsonArray behaviors = definition["behaviors"]?.AsArray()
+                ?? throw new InvalidOperationException($"Performer '{definitionId}' must declare behaviors.");
+            JsonObject body = behaviors
+                .Select(node => node?.AsObject())
+                .FirstOrDefault(obj => obj?["slot"]?.GetValue<string>() == "body")
+                ?? throw new InvalidOperationException($"Performer '{definitionId}' must declare semantic body slot.");
+            JsonObject assetBinding = body["assetBinding"]?.AsObject()
+                ?? throw new InvalidOperationException($"Performer '{definitionId}' body slot must be AssetBinding.");
+
+            Assert.That(assetBinding["assetKind"]?.GetValue<string>(), Is.EqualTo("Mesh"));
+            Assert.That(assetBinding["assetId"]?.GetValue<string>(), Is.EqualTo("mass_navigation.agent.lod"));
+            Assert.That(assetBinding["renderPath"]?.GetValue<string>(), Is.EqualTo("InstancedStaticMesh"));
+            Assert.That(assetBinding["mobility"]?.GetValue<string>(), Is.EqualTo("Movable"),
+                $"Performer '{definitionId}' high-scale agents must stay movable while Raylib batches them through dynamic ISM.");
+            AssertVector3(assetBinding["localScale"]?.AsArray(), expectedScale, $"Performer '{definitionId}' high-scale LOD scale");
+            Assert.That(
+                behaviors.Select(node => node?["kind"]?.GetValue<string>()).ToArray(),
+                Does.Not.Contain("Animator"),
+                $"Performer '{definitionId}' must not attach per-agent animator fanout in high-scale mode.");
+            Assert.That(
+                behaviors.Select(node => node?["kind"]?.GetValue<string>()).ToArray(),
+                Does.Not.Contain("Grounding"),
+                $"Performer '{definitionId}' must not attach per-agent visual-height grounding in high-scale mode.");
+            Assert.That(
+                behaviors.Select(node => node?["kind"]?.GetValue<string>()).ToArray(),
+                Does.Not.Contain("MinimapMarker"),
+                $"Performer '{definitionId}' must keep 10k minimap evidence in bounded diagnostics, not per-agent marker fanout.");
+            Assert.That(
+                behaviors.Select(node => node?["kind"]?.GetValue<string>()).ToArray(),
+                Does.Not.Contain("WorldHud"),
+                $"Performer '{definitionId}' must keep 10k health/status evidence in bounded diagnostics, not per-agent HUD fanout.");
         }
 
         private static void AssertHudDefinitionUsesHealthRatio(JsonObject definition, string definitionId, float expectedWidth, float expectedHeight)
@@ -635,6 +752,36 @@ namespace Ludots.Tests.Presentation
                 yield return node?.AsObject()
                     ?? throw new InvalidOperationException("MassNavigationConfig.presentation.teams entries must be objects.");
             }
+        }
+
+        private static string[] HighScalePerformerIds()
+        {
+            return new[]
+            {
+                "mass_navigation_agent_azure_high_scale_light",
+                "mass_navigation_agent_azure_high_scale_heavy",
+                "mass_navigation_agent_crimson_high_scale_light",
+                "mass_navigation_agent_crimson_high_scale_heavy",
+                "mass_navigation_agent_amber_high_scale_light",
+                "mass_navigation_agent_amber_high_scale_heavy",
+                "mass_navigation_agent_emerald_high_scale_light",
+                "mass_navigation_agent_emerald_high_scale_heavy"
+            };
+        }
+
+        private static string[] HighScaleTemplateIds()
+        {
+            return new[]
+            {
+                "mass_navigation_agent_azure_high_scale_light",
+                "mass_navigation_agent_azure_high_scale_heavy",
+                "mass_navigation_agent_crimson_high_scale_light",
+                "mass_navigation_agent_crimson_high_scale_heavy",
+                "mass_navigation_agent_amber_high_scale_light",
+                "mass_navigation_agent_amber_high_scale_heavy",
+                "mass_navigation_agent_emerald_high_scale_light",
+                "mass_navigation_agent_emerald_high_scale_heavy"
+            };
         }
 
         private static string RequireString(JsonObject obj, string propertyName)

@@ -8,8 +8,10 @@ using Ludots.Core.Gameplay.Camera;
 using Ludots.Core.Input.Selection;
 using Ludots.Core.Mathematics;
 using Ludots.Core.Presentation;
+using Ludots.Core.Presentation.Camera;
 using Ludots.Core.Presentation.Hud;
 using Ludots.Core.Presentation.Performers;
+using Ludots.Core.Scripting;
 using Ludots.Platform.Abstractions;
 
 namespace Ludots.Core.Presentation.Minimap
@@ -62,11 +64,14 @@ namespace Ludots.Core.Presentation.Minimap
         private const float MinHalfExtentCm = 750f;
         private const float MaxHalfExtentCm = 100_000_000f;
         private const int PanelInset = 18;
-        private const int PanelHeaderHeight = 44;
-        private const int PanelFooterTextHeight = 36;
+        private const int DefaultPanelHeaderHeight = 44;
+        private const int DefaultPanelFooterTextHeight = 36;
+        private const int CompactPanelHeaderHeight = 34;
+        private const int CompactPanelFooterTextHeight = 28;
         private const int ZoomSliderHeight = 28;
-        private const int MinFieldSize = 264;
-        private const int MaxFieldSize = 660;
+        private const int AbsoluteMinFieldSize = 120;
+        private const int DefaultMinFieldSize = 264;
+        private const int DefaultMaxFieldSize = 660;
         private const int PanelMargin = 24;
         private const int ZoomSliderTrackHeight = 6;
         private const int ZoomSliderThumbWidth = 10;
@@ -148,6 +153,8 @@ namespace Ludots.Core.Presentation.Minimap
         private int _panelY = 24;
         private int _panelWidth = 416;
         private int _panelHeight = 414;
+        private int _panelHeaderHeight = DefaultPanelHeaderHeight;
+        private int _panelFooterTextHeight = DefaultPanelFooterTextHeight;
         private int _fieldX = 858;
         private int _fieldY = 80;
         private int _fieldSize = 272;
@@ -217,6 +224,10 @@ namespace Ludots.Core.Presentation.Minimap
         public int FieldY => _fieldY;
 
         public int FieldSize => _fieldSize;
+
+        public int PanelWidth => _panelWidth;
+
+        public int PanelHeight => _panelHeight;
 
         public int ZoomSliderX => _zoomSliderX;
 
@@ -363,8 +374,19 @@ namespace Ludots.Core.Presentation.Minimap
                 _fieldSize,
                 new Vector4(0.01f, 0.04f, 0.06f, 1f),
                 new Vector4(0.42f, 0.65f, 0.80f, 1f));
-            overlay.AddText(_panelX + PanelInset + 6, _panelY + 13, "Minimap", 18, new Vector4(0.98f, 0.99f, 1f, 1f));
-            overlay.AddText(_panelX + _panelWidth - 118, _panelY + 14, BandLabels[(int)ZoomBand], 14, new Vector4(1f, 0.84f, 0.42f, 1f));
+            bool compactChrome = _panelHeaderHeight < DefaultPanelHeaderHeight;
+            overlay.AddText(
+                _panelX + PanelInset + (compactChrome ? 2 : 6),
+                _panelY + (compactChrome ? 9 : 13),
+                compactChrome ? "Map" : "Minimap",
+                compactChrome ? 14 : 18,
+                new Vector4(0.98f, 0.99f, 1f, 1f));
+            overlay.AddText(
+                _panelX + _panelWidth - (compactChrome ? 80 : 118),
+                _panelY + (compactChrome ? 10 : 14),
+                BandLabels[(int)ZoomBand],
+                compactChrome ? 11 : 14,
+                new Vector4(1f, 0.84f, 0.42f, 1f));
             RenderGrid(overlay);
             RenderCameraFrustum(overlay);
             RenderZoomSlider(overlay);
@@ -375,8 +397,8 @@ namespace Ludots.Core.Presentation.Minimap
                 overlay.AddText(_fieldX + 16, _fieldY + 28, _diagnostic, 14, new Vector4(1f, 0.72f, 0.48f, 1f));
             }
 
-            int footerTextY = _fieldY + _fieldSize + (_config.ZoomSliderEnabled ? ZoomSliderHeight : 0) + 21;
-            overlay.AddText(_panelX + PanelInset, footerTextY, ResolveMarkerFooterText(), 13, new Vector4(0.78f, 0.86f, 0.93f, 1f));
+            int footerTextY = _fieldY + _fieldSize + (_config.ZoomSliderEnabled ? ZoomSliderHeight : 0) + (compactChrome ? 17 : 21);
+            overlay.AddText(_panelX + PanelInset, footerTextY, ResolveMarkerFooterText(), compactChrome ? 11 : 13, new Vector4(0.78f, 0.86f, 0.93f, 1f));
         }
 
         public bool ContainsField(Vector2 screenPosition)
@@ -865,8 +887,7 @@ namespace Ludots.Core.Presentation.Minimap
             _cameraFrustumVisible = false;
             _cameraFrustumPointCount = 0;
 
-            int screenWidth = Math.Max(1, engine.MergedConfig?.WindowWidth ?? 1280);
-            int screenHeight = Math.Max(1, engine.MergedConfig?.WindowHeight ?? 720);
+            ResolveViewport(engine, out int screenWidth, out int screenHeight);
             float aspect = screenWidth / (float)screenHeight;
             Vector2 resolution = new(screenWidth, screenHeight);
             var camera = CameraViewportUtil.StateToRenderState(state);
@@ -1391,38 +1412,77 @@ namespace Ludots.Core.Presentation.Minimap
 
         private void RefreshPanelLayout(GameEngine engine)
         {
-            int screenWidth = engine.MergedConfig?.WindowWidth > 0 ? engine.MergedConfig.WindowWidth : 1280;
-            int screenHeight = engine.MergedConfig?.WindowHeight > 0 ? engine.MergedConfig.WindowHeight : 720;
-            _fieldSize = ResolveFieldSize(screenWidth, screenHeight, _config.ZoomSliderEnabled);
+            ResolveViewport(engine, out int screenWidth, out int screenHeight);
+            _fieldSize = ResolveFieldSize(
+                screenWidth,
+                screenHeight,
+                _config.ZoomSliderEnabled,
+                _config.FieldSizeViewportShortEdgeRatio,
+                _config.MinFieldSizePx,
+                _config.MaxFieldSizePx);
+            bool compactChrome = ResolveCompactChrome(_fieldSize);
+            _panelHeaderHeight = compactChrome ? CompactPanelHeaderHeight : DefaultPanelHeaderHeight;
+            _panelFooterTextHeight = compactChrome ? CompactPanelFooterTextHeight : DefaultPanelFooterTextHeight;
             _panelWidth = _fieldSize + (PanelInset * 2);
-            _panelHeight = PanelHeaderHeight + _fieldSize + PanelFooterTextHeight + (_config.ZoomSliderEnabled ? ZoomSliderHeight : 0);
+            _panelHeight = _panelHeaderHeight + _fieldSize + _panelFooterTextHeight + (_config.ZoomSliderEnabled ? ZoomSliderHeight : 0);
             _panelX = Math.Max(PanelMargin, screenWidth - _panelWidth - PanelMargin);
             _panelY = Math.Max(PanelMargin, Math.Min(PanelMargin, screenHeight - _panelHeight - PanelMargin));
             _fieldX = _panelX + PanelInset;
-            _fieldY = _panelY + PanelHeaderHeight;
+            _fieldY = _panelY + _panelHeaderHeight;
             _zoomSliderX = _fieldX;
             _zoomSliderY = _fieldY + _fieldSize + 4;
             _zoomSliderWidth = _fieldSize;
             _presetToggleX = _panelX + _panelWidth - PanelInset - ToggleButtonWidth;
             _rotateToggleX = _presetToggleX - ToggleButtonGap - ToggleButtonWidth;
-            _presetToggleY = _fieldY + _fieldSize + (_config.ZoomSliderEnabled ? ZoomSliderHeight : 0) + 8;
+            _presetToggleY = _fieldY + _fieldSize + (_config.ZoomSliderEnabled ? ZoomSliderHeight : 0) + (compactChrome ? 5 : 8);
             _rotateToggleY = _presetToggleY;
         }
 
-        private static int ResolveFieldSize(int screenWidth, int screenHeight, bool zoomSliderEnabled)
+        private bool ResolveCompactChrome(int fieldSize)
         {
-            int widthLimit = Math.Max(120, screenWidth - (PanelMargin * 2) - (PanelInset * 2));
-            int heightLimit = Math.Max(
-                120,
-                screenHeight - (PanelMargin * 2) - PanelHeaderHeight - PanelFooterTextHeight - (zoomSliderEnabled ? ZoomSliderHeight : 0));
-            int available = Math.Min(widthLimit, heightLimit);
-            int desired = Math.Min(MaxFieldSize, available);
-            if (desired >= MinFieldSize)
+            return fieldSize <= 220 &&
+                !_config.ZoomSliderEnabled &&
+                !_config.ModeToggleEnabled &&
+                !_config.RotateToggleEnabled;
+        }
+
+        private static void ResolveViewport(GameEngine engine, out int width, out int height)
+        {
+            if (engine.GetService(CoreServiceKeys.ViewController) is IViewController view)
             {
-                desired = Math.Max(MinFieldSize, desired);
+                Vector2 resolution = view.Resolution;
+                if (resolution.X > 0f && resolution.Y > 0f)
+                {
+                    width = Math.Max(1, (int)MathF.Round(resolution.X));
+                    height = Math.Max(1, (int)MathF.Round(resolution.Y));
+                    return;
+                }
             }
 
-            return Math.Max(120, desired);
+            width = Math.Max(1, engine.MergedConfig?.WindowWidth ?? 1280);
+            height = Math.Max(1, engine.MergedConfig?.WindowHeight ?? 720);
+        }
+
+        private static int ResolveFieldSize(
+            int screenWidth,
+            int screenHeight,
+            bool zoomSliderEnabled,
+            float viewportShortEdgeRatio,
+            int configuredMinFieldSize,
+            int configuredMaxFieldSize)
+        {
+            int minFieldSize = Math.Clamp(configuredMinFieldSize, AbsoluteMinFieldSize, DefaultMaxFieldSize);
+            int maxFieldSize = Math.Clamp(configuredMaxFieldSize, minFieldSize, DefaultMaxFieldSize);
+            int widthLimit = Math.Max(AbsoluteMinFieldSize, screenWidth - (PanelMargin * 2) - (PanelInset * 2));
+            int heightLimit = Math.Max(
+                AbsoluteMinFieldSize,
+                screenHeight - (PanelMargin * 2) - DefaultPanelHeaderHeight - DefaultPanelFooterTextHeight - (zoomSliderEnabled ? ZoomSliderHeight : 0));
+            int available = Math.Min(widthLimit, heightLimit);
+            int ratioFieldSize = (int)MathF.Round(MathF.Min(screenWidth, screenHeight) * viewportShortEdgeRatio);
+            int desired = Math.Clamp(ratioFieldSize, minFieldSize, maxFieldSize);
+            desired = Math.Min(desired, available);
+
+            return Math.Max(AbsoluteMinFieldSize, desired);
         }
 
         private static MinimapZoomBand ResolveZoomBand(float halfExtentCm, in WorldAabbCm bounds)

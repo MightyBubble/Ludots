@@ -9,6 +9,7 @@ using Ludots.Core.Presentation.Components;
 using Ludots.Core.Registry;
 using Ludots.Core.Scripting;
 using Ludots.Core.Spatial;
+using Ludots.Core.Systems;
 using Ludots.Platform.Abstractions;
 
 namespace Ludots.Core.Input.Selection
@@ -27,6 +28,13 @@ namespace Ludots.Core.Input.Selection
         private Entity[] _boxSelectionScratch = new Entity[16];
         private Entity[] _selectionScratch = new Entity[16];
         private bool _suppressConfirmRelease;
+        private Entity _cachedHoveredEntity;
+        private Vector2 _cachedHoverPointer;
+        private float _cachedHoverRadiusPixels = float.NaN;
+        private int _cachedHoverVisibilityRevision = -1;
+        private int _hoverCacheFrame;
+        private int _frameIndex;
+        private bool _hasCachedHover;
 
         public Action<WorldCmInt2, Entity>? OnEntitySelected { get; set; }
 
@@ -48,19 +56,46 @@ namespace Ludots.Core.Input.Selection
 
         public void Update(in float dt)
         {
+            _frameIndex++;
             if (!PointerInteractionSnapshotReader.TryRead(_globals, out PointerInteractionSnapshot pointer))
             {
                 return;
             }
 
             bool selectionSuppressed = IsSelectionSuppressed();
+            if (IsPointerCapturedForWorldSelection())
+            {
+                if (pointer.Confirm.PressedThisFrame)
+                {
+                    _suppressConfirmRelease = true;
+                }
+
+                ClearHoverCache();
+                UpdateHoveredEntity(Entity.Null);
+                if (TryGetSelectionOwner(out var capturedOwner) &&
+                    _world.Has<SelectionDragState>(capturedOwner))
+                {
+                    ref var capturedDrag = ref _world.Get<SelectionDragState>(capturedOwner);
+                    if (capturedDrag.Active)
+                    {
+                        capturedDrag.Clear();
+                    }
+                }
+
+                if (_suppressConfirmRelease && pointer.Confirm.ReleasedThisFrame)
+                {
+                    _suppressConfirmRelease = false;
+                }
+
+                return;
+            }
 
             if (selectionSuppressed && pointer.Confirm.PressedThisFrame)
             {
                 _suppressConfirmRelease = true;
             }
 
-            Entity hovered = FindNearestEntity(pointer.Pointer, _selection.Config.ClickPickRadiusPixels);
+            Entity hovered = ResolveHoveredEntity(pointer);
             UpdateHoveredEntity(hovered);
 
             bool hasOwner = TryGetSelectionOwner(out var owner);
@@ -127,6 +162,21 @@ namespace Ludots.Core.Input.Selection
             }
         }
 
+        private bool IsPointerCapturedForWorldSelection()
+        {
+            bool uiCaptured = _globals.TryGetValue(CoreServiceKeys.UiCaptured.Name, out var uiCapturedObj) &&
+                uiCapturedObj is bool uiCapturedValue &&
+                uiCapturedValue;
+            if (uiCaptured)
+            {
+                return true;
+            }
+
+            return _globals.TryGetValue(CoreServiceKeys.PointerInputCaptured.Name, out var pointerCapturedObj) &&
+                pointerCapturedObj is bool pointerCaptured &&
+                pointerCaptured;
+        }
+
         private bool TryGetSelectionOwner(out Entity owner)
         {
             owner = default;
@@ -181,6 +231,66 @@ namespace Ludots.Core.Input.Selection
             {
                 _globals.Remove(CoreServiceKeys.HoveredEntity.Name);
             }
+        }
+
+        private Entity ResolveHoveredEntity(in PointerInteractionSnapshot pointer)
+        {
+            bool forceRefresh = pointer.Confirm.PressedThisFrame ||
+                pointer.Confirm.ReleasedThisFrame ||
+                pointer.Confirm.IsDown;
+            float radiusPixels = _selection.Config.ClickPickRadiusPixels;
+            int visibilityRevision = ResolveVisibilityRevision();
+            bool canReuseCachedHover = _hasCachedHover &&
+                _cachedHoverRadiusPixels == radiusPixels &&
+                _cachedHoverPointer == pointer.Pointer &&
+                IsCachedHoverStillEligible(_cachedHoveredEntity);
+            if (!forceRefresh &&
+                canReuseCachedHover &&
+                (ShouldDeferPassiveHoverRefresh() || _cachedHoverVisibilityRevision == visibilityRevision))
+            {
+                return _cachedHoveredEntity;
+            }
+
+            Entity hovered = FindNearestEntity(pointer.Pointer, radiusPixels);
+            _cachedHoveredEntity = hovered;
+            _cachedHoverPointer = pointer.Pointer;
+            _cachedHoverRadiusPixels = radiusPixels;
+            _cachedHoverVisibilityRevision = visibilityRevision;
+            _hoverCacheFrame = _frameIndex;
+            _hasCachedHover = true;
+            return hovered;
+        }
+
+        private void ClearHoverCache()
+        {
+            _cachedHoveredEntity = Entity.Null;
+            _cachedHoverPointer = default;
+            _cachedHoverRadiusPixels = float.NaN;
+            _cachedHoverVisibilityRevision = -1;
+            _hoverCacheFrame = 0;
+            _hasCachedHover = false;
+        }
+
+        private bool ShouldDeferPassiveHoverRefresh()
+        {
+            int interval = Math.Max(1, _selection.Config.PassiveHoverRefreshIntervalFrames);
+            return _frameIndex - _hoverCacheFrame < interval;
+        }
+
+        private bool IsCachedHoverStillEligible(Entity entity)
+        {
+            return entity == Entity.Null ||
+                (_world.Has<CullState>(entity) &&
+                 _world.Get<CullState>(entity).IsVisible &&
+                 SelectionEligibility.IsSelectableNow(_world, entity));
+        }
+
+        private int ResolveVisibilityRevision()
+        {
+            return _globals.TryGetValue(CoreServiceKeys.CameraCullingDebugState.Name, out object? debugObj) &&
+                debugObj is CameraCullingDebugState debug
+                    ? debug.VisibilityRevision
+                    : -1;
         }
 
         private void ApplyClickSelection(Entity owner, Entity clicked, SelectionAcquisitionMode acquisitionMode)

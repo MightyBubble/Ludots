@@ -35,6 +35,8 @@ public sealed class MassFlowSimulationState
 
     private readonly float[] _staticCost = new float[GridWidth * GridHeight];
     private readonly float[] _cost = new float[GridWidth * GridHeight];
+    private readonly float[] _staticAvoidX = new float[GridWidth * GridHeight];
+    private readonly float[] _staticAvoidY = new float[GridWidth * GridHeight];
     private readonly float[] _obsX = new float[MaxObstacleCount];
     private readonly float[] _obsY = new float[MaxObstacleCount];
     private readonly float[] _obsWorldX = new float[MaxObstacleCount];
@@ -98,6 +100,7 @@ public sealed class MassFlowSimulationState
     public int ObstacleCount { get; private set; }
     public int SettledUnitCount { get; private set; }
     public int PendingEntitySyncCount => _entitySyncDirtyCount;
+    public int SolverStaticObstacleCapacity => MaxObstacleCount;
     public float LastFlowFieldRebuildMs { get; private set; }
     public MassFlowArrivalTuning ArrivalTuning { get; } = new();
     public MassFlowAvoidanceTuning AvoidanceTuning { get; } = new();
@@ -143,6 +146,93 @@ public sealed class MassFlowSimulationState
 
         int offset = index << 1;
         return new Vector2(_velocitiesCm[offset], _velocitiesCm[offset + 1]);
+    }
+
+    public bool HasUnitTarget(int index)
+    {
+        return (uint)index < (uint)UnitCount && _hasUnitTarget[index] != 0;
+    }
+
+    public bool TryGetUnitTargetWorldCm(int index, out Vector2 targetWorldCm)
+    {
+        targetWorldCm = default;
+        if ((uint)index >= (uint)UnitCount || _hasUnitTarget[index] == 0)
+        {
+            return false;
+        }
+
+        int offset = index << 1;
+        targetWorldCm = LocalToWorldCm(new Vector2(_unitTargetsCm[offset], _unitTargetsCm[offset + 1]));
+        return true;
+    }
+
+    public int CountUnitsWithTargets()
+    {
+        int count = 0;
+        for (int i = 0; i < UnitCount; i++)
+        {
+            if (_hasUnitTarget[i] != 0)
+            {
+                count++;
+            }
+        }
+
+        return count;
+    }
+
+    public int CountMovingUnits(float minSpeedSquared)
+    {
+        int count = 0;
+        float threshold = MathF.Max(0f, minSpeedSquared);
+        for (int i = 0; i < UnitCount; i++)
+        {
+            int offset = i << 1;
+            float vx = _velocitiesCm[offset];
+            float vy = _velocitiesCm[offset + 1];
+            if ((vx * vx) + (vy * vy) >= threshold)
+            {
+                count++;
+            }
+        }
+
+        return count;
+    }
+
+    public int CountStuckUnits()
+    {
+        if (!ArrivalTuning.Enabled || UnitCount <= 0)
+        {
+            return 0;
+        }
+
+        int count = 0;
+        float timeout = ArrivalTuning.TimeoutSeconds;
+        for (int i = 0; i < UnitCount; i++)
+        {
+            if (_hasUnitTarget[i] != 0 &&
+                _unitSettledFlags[i] == 0 &&
+                _unitStuckSeconds[i] >= timeout)
+            {
+                count++;
+            }
+        }
+
+        return count;
+    }
+
+    public int CountTargetedIdleUnits(float minSpeedSquared)
+    {
+        int commanded = CountUnitsWithTargets();
+        int moving = CountMovingUnits(minSpeedSquared);
+        int stuck = CountStuckUnits();
+        int waiting = commanded - moving - SettledUnitCount - stuck;
+        return Math.Max(0, waiting);
+    }
+
+    public int CountActiveFlowUnits(float minSpeedSquared)
+    {
+        int moving = CountMovingUnits(minSpeedSquared);
+        return Math.Min(UnitCount, moving + SettledUnitCount + CountStuckUnits() + CountTargetedIdleUnits(minSpeedSquared));
     }
 
     public void SetWorldOrigin(float originXCm, float originYCm)
@@ -444,6 +534,7 @@ public sealed class MassFlowSimulationState
         float sepRadiusCm = Semantics.Steering.SeparationRadiusCm;
         float sepRadiusSq = sepRadiusCm * sepRadiusCm;
         float invSepRadius = 1f / sepRadiusCm;
+        int maxSeparationNeighbors = Math.Max(0, Semantics.Steering.MaxSeparationNeighborsPerUnit);
         float arrivalRadiusCm = Semantics.Steering.GoalArrivalRadiusCm;
         float arrivalRadiusSq = arrivalRadiusCm * arrivalRadiusCm;
         float unitTargetStopThresholdCm = Semantics.Group.UnitTargetStopThresholdCm;
@@ -459,7 +550,7 @@ public sealed class MassFlowSimulationState
         if (World.SharedJobScheduler == null || UnitCount < 2048)
         {
             long steeringStart = System.Diagnostics.Stopwatch.GetTimestamp();
-            StepRange(0, UnitCount, clampedDt, navGroupRuntime, speed, sepRadiusSq, invSepRadius, arrivalRadiusCm, arrivalRadiusSq, unitTargetStopThresholdSq, hwm1, hhm1, invHashCell, SeparationHashSearchRadius, _useCandidateGating);
+            StepRange(0, UnitCount, clampedDt, navGroupRuntime, speed, sepRadiusSq, invSepRadius, maxSeparationNeighbors, arrivalRadiusCm, arrivalRadiusSq, unitTargetStopThresholdSq, hwm1, hhm1, invHashCell, SeparationHashSearchRadius, _useCandidateGating);
             observeLocalSteering?.Invoke((System.Diagnostics.Stopwatch.GetTimestamp() - steeringStart) * 1000.0 / System.Diagnostics.Stopwatch.Frequency);
             ClampAllPositionsToWorldBounds();
             long resolveStart = System.Diagnostics.Stopwatch.GetTimestamp();
@@ -492,6 +583,7 @@ public sealed class MassFlowSimulationState
             job.Speed = speed;
             job.SepRadiusSq = sepRadiusSq;
             job.InvSepRadius = invSepRadius;
+            job.MaxSeparationNeighbors = maxSeparationNeighbors;
             job.ArrivalRadiusCm = arrivalRadiusCm;
             job.ArrivalRadiusSq = arrivalRadiusSq;
             job.UnitTargetStopThresholdSq = unitTargetStopThresholdSq;
@@ -878,6 +970,8 @@ public sealed class MassFlowSimulationState
                 _staticCost[(y * GridWidth) + x] = IsObstacle(wx, wy) ? 99_999f : 1f;
             }
         }
+
+        RebuildStaticAvoidanceField();
     }
 
     private void RebuildDynamicCost(int crowdStampBudgetUnits)
@@ -928,6 +1022,68 @@ public sealed class MassFlowSimulationState
 
                 float penalty = (ox == 0 && oy == 0) ? 8f : 3f;
                 _cost[idx] += penalty;
+            }
+        }
+    }
+
+    private void RebuildStaticAvoidanceField()
+    {
+        Array.Clear(_staticAvoidX, 0, _staticAvoidX.Length);
+        Array.Clear(_staticAvoidY, 0, _staticAvoidY.Length);
+
+        for (int y = 0; y < GridHeight; y++)
+        {
+            int rowOffset = y * GridWidth;
+            for (int x = 0; x < GridWidth; x++)
+            {
+                int idx = rowOffset + x;
+                if (_staticCost[idx] > 9_999f)
+                {
+                    continue;
+                }
+
+                float avoidX = 0f;
+                float avoidY = 0f;
+                for (int offsetY = -4; offsetY <= 4; offsetY++)
+                {
+                    int ny = y + offsetY;
+                    if ((uint)ny >= (uint)GridHeight)
+                    {
+                        continue;
+                    }
+
+                    int neighborRow = ny * GridWidth;
+                    for (int offsetX = -4; offsetX <= 4; offsetX++)
+                    {
+                        if (offsetX == 0 && offsetY == 0)
+                        {
+                            continue;
+                        }
+
+                        int nx = x + offsetX;
+                        if ((uint)nx >= (uint)GridWidth || _staticCost[neighborRow + nx] <= 9_999f)
+                        {
+                            continue;
+                        }
+
+                        float ovx = -offsetX;
+                        float ovy = -offsetY;
+                        float obstacleDistSq = (ovx * ovx) + (ovy * ovy);
+                        if (obstacleDistSq <= 0.01f)
+                        {
+                            continue;
+                        }
+
+                        float invObstacleDist = FastInvSqrt(obstacleDistSq);
+                        float obstacleDist = obstacleDistSq * invObstacleDist;
+                        float weight = 5f / (obstacleDist * obstacleDist);
+                        avoidX += (ovx * invObstacleDist) * weight;
+                        avoidY += (ovy * invObstacleDist) * weight;
+                    }
+                }
+
+                _staticAvoidX[idx] = avoidX;
+                _staticAvoidY[idx] = avoidY;
             }
         }
     }
@@ -1026,39 +1182,8 @@ public sealed class MassFlowSimulationState
                 dx *= invDist;
                 dy *= invDist;
 
-                float avoidX = 0f;
-                float avoidY = 0f;
-                for (int offsetY = -4; offsetY <= 4; offsetY++)
-                {
-                    for (int offsetX = -4; offsetX <= 4; offsetX++)
-                    {
-                        if (offsetX == 0 && offsetY == 0)
-                        {
-                            continue;
-                        }
-
-                        int nx = x + offsetX;
-                        int ny = y + offsetY;
-                        if ((uint)nx >= (uint)GridWidth || (uint)ny >= (uint)GridHeight)
-                        {
-                            continue;
-                        }
-
-                        if (_cost[(ny * GridWidth) + nx] > 9_999f)
-                        {
-                            float ovx = -offsetX;
-                            float ovy = -offsetY;
-                            float obstacleDistSq = (ovx * ovx) + (ovy * ovy);
-                            if (obstacleDistSq > 0.01f)
-                            {
-                                float invObstacleDist = FastInvSqrt(obstacleDistSq);
-                                float obstacleDist = obstacleDistSq * invObstacleDist;
-                                avoidX += (ovx * invObstacleDist) * (5f / (obstacleDist * obstacleDist));
-                                avoidY += (ovy * invObstacleDist) * (5f / (obstacleDist * obstacleDist));
-                            }
-                        }
-                    }
-                }
+                float avoidX = _staticAvoidX[idx];
+                float avoidY = _staticAvoidY[idx];
 
                 float flowX = dx + (avoidX * 1.5f);
                 float flowY = dy + (avoidY * 1.5f);
@@ -1192,6 +1317,7 @@ public sealed class MassFlowSimulationState
         float speed,
         float sepRadiusSq,
         float invSepRadius,
+        int maxSeparationNeighbors,
         float arrivalRadiusCm,
         float arrivalRadiusSq,
         float unitTargetStopThresholdSq,
@@ -1403,6 +1529,7 @@ public sealed class MassFlowSimulationState
 
             float separationX = 0f;
             float separationY = 0f;
+            int separationNeighborCount = 0;
             int cellX = (int)(px * invHashCell);
             int cellY = (int)(py * invHashCell);
             cellX = cellX < 0 ? 0 : (cellX > hashWidthMinusOne ? hashWidthMinusOne : cellX);
@@ -1443,11 +1570,18 @@ public sealed class MassFlowSimulationState
                                 float response = ComputeSeparationResponse(teamStateIndex, _teamRuntimeIndices[j], i, j);
                                 separationX += dx * invD * force * response;
                                 separationY += dy * invD * force * response;
+                                separationNeighborCount++;
+                                if (maxSeparationNeighbors > 0 && separationNeighborCount >= maxSeparationNeighbors)
+                                {
+                                    goto SeparationBudgetSatisfied;
+                                }
                             }
                         }
                     }
                 }
             }
+
+SeparationBudgetSatisfied:
 
             float obstaclePushX = 0f;
             float obstaclePushY = 0f;
@@ -2038,6 +2172,7 @@ public sealed class MassFlowSimulationState
         public float Speed { get; set; }
         public float SepRadiusSq { get; set; }
         public float InvSepRadius { get; set; }
+        public int MaxSeparationNeighbors { get; set; }
         public float ArrivalRadiusCm { get; set; }
         public float ArrivalRadiusSq { get; set; }
         public float UnitTargetStopThresholdSq { get; set; }
@@ -2057,6 +2192,7 @@ public sealed class MassFlowSimulationState
                 Speed,
                 SepRadiusSq,
                 InvSepRadius,
+                MaxSeparationNeighbors,
                 ArrivalRadiusCm,
                 ArrivalRadiusSq,
                 UnitTargetStopThresholdSq,

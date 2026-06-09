@@ -1,0 +1,14 @@
+{
+  "scenario": {
+    "agentsPerTeam": 64
+  },
+  "showcase": {
+    "id": "mass_navigation_u10_waypoint_authoring",
+    "title": "U10 Waypoint vs Pathpoint Authoring Showcase",
+    "panelMode": "Focused",
+    "initialStepId": "WaypointAuthoring",
+    "visibleStepIds": [ "WaypointAuthoring" ],
+    "playerPerspective": "Use Waypoint Edit. Editable waypoint handles should move as authored order intent while regenerated pathpoints remain query-owned immutable output.",
+    "modAuthorPerspective": "Use waypoints for authored order intent and trade-route editing; pathpoints are immutable low-level route samples that can be discarded."
+  }
+}

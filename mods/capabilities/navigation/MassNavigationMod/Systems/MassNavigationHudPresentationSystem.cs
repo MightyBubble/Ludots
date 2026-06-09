@@ -70,17 +70,17 @@ internal sealed class MassNavigationHudPresentationSystem : ISystem<float>
             return timing.WallFrameMs;
         }
 
-        if (timing.FrameMs > 0.001f)
-        {
-            return timing.FrameMs;
-        }
-
         if (timing.LastWallFrameMs > 0.001f)
         {
             return timing.LastWallFrameMs;
         }
 
-        return timing.LastFrameMs;
+        if (timing.LastFrameMs > 0.001f)
+        {
+            return timing.LastFrameMs;
+        }
+
+        return timing.FrameMs;
     }
 
     private static CachedHudLine[] CreateHudLineCache()

@@ -130,6 +130,9 @@ namespace Ludots.Core.Presentation
         public bool ModeToggleEnabled { get; set; } = true;
         public bool RotateToggleEnabled { get; set; } = true;
         public int DebugMarkerSampleCapacity { get; set; } = 64;
+        public float FieldSizeViewportShortEdgeRatio { get; set; } = 0.24f;
+        public int MinFieldSizePx { get; set; } = 264;
+        public int MaxFieldSizePx { get; set; } = 660;
         public MinimapZoomExtentMode MinZoomExtentMode { get; set; } = MinimapZoomExtentMode.OneChunk;
         public MinimapZoomExtentMode MaxZoomExtentMode { get; set; } = MinimapZoomExtentMode.FullMap;
         public float MinZoomExplicitHalfExtentCm { get; set; } = 750f;
@@ -161,6 +164,26 @@ namespace Ludots.Core.Presentation
             {
                 throw new InvalidOperationException(
                     "presentation.minimap.debugMarkerSampleCapacity must be >= 0.");
+            }
+
+            if (!float.IsFinite(FieldSizeViewportShortEdgeRatio) ||
+                FieldSizeViewportShortEdgeRatio <= 0f ||
+                FieldSizeViewportShortEdgeRatio > 0.5f)
+            {
+                throw new InvalidOperationException(
+                    "presentation.minimap.fieldSizeViewportShortEdgeRatio must be finite and in (0, 0.5].");
+            }
+
+            if (MinFieldSizePx < 120 || MinFieldSizePx > 660)
+            {
+                throw new InvalidOperationException(
+                    "presentation.minimap.minFieldSizePx must be in [120, 660].");
+            }
+
+            if (MaxFieldSizePx < MinFieldSizePx || MaxFieldSizePx > 660)
+            {
+                throw new InvalidOperationException(
+                    "presentation.minimap.maxFieldSizePx must be >= minFieldSizePx and <= 660.");
             }
 
             if (MinZoomExtentMode == MinimapZoomExtentMode.ExplicitCm &&

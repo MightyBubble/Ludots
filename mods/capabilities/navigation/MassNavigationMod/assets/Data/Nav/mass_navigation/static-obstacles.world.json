@@ -1,0 +1,15 @@
+{
+  "schemaVersion": "mass-navigation.static-obstacle-world.v1",
+  "mapId": "mass_navigation",
+  "macroChunkColumns": 256,
+  "macroChunkRows": 256,
+  "targetStaticObstacleCount": 40000,
+  "deterministicSeed": 40000256,
+  "distributionStrategy": "deterministic_macro_chunk_hash_permutation",
+  "obstaclesPerCoveredChunk": 1,
+  "radiusCm": 380,
+  "runtimeActivation": {
+    "strategy": "active_window_subset_to_mass_flow_solver",
+    "maxSolverObstacles": 64
+  }
+}

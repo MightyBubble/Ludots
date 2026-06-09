@@ -837,6 +837,40 @@ namespace Ludots.Tests.GAS
         }
 
         [Test]
+        public void CurrentSelectionApplySystem_UiCaptured_DoesNotHitTestOrMutateSelection()
+        {
+            using var world = World.Create();
+
+            var input = new PlayerInputHandler(new NullInputBackend(), CreateInputConfig());
+            var local = world.Create();
+            var first = world.Create(WorldPositionCm.FromCm(1600, 1200), new VisualTransform { Position = new Vector3(16f, 0f, 12f) }, new CullState { IsVisible = true }, new SelectionSelectableTag());
+            var second = world.Create(WorldPositionCm.FromCm(2600, 1600), new VisualTransform { Position = new Vector3(26f, 0f, 16f) }, new CullState { IsVisible = true }, new SelectionSelectableTag());
+
+            var globals = new Dictionary<string, object>
+            {
+                [CoreServiceKeys.AuthoritativeInput.Name] = input,
+                [CoreServiceKeys.AuthoritativePointerButtons.Name] = new AuthoritativePointerButtonSnapshot(),
+                [CoreServiceKeys.ScreenRayProvider.Name] = new WorldMappedScreenRayProvider(),
+                [CoreServiceKeys.VisualHeightmap.Name] = CreateFlatHeightmap(),
+                [CoreServiceKeys.ScreenProjector.Name] = new WorldMappedScreenProjector(),
+                [CoreServiceKeys.WorldSizeSpec.Name] = CreateWorldSizeSpec(),
+                [CoreServiceKeys.LocalPlayerEntity.Name] = local,
+                [CoreServiceKeys.InteractionActionBindings.Name] = new InteractionActionBindings(),
+                [CoreServiceKeys.UiCaptured.Name] = true,
+            };
+            var selectionRuntime = CreateSelectionRuntime(world, globals);
+            SeedLivePrimarySelection(world, globals, local, second);
+
+            var system = new CurrentSelectionApplySystem(world, globals);
+            Click(system, globals, input, new Vector2(1600f, 1200f));
+
+            AssertSelection(selectionRuntime, local, second);
+            That(globals.ContainsKey(CoreServiceKeys.HoveredEntity.Name), Is.False);
+            That(selectionRuntime.TryGetPrimary(local, SelectionSetKeys.LivePrimary, out var primary), Is.True);
+            That(primary, Is.EqualTo(second));
+        }
+
+        [Test]
         public void CurrentSelectionApplySystem_RuntimeDisabledEntity_IsNotSelectable()
         {
             using var world = World.Create();

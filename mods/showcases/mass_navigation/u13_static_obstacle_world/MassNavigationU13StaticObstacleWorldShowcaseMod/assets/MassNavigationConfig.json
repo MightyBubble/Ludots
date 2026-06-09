@@ -1,0 +1,14 @@
+{
+  "scenario": {
+    "agentsPerTeam": 64
+  },
+  "showcase": {
+    "id": "mass_navigation_u13_static_obstacle_world",
+    "title": "U13 40k Static Obstacle World Showcase",
+    "panelMode": "Focused",
+    "initialStepId": "StaticObstacleWorld",
+    "visibleStepIds": [ "StaticObstacleWorld" ],
+    "playerPerspective": "Use 40k Obstacles. The map data view must separate planned, authored, baked, loaded, and active solver obstacle counts.",
+    "modAuthorPerspective": "Author 40k world obstacles as data, then activate only the active-window subset in the solver; inspect capacity and activation strategy."
+  }
+}

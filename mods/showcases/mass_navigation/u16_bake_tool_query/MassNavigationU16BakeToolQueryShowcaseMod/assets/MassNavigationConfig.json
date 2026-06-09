@@ -1,0 +1,14 @@
+{
+  "scenario": {
+    "agentsPerTeam": 64
+  },
+  "showcase": {
+    "id": "mass_navigation_u16_bake_tool_query",
+    "title": "U16 Runtime Bake Query Update Showcase",
+    "panelMode": "Focused",
+    "initialStepId": "BakeToolQuery",
+    "visibleStepIds": [ "BakeToolQuery" ],
+    "playerPerspective": "Use the runtime NavData update showcase: pick a route, draw a polygon obstacle on the world or minimap, Update NavData, and read the refreshed NavMesh/HPA/layer overlays.",
+    "modAuthorPerspective": "Use this as the Unity/Unreal-style in-game runtime bake acceptance entry: authored polygon, dirty chunks, reload revision, refreshed path query, and the remaining polygon-to-Recast incremental bake gap must all be visible."
+  }
+}

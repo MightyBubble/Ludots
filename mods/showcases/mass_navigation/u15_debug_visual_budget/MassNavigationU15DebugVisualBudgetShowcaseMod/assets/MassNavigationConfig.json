@@ -1,0 +1,14 @@
+{
+  "scenario": {
+    "agentsPerTeam": 64
+  },
+  "showcase": {
+    "id": "mass_navigation_u15_debug_visual_budget",
+    "title": "U15 Low-Cost Debug Visuals Showcase",
+    "panelMode": "Focused",
+    "initialStepId": "DebugVisualBudget",
+    "visibleStepIds": [ "DebugVisualBudget" ],
+    "playerPerspective": "Use Debug Budget and layer toggles. The visual diagnostics should remain sampled, readable, and within the measured budget.",
+    "modAuthorPerspective": "Debug presentation must explain data without becoming the workload; verify overlay caps, visible sample counts, and frame budget."
+  }
+}
