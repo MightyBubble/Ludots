@@ -112,10 +112,11 @@ namespace Ludots.Core.Input.Selection
                 }
                 else
                 {
-                    ApplyClickSelection(owner, hovered, acquisitionMode);
+                    Entity acquired = ResolveClickAcquisition(owner, hovered);
+                    ApplyClickSelection(owner, acquired, acquisitionMode);
                     if (pointer.HasGroundPoint)
                     {
-                        OnEntitySelected?.Invoke(pointer.GroundWorldCm, hovered);
+                        OnEntitySelected?.Invoke(pointer.GroundWorldCm, acquired);
                     }
                 }
 
@@ -217,12 +218,13 @@ namespace Ludots.Core.Input.Selection
             }
 
             ScreenRect marquee = ScreenRect.FromPoints(drag.StartScreen, drag.CurrentScreen);
+            var targetRelationFilter = _selection.TargetRelationFilter;
 
             int nextCount = 0;
             _world.Query(in SelectableQuery, (Entity entity, ref VisualTransform transform, ref CullState cull, ref SelectionSelectableTag selectable) =>
             {
                 if (!cull.IsVisible ||
-                    !SelectionEligibility.IsSelectableNow(_world, entity))
+                    !SelectionEligibility.CanAcquire(_world, owner, entity, targetRelationFilter))
                 {
                     return;
                 }
@@ -295,6 +297,13 @@ namespace Ludots.Core.Input.Selection
             });
 
             return best;
+        }
+
+        private Entity ResolveClickAcquisition(Entity owner, Entity hovered)
+        {
+            return _world.IsAlive(hovered) && SelectionEligibility.CanAcquire(_world, owner, hovered, _selection.TargetRelationFilter)
+                ? hovered
+                : Entity.Null;
         }
 
         private void ApplyAcquisition(Entity owner, ReadOnlySpan<Entity> hits, SelectionAcquisitionMode mode)

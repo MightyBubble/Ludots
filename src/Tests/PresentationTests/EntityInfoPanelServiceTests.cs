@@ -260,7 +260,13 @@ public sealed class EntityInfoPanelServiceTests
         Entity third = world.Create(new Name { Value = "Vanguard 01" });
 
         var selectionRegistry = new StringIntRegistry(capacity: 8, startId: 1, invalidId: 0, comparer: System.StringComparer.Ordinal);
-        var selection = new SelectionRuntime(world, new SelectionRuntimeConfig(), selectionRegistry);
+        var selection = new SelectionRuntime(
+            world,
+            new SelectionRuntimeConfig
+            {
+                TargetFilter = new SelectionTargetFilterConfig { RelationFilter = "All" },
+            },
+            selectionRegistry);
         Assert.That(selection.ReplaceSelection(viewer, SelectionSetKeys.LivePrimary, new[] { first, second, third }), Is.True);
         Assert.That(selection.TryBindView(viewer, SelectionViewKeys.Primary, viewer, SelectionSetKeys.LivePrimary), Is.True);
 

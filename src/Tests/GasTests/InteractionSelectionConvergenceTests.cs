@@ -871,6 +871,112 @@ namespace Ludots.Tests.GAS
         }
 
         [Test]
+        public void CurrentSelectionApplySystem_TargetRelationFilter_GatesClickAcquireButKeepsHover()
+        {
+            using var world = World.Create();
+            TeamManager.Clear();
+
+            try
+            {
+                var input = new PlayerInputHandler(new NullInputBackend(), CreateInputConfig());
+                var local = world.Create(new Team { Id = 1 });
+                var formation = world.Create(
+                    WorldPositionCm.FromCm(1600, 1200),
+                    new VisualTransform { Position = new Vector3(16f, 0f, 12f), Rotation = Quaternion.Identity, Scale = Vector3.One },
+                    new CullState { IsVisible = true },
+                    new SelectionSelectableTag(),
+                    new Team { Id = 2 });
+
+                var globals = new Dictionary<string, object>
+                {
+                    [CoreServiceKeys.AuthoritativeInput.Name] = input,
+                    [CoreServiceKeys.AuthoritativePointerButtons.Name] = new AuthoritativePointerButtonSnapshot(),
+                    [CoreServiceKeys.ScreenRayProvider.Name] = new WorldMappedScreenRayProvider(),
+                    [CoreServiceKeys.VisualHeightmap.Name] = CreateFlatHeightmap(),
+                    [CoreServiceKeys.ScreenProjector.Name] = new WorldMappedScreenProjector(),
+                    [CoreServiceKeys.WorldSizeSpec.Name] = CreateWorldSizeSpec(),
+                    [CoreServiceKeys.LocalPlayerEntity.Name] = local,
+                    [CoreServiceKeys.InteractionActionBindings.Name] = new InteractionActionBindings(),
+                };
+                var selectionRuntime = CreateSelectionRuntime(world, globals, "Friendly");
+                var system = new CurrentSelectionApplySystem(world, globals);
+
+                Click(system, globals, input, new Vector2(1600f, 1200f));
+
+                That(selectionRuntime.GetSelectionCount(local, SelectionSetKeys.LivePrimary), Is.EqualTo(0));
+                That(globals.TryGetValue(CoreServiceKeys.HoveredEntity.Name, out object? hovered), Is.True);
+                That(hovered, Is.EqualTo(formation));
+
+                world.Set(formation, new Team { Id = 1 });
+                Click(system, globals, input, new Vector2(1600f, 1200f));
+
+                AssertSelection(selectionRuntime, local, formation);
+            }
+            finally
+            {
+                TeamManager.Clear();
+            }
+        }
+
+        [Test]
+        public void CurrentSelectionApplySystem_TargetRelationFilter_FiltersBoxSelection()
+        {
+            using var world = World.Create();
+            TeamManager.Clear();
+
+            try
+            {
+                var input = new PlayerInputHandler(new NullInputBackend(), CreateInputConfig());
+                var local = world.Create(new Team { Id = 1 });
+                var first = world.Create(
+                    WorldPositionCm.FromCm(1600, 1200),
+                    new VisualTransform { Position = new Vector3(16f, 0f, 12f), Rotation = Quaternion.Identity, Scale = Vector3.One },
+                    new CullState { IsVisible = true },
+                    new SelectionSelectableTag(),
+                    new Team { Id = 1 });
+                _ = world.Create(
+                    WorldPositionCm.FromCm(2600, 1600),
+                    new VisualTransform { Position = new Vector3(26f, 0f, 16f), Rotation = Quaternion.Identity, Scale = Vector3.One },
+                    new CullState { IsVisible = true },
+                    new SelectionSelectableTag(),
+                    new Team { Id = 2 });
+                _ = world.Create(
+                    WorldPositionCm.FromCm(3000, 1900),
+                    new VisualTransform { Position = new Vector3(30f, 0f, 19f), Rotation = Quaternion.Identity, Scale = Vector3.One },
+                    new CullState { IsVisible = true },
+                    new SelectionSelectableTag());
+                var third = world.Create(
+                    WorldPositionCm.FromCm(3400, 2200),
+                    new VisualTransform { Position = new Vector3(34f, 0f, 22f), Rotation = Quaternion.Identity, Scale = Vector3.One },
+                    new CullState { IsVisible = true },
+                    new SelectionSelectableTag(),
+                    new Team { Id = 1 });
+
+                var globals = new Dictionary<string, object>
+                {
+                    [CoreServiceKeys.AuthoritativeInput.Name] = input,
+                    [CoreServiceKeys.AuthoritativePointerButtons.Name] = new AuthoritativePointerButtonSnapshot(),
+                    [CoreServiceKeys.ScreenRayProvider.Name] = new WorldMappedScreenRayProvider(),
+                    [CoreServiceKeys.VisualHeightmap.Name] = CreateFlatHeightmap(),
+                    [CoreServiceKeys.ScreenProjector.Name] = new WorldMappedScreenProjector(),
+                    [CoreServiceKeys.WorldSizeSpec.Name] = CreateWorldSizeSpec(),
+                    [CoreServiceKeys.LocalPlayerEntity.Name] = local,
+                    [CoreServiceKeys.InteractionActionBindings.Name] = new InteractionActionBindings(),
+                };
+                var selectionRuntime = CreateSelectionRuntime(world, globals, "Friendly");
+                var system = new CurrentSelectionApplySystem(world, globals);
+
+                DragSelect(system, globals, input, new Vector2(1500f, 1100f), new Vector2(3500f, 2300f));
+
+                AssertSelection(selectionRuntime, local, first, third);
+            }
+            finally
+            {
+                TeamManager.Clear();
+            }
+        }
+
+        [Test]
         public void CurrentSelectionApplySystem_ClickUsesFootprintPolygonInsteadOfProjectedOriginOnly()
         {
             using var world = World.Create();
@@ -1299,9 +1405,12 @@ namespace Ludots.Tests.GAS
             }
         }
 
-        private static SelectionRuntime CreateSelectionRuntime(World world, Dictionary<string, object> globals)
+        private static SelectionRuntime CreateSelectionRuntime(World world, Dictionary<string, object> globals, string relationFilter = "All")
         {
-            var config = new SelectionRuntimeConfig();
+            var config = new SelectionRuntimeConfig
+            {
+                TargetFilter = new SelectionTargetFilterConfig { RelationFilter = relationFilter },
+            };
             var registry = new Ludots.Core.Registry.StringIntRegistry(capacity: 8, startId: 1, invalidId: 0, comparer: StringComparer.Ordinal);
             var runtime = new SelectionRuntime(world, config, registry);
             globals[CoreServiceKeys.SelectionRuntime.Name] = runtime;

@@ -629,7 +629,8 @@ namespace Ludots.Core.Engine
             var selectionRequestQueue = new SelectionRequestQueue();
             var selectionResponseBuffer = new SelectionResponseBuffer();
             var selectionSetKeyRegistry = new StringIntRegistry(capacity: 32, startId: 1, invalidId: 0, comparer: StringComparer.Ordinal);
-            var selectionConfig = config.Selection ?? new SelectionRuntimeConfig();
+            var selectionConfig = config.Selection
+                ?? throw new InvalidOperationException("game.json selection must be explicitly configured.");
             var selectionRuntime = new SelectionRuntime(World, selectionConfig, selectionSetKeyRegistry);
             var interactionActionBindings = new InteractionActionBindings();
             var selectionRuleRegistry = SelectionRuleRegistry.CreateWithDefaults();

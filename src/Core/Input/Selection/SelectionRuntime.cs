@@ -1,6 +1,7 @@
 using System;
 using System.Collections.Generic;
 using Arch.Core;
+using Ludots.Core.Gameplay.Teams;
 using Ludots.Core.Registry;
 
 namespace Ludots.Core.Input.Selection
@@ -10,13 +11,25 @@ namespace Ludots.Core.Input.Selection
         public int MutationApplyBudgetPerFrame { get; set; } = 4096;
         public float ClickPickRadiusPixels { get; set; } = 20f;
         public float DragThresholdPixels { get; set; } = 8f;
+        public SelectionTargetFilterConfig? TargetFilter { get; set; }
         public string[] MovePathPreviewOrderTypeKeys { get; set; } = Array.Empty<string>();
+    }
+
+    public sealed class SelectionTargetFilterConfig
+    {
+        public string? RelationFilter { get; set; }
+
+        public RelationshipFilter ParseRelationFilter()
+        {
+            return RelationshipFilterUtil.Parse(RelationFilter ?? string.Empty);
+        }
     }
 
     public sealed class SelectionRuntime
     {
         private readonly World _world;
         private readonly SelectionRuntimeConfig _config;
+        private readonly RelationshipFilter _targetRelationFilter;
         private readonly StringIntRegistry _setKeyRegistry;
         private readonly StringIntRegistry _viewKeyRegistry;
         private readonly Dictionary<SelectionOwnerSetKey, Entity> _containers = new();
@@ -27,6 +40,8 @@ namespace Ludots.Core.Input.Selection
         {
             _world = world ?? throw new ArgumentNullException(nameof(world));
             _config = config ?? throw new ArgumentNullException(nameof(config));
+            _targetRelationFilter = (_config.TargetFilter ?? throw new InvalidOperationException(
+                "selection.targetFilter must be explicitly configured.")).ParseRelationFilter();
             _setKeyRegistry = setKeyRegistry ?? throw new ArgumentNullException(nameof(setKeyRegistry));
             _viewKeyRegistry = new StringIntRegistry(capacity: 32, startId: 1, invalidId: 0, comparer: StringComparer.Ordinal);
 
@@ -42,6 +57,7 @@ namespace Ludots.Core.Input.Selection
         }
 
         public SelectionRuntimeConfig Config => _config;
+        public RelationshipFilter TargetRelationFilter => _targetRelationFilter;
         public StringIntRegistry SetKeyRegistry => _setKeyRegistry;
 
         public bool TryDescribeSelection(Entity owner, string setKey, out SelectionContainerDescriptor descriptor)

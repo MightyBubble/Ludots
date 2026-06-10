@@ -55,6 +55,7 @@
     }
   },
   "selection": {
+    "targetFilter": { "relationFilter": "All" },
     "movePathPreviewOrderTypeKeys": [ "moveTo" ]
   }
 }

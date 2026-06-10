@@ -279,7 +279,13 @@ namespace Ludots.Tests.Presentation
             simulation.AgentState.RegisterAgentAtIndex(enemyAgent, agentIndex: 1, controllable: true);
 
             var selectionRegistry = new StringIntRegistry(32, 1, 0, StringComparer.Ordinal);
-            var selection = new SelectionRuntime(world, new SelectionRuntimeConfig(), selectionRegistry);
+            var selection = new SelectionRuntime(
+                world,
+                new SelectionRuntimeConfig
+                {
+                    TargetFilter = new SelectionTargetFilterConfig { RelationFilter = "All" },
+                },
+                selectionRegistry);
             selection.TryBindView(localPlayer, SelectionViewKeys.Primary, localPlayer, SelectionSetKeys.LivePrimary);
             engine.SetService(CoreServiceKeys.LocalPlayerEntity, localPlayer);
             engine.SetService(CoreServiceKeys.SelectionRuntime, selection);

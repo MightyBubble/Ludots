@@ -12,6 +12,7 @@
   "worldWidthInTiles": 64,
   "worldHeightInTiles": 64,
   "selection": {
+    "targetFilter": { "relationFilter": "All" },
     "clickPickRadiusPixels": 20,
     "dragThresholdPixels": 8
   },

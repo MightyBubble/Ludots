@@ -59,11 +59,15 @@ namespace Ludots.Tests.Presentation
             Assert.That(formationTemplateId, Is.EqualTo("mass_navigation_total_war_formation_agent"));
             string formationProfileId = RequireString(formationAgent, "profileId");
             Assert.That(formationProfileId, Is.EqualTo("formation"));
-            Assert.That(config["localPlayerTeamId"]?.GetValue<int>(), Is.EqualTo(1));
-            JsonObject selection = config["selection"]?.AsObject()
-                ?? throw new InvalidOperationException("TotalWar config must author selection.");
-            Assert.That(RequireString(selection, "formationSelectableTeamScope"), Is.EqualTo("LocalPlayerTeam"),
-                "Player box selection in the Total War showcase must be explicitly scoped to locally commandable formations.");
+            Assert.That(config.ContainsKey("selection"), Is.False,
+                "TotalWar config must not invent a private selection scope block; selection acquire uses game.json selection.targetFilter.");
+            JsonObject gameConfig = ReadObject(Path.Combine(modRoot, "assets", "game.json"));
+            JsonObject selection = gameConfig["selection"]?.AsObject()
+                ?? throw new InvalidOperationException("TotalWar game.json must author selection.");
+            JsonObject targetFilter = selection["targetFilter"]?.AsObject()
+                ?? throw new InvalidOperationException("TotalWar game.json selection must author targetFilter.");
+            Assert.That(RequireString(targetFilter, "relationFilter"), Is.EqualTo("Friendly"),
+                "TotalWar player acquisition must use Core RelationshipFilter authoring, not a showcase-local selection policy.");
             JsonObject formationProfile = FindAgentProfileById(agentProfiles, formationProfileId);
             float formationSpeedCmPerSecond = formationProfile["speedCmPerSecond"]?.GetValue<float>()
                 ?? throw new InvalidOperationException("MassNavigation formation agent profile speedCmPerSecond must be numeric.");
@@ -82,6 +86,10 @@ namespace Ludots.Tests.Presentation
             Assert.That(components.ContainsKey("OrderBuffer"), Is.True);
             Assert.That(components.ContainsKey("SelectionSelectableTag"), Is.True);
             Assert.That(components.ContainsKey("SelectionSelectableState"), Is.True);
+            Assert.That(components.ContainsKey("Team"), Is.False,
+                "Formation template must not bake scene team; TotalWarShowcaseConfig teamId is applied at receipt binding.");
+            Assert.That(components.ContainsKey("PlayerOwner"), Is.False,
+                "Formation template must not bake scene ownership; TotalWarShowcaseConfig ownerPlayerId is applied at receipt binding.");
             Assert.That(components.ContainsKey("AttributeBuffer"), Is.True);
             Assert.That(components.ContainsKey("SpatialBounds"), Is.False,
                 "Formation footprint is derived from TotalWarShowcaseConfig outline at receipt binding time, not authored in the template.");
@@ -113,6 +121,7 @@ namespace Ludots.Tests.Presentation
 
             foreach (JsonObject formation in formations.Select(node => node?.AsObject() ?? throw new InvalidOperationException("Formation must be an object.")))
             {
+                AssertPositive(formation, "ownerPlayerId");
                 JsonObject formationOutline = formation["outline"]?.AsObject()
                     ?? throw new InvalidOperationException("Every formation must author outline.");
                 if (RequireString(formationOutline, "shape") == "Circle")
@@ -214,12 +223,8 @@ namespace Ludots.Tests.Presentation
 
             JsonObject config = ReadObject(Path.Combine(modRoot, "assets", "MassNavigationConfig.json"));
             JsonObject showcaseConfig = ReadObject(Path.Combine(modRoot, "assets", "TotalWarShowcaseConfig.json"));
-            Assert.That(showcaseConfig.ContainsKey("localPlayerTeamId"), Is.True,
-                "TotalWarShowcaseConfig must explicitly author which Team receives local PlayerOwner command ownership.");
-            JsonObject selection = showcaseConfig["selection"]?.AsObject()
-                ?? throw new InvalidOperationException("TotalWarShowcaseConfig must explicitly author selection.");
-            Assert.That(RequireString(selection, "formationSelectableTeamScope"), Is.EqualTo("LocalPlayerTeam"),
-                "TotalWarShowcaseConfig must explicitly author which formations can enter player box selection.");
+            Assert.That(showcaseConfig.ContainsKey("selection"), Is.False,
+                "TotalWarShowcaseConfig must not invent a private selection scope block.");
             Assert.That(showcaseConfig["initialSelectionEntityCapacity"]?.GetValue<int>(), Is.GreaterThan(0),
                 "TotalWarShowcaseConfig must explicitly author initial selection scratch capacity.");
             string[] required =
@@ -1859,15 +1864,13 @@ namespace Ludots.Tests.Presentation
         }
 
         [Test]
-        public void TotalWarPlayable_NonLocalTeamFormationSelectionRejectsRightClickMoveOrder()
+        public void TotalWarPlayable_NonLocalPlayerOwnerFormationSelectionRejectsRightClickMoveOrder()
         {
             using GameEngine engine = CreatePlayableTotalWarEngine();
             engine.LoadMap("mass_navigation_total_war");
             Tick(engine, TotalWarAcceptance.FrameBudgetForMapEntry);
 
             MassNavigationSimulationRuntime simulation = RequireSimulation(engine);
-            TotalWarShowcaseConfig config = TotalWarShowcaseConfig.Load(
-                ReadObject(Path.Combine(TotalWarModRoot(), "assets", "TotalWarShowcaseConfig.json")));
             TickUntil(
                 engine,
                 () => simulation.AgentState.TotalAgents == TotalWarAcceptance.ExpectedTotalAgents &&
@@ -1875,10 +1878,12 @@ namespace Ludots.Tests.Presentation
                 maxFrames: TotalWarAcceptance.FrameBudgetForScenarioReady,
                 failureMessage: "Total War scenario should be fully spawned before non-local formation command verification.");
 
-            AssertLocalTeamFormationsOwnLocalPlayer(engine, config.LocalPlayerTeamId);
-            Entity enemyFormation = FindNonLocalTeamFormation(engine, config.LocalPlayerTeamId);
+            AssertLocalPlayerOwnerFormations(engine);
+            int localPlayerId = ResolveLocalPlayerOwnerId(engine);
+            Entity enemyFormation = FindNonLocalPlayerOwnerFormation(engine, localPlayerId);
             Assert.That(engine.World.TryGet(enemyFormation, out MassNavigationAgentIndex enemyAgentIndex), Is.True);
-            Assert.That(engine.World.TryGet(enemyFormation, out PlayerOwner enemyOwner), Is.False);
+            Assert.That(engine.World.TryGet(enemyFormation, out PlayerOwner enemyOwner), Is.True);
+            Assert.That(enemyOwner.PlayerId, Is.Not.EqualTo(localPlayerId));
             Assert.That(simulation.NavGroupRuntime.TryGetGroupMemberOrderTarget(
                     enemyAgentIndex.Value,
                     out float _,
@@ -1902,7 +1907,8 @@ namespace Ludots.Tests.Presentation
                 failureMessage: "Right-clicking a selected non-local formation must be rejected at the MassNavigation command boundary.");
 
             Assert.That(CountActiveMoveOrders(engine, simulation), Is.EqualTo(0));
-            Assert.That(engine.World.TryGet(enemyFormation, out enemyOwner), Is.False);
+            Assert.That(engine.World.TryGet(enemyFormation, out enemyOwner), Is.True);
+            Assert.That(enemyOwner.PlayerId, Is.Not.EqualTo(localPlayerId));
             Assert.That(simulation.NavGroupRuntime.TryGetGroupMemberOrderTarget(
                     enemyAgentIndex.Value,
                     out float _,
@@ -1933,8 +1939,6 @@ namespace Ludots.Tests.Presentation
             Tick(engine, TotalWarAcceptance.FrameBudgetForMapEntry);
 
             MassNavigationSimulationRuntime simulation = RequireSimulation(engine);
-            TotalWarShowcaseConfig config = TotalWarShowcaseConfig.Load(
-                ReadObject(Path.Combine(TotalWarModRoot(), "assets", "TotalWarShowcaseConfig.json")));
             TickUntil(
                 engine,
                 () => simulation.AgentState.TotalAgents == TotalWarAcceptance.ExpectedTotalAgents &&
@@ -1942,26 +1946,24 @@ namespace Ludots.Tests.Presentation
                 maxFrames: TotalWarAcceptance.FrameBudgetForScenarioReady,
                 failureMessage: "Total War scenario should be fully spawned before box selection ownership verification.");
 
-            AssertFormationSelectionScopes(engine, config.LocalPlayerTeamId);
+            AssertFormationSelectionCandidateFacts(engine);
             Entity[] formations = CaptureFormationAgents(engine, TotalWarAcceptance.ExpectedTotalFormations);
             DragSelect(engine, GetInputBackend(engine), ProjectEntitiesDragRect(engine, formations));
+            int selectorTeamId = ResolveSelectionOwnerTeamId(engine);
             TickUntil(
                 engine,
-                () => simulation.SelectedCount == CountLocalTeamFormations(engine, config.LocalPlayerTeamId),
+                () => simulation.SelectedCount == CountFriendlyTeamFormations(engine, selectorTeamId),
                 maxFrames: TotalWarAcceptance.FrameBudgetForInteraction,
-                failureMessage: "Player box selection should include only locally commandable Total War formations.");
+                failureMessage: "Player box selection should include only formations accepted by the configured Friendly relationship filter.");
 
             Entity[] selected = SelectionContextRuntime.SnapshotCurrentSelection(engine.World, engine.GlobalContext);
-            Assert.That(selected.Length, Is.EqualTo(CountLocalTeamFormations(engine, config.LocalPlayerTeamId)));
-            int localPlayerId = ResolveLocalPlayerOwnerId(engine);
+            Assert.That(selected.Length, Is.EqualTo(CountFriendlyTeamFormations(engine, selectorTeamId)));
             for (int i = 0; i < selected.Length; i++)
             {
                 Entity entity = selected[i];
                 Assert.That(engine.World.Has<TotalWarFormationAgent>(entity), Is.True);
                 Assert.That(engine.World.TryGet(entity, out Team team), Is.True);
-                Assert.That(team.Id, Is.EqualTo(config.LocalPlayerTeamId));
-                Assert.That(engine.World.TryGet(entity, out PlayerOwner owner), Is.True);
-                Assert.That(owner.PlayerId, Is.EqualTo(localPlayerId));
+                Assert.That(RelationshipFilterUtil.Passes(RelationshipFilter.Friendly, selectorTeamId, team.Id), Is.True);
             }
         }
 
@@ -1973,8 +1975,6 @@ namespace Ludots.Tests.Presentation
             Tick(engine, TotalWarAcceptance.FrameBudgetForMapEntry);
 
             MassNavigationSimulationRuntime simulation = RequireSimulation(engine);
-            TotalWarShowcaseConfig config = TotalWarShowcaseConfig.Load(
-                ReadObject(Path.Combine(TotalWarModRoot(), "assets", "TotalWarShowcaseConfig.json")));
             TickUntil(
                 engine,
                 () => simulation.AgentState.TotalAgents == TotalWarAcceptance.ExpectedTotalAgents &&
@@ -1982,8 +1982,9 @@ namespace Ludots.Tests.Presentation
                 maxFrames: TotalWarAcceptance.FrameBudgetForScenarioReady,
                 failureMessage: "Total War scenario should be fully spawned before mixed selection rotate verification.");
 
-            Entity localFormation = FindLocalTeamFormation(engine, config.LocalPlayerTeamId);
-            Entity enemyFormation = FindNonLocalTeamFormation(engine, config.LocalPlayerTeamId);
+            int localPlayerId = ResolveLocalPlayerOwnerId(engine);
+            Entity localFormation = FindLocalPlayerOwnerFormation(engine, localPlayerId);
+            Entity enemyFormation = FindNonLocalPlayerOwnerFormation(engine, localPlayerId);
             float localFacingBefore = engine.World.Get<FacingDirection>(localFormation).AngleRad;
             float enemyFacingBefore = engine.World.Get<FacingDirection>(enemyFormation).AngleRad;
             SelectFormations(engine, new[] { localFormation, enemyFormation });
@@ -2132,7 +2133,13 @@ namespace Ludots.Tests.Presentation
             try
             {
                 var selectionKeys = new StringIntRegistry(capacity: 16, startId: 1, invalidId: 0, comparer: StringComparer.Ordinal);
-                var selection = new SelectionRuntime(world, new SelectionRuntimeConfig(), selectionKeys);
+                var selection = new SelectionRuntime(
+                    world,
+                    new SelectionRuntimeConfig
+                    {
+                        TargetFilter = new SelectionTargetFilterConfig { RelationFilter = "All" },
+                    },
+                    selectionKeys);
                 var events = new PresentationEventStream(PresentationTestConstants.EventStreamCapacity);
                 var commands = new PerformerCommandBuffer();
                 var definitions = new PerformerDefinitionRegistry();
@@ -2944,21 +2951,21 @@ namespace Ludots.Tests.Presentation
             return result;
         }
 
-        private static Entity FindNonLocalTeamFormation(GameEngine engine, int localTeamId)
+        private static Entity FindNonLocalPlayerOwnerFormation(GameEngine engine, int localPlayerId)
         {
             Entity result = Entity.Null;
             int formationIndex = int.MaxValue;
-            int formationsWithoutTeam = 0;
+            int formationsWithoutOwner = 0;
             var query = new QueryDescription().WithAll<TotalWarFormationAgent>();
             engine.World.Query(in query, (Entity entity, ref TotalWarFormationAgent formation) =>
             {
-                if (!engine.World.TryGet(entity, out Team team))
+                if (!engine.World.TryGet(entity, out PlayerOwner owner))
                 {
-                    formationsWithoutTeam++;
+                    formationsWithoutOwner++;
                     return;
                 }
 
-                if (team.Id == localTeamId || formation.FormationIndex >= formationIndex)
+                if (owner.PlayerId == localPlayerId || formation.FormationIndex >= formationIndex)
                 {
                     return;
                 }
@@ -2968,25 +2975,25 @@ namespace Ludots.Tests.Presentation
             });
 
             Assert.That(result, Is.Not.EqualTo(Entity.Null),
-                $"Total War command authorization test requires at least one non-local team formation; formations without Team={formationsWithoutTeam}.");
+                $"Total War command authorization test requires at least one non-local owner formation; formations without PlayerOwner={formationsWithoutOwner}.");
             return result;
         }
 
-        private static Entity FindLocalTeamFormation(GameEngine engine, int localTeamId)
+        private static Entity FindLocalPlayerOwnerFormation(GameEngine engine, int localPlayerId)
         {
             Entity result = Entity.Null;
             int formationIndex = int.MaxValue;
-            int formationsWithoutTeam = 0;
+            int formationsWithoutOwner = 0;
             var query = new QueryDescription().WithAll<TotalWarFormationAgent>();
             engine.World.Query(in query, (Entity entity, ref TotalWarFormationAgent formation) =>
             {
-                if (!engine.World.TryGet(entity, out Team team))
+                if (!engine.World.TryGet(entity, out PlayerOwner owner))
                 {
-                    formationsWithoutTeam++;
+                    formationsWithoutOwner++;
                     return;
                 }
 
-                if (team.Id != localTeamId || formation.FormationIndex >= formationIndex)
+                if (owner.PlayerId != localPlayerId || formation.FormationIndex >= formationIndex)
                 {
                     return;
                 }
@@ -2996,17 +3003,17 @@ namespace Ludots.Tests.Presentation
             });
 
             Assert.That(result, Is.Not.EqualTo(Entity.Null),
-                $"Total War command authorization test requires at least one local team formation; formations without Team={formationsWithoutTeam}.");
+                $"Total War command authorization test requires at least one local owner formation; formations without PlayerOwner={formationsWithoutOwner}.");
             return result;
         }
 
-        private static int CountLocalTeamFormations(GameEngine engine, int localTeamId)
+        private static int CountFriendlyTeamFormations(GameEngine engine, int selectorTeamId)
         {
             int count = 0;
             var query = new QueryDescription().WithAll<TotalWarFormationAgent, Team>();
             engine.World.Query(in query, (ref TotalWarFormationAgent _, ref Team team) =>
             {
-                if (team.Id == localTeamId)
+                if (RelationshipFilterUtil.Passes(RelationshipFilter.Friendly, selectorTeamId, team.Id))
                 {
                     count++;
                 }
@@ -3015,58 +3022,56 @@ namespace Ludots.Tests.Presentation
             return count;
         }
 
-        private static void AssertFormationSelectionScopes(GameEngine engine, int localTeamId)
+        private static void AssertFormationSelectionCandidateFacts(GameEngine engine)
         {
-            int localPlayerId = ResolveLocalPlayerOwnerId(engine);
-            int localFormationCount = 0;
-            int nonLocalFormationCount = 0;
-            var query = new QueryDescription().WithAll<TotalWarFormationAgent, Team, SelectionSelectableState>();
-            engine.World.Query(in query, (Entity entity, ref TotalWarFormationAgent _, ref Team team, ref SelectionSelectableState selectable) =>
+            int selectorTeamId = ResolveSelectionOwnerTeamId(engine);
+            int friendlyFormationCount = 0;
+            int rejectedFormationCount = 0;
+            int formationsWithoutTeam = 0;
+            var query = new QueryDescription().WithAll<TotalWarFormationAgent, SelectionSelectableState>();
+            engine.World.Query(in query, (Entity entity, ref TotalWarFormationAgent _, ref SelectionSelectableState selectable) =>
             {
-                if (team.Id == localTeamId)
+                Assert.That(selectable.Enabled, Is.True,
+                    "Total War formation candidates stay generally selectable; Core relationship filtering gates player acquisition.");
+
+                if (!engine.World.TryGet(entity, out Team team))
                 {
-                    localFormationCount++;
-                    Assert.That(selectable.Enabled, Is.True,
-                        "Local Total War team formations must be selectable by the player.");
-                    Assert.That(engine.World.TryGet(entity, out PlayerOwner owner), Is.True,
-                        "Local Total War team formations must receive formal PlayerOwner command ownership.");
-                    Assert.That(owner.PlayerId, Is.EqualTo(localPlayerId));
+                    formationsWithoutTeam++;
+                    return;
+                }
+
+                if (RelationshipFilterUtil.Passes(RelationshipFilter.Friendly, selectorTeamId, team.Id))
+                {
+                    friendlyFormationCount++;
                 }
                 else
                 {
-                    nonLocalFormationCount++;
-                    Assert.That(selectable.Enabled, Is.False,
-                        "Non-local Total War formations must not enter player box selection.");
-                    Assert.That(engine.World.Has<PlayerOwner>(entity), Is.False,
-                        "Non-local Total War formations must not receive local PlayerOwner command ownership.");
+                    rejectedFormationCount++;
                 }
             });
 
-            Assert.That(localFormationCount, Is.GreaterThan(0));
-            Assert.That(nonLocalFormationCount, Is.GreaterThan(0));
+            Assert.That(formationsWithoutTeam, Is.EqualTo(0));
+            Assert.That(friendlyFormationCount, Is.GreaterThan(0));
+            Assert.That(rejectedFormationCount, Is.GreaterThan(0));
         }
 
-        private static void AssertLocalTeamFormationsOwnLocalPlayer(GameEngine engine, int localTeamId)
+        private static void AssertLocalPlayerOwnerFormations(GameEngine engine)
         {
             int localPlayerId = ResolveLocalPlayerOwnerId(engine);
             int localFormationCount = 0;
-            var query = new QueryDescription().WithAll<TotalWarFormationAgent>();
-            engine.World.Query(in query, (Entity entity, ref TotalWarFormationAgent _) =>
+            var query = new QueryDescription().WithAll<TotalWarFormationAgent, PlayerOwner>();
+            engine.World.Query(in query, (ref TotalWarFormationAgent _, ref PlayerOwner owner) =>
             {
-                if (!engine.World.TryGet(entity, out Team team) ||
-                    team.Id != localTeamId)
+                if (owner.PlayerId != localPlayerId)
                 {
                     return;
                 }
 
                 localFormationCount++;
-                Assert.That(engine.World.TryGet(entity, out PlayerOwner owner), Is.True,
-                    "Local Total War team formations must receive formal PlayerOwner command ownership.");
-                Assert.That(owner.PlayerId, Is.EqualTo(localPlayerId));
             });
 
             Assert.That(localFormationCount, Is.GreaterThan(0),
-                "Total War command authorization test requires at least one local team formation.");
+                "Total War command authorization test requires at least one local owner formation.");
         }
 
         private static void SelectFormations(GameEngine engine, ReadOnlySpan<Entity> formations)
@@ -3108,6 +3113,13 @@ namespace Ludots.Tests.Presentation
             Entity local = ResolveLocalPlayerEntity(engine);
             Assert.That(engine.World.TryGet(local, out PlayerOwner owner), Is.True);
             return owner.PlayerId;
+        }
+
+        private static int ResolveSelectionOwnerTeamId(GameEngine engine)
+        {
+            Entity local = ResolveLocalPlayerEntity(engine);
+            Assert.That(engine.World.TryGet(local, out Team team), Is.True);
+            return team.Id;
         }
 
         private static float MinPairDistanceSq(

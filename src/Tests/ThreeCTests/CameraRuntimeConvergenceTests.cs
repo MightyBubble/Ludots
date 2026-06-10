@@ -181,7 +181,10 @@ namespace Ludots.Tests.ThreeC
             var globals = new Dictionary<string, object>();
             var selectionRuntime = new SelectionRuntime(
                 world,
-                new SelectionRuntimeConfig(),
+                new SelectionRuntimeConfig
+                {
+                    TargetFilter = new SelectionTargetFilterConfig { RelationFilter = "All" },
+                },
                 new StringIntRegistry(capacity: 8, startId: 1, invalidId: 0, comparer: StringComparer.Ordinal));
 
             Entity selector = world.Create();

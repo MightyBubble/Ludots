@@ -17,8 +17,6 @@ internal sealed class TotalWarShowcaseConfig
     public TotalWarAgentAuthoringConfig FormationAgent { get; set; } = new();
     public string InitialSelectionFormationId { get; set; } = string.Empty;
     public int InitialSelectionEntityCapacity { get; set; }
-    public int LocalPlayerTeamId { get; set; }
-    public TotalWarSelectionConfig Selection { get; set; } = new();
     public TotalWarSoldierTargetSyncConfig SoldierTargetSync { get; set; } = new();
     public TotalWarObstacleOverlayConfig ObstacleOverlay { get; set; } = new();
     public TotalWarFormationConfig[] Formations { get; set; } = Array.Empty<TotalWarFormationConfig>();
@@ -62,9 +60,6 @@ internal sealed class TotalWarShowcaseConfig
         RequireAgentAuthoring(RequireProperty(root, "formationAgent"), "formationAgent");
         RequireProperty(root, "initialSelectionFormationId");
         RequireProperty(root, "initialSelectionEntityCapacity");
-        RequireProperty(root, "localPlayerTeamId");
-        JsonElement selection = RequireProperty(root, "selection");
-        RequireProperties(selection, "formationSelectableTeamScope");
         JsonElement soldierTargetSync = RequireProperty(root, "soldierTargetSync");
         RequireProperties(
             soldierTargetSync,
@@ -84,6 +79,7 @@ internal sealed class TotalWarShowcaseConfig
             RequireProperty(formation, "id");
             RequireProperty(formation, "label");
             RequireProperty(formation, "teamId");
+            RequireProperty(formation, "ownerPlayerId");
             RequireAgentAuthoring(RequireProperty(formation, "soldierAgent"), $"formations[{index}].soldierAgent");
             RequireProperty(formation, "centerXCm");
             RequireProperty(formation, "centerYCm");
@@ -184,12 +180,6 @@ internal sealed class TotalWarShowcaseConfig
             throw new InvalidOperationException("Total War showcase config requires initialSelectionEntityCapacity > 0.");
         }
 
-        if (LocalPlayerTeamId <= 0)
-        {
-            throw new InvalidOperationException("Total War showcase config requires localPlayerTeamId > 0.");
-        }
-
-        Selection.Validate();
         SoldierTargetSync.Validate();
         ObstacleOverlay.Validate();
         if (Formations.Length <= 0)
@@ -199,7 +189,6 @@ internal sealed class TotalWarShowcaseConfig
 
         var formationIds = new HashSet<string>(StringComparer.Ordinal);
         bool foundInitialSelection = false;
-        bool foundLocalPlayerTeam = false;
         for (int i = 0; i < Formations.Length; i++)
         {
             Formations[i].Validate(i);
@@ -209,25 +198,12 @@ internal sealed class TotalWarShowcaseConfig
             }
 
             foundInitialSelection |= string.Equals(Formations[i].Id, InitialSelectionFormationId, StringComparison.Ordinal);
-            foundLocalPlayerTeam |= Formations[i].TeamId == LocalPlayerTeamId;
-            if (string.Equals(Formations[i].Id, InitialSelectionFormationId, StringComparison.Ordinal) &&
-                !Selection.IsFormationSelectable(Formations[i].TeamId, LocalPlayerTeamId))
-            {
-                throw new InvalidOperationException(
-                    $"Total War showcase initial selection formation '{InitialSelectionFormationId}' must be selectable by selection.formationSelectableTeamScope '{Selection.FormationSelectableTeamScope}'.");
-            }
         }
 
         if (!foundInitialSelection)
         {
             throw new InvalidOperationException(
                 $"Total War showcase initial selection formation '{InitialSelectionFormationId}' is not configured.");
-        }
-
-        if (!foundLocalPlayerTeam)
-        {
-            throw new InvalidOperationException(
-                $"Total War showcase localPlayerTeamId {LocalPlayerTeamId} is not used by any formation.");
         }
     }
 
@@ -297,36 +273,6 @@ internal sealed class TotalWarShowcaseConfig
         }
     }
 
-}
-
-internal sealed class TotalWarSelectionConfig
-{
-    public string FormationSelectableTeamScope { get; set; } = string.Empty;
-
-    public void Validate()
-    {
-        if (!string.Equals(FormationSelectableTeamScope, TotalWarSelectionTeamScopeNames.LocalPlayerTeam, StringComparison.Ordinal))
-        {
-            throw new InvalidOperationException(
-                $"Total War showcase selection.formationSelectableTeamScope must be '{TotalWarSelectionTeamScopeNames.LocalPlayerTeam}', got '{FormationSelectableTeamScope}'.");
-        }
-    }
-
-    public bool IsFormationSelectable(int formationTeamId, int localPlayerTeamId)
-    {
-        if (string.Equals(FormationSelectableTeamScope, TotalWarSelectionTeamScopeNames.LocalPlayerTeam, StringComparison.Ordinal))
-        {
-            return formationTeamId == localPlayerTeamId;
-        }
-
-        throw new InvalidOperationException(
-            $"Total War showcase selection.formationSelectableTeamScope '{FormationSelectableTeamScope}' was not validated.");
-    }
-}
-
-internal static class TotalWarSelectionTeamScopeNames
-{
-    public const string LocalPlayerTeam = "LocalPlayerTeam";
 }
 
 internal sealed class TotalWarSoldierTargetSyncConfig
@@ -437,6 +383,7 @@ internal sealed class TotalWarFormationConfig
     public string Id { get; set; } = string.Empty;
     public string Label { get; set; } = string.Empty;
     public int TeamId { get; set; }
+    public int OwnerPlayerId { get; set; }
     public TotalWarAgentAuthoringConfig SoldierAgent { get; set; } = new();
     public int CenterXCm { get; set; }
     public int CenterYCm { get; set; }
@@ -454,6 +401,11 @@ internal sealed class TotalWarFormationConfig
         if (TeamId <= 0)
         {
             throw new InvalidOperationException($"Total War formation '{Id}' requires TeamId > 0.");
+        }
+
+        if (OwnerPlayerId <= 0)
+        {
+            throw new InvalidOperationException($"Total War formation '{Id}' requires OwnerPlayerId > 0.");
         }
 
         Slots.Validate(Id);

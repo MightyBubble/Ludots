@@ -1,4 +1,6 @@
 using Arch.Core;
+using Ludots.Core.Gameplay.Components;
+using Ludots.Core.Gameplay.Teams;
 
 namespace Ludots.Core.Input.Selection
 {
@@ -16,6 +18,23 @@ namespace Ludots.Core.Input.Selection
 
             return !world.Has<SelectionSelectableState>(entity) ||
                    world.Get<SelectionSelectableState>(entity).Enabled;
+        }
+
+        public static bool CanAcquire(World world, Entity selector, Entity candidate, RelationshipFilter relationFilter)
+        {
+            if (!world.IsAlive(selector) || !IsSelectableNow(world, candidate))
+            {
+                return false;
+            }
+
+            if (relationFilter == RelationshipFilter.All)
+            {
+                return true;
+            }
+
+            return world.TryGet(selector, out Team selectorTeam) &&
+                   world.TryGet(candidate, out Team candidateTeam) &&
+                   RelationshipFilterUtil.Passes(relationFilter, selectorTeam.Id, candidateTeam.Id);
         }
     }
 }

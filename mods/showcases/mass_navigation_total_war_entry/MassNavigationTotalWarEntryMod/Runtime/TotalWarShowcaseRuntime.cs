@@ -355,13 +355,9 @@ internal sealed class TotalWarShowcaseRuntime
         UpsertComponent(engine.World, entity, formation.Outline.ToComponent(plan.Id));
         UpsertComponent(engine.World, entity, formation.Outline.ToSpatialBounds());
         UpsertComponent(engine.World, entity, formation.Outline.ToSpatialFootprint(plan.Id));
-        UpsertComponent(engine.World, entity, ActiveConfig.Selection.IsFormationSelectable(plan.TeamId, ActiveConfig.LocalPlayerTeamId)
-            ? SelectionSelectableState.EnabledByDefault
-            : SelectionSelectableState.Disabled);
-        if (plan.TeamId == ActiveConfig.LocalPlayerTeamId)
-        {
-            UpsertComponent(engine.World, entity, new PlayerOwner { PlayerId = ResolveLocalPlayerId(engine) });
-        }
+        UpsertComponent(engine.World, entity, SelectionSelectableState.EnabledByDefault);
+        UpsertComponent(engine.World, entity, new Team { Id = formation.TeamId });
+        UpsertComponent(engine.World, entity, new PlayerOwner { PlayerId = formation.OwnerPlayerId });
     }
 
     public void RegisterSpawnedObstacleOverlay(Entity entity, in TotalWarSpawnReceiptBinding binding)
@@ -1014,6 +1010,12 @@ internal sealed class TotalWarShowcaseRuntime
                 $"Total War showcase initial selection formation '{config.InitialSelectionFormationId}' was not bound to a live entity.");
         }
 
+        if (!SelectionEligibility.CanAcquire(engine.World, owner, formation, selection.TargetRelationFilter))
+        {
+            throw new InvalidOperationException(
+                $"Total War showcase initial selection formation '{config.InitialSelectionFormationId}' must pass selection.targetFilter.relationFilter '{selection.TargetRelationFilter}'.");
+        }
+
         _initialSelectionScratch[0] = formation;
         if (!selection.ReplaceSelection(owner, SelectionSetKeys.LivePrimary, _initialSelectionScratch.AsSpan(0, 1)))
         {
@@ -1275,7 +1277,7 @@ internal sealed class TotalWarShowcaseRuntime
         return local;
     }
 
-    private static int ResolveLocalPlayerId(GameEngine engine)
+    private static int ResolveLocalPlayerOwnerId(GameEngine engine)
     {
         if (!engine.GlobalContext.TryGetValue(CoreServiceKeys.LocalPlayerEntity.Name, out object? localObj) ||
             localObj is not Entity local ||

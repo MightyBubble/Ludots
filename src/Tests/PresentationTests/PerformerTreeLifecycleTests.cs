@@ -183,7 +183,13 @@ namespace Ludots.Tests.Presentation
         {
             using var fixture = PerformerTreeFixture.Create();
             var selectionKeys = new StringIntRegistry(capacity: 32, startId: 1, invalidId: 0, comparer: StringComparer.Ordinal);
-            var selection = new SelectionRuntime(fixture.World, new SelectionRuntimeConfig(), selectionKeys);
+            var selection = new SelectionRuntime(
+                fixture.World,
+                new SelectionRuntimeConfig
+                {
+                    TargetFilter = new SelectionTargetFilterConfig { RelationFilter = "All" },
+                },
+                selectionKeys);
             int livePrimaryKeyId = selectionKeys.GetId(SelectionSetKeys.LivePrimary);
             const int sourceStableId = 9001;
 

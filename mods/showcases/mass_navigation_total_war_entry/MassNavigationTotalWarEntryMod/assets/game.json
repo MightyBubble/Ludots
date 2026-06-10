@@ -6,6 +6,7 @@
   "windowHeight": 900,
   "windowResizable": true,
   "selection": {
+    "targetFilter": { "relationFilter": "Friendly" },
     "movePathPreviewOrderTypeKeys": [ "massNavigationMove" ]
   },
   "presentation": {

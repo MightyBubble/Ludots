@@ -48,7 +48,7 @@ namespace Ludots.Core.Config
 
         public Navigation2DConfig Navigation2D { get; set; } = new Navigation2DConfig();
 
-        public SelectionRuntimeConfig Selection { get; set; } = new SelectionRuntimeConfig();
+        public SelectionRuntimeConfig? Selection { get; set; }
 
         public PresentationRuntimeConfig Presentation { get; set; } = null!;
 
