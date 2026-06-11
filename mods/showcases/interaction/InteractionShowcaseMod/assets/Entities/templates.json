@@ -24,7 +24,10 @@
       "OrderBuffer": {},
       "BlackboardSpatialBuffer": {},
       "BlackboardEntityBuffer": {},
-      "BlackboardIntBuffer": {}
+      "BlackboardIntBuffer": {},
+      "Presentation": {
+        "startupPerformerIds": ["interaction.character.hero_showcase"]
+      }
     }
   },
   {
@@ -52,7 +55,10 @@
       "OrderBuffer": {},
       "BlackboardSpatialBuffer": {},
       "BlackboardEntityBuffer": {},
-      "BlackboardIntBuffer": {}
+      "BlackboardIntBuffer": {},
+      "Presentation": {
+        "startupPerformerIds": ["interaction.character.hero_showcase"]
+      }
     }
   },
   {
@@ -79,7 +85,10 @@
       "OrderBuffer": {},
       "BlackboardSpatialBuffer": {},
       "BlackboardEntityBuffer": {},
-      "BlackboardIntBuffer": {}
+      "BlackboardIntBuffer": {},
+      "Presentation": {
+        "startupPerformerIds": ["interaction.character.hero_showcase"]
+      }
     }
   },
   {
@@ -107,7 +116,10 @@
       "OrderBuffer": {},
       "BlackboardSpatialBuffer": {},
       "BlackboardEntityBuffer": {},
-      "BlackboardIntBuffer": {}
+      "BlackboardIntBuffer": {},
+      "Presentation": {
+        "startupPerformerIds": ["interaction.character.hero_showcase"]
+      }
     }
   },
   {
@@ -119,7 +131,10 @@
       "WorldPositionCm": { "Value": { "X": 0, "Y": 0 } },
       "FacingDirection": { "AngleRad": 3.14159 },
       "AttributeBuffer": { "base": { "Health": 140, "Shield": 0, "MoveSpeed": 290, "Armor": 4 } },
-      "GameplayTagContainer": {}
+      "GameplayTagContainer": {},
+      "Presentation": {
+        "startupPerformerIds": ["interaction.prop.dummy_showcase"]
+      }
     }
   },
   {
@@ -131,7 +146,10 @@
       "WorldPositionCm": { "Value": { "X": 0, "Y": 0 } },
       "FacingDirection": { "AngleRad": 3.14159 },
       "AttributeBuffer": { "base": { "Health": 220, "Shield": 0, "MoveSpeed": 260, "Armor": 10 } },
-      "GameplayTagContainer": {}
+      "GameplayTagContainer": {},
+      "Presentation": {
+        "startupPerformerIds": ["interaction.prop.dummy_showcase"]
+      }
     }
   },
   {
@@ -152,7 +170,10 @@
       "OrderBuffer": {},
       "BlackboardSpatialBuffer": {},
       "BlackboardEntityBuffer": {},
-      "BlackboardIntBuffer": {}
+      "BlackboardIntBuffer": {},
+      "Presentation": {
+        "startupPerformerIds": ["interaction.character.hero_showcase"]
+      }
     }
   },
   {
@@ -173,7 +194,10 @@
       "OrderBuffer": {},
       "BlackboardSpatialBuffer": {},
       "BlackboardEntityBuffer": {},
-      "BlackboardIntBuffer": {}
+      "BlackboardIntBuffer": {},
+      "Presentation": {
+        "startupPerformerIds": ["interaction.character.hero_showcase"]
+      }
     }
   },
   {
@@ -184,7 +208,10 @@
       "SelectionSelectableTag": {},
       "WorldPositionCm": { "Value": { "X": 0, "Y": 0 } },
       "AttributeBuffer": { "base": { "Health": 500000, "Shield": 0, "MoveSpeed": 0, "Armor": 0 } },
-      "GameplayTagContainer": {}
+      "GameplayTagContainer": {},
+      "Presentation": {
+        "startupPerformerIds": ["interaction.prop.dummy_showcase"]
+      }
     }
   },
   {
@@ -195,7 +222,10 @@
       "SelectionSelectableTag": {},
       "WorldPositionCm": { "Value": { "X": 0, "Y": 0 } },
       "AttributeBuffer": { "base": { "Health": 500000, "Shield": 0, "MoveSpeed": 0, "Armor": 0 } },
-      "GameplayTagContainer": {}
+      "GameplayTagContainer": {},
+      "Presentation": {
+        "startupPerformerIds": ["interaction.prop.dummy_showcase"]
+      }
     }
   }
 ]

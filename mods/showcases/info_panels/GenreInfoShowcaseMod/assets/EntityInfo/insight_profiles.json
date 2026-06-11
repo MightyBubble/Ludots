@@ -129,8 +129,8 @@
       { "glyph": "S", "textToken": "genreinfo.profile.barracks.tip.2" }
     ],
     "actions": [
-      { "ability": "Ability.Rts.TrainMarine", "glyph": "MN", "titleToken": "genreinfo.profile.barracks.action.marine.title", "bodyToken": "genreinfo.profile.barracks.action.marine.body" },
-      { "ability": "Ability.Rts.ResearchStim", "glyph": "ST", "titleToken": "genreinfo.profile.barracks.action.stim.title", "bodyToken": "genreinfo.profile.barracks.action.stim.body" }
+      { "ability": "Ability.Rts.Terran.TrainMarine", "glyph": "MN", "titleToken": "genreinfo.profile.barracks.action.marine.title", "bodyToken": "genreinfo.profile.barracks.action.marine.body" },
+      { "ability": "Ability.Rts.Terran.ResearchStim", "glyph": "ST", "titleToken": "genreinfo.profile.barracks.action.stim.title", "bodyToken": "genreinfo.profile.barracks.action.stim.body" }
     ]
   },
   {
@@ -172,7 +172,7 @@
       { "glyph": "K", "textToken": "genreinfo.profile.marine.tip.2" }
     ],
     "actions": [
-      { "ability": "Ability.Rts.StimPack", "glyph": "ST", "titleToken": "genreinfo.profile.marine.action.stim.title", "bodyToken": "genreinfo.profile.marine.action.stim.body" }
+      { "ability": "Ability.Rts.Terran.StimPack", "glyph": "ST", "titleToken": "genreinfo.profile.marine.action.stim.title", "bodyToken": "genreinfo.profile.marine.action.stim.body" }
     ]
   },
   {
@@ -214,7 +214,7 @@
       { "glyph": "P", "textToken": "genreinfo.profile.tank.tip.2" }
     ],
     "actions": [
-      { "ability": "Ability.Rts.SiegeModeAoe", "glyph": "AO", "titleToken": "genreinfo.profile.tank.action.aoe.title", "bodyToken": "genreinfo.profile.tank.action.aoe.body" }
+      { "ability": "Ability.Rts.Terran.SiegeModeAoe", "glyph": "AO", "titleToken": "genreinfo.profile.tank.action.aoe.title", "bodyToken": "genreinfo.profile.tank.action.aoe.body" }
     ]
   },
   {
@@ -256,8 +256,8 @@
       { "glyph": "D", "textToken": "genreinfo.profile.vessel.tip.2" }
     ],
     "actions": [
-      { "ability": "Ability.Rts.ShieldAura", "glyph": "AU", "titleToken": "genreinfo.profile.vessel.action.aura.title", "bodyToken": "genreinfo.profile.vessel.action.aura.body" },
-      { "ability": "Ability.Rts.Irradiate", "glyph": "IR", "titleToken": "genreinfo.profile.vessel.action.irradiate.title", "bodyToken": "genreinfo.profile.vessel.action.irradiate.body" }
+      { "ability": "Ability.Rts.Terran.ShieldAura", "glyph": "AU", "titleToken": "genreinfo.profile.vessel.action.aura.title", "bodyToken": "genreinfo.profile.vessel.action.aura.body" },
+      { "ability": "Ability.Rts.Terran.Irradiate", "glyph": "IR", "titleToken": "genreinfo.profile.vessel.action.irradiate.title", "bodyToken": "genreinfo.profile.vessel.action.irradiate.body" }
     ]
   }
 ]

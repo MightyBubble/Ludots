@@ -20,10 +20,10 @@ export class ClientCameraController {
   /** Apply server camera state. Smoothly interpolates to new position. */
   applyServerState(state: CameraState): void {
     this._targetPos.set(state.posX, state.posY, state.posZ);
-    this._targetLookAt.set(state.targetX, state.targetY, state.targetZ);
+    this._targetLookAt.set(state.tgtX, state.tgtY, state.tgtZ);
 
-    if (state.fovYDeg > 0 && Math.abs(this._camera.fov - state.fovYDeg) > 0.01) {
-      this._camera.fov = state.fovYDeg;
+    if (state.fov > 0 && Math.abs(this._camera.fov - state.fov) > 0.01) {
+      this._camera.fov = state.fov;
       this._camera.updateProjectionMatrix();
     }
 

@@ -7,7 +7,7 @@ namespace Ludots.Core.Presentation.Performers
     /// </summary>
     public static class WellKnownPerformerParamKeys
     {
-        // ── WorldBar ──
+        // WorldBar.
 
         /// <summary>Bar fill ratio (0..1). Default: 1.</summary>
         public const int BarFillRatio = 0;
@@ -32,7 +32,7 @@ namespace Ludots.Core.Presentation.Performers
         /// <summary>Background color alpha channel.</summary>
         public const int BarBackgroundA = 11;
 
-        // ── WorldText ──
+        // WorldText.
 
         /// <summary>Primary numeric value (e.g. damage amount).</summary>
         public const int TextValue0 = 0;
@@ -48,12 +48,12 @@ namespace Ludots.Core.Presentation.Performers
         public const int TextColorB = 6;
         /// <summary>Text color alpha channel.</summary>
         public const int TextColorA = 7;
-        /// <summary>Stable text token ID for localization.</summary>
+        /// <summary>Reserved runtime slot; authoring uses PerformerDefinition.defaultTextId.</summary>
         public const int TextTokenId = 15;
-        /// <summary>WorldHudValueMode ordinal for legacy adapters.</summary>
+        /// <summary>Reserved runtime slot; authoring uses PerformerDefinition.worldTextValueMode.</summary>
         public const int TextValueMode = 16;
 
-        // ── GroundOverlay ──
+        // GroundOverlay.
 
         /// <summary>Outer radius (or uniform scale).</summary>
         public const int OverlayRadius = 0;
@@ -86,9 +86,9 @@ namespace Ludots.Core.Presentation.Performers
         /// <summary>Rectangle width (for rectangular overlays).</summary>
         public const int OverlayWidth = 14;
 
-        // ── Marker3D ──
+        // Marker3D.
 
-        /// <summary>Uniform scale. Per-axis falls back to this value.</summary>
+        /// <summary>Uniform scale used when no per-axis override is authored.</summary>
         public const int MarkerScale = 0;
         /// <summary>Per-axis scale X override.</summary>
         public const int MarkerScaleX = 1;

@@ -21,7 +21,7 @@ namespace Ludots.Core.Presentation.Performers
         /// <summary>Ground-following cubic spline ribbon for roads, lanes, and route highlights.</summary>
         RoadSpline = 4,
 
-        /// <summary>Authored procedural surface source consumed by surface build systems.</summary>
+        /// <summary>Core-authored procedural surface source that bakes into procedural mesh payloads.</summary>
         SurfaceSource = 5,
     }
 }

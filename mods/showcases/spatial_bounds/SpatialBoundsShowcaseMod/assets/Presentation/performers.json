@@ -9,8 +9,9 @@
         "assetBinding": {
           "assetKind": "SkinnedMesh",
           "assetId": "sphere",
-          "materialId": "default_surface",
+          "materialId": "default_skinned_surface",
           "renderPath": "SkinnedMesh",
+          "animatorSlot": 1,
           "mobility": "Movable",
           "localScale": [0.9, 0.9, 0.9]
         }
@@ -24,47 +25,6 @@
           "animationProfileId": "core.hero.profile.locomotion",
           "speedParamKey": 0
         }
-      }
-    ],
-    "rules": [
-      {
-        "event": { "kind": "EntitySpawned", "key": "spatial_bounds_point_pin" },
-        "condition": { "inline": "SourceHasVisualTransform" },
-        "command": {
-          "kind": "CreatePerformer",
-          "definitionId": "spatial_bounds.character.hero_skinned",
-          "scopeSource": "EventPayloadA"
-        }
-      },
-      {
-        "event": { "kind": "EntitySpawned", "key": "spatial_bounds_box_tower" },
-        "condition": { "inline": "SourceHasVisualTransform" },
-        "command": {
-          "kind": "CreatePerformer",
-          "definitionId": "spatial_bounds.character.hero_skinned",
-          "scopeSource": "EventPayloadA"
-        }
-      },
-      {
-        "event": { "kind": "EntitySpawned", "key": "spatial_bounds_overlap_point" },
-        "condition": { "inline": "SourceHasVisualTransform" },
-        "command": {
-          "kind": "CreatePerformer",
-          "definitionId": "spatial_bounds.character.hero_skinned",
-          "scopeSource": "EventPayloadA"
-        }
-      },
-      {
-        "event": { "kind": "EntityDestroyed", "key": "spatial_bounds_point_pin" },
-        "command": { "kind": "DestroyPerformerScope", "scopeSource": "EventPayloadA" }
-      },
-      {
-        "event": { "kind": "EntityDestroyed", "key": "spatial_bounds_box_tower" },
-        "command": { "kind": "DestroyPerformerScope", "scopeSource": "EventPayloadA" }
-      },
-      {
-        "event": { "kind": "EntityDestroyed", "key": "spatial_bounds_overlap_point" },
-        "command": { "kind": "DestroyPerformerScope", "scopeSource": "EventPayloadA" }
       }
     ]
   },
@@ -83,60 +43,6 @@
           "mobility": "Movable",
           "localScale": [0.8, 0.8, 0.8]
         }
-      }
-    ],
-    "rules": [
-      {
-        "event": { "kind": "EntitySpawned", "key": "spatial_bounds_rect_footprint" },
-        "condition": { "inline": "SourceHasVisualTransform" },
-        "command": {
-          "kind": "CreatePerformer",
-          "definitionId": "spatial_bounds.prop.dummy_static",
-          "scopeSource": "EventPayloadA"
-        }
-      },
-      {
-        "event": { "kind": "EntitySpawned", "key": "spatial_bounds_diamond_footprint" },
-        "condition": { "inline": "SourceHasVisualTransform" },
-        "command": {
-          "kind": "CreatePerformer",
-          "definitionId": "spatial_bounds.prop.dummy_static",
-          "scopeSource": "EventPayloadA"
-        }
-      },
-      {
-        "event": { "kind": "EntitySpawned", "key": "spatial_bounds_multi_footprint" },
-        "condition": { "inline": "SourceHasVisualTransform" },
-        "command": {
-          "kind": "CreatePerformer",
-          "definitionId": "spatial_bounds.prop.dummy_static",
-          "scopeSource": "EventPayloadA"
-        }
-      },
-      {
-        "event": { "kind": "EntitySpawned", "key": "spatial_bounds_overlap_pad" },
-        "condition": { "inline": "SourceHasVisualTransform" },
-        "command": {
-          "kind": "CreatePerformer",
-          "definitionId": "spatial_bounds.prop.dummy_static",
-          "scopeSource": "EventPayloadA"
-        }
-      },
-      {
-        "event": { "kind": "EntityDestroyed", "key": "spatial_bounds_rect_footprint" },
-        "command": { "kind": "DestroyPerformerScope", "scopeSource": "EventPayloadA" }
-      },
-      {
-        "event": { "kind": "EntityDestroyed", "key": "spatial_bounds_diamond_footprint" },
-        "command": { "kind": "DestroyPerformerScope", "scopeSource": "EventPayloadA" }
-      },
-      {
-        "event": { "kind": "EntityDestroyed", "key": "spatial_bounds_multi_footprint" },
-        "command": { "kind": "DestroyPerformerScope", "scopeSource": "EventPayloadA" }
-      },
-      {
-        "event": { "kind": "EntityDestroyed", "key": "spatial_bounds_overlap_pad" },
-        "command": { "kind": "DestroyPerformerScope", "scopeSource": "EventPayloadA" }
       }
     ]
   }

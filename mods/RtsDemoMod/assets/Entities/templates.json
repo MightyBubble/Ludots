@@ -1,11 +1,11 @@
-﻿[
+[
   {
     "id": "rts_barracks",
     "components": {
       "Name": { "Value": "Barracks" },
       "Team": { "Id": 1 },
       "SelectionSelectableTag": {},
-      "SelectionSelectableState": { "IsEnabled": true },
+      "SelectionSelectableState": { "isEnabled": true },
       "WorldPositionCm": { "Value": { "X": 0, "Y": 0 } },
       "Presentation": {
         "imageBindings": [
@@ -15,8 +15,8 @@
       "AttributeBuffer": { "base": { "Health": 1200 } },
       "AbilityStateBuffer": {
         "abilityIds": [
-          "Ability.Rts.TrainMarine",
-          "Ability.Rts.ResearchStim"
+          "Ability.Rts.Terran.TrainMarine",
+          "Ability.Rts.Terran.ResearchStim"
         ]
       },
       "GameplayTagContainer": {},
@@ -34,7 +34,7 @@
       "Name": { "Value": "Marine" },
       "Team": { "Id": 1 },
       "SelectionSelectableTag": {},
-      "SelectionSelectableState": { "IsEnabled": true },
+      "SelectionSelectableState": { "isEnabled": true },
       "WorldPositionCm": { "Value": { "X": 0, "Y": 0 } },
       "Presentation": {
         "imageBindings": [
@@ -44,7 +44,7 @@
       "AttributeBuffer": { "base": { "Health": 40, "AttackSpeed": 100 } },
       "AbilityStateBuffer": {
         "abilityIds": [
-          "Ability.Rts.StimPack"
+          "Ability.Rts.Terran.StimPack"
         ]
       },
       "GameplayTagContainer": {},
@@ -62,7 +62,7 @@
       "Name": { "Value": "Siege Tank" },
       "Team": { "Id": 1 },
       "SelectionSelectableTag": {},
-      "SelectionSelectableState": { "IsEnabled": true },
+      "SelectionSelectableState": { "isEnabled": true },
       "WorldPositionCm": { "Value": { "X": 0, "Y": 0 } },
       "Presentation": {
         "imageBindings": [
@@ -72,7 +72,7 @@
       "AttributeBuffer": { "base": { "Health": 150, "Shield": 0 } },
       "AbilityStateBuffer": {
         "abilityIds": [
-          "Ability.Rts.SiegeModeAoe"
+          "Ability.Rts.Terran.SiegeModeAoe"
         ]
       },
       "GameplayTagContainer": {},
@@ -90,7 +90,7 @@
       "Name": { "Value": "Science Vessel" },
       "Team": { "Id": 1 },
       "SelectionSelectableTag": {},
-      "SelectionSelectableState": { "IsEnabled": true },
+      "SelectionSelectableState": { "isEnabled": true },
       "WorldPositionCm": { "Value": { "X": 0, "Y": 0 } },
       "Presentation": {
         "imageBindings": [
@@ -100,8 +100,8 @@
       "AttributeBuffer": { "base": { "Health": 200, "Energy": 200 } },
       "AbilityStateBuffer": {
         "abilityIds": [
-          "Ability.Rts.ShieldAura",
-          "Ability.Rts.Irradiate"
+          "Ability.Rts.Terran.ShieldAura",
+          "Ability.Rts.Terran.Irradiate"
         ]
       },
       "GameplayTagContainer": {},
@@ -119,7 +119,7 @@
       "Name": { "Value": "Peasant" },
       "Team": { "Id": 1 },
       "SelectionSelectableTag": {},
-      "SelectionSelectableState": { "IsEnabled": true },
+      "SelectionSelectableState": { "isEnabled": true },
       "WorldPositionCm": { "Value": { "X": 0, "Y": 0 } },
       "AttributeBuffer": { "base": { "Health": 230, "Minerals": 900, "Lumber": 400 } },
       "AbilityStateBuffer": {
@@ -146,7 +146,7 @@
       "Name": { "Value": "Barracks" },
       "Team": { "Id": 1 },
       "SelectionSelectableTag": {},
-      "SelectionSelectableState": { "IsEnabled": true },
+      "SelectionSelectableState": { "isEnabled": true },
       "WorldPositionCm": { "Value": { "X": 0, "Y": 0 } },
       "AttributeBuffer": { "base": { "Health": 1200, "Minerals": 700 } },
       "AbilityStateBuffer": {
@@ -171,7 +171,7 @@
       "Name": { "Value": "Lumber Mill" },
       "Team": { "Id": 1 },
       "SelectionSelectableTag": {},
-      "SelectionSelectableState": { "IsEnabled": true },
+      "SelectionSelectableState": { "isEnabled": true },
       "WorldPositionCm": { "Value": { "X": 0, "Y": 0 } },
       "AttributeBuffer": { "base": { "Health": 900 } },
       "GameplayTagContainer": {},
@@ -189,7 +189,7 @@
       "Name": { "Value": "Guard Tower" },
       "Team": { "Id": 1 },
       "SelectionSelectableTag": {},
-      "SelectionSelectableState": { "IsEnabled": true },
+      "SelectionSelectableState": { "isEnabled": true },
       "WorldPositionCm": { "Value": { "X": 0, "Y": 0 } },
       "AttributeBuffer": { "base": { "Health": 750 } },
       "AbilityStateBuffer": {
@@ -215,7 +215,7 @@
       "Name": { "Value": "Footman" },
       "Team": { "Id": 1 },
       "SelectionSelectableTag": {},
-      "SelectionSelectableState": { "IsEnabled": true },
+      "SelectionSelectableState": { "isEnabled": true },
       "WorldPositionCm": { "Value": { "X": 0, "Y": 0 } },
       "AttributeBuffer": { "base": { "Health": 420 } },
       "AbilityStateBuffer": {
@@ -240,7 +240,7 @@
       "Name": { "Value": "Construction Yard" },
       "Team": { "Id": 1 },
       "SelectionSelectableTag": {},
-      "SelectionSelectableState": { "IsEnabled": true },
+      "SelectionSelectableState": { "isEnabled": true },
       "WorldPositionCm": { "Value": { "X": 0, "Y": 0 } },
       "AttributeBuffer": { "base": { "Health": 1600, "Credits": 6000 } },
       "AbilityStateBuffer": {
@@ -267,7 +267,7 @@
       "Name": { "Value": "Power Plant" },
       "Team": { "Id": 1 },
       "SelectionSelectableTag": {},
-      "SelectionSelectableState": { "IsEnabled": true },
+      "SelectionSelectableState": { "isEnabled": true },
       "WorldPositionCm": { "Value": { "X": 0, "Y": 0 } },
       "AttributeBuffer": { "base": { "Health": 900 } },
       "GameplayTagContainer": {},
@@ -285,7 +285,7 @@
       "Name": { "Value": "Refinery" },
       "Team": { "Id": 1 },
       "SelectionSelectableTag": {},
-      "SelectionSelectableState": { "IsEnabled": true },
+      "SelectionSelectableState": { "isEnabled": true },
       "WorldPositionCm": { "Value": { "X": 0, "Y": 0 } },
       "AttributeBuffer": { "base": { "Health": 1200 } },
       "GameplayTagContainer": {},
@@ -303,7 +303,7 @@
       "Name": { "Value": "War Factory" },
       "Team": { "Id": 1 },
       "SelectionSelectableTag": {},
-      "SelectionSelectableState": { "IsEnabled": true },
+      "SelectionSelectableState": { "isEnabled": true },
       "WorldPositionCm": { "Value": { "X": 0, "Y": 0 } },
       "AttributeBuffer": { "base": { "Health": 1400, "Credits": 2800 } },
       "AbilityStateBuffer": {
@@ -328,7 +328,7 @@
       "Name": { "Value": "Battle Bunker" },
       "Team": { "Id": 1 },
       "SelectionSelectableTag": {},
-      "SelectionSelectableState": { "IsEnabled": true },
+      "SelectionSelectableState": { "isEnabled": true },
       "WorldPositionCm": { "Value": { "X": 0, "Y": 0 } },
       "AttributeBuffer": { "base": { "Health": 1100 } },
       "AbilityStateBuffer": {
@@ -354,7 +354,7 @@
       "Name": { "Value": "Rhino Tank" },
       "Team": { "Id": 1 },
       "SelectionSelectableTag": {},
-      "SelectionSelectableState": { "IsEnabled": true },
+      "SelectionSelectableState": { "isEnabled": true },
       "WorldPositionCm": { "Value": { "X": 0, "Y": 0 } },
       "AttributeBuffer": { "base": { "Health": 660 } },
       "AbilityStateBuffer": {
@@ -377,7 +377,7 @@
       "Name": { "Value": "Rocket Trooper" },
       "Team": { "Id": 1 },
       "SelectionSelectableTag": {},
-      "SelectionSelectableState": { "IsEnabled": true },
+      "SelectionSelectableState": { "isEnabled": true },
       "WorldPositionCm": { "Value": { "X": 0, "Y": 0 } },
       "AttributeBuffer": { "base": { "Health": 240 } },
       "AbilityStateBuffer": {
@@ -402,7 +402,7 @@
       "Name": { "Value": "Gateway" },
       "Team": { "Id": 3 },
       "SelectionSelectableTag": {},
-      "SelectionSelectableState": { "IsEnabled": true },
+      "SelectionSelectableState": { "isEnabled": true },
       "WorldPositionCm": { "Value": { "X": 0, "Y": 0 } },
       "AttributeBuffer": { "base": { "Health": 1000, "Shield": 1000, "Minerals": 800, "Gas": 300 } },
       "AbilityStateBuffer": {
@@ -429,7 +429,7 @@
       "Name": { "Value": "Probe" },
       "Team": { "Id": 3 },
       "SelectionSelectableTag": {},
-      "SelectionSelectableState": { "IsEnabled": true },
+      "SelectionSelectableState": { "isEnabled": true },
       "WorldPositionCm": { "Value": { "X": 0, "Y": 0 } },
       "AttributeBuffer": { "base": { "Health": 200, "Shield": 200, "Minerals": 500 } },
       "AbilityStateBuffer": {
@@ -452,7 +452,7 @@
       "Name": { "Value": "Zealot" },
       "Team": { "Id": 3 },
       "SelectionSelectableTag": {},
-      "SelectionSelectableState": { "IsEnabled": true },
+      "SelectionSelectableState": { "isEnabled": true },
       "WorldPositionCm": { "Value": { "X": 0, "Y": 0 } },
       "AttributeBuffer": { "base": { "Health": 500, "Shield": 500 } },
       "AbilityStateBuffer": {
@@ -475,7 +475,7 @@
       "Name": { "Value": "Drone" },
       "Team": { "Id": 2 },
       "SelectionSelectableTag": {},
-      "SelectionSelectableState": { "IsEnabled": true },
+      "SelectionSelectableState": { "isEnabled": true },
       "WorldPositionCm": { "Value": { "X": 0, "Y": 0 } },
       "AttributeBuffer": { "base": { "Health": 240, "Minerals": 700 } },
       "AbilityStateBuffer": {
@@ -498,7 +498,7 @@
       "Name": { "Value": "Spawning Pool" },
       "Team": { "Id": 2 },
       "SelectionSelectableTag": {},
-      "SelectionSelectableState": { "IsEnabled": true },
+      "SelectionSelectableState": { "isEnabled": true },
       "WorldPositionCm": { "Value": { "X": 0, "Y": 0 } },
       "AttributeBuffer": { "base": { "Health": 1100 } },
       "GameplayTagContainer": {},

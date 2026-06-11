@@ -115,6 +115,8 @@
       "genreinfo.view.live": "Live view"
     },
     "zh-CN": {
+      "genreinfo.locale.english": "EN",
+      "genreinfo.locale.chinese": "\u4e2d\u6587",
       "entityinfo.actionstate.ready": "就绪",
       "entityinfo.actionstate.blocked": "受阻",
       "entityinfo.actionstate.active": "激活中",

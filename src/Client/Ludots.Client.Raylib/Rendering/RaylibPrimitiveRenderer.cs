@@ -6,6 +6,7 @@ using Ludots.Core.Modding;
 using Ludots.Core.Presentation.AdapterSync;
 using Ludots.Core.Presentation.Assets;
 using Ludots.Core.Presentation.Components;
+using Ludots.Core.Presentation.Performers;
 using Ludots.Core.Presentation.Rendering;
 using Raylib_cs;
 using Rl = Raylib_cs.Raylib;
@@ -125,6 +126,7 @@ namespace Ludots.Client.Raylib.Rendering
                     continue;
                 }
 
+                ThrowIfMaterialCustomDataWouldBeDropped(in item, "persistent static lane");
                 DrawAssetRecursive(
                     item.MeshAssetId,
                     item.Position,
@@ -147,6 +149,11 @@ namespace Ludots.Client.Raylib.Rendering
             for (int i = 0; i < span.Length; i++)
             {
                 ref readonly var item = ref span[i];
+                if (ShouldSkipHostOwnedSurface(in item))
+                {
+                    continue;
+                }
+
                 if (skinnedBatchActive && item.RenderPath.IsSkinnedLane())
                 {
                     continue;
@@ -157,6 +164,7 @@ namespace Ludots.Client.Raylib.Rendering
                     continue;
                 }
 
+                ThrowIfMaterialCustomDataWouldBeDropped(in item, "immediate primitive draw");
                 if (TryDrawPrototypeSkinned(item, meshes, scaleMul))
                 {
                     continue;
@@ -183,6 +191,50 @@ namespace Ludots.Client.Raylib.Rendering
             return _persistentStaticLaneSync.TryGetBinding(item.StableId, out _);
         }
 
+        private static bool ShouldSkipHostOwnedSurface(in PrimitiveDrawItem item)
+        {
+            if (item.AssetKind == AssetKind.Surface)
+            {
+                if (item.RenderPath != VisualRenderPath.Surface)
+                {
+                    throw new InvalidOperationException(
+                        $"RaylibPrimitiveRenderer received Surface visual stableId={item.StableId} on render path '{item.RenderPath}'.");
+                }
+
+                return true;
+            }
+
+            if (item.RenderPath == VisualRenderPath.Surface)
+            {
+                throw new InvalidOperationException(
+                    $"RaylibPrimitiveRenderer received non-Surface assetKind '{item.AssetKind}' on Surface render path.");
+            }
+
+            return false;
+        }
+
+        private static void ThrowIfMaterialCustomDataWouldBeDropped(in PrimitiveDrawItem item, string path)
+        {
+            if (!item.MaterialCustomData.HasAny)
+            {
+                return;
+            }
+
+            throw new InvalidOperationException(
+                $"RaylibPrimitiveRenderer cannot consume MaterialCustomData for stableId={item.StableId} on {path}. Configure a backend lane that binds per-instance custom data.");
+        }
+
+        private static void ThrowIfMaterialCustomDataWouldBeDropped(in SkinnedVisualBatchItem item, string path)
+        {
+            if (!item.MaterialCustomData.HasAny)
+            {
+                return;
+            }
+
+            throw new InvalidOperationException(
+                $"RaylibPrimitiveRenderer cannot consume MaterialCustomData for stableId={item.StableId} on {path}. Configure a backend lane that binds per-instance custom data.");
+        }
+
         private void DrawHybridInstanced(ReadOnlySpan<PrimitiveDrawItem> span, Camera3D camera, MeshAssetRegistry meshes, float scaleMul)
         {
             EnsureInitialized();
@@ -190,11 +242,17 @@ namespace Ludots.Client.Raylib.Rendering
             for (int i = 0; i < span.Length; i++)
             {
                 ref readonly var item = ref span[i];
+                if (ShouldSkipHostOwnedSurface(in item))
+                {
+                    continue;
+                }
+
                 if (TryDrawPrototypeSkinned(item, meshes, scaleMul))
                 {
                     continue;
                 }
 
+                ThrowIfMaterialCustomDataWouldBeDropped(in item, "instanced primitive draw");
                 SubmitAssetRecursive(
                     item.MeshAssetId,
                     item.Position,
@@ -311,6 +369,7 @@ namespace Ludots.Client.Raylib.Rendering
                     continue;
                 }
 
+                ThrowIfMaterialCustomDataWouldBeDropped(in item, "skinned batch draw");
                 if (TryDrawPrototypeSkinned(item, meshes, scaleMul))
                 {
                     continue;
@@ -924,7 +983,7 @@ namespace Ludots.Client.Raylib.Rendering
             angleDegrees = angleRad * (180f / MathF.PI);
         }
 
-        // ── Instanced rendering (unchanged from original) ──
+        // Standalone instanced primitive rendering.
 
         public void DrawInstanced(PrimitiveDrawBuffer draw, MeshAssetRegistry meshes)
         {
@@ -940,6 +999,12 @@ namespace Ludots.Client.Raylib.Rendering
             for (int i = 0; i < span.Length; i++)
             {
                 ref readonly var item = ref span[i];
+                if (ShouldSkipHostOwnedSurface(in item))
+                {
+                    continue;
+                }
+
+                ThrowIfMaterialCustomDataWouldBeDropped(in item, "standalone instanced primitive draw");
                 if (!meshes.TryGetPrimitiveKind(item.MeshAssetId, out var kind)) continue;
 
                 SubmitPrimitive(kind, item.Position, item.Rotation, item.Scale, item.Color);

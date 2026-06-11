@@ -1,48 +1,46 @@
-using Ludots.Core.Presentation.Commands;
+using System.Numerics;
 
 namespace Ludots.Core.Presentation.Performers
 {
+    public enum PerformerCommandKind : byte
+    {
+        None = 0,
+        CreatePerformer = 1,
+        DestroyPerformer = 2,
+        DestroyPerformerScope = 3,
+        SetParam = 4,
+        SetParamDefaults = 5,
+        ActivateBehavior = 6,
+        DeactivateBehavior = 7,
+    }
+
+    public enum PerformerCommandScopeSource : byte
+    {
+        Fixed = 0,
+        EventPayloadA = 1,
+        EventPayloadB = 2,
+        SourceStableId = 3,
+        TargetStableId = 4,
+    }
+
     /// <summary>
     /// The action part of a <see cref="PerformerRule"/>. When the rule fires,
-    /// the PerformerRuleSystem translates this into a <see cref="PresentationCommand"/>
-    /// and writes it to the <see cref="PresentationCommandBuffer"/>.
+    /// the PerformerRuleSystem translates this into an adapter-neutral presentation command.
     /// </summary>
     public struct PerformerCommand
     {
-        /// <summary>
-        /// The PresentationCommandKind to produce.
-        /// Maps directly to CreatePerformer / DestroyPerformer / DestroyPerformerScope / SetPerformerParam.
-        /// </summary>
-        public PresentationCommandKind CommandKind;
-
-        public PresentationCommandKind LegacyCommandKind
-        {
-            readonly get => CommandKind;
-            set => CommandKind = value;
-        }
+        public PerformerCommandKind CommandKind;
 
         /// <summary>
         /// The PerformerDefinition ID to instantiate (used with CreatePerformer).
         /// </summary>
         public int PerformerDefinitionId;
 
-        /// <summary>
-        /// The Scope ID for grouping (used with CreatePerformer / DestroyPerformerScope).
-        /// Instances sharing a ScopeId can be destroyed together with a single command.
-        /// </summary>
-        public int ScopeId;
-
-        public int ScopeTag
-        {
-            readonly get => ScopeId;
-            set => ScopeId = value;
-        }
-
         public int ParentHandle;
 
-        public PerformerCommandScopeSource ScopeSource;
+        public int ScopeTag;
 
-        public int TargetBehaviorSlot;
+        public PerformerCommandScopeSource ScopeSource;
 
         /// <summary>
         /// The parameter key for SetPerformerParam.
@@ -58,20 +56,14 @@ namespace Ludots.Core.Presentation.Performers
 
         public int IntValue;
 
-        public System.Numerics.Vector4 VectorValue;
+        public Vector4 VectorValue;
 
         /// <summary>
         /// When > 0, execute this Graph program to compute the parameter value
         /// dynamically instead of using <see cref="ParamValue"/>.
         /// </summary>
         public int ParamGraphProgramId;
-    }
 
-    public enum PerformerCommandScopeSource : byte
-    {
-        Fixed = 0,
-        EventPayloadA = 1,
-        EventPayloadB = 2,
-        SourceStableId = 3,
+        public int TargetBehaviorSlot;
     }
 }

@@ -1,2 +1,79 @@
-[
+﻿[
+  {
+    "_comment": "RTS actor ground ring: always-on entity-scoped overlay so units/buildings remain readable on the grid.",
+    "id": "rts_actor_ring",
+    "visualKind": "GroundOverlay",
+    "meshOrShapeId": "Ring",
+    "defaultColor": [0.22, 0.54, 0.96, 0.18],
+    "defaultScale": 1.5,
+    "defaultLifetime": -1,
+    "positionOffset": [0, 0.05, 0],
+    "visibility": { "inline": "OwnerCullVisible" },
+    "bindings": [
+      { "paramKey": 1, "source": "Constant", "constantValue": 0.84 },
+      { "paramKey": 8, "source": "EntityColor", "channel": "Red" },
+      { "paramKey": 9, "source": "EntityColor", "channel": "Green" },
+      { "paramKey": 10, "source": "EntityColor", "channel": "Blue" },
+      { "paramKey": 11, "source": "Constant", "constantValue": 1.0 },
+      { "paramKey": 12, "source": "Constant", "constantValue": 0.08 }
+    ],
+    "rules": [
+      {
+        "event": { "kind": "EntitySpawned" },
+        "condition": { "inline": "SourceHasVisualTransformAndPresentationStableId" },
+        "command": {
+          "kind": "CreatePerformer",
+          "definitionId": "rts_actor_ring",
+          "scopeSource": "SourceStableId"
+        }
+      },
+      {
+        "event": { "kind": "EntityDestroyed" },
+        "condition": { "inline": "SourceHasVisualTransformAndPresentationStableId" },
+        "command": {
+          "kind": "DestroyPerformerScope",
+          "scopeSource": "SourceStableId"
+        }
+      }
+    ]
+  },
+  {
+    "_comment": "RTS actor marker: simple readable body proxy for RtsDemoMod when no showcase-only performer pack is loaded.",
+    "id": "rts_actor_marker",
+    "visualKind": "Marker3D",
+    "meshOrShapeId": "cube",
+    "defaultColor": [0.92, 0.96, 1.0, 0.98],
+    "defaultScale": 1.05,
+    "defaultLifetime": -1,
+    "positionOffset": [0, 0.55, 0],
+    "visibility": { "inline": "OwnerCullVisible" },
+    "bindings": [
+      { "paramKey": 1, "source": "Constant", "constantValue": 1.18 },
+      { "paramKey": 2, "source": "Constant", "constantValue": 1.38 },
+      { "paramKey": 3, "source": "Constant", "constantValue": 1.18 },
+      { "paramKey": 4, "source": "EntityColor", "channel": "Red" },
+      { "paramKey": 5, "source": "EntityColor", "channel": "Green" },
+      { "paramKey": 6, "source": "EntityColor", "channel": "Blue" },
+      { "paramKey": 7, "source": "Constant", "constantValue": 1.0 }
+    ],
+    "rules": [
+      {
+        "event": { "kind": "EntitySpawned" },
+        "condition": { "inline": "SourceHasVisualTransformAndPresentationStableId" },
+        "command": {
+          "kind": "CreatePerformer",
+          "definitionId": "rts_actor_marker",
+          "scopeSource": "SourceStableId"
+        }
+      },
+      {
+        "event": { "kind": "EntityDestroyed" },
+        "condition": { "inline": "SourceHasVisualTransformAndPresentationStableId" },
+        "command": {
+          "kind": "DestroyPerformerScope",
+          "scopeSource": "SourceStableId"
+        }
+      }
+    ]
+  }
 ]

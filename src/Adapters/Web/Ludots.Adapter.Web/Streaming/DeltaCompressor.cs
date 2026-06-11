@@ -3,21 +3,24 @@ using System.Buffers.Binary;
 using System.Text;
 using Ludots.Adapter.Web.Protocol;
 using Ludots.Core.Presentation.Camera;
+using Ludots.Core.Presentation.Components;
 using Ludots.Core.Presentation.Config;
 using Ludots.Core.Presentation.DebugDraw;
 using Ludots.Core.Presentation.Hud;
+using Ludots.Core.Presentation.Performers;
 using Ludots.Core.Presentation.Rendering;
 
 namespace Ludots.Adapter.Web.Streaming
 {
     /// <summary>
     /// Delta encoder: compares current frame against previous and emits only changed items.
-    /// Falls back to full frame if delta would exceed the full size.
     /// </summary>
     public sealed class DeltaCompressor
     {
         private PrimitiveDrawItem[] _prevPrimitives = Array.Empty<PrimitiveDrawItem>();
+        private PrimitiveDrawItem[] _curPrimitives = Array.Empty<PrimitiveDrawItem>();
         private int _prevPrimitiveCount;
+        private int _curPrimitiveCount;
         private int _prevDebugLineHash;
         private int _prevDebugCircleHash;
         private int _prevDebugBoxHash;
@@ -58,8 +61,10 @@ namespace Ludots.Adapter.Web.Streaming
             WriteInt32(simTick);
             WriteInt64(timestampMs);
 
+            PreparePrimitiveLane(primitives);
             WriteCameraSection(in camera);
-            WritePrimitiveDelta(primitives);
+            WritePrimitiveDelta();
+            WriteSurfaces(primitives, emitEmptySection: true);
             WriteGroundOverlayIfChanged(groundOverlays);
             WriteScreenHud(screenHud, worldHudStrings);
             WriteDebugDrawIfChanged(debugDraw);
@@ -70,7 +75,7 @@ namespace Ludots.Adapter.Web.Streaming
             _buffer[_pos++] = FrameProtocol.SectionEnd;
             EncodedLength = _pos;
 
-            SnapshotPrimitives(primitives);
+            SnapshotPrimitives();
             return true;
         }
 
@@ -85,10 +90,9 @@ namespace Ludots.Adapter.Web.Streaming
             WriteFloat(cam.FovYDeg);
         }
 
-        private int WritePrimitiveDelta(PrimitiveDrawBuffer? buf)
+        private int WritePrimitiveDelta()
         {
-            int curCount = buf?.Count ?? 0;
-            ReadOnlySpan<PrimitiveDrawItem> curSpan = buf != null ? buf.GetSpan() : ReadOnlySpan<PrimitiveDrawItem>.Empty;
+            int curCount = _curPrimitiveCount;
 
             int changedCount = 0;
             int maxItems = Math.Max(curCount, _prevPrimitiveCount);
@@ -96,7 +100,7 @@ namespace Ludots.Adapter.Web.Streaming
             int startPos = _pos;
             WriteSectionHeader(FrameProtocol.SectionPrimitivesDelta, 0, 0);
             EnsureCapacity(4);
-            BinaryPrimitives.WriteUInt16LittleEndian(_buffer.AsSpan(_pos), (ushort)curCount);
+            BinaryPrimitives.WriteUInt16LittleEndian(_buffer.AsSpan(_pos), checked((ushort)curCount));
             _pos += 2;
             _pos += 2; // reserved
 
@@ -106,14 +110,14 @@ namespace Ludots.Adapter.Web.Streaming
                 if (i >= curCount || i >= _prevPrimitiveCount)
                     changed = true;
                 else
-                    changed = !curSpan[i].Equals(_prevPrimitives[i]);
+                    changed = !_curPrimitives[i].Equals(_prevPrimitives[i]);
 
                 if (changed && i < curCount)
                 {
                     EnsureCapacity(2 + WirePrimitiveDrawItem.SizeInBytes);
-                    BinaryPrimitives.WriteUInt16LittleEndian(_buffer.AsSpan(_pos), (ushort)i);
+                    BinaryPrimitives.WriteUInt16LittleEndian(_buffer.AsSpan(_pos), checked((ushort)i));
                     _pos += 2;
-                    ref readonly var item = ref curSpan[i];
+                    ref readonly var item = ref _curPrimitives[i];
                     WriteInt32(item.MeshAssetId);
                     WriteFloat(item.Position.X); WriteFloat(item.Position.Y); WriteFloat(item.Position.Z);
                     WriteFloat(item.Scale.X); WriteFloat(item.Scale.Y); WriteFloat(item.Scale.Z);
@@ -124,9 +128,49 @@ namespace Ludots.Adapter.Web.Streaming
 
             int totalBytes = _pos - startPos - FrameProtocol.SectionHeaderSize;
             _buffer[startPos] = FrameProtocol.SectionPrimitivesDelta;
-            BinaryPrimitives.WriteUInt16LittleEndian(_buffer.AsSpan(startPos + 1), (ushort)changedCount);
+            BinaryPrimitives.WriteUInt16LittleEndian(_buffer.AsSpan(startPos + 1), checked((ushort)changedCount));
             BinaryPrimitives.WriteInt32LittleEndian(_buffer.AsSpan(startPos + 3), totalBytes);
             return changedCount;
+        }
+
+        private void WriteSurfaces(PrimitiveDrawBuffer? buf, bool emitEmptySection)
+        {
+            if (buf == null || buf.Count == 0)
+            {
+                if (emitEmptySection)
+                {
+                    WriteSectionHeader(FrameProtocol.SectionSurfaces, 0, 0);
+                }
+
+                return;
+            }
+
+            var span = buf.GetSpan();
+            int startPos = _pos;
+            int count = 0;
+            WriteSectionHeader(FrameProtocol.SectionSurfaces, 0, 0);
+
+            for (int i = 0; i < span.Length; i++)
+            {
+                ref readonly var item = ref span[i];
+                if (!IsSurfaceLaneItem(in item))
+                {
+                    continue;
+                }
+
+                WriteSurfaceItem(in item);
+                count++;
+            }
+
+            if (count == 0 && !emitEmptySection)
+            {
+                _pos = startPos;
+                return;
+            }
+
+            int itemBytes = _pos - startPos - FrameProtocol.SectionHeaderSize;
+            BinaryPrimitives.WriteUInt16LittleEndian(_buffer.AsSpan(startPos + 1), checked((ushort)count));
+            BinaryPrimitives.WriteInt32LittleEndian(_buffer.AsSpan(startPos + 3), itemBytes);
         }
 
         private void WriteGroundOverlayIfChanged(GroundOverlayBuffer? buf)
@@ -186,7 +230,7 @@ namespace Ludots.Adapter.Web.Streaming
                 }
             }
 
-            WriteLegacyStringTable(maxStringId > 0 ? maxStringId + 1 : 0, strings);
+            WriteScreenHudStringTable(maxStringId > 0 ? maxStringId + 1 : 0, strings);
             WriteTextTemplateTable(span, strings);
 
             int totalBytes = _pos - startPos - FrameProtocol.SectionHeaderSize;
@@ -331,7 +375,7 @@ namespace Ludots.Adapter.Web.Streaming
             WriteInt32(arg.Raw32);
         }
 
-        private void WriteLegacyStringTable(int stringCount, WorldHudStringTable? strings)
+        private void WriteScreenHudStringTable(int stringCount, WorldHudStringTable? strings)
         {
             EnsureCapacity(2);
             BinaryPrimitives.WriteUInt16LittleEndian(_buffer.AsSpan(_pos), (ushort)stringCount);
@@ -496,19 +540,144 @@ namespace Ludots.Adapter.Web.Streaming
             BinaryPrimitives.WriteInt32LittleEndian(_buffer.AsSpan(startPos + 3), totalBytes);
         }
 
-        private void SnapshotPrimitives(PrimitiveDrawBuffer? buf)
+        private void PreparePrimitiveLane(PrimitiveDrawBuffer? buf)
         {
             int count = buf?.Count ?? 0;
-            if (_prevPrimitives.Length < count)
-                _prevPrimitives = new PrimitiveDrawItem[count * 2];
-            if (count > 0)
-                buf!.GetSpan().CopyTo(_prevPrimitives.AsSpan());
-            _prevPrimitiveCount = count;
+            if (_curPrimitives.Length < count)
+            {
+                _curPrimitives = new PrimitiveDrawItem[Math.Max(4, count * 2)];
+            }
+
+            _curPrimitiveCount = 0;
+            if (count == 0)
+            {
+                return;
+            }
+
+            ReadOnlySpan<PrimitiveDrawItem> span = buf!.GetSpan();
+            for (int i = 0; i < span.Length; i++)
+            {
+                ref readonly PrimitiveDrawItem item = ref span[i];
+                if (!IsPrimitiveLaneItem(in item))
+                {
+                    continue;
+                }
+
+                _curPrimitives[_curPrimitiveCount++] = item;
+            }
+        }
+
+        private void SnapshotPrimitives()
+        {
+            if (_prevPrimitives.Length < _curPrimitiveCount)
+            {
+                _prevPrimitives = new PrimitiveDrawItem[Math.Max(4, _curPrimitiveCount * 2)];
+            }
+
+            if (_curPrimitiveCount > 0)
+            {
+                _curPrimitives.AsSpan(0, _curPrimitiveCount).CopyTo(_prevPrimitives.AsSpan());
+            }
+
+            _prevPrimitiveCount = _curPrimitiveCount;
         }
 
         private static int HashBuffer(GroundOverlayBuffer? buf)
         {
             return buf?.Count ?? 0;
+        }
+
+        private void WriteSurfaceItem(in PrimitiveDrawItem item)
+        {
+            int layerKeyByteCount = Encoding.UTF8.GetByteCount(item.SurfaceLayerKey);
+            EnsureCapacity(WireSurfaceDrawItem.FixedSizeInBytes + 2 + layerKeyByteCount);
+
+            WriteInt32(item.StableId);
+            WriteInt32(item.MeshAssetId);
+            WriteInt32(item.MaterialId);
+            WriteInt32(item.SortId);
+            WriteFloat(item.Position.X); WriteFloat(item.Position.Y); WriteFloat(item.Position.Z);
+            WriteFloat(item.Rotation.X); WriteFloat(item.Rotation.Y); WriteFloat(item.Rotation.Z); WriteFloat(item.Rotation.W);
+            WriteFloat(item.Scale.X); WriteFloat(item.Scale.Y); WriteFloat(item.Scale.Z);
+            _buffer[_pos++] = (byte)item.Visibility;
+            WriteMaterialCustomData(in item.MaterialCustomData);
+            WriteUtf8ShortString(item.SurfaceLayerKey, layerKeyByteCount);
+        }
+
+        private void WriteMaterialCustomData(in MaterialCustomData data)
+        {
+            WriteUInt32(data.SlotMask);
+            WriteVector4(data.Slot0);
+            WriteVector4(data.Slot1);
+            WriteVector4(data.Slot2);
+            WriteVector4(data.Slot3);
+        }
+
+        private void WriteVector4(in System.Numerics.Vector4 value)
+        {
+            WriteFloat(value.X);
+            WriteFloat(value.Y);
+            WriteFloat(value.Z);
+            WriteFloat(value.W);
+        }
+
+        private void WriteUtf8ShortString(string value, int byteCount)
+        {
+            if (byteCount > ushort.MaxValue)
+            {
+                throw new InvalidOperationException(
+                    $"Surface layer key exceeds {ushort.MaxValue} UTF-8 bytes.");
+            }
+
+            EnsureCapacity(2 + byteCount);
+            BinaryPrimitives.WriteUInt16LittleEndian(_buffer.AsSpan(_pos), (ushort)byteCount);
+            _pos += 2;
+            Encoding.UTF8.GetBytes(value, _buffer.AsSpan(_pos));
+            _pos += byteCount;
+        }
+
+        private static bool IsPrimitiveLaneItem(in PrimitiveDrawItem item)
+        {
+            ValidateLaneRouting(in item);
+            return item.AssetKind != AssetKind.Surface;
+        }
+
+        private static bool IsSurfaceLaneItem(in PrimitiveDrawItem item)
+        {
+            ValidateLaneRouting(in item);
+            return item.AssetKind == AssetKind.Surface;
+        }
+
+        private static void ValidateLaneRouting(in PrimitiveDrawItem item)
+        {
+            if (item.AssetKind == AssetKind.Surface)
+            {
+                if (item.RenderPath != VisualRenderPath.Surface)
+                {
+                    throw new InvalidOperationException(
+                        $"DeltaCompressor received Surface visual stableId={item.StableId} on render path '{item.RenderPath}'.");
+                }
+
+                if (string.IsNullOrWhiteSpace(item.SurfaceLayerKey))
+                {
+                    throw new InvalidOperationException(
+                        $"DeltaCompressor received Surface visual stableId={item.StableId} without SurfaceLayerKey.");
+                }
+
+                return;
+            }
+
+            if (item.RenderPath == VisualRenderPath.Surface)
+            {
+                throw new InvalidOperationException(
+                    $"DeltaCompressor received non-Surface assetKind '{item.AssetKind}' on Surface render path.");
+            }
+
+            if (item.MaterialCustomData.HasAny)
+            {
+                throw new InvalidOperationException(
+                    $"DeltaCompressor cannot consume MaterialCustomData for non-Surface stableId={item.StableId}. Configure a Web lane that binds per-instance custom data.");
+            }
         }
 
         private void WriteSectionHeader(byte sectionType, ushort itemCount, int byteLength)

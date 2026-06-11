@@ -4,9 +4,14 @@ namespace Ludots.Core.Presentation.Performers
     {
         public static int ComposeStableId(int ownerStableId, PerformerVisualKind visualKind, int definitionId)
         {
+            return ComposeStableId(ownerStableId, (int)visualKind, definitionId);
+        }
+
+        public static int ComposeStableId(int ownerStableId, int visualComponent, int definitionId)
+        {
             int hash = 19;
             hash = Mix(hash, ownerStableId);
-            hash = Mix(hash, (int)visualKind);
+            hash = Mix(hash, visualComponent);
             hash = Mix(hash, definitionId);
             return Finalize(hash);
         }

@@ -1,7 +1,6 @@
 using System;
 using System.Numerics;
 using Ludots.Core.Presentation.Assets;
-using Ludots.Core.Presentation.Commands;
 using Ludots.Core.Presentation.Events;
 using Ludots.Core.Presentation.Hud;
 
@@ -53,9 +52,9 @@ namespace Ludots.Core.Presentation.Performers
                         Condition = ConditionRef.AlwaysTrue,
                         Command = new PerformerCommand
                         {
-                            CommandKind = PresentationCommandKind.CreatePerformer,
+                            CommandKind = PerformerCommandKind.CreatePerformer,
                             PerformerDefinitionId = id,
-                            ScopeId = -1,
+                            ScopeTag = -1,
                         }
                     }
                 },
@@ -87,9 +86,9 @@ namespace Ludots.Core.Presentation.Performers
                         Condition = ConditionRef.AlwaysTrue,
                         Command = new PerformerCommand
                         {
-                            CommandKind = PresentationCommandKind.CreatePerformer,
+                            CommandKind = PerformerCommandKind.CreatePerformer,
                             PerformerDefinitionId = id,
-                            ScopeId = -1,
+                            ScopeTag = -1,
                         }
                     }
                 },
@@ -113,7 +112,7 @@ namespace Ludots.Core.Presentation.Performers
                 DefaultColor = new Vector4(1f, 0.2f, 0.1f, 1f),
                 DefaultFontSize = 18,
                 DefaultTextId = textTokenId,
-                LegacyWorldTextMode = WorldHudValueMode.AttributeCurrent,
+                WorldTextValueMode = WorldHudValueMode.AttributeCurrent,
                 DefaultLifetime = 1.2f,
                 PositionOffset = new Vector3(0f, 1.0f, 0f),
                 PositionYDriftPerSecond = 0.8f,
@@ -130,9 +129,9 @@ namespace Ludots.Core.Presentation.Performers
                         Condition = ConditionRef.AlwaysTrue,
                         Command = new PerformerCommand
                         {
-                            CommandKind = PresentationCommandKind.CreatePerformer,
+                            CommandKind = PerformerCommandKind.CreatePerformer,
                             PerformerDefinitionId = id,
-                            ScopeId = -1,
+                            ScopeTag = -1,
                         }
                     }
                 },
@@ -141,14 +140,53 @@ namespace Ludots.Core.Presentation.Performers
 
         private static void RegisterEntityHealthBar(PerformerDefinitionRegistry registry)
         {
-            registry.Register(WellKnownPerformerKeys.EntityHealthBar, new PerformerDefinition
+            string key = WellKnownPerformerKeys.EntityHealthBar;
+            int id = registry.GetOrRegisterId(key);
+            registry.Register(key, new PerformerDefinition
             {
                 VisualKind = PerformerVisualKind.WorldBar,
-                EntityScope = EntityScopeFilter.AllWithAttributes,
                 VisibilityCondition = new ConditionRef { Inline = InlineConditionKind.OwnerCullVisible },
                 DefaultColor = new Vector4(0f, 1f, 0f, 1f),
                 DefaultScale = 1f,
                 PositionOffset = new Vector3(0f, 1.5f, 0f),
+                Rules = new[]
+                {
+                    new PerformerRule
+                    {
+                        Event = new EventFilter
+                        {
+                            Kind = PresentationEventKind.EntitySpawned,
+                            KeyId = -1
+                        },
+                        Condition = new ConditionRef
+                        {
+                            Inline = InlineConditionKind.SourceHasAttributeBufferAndPresentationStableId
+                        },
+                        Command = new PerformerCommand
+                        {
+                            CommandKind = PerformerCommandKind.CreatePerformer,
+                            PerformerDefinitionId = id,
+                            ScopeSource = PerformerCommandScopeSource.SourceStableId,
+                        }
+                    },
+                    new PerformerRule
+                    {
+                        Event = new EventFilter
+                        {
+                            Kind = PresentationEventKind.EntityDestroyed,
+                            KeyId = -1
+                        },
+                        Condition = new ConditionRef
+                        {
+                            Inline = InlineConditionKind.SourceHasAttributeBufferAndPresentationStableId
+                        },
+                        Command = new PerformerCommand
+                        {
+                            CommandKind = PerformerCommandKind.DestroyPerformerScope,
+                            ScopeSource = PerformerCommandScopeSource.SourceStableId,
+                        }
+                    }
+                },
             });
         }
     }

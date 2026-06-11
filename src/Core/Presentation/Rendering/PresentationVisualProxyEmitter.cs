@@ -32,6 +32,7 @@ namespace Ludots.Core.Presentation.Rendering
 
             var primitive = new PrimitiveDrawItem
             {
+                AssetKind = proxy.AssetKind,
                 MeshAssetId = proxy.MeshAssetId,
                 Position = proxy.Position,
                 Rotation = proxy.Rotation,
@@ -47,6 +48,9 @@ namespace Ludots.Core.Presentation.Rendering
                 Animator = proxy.Animator,
                 AnimationOverlay = proxy.AnimationOverlay,
                 Visibility = proxy.Visibility,
+                SurfaceLayerKey = proxy.SurfaceLayerKey,
+                SortId = proxy.SortId,
+                MaterialCustomData = proxy.MaterialCustomData,
             };
 
             if (_snapshotBuffer != null && !_snapshotBuffer.TryAdd(primitive))
@@ -59,6 +63,7 @@ namespace Ludots.Core.Presentation.Rendering
                 _skinnedBatchBuffer != null &&
                 !_skinnedBatchBuffer.TryAdd(new SkinnedVisualBatchItem
                 {
+                    AssetKind = proxy.AssetKind,
                     StableId = proxy.StableId,
                     MeshAssetId = proxy.MeshAssetId,
                     MaterialId = proxy.MaterialId,
@@ -72,6 +77,7 @@ namespace Ludots.Core.Presentation.Rendering
                     Animator = proxy.Animator,
                     AnimationOverlay = proxy.AnimationOverlay,
                     Visibility = proxy.Visibility,
+                    MaterialCustomData = proxy.MaterialCustomData,
                 }))
             {
                 throw new InvalidOperationException(
@@ -80,7 +86,11 @@ namespace Ludots.Core.Presentation.Rendering
 
             if (proxy.Visibility == VisualVisibility.Visible)
             {
-                _drawBuffer.TryAdd(primitive);
+                if (!_drawBuffer.TryAdd(primitive))
+                {
+                    throw new InvalidOperationException(
+                        $"Presentation primitive draw buffer overflowed while emitting visible stableId={proxy.StableId}, renderPath={proxy.RenderPath}.");
+                }
             }
         }
     }

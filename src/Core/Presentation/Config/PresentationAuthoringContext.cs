@@ -73,7 +73,7 @@ namespace Ludots.Core.Presentation.Config
 
             if (template.AnimatorControllerId > 0)
             {
-                Upsert(entity, AnimatorPackedState.Create(template.AnimatorControllerId));
+                Upsert(entity, CreateDefaultPackedState(template.AnimatorControllerId, "Presentation visual template"));
                 Upsert(entity, AnimatorRuntimeState.Create(template.AnimatorControllerId));
                 Upsert(entity, default(AnimatorParameterBuffer));
                 Upsert(entity, default(AnimationOverlayRequest));
@@ -111,27 +111,46 @@ namespace Ludots.Core.Presentation.Config
             if (animatorNode is not JsonObject obj)
                 throw new InvalidOperationException("Presentation animator block must be a JSON object.");
 
-            if (!entity.Has<VisualRuntimeState>())
-            {
-                throw new InvalidOperationException(
-                    "Presentation animator block requires a skinned visualTemplateId because AnimatorPackedState is only valid for skinned render paths.");
-            }
-
-            var visual = entity.Get<VisualRuntimeState>();
-            PresentationRenderContract.ValidateAnimatorAuthoring("Presentation animator block", visual.RenderPath);
-
-            AnimatorPackedState packed = entity.Has<AnimatorPackedState>()
+            bool hasPackedState = entity.Has<AnimatorPackedState>();
+            AnimatorPackedState packed = hasPackedState
                 ? entity.Get<AnimatorPackedState>()
                 : default;
 
             string controllerKey = obj["controllerId"]?.GetValue<string>() ?? string.Empty;
             if (!string.IsNullOrWhiteSpace(controllerKey))
             {
-                packed.SetControllerId(_animators.Register(controllerKey));
+                int controllerId = ResolveRequiredAnimatorControllerId(controllerKey, "Presentation animator block");
+                if (!hasPackedState || packed.GetControllerId() != controllerId)
+                {
+                    packed = CreateDefaultPackedState(controllerId, "Presentation animator block");
+                    hasPackedState = true;
+                }
+            }
+
+            if (packed.GetControllerId() <= 0)
+            {
+                int visualControllerId = entity.Has<VisualRuntimeState>()
+                    ? entity.Get<VisualRuntimeState>().AnimatorControllerId
+                    : 0;
+                if (visualControllerId > 0)
+                {
+                    packed = CreateDefaultPackedState(visualControllerId, "Presentation animator block");
+                    hasPackedState = true;
+                }
             }
 
             if (packed.GetControllerId() <= 0)
                 throw new InvalidOperationException("Presentation animator block requires a controllerId or a visual template with animatorControllerId.");
+
+            bool hasVisualRuntimeState = entity.Has<VisualRuntimeState>();
+            if (!hasVisualRuntimeState)
+            {
+                throw new InvalidOperationException(
+                    "Presentation animator block requires a visualTemplateId or existing VisualRuntimeState. Animator authoring cannot synthesize visual assets.");
+            }
+
+            var visual = entity.Get<VisualRuntimeState>();
+            PresentationRenderContract.ValidateAnimatorAuthoring("Presentation animator block", visual.RenderPath);
 
             if (obj.TryGetPropertyValue("primaryStateIndex", out var primaryStateNode) && primaryStateNode != null)
                 packed.SetPrimaryStateIndex(primaryStateNode.GetValue<int>());
@@ -155,7 +174,7 @@ namespace Ludots.Core.Presentation.Config
                 for (int i = 0; i < flagsArray.Count; i++)
                 {
                     string flagText = flagsArray[i]?.GetValue<string>() ?? string.Empty;
-                    if (!Enum.TryParse(flagText, ignoreCase: true, out AnimatorPackedStateFlags parsed))
+                    if (!Enum.TryParse(flagText, ignoreCase: false, out AnimatorPackedStateFlags parsed))
                         throw new InvalidOperationException($"Presentation animator flag '{flagText}' is invalid.");
                     flags |= parsed;
                 }
@@ -197,6 +216,54 @@ namespace Ludots.Core.Presentation.Config
             entity.Set(visual);
         }
 
+        private int ResolveRequiredAnimatorControllerId(string controllerKey, string sourceName)
+        {
+            int controllerId = _animators.GetId(controllerKey);
+            if (controllerId <= 0)
+            {
+                throw new InvalidOperationException($"{sourceName} references unknown animator controller '{controllerKey}'.");
+            }
+
+            string registeredKey = _animators.GetName(controllerId);
+            if (!string.Equals(registeredKey, controllerKey, StringComparison.Ordinal))
+            {
+                throw new InvalidOperationException(
+                    $"{sourceName} references animator controller '{controllerKey}' with casing that does not match registered key '{registeredKey}'.");
+            }
+
+            return controllerId;
+        }
+
+        private AnimatorPackedState CreateDefaultPackedState(int controllerId, string sourceName)
+        {
+            if (!_animators.TryGet(controllerId, out var definition))
+            {
+                throw new InvalidOperationException(
+                    $"{sourceName} references animator controller id {controllerId}, but no controller definition is registered.");
+            }
+
+            var packed = AnimatorPackedState.Create(controllerId);
+            int defaultStateIndex = definition.ResolveDefaultStateIndex();
+            if (defaultStateIndex == AnimatorRuntimeState.NoState)
+            {
+                return packed;
+            }
+
+            if (!definition.TryGetState(defaultStateIndex, out var state))
+            {
+                throw new InvalidOperationException(
+                    $"{sourceName} animator controller '{_animators.GetName(controllerId)}' resolves missing default state index {defaultStateIndex}.");
+            }
+
+            packed.SetPrimaryStateIndex(state.PackedStateIndex);
+            if (state.Loop)
+            {
+                packed.SetFlags(AnimatorPackedStateFlags.Active | AnimatorPackedStateFlags.Looping);
+            }
+
+            return packed;
+        }
+
         private void ApplyImageBindings(Entity entity, JsonArray bindingsArray)
         {
             if (bindingsArray.Count == 0)
@@ -216,9 +283,9 @@ namespace Ludots.Core.Presentation.Config
                 }
 
                 string roleText = bindingNode["role"]?.GetValue<string>() ?? string.Empty;
-                if (!Enum.TryParse(roleText, ignoreCase: true, out PresentationImageRole role))
+                if (!Enum.TryParse(roleText, ignoreCase: false, out PresentationImageRole role))
                 {
-                    throw new InvalidOperationException($"Presentation imageBindings[{i}] uses invalid role '{roleText}'.");
+                    throw new InvalidOperationException($"Presentation imageBindings[{i}] uses invalid role '{roleText}'. Enum values are case-sensitive.");
                 }
 
                 string stateText = bindingNode["state"]?.GetValue<string>() ?? string.Empty;
@@ -227,9 +294,9 @@ namespace Ludots.Core.Presentation.Config
                     throw new InvalidOperationException($"Presentation imageBindings[{i}] must define non-empty 'state'.");
                 }
 
-                if (!Enum.TryParse(stateText, ignoreCase: true, out PresentationImageState state))
+                if (!Enum.TryParse(stateText, ignoreCase: false, out PresentationImageState state))
                 {
-                    throw new InvalidOperationException($"Presentation imageBindings[{i}] uses invalid state '{stateText}'.");
+                    throw new InvalidOperationException($"Presentation imageBindings[{i}] uses invalid state '{stateText}'. Enum values are case-sensitive.");
                 }
 
                 string imageAssetKey = bindingNode["imageAsset"]?.GetValue<string>() ?? string.Empty;

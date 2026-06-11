@@ -9,8 +9,9 @@
         "assetBinding": {
           "assetKind": "SkinnedMesh",
           "assetId": "sphere",
-          "materialId": "default_surface",
+          "materialId": "default_skinned_surface",
           "renderPath": "SkinnedMesh",
+          "animatorSlot": 1,
           "mobility": "Movable",
           "localScale": [2.2, 2.2, 2.2]
         }
@@ -24,86 +25,6 @@
           "animationProfileId": "core.hero.profile.locomotion",
           "speedParamKey": 0
         }
-      }
-    ],
-    "rules": [
-      {
-        "event": { "kind": "EntitySpawned", "key": "interaction_arcweaver" },
-        "condition": { "inline": "SourceHasVisualTransform" },
-        "command": {
-          "kind": "CreatePerformer",
-          "definitionId": "interaction.character.hero_showcase",
-          "scopeSource": "EventPayloadA"
-        }
-      },
-      {
-        "event": { "kind": "EntitySpawned", "key": "interaction_vanguard" },
-        "condition": { "inline": "SourceHasVisualTransform" },
-        "command": {
-          "kind": "CreatePerformer",
-          "definitionId": "interaction.character.hero_showcase",
-          "scopeSource": "EventPayloadA"
-        }
-      },
-      {
-        "event": { "kind": "EntitySpawned", "key": "interaction_arcweaver_forms_demo" },
-        "condition": { "inline": "SourceHasVisualTransform" },
-        "command": {
-          "kind": "CreatePerformer",
-          "definitionId": "interaction.character.hero_showcase",
-          "scopeSource": "EventPayloadA"
-        }
-      },
-      {
-        "event": { "kind": "EntitySpawned", "key": "interaction_commander" },
-        "condition": { "inline": "SourceHasVisualTransform" },
-        "command": {
-          "kind": "CreatePerformer",
-          "definitionId": "interaction.character.hero_showcase",
-          "scopeSource": "EventPayloadA"
-        }
-      },
-      {
-        "event": { "kind": "EntitySpawned", "key": "interaction_stress_red_mage" },
-        "condition": { "inline": "SourceHasVisualTransform" },
-        "command": {
-          "kind": "CreatePerformer",
-          "definitionId": "interaction.character.hero_showcase",
-          "scopeSource": "EventPayloadA"
-        }
-      },
-      {
-        "event": { "kind": "EntitySpawned", "key": "interaction_stress_blue_mage" },
-        "condition": { "inline": "SourceHasVisualTransform" },
-        "command": {
-          "kind": "CreatePerformer",
-          "definitionId": "interaction.character.hero_showcase",
-          "scopeSource": "EventPayloadA"
-        }
-      },
-      {
-        "event": { "kind": "EntityDestroyed", "key": "interaction_arcweaver" },
-        "command": { "kind": "DestroyPerformerScope", "scopeSource": "EventPayloadA" }
-      },
-      {
-        "event": { "kind": "EntityDestroyed", "key": "interaction_vanguard" },
-        "command": { "kind": "DestroyPerformerScope", "scopeSource": "EventPayloadA" }
-      },
-      {
-        "event": { "kind": "EntityDestroyed", "key": "interaction_arcweaver_forms_demo" },
-        "command": { "kind": "DestroyPerformerScope", "scopeSource": "EventPayloadA" }
-      },
-      {
-        "event": { "kind": "EntityDestroyed", "key": "interaction_commander" },
-        "command": { "kind": "DestroyPerformerScope", "scopeSource": "EventPayloadA" }
-      },
-      {
-        "event": { "kind": "EntityDestroyed", "key": "interaction_stress_red_mage" },
-        "command": { "kind": "DestroyPerformerScope", "scopeSource": "EventPayloadA" }
-      },
-      {
-        "event": { "kind": "EntityDestroyed", "key": "interaction_stress_blue_mage" },
-        "command": { "kind": "DestroyPerformerScope", "scopeSource": "EventPayloadA" }
       }
     ]
   },
@@ -123,60 +44,6 @@
           "localScale": [1.8, 1.8, 1.8]
         }
       }
-    ],
-    "rules": [
-      {
-        "event": { "kind": "EntitySpawned", "key": "interaction_enemy_raider" },
-        "condition": { "inline": "SourceHasVisualTransform" },
-        "command": {
-          "kind": "CreatePerformer",
-          "definitionId": "interaction.prop.dummy_showcase",
-          "scopeSource": "EventPayloadA"
-        }
-      },
-      {
-        "event": { "kind": "EntitySpawned", "key": "interaction_enemy_bruiser" },
-        "condition": { "inline": "SourceHasVisualTransform" },
-        "command": {
-          "kind": "CreatePerformer",
-          "definitionId": "interaction.prop.dummy_showcase",
-          "scopeSource": "EventPayloadA"
-        }
-      },
-      {
-        "event": { "kind": "EntitySpawned", "key": "interaction_stress_anchor_red" },
-        "condition": { "inline": "SourceHasVisualTransform" },
-        "command": {
-          "kind": "CreatePerformer",
-          "definitionId": "interaction.prop.dummy_showcase",
-          "scopeSource": "EventPayloadA"
-        }
-      },
-      {
-        "event": { "kind": "EntitySpawned", "key": "interaction_stress_anchor_blue" },
-        "condition": { "inline": "SourceHasVisualTransform" },
-        "command": {
-          "kind": "CreatePerformer",
-          "definitionId": "interaction.prop.dummy_showcase",
-          "scopeSource": "EventPayloadA"
-        }
-      },
-      {
-        "event": { "kind": "EntityDestroyed", "key": "interaction_enemy_raider" },
-        "command": { "kind": "DestroyPerformerScope", "scopeSource": "EventPayloadA" }
-      },
-      {
-        "event": { "kind": "EntityDestroyed", "key": "interaction_enemy_bruiser" },
-        "command": { "kind": "DestroyPerformerScope", "scopeSource": "EventPayloadA" }
-      },
-      {
-        "event": { "kind": "EntityDestroyed", "key": "interaction_stress_anchor_red" },
-        "command": { "kind": "DestroyPerformerScope", "scopeSource": "EventPayloadA" }
-      },
-      {
-        "event": { "kind": "EntityDestroyed", "key": "interaction_stress_anchor_blue" },
-        "command": { "kind": "DestroyPerformerScope", "scopeSource": "EventPayloadA" }
-      }
     ]
   },
   {
@@ -188,12 +55,12 @@
     "defaultLifetime": -1,
     "positionOffset": [0, 0.04, 0],
     "bindings": [
-      { "paramKey": 1, "source": "constant", "constantValue": 0.95 },
-      { "paramKey": 8, "source": "constant", "constantValue": 0.45 },
-      { "paramKey": 9, "source": "constant", "constantValue": 0.86 },
-      { "paramKey": 10, "source": "constant", "constantValue": 1.0 },
-      { "paramKey": 11, "source": "constant", "constantValue": 0.95 },
-      { "paramKey": 12, "source": "constant", "constantValue": 0.03 }
+      { "paramKey": 1, "source": "Constant", "constantValue": 0.95 },
+      { "paramKey": 8, "source": "Constant", "constantValue": 0.45 },
+      { "paramKey": 9, "source": "Constant", "constantValue": 0.86 },
+      { "paramKey": 10, "source": "Constant", "constantValue": 1.0 },
+      { "paramKey": 11, "source": "Constant", "constantValue": 0.95 },
+      { "paramKey": 12, "source": "Constant", "constantValue": 0.03 }
     ]
   }
 ]

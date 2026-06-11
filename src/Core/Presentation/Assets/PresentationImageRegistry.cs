@@ -16,7 +16,7 @@ namespace Ludots.Core.Presentation.Assets
                 throw new ArgumentOutOfRangeException(nameof(capacity));
             }
 
-            _ids = new StringIntRegistry(capacity, startId: 1, invalidId: 0, comparer: StringComparer.OrdinalIgnoreCase);
+            _ids = new StringIntRegistry(capacity, startId: 1, invalidId: 0, comparer: StringComparer.Ordinal);
             _definitions = new PresentationImageDefinition[capacity];
             _hasDefinitions = new bool[capacity];
         }

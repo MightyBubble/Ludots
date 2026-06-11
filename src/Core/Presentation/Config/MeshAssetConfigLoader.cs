@@ -81,16 +81,27 @@ namespace Ludots.Core.Presentation.Config
 
         private MeshAssetDescriptor ParseDescriptor(JsonNode node)
         {
-            string typeStr = node["type"]?.GetValue<string>();
-            if (!Enum.TryParse<MeshAssetType>(typeStr, ignoreCase: true, out var type))
-                return default;
+            string key = node["id"]?.GetValue<string>() ?? "<unknown>";
+            string typeStr = node["type"]?.GetValue<string>() ?? string.Empty;
+            if (string.IsNullOrWhiteSpace(typeStr) ||
+                !Enum.TryParse<MeshAssetType>(typeStr, ignoreCase: false, out var type))
+            {
+                throw new InvalidOperationException(
+                    $"Mesh asset '{key}' has invalid type '{typeStr}'. Enum values are case-sensitive.");
+            }
 
             switch (type)
             {
                 case MeshAssetType.Primitive:
                 {
-                    string kindStr = node["primitiveKind"]?.GetValue<string>();
-                    Enum.TryParse<PrimitiveMeshKind>(kindStr, ignoreCase: true, out var kind);
+                    string kindStr = node["primitiveKind"]?.GetValue<string>() ?? string.Empty;
+                    if (string.IsNullOrWhiteSpace(kindStr) ||
+                        !Enum.TryParse<PrimitiveMeshKind>(kindStr, ignoreCase: false, out var kind))
+                    {
+                        throw new InvalidOperationException(
+                            $"Mesh asset '{key}' has invalid primitiveKind '{kindStr}'. Enum values are case-sensitive.");
+                    }
+
                     return MeshAssetDescriptor.Primitive(0, kind);
                 }
                 case MeshAssetType.Model:
@@ -119,7 +130,7 @@ namespace Ludots.Core.Presentation.Config
                     return MeshAssetDescriptor.Prefab(0, parts);
                 }
                 default:
-                    return default;
+                    throw new InvalidOperationException($"Mesh asset '{key}' has unsupported type '{type}'.");
             }
         }
 

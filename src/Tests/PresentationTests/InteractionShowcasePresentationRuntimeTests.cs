@@ -36,26 +36,26 @@ namespace Ludots.Tests.Presentation
             using var engine = CreateEngine(ShowcaseMods);
             LoadMap(engine, "interaction_showcase_hub");
 
-            int mapVisuals = 0;
-            int skinnedCount = 0;
-            int staticCount = 0;
+            int animatorSources = 0;
+            int skinnedAnimatorSources = 0;
+            int staticAnimatorSources = 0;
             var query = new QueryDescription().WithAll<MapEntity, Name, VisualRuntimeState>();
             engine.World.Query(in query, (ref MapEntity _, ref Name _, ref VisualRuntimeState visual) =>
             {
-                mapVisuals++;
+                animatorSources++;
                 if (visual.RenderPath == VisualRenderPath.SkinnedMesh)
                 {
-                    skinnedCount++;
+                    skinnedAnimatorSources++;
                 }
                 else if (visual.RenderPath == VisualRenderPath.StaticMesh)
                 {
-                    staticCount++;
+                    staticAnimatorSources++;
                 }
             });
 
-            Assert.That(mapVisuals, Is.EqualTo(8), "Interaction showcase hub should spawn eight visible map entities with presentation runtime.");
-            Assert.That(skinnedCount, Is.EqualTo(4), "Hero-side interaction fixtures should stay on the skinned lane.");
-            Assert.That(staticCount, Is.EqualTo(4), "Enemy-side interaction fixtures should stay on the static lane.");
+            Assert.That(animatorSources, Is.EqualTo(0), "Interaction showcase visuals are performer-owned and should not require entity VisualRuntimeState.");
+            Assert.That(skinnedAnimatorSources, Is.EqualTo(0), "Hero-side interaction fixtures should own skinned animator state on performer instances.");
+            Assert.That(staticAnimatorSources, Is.EqualTo(0), "Enemy-side static visuals are performer-owned and should not require entity VisualRuntimeState.");
 
             var primitives = engine.GetService(CoreServiceKeys.PresentationPrimitiveDrawBuffer);
             Assert.That(primitives, Is.Not.Null);

@@ -2,6 +2,7 @@ using System;
 using System.Numerics;
 using Arch.Core;
 using Ludots.Core.Presentation.Components;
+using Ludots.Core.Presentation.Performers;
 
 namespace Ludots.Core.Presentation.Rendering
 {
@@ -115,6 +116,7 @@ namespace Ludots.Core.Presentation.Rendering
                 emitter.Emit(new PresentationVisualProxy
                 {
                     ProxyKind = PresentationVisualProxyKind.Performer,
+                    AssetKind = AssetKind.Mesh,
                     MeshAssetId = m.MeshAssetId,
                     Position = pos,
                     Rotation = Quaternion.Identity,

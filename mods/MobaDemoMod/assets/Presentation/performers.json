@@ -1,6 +1,40 @@
-[
+﻿[
   {
-    "_comment": "选中指示器 - instance-scoped, 黄色球体悬浮在选中单位头顶",
+    "_comment": "Unit marker for entities with VisualTransform.",
+    "id": "moba_unit_marker",
+    "visualKind": "Marker3D",
+    "meshOrShapeId": "cube",
+    "defaultScale": 0.35,
+    "positionOffset": [0, 0.25, 0],
+    "visibility": { "inline": "OwnerCullVisible" },
+    "bindings": [
+      { "paramKey": 4, "source": "EntityColor", "channel": "Red" },
+      { "paramKey": 5, "source": "EntityColor", "channel": "Green" },
+      { "paramKey": 6, "source": "EntityColor", "channel": "Blue" },
+      { "paramKey": 7, "source": "EntityColor", "channel": "Alpha" }
+    ],
+    "rules": [
+      {
+        "event": { "kind": "EntitySpawned" },
+        "condition": { "inline": "SourceHasVisualTransformAndPresentationStableId" },
+        "command": {
+          "kind": "CreatePerformer",
+          "definitionId": "moba_unit_marker",
+          "scopeSource": "SourceStableId"
+        }
+      },
+      {
+        "event": { "kind": "EntityDestroyed" },
+        "condition": { "inline": "SourceHasVisualTransformAndPresentationStableId" },
+        "command": {
+          "kind": "DestroyPerformerScope",
+          "scopeSource": "SourceStableId"
+        }
+      }
+    ]
+  },
+  {
+    "_comment": "Selection indicator shown above the selected unit.",
     "id": "moba_selection_indicator",
     "visualKind": "Marker3D",
     "meshOrShapeId": "sphere",
@@ -10,7 +44,7 @@
     "positionOffset": [0, 0.85, 0]
   },
   {
-    "_comment": "选区范围标记 - instance-scoped, 紫色扁球短暂闪烁(CircleEnemy)",
+    "_comment": "閫夊尯鑼冨洿鏍囪 - instance-scoped, 绱壊鎵佺悆鐭殏闂儊(CircleEnemy)",
     "id": "moba_area_marker",
     "visualKind": "Marker3D",
     "meshOrShapeId": "sphere",
@@ -19,16 +53,16 @@
     "alphaFadeOverLifetime": true,
     "positionOffset": [0, 0.1, 0],
     "bindings": [
-      { "paramKey": 1, "source": "constant", "constantValue": 1.2 },
-      { "paramKey": 2, "source": "constant", "constantValue": 0.08 },
-      { "paramKey": 3, "source": "constant", "constantValue": 1.2 }
+      { "paramKey": 1, "source": "Constant", "constantValue": 1.2 },
+      { "paramKey": 2, "source": "Constant", "constantValue": 0.08 },
+      { "paramKey": 3, "source": "Constant", "constantValue": 1.2 }
     ]
   },
   {
-    "_comment": "技能范围圈 - instance-scoped, 瞄准时的地面圆形指示器",
+    "_comment": "Ground range marker shown while aiming an ability.",
     "id": "moba_ability_range",
     "visualKind": "GroundOverlay",
-    "meshOrShapeId": "circle",
+    "meshOrShapeId": "Circle",
     "defaultColor": [0.3, 0.7, 1.0, 0.2],
     "defaultScale": 6.0,
     "defaultLifetime": -1,

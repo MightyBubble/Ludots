@@ -1,4 +1,5 @@
 using Arch.System;
+using System;
 using Ludots.Core.Gameplay.GAS.Orders;
 using Ludots.Core.Gameplay.GAS.Systems;
 
@@ -11,10 +12,15 @@ namespace Ludots.Core.Presentation.Systems
         private readonly int _chainPassOrderTypeId;
         private int _lastSubmittedRootId;
 
-        public ResponseChainAiOrderSourceSystem(ResponseChainUiState ui, OrderQueue chainOrders, int chainPassOrderTypeId = 1)
+        public ResponseChainAiOrderSourceSystem(ResponseChainUiState ui, OrderQueue chainOrders, int chainPassOrderTypeId)
         {
             _ui = ui;
             _chainOrders = chainOrders;
+            if (chainPassOrderTypeId <= 0)
+            {
+                throw new ArgumentOutOfRangeException(nameof(chainPassOrderTypeId), "Response-chain pass order type id must be positive.");
+            }
+
             _chainPassOrderTypeId = chainPassOrderTypeId;
         }
 

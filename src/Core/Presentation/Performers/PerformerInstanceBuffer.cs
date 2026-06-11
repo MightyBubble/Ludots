@@ -2,6 +2,7 @@ using System;
 using System.Numerics;
 using Arch.Core;
 using Ludots.Core.Presentation.Commands;
+using Ludots.Core.Presentation.Components;
 
 namespace Ludots.Core.Presentation.Performers
 {
@@ -27,7 +28,17 @@ namespace Ludots.Core.Presentation.Performers
         private readonly int[] _overrideKeys;    // -1 = unused
         private readonly float[] _overrideValues;
 
+        private readonly int _animatorSlotsPerInstance;
+        private readonly int[] _animatorBehaviorSlots;
+        private readonly AnimatorPackedState[] _animatorPackedStates;
+        private readonly AnimatorRuntimeState[] _animatorRuntimeStates;
+        private readonly AnimatorParameterBuffer[] _animatorParameterBuffers;
+        private readonly AnimationOverlayRequest[] _animationOverlayRequests;
+        private readonly AnimatorFeedbackBuffer[] _animatorFeedbackBuffers;
+
         public int Capacity => _slots.Length;
+
+        public int AnimatorSlotsPerInstance => _animatorSlotsPerInstance;
 
         /// <summary>
         /// Number of currently active instances.
@@ -43,16 +54,27 @@ namespace Ludots.Core.Presentation.Performers
             }
         }
 
-        public PerformerInstanceBuffer(int capacity = 256)
+        public PerformerInstanceBuffer(int capacity = 256, int animatorSlotsPerInstance = 1)
         {
             if (capacity <= 0)
                 throw new ArgumentOutOfRangeException(nameof(capacity), "PerformerInstanceBuffer capacity must be positive.");
+            if (animatorSlotsPerInstance <= 0)
+                throw new ArgumentOutOfRangeException(nameof(animatorSlotsPerInstance), "Performer animator slots per instance must be positive.");
 
             _slots = new PerformerInstance[capacity];
             _freeStack = new int[capacity];
             _overrideKeys = new int[capacity * MaxOverridesPerInstance];
             _overrideValues = new float[capacity * MaxOverridesPerInstance];
+            _animatorSlotsPerInstance = animatorSlotsPerInstance;
+            int animatorCapacity = capacity * animatorSlotsPerInstance;
+            _animatorBehaviorSlots = new int[animatorCapacity];
+            _animatorPackedStates = new AnimatorPackedState[animatorCapacity];
+            _animatorRuntimeStates = new AnimatorRuntimeState[animatorCapacity];
+            _animatorParameterBuffers = new AnimatorParameterBuffer[animatorCapacity];
+            _animationOverlayRequests = new AnimationOverlayRequest[animatorCapacity];
+            _animatorFeedbackBuffers = new AnimatorFeedbackBuffer[animatorCapacity];
             Array.Fill(_overrideKeys, -1);
+            Array.Fill(_animatorBehaviorSlots, -1);
         }
 
         /// <summary>
@@ -104,6 +126,7 @@ namespace Ludots.Core.Presentation.Performers
             if (!_slots[handle].Active) return; // guard against double-free
             _slots[handle].Active = false;
             ClearAllOverrides(handle);
+            ClearAnimatorSlots(handle);
             PushFree(handle);
         }
 
@@ -119,6 +142,7 @@ namespace Ludots.Core.Presentation.Performers
                 {
                     _slots[i].Active = false;
                     ClearAllOverrides(i);
+                    ClearAnimatorSlots(i);
                     PushFree(i);
                 }
             }
@@ -164,6 +188,109 @@ namespace Ludots.Core.Presentation.Performers
                 processed++;
             }
             return processed;
+        }
+
+        public delegate void AnimatorSlotProcessCallback(
+            int handle,
+            ref PerformerInstance instance,
+            int behaviorSlot,
+            ref AnimatorPackedState packed,
+            ref AnimatorRuntimeState runtime,
+            ref AnimatorParameterBuffer parameters,
+            ref AnimationOverlayRequest overlay,
+            ref AnimatorFeedbackBuffer feedback,
+            float dt);
+
+        public int ProcessAnimatorSlots(float dt, AnimatorSlotProcessCallback callback)
+        {
+            int processed = 0;
+            for (int handle = 0; handle < _highWaterMark; handle++)
+            {
+                if (!_slots[handle].Active)
+                    continue;
+
+                int baseIdx = GetAnimatorBaseIndex(handle);
+                for (int slot = 0; slot < _animatorSlotsPerInstance; slot++)
+                {
+                    int idx = baseIdx + slot;
+                    int behaviorSlot = _animatorBehaviorSlots[idx];
+                    if (behaviorSlot < 0)
+                        continue;
+
+                    callback(
+                        handle,
+                        ref _slots[handle],
+                        behaviorSlot,
+                        ref _animatorPackedStates[idx],
+                        ref _animatorRuntimeStates[idx],
+                        ref _animatorParameterBuffers[idx],
+                        ref _animationOverlayRequests[idx],
+                        ref _animatorFeedbackBuffers[idx],
+                        dt);
+                    processed++;
+                }
+            }
+
+            return processed;
+        }
+
+        public void InitializeAnimatorSlots(int handle, PerformerDefinition definition)
+        {
+            if (!IsActive(handle))
+                throw new ArgumentOutOfRangeException(nameof(handle), "Cannot initialize animator slots for an inactive performer instance.");
+            if (definition == null)
+                throw new ArgumentNullException(nameof(definition));
+
+            ClearAnimatorSlots(handle);
+
+            int count = 0;
+            for (int i = 0; i < definition.Behaviors.Length; i++)
+            {
+                ref readonly BehaviorSlot behavior = ref definition.Behaviors[i];
+                if (behavior.Kind != BehaviorKind.Animator)
+                    continue;
+
+                if (count >= _animatorSlotsPerInstance)
+                {
+                    throw new InvalidOperationException(
+                        $"Performer '{definition.Key}' declares more Animator behavior slots than PerformerInstanceBuffer capacity per instance ({_animatorSlotsPerInstance}). Increase presentation.performerAnimatorSlotsPerInstance.");
+                }
+
+                int idx = GetAnimatorBaseIndex(handle) + count;
+                _animatorBehaviorSlots[idx] = behavior.SlotIndex;
+                _animatorPackedStates[idx] = AnimatorPackedState.Create(behavior.Animator.AnimatorControllerId);
+                _animatorRuntimeStates[idx] = AnimatorRuntimeState.Create(behavior.Animator.AnimatorControllerId);
+                _animatorParameterBuffers[idx] = default;
+                _animationOverlayRequests[idx] = default;
+                _animatorFeedbackBuffers[idx] = default;
+                count++;
+            }
+        }
+
+        public bool TryReadAnimatorSlot(
+            int handle,
+            int behaviorSlot,
+            out AnimatorPackedState packed,
+            out AnimationOverlayRequest overlay)
+        {
+            if (handle < 0 || handle >= _highWaterMark || !_slots[handle].Active)
+            {
+                packed = default;
+                overlay = default;
+                return false;
+            }
+
+            int idx = FindAnimatorSlotIndex(handle, behaviorSlot);
+            if (idx < 0)
+            {
+                packed = default;
+                overlay = default;
+                return false;
+            }
+
+            packed = _animatorPackedStates[idx];
+            overlay = _animationOverlayRequests[idx];
+            return true;
         }
 
         // ── Imperative Parameter Overrides ──
@@ -263,6 +390,7 @@ namespace Ludots.Core.Presentation.Performers
 
                 _slots[i].Active = false;
                 ClearAllOverrides(i);
+                ClearAnimatorSlots(i);
                 PushFree(i);
                 released++;
             }
@@ -317,6 +445,7 @@ namespace Ludots.Core.Presentation.Performers
                 Active = true
             };
             ClearAllOverrides(idx);
+            ClearAnimatorSlots(idx);
         }
 
         private void ClearAllOverrides(int handle)
@@ -324,6 +453,39 @@ namespace Ludots.Core.Presentation.Performers
             int baseIdx = handle * MaxOverridesPerInstance;
             for (int i = 0; i < MaxOverridesPerInstance; i++)
                 _overrideKeys[baseIdx + i] = -1;
+        }
+
+        private int GetAnimatorBaseIndex(int handle)
+        {
+            return handle * _animatorSlotsPerInstance;
+        }
+
+        private int FindAnimatorSlotIndex(int handle, int behaviorSlot)
+        {
+            int baseIdx = GetAnimatorBaseIndex(handle);
+            for (int i = 0; i < _animatorSlotsPerInstance; i++)
+            {
+                int idx = baseIdx + i;
+                if (_animatorBehaviorSlots[idx] == behaviorSlot)
+                    return idx;
+            }
+
+            return -1;
+        }
+
+        private void ClearAnimatorSlots(int handle)
+        {
+            int baseIdx = GetAnimatorBaseIndex(handle);
+            for (int i = 0; i < _animatorSlotsPerInstance; i++)
+            {
+                int idx = baseIdx + i;
+                _animatorBehaviorSlots[idx] = -1;
+                _animatorPackedStates[idx] = default;
+                _animatorRuntimeStates[idx] = default;
+                _animatorParameterBuffers[idx] = default;
+                _animationOverlayRequests[idx] = default;
+                _animatorFeedbackBuffers[idx] = default;
+            }
         }
     }
 }

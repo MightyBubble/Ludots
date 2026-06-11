@@ -171,7 +171,7 @@ namespace Ludots.Adapter.UE5
                           ?? throw new ArgumentException("Cannot resolve directory from gameJsonAbsPath.");
             var gameConfigFile = System.IO.Path.GetFileName(gameJsonAbsPath);
 
-            var result = GameBootstrapper.InitializeFromBaseDirectory(baseDir, gameConfigFile);
+            var result = GameBootstrapper.InitializeFromBaseDirectory(baseDir, gameConfigFile, presentationBackendId: "ue5");
             var engine = result.Engine;
             var config = result.Config;
 

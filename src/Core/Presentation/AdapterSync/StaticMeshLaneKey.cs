@@ -1,4 +1,5 @@
 using Ludots.Core.Presentation.Components;
+using Ludots.Core.Presentation.Performers;
 using Ludots.Core.Presentation.Rendering;
 
 namespace Ludots.Core.Presentation.AdapterSync
@@ -20,7 +21,27 @@ namespace Ludots.Core.Presentation.AdapterSync
                 || renderPath == VisualRenderPath.HierarchicalInstancedStaticMesh;
         }
 
-        public static bool Supports(in PrimitiveDrawItem item) => Supports(item.RenderPath);
+        public static bool Supports(in PrimitiveDrawItem item)
+        {
+            return item.AssetKind != AssetKind.Surface && Supports(item.RenderPath);
+        }
+
+        public static void ValidateSurfaceContract(in PrimitiveDrawItem item)
+        {
+            if (item.RenderPath == VisualRenderPath.Surface && item.AssetKind != AssetKind.Surface)
+            {
+                throw new ArgumentException(
+                    $"RenderPath '{item.RenderPath}' requires AssetKind '{AssetKind.Surface}', but got '{item.AssetKind}'.",
+                    nameof(item));
+            }
+
+            if (item.AssetKind == AssetKind.Surface && item.RenderPath != VisualRenderPath.Surface)
+            {
+                throw new ArgumentException(
+                    $"AssetKind '{AssetKind.Surface}' requires RenderPath '{VisualRenderPath.Surface}', but got '{item.RenderPath}'.",
+                    nameof(item));
+            }
+        }
 
         public static StaticMeshLaneKey FromItem(in PrimitiveDrawItem item)
         {

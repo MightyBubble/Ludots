@@ -112,11 +112,11 @@ namespace Ludots.Core.Presentation.Config
                 }
 
                 string builtinClipText = bindingNode["builtinClipId"]?.GetValue<string>() ?? string.Empty;
-                if (!Enum.TryParse(builtinClipText, ignoreCase: true, out AnimatorBuiltinClipId builtinClipId) ||
+                if (!Enum.TryParse(builtinClipText, ignoreCase: false, out AnimatorBuiltinClipId builtinClipId) ||
                     builtinClipId == AnimatorBuiltinClipId.None)
                 {
                     throw new InvalidOperationException(
-                        $"Animation profile '{key}' builtinClips[{i}] has invalid builtinClipId '{builtinClipText}'.");
+                        $"Animation profile '{key}' builtinClips[{i}] has invalid builtinClipId '{builtinClipText}'. Enum values are case-sensitive.");
                 }
 
                 string clipKey = bindingNode["clipAssetId"]?.GetValue<string>() ?? string.Empty;

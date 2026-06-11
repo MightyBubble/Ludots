@@ -3,9 +3,11 @@ using System.Buffers.Binary;
 using System.Text;
 using Ludots.Adapter.Web.Protocol;
 using Ludots.Core.Presentation.Camera;
+using Ludots.Core.Presentation.Components;
 using Ludots.Core.Presentation.Config;
 using Ludots.Core.Presentation.DebugDraw;
 using Ludots.Core.Presentation.Hud;
+using Ludots.Core.Presentation.Performers;
 using Ludots.Core.Presentation.Rendering;
 
 namespace Ludots.Adapter.Web.Streaming
@@ -61,6 +63,7 @@ namespace Ludots.Adapter.Web.Streaming
 
             WriteCamera(in camera);
             WritePrimitives(primitives);
+            WriteSurfaces(primitives);
             WriteGroundOverlays(groundOverlays);
             WriteWorldHud(worldHud);
             WriteScreenHud(screenHud, worldHudStrings);
@@ -91,19 +94,67 @@ namespace Ludots.Adapter.Web.Streaming
             if (buf == null || buf.Count == 0) return;
 
             var span = buf.GetSpan();
-            int count = span.Length;
-            int itemBytes = count * WirePrimitiveDrawItem.SizeInBytes;
-            WriteSectionHeader(FrameProtocol.SectionPrimitives, (ushort)count, itemBytes);
-            EnsureCapacity(itemBytes);
+            int startPos = _pos;
+            int count = 0;
+            WriteSectionHeader(FrameProtocol.SectionPrimitives, 0, 0);
 
-            for (int i = 0; i < count; i++)
+            for (int i = 0; i < span.Length; i++)
             {
                 ref readonly var item = ref span[i];
+                if (!IsPrimitiveLaneItem(in item))
+                {
+                    continue;
+                }
+
+                EnsureCapacity(WirePrimitiveDrawItem.SizeInBytes);
                 WriteInt32(item.MeshAssetId);
                 WriteFloat(item.Position.X); WriteFloat(item.Position.Y); WriteFloat(item.Position.Z);
                 WriteFloat(item.Scale.X); WriteFloat(item.Scale.Y); WriteFloat(item.Scale.Z);
                 WriteFloat(item.Color.X); WriteFloat(item.Color.Y); WriteFloat(item.Color.Z); WriteFloat(item.Color.W);
+                count++;
             }
+
+            if (count == 0)
+            {
+                _pos = startPos;
+                return;
+            }
+
+            int itemBytes = count * WirePrimitiveDrawItem.SizeInBytes;
+            BinaryPrimitives.WriteUInt16LittleEndian(_buffer.AsSpan(startPos + 1), checked((ushort)count));
+            BinaryPrimitives.WriteInt32LittleEndian(_buffer.AsSpan(startPos + 3), itemBytes);
+        }
+
+        private void WriteSurfaces(PrimitiveDrawBuffer? buf)
+        {
+            if (buf == null || buf.Count == 0) return;
+
+            var span = buf.GetSpan();
+            int startPos = _pos;
+            int count = 0;
+            WriteSectionHeader(FrameProtocol.SectionSurfaces, 0, 0);
+
+            for (int i = 0; i < span.Length; i++)
+            {
+                ref readonly var item = ref span[i];
+                if (!IsSurfaceLaneItem(in item))
+                {
+                    continue;
+                }
+
+                WriteSurfaceItem(in item);
+                count++;
+            }
+
+            if (count == 0)
+            {
+                _pos = startPos;
+                return;
+            }
+
+            int itemBytes = _pos - startPos - FrameProtocol.SectionHeaderSize;
+            BinaryPrimitives.WriteUInt16LittleEndian(_buffer.AsSpan(startPos + 1), checked((ushort)count));
+            BinaryPrimitives.WriteInt32LittleEndian(_buffer.AsSpan(startPos + 3), itemBytes);
         }
 
         private void WriteGroundOverlays(GroundOverlayBuffer? buf)
@@ -193,7 +244,7 @@ namespace Ludots.Adapter.Web.Streaming
                 }
             }
 
-            WriteLegacyStringTable(maxStringId > 0 ? maxStringId + 1 : 0, strings);
+            WriteScreenHudStringTable(maxStringId > 0 ? maxStringId + 1 : 0, strings);
             WriteTextTemplateTable(span, strings);
 
             int totalBytes = _pos - startPos - FrameProtocol.SectionHeaderSize;
@@ -336,7 +387,7 @@ namespace Ludots.Adapter.Web.Streaming
             WriteInt32(arg.Raw32);
         }
 
-        private void WriteLegacyStringTable(int stringCount, WorldHudStringTable? strings)
+        private void WriteScreenHudStringTable(int stringCount, WorldHudStringTable? strings)
         {
             EnsureCapacity(2);
             BinaryPrimitives.WriteUInt16LittleEndian(_buffer.AsSpan(_pos), (ushort)stringCount);
@@ -509,6 +560,99 @@ namespace Ludots.Adapter.Web.Streaming
             _pos += 2;
             BinaryPrimitives.WriteInt32LittleEndian(_buffer.AsSpan(_pos), byteLength);
             _pos += 4;
+        }
+
+        private void WriteSurfaceItem(in PrimitiveDrawItem item)
+        {
+            int layerKeyByteCount = Encoding.UTF8.GetByteCount(item.SurfaceLayerKey);
+            EnsureCapacity(WireSurfaceDrawItem.FixedSizeInBytes + 2 + layerKeyByteCount);
+
+            WriteInt32(item.StableId);
+            WriteInt32(item.MeshAssetId);
+            WriteInt32(item.MaterialId);
+            WriteInt32(item.SortId);
+            WriteFloat(item.Position.X); WriteFloat(item.Position.Y); WriteFloat(item.Position.Z);
+            WriteFloat(item.Rotation.X); WriteFloat(item.Rotation.Y); WriteFloat(item.Rotation.Z); WriteFloat(item.Rotation.W);
+            WriteFloat(item.Scale.X); WriteFloat(item.Scale.Y); WriteFloat(item.Scale.Z);
+            _buffer[_pos++] = (byte)item.Visibility;
+            WriteMaterialCustomData(in item.MaterialCustomData);
+            WriteUtf8ShortString(item.SurfaceLayerKey, layerKeyByteCount);
+        }
+
+        private void WriteMaterialCustomData(in MaterialCustomData data)
+        {
+            WriteUInt32(data.SlotMask);
+            WriteVector4(data.Slot0);
+            WriteVector4(data.Slot1);
+            WriteVector4(data.Slot2);
+            WriteVector4(data.Slot3);
+        }
+
+        private void WriteVector4(in System.Numerics.Vector4 value)
+        {
+            WriteFloat(value.X);
+            WriteFloat(value.Y);
+            WriteFloat(value.Z);
+            WriteFloat(value.W);
+        }
+
+        private void WriteUtf8ShortString(string value, int byteCount)
+        {
+            if (byteCount > ushort.MaxValue)
+            {
+                throw new InvalidOperationException(
+                    $"Surface layer key exceeds {ushort.MaxValue} UTF-8 bytes.");
+            }
+
+            EnsureCapacity(2 + byteCount);
+            BinaryPrimitives.WriteUInt16LittleEndian(_buffer.AsSpan(_pos), (ushort)byteCount);
+            _pos += 2;
+            Encoding.UTF8.GetBytes(value, _buffer.AsSpan(_pos));
+            _pos += byteCount;
+        }
+
+        private static bool IsPrimitiveLaneItem(in PrimitiveDrawItem item)
+        {
+            ValidateLaneRouting(in item);
+            return item.AssetKind != AssetKind.Surface;
+        }
+
+        private static bool IsSurfaceLaneItem(in PrimitiveDrawItem item)
+        {
+            ValidateLaneRouting(in item);
+            return item.AssetKind == AssetKind.Surface;
+        }
+
+        private static void ValidateLaneRouting(in PrimitiveDrawItem item)
+        {
+            if (item.AssetKind == AssetKind.Surface)
+            {
+                if (item.RenderPath != VisualRenderPath.Surface)
+                {
+                    throw new InvalidOperationException(
+                        $"BinaryFrameEncoder received Surface visual stableId={item.StableId} on render path '{item.RenderPath}'.");
+                }
+
+                if (string.IsNullOrWhiteSpace(item.SurfaceLayerKey))
+                {
+                    throw new InvalidOperationException(
+                        $"BinaryFrameEncoder received Surface visual stableId={item.StableId} without SurfaceLayerKey.");
+                }
+
+                return;
+            }
+
+            if (item.RenderPath == VisualRenderPath.Surface)
+            {
+                throw new InvalidOperationException(
+                    $"BinaryFrameEncoder received non-Surface assetKind '{item.AssetKind}' on Surface render path.");
+            }
+
+            if (item.MaterialCustomData.HasAny)
+            {
+                throw new InvalidOperationException(
+                    $"BinaryFrameEncoder cannot consume MaterialCustomData for non-Surface stableId={item.StableId}. Configure a Web lane that binds per-instance custom data.");
+            }
         }
 
         private void WriteFloat(float value)

@@ -121,7 +121,20 @@ namespace Ludots.Tests.Presentation
             var animators = new AnimatorControllerRegistry();
             var stableIds = new PresentationStableIdAllocator();
 
-            int controllerId = animators.Register("hero.controller");
+            int controllerId = animators.Register("hero.controller", new AnimatorControllerDefinition
+            {
+                DefaultStateIndex = 0,
+                States =
+                [
+                    new AnimatorStateDefinition
+                    {
+                        PackedStateIndex = 5,
+                        DurationSeconds = 1f,
+                        PlaybackSpeed = 1f,
+                        Loop = true,
+                    }
+                ],
+            });
             int templateId = visualTemplates.Register(
                 "hero.template",
                 new VisualTemplateDefinition
@@ -235,6 +248,20 @@ namespace Ludots.Tests.Presentation
             var performers = new PerformerDefinitionRegistry();
             var animators = new AnimatorControllerRegistry();
             var stableIds = new PresentationStableIdAllocator();
+            animators.Register("hero.controller", new AnimatorControllerDefinition
+            {
+                DefaultStateIndex = 0,
+                States =
+                [
+                    new AnimatorStateDefinition
+                    {
+                        PackedStateIndex = 5,
+                        DurationSeconds = 1f,
+                        PlaybackSpeed = 1f,
+                        Loop = true,
+                    }
+                ],
+            });
 
             visualTemplates.Register(
                 "static.template",
@@ -322,7 +349,7 @@ namespace Ludots.Tests.Presentation
         }
 
         [Test]
-        public void AnimationProfileConfigLoaders_LoadProfileClipAndTemplateResolutionChain()
+        public void AnimationProfileConfigLoaders_LoadProfileClipAndPerformerBehaviorResolutionChain()
         {
             string repoRoot = FindRepoRoot();
             string assetsRoot = Path.Combine(repoRoot, "assets");
@@ -337,12 +364,12 @@ namespace Ludots.Tests.Presentation
             engine.InitializeWithConfigPipeline(modPaths, assetsRoot);
 
             var controllerRegistry = engine.GetService(Ludots.Core.Scripting.CoreServiceKeys.AnimatorControllerRegistry);
-            var templateRegistry = engine.GetService(Ludots.Core.Scripting.CoreServiceKeys.PresentationVisualTemplateRegistry);
+            var performerRegistry = engine.GetService(Ludots.Core.Scripting.CoreServiceKeys.PerformerDefinitionRegistry);
             var profileRegistry = engine.GetService(Ludots.Core.Scripting.CoreServiceKeys.AnimationProfileRegistry);
             var clipRegistry = engine.GetService(Ludots.Core.Scripting.CoreServiceKeys.AnimationClipRegistry);
 
             Assert.That(controllerRegistry, Is.Not.Null);
-            Assert.That(templateRegistry, Is.Not.Null);
+            Assert.That(performerRegistry, Is.Not.Null);
             Assert.That(profileRegistry, Is.Not.Null);
             Assert.That(clipRegistry, Is.Not.Null);
 
@@ -383,14 +410,30 @@ namespace Ludots.Tests.Presentation
             Assert.That(humanoidRunRaylib.AssetRef, Does.Contain("humanoid_run"));
             Assert.That(humanoidAimUe5.AssetRef, Does.Contain("Humanoid_AimYawOffset"));
 
-            int tankTemplateId = templateRegistry!.GetId(AnimationAcceptanceMod.AnimationAcceptanceIds.TankVisualTemplateId);
-            int humanoidTemplateId = templateRegistry.GetId(AnimationAcceptanceMod.AnimationAcceptanceIds.HumanoidVisualTemplateId);
-            Assert.That(templateRegistry.TryGet(tankTemplateId, out var tankTemplate), Is.True);
-            Assert.That(templateRegistry.TryGet(humanoidTemplateId, out var humanoidTemplate), Is.True);
-            Assert.That(tankTemplate.AnimationProfileId, Is.EqualTo(tankProfileId));
-            Assert.That(humanoidTemplate.AnimationProfileId, Is.EqualTo(humanoidProfileId));
-            Assert.That(tankTemplate.AnimatorControllerId, Is.EqualTo(tankProfile.AnimatorControllerId));
-            Assert.That(humanoidTemplate.AnimatorControllerId, Is.EqualTo(humanoidProfile.AnimatorControllerId));
+            Assert.That(
+                performerRegistry!.TryGet(performerRegistry.GetId(AnimationAcceptanceMod.AnimationAcceptanceIds.TankPerformerKey), out var tankPerformer),
+                Is.True);
+            Assert.That(
+                performerRegistry.TryGet(performerRegistry.GetId(AnimationAcceptanceMod.AnimationAcceptanceIds.HumanoidPerformerKey), out var humanoidPerformer),
+                Is.True);
+
+            AssertSkinnedPerformerAnimatorBinding(tankPerformer, tankProfileId, tankProfile.AnimatorControllerId);
+            AssertSkinnedPerformerAnimatorBinding(humanoidPerformer, humanoidProfileId, humanoidProfile.AnimatorControllerId);
+        }
+
+        private static void AssertSkinnedPerformerAnimatorBinding(
+            PerformerDefinition performer,
+            int expectedProfileId,
+            int expectedControllerId)
+        {
+            Assert.That(performer.Behaviors.Length, Is.EqualTo(2));
+            Assert.That(performer.Behaviors[0].Kind, Is.EqualTo(BehaviorKind.AssetBinding));
+            Assert.That(performer.Behaviors[0].AssetBinding.RenderPath, Is.EqualTo(VisualRenderPath.SkinnedMesh));
+            Assert.That(performer.Behaviors[0].AssetBinding.AnimatorSlot, Is.EqualTo(1));
+            Assert.That(performer.Behaviors[1].SlotIndex, Is.EqualTo(1));
+            Assert.That(performer.Behaviors[1].Kind, Is.EqualTo(BehaviorKind.Animator));
+            Assert.That(performer.Behaviors[1].Animator.AnimationProfileId, Is.EqualTo(expectedProfileId));
+            Assert.That(performer.Behaviors[1].Animator.AnimatorControllerId, Is.EqualTo(expectedControllerId));
         }
 
         [Test]
@@ -480,7 +523,7 @@ namespace Ludots.Tests.Presentation
         }
 
         [Test]
-        public void PerformerEmitSystem_EntityScopedMarker_ComposesPositiveStableId()
+        public void PerformerEmitSystem_InstanceMarker_ComposesPositiveStableId()
         {
             using var world = World.Create();
             var instances = new PerformerInstanceBuffer();
@@ -497,12 +540,11 @@ namespace Ludots.Tests.Presentation
                 new PerformerDefinition
                 {
                     VisualKind = PerformerVisualKind.Marker3D,
-                    EntityScope = EntityScopeFilter.AllWithVisualTransform,
                     MeshOrShapeId = 77,
                     DefaultScale = 1f,
                 });
 
-            world.Create(
+            Entity owner = world.Create(
                 new PresentationStableId { Value = 501 },
                 new VisualTransform
                 {
@@ -510,6 +552,7 @@ namespace Ludots.Tests.Presentation
                     Rotation = Quaternion.Identity,
                     Scale = Vector3.One,
                 });
+            instances.TryAllocate(definitionId, owner, 501, out _);
 
             using var system = new PerformerEmitSystem(
                 world,

@@ -6,6 +6,7 @@ import { HudRenderer } from './rendering/HudRenderer';
 import { GroundOverlayRenderer } from './rendering/GroundOverlayRenderer';
 import { PositionInterpolator } from './rendering/PositionInterpolator';
 import { ReferenceWorldRenderer } from './rendering/ReferenceWorldRenderer';
+import { SurfaceRenderer } from './rendering/SurfaceRenderer';
 import { UiSceneOverlay } from './rendering/UiSceneOverlay';
 
 const scene = new THREE.Scene();
@@ -37,6 +38,7 @@ const hudRenderer = new HudRenderer(hudCanvas);
 const groundOverlayRenderer = new GroundOverlayRenderer(scene);
 const interpolator = new PositionInterpolator();
 const referenceWorldRenderer = new ReferenceWorldRenderer(scene);
+const surfaceRenderer = new SurfaceRenderer(scene);
 const uiOverlay = new UiSceneOverlay(uiCanvas);
 
 let _socket: WebSocket | null = null;
@@ -47,6 +49,7 @@ let _lastStatTime = performance.now();
 let _displayFps = 0;
 let _displayKbps = 0;
 let _meshMapApplied = false;
+let _materialMapApplied = false;
 
 function connectWebSocket(): void {
   const protocol = location.protocol === 'https:' ? 'wss:' : 'ws:';
@@ -65,7 +68,10 @@ function connectWebSocket(): void {
       _socket = null;
     }
     _meshMapApplied = false;
+    _materialMapApplied = false;
+    decoder.resetMaps();
     _lastFrame = null;
+    surfaceRenderer.update([]);
     uiOverlay.clear();
     setTimeout(connectWebSocket, 2000);
   });
@@ -81,6 +87,10 @@ function connectWebSocket(): void {
     if (!_meshMapApplied && decoder.meshMap) {
       entityManager.applyMeshMap(decoder.meshMap);
       _meshMapApplied = true;
+    }
+    if (!_materialMapApplied && decoder.materialMap) {
+      surfaceRenderer.applyMaterialMap(decoder.materialMap);
+      _materialMapApplied = true;
     }
 
     if (!frame) return;
@@ -151,6 +161,7 @@ function animate(): void {
 
     referenceWorldRenderer.update(cam.tgtX, cam.tgtY, cam.tgtZ);
     entityManager.update(interpolator.getInterpolated());
+    surfaceRenderer.update(_lastFrame.surfaces);
     groundOverlayRenderer.update(_lastFrame.groundOverlays);
 
     hudRenderer.clear();
@@ -176,8 +187,9 @@ function animate(): void {
     _lastStatTime = now;
 
     const entities = _lastFrame?.primitives.length ?? 0;
+    const surfaces = _lastFrame?.surfaces.length ?? 0;
     const tick = _lastFrame?.simTick ?? 0;
-    statsEl.textContent = `FPS: ${_displayFps} | ${_displayKbps.toFixed(1)} KB/s | Entities: ${entities} | Tick: ${tick}`;
+    statsEl.textContent = `FPS: ${_displayFps} | ${_displayKbps.toFixed(1)} KB/s | Entities: ${entities} | Surfaces: ${surfaces} | Tick: ${tick}`;
   }
 }
 

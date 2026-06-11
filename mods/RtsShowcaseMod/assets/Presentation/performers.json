@@ -1,1 +1,35 @@
-[]
+﻿[
+  {
+    "_comment": "RTS unit cube marker rendered for spawned entities with VisualTransform and PresentationStableId.",
+    "id": "rts_unit_marker",
+    "visualKind": "Marker3D",
+    "meshOrShapeId": "cube",
+    "defaultScale": 1.0,
+    "positionOffset": [0, 0.5, 0],
+    "bindings": [
+      { "paramKey": 4, "source": "EntityColor", "channel": "Red" },
+      { "paramKey": 5, "source": "EntityColor", "channel": "Green" },
+      { "paramKey": 6, "source": "EntityColor", "channel": "Blue" },
+      { "paramKey": 7, "source": "EntityColor", "channel": "Alpha" }
+    ],
+    "rules": [
+      {
+        "event": { "kind": "EntitySpawned" },
+        "condition": { "inline": "SourceHasVisualTransformAndPresentationStableId" },
+        "command": {
+          "kind": "CreatePerformer",
+          "definitionId": "rts_unit_marker",
+          "scopeSource": "SourceStableId"
+        }
+      },
+      {
+        "event": { "kind": "EntityDestroyed" },
+        "condition": { "inline": "SourceHasVisualTransformAndPresentationStableId" },
+        "command": {
+          "kind": "DestroyPerformerScope",
+          "scopeSource": "SourceStableId"
+        }
+      }
+    ]
+  }
+]

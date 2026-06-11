@@ -170,13 +170,8 @@ namespace Ludots.Core.Presentation.Hud
                 }
             }
 
-            PresentationOverlayItemKind fallback = deferredLargeKinds[0];
-            _nextLargeLaneCursor = GetLargeLaneOrderIndex(fallback) + 1;
-            if (_nextLargeLaneCursor >= LargeLaneOrder.Length)
-            {
-                _nextLargeLaneCursor = 0;
-            }
-            return fallback;
+            throw new InvalidOperationException(
+                $"Presentation overlay large lane order does not contain deferred kind '{deferredLargeKinds[0]}'.");
         }
 
         private static int GetLargeLaneOrderIndex(PresentationOverlayItemKind kind)

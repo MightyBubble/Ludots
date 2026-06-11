@@ -1,6 +1,7 @@
 using System.Numerics;
 using Ludots.Core.Presentation.AdapterSync;
 using Ludots.Core.Presentation.Components;
+using Ludots.Core.Presentation.Performers;
 using Ludots.Core.Presentation.Rendering;
 using NUnit.Framework;
 
@@ -175,6 +176,45 @@ namespace Ludots.Tests.Presentation
             Assert.That(invalid!.Message, Does.Contain("positive PresentationStableId"));
         }
 
+        [Test]
+        public void Sync_DoesNotBindHostOwnedSurfaceItems()
+        {
+            var planner = new StaticMeshAdapterSyncPlanner();
+
+            planner.Sync(new[]
+            {
+                CreateItem(101, VisualRenderPath.StaticMesh, meshAssetId: 10, materialId: 1),
+                CreateItem(
+                    202,
+                    VisualRenderPath.Surface,
+                    meshAssetId: 20,
+                    materialId: 2,
+                    assetKind: AssetKind.Surface),
+            });
+
+            Assert.That(planner.TryGetBinding(101, out _), Is.True);
+            Assert.That(planner.TryGetBinding(202, out _), Is.False);
+            Assert.That(planner.ActiveBindings.Count, Is.EqualTo(1));
+        }
+
+        [Test]
+        public void Sync_RejectsInvalidSurfaceLaneCombinations()
+        {
+            var planner = new StaticMeshAdapterSyncPlanner();
+
+            var nonSurfaceAsset = Assert.Throws<System.ArgumentException>(() => planner.Sync(new[]
+            {
+                CreateItem(101, VisualRenderPath.Surface, meshAssetId: 10, materialId: 1, assetKind: AssetKind.Mesh),
+            }));
+            Assert.That(nonSurfaceAsset!.Message, Does.Contain("requires AssetKind"));
+
+            var nonSurfacePath = Assert.Throws<System.ArgumentException>(() => planner.Sync(new[]
+            {
+                CreateItem(202, VisualRenderPath.StaticMesh, meshAssetId: 20, materialId: 2, assetKind: AssetKind.Surface),
+            }));
+            Assert.That(nonSurfacePath!.Message, Does.Contain("requires RenderPath"));
+        }
+
         private static PrimitiveDrawItem CreateItem(
             int stableId,
             VisualRenderPath renderPath,
@@ -183,10 +223,12 @@ namespace Ludots.Tests.Presentation
             float posX = 0f,
             VisualVisibility visibility = VisualVisibility.Visible,
             Quaternion rotation = default,
-            VisualMobility mobility = VisualMobility.Static)
+            VisualMobility mobility = VisualMobility.Static,
+            AssetKind assetKind = AssetKind.Mesh)
         {
             return new PrimitiveDrawItem
             {
+                AssetKind = assetKind,
                 MeshAssetId = meshAssetId,
                 Position = new Vector3(posX, 0f, 0f),
                 Rotation = rotation == default ? Quaternion.Identity : rotation,

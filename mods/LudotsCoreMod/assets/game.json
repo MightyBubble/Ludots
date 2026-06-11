@@ -2,7 +2,8 @@
   "startupMapId": "entry",
   "startupInputContexts": ["Default_Gameplay"],
   "presentation": {
-    "performerInstanceCapacity": 2048
+    "performerInstanceCapacity": 2048,
+    "performerAnimatorSlotsPerInstance": 1
   },
   "constants": {
     "orderTypeIds": {

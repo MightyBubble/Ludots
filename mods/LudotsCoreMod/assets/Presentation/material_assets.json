@@ -1,0 +1,19 @@
+[
+  {
+    "id": "default_surface",
+    "domain": "Mesh",
+    "flags": []
+  },
+  {
+    "id": "default_skinned_surface",
+    "domain": "SkinnedMesh",
+    "flags": []
+  },
+  {
+    "id": "default_host_surface",
+    "domain": "Surface",
+    "flags": [
+      "SupportsPerInstanceCustomData"
+    ]
+  }
+]

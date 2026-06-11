@@ -128,6 +128,32 @@ namespace Ludots.Core.Engine
 
         public int SimulationBudgetMsPerFrame { get; set; } = 4;
         public int SimulationMaxSlicesPerLogicFrame { get; set; } = 120;
+
+        private static int ResolvePerformerAssetId(AssetKind kind, string key, MeshAssetRegistry meshAssets)
+        {
+            return kind switch
+            {
+                AssetKind.Mesh => meshAssets.GetId(key),
+                AssetKind.SkinnedMesh => meshAssets.GetId(key),
+                AssetKind.Surface => meshAssets.GetId(key),
+                AssetKind.GroundOverlay => meshAssets.GetId(key),
+                _ => 0,
+            };
+        }
+
+        private static int RequireConfiguredPositiveId(
+            IReadOnlyDictionary<string, int> ids,
+            string tableName,
+            string key)
+        {
+            if (ids != null && ids.TryGetValue(key, out int id) && id > 0)
+            {
+                return id;
+            }
+
+            throw new InvalidOperationException(
+                $"game.json constants.{tableName} must define positive key '{key}'.");
+        }
         
         // Time Control
         public IPacemaker Pacemaker { get; set; } = new RealtimePacemaker();
@@ -392,8 +418,6 @@ namespace Ludots.Core.Engine
             SimulationBudgetMsPerFrame = MergedConfig.SimulationBudgetMsPerFrame;
             SimulationMaxSlicesPerLogicFrame = MergedConfig.SimulationMaxSlicesPerLogicFrame;
             
-            // 7. Post-Mod Load Initialization
-
             // 8. Print registration conflict summary
             ConflictReport?.PrintSummary();
         }
@@ -478,20 +502,6 @@ namespace Ludots.Core.Engine
                 ref var pos = ref w.Get<WorldPositionCm>(entity);
                 return pos.Value.ToWorldCmInt2();
             });
-        }
-
-        private static int ResolvePerformerBehaviorAssetId(MeshAssetRegistry meshAssets, AssetKind kind, string key)
-        {
-            if (string.IsNullOrWhiteSpace(key))
-            {
-                return 0;
-            }
-
-            return kind switch
-            {
-                AssetKind.Mesh or AssetKind.SkinnedMesh => meshAssets.GetId(key),
-                _ => 0,
-            };
         }
 
         private void InitializeCoreSystems(GameConfig config)
@@ -620,6 +630,7 @@ namespace Ludots.Core.Engine
             var clearPresentationFlagsSystem = new ClearPresentationFlagsSystem(World);
             var gasPresentationEvents = new GasPresentationEventBuffer();
             var presentationEventStream = new PresentationEventStream();
+            MapLoader.PresentationEvents = presentationEventStream;
             var presentationBridgeSystem = new PresentationBridgeSystem(World, EventBus, presentationEventStream, GameSession, gasPresentationEvents);
             var presentationCommandBuffer = new PresentationCommandBuffer();
             var presentationPrefabs = new PrefabRegistry();
@@ -629,6 +640,7 @@ namespace Ludots.Core.Engine
             var animationClips = new AnimationClipRegistry();
             var presentationImages = new PresentationImageRegistry();
             var animationProfiles = new AnimationProfileRegistry();
+            var presentationMaterials = new PresentationMaterialRegistry();
             var presentationStableIds = new PresentationStableIdAllocator();
             var primitiveDrawBuffer = new PrimitiveDrawBuffer(PrimitiveDrawBufferCapacity);
             var visualSnapshotBuffer = new PrimitiveDrawBuffer(VisualSnapshotBufferCapacity);
@@ -640,10 +652,26 @@ namespace Ludots.Core.Engine
             var worldHudBuffer = new WorldHudBatchBuffer();
             var performerDefinitions = new PerformerDefinitionRegistry();
             var presentationConfig = config.Presentation ?? new PresentationRuntimeConfig();
-            var performerInstances = new PerformerInstanceBuffer(presentationConfig.GetEffectivePerformerInstanceCapacity());
+            var performerInstances = new PerformerInstanceBuffer(
+                presentationConfig.GetEffectivePerformerInstanceCapacity(),
+                presentationConfig.GetEffectivePerformerAnimatorSlotsPerInstance());
             var projectilePresentationBindings = new ProjectilePresentationBindingRegistry();
             var performerGraphApi = new GasGraphRuntimeApi(World, spatialQueries: null, coords: null, eventBus: null);
             new MeshAssetConfigLoader(ConfigPipeline, meshAssets, presentationPrefabs).Load(ConfigCatalog, ConfigConflictReport);
+            new PresentationMaterialConfigLoader(ConfigPipeline, presentationMaterials).Load(ConfigCatalog, ConfigConflictReport);
+            string hostAssetBackendId = presentationConfig.HostAssetBackendId;
+            if (string.IsNullOrWhiteSpace(hostAssetBackendId) &&
+                TryGetService(CoreServiceKeys.PresentationBackendId, out string configuredPresentationBackendId))
+            {
+                hostAssetBackendId = configuredPresentationBackendId;
+            }
+
+            if (!string.IsNullOrWhiteSpace(hostAssetBackendId))
+            {
+                new PresentationHostAssetConfigLoader(ConfigPipeline, presentationMaterials, hostAssetBackendId)
+                    .Load(ConfigCatalog, ConfigConflictReport);
+            }
+
             new AnimatorControllerConfigLoader(ConfigPipeline, animatorControllers).Load(ConfigCatalog, ConfigConflictReport);
             new AnimationClipConfigLoader(ConfigPipeline, animationClips).Load(ConfigCatalog, ConfigConflictReport);
             new PresentationImageConfigLoader(ConfigPipeline, presentationImages).Load(ConfigCatalog, ConfigConflictReport);
@@ -653,6 +681,13 @@ namespace Ludots.Core.Engine
             var presentationTextLocaleSelection = new PresentationTextLocaleSelection(presentationTextCatalog);
             var presentationSemanticCatalog = new PresentationSemanticCatalogLoader(ConfigPipeline, presentationTextCatalog).Load(ConfigCatalog, ConfigConflictReport);
             BuiltinPerformerDefinitions.Register(performerDefinitions, meshAssets, presentationTextCatalog.GetTokenId);
+            bool MaterialSupportsCustomData(int materialId) =>
+                presentationMaterials.TryGet(materialId, out MaterialAssetDescriptor material) &&
+                (material.Flags & MaterialAssetFlags.SupportsPerInstanceCustomData) != 0;
+            MaterialAssetDomain? ResolveMaterialDomain(int materialId) =>
+                presentationMaterials.TryGet(materialId, out MaterialAssetDescriptor material)
+                    ? material.Domain
+                    : null;
             var performerRuleSystem = new PerformerRuleSystem(World, presentationEventStream, presentationCommandBuffer, performerDefinitions, graphProgramRegistry, performerGraphApi, GlobalContext);
             var performerRuntimeSystem = new PerformerRuntimeSystem(
                 World,
@@ -666,24 +701,32 @@ namespace Ludots.Core.Engine
                 snapshotBuffer: visualSnapshotBuffer,
                 proxyBuffer: visualProxyBuffer,
                 skinnedBatchBuffer: skinnedVisualBatchBuffer);
+            var performerAnimatorRuntimeSystem = new PerformerAnimatorRuntimeSystem(
+                World,
+                performerInstances,
+                performerDefinitions,
+                animatorControllers);
             var performerEmitSystem = new PerformerEmitSystem(World, performerInstances, performerDefinitions, groundOverlayBuffer, primitiveDrawBuffer, worldHudBuffer, graphProgramRegistry, performerGraphApi, GlobalContext,
                 entityColorResolver: (world, entity) => Ludots.Core.Presentation.Utils.TeamColorResolver.Resolve(world, entity),
                 snapshotBuffer: visualSnapshotBuffer,
                 proxyBuffer: visualProxyBuffer,
                 skinnedBatchBuffer: skinnedVisualBatchBuffer,
+                materialSupportsCustomData: MaterialSupportsCustomData,
                 roadSplines: roadSplineBuffer);
             new PerformerDefinitionConfigLoader(
                 ConfigPipeline,
                 performerDefinitions,
-                Ludots.Core.Gameplay.GAS.Registry.AttributeRegistry.Register,
+                Ludots.Core.Gameplay.GAS.Registry.AttributeRegistry.GetId,
                 meshAssets.GetId,
                 presentationTextCatalog.GetTokenId,
                 MapLoader.EntityTemplateKeys.GetId,
                 EffectTemplateIdRegistry.GetId,
-                materialKey => 0,
+                presentationMaterials.GetId,
                 animatorControllers.GetId,
                 animationProfiles.GetId,
-                (kind, key) => ResolvePerformerBehaviorAssetId(meshAssets, kind, key)).Load(ConfigCatalog, ConfigConflictReport);
+                (kind, key) => ResolvePerformerAssetId(kind, key, meshAssets),
+                materialSupportsCustomData: MaterialSupportsCustomData,
+                resolveMaterialDomain: ResolveMaterialDomain).Load(ConfigCatalog, ConfigConflictReport);
             new ProjectilePresentationBindingConfigLoader(
                 ConfigPipeline,
                 projectilePresentationBindings,
@@ -727,19 +770,10 @@ namespace Ludots.Core.Engine
             var timedTagSystem = new TimedTagExpirationSystem(World, clock, tagOps);
             
             // Get order tags from config — fail-fast if missing (SSOT: game.json + OrderStateTags.cs)
-            if (!orderTypeIds.ContainsKey("castAbility") ||
-                !orderTypeIds.ContainsKey("moveTo") ||
-                !orderTypeIds.ContainsKey("attackTarget") ||
-                !orderTypeIds.ContainsKey("stop"))
-            {
-                throw new InvalidOperationException(
-                    "game.json constants.orderTypeIds must define all required keys: castAbility, moveTo, attackTarget, stop. " +
-                    "These are the single source of truth for order type ids.");
-            }
-            int cfgCastAbility = orderTypeIds["castAbility"];
-            int cfgMoveTo = orderTypeIds["moveTo"];
-            int cfgAttackTarget = orderTypeIds["attackTarget"];
-            int cfgStop = orderTypeIds["stop"];
+            int cfgCastAbility = RequireConfiguredPositiveId(orderTypeIds, "orderTypeIds", "castAbility");
+            int cfgMoveTo = RequireConfiguredPositiveId(orderTypeIds, "orderTypeIds", "moveTo");
+            int cfgAttackTarget = RequireConfiguredPositiveId(orderTypeIds, "orderTypeIds", "attackTarget");
+            int cfgStop = RequireConfiguredPositiveId(orderTypeIds, "orderTypeIds", "stop");
             
             // respondChainOrderTagId = -1 (invalid sentinel): chain orders are routed directly
             // to chainOrderQueue by ResponseChain*Systems, not through the dispatch system.
@@ -751,9 +785,9 @@ namespace Ludots.Core.Engine
             new OrderTypeConfigLoader(ConfigPipeline).Load(orderTypeRegistry, orderRuleRegistry, ConfigCatalog, ConfigConflictReport);
             
             // Register chain order types (response chain) into OrderTypeRegistry
-            int cfgChainPass = responseChainOrderTypeIds.GetValueOrDefault("chainPass", 1);
-            int cfgChainNegate = responseChainOrderTypeIds.GetValueOrDefault("chainNegate", 2);
-            int cfgChainActivateEffect = responseChainOrderTypeIds.GetValueOrDefault("chainActivateEffect", 3);
+            int cfgChainPass = RequireConfiguredPositiveId(responseChainOrderTypeIds, "responseChainOrderTypeIds", "chainPass");
+            int cfgChainNegate = RequireConfiguredPositiveId(responseChainOrderTypeIds, "responseChainOrderTypeIds", "chainNegate");
+            int cfgChainActivateEffect = RequireConfiguredPositiveId(responseChainOrderTypeIds, "responseChainOrderTypeIds", "chainActivateEffect");
             int cfgCastAbilityStart = orderTypeRegistry.TryGetId("castAbility.Start", out int resolvedCastAbilityStart) ? resolvedCastAbilityStart : 0;
             int cfgCastAbilityEnd = orderTypeRegistry.TryGetId("castAbility.End", out int resolvedCastAbilityEnd) ? resolvedCastAbilityEnd : 0;
             if (!orderTypeRegistry.IsRegistered(cfgCastAbility) ||
@@ -843,6 +877,7 @@ namespace Ludots.Core.Engine
             SetService(CoreServiceKeys.PresentationCommandBuffer, presentationCommandBuffer);
             SetService(CoreServiceKeys.PresentationPrefabRegistry, presentationPrefabs);
             SetService(CoreServiceKeys.PresentationMeshAssetRegistry, meshAssets);
+            SetService(CoreServiceKeys.PresentationMaterialRegistry, presentationMaterials);
             SetService(CoreServiceKeys.PresentationVisualTemplateRegistry, visualTemplates);
             SetService(CoreServiceKeys.AnimatorControllerRegistry, animatorControllers);
             SetService(CoreServiceKeys.AnimationClipRegistry, animationClips);
@@ -990,7 +1025,7 @@ namespace Ludots.Core.Engine
             RegisterSystem(new ManifestationMotion2DSystem(World), SystemGroup.EffectProcessing);
             RegisterSystem(new EffectProcessingLoopSystem(World, effectRequestQueue, clock, gasConditions, gasBudget, effectTemplateRegistry, inputRequestQueue, chainOrderQueue, responseChainTelemetry, orderRequestQueue, responseChainOrderTypes, gasPresentationEvents, SpatialQueries, runtimeEntitySpawnQueue, phaseExecutor: phaseExecutor, graphApi: gasGraphApi, tagOps: tagOps), SystemGroup.EffectProcessing);
             RegisterSystem(new ProjectileRuntimeSystem(World, effectRequestQueue, SpatialQueries), SystemGroup.EffectProcessing);
-            RegisterSystem(new RuntimeEntitySpawnSystem(World, runtimeEntitySpawnQueue, MapLoader.TemplateRegistry, MapLoader.EntityTemplateKeys, presentationAuthoring, presentationStableIds, effectRequestQueue), SystemGroup.EffectProcessing);
+            RegisterSystem(new RuntimeEntitySpawnSystem(World, runtimeEntitySpawnQueue, MapLoader.TemplateRegistry, MapLoader.EntityTemplateKeys, presentationAuthoring, presentationStableIds, presentationEventStream, effectRequestQueue), SystemGroup.EffectProcessing);
             const string manifestationObstacleBridgeSystemTypeName = "Ludots.Core.Physics2D.Systems.ManifestationObstacleBridge2DSystem";
             var manifestationObstacleBridgeType = Type.GetType($"{manifestationObstacleBridgeSystemTypeName}, Ludots.Physics2D", throwOnError: false);
             if (manifestationObstacleBridgeType != null)
@@ -1050,6 +1085,8 @@ namespace Ludots.Core.Engine
             RegisterPresentationSystem(performerRuleSystem);
             // PerformerRuntimeSystem consumes commands, manages instance lifecycle.
             RegisterPresentationSystem(performerRuntimeSystem);
+            // PerformerAnimatorRuntimeSystem updates performer-owned Animator behavior slots before emit.
+            RegisterPresentationSystem(performerAnimatorRuntimeSystem);
             // PerformerEmitSystem ticks instances, evaluates visibility/bindings, outputs to draw buffers.
             // Also handles entity-scoped definitions (replaces WorldHudCollectorSystem).
             RegisterPresentationSystem(performerEmitSystem);

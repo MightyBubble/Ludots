@@ -57,7 +57,7 @@ export class EntityInstanceManager {
         this._tempMatrix.setPosition(item.posX, item.posY, item.posZ);
         mesh.setMatrixAt(i, this._tempMatrix);
 
-        this._tempColor.setRGB(item.colorR, item.colorG, item.colorB);
+        this._tempColor.setRGB(item.r, item.g, item.b);
         mesh.setColorAt(i, this._tempColor);
       }
 

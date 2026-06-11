@@ -1,6 +1,7 @@
 using System.Collections.Generic;
 using System.Numerics;
 using Arch.Core;
+using Ludots.Core.Config;
 using Ludots.Core.Engine;
 using Ludots.Core.Gameplay.Components;
 using Ludots.Core.Gameplay.GAS;
@@ -211,6 +212,18 @@ namespace Ludots.Tests.GAS
                     ResponseChainPassActionId = "UiPass",
                     ResponseChainNegateActionId = "UiNegate",
                     ResponseChainActivateActionId = "UiActivate"
+                },
+                [CoreServiceKeys.GameConfig.Name] = new GameConfig
+                {
+                    Constants = new GameConstants
+                    {
+                        ResponseChainOrderTypeIds = new Dictionary<string, int>
+                        {
+                            ["chainPass"] = TestResponseChainOrderTypeIds.ChainPass,
+                            ["chainNegate"] = TestResponseChainOrderTypeIds.ChainNegate,
+                            ["chainActivateEffect"] = TestResponseChainOrderTypeIds.ChainActivateEffect
+                        }
+                    }
                 }
             };
 

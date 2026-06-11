@@ -1,10 +1,12 @@
 using System.Numerics;
 using Ludots.Core.Presentation.Components;
+using Ludots.Core.Presentation.Performers;
 
 namespace Ludots.Core.Presentation.Rendering
 {
     public struct SkinnedVisualBatchItem
     {
+        public AssetKind AssetKind;
         public int StableId;
         public int MeshAssetId;
         public int MaterialId;
@@ -18,5 +20,6 @@ namespace Ludots.Core.Presentation.Rendering
         public AnimatorPackedState Animator;
         public AnimationOverlayRequest AnimationOverlay;
         public VisualVisibility Visibility;
+        public MaterialCustomData MaterialCustomData;
     }
 }

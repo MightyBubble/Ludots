@@ -7,7 +7,9 @@
       "SelectionSelectableTag": {},
       "WorldPositionCm": { "Value": { "X": 0, "Y": 0 } },
       "FacingDirection": { "AngleRad": 0.0 },
-      "Presentation": { "visualTemplateId": "core.character.hero_skinned" },
+      "Presentation": {
+        "startupPerformerIds": ["core.character.hero_skinned"]
+      },
       "AttributeBuffer": { "base": { "Health": 160, "Shield": 0, "MoveSpeed": 355, "Armor": 4 } },
       "Collider2D": {
         "shape": {
@@ -50,7 +52,9 @@
       "SelectionSelectableTag": {},
       "WorldPositionCm": { "Value": { "X": 0, "Y": 0 } },
       "FacingDirection": { "AngleRad": 0.0 },
-      "Presentation": { "visualTemplateId": "core.character.hero_skinned" },
+      "Presentation": {
+        "startupPerformerIds": ["core.character.hero_skinned"]
+      },
       "AttributeBuffer": { "base": { "Health": 240, "Shield": 0, "MoveSpeed": 325, "Armor": 14 } },
       "Collider2D": {
         "shape": {
@@ -93,7 +97,9 @@
       "SelectionSelectableTag": {},
       "WorldPositionCm": { "Value": { "X": 0, "Y": 0 } },
       "FacingDirection": { "AngleRad": 0.0 },
-      "Presentation": { "visualTemplateId": "core.character.hero_skinned" },
+      "Presentation": {
+        "startupPerformerIds": ["core.character.hero_skinned"]
+      },
       "AttributeBuffer": { "base": { "Health": 190, "Shield": 0, "MoveSpeed": 340, "Armor": 8 } },
       "Collider2D": {
         "shape": {
@@ -139,7 +145,9 @@
       "SelectionSelectableTag": {},
       "WorldPositionCm": { "Value": { "X": 0, "Y": 0 } },
       "FacingDirection": { "AngleRad": 0.0 },
-      "Presentation": { "visualTemplateId": "core.character.hero_skinned" },
+      "Presentation": {
+        "startupPerformerIds": ["core.character.hero_skinned"]
+      },
       "AttributeBuffer": { "base": { "Health": 185, "Shield": 0, "MoveSpeed": 335, "Armor": 7 } },
       "AbilityStateBuffer": {
         "abilityIds": [
@@ -164,7 +172,9 @@
       "SelectionSelectableTag": {},
       "WorldPositionCm": { "Value": { "X": 0, "Y": 0 } },
       "FacingDirection": { "AngleRad": 0.0 },
-      "Presentation": { "visualTemplateId": "core.character.hero_skinned" },
+      "Presentation": {
+        "startupPerformerIds": ["core.character.hero_skinned"]
+      },
       "AttributeBuffer": { "base": { "Health": 180, "Shield": 0, "MoveSpeed": 330, "Armor": 6 } },
       "AbilityStateBuffer": {
         "abilityIds": [
@@ -192,8 +202,8 @@
       "SelectionSelectableTag": {},
       "FacingDirection": { "AngleRad": 0.0 },
       "Presentation": {
-        "visualTemplateId": "core.prop.dummy_static",
         "startupPerformerIds": [
+          "core.prop.dummy_static",
           "champion_skill_sandbox.manifestation.runic_beacon"
         ]
       },
@@ -213,8 +223,8 @@
       "SelectionSelectableTag": {},
       "FacingDirection": { "AngleRad": 0.0 },
       "Presentation": {
-        "visualTemplateId": "core.prop.dummy_static",
         "startupPerformerIds": [
+          "core.prop.dummy_static",
           "champion_skill_sandbox.manifestation.rune_field"
         ]
       },
@@ -234,8 +244,8 @@
       "SelectionSelectableTag": {},
       "FacingDirection": { "AngleRad": 0.0 },
       "Presentation": {
-        "visualTemplateId": "core.prop.dummy_static",
         "startupPerformerIds": [
+          "core.prop.dummy_static",
           "champion_skill_sandbox.manifestation.stone_pillar"
         ]
       },
@@ -338,7 +348,7 @@
       "SelectionSelectableTag": {},
       "WorldPositionCm": { "Value": { "X": 0, "Y": 0 } },
       "FacingDirection": { "AngleRad": 3.14159 },
-      "Presentation": { "visualTemplateId": "core.prop.dummy_static" },
+      "Presentation": { "startupPerformerIds": ["core.prop.dummy_static"] },
       "AttributeBuffer": { "base": { "Health": 220, "Shield": 0, "MoveSpeed": 0, "Armor": 2 } },
       "GameplayTagContainer": {}
     }
@@ -351,7 +361,7 @@
       "SelectionSelectableTag": {},
       "WorldPositionCm": { "Value": { "X": 0, "Y": 0 } },
       "FacingDirection": { "AngleRad": 3.14159 },
-      "Presentation": { "visualTemplateId": "core.prop.dummy_static" },
+      "Presentation": { "startupPerformerIds": ["core.prop.dummy_static"] },
       "AttributeBuffer": { "base": { "Health": 320, "Shield": 0, "MoveSpeed": 0, "Armor": 10 } },
       "GameplayTagContainer": {}
     }
@@ -365,7 +375,9 @@
       "SelectionSelectableTag": {},
       "WorldPositionCm": { "Value": { "X": 0, "Y": 0 } },
       "FacingDirection": { "AngleRad": 0.0 },
-      "Presentation": { "visualTemplateId": "core.character.hero_skinned" },
+      "Presentation": {
+        "startupPerformerIds": ["core.character.hero_skinned"]
+      },
       "AttributeBuffer": { "base": { "Health": 260, "Shield": 0, "MoveSpeed": 330, "Armor": 16 } },
       "Collider2D": {
         "shape": {
@@ -406,7 +418,9 @@
       "SelectionSelectableTag": {},
       "WorldPositionCm": { "Value": { "X": 0, "Y": 0 } },
       "FacingDirection": { "AngleRad": 0.0 },
-      "Presentation": { "visualTemplateId": "core.character.hero_skinned" },
+      "Presentation": {
+        "startupPerformerIds": ["core.character.hero_skinned"]
+      },
       "AttributeBuffer": { "base": { "Health": 170, "Shield": 0, "MoveSpeed": 320, "Armor": 4 } },
       "Collider2D": {
         "shape": {
@@ -447,7 +461,9 @@
       "SelectionSelectableTag": {},
       "WorldPositionCm": { "Value": { "X": 0, "Y": 0 } },
       "FacingDirection": { "AngleRad": 0.0 },
-      "Presentation": { "visualTemplateId": "core.character.hero_skinned" },
+      "Presentation": {
+        "startupPerformerIds": ["core.character.hero_skinned"]
+      },
       "AttributeBuffer": { "base": { "Health": 150, "Shield": 0, "MoveSpeed": 325, "Armor": 3 } },
       "Collider2D": {
         "shape": {
@@ -488,7 +504,9 @@
       "SelectionSelectableTag": {},
       "WorldPositionCm": { "Value": { "X": 0, "Y": 0 } },
       "FacingDirection": { "AngleRad": 0.0 },
-      "Presentation": { "visualTemplateId": "core.character.hero_skinned" },
+      "Presentation": {
+        "startupPerformerIds": ["core.character.hero_skinned"]
+      },
       "AttributeBuffer": { "base": { "Health": 180, "Shield": 0, "MoveSpeed": 315, "Armor": 5 } },
       "Collider2D": {
         "shape": {
@@ -529,7 +547,9 @@
       "SelectionSelectableTag": {},
       "WorldPositionCm": { "Value": { "X": 0, "Y": 0 } },
       "FacingDirection": { "AngleRad": 3.14159 },
-      "Presentation": { "visualTemplateId": "core.character.hero_skinned" },
+      "Presentation": {
+        "startupPerformerIds": ["core.character.hero_skinned"]
+      },
       "AttributeBuffer": { "base": { "Health": 260, "Shield": 0, "MoveSpeed": 330, "Armor": 16 } },
       "Collider2D": {
         "shape": {
@@ -570,7 +590,9 @@
       "SelectionSelectableTag": {},
       "WorldPositionCm": { "Value": { "X": 0, "Y": 0 } },
       "FacingDirection": { "AngleRad": 3.14159 },
-      "Presentation": { "visualTemplateId": "core.character.hero_skinned" },
+      "Presentation": {
+        "startupPerformerIds": ["core.character.hero_skinned"]
+      },
       "AttributeBuffer": { "base": { "Health": 170, "Shield": 0, "MoveSpeed": 320, "Armor": 4 } },
       "Collider2D": {
         "shape": {
@@ -611,7 +633,9 @@
       "SelectionSelectableTag": {},
       "WorldPositionCm": { "Value": { "X": 0, "Y": 0 } },
       "FacingDirection": { "AngleRad": 3.14159 },
-      "Presentation": { "visualTemplateId": "core.character.hero_skinned" },
+      "Presentation": {
+        "startupPerformerIds": ["core.character.hero_skinned"]
+      },
       "AttributeBuffer": { "base": { "Health": 150, "Shield": 0, "MoveSpeed": 325, "Armor": 3 } },
       "Collider2D": {
         "shape": {
@@ -652,7 +676,9 @@
       "SelectionSelectableTag": {},
       "WorldPositionCm": { "Value": { "X": 0, "Y": 0 } },
       "FacingDirection": { "AngleRad": 3.14159 },
-      "Presentation": { "visualTemplateId": "core.character.hero_skinned" },
+      "Presentation": {
+        "startupPerformerIds": ["core.character.hero_skinned"]
+      },
       "AttributeBuffer": { "base": { "Health": 180, "Shield": 0, "MoveSpeed": 315, "Armor": 5 } },
       "Collider2D": {
         "shape": {

@@ -4,6 +4,7 @@ using System.Numerics;
 using Ludots.Core.Engine;
 using Ludots.Core.Presentation.Assets;
 using Ludots.Core.Presentation.Components;
+using Ludots.Core.Presentation.Performers;
 using Ludots.Core.Presentation.Rendering;
 using Ludots.Core.Scripting;
 
@@ -17,6 +18,7 @@ namespace Ludots.Adapter.UE5
         public Quaternion Rotation { get; init; }
         public Vector3 Scale { get; init; }
         public VisualVisibility Visibility { get; init; }
+        public MaterialCustomData MaterialCustomData { get; init; }
     }
 
     public readonly struct AllegroDrawItem
@@ -32,6 +34,7 @@ namespace Ludots.Adapter.UE5
         public AnimatorPackedState Animator { get; init; }
         public AnimationOverlayRequest AnimationOverlay { get; init; }
         public VisualVisibility Visibility { get; init; }
+        public MaterialCustomData MaterialCustomData { get; init; }
     }
 
     public sealed class IsmBucket
@@ -56,10 +59,12 @@ namespace Ludots.Adapter.UE5
         private readonly Dictionary<long, IsmBucket> _buckets = new();
         private readonly List<IsmBucket> _bucketList = new();
         private readonly List<AllegroDrawItem> _allegroItems = new();
+        private readonly List<SurfaceDrawItem> _surfaceItems = new();
         private readonly PrefabFinalizedLeafBuffer _prefabLeaves = new();
 
         public IReadOnlyList<IsmBucket> HismBuckets => _bucketList;
         public IReadOnlyList<AllegroDrawItem> AllegroItems => _allegroItems;
+        public IReadOnlyList<SurfaceDrawItem> SurfaceItems => _surfaceItems;
 
         public void CollectBuckets(GameEngine engine)
         {
@@ -76,6 +81,7 @@ namespace Ludots.Adapter.UE5
 
             if (snapshot != null)
             {
+                CollectSurfaceItems(snapshot);
                 CollectStaticBuckets(engine, snapshot);
             }
 
@@ -88,7 +94,7 @@ namespace Ludots.Adapter.UE5
 
             if (snapshot != null)
             {
-                CollectSkinnedFallback(snapshot);
+                CollectSkinnedItemsFromPrimitiveSnapshot(snapshot);
             }
         }
 
@@ -119,6 +125,46 @@ namespace Ludots.Adapter.UE5
 
             _bucketList.Clear();
             _allegroItems.Clear();
+            _surfaceItems.Clear();
+        }
+
+        private void CollectSurfaceItems(PrimitiveDrawBuffer buffer)
+        {
+            ReadOnlySpan<PrimitiveDrawItem> span = buffer.GetSpan();
+            for (int i = 0; i < span.Length; i++)
+            {
+                ref readonly var item = ref span[i];
+                if (item.RenderPath == VisualRenderPath.Surface && item.AssetKind != AssetKind.Surface)
+                {
+                    throw new InvalidOperationException(
+                        $"UE5IsmRenderBridge received render path 'Surface' for non-Surface asset kind '{item.AssetKind}' stableId={item.StableId}.");
+                }
+
+                if (item.AssetKind != AssetKind.Surface)
+                {
+                    continue;
+                }
+
+                if (item.RenderPath != VisualRenderPath.Surface)
+                {
+                    throw new InvalidOperationException(
+                        $"UE5IsmRenderBridge received Surface visual stableId={item.StableId} on render path '{item.RenderPath}'.");
+                }
+
+                _surfaceItems.Add(new SurfaceDrawItem
+                {
+                    StableId = item.StableId,
+                    MeshAssetId = item.MeshAssetId,
+                    MaterialId = item.MaterialId,
+                    SurfaceLayerKey = item.SurfaceLayerKey,
+                    SortId = item.SortId,
+                    Position = ToUEPosition(item.Position),
+                    Rotation = ToUERotation(item.Rotation),
+                    Scale = ToUEScale(item.Scale),
+                    Visibility = item.Visibility,
+                    MaterialCustomData = item.MaterialCustomData,
+                });
+            }
         }
 
         private void CollectStaticBuckets(GameEngine engine, PrimitiveDrawBuffer buffer)
@@ -128,6 +174,23 @@ namespace Ludots.Adapter.UE5
             for (int i = 0; i < span.Length; i++)
             {
                 ref readonly var item = ref span[i];
+                if (item.AssetKind == AssetKind.Surface)
+                {
+                    if (item.RenderPath != VisualRenderPath.Surface)
+                    {
+                        throw new InvalidOperationException(
+                            $"UE5IsmRenderBridge received Surface visual stableId={item.StableId} on render path '{item.RenderPath}'.");
+                    }
+
+                    continue;
+                }
+
+                if (item.RenderPath == VisualRenderPath.Surface)
+                {
+                    throw new InvalidOperationException(
+                        $"UE5IsmRenderBridge received non-Surface asset kind '{item.AssetKind}' on Surface render path.");
+                }
+
                 if (!item.RenderPath.IsStaticInstanceLane())
                 {
                     continue;
@@ -141,6 +204,7 @@ namespace Ludots.Adapter.UE5
                     item.Rotation,
                     item.Scale,
                     item.Visibility,
+                    item.MaterialCustomData,
                     meshRegistry);
             }
         }
@@ -153,6 +217,7 @@ namespace Ludots.Adapter.UE5
             Quaternion rotation,
             Vector3 scale,
             VisualVisibility visibility,
+            MaterialCustomData materialCustomData,
             MeshAssetRegistry? meshRegistry)
         {
             if (meshRegistry == null)
@@ -193,6 +258,7 @@ namespace Ludots.Adapter.UE5
                     Rotation = ToUERotation(leaf.Rotation),
                     Scale = ToUEScale(leaf.Scale),
                     Visibility = visibility,
+                    MaterialCustomData = materialCustomData,
                 });
             }
         }
@@ -216,11 +282,12 @@ namespace Ludots.Adapter.UE5
                     Animator = item.Animator,
                     AnimationOverlay = item.AnimationOverlay,
                     Visibility = item.Visibility,
+                    MaterialCustomData = item.MaterialCustomData,
                 });
             }
         }
 
-        private void CollectSkinnedFallback(PrimitiveDrawBuffer buffer)
+        private void CollectSkinnedItemsFromPrimitiveSnapshot(PrimitiveDrawBuffer buffer)
         {
             ReadOnlySpan<PrimitiveDrawItem> span = buffer.GetSpan();
             for (int i = 0; i < span.Length; i++)
@@ -244,6 +311,7 @@ namespace Ludots.Adapter.UE5
                     Animator = item.Animator,
                     AnimationOverlay = item.AnimationOverlay,
                     Visibility = item.Visibility,
+                    MaterialCustomData = item.MaterialCustomData,
                 });
             }
         }

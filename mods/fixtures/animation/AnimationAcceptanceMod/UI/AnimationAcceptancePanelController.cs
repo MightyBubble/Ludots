@@ -6,6 +6,7 @@ using Ludots.Core.Components;
 using Ludots.Core.Engine;
 using Ludots.Core.Presentation.Assets;
 using Ludots.Core.Presentation.Components;
+using Ludots.Core.Presentation.Performers;
 using Ludots.Core.Scripting;
 using Ludots.UI;
 using Ludots.UI.Compose;
@@ -18,8 +19,6 @@ namespace AnimationAcceptanceMod.UI
     {
         private const float PanelWidth = 556f;
         private const float PanelHeight = 688f;
-        private static readonly QueryDescription RigQuery = new QueryDescription()
-            .WithAll<Name, VisualRuntimeState, AnimatorPackedState, AnimatorRuntimeState, AnimatorParameterBuffer, AnimationOverlayRequest, AnimatorFeedbackBuffer>();
 
         private readonly ReactivePage<AnimationAcceptancePanelState> _page;
         private GameEngine? _engine;
@@ -415,34 +414,49 @@ namespace AnimationAcceptanceMod.UI
             }
 
             var result = new Dictionary<AnimationAcceptanceRigId, RigRuntimeSample>();
-            var query = engine.World.Query(in RigQuery);
-            foreach (var chunk in query)
+            var performers = engine.GetService(CoreServiceKeys.PerformerInstanceBuffer)
+                ?? throw new InvalidOperationException("Animation acceptance panel requires PerformerInstanceBuffer.");
+
+            performers.ProcessAnimatorSlots(0f, (
+                int handle,
+                ref PerformerInstance instance,
+                int behaviorSlot,
+                ref AnimatorPackedState packed,
+                ref AnimatorRuntimeState runtime,
+                ref AnimatorParameterBuffer parameters,
+                ref AnimationOverlayRequest overlay,
+                ref AnimatorFeedbackBuffer feedback,
+                float _) =>
             {
-                var names = chunk.GetArray<Name>();
-                var visuals = chunk.GetArray<VisualRuntimeState>();
-                var packedStates = chunk.GetArray<AnimatorPackedState>();
-                var runtimeStates = chunk.GetArray<AnimatorRuntimeState>();
-                var parameterBuffers = chunk.GetArray<AnimatorParameterBuffer>();
-                var overlays = chunk.GetArray<AnimationOverlayRequest>();
-                var feedbackBuffers = chunk.GetArray<AnimatorFeedbackBuffer>();
-
-                for (int i = 0; i < chunk.Count; i++)
+                int controllerId = packed.GetControllerId();
+                if (!controllerLookup.TryGetValue(controllerId, out var definition))
                 {
-                    if (!controllerLookup.TryGetValue(visuals[i].AnimatorControllerId, out var definition))
-                    {
-                        continue;
-                    }
-
-                    result[definition.RigId] = new RigRuntimeSample(
-                        Found: true,
-                        EntityName: names[i].Value ?? definition.DisplayName,
-                        PackedState: packedStates[i],
-                        RuntimeState: runtimeStates[i],
-                        Parameters: parameterBuffers[i],
-                        OverlayRequest: overlays[i],
-                        Feedback: feedbackBuffers[i]);
+                    return;
                 }
-            }
+
+                Entity owner = instance.Owner;
+                if (!engine.World.IsAlive(owner) || !engine.World.Has<Name>(owner))
+                {
+                    throw new InvalidOperationException(
+                        $"Animation acceptance performer instance '{handle}' requires a live owner with Name.");
+                }
+
+                string entityName = engine.World.Get<Name>(owner).Value;
+                if (string.IsNullOrWhiteSpace(entityName))
+                {
+                    throw new InvalidOperationException(
+                        $"Animation acceptance performer instance '{handle}' owner has an empty Name.");
+                }
+
+                result[definition.RigId] = new RigRuntimeSample(
+                    Found: true,
+                    EntityName: entityName,
+                    PackedState: packed,
+                    RuntimeState: runtime,
+                    Parameters: parameters,
+                    OverlayRequest: overlay,
+                    Feedback: feedback);
+            });
 
             return result;
         }

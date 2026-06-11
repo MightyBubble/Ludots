@@ -5,6 +5,7 @@ using System.Numerics;
 using Ludots.Core.Presentation.AdapterSync;
 using Ludots.Core.Presentation.Assets;
 using Ludots.Core.Presentation.Components;
+using Ludots.Core.Presentation.Performers;
 using Ludots.Core.Presentation.Rendering;
 using Ludots.Platform.Abstractions;
 
@@ -29,6 +30,7 @@ namespace Ludots.Client.Raylib.Rendering
         private readonly StaticMeshAdapterSyncPlanner _planner = new();
         private readonly Dictionary<StaticMeshLaneKey, Bucket> _bucketMap = new();
         private readonly List<Bucket> _activeBuckets = new();
+        private readonly List<SurfaceDrawItem> _surfaceItems = new();
         private readonly Dictionary<int, Vector4> _materialColors = new();
         private RaylibBenchmarkScene _benchmarkScene;
         private RaylibBenchmarkStats _lastStats;
@@ -37,12 +39,15 @@ namespace Ludots.Client.Raylib.Rendering
 
         public IReadOnlyList<Bucket> ActiveBuckets => _activeBuckets;
 
+        public IReadOnlyList<SurfaceDrawItem> SurfaceItems => _surfaceItems;
+
         public StaticMeshAdapterSyncPlanner Planner => _planner;
 
         public RaylibBenchmarkStats LastStats => _lastStats;
 
         public void SyncPersistentLanes(PrimitiveDrawBuffer? snapshot)
         {
+            CollectSurfaceItems(snapshot);
             _planner.Sync(snapshot);
             RebuildBucketsFromBindings(_planner.ActiveBindings.Values);
         }
@@ -86,6 +91,7 @@ namespace Ludots.Client.Raylib.Rendering
                 Vector4 color = ResolveMaterialColor(instance.MaterialId, instance.Color);
                 var item = new PrimitiveDrawItem
                 {
+                    AssetKind = AssetKind.Mesh,
                     MeshAssetId = instance.MeshAssetId,
                     Position = instance.Position,
                     Rotation = instance.Rotation,
@@ -96,7 +102,7 @@ namespace Ludots.Client.Raylib.Rendering
                     TemplateId = 0,
                     RenderPath = VisualRenderPath.InstancedStaticMesh,
                     Mobility = VisualMobility.Static,
-                    Flags = PrimitiveFlags.None,
+                    Flags = VisualRuntimeFlags.Visible,
                     Visibility = VisualVisibility.Visible,
                 };
 
@@ -120,6 +126,51 @@ namespace Ludots.Client.Raylib.Rendering
                 cpuBuildMs: buildMs,
                 cpuDrawMs: _lastStats.CpuDrawMs);
             return _lastStats;
+        }
+
+        private void CollectSurfaceItems(PrimitiveDrawBuffer? snapshot)
+        {
+            _surfaceItems.Clear();
+            if (snapshot == null)
+            {
+                return;
+            }
+
+            ReadOnlySpan<PrimitiveDrawItem> span = snapshot.GetSpan();
+            for (int i = 0; i < span.Length; i++)
+            {
+                ref readonly PrimitiveDrawItem item = ref span[i];
+                if (item.RenderPath == VisualRenderPath.Surface && item.AssetKind != AssetKind.Surface)
+                {
+                    throw new InvalidOperationException(
+                        $"RaylibIsmRenderBridge received render path 'Surface' for non-Surface asset kind '{item.AssetKind}' stableId={item.StableId}.");
+                }
+
+                if (item.AssetKind != AssetKind.Surface)
+                {
+                    continue;
+                }
+
+                if (item.RenderPath != VisualRenderPath.Surface)
+                {
+                    throw new InvalidOperationException(
+                        $"RaylibIsmRenderBridge received Surface visual stableId={item.StableId} on render path '{item.RenderPath}'.");
+                }
+
+                _surfaceItems.Add(new SurfaceDrawItem
+                {
+                    StableId = item.StableId,
+                    MeshAssetId = item.MeshAssetId,
+                    MaterialId = item.MaterialId,
+                    SurfaceLayerKey = item.SurfaceLayerKey,
+                    SortId = item.SortId,
+                    Position = item.Position,
+                    Rotation = item.Rotation,
+                    Scale = item.Scale,
+                    Visibility = item.Visibility,
+                    MaterialCustomData = item.MaterialCustomData,
+                });
+            }
         }
 
         public void CompleteBenchmarkDraw(double drawMs, int visibleCount)
@@ -164,14 +215,20 @@ namespace Ludots.Client.Raylib.Rendering
             }
         }
 
-        private Vector4 ResolveMaterialColor(int materialId, Vector4 fallback)
+        private Vector4 ResolveMaterialColor(int materialId, Vector4 instanceColor)
         {
             if (materialId > 0 && _materialColors.TryGetValue(materialId, out Vector4 color))
             {
                 return color;
             }
 
-            return fallback == Vector4.Zero ? _benchmarkScene.Palette.DefaultColor : fallback;
+            if (materialId > 0)
+            {
+                throw new InvalidOperationException(
+                    $"Raylib benchmark materialId '{materialId}' is not declared in the benchmark material palette.");
+            }
+
+            return instanceColor == Vector4.Zero ? _benchmarkScene.Palette.DefaultColor : instanceColor;
         }
     }
 }

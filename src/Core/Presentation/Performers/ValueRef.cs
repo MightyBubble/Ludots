@@ -28,7 +28,7 @@ namespace Ludots.Core.Presentation.Performers
 
         /// <summary>
         /// Read a per-entity color channel from an injected resolver.
-        /// SourceId = channel index: 0=R, 1=G, 2=B, 3=A.
+        /// SourceId is the compiled channel index from authoring channel Red/Green/Blue/Alpha.
         /// The resolver is platform/game-specific (e.g. team color, faction color).
         /// If no resolver is injected, returns the DefaultColor channel.
         /// </summary>
@@ -44,12 +44,17 @@ namespace Ludots.Core.Presentation.Performers
         /// convert it to degrees.
         /// </summary>
         FacingDegrees = 7,
+
+        /// <summary>
+        /// Use a presentation text token id resolved from authoring at load time.
+        /// </summary>
+        TextToken = 8,
     }
 
     /// <summary>
     /// A declarative data source for a single float parameter.
     /// Resolved each frame by PerformerEmitSystem for visible instances.
-    /// This ensures parameters are always fresh after off-screen → on-screen transitions.
+    /// This ensures parameters are always fresh after off-screen to on-screen transitions.
     /// </summary>
     public struct ValueRef
     {
@@ -58,9 +63,10 @@ namespace Ludots.Core.Presentation.Performers
 
         /// <summary>
         /// Interpretation depends on <see cref="Source"/>:
-        ///   Attribute → the attribute ID to read from the Owner entity.
-        ///   Graph     → the registered Graph program ID to execute.
-        ///   Constant  → unused.
+        ///   Attribute: the attribute ID to read from the Owner entity.
+        ///   Graph: the registered Graph program ID to execute.
+        ///   TextToken: the resolved presentation text token ID.
+        ///   Constant: unused.
         /// </summary>
         public int SourceId;
 
@@ -112,6 +118,12 @@ namespace Ludots.Core.Presentation.Performers
         public static ValueRef FromFacingDegrees() => new()
         {
             Source = ValueSourceKind.FacingDegrees
+        };
+
+        public static ValueRef FromTextToken(int tokenId) => new()
+        {
+            Source = ValueSourceKind.TextToken,
+            SourceId = tokenId
         };
     }
 }

@@ -14,13 +14,11 @@ namespace Ludots.Core.Presentation.Performers
         /// <summary>Unique definition ID.</summary>
         public int Id;
 
-        /// <summary>Stable authoring key used to register this definition.</summary>
         public string Key = string.Empty;
 
-        /// <summary>Optional parent definition key expanded by the config loader.</summary>
         public string Extends = string.Empty;
 
-        /// <summary>Visual output category — determines which draw buffer to write to.</summary>
+        /// <summary>Visual output category; determines which draw buffer to write to.</summary>
         public PerformerVisualKind VisualKind;
 
         /// <summary>
@@ -30,7 +28,7 @@ namespace Ludots.Core.Presentation.Performers
         public PerformerRule[] Rules = System.Array.Empty<PerformerRule>();
 
         /// <summary>
-        /// Declarative visibility condition — controls the Active / Dormant lifecycle.
+        /// Declarative visibility condition; controls the Active / Dormant lifecycle.
         /// Default (all zeroes) = always visible.
         /// When false: instance survives but stops emitting; when true again, bindings
         /// are resolved fresh so data is always in sync.
@@ -43,38 +41,19 @@ namespace Ludots.Core.Presentation.Performers
         /// </summary>
         public PerformerParamBinding[] Bindings = System.Array.Empty<PerformerParamBinding>();
 
-        /// <summary>Authoring-only child performer refs expanded into rules at load time.</summary>
         public ChildPerformerRef[] Children = System.Array.Empty<ChildPerformerRef>();
 
-        /// <summary>Authoring behavior slots parsed from performers.json.</summary>
         public BehaviorSlot[] Behaviors = System.Array.Empty<BehaviorSlot>();
 
-        /// <summary>Typed authoring param defaults parsed from performers.json.</summary>
         public ParamDefault[] ParamDefaults = System.Array.Empty<ParamDefault>();
 
-        /// <summary>Optional authored surface block for SurfaceSource performers.</summary>
         public SurfaceAuthoringBlock Surface;
 
-        // ── Entity-scoped mode ──
-
-        /// <summary>
-        /// When not None, this definition is entity-scoped: PerformerEmitSystem queries
-        /// matching entities directly each frame instead of using PerformerInstanceBuffer.
-        /// Instance-scoped fields (Rules, DefaultLifetime) are ignored for entity-scoped definitions.
-        /// </summary>
-        public EntityScopeFilter EntityScope;
-
-        /// <summary>
-        /// When &gt; 0, only emit for entities whose <see cref="Components.VisualTemplateRef.TemplateId"/>
-        /// matches this value. Zero = no template filter (emit for all matching entities, the default).
-        /// </summary>
-        public int RequiredTemplateId;
-
-        // ── Time-based modulation (instance-scoped only) ──
+        // Time-based modulation.
 
         /// <summary>
         /// World-space offset added to the Owner entity's position.
-        /// For entity-scoped definitions, this is the static offset each frame.
+        /// For entity-anchored instances, this is the static offset each frame.
         /// </summary>
         public Vector3 PositionOffset;
 
@@ -85,12 +64,12 @@ namespace Ludots.Core.Presentation.Performers
         public float PositionYDriftPerSecond;
 
         /// <summary>
-        /// When true, linearly fade the alpha channel from 1.0 → 0.0 over DefaultLifetime.
+        /// When true, linearly fade the alpha channel from 1.0 to 0.0 over DefaultLifetime.
         /// Typical use: floating combat text fading out.
         /// </summary>
         public bool AlphaFadeOverLifetime;
 
-        // ── Static default values (used when no Binding or Override exists) ──
+        // Static default values used when no binding or override exists.
 
         /// <summary>Mesh asset ID (Marker3D) or GroundOverlayShape ordinal (GroundOverlay).</summary>
         public int MeshOrShapeId;
@@ -114,16 +93,16 @@ namespace Ludots.Core.Presentation.Performers
         public int DefaultTextId;
 
         /// <summary>
-        /// Transitional format hint for legacy adapters that still consume Id1/Value0/Value1.
+        /// Adapter text packet mode for WorldText/HUD payloads that consume Id1/Value0/Value1.
         /// The adapter-neutral runtime contract lives in <see cref="PresentationTextPacket"/>.
         /// </summary>
-        public WorldHudValueMode LegacyWorldTextMode = WorldHudValueMode.None;
+        public WorldHudValueMode WorldTextValueMode = WorldHudValueMode.None;
 
-        // ── Binding index (built by PerformerDefinitionRegistry.Register) ──
+        // Binding index built by PerformerDefinitionRegistry.Register.
 
         /// <summary>
         /// Pre-built index for O(1) binding lookup by ParamKey.
-        /// <c>_bindingIndex[paramKey]</c> → index into <see cref="Bindings"/> array, or -1 if unbound.
+        /// <c>_bindingIndex[paramKey]</c> maps to an index into <see cref="Bindings"/> array, or -1 if unbound.
         /// Built once at registration time; never mutated at runtime.
         /// </summary>
         internal int[] BindingIndex = System.Array.Empty<int>();

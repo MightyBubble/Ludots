@@ -36,9 +36,9 @@ namespace Ludots.Core.Presentation.Config
         private static AnimationClipDefinition ParseClip(JsonNode node, string key)
         {
             string assetKindText = node["assetKind"]?.GetValue<string>() ?? nameof(AnimationClipAssetKind.Clip);
-            if (!Enum.TryParse(assetKindText, ignoreCase: true, out AnimationClipAssetKind assetKind))
+            if (!Enum.TryParse(assetKindText, ignoreCase: false, out AnimationClipAssetKind assetKind))
             {
-                throw new InvalidOperationException($"Animation clip '{key}' has invalid assetKind '{assetKindText}'.");
+                throw new InvalidOperationException($"Animation clip '{key}' has invalid assetKind '{assetKindText}'. Enum values are case-sensitive.");
             }
 
             if (node["locators"] is not JsonArray locatorsArray || locatorsArray.Count == 0)
@@ -77,20 +77,20 @@ namespace Ludots.Core.Presentation.Config
 
         private static AnimationBlendInputSource ParseBlendInput(
             JsonNode? node,
-            AnimationBlendInputSource fallback,
+            AnimationBlendInputSource defaultInput,
             string key,
             string axisLabel)
         {
             if (node == null)
             {
-                return fallback;
+                return defaultInput;
             }
 
             string value = node.GetValue<string>();
-            if (!Enum.TryParse(value, ignoreCase: true, out AnimationBlendInputSource input))
+            if (!Enum.TryParse(value, ignoreCase: false, out AnimationBlendInputSource input))
             {
                 throw new InvalidOperationException(
-                    $"Animation clip '{key}' has invalid blendInputs.{axisLabel} '{value}'.");
+                    $"Animation clip '{key}' has invalid blendInputs.{axisLabel} '{value}'. Enum values are case-sensitive.");
             }
 
             return input;
@@ -102,7 +102,7 @@ namespace Ludots.Core.Presentation.Config
             {
                 for (int j = i + 1; j < locators.Length; j++)
                 {
-                    if (string.Equals(locators[i].BackendId, locators[j].BackendId, StringComparison.OrdinalIgnoreCase))
+                    if (string.Equals(locators[i].BackendId, locators[j].BackendId, StringComparison.Ordinal))
                     {
                         throw new InvalidOperationException(
                             $"Animation clip '{key}' defines duplicate locator backend '{locators[i].BackendId}'.");

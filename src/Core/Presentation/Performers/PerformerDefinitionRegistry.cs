@@ -22,7 +22,7 @@ namespace Ludots.Core.Presentation.Performers
 
         public PerformerDefinitionRegistry(int capacity = 1024)
         {
-            _ids = new StringIntRegistry(capacity, startId: 1, invalidId: 0);
+            _ids = new StringIntRegistry(capacity, startId: 1, invalidId: 0, comparer: StringComparer.Ordinal);
             _items = new PerformerDefinition[capacity];
             _has = new bool[capacity];
         }
@@ -66,8 +66,8 @@ namespace Ludots.Core.Presentation.Performers
                 return false;
             }
 
-            _items[id] = null!;
             _has[id] = false;
+            _items[id] = null!;
             _registeredIds.Remove(id);
             Version++;
             return true;

@@ -2,6 +2,7 @@ using System;
 using Arch.Core;
 using Arch.System;
 using Ludots.Core.Presentation.Components;
+using Ludots.Core.Presentation.Performers;
 using Ludots.Core.Presentation.Rendering;
 using Ludots.Core.Presentation.Utils;
 
@@ -114,6 +115,7 @@ namespace Ludots.Core.Presentation.Systems
             _proxyEmitter.Emit(new PresentationVisualProxy
             {
                 ProxyKind = PresentationVisualProxyKind.Entity,
+                AssetKind = ResolveAssetKind(visual.RenderPath),
                 MeshAssetId = visual.MeshAssetId,
                 Position = transform.Position,
                 Rotation = transform.Rotation,
@@ -130,6 +132,21 @@ namespace Ludots.Core.Presentation.Systems
                 AnimationOverlay = animationOverlay,
                 Visibility = visibility,
             });
+        }
+
+        private static AssetKind ResolveAssetKind(VisualRenderPath renderPath)
+        {
+            if (renderPath.IsSkinnedLane())
+            {
+                return AssetKind.SkinnedMesh;
+            }
+
+            if (renderPath.IsStaticInstanceLane())
+            {
+                return AssetKind.Mesh;
+            }
+
+            throw new InvalidOperationException($"Entity visual render path '{renderPath}' is not supported by VisualRuntimeState.");
         }
     }
 }

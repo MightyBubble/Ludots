@@ -12,6 +12,7 @@ using Ludots.Core.Input.Config;
 using Ludots.Core.Input.Runtime;
 using Ludots.Core.Presentation.Components;
 using Ludots.Core.Presentation.Hud;
+using Ludots.Core.Presentation.Rendering;
 using Ludots.Core.Scripting;
 using NUnit.Framework;
 
@@ -34,30 +35,30 @@ namespace Ludots.Tests.Presentation
             using var engine = CreateEngine(ProjectionMods);
             LoadMap(engine, CameraAcceptanceIds.ProjectionMapId);
 
-            int entitiesWithVisualRuntime = 0;
-            int skinnedCount = 0;
-            int staticCount = 0;
+            int animatorSourceCount = 0;
+            int animatorSourceSkinnedCount = 0;
+            int animatorSourceStaticCount = 0;
             var visualQuery = new QueryDescription().WithAll<Name, VisualRuntimeState>();
             engine.World.Query(in visualQuery, (ref Name _, ref VisualRuntimeState visual) =>
             {
-                entitiesWithVisualRuntime++;
-                if (visual.RenderPath == VisualRenderPath.SkinnedMesh) skinnedCount++;
-                if (visual.RenderPath == VisualRenderPath.StaticMesh) staticCount++;
+                animatorSourceCount++;
+                if (visual.RenderPath == VisualRenderPath.SkinnedMesh) animatorSourceSkinnedCount++;
+                if (visual.RenderPath == VisualRenderPath.StaticMesh) animatorSourceStaticCount++;
             });
 
-            Assert.That(entitiesWithVisualRuntime, Is.EqualTo(3), "Projection fixture entities must all carry VisualRuntimeState.");
-            Assert.That(skinnedCount, Is.EqualTo(1), "Hero fixture must be marked as SkinnedMesh.");
-            Assert.That(staticCount, Is.EqualTo(2), "Dummy fixtures must be marked as StaticMesh.");
+            Assert.That(animatorSourceCount, Is.EqualTo(0), "Projection fixture visuals are performer-owned and should not require entity VisualRuntimeState.");
+            Assert.That(animatorSourceSkinnedCount, Is.EqualTo(0), "Skinned projection fixtures should own animator state on performer instances.");
+            Assert.That(animatorSourceStaticCount, Is.EqualTo(0), "Static fixture visuals are performer-owned and should not require entity VisualRuntimeState.");
 
             var primitives = engine.GetService(CoreServiceKeys.PresentationPrimitiveDrawBuffer);
             Assert.That(primitives, Is.Not.Null);
-            Assert.That(primitives!.Count, Is.EqualTo(3), "Entity visuals must emit one primitive draw item per visible fixture entity.");
+            Assert.That(primitives!.Count, Is.EqualTo(3), "Performer visuals must emit one primitive draw item per visible projection fixture entity.");
 
             var snapshot = engine.GetService(CoreServiceKeys.PresentationVisualSnapshotBuffer);
             Assert.That(snapshot, Is.Not.Null);
             Assert.That(snapshot!.Count, Is.EqualTo(3), "Adapter-facing visual snapshot must expose all projection fixture visuals.");
 
-            var expectedVisuals = CaptureExpectedEntityVisuals(engine);
+            var expectedVisuals = CaptureExpectedPrimitiveVisuals(primitives);
             Assert.That(expectedVisuals.Count, Is.EqualTo(3));
 
             int skinnedWithAnimator = 0;
@@ -65,8 +66,8 @@ namespace Ludots.Tests.Presentation
             var stableIds = new HashSet<int>();
             foreach (ref readonly var item in primitives.GetSpan())
             {
-                Assert.That(item.StableId, Is.GreaterThan(0), "Visible entity visuals must expose stable ids for adapter instance mapping.");
-                Assert.That(item.TemplateId, Is.GreaterThan(0), "Visible entity visuals must expose their visual template id.");
+                Assert.That(item.StableId, Is.GreaterThan(0), "Visible performer visuals must expose stable ids for adapter instance mapping.");
+                Assert.That(item.TemplateId, Is.GreaterThan(0), "Visible performer visuals must expose their definition/template id.");
                 stableIds.Add(item.StableId);
 
                 if (item.RenderPath == VisualRenderPath.SkinnedMesh)
@@ -85,7 +86,7 @@ namespace Ludots.Tests.Presentation
 
             foreach (ref readonly var item in snapshot.GetSpan())
             {
-                Assert.That(expectedVisuals.TryGetValue(item.StableId, out var expected), Is.True, $"Snapshot item stableId={item.StableId} must map to a live entity visual.");
+                Assert.That(expectedVisuals.TryGetValue(item.StableId, out var expected), Is.True, $"Snapshot item stableId={item.StableId} must map to the primitive emitted this frame.");
                 Assert.That(item.TemplateId, Is.EqualTo(expected.TemplateId));
                 Assert.That(item.Position, Is.EqualTo(expected.Position));
                 Assert.That(item.Scale, Is.EqualTo(expected.Scale));
@@ -112,12 +113,12 @@ namespace Ludots.Tests.Presentation
             Assert.That(primitives!.Count, Is.EqualTo(3));
             Assert.That(snapshot!.Count, Is.EqualTo(3));
 
-            var entityVisualQuery = new QueryDescription().WithAll<PresentationStableId, VisualRuntimeState>();
-            engine.World.Destroy(in entityVisualQuery);
+            var mapVisualQuery = new QueryDescription().WithAll<MapEntity>();
+            engine.World.Destroy(in mapVisualQuery);
 
             Tick(engine, 1);
 
-            Assert.That(primitives.Count, Is.EqualTo(0), "Visible draw buffer must be rebuilt every frame after entity visuals are removed.");
+            Assert.That(primitives.Count, Is.EqualTo(0), "Visible draw buffer must be rebuilt every frame after performer owners are removed.");
             Assert.That(snapshot.Count, Is.EqualTo(0), "Adapter-facing snapshot buffer must not retain visuals from a previous frame.");
         }
 
@@ -273,23 +274,19 @@ namespace Ludots.Tests.Presentation
             throw new DirectoryNotFoundException("Repository root not found from test work directory.");
         }
 
-        private static Dictionary<int, ExpectedEntityVisual> CaptureExpectedEntityVisuals(GameEngine engine)
+        private static Dictionary<int, ExpectedVisualSnapshot> CaptureExpectedPrimitiveVisuals(PrimitiveDrawBuffer primitives)
         {
-            var expected = new Dictionary<int, ExpectedEntityVisual>();
-            var query = new QueryDescription().WithAll<PresentationStableId, VisualTransform, VisualRuntimeState>();
-            engine.World.Query(in query, (Entity entity, ref PresentationStableId stableId, ref VisualTransform transform, ref VisualRuntimeState visual) =>
+            var expected = new Dictionary<int, ExpectedVisualSnapshot>();
+            foreach (ref readonly var item in primitives.GetSpan())
             {
-                bool cullVisible = !engine.World.Has<CullState>(entity) || engine.World.Get<CullState>(entity).IsVisible;
-                float baseScale = visual.BaseScale <= 0f ? 1f : visual.BaseScale;
-                int templateId = engine.World.Has<VisualTemplateRef>(entity) ? engine.World.Get<VisualTemplateRef>(entity).TemplateId : 0;
-                expected[stableId.Value] = new ExpectedEntityVisual(
-                    templateId,
-                    transform.Position,
-                    transform.Rotation,
-                    transform.Scale * baseScale,
-                    visual.ResolveVisibility(cullVisible),
-                    visual.RenderPath);
-            });
+                expected[item.StableId] = new ExpectedVisualSnapshot(
+                    item.TemplateId,
+                    item.Position,
+                    item.Rotation,
+                    item.Scale,
+                    item.Visibility,
+                    item.RenderPath);
+            }
 
             return expected;
         }
@@ -302,7 +299,7 @@ namespace Ludots.Tests.Presentation
             Assert.That(similarity, Is.GreaterThanOrEqualTo(1f - epsilon));
         }
 
-        private readonly record struct ExpectedEntityVisual(
+        private readonly record struct ExpectedVisualSnapshot(
             int TemplateId,
             Vector3 Position,
             Quaternion Rotation,

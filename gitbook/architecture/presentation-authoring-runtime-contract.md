@@ -84,7 +84,7 @@ Presentation/text_locales.json
 WorldText.defaultTextId
 ```
 
-`source: "textToken"` 已移除。WorldText 的 binding 只负责数值参数、颜色、字号等，不负责把字符串 token 当数据源解析。
+`source: "textToken"` 已移除。WorldText 的 binding 只负责数值参数、颜色、字号等，不负责把字符串 token 当数据源解析。文本 token 使用 `defaultTextId`，文本数值格式使用 `worldTextValueMode`；`paramKey` 15/16 是运行时保留槽，不是 JSON authoring 入口。
 
 ### 2.4 Performer 参数
 
@@ -138,6 +138,7 @@ flowchart LR
 | `behaviorSlot` | 旧命令字段 | 用 `targetBehaviorSlot` |
 | behavior `slotIndex` | 旧 behavior 字段 | 用 `slot` |
 | binding `source: "textToken"` | text token 入口不在 binding | 用 `defaultTextId` |
+| WorldText `paramKey` 15/16 | token 和文本模式不是数字 binding | 用 `defaultTextId` / `worldTextValueMode` |
 | binding `source: "graph"` | 当前 runtime binding evaluator 不支持 graph source | 用 rule condition 或 command graph |
 
 这些错误不能被 catch 后跳过。坏 performer authoring 会阻止加载，避免一个 mod 半成功运行。

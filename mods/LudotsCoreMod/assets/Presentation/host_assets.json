@@ -1,0 +1,29 @@
+[
+  {
+    "id": "default_host_surface.raylib",
+    "backendId": "raylib",
+    "assetKind": "Material",
+    "assetId": "default_host_surface",
+    "sourceUris": [
+      "raylib.material:default_host_surface"
+    ]
+  },
+  {
+    "id": "default_host_surface.web",
+    "backendId": "web",
+    "assetKind": "Material",
+    "assetId": "default_host_surface",
+    "sourceUris": [
+      "web.material:surface.per_instance_quad?baseColor=0.35,0.65,1.0"
+    ]
+  },
+  {
+    "id": "default_host_surface.ue5",
+    "backendId": "ue5",
+    "assetKind": "Material",
+    "assetId": "default_host_surface",
+    "sourceUris": [
+      "ue5.material:/Game/Ludots/Materials/M_DefaultHostSurface"
+    ]
+  }
+]

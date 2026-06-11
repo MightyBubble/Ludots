@@ -23,8 +23,8 @@ namespace Ludots.Core.Presentation.Config
         public WorldHudStringTable(
             PresentationTextCatalog catalog,
             PresentationTextLocaleSelection localeSelection,
-            int legacyCapacity = 256)
-            : this(GetBridgeCapacity(catalog, legacyCapacity))
+            int dynamicCapacity = 256)
+            : this(GetTableCapacity(catalog, dynamicCapacity))
         {
             _catalog = catalog ?? throw new ArgumentNullException(nameof(catalog));
             _localeSelection = localeSelection ?? throw new ArgumentNullException(nameof(localeSelection));
@@ -52,11 +52,11 @@ namespace Ludots.Core.Presentation.Config
             return _table[id];
         }
 
-        private static int GetBridgeCapacity(PresentationTextCatalog catalog, int legacyCapacity)
+        private static int GetTableCapacity(PresentationTextCatalog catalog, int dynamicCapacity)
         {
             if (catalog == null) throw new ArgumentNullException(nameof(catalog));
-            if (legacyCapacity <= 0) throw new ArgumentOutOfRangeException(nameof(legacyCapacity));
-            return checked(catalog.TokenCount + legacyCapacity + 1);
+            if (dynamicCapacity <= 0) throw new ArgumentOutOfRangeException(nameof(dynamicCapacity));
+            return checked(catalog.TokenCount + dynamicCapacity + 1);
         }
     }
 }

@@ -60,6 +60,96 @@
     }
   },
   {
+    "id": "Ability.Rts.Terran.TrainMarine",
+    "exec": {
+      "clockId": "FixedFrame",
+      "items": [
+        { "kind": "End", "tick": 0 }
+      ]
+    },
+    "presentation": {
+      "displayName": "Train Marine",
+      "iconGlyph": "MN",
+      "accentColor": "#3B82F6",
+      "hintText": "Display-facing Terran infantry production action for RTS unit-card showcases."
+    }
+  },
+  {
+    "id": "Ability.Rts.Terran.ResearchStim",
+    "exec": {
+      "clockId": "FixedFrame",
+      "items": [
+        { "kind": "End", "tick": 0 }
+      ]
+    },
+    "presentation": {
+      "displayName": "Research Stim",
+      "iconGlyph": "ST",
+      "accentColor": "#F97316",
+      "hintText": "Display-facing Terran upgrade action for RTS unit-card showcases."
+    }
+  },
+  {
+    "id": "Ability.Rts.Terran.StimPack",
+    "exec": {
+      "clockId": "FixedFrame",
+      "items": [
+        { "kind": "End", "tick": 0 }
+      ]
+    },
+    "presentation": {
+      "displayName": "Stim Pack",
+      "iconGlyph": "ST",
+      "accentColor": "#EF4444",
+      "hintText": "Display-facing infantry active ability for RTS unit-card showcases."
+    }
+  },
+  {
+    "id": "Ability.Rts.Terran.SiegeModeAoe",
+    "exec": {
+      "clockId": "FixedFrame",
+      "items": [
+        { "kind": "End", "tick": 0 }
+      ]
+    },
+    "presentation": {
+      "displayName": "Siege Splash",
+      "iconGlyph": "AO",
+      "accentColor": "#D97706",
+      "hintText": "Display-facing armored support action for RTS unit-card showcases."
+    }
+  },
+  {
+    "id": "Ability.Rts.Terran.ShieldAura",
+    "exec": {
+      "clockId": "FixedFrame",
+      "items": [
+        { "kind": "End", "tick": 0 }
+      ]
+    },
+    "presentation": {
+      "displayName": "Shield Aura",
+      "iconGlyph": "AU",
+      "accentColor": "#14B8A6",
+      "hintText": "Display-facing support aura action for RTS unit-card showcases."
+    }
+  },
+  {
+    "id": "Ability.Rts.Terran.Irradiate",
+    "exec": {
+      "clockId": "FixedFrame",
+      "items": [
+        { "kind": "End", "tick": 0 }
+      ]
+    },
+    "presentation": {
+      "displayName": "Irradiate",
+      "iconGlyph": "IR",
+      "accentColor": "#22C55E",
+      "hintText": "Display-facing support caster action for RTS unit-card showcases."
+    }
+  },
+  {
     "id": "Ability.Rts.Strategy.War3.BuildLumberMill",
     "exec": {
       "clockId": "FixedFrame",

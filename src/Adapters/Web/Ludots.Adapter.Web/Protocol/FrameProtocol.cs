@@ -4,6 +4,7 @@ namespace Ludots.Adapter.Web.Protocol
     {
         public const byte MsgTypeFrame = 0x01;
         public const byte MsgTypeMeshMap = 0x03;
+        public const byte MsgTypeMaterialMap = 0x04;
         public const byte MsgTypeDelta = 0x05;
 
         public const byte SectionEnd = 0x00;
@@ -18,6 +19,7 @@ namespace Ludots.Adapter.Web.Protocol
         public const byte SectionDebugCircles = 0x11;
         public const byte SectionDebugBoxes = 0x12;
         public const byte SectionPrimitivesDelta = 0x18;
+        public const byte SectionSurfaces = 0x19;
 
         public const int FrameHeaderSize = 1 + 4 + 4 + 8;
         public const int SectionHeaderSize = 1 + 2 + 4;
@@ -31,6 +33,12 @@ namespace Ludots.Adapter.Web.Protocol
     public static class WirePrimitiveDrawItem
     {
         public const int SizeInBytes = 44;
+    }
+
+    public static class WireSurfaceDrawItem
+    {
+        public const int MaterialCustomDataSizeInBytes = 4 + (4 * 4 * 4);
+        public const int FixedSizeInBytes = (4 * 4) + (10 * 4) + 1 + MaterialCustomDataSizeInBytes;
     }
 
     public static class WireGroundOverlayItem

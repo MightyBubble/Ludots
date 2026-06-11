@@ -69,10 +69,10 @@ namespace Ludots.Core.Presentation.Config
                 }
 
                 string conditionKindText = transitionNode["conditionKind"]?.GetValue<string>() ?? nameof(AnimatorConditionKind.None);
-                if (!Enum.TryParse(conditionKindText, ignoreCase: true, out AnimatorConditionKind conditionKind))
+                if (!Enum.TryParse(conditionKindText, ignoreCase: false, out AnimatorConditionKind conditionKind))
                 {
                     throw new InvalidOperationException(
-                        $"Animator controller '{key}' transition[{i}] has invalid conditionKind '{conditionKindText}'.");
+                        $"Animator controller '{key}' transition[{i}] has invalid conditionKind '{conditionKindText}'. Enum values are case-sensitive.");
                 }
 
                 transitions[i] = new AnimatorTransitionDefinition

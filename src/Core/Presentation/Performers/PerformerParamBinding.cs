@@ -9,7 +9,8 @@ namespace Ludots.Core.Presentation.Performers
     /// ParamKey interpretation is VisualKind-dependent (documented convention):
     ///   GroundOverlay: 0=Radius, 1=InnerRadius, 2=Angle, 3=Rotation, 4=FillColorR, ...
     ///   Marker3D:      0=Scale, 4=ColorR, 5=ColorG, 6=ColorB, 7=ColorA
-    ///   WorldText:     0=Value0, 1=Value1, 4=ColorR, 5=ColorG, 6=ColorB, 7=ColorA, 15=TextTokenId, 16=WorldHudValueMode
+    ///   WorldText:     0=Value0, 1=Value1, 3=FontSize, 4=ColorR, 5=ColorG, 6=ColorB, 7=ColorA.
+    ///                  Text token and value mode are semantic definition fields, not ParamKey bindings.
     ///   WorldBar:      0=FillRatio, 4=FillColorR, 5=FillColorG, 6=FillColorB, 7=FillColorA
     /// </summary>
     public struct PerformerParamBinding

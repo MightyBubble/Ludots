@@ -8,6 +8,8 @@ using Ludots.Core.Diagnostics;
 using Ludots.Core.Gameplay.Spawning;
 using Ludots.Core.Map;
 using Ludots.Core.Presentation.Config;
+using Ludots.Core.Presentation.Components;
+using Ludots.Core.Presentation.Events;
 
 namespace Ludots.Core.Systems
 {
@@ -20,6 +22,7 @@ namespace Ludots.Core.Systems
         public DataRegistry<EntityTemplate> TemplateRegistry { get; private set; }
         public EntityTemplateKeyRegistry EntityTemplateKeys { get; }
         public PresentationAuthoringContext? PresentationAuthoringContext { get; set; }
+        public PresentationEventStream? PresentationEvents { get; set; }
 
         public MapLoader(World world, WorldMap worldMap, ConfigPipeline pipeline)
         {
@@ -86,6 +89,7 @@ namespace Ludots.Core.Systems
                 var entity = builder.Build();
                 TryApplyTemplateKey(entity, entityData.Template);
                 _world.Add(entity, mapEntityTag);
+                PublishEntitySpawned(entity, entityData.Template);
             }
         }
 
@@ -106,6 +110,35 @@ namespace Ludots.Core.Systems
             {
                 _world.Add(entity, templateKey);
             }
+        }
+
+        private void PublishEntitySpawned(Entity entity, string templateId)
+        {
+            if (PresentationEvents == null)
+            {
+                return;
+            }
+
+            int templateKeyId = EntityTemplateKeys.GetId(templateId);
+            if (templateKeyId <= 0)
+            {
+                return;
+            }
+
+            int stableId = 0;
+            if (_world.Has<PresentationStableId>(entity))
+            {
+                stableId = _world.Get<PresentationStableId>(entity).Value;
+            }
+
+            PresentationEvents.TryAdd(new PresentationEvent
+            {
+                Kind = PresentationEventKind.EntitySpawned,
+                KeyId = templateKeyId,
+                Source = entity,
+                Target = entity,
+                PayloadA = stableId,
+            });
         }
         
         public void LoadMapBinary(byte[] data)

@@ -18,7 +18,7 @@ public sealed class NativeSkiaOverlayTests
         var screenHud = new ScreenHudBatchBuffer(8);
         var catalog = CreateCatalog();
         var locale = new PresentationTextLocaleSelection(catalog);
-        var worldHudStrings = new WorldHudStringTable(catalog, locale, legacyCapacity: 4);
+        var worldHudStrings = new WorldHudStringTable(catalog, locale, dynamicCapacity: 4);
         var overlayBuffer = new ScreenOverlayBuffer();
 
         var textPacket = PresentationTextPacket.FromToken(1);

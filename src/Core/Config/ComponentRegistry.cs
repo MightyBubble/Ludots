@@ -121,22 +121,25 @@ namespace Ludots.Core.Config
 
         private static void SetSelectionSelectableState(Entity entity, JsonNode data)
         {
-            var state = SelectionSelectableState.EnabledByDefault;
-            if (data is JsonObject obj)
+            if (data is not JsonObject obj)
             {
-                if ((obj.TryGetPropertyValue("IsEnabled", out var isEnabledNode) ||
-                     obj.TryGetPropertyValue("isEnabled", out isEnabledNode)) &&
-                    isEnabledNode != null)
-                {
-                    state.IsEnabled = ParseSelectionEnabled(isEnabledNode);
-                }
-            }
-            else if (data != null)
-            {
-                state.IsEnabled = ParseSelectionEnabled(data);
+                throw new InvalidOperationException("SelectionSelectableState requires an object payload.");
             }
 
-            entity.Add(state);
+            if (!obj.TryGetPropertyValue("isEnabled", out JsonNode? isEnabledNode) || isEnabledNode == null)
+            {
+                throw new InvalidOperationException("SelectionSelectableState requires boolean field 'isEnabled'.");
+            }
+
+            if (isEnabledNode.GetValueKind() is not JsonValueKind.True and not JsonValueKind.False)
+            {
+                throw new InvalidOperationException("SelectionSelectableState.isEnabled must be a boolean.");
+            }
+
+            entity.Add(new SelectionSelectableState
+            {
+                IsEnabled = isEnabledNode.GetValue<bool>() ? (byte)1 : (byte)0,
+            });
         }
 
         private static void SetSpatialBounds(Entity entity, JsonNode data)
@@ -146,9 +149,7 @@ namespace Ludots.Core.Config
                 throw new InvalidOperationException("SpatialBounds requires an object payload.");
             }
 
-            string kindRaw =
-                obj["kind"]?.GetValue<string>() ??
-                obj["Kind"]?.GetValue<string>() ??
+            string kindRaw = obj["kind"]?.GetValue<string>() ??
                 throw new InvalidOperationException("SpatialBounds requires 'kind'.");
 
             var bounds = new SpatialBounds
@@ -156,18 +157,18 @@ namespace Ludots.Core.Config
                 Kind = ParseSpatialBoundsKind(kindRaw),
             };
 
-            if (TryReadPointProperty(obj, out var localCenter, "localCenterCm", "LocalCenterCm"))
+            if (TryReadPointProperty(obj, out var localCenter, "localCenterCm"))
             {
                 bounds.LocalCenterXCm = localCenter.X;
                 bounds.LocalCenterZCm = localCenter.Y;
             }
             else
             {
-                bounds.LocalCenterXCm = ReadIntProperty(obj, "localCenterXCm", "LocalCenterXCm");
-                bounds.LocalCenterZCm = ReadIntProperty(obj, "localCenterZCm", "LocalCenterZCm");
+                bounds.LocalCenterXCm = ReadIntProperty(obj, "localCenterXCm");
+                bounds.LocalCenterZCm = ReadIntProperty(obj, "localCenterZCm");
             }
 
-            bounds.LocalCenterYCm = ReadIntProperty(obj, "localCenterYCm", "LocalCenterYCm");
+            bounds.LocalCenterYCm = ReadIntProperty(obj, "localCenterYCm");
             entity.Add(bounds);
         }
 
@@ -180,9 +181,9 @@ namespace Ludots.Core.Config
 
             entity.Add(new SpatialBox3D
             {
-                HalfSizeXCm = ReadIntProperty(obj, "halfSizeXCm", "HalfSizeXCm"),
-                HalfSizeYCm = ReadIntProperty(obj, "halfSizeYCm", "HalfSizeYCm"),
-                HalfSizeZCm = ReadIntProperty(obj, "halfSizeZCm", "HalfSizeZCm"),
+                HalfSizeXCm = ReadIntProperty(obj, "halfSizeXCm"),
+                HalfSizeYCm = ReadIntProperty(obj, "halfSizeYCm"),
+                HalfSizeZCm = ReadIntProperty(obj, "halfSizeZCm"),
             });
         }
 
@@ -193,12 +194,8 @@ namespace Ludots.Core.Config
                 throw new InvalidOperationException("SpatialFootprint2D requires an object payload.");
             }
 
-            JsonArray? polygons =
-                obj["polygons"] as JsonArray ??
-                obj["Polygons"] as JsonArray;
-            JsonArray? vertices =
-                obj["vertices"] as JsonArray ??
-                obj["Vertices"] as JsonArray;
+            JsonArray? polygons = obj["polygons"] as JsonArray;
+            JsonArray? vertices = obj["vertices"] as JsonArray;
 
             var footprint = new SpatialFootprint2D();
             if (polygons != null)
@@ -268,30 +265,19 @@ namespace Ludots.Core.Config
             entity.Add(buffer);
         }
 
-        private static byte ParseSelectionEnabled(JsonNode node)
-        {
-            return node.GetValueKind() switch
-            {
-                JsonValueKind.True => 1,
-                JsonValueKind.False => 0,
-                JsonValueKind.Number => node.GetValue<int>() != 0 ? (byte)1 : (byte)0,
-                _ => 0,
-            };
-        }
-
         private static SpatialBoundsKind ParseSpatialBoundsKind(string value)
         {
-            if (string.Equals(value, "Point", StringComparison.OrdinalIgnoreCase))
+            if (string.Equals(value, nameof(SpatialBoundsKind.Point), StringComparison.Ordinal))
             {
                 return SpatialBoundsKind.Point;
             }
 
-            if (string.Equals(value, "Footprint2D", StringComparison.OrdinalIgnoreCase))
+            if (string.Equals(value, nameof(SpatialBoundsKind.Footprint2D), StringComparison.Ordinal))
             {
                 return SpatialBoundsKind.Footprint2D;
             }
 
-            if (string.Equals(value, "Box3D", StringComparison.OrdinalIgnoreCase))
+            if (string.Equals(value, nameof(SpatialBoundsKind.Box3D), StringComparison.Ordinal))
             {
                 return SpatialBoundsKind.Box3D;
             }
@@ -312,15 +298,15 @@ namespace Ludots.Core.Config
             {
                 if (vertices[i] is not JsonObject pointObj)
                 {
-                    throw new InvalidOperationException("SpatialFootprint2D vertices entries must be objects with X/Y.");
+                    throw new InvalidOperationException("SpatialFootprint2D vertices entries must be objects with x/y.");
                 }
 
                 footprint.SetVertex(
                     polygonIndex,
                     i,
                     new WorldCmInt2(
-                        ReadIntProperty(pointObj, "x", "X"),
-                        ReadIntProperty(pointObj, "y", "Y")));
+                        ReadIntProperty(pointObj, "x"),
+                        ReadIntProperty(pointObj, "y")));
             }
         }
 

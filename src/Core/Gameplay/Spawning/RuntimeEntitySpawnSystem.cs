@@ -13,6 +13,7 @@ using Ludots.Core.Map;
 using Ludots.Core.Presentation;
 using Ludots.Core.Presentation.Components;
 using Ludots.Core.Presentation.Config;
+using Ludots.Core.Presentation.Events;
 
 namespace Ludots.Core.Gameplay.Spawning
 {
@@ -25,6 +26,7 @@ namespace Ludots.Core.Gameplay.Spawning
         private readonly Dictionary<string, EntityTemplate> _cachedTemplates = new(StringComparer.OrdinalIgnoreCase);
         private readonly EntityBuilder _builder;
         private readonly PresentationStableIdAllocator _stableIds;
+        private readonly PresentationEventStream _presentationEvents;
 
         public RuntimeEntitySpawnSystem(
             World world,
@@ -33,6 +35,7 @@ namespace Ludots.Core.Gameplay.Spawning
             EntityTemplateKeyRegistry templateKeys,
             PresentationAuthoringContext presentationAuthoring,
             PresentationStableIdAllocator stableIds,
+            PresentationEventStream presentationEvents = null,
             EffectRequestQueue effectRequests = null)
             : base(world)
         {
@@ -42,6 +45,7 @@ namespace Ludots.Core.Gameplay.Spawning
             _effectRequests = effectRequests;
             _builder = new EntityBuilder(world, _cachedTemplates, presentationAuthoring ?? throw new ArgumentNullException(nameof(presentationAuthoring)));
             _stableIds = stableIds ?? throw new ArgumentNullException(nameof(stableIds));
+            _presentationEvents = presentationEvents;
         }
 
         public override void Update(in float dt)
@@ -87,6 +91,7 @@ namespace Ludots.Core.Gameplay.Spawning
             TryApplySourcePlayerOwner(in request, entity);
             TryApplyMapOwnership(in request, entity);
             TryApplyParentLink(in request, entity);
+            PublishEntitySpawned(entity, typeName);
             return entity;
         }
 
@@ -107,6 +112,7 @@ namespace Ludots.Core.Gameplay.Spawning
             TryApplySourcePlayerOwner(in request, entity);
             TryApplyMapOwnership(in request, entity);
             TryApplyParentLink(in request, entity);
+            PublishEntitySpawned(entity, request.TemplateId);
             return entity;
         }
 
@@ -130,6 +136,30 @@ namespace Ludots.Core.Gameplay.Spawning
             TryApplyMapOwnership(in request, entity);
             TryApplyParentLink(in request, entity);
             return entity;
+        }
+
+        private void PublishEntitySpawned(Entity entity, string templateId)
+        {
+            if (_presentationEvents == null || string.IsNullOrWhiteSpace(templateId))
+            {
+                return;
+            }
+
+            int templateKeyId = _templateKeys.GetId(templateId);
+            if (templateKeyId <= 0)
+            {
+                return;
+            }
+
+            int stableId = World.Has<PresentationStableId>(entity) ? World.Get<PresentationStableId>(entity).Value : 0;
+            _presentationEvents.TryAdd(new PresentationEvent
+            {
+                Kind = PresentationEventKind.EntitySpawned,
+                KeyId = templateKeyId,
+                Source = entity,
+                Target = entity,
+                PayloadA = stableId,
+            });
         }
 
         private void EnsureTemplateLoaded(string templateId)

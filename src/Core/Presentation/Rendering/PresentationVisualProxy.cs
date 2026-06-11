@@ -1,11 +1,13 @@
 using System.Numerics;
 using Ludots.Core.Presentation.Components;
+using Ludots.Core.Presentation.Performers;
 
 namespace Ludots.Core.Presentation.Rendering
 {
     public struct PresentationVisualProxy
     {
         public PresentationVisualProxyKind ProxyKind;
+        public AssetKind AssetKind;
         public int MeshAssetId;
         public Vector3 Position;
         public Quaternion Rotation;
@@ -21,5 +23,8 @@ namespace Ludots.Core.Presentation.Rendering
         public AnimatorPackedState Animator;
         public AnimationOverlayRequest AnimationOverlay;
         public VisualVisibility Visibility;
+        public string SurfaceLayerKey;
+        public int SortId;
+        public MaterialCustomData MaterialCustomData;
     }
 }

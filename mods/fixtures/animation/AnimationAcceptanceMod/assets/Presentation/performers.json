@@ -1,4 +1,4 @@
-[
+﻿[
   {
     "id": "acceptance.vehicle.tank_skinned",
     "behaviors": [
@@ -9,8 +9,9 @@
         "assetBinding": {
           "assetKind": "SkinnedMesh",
           "assetId": "cube",
-          "materialId": "default_surface",
+          "materialId": "default_skinned_surface",
           "renderPath": "SkinnedMesh",
+          "animatorSlot": 1,
           "mobility": "Movable",
           "localScale": [1.15, 1.15, 1.15]
         }
@@ -25,24 +26,6 @@
           "speedParamKey": 0
         }
       }
-    ],
-    "rules": [
-      {
-        "event": { "kind": "EntitySpawned", "key": "animation_acceptance_tank" },
-        "condition": { "inline": "SourceHasVisualTransform" },
-        "command": {
-          "kind": "CreatePerformer",
-          "definitionId": "acceptance.vehicle.tank_skinned",
-          "scopeSource": "EventPayloadA"
-        }
-      },
-      {
-        "event": { "kind": "EntityDestroyed", "key": "animation_acceptance_tank" },
-        "command": {
-          "kind": "DestroyPerformerScope",
-          "scopeSource": "EventPayloadA"
-        }
-      }
     ]
   },
   {
@@ -55,8 +38,9 @@
         "assetBinding": {
           "assetKind": "SkinnedMesh",
           "assetId": "sphere",
-          "materialId": "default_surface",
+          "materialId": "default_skinned_surface",
           "renderPath": "SkinnedMesh",
+          "animatorSlot": 1,
           "mobility": "Movable",
           "localScale": [1.0, 1.0, 1.0]
         }
@@ -69,24 +53,6 @@
           "animatorControllerId": "acceptance.humanoid.layered",
           "animationProfileId": "acceptance.profile.humanoid.layered",
           "speedParamKey": 0
-        }
-      }
-    ],
-    "rules": [
-      {
-        "event": { "kind": "EntitySpawned", "key": "animation_acceptance_humanoid" },
-        "condition": { "inline": "SourceHasVisualTransform" },
-        "command": {
-          "kind": "CreatePerformer",
-          "definitionId": "acceptance.character.layered_skinned",
-          "scopeSource": "EventPayloadA"
-        }
-      },
-      {
-        "event": { "kind": "EntityDestroyed", "key": "animation_acceptance_humanoid" },
-        "command": {
-          "kind": "DestroyPerformerScope",
-          "scopeSource": "EventPayloadA"
         }
       }
     ]

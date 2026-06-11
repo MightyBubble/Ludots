@@ -2,6 +2,7 @@ import type { UiScenePayload } from './UiSceneTypes';
 
 const MSG_FULL = 0x01;
 const MSG_MESH_MAP = 0x03;
+const MSG_MATERIAL_MAP = 0x04;
 const MSG_DELTA = 0x05;
 
 const SEC_END = 0x00;
@@ -16,6 +17,7 @@ const SEC_DEBUG_LINES = 0x10;
 const SEC_DEBUG_CIRCLES = 0x11;
 const SEC_DEBUG_BOXES = 0x12;
 const SEC_PRIMITIVES_DELTA = 0x18;
+const SEC_SURFACES = 0x19;
 
 export interface CameraState {
   posX: number; posY: number; posZ: number;
@@ -29,6 +31,29 @@ export interface PrimitiveItem {
   posX: number; posY: number; posZ: number;
   scaleX: number; scaleY: number; scaleZ: number;
   r: number; g: number; b: number; a: number;
+}
+
+export interface MaterialCustomData {
+  slotMask: number;
+  slots: [
+    [number, number, number, number],
+    [number, number, number, number],
+    [number, number, number, number],
+    [number, number, number, number],
+  ];
+}
+
+export interface SurfaceItem {
+  stableId: number;
+  meshAssetId: number;
+  materialId: number;
+  sortId: number;
+  posX: number; posY: number; posZ: number;
+  rotX: number; rotY: number; rotZ: number; rotW: number;
+  scaleX: number; scaleY: number; scaleZ: number;
+  visibility: number;
+  materialCustomData: MaterialCustomData;
+  surfaceLayerKey: string;
 }
 
 export interface DebugLine {
@@ -103,12 +128,21 @@ export interface MeshMapEntry {
   key: string;
 }
 
+export interface MaterialMapEntry {
+  id: number;
+  key: string;
+  domain: number;
+  flags: number;
+  sourceUris: string[];
+}
+
 export interface DecodedFrame {
   frameNumber: number;
   simTick: number;
   timestampMs: number;
   camera: CameraState;
   primitives: PrimitiveItem[];
+  surfaces: SurfaceItem[];
   debugLines: DebugLine[];
   debugCircles: DebugCircle[];
   debugBoxes: DebugBox[];
@@ -121,23 +155,38 @@ export interface DecodedFrame {
 export class FrameDecoder {
   private _prevFrame: DecodedFrame | null = null;
   private _meshMap: MeshMapEntry[] | null = null;
+  private _materialMap: MaterialMapEntry[] | null = null;
   private _textDecoder = new TextDecoder();
 
   get meshMap(): MeshMapEntry[] | null { return this._meshMap; }
+  get materialMap(): MaterialMapEntry[] | null { return this._materialMap; }
+
+  resetMaps(): void {
+    this._meshMap = null;
+    this._materialMap = null;
+  }
 
   decode(buffer: ArrayBuffer): DecodedFrame | null {
     const v = new DataView(buffer);
-    if (v.byteLength < 3) return null;
+    if (v.byteLength < 3) {
+      throw new Error(`FrameDecoder message is too short: ${v.byteLength} bytes.`);
+    }
 
     const msgType = v.getUint8(0);
     if (msgType === MSG_MESH_MAP) {
       this.decodeMeshMap(v);
       return null;
     }
-    if (v.byteLength < 17) return null;
+    if (msgType === MSG_MATERIAL_MAP) {
+      this.decodeMaterialMap(v);
+      return null;
+    }
+    if (v.byteLength < 17) {
+      throw new Error(`FrameDecoder frame message is too short: ${v.byteLength} bytes.`);
+    }
     if (msgType === MSG_FULL) return this.decodeFull(v);
     if (msgType === MSG_DELTA) return this.decodeDelta(v);
-    return null;
+    throw new Error(`FrameDecoder received unknown message type 0x${msgType.toString(16)}.`);
   }
 
   private decodeMeshMap(v: DataView): void {
@@ -153,6 +202,31 @@ export class FrameDecoder {
       entries.push({ id, key });
     }
     this._meshMap = entries;
+  }
+
+  private decodeMaterialMap(v: DataView): void {
+    const count = v.getUint16(1, true);
+    const entries: MaterialMapEntry[] = [];
+    let p = 3;
+    for (let i = 0; i < count; i++) {
+      const id = v.getInt32(p, true); p += 4;
+      const domain = v.getUint8(p); p += 1;
+      const flags = v.getUint16(p, true); p += 2;
+      const keyResult = this.readUtf8String(v, p);
+      const key = keyResult.value;
+      p = keyResult.next;
+      const uriCount = v.getUint16(p, true); p += 2;
+      const sourceUris: string[] = [];
+      for (let uriIndex = 0; uriIndex < uriCount; uriIndex++) {
+        const uriResult = this.readUtf8String(v, p);
+        sourceUris.push(uriResult.value);
+        p = uriResult.next;
+      }
+
+      entries.push({ id, key, domain, flags, sourceUris });
+    }
+
+    this._materialMap = entries;
   }
 
   private decodeFull(v: DataView): DecodedFrame {
@@ -172,6 +246,7 @@ export class FrameDecoder {
       switch (secType) {
         case SEC_CAMERA: p = this.readCamera(frame, v, p); break;
         case SEC_PRIMITIVES: p = this.readPrimitives(frame, v, p, itemCount); break;
+        case SEC_SURFACES: p = this.readSurfaces(frame, v, p, itemCount); break;
         case SEC_GROUND_OVERLAYS: p = this.readGroundOverlays(frame, v, p, itemCount); break;
         case SEC_WORLD_HUD: p += byteLen; break;
         case SEC_SCREEN_HUD: p = this.readScreenHud(frame, v, p, itemCount); break;
@@ -180,7 +255,7 @@ export class FrameDecoder {
         case SEC_DEBUG_LINES: p = this.readDebugLines(frame, v, p, itemCount); break;
         case SEC_DEBUG_CIRCLES: p = this.readDebugCircles(frame, v, p, itemCount); break;
         case SEC_DEBUG_BOXES: p = this.readDebugBoxes(frame, v, p, itemCount); break;
-        default: p += byteLen; break;
+        default: throw new Error(`Unknown frame section 0x${secType.toString(16)}`);
       }
     }
 
@@ -206,6 +281,7 @@ export class FrameDecoder {
         case SEC_CAMERA: p = this.readCamera(frame, v, p); break;
         case SEC_PRIMITIVES_DELTA: p = this.applyPrimitiveDelta(frame, v, p, itemCount); break;
         case SEC_PRIMITIVES: p = this.readPrimitives(frame, v, p, itemCount); break;
+        case SEC_SURFACES: p = this.readSurfaces(frame, v, p, itemCount); break;
         case SEC_GROUND_OVERLAYS: p = this.readGroundOverlays(frame, v, p, itemCount); break;
         case SEC_WORLD_HUD: p += byteLen; break;
         case SEC_SCREEN_HUD: p = this.readScreenHud(frame, v, p, itemCount); break;
@@ -214,7 +290,7 @@ export class FrameDecoder {
         case SEC_DEBUG_LINES: p = this.readDebugLines(frame, v, p, itemCount); break;
         case SEC_DEBUG_CIRCLES: p = this.readDebugCircles(frame, v, p, itemCount); break;
         case SEC_DEBUG_BOXES: p = this.readDebugBoxes(frame, v, p, itemCount); break;
-        default: p += byteLen; break;
+        default: throw new Error(`Unknown frame section 0x${secType.toString(16)}`);
       }
     }
 
@@ -266,6 +342,64 @@ export class FrameDecoder {
       p += 44;
     }
     return p;
+  }
+
+  private readSurfaces(frame: DecodedFrame, v: DataView, p: number, count: number): number {
+    frame.surfaces = [];
+    for (let i = 0; i < count; i++) {
+      const materialCustomData = this.readMaterialCustomData(v, p + 57);
+      const layerKeyLengthOffset = p + 125;
+      const layerKeyLength = v.getUint16(layerKeyLengthOffset, true);
+      const layerKeyOffset = layerKeyLengthOffset + 2;
+      const layerKeyBytes = new Uint8Array(v.buffer, v.byteOffset + layerKeyOffset, layerKeyLength);
+
+      frame.surfaces.push({
+        stableId: v.getInt32(p, true),
+        meshAssetId: v.getInt32(p + 4, true),
+        materialId: v.getInt32(p + 8, true),
+        sortId: v.getInt32(p + 12, true),
+        posX: v.getFloat32(p + 16, true), posY: v.getFloat32(p + 20, true), posZ: v.getFloat32(p + 24, true),
+        rotX: v.getFloat32(p + 28, true), rotY: v.getFloat32(p + 32, true), rotZ: v.getFloat32(p + 36, true), rotW: v.getFloat32(p + 40, true),
+        scaleX: v.getFloat32(p + 44, true), scaleY: v.getFloat32(p + 48, true), scaleZ: v.getFloat32(p + 52, true),
+        visibility: v.getUint8(p + 56),
+        materialCustomData,
+        surfaceLayerKey: this._textDecoder.decode(layerKeyBytes),
+      });
+      p = layerKeyOffset + layerKeyLength;
+    }
+
+    return p;
+  }
+
+  private readMaterialCustomData(v: DataView, p: number): MaterialCustomData {
+    return {
+      slotMask: v.getUint32(p, true),
+      slots: [
+        this.readVector4(v, p + 4),
+        this.readVector4(v, p + 20),
+        this.readVector4(v, p + 36),
+        this.readVector4(v, p + 52),
+      ],
+    };
+  }
+
+  private readVector4(v: DataView, p: number): [number, number, number, number] {
+    return [
+      v.getFloat32(p, true),
+      v.getFloat32(p + 4, true),
+      v.getFloat32(p + 8, true),
+      v.getFloat32(p + 12, true),
+    ];
+  }
+
+  private readUtf8String(v: DataView, p: number): { value: string; next: number } {
+    const byteLength = v.getUint16(p, true);
+    p += 2;
+    const bytes = new Uint8Array(v.buffer, v.byteOffset + p, byteLength);
+    return {
+      value: this._textDecoder.decode(bytes),
+      next: p + byteLength,
+    };
   }
 
   private readGroundOverlays(frame: DecodedFrame, v: DataView, p: number, count: number): number {
@@ -478,7 +612,7 @@ export class FrameDecoder {
     return {
       frameNumber: 0, simTick: 0, timestampMs: 0,
       camera: { posX: 0, posY: 10, posZ: 10, tgtX: 0, tgtY: 0, tgtZ: 0, upX: 0, upY: 1, upZ: 0, fov: 60 },
-      primitives: [], debugLines: [], debugCircles: [], debugBoxes: [],
+      primitives: [], surfaces: [], debugLines: [], debugCircles: [], debugBoxes: [],
       groundOverlays: [], screenHud: [], screenOverlays: [],
     };
   }
@@ -488,6 +622,13 @@ export class FrameDecoder {
       ...f,
       camera: { ...f.camera },
       primitives: f.primitives.map(p => ({ ...p })),
+      surfaces: f.surfaces.map(item => ({
+        ...item,
+        materialCustomData: {
+          slotMask: item.materialCustomData.slotMask,
+          slots: item.materialCustomData.slots.map(slot => [...slot]) as MaterialCustomData['slots'],
+        },
+      })),
       debugLines: [...f.debugLines],
       debugCircles: [...f.debugCircles],
       debugBoxes: [...f.debugBoxes],

@@ -32,8 +32,8 @@ namespace Ludots.Core.Presentation.Hud
 
         public static int ComposeTextDirtySerial(
             int fontSize,
-            int legacyStringId,
-            int legacyModeId,
+            int textTokenId,
+            int valueModeId,
             float value0,
             float value1,
             in Vector4 color,
@@ -41,8 +41,8 @@ namespace Ludots.Core.Presentation.Hud
         {
             int hash = 29;
             hash = Mix(hash, fontSize);
-            hash = Mix(hash, legacyStringId);
-            hash = Mix(hash, legacyModeId);
+            hash = Mix(hash, textTokenId);
+            hash = Mix(hash, valueModeId);
             hash = Mix(hash, BitConverter.SingleToInt32Bits(value0));
             hash = Mix(hash, BitConverter.SingleToInt32Bits(value1));
             hash = Mix(hash, color);

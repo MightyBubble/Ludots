@@ -75,6 +75,7 @@ namespace Ludots.Adapter.Web
             engine.SetService(CoreServiceKeys.UiCaptured, false);
 
             BuildAndSendMeshMap(engine, setup.Transport);
+            BuildAndSendMaterialMap(engine, setup.Transport);
 
             Log.Info(in LogChannel, $"Web host loop started (target {targetFps} fps, map={config.StartupMapId})");
 
@@ -167,6 +168,43 @@ namespace Ludots.Adapter.Web
             if (map.Count > 0)
             {
                 transport.SetMeshMap(map);
+            }
+        }
+
+        private static void BuildAndSendMaterialMap(GameEngine engine, WebTransportLayer transport)
+        {
+            var materialRegistry = engine.GetService(CoreServiceKeys.PresentationMaterialRegistry);
+            if (materialRegistry == null)
+            {
+                return;
+            }
+
+            var entries = new List<WebMaterialMapEntry>();
+            for (int id = 1; id < 4096; id++)
+            {
+                string key = materialRegistry.GetName(id);
+                if (string.IsNullOrEmpty(key))
+                {
+                    break;
+                }
+
+                if (!materialRegistry.TryGet(id, out MaterialAssetDescriptor descriptor) ||
+                    descriptor.SourceUris.Length == 0)
+                {
+                    continue;
+                }
+
+                entries.Add(new WebMaterialMapEntry(
+                    id,
+                    key,
+                    descriptor.Domain,
+                    descriptor.Flags,
+                    descriptor.SourceUris));
+            }
+
+            if (entries.Count > 0)
+            {
+                transport.SetMaterialMap(entries);
             }
         }
 

@@ -5,6 +5,7 @@ using System.Text.Json;
 using Ludots.Core.Config;
 using Ludots.Core.Engine;
 using Ludots.Core.Modding;
+using Ludots.Core.Scripting;
 
 namespace Ludots.Core.Hosting
 {
@@ -60,6 +61,14 @@ namespace Ludots.Core.Hosting
         /// </summary>
         public static GameBootstrapResult InitializeFromBaseDirectory(string baseDirectory, string gameConfigFile)
         {
+            return InitializeFromBaseDirectory(baseDirectory, gameConfigFile, presentationBackendId: null);
+        }
+
+        public static GameBootstrapResult InitializeFromBaseDirectory(
+            string baseDirectory,
+            string gameConfigFile,
+            string? presentationBackendId)
+        {
             if (string.IsNullOrWhiteSpace(baseDirectory))
                 throw new ArgumentException("Base directory is required.", nameof(baseDirectory));
 
@@ -93,6 +102,11 @@ namespace Ludots.Core.Hosting
             // Step 2 & 3: Initialize engine with launcher-resolved plan
             // Engine will internally use ConfigPipeline to merge game.json
             var engine = new GameEngine();
+            if (!string.IsNullOrWhiteSpace(presentationBackendId))
+            {
+                engine.SetService(CoreServiceKeys.PresentationBackendId, presentationBackendId);
+            }
+
             engine.InitializeWithConfigPipeline(resolvedPlan, assetsRoot);
 
             // Get the merged config from engine

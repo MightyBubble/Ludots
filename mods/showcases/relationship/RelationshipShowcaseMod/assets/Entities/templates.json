@@ -9,7 +9,10 @@
       "WorldPositionCm": { "Value": { "X": 0, "Y": 0 } },
       "FacingDirection": { "AngleRad": 0.0 },
       "AttributeBuffer": { "base": { "Health": 160, "Shield": 16, "MoveSpeed": 320, "Armor": 6 } },
-      "GameplayTagContainer": {}
+      "GameplayTagContainer": {},
+      "Presentation": {
+        "startupPerformerIds": ["relationship.hero.peach_garden"]
+      }
     }
   },
   {
@@ -22,7 +25,10 @@
       "WorldPositionCm": { "Value": { "X": 0, "Y": 0 } },
       "FacingDirection": { "AngleRad": 0.0 },
       "AttributeBuffer": { "base": { "Health": 180, "Shield": 12, "MoveSpeed": 300, "Armor": 10 } },
-      "GameplayTagContainer": {}
+      "GameplayTagContainer": {},
+      "Presentation": {
+        "startupPerformerIds": ["relationship.hero.peach_garden"]
+      }
     }
   },
   {
@@ -35,7 +41,10 @@
       "WorldPositionCm": { "Value": { "X": 0, "Y": 0 } },
       "FacingDirection": { "AngleRad": 0.0 },
       "AttributeBuffer": { "base": { "Health": 210, "Shield": 10, "MoveSpeed": 295, "Armor": 14 } },
-      "GameplayTagContainer": {}
+      "GameplayTagContainer": {},
+      "Presentation": {
+        "startupPerformerIds": ["relationship.hero.peach_garden"]
+      }
     }
   },
   {
@@ -47,7 +56,10 @@
       "WorldPositionCm": { "Value": { "X": 0, "Y": 0 } },
       "FacingDirection": { "AngleRad": 3.14159 },
       "AttributeBuffer": { "base": { "Health": 175, "Shield": 0, "MoveSpeed": 285, "Armor": 8 } },
-      "GameplayTagContainer": {}
+      "GameplayTagContainer": {},
+      "Presentation": {
+        "startupPerformerIds": ["relationship.enemy.turban"]
+      }
     }
   },
   {
@@ -59,7 +71,10 @@
       "WorldPositionCm": { "Value": { "X": 0, "Y": 0 } },
       "FacingDirection": { "AngleRad": 3.14159 },
       "AttributeBuffer": { "base": { "Health": 150, "Shield": 0, "MoveSpeed": 300, "Armor": 5 } },
-      "GameplayTagContainer": {}
+      "GameplayTagContainer": {},
+      "Presentation": {
+        "startupPerformerIds": ["relationship.enemy.turban"]
+      }
     }
   }
 ]

@@ -513,8 +513,8 @@ GAS Domain              Global Domain
 | BehaviorSlot | `slot` | ~~slotIndex~~ |
 | TagBindingConfig | `tagId` | ~~tag~~ |
 | SplineConfig | `splineAssetId` | ~~splinePathId~~ |
-| AttributeBindingConfig | `attributeId` | ~~sourceId~~ |
-| WorldText binding | `textToken` | ~~sourceKey~~ |
+| AttributeBindingConfig | `attributeName` | ~~attributeId~~ / ~~sourceId~~ |
+| WorldText text contract | `defaultTextId` / `worldTextValueMode` | ~~sourceKey~~ / ~~textToken binding~~ / ~~paramKey 15/16~~ |
 
 ## 7 相关文档
 

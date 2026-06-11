@@ -5,7 +5,10 @@
       "Name": { "Value": "PointPin" },
       "SelectionSelectableTag": {},
       "WorldPositionCm": { "Value": { "X": 0, "Y": 0 } },
-      "SpatialBounds": { "kind": "Point" }
+      "SpatialBounds": { "kind": "Point" },
+      "Presentation": {
+        "startupPerformerIds": ["spatial_bounds.character.hero_skinned"]
+      }
     }
   },
   {
@@ -22,6 +25,9 @@
           { "x": 190, "y": 120 },
           { "x": -190, "y": 120 }
         ]
+      },
+      "Presentation": {
+        "startupPerformerIds": ["spatial_bounds.prop.dummy_static"]
       }
     }
   },
@@ -40,6 +46,9 @@
           { "x": 0, "y": 220 },
           { "x": -190, "y": 0 }
         ]
+      },
+      "Presentation": {
+        "startupPerformerIds": ["spatial_bounds.prop.dummy_static"]
       }
     }
   },
@@ -65,6 +74,9 @@
             { "x": 70, "y": 120 }
           ]
         ]
+      },
+      "Presentation": {
+        "startupPerformerIds": ["spatial_bounds.prop.dummy_static"]
       }
     }
   },
@@ -82,6 +94,9 @@
         "halfSizeXCm": 120,
         "halfSizeYCm": 150,
         "halfSizeZCm": 120
+      },
+      "Presentation": {
+        "startupPerformerIds": ["spatial_bounds.character.hero_skinned"]
       }
     }
   },
@@ -99,6 +114,9 @@
           { "x": 210, "y": 150 },
           { "x": -210, "y": 150 }
         ]
+      },
+      "Presentation": {
+        "startupPerformerIds": ["spatial_bounds.prop.dummy_static"]
       }
     }
   },
@@ -108,7 +126,10 @@
       "Name": { "Value": "OverlapPoint" },
       "SelectionSelectableTag": {},
       "WorldPositionCm": { "Value": { "X": 0, "Y": 0 } },
-      "SpatialBounds": { "kind": "Point" }
+      "SpatialBounds": { "kind": "Point" },
+      "Presentation": {
+        "startupPerformerIds": ["spatial_bounds.character.hero_skinned"]
+      }
     }
   }
 ]

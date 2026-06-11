@@ -60,7 +60,8 @@ namespace Ludots.Tests.Presentation
 
                     Assert.That(
                         profileRegistry!.TryResolveStateClipId(item.AnimationProfileId, item.Animator.GetPrimaryStateIndex(), out int stateClipAssetId),
-                        Is.True);
+                        Is.True,
+                        $"Expected animation profile '{profileRegistry.GetName(item.AnimationProfileId)}' to resolve packed state {item.Animator.GetPrimaryStateIndex()} for stableId={item.StableId}, controllerId={item.Animator.GetControllerId()}.");
                     Assert.That(
                         profileRegistry.TryResolveBuiltinClipId(item.AnimationProfileId, item.AnimationOverlay.BaseClip.ClipId, out int baseClipAssetId),
                         Is.True);

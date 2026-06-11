@@ -9,9 +9,33 @@ using System.Threading.Tasks;
 using Ludots.Adapter.Web.Protocol;
 using Ludots.Adapter.Web.Services;
 using Ludots.Core.Diagnostics;
+using Ludots.Core.Presentation.Assets;
 
 namespace Ludots.Adapter.Web.Streaming
 {
+    public readonly struct WebMaterialMapEntry
+    {
+        public WebMaterialMapEntry(
+            int id,
+            string key,
+            MaterialAssetDomain domain,
+            MaterialAssetFlags flags,
+            string[] sourceUris)
+        {
+            Id = id;
+            Key = key ?? throw new ArgumentNullException(nameof(key));
+            Domain = domain;
+            Flags = flags;
+            SourceUris = sourceUris ?? Array.Empty<string>();
+        }
+
+        public int Id { get; }
+        public string Key { get; }
+        public MaterialAssetDomain Domain { get; }
+        public MaterialAssetFlags Flags { get; }
+        public string[] SourceUris { get; }
+    }
+
     public sealed class WebTransportLayer : IDisposable
     {
         private static readonly LogChannel LogChannel = Log.RegisterChannel("WebTransport");
@@ -20,6 +44,7 @@ namespace Ludots.Adapter.Web.Streaming
         private readonly WebViewController _viewController;
         private readonly ConcurrentDictionary<string, ClientSession> _sessions = new();
         private volatile byte[]? _meshMapMessage;
+        private volatile byte[]? _materialMapMessage;
 
         public bool HasClients => !_sessions.IsEmpty;
         public int ClientCount => _sessions.Count;
@@ -56,6 +81,69 @@ namespace Ludots.Adapter.Web.Streaming
             _meshMapMessage = buf;
         }
 
+        public void SetMaterialMap(IReadOnlyList<WebMaterialMapEntry> entries)
+        {
+            _materialMapMessage = EncodeMaterialMap(entries);
+        }
+
+        public static byte[] EncodeMaterialMap(IReadOnlyList<WebMaterialMapEntry> entries)
+        {
+            if (entries == null)
+            {
+                throw new ArgumentNullException(nameof(entries));
+            }
+
+            int totalSize = 1 + 2;
+            for (int i = 0; i < entries.Count; i++)
+            {
+                WebMaterialMapEntry entry = entries[i];
+                if (string.IsNullOrWhiteSpace(entry.Key))
+                {
+                    throw new InvalidOperationException($"Web material map entry at index {i} has no key.");
+                }
+
+                if (entry.SourceUris.Length == 0)
+                {
+                    throw new InvalidOperationException($"Web material '{entry.Key}' has no host sourceUris.");
+                }
+
+                totalSize += 4 + 1 + 2 + 2 + Encoding.UTF8.GetByteCount(entry.Key) + 2;
+                for (int uriIndex = 0; uriIndex < entry.SourceUris.Length; uriIndex++)
+                {
+                    string uri = entry.SourceUris[uriIndex];
+                    if (string.IsNullOrWhiteSpace(uri))
+                    {
+                        throw new InvalidOperationException($"Web material '{entry.Key}' sourceUris[{uriIndex}] is empty.");
+                    }
+
+                    totalSize += 2 + Encoding.UTF8.GetByteCount(uri);
+                }
+            }
+
+            var buf = new byte[totalSize];
+            buf[0] = FrameProtocol.MsgTypeMaterialMap;
+            BinaryPrimitives.WriteUInt16LittleEndian(buf.AsSpan(1), checked((ushort)entries.Count));
+            int pos = 3;
+            for (int i = 0; i < entries.Count; i++)
+            {
+                WebMaterialMapEntry entry = entries[i];
+                BinaryPrimitives.WriteInt32LittleEndian(buf.AsSpan(pos), entry.Id);
+                pos += 4;
+                buf[pos++] = (byte)entry.Domain;
+                BinaryPrimitives.WriteUInt16LittleEndian(buf.AsSpan(pos), (ushort)entry.Flags);
+                pos += 2;
+                WriteUtf8String(buf, ref pos, entry.Key);
+                BinaryPrimitives.WriteUInt16LittleEndian(buf.AsSpan(pos), checked((ushort)entry.SourceUris.Length));
+                pos += 2;
+                for (int uriIndex = 0; uriIndex < entry.SourceUris.Length; uriIndex++)
+                {
+                    WriteUtf8String(buf, ref pos, entry.SourceUris[uriIndex]);
+                }
+            }
+
+            return buf;
+        }
+
         public async Task HandleClientAsync(WebSocket ws, CancellationToken ct)
         {
             string id = Guid.NewGuid().ToString("N")[..8];
@@ -70,6 +158,16 @@ namespace Ludots.Adapter.Web.Streaming
                 {
                     await ws.SendAsync(
                         new ArraySegment<byte>(meshMap),
+                        WebSocketMessageType.Binary,
+                        true,
+                        ct);
+                }
+
+                byte[]? materialMap = _materialMapMessage;
+                if (materialMap != null)
+                {
+                    await ws.SendAsync(
+                        new ArraySegment<byte>(materialMap),
                         WebSocketMessageType.Binary,
                         true,
                         ct);
@@ -128,6 +226,15 @@ namespace Ludots.Adapter.Web.Streaming
             }
 
             return list;
+        }
+
+        private static void WriteUtf8String(byte[] buffer, ref int pos, string value)
+        {
+            int byteCount = Encoding.UTF8.GetByteCount(value);
+            BinaryPrimitives.WriteUInt16LittleEndian(buffer.AsSpan(pos), checked((ushort)byteCount));
+            pos += 2;
+            Encoding.UTF8.GetBytes(value, buffer.AsSpan(pos));
+            pos += byteCount;
         }
 
         private async Task ReceiveLoopAsync(ClientSession session, CancellationToken ct)

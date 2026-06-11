@@ -11,7 +11,7 @@ namespace Ludots.Core.Presentation.Assets
         public MeshAssetRegistry(int capacity = 4096)
         {
             if (capacity <= 0) throw new ArgumentOutOfRangeException(nameof(capacity));
-            _ids = new StringIntRegistry(capacity, startId: 1, invalidId: 0, StringComparer.OrdinalIgnoreCase);
+            _ids = new StringIntRegistry(capacity, startId: 1, invalidId: 0, StringComparer.Ordinal);
             _data = new MeshAssetDescriptor[capacity];
 
             RegisterPrimitive(WellKnownMeshKeys.Cube, PrimitiveMeshKind.Cube);

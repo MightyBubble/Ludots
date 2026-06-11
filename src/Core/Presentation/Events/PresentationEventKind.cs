@@ -6,15 +6,6 @@ namespace Ludots.Core.Presentation.Events
         GameplayEvent = 1,
         TagEffectiveChanged = 2,
 
-        /// <summary>An entity was created from a registered entity template. Source=created entity.</summary>
-        EntitySpawned = 3,
-
-        /// <summary>An entity created from a registered entity template was destroyed. Source=destroyed entity.</summary>
-        EntityDestroyed = 4,
-
-        /// <summary>A projectile/effect template was spawned. Source=projectile owner, Target=projectile entity.</summary>
-        ProjectileSpawned = 5,
-
         // ── Performer domain events ──
         /// <summary>Emitted when a persistent performer instance is created.</summary>
         PerformerCreated = 10,
@@ -28,5 +19,14 @@ namespace Ludots.Core.Presentation.Events
         CastCommitted = 21,
         /// <summary>An ability cast failed. PayloadA=AbilitySlot, PayloadB=(int)FailReason.</summary>
         CastFailed = 22,
+
+        /// <summary>An entity template instance entered presentation lifetime. KeyId=entity template id.</summary>
+        EntitySpawned = 30,
+
+        /// <summary>An entity template instance left presentation lifetime. KeyId=entity template id.</summary>
+        EntityDestroyed = 31,
+
+        /// <summary>A projectile presentation entity was spawned. KeyId=effect/projectile template id.</summary>
+        ProjectileSpawned = 32,
     }
 }

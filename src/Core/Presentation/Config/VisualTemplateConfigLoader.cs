@@ -46,12 +46,14 @@ namespace Ludots.Core.Presentation.Config
         private VisualTemplateDefinition Parse(JsonNode node, string key)
         {
             string renderPathText = node["renderPath"]?.GetValue<string>() ?? string.Empty;
-            if (!Enum.TryParse(renderPathText, ignoreCase: true, out VisualRenderPath renderPath))
-                throw new InvalidOperationException($"Visual template '{key}' has invalid renderPath '{renderPathText}'.");
+            if (string.IsNullOrWhiteSpace(renderPathText) ||
+                !Enum.TryParse(renderPathText, ignoreCase: false, out VisualRenderPath renderPath))
+                throw new InvalidOperationException($"Visual template '{key}' has invalid renderPath '{renderPathText}'. Enum values are case-sensitive.");
 
-            string mobilityText = node["mobility"]?.GetValue<string>() ?? nameof(VisualMobility.Movable);
-            if (!Enum.TryParse(mobilityText, ignoreCase: true, out VisualMobility mobility))
-                throw new InvalidOperationException($"Visual template '{key}' has invalid mobility '{mobilityText}'.");
+            string mobilityText = node["mobility"]?.GetValue<string>() ?? string.Empty;
+            if (string.IsNullOrWhiteSpace(mobilityText) ||
+                !Enum.TryParse(mobilityText, ignoreCase: false, out VisualMobility mobility))
+                throw new InvalidOperationException($"Visual template '{key}' has invalid mobility '{mobilityText}'. Enum values are case-sensitive.");
 
             string meshKey = node["meshAssetId"]?.GetValue<string>() ?? string.Empty;
             int meshAssetId = string.IsNullOrWhiteSpace(meshKey) ? 0 : _meshes.GetId(meshKey);

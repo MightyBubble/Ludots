@@ -12,8 +12,6 @@ namespace Ludots.Core.Presentation.Terrain
     public sealed class ChunkedVisualHeightmapStore
     {
         private readonly Dictionary<long, ChunkedVisualHeightmapChunk> _chunks = new Dictionary<long, ChunkedVisualHeightmapChunk>();
-        private long _lastChunkKey = long.MinValue;
-        private ChunkedVisualHeightmapChunk? _lastChunk;
         private ILoadedChunks? _loadedChunks;
 
         public ChunkedVisualHeightmapStore(ChunkedVisualHeightmapDescriptor descriptor)
@@ -60,71 +58,30 @@ namespace Ludots.Core.Presentation.Terrain
 
             long key = GraphChunkKey.Pack(chunk.ChunkX, chunk.ChunkY);
             _chunks[key] = chunk;
-            _lastChunkKey = key;
-            _lastChunk = chunk;
         }
 
         public bool RemoveChunk(int chunkX, int chunkY)
         {
             ValidateChunkCoordinates(chunkX, chunkY);
             long key = GraphChunkKey.Pack(chunkX, chunkY);
-            bool removed = _chunks.Remove(key);
-            if (removed && _lastChunkKey == key)
-            {
-                _lastChunkKey = long.MinValue;
-                _lastChunk = null;
-            }
-
-            return removed;
+            return _chunks.Remove(key);
         }
 
         public bool TryGetChunk(int chunkX, int chunkY, out ChunkedVisualHeightmapChunk chunk)
         {
             ValidateChunkCoordinates(chunkX, chunkY);
             long key = GraphChunkKey.Pack(chunkX, chunkY);
-            if (_lastChunkKey == key && _lastChunk != null)
-            {
-                chunk = _lastChunk;
-                return true;
-            }
-
-            if (_chunks.TryGetValue(key, out chunk!))
-            {
-                _lastChunkKey = key;
-                _lastChunk = chunk;
-                return true;
-            }
-
-            chunk = null!;
-            return false;
+            return _chunks.TryGetValue(key, out chunk!);
         }
 
         public bool TryGetChunk(long chunkKey, out ChunkedVisualHeightmapChunk chunk)
         {
-            if (_lastChunkKey == chunkKey && _lastChunk != null)
-            {
-                chunk = _lastChunk;
-                return true;
-            }
-
-            if (_chunks.TryGetValue(chunkKey, out chunk!))
-            {
-                _lastChunkKey = chunkKey;
-                _lastChunk = chunk;
-                return true;
-            }
-
-            chunk = null!;
-            return false;
+            return _chunks.TryGetValue(chunkKey, out chunk!);
         }
 
         private void OnChunkUnloaded(long chunkKey)
         {
-            if (_chunks.Remove(chunkKey) && _lastChunkKey == chunkKey)
-            {
-                _lastChunkKey = long.MinValue;
-                _lastChunk = null;
-            }
+            _chunks.Remove(chunkKey);
         }
 
         private void ValidateChunkCoordinates(int chunkX, int chunkY)

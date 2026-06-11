@@ -3,6 +3,7 @@ using System.Collections.Generic;
 using Arch.Core;
 using Arch.System;
 using Ludots.Core.GraphRuntime;
+using Ludots.Core.Gameplay.GAS.Components;
 using Ludots.Core.Mathematics;
 using Ludots.Core.NodeLibraries.GASGraph;
 using Ludots.Core.Presentation.Commands;
@@ -221,6 +222,21 @@ namespace Ludots.Core.Presentation.Systems
                 case InlineConditionKind.SourceHasVisualTransform:
                     return World.IsAlive(evt.Source) && World.Has<VisualTransform>(evt.Source);
 
+                case InlineConditionKind.SourceHasAttributeBuffer:
+                    return World.IsAlive(evt.Source) && World.Has<AttributeBuffer>(evt.Source);
+
+                case InlineConditionKind.SourceHasAttributeBufferAndPresentationStableId:
+                    return World.IsAlive(evt.Source) &&
+                           World.Has<AttributeBuffer>(evt.Source) &&
+                           World.Has<PresentationStableId>(evt.Source) &&
+                           World.Get<PresentationStableId>(evt.Source).Value > 0;
+
+                case InlineConditionKind.SourceHasVisualTransformAndPresentationStableId:
+                    return World.IsAlive(evt.Source) &&
+                           World.Has<VisualTransform>(evt.Source) &&
+                           World.Has<PresentationStableId>(evt.Source) &&
+                           World.Get<PresentationStableId>(evt.Source).Value > 0;
+
                 default:
                     return true;
             }
@@ -283,45 +299,75 @@ namespace Ludots.Core.Presentation.Systems
 
         private void EmitCommand(in PerformerCommand cmd, in PresentationEvent evt)
         {
+            PresentationCommandKind kind = ToPresentationCommandKind(cmd.CommandKind);
             int scopeId = ResolveScopeId(in cmd, in evt);
+            int commandIdA = ResolveCommandIdA(kind, in cmd, scopeId);
+            int commandIdB = kind == PresentationCommandKind.SetPerformerParam ? cmd.ParamKey : scopeId;
+
             _commands.TryAdd(new PresentationCommand
             {
                 LogicTickStamp = evt.LogicTickStamp,
-                Kind = cmd.CommandKind,
-                IdA = cmd.CommandKind == PresentationCommandKind.CreatePerformer
-                    ? cmd.PerformerDefinitionId
-                    : 0,
-                IdB = scopeId,
+                Kind = kind,
+                IdA = commandIdA,
+                IdB = commandIdB,
                 Source = evt.Source,
                 Target = evt.Target,
                 Param1 = cmd.ParamGraphProgramId > 0
                     ? EvaluateGraphFloat(cmd.ParamGraphProgramId, evt.Source, evt.Target)
                     : cmd.ParamValue,
-                Param2 = cmd.ParamKey,
             });
+        }
+
+        private static PresentationCommandKind ToPresentationCommandKind(PerformerCommandKind kind)
+        {
+            return kind switch
+            {
+                PerformerCommandKind.CreatePerformer => PresentationCommandKind.CreatePerformer,
+                PerformerCommandKind.DestroyPerformer => PresentationCommandKind.DestroyPerformer,
+                PerformerCommandKind.DestroyPerformerScope => PresentationCommandKind.DestroyPerformerScope,
+                PerformerCommandKind.SetParam => PresentationCommandKind.SetPerformerParam,
+                PerformerCommandKind.None => PresentationCommandKind.None,
+                _ => throw new InvalidOperationException($"Performer command kind '{kind}' has no presentation command mapping."),
+            };
+        }
+
+        private static int ResolveCommandIdA(PresentationCommandKind kind, in PerformerCommand cmd, int scopeId)
+        {
+            return kind switch
+            {
+                PresentationCommandKind.CreatePerformer => cmd.PerformerDefinitionId,
+                PresentationCommandKind.DestroyPerformer => cmd.ParentHandle,
+                PresentationCommandKind.DestroyPerformerScope => scopeId,
+                PresentationCommandKind.SetPerformerParam => cmd.ParentHandle,
+                _ => 0,
+            };
         }
 
         private int ResolveScopeId(in PerformerCommand cmd, in PresentationEvent evt)
         {
             return cmd.ScopeSource switch
             {
+                PerformerCommandScopeSource.Fixed => cmd.ScopeTag,
                 PerformerCommandScopeSource.EventPayloadA => evt.PayloadA,
                 PerformerCommandScopeSource.EventPayloadB => evt.PayloadB,
-                PerformerCommandScopeSource.SourceStableId => TryGetStableId(evt.Source, out int stableId) ? stableId : 0,
-                _ => cmd.ScopeId,
+                PerformerCommandScopeSource.SourceStableId => ResolveStableId(evt.Source, "source"),
+                PerformerCommandScopeSource.TargetStableId => ResolveStableId(evt.Target, "target"),
+                _ => throw new InvalidOperationException($"Unsupported performer scope source '{cmd.ScopeSource}'."),
             };
         }
 
-        private bool TryGetStableId(Entity entity, out int stableId)
+        private int ResolveStableId(Entity entity, string role)
         {
             if (World.IsAlive(entity) && World.Has<PresentationStableId>(entity))
             {
-                stableId = World.Get<PresentationStableId>(entity).Value;
-                return stableId > 0;
+                int stableId = World.Get<PresentationStableId>(entity).Value;
+                if (stableId > 0)
+                {
+                    return stableId;
+                }
             }
 
-            stableId = 0;
-            return false;
+            throw new InvalidOperationException($"Performer scope source '{role} stable id' requires a live entity with positive PresentationStableId.");
         }
 
         /// <summary>

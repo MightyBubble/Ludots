@@ -8,12 +8,12 @@
     "defaultLifetime": -1,
     "positionOffset": [0, 0.04, 0],
     "bindings": [
-      { "paramKey": 1, "source": "constant", "constantValue": 0.68 },
-      { "paramKey": 8, "source": "constant", "constantValue": 0.47 },
-      { "paramKey": 9, "source": "constant", "constantValue": 0.94 },
-      { "paramKey": 10, "source": "constant", "constantValue": 1.0 },
-      { "paramKey": 11, "source": "constant", "constantValue": 0.98 },
-      { "paramKey": 12, "source": "constant", "constantValue": 0.035 }
+      { "paramKey": 1, "source": "Constant", "constantValue": 0.68 },
+      { "paramKey": 8, "source": "Constant", "constantValue": 0.47 },
+      { "paramKey": 9, "source": "Constant", "constantValue": 0.94 },
+      { "paramKey": 10, "source": "Constant", "constantValue": 1.0 },
+      { "paramKey": 11, "source": "Constant", "constantValue": 0.98 },
+      { "paramKey": 12, "source": "Constant", "constantValue": 0.035 }
     ]
   },
   {
@@ -25,18 +25,18 @@
     "defaultLifetime": -1,
     "positionOffset": [0, 0.06, 0],
     "bindings": [
-      { "paramKey": 1, "source": "constant", "constantValue": 0.8 },
-      { "paramKey": 8, "source": "constant", "constantValue": 1.0 },
-      { "paramKey": 9, "source": "constant", "constantValue": 0.74 },
-      { "paramKey": 10, "source": "constant", "constantValue": 0.24 },
-      { "paramKey": 11, "source": "constant", "constantValue": 1.0 },
-      { "paramKey": 12, "source": "constant", "constantValue": 0.045 }
+      { "paramKey": 1, "source": "Constant", "constantValue": 0.8 },
+      { "paramKey": 8, "source": "Constant", "constantValue": 1.0 },
+      { "paramKey": 9, "source": "Constant", "constantValue": 0.74 },
+      { "paramKey": 10, "source": "Constant", "constantValue": 0.24 },
+      { "paramKey": 11, "source": "Constant", "constantValue": 1.0 },
+      { "paramKey": 12, "source": "Constant", "constantValue": 0.045 }
     ]
   },
   {
     "id": "champion_skill_sandbox.projectile.ezreal_e",
     "visualKind": "Marker3D",
-    "meshOrShapeId": "Sphere",
+    "meshOrShapeId": "sphere",
     "defaultColor": [0.44, 0.9, 1.0, 0.92],
     "defaultScale": 0.2,
     "defaultLifetime": -1
@@ -44,7 +44,7 @@
   {
     "id": "champion_skill_sandbox.projectile.ezreal_w",
     "visualKind": "Marker3D",
-    "meshOrShapeId": "Sphere",
+    "meshOrShapeId": "sphere",
     "defaultColor": [0.98, 0.82, 0.36, 0.92],
     "defaultScale": 0.24,
     "defaultLifetime": -1
@@ -52,7 +52,7 @@
   {
     "id": "champion_skill_sandbox.projectile.ezreal_q",
     "visualKind": "Marker3D",
-    "meshOrShapeId": "Sphere",
+    "meshOrShapeId": "sphere",
     "defaultColor": [0.34, 0.86, 1.0, 0.92],
     "defaultScale": 0.22,
     "defaultLifetime": -1
@@ -60,7 +60,7 @@
   {
     "id": "champion_skill_sandbox.projectile.ezreal_r",
     "visualKind": "Marker3D",
-    "meshOrShapeId": "Sphere",
+    "meshOrShapeId": "sphere",
     "defaultColor": [0.72, 0.93, 1.0, 0.94],
     "defaultScale": 0.34,
     "defaultLifetime": -1
@@ -68,7 +68,7 @@
   {
     "id": "champion_skill_sandbox.projectile.jayce_q",
     "visualKind": "Marker3D",
-    "meshOrShapeId": "Sphere",
+    "meshOrShapeId": "sphere",
     "defaultColor": [0.44, 0.84, 1.0, 0.92],
     "defaultScale": 0.24,
     "defaultLifetime": -1
@@ -76,7 +76,7 @@
   {
     "id": "champion_skill_sandbox.cue.ezreal_arcane_shift",
     "visualKind": "Marker3D",
-    "meshOrShapeId": "Sphere",
+    "meshOrShapeId": "sphere",
     "defaultColor": [0.38, 0.9, 1.0, 0.82],
     "defaultScale": 0.42,
     "defaultLifetime": 0.26,
@@ -92,11 +92,11 @@
     "defaultLifetime": 0.34,
     "positionOffset": [0, 0.04, 0],
     "bindings": [
-      { "paramKey": 8, "source": "constant", "constantValue": 0.95 },
-      { "paramKey": 9, "source": "constant", "constantValue": 0.78 },
-      { "paramKey": 10, "source": "constant", "constantValue": 0.34 },
-      { "paramKey": 11, "source": "constant", "constantValue": 0.95 },
-      { "paramKey": 12, "source": "constant", "constantValue": 0.03 }
+      { "paramKey": 8, "source": "Constant", "constantValue": 0.95 },
+      { "paramKey": 9, "source": "Constant", "constantValue": 0.78 },
+      { "paramKey": 10, "source": "Constant", "constantValue": 0.34 },
+      { "paramKey": 11, "source": "Constant", "constantValue": 0.95 },
+      { "paramKey": 12, "source": "Constant", "constantValue": 0.03 }
     ]
   },
   {
@@ -108,18 +108,18 @@
     "defaultLifetime": 0.42,
     "positionOffset": [0, 0.05, 0],
     "bindings": [
-      { "paramKey": 1, "source": "constant", "constantValue": 0.78 },
-      { "paramKey": 8, "source": "constant", "constantValue": 0.97 },
-      { "paramKey": 9, "source": "constant", "constantValue": 0.83 },
-      { "paramKey": 10, "source": "constant", "constantValue": 0.42 },
-      { "paramKey": 11, "source": "constant", "constantValue": 1.0 },
-      { "paramKey": 12, "source": "constant", "constantValue": 0.04 }
+      { "paramKey": 1, "source": "Constant", "constantValue": 0.78 },
+      { "paramKey": 8, "source": "Constant", "constantValue": 0.97 },
+      { "paramKey": 9, "source": "Constant", "constantValue": 0.83 },
+      { "paramKey": 10, "source": "Constant", "constantValue": 0.42 },
+      { "paramKey": 11, "source": "Constant", "constantValue": 1.0 },
+      { "paramKey": 12, "source": "Constant", "constantValue": 0.04 }
     ]
   },
   {
     "id": "champion_skill_sandbox.cue.ezreal_mystic_shot_cast",
     "visualKind": "Marker3D",
-    "meshOrShapeId": "Sphere",
+    "meshOrShapeId": "sphere",
     "defaultColor": [0.38, 0.82, 1.0, 0.86],
     "defaultScale": 0.26,
     "defaultLifetime": 0.18,
@@ -129,7 +129,7 @@
   {
     "id": "champion_skill_sandbox.cue.ezreal_mystic_shot_hit",
     "visualKind": "Marker3D",
-    "meshOrShapeId": "Sphere",
+    "meshOrShapeId": "sphere",
     "defaultColor": [0.55, 0.9, 1.0, 0.9],
     "defaultScale": 0.32,
     "defaultLifetime": 0.22,
@@ -139,7 +139,7 @@
   {
     "id": "champion_skill_sandbox.cue.ezreal_trueshot_barrage_cast",
     "visualKind": "Marker3D",
-    "meshOrShapeId": "Sphere",
+    "meshOrShapeId": "sphere",
     "defaultColor": [0.7, 0.94, 1.0, 0.9],
     "defaultScale": 0.5,
     "defaultLifetime": 0.28,
@@ -155,11 +155,11 @@
     "defaultLifetime": 0.28,
     "positionOffset": [0, 0.06, 0],
     "bindings": [
-      { "paramKey": 8, "source": "constant", "constantValue": 0.74 },
-      { "paramKey": 9, "source": "constant", "constantValue": 0.94 },
-      { "paramKey": 10, "source": "constant", "constantValue": 1.0 },
-      { "paramKey": 11, "source": "constant", "constantValue": 0.96 },
-      { "paramKey": 12, "source": "constant", "constantValue": 0.04 }
+      { "paramKey": 8, "source": "Constant", "constantValue": 0.74 },
+      { "paramKey": 9, "source": "Constant", "constantValue": 0.94 },
+      { "paramKey": 10, "source": "Constant", "constantValue": 1.0 },
+      { "paramKey": 11, "source": "Constant", "constantValue": 0.96 },
+      { "paramKey": 12, "source": "Constant", "constantValue": 0.04 }
     ]
   },
   {
@@ -171,11 +171,11 @@
     "defaultLifetime": 0.32,
     "positionOffset": [0, 0.05, 0],
     "bindings": [
-      { "paramKey": 8, "source": "constant", "constantValue": 1.0 },
-      { "paramKey": 9, "source": "constant", "constantValue": 0.88 },
-      { "paramKey": 10, "source": "constant", "constantValue": 0.54 },
-      { "paramKey": 11, "source": "constant", "constantValue": 0.98 },
-      { "paramKey": 12, "source": "constant", "constantValue": 0.035 }
+      { "paramKey": 8, "source": "Constant", "constantValue": 1.0 },
+      { "paramKey": 9, "source": "Constant", "constantValue": 0.88 },
+      { "paramKey": 10, "source": "Constant", "constantValue": 0.54 },
+      { "paramKey": 11, "source": "Constant", "constantValue": 0.98 },
+      { "paramKey": 12, "source": "Constant", "constantValue": 0.035 }
     ]
   },
   {
@@ -187,12 +187,12 @@
     "defaultLifetime": 0.46,
     "positionOffset": [0, 0.05, 0],
     "bindings": [
-      { "paramKey": 1, "source": "constant", "constantValue": 0.88 },
-      { "paramKey": 8, "source": "constant", "constantValue": 0.85 },
-      { "paramKey": 9, "source": "constant", "constantValue": 0.95 },
-      { "paramKey": 10, "source": "constant", "constantValue": 0.58 },
-      { "paramKey": 11, "source": "constant", "constantValue": 1.0 },
-      { "paramKey": 12, "source": "constant", "constantValue": 0.045 }
+      { "paramKey": 1, "source": "Constant", "constantValue": 0.88 },
+      { "paramKey": 8, "source": "Constant", "constantValue": 0.85 },
+      { "paramKey": 9, "source": "Constant", "constantValue": 0.95 },
+      { "paramKey": 10, "source": "Constant", "constantValue": 0.58 },
+      { "paramKey": 11, "source": "Constant", "constantValue": 1.0 },
+      { "paramKey": 12, "source": "Constant", "constantValue": 0.045 }
     ]
   },
   {
@@ -204,18 +204,18 @@
     "defaultLifetime": 0.5,
     "positionOffset": [0, 0.05, 0],
     "bindings": [
-      { "paramKey": 1, "source": "constant", "constantValue": 1.76 },
-      { "paramKey": 8, "source": "constant", "constantValue": 0.96 },
-      { "paramKey": 9, "source": "constant", "constantValue": 0.71 },
-      { "paramKey": 10, "source": "constant", "constantValue": 0.41 },
-      { "paramKey": 11, "source": "constant", "constantValue": 1.0 },
-      { "paramKey": 12, "source": "constant", "constantValue": 0.05 }
+      { "paramKey": 1, "source": "Constant", "constantValue": 1.76 },
+      { "paramKey": 8, "source": "Constant", "constantValue": 0.96 },
+      { "paramKey": 9, "source": "Constant", "constantValue": 0.71 },
+      { "paramKey": 10, "source": "Constant", "constantValue": 0.41 },
+      { "paramKey": 11, "source": "Constant", "constantValue": 1.0 },
+      { "paramKey": 12, "source": "Constant", "constantValue": 0.05 }
     ]
   },
   {
     "id": "champion_skill_sandbox.cue.garen_judgment_hit",
     "visualKind": "Marker3D",
-    "meshOrShapeId": "Sphere",
+    "meshOrShapeId": "sphere",
     "defaultColor": [1.0, 0.66, 0.42, 0.9],
     "defaultScale": 0.28,
     "defaultLifetime": 0.2,
@@ -225,7 +225,7 @@
   {
     "id": "champion_skill_sandbox.cue.garen_demacian_justice_cast",
     "visualKind": "Marker3D",
-    "meshOrShapeId": "Sphere",
+    "meshOrShapeId": "sphere",
     "defaultColor": [1.0, 0.58, 0.42, 0.84],
     "defaultScale": 0.44,
     "defaultLifetime": 0.22,
@@ -241,17 +241,17 @@
     "defaultLifetime": 0.26,
     "positionOffset": [0, 0.06, 0],
     "bindings": [
-      { "paramKey": 8, "source": "constant", "constantValue": 1.0 },
-      { "paramKey": 9, "source": "constant", "constantValue": 0.58 },
-      { "paramKey": 10, "source": "constant", "constantValue": 0.4 },
-      { "paramKey": 11, "source": "constant", "constantValue": 1.0 },
-      { "paramKey": 12, "source": "constant", "constantValue": 0.045 }
+      { "paramKey": 8, "source": "Constant", "constantValue": 1.0 },
+      { "paramKey": 9, "source": "Constant", "constantValue": 0.58 },
+      { "paramKey": 10, "source": "Constant", "constantValue": 0.4 },
+      { "paramKey": 11, "source": "Constant", "constantValue": 1.0 },
+      { "paramKey": 12, "source": "Constant", "constantValue": 0.045 }
     ]
   },
   {
     "id": "champion_skill_sandbox.cue.geomancer_runic_beacon",
     "visualKind": "Marker3D",
-    "meshOrShapeId": "Sphere",
+    "meshOrShapeId": "sphere",
     "defaultColor": [0.54, 0.9, 0.68, 0.88],
     "defaultScale": 0.34,
     "defaultLifetime": 0.22,
@@ -267,11 +267,11 @@
     "defaultLifetime": 0.42,
     "positionOffset": [0, 0.05, 0],
     "bindings": [
-      { "paramKey": 8, "source": "constant", "constantValue": 0.9 },
-      { "paramKey": 9, "source": "constant", "constantValue": 0.97 },
-      { "paramKey": 10, "source": "constant", "constantValue": 0.52 },
-      { "paramKey": 11, "source": "constant", "constantValue": 0.98 },
-      { "paramKey": 12, "source": "constant", "constantValue": 0.04 }
+      { "paramKey": 8, "source": "Constant", "constantValue": 0.9 },
+      { "paramKey": 9, "source": "Constant", "constantValue": 0.97 },
+      { "paramKey": 10, "source": "Constant", "constantValue": 0.52 },
+      { "paramKey": 11, "source": "Constant", "constantValue": 0.98 },
+      { "paramKey": 12, "source": "Constant", "constantValue": 0.04 }
     ]
   },
   {
@@ -283,12 +283,12 @@
     "defaultLifetime": 0.24,
     "positionOffset": [0, 0.05, 0],
     "bindings": [
-      { "paramKey": 1, "source": "constant", "constantValue": 0.72 },
-      { "paramKey": 8, "source": "constant", "constantValue": 0.9 },
-      { "paramKey": 9, "source": "constant", "constantValue": 0.97 },
-      { "paramKey": 10, "source": "constant", "constantValue": 0.52 },
-      { "paramKey": 11, "source": "constant", "constantValue": 1.0 },
-      { "paramKey": 12, "source": "constant", "constantValue": 0.04 }
+      { "paramKey": 1, "source": "Constant", "constantValue": 0.72 },
+      { "paramKey": 8, "source": "Constant", "constantValue": 0.9 },
+      { "paramKey": 9, "source": "Constant", "constantValue": 0.97 },
+      { "paramKey": 10, "source": "Constant", "constantValue": 0.52 },
+      { "paramKey": 11, "source": "Constant", "constantValue": 1.0 },
+      { "paramKey": 12, "source": "Constant", "constantValue": 0.04 }
     ]
   },
   {
@@ -300,18 +300,18 @@
     "defaultLifetime": 0.34,
     "positionOffset": [0, 0.05, 0],
     "bindings": [
-      { "paramKey": 1, "source": "constant", "constantValue": 0.82 },
-      { "paramKey": 8, "source": "constant", "constantValue": 0.98 },
-      { "paramKey": 9, "source": "constant", "constantValue": 0.76 },
-      { "paramKey": 10, "source": "constant", "constantValue": 0.44 },
-      { "paramKey": 11, "source": "constant", "constantValue": 0.98 },
-      { "paramKey": 12, "source": "constant", "constantValue": 0.045 }
+      { "paramKey": 1, "source": "Constant", "constantValue": 0.82 },
+      { "paramKey": 8, "source": "Constant", "constantValue": 0.98 },
+      { "paramKey": 9, "source": "Constant", "constantValue": 0.76 },
+      { "paramKey": 10, "source": "Constant", "constantValue": 0.44 },
+      { "paramKey": 11, "source": "Constant", "constantValue": 0.98 },
+      { "paramKey": 12, "source": "Constant", "constantValue": 0.045 }
     ]
   },
   {
     "id": "champion_skill_sandbox.cue.geomancer_prismatic_beam_cast",
     "visualKind": "Marker3D",
-    "meshOrShapeId": "Sphere",
+    "meshOrShapeId": "sphere",
     "defaultColor": [0.5, 0.9, 1.0, 0.88],
     "defaultScale": 0.38,
     "defaultLifetime": 0.2,
@@ -321,7 +321,7 @@
   {
     "id": "champion_skill_sandbox.cue.geomancer_prismatic_beam_hit",
     "visualKind": "Marker3D",
-    "meshOrShapeId": "Sphere",
+    "meshOrShapeId": "sphere",
     "defaultColor": [0.62, 0.94, 1.0, 0.92],
     "defaultScale": 0.3,
     "defaultLifetime": 0.2,
@@ -337,18 +337,18 @@
     "defaultLifetime": 0.38,
     "positionOffset": [0, 0.05, 0],
     "bindings": [
-      { "paramKey": 1, "source": "constant", "constantValue": 1.1 },
-      { "paramKey": 8, "source": "constant", "constantValue": 0.57 },
-      { "paramKey": 9, "source": "constant", "constantValue": 0.92 },
-      { "paramKey": 10, "source": "constant", "constantValue": 0.71 },
-      { "paramKey": 11, "source": "constant", "constantValue": 0.98 },
-      { "paramKey": 12, "source": "constant", "constantValue": 0.04 }
+      { "paramKey": 1, "source": "Constant", "constantValue": 1.1 },
+      { "paramKey": 8, "source": "Constant", "constantValue": 0.57 },
+      { "paramKey": 9, "source": "Constant", "constantValue": 0.92 },
+      { "paramKey": 10, "source": "Constant", "constantValue": 0.71 },
+      { "paramKey": 11, "source": "Constant", "constantValue": 0.98 },
+      { "paramKey": 12, "source": "Constant", "constantValue": 0.04 }
     ]
   },
   {
     "id": "champion_skill_sandbox.cue.jayce_hyper_charge",
     "visualKind": "Marker3D",
-    "meshOrShapeId": "Sphere",
+    "meshOrShapeId": "sphere",
     "defaultColor": [0.66, 0.96, 0.72, 0.86],
     "defaultScale": 0.32,
     "defaultLifetime": 0.22,
@@ -358,7 +358,7 @@
   {
     "id": "champion_skill_sandbox.cue.jayce_shock_blast_cast",
     "visualKind": "Marker3D",
-    "meshOrShapeId": "Sphere",
+    "meshOrShapeId": "sphere",
     "defaultColor": [0.44, 0.84, 1.0, 0.88],
     "defaultScale": 0.28,
     "defaultLifetime": 0.18,
@@ -368,7 +368,7 @@
   {
     "id": "champion_skill_sandbox.cue.jayce_shock_blast_hit",
     "visualKind": "Marker3D",
-    "meshOrShapeId": "Sphere",
+    "meshOrShapeId": "sphere",
     "defaultColor": [0.64, 0.92, 1.0, 0.92],
     "defaultScale": 0.34,
     "defaultLifetime": 0.22,
@@ -384,18 +384,18 @@
     "defaultLifetime": 0.44,
     "positionOffset": [0, 0.05, 0],
     "bindings": [
-      { "paramKey": 1, "source": "constant", "constantValue": 0.92 },
-      { "paramKey": 8, "source": "constant", "constantValue": 1.0 },
-      { "paramKey": 9, "source": "constant", "constantValue": 0.84 },
-      { "paramKey": 10, "source": "constant", "constantValue": 0.49 },
-      { "paramKey": 11, "source": "constant", "constantValue": 1.0 },
-      { "paramKey": 12, "source": "constant", "constantValue": 0.05 }
+      { "paramKey": 1, "source": "Constant", "constantValue": 0.92 },
+      { "paramKey": 8, "source": "Constant", "constantValue": 1.0 },
+      { "paramKey": 9, "source": "Constant", "constantValue": 0.84 },
+      { "paramKey": 10, "source": "Constant", "constantValue": 0.49 },
+      { "paramKey": 11, "source": "Constant", "constantValue": 1.0 },
+      { "paramKey": 12, "source": "Constant", "constantValue": 0.05 }
     ]
   },
   {
     "id": "champion_skill_sandbox.cue.jayce_hammer_lightning_field_hit",
     "visualKind": "Marker3D",
-    "meshOrShapeId": "Sphere",
+    "meshOrShapeId": "sphere",
     "defaultColor": [1.0, 0.84, 0.52, 0.88],
     "defaultScale": 0.24,
     "defaultLifetime": 0.18,
@@ -405,7 +405,7 @@
   {
     "id": "champion_skill_sandbox.cue.jayce_hammer_thundering_blow_cast",
     "visualKind": "Marker3D",
-    "meshOrShapeId": "Sphere",
+    "meshOrShapeId": "sphere",
     "defaultColor": [1.0, 0.66, 0.42, 0.86],
     "defaultScale": 0.36,
     "defaultLifetime": 0.18,
@@ -415,7 +415,7 @@
   {
     "id": "champion_skill_sandbox.cue.jayce_hammer_thundering_blow_hit",
     "visualKind": "Marker3D",
-    "meshOrShapeId": "Sphere",
+    "meshOrShapeId": "sphere",
     "defaultColor": [1.0, 0.72, 0.48, 0.9],
     "defaultScale": 0.3,
     "defaultLifetime": 0.2,
@@ -425,7 +425,7 @@
   {
     "id": "champion_skill_sandbox.cue.jayce_hammer_to_the_skies_cast",
     "visualKind": "Marker3D",
-    "meshOrShapeId": "Sphere",
+    "meshOrShapeId": "sphere",
     "defaultColor": [1.0, 0.72, 0.34, 0.88],
     "defaultScale": 0.38,
     "defaultLifetime": 0.2,
@@ -441,17 +441,17 @@
     "defaultLifetime": 0.26,
     "positionOffset": [0, 0.06, 0],
     "bindings": [
-      { "paramKey": 8, "source": "constant", "constantValue": 1.0 },
-      { "paramKey": 9, "source": "constant", "constantValue": 0.75 },
-      { "paramKey": 10, "source": "constant", "constantValue": 0.42 },
-      { "paramKey": 11, "source": "constant", "constantValue": 1.0 },
-      { "paramKey": 12, "source": "constant", "constantValue": 0.04 }
+      { "paramKey": 8, "source": "Constant", "constantValue": 1.0 },
+      { "paramKey": 9, "source": "Constant", "constantValue": 0.75 },
+      { "paramKey": 10, "source": "Constant", "constantValue": 0.42 },
+      { "paramKey": 11, "source": "Constant", "constantValue": 1.0 },
+      { "paramKey": 12, "source": "Constant", "constantValue": 0.04 }
     ]
   },
   {
     "id": "champion_skill_sandbox.cue.jayce_transform_cannon",
     "visualKind": "Marker3D",
-    "meshOrShapeId": "Sphere",
+    "meshOrShapeId": "sphere",
     "defaultColor": [0.52, 0.7, 1.0, 0.86],
     "defaultScale": 0.34,
     "defaultLifetime": 0.22,
@@ -461,7 +461,7 @@
   {
     "id": "champion_skill_sandbox.cue.jayce_transform_hammer",
     "visualKind": "Marker3D",
-    "meshOrShapeId": "Sphere",
+    "meshOrShapeId": "sphere",
     "defaultColor": [1.0, 0.74, 0.42, 0.86],
     "defaultScale": 0.34,
     "defaultLifetime": 0.22,
@@ -471,7 +471,7 @@
   {
     "id": "champion_skill_sandbox.projectile.stress_fireball",
     "visualKind": "Marker3D",
-    "meshOrShapeId": "Sphere",
+    "meshOrShapeId": "sphere",
     "defaultColor": [1.0, 0.55, 0.32, 0.92],
     "defaultScale": 0.28,
     "defaultLifetime": -1
@@ -479,7 +479,7 @@
   {
     "id": "champion_skill_sandbox.projectile.stress_laser",
     "visualKind": "Marker3D",
-    "meshOrShapeId": "Sphere",
+    "meshOrShapeId": "sphere",
     "defaultColor": [0.44, 0.88, 1.0, 0.94],
     "defaultScale": 0.16,
     "defaultLifetime": -1
@@ -487,7 +487,7 @@
   {
     "id": "champion_skill_sandbox.manifestation.runic_beacon",
     "visualKind": "Marker3D",
-    "meshOrShapeId": "Sphere",
+    "meshOrShapeId": "sphere",
     "defaultColor": [0.56, 0.92, 0.72, 0.92],
     "defaultScale": 0.38,
     "defaultLifetime": -1,
@@ -502,12 +502,12 @@
     "defaultLifetime": -1,
     "positionOffset": [0, 0.05, 0],
     "bindings": [
-      { "paramKey": 1, "source": "constant", "constantValue": 1.52 },
-      { "paramKey": 8, "source": "constant", "constantValue": 0.91 },
-      { "paramKey": 9, "source": "constant", "constantValue": 0.97 },
-      { "paramKey": 10, "source": "constant", "constantValue": 0.54 },
-      { "paramKey": 11, "source": "constant", "constantValue": 0.98 },
-      { "paramKey": 12, "source": "constant", "constantValue": 0.04 }
+      { "paramKey": 1, "source": "Constant", "constantValue": 1.52 },
+      { "paramKey": 8, "source": "Constant", "constantValue": 0.91 },
+      { "paramKey": 9, "source": "Constant", "constantValue": 0.97 },
+      { "paramKey": 10, "source": "Constant", "constantValue": 0.54 },
+      { "paramKey": 11, "source": "Constant", "constantValue": 0.98 },
+      { "paramKey": 12, "source": "Constant", "constantValue": 0.04 }
     ]
   },
   {
@@ -519,18 +519,18 @@
     "defaultLifetime": -1,
     "positionOffset": [0, 0.05, 0],
     "bindings": [
-      { "paramKey": 1, "source": "constant", "constantValue": 0.78 },
-      { "paramKey": 8, "source": "constant", "constantValue": 0.98 },
-      { "paramKey": 9, "source": "constant", "constantValue": 0.78 },
-      { "paramKey": 10, "source": "constant", "constantValue": 0.47 },
-      { "paramKey": 11, "source": "constant", "constantValue": 1.0 },
-      { "paramKey": 12, "source": "constant", "constantValue": 0.045 }
+      { "paramKey": 1, "source": "Constant", "constantValue": 0.78 },
+      { "paramKey": 8, "source": "Constant", "constantValue": 0.98 },
+      { "paramKey": 9, "source": "Constant", "constantValue": 0.78 },
+      { "paramKey": 10, "source": "Constant", "constantValue": 0.47 },
+      { "paramKey": 11, "source": "Constant", "constantValue": 1.0 },
+      { "paramKey": 12, "source": "Constant", "constantValue": 0.045 }
     ]
   },
   {
     "id": "champion_skill_sandbox.manifestation.spell_beacon",
     "visualKind": "Marker3D",
-    "meshOrShapeId": "Sphere",
+    "meshOrShapeId": "sphere",
     "defaultColor": [0.52, 0.9, 1.0, 0.92],
     "defaultScale": 0.34,
     "defaultLifetime": -1,
@@ -545,12 +545,12 @@
     "defaultLifetime": -1,
     "positionOffset": [0, 0.05, 0],
     "bindings": [
-      { "paramKey": 1, "source": "constant", "constantValue": 1.68 },
-      { "paramKey": 8, "source": "constant", "constantValue": 0.55 },
-      { "paramKey": 9, "source": "constant", "constantValue": 0.69 },
-      { "paramKey": 10, "source": "constant", "constantValue": 1.0 },
-      { "paramKey": 11, "source": "constant", "constantValue": 1.0 },
-      { "paramKey": 12, "source": "constant", "constantValue": 0.045 }
+      { "paramKey": 1, "source": "Constant", "constantValue": 1.68 },
+      { "paramKey": 8, "source": "Constant", "constantValue": 0.55 },
+      { "paramKey": 9, "source": "Constant", "constantValue": 0.69 },
+      { "paramKey": 10, "source": "Constant", "constantValue": 1.0 },
+      { "paramKey": 11, "source": "Constant", "constantValue": 1.0 },
+      { "paramKey": 12, "source": "Constant", "constantValue": 0.045 }
     ]
   },
   {
@@ -562,14 +562,14 @@
     "defaultLifetime": -1,
     "positionOffset": [0, 0.05, 0],
     "bindings": [
-      { "paramKey": 3, "source": "facingradians" },
-      { "paramKey": 8, "source": "constant", "constantValue": 1.0 },
-      { "paramKey": 9, "source": "constant", "constantValue": 0.64 },
-      { "paramKey": 10, "source": "constant", "constantValue": 0.48 },
-      { "paramKey": 11, "source": "constant", "constantValue": 1.0 },
-      { "paramKey": 12, "source": "constant", "constantValue": 0.06 },
-      { "paramKey": 13, "source": "constant", "constantValue": 1.84 },
-      { "paramKey": 14, "source": "constant", "constantValue": 0.4 }
+      { "paramKey": 3, "source": "FacingRadians" },
+      { "paramKey": 8, "source": "Constant", "constantValue": 1.0 },
+      { "paramKey": 9, "source": "Constant", "constantValue": 0.64 },
+      { "paramKey": 10, "source": "Constant", "constantValue": 0.48 },
+      { "paramKey": 11, "source": "Constant", "constantValue": 1.0 },
+      { "paramKey": 12, "source": "Constant", "constantValue": 0.06 },
+      { "paramKey": 13, "source": "Constant", "constantValue": 1.84 },
+      { "paramKey": 14, "source": "Constant", "constantValue": 0.4 }
     ]
   },
   {
@@ -581,14 +581,14 @@
     "defaultLifetime": -1,
     "positionOffset": [0, 0.06, 0],
     "bindings": [
-      { "paramKey": 3, "source": "facingradians" },
-      { "paramKey": 8, "source": "constant", "constantValue": 0.82 },
-      { "paramKey": 9, "source": "constant", "constantValue": 0.66 },
-      { "paramKey": 10, "source": "constant", "constantValue": 1.0 },
-      { "paramKey": 11, "source": "constant", "constantValue": 1.0 },
-      { "paramKey": 12, "source": "constant", "constantValue": 0.08 },
-      { "paramKey": 13, "source": "constant", "constantValue": 9.0 },
-      { "paramKey": 14, "source": "constant", "constantValue": 1.4 }
+      { "paramKey": 3, "source": "FacingRadians" },
+      { "paramKey": 8, "source": "Constant", "constantValue": 0.82 },
+      { "paramKey": 9, "source": "Constant", "constantValue": 0.66 },
+      { "paramKey": 10, "source": "Constant", "constantValue": 1.0 },
+      { "paramKey": 11, "source": "Constant", "constantValue": 1.0 },
+      { "paramKey": 12, "source": "Constant", "constantValue": 0.08 },
+      { "paramKey": 13, "source": "Constant", "constantValue": 9.0 },
+      { "paramKey": 14, "source": "Constant", "constantValue": 1.4 }
     ]
   },
   {
@@ -600,18 +600,18 @@
     "defaultLifetime": 0.28,
     "positionOffset": [0, 0.05, 0],
     "bindings": [
-      { "paramKey": 1, "source": "constant", "constantValue": 0.88 },
-      { "paramKey": 8, "source": "constant", "constantValue": 0.98 },
-      { "paramKey": 9, "source": "constant", "constantValue": 0.68 },
-      { "paramKey": 10, "source": "constant", "constantValue": 0.36 },
-      { "paramKey": 11, "source": "constant", "constantValue": 1.0 },
-      { "paramKey": 12, "source": "constant", "constantValue": 0.045 }
+      { "paramKey": 1, "source": "Constant", "constantValue": 0.88 },
+      { "paramKey": 8, "source": "Constant", "constantValue": 0.98 },
+      { "paramKey": 9, "source": "Constant", "constantValue": 0.68 },
+      { "paramKey": 10, "source": "Constant", "constantValue": 0.36 },
+      { "paramKey": 11, "source": "Constant", "constantValue": 1.0 },
+      { "paramKey": 12, "source": "Constant", "constantValue": 0.045 }
     ]
   },
   {
     "id": "champion_skill_sandbox.cue.stress_warrior_cleave_hit",
     "visualKind": "Marker3D",
-    "meshOrShapeId": "Sphere",
+    "meshOrShapeId": "sphere",
     "defaultColor": [1.0, 0.72, 0.48, 0.88],
     "defaultScale": 0.24,
     "defaultLifetime": 0.18,
@@ -621,7 +621,7 @@
   {
     "id": "champion_skill_sandbox.cue.stress_fireball_cast",
     "visualKind": "Marker3D",
-    "meshOrShapeId": "Sphere",
+    "meshOrShapeId": "sphere",
     "defaultColor": [1.0, 0.56, 0.34, 0.86],
     "defaultScale": 0.34,
     "defaultLifetime": 0.18,
@@ -637,17 +637,17 @@
     "defaultLifetime": 0.24,
     "positionOffset": [0, 0.06, 0],
     "bindings": [
-      { "paramKey": 8, "source": "constant", "constantValue": 1.0 },
-      { "paramKey": 9, "source": "constant", "constantValue": 0.48 },
-      { "paramKey": 10, "source": "constant", "constantValue": 0.28 },
-      { "paramKey": 11, "source": "constant", "constantValue": 1.0 },
-      { "paramKey": 12, "source": "constant", "constantValue": 0.05 }
+      { "paramKey": 8, "source": "Constant", "constantValue": 1.0 },
+      { "paramKey": 9, "source": "Constant", "constantValue": 0.48 },
+      { "paramKey": 10, "source": "Constant", "constantValue": 0.28 },
+      { "paramKey": 11, "source": "Constant", "constantValue": 1.0 },
+      { "paramKey": 12, "source": "Constant", "constantValue": 0.05 }
     ]
   },
   {
     "id": "champion_skill_sandbox.cue.stress_laser_cast",
     "visualKind": "Marker3D",
-    "meshOrShapeId": "Sphere",
+    "meshOrShapeId": "sphere",
     "defaultColor": [0.44, 0.88, 1.0, 0.88],
     "defaultScale": 0.26,
     "defaultLifetime": 0.16,
@@ -657,7 +657,7 @@
   {
     "id": "champion_skill_sandbox.cue.stress_laser_hit",
     "visualKind": "Marker3D",
-    "meshOrShapeId": "Sphere",
+    "meshOrShapeId": "sphere",
     "defaultColor": [0.62, 0.94, 1.0, 0.92],
     "defaultScale": 0.22,
     "defaultLifetime": 0.18,
@@ -667,7 +667,7 @@
   {
     "id": "champion_skill_sandbox.cue.stress_priest_heal_cast",
     "visualKind": "Marker3D",
-    "meshOrShapeId": "Sphere",
+    "meshOrShapeId": "sphere",
     "defaultColor": [0.56, 0.94, 0.62, 0.86],
     "defaultScale": 0.28,
     "defaultLifetime": 0.18,
@@ -683,18 +683,18 @@
     "defaultLifetime": 0.22,
     "positionOffset": [0, 0.05, 0],
     "bindings": [
-      { "paramKey": 1, "source": "constant", "constantValue": 0.76 },
-      { "paramKey": 8, "source": "constant", "constantValue": 0.58 },
-      { "paramKey": 9, "source": "constant", "constantValue": 0.96 },
-      { "paramKey": 10, "source": "constant", "constantValue": 0.66 },
-      { "paramKey": 11, "source": "constant", "constantValue": 1.0 },
-      { "paramKey": 12, "source": "constant", "constantValue": 0.04 }
+      { "paramKey": 1, "source": "Constant", "constantValue": 0.76 },
+      { "paramKey": 8, "source": "Constant", "constantValue": 0.58 },
+      { "paramKey": 9, "source": "Constant", "constantValue": 0.96 },
+      { "paramKey": 10, "source": "Constant", "constantValue": 0.66 },
+      { "paramKey": 11, "source": "Constant", "constantValue": 1.0 },
+      { "paramKey": 12, "source": "Constant", "constantValue": 0.04 }
     ]
   },
   {
     "id": "champion_skill_sandbox.cue.spell_engineer_spell_beacon_cast",
     "visualKind": "Marker3D",
-    "meshOrShapeId": "Sphere",
+    "meshOrShapeId": "sphere",
     "defaultColor": [0.52, 0.9, 1.0, 0.88],
     "defaultScale": 0.34,
     "defaultLifetime": 0.2,
@@ -710,11 +710,11 @@
     "defaultLifetime": 0.34,
     "positionOffset": [0, 0.05, 0],
     "bindings": [
-      { "paramKey": 8, "source": "constant", "constantValue": 0.56 },
-      { "paramKey": 9, "source": "constant", "constantValue": 0.7 },
-      { "paramKey": 10, "source": "constant", "constantValue": 1.0 },
-      { "paramKey": 11, "source": "constant", "constantValue": 0.98 },
-      { "paramKey": 12, "source": "constant", "constantValue": 0.04 }
+      { "paramKey": 8, "source": "Constant", "constantValue": 0.56 },
+      { "paramKey": 9, "source": "Constant", "constantValue": 0.7 },
+      { "paramKey": 10, "source": "Constant", "constantValue": 1.0 },
+      { "paramKey": 11, "source": "Constant", "constantValue": 0.98 },
+      { "paramKey": 12, "source": "Constant", "constantValue": 0.04 }
     ]
   },
   {
@@ -726,12 +726,12 @@
     "defaultLifetime": 0.24,
     "positionOffset": [0, 0.05, 0],
     "bindings": [
-      { "paramKey": 1, "source": "constant", "constantValue": 0.72 },
-      { "paramKey": 8, "source": "constant", "constantValue": 0.58 },
-      { "paramKey": 9, "source": "constant", "constantValue": 0.72 },
-      { "paramKey": 10, "source": "constant", "constantValue": 1.0 },
-      { "paramKey": 11, "source": "constant", "constantValue": 1.0 },
-      { "paramKey": 12, "source": "constant", "constantValue": 0.04 }
+      { "paramKey": 1, "source": "Constant", "constantValue": 0.72 },
+      { "paramKey": 8, "source": "Constant", "constantValue": 0.58 },
+      { "paramKey": 9, "source": "Constant", "constantValue": 0.72 },
+      { "paramKey": 10, "source": "Constant", "constantValue": 1.0 },
+      { "paramKey": 11, "source": "Constant", "constantValue": 1.0 },
+      { "paramKey": 12, "source": "Constant", "constantValue": 0.04 }
     ]
   },
   {
@@ -743,18 +743,18 @@
     "defaultLifetime": 0.36,
     "positionOffset": [0, 0.05, 0],
     "bindings": [
-      { "paramKey": 1, "source": "constant", "constantValue": 2.2 },
-      { "paramKey": 8, "source": "constant", "constantValue": 1.0 },
-      { "paramKey": 9, "source": "constant", "constantValue": 0.66 },
-      { "paramKey": 10, "source": "constant", "constantValue": 0.48 },
-      { "paramKey": 11, "source": "constant", "constantValue": 0.98 },
-      { "paramKey": 12, "source": "constant", "constantValue": 0.045 }
+      { "paramKey": 1, "source": "Constant", "constantValue": 2.2 },
+      { "paramKey": 8, "source": "Constant", "constantValue": 1.0 },
+      { "paramKey": 9, "source": "Constant", "constantValue": 0.66 },
+      { "paramKey": 10, "source": "Constant", "constantValue": 0.48 },
+      { "paramKey": 11, "source": "Constant", "constantValue": 0.98 },
+      { "paramKey": 12, "source": "Constant", "constantValue": 0.045 }
     ]
   },
   {
     "id": "champion_skill_sandbox.cue.spell_engineer_guided_laser_cast",
     "visualKind": "Marker3D",
-    "meshOrShapeId": "Sphere",
+    "meshOrShapeId": "sphere",
     "defaultColor": [0.74, 0.56, 1.0, 0.88],
     "defaultScale": 0.36,
     "defaultLifetime": 0.22,
@@ -764,7 +764,7 @@
   {
     "id": "champion_skill_sandbox.cue.spell_engineer_guided_laser_hit",
     "visualKind": "Marker3D",
-    "meshOrShapeId": "Sphere",
+    "meshOrShapeId": "sphere",
     "defaultColor": [0.84, 0.72, 1.0, 0.92],
     "defaultScale": 0.28,
     "defaultLifetime": 0.18,

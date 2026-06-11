@@ -8,6 +8,7 @@ using Ludots.Core.Gameplay.GAS.Registry;
 using Ludots.Core.Modding;
 using Ludots.Core.Presentation.Assets;
 using Ludots.Core.Presentation.Camera;
+using Ludots.Core.Presentation.Components;
 using Ludots.Core.Presentation.Config;
 using Ludots.Core.Presentation.Hud;
 using Ludots.Core.Presentation.Performers;
@@ -262,7 +263,7 @@ namespace Ludots.Tests.Presentation
         }
 
         [Test]
-        public void PerformerDefinitionConfigLoader_ResolvesDefaultTextId_ToStableId()
+        public void PerformerDefinitionConfigLoader_ResolvesWorldTextDefaultTextId_ToStableId()
         {
             WriteFile("Core", "config_catalog.json",
                 @"[{ ""Path"": ""Presentation/performers.json"", ""Policy"": ""ArrayById"", ""IdField"": ""id"" }]");
@@ -272,8 +273,9 @@ namespace Ludots.Tests.Presentation
     ""id"": ""entity_world_text"",
     ""visualKind"": ""WorldText"",
     ""defaultTextId"": ""hud.current_over_base"",
+    ""worldTextValueMode"": ""AttributeCurrentOverBase"",
     ""bindings"": [
-      { ""paramKey"": 16, ""source"": ""constant"", ""constantValue"": 1 }
+      { ""paramKey"": 0, ""source"": ""Constant"", ""constantValue"": 7 }
     ]
   }
 ]");
@@ -290,25 +292,25 @@ namespace Ludots.Tests.Presentation
             int defId = registry.GetId("entity_world_text");
             Assert.That(defId, Is.GreaterThan(0));
             Assert.That(registry.TryGet(defId, out var definition), Is.True);
+
             Assert.That(definition.DefaultTextId, Is.EqualTo(42));
+            Assert.That(definition.WorldTextValueMode, Is.EqualTo(WorldHudValueMode.AttributeCurrentOverBase));
             Assert.That(definition.Bindings.Length, Is.EqualTo(1));
-            Assert.That(definition.Bindings[0].ParamKey, Is.EqualTo(16));
-            Assert.That(definition.Bindings[0].Value.Source, Is.EqualTo(ValueSourceKind.Constant));
-            Assert.That(definition.Bindings[0].Value.ConstantValue, Is.EqualTo(1f));
+            Assert.That(definition.Bindings[0].ParamKey, Is.EqualTo(0));
         }
 
         [Test]
-        public void PerformerDefinitionConfigLoader_RejectsRemovedTextTokenBindingSource()
+        public void PerformerDefinitionConfigLoader_Fails_WhenWorldTextUsesTextTokenBinding()
         {
             WriteFile("Core", "config_catalog.json",
                 @"[{ ""Path"": ""Presentation/performers.json"", ""Policy"": ""ArrayById"", ""IdField"": ""id"" }]");
             WriteFile("Core", "Presentation/performers.json",
                 @"[
   {
-    ""id"": ""bad_world_text"",
+    ""id"": ""entity_world_text"",
     ""visualKind"": ""WorldText"",
     ""bindings"": [
-      { ""paramKey"": 15, ""source"": ""textToken"", ""textToken"": ""hud.current_over_base"" }
+      { ""paramKey"": 15, ""source"": ""TextToken"", ""textToken"": ""hud.current_over_base"" }
     ]
   }
 ]");
@@ -318,35 +320,42 @@ namespace Ludots.Tests.Presentation
             var loader = new PerformerDefinitionConfigLoader(pipeline, registry);
 
             var ex = Assert.Throws<InvalidOperationException>(() => loader.Load(catalog));
-            Assert.That(ex!.Message, Does.Contain("source 'textToken' has been removed"));
+            Assert.That(ex!.Message, Does.Contain("defaultTextId"));
         }
 
-        [Test]
-        public void PerformerDefinitionConfigLoader_RejectsUnsupportedGraphBindingSource()
+        [TestCase(15, "defaultTextId")]
+        [TestCase(16, "worldTextValueMode")]
+        public void PerformerDefinitionConfigLoader_Fails_WhenWorldTextBindingTargetsReservedTokenOrModeParam(
+            int paramKey,
+            string expectedMessage)
         {
             WriteFile("Core", "config_catalog.json",
                 @"[{ ""Path"": ""Presentation/performers.json"", ""Policy"": ""ArrayById"", ""IdField"": ""id"" }]");
             WriteFile("Core", "Presentation/performers.json",
                 @"[
   {
-    ""id"": ""graph_bound_bar"",
-    ""visualKind"": ""WorldBar"",
+    ""id"": ""entity_world_text"",
+    ""visualKind"": ""WorldText"",
+    ""defaultTextId"": ""hud.current_over_base"",
     ""bindings"": [
-      { ""paramKey"": 0, ""source"": ""graph"", ""sourceId"": 123 }
+      { ""paramKey"": " + paramKey + @", ""source"": ""Constant"", ""constantValue"": 42 }
     ]
   }
 ]");
 
             var (_, _, pipeline, catalog) = BuildPipeline(_root);
             var registry = new PerformerDefinitionRegistry();
-            var loader = new PerformerDefinitionConfigLoader(pipeline, registry);
+            var loader = new PerformerDefinitionConfigLoader(
+                pipeline,
+                registry,
+                resolveTextTokenId: key => string.Equals(key, "hud.current_over_base", StringComparison.Ordinal) ? 42 : 0);
 
             var ex = Assert.Throws<InvalidOperationException>(() => loader.Load(catalog));
-            Assert.That(ex!.Message, Does.Contain("source 'graph' is not supported"));
+            Assert.That(ex!.Message, Does.Contain(expectedMessage));
         }
 
         [Test]
-        public void PerformerDefinitionConfigLoader_RejectsRemovedEntityFilterFields()
+        public void PerformerDefinitionConfigLoader_Fails_WhenLegacyEntityFilterFieldsArePresent()
         {
             WriteFile("Core", "config_catalog.json",
                 @"[{ ""Path"": ""Presentation/performers.json"", ""Policy"": ""ArrayById"", ""IdField"": ""id"" }]");
@@ -365,7 +374,214 @@ namespace Ludots.Tests.Presentation
             var loader = new PerformerDefinitionConfigLoader(pipeline, registry);
 
             var ex = Assert.Throws<InvalidOperationException>(() => loader.Load(catalog));
-            Assert.That(ex!.Message, Does.Contain("removed field 'entityScope'"));
+            Assert.That(ex!.Message, Does.Contain("entityScope"));
+        }
+
+        [Test]
+        public void PerformerDefinitionConfigLoader_Fails_WhenLegacyMaxVisibilityDistanceIsPresent()
+        {
+            WriteFile("Core", "config_catalog.json",
+                @"[{ ""Path"": ""Presentation/performers.json"", ""Policy"": ""ArrayById"", ""IdField"": ""id"" }]");
+            WriteFile("Core", "Presentation/performers.json",
+                @"[
+  {
+    ""id"": ""distance_culled_marker"",
+    ""visualKind"": ""Marker3D"",
+    ""maxVisibilityDistanceCm"": 5000
+  }
+]");
+
+            var (_, _, pipeline, catalog) = BuildPipeline(_root);
+            var registry = new PerformerDefinitionRegistry();
+            var loader = new PerformerDefinitionConfigLoader(pipeline, registry);
+
+            var ex = Assert.Throws<InvalidOperationException>(() => loader.Load(catalog));
+            Assert.That(ex!.Message, Does.Contain("maxVisibilityDistanceCm"));
+        }
+
+        [Test]
+        public void PerformerDefinitionConfigLoader_Fails_WhenCommandUsesRemovedFields()
+        {
+            WriteFile("Core", "config_catalog.json",
+                @"[{ ""Path"": ""Presentation/performers.json"", ""Policy"": ""ArrayById"", ""IdField"": ""id"" }]");
+            WriteFile("Core", "Presentation/performers.json",
+                @"[
+  {
+    ""id"": ""legacy_command_marker"",
+    ""visualKind"": ""GroundOverlay"",
+    ""rules"": [
+      {
+        ""event"": { ""kind"": ""EntitySpawned"" },
+        ""command"": { ""commandKind"": ""CreatePerformer"", ""performerDefinitionId"": ""legacy_command_marker"" }
+      }
+    ]
+  }
+]");
+
+            var (_, _, pipeline, catalog) = BuildPipeline(_root);
+            var registry = new PerformerDefinitionRegistry();
+            var loader = new PerformerDefinitionConfigLoader(pipeline, registry);
+
+            var ex = Assert.Throws<InvalidOperationException>(() => loader.Load(catalog));
+            Assert.That(ex!.Message, Does.Contain("commandKind"));
+        }
+
+        [Test]
+        public void PerformerDefinitionConfigLoader_Fails_WhenScopedCommandOmitsScopeSource()
+        {
+            WriteFile("Core", "config_catalog.json",
+                @"[{ ""Path"": ""Presentation/performers.json"", ""Policy"": ""ArrayById"", ""IdField"": ""id"" }]");
+            WriteFile("Core", "Presentation/performers.json",
+                @"[
+  {
+    ""id"": ""scoped_marker"",
+    ""visualKind"": ""GroundOverlay"",
+    ""rules"": [
+      {
+        ""event"": { ""kind"": ""EntitySpawned"" },
+        ""command"": { ""kind"": ""CreatePerformer"", ""definitionId"": ""scoped_marker"" }
+      }
+    ]
+  }
+]");
+
+            var (_, _, pipeline, catalog) = BuildPipeline(_root);
+            var registry = new PerformerDefinitionRegistry();
+            var loader = new PerformerDefinitionConfigLoader(pipeline, registry);
+
+            var ex = Assert.Throws<InvalidOperationException>(() => loader.Load(catalog));
+            Assert.That(ex!.Message, Does.Contain("scopeSource"));
+        }
+
+        [Test]
+        public void PerformerDefinitionConfigLoader_Fails_WhenSetParamOmitsParamLane()
+        {
+            WriteFile("Core", "config_catalog.json",
+                @"[{ ""Path"": ""Presentation/performers.json"", ""Policy"": ""ArrayById"", ""IdField"": ""id"" }]");
+            WriteFile("Core", "Presentation/performers.json",
+                @"[
+  {
+    ""id"": ""implicit_set_param"",
+    ""visualKind"": ""GroundOverlay"",
+    ""rules"": [
+      {
+        ""event"": { ""kind"": ""EffectApplied"" },
+        ""command"": { ""kind"": ""SetParam"", ""paramKey"": 4, ""paramValue"": 1.0 }
+      }
+    ]
+  }
+]");
+
+            var (_, _, pipeline, catalog) = BuildPipeline(_root);
+            var registry = new PerformerDefinitionRegistry();
+            var loader = new PerformerDefinitionConfigLoader(pipeline, registry);
+
+            var ex = Assert.Throws<InvalidOperationException>(() => loader.Load(catalog));
+            Assert.That(ex!.Message, Does.Contain("paramLane"));
+        }
+
+        [Test]
+        public void PerformerDefinitionConfigLoader_Fails_WhenParamDefaultInfersLaneOrUsesRemovedValue()
+        {
+            WriteFile("Core", "config_catalog.json",
+                @"[{ ""Path"": ""Presentation/performers.json"", ""Policy"": ""ArrayById"", ""IdField"": ""id"" }]");
+            WriteFile("Core", "Presentation/performers.json",
+                @"[
+  {
+    ""id"": ""implicit_param_default"",
+    ""visualKind"": ""GroundOverlay"",
+    ""paramDefaults"": [
+      { ""paramKey"": 1, ""value"": 4.0 }
+    ]
+  }
+]");
+
+            var (_, _, pipeline, catalog) = BuildPipeline(_root);
+            var registry = new PerformerDefinitionRegistry();
+            var loader = new PerformerDefinitionConfigLoader(pipeline, registry);
+
+            var ex = Assert.Throws<InvalidOperationException>(() => loader.Load(catalog));
+            Assert.That(ex!.Message, Does.Contain("value"));
+        }
+
+        [Test]
+        public void PerformerDefinitionConfigLoader_Fails_WhenInheritedBindingOmitsParamKey()
+        {
+            WriteFile("Core", "config_catalog.json",
+                @"[{ ""Path"": ""Presentation/performers.json"", ""Policy"": ""ArrayById"", ""IdField"": ""id"" }]");
+            WriteFile("Core", "Presentation/performers.json",
+                @"[
+  {
+    ""id"": ""base_overlay"",
+    ""visualKind"": ""GroundOverlay"",
+    ""bindings"": [
+      { ""paramKey"": 4, ""source"": ""Constant"", ""constantValue"": 1.0 }
+    ]
+  },
+  {
+    ""id"": ""child_overlay"",
+    ""extends"": ""base_overlay"",
+    ""bindings"": [
+      { ""source"": ""Constant"", ""constantValue"": 0.5 }
+    ]
+  }
+]");
+
+            var (_, _, pipeline, catalog) = BuildPipeline(_root);
+            var registry = new PerformerDefinitionRegistry();
+            var loader = new PerformerDefinitionConfigLoader(pipeline, registry);
+
+            var ex = Assert.Throws<InvalidOperationException>(() => loader.Load(catalog));
+            Assert.That(ex!.Message, Does.Contain("paramKey"));
+        }
+
+        [Test]
+        public void PerformerDefinitionConfigLoader_Fails_WhenInheritedBehaviorOmitsSlot()
+        {
+            WriteFile("Core", "config_catalog.json",
+                @"[{ ""Path"": ""Presentation/performers.json"", ""Policy"": ""ArrayById"", ""IdField"": ""id"" }]");
+            WriteFile("Core", "Presentation/performers.json",
+                @"[
+  {
+    ""id"": ""base_marker"",
+    ""visualKind"": ""Marker3D"",
+    ""meshOrShapeId"": ""mesh.cube"",
+    ""behaviors"": [
+      {
+        ""slot"": 0,
+        ""kind"": ""AssetBinding"",
+        ""activeByDefault"": true,
+        ""assetBinding"": {
+          ""assetKind"": ""Mesh"",
+          ""assetId"": ""mesh.cube"",
+          ""materialId"": ""default_surface"",
+          ""renderPath"": ""StaticMesh"",
+          ""mobility"": ""Static""
+        }
+      }
+    ]
+  },
+  {
+    ""id"": ""child_marker"",
+    ""extends"": ""base_marker"",
+    ""behaviors"": [
+      { ""kind"": ""Material"", ""activeByDefault"": true, ""material"": { ""baseMaterialId"": ""default_surface"" } }
+    ]
+  }
+]");
+
+            var (_, _, pipeline, catalog) = BuildPipeline(_root);
+            var registry = new PerformerDefinitionRegistry();
+            var loader = new PerformerDefinitionConfigLoader(
+                pipeline,
+                registry,
+                resolveMeshId: key => string.Equals(key, "mesh.cube", StringComparison.Ordinal) ? 1 : 0,
+                resolveBehaviorAssetId: (_, key) => string.Equals(key, "mesh.cube", StringComparison.Ordinal) ? 1 : 0,
+                resolveMaterialId: key => string.Equals(key, "default_surface", StringComparison.Ordinal) ? 1 : 0,
+                resolveMaterialDomain: id => id == 1 ? MaterialAssetDomain.Mesh : null);
+
+            var ex = Assert.Throws<InvalidOperationException>(() => loader.Load(catalog));
+            Assert.That(ex!.Message, Does.Contain("slot"));
         }
 
         [Test]
@@ -379,7 +595,7 @@ namespace Ludots.Tests.Presentation
     ""id"": ""line_overlay"",
     ""visualKind"": ""GroundOverlay"",
     ""bindings"": [
-      { ""paramKey"": 3, ""source"": ""facingradians"" }
+      { ""paramKey"": 3, ""source"": ""FacingRadians"" }
     ]
   }
 ]");
@@ -399,93 +615,54 @@ namespace Ludots.Tests.Presentation
         }
 
         [Test]
-        public void PerformerDefinitionConfigLoader_ExpandsChildrenIntoPerformerCreatedRules()
-        {
-            WriteFile("Core", "config_catalog.json",
-                @"[{ ""Path"": ""Presentation/performers.json"", ""Policy"": ""ArrayById"", ""IdField"": ""id"" }]");
-            WriteFile("Core", "Presentation/performers.json",
-                @"[
-  { ""id"": ""child_a"", ""visualKind"": ""Marker3D"" },
-  {
-    ""id"": ""root"",
-    ""visualKind"": ""Marker3D"",
-    ""children"": [
-      { ""definitionId"": ""child_a"", ""scopeTag"": ""structure"" }
-    ]
-  }
-]");
-
-            PerformerScopeTagRegistry.Clear();
-
-            var (_, _, pipeline, catalog) = BuildPipeline(_root);
-            var registry = new PerformerDefinitionRegistry();
-            var loader = new PerformerDefinitionConfigLoader(pipeline, registry);
-
-            loader.Load(catalog);
-
-            int rootId = registry.GetId("root");
-            int childId = registry.GetId("child_a");
-            int structureScope = PerformerScopeTagRegistry.GetId("structure");
-
-            Assert.That(registry.TryGet(rootId, out var root), Is.True);
-            Assert.That(root.Children.Length, Is.EqualTo(1));
-            Assert.That(root.Children[0].DefinitionId, Is.EqualTo(childId));
-            Assert.That(root.Children[0].ScopeTag, Is.EqualTo(structureScope));
-            Assert.That(root.Rules.Length, Is.EqualTo(1));
-            Assert.That(root.Rules[0].Event.Kind, Is.EqualTo(PresentationEventKind.PerformerCreated));
-            Assert.That(root.Rules[0].Command.PerformerDefinitionId, Is.EqualTo(childId));
-            Assert.That(root.Rules[0].Command.ScopeTag, Is.EqualTo(structureScope));
-        }
-
-        [Test]
-        public void PerformerDefinitionConfigLoader_ExpandsExtendsChain_AndOverridesBySlotAndLane()
+        public void PerformerDefinitionConfigLoader_ParsesEntityColorChannelBinding()
         {
             WriteFile("Core", "config_catalog.json",
                 @"[{ ""Path"": ""Presentation/performers.json"", ""Policy"": ""ArrayById"", ""IdField"": ""id"" }]");
             WriteFile("Core", "Presentation/performers.json",
                 @"[
   {
-    ""id"": ""base_unit"",
-    ""visualKind"": ""Marker3D"",
+    ""id"": ""team_tint"",
+    ""visualKind"": ""GroundOverlay"",
     ""bindings"": [
-      { ""paramKey"": 1, ""source"": ""constant"", ""constantValue"": 5 }
-    ],
-    ""paramDefaults"": [
-      { ""paramKey"": 10, ""lane"": ""Int"", ""intValue"": 1 }
-    ],
-    ""behaviors"": [
-      {
-        ""slot"": 2,
-        ""kind"": ""Material"",
-        ""material"": { ""baseMaterialId"": ""knight_base"" }
-      }
-    ],
-    ""children"": [
-      { ""definitionId"": ""child_a"", ""scopeTag"": ""structure"" }
+      { ""paramKey"": 4, ""source"": ""EntityColor"", ""channel"": ""Red"" },
+      { ""paramKey"": 5, ""source"": ""EntityColor"", ""channel"": ""Green"" },
+      { ""paramKey"": 6, ""source"": ""EntityColor"", ""channel"": ""Blue"" },
+      { ""paramKey"": 7, ""source"": ""EntityColor"", ""channel"": ""Alpha"" }
     ]
-  },
-  { ""id"": ""child_a"", ""visualKind"": ""Marker3D"" },
+  }
+]");
+
+            var (_, _, pipeline, catalog) = BuildPipeline(_root);
+            var registry = new PerformerDefinitionRegistry();
+            var loader = new PerformerDefinitionConfigLoader(pipeline, registry);
+
+            loader.Load(catalog);
+
+            int defId = registry.GetId("team_tint");
+            Assert.That(registry.TryGet(defId, out var def), Is.True);
+            Assert.That(def.Bindings.Length, Is.EqualTo(4));
+            Assert.That(def.Bindings[0].Value.SourceId, Is.EqualTo(0));
+            Assert.That(def.Bindings[1].Value.SourceId, Is.EqualTo(1));
+            Assert.That(def.Bindings[2].Value.SourceId, Is.EqualTo(2));
+            Assert.That(def.Bindings[3].Value.SourceId, Is.EqualTo(3));
+        }
+
+        [Test]
+        public void PerformerDefinitionConfigLoader_ParsesGraphBindingProgramId()
+        {
+            WriteFile("Core", "config_catalog.json",
+                @"[{ ""Path"": ""Presentation/performers.json"", ""Policy"": ""ArrayById"", ""IdField"": ""id"" }]");
+            WriteFile("Core", "Presentation/performers.json",
+                @"[
   {
-    ""id"": ""knight"",
-    ""extends"": ""base_unit"",
-    ""visualKind"": ""Marker3D"",
+    ""id"": ""graph_driven_overlay"",
+    ""visualKind"": ""GroundOverlay"",
     ""bindings"": [
-      { ""paramKey"": 1, ""source"": ""constant"", ""constantValue"": 9 }
-    ],
-    ""paramDefaults"": [
-      { ""paramKey"": 10, ""lane"": ""Int"", ""intValue"": 7 }
-    ],
-    ""behaviors"": [
-      {
-        ""slot"": 2,
-        ""kind"": ""Material"",
-        ""material"": { ""baseMaterialId"": ""knight_armor"" }
-      }
+      { ""paramKey"": 0, ""source"": ""Graph"", ""graphProgramId"": 17 }
     ]
   }
 ]");
-
-            PerformerScopeTagRegistry.Clear();
 
             var (_, _, pipeline, catalog) = BuildPipeline(_root);
             var registry = new PerformerDefinitionRegistry();
@@ -493,88 +670,593 @@ namespace Ludots.Tests.Presentation
 
             loader.Load(catalog);
 
-            int knightId = registry.GetId("knight");
-            Assert.That(registry.TryGet(knightId, out var knight), Is.True);
-            Assert.That(knight.Extends, Is.EqualTo("base_unit"));
-            Assert.That(knight.Bindings.Length, Is.EqualTo(1));
-            Assert.That(knight.Bindings[0].Value.ConstantValue, Is.EqualTo(9f));
-            Assert.That(knight.ParamDefaults.Length, Is.EqualTo(1));
-            Assert.That(knight.ParamDefaults[0].Lane, Is.EqualTo(ParamLane.Int));
-            Assert.That(knight.ParamDefaults[0].IntValue, Is.EqualTo(7));
-            Assert.That(knight.Behaviors.Length, Is.EqualTo(1));
-            Assert.That(knight.Behaviors[0].Kind, Is.EqualTo(BehaviorKind.Material));
-            Assert.That(knight.Children.Length, Is.EqualTo(1));
-            Assert.That(knight.Rules.Length, Is.EqualTo(1));
+            int defId = registry.GetId("graph_driven_overlay");
+            Assert.That(registry.TryGet(defId, out var def), Is.True);
+            Assert.That(def.Bindings[0].Value.Source, Is.EqualTo(ValueSourceKind.Graph));
+            Assert.That(def.Bindings[0].Value.SourceId, Is.EqualTo(17));
         }
 
         [Test]
-        public void PerformerDefinitionConfigLoader_ResolvesTagEffectiveChangedStringKeys()
+        public void PerformerDefinitionConfigLoader_Fails_WhenBindingSourceCasingDoesNotMatchContract()
         {
             WriteFile("Core", "config_catalog.json",
                 @"[{ ""Path"": ""Presentation/performers.json"", ""Policy"": ""ArrayById"", ""IdField"": ""id"" }]");
             WriteFile("Core", "Presentation/performers.json",
                 @"[
   {
-    ""id"": ""tag_test"",
-    ""visualKind"": ""Marker3D"",
-    ""rules"": [
-      {
-        ""event"": { ""kind"": ""TagEffectiveChanged"", ""keyId"": ""Status.Working"" },
-        ""command"": { ""kind"": ""DestroyPerformerScope"", ""scopeTag"": ""working"" }
-      }
+    ""id"": ""line_overlay"",
+    ""visualKind"": ""GroundOverlay"",
+    ""bindings"": [
+      { ""paramKey"": 3, ""source"": ""facingradians"" }
     ]
   }
 ]");
-
-            TagRegistry.Clear();
-            PerformerScopeTagRegistry.Clear();
-
-            var (_, _, pipeline, catalog) = BuildPipeline(_root);
-            var registry = new PerformerDefinitionRegistry();
-            var loader = new PerformerDefinitionConfigLoader(pipeline, registry);
-
-            loader.Load(catalog);
-
-            Assert.That(registry.TryGet(registry.GetId("tag_test"), out var def), Is.True);
-            Assert.That(def.Rules[0].Event.KeyId, Is.EqualTo(TagRegistry.GetId("Status.Working")));
-            Assert.That(def.Rules[0].Command.ScopeTag, Is.EqualTo(PerformerScopeTagRegistry.GetId("working")));
-        }
-
-        [Test]
-        public void PerformerDefinitionConfigLoader_FailsFast_OnInvalidDefinition()
-        {
-            WriteFile("Core", "config_catalog.json",
-                @"[{ ""Path"": ""Presentation/performers.json"", ""Policy"": ""ArrayById"", ""IdField"": ""id"" }]");
-            WriteFile("Core", "Presentation/performers.json",
-                @"[
-  {
-    ""id"": ""bad_performer"",
-    ""visualKind"": ""WorldBar"",
-    ""entityScope"": ""AllWithAttributes""
-  },
-  {
-    ""id"": ""good_performer"",
-    ""visualKind"": ""Marker3D"",
-    ""rules"": [
-      {
-        ""event"": { ""kind"": ""GameplayEvent"", ""keyId"": ""Event.Test"" },
-        ""command"": { ""kind"": ""DestroyPerformerScope"", ""scopeTag"": ""good"" }
-      }
-    ]
-  }
-]");
-
-            TagRegistry.Clear();
-            PerformerScopeTagRegistry.Clear();
 
             var (_, _, pipeline, catalog) = BuildPipeline(_root);
             var registry = new PerformerDefinitionRegistry();
             var loader = new PerformerDefinitionConfigLoader(pipeline, registry);
 
             var ex = Assert.Throws<InvalidOperationException>(() => loader.Load(catalog));
-            Assert.That(ex!.Message, Does.Contain("removed field 'entityScope'"));
-            Assert.That(registry.TryGet(registry.GetId("bad_performer"), out _), Is.False);
-            Assert.That(registry.TryGet(registry.GetId("good_performer"), out _), Is.False);
+            Assert.That(ex!.Message, Does.Contain("case-sensitive"));
+        }
+
+        [Test]
+        public void PerformerDefinitionConfigLoader_Fails_WhenMeshReferenceUsesNumericId()
+        {
+            WriteFile("Core", "config_catalog.json",
+                @"[{ ""Path"": ""Presentation/performers.json"", ""Policy"": ""ArrayById"", ""IdField"": ""id"" }]");
+            WriteFile("Core", "Presentation/performers.json",
+                @"[
+  {
+    ""id"": ""numeric_mesh_marker"",
+    ""visualKind"": ""Marker3D"",
+    ""meshOrShapeId"": 1
+  }
+]");
+
+            var (_, _, pipeline, catalog) = BuildPipeline(_root);
+            var registry = new PerformerDefinitionRegistry();
+            var loader = new PerformerDefinitionConfigLoader(pipeline, registry);
+
+            var ex = Assert.Throws<InvalidOperationException>(() => loader.Load(catalog));
+            Assert.That(ex!.Message, Does.Contain("meshId must be a registered string key"));
+        }
+
+        [Test]
+        public void PerformerDefinitionConfigLoader_Fails_WhenAttributeReferenceUsesNumericId()
+        {
+            WriteFile("Core", "config_catalog.json",
+                @"[{ ""Path"": ""Presentation/performers.json"", ""Policy"": ""ArrayById"", ""IdField"": ""id"" }]");
+            WriteFile("Core", "Presentation/performers.json",
+                @"[
+  {
+    ""id"": ""numeric_attribute_bar"",
+    ""visualKind"": ""WorldBar"",
+    ""bindings"": [
+      { ""paramKey"": 0, ""source"": ""Attribute"", ""sourceId"": 1 }
+    ]
+  }
+]");
+
+            var (_, _, pipeline, catalog) = BuildPipeline(_root);
+            var registry = new PerformerDefinitionRegistry();
+            var loader = new PerformerDefinitionConfigLoader(pipeline, registry);
+
+            var ex = Assert.Throws<InvalidOperationException>(() => loader.Load(catalog));
+            Assert.That(ex!.Message, Does.Contain("attribute reference must be a registered string key"));
+        }
+
+        [Test]
+        public void PerformerDefinitionConfigLoader_Fails_WhenAttributeNameIsUnknown()
+        {
+            WriteFile("Core", "config_catalog.json",
+                @"[{ ""Path"": ""Presentation/performers.json"", ""Policy"": ""ArrayById"", ""IdField"": ""id"" }]");
+            WriteFile("Core", "Presentation/performers.json",
+                @"[
+  {
+    ""id"": ""unknown_attribute_bar"",
+    ""visualKind"": ""WorldBar"",
+    ""bindings"": [
+      { ""paramKey"": 0, ""source"": ""Attribute"", ""attributeName"": ""Tests.Presentation.Semantic.DoesNotExist"" }
+    ]
+  }
+]");
+
+            var (_, _, pipeline, catalog) = BuildPipeline(_root);
+            var registry = new PerformerDefinitionRegistry();
+            var loader = new PerformerDefinitionConfigLoader(pipeline, registry);
+
+            var ex = Assert.Throws<InvalidOperationException>(() => loader.Load(catalog));
+            Assert.That(ex!.Message, Does.Contain("unknown attributeName"));
+            Assert.That(ex.Message, Does.Contain("Tests.Presentation.Semantic.DoesNotExist"));
+        }
+
+        [Test]
+        public void PerformerDefinitionConfigLoader_Fails_WhenEntityColorUsesRemovedSourceId()
+        {
+            WriteFile("Core", "config_catalog.json",
+                @"[{ ""Path"": ""Presentation/performers.json"", ""Policy"": ""ArrayById"", ""IdField"": ""id"" }]");
+            WriteFile("Core", "Presentation/performers.json",
+                @"[
+  {
+    ""id"": ""numeric_color_channel"",
+    ""visualKind"": ""GroundOverlay"",
+    ""bindings"": [
+      { ""paramKey"": 4, ""source"": ""EntityColor"", ""sourceId"": 0 }
+    ]
+  }
+]");
+
+            var (_, _, pipeline, catalog) = BuildPipeline(_root);
+            var registry = new PerformerDefinitionRegistry();
+            var loader = new PerformerDefinitionConfigLoader(pipeline, registry);
+
+            var ex = Assert.Throws<InvalidOperationException>(() => loader.Load(catalog));
+            Assert.That(ex!.Message, Does.Contain("EntityColor binding sourceId was removed"));
+        }
+
+        [Test]
+        public void PerformerDefinitionConfigLoader_Fails_WhenGraphUsesRemovedSourceId()
+        {
+            WriteFile("Core", "config_catalog.json",
+                @"[{ ""Path"": ""Presentation/performers.json"", ""Policy"": ""ArrayById"", ""IdField"": ""id"" }]");
+            WriteFile("Core", "Presentation/performers.json",
+                @"[
+  {
+    ""id"": ""numeric_graph_binding"",
+    ""visualKind"": ""GroundOverlay"",
+    ""bindings"": [
+      { ""paramKey"": 0, ""source"": ""Graph"", ""sourceId"": 17 }
+    ]
+  }
+]");
+
+            var (_, _, pipeline, catalog) = BuildPipeline(_root);
+            var registry = new PerformerDefinitionRegistry();
+            var loader = new PerformerDefinitionConfigLoader(pipeline, registry);
+
+            var ex = Assert.Throws<InvalidOperationException>(() => loader.Load(catalog));
+            Assert.That(ex!.Message, Does.Contain("Graph binding sourceId was removed"));
+        }
+
+        [Test]
+        public void PerformerDefinitionConfigLoader_Fails_WhenEventUsesLegacyKeyId()
+        {
+            WriteFile("Core", "config_catalog.json",
+                @"[{ ""Path"": ""Presentation/performers.json"", ""Policy"": ""ArrayById"", ""IdField"": ""id"" }]");
+            WriteFile("Core", "Presentation/performers.json",
+                @"[
+  {
+    ""id"": ""legacy_event_keyid"",
+    ""visualKind"": ""Marker3D"",
+    ""meshOrShapeId"": ""mesh.cube"",
+    ""rules"": [
+      {
+        ""event"": { ""kind"": ""EntitySpawned"", ""keyId"": 1 },
+        ""command"": { ""kind"": ""DestroyPerformerScope"" }
+      }
+    ]
+  }
+]");
+
+            var (_, _, pipeline, catalog) = BuildPipeline(_root);
+            var registry = new PerformerDefinitionRegistry();
+            var loader = new PerformerDefinitionConfigLoader(
+                pipeline,
+                registry,
+                resolveMeshId: key => string.Equals(key, "mesh.cube", StringComparison.Ordinal) ? 1 : 0);
+
+            var ex = Assert.Throws<InvalidOperationException>(() => loader.Load(catalog));
+            Assert.That(ex!.Message, Does.Contain("keyId was removed"));
+        }
+
+        [Test]
+        public void PerformerDefinitionConfigLoader_ParsesTagBindingTagId()
+        {
+            WriteFile("Core", "config_catalog.json",
+                @"[{ ""Path"": ""Presentation/performers.json"", ""Policy"": ""ArrayById"", ""IdField"": ""id"" }]");
+            WriteFile("Core", "Presentation/performers.json",
+                @"[
+  {
+    ""id"": ""tagid_binding"",
+    ""behaviors"": [
+      {
+        ""slot"": 0,
+        ""kind"": ""TagBinding"",
+        ""activeByDefault"": true,
+        ""tagBinding"": {
+          ""tagId"": ""Tests.Presentation.Working"",
+          ""targetParamKey"": 1
+        }
+      }
+    ]
+  }
+]");
+
+            var (_, _, pipeline, catalog) = BuildPipeline(_root);
+            var registry = new PerformerDefinitionRegistry();
+            var loader = new PerformerDefinitionConfigLoader(pipeline, registry);
+
+            loader.Load(catalog);
+
+            int defId = registry.GetId("tagid_binding");
+            Assert.That(registry.TryGet(defId, out var def), Is.True);
+            Assert.That(def.Behaviors.Length, Is.EqualTo(1));
+            Assert.That(def.Behaviors[0].TagBinding.TagId, Is.EqualTo(TagRegistry.GetId("Tests.Presentation.Working")));
+            Assert.That(def.Behaviors[0].TagBinding.TargetParamKey, Is.EqualTo(1));
+        }
+
+        [Test]
+        public void PerformerDefinitionConfigLoader_Fails_WhenTagBindingUsesLegacyTag()
+        {
+            WriteFile("Core", "config_catalog.json",
+                @"[{ ""Path"": ""Presentation/performers.json"", ""Policy"": ""ArrayById"", ""IdField"": ""id"" }]");
+            WriteFile("Core", "Presentation/performers.json",
+                @"[
+  {
+    ""id"": ""legacy_tag_binding"",
+    ""behaviors"": [
+      {
+        ""slot"": 0,
+        ""kind"": ""TagBinding"",
+        ""activeByDefault"": true,
+        ""tagBinding"": {
+          ""tag"": ""Tests.Presentation.Working"",
+          ""targetParamKey"": 1
+        }
+      }
+    ]
+  }
+]");
+
+            var (_, _, pipeline, catalog) = BuildPipeline(_root);
+            var registry = new PerformerDefinitionRegistry();
+            var loader = new PerformerDefinitionConfigLoader(pipeline, registry);
+
+            var ex = Assert.Throws<InvalidOperationException>(() => loader.Load(catalog));
+            Assert.That(ex!.Message, Does.Contain("TagBinding.tag was removed"));
+        }
+
+        [Test]
+        public void PerformerDefinitionConfigLoader_Fails_WhenTagBindingTagIdUsesNumericId()
+        {
+            WriteFile("Core", "config_catalog.json",
+                @"[{ ""Path"": ""Presentation/performers.json"", ""Policy"": ""ArrayById"", ""IdField"": ""id"" }]");
+            WriteFile("Core", "Presentation/performers.json",
+                @"[
+  {
+    ""id"": ""numeric_tagid_binding"",
+    ""behaviors"": [
+      {
+        ""slot"": 0,
+        ""kind"": ""TagBinding"",
+        ""activeByDefault"": true,
+        ""tagBinding"": {
+          ""tagId"": 1,
+          ""targetParamKey"": 1
+        }
+      }
+    ]
+  }
+]");
+
+            var (_, _, pipeline, catalog) = BuildPipeline(_root);
+            var registry = new PerformerDefinitionRegistry();
+            var loader = new PerformerDefinitionConfigLoader(pipeline, registry);
+
+            var ex = Assert.Throws<InvalidOperationException>(() => loader.Load(catalog));
+            Assert.That(ex!.Message, Does.Contain("not numeric id"));
+        }
+
+        [Test]
+        public void PerformerDefinitionConfigLoader_Fails_WhenRawPerformerIdsDifferOnlyByCase()
+        {
+            WriteFile("Core", "config_catalog.json",
+                @"[{ ""Path"": ""Presentation/performers.json"", ""Policy"": ""ArrayById"", ""IdField"": ""id"" }]");
+            WriteFile("Core", "Presentation/performers.json",
+                @"[
+  { ""id"": ""case_marker"", ""visualKind"": ""GroundOverlay"" }
+]");
+
+            string directDir = Path.Combine(_root, "Core", "Presentation");
+            Directory.CreateDirectory(directDir);
+            File.WriteAllText(Path.Combine(directDir, "performers.json"),
+                @"[
+  { ""id"": ""Case_Marker"", ""visualKind"": ""GroundOverlay"" }
+]");
+
+            var (_, _, pipeline, catalog) = BuildPipeline(_root);
+            var registry = new PerformerDefinitionRegistry();
+            var loader = new PerformerDefinitionConfigLoader(pipeline, registry);
+
+            var ex = Assert.Throws<InvalidOperationException>(() => loader.Load(catalog));
+            Assert.That(ex!.Message, Does.Contain("differs only by case"));
+        }
+
+        [Test]
+        public void PerformerAssetKindContract_DefinesHostOwnedSurfaceAsStableSemanticKind()
+        {
+            AssetKind[] values = Enum.GetValues<AssetKind>();
+
+            Assert.That(values.Length, Is.EqualTo(10));
+            Assert.That(values, Does.Contain(AssetKind.Surface));
+            Assert.That((byte)AssetKind.Surface, Is.EqualTo(10));
+            Assert.That(VisualRenderPath.Surface.IsSurfaceLane(), Is.True);
+        }
+
+        [Test]
+        public void PerformerDefinitionConfigLoader_Fails_WhenMaterialCustomDataIsNotArray()
+        {
+            WriteFile("Core", "config_catalog.json",
+                @"[{ ""Path"": ""Presentation/performers.json"", ""Policy"": ""ArrayById"", ""IdField"": ""id"" }]");
+            WriteFile("Core", "Presentation/performers.json",
+                @"[
+  {
+    ""id"": ""bad_custom_data_shape"",
+    ""behaviors"": [
+      {
+        ""slot"": 0,
+        ""kind"": ""AssetBinding"",
+        ""activeByDefault"": true,
+        ""assetBinding"": {
+          ""assetKind"": ""Mesh"",
+          ""assetId"": ""mesh.cube"",
+          ""materialId"": ""mat.mesh"",
+          ""renderPath"": ""StaticMesh"",
+          ""mobility"": ""Static"",
+          ""materialCustomData"": { ""slot"": 0 }
+        }
+      }
+    ]
+  }
+]");
+
+            var (_, _, pipeline, catalog) = BuildPipeline(_root);
+            var registry = new PerformerDefinitionRegistry();
+            var loader = CreatePerformerLoader(pipeline, registry);
+
+            var ex = Assert.Throws<InvalidOperationException>(() => loader.Load(catalog));
+            Assert.That(ex!.Message, Does.Contain("materialCustomData must be an array"));
+        }
+
+        [Test]
+        public void PerformerDefinitionConfigLoader_Fails_WhenMaterialDoesNotDeclareCustomDataSupport()
+        {
+            WriteFile("Core", "config_catalog.json",
+                @"[{ ""Path"": ""Presentation/performers.json"", ""Policy"": ""ArrayById"", ""IdField"": ""id"" }]");
+            WriteFile("Core", "Presentation/performers.json",
+                @"[
+  {
+    ""id"": ""mesh_custom_data_without_material_capability"",
+    ""behaviors"": [
+      {
+        ""slot"": 0,
+        ""kind"": ""AssetBinding"",
+        ""activeByDefault"": true,
+        ""assetBinding"": {
+          ""assetKind"": ""Mesh"",
+          ""assetId"": ""mesh.cube"",
+          ""materialId"": ""mat.mesh"",
+          ""renderPath"": ""StaticMesh"",
+          ""mobility"": ""Static"",
+          ""materialCustomData"": [
+            { ""slot"": 0, ""defaultValue"": [1, 2, 3, 4] }
+          ]
+        }
+      }
+    ]
+  }
+]");
+
+            var (_, _, pipeline, catalog) = BuildPipeline(_root);
+            var registry = new PerformerDefinitionRegistry();
+            var loader = CreatePerformerLoader(pipeline, registry, materialSupportsCustomData: false);
+
+            var ex = Assert.Throws<InvalidOperationException>(() => loader.Load(catalog));
+            Assert.That(ex!.Message, Does.Contain("SupportsPerInstanceCustomData"));
+        }
+
+        [Test]
+        public void PerformerDefinitionConfigLoader_Fails_WhenUnsupportedAssetKindDeclaresCustomData()
+        {
+            WriteFile("Core", "config_catalog.json",
+                @"[{ ""Path"": ""Presentation/performers.json"", ""Policy"": ""ArrayById"", ""IdField"": ""id"" }]");
+            WriteFile("Core", "Presentation/performers.json",
+                @"[
+  {
+    ""id"": ""spline_custom_data_is_invalid"",
+    ""behaviors"": [
+      {
+        ""slot"": 0,
+        ""kind"": ""AssetBinding"",
+        ""activeByDefault"": true,
+        ""assetBinding"": {
+          ""assetKind"": ""Spline"",
+          ""assetId"": ""spline.path"",
+          ""renderPath"": ""StaticMesh"",
+          ""mobility"": ""Static"",
+          ""materialCustomData"": [
+            { ""slot"": 0, ""defaultValue"": [1, 0, 0, 1] }
+          ]
+        }
+      }
+    ]
+  }
+]");
+
+            var (_, _, pipeline, catalog) = BuildPipeline(_root);
+            var registry = new PerformerDefinitionRegistry();
+            var loader = CreatePerformerLoader(pipeline, registry);
+
+            var ex = Assert.Throws<InvalidOperationException>(() => loader.Load(catalog));
+            Assert.That(ex!.Message, Does.Contain("cannot consume materialCustomData"));
+        }
+
+        [Test]
+        public void PerformerDefinitionConfigLoader_Fails_WhenSurfaceUsesNonSurfaceRenderPath()
+        {
+            WriteFile("Core", "config_catalog.json",
+                @"[{ ""Path"": ""Presentation/performers.json"", ""Policy"": ""ArrayById"", ""IdField"": ""id"" }]");
+            WriteFile("Core", "Presentation/performers.json",
+                @"[
+  {
+    ""id"": ""surface_on_static_lane"",
+    ""behaviors"": [
+      {
+        ""slot"": 0,
+        ""kind"": ""AssetBinding"",
+        ""activeByDefault"": true,
+        ""assetBinding"": {
+          ""assetKind"": ""Surface"",
+          ""assetId"": ""surface.heightfield"",
+          ""materialId"": ""mat.surface"",
+          ""renderPath"": ""StaticMesh"",
+          ""mobility"": ""Static"",
+          ""surfaceLayerKey"": ""terrain.visual""
+        }
+      }
+    ]
+  }
+]");
+
+            var (_, _, pipeline, catalog) = BuildPipeline(_root);
+            var registry = new PerformerDefinitionRegistry();
+            var loader = CreatePerformerLoader(pipeline, registry);
+
+            var ex = Assert.Throws<InvalidOperationException>(() => loader.Load(catalog));
+            Assert.That(ex!.Message, Does.Contain("requires renderPath 'Surface'"));
+        }
+
+        [Test]
+        public void PerformerDefinitionConfigLoader_Fails_WhenNonSurfaceDeclaresSurfaceMetadata()
+        {
+            WriteFile("Core", "config_catalog.json",
+                @"[{ ""Path"": ""Presentation/performers.json"", ""Policy"": ""ArrayById"", ""IdField"": ""id"" }]");
+            WriteFile("Core", "Presentation/performers.json",
+                @"[
+  {
+    ""id"": ""mesh_with_surface_metadata"",
+    ""behaviors"": [
+      {
+        ""slot"": 0,
+        ""kind"": ""AssetBinding"",
+        ""activeByDefault"": true,
+        ""assetBinding"": {
+          ""assetKind"": ""Mesh"",
+          ""assetId"": ""mesh.cube"",
+          ""materialId"": ""mat.mesh"",
+          ""renderPath"": ""InstancedStaticMesh"",
+          ""mobility"": ""Static"",
+          ""surfaceLayerKey"": ""terrain.visual"",
+          ""sortId"": 7
+        }
+      }
+    ]
+  }
+]");
+
+            var (_, _, pipeline, catalog) = BuildPipeline(_root);
+            var registry = new PerformerDefinitionRegistry();
+            var loader = CreatePerformerLoader(pipeline, registry);
+
+            var ex = Assert.Throws<InvalidOperationException>(() => loader.Load(catalog));
+            Assert.That(ex!.Message, Does.Contain("surfaceLayerKey is only valid for Surface"));
+        }
+
+        [Test]
+        public void PerformerDefinitionConfigLoader_ParsesSurfaceAssetBinding_AsHostOwnedSurfaceLane()
+        {
+            WriteFile("Core", "config_catalog.json",
+                @"[{ ""Path"": ""Presentation/performers.json"", ""Policy"": ""ArrayById"", ""IdField"": ""id"" }]");
+            WriteFile("Core", "Presentation/performers.json",
+                @"[
+  {
+    ""id"": ""terrain_surface"",
+    ""behaviors"": [
+      {
+        ""slot"": 0,
+        ""kind"": ""AssetBinding"",
+        ""activeByDefault"": true,
+        ""assetBinding"": {
+          ""assetKind"": ""Surface"",
+          ""assetId"": ""surface.heightfield"",
+          ""materialId"": ""mat.surface"",
+          ""renderPath"": ""Surface"",
+          ""mobility"": ""Static"",
+          ""surfaceLayerKey"": ""terrain.visual"",
+          ""sortId"": 7
+        }
+      }
+    ]
+  }
+]");
+
+            var (_, _, pipeline, catalog) = BuildPipeline(_root);
+            var registry = new PerformerDefinitionRegistry();
+            var loader = CreatePerformerLoader(pipeline, registry);
+
+            loader.Load(catalog);
+
+            int defId = registry.GetId("terrain_surface");
+            Assert.That(registry.TryGet(defId, out var definition), Is.True);
+            Assert.That(definition.Behaviors.Length, Is.EqualTo(1));
+            ref readonly var binding = ref definition.Behaviors[0].AssetBinding;
+            Assert.That(binding.AssetKind, Is.EqualTo(AssetKind.Surface));
+            Assert.That(binding.RenderPath, Is.EqualTo(VisualRenderPath.Surface));
+            Assert.That(binding.SurfaceLayerKey, Is.EqualTo("terrain.visual"));
+            Assert.That(binding.SortId, Is.EqualTo(7));
+        }
+
+        [Test]
+        public void PresentationHostAssetConfigLoader_BindsBackendMaterialUris_FromHostAssetsOnly()
+        {
+            WriteFile("Core", "config_catalog.json",
+                @"[
+  { ""Path"": ""Presentation/material_assets.json"", ""Policy"": ""ArrayById"", ""IdField"": ""id"" },
+  { ""Path"": ""Presentation/host_assets.json"", ""Policy"": ""ArrayById"", ""IdField"": ""id"" }
+]");
+            WriteFile("Core", "Presentation/material_assets.json",
+                @"[
+  {
+    ""id"": ""mat.surface"",
+    ""domain"": ""Surface"",
+    ""flags"": [""SupportsPerInstanceCustomData""]
+  }
+]");
+            WriteFile("Core", "Presentation/host_assets.json",
+                @"[
+  {
+    ""id"": ""mat.surface.raylib"",
+    ""backendId"": ""raylib"",
+    ""assetKind"": ""Material"",
+    ""assetId"": ""mat.surface"",
+    ""sourceUris"": [""raylib.material:mat.surface""]
+  },
+  {
+    ""id"": ""mat.surface.ue5"",
+    ""backendId"": ""ue5"",
+    ""assetKind"": ""Material"",
+    ""assetId"": ""mat.surface"",
+    ""sourceUris"": [""ue5.material:/Game/Ludots/Materials/M_Surface""]
+  }
+]");
+
+            var (_, _, pipeline, catalog) = BuildPipeline(_root);
+            var materials = new PresentationMaterialRegistry();
+
+            new PresentationMaterialConfigLoader(pipeline, materials).Load(catalog);
+            int materialId = materials.GetId("mat.surface");
+            Assert.That(materials.TryGet(materialId, out var semanticDescriptor), Is.True);
+            Assert.That(semanticDescriptor.SourceUris, Is.Empty);
+
+            new PresentationHostAssetConfigLoader(pipeline, materials, "ue5").Load(catalog);
+
+            Assert.That(materials.TryGet(materialId, out var backendDescriptor), Is.True);
+            Assert.That(backendDescriptor.Domain, Is.EqualTo(MaterialAssetDomain.Surface));
+            Assert.That(
+                backendDescriptor.Flags & MaterialAssetFlags.SupportsPerInstanceCustomData,
+                Is.EqualTo(MaterialAssetFlags.SupportsPerInstanceCustomData));
+            Assert.That(backendDescriptor.SourceUris, Is.EqualTo(new[] { "ue5.material:/Game/Ludots/Materials/M_Surface" }));
         }
 
         [Test]
@@ -606,7 +1288,7 @@ namespace Ludots.Tests.Presentation
             var loader = new PresentationTextCatalogLoader(pipeline);
             PresentationTextCatalog textCatalog = loader.Load(catalog);
             var selection = new PresentationTextLocaleSelection(textCatalog);
-            var strings = new WorldHudStringTable(textCatalog, selection, legacyCapacity: 4);
+            var strings = new WorldHudStringTable(textCatalog, selection, dynamicCapacity: 4);
 
             int tokenId = textCatalog.GetTokenId("hud.static_label");
             int legacyId = strings.Register("runtime-only");
@@ -627,7 +1309,7 @@ namespace Ludots.Tests.Presentation
             {
                 var worldHud = new WorldHudBatchBuffer(4);
                 var screenHud = new ScreenHudBatchBuffer(4);
-                var expectedText = PresentationTextPacket.FromLegacyWorldHud(
+                var expectedText = PresentationTextPacket.FromWorldHudValue(
                     tokenId: 17,
                     mode: WorldHudValueMode.AttributeCurrentOverBase,
                     value0: 100f,
@@ -1003,7 +1685,7 @@ namespace Ludots.Tests.Presentation
             var loader = new PresentationImageConfigLoader(pipeline, registry);
 
             var ex = Assert.Throws<InvalidOperationException>(() => loader.Load(catalog));
-            Assert.That(ex!.Message, Does.Contain("legacy 'fallbackGlyph'"));
+            Assert.That(ex!.Message, Does.Contain("removed field 'fallbackGlyph'"));
         }
 
         [Test]
@@ -1066,6 +1748,36 @@ namespace Ludots.Tests.Presentation
             var pipeline = new ConfigPipeline(vfs, modLoader);
             var catalog = ConfigCatalogLoader.Load(pipeline);
             return (vfs, modLoader, pipeline, catalog);
+        }
+
+        private static PerformerDefinitionConfigLoader CreatePerformerLoader(
+            ConfigPipeline pipeline,
+            PerformerDefinitionRegistry registry,
+            bool materialSupportsCustomData = true)
+        {
+            return new PerformerDefinitionConfigLoader(
+                pipeline,
+                registry,
+                resolveBehaviorAssetId: (kind, key) => key switch
+                {
+                    "mesh.cube" when kind == AssetKind.Mesh => 10,
+                    "spline.path" when kind == AssetKind.Spline => 20,
+                    "surface.heightfield" when kind == AssetKind.Surface => 30,
+                    _ => 0,
+                },
+                resolveMaterialId: key => key switch
+                {
+                    "mat.mesh" => 100,
+                    "mat.surface" => 200,
+                    _ => 0,
+                },
+                materialSupportsCustomData: materialId => materialSupportsCustomData && materialId == 100,
+                resolveMaterialDomain: materialId => materialId switch
+                {
+                    100 => MaterialAssetDomain.Mesh,
+                    200 => MaterialAssetDomain.Surface,
+                    _ => null,
+                });
         }
 
         private void WriteFile(string modId, string relativePath, string content)

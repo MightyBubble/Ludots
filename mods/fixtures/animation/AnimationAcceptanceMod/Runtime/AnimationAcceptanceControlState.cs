@@ -16,18 +16,13 @@ namespace AnimationAcceptanceMod.Runtime
             DriverMode = AnimationAcceptanceDriverMode.Auto;
             OverlayWeight01 = 1f;
             ActiveProfileId = "auto";
-            ApplyProfile(definition.Profiles.Length > 0 ? definition.Profiles[0] : new AnimationAcceptanceExampleProfile(
-                "default",
-                "Default",
-                "Fallback acceptance profile.",
-                0f,
-                false,
-                0f,
-                0f,
-                1f,
-                0f,
-                0f,
-                false));
+            if (definition.Profiles.Length == 0)
+            {
+                throw new InvalidOperationException(
+                    $"Animation acceptance rig '{definition.RigId}' must declare at least one profile.");
+            }
+
+            ApplyProfile(definition.Profiles[0]);
             DriverMode = AnimationAcceptanceDriverMode.Auto;
             ActiveProfileId = "auto";
         }

@@ -131,7 +131,7 @@ namespace Ludots.Core.Presentation.Systems
                     cmd.AnchorKind,
                     cmd.Position,
                     _stableIds.Allocate(),
-                    out _))
+                    out int handle))
             {
                 string performerKey = _definitions.GetName(cmd.IdA);
                 string ownerText = cmd.Source == Entity.Null
@@ -140,6 +140,8 @@ namespace Ludots.Core.Presentation.Systems
                 throw new InvalidOperationException(
                     $"PerformerInstanceBuffer is full while creating performer '{performerKey}' (defId={cmd.IdA}, scopeId={cmd.IdB}, owner={ownerText}, active={_instances.ActiveCount}, capacity={_instances.Capacity}).");
             }
+
+            _instances.InitializeAnimatorSlots(handle, definition);
         }
 
         private bool ShouldSkipDuplicatePersistentScopedCreate(in PresentationCommand cmd, PerformerDefinition definition)

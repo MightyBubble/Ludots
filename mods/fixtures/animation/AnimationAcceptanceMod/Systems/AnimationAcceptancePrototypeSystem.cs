@@ -5,6 +5,7 @@ using AnimationAcceptanceMod.Runtime;
 using Ludots.Core.Components;
 using Ludots.Core.Engine;
 using Ludots.Core.Presentation.Components;
+using Ludots.Core.Presentation.Performers;
 using Ludots.Core.Scripting;
 
 namespace AnimationAcceptanceMod.Systems
@@ -13,8 +14,7 @@ namespace AnimationAcceptanceMod.Systems
     {
         private readonly GameEngine _engine;
         private readonly AnimationAcceptanceControlState _controls;
-        private readonly QueryDescription _query = new QueryDescription()
-            .WithAll<WorldPositionCm, FacingDirection, VisualRuntimeState, AnimatorParameterBuffer, AnimationOverlayRequest>();
+        private readonly PerformerInstanceBuffer _performers;
 
         private float _elapsed;
         private bool _tankFireGate;
@@ -28,6 +28,8 @@ namespace AnimationAcceptanceMod.Systems
             _engine = engine;
             _controls = engine.GetService(AnimationAcceptanceServiceKeys.ControlState)
                 ?? throw new InvalidOperationException("Animation acceptance requires control state service.");
+            _performers = engine.GetService(CoreServiceKeys.PerformerInstanceBuffer)
+                ?? throw new InvalidOperationException("Animation acceptance requires PerformerInstanceBuffer.");
         }
 
         public override void Update(in float dt)
@@ -36,26 +38,45 @@ namespace AnimationAcceptanceMod.Systems
             _elapsed += scaledDt;
             ResolveControllerIds();
 
-            var query = World.Query(in _query);
-            foreach (var chunk in query)
-            {
-                var positions = chunk.GetArray<WorldPositionCm>();
-                var facings = chunk.GetArray<FacingDirection>();
-                var visuals = chunk.GetArray<VisualRuntimeState>();
-                var parameters = chunk.GetArray<AnimatorParameterBuffer>();
-                var overlays = chunk.GetArray<AnimationOverlayRequest>();
+            _performers.ProcessAnimatorSlots(scaledDt, UpdatePerformerAnimatorSlot);
+        }
 
-                for (int i = 0; i < chunk.Count; i++)
-                {
-                    if (visuals[i].AnimatorControllerId == _tankControllerId)
-                    {
-                        UpdateTank(ref positions[i], ref facings[i], ref parameters[i], ref overlays[i], scaledDt);
-                    }
-                    else if (visuals[i].AnimatorControllerId == _humanoidControllerId)
-                    {
-                        UpdateHumanoid(ref positions[i], ref facings[i], ref parameters[i], ref overlays[i], scaledDt);
-                    }
-                }
+        private void UpdatePerformerAnimatorSlot(
+            int handle,
+            ref PerformerInstance instance,
+            int behaviorSlot,
+            ref AnimatorPackedState packed,
+            ref AnimatorRuntimeState runtime,
+            ref AnimatorParameterBuffer parameters,
+            ref AnimationOverlayRequest overlay,
+            ref AnimatorFeedbackBuffer feedback,
+            float dt)
+        {
+            int controllerId = packed.GetControllerId();
+            if (controllerId != _tankControllerId && controllerId != _humanoidControllerId)
+            {
+                return;
+            }
+
+            Entity owner = instance.Owner;
+            if (!World.IsAlive(owner) ||
+                !World.Has<WorldPositionCm>(owner) ||
+                !World.Has<FacingDirection>(owner))
+            {
+                throw new InvalidOperationException(
+                    $"Animation acceptance performer instance '{handle}' requires a live owner with WorldPositionCm and FacingDirection.");
+            }
+
+            ref WorldPositionCm position = ref World.Get<WorldPositionCm>(owner);
+            ref FacingDirection facing = ref World.Get<FacingDirection>(owner);
+
+            if (controllerId == _tankControllerId)
+            {
+                UpdateTank(ref position, ref facing, ref parameters, ref overlay, dt);
+            }
+            else
+            {
+                UpdateHumanoid(ref position, ref facing, ref parameters, ref overlay, dt);
             }
         }
 

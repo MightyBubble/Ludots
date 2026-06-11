@@ -60,6 +60,7 @@ namespace Ludots.Core.Presentation.AdapterSync
             for (int i = 0; i < snapshot.Length; i++)
             {
                 ref readonly var item = ref snapshot[i];
+                StaticMeshLaneKey.ValidateSurfaceContract(in item);
                 if (!StaticMeshLaneKey.Supports(item))
                 {
                     continue;
@@ -163,6 +164,7 @@ namespace Ludots.Core.Presentation.AdapterSync
         private static bool ItemEquals(in PrimitiveDrawItem a, in PrimitiveDrawItem b)
         {
             return a.MeshAssetId == b.MeshAssetId
+                && a.AssetKind == b.AssetKind
                 && a.Position.Equals(b.Position)
                 && a.Rotation.Equals(b.Rotation)
                 && a.Scale.Equals(b.Scale)
@@ -175,7 +177,10 @@ namespace Ludots.Core.Presentation.AdapterSync
                 && a.Flags == b.Flags
                 && a.Animator.Equals(b.Animator)
                 && a.AnimationOverlay.Equals(b.AnimationOverlay)
-                && a.Visibility == b.Visibility;
+                && a.Visibility == b.Visibility
+                && string.Equals(a.SurfaceLayerKey, b.SurfaceLayerKey, StringComparison.Ordinal)
+                && a.SortId == b.SortId
+                && a.MaterialCustomData == b.MaterialCustomData;
         }
 
         private sealed class LaneState

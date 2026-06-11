@@ -110,6 +110,18 @@ namespace Ludots.Tests.Presentation
             _emitSystem.Update(dt);
         }
 
+        private void PublishEntitySpawned(Entity entity, int templateId, int stableId)
+        {
+            _presEvents.TryAdd(new PresentationEvent
+            {
+                Kind = PresentationEventKind.EntitySpawned,
+                KeyId = templateId,
+                Source = entity,
+                Target = entity,
+                PayloadA = stableId,
+            });
+        }
+
         // ═══════════════════════════════════════════════════════════════
         // E2E-1  EffectApplied → FloatingCombatText (WorldText + drift + fade)
         // ═══════════════════════════════════════════════════════════════
@@ -307,13 +319,18 @@ namespace Ludots.Tests.Presentation
         // ═══════════════════════════════════════════════════════════════
 
         [Test]
-        public void EntityScoped_HealthBar_EmitsForEntityWithAttributes()
+        public void EntityLifecycle_HealthBar_EmitsForEntityWithAttributes()
         {
             // Arrange — entity with VisualTransform + AttributeBuffer
             var attrBuf = new AttributeBuffer();
             attrBuf.SetBase(_healthAttrId, 100f);
             attrBuf.SetCurrent(_healthAttrId, 100f);
-            var entity = _world.Create(new VisualTransform { Position = new Vector3(10, 0, 10) }, attrBuf);
+            int stableId = 1001;
+            var entity = _world.Create(
+                new VisualTransform { Position = new Vector3(10, 0, 10) },
+                attrBuf,
+                new PresentationStableId { Value = stableId });
+            PublishEntitySpawned(entity, templateId: 1, stableId);
 
             // Act
             TickPipeline(0.016f);
@@ -329,14 +346,18 @@ namespace Ludots.Tests.Presentation
                     break;
                 }
             }
-            Assert.That(foundBar, Is.True, "Entity with AttributeBuffer should get an entity-scoped health bar");
+            Assert.That(foundBar, Is.True, "Entity with AttributeBuffer should get a lifecycle-created health bar");
         }
 
         [Test]
-        public void EntityScoped_HealthBar_SkipsEntityWithoutAttributes()
+        public void EntityLifecycle_HealthBar_SkipsEntityWithoutAttributes()
         {
             // Arrange — entity with VisualTransform but NO AttributeBuffer
-            _world.Create(new VisualTransform { Position = Vector3.Zero });
+            int stableId = 1002;
+            var entity = _world.Create(
+                new VisualTransform { Position = Vector3.Zero },
+                new PresentationStableId { Value = stableId });
+            PublishEntitySpawned(entity, templateId: 1, stableId);
 
             // Act
             TickPipeline(0.016f);
@@ -350,16 +371,19 @@ namespace Ludots.Tests.Presentation
         }
 
         [Test]
-        public void EntityScoped_HealthBar_CullInvisible_NoOutput()
+        public void EntityLifecycle_HealthBar_CullInvisible_NoOutput()
         {
             // Arrange — entity with CullState.IsVisible = false
             var attrBuf = new AttributeBuffer();
             attrBuf.SetBase(_healthAttrId, 100f);
             attrBuf.SetCurrent(_healthAttrId, 100f);
-            _world.Create(
+            int stableId = 1003;
+            var entity = _world.Create(
                 new VisualTransform { Position = Vector3.Zero },
                 attrBuf,
+                new PresentationStableId { Value = stableId },
                 new CullState { IsVisible = false });
+            PublishEntitySpawned(entity, templateId: 1, stableId);
 
             // Act
             TickPipeline(0.016f);
@@ -483,17 +507,37 @@ namespace Ludots.Tests.Presentation
         // ═══════════════════════════════════════════════════════════════
 
         [Test]
-        public void EntityScoped_TemplateFilter_OnlyMatchingTemplateEmits()
+        public void EntityLifecycle_TemplateFilter_OnlyMatchingTemplateEmits()
         {
             // Arrange — register a template-filtered bar
             int heroTemplateId = 42;
+            int customBarDefId = _defs.GetOrRegisterId("test_e2e_tmpl_bar");
             var def = new PerformerDefinition
             {
                 VisualKind = PerformerVisualKind.WorldBar,
-                EntityScope = EntityScopeFilter.AllWithAttributes,
-                RequiredTemplateId = heroTemplateId,
                 DefaultColor = new Vector4(1f, 0f, 0f, 1f),
                 PositionOffset = new Vector3(0f, 2f, 0f),
+                Rules = new[]
+                {
+                    new PerformerRule
+                    {
+                        Event = new EventFilter
+                        {
+                            Kind = PresentationEventKind.EntitySpawned,
+                            KeyId = heroTemplateId,
+                        },
+                        Condition = new ConditionRef
+                        {
+                            Inline = InlineConditionKind.SourceHasAttributeBufferAndPresentationStableId,
+                        },
+                        Command = new PerformerCommand
+                        {
+                            CommandKind = PerformerCommandKind.CreatePerformer,
+                            PerformerDefinitionId = customBarDefId,
+                            ScopeSource = PerformerCommandScopeSource.SourceStableId,
+                        },
+                    },
+                },
             };
             _defs.Register("test_e2e_tmpl_bar", def);
 
@@ -501,19 +545,23 @@ namespace Ludots.Tests.Presentation
             var heroAttr = new AttributeBuffer();
             heroAttr.SetBase(_healthAttrId, 200f);
             heroAttr.SetCurrent(_healthAttrId, 200f);
-            _world.Create(
+            int heroStableId = 2001;
+            var hero = _world.Create(
                 new VisualTransform { Position = new Vector3(1, 0, 1) },
                 heroAttr,
-                new VisualTemplateRef { TemplateId = heroTemplateId });
+                new PresentationStableId { Value = heroStableId });
+            PublishEntitySpawned(hero, heroTemplateId, heroStableId);
 
             // Minion entity — different template, should NOT get the template-filtered bar
             var minionAttr = new AttributeBuffer();
             minionAttr.SetBase(_healthAttrId, 50f);
             minionAttr.SetCurrent(_healthAttrId, 50f);
-            _world.Create(
+            int minionStableId = 2002;
+            var minion = _world.Create(
                 new VisualTransform { Position = new Vector3(5, 0, 5) },
                 minionAttr,
-                new VisualTemplateRef { TemplateId = 99 });
+                new PresentationStableId { Value = minionStableId });
+            PublishEntitySpawned(minion, templateId: 99, minionStableId);
 
             // Act
             TickPipeline(0.016f);

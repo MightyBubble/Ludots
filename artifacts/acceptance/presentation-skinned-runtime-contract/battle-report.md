@@ -4,12 +4,12 @@
 - scenario name: projection_map skinned vs static lane contract
 - build/version: local PresentationTests
 - seed/map/clock: deterministic fixture / camera_acceptance_projection / 5 ticks @ 60 Hz
-- execution timestamp: 2026-03-14T01:56:55.2994325Z
+- execution timestamp: 2026-06-11T23:08:50.0741929Z
 
 ## Timeline
-- [T+005] Hero#1.Spawn -> lane SkinnedMesh | Animator controller 1 bound | result = skinned runtime contract valid
-- [T+005] Dummy#3.Spawn -> lane StaticMesh | Animator none | result = static dirty-sync lane stays separate
-- [T+005] Dummy#2.Spawn -> lane StaticMesh | Animator none | result = static dirty-sync lane stays separate
+- [T+005] Hero#254684418.Spawn -> lane SkinnedMesh | Animator controller 1 bound | result = skinned runtime contract valid
+- [T+005] Dummy#1126774835.Spawn -> lane StaticMesh | Animator none | result = static dirty-sync lane stays separate
+- [T+005] Dummy#489078218.Spawn -> lane StaticMesh | Animator none | result = static dirty-sync lane stays separate
 
 ## Outcome
 - success/failure decision: success

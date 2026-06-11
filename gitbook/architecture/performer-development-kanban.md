@@ -122,8 +122,8 @@ T17 ──→ T19 Persistent Draw Buffer + Static Freeze
 
 | 行号 | 别名（删除） | 规范名（保留） | 上下文 |
 |------|-------------|---------------|--------|
-| 575 | `sourceKey` | `textToken` | ResolveTextTokenId |
-| 592 | `sourceId`（仅 attribute 上下文） | `attributeId` | ResolveAttributeId（注意：ValueRef 绑定上下文中 `sourceId` 是 graph/entityColor 的规范名，不受影响） |
+| 575 | `sourceKey` / `textToken binding` / `paramKey 15/16` | `defaultTextId` / `worldTextValueMode` | WorldText authoring |
+| 592 | `sourceId` / `attributeId` | `attributeName` | ResolveAttributeId |
 | 746 | `ParseLegacyIntValue(obj["value"])` | `intValue` | ParseParamDefaults Int lane |
 | 749 | `value`（作为 array） | `vectorValue` | ParseParamDefaults Vector lane |
 | 752 | `value`（作为 float） | `floatValue` | ParseParamDefaults Float lane |
@@ -135,7 +135,7 @@ T17 ──→ T19 Persistent Draw Buffer + Static Freeze
 
 #### JSON 迁移范围
 
-现有 mod JSON 文件中 `sourceId` 用于 ValueRef 绑定（graph/entityColor），这是该上下文的规范名，不需要迁移。仅 `ResolveAttributeId` 中的 `sourceId` 别名需要删除（attribute 上下文应使用 `attributeId` 或 `attributeName`）。其余别名（`tag`、`value`、`splinePathId` 等）目前无 mod JSON 使用，删除别名即可，无需迁移。
+现有 performer JSON 不应再使用 `sourceId`。Attribute 绑定使用 `attributeName`；Graph 绑定使用 `graphProgramId`；EntityColor 绑定使用 `channel`。其余别名（`tag`、`value`、`splinePathId` 等）目前无 mod JSON 使用，删除别名即可，无需迁移。
 
 #### 跨里程碑别名治理规则
 
@@ -306,12 +306,12 @@ T17-F1 ~ F4 进展（2026-04-19 审计，基于未提交改动 + commit 2948d443
 
 | ID | 状态 | 描述 |
 |----|------|------|
-| T17-F1 | ✓ 已完成 | `EntityVisualEmitSystem.cs` 已删除，`GameEngine.cs` 不再注册 |
-| T17-F2 | ✓ 已完成 | VisualTemplate 系统 5 文件全部删除（Definition/Registry/Ref/ConfigLoader/PresentationAuthoringContext），6 个 mod 的 `visual_templates.json` 全部删除，8 个 mod 全部迁移到 `performers.json` |
+| T17-F1 | 待单独治理 | 当前仓库仍保留 `EntityVisualEmitSystem.cs`；不得把本段历史记录当作已删除事实 |
+| T17-F2 | 待单独治理 | 当前仓库仍保留 VisualTemplate / `PresentationAuthoringContext` / `visualTemplateId` authoring 入口；后续若要收敛必须单独审计并修改代码、配置和测试 |
 | T17-F3 | 待确认 | 架构守卫测试需确认是否已补充（反射断言旧类型不存在） |
 | T17-F4 | 待确认 | `LoadFromJson_AllCoreBuiltinIds_Present` 测试适配状态待确认 |
 
-全量 grep 验证（2026-04-19）：C# 源码和 JSON 配置中 `VisualTemplate`/`EntityVisualEmit`/`PresentationAuthoringContext`/`ModelPerformBinding`/`visual_templates.json`/`visualTemplateId` 引用全部为零。
+当前 grep 验证（2026-06-11）：C# 源码仍存在 `VisualTemplateConfigLoader`、`EntityVisualEmitSystem`、`PresentationAuthoringContext` 和 `visualTemplateId` 入口。本文件只记录 Performer 收敛计划，不再声明这些入口已删除。
 
 阶段性修复提交（2026-04-19，commit 2948d443，由人工审核后提交）：
 - `RtsShowcaseMod/assets/Presentation/performers.json`：从裸对象修正为规范数组格式

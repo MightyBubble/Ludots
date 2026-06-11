@@ -29,7 +29,7 @@ namespace Ludots.Tests.Presentation
     /// Measures:
     /// - PerformerRuleSystem event matching throughput
     /// - PerformerEmitSystem instance-scoped emission throughput
-    /// - PerformerEmitSystem entity-scoped emission throughput
+    /// - PerformerEmitSystem lifecycle instance emission throughput
     /// - PerformerInstanceBuffer allocate/release throughput
     /// - Full pipeline throughput (Bridge → Rule → Runtime → Emit)
     /// - Parameter resolution overhead isolation
@@ -129,6 +129,42 @@ namespace Ludots.Tests.Presentation
             _emitSystem.Update(dt);
         }
 
+        private Entity CreateHealthBarEntity(int index, float currentHealth, bool? cullVisible = null)
+        {
+            var attrBuf = new AttributeBuffer();
+            attrBuf.SetBase(_healthAttrId, 100f);
+            attrBuf.SetCurrent(_healthAttrId, currentHealth);
+            int stableId = 10000 + index;
+
+            Entity entity = cullVisible.HasValue
+                ? _world.Create(
+                    new VisualTransform { Position = new Vector3(index, 0, index) },
+                    attrBuf,
+                    new PresentationStableId { Value = stableId },
+                    new CullState { IsVisible = cullVisible.Value })
+                : _world.Create(
+                    new VisualTransform { Position = new Vector3(index, 0, index) },
+                    attrBuf,
+                    new PresentationStableId { Value = stableId });
+
+            _presEvents.TryAdd(new PresentationEvent
+            {
+                Kind = PresentationEventKind.EntitySpawned,
+                KeyId = 1,
+                Source = entity,
+                Target = entity,
+                PayloadA = stableId,
+            });
+            return entity;
+        }
+
+        private void MaterializeLifecycleHealthBars()
+        {
+            _ruleSystem.Update(0.016f);
+            _runtimeSystem.Update(0.016f);
+            ClearOutputBuffers();
+        }
+
         // ════════════════════════════════════════════════════════════════════
         // B-1  PerformerRuleSystem — Event Matching Throughput
         //      Measures O(Events × Definitions × Rules) hot loop cost.
@@ -140,7 +176,9 @@ namespace Ludots.Tests.Presentation
             // Register multiple definitions with rules to stress the matching loop
             for (int d = 100; d < 120; d++)
             {
-                _defs.Register($"bench_{d}", new PerformerDefinition
+                string key = $"bench_{d}";
+                int defId = _defs.GetOrRegisterId(key);
+                _defs.Register(key, new PerformerDefinition
                 {
                     VisualKind = PerformerVisualKind.Marker3D,
                     MeshOrShapeId = 1,
@@ -153,9 +191,9 @@ namespace Ludots.Tests.Presentation
                             Condition = ConditionRef.AlwaysTrue,
                             Command = new PerformerCommand
                             {
-                                CommandKind = PresentationCommandKind.CreatePerformer,
-                                PerformerDefinitionId = d,
-                                ScopeId = -1,
+                                CommandKind = PerformerCommandKind.CreatePerformer,
+                                PerformerDefinitionId = defId,
+                                ScopeTag = -1,
                             }
                         },
                         new PerformerRule
@@ -164,9 +202,9 @@ namespace Ludots.Tests.Presentation
                             Condition = ConditionRef.AlwaysTrue,
                             Command = new PerformerCommand
                             {
-                                CommandKind = PresentationCommandKind.CreatePerformer,
-                                PerformerDefinitionId = d,
-                                ScopeId = -1,
+                                CommandKind = PerformerCommandKind.CreatePerformer,
+                                PerformerDefinitionId = defId,
+                                ScopeTag = -1,
                             }
                         },
                     }
@@ -256,18 +294,13 @@ namespace Ludots.Tests.Presentation
         // ════════════════════════════════════════════════════════════════════
 
         [Test]
-        public void Benchmark_EmitSystem_EntityScoped_HealthBars()
+        public void Benchmark_EmitSystem_LifecycleHealthBars()
         {
-            // Create entities with VisualTransform + AttributeBuffer (health bar targets)
             for (int i = 0; i < ENTITY_COUNT; i++)
             {
-                var attrBuf = new AttributeBuffer();
-                attrBuf.SetBase(_healthAttrId, 100f);
-                attrBuf.SetCurrent(_healthAttrId, 70f + (i % 30));
-                _world.Create(
-                    new VisualTransform { Position = new Vector3(i, 0, i) },
-                    attrBuf);
+                CreateHealthBarEntity(i, 70f + (i % 30));
             }
+            MaterializeLifecycleHealthBars();
 
             WarmUpGC();
             long startAlloc = GC.GetAllocatedBytesForCurrentThread();
@@ -283,7 +316,7 @@ namespace Ludots.Tests.Presentation
             long endAlloc = GC.GetAllocatedBytesForCurrentThread();
             int totalEmits = ENTITY_COUNT * FRAMES;
 
-            PrintResult("PerformerEmitSystem.EntityScoped.HealthBars",
+            PrintResult("PerformerEmitSystem.Lifecycle.HealthBars",
                 sw, startAlloc, endAlloc, totalEmits,
                 $"  Entities with AttributeBuffer: {ENTITY_COUNT}",
                 $"  Avg frame time: {sw.ElapsedMilliseconds / (double)FRAMES:F2}ms",
@@ -296,18 +329,13 @@ namespace Ludots.Tests.Presentation
         // ════════════════════════════════════════════════════════════════════
 
         [Test]
-        public void Benchmark_EmitSystem_EntityScoped_WithCulling()
+        public void Benchmark_EmitSystem_LifecycleHealthBars_WithCulling()
         {
             for (int i = 0; i < ENTITY_COUNT; i++)
             {
-                var attrBuf = new AttributeBuffer();
-                attrBuf.SetBase(_healthAttrId, 100f);
-                attrBuf.SetCurrent(_healthAttrId, 80f);
-                _world.Create(
-                    new VisualTransform { Position = new Vector3(i, 0, i) },
-                    attrBuf,
-                    new CullState { IsVisible = i % 3 != 0 }); // 1/3 culled
+                CreateHealthBarEntity(i, 80f, i % 3 != 0);
             }
+            MaterializeLifecycleHealthBars();
 
             WarmUpGC();
             long startAlloc = GC.GetAllocatedBytesForCurrentThread();
@@ -322,7 +350,7 @@ namespace Ludots.Tests.Presentation
             sw.Stop();
             long endAlloc = GC.GetAllocatedBytesForCurrentThread();
 
-            PrintResult("PerformerEmitSystem.EntityScoped.WithCulling",
+            PrintResult("PerformerEmitSystem.Lifecycle.WithCulling",
                 sw, startAlloc, endAlloc, ENTITY_COUNT * FRAMES,
                 $"  Entities: {ENTITY_COUNT} (1/3 culled)",
                 $"  Avg frame time: {sw.ElapsedMilliseconds / (double)FRAMES:F2}ms");
@@ -429,16 +457,11 @@ namespace Ludots.Tests.Presentation
         [Test]
         public void Benchmark_FullPipeline_RealisticFrame()
         {
-            // Create entities for entity-scoped health bars
             for (int i = 0; i < 200; i++)
             {
-                var attrBuf = new AttributeBuffer();
-                attrBuf.SetBase(_healthAttrId, 100f);
-                attrBuf.SetCurrent(_healthAttrId, 80f);
-                _world.Create(
-                    new VisualTransform { Position = new Vector3(i, 0, i) },
-                    attrBuf);
+                CreateHealthBarEntity(i, 80f);
             }
+            MaterializeLifecycleHealthBars();
 
             var actor = _world.Create(new VisualTransform { Position = Vector3.Zero });
 
@@ -485,16 +508,11 @@ namespace Ludots.Tests.Presentation
         [Test]
         public void Benchmark_FullPipeline_StressTest()
         {
-            // Create many entities for entity-scoped performers
             for (int i = 0; i < ENTITY_COUNT; i++)
             {
-                var attrBuf = new AttributeBuffer();
-                attrBuf.SetBase(_healthAttrId, 100f);
-                attrBuf.SetCurrent(_healthAttrId, 60f + (i % 40));
-                _world.Create(
-                    new VisualTransform { Position = new Vector3(i % 100, 0, i / 100) },
-                    attrBuf);
+                CreateHealthBarEntity(i, 60f + (i % 40));
             }
+            MaterializeLifecycleHealthBars();
 
             var actor = _world.Create(new VisualTransform { Position = Vector3.Zero });
 
@@ -542,11 +560,10 @@ namespace Ludots.Tests.Presentation
         [Test]
         public void Benchmark_ParamResolution_ManyBindings()
         {
-            // Register a definition with many bindings to stress ResolveParam's linear scan
-            _defs.Register("test_200", new PerformerDefinition
+            // Register a definition with many bindings to stress ResolveParam's indexed lookup
+            int defId = _defs.Register("test_many_bindings", new PerformerDefinition
             {
                 VisualKind = PerformerVisualKind.WorldBar,
-                EntityScope = EntityScopeFilter.AllWithAttributes,
                 DefaultColor = new Vector4(0, 1, 0, 1),
                 PositionOffset = new Vector3(0, 1.5f, 0),
                 Bindings = new[]
@@ -571,9 +588,21 @@ namespace Ludots.Tests.Presentation
                 var attrBuf = new AttributeBuffer();
                 attrBuf.SetBase(_healthAttrId, 100f);
                 attrBuf.SetCurrent(_healthAttrId, 50f + (i % 50));
-                _world.Create(
+                int stableId = 20000 + i;
+                Entity entity = _world.Create(
                     new VisualTransform { Position = new Vector3(i, 0, i) },
-                    attrBuf);
+                    attrBuf,
+                    new PresentationStableId { Value = stableId });
+                Assert.That(
+                    _instances.TryAllocate(
+                        defId,
+                        entity,
+                        stableId,
+                        PresentationAnchorKind.Entity,
+                        Vector3.Zero,
+                        stableId,
+                        out _),
+                    Is.True);
             }
 
             WarmUpGC();
@@ -674,7 +703,9 @@ namespace Ludots.Tests.Presentation
 
                 for (int d = 0; d < defCount; d++)
                 {
-                    defs.Register($"bench_{d + 1000}", new PerformerDefinition
+                    string key = $"bench_{d + 1000}";
+                    int defId = defs.GetOrRegisterId(key);
+                    defs.Register(key, new PerformerDefinition
                     {
                         VisualKind = PerformerVisualKind.Marker3D,
                         Rules = new[]
@@ -685,9 +716,9 @@ namespace Ludots.Tests.Presentation
                                 Condition = ConditionRef.AlwaysTrue,
                                 Command = new PerformerCommand
                                 {
-                                    CommandKind = PresentationCommandKind.CreatePerformer,
-                                    PerformerDefinitionId = d + 1000,
-                                    ScopeId = -1,
+                                    CommandKind = PerformerCommandKind.CreatePerformer,
+                                    PerformerDefinitionId = defId,
+                                    ScopeTag = -1,
                                 }
                             }
                         }

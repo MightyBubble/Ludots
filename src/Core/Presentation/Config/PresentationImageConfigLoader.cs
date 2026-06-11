@@ -43,9 +43,9 @@ namespace Ludots.Core.Presentation.Config
                 throw new InvalidOperationException($"Presentation image asset '{key}' is missing required 'assetKind'.");
             }
 
-            if (!Enum.TryParse(assetKindText, ignoreCase: true, out PresentationImageAssetKind assetKind))
+            if (!Enum.TryParse(assetKindText, ignoreCase: false, out PresentationImageAssetKind assetKind))
             {
-                throw new InvalidOperationException($"Presentation image asset '{key}' has invalid assetKind '{assetKindText}'.");
+                throw new InvalidOperationException($"Presentation image asset '{key}' has invalid assetKind '{assetKindText}'. Enum values are case-sensitive.");
             }
 
             if (node["locators"] is not JsonArray locatorsArray || locatorsArray.Count == 0)
@@ -68,9 +68,9 @@ namespace Ludots.Core.Presentation.Config
 
             ValidateUniqueBackends(key, locators);
 
-            RejectLegacyFallbackField(node, key, "fallbackGlyph");
-            RejectLegacyFallbackField(node, key, "fallbackAccentColorHex");
-            RejectLegacyFallbackField(node, key, "fallbackSurfaceColorHex");
+            RejectRemovedGeneratedImageField(node, key, "fallbackGlyph");
+            RejectRemovedGeneratedImageField(node, key, "fallbackAccentColorHex");
+            RejectRemovedGeneratedImageField(node, key, "fallbackSurfaceColorHex");
 
             return new PresentationImageDefinition
             {
@@ -85,12 +85,12 @@ namespace Ludots.Core.Presentation.Config
             return string.IsNullOrWhiteSpace(value) ? null : value.Trim();
         }
 
-        private static void RejectLegacyFallbackField(JsonObject node, string key, string propertyName)
+        private static void RejectRemovedGeneratedImageField(JsonObject node, string key, string propertyName)
         {
             if (node[propertyName] is not null)
             {
                 throw new InvalidOperationException(
-                    $"Presentation image asset '{key}' uses legacy '{propertyName}'. Define only backend locators.");
+                    $"Presentation image asset '{key}' uses removed field '{propertyName}'. Define only backend locators.");
             }
         }
 
@@ -100,7 +100,7 @@ namespace Ludots.Core.Presentation.Config
             {
                 for (int j = i + 1; j < locators.Length; j++)
                 {
-                    if (string.Equals(locators[i].BackendId, locators[j].BackendId, StringComparison.OrdinalIgnoreCase))
+                    if (string.Equals(locators[i].BackendId, locators[j].BackendId, StringComparison.Ordinal))
                     {
                         throw new InvalidOperationException(
                             $"Presentation image asset '{key}' defines duplicate locator backend '{locators[i].BackendId}'.");

@@ -13,7 +13,10 @@
     "components": {
       "Health": { "Current": 50, "Max": 50 },
       "Name": { "Value": "Pine Tree" },
-      "WorldPositionCm": { "Value": { "X": 0, "Y": 0 } }
+      "WorldPositionCm": { "Value": { "X": 0, "Y": 0 } },
+      "Presentation": {
+        "startupPerformerIds": ["core.foliage.tree_pine_hism"]
+      }
     }
   },
   {
@@ -32,7 +35,10 @@
       "OrderBuffer": {},
       "BlackboardSpatialBuffer": {},
       "BlackboardEntityBuffer": {},
-      "BlackboardIntBuffer": {}
+      "BlackboardIntBuffer": {},
+      "Presentation": {
+        "startupPerformerIds": ["core.character.hero_skinned"]
+      }
     }
   },
   {
@@ -42,7 +48,10 @@
       "Team": { "Id": 2 },
       "SelectionSelectableTag": {},
       "WorldPositionCm": { "Value": { "X": 600, "Y": 0 } },
-      "AttributeBuffer": { "base": { "Health": 100 } }
+      "AttributeBuffer": { "base": { "Health": 100 } },
+      "Presentation": {
+        "startupPerformerIds": ["core.prop.dummy_static"]
+      }
     }
   }
 ]

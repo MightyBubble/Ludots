@@ -29,7 +29,7 @@ namespace Ludots.Core.Presentation.Performers
                 capacity: 128,
                 startId: 1,
                 invalidId: 0,
-                comparer: StringComparer.OrdinalIgnoreCase);
+                comparer: StringComparer.Ordinal);
         }
     }
 }

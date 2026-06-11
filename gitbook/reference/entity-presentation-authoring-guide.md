@@ -240,7 +240,9 @@ WorldText performer 的 token 要写在 `defaultTextId`：
 }
 ```
 
-如果希望某类实体出生/销毁时自动创建或销毁 performer，使用 `rules`：
+如果确实需要由事件触发短生命周期 performer，使用 `rules`。事件源必须有
+`PresentationStableId`，scope 使用 `SourceStableId`；不要把事件 payload 当表现
+scope 的替代来源。
 
 ```json
 [
@@ -254,11 +256,11 @@ WorldText performer 的 token 要写在 `defaultTextId`：
     "rules": [
       {
         "event": { "kind": "EntitySpawned", "key": "my_footman" },
-        "condition": { "inline": "SourceHasVisualTransform" },
+        "condition": { "inline": "SourceHasVisualTransformAndPresentationStableId" },
         "command": {
           "kind": "CreatePerformer",
           "definitionId": "my.spawn_marker",
-          "scopeSource": "EventPayloadA"
+          "scopeSource": "SourceStableId"
         }
       }
     ]
@@ -266,7 +268,7 @@ WorldText performer 的 token 要写在 `defaultTextId`：
 ]
 ```
 
-`SourceHasVisualTransform` 的意思是：事件源必须已经接入正式表现同步链路。缺这个条件时，如果事件源没有 `VisualTransform`，后续锚点无法成立，会在运行时暴露为错误或无输出。
+`SourceHasVisualTransformAndPresentationStableId` 的意思是：事件源必须已经接入正式表现同步链路，并且有稳定表现 ID。缺这个条件时，如果事件源没有 `VisualTransform` 或 `PresentationStableId`，后续锚点和 scope 都无法成立，会在运行时暴露为错误或无输出。
 
 ## 6. Performer 参数不是临时魔法数
 
@@ -285,8 +287,8 @@ WorldText performer 的 token 要写在 `defaultTextId`：
 | `WorldText` | `TextValue0/1` | `0/1` | 格式化数值 |
 | `WorldText` | `TextFontSize` | `3` | 字号 |
 | `WorldText` | `TextColorR/G/B/A` | `4/5/6/7` | 颜色 |
-| `WorldText` | `TextTokenId` | `15` | 覆盖 `defaultTextId` 的 token id |
-| `WorldText` | `TextValueMode` | `16` | legacy adapter value mode |
+| `WorldText` | `defaultTextId` | 字符串字段 | 本地化 token 的唯一 authoring 入口 |
+| `WorldText` | `worldTextValueMode` | 字符串字段 | 文本数值格式，例如 `AttributeCurrentOverBase` |
 | `GroundOverlay` | `OverlayRadius` | `0` | 半径 |
 | `GroundOverlay` | `OverlayInnerRadius` | `1` | 内半径 |
 | `GroundOverlay` | `OverlayAngle` | `2` | 扇形角度 |
