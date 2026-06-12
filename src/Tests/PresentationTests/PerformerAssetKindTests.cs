@@ -24,7 +24,7 @@ namespace Ludots.Tests.Presentation
         public void AssetKindContract_ArchitectureExposesNineKinds()
         {
             AssetKind[] values = (AssetKind[])System.Enum.GetValues(typeof(AssetKind));
-            Assert.That(values.Length, Is.EqualTo(9), "AssetKind SSOT is the architecture enum, which defines 9 kinds.");
+            Assert.That(values.Length, Is.EqualTo(10), "AssetKind SSOT is the architecture enum, which defines 10 kinds.");
             Assert.That(values, Does.Contain(AssetKind.Mesh));
             Assert.That(values, Does.Contain(AssetKind.SkinnedMesh));
             Assert.That(values, Does.Contain(AssetKind.Decal));
@@ -34,6 +34,7 @@ namespace Ludots.Tests.Presentation
             Assert.That(values, Does.Contain(AssetKind.WorldHud));
             Assert.That(values, Does.Contain(AssetKind.WorldText));
             Assert.That(values, Does.Contain(AssetKind.GroundOverlay));
+            Assert.That(values, Does.Contain(AssetKind.Surface));
         }
 
         [Test]
@@ -48,6 +49,16 @@ namespace Ludots.Tests.Presentation
             Assert.That((byte)AssetKind.WorldHud, Is.EqualTo(7));
             Assert.That((byte)AssetKind.WorldText, Is.EqualTo(8));
             Assert.That((byte)AssetKind.GroundOverlay, Is.EqualTo(9));
+            Assert.That((byte)AssetKind.Surface, Is.EqualTo(10));
+        }
+
+        [Test]
+        public void VisualRenderPathContract_ExposesSurfaceLane()
+        {
+            Assert.That((byte)VisualRenderPath.Surface, Is.EqualTo(6));
+            Assert.That(VisualRenderPath.Surface.IsSurfaceLane(), Is.True);
+            Assert.That(VisualRenderPath.Surface.IsStaticInstanceLane(), Is.False);
+            Assert.That(VisualRenderPath.Surface.IsSkinnedLane(), Is.False);
         }
 
         [TestCase(AssetKind.Mesh, 1001, 2001, VisualRenderPath.StaticMesh)]
@@ -123,6 +134,98 @@ namespace Ludots.Tests.Presentation
             Assert.That(span[0].VisualProxy.RenderPath, Is.EqualTo(renderPath));
             Assert.That(span[0].VisualProxy.Position, Is.EqualTo(new Vector3(4f, 5f, 6f)));
             Assert.That(span[0].VisualProxy.Scale, Is.EqualTo(new Vector3(1.5f, 2f, 2.5f)));
+        }
+
+        [Test]
+        public void AssetBinding_Surface_EmitsVisualProxyWithSurfaceRoutingAndCustomData()
+        {
+            using var world = World.Create();
+            Entity owner = world.Create(
+                new PresentationStableId { Value = 7101 },
+                VisualTransform.Default,
+                new CullState { IsVisible = true, LOD = LODLevel.High });
+            var instances = new PerformerEntityRuntime(world);
+            var definitions = new PerformerDefinitionRegistry();
+            var requests = new PresentationRequestBuffer();
+            int heatParamKey = 410;
+            int flowParamKey = 411;
+            int defId = definitions.Register("asset.surface", new PerformerDefinition
+            {
+                Behaviors =
+                [
+                    new BehaviorSlot
+                    {
+                        SlotIndex = 0,
+                        Kind = BehaviorKind.AssetBinding,
+                        ActiveByDefault = true,
+                        AssetBinding = new AssetBindingConfig
+                        {
+                            AssetKind = AssetKind.Surface,
+                            AssetId = 1201,
+                            MaterialId = 2201,
+                            RenderPath = VisualRenderPath.Surface,
+                            Mobility = VisualMobility.Static,
+                            LocalScale = Vector3.One,
+                            AssetIdParamKey = -1,
+                            AssetSwapParamKey = -1,
+                            SurfaceLayerKey = "terrain.rvt",
+                            SortId = 7,
+                            MaterialCustomData = new MaterialCustomDataBinding
+                            {
+                                Slots =
+                                [
+                                    new MaterialCustomDataSlotBinding
+                                    {
+                                        Slot = 0,
+                                        Lane = MaterialCustomDataLane.Float,
+                                        ParamKey = heatParamKey,
+                                    },
+                                    new MaterialCustomDataSlotBinding
+                                    {
+                                        Slot = 1,
+                                        Lane = MaterialCustomDataLane.Vector,
+                                        ParamKey = flowParamKey,
+                                    },
+                                ],
+                            },
+                        },
+                    },
+                ],
+            });
+
+            instances.BindDefinitions(definitions);
+            Entity performer = instances.Create(defId, owner, 0, PresentationAnchorKind.WorldPosition, new Vector3(4f, 5f, 6f), 9100, Entity.Null, default);
+            ref var state = ref world.Get<PerformerState>(performer);
+            state.BehaviorActiveMask = 1u;
+            ref var rot = ref world.Get<PerformerWorldRotation>(performer);
+            rot.Value = Quaternion.Identity;
+            ref var scale = ref world.Get<PerformerWorldScale>(performer);
+            scale.Value = Vector3.One;
+            instances.SetParam(performer, heatParamKey, ParamLane.Float, 3.5f, 0, default);
+            instances.SetParam(performer, flowParamKey, ParamLane.Vector, 0f, 0, new Vector4(0.1f, 0.2f, 0.3f, 0.4f));
+
+            using var system = new PerformerEmitSystem(
+                world,
+                instances,
+                definitions,
+                requests,
+                new Dictionary<string, object>(),
+                animatorStates: null!,
+                soundRequests: null!);
+
+            system.Update(0.016f);
+
+            ReadOnlySpan<PresentationRequest> span = requests.GetSpan();
+            Assert.That(span.Length, Is.EqualTo(1));
+            Assert.That(span[0].Kind, Is.EqualTo(PresentationRequestKind.VisualProxy));
+            PresentationVisualProxy proxy = span[0].VisualProxy;
+            Assert.That(proxy.AssetKind, Is.EqualTo(AssetKind.Surface));
+            Assert.That(proxy.RenderPath, Is.EqualTo(VisualRenderPath.Surface));
+            Assert.That(proxy.SurfaceLayerKey, Is.EqualTo("terrain.rvt"));
+            Assert.That(proxy.SortId, Is.EqualTo(7));
+            Assert.That(proxy.MaterialCustomData.Count, Is.EqualTo(2));
+            Assert.That(proxy.MaterialCustomData.GetSlot(0).X, Is.EqualTo(3.5f).Within(0.001f));
+            Assert.That(proxy.MaterialCustomData.GetSlot(1), Is.EqualTo(new Vector4(0.1f, 0.2f, 0.3f, 0.4f)));
         }
 
         [Test]

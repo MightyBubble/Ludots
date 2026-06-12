@@ -312,6 +312,8 @@ namespace Ludots.Client.Raylib.Rendering
                 && a.Rotation.Equals(b.Rotation)
                 && a.Scale.Equals(b.Scale)
                 && a.Color.Equals(b.Color)
+                && a.AssetKind == b.AssetKind
+                && a.MaterialCustomData.Equals(b.MaterialCustomData)
                 && a.Flags == b.Flags
                 && a.LOD == b.LOD
                 && a.Visibility == b.Visibility;

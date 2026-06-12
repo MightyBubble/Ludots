@@ -28,6 +28,7 @@
   { "Path": "Entities/templates.json", "Policy": "ArrayById", "IdField": "id" },
   { "Path": "Presentation/performers.json", "Policy": "ArrayById", "IdField": "id" },
   { "Path": "Presentation/mesh_assets.json", "Policy": "ArrayById", "IdField": "id" },
+  { "Path": "Presentation/material_assets.json", "Policy": "ArrayById", "IdField": "id" },
   { "Path": "Presentation/host_assets.json", "Policy": "ArrayById", "IdField": "id" },
   { "Path": "Presentation/prefabs.json", "Policy": "ArrayById", "IdField": "id" },
   { "Path": "Presentation/presentation_behaviors.json", "Policy": "ArrayById", "IdField": "id" },

@@ -5,6 +5,7 @@ using Ludots.Core.Engine;
 using Ludots.Core.Mathematics;
 using Ludots.Core.Presentation.Assets;
 using Ludots.Core.Presentation.Components;
+using Ludots.Core.Presentation.Performers;
 using Ludots.Core.Presentation.Rendering;
 using Ludots.Core.Presentation.Terrain;
 using Ludots.Core.Scripting;
@@ -148,6 +149,75 @@ public sealed class UE5SkinnedPrefabFinalizationTests
         var bridge = new UE5IsmRenderBridge();
         var ex = Assert.Throws<InvalidOperationException>(() => bridge.CollectBuckets(engine));
         Assert.That(ex!.Message, Does.Contain("does not support finalized visual kind 'Decal'"));
+    }
+
+    [Test]
+    public void UE5IsmRenderBridge_SurfacePrimitive_CollectsSurfaceItemsOutsideStaticBuckets()
+    {
+        using var engine = new GameEngine();
+        var snapshot = new PrimitiveDrawBuffer();
+        var customData = new MaterialCustomDataPayload { Count = 2 };
+        customData.SetSlot(0, new Vector4(0.25f, 0.5f, 0.75f, 1f));
+        customData.SetSlot(1, new Vector4(2f, 3f, 4f, 5f));
+        Assert.That(snapshot.TryAdd(new PrimitiveDrawItem
+        {
+            StableId = 101,
+            MeshAssetId = 202,
+            MaterialId = 303,
+            AssetKind = AssetKind.Surface,
+            RenderPath = VisualRenderPath.Surface,
+            SurfaceLayerKey = "terrain.rvt",
+            SortId = 404,
+            Position = new Vector3(1f, 2f, 3f),
+            Rotation = Quaternion.Identity,
+            Scale = new Vector3(4f, 5f, 6f),
+            Visibility = VisualVisibility.Visible,
+            MaterialCustomData = customData,
+        }), Is.True);
+        engine.SetService(CoreServiceKeys.PresentationPrimitiveDrawBuffer, snapshot);
+
+        var bridge = new UE5IsmRenderBridge();
+        bridge.CollectBuckets(engine);
+
+        Assert.That(bridge.HismBuckets, Is.Empty);
+        Assert.That(bridge.AllegroItems, Is.Empty);
+        Assert.That(bridge.SurfaceItems.Count, Is.EqualTo(1));
+        SurfaceDrawItem item = bridge.SurfaceItems[0];
+        Assert.That(item.StableId, Is.EqualTo(101));
+        Assert.That(item.MeshAssetId, Is.EqualTo(202));
+        Assert.That(item.MaterialId, Is.EqualTo(303));
+        Assert.That(item.SurfaceLayerKey, Is.EqualTo("terrain.rvt"));
+        Assert.That(item.SortId, Is.EqualTo(404));
+        Assert.That(item.Position, Is.EqualTo(new Vector3(100f, 300f, 200f)));
+        Assert.That(item.Scale, Is.EqualTo(new Vector3(4f, 6f, 5f)));
+        Assert.That(item.Visibility, Is.EqualTo(VisualVisibility.Visible));
+        Assert.That(item.MaterialCustomData.Count, Is.EqualTo(2));
+        Assert.That(item.MaterialCustomData.GetSlot(0), Is.EqualTo(new Vector4(0.25f, 0.5f, 0.75f, 1f)));
+        Assert.That(item.MaterialCustomData.GetSlot(1), Is.EqualTo(new Vector4(2f, 3f, 4f, 5f)));
+    }
+
+    [Test]
+    public void UE5IsmRenderBridge_SurfaceRenderPathWithoutSurfaceAssetKind_ThrowsExplicitly()
+    {
+        using var engine = new GameEngine();
+        var snapshot = new PrimitiveDrawBuffer();
+        Assert.That(snapshot.TryAdd(new PrimitiveDrawItem
+        {
+            StableId = 102,
+            MeshAssetId = 202,
+            AssetKind = AssetKind.Mesh,
+            RenderPath = VisualRenderPath.Surface,
+            Position = Vector3.Zero,
+            Rotation = Quaternion.Identity,
+            Scale = Vector3.One,
+            Color = Vector4.One,
+            Visibility = VisualVisibility.Visible,
+        }), Is.True);
+        engine.SetService(CoreServiceKeys.PresentationPrimitiveDrawBuffer, snapshot);
+
+        var bridge = new UE5IsmRenderBridge();
+        var ex = Assert.Throws<InvalidOperationException>(() => bridge.CollectBuckets(engine));
+        Assert.That(ex!.Message, Does.Contain("non-Surface assetKind"));
     }
 
     private static int RegisterGroundedPrefab(MeshAssetRegistry meshes, int cubeId, int sphereId)

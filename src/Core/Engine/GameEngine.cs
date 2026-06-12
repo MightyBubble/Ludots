@@ -693,6 +693,7 @@ namespace Ludots.Core.Engine
             var presentationBehaviors = new PresentationBehaviorRegistry();
             var performerGraphApi = new GasGraphRuntimeApi(World, spatialQueries: null, coords: null, eventBus: null);
             new MeshAssetConfigLoader(ConfigPipeline, meshAssets, presentationPrefabs).Load(ConfigCatalog, ConfigConflictReport);
+            new PresentationMaterialConfigLoader(ConfigPipeline, materialAssets).Load(ConfigCatalog, ConfigConflictReport);
             new PresentationBehaviorConfigLoader(ConfigPipeline, presentationBehaviors, meshAssets).Load(ConfigCatalog, ConfigConflictReport);
             var presentationBehaviorResolver = new PresentationBehaviorResolver(presentationBehaviors, meshAssets);
             new AnimatorControllerConfigLoader(ConfigPipeline, animatorControllers).Load(ConfigCatalog, ConfigConflictReport);
@@ -779,6 +780,7 @@ namespace Ludots.Core.Engine
                     AssetKind.Decal => meshAssets.GetId(key),
                     AssetKind.VFX => meshAssets.GetId(key),
                     AssetKind.Spline => meshAssets.GetId(key),
+                    AssetKind.Surface => meshAssets.GetId(key),
                     AssetKind.Sound => meshAssets.GetId(key),
                     AssetKind.WorldText => presentationTextCatalog.GetTokenId(key),
                     AssetKind.GroundOverlay => ResolveGroundOverlayShapeId(key),

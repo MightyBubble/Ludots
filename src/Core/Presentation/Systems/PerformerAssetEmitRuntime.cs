@@ -65,6 +65,7 @@ namespace Ludots.Core.Presentation.Systems
                 case AssetKind.SkinnedMesh:
                 case AssetKind.Decal:
                 case AssetKind.VFX:
+                case AssetKind.Surface:
                     EmitVisualAsset(entity, in state, in definition, slotIndex, in asset, lod, position, performerWorldRotation, performerWorldScale, alpha);
                     return;
 
@@ -152,6 +153,10 @@ namespace Ludots.Core.Presentation.Systems
                     TemplateId = state.DefId,
                     AnimationProfileId = definition.AnimationProfileId,
                     RenderPath = renderPath,
+                    AssetKind = asset.AssetKind,
+                    SurfaceLayerKey = asset.SurfaceLayerKey,
+                    SortId = asset.SortId,
+                    MaterialCustomData = PerformerMaterialCustomDataResolver.Resolve(_runtime, entity, in asset.MaterialCustomData),
                     Mobility = asset.Mobility,
                     Flags = VisualRuntimeFlags.Visible,
                     Animator = ResolveAnimator(entity, renderPath),
@@ -279,7 +284,7 @@ namespace Ludots.Core.Presentation.Systems
             Vector3 performerWorldScale,
             float alpha)
         {
-            if (asset.AssetKind is not (AssetKind.Mesh or AssetKind.SkinnedMesh or AssetKind.Decal or AssetKind.VFX))
+            if (asset.AssetKind is not (AssetKind.Mesh or AssetKind.SkinnedMesh or AssetKind.Decal or AssetKind.VFX or AssetKind.Surface))
             {
                 return;
             }
@@ -695,6 +700,10 @@ namespace Ludots.Core.Presentation.Systems
                 TemplateId = state.DefId,
                 AnimationProfileId = definition.AnimationProfileId,
                 RenderPath = renderPath,
+                AssetKind = asset.AssetKind,
+                SurfaceLayerKey = asset.SurfaceLayerKey,
+                SortId = asset.SortId,
+                MaterialCustomData = PerformerMaterialCustomDataResolver.Resolve(_runtime, entity, in asset.MaterialCustomData),
                 Mobility = asset.Mobility,
                 Flags = VisualRuntimeFlags.Visible,
                 Animator = ResolveAnimator(entity, renderPath),

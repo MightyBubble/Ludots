@@ -1,6 +1,7 @@
 using System.Numerics;
 using Ludots.Core.Presentation.AdapterSync;
 using Ludots.Core.Presentation.Components;
+using Ludots.Core.Presentation.Performers;
 using Ludots.Core.Presentation.Rendering;
 using NUnit.Framework;
 
@@ -59,6 +60,64 @@ namespace Ludots.Tests.Presentation
             Assert.That(planner.ActiveBindings.Count, Is.EqualTo(0));
             Assert.That(planner.Operations, Is.Empty);
             Assert.That(planner.TryGetBinding(404, out _), Is.False);
+        }
+
+        [Test]
+        public void Sync_IgnoresSurfaceAssetKind_EvenWhenRenderPathLooksStatic()
+        {
+            var planner = new StaticMeshAdapterSyncPlanner();
+
+            planner.Sync(new[]
+            {
+                CreateItem(
+                    505,
+                    VisualRenderPath.StaticMesh,
+                    meshAssetId: 15,
+                    materialId: 5,
+                    assetKind: AssetKind.Surface),
+            });
+
+            Assert.That(planner.ActiveBindings.Count, Is.EqualTo(0));
+            Assert.That(planner.Operations, Is.Empty);
+            Assert.That(planner.TryGetBinding(505, out _), Is.False);
+        }
+
+        [Test]
+        public void Sync_CustomDataChange_EmitsUpdate_WithoutChangingLaneSlot()
+        {
+            var planner = new StaticMeshAdapterSyncPlanner();
+            var initialCustomData = new MaterialCustomDataPayload { Count = 1 };
+            initialCustomData.SetSlot(0, new Vector4(1f, 0f, 0f, 0f));
+            var updatedCustomData = new MaterialCustomDataPayload { Count = 1 };
+            updatedCustomData.SetSlot(0, new Vector4(2f, 0f, 0f, 0f));
+
+            planner.Sync(new[]
+            {
+                CreateItem(
+                    606,
+                    VisualRenderPath.InstancedStaticMesh,
+                    meshAssetId: 16,
+                    materialId: 6,
+                    customData: initialCustomData),
+            });
+            Assert.That(planner.TryGetBinding(606, out var original), Is.True);
+
+            planner.Sync(new[]
+            {
+                CreateItem(
+                    606,
+                    VisualRenderPath.InstancedStaticMesh,
+                    meshAssetId: 16,
+                    materialId: 6,
+                    customData: updatedCustomData),
+            });
+
+            Assert.That(planner.Operations.Count, Is.EqualTo(1));
+            Assert.That(planner.Operations[0].Kind, Is.EqualTo(StaticMeshAdapterSyncOpKind.Update));
+            Assert.That(planner.TryGetBinding(606, out var updated), Is.True);
+            Assert.That(updated.Slot, Is.EqualTo(original.Slot));
+            Assert.That(updated.Generation, Is.EqualTo(original.Generation));
+            Assert.That(updated.Item.MaterialCustomData.GetSlot(0).X, Is.EqualTo(2f).Within(0.001f));
         }
 
         [Test]
@@ -204,7 +263,9 @@ namespace Ludots.Tests.Presentation
             float posX = 0f,
             VisualVisibility visibility = VisualVisibility.Visible,
             Quaternion rotation = default,
-            VisualMobility mobility = VisualMobility.Static)
+            VisualMobility mobility = VisualMobility.Static,
+            AssetKind assetKind = default,
+            MaterialCustomDataPayload customData = default)
         {
             return new PrimitiveDrawItem
             {
@@ -217,6 +278,8 @@ namespace Ludots.Tests.Presentation
                 MaterialId = materialId,
                 TemplateId = 1000 + stableId,
                 RenderPath = renderPath,
+                AssetKind = assetKind,
+                MaterialCustomData = customData,
                 Mobility = mobility,
                 Flags = VisualRuntimeFlags.Visible,
                 Animator = default,

@@ -4,6 +4,7 @@ using System.Numerics;
 using Ludots.Core.Engine;
 using Ludots.Core.Presentation.Assets;
 using Ludots.Core.Presentation.Components;
+using Ludots.Core.Presentation.Performers;
 using Ludots.Core.Presentation.Rendering;
 using Ludots.Core.Presentation.Terrain;
 using Ludots.Core.Scripting;
@@ -57,10 +58,12 @@ namespace Ludots.Adapter.UE5
         private readonly Dictionary<long, IsmBucket> _buckets = new();
         private readonly List<IsmBucket> _bucketList = new();
         private readonly List<AllegroDrawItem> _allegroItems = new();
+        private readonly List<SurfaceDrawItem> _surfaceItems = new();
         private readonly PrefabFinalizedVisualBuffer _prefabVisuals = new();
 
         public IReadOnlyList<IsmBucket> HismBuckets => _bucketList;
         public IReadOnlyList<AllegroDrawItem> AllegroItems => _allegroItems;
+        public IReadOnlyList<SurfaceDrawItem> SurfaceItems => _surfaceItems;
 
         public void CollectBuckets(GameEngine engine)
         {
@@ -81,6 +84,7 @@ namespace Ludots.Adapter.UE5
 
             if (snapshot != null)
             {
+                CollectSurfaceItems(snapshot);
                 CollectStaticBuckets(snapshot, meshRegistry, in finalizationContext);
             }
 
@@ -124,6 +128,46 @@ namespace Ludots.Adapter.UE5
 
             _bucketList.Clear();
             _allegroItems.Clear();
+            _surfaceItems.Clear();
+        }
+
+        private void CollectSurfaceItems(PrimitiveDrawBuffer buffer)
+        {
+            ReadOnlySpan<PrimitiveDrawItem> span = buffer.GetSpan();
+            for (int i = 0; i < span.Length; i++)
+            {
+                ref readonly PrimitiveDrawItem item = ref span[i];
+                if (item.AssetKind != AssetKind.Surface)
+                {
+                    if (item.RenderPath == VisualRenderPath.Surface)
+                    {
+                        throw new InvalidOperationException(
+                            $"{nameof(UE5IsmRenderBridge)} received non-Surface assetKind '{item.AssetKind}' on Surface render path stableId={item.StableId}.");
+                    }
+
+                    continue;
+                }
+
+                if (item.RenderPath != VisualRenderPath.Surface)
+                {
+                    throw new InvalidOperationException(
+                        $"{nameof(UE5IsmRenderBridge)} received Surface visual stableId={item.StableId} on render path '{item.RenderPath}'.");
+                }
+
+                _surfaceItems.Add(new SurfaceDrawItem
+                {
+                    StableId = item.StableId,
+                    MeshAssetId = item.MeshAssetId,
+                    MaterialId = item.MaterialId,
+                    SurfaceLayerKey = item.SurfaceLayerKey,
+                    SortId = item.SortId,
+                    Position = ToUEPosition(item.Position),
+                    Rotation = ToUERotation(item.Rotation),
+                    Scale = ToUEScale(item.Scale),
+                    Visibility = item.Visibility,
+                    MaterialCustomData = item.MaterialCustomData,
+                });
+            }
         }
 
         private void CollectStaticBuckets(PrimitiveDrawBuffer buffer, MeshAssetRegistry? meshRegistry, in PrefabFinalizationContext finalizationContext)
@@ -132,6 +176,11 @@ namespace Ludots.Adapter.UE5
             for (int i = 0; i < span.Length; i++)
             {
                 ref readonly var item = ref span[i];
+                if (item.AssetKind == AssetKind.Surface)
+                {
+                    continue;
+                }
+
                 if (!item.RenderPath.IsStaticInstanceLane())
                 {
                     continue;

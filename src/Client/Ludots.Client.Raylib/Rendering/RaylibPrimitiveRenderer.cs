@@ -9,6 +9,7 @@ using Ludots.Core.Modding;
 using Ludots.Core.Presentation.AdapterSync;
 using Ludots.Core.Presentation.Assets;
 using Ludots.Core.Presentation.Components;
+using Ludots.Core.Presentation.Performers;
 using Ludots.Core.Presentation.Rendering;
 using Ludots.Core.Presentation.Terrain;
 using Raylib_cs;
@@ -199,6 +200,12 @@ namespace Ludots.Client.Raylib.Rendering
             for (int i = 0; i < span.Length; i++)
             {
                 ref readonly var item = ref span[i];
+                if (IsHostSurfaceLane(in item))
+                {
+                    LastImmediateSkippedCount++;
+                    continue;
+                }
+
                 if (skinnedBatchActive && item.RenderPath.IsSkinnedLane())
                 {
                     LastImmediateSkippedCount++;
@@ -239,6 +246,12 @@ namespace Ludots.Client.Raylib.Rendering
             for (int i = 0; i < span.Length; i++)
             {
                 ref readonly var item = ref span[i];
+                if (IsHostSurfaceLane(in item))
+                {
+                    LastImmediateSkippedCount++;
+                    continue;
+                }
+
                 if (skinnedBatchActive && item.RenderPath.IsSkinnedLane())
                 {
                     LastImmediateSkippedCount++;
@@ -289,6 +302,11 @@ namespace Ludots.Client.Raylib.Rendering
             for (int i = 0; i < span.Length; i++)
             {
                 ref readonly var item = ref span[i];
+                if (IsHostSurfaceLane(in item))
+                {
+                    continue;
+                }
+
                 if (TryDrawPrototypeSkinned(item, meshes, scaleMul))
                 {
                     continue;
@@ -326,6 +344,11 @@ namespace Ludots.Client.Raylib.Rendering
             {
                 SubmitFinalizedVisual(in visual, camera);
             }
+        }
+
+        private static bool IsHostSurfaceLane(in PrimitiveDrawItem item)
+        {
+            return item.AssetKind == AssetKind.Surface || item.RenderPath.IsSurfaceLane();
         }
 
         private void SubmitFinalizedVisual(in PrefabFinalizedVisual visual, Camera3D camera)

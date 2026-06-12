@@ -1,5 +1,6 @@
 using System.Numerics;
 using Ludots.Core.Presentation.Components;
+using Ludots.Core.Presentation.Performers;
 
 namespace Ludots.Core.Presentation.Rendering
 {
@@ -69,6 +70,30 @@ namespace Ludots.Core.Presentation.Rendering
         {
             readonly get => Payload.RenderPath;
             set => Payload.RenderPath = value;
+        }
+
+        public AssetKind AssetKind
+        {
+            readonly get => Payload.AssetKind;
+            set => Payload.AssetKind = value;
+        }
+
+        public string SurfaceLayerKey
+        {
+            readonly get => Payload.SurfaceLayerKey;
+            set => Payload.SurfaceLayerKey = value;
+        }
+
+        public int SortId
+        {
+            readonly get => Payload.SortId;
+            set => Payload.SortId = value;
+        }
+
+        public MaterialCustomDataPayload MaterialCustomData
+        {
+            readonly get => Payload.MaterialCustomData;
+            set => Payload.MaterialCustomData = value;
         }
 
         public AnimatorPackedState Animator

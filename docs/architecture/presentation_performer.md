@@ -80,15 +80,35 @@
     *   属于 **GPU skinned lane**
     *   adapter 负责 crowd slot、palette/buffer 上传或等价 GPU skin runtime
     *   **不属于** static instance dirty sync
+*   `Surface`
+    *   属于 **host-owned surface lane**
+    *   `AssetKind.Surface` 必须只使用 `renderPath: "Surface"`，并且必须声明 `surfaceLayerKey`
+    *   Core 只输出 stable semantic payload：`StableId`、`AssetKind`、`RenderPath`、`MeshAssetId`、`MaterialId`、`SurfaceLayerKey`、`SortId`、transform、visibility 和 `MaterialCustomData`
+    *   adapter 必须把 Surface items 收集到独立 surface runtime，不得放进 static/skinned bucket，也不得 fallback 成 mesh
 
 这条边界的目的，是避免把以下职责揉进同一条“static dirty sync”管线：
 
 *   static instance lifetime / batch slot
 *   skeletal component lifetime
 *   GPU skinned crowd ownership
+*   host-owned surface runtime / layer routing
 *   animator packed bits 同步
 
-## 7 Animator Packed Contract
+## 7 Material Custom Data Contract
+
+`AssetBinding.materialCustomData` 是 performer-authored per-instance material payload。它用于把少量数值稳定传给 adapter/material runtime，不用于创建新的 request kind。
+
+约束：
+
+*   最多 4 个 slot，slot 必须从 `0` 连续声明。
+*   slot lane 只能是 `Float`、`Int` 或 `Vector`。
+*   每个 slot 可以绑定 performer param，也可以使用 authoring default。
+*   仅支持 static instance lane、skinned lane 与 `Surface` lane；其他 render path 配置时 fail-fast。
+*   payload 通过 `VisualRenderPayload.MaterialCustomData` 进入 `PresentationVisualProxy`、`PrimitiveDrawItem`、`SkinnedVisualBatchItem` 和 adapter collection。
+
+`Presentation/material_assets.json` 只声明 Core-owned semantic material identity；平台 URI 必须放在 `Presentation/host_assets.json` 并由 host composer 按 backend 注入。
+
+## 8 Animator Packed Contract
 
 `AnimatorPackedState` 是一个 **128-bit compact runtime payload**：
 

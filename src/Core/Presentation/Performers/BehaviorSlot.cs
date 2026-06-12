@@ -55,6 +55,9 @@ namespace Ludots.Core.Presentation.Performers
             AssetSwapParamKey = PerformerParamKeyRegistry.UnsetParamKey;
             AssetSwapTable = Array.Empty<AssetSwapEntry>();
             VisibilityParamKey = PerformerParamKeyRegistry.UnsetParamKey;
+            SurfaceLayerKey = string.Empty;
+            SortId = 0;
+            MaterialCustomData = MaterialCustomDataBinding.Empty;
             HasMaxLod = false;
             MaxLod = LODLevel.Low;
         }
@@ -74,8 +77,40 @@ namespace Ludots.Core.Presentation.Performers
         public int AssetSwapParamKey;
         public AssetSwapEntry[] AssetSwapTable;
         public int VisibilityParamKey;
+        public string SurfaceLayerKey;
+        public int SortId;
+        public MaterialCustomDataBinding MaterialCustomData;
         public bool HasMaxLod;
         public LODLevel MaxLod;
+    }
+
+    public enum MaterialCustomDataLane : byte
+    {
+        Float = 1,
+        Int = 2,
+        Vector = 3,
+    }
+
+    public struct MaterialCustomDataSlotBinding
+    {
+        public int Slot;
+        public MaterialCustomDataLane Lane;
+        public int ParamKey;
+        public float DefaultFloatValue;
+        public int DefaultIntValue;
+        public Vector4 DefaultVectorValue;
+    }
+
+    public struct MaterialCustomDataBinding
+    {
+        public const int MaxSlots = 4;
+
+        public static readonly MaterialCustomDataBinding Empty = new()
+        {
+            Slots = Array.Empty<MaterialCustomDataSlotBinding>(),
+        };
+
+        public MaterialCustomDataSlotBinding[] Slots;
     }
 
     public struct AssetSwapEntry

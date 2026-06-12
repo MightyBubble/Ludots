@@ -1432,6 +1432,7 @@ namespace Ludots.Core.Presentation.Performers
                 or AssetKind.SkinnedMesh
                 or AssetKind.Decal
                 or AssetKind.VFX
+                or AssetKind.Surface
                 or AssetKind.WorldHud
                 or AssetKind.WorldText
                 or AssetKind.Spline

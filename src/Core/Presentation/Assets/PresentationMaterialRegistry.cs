@@ -22,7 +22,7 @@ namespace Ludots.Core.Presentation.Assets
             _data = new MaterialAssetDescriptor[capacity];
             _has = new bool[capacity];
 
-            Register(DefaultSurfaceKey, MaterialAssetDomain.Surface, new[] { "materials/default_surface.mat" }, MaterialAssetFlags.None);
+            Register(DefaultSurfaceKey, MaterialAssetDomain.Surface, Array.Empty<string>(), MaterialAssetFlags.None);
         }
 
         public int Register(string key, MaterialAssetDomain domain, string[] sourceUris, MaterialAssetFlags flags)

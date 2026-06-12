@@ -284,7 +284,12 @@ public static class LauncherEvidenceRecorder
             throw new InvalidOperationException("Raylib evidence recording requires PresentationMeshAssetRegistry before host asset binding.");
         }
 
-        new PresentationHostAssetConfigLoader(engine.ConfigPipeline, meshAssets)
+        if (!engine.TryGetService(CoreServiceKeys.PresentationMaterialRegistry, out PresentationMaterialRegistry materialAssets))
+        {
+            throw new InvalidOperationException("Raylib evidence recording requires PresentationMaterialRegistry before host asset binding.");
+        }
+
+        new PresentationHostAssetConfigLoader(engine.ConfigPipeline, meshAssets, materialAssets)
             .Apply("raylib", engine.ConfigCatalog, engine.ConfigConflictReport);
     }
 

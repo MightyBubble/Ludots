@@ -11,11 +11,16 @@ namespace Ludots.Core.Presentation.Config
 
         private readonly ConfigPipeline _configs;
         private readonly MeshAssetRegistry _meshRegistry;
+        private readonly PresentationMaterialRegistry _materialRegistry;
 
-        public PresentationHostAssetConfigLoader(ConfigPipeline configs, MeshAssetRegistry meshRegistry)
+        public PresentationHostAssetConfigLoader(
+            ConfigPipeline configs,
+            MeshAssetRegistry meshRegistry,
+            PresentationMaterialRegistry materialRegistry)
         {
             _configs = configs ?? throw new ArgumentNullException(nameof(configs));
             _meshRegistry = meshRegistry ?? throw new ArgumentNullException(nameof(meshRegistry));
+            _materialRegistry = materialRegistry ?? throw new ArgumentNullException(nameof(materialRegistry));
         }
 
         public void Apply(string backendId, ConfigCatalog catalog = null, ConfigConflictReport report = null)
@@ -39,13 +44,20 @@ namespace Ludots.Core.Presentation.Config
                 }
 
                 string assetKind = RequireString(node, "assetKind", rowBackendId);
-                if (!string.Equals(assetKind, "Mesh", StringComparison.Ordinal))
+                if (string.Equals(assetKind, "Mesh", StringComparison.Ordinal))
                 {
-                    throw new InvalidOperationException(
-                        $"Presentation host asset '{RequireString(node, "id", "host asset row")}' has unsupported assetKind '{assetKind}'.");
+                    ApplyMeshHostAsset(node, backendId);
+                    continue;
                 }
 
-                ApplyMeshHostAsset(node, backendId);
+                if (string.Equals(assetKind, "Material", StringComparison.Ordinal))
+                {
+                    ApplyMaterialHostAsset(node, backendId);
+                    continue;
+                }
+
+                throw new InvalidOperationException(
+                    $"Presentation host asset '{RequireString(node, "id", "host asset row")}' has unsupported assetKind '{assetKind}'.");
             }
         }
 
@@ -68,6 +80,20 @@ namespace Ludots.Core.Presentation.Config
 
             descriptor.SourceUris = ParseSourceUris(node["sourceUris"], rowId);
             _meshRegistry.Register(assetId, in descriptor);
+        }
+
+        private void ApplyMaterialHostAsset(JsonNode node, string backendId)
+        {
+            string rowId = RequireString(node, "id", "host asset row");
+            string assetId = RequireString(node, "assetId", rowId);
+            int materialAssetId = _materialRegistry.GetId(assetId);
+            if (materialAssetId == 0 || !_materialRegistry.TryGet(materialAssetId, out MaterialAssetDescriptor descriptor))
+            {
+                throw new InvalidOperationException(
+                    $"Presentation host asset '{rowId}' targets unknown material asset '{assetId}' for backend '{backendId}'.");
+            }
+
+            _materialRegistry.Register(assetId, descriptor.Domain, ParseSourceUris(node["sourceUris"], rowId), descriptor.Flags);
         }
 
         private static string[] ParseSourceUris(JsonNode node, string rowId)

@@ -404,6 +404,7 @@ namespace Ludots.Core.Presentation.Performers
                             case AssetKind.SkinnedMesh:
                             case AssetKind.Decal:
                             case AssetKind.VFX:
+                            case AssetKind.Surface:
                                 if (AssetBindingSupportsEventDrivenStaticEmit(slot.AssetBinding))
                                 {
                                     hasCacheableVisual = true;
@@ -633,13 +634,14 @@ namespace Ludots.Core.Presentation.Performers
 
         private static bool SupportsVisualProxyFastEmitFor(in AssetBindingConfig asset)
         {
-            return asset.AssetKind is AssetKind.Mesh or AssetKind.SkinnedMesh or AssetKind.Decal or AssetKind.VFX &&
+            return asset.AssetKind is AssetKind.Mesh or AssetKind.SkinnedMesh or AssetKind.Decal or AssetKind.VFX or AssetKind.Surface &&
                    asset.ScaleParamKey < 0 &&
                    asset.ColorParamKey < 0 &&
                    asset.MaterialParamKey < 0 &&
                    asset.AssetIdParamKey < 0 &&
                    asset.AssetSwapParamKey < 0 &&
                    asset.VisibilityParamKey < 0 &&
+                   (asset.MaterialCustomData.Slots == null || asset.MaterialCustomData.Slots.Length == 0) &&
                    !HasAssetSwapTable(asset);
         }
 
@@ -763,6 +765,7 @@ namespace Ludots.Core.Presentation.Performers
             AddIfValid(intParams, asset.AssetSwapParamKey);
             AddIfValid(intParams, asset.VisibilityParamKey);
             AddIfValid(vectorParams, asset.ColorParamKey);
+            CollectMaterialCustomDataParams(floatParams, intParams, vectorParams, in asset.MaterialCustomData);
         }
 
         private static void CollectRetainedPresentationRequestParams(
@@ -777,6 +780,37 @@ namespace Ludots.Core.Presentation.Performers
             AddIfValid(intParams, asset.AssetSwapParamKey);
             AddIfValid(intParams, asset.VisibilityParamKey);
             AddIfValid(vectorParams, asset.ColorParamKey);
+            CollectMaterialCustomDataParams(floatParams, intParams, vectorParams, in asset.MaterialCustomData);
+        }
+
+        private static void CollectMaterialCustomDataParams(
+            System.Collections.Generic.HashSet<int> floatParams,
+            System.Collections.Generic.HashSet<int> intParams,
+            System.Collections.Generic.HashSet<int> vectorParams,
+            in MaterialCustomDataBinding materialCustomData)
+        {
+            MaterialCustomDataSlotBinding[] slots = materialCustomData.Slots;
+            if (slots == null || slots.Length == 0)
+            {
+                return;
+            }
+
+            for (int i = 0; i < slots.Length; i++)
+            {
+                ref readonly MaterialCustomDataSlotBinding slot = ref slots[i];
+                switch (slot.Lane)
+                {
+                    case MaterialCustomDataLane.Float:
+                        AddIfValid(floatParams, slot.ParamKey);
+                        break;
+                    case MaterialCustomDataLane.Int:
+                        AddIfValid(intParams, slot.ParamKey);
+                        break;
+                    case MaterialCustomDataLane.Vector:
+                        AddIfValid(vectorParams, slot.ParamKey);
+                        break;
+                }
+            }
         }
 
         private static void AddIfValid(System.Collections.Generic.HashSet<int> set, int key)

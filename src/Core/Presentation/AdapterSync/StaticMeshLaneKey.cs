@@ -1,4 +1,5 @@
 using Ludots.Core.Presentation.Components;
+using Ludots.Core.Presentation.Performers;
 using Ludots.Core.Presentation.Rendering;
 
 namespace Ludots.Core.Presentation.AdapterSync
@@ -21,7 +22,9 @@ namespace Ludots.Core.Presentation.AdapterSync
         }
 
         public static bool Supports(in PrimitiveDrawItem item) =>
-            item.Mobility == VisualMobility.Static && Supports(item.RenderPath);
+            item.AssetKind != AssetKind.Surface &&
+            item.Mobility == VisualMobility.Static &&
+            Supports(item.RenderPath);
 
         public static StaticMeshLaneKey FromItem(in PrimitiveDrawItem item)
         {

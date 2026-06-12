@@ -1205,7 +1205,8 @@ namespace Ludots.Core.Presentation.Systems
                     slot.AssetBinding.AssetKind == AssetKind.SkinnedMesh ||
                     slot.AssetBinding.AssetKind == AssetKind.Mesh ||
                     slot.AssetBinding.AssetKind == AssetKind.Decal ||
-                    slot.AssetBinding.AssetKind == AssetKind.VFX)
+                    slot.AssetBinding.AssetKind == AssetKind.VFX ||
+                    slot.AssetBinding.AssetKind == AssetKind.Surface)
                 {
                     return true;
                 }
@@ -1521,6 +1522,10 @@ namespace Ludots.Core.Presentation.Systems
                 TemplateId = state.DefId,
                 AnimationProfileId = definition.AnimationProfileId,
                 RenderPath = renderPath,
+                AssetKind = asset.AssetKind,
+                SurfaceLayerKey = asset.SurfaceLayerKey,
+                SortId = asset.SortId,
+                MaterialCustomData = PerformerMaterialCustomDataResolver.Resolve(_runtime, entity, in asset.MaterialCustomData),
                 Animator = ResolveAnimatorFast(entity, animatorSlot),
                 AnimationOverlay = ResolveAnimationOverlayFast(entity, renderPath, animatorSlot),
                 Visibility = VisualVisibility.Visible,
@@ -1568,6 +1573,10 @@ namespace Ludots.Core.Presentation.Systems
                 TemplateId = state.DefId,
                 AnimationProfileId = definition.AnimationProfileId,
                 RenderPath = renderPath,
+                AssetKind = asset.AssetKind,
+                SurfaceLayerKey = asset.SurfaceLayerKey,
+                SortId = asset.SortId,
+                MaterialCustomData = PerformerMaterialCustomDataResolver.Resolve(_runtime, entity, in asset.MaterialCustomData),
                 Mobility = asset.Mobility,
                 Flags = VisualRuntimeFlags.Visible,
                 Animator = renderPath.SupportsAnimatorPackedState() ? ResolveAnimatorFast(entity, animatorSlot) : default,
@@ -1615,7 +1624,7 @@ namespace Ludots.Core.Presentation.Systems
 
         private static bool IsCacheableVisualKind(AssetKind kind)
         {
-            return kind is AssetKind.Mesh or AssetKind.SkinnedMesh or AssetKind.Decal or AssetKind.VFX;
+            return kind is AssetKind.Mesh or AssetKind.SkinnedMesh or AssetKind.Decal or AssetKind.VFX or AssetKind.Surface;
         }
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]

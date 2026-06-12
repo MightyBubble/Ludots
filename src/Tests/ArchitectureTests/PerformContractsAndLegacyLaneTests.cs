@@ -223,7 +223,7 @@ namespace Ludots.Tests.Architecture
         }
 
         [Test]
-        public void VisualRenderPayloadContract_ExposesOnlySharedThirteenFields()
+        public void VisualRenderPayloadContract_ExposesSharedSurfaceAndCustomDataFields()
         {
             string[] fieldNames = typeof(VisualRenderPayload)
                 .GetFields(BindingFlags.Instance | BindingFlags.Public)
@@ -236,14 +236,18 @@ namespace Ludots.Tests.Architecture
                 "AnimationOverlay",
                 "AnimationProfileId",
                 "Animator",
+                "AssetKind",
                 "Color",
+                "MaterialCustomData",
                 "MaterialId",
                 "MeshAssetId",
                 "Position",
                 "RenderPath",
                 "Rotation",
                 "Scale",
+                "SortId",
                 "StableId",
+                "SurfaceLayerKey",
                 "TemplateId",
                 "Visibility",
             };

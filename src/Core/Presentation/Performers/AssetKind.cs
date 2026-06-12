@@ -11,5 +11,6 @@ namespace Ludots.Core.Presentation.Performers
         WorldHud = 7,
         WorldText = 8,
         GroundOverlay = 9,
+        Surface = 10,
     }
 }

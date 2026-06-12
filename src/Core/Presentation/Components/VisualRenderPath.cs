@@ -26,6 +26,10 @@ namespace Ludots.Core.Presentation.Components
         /// GPU-skinned crowd lane. This is not a static instance sync path and requires skinned runtime ownership in the adapter.
         /// </summary>
         GpuSkinnedInstance = 5,
+        /// <summary>
+        /// Host-owned surface lane. Core emits stable semantic payload; adapters own platform-specific surface runtime state.
+        /// </summary>
+        Surface = 6,
     }
 
     public static class VisualRenderPathSemantics
@@ -51,6 +55,11 @@ namespace Ludots.Core.Presentation.Components
         public static bool RequiresExplicitAnimatorController(this VisualRenderPath renderPath)
         {
             return renderPath.IsSkinnedLane();
+        }
+
+        public static bool IsSurfaceLane(this VisualRenderPath renderPath)
+        {
+            return renderPath == VisualRenderPath.Surface;
         }
     }
 }

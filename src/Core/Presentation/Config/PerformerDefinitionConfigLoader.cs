@@ -1266,6 +1266,10 @@ namespace Ludots.Core.Presentation.Config
             ValidateAssetBindingRenderPath(assetKind, renderPath);
             int assetIdParamKey = ParseOptionalParamKey(obj["assetIdParamKey"], "AssetBinding.assetIdParamKey");
             int assetSwapParamKey = ParseOptionalParamKey(obj["assetSwapParamKey"], "AssetBinding.assetSwapParamKey");
+            string surfaceLayerKey = ParseOptionalCanonicalString(obj["surfaceLayerKey"], "AssetBinding.surfaceLayerKey");
+            int sortId = obj["sortId"]?.GetValue<int>() ?? 0;
+            MaterialCustomDataBinding materialCustomData = ParseMaterialCustomData(obj["materialCustomData"], renderPath);
+            ValidateSurfaceMetadata(assetKind, surfaceLayerKey, obj.ContainsKey("surfaceLayerKey"), obj.ContainsKey("sortId"));
             if (assetKind == AssetKind.WorldHud &&
                 (obj.ContainsKey("assetId") || assetIdParamKey >= 0 || assetSwapParamKey >= 0 || obj.ContainsKey("assetSwapTable")))
             {
@@ -1307,9 +1311,39 @@ namespace Ludots.Core.Presentation.Config
                 AssetSwapParamKey = assetSwapParamKey,
                 AssetSwapTable = assetSwapTable,
                 VisibilityParamKey = ParseOptionalParamKey(obj["visibilityParamKey"], "AssetBinding.visibilityParamKey"),
+                SurfaceLayerKey = surfaceLayerKey,
+                SortId = sortId,
+                MaterialCustomData = materialCustomData,
                 HasMaxLod = obj.ContainsKey("maxLod"),
                 MaxLod = ParseEnum(obj["maxLod"]?.GetValue<string>(), LODLevel.Low),
             };
+        }
+
+        private static void ValidateSurfaceMetadata(
+            AssetKind assetKind,
+            string surfaceLayerKey,
+            bool hasSurfaceLayerKey,
+            bool hasSortId)
+        {
+            if (assetKind == AssetKind.Surface)
+            {
+                if (string.IsNullOrWhiteSpace(surfaceLayerKey))
+                {
+                    throw new InvalidOperationException("Surface AssetBinding requires non-empty surfaceLayerKey.");
+                }
+
+                return;
+            }
+
+            if (hasSurfaceLayerKey)
+            {
+                throw new InvalidOperationException("AssetBinding.surfaceLayerKey is only valid for Surface assets.");
+            }
+
+            if (hasSortId)
+            {
+                throw new InvalidOperationException("AssetBinding.sortId is only valid for Surface assets.");
+            }
         }
 
         private AttributeBindingConfig ParseAttributeBinding(JsonNode? node)
@@ -1425,6 +1459,14 @@ namespace Ludots.Core.Presentation.Config
                     }
 
                     break;
+                case AssetKind.Surface:
+                    if (renderPath != VisualRenderPath.Surface)
+                    {
+                        throw new InvalidOperationException(
+                            $"AssetBinding assetKind '{assetKind}' requires renderPath 'Surface', not '{renderPath}'.");
+                    }
+
+                    break;
                 case AssetKind.WorldHud:
                 case AssetKind.WorldText:
                 case AssetKind.Sound:
@@ -1439,6 +1481,105 @@ namespace Ludots.Core.Presentation.Config
                     break;
                 default:
                     throw new InvalidOperationException($"AssetBinding assetKind '{assetKind}' has no renderPath contract.");
+            }
+        }
+
+        private static MaterialCustomDataBinding ParseMaterialCustomData(JsonNode? node, VisualRenderPath renderPath)
+        {
+            if (node == null)
+            {
+                return MaterialCustomDataBinding.Empty;
+            }
+
+            if (!MaterialCustomDataSupported(renderPath))
+            {
+                throw new InvalidOperationException(
+                    $"AssetBinding.materialCustomData is not supported by renderPath '{renderPath}'.");
+            }
+
+            if (node is not JsonArray arr)
+            {
+                throw new InvalidOperationException("AssetBinding.materialCustomData must be an array.");
+            }
+
+            if (arr.Count == 0)
+            {
+                throw new InvalidOperationException("AssetBinding.materialCustomData must not be empty when declared.");
+            }
+
+            if (arr.Count > MaterialCustomDataBinding.MaxSlots)
+            {
+                throw new InvalidOperationException(
+                    $"AssetBinding.materialCustomData supports at most {MaterialCustomDataBinding.MaxSlots} slots.");
+            }
+
+            var slots = new MaterialCustomDataSlotBinding[arr.Count];
+            bool[] seen = new bool[MaterialCustomDataBinding.MaxSlots];
+            for (int i = 0; i < arr.Count; i++)
+            {
+                if (arr[i] is not JsonObject obj)
+                {
+                    throw new InvalidOperationException($"materialCustomData[{i}] must be an object.");
+                }
+
+                int slot = ParseRequiredInt(obj["slot"], $"materialCustomData[{i}].slot");
+                if ((uint)slot >= MaterialCustomDataBinding.MaxSlots)
+                {
+                    throw new InvalidOperationException(
+                        $"materialCustomData[{i}].slot must be between 0 and {MaterialCustomDataBinding.MaxSlots - 1}.");
+                }
+
+                if (seen[slot])
+                {
+                    throw new InvalidOperationException($"materialCustomData[{i}].slot duplicates slot {slot}.");
+                }
+
+                seen[slot] = true;
+                MaterialCustomDataLane lane = ParseRequiredEnum<MaterialCustomDataLane>(obj["lane"], $"materialCustomData[{i}].lane");
+                slots[i] = new MaterialCustomDataSlotBinding
+                {
+                    Slot = slot,
+                    Lane = lane,
+                    ParamKey = ParseOptionalParamKey(obj["paramKey"], $"materialCustomData[{i}].paramKey"),
+                    DefaultFloatValue = obj["defaultFloatValue"]?.GetValue<float>() ?? 0f,
+                    DefaultIntValue = obj["defaultIntValue"]?.GetValue<int>() ?? 0,
+                    DefaultVectorValue = ParseVector4(obj["defaultVectorValue"]),
+                };
+            }
+
+            SortMaterialCustomDataSlots(slots);
+            for (int i = 0; i < slots.Length; i++)
+            {
+                if (slots[i].Slot != i)
+                {
+                    throw new InvalidOperationException(
+                        "AssetBinding.materialCustomData slots must be contiguous starting at 0.");
+                }
+            }
+
+            return new MaterialCustomDataBinding { Slots = slots };
+        }
+
+        private static bool MaterialCustomDataSupported(VisualRenderPath renderPath)
+        {
+            return renderPath.IsStaticInstanceLane() ||
+                   renderPath.IsSkinnedLane() ||
+                   renderPath == VisualRenderPath.Surface;
+        }
+
+        private static void SortMaterialCustomDataSlots(MaterialCustomDataSlotBinding[] slots)
+        {
+            for (int i = 1; i < slots.Length; i++)
+            {
+                MaterialCustomDataSlotBinding slot = slots[i];
+                int j = i - 1;
+                while (j >= 0 && slots[j].Slot > slot.Slot)
+                {
+                    slots[j + 1] = slots[j];
+                    j--;
+                }
+
+                slots[j + 1] = slot;
             }
         }
 

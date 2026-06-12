@@ -598,6 +598,229 @@ namespace Ludots.Tests.Presentation
             Assert.That(ex.Message, Does.Contain(expectedMessage));
         }
 
+        [Test]
+        public void Load_ParsesSurfaceAssetBindingRoutingAndMaterialCustomData()
+        {
+            WriteCatalog();
+            WritePerformers(
+                """
+                [
+                  {
+                    "id": "surface_actor",
+                    "behaviors": [
+                      {
+                        "slot": "body",
+                        "kind": "AssetBinding",
+                        "activeByDefault": true,
+                        "assetBinding": {
+                          "assetKind": "Surface",
+                          "assetId": "surface.projector",
+                          "materialId": "surface.grid",
+                          "renderPath": "Surface",
+                          "mobility": "Static",
+                          "surfaceLayerKey": "terrain.rvt",
+                          "sortId": 17,
+                          "materialCustomData": [
+                            {
+                              "slot": 1,
+                              "lane": "Vector",
+                              "paramKey": "surface.flow",
+                              "defaultVectorValue": [0.1, 0.2, 0.3, 0.4]
+                            },
+                            {
+                              "slot": 0,
+                              "lane": "Float",
+                              "paramKey": "surface.heat",
+                              "defaultFloatValue": 2.5
+                            }
+                          ]
+                        }
+                      }
+                    ]
+                  }
+                ]
+                """);
+
+            var (_, _, pipeline, catalog) = BuildPipeline();
+            var registry = new PerformerDefinitionRegistry();
+            var loader = new PerformerDefinitionConfigLoader(
+                pipeline,
+                registry,
+                resolveMaterialId: key => string.Equals(key, "surface.grid", StringComparison.Ordinal) ? 88 : 0,
+                resolveBehaviorAssetId: (kind, key) =>
+                    kind == AssetKind.Surface && string.Equals(key, "surface.projector", StringComparison.Ordinal) ? 77 : 0);
+
+            loader.Load(catalog);
+
+            Assert.That(registry.TryGet(registry.GetId("surface_actor"), out var definition), Is.True);
+            AssetBindingConfig binding = definition.Behaviors[0].AssetBinding;
+            Assert.That(binding.AssetKind, Is.EqualTo(AssetKind.Surface));
+            Assert.That(binding.AssetId, Is.EqualTo(77));
+            Assert.That(binding.MaterialId, Is.EqualTo(88));
+            Assert.That(binding.RenderPath, Is.EqualTo(VisualRenderPath.Surface));
+            Assert.That(binding.SurfaceLayerKey, Is.EqualTo("terrain.rvt"));
+            Assert.That(binding.SortId, Is.EqualTo(17));
+            Assert.That(binding.MaterialCustomData.Slots.Length, Is.EqualTo(2));
+            Assert.That(binding.MaterialCustomData.Slots[0].Slot, Is.EqualTo(0));
+            Assert.That(binding.MaterialCustomData.Slots[0].Lane, Is.EqualTo(MaterialCustomDataLane.Float));
+            Assert.That(binding.MaterialCustomData.Slots[0].ParamKey, Is.EqualTo(PerformerParamKeyRegistry.Register("surface.heat")));
+            Assert.That(binding.MaterialCustomData.Slots[0].DefaultFloatValue, Is.EqualTo(2.5f).Within(0.001f));
+            Assert.That(binding.MaterialCustomData.Slots[1].Slot, Is.EqualTo(1));
+            Assert.That(binding.MaterialCustomData.Slots[1].Lane, Is.EqualTo(MaterialCustomDataLane.Vector));
+            Assert.That(binding.MaterialCustomData.Slots[1].ParamKey, Is.EqualTo(PerformerParamKeyRegistry.Register("surface.flow")));
+            Assert.That(binding.MaterialCustomData.Slots[1].DefaultVectorValue, Is.EqualTo(new Vector4(0.1f, 0.2f, 0.3f, 0.4f)));
+        }
+
+        [TestCase(
+            """
+            {
+              "assetKind": "Surface",
+              "assetId": "surface.projector",
+              "renderPath": "StaticMesh",
+              "mobility": "Static",
+              "surfaceLayerKey": "terrain.rvt"
+            }
+            """,
+            "requires renderPath 'Surface'")]
+        [TestCase(
+            """
+            {
+              "assetKind": "Surface",
+              "assetId": "surface.projector",
+              "renderPath": "Surface",
+              "mobility": "Static"
+            }
+            """,
+            "requires non-empty surfaceLayerKey")]
+        [TestCase(
+            """
+            {
+              "assetKind": "Mesh",
+              "assetId": "cube",
+              "renderPath": "StaticMesh",
+              "mobility": "Static",
+              "surfaceLayerKey": "terrain.rvt"
+            }
+            """,
+            "surfaceLayerKey is only valid for Surface assets")]
+        [TestCase(
+            """
+            {
+              "assetKind": "Mesh",
+              "assetId": "cube",
+              "renderPath": "StaticMesh",
+              "mobility": "Static",
+              "sortId": 3
+            }
+            """,
+            "sortId is only valid for Surface assets")]
+        public void Load_RejectsMisconfiguredSurfaceAssetBinding(string assetBindingJson, string expectedMessage)
+        {
+            WriteCatalog();
+            WritePerformers($$"""
+                [
+                  {
+                    "id": "bad_surface_actor",
+                    "behaviors": [
+                      {
+                        "slot": "body",
+                        "kind": "AssetBinding",
+                        "activeByDefault": true,
+                        "assetBinding": {{assetBindingJson}}
+                      }
+                    ]
+                  }
+                ]
+                """);
+
+            var (_, _, pipeline, catalog) = BuildPipeline();
+            var registry = new PerformerDefinitionRegistry();
+            var loader = new PerformerDefinitionConfigLoader(
+                pipeline,
+                registry,
+                resolveBehaviorAssetId: (kind, key) =>
+                    (kind == AssetKind.Surface && string.Equals(key, "surface.projector", StringComparison.Ordinal)) ||
+                    (kind == AssetKind.Mesh && string.Equals(key, "cube", StringComparison.Ordinal))
+                        ? 42
+                        : 0);
+
+            InvalidOperationException ex = Assert.Throws<InvalidOperationException>(() => loader.Load(catalog))!;
+            Assert.That(ex.Message, Does.Contain(expectedMessage));
+        }
+
+        [TestCase(
+            """
+            {
+              "assetKind": "WorldHud",
+              "renderPath": "None",
+              "mobility": "Movable",
+              "materialCustomData": [
+                { "slot": 0, "lane": "Float", "defaultFloatValue": 1.0 }
+              ]
+            }
+            """,
+            "not supported by renderPath 'None'")]
+        [TestCase(
+            """
+            {
+              "assetKind": "Mesh",
+              "assetId": "cube",
+              "renderPath": "StaticMesh",
+              "mobility": "Static",
+              "materialCustomData": [
+                { "slot": 1, "lane": "Float", "defaultFloatValue": 1.0 }
+              ]
+            }
+            """,
+            "contiguous starting at 0")]
+        [TestCase(
+            """
+            {
+              "assetKind": "Mesh",
+              "assetId": "cube",
+              "renderPath": "StaticMesh",
+              "mobility": "Static",
+              "materialCustomData": [
+                { "slot": 0, "lane": "Float", "defaultFloatValue": 1.0 },
+                { "slot": 1, "lane": "Float", "defaultFloatValue": 1.0 },
+                { "slot": 2, "lane": "Float", "defaultFloatValue": 1.0 },
+                { "slot": 3, "lane": "Float", "defaultFloatValue": 1.0 },
+                { "slot": 4, "lane": "Float", "defaultFloatValue": 1.0 }
+              ]
+            }
+            """,
+            "supports at most 4 slots")]
+        public void Load_RejectsMisconfiguredMaterialCustomData(string assetBindingJson, string expectedMessage)
+        {
+            WriteCatalog();
+            WritePerformers($$"""
+                [
+                  {
+                    "id": "bad_custom_data_actor",
+                    "behaviors": [
+                      {
+                        "slot": "body",
+                        "kind": "AssetBinding",
+                        "activeByDefault": true,
+                        "assetBinding": {{assetBindingJson}}
+                      }
+                    ]
+                  }
+                ]
+                """);
+
+            var (_, _, pipeline, catalog) = BuildPipeline();
+            var registry = new PerformerDefinitionRegistry();
+            var loader = new PerformerDefinitionConfigLoader(
+                pipeline,
+                registry,
+                resolveBehaviorAssetId: (kind, key) =>
+                    kind == AssetKind.Mesh && string.Equals(key, "cube", StringComparison.Ordinal) ? 42 : 0);
+
+            InvalidOperationException ex = Assert.Throws<InvalidOperationException>(() => loader.Load(catalog))!;
+            Assert.That(ex.Message, Does.Contain(expectedMessage));
+        }
+
         [TestCase(
             """
             {

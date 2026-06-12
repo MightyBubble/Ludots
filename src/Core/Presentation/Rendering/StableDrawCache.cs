@@ -260,6 +260,8 @@ namespace Ludots.Core.Presentation.Rendering
             return itemA.MeshAssetId == itemB.MeshAssetId
                 && itemA.MaterialId == itemB.MaterialId
                 && itemA.RenderPath == itemB.RenderPath
+                && itemA.AssetKind == itemB.AssetKind
+                && itemA.MaterialCustomData.Equals(itemB.MaterialCustomData)
                 && itemA.Mobility == itemB.Mobility
                 && itemA.Position.Equals(itemB.Position)
                 && itemA.Rotation.Equals(itemB.Rotation)

@@ -25,9 +25,9 @@ namespace Ludots.Core.Presentation.Assets
                 throw new ArgumentOutOfRangeException(nameof(id));
             }
 
-            if (sourceUris == null || sourceUris.Length == 0)
+            if (sourceUris == null)
             {
-                throw new ArgumentException("Material asset must declare at least one source URI.", nameof(sourceUris));
+                throw new ArgumentNullException(nameof(sourceUris));
             }
 
             Id = id;

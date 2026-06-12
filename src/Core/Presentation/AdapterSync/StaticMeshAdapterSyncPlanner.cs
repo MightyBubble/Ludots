@@ -269,6 +269,8 @@ namespace Ludots.Core.Presentation.AdapterSync
                 && a.MaterialId == b.MaterialId
                 && a.TemplateId == b.TemplateId
                 && a.RenderPath == b.RenderPath
+                && a.AssetKind == b.AssetKind
+                && a.MaterialCustomData.Equals(b.MaterialCustomData)
                 && a.Mobility == b.Mobility
                 && a.Flags == b.Flags
                 && a.Animator.Equals(b.Animator)

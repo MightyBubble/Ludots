@@ -81,9 +81,10 @@ namespace Ludots.Tests.Presentation
             var pipeline = BuildCorePipeline(root);
             var catalog = BuildPresentationCatalog();
             var meshes = new MeshAssetRegistry();
+            var materials = new PresentationMaterialRegistry();
             new MeshAssetConfigLoader(pipeline, meshes).Load(catalog);
 
-            new PresentationHostAssetConfigLoader(pipeline, meshes).Apply("raylib", catalog);
+            new PresentationHostAssetConfigLoader(pipeline, meshes, materials).Apply("raylib", catalog);
 
             int modelId = meshes.GetId("test.model");
             Assert.That(meshes.TryGetDescriptor(modelId, out var model), Is.True);
@@ -123,10 +124,11 @@ namespace Ludots.Tests.Presentation
             var pipeline = BuildCorePipeline(root);
             var catalog = BuildPresentationCatalog();
             var meshes = new MeshAssetRegistry();
+            var materials = new PresentationMaterialRegistry();
             new MeshAssetConfigLoader(pipeline, meshes).Load(catalog);
 
             var ex = Assert.Throws<InvalidOperationException>(() =>
-                new PresentationHostAssetConfigLoader(pipeline, meshes).Apply("raylib", catalog));
+                new PresentationHostAssetConfigLoader(pipeline, meshes, materials).Apply("raylib", catalog));
             Assert.That(ex!.Message, Does.Contain("unknown mesh asset 'missing.model'"));
         }
 
@@ -160,10 +162,11 @@ namespace Ludots.Tests.Presentation
             var pipeline = BuildCorePipeline(root);
             var catalog = BuildPresentationCatalog();
             var meshes = new MeshAssetRegistry();
+            var materials = new PresentationMaterialRegistry();
             new MeshAssetConfigLoader(pipeline, meshes).Load(catalog);
 
             var ex = Assert.Throws<InvalidOperationException>(() =>
-                new PresentationHostAssetConfigLoader(pipeline, meshes).Apply("raylib", catalog));
+                new PresentationHostAssetConfigLoader(pipeline, meshes, materials).Apply("raylib", catalog));
             Assert.That(ex!.Message, Does.Contain(expectedMessage));
         }
 
@@ -196,11 +199,96 @@ namespace Ludots.Tests.Presentation
             var pipeline = BuildCorePipeline(root);
             var catalog = BuildPresentationCatalog();
             var meshes = new MeshAssetRegistry();
+            var materials = new PresentationMaterialRegistry();
             new MeshAssetConfigLoader(pipeline, meshes).Load(catalog);
 
             Assert.That(
-                () => new PresentationHostAssetConfigLoader(pipeline, meshes).Apply("raylib ", catalog),
+                () => new PresentationHostAssetConfigLoader(pipeline, meshes, materials).Apply("raylib ", catalog),
                 Throws.InvalidOperationException.With.Message.Contains("backendId"));
+        }
+
+        [Test]
+        public void MaterialAssetConfigLoader_WhenMaterialDeclaresSourceUris_ThrowsExplicitHostAssetError()
+        {
+            string root = CreateTempCoreRoot();
+            Directory.CreateDirectory(Path.Combine(root, "Configs", "Presentation"));
+            File.WriteAllText(
+                Path.Combine(root, "Configs", "Presentation", "material_assets.json"),
+                """
+                [
+                  {
+                    "id": "surface.grid",
+                    "domain": "Surface",
+                    "sourceUris": [ "TestMod:assets/Materials/surface.mat" ]
+                  }
+                ]
+                """);
+
+            var pipeline = BuildCorePipeline(root);
+            var catalog = BuildPresentationCatalog();
+            var materials = new PresentationMaterialRegistry();
+
+            var ex = Assert.Throws<InvalidOperationException>(() =>
+                new PresentationMaterialConfigLoader(pipeline, materials).Load(catalog));
+            Assert.That(ex!.Message, Does.Contain("Presentation/host_assets.json"));
+        }
+
+        [Test]
+        public void Apply_WhenMaterialBackendMatches_InjectsHostUrisIntoExistingMaterialDescriptor()
+        {
+            string root = CreateTempCoreRoot();
+            Directory.CreateDirectory(Path.Combine(root, "Configs", "Presentation"));
+            File.WriteAllText(
+                Path.Combine(root, "Configs", "Presentation", "mesh_assets.json"),
+                "[]");
+            File.WriteAllText(
+                Path.Combine(root, "Configs", "Presentation", "material_assets.json"),
+                """
+                [
+                  {
+                    "id": "surface.grid",
+                    "domain": "Surface",
+                    "flags": [ "Transparent", "DoubleSided" ]
+                  }
+                ]
+                """);
+            File.WriteAllText(
+                Path.Combine(root, "Configs", "Presentation", "host_assets.json"),
+                """
+                [
+                  {
+                    "id": "surface.grid.raylib",
+                    "assetKind": "Material",
+                    "assetId": "surface.grid",
+                    "backendId": "raylib",
+                    "sourceUris": [ "TestMod:assets/Materials/surface.mat" ]
+                  },
+                  {
+                    "id": "surface.grid.ue5",
+                    "assetKind": "Material",
+                    "assetId": "surface.grid",
+                    "backendId": "ue5",
+                    "sourceUris": [ "ue5.material:/Game/Test/Surface.Surface" ]
+                  }
+                ]
+                """);
+
+            var pipeline = BuildCorePipeline(root);
+            var catalog = BuildPresentationCatalog();
+            var meshes = new MeshAssetRegistry();
+            var materials = new PresentationMaterialRegistry();
+            new MeshAssetConfigLoader(pipeline, meshes).Load(catalog);
+            new PresentationMaterialConfigLoader(pipeline, materials).Load(catalog);
+
+            int materialId = materials.GetId("surface.grid");
+            Assert.That(materials.TryGet(materialId, out var semanticDescriptor), Is.True);
+            Assert.That(semanticDescriptor.SourceUris, Is.Empty);
+
+            new PresentationHostAssetConfigLoader(pipeline, meshes, materials).Apply("raylib", catalog);
+
+            Assert.That(materials.TryGet(materialId, out var boundDescriptor), Is.True);
+            Assert.That(boundDescriptor.SourceUris, Is.EqualTo(new[] { "TestMod:assets/Materials/surface.mat" }));
+            Assert.That(boundDescriptor.Flags, Is.EqualTo(MaterialAssetFlags.Transparent | MaterialAssetFlags.DoubleSided));
         }
 
         private static string CreateTempCoreRoot()
@@ -219,6 +307,7 @@ namespace Ludots.Tests.Presentation
         {
             var catalog = new ConfigCatalog();
             catalog.Add(new ConfigCatalogEntry("Presentation/mesh_assets.json", ConfigMergePolicy.ArrayById, "id"));
+            catalog.Add(new ConfigCatalogEntry("Presentation/material_assets.json", ConfigMergePolicy.ArrayById, "id"));
             catalog.Add(new ConfigCatalogEntry("Presentation/host_assets.json", ConfigMergePolicy.ArrayById, "id"));
             return catalog;
         }
