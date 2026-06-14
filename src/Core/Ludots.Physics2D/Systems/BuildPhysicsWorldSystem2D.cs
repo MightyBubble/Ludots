@@ -48,7 +48,7 @@ namespace Ludots.Core.Physics2D.Systems
                     rotation = rot.Value;
                 }
 
-                var aabb = CalculateAabb(in position, rotation, in collider);
+                var aabb = CalculateAabb(position.Value, rotation, in collider);
                 AddRigidBody(entity, shapeSlot: 0, in aabb, mass.IsStatic);
             });
 
@@ -72,7 +72,7 @@ namespace Ludots.Core.Physics2D.Systems
                         Type = ToColliderType(state.GetShape(i)),
                         ShapeDataIndex = state.GetShapeDataIndex(i)
                     };
-                    var aabb = CalculateAabb(in position, rotation, in collider);
+                    var aabb = CalculateAabb(position.Value, rotation, in collider);
                     AddRigidBody(entity, checked((byte)i), in aabb, mass.IsStatic);
                 }
             });
@@ -92,25 +92,25 @@ namespace Ludots.Core.Physics2D.Systems
             ShapeSlots.Add(shapeSlot);
         }
 
-        private static Aabb CalculateAabb(in Position2D position, Fix64 rotation, in Collider2D collider)
+        private static Aabb CalculateAabb(Fix64Vec2 worldPos, Fix64 rotation, in Collider2D collider)
         {
             return collider.Type switch
             {
-                ColliderType2D.Circle => CalculateCircleAabb(position.Value, collider.ShapeDataIndex),
-                ColliderType2D.Box => CalculateBoxAabb(position.Value, rotation, collider.ShapeDataIndex),
-                ColliderType2D.Polygon => CalculatePolygonAabb(position.Value, rotation, collider.ShapeDataIndex),
+                ColliderType2D.Circle => CalculateCircleAabb(worldPos, rotation, collider.ShapeDataIndex),
+                ColliderType2D.Box => CalculateBoxAabb(worldPos, rotation, collider.ShapeDataIndex),
+                ColliderType2D.Polygon => CalculatePolygonAabb(worldPos, rotation, collider.ShapeDataIndex),
                 _ => throw new ArgumentOutOfRangeException(nameof(collider.Type), collider.Type, "Unknown collider type")
             };
         }
 
-        private static Aabb CalculateCircleAabb(Fix64Vec2 worldPos, int shapeIndex)
+        private static Aabb CalculateCircleAabb(Fix64Vec2 worldPos, Fix64 rotation, int shapeIndex)
         {
             if (!ShapeDataStorage2D.TryGetCircle(shapeIndex, out var circleData))
             {
                 throw new InvalidOperationException($"Circle shape not found: {shapeIndex}");
             }
 
-            var center = worldPos + circleData.LocalCenter;
+            var center = ShapeWorldTransform2D.GetCircleCenter(worldPos, rotation, circleData);
             var radiusVec = new Fix64Vec2(circleData.Radius, circleData.Radius);
 
             return new Aabb
@@ -127,7 +127,7 @@ namespace Ludots.Core.Physics2D.Systems
                 throw new InvalidOperationException($"Box shape not found: {shapeIndex}");
             }
 
-            var center = worldPos + boxData.LocalCenter;
+            var center = ShapeWorldTransform2D.GetBoxCenter(worldPos, rotation, boxData);
             var halfSize = new Fix64Vec2(boxData.HalfWidth, boxData.HalfHeight);
 
             if (rotation != Fix64.Zero)
@@ -168,8 +168,7 @@ namespace Ludots.Core.Physics2D.Systems
                 cos = Fix64Math.Cos(rotation);
             }
 
-            var localCenter = polygonData.LocalCenter;
-            var v0 = polygonData.Vertices[0] - localCenter;
+            var v0 = ShapeWorldTransform2D.GetPolygonLocalVertex(polygonData, 0);
             if (rotation != Fix64.Zero)
             {
                 v0 = Rotate(v0, sin, cos);
@@ -180,7 +179,7 @@ namespace Ludots.Core.Physics2D.Systems
 
             for (int i = 1; i < polygonData.VertexCount; i++)
             {
-                var v = polygonData.Vertices[i] - localCenter;
+                var v = ShapeWorldTransform2D.GetPolygonLocalVertex(polygonData, i);
                 if (rotation != Fix64.Zero)
                 {
                     v = Rotate(v, sin, cos);
@@ -192,8 +191,8 @@ namespace Ludots.Core.Physics2D.Systems
 
             return new Aabb
             {
-                Min = worldPos + polygonData.LocalOffset + min,
-                Max = worldPos + polygonData.LocalOffset + max
+                Min = worldPos + min,
+                Max = worldPos + max
             };
         }
 

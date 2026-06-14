@@ -136,6 +136,12 @@ namespace Ludots.Core.Physics2D.Systems
 
         private void DrawRigidBodyMeters(Entity entity, ref Collider2D collider, ref Mass2D mass, Vector2 drawPosM)
         {
+            Fix64 rotation = Fix64.Zero;
+            if (World.TryGet(entity, out Rotation2D rotationComponent))
+            {
+                rotation = rotationComponent.Value;
+            }
+
             DebugDrawColor color;
             if (World.Has<SleepingTag>(entity))
             {
@@ -154,7 +160,7 @@ namespace Ludots.Core.Physics2D.Systems
                     // Fix64 → float 渲染边界
                     _buffer.Circles.Add(new DebugDrawCircle2D
                     {
-                        Center = drawPosM + circle.LocalCenter.ToVector2() * CmToM,
+                        Center = drawPosM + ShapeWorldTransform2D.RotateLocal(circle.LocalCenter, rotation).ToVector2() * CmToM,
                         Radius = circle.Radius.ToFloat() * CmToM,
                         Thickness = DefaultThickness,
                         Color = color
@@ -166,10 +172,10 @@ namespace Ludots.Core.Physics2D.Systems
                     if (!ShapeDataStorage2D.TryGetBox(collider.ShapeDataIndex, out var box)) return;
                     _buffer.Boxes.Add(new DebugDrawBox2D
                     {
-                        Center = drawPosM + box.LocalCenter.ToVector2() * CmToM,
+                        Center = drawPosM + ShapeWorldTransform2D.RotateLocal(box.LocalCenter, rotation).ToVector2() * CmToM,
                         HalfWidth = box.HalfWidth.ToFloat() * CmToM,
                         HalfHeight = box.HalfHeight.ToFloat() * CmToM,
-                        RotationRadians = 0f,
+                        RotationRadians = rotation.ToFloat(),
                         Thickness = DefaultThickness,
                         Color = color
                     });
@@ -178,10 +184,24 @@ namespace Ludots.Core.Physics2D.Systems
                 case ColliderType2D.Polygon:
                 {
                     if (!ShapeDataStorage2D.TryGetPolygon(collider.ShapeDataIndex, out var poly) || poly.Vertices == null || poly.VertexCount < 3) return;
+                    Fix64 sin = Fix64.Zero;
+                    Fix64 cos = Fix64.OneValue;
+                    if (rotation != Fix64.Zero)
+                    {
+                        sin = Fix64Math.Sin(rotation);
+                        cos = Fix64Math.Cos(rotation);
+                    }
+
                     for (int i = 0; i < poly.VertexCount; i++)
                     {
-                        var aLocal = poly.LocalOffset + poly.Vertices[i] - poly.LocalCenter;
-                        var bLocal = poly.LocalOffset + poly.Vertices[(i + 1) % poly.VertexCount] - poly.LocalCenter;
+                        var aLocal = ShapeWorldTransform2D.GetPolygonLocalVertex(poly, i);
+                        var bLocal = ShapeWorldTransform2D.GetPolygonLocalVertex(poly, (i + 1) % poly.VertexCount);
+                        if (rotation != Fix64.Zero)
+                        {
+                            aLocal = ShapeWorldTransform2D.RotateLocal(aLocal, sin, cos);
+                            bLocal = ShapeWorldTransform2D.RotateLocal(bLocal, sin, cos);
+                        }
+
                         var a = drawPosM + aLocal.ToVector2() * CmToM;
                         var b = drawPosM + bLocal.ToVector2() * CmToM;
                         _buffer.Lines.Add(new DebugDrawLine2D

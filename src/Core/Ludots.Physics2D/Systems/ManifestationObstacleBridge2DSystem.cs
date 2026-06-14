@@ -38,15 +38,26 @@ namespace Ludots.Core.Physics2D.Systems
                     Upsert(entity, new Rotation2D { Value = Fix64.FromFloat(facing.AngleRad) });
                 }
 
+                bool hadPreviousBridgeState = World.TryGet(entity, out ManifestationObstacleBridge2DState previousBridgeState);
                 int signature = ComputeShapeSignature(in intent, entity);
-                int shapeDataIndex = EnsureShapeRegistered(entity, in intent, signature);
+                bool wantsPhysicsSink = intent.SinkPhysicsCollider != 0;
+                bool wantsNavigationSink = intent.SinkNavigationObstacle != 0;
+                int shapeDataIndex = -1;
+                if (wantsPhysicsSink || wantsNavigationSink)
+                {
+                    shapeDataIndex = EnsureShapeRegistered(entity, in intent, signature);
+                }
+                else if (hadPreviousBridgeState && previousBridgeState.ShapeSignature == signature)
+                {
+                    shapeDataIndex = previousBridgeState.ShapeDataIndex;
+                }
 
                 if (World.Has<CompoundObstacle2DState>(entity))
                 {
                     World.Remove<CompoundObstacle2DState>(entity);
                 }
 
-                if (intent.SinkPhysicsCollider != 0)
+                if (wantsPhysicsSink)
                 {
                     Upsert(entity, new Collider2D
                     {
@@ -56,8 +67,15 @@ namespace Ludots.Core.Physics2D.Systems
                     Upsert(entity, Mass2D.Static);
                     Upsert(entity, Velocity2D.Zero);
                 }
+                else
+                {
+                    if (previousBridgeState.SinkPhysicsCollider != 0)
+                    {
+                        RemovePhysicsDerivedState(entity);
+                    }
+                }
 
-                if (intent.SinkNavigationObstacle != 0)
+                if (wantsNavigationSink)
                 {
                     Upsert(entity, new NavObstacle2D
                     {
@@ -74,6 +92,21 @@ namespace Ludots.Core.Physics2D.Systems
                         MaxNeighbors = 0
                     });
                 }
+                else
+                {
+                    if (previousBridgeState.SinkNavigationObstacle != 0)
+                    {
+                        RemoveNavigationDerivedState(entity);
+                    }
+                }
+
+                Upsert(entity, new ManifestationObstacleBridge2DState
+                {
+                    ShapeDataIndex = shapeDataIndex,
+                    ShapeSignature = signature,
+                    SinkPhysicsCollider = intent.SinkPhysicsCollider,
+                    SinkNavigationObstacle = intent.SinkNavigationObstacle
+                });
             });
 
             World.Query(in _compoundQuery, (Entity entity, ref WorldPositionCm worldPosition, ref CompoundObstacle2D obstacle) =>
@@ -90,8 +123,16 @@ namespace Ludots.Core.Physics2D.Systems
                     Upsert(entity, new Rotation2D { Value = Fix64.FromFloat(facing.AngleRad) });
                 }
 
+                bool hadPreviousCompoundState = World.TryGet(entity, out CompoundObstacle2DState previousCompoundState);
                 int signature = ComputeCompoundShapeSignature(in obstacle);
                 CompoundObstacle2DState state = EnsureCompoundStateRegistered(entity, in obstacle, signature);
+                if (state.SinkPhysicsCollider != obstacle.SinkPhysicsCollider ||
+                    state.SinkNavigationObstacle != obstacle.SinkNavigationObstacle)
+                {
+                    state.SinkPhysicsCollider = obstacle.SinkPhysicsCollider;
+                    state.SinkNavigationObstacle = obstacle.SinkNavigationObstacle;
+                    Upsert(entity, state);
+                }
 
                 if (World.Has<Collider2D>(entity))
                 {
@@ -113,6 +154,13 @@ namespace Ludots.Core.Physics2D.Systems
                     Upsert(entity, Mass2D.Static);
                     Upsert(entity, Velocity2D.Zero);
                 }
+                else
+                {
+                    if (hadPreviousCompoundState && previousCompoundState.SinkPhysicsCollider != 0)
+                    {
+                        RemovePhysicsDerivedState(entity);
+                    }
+                }
 
                 if (obstacle.SinkNavigationObstacle != 0)
                 {
@@ -125,6 +173,13 @@ namespace Ludots.Core.Physics2D.Systems
                         TimeHorizonSec = Fix64.Zero,
                         MaxNeighbors = 0
                     });
+                }
+                else
+                {
+                    if (hadPreviousCompoundState && previousCompoundState.SinkNavigationObstacle != 0)
+                    {
+                        RemoveNavigationDerivedState(entity);
+                    }
                 }
             });
         }
@@ -139,11 +194,6 @@ namespace Ludots.Core.Physics2D.Systems
             }
 
             int shapeDataIndex = RegisterShape(entity, in intent);
-            Upsert(entity, new ManifestationObstacleBridge2DState
-            {
-                ShapeDataIndex = shapeDataIndex,
-                ShapeSignature = signature
-            });
             return shapeDataIndex;
         }
 
@@ -297,8 +347,6 @@ namespace Ludots.Core.Physics2D.Systems
         private static int ComputeCompoundShapeSignature(in CompoundObstacle2D obstacle)
         {
             var hash = new HashCode();
-            hash.Add(obstacle.SinkPhysicsCollider);
-            hash.Add(obstacle.SinkNavigationObstacle);
             hash.Add(obstacle.PieceCount);
             for (int i = 0; i < obstacle.PieceCount; i++)
             {
@@ -349,7 +397,7 @@ namespace Ludots.Core.Physics2D.Systems
             Fix64 maxDistanceSq = Fix64.Zero;
             for (int i = 0; i < polygon.VertexCount; i++)
             {
-                Fix64Vec2 delta = polygon.LocalOffset + polygon.Vertices[i] - polygon.LocalCenter;
+                Fix64Vec2 delta = ShapeWorldTransform2D.GetPolygonLocalVertex(polygon, i);
                 Fix64 distanceSq = delta.LengthSquared();
                 if (distanceSq > maxDistanceSq)
                 {
@@ -430,6 +478,37 @@ namespace Ludots.Core.Physics2D.Systems
             else
             {
                 World.Add(entity, component);
+            }
+        }
+
+        private void RemovePhysicsDerivedState(Entity entity)
+        {
+            if (World.Has<Collider2D>(entity))
+            {
+                World.Remove<Collider2D>(entity);
+            }
+
+            if (World.Has<Mass2D>(entity))
+            {
+                World.Remove<Mass2D>(entity);
+            }
+
+            if (World.Has<Velocity2D>(entity))
+            {
+                World.Remove<Velocity2D>(entity);
+            }
+        }
+
+        private void RemoveNavigationDerivedState(Entity entity)
+        {
+            if (World.Has<NavObstacle2D>(entity))
+            {
+                World.Remove<NavObstacle2D>(entity);
+            }
+
+            if (World.Has<NavKinematics2D>(entity))
+            {
+                World.Remove<NavKinematics2D>(entity);
             }
         }
     }
