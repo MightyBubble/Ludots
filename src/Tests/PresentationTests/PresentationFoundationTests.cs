@@ -1770,6 +1770,24 @@ namespace Ludots.Tests.Presentation
         }
 
         [Test]
+        public void RegisterPresentationAdapterCapabilities_ValidatesExternalTargetLifecycleWiring()
+        {
+            using var engine = new Ludots.Core.Engine.GameEngine();
+            var capabilities = new PresentationAdapterCapabilities(PresentationVisualCapabilities.ExternalTargetLifecycle);
+
+            InvalidOperationException ex = Assert.Throws<InvalidOperationException>(
+                () => engine.RegisterPresentationAdapterCapabilities(capabilities))!;
+            Assert.That(ex.Message, Does.Contain(nameof(PresentationTargetGeneration)));
+
+            var targetGeneration = new PresentationTargetGeneration();
+            engine.SetService(CoreServiceKeys.PresentationTargetGeneration, targetGeneration);
+
+            engine.RegisterPresentationAdapterCapabilities(capabilities);
+
+            Assert.That(engine.GetService(CoreServiceKeys.PresentationAdapterCapabilities), Is.SameAs(capabilities));
+        }
+
+        [Test]
         public void PresentationRequestFlushSystem_ClearsTransientProjection_WhenFrameStopsEmittingMovableProxy()
         {
             using var world = World.Create();

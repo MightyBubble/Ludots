@@ -65,7 +65,7 @@ Core 负责每帧生成完整 visual snapshot，不负责 adapter 侧的 persist
 * `RenderPath` 决定实例应进入 static lane 还是 skinned lane，adapter 不得把两条 lane 合并为一个共享实例语义。
 * 维护外部 target lifecycle 的 adapter 必须显式持有并更新 Core 的 `PresentationTargetGeneration`。当 target unavailable -> ready 或 target A -> target B 时，adapter 调用 generation service；Core 在下一次 flush 中重投影 retained content。
 * persistent / delta 消费方必须比较 `(content/static revision, ProjectionGeneration)`。`Revision` 不变但 `ProjectionGeneration` 变化时，adapter resident state 需要一次 full resync。
-* 声明 `PresentationVisualCapabilities.ExternalTargetLifecycle` 的 adapter 必须绑定 `PresentationTargetGeneration`；缺失时 validator 抛出诊断，不允许静默 fallback。
+* 声明 `PresentationVisualCapabilities.ExternalTargetLifecycle` 的 adapter 必须通过 `GameEngine.RegisterPresentationAdapterCapabilities(...)` 注册能力，并绑定 `PresentationTargetGeneration`；缺失时 validator 抛出诊断，不允许静默 fallback。
 
 这些要求对应的 follow-up playable 方案见 [../rfcs/RFC-0052-presentation-snapshot-playable-mods.md](../rfcs/RFC-0052-presentation-snapshot-playable-mods.md)。
 

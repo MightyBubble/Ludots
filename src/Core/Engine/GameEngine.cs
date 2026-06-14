@@ -180,6 +180,15 @@ namespace Ludots.Core.Engine
         public bool RemoveService<T>(ServiceKey<T> key)
             => _engineServices.Remove(key);
 
+        public void RegisterPresentationAdapterCapabilities(PresentationAdapterCapabilities capabilities)
+        {
+            if (capabilities == null) throw new ArgumentNullException(nameof(capabilities));
+
+            TryGetService(CoreServiceKeys.PresentationTargetGeneration, out PresentationTargetGeneration targetGeneration);
+            PresentationVisualCapabilityValidator.ValidateTargetLifecycle(capabilities, targetGeneration);
+            SetService(CoreServiceKeys.PresentationAdapterCapabilities, capabilities);
+        }
+
         public GameSynchronizationContext SyncContext { get; private set; }
 
         // Systems - 按Phase分组
