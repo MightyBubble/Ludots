@@ -78,6 +78,90 @@ namespace Ludots.Tests.GAS
         }
 
         [Test]
+        public void ManifestationObstacleBridge2D_SingleSinkTogglesRemoveDerivedState()
+        {
+            using var world = World.Create();
+            var system = new ManifestationObstacleBridge2DSystem(world);
+            var entity = world.Create(
+                WorldPositionCm.FromCm(0, 0),
+                new ManifestationObstacleIntent2D
+                {
+                    Shape = ManifestationObstacleShape2D.Circle,
+                    SinkPhysicsCollider = 1,
+                    SinkNavigationObstacle = 1,
+                    RadiusCm = 50,
+                    NavRadiusCm = 50,
+                });
+
+            system.Update(0f);
+
+            That(world.Has<Collider2D>(entity), Is.True);
+            That(world.Has<Mass2D>(entity), Is.True);
+            That(world.Has<Velocity2D>(entity), Is.True);
+            That(world.Has<NavObstacle2D>(entity), Is.True);
+            That(world.Has<NavKinematics2D>(entity), Is.True);
+
+            var intent = world.Get<ManifestationObstacleIntent2D>(entity);
+            intent.SinkPhysicsCollider = 0;
+            intent.SinkNavigationObstacle = 0;
+            world.Set(entity, intent);
+
+            system.Update(0f);
+
+            That(world.Has<Collider2D>(entity), Is.False);
+            That(world.Has<Mass2D>(entity), Is.False);
+            That(world.Has<Velocity2D>(entity), Is.False);
+            That(world.Has<NavObstacle2D>(entity), Is.False);
+            That(world.Has<NavKinematics2D>(entity), Is.False);
+        }
+
+        [Test]
+        public void ManifestationObstacleBridge2D_DisabledInitialSinksDoNotRemoveAuthoredRuntimeComponents()
+        {
+            using var world = World.Create();
+            int authoredShapeIndex = ShapeDataStorage2D.RegisterBox(Fix64.FromInt(10), Fix64.FromInt(20));
+            var authoredVelocity = Velocity2D.FromCmPerSec(7f, 8f, 0.5f);
+            var authoredMass = Mass2D.FromFloat(1f, 2f);
+            var authoredNav = new NavKinematics2D
+            {
+                MaxSpeedCmPerSec = Fix64.FromInt(300),
+                MaxAccelCmPerSec2 = Fix64.FromInt(400),
+                RadiusCm = Fix64.FromInt(30),
+                NeighborDistCm = Fix64.FromInt(500),
+                TimeHorizonSec = Fix64.OneValue,
+                MaxNeighbors = 4
+            };
+
+            var entity = world.Create(
+                WorldPositionCm.FromCm(0, 0),
+                new Collider2D { Type = ColliderType2D.Box, ShapeDataIndex = authoredShapeIndex },
+                authoredMass,
+                authoredVelocity,
+                new NavObstacle2D { Shape = NavObstacleShape2D.Box, ShapeDataIndex = authoredShapeIndex },
+                authoredNav,
+                new ManifestationObstacleIntent2D
+                {
+                    Shape = ManifestationObstacleShape2D.Circle,
+                    SinkPhysicsCollider = 0,
+                    SinkNavigationObstacle = 0,
+                    RadiusCm = 50,
+                    NavRadiusCm = 50,
+                });
+
+            var system = new ManifestationObstacleBridge2DSystem(world);
+            system.Update(0f);
+
+            That(world.Get<Collider2D>(entity).ShapeDataIndex, Is.EqualTo(authoredShapeIndex));
+            That(world.Get<Mass2D>(entity).InverseMass, Is.EqualTo(authoredMass.InverseMass));
+            That(world.Get<Mass2D>(entity).InverseInertia, Is.EqualTo(authoredMass.InverseInertia));
+            That(world.Get<Velocity2D>(entity).Linear, Is.EqualTo(authoredVelocity.Linear));
+            That(world.Get<Velocity2D>(entity).Angular, Is.EqualTo(authoredVelocity.Angular));
+            That(world.Get<NavObstacle2D>(entity).ShapeDataIndex, Is.EqualTo(authoredShapeIndex));
+            That(world.Get<NavKinematics2D>(entity).MaxSpeedCmPerSec, Is.EqualTo(authoredNav.MaxSpeedCmPerSec));
+            That(world.Get<NavKinematics2D>(entity).MaxNeighbors, Is.EqualTo(authoredNav.MaxNeighbors));
+        }
+
+        [Test]
         public void ComponentRegistry_ParsesPolygonManifestationObstacle_AndBridgeCreatesPolygonObstacle()
         {
             using var world = World.Create();
@@ -287,6 +371,11 @@ namespace Ludots.Tests.GAS
                 "ManifestationObstacleIntent2D",
                 """{ "shape": "Circle", "sinkPhysicsCollider": 1, "sinkNavigationObstacle": true, "navRadiusCm": 10 }""",
                 "requires a boolean value");
+            AssertRejects(
+                world,
+                "ManifestationObstacleIntent2D",
+                """{ "shape": "Circle", "sinkPhysicsCollider": false, "sinkNavigationObstacle": false, "radiusCm": 10, "navRadiusCm": 10, "localOffsetCm": { "x": 0, "y": 0 } }""",
+                "requires at least one sink intent");
             AssertRejects(
                 world,
                 "CompoundObstacle2D",

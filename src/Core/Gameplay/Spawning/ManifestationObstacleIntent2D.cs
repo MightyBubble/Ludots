@@ -299,5 +299,7 @@ namespace Ludots.Core.Gameplay.Spawning
     {
         public int ShapeDataIndex;
         public int ShapeSignature;
+        public byte SinkPhysicsCollider;
+        public byte SinkNavigationObstacle;
     }
 }
