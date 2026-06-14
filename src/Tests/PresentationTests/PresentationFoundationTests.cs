@@ -1410,6 +1410,7 @@ namespace Ludots.Tests.Presentation
             var snapshotBuffer = new PrimitiveDrawBuffer();
             var requests = new PresentationRequestBuffer();
             var definitions = new PerformerDefinitionRegistry();
+            var stableDrawCache = new StableDrawCache();
             int visibleDef = RegisterStaticVisualDefinition(definitions, "visible", assetId: 10, materialId: 20);
             int hiddenDef = RegisterStaticVisualDefinition(definitions, "hidden", assetId: 11, materialId: 21, visibilityParamKey: 500);
             int culledDef = RegisterStaticVisualDefinition(definitions, "culled", assetId: 12, materialId: 22, renderPath: VisualRenderPath.InstancedStaticMesh);
@@ -1441,13 +1442,13 @@ namespace Ludots.Tests.Presentation
             world.Get<PerformerWorldRotation>(culledPerformer).Value = culledRotation;
             world.Get<PerformerWorldScale>(culledPerformer).Value = new Vector3(3f, 2f, 1f);
 
-            using var system = new PerformerEmitSystem(world, instances, definitions, requests, new Dictionary<string, object>(), null!, null!);
+            using var system = new PerformerEmitSystem(world, instances, definitions, requests, new Dictionary<string, object>(), null!, null!, stableDrawCache: stableDrawCache);
             using var flush = new PresentationRequestFlushSystem(
                 world,
                 requests,
                 new PrefabRegistry(),
                 new MeshAssetRegistry(),
-                new StableDrawCache(),
+                stableDrawCache,
                 drawBuffer,
                 new GroundOverlayBuffer(),
                 new WorldHudBatchBuffer(),
