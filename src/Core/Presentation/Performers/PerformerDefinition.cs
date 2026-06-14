@@ -1,5 +1,6 @@
 using System.Numerics;
 using Ludots.Core.Presentation.Hud;
+using Ludots.Core.Presentation.Instancing;
 
 namespace Ludots.Core.Presentation.Performers
 {
@@ -68,6 +69,7 @@ namespace Ludots.Core.Presentation.Performers
         public string Extends = string.Empty;
         public ChildPerformerRef[] Children = System.Array.Empty<ChildPerformerRef>();
         public BehaviorSlot[] Behaviors = System.Array.Empty<BehaviorSlot>();
+        public InstancedBatchBinding[] InstancedBatches = System.Array.Empty<InstancedBatchBinding>();
         public PerformerRule[] Rules = System.Array.Empty<PerformerRule>();
         public ConditionRef VisibilityCondition;
         public PerformerParamBinding[] Bindings = System.Array.Empty<PerformerParamBinding>();
@@ -91,6 +93,7 @@ namespace Ludots.Core.Presentation.Performers
         internal uint AssetBindingSlotMask;
         internal uint AnimatorSlotMask;
         internal bool HasAssetBindingBehavior;
+        internal bool HasInstancedBatchBindings;
         internal bool HasAnimatorBehavior;
         internal bool HasSoundBehavior;
         internal bool HasMinimapMarkerBehavior;
@@ -278,11 +281,12 @@ namespace Ludots.Core.Presentation.Performers
             AssetBindingSlotMask = 0u;
             AnimatorSlotMask = 0u;
             HasAssetBindingBehavior = false;
+            HasInstancedBatchBindings = InstancedBatches != null && InstancedBatches.Length != 0;
             HasAnimatorBehavior = false;
             HasSoundBehavior = false;
             HasMinimapMarkerBehavior = false;
             HasSurfaceAuthoring = Surface != null;
-            RequiresBootstrapProcessing = (Bindings != null && Bindings.Length > 0) || HasSurfaceAuthoring;
+            RequiresBootstrapProcessing = (Bindings != null && Bindings.Length > 0) || HasSurfaceAuthoring || HasInstancedBatchBindings;
             UsesStableVisualCache = false;
             UsesEventDrivenStaticEmit = false;
             UsesRetainedPresentationRequest = false;

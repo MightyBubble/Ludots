@@ -12,6 +12,12 @@ namespace Ludots.Core.Presentation.Rendering
         MaterialOverride = 1 << 3,
         InstanceCustomData = 1 << 4,
         ExternalTargetLifecycle = 1 << 5,
+        InstancedStaticMeshBatch = 1 << 6,
+        HierarchicalInstancedStaticMeshBatch = 1 << 7,
+        InstancedBatchVisibility = 1 << 8,
+        InstancedBatchRefresh = 1 << 9,
+        InstancedBatchPresentationState = 1 << 10,
+        InstancedBatchEffect = 1 << 11,
     }
 
     public sealed class PresentationAdapterCapabilities

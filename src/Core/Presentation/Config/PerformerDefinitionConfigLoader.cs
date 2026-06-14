@@ -9,6 +9,7 @@ using Ludots.Core.Gameplay.GAS.Registry;
 using Ludots.Core.Presentation.Components;
 using Ludots.Core.Presentation.Events;
 using Ludots.Core.Presentation.Hud;
+using Ludots.Core.Presentation.Instancing;
 using Ludots.Core.Presentation.Performers;
 using Ludots.Core.Presentation.Rendering;
 
@@ -32,6 +33,7 @@ namespace Ludots.Core.Presentation.Config
         private readonly Func<string, int> _resolveAnimationProfileId;
         private readonly Func<AssetKind, string, int> _resolveBehaviorAssetId;
         private readonly Func<string, int> _resolveSelectionSetKeyId;
+        private readonly Func<string, int> _resolveInstancedBatchAssetId;
 
         public PerformerDefinitionConfigLoader(
             ConfigPipeline configs,
@@ -45,7 +47,8 @@ namespace Ludots.Core.Presentation.Config
             Func<string, int> resolveAnimatorControllerId = null,
             Func<string, int> resolveAnimationProfileId = null,
             Func<AssetKind, string, int> resolveBehaviorAssetId = null,
-            Func<string, int> resolveSelectionSetKeyId = null)
+            Func<string, int> resolveSelectionSetKeyId = null,
+            Func<string, int> resolveInstancedBatchAssetId = null)
         {
             _configs = configs ?? throw new ArgumentNullException(nameof(configs));
             _registry = registry ?? throw new ArgumentNullException(nameof(registry));
@@ -59,6 +62,7 @@ namespace Ludots.Core.Presentation.Config
             _resolveAnimationProfileId = resolveAnimationProfileId ?? (_ => 0);
             _resolveBehaviorAssetId = resolveBehaviorAssetId ?? ((_, __) => 0);
             _resolveSelectionSetKeyId = resolveSelectionSetKeyId ?? (_ => 0);
+            _resolveInstancedBatchAssetId = resolveInstancedBatchAssetId ?? (_ => 0);
         }
 
         public void Load(ConfigCatalog catalog = null, ConfigConflictReport report = null)
@@ -388,6 +392,7 @@ namespace Ludots.Core.Presentation.Config
                 Bindings = ParseBindings(node["bindings"]),
                 Children = ParseChildren(node["children"]),
                 Behaviors = behaviors,
+                InstancedBatches = ParseInstancedBatchBindings(node["instancedBatches"], key),
                 ParamDefaults = ParseParamDefaults(node["paramDefaults"]),
             };
 
@@ -1184,6 +1189,55 @@ namespace Ludots.Core.Presentation.Config
             }
 
             return slots;
+        }
+
+        private InstancedBatchBinding[] ParseInstancedBatchBindings(JsonNode? node, string ownerKey)
+        {
+            if (node is not JsonArray arr || arr.Count == 0)
+            {
+                return Array.Empty<InstancedBatchBinding>();
+            }
+
+            var bindings = new InstancedBatchBinding[arr.Count];
+            for (int i = 0; i < arr.Count; i++)
+            {
+                if (arr[i] is not JsonObject obj)
+                {
+                    throw new InvalidOperationException($"Performer '{ownerKey}' instancedBatches[{i}] must be an object.");
+                }
+
+                string batchKey = ParseRequiredSemanticString(
+                    obj["batchAssetId"],
+                    $"Performer '{ownerKey}' instancedBatches[{i}].batchAssetId");
+                int batchAssetId = _resolveInstancedBatchAssetId(batchKey);
+                if (batchAssetId <= 0)
+                {
+                    throw new InvalidOperationException(
+                        $"Performer '{ownerKey}' references unknown instanced batch asset '{batchKey}'.");
+                }
+
+                bindings[i] = new InstancedBatchBinding(batchAssetId);
+            }
+
+            return bindings;
+        }
+
+        private static string ParseRequiredSemanticString(JsonNode? node, string context)
+        {
+            if (node is JsonValue value)
+            {
+                if (value.TryGetValue<int>(out int numericId))
+                {
+                    throw new InvalidOperationException($"{context} must be a semantic string, not numeric id {numericId}.");
+                }
+
+                if (value.TryGetValue<string>(out string? text) && !string.IsNullOrWhiteSpace(text))
+                {
+                    return RequireCanonicalString(text, context);
+                }
+            }
+
+            throw new InvalidOperationException($"{context} must be a semantic string.");
         }
 
         private ParamDefault[] ParseParamDefaults(JsonNode? node)
