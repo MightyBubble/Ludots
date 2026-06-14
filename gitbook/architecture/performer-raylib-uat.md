@@ -5,7 +5,7 @@
 - **玩家体验 UAT** — 从玩家视角验证可见效果
 - **Mod 作者配置 UAT** — 从 Mod 开发者视角验证 JSON 配置的输入/输出/反馈
 
-Raylib 全部测通后，再去 UE5 写适配。
+Raylib 全部测通后，再由开发者/应用仓库中的商业引擎 adapter 承接 UE5 等高保真适配。
 
 ---
 
@@ -41,7 +41,7 @@ Raylib 的 GLTF 骨骼动画存在已知问题（bone transform 计算偏差，�
 - 测试模型限制为 2-3 个骨骼的简单链（如：root→torso→arm）
 - 只验证：AnimatorRuntimeSystem 状态机输出 clip index → Raylib adapter 调用 UpdateModelAnimation → 骨骼有可见运动
 - 不验证：蒙皮权重混合质量、复杂骨骼树、动画过渡平滑度
-- 这些高保真验证留给 UE5 适配层（T18）
+- 这些高保真验证留给开发者仓库中的 UE5 适配层（T18）
 
 ### 0.4 测试资产清单
 
@@ -404,14 +404,14 @@ mods/fixtures/blacksmith/
 │   └── BlacksmithTestModEntry.cs
 ```
 
-## 15 Raylib → UE5 适配顺序
+## 15 Raylib → 商业引擎适配顺序
 
 1. Raylib 全部 §1-13 测通
-2. UE5 adapter 实现 AssetKind 映射：
+2. 开发者仓库中的 UE5 adapter 实现 AssetKind 映射：
    - Mesh → ISM (Instanced Static Mesh)
    - SkinnedMesh → Skeletal Mesh Component
    - Decal → Decal Component
    - VFX → Niagara System
    - Sound → Audio Component
    - Spline → Spline Mesh Component
-3. UE5 跑同一套 §13 UAT JSON，验证 adapter parity
+3. UE5 在 adapter 所属仓库跑同一套 §13 UAT JSON，验证 adapter parity
