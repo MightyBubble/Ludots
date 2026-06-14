@@ -550,6 +550,7 @@ namespace Ludots.Tests.Presentation
                 {
                     DefaultStateIndex = 0,
                     States = [ new AnimatorStateDefinition { PackedStateIndex = 3, DurationSeconds = 1f, PlaybackSpeed = 1f, Loop = true } ],
+                    Transitions = Array.Empty<AnimatorTransitionDefinition>(),
                 });
 
             var definitions = new PerformerDefinitionRegistry();
