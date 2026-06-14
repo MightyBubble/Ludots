@@ -67,6 +67,7 @@ namespace Ludots.Client.Raylib.Rendering
         private int _benchmarkActiveInstanceCount;
         private int _lastPersistentSnapshotRevision = -1;
         private int _lastPersistentStaticMeshGeometryRevision = -1;
+        private int _lastPersistentProjectionGeneration = -1;
         private double _lastBenchmarkBucketRebuildMs;
         private BucketCacheOwner _bucketOwner;
 
@@ -93,19 +94,25 @@ namespace Ludots.Client.Raylib.Rendering
 
             bool requiresFullRebuild = _bucketOwner != BucketCacheOwner.PersistentSync;
             int staticMeshGeometryRevision = snapshot.StaticMeshGeometryRevision;
-            if (!requiresFullRebuild && staticMeshGeometryRevision == _lastPersistentStaticMeshGeometryRevision)
+            int projectionGeneration = snapshot.ProjectionGeneration;
+            bool projectionGenerationChanged = projectionGeneration != _lastPersistentProjectionGeneration;
+            if (!requiresFullRebuild &&
+                !projectionGenerationChanged &&
+                staticMeshGeometryRevision == _lastPersistentStaticMeshGeometryRevision)
             {
                 LastPersistentSyncMs = (Stopwatch.GetTimestamp() - syncStart) * 1000d / Stopwatch.Frequency;
                 return;
             }
 
             if (!requiresFullRebuild &&
+                !projectionGenerationChanged &&
                 snapshot.StaticMeshDeltaBaseRevision == _lastPersistentSnapshotRevision &&
                 snapshot.StaticMeshDeltaItemCount + snapshot.StaticMeshRemovedStableIdCount > 0)
             {
-                _planner.SyncDeltas(snapshot.GetStaticMeshDeltaItems(), snapshot.GetStaticMeshRemovedStableIds());
+                _planner.SyncDeltas(snapshot.GetStaticMeshDeltaItems(), snapshot.GetStaticMeshRemovedStableIds(), projectionGeneration);
                 _lastPersistentSnapshotRevision = snapshot.Revision;
                 _lastPersistentStaticMeshGeometryRevision = staticMeshGeometryRevision;
+                _lastPersistentProjectionGeneration = projectionGeneration;
                 ApplySyncOperations(_planner.Operations);
                 LastPersistentSyncMs = (Stopwatch.GetTimestamp() - syncStart) * 1000d / Stopwatch.Frequency;
                 return;
@@ -114,6 +121,7 @@ namespace Ludots.Client.Raylib.Rendering
             _planner.Sync(snapshot);
             _lastPersistentSnapshotRevision = snapshot.Revision;
             _lastPersistentStaticMeshGeometryRevision = staticMeshGeometryRevision;
+            _lastPersistentProjectionGeneration = projectionGeneration;
             if (requiresFullRebuild)
             {
                 RebuildBuckets(_planner.ActiveBindings.Values);
@@ -225,6 +233,7 @@ namespace Ludots.Client.Raylib.Rendering
             _bucketOwner = BucketCacheOwner.None;
             _lastPersistentSnapshotRevision = -1;
             _lastPersistentStaticMeshGeometryRevision = -1;
+            _lastPersistentProjectionGeneration = -1;
         }
 
         private void RebuildBuckets(IEnumerable<StaticMeshAdapterBindingState> bindings)
@@ -255,6 +264,9 @@ namespace Ludots.Client.Raylib.Rendering
                         break;
                     case StaticMeshAdapterSyncOpKind.Remove:
                         RemoveVisibleBinding(operation.Binding.StableId);
+                        break;
+                    case StaticMeshAdapterSyncOpKind.Resync:
+                        ResyncVisibleBinding(operation.Binding);
                         break;
                     default:
                         throw new InvalidOperationException(
@@ -304,6 +316,31 @@ namespace Ludots.Client.Raylib.Rendering
             {
                 slot.Bucket.MarkDirty();
             }
+        }
+
+        private void ResyncVisibleBinding(in StaticMeshAdapterBindingState binding)
+        {
+            if (!_bucketSlotsByStableId.TryGetValue(binding.StableId, out BucketSlot slot))
+            {
+                AddVisibleBinding(binding);
+                return;
+            }
+
+            if (!binding.IsVisible)
+            {
+                RemoveVisibleBinding(binding.StableId);
+                return;
+            }
+
+            if (!slot.Bucket.Lane.Equals(binding.Lane))
+            {
+                RemoveVisibleBinding(binding.StableId);
+                AddVisibleBinding(binding);
+                return;
+            }
+
+            slot.Bucket.Items[slot.ItemIndex] = binding.Item;
+            slot.Bucket.MarkDirty();
         }
 
         private static bool BucketItemEquals(in PrimitiveDrawItem a, in PrimitiveDrawItem b)

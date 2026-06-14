@@ -11,6 +11,7 @@ namespace Ludots.Core.Presentation.Rendering
         Surface = 1 << 2,
         MaterialOverride = 1 << 3,
         InstanceCustomData = 1 << 4,
+        ExternalTargetLifecycle = 1 << 5,
     }
 
     public sealed class PresentationAdapterCapabilities

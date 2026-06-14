@@ -7,10 +7,12 @@
 - Core 责任：
   - `src/Core/Presentation/Systems/EntityVisualEmitSystem.cs` 继续写入 `PresentationVisualSnapshotBuffer`
   - `src/Core/Presentation/Rendering/PrimitiveDrawItem.cs` 提供 `StableId`、`RenderPath`、`MaterialId`、`Mobility`、`Visibility`、`transform`
+  - `src/Core/Presentation/Rendering/PresentationTargetGeneration.cs` 提供独立的 projection / target generation，不污染 retained content revision
 - Adapter 责任：
   - 基于 snapshot 做 stableId-driven diff
-  - 本地维护 `stableId -> lane + slot + generation`
+  - 本地维护 `stableId -> lane + slot + generation + projectionGeneration`
   - 把 `Visibility`、transform、材质、lane 变化转成 adapter 自己的 scene object / instance slot 更新
+  - 当 adapter target unavailable -> ready 或 target A -> target B 时，显式 bump Core 的 `PresentationTargetGeneration`
 - 非目标：
   - 不把 dirty-only emit 回灌到 Core
   - 不要求 Web wire format 在本 issue 内承载该 contract
@@ -42,7 +44,7 @@ StaticMeshLaneKey = (RenderPath, MeshAssetId, MaterialId, Mobility)
 adapter 本地必须维护：
 
 ```text
-PresentationStableId -> (LaneKey, Slot, Generation, LastSnapshotItem)
+PresentationStableId -> (LaneKey, Slot, Generation, ProjectionGeneration, LastSnapshotItem)
 ```
 
 语义：
@@ -57,6 +59,10 @@ PresentationStableId -> (LaneKey, Slot, Generation, LastSnapshotItem)
 - `LastSnapshotItem`：
   - 保存上次已同步的 transform / visibility / flags / color / template 信息
   - 用于判断本帧是否需要 `Update`
+- `ProjectionGeneration`：
+  - 保存本 binding 对应的 Core projection / target generation
+  - generation 变化但 item 内容不变时，发出 `Resync`，让 adapter 重建 resident target state
+  - 不得回写或伪造 `StableDrawCache.ContentRevision`
 
 证据：
 
@@ -81,6 +87,10 @@ PresentationStableId -> (LaneKey, Slot, Generation, LastSnapshotItem)
    - 本帧 snapshot 不再包含该 `StableId`，发出 `Remove` 并释放 slot
 6. slot 复用：
    - 释放的 slot 可被后续对象复用，但 generation 必须递增
+7. projection generation：
+   - `PrimitiveDrawBuffer.ProjectionGeneration` 与上次同步值不同，且 item 内容未变时，发出 `Resync`
+   - `Resync` 不重新分配 lane slot，不表示 gameplay / performer content 变化
+   - adapter 应把 `Resync` 当作 resident target state 的 full resync 指令
 
 证据：
 
@@ -122,6 +132,7 @@ PresentationStableId -> (LaneKey, Slot, Generation, LastSnapshotItem)
   - 读取 `PresentationVisualSnapshotBuffer`
 - `src/Client/Ludots.Client.Raylib/Rendering/RaylibPrimitiveRenderer.cs`
   - 通过 `StaticMeshAdapterSyncPlanner` 同步 static lane
+  - 将 `ProjectionGeneration` 纳入 persistent lane skip / full sync 判断
   - 从持久 lane 状态绘制 visible static visuals
   - draw buffer 仅继续处理非持久 static lane 项与其他非 static lane 项
 
@@ -142,9 +153,11 @@ PresentationStableId -> (LaneKey, Slot, Generation, LastSnapshotItem)
   - visibility / transform 变化只做 update
   - remove 后 slot 复用且 generation 递增
   - lane key 变化必须 remove + create
+  - projection generation 变化且 snapshot item 未变时发出 `Resync`
   - 非法 stableId / duplicate stableId 直接失败
 - `src/Tests/PresentationTests/PresentationFoundationTests.cs`
   - snapshot 含 visibility / transform / stable identity
+  - target generation 变化会重投影 retained stable content，且不改变 `StableDrawCache.ContentRevision`
 - `src/Tests/PresentationTests/ProjectionMapPresentationRuntimeTests.cs`
   - fixture visuals 暴露稳定 snapshot identity
 

@@ -1693,6 +1693,83 @@ namespace Ludots.Tests.Presentation
         }
 
         [Test]
+        public void PresentationRequestFlushSystem_TargetGenerationChange_ReprojectsRetainedStableContentWithoutContentRevisionChange()
+        {
+            using var world = World.Create();
+            var requests = new PresentationRequestBuffer();
+            var drawBuffer = new PrimitiveDrawBuffer();
+            var snapshotBuffer = new PrimitiveDrawBuffer();
+            var proxyBuffer = new PresentationVisualProxyBuffer();
+            var stableDrawCache = new StableDrawCache();
+            var targetGeneration = new PresentationTargetGeneration();
+            using var flush = new PresentationRequestFlushSystem(
+                world,
+                requests,
+                new PrefabRegistry(),
+                new MeshAssetRegistry(),
+                stableDrawCache,
+                drawBuffer,
+                new GroundOverlayBuffer(),
+                new WorldHudBatchBuffer(),
+                new RoadSplineBuffer(),
+                snapshotBuffer,
+                proxyBuffer,
+                new SkinnedVisualBatchBuffer(),
+                targetGeneration: targetGeneration);
+
+            requests.Add(PresentationRequest.FromVisualProxy(Entity.Null, new PresentationVisualProxy
+            {
+                ProxyKind = PresentationVisualProxyKind.Performer,
+                MeshAssetId = 10,
+                MaterialId = 20,
+                StableId = 9200,
+                TemplateId = 300,
+                Position = new Vector3(1f, 2f, 3f),
+                Rotation = Quaternion.Identity,
+                Scale = Vector3.One,
+                Color = Vector4.One,
+                RenderPath = VisualRenderPath.InstancedStaticMesh,
+                Mobility = VisualMobility.Static,
+                Visibility = VisualVisibility.Visible,
+                LOD = LODLevel.High,
+            }));
+
+            flush.Update(0.016f);
+            int contentRevision = stableDrawCache.ContentRevision;
+            int projectionGeneration = snapshotBuffer.ProjectionGeneration;
+            Assert.That(snapshotBuffer.Count, Is.EqualTo(1));
+            Assert.That(proxyBuffer.Count, Is.EqualTo(1));
+
+            snapshotBuffer.Clear();
+            drawBuffer.Clear();
+            proxyBuffer.Clear();
+            targetGeneration.MarkReady();
+
+            flush.Update(0.016f);
+
+            Assert.That(stableDrawCache.ContentRevision, Is.EqualTo(contentRevision));
+            Assert.That(snapshotBuffer.Revision, Is.EqualTo(contentRevision));
+            Assert.That(snapshotBuffer.ProjectionGeneration, Is.GreaterThan(projectionGeneration));
+            Assert.That(snapshotBuffer.Count, Is.EqualTo(1), "Target generation changes must replay retained snapshot content.");
+            Assert.That(drawBuffer.Count, Is.EqualTo(1), "Target generation changes must replay visible retained draw content.");
+            Assert.That(proxyBuffer.Count, Is.EqualTo(1), "Target generation changes must replay proxy content for adapter snapshot consumers.");
+            Assert.That(snapshotBuffer.GetSpan()[0].StableId, Is.EqualTo(9200));
+        }
+
+        [Test]
+        public void PresentationVisualCapabilityValidator_RequiresTargetGeneration_WhenAdapterDeclaresExternalTargetLifecycle()
+        {
+            var requests = new PresentationVisualRequestBuffer();
+            var capabilities = new PresentationAdapterCapabilities(PresentationVisualCapabilities.ExternalTargetLifecycle);
+
+            InvalidOperationException ex = Assert.Throws<InvalidOperationException>(
+                () => PresentationVisualCapabilityValidator.Validate(requests, capabilities, targetGeneration: null))!;
+
+            Assert.That(ex.Message, Does.Contain("external target lifecycle"));
+            Assert.That(ex.Message, Does.Contain(nameof(PresentationTargetGeneration)));
+        }
+
+        [Test]
         public void PresentationRequestFlushSystem_ClearsTransientProjection_WhenFrameStopsEmittingMovableProxy()
         {
             using var world = World.Create();

@@ -6,7 +6,23 @@ namespace Ludots.Core.Presentation.Rendering
     {
         public static void Validate(PresentationVisualRequestBuffer requests, PresentationAdapterCapabilities? capabilities)
         {
+            Validate(requests, capabilities, targetGeneration: null);
+        }
+
+        public static void Validate(
+            PresentationVisualRequestBuffer requests,
+            PresentationAdapterCapabilities? capabilities,
+            PresentationTargetGeneration? targetGeneration)
+        {
             if (requests == null) throw new ArgumentNullException(nameof(requests));
+
+            if (capabilities != null &&
+                capabilities.Visuals.HasFlag(PresentationVisualCapabilities.ExternalTargetLifecycle) &&
+                targetGeneration == null)
+            {
+                throw new InvalidOperationException(
+                    "Presentation adapter declares an external target lifecycle but has not wired PresentationTargetGeneration.");
+            }
 
             ReadOnlySpan<PresentationVisualRequest> span = requests.GetSpan();
             if (span.Length == 0)

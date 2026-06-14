@@ -9,11 +9,12 @@ Core 负责每帧生成完整 visual snapshot，不负责 adapter 侧的 persist
 当前边界由以下实现固定：
 
 * `src/Core/Engine/GameEngine.cs` 创建并每帧清空 `PresentationVisualSnapshotBuffer`，同时保留 `PresentationPrimitiveDrawBuffer` 作为“当前可绘制项”缓冲。
+* `src/Core/Presentation/Rendering/PresentationTargetGeneration.cs` 是 adapter 可见的外部 presentation target lifecycle 信号；它只表示 target / projection generation 变化，不表示 retained 内容变化。
 * `src/Core/Presentation/Systems/WorldToVisualSyncSystem.cs` 在 render frame 内刷新 `VisualTransform`，即使实体当前处于 `CullState.IsVisible == false`，也不会停止更新 transform。
 * `src/Core/Presentation/Systems/EntityVisualEmitSystem.cs` 负责把 `VisualTransform`、`VisualRuntimeState`、`PresentationStableId` 和 `CullState` 组合成 adapter-facing snapshot item。
 * `src/Core/Presentation/Systems/EntityVisualEmitSystem.cs` 不输出 dirty-only contract；它始终按 frame snapshot 语义重建当前帧数据。
 
-这意味着 adapter 侧只能在读取 snapshot 后自行维护 persistent static manager、persistent skeleton manager 与 dirty sync。Core 不提供第二套“只发脏项”的并行表现管线。
+这意味着 adapter 侧只能在读取 snapshot 后自行维护 persistent static manager、persistent skeleton manager 与 dirty sync。Core 不提供第二套“只发脏项”的并行表现管线，也不允许用 gameplay event 或 content revision 假装 target lifecycle 变化。
 
 ## 2 Snapshot 生命周期
 
@@ -23,7 +24,8 @@ Core 负责每帧生成完整 visual snapshot，不负责 adapter 侧的 persist
 2. 每帧进入 presentation systems 前，`src/Core/Engine/GameEngine.cs` 先清空 snapshot buffer。
 3. `src/Core/Presentation/Systems/WorldToVisualSyncSystem.cs` 刷新 `VisualTransform.Position` 与 `VisualTransform.Rotation`。
 4. `src/Core/Presentation/Systems/EntityVisualEmitSystem.cs` 把 renderable visual 写入 snapshot buffer。
-5. Adapter 在本帧渲染阶段读取 snapshot buffer，自行完成 persistent object 对齐。
+5. `src/Core/Presentation/Requests/PresentationRequestFlushSystem.cs` 在 retained content revision 或 `PresentationTargetGeneration.Generation` 变化时，重新把 `StableDrawCache` 投影到 adapter-facing buffers。
+6. Adapter 在本帧渲染阶段读取 snapshot buffer，自行完成 persistent object 对齐。
 
 相关回归测试位于：
 
@@ -40,6 +42,8 @@ Core 负责每帧生成完整 visual snapshot，不负责 adapter 侧的 persist
 | `Visibility` | `VisualRuntimeState.ResolveVisibility(...)` | `Visible`、`Hidden`、`Culled` 三态必须显式输出；adapter 不得再从“是否出现在 draw buffer”反推可见性 | `src/Core/Presentation/Components/VisualRuntimeState.cs`, `src/Core/Presentation/Components/VisualVisibility.cs`, `src/Tests/PresentationTests/PresentationFoundationTests.cs` |
 | `RenderPath` / `Animator` | `VisualRuntimeState` + `AnimatorPackedState` | static mesh lane 与 skinned mesh lane 共享同一 snapshot 入口，但保留各自 lane 判定字段 | `src/Core/Presentation/Rendering/PrimitiveDrawItem.cs`, `src/Tests/PresentationTests/ProjectionMapPresentationRuntimeTests.cs` |
 | `TemplateId` | `VisualTemplateRef.TemplateId` | entity 带 `VisualTemplateRef` 时必须原样进入 snapshot；无模板实例允许为 `0` | `src/Core/Presentation/Systems/EntityVisualEmitSystem.cs`, `src/Tests/PresentationTests/PresentationFoundationTests.cs` |
+| `Revision` | `StableDrawCache.ContentRevision` | 只表示 retained visual content 变化；target / viewport / render target lifecycle 不得写入该 revision | `src/Core/Presentation/Rendering/StableDrawCache.cs`, `src/Core/Presentation/Requests/PresentationRequestFlushSystem.cs` |
+| `ProjectionGeneration` | `PresentationTargetGeneration.Generation` | adapter target readiness / target replacement 的独立 generation；变化时 retained content 必须重投影，但 `ContentRevision` 保持不变 | `src/Core/Presentation/Rendering/PresentationTargetGeneration.cs`, `src/Tests/PresentationTests/PresentationFoundationTests.cs` |
 | Snapshot overflow | `PrimitiveDrawBuffer.TryAdd` 返回值 | snapshot buffer 溢出时直接抛错，禁止静默丢状态 | `src/Core/Presentation/Systems/EntityVisualEmitSystem.cs`, `src/Tests/PresentationTests/PresentationFoundationTests.cs` |
 
 ## 4 Snapshot buffer 与 draw buffer 的区别
@@ -59,6 +63,9 @@ Core 负责每帧生成完整 visual snapshot，不负责 adapter 侧的 persist
 * static manager 以 `StableId` 作为实例键，按 `Visibility` 处理 show / hide / despawn / reuse，不依赖 packet index。
 * skeleton manager 以 `StableId` 作为骨架实例键，读取 `Position`、`Rotation` 与 `Animator`，确保 skinned actor 离屏期间继续保持正确状态。
 * `RenderPath` 决定实例应进入 static lane 还是 skinned lane，adapter 不得把两条 lane 合并为一个共享实例语义。
+* 维护外部 target lifecycle 的 adapter 必须显式持有并更新 Core 的 `PresentationTargetGeneration`。当 target unavailable -> ready 或 target A -> target B 时，adapter 调用 generation service；Core 在下一次 flush 中重投影 retained content。
+* persistent / delta 消费方必须比较 `(content/static revision, ProjectionGeneration)`。`Revision` 不变但 `ProjectionGeneration` 变化时，adapter resident state 需要一次 full resync。
+* 声明 `PresentationVisualCapabilities.ExternalTargetLifecycle` 的 adapter 必须绑定 `PresentationTargetGeneration`；缺失时 validator 抛出诊断，不允许静默 fallback。
 
 这些要求对应的 follow-up playable 方案见 [../rfcs/RFC-0052-presentation-snapshot-playable-mods.md](../rfcs/RFC-0052-presentation-snapshot-playable-mods.md)。
 

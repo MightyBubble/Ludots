@@ -677,6 +677,7 @@ namespace Ludots.Core.Engine
             var visualProxyBuffer = new PresentationVisualProxyBuffer(presentationConfig.VisualProxyBufferCapacity);
             var skinnedVisualBatchBuffer = new SkinnedVisualBatchBuffer(presentationConfig.SkinnedVisualBatchCapacity);
             var stableDrawCache = new StableDrawCache(presentationConfig.VisualSnapshotBufferCapacity);
+            var presentationTargetGeneration = new PresentationTargetGeneration();
             var presentationRequestBuffer = new PresentationRequestBuffer(presentationConfig.PresentationRequestCapacity);
             var transientMarkerBuffer = new TransientMarkerBuffer();
             var groundOverlayBuffer = new GroundOverlayBuffer(presentationConfig.GroundOverlayCapacity);
@@ -761,7 +762,8 @@ namespace Ludots.Core.Engine
                 visualSnapshotBuffer,
                 visualProxyBuffer,
                 skinnedVisualBatchBuffer,
-                presentationTimingDiagnostics);
+                presentationTimingDiagnostics,
+                presentationTargetGeneration);
             new PerformerDefinitionConfigLoader(
                 ConfigPipeline,
                 performerDefinitions,
@@ -951,6 +953,7 @@ namespace Ludots.Core.Engine
             SetService(CoreServiceKeys.AnimationProfileRegistry, animationProfiles);
             SetService(CoreServiceKeys.PresentationStableIdAllocator, presentationStableIds);
             SetService(CoreServiceKeys.PresentationStableDrawCache, stableDrawCache);
+            SetService(CoreServiceKeys.PresentationTargetGeneration, presentationTargetGeneration);
             _primitiveDrawBuffer = primitiveDrawBuffer;
             _visualSnapshotBuffer = visualSnapshotBuffer;
             _visualProxyBuffer = visualProxyBuffer;

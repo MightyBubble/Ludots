@@ -28,6 +28,7 @@
 - 输入、选择、实体信息面板、路网移动与 narrative frontend 都已有主线实现和 showcase 入口
 - 大规模实体场景的下一阶段主线，是把 `Authority` 与 `Budgeted` 仿真车道、碰撞层过滤、AOI/LOD 调度和 mass crowd 展示收敛成同一套正式组件规范
 - Raylib 侧已补充一个“脱离 performer/entity 行为”的直接 ISM benchmark，用于隔离最终绘制瓶颈；当前证据表明 30K 黑铁匠铺 mesh 的平台层 instanced draw 已能稳定跑通，优先暴露出的风险点在 Skia final overlay，而不是平台层 mesh draw
+- Retained presentation 的 content revision 与 adapter target/projection generation 是两条独立真相：content revision 只表示表现内容变化；adapter target unavailable -> ready 或 target 替换必须通过 Core-owned generation 触发 retained projection replay
 - 商业引擎 adapter（例如开发者仓库中的 UE5 adapter）的 host-bound map session 只能由 focused map SSOT 与显式 host binding 推导，禁止用菜单态、world 名、tag 或 view mode 充当 ownership 真相
 - prefab grounding、visual height 与 adapter parity 必须共用同一套 Core-owned contract，禁止把 grounding 语义下放给 adapter 或 showcase 私有 glue
 - `docs/architecture/` 中的长篇页面覆盖了这些能力的深度说明，GitBook 这里负责给出正式导航和判断口径
