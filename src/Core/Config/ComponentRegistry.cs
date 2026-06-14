@@ -605,6 +605,11 @@ namespace Ludots.Core.Config
                 NavRadiusCm = ReadIntProperty(obj, "navRadiusCm", "ManifestationObstacleIntent2D"),
             };
 
+            if (intent.SinkPhysicsCollider == 0 && intent.SinkNavigationObstacle == 0)
+            {
+                throw new InvalidOperationException("ManifestationObstacleIntent2D requires at least one sink intent.");
+            }
+
             if (intent.Shape == ManifestationObstacleShape2D.Circle)
             {
                 RequireAbsentProperties(obj, "ManifestationObstacleIntent2D Circle", "halfWidthCm", "halfHeightCm");
