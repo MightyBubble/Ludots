@@ -75,6 +75,7 @@ namespace Ludots.Core.NodeLibraries.GASGraph
         /// </summary>
         public void FilterRelationship(World world, IGraphRuntimeApi api, Entity reference, int mode)
         {
+            GraphRelationshipFilterMode filterMode = ParseRelationshipFilterMode(mode);
             int refTeam = api.GetTeamId(reference);
             int write = 0;
             for (int r = 0; r < Count; r++)
@@ -83,14 +84,14 @@ namespace Ludots.Core.NodeLibraries.GASGraph
                 if (!world.IsAlive(ent)) continue;
                 int entTeam = api.GetTeamId(ent);
                 int rel = api.GetRelationship(refTeam, entTeam);
-                bool pass = mode switch
+                bool pass = filterMode switch
                 {
-                    1 => rel == GraphRelationship.Hostile,
-                    2 => rel == GraphRelationship.Friendly,
-                    3 => rel == GraphRelationship.Neutral,
-                    4 => rel != GraphRelationship.Friendly,
-                    5 => rel != GraphRelationship.Hostile,
-                    _ => true
+                    GraphRelationshipFilterMode.Hostile => MatchesRelationship(rel, GraphRelationship.Hostile),
+                    GraphRelationshipFilterMode.Friendly => MatchesRelationship(rel, GraphRelationship.Friendly),
+                    GraphRelationshipFilterMode.Neutral => MatchesRelationship(rel, GraphRelationship.Neutral),
+                    GraphRelationshipFilterMode.NotFriendly => DoesNotMatchRelationship(rel, GraphRelationship.Friendly),
+                    GraphRelationshipFilterMode.NotHostile => DoesNotMatchRelationship(rel, GraphRelationship.Hostile),
+                    _ => throw new ArgumentOutOfRangeException(nameof(mode), mode, "Unsupported graph relationship filter mode.")
                 };
                 if (!pass) continue;
                 _buffer[write++] = ent;
@@ -156,5 +157,46 @@ namespace Ludots.Core.NodeLibraries.GASGraph
             }
             return write;
         }
+
+        private static GraphRelationshipFilterMode ParseRelationshipFilterMode(int mode)
+        {
+            return mode switch
+            {
+                1 => GraphRelationshipFilterMode.Hostile,
+                2 => GraphRelationshipFilterMode.Friendly,
+                3 => GraphRelationshipFilterMode.Neutral,
+                4 => GraphRelationshipFilterMode.NotFriendly,
+                5 => GraphRelationshipFilterMode.NotHostile,
+                _ => throw new ArgumentOutOfRangeException(nameof(mode), mode, "Unsupported graph relationship filter mode.")
+            };
+        }
+
+        private static bool MatchesRelationship(int relationship, int expected)
+        {
+            return ValidateRelationship(relationship) == expected;
+        }
+
+        private static bool DoesNotMatchRelationship(int relationship, int excluded)
+        {
+            return ValidateRelationship(relationship) != excluded;
+        }
+
+        private static int ValidateRelationship(int relationship)
+        {
+            return relationship switch
+            {
+                GraphRelationship.Hostile or GraphRelationship.Friendly or GraphRelationship.Neutral => relationship,
+                _ => throw new InvalidOperationException($"Unsupported graph relationship value '{relationship}'.")
+            };
+        }
+    }
+
+    public enum GraphRelationshipFilterMode : int
+    {
+        Hostile = 1,
+        Friendly = 2,
+        Neutral = 3,
+        NotFriendly = 4,
+        NotHostile = 5
     }
 }

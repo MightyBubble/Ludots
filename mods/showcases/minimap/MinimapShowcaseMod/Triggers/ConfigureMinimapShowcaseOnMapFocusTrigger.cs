@@ -1,5 +1,4 @@
 using System;
-using System.Reflection;
 using System.Threading.Tasks;
 using Arch.Core;
 using Ludots.Core.Components;
@@ -9,8 +8,8 @@ using Ludots.Core.Gameplay.GAS.Components;
 using Ludots.Core.Gameplay.GAS.Registry;
 using Ludots.Core.Input.Selection;
 using Ludots.Core.Map;
+using Ludots.Core.Presentation.Minimap;
 using Ludots.Core.Scripting;
-using MinimapControlMod;
 
 namespace MinimapShowcaseMod.Triggers;
 
@@ -39,13 +38,14 @@ internal sealed class ConfigureMinimapShowcaseOnMapFocusTrigger : Trigger
             return Task.CompletedTask;
         }
 
-        if (!TryGetMinimapRuntime(engine, out object runtime))
+        if (!TryGetMinimapRuntime(engine, out MinimapRuntime runtime))
         {
             return Task.CompletedTask;
         }
 
-        SetRuntimeVisible(runtime, true);
-        SetRuntimeViewport(runtime, 1800f, -600f, 22000f);
+        runtime.Visible = true;
+        runtime.UseRtsFullMapPreset();
+        runtime.SetViewport(1800f, -600f, 22000f);
         ConfigurePerspectiveAndTags(engine);
         return Task.CompletedTask;
     }
@@ -53,17 +53,17 @@ internal sealed class ConfigureMinimapShowcaseOnMapFocusTrigger : Trigger
     public Task HandleMapUnloadedAsync(ScriptContext context)
     {
         GameEngine? engine = context.GetEngine();
-        if (engine != null && TryGetMinimapRuntime(engine, out object runtime))
+        if (engine != null && TryGetMinimapRuntime(engine, out MinimapRuntime runtime))
         {
-            SetRuntimeVisible(runtime, false);
+            runtime.Visible = false;
         }
 
         return Task.CompletedTask;
     }
 
-    private static bool TryGetMinimapRuntime(GameEngine engine, out object runtime)
+    private static bool TryGetMinimapRuntime(GameEngine engine, out MinimapRuntime runtime)
     {
-        if (engine.GlobalContext.TryGetValue(MinimapControlServiceKeys.Runtime.Name, out object? found) && found != null)
+        if (engine.GetService(CoreServiceKeys.MinimapRuntime) is MinimapRuntime found)
         {
             runtime = found;
             return true;
@@ -71,20 +71,6 @@ internal sealed class ConfigureMinimapShowcaseOnMapFocusTrigger : Trigger
 
         runtime = null!;
         return false;
-    }
-
-    private static void SetRuntimeVisible(object runtime, bool value)
-    {
-        PropertyInfo property = runtime.GetType().GetProperty("Visible", BindingFlags.Instance | BindingFlags.Public)
-            ?? throw new MissingMemberException(runtime.GetType().FullName, "Visible");
-        property.SetValue(runtime, value);
-    }
-
-    private static void SetRuntimeViewport(object runtime, float centerXcm, float centerYcm, float halfExtentCm)
-    {
-        MethodInfo method = runtime.GetType().GetMethod("SetViewport", BindingFlags.Instance | BindingFlags.Public, [typeof(float), typeof(float), typeof(float)])
-            ?? throw new MissingMethodException(runtime.GetType().FullName, "SetViewport");
-        method.Invoke(runtime, [centerXcm, centerYcm, halfExtentCm]);
     }
 
     private void ConfigurePerspectiveAndTags(GameEngine engine)

@@ -84,6 +84,7 @@ namespace Ludots.Core.Gameplay.GAS.Systems
         private bool _inputRequestSent;
         private int _inputRequestTagId;
         private int _nextWindowId = 1;
+        private bool _emitTelemetry;
 
         private sealed class EntityStableComparer : IComparer<Entity>
         {
@@ -332,6 +333,7 @@ namespace Ludots.Core.Gameplay.GAS.Systems
                     _closeRequested = false;
                     _inputRequestSent = false;
                     _inputRequestTagId = 0;
+                    _emitTelemetry = rootTpl.ParticipatesInResponse;
 
                     var rootModifiers = rootTpl.Modifiers;
                     ApplyPresetModifiers(ref rootModifiers, in rootTpl, in req);
@@ -357,7 +359,7 @@ namespace Ludots.Core.Gameplay.GAS.Systems
                         continue;
                     }
  
-                    if (_telemetry != null)
+                    if (_telemetry != null && _emitTelemetry)
                     {
                         _telemetry.TryAdd(new ResponseChainTelemetryEvent
                         {
@@ -497,7 +499,7 @@ namespace Ludots.Core.Gameplay.GAS.Systems
                         });
                         _inputRequestSent = true;
  
-                        if (_telemetry != null)
+                        if (_telemetry != null && _emitTelemetry)
                         {
                             _telemetry.TryAdd(new ResponseChainTelemetryEvent
                             {
@@ -550,7 +552,7 @@ namespace Ludots.Core.Gameplay.GAS.Systems
 
                             if (order.OrderTypeId == _responseChainOrderTypes.ChainPass)
                             {
-                                if (_telemetry != null)
+                                if (_telemetry != null && _emitTelemetry)
                                 {
                                     _telemetry.TryAdd(new ResponseChainTelemetryEvent
                                     {
@@ -579,7 +581,7 @@ namespace Ludots.Core.Gameplay.GAS.Systems
                             _passStreak = 0;
                             if (order.OrderTypeId == _responseChainOrderTypes.ChainNegate)
                             {
-                                if (_telemetry != null)
+                                if (_telemetry != null && _emitTelemetry)
                                 {
                                     _telemetry.TryAdd(new ResponseChainTelemetryEvent
                                     {
@@ -601,7 +603,7 @@ namespace Ludots.Core.Gameplay.GAS.Systems
 
                             if (order.OrderTypeId == _responseChainOrderTypes.ChainActivateEffect && order.Args.I0 > 0)
                             {
-                                if (_telemetry != null)
+                                if (_telemetry != null && _emitTelemetry)
                                 {
                                     _telemetry.TryAdd(new ResponseChainTelemetryEvent
                                     {
@@ -653,7 +655,7 @@ namespace Ludots.Core.Gameplay.GAS.Systems
                                 }
                                 _creates++;
                                 if (_budget != null) _budget.ResponseCreates++;
-                                if (_telemetry != null)
+                                if (_telemetry != null && _emitTelemetry)
                                 {
                                     _telemetry.TryAdd(new ResponseChainTelemetryEvent
                                     {
@@ -712,7 +714,7 @@ namespace Ludots.Core.Gameplay.GAS.Systems
                         var e = _window[i];
                         if (e.Cancelled)
                         {
-                            if (_telemetry != null)
+                            if (_telemetry != null && _emitTelemetry)
                             {
                                 _telemetry.TryAdd(new ResponseChainTelemetryEvent
                                 {
@@ -734,7 +736,7 @@ namespace Ludots.Core.Gameplay.GAS.Systems
                         if (i > 0 && _resolveNegatesRemaining > 0)
                         {
                             _resolveNegatesRemaining--;
-                            if (_telemetry != null)
+                            if (_telemetry != null && _emitTelemetry)
                             {
                                 _telemetry.TryAdd(new ResponseChainTelemetryEvent
                                 {
@@ -755,7 +757,7 @@ namespace Ludots.Core.Gameplay.GAS.Systems
 
                         if (!World.IsAlive(e.Target))
                         {
-                            if (_telemetry != null)
+                            if (_telemetry != null && _emitTelemetry)
                             {
                                 _telemetry.TryAdd(new ResponseChainTelemetryEvent
                                 {
@@ -776,7 +778,7 @@ namespace Ludots.Core.Gameplay.GAS.Systems
 
                         if (_templates == null || e.TemplateId <= 0 || !_templates.TryGetRef(e.TemplateId, out int tplIdx))
                         {
-                            if (_telemetry != null)
+                            if (_telemetry != null && _emitTelemetry)
                             {
                                 _telemetry.TryAdd(new ResponseChainTelemetryEvent
                                 {
@@ -808,7 +810,7 @@ namespace Ludots.Core.Gameplay.GAS.Systems
                                 // Snapshot primary attribute for delta calculation
                                 int primaryAttrId = e.Modifiers.Count > 0 ? e.Modifiers.Get(0).AttributeId : -1;
                                 float before = primaryAttrId >= 0 ? attr.GetCurrent(primaryAttrId) : 0f;
-                                EffectModifierOps.Apply(in e.Modifiers, ref attr);
+                                AttributeMutationOps.ApplyModifiers(World, e.Target, in e.Modifiers);
                                 float after = primaryAttrId >= 0 ? attr.GetCurrent(primaryAttrId) : 0f;
                                 delta = after - before;
                                 if (_presentationEvents != null)
@@ -842,7 +844,7 @@ namespace Ludots.Core.Gameplay.GAS.Systems
                                 ClearConfigContext();
                             }
 
-                            if (_telemetry != null)
+                            if (_telemetry != null && _emitTelemetry)
                             {
                                 _telemetry.TryAdd(new ResponseChainTelemetryEvent
                                 {
@@ -861,7 +863,7 @@ namespace Ludots.Core.Gameplay.GAS.Systems
                         else
                         {
                             CreateEntityEffect(in e, in tpl);
-                            if (_telemetry != null)
+                            if (_telemetry != null && _emitTelemetry)
                             {
                                 _telemetry.TryAdd(new ResponseChainTelemetryEvent
                                 {
@@ -881,7 +883,7 @@ namespace Ludots.Core.Gameplay.GAS.Systems
                         workUnits++;
                     }
 
-                    if (_telemetry != null)
+                    if (_telemetry != null && _emitTelemetry)
                     {
                         _telemetry.TryAdd(new ResponseChainTelemetryEvent
                         {
@@ -942,6 +944,7 @@ namespace Ludots.Core.Gameplay.GAS.Systems
             _closeRequested = false;
             _inputRequestSent = false;
             _inputRequestTagId = 0;
+            _emitTelemetry = false;
             _sliceActive = false;
         }
 
@@ -1072,6 +1075,7 @@ namespace Ludots.Core.Gameplay.GAS.Systems
                             ref readonly var grantedTags = ref World.Get<EffectGrantedTags>(existing);
                             EffectTagContributionHelper.UpdateOnEntity(World, proposal.Target, in grantedTags, oldCount, stack.Count, _tagOps, _budget);
                         }
+                        MarkAggregateDirtyIfNeeded(proposal.Target, existing);
                         return; // Merged into existing stack, no new entity
                     }
                     // TryAddStack returned false = stack full + RejectNew policy
@@ -1084,6 +1088,7 @@ namespace Ludots.Core.Gameplay.GAS.Systems
 
             ref var effectState = ref World.Get<GameplayEffect>(newEffect);
             effectState.State = EffectState.Pending;
+            effectState.AggregatesModifiers = tpl.PresetType == EffectPresetType.Buff;
 
             World.Add(newEffect, new ExcludeFromChain());
 
@@ -1138,6 +1143,24 @@ namespace Ludots.Core.Gameplay.GAS.Systems
                 }
             }
             return Entity.Null;
+        }
+
+        private void MarkAggregateDirtyIfNeeded(Entity target, Entity effect)
+        {
+            if (!World.IsAlive(target) || !World.IsAlive(effect))
+            {
+                return;
+            }
+
+            if (!World.Has<GameplayEffect>(effect) || !World.Get<GameplayEffect>(effect).AggregatesModifiers)
+            {
+                return;
+            }
+
+            if (!World.Has<AttributeAggregateDirty>(target))
+            {
+                World.Add(target, new AttributeAggregateDirty());
+            }
         }
 
         /// <summary>

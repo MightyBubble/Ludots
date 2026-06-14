@@ -8,8 +8,10 @@ namespace Ludots.Core.Mathematics
     {
         public const float CmPerMeter = 100f;
 
-        public static float CmToM(float cm) => cm / CmPerMeter;
-        public static float CmToM(int cm) => cm / CmPerMeter;
+        public const float MetersPerCm = 1f / CmPerMeter;
+
+        public static float CmToM(float cm) => cm * MetersPerCm;
+        public static float CmToM(int cm) => cm * MetersPerCm;
 
         public static int MToCm(float meters) => (int)MathF.Round(meters * CmPerMeter);
 
@@ -24,17 +26,27 @@ namespace Ludots.Core.Mathematics
             return new Vector3(CmToM(worldCm.X), yMeters, CmToM(worldCm.Y));
         }
 
+        public static Vector3 WorldCmToVisualMeters(float worldXCm, float worldYCm, float yMeters = 0f)
+        {
+            return new Vector3(CmToM(worldXCm), yMeters, CmToM(worldYCm));
+        }
+
         /// <summary>
         /// Fix64Vec2 厘米 → 浮点米 (渲染边界转换)
         /// </summary>
         public static Vector3 WorldCmToVisualMeters(in Fix64Vec2 worldCmFix64, float yMeters = 0f)
         {
-            return new Vector3(worldCmFix64.X.ToFloat() * 0.01f, yMeters, worldCmFix64.Y.ToFloat() * 0.01f);
+            return new Vector3(CmToM(worldCmFix64.X.ToFloat()), yMeters, CmToM(worldCmFix64.Y.ToFloat()));
         }
 
         public static WorldCmInt2 VisualMetersToWorldCm(in Vector3 visualMeters)
         {
             return new WorldCmInt2(MToCm(visualMeters.X), MToCm(visualMeters.Z));
+        }
+
+        public static Vector2 VisualMetersToWorldCm2(in Vector3 visualMeters)
+        {
+            return new Vector2(visualMeters.X * CmPerMeter, visualMeters.Z * CmPerMeter);
         }
     }
 }

@@ -3,7 +3,6 @@
     "../../../../../../../mods/LudotsCoreMod",
     "../../../../../../../mods/CoreInputMod",
     "../../../../../../../mods/FourXDemoMod",
-    "../../../../../../../mods/capabilities/minimap/MinimapControlMod",
     "../../../../../../../mods/showcases/minimap/MinimapShowcaseMod"
   ]
 }

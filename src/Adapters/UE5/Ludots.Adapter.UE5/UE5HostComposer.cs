@@ -6,8 +6,10 @@ using Ludots.Core.Hosting;
 using Ludots.Core.Input.Config;
 using Ludots.Core.Input.Runtime;
 using Ludots.Core.Presentation.Camera;
+using Ludots.Core.Presentation.Assets;
+using Ludots.Core.Presentation.Config;
 using Ludots.Core.Presentation.Hud;
-using Ludots.Core.Presentation.Rendering;
+using Ludots.Core.Presentation.Performers;
 using Ludots.Core.Presentation.Systems;
 using Ludots.Core.Scripting;
 using Ludots.Core.Systems;
@@ -175,6 +177,18 @@ namespace Ludots.Adapter.UE5
             var result = GameBootstrapper.InitializeFromBaseDirectory(baseDir, gameConfigFile);
             var engine = result.Engine;
             var config = result.Config;
+            if (!engine.TryGetService(CoreServiceKeys.PresentationMeshAssetRegistry, out MeshAssetRegistry meshAssets))
+            {
+                throw new InvalidOperationException("UE5 host requires PresentationMeshAssetRegistry before host asset binding.");
+            }
+
+            if (!engine.TryGetService(CoreServiceKeys.PresentationMaterialRegistry, out PresentationMaterialRegistry materialAssets))
+            {
+                throw new InvalidOperationException("UE5 host requires PresentationMaterialRegistry before host asset binding.");
+            }
+
+            new PresentationHostAssetConfigLoader(engine.ConfigPipeline, meshAssets, materialAssets)
+                .Apply("ue5", engine.ConfigCatalog, engine.ConfigConflictReport);
 
             // 升级为文件日志（如果 config 中已启用且调用方未提供外部 backend）
             if (config.Logging.FileLogging && externalBackend == null)
@@ -209,14 +223,6 @@ namespace Ludots.Adapter.UE5
             engine.SetService(UE5AdapterServiceKeys.SharedCameraState, sharedState);
             engine.SetService(UE5AdapterServiceKeys.HostCameraDiagnosticsSnapshot, hostCameraDiagnosticsSnapshot);
             engine.SetService(UE5AdapterServiceKeys.HostCameraDiagnosticsCommands, hostCameraDiagnosticsCommands);
-            engine.SetService(
-                CoreServiceKeys.PresentationAdapterCapabilities,
-                new PresentationAdapterCapabilities(
-                    PresentationVisualCapabilities.Decal |
-                    PresentationVisualCapabilities.Vfx |
-                    PresentationVisualCapabilities.Surface |
-                    PresentationVisualCapabilities.MaterialOverride |
-                    PresentationVisualCapabilities.InstanceCustomData));
 
             // ── 4. 注入 UE5 适配器 ───────────────────────────────────────
 
@@ -275,8 +281,10 @@ namespace Ludots.Adapter.UE5
                 engine.World,
                 engine.GameSession.Camera,
                 engine.SpatialQueries,
-                viewController);
-            engine.RegisterPresentationSystem(cullingSystem);
+                viewController,
+                performers: engine.GetService(CoreServiceKeys.PerformerEntityRuntime),
+                cullingConfig: engine.MergedConfig.Presentation.CameraCulling);
+            engine.InsertPresentationSystemBefore<PresentationEntityLifecycleSystem>(cullingSystem);
             engine.SetService(CoreServiceKeys.CameraCullingDebugState, cullingSystem.DebugState);
 
             // 5c. 可视化调试系统（可选，UE5 侧通常不使用，但保持与 Raylib 对称）

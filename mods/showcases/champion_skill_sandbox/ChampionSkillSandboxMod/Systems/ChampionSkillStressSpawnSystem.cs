@@ -115,7 +115,7 @@ namespace ChampionSkillSandboxMod.Systems
             string mapId = _engine.CurrentMapSession!.MapId.Value;
             _engine.World.Query(in StressUnitQuery, (Entity entity, ref Name name, ref Team team, ref MapEntity mapEntity, ref AbilityStateBuffer _) =>
             {
-                if (!string.Equals(mapEntity.MapId.Value, mapId, StringComparison.OrdinalIgnoreCase))
+                if (!string.Equals(mapEntity.MapId.Value, mapId, StringComparison.Ordinal))
                 {
                     return;
                 }
@@ -202,12 +202,13 @@ namespace ChampionSkillSandboxMod.Systems
                     Kind = RuntimeEntitySpawnKind.Template,
                     TemplateId = templateId,
                     WorldPositionCm = ComputeSpawnPosition(teamA, role, i, desiredCount),
+                    HasWorldPosition = 1,
                     MapId = mapId,
                 };
 
                 if (!_spawnQueue.TryEnqueue(in request))
                 {
-                    break;
+                    throw new InvalidOperationException("ChampionSkillSandbox stress spawn failed to enqueue runtime entity spawn request.");
                 }
             }
         }

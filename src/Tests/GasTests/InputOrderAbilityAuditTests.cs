@@ -543,7 +543,7 @@ namespace Ludots.Tests.GAS
             var def = new AbilityDefinition();
             defs.Register(abilityId, in def);
 
-            var presentationEvents = new GasPresentationEventBuffer();
+            var presentationEvents = new GasPresentationEventBuffer(8);
             var system = new AbilityExecSystem(
                 world,
                 new DiscreteClock(),
@@ -710,7 +710,7 @@ namespace Ludots.Tests.GAS
                 IntArg0BlackboardKey = OrderBlackboardKeys.Cast_SlotIndex
             });
 
-            var presentationEvents = new GasPresentationEventBuffer();
+            var presentationEvents = new GasPresentationEventBuffer(8);
             var graphApi = new GasGraphRuntimeApi(world, spatialQueries: null, coords: null, eventBus: null);
             var system = new AbilityExecSystem(
                 world,

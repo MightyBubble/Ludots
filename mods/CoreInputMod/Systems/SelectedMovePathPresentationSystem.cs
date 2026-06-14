@@ -7,6 +7,7 @@ using Ludots.Core.Components;
 using Ludots.Core.Config;
 using Ludots.Core.Engine;
 using Ludots.Core.Gameplay.GAS.Components;
+using Ludots.Core.Gameplay.GAS.Orders;
 using Ludots.Core.Input.Orders;
 using Ludots.Core.Input.Selection;
 using Ludots.Core.Navigation2D.Components;
@@ -35,6 +36,8 @@ namespace CoreInputMod.Systems
         private SelectedMovePathOverlayBridge? _bridge;
         private GroundOverlayBuffer? _groundOverlays;
         private string _lastBridgeFailureReason = "bridge=uninitialized";
+        private int[] _moveOrderTypeIds = Array.Empty<int>();
+        private bool _moveOrderTypeIdsResolved;
 
         public SelectedMovePathPresentationSystem(World world, Dictionary<string, object> globals, SelectionRuntime selection)
         {
@@ -111,10 +114,17 @@ namespace CoreInputMod.Systems
                 return false;
             }
 
-            if (!config.Constants.OrderTypeIds.TryGetValue("moveTo", out int moveToOrderTypeId) ||
-                moveToOrderTypeId <= 0)
+            if (!_globals.TryGetValue(CoreServiceKeys.OrderTypeRegistry.Name, out var orderTypesObj) ||
+                orderTypesObj is not OrderTypeRegistry orderTypes)
             {
-                _lastBridgeFailureReason = "bridge=missing:moveToOrderType";
+                _lastBridgeFailureReason = "bridge=missing:OrderTypeRegistry";
+                return false;
+            }
+
+            int[] moveOrderTypeIds = ResolveMoveOrderTypeIds(config, orderTypes);
+            if (moveOrderTypeIds.Length == 0)
+            {
+                _lastBridgeFailureReason = "bridge=missing:moveOrderType";
                 return false;
             }
 
@@ -140,8 +150,10 @@ namespace CoreInputMod.Systems
             }
 
             _groundOverlays = overlays;
-            _lastBridgeFailureReason = $"bridge=ready:path={pathService.GetType().Name}";
-            bridge = new SelectedMovePathOverlayBridge(_world, pathService, pathStore, overlays, moveToOrderTypeId);
+            _moveOrderTypeIds = moveOrderTypeIds;
+            _moveOrderTypeIdsResolved = true;
+            _lastBridgeFailureReason = $"bridge=ready:path={pathService.GetType().Name} moveTypes={moveOrderTypeIds.Length}";
+            bridge = new SelectedMovePathOverlayBridge(_world, pathService, pathStore, overlays, moveOrderTypeIds);
             return true;
         }
 
@@ -201,17 +213,17 @@ namespace CoreInputMod.Systems
             string navGoalSummary = "goal=(none)";
             string positionSummary = "pos2D=(none)";
             string worldSummary = "world=(none)";
-            if (hasOrderBuffer && TryResolveMoveToOrderTypeId(out int moveToOrderTypeId))
+            if (hasOrderBuffer && TryResolveMoveOrderTypeIds(out int[] moveOrderTypeIds))
             {
                 ref var buffer = ref _world.Get<OrderBuffer>(inspected);
-                if (buffer.HasActive && buffer.ActiveOrder.Order.OrderTypeId == moveToOrderTypeId)
+                if (buffer.HasActive && IsMoveOrderType(buffer.ActiveOrder.Order.OrderTypeId, moveOrderTypeIds))
                 {
                     activeMoveCount = 1;
                 }
 
                 for (int i = 0; i < buffer.QueuedCount; i++)
                 {
-                    if (buffer.GetQueued(i).Order.OrderTypeId == moveToOrderTypeId)
+                    if (IsMoveOrderType(buffer.GetQueued(i).Order.OrderTypeId, moveOrderTypeIds))
                     {
                         queuedMoveCount++;
                     }
@@ -267,13 +279,101 @@ namespace CoreInputMod.Systems
                 : "viewer=(none)";
         }
 
-        private bool TryResolveMoveToOrderTypeId(out int moveToOrderTypeId)
+        private bool TryResolveMoveOrderTypeIds(out int[] moveOrderTypeIds)
         {
-            moveToOrderTypeId = 0;
-            return _globals.TryGetValue(CoreServiceKeys.GameConfig.Name, out var configObj) &&
-                   configObj is GameConfig config &&
-                   config.Constants.OrderTypeIds.TryGetValue("moveTo", out moveToOrderTypeId) &&
-                   moveToOrderTypeId > 0;
+            if (_moveOrderTypeIdsResolved)
+            {
+                moveOrderTypeIds = _moveOrderTypeIds;
+                return moveOrderTypeIds.Length > 0;
+            }
+
+            moveOrderTypeIds = Array.Empty<int>();
+            if (!_globals.TryGetValue(CoreServiceKeys.GameConfig.Name, out var configObj) ||
+                configObj is not GameConfig config)
+            {
+                return false;
+            }
+
+            if (!_globals.TryGetValue(CoreServiceKeys.OrderTypeRegistry.Name, out var orderTypesObj) ||
+                orderTypesObj is not OrderTypeRegistry orderTypes)
+            {
+                return false;
+            }
+
+            moveOrderTypeIds = ResolveMoveOrderTypeIds(config, orderTypes);
+            _moveOrderTypeIds = moveOrderTypeIds;
+            _moveOrderTypeIdsResolved = true;
+            return moveOrderTypeIds.Length > 0;
+        }
+
+        private static int[] ResolveMoveOrderTypeIds(GameConfig config, OrderTypeRegistry orderTypes)
+        {
+            string[] orderTypeKeys = config.Selection.MovePathPreviewOrderTypeKeys;
+            if (orderTypeKeys.Length == 0)
+            {
+                throw new InvalidOperationException(
+                    "selection.movePathPreviewOrderTypeKeys must explicitly list order types that SelectedMovePathPresentationSystem may preview.");
+            }
+
+            int[] ids = new int[orderTypeKeys.Length];
+            int count = 0;
+            for (int i = 0; i < orderTypeKeys.Length; i++)
+            {
+                string orderTypeKey = orderTypeKeys[i];
+                if (string.IsNullOrWhiteSpace(orderTypeKey))
+                {
+                    throw new InvalidOperationException(
+                        "selection.movePathPreviewOrderTypeKeys must not contain blank order type keys.");
+                }
+
+                if (!orderTypes.TryGetId(orderTypeKey, out int orderTypeId) ||
+                    orderTypeId <= 0)
+                {
+                    throw new InvalidOperationException(
+                        $"selection.movePathPreviewOrderTypeKeys references unknown OrderTypeRegistry key '{orderTypeKey}'.");
+                }
+
+                if (Contains(ids.AsSpan(0, count), orderTypeId))
+                {
+                    throw new InvalidOperationException(
+                        $"selection.movePathPreviewOrderTypeKeys resolves duplicate order type id {orderTypeId} from key '{orderTypeKey}'.");
+                }
+
+                ids[count++] = orderTypeId;
+            }
+
+            if (count != ids.Length)
+            {
+                Array.Resize(ref ids, count);
+            }
+
+            return ids;
+        }
+
+        private static bool IsMoveOrderType(int orderTypeId, ReadOnlySpan<int> moveOrderTypeIds)
+        {
+            for (int i = 0; i < moveOrderTypeIds.Length; i++)
+            {
+                if (moveOrderTypeIds[i] == orderTypeId)
+                {
+                    return true;
+                }
+            }
+
+            return false;
+        }
+
+        private static bool Contains(ReadOnlySpan<int> values, int value)
+        {
+            for (int i = 0; i < values.Length; i++)
+            {
+                if (values[i] == value)
+                {
+                    return true;
+                }
+            }
+
+            return false;
         }
 
         private int CountOverlayShape(GroundOverlayShape shape)

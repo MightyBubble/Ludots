@@ -4,6 +4,7 @@ using System.Numerics;
 using Ludots.Core.Engine;
 using Ludots.Core.Presentation.Assets;
 using Ludots.Core.Presentation.Components;
+using Ludots.Core.Presentation.Performers;
 using Ludots.Core.Presentation.Rendering;
 using Ludots.Core.Presentation.Terrain;
 using Ludots.Core.Scripting;
@@ -57,11 +58,12 @@ namespace Ludots.Adapter.UE5
         private readonly Dictionary<long, IsmBucket> _buckets = new();
         private readonly List<IsmBucket> _bucketList = new();
         private readonly List<AllegroDrawItem> _allegroItems = new();
-        private readonly PrefabFinalizedLeafBuffer _prefabLeaves = new();
+        private readonly List<SurfaceDrawItem> _surfaceItems = new();
         private readonly PrefabFinalizedVisualBuffer _prefabVisuals = new();
 
         public IReadOnlyList<IsmBucket> HismBuckets => _bucketList;
         public IReadOnlyList<AllegroDrawItem> AllegroItems => _allegroItems;
+        public IReadOnlyList<SurfaceDrawItem> SurfaceItems => _surfaceItems;
 
         public void CollectBuckets(GameEngine engine)
         {
@@ -73,9 +75,7 @@ namespace Ludots.Adapter.UE5
             }
 
             MeshAssetRegistry? meshRegistry = engine.GetService(CoreServiceKeys.PresentationMeshAssetRegistry);
-            PresentationVisualRequestBuffer? visualRequests = engine.GetService(CoreServiceKeys.PresentationVisualRequestBuffer);
-            PresentationAdapterCapabilities? capabilities = engine.GetService(CoreServiceKeys.PresentationAdapterCapabilities);
-            var visualHeightmap = engine.GetService(CoreServiceKeys.VisualHeightmap);
+            engine.TryGetService(CoreServiceKeys.VisualHeightmap, out IVisualHeightmap? visualHeightmap);
             var finalizationContext = new PrefabFinalizationContext(visualHeightmap);
 
             PrimitiveDrawBuffer? snapshot =
@@ -84,19 +84,20 @@ namespace Ludots.Adapter.UE5
 
             if (snapshot != null)
             {
-                CollectStaticBuckets(snapshot, meshRegistry, visualRequests, capabilities, in finalizationContext);
+                CollectSurfaceItems(snapshot);
+                CollectStaticBuckets(snapshot, meshRegistry, in finalizationContext);
             }
 
             SkinnedVisualBatchBuffer? skinnedBatch = engine.GetService(CoreServiceKeys.PresentationSkinnedVisualBatchBuffer);
             if (skinnedBatch != null)
             {
-                CollectSkinnedItems(skinnedBatch, meshRegistry, visualRequests, capabilities, in finalizationContext);
+                CollectSkinnedItems(skinnedBatch, meshRegistry, in finalizationContext);
                 return;
             }
 
             if (snapshot != null)
             {
-                CollectSkinnedFallback(snapshot, meshRegistry, visualRequests, capabilities, in finalizationContext);
+                CollectSkinnedFallback(snapshot, meshRegistry, in finalizationContext);
             }
         }
 
@@ -127,19 +128,59 @@ namespace Ludots.Adapter.UE5
 
             _bucketList.Clear();
             _allegroItems.Clear();
+            _surfaceItems.Clear();
         }
 
-        private void CollectStaticBuckets(
-            PrimitiveDrawBuffer buffer,
-            MeshAssetRegistry? meshRegistry,
-            PresentationVisualRequestBuffer? visualRequests,
-            PresentationAdapterCapabilities? capabilities,
-            in PrefabFinalizationContext finalizationContext)
+        private void CollectSurfaceItems(PrimitiveDrawBuffer buffer)
+        {
+            ReadOnlySpan<PrimitiveDrawItem> span = buffer.GetSpan();
+            for (int i = 0; i < span.Length; i++)
+            {
+                ref readonly PrimitiveDrawItem item = ref span[i];
+                if (item.AssetKind != AssetKind.Surface)
+                {
+                    if (item.RenderPath == VisualRenderPath.Surface)
+                    {
+                        throw new InvalidOperationException(
+                            $"{nameof(UE5IsmRenderBridge)} received non-Surface assetKind '{item.AssetKind}' on Surface render path stableId={item.StableId}.");
+                    }
+
+                    continue;
+                }
+
+                if (item.RenderPath != VisualRenderPath.Surface)
+                {
+                    throw new InvalidOperationException(
+                        $"{nameof(UE5IsmRenderBridge)} received Surface visual stableId={item.StableId} on render path '{item.RenderPath}'.");
+                }
+
+                _surfaceItems.Add(new SurfaceDrawItem
+                {
+                    StableId = item.StableId,
+                    MeshAssetId = item.MeshAssetId,
+                    MaterialId = item.MaterialId,
+                    SurfaceLayerKey = item.SurfaceLayerKey,
+                    SortId = item.SortId,
+                    Position = ToUEPosition(item.Position),
+                    Rotation = ToUERotation(item.Rotation),
+                    Scale = ToUEScale(item.Scale),
+                    Visibility = item.Visibility,
+                    MaterialCustomData = item.MaterialCustomData,
+                });
+            }
+        }
+
+        private void CollectStaticBuckets(PrimitiveDrawBuffer buffer, MeshAssetRegistry? meshRegistry, in PrefabFinalizationContext finalizationContext)
         {
             ReadOnlySpan<PrimitiveDrawItem> span = buffer.GetSpan();
             for (int i = 0; i < span.Length; i++)
             {
                 ref readonly var item = ref span[i];
+                if (item.AssetKind == AssetKind.Surface)
+                {
+                    continue;
+                }
+
                 if (!item.RenderPath.IsStaticInstanceLane())
                 {
                     continue;
@@ -154,8 +195,6 @@ namespace Ludots.Adapter.UE5
                     item.Scale,
                     item.Visibility,
                     meshRegistry,
-                    visualRequests,
-                    capabilities,
                     in finalizationContext);
             }
         }
@@ -169,8 +208,6 @@ namespace Ludots.Adapter.UE5
             Vector3 scale,
             VisualVisibility visibility,
             MeshAssetRegistry? meshRegistry,
-            PresentationVisualRequestBuffer? visualRequests,
-            PresentationAdapterCapabilities? capabilities,
             in PrefabFinalizationContext finalizationContext)
         {
             if (meshRegistry == null)
@@ -178,7 +215,6 @@ namespace Ludots.Adapter.UE5
                 return;
             }
 
-            _prefabLeaves.Clear();
             _prefabVisuals.Clear();
             PrefabFinalizationPipeline.FinalizeVisuals(
                 meshRegistry,
@@ -189,43 +225,15 @@ namespace Ludots.Adapter.UE5
                 scale,
                 Vector4.One,
                 finalizationContext,
-                _prefabLeaves,
                 _prefabVisuals);
 
-            foreach (ref readonly var leaf in _prefabLeaves.GetSpan())
+            foreach (ref readonly var visual in _prefabVisuals.GetSpan())
             {
-                long key = BuildBucketKey(leaf.MeshAssetId, renderPath);
-                if (!_buckets.TryGetValue(key, out var bucket))
-                {
-                    bucket = new IsmBucket(leaf.MeshAssetId, renderPath);
-                    _buckets.Add(key, bucket);
-                }
-
-                if (bucket.Instances.Count == 0)
-                {
-                    _bucketList.Add(bucket);
-                }
-
-                bucket.Instances.Add(new StaticDrawItem
-                {
-                    StableId = leaf.StableId,
-                    RenderPath = renderPath,
-                    Translation = ToUEPosition(leaf.Position),
-                    Rotation = ToUERotation(leaf.Rotation),
-                    Scale = ToUEScale(leaf.Scale),
-                    Visibility = visibility,
-                });
+                AddFinalizedStaticVisual(in visual, renderPath, visibility);
             }
-
-            AppendTypedPrefabVisualRequests(visualRequests, capabilities, _prefabVisuals);
         }
 
-        private void CollectSkinnedItems(
-            SkinnedVisualBatchBuffer buffer,
-            MeshAssetRegistry? meshRegistry,
-            PresentationVisualRequestBuffer? visualRequests,
-            PresentationAdapterCapabilities? capabilities,
-            in PrefabFinalizationContext finalizationContext)
+        private void CollectSkinnedItems(SkinnedVisualBatchBuffer buffer, MeshAssetRegistry? meshRegistry, in PrefabFinalizationContext finalizationContext)
         {
             ReadOnlySpan<SkinnedVisualBatchItem> span = buffer.GetSpan();
             for (int i = 0; i < span.Length; i++)
@@ -244,18 +252,11 @@ namespace Ludots.Adapter.UE5
                     item.AnimationOverlay,
                     item.Visibility,
                     meshRegistry,
-                    visualRequests,
-                    capabilities,
                     in finalizationContext);
             }
         }
 
-        private void CollectSkinnedFallback(
-            PrimitiveDrawBuffer buffer,
-            MeshAssetRegistry? meshRegistry,
-            PresentationVisualRequestBuffer? visualRequests,
-            PresentationAdapterCapabilities? capabilities,
-            in PrefabFinalizationContext finalizationContext)
+        private void CollectSkinnedFallback(PrimitiveDrawBuffer buffer, MeshAssetRegistry? meshRegistry, in PrefabFinalizationContext finalizationContext)
         {
             ReadOnlySpan<PrimitiveDrawItem> span = buffer.GetSpan();
             for (int i = 0; i < span.Length; i++)
@@ -279,8 +280,6 @@ namespace Ludots.Adapter.UE5
                     item.AnimationOverlay,
                     item.Visibility,
                     meshRegistry,
-                    visualRequests,
-                    capabilities,
                     in finalizationContext);
             }
         }
@@ -298,8 +297,6 @@ namespace Ludots.Adapter.UE5
             AnimationOverlayRequest animationOverlay,
             VisualVisibility visibility,
             MeshAssetRegistry? meshRegistry,
-            PresentationVisualRequestBuffer? visualRequests,
-            PresentationAdapterCapabilities? capabilities,
             in PrefabFinalizationContext finalizationContext)
         {
             if (meshRegistry == null)
@@ -307,7 +304,6 @@ namespace Ludots.Adapter.UE5
                 return;
             }
 
-            _prefabLeaves.Clear();
             _prefabVisuals.Clear();
             PrefabFinalizationPipeline.FinalizeVisuals(
                 meshRegistry,
@@ -318,84 +314,103 @@ namespace Ludots.Adapter.UE5
                 scale,
                 color,
                 finalizationContext,
-                _prefabLeaves,
                 _prefabVisuals);
 
-            foreach (ref readonly var leaf in _prefabLeaves.GetSpan())
+            foreach (ref readonly var visual in _prefabVisuals.GetSpan())
             {
-                AddFinalizedSkinnedLeaf(
-                    leaf.StableId,
-                    leaf.MeshAssetId,
+                AddFinalizedSkinnedVisual(
+                    in visual,
                     animationProfileId,
                     renderPath,
-                    leaf.Position,
-                    leaf.Rotation,
-                    leaf.Scale,
-                    leaf.Color,
                     animator,
                     animationOverlay,
                     visibility);
             }
-
-            AppendTypedPrefabVisualRequests(visualRequests, capabilities, _prefabVisuals);
         }
 
-        private static void AppendTypedPrefabVisualRequests(
-            PresentationVisualRequestBuffer? visualRequests,
-            PresentationAdapterCapabilities? capabilities,
-            PrefabFinalizedVisualBuffer visuals)
+        private void AddFinalizedStaticVisual(
+            in PrefabFinalizedVisual visual,
+            VisualRenderPath renderPath,
+            VisualVisibility visibility)
         {
-            if (visuals.Count == 0)
+            EnsureMeshVisualSupported(in visual, renderPath, consumerName: nameof(UE5IsmRenderBridge));
+
+            long key = BuildBucketKey(visual.MeshAssetId, renderPath);
+            if (!_buckets.TryGetValue(key, out var bucket))
             {
-                return;
+                bucket = new IsmBucket(visual.MeshAssetId, renderPath);
+                _buckets.Add(key, bucket);
             }
 
-            if (visualRequests == null)
+            if (bucket.Instances.Count == 0)
             {
-                throw new InvalidOperationException(
-                    $"Typed prefab finalization produced {visuals.Count} non-mesh visual request(s), but PresentationVisualRequestBuffer is not registered.");
+                _bucketList.Add(bucket);
             }
 
-            foreach (ref readonly var visual in visuals.GetSpan())
+            bucket.Instances.Add(new StaticDrawItem
             {
-                var request = visual.ToVisualRequest();
-                if (!visualRequests.TryAdd(in request))
-                {
-                    throw new InvalidOperationException(
-                        $"Presentation visual request buffer overflowed while forwarding prefab visual stableId={visual.StableId} kind={visual.Kind}.");
-                }
-            }
-
-            PresentationVisualCapabilityValidator.Validate(visualRequests, capabilities);
+                StableId = visual.StableId,
+                RenderPath = renderPath,
+                Translation = ToUEPosition(visual.Position),
+                Rotation = ToUERotation(visual.Rotation),
+                Scale = ToUEScale(visual.Scale),
+                Visibility = visibility,
+            });
         }
 
-        private void AddFinalizedSkinnedLeaf(
-            int stableId,
-            int meshAssetId,
+        private void AddFinalizedSkinnedVisual(
+            in PrefabFinalizedVisual visual,
             int animationProfileId,
             VisualRenderPath renderPath,
-            Vector3 position,
-            Quaternion rotation,
-            Vector3 scale,
-            Vector4 color,
             AnimatorPackedState animator,
             AnimationOverlayRequest animationOverlay,
             VisualVisibility visibility)
         {
+            EnsureMeshVisualSupported(in visual, renderPath, consumerName: nameof(UE5IsmRenderBridge));
+
             _allegroItems.Add(new AllegroDrawItem
             {
-                StableId = stableId,
-                MeshAssetId = meshAssetId,
+                StableId = visual.StableId,
+                MeshAssetId = visual.MeshAssetId,
                 AnimationProfileId = animationProfileId,
                 RenderPath = renderPath,
-                Position = ToUEPosition(position),
-                Rotation = ToUERotation(rotation),
-                Scale = ToUEScale(scale),
-                Color = color,
+                Position = ToUEPosition(visual.Position),
+                Rotation = ToUERotation(visual.Rotation),
+                Scale = ToUEScale(visual.Scale),
+                Color = visual.Color,
                 Animator = animator,
                 AnimationOverlay = animationOverlay,
                 Visibility = visibility,
             });
+        }
+
+        private static void EnsureMeshVisualSupported(in PrefabFinalizedVisual visual, VisualRenderPath renderPath, string consumerName)
+        {
+            if (visual.Kind == PrefabVisualPartKind.Mesh)
+            {
+                return;
+            }
+
+            if (visual.Kind == PrefabVisualPartKind.ProceduralMesh)
+            {
+                if (visual.MeshDescriptor.Type != MeshAssetType.ProceduralMesh || visual.MeshDescriptor.ProceduralMeshData == null)
+                {
+                    throw new InvalidOperationException(
+                        $"{consumerName} received procedural finalized visual stableId={visual.StableId} without procedural resource payload.");
+                }
+
+                ProceduralMeshAssetData mesh = visual.MeshDescriptor.ProceduralMeshData;
+                if (mesh.UsageHint != ProceduralMeshUsageHint.Static && renderPath.IsStaticInstanceLane())
+                {
+                    throw new InvalidOperationException(
+                        $"{consumerName} cannot place non-static procedural mesh stableId={visual.StableId} into static instance lane '{renderPath}'.");
+                }
+
+                return;
+            }
+
+            throw new InvalidOperationException(
+                $"{consumerName} does not support finalized visual kind '{visual.Kind}' on render path '{renderPath}' (stableId={visual.StableId}).");
         }
 
         private static long BuildBucketKey(int meshAssetId, VisualRenderPath renderPath)

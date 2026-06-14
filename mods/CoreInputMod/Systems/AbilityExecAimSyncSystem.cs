@@ -3,6 +3,7 @@ using Arch.System;
 using Ludots.Core.Components;
 using Ludots.Core.Gameplay.GAS.Components;
 using Ludots.Core.Gameplay.GAS.Orders;
+using Ludots.Core.Mathematics;
 using Ludots.Core.Mathematics.FixedPoint;
 
 namespace CoreInputMod.Systems
@@ -46,7 +47,7 @@ namespace CoreInputMod.Systems
                     Fix64Vec2 delta = exec.TargetPosCm - position.Value;
                     if (delta.X != Fix64.Zero || delta.Y != Fix64.Zero)
                     {
-                        Upsert(entity, new FacingDirection { AngleRad = Fix64Math.Atan2Fast(delta.Y, delta.X).ToFloat() });
+                        Upsert(entity, new FacingDirection { AngleRad = WorldPlane2D.FacingRadFromDirection(in delta) });
                     }
                 }
 

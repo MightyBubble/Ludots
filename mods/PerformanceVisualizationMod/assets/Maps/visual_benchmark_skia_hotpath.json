@@ -1,0 +1,10 @@
+{
+  "Id": "visual_benchmark_skia_hotpath",
+  "Tags": [
+    "Benchmark",
+    "Visual",
+    "Showcase",
+    "SkiaHotpath"
+  ],
+  "Entities": []
+}

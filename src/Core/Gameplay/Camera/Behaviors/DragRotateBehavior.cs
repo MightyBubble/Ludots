@@ -1,5 +1,6 @@
 using System;
 using System.Numerics;
+using Ludots.Core.Mathematics;
 
 namespace Ludots.Core.Gameplay.Camera.Behaviors
 {
@@ -39,14 +40,7 @@ namespace Ludots.Core.Gameplay.Camera.Behaviors
             state.Yaw += look.X * _degPerPixel;
             state.Pitch += look.Y * _degPerPixel;
             state.Pitch = Math.Clamp(state.Pitch, _minPitchDeg, _maxPitchDeg);
-            state.Yaw = Wrap360(state.Yaw);
-        }
-
-        private static float Wrap360(float degrees)
-        {
-            degrees %= 360f;
-            if (degrees < 0f) degrees += 360f;
-            return degrees;
+            state.Yaw = WorldPlane2D.NormalizeDegreesPositive(state.Yaw);
         }
     }
 }

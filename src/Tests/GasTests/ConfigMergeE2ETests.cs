@@ -78,10 +78,10 @@ namespace Ludots.Tests.GAS
             File.WriteAllText(Path.Combine(dir, Path.GetFileName(relativePath)), content);
         }
 
-        // ═══════════════════════════════════════════════════════════════════
+        // ══════════════════════════════════════════════════════════════════�?
         // Scenario 1: Mod overrides a single effect property (ArrayById merge)
         // A mod developer wants to change the damage of a Core-defined effect.
-        // ═══════════════════════════════════════════════════════════════════
+        // ══════════════════════════════════════════════════════════════════�?
         [Test]
         public void Scenario_ModOverridesEffectProperty_MergedCorrectly()
         {
@@ -93,7 +93,7 @@ namespace Ludots.Tests.GAS
                 @"[{ ""id"": ""Fireball"", ""damage"": 200 }]");
 
             var (_, _, pipeline, catalog) = BuildPipeline(_root, new[] { "ModA" });
-            var entry = ConfigPipeline.GetEntryOrDefault(catalog, "GAS/effects.json", ConfigMergePolicy.ArrayById, "id");
+            var entry = ConfigPipeline.RequireEntry(catalog, "GAS/effects.json", ConfigMergePolicy.ArrayById, "id");
             var report = new ConfigConflictReport();
             var merged = pipeline.MergeArrayByIdFromCatalog(in entry, report);
 
@@ -103,9 +103,9 @@ namespace Ludots.Tests.GAS
             That(merged[0].Node["presetType"]?.GetValue<string>(), Is.EqualTo("Damage"), "Core property should be preserved");
         }
 
-        // ═══════════════════════════════════════════════════════════════════
+        // ══════════════════════════════════════════════════════════════════�?
         // Scenario 2: Mod adds a new ability without touching Core abilities
-        // ═══════════════════════════════════════════════════════════════════
+        // ══════════════════════════════════════════════════════════════════�?
         [Test]
         public void Scenario_ModAddsNewAbility_BothExist()
         {
@@ -117,7 +117,7 @@ namespace Ludots.Tests.GAS
                 @"[{ ""id"": ""Fireball"", ""cooldown"": 8 }]");
 
             var (_, _, pipeline, catalog) = BuildPipeline(_root, new[] { "ModA" });
-            var entry = ConfigPipeline.GetEntryOrDefault(catalog, "GAS/abilities.json", ConfigMergePolicy.ArrayById, "id");
+            var entry = ConfigPipeline.RequireEntry(catalog, "GAS/abilities.json", ConfigMergePolicy.ArrayById, "id");
             var merged = pipeline.MergeArrayByIdFromCatalog(in entry);
 
             That(merged.Count, Is.EqualTo(2));
@@ -125,9 +125,9 @@ namespace Ludots.Tests.GAS
             That(merged[1].Id, Is.EqualTo("Fireball"));
         }
 
-        // ═══════════════════════════════════════════════════════════════════
+        // ══════════════════════════════════════════════════════════════════�?
         // Scenario 3: Mod deletes a Core-defined tag rule via __delete
-        // ═══════════════════════════════════════════════════════════════════
+        // ══════════════════════════════════════════════════════════════════�?
         [Test]
         public void Scenario_ModDeletesTagRule_ViaDeleteField()
         {
@@ -139,7 +139,7 @@ namespace Ludots.Tests.GAS
                 @"[{ ""id"": ""Stun"", ""__delete"": true }]");
 
             var (_, _, pipeline, catalog) = BuildPipeline(_root, new[] { "ModA" });
-            var entry = ConfigPipeline.GetEntryOrDefault(catalog, "GAS/tag_rules.json", ConfigMergePolicy.ArrayById, "id");
+            var entry = ConfigPipeline.RequireEntry(catalog, "GAS/tag_rules.json", ConfigMergePolicy.ArrayById, "id");
             var report = new ConfigConflictReport();
             var merged = pipeline.MergeArrayByIdFromCatalog(in entry, report);
 
@@ -147,9 +147,9 @@ namespace Ludots.Tests.GAS
             That(merged[0].Id, Is.EqualTo("Silence"));
         }
 
-        // ═══════════════════════════════════════════════════════════════════
+        // ══════════════════════════════════════════════════════════════════�?
         // Scenario 4: Mod deletes via Disabled field
-        // ═══════════════════════════════════════════════════════════════════
+        // ══════════════════════════════════════════════════════════════════�?
         [Test]
         public void Scenario_ModDeletesEntry_ViaDisabled()
         {
@@ -161,39 +161,39 @@ namespace Ludots.Tests.GAS
                 @"[{ ""id"": ""Heal"", ""Disabled"": true }]");
 
             var (_, _, pipeline, catalog) = BuildPipeline(_root, new[] { "ModA" });
-            var entry = ConfigPipeline.GetEntryOrDefault(catalog, "GAS/effects.json", ConfigMergePolicy.ArrayById, "id");
+            var entry = ConfigPipeline.RequireEntry(catalog, "GAS/effects.json", ConfigMergePolicy.ArrayById, "id");
             var merged = pipeline.MergeArrayByIdFromCatalog(in entry);
 
             That(merged.Count, Is.EqualTo(1));
             That(merged[0].Id, Is.EqualTo("Poison"));
         }
 
-        // ═══════════════════════════════════════════════════════════════════
-        // Scenario 5: DeepObject merge — mod adds a new clock field
-        // ═══════════════════════════════════════════════════════════════════
+        // ══════════════════════════════════════════════════════════════════�?
+        // Scenario 5: DeepObject merge �?mod adds a new clock field
+        // ══════════════════════════════════════════════════════════════════�?
         [Test]
         public void Scenario_DeepObjectMerge_ModAddsField()
         {
             WriteFile("Core", "config_catalog.json",
                 @"[{ ""Path"": ""GAS/clock.json"", ""Policy"": ""DeepObject"" }]");
             WriteFile("Core", "GAS/clock.json",
-                @"{ ""StepEveryFixedTicks"": 1, ""Mode"": ""Auto"" }");
+                @"{ ""stepEveryFixedTicks"": 1, ""mode"": ""Auto"" }");
             WriteAssetFile("ModA", "GAS/clock.json",
-                @"{ ""StepEveryFixedTicks"": 2 }");
+                @"{ ""stepEveryFixedTicks"": 2 }");
 
             var (_, _, pipeline, catalog) = BuildPipeline(_root, new[] { "ModA" });
-            var entry = ConfigPipeline.GetEntryOrDefault(catalog, "GAS/clock.json", ConfigMergePolicy.DeepObject);
+            var entry = ConfigPipeline.RequireEntry(catalog, "GAS/clock.json", ConfigMergePolicy.DeepObject);
             var merged = pipeline.MergeDeepObjectFromCatalog(in entry);
 
             That(merged, Is.Not.Null);
-            That(merged["StepEveryFixedTicks"]?.GetValue<int>(), Is.EqualTo(2), "Mod overrides tick count");
-            That(merged["Mode"]?.GetValue<string>(), Is.EqualTo("Auto"), "Core field preserved");
+            That(merged["stepEveryFixedTicks"]?.GetValue<int>(), Is.EqualTo(2), "Mod overrides tick count");
+            That(merged["mode"]?.GetValue<string>(), Is.EqualTo("Auto"), "Core field preserved");
         }
 
-        // ═══════════════════════════════════════════════════════════════════
-        // Scenario 6: Three-mod layering — priority ordering
+        // ══════════════════════════════════════════════════════════════════�?
+        // Scenario 6: Three-mod layering �?priority ordering
         // ModB overrides ModA which overrides Core.
-        // ═══════════════════════════════════════════════════════════════════
+        // ══════════════════════════════════════════════════════════════════�?
         [Test]
         public void Scenario_ThreeModLayering_LastModWins()
         {
@@ -207,7 +207,7 @@ namespace Ludots.Tests.GAS
                 @"[{ ""id"": ""Fireball"", ""damage"": 200, ""splash"": true }]");
 
             var (_, _, pipeline, catalog) = BuildPipeline(_root, new[] { "ModA", "ModB" });
-            var entry = ConfigPipeline.GetEntryOrDefault(catalog, "GAS/effects.json", ConfigMergePolicy.ArrayById, "id");
+            var entry = ConfigPipeline.RequireEntry(catalog, "GAS/effects.json", ConfigMergePolicy.ArrayById, "id");
             var merged = pipeline.MergeArrayByIdFromCatalog(in entry);
 
             That(merged.Count, Is.EqualTo(1));
@@ -216,9 +216,9 @@ namespace Ludots.Tests.GAS
             That(merged[0].Node["splash"]?.GetValue<bool>(), Is.True, "ModB field added");
         }
 
-        // ═══════════════════════════════════════════════════════════════════
+        // ══════════════════════════════════════════════════════════════════�?
         // Scenario 7: ConflictReport records all fragment sources and winners
-        // ═══════════════════════════════════════════════════════════════════
+        // ══════════════════════════════════════════════════════════════════�?
         [Test]
         public void Scenario_ConflictReport_RecordsFragmentsAndWinners()
         {
@@ -230,7 +230,7 @@ namespace Ludots.Tests.GAS
                 @"[{ ""id"": ""A"", ""v"": 10 }, { ""id"": ""C"", ""v"": 3 }]");
 
             var (_, _, pipeline, catalog) = BuildPipeline(_root, new[] { "ModA" });
-            var entry = ConfigPipeline.GetEntryOrDefault(catalog, "GAS/effects.json", ConfigMergePolicy.ArrayById, "id");
+            var entry = ConfigPipeline.RequireEntry(catalog, "GAS/effects.json", ConfigMergePolicy.ArrayById, "id");
             var report = new ConfigConflictReport();
             var merged = pipeline.MergeArrayByIdFromCatalog(in entry, report);
 
@@ -241,9 +241,9 @@ namespace Ludots.Tests.GAS
             That(fragments.Count, Is.GreaterThanOrEqualTo(2), "Should record at least Core + ModA fragments");
         }
 
-        // ═══════════════════════════════════════════════════════════════════
-        // Scenario 8: Single source — Core only, no mods
-        // ═══════════════════════════════════════════════════════════════════
+        // ══════════════════════════════════════════════════════════════════�?
+        // Scenario 8: Single source �?Core only, no mods
+        // ══════════════════════════════════════════════════════════════════�?
         [Test]
         public void Scenario_SingleSource_CoreOnly()
         {
@@ -253,7 +253,7 @@ namespace Ludots.Tests.GAS
                 @"[{ ""id"": ""Slash"", ""cooldown"": 5 }, { ""id"": ""Heal"", ""cooldown"": 10 }]");
 
             var (_, _, pipeline, catalog) = BuildPipeline(_root);
-            var entry = ConfigPipeline.GetEntryOrDefault(catalog, "GAS/abilities.json", ConfigMergePolicy.ArrayById, "id");
+            var entry = ConfigPipeline.RequireEntry(catalog, "GAS/abilities.json", ConfigMergePolicy.ArrayById, "id");
             var merged = pipeline.MergeArrayByIdFromCatalog(in entry);
 
             That(merged.Count, Is.EqualTo(2));
@@ -261,27 +261,26 @@ namespace Ludots.Tests.GAS
             That(merged[1].Id, Is.EqualTo("Heal"));
         }
 
-        // ═══════════════════════════════════════════════════════════════════
-        // Scenario 9: GetEntryOrDefault fallback when not in catalog
-        // ═══════════════════════════════════════════════════════════════════
+        // ══════════════════════════════════════════════════════════════════�?
+        // Scenario 9: missing catalog entry is a configuration error
+        // ══════════════════════════════════════════════════════════════════�?
         [Test]
-        public void Scenario_GetEntryOrDefault_FallbackWhenNotInCatalog()
+        public void Scenario_RequireEntry_ThrowsWhenNotInCatalog()
         {
             WriteFile("Core", "config_catalog.json", "[]");
             WriteFile("Core", "Custom/my_config.json",
                 @"[{ ""id"": ""X"", ""v"": 1 }]");
 
             var (_, _, pipeline, catalog) = BuildPipeline(_root);
-            var entry = ConfigPipeline.GetEntryOrDefault(catalog, "Custom/my_config.json", ConfigMergePolicy.ArrayById, "id");
-            var merged = pipeline.MergeArrayByIdFromCatalog(in entry);
 
-            That(merged.Count, Is.EqualTo(1));
-            That(merged[0].Id, Is.EqualTo("X"));
+            InvalidOperationException ex = Throws<InvalidOperationException>(
+                () => ConfigPipeline.RequireEntry(catalog, "Custom/my_config.json", ConfigMergePolicy.ArrayById, "id"))!;
+            That(ex.Message, Does.Contain("Custom/my_config.json"));
         }
 
-        // ═══════════════════════════════════════════════════════════════════
-        // Scenario 10: DeepObject — attribute constraints merge from multiple mods
-        // ═══════════════════════════════════════════════════════════════════
+        // ══════════════════════════════════════════════════════════════════�?
+        // Scenario 10: DeepObject �?attribute constraints merge from multiple mods
+        // ══════════════════════════════════════════════════════════════════�?
         [Test]
         public void Scenario_DeepObject_AttributeConstraints_MultiMod()
         {
@@ -293,7 +292,7 @@ namespace Ludots.Tests.GAS
                 @"{ ""Mana"": { ""min"": 0, ""max"": 500 }, ""Health"": { ""max"": 2000 } }");
 
             var (_, _, pipeline, catalog) = BuildPipeline(_root, new[] { "ModA" });
-            var entry = ConfigPipeline.GetEntryOrDefault(catalog, "GAS/attribute_constraints.json", ConfigMergePolicy.DeepObject);
+            var entry = ConfigPipeline.RequireEntry(catalog, "GAS/attribute_constraints.json", ConfigMergePolicy.DeepObject);
             var merged = pipeline.MergeDeepObjectFromCatalog(in entry);
 
             That(merged, Is.Not.Null);
@@ -307,9 +306,9 @@ namespace Ludots.Tests.GAS
             That(mana["max"]?.GetValue<int>(), Is.EqualTo(500));
         }
 
-        // ═══════════════════════════════════════════════════════════════════
+        // ══════════════════════════════════════════════════════════════════�?
         // Scenario 11: Mod re-adds a previously deleted entry
-        // ═══════════════════════════════════════════════════════════════════
+        // ══════════════════════════════════════════════════════════════════�?
         [Test]
         public void Scenario_ModReAddsDeletedEntry()
         {
@@ -325,7 +324,7 @@ namespace Ludots.Tests.GAS
                 @"[{ ""id"": ""Heal"", ""amount"": 100, ""type"": ""holy"" }]");
 
             var (_, _, pipeline, catalog) = BuildPipeline(_root, new[] { "ModA", "ModB" });
-            var entry = ConfigPipeline.GetEntryOrDefault(catalog, "GAS/effects.json", ConfigMergePolicy.ArrayById, "id");
+            var entry = ConfigPipeline.RequireEntry(catalog, "GAS/effects.json", ConfigMergePolicy.ArrayById, "id");
             var merged = pipeline.MergeArrayByIdFromCatalog(in entry);
 
             That(merged.Count, Is.EqualTo(1));
@@ -334,9 +333,9 @@ namespace Ludots.Tests.GAS
             That(merged[0].Node["type"]?.GetValue<string>(), Is.EqualTo("holy"), "New field from ModB");
         }
 
-        // ═══════════════════════════════════════════════════════════════════
+        // ══════════════════════════════════════════════════════════════════�?
         // Scenario 12: PresetTypeLoader via ConfigPipeline (full integration)
-        // ═══════════════════════════════════════════════════════════════════
+        // ══════════════════════════════════════════════════════════════════�?
         [Test]
         public void Scenario_PresetTypeLoader_LoadsViaPipeline()
         {
@@ -347,7 +346,10 @@ namespace Ludots.Tests.GAS
                     ""id"": ""InstantDamage"",
                     ""components"": [""ModifierParams""],
                     ""activePhases"": [""OnApply""],
-                    ""allowedLifetimes"": [""Instant""]
+                    ""allowedLifetimes"": [""Instant""],
+                    ""defaultPhaseHandlers"": {
+                      ""OnApply"": { ""type"": ""builtin"", ""id"": ""ApplyModifiers"" }
+                    }
                 }
             ]");
             WriteAssetFile("ModA", "GAS/preset_types.json", @"[
@@ -368,18 +370,18 @@ namespace Ludots.Tests.GAS
             That(def.HasComponent(ComponentFlags.PhaseGraphBindings), Is.True, "ModA component added");
         }
 
-        // ═══════════════════════════════════════════════════════════════════
+        // ══════════════════════════════════════════════════════════════════�?
         // Scenario 13: GasClockConfig DeepObject merge
-        // ═══════════════════════════════════════════════════════════════════
+        // ══════════════════════════════════════════════════════════════════�?
         [Test]
         public void Scenario_GasClockConfig_LoadsViaPipeline()
         {
             WriteFile("Core", "config_catalog.json",
                 @"[{ ""Path"": ""GAS/clock.json"", ""Policy"": ""DeepObject"" }]");
             WriteFile("Core", "GAS/clock.json",
-                @"{ ""StepEveryFixedTicks"": 1, ""Mode"": ""Auto"" }");
+                @"{ ""stepEveryFixedTicks"": 1, ""mode"": ""Auto"" }");
             WriteAssetFile("ModA", "GAS/clock.json",
-                @"{ ""StepEveryFixedTicks"": 3 }");
+                @"{ ""stepEveryFixedTicks"": 3 }");
 
             var (_, _, pipeline, catalog) = BuildPipeline(_root, new[] { "ModA" });
             var loader = new GasClockConfigLoader(pipeline);
@@ -389,9 +391,9 @@ namespace Ludots.Tests.GAS
             That(config.Mode, Is.EqualTo(GasStepMode.Auto), "Core mode preserved");
         }
 
-        // ═══════════════════════════════════════════════════════════════════
-        // Scenario 14: Empty mod fragment — no crash, Core preserved
-        // ═══════════════════════════════════════════════════════════════════
+        // ══════════════════════════════════════════════════════════════════�?
+        // Scenario 14: Empty mod fragment �?no crash, Core preserved
+        // ══════════════════════════════════════════════════════════════════�?
         [Test]
         public void Scenario_EmptyModFragment_CorePreserved()
         {
@@ -402,58 +404,59 @@ namespace Ludots.Tests.GAS
             WriteAssetFile("ModA", "GAS/effects.json", "[]");
 
             var (_, _, pipeline, catalog) = BuildPipeline(_root, new[] { "ModA" });
-            var entry = ConfigPipeline.GetEntryOrDefault(catalog, "GAS/effects.json", ConfigMergePolicy.ArrayById, "id");
+            var entry = ConfigPipeline.RequireEntry(catalog, "GAS/effects.json", ConfigMergePolicy.ArrayById, "id");
             var merged = pipeline.MergeArrayByIdFromCatalog(in entry);
 
             That(merged.Count, Is.EqualTo(1));
             That(merged[0].Node["damage"]?.GetValue<int>(), Is.EqualTo(100));
         }
 
-        // ═══════════════════════════════════════════════════════════════════
-        // Scenario 15: No config file exists anywhere — empty result
-        // ═══════════════════════════════════════════════════════════════════
+        // ══════════════════════════════════════════════════════════════════�?
+        // Scenario 15: No config file exists anywhere �?empty result
+        // ══════════════════════════════════════════════════════════════════�?
         [Test]
         public void Scenario_NoConfigExists_EmptyResult()
         {
-            WriteFile("Core", "config_catalog.json", "[]");
+            WriteFile("Core", "config_catalog.json",
+                @"[{ ""Path"": ""NonExistent/stuff.json"", ""Policy"": ""ArrayById"", ""IdField"": ""id"" }]");
 
             var (_, _, pipeline, catalog) = BuildPipeline(_root);
-            var entry = ConfigPipeline.GetEntryOrDefault(catalog, "NonExistent/stuff.json", ConfigMergePolicy.ArrayById, "id");
+            var entry = ConfigPipeline.RequireEntry(catalog, "NonExistent/stuff.json", ConfigMergePolicy.ArrayById, "id");
             var merged = pipeline.MergeArrayByIdFromCatalog(in entry);
 
             That(merged.Count, Is.EqualTo(0));
         }
 
-        // ═══════════════════════════════════════════════════════════════════
-        // Scenario 16: Performer definition with numeric ID — ArrayById merge
-        // ═══════════════════════════════════════════════════════════════════
+        // ══════════════════════════════════════════════════════════════════�?
+        // Scenario 16: Performer definition with numeric ID �?ArrayById merge
+        // ══════════════════════════════════════════════════════════════════�?
         [Test]
         public void Scenario_PerformerDefinition_NumericId_MergesCorrectly()
         {
             WriteFile("Core", "config_catalog.json",
                 @"[{ ""Path"": ""Presentation/performers.json"", ""Policy"": ""ArrayById"", ""IdField"": ""id"" }]");
             WriteFile("Core", "Presentation/performers.json", @"[
-                { ""id"": ""1"", ""visualKind"": ""GroundOverlay"", ""defaultScale"": 1.0 },
-                { ""id"": ""2"", ""visualKind"": ""GroundOverlay"", ""defaultScale"": 2.0 }
+                { ""id"": ""1"", ""defaultLifetime"": 1.0 },
+                { ""id"": ""2"", ""defaultLifetime"": 2.0 }
             ]");
             WriteAssetFile("ModA", "Presentation/performers.json", @"[
-                { ""id"": ""1"", ""defaultScale"": 1.5 }
+                { ""id"": ""1"", ""defaultLifetime"": 1.5 }
             ]");
 
             var (_, _, pipeline, catalog) = BuildPipeline(_root, new[] { "ModA" });
-            var entry = ConfigPipeline.GetEntryOrDefault(catalog, "Presentation/performers.json", ConfigMergePolicy.ArrayById, "id");
+            var entry = ConfigPipeline.RequireEntry(catalog, "Presentation/performers.json", ConfigMergePolicy.ArrayById, "id");
             var merged = pipeline.MergeArrayByIdFromCatalog(in entry);
 
             That(merged.Count, Is.EqualTo(2));
             // id=1 should have merged scale
-            That(merged[0].Node["defaultScale"]?.GetValue<float>(), Is.EqualTo(1.5f).Within(0.01f));
+            That(merged[0].Node["defaultLifetime"]?.GetValue<float>(), Is.EqualTo(1.5f).Within(0.01f));
             // id=2 should be unchanged
-            That(merged[1].Node["defaultScale"]?.GetValue<float>(), Is.EqualTo(2.0f).Within(0.01f));
+            That(merged[1].Node["defaultLifetime"]?.GetValue<float>(), Is.EqualTo(2.0f).Within(0.01f));
         }
 
-        // ═══════════════════════════════════════════════════════════════════
+        // ══════════════════════════════════════════════════════════════════�?
         // Scenario 17: MergeArrayByIdToEntries preserves insertion order
-        // ═══════════════════════════════════════════════════════════════════
+        // ══════════════════════════════════════════════════════════════════�?
         [Test]
         public void Scenario_InsertionOrder_Preserved()
         {
@@ -463,7 +466,7 @@ namespace Ludots.Tests.GAS
                 @"[{ ""id"": ""C"" }, { ""id"": ""A"" }, { ""id"": ""B"" }]");
 
             var (_, _, pipeline, catalog) = BuildPipeline(_root);
-            var entry = ConfigPipeline.GetEntryOrDefault(catalog, "GAS/effects.json", ConfigMergePolicy.ArrayById, "id");
+            var entry = ConfigPipeline.RequireEntry(catalog, "GAS/effects.json", ConfigMergePolicy.ArrayById, "id");
             var merged = pipeline.MergeArrayByIdFromCatalog(in entry);
 
             That(merged.Count, Is.EqualTo(3));
@@ -472,11 +475,11 @@ namespace Ludots.Tests.GAS
             That(merged[2].Id, Is.EqualTo("B"));
         }
 
-        // ═══════════════════════════════════════════════════════════════════
-        // Scenario 18: Case-insensitive ID matching
-        // ═══════════════════════════════════════════════════════════════════
+        // ══════════════════════════════════════════════════════════════════�?
+        // Scenario 18: Case-sensitive ID matching
+        // ══════════════════════════════════════════════════════════════════�?
         [Test]
-        public void Scenario_CaseInsensitiveId_MergesCorrectly()
+        public void Scenario_CaseSensitiveId_KeepsDistinctEntries()
         {
             WriteFile("Core", "config_catalog.json",
                 @"[{ ""Path"": ""GAS/effects.json"", ""Policy"": ""ArrayById"", ""IdField"": ""id"" }]");
@@ -486,11 +489,16 @@ namespace Ludots.Tests.GAS
                 @"[{ ""id"": ""fireball"", ""damage"": 200 }]");
 
             var (_, _, pipeline, catalog) = BuildPipeline(_root, new[] { "ModA" });
-            var entry = ConfigPipeline.GetEntryOrDefault(catalog, "GAS/effects.json", ConfigMergePolicy.ArrayById, "id");
+            var entry = ConfigPipeline.RequireEntry(catalog, "GAS/effects.json", ConfigMergePolicy.ArrayById, "id");
             var merged = pipeline.MergeArrayByIdFromCatalog(in entry);
 
-            That(merged.Count, Is.EqualTo(1), "Case-insensitive: should merge as one entry");
-            That(merged[0].Node["damage"]?.GetValue<int>(), Is.EqualTo(200));
+            That(merged.Count, Is.EqualTo(2), "Config IDs are canonical and case-sensitive; case variants are distinct entries.");
+            That(merged[0].Id, Is.EqualTo("Fireball"));
+            That(merged[0].Node["damage"]?.GetValue<int>(), Is.EqualTo(100));
+            That(merged[1].Id, Is.EqualTo("fireball"));
+            That(merged[1].Node["damage"]?.GetValue<int>(), Is.EqualTo(200));
         }
     }
 }
+
+

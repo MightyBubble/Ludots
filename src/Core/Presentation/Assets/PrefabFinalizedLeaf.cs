@@ -1,10 +1,11 @@
 using System.Numerics;
-using Ludots.Core.Presentation.Rendering;
 
 namespace Ludots.Core.Presentation.Assets
 {
     public readonly struct PrefabFinalizedLeaf
     {
+        private readonly PrefabFinalizedVisual _visual;
+
         public PrefabFinalizedLeaf(
             int meshAssetId,
             in MeshAssetDescriptor descriptor,
@@ -12,7 +13,10 @@ namespace Ludots.Core.Presentation.Assets
             in Vector3 position,
             in Quaternion rotation,
             in Vector3 scale,
-            in Vector4 color)
+            in Vector4 color,
+            int materialId = 0,
+            PrefabMaterialBinding[]? materialBindings = null,
+            in ProceduralMeshBounds localBounds = default)
         {
             MeshAssetId = meshAssetId;
             Descriptor = descriptor;
@@ -21,16 +25,9 @@ namespace Ludots.Core.Presentation.Assets
             Rotation = rotation;
             Scale = scale;
             Color = color;
-            Visual = new PrefabFinalizedVisual(
-                PrefabPartKind.Mesh,
-                meshAssetId,
-                string.Empty,
-                stableId,
-                position,
-                rotation,
-                scale,
-                color,
-                System.Array.Empty<PresentationPayloadField>());
+            _visual = descriptor.Type == MeshAssetType.ProceduralMesh
+                ? PrefabFinalizedVisual.ProceduralMesh(meshAssetId, descriptor, stableId, position, rotation, scale, color, materialBindings ?? System.Array.Empty<PrefabMaterialBinding>(), localBounds)
+                : PrefabFinalizedVisual.Mesh(meshAssetId, descriptor, stableId, position, rotation, scale, color, materialId, materialBindings, localBounds);
         }
 
         public int MeshAssetId { get; }
@@ -47,6 +44,6 @@ namespace Ludots.Core.Presentation.Assets
 
         public Vector4 Color { get; }
 
-        public PrefabFinalizedVisual Visual { get; }
+        public PrefabFinalizedVisual ToVisual() => _visual;
     }
 }

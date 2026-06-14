@@ -73,6 +73,7 @@ external/
 # docs/  <-- Un-ignore docs to keep archived documentation
 artifacts/
 _temp_export/
+.codex_out/
 
 # ----- Build Logs & Artifacts -----
 msbuild.log

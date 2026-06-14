@@ -1,880 +1,1873 @@
 using System;
 using System.Collections.Generic;
+using System.Diagnostics;
 using System.Numerics;
+using System.Runtime.CompilerServices;
 using Arch.Core;
 using Arch.System;
-using Ludots.Core.GraphRuntime;
-using Ludots.Core.Mathematics;
-using Ludots.Core.NodeLibraries.GASGraph;
 using Ludots.Core.Gameplay.GAS.Components;
-using Ludots.Core.Presentation.Components;
+using Ludots.Core.Mathematics;
 using Ludots.Core.Presentation.Commands;
+using Ludots.Core.Presentation.Components;
 using Ludots.Core.Presentation.Hud;
 using Ludots.Core.Presentation.Performers;
 using Ludots.Core.Presentation.Rendering;
+using Ludots.Core.Presentation.Requests;
+using Ludots.Core.Presentation.Surfaces;
 using Ludots.Core.Scripting;
 
 namespace Ludots.Core.Presentation.Systems
 {
-    /// <summary>
-    /// Unified performer output system. Handles two modes:
-    ///
-    /// 1. Instance-scoped: iterate PerformerInstanceBuffer, tick elapsed,
-    ///    evaluate visibility, resolve bindings, apply time modulation, emit.
-    ///
-    /// 2. Entity-scoped: iterate ECS entities matching EntityScopeFilter,
-    ///    evaluate visibility, resolve bindings, emit. No instances needed.
-    ///
-    /// Resolution priority: Override > Binding > Default.
-    /// Parameters are NEVER cached — always resolved fresh for data sync safety.
-    /// </summary>
-    /// <summary>
-    /// Delegate for resolving a per-entity color (e.g. team color, faction color).
-    /// Injected by the composition root. When null, <see cref="ValueSourceKind.EntityColor"/> returns white.
-    /// </summary>
-    public delegate Vector4 EntityColorResolver(World world, Entity entity);
-
     public sealed class PerformerEmitSystem : BaseSystem<World, float>
     {
-        private readonly PerformerInstanceBuffer _instances;
+        private static readonly QueryDescription EmitQuery = new QueryDescription()
+            .WithAll<PerformerState, PerformerCullState, PerformerWorldPosition, PerformerWorldRotation, PerformerWorldFacing, PerformerWorldScale, PerformerEmitCache, PerfHasEmitWork>()
+            .WithNone<PerfStaticStableVisual>();
+
+        private static readonly QueryDescription DirtyStaticEmitQuery = new QueryDescription()
+            .WithAll<PerformerState, PerformerCullState, PerformerWorldPosition, PerformerWorldRotation, PerformerWorldFacing, PerformerWorldScale, PerformerEmitCache, PerfStaticStableVisual>();
+
+        private static readonly QueryDescription DirtyRetainedRequestEmitQuery = new QueryDescription()
+            .WithAll<PerformerState, PerformerCullState, PerformerWorldPosition, PerformerWorldRotation, PerformerWorldFacing, PerformerWorldScale, PerformerEmitCache, PerfRetainedPresentationRequest>();
+
+        private static readonly QueryDescription RetainedRequestLifecycleQuery = new QueryDescription()
+            .WithAll<PerformerState, PerformerCullState, PerformerEmitCache, PerfRetainedPresentationRequest, PerfRetainedPresentationRequestLifecycleTick>();
+
+        private readonly PerformerEntityRuntime _runtime;
         private readonly PerformerDefinitionRegistry _definitions;
-        private readonly GroundOverlayBuffer _groundOverlays;
-        private readonly RoadSplineBuffer _roadSplines;
-        private readonly PresentationVisualProxyEmitter _proxyEmitter;
-        private readonly PresentationVisualRequestBuffer? _visualRequests;
-        private readonly WorldHudBatchBuffer _worldHud;
-        private readonly GraphProgramRegistry _programs;
-        private readonly IGraphRuntimeApi _graphApi;
+        private readonly PresentationRequestBuffer _requests;
         private readonly Dictionary<string, object> _globals;
-        private readonly EntityColorResolver _entityColorResolver;
-        private int _entityHealthBarDefinitionId = int.MinValue;
-        private int _entityWorldTextDefinitionId = int.MinValue;
-
-        // Entity-scoped queries
-        private readonly QueryDescription _attrNoCullQuery = new QueryDescription()
-            .WithAll<VisualTransform, AttributeBuffer>()
-            .WithNone<CullState>();
-        private readonly QueryDescription _attrWithCullQuery = new QueryDescription()
-            .WithAll<VisualTransform, AttributeBuffer, CullState>();
-        private readonly QueryDescription _vtNoCullQuery = new QueryDescription()
-            .WithAll<VisualTransform>()
-            .WithNone<CullState>();
-        private readonly QueryDescription _vtWithCullQuery = new QueryDescription()
-            .WithAll<VisualTransform, CullState>();
-
-        // Pre-allocated Graph VM registers
-        private readonly float[] _floatRegs = new float[GraphVmLimits.MaxFloatRegisters];
-        private readonly int[] _intRegs = new int[GraphVmLimits.MaxIntRegisters];
-        private readonly byte[] _boolRegs = new byte[GraphVmLimits.MaxBoolRegisters];
-        private readonly Entity[] _entityRegs = new Entity[GraphVmLimits.MaxEntityRegisters];
-        private readonly Entity[] _targets = new Entity[GraphVmLimits.MaxTargets];
-        private readonly GasGraphOpHandlerTable _handlers = GasGraphOpHandlerTable.Instance;
+        private readonly PerformerAssetEmitRuntime _assetEmitter;
+        private readonly StableDrawCache? _stableDrawCache;
+        private readonly SkinnedVisualBatchBuffer? _skinnedVisualBatchBuffer;
+        private readonly WorldHudBatchBuffer? _worldHudBuffer;
+        private readonly PresentationTimingDiagnostics? _timingDiagnostics;
+        private readonly List<Entity> _pendingDestroy = new(256);
+        private readonly Dictionary<Entity, PresentationRequest> _singleRequestReplayCache = new();
 
         public PerformerEmitSystem(
             World world,
-            PerformerInstanceBuffer instances,
+            PerformerEntityRuntime runtime,
             PerformerDefinitionRegistry definitions,
-            GroundOverlayBuffer groundOverlays,
-            PrimitiveDrawBuffer primitives,
-            WorldHudBatchBuffer worldHud,
-            GraphProgramRegistry programs,
-            IGraphRuntimeApi graphApi,
+            PresentationRequestBuffer requests,
             Dictionary<string, object> globals,
-            EntityColorResolver entityColorResolver = null,
-            PrimitiveDrawBuffer? snapshotBuffer = null,
-            PresentationVisualProxyBuffer? proxyBuffer = null,
-            SkinnedVisualBatchBuffer? skinnedBatchBuffer = null,
-            RoadSplineBuffer? roadSplines = null,
-            PresentationVisualRequestBuffer? visualRequests = null)
+            PerformerAnimatorStateBuffer animatorStates = null,
+            SoundRequestBuffer soundRequests = null,
+            PresentationTimingDiagnostics? timingDiagnostics = null,
+            StableDrawCache? stableDrawCache = null,
+            SkinnedVisualBatchBuffer? skinnedVisualBatchBuffer = null,
+            WorldHudBatchBuffer? worldHudBuffer = null)
             : base(world)
         {
-            _instances = instances;
-            _definitions = definitions;
-            _groundOverlays = groundOverlays;
-            _roadSplines = roadSplines ?? new RoadSplineBuffer();
-            _proxyEmitter = new PresentationVisualProxyEmitter(primitives, snapshotBuffer, proxyBuffer, skinnedBatchBuffer);
-            _visualRequests = visualRequests;
-            _worldHud = worldHud;
-            _programs = programs;
-            _graphApi = graphApi;
-            _globals = globals;
-            _entityColorResolver = entityColorResolver;
+            _runtime = runtime ?? throw new ArgumentNullException(nameof(runtime));
+            _definitions = definitions ?? throw new ArgumentNullException(nameof(definitions));
+            _requests = requests ?? throw new ArgumentNullException(nameof(requests));
+            _globals = globals ?? new Dictionary<string, object>();
+            _timingDiagnostics = timingDiagnostics;
+            _stableDrawCache = stableDrawCache;
+            _skinnedVisualBatchBuffer = skinnedVisualBatchBuffer;
+            _worldHudBuffer = worldHudBuffer;
+            _runtime.BindDefinitions(_definitions);
+            _assetEmitter = new PerformerAssetEmitRuntime(
+                world, _runtime, requests, globals, animatorStates, soundRequests);
         }
 
         public override void Update(in float dt)
         {
-            // ── Part 1: Instance-scoped performers ──
-            _instances.ProcessActive(dt, (int handle, ref PerformerInstance inst) =>
+            long start = _timingDiagnostics != null ? Stopwatch.GetTimestamp() : 0L;
+            float deltaTime = dt;
+            _pendingDestroy.Clear();
+            _skinnedVisualBatchBuffer?.Clear();
+            int cachedDefId = -1;
+            PerformerDefinition? cachedDefinition = null;
+            bool cachedFastDefinition = false;
+            foreach (ref var chunk in World.Query(in EmitQuery))
             {
-                if (!_definitions.TryGet(inst.DefId, out var def)) return;
-                if (def.EntityScope != EntityScopeFilter.None) return; // skip entity-scoped
+                ref Entity entityFirst = ref chunk.Entity(0);
+                Span<PerformerState> states = chunk.GetSpan<PerformerState>();
+                Span<PerformerCullState> culls = chunk.GetSpan<PerformerCullState>();
+                Span<PerformerWorldPosition> positions = chunk.GetSpan<PerformerWorldPosition>();
+                Span<PerformerWorldRotation> rotations = chunk.GetSpan<PerformerWorldRotation>();
+                Span<PerformerWorldFacing> facings = chunk.GetSpan<PerformerWorldFacing>();
+                Span<PerformerWorldScale> scales = chunk.GetSpan<PerformerWorldScale>();
+                Span<PerformerEmitCache> emitCaches = chunk.GetSpan<PerformerEmitCache>();
+                bool hasAnimatorSlots = chunk.Has<PerformerAnimatorSlot>();
+                Span<PerformerAnimatorSlot> animatorSlots = hasAnimatorSlots
+                    ? chunk.GetSpan<PerformerAnimatorSlot>()
+                    : default;
 
-                if (inst.AnchorKind == PresentationAnchorKind.Entity && !World.IsAlive(inst.Owner))
+                foreach (int index in chunk)
                 {
-                    _instances.Release(handle);
-                    return;
-                }
+                    Entity entity = Unsafe.Add(ref entityFirst, index);
+                    ref PerformerState state = ref states[index];
+                    ResolveCachedDefinition(
+                        state.DefId,
+                        ref cachedDefId,
+                        ref cachedDefinition,
+                        ref cachedFastDefinition);
 
-                // Auto-expire duration-based performers
-                if (def.DefaultLifetime > 0f && inst.Elapsed >= def.DefaultLifetime)
-                {
-                    _instances.Release(handle);
-                    return;
-                }
-
-                // Evaluate visibility
-                if (!EvaluateVisibility(def, inst.Owner)) return;
-
-                // Compute position with offset and Y-drift
-                Vector3 pos = ResolveAnchorPosition(in inst) + def.PositionOffset;
-                pos.Y += def.PositionYDriftPerSecond * inst.Elapsed;
-
-                // Compute alpha modulation
-                float alphaMod = 1f;
-                if (def.AlphaFadeOverLifetime && def.DefaultLifetime > 0f)
-                    alphaMod = Math.Clamp(1f - inst.Elapsed / def.DefaultLifetime, 0f, 1f);
-
-                EmitForVisualKind(handle, inst.DefId, def, inst.Owner, pos, alphaMod);
-            });
-
-            // ── Part 2: Entity-scoped performers ──
-            var ids = _definitions.RegisteredIds;
-            for (int di = 0; di < ids.Count; di++)
-            {
-                if (!_definitions.TryGet(ids[di], out var def)) continue;
-                if (def.EntityScope == EntityScopeFilter.None) continue;
-                if (ShouldSkipEntityScopedDefinition(ids[di], def)) continue;
-
-                EmitEntityScoped(ids[di], def);
-            }
-        }
-
-        // ── Entity-Scoped Emission ──
-
-        private void EmitEntityScoped(int definitionId, PerformerDefinition def)
-        {
-            switch (def.EntityScope)
-            {
-                case EntityScopeFilter.AllWithAttributes:
-                    EmitEntityScopedWithAttr(definitionId, def, _attrNoCullQuery, requireCullCheck: false);
-                    EmitEntityScopedWithAttr(definitionId, def, _attrWithCullQuery, requireCullCheck: true);
-                    break;
-
-                case EntityScopeFilter.AllWithVisualTransform:
-                    EmitEntityScopedVT(definitionId, def, _vtNoCullQuery, requireCullCheck: false);
-                    EmitEntityScopedVT(definitionId, def, _vtWithCullQuery, requireCullCheck: true);
-                    break;
-            }
-        }
-
-        private bool ShouldSkipEntityScopedDefinition(int definitionId, PerformerDefinition def)
-        {
-            if (!TryGetRenderDebugState(out RenderDebugState renderDebug))
-            {
-                return false;
-            }
-
-            if (def.VisualKind == PerformerVisualKind.WorldBar &&
-                definitionId == ResolveWellKnownDefinitionId(ref _entityHealthBarDefinitionId, WellKnownPerformerKeys.EntityHealthBar))
-            {
-                return !renderDebug.DrawWorldHudBars;
-            }
-
-            if (def.VisualKind == PerformerVisualKind.WorldText &&
-                definitionId == ResolveWellKnownDefinitionId(ref _entityWorldTextDefinitionId, WellKnownPerformerKeys.EntityWorldText))
-            {
-                return !renderDebug.DrawWorldHudText;
-            }
-
-            return false;
-        }
-
-        private int ResolveWellKnownDefinitionId(ref int cache, string key)
-        {
-            if (cache != int.MinValue)
-            {
-                return cache;
-            }
-
-            cache = _definitions.GetId(key);
-            return cache;
-        }
-
-        private bool TryGetRenderDebugState(out RenderDebugState state)
-        {
-            if (_globals.TryGetValue(CoreServiceKeys.RenderDebugState.Name, out object? value) &&
-                value is RenderDebugState renderDebug)
-            {
-                state = renderDebug;
-                return true;
-            }
-
-            state = null!;
-            return false;
-        }
-
-        private void EmitEntityScopedWithAttr(int definitionId, PerformerDefinition def, QueryDescription query, bool requireCullCheck)
-        {
-            // When requireCullCheck is true, the chunk already contains only entities WITH CullState.
-            // If the definition's visibility condition is OwnerCullVisible, the chunk-level cull check
-            // is semantically equivalent — skip the redundant per-entity ECS random-access lookup.
-            bool skipVisibilityEval = requireCullCheck
-                && def.VisibilityCondition.Inline == InlineConditionKind.OwnerCullVisible;
-
-            bool hasTemplateFilter = def.RequiredTemplateId > 0;
-
-            var q = World.Query(in query);
-            foreach (var chunk in q)
-            {
-                var transforms = chunk.GetArray<VisualTransform>();
-                var culls = requireCullCheck ? chunk.GetArray<CullState>() : null;
-                for (int i = 0; i < chunk.Count; i++)
-                {
-                    if (requireCullCheck && culls != null && !culls[i].IsVisible) continue;
-
-                    // Template filter — runtime check via World.Has/Get
-                    if (hasTemplateFilter)
+                    if (cachedDefinition == null)
                     {
-                        var entity = chunk.Entity(i);
-                        if (!World.Has<VisualTemplateRef>(entity) ||
-                            World.Get<VisualTemplateRef>(entity).TemplateId != def.RequiredTemplateId)
-                            continue;
+                        RemoveReplayCache(entity);
+                        continue;
                     }
 
-                    if (!skipVisibilityEval)
+                    if (cachedFastDefinition &&
+                        ProcessSingleVisualProxyFastChunkEntity(
+                            entity,
+                            ref state,
+                            cachedDefinition,
+                            ref culls[index],
+                            ref positions[index],
+                            ref rotations[index],
+                            ref facings[index],
+                            ref scales[index],
+                            ref emitCaches[index],
+                            deltaTime,
+                            hasAnimatorSlots ? animatorSlots[index].Value : -1))
                     {
-                        var entity = chunk.Entity(i);
-                        if (!EvaluateVisibility(def, entity)) continue;
+                        continue;
                     }
 
-                    Vector3 pos = transforms[i].Position + def.PositionOffset;
-                    EmitForVisualKind(-1, definitionId, def, chunk.Entity(i), pos, 1f);
+                    ProcessEmitEntity(
+                        entity,
+                        ref state,
+                        ref culls[index],
+                        ref positions[index],
+                        ref rotations[index],
+                        ref facings[index],
+                        ref scales[index],
+                        ref emitCaches[index],
+                        deltaTime,
+                        clearDirtyAfterProcessing: false);
                 }
             }
-        }
 
-        private void EmitEntityScopedVT(int definitionId, PerformerDefinition def, QueryDescription query, bool requireCullCheck)
-        {
-            bool skipVisibilityEval = requireCullCheck
-                && def.VisibilityCondition.Inline == InlineConditionKind.OwnerCullVisible;
+            ProcessDirtyStaticEmitEntities();
+            ProcessDirtyRetainedPresentationRequestEntities();
+            ProcessRetainedPresentationRequestLifecycleEntities(deltaTime);
 
-            bool hasTemplateFilter = def.RequiredTemplateId > 0;
-
-            var q = World.Query(in query);
-            foreach (var chunk in q)
+            for (int i = 0; i < _pendingDestroy.Count; i++)
             {
-                var transforms = chunk.GetArray<VisualTransform>();
-                var culls = requireCullCheck ? chunk.GetArray<CullState>() : null;
-                for (int i = 0; i < chunk.Count; i++)
+                Entity performer = _pendingDestroy[i];
+                if (World.IsAlive(performer))
                 {
-                    if (requireCullCheck && culls != null && !culls[i].IsVisible) continue;
-
-                    // Template filter
-                    if (hasTemplateFilter)
-                    {
-                        var entity = chunk.Entity(i);
-                        if (!World.Has<VisualTemplateRef>(entity) ||
-                            World.Get<VisualTemplateRef>(entity).TemplateId != def.RequiredTemplateId)
-                            continue;
-                    }
-
-                    if (!skipVisibilityEval)
-                    {
-                        var entity = chunk.Entity(i);
-                        if (!EvaluateVisibility(def, entity)) continue;
-                    }
-
-                    Vector3 pos = transforms[i].Position + def.PositionOffset;
-                    EmitForVisualKind(-1, definitionId, def, chunk.Entity(i), pos, 1f);
+                    _runtime.Destroy(performer);
                 }
             }
-        }
 
-        // ── Unified Emit by VisualKind ──
-
-        private void EmitForVisualKind(int handle, int definitionId, PerformerDefinition def, Entity owner, Vector3 pos, float alphaMod)
-        {
-            switch (def.VisualKind)
+            if (_timingDiagnostics != null)
             {
-                case PerformerVisualKind.GroundOverlay:
-                    EmitGroundOverlay(handle, def, owner, pos, alphaMod);
-                    break;
-                case PerformerVisualKind.Marker3D:
-                    EmitMarker3D(handle, def, owner, pos, alphaMod);
-                    break;
-                case PerformerVisualKind.WorldBar:
-                    EmitWorldBar(handle, definitionId, def, owner, pos, alphaMod);
-                    break;
-                case PerformerVisualKind.WorldText:
-                    EmitWorldText(handle, definitionId, def, owner, pos, alphaMod);
-                    break;
-                case PerformerVisualKind.RoadSpline:
-                    EmitRoadSpline(handle, definitionId, def, owner, pos, alphaMod);
-                    break;
-                case PerformerVisualKind.Decal:
-                case PerformerVisualKind.Vfx:
-                case PerformerVisualKind.Surface:
-                case PerformerVisualKind.MaterialOverride:
-                case PerformerVisualKind.InstanceCustomData:
-                    EmitTypedVisualRequest(handle, definitionId, def, owner, pos, alphaMod);
-                    break;
+                _timingDiagnostics.ObservePerformerEmit((Stopwatch.GetTimestamp() - start) * 1000d / Stopwatch.Frequency);
             }
         }
 
-        // ── Visibility ──
-
-        private bool EvaluateVisibility(PerformerDefinition def, Entity owner)
+        private bool ResolveCachedDefinition(
+            int definitionId,
+            ref int cachedDefId,
+            ref PerformerDefinition? cachedDefinition,
+            ref bool cachedFastDefinition)
         {
-            ref readonly var cond = ref def.VisibilityCondition;
-            if (cond.Inline != InlineConditionKind.None)
-                return EvaluateInlineVisibility(cond.Inline, owner);
-            if (cond.GraphProgramId > 0)
-                return EvaluateGraphBool(cond.GraphProgramId, owner, owner);
-            return true;
+            if (definitionId == cachedDefId)
+            {
+                return cachedDefinition != null;
+            }
+
+            cachedDefId = definitionId;
+            cachedDefinition = _definitions.TryGet(definitionId, out PerformerDefinition definition)
+                ? definition
+                : null;
+            cachedFastDefinition = cachedDefinition != null && IsVisualProxyFastDefinition(cachedDefinition);
+
+            return cachedDefinition != null;
         }
 
-        private bool EvaluateInlineVisibility(InlineConditionKind kind, Entity owner)
+        private void ProcessDirtyRetainedPresentationRequestEntities()
         {
-            switch (kind)
+            if (!_runtime.HasDirtyRetainedPresentationRequests)
             {
-                case InlineConditionKind.None: return true;
-                case InlineConditionKind.SourceIsLocalPlayer:
-                case InlineConditionKind.TargetIsLocalPlayer:
-                    return IsLocalPlayer(owner);
-                case InlineConditionKind.SourceIsAlive:
-                case InlineConditionKind.TargetIsAlive:
-                    return World.IsAlive(owner);
-                case InlineConditionKind.OwnerCullVisible:
-                    if (!World.IsAlive(owner)) return false;
-                    if (!World.Has<CullState>(owner)) return true;
-                    return World.Get<CullState>(owner).IsVisible;
-                default: return true;
+                _runtime.ClearConsumedRetainedPresentationDirtyEntities();
+                _timingDiagnostics?.ObservePerformerEmitRetainedBreakdown(processMs: 0d, dirtyCount: 0);
+                _timingDiagnostics?.ObservePerformerEmitRetainedDirectPath(directHits: 0, fullPathCount: 0, directMisses: 0);
+                return;
+            }
+
+            long processStart = _timingDiagnostics != null ? Stopwatch.GetTimestamp() : 0L;
+            ReadOnlySpan<Entity> dirtyEntities = _runtime.RetainedPresentationDirtyEntities;
+            if (!dirtyEntities.IsEmpty)
+            {
+                int dirtyCount = ProcessRetainedPresentationDirtyList(
+                    dirtyEntities,
+                    out int directHits,
+                    out int fullPathCount,
+                    out int directMisses);
+                _runtime.ClearConsumedRetainedPresentationDirtyEntities();
+                if (_timingDiagnostics != null)
+                {
+                    _timingDiagnostics.ObservePerformerEmitRetainedBreakdown(
+                        (Stopwatch.GetTimestamp() - processStart) * 1000d / Stopwatch.Frequency,
+                        dirtyCount);
+                    _timingDiagnostics.ObservePerformerEmitRetainedDirectPath(directHits, fullPathCount, directMisses);
+                }
+
+                return;
+            }
+
+            int cachedDefId = -1;
+            PerformerDefinition? cachedDefinition = null;
+            int scannedDirtyCount = 0;
+            foreach (ref var chunk in World.Query(in DirtyRetainedRequestEmitQuery))
+            {
+                ref Entity entityFirst = ref chunk.Entity(0);
+                var states = chunk.GetSpan<PerformerState>();
+                var culls = chunk.GetSpan<PerformerCullState>();
+                var positions = chunk.GetSpan<PerformerWorldPosition>();
+                var rotations = chunk.GetSpan<PerformerWorldRotation>();
+                var facings = chunk.GetSpan<PerformerWorldFacing>();
+                var scales = chunk.GetSpan<PerformerWorldScale>();
+                var emitCaches = chunk.GetSpan<PerformerEmitCache>();
+                foreach (var index in chunk)
+                {
+                    if (emitCaches[index].RetainedDirty == 0)
+                    {
+                        continue;
+                    }
+
+                    scannedDirtyCount++;
+                    Entity entity = Unsafe.Add(ref entityFirst, index);
+                    ref PerformerState state = ref states[index];
+                    if (state.DefId != cachedDefId)
+                    {
+                        cachedDefId = state.DefId;
+                        cachedDefinition = _definitions.TryGet(state.DefId, out PerformerDefinition definition)
+                            ? definition
+                            : null;
+                    }
+
+                    if (cachedDefinition == null)
+                    {
+                        _runtime.ClearStaticDirty(entity);
+                        continue;
+                    }
+
+                    ProcessEmitEntity(
+                        entity,
+                        ref state,
+                        ref culls[index],
+                        ref positions[index],
+                        ref rotations[index],
+                        ref facings[index],
+                        ref scales[index],
+                        ref emitCaches[index],
+                        deltaTime: 0f,
+                        clearDirtyAfterProcessing: true);
+                }
+            }
+
+            if (_timingDiagnostics != null)
+            {
+                _timingDiagnostics.ObservePerformerEmitRetainedBreakdown(
+                    (Stopwatch.GetTimestamp() - processStart) * 1000d / Stopwatch.Frequency,
+                    scannedDirtyCount);
+                _timingDiagnostics.ObservePerformerEmitRetainedDirectPath(directHits: 0, fullPathCount: scannedDirtyCount, directMisses: 0);
             }
         }
 
-        // ── Parameter Resolution ──
-
-        private float ResolveParam(int handle, PerformerDefinition def, Entity owner, int paramKey, float defaultValue)
+        private int ProcessRetainedPresentationDirtyList(
+            ReadOnlySpan<Entity> dirtyEntities,
+            out int directHits,
+            out int fullPathCount,
+            out int directMisses)
         {
-            // 1. Imperative override (highest priority)
-            if (handle >= 0 && _instances.TryGetParamOverride(handle, paramKey, out float ov))
-                return ov;
-
-            // 2. Declarative binding — O(1) indexed lookup
-            var idx = def.BindingIndex;
-            if (paramKey >= 0 && paramKey < idx.Length)
+            int cachedDefId = -1;
+            PerformerDefinition? cachedDefinition = null;
+            int dirtyCount = 0;
+            directHits = 0;
+            fullPathCount = 0;
+            directMisses = 0;
+            for (int i = 0; i < dirtyEntities.Length; i++)
             {
-                int bi = idx[paramKey];
-                if (bi >= 0)
-                    return ResolveValueRef(in def.Bindings[bi].Value, owner);
-            }
-
-            return defaultValue;
-        }
-
-        private float ResolveValueRef(in ValueRef vr, Entity owner)
-        {
-            switch (vr.Source)
-            {
-                case ValueSourceKind.Constant:
-                    return vr.ConstantValue;
-                case ValueSourceKind.Attribute:
-                    if (_graphApi != null && _graphApi.TryGetAttributeCurrent(owner, vr.SourceId, out float attrVal))
-                        return attrVal;
-                    return 0f;
-                case ValueSourceKind.AttributeRatio:
-                    return ResolveAttributeRatio(owner, vr.SourceId);
-                case ValueSourceKind.AttributeBase:
-                    return ResolveAttributeBase(owner, vr.SourceId);
-                case ValueSourceKind.Graph:
-                    return EvaluateGraphFloat(vr.SourceId, owner);
-                case ValueSourceKind.EntityColor:
-                    return ResolveEntityColorChannel(owner, vr.SourceId);
-                case ValueSourceKind.FacingRadians:
-                    return ResolveFacingRadians(owner);
-                case ValueSourceKind.FacingDegrees:
-                    return ResolveFacingDegrees(owner);
-                default:
-                    return 0f;
-            }
-        }
-
-        private float ResolveEntityColorChannel(Entity owner, int channelIndex)
-        {
-            if (_entityColorResolver == null) return 1f;
-            var c = _entityColorResolver(World, owner);
-            return channelIndex switch
-            {
-                0 => c.X,
-                1 => c.Y,
-                2 => c.Z,
-                3 => c.W,
-                _ => 1f,
-            };
-        }
-
-        private float ResolveFacingRadians(Entity owner)
-        {
-            if (!World.IsAlive(owner) || !World.Has<Ludots.Core.Components.FacingDirection>(owner))
-            {
-                return 0f;
-            }
-
-            return World.Get<Ludots.Core.Components.FacingDirection>(owner).AngleRad;
-        }
-
-        private float ResolveFacingDegrees(Entity owner)
-        {
-            return ResolveFacingRadians(owner) * (180f / MathF.PI);
-        }
-
-        private float ResolveAttributeRatio(Entity owner, int attributeId)
-        {
-            if (!World.IsAlive(owner) || !World.Has<AttributeBuffer>(owner)) return 1f;
-            ref var attr = ref World.Get<AttributeBuffer>(owner);
-            float current = attr.GetCurrent(attributeId);
-            float max = attr.GetBase(attributeId);
-            if (max <= 0f) max = 1f;
-            return Math.Clamp(current / max, 0f, 1f);
-        }
-
-        private float ResolveAttributeBase(Entity owner, int attributeId)
-        {
-            if (!World.IsAlive(owner) || !World.Has<AttributeBuffer>(owner)) return 0f;
-            ref var attr = ref World.Get<AttributeBuffer>(owner);
-            float max = attr.GetBase(attributeId);
-            return max <= 0f ? 1f : max;
-        }
-
-        // ── Emit per VisualKind ──
-
-        private void EmitGroundOverlay(int handle, PerformerDefinition def, Entity owner, Vector3 pos, float alphaMod)
-        {
-            var fc = ResolveColor(handle, def, owner, 4, 5, 6, 7, def.DefaultColor);
-            fc.W *= alphaMod;
-
-            _groundOverlays.TryAdd(new GroundOverlayItem
-            {
-                Shape = (GroundOverlayShape)def.MeshOrShapeId,
-                Center = pos,
-                Radius = ResolveParam(handle, def, owner, 0, def.DefaultScale),
-                InnerRadius = ResolveParam(handle, def, owner, 1, 0f),
-                Angle = ResolveParam(handle, def, owner, 2, 0f),
-                Rotation = ResolveParam(handle, def, owner, 3, 0f),
-                FillColor = fc,
-                BorderColor = ResolveColor(handle, def, owner, 8, 9, 10, 11, new Vector4(1f, 1f, 1f, 1f)),
-                BorderWidth = ResolveParam(handle, def, owner, 12, 0.02f),
-                Length = ResolveParam(handle, def, owner, 13, 0f),
-                Width = ResolveParam(handle, def, owner, 14, 0f),
-            });
-        }
-
-        private void EmitMarker3D(int handle, PerformerDefinition def, Entity owner, Vector3 pos, float alphaMod)
-        {
-            float scaleUniform = ResolveParam(handle, def, owner, 0, def.DefaultScale);
-            // ParamKey 1/2/3: per-axis scale override. Falls back to uniform scale.
-            float sx = ResolveParam(handle, def, owner, 1, scaleUniform);
-            float sy = ResolveParam(handle, def, owner, 2, scaleUniform);
-            float sz = ResolveParam(handle, def, owner, 3, scaleUniform);
-            var color = ResolveColor(handle, def, owner, 4, 5, 6, 7, def.DefaultColor);
-            color.W *= alphaMod;
-            int stableId = ResolveMarkerStableId(handle, def.Id, owner);
-
-            _proxyEmitter.Emit(new PresentationVisualProxy
-            {
-                ProxyKind = PresentationVisualProxyKind.Performer,
-                MeshAssetId = def.MeshOrShapeId,
-                Position = pos,
-                Rotation = Quaternion.Identity,
-                Scale = new Vector3(sx, sy, sz),
-                Color = color,
-                StableId = stableId,
-                RenderPath = VisualRenderPath.StaticMesh,
-                Mobility = VisualMobility.Movable,
-                Flags = VisualRuntimeFlags.Visible,
-                Visibility = VisualVisibility.Visible,
-            });
-        }
-
-        private void EmitRoadSpline(int handle, int definitionId, PerformerDefinition def, Entity owner, Vector3 pos, float alphaMod)
-        {
-            Vector3 control0 = pos + new Vector3(
-                ResolveParam(handle, def, owner, 0, 0f),
-                ResolveParam(handle, def, owner, 1, 0f),
-                ResolveParam(handle, def, owner, 2, 0f));
-            Vector3 control1 = pos + new Vector3(
-                ResolveParam(handle, def, owner, 3, 0f),
-                ResolveParam(handle, def, owner, 4, 0f),
-                ResolveParam(handle, def, owner, 5, 0f));
-            Vector3 end = pos + new Vector3(
-                ResolveParam(handle, def, owner, 6, 0f),
-                ResolveParam(handle, def, owner, 7, 0f),
-                ResolveParam(handle, def, owner, 8, 0f));
-
-            float width = ResolveParam(handle, def, owner, 12, def.DefaultScale > 0f ? def.DefaultScale : 0.25f);
-            float borderWidth = ResolveParam(handle, def, owner, 13, 0.03f);
-            byte style = (byte)Math.Clamp((int)ResolveParam(handle, def, owner, 14, 0f), 0, byte.MaxValue);
-
-            Vector4 fill = ResolveColor(handle, def, owner, 20, 21, 22, 23, def.DefaultColor);
-            fill.W *= alphaMod;
-            Vector4 border = ResolveColor(handle, def, owner, 24, 25, 26, 27, new Vector4(1f, 1f, 1f, 1f));
-            border.W *= alphaMod;
-
-            int stableId = ResolveRoadSplineStableId(handle, definitionId, owner);
-            _roadSplines.TryAdd(stableId, pos, control0, control1, end, width, fill, border, borderWidth, style);
-        }
-
-        private void EmitTypedVisualRequest(int handle, int definitionId, PerformerDefinition def, Entity owner, Vector3 pos, float alphaMod)
-        {
-            if (_visualRequests == null)
-            {
-                throw new InvalidOperationException(
-                    $"Performer '{_definitions.GetName(definitionId)}' emits typed visual kind '{def.VisualKind}', but PresentationVisualRequestBuffer is not registered.");
-            }
-
-            var color = ResolveColor(handle, def, owner, 4, 5, 6, 7, def.DefaultColor);
-            color.W *= alphaMod;
-            int stableId = ResolveTypedStableId(handle, definitionId, def.VisualKind, owner);
-            var payload = ResolveTypedPayload(handle, def, owner);
-
-            if (!_visualRequests.TryAdd(new PresentationVisualRequest(
-                    ToRequestKind(def.VisualKind),
-                    stableId,
-                    def.VisualAssetKey,
-                    pos,
-                    Quaternion.Identity,
-                    new Vector3(def.DefaultScale),
-                    color,
-                    owner,
-                    Entity.Null,
-                    payload,
-                    def.MaterialKey,
-                    def.SurfaceLayerKey)))
-            {
-                throw new InvalidOperationException(
-                    $"Presentation visual request buffer overflowed while emitting performer '{_definitions.GetName(definitionId)}' stableId={stableId} kind={def.VisualKind}.");
-            }
-        }
-
-        private PresentationPayloadField[] ResolveTypedPayload(int handle, PerformerDefinition def, Entity owner)
-        {
-            var fields = new List<PresentationPayloadField>(
-                (def.DefaultPayload?.Length ?? 0) + def.Bindings.Length + Math.Max(0, handle >= 0 ? _instances.GetFieldOverrideCount(handle) : 0));
-
-            AddPayloadFields(fields, def.DefaultPayload);
-
-            for (int i = 0; i < def.Bindings.Length; i++)
-            {
-                ref readonly var binding = ref def.Bindings[i];
-                if (string.IsNullOrWhiteSpace(binding.FieldName))
+                Entity entity = dirtyEntities[i];
+                if (!World.IsAlive(entity) ||
+                    !World.Has<PerformerState>(entity) ||
+                    !World.Has<PerformerEmitCache>(entity))
                 {
                     continue;
                 }
 
-                PresentationTypedValue value = ToTypedValue(binding.ValueKind, binding.Value, owner);
-                UpsertPayloadField(fields, binding.FieldName, in value);
+                ref PerformerEmitCache emitCache = ref World.Get<PerformerEmitCache>(entity);
+                if (emitCache.RetainedDirty == 0)
+                {
+                    continue;
+                }
+
+                ref PerformerState state = ref World.Get<PerformerState>(entity);
+                if (state.DefId != cachedDefId)
+                {
+                    cachedDefId = state.DefId;
+                    cachedDefinition = _definitions.TryGet(state.DefId, out PerformerDefinition definition)
+                        ? definition
+                        : null;
+                }
+
+                if (cachedDefinition == null)
+                {
+                    _runtime.ClearStaticDirty(entity);
+                    continue;
+                }
+
+                if (!World.Has<PerformerCullState>(entity) ||
+                    !World.Has<PerformerWorldPosition>(entity) ||
+                    !World.Has<PerformerWorldRotation>(entity) ||
+                    !World.Has<PerformerWorldFacing>(entity) ||
+                    !World.Has<PerformerWorldScale>(entity))
+                {
+                    _runtime.ClearStaticDirty(entity);
+                    continue;
+                }
+
+                ref PerformerCullState cull = ref World.Get<PerformerCullState>(entity);
+                ref PerformerWorldPosition position = ref World.Get<PerformerWorldPosition>(entity);
+                ref PerformerWorldRotation rotation = ref World.Get<PerformerWorldRotation>(entity);
+                ref PerformerWorldFacing facing = ref World.Get<PerformerWorldFacing>(entity);
+                ref PerformerWorldScale scale = ref World.Get<PerformerWorldScale>(entity);
+                dirtyCount++;
+                if (TryUpdateRetainedWorldHudDirect(
+                        entity,
+                        ref state,
+                        cachedDefinition,
+                        ref cull,
+                        ref position,
+                        ref scale,
+                        ref emitCache))
+                {
+                    directHits++;
+                    continue;
+                }
+
+                directMisses++;
+                fullPathCount++;
+                ProcessEmitEntity(entity, ref state, ref cull, ref position, ref rotation, ref facing, ref scale, ref emitCache, deltaTime: 0f, clearDirtyAfterProcessing: true);
             }
 
-            if (handle >= 0 && _instances.IsActive(handle))
+            return dirtyCount;
+        }
+
+        private bool TryUpdateRetainedWorldHudDirect(
+            Entity entity,
+            ref PerformerState state,
+            PerformerDefinition definition,
+            ref PerformerCullState cull,
+            ref PerformerWorldPosition position,
+            ref PerformerWorldScale scale,
+            ref PerformerEmitCache emitCache)
+        {
+            if (_worldHudBuffer == null ||
+                definition.HasSurfaceAuthoring ||
+                definition.AssetBehaviorIndices.Length != 1)
             {
-                int count = _instances.GetFieldOverrideCount(handle);
-                for (int i = 0; i < count; i++)
+                return false;
+            }
+
+            int behaviorIndex = definition.AssetBehaviorIndices[0];
+            if ((uint)behaviorIndex >= (uint)definition.Behaviors.Length)
+            {
+                return false;
+            }
+
+            ref readonly BehaviorSlot slot = ref definition.Behaviors[behaviorIndex];
+            if (slot.Kind != BehaviorKind.AssetBinding ||
+                !IsBehaviorActive(state.BehaviorActiveMask, slot.SlotIndex))
+            {
+                return false;
+            }
+
+            ref readonly AssetBindingConfig asset = ref slot.AssetBinding;
+            WorldHudItemKind kind = asset.AssetKind switch
+            {
+                AssetKind.WorldHud => WorldHudItemKind.Bar,
+                AssetKind.WorldText => WorldHudItemKind.Text,
+                _ => default,
+            };
+
+            if (kind == default)
+            {
+                return false;
+            }
+
+            int stableId = HudItemIdentity.ComposeStableId(state.StableId, kind, state.DefId);
+
+            bool visible = cull.OwnerCullVisible &&
+                           EvaluateVisibility(definition, state.OwnerEntity) &&
+                           IsWithinMaxLod(cull.LOD, in asset) &&
+                           ResolveAssetVisibility(entity, in asset) &&
+                           IsWorldHudDebugEnabled(kind);
+            if (!visible)
+            {
+                _worldHudBuffer.Remove(stableId);
+                UpdateEmitCache(ref emitCache, state.Version, position.Value, cull.OwnerCullVisible, definitionVisible: true, cull.LOD, emitCache.StableVisualPresent, retainedRequestPresent: 0);
+                _runtime.ClearStaticDirty(entity);
+                return true;
+            }
+
+            WorldHudItem next = kind == WorldHudItemKind.Bar
+                ? BuildWorldHudBarItemDirect(entity, in state, in definition, in asset, stableId, position.Value, in scale)
+                : BuildWorldHudTextItemDirect(entity, in state, in definition, in asset, stableId, position.Value);
+
+            if (!_worldHudBuffer.TryAdd(in next))
+            {
+                throw new InvalidOperationException(
+                    $"WorldHudBatchBuffer overflowed while directly updating retained performer HUD stableId={stableId}.");
+            }
+
+            UpdateEmitCache(ref emitCache, state.Version, position.Value, cull.OwnerCullVisible, definitionVisible: true, cull.LOD, emitCache.StableVisualPresent, retainedRequestPresent: 1);
+            _runtime.ClearStaticDirty(entity);
+            return true;
+        }
+
+        private bool IsWorldHudDebugEnabled(WorldHudItemKind kind)
+        {
+            if (!_globals.TryGetValue(CoreServiceKeys.RenderDebugState.Name, out object? obj) ||
+                obj is not RenderDebugState state)
+            {
+                return true;
+            }
+
+            return kind switch
+            {
+                WorldHudItemKind.Bar => state.DrawWorldHudBars,
+                WorldHudItemKind.Text => state.DrawWorldHudText,
+                _ => throw new InvalidOperationException($"Unsupported world HUD item kind '{kind}'."),
+            };
+        }
+
+        private WorldHudItem BuildWorldHudBarItemDirect(
+            Entity entity,
+            in PerformerState state,
+            in PerformerDefinition definition,
+            in AssetBindingConfig asset,
+            int stableId,
+            in Vector3 worldPosition,
+            in PerformerWorldScale performerScale)
+        {
+            Vector3 resolvedScale = ResolveAssetScale(entity, in asset, performerScale.Value);
+            Vector4 foreground = ResolveAssetColor(entity, in asset, definition.DefaultColor);
+            Vector4 background = new(0.2f, 0.2f, 0.2f, foreground.W);
+            float value = asset.MaterialParamKey >= 0
+                ? ResolveWorldHudFloatParam(entity, asset.MaterialParamKey, "AssetBinding.materialParamKey")
+                : 1f;
+            float width = resolvedScale.X > 0f ? resolvedScale.X : 40f;
+            float height = resolvedScale.Y > 0f ? resolvedScale.Y : 6f;
+
+            return new WorldHudItem
+            {
+                Owner = state.OwnerEntity,
+                StableId = stableId,
+                DirtySerial = HudItemIdentity.ComposeBarDirtySerial(width, height, value, background, foreground),
+                Kind = WorldHudItemKind.Bar,
+                WorldPosition = worldPosition,
+                Value0 = value,
+                Width = width,
+                Height = height,
+                Color0 = background,
+                Color1 = foreground,
+            };
+        }
+
+        private WorldHudItem BuildWorldHudTextItemDirect(
+            Entity entity,
+            in PerformerState state,
+            in PerformerDefinition definition,
+            in AssetBindingConfig asset,
+            int stableId,
+            in Vector3 worldPosition)
+        {
+            Vector4 color = ResolveAssetColor(entity, in asset, definition.DefaultColor);
+            int tokenId = ResolveAssetId(entity, in asset);
+            if (tokenId <= 0)
+            {
+                throw new InvalidOperationException(
+                    $"WorldText AssetBinding for performer definition '{definition.Key}' resolved invalid asset id {tokenId}.");
+            }
+
+            float value0 = asset.ScaleParamKey >= 0
+                ? ResolveWorldHudFloatParam(entity, asset.ScaleParamKey, "AssetBinding.scaleParamKey")
+                : 0f;
+            float value1 = asset.MaterialParamKey >= 0
+                ? ResolveWorldHudFloatParam(entity, asset.MaterialParamKey, "AssetBinding.materialParamKey")
+                : 0f;
+            WorldHudValueMode valueMode = definition.WorldTextMode;
+            int fontSize = definition.DefaultFontSize > 0 ? definition.DefaultFontSize : 16;
+            int stringTableId = valueMode == WorldHudValueMode.None ? tokenId : 0;
+            PresentationTextPacket packet = PresentationTextPacket.FromWorldHudValueMode(tokenId, valueMode, value0, value1);
+
+            return new WorldHudItem
+            {
+                Owner = state.OwnerEntity,
+                StableId = stableId,
+                DirtySerial = HudItemIdentity.ComposeTextDirtySerial(fontSize, stringTableId, (int)valueMode, value0, value1, color, packet),
+                Kind = WorldHudItemKind.Text,
+                WorldPosition = worldPosition,
+                Value0 = value0,
+                Value1 = value1,
+                Id0 = stringTableId,
+                Id1 = (int)valueMode,
+                FontSize = fontSize,
+                Color0 = color,
+                Text = packet,
+            };
+        }
+
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        private bool ResolveAssetVisibility(Entity entity, in AssetBindingConfig asset)
+        {
+            return asset.VisibilityParamKey < 0 ||
+                RequireIntParam(entity, asset.VisibilityParamKey, "AssetBinding.visibilityParamKey") != 0;
+        }
+
+        private int ResolveAssetId(Entity entity, in AssetBindingConfig asset)
+        {
+            if (asset.AssetIdParamKey >= 0)
+            {
+                if (!_runtime.TryResolveInt(entity, asset.AssetIdParamKey, out int assetId) || assetId <= 0)
                 {
-                    if (_instances.TryGetFieldOverrideAt(handle, i, out string fieldName, out PresentationTypedValue value))
-                    {
-                        UpsertPayloadField(fields, fieldName, in value);
-                    }
+                    throw new InvalidOperationException(
+                        $"Performer AssetBinding assetIdParamKey {asset.AssetIdParamKey} did not resolve to a registered asset id.");
+                }
+
+                return assetId;
+            }
+
+            if (asset.AssetSwapParamKey < 0)
+            {
+                return asset.AssetId;
+            }
+
+            if (!_runtime.TryResolveInt(entity, asset.AssetSwapParamKey, out int resolved))
+            {
+                throw new InvalidOperationException(
+                    $"Performer AssetBinding assetSwapParamKey {asset.AssetSwapParamKey} did not resolve to a swap value.");
+            }
+
+            AssetSwapEntry[] table = asset.AssetSwapTable ?? Array.Empty<AssetSwapEntry>();
+            for (int i = 0; i < table.Length; i++)
+            {
+                ref readonly AssetSwapEntry entry = ref table[i];
+                if (MathF.Abs(entry.ParamValue - resolved) <= 0.0001f)
+                {
+                    return entry.AssetId;
                 }
             }
 
-            return fields.Count == 0 ? Array.Empty<PresentationPayloadField>() : fields.ToArray();
+            throw new InvalidOperationException(
+                $"Performer AssetBinding assetSwapParamKey {asset.AssetSwapParamKey} resolved value {resolved} with no matching assetSwapTable entry.");
         }
 
-        private static void AddPayloadFields(List<PresentationPayloadField> fields, PresentationPayloadField[]? payload)
+        private Vector3 ResolveAssetScale(Entity entity, in AssetBindingConfig asset, Vector3 performerWorldScale)
         {
-            if (payload == null)
+            Vector3 resolved = performerWorldScale == Vector3.Zero ? Vector3.One : performerWorldScale;
+            resolved *= asset.LocalScale == Vector3.Zero ? Vector3.One : asset.LocalScale;
+            if (asset.ScaleParamKey >= 0)
+            {
+                resolved *= RequireFloatParam(entity, asset.ScaleParamKey, "AssetBinding.scaleParamKey");
+            }
+
+            return resolved;
+        }
+
+        private static Quaternion ResolveAssetRotation(in AssetBindingConfig asset, Quaternion performerWorldRotation)
+        {
+            return WorldPlane2D.ResolveVisualAssetRotation(in performerWorldRotation, in asset.LocalRotation);
+        }
+
+        private static Vector3 ResolveAssetPosition(
+            Vector3 position,
+            Quaternion performerWorldRotation,
+            Vector3 performerWorldScale,
+            in AssetBindingConfig asset)
+        {
+            return WorldPlane2D.ResolveVisualAssetPosition(
+                in position,
+                in performerWorldRotation,
+                in performerWorldScale,
+                in asset.LocalOffset);
+        }
+
+        private Vector4 ResolveAssetColor(Entity entity, in AssetBindingConfig asset, Vector4 defaultColor)
+        {
+            return asset.ColorParamKey >= 0
+                ? RequireVectorParam(entity, asset.ColorParamKey, "AssetBinding.colorParamKey")
+                : defaultColor;
+        }
+
+        private int ResolveMaterialId(Entity entity, in AssetBindingConfig asset)
+        {
+            if (asset.MaterialParamKey < 0)
+            {
+                return asset.MaterialId;
+            }
+
+            int materialId = RequireIntParam(entity, asset.MaterialParamKey, "AssetBinding.materialParamKey");
+            if (materialId <= 0)
+            {
+                throw new InvalidOperationException(
+                    $"AssetBinding.materialParamKey {asset.MaterialParamKey} resolved invalid material id {materialId}.");
+            }
+
+            return materialId;
+        }
+
+        private float ResolveWorldHudFloatParam(Entity entity, int paramKey, string context)
+        {
+            return RequireFloatParam(entity, paramKey, context);
+        }
+
+        private int RequireIntParam(Entity entity, int paramKey, string context)
+        {
+            if (!_runtime.TryResolveInt(entity, paramKey, out int value))
+            {
+                throw new InvalidOperationException($"{context} {paramKey} did not resolve to an int param value.");
+            }
+
+            return value;
+        }
+
+        private float RequireFloatParam(Entity entity, int paramKey, string context)
+        {
+            if (!_runtime.TryResolveFloat(entity, paramKey, out float value))
+            {
+                throw new InvalidOperationException($"{context} {paramKey} did not resolve to a float param value.");
+            }
+
+            return value;
+        }
+
+        private Vector4 RequireVectorParam(Entity entity, int paramKey, string context)
+        {
+            if (!_runtime.TryResolveVector(entity, paramKey, out Vector4 value))
+            {
+                throw new InvalidOperationException($"{context} {paramKey} did not resolve to a vector param value.");
+            }
+
+            return value;
+        }
+
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        private static bool IsWithinMaxLod(LODLevel lod, in AssetBindingConfig asset)
+        {
+            return lod != LODLevel.Culled && (!asset.HasMaxLod || lod <= asset.MaxLod);
+        }
+
+        private void ProcessDirtyStaticEmitEntities()
+        {
+            if (!_runtime.HasDirtyStaticVisuals)
+            {
+                if (_timingDiagnostics != null)
+                {
+                    _timingDiagnostics.ObservePerformerEmitDirtyBreakdown(processMs: 0d, cleanupMs: 0d, dirtyCount: 0);
+                }
+
+                return;
+            }
+
+            if (_stableDrawCache == null)
+            {
+                foreach (ref var chunk in World.Query(in DirtyStaticEmitQuery))
+                {
+                    ref Entity entityFirst = ref chunk.Entity(0);
+                    var states = chunk.GetSpan<PerformerState>();
+                    var culls = chunk.GetSpan<PerformerCullState>();
+                    var positions = chunk.GetSpan<PerformerWorldPosition>();
+                    var rotations = chunk.GetSpan<PerformerWorldRotation>();
+                    var facings = chunk.GetSpan<PerformerWorldFacing>();
+                    var scales = chunk.GetSpan<PerformerWorldScale>();
+                    var emitCaches = chunk.GetSpan<PerformerEmitCache>();
+                    foreach (var index in chunk)
+                    {
+                        if (emitCaches[index].StaticDirty == 0)
+                        {
+                            continue;
+                        }
+
+                        Entity entity = Unsafe.Add(ref entityFirst, index);
+                        ProcessEmitEntity(
+                            entity,
+                            ref states[index],
+                            ref culls[index],
+                            ref positions[index],
+                            ref rotations[index],
+                            ref facings[index],
+                            ref scales[index],
+                            ref emitCaches[index],
+                            deltaTime: 0f,
+                            clearDirtyAfterProcessing: true);
+                    }
+                }
+                return;
+            }
+
+            long processStart = _timingDiagnostics != null ? Stopwatch.GetTimestamp() : 0L;
+            int cachedDefId = -1;
+            PerformerDefinition? cachedDefinition = null;
+            int dirtyCount = 0;
+            foreach (ref var chunk in World.Query(in DirtyStaticEmitQuery))
+            {
+                ref Entity entityFirst = ref chunk.Entity(0);
+                var states = chunk.GetSpan<PerformerState>();
+                var culls = chunk.GetSpan<PerformerCullState>();
+                var positions = chunk.GetSpan<PerformerWorldPosition>();
+                var rotations = chunk.GetSpan<PerformerWorldRotation>();
+                var facings = chunk.GetSpan<PerformerWorldFacing>();
+                var scales = chunk.GetSpan<PerformerWorldScale>();
+                var emitCaches = chunk.GetSpan<PerformerEmitCache>();
+                foreach (var index in chunk)
+                {
+                    if (emitCaches[index].StaticDirty == 0)
+                    {
+                        continue;
+                    }
+
+                    dirtyCount++;
+                    Entity entity = Unsafe.Add(ref entityFirst, index);
+                    ref PerformerState state = ref states[index];
+                    if (state.DefId != cachedDefId)
+                    {
+                        cachedDefId = state.DefId;
+                        cachedDefinition = _definitions.TryGet(state.DefId, out PerformerDefinition definition)
+                            ? definition
+                            : null;
+                    }
+
+                    if (cachedDefinition == null)
+                    {
+                        continue;
+                    }
+
+                    ProcessDirtyStaticStableEmit(
+                        entity,
+                        ref state,
+                        ref culls[index],
+                        ref positions[index],
+                        ref rotations[index],
+                        ref facings[index],
+                        ref scales[index],
+                        ref emitCaches[index],
+                        cachedDefinition);
+                }
+            }
+
+            double processMs = _timingDiagnostics != null
+                ? (Stopwatch.GetTimestamp() - processStart) * 1000d / Stopwatch.Frequency
+                : 0d;
+            if (_timingDiagnostics != null)
+            {
+                _timingDiagnostics.ObservePerformerEmitDirtyBreakdown(processMs, cleanupMs: 0d, dirtyCount);
+            }
+        }
+
+        private void ProcessRetainedPresentationRequestLifecycleEntities(float deltaTime)
+        {
+            foreach (ref var chunk in World.Query(in RetainedRequestLifecycleQuery))
+            {
+                ref Entity entityFirst = ref chunk.Entity(0);
+                var states = chunk.GetSpan<PerformerState>();
+                var culls = chunk.GetSpan<PerformerCullState>();
+                var emitCaches = chunk.GetSpan<PerformerEmitCache>();
+                foreach (var index in chunk)
+                {
+                    ref PerformerEmitCache emitCache = ref emitCaches[index];
+                    if (emitCache.RetainedRequestPresent == 0 || emitCache.RetainedDirty != 0)
+                    {
+                        continue;
+                    }
+
+                    Entity entity = Unsafe.Add(ref entityFirst, index);
+                    ref PerformerState state = ref states[index];
+                    if (!_definitions.TryGet(state.DefId, out PerformerDefinition definition))
+                    {
+                        RemoveReplayCache(entity);
+                        continue;
+                    }
+
+                    if (!definition.UsesRetainedPresentationRequest)
+                    {
+                        continue;
+                    }
+
+                    bool ownerDead = state.AnchorKind == PresentationAnchorKind.Entity && !World.IsAlive(state.OwnerEntity);
+                    bool lifetimeExpired = state.DefaultLifetime > 0f && state.Elapsed + deltaTime >= state.DefaultLifetime;
+                    bool hiddenByCull = !culls[index].OwnerCullVisible;
+                    bool hiddenByDefinition = !EvaluateVisibility(definition, state.OwnerEntity);
+                    if (!ownerDead && !lifetimeExpired && !hiddenByCull && !hiddenByDefinition)
+                    {
+                        continue;
+                    }
+
+                    RemoveRetainedPresentationRequestIfPresent(in state, in definition, ref emitCache);
+                    RemoveSurfaceSourceIfPresent(in state, in definition, ref emitCache);
+                    RemoveReplayCache(entity);
+                    if (ownerDead || lifetimeExpired)
+                    {
+                        _pendingDestroy.Add(entity);
+                    }
+                }
+            }
+        }
+
+        private void ProcessEmitEntity(
+            Entity entity,
+            ref PerformerState state,
+            ref PerformerCullState cull,
+            ref PerformerWorldPosition position,
+            ref PerformerWorldRotation rotation,
+            ref PerformerWorldFacing facing,
+            ref PerformerWorldScale scale,
+            ref PerformerEmitCache emitCache,
+            float deltaTime,
+            bool clearDirtyAfterProcessing)
+        {
+            state.Elapsed += deltaTime;
+            if (!_definitions.TryGet(state.DefId, out PerformerDefinition definition))
+            {
+                RemoveReplayCache(entity);
+                ClearDirtyIfNeeded(entity, ref emitCache, clearDirtyAfterProcessing);
+                return;
+            }
+
+            if (state.AnchorKind == PresentationAnchorKind.Entity && !World.IsAlive(state.OwnerEntity))
+            {
+                RemoveStableCacheIfPresent(in state, in definition, ref emitCache);
+                RemoveRetainedPresentationRequestIfPresent(in state, in definition, ref emitCache);
+                RemoveSurfaceSourceIfPresent(in state, in definition, ref emitCache);
+                RemoveReplayCache(entity);
+                _pendingDestroy.Add(entity);
+                ClearDirtyIfNeeded(entity, ref emitCache, clearDirtyAfterProcessing);
+                return;
+            }
+
+            if (state.DefaultLifetime > 0f && state.Elapsed >= state.DefaultLifetime)
+            {
+                RemoveStableCacheIfPresent(in state, in definition, ref emitCache);
+                RemoveRetainedPresentationRequestIfPresent(in state, in definition, ref emitCache);
+                RemoveSurfaceSourceIfPresent(in state, in definition, ref emitCache);
+                RemoveReplayCache(entity);
+                _pendingDestroy.Add(entity);
+                ClearDirtyIfNeeded(entity, ref emitCache, clearDirtyAfterProcessing);
+                return;
+            }
+
+            bool ownerCullVisible = cull.OwnerCullVisible;
+            if (TryProcessSingleVisualProxyFastEntity(
+                    entity,
+                    in state,
+                    definition,
+                    ref cull,
+                    ref position,
+                    ref rotation,
+                    ref facing,
+                    ref scale,
+                    ref emitCache,
+                    ownerCullVisible,
+                    clearDirtyAfterProcessing))
             {
                 return;
             }
 
-            for (int i = 0; i < payload.Length; i++)
+            bool definitionVisible = EvaluateVisibility(definition, state.OwnerEntity);
+            bool stableCacheEligible = _stableDrawCache != null && definition.UsesStableVisualCache;
+            if (!stableCacheEligible && emitCache.StableVisualPresent != 0)
             {
-                fields.Add(payload[i]);
+                RemoveStableCacheIfPresent(in state, in definition, ref emitCache);
             }
-        }
 
-        private static void UpsertPayloadField(List<PresentationPayloadField> fields, string fieldName, in PresentationTypedValue value)
-        {
-            for (int i = 0; i < fields.Count; i++)
+            if (!definitionVisible)
             {
-                if (string.Equals(fields[i].Name, fieldName, StringComparison.Ordinal))
+                RemoveStableCacheIfPresent(in state, in definition, ref emitCache);
+                RemoveRetainedPresentationRequestIfPresent(in state, in definition, ref emitCache);
+                RemoveSurfaceSourceIfPresent(in state, in definition, ref emitCache);
+                RemoveReplayCache(entity);
+                UpdateEmitCache(
+                    ref emitCache,
+                    state.Version,
+                    position.Value,
+                    ownerCullVisible,
+                    definitionVisible,
+                    cull.LOD,
+                    emitCache.StableVisualPresent,
+                    emitCache.RetainedRequestPresent);
+                ClearDirtyIfNeeded(entity, ref emitCache, clearDirtyAfterProcessing);
+                return;
+            }
+
+            if (!ownerCullVisible && (stableCacheEligible || state.AnchorKind == PresentationAnchorKind.Entity))
+            {
+                RemoveStableCacheIfPresent(in state, in definition, ref emitCache);
+                if (definition.UsesRetainedPresentationRequest)
                 {
-                    fields[i] = new PresentationPayloadField(fieldName, in value);
+                    RemoveRetainedPresentationRequestIfPresent(in state, in definition, ref emitCache);
+                    RemoveSurfaceSourceIfPresent(in state, in definition, ref emitCache);
+                }
+
+                RemoveReplayCache(entity);
+                UpdateEmitCache(ref emitCache, state.Version, position.Value, false, true, cull.LOD, stableVisualPresent: 0, definition.UsesRetainedPresentationRequest ? (byte)0 : emitCache.RetainedRequestPresent);
+                ClearDirtyIfNeeded(entity, ref emitCache, clearDirtyAfterProcessing);
+                return;
+            }
+
+            if (!ownerCullVisible && definition.UsesRetainedPresentationRequest)
+            {
+                RemoveRetainedPresentationRequestIfPresent(in state, in definition, ref emitCache);
+                RemoveSurfaceSourceIfPresent(in state, in definition, ref emitCache);
+                RemoveReplayCache(entity);
+                UpdateEmitCache(ref emitCache, state.Version, position.Value, false, true, cull.LOD, emitCache.StableVisualPresent, retainedRequestPresent: 0);
+                ClearDirtyIfNeeded(entity, ref emitCache, clearDirtyAfterProcessing);
+                return;
+            }
+
+            bool versionClean = emitCache.CachedVersion == state.Version;
+            bool positionClean = emitCache.LastEmitPosition == position.Value;
+            bool ownerCullClean = emitCache.LastOwnerCullVisible == 1;
+            bool definitionVisibleClean = emitCache.LastDefinitionVisible == 1;
+            bool lodClean = emitCache.LastLod == cull.LOD;
+            bool replayEligible = definition.SupportsSingleRequestReplay;
+            if (stableCacheEligible && emitCache.StableVisualPresent != 0)
+            {
+                if (versionClean && positionClean && ownerCullClean && definitionVisibleClean && lodClean)
+                {
+                    ClearDirtyIfNeeded(entity, ref emitCache, clearDirtyAfterProcessing);
+                    return;
+                }
+
+                if (versionClean && !positionClean && ownerCullClean && definitionVisibleClean && lodClean)
+                {
+                    UpdateStableVisualPositions(in state, in definition, position.Value);
+                    UpdateEmitCache(ref emitCache, state.Version, position.Value, true, true, cull.LOD, stableVisualPresent: 1, emitCache.RetainedRequestPresent);
+                    ClearDirtyIfNeeded(entity, ref emitCache, clearDirtyAfterProcessing);
                     return;
                 }
             }
 
-            fields.Add(new PresentationPayloadField(fieldName, in value));
+            if (replayEligible &&
+                !definition.UsesRetainedPresentationRequest &&
+                versionClean &&
+                positionClean &&
+                ownerCullClean &&
+                definitionVisibleClean &&
+                lodClean &&
+                TryReplayCachedRequest(entity))
+            {
+                ClearDirtyIfNeeded(entity, ref emitCache, clearDirtyAfterProcessing);
+                return;
+            }
+
+            int emitRequestStartCount = _requests.Count;
+            if (ownerCullVisible && definition.HasSurfaceAuthoring)
+            {
+                EmitSurfaceSourceIfAny(in state, position.Value, definition, cull.LOD);
+            }
+
+            bool emittedStableVisual = false;
+            int requestStartCount = replayEligible ? _requests.Count : -1;
+            if (definition.HasAssetBindingBehavior)
+            {
+                emittedStableVisual =
+                    stableCacheEligible &&
+                    clearDirtyAfterProcessing &&
+                    definition.UsesEventDrivenStaticEmit
+                        ? _assetEmitter.EmitStaticStableVisualDirect(
+                            entity,
+                            in state,
+                            in definition,
+                            cull.LOD,
+                            position.Value,
+                            rotation.Value,
+                            in facing,
+                            scale.Value,
+                            _stableDrawCache!,
+                            addOnly: emitCache.StableVisualPresent == 0)
+                        : definition.SupportsVisualProxyFastEmit
+                            ? EmitVisualProxyFast(
+                                entity,
+                                in state,
+                                definition,
+                                cull.LOD,
+                                position.Value,
+                                rotation.Value,
+                                in facing,
+                                scale.Value)
+                        : EmitAssetBindings(
+                            entity,
+                            in state,
+                            definition,
+                            cull.LOD,
+                            position.Value,
+                            rotation.Value,
+                            in facing,
+                            scale.Value);
+            }
+
+            byte retainedRequestPresent = definition.UsesRetainedPresentationRequest
+                ? (_requests.Count > emitRequestStartCount ? (byte)1 : (byte)0)
+                : (byte)0;
+            if (definition.HasSurfaceAuthoring && emitCache.RetainedRequestPresent != 0)
+            {
+                retainedRequestPresent = 1;
+            }
+
+            if (!emittedStableVisual && _requests.Count == emitRequestStartCount && emitCache.CachedVersion != 0)
+            {
+                if (definition.UsesRetainedPresentationRequest && emitCache.RetainedRequestPresent != 0)
+                {
+                    RemoveRetainedPresentationRequestIfPresent(in state, in definition, ref emitCache);
+                    RemoveSurfaceSourceIfPresent(in state, in definition, ref emitCache);
+                    retainedRequestPresent = 0;
+                }
+                else if (DefinitionHasTransientVisualBindings(definition))
+                {
+                    _requests.Add(PresentationRequest.ClearTransientVisualProjection(state.OwnerEntity));
+                }
+            }
+
+            UpdateReplayCache(entity, replayEligible, requestStartCount);
+
+            if (stableCacheEligible && !emittedStableVisual && emitCache.StableVisualPresent != 0)
+            {
+                RemoveStableCacheIfPresent(in state, in definition, ref emitCache);
+            }
+
+            UpdateEmitCache(
+                ref emitCache,
+                state.Version,
+                position.Value,
+                true,
+                true,
+                cull.LOD,
+                stableCacheEligible && emittedStableVisual ? (byte)1 : (byte)0,
+                retainedRequestPresent);
+            ClearDirtyIfNeeded(entity, ref emitCache, clearDirtyAfterProcessing);
         }
 
-        private PresentationTypedValue ToTypedValue(PresentationTypedValueKind kind, in ValueRef valueRef, Entity owner)
+        private bool TryProcessSingleVisualProxyFastEntity(
+            Entity entity,
+            in PerformerState state,
+            PerformerDefinition definition,
+            ref PerformerCullState cull,
+            ref PerformerWorldPosition position,
+            ref PerformerWorldRotation rotation,
+            ref PerformerWorldFacing facing,
+            ref PerformerWorldScale scale,
+            ref PerformerEmitCache emitCache,
+            bool ownerCullVisible,
+            bool clearDirtyAfterProcessing)
         {
-            float scalar = ResolveValueRef(in valueRef, owner);
-            return kind switch
+            if (!definition.SupportsVisualProxyFastEmit ||
+                definition.HasSurfaceAuthoring ||
+                definition.UsesStableVisualCache ||
+                definition.UsesRetainedPresentationRequest ||
+                definition.DefaultLifetime > 0f ||
+                definition.PositionYDriftPerSecond != 0f ||
+                definition.AlphaFadeOverLifetime ||
+                definition.VisibilityCondition.Inline != InlineConditionKind.None ||
+                definition.VisibilityCondition.GraphProgramId > 0)
             {
-                PresentationTypedValueKind.Bool => PresentationTypedValue.FromBool(MathF.Abs(scalar) > float.Epsilon),
-                PresentationTypedValueKind.Int => PresentationTypedValue.FromInt((int)MathF.Round(scalar)),
-                PresentationTypedValueKind.Float => PresentationTypedValue.FromFloat(scalar),
-                PresentationTypedValueKind.Vector4 => PresentationTypedValue.FromVector4(ResolveVector4(valueRef, owner)),
-                PresentationTypedValueKind.Color => PresentationTypedValue.FromColor(ResolveVector4(valueRef, owner)),
-                _ => throw new InvalidOperationException($"Dynamic performer binding cannot produce typed value kind '{kind}'. Use static payload for structured values."),
+                return false;
+            }
+
+            if (!ownerCullVisible)
+            {
+                RemoveReplayCache(entity);
+                UpdateEmitCache(
+                    ref emitCache,
+                    state.Version,
+                    position.Value,
+                    ownerCullVisible: false,
+                    definitionVisible: true,
+                    cull.LOD,
+                    stableVisualPresent: 0,
+                    retainedRequestPresent: 0);
+                ClearDirtyIfNeeded(entity, ref emitCache, clearDirtyAfterProcessing);
+                return true;
+            }
+
+            EmitVisualProxyFast(
+                entity,
+                in state,
+                definition,
+                cull.LOD,
+                position.Value,
+                rotation.Value,
+                in facing,
+                scale.Value);
+            UpdateEmitCache(
+                ref emitCache,
+                state.Version,
+                position.Value,
+                ownerCullVisible: true,
+                definitionVisible: true,
+                cull.LOD,
+                stableVisualPresent: 0,
+                retainedRequestPresent: 0);
+            ClearDirtyIfNeeded(entity, ref emitCache, clearDirtyAfterProcessing);
+            return true;
+        }
+
+        private bool ProcessSingleVisualProxyFastChunkEntity(
+            Entity entity,
+            ref PerformerState state,
+            PerformerDefinition definition,
+            ref PerformerCullState cull,
+            ref PerformerWorldPosition position,
+            ref PerformerWorldRotation rotation,
+            ref PerformerWorldFacing facing,
+            ref PerformerWorldScale scale,
+            ref PerformerEmitCache emitCache,
+            float deltaTime,
+            int animatorSlot)
+        {
+            state.Elapsed += deltaTime;
+
+            if (state.AnchorKind == PresentationAnchorKind.Entity && !World.IsAlive(state.OwnerEntity))
+            {
+                RemoveReplayCache(entity);
+                _pendingDestroy.Add(entity);
+                UpdateEmitCache(
+                    ref emitCache,
+                    state.Version,
+                    position.Value,
+                    ownerCullVisible: false,
+                    definitionVisible: true,
+                    cull.LOD,
+                    stableVisualPresent: 0,
+                    retainedRequestPresent: 0);
+                return true;
+            }
+
+            bool ownerCullVisible = cull.OwnerCullVisible;
+            if (!ownerCullVisible)
+            {
+                RemoveReplayCache(entity);
+                UpdateEmitCache(
+                    ref emitCache,
+                    state.Version,
+                    position.Value,
+                    ownerCullVisible: false,
+                    definitionVisible: true,
+                    cull.LOD,
+                    stableVisualPresent: 0,
+                    retainedRequestPresent: 0);
+                return true;
+            }
+
+            EmitVisualProxyFast(
+                entity,
+                in state,
+                definition,
+                cull.LOD,
+                position.Value,
+                rotation.Value,
+                in facing,
+                scale.Value,
+                animatorSlot);
+
+            UpdateEmitCache(
+                ref emitCache,
+                state.Version,
+                position.Value,
+                ownerCullVisible: true,
+                definitionVisible: true,
+                cull.LOD,
+                stableVisualPresent: 0,
+                retainedRequestPresent: 0);
+            return true;
+        }
+
+        private static bool IsVisualProxyFastDefinition(PerformerDefinition definition)
+        {
+            return definition.SupportsVisualProxyFastEmit &&
+                   !definition.HasSurfaceAuthoring &&
+                   !definition.UsesStableVisualCache &&
+                   !definition.UsesRetainedPresentationRequest &&
+                   definition.DefaultLifetime <= 0f &&
+                   definition.PositionYDriftPerSecond == 0f &&
+                   !definition.AlphaFadeOverLifetime &&
+                   definition.VisibilityCondition.Inline == InlineConditionKind.None &&
+                   definition.VisibilityCondition.GraphProgramId <= 0;
+        }
+
+        private static bool DefinitionHasTransientVisualBindings(PerformerDefinition definition)
+        {
+            int[] assetBehaviorIndices = definition.AssetBehaviorIndices;
+            BehaviorSlot[] behaviors = definition.Behaviors;
+            for (int i = 0; i < assetBehaviorIndices.Length; i++)
+            {
+                ref readonly BehaviorSlot slot = ref behaviors[assetBehaviorIndices[i]];
+                if (slot.AssetBinding.Mobility == VisualMobility.Movable ||
+                    slot.AssetBinding.AssetKind == AssetKind.SkinnedMesh ||
+                    slot.AssetBinding.AssetKind == AssetKind.Mesh ||
+                    slot.AssetBinding.AssetKind == AssetKind.Decal ||
+                    slot.AssetBinding.AssetKind == AssetKind.VFX ||
+                    slot.AssetBinding.AssetKind == AssetKind.Surface)
+                {
+                    return true;
+                }
+            }
+
+            return false;
+        }
+
+        private void ClearDirtyIfNeeded(Entity entity, ref PerformerEmitCache emitCache, bool clearDirtyAfterProcessing)
+        {
+            if (clearDirtyAfterProcessing)
+            {
+                _runtime.ClearStaticDirty(entity);
+            }
+        }
+
+        private void ProcessDirtyStaticStableEmit(
+            Entity entity,
+            ref PerformerState state,
+            ref PerformerCullState cull,
+            ref PerformerWorldPosition position,
+            ref PerformerWorldRotation rotation,
+            ref PerformerWorldFacing facing,
+            ref PerformerWorldScale scale,
+            ref PerformerEmitCache emitCache,
+            PerformerDefinition definition)
+        {
+            if (state.AnchorKind == PresentationAnchorKind.Entity && !World.IsAlive(state.OwnerEntity))
+            {
+                RemoveStableCacheIfPresent(in state, in definition, ref emitCache);
+                RemoveRetainedPresentationRequestIfPresent(in state, in definition, ref emitCache);
+                RemoveSurfaceSourceIfPresent(in state, in definition, ref emitCache);
+                RemoveReplayCache(entity);
+                _pendingDestroy.Add(entity);
+                _runtime.ClearStaticDirty(entity);
+                return;
+            }
+
+            bool ownerCullVisible = cull.OwnerCullVisible;
+            bool definitionVisible = EvaluateVisibility(definition, state.OwnerEntity);
+            byte stableVisualPresent = emitCache.StableVisualPresent != 0
+                ? (HasStaticStableVisuals(in state, in definition) ? (byte)1 : (byte)0)
+                : (byte)0;
+            emitCache.StableVisualPresent = stableVisualPresent;
+            bool versionClean = emitCache.CachedVersion == state.Version;
+            bool positionClean = emitCache.LastEmitPosition == position.Value;
+            bool ownerCullClean = emitCache.LastOwnerCullVisible == 1;
+            bool definitionVisibleClean = emitCache.LastDefinitionVisible == 1;
+            bool lodClean = emitCache.LastLod == cull.LOD;
+
+            if (!definitionVisible)
+            {
+                RemoveStableCacheIfPresent(in state, in definition, ref emitCache);
+                RemoveRetainedPresentationRequestIfPresent(in state, in definition, ref emitCache);
+                RemoveSurfaceSourceIfPresent(in state, in definition, ref emitCache);
+                RemoveReplayCache(entity);
+                UpdateEmitCache(ref emitCache, state.Version, position.Value, ownerCullVisible, false, cull.LOD, stableVisualPresent: 0, retainedRequestPresent: 0);
+                _runtime.ClearStaticDirty(entity);
+                return;
+            }
+
+            if (!ownerCullVisible)
+            {
+                RemoveStableCacheIfPresent(in state, in definition, ref emitCache);
+                RemoveRetainedPresentationRequestIfPresent(in state, in definition, ref emitCache);
+                RemoveSurfaceSourceIfPresent(in state, in definition, ref emitCache);
+                RemoveReplayCache(entity);
+                UpdateEmitCache(ref emitCache, state.Version, position.Value, false, true, cull.LOD, stableVisualPresent: 0, retainedRequestPresent: 0);
+                _runtime.ClearStaticDirty(entity);
+                return;
+            }
+
+            if (stableVisualPresent != 0)
+            {
+                if (versionClean && positionClean && ownerCullClean && definitionVisibleClean && lodClean)
+                {
+                    _runtime.ClearStaticDirty(entity);
+                    return;
+                }
+
+                if (versionClean && !positionClean && ownerCullClean && definitionVisibleClean && lodClean)
+                {
+                    UpdateStableVisualPositions(in state, in definition, position.Value);
+                    UpdateEmitCache(ref emitCache, state.Version, position.Value, true, true, cull.LOD, stableVisualPresent: 1, emitCache.RetainedRequestPresent);
+                    _runtime.ClearStaticDirty(entity);
+                    return;
+                }
+            }
+
+            bool emittedStableVisual = _assetEmitter.EmitStaticStableVisualDirect(
+                entity,
+                in state,
+                in definition,
+                cull.LOD,
+                position.Value,
+                rotation.Value,
+                in facing,
+                scale.Value,
+                _stableDrawCache!,
+                addOnly: stableVisualPresent == 0);
+
+            if (!emittedStableVisual && emitCache.StableVisualPresent != 0)
+            {
+                RemoveStableCacheIfPresent(in state, in definition, ref emitCache);
+            }
+
+            UpdateEmitCache(
+                ref emitCache,
+                state.Version,
+                position.Value,
+                true,
+                true,
+                cull.LOD,
+                emittedStableVisual ? (byte)1 : (byte)0,
+                emitCache.RetainedRequestPresent);
+            _runtime.ClearStaticDirty(entity);
+        }
+
+        private void EmitSurfaceSourceIfAny(in PerformerState state, Vector3 worldPos, PerformerDefinition definition, LODLevel lod)
+        {
+            SurfaceAuthoringBlock? surface = definition.Surface;
+            if (surface == null)
+            {
+                return;
+            }
+
+            _requests.Add(PresentationRequest.FromSurfaceSource(state.OwnerEntity, new SurfaceSourceRequest
+            {
+                StableId = state.StableId,
+                PerformerDefinitionId = state.DefId,
+                ScopeId = state.ScopeId,
+                SurfaceKind = surface.Kind,
+                Authoring = surface,
+                AnchorPosition = worldPos + definition.PositionOffset,
+                LodSeed = lod,
+            }, lod));
+        }
+
+        private bool EmitAssetBindings(
+            Entity entity,
+            in PerformerState state,
+            PerformerDefinition definition,
+            LODLevel lod,
+            Vector3 performerWorldPosition,
+            Quaternion performerWorldRotation,
+            in PerformerWorldFacing performerWorldFacing,
+            Vector3 performerWorldScale,
+            int animatorSlot = -1)
+        {
+            int[] assetBehaviorIndices = definition.AssetBehaviorIndices;
+            if (assetBehaviorIndices.Length == 0)
+            {
+                return false;
+            }
+
+            bool emittedStableVisual = false;
+            BehaviorSlot[] behaviors = definition.Behaviors;
+            for (int i = 0; i < assetBehaviorIndices.Length; i++)
+            {
+                ref readonly BehaviorSlot slot = ref behaviors[assetBehaviorIndices[i]];
+                if (!IsBehaviorActive(state.BehaviorActiveMask, slot.SlotIndex))
+                {
+                    continue;
+                }
+
+                ref readonly AssetBindingConfig asset = ref slot.AssetBinding;
+                if (TryEmitSkinnedVisualBatchFast(
+                        entity,
+                        in state,
+                        definition,
+                        slot.SlotIndex,
+                        in asset,
+                        lod,
+                        performerWorldPosition + definition.PositionOffset,
+                        performerWorldRotation,
+                        in performerWorldFacing,
+                        performerWorldScale,
+                        animatorSlot))
+                {
+                    emittedStableVisual = true;
+                    continue;
+                }
+
+                _assetEmitter.Emit(
+                    entity,
+                    in state,
+                    in definition,
+                    slot.SlotIndex,
+                    in asset,
+                    lod,
+                    performerWorldPosition,
+                    performerWorldRotation,
+                    in performerWorldFacing,
+                    performerWorldScale);
+                emittedStableVisual |= IsCacheableVisualKind(asset.AssetKind);
+            }
+
+            return emittedStableVisual;
+        }
+
+        private bool EmitVisualProxyFast(
+            Entity entity,
+            in PerformerState state,
+            PerformerDefinition definition,
+            LODLevel lod,
+            Vector3 performerWorldPosition,
+            Quaternion performerWorldRotation,
+            in PerformerWorldFacing performerWorldFacing,
+            Vector3 performerWorldScale,
+            int animatorSlot = -1)
+        {
+            int[] assetBehaviorIndices = definition.AssetBehaviorIndices;
+            if (assetBehaviorIndices.Length == 0)
+            {
+                return false;
+            }
+
+            bool emittedStableVisual = false;
+            BehaviorSlot[] behaviors = definition.Behaviors;
+            Vector3 resolvedPosition = performerWorldPosition + definition.PositionOffset;
+            for (int i = 0; i < assetBehaviorIndices.Length; i++)
+            {
+                ref readonly BehaviorSlot slot = ref behaviors[assetBehaviorIndices[i]];
+                if (!IsBehaviorActive(state.BehaviorActiveMask, slot.SlotIndex))
+                {
+                    continue;
+                }
+
+                ref readonly AssetBindingConfig asset = ref slot.AssetBinding;
+                VisualVisibility visibility = lod == LODLevel.Culled || (asset.HasMaxLod && lod > asset.MaxLod)
+                    ? VisualVisibility.Culled
+                    : VisualVisibility.Visible;
+                if (visibility == VisualVisibility.Visible &&
+                    TryEmitSkinnedVisualBatchFast(
+                        entity,
+                        in state,
+                        definition,
+                        slot.SlotIndex,
+                        in asset,
+                        lod,
+                        resolvedPosition,
+                        performerWorldRotation,
+                        in performerWorldFacing,
+                        performerWorldScale,
+                        animatorSlot))
+                {
+                    continue;
+                }
+
+                _requests.Add(PresentationRequest.FromVisualProxy(
+                    state.OwnerEntity,
+                    BuildVisualProxyFast(
+                        entity,
+                        in state,
+                        definition,
+                        slot.SlotIndex,
+                        in asset,
+                        lod,
+                        resolvedPosition,
+                        performerWorldRotation,
+                        in performerWorldFacing,
+                        performerWorldScale,
+                        visibility,
+                        animatorSlot)));
+                emittedStableVisual |= IsCacheableVisualKind(asset.AssetKind);
+            }
+
+            return emittedStableVisual;
+        }
+
+        private bool TryEmitSkinnedVisualBatchFast(
+            Entity entity,
+            in PerformerState state,
+            PerformerDefinition definition,
+            int slotIndex,
+            in AssetBindingConfig asset,
+            LODLevel lod,
+            Vector3 resolvedPosition,
+            Quaternion performerWorldRotation,
+            in PerformerWorldFacing performerWorldFacing,
+            Vector3 performerWorldScale,
+            int animatorSlot = -1)
+        {
+            if (_skinnedVisualBatchBuffer == null ||
+                asset.AssetKind != AssetKind.SkinnedMesh ||
+                lod == LODLevel.Culled ||
+                (asset.HasMaxLod && lod > asset.MaxLod) ||
+                !ResolveAssetVisibility(entity, in asset))
+            {
+                return false;
+            }
+
+            VisualRenderPath renderPath = asset.RenderPath;
+            if (renderPath == VisualRenderPath.None)
+            {
+                throw new InvalidOperationException("SkinnedMesh AssetBinding requires an explicit skinned renderPath.");
+            }
+
+            if (!renderPath.IsSkinnedLane())
+            {
+                return false;
+            }
+
+            if (!_skinnedVisualBatchBuffer.TryAddDirect(new SkinnedVisualBatchItem
+            {
+                MeshAssetId = ResolveAssetId(entity, in asset),
+                Position = ResolveAssetPosition(resolvedPosition, performerWorldRotation, performerWorldScale, in asset),
+                Rotation = ResolveAssetRotation(in asset, performerWorldRotation),
+                Scale = ResolveAssetScale(entity, in asset, performerWorldScale),
+                Color = ResolveAssetColor(entity, in asset, definition.DefaultColor),
+                StableId = PerformerBehaviorRuntimeUtility.ComposeVisualStableId(state.StableId, slotIndex, asset.AssetKind, state.DefId),
+                MaterialId = ResolveMaterialId(entity, in asset),
+                TemplateId = state.DefId,
+                AnimationProfileId = definition.AnimationProfileId,
+                RenderPath = renderPath,
+                AssetKind = asset.AssetKind,
+                SurfaceLayerKey = asset.SurfaceLayerKey,
+                SortId = asset.SortId,
+                MaterialCustomData = PerformerMaterialCustomDataResolver.Resolve(_runtime, entity, in asset.MaterialCustomData),
+                Animator = ResolveAnimatorFast(entity, animatorSlot),
+                AnimationOverlay = ResolveAnimationOverlayFast(entity, renderPath, animatorSlot),
+                Visibility = VisualVisibility.Visible,
+                LOD = lod,
+            }))
+            {
+                throw new InvalidOperationException(
+                    $"Skinned visual batch buffer overflowed while fast-emitting stableId={state.StableId}, definitionId={state.DefId}.");
+            }
+
+            return true;
+        }
+
+        private PresentationVisualProxy BuildVisualProxyFast(
+            Entity entity,
+            in PerformerState state,
+            PerformerDefinition definition,
+            int slotIndex,
+            in AssetBindingConfig asset,
+            LODLevel lod,
+            Vector3 resolvedPosition,
+            Quaternion performerWorldRotation,
+            in PerformerWorldFacing performerWorldFacing,
+            Vector3 performerWorldScale,
+            VisualVisibility visibility,
+            int animatorSlot = -1)
+        {
+            VisualRenderPath renderPath = asset.RenderPath;
+            if (renderPath == VisualRenderPath.None)
+            {
+                throw new InvalidOperationException(
+                    $"Visual AssetBinding assetKind '{asset.AssetKind}' requires an explicit renderPath.");
+            }
+
+            return new PresentationVisualProxy
+            {
+                ProxyKind = PresentationVisualProxyKind.Performer,
+                MeshAssetId = ResolveAssetId(entity, in asset),
+                Position = ResolveAssetPosition(resolvedPosition, performerWorldRotation, performerWorldScale, in asset),
+                Rotation = ResolveAssetRotation(in asset, performerWorldRotation),
+                Scale = ResolveAssetScale(entity, in asset, performerWorldScale),
+                Color = ResolveAssetColor(entity, in asset, definition.DefaultColor),
+                StableId = PerformerBehaviorRuntimeUtility.ComposeVisualStableId(state.StableId, slotIndex, asset.AssetKind, state.DefId),
+                MaterialId = ResolveMaterialId(entity, in asset),
+                TemplateId = state.DefId,
+                AnimationProfileId = definition.AnimationProfileId,
+                RenderPath = renderPath,
+                AssetKind = asset.AssetKind,
+                SurfaceLayerKey = asset.SurfaceLayerKey,
+                SortId = asset.SortId,
+                MaterialCustomData = PerformerMaterialCustomDataResolver.Resolve(_runtime, entity, in asset.MaterialCustomData),
+                Mobility = asset.Mobility,
+                Flags = VisualRuntimeFlags.Visible,
+                Animator = renderPath.SupportsAnimatorPackedState() ? ResolveAnimatorFast(entity, animatorSlot) : default,
+                AnimationOverlay = ResolveAnimationOverlayFast(entity, renderPath, animatorSlot),
+                Visibility = visibility,
+                LOD = lod,
             };
         }
 
-        private Vector4 ResolveVector4(in ValueRef valueRef, Entity owner)
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        private AnimatorPackedState ResolveAnimatorFast(Entity entity, int animatorSlot = -1)
         {
-            if (valueRef.Source == ValueSourceKind.EntityColor)
+            if (animatorSlot >= 0)
             {
-                if (_entityColorResolver != null)
-                {
-                    return _entityColorResolver(World, owner);
-                }
-
-                return Vector4.One;
+                return _assetEmitter.GetAnimatorPackedStateBySlot(animatorSlot);
             }
 
-            float scalar = ResolveValueRef(in valueRef, owner);
-            return new Vector4(scalar, scalar, scalar, scalar);
+            return _assetEmitter.TryGetAnimatorPackedState(entity, out AnimatorPackedState state)
+                ? state
+                : default;
         }
 
-        private static PresentationVisualRequestKind ToRequestKind(PerformerVisualKind kind)
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        private AnimationOverlayRequest ResolveAnimationOverlayFast(Entity entity, VisualRenderPath renderPath, int animatorSlot = -1)
         {
-            return kind switch
+            if (!renderPath.SupportsAnimatorPackedState())
             {
-                PerformerVisualKind.Decal => PresentationVisualRequestKind.Decal,
-                PerformerVisualKind.Vfx => PresentationVisualRequestKind.Vfx,
-                PerformerVisualKind.Surface => PresentationVisualRequestKind.Surface,
-                PerformerVisualKind.MaterialOverride => PresentationVisualRequestKind.MaterialOverride,
-                PerformerVisualKind.InstanceCustomData => PresentationVisualRequestKind.InstanceCustomData,
-                _ => PresentationVisualRequestKind.None,
+                return default;
+            }
+
+            if (animatorSlot >= 0)
+            {
+                return _assetEmitter.GetAnimationOverlayBySlot(animatorSlot);
+            }
+
+            return _assetEmitter.TryGetAnimationOverlay(entity, out AnimationOverlayRequest overlay)
+                ? overlay
+                : default;
+        }
+
+        private static bool IsBehaviorActive(uint mask, int slotIndex)
+        {
+            return slotIndex is >= 0 and < 32 && (mask & (1u << slotIndex)) != 0;
+        }
+
+        private static bool IsCacheableVisualKind(AssetKind kind)
+        {
+            return kind is AssetKind.Mesh or AssetKind.SkinnedMesh or AssetKind.Decal or AssetKind.VFX or AssetKind.Surface;
+        }
+
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        private bool TryReplayCachedRequest(Entity entity)
+        {
+            if (!_singleRequestReplayCache.TryGetValue(entity, out PresentationRequest request))
+            {
+                return false;
+            }
+
+            _requests.Add(request);
+            return true;
+        }
+
+        private void UpdateReplayCache(Entity entity, bool replayEligible, int requestStartCount)
+        {
+            if (!replayEligible)
+            {
+                RemoveReplayCache(entity);
+                return;
+            }
+
+            int emittedCount = _requests.Count - requestStartCount;
+            if (emittedCount != 1)
+            {
+                RemoveReplayCache(entity);
+                return;
+            }
+
+            _singleRequestReplayCache[entity] = _requests.Get(requestStartCount);
+        }
+
+        private void RemoveReplayCache(Entity entity)
+        {
+            _singleRequestReplayCache.Remove(entity);
+        }
+
+        private bool HasStaticStableVisuals(in PerformerState state, in PerformerDefinition definition)
+        {
+            if (_stableDrawCache == null)
+            {
+                return false;
+            }
+
+            BehaviorSlot[] behaviors = definition.Behaviors;
+            int[] cacheableAssetBehaviorIndices = definition.CacheableAssetBehaviorIndices;
+            for (int i = 0; i < cacheableAssetBehaviorIndices.Length; i++)
+            {
+                ref readonly BehaviorSlot slot = ref behaviors[cacheableAssetBehaviorIndices[i]];
+                if (_stableDrawCache.Contains(PerformerBehaviorRuntimeUtility.ComposeVisualStableId(
+                        state.StableId,
+                        slot.SlotIndex,
+                        slot.AssetBinding.AssetKind,
+                        state.DefId)))
+                {
+                    return true;
+                }
+            }
+
+            return false;
+        }
+
+        private void RemoveStableCacheIfPresent(in PerformerState state, in PerformerDefinition definition, ref PerformerEmitCache emitCache)
+        {
+            if (_stableDrawCache == null)
+            {
+                emitCache.StableVisualPresent = 0;
+                return;
+            }
+
+            _assetEmitter.RemoveStaticStableVisuals(in state, in definition, _stableDrawCache);
+            emitCache.StableVisualPresent = 0;
+        }
+
+        private void RemoveRetainedPresentationRequestIfPresent(in PerformerState state, in PerformerDefinition definition)
+        {
+            if (!definition.UsesRetainedPresentationRequest ||
+                definition.AssetBehaviorIndices.Length != 1 ||
+                definition.Behaviors == null)
+            {
+                return;
+            }
+
+            ref readonly BehaviorSlot slot = ref definition.Behaviors[definition.AssetBehaviorIndices[0]];
+            int stableId = slot.AssetBinding.AssetKind switch
+            {
+                AssetKind.WorldHud => HudItemIdentity.ComposeStableId(state.StableId, WorldHudItemKind.Bar, definition.Id),
+                AssetKind.WorldText => HudItemIdentity.ComposeStableId(state.StableId, WorldHudItemKind.Text, definition.Id),
+                AssetKind.Spline => PerformerBehaviorRuntimeUtility.ComposeVisualStableId(state.StableId, slot.SlotIndex, slot.AssetBinding.AssetKind, state.DefId),
+                AssetKind.GroundOverlay => PerformerBehaviorRuntimeUtility.ComposeVisualStableId(state.StableId, slot.SlotIndex, slot.AssetBinding.AssetKind, state.DefId),
+                _ => 0,
             };
-        }
-
-        private int ResolveMarkerStableId(int handle, int definitionId, Entity owner)
-        {
-            if (handle >= 0 && _instances.IsActive(handle))
+            if (stableId <= 0)
             {
-                return _instances.Get(handle).StableId;
+                return;
             }
 
-            if (World.IsAlive(owner) && World.Has<PresentationStableId>(owner))
+            switch (slot.AssetBinding.AssetKind)
             {
-                int ownerStableId = World.Get<PresentationStableId>(owner).Value;
-                if (ownerStableId > 0)
+                case AssetKind.WorldHud:
+                case AssetKind.WorldText:
+                    _requests.Add(PresentationRequest.RemoveWorldHud(state.OwnerEntity, stableId));
+                    break;
+                case AssetKind.Spline:
+                    _requests.Add(PresentationRequest.RemoveRoadSpline(state.OwnerEntity, stableId));
+                    break;
+                case AssetKind.GroundOverlay:
+                    _requests.Add(PresentationRequest.RemoveGroundOverlay(state.OwnerEntity, stableId));
+                    break;
+            }
+        }
+
+        private void RemoveRetainedPresentationRequestIfPresent(
+            in PerformerState state,
+            in PerformerDefinition definition,
+            ref PerformerEmitCache emitCache)
+        {
+            if (emitCache.RetainedRequestPresent == 0)
+            {
+                return;
+            }
+
+            RemoveRetainedPresentationRequestIfPresent(in state, in definition);
+            emitCache.RetainedRequestPresent = 0;
+        }
+
+        private void RemoveSurfaceSourceIfPresent(
+            in PerformerState state,
+            in PerformerDefinition definition,
+            ref PerformerEmitCache emitCache)
+        {
+            if (!definition.HasSurfaceAuthoring)
+            {
+                return;
+            }
+
+            _requests.Add(PresentationRequest.RemoveSurfaceSource(state.OwnerEntity, state.StableId));
+            emitCache.RetainedRequestPresent = 0;
+        }
+
+        private void UpdateStableVisualPositions(in PerformerState state, in PerformerDefinition definition, Vector3 performerWorldPosition)
+        {
+            if (_stableDrawCache == null)
+            {
+                return;
+            }
+
+            Vector3 position = PerformerAssetEmitRuntime.ResolvePosition(in state, in definition, performerWorldPosition);
+            BehaviorSlot[] behaviors = definition.Behaviors;
+            int[] cacheableAssetBehaviorIndices = definition.CacheableAssetBehaviorIndices;
+            for (int i = 0; i < cacheableAssetBehaviorIndices.Length; i++)
+            {
+                ref readonly BehaviorSlot slot = ref behaviors[cacheableAssetBehaviorIndices[i]];
+                _stableDrawCache.UpdatePosition(PerformerBehaviorRuntimeUtility.ComposeVisualStableId(state.StableId, slot.SlotIndex, slot.AssetBinding.AssetKind, state.DefId), position);
+            }
+        }
+
+        private static void UpdateEmitCache(
+            ref PerformerEmitCache emitCache,
+            int version,
+            Vector3 emitPosition,
+            bool ownerCullVisible,
+            bool definitionVisible,
+            LODLevel lod,
+            byte stableVisualPresent,
+            byte retainedRequestPresent)
+        {
+            emitCache.CachedVersion = version;
+            emitCache.LastEmitPosition = emitPosition;
+            emitCache.LastOwnerCullVisible = ownerCullVisible ? (byte)1 : (byte)0;
+            emitCache.LastDefinitionVisible = definitionVisible ? (byte)1 : (byte)0;
+            emitCache.LastLod = lod;
+            emitCache.StableVisualPresent = stableVisualPresent;
+            emitCache.RetainedRequestPresent = retainedRequestPresent;
+        }
+
+        private bool EvaluateVisibility(in PerformerDefinition definition, Entity owner)
+        {
+            ref readonly ConditionRef condition = ref definition.VisibilityCondition;
+            if (condition.Inline != InlineConditionKind.None)
+            {
+                return condition.Inline switch
                 {
-                    return PerformerVisualIdentity.ComposeStableId(ownerStableId, PerformerVisualKind.Marker3D, definitionId);
+                    InlineConditionKind.SourceIsLocalPlayer => IsLocalPlayer(owner),
+                    InlineConditionKind.TargetIsLocalPlayer => IsLocalPlayer(owner),
+                    InlineConditionKind.SourceIsAlive => World.IsAlive(owner),
+                    InlineConditionKind.TargetIsAlive => World.IsAlive(owner),
+                    InlineConditionKind.OwnerCullVisible => IsOwnerCullVisible(owner),
+                    InlineConditionKind.SourceHasAttributes => OwnerSatisfiesAttributeRequirements(owner, definition),
+                    InlineConditionKind.SourceHasVisualTransform => World.IsAlive(owner) && World.Has<VisualTransform>(owner),
+                    _ => throw new InvalidOperationException($"Unsupported performer visibility inline condition '{condition.Inline}'."),
+                };
+            }
+
+            if (condition.GraphProgramId > 0)
+            {
+                throw new InvalidOperationException(
+                    $"Performer visibility graph condition graphProgramId={condition.GraphProgramId} is not wired into PerformerEmitSystem; silent visible fallback is forbidden.");
+            }
+
+            return true;
+        }
+
+        private bool IsLocalPlayer(Entity owner)
+        {
+            return _globals.TryGetValue(CoreServiceKeys.LocalPlayerEntity.Name, out object? candidate) &&
+                   candidate is Entity localPlayer &&
+                   localPlayer == owner;
+        }
+
+        private bool IsOwnerCullVisible(Entity owner)
+        {
+            if (!World.IsAlive(owner))
+            {
+                return false;
+            }
+
+            return !World.Has<CullState>(owner) || World.Get<CullState>(owner).IsVisible;
+        }
+
+        private bool OwnerSatisfiesAttributeRequirements(Entity owner, in PerformerDefinition definition)
+        {
+            if (!World.IsAlive(owner) || !World.Has<AttributeBuffer>(owner))
+            {
+                return false;
+            }
+
+            ref AttributeBuffer attributes = ref World.Get<AttributeBuffer>(owner);
+            int[] required = definition.RequiredAttributeIds;
+            if (required == null || required.Length == 0)
+            {
+                return true;
+            }
+
+            for (int i = 0; i < required.Length; i++)
+            {
+                if (!attributes.HasAttribute(required[i]))
+                {
+                    return false;
                 }
             }
 
-            throw new InvalidOperationException(
-                $"Entity-scoped Marker3D performer '{_definitions.GetName(definitionId)}' requires a positive PresentationStableId on its owner.");
-        }
-
-        private int ResolveRoadSplineStableId(int handle, int definitionId, Entity owner)
-        {
-            if (handle >= 0 && _instances.IsActive(handle))
-            {
-                return _instances.Get(handle).StableId;
-            }
-
-            if (World.IsAlive(owner) && World.Has<PresentationStableId>(owner))
-            {
-                int ownerStableId = World.Get<PresentationStableId>(owner).Value;
-                if (ownerStableId > 0)
-                {
-                    return PerformerVisualIdentity.ComposeStableId(ownerStableId, PerformerVisualKind.RoadSpline, definitionId);
-                }
-            }
-
-            throw new InvalidOperationException(
-                $"Entity-scoped RoadSpline performer '{_definitions.GetName(definitionId)}' requires a positive PresentationStableId on its owner.");
-        }
-
-        private int ResolveTypedStableId(int handle, int definitionId, PerformerVisualKind visualKind, Entity owner)
-        {
-            if (handle >= 0 && _instances.IsActive(handle))
-            {
-                return _instances.Get(handle).StableId;
-            }
-
-            if (World.IsAlive(owner) && World.Has<PresentationStableId>(owner))
-            {
-                int ownerStableId = World.Get<PresentationStableId>(owner).Value;
-                if (ownerStableId > 0)
-                {
-                    return PerformerVisualIdentity.ComposeStableId(ownerStableId, visualKind, definitionId);
-                }
-            }
-
-            throw new InvalidOperationException(
-                $"Entity-scoped typed performer '{_definitions.GetName(definitionId)}' requires a positive PresentationStableId on its owner.");
-        }
-
-        private void EmitWorldBar(int handle, int definitionId, PerformerDefinition def, Entity owner, Vector3 pos, float alphaMod)
-        {
-            var fg = ResolveColor(handle, def, owner, 4, 5, 6, 7, def.DefaultColor);
-            fg.W *= alphaMod;
-            var bg = ResolveColor(handle, def, owner, 8, 9, 10, 11, new Vector4(0.2f, 0.2f, 0.2f, 1f));
-            bg.W *= alphaMod;
-            float value = ResolveParam(handle, def, owner, 0, 1f);
-            float width = ResolveParam(handle, def, owner, 1, 40f);
-            float height = ResolveParam(handle, def, owner, 2, 6f);
-            int stableId = ResolveHudStableId(handle, definitionId, owner, WorldHudItemKind.Bar);
-            int dirtySerial = HudItemIdentity.ComposeBarDirtySerial(width, height, value, bg, fg);
-
-            _worldHud.TryAdd(new WorldHudItem
-            {
-                StableId = stableId,
-                DirtySerial = dirtySerial,
-                Kind = WorldHudItemKind.Bar,
-                WorldPosition = pos,
-                Value0 = value,
-                Width = width,
-                Height = height,
-                Color0 = bg,
-                Color1 = fg,
-            });
-        }
-
-        private void EmitWorldText(int handle, int definitionId, PerformerDefinition def, Entity owner, Vector3 pos, float alphaMod)
-        {
-            var color = ResolveColor(handle, def, owner, 4, 5, 6, 7, def.DefaultColor);
-            color.W *= alphaMod;
-            float value0 = ResolveParam(handle, def, owner, 0, 0f);
-            float value1 = ResolveParam(handle, def, owner, 1, 0f);
-            int textTokenId = (int)ResolveParam(handle, def, owner, 15, def.DefaultTextId);
-            var legacyMode = (WorldHudValueMode)(int)ResolveParam(handle, def, owner, 16, (int)def.LegacyWorldTextMode);
-            int legacyStringId = legacyMode == WorldHudValueMode.None ? textTokenId : 0;
-            PresentationTextPacket packet = PresentationTextPacket.FromLegacyWorldHud(
-                textTokenId,
-                legacyMode,
-                value0,
-                value1);
-            int stableId = ResolveHudStableId(handle, definitionId, owner, WorldHudItemKind.Text);
-            int dirtySerial = HudItemIdentity.ComposeTextDirtySerial(
-                (int)ResolveParam(handle, def, owner, 3, def.DefaultFontSize),
-                legacyStringId,
-                (int)legacyMode,
-                value0,
-                value1,
-                color,
-                packet);
-
-            _worldHud.TryAdd(new WorldHudItem
-            {
-                StableId = stableId,
-                DirtySerial = dirtySerial,
-                Kind = WorldHudItemKind.Text,
-                WorldPosition = pos,
-                Value0 = value0,
-                Value1 = value1,
-                Id0 = legacyStringId,
-                Id1 = (int)legacyMode, // WorldHudValueMode legacy adapter contract
-                FontSize = (int)ResolveParam(handle, def, owner, 3, def.DefaultFontSize),
-                Color0 = color,
-                Text = packet,
-            });
-        }
-
-        private int ResolveHudStableId(int handle, int definitionId, Entity owner, WorldHudItemKind kind)
-        {
-            int ownerStableId = 0;
-            if (handle >= 0 && _instances.IsActive(handle))
-            {
-                ownerStableId = _instances.Get(handle).StableId;
-            }
-            else if (World.IsAlive(owner) && World.Has<PresentationStableId>(owner))
-            {
-                ownerStableId = World.Get<PresentationStableId>(owner).Value;
-            }
-
-            return ownerStableId > 0
-                ? HudItemIdentity.ComposeStableId(ownerStableId, kind, definitionId)
-                : 0;
-        }
-
-        // ── Helpers ──
-
-        private Vector4 ResolveColor(int handle, PerformerDefinition def, Entity owner, int rKey, int gKey, int bKey, int aKey, Vector4 defaultColor)
-        {
-            return new Vector4(
-                ResolveParam(handle, def, owner, rKey, defaultColor.X),
-                ResolveParam(handle, def, owner, gKey, defaultColor.Y),
-                ResolveParam(handle, def, owner, bKey, defaultColor.Z),
-                ResolveParam(handle, def, owner, aKey, defaultColor.W));
-        }
-
-        private Vector3 ResolveOwnerPosition(Entity owner)
-        {
-            if (World.IsAlive(owner) && World.Has<VisualTransform>(owner))
-                return World.Get<VisualTransform>(owner).Position;
-            return Vector3.Zero;
-        }
-
-        private Vector3 ResolveAnchorPosition(in PerformerInstance instance)
-        {
-            return instance.AnchorKind == PresentationAnchorKind.WorldPosition
-                ? instance.WorldPosition
-                : ResolveOwnerPosition(instance.Owner);
-        }
-
-        private bool IsLocalPlayer(Entity entity)
-        {
-            if (!_globals.TryGetValue(CoreServiceKeys.LocalPlayerEntity.Name, out var obj)) return false;
-            return obj is Entity lp && lp == entity;
-        }
-
-        private bool EvaluateGraphBool(int graphProgramId, Entity source, Entity target)
-        {
-            if (!_programs.TryGetProgram(graphProgramId, out var program)) return false;
-            if (program.Length == 0) return false;
-            ExecuteGraph(source, target, program);
-            return _boolRegs[0] != 0;
-        }
-
-        private float EvaluateGraphFloat(int graphProgramId, Entity owner)
-        {
-            if (!_programs.TryGetProgram(graphProgramId, out var program)) return 0f;
-            if (program.Length == 0) return 0f;
-            ExecuteGraph(owner, owner, program);
-            return _floatRegs[0];
-        }
-
-        private void ExecuteGraph(Entity source, Entity target, ReadOnlySpan<GraphInstruction> program)
-        {
-            Array.Clear(_floatRegs, 0, _floatRegs.Length);
-            Array.Clear(_intRegs, 0, _intRegs.Length);
-            Array.Clear(_boolRegs, 0, _boolRegs.Length);
-            Array.Clear(_entityRegs, 0, _entityRegs.Length);
-            _entityRegs[0] = source;
-            _entityRegs[1] = target;
-
-            var targetList = new GraphTargetList(_targets);
-            var state = new GraphExecutionState
-            {
-                World = World,
-                Caster = source,
-                ExplicitTarget = target,
-                TargetPos = IntVector2.Zero,
-                Api = _graphApi,
-                F = _floatRegs,
-                I = _intRegs,
-                B = _boolRegs,
-                E = _entityRegs,
-                Targets = _targets,
-                TargetList = targetList,
-            };
-            GasGraphOpHandlerTable.Execute(ref state, program, _handlers);
+            return true;
         }
     }
 }

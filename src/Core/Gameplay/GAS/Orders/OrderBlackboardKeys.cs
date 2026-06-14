@@ -1,5 +1,17 @@
 namespace Ludots.Core.Gameplay.GAS.Orders
 {
+    public readonly struct OrderBlackboardKeyDefinition
+    {
+        public OrderBlackboardKeyDefinition(string key, int id)
+        {
+            Key = key;
+            Id = id;
+        }
+
+        public string Key { get; }
+        public int Id { get; }
+    }
+
     /// <summary>
     /// Blackboard key constants for Order-related data.
     /// Order execution systems read/write these keys to get/set parameters.
@@ -111,5 +123,27 @@ namespace Ludots.Core.Gameplay.GAS.Orders
         /// Generic float parameter (BlackboardFloatBuffer).
         /// </summary>
         public const int Generic_FloatParam = 203;
+
+        private static readonly OrderBlackboardKeyDefinition[] Builtins =
+        {
+            new("Cast.SlotIndex", Cast_SlotIndex),
+            new("Cast.TargetEntity", Cast_TargetEntity),
+            new("Cast.TargetPosition", Cast_TargetPosition),
+            new("Cast.AbilityId", Cast_AbilityId),
+            new("Attack.TargetEntity", Attack_TargetEntity),
+            new("Attack.MovePosition", Attack_MovePosition),
+            new("Attack.IsAttackMove", Attack_IsAttackMove),
+            new("Stop.Type", Stop_Type),
+            new("Hold.Active", Hold_Active),
+            new("Patrol.Waypoints", Patrol_Waypoints),
+            new("Patrol.CurrentIndex", Patrol_CurrentIndex),
+            new("Patrol.Direction", Patrol_Direction),
+            new("Generic.TargetEntity", Generic_TargetEntity),
+            new("Generic.TargetPosition", Generic_TargetPosition),
+            new("Generic.IntParam", Generic_IntParam),
+            new("Generic.FloatParam", Generic_FloatParam),
+        };
+
+        public static ReadOnlySpan<OrderBlackboardKeyDefinition> BuiltinDefinitions => Builtins;
     }
 }

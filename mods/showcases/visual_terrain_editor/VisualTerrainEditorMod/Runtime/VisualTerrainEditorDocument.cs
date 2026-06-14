@@ -14,18 +14,23 @@ internal sealed class VisualTerrainEditorDocument : IDisposable
     private const float WaterHeight = 0.46f;
     private const float Tau = MathF.PI * 2f;
     private const float HeightAmplitudeCm = 4_000f;
-    private const int VerticesPerQuad = 6;
-
     private readonly VisualTerrainAssetDescriptor _asset;
+    private readonly int _defaultMaterialAssetId;
     private readonly VisualTerrainErosionParameters _parameters = new();
     private readonly ChunkedVisualHeightmapStore _heightmapStore;
     private readonly ChunkedVisualHeightmapRuntime _heightmapRuntime;
     private readonly Dictionary<long, ChunkState> _chunks = new();
     private readonly List<ChunkState> _dirtyChunksScratch = new();
 
-    public VisualTerrainEditorDocument(VisualTerrainAssetDescriptor asset)
+    public VisualTerrainEditorDocument(VisualTerrainAssetDescriptor asset, int defaultMaterialAssetId)
     {
         _asset = asset ?? throw new ArgumentNullException(nameof(asset));
+        if (defaultMaterialAssetId <= 0)
+        {
+            throw new ArgumentOutOfRangeException(nameof(defaultMaterialAssetId), "Visual terrain editor requires a positive default material asset id.");
+        }
+
+        _defaultMaterialAssetId = defaultMaterialAssetId;
         _heightmapStore = new ChunkedVisualHeightmapStore(_asset.CreateHeightmapDescriptor());
         _heightmapRuntime = new ChunkedVisualHeightmapRuntime(_heightmapStore.Descriptor, _heightmapStore);
         Reset();
@@ -182,7 +187,7 @@ internal sealed class VisualTerrainEditorDocument : IDisposable
         for (int i = 0; i < _dirtyChunksScratch.Count; i++)
         {
             ChunkState state = _dirtyChunksScratch[i];
-            RebuildChunkRuntimeMesh(state);
+            RebuildChunkProceduralMesh(state);
             state.Dirty = false;
         }
 
@@ -210,7 +215,7 @@ internal sealed class VisualTerrainEditorDocument : IDisposable
         {
             for (int chunkX = minChunkX; chunkX <= maxChunkX; chunkX++)
             {
-                EnsureChunkLoaded(chunkX, chunkY, requireRuntimeMesh: true);
+                EnsureChunkLoaded(chunkX, chunkY, requireProceduralMesh: true);
             }
         }
 
@@ -251,11 +256,11 @@ internal sealed class VisualTerrainEditorDocument : IDisposable
         }
     }
 
-    public bool TryGetChunkRuntimeMesh(int chunkX, int chunkY, out RuntimeMeshAssetData runtimeMesh)
+    public bool TryGetChunkProceduralMesh(int chunkX, int chunkY, out ProceduralMeshAssetData proceduralMesh)
     {
         ChunkState state = EnsureChunkLoaded(chunkX, chunkY);
-        runtimeMesh = state.RuntimeMesh;
-        return runtimeMesh.VertexCount > 0;
+        proceduralMesh = state.ProceduralMesh;
+        return proceduralMesh.VertexCount > 0;
     }
 
     public WorldAabbCm GetChunkBounds(int chunkX, int chunkY)
@@ -327,7 +332,7 @@ internal sealed class VisualTerrainEditorDocument : IDisposable
         {
             for (int chunkX = prewarmMinChunkX; chunkX <= prewarmMaxChunkX; chunkX++)
             {
-                EnsureChunkLoaded(chunkX, chunkY, requireRuntimeMesh: false);
+                EnsureChunkLoaded(chunkX, chunkY, requireProceduralMesh: false);
             }
         }
     }
@@ -390,14 +395,14 @@ internal sealed class VisualTerrainEditorDocument : IDisposable
     {
     }
 
-    private ChunkState EnsureChunkLoaded(int chunkX, int chunkY, bool requireRuntimeMesh = true)
+    private ChunkState EnsureChunkLoaded(int chunkX, int chunkY, bool requireProceduralMesh = true)
     {
         chunkX = Math.Clamp(chunkX, 0, _asset.ChunkColumns - 1);
         chunkY = Math.Clamp(chunkY, 0, _asset.ChunkRows - 1);
         long key = GraphChunkKey.Pack(chunkX, chunkY);
         if (_chunks.TryGetValue(key, out ChunkState? existing))
         {
-            if (requireRuntimeMesh && existing.RuntimeMesh.VertexCount == 0)
+            if (requireProceduralMesh && existing.ProceduralMesh.VertexCount == 0)
             {
                 existing.Dirty = true;
             }
@@ -410,11 +415,12 @@ internal sealed class VisualTerrainEditorDocument : IDisposable
             chunkY,
             _asset.SamplesPerChunkColumn,
             _asset.SamplesPerChunkRow,
-            _asset.RuntimeVertexCapacityPerChunk);
+            _asset.RuntimeVertexCapacityPerChunk,
+            _defaultMaterialAssetId);
         PopulateDefaultChunkBaseHeights(state);
         _chunks.Add(key, state);
         _heightmapStore.SetChunk(state.HeightChunk);
-        state.Dirty = requireRuntimeMesh;
+        state.Dirty = requireProceduralMesh;
         return state;
     }
 
@@ -559,57 +565,60 @@ internal sealed class VisualTerrainEditorDocument : IDisposable
         state.MaxHeightCm = float.IsFinite(maxHeightCm) ? maxHeightCm : 0f;
     }
 
-    private void RebuildChunkRuntimeMesh(ChunkState state)
+    private void RebuildChunkProceduralMesh(ChunkState state)
     {
         float meshStepX = 1f / (_asset.RenderColumnsPerChunk - 1);
         float meshStepY = 1f / (_asset.RenderRowsPerChunk - 1);
-        int quadsPerRow = _asset.RenderColumnsPerChunk - 1;
-        int quadRows = _asset.RenderRowsPerChunk - 1;
-        int verticesPerRow = quadsPerRow * VerticesPerQuad;
-        int vertexIndex = 0;
-
         WorldAabbCm chunkBounds = GetChunkBounds(state.ChunkX, state.ChunkY);
+        int renderColumns = _asset.RenderColumnsPerChunk;
+        int renderRows = _asset.RenderRowsPerChunk;
+        int vertexCount = renderColumns * renderRows;
+        int indexCount = _asset.RuntimeIndexCapacityPerChunk;
 
-        Parallel.For(0, quadRows, y =>
+        Parallel.For(0, renderRows, y =>
         {
-            int rowVertexIndex = y * verticesPerRow;
-            float v0 = y * meshStepY;
-            float v1 = (y + 1) * meshStepY;
-
-            for (int x = 0; x < quadsPerRow; x++)
+            float v = y * meshStepY;
+            for (int x = 0; x < renderColumns; x++)
             {
-                float u0 = x * meshStepX;
-                float u1 = (x + 1) * meshStepX;
-
-                RenderVertexData p00 = BuildRenderVertex(chunkBounds, u0, v0);
-                RenderVertexData p01 = BuildRenderVertex(chunkBounds, u0, v1);
-                RenderVertexData p10 = BuildRenderVertex(chunkBounds, u1, v0);
-                RenderVertexData p11 = BuildRenderVertex(chunkBounds, u1, v1);
-                if (_asset.InterpolationMode == VisualHeightmapInterpolationMode.TriangleHeightfield)
-                {
-                    Vector3 normalA = ComputeTriangleNormal(p00.Position, p01.Position, p10.Position);
-                    Vector3 normalB = ComputeTriangleNormal(p11.Position, p10.Position, p01.Position);
-                    WriteRuntimeVertex(state.RuntimeMesh, rowVertexIndex++, WithNormal(p00, normalA));
-                    WriteRuntimeVertex(state.RuntimeMesh, rowVertexIndex++, WithNormal(p01, normalA));
-                    WriteRuntimeVertex(state.RuntimeMesh, rowVertexIndex++, WithNormal(p10, normalA));
-                    WriteRuntimeVertex(state.RuntimeMesh, rowVertexIndex++, WithNormal(p11, normalB));
-                    WriteRuntimeVertex(state.RuntimeMesh, rowVertexIndex++, WithNormal(p10, normalB));
-                    WriteRuntimeVertex(state.RuntimeMesh, rowVertexIndex++, WithNormal(p01, normalB));
-                }
-                else
-                {
-                    WriteRuntimeVertex(state.RuntimeMesh, rowVertexIndex++, in p00);
-                    WriteRuntimeVertex(state.RuntimeMesh, rowVertexIndex++, in p01);
-                    WriteRuntimeVertex(state.RuntimeMesh, rowVertexIndex++, in p10);
-                    WriteRuntimeVertex(state.RuntimeMesh, rowVertexIndex++, in p11);
-                    WriteRuntimeVertex(state.RuntimeMesh, rowVertexIndex++, in p10);
-                    WriteRuntimeVertex(state.RuntimeMesh, rowVertexIndex++, in p01);
-                }
+                float u = x * meshStepX;
+                RenderVertexData vertex = BuildRenderVertex(chunkBounds, u, v);
+                WriteProceduralVertex(state.ProceduralMesh, (y * renderColumns) + x, in vertex, u, v);
             }
         });
 
-        vertexIndex = quadRows * verticesPerRow;
-        state.RuntimeMesh.Update(vertexIndex);
+        int indexCursor = 0;
+        for (int y = 0; y < renderRows - 1; y++)
+        {
+            for (int x = 0; x < renderColumns - 1; x++)
+            {
+                int p00 = (y * renderColumns) + x;
+                int p01 = ((y + 1) * renderColumns) + x;
+                int p10 = (y * renderColumns) + (x + 1);
+                int p11 = ((y + 1) * renderColumns) + (x + 1);
+
+                state.ProceduralMesh.Indices[indexCursor++] = p00;
+                state.ProceduralMesh.Indices[indexCursor++] = p01;
+                state.ProceduralMesh.Indices[indexCursor++] = p10;
+                state.ProceduralMesh.Indices[indexCursor++] = p11;
+                state.ProceduralMesh.Indices[indexCursor++] = p10;
+                state.ProceduralMesh.Indices[indexCursor++] = p01;
+            }
+        }
+
+        state.ProceduralMesh.Commit(
+            vertexCount,
+            indexCount,
+            new[] { new ProceduralSubmeshDescriptor(0, indexCount, state.MaterialAssetId) },
+            new ProceduralMeshBounds(
+                new Vector3(
+                    ((chunkBounds.Left + chunkBounds.Right) * 0.5f) * 0.01f,
+                    ((state.MinHeightCm + state.MaxHeightCm) * 0.5f) * 0.01f,
+                    ((chunkBounds.Top + chunkBounds.Bottom) * 0.5f) * 0.01f),
+                new Vector3(
+                    chunkBounds.Width * 0.005f,
+                    MathF.Max(0.5f, (state.MaxHeightCm - state.MinHeightCm) * 0.005f),
+                    chunkBounds.Height * 0.005f)),
+            ProceduralMeshUsageHint.Static);
     }
 
     private static Vector3 ComputeTriangleNormal(in Vector3 a, in Vector3 b, in Vector3 c)
@@ -1037,19 +1046,38 @@ internal sealed class VisualTerrainEditorDocument : IDisposable
         return -Vector2.One + (v * 2f);
     }
 
-    private static void WriteRuntimeVertex(RuntimeMeshAssetData runtimeMesh, int vertexIndex, in RenderVertexData vertex)
+    private static void WriteProceduralVertex(ProceduralMeshAssetData proceduralMesh, int vertexIndex, in RenderVertexData vertex, float u, float v)
     {
         int floatOffset = vertexIndex * 3;
-        runtimeMesh.Vertices[floatOffset + 0] = vertex.Position.X;
-        runtimeMesh.Vertices[floatOffset + 1] = vertex.Position.Y;
-        runtimeMesh.Vertices[floatOffset + 2] = vertex.Position.Z;
+        proceduralMesh.Positions[floatOffset + 0] = vertex.Position.X;
+        proceduralMesh.Positions[floatOffset + 1] = vertex.Position.Y;
+        proceduralMesh.Positions[floatOffset + 2] = vertex.Position.Z;
 
-        runtimeMesh.Normals[floatOffset + 0] = vertex.Normal.X;
-        runtimeMesh.Normals[floatOffset + 1] = vertex.Normal.Y;
-        runtimeMesh.Normals[floatOffset + 2] = vertex.Normal.Z;
+        proceduralMesh.Normals[floatOffset + 0] = vertex.Normal.X;
+        proceduralMesh.Normals[floatOffset + 1] = vertex.Normal.Y;
+        proceduralMesh.Normals[floatOffset + 2] = vertex.Normal.Z;
 
-        int colorOffset = vertexIndex * 4;
-        WriteColor(runtimeMesh.Colors, colorOffset, vertex.Color);
+        int tangentOffset = vertexIndex * 4;
+        Vector3 tangent = Vector3.Normalize(Vector3.Cross(Vector3.UnitY, vertex.Normal));
+        if (tangent.LengthSquared() <= 1e-6f)
+        {
+            tangent = Vector3.UnitX;
+        }
+
+        proceduralMesh.Tangents[tangentOffset + 0] = tangent.X;
+        proceduralMesh.Tangents[tangentOffset + 1] = tangent.Y;
+        proceduralMesh.Tangents[tangentOffset + 2] = tangent.Z;
+        proceduralMesh.Tangents[tangentOffset + 3] = 1f;
+
+        int uvOffset = vertexIndex * 2;
+        proceduralMesh.Uv0[uvOffset + 0] = u;
+        proceduralMesh.Uv0[uvOffset + 1] = v;
+
+        if (proceduralMesh.Colors32 != null)
+        {
+            int colorOffset = vertexIndex * 4;
+            WriteColor(proceduralMesh.Colors32, colorOffset, vertex.Color);
+        }
     }
 
     private static float HeightToMeters(float height, float defaultHeight01)
@@ -1147,11 +1175,6 @@ internal sealed class VisualTerrainEditorDocument : IDisposable
         colors[offset + 3] = 255;
     }
 
-    private static RenderVertexData WithNormal(in RenderVertexData vertex, in Vector3 normal)
-    {
-        return new RenderVertexData(vertex.Position, normal, vertex.Color);
-    }
-
     internal readonly record struct VisualTerrainErosionSettingsSnapshot(
         float Scale,
         float Strength,
@@ -1204,7 +1227,7 @@ internal sealed class VisualTerrainEditorDocument : IDisposable
 
     private sealed class ChunkState
     {
-        public ChunkState(int chunkX, int chunkY, int sampleColumns, int sampleRows, int runtimeVertexCapacity)
+        public ChunkState(int chunkX, int chunkY, int sampleColumns, int sampleRows, int runtimeVertexCapacity, int materialAssetId)
         {
             ChunkX = chunkX;
             ChunkY = chunkY;
@@ -1213,9 +1236,15 @@ internal sealed class VisualTerrainEditorDocument : IDisposable
             RidgeMap = new float[sampleColumns * sampleRows];
             Drainage = new float[sampleColumns * sampleRows];
             HeightSamplesCm = new short[sampleColumns * sampleRows];
-            RuntimeMesh = new RuntimeMeshAssetData(runtimeVertexCapacity);
+            ProceduralMesh = new ProceduralMeshAssetData(
+                runtimeVertexCapacity,
+                maxIndexCount: ((sampleColumns - 1) * (sampleRows - 1) * 6),
+                maxSubmeshCount: 1,
+                includeUv1: false,
+                includeColors32: true);
             HeightChunk = new ChunkedVisualHeightmapChunk(chunkX, chunkY, HeightSamplesCm);
             Dirty = true;
+            MaterialAssetId = materialAssetId;
         }
 
         public int ChunkX { get; }
@@ -1232,7 +1261,9 @@ internal sealed class VisualTerrainEditorDocument : IDisposable
 
         public short[] HeightSamplesCm { get; }
 
-        public RuntimeMeshAssetData RuntimeMesh { get; }
+        public ProceduralMeshAssetData ProceduralMesh { get; }
+
+        public int MaterialAssetId { get; }
 
         public ChunkedVisualHeightmapChunk HeightChunk { get; }
 

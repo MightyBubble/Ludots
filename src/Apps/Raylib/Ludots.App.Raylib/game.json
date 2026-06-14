@@ -1,5 +1,5 @@
 {
-  "ModPaths": [
+  "modPaths": [
     "../../../../../../../mods/LudotsCoreMod",
     "../../../../../../../mods/CoreInputMod",
     "../../../../../../../mods/MobaDemoMod",

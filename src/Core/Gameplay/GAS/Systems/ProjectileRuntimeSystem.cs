@@ -1,11 +1,14 @@
 using System;
 using System.Collections.Generic;
+using Arch.Buffer;
 using Arch.Core;
 using Arch.System;
 using Ludots.Core.Components;
 using Ludots.Core.Gameplay.Components;
 using Ludots.Core.Gameplay.GAS.Components;
+using Ludots.Core.Presentation.Components;
 using Ludots.Core.Gameplay.Teams;
+using Ludots.Core.Mathematics;
 using Ludots.Core.Mathematics.FixedPoint;
 using Ludots.Core.Spatial;
 
@@ -14,11 +17,11 @@ namespace Ludots.Core.Gameplay.GAS.Systems
     public sealed class ProjectileRuntimeSystem : BaseSystem<World, float>
     {
         private static readonly QueryDescription Query = new QueryDescription().WithAll<ProjectileState, WorldPositionCm>();
-        private static readonly Fix64 Deg180 = Fix64.FromInt(180);
-
         private readonly EffectRequestQueue _effectRequests;
         private readonly ISpatialQueryService _spatialQueries;
         private readonly List<Entity> _toDestroy = new();
+        private readonly HashSet<Entity> _toDestroySet = new();
+        private readonly CommandBuffer _commandBuffer = new();
 
         public ProjectileRuntimeSystem(World world, EffectRequestQueue effectRequests, ISpatialQueryService spatialQueries) : base(world)
         {
@@ -34,19 +37,47 @@ namespace Ludots.Core.Gameplay.GAS.Systems
             }
 
             _toDestroy.Clear();
+            _toDestroySet.Clear();
             Fix64 deltaTime = Fix64.FromFloat(dt);
 
-            World.Query(in Query, (Entity entity, ref ProjectileState projectile, ref WorldPositionCm position) =>
+            foreach (ref var chunk in World.Query(in Query))
             {
-                UpdateProjectile(entity, ref projectile, ref position, deltaTime);
-            });
+                ref Entity entityFirst = ref chunk.Entity(0);
+                var projectiles = chunk.GetSpan<ProjectileState>();
+                var positions = chunk.GetSpan<WorldPositionCm>();
+                foreach (var index in chunk)
+                {
+                    Entity entity = System.Runtime.CompilerServices.Unsafe.Add(ref entityFirst, index);
+                    UpdateProjectile(entity, ref projectiles[index], ref positions[index], deltaTime);
+                }
+            }
 
             for (int i = 0; i < _toDestroy.Count; i++)
             {
                 if (World.IsAlive(_toDestroy[i]))
                 {
-                    World.Destroy(_toDestroy[i]);
+                    if (World.Has<PresentationStableId>(_toDestroy[i]))
+                    {
+                        if (!World.Has<PresentationDestroyPending>(_toDestroy[i]))
+                        {
+                            _commandBuffer.Add(_toDestroy[i], new PresentationDestroyPending());
+                        }
+
+                        if (World.Has<PresentationDestroyEventPublished>(_toDestroy[i]))
+                        {
+                            _commandBuffer.Remove<PresentationDestroyEventPublished>(_toDestroy[i]);
+                        }
+
+                        continue;
+                    }
+
+                    _commandBuffer.Destroy(_toDestroy[i]);
                 }
+            }
+
+            if (_commandBuffer.Size > 0)
+            {
+                _commandBuffer.Playback(World);
             }
         }
 
@@ -54,13 +85,13 @@ namespace Ludots.Core.Gameplay.GAS.Systems
         {
             if (!World.IsAlive(projectile.Source))
             {
-                _toDestroy.Add(entity);
+                QueueDestroy(entity);
                 return;
             }
 
             if (projectile.Speed <= Fix64.Zero || projectile.Range <= 0)
             {
-                _toDestroy.Add(entity);
+                QueueDestroy(entity);
                 return;
             }
 
@@ -118,7 +149,7 @@ namespace Ludots.Core.Gameplay.GAS.Systems
                             position.Value = World.Get<WorldPositionCm>(firstHit).Value;
                         }
 
-                        _toDestroy.Add(entity);
+                        QueueDestroy(entity);
                         return;
                     }
                 }
@@ -135,7 +166,7 @@ namespace Ludots.Core.Gameplay.GAS.Systems
             if (completed)
             {
                 PublishEffect(projectile.ImpactEffectTemplateId, in projectile, World.IsAlive(projectile.Target) ? projectile.Target : Entity.Null, position.Value);
-                _toDestroy.Add(entity);
+                QueueDestroy(entity);
             }
         }
 
@@ -244,7 +275,7 @@ namespace Ludots.Core.Gameplay.GAS.Systems
 
                 if (projectile.MaxHitCount > 0 && projectile.DistinctHitCount >= projectile.MaxHitCount)
                 {
-                    _toDestroy.Add(projectileEntity);
+                    QueueDestroy(projectileEntity);
                     return true;
                 }
 
@@ -255,6 +286,14 @@ namespace Ludots.Core.Gameplay.GAS.Systems
             }
 
             return firstHit != Entity.Null;
+        }
+
+        private void QueueDestroy(Entity entity)
+        {
+            if (_toDestroySet.Add(entity))
+            {
+                _toDestroy.Add(entity);
+            }
         }
 
         private bool IsValidCollisionTarget(Entity projectileEntity, in ProjectileState projectile, Entity candidate, int sourceTeamId)
@@ -412,14 +451,7 @@ namespace Ludots.Core.Gameplay.GAS.Systems
 
         private static int ComputeDirectionDeg(in Fix64Vec2 delta)
         {
-            var radians = Fix64Math.Atan2Fast(delta.Y, delta.X);
-            int degrees = (radians * Deg180 / Fix64.Pi).RoundToInt();
-            if (degrees < 0)
-            {
-                degrees += 360;
-            }
-
-            return degrees;
+            return WorldPlane2D.FacingDegreesPositiveFromDirection(in delta);
         }
 
         private static int ComputeSegmentProjectionCm(in Fix64Vec2 start, in Fix64Vec2 end, in Fix64Vec2 point)
@@ -439,6 +471,12 @@ namespace Ludots.Core.Gameplay.GAS.Systems
             }
 
             return (segment.Length() * projection).RoundToInt();
+        }
+
+        public override void Dispose()
+        {
+            _commandBuffer.Dispose();
+            base.Dispose();
         }
     }
 }

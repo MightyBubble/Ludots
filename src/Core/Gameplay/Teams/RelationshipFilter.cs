@@ -32,32 +32,65 @@ namespace Ludots.Core.Gameplay.Teams
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
         public static bool Passes(RelationshipFilter filter, int sourceTeamId, int targetTeamId)
         {
-            if (filter == RelationshipFilter.All) return true;
-            var rel = TeamManager.GetRelationship(sourceTeamId, targetTeamId);
             return filter switch
             {
-                RelationshipFilter.Hostile     => rel == TeamRelationship.Hostile,
-                RelationshipFilter.Friendly    => rel == TeamRelationship.Friendly,
-                RelationshipFilter.Neutral     => rel == TeamRelationship.Neutral,
-                RelationshipFilter.NotFriendly => rel != TeamRelationship.Friendly,
-                RelationshipFilter.NotHostile  => rel != TeamRelationship.Hostile,
-                _ => true
+                RelationshipFilter.All => true,
+                RelationshipFilter.Hostile => Matches(sourceTeamId, targetTeamId, TeamRelationship.Hostile),
+                RelationshipFilter.Friendly => Matches(sourceTeamId, targetTeamId, TeamRelationship.Friendly),
+                RelationshipFilter.Neutral => Matches(sourceTeamId, targetTeamId, TeamRelationship.Neutral),
+                RelationshipFilter.NotFriendly => DoesNotMatch(sourceTeamId, targetTeamId, TeamRelationship.Friendly),
+                RelationshipFilter.NotHostile => DoesNotMatch(sourceTeamId, targetTeamId, TeamRelationship.Hostile),
+                _ => throw new ArgumentOutOfRangeException(nameof(filter), filter, "Unsupported relationship filter.")
             };
         }
 
         /// <summary>
         /// Parse a canonical <see cref="RelationshipFilter"/> name.
         /// Only accepts enum-defined names: All, Hostile, Friendly, Neutral, NotFriendly, NotHostile.
-        /// Alias mapping (e.g. "Enemy") is NOT handled here — use the config Loader's migration path.
         /// </summary>
         public static RelationshipFilter Parse(string filter)
         {
-            if (string.IsNullOrWhiteSpace(filter)) return RelationshipFilter.All;
-            if (Enum.TryParse<RelationshipFilter>(filter, ignoreCase: true, out var result))
+            if (string.IsNullOrEmpty(filter))
+            {
+                throw new ArgumentException("Relationship filter must be explicitly authored.", nameof(filter));
+            }
+
+            if (filter != filter.Trim())
+            {
+                throw new InvalidOperationException($"Relationship filter '{filter}' must not contain leading or trailing whitespace.");
+            }
+
+            if (Enum.TryParse<RelationshipFilter>(filter, ignoreCase: false, out var result) &&
+                string.Equals(Enum.GetName(typeof(RelationshipFilter), result), filter, StringComparison.Ordinal))
             {
                 return result;
             }
-            return RelationshipFilter.All;
+
+            throw new InvalidOperationException(
+                $"Unsupported relationship filter '{filter}'. Supported: All, Hostile, Friendly, Neutral, NotFriendly, NotHostile.");
+        }
+
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        private static bool Matches(int sourceTeamId, int targetTeamId, TeamRelationship expected)
+        {
+            return ValidateRelationship(TeamManager.GetRelationship(sourceTeamId, targetTeamId), sourceTeamId, targetTeamId) == expected;
+        }
+
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        private static bool DoesNotMatch(int sourceTeamId, int targetTeamId, TeamRelationship excluded)
+        {
+            return ValidateRelationship(TeamManager.GetRelationship(sourceTeamId, targetTeamId), sourceTeamId, targetTeamId) != excluded;
+        }
+
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        private static TeamRelationship ValidateRelationship(TeamRelationship relationship, int sourceTeamId, int targetTeamId)
+        {
+            return relationship switch
+            {
+                TeamRelationship.Hostile or TeamRelationship.Friendly or TeamRelationship.Neutral => relationship,
+                _ => throw new InvalidOperationException(
+                    $"Unsupported team relationship '{relationship}' between team {sourceTeamId} and team {targetTeamId}.")
+            };
         }
     }
 }

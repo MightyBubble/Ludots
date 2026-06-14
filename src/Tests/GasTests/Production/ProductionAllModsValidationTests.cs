@@ -60,7 +60,7 @@ namespace Ludots.Tests.GAS.Production
 
             yield return new TestCaseData(new ModCase(
                     "Navigation2DPlaygroundMod",
-                    new[] { "LudotsCoreMod", "Navigation2DPlaygroundMod" },
+                    new[] { "LudotsCoreMod", "CoreInputMod", "Navigation2DPlaygroundMod" },
                     true))
                 .SetName("ProdModSmoke_Navigation2DPlaygroundMod");
 
@@ -108,7 +108,7 @@ namespace Ludots.Tests.GAS.Production
 
             yield return new TestCaseData(new ModCase(
                     "InteractionShowcaseMod",
-                    new[] { "LudotsCoreMod", "CoreInputMod", "CameraProfilesMod", "InteractionShowcaseMod" },
+                    new[] { "LudotsCoreMod", "CoreInputMod", "CameraProfilesMod", "EntityInfoPanelsMod", "InteractionShowcaseMod" },
                     true))
                 .SetName("ProdModSmoke_InteractionShowcaseMod");
 
@@ -181,8 +181,10 @@ namespace Ludots.Tests.GAS.Production
             yield return new TestCaseData(new ModCase(
                     "BrokenBuildMod",
                     new[] { "LudotsCoreMod", "BrokenBuildMod" },
-                    true))
-                .SetName("ProdModSmoke_BrokenBuildMod_AssetOnlyOk");
+                    false,
+                    typeof(FileNotFoundException),
+                    "declares main assembly but the DLL was not found"))
+                .SetName("ProdModLoadFail_BrokenBuildMod_MissingDeclaredMain");
 
             yield return new TestCaseData(new ModCase(
                     "MissingDepMod",

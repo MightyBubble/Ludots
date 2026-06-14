@@ -1,15 +1,22 @@
 [
   {
     "id": "Effect.Arpg.Poison",
-    "tags": ["Effect.Arpg.Poison"],
+    "tags": [
+      "Effect.Arpg.Poison"
+    ],
     "presetType": "DoT",
     "lifetime": "After",
     "duration": {
       "durationTicks": 60,
-      "periodTicks": 10
+      "periodTicks": 10,
+      "clockId": "FixedFrame"
     },
     "modifiers": [
-      { "attribute": "Health", "op": "Add", "value": -2 }
+      {
+        "attribute": "Health",
+        "op": "Add",
+        "value": -2
+      }
     ],
     "stack": {
       "limit": 3,
@@ -19,32 +26,49 @@
   },
   {
     "id": "Effect.Arpg.HealPotion",
-    "tags": ["Effect.Arpg.HealPotion"],
+    "tags": [
+      "Effect.Arpg.HealPotion"
+    ],
     "presetType": "Heal",
     "lifetime": "Instant",
     "modifiers": [
-      { "attribute": "Health", "op": "Add", "value": 25 }
+      {
+        "attribute": "Health",
+        "op": "Add",
+        "value": 25
+      }
     ]
   },
   {
     "id": "Effect.Arpg.FireArrow",
-    "tags": ["Effect.Arpg.FireArrow"],
+    "tags": [
+      "Effect.Arpg.FireArrow"
+    ],
     "presetType": "LaunchProjectile",
     "lifetime": "Instant",
     "projectile": {
       "speed": 1200,
       "range": 2000,
       "arcHeight": 0,
-      "impactEffect": "Effect.Arpg.Poison"
+      "impactEffect": "Effect.Arpg.Poison",
+      "collisionRelationFilter": "All"
     },
     "configParams": {
-      "damage_base": { "type": "float", "value": 10.0 },
-      "skill_level": { "type": "int", "value": 1 }
+      "damage_base": {
+        "type": "Float",
+        "value": 10
+      },
+      "skill_level": {
+        "type": "Int",
+        "value": 1
+      }
     }
   },
   {
     "id": "Effect.Arpg.SummonWolf",
-    "tags": ["Effect.Arpg.SummonWolf"],
+    "tags": [
+      "Effect.Arpg.SummonWolf"
+    ],
     "presetType": "CreateUnit",
     "lifetime": "Instant",
     "unitCreation": {
@@ -56,28 +80,43 @@
   },
   {
     "id": "Effect.Arpg.WolfSpawnBuff",
-    "tags": ["Effect.Arpg.WolfSpawnBuff"],
+    "tags": [
+      "Effect.Arpg.WolfSpawnBuff"
+    ],
     "presetType": "Buff",
     "lifetime": "After",
     "duration": {
-      "durationTicks": 30
+      "durationTicks": 30,
+      "periodTicks": 0,
+      "clockId": "FixedFrame"
     },
     "modifiers": [
-      { "attribute": "Armor", "op": "Add", "value": 5 }
+      {
+        "attribute": "Armor",
+        "op": "Add",
+        "value": 5
+      }
     ]
   },
   {
     "id": "Effect.Arpg.Bleed",
-    "tags": ["Effect.Arpg.Bleed"],
+    "tags": [
+      "Effect.Arpg.Bleed"
+    ],
     "presetType": "DoT",
     "lifetime": "After",
     "participatesInResponse": true,
     "duration": {
       "durationTicks": 90,
-      "periodTicks": 15
+      "periodTicks": 15,
+      "clockId": "FixedFrame"
     },
     "modifiers": [
-      { "attribute": "Health", "op": "Add", "value": -4 }
+      {
+        "attribute": "Health",
+        "op": "Add",
+        "value": -4
+      }
     ],
     "stack": {
       "limit": 5,
@@ -85,23 +124,39 @@
       "overflowPolicy": "RemoveOldest"
     },
     "grantedTags": [
-      { "tag": "Status.Bleeding", "formula": "Fixed", "amount": 1 }
+      {
+        "tag": "Status.Bleeding",
+        "formula": "Fixed",
+        "amount": 1
+      }
     ]
   },
   {
     "id": "Effect.Arpg.IronSkin",
-    "tags": ["Effect.Arpg.Buff"],
+    "tags": [
+      "Effect.Arpg.Buff"
+    ],
     "presetType": "Buff",
     "lifetime": "After",
     "participatesInResponse": false,
     "duration": {
-      "durationTicks": 300
+      "durationTicks": 300,
+      "periodTicks": 0,
+      "clockId": "FixedFrame"
     },
     "modifiers": [
-      { "attribute": "Armor", "op": "Add", "value": 20 }
+      {
+        "attribute": "Armor",
+        "op": "Add",
+        "value": 20
+      }
     ],
     "grantedTags": [
-      { "tag": "Status.Armored", "formula": "Fixed", "amount": 1 }
+      {
+        "tag": "Status.Armored",
+        "formula": "Fixed",
+        "amount": 1
+      }
     ]
   }
 ]

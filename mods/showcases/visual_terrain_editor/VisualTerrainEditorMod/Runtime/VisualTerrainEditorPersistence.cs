@@ -132,7 +132,7 @@ internal static class VisualTerrainEditorPersistence
 
         VisualTerrainEditorMapManifest manifest = ReadManifest(resolvedManifestPath);
         VisualTerrainAssetDescriptor asset = CreateAssetDescriptor(manifest);
-        var document = new VisualTerrainEditorDocument(asset);
+        var document = new VisualTerrainEditorDocument(asset, defaultMaterialAssetId: 1);
         document.ApplyErosionSettingsSnapshot(CreateErosionSnapshot(manifest));
 
         string manifestDirectory = Path.GetDirectoryName(resolvedManifestPath)

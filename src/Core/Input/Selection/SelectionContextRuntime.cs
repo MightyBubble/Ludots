@@ -100,6 +100,42 @@ namespace Ludots.Core.Input.Selection
                    selection.TryDescribeView(viewer, viewKey, out descriptor);
         }
 
+        public static bool TrySetCurrentView(
+            World world,
+            Dictionary<string, object> globals,
+            SelectionRuntime selection,
+            Entity viewer,
+            string viewKey,
+            Entity owner,
+            string setKey,
+            out SelectionViewDescriptor descriptor)
+        {
+            descriptor = default;
+            if (selection == null ||
+                !world.IsAlive(viewer) ||
+                !world.IsAlive(owner) ||
+                string.IsNullOrWhiteSpace(viewKey) ||
+                string.IsNullOrWhiteSpace(setKey))
+            {
+                return false;
+            }
+
+            if (!selection.TryGetOrCreateSelectionEntity(owner, setKey, out _) ||
+                !selection.TryBindView(viewer, viewKey, owner, setKey))
+            {
+                if (!selection.TryDescribeView(viewer, viewKey, out SelectionViewDescriptor existing) ||
+                    existing.Container.Owner != owner ||
+                    !string.Equals(existing.Container.SetKey, setKey, StringComparison.Ordinal))
+                {
+                    return false;
+                }
+            }
+
+            globals[CoreServiceKeys.SelectionViewViewerEntity.Name] = viewer;
+            globals[CoreServiceKeys.SelectionViewKey.Name] = viewKey;
+            return TryDescribeCurrentView(world, globals, out descriptor);
+        }
+
         public static bool TryGetRuntime(Dictionary<string, object> globals, out SelectionRuntime selection)
         {
             selection = default!;

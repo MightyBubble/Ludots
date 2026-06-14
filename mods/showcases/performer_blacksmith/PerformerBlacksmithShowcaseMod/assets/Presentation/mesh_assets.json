@@ -1,0 +1,38 @@
+[
+  {
+    "id": "blacksmith.building.north.intact",
+    "type": "Model"
+  },
+  {
+    "id": "blacksmith.building.south.intact",
+    "type": "Model"
+  },
+  {
+    "id": "blacksmith.building.damaged",
+    "type": "Model"
+  },
+  {
+    "id": "blacksmith.building.ruined",
+    "type": "Model"
+  },
+  {
+    "id": "blacksmith.furnace",
+    "type": "Model"
+  },
+  {
+    "id": "blacksmith.worker.knight",
+    "type": "Model"
+  },
+  {
+    "id": "blacksmith.smoke.billboard",
+    "type": "Billboard"
+  },
+  {
+    "id": "blacksmith.worker.patrol",
+    "type": "Model"
+  },
+  {
+    "id": "blacksmith.sound.anvil_hammering",
+    "type": "Model"
+  }
+]

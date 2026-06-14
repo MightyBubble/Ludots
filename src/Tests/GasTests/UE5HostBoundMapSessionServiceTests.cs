@@ -612,10 +612,10 @@ namespace GasTests
                 string graphPath = Path.Combine(_tempBootstrapRoot, "launch.graph.json");
                 File.WriteAllText(Path.Combine(_tempBootstrapRoot, "launcher.runtime.json"), """
 {
-  "launchGraphPath": "launch.graph.json",
-  "planFingerprint": "issue110-host-tests",
-  "planSchemaVersion": 1,
-  "planGeneratedAtUtc": "2026-04-09T00:00:00Z"
+  "LaunchGraphPath": "launch.graph.json",
+  "PlanFingerprint": "issue110-host-tests",
+  "PlanSchemaVersion": 1,
+  "PlanGeneratedAtUtc": "2026-04-09T00:00:00Z"
 }
 """);
                 File.WriteAllText(graphPath, $$"""

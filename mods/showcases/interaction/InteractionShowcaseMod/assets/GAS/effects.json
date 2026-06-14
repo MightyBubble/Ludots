@@ -1,17 +1,25 @@
 [
   {
     "id": "Effect.Interaction.DuelBolt",
-    "tags": ["Effect.Interaction.Damage"],
+    "tags": [
+      "Effect.Interaction.Damage"
+    ],
     "presetType": "InstantDamage",
     "lifetime": "Instant",
     "participatesInResponse": true,
     "modifiers": [
-      { "attribute": "Health", "op": "Add", "value": -18.0 }
+      {
+        "attribute": "Health",
+        "op": "Add",
+        "value": -18
+      }
     ]
   },
   {
     "id": "Effect.Interaction.BlinkStep",
-    "tags": ["Effect.Interaction.Movement"],
+    "tags": [
+      "Effect.Interaction.Movement"
+    ],
     "presetType": "Displacement",
     "lifetime": "Instant",
     "participatesInResponse": false,
@@ -24,7 +32,9 @@
   },
   {
     "id": "Effect.Interaction.FireLance",
-    "tags": ["Effect.Interaction.Damage"],
+    "tags": [
+      "Effect.Interaction.Damage"
+    ],
     "presetType": "Search",
     "lifetime": "Instant",
     "participatesInResponse": true,
@@ -45,17 +55,25 @@
   },
   {
     "id": "Effect.Interaction.FireLanceHit",
-    "tags": ["Effect.Interaction.Damage"],
+    "tags": [
+      "Effect.Interaction.Damage"
+    ],
     "presetType": "InstantDamage",
     "lifetime": "Instant",
     "participatesInResponse": true,
     "modifiers": [
-      { "attribute": "Health", "op": "Add", "value": -14.0 }
+      {
+        "attribute": "Health",
+        "op": "Add",
+        "value": -14
+      }
     ]
   },
   {
     "id": "Effect.Interaction.NovaPulse",
-    "tags": ["Effect.Interaction.Damage"],
+    "tags": [
+      "Effect.Interaction.Damage"
+    ],
     "presetType": "Search",
     "lifetime": "Instant",
     "participatesInResponse": true,
@@ -75,17 +93,25 @@
   },
   {
     "id": "Effect.Interaction.NovaPulseHit",
-    "tags": ["Effect.Interaction.Damage"],
+    "tags": [
+      "Effect.Interaction.Damage"
+    ],
     "presetType": "InstantDamage",
     "lifetime": "Instant",
     "participatesInResponse": true,
     "modifiers": [
-      { "attribute": "Health", "op": "Add", "value": -10.0 }
+      {
+        "attribute": "Health",
+        "op": "Add",
+        "value": -10
+      }
     ]
   },
   {
     "id": "Effect.Interaction.ArcDash",
-    "tags": ["Effect.Interaction.Movement"],
+    "tags": [
+      "Effect.Interaction.Movement"
+    ],
     "presetType": "Displacement",
     "lifetime": "Instant",
     "participatesInResponse": false,
@@ -98,13 +124,23 @@
   },
   {
     "id": "Effect.Interaction.ArcaneGuardAura",
-    "tags": ["Effect.Interaction.Toggle"],
+    "tags": [
+      "Effect.Interaction.Toggle"
+    ],
     "presetType": "Buff",
     "lifetime": "Infinite",
     "participatesInResponse": false,
     "modifiers": [
-      { "attribute": "Shield", "op": "Add", "value": 45.0 },
-      { "attribute": "MoveSpeed", "op": "Add", "value": -20.0 }
+      {
+        "attribute": "Shield",
+        "op": "Add",
+        "value": 45
+      },
+      {
+        "attribute": "MoveSpeed",
+        "op": "Add",
+        "value": -20
+      }
     ],
     "expireCondition": {
       "kind": "TagPresent",
@@ -113,17 +149,25 @@
   },
   {
     "id": "Effect.Interaction.GuardRelease",
-    "tags": ["Effect.Interaction.Buff"],
+    "tags": [
+      "Effect.Interaction.Buff"
+    ],
     "presetType": "Heal",
     "lifetime": "Instant",
     "participatesInResponse": false,
     "modifiers": [
-      { "attribute": "Shield", "op": "Add", "value": 12.0 }
+      {
+        "attribute": "Shield",
+        "op": "Add",
+        "value": 12
+      }
     ]
   },
   {
     "id": "Effect.Interaction.RuneBurst",
-    "tags": ["Effect.Interaction.Zone"],
+    "tags": [
+      "Effect.Interaction.Zone"
+    ],
     "presetType": "Search",
     "lifetime": "Instant",
     "participatesInResponse": true,
@@ -144,27 +188,41 @@
   },
   {
     "id": "Effect.Interaction.RuneBurstHit",
-    "tags": ["Effect.Interaction.Damage"],
+    "tags": [
+      "Effect.Interaction.Damage"
+    ],
     "presetType": "InstantDamage",
     "lifetime": "Instant",
     "participatesInResponse": true,
     "modifiers": [
-      { "attribute": "Health", "op": "Add", "value": -22.0 }
+      {
+        "attribute": "Health",
+        "op": "Add",
+        "value": -22
+      }
     ]
   },
   {
     "id": "Effect.Interaction.Challenge",
-    "tags": ["Effect.Interaction.Damage"],
+    "tags": [
+      "Effect.Interaction.Damage"
+    ],
     "presetType": "InstantDamage",
     "lifetime": "Instant",
     "participatesInResponse": true,
     "modifiers": [
-      { "attribute": "Health", "op": "Add", "value": -16.0 }
+      {
+        "attribute": "Health",
+        "op": "Add",
+        "value": -16
+      }
     ]
   },
   {
     "id": "Effect.Interaction.BannerLeap",
-    "tags": ["Effect.Interaction.Movement"],
+    "tags": [
+      "Effect.Interaction.Movement"
+    ],
     "presetType": "Displacement",
     "lifetime": "Instant",
     "participatesInResponse": false,
@@ -177,7 +235,9 @@
   },
   {
     "id": "Effect.Interaction.CleaveCone",
-    "tags": ["Effect.Interaction.Damage"],
+    "tags": [
+      "Effect.Interaction.Damage"
+    ],
     "presetType": "Search",
     "lifetime": "Instant",
     "participatesInResponse": true,
@@ -198,17 +258,25 @@
   },
   {
     "id": "Effect.Interaction.CleaveConeHit",
-    "tags": ["Effect.Interaction.Damage"],
+    "tags": [
+      "Effect.Interaction.Damage"
+    ],
     "presetType": "InstantDamage",
     "lifetime": "Instant",
     "participatesInResponse": true,
     "modifiers": [
-      { "attribute": "Health", "op": "Add", "value": -12.0 }
+      {
+        "attribute": "Health",
+        "op": "Add",
+        "value": -12
+      }
     ]
   },
   {
     "id": "Effect.Interaction.Shockwave",
-    "tags": ["Effect.Interaction.Damage"],
+    "tags": [
+      "Effect.Interaction.Damage"
+    ],
     "presetType": "Search",
     "lifetime": "Instant",
     "participatesInResponse": true,
@@ -229,17 +297,25 @@
   },
   {
     "id": "Effect.Interaction.ShockwaveHit",
-    "tags": ["Effect.Interaction.Damage"],
+    "tags": [
+      "Effect.Interaction.Damage"
+    ],
     "presetType": "InstantDamage",
     "lifetime": "Instant",
     "participatesInResponse": true,
     "modifiers": [
-      { "attribute": "Health", "op": "Add", "value": -13.0 }
+      {
+        "attribute": "Health",
+        "op": "Add",
+        "value": -13
+      }
     ]
   },
   {
     "id": "Effect.Interaction.ChargeDash",
-    "tags": ["Effect.Interaction.Movement"],
+    "tags": [
+      "Effect.Interaction.Movement"
+    ],
     "presetType": "Displacement",
     "lifetime": "Instant",
     "participatesInResponse": false,
@@ -252,13 +328,23 @@
   },
   {
     "id": "Effect.Interaction.IronWallAura",
-    "tags": ["Effect.Interaction.Toggle"],
+    "tags": [
+      "Effect.Interaction.Toggle"
+    ],
     "presetType": "Buff",
     "lifetime": "Infinite",
     "participatesInResponse": false,
     "modifiers": [
-      { "attribute": "Shield", "op": "Add", "value": 65.0 },
-      { "attribute": "Armor", "op": "Add", "value": 20.0 }
+      {
+        "attribute": "Shield",
+        "op": "Add",
+        "value": 65
+      },
+      {
+        "attribute": "Armor",
+        "op": "Add",
+        "value": 20
+      }
     ],
     "expireCondition": {
       "kind": "TagPresent",
@@ -267,7 +353,9 @@
   },
   {
     "id": "Effect.Interaction.GroundSlam",
-    "tags": ["Effect.Interaction.Damage"],
+    "tags": [
+      "Effect.Interaction.Damage"
+    ],
     "presetType": "Search",
     "lifetime": "Instant",
     "participatesInResponse": true,
@@ -288,27 +376,41 @@
   },
   {
     "id": "Effect.Interaction.GroundSlamHit",
-    "tags": ["Effect.Interaction.Damage"],
+    "tags": [
+      "Effect.Interaction.Damage"
+    ],
     "presetType": "InstantDamage",
     "lifetime": "Instant",
     "participatesInResponse": true,
     "modifiers": [
-      { "attribute": "Health", "op": "Add", "value": -20.0 }
+      {
+        "attribute": "Health",
+        "op": "Add",
+        "value": -20
+      }
     ]
   },
   {
     "id": "Effect.Interaction.SupportBeam",
-    "tags": ["Effect.Interaction.Heal"],
+    "tags": [
+      "Effect.Interaction.Heal"
+    ],
     "presetType": "Heal",
     "lifetime": "Instant",
     "participatesInResponse": true,
     "modifiers": [
-      { "attribute": "Health", "op": "Add", "value": 22.0 }
+      {
+        "attribute": "Health",
+        "op": "Add",
+        "value": 22
+      }
     ]
   },
   {
     "id": "Effect.Interaction.TacticalJump",
-    "tags": ["Effect.Interaction.Movement"],
+    "tags": [
+      "Effect.Interaction.Movement"
+    ],
     "presetType": "Displacement",
     "lifetime": "Instant",
     "participatesInResponse": false,
@@ -321,7 +423,9 @@
   },
   {
     "id": "Effect.Interaction.VolleyLine",
-    "tags": ["Effect.Interaction.Damage"],
+    "tags": [
+      "Effect.Interaction.Damage"
+    ],
     "presetType": "Search",
     "lifetime": "Instant",
     "participatesInResponse": true,
@@ -342,30 +446,46 @@
   },
   {
     "id": "Effect.Interaction.VolleyLineHit",
-    "tags": ["Effect.Interaction.Damage"],
+    "tags": [
+      "Effect.Interaction.Damage"
+    ],
     "presetType": "InstantDamage",
     "lifetime": "Instant",
     "participatesInResponse": true,
     "modifiers": [
-      { "attribute": "Health", "op": "Add", "value": -12.0 }
+      {
+        "attribute": "Health",
+        "op": "Add",
+        "value": -12
+      }
     ]
   },
   {
     "id": "Effect.Interaction.Overclock",
-    "tags": ["Effect.Interaction.Buff"],
+    "tags": [
+      "Effect.Interaction.Buff"
+    ],
     "presetType": "Buff",
     "lifetime": "After",
     "participatesInResponse": false,
     "duration": {
-      "durationTicks": 180
+      "durationTicks": 180,
+      "periodTicks": 0,
+      "clockId": "FixedFrame"
     },
     "modifiers": [
-      { "attribute": "MoveSpeed", "op": "Add", "value": 80.0 }
+      {
+        "attribute": "MoveSpeed",
+        "op": "Add",
+        "value": 80
+      }
     ]
   },
   {
     "id": "Effect.Interaction.ThrustJump",
-    "tags": ["Effect.Interaction.Movement"],
+    "tags": [
+      "Effect.Interaction.Movement"
+    ],
     "presetType": "Displacement",
     "lifetime": "Instant",
     "participatesInResponse": false,
@@ -378,13 +498,23 @@
   },
   {
     "id": "Effect.Interaction.ShieldNetAura",
-    "tags": ["Effect.Interaction.Toggle"],
+    "tags": [
+      "Effect.Interaction.Toggle"
+    ],
     "presetType": "Buff",
     "lifetime": "Infinite",
     "participatesInResponse": false,
     "modifiers": [
-      { "attribute": "Shield", "op": "Add", "value": 30.0 },
-      { "attribute": "MoveSpeed", "op": "Add", "value": 35.0 }
+      {
+        "attribute": "Shield",
+        "op": "Add",
+        "value": 30
+      },
+      {
+        "attribute": "MoveSpeed",
+        "op": "Add",
+        "value": 35
+      }
     ],
     "expireCondition": {
       "kind": "TagPresent",
@@ -393,13 +523,16 @@
   },
   {
     "id": "Effect.Interaction.OrbitalStrike",
-    "tags": ["Effect.Interaction.Zone"],
+    "tags": [
+      "Effect.Interaction.Zone"
+    ],
     "presetType": "PeriodicSearch",
     "lifetime": "After",
     "participatesInResponse": false,
     "duration": {
       "durationTicks": 180,
-      "periodTicks": 30
+      "periodTicks": 30,
+      "clockId": "FixedFrame"
     },
     "targetQuery": {
       "kind": "BuiltinSpatial",
@@ -418,17 +551,25 @@
   },
   {
     "id": "Effect.Interaction.OrbitalStrikeTick",
-    "tags": ["Effect.Interaction.Damage"],
+    "tags": [
+      "Effect.Interaction.Damage"
+    ],
     "presetType": "InstantDamage",
     "lifetime": "Instant",
     "participatesInResponse": true,
     "modifiers": [
-      { "attribute": "Health", "op": "Add", "value": -8.0 }
+      {
+        "attribute": "Health",
+        "op": "Add",
+        "value": -8
+      }
     ]
   },
   {
     "id": "Effect.Interaction.Stress.Fireball",
-    "tags": ["Effect.Interaction.Projectile"],
+    "tags": [
+      "Effect.Interaction.Projectile"
+    ],
     "presetType": "LaunchProjectile",
     "lifetime": "Instant",
     "participatesInResponse": true,
@@ -436,17 +577,24 @@
       "speed": 1400,
       "range": 5200,
       "arcHeight": 0,
-      "impactEffect": "Effect.Interaction.Stress.FireballHit"
+      "impactEffect": "Effect.Interaction.Stress.FireballHit",
+      "collisionRelationFilter": "All"
     }
   },
   {
     "id": "Effect.Interaction.Stress.FireballHit",
-    "tags": ["Effect.Interaction.Damage"],
+    "tags": [
+      "Effect.Interaction.Damage"
+    ],
     "presetType": "InstantDamage",
     "lifetime": "Instant",
     "participatesInResponse": true,
     "modifiers": [
-      { "attribute": "Health", "op": "Add", "value": -6.0 }
+      {
+        "attribute": "Health",
+        "op": "Add",
+        "value": -6
+      }
     ]
   }
 ]

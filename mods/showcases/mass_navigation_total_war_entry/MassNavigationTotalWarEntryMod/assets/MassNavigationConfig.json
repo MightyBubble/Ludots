@@ -1,0 +1,344 @@
+{
+  "mapId": "mass_navigation_total_war",
+  "world": {
+    "solverWindowWidthCm": 10000,
+    "solverWindowHeightCm": 10000,
+    "streamingChunkSizeCm": 6400,
+    "streamingRadiusCm": 16000,
+    "cameraFocusShiftThresholdCm": 3000,
+    "commandFocusHoldTicks": 90,
+    "workAreaPaddingCm": 4000,
+    "workAreaMaxWidthCm": 48000,
+    "workAreaMaxHeightCm": 48000,
+    "activeHotZoneId": "central",
+    "hotZones": [
+      {
+        "id": "central",
+        "label": "Central",
+        "centerXCm": 0,
+        "centerYCm": 0,
+        "widthCm": 10000,
+        "heightCm": 10000
+      },
+      {
+        "id": "east_front",
+        "label": "East Front",
+        "centerXCm": 1800000,
+        "centerYCm": 600000,
+        "widthCm": 10000,
+        "heightCm": 10000
+      },
+      {
+        "id": "southwest",
+        "label": "Southwest",
+        "centerXCm": -2100000,
+        "centerYCm": -1600000,
+        "widthCm": 10000,
+        "heightCm": 10000
+      },
+      {
+        "id": "northeast",
+        "label": "Northeast",
+        "centerXCm": 2400000,
+        "centerYCm": 2100000,
+        "widthCm": 10000,
+        "heightCm": 10000
+      }
+    ],
+    "obstacles": [
+      { "id": "west_gate", "localXCm": 3000.0, "localYCm": 5000.0, "radiusCm": 500.0 },
+      { "id": "south_gate", "localXCm": 5000.0, "localYCm": 3000.0, "radiusCm": 400.0 },
+      { "id": "north_gate", "localXCm": 5000.0, "localYCm": 7000.0, "radiusCm": 400.0 },
+      { "id": "east_gate", "localXCm": 7000.0, "localYCm": 5000.0, "radiusCm": 500.0 },
+      { "id": "central_blocker", "localXCm": 5000.0, "localYCm": 5000.0, "radiusCm": 300.0 }
+    ]
+  },
+  "solver": {
+    "fieldWidthCm": 10000,
+    "fieldHeightCm": 10000,
+    "flowCellSizeCm": 100,
+    "maxObstacleCount": 64,
+    "parallelWorkerCount": 8,
+    "separationHashCellSizeCm": 100,
+    "separationHashMinSearchRadiusCells": 2,
+    "hardResolveHashCellSizeCm": 50,
+    "hardResolveHashMinSearchRadiusCells": 1,
+    "playAreaMinXCm": 50.0,
+    "playAreaMaxXCm": 9950.0,
+    "playAreaMinYCm": 50.0,
+    "playAreaMaxYCm": 9950.0
+  },
+  "presentation": {
+    "requiredMeshAssetIds": [
+      "mass_navigation.agent.soldier",
+      "mass_navigation.selection.marker"
+    ],
+    "teams": []
+  },
+  "scenario": {
+    "agentsPerTeam": 0,
+    "initialSelectedTeamId": 1,
+    "teams": [
+      { "id": 1, "name": "Azure Vanguard" },
+      { "id": 2, "name": "Crimson Column" }
+    ]
+  },
+  "scenarioRuntime": {
+    "autoSpawnConfiguredScenario": false,
+    "initialSelectionScratchCapacity": 512,
+    "initialSelectedEntityCapacity": 128,
+    "runtimeCapacity": {
+      "navigationGroupCapacity": 512,
+      "groupMembershipAgentCapacity": 80000,
+      "selectionMemberScratchCapacity": 512,
+      "groupMemberCapacity": 512,
+      "orderIngestionTokenCapacity": 512,
+      "orderIngestionMemberCapacity": 512,
+      "loadedChunkCapacity": 512,
+      "metadataTeamCapacity": 2
+    },
+    "panelControls": {
+      "maxAgentsPerTeam": 40000,
+      "totalAgentStep": 2000,
+      "totalAgentPresets": [5000, 10000, 20000, 40000],
+      "panelRefreshIntervalSeconds": 0.25,
+      "viewResidencyRetainSecondsStep": 2.0,
+      "simulationBudgetStepMs": 1,
+      "simulationBudgetMinMs": 1,
+      "simulationBudgetMaxMs": 64,
+      "simulationSliceStep": 30,
+      "simulationSliceMin": 1,
+      "simulationSliceMax": 2048,
+      "enginePolicyHzStep": 5,
+      "enginePolicyHzMin": 0,
+      "enginePolicyHzMax": 240,
+      "enginePolicyMaxStepsStep": 1,
+      "enginePolicyMaxStepsMin": 1,
+      "enginePolicyMaxStepsMax": 32,
+      "arrivalTimeoutStepMs": 250,
+      "arrivalProgressStepCm": 10,
+      "arrivalWakePushStepCm": 10,
+      "arrivalRetryStep": 1,
+      "flowIterationStep": 512,
+      "flowCadenceHzStep": 1
+    }
+  },
+  "cadence": {
+    "simulationHz": 15,
+    "targetUpdateHz": 15,
+    "flowStepHz": 5,
+    "flowCrowdStampHz": 5,
+    "flowObstacleStampHz": 2,
+    "hardResolveHz": 10,
+    "entitySyncHz": 15,
+    "maxStepsPerFixedTick": 1,
+    "hardResolveCandidateThresholdAgents": 1,
+    "orderIdleScanIntervalFrames": 6
+  },
+  "agentProfiles": {
+    "defaultProfileId": "light",
+    "profiles": [
+      {
+        "id": "formation",
+        "heavy": true,
+        "navMass": 12.0,
+        "visualScale": 1.0,
+        "bodyRadiusCm": 720.0,
+        "speedCmPerSecond": 360.0,
+        "everyNth": 0,
+        "nthOffset": 0
+      },
+      {
+        "id": "heavy",
+        "heavy": true,
+        "navMass": 4.0,
+        "visualScale": 0.34,
+        "bodyRadiusCm": 28.0,
+        "speedCmPerSecond": 780.0,
+        "everyNth": 7,
+        "nthOffset": 0
+      },
+      {
+        "id": "light",
+        "heavy": false,
+        "navMass": 1.0,
+        "visualScale": 0.22,
+        "bodyRadiusCm": 20.0,
+        "speedCmPerSecond": 920.0,
+        "everyNth": 0,
+        "nthOffset": 0
+      }
+    ]
+  },
+  "cameraProfiles": {
+    "tacticalProfileId": "Camera.Profile.MassNavigationTactical",
+    "strategicProfileId": "Camera.Profile.MassNavigationStrategic",
+    "requestPolicy": {
+      "blendDurationSeconds": 0.0,
+      "resetRuntimeState": true,
+      "snapToFollowTargetWhenAvailable": false,
+      "strategicTargetXCm": 0.0,
+      "strategicTargetYCm": -1800.0
+    }
+  },
+  "minimap": {
+    "visible": true,
+    "initialPreset": "RtsFullMap",
+    "followCameraHalfExtentCm": 7000.0,
+    "rotateWithCamera": true
+  },
+  "teamRelationships": {
+    "defaultRelationship": "Hostile",
+    "relationships": []
+  },
+  "flow": {
+    "enabled": false,
+    "iterationsPerStep": 4096,
+    "maxIterationsPerStep": 131072,
+    "stepIntervalTicks": 1,
+    "crowdStampIntervalTicks": 1,
+    "obstacleStampIntervalTicks": 1,
+    "forceRefreshFlow": false,
+    "forceRefreshCrowd": false,
+    "forceRefreshObstacles": false
+  },
+  "arrival": {
+    "enabled": true,
+    "timeoutMs": 1500,
+    "timeoutMinMs": 250,
+    "timeoutMaxMs": 10000,
+    "progressDistanceCm": 60,
+    "progressDistanceMinCm": 10,
+    "progressDistanceMaxCm": 500,
+    "wakePushDistanceCm": 80,
+    "wakePushDistanceMinCm": 10,
+    "wakePushDistanceMaxCm": 500,
+    "maxRetryCountMin": 0,
+    "maxRetryCountMax": 16,
+    "maxRetryCount": 2
+  },
+  "viewResidency": {
+    "mode": "Probe",
+    "retainSeconds": 12.0,
+    "radiusCm": 24000,
+    "initialProbeId": "battlefield_overview",
+    "cameraProbes": [
+      {
+        "id": "battlefield_overview",
+        "label": "Battlefield Overview",
+        "targetXCm": 0,
+        "targetYCm": -1800,
+        "distanceCm": 22000,
+        "yaw": 180,
+        "pitch": 54,
+        "fovYDeg": 50
+      },
+      {
+        "id": "left_flank",
+        "label": "Left Flank",
+        "targetXCm": -1200000,
+        "targetYCm": 400000,
+        "distanceCm": 20000,
+        "yaw": 135,
+        "pitch": 56,
+        "fovYDeg": 50
+      },
+      {
+        "id": "right_flank",
+        "label": "Right Flank",
+        "targetXCm": 1200000,
+        "targetYCm": 400000,
+        "distanceCm": 20000,
+        "yaw": 225,
+        "pitch": 56,
+        "fovYDeg": 50
+      }
+    ]
+  },
+  "avoidance": {
+    "dominantMassRatio": 2.25,
+    "friendlyResponseScale": 1.1,
+    "friendlyResponseMin": 0.35,
+    "friendlyResponseMax": 2.75,
+    "nonFriendlyResponseScale": 1.25,
+    "nonFriendlyResponseMin": 0.25,
+    "nonFriendlyResponseMax": 3.25,
+    "dominantPushResponseScale": 1.6,
+    "dominantPushResponseMin": 0.15,
+    "dominantPushResponseMax": 4.5,
+    "friendlyCorrectionShareMin": 0.18,
+    "friendlyCorrectionShareMax": 0.82,
+    "dominantCorrectionOtherMassWeight": 1.8,
+    "dominantCorrectionShareMin": 0.05,
+    "dominantCorrectionShareMax": 0.95,
+    "nonFriendlyCorrectionOtherMassWeight": 1.2,
+    "nonFriendlyCorrectionShareMin": 0.08,
+    "nonFriendlyCorrectionShareMax": 0.92
+  },
+  "semantics": {
+    "obstacle": {
+      "hardResolveCandidateDistanceCm": 100.0,
+      "softPushPaddingCm": 350.0,
+      "softPushForceScale": 8.0
+    },
+    "targetProjection": {
+      "teamTargetClearanceCm": 60.0,
+      "groupCenterClearanceCm": 60.0,
+      "teamSlotClearanceCm": 45.0,
+      "groupSlotClearanceCm": 50.0,
+      "looseTargetClearanceCm": 50.0
+    },
+    "group": {
+      "spawnSpacingCm": 46.0,
+      "spawnJitterCm": 12.0,
+      "teamSlotSpacingCm": 90.0,
+      "formationLineSpacingCm": 180.0,
+      "formationSquareSpacingCm": 80.0,
+      "formationCircleSpacingCm": 180.0,
+      "formationCircleMinRadiusCm": 200.0,
+      "formationWedgeSpacingCm": 180.0,
+      "formationRotationEpsilonRadians": 0.00001,
+      "formationRotationSpeedRadiansPerSecond": 2.5,
+      "pullDeadZoneCm": 50.0,
+      "pullClampCm": 2000.0,
+      "arrivedRadiusCm": 150.0,
+      "formationArriveThresholdCm": 200.0,
+      "looseArriveThresholdCm": 300.0,
+      "unitTargetStopThresholdCm": 50.0,
+      "formationFlowSlowRadiusCm": 400.0,
+      "nearSlotBlend": 0.82,
+      "farSlotBlend": 0.38,
+      "nearSlotBlendDistanceSq": 4000000.0
+    },
+    "steering": {
+      "separationRadiusCm": 200.0,
+      "goalArrivalRadiusCm": 1200.0,
+      "flowObstacleAvoidanceScale": 1.2,
+      "formationSeparationScale": 2.0,
+      "looseSeparationScale": 4.0,
+      "velocityBlendPerSecond": 5.0
+    },
+    "solver": {
+      "minNavMass": 0.001,
+      "minVisualScale": 0.01,
+      "maxStepDtSeconds": 0.05,
+      "parallelStepMinAgents": 2048,
+      "directionEpsilonSq": 0.0001,
+      "normalizationEpsilonSq": 0.000001,
+      "inverseSqrtMinValue": 0.00000001,
+      "entitySyncPositionEpsilonSq": 0.25,
+      "entitySyncVelocityEpsilonSq": 0.01,
+      "facingVelocityEpsilonSq": 0.01,
+      "flowBlockedCellCost": 99999.0,
+      "flowBlockedCellThreshold": 9999.0,
+      "flowTargetStopDistanceSq": 1.0,
+      "flowObstacleNeighborRadiusCells": 4,
+      "flowObstacleNeighborWeight": 5.0,
+      "flowObstacleAvoidanceWeight": 1.5,
+      "coincidentPairHashBucketCount": 1024,
+      "coincidentPairHashPrimeA": 73856093,
+      "coincidentPairHashPrimeB": 19349663
+    }
+  }
+}
+

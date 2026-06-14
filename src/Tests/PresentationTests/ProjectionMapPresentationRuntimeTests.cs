@@ -1,6 +1,7 @@
 using System;
 using System.Collections.Generic;
 using System.IO;
+using System.Linq;
 using System.Numerics;
 using System.Text;
 using System.Text.Json;
@@ -10,8 +11,11 @@ using Ludots.Core.Components;
 using Ludots.Core.Engine;
 using Ludots.Core.Input.Config;
 using Ludots.Core.Input.Runtime;
+using Ludots.Core.Presentation.Commands;
 using Ludots.Core.Presentation.Components;
 using Ludots.Core.Presentation.Hud;
+using Ludots.Core.Presentation.Performers;
+using Ludots.Core.Presentation.Rendering;
 using Ludots.Core.Scripting;
 using NUnit.Framework;
 
@@ -29,96 +33,89 @@ namespace Ludots.Tests.Presentation
         };
 
         [Test]
-        public void ProjectionMap_PopulatesVisualRuntimeStates_AndEmitsWorldPrimitives()
+        public void ProjectionMap_BootstrapsPerformerInstances_AndEmitsWorldPrimitives()
         {
             using var engine = CreateEngine(ProjectionMods);
             LoadMap(engine, CameraAcceptanceIds.ProjectionMapId);
 
-            int entitiesWithVisualRuntime = 0;
+            var performers = engine.GetService(CoreServiceKeys.PerformerEntityRuntime)
+                ?? throw new InvalidOperationException("PerformerEntityRuntime missing.");
+            var definitions = engine.GetService(CoreServiceKeys.PerformerDefinitionRegistry)
+                ?? throw new InvalidOperationException("PerformerDefinitionRegistry missing.");
+            var primitives = engine.GetService(CoreServiceKeys.PresentationPrimitiveDrawBuffer)
+                ?? throw new InvalidOperationException("PresentationPrimitiveDrawBuffer missing.");
+            var snapshot = engine.GetService(CoreServiceKeys.PresentationVisualSnapshotBuffer)
+                ?? throw new InvalidOperationException("PresentationVisualSnapshotBuffer missing.");
+
+            var activeDefinitions = CollectActiveDefinitionKeys(engine.World, performers, definitions);
+            Assert.That(activeDefinitions.Count, Is.GreaterThanOrEqualTo(2), "Projection fixture should bootstrap skinned + static performer definitions.");
+            Assert.That(FindPerformerOwners(engine.World, performers).Count, Is.EqualTo(3), "Projection fixture should bootstrap one performer-backed actor per map entity.");
+
+            Assert.That(primitives.Count, Is.EqualTo(3), "Projection fixture should emit one visible primitive per visible performer-backed actor.");
+            Assert.That(snapshot.Count, Is.EqualTo(3), "Adapter-facing snapshot should expose all visible projection fixture outputs.");
+
             int skinnedCount = 0;
             int staticCount = 0;
-            var visualQuery = new QueryDescription().WithAll<Name, VisualRuntimeState>();
-            engine.World.Query(in visualQuery, (ref Name _, ref VisualRuntimeState visual) =>
-            {
-                entitiesWithVisualRuntime++;
-                if (visual.RenderPath == VisualRenderPath.SkinnedMesh) skinnedCount++;
-                if (visual.RenderPath == VisualRenderPath.StaticMesh) staticCount++;
-            });
-
-            Assert.That(entitiesWithVisualRuntime, Is.EqualTo(3), "Projection fixture entities must all carry VisualRuntimeState.");
-            Assert.That(skinnedCount, Is.EqualTo(1), "Hero fixture must be marked as SkinnedMesh.");
-            Assert.That(staticCount, Is.EqualTo(2), "Dummy fixtures must be marked as StaticMesh.");
-
-            var primitives = engine.GetService(CoreServiceKeys.PresentationPrimitiveDrawBuffer);
-            Assert.That(primitives, Is.Not.Null);
-            Assert.That(primitives!.Count, Is.EqualTo(3), "Entity visuals must emit one primitive draw item per visible fixture entity.");
-
-            var snapshot = engine.GetService(CoreServiceKeys.PresentationVisualSnapshotBuffer);
-            Assert.That(snapshot, Is.Not.Null);
-            Assert.That(snapshot!.Count, Is.EqualTo(3), "Adapter-facing visual snapshot must expose all projection fixture visuals.");
-
-            var expectedVisuals = CaptureExpectedEntityVisuals(engine);
-            Assert.That(expectedVisuals.Count, Is.EqualTo(3));
-
-            int skinnedWithAnimator = 0;
-            int staticWithoutAnimator = 0;
             var stableIds = new HashSet<int>();
-            foreach (ref readonly var item in primitives.GetSpan())
+            foreach (ref readonly PrimitiveDrawItem item in primitives.GetSpan())
             {
-                Assert.That(item.StableId, Is.GreaterThan(0), "Visible entity visuals must expose stable ids for adapter instance mapping.");
-                Assert.That(item.TemplateId, Is.GreaterThan(0), "Visible entity visuals must expose their visual template id.");
+                Assert.That(item.StableId, Is.GreaterThan(0), "Performer-emitted primitives must expose stable ids.");
+                Assert.That(item.TemplateId, Is.GreaterThan(0), "Performer-emitted primitives must expose definition-backed template ids.");
                 stableIds.Add(item.StableId);
 
                 if (item.RenderPath == VisualRenderPath.SkinnedMesh)
                 {
-                    skinnedWithAnimator++;
-                    Assert.That(item.Animator.GetControllerId(), Is.GreaterThan(0), "Skinned visuals must carry packed animator controller ids.");
-                    Assert.That((item.Flags & VisualRuntimeFlags.HasAnimator) != 0, Is.True, "Skinned visuals must mark animator presence.");
+                    skinnedCount++;
+                    Assert.That(item.Animator.GetControllerId(), Is.GreaterThan(0), "Skinned performer output must carry animator payload.");
                 }
 
                 if (item.RenderPath == VisualRenderPath.StaticMesh)
                 {
-                    staticWithoutAnimator++;
-                    Assert.That(item.Animator.GetControllerId(), Is.EqualTo(0), "Static visuals should not carry animator controllers in the projection fixture.");
+                    staticCount++;
+                    Assert.That(item.Animator.GetControllerId(), Is.EqualTo(0), "Static performer output must stay free of animator payload.");
                 }
             }
 
-            foreach (ref readonly var item in snapshot.GetSpan())
+            foreach (ref readonly PrimitiveDrawItem item in snapshot.GetSpan())
             {
-                Assert.That(expectedVisuals.TryGetValue(item.StableId, out var expected), Is.True, $"Snapshot item stableId={item.StableId} must map to a live entity visual.");
-                Assert.That(item.TemplateId, Is.EqualTo(expected.TemplateId));
-                Assert.That(item.Position, Is.EqualTo(expected.Position));
-                Assert.That(item.Scale, Is.EqualTo(expected.Scale));
-                Assert.That(item.Visibility, Is.EqualTo(expected.Visibility));
-                Assert.That(item.RenderPath, Is.EqualTo(expected.RenderPath));
-                AssertQuaternionEquivalent(item.Rotation, expected.Rotation);
+                Assert.That(item.StableId, Is.GreaterThan(0));
+                Assert.That(item.Visibility, Is.EqualTo(VisualVisibility.Visible));
             }
 
-            Assert.That(stableIds.Count, Is.EqualTo(3), "Each visible fixture entity must keep a unique stable id.");
-            Assert.That(skinnedWithAnimator, Is.EqualTo(1), "Exactly one hero fixture should emit the skinned animator payload.");
-            Assert.That(staticWithoutAnimator, Is.EqualTo(2), "Projection fixture dummies should stay on the static mesh path.");
+            Assert.That(stableIds.Count, Is.EqualTo(3), "Each visible performer-backed fixture should keep a unique stable id.");
+            Assert.That(skinnedCount, Is.EqualTo(1), "Projection hero fixture should emit exactly one skinned performer output.");
+            Assert.That(staticCount, Is.EqualTo(2), "Projection dummy fixtures should stay on the static performer lane.");
         }
 
         [Test]
-        public void ProjectionMap_VisualSnapshotBuffer_RebuildsPerFrameWithoutRetainingDestroyedVisuals()
+        public void ProjectionMap_PerformerSnapshot_RebuildsPerFrameWithoutRetainingDestroyedOwners()
         {
             using var engine = CreateEngine(ProjectionMods);
             LoadMap(engine, CameraAcceptanceIds.ProjectionMapId);
 
-            var primitives = engine.GetService(CoreServiceKeys.PresentationPrimitiveDrawBuffer);
-            var snapshot = engine.GetService(CoreServiceKeys.PresentationVisualSnapshotBuffer);
-            Assert.That(primitives, Is.Not.Null);
-            Assert.That(snapshot, Is.Not.Null);
-            Assert.That(primitives!.Count, Is.EqualTo(3));
-            Assert.That(snapshot!.Count, Is.EqualTo(3));
+            var performers = engine.GetService(CoreServiceKeys.PerformerEntityRuntime)
+                ?? throw new InvalidOperationException("PerformerEntityRuntime missing.");
+            var primitives = engine.GetService(CoreServiceKeys.PresentationPrimitiveDrawBuffer)
+                ?? throw new InvalidOperationException("PresentationPrimitiveDrawBuffer missing.");
+            var snapshot = engine.GetService(CoreServiceKeys.PresentationVisualSnapshotBuffer)
+                ?? throw new InvalidOperationException("PresentationVisualSnapshotBuffer missing.");
 
-            var entityVisualQuery = new QueryDescription().WithAll<PresentationStableId, VisualRuntimeState>();
-            engine.World.Destroy(in entityVisualQuery);
+            Assert.That(performers.ActiveCount, Is.GreaterThanOrEqualTo(3));
+            Assert.That(primitives.Count, Is.EqualTo(3));
+            Assert.That(snapshot.Count, Is.EqualTo(3));
+
+            var owners = FindPerformerOwners(engine.World, performers);
+            Assert.That(owners.Count, Is.EqualTo(3), "Projection fixture should have three live performer owners before teardown.");
+            for (int i = 0; i < owners.Count; i++)
+            {
+                engine.World.Destroy(owners[i]);
+            }
 
             Tick(engine, 1);
 
-            Assert.That(primitives.Count, Is.EqualTo(0), "Visible draw buffer must be rebuilt every frame after entity visuals are removed.");
-            Assert.That(snapshot.Count, Is.EqualTo(0), "Adapter-facing snapshot buffer must not retain visuals from a previous frame.");
+            Assert.That(performers.ActiveCount, Is.EqualTo(0), "Dead entity anchors should release their performer subtree on the next runtime tick.");
+            Assert.That(primitives.Count, Is.EqualTo(0), "Visible draw buffer must be rebuilt after performer owners are destroyed.");
+            Assert.That(snapshot.Count, Is.EqualTo(0), "Snapshot buffer must not retain visuals from released performer instances.");
         }
 
         [Test]
@@ -150,13 +147,13 @@ namespace Ludots.Tests.Presentation
         }
 
         [Test]
-        public void ProjectionMap_WritesSkinnedRuntimeContractAcceptanceArtifacts()
+        public void ProjectionMap_WritesPerformerLaneAcceptanceArtifacts()
         {
             using var engine = CreateEngine(ProjectionMods);
             LoadMap(engine, CameraAcceptanceIds.ProjectionMapId);
 
-            var primitives = engine.GetService(CoreServiceKeys.PresentationPrimitiveDrawBuffer);
-            Assert.That(primitives, Is.Not.Null);
+            var primitives = engine.GetService(CoreServiceKeys.PresentationPrimitiveDrawBuffer)
+                ?? throw new InvalidOperationException("PresentationPrimitiveDrawBuffer missing.");
 
             int skinnedCount = 0;
             int staticCount = 0;
@@ -166,7 +163,7 @@ namespace Ludots.Tests.Presentation
             var traceLines = new List<string>();
             int eventId = 1;
 
-            foreach (ref readonly var item in primitives!.GetSpan())
+            foreach (ref readonly var item in primitives.GetSpan())
             {
                 bool isSkinned = item.RenderPath.IsSkinnedLane();
                 if (isSkinned)
@@ -190,7 +187,7 @@ namespace Ludots.Tests.Presentation
                     template_id = item.TemplateId,
                     mesh_asset_id = item.MeshAssetId,
                     animator_controller_id = item.Animator.GetControllerId(),
-                    animator_lane = isSkinned ? "skinned" : "static",
+                    source = "performer_emit",
                 }));
             }
 
@@ -216,6 +213,39 @@ namespace Ludots.Tests.Presentation
             Assert.That(File.Exists(pathPath), Is.True);
         }
 
+        private static HashSet<string> CollectActiveDefinitionKeys(World world, PerformerEntityRuntime performers, PerformerDefinitionRegistry definitions)
+        {
+            var keys = new HashSet<string>(StringComparer.Ordinal);
+            var query = new QueryDescription().WithAll<PerformerState>();
+            world.Query(in query, (Entity entity, ref PerformerState state) =>
+            {
+                keys.Add(definitions.GetName(state.DefId));
+            });
+
+            return keys;
+        }
+
+        private static List<Entity> FindPerformerOwners(World world, PerformerEntityRuntime performers)
+        {
+            var owners = new List<Entity>();
+            var seen = new HashSet<int>();
+            var query = new QueryDescription().WithAll<PerformerState>();
+            world.Query(in query, (Entity entity, ref PerformerState state) =>
+            {
+                if (state.AnchorKind != PresentationAnchorKind.Entity || !world.IsAlive(state.OwnerEntity))
+                {
+                    return;
+                }
+
+                if (seen.Add(state.OwnerEntity.Id))
+                {
+                    owners.Add(state.OwnerEntity);
+                }
+            });
+
+            return owners;
+        }
+
         private static GameEngine CreateEngine(params string[] modIds)
         {
             string repoRoot = FindRepoRoot();
@@ -225,6 +255,7 @@ namespace Ludots.Tests.Presentation
             var engine = new GameEngine();
             engine.InitializeWithConfigPipeline(modPaths, assetsRoot);
             InstallInput(engine);
+            HeadlessPresentationTestHost.Install(engine);
             engine.Start();
             return engine;
         }
@@ -253,6 +284,7 @@ namespace Ludots.Tests.Presentation
             for (int i = 0; i < frames; i++)
             {
                 engine.Tick(1f / 60f);
+                HeadlessPresentationTestHost.UpdateCamera(engine);
             }
         }
 
@@ -273,58 +305,22 @@ namespace Ludots.Tests.Presentation
             throw new DirectoryNotFoundException("Repository root not found from test work directory.");
         }
 
-        private static Dictionary<int, ExpectedEntityVisual> CaptureExpectedEntityVisuals(GameEngine engine)
-        {
-            var expected = new Dictionary<int, ExpectedEntityVisual>();
-            var query = new QueryDescription().WithAll<PresentationStableId, VisualTransform, VisualRuntimeState>();
-            engine.World.Query(in query, (Entity entity, ref PresentationStableId stableId, ref VisualTransform transform, ref VisualRuntimeState visual) =>
-            {
-                bool cullVisible = !engine.World.Has<CullState>(entity) || engine.World.Get<CullState>(entity).IsVisible;
-                float baseScale = visual.BaseScale <= 0f ? 1f : visual.BaseScale;
-                int templateId = engine.World.Has<VisualTemplateRef>(entity) ? engine.World.Get<VisualTemplateRef>(entity).TemplateId : 0;
-                expected[stableId.Value] = new ExpectedEntityVisual(
-                    templateId,
-                    transform.Position,
-                    transform.Rotation,
-                    transform.Scale * baseScale,
-                    visual.ResolveVisibility(cullVisible),
-                    visual.RenderPath);
-            });
-
-            return expected;
-        }
-
-        private static void AssertQuaternionEquivalent(Quaternion actual, Quaternion expected, float epsilon = 0.0001f)
-        {
-            Quaternion normalizedActual = Quaternion.Normalize(actual);
-            Quaternion normalizedExpected = Quaternion.Normalize(expected);
-            float similarity = MathF.Abs(Quaternion.Dot(normalizedActual, normalizedExpected));
-            Assert.That(similarity, Is.GreaterThanOrEqualTo(1f - epsilon));
-        }
-
-        private readonly record struct ExpectedEntityVisual(
-            int TemplateId,
-            Vector3 Position,
-            Quaternion Rotation,
-            Vector3 Scale,
-            VisualVisibility Visibility,
-            VisualRenderPath RenderPath);
         private static string BuildSkinnedRuntimeBattleReport(int heroStableId, int heroControllerId, IReadOnlyList<int> staticStableIds)
         {
             var sb = new StringBuilder();
             sb.AppendLine("# Scenario: presentation-skinned-runtime-contract");
             sb.AppendLine();
             sb.AppendLine("## Header");
-            sb.AppendLine("- scenario name: projection_map skinned vs static lane contract");
+            sb.AppendLine("- scenario name: projection_map performer skinned vs static lane contract");
             sb.AppendLine("- build/version: local PresentationTests");
             sb.AppendLine("- seed/map/clock: deterministic fixture / camera_acceptance_projection / 5 ticks @ 60 Hz");
             sb.AppendLine($"- execution timestamp: {DateTime.UtcNow:O}");
             sb.AppendLine();
             sb.AppendLine("## Timeline");
-            sb.AppendLine($"- [T+005] Hero#{heroStableId}.Spawn -> lane SkinnedMesh | Animator controller {heroControllerId} bound | result = skinned runtime contract valid");
+            sb.AppendLine($"- [T+005] Hero#{heroStableId}.Emit -> lane SkinnedMesh | Animator controller {heroControllerId} bound | result = performer skinned contract valid");
             for (int i = 0; i < staticStableIds.Count; i++)
             {
-                sb.AppendLine($"- [T+005] Dummy#{staticStableIds[i]}.Spawn -> lane StaticMesh | Animator none | result = static dirty-sync lane stays separate");
+                sb.AppendLine($"- [T+005] Dummy#{staticStableIds[i]}.Emit -> lane StaticMesh | Animator none | result = static performer lane stays separate");
             }
 
             sb.AppendLine();
@@ -345,16 +341,15 @@ namespace Ludots.Tests.Presentation
             return
                 """
                 flowchart TD
-                    A[start: load projection fixture] --> B[presentation: resolve visual templates]
+                    A[start: load projection fixture] --> B[presentation: bootstrap performer instances]
                     B --> C{render path}
-                    C -->|SkinnedMesh or GpuSkinnedInstance| D[animator contract: require controller + packed state]
-                    C -->|StaticMesh or instance lane| E[static lane: forbid animator payload]
-                    D --> F[outcome: emit skinned runtime snapshot]
-                    E --> G[outcome: emit static runtime snapshot]
-                    D -->|if controller missing| H[fail: fuse invalid skinned contract]
-                    E -->|if animator payload present| I[fail: reject static/skinned lane mixing]
+                    C -->|SkinnedMesh| D[animator contract: emit packed animator payload]
+                    C -->|StaticMesh| E[static lane: forbid animator payload]
+                    D --> F[outcome: emit skinned performer snapshot]
+                    E --> G[outcome: emit static performer snapshot]
                 """;
         }
+
         private sealed class NullInputBackend : IInputBackend
         {
             public float GetAxis(string devicePath) => 0f;

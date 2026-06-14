@@ -2,6 +2,7 @@ using System.Collections.Generic;
 using Arch.Core;
 using Arch.System;
 using Ludots.Core.Gameplay.GAS.Components;
+using Ludots.Core.Presentation.Components;
 
 namespace Ludots.Core.Gameplay.Spawning.Systems
 {
@@ -36,6 +37,21 @@ namespace Ludots.Core.Gameplay.Spawning.Systems
             {
                 if (World.IsAlive(_pendingDestroy[i]))
                 {
+                    if (World.Has<PresentationStableId>(_pendingDestroy[i]))
+                    {
+                        if (!World.Has<PresentationDestroyPending>(_pendingDestroy[i]))
+                        {
+                            World.Add(_pendingDestroy[i], new PresentationDestroyPending());
+                        }
+
+                        if (World.Has<PresentationDestroyEventPublished>(_pendingDestroy[i]))
+                        {
+                            World.Remove<PresentationDestroyEventPublished>(_pendingDestroy[i]);
+                        }
+
+                        continue;
+                    }
+
                     World.Destroy(_pendingDestroy[i]);
                 }
             }

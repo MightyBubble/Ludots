@@ -11,8 +11,8 @@ namespace Ludots.Core.Navigation.GraphWorld
     /// </summary>
     public sealed class WorldGridLoadedChunks : ILoadedChunks
     {
-        private readonly HashSet<long> _activeChunks = new HashSet<long>();
-        private readonly HashSet<long> _nextActiveChunks = new HashSet<long>();
+        private readonly HashSet<long> _activeChunks;
+        private readonly HashSet<long> _nextActiveChunks;
 
         public int ChunkSizeCm { get; }
         public IReadOnlyCollection<long> ActiveChunkKeys => _activeChunks;
@@ -20,13 +20,24 @@ namespace Ludots.Core.Navigation.GraphWorld
         public event Action<long> ChunkLoaded;
         public event Action<long> ChunkUnloaded;
 
-        public WorldGridLoadedChunks(int chunkSizeCm)
+        public WorldGridLoadedChunks(int chunkSizeCm, int loadedChunkCapacity = 0)
         {
             if (chunkSizeCm <= 0)
             {
                 throw new ArgumentOutOfRangeException(nameof(chunkSizeCm));
             }
 
+            if (loadedChunkCapacity < 0)
+            {
+                throw new ArgumentOutOfRangeException(nameof(loadedChunkCapacity));
+            }
+
+            _activeChunks = loadedChunkCapacity > 0
+                ? new HashSet<long>(loadedChunkCapacity)
+                : new HashSet<long>();
+            _nextActiveChunks = loadedChunkCapacity > 0
+                ? new HashSet<long>(loadedChunkCapacity)
+                : new HashSet<long>();
             ChunkSizeCm = chunkSizeCm;
         }
 

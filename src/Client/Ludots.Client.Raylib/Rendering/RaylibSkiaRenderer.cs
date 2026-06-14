@@ -14,6 +14,8 @@ namespace Ludots.Client.Raylib.Rendering
         private int _height;
 
         public SKCanvas Canvas => _canvas ?? throw new InvalidOperationException("Raylib Skia canvas is not initialized.");
+        public int Width => _width;
+        public int Height => _height;
 
         public RaylibSkiaRenderer(int width, int height)
         {
@@ -50,7 +52,29 @@ namespace Ludots.Client.Raylib.Rendering
             var info = new SKImageInfo(width, height, SKColorType.Rgba8888, SKAlphaType.Premul);
             _bitmap = new SKBitmap(info);
             _canvas = new SKCanvas(_bitmap);
-            _canvas.Clear(SKColors.Transparent);
+            ClearTransparent();
+        }
+
+        public void ClearTransparent()
+        {
+            if (_bitmap == null)
+            {
+                return;
+            }
+
+            IntPtr ptr = _bitmap.GetPixels();
+            if (ptr == IntPtr.Zero)
+            {
+                _canvas?.Clear(SKColors.Transparent);
+                return;
+            }
+
+            unsafe
+            {
+                new Span<byte>((void*)ptr, _bitmap.ByteCount).Clear();
+            }
+
+            _canvas?.ResetMatrix();
         }
 
         public void UpdateTexture()

@@ -1,0 +1,19 @@
+[
+  {
+    "id": "mass_navigation.agent.soldier",
+    "type": "Model"
+  },
+  {
+    "id": "mass_navigation.selection.marker",
+    "type": "Model"
+  },
+  {
+    "id": "mass_navigation.blocker.rock",
+    "type": "Model"
+  },
+  {
+    "id": "mass_navigation.hotspot.obelisk",
+    "type": "Model"
+  }
+]
+

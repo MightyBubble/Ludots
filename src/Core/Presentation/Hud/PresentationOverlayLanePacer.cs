@@ -13,8 +13,8 @@ namespace Ludots.Core.Presentation.Hud
         private readonly PresentationOverlayLayer _layer;
         private readonly int _largeUnderUiThreshold;
         private readonly int _maxLargeLanesPerFrame;
-        private readonly int[] _presentedVersions = new int[3];
-        private readonly bool[] _presentedHasContent = new bool[3];
+        private readonly int[] _presentedVersions = new int[5];
+        private readonly bool[] _presentedHasContent = new bool[5];
 
         private int _nextLargeLaneCursor;
 
@@ -39,10 +39,11 @@ namespace Ludots.Core.Presentation.Hud
             ArgumentNullException.ThrowIfNull(scene);
 
             byte refreshFlags = 0;
+            byte pendingFlags = 0;
             int deferredLargeCount = 0;
             Span<PresentationOverlayItemKind> deferredLargeKinds = stackalloc PresentationOverlayItemKind[LargeLaneOrder.Length];
 
-            for (int kindValue = (int)PresentationOverlayItemKind.Text; kindValue <= (int)PresentationOverlayItemKind.Bar; kindValue++)
+            for (int kindValue = (int)PresentationOverlayItemKind.Text; kindValue <= (int)PresentationOverlayItemKind.Line; kindValue++)
             {
                 PresentationOverlayItemKind kind = (PresentationOverlayItemKind)kindValue;
                 int index = GetKindIndex(kind);
@@ -76,7 +77,7 @@ namespace Ludots.Core.Presentation.Hud
                     refreshFlags |= ToFlag(deferredLargeKinds[i]);
                 }
 
-                return new LaneRefreshPlan(refreshFlags);
+                return new LaneRefreshPlan(refreshFlags, pendingFlags);
             }
 
             int selectedLargeCount = 0;
@@ -95,14 +96,23 @@ namespace Ludots.Core.Presentation.Hud
                 }
             }
 
-            return new LaneRefreshPlan(refreshFlags);
+            for (int i = 0; i < deferredLargeCount; i++)
+            {
+                byte flag = ToFlag(deferredLargeKinds[i]);
+                if ((refreshFlags & flag) == 0)
+                {
+                    pendingFlags |= flag;
+                }
+            }
+
+            return new LaneRefreshPlan(refreshFlags, pendingFlags);
         }
 
         public void MarkPresented(PresentationOverlayScene scene, in LaneRefreshPlan plan)
         {
             ArgumentNullException.ThrowIfNull(scene);
 
-            for (int kindValue = (int)PresentationOverlayItemKind.Text; kindValue <= (int)PresentationOverlayItemKind.Bar; kindValue++)
+            for (int kindValue = (int)PresentationOverlayItemKind.Text; kindValue <= (int)PresentationOverlayItemKind.Line; kindValue++)
             {
                 PresentationOverlayItemKind kind = (PresentationOverlayItemKind)kindValue;
                 if (!plan.ShouldRefresh(kind))
@@ -146,7 +156,6 @@ namespace Ludots.Core.Presentation.Hud
             PresentationOverlayLaneMutationKind mutationKind = scene.GetLaneMutationKind(_layer, kind);
             return mutationKind switch
             {
-                PresentationOverlayLaneMutationKind.Content => kind is PresentationOverlayItemKind.Text or PresentationOverlayItemKind.Bar,
                 PresentationOverlayLaneMutationKind.PositionOnly =>
                     scene.TryGetLaneUniformTranslation(_layer, kind, out _) &&
                     kind is PresentationOverlayItemKind.Text or PresentationOverlayItemKind.Bar,
@@ -170,13 +179,13 @@ namespace Ludots.Core.Presentation.Hud
                 }
             }
 
-            PresentationOverlayItemKind fallback = deferredLargeKinds[0];
-            _nextLargeLaneCursor = GetLargeLaneOrderIndex(fallback) + 1;
+            PresentationOverlayItemKind selected = deferredLargeKinds[0];
+            _nextLargeLaneCursor = GetLargeLaneOrderIndex(selected) + 1;
             if (_nextLargeLaneCursor >= LargeLaneOrder.Length)
             {
                 _nextLargeLaneCursor = 0;
             }
-            return fallback;
+            return selected;
         }
 
         private static int GetLargeLaneOrderIndex(PresentationOverlayItemKind kind)
@@ -199,6 +208,8 @@ namespace Ludots.Core.Presentation.Hud
                 PresentationOverlayItemKind.Text => 0,
                 PresentationOverlayItemKind.Rect => 1,
                 PresentationOverlayItemKind.Bar => 2,
+                PresentationOverlayItemKind.MinimapMarker => 3,
+                PresentationOverlayItemKind.Line => 4,
                 _ => throw new ArgumentOutOfRangeException(nameof(kind)),
             };
         }
@@ -210,13 +221,17 @@ namespace Ludots.Core.Presentation.Hud
                 PresentationOverlayItemKind.Text => 1 << 0,
                 PresentationOverlayItemKind.Rect => 1 << 1,
                 PresentationOverlayItemKind.Bar => 1 << 2,
+                PresentationOverlayItemKind.MinimapMarker => 1 << 3,
+                PresentationOverlayItemKind.Line => 1 << 4,
                 _ => throw new ArgumentOutOfRangeException(nameof(kind)),
             };
         }
 
-        public readonly record struct LaneRefreshPlan(byte Flags)
+        public readonly record struct LaneRefreshPlan(byte Flags, byte PendingFlags = 0)
         {
             public bool HasAnyRefresh => Flags != 0;
+
+            public bool HasPendingRefresh => PendingFlags != 0;
 
             public bool ShouldRefresh(PresentationOverlayItemKind kind)
             {

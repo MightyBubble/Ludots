@@ -1,22 +1,30 @@
 using System;
+using System.Collections.Generic;
+using System.IO;
 using System.Numerics;
 using Arch.Core;
 using Ludots.Core.Components;
+using Ludots.Core.Config;
 using Ludots.Core.Gameplay;
 using Ludots.Core.Gameplay.GAS;
 using Ludots.Core.Gameplay.GAS.Components;
 using Ludots.Core.Gameplay.GAS.Presentation;
+using Ludots.Core.Gameplay.GAS.Registry;
+using Ludots.Core.Gameplay.Spawning;
 using Ludots.Core.GraphRuntime;
 using Ludots.Core.NodeLibraries.GASGraph;
 using Ludots.Core.NodeLibraries.GASGraph.Host;
-using Ludots.Core.Presentation.Commands;
 using Ludots.Core.Presentation.Components;
 using Ludots.Core.Presentation.Events;
 using Ludots.Core.Presentation.Hud;
 using Ludots.Core.Presentation.Assets;
+using Ludots.Core.Presentation.Commands;
+using Ludots.Core.Presentation.Config;
 using Ludots.Core.Presentation.Performers;
+using Ludots.Core.Presentation.Requests;
 using Ludots.Core.Presentation.Rendering;
 using Ludots.Core.Presentation.Systems;
+using Ludots.Core.Modding;
 using Ludots.Core.Scripting;
 using NUnit.Framework;
 
@@ -59,92 +67,210 @@ namespace Ludots.Tests.Presentation
     }
 
     [TestFixture]
-    public class PerformerInstanceBufferTests
+    public class PerformerEntityRuntimeTests
     {
-        private PerformerInstanceBuffer _buf;
+        private World _world;
+        private PerformerEntityRuntime _buf;
 
         [SetUp]
         public void Setup()
         {
-            _buf = new PerformerInstanceBuffer(16);
+            _world = World.Create();
+            _buf = new PerformerEntityRuntime(_world);
+        }
+
+        [TearDown]
+        public void TearDown()
+        {
+            _world?.Dispose();
         }
 
         [Test]
-        public void TryAllocate_ReturnsHandle_AndInstanceIsActive()
+        public void Create_ReturnsEntity_AndIsAlive()
         {
-            var world = World.Create();
-            var entity = world.Create();
-            Assert.That(_buf.TryAllocate(100, entity, 0, out int handle), Is.True);
-            Assert.That(_buf.IsActive(handle), Is.True);
-            world.Dispose();
+            var entity = _world.Create();
+            var performer = _buf.Create(100, entity, 0);
+            Assert.That(_world.IsAlive(performer), Is.True);
         }
 
         [Test]
-        public void Release_MakesInactive()
+        public void Create_InitializesStateAndTransformDefaults()
         {
-            var world = World.Create();
-            var entity = world.Create();
-            _buf.TryAllocate(100, entity, 0, out int handle);
-            _buf.Release(handle);
-            Assert.That(_buf.IsActive(handle), Is.False);
-            world.Dispose();
+            Entity entity = _world.Create();
+
+            var performer = _buf.Create(100, entity, 7);
+
+            ref readonly PerformerState state = ref _world.Get<PerformerState>(performer);
+            Assert.That(state.ScopeId, Is.EqualTo(7));
+            Assert.That(_world.Get<PerformerWorldRotation>(performer).Value, Is.EqualTo(Quaternion.Identity));
+            Assert.That(_world.Get<PerformerWorldScale>(performer).Value, Is.EqualTo(Vector3.One));
+            Assert.That(_world.Get<PerformerTransformSource>(performer).Value, Is.EqualTo(TransformSource.EntityTransform));
+            Assert.That(state.BehaviorActiveMask, Is.EqualTo(0u));
         }
 
         [Test]
-        public void ReleaseScope_ReleasesAllInScope()
+        public void Create_WorldAnchor_InitializesWorldFixedTransformSource()
         {
-            var world = World.Create();
-            var e1 = world.Create();
-            var e2 = world.Create();
-            _buf.TryAllocate(1, e1, 42, out int h1);
-            _buf.TryAllocate(2, e2, 42, out int h2);
-            _buf.TryAllocate(3, e1, 99, out int h3); // different scope
+            var performer = _buf.Create(100, Entity.Null, 11, PresentationAnchorKind.WorldPosition, new Vector3(1f, 2f, 3f), 321, Entity.Null, default);
 
-            _buf.ReleaseScope(42);
-            Assert.That(_buf.IsActive(h1), Is.False);
-            Assert.That(_buf.IsActive(h2), Is.False);
-            Assert.That(_buf.IsActive(h3), Is.True);
-            world.Dispose();
+            ref readonly PerformerState state = ref _world.Get<PerformerState>(performer);
+            Assert.That(state.AnchorKind, Is.EqualTo(PresentationAnchorKind.WorldPosition));
+            Assert.That(_world.Get<PerformerWorldPosition>(performer).Value, Is.EqualTo(new Vector3(1f, 2f, 3f)));
+            Assert.That(_world.Get<PerformerTransformSource>(performer).Value, Is.EqualTo(TransformSource.WorldFixed));
+            Assert.That(state.StableId, Is.EqualTo(321));
         }
 
         [Test]
-        public void ParamOverride_IsRetrievable()
+        public void Create_WithParent_LinksIntoTree()
         {
-            var world = World.Create();
-            var entity = world.Create();
-            _buf.TryAllocate(1, entity, 0, out int handle);
-            _buf.SetParamOverride(handle, 5, 3.14f);
-            Assert.That(_buf.TryGetParamOverride(handle, 5, out float val), Is.True);
-            Assert.That(val, Is.EqualTo(3.14f).Within(0.001f));
-            world.Dispose();
+            Entity entity = _world.Create();
+
+            var parentPerformer = _buf.Create(100, entity, 7);
+            var childPerformer = _buf.Create(101, entity, 7, PresentationAnchorKind.Entity, Vector3.Zero, 0, parentPerformer, default);
+
+            ref readonly PerformerChildren parentChildren = ref _world.Get<PerformerChildren>(parentPerformer);
+            ref readonly PerformerParent childParent = ref _world.Get<PerformerParent>(childPerformer);
+
+            Assert.That(parentChildren.Count, Is.GreaterThan(0));
+            Assert.That(childParent.Parent, Is.EqualTo(parentPerformer));
         }
 
         [Test]
-        public void ParamOverride_MissingKey_ReturnsFalse()
+        public void CreateHierarchy_RecursivelyBuildsChildrenAndAppliesDefaults()
         {
-            var world = World.Create();
-            var entity = world.Create();
-            _buf.TryAllocate(1, entity, 0, out int handle);
-            Assert.That(_buf.TryGetParamOverride(handle, 99, out _), Is.False);
-            world.Dispose();
+            Entity owner = _world.Create(new VisualTransform());
+            var definitions = new PerformerDefinitionRegistry();
+            int childId = definitions.Register("test.child", new PerformerDefinition
+            {
+                ParamDefaults = new[]
+                {
+                    new ParamDefault { ParamKey = 7, Lane = ParamLane.Int, IntValue = 99 }
+                }
+            });
+            int rootId = definitions.Register("test.root", new PerformerDefinition
+            {
+                Children = new[]
+                {
+                    new ChildPerformerRef
+                    {
+                        DefinitionId = childId,
+                        ScopeTag = 42
+                    }
+                }
+            });
+
+            Entity root = _buf.CreateHierarchy(
+                definitions,
+                rootId,
+                owner,
+                11,
+                PresentationAnchorKind.Entity,
+                Vector3.Zero,
+                500,
+                Entity.Null,
+                definitions.Get(rootId));
+
+            ref readonly PerformerChildren children = ref _world.Get<PerformerChildren>(root);
+            Assert.That(children.Count, Is.EqualTo(1));
+            Entity child = children.Get(0);
+            Assert.That(_world.IsAlive(child), Is.True);
+            Assert.That(_world.Get<PerformerParent>(child).Parent, Is.EqualTo(root));
+            Assert.That(_world.Get<PerformerState>(child).ScopeId, Is.EqualTo(42));
+            Assert.That(_buf.ResolveInt(child, 7, -1), Is.EqualTo(99));
         }
 
         [Test]
-        public void ReusedSlot_DoesNotKeepStaleHandleAlive()
+        public void Destroy_MakesEntityDead()
         {
-            var world = World.Create();
-            var first = world.Create();
-            var second = world.Create();
+            var entity = _world.Create();
+            var performer = _buf.Create(100, entity, 0);
+            _buf.Destroy(performer);
+            Assert.That(_world.IsAlive(performer), Is.False);
+        }
 
-            Assert.That(_buf.TryAllocate(1, first, 0, out int staleHandle), Is.True);
-            _buf.Release(staleHandle);
+        [Test]
+        public void DestroyScope_DestroysAllInScope()
+        {
+            var e1 = _world.Create();
+            var e2 = _world.Create();
+            var p1 = _buf.Create(1, e1, 42);
+            var p2 = _buf.Create(2, e2, 42);
+            var p3 = _buf.Create(3, e1, 99); // different scope
 
-            Assert.That(_buf.TryAllocate(2, second, 0, out int reusedHandle), Is.True);
-            Assert.That(reusedHandle, Is.Not.EqualTo(staleHandle));
-            Assert.That(_buf.IsActive(staleHandle), Is.False);
-            Assert.That(_buf.IsActive(reusedHandle), Is.True);
+            _buf.DestroyScope(42);
+            Assert.That(_world.IsAlive(p1), Is.False);
+            Assert.That(_world.IsAlive(p2), Is.False);
+            Assert.That(_world.IsAlive(p3), Is.True);
+        }
 
-            world.Dispose();
+        [Test]
+        public void Destroy_RecursivelyDestroysChildSubtree()
+        {
+            Entity entity = _world.Create();
+
+            var parentPerformer = _buf.Create(1, entity, 5);
+            var childPerformer = _buf.Create(2, entity, 5, PresentationAnchorKind.Entity, Vector3.Zero, 0, parentPerformer, default);
+            var grandChildPerformer = _buf.Create(3, entity, 5, PresentationAnchorKind.Entity, Vector3.Zero, 0, childPerformer, default);
+
+            _buf.Destroy(parentPerformer);
+
+            Assert.That(_world.IsAlive(parentPerformer), Is.False);
+            Assert.That(_world.IsAlive(childPerformer), Is.False);
+            Assert.That(_world.IsAlive(grandChildPerformer), Is.False);
+            Assert.That(_buf.ActiveCount, Is.EqualTo(0));
+        }
+
+        [Test]
+        public void DestroyScope_RecursivelyDestroysScopedRootsAndChildren()
+        {
+            Entity entity = _world.Create();
+
+            var rootPerformer = _buf.Create(1, entity, 42);
+            var childPerformer = _buf.Create(2, entity, 99, PresentationAnchorKind.Entity, Vector3.Zero, 0, rootPerformer, default);
+            var unrelatedPerformer = _buf.Create(3, entity, 77);
+
+            int destroyed = _buf.DestroyScope(42);
+
+            Assert.That(destroyed, Is.GreaterThanOrEqualTo(1));
+            Assert.That(_world.IsAlive(rootPerformer), Is.False);
+            Assert.That(_world.IsAlive(childPerformer), Is.False);
+            Assert.That(_world.IsAlive(unrelatedPerformer), Is.True);
+        }
+
+        [Test]
+        public void SetParam_Float_IsResolvable()
+        {
+            var entity = _world.Create();
+            var performer = _buf.Create(1, entity, 0);
+            _buf.SetParam(performer, 5, ParamLane.Float, 3.14f, 0, default);
+            Assert.That(_buf.ResolveFloat(performer, 5, -1f), Is.EqualTo(3.14f).Within(0.001f));
+        }
+
+        [Test]
+        public void ResolveFloat_InheritsFromParent()
+        {
+            Entity entity = _world.Create();
+
+            var parentPerformer = _buf.Create(1, entity, 0);
+            var childPerformer = _buf.Create(2, entity, 0, PresentationAnchorKind.Entity, Vector3.Zero, 0, parentPerformer, default);
+            _buf.SetParam(parentPerformer, 15, ParamLane.Float, 9.5f, 0, Vector4.Zero);
+
+            Assert.That(_buf.ResolveFloat(childPerformer, 15, -1f), Is.EqualTo(9.5f).Within(0.001f));
+        }
+
+        [Test]
+        public void SetParam_WritesAllLanes()
+        {
+            Entity entity = _world.Create();
+
+            var performer = _buf.Create(1, entity, 0);
+            _buf.SetParam(performer, 1, ParamLane.Float, 2.5f, 0, Vector4.Zero);
+            _buf.SetParam(performer, 2, ParamLane.Int, 0f, 7, Vector4.Zero);
+            _buf.SetParam(performer, 3, ParamLane.Vector, 0f, 0, new Vector4(1f, 2f, 3f, 4f));
+
+            Assert.That(_buf.ResolveFloat(performer, 1, -1f), Is.EqualTo(2.5f).Within(0.001f));
+            Assert.That(_buf.ResolveInt(performer, 2, -1), Is.EqualTo(7));
+            Assert.That(_buf.ResolveVector(performer, 3, Vector4.Zero), Is.EqualTo(new Vector4(1f, 2f, 3f, 4f)));
         }
     }
 
@@ -153,7 +279,7 @@ namespace Ludots.Tests.Presentation
     {
         private World _world;
         private PresentationEventStream _events;
-        private PresentationCommandBuffer _commands;
+        private PerformerCommandBuffer _commands;
         private PerformerDefinitionRegistry _defs;
         private GraphProgramRegistry _programs;
         private PerformerRuleSystem _system;
@@ -162,12 +288,12 @@ namespace Ludots.Tests.Presentation
         public void Setup()
         {
             _world = World.Create();
-            _events = new PresentationEventStream();
-            _commands = new PresentationCommandBuffer();
+            _events = new PresentationEventStream(PresentationTestConstants.EventStreamCapacity);
+            _commands = new PerformerCommandBuffer();
             _defs = new PerformerDefinitionRegistry();
             _programs = new GraphProgramRegistry();
             var api = new GasGraphRuntimeApi(_world, spatialQueries: null, coords: null, eventBus: null);
-            _system = new PerformerRuleSystem(_world, _events, _commands, _defs, _programs, api, new System.Collections.Generic.Dictionary<string, object>());
+            _system = new PerformerRuleSystem(_world, _events, _commands, _defs, runtime: null, _programs, api, new System.Collections.Generic.Dictionary<string, object>());
         }
 
         [TearDown]
@@ -177,12 +303,16 @@ namespace Ludots.Tests.Presentation
             _world?.Dispose();
         }
 
+        private void TickAndFlush(float dt)
+        {
+            _system.Update(dt);
+        }
+
         [Test]
         public void MatchingEvent_ProducesCommand()
         {
             var def = new PerformerDefinition
             {
-                VisualKind = PerformerVisualKind.Marker3D,
                 Rules = new[]
                 {
                     new PerformerRule
@@ -191,9 +321,9 @@ namespace Ludots.Tests.Presentation
                         Condition = ConditionRef.AlwaysTrue,
                         Command = new PerformerCommand
                         {
-                            CommandKind = PresentationCommandKind.CreatePerformer,
+                            CommandKind = PerformerCommandKind.CreatePerformer,
                             PerformerDefinitionId = 1,
-                            ScopeId = -1,
+                            ScopeTag = -1,
                         }
                     }
                 }
@@ -209,11 +339,11 @@ namespace Ludots.Tests.Presentation
                 Target = actor,
             });
 
-            _system.Update(0.016f);
+            TickAndFlush(0.016f);
 
             var cmds = _commands.GetSpan();
             Assert.That(cmds.Length, Is.EqualTo(1));
-            Assert.That(cmds[0].Kind, Is.EqualTo(PresentationCommandKind.CreatePerformer));
+            Assert.That(cmds[0].CommandKind, Is.EqualTo(PerformerCommandKind.CreatePerformer));
             Assert.That(cmds[0].PerformerDefinitionId, Is.EqualTo(1));
         }
 
@@ -222,7 +352,6 @@ namespace Ludots.Tests.Presentation
         {
             var def = new PerformerDefinition
             {
-                VisualKind = PerformerVisualKind.Marker3D,
                 Rules = new[]
                 {
                     new PerformerRule
@@ -231,9 +360,9 @@ namespace Ludots.Tests.Presentation
                         Condition = ConditionRef.AlwaysTrue,
                         Command = new PerformerCommand
                         {
-                            CommandKind = PresentationCommandKind.CreatePerformer,
+                            CommandKind = PerformerCommandKind.CreatePerformer,
                             PerformerDefinitionId = 1,
-                            ScopeId = -1,
+                            ScopeTag = -1,
                         }
                     }
                 }
@@ -246,7 +375,7 @@ namespace Ludots.Tests.Presentation
                 KeyId = 5,
             });
 
-            _system.Update(0.016f);
+            TickAndFlush(0.016f);
 
             var cmds = _commands.GetSpan();
             Assert.That(cmds.Length, Is.EqualTo(0));
@@ -260,9 +389,110 @@ namespace Ludots.Tests.Presentation
                 Kind = PresentationEventKind.CastCommitted,
                 KeyId = 1,
             });
-            _system.Update(0.016f);
+            TickAndFlush(0.016f);
 
             Assert.That(_events.Count, Is.EqualTo(0));
+        }
+
+        [Test]
+        public void UnsupportedInlineCondition_Throws()
+        {
+            _defs.Register("test.rule.unsupported_inline", new PerformerDefinition
+            {
+                Rules = new[]
+                {
+                    new PerformerRule
+                    {
+                        Event = new EventFilter { Kind = PresentationEventKind.CastCommitted, KeyId = -1 },
+                        Condition = new ConditionRef { Inline = (InlineConditionKind)byte.MaxValue },
+                        Command = new PerformerCommand
+                        {
+                            CommandKind = PerformerCommandKind.CreatePerformer,
+                            PerformerDefinitionId = 1,
+                            ScopeTag = 1,
+                        },
+                    },
+                },
+            });
+
+            var actor = _world.Create();
+            _events.TryAdd(new PresentationEvent
+            {
+                Kind = PresentationEventKind.CastCommitted,
+                Source = actor,
+                Target = actor,
+            });
+
+            InvalidOperationException? ex = Assert.Throws<InvalidOperationException>(() => TickAndFlush(0.016f));
+            Assert.That(ex!.Message, Does.Contain("Unsupported performer rule inline condition"));
+        }
+
+        [Test]
+        public void MissingConditionGraphProgram_Throws()
+        {
+            _defs.Register("test.rule.missing_condition_graph", new PerformerDefinition
+            {
+                Rules = new[]
+                {
+                    new PerformerRule
+                    {
+                        Event = new EventFilter { Kind = PresentationEventKind.CastCommitted, KeyId = -1 },
+                        Condition = new ConditionRef { GraphProgramId = 9001 },
+                        Command = new PerformerCommand
+                        {
+                            CommandKind = PerformerCommandKind.CreatePerformer,
+                            PerformerDefinitionId = 1,
+                            ScopeTag = 1,
+                        },
+                    },
+                },
+            });
+
+            var actor = _world.Create();
+            _events.TryAdd(new PresentationEvent
+            {
+                Kind = PresentationEventKind.CastCommitted,
+                Source = actor,
+                Target = actor,
+            });
+
+            InvalidOperationException? ex = Assert.Throws<InvalidOperationException>(() => TickAndFlush(0.016f));
+            Assert.That(ex!.Message, Does.Contain("unknown graphProgramId=9001"));
+        }
+
+        [Test]
+        public void MissingParamGraphProgram_Throws()
+        {
+            _defs.Register("test.rule.missing_param_graph", new PerformerDefinition
+            {
+                Rules = new[]
+                {
+                    new PerformerRule
+                    {
+                        Event = new EventFilter { Kind = PresentationEventKind.CastCommitted, KeyId = -1 },
+                        Condition = ConditionRef.AlwaysTrue,
+                        Command = new PerformerCommand
+                        {
+                            CommandKind = PerformerCommandKind.SetParam,
+                            ParamKey = 11,
+                            ParamLane = ParamLane.Float,
+                            ValueSource = PerformerCommandValueSource.Fixed,
+                            ParamGraphProgramId = 9002,
+                        },
+                    },
+                },
+            });
+
+            var actor = _world.Create();
+            _events.TryAdd(new PresentationEvent
+            {
+                Kind = PresentationEventKind.CastCommitted,
+                Source = actor,
+                Target = actor,
+            });
+
+            InvalidOperationException? ex = Assert.Throws<InvalidOperationException>(() => TickAndFlush(0.016f));
+            Assert.That(ex!.Message, Does.Contain("paramGraphProgramId=9002"));
         }
     }
 
@@ -270,22 +500,24 @@ namespace Ludots.Tests.Presentation
     public class PerformerRuntimeSystemTests
     {
         private World _world;
-        private PresentationCommandBuffer _commands;
-        private PerformerInstanceBuffer _instances;
+        private PerformerCommandBuffer _commands;
+        private PresentationEventStream _events;
+        private PerformerEntityRuntime _instances;
         private PerformerDefinitionRegistry _definitions;
         private PerformerRuntimeSystem _system;
+        private PresentationRequestBuffer _requests;
 
         [SetUp]
         public void Setup()
         {
             _world = World.Create();
-            _commands = new PresentationCommandBuffer();
-            _instances = new PerformerInstanceBuffer();
+            _commands = new PerformerCommandBuffer();
+            _events = new PresentationEventStream(PresentationTestConstants.EventStreamCapacity);
+            _instances = new PerformerEntityRuntime(_world);
             _definitions = new PerformerDefinitionRegistry();
-            var prefabs = new Ludots.Core.Presentation.Assets.PrefabRegistry();
-            var draw = new PrimitiveDrawBuffer();
             var markers = new TransientMarkerBuffer();
-            _system = new PerformerRuntimeSystem(_world, prefabs, _commands, draw, markers, _instances, new Ludots.Core.Presentation.PresentationStableIdAllocator(), _definitions);
+            _requests = new PresentationRequestBuffer();
+            _system = new PerformerRuntimeSystem(_world, _commands, _events, markers, _requests, _instances, new Ludots.Core.Presentation.PresentationStableIdAllocator(), _definitions);
         }
 
         [TearDown]
@@ -293,6 +525,11 @@ namespace Ludots.Tests.Presentation
         {
             _system?.Dispose();
             _world?.Dispose();
+        }
+
+        private void TickAndFlush(float dt)
+        {
+            _system.Update(dt);
         }
 
         [Test]
@@ -301,20 +538,21 @@ namespace Ludots.Tests.Presentation
             var owner = _world.Create();
             _definitions.Register("test.runtime.basic", new PerformerDefinition
             {
-                VisualKind = PerformerVisualKind.Marker3D,
                 DefaultLifetime = 1f,
             });
-            _commands.TryAdd(new PresentationCommand
+            _commands.TryAdd(new PerformerCommand
             {
-                Kind = PresentationCommandKind.CreatePerformer,
+                CommandKind = PerformerCommandKind.CreatePerformer,
                 PerformerDefinitionId = _definitions.GetId("test.runtime.basic"),
-                ScopeId = 5,
+                ScopeTag = 5,
+                ScopeSource = PerformerCommandScopeSource.Fixed,
+                AnchorKind = PresentationAnchorKind.Entity,
                 Source = owner,
             });
 
-            _system.Update(0.016f);
+            TickAndFlush(0.016f);
 
-            Assert.That(_instances.IsActive(0), Is.True);
+            Assert.That(_instances.ActiveCount, Is.EqualTo(1));
         }
 
         [Test]
@@ -323,27 +561,29 @@ namespace Ludots.Tests.Presentation
             var owner = _world.Create();
             _definitions.Register("test.runtime.scope", new PerformerDefinition
             {
-                VisualKind = PerformerVisualKind.Marker3D,
                 DefaultLifetime = -1f,
             });
-            _commands.TryAdd(new PresentationCommand
+            _commands.TryAdd(new PerformerCommand
             {
-                Kind = PresentationCommandKind.CreatePerformer,
+                CommandKind = PerformerCommandKind.CreatePerformer,
                 PerformerDefinitionId = _definitions.GetId("test.runtime.scope"),
-                ScopeId = 7,
+                ScopeTag = 7,
+                ScopeSource = PerformerCommandScopeSource.Fixed,
+                AnchorKind = PresentationAnchorKind.Entity,
                 Source = owner,
             });
-            _system.Update(0.016f);
+            TickAndFlush(0.016f);
             _commands.Clear();
 
-            _commands.TryAdd(new PresentationCommand
+            _commands.TryAdd(new PerformerCommand
             {
-                Kind = PresentationCommandKind.DestroyPerformerScope,
-                ScopeId = 7,
+                CommandKind = PerformerCommandKind.DestroyPerformerScope,
+                PerformerDefinitionId = 7,
+                ScopeTag = 7,
             });
-            _system.Update(0.016f);
+            TickAndFlush(0.016f);
 
-            Assert.That(_instances.IsActive(0), Is.False);
+            Assert.That(_instances.ActiveCount, Is.EqualTo(0));
         }
 
         [Test]
@@ -351,26 +591,27 @@ namespace Ludots.Tests.Presentation
         {
             _definitions.Register("test.runtime.dead_owner", new PerformerDefinition
             {
-                VisualKind = PerformerVisualKind.Marker3D,
                 DefaultLifetime = -1f,
             });
             int defId = _definitions.GetId("test.runtime.dead_owner");
             var firstOwner = _world.Create();
-            Assert.That(_instances.TryAllocate(defId, firstOwner, 1, out int staleHandle), Is.True);
+            var staleEntity = _instances.Create(defId, firstOwner, 1);
+            Assert.That(staleEntity, Is.Not.EqualTo(Entity.Null));
             _world.Destroy(firstOwner);
 
             var secondOwner = _world.Create();
-            _commands.TryAdd(new PresentationCommand
+            _commands.TryAdd(new PerformerCommand
             {
-                Kind = PresentationCommandKind.CreatePerformer,
+                CommandKind = PerformerCommandKind.CreatePerformer,
                 PerformerDefinitionId = defId,
-                ScopeId = 2,
+                ScopeTag = 2,
+                ScopeSource = PerformerCommandScopeSource.Fixed,
+                AnchorKind = PresentationAnchorKind.Entity,
                 Source = secondOwner,
             });
 
-            _system.Update(0.016f);
+            TickAndFlush(0.016f);
 
-            Assert.That(_instances.IsActive(staleHandle), Is.False);
             Assert.That(_instances.ActiveCount, Is.EqualTo(1));
         }
 
@@ -379,617 +620,200 @@ namespace Ludots.Tests.Presentation
         {
             _definitions.Register("test.runtime.persistent_scope", new PerformerDefinition
             {
-                VisualKind = PerformerVisualKind.Marker3D,
                 DefaultLifetime = -1f,
             });
             int defId = _definitions.GetId("test.runtime.persistent_scope");
             var owner = _world.Create();
 
-            _commands.TryAdd(new PresentationCommand
+            _commands.TryAdd(new PerformerCommand
             {
-                Kind = PresentationCommandKind.CreatePerformer,
+                CommandKind = PerformerCommandKind.CreatePerformer,
                 PerformerDefinitionId = defId,
-                ScopeId = 77,
+                ScopeTag = 77,
+                ScopeSource = PerformerCommandScopeSource.Fixed,
+                AnchorKind = PresentationAnchorKind.Entity,
                 Source = owner,
             });
-            _commands.TryAdd(new PresentationCommand
+            _commands.TryAdd(new PerformerCommand
             {
-                Kind = PresentationCommandKind.CreatePerformer,
+                CommandKind = PerformerCommandKind.CreatePerformer,
                 PerformerDefinitionId = defId,
-                ScopeId = 77,
+                ScopeTag = 77,
+                ScopeSource = PerformerCommandScopeSource.Fixed,
+                AnchorKind = PresentationAnchorKind.Entity,
                 Source = owner,
             });
 
-            _system.Update(0.016f);
+            TickAndFlush(0.016f);
 
             Assert.That(_instances.ActiveCount, Is.EqualTo(1));
         }
-    }
-
-    [TestFixture]
-    public class PerformerEmitSystemTests
-    {
-        private World _world;
-        private PerformerInstanceBuffer _instances;
-        private PerformerDefinitionRegistry _defs;
-        private PrimitiveDrawBuffer _primitives;
-        private PresentationVisualRequestBuffer _visualRequests;
-        private WorldHudBatchBuffer _hud;
-        private GroundOverlayBuffer _overlays;
-        private RoadSplineBuffer _roadSplines;
-        private PerformerEmitSystem _system;
-        private System.Collections.Generic.Dictionary<string, object> _globals;
-        private RenderDebugState _renderDebug;
-
-        [SetUp]
-        public void Setup()
-        {
-            _world = World.Create();
-            _instances = new PerformerInstanceBuffer();
-            _defs = new PerformerDefinitionRegistry();
-            _primitives = new PrimitiveDrawBuffer();
-            _visualRequests = new PresentationVisualRequestBuffer();
-            _hud = new WorldHudBatchBuffer();
-            _overlays = new GroundOverlayBuffer();
-            _roadSplines = new RoadSplineBuffer();
-            var programs = new GraphProgramRegistry();
-            var api = new GasGraphRuntimeApi(_world, null, null, null);
-            _globals = new System.Collections.Generic.Dictionary<string, object>();
-            _renderDebug = new RenderDebugState();
-            _globals[CoreServiceKeys.RenderDebugState.Name] = _renderDebug;
-            _system = new PerformerEmitSystem(_world, _instances, _defs, _overlays, _primitives, _hud, programs, api, _globals, roadSplines: _roadSplines, visualRequests: _visualRequests);
-        }
-
-        [TearDown]
-        public void TearDown()
-        {
-            _system?.Dispose();
-            _world?.Dispose();
-        }
 
         [Test]
-        public void InstanceScoped_Marker3D_EmitsToPrimitiveBuffer()
+        public void CreatePerformerCommand_WithParentHandle_LinksChildAndInheritsDefaults()
         {
-            var entity = _world.Create(new VisualTransform { Position = new Vector3(1, 2, 3) });
-            var def = new PerformerDefinition
+            var owner = _world.Create();
+            int parentDefId = _definitions.Register("test.runtime.parent", new PerformerDefinition
             {
-                VisualKind = PerformerVisualKind.Marker3D,
-                MeshOrShapeId = 2,
-                DefaultColor = new Vector4(1, 0, 0, 1),
-                DefaultScale = 0.5f,
-                DefaultLifetime = 1f,
-            };
-            int defId = _defs.Register("test_50", def);
-            _instances.TryAllocate(defId, entity, 0, out _);
-
-            _system.Update(0.016f);
-
-            var span = _primitives.GetSpan();
-            Assert.That(span.Length, Is.EqualTo(1));
-            Assert.That(span[0].MeshAssetId, Is.EqualTo(2));
-            Assert.That(span[0].Scale.X, Is.EqualTo(0.5f).Within(0.01f));
-        }
-
-        [Test]
-        public void WorldAnchored_InstanceScoped_Marker3D_EmitsAtWorldAnchor()
-        {
-            var def = new PerformerDefinition
-            {
-                VisualKind = PerformerVisualKind.Marker3D,
-                MeshOrShapeId = 2,
-                DefaultColor = new Vector4(0f, 1f, 0f, 1f),
-                DefaultScale = 1f,
-            };
-
-            int defId = _defs.Register("test_world_anchor", def);
-            _instances.TryAllocate(defId, default, 0, PresentationAnchorKind.WorldPosition, new Vector3(7f, 0.5f, 9f), 123, out _);
-
-            _system.Update(0.016f);
-
-            var span = _primitives.GetSpan();
-            Assert.That(span.Length, Is.EqualTo(1));
-            Assert.That(span[0].StableId, Is.EqualTo(123));
-            Assert.That(span[0].Position.X, Is.EqualTo(7f).Within(0.01f));
-            Assert.That(span[0].Position.Z, Is.EqualTo(9f).Within(0.01f));
-        }
-
-        [Test]
-        public void InstanceScoped_AutoExpires_AfterLifetime()
-        {
-            var entity = _world.Create(new VisualTransform { Position = Vector3.Zero });
-            var def = new PerformerDefinition
-            {
-                VisualKind = PerformerVisualKind.Marker3D,
-                MeshOrShapeId = 1,
-                DefaultLifetime = 0.1f,
-            };
-            int defId = _defs.Register("test_60", def);
-            _instances.TryAllocate(defId, entity, 0, out int handle);
-
-            // Tick past lifetime
-            _system.Update(0.05f);
-            Assert.That(_instances.IsActive(handle), Is.True);
-
-            _system.Update(0.06f); // total elapsed > 0.1
-            Assert.That(_instances.IsActive(handle), Is.False);
-        }
-
-        [Test]
-        public void InstanceScoped_TypedDecalPerformer_EmitsVisualRequest()
-        {
-            var entity = _world.Create(
-                new VisualTransform { Position = new Vector3(1f, 2f, 3f) },
-                new PresentationStableId { Value = 55 },
-                new AttributeBuffer());
-            ref var attributes = ref _world.Get<AttributeBuffer>(entity);
-            attributes.SetBase(7, 1f);
-            attributes.SetCurrent(7, 0.65f);
-
-            var def = new PerformerDefinition
-            {
-                VisualKind = PerformerVisualKind.Decal,
-                VisualAssetKey = "decal.scorch",
-                MaterialKey = "mat.scorch",
-                DefaultScale = 1.5f,
-                DefaultColor = new Vector4(1f, 0.4f, 0.1f, 0.9f),
-                DefaultPayload = new[]
+                DefaultLifetime = -1f,
+                ParamDefaults = new[]
                 {
-                    new PresentationPayloadField("Tint", PresentationTypedValue.FromColor(new Vector4(1f, 0.5f, 0.25f, 1f))),
-                },
-                Bindings = new[]
-                {
-                    new PerformerParamBinding
-                    {
-                        FieldName = "Intensity",
-                        ValueKind = PresentationTypedValueKind.Float,
-                        Value = ValueRef.FromAttribute(7),
-                    }
+                    new ParamDefault { ParamKey = 100, Lane = ParamLane.Int, IntValue = 3 }
                 }
-            };
-            int defId = _defs.Register("typed.decal", def);
-            _instances.TryAllocate(defId, entity, 0, out _);
-
-            _system.Update(0.016f);
-
-            Assert.That(_visualRequests.Count, Is.EqualTo(1));
-            var request = _visualRequests.GetSpan()[0];
-            Assert.That(request.Kind, Is.EqualTo(PresentationVisualRequestKind.Decal));
-            Assert.That(request.AssetKey, Is.EqualTo("decal.scorch"));
-            Assert.That(request.MaterialKey, Is.EqualTo("mat.scorch"));
-            Assert.That(request.Source, Is.EqualTo(entity));
-            Assert.That(request.Scale, Is.EqualTo(new Vector3(1.5f, 1.5f, 1.5f)));
-            Assert.That(request.Payload, Has.Length.EqualTo(2));
-            Assert.That(request.Payload[0].Name, Is.EqualTo("Tint"));
-            Assert.That(request.Payload[0].Value.Kind, Is.EqualTo(PresentationTypedValueKind.Color));
-            Assert.That(request.Payload[1].Name, Is.EqualTo("Intensity"));
-            Assert.That(request.Payload[1].Value.Kind, Is.EqualTo(PresentationTypedValueKind.Float));
-            Assert.That(request.Payload[1].Value.FloatValue, Is.EqualTo(0.65f).Within(0.001f));
-        }
-
-        [Test]
-        public void InstanceScoped_TypedBindingWithDefaultParamKey_DoesNotOverrideScale()
-        {
-            var entity = _world.Create(
-                new VisualTransform { Position = Vector3.Zero },
-                new PresentationStableId { Value = 56 },
-                new AttributeBuffer());
-            ref var attributes = ref _world.Get<AttributeBuffer>(entity);
-            attributes.SetBase(7, 1f);
-            attributes.SetCurrent(7, 0.65f);
-
-            var def = new PerformerDefinition
-            {
-                VisualKind = PerformerVisualKind.Decal,
-                VisualAssetKey = "decal.scorch",
-                MaterialKey = "mat.scorch",
-                DefaultScale = 1.5f,
-                Bindings = new[]
-                {
-                    new PerformerParamBinding
-                    {
-                        FieldName = "Intensity",
-                        ValueKind = PresentationTypedValueKind.Float,
-                        Value = ValueRef.FromAttribute(7),
-                    }
-                }
-            };
-            int defId = _defs.Register("typed.decal.default_param_key", def);
-            _instances.TryAllocate(defId, entity, 0, out _);
-
-            _system.Update(0.016f);
-
-            var request = _visualRequests.GetSpan()[0];
-            Assert.That(request.Scale, Is.EqualTo(new Vector3(1.5f, 1.5f, 1.5f)));
-            Assert.That(request.Payload[0].Name, Is.EqualTo("Intensity"));
-            Assert.That(request.Payload[0].Value.FloatValue, Is.EqualTo(0.65f).Within(0.001f));
-        }
-
-        [Test]
-        public void InstanceScoped_TypedColorBinding_UsesEntityColorResolver()
-        {
-            _system.Dispose();
-            _system = new PerformerEmitSystem(
-                _world,
-                _instances,
-                _defs,
-                _overlays,
-                _primitives,
-                _hud,
-                new GraphProgramRegistry(),
-                new GasGraphRuntimeApi(_world, null, null, null),
-                _globals,
-                entityColorResolver: (_, _) => new Vector4(0.2f, 0.3f, 0.4f, 0.5f),
-                roadSplines: _roadSplines,
-                visualRequests: _visualRequests);
-
-            var entity = _world.Create(
-                new VisualTransform { Position = Vector3.Zero },
-                new PresentationStableId { Value = 57 });
-
-            var def = new PerformerDefinition
-            {
-                VisualKind = PerformerVisualKind.Decal,
-                VisualAssetKey = "decal.tint",
-                MaterialKey = "mat.tint",
-                Bindings = new[]
-                {
-                    new PerformerParamBinding
-                    {
-                        FieldName = "Tint",
-                        ValueKind = PresentationTypedValueKind.Color,
-                        Value = ValueRef.FromEntityColor(0),
-                    }
-                }
-            };
-            int defId = _defs.Register("typed.decal.color_binding", def);
-            _instances.TryAllocate(defId, entity, 0, out _);
-
-            _system.Update(0.016f);
-
-            var request = _visualRequests.GetSpan()[0];
-            Assert.That(request.Payload[0].Name, Is.EqualTo("Tint"));
-            Assert.That(request.Payload[0].Value.Kind, Is.EqualTo(PresentationTypedValueKind.Color));
-            Assert.That(request.Payload[0].Value.VectorValue, Is.EqualTo(new Vector4(0.2f, 0.3f, 0.4f, 0.5f)));
-        }
-
-        [Test]
-        public void TypedBinding_RejectsUnsupportedDynamicAssetRef()
-        {
-            var def = new PerformerDefinition
-            {
-                VisualKind = PerformerVisualKind.Decal,
-                VisualAssetKey = "decal.asset",
-                MaterialKey = "mat.asset",
-                Bindings = new[]
-                {
-                    new PerformerParamBinding
-                    {
-                        FieldName = "Texture",
-                        ValueKind = PresentationTypedValueKind.AssetRef,
-                        Value = ValueRef.FromConstant(1f),
-                    }
-                }
-            };
-
-            Assert.That(
-                () => _defs.Register("typed.decal.invalid_asset_binding", def),
-                Throws.InvalidOperationException.With.Message.Contains("cannot be resolved"));
-        }
-
-        [Test]
-        public void TypedFieldCommandOverride_ReplacesStaticAndBindingPayload()
-        {
-            var entity = _world.Create(
-                new VisualTransform { Position = Vector3.Zero },
-                new PresentationStableId { Value = 58 },
-                new AttributeBuffer());
-            ref var attributes = ref _world.Get<AttributeBuffer>(entity);
-            attributes.SetBase(7, 1f);
-            attributes.SetCurrent(7, 0.4f);
-
-            var def = new PerformerDefinition
-            {
-                VisualKind = PerformerVisualKind.Decal,
-                VisualAssetKey = "decal.override",
-                MaterialKey = "mat.override",
-                DefaultPayload = new[]
-                {
-                    new PresentationPayloadField("Intensity", PresentationTypedValue.FromFloat(0.2f)),
-                },
-                Bindings = new[]
-                {
-                    new PerformerParamBinding
-                    {
-                        FieldName = "Intensity",
-                        ValueKind = PresentationTypedValueKind.Float,
-                        Value = ValueRef.FromAttribute(7),
-                    }
-                }
-            };
-            int defId = _defs.Register("typed.decal.field_override", def);
-            Assert.That(_instances.TryAllocate(defId, entity, 0, out int handle), Is.True);
-            _instances.SetFieldOverride(handle, "Intensity", PresentationTypedValue.FromFloat(0.9f));
-
-            _system.Update(0.016f);
-
-            var request = _visualRequests.GetSpan()[0];
-            Assert.That(request.Payload, Has.Length.EqualTo(1));
-            Assert.That(request.Payload[0].Name, Is.EqualTo("Intensity"));
-            Assert.That(request.Payload[0].Value.FloatValue, Is.EqualTo(0.9f).Within(0.001f));
-        }
-
-        [Test]
-        public void PresentationVisualCapabilityValidator_ThrowsForTypedPerformerRequestWithoutCapability()
-        {
-            Assert.That(
-                _visualRequests.TryAdd(new PresentationVisualRequest(
-                    PresentationVisualRequestKind.Vfx,
-                    stableId: 77,
-                    assetKey: "vfx.hit",
-                    position: Vector3.Zero,
-                    rotation: Quaternion.Identity,
-                    scale: Vector3.One,
-                    color: Vector4.One,
-                    source: Entity.Null,
-                    target: Entity.Null,
-                    payload: Array.Empty<PresentationPayloadField>())),
-                Is.True);
-
-            var ex = Assert.Throws<InvalidOperationException>(() =>
-                PresentationVisualCapabilityValidator.Validate(
-                    _visualRequests,
-                    new PresentationAdapterCapabilities(PresentationVisualCapabilities.Decal)));
-            Assert.That(ex!.Message, Does.Contain("Vfx"));
-        }
-
-        [Test]
-        public void InstanceScoped_AlphaFade_ReducesAlpha()
-        {
-            var entity = _world.Create(new VisualTransform { Position = Vector3.Zero });
-            var def = new PerformerDefinition
-            {
-                VisualKind = PerformerVisualKind.Marker3D,
-                MeshOrShapeId = 2,
-                DefaultColor = new Vector4(1, 1, 1, 1),
-                DefaultScale = 1f,
-                DefaultLifetime = 1f,
-                AlphaFadeOverLifetime = true,
-            };
-            int defId = _defs.Register("test_70", def);
-            _instances.TryAllocate(defId, entity, 0, out _);
-
-            // Tick to 50% of lifetime
-            _system.Update(0.5f);
-            var span = _primitives.GetSpan();
-            Assert.That(span.Length, Is.EqualTo(1));
-            Assert.That(span[0].Color.W, Is.LessThan(1f));
-            Assert.That(span[0].Color.W, Is.GreaterThan(0f));
-        }
-
-        [Test]
-        public void InstanceScoped_GroundOverlay_FacingRadiansBinding_UsesOwnerFacingAngle()
-        {
-            var entity = _world.Create(
-                new VisualTransform { Position = Vector3.Zero },
-                new FacingDirection { AngleRad = MathF.PI * 0.5f });
-            var def = new PerformerDefinition
-            {
-                VisualKind = PerformerVisualKind.GroundOverlay,
-                MeshOrShapeId = (int)GroundOverlayShape.Line,
-                DefaultScale = 1f,
-                Bindings = new[]
-                {
-                    new PerformerParamBinding
-                    {
-                        ParamKey = WellKnownPerformerParamKeys.OverlayRotation,
-                        Value = ValueRef.FromFacingRadians()
-                    }
-                }
-            };
-            int defId = _defs.Register("test_overlay_facing_radians", def);
-            _instances.TryAllocate(defId, entity, 0, out _);
-
-            _system.Update(0.016f);
-
-            var span = _overlays.GetSpan();
-            Assert.That(span.Length, Is.EqualTo(1));
-            Assert.That(span[0].Rotation, Is.EqualTo(MathF.PI * 0.5f).Within(0.0001f));
-        }
-
-        [Test]
-        public void InstanceScoped_YDrift_OffsetsPosition()
-        {
-            var entity = _world.Create(new VisualTransform { Position = new Vector3(0, 0, 0) });
-            var def = new PerformerDefinition
-            {
-                VisualKind = PerformerVisualKind.Marker3D,
-                MeshOrShapeId = 2,
-                DefaultScale = 1f,
-                DefaultLifetime = 2f,
-                PositionYDriftPerSecond = 1f, // 1 meter per second
-            };
-            int defId = _defs.Register("test_80", def);
-            _instances.TryAllocate(defId, entity, 0, out _);
-
-            _system.Update(1f); // 1 second → Y should be ~1.0
-            var span = _primitives.GetSpan();
-            Assert.That(span.Length, Is.EqualTo(1));
-            Assert.That(span[0].Position.Y, Is.GreaterThan(0.5f));
-        }
-
-        [Test]
-        public void EntityScoped_WorldBar_EmitsForMatchingEntities()
-        {
-            // Create two entities with VisualTransform + AttributeBuffer
-            var e1 = _world.Create(new VisualTransform { Position = new Vector3(1, 0, 0) }, new AttributeBuffer());
-            var e2 = _world.Create(new VisualTransform { Position = new Vector3(2, 0, 0) }, new AttributeBuffer());
-            // One entity without AttributeBuffer — should NOT get a bar
-            var e3 = _world.Create(new VisualTransform { Position = new Vector3(3, 0, 0) });
-
-            var def = new PerformerDefinition
-            {
-                VisualKind = PerformerVisualKind.WorldBar,
-                EntityScope = EntityScopeFilter.AllWithAttributes,
-                DefaultColor = new Vector4(0, 1, 0, 1),
-                PositionOffset = new Vector3(0, 0.5f, 0),
-            };
-            _defs.Register("test_90", def);
-
-            _system.Update(0.016f);
-
-            var span = _hud.GetSpan();
-            Assert.That(span.Length, Is.EqualTo(2)); // e1 and e2 only
-        }
-
-        [Test]
-        public void EntityScoped_CullState_HidesInvisibleEntities()
-        {
-            var visible = _world.Create(
-                new VisualTransform { Position = Vector3.Zero },
-                new AttributeBuffer(),
-                new CullState { IsVisible = true });
-            var hidden = _world.Create(
-                new VisualTransform { Position = Vector3.One },
-                new AttributeBuffer(),
-                new CullState { IsVisible = false });
-
-            var def = new PerformerDefinition
-            {
-                VisualKind = PerformerVisualKind.WorldBar,
-                EntityScope = EntityScopeFilter.AllWithAttributes,
-                VisibilityCondition = new ConditionRef { Inline = InlineConditionKind.OwnerCullVisible },
-            };
-            _defs.Register("test_91", def);
-
-            _system.Update(0.016f);
-
-            var span = _hud.GetSpan();
-            Assert.That(span.Length, Is.EqualTo(1)); // only visible entity
-        }
-
-        [Test]
-        public void EntityScoped_WellKnownWorldBar_IsSuppressed_WhenRenderDebugDisablesHudBars()
-        {
-            _world.Create(new VisualTransform { Position = Vector3.Zero }, new AttributeBuffer());
-            _defs.Register(WellKnownPerformerKeys.EntityHealthBar, new PerformerDefinition
-            {
-                VisualKind = PerformerVisualKind.WorldBar,
-                EntityScope = EntityScopeFilter.AllWithAttributes,
             });
-            _renderDebug.DrawWorldHudBars = false;
-
-            _system.Update(0.016f);
-
-            Assert.That(_hud.GetSpan().Length, Is.EqualTo(0));
-        }
-
-        [Test]
-        public void EntityScoped_WellKnownWorldText_IsSuppressed_WhenRenderDebugDisablesHudText()
-        {
-            _world.Create(new VisualTransform { Position = Vector3.Zero }, new AttributeBuffer());
-            _defs.Register(WellKnownPerformerKeys.EntityWorldText, new PerformerDefinition
+            int childDefId = _definitions.Register("test.runtime.child", new PerformerDefinition
             {
-                VisualKind = PerformerVisualKind.WorldText,
-                EntityScope = EntityScopeFilter.AllWithAttributes,
-            });
-            _renderDebug.DrawWorldHudText = false;
-
-            _system.Update(0.016f);
-
-            Assert.That(_hud.GetSpan().Length, Is.EqualTo(0));
-        }
-
-        [Test]
-        public void InstanceScoped_RoadSpline_EmitsControlPointsAndColorsWithoutParamCollisions()
-        {
-            var def = new PerformerDefinition
-            {
-                VisualKind = PerformerVisualKind.RoadSpline,
-                DefaultColor = new Vector4(0.25f, 0.35f, 0.45f, 0.9f),
-                DefaultScale = 0.75f,
-                Bindings = new[]
+                DefaultLifetime = -1f,
+                ParamDefaults = new[]
                 {
-                    new PerformerParamBinding { ParamKey = 0, Value = ValueRef.FromConstant(2f) },
-                    new PerformerParamBinding { ParamKey = 1, Value = ValueRef.FromConstant(0.1f) },
-                    new PerformerParamBinding { ParamKey = 2, Value = ValueRef.FromConstant(3f) },
-                    new PerformerParamBinding { ParamKey = 3, Value = ValueRef.FromConstant(4f) },
-                    new PerformerParamBinding { ParamKey = 4, Value = ValueRef.FromConstant(0.2f) },
-                    new PerformerParamBinding { ParamKey = 5, Value = ValueRef.FromConstant(6f) },
-                    new PerformerParamBinding { ParamKey = 6, Value = ValueRef.FromConstant(8f) },
-                    new PerformerParamBinding { ParamKey = 7, Value = ValueRef.FromConstant(0.3f) },
-                    new PerformerParamBinding { ParamKey = 8, Value = ValueRef.FromConstant(12f) },
-                    new PerformerParamBinding { ParamKey = 12, Value = ValueRef.FromConstant(1.25f) },
-                    new PerformerParamBinding { ParamKey = 13, Value = ValueRef.FromConstant(0.15f) },
-                    new PerformerParamBinding { ParamKey = 14, Value = ValueRef.FromConstant(3f) },
-                    new PerformerParamBinding { ParamKey = 20, Value = ValueRef.FromConstant(0.9f) },
-                    new PerformerParamBinding { ParamKey = 21, Value = ValueRef.FromConstant(0.8f) },
-                    new PerformerParamBinding { ParamKey = 22, Value = ValueRef.FromConstant(0.2f) },
-                    new PerformerParamBinding { ParamKey = 23, Value = ValueRef.FromConstant(0.7f) },
-                    new PerformerParamBinding { ParamKey = 24, Value = ValueRef.FromConstant(0.1f) },
-                    new PerformerParamBinding { ParamKey = 25, Value = ValueRef.FromConstant(0.2f) },
-                    new PerformerParamBinding { ParamKey = 26, Value = ValueRef.FromConstant(0.3f) },
-                    new PerformerParamBinding { ParamKey = 27, Value = ValueRef.FromConstant(0.4f) },
+                    new ParamDefault { ParamKey = 200, Lane = ParamLane.Float, FloatValue = 2.25f }
                 }
-            };
+            });
 
-            int defId = _defs.Register("test_road_spline", def);
-            Assert.That(
-                _instances.TryAllocate(defId, owner: default, scopeId: 0, PresentationAnchorKind.WorldPosition, new Vector3(10f, 0.5f, 20f), stableId: 701, out _),
-                Is.True);
+            _commands.TryAdd(new PerformerCommand
+            {
+                CommandKind = PerformerCommandKind.CreatePerformer,
+                PerformerDefinitionId = parentDefId,
+                ScopeTag = 10,
+                AnchorKind = PresentationAnchorKind.Entity,
+                Source = owner,
+            });
+            TickAndFlush(0.016f);
+            _commands.Clear();
 
-            _system.Update(0.016f);
+            _commands.TryAdd(new PerformerCommand
+            {
+                CommandKind = PerformerCommandKind.CreatePerformer,
+                PerformerDefinitionId = childDefId,
+                PerformerEntity = Entity.Null,
+                ParentEntity = Entity.Null,
+                ScopeTag = 20,
+                AnchorKind = PresentationAnchorKind.Entity,
+                Source = owner,
+            });
+            TickAndFlush(0.016f);
 
-            Assert.That(_roadSplines.Count, Is.EqualTo(1));
-            Assert.That(_roadSplines.StableIds[0], Is.EqualTo(701));
-            Assert.That(_roadSplines.P0X[0], Is.EqualTo(10f).Within(0.001f));
-            Assert.That(_roadSplines.P1X[0], Is.EqualTo(12f).Within(0.001f));
-            Assert.That(_roadSplines.P1Z[0], Is.EqualTo(23f).Within(0.001f));
-            Assert.That(_roadSplines.P2X[0], Is.EqualTo(14f).Within(0.001f));
-            Assert.That(_roadSplines.P2Z[0], Is.EqualTo(26f).Within(0.001f));
-            Assert.That(_roadSplines.P3X[0], Is.EqualTo(18f).Within(0.001f));
-            Assert.That(_roadSplines.P3Z[0], Is.EqualTo(32f).Within(0.001f));
-            Assert.That(_roadSplines.Width[0], Is.EqualTo(1.25f).Within(0.001f));
-            Assert.That(_roadSplines.BorderWidth[0], Is.EqualTo(0.15f).Within(0.001f));
-            Assert.That(_roadSplines.FillR[0], Is.EqualTo(0.9f).Within(0.001f));
-            Assert.That(_roadSplines.FillG[0], Is.EqualTo(0.8f).Within(0.001f));
-            Assert.That(_roadSplines.FillB[0], Is.EqualTo(0.2f).Within(0.001f));
-            Assert.That(_roadSplines.FillA[0], Is.EqualTo(0.7f).Within(0.001f));
-            Assert.That(_roadSplines.BorderR[0], Is.EqualTo(0.1f).Within(0.001f));
-            Assert.That(_roadSplines.BorderG[0], Is.EqualTo(0.2f).Within(0.001f));
-            Assert.That(_roadSplines.BorderB[0], Is.EqualTo(0.3f).Within(0.001f));
-            Assert.That(_roadSplines.BorderA[0], Is.EqualTo(0.4f).Within(0.001f));
-            Assert.That(_roadSplines.Style[0], Is.EqualTo((byte)3));
+            Assert.That(_instances.ActiveCount, Is.EqualTo(2));
+        }
+
+        [Test]
+        public void SetParamCommand_WritesRequestedLaneToBlackboard()
+        {
+            var owner = _world.Create();
+            int defId = _definitions.Register("test.runtime.param_lanes", new PerformerDefinition
+            {
+                DefaultLifetime = -1f,
+            });
+
+            _commands.TryAdd(new PerformerCommand
+            {
+                CommandKind = PerformerCommandKind.CreatePerformer,
+                PerformerDefinitionId = defId,
+                ScopeTag = 1,
+                AnchorKind = PresentationAnchorKind.Entity,
+                Source = owner,
+            });
+            TickAndFlush(0.016f);
+            _commands.Clear();
+
+            _commands.TryAdd(new PerformerCommand
+            {
+                CommandKind = PerformerCommandKind.SetParam,
+                PerformerEntity = Entity.Null,
+                ParamKey = 10,
+                ParamLane = ParamLane.Float,
+                ParamValue = 4.5f,
+            });
+            _commands.TryAdd(new PerformerCommand
+            {
+                CommandKind = PerformerCommandKind.SetParam,
+                PerformerEntity = Entity.Null,
+                ParamKey = 11,
+                ParamLane = ParamLane.Int,
+                IntValue = 9,
+            });
+            _commands.TryAdd(new PerformerCommand
+            {
+                CommandKind = PerformerCommandKind.SetParam,
+                PerformerEntity = Entity.Null,
+                ParamKey = 12,
+                ParamLane = ParamLane.Vector,
+                VectorValue = new Vector4(8f, 7f, 6f, 5f),
+            });
+            TickAndFlush(0.016f);
+
+            var query = new QueryDescription().WithAll<PerformerState>();
+            Entity performer = Entity.Null;
+            _world.Query(in query, (Entity e, ref PerformerState s) => { performer = e; });
+            Assert.That(performer, Is.Not.EqualTo(Entity.Null));
+
+            Assert.That(_instances.ResolveFloat(performer, 10, -1f), Is.EqualTo(4.5f).Within(0.001f));
+            Assert.That(_instances.ResolveInt(performer, 11, -1), Is.EqualTo(9));
+            Assert.That(_instances.ResolveVector(performer, 12, Vector4.Zero), Is.EqualTo(new Vector4(8f, 7f, 6f, 5f)));
+        }
+
+        [Test]
+        public void CreatePerformerDefinition_WithActiveByDefaultBehaviors_SeedsBehaviorMask()
+        {
+            var owner = _world.Create();
+            int defId = _definitions.Register("test.runtime.behaviors", new PerformerDefinition
+            {
+                DefaultLifetime = -1f,
+                Behaviors = new[]
+                {
+                    new BehaviorSlot { SlotIndex = 0, ActiveByDefault = true },
+                    new BehaviorSlot { SlotIndex = 2, ActiveByDefault = true },
+                    new BehaviorSlot { SlotIndex = 5, ActiveByDefault = false },
+                }
+            });
+
+            _commands.TryAdd(new PerformerCommand
+            {
+                CommandKind = PerformerCommandKind.CreatePerformer,
+                PerformerDefinitionId = defId,
+                ScopeTag = 3,
+                AnchorKind = PresentationAnchorKind.Entity,
+                Source = owner,
+            });
+            TickAndFlush(0.016f);
+
+            var query = new QueryDescription().WithAll<PerformerState>();
+            Entity performer = Entity.Null;
+            _world.Query(in query, (Entity e, ref PerformerState s) => { performer = e; });
+            Assert.That(performer, Is.Not.EqualTo(Entity.Null));
+            Assert.That(_world.Get<PerformerState>(performer).BehaviorActiveMask, Is.EqualTo((1u << 0) | (1u << 2)));
         }
     }
 
     [TestFixture]
-    public class PresentationBridgeGasTests
+    public class GameplayPresentationProjectionGasTests
     {
         private World _world;
         private GasPresentationEventBuffer _gasEvents;
         private PresentationEventStream _stream;
-        private PresentationBridgeSystem _bridge;
+        private GameplayPresentationProjectionSystem _projection;
 
         [SetUp]
         public void Setup()
         {
             _world = World.Create();
-            _gasEvents = new GasPresentationEventBuffer();
-            _stream = new PresentationEventStream();
+            _gasEvents = new GasPresentationEventBuffer(8);
+            _stream = new PresentationEventStream(PresentationTestConstants.EventStreamCapacity);
             var eventBus = new GameplayEventBus();
             var session = new GameSession();
-            _bridge = new PresentationBridgeSystem(_world, eventBus, _stream, session, _gasEvents);
+            var ownerChanges = new PresentationOwnerChangeBuffer(8);
+            _projection = new GameplayPresentationProjectionSystem(_world, eventBus, _stream, session, _gasEvents, ownerChanges);
         }
 
         [TearDown]
         public void TearDown()
         {
-            _bridge?.Dispose();
+            _projection?.Dispose();
             _world?.Dispose();
         }
 
         [Test]
-        public void EffectApplied_BridgedToStream()
+        public void EffectApplied_ProjectedToStream()
         {
             var actor = _world.Create();
             _gasEvents.Publish(new GasPresentationEvent
@@ -1001,28 +825,30 @@ namespace Ludots.Tests.Presentation
                 EffectTemplateId = 10,
             });
 
-            _bridge.Update(0.016f);
+            _projection.Update(0.016f);
 
             var span = _stream.GetSpan();
             Assert.That(span.Length, Is.GreaterThanOrEqualTo(1));
-            // Find the EffectApplied event
             bool found = false;
             for (int i = 0; i < span.Length; i++)
             {
-                if (span[i].Kind == PresentationEventKind.EffectApplied)
+                if (span[i].Kind != PresentationEventKind.EffectApplied)
                 {
-                    Assert.That(span[i].Magnitude, Is.EqualTo(-25f));
-                    Assert.That(span[i].PayloadA, Is.EqualTo(1)); // attributeId
-                    Assert.That(span[i].KeyId, Is.EqualTo(10));   // effectTemplateId
-                    found = true;
-                    break;
+                    continue;
                 }
+
+                Assert.That(span[i].Magnitude, Is.EqualTo(-25f));
+                Assert.That(span[i].PayloadA, Is.EqualTo(1));
+                Assert.That(span[i].KeyId, Is.EqualTo(10));
+                found = true;
+                break;
             }
-            Assert.That(found, Is.True, "EffectApplied event not bridged");
+
+            Assert.That(found, Is.True, "EffectApplied event not projected");
         }
 
         [Test]
-        public void CastCommitted_BridgedToStream()
+        public void CastCommitted_ProjectedToStream()
         {
             var actor = _world.Create();
             _gasEvents.Publish(new GasPresentationEvent
@@ -1033,25 +859,28 @@ namespace Ludots.Tests.Presentation
                 AbilityId = 42,
             });
 
-            _bridge.Update(0.016f);
+            _projection.Update(0.016f);
 
             var span = _stream.GetSpan();
             bool found = false;
             for (int i = 0; i < span.Length; i++)
             {
-                if (span[i].Kind == PresentationEventKind.CastCommitted)
+                if (span[i].Kind != PresentationEventKind.CastCommitted)
                 {
-                    Assert.That(span[i].PayloadA, Is.EqualTo(2)); // slot
-                    Assert.That(span[i].KeyId, Is.EqualTo(42));   // abilityId
-                    found = true;
-                    break;
+                    continue;
                 }
+
+                Assert.That(span[i].PayloadA, Is.EqualTo(2));
+                Assert.That(span[i].KeyId, Is.EqualTo(42));
+                found = true;
+                break;
             }
-            Assert.That(found, Is.True, "CastCommitted event not bridged");
+
+            Assert.That(found, Is.True, "CastCommitted event not projected");
         }
 
         [Test]
-        public void CastFailed_BridgedToStream()
+        public void CastFailed_ProjectedToStream()
         {
             var actor = _world.Create();
             _gasEvents.Publish(new GasPresentationEvent
@@ -1063,51 +892,46 @@ namespace Ludots.Tests.Presentation
                 FailReason = AbilityCastFailReason.OnCooldown,
             });
 
-            _bridge.Update(0.016f);
+            _projection.Update(0.016f);
 
             var span = _stream.GetSpan();
             bool found = false;
             for (int i = 0; i < span.Length; i++)
             {
-                if (span[i].Kind == PresentationEventKind.CastFailed)
+                if (span[i].Kind != PresentationEventKind.CastFailed)
                 {
-                    Assert.That(span[i].PayloadB, Is.EqualTo((int)AbilityCastFailReason.OnCooldown));
-                    found = true;
-                    break;
+                    continue;
                 }
+
+                Assert.That(span[i].PayloadB, Is.EqualTo((int)AbilityCastFailReason.OnCooldown));
+                found = true;
+                break;
             }
-            Assert.That(found, Is.True, "CastFailed event not bridged");
+
+            Assert.That(found, Is.True, "CastFailed event not projected");
         }
     }
 
     [TestFixture]
-    public class BuiltinPerformerDefinitionTests
+    public class CorePerformerDefinitionTests
     {
         [Test]
-        public void Register_AllBuiltinIds_Present()
+        public void LoadFromJson_AllCoreBuiltinIds_Present()
         {
-            var meshes = new MeshAssetRegistry();
             var registry = new PerformerDefinitionRegistry();
-            BuiltinPerformerDefinitions.Register(
-                registry,
-                meshes,
-                key => string.Equals(key, WellKnownHudTextKeys.CombatDelta, StringComparison.Ordinal) ? 1 : 0);
+            LoadCorePerformerDefinitions(registry);
 
             Assert.That(registry.TryGet(registry.GetId(WellKnownPerformerKeys.CastCommittedMarker), out _), Is.True);
             Assert.That(registry.TryGet(registry.GetId(WellKnownPerformerKeys.CastFailedMarker), out _), Is.True);
             Assert.That(registry.TryGet(registry.GetId(WellKnownPerformerKeys.FloatingCombatText), out _), Is.True);
-            Assert.That(registry.TryGet(registry.GetId(WellKnownPerformerKeys.EntityHealthBar), out _), Is.True);
+            Assert.That(registry.GetId(WellKnownPerformerKeys.EntityHealthBar), Is.EqualTo(0));
         }
 
         [Test]
         public void FloatingCombatText_HasYDriftAndAlphaFade()
         {
-            var meshes = new MeshAssetRegistry();
             var registry = new PerformerDefinitionRegistry();
-            BuiltinPerformerDefinitions.Register(
-                registry,
-                meshes,
-                key => string.Equals(key, WellKnownHudTextKeys.CombatDelta, StringComparison.Ordinal) ? 1 : 0);
+            LoadCorePerformerDefinitions(registry);
             registry.TryGet(registry.GetId(WellKnownPerformerKeys.FloatingCombatText), out var def);
 
             Assert.That(def.PositionYDriftPerSecond, Is.GreaterThan(0f));
@@ -1116,44 +940,105 @@ namespace Ludots.Tests.Presentation
         }
 
         [Test]
-        public void EntityHealthBar_IsEntityScoped()
+        public void EntityHealthBar_IsConfigDefined_NotBuiltin()
         {
-            var meshes = new MeshAssetRegistry();
             var registry = new PerformerDefinitionRegistry();
-            BuiltinPerformerDefinitions.Register(
-                registry,
-                meshes,
-                key => string.Equals(key, WellKnownHudTextKeys.CombatDelta, StringComparison.Ordinal) ? 1 : 0);
-            registry.TryGet(registry.GetId(WellKnownPerformerKeys.EntityHealthBar), out var def);
+            LoadCorePerformerDefinitions(registry);
 
-            Assert.That(def.EntityScope, Is.EqualTo(EntityScopeFilter.AllWithAttributes));
-            Assert.That(def.VisualKind, Is.EqualTo(PerformerVisualKind.WorldBar));
+            Assert.That(registry.GetId(WellKnownPerformerKeys.EntityHealthBar), Is.GreaterThan(0));
+        }
+
+        private static void LoadCorePerformerDefinitions(PerformerDefinitionRegistry registry)
+        {
+            string repoRoot = FindRepoRoot();
+            int healthAttrId = AttributeRegistry.Register("Health");
+
+            var vfs = new VirtualFileSystem();
+            vfs.Mount("Core", Path.Combine(repoRoot, "assets"));
+
+            var modLoader = new ModLoader(vfs, new FunctionRegistry(), new TriggerManager());
+            vfs.Mount("LudotsCoreMod", Path.Combine(repoRoot, "mods", "LudotsCoreMod"));
+            modLoader.LoadedModIds.Add("LudotsCoreMod");
+
+            var pipeline = new ConfigPipeline(vfs, modLoader);
+            var catalog = ConfigCatalogLoader.Load(pipeline);
+            var meshes = new MeshAssetRegistry();
+            var prefabs = new PrefabRegistry();
+            new MeshAssetConfigLoader(pipeline, meshes, prefabs).Load(catalog);
+            var materialAssets = new PresentationMaterialRegistry();
+            var textCatalog = new PresentationTextCatalogLoader(pipeline).Load(catalog);
+            var templateRegistry = new DataRegistry<EntityTemplate>(pipeline);
+            templateRegistry.Load("Entities/templates.json", catalog);
+            var templateKeys = new EntityTemplateKeyRegistry();
+            foreach (EntityTemplate template in templateRegistry.GetAll())
+            {
+                templateKeys.Register(template.Id);
+            }
+
+            var animatorControllers = new AnimatorControllerRegistry();
+            new AnimatorControllerConfigLoader(pipeline, animatorControllers).Load(catalog);
+            var animationClips = new AnimationClipRegistry();
+            new AnimationClipConfigLoader(pipeline, animationClips).Load(catalog);
+            var animationProfiles = new AnimationProfileRegistry();
+            new AnimationProfileConfigLoader(pipeline, animationProfiles, animatorControllers, animationClips).Load(catalog);
+
+            new PerformerDefinitionConfigLoader(
+                pipeline,
+                registry,
+                resolveAttributeName: name => string.Equals(name, "Health", StringComparison.Ordinal) ? healthAttrId : 0,
+                resolveMeshId: meshes.GetId,
+                resolveTextTokenId: textCatalog.GetTokenId,
+                resolveEntityTemplateKey: templateKeys.GetId,
+                resolveMaterialId: materialAssets.GetId,
+                resolveAnimatorControllerId: animatorControllers.GetId,
+                resolveAnimationProfileId: animationProfiles.GetId,
+                resolveBehaviorAssetId: (kind, key) => kind switch
+                {
+                    AssetKind.Mesh or AssetKind.SkinnedMesh or AssetKind.Decal or AssetKind.VFX or AssetKind.Spline or AssetKind.Sound => meshes.GetId(key),
+                    AssetKind.WorldText => textCatalog.GetTokenId(key),
+                    AssetKind.GroundOverlay => Enum.TryParse<GroundOverlayShape>(key, ignoreCase: false, out var shape) ? (int)shape : 0,
+                    _ => 0,
+                }).Load(catalog);
+        }
+
+        private static string FindRepoRoot()
+        {
+            string current = TestContext.CurrentContext.WorkDirectory;
+            while (!string.IsNullOrEmpty(current))
+            {
+                if (Directory.Exists(Path.Combine(current, "mods")) &&
+                    File.Exists(Path.Combine(current, "AGENTS.md")))
+                {
+                    return current;
+                }
+
+                current = Path.GetDirectoryName(current)!;
+            }
+
+            throw new DirectoryNotFoundException("Repository root not found from test work directory.");
         }
     }
 
     [TestFixture]
-    public class PerformerTemplateFilterTests
+    public class PerformerLifecycleRuleFilterTests
     {
         private World _world;
-        private PerformerInstanceBuffer _instances;
+        private PresentationEventStream _events;
+        private PerformerCommandBuffer _commands;
         private PerformerDefinitionRegistry _defs;
-        private WorldHudBatchBuffer _hud;
-        private PerformerEmitSystem _system;
+        private GraphProgramRegistry _programs;
+        private PerformerRuleSystem _system;
 
         [SetUp]
         public void Setup()
         {
             _world = World.Create();
-            _instances = new PerformerInstanceBuffer();
+            _events = new PresentationEventStream(PresentationTestConstants.EventStreamCapacity);
+            _commands = new PerformerCommandBuffer();
             _defs = new PerformerDefinitionRegistry();
-            _hud = new WorldHudBatchBuffer();
-            var programs = new GraphProgramRegistry();
-            var api = new GasGraphRuntimeApi(_world, null, null, null);
-            var globals = new System.Collections.Generic.Dictionary<string, object>();
-            _system = new PerformerEmitSystem(
-                _world, _instances, _defs,
-                new GroundOverlayBuffer(), new PrimitiveDrawBuffer(), _hud,
-                programs, api, globals);
+            _programs = new GraphProgramRegistry();
+            var api = new GasGraphRuntimeApi(_world, spatialQueries: null, coords: null, eventBus: null);
+            _system = new PerformerRuleSystem(_world, _events, _commands, _defs, runtime: null, _programs, api, new System.Collections.Generic.Dictionary<string, object>());
         }
 
         [TearDown]
@@ -1164,87 +1049,120 @@ namespace Ludots.Tests.Presentation
         }
 
         [Test]
-        public void EntityScopedPerformer_WithRequiredTemplateId_SkipsMismatch()
+        public void LifecycleRule_KeyFilter_SkipsMismatch()
         {
-            _world.Create(
-                new VisualTransform { Position = Vector3.Zero },
-                new AttributeBuffer(),
-                new VisualTemplateRef { TemplateId = 5 });
-
-            var def = new PerformerDefinition
+            _defs.Register("test.lifecycle.mismatch", new PerformerDefinition
             {
-                VisualKind = PerformerVisualKind.WorldBar,
-                EntityScope = EntityScopeFilter.AllWithAttributes,
-                RequiredTemplateId = 10,
-            };
-            _defs.Register("test_tmpl_mismatch", def);
+                Rules = new[]
+                {
+                    new PerformerRule
+                    {
+                        Event = new EventFilter { Kind = PresentationEventKind.EntitySpawned, KeyId = 10 },
+                        Condition = ConditionRef.AlwaysTrue,
+                        Command = new PerformerCommand
+                        {
+                            CommandKind = PerformerCommandKind.CreatePerformer,
+                            PerformerDefinitionId = 77,
+                            ScopeSource = PerformerCommandScopeSource.EventPayloadA,
+                        }
+                    }
+                }
+            });
+
+            var owner = _world.Create();
+            _events.TryAdd(new PresentationEvent
+            {
+                Kind = PresentationEventKind.EntitySpawned,
+                KeyId = 11,
+                Source = owner,
+                PayloadA = 123,
+            });
 
             _system.Update(0.016f);
 
-            Assert.That(_hud.GetSpan().Length, Is.EqualTo(0));
+            Assert.That(_commands.GetSpan().Length, Is.EqualTo(0));
         }
 
         [Test]
-        public void EntityScopedPerformer_WithRequiredTemplateId_IncludesMatch()
+        public void LifecycleRule_KeyFilter_EmitsScopeFromEventPayload()
         {
-            _world.Create(
-                new VisualTransform { Position = Vector3.Zero },
-                new AttributeBuffer(),
-                new VisualTemplateRef { TemplateId = 10 });
-
-            var def = new PerformerDefinition
+            _defs.Register("test.lifecycle.match", new PerformerDefinition
             {
-                VisualKind = PerformerVisualKind.WorldBar,
-                EntityScope = EntityScopeFilter.AllWithAttributes,
-                RequiredTemplateId = 10,
-            };
-            _defs.Register("test_tmpl_match", def);
+                Rules = new[]
+                {
+                    new PerformerRule
+                    {
+                        Event = new EventFilter { Kind = PresentationEventKind.EntitySpawned, KeyId = 10 },
+                        Condition = ConditionRef.AlwaysTrue,
+                        Command = new PerformerCommand
+                        {
+                            CommandKind = PerformerCommandKind.CreatePerformer,
+                            PerformerDefinitionId = 77,
+                            ScopeSource = PerformerCommandScopeSource.EventPayloadA,
+                        }
+                    }
+                }
+            });
+
+            var owner = _world.Create();
+            _events.TryAdd(new PresentationEvent
+            {
+                Kind = PresentationEventKind.EntitySpawned,
+                KeyId = 10,
+                Source = owner,
+                PayloadA = 456,
+            });
 
             _system.Update(0.016f);
 
-            Assert.That(_hud.GetSpan().Length, Is.EqualTo(1));
+            var span = _commands.GetSpan();
+            Assert.That(span.Length, Is.EqualTo(1));
+            Assert.That(span[0].CommandKind, Is.EqualTo(PerformerCommandKind.CreatePerformer));
+            Assert.That(span[0].PerformerDefinitionId, Is.EqualTo(77));
+            Assert.That(span[0].ScopeTag, Is.EqualTo(456));
+            Assert.That(span[0].Source, Is.EqualTo(owner));
         }
 
         [Test]
-        public void EntityScopedPerformer_WithRequiredTemplateId_SkipsEntitiesWithoutComponent()
+        public void PerformerCreatedEvent_PromotesPayloadEntity_ToChildParentEntity()
         {
-            // Entity without VisualTemplateRef should be skipped
-            _world.Create(
-                new VisualTransform { Position = Vector3.Zero },
-                new AttributeBuffer());
-
-            var def = new PerformerDefinition
+            _defs.Register("test.lifecycle.child", new PerformerDefinition
             {
-                VisualKind = PerformerVisualKind.WorldBar,
-                EntityScope = EntityScopeFilter.AllWithAttributes,
-                RequiredTemplateId = 10,
-            };
-            _defs.Register("test_tmpl_missing", def);
+                Rules = new[]
+                {
+                    new PerformerRule
+                    {
+                        Event = new EventFilter { Kind = PresentationEventKind.PerformerCreated, KeyId = -1 },
+                        Condition = ConditionRef.AlwaysTrue,
+                        Command = new PerformerCommand
+                        {
+                            CommandKind = PerformerCommandKind.CreatePerformer,
+                            PerformerDefinitionId = 99,
+                            ParentEntity = Entity.Null,
+                            ScopeTag = 55,
+                        }
+                    }
+                }
+            });
+
+            var owner = _world.Create();
+            _events.TryAdd(new PresentationEvent
+            {
+                Kind = PresentationEventKind.PerformerCreated,
+                KeyId = 1,
+                Source = owner,
+                Target = owner,
+                PayloadA = 23,
+                PayloadB = 77,
+            });
 
             _system.Update(0.016f);
 
-            Assert.That(_hud.GetSpan().Length, Is.EqualTo(0));
-        }
-
-        [Test]
-        public void EntityScopedPerformer_ZeroRequiredTemplateId_DoesNotFilter()
-        {
-            _world.Create(
-                new VisualTransform { Position = Vector3.Zero },
-                new AttributeBuffer(),
-                new VisualTemplateRef { TemplateId = 5 });
-
-            var def = new PerformerDefinition
-            {
-                VisualKind = PerformerVisualKind.WorldBar,
-                EntityScope = EntityScopeFilter.AllWithAttributes,
-                RequiredTemplateId = 0,
-            };
-            _defs.Register("test_tmpl_zero", def);
-
-            _system.Update(0.016f);
-
-            Assert.That(_hud.GetSpan().Length, Is.EqualTo(1));
+            var span = _commands.GetSpan();
+            Assert.That(span.Length, Is.EqualTo(1));
+            Assert.That(span[0].PerformerDefinitionId, Is.EqualTo(99));
+            Assert.That(span[0].ParentEntity.Id, Is.EqualTo(23));
+            Assert.That(span[0].ScopeTag, Is.EqualTo(55));
         }
     }
 
@@ -1254,7 +1172,7 @@ namespace Ludots.Tests.Presentation
         [Test]
         public void BarConstants_MatchEmitSystemConventions()
         {
-            // These values must match the hardcoded keys in PerformerEmitSystem.EmitWorldBar
+            // These values must stay aligned with the canonical world-bar param mapping.
             Assert.That(WellKnownPerformerParamKeys.BarFillRatio, Is.EqualTo(0));
             Assert.That(WellKnownPerformerParamKeys.BarWidth, Is.EqualTo(1));
             Assert.That(WellKnownPerformerParamKeys.BarHeight, Is.EqualTo(2));
@@ -1276,7 +1194,6 @@ namespace Ludots.Tests.Presentation
             Assert.That(WellKnownPerformerParamKeys.TextFontSize, Is.EqualTo(3));
             Assert.That(WellKnownPerformerParamKeys.TextColorR, Is.EqualTo(4));
             Assert.That(WellKnownPerformerParamKeys.TextTokenId, Is.EqualTo(15));
-            Assert.That(WellKnownPerformerParamKeys.TextValueMode, Is.EqualTo(16));
         }
 
         [Test]

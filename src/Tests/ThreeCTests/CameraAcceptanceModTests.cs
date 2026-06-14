@@ -4,6 +4,7 @@ using System.Diagnostics;
 using System.IO;
 using System.Numerics;
 using System.Reflection;
+using System.Text.RegularExpressions;
 using System.Text;
 using System.Text.Json;
 using Arch.Core;
@@ -104,6 +105,29 @@ namespace Ludots.Tests.ThreeC.Acceptance
                 }
             }
             Assert.That(foundCueMarker, Is.False, "Transient marker should expire after its configured lifetime.");
+        }
+
+        [Test]
+        public void CameraAcceptanceMod_ProjectionMap_RaylibEvidence_ValidatesTypedCueMarkerVisuals()
+        {
+            string repoRoot = FindRepoRoot();
+            string artifactDir = Path.Combine(repoRoot, "artifacts", "acceptance", "camera-acceptance");
+            Directory.CreateDirectory(artifactDir);
+
+            RaylibTypedVisualEvidenceStatus evidence = ResolveTypedCueMarkerRaylibEvidenceStatus(artifactDir);
+            if (!evidence.Validated)
+            {
+                return;
+            }
+
+            Assert.That(evidence.LastMeshCount, Is.GreaterThan(0),
+                $"Expected Raylib diagnostic '{evidence.DiagnosticPath}' to report mesh visuals for the camera acceptance typed cue marker.");
+            Assert.That(evidence.LastDecalCount, Is.GreaterThan(0),
+                $"Expected Raylib diagnostic '{evidence.DiagnosticPath}' to report decal visuals for the camera acceptance typed cue marker.");
+            Assert.That(evidence.LastVfxCount, Is.GreaterThan(0),
+                $"Expected Raylib diagnostic '{evidence.DiagnosticPath}' to report vfx visuals for the camera acceptance typed cue marker.");
+            Assert.That(evidence.LastSurfaceCount, Is.GreaterThan(0),
+                $"Expected Raylib diagnostic '{evidence.DiagnosticPath}' to report surface visuals for the camera acceptance typed cue marker.");
         }
 
         [Test]
@@ -1083,7 +1107,7 @@ namespace Ludots.Tests.ThreeC.Acceptance
             screenRayProvider.BindPresenter(cameraPresenter);
             engine.SetService(CoreServiceKeys.ScreenProjector, screenProjector);
             engine.SetService(CoreServiceKeys.ScreenRayProvider, screenRayProvider);
-            var culling = new CameraCullingSystem(engine.World, engine.GameSession.Camera, engine.SpatialQueries, view, timingDiagnostics);
+            var culling = new CameraCullingSystem(engine.World, engine.GameSession.Camera, engine.SpatialQueries, view, cullingConfig: engine.MergedConfig.Presentation.CameraCulling, timingDiagnostics: timingDiagnostics);
             engine.RegisterPresentationSystem(culling);
             engine.SetService(CoreServiceKeys.CameraCullingDebugState, culling.DebugState);
             engine.GlobalContext["Tests.CameraAcceptanceMod.HeadlessCamera"] = new HeadlessCameraRuntime(
@@ -2186,6 +2210,86 @@ namespace Ludots.Tests.ThreeC.Acceptance
             throw new DirectoryNotFoundException("Failed to locate repository root from test output directory.");
         }
 
+        private static RaylibTypedVisualEvidenceStatus ResolveTypedCueMarkerRaylibEvidenceStatus(string artifactDir)
+        {
+            string screenshotPath = Environment.GetEnvironmentVariable("LUDOTS_CAMERA_ACCEPTANCE_SCREENSHOT_PATH");
+            if (string.IsNullOrWhiteSpace(screenshotPath))
+            {
+                screenshotPath = Path.Combine(artifactDir, "camera-acceptance-raylib.png");
+            }
+
+            string diagnosticPath = Environment.GetEnvironmentVariable("LUDOTS_CAMERA_ACCEPTANCE_DIAGNOSTIC_PATH");
+            if (string.IsNullOrWhiteSpace(diagnosticPath))
+            {
+                diagnosticPath = Path.Combine(artifactDir, "camera-acceptance-raylib-diagnostic.log");
+            }
+
+            string notBeforeRaw = Environment.GetEnvironmentVariable("LUDOTS_CAMERA_ACCEPTANCE_SCREENSHOT_NOT_BEFORE_UTC");
+            bool requireValidation =
+                !string.IsNullOrWhiteSpace(notBeforeRaw) ||
+                string.Equals(Environment.GetEnvironmentVariable("LUDOTS_CAMERA_ACCEPTANCE_REQUIRE_RAYLIB_EVIDENCE"), "1", StringComparison.Ordinal);
+
+            if (!requireValidation)
+            {
+                return new RaylibTypedVisualEvidenceStatus(
+                    screenshotPath,
+                    diagnosticPath,
+                    false,
+                    null,
+                    null,
+                    null,
+                    0,
+                    0,
+                    0,
+                    0);
+            }
+
+            Assert.That(string.IsNullOrWhiteSpace(notBeforeRaw), Is.False,
+                "Camera acceptance Raylib evidence validation requires LUDOTS_CAMERA_ACCEPTANCE_SCREENSHOT_NOT_BEFORE_UTC.");
+            Assert.That(DateTimeOffset.TryParse(notBeforeRaw, out DateTimeOffset notBeforeUtc), Is.True,
+                $"Could not parse LUDOTS_CAMERA_ACCEPTANCE_SCREENSHOT_NOT_BEFORE_UTC='{notBeforeRaw}'.");
+            Assert.That(File.Exists(screenshotPath), Is.True, $"Expected fresh Raylib screenshot at '{screenshotPath}'.");
+            Assert.That(File.Exists(diagnosticPath), Is.True, $"Expected fresh Raylib diagnostic log at '{diagnosticPath}'.");
+
+            DateTimeOffset screenshotWrittenAtUtc = File.GetLastWriteTimeUtc(screenshotPath);
+            DateTimeOffset diagnosticWrittenAtUtc = File.GetLastWriteTimeUtc(diagnosticPath);
+            Assert.That(screenshotWrittenAtUtc, Is.GreaterThanOrEqualTo(notBeforeUtc),
+                $"Raylib screenshot '{screenshotPath}' is stale: {screenshotWrittenAtUtc:O} < {notBeforeUtc:O}.");
+            Assert.That(diagnosticWrittenAtUtc, Is.GreaterThanOrEqualTo(notBeforeUtc),
+                $"Raylib diagnostic '{diagnosticPath}' is stale: {diagnosticWrittenAtUtc:O} < {notBeforeUtc:O}.");
+
+            string diagnosticText = File.ReadAllText(diagnosticPath);
+            Match match = Regex.Match(
+                diagnosticText,
+                @"prefab-visual-counts lastFrame\(mesh=(?<mesh>\d+),decal=(?<decal>\d+),vfx=(?<vfx>\d+),surface=(?<surface>\d+)\)",
+                RegexOptions.CultureInvariant | RegexOptions.RightToLeft);
+            Assert.That(match.Success, Is.True,
+                $"Expected Raylib diagnostic '{diagnosticPath}' to contain prefab visual counts for the screenshot frame.");
+
+            return new RaylibTypedVisualEvidenceStatus(
+                screenshotPath,
+                diagnosticPath,
+                true,
+                screenshotWrittenAtUtc,
+                diagnosticWrittenAtUtc,
+                notBeforeUtc,
+                ParseMatchGroup(match, "mesh"),
+                ParseMatchGroup(match, "decal"),
+                ParseMatchGroup(match, "vfx"),
+                ParseMatchGroup(match, "surface"));
+        }
+
+        private static int ParseMatchGroup(Match match, string groupName)
+        {
+            Group group = match.Groups[groupName];
+            if (!group.Success || !int.TryParse(group.Value, out int parsed))
+            {
+                throw new InvalidOperationException($"Failed to parse diagnostic counter '{groupName}' from '{match.Value}'.");
+            }
+
+            return parsed;
+        }
+
         private readonly record struct HotpathHarnessSnapshot(
             string Step,
             long Tick,
@@ -2211,6 +2315,44 @@ namespace Ludots.Tests.ThreeC.Acceptance
             int OverlayTextLayoutCacheCount,
             string DiagnosticsSummary,
             string HotpathSummary);
+
+        private sealed class RaylibTypedVisualEvidenceStatus
+        {
+            public RaylibTypedVisualEvidenceStatus(
+                string screenshotPath,
+                string diagnosticPath,
+                bool validated,
+                DateTimeOffset? screenshotWrittenAtUtc,
+                DateTimeOffset? diagnosticWrittenAtUtc,
+                DateTimeOffset? notBeforeUtc,
+                int lastMeshCount,
+                int lastDecalCount,
+                int lastVfxCount,
+                int lastSurfaceCount)
+            {
+                ScreenshotPath = screenshotPath;
+                DiagnosticPath = diagnosticPath;
+                Validated = validated;
+                ScreenshotWrittenAtUtc = screenshotWrittenAtUtc;
+                DiagnosticWrittenAtUtc = diagnosticWrittenAtUtc;
+                NotBeforeUtc = notBeforeUtc;
+                LastMeshCount = lastMeshCount;
+                LastDecalCount = lastDecalCount;
+                LastVfxCount = lastVfxCount;
+                LastSurfaceCount = lastSurfaceCount;
+            }
+
+            public string ScreenshotPath { get; }
+            public string DiagnosticPath { get; }
+            public bool Validated { get; }
+            public DateTimeOffset? ScreenshotWrittenAtUtc { get; }
+            public DateTimeOffset? DiagnosticWrittenAtUtc { get; }
+            public DateTimeOffset? NotBeforeUtc { get; }
+            public int LastMeshCount { get; }
+            public int LastDecalCount { get; }
+            public int LastVfxCount { get; }
+            public int LastSurfaceCount { get; }
+        }
 
         private sealed class HeadlessNativeOverlayHarness : IDisposable
         {
@@ -2248,8 +2390,13 @@ namespace Ludots.Tests.ThreeC.Acceptance
                 _surface.Canvas.Clear(SKColors.Transparent);
                 _renderer.Render(_scene, _surface.Canvas, PresentationOverlayLayer.UnderUi);
                 _renderer.Render(_scene, _surface.Canvas, PresentationOverlayLayer.TopMost);
+                double overlayDrawMs = ToElapsedMs(drawStart);
                 _timings.ObserveScreenOverlayDraw(
-                    ToElapsedMs(drawStart),
+                    overlayDrawMs,
+                    overlayDrawMs,
+                    0d,
+                    0d,
+                    0d,
                     _renderer.RebuiltLaneCountLastFrame,
                     _renderer.CachedTextLayoutCount);
             }

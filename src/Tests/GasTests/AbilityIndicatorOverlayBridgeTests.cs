@@ -4,6 +4,8 @@ using Ludots.Core.Components;
 using Ludots.Core.Gameplay.GAS;
 using Ludots.Core.Gameplay.GAS.Components;
 using Ludots.Core.Input.Orders;
+using Ludots.Core.Presentation.Assets;
+using Ludots.Core.Presentation.Components;
 using Ludots.Core.Presentation.Performers;
 using Ludots.Core.Presentation.Rendering;
 using NUnit.Framework;
@@ -17,7 +19,7 @@ namespace Ludots.Tests.GAS
         private AbilityDefinitionRegistry _abilities = null!;
         private GroundOverlayBuffer _overlays = null!;
         private PerformerDefinitionRegistry _performerDefinitions = null!;
-        private PerformerInstanceBuffer _performers = null!;
+        private PerformerEntityRuntime _performers = null!;
         private AbilityIndicatorOverlayBridge _bridge = null!;
 
         [SetUp]
@@ -27,7 +29,7 @@ namespace Ludots.Tests.GAS
             _abilities = new AbilityDefinitionRegistry();
             _overlays = new GroundOverlayBuffer();
             _performerDefinitions = new PerformerDefinitionRegistry();
-            _performers = new PerformerInstanceBuffer();
+            _performers = new PerformerEntityRuntime(_world);
             _bridge = new AbilityIndicatorOverlayBridge(_world, _abilities, _overlays, _performerDefinitions, _performers);
         }
 
@@ -150,8 +152,31 @@ namespace Ludots.Tests.GAS
         {
             _performerDefinitions.Register("test.preview", new PerformerDefinition
             {
-                VisualKind = PerformerVisualKind.Marker3D,
-                MeshOrShapeId = 1,
+                Behaviors = new[]
+                {
+                    new BehaviorSlot
+                    {
+                        SlotIndex = 0,
+                        Kind = BehaviorKind.AssetBinding,
+                        ActiveByDefault = true,
+                        AssetBinding = new AssetBindingConfig
+                        {
+                            AssetKind = AssetKind.Mesh,
+                            AssetId = 1,
+                            MaterialId = 0,
+                            RenderPath = VisualRenderPath.StaticMesh,
+                            Mobility = VisualMobility.Movable,
+                            LocalOffset = Vector3.Zero,
+                            LocalRotation = Quaternion.Identity,
+                            LocalScale = Vector3.One,
+                            ScaleParamKey = -1,
+                            ColorParamKey = -1,
+                            MaterialParamKey = -1,
+                            AssetSwapParamKey = -1,
+                            VisibilityParamKey = -1,
+                        }
+                    }
+                },
                 DefaultLifetime = -1f
             });
 
@@ -186,13 +211,18 @@ namespace Ludots.Tests.GAS
                 hoveredEntity: Entity.Null);
 
             Assert.That(_performers.ActiveCount, Is.EqualTo(1));
-            ref readonly var preview = ref _performers.Get(0);
+            Entity previewEntity = Entity.Null;
+            var query = new QueryDescription().WithAll<PerformerState>();
+            _world.Query(in query, (Entity e, ref PerformerState s) => { previewEntity = e; });
+            Assert.That(previewEntity, Is.Not.EqualTo(Entity.Null));
+            ref readonly var preview = ref _world.Get<PerformerState>(previewEntity);
             Assert.That(preview.DefId, Is.EqualTo(_performerDefinitions.GetId("test.preview")));
-            Assert.That(preview.WorldPosition.X, Is.EqualTo(2.5f).Within(0.001f));
-            Assert.That(preview.WorldPosition.Y, Is.EqualTo(0.43f).Within(0.001f));
-            Assert.That(_performers.TryGetParamOverride(0, WellKnownPerformerParamKeys.MarkerScaleX, out float scaleX), Is.True);
+            Assert.That(_world.Get<PerformerWorldPosition>(previewEntity).Value.X, Is.EqualTo(2.5f).Within(0.001f));
+            Assert.That(_world.Get<PerformerWorldPosition>(previewEntity).Value.Y, Is.EqualTo(0.43f).Within(0.001f));
+            Assert.That(_performers.ResolveFloat(previewEntity, WellKnownPerformerParamKeys.MarkerScaleX, -1f), Is.Not.EqualTo(-1f));
+            float scaleX = _performers.ResolveFloat(previewEntity, WellKnownPerformerParamKeys.MarkerScaleX, -1f);
             Assert.That(scaleX, Is.EqualTo(3.5f).Within(0.001f));
-            Assert.That(_performers.TryGetParamOverride(0, WellKnownPerformerParamKeys.MarkerColorA, out float alpha), Is.True);
+            float alpha = _performers.ResolveFloat(previewEntity, WellKnownPerformerParamKeys.MarkerColorA, -1f);
             Assert.That(alpha, Is.GreaterThanOrEqualTo(0.3f));
 
             _bridge.ClearPreview();

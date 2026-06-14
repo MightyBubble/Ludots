@@ -5,19 +5,29 @@ namespace Ludots.Core.Presentation.Events
         None = 0,
         GameplayEvent = 1,
         TagEffectiveChanged = 2,
+        EntitySpawned = 3,
+        EntityDestroyed = 4,
+        ProjectileSpawned = 5,
 
-        // ── Performer domain events ──
-        /// <summary>Emitted when a persistent performer instance is created.</summary>
+        // Performer domain events
         PerformerCreated = 10,
-        /// <summary>Emitted when a persistent performer instance is destroyed.</summary>
         PerformerDestroyed = 11,
 
-        // ── GAS presentation events (bridged from GasPresentationEventBuffer) ──
-        /// <summary>An effect was applied (damage/heal). PayloadA=AttributeId, Magnitude=Delta.</summary>
+        // GAS presentation events
         EffectApplied = 20,
-        /// <summary>An ability cast was committed. PayloadA=AbilitySlot, PayloadB=AbilityId.</summary>
         CastCommitted = 21,
-        /// <summary>An ability cast failed. PayloadA=AbilitySlot, PayloadB=(int)FailReason.</summary>
         CastFailed = 22,
+
+        // Global domain events
+        GlobalDayNight = 30,
+        GlobalRegionChanged = 31,
+        GlobalWeather = 32,
+
+        // Attribute domain events
+        AttributeValueChanged = 40,
+
+        // Selection domain events
+        SelectionMemberAdded = 50,
+        SelectionMemberRemoved = 51,
     }
 }

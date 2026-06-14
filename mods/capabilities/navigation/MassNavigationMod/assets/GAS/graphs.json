@@ -1,0 +1,16 @@
+[
+  {
+    "id": "Graph.MassNavigation.Agent.HealthDrift",
+    "kind": "Effect",
+    "entry": "target",
+    "nodes": [
+      { "id": "target", "op": "LoadContextTarget", "next": "random" },
+      { "id": "random", "op": "RandomFloat01", "next": "center" },
+      { "id": "center", "op": "ConstFloat", "floatValue": 0.5, "next": "signed" },
+      { "id": "signed", "op": "SubFloat", "inputs": ["random", "center"], "next": "scale" },
+      { "id": "scale", "op": "ConstFloat", "floatValue": 16.0, "next": "delta" },
+      { "id": "delta", "op": "MulFloat", "inputs": ["signed", "scale"], "next": "modify" },
+      { "id": "modify", "op": "ModifyAttributeAdd", "attribute": "Health", "inputs": ["target", "delta"] }
+    ]
+  }
+]

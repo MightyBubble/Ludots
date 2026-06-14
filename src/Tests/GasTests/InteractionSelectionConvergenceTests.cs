@@ -176,7 +176,7 @@ namespace Ludots.Tests.GAS
                 [CoreServiceKeys.InteractionActionBindings.Name] = new InteractionActionBindings { ConfirmActionId = "Confirm" },
             };
             CreateSelectionRuntime(world, globals);
-            SeedAmbientSelection(world, globals, local, target);
+            SeedLivePrimarySelection(world, globals, local, target);
 
             var system = new GasInputResponseSystem(world, globals);
             var requests = (InputRequestQueue)globals[CoreServiceKeys.AbilityInputRequestQueue.Name];
@@ -475,12 +475,12 @@ namespace Ludots.Tests.GAS
                 [CoreServiceKeys.LocalPlayerEntity.Name] = local,
             };
             SelectionRuntime selectionRuntime = CreateSelectionRuntime(world, globals);
-            SeedAmbientSelection(world, globals, local, first, second);
+            SeedLivePrimarySelection(world, globals, local, first, second);
 
             var mapping = new InputOrderMappingSystem(input, cfg);
             mapping.SetOrderTypeKeyResolver(key => key == "castAbility" ? 1001 : 0);
             mapping.SetSelectedContainerProvider((string setKey, out Entity container) =>
-                selectionRuntime.TryCreateSnapshotLease(local, SelectionSetKeys.Ambient, SelectionSetKeys.CommandSnapshot, SelectionContainerKind.Snapshot, out _, out container));
+                selectionRuntime.TryCreateSnapshotLease(local, SelectionSetKeys.LivePrimary, SelectionSetKeys.CommandSnapshot, SelectionContainerKind.Snapshot, out _, out container));
 
             var orders = new List<Order>();
             mapping.SetOrderSubmitHandler((in Order order) => orders.Add(order));
@@ -529,12 +529,12 @@ namespace Ludots.Tests.GAS
                 [CoreServiceKeys.LocalPlayerEntity.Name] = local,
             };
             SelectionRuntime selectionRuntime = CreateSelectionRuntime(world, globals);
-            SeedAmbientSelection(world, globals, local, first, second);
+            SeedLivePrimarySelection(world, globals, local, first, second);
 
             var mapping = new InputOrderMappingSystem(input, cfg);
             mapping.SetOrderTypeKeyResolver(key => key == "castAbility" ? 1001 : 0);
             mapping.SetSelectedContainerProvider((string setKey, out Entity container) =>
-                selectionRuntime.TryCreateSnapshotLease(local, SelectionSetKeys.Ambient, SelectionSetKeys.CommandSnapshot, SelectionContainerKind.Snapshot, out _, out container));
+                selectionRuntime.TryCreateSnapshotLease(local, SelectionSetKeys.LivePrimary, SelectionSetKeys.CommandSnapshot, SelectionContainerKind.Snapshot, out _, out container));
 
             Order submitted = default;
             mapping.SetOrderSubmitHandler((in Order order) => submitted = order);
@@ -543,7 +543,7 @@ namespace Ludots.Tests.GAS
             input.Update();
             mapping.Update(0f);
 
-            SeedAmbientSelection(world, globals, local, third);
+            SeedLivePrimarySelection(world, globals, local, third);
 
             That(submitted.Args.Selection.HasContainer, Is.True);
             Entity[] selected = new Entity[4];
@@ -565,12 +565,12 @@ namespace Ludots.Tests.GAS
                 [CoreServiceKeys.LocalPlayerEntity.Name] = local,
             };
             SelectionRuntime selectionRuntime = CreateSelectionRuntime(world, globals);
-            SeedAmbientSelection(world, globals, local, first, second);
+            SeedLivePrimarySelection(world, globals, local, first, second);
 
             That(
                 selectionRuntime.TryCreateSnapshotLease(
                     local,
-                    SelectionSetKeys.Ambient,
+                    SelectionSetKeys.LivePrimary,
                     SelectionSetKeys.CommandSnapshot,
                     SelectionContainerKind.Snapshot,
                     out Entity leaseOwner,
@@ -603,7 +603,7 @@ namespace Ludots.Tests.GAS
         }
 
         [Test]
-        public void InputOrderMapping_PositionCommand_FansOutAcrossAmbientSelection()
+        public void InputOrderMapping_PositionCommand_FansOutAcrossLivePrimarySelection()
         {
             var input = new PlayerInputHandler(new NullInputBackend(), CreateInputConfig());
             var cfg = new InputOrderMappingConfig
@@ -658,7 +658,7 @@ namespace Ludots.Tests.GAS
         }
 
         [Test]
-        public void InputOrderMapping_PositionMoveCommand_WithGroupFormation_AssignsOffsetTargetsAcrossAmbientSelection()
+        public void InputOrderMapping_PositionMoveCommand_WithGroupFormation_AssignsOffsetTargetsAcrossLivePrimarySelection()
         {
             var input = new PlayerInputHandler(new NullInputBackend(), CreateInputConfig());
             var cfg = new InputOrderMappingConfig
@@ -718,7 +718,7 @@ namespace Ludots.Tests.GAS
         }
 
         [Test]
-        public void InputOrderMapping_StopCommand_FansOutAcrossAmbientSelection()
+        public void InputOrderMapping_StopCommand_FansOutAcrossLivePrimarySelection()
         {
             var input = new PlayerInputHandler(new NullInputBackend(), CreateInputConfig());
             var cfg = new InputOrderMappingConfig
@@ -796,13 +796,13 @@ namespace Ludots.Tests.GAS
             Click(system, globals, input, new Vector2(1600f, 1200f));
 
             AssertSelection(selectionRuntime, local, first);
-            That(selectionRuntime.TryGetPrimary(local, SelectionSetKeys.Ambient, out var currentPrimary), Is.True);
+            That(selectionRuntime.TryGetPrimary(local, SelectionSetKeys.LivePrimary, out var currentPrimary), Is.True);
             That(currentPrimary, Is.EqualTo(first));
 
             DragSelect(system, globals, input, new Vector2(1500f, 1100f), new Vector2(3500f, 2300f));
 
             AssertSelection(selectionRuntime, local, first, second, third);
-            That(selectionRuntime.TryGetPrimary(local, SelectionSetKeys.Ambient, out currentPrimary), Is.True);
+            That(selectionRuntime.TryGetPrimary(local, SelectionSetKeys.LivePrimary, out currentPrimary), Is.True);
             That(currentPrimary, Is.EqualTo(first), "Primary selected entity should stay deterministic after box select.");
         }
 
@@ -827,13 +827,13 @@ namespace Ludots.Tests.GAS
                 [CoreServiceKeys.InteractionActionBindings.Name] = new InteractionActionBindings(),
             };
             var selectionRuntime = CreateSelectionRuntime(world, globals);
-            SeedAmbientSelection(world, globals, local, first);
+            SeedLivePrimarySelection(world, globals, local, first);
 
             var system = new CurrentSelectionApplySystem(world, globals);
             Click(system, globals, input, new Vector2(5200f, 4200f));
 
-            That(selectionRuntime.GetSelectionCount(local, SelectionSetKeys.Ambient), Is.EqualTo(0));
-            That(selectionRuntime.TryGetPrimary(local, SelectionSetKeys.Ambient, out _), Is.False);
+            That(selectionRuntime.GetSelectionCount(local, SelectionSetKeys.LivePrimary), Is.EqualTo(0));
+            That(selectionRuntime.TryGetPrimary(local, SelectionSetKeys.LivePrimary, out _), Is.False);
         }
 
         [Test]
@@ -845,7 +845,7 @@ namespace Ludots.Tests.GAS
             var local = world.Create();
             _ = world.Create(
                 WorldPositionCm.FromCm(1600, 1200),
-                new VisualTransform { Position = new Vector3(16f, 0f, 12f) },
+                new VisualTransform { Position = new Vector3(16f, 0f, 12f), Rotation = Quaternion.Identity, Scale = Vector3.One },
                 new CullState { IsVisible = true },
                 new SelectionSelectableTag(),
                 SelectionSelectableState.Disabled);
@@ -866,8 +866,114 @@ namespace Ludots.Tests.GAS
 
             Click(system, globals, input, new Vector2(1600f, 1200f));
 
-            That(selectionRuntime.GetSelectionCount(local, SelectionSetKeys.Ambient), Is.EqualTo(0));
-            That(selectionRuntime.TryGetPrimary(local, SelectionSetKeys.Ambient, out _), Is.False);
+            That(selectionRuntime.GetSelectionCount(local, SelectionSetKeys.LivePrimary), Is.EqualTo(0));
+            That(selectionRuntime.TryGetPrimary(local, SelectionSetKeys.LivePrimary, out _), Is.False);
+        }
+
+        [Test]
+        public void CurrentSelectionApplySystem_TargetRelationFilter_GatesClickAcquireButKeepsHover()
+        {
+            using var world = World.Create();
+            TeamManager.Clear();
+
+            try
+            {
+                var input = new PlayerInputHandler(new NullInputBackend(), CreateInputConfig());
+                var local = world.Create(new Team { Id = 1 });
+                var formation = world.Create(
+                    WorldPositionCm.FromCm(1600, 1200),
+                    new VisualTransform { Position = new Vector3(16f, 0f, 12f), Rotation = Quaternion.Identity, Scale = Vector3.One },
+                    new CullState { IsVisible = true },
+                    new SelectionSelectableTag(),
+                    new Team { Id = 2 });
+
+                var globals = new Dictionary<string, object>
+                {
+                    [CoreServiceKeys.AuthoritativeInput.Name] = input,
+                    [CoreServiceKeys.AuthoritativePointerButtons.Name] = new AuthoritativePointerButtonSnapshot(),
+                    [CoreServiceKeys.ScreenRayProvider.Name] = new WorldMappedScreenRayProvider(),
+                    [CoreServiceKeys.VisualHeightmap.Name] = CreateFlatHeightmap(),
+                    [CoreServiceKeys.ScreenProjector.Name] = new WorldMappedScreenProjector(),
+                    [CoreServiceKeys.WorldSizeSpec.Name] = CreateWorldSizeSpec(),
+                    [CoreServiceKeys.LocalPlayerEntity.Name] = local,
+                    [CoreServiceKeys.InteractionActionBindings.Name] = new InteractionActionBindings(),
+                };
+                var selectionRuntime = CreateSelectionRuntime(world, globals, "Friendly");
+                var system = new CurrentSelectionApplySystem(world, globals);
+
+                Click(system, globals, input, new Vector2(1600f, 1200f));
+
+                That(selectionRuntime.GetSelectionCount(local, SelectionSetKeys.LivePrimary), Is.EqualTo(0));
+                That(globals.TryGetValue(CoreServiceKeys.HoveredEntity.Name, out object? hovered), Is.True);
+                That(hovered, Is.EqualTo(formation));
+
+                world.Set(formation, new Team { Id = 1 });
+                Click(system, globals, input, new Vector2(1600f, 1200f));
+
+                AssertSelection(selectionRuntime, local, formation);
+            }
+            finally
+            {
+                TeamManager.Clear();
+            }
+        }
+
+        [Test]
+        public void CurrentSelectionApplySystem_TargetRelationFilter_FiltersBoxSelection()
+        {
+            using var world = World.Create();
+            TeamManager.Clear();
+
+            try
+            {
+                var input = new PlayerInputHandler(new NullInputBackend(), CreateInputConfig());
+                var local = world.Create(new Team { Id = 1 });
+                var first = world.Create(
+                    WorldPositionCm.FromCm(1600, 1200),
+                    new VisualTransform { Position = new Vector3(16f, 0f, 12f), Rotation = Quaternion.Identity, Scale = Vector3.One },
+                    new CullState { IsVisible = true },
+                    new SelectionSelectableTag(),
+                    new Team { Id = 1 });
+                _ = world.Create(
+                    WorldPositionCm.FromCm(2600, 1600),
+                    new VisualTransform { Position = new Vector3(26f, 0f, 16f), Rotation = Quaternion.Identity, Scale = Vector3.One },
+                    new CullState { IsVisible = true },
+                    new SelectionSelectableTag(),
+                    new Team { Id = 2 });
+                _ = world.Create(
+                    WorldPositionCm.FromCm(3000, 1900),
+                    new VisualTransform { Position = new Vector3(30f, 0f, 19f), Rotation = Quaternion.Identity, Scale = Vector3.One },
+                    new CullState { IsVisible = true },
+                    new SelectionSelectableTag());
+                var third = world.Create(
+                    WorldPositionCm.FromCm(3400, 2200),
+                    new VisualTransform { Position = new Vector3(34f, 0f, 22f), Rotation = Quaternion.Identity, Scale = Vector3.One },
+                    new CullState { IsVisible = true },
+                    new SelectionSelectableTag(),
+                    new Team { Id = 1 });
+
+                var globals = new Dictionary<string, object>
+                {
+                    [CoreServiceKeys.AuthoritativeInput.Name] = input,
+                    [CoreServiceKeys.AuthoritativePointerButtons.Name] = new AuthoritativePointerButtonSnapshot(),
+                    [CoreServiceKeys.ScreenRayProvider.Name] = new WorldMappedScreenRayProvider(),
+                    [CoreServiceKeys.VisualHeightmap.Name] = CreateFlatHeightmap(),
+                    [CoreServiceKeys.ScreenProjector.Name] = new WorldMappedScreenProjector(),
+                    [CoreServiceKeys.WorldSizeSpec.Name] = CreateWorldSizeSpec(),
+                    [CoreServiceKeys.LocalPlayerEntity.Name] = local,
+                    [CoreServiceKeys.InteractionActionBindings.Name] = new InteractionActionBindings(),
+                };
+                var selectionRuntime = CreateSelectionRuntime(world, globals, "Friendly");
+                var system = new CurrentSelectionApplySystem(world, globals);
+
+                DragSelect(system, globals, input, new Vector2(1500f, 1100f), new Vector2(3500f, 2300f));
+
+                AssertSelection(selectionRuntime, local, first, third);
+            }
+            finally
+            {
+                TeamManager.Clear();
+            }
         }
 
         [Test]
@@ -879,7 +985,7 @@ namespace Ludots.Tests.GAS
             var local = world.Create();
             var entity = world.Create(
                 WorldPositionCm.FromCm(1600, 1200),
-                new VisualTransform { Position = new Vector3(16f, 0f, 12f) },
+                new VisualTransform { Position = new Vector3(16f, 0f, 12f), Rotation = Quaternion.Identity, Scale = Vector3.One },
                 new CullState { IsVisible = true },
                 new SelectionSelectableTag(),
                 new SpatialBounds { Kind = SpatialBoundsKind.Footprint2D },
@@ -899,7 +1005,7 @@ namespace Ludots.Tests.GAS
             var selectionRuntime = CreateSelectionRuntime(world, globals);
             var system = new CurrentSelectionApplySystem(world, globals);
 
-            Click(system, globals, input, new Vector2(1800f, 1200f));
+            Click(system, globals, input, new Vector2(1700f, 1200f));
 
             AssertSelection(selectionRuntime, local, entity);
         }
@@ -913,7 +1019,7 @@ namespace Ludots.Tests.GAS
             var local = world.Create();
             var entity = world.Create(
                 WorldPositionCm.FromCm(3000, 1500),
-                new VisualTransform { Position = new Vector3(30f, 0f, 15f) },
+                new VisualTransform { Position = new Vector3(30f, 0f, 15f), Rotation = Quaternion.Identity, Scale = Vector3.One },
                 new CullState { IsVisible = true },
                 new SelectionSelectableTag(),
                 new SpatialBounds { Kind = SpatialBoundsKind.Footprint2D, LocalCenterXCm = -250 },
@@ -947,7 +1053,7 @@ namespace Ludots.Tests.GAS
             var local = world.Create();
             var entity = world.Create(
                 WorldPositionCm.FromCm(1600, 1200),
-                new VisualTransform { Position = new Vector3(16f, 0f, 12f) },
+                new VisualTransform { Position = new Vector3(16f, 0f, 12f), Rotation = Quaternion.Identity, Scale = Vector3.One },
                 new CullState { IsVisible = true },
                 new SelectionSelectableTag(),
                 new SpatialBounds { Kind = SpatialBoundsKind.Box3D, LocalCenterYCm = 100 },
@@ -981,7 +1087,7 @@ namespace Ludots.Tests.GAS
             var local = world.Create();
             var entity = world.Create(
                 WorldPositionCm.FromCm(1600, 1200),
-                new VisualTransform { Position = new Vector3(16f, 0f, 12f) },
+                new VisualTransform { Position = new Vector3(16f, 0f, 12f), Rotation = Quaternion.Identity, Scale = Vector3.One },
                 new CullState { IsVisible = true },
                 new SelectionSelectableTag(),
                 new SpatialBounds { Kind = SpatialBoundsKind.Footprint2D },
@@ -998,13 +1104,13 @@ namespace Ludots.Tests.GAS
             var selectionRuntime = CreateSelectionRuntime(world, globals);
             var system = new CurrentSelectionApplySystem(world, globals);
 
-            SetConfirmSnapshot(globals, new Vector2(1800f, 1200f), pressedThisFrame: true, isDown: true);
-            input.InjectAction("PointerPos", new Vector3(1800f, 1200f, 0f));
+            SetConfirmSnapshot(globals, new Vector2(1700f, 1200f), pressedThisFrame: true, isDown: true);
+            input.InjectAction("PointerPos", new Vector3(1700f, 1200f, 0f));
             input.Update();
             system.Update(0f);
 
-            SetConfirmSnapshot(globals, new Vector2(1800f, 1200f), pressedThisFrame: false, isDown: false, releasedThisFrame: true);
-            input.InjectAction("PointerPos", new Vector3(1800f, 1200f, 0f));
+            SetConfirmSnapshot(globals, new Vector2(1700f, 1200f), pressedThisFrame: false, isDown: false, releasedThisFrame: true);
+            input.InjectAction("PointerPos", new Vector3(1700f, 1200f, 0f));
             input.Update();
             system.Update(0f);
 
@@ -1064,7 +1170,7 @@ namespace Ludots.Tests.GAS
                 [CoreServiceKeys.InteractionActionBindings.Name] = new InteractionActionBindings(),
             };
             var selectionRuntime = CreateSelectionRuntime(world, globals);
-            SeedAmbientSelection(world, globals, local, first, second);
+            SeedLivePrimarySelection(world, globals, local, first, second);
             var system = new CurrentSelectionApplySystem(world, globals);
 
             input.InjectAction(SelectionModifierActionIds.Toggle, Vector3.One);
@@ -1095,7 +1201,7 @@ namespace Ludots.Tests.GAS
                 [CoreServiceKeys.InteractionActionBindings.Name] = new InteractionActionBindings(),
             };
             var selectionRuntime = CreateSelectionRuntime(world, globals);
-            SeedAmbientSelection(world, globals, local, actor);
+            SeedLivePrimarySelection(world, globals, local, actor);
 
             var selectionSystem = new CurrentSelectionApplySystem(world, globals);
             var mapping = new InputOrderMappingSystem(input, new InputOrderMappingConfig
@@ -1205,6 +1311,8 @@ namespace Ludots.Tests.GAS
                     new() { Id = "Stop", Name = "Stop", Type = InputActionType.Button },
                     new() { Id = "Confirm", Name = "Confirm", Type = InputActionType.Button },
                     new() { Id = "Select", Name = "Select", Type = InputActionType.Button },
+                    new() { Id = SelectionModifierActionIds.Additive, Name = SelectionModifierActionIds.Additive, Type = InputActionType.Button },
+                    new() { Id = SelectionModifierActionIds.Toggle, Name = SelectionModifierActionIds.Toggle, Type = InputActionType.Button },
                     new() { Id = "TabTarget", Name = "TabTarget", Type = InputActionType.Button },
                     new() { Id = "TabTargetReverse", Name = "TabTargetReverse", Type = InputActionType.Button },
                     new() { Id = "PointerPos", Name = "PointerPos", Type = InputActionType.Axis2D },
@@ -1287,9 +1395,9 @@ namespace Ludots.Tests.GAS
 
         private static void AssertSelection(SelectionRuntime selectionRuntime, Entity owner, params Entity[] expected)
         {
-            That(selectionRuntime.GetSelectionCount(owner, SelectionSetKeys.Ambient), Is.EqualTo(expected.Length));
+            That(selectionRuntime.GetSelectionCount(owner, SelectionSetKeys.LivePrimary), Is.EqualTo(expected.Length));
             Entity[] actual = new Entity[expected.Length];
-            int written = selectionRuntime.CopySelection(owner, SelectionSetKeys.Ambient, actual);
+            int written = selectionRuntime.CopySelection(owner, SelectionSetKeys.LivePrimary, actual);
             That(written, Is.EqualTo(expected.Length));
             for (int i = 0; i < expected.Length; i++)
             {
@@ -1297,9 +1405,12 @@ namespace Ludots.Tests.GAS
             }
         }
 
-        private static SelectionRuntime CreateSelectionRuntime(World world, Dictionary<string, object> globals)
+        private static SelectionRuntime CreateSelectionRuntime(World world, Dictionary<string, object> globals, string relationFilter = "All")
         {
-            var config = new SelectionRuntimeConfig();
+            var config = new SelectionRuntimeConfig
+            {
+                TargetFilter = new SelectionTargetFilterConfig { RelationFilter = relationFilter },
+            };
             var registry = new Ludots.Core.Registry.StringIntRegistry(capacity: 8, startId: 1, invalidId: 0, comparer: StringComparer.Ordinal);
             var runtime = new SelectionRuntime(world, config, registry);
             globals[CoreServiceKeys.SelectionRuntime.Name] = runtime;
@@ -1308,13 +1419,13 @@ namespace Ludots.Tests.GAS
             return runtime;
         }
 
-        private static void SeedAmbientSelection(World world, Dictionary<string, object> globals, Entity owner, params Entity[] targets)
+        private static void SeedLivePrimarySelection(World world, Dictionary<string, object> globals, Entity owner, params Entity[] targets)
         {
             var runtime = globals.TryGetValue(CoreServiceKeys.SelectionRuntime.Name, out object? runtimeObj) &&
                           runtimeObj is SelectionRuntime selection
                 ? selection
                 : throw new InvalidOperationException("SelectionRuntime missing from globals.");
-            runtime.ReplaceSelection(owner, SelectionSetKeys.Ambient, targets);
+            runtime.ReplaceSelection(owner, SelectionSetKeys.LivePrimary, targets);
         }
 
         private static WorldSizeSpec CreateWorldSizeSpec()

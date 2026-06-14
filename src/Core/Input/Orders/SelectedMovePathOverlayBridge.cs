@@ -31,7 +31,7 @@ namespace Ludots.Core.Input.Orders
         private readonly IPathService _paths;
         private readonly PathStore _pathStore;
         private readonly GroundOverlayBuffer _overlays;
-        private readonly int _moveToOrderTypeId;
+        private readonly int[] _moveOrderTypeIds;
         private readonly int[] _pathXcm = new int[DefaultMaxPathPoints];
         private readonly int[] _pathYcm = new int[DefaultMaxPathPoints];
         private int _nextRequestId = 1;
@@ -42,12 +42,26 @@ namespace Ludots.Core.Input.Orders
             PathStore pathStore,
             GroundOverlayBuffer overlays,
             int moveToOrderTypeId)
+            : this(world, paths, pathStore, overlays, new[] { moveToOrderTypeId })
+        {
+        }
+
+        public SelectedMovePathOverlayBridge(
+            World world,
+            IPathService paths,
+            PathStore pathStore,
+            GroundOverlayBuffer overlays,
+            int[] moveOrderTypeIds)
         {
             _world = world ?? throw new ArgumentNullException(nameof(world));
             _paths = paths ?? throw new ArgumentNullException(nameof(paths));
             _pathStore = pathStore ?? throw new ArgumentNullException(nameof(pathStore));
             _overlays = overlays ?? throw new ArgumentNullException(nameof(overlays));
-            _moveToOrderTypeId = moveToOrderTypeId;
+            _moveOrderTypeIds = moveOrderTypeIds ?? throw new ArgumentNullException(nameof(moveOrderTypeIds));
+            if (_moveOrderTypeIds.Length == 0)
+            {
+                throw new ArgumentException("At least one move order type id is required.", nameof(moveOrderTypeIds));
+            }
         }
 
         public void UpdateViewedSelection(ReadOnlySpan<Entity> selected)
@@ -75,13 +89,13 @@ namespace Ludots.Core.Input.Orders
 
             ref var buffer = ref _world.Get<OrderBuffer>(entity);
             if (buffer.HasActive &&
-                buffer.ActiveOrder.Order.OrderTypeId == _moveToOrderTypeId &&
+                IsMoveOrderType(buffer.ActiveOrder.Order.OrderTypeId) &&
                 TryEmitAuthoredRoute(in buffer.ActiveOrder.Order, originWorldCm, isPrimary, consumeFromCurrentIndex: true, out var activeDestination))
             {
                 originWorldCm = activeDestination;
             }
             else if (buffer.HasActive &&
-                     buffer.ActiveOrder.Order.OrderTypeId == _moveToOrderTypeId &&
+                     IsMoveOrderType(buffer.ActiveOrder.Order.OrderTypeId) &&
                      OrderWorldSpatialResolver.TryResolveMoveDestination(in buffer.ActiveOrder.Order, out activeDestination))
             {
                 EmitSolvedLeg(entity, originWorldCm, activeDestination, isPrimary);
@@ -91,7 +105,7 @@ namespace Ludots.Core.Input.Orders
             for (int i = 0; i < buffer.QueuedCount; i++)
             {
                 Order queued = buffer.GetQueued(i).Order;
-                if (queued.OrderTypeId != _moveToOrderTypeId)
+                if (!IsMoveOrderType(queued.OrderTypeId))
                 {
                     continue;
                 }
@@ -146,6 +160,10 @@ namespace Ludots.Core.Input.Orders
                 _pathYcm[writeCount] = (int)MathF.Round(pointWorldCm.Z);
                 writeCount++;
                 finalDestination = pointWorldCm;
+                if (writeCount == _pathXcm.Length)
+                {
+                    break;
+                }
             }
 
             if (writeCount == 0)
@@ -155,6 +173,19 @@ namespace Ludots.Core.Input.Orders
 
             EmitPolylineFromOrigin(originWorldCm, writeCount, isPrimary);
             return true;
+        }
+
+        private bool IsMoveOrderType(int orderTypeId)
+        {
+            for (int i = 0; i < _moveOrderTypeIds.Length; i++)
+            {
+                if (_moveOrderTypeIds[i] == orderTypeId)
+                {
+                    return true;
+                }
+            }
+
+            return false;
         }
 
         private int ResolveActiveRouteStartIndex(Entity entity, in Order order, int pointCount)
@@ -198,7 +229,6 @@ namespace Ludots.Core.Input.Orders
                 result.Status != PathStatus.Found ||
                 !result.Handle.IsValid)
             {
-                EmitDirectLeg(startWorldCm, goalWorldCm, isPrimary);
                 return;
             }
 
@@ -207,7 +237,6 @@ namespace Ludots.Core.Input.Orders
                 if (!_paths.TryCopyPath(in result.Handle, _pathXcm, _pathYcm, out int count) ||
                     count < 2)
                 {
-                    EmitDirectLeg(startWorldCm, goalWorldCm, isPrimary);
                     return;
                 }
 
@@ -220,15 +249,6 @@ namespace Ludots.Core.Input.Orders
                     _pathStore.Release(result.Handle);
                 }
             }
-        }
-
-        private void EmitDirectLeg(Vector3 startWorldCm, Vector3 goalWorldCm, bool isPrimary)
-        {
-            _pathXcm[0] = (int)MathF.Round(startWorldCm.X);
-            _pathYcm[0] = (int)MathF.Round(startWorldCm.Z);
-            _pathXcm[1] = (int)MathF.Round(goalWorldCm.X);
-            _pathYcm[1] = (int)MathF.Round(goalWorldCm.Z);
-            EmitPolyline(count: 2, isPrimary);
         }
 
         private void EmitPolyline(int count, bool isPrimary)
@@ -254,7 +274,7 @@ namespace Ludots.Core.Input.Orders
                     Center = start,
                     Length = length,
                     Width = widthMeters,
-                    Rotation = MathF.Atan2(delta.Y, delta.X),
+                    Rotation = WorldPlane2D.FacingRadFromDirection(delta.X, delta.Y),
                     FillColor = fill,
                     BorderColor = border,
                     BorderWidth = 0.02f
@@ -292,7 +312,7 @@ namespace Ludots.Core.Input.Orders
                         Center = previous,
                         Length = length,
                         Width = widthMeters,
-                        Rotation = MathF.Atan2(delta.Y, delta.X),
+                        Rotation = WorldPlane2D.FacingRadFromDirection(delta.X, delta.Y),
                         FillColor = fill,
                         BorderColor = border,
                         BorderWidth = 0.02f

@@ -93,7 +93,7 @@ namespace InteractionShowcaseMod.Triggers
                 return;
             }
 
-            if (context.Get(CoreServiceKeys.PresentationCommandBuffer) is not PresentationCommandBuffer commands)
+            if (context.Get(CoreServiceKeys.PerformerCommandBuffer) is not PerformerCommandBuffer commands)
             {
                 return;
             }
@@ -111,10 +111,10 @@ namespace InteractionShowcaseMod.Triggers
 
             selectionCallbacks.Add((_, entity) =>
             {
-                commands.TryAdd(new PresentationCommand
+                commands.TryAdd(new PerformerCommand
                 {
-                    Kind = PresentationCommandKind.DestroyPerformerScope,
-                    ScopeId = InteractionShowcaseIds.SelectionScopeId
+                    CommandKind = PerformerCommandKind.DestroyPerformerScope,
+                    ScopeTag = InteractionShowcaseIds.SelectionScopeId
                 });
 
                 if (!engine.World.IsAlive(entity))
@@ -122,11 +122,11 @@ namespace InteractionShowcaseMod.Triggers
                     return;
                 }
 
-                commands.TryAdd(new PresentationCommand
+                commands.TryAdd(new PerformerCommand
                 {
-                    Kind = PresentationCommandKind.CreatePerformer,
+                    CommandKind = PerformerCommandKind.CreatePerformer,
                     PerformerDefinitionId = selectionDefId,
-                    ScopeId = InteractionShowcaseIds.SelectionScopeId,
+                    ScopeTag = InteractionShowcaseIds.SelectionScopeId,
                     Source = entity
                 });
             });

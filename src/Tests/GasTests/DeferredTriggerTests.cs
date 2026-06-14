@@ -94,6 +94,7 @@ namespace Ludots.Tests.GAS
             That(dirtyFlags.IsAttributeDirty(10), Is.True);
             That(dirtyFlags.IsAttributeDirty(20), Is.True);
             That(dirtyFlags.IsAttributeDirty(30), Is.False);
+            That(dirtyFlags.IsAnyAttributeDirty(), Is.True);
             
             Console.WriteLine($"[DeferredTriggerTests] TestDirtyFlags_MarkAttributeDirty: Dirty flags work correctly");
         }
@@ -132,6 +133,7 @@ namespace Ludots.Tests.GAS
             // Assert
             That(dirtyFlags.IsAttributeDirty(10), Is.False);
             That(dirtyFlags.IsTagDirty(5), Is.False);
+            That(dirtyFlags.IsAnyAttributeDirty(), Is.False);
             
             Console.WriteLine($"[DeferredTriggerTests] TestDirtyFlags_Clear: Clear works correctly");
         }

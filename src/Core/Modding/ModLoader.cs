@@ -6,6 +6,7 @@ using System.Reflection;
 using System.Runtime.Loader;
 using Ludots.Core.Diagnostics;
 using Ludots.Core.Engine;
+using Ludots.Core.Config;
 using Ludots.Core.Hosting;
 using Ludots.Core.Scripting;
 using Ludots.Core.Map;
@@ -21,8 +22,8 @@ namespace Ludots.Core.Modding
         private readonly TriggerDecoratorRegistry _triggerDecoratorRegistry;
         private readonly List<IMod> _loadedMods = new List<IMod>();
         private readonly List<ModLoadContext> _loadContexts = new List<ModLoadContext>();
-        private readonly Dictionary<string, Assembly> _sharedAssemblies = new Dictionary<string, Assembly>(StringComparer.OrdinalIgnoreCase);
-        private readonly Dictionary<string, string> _modDirectories = new Dictionary<string, string>();
+        private readonly Dictionary<string, Assembly> _sharedAssemblies = new Dictionary<string, Assembly>(StringComparer.Ordinal);
+        private readonly Dictionary<string, string> _modDirectories = new Dictionary<string, string>(StringComparer.Ordinal);
         private ModLoadContext? _activePlanLoadContext;
 
         public IMapManager MapManager { get; set; }
@@ -45,8 +46,7 @@ namespace Ludots.Core.Modding
         {
             if (!Directory.Exists(modsRootPath))
             {
-                Log.Warn(in LogChannels.ModLoader, $"Mods directory not found: {modsRootPath}");
-                return;
+                throw new DirectoryNotFoundException($"Mods directory not found: {Path.GetFullPath(modsRootPath)}");
             }
 
             var directories = ModDiscovery.DiscoverModDirectories(modsRootPath);
@@ -82,7 +82,7 @@ namespace Ludots.Core.Modding
                 Log.Info(in LogChannels.ModLoader, $"- {m.Name} (P:{m.Priority})");
             }
 
-            var scannedByName = scannedMods.ToDictionary(item => item.Manifest.Name, StringComparer.OrdinalIgnoreCase);
+            var scannedByName = scannedMods.ToDictionary(item => item.Manifest.Name, StringComparer.Ordinal);
             var orderedPlan = sortedManifests
                 .Select(manifest => new ResolvedModLoadEntry(manifest.Name, scannedByName[manifest.Name].Directory))
                 .ToList();
@@ -99,9 +99,9 @@ namespace Ludots.Core.Modding
             ResetLoadedState();
 
             var validatedMods = new List<ValidatedResolvedMod>(orderedMods.Count);
-            var orderById = new Dictionary<string, int>(StringComparer.OrdinalIgnoreCase);
-            var versionById = new Dictionary<string, DependencyResolver.SemVersion>(StringComparer.OrdinalIgnoreCase);
-            var seenRoots = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
+            var orderById = new Dictionary<string, int>(StringComparer.Ordinal);
+            var versionById = new Dictionary<string, DependencyResolver.SemVersion>(StringComparer.Ordinal);
+            var seenRoots = new HashSet<string>(StringComparer.Ordinal);
 
             for (int i = 0; i < orderedMods.Count; i++)
             {
@@ -127,15 +127,14 @@ namespace Ludots.Core.Modding
                     throw new DirectoryNotFoundException($"Mod directory not found: {modDir}");
                 }
 
-                var manifestPath = Path.Combine(modDir, "mod.json");
-                if (!File.Exists(manifestPath))
+                if (!TryGetExactChildFile(modDir, "mod.json", out var manifestPath))
                 {
                     throw new FileNotFoundException($"mod.json not found in mod directory: {modDir}");
                 }
 
                 var manifest = ModManifestJson.ParseStrict(File.ReadAllText(manifestPath), manifestPath)
                     ?? throw new InvalidOperationException($"Failed to parse mod manifest from '{manifestPath}'.");
-                if (!string.Equals(manifest.Name, entry.Id, StringComparison.OrdinalIgnoreCase))
+                if (!string.Equals(manifest.Name, entry.Id, StringComparison.Ordinal))
                 {
                     throw new InvalidOperationException(
                         $"Resolved mod plan mismatch: entry id '{entry.Id}' does not match manifest '{manifest.Name}' at '{modDir}'.");
@@ -187,26 +186,21 @@ namespace Ludots.Core.Modding
 
             foreach (var dir in modDirectories)
             {
-                var manifestPath = Path.Combine(dir, "mod.json");
-                if (!File.Exists(manifestPath))
+                if (!TryGetExactChildFile(dir, "mod.json", out var manifestPath))
                 {
-                    continue;
+                    throw new FileNotFoundException($"mod.json not found in explicit mod directory: {Path.GetFullPath(dir)}");
                 }
 
                 try
                 {
                     var json = File.ReadAllText(manifestPath);
                     var manifest = ModManifestJson.ParseStrict(json, manifestPath);
-                    if (manifest == null)
-                    {
-                        continue;
-                    }
-
                     scanned.Add(new ScannedModDirectory(Path.GetFullPath(dir), manifest, scanIndex++));
                 }
                 catch (Exception ex)
                 {
                     Log.Error(in LogChannels.ModLoader, $"Failed to load manifest from {dir}: {ex.Message}");
+                    throw;
                 }
             }
 
@@ -217,17 +211,34 @@ namespace Ludots.Core.Modding
         {
             foreach (var mod in _loadedMods)
             {
-                try { mod.OnUnload(); } catch { }
+                try
+                {
+                    mod.OnUnload();
+                }
+                catch (Exception ex)
+                {
+                    Log.Error(in LogChannels.ModLoader, $"Mod unload failed for {mod.GetType().FullName}: {ex}");
+                    throw;
+                }
             }
             _loadedMods.Clear();
+            UnregisterModComponentAuthoring(LoadedModIds);
 
             foreach (var ctx in _loadContexts)
             {
-                try { ctx.Unload(); } catch { }
+                try
+                {
+                    ctx.Unload();
+                }
+                catch (Exception ex)
+                {
+                    Log.Error(in LogChannels.ModLoader, $"Mod load context unload failed: {ex}");
+                    throw;
+                }
             }
             _loadContexts.Clear();
 
-            var staleMounts = new HashSet<string>(LoadedModIds, StringComparer.OrdinalIgnoreCase);
+            var staleMounts = new HashSet<string>(LoadedModIds, StringComparer.Ordinal);
             foreach (var id in _modDirectories.Keys)
             {
                 staleMounts.Add(id);
@@ -242,6 +253,14 @@ namespace Ludots.Core.Modding
             _modDirectories.Clear();
             _sharedAssemblies.Clear();
             _activePlanLoadContext = null;
+        }
+
+        private static void UnregisterModComponentAuthoring(IEnumerable<string> modIds)
+        {
+            foreach (var modId in modIds)
+            {
+                ComponentRegistry.UnregisterSource(modId);
+            }
         }
 
         private static void ValidateResolvedPlanDependencies(
@@ -309,23 +328,36 @@ namespace Ludots.Core.Modding
                         $"Found:\n- {string.Join("\n- ", matches)}");
                 }
 
-                Log.Warn(in LogChannels.ModLoader, $"No DLL found for {manifest.Name} (asset-only mod?): expected {dllPath}");
-                return;
+                throw new FileNotFoundException(
+                    $"Mod '{manifest.Name}' declares main assembly but the DLL was not found.",
+                    dllPath);
             }
 
             try
                 {
                     dllPath = Path.GetFullPath(dllPath);
-                    Log.Info(in LogChannels.ModLoader, $"Loading DLL for {manifest.Name} at {dllPath}");
-                    var loadContext = _activePlanLoadContext ?? new ModLoadContext(ResolveSharedAssembly);
-                    if (_activePlanLoadContext == null)
+                    Assembly assembly;
+                    if (TryResolvePreloadedAssembly(manifest.Name, out Assembly? preloadedAssembly))
                     {
-                        _activePlanLoadContext = loadContext;
-                        _loadContexts.Add(loadContext);
+                        assembly = preloadedAssembly;
+                        CacheSharedAssembly(assembly);
+                        Log.Info(in LogChannels.ModLoader, $"Reusing preloaded assembly for {manifest.Name}: {assembly.Location}");
+                    }
+                    else
+                    {
+                        Log.Info(in LogChannels.ModLoader, $"Loading DLL for {manifest.Name} at {dllPath}");
+                        var loadContext = _activePlanLoadContext ?? new ModLoadContext(ResolveSharedAssembly);
+                        if (_activePlanLoadContext == null)
+                        {
+                            _activePlanLoadContext = loadContext;
+                            _loadContexts.Add(loadContext);
+                        }
+
+                        loadContext.RegisterMainAssemblyPath(dllPath);
+                        assembly = loadContext.LoadMainAssembly(dllPath);
+                        CacheSharedAssembly(assembly);
                     }
 
-                    loadContext.RegisterMainAssemblyPath(dllPath);
-                    var assembly = loadContext.LoadMainAssembly(dllPath);
                     CacheSharedAssembly(assembly);
 
                     Type[] allTypes;
@@ -388,8 +420,23 @@ namespace Ludots.Core.Modding
             }
             catch (Exception ex)
             {
-                Log.Error(in LogChannels.ModLoader, $"Failed to load DLL for {manifest.Name}: {ex}");
+                ComponentRegistry.UnregisterSource(manifest.Name);
+                throw new InvalidOperationException($"Failed to load code mod '{manifest.Name}'.", ex);
             }
+        }
+
+        private static bool TryResolvePreloadedAssembly(string assemblySimpleName, out Assembly? assembly)
+        {
+            assembly = null;
+            if (string.IsNullOrWhiteSpace(assemblySimpleName))
+            {
+                return false;
+            }
+
+            assembly = AssemblyLoadContext.Default.Assemblies.FirstOrDefault(candidate =>
+                string.Equals(candidate.GetName().Name, assemblySimpleName, StringComparison.Ordinal));
+
+            return assembly != null;
         }
 
         private Assembly ResolveSharedAssembly(AssemblyName assemblyName)
@@ -418,7 +465,7 @@ namespace Ludots.Core.Modding
                 }
 
                 var primary = Path.GetFullPath(Path.Combine(modDirFull, relative));
-                if (!primary.StartsWith(modDirFull, StringComparison.OrdinalIgnoreCase))
+                if (!primary.StartsWith(modDirFull, StringComparison.Ordinal))
                 {
                     throw new Exception($"Invalid mod.json ('main' escapes mod directory): {manifest.Name}");
                 }
@@ -428,6 +475,21 @@ namespace Ludots.Core.Modding
             }
 
             dllPath = "(no main)";
+            return false;
+        }
+
+        private static bool TryGetExactChildFile(string directory, string fileName, out string fullPath)
+        {
+            foreach (var candidate in Directory.EnumerateFiles(directory))
+            {
+                if (string.Equals(Path.GetFileName(candidate), fileName, StringComparison.Ordinal))
+                {
+                    fullPath = Path.GetFullPath(candidate);
+                    return true;
+                }
+            }
+
+            fullPath = string.Empty;
             return false;
         }
 
@@ -443,15 +505,16 @@ namespace Ludots.Core.Modding
                 foreach (var p in Directory.EnumerateFiles(binDir, defaultName, SearchOption.AllDirectories))
                 {
                     var full = Path.GetFullPath(p);
-                    if (!full.StartsWith(modDirFull, StringComparison.OrdinalIgnoreCase)) continue;
+                    if (!full.StartsWith(modDirFull, StringComparison.Ordinal)) continue;
                     results.Add(full);
                 }
             }
-            catch
+            catch (Exception ex)
             {
+                throw new IOException($"Failed to enumerate built DLL candidates under '{Path.Combine(modDirFull, "bin")}'.", ex);
             }
 
-            results.Sort(StringComparer.OrdinalIgnoreCase);
+            results.Sort(StringComparer.Ordinal);
             return results;
         }
 
@@ -459,13 +522,30 @@ namespace Ludots.Core.Modding
         {
             foreach(var mod in _loadedMods)
             {
-                try { mod.OnUnload(); } catch { }
+                try
+                {
+                    mod.OnUnload();
+                }
+                catch (Exception ex)
+                {
+                    Log.Error(in LogChannels.ModLoader, $"Mod unload failed for {mod.GetType().FullName}: {ex}");
+                    throw;
+                }
             }
             _loadedMods.Clear();
+            UnregisterModComponentAuthoring(LoadedModIds);
 
             foreach (var ctx in _loadContexts)
             {
-                try { ctx.Unload(); } catch { }
+                try
+                {
+                    ctx.Unload();
+                }
+                catch (Exception ex)
+                {
+                    Log.Error(in LogChannels.ModLoader, $"Mod load context unload failed: {ex}");
+                    throw;
+                }
             }
             _loadContexts.Clear();
 

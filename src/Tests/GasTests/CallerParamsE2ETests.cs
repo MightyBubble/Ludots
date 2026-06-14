@@ -1,4 +1,4 @@
-using System;
+﻿using System;
 using System.IO;
 using Arch.Core;
 using Ludots.Core.Config;
@@ -21,12 +21,12 @@ namespace Ludots.Tests.GAS
 {
     /// <summary>
     /// End-to-end scenario tests for the CallerParams pipeline:
-    ///   EffectRequest �?EffectProposal �?phase execution with merged config.
+    ///   EffectRequest 鈫?EffectProposal 鈫?phase execution with merged config.
     /// Tests cover:
     ///   - CallerParams override template ConfigParams for instant effects
     ///   - CallerParams propagation to duration effect entities
     ///   - Multiple CallerParams keys in a single request
-    ///   - Graph �?ApplyEffectTemplate �?CallerParams bridge
+    ///   - Graph -> ApplyEffectTemplate -> CallerParams pipeline
     /// </summary>
     [TestFixture]
     public class CallerParamsE2ETests
@@ -37,9 +37,9 @@ namespace Ludots.Tests.GAS
             EffectParamKeys.Initialize();
         }
 
-        // ════════════════════════════════════════════════════════════════════
+        // 鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲
         //  Scenario: CallerParams override ForceX/Y in ApplyForce2D preset
-        // ════════════════════════════════════════════════════════════════════
+        // 鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲
 
         [Test]
         public void CallerParams_OverrideForceValues_InInstantEffect()
@@ -53,10 +53,11 @@ namespace Ludots.Tests.GAS
                 vfs.Mount("Core", root);
                 var modLoader = new ModLoader(vfs, new FunctionRegistry(), new TriggerManager());
                 var pipeline = new ConfigPipeline(vfs, modLoader);
+                var catalog = ConfigCatalogLoader.Load(pipeline);
 
                 var templates = new EffectTemplateRegistry();
                 var loader = new EffectTemplateLoader(pipeline, templates);
-                loader.Load(relativePath: "GAS/effects.json");
+                loader.Load(catalog, relativePath: "GAS/effects.json");
 
                 using var world = World.Create();
                 int fxAttrId = AttributeRegistry.GetId("Physics.ForceRequestX");
@@ -101,12 +102,12 @@ namespace Ludots.Tests.GAS
             }
         }
 
-        // ════════════════════════════════════════════════════════════════════
-        //  Scenario: Request without CallerParams falls back to template ConfigParams
-        // ════════════════════════════════════════════════════════════════════
+        // 鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲
+        //  Scenario: Request without CallerParams uses template ConfigParams
+        // 鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲
 
         [Test]
-        public void NoCallerParams_FallsBackToTemplateConfigParams()
+        public void NoCallerParams_UsesTemplateConfigParams()
         {
             string root = CreateTempRoot();
             try
@@ -117,10 +118,11 @@ namespace Ludots.Tests.GAS
                 vfs.Mount("Core", root);
                 var modLoader = new ModLoader(vfs, new FunctionRegistry(), new TriggerManager());
                 var pipeline = new ConfigPipeline(vfs, modLoader);
+                var catalog = ConfigCatalogLoader.Load(pipeline);
 
                 var templates = new EffectTemplateRegistry();
                 var loader = new EffectTemplateLoader(pipeline, templates);
-                loader.Load(relativePath: "GAS/effects.json");
+                loader.Load(catalog, relativePath: "GAS/effects.json");
 
                 using var world = World.Create();
                 int fxAttrId = AttributeRegistry.GetId("Physics.ForceRequestX");
@@ -159,9 +161,9 @@ namespace Ludots.Tests.GAS
             }
         }
 
-        // ════════════════════════════════════════════════════════════════════
+        // 鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲
         //  Scenario: Graph-originated CallerParams bridge
-        // ════════════════════════════════════════════════════════════════════
+        // 鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲
 
         [Test]
         public void GraphBridge_EffectArgs_ConvertsToCallerParams()
@@ -172,7 +174,7 @@ namespace Ludots.Tests.GAS
 
             var target = world.Create();
 
-            // Graph: ConstFloat(5.5) �?fx, ConstFloat(-3.3) �?fy, ApplyEffectTemplate(target, fx, fy)
+            // Graph: ConstFloat(5.5) 鈫?fx, ConstFloat(-3.3) 鈫?fy, ApplyEffectTemplate(target, fx, fy)
             var program = new GraphInstruction[]
             {
                 new() { Op = (ushort)GraphNodeOp.ConstFloat, Dst = 0, ImmF = 5.5f },
@@ -194,9 +196,9 @@ namespace Ludots.Tests.GAS
             That(fy, Is.EqualTo(-3.3f).Within(1e-6f));
         }
 
-        // ════════════════════════════════════════════════════════════════════
+        // 鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲
         //  Scenario: EffectRequest.CallerParams multiple keys
-        // ════════════════════════════════════════════════════════════════════
+        // 鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲
 
         [Test]
         public void CallerParams_MultipleKeys_AllPreservedInRequest()
@@ -216,13 +218,19 @@ namespace Ludots.Tests.GAS
             That(pid, Is.EqualTo(42));
         }
 
-        // ════════════════════════════════════════════════════════════════════
+        // 鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲
         //  Helpers
-        // ════════════════════════════════════════════════════════════════════
+        // 鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲
 
         private static void SetupEffectsJson(string root)
         {
             Directory.CreateDirectory(Path.Combine(root, "Configs", "GAS"));
+            File.WriteAllText(Path.Combine(root, "Configs", "config_catalog.json"),
+                """
+                [
+                  { "Path": "GAS/effects.json", "Policy": "ArrayById", "IdField": "id" }
+                ]
+                """);
             File.WriteAllText(Path.Combine(root, "Configs", "GAS", "effects.json"),
                 """
                 [
@@ -231,10 +239,10 @@ namespace Ludots.Tests.GAS
                     "tags": ["Effect.ApplyForce"],
                     "presetType": "ApplyForce2D",
                     "lifetime": "Instant",
-                    "excludeFromChain": true,
+                    "participatesInResponse": true,
                     "configParams": {
-                      "_ep.forceXTargetAttrId": { "type": "attribute", "value": "Physics.ForceRequestX" },
-                      "_ep.forceYTargetAttrId": { "type": "attribute", "value": "Physics.ForceRequestY" }
+                      "_ep.forceXTargetAttrId": { "type": "Attribute", "value": "Physics.ForceRequestX" },
+                      "_ep.forceYTargetAttrId": { "type": "Attribute", "value": "Physics.ForceRequestY" }
                     }
                   }
                 ]

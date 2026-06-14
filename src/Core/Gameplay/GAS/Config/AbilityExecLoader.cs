@@ -38,7 +38,7 @@ namespace Ludots.Core.Gameplay.GAS.Config
             _registry.Clear();
             AbilityIdRegistry.Clear();
 
-            var entry = ConfigPipeline.GetEntryOrDefault(catalog, relativePath, ConfigMergePolicy.ArrayById, "id");
+            var entry = ConfigPipeline.RequireEntry(catalog, relativePath, ConfigMergePolicy.ArrayById, "id");
             var mergedEntries = _pipeline.MergeArrayByIdFromCatalog(in entry, report);
             var merged = new List<(string Id, JsonObject Node)>(mergedEntries.Count);
             for (int i = 0; i < mergedEntries.Count; i++)

@@ -8,8 +8,8 @@ using Ludots.Core.Input.Runtime;
 using Ludots.Core.Mathematics;
 using Ludots.Core.Modding;
 using Ludots.Core.Presentation.Assets;
-using Ludots.Core.Presentation.Commands;
 using Ludots.Core.Presentation.Primitives;
+using Ludots.Core.Presentation.Rendering;
 using Ludots.Core.Scripting;
 using RoadNetworkShowcaseMod.Gameplay;
 
@@ -23,7 +23,7 @@ namespace RoadNetworkShowcaseMod.Systems
         private readonly IModContext _context;
         private readonly RoadMoveOrderExpander _expander;
         private InputOrderMappingSystem? _mapping;
-        private PresentationCommandBuffer? _presentationCommands;
+        private TransientMarkerBuffer? _transientMarkers;
         private PrefabRegistry? _prefabs;
         private int _cueMarkerPrefabId;
         private bool _initialized;
@@ -80,9 +80,9 @@ namespace RoadNetworkShowcaseMod.Systems
 
             _initialized = true;
             _mapping = _helper.TryCreateMapping(_context);
-            _presentationCommands = _globals.TryGetValue(CoreServiceKeys.PresentationCommandBuffer.Name, out var commandObj) &&
-                                    commandObj is PresentationCommandBuffer presentationCommands
-                ? presentationCommands
+            _transientMarkers = _globals.TryGetValue(CoreServiceKeys.TransientMarkerBuffer.Name, out var markerObj) &&
+                                markerObj is TransientMarkerBuffer transientMarkers
+                ? transientMarkers
                 : null;
             _prefabs = _globals.TryGetValue(CoreServiceKeys.PresentationPrefabRegistry.Name, out var prefabObj) &&
                        prefabObj is PrefabRegistry prefabs
@@ -110,7 +110,7 @@ namespace RoadNetworkShowcaseMod.Systems
 
         private void EmitSubmitCue(in Order order, bool accepted)
         {
-            if (_presentationCommands == null ||
+            if (_transientMarkers == null ||
                 !OrderWorldSpatialResolver.TryResolveMoveDestination(in order, out var targetWorldCm))
             {
                 return;
@@ -122,19 +122,17 @@ namespace RoadNetworkShowcaseMod.Systems
                 return;
             }
 
-            _presentationCommands.TryAdd(new PresentationCommand
-            {
-                Kind = PresentationCommandKind.PlayOneShotPerformer,
-                PrefabId = prefabId,
-                Position = new System.Numerics.Vector3(
+            _transientMarkers.TryAddPrefab(
+                prefabId,
+                new System.Numerics.Vector3(
                     WorldUnits.CmToM(targetWorldCm.X),
                     0.15f,
                     WorldUnits.CmToM(targetWorldCm.Z)),
-                Color = accepted
+                new System.Numerics.Vector3(accepted ? 0.75f : 0.90f),
+                accepted
                     ? new System.Numerics.Vector4(0.28f, 0.94f, 0.60f, 1f)
                     : new System.Numerics.Vector4(1.0f, 0.52f, 0.18f, 1f),
-                LifetimeSeconds = accepted ? 0.75f : 0.90f
-            });
+                accepted ? 0.75f : 0.90f);
         }
 
         private int ResolveCueMarkerPrefabId()

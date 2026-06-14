@@ -22,9 +22,6 @@ namespace GasTests
                 WriteMapConfig(tempRoot, "parent", """
                 {
                   "id": "parent",
-                  "visualHeightmap": {
-                    "asset": "Data/Maps/parent_visual.vhtm"
-                  },
                   "boards": [
                     {
                       "name": "default",
@@ -56,8 +53,6 @@ namespace GasTests
                 Assert.That(board.SpatialType, Is.EqualTo("Hex"));
                 Assert.That(board.WidthInTiles, Is.EqualTo(128));
                 Assert.That(board.HexEdgeLengthCm, Is.EqualTo(900));
-                Assert.That(cfg.VisualHeightmap, Is.Not.Null);
-                Assert.That(cfg.VisualHeightmap!.Asset, Is.EqualTo("Data/Maps/parent_visual.vhtm"));
             }
             finally
             {
@@ -96,7 +91,7 @@ namespace GasTests
         }
 
         [Test]
-        public void LoadMap_WhenChildDeclaresVisualHeightmap_OverridesParent()
+        public void LoadMap_WhenChildOmitsVisualHeightmapAsset_InheritsParentDeclaration()
         {
             var tempRoot = CreateTempDir();
             try
@@ -104,8 +99,76 @@ namespace GasTests
                 WriteMapConfig(tempRoot, "parent", """
                 {
                   "id": "parent",
-                  "visualHeightmap": {
-                    "asset": "Data/Maps/parent_visual.vhtm"
+                  "visualHeightmapAsset": "terrain/parent.vhtm"
+                }
+                """);
+
+                WriteMapConfig(tempRoot, "child", """
+                {
+                  "id": "child",
+                  "parentId": "parent"
+                }
+                """);
+
+                var manager = CreateMapManager(tempRoot);
+                var cfg = manager.LoadMap("child");
+
+                Assert.That(cfg, Is.Not.Null);
+                Assert.That(cfg!.VisualHeightmapAsset, Is.EqualTo("terrain/parent.vhtm"));
+            }
+            finally
+            {
+                TryDelete(tempRoot);
+            }
+        }
+
+        [Test]
+        public void LoadMap_WhenBoardDeclaresVisualHeightmapAsset_UsesBoardScopedContract()
+        {
+            var tempRoot = CreateTempDir();
+            try
+            {
+                WriteMapConfig(tempRoot, "board_map", """
+                {
+                  "id": "board_map",
+                  "boards": [
+                    {
+                      "name": "default",
+                      "visualHeightmapAsset": "terrain/board.vhtm"
+                    }
+                  ]
+                }
+                """);
+
+                var manager = CreateMapManager(tempRoot);
+                var cfg = manager.LoadMap("board_map");
+
+                Assert.That(cfg, Is.Not.Null);
+                Assert.That(cfg!.Boards.Count, Is.EqualTo(1));
+                Assert.That(cfg.Boards[0].VisualHeightmapAsset, Is.EqualTo("terrain/board.vhtm"));
+            }
+            finally
+            {
+                TryDelete(tempRoot);
+            }
+        }
+
+        [Test]
+        public void LoadMap_WhenChildOverridesMetadata_MergesByTopLevelKey()
+        {
+            var tempRoot = CreateTempDir();
+            try
+            {
+                WriteMapConfig(tempRoot, "parent", """
+                {
+                  "id": "parent",
+                  "metadata": {
+                    "terrain": {
+                      "profile": "parent"
+                    },
+                    "benchmark": {
+                      "count": 1000
+                    }
                   }
                 }
                 """);
@@ -114,8 +177,10 @@ namespace GasTests
                 {
                   "id": "child",
                   "parentId": "parent",
-                  "visualHeightmap": {
-                    "asset": "Data/Maps/child_visual.vhtm"
+                  "metadata": {
+                    "benchmark": {
+                      "count": 30000
+                    }
                   }
                 }
                 """);
@@ -124,8 +189,8 @@ namespace GasTests
                 var cfg = manager.LoadMap("child");
 
                 Assert.That(cfg, Is.Not.Null);
-                Assert.That(cfg!.VisualHeightmap, Is.Not.Null);
-                Assert.That(cfg.VisualHeightmap!.Asset, Is.EqualTo("Data/Maps/child_visual.vhtm"));
+                Assert.That(cfg!.Metadata["terrain"]!["profile"]!.GetValue<string>(), Is.EqualTo("parent"));
+                Assert.That(cfg.Metadata["benchmark"]!["count"]!.GetValue<int>(), Is.EqualTo(30000));
             }
             finally
             {

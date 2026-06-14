@@ -25,7 +25,7 @@ namespace Ludots.Core.Engine.Navigation2D
             ConfigConflictReport report = null,
             string relativePath = "Navigation2D/clock.json")
         {
-            var entry = ConfigPipeline.GetEntryOrDefault(catalog, relativePath, ConfigMergePolicy.DeepObject);
+            var entry = ConfigPipeline.RequireEntry(catalog, relativePath, ConfigMergePolicy.DeepObject);
             var mergedObject = _pipeline.MergeDeepObjectFromCatalog(in entry, report);
 
             if (mergedObject == null)

@@ -1,5 +1,6 @@
 using System;
 using System.Collections.Generic;
+using System.Diagnostics;
 using Arch.Core;
 using Arch.Core.Extensions;
 using Arch.System;
@@ -11,43 +12,120 @@ using Ludots.Core.Gameplay.GAS;
 using Ludots.Core.Gameplay.GAS.Registry;
 using Ludots.Core.Map;
 using Ludots.Core.Presentation;
+using Ludots.Core.Presentation.Commands;
 using Ludots.Core.Presentation.Components;
-using Ludots.Core.Presentation.Config;
+using Ludots.Core.Presentation.Events;
+using Ludots.Core.Presentation.Hud;
+using Ludots.Core.Presentation.Performers;
+using Ludots.Core.Spatial;
 
 namespace Ludots.Core.Gameplay.Spawning
 {
     public sealed class RuntimeEntitySpawnSystem : BaseSystem<World, float>
     {
+        private const int BatchEntityScratchCapacity = 32768;
         private readonly RuntimeEntitySpawnQueue _requests;
+        private readonly RuntimeEntitySpawnReceiptQueue? _receipts;
         private readonly EffectRequestQueue _effectRequests;
         private readonly DataRegistry<EntityTemplate> _templateRegistry;
         private readonly EntityTemplateKeyRegistry _templateKeys;
-        private readonly Dictionary<string, EntityTemplate> _cachedTemplates = new(StringComparer.OrdinalIgnoreCase);
+        private readonly Dictionary<string, EntityTemplate> _cachedTemplates = new(StringComparer.Ordinal);
         private readonly EntityBuilder _builder;
         private readonly PresentationStableIdAllocator _stableIds;
+        private readonly RuntimeEntitySpawnRequest[] _batchRequests = new RuntimeEntitySpawnRequest[BatchEntityScratchCapacity];
+        private readonly TemplateEntityBatchSpawner.TemplateBatchSpawnRequest[] _templateBatchRequests = new TemplateEntityBatchSpawner.TemplateBatchSpawnRequest[BatchEntityScratchCapacity];
+        private readonly Entity[] _performerBatchOwners = new Entity[BatchEntityScratchCapacity];
+        private readonly int[] _performerBatchScopeIds = new int[BatchEntityScratchCapacity];
+        private readonly int[] _performerBatchStableIds = new int[BatchEntityScratchCapacity];
+        private readonly Entity[] _performerBatchCreated = new Entity[BatchEntityScratchCapacity];
+        private readonly VisualTransform[] _performerBatchOwnerTransforms = new VisualTransform[BatchEntityScratchCapacity];
+        private readonly CullState[] _performerBatchOwnerCulls = new CullState[BatchEntityScratchCapacity];
+        private readonly TemplateEntityBatchSpawner _templateBatchSpawner;
+        private readonly PerformerEntityRuntime? _performerRuntime;
+        private readonly PerformerDefinitionRegistry? _performerDefinitions;
+        private readonly CompiledPerformerBootstrapRegistry? _performerBootstrap;
+        private readonly PresentationEventStream? _presentationEvents;
+        private readonly ISpatialPartitionWorld? _spatialPartition;
+        private readonly WorldSizeSpec _worldSizeSpec;
+        private readonly PresentationTimingDiagnostics? _timingDiagnostics;
 
         public RuntimeEntitySpawnSystem(
             World world,
             RuntimeEntitySpawnQueue requests,
             DataRegistry<EntityTemplate> templateRegistry,
             EntityTemplateKeyRegistry templateKeys,
-            PresentationAuthoringContext presentationAuthoring,
             PresentationStableIdAllocator stableIds,
-            EffectRequestQueue effectRequests = null)
+            EffectRequestQueue effectRequests = null,
+            RuntimeEntitySpawnReceiptQueue? receipts = null,
+            PerformerEntityRuntime? performerRuntime = null,
+            PerformerDefinitionRegistry? performerDefinitions = null,
+            PresentationEventStream? presentationEvents = null,
+            ISpatialPartitionWorld? spatialPartition = null,
+            WorldSizeSpec worldSizeSpec = default,
+            PresentationTimingDiagnostics? timingDiagnostics = null)
             : base(world)
         {
             _requests = requests ?? throw new ArgumentNullException(nameof(requests));
+            _receipts = receipts;
             _templateRegistry = templateRegistry ?? throw new ArgumentNullException(nameof(templateRegistry));
             _templateKeys = templateKeys ?? throw new ArgumentNullException(nameof(templateKeys));
             _effectRequests = effectRequests;
-            _builder = new EntityBuilder(world, _cachedTemplates, presentationAuthoring ?? throw new ArgumentNullException(nameof(presentationAuthoring)));
+            _builder = new EntityBuilder(world, _cachedTemplates);
             _stableIds = stableIds ?? throw new ArgumentNullException(nameof(stableIds));
+            _spatialPartition = spatialPartition;
+            _worldSizeSpec = worldSizeSpec;
+            _templateBatchSpawner = new TemplateEntityBatchSpawner(
+                world,
+                templateKeys,
+                stableIds,
+                spatialPartition,
+                worldSizeSpec,
+                BatchEntityScratchCapacity);
+            _performerRuntime = performerRuntime;
+            _performerDefinitions = performerDefinitions;
+            _performerBootstrap = performerDefinitions?.BootstrapRegistry;
+            _presentationEvents = presentationEvents;
+            _timingDiagnostics = timingDiagnostics;
         }
 
         public override void Update(in float dt)
         {
-            while (_requests.TryDequeue(out var request))
+            while (_requests.TryPeek(out var peek))
             {
+                if (peek.Kind == RuntimeEntitySpawnKind.Template &&
+                    !string.IsNullOrWhiteSpace(peek.TemplateId) &&
+                    TryGetTemplate(peek.TemplateId, out EntityTemplate template) &&
+                    _templateBatchSpawner.IsBatchCompatible(peek.TemplateId, template))
+                {
+                    if (!TryDrainTemplateBatch(peek.TemplateId, out int batchCount))
+                    {
+                        break;
+                    }
+
+                    if (batchCount > 1)
+                    {
+                        if (!TrySpawnTemplateBatch(peek.TemplateId, template, batchCount))
+                        {
+                            throw new InvalidOperationException(
+                                $"Runtime template batch spawn failed after template '{peek.TemplateId}' was classified as batch-compatible. " +
+                                "The production path must stay on the validated bulk lane.");
+                        }
+
+                        continue;
+                    }
+
+                    var singleRequest = _batchRequests[0];
+                    var spawnedSingle = SpawnTemplate(singleRequest);
+                    PublishSpawnReceipt(in singleRequest, spawnedSingle);
+                    PublishOnSpawnEffect(in singleRequest, spawnedSingle);
+                    continue;
+                }
+
+                if (!_requests.TryDequeue(out var request))
+                {
+                    break;
+                }
+
                 var spawned = request.Kind switch
                 {
                     RuntimeEntitySpawnKind.UnitType => SpawnUnitType(request),
@@ -57,6 +135,7 @@ namespace Ludots.Core.Gameplay.Spawning
                 };
 
                 PublishOnSpawnEffect(in request, spawned);
+                PublishSpawnReceipt(in request, spawned);
             }
         }
 
@@ -71,7 +150,7 @@ namespace Ludots.Core.Gameplay.Spawning
                 new WorldPositionCm { Value = request.WorldPositionCm },
                 new PreviousWorldPositionCm { Value = request.WorldPositionCm },
                 VisualTransform.Default,
-                new CullState { IsVisible = true, LOD = LODLevel.High },
+                new CullState { IsVisible = false, LOD = LODLevel.Low },
                 new AttributeBuffer());
             EnsurePresentationStableId(entity);
 
@@ -101,13 +180,267 @@ namespace Ludots.Core.Gameplay.Spawning
             var entity = _builder.UseTemplate(request.TemplateId).Build();
             ApplyTemplateKey(entity, request.TemplateId);
 
-            ApplyWorldPosition(entity, request.WorldPositionCm);
+            if (request.HasWorldPosition != 0)
+            {
+                ApplyWorldPosition(entity, request.WorldPositionCm);
+            }
+            else
+            {
+                EnsurePresentationStableId(entity);
+            }
+
             TryApplyFacing(in request, entity);
             TryApplySourceTeam(in request, entity);
             TryApplySourcePlayerOwner(in request, entity);
             TryApplyMapOwnership(in request, entity);
             TryApplyParentLink(in request, entity);
+            TryBootstrapPerformer(entity, request.TemplateId);
             return entity;
+        }
+
+        private bool TryDrainTemplateBatch(string templateId, out int count)
+        {
+            count = 0;
+            if (string.IsNullOrWhiteSpace(templateId))
+            {
+                return false;
+            }
+
+            while (count < _batchRequests.Length &&
+                   _requests.TryPeek(out var next) &&
+                   next.Kind == RuntimeEntitySpawnKind.Template &&
+                   string.Equals(next.TemplateId, templateId, StringComparison.Ordinal))
+            {
+                if (!_requests.TryDequeue(out _batchRequests[count]))
+                {
+                    break;
+                }
+
+                count++;
+            }
+
+            return count > 0;
+        }
+
+        private bool TrySpawnTemplateBatch(string templateId, EntityTemplate template, int count)
+        {
+            long prepareStart = Stopwatch.GetTimestamp();
+            bool allHaveMapEntity = true;
+            for (int i = 0; i < count; i++)
+            {
+                ref readonly var request = ref _batchRequests[i];
+                MapEntity? mapEntity = TryResolveMapEntity(in request);
+                allHaveMapEntity &= mapEntity.HasValue;
+                _templateBatchRequests[i] = new TemplateEntityBatchSpawner.TemplateBatchSpawnRequest(
+                    request.WorldPositionCm,
+                    hasWorldPosition: request.HasWorldPosition != 0,
+                    facingAngleRad: request.FacingAngleRad,
+                    hasFacing: request.HasFacing != 0,
+                    mapEntity: mapEntity ?? default,
+                    hasMapEntity: mapEntity.HasValue);
+            }
+
+            int templateKeyId = ResolveOrRegisterTemplateKeyId(templateId);
+            bool hasDirectBootstrap = HasDirectEntitySpawnBootstrap(templateKeyId);
+            bool publishSpawnedEvent = ShouldPublishSpawnedEvent(templateKeyId, hasDirectBootstrap);
+            bool hasSourceTeamWork = false;
+            bool hasSourcePlayerOwnerWork = false;
+            bool hasParentWork = false;
+            bool hasRequestOnSpawnEffect = false;
+            bool hasReceiptWork = false;
+            for (int i = 0; i < count; i++)
+            {
+                ref readonly var request = ref _batchRequests[i];
+                hasSourceTeamWork |= request.CopySourceTeam != 0;
+                hasSourcePlayerOwnerWork |= request.CopySourcePlayerOwner != 0;
+                hasParentWork |= request.LinkSourceAsParent != 0 || World.IsAlive(request.Parent);
+                hasRequestOnSpawnEffect |= request.OnSpawnEffectTemplateId > 0;
+                hasReceiptWork |= request.EmitReceipt != 0;
+            }
+
+            TemplateBatchSpawnFeatures features =
+                TemplateBatchSpawnFeatures.PresentationStableId |
+                TemplateBatchSpawnFeatures.PresentationLifecycleState;
+            if (allHaveMapEntity)
+            {
+                features |= TemplateBatchSpawnFeatures.MapEntity;
+            }
+
+            if (CanPreseedOwnerPayloadMarker(template, templateKeyId))
+            {
+                features |= TemplateBatchSpawnFeatures.PresentationOwnerHasPerformerPayload;
+            }
+            double prepareMs = ElapsedMs(prepareStart);
+
+            if (!_templateBatchSpawner.TryCreateBatch(
+                templateId,
+                template,
+                _templateBatchRequests.AsSpan(0, count),
+                features,
+                out ReadOnlySpan<Entity> created,
+                _performerBatchStableIds.AsSpan(0, count),
+                _performerBatchOwnerTransforms.AsSpan(0, count),
+                _performerBatchOwnerCulls.AsSpan(0, count)))
+            {
+                return false;
+            }
+
+            double postSpawnMs = 0d;
+            int onSpawnEffectTemplateId = _templateBatchSpawner.GetOnSpawnEffectTemplateId(templateId, template);
+            if (_effectRequests != null && (hasRequestOnSpawnEffect || onSpawnEffectTemplateId > 0))
+            {
+                _effectRequests.Reserve(_effectRequests.Count + _effectRequests.OverflowCount + created.Length);
+            }
+
+            bool requiresPostSpawnLoop =
+                hasSourceTeamWork ||
+                hasSourcePlayerOwnerWork ||
+                hasParentWork ||
+                publishSpawnedEvent ||
+                hasRequestOnSpawnEffect ||
+                hasReceiptWork ||
+                onSpawnEffectTemplateId > 0 ||
+                !allHaveMapEntity;
+            if (requiresPostSpawnLoop)
+            {
+                long postSpawnStart = Stopwatch.GetTimestamp();
+                for (int i = 0; i < created.Length; i++)
+                {
+                    Entity entity = created[i];
+                    ref readonly var request = ref _batchRequests[i];
+                    if (hasSourceTeamWork)
+                    {
+                        TryApplySourceTeam(in request, entity);
+                    }
+
+                    if (hasSourcePlayerOwnerWork)
+                    {
+                        TryApplySourcePlayerOwner(in request, entity);
+                    }
+
+                    if (!allHaveMapEntity)
+                    {
+                        TryApplyMapOwnership(in request, entity);
+                    }
+
+                    if (hasParentWork)
+                    {
+                        TryApplyParentLink(in request, entity);
+                    }
+
+                    if (publishSpawnedEvent)
+                    {
+                        PublishSpawnedPresentationEvent(entity);
+                    }
+
+                    PublishSpawnReceipt(in request, entity);
+
+                    if (hasRequestOnSpawnEffect || onSpawnEffectTemplateId > 0)
+                    {
+                        PublishOnSpawnEffect(in request, entity, onSpawnEffectTemplateId);
+                    }
+                }
+
+                postSpawnMs = ElapsedMs(postSpawnStart);
+            }
+
+            double performerBatchMs = 0d;
+            double performerCreateMs = 0d;
+            double performerBootstrapMarkMs = 0d;
+            double performerCreateSetupMs = 0d;
+            double performerWorldCreateMs = 0d;
+            double performerComponentFillMs = 0d;
+            double performerIndexWriteMs = 0d;
+            double performerOwnerPayloadMs = 0d;
+            double performerPostCreateMs = 0d;
+            double performerChildSetupMs = 0d;
+            double performerChildWorldCreateMs = 0d;
+            double performerChildComponentFillMs = 0d;
+            double performerChildIndexWriteMs = 0d;
+            double performerChildStableIdMs = 0d;
+            int performerCreated = 0;
+            if (hasDirectBootstrap)
+            {
+                long performerBatchStart = Stopwatch.GetTimestamp();
+                TryBootstrapPerformerBatch(
+                    templateKeyId,
+                    created,
+                    _performerBatchStableIds.AsSpan(0, created.Length),
+                    _performerBatchOwnerTransforms.AsSpan(0, created.Length),
+                    _performerBatchOwnerCulls.AsSpan(0, created.Length),
+                    out performerCreated,
+                    out performerCreateMs,
+                    out performerBootstrapMarkMs,
+                    out performerCreateSetupMs,
+                    out performerWorldCreateMs,
+                    out performerComponentFillMs,
+                    out performerIndexWriteMs,
+                    out performerOwnerPayloadMs,
+                    out performerPostCreateMs,
+                    out performerChildSetupMs,
+                    out performerChildWorldCreateMs,
+                    out performerChildComponentFillMs,
+                    out performerChildIndexWriteMs,
+                    out performerChildStableIdMs);
+                performerBatchMs = ElapsedMs(performerBatchStart);
+            }
+
+            _timingDiagnostics?.ObserveRuntimeSpawnBatch(
+                count,
+                performerCreated,
+                prepareMs,
+                _templateBatchSpawner.LastWorldCreateMs,
+                _templateBatchSpawner.LastFillCreatedBatchMs,
+                postSpawnMs,
+                performerBatchMs,
+                performerCreateMs,
+                performerBootstrapMarkMs,
+                performerCreateSetupMs,
+                performerWorldCreateMs,
+                performerComponentFillMs,
+                performerIndexWriteMs,
+                performerOwnerPayloadMs,
+                performerPostCreateMs,
+                performerChildSetupMs,
+                performerChildWorldCreateMs,
+                performerChildComponentFillMs,
+                performerChildIndexWriteMs,
+                performerChildStableIdMs);
+
+            return true;
+        }
+
+        private bool CanPreseedOwnerPayloadMarker(EntityTemplate template, int templateKeyId)
+        {
+            if (_performerBootstrap == null ||
+                templateKeyId <= 0 ||
+                !_performerBootstrap.TryGetEntitySpawnCreates(templateKeyId, out CompiledPerformerBootstrapRegistry.BootstrapCreateRule[] rules) ||
+                rules.Length == 0)
+            {
+                return false;
+            }
+
+            for (int i = 0; i < rules.Length; i++)
+            {
+                ref readonly var rule = ref rules[i];
+                if (rule.ResolveScopeTag(1) <= 0 || !TemplateSatisfiesBootstrapCondition(template, rule.InlineCondition))
+                {
+                    return false;
+                }
+            }
+
+            return true;
+        }
+
+        private static bool TemplateSatisfiesBootstrapCondition(EntityTemplate template, InlineConditionKind condition)
+        {
+            return condition switch
+            {
+                InlineConditionKind.None => true,
+                InlineConditionKind.SourceHasVisualTransform => true,
+                InlineConditionKind.SourceHasAttributes => template.Components != null && template.Components.ContainsKey("AttributeBuffer"),
+                _ => throw new InvalidOperationException($"Unsupported performer bootstrap inline condition '{condition}'."),
+            };
         }
 
         private Entity SpawnAssembly(in RuntimeEntitySpawnRequest request)
@@ -145,7 +478,26 @@ namespace Ludots.Core.Gameplay.Spawning
                 throw new InvalidOperationException($"Runtime template spawn references unknown template '{templateId}'.");
             }
 
+            if (!string.Equals(template.Id, templateId, StringComparison.Ordinal))
+            {
+                throw new InvalidOperationException(
+                    $"Runtime template spawn requires exact template id '{template.Id}', got '{templateId}'.");
+            }
+
             _cachedTemplates[templateId] = template;
+        }
+
+        private bool TryGetTemplate(string templateId, out EntityTemplate template)
+        {
+            template = null;
+            if (string.IsNullOrWhiteSpace(templateId))
+            {
+                return false;
+            }
+
+            EnsureTemplateLoaded(templateId);
+            template = _cachedTemplates[templateId];
+            return template != null;
         }
 
         private void ApplyTemplateKey(Entity entity, string templateId)
@@ -197,7 +549,7 @@ namespace Ludots.Core.Gameplay.Spawning
 
             if (!World.Has<CullState>(entity))
             {
-                World.Add(entity, new CullState { IsVisible = true, LOD = LODLevel.High });
+                World.Add(entity, new CullState { IsVisible = false, LOD = LODLevel.Low });
             }
 
             EnsurePresentationStableId(entity);
@@ -279,6 +631,24 @@ namespace Ludots.Core.Gameplay.Spawning
 
         private void TryApplyMapOwnership(in RuntimeEntitySpawnRequest request, Entity entity)
         {
+            MapEntity? mapEntity = TryResolveMapEntity(in request);
+            if (!mapEntity.HasValue)
+            {
+                return;
+            }
+
+            if (World.Has<MapEntity>(entity))
+            {
+                World.Set(entity, mapEntity.Value);
+            }
+            else
+            {
+                World.Add(entity, mapEntity.Value);
+            }
+        }
+
+        private MapEntity? TryResolveMapEntity(in RuntimeEntitySpawnRequest request)
+        {
             var mapId = request.MapId;
             if (string.IsNullOrWhiteSpace(mapId.Value) &&
                 World.IsAlive(request.Source) &&
@@ -289,18 +659,10 @@ namespace Ludots.Core.Gameplay.Spawning
 
             if (string.IsNullOrWhiteSpace(mapId.Value))
             {
-                return;
+                return null;
             }
 
-            var mapEntity = new MapEntity { MapId = mapId };
-            if (World.Has<MapEntity>(entity))
-            {
-                World.Set(entity, mapEntity);
-            }
-            else
-            {
-                World.Add(entity, mapEntity);
-            }
+            return new MapEntity { MapId = mapId };
         }
 
         private void TryApplyParentLink(in RuntimeEntitySpawnRequest request, Entity entity)
@@ -316,19 +678,473 @@ namespace Ludots.Core.Gameplay.Spawning
 
         private void PublishOnSpawnEffect(in RuntimeEntitySpawnRequest request, Entity spawned)
         {
-            if (_effectRequests == null || request.OnSpawnEffectTemplateId <= 0)
+            PublishOnSpawnEffect(in request, spawned, 0);
+        }
+
+        private void PublishSpawnReceipt(in RuntimeEntitySpawnRequest request, Entity spawned)
+        {
+            if (request.EmitReceipt == 0)
             {
                 return;
             }
 
+            if (_receipts == null)
+            {
+                throw new InvalidOperationException("RuntimeEntitySpawnRequest requested a receipt but RuntimeEntitySpawnReceiptQueue is not registered.");
+            }
+
+            if (!_receipts.TryEnqueue(new RuntimeEntitySpawnReceipt
+                {
+                    ReceiptChannelId = request.ReceiptChannelId,
+                    ReceiptId = request.ReceiptId,
+                    Kind = request.Kind,
+                    Entity = spawned,
+                    TemplateId = request.TemplateId,
+                    MapId = request.MapId,
+                }))
+            {
+                throw new InvalidOperationException("RuntimeEntitySpawnReceiptQueue capacity exceeded.");
+            }
+        }
+
+        private void PublishSpawnedPresentationEvent(Entity entity)
+        {
+            if (_presentationEvents == null ||
+                !World.IsAlive(entity) ||
+                !World.Has<PresentationStableId>(entity))
+            {
+                return;
+            }
+
+            int templateKeyId = World.Has<EntityTemplateKeyCm>(entity)
+                ? World.Get<EntityTemplateKeyCm>(entity).TemplateKeyId
+                : 0;
+            if (!_presentationEvents.TryAdd(new PresentationEvent
+                {
+                    Kind = PresentationEventKind.EntitySpawned,
+                    Source = entity,
+                    Target = entity,
+                    KeyId = templateKeyId,
+                    PayloadA = World.Get<PresentationStableId>(entity).Value,
+                }))
+            {
+                throw new InvalidOperationException("PresentationEventStream is full while publishing batch EntitySpawned.");
+            }
+        }
+
+        private void PublishOnSpawnEffect(in RuntimeEntitySpawnRequest request, Entity spawned, int cachedTemplateOnSpawnEffectId)
+        {
+            if (_effectRequests == null)
+            {
+                return;
+            }
+
+            int effectTemplateId = request.OnSpawnEffectTemplateId > 0
+                ? request.OnSpawnEffectTemplateId
+                : cachedTemplateOnSpawnEffectId;
+            bool useSpawnedAsSource = false;
+            if (effectTemplateId <= 0 &&
+                request.Kind == RuntimeEntitySpawnKind.Template &&
+                !string.IsNullOrWhiteSpace(request.TemplateId))
+            {
+                var template = _templateRegistry.Get(request.TemplateId);
+                if (template != null && !string.IsNullOrWhiteSpace(template.OnSpawnEffect))
+                {
+                    effectTemplateId = EffectTemplateIdRegistry.GetId(template.OnSpawnEffect);
+                    if (effectTemplateId <= 0)
+                    {
+                        throw new InvalidOperationException(
+                            $"Entity template '{request.TemplateId}' references unknown onSpawnEffect '{template.OnSpawnEffect}'.");
+                    }
+                }
+            }
+
+            if (effectTemplateId <= 0)
+            {
+                return;
+            }
+
+            useSpawnedAsSource = request.OnSpawnEffectTemplateId <= 0;
             _effectRequests.Publish(new EffectRequest
             {
                 RootId = 0,
-                Source = request.Source,
+                Source = useSpawnedAsSource ? spawned : request.Source,
                 Target = spawned,
-                TargetContext = request.TargetContext,
-                TemplateId = request.OnSpawnEffectTemplateId,
+                TargetContext = useSpawnedAsSource ? spawned : request.TargetContext,
+                TemplateId = effectTemplateId,
             });
+        }
+
+        private void TryBootstrapPerformer(Entity owner, string templateId)
+        {
+            if (_performerRuntime == null || _performerDefinitions == null || _performerBootstrap == null)
+            {
+                return;
+            }
+
+            int templateKeyId = ResolveTemplateKeyId(templateId, owner);
+            if (templateKeyId <= 0 ||
+                !_performerBootstrap.TryGetEntitySpawnCreates(templateKeyId, out CompiledPerformerBootstrapRegistry.BootstrapCreateRule[] rules))
+            {
+                return;
+            }
+
+            int stableId = World.Has<PresentationStableId>(owner)
+                ? World.Get<PresentationStableId>(owner).Value
+                : 0;
+            for (int i = 0; i < rules.Length; i++)
+            {
+                ref readonly var rule = ref rules[i];
+                if (!PassesBootstrapCondition(rule, owner))
+                {
+                    continue;
+                }
+
+                if (!_performerDefinitions.TryGet(rule.PerformerDefinitionId, out PerformerDefinition definition))
+                {
+                    throw new InvalidOperationException($"Performer definition id={rule.PerformerDefinitionId} is not registered.");
+                }
+
+                int scopeTag = rule.ResolveScopeTag(stableId);
+                if (scopeTag <= 0)
+                {
+                    continue;
+                }
+
+                if (_performerRuntime.HasActiveScopedInstance(rule.PerformerDefinitionId, owner, scopeTag, PresentationAnchorKind.Entity, default))
+                {
+                    continue;
+                }
+
+                Entity root = _performerRuntime.CreateHierarchy(
+                    _performerDefinitions,
+                    rule.PerformerDefinitionId,
+                    owner,
+                    scopeTag,
+                    PresentationAnchorKind.Entity,
+                    default,
+                    _stableIds.Allocate(),
+                    Entity.Null,
+                    definition,
+                    _stableIds.Allocate);
+                MarkHierarchyForBootstrapIfNeeded(root);
+                MarkOwnerBootstrapHandled(owner);
+            }
+        }
+
+        private void TryBootstrapPerformerBatch(
+            int templateKeyId,
+            ReadOnlySpan<Entity> owners,
+            ReadOnlySpan<int> stableIds,
+            ReadOnlySpan<VisualTransform> ownerTransforms,
+            ReadOnlySpan<CullState> ownerCulls)
+        {
+            TryBootstrapPerformerBatch(
+                templateKeyId,
+                owners,
+                stableIds,
+                ownerTransforms,
+                ownerCulls,
+                out _,
+                out _,
+                out _,
+                out _,
+                out _,
+                out _,
+                out _,
+                out _,
+                out _,
+                out _,
+                out _,
+                out _,
+                out _,
+                out _);
+        }
+
+        private void TryBootstrapPerformerBatch(
+            int templateKeyId,
+            ReadOnlySpan<Entity> owners,
+            ReadOnlySpan<int> stableIds,
+            ReadOnlySpan<VisualTransform> ownerTransforms,
+            ReadOnlySpan<CullState> ownerCulls,
+            out int totalCreated,
+            out double performerCreateMs,
+            out double bootstrapMarkMs,
+            out double performerCreateSetupMs,
+            out double performerWorldCreateMs,
+            out double performerComponentFillMs,
+            out double performerIndexWriteMs,
+            out double performerOwnerPayloadMs,
+            out double performerPostCreateMs,
+            out double performerChildSetupMs,
+            out double performerChildWorldCreateMs,
+            out double performerChildComponentFillMs,
+            out double performerChildIndexWriteMs,
+            out double performerChildStableIdMs)
+        {
+            totalCreated = 0;
+            performerCreateMs = 0d;
+            bootstrapMarkMs = 0d;
+            performerCreateSetupMs = 0d;
+            performerWorldCreateMs = 0d;
+            performerComponentFillMs = 0d;
+            performerIndexWriteMs = 0d;
+            performerOwnerPayloadMs = 0d;
+            performerPostCreateMs = 0d;
+            performerChildSetupMs = 0d;
+            performerChildWorldCreateMs = 0d;
+            performerChildComponentFillMs = 0d;
+            performerChildIndexWriteMs = 0d;
+            performerChildStableIdMs = 0d;
+            if (_performerRuntime == null || _performerDefinitions == null || _performerBootstrap == null || owners.Length == 0)
+            {
+                return;
+            }
+
+            if (owners.Length != stableIds.Length ||
+                owners.Length != ownerTransforms.Length ||
+                owners.Length != ownerCulls.Length)
+            {
+                throw new ArgumentException("Performer bootstrap batch spans must have matching lengths.");
+            }
+
+            if (templateKeyId <= 0 ||
+                !_performerBootstrap.TryGetEntitySpawnCreates(templateKeyId, out CompiledPerformerBootstrapRegistry.BootstrapCreateRule[] rules))
+            {
+                return;
+            }
+
+            for (int ri = 0; ri < rules.Length; ri++)
+            {
+                ref readonly var rule = ref rules[ri];
+                if (!_performerDefinitions.TryGet(rule.PerformerDefinitionId, out PerformerDefinition definition))
+                {
+                    throw new InvalidOperationException($"Performer definition id={rule.PerformerDefinitionId} is not registered.");
+                }
+
+                int createCount = 0;
+                for (int oi = 0; oi < owners.Length; oi++)
+                {
+                    Entity owner = owners[oi];
+                    if (!PassesBootstrapCondition(rule, owner))
+                    {
+                        continue;
+                    }
+
+                    int stableId = stableIds[oi];
+                    int scopeTag = rule.ResolveScopeTag(stableId);
+                    if (scopeTag <= 0)
+                    {
+                        continue;
+                    }
+
+                    _performerBatchOwners[createCount] = owner;
+                    _performerBatchScopeIds[createCount] = scopeTag;
+                    _performerBatchStableIds[createCount] = _stableIds.Allocate();
+                    _performerBatchOwnerTransforms[createCount] = ownerTransforms[oi];
+                    _performerBatchOwnerCulls[createCount] = ownerCulls[oi];
+                    createCount++;
+                }
+
+                if (createCount == 0)
+                {
+                    continue;
+                }
+
+                long createStart = Stopwatch.GetTimestamp();
+                _performerRuntime.CreateEntityAnchoredRootBatch(
+                    _performerDefinitions,
+                    rule.PerformerDefinitionId,
+                    _performerBatchOwners.AsSpan(0, createCount),
+                    _performerBatchScopeIds.AsSpan(0, createCount),
+                    _performerBatchStableIds.AsSpan(0, createCount),
+                    _performerBatchOwnerTransforms.AsSpan(0, createCount),
+                    _performerBatchOwnerCulls.AsSpan(0, createCount),
+                    definition,
+                    _performerBatchCreated.AsSpan(0, createCount),
+                    _stableIds.Allocate);
+                performerCreateMs += ElapsedMs(createStart);
+                performerCreateSetupMs += _performerRuntime.LastRootBatchSetupMs;
+                performerWorldCreateMs += _performerRuntime.LastRootBatchWorldCreateMs;
+                performerComponentFillMs += _performerRuntime.LastRootBatchComponentFillMs;
+                performerIndexWriteMs += _performerRuntime.LastRootBatchIndexWriteMs;
+                performerOwnerPayloadMs += _performerRuntime.LastRootBatchOwnerPayloadMs;
+                performerPostCreateMs += _performerRuntime.LastRootBatchPostCreateMs;
+                performerChildSetupMs += _performerRuntime.LastChildBatchSetupMs;
+                performerChildWorldCreateMs += _performerRuntime.LastChildBatchWorldCreateMs;
+                performerChildComponentFillMs += _performerRuntime.LastChildBatchComponentFillMs;
+                performerChildIndexWriteMs += _performerRuntime.LastChildBatchIndexWriteMs;
+                performerChildStableIdMs += _performerRuntime.LastChildBatchStableIdMs;
+
+                if (PerformerEntityRuntime.RequiresDeferredBootstrapAfterBatchCreateHierarchy(definition, _performerDefinitions))
+                {
+                    long markStart = Stopwatch.GetTimestamp();
+                    for (int i = 0; i < createCount; i++)
+                    {
+                        MarkHierarchyForBootstrapAfterBatchCreateIfNeeded(_performerBatchCreated[i]);
+                    }
+
+                    bootstrapMarkMs += ElapsedMs(markStart);
+                }
+
+                totalCreated += createCount;
+            }
+        }
+
+        private static double ElapsedMs(long startTimestamp)
+        {
+            return (Stopwatch.GetTimestamp() - startTimestamp) * 1000d / Stopwatch.Frequency;
+        }
+
+        private int ResolveTemplateKeyId(string templateId, Entity owner)
+        {
+            if (!string.IsNullOrWhiteSpace(templateId))
+            {
+                int templateKeyId = _templateKeys.GetId(templateId);
+                if (templateKeyId > 0)
+                {
+                    return templateKeyId;
+                }
+            }
+
+            return World.Has<EntityTemplateKeyCm>(owner)
+                ? World.Get<EntityTemplateKeyCm>(owner).TemplateKeyId
+                : 0;
+        }
+
+        private bool PassesBootstrapCondition(CompiledPerformerBootstrapRegistry.BootstrapCreateRule rule, Entity owner)
+        {
+            return rule.InlineCondition switch
+            {
+                InlineConditionKind.None => true,
+                InlineConditionKind.SourceHasVisualTransform => World.Has<VisualTransform>(owner),
+                InlineConditionKind.SourceHasAttributes => World.Has<AttributeBuffer>(owner),
+                _ => throw new InvalidOperationException($"Unsupported performer bootstrap inline condition '{rule.InlineCondition}'."),
+            };
+        }
+
+        private int ResolveOrRegisterTemplateKeyId(string templateId)
+        {
+            int templateKeyId = _templateKeys.GetId(templateId);
+            return templateKeyId > 0 ? templateKeyId : _templateKeys.Register(templateId);
+        }
+
+        private bool HasDirectEntitySpawnBootstrap(int templateKeyId)
+        {
+            if (_performerBootstrap == null)
+            {
+                return false;
+            }
+
+            return templateKeyId > 0 &&
+                   _performerBootstrap.TryGetEntitySpawnCreates(templateKeyId, out CompiledPerformerBootstrapRegistry.BootstrapCreateRule[] rules) &&
+                   rules.Length > 0;
+        }
+
+        private bool ShouldPublishSpawnedEvent(int templateKeyId, bool hasDirectBootstrap)
+        {
+            if (_presentationEvents == null)
+            {
+                return false;
+            }
+
+            if (!hasDirectBootstrap || _performerBootstrap == null)
+            {
+                return true;
+            }
+
+            return _performerBootstrap.HasNonBootstrapEntitySpawnRules(templateKeyId);
+        }
+
+        private void MarkHierarchyForBootstrap(Entity root)
+        {
+            if (!World.IsAlive(root) || !World.Has<PerformerState>(root))
+            {
+                return;
+            }
+
+            MarkPerformer(root);
+            ref PerformerChildren children = ref World.Get<PerformerChildren>(root);
+            for (int i = 0; i < children.Count; i++)
+            {
+                Entity child = children.Get(i);
+                if (World.IsAlive(child))
+                {
+                    MarkHierarchyForBootstrap(child);
+                }
+            }
+        }
+
+        private void MarkPerformer(Entity performer)
+        {
+            if (World.Has<PerformerBootstrapPending>(performer))
+            {
+                return;
+            }
+
+            World.Add(performer, new PerformerBootstrapPending());
+        }
+
+        private void MarkHierarchyForBootstrapIfNeeded(Entity root)
+        {
+            if (!World.IsAlive(root) || !World.Has<PerformerState>(root))
+            {
+                return;
+            }
+
+            ref readonly PerformerState state = ref World.Get<PerformerState>(root);
+            if (_performerDefinitions != null &&
+                _performerDefinitions.TryGet(state.DefId, out PerformerDefinition definition) &&
+                definition.RequiresBootstrapProcessing)
+            {
+                MarkPerformer(root);
+            }
+
+            ref PerformerChildren children = ref World.Get<PerformerChildren>(root);
+            for (int i = 0; i < children.Count; i++)
+            {
+                Entity child = children.Get(i);
+                if (World.IsAlive(child))
+                {
+                    MarkHierarchyForBootstrapIfNeeded(child);
+                }
+            }
+        }
+
+        private void MarkHierarchyForBootstrapAfterBatchCreateIfNeeded(Entity root)
+        {
+            if (!World.IsAlive(root) || !World.Has<PerformerState>(root))
+            {
+                return;
+            }
+
+            ref readonly PerformerState state = ref World.Get<PerformerState>(root);
+            if (_performerDefinitions != null &&
+                _performerDefinitions.TryGet(state.DefId, out PerformerDefinition definition) &&
+                PerformerEntityRuntime.RequiresDeferredBootstrapAfterBatchCreate(definition))
+            {
+                MarkPerformer(root);
+            }
+
+            ref PerformerChildren children = ref World.Get<PerformerChildren>(root);
+            for (int i = 0; i < children.Count; i++)
+            {
+                Entity child = children.Get(i);
+                if (World.IsAlive(child))
+                {
+                    MarkHierarchyForBootstrapAfterBatchCreateIfNeeded(child);
+                }
+            }
+        }
+
+        private void MarkOwnerBootstrapHandled(Entity owner)
+        {
+            if (World.Has<PerformerRootBootstrapHandled>(owner))
+            {
+                return;
+            }
+
+            World.Add(owner, new PerformerRootBootstrapHandled());
         }
     }
 }

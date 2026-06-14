@@ -128,7 +128,7 @@ namespace Ludots.Tests.GAS
         }
 
         [Test]
-        public void MergeArrayByIdToEntries_CaseInsensitiveIds()
+        public void MergeArrayByIdToEntries_CaseExactIds()
         {
             var frags = new List<ConfigFragment>
             {
@@ -138,8 +138,9 @@ namespace Ludots.Tests.GAS
             var entry = new ConfigCatalogEntry("test.json", ConfigMergePolicy.ArrayById, "id");
             var result = ConfigMerger.MergeArrayByIdToEntries(frags, in entry);
 
-            That(result.Count, Is.EqualTo(1), "Case-insensitive merge");
-            That(result[0].Node["v"]?.GetValue<int>(), Is.EqualTo(2));
+            That(result.Count, Is.EqualTo(2), "ArrayById ids are case-exact and must not create aliases.");
+            That(result[0].Id, Is.EqualTo("Fireball"));
+            That(result[1].Id, Is.EqualTo("fireball"));
         }
 
         [Test]

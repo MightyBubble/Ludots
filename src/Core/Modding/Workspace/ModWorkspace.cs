@@ -59,8 +59,8 @@ namespace Ludots.Core.Modding.Workspace
         public List<string> ResolveModPaths(IEnumerable<string> modNames)
         {
             var discoveredMods = ModDiscovery.DiscoverMods(Sources);
-            var byName = new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase);
-            var byManifest = new Dictionary<string, ModManifest>(StringComparer.OrdinalIgnoreCase);
+            var byName = new Dictionary<string, string>(StringComparer.Ordinal);
+            var byManifest = new Dictionary<string, ModManifest>(StringComparer.Ordinal);
 
             for (int i = 0; i < discoveredMods.Count; i++)
             {
@@ -69,7 +69,7 @@ namespace Ludots.Core.Modding.Workspace
                 byManifest[discovered.Manifest.Name] = discovered.Manifest;
             }
 
-            var required = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
+            var required = new HashSet<string>(StringComparer.Ordinal);
             var order = new List<string>();
 
             void Collect(string name)
@@ -110,7 +110,8 @@ namespace Ludots.Core.Modding.Workspace
         {
             ReadCommentHandling = JsonCommentHandling.Skip,
             AllowTrailingCommas = true,
-            PropertyNameCaseInsensitive = true
+            PropertyNameCaseInsensitive = false,
+            UnmappedMemberHandling = System.Text.Json.Serialization.JsonUnmappedMemberHandling.Disallow
         };
     }
 }

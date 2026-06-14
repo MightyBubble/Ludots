@@ -49,7 +49,10 @@ namespace Ludots.Core.Presentation.Camera
             }
 
             CameraStateSnapshot state = cameraManager.GetInterpolatedState(interpolationAlpha);
-            CurrentTargetPosition = new Vector3(WorldUnits.CmToM(state.TargetCm.X), 0f, WorldUnits.CmToM(state.TargetCm.Y));
+            CurrentTargetPosition = new Vector3(
+                WorldUnits.CmToM(state.TargetCm.X),
+                WorldUnits.CmToM(state.TargetHeightCm),
+                WorldUnits.CmToM(state.TargetCm.Y));
             SmoothedRenderState = CameraViewportUtil.StateToRenderState(state, cameraDebug);
             _adapter.UpdateCamera(SmoothedRenderState);
             _timingDiagnostics?.ObserveCameraPresenter((Stopwatch.GetTimestamp() - start) * 1000.0 / Stopwatch.Frequency);

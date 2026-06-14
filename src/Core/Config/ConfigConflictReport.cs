@@ -6,7 +6,7 @@ namespace Ludots.Core.Config
 {
     public sealed class ConfigConflictReport
     {
-        private readonly Dictionary<string, List<string>> _fragmentsByPath = new(StringComparer.OrdinalIgnoreCase);
+        private readonly Dictionary<string, List<string>> _fragmentsByPath = new(StringComparer.Ordinal);
         private readonly Dictionary<(string Path, string Id), string> _winnerById = new();
         private readonly HashSet<(string Path, string Id)> _deleted = new();
 
@@ -50,7 +50,7 @@ namespace Ludots.Core.Config
             var result = new List<(string, string)>();
             foreach (var d in _deleted)
             {
-                if (string.Equals(d.Path, relativePath, StringComparison.OrdinalIgnoreCase))
+                if (string.Equals(d.Path, relativePath, StringComparison.Ordinal))
                     result.Add(d);
             }
             return result;

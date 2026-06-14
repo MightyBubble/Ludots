@@ -1,4 +1,5 @@
 {
+  "orderBlackboardKeys": {},
   "orderTypes": {
     "castAbility": {
       "orderTypeId": 100,
@@ -13,10 +14,10 @@
       "queuedModeMaxSize": 8,
       "allowQueuedMode": true,
       "clearQueueOnActivate": true,
-      "spatialBlackboardKey": 112,
-      "entityBlackboardKey": 111,
-      "intArg0BlackboardKey": 110,
-      "validationGraphId": 0
+      "spatialBlackboardKey": "Cast.TargetPosition",
+      "entityBlackboardKey": "Cast.TargetEntity",
+      "intArg0BlackboardKey": "Cast.SlotIndex",
+      "validationGraph": "none"
     },
     "castAbility.Start": {
       "orderTypeId": 104,
@@ -31,10 +32,10 @@
       "queuedModeMaxSize": 8,
       "allowQueuedMode": true,
       "clearQueueOnActivate": true,
-      "spatialBlackboardKey": 112,
-      "entityBlackboardKey": 111,
-      "intArg0BlackboardKey": 110,
-      "validationGraphId": 0
+      "spatialBlackboardKey": "Cast.TargetPosition",
+      "entityBlackboardKey": "Cast.TargetEntity",
+      "intArg0BlackboardKey": "Cast.SlotIndex",
+      "validationGraph": "none"
     },
     "castAbility.End": {
       "orderTypeId": 105,
@@ -49,10 +50,10 @@
       "queuedModeMaxSize": 1,
       "allowQueuedMode": false,
       "clearQueueOnActivate": true,
-      "spatialBlackboardKey": -1,
-      "entityBlackboardKey": -1,
-      "intArg0BlackboardKey": 110,
-      "validationGraphId": 0
+      "spatialBlackboardKey": "none",
+      "entityBlackboardKey": "none",
+      "intArg0BlackboardKey": "Cast.SlotIndex",
+      "validationGraph": "none"
     },
     "moveTo": {
       "orderTypeId": 101,
@@ -67,10 +68,10 @@
       "queuedModeMaxSize": 8,
       "allowQueuedMode": true,
       "clearQueueOnActivate": true,
-      "spatialBlackboardKey": 201,
-      "entityBlackboardKey": -1,
-      "intArg0BlackboardKey": -1,
-      "validationGraphId": 0
+      "spatialBlackboardKey": "Generic.TargetPosition",
+      "entityBlackboardKey": "none",
+      "intArg0BlackboardKey": "none",
+      "validationGraph": "none"
     },
     "attackTarget": {
       "orderTypeId": 102,
@@ -85,10 +86,10 @@
       "queuedModeMaxSize": 8,
       "allowQueuedMode": true,
       "clearQueueOnActivate": true,
-      "spatialBlackboardKey": 121,
-      "entityBlackboardKey": 120,
-      "intArg0BlackboardKey": -1,
-      "validationGraphId": 0
+      "spatialBlackboardKey": "Attack.MovePosition",
+      "entityBlackboardKey": "Attack.TargetEntity",
+      "intArg0BlackboardKey": "none",
+      "validationGraph": "none"
     },
     "stop": {
       "orderTypeId": 103,
@@ -103,10 +104,10 @@
       "queuedModeMaxSize": 1,
       "allowQueuedMode": false,
       "clearQueueOnActivate": true,
-      "spatialBlackboardKey": -1,
-      "entityBlackboardKey": -1,
-      "intArg0BlackboardKey": -1,
-      "validationGraphId": 0
+      "spatialBlackboardKey": "none",
+      "entityBlackboardKey": "none",
+      "intArg0BlackboardKey": "none",
+      "validationGraph": "none"
     },
     "chainPass": {
       "orderTypeId": 1,
@@ -121,10 +122,10 @@
       "queuedModeMaxSize": 1,
       "allowQueuedMode": false,
       "clearQueueOnActivate": false,
-      "spatialBlackboardKey": -1,
-      "entityBlackboardKey": -1,
-      "intArg0BlackboardKey": -1,
-      "validationGraphId": 0
+      "spatialBlackboardKey": "none",
+      "entityBlackboardKey": "none",
+      "intArg0BlackboardKey": "none",
+      "validationGraph": "none"
     },
     "chainNegate": {
       "orderTypeId": 2,
@@ -139,10 +140,10 @@
       "queuedModeMaxSize": 1,
       "allowQueuedMode": false,
       "clearQueueOnActivate": false,
-      "spatialBlackboardKey": -1,
-      "entityBlackboardKey": -1,
-      "intArg0BlackboardKey": -1,
-      "validationGraphId": 0
+      "spatialBlackboardKey": "none",
+      "entityBlackboardKey": "none",
+      "intArg0BlackboardKey": "none",
+      "validationGraph": "none"
     },
     "chainActivateEffect": {
       "orderTypeId": 3,
@@ -157,56 +158,56 @@
       "queuedModeMaxSize": 1,
       "allowQueuedMode": false,
       "clearQueueOnActivate": false,
-      "spatialBlackboardKey": -1,
-      "entityBlackboardKey": -1,
-      "intArg0BlackboardKey": -1,
-      "validationGraphId": 0
+      "spatialBlackboardKey": "none",
+      "entityBlackboardKey": "none",
+      "intArg0BlackboardKey": "none",
+      "validationGraph": "none"
     }
   },
   "orderRules": {
     "castAbility": {
-      "orderTypeId": 100,
-      "blockedActiveOrderTypeIds": [],
-      "interruptsActiveOrderTypeIds": [
-        101
+      "orderTypeKey": "castAbility",
+      "blockedActiveOrderTypeKeys": [],
+      "interruptsActiveOrderTypeKeys": [
+        "moveTo"
       ]
     },
     "castAbility.Start": {
-      "orderTypeId": 104,
-      "blockedActiveOrderTypeIds": [],
-      "interruptsActiveOrderTypeIds": [
-        101
+      "orderTypeKey": "castAbility.Start",
+      "blockedActiveOrderTypeKeys": [],
+      "interruptsActiveOrderTypeKeys": [
+        "moveTo"
       ]
     },
     "castAbility.End": {
-      "orderTypeId": 105,
-      "blockedActiveOrderTypeIds": [],
-      "interruptsActiveOrderTypeIds": [
-        100,
-        104
+      "orderTypeKey": "castAbility.End",
+      "blockedActiveOrderTypeKeys": [],
+      "interruptsActiveOrderTypeKeys": [
+        "castAbility",
+        "castAbility.Start"
       ]
     },
     "moveTo": {
-      "orderTypeId": 101,
-      "blockedActiveOrderTypeIds": [],
-      "interruptsActiveOrderTypeIds": [
-        102
+      "orderTypeKey": "moveTo",
+      "blockedActiveOrderTypeKeys": [],
+      "interruptsActiveOrderTypeKeys": [
+        "attackTarget"
       ]
     },
     "attackTarget": {
-      "orderTypeId": 102,
-      "blockedActiveOrderTypeIds": [],
-      "interruptsActiveOrderTypeIds": [
-        101
+      "orderTypeKey": "attackTarget",
+      "blockedActiveOrderTypeKeys": [],
+      "interruptsActiveOrderTypeKeys": [
+        "moveTo"
       ]
     },
     "stop": {
-      "orderTypeId": 103,
-      "blockedActiveOrderTypeIds": [],
-      "interruptsActiveOrderTypeIds": [
-        100,
-        101,
-        102
+      "orderTypeKey": "stop",
+      "blockedActiveOrderTypeKeys": [],
+      "interruptsActiveOrderTypeKeys": [
+        "castAbility",
+        "moveTo",
+        "attackTarget"
       ]
     }
   }

@@ -11,8 +11,12 @@ using Ludots.Core.Mathematics;
 using Ludots.Core.Mathematics.FixedPoint;
 using Ludots.Core.Physics2D.Components;
 using Ludots.Core.Physics2D.Systems;
+using Ludots.Core.Presentation;
+using Ludots.Core.Presentation.Assets;
 using Ludots.Core.Presentation.Camera;
+using Ludots.Core.Presentation.Commands;
 using Ludots.Core.Presentation.Components;
+using Ludots.Core.Presentation.Performers;
 using Ludots.Core.Presentation.Systems;
 using Ludots.Core.Presentation.Utils;
 using Ludots.Core.Gameplay.GAS.Orders;
@@ -27,9 +31,16 @@ namespace Ludots.Tests.ThreeC
     [TestFixture]
     public class ThreeCSystemTests
     {
-        // 鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲
+        private static CameraCullingRuntimeConfig TestCameraCullingConfig => new CameraCullingRuntimeConfig
+        {
+            HighLodDistanceCm = 4000f,
+            MediumLodDistanceCm = 10000f,
+            LowLodDistanceCm = 20000f,
+        };
+
+        // 鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨�?
         //  Test Doubles
-        // 鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲
+        // 鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨�?
 
         /// <summary>Captures CameraRenderState3D sent by CameraPresenter.</summary>
         private sealed class StubCameraAdapter : ICameraAdapter
@@ -73,6 +84,36 @@ namespace Ludots.Tests.ThreeC
             public SpatialQueryResult QueryHexRing(Ludots.Core.Map.Hex.HexCoordinates center, int hexRadius, Span<Entity> buffer) => throw new NotSupportedException();
         }
 
+        private sealed class StubLoadedChunks : Ludots.Core.Spatial.ILoadedChunks
+        {
+            private readonly HashSet<long> _active = new();
+
+            public IReadOnlyCollection<long> ActiveChunkKeys => _active;
+
+            public event Action<long> ChunkLoaded
+            {
+                add { }
+                remove { }
+            }
+
+            public event Action<long> ChunkUnloaded
+            {
+                add { }
+                remove { }
+            }
+
+            public bool IsLoaded(long chunkKey) => _active.Contains(chunkKey);
+
+            public void SetLoaded(params long[] keys)
+            {
+                _active.Clear();
+                foreach (long key in keys)
+                {
+                    _active.Add(key);
+                }
+            }
+        }
+
         /// <summary>Dictionary-driven input backend for deterministic tests.</summary>
         private sealed class StubInputBackend : IInputBackend
         {
@@ -100,9 +141,9 @@ namespace Ludots.Tests.ThreeC
             public Ludots.Core.Map.Hex.HexCoordinates WorldToHex(in WorldCmInt2 world) => default;
         }
 
-        // 鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲
+        // 鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨�?
         //  SetUp
-        // 鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲
+        // 鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨�?
 
         [SetUp]
         public void Setup()
@@ -119,9 +160,9 @@ namespace Ludots.Tests.ThreeC
             }
         }
 
-        // 鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲
+        // 鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨�?
         //  A. Camera State & Manager
-        // 鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲
+        // 鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨�?
 
         [Test]
         public void CameraState_DefaultValues_MatchExpected()
@@ -171,9 +212,9 @@ namespace Ludots.Tests.ThreeC
             That(manager.State.Yaw, Is.EqualTo(85f).Within(0.01f));
         }
 
-        // 鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲
+        // 鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨�?
         //  B. Camera Preset Runtime Behaviors
-        // 鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲
+        // 鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨�?
 
         private static (StubInputBackend backend, PlayerInputHandler handler) BuildOrbitInputHandler()
         {
@@ -363,7 +404,7 @@ namespace Ludots.Tests.ThreeC
             return manager;
         }
         //  C. Camera Presenter
-        // 鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲
+        // 鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨�?
 
         [Test]
         public void Presenter_FirstUpdate_SphericalToCartesianCorrect()
@@ -386,12 +427,12 @@ namespace Ludots.Tests.ThreeC
 
             presenter.Update(manager, 1f);
 
-            // Yaw=0 鈫?sin(0)=0, cos(0)=1
-            // Pitch=45掳 鈫?cos(蟺/4)鈮?.7071, sin(蟺/4)鈮?.7071
-            // distM = 10m, hDist = 10*cos(45掳)鈮?.071, vDist = 10*sin(45掳)鈮?.071
+            // Yaw=0 �?sin(0)=0, cos(0)=1
+            // Pitch=45�?�?cos(�?4)�?.7071, sin(�?4)�?.7071
+            // distM = 10m, hDist = 10*cos(45�?�?.071, vDist = 10*sin(45�?�?.071
             // offsetX = 7.071 * sin(0) = 0
             // offsetZ = -7.071 * cos(0) = -7.071
-            // position 鈮?(0, 7.071, -7.071)
+            // position �?(0, 7.071, -7.071)
             var pos = adapter.LastState.Position;
             That(pos.X, Is.EqualTo(0f).Within(0.1f));
             That(pos.Y, Is.EqualTo(7.071f).Within(0.1f));
@@ -406,7 +447,7 @@ namespace Ludots.Tests.ThreeC
             var coords = new StubSpatialCoordinateConverter();
             var presenter = new CameraPresenter(coords, adapter);
 
-            // Pitch 鈮?89掳 鈫?forward 鈮?(0, -1, 0) 鈫?dot(forward, UnitY) > 0.99 鈫?up switches to UnitZ
+            // Pitch �?89�?�?forward �?(0, -1, 0) �?dot(forward, UnitY) > 0.99 �?up switches to UnitZ
             var manager = new CameraManager();
             manager.PreviousState.Yaw = 0f;
             manager.PreviousState.Pitch = 89f;
@@ -440,7 +481,7 @@ namespace Ludots.Tests.ThreeC
             manager.PreviousState.FovYDeg = 60f;
             manager.PreviousState.TargetCm = Vector2.Zero;
 
-            // Second frame: move target 鈫?position should lerp, not snap
+            // Second frame: move target �?position should lerp, not snap
             manager.State.Yaw = 0f;
             manager.State.Pitch = 45f;
             manager.State.DistanceCm = 1000f;
@@ -455,21 +496,55 @@ namespace Ludots.Tests.ThreeC
             That(adapter.LastState.Target.X, Is.EqualTo(25f).Within(0.01f));
         }
 
-        // 鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲
+        // 鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨�?
         //  D. Camera Culling
-        // 鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲
+        // 鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨�?
 
-        private static Entity CreateCullableEntity(World world, int xCm, int yCm)
+        private static PerformerEntityRuntime CreatePerformerPayload(World world, Entity entity)
+        {
+            var performers = new PerformerEntityRuntime(world);
+            var definition = new PerformerDefinition { Key = "test.culling.performer" };
+            Entity performerEntity = performers.Create(
+                defId: 1,
+                owner: entity,
+                scopeId: 1,
+                PresentationAnchorKind.Entity,
+                Vector3.Zero,
+                stableId: 7001,
+                Entity.Null,
+                definition);
+            That(performerEntity, Is.Not.EqualTo(Entity.Null));
+            return performers;
+        }
+
+        private static Entity CreateCullableEntity(
+            World world,
+            int xCm,
+            int yCm,
+            PresentationLocalBounds? bounds = null,
+            PresentationLodProfile? lodProfile = null)
         {
             var e = world.Create(
                 WorldPositionCm.FromCm(xCm, yCm),
                 new CullState(),
-                VisualRuntimeState.Create(
-                    meshAssetId: 1,
-                    materialId: 1,
-                    baseScale: 1f,
-                    renderPath: VisualRenderPath.StaticMesh)
+                new VisualTransform
+                {
+                    Position = new Vector3(xCm * 0.01f, 0f, yCm * 0.01f),
+                    Rotation = Quaternion.Identity,
+                    Scale = Vector3.One,
+                }
             );
+
+            if (bounds.HasValue)
+            {
+                world.Add(e, bounds.Value);
+            }
+
+            if (lodProfile.HasValue)
+            {
+                world.Add(e, lodProfile.Value);
+            }
+
             return e;
         }
 
@@ -531,7 +606,7 @@ namespace Ludots.Tests.ThreeC
             var entity = CreateCullableEntity(world, 100, 100); // very close to camera target
             spatial.Entities.Add(entity);
 
-            var system = new CameraCullingSystem(world, manager, spatial, view);
+            var system = new CameraCullingSystem(world, manager, spatial, view, cullingConfig: TestCameraCullingConfig, performers: null);
             system.Update(0.016f);
 
             ref var cull = ref world.Get<CullState>(entity);
@@ -545,18 +620,18 @@ namespace Ludots.Tests.ThreeC
             using var world = World.Create();
             var manager = new CameraManager();
             manager.State.TargetCm = Vector2.Zero;
-            manager.State.DistanceCm = 30000f; // large distance 鈫?viewport covers test entities
+            manager.State.DistanceCm = 30000f; // large distance �?viewport covers test entities
             manager.State.Pitch = 45f;
             manager.State.FovYDeg = 60f;
 
             var spatial = new StubSpatialQueryService();
             var view = new StubViewController();
 
-            // Place entity at ~7000cm from origin 鈫?between High(4000) and Medium(10000)
-            var entity = CreateCullableEntity(world, 5000, 5000); // dist 鈮?7071cm
+            // Place entity at ~7000cm from origin �?between High(4000) and Medium(10000)
+            var entity = CreateCullableEntity(world, 5000, 5000); // dist �?7071cm
             spatial.Entities.Add(entity);
 
-            var system = new CameraCullingSystem(world, manager, spatial, view);
+            var system = new CameraCullingSystem(world, manager, spatial, view, cullingConfig: TestCameraCullingConfig, performers: null);
             system.Update(0.016f);
 
             ref var cull = ref world.Get<CullState>(entity);
@@ -570,18 +645,18 @@ namespace Ludots.Tests.ThreeC
             using var world = World.Create();
             var manager = new CameraManager();
             manager.State.TargetCm = Vector2.Zero;
-            manager.State.DistanceCm = 30000f; // large distance 鈫?viewport covers test entities
+            manager.State.DistanceCm = 30000f; // large distance �?viewport covers test entities
             manager.State.Pitch = 45f;
             manager.State.FovYDeg = 60f;
 
             var spatial = new StubSpatialQueryService();
             var view = new StubViewController();
 
-            // Place entity at ~14142cm from origin 鈫?between Medium(10000) and Low(20000)
-            var entity = CreateCullableEntity(world, 10000, 10000); // dist 鈮?14142cm
+            // Place entity at ~14142cm from origin �?between Medium(10000) and Low(20000)
+            var entity = CreateCullableEntity(world, 10000, 10000); // dist �?14142cm
             spatial.Entities.Add(entity);
 
-            var system = new CameraCullingSystem(world, manager, spatial, view);
+            var system = new CameraCullingSystem(world, manager, spatial, view, cullingConfig: TestCameraCullingConfig, performers: null);
             system.Update(0.016f);
 
             ref var cull = ref world.Get<CullState>(entity);
@@ -590,28 +665,28 @@ namespace Ludots.Tests.ThreeC
         }
 
         [Test]
-        public void Culling_BeyondLow_Culled()
+        public void Culling_BeyondLow_ViewportVisibleStaysLowLod()
         {
             using var world = World.Create();
             var manager = new CameraManager();
             manager.State.TargetCm = Vector2.Zero;
-            manager.State.DistanceCm = 30000f; // large distance 鈫?viewport covers test entities
+            manager.State.DistanceCm = 30000f; // large distance �?viewport covers test entities
             manager.State.Pitch = 45f;
             manager.State.FovYDeg = 60f;
 
             var spatial = new StubSpatialQueryService();
             var view = new StubViewController();
 
-            // Place entity at ~28284cm 鈫?beyond Low(20000) threshold
-            var entity = CreateCullableEntity(world, 20000, 20000); // dist 鈮?28284cm
+            // Place entity at ~28284cm �?beyond Low(20000) threshold
+            var entity = CreateCullableEntity(world, 20000, 20000); // dist �?28284cm
             spatial.Entities.Add(entity);
 
-            var system = new CameraCullingSystem(world, manager, spatial, view);
+            var system = new CameraCullingSystem(world, manager, spatial, view, cullingConfig: TestCameraCullingConfig, performers: null);
             system.Update(0.016f);
 
             ref var cull = ref world.Get<CullState>(entity);
-            That(cull.LOD, Is.EqualTo(LODLevel.Culled));
-            That(cull.IsVisible, Is.False);
+            That(cull.LOD, Is.EqualTo(LODLevel.Low));
+            That(cull.IsVisible, Is.True);
         }
 
         [Test]
@@ -628,9 +703,10 @@ namespace Ludots.Tests.ThreeC
             var view = new StubViewController();
 
             var entity = CreateCullableEntity(world, 100, 100);
+            var performers = CreatePerformerPayload(world, entity);
             spatial.Entities.Add(entity);
 
-            var system = new CameraCullingSystem(world, manager, spatial, view);
+            var system = new CameraCullingSystem(world, manager, spatial, view, cullingConfig: TestCameraCullingConfig, performers: performers);
 
             // Frame 1: entity is visible
             system.Update(0.016f);
@@ -644,9 +720,230 @@ namespace Ludots.Tests.ThreeC
             That(cull.IsVisible, Is.False, "Frame 2: previously visible entity should be marked culled");
         }
 
-        // 鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲
+        [Test]
+        public void Culling_UsesBoundsAwareScreenCoverageAndPresentationLodProfile()
+        {
+            using var world = World.Create();
+            world.Create(
+                new PresentationFrameState { InterpolationAlpha = 1f, Enabled = true },
+                new PresentationFrameStateTag());
+
+            var manager = new CameraManager();
+            manager.State.TargetCm = Vector2.Zero;
+            manager.State.DistanceCm = 12000f;
+            manager.State.Pitch = 45f;
+            manager.State.FovYDeg = 60f;
+
+            var spatial = new StubSpatialQueryService();
+            var view = new StubViewController();
+            var lodProfile = new PresentationLodProfile(
+                new PresentationLodEntry(maxDistanceCm: 4000f, minScreenCoverage01: 0.30f),
+                new PresentationLodEntry(maxDistanceCm: 12000f, minScreenCoverage01: 0.05f),
+                new PresentationLodEntry(maxDistanceCm: 30000f, minScreenCoverage01: 0.01f));
+
+            var entity = CreateCullableEntity(
+                world,
+                xCm: 2000,
+                yCm: 2000,
+                PresentationLocalBounds.Create(Vector3.Zero, new Vector3(20f, 1f, 20f)),
+                lodProfile);
+            var performers = CreatePerformerPayload(world, entity);
+            spatial.Entities.Add(entity);
+
+            var system = new CameraCullingSystem(world, manager, spatial, view, cullingConfig: TestCameraCullingConfig, performers: performers);
+            system.Update(0.016f);
+
+            ref CullState cull = ref world.Get<CullState>(entity);
+            That(cull.IsVisible, Is.True);
+            That(cull.ScreenCoverage01, Is.GreaterThan(0.05f));
+            That(cull.LOD, Is.EqualTo(LODLevel.High));
+        }
+
+        [Test]
+        public void Culling_WithoutPerformerBuffer_DoesNotForceCullEntities()
+        {
+            using var world = World.Create();
+            world.Create(
+                new PresentationFrameState { InterpolationAlpha = 1f, Enabled = true },
+                new PresentationFrameStateTag());
+
+            var manager = new CameraManager();
+            manager.State.TargetCm = Vector2.Zero;
+            manager.State.DistanceCm = 2000f;
+            manager.State.Pitch = 45f;
+            manager.State.FovYDeg = 60f;
+
+            var spatial = new StubSpatialQueryService();
+            var view = new StubViewController();
+            var entity = CreateCullableEntity(world, 100, 100);
+            spatial.Entities.Add(entity);
+
+            var system = new CameraCullingSystem(world, manager, spatial, view, cullingConfig: TestCameraCullingConfig, performers: null);
+            system.Update(0.016f);
+
+            ref var cull = ref world.Get<CullState>(entity);
+            That(cull.IsVisible, Is.True);
+            That(cull.LOD, Is.EqualTo(LODLevel.High));
+        }
+
+        [Test]
+        public void Culling_EntityOutsideSpatialQuery_RemainsCulledInsteadOfDefaultVisible()
+        {
+            using var world = World.Create();
+            world.Create(
+                new PresentationFrameState { InterpolationAlpha = 1f, Enabled = true },
+                new PresentationFrameStateTag());
+
+            var manager = new CameraManager();
+            manager.State.TargetCm = Vector2.Zero;
+            manager.PreviousState.TargetCm = Vector2.Zero;
+
+            var view = new StubViewController();
+            var spatial = new StubSpatialQueryService();
+            Entity entity = world.Create(
+                WorldPositionCm.FromCm(50000, 50000),
+                new CullState { IsVisible = false, LOD = LODLevel.Culled },
+                new Name { Value = "outside" });
+
+            using var system = new CameraCullingSystem(world, manager, spatial, view, cullingConfig: TestCameraCullingConfig, timingDiagnostics: null);
+
+            system.Update(0.016f);
+
+            ref var cull = ref world.Get<CullState>(entity);
+            That(cull.IsVisible, Is.False);
+            That(cull.LOD, Is.EqualTo(LODLevel.Low));
+            That(cull.ScreenCoverage01, Is.EqualTo(0f));
+        }
+
+        [Test]
+        public void Culling_LoadedChunkGate_RemovesEntitiesOutsideLoadedSet()
+        {
+            using var world = World.Create();
+            world.Create(
+                new PresentationFrameState { InterpolationAlpha = 1f, Enabled = true },
+                new PresentationFrameStateTag());
+
+            var manager = new CameraManager();
+            manager.State.TargetCm = Vector2.Zero;
+            manager.State.DistanceCm = 20000f;
+            manager.State.Pitch = 45f;
+            manager.State.FovYDeg = 60f;
+
+            var spatial = new StubSpatialQueryService();
+            var view = new StubViewController();
+            var loadedChunks = new StubLoadedChunks();
+            long loadedKey = Ludots.Core.Map.Hex.HexCoordinates.GetChunkKey(0, 0);
+            loadedChunks.SetLoaded(loadedKey);
+
+            var entity = CreateCullableEntity(world, 100000, 100000);
+            var performers = CreatePerformerPayload(world, entity);
+            spatial.Entities.Add(entity);
+
+            var system = new CameraCullingSystem(
+                world,
+                manager,
+                spatial,
+                view,
+                cullingConfig: TestCameraCullingConfig,
+                loadedChunks: loadedChunks,
+                performers: performers,
+                timingDiagnostics: null);
+            system.Update(0.016f);
+
+            ref CullState cull = ref world.Get<CullState>(entity);
+            That(cull.IsVisible, Is.False);
+            That(cull.LOD, Is.EqualTo(LODLevel.High));
+            That(cull.ScreenCoverage01, Is.EqualTo(0f));
+        }
+
+        // 鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨�?
         //  E. Character Position Pipeline
-        // 鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲
+        // 鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨�?
+
+        [Test]
+        public void Culling_StaticCameraYawChange_RecomputesStaticVisibility()
+        {
+            using var world = World.Create();
+            world.Create(
+                new PresentationFrameState { InterpolationAlpha = 1f, Enabled = true },
+                new PresentationFrameStateTag());
+
+            var manager = new CameraManager();
+            manager.State.TargetCm = Vector2.Zero;
+            manager.PreviousState.TargetCm = Vector2.Zero;
+            manager.State.Yaw = 0f;
+            manager.PreviousState.Yaw = 0f;
+            manager.State.DistanceCm = 2000f;
+            manager.PreviousState.DistanceCm = 2000f;
+            manager.State.Pitch = 45f;
+            manager.PreviousState.Pitch = 45f;
+            manager.State.FovYDeg = 60f;
+            manager.PreviousState.FovYDeg = 60f;
+
+            var spatial = new StubSpatialQueryService();
+            var view = new StubViewController();
+            Entity entity = world.Create(
+                WorldPositionCm.FromCm(0, 2600),
+                new CullState { IsVisible = false, LOD = LODLevel.Culled },
+                new PresentationStaticTransform(),
+                new VisualTransform
+                {
+                    Position = new Vector3(0f, 0f, 26f),
+                    Rotation = Quaternion.Identity,
+                    Scale = Vector3.One,
+                },
+                PresentationLocalBounds.Create(Vector3.Zero, new Vector3(1f, 1f, 1f)));
+
+            using var system = new CameraCullingSystem(world, manager, spatial, view, cullingConfig: TestCameraCullingConfig, timingDiagnostics: null);
+            system.Update(0.016f);
+            That(world.Get<CullState>(entity).IsVisible, Is.False);
+
+            manager.State.Yaw = 90f;
+            manager.PreviousState.Yaw = 90f;
+            system.Update(0.016f);
+
+            ref CullState cull = ref world.Get<CullState>(entity);
+            That(cull.IsVisible, Is.True, "Static culling must treat yaw changes as camera changes.");
+        }
+
+        [Test]
+        public void Culling_UsesRotatedVisualBounds_ForViewportIntersection()
+        {
+            using var world = World.Create();
+            world.Create(
+                new PresentationFrameState { InterpolationAlpha = 1f, Enabled = true },
+                new PresentationFrameStateTag());
+
+            var manager = new CameraManager();
+            manager.State.TargetCm = Vector2.Zero;
+            manager.PreviousState.TargetCm = Vector2.Zero;
+            manager.State.DistanceCm = 2000f;
+            manager.PreviousState.DistanceCm = 2000f;
+            manager.State.Pitch = 45f;
+            manager.PreviousState.Pitch = 45f;
+            manager.State.FovYDeg = 60f;
+            manager.PreviousState.FovYDeg = 60f;
+
+            var spatial = new StubSpatialQueryService();
+            var view = new StubViewController();
+            Entity entity = world.Create(
+                WorldPositionCm.FromCm(5000, 0),
+                new CullState { IsVisible = false, LOD = LODLevel.Culled },
+                new PresentationStaticTransform(),
+                new VisualTransform
+                {
+                    Position = Vector3.Zero,
+                    Rotation = Quaternion.CreateFromAxisAngle(Vector3.UnitY, MathF.PI * 0.5f),
+                    Scale = Vector3.One,
+                },
+                PresentationLocalBounds.Create(Vector3.Zero, new Vector3(1f, 1f, 30f)));
+
+            using var system = new CameraCullingSystem(world, manager, spatial, view, cullingConfig: TestCameraCullingConfig, timingDiagnostics: null);
+            system.Update(0.016f);
+
+            ref CullState cull = ref world.Get<CullState>(entity);
+            That(cull.IsVisible, Is.True, "Culling must use VisualTransform rotation and local bounds, not only logic position.");
+        }
 
         [Test]
         public void Physics2DSync_ExactFixedPointCopy()
@@ -716,7 +1013,7 @@ namespace Ludots.Tests.ThreeC
             system.Update(0.016f);
 
             ref var visual = ref world.Get<VisualTransform>(entity);
-            // Midpoint: (500, 1000) cm 鈫?(5, 0, 10) m (XY logic 鈫?XZ visual)
+            // Midpoint: (500, 1000) cm �?(5, 0, 10) m (XY logic �?XZ visual)
             That(visual.Position.X, Is.EqualTo(5f).Within(0.05f));
             That(visual.Position.Y, Is.EqualTo(0f).Within(0.01f));
             That(visual.Position.Z, Is.EqualTo(10f).Within(0.05f));
@@ -786,7 +1083,7 @@ namespace Ludots.Tests.ThreeC
                 new PresentationFrameStateTag()
             );
 
-            // Entity WITHOUT CullState component 鈥?should always sync
+            // Entity WITHOUT CullState component �?should always sync
             var entity = world.Create(
                 WorldPositionCm.FromCm(300, 400),
                 new PreviousWorldPositionCm { Value = Fix64Vec2.FromInt(300, 400) },
@@ -797,14 +1094,14 @@ namespace Ludots.Tests.ThreeC
             system.Update(0.016f);
 
             ref var visual = ref world.Get<VisualTransform>(entity);
-            // (300, 400) cm 鈫?(3, 0, 4) m
+            // (300, 400) cm �?(3, 0, 4) m
             That(visual.Position.X, Is.EqualTo(3f).Within(0.05f));
             That(visual.Position.Z, Is.EqualTo(4f).Within(0.05f));
         }
 
-        // 鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲
+        // 鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨�?
         //  F. Input Edge Detection & Order Building
-        // 鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲
+        // 鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨�?
 
         private static (StubInputBackend backend, PlayerInputHandler handler) BuildSimpleInputHandler()
         {

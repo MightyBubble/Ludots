@@ -9,13 +9,14 @@ namespace Ludots.Core.Presentation.Components
     }
 
     /// <summary>
-    /// Stores the culling and LOD state of a visual entity.
-    /// Updated by CameraCullingSystem.
+    /// Stores viewport/spatial visibility and visual quality tier for a visual entity.
+    /// CameraCullingSystem owns IsVisible; LOD is a quality tier and must not be used as a visibility gate.
     /// </summary>
     public struct CullState
     {
         public bool IsVisible;
         public LODLevel LOD;
         public float DistanceToCameraSq;
+        public float ScreenCoverage01;
     }
 }

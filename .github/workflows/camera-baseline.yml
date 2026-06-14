@@ -10,7 +10,6 @@ on:
       - 'src/Core/Engine/GameEngine.cs'
       - 'src/Core/Config/ComponentRegistry.cs'
       - 'src/Core/Gameplay/Camera/**'
-      - 'src/Core/Presentation/Systems/EntityVisualEmitSystem.cs'
       - 'src/Tests/ThreeCTests/**'
       - 'src/Tests/PresentationTests/**'
   push:
@@ -24,7 +23,6 @@ on:
       - 'src/Core/Engine/GameEngine.cs'
       - 'src/Core/Config/ComponentRegistry.cs'
       - 'src/Core/Gameplay/Camera/**'
-      - 'src/Core/Presentation/Systems/EntityVisualEmitSystem.cs'
       - 'src/Tests/ThreeCTests/**'
       - 'src/Tests/PresentationTests/**'
   workflow_dispatch:

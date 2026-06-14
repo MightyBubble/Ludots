@@ -1,7 +1,9 @@
 using System;
 using System.Runtime.CompilerServices;
+using Arch.Buffer;
 using Arch.Core;
 using Ludots.Core.Components;
+using Ludots.Core.Mathematics;
 using Ludots.Core.Mathematics.FixedPoint;
 using Ludots.Core.Presentation.Components;
 using System.Numerics;
@@ -32,22 +34,31 @@ namespace Ludots.Core.Presentation.Systems
     {
         private static readonly QueryDescription _stateQuery = new QueryDescription()
             .WithAll<PresentationFrameState>();
+
+        private static readonly QueryDescription _staticPendingFacingQuery = new QueryDescription()
+            .WithAll<WorldPositionCm, PreviousWorldPositionCm, VisualTransform, PresentationStaticTransform, PresentationStaticVisualPending, FacingDirection>();
+
+        private static readonly QueryDescription _staticPendingNoFacingQuery = new QueryDescription()
+            .WithAll<WorldPositionCm, PreviousWorldPositionCm, VisualTransform, PresentationStaticTransform, PresentationStaticVisualPending>()
+            .WithNone<FacingDirection>();
         
         private static readonly QueryDescription _noCullQuery = new QueryDescription()
             .WithAll<WorldPositionCm, PreviousWorldPositionCm, VisualTransform>()
-            .WithNone<CullState, FacingDirection>();
+            .WithNone<CullState, FacingDirection, PresentationStaticTransform>();
             
         private static readonly QueryDescription _withCullQuery = new QueryDescription()
             .WithAll<WorldPositionCm, PreviousWorldPositionCm, VisualTransform, CullState>()
-            .WithNone<FacingDirection>();
+            .WithNone<FacingDirection, PresentationStaticTransform>();
             
         // 带 FacingDirection 的查询（同步位置 + 旋转）
         private static readonly QueryDescription _facingNoCullQuery = new QueryDescription()
             .WithAll<WorldPositionCm, PreviousWorldPositionCm, VisualTransform, FacingDirection>()
-            .WithNone<CullState>();
+            .WithNone<CullState, PresentationStaticTransform>();
             
         private static readonly QueryDescription _facingWithCullQuery = new QueryDescription()
-            .WithAll<WorldPositionCm, PreviousWorldPositionCm, VisualTransform, FacingDirection, CullState>();
+            .WithAll<WorldPositionCm, PreviousWorldPositionCm, VisualTransform, FacingDirection, CullState>()
+            .WithNone<PresentationStaticTransform>();
+        private readonly CommandBuffer _commandBuffer = new();
 
         public WorldToVisualSyncSystem(World world) : base(world)
         {
@@ -59,6 +70,28 @@ namespace Ludots.Core.Presentation.Systems
             var readAlphaJob = new ReadAlphaJob();
             World.InlineQuery<ReadAlphaJob, PresentationFrameState>(in _stateQuery, ref readAlphaJob);
             Fix64 alpha = readAlphaJob.Alpha;
+
+            var staticNoFacingJob = new SyncStaticNoFacingJob
+            {
+                Alpha = alpha,
+                CommandBuffer = _commandBuffer,
+            };
+            World.InlineEntityQuery<SyncStaticNoFacingJob, WorldPositionCm, PreviousWorldPositionCm, VisualTransform>(
+                in _staticPendingNoFacingQuery,
+                ref staticNoFacingJob);
+
+            var staticFacingJob = new SyncStaticFacingJob
+            {
+                Alpha = alpha,
+                CommandBuffer = _commandBuffer,
+            };
+            World.InlineEntityQuery<SyncStaticFacingJob, WorldPositionCm, PreviousWorldPositionCm, VisualTransform, FacingDirection>(
+                in _staticPendingFacingQuery,
+                ref staticFacingJob);
+            if (_commandBuffer.Size > 0)
+            {
+                _commandBuffer.Playback(World);
+            }
             
             // 2. 同步仅位置的实体（无 FacingDirection）
             var noCullJob = new SyncNoCullJob { Alpha = alpha };
@@ -77,6 +110,12 @@ namespace Ludots.Core.Presentation.Systems
             var facingWithCullJob = new SyncFacingWithCullJob { Alpha = alpha };
             World.InlineQuery<SyncFacingWithCullJob, WorldPositionCm, PreviousWorldPositionCm, VisualTransform, FacingDirection, CullState>(
                 in _facingWithCullQuery, ref facingWithCullJob);
+        }
+
+        public override void Dispose()
+        {
+            _commandBuffer.Dispose();
+            base.Dispose();
         }
 
         private struct ReadAlphaJob : IForEach<PresentationFrameState>
@@ -105,6 +144,33 @@ namespace Ludots.Core.Presentation.Systems
                 visual.Position = InterpolateToVisual(in previous.Value, in current.Value, Alpha);
             }
         }
+
+        private struct SyncStaticNoFacingJob : IForEachWithEntity<WorldPositionCm, PreviousWorldPositionCm, VisualTransform>
+        {
+            public Fix64 Alpha;
+            public CommandBuffer CommandBuffer;
+
+            [MethodImpl(MethodImplOptions.AggressiveInlining)]
+            public void Update(Entity entity, ref WorldPositionCm current, ref PreviousWorldPositionCm previous, ref VisualTransform visual)
+            {
+                visual.Position = InterpolateToVisual(in previous.Value, in current.Value, Alpha);
+                CommandBuffer.Remove<PresentationStaticVisualPending>(in entity);
+            }
+        }
+
+        private struct SyncStaticFacingJob : IForEachWithEntity<WorldPositionCm, PreviousWorldPositionCm, VisualTransform, FacingDirection>
+        {
+            public Fix64 Alpha;
+            public CommandBuffer CommandBuffer;
+
+            [MethodImpl(MethodImplOptions.AggressiveInlining)]
+            public void Update(Entity entity, ref WorldPositionCm current, ref PreviousWorldPositionCm previous, ref VisualTransform visual, ref FacingDirection facing)
+            {
+                visual.Position = InterpolateToVisual(in previous.Value, in current.Value, Alpha);
+                visual.Rotation = WorldPlane2D.FacingRadToVisualYRotation(facing.AngleRad);
+                CommandBuffer.Remove<PresentationStaticVisualPending>(in entity);
+            }
+        }
         
         private struct SyncWithCullJob : IForEach<WorldPositionCm, PreviousWorldPositionCm, VisualTransform, CullState>
         {
@@ -127,7 +193,7 @@ namespace Ludots.Core.Presentation.Systems
                                ref VisualTransform visual, ref FacingDirection facing)
             {
                 visual.Position = InterpolateToVisual(in previous.Value, in current.Value, Alpha);
-                visual.Rotation = FacingToYRotation(facing.AngleRad);
+                visual.Rotation = WorldPlane2D.FacingRadToVisualYRotation(facing.AngleRad);
             }
         }
         
@@ -140,22 +206,11 @@ namespace Ludots.Core.Presentation.Systems
                                ref VisualTransform visual, ref FacingDirection facing, ref CullState cull)
             {
                 visual.Position = InterpolateToVisual(in previous.Value, in current.Value, Alpha);
-                visual.Rotation = FacingToYRotation(facing.AngleRad);
+                visual.Rotation = WorldPlane2D.FacingRadToVisualYRotation(facing.AngleRad);
             }
         }
         
-        /// <summary>
-        /// 将逻辑层 XY 平面角度转换为视觉层绕 Y 轴旋转的四元数。
-        /// 逻辑: angleRad 0 = +X, π/2 = +Y
-        /// 视觉: Y-up, 对应绕 Y 轴旋转（取反，因为 XY→XZ 映射中 Y→-Z）
-        /// </summary>
-        [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        private static Quaternion FacingToYRotation(float angleRad)
-        {
-            // 逻辑 XY 到视觉 XZ: Y 轴映射到 -Z，所以角度取反
-            return Quaternion.CreateFromAxisAngle(Vector3.UnitY, -angleRad);
-        }
-        
+
         /// <summary>
         /// 从 Fix64Vec2 (定点数厘米, XY) 插值并转换到 Visual 空间 (浮点米, XZ)。
         /// 插值在定点数域进行，仅在最终输出时转换为浮点。
@@ -164,12 +219,7 @@ namespace Ludots.Core.Presentation.Systems
         private static Vector3 InterpolateToVisual(in Fix64Vec2 previous, in Fix64Vec2 current, Fix64 alpha)
         {
             Fix64Vec2 interpolated = Fix64Vec2.Lerp(previous, current, alpha);
-            const float cmToM = 0.01f;
-            return new Vector3(
-                interpolated.X.ToFloat() * cmToM, 
-                0f, 
-                interpolated.Y.ToFloat() * cmToM
-            );
+            return WorldPlane2D.LogicCmToVisualMeters(in interpolated);
         }
     }
 }

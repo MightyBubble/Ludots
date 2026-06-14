@@ -18,6 +18,10 @@ namespace Ludots.Core.Gameplay.GAS.Systems
     {
         private static readonly QueryDescription _activeEffectsQuery = new QueryDescription()
             .WithAll<GameplayEffect, EffectContext>();
+        private static readonly QueryDescription _periodicEffectsQuery = new QueryDescription()
+            .WithAll<GameplayEffect, EffectContext, EffectPeriodicTick>();
+        private static readonly QueryDescription _expirationEffectsQuery = new QueryDescription()
+            .WithAll<GameplayEffect, EffectContext, EffectExpirationCheck>();
 
         private readonly EffectRequestQueue _effectRequests;
         private readonly GasBudget _budget;
@@ -65,6 +69,7 @@ namespace Ludots.Core.Gameplay.GAS.Systems
         {
             public int TemplateId;
             public int EffectEntityId;
+            public int ClockTick;
             public Entity EffectEntity;
             public Components.EffectContext Context;
         }
@@ -116,7 +121,7 @@ namespace Ludots.Core.Gameplay.GAS.Systems
                 PeriodPhaseGraphs = _periodPhaseGraphs,
                 Budget = _callbackCreateBudget
             };
-            World.InlineEntityQuery<LifetimeTickJob, GameplayEffect, EffectContext>(in _activeEffectsQuery, ref tickJob);
+            World.InlineEntityQuery<LifetimeTickJob, GameplayEffect, EffectContext>(in _periodicEffectsQuery, ref tickJob);
 
 
             var cleanupJob = new LifetimeCleanupJob
@@ -133,7 +138,7 @@ namespace Ludots.Core.Gameplay.GAS.Systems
                 TagOps = _tagOps,
                 GasBudget = _budget
             };
-            World.InlineEntityQuery<LifetimeCleanupJob, GameplayEffect, EffectContext>(in _activeEffectsQuery, ref cleanupJob);
+            World.InlineEntityQuery<LifetimeCleanupJob, GameplayEffect, EffectContext>(in _expirationEffectsQuery, ref cleanupJob);
 
             // ── Execute Phase Graphs for period/expire/remove ──
             ExecutePhaseGraphsForEntries(_periodPhaseGraphs, EffectPhaseId.OnPeriod, _builtinRuntime);
@@ -183,7 +188,7 @@ namespace Ludots.Core.Gameplay.GAS.Systems
                 {
                     if (effect.NextTickAtTick == 0)
                     {
-                        effect.NextTickAtTick = now + effect.PeriodTicks;
+                        effect.NextTickAtTick = now + ResolveInitialPeriodOffset(entity, effect.PeriodTicks);
                     }
 
                     if (now >= effect.NextTickAtTick)
@@ -199,6 +204,7 @@ namespace Ludots.Core.Gameplay.GAS.Systems
                                 EffectEntity = entity,
                                 TemplateId = World.Get<EffectTemplateRef>(entity).TemplateId,
                                 EffectEntityId = entity.Id,
+                                ClockTick = now,
                                 Context = context
                             });
                         }
@@ -206,6 +212,20 @@ namespace Ludots.Core.Gameplay.GAS.Systems
                         effect.NextTickAtTick = now + effect.PeriodTicks;
                     }
                 }
+            }
+
+            [MethodImpl(MethodImplOptions.AggressiveInlining)]
+            private static int ResolveInitialPeriodOffset(Entity entity, int periodTicks)
+            {
+                if (periodTicks <= 1)
+                {
+                    return 1;
+                }
+
+                uint hash = (uint)entity.Id;
+                hash ^= (uint)entity.Version * 0x9E3779B9u;
+                hash ^= hash >> 16;
+                return 1 + (int)(hash % (uint)periodTicks);
             }
         }
 
@@ -273,7 +293,7 @@ namespace Ludots.Core.Gameplay.GAS.Systems
                 if (World.Has<EffectTemplateRef>(entity))
                 {
                     int tplId = World.Get<EffectTemplateRef>(entity).TemplateId;
-                    var entry = new PhaseGraphEntry { TemplateId = tplId, EffectEntityId = entity.Id, EffectEntity = entity, Context = context };
+                    var entry = new PhaseGraphEntry { TemplateId = tplId, EffectEntityId = entity.Id, ClockTick = now, EffectEntity = entity, Context = context };
                     if (!cancelled)
                     {
                         ExpirePhaseGraphs.Add(entry);
@@ -293,6 +313,10 @@ namespace Ludots.Core.Gameplay.GAS.Systems
                 {
                     ref var container = ref World.Get<ActiveEffectContainer>(context.Target);
                     container.Remove(entity);
+                    if (effect.AggregatesModifiers && !World.Has<AttributeAggregateDirty>(context.Target))
+                    {
+                        CommandBuffer.Add(context.Target, new AttributeAggregateDirty());
+                    }
                 }
 
                 CommandBuffer.Destroy(entity);
@@ -351,7 +375,8 @@ namespace Ludots.Core.Gameplay.GAS.Systems
                     tpl.TagId,
                     entry.TemplateId,
                     in mergedConfig,
-                    builtinRuntime);
+                    builtinRuntime,
+                    BuildExecutionSeed(entry.EffectEntity, phase, entry.TemplateId, entry.ClockTick, entry.Context));
 
                 if (builtinRuntime != null)
                 {
@@ -384,6 +409,25 @@ namespace Ludots.Core.Gameplay.GAS.Systems
                 ref var buf = ref World.Get<EffectPhaseListenerBuffer>(context.Source);
                 buf.RemoveByOwner(ownerEffectId);
             }
+        }
+
+        private static uint BuildExecutionSeed(Entity effectEntity, EffectPhaseId phase, int templateId, int clockTick, in Components.EffectContext context)
+        {
+            uint hash = 2166136261u;
+            hash = Mix(hash, effectEntity.Id);
+            hash = Mix(hash, effectEntity.Version);
+            hash = Mix(hash, context.Source.Id);
+            hash = Mix(hash, context.Target.Id);
+            hash = Mix(hash, context.TargetContext.Id);
+            hash = Mix(hash, templateId);
+            hash = Mix(hash, (int)phase);
+            hash = Mix(hash, clockTick);
+            return hash == 0u ? 1u : hash;
+        }
+
+        private static uint Mix(uint hash, int value)
+        {
+            return (hash ^ unchecked((uint)value)) * 16777619u;
         }
     }
 }

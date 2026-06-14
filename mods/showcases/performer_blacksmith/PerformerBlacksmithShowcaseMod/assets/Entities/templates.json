@@ -1,0 +1,113 @@
+[
+  {
+    "id": "blacksmith_building",
+    "onSpawnEffect": "Effect.Showcase.Blacksmith.RandomDrift",
+    "components": {
+      "Name": { "Value": "Blacksmith" },
+      "WorldPositionCm": { "Value": { "X": 0, "Y": 0 } },
+      "PresentationStaticTransform": {},
+      "FacingDirection": { "AngleRad": 0.0 },
+      "AttributeBuffer": {
+        "base": {
+          "Durability": 100
+        },
+        "current": {
+          "Durability": 72
+        }
+      },
+      "GameplayTagContainer": {},
+      "TagCountContainer": {}
+    }
+  },
+  {
+    "id": "blacksmith_mesh_benchmark_entity",
+    "components": {
+      "Name": { "Value": "BlacksmithMeshBenchmark" },
+      "WorldPositionCm": { "Value": { "X": 0, "Y": 0 } },
+      "PresentationStaticTransform": {},
+      "FacingDirection": { "AngleRad": 0.0 },
+      "AttributeBuffer": {
+        "base": {}
+      },
+      "GameplayTagContainer": {},
+      "TagCountContainer": {}
+    }
+  },
+  {
+    "id": "blacksmith_mesh_hudbar_benchmark_entity",
+    "onSpawnEffect": "Effect.Showcase.Blacksmith.RandomDrift",
+    "components": {
+      "Name": { "Value": "BlacksmithMeshHudBarBenchmark" },
+      "WorldPositionCm": { "Value": { "X": 0, "Y": 0 } },
+      "PresentationStaticTransform": {},
+      "FacingDirection": { "AngleRad": 0.0 },
+      "AttributeBuffer": {
+        "base": {
+          "Durability": 100
+        },
+        "current": {
+          "Durability": 72
+        }
+      },
+      "GameplayTagContainer": {},
+      "TagCountContainer": {}
+    }
+  },
+  {
+    "id": "blacksmith_mesh_hudtext_benchmark_entity",
+    "onSpawnEffect": "Effect.Showcase.Blacksmith.RandomDrift",
+    "components": {
+      "Name": { "Value": "BlacksmithMeshHudTextBenchmark" },
+      "WorldPositionCm": { "Value": { "X": 0, "Y": 0 } },
+      "PresentationStaticTransform": {},
+      "FacingDirection": { "AngleRad": 0.0 },
+      "AttributeBuffer": {
+        "base": {
+          "Durability": 100
+        },
+        "current": {
+          "Durability": 72
+        }
+      },
+      "GameplayTagContainer": {},
+      "TagCountContainer": {}
+    }
+  },
+  {
+    "id": "blacksmith_dynamic_worker_entity",
+    "components": {
+      "Name": { "Value": "BlacksmithDynamicWorker" },
+      "WorldPositionCm": { "Value": { "X": 0, "Y": 0 } },
+      "VisualHeightmapSampleState": {},
+      "FacingDirection": { "AngleRad": 0.0 },
+      "AttributeBuffer": {
+        "base": {}
+      },
+      "GameplayTagContainer": {},
+      "TagCountContainer": {},
+      "DynamicWorkerCrowdTag": {}
+    }
+  },
+  {
+    "id": "blacksmith_minimap_marker_ball_entity",
+    "onSpawnEffect": "Effect.Showcase.Blacksmith.RandomDrift",
+    "components": {
+      "Name": { "Value": "BlacksmithMinimapMarkerBall" },
+      "WorldPositionCm": { "Value": { "X": 0, "Y": 0 } },
+      "VisualHeightmapSampleState": {},
+      "FacingDirection": { "AngleRad": 0.0 },
+      "AttributeBuffer": {
+        "base": {
+          "Durability": 100
+        },
+        "current": {
+          "Durability": 72
+        }
+      },
+      "GameplayTagContainer": {},
+      "TagCountContainer": {},
+      "SpatialPartitionExcluded": {},
+      "MinimapMarkerBallMovementTag": {}
+    }
+  }
+]

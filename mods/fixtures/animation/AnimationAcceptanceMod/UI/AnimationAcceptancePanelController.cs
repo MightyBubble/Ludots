@@ -5,7 +5,9 @@ using AnimationAcceptanceMod.Runtime;
 using Ludots.Core.Components;
 using Ludots.Core.Engine;
 using Ludots.Core.Presentation.Assets;
+using Ludots.Core.Presentation.Commands;
 using Ludots.Core.Presentation.Components;
+using Ludots.Core.Presentation.Performers;
 using Ludots.Core.Scripting;
 using Ludots.UI;
 using Ludots.UI.Compose;
@@ -18,8 +20,6 @@ namespace AnimationAcceptanceMod.UI
     {
         private const float PanelWidth = 556f;
         private const float PanelHeight = 688f;
-        private static readonly QueryDescription RigQuery = new QueryDescription()
-            .WithAll<Name, VisualRuntimeState, AnimatorPackedState, AnimatorRuntimeState, AnimatorParameterBuffer, AnimationOverlayRequest, AnimatorFeedbackBuffer>();
 
         private readonly ReactivePage<AnimationAcceptancePanelState> _page;
         private GameEngine? _engine;
@@ -404,45 +404,68 @@ namespace AnimationAcceptanceMod.UI
 
         private static Dictionary<AnimationAcceptanceRigId, RigRuntimeSample> ResolveRigSamples(GameEngine engine, AnimatorControllerRegistry registry)
         {
-            var controllerLookup = new Dictionary<int, AnimationAcceptanceRigDefinition>();
+            var definitionLookup = new Dictionary<int, AnimationAcceptanceRigDefinition>();
             for (int i = 0; i < AnimationAcceptanceRigCatalog.All.Length; i++)
             {
-                int controllerId = registry.GetId(AnimationAcceptanceRigCatalog.All[i].ControllerKey);
-                if (controllerId > 0)
+                string performerKey = AnimationAcceptanceRigCatalog.All[i].RigId switch
                 {
-                    controllerLookup[controllerId] = AnimationAcceptanceRigCatalog.All[i];
+                    AnimationAcceptanceRigId.Tank => AnimationAcceptanceIds.TankPerformerDefinitionId,
+                    AnimationAcceptanceRigId.Humanoid => AnimationAcceptanceIds.HumanoidPerformerDefinitionId,
+                    _ => string.Empty,
+                };
+
+                int definitionId = engine.GetService(CoreServiceKeys.PerformerDefinitionRegistry)
+                    ?.GetId(performerKey) ?? 0;
+                if (definitionId > 0)
+                {
+                    definitionLookup[definitionId] = AnimationAcceptanceRigCatalog.All[i];
                 }
             }
 
+            var performers = engine.GetService(CoreServiceKeys.PerformerEntityRuntime)
+                ?? throw new InvalidOperationException("Animation acceptance requires PerformerEntityRuntime.");
+            var animatorStates = engine.GetService(CoreServiceKeys.PerformerAnimatorStateBuffer)
+                ?? throw new InvalidOperationException("Animation acceptance requires PerformerAnimatorStateBuffer.");
             var result = new Dictionary<AnimationAcceptanceRigId, RigRuntimeSample>();
-            var query = engine.World.Query(in RigQuery);
-            foreach (var chunk in query)
+            var query = new QueryDescription().WithAll<PerformerState>();
+            engine.World.Query(in query, (Entity entity, ref PerformerState instance) =>
             {
-                var names = chunk.GetArray<Name>();
-                var visuals = chunk.GetArray<VisualRuntimeState>();
-                var packedStates = chunk.GetArray<AnimatorPackedState>();
-                var runtimeStates = chunk.GetArray<AnimatorRuntimeState>();
-                var parameterBuffers = chunk.GetArray<AnimatorParameterBuffer>();
-                var overlays = chunk.GetArray<AnimationOverlayRequest>();
-                var feedbackBuffers = chunk.GetArray<AnimatorFeedbackBuffer>();
-
-                for (int i = 0; i < chunk.Count; i++)
+                if (!animatorStates.IsAllocated(entity))
                 {
-                    if (!controllerLookup.TryGetValue(visuals[i].AnimatorControllerId, out var definition))
-                    {
-                        continue;
-                    }
-
-                    result[definition.RigId] = new RigRuntimeSample(
-                        Found: true,
-                        EntityName: names[i].Value ?? definition.DisplayName,
-                        PackedState: packedStates[i],
-                        RuntimeState: runtimeStates[i],
-                        Parameters: parameterBuffers[i],
-                        OverlayRequest: overlays[i],
-                        Feedback: feedbackBuffers[i]);
+                    return;
                 }
-            }
+
+                if (!definitionLookup.TryGetValue(instance.DefId, out var definition))
+                {
+                    return;
+                }
+
+                string entityName = definition.DisplayName;
+                if (instance.AnchorKind == PresentationAnchorKind.Entity &&
+                    engine.World.IsAlive(instance.OwnerEntity) &&
+                    engine.World.Has<Name>(instance.OwnerEntity))
+                {
+                    entityName = engine.World.Get<Name>(instance.OwnerEntity).Value ?? definition.DisplayName;
+                }
+
+                ref AnimatorPackedState packed = ref animatorStates.GetPackedState(entity);
+                if (packed.GetControllerId() <= 0)
+                {
+                    int controllerId = registry.GetId(definition.ControllerKey);
+                    if (controllerId > 0)
+                    {
+                        packed.SetControllerId(controllerId);
+                    }
+                }
+
+                result[definition.RigId] = new RigRuntimeSample(
+                    Found: true,
+                    EntityName: entityName,
+                    PackedState: packed,
+                    RuntimeState: animatorStates.GetRuntimeState(entity),
+                    OverlayRequest: animatorStates.GetOverlay(entity),
+                    Feedback: animatorStates.GetFeedbackBuffer(entity));
+            });
 
             return result;
         }
@@ -469,17 +492,20 @@ namespace AnimationAcceptanceMod.UI
             for (int i = 0; i < definition.FloatParameters.Length; i++)
             {
                 var parameter = definition.FloatParameters[i];
-                parameterLines.Add($"{parameter.Label}[{parameter.Index}] = {sample.Parameters.GetFloat(parameter.Index):0.00}  ({parameter.Description})");
+                float value = parameter.Index == definition.SpeedParameterIndex ? slot.Speed : 0f;
+                parameterLines.Add($"{parameter.Label}[{parameter.Index}] = {value:0.00}  ({parameter.Description})");
             }
             for (int i = 0; i < definition.BoolParameters.Length; i++)
             {
                 var parameter = definition.BoolParameters[i];
-                parameterLines.Add($"{parameter.Label}[{parameter.Index}] = {sample.Parameters.GetBool(parameter.Index)}  ({parameter.Description})");
+                bool active = sample.PackedState.GetParameterBit(parameter.Index);
+                parameterLines.Add($"{parameter.Label}[{parameter.Index}] = {active}  ({parameter.Description})");
             }
             for (int i = 0; i < definition.TriggerParameters.Length; i++)
             {
                 var parameter = definition.TriggerParameters[i];
-                parameterLines.Add($"{parameter.Label}[{parameter.Index}] pending = {sample.Parameters.HasTrigger(parameter.Index)}  ({parameter.Description})");
+                bool active = sample.PackedState.GetParameterBit(parameter.Index);
+                parameterLines.Add($"{parameter.Label}[{parameter.Index}] active = {active}  ({parameter.Description})");
             }
 
             string[] overlayLines =
@@ -774,7 +800,6 @@ namespace AnimationAcceptanceMod.UI
             string EntityName,
             AnimatorPackedState PackedState,
             AnimatorRuntimeState RuntimeState,
-            AnimatorParameterBuffer Parameters,
             AnimationOverlayRequest OverlayRequest,
             AnimatorFeedbackBuffer Feedback)
         {
@@ -783,7 +808,6 @@ namespace AnimationAcceptanceMod.UI
                 string.Empty,
                 default,
                 AnimatorRuntimeState.Create(0),
-                default,
                 default,
                 default);
         }

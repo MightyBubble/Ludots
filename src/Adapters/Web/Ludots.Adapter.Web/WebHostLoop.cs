@@ -8,6 +8,7 @@ using Ludots.Core.Engine;
 using Ludots.Core.Presentation.Assets;
 using Ludots.Core.Presentation.Camera;
 using Ludots.Core.Presentation.Hud;
+using Ludots.Core.Presentation.Performers;
 using Ludots.Core.Presentation.Rendering;
 using Ludots.Core.Presentation.Systems;
 using Ludots.Core.Scripting;
@@ -42,8 +43,22 @@ namespace Ludots.Adapter.Web
             screenRayProvider.BindPresenter(cameraPresenter);
 
             var cullingSystem = new CameraCullingSystem(
-                engine.World, engine.GameSession.Camera, engine.SpatialQueries, viewController);
-            engine.RegisterPresentationSystem(cullingSystem);
+                engine.World,
+                engine.GameSession.Camera,
+                engine.SpatialQueries,
+                viewController,
+                cullingConfig: engine.MergedConfig.Presentation.CameraCulling);
+            if (engine.GetService(CoreServiceKeys.PerformerEntityRuntime) is PerformerEntityRuntime performerInstances)
+            {
+                cullingSystem = new CameraCullingSystem(
+                    engine.World,
+                    engine.GameSession.Camera,
+                    engine.SpatialQueries,
+                    viewController,
+                    performers: performerInstances,
+                    cullingConfig: engine.MergedConfig.Presentation.CameraCulling);
+            }
+            engine.InsertPresentationSystemBefore<PresentationEntityLifecycleSystem>(cullingSystem);
             engine.SetService(CoreServiceKeys.CameraCullingDebugState, cullingSystem.DebugState);
 
             var renderCameraDebug = new RenderCameraDebugState();

@@ -10,7 +10,7 @@ namespace Ludots.Core.Gameplay.GAS.Bindings
 
     public sealed class AttributeSinkRegistry
     {
-        private readonly Dictionary<string, int> _nameToId = new(StringComparer.OrdinalIgnoreCase);
+        private readonly Dictionary<string, int> _nameToId = new(StringComparer.Ordinal);
         private readonly List<IAttributeSink> _sinks = new();
         private bool _frozen;
 
@@ -32,6 +32,8 @@ namespace Ludots.Core.Gameplay.GAS.Bindings
         {
             if (_frozen) throw new InvalidOperationException("AttributeSinkRegistry is frozen.");
             if (string.IsNullOrWhiteSpace(sinkName)) throw new ArgumentException("sinkName is empty.", nameof(sinkName));
+            if (!string.Equals(sinkName, sinkName.Trim(), StringComparison.Ordinal))
+                throw new ArgumentException("sinkName must not include leading or trailing whitespace.", nameof(sinkName));
             if (sink == null) throw new ArgumentNullException(nameof(sink));
 
             if (_nameToId.TryGetValue(sinkName, out var existing))

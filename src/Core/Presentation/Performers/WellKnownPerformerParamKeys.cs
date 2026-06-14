@@ -2,7 +2,7 @@ namespace Ludots.Core.Presentation.Performers
 {
     /// <summary>
     /// Documents the implicit ParamKey conventions used by <see cref="PerformerParamBinding"/>
-    /// across all <see cref="PerformerVisualKind"/> types.
+    /// across performer behavior configurations.
     /// Mod developers should reference these constants instead of hard-coding numeric keys.
     /// </summary>
     public static class WellKnownPerformerParamKeys
@@ -50,9 +50,6 @@ namespace Ludots.Core.Presentation.Performers
         public const int TextColorA = 7;
         /// <summary>Stable text token ID for localization.</summary>
         public const int TextTokenId = 15;
-        /// <summary>WorldHudValueMode ordinal for legacy adapters.</summary>
-        public const int TextValueMode = 16;
-
         // ── GroundOverlay ──
 
         /// <summary>Outer radius (or uniform scale).</summary>
@@ -88,7 +85,7 @@ namespace Ludots.Core.Presentation.Performers
 
         // ── Marker3D ──
 
-        /// <summary>Uniform scale. Per-axis falls back to this value.</summary>
+        /// <summary>Uniform scale. Per-axis uses this value when no axis-specific value is authored.</summary>
         public const int MarkerScale = 0;
         /// <summary>Per-axis scale X override.</summary>
         public const int MarkerScaleX = 1;

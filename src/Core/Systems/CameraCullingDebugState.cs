@@ -21,5 +21,6 @@ namespace Ludots.Core.Systems
 
         public int VisibleEntityCount { get; set; }
         public int CulledEntityCount { get; set; }
+        public int VisibilityRevision { get; set; }
     }
 }

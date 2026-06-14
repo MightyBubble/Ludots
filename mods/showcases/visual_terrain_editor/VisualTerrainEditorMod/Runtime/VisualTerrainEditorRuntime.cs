@@ -3,14 +3,17 @@ using System.Collections.Generic;
 using System.Numerics;
 using System.Threading.Tasks;
 using Arch.Core;
+using Ludots.Core.Components;
 using Ludots.Core.Engine;
 using Ludots.Core.Gameplay.Camera;
 using Ludots.Core.Input.Runtime;
 using Ludots.Core.Mathematics;
 using Ludots.Core.Navigation.GraphWorld;
 using Ludots.Core.Presentation.Assets;
+using Ludots.Core.Presentation.Commands;
 using Ludots.Core.Presentation.Components;
 using Ludots.Core.Presentation.Hud;
+using Ludots.Core.Presentation.Performers;
 using Ludots.Core.Presentation.Rendering;
 using Ludots.Core.Presentation.Terrain;
 using Ludots.Core.Scripting;
@@ -22,10 +25,20 @@ namespace VisualTerrainEditorMod.Runtime;
 
 internal sealed class VisualTerrainEditorRuntime
 {
+    private const string ChunkMeshAssetParamKey = "visual_terrain_editor.chunkMesh.asset";
+    private const string ChunkMaterialParamKey = "visual_terrain_editor.chunkMesh.material";
     private const string TerrainMeshAssetKeyPrefix = "visual_terrain_editor.runtime_terrain";
+    private const string TerrainChunkPerformerKeyPrefix = "visual_terrain_editor.runtime_chunk";
+    private static readonly int DefaultChunkMaterialAssetId = 1;
     private const int MinVisibleChunkRadius = 4;
     private const int MaxVisibleChunkRadius = 8;
     private const int RetainedChunkMargin = 1;
+
+    private static readonly PresentationLodProfile ChunkLodProfile =
+        new(
+            new PresentationLodEntry(maxDistanceCm: 30000f, minScreenCoverage01: 0.01f),
+            new PresentationLodEntry(maxDistanceCm: 90000f, minScreenCoverage01: 0.002f),
+            new PresentationLodEntry(maxDistanceCm: 180000f, minScreenCoverage01: 0.0005f));
 
     private readonly Dictionary<long, RenderedChunk> _renderedChunks = new();
 
@@ -57,10 +70,11 @@ internal sealed class VisualTerrainEditorRuntime
     private int _visibleMaxChunkY = -1;
     private float _lastViewportWidth = -1f;
     private float _lastViewportHeight = -1f;
+    private int _chunkMeshPerformerDefinitionId;
 
     public VisualTerrainEditorRuntime()
     {
-        _document = new VisualTerrainEditorDocument(CreatePresetAsset("8K", 32, 32, 50_000, 257, 33));
+        _document = new VisualTerrainEditorDocument(CreatePresetAsset("8K", 32, 32, 50_000, 257, 33), DefaultChunkMaterialAssetId);
         _panelController = new VisualTerrainEditorPanelController(this, _document);
     }
 
@@ -447,7 +461,7 @@ internal sealed class VisualTerrainEditorRuntime
 
         ClearRenderedChunks(engine);
         _document.Dispose();
-        _document = new VisualTerrainEditorDocument(_pendingAssetReplacement);
+        _document = new VisualTerrainEditorDocument(_pendingAssetReplacement, DefaultChunkMaterialAssetId);
         _panelController = new VisualTerrainEditorPanelController(this, _document);
         _pendingAssetReplacement = null;
         _forceChunkEntityRefresh = true;
@@ -536,7 +550,10 @@ internal sealed class VisualTerrainEditorRuntime
     private void SyncRenderedChunks(GameEngine engine)
     {
         if (!engine.TryGetService(CoreServiceKeys.PresentationMeshAssetRegistry, out MeshAssetRegistry registry) ||
-            !engine.TryGetService(CoreServiceKeys.PresentationStableIdAllocator, out var stableIds))
+            !engine.TryGetService(CoreServiceKeys.PresentationMaterialRegistry, out PresentationMaterialRegistry materials) ||
+            !engine.TryGetService(CoreServiceKeys.PresentationStableIdAllocator, out var stableIds) ||
+            !engine.TryGetService(CoreServiceKeys.PerformerCommandBuffer, out PerformerCommandBuffer performerCommands) ||
+            !engine.TryGetService(CoreServiceKeys.PerformerDefinitionRegistry, out PerformerDefinitionRegistry performerDefinitions))
         {
             return;
         }
@@ -554,7 +571,7 @@ internal sealed class VisualTerrainEditorRuntime
         {
             for (int chunkX = minChunkX; chunkX <= maxChunkX; chunkX++)
             {
-                if (!_document.TryGetChunkRuntimeMesh(chunkX, chunkY, out RuntimeMeshAssetData runtimeMesh))
+                if (!_document.TryGetChunkProceduralMesh(chunkX, chunkY, out ProceduralMeshAssetData proceduralMesh))
                 {
                     continue;
                 }
@@ -571,9 +588,15 @@ internal sealed class VisualTerrainEditorRuntime
                 }
 
                 string meshKey = $"{TerrainMeshAssetKeyPrefix}.{chunkX}.{chunkY}";
-                int meshAssetId = registry.Register(meshKey, MeshAssetDescriptor.Runtime(id: 0, runtimeMesh));
+                int meshAssetId = registry.Register(meshKey, MeshAssetDescriptor.Procedural(id: 0, proceduralMesh));
+                int materialAssetId = ResolveChunkMaterialAssetId(materials);
+                int definitionId = RegisterChunkMeshDefinition(performerDefinitions, meshAssetId, materialAssetId, proceduralMesh.UsageHint, chunkX, chunkY);
                 int stableId = stableIds.Allocate();
+                Vector3 centerMeters = ResolveChunkCenterMeters(_document.Asset, chunkX, chunkY);
+                WorldPositionCm worldPosition = WorldPositionCm.FromCmFloat(centerMeters.X * 100f, centerMeters.Z * 100f);
                 Entity entity = engine.World.Create(
+                    worldPosition,
+                    new PreviousWorldPositionCm { Value = worldPosition.Value },
                     new PresentationStableId { Value = stableId },
                     new VisualTransform
                     {
@@ -581,14 +604,28 @@ internal sealed class VisualTerrainEditorRuntime
                         Rotation = Quaternion.Identity,
                         Scale = Vector3.One,
                     },
-                    VisualRuntimeState.Create(
-                        meshAssetId,
-                        materialId: 0,
-                        baseScale: 1f,
-                        renderPath: VisualRenderPath.StaticMesh,
-                        mobility: VisualMobility.Static));
+                    PresentationLocalBounds.Create(proceduralMesh.LocalBounds.Center, proceduralMesh.LocalBounds.Extents),
+                    ChunkLodProfile,
+                    new CullState
+                    {
+                        IsVisible = true,
+                        LOD = LODLevel.High,
+                    });
 
-                _renderedChunks.Add(key, new RenderedChunk(chunkX, chunkY, entity));
+                int scopeId = ComposeChunkScopeId(chunkX, chunkY);
+                if (!performerCommands.TryAdd(new PerformerCommand
+                    {
+                        CommandKind = PerformerCommandKind.CreatePerformer,
+                        PerformerDefinitionId = definitionId,
+                        ScopeTag = scopeId,
+                        Source = entity,
+                        AnchorKind = PresentationAnchorKind.Entity,
+                    }))
+                {
+                    throw new InvalidOperationException("VisualTerrainEditor failed to queue chunk performer creation.");
+                }
+
+                _renderedChunks.Add(key, new RenderedChunk(chunkX, chunkY, entity, scopeId));
             }
         }
 
@@ -617,6 +654,15 @@ internal sealed class VisualTerrainEditorRuntime
         {
             long key = keysToRemove[i];
             RenderedChunk rendered = _renderedChunks[key];
+            if (engine.TryGetService(CoreServiceKeys.PerformerCommandBuffer, out PerformerCommandBuffer commands))
+            {
+                commands.TryAdd(new PerformerCommand
+                {
+                    CommandKind = PerformerCommandKind.DestroyPerformerScope,
+                    ScopeTag = rendered.ScopeId,
+                });
+            }
+
             if (engine.World.IsAlive(rendered.Entity))
             {
                 engine.World.Destroy(rendered.Entity);
@@ -630,6 +676,15 @@ internal sealed class VisualTerrainEditorRuntime
     {
         foreach (RenderedChunk rendered in _renderedChunks.Values)
         {
+            if (engine.TryGetService(CoreServiceKeys.PerformerCommandBuffer, out PerformerCommandBuffer commands))
+            {
+                commands.TryAdd(new PerformerCommand
+                {
+                    CommandKind = PerformerCommandKind.DestroyPerformerScope,
+                    ScopeTag = rendered.ScopeId,
+                });
+            }
+
             if (engine.World.IsAlive(rendered.Entity))
             {
                 engine.World.Destroy(rendered.Entity);
@@ -835,5 +890,143 @@ internal sealed class VisualTerrainEditorRuntime
         return Math.Clamp(_document.Asset.ChunkWorldWidthCm * 1.45f, 22_000f, 72_000f);
     }
 
-    private readonly record struct RenderedChunk(int ChunkX, int ChunkY, Entity Entity);
+    private static int ResolveChunkMaterialAssetId(PresentationMaterialRegistry materials)
+    {
+        int materialAssetId = materials.GetId(PresentationMaterialRegistry.DefaultSurfaceKey);
+        if (materialAssetId <= 0)
+        {
+            throw new InvalidOperationException(
+                $"VisualTerrainEditor requires material '{PresentationMaterialRegistry.DefaultSurfaceKey}' to be registered.");
+        }
+
+        return materialAssetId;
+    }
+
+    private int ResolveChunkMeshPerformerDefinitionId(PerformerDefinitionRegistry performerDefinitions)
+    {
+        if (_chunkMeshPerformerDefinitionId > 0)
+        {
+            return _chunkMeshPerformerDefinitionId;
+        }
+
+        _chunkMeshPerformerDefinitionId = performerDefinitions.GetId(VisualTerrainEditorIds.ChunkMeshPerformerId);
+        if (_chunkMeshPerformerDefinitionId <= 0)
+        {
+            throw new InvalidOperationException(
+                $"Performer '{VisualTerrainEditorIds.ChunkMeshPerformerId}' is required by VisualTerrainEditorMod.");
+        }
+
+        return _chunkMeshPerformerDefinitionId;
+    }
+
+    private int RegisterChunkMeshDefinition(
+        PerformerDefinitionRegistry performerDefinitions,
+        int meshAssetId,
+        int materialAssetId,
+        ProceduralMeshUsageHint usageHint,
+        int chunkX,
+        int chunkY)
+    {
+        int templateDefinitionId = ResolveChunkMeshPerformerDefinitionId(performerDefinitions);
+        PerformerDefinition template = performerDefinitions.Get(templateDefinitionId);
+        string definitionKey = $"{TerrainChunkPerformerKeyPrefix}.{chunkX}.{chunkY}";
+        var definition = new PerformerDefinition
+        {
+            Key = definitionKey,
+            DefaultLifetime = template.DefaultLifetime,
+            PositionOffset = template.PositionOffset,
+            PositionYDriftPerSecond = template.PositionYDriftPerSecond,
+            AlphaFadeOverLifetime = template.AlphaFadeOverLifetime,
+            DefaultColor = template.DefaultColor,
+            DefaultFontSize = template.DefaultFontSize,
+            WorldTextMode = template.WorldTextMode,
+            VisibilityCondition = template.VisibilityCondition,
+            Surface = template.Surface,
+            Children = template.Children,
+            Rules = CloneRules(template.Rules),
+            Bindings = CloneBindings(template.Bindings),
+            Behaviors = CloneChunkMeshBehaviors(template.Behaviors, usageHint),
+            ParamDefaults = new[]
+            {
+                new ParamDefault
+                {
+                    ParamKey = PerformerParamKeyRegistry.Register(ChunkMeshAssetParamKey),
+                    Lane = ParamLane.Int,
+                    IntValue = meshAssetId,
+                },
+                new ParamDefault
+                {
+                    ParamKey = PerformerParamKeyRegistry.Register(ChunkMaterialParamKey),
+                    Lane = ParamLane.Int,
+                    IntValue = materialAssetId,
+                },
+            },
+        };
+        return performerDefinitions.Register(definitionKey, definition);
+    }
+
+    private static PerformerRule[] CloneRules(PerformerRule[] source)
+    {
+        if (source == null || source.Length == 0)
+        {
+            return Array.Empty<PerformerRule>();
+        }
+
+        PerformerRule[] cloned = new PerformerRule[source.Length];
+        Array.Copy(source, cloned, source.Length);
+        return cloned;
+    }
+
+    private static PerformerParamBinding[] CloneBindings(PerformerParamBinding[] source)
+    {
+        if (source == null || source.Length == 0)
+        {
+            return Array.Empty<PerformerParamBinding>();
+        }
+
+        PerformerParamBinding[] cloned = new PerformerParamBinding[source.Length];
+        Array.Copy(source, cloned, source.Length);
+        return cloned;
+    }
+
+    private static BehaviorSlot[] CloneChunkMeshBehaviors(BehaviorSlot[] source, ProceduralMeshUsageHint usageHint)
+    {
+        if (source == null || source.Length == 0)
+        {
+            return Array.Empty<BehaviorSlot>();
+        }
+
+        BehaviorSlot[] cloned = new BehaviorSlot[source.Length];
+        Array.Copy(source, cloned, source.Length);
+        for (int i = 0; i < cloned.Length; i++)
+        {
+            if (cloned[i].Kind != BehaviorKind.AssetBinding)
+            {
+                continue;
+            }
+
+            AssetBindingConfig binding = cloned[i].AssetBinding;
+            binding.Mobility = usageHint == ProceduralMeshUsageHint.Static
+                ? VisualMobility.Static
+                : VisualMobility.Movable;
+            cloned[i].AssetBinding = binding;
+        }
+
+        return cloned;
+    }
+
+    private static int ComposeChunkScopeId(int chunkX, int chunkY)
+    {
+        int scopeId = HashCode.Combine(VisualTerrainEditorIds.ChunkMeshPerformerId, chunkX, chunkY) & int.MaxValue;
+        return scopeId == 0 ? 1 : scopeId;
+    }
+
+    private static Vector3 ResolveChunkCenterMeters(VisualTerrainAssetDescriptor asset, int chunkX, int chunkY)
+    {
+        float centerXCm = asset.Bounds.Left + ((chunkX + 0.5f) * asset.ChunkWorldWidthCm);
+        float centerYCm = asset.Bounds.Top + ((chunkY + 0.5f) * asset.ChunkWorldHeightCm);
+        return new Vector3(centerXCm * 0.01f, 0f, centerYCm * 0.01f);
+    }
+
+    private readonly record struct RenderedChunk(int ChunkX, int ChunkY, Entity Entity, int ScopeId);
 }

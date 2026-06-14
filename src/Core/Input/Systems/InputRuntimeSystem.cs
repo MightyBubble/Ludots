@@ -1,6 +1,7 @@
 using System.Collections.Generic;
 using System.Numerics;
 using Arch.System;
+using Ludots.Core.Engine;
 using Ludots.Core.Gameplay;
 using Ludots.Core.Input.Interaction;
 using Ludots.Core.Input.Runtime;
@@ -40,10 +41,12 @@ namespace Ludots.Core.Input.Systems
             {
                 synchronizedBackend.AdvanceFrameInput();
             }
- 
+
             bool uiCaptured = _globals.TryGetValue(CoreServiceKeys.UiCaptured.Name, out var capturedObj) && capturedObj is bool b && b;
             input.InputBlocked = uiCaptured;
             input.Update();
+            RunFrameConsumers(input, dt);
+            ApplyPointerCaptureSuppression(input);
             if (_authoritativeInput != null)
             {
                 _authoritativeInput.CaptureVisualFrame(input);
@@ -59,6 +62,23 @@ namespace Ludots.Core.Input.Systems
             {
                 session.Camera.SetUserInputSuppressed(uiCaptured);
                 session.Camera.CaptureVisualInput();
+            }
+        }
+
+        private void RunFrameConsumers(PlayerInputHandler input, float dt)
+        {
+            if (!_globals.TryGetValue(CoreServiceKeys.InputFrameConsumers.Name, out var consumersObj) ||
+                consumersObj is not List<IInputFrameConsumer> consumers ||
+                consumers.Count == 0 ||
+                !_globals.TryGetValue(CoreServiceKeys.Engine.Name, out var engineObj) ||
+                engineObj is not GameEngine engine)
+            {
+                return;
+            }
+
+            for (int i = 0; i < consumers.Count; i++)
+            {
+                consumers[i]?.Consume(engine, input, dt);
             }
         }
  
@@ -88,6 +108,50 @@ namespace Ludots.Core.Input.Systems
                 input.IsDown(actionId),
                 input.PressedThisFrame(actionId),
                 input.ReleasedThisFrame(actionId));
+        }
+
+        private void ApplyPointerCaptureSuppression(PlayerInputHandler input)
+        {
+            if (!_globals.TryGetValue(CoreServiceKeys.PointerInputCaptured.Name, out var capturedObj) ||
+                capturedObj is not bool captured ||
+                !captured)
+            {
+                return;
+            }
+
+            var bindings = InteractionActionBindingsResolver.Require(_globals, nameof(InputRuntimeSystem));
+            bool preserveCommandAction = ShouldPreserveCapturedCommand(bindings.CommandActionId);
+            Suppress(input, bindings.ConfirmActionId);
+            if (!preserveCommandAction)
+            {
+                Suppress(input, bindings.CommandActionId);
+            }
+            Suppress(input, bindings.CancelActionId);
+            if (_globals is Dictionary<string, object> mutable)
+            {
+                mutable[CoreServiceKeys.PointerInputCaptured.Name] = false;
+            }
+        }
+
+        private bool ShouldPreserveCapturedCommand(string actionId)
+        {
+            return !string.IsNullOrWhiteSpace(actionId) &&
+                _globals.TryGetValue(CoreServiceKeys.AuthoritativeGroundPointerOverride.Name, out var overrideObj) &&
+                overrideObj is AuthoritativeGroundPointerOverride pointerOverride &&
+                pointerOverride.HasOverride &&
+                string.Equals(pointerOverride.ActionId, actionId, System.StringComparison.Ordinal);
+        }
+
+        private void Suppress(PlayerInputHandler input, string actionId)
+        {
+            if (string.IsNullOrWhiteSpace(actionId))
+            {
+                return;
+            }
+
+            input.SuppressActionThisFrame(actionId);
+            _authoritativeInput?.SuppressActionThisTick(actionId);
+            _pointerButtons?.SuppressActionThisTick(actionId);
         }
     }
 }

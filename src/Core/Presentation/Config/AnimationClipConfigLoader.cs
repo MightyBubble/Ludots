@@ -20,7 +20,7 @@ namespace Ludots.Core.Presentation.Config
 
         public void Load(ConfigCatalog catalog = null, ConfigConflictReport report = null)
         {
-            var entry = ConfigPipeline.GetEntryOrDefault(catalog, "Presentation/animation_clips.json", ConfigMergePolicy.ArrayById, "id");
+            var entry = ConfigPipeline.RequireEntry(catalog, "Presentation/animation_clips.json", ConfigMergePolicy.ArrayById, "id");
             var merged = _configs.MergeArrayByIdFromCatalog(in entry, report);
             for (int i = 0; i < merged.Count; i++)
             {
@@ -36,7 +36,7 @@ namespace Ludots.Core.Presentation.Config
         private static AnimationClipDefinition ParseClip(JsonNode node, string key)
         {
             string assetKindText = node["assetKind"]?.GetValue<string>() ?? nameof(AnimationClipAssetKind.Clip);
-            if (!Enum.TryParse(assetKindText, ignoreCase: true, out AnimationClipAssetKind assetKind))
+            if (!Enum.TryParse(assetKindText, ignoreCase: false, out AnimationClipAssetKind assetKind))
             {
                 throw new InvalidOperationException($"Animation clip '{key}' has invalid assetKind '{assetKindText}'.");
             }
@@ -77,17 +77,17 @@ namespace Ludots.Core.Presentation.Config
 
         private static AnimationBlendInputSource ParseBlendInput(
             JsonNode? node,
-            AnimationBlendInputSource fallback,
+            AnimationBlendInputSource defaultValue,
             string key,
             string axisLabel)
         {
             if (node == null)
             {
-                return fallback;
+                return defaultValue;
             }
 
             string value = node.GetValue<string>();
-            if (!Enum.TryParse(value, ignoreCase: true, out AnimationBlendInputSource input))
+            if (!Enum.TryParse(value, ignoreCase: false, out AnimationBlendInputSource input))
             {
                 throw new InvalidOperationException(
                     $"Animation clip '{key}' has invalid blendInputs.{axisLabel} '{value}'.");
@@ -102,7 +102,7 @@ namespace Ludots.Core.Presentation.Config
             {
                 for (int j = i + 1; j < locators.Length; j++)
                 {
-                    if (string.Equals(locators[i].BackendId, locators[j].BackendId, StringComparison.OrdinalIgnoreCase))
+                    if (string.Equals(locators[i].BackendId, locators[j].BackendId, StringComparison.Ordinal))
                     {
                         throw new InvalidOperationException(
                             $"Animation clip '{key}' defines duplicate locator backend '{locators[i].BackendId}'.");

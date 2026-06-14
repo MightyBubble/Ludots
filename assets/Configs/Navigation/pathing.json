@@ -5,12 +5,11 @@
       "profileId": "Small",
       "layer": 0,
       "selection": {
-        "mode": "AutoCheapest",
+        "mode": "PreferMesh",
         "graphBias": 0.0,
         "meshBias": 0.0,
         "graphCostWeight": 1.0,
-        "meshCostWeight": 1.0,
-        "fallback": "PreferMesh"
+        "meshCostWeight": 1.0
       },
       "navMesh": {
         "areaCosts": [

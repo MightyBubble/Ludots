@@ -27,15 +27,17 @@ namespace Ludots.Core.Gameplay.GAS.Bindings
         {
             _registry.Clear();
 
-            var entry = ConfigPipeline.GetEntryOrDefault(catalog, relativePath, ConfigMergePolicy.ArrayById, "id");
-            var merged = _pipeline.MergeArrayByIdFromCatalog(in entry, report);
+            var entry = ConfigPipeline.RequireEntry(catalog, relativePath, ConfigMergePolicy.ArrayById, "id");
+            var fragments = _pipeline.CollectFragmentsWithSources(entry.RelativePath);
+            ValidateRawIds(fragments, entry.RelativePath);
+            var merged = ConfigMerger.MergeArrayByIdToEntries(fragments, in entry, report);
 
             var sorted = new List<(string Id, JsonObject Node)>(merged.Count);
             for (int i = 0; i < merged.Count; i++)
                 sorted.Add((merged[i].Id, merged[i].Node));
-            sorted.Sort((a, b) => StringComparer.OrdinalIgnoreCase.Compare(a.Id, b.Id));
+            sorted.Sort((a, b) => StringComparer.Ordinal.Compare(a.Id, b.Id));
 
-            var options = new JsonSerializerOptions { PropertyNameCaseInsensitive = true, IncludeFields = true };
+            var options = StrictJsonOptions.CreateCamelCase();
             var compiled = new List<(int SinkId, int Order, AttributeBindingEntry Entry)>(sorted.Count);
 
             for (int i = 0; i < sorted.Count; i++)
@@ -47,41 +49,29 @@ namespace Ludots.Core.Gameplay.GAS.Bindings
                     throw new InvalidOperationException($"Failed to deserialize attribute binding '{id}' from {relativePath}.");
                 }
 
-                if (string.IsNullOrWhiteSpace(cfg.Id))
-                {
-                    cfg.Id = id;
-                }
-
-                if (!string.Equals(cfg.Id, id, StringComparison.OrdinalIgnoreCase))
+                if (!string.Equals(cfg.Id, id, StringComparison.Ordinal))
                 {
                     throw new InvalidOperationException($"Attribute binding id mismatch in {relativePath}: '{id}' vs '{cfg.Id}'.");
                 }
 
-                if (string.IsNullOrWhiteSpace(cfg.Attribute))
-                {
-                    throw new InvalidOperationException($"Attribute binding '{id}' in {relativePath} missing attribute.");
-                }
-                if (string.IsNullOrWhiteSpace(cfg.Sink))
-                {
-                    throw new InvalidOperationException($"Attribute binding '{id}' in {relativePath} missing sink.");
-                }
+                string attribute = RequireCanonicalField(obj, cfg.Attribute, "attribute", id, relativePath);
+                string sink = RequireCanonicalField(obj, cfg.Sink, "sink", id, relativePath);
+                string modeText = RequireCanonicalField(obj, cfg.Mode, "mode", id, relativePath);
+                string resetPolicyText = RequireCanonicalField(obj, cfg.ResetPolicy, "resetPolicy", id, relativePath);
+                int channel = RequireChannel(obj, cfg.Channel, id, relativePath);
+                float scale = RequireScale(obj, cfg.Scale, id, relativePath);
 
-                int attributeId = AttributeRegistry.Register(cfg.Attribute);
-                int sinkId = _sinks.GetId(cfg.Sink);
+                int attributeId = AttributeRegistry.Register(attribute);
+                int sinkId = _sinks.GetId(sink);
                 if (sinkId < 0)
                 {
-                    throw new InvalidOperationException($"Attribute binding '{id}' in {relativePath}: unknown sink '{cfg.Sink}'.");
+                    throw new InvalidOperationException($"Attribute binding '{id}' in {relativePath}: unknown sink '{sink}'.");
                 }
 
-                var mode = ParseMode(cfg.Mode, id, relativePath);
-                var reset = ParseResetPolicy(cfg.ResetPolicy, id, relativePath);
-                int channel = cfg.Channel;
-                if (channel < 0 || channel > 255)
-                {
-                    throw new InvalidOperationException($"Attribute binding '{id}' in {relativePath}: channel out of range (0..255).");
-                }
+                var mode = ParseMode(modeText, id, relativePath);
+                var reset = ParseResetPolicy(resetPolicyText, id, relativePath);
 
-                compiled.Add((sinkId, i, new AttributeBindingEntry(attributeId, sinkId, (byte)channel, mode, reset, cfg.Scale)));
+                compiled.Add((sinkId, i, new AttributeBindingEntry(attributeId, sinkId, (byte)channel, mode, reset, scale)));
             }
 
             compiled.Sort((a, b) =>
@@ -123,18 +113,117 @@ namespace Ludots.Core.Gameplay.GAS.Bindings
 
         private static AttributeBindingMode ParseMode(string mode, string ownerId, string relativePath)
         {
-            if (string.IsNullOrWhiteSpace(mode)) return AttributeBindingMode.Add;
-            if (string.Equals(mode, "Add", StringComparison.OrdinalIgnoreCase)) return AttributeBindingMode.Add;
-            if (string.Equals(mode, "Override", StringComparison.OrdinalIgnoreCase)) return AttributeBindingMode.Override;
-            throw new InvalidOperationException($"Attribute binding '{ownerId}' in {relativePath}: unsupported mode '{mode}'. Allowed: Add, Override.");
+            return mode switch
+            {
+                "Add" => AttributeBindingMode.Add,
+                "Override" => AttributeBindingMode.Override,
+                _ => throw new InvalidOperationException($"Attribute binding '{ownerId}' in {relativePath}: unsupported mode '{mode}'. Allowed: Add, Override."),
+            };
         }
 
         private static AttributeBindingResetPolicy ParseResetPolicy(string policy, string ownerId, string relativePath)
         {
-            if (string.IsNullOrWhiteSpace(policy)) return AttributeBindingResetPolicy.None;
-            if (string.Equals(policy, "None", StringComparison.OrdinalIgnoreCase)) return AttributeBindingResetPolicy.None;
-            if (string.Equals(policy, "ResetToZeroPerLogicFrame", StringComparison.OrdinalIgnoreCase)) return AttributeBindingResetPolicy.ResetToZeroPerLogicFrame;
-            throw new InvalidOperationException($"Attribute binding '{ownerId}' in {relativePath}: unsupported resetPolicy '{policy}'.");
+            return policy switch
+            {
+                "None" => AttributeBindingResetPolicy.None,
+                "ResetToZeroPerLogicFrame" => AttributeBindingResetPolicy.ResetToZeroPerLogicFrame,
+                _ => throw new InvalidOperationException($"Attribute binding '{ownerId}' in {relativePath}: unsupported resetPolicy '{policy}'."),
+            };
+        }
+
+        private static void ValidateRawIds(IReadOnlyList<ConfigFragment> fragments, string relativePath)
+        {
+            for (int fragmentIndex = 0; fragmentIndex < fragments.Count; fragmentIndex++)
+            {
+                if (fragments[fragmentIndex].Node is not JsonArray arr)
+                {
+                    continue;
+                }
+
+                for (int entryIndex = 0; entryIndex < arr.Count; entryIndex++)
+                {
+                    if (arr[entryIndex] is not JsonObject obj)
+                    {
+                        throw new InvalidOperationException(
+                            $"{relativePath} entry at index {entryIndex} must be a JSON object.");
+                    }
+
+                    if (!obj.TryGetPropertyValue("id", out JsonNode? idNode) ||
+                        idNode is not JsonValue idValue ||
+                        !idValue.TryGetValue<string>(out string? id))
+                    {
+                        throw new InvalidOperationException(
+                            $"{relativePath} entry at index {entryIndex} must declare exact string field 'id'.");
+                    }
+
+                    RequireCanonicalString(id, $"{relativePath} entry id");
+                }
+            }
+        }
+
+        private static string RequireCanonicalField(
+            JsonObject obj,
+            string value,
+            string fieldName,
+            string ownerId,
+            string relativePath)
+        {
+            if (!obj.ContainsKey(fieldName))
+            {
+                throw new InvalidOperationException(
+                    $"Attribute binding '{ownerId}' in {relativePath}: {fieldName} requires an explicit semantic string.");
+            }
+
+            return RequireCanonicalString(value, $"Attribute binding '{ownerId}' in {relativePath}: {fieldName}");
+        }
+
+        private static string RequireCanonicalString(string value, string context)
+        {
+            if (string.IsNullOrWhiteSpace(value))
+            {
+                throw new InvalidOperationException($"{context} must be a non-empty semantic string.");
+            }
+
+            string trimmed = value.Trim();
+            if (!string.Equals(value, trimmed, StringComparison.Ordinal))
+            {
+                throw new InvalidOperationException($"{context} must not include leading or trailing whitespace.");
+            }
+
+            return value;
+        }
+
+        private static int RequireChannel(JsonObject obj, int channel, string ownerId, string relativePath)
+        {
+            if (!obj.ContainsKey("channel"))
+            {
+                throw new InvalidOperationException(
+                    $"Attribute binding '{ownerId}' in {relativePath}: channel requires an explicit integer field.");
+            }
+
+            if (channel < 0 || channel > 255)
+            {
+                throw new InvalidOperationException($"Attribute binding '{ownerId}' in {relativePath}: channel out of range (0..255).");
+            }
+
+            return channel;
+        }
+
+        private static float RequireScale(JsonObject obj, float scale, string ownerId, string relativePath)
+        {
+            if (!obj.ContainsKey("scale"))
+            {
+                throw new InvalidOperationException(
+                    $"Attribute binding '{ownerId}' in {relativePath}: scale requires an explicit finite number.");
+            }
+
+            if (!float.IsFinite(scale))
+            {
+                throw new InvalidOperationException(
+                    $"Attribute binding '{ownerId}' in {relativePath}: scale must be finite.");
+            }
+
+            return scale;
         }
     }
 }

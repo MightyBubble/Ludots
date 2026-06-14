@@ -7,6 +7,7 @@ namespace Ludots.Core.Presentation.Hud
     {
         Text = 0,
         Rect = 1,
+        Line = 2,
     }
 
     public struct ScreenOverlayItem
@@ -18,6 +19,7 @@ namespace Ludots.Core.Presentation.Hud
         public int Y;
         public int Width;
         public int Height;
+        public int Thickness;
         public int FontSize;
         public int StringId;
         public Vector4 Color;
@@ -123,6 +125,31 @@ namespace Ludots.Core.Presentation.Hud
                 Height = height,
                 BackgroundColor = fill,
                 Color = border
+            };
+            return true;
+        }
+
+        public bool AddLine(int x0, int y0, int x1, int y1, int thickness, Vector4 color)
+        {
+            return AddLine(x0, y0, x1, y1, thickness, color, stableId: 0, dirtySerial: 0);
+        }
+
+        public bool AddLine(int x0, int y0, int x1, int y1, int thickness, Vector4 color, int stableId, int dirtySerial)
+        {
+            if (_count >= MaxItems) return false;
+            if (thickness <= 0 || color.W <= 0f) return true;
+
+            _items[_count++] = new ScreenOverlayItem
+            {
+                StableId = stableId,
+                DirtySerial = dirtySerial,
+                Kind = ScreenOverlayItemKind.Line,
+                X = x0,
+                Y = y0,
+                Width = x1,
+                Height = y1,
+                Thickness = thickness,
+                Color = color
             };
             return true;
         }

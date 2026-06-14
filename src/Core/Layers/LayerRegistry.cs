@@ -6,12 +6,6 @@ namespace Ludots.Core.Layers
     /// <summary>
     /// Maps layer names (e.g. "Hero", "Projectile", "Structure") to bit indices (0..31).
     /// Thread-safe after Freeze(). Shared across all systems.
-    ///
-    /// Usage:
-    ///   LayerRegistry.Register("Hero");       // → index 0
-    ///   LayerRegistry.Register("Projectile");  // → index 1
-    ///   uint heroMask = LayerRegistry.GetBit("Hero");  // → 0x0000_0001
-    ///   uint mask = LayerRegistry.GetCombinedMask("Hero", "Projectile"); // → 0x0000_0003
     /// </summary>
     public static class LayerRegistry
     {
@@ -35,15 +29,27 @@ namespace Ludots.Core.Layers
             _frozen = false;
         }
 
-        /// <summary>Register a layer name, returning its bit index (0..31). Idempotent.</summary>
         public static int Register(string name)
         {
             if (_frozen)
+            {
                 throw new InvalidOperationException("LayerRegistry is frozen.");
+            }
+
+            if (string.IsNullOrWhiteSpace(name))
+            {
+                throw new InvalidOperationException("LayerRegistry requires a non-empty layer name.");
+            }
+
             if (_nameToIndex.TryGetValue(name, out var idx))
+            {
                 return idx;
+            }
+
             if (_nextIndex >= MaxLayers)
-                throw new InvalidOperationException($"LayerRegistry: max {MaxLayers} layers reached.");
+            {
+                throw new InvalidOperationException($"LayerRegistry max {MaxLayers} layers reached.");
+            }
 
             idx = _nextIndex++;
             _nameToIndex[name] = idx;
@@ -51,43 +57,65 @@ namespace Ludots.Core.Layers
             return idx;
         }
 
-        /// <summary>Get the bit index for a name, or -1 if not found.</summary>
         public static int GetIndex(string name)
-            => _nameToIndex.TryGetValue(name, out var idx) ? idx : -1;
-
-        /// <summary>Get the name for a bit index, or null if unregistered.</summary>
-        public static string GetName(int index)
-            => (uint)index < MaxLayers ? _indexToName[index] : null;
-
-        /// <summary>Get a single-bit mask for the named layer.</summary>
-        public static uint GetBit(string name)
         {
-            int idx = GetIndex(name);
-            return idx >= 0 ? 1u << idx : 0u;
+            if (string.IsNullOrWhiteSpace(name))
+            {
+                throw new InvalidOperationException("LayerRegistry requires a non-empty layer name.");
+            }
+
+            if (_nameToIndex.TryGetValue(name, out var idx))
+            {
+                return idx;
+            }
+
+            throw new InvalidOperationException($"LayerRegistry has no registered layer '{name}'.");
         }
 
-        /// <summary>Get a combined bitmask for multiple layer names.</summary>
+        public static string GetName(int index)
+        {
+            if ((uint)index >= MaxLayers || string.IsNullOrEmpty(_indexToName[index]))
+            {
+                throw new InvalidOperationException($"LayerRegistry has no registered layer at index {index}.");
+            }
+
+            return _indexToName[index];
+        }
+
+        public static uint GetBit(string name)
+        {
+            return 1u << GetIndex(name);
+        }
+
         public static uint GetCombinedMask(params string[] names)
         {
-            uint mask = 0;
-            foreach (var n in names)
+            if (names == null || names.Length == 0)
             {
-                int idx = GetIndex(n);
-                if (idx >= 0) mask |= 1u << idx;
+                throw new InvalidOperationException("LayerRegistry requires at least one layer name for a combined mask.");
             }
+
+            uint mask = 0;
+            foreach (var name in names)
+            {
+                mask |= 1u << GetIndex(name);
+            }
+
             return mask;
         }
 
-        /// <summary>Get a combined bitmask for multiple layer names (List version, zero-alloc on call).</summary>
         public static uint GetCombinedMask(List<string> names)
         {
-            if (names == null) return 0;
+            if (names == null || names.Count == 0)
+            {
+                throw new InvalidOperationException("LayerRegistry requires at least one layer name for a combined mask.");
+            }
+
             uint mask = 0;
             for (int i = 0; i < names.Count; i++)
             {
-                int idx = GetIndex(names[i]);
-                if (idx >= 0) mask |= 1u << idx;
+                mask |= 1u << GetIndex(names[i]);
             }
+
             return mask;
         }
     }

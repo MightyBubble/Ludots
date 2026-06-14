@@ -5,7 +5,7 @@ namespace Ludots.Core.Input.Selection
     public readonly record struct SelectionContainerDescriptor(
         Entity Container,
         Entity Owner,
-        string AliasKey,
+        string SetKey,
         SelectionContainerKind Kind,
         uint Revision,
         int MemberCount,

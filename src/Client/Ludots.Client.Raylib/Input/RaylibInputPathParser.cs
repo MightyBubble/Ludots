@@ -36,7 +36,15 @@ namespace Ludots.Client.Raylib.Input
                 "ESCAPE" => KeyboardKey.KEY_ESCAPE,
                 "TAB" => KeyboardKey.KEY_TAB,
                 "BACKSPACE" => KeyboardKey.KEY_BACKSPACE,
+                "INSERT" => KeyboardKey.KEY_INSERT,
                 "DELETE" => KeyboardKey.KEY_DELETE,
+                "PAGEUP" => KeyboardKey.KEY_PAGE_UP,
+                "PAGEDOWN" => KeyboardKey.KEY_PAGE_DOWN,
+                "HOME" => KeyboardKey.KEY_HOME,
+                "END" => KeyboardKey.KEY_END,
+                "MINUS" => KeyboardKey.KEY_MINUS,
+                "EQUAL" => KeyboardKey.KEY_EQUAL,
+                "EQUALS" => KeyboardKey.KEY_EQUAL,
                 "LEFT" => KeyboardKey.KEY_LEFT,
                 "RIGHT" => KeyboardKey.KEY_RIGHT,
                 "UP" => KeyboardKey.KEY_UP,
@@ -44,6 +52,11 @@ namespace Ludots.Client.Raylib.Input
                 "LEFTSHIFT" => KeyboardKey.KEY_LEFT_SHIFT,
                 "LEFTCONTROL" => KeyboardKey.KEY_LEFT_CONTROL,
                 "LEFTALT" => KeyboardKey.KEY_LEFT_ALT,
+                "RIGHTSHIFT" => KeyboardKey.KEY_RIGHT_SHIFT,
+                "RIGHTCONTROL" => KeyboardKey.KEY_RIGHT_CONTROL,
+                "RIGHTCTRL" => KeyboardKey.KEY_RIGHT_CONTROL,
+                "RIGHTALT" => KeyboardKey.KEY_RIGHT_ALT,
+                "LEFTCTRL" => KeyboardKey.KEY_LEFT_CONTROL,
                 _ => null
             };
         }

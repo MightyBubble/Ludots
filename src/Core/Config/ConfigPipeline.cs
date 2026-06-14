@@ -1,4 +1,4 @@
-﻿using System;
+using System;
 using System.Collections.Generic;
 using System.IO;
 using System.Text.Json;
@@ -39,11 +39,8 @@ namespace Ludots.Core.Config
                 }
             }
             
-            // Deserialize merged JSON to GameConfig
-            var options = new JsonSerializerOptions
-            {
-                PropertyNameCaseInsensitive = true
-            };
+            // Deserialize merged JSON to GameConfig.
+            var options = StrictJsonOptions.CreateCamelCase();
             options.Converters.Add(new JsonStringEnumConverter());
             
             var jsonString = merged.ToJsonString();
@@ -162,16 +159,14 @@ namespace Ludots.Core.Config
             return result as JsonObject;
         }
 
-        /// <summary>
-        /// Catalog lookup helper: returns the catalog entry or a default with specified policy.
-        /// </summary>
-        public static ConfigCatalogEntry GetEntryOrDefault(
+        public static ConfigCatalogEntry RequireEntry(
             ConfigCatalog catalog, string path,
             ConfigMergePolicy defaultPolicy, string defaultIdField = "id")
         {
             if (catalog != null && catalog.TryGet(path, out var found))
                 return found;
-            return new ConfigCatalogEntry(path, defaultPolicy, defaultIdField);
+            throw new InvalidOperationException(
+                $"Config catalog must explicitly declare '{path}' with policy '{defaultPolicy}'.");
         }
 
         private void LoadFromAllSources(string relativePath, Action<Stream, string> onStreamOpened)

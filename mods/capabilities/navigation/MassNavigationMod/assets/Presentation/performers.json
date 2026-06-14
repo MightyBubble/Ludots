@@ -1,0 +1,863 @@
+[
+  {
+    "id": "mass_navigation_azure_light_bootstrap",
+    "rules": [
+      {
+        "event": { "kind": "EntitySpawned", "key": "mass_navigation_agent_azure_light" },
+        "condition": { "inline": "SourceHasVisualTransform" },
+        "command": {
+          "kind": "CreatePerformer",
+          "definitionId": "mass_navigation_agent_azure_light",
+          "scopeSource": "EventPayloadA"
+        }
+      },
+      {
+        "event": { "kind": "EntityDestroyed", "key": "mass_navigation_agent_azure_light" },
+        "command": {
+          "kind": "DestroyPerformerScope",
+          "scopeSource": "EventPayloadA"
+        }
+      }
+    ]
+  },
+  {
+    "id": "mass_navigation_azure_heavy_bootstrap",
+    "rules": [
+      {
+        "event": { "kind": "EntitySpawned", "key": "mass_navigation_agent_azure_heavy" },
+        "condition": { "inline": "SourceHasVisualTransform" },
+        "command": {
+          "kind": "CreatePerformer",
+          "definitionId": "mass_navigation_agent_azure_heavy",
+          "scopeSource": "EventPayloadA"
+        }
+      },
+      {
+        "event": { "kind": "EntityDestroyed", "key": "mass_navigation_agent_azure_heavy" },
+        "command": {
+          "kind": "DestroyPerformerScope",
+          "scopeSource": "EventPayloadA"
+        }
+      }
+    ]
+  },
+  {
+    "id": "mass_navigation_crimson_light_bootstrap",
+    "rules": [
+      {
+        "event": { "kind": "EntitySpawned", "key": "mass_navigation_agent_crimson_light" },
+        "condition": { "inline": "SourceHasVisualTransform" },
+        "command": {
+          "kind": "CreatePerformer",
+          "definitionId": "mass_navigation_agent_crimson_light",
+          "scopeSource": "EventPayloadA"
+        }
+      },
+      {
+        "event": { "kind": "EntityDestroyed", "key": "mass_navigation_agent_crimson_light" },
+        "command": {
+          "kind": "DestroyPerformerScope",
+          "scopeSource": "EventPayloadA"
+        }
+      }
+    ]
+  },
+  {
+    "id": "mass_navigation_crimson_heavy_bootstrap",
+    "rules": [
+      {
+        "event": { "kind": "EntitySpawned", "key": "mass_navigation_agent_crimson_heavy" },
+        "condition": { "inline": "SourceHasVisualTransform" },
+        "command": {
+          "kind": "CreatePerformer",
+          "definitionId": "mass_navigation_agent_crimson_heavy",
+          "scopeSource": "EventPayloadA"
+        }
+      },
+      {
+        "event": { "kind": "EntityDestroyed", "key": "mass_navigation_agent_crimson_heavy" },
+        "command": {
+          "kind": "DestroyPerformerScope",
+          "scopeSource": "EventPayloadA"
+        }
+      }
+    ]
+  },
+  {
+    "id": "mass_navigation_amber_light_bootstrap",
+    "rules": [
+      {
+        "event": { "kind": "EntitySpawned", "key": "mass_navigation_agent_amber_light" },
+        "condition": { "inline": "SourceHasVisualTransform" },
+        "command": {
+          "kind": "CreatePerformer",
+          "definitionId": "mass_navigation_agent_amber_light",
+          "scopeSource": "EventPayloadA"
+        }
+      },
+      {
+        "event": { "kind": "EntityDestroyed", "key": "mass_navigation_agent_amber_light" },
+        "command": {
+          "kind": "DestroyPerformerScope",
+          "scopeSource": "EventPayloadA"
+        }
+      }
+    ]
+  },
+  {
+    "id": "mass_navigation_amber_heavy_bootstrap",
+    "rules": [
+      {
+        "event": { "kind": "EntitySpawned", "key": "mass_navigation_agent_amber_heavy" },
+        "condition": { "inline": "SourceHasVisualTransform" },
+        "command": {
+          "kind": "CreatePerformer",
+          "definitionId": "mass_navigation_agent_amber_heavy",
+          "scopeSource": "EventPayloadA"
+        }
+      },
+      {
+        "event": { "kind": "EntityDestroyed", "key": "mass_navigation_agent_amber_heavy" },
+        "command": {
+          "kind": "DestroyPerformerScope",
+          "scopeSource": "EventPayloadA"
+        }
+      }
+    ]
+  },
+  {
+    "id": "mass_navigation_emerald_light_bootstrap",
+    "rules": [
+      {
+        "event": { "kind": "EntitySpawned", "key": "mass_navigation_agent_emerald_light" },
+        "condition": { "inline": "SourceHasVisualTransform" },
+        "command": {
+          "kind": "CreatePerformer",
+          "definitionId": "mass_navigation_agent_emerald_light",
+          "scopeSource": "EventPayloadA"
+        }
+      },
+      {
+        "event": { "kind": "EntityDestroyed", "key": "mass_navigation_agent_emerald_light" },
+        "command": {
+          "kind": "DestroyPerformerScope",
+          "scopeSource": "EventPayloadA"
+        }
+      }
+    ]
+  },
+  {
+    "id": "mass_navigation_emerald_heavy_bootstrap",
+    "rules": [
+      {
+        "event": { "kind": "EntitySpawned", "key": "mass_navigation_agent_emerald_heavy" },
+        "condition": { "inline": "SourceHasVisualTransform" },
+        "command": {
+          "kind": "CreatePerformer",
+          "definitionId": "mass_navigation_agent_emerald_heavy",
+          "scopeSource": "EventPayloadA"
+        }
+      },
+      {
+        "event": { "kind": "EntityDestroyed", "key": "mass_navigation_agent_emerald_heavy" },
+        "command": {
+          "kind": "DestroyPerformerScope",
+          "scopeSource": "EventPayloadA"
+        }
+      }
+    ]
+  },
+  {
+    "id": "mass_navigation_blocker_bootstrap",
+    "rules": [
+      {
+        "event": { "kind": "EntitySpawned", "key": "mass_navigation_blocker" },
+        "condition": { "inline": "SourceHasVisualTransform" },
+        "command": {
+          "kind": "CreatePerformer",
+          "definitionId": "mass_navigation_blocker",
+          "scopeSource": "EventPayloadA"
+        }
+      },
+      {
+        "event": { "kind": "EntityDestroyed", "key": "mass_navigation_blocker" },
+        "command": {
+          "kind": "DestroyPerformerScope",
+          "scopeSource": "EventPayloadA"
+        }
+      }
+    ]
+  },
+  {
+    "id": "mass_navigation_hotspot_bootstrap",
+    "rules": [
+      {
+        "event": { "kind": "EntitySpawned", "key": "mass_navigation_hotspot_marker" },
+        "condition": { "inline": "SourceHasVisualTransform" },
+        "command": {
+          "kind": "CreatePerformer",
+          "definitionId": "mass_navigation_hotspot_marker",
+          "scopeSource": "EventPayloadA"
+        }
+      },
+      {
+        "event": { "kind": "EntityDestroyed", "key": "mass_navigation_hotspot_marker" },
+        "command": {
+          "kind": "DestroyPerformerScope",
+          "scopeSource": "EventPayloadA"
+        }
+      }
+    ]
+  },
+  {
+    "id": "mass_navigation_agent_light",
+    "defaultColor": [0.38, 0.72, 1.0, 1.0],
+    "rules": [
+      {
+        "event": { "kind": "SelectionMemberAdded", "key": "selection.live.primary" },
+        "command": {
+          "kind": "CreatePerformer",
+          "definitionId": "mass_navigation_agent_selection_marker_light",
+          "scopeSource": "SourceStableId"
+        }
+      },
+      {
+        "event": { "kind": "SelectionMemberRemoved", "key": "selection.live.primary" },
+        "command": {
+          "kind": "DestroyScopedPerformer",
+          "definitionId": "mass_navigation_agent_selection_marker_light",
+          "scopeSource": "SourceStableId"
+        }
+      }
+    ],
+    "children": [
+      { "definitionId": "mass_navigation_agent_health_hud_light", "scopeTag": "structure" },
+      { "definitionId": "mass_navigation_agent_health_text_light", "scopeTag": "structure" }
+    ],
+    "behaviors": [
+      {
+        "slot": "body",
+        "kind": "AssetBinding",
+        "activeByDefault": true,
+        "assetBinding": {
+          "assetKind": "SkinnedMesh",
+          "assetId": "mass_navigation.agent.soldier",
+          "materialId": "default_surface",
+          "renderPath": "GpuSkinnedInstance",
+          "mobility": "Movable",
+          "localScale": [0.45, 0.45, 0.45]
+        }
+      },
+      {
+        "slot": "grounding",
+        "kind": "Grounding",
+        "activeByDefault": true,
+        "grounding": {
+          "mode": "SnapToGround",
+          "offset": 0.0,
+          "updatePolicy": "EveryFrame"
+        }
+      },
+      {
+        "slot": "animator",
+        "kind": "Animator",
+        "activeByDefault": true,
+        "animator": {
+          "animatorControllerId": "mass_navigation.agent.locomotion",
+          "animationProfileId": "mass_navigation.agent.profile",
+          "speedParamKey": "mass_navigation.agent.locomotion.speed",
+          "stateParamKey": "none"
+        }
+      },
+      {
+        "slot": "minimap",
+        "kind": "MinimapMarker",
+        "activeByDefault": true,
+        "minimapMarker": {
+          "shape": "Circle",
+          "color": [0.38, 0.72, 1.0, 1.0],
+          "sizePx": 3.0,
+          "colorParamKey": "none",
+          "sizeParamKey": "none",
+          "visibilityParamKey": "none",
+          "orientationMode": "PerformerForward",
+          "orientationParamKey": "none",
+          "orientationOffsetRad": 0.0,
+          "orientationLengthPx": 4.0
+        }
+      }
+    ],
+    "paramDefaults": [
+      { "paramKey": "mass_navigation.agent.locomotion.speed", "lane": "Float", "floatValue": 1.0 }
+    ]
+  },
+  {
+    "id": "mass_navigation_agent_heavy",
+    "defaultColor": [0.95, 0.58, 0.28, 1.0],
+    "rules": [
+      {
+        "event": { "kind": "SelectionMemberAdded", "key": "selection.live.primary" },
+        "command": {
+          "kind": "CreatePerformer",
+          "definitionId": "mass_navigation_agent_selection_marker_heavy",
+          "scopeSource": "SourceStableId"
+        }
+      },
+      {
+        "event": { "kind": "SelectionMemberRemoved", "key": "selection.live.primary" },
+        "command": {
+          "kind": "DestroyScopedPerformer",
+          "definitionId": "mass_navigation_agent_selection_marker_heavy",
+          "scopeSource": "SourceStableId"
+        }
+      }
+    ],
+    "children": [
+      { "definitionId": "mass_navigation_agent_health_hud_heavy", "scopeTag": "structure" },
+      { "definitionId": "mass_navigation_agent_health_text_heavy", "scopeTag": "structure" }
+    ],
+    "behaviors": [
+      {
+        "slot": "body",
+        "kind": "AssetBinding",
+        "activeByDefault": true,
+        "assetBinding": {
+          "assetKind": "SkinnedMesh",
+          "assetId": "mass_navigation.agent.soldier",
+          "materialId": "default_surface",
+          "renderPath": "GpuSkinnedInstance",
+          "mobility": "Movable",
+          "localScale": [0.62, 0.62, 0.62]
+        }
+      },
+      {
+        "slot": "grounding",
+        "kind": "Grounding",
+        "activeByDefault": true,
+        "grounding": {
+          "mode": "SnapToGround",
+          "offset": 0.0,
+          "updatePolicy": "EveryFrame"
+        }
+      },
+      {
+        "slot": "animator",
+        "kind": "Animator",
+        "activeByDefault": true,
+        "animator": {
+          "animatorControllerId": "mass_navigation.agent.locomotion",
+          "animationProfileId": "mass_navigation.agent.profile",
+          "speedParamKey": "mass_navigation.agent.locomotion.speed",
+          "stateParamKey": "none"
+        }
+      },
+      {
+        "slot": "minimap",
+        "kind": "MinimapMarker",
+        "activeByDefault": true,
+        "minimapMarker": {
+          "shape": "Circle",
+          "color": [0.95, 0.58, 0.28, 1.0],
+          "sizePx": 4.5,
+          "colorParamKey": "none",
+          "sizeParamKey": "none",
+          "visibilityParamKey": "none",
+          "orientationMode": "PerformerForward",
+          "orientationParamKey": "none",
+          "orientationOffsetRad": 0.0,
+          "orientationLengthPx": 5.0
+        }
+      }
+    ],
+    "paramDefaults": [
+      { "paramKey": "mass_navigation.agent.locomotion.speed", "lane": "Float", "floatValue": 1.0 }
+    ]
+  },
+  {
+    "id": "mass_navigation_agent_selection_marker_light",
+    "defaultColor": [0.72, 0.92, 1.0, 0.95],
+    "behaviors": [
+      {
+        "slot": "body",
+        "kind": "AssetBinding",
+        "activeByDefault": true,
+        "assetBinding": {
+          "assetKind": "Mesh",
+          "assetId": "mass_navigation.selection.marker",
+          "materialId": "default_surface",
+          "renderPath": "InstancedStaticMesh",
+          "mobility": "Movable",
+          "localScale": [0.55, 0.05, 0.55]
+        }
+      },
+      {
+        "slot": "attachment",
+        "kind": "Attachment",
+        "activeByDefault": true,
+        "attachment": {
+          "target": "Parent",
+          "offset": [0.0, 0.035, 0.0],
+          "rotationOffset": [0.0, 0.0, 0.0, 1.0],
+          "inheritScale": false
+        }
+      }
+    ]
+  },
+  {
+    "id": "mass_navigation_agent_selection_marker_heavy",
+    "extends": "mass_navigation_agent_selection_marker_light",
+    "behaviors": [
+      {
+        "slot": "body",
+        "kind": "AssetBinding",
+        "activeByDefault": true,
+        "assetBinding": {
+          "assetKind": "Mesh",
+          "assetId": "mass_navigation.selection.marker",
+          "materialId": "default_surface",
+          "renderPath": "InstancedStaticMesh",
+          "mobility": "Movable",
+          "localScale": [0.78, 0.06, 0.78]
+        }
+      },
+      {
+        "slot": "attachment",
+        "kind": "Attachment",
+        "activeByDefault": true,
+        "attachment": {
+          "target": "Parent",
+          "offset": [0.0, 0.04, 0.0],
+          "rotationOffset": [0.0, 0.0, 0.0, 1.0],
+          "inheritScale": false
+        }
+      }
+    ]
+  },
+  {
+    "id": "mass_navigation_agent_health_hud_light",
+    "defaultColor": [0.12, 0.92, 0.30, 0.96],
+    "behaviors": [
+      {
+        "slot": "body",
+        "kind": "AssetBinding",
+        "activeByDefault": true,
+        "assetBinding": {
+          "assetKind": "WorldHud",
+          "materialParamKey": "massNavigation.agent.health.ratio",
+          "renderPath": "None",
+          "mobility": "Movable",
+          "localScale": [42.0, 5.0, 1.0]
+        }
+      },
+      {
+        "slot": "attachment",
+        "kind": "Attachment",
+        "activeByDefault": true,
+        "attachment": {
+          "target": "Parent",
+          "offset": [0.0, 1.25, 0.0],
+          "rotationOffset": [0.0, 0.0, 0.0, 1.0],
+          "inheritScale": false
+        }
+      }
+    ],
+    "bindings": [
+      { "paramKey": "massNavigation.agent.health.ratio", "source": "attributeRatio", "attributeId": "Health" }
+    ],
+    "paramDefaults": [
+      { "paramKey": "massNavigation.agent.health.ratio", "lane": "Float", "floatValue": 1.0 }
+    ]
+  },
+  {
+    "id": "mass_navigation_agent_health_hud_heavy",
+    "extends": "mass_navigation_agent_health_hud_light",
+    "behaviors": [
+      {
+        "slot": "body",
+        "kind": "AssetBinding",
+        "activeByDefault": true,
+        "assetBinding": {
+          "assetKind": "WorldHud",
+          "materialParamKey": "massNavigation.agent.health.ratio",
+          "renderPath": "None",
+          "mobility": "Movable",
+          "localScale": [58.0, 6.0, 1.0]
+        }
+      },
+      {
+        "slot": "attachment",
+        "kind": "Attachment",
+        "activeByDefault": true,
+        "attachment": {
+          "target": "Parent",
+          "offset": [0.0, 1.55, 0.0],
+          "rotationOffset": [0.0, 0.0, 0.0, 1.0],
+          "inheritScale": false
+        }
+      }
+    ]
+  },
+  {
+    "id": "mass_navigation_agent_health_text_light",
+    "worldTextMode": "AttributeCurrentOverBase",
+    "defaultFontSize": 11,
+    "defaultColor": [1.0, 0.98, 0.92, 1.0],
+    "behaviors": [
+      {
+        "slot": "body",
+        "kind": "AssetBinding",
+        "activeByDefault": true,
+        "assetBinding": {
+          "assetKind": "WorldText",
+          "assetId": "hud.attribute.current_over_base",
+          "scaleParamKey": "massNavigation.agent.health.current",
+          "materialParamKey": "massNavigation.agent.health.base",
+          "renderPath": "None",
+          "mobility": "Movable",
+          "localScale": [1.0, 1.0, 1.0]
+        }
+      },
+      {
+        "slot": "attachment",
+        "kind": "Attachment",
+        "activeByDefault": true,
+        "attachment": {
+          "target": "Parent",
+          "offset": [0.0, 1.42, 0.0],
+          "rotationOffset": [0.0, 0.0, 0.0, 1.0],
+          "inheritScale": false
+        }
+      }
+    ],
+    "bindings": [
+      { "paramKey": "massNavigation.agent.health.current", "source": "attribute", "attributeId": "Health" },
+      { "paramKey": "massNavigation.agent.health.base", "source": "attributeBase", "attributeId": "Health" }
+    ],
+    "paramDefaults": [
+      { "paramKey": "massNavigation.agent.health.current", "lane": "Float", "floatValue": 100.0 },
+      { "paramKey": "massNavigation.agent.health.base", "lane": "Float", "floatValue": 100.0 }
+    ]
+  },
+  {
+    "id": "mass_navigation_agent_health_text_heavy",
+    "extends": "mass_navigation_agent_health_text_light",
+    "worldTextMode": "AttributeCurrentOverBase",
+    "defaultFontSize": 12,
+    "behaviors": [
+      {
+        "slot": "body",
+        "kind": "AssetBinding",
+        "activeByDefault": true,
+        "assetBinding": {
+          "assetKind": "WorldText",
+          "assetId": "hud.attribute.current_over_base",
+          "scaleParamKey": "massNavigation.agent.health.current",
+          "materialParamKey": "massNavigation.agent.health.base",
+          "renderPath": "None",
+          "mobility": "Movable",
+          "localScale": [1.0, 1.0, 1.0]
+        }
+      },
+      {
+        "slot": "attachment",
+        "kind": "Attachment",
+        "activeByDefault": true,
+        "attachment": {
+          "target": "Parent",
+          "offset": [0.0, 1.76, 0.0],
+          "rotationOffset": [0.0, 0.0, 0.0, 1.0],
+          "inheritScale": false
+        }
+      }
+    ],
+    "paramDefaults": [
+      { "paramKey": "massNavigation.agent.health.current", "lane": "Float", "floatValue": 260.0 },
+      { "paramKey": "massNavigation.agent.health.base", "lane": "Float", "floatValue": 260.0 }
+    ]
+  },
+  {
+    "id": "mass_navigation_agent_azure_light",
+    "extends": "mass_navigation_agent_light",
+    "defaultColor": [0.28, 0.58, 1.0, 1.0],
+    "behaviors": [
+      {
+        "slot": "minimap",
+        "kind": "MinimapMarker",
+        "activeByDefault": true,
+        "minimapMarker": {
+          "shape": "Circle",
+          "color": [0.28, 0.58, 1.0, 1.0],
+          "sizePx": 3.0,
+          "colorParamKey": "none",
+          "sizeParamKey": "none",
+          "visibilityParamKey": "none",
+          "orientationMode": "PerformerForward",
+          "orientationParamKey": "none",
+          "orientationOffsetRad": 0.0,
+          "orientationLengthPx": 4.0
+        }
+      }
+    ]
+  },
+  {
+    "id": "mass_navigation_agent_azure_heavy",
+    "extends": "mass_navigation_agent_heavy",
+    "defaultColor": [0.48, 0.76, 1.0, 1.0],
+    "behaviors": [
+      {
+        "slot": "minimap",
+        "kind": "MinimapMarker",
+        "activeByDefault": true,
+        "minimapMarker": {
+          "shape": "Circle",
+          "color": [0.48, 0.76, 1.0, 1.0],
+          "sizePx": 4.5,
+          "colorParamKey": "none",
+          "sizeParamKey": "none",
+          "visibilityParamKey": "none",
+          "orientationMode": "PerformerForward",
+          "orientationParamKey": "none",
+          "orientationOffsetRad": 0.0,
+          "orientationLengthPx": 5.0
+        }
+      }
+    ]
+  },
+  {
+    "id": "mass_navigation_agent_crimson_light",
+    "extends": "mass_navigation_agent_light",
+    "defaultColor": [1.0, 0.26, 0.22, 1.0],
+    "behaviors": [
+      {
+        "slot": "minimap",
+        "kind": "MinimapMarker",
+        "activeByDefault": true,
+        "minimapMarker": {
+          "shape": "Circle",
+          "color": [1.0, 0.26, 0.22, 1.0],
+          "sizePx": 3.0,
+          "colorParamKey": "none",
+          "sizeParamKey": "none",
+          "visibilityParamKey": "none",
+          "orientationMode": "PerformerForward",
+          "orientationParamKey": "none",
+          "orientationOffsetRad": 0.0,
+          "orientationLengthPx": 4.0
+        }
+      }
+    ]
+  },
+  {
+    "id": "mass_navigation_agent_crimson_heavy",
+    "extends": "mass_navigation_agent_heavy",
+    "defaultColor": [1.0, 0.48, 0.34, 1.0],
+    "behaviors": [
+      {
+        "slot": "minimap",
+        "kind": "MinimapMarker",
+        "activeByDefault": true,
+        "minimapMarker": {
+          "shape": "Circle",
+          "color": [1.0, 0.48, 0.34, 1.0],
+          "sizePx": 4.5,
+          "colorParamKey": "none",
+          "sizeParamKey": "none",
+          "visibilityParamKey": "none",
+          "orientationMode": "PerformerForward",
+          "orientationParamKey": "none",
+          "orientationOffsetRad": 0.0,
+          "orientationLengthPx": 5.0
+        }
+      }
+    ]
+  },
+  {
+    "id": "mass_navigation_agent_amber_light",
+    "extends": "mass_navigation_agent_light",
+    "defaultColor": [1.0, 0.76, 0.22, 1.0],
+    "behaviors": [
+      {
+        "slot": "minimap",
+        "kind": "MinimapMarker",
+        "activeByDefault": true,
+        "minimapMarker": {
+          "shape": "Circle",
+          "color": [1.0, 0.76, 0.22, 1.0],
+          "sizePx": 3.0,
+          "colorParamKey": "none",
+          "sizeParamKey": "none",
+          "visibilityParamKey": "none",
+          "orientationMode": "PerformerForward",
+          "orientationParamKey": "none",
+          "orientationOffsetRad": 0.0,
+          "orientationLengthPx": 4.0
+        }
+      }
+    ]
+  },
+  {
+    "id": "mass_navigation_agent_amber_heavy",
+    "extends": "mass_navigation_agent_heavy",
+    "defaultColor": [1.0, 0.88, 0.38, 1.0],
+    "behaviors": [
+      {
+        "slot": "minimap",
+        "kind": "MinimapMarker",
+        "activeByDefault": true,
+        "minimapMarker": {
+          "shape": "Circle",
+          "color": [1.0, 0.88, 0.38, 1.0],
+          "sizePx": 4.5,
+          "colorParamKey": "none",
+          "sizeParamKey": "none",
+          "visibilityParamKey": "none",
+          "orientationMode": "PerformerForward",
+          "orientationParamKey": "none",
+          "orientationOffsetRad": 0.0,
+          "orientationLengthPx": 5.0
+        }
+      }
+    ]
+  },
+  {
+    "id": "mass_navigation_agent_emerald_light",
+    "extends": "mass_navigation_agent_light",
+    "defaultColor": [0.32, 0.92, 0.48, 1.0],
+    "behaviors": [
+      {
+        "slot": "minimap",
+        "kind": "MinimapMarker",
+        "activeByDefault": true,
+        "minimapMarker": {
+          "shape": "Circle",
+          "color": [0.32, 0.92, 0.48, 1.0],
+          "sizePx": 3.0,
+          "colorParamKey": "none",
+          "sizeParamKey": "none",
+          "visibilityParamKey": "none",
+          "orientationMode": "PerformerForward",
+          "orientationParamKey": "none",
+          "orientationOffsetRad": 0.0,
+          "orientationLengthPx": 4.0
+        }
+      }
+    ]
+  },
+  {
+    "id": "mass_navigation_agent_emerald_heavy",
+    "extends": "mass_navigation_agent_heavy",
+    "defaultColor": [0.58, 1.0, 0.62, 1.0],
+    "behaviors": [
+      {
+        "slot": "minimap",
+        "kind": "MinimapMarker",
+        "activeByDefault": true,
+        "minimapMarker": {
+          "shape": "Circle",
+          "color": [0.58, 1.0, 0.62, 1.0],
+          "sizePx": 4.5,
+          "colorParamKey": "none",
+          "sizeParamKey": "none",
+          "visibilityParamKey": "none",
+          "orientationMode": "PerformerForward",
+          "orientationParamKey": "none",
+          "orientationOffsetRad": 0.0,
+          "orientationLengthPx": 5.0
+        }
+      }
+    ]
+  },
+  {
+    "id": "mass_navigation_blocker",
+    "defaultColor": [0.85, 0.88, 0.92, 1.0],
+    "behaviors": [
+      {
+        "slot": "body",
+        "kind": "AssetBinding",
+        "activeByDefault": true,
+        "assetBinding": {
+          "assetKind": "Mesh",
+          "assetId": "mass_navigation.blocker.rock",
+          "materialId": "default_surface",
+          "renderPath": "InstancedStaticMesh",
+          "mobility": "Static",
+          "localScale": [5.0, 2.2, 5.0]
+        }
+      },
+      {
+        "slot": "grounding",
+        "kind": "Grounding",
+        "activeByDefault": true,
+        "grounding": {
+          "mode": "SnapToGround",
+          "offset": 0.0,
+          "updatePolicy": "Once"
+        }
+      },
+      {
+        "slot": "minimap",
+        "kind": "MinimapMarker",
+        "activeByDefault": true,
+        "minimapMarker": {
+          "shape": "Circle",
+          "color": [0.85, 0.88, 0.92, 1.0],
+          "sizePx": 7.0,
+          "colorParamKey": "none",
+          "sizeParamKey": "none",
+          "visibilityParamKey": "none",
+          "orientationMode": "None",
+          "orientationParamKey": "none",
+          "orientationOffsetRad": 0.0,
+          "orientationLengthPx": 0.0
+        }
+      }
+    ]
+  },
+  {
+    "id": "mass_navigation_hotspot_marker",
+    "defaultColor": [1.0, 0.76, 0.26, 1.0],
+    "behaviors": [
+      {
+        "slot": "body",
+        "kind": "AssetBinding",
+        "activeByDefault": true,
+        "assetBinding": {
+          "assetKind": "Mesh",
+          "assetId": "mass_navigation.hotspot.obelisk",
+          "materialId": "default_surface",
+          "renderPath": "InstancedStaticMesh",
+          "mobility": "Static",
+          "localScale": [1.4, 1.4, 1.4]
+        }
+      },
+      {
+        "slot": "grounding",
+        "kind": "Grounding",
+        "activeByDefault": true,
+        "grounding": {
+          "mode": "SnapToGround",
+          "offset": 0.0,
+          "updatePolicy": "Once"
+        }
+      },
+      {
+        "slot": "minimap",
+        "kind": "MinimapMarker",
+        "activeByDefault": true,
+        "minimapMarker": {
+          "shape": "Circle",
+          "color": [1.0, 0.76, 0.26, 1.0],
+          "sizePx": 8.0,
+          "colorParamKey": "none",
+          "sizeParamKey": "none",
+          "visibilityParamKey": "none",
+          "orientationMode": "None",
+          "orientationParamKey": "none",
+          "orientationOffsetRad": 0.0,
+          "orientationLengthPx": 0.0
+        }
+      }
+    ]
+  }
+]
+

@@ -1,0 +1,39 @@
+[
+  {
+    "id": "mass_navigation.agent.soldier.raylib",
+    "assetKind": "Mesh",
+    "assetId": "mass_navigation.agent.soldier",
+    "backendId": "raylib",
+    "sourceUris": [
+      "MassNavigationMod:assets/Models/mass_navigation_agent_soldier.glb"
+    ]
+  },
+  {
+    "id": "mass_navigation.selection.marker.raylib",
+    "assetKind": "Mesh",
+    "assetId": "mass_navigation.selection.marker",
+    "backendId": "raylib",
+    "sourceUris": [
+      "MassNavigationMod:assets/Models/mass_navigation_selection_marker.obj"
+    ]
+  },
+  {
+    "id": "mass_navigation.blocker.rock.raylib",
+    "assetKind": "Mesh",
+    "assetId": "mass_navigation.blocker.rock",
+    "backendId": "raylib",
+    "sourceUris": [
+      "MassNavigationMod:assets/Models/mass_navigation_blocker_rock.obj"
+    ]
+  },
+  {
+    "id": "mass_navigation.hotspot.obelisk.raylib",
+    "assetKind": "Mesh",
+    "assetId": "mass_navigation.hotspot.obelisk",
+    "backendId": "raylib",
+    "sourceUris": [
+      "MassNavigationMod:assets/Models/mass_navigation_hotspot_obelisk.obj"
+    ]
+  }
+]
+

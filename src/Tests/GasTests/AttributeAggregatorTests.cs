@@ -148,13 +148,14 @@ namespace Ludots.Tests.GAS
             AttributeRegistry.SetConstraints(healthId, AttributeRegistry.AttributeConstraints.ClampToBase());
 
             using var world = World.Create();
-            var entity = world.Create(new AttributeBuffer(), new ActiveEffectContainer());
+            var entity = world.Create(new AttributeBuffer(), new ActiveEffectContainer(), new AttributeAggregateDirty());
             ref var attr = ref world.Get<AttributeBuffer>(entity);
             attr.SetBase(healthId, 100f);
             attr.SetCurrent(healthId, 70f);
 
-            var effect = world.Create();
-            world.Add(effect, new EffectModifiers());
+            var effect = world.Create(
+                new GameplayEffect { AggregatesModifiers = true },
+                new EffectModifiers());
             ref var modifiers = ref world.Get<EffectModifiers>(effect);
             modifiers.Add(healthId, ModifierOp.Add, 25f);
 
@@ -166,6 +167,148 @@ namespace Ludots.Tests.GAS
 
             That(attr.GetCurrent(healthId), Is.EqualTo(70f));
             That(attr.GetBase(healthId), Is.EqualTo(125f));
+        }
+
+        [Test]
+        public unsafe void NonAggregatedAttribute_PreservesCurrentAcrossAggregation()
+        {
+            int durabilityId = EnsureAttribute("Durability");
+
+            using var world = World.Create();
+            var entity = world.Create(new AttributeBuffer(), new ActiveEffectContainer());
+            ref var attr = ref world.Get<AttributeBuffer>(entity);
+            attr.SetBase(durabilityId, 100f);
+            attr.SetCurrent(durabilityId, 93f);
+
+            var aggregator = new AttributeAggregatorSystem(world);
+            aggregator.Update(0f);
+
+            That(attr.GetCurrent(durabilityId), Is.EqualTo(93f));
+            That(attr.GetBase(durabilityId), Is.EqualTo(100f));
+        }
+
+        [Test]
+        public unsafe void NonAggregatingGameplayEffect_DoesNotModifyEffectiveCap()
+        {
+            int healthId = EnsureAttribute("Health");
+            AttributeRegistry.SetConstraints(healthId, AttributeRegistry.AttributeConstraints.ClampToBase());
+
+            using var world = World.Create();
+            var entity = world.Create(new AttributeBuffer(), new ActiveEffectContainer());
+            ref var attr = ref world.Get<AttributeBuffer>(entity);
+            attr.SetBase(healthId, 100f);
+            attr.SetCurrent(healthId, 70f);
+
+            var effect = world.Create(
+                new GameplayEffect { AggregatesModifiers = false },
+                new EffectModifiers());
+            ref var modifiers = ref world.Get<EffectModifiers>(effect);
+            modifiers.Add(healthId, ModifierOp.Add, 25f);
+
+            ref var container = ref world.Get<ActiveEffectContainer>(entity);
+            That(container.Add(effect), Is.True);
+
+            var aggregator = new AttributeAggregatorSystem(world);
+            aggregator.Update(0f);
+
+            That(attr.GetCurrent(healthId), Is.EqualTo(70f));
+            That(attr.GetBase(healthId), Is.EqualTo(100f));
+        }
+
+        [Test]
+        public void InstantDamage_PreservesCurrentStateAfterAggregation()
+        {
+            int healthId = EnsureAttribute("Health");
+            AttributeRegistry.SetConstraints(healthId, AttributeRegistry.AttributeConstraints.ClampToBase());
+
+            using var world = World.Create();
+            var target = world.Create(new AttributeBuffer());
+            ref var attributes = ref world.Get<AttributeBuffer>(target);
+            attributes.SetBase(healthId, 100f);
+            attributes.SetCurrent(healthId, 60f);
+
+            var templates = new EffectTemplateRegistry();
+            var modifiers = default(EffectModifiers);
+            modifiers.Add(healthId, ModifierOp.Add, -10f);
+            templates.Register(1101, new EffectTemplateData
+            {
+                TagId = 1,
+                PresetType = EffectPresetType.InstantDamage,
+                LifetimeKind = EffectLifetimeKind.Instant,
+                ClockId = GasClockId.Step,
+                DurationTicks = 0,
+                PeriodTicks = 0,
+                Modifiers = modifiers,
+            });
+
+            var requests = new EffectRequestQueue();
+            var proposal = new EffectProposalProcessingSystem(world, requests, templates: templates);
+            var application = new EffectApplicationSystem(world, requests, templates: templates);
+            var aggregator = new AttributeAggregatorSystem(world);
+
+            requests.Publish(new EffectRequest
+            {
+                RootId = 1,
+                Source = Entity.Null,
+                Target = target,
+                TargetContext = Entity.Null,
+                TemplateId = 1101,
+            });
+
+            proposal.Update(0f);
+            application.Update(0f);
+            aggregator.Update(0f);
+
+            That(attributes.GetCurrent(healthId), Is.EqualTo(50f));
+            That(attributes.GetBase(healthId), Is.EqualTo(100f));
+        }
+
+        [Test]
+        public void Heal_PreservesCurrentStateAfterAggregation()
+        {
+            int healthId = EnsureAttribute("Health");
+            AttributeRegistry.SetConstraints(healthId, AttributeRegistry.AttributeConstraints.ClampToBase());
+
+            using var world = World.Create();
+            var target = world.Create(new AttributeBuffer());
+            ref var attributes = ref world.Get<AttributeBuffer>(target);
+            attributes.SetBase(healthId, 100f);
+            attributes.SetCurrent(healthId, 60f);
+
+            var templates = new EffectTemplateRegistry();
+            var modifiers = default(EffectModifiers);
+            modifiers.Add(healthId, ModifierOp.Add, 15f);
+            templates.Register(1102, new EffectTemplateData
+            {
+                TagId = 2,
+                PresetType = EffectPresetType.Heal,
+                LifetimeKind = EffectLifetimeKind.Instant,
+                ClockId = GasClockId.Step,
+                DurationTicks = 0,
+                PeriodTicks = 0,
+                Modifiers = modifiers,
+            });
+
+            var requests = new EffectRequestQueue();
+            var proposal = new EffectProposalProcessingSystem(world, requests, templates: templates);
+            var application = new EffectApplicationSystem(world, requests, templates: templates);
+            var aggregator = new AttributeAggregatorSystem(world);
+
+            requests.Publish(new EffectRequest
+            {
+                RootId = 2,
+                Source = Entity.Null,
+                Target = target,
+                TargetContext = Entity.Null,
+                TemplateId = 1102,
+            });
+
+            proposal.Update(0f);
+            application.Update(0f);
+            aggregator.Update(0f);
+
+            That(attributes.GetCurrent(healthId), Is.EqualTo(75f));
+            That(attributes.GetBase(healthId), Is.EqualTo(100f));
         }
 
         private static int EnsureAttribute(string name)

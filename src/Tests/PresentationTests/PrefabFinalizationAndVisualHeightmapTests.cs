@@ -7,7 +7,6 @@ using Ludots.Core.Mathematics;
 using Ludots.Core.Mathematics.FixedPoint;
 using Ludots.Core.Presentation.Assets;
 using Ludots.Core.Presentation.Components;
-using Ludots.Core.Presentation.Rendering;
 using Ludots.Core.Presentation.Systems;
 using Ludots.Core.Presentation.Terrain;
 using Ludots.Core.Presentation.Utils;
@@ -193,123 +192,430 @@ namespace Ludots.Tests.Presentation
         }
 
         [Test]
-        public void PrefabFinalizationPipeline_MixedPrefabProducesMeshLeavesAndTypedVisuals()
+        public void PrefabFinalizationPipeline_WhenPrefabDoesNotRequestGrounding_AllowsMissingVisualHeightmapTruth()
         {
             var meshes = new MeshAssetRegistry();
             int cubeId = meshes.GetId(WellKnownMeshKeys.Cube);
-            int rootPrefabId = meshes.Register(
-                "prefab.mixed",
+            int prefabId = meshes.Register(
+                "prefab.no_grounding",
                 MeshAssetDescriptor.Prefab(
                     0,
                     new PrefabPart
                     {
-                        Kind = PrefabPartKind.Mesh,
                         MeshAssetId = cubeId,
-                        LocalPosition = new Vector3(1f, 0f, 0f),
+                        LocalPosition = new Vector3(2f, 3f, 4f),
                         LocalRotation = Quaternion.Identity,
-                        LocalScale = Vector3.One,
-                        ColorTint = Vector4.One,
-                    },
-                    new PrefabPart
-                    {
-                        Kind = PrefabPartKind.Decal,
-                        AssetKey = "decal.scorch",
-                        MaterialKey = "mat.scorch",
-                        LocalPosition = new Vector3(2f, 0f, 0f),
-                        LocalRotation = Quaternion.Identity,
-                        LocalScale = new Vector3(3f, 1f, 3f),
-                        ColorTint = new Vector4(1f, 0.5f, 0.25f, 1f),
-                        Payload = new[]
-                        {
-                            new PresentationPayloadField("Intensity", PresentationTypedValue.FromFloat(0.75f)),
-                        },
-                    },
-                    new PrefabPart
-                    {
-                        Kind = PrefabPartKind.Vfx,
-                        AssetKey = "vfx.spark",
-                        LocalPosition = new Vector3(3f, 0f, 0f),
-                        LocalRotation = Quaternion.Identity,
-                        LocalScale = Vector3.One,
-                        ColorTint = Vector4.One,
-                    },
-                    new PrefabPart
-                    {
-                        Kind = PrefabPartKind.Surface,
-                        AssetKey = "surface.mud",
-                        SurfaceLayerKey = "mud",
-                        LocalPosition = new Vector3(4f, 0f, 0f),
-                        LocalRotation = Quaternion.Identity,
-                        LocalScale = Vector3.One,
-                        ColorTint = Vector4.One,
-                    }));
-
-            var leaves = new PrefabFinalizedLeafBuffer();
-            var visuals = new PrefabFinalizedVisualBuffer();
-            PrefabFinalizationPipeline.FinalizeVisuals(
-                meshes,
-                rootPrefabId,
-                stableId: 200,
-                position: new Vector3(10f, 0f, 30f),
-                rotation: Quaternion.Identity,
-                scale: Vector3.One,
-                color: Vector4.One,
-                new PrefabFinalizationContext(new FlatVisualHeightmap()),
-                leaves,
-                visuals);
-
-            Assert.That(leaves.Count, Is.EqualTo(1));
-            Assert.That(leaves.GetSpan()[0].MeshAssetId, Is.EqualTo(cubeId));
-            Assert.That(visuals.Count, Is.EqualTo(3));
-
-            var finalized = visuals.GetSpan();
-            Assert.That(finalized[0].Kind, Is.EqualTo(PrefabPartKind.Decal));
-            Assert.That(finalized[0].AssetKey, Is.EqualTo("decal.scorch"));
-            Assert.That(finalized[0].MaterialKey, Is.EqualTo("mat.scorch"));
-            Assert.That(finalized[0].Position, Is.EqualTo(new Vector3(12f, 0f, 30f)));
-            Assert.That(finalized[0].Payload, Has.Length.EqualTo(1));
-            Assert.That(finalized[0].Payload[0].Name, Is.EqualTo("Intensity"));
-            Assert.That(finalized[0].Payload[0].Value.Kind, Is.EqualTo(PresentationTypedValueKind.Float));
-            Assert.That(finalized[0].ToVisualRequest().Kind, Is.EqualTo(PresentationVisualRequestKind.Decal));
-            Assert.That(finalized[1].Kind, Is.EqualTo(PrefabPartKind.Vfx));
-            Assert.That(finalized[1].ToVisualRequest().Kind, Is.EqualTo(PresentationVisualRequestKind.Vfx));
-            Assert.That(finalized[2].Kind, Is.EqualTo(PrefabPartKind.Surface));
-            Assert.That(finalized[2].SurfaceLayerKey, Is.EqualTo("mud"));
-            Assert.That(finalized[2].ToVisualRequest().Kind, Is.EqualTo(PresentationVisualRequestKind.Surface));
-        }
-
-        [Test]
-        public void PrefabFinalizationPipeline_LegacyFinalizeLeavesThrowsForNonMeshPart()
-        {
-            var meshes = new MeshAssetRegistry();
-            int rootPrefabId = meshes.Register(
-                "prefab.decal_only",
-                MeshAssetDescriptor.Prefab(
-                    0,
-                    new PrefabPart
-                    {
-                        Kind = PrefabPartKind.Decal,
-                        AssetKey = "decal.warning",
-                        LocalRotation = Quaternion.Identity,
-                        LocalScale = Vector3.One,
-                        ColorTint = Vector4.One,
+                        LocalScale = new Vector3(1.5f, 2f, 2.5f),
+                        ColorTint = new Vector4(0.5f, 0.75f, 1f, 1f),
                     }));
 
             var output = new PrefabFinalizedLeafBuffer();
 
-            var ex = Assert.Throws<InvalidOperationException>(() =>
+            Assert.DoesNotThrow(() =>
                 PrefabFinalizationPipeline.FinalizeLeaves(
                     meshes,
-                    rootPrefabId,
-                    stableId: 12,
+                    prefabId,
+                    stableId: 13,
+                    position: new Vector3(10f, 20f, 30f),
+                    rotation: Quaternion.Identity,
+                    scale: Vector3.One,
+                    color: Vector4.One,
+                    output));
+
+            Assert.That(output.Count, Is.EqualTo(1));
+            Assert.That(output.GetSpan()[0].Position, Is.EqualTo(new Vector3(12f, 23f, 34f)));
+        }
+
+        [Test]
+        public void PrefabFinalizationPipeline_FinalizeVisuals_ProducesTypedMeshDecalVfxAndSurfaceOutputs()
+        {
+            var meshes = new MeshAssetRegistry();
+            int cubeId = meshes.GetId(WellKnownMeshKeys.Cube);
+            int prefabId = meshes.Register(
+                "prefab.mixed_visuals",
+                MeshAssetDescriptor.Prefab(
+                    0,
+                    PrefabPart.Default(cubeId),
+                    PrefabPart.Decal(materialId: 22, size: new Vector2(4f, 5f)),
+                    PrefabPart.Vfx(effectAssetId: 33, spawnMode: PrefabVfxSpawnMode.Loop),
+                    PrefabPart.Surface(cubeId, materialId: 44, tiling: new Vector2(2f, 3f))));
+
+            var output = new PrefabFinalizedVisualBuffer();
+
+            PrefabFinalizationPipeline.FinalizeVisuals(
+                meshes,
+                prefabId,
+                stableId: 30,
+                position: new Vector3(10f, 20f, 30f),
+                rotation: Quaternion.Identity,
+                scale: Vector3.One,
+                color: Vector4.One,
+                output);
+
+            Assert.That(output.Count, Is.EqualTo(4));
+
+            ReadOnlySpan<PrefabFinalizedVisual> visuals = output.GetSpan();
+            Assert.That(visuals[0].Kind, Is.EqualTo(PrefabVisualPartKind.Mesh));
+            Assert.That(visuals[0].MeshAssetId, Is.EqualTo(cubeId));
+
+            Assert.That(visuals[1].Kind, Is.EqualTo(PrefabVisualPartKind.Decal));
+            Assert.That(visuals[1].MaterialId, Is.EqualTo(22));
+            Assert.That(visuals[1].Size, Is.EqualTo(new Vector2(4f, 5f)));
+            Assert.That(visuals[1].AlignToSurface, Is.True);
+
+            Assert.That(visuals[2].Kind, Is.EqualTo(PrefabVisualPartKind.Vfx));
+            Assert.That(visuals[2].EffectAssetId, Is.EqualTo(33));
+            Assert.That(visuals[2].VfxSpawnMode, Is.EqualTo(PrefabVfxSpawnMode.Loop));
+
+            Assert.That(visuals[3].Kind, Is.EqualTo(PrefabVisualPartKind.Surface));
+            Assert.That(visuals[3].MeshAssetId, Is.EqualTo(cubeId));
+            Assert.That(visuals[3].MaterialId, Is.EqualTo(44));
+            Assert.That(visuals[3].Tiling, Is.EqualTo(new Vector2(2f, 3f)));
+            Assert.That(visuals[3].TerrainFacing, Is.True);
+        }
+
+        [Test]
+        public void ProceduralMeshAssetData_Commit_RequiresNormalsTangentsUvBoundsAndTriangleIndices()
+        {
+            var mesh = new ProceduralMeshAssetData(
+                maxVertexCount: 4,
+                maxIndexCount: 6,
+                maxSubmeshCount: 1,
+                includeUv1: false,
+                includeColors32: false);
+
+            mesh.Positions[0] = 0f;
+            mesh.Positions[1] = 0f;
+            mesh.Positions[2] = 0f;
+            mesh.Positions[3] = 1f;
+            mesh.Positions[4] = 0f;
+            mesh.Positions[5] = 0f;
+            mesh.Positions[6] = 0f;
+            mesh.Positions[7] = 0f;
+            mesh.Positions[8] = 1f;
+            mesh.Indices[0] = 0;
+            mesh.Indices[1] = 1;
+            mesh.Indices[2] = 2;
+
+            Assert.Throws<InvalidOperationException>(() =>
+                mesh.Commit(
+                    vertexCount: 3,
+                    indexCount: 3,
+                    new[] { new ProceduralSubmeshDescriptor(0, 3, materialAssetId: 1) },
+                    new ProceduralMeshBounds(Vector3.Zero, new Vector3(0.5f, 0.5f, 0.5f)),
+                    ProceduralMeshUsageHint.Static));
+
+            for (int i = 0; i < 9; i++)
+            {
+                mesh.Normals[i] = i % 3 == 1 ? 1f : 0f;
+            }
+
+            for (int i = 0; i < 12; i++)
+            {
+                mesh.Tangents[i] = i % 4 == 0 ? 1f : 0f;
+            }
+
+            for (int i = 0; i < 6; i++)
+            {
+                mesh.Uv0[i] = 0.5f;
+            }
+
+            Assert.Throws<ArgumentOutOfRangeException>(() =>
+                mesh.Commit(
+                    vertexCount: 3,
+                    indexCount: 4,
+                    new[] { new ProceduralSubmeshDescriptor(0, 3, materialAssetId: 1) },
+                    new ProceduralMeshBounds(Vector3.Zero, new Vector3(0.5f, 0.5f, 0.5f)),
+                    ProceduralMeshUsageHint.Static));
+
+            Assert.Throws<InvalidOperationException>(() =>
+                mesh.Commit(
+                    vertexCount: 3,
+                    indexCount: 3,
+                    new[] { new ProceduralSubmeshDescriptor(0, 3, materialAssetId: 1) },
+                    new ProceduralMeshBounds(Vector3.Zero, Vector3.Zero),
+                    ProceduralMeshUsageHint.Static));
+        }
+
+        [Test]
+        public void PrefabFinalizationPipeline_ProceduralMeshVisual_CarriesBoundsAndMaterialBindings()
+        {
+            var meshes = new MeshAssetRegistry();
+            var procedural = BuildTriangleProceduralMesh(
+                materialIds: new[] { 11, 12 },
+                splitIntoTwoSubmeshes: true);
+            int proceduralId = meshes.Register("mesh.procedural", MeshAssetDescriptor.Procedural(0, procedural));
+            int prefabId = meshes.Register(
+                "prefab.procedural",
+                MeshAssetDescriptor.Prefab(
+                    0,
+                    new PrefabPart
+                    {
+                        Kind = PrefabVisualPartKind.ProceduralMesh,
+                        MeshAssetId = proceduralId,
+                        LocalPosition = new Vector3(1f, 2f, 3f),
+                        LocalRotation = Quaternion.Identity,
+                        LocalScale = new Vector3(2f, 2f, 2f),
+                        ColorTint = new Vector4(0.5f, 0.75f, 1f, 1f),
+                    }));
+
+            var output = new PrefabFinalizedVisualBuffer();
+            PrefabFinalizationPipeline.FinalizeVisuals(
+                meshes,
+                prefabId,
+                stableId: 77,
+                position: Vector3.Zero,
+                rotation: Quaternion.Identity,
+                scale: Vector3.One,
+                color: Vector4.One,
+                output);
+
+            Assert.That(output.Count, Is.EqualTo(1));
+            ref readonly PrefabFinalizedVisual visual = ref output.GetSpan()[0];
+            Assert.That(visual.Kind, Is.EqualTo(PrefabVisualPartKind.ProceduralMesh));
+            Assert.That(visual.MeshAssetId, Is.EqualTo(proceduralId));
+            Assert.That(visual.MaterialBindings, Is.Not.Null);
+            Assert.That(visual.MaterialBindings!.Length, Is.EqualTo(2));
+            Assert.That(visual.MaterialBindings[0].MaterialAssetId, Is.EqualTo(11));
+            Assert.That(visual.MaterialBindings[1].MaterialAssetId, Is.EqualTo(12));
+            Assert.That(visual.LocalBounds.Center, Is.EqualTo(procedural.LocalBounds.Center));
+            Assert.That(visual.LocalBounds.Extents, Is.EqualTo(procedural.LocalBounds.Extents));
+        }
+
+        [Test]
+        public void PrefabFinalizationPipeline_ProceduralMeshRejectsMultiSubmeshInstanceMaterialOverride()
+        {
+            var meshes = new MeshAssetRegistry();
+            var procedural = BuildTriangleProceduralMesh(
+                materialIds: new[] { 21, 22 },
+                splitIntoTwoSubmeshes: true);
+            int proceduralId = meshes.Register("mesh.procedural.multi", MeshAssetDescriptor.Procedural(0, procedural));
+            int prefabId = meshes.Register(
+                "prefab.procedural.override",
+                MeshAssetDescriptor.Prefab(
+                    0,
+                    new PrefabPart
+                    {
+                        Kind = PrefabVisualPartKind.ProceduralMesh,
+                        MeshAssetId = proceduralId,
+                        MaterialId = 99,
+                        LocalPosition = Vector3.Zero,
+                        LocalRotation = Quaternion.Identity,
+                        LocalScale = Vector3.One,
+                        ColorTint = Vector4.One,
+                    }));
+
+            var output = new PrefabFinalizedVisualBuffer();
+            var ex = Assert.Throws<InvalidOperationException>(() =>
+                PrefabFinalizationPipeline.FinalizeVisuals(
+                    meshes,
+                    prefabId,
+                    stableId: 80,
                     position: Vector3.Zero,
                     rotation: Quaternion.Identity,
                     scale: Vector3.One,
                     color: Vector4.One,
-                    new PrefabFinalizationContext(new FlatVisualHeightmap()),
                     output));
 
-            Assert.That(ex!.Message, Does.Contain("typed visual finalization"));
+            Assert.That(ex!.Message, Does.Contain("cannot receive an instance material override"));
+        }
+
+        [Test]
+        public void PresentationBehaviorResolver_ResolvesStateToTypedVisualOutputs()
+        {
+            var meshes = new MeshAssetRegistry();
+            int cubeId = meshes.GetId(WellKnownMeshKeys.Cube);
+            int prefabId = meshes.Register(
+                "prefab.behavior.stage0",
+                MeshAssetDescriptor.Prefab(
+                    0,
+                    PrefabPart.Default(cubeId),
+                    PrefabPart.Decal(materialId: 77, size: new Vector2(6f, 2f))));
+
+            var behaviors = new PresentationBehaviorRegistry();
+            int behaviorId = behaviors.Register(
+                "behavior.crop",
+                new PresentationBehaviorDefinition
+                {
+                    States = new[]
+                    {
+                        new PresentationBehaviorStateDefinition("Growing", prefabId),
+                    },
+                });
+
+            var resolver = new PresentationBehaviorResolver(behaviors, meshes);
+            var output = new PrefabFinalizedVisualBuffer();
+
+            resolver.ResolveState(
+                behaviorId,
+                "Growing",
+                stableId: 50,
+                position: Vector3.Zero,
+                rotation: Quaternion.Identity,
+                scale: Vector3.One,
+                color: Vector4.One,
+                output);
+
+            Assert.That(output.Count, Is.EqualTo(2));
+            Assert.That(output.GetSpan()[0].Kind, Is.EqualTo(PrefabVisualPartKind.Mesh));
+            Assert.That(output.GetSpan()[1].Kind, Is.EqualTo(PrefabVisualPartKind.Decal));
+        }
+
+        [Test]
+        public void PresentationBehaviorResolver_WhenStateMissing_ThrowsExplicitly()
+        {
+            var meshes = new MeshAssetRegistry();
+            var behaviors = new PresentationBehaviorRegistry();
+            int behaviorId = behaviors.Register(
+                "behavior.empty",
+                new PresentationBehaviorDefinition
+                {
+                    States = new[]
+                    {
+                        new PresentationBehaviorStateDefinition("Idle", 0),
+                    },
+                });
+
+            var resolver = new PresentationBehaviorResolver(behaviors, meshes);
+            var output = new PrefabFinalizedVisualBuffer();
+
+            var ex = Assert.Throws<InvalidOperationException>(() => resolver.ResolveState(
+                behaviorId,
+                "Missing",
+                stableId: 61,
+                position: Vector3.Zero,
+                rotation: Quaternion.Identity,
+                scale: Vector3.One,
+                color: Vector4.One,
+                output));
+            Assert.That(ex!.Message, Does.Contain("does not define state"));
+        }
+
+        [Test]
+        public void PrefabFinalizationPipeline_WhenMeshAssetIsUnknown_ThrowsExplicitly()
+        {
+            var meshes = new MeshAssetRegistry();
+            var output = new PrefabFinalizedVisualBuffer();
+
+            var ex = Assert.Throws<InvalidOperationException>(() =>
+                PrefabFinalizationPipeline.FinalizeVisuals(
+                    meshes,
+                    meshAssetId: 9999,
+                    stableId: 71,
+                    position: Vector3.Zero,
+                    rotation: Quaternion.Identity,
+                    scale: Vector3.One,
+                    color: Vector4.One,
+                    output));
+
+            Assert.That(ex!.Message, Does.Contain("unknown meshAssetId=9999"));
+        }
+
+        [Test]
+        public void PrefabFinalizationPipeline_BatchesGroundedSiblingResolution_ByLayerAndMode()
+        {
+            var meshes = new MeshAssetRegistry();
+            int cubeId = meshes.GetId(WellKnownMeshKeys.Cube);
+            int prefabId = meshes.Register(
+                "prefab.batch_grounded",
+                MeshAssetDescriptor.Prefab(
+                    0,
+                    new PrefabPart
+                    {
+                        MeshAssetId = cubeId,
+                        LocalPosition = new Vector3(1f, 0f, 1f),
+                        LocalRotation = Quaternion.Identity,
+                        LocalScale = Vector3.One,
+                        ColorTint = Vector4.One,
+                        Grounding = new PrefabPartGrounding(PrefabPartGroundingMode.VisualHeightmap, verticalOffsetMeters: 0.1f),
+                    },
+                    new PrefabPart
+                    {
+                        MeshAssetId = cubeId,
+                        LocalPosition = new Vector3(2f, 0f, 2f),
+                        LocalRotation = Quaternion.Identity,
+                        LocalScale = Vector3.One,
+                        ColorTint = Vector4.One,
+                        Grounding = new PrefabPartGrounding(PrefabPartGroundingMode.VisualHeightmap, verticalOffsetMeters: 0.2f),
+                    },
+                    new PrefabPart
+                    {
+                        MeshAssetId = cubeId,
+                        LocalPosition = new Vector3(3f, 0f, 3f),
+                        LocalRotation = Quaternion.Identity,
+                        LocalScale = Vector3.One,
+                        ColorTint = Vector4.One,
+                        Grounding = new PrefabPartGrounding(PrefabPartGroundingMode.VisualHeightmap, alignToGroundNormal: true),
+                    }));
+
+            var output = new PrefabFinalizedLeafBuffer();
+            var runtime = new CountingVisualHeightmap(CreateRuntime());
+
+            PrefabFinalizationPipeline.FinalizeLeaves(
+                meshes,
+                prefabId,
+                stableId: 88,
+                position: Vector3.Zero,
+                rotation: Quaternion.Identity,
+                scale: Vector3.One,
+                color: Vector4.One,
+                new PrefabFinalizationContext(runtime),
+                output);
+
+            Assert.That(output.Count, Is.EqualTo(3));
+            Assert.That(runtime.SampleBatchCalls, Is.EqualTo(1));
+            Assert.That(runtime.RaycastBatchCalls, Is.EqualTo(1));
+        }
+
+        [Test]
+        public void PrefabFinalizationPipeline_GroundsPrefabNodeBeforeFinalizingNestedLeaves()
+        {
+            var meshes = new MeshAssetRegistry();
+            int cubeId = meshes.GetId(WellKnownMeshKeys.Cube);
+
+            int childPrefabId = meshes.Register(
+                "prefab.nested_child",
+                MeshAssetDescriptor.Prefab(
+                    0,
+                    new PrefabPart
+                    {
+                        MeshAssetId = cubeId,
+                        LocalPosition = new Vector3(0f, 2f, 0f),
+                        LocalRotation = Quaternion.Identity,
+                        LocalScale = Vector3.One,
+                        ColorTint = Vector4.One,
+                    }));
+
+            int rootPrefabId = meshes.Register(
+                "prefab.nested_root",
+                MeshAssetDescriptor.Prefab(
+                    0,
+                    new PrefabPart
+                    {
+                        MeshAssetId = childPrefabId,
+                        LocalPosition = new Vector3(1f, 99f, 1f),
+                        LocalRotation = Quaternion.Identity,
+                        LocalScale = Vector3.One,
+                        ColorTint = Vector4.One,
+                        Grounding = new PrefabPartGrounding(
+                            PrefabPartGroundingMode.VisualHeightmap,
+                            verticalOffsetMeters: 0.25f),
+                    }));
+
+            var output = new PrefabFinalizedLeafBuffer();
+            PrefabFinalizationPipeline.FinalizeLeaves(
+                meshes,
+                rootPrefabId,
+                stableId: 123,
+                position: Vector3.Zero,
+                rotation: Quaternion.Identity,
+                scale: Vector3.One,
+                color: Vector4.One,
+                new PrefabFinalizationContext(CreateRuntime()),
+                output);
+
+            Assert.That(output.Count, Is.EqualTo(1));
+            Assert.That(output.GetSpan()[0].Position, Is.EqualTo(new Vector3(1f, 2.45f, 1f)));
         }
 
         [Test]
@@ -349,37 +655,6 @@ namespace Ludots.Tests.Presentation
             Assert.That(roundTripped.Layers[0].Name, Is.EqualTo("base"));
             Assert.That(roundTripped.Layers[1].Name, Is.EqualTo("detail"));
             Assert.That(roundTripped.HeightSamplesCm, Is.EqualTo(asset.HeightSamplesCm));
-        }
-
-        [Test]
-        public void VisualHeightmapRuntime_UsesInstalledDefaultLayerOverride()
-        {
-            var runtime = new VisualHeightmapRuntime(
-                new VisualHeightmapAsset(
-                    new WorldAabbCm(0, 0, 100, 100),
-                    sampleColumns: 2,
-                    sampleRows: 2,
-                    new short[]
-                    {
-                        10, 10,
-                        10, 10,
-                        25, 25,
-                        25, 25,
-                    },
-                    new[]
-                    {
-                        new VisualHeightmapLayerDefinition(0, "base", sampleOffset: 0, sampleCount: 4),
-                        new VisualHeightmapLayerDefinition(1, "visual", sampleOffset: 4, sampleCount: 4),
-                    },
-                    VisualHeightmapStorageLayout.RowMajorInt16Centimeters,
-                    defaultLayerIndex: 0),
-                defaultLayerIndex: 1);
-
-            Assert.That(runtime.DefaultLayerIndex, Is.EqualTo(1));
-            Assert.That(runtime.TrySampleHeightCm(50f, 50f, out float defaultHeight), Is.True);
-            Assert.That(defaultHeight, Is.EqualTo(25f).Within(0.001f));
-            Assert.That(runtime.TrySampleHeightCm(50f, 50f, out float baseHeight, layerIndex: 0), Is.True);
-            Assert.That(baseHeight, Is.EqualTo(10f).Within(0.001f));
         }
 
         [Test]
@@ -507,6 +782,47 @@ namespace Ludots.Tests.Presentation
         }
 
         [Test]
+        public void VisualHeightmapRuntime_RenderSource_SupportsUnevenChunkTailWithoutSecondTruth()
+        {
+            const int columns = 70;
+            const int rows = 35;
+            short[] samples = new short[columns * rows];
+            for (int y = 0; y < rows; y++)
+            {
+                for (int x = 0; x < columns; x++)
+                {
+                    samples[(y * columns) + x] = (short)((x * 10) + y);
+                }
+            }
+
+            var runtime = new VisualHeightmapRuntime(
+                VisualHeightmapAsset.CreateSingleLayer(
+                    new WorldAabbCm(-1200, -700, 6900, 3400),
+                    columns,
+                    rows,
+                    samples));
+            IVisualHeightmapRenderSource source = runtime;
+
+            Assert.That(source.ChunkColumns, Is.EqualTo(3));
+            Assert.That(source.ChunkRows, Is.EqualTo(2));
+
+            Assert.That(source.TryGetChunk(2, 1, out VisualHeightmapRenderChunk tail), Is.True);
+            Assert.That(tail.SampleColumns, Is.EqualTo(24));
+            Assert.That(tail.SampleRows, Is.EqualTo(18));
+            Assert.That(tail.SampleStepXCm, Is.EqualTo(100f).Within(0.001f));
+            Assert.That(tail.SampleStepYCm, Is.EqualTo(100f).Within(0.001f));
+            Assert.That(tail.Bounds.Left, Is.EqualTo(3400));
+            Assert.That(tail.Bounds.Top, Is.EqualTo(1000));
+            Assert.That(tail.Bounds.Right, Is.EqualTo(5700));
+            Assert.That(tail.Bounds.Bottom, Is.EqualTo(2700));
+
+            Assert.That(tail.TryReadHeightCm(23, 17, out float lastHeightCm), Is.True);
+            Assert.That(lastHeightCm, Is.EqualTo((69 * 10) + 34).Within(0.001f));
+            Assert.That(runtime.TrySampleHeightCm(5700f, 2700f, out float sampledHeightCm), Is.True);
+            Assert.That(sampledHeightCm, Is.EqualTo(lastHeightCm).Within(0.001f));
+        }
+
+        [Test]
         public void TerrainHeightSyncSystem_PrefersVisualHeightmap_AndGroundRaycastUsesSameTruth()
         {
             using var world = World.Create();
@@ -521,6 +837,7 @@ namespace Ludots.Tests.Presentation
             Entity entity = world.Create(
                 WorldPositionCm.FromCm(400, 800),
                 new PreviousWorldPositionCm { Value = Fix64Vec2.FromInt(0, 400) },
+                new VisualHeightmapSampleState(),
                 new VisualTransform
                 {
                     Position = new Vector3(1f, 0f, 5f),
@@ -700,6 +1017,81 @@ namespace Ludots.Tests.Presentation
                     }));
         }
 
+        private static ProceduralMeshAssetData BuildTriangleProceduralMesh(int[] materialIds, bool splitIntoTwoSubmeshes)
+        {
+            int submeshCount = splitIntoTwoSubmeshes ? materialIds.Length : 1;
+            var mesh = new ProceduralMeshAssetData(
+                maxVertexCount: 4,
+                maxIndexCount: 6,
+                maxSubmeshCount: submeshCount,
+                includeUv1: false,
+                includeColors32: true);
+
+            Vector3[] positions =
+            {
+                new(0f, 0f, 0f),
+                new(1f, 0f, 0f),
+                new(0f, 0f, 1f),
+                new(1f, 0f, 1f),
+            };
+
+            for (int i = 0; i < positions.Length; i++)
+            {
+                int posOffset = i * 3;
+                mesh.Positions[posOffset + 0] = positions[i].X;
+                mesh.Positions[posOffset + 1] = positions[i].Y;
+                mesh.Positions[posOffset + 2] = positions[i].Z;
+                mesh.Normals[posOffset + 0] = 0f;
+                mesh.Normals[posOffset + 1] = 1f;
+                mesh.Normals[posOffset + 2] = 0f;
+
+                int tangentOffset = i * 4;
+                mesh.Tangents[tangentOffset + 0] = 1f;
+                mesh.Tangents[tangentOffset + 1] = 0f;
+                mesh.Tangents[tangentOffset + 2] = 0f;
+                mesh.Tangents[tangentOffset + 3] = 1f;
+
+                int uvOffset = i * 2;
+                mesh.Uv0[uvOffset + 0] = i % 2;
+                mesh.Uv0[uvOffset + 1] = i / 2;
+
+                if (mesh.Colors32 != null)
+                {
+                    int colorOffset = i * 4;
+                    mesh.Colors32[colorOffset + 0] = 255;
+                    mesh.Colors32[colorOffset + 1] = 255;
+                    mesh.Colors32[colorOffset + 2] = 255;
+                    mesh.Colors32[colorOffset + 3] = 255;
+                }
+            }
+
+            mesh.Indices[0] = 0;
+            mesh.Indices[1] = 2;
+            mesh.Indices[2] = 1;
+            mesh.Indices[3] = 1;
+            mesh.Indices[4] = 2;
+            mesh.Indices[5] = 3;
+
+            ProceduralSubmeshDescriptor[] submeshes = splitIntoTwoSubmeshes
+                ? new[]
+                {
+                    new ProceduralSubmeshDescriptor(0, 3, materialIds[0]),
+                    new ProceduralSubmeshDescriptor(3, 3, materialIds[1]),
+                }
+                : new[]
+                {
+                    new ProceduralSubmeshDescriptor(0, 6, materialIds[0]),
+                };
+
+            mesh.Commit(
+                vertexCount: 4,
+                indexCount: 6,
+                submeshes,
+                new ProceduralMeshBounds(new Vector3(0.5f, 0f, 0.5f), new Vector3(0.5f, 0.1f, 0.5f)),
+                ProceduralMeshUsageHint.Static);
+            return mesh;
+        }
+
         private static ChunkedVisualHeightmapRuntime CreateChunkedRuntime(bool includeRightChunk)
         {
             var descriptor = ChunkedVisualHeightmapDescriptor.CreateSingleLayer(
@@ -742,6 +1134,70 @@ namespace Ludots.Tests.Presentation
             {
                 InvocationCount++;
                 return false;
+            }
+        }
+
+        private sealed class CountingVisualHeightmap : IVisualHeightmap
+        {
+            private readonly IVisualHeightmap _inner;
+
+            public CountingVisualHeightmap(IVisualHeightmap inner)
+            {
+                _inner = inner;
+            }
+
+            public int SampleBatchCalls { get; private set; }
+
+            public int RaycastBatchCalls { get; private set; }
+
+            public bool TrySampleHeightCm(float worldXCm, float worldYCm, out float heightCm, int layerIndex = 0)
+                => _inner.TrySampleHeightCm(worldXCm, worldYCm, out heightCm, layerIndex);
+
+            public bool SampleHeightsCm(ReadOnlySpan<float> worldXCm, ReadOnlySpan<float> worldYCm, Span<float> outHeightCm, int layerIndex = 0)
+            {
+                SampleBatchCalls++;
+                return _inner.SampleHeightsCm(worldXCm, worldYCm, outHeightCm, layerIndex);
+            }
+
+            public bool TryRaycastGround(in ScreenRay ray, out VisualGroundHit hit, int layerIndex = 0)
+                => _inner.TryRaycastGround(in ray, out hit, layerIndex);
+
+            public bool RaycastGroundBatch(
+                ReadOnlySpan<float> originXMeters,
+                ReadOnlySpan<float> originYMeters,
+                ReadOnlySpan<float> originZMeters,
+                ReadOnlySpan<float> directionX,
+                ReadOnlySpan<float> directionY,
+                ReadOnlySpan<float> directionZ,
+                Span<float> outWorldXCm,
+                Span<float> outWorldYCm,
+                Span<float> outHeightCm,
+                Span<float> outDistanceMeters,
+                Span<float> outNormalX,
+                Span<float> outNormalY,
+                Span<float> outNormalZ,
+                Span<int> outLayerIndex,
+                Span<byte> outHitMask,
+                int layerIndex = 0)
+            {
+                RaycastBatchCalls++;
+                return _inner.RaycastGroundBatch(
+                    originXMeters,
+                    originYMeters,
+                    originZMeters,
+                    directionX,
+                    directionY,
+                    directionZ,
+                    outWorldXCm,
+                    outWorldYCm,
+                    outHeightCm,
+                    outDistanceMeters,
+                    outNormalX,
+                    outNormalY,
+                    outNormalZ,
+                    outLayerIndex,
+                    outHitMask,
+                    layerIndex);
             }
         }
     }

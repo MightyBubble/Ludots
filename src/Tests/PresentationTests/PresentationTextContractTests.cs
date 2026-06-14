@@ -7,11 +7,13 @@ using Ludots.Core.Engine;
 using Ludots.Core.Modding;
 using Ludots.Core.Presentation.Camera;
 using Ludots.Core.Presentation.Config;
+using Ludots.Core.Presentation.Components;
 using Ludots.Core.Presentation.Hud;
 using Ludots.Core.Presentation.Performers;
 using Ludots.Core.Presentation.Rendering;
 using Ludots.Core.Presentation.Systems;
 using Ludots.Core.Scripting;
+using Ludots.Core.Systems;
 using Ludots.Platform.Abstractions;
 using NUnit.Framework;
 
@@ -269,10 +271,23 @@ namespace Ludots.Tests.Presentation
                 @"[
   {
     ""id"": ""entity_world_text"",
-    ""visualKind"": ""WorldText"",
+    ""worldTextMode"": ""AttributeCurrentOverBase"",
+    ""behaviors"": [
+      {
+        ""slot"": ""body"",
+        ""kind"": ""AssetBinding"",
+        ""activeByDefault"": true,
+        ""assetBinding"": {
+          ""assetKind"": ""WorldText"",
+          ""assetId"": ""hud.current_over_base"",
+          ""renderPath"": ""None"",
+          ""mobility"": ""Movable"",
+          ""localScale"": [1, 1, 1]
+        }
+      }
+    ],
     ""bindings"": [
-      { ""paramKey"": 15, ""source"": ""textToken"", ""textToken"": ""hud.current_over_base"" },
-      { ""paramKey"": 16, ""source"": ""constant"", ""constantValue"": 1 }
+      { ""paramKey"": ""worldText.tokenId"", ""source"": ""textToken"", ""textToken"": ""hud.current_over_base"" }
     ]
   }
 ]");
@@ -291,9 +306,10 @@ namespace Ludots.Tests.Presentation
             Assert.That(registry.TryGet(defId, out var definition), Is.True);
 
             bool found = false;
+            int textTokenParamKey = PerformerParamKeyRegistry.Register("worldText.tokenId");
             for (int i = 0; i < definition.Bindings.Length; i++)
             {
-                if (definition.Bindings[i].ParamKey != 15)
+                if (definition.Bindings[i].ParamKey != textTokenParamKey)
                 {
                     continue;
                 }
@@ -303,71 +319,11 @@ namespace Ludots.Tests.Presentation
                 Assert.That(definition.Bindings[i].Value.ConstantValue, Is.EqualTo(42f));
             }
 
-            Assert.That(found, Is.True, "Expected WorldText binding paramKey=15 to resolve into a stable text token id.");
+            Assert.That(found, Is.True, "Expected WorldText token binding to resolve into a stable text token id.");
         }
 
         [Test]
-        public void PerformerDefinitionConfigLoader_ParsesNewFilterFields()
-        {
-            WriteFile("Core", "config_catalog.json",
-                @"[{ ""Path"": ""Presentation/performers.json"", ""Policy"": ""ArrayById"", ""IdField"": ""id"" }]");
-            WriteFile("Core", "Presentation/performers.json",
-                @"[
-  {
-    ""id"": ""filtered_bar"",
-    ""visualKind"": ""WorldBar"",
-    ""entityScope"": ""AllWithAttributes"",
-    ""requiredTemplate"": ""moba_hero""
-  }
-]");
-
-            var (_, _, pipeline, catalog) = BuildPipeline(_root);
-            var registry = new PerformerDefinitionRegistry();
-            var loader = new PerformerDefinitionConfigLoader(
-                pipeline,
-                registry,
-                resolveTemplateId: key => string.Equals(key, "moba_hero", StringComparison.Ordinal) ? 42 : 0);
-
-            loader.Load(catalog);
-
-            int defId = registry.GetId("filtered_bar");
-            Assert.That(defId, Is.GreaterThan(0));
-            Assert.That(registry.TryGet(defId, out var def), Is.True);
-            Assert.That(def.RequiredTemplateId, Is.EqualTo(42));
-        }
-
-        [Test]
-        public void PerformerDefinitionConfigLoader_ParsesFacingRadiansBinding()
-        {
-            WriteFile("Core", "config_catalog.json",
-                @"[{ ""Path"": ""Presentation/performers.json"", ""Policy"": ""ArrayById"", ""IdField"": ""id"" }]");
-            WriteFile("Core", "Presentation/performers.json",
-                @"[
-  {
-    ""id"": ""line_overlay"",
-    ""visualKind"": ""GroundOverlay"",
-    ""bindings"": [
-      { ""paramKey"": 3, ""source"": ""facingradians"" }
-    ]
-  }
-]");
-
-            var (_, _, pipeline, catalog) = BuildPipeline(_root);
-            var registry = new PerformerDefinitionRegistry();
-            var loader = new PerformerDefinitionConfigLoader(pipeline, registry);
-
-            loader.Load(catalog);
-
-            int defId = registry.GetId("line_overlay");
-            Assert.That(defId, Is.GreaterThan(0));
-            Assert.That(registry.TryGet(defId, out var def), Is.True);
-            Assert.That(def.Bindings.Length, Is.EqualTo(1));
-            Assert.That(def.Bindings[0].ParamKey, Is.EqualTo(3));
-            Assert.That(def.Bindings[0].Value.Source, Is.EqualTo(ValueSourceKind.FacingRadians));
-        }
-
-        [Test]
-        public void PerformerDefinitionConfigLoader_ParsesTypedVisualBindingsAndPayload()
+        public void PerformerDefinitionConfigLoader_ParsesAssetBindingAndSemanticParamBindings()
         {
             WriteFile("Core", "config_catalog.json",
                 @"[{ ""Path"": ""Presentation/performers.json"", ""Policy"": ""ArrayById"", ""IdField"": ""id"" }]");
@@ -375,14 +331,23 @@ namespace Ludots.Tests.Presentation
                 @"[
   {
     ""id"": ""scorch_decal"",
-    ""visualKind"": ""Decal"",
-    ""assetKey"": ""decal.scorch"",
-    ""materialKey"": ""mat.scorch"",
-    ""payload"": [
-      { ""name"": ""Tint"", ""type"": ""Color"", ""value"": [1, 0.2, 0.1, 1] }
+    ""behaviors"": [
+      {
+        ""slot"": ""body"",
+        ""kind"": ""AssetBinding"",
+        ""activeByDefault"": true,
+        ""assetBinding"": {
+          ""assetKind"": ""Decal"",
+          ""assetId"": ""decal.scorch"",
+          ""materialId"": ""mat.scorch"",
+          ""renderPath"": ""StaticMesh"",
+          ""mobility"": ""Movable"",
+          ""colorParamKey"": ""decal.tint""
+        }
+      }
     ],
     ""bindings"": [
-      { ""fieldName"": ""Intensity"", ""valueKind"": ""Float"", ""source"": ""attribute"", ""attributeName"": ""burn"" }
+      { ""paramKey"": ""decal.intensity"", ""source"": ""attribute"", ""attributeId"": ""burn"" }
     ]
   }
 ]");
@@ -392,22 +357,29 @@ namespace Ludots.Tests.Presentation
             var loader = new PerformerDefinitionConfigLoader(
                 pipeline,
                 registry,
-                resolveAttributeName: key => string.Equals(key, "burn", StringComparison.Ordinal) ? 9 : 0);
+                resolveAttributeName: key => string.Equals(key, "burn", StringComparison.Ordinal) ? 9 : -1,
+                resolveMaterialId: key => string.Equals(key, "mat.scorch", StringComparison.Ordinal) ? 23 : 0,
+                resolveBehaviorAssetId: (kind, key) =>
+                    kind == AssetKind.Decal && string.Equals(key, "decal.scorch", StringComparison.Ordinal) ? 17 : 0);
 
             loader.Load(catalog);
 
             int defId = registry.GetId("scorch_decal");
             Assert.That(registry.TryGet(defId, out var def), Is.True);
-            Assert.That(def.VisualKind, Is.EqualTo(PerformerVisualKind.Decal));
-            Assert.That(def.VisualAssetKey, Is.EqualTo("decal.scorch"));
-            Assert.That(def.MaterialKey, Is.EqualTo("mat.scorch"));
-            Assert.That(def.DefaultPayload, Has.Length.EqualTo(1));
-            Assert.That(def.DefaultPayload[0].Name, Is.EqualTo("Tint"));
-            Assert.That(def.DefaultPayload[0].Value.Kind, Is.EqualTo(PresentationTypedValueKind.Color));
+            Assert.That(def.Behaviors, Has.Length.EqualTo(1));
+            Assert.That(def.Behaviors[0].SlotIndex, Is.EqualTo(0));
+            Assert.That(def.Behaviors[0].Kind, Is.EqualTo(BehaviorKind.AssetBinding));
+            Assert.That(def.Behaviors[0].ActiveByDefault, Is.True);
+            Assert.That(def.Behaviors[0].AssetBinding.AssetKind, Is.EqualTo(AssetKind.Decal));
+            Assert.That(def.Behaviors[0].AssetBinding.AssetId, Is.EqualTo(17));
+            Assert.That(def.Behaviors[0].AssetBinding.MaterialId, Is.EqualTo(23));
+            Assert.That(def.Behaviors[0].AssetBinding.RenderPath, Is.EqualTo(VisualRenderPath.StaticMesh));
+            Assert.That(def.Behaviors[0].AssetBinding.Mobility, Is.EqualTo(VisualMobility.Movable));
+            Assert.That(
+                def.Behaviors[0].AssetBinding.ColorParamKey,
+                Is.EqualTo(PerformerParamKeyRegistry.Register("decal.tint")));
             Assert.That(def.Bindings, Has.Length.EqualTo(1));
-            Assert.That(def.Bindings[0].FieldName, Is.EqualTo("Intensity"));
-            Assert.That(def.Bindings[0].ParamKey, Is.EqualTo(-1));
-            Assert.That(def.Bindings[0].ValueKind, Is.EqualTo(PresentationTypedValueKind.Float));
+            Assert.That(def.Bindings[0].ParamKey, Is.EqualTo(PerformerParamKeyRegistry.Register("decal.intensity")));
             Assert.That(def.Bindings[0].Value.Source, Is.EqualTo(ValueSourceKind.Attribute));
             Assert.That(def.Bindings[0].Value.SourceId, Is.EqualTo(9));
         }
@@ -441,14 +413,14 @@ namespace Ludots.Tests.Presentation
             var loader = new PresentationTextCatalogLoader(pipeline);
             PresentationTextCatalog textCatalog = loader.Load(catalog);
             var selection = new PresentationTextLocaleSelection(textCatalog);
-            var strings = new WorldHudStringTable(textCatalog, selection, legacyCapacity: 4);
+            var strings = new WorldHudStringTable(textCatalog, selection, runtimeStringCapacity: 4);
 
             int tokenId = textCatalog.GetTokenId("hud.static_label");
-            int legacyId = strings.Register("runtime-only");
+            int runtimeStringId = strings.Register("runtime-only");
 
             Assert.That(strings.TryGet(tokenId), Is.EqualTo("Static Label"));
-            Assert.That(legacyId, Is.GreaterThan(tokenId));
-            Assert.That(strings.TryGet(legacyId), Is.EqualTo("runtime-only"));
+            Assert.That(runtimeStringId, Is.GreaterThan(tokenId));
+            Assert.That(strings.TryGet(runtimeStringId), Is.EqualTo("runtime-only"));
 
             selection.SetActiveLocale("zh-CN");
             Assert.That(strings.TryGet(tokenId), Is.EqualTo("Static Label ZH"));
@@ -462,7 +434,7 @@ namespace Ludots.Tests.Presentation
             {
                 var worldHud = new WorldHudBatchBuffer(4);
                 var screenHud = new ScreenHudBatchBuffer(4);
-                var expectedText = PresentationTextPacket.FromLegacyWorldHud(
+                var expectedText = PresentationTextPacket.FromWorldHudValueMode(
                     tokenId: 17,
                     mode: WorldHudValueMode.AttributeCurrentOverBase,
                     value0: 100f,
@@ -498,6 +470,50 @@ namespace Ludots.Tests.Presentation
                 Assert.That(item.Text.GetArg(0).Type, Is.EqualTo(PresentationTextArgType.Int32));
                 Assert.That(item.Text.GetArg(0).AsInt32(), Is.EqualTo(100));
                 Assert.That(item.Text.GetArg(1).AsInt32(), Is.EqualTo(150));
+            }
+            finally
+            {
+                World.Destroy(world);
+            }
+        }
+
+        [Test]
+        public void WorldHudToScreenSystem_SubmitsInCameraLargeBars()
+        {
+            var world = World.Create();
+            try
+            {
+                var worldHud = new WorldHudBatchBuffer(4);
+                var screenHud = new ScreenHudBatchBuffer(4);
+                worldHud.TryAdd(new WorldHudItem
+                {
+                    StableId = 901,
+                    DirtySerial = 902,
+                    Kind = WorldHudItemKind.Bar,
+                    WorldPosition = new Vector3(10f, 2f, 0f),
+                    Width = 1024f,
+                    Height = 24f,
+                    Value0 = 0.75f,
+                    Color0 = new Vector4(0.1f, 0.1f, 0.1f, 1f),
+                    Color1 = new Vector4(0.2f, 0.8f, 0.2f, 1f),
+                });
+
+                var system = new WorldHudToScreenSystem(
+                    world,
+                    worldHud,
+                    strings: null,
+                    projector: new FixedProjector(new Vector2(960f, 360f)),
+                    view: new FixedViewController(new Vector2(1920f, 1080f)),
+                    screenHud: screenHud);
+
+                system.Update(0f);
+
+                Assert.That(screenHud.BarCount, Is.EqualTo(1),
+                    "screen-visible HUD bars must not be rejected by readability, density, or size caps");
+                Assert.That(screenHud.DroppedTotal, Is.EqualTo(0));
+                ref readonly var item = ref screenHud.GetBarSpan()[0];
+                Assert.That(item.Width, Is.EqualTo(1024f));
+                Assert.That(item.StableId, Is.EqualTo(901));
             }
             finally
             {
@@ -548,6 +564,122 @@ namespace Ludots.Tests.Presentation
                 Assert.That(scene.DirtyLaneCount, Is.EqualTo(0),
                     "sub-pixel stationary jitter should not dirty retained overlay lanes");
                 Assert.That(scene.GetLayerVersion(PresentationOverlayLayer.UnderUi), Is.EqualTo(firstLayerVersion));
+            }
+            finally
+            {
+                World.Destroy(world);
+            }
+        }
+
+        [Test]
+        public void WorldHudToScreenSystem_RebuildsWhenOwnerCullVisibilityChanges()
+        {
+            var world = World.Create();
+            try
+            {
+                var worldHud = new WorldHudBatchBuffer(4);
+                var screenHud = new ScreenHudBatchBuffer(4);
+                var cullingDebug = new CameraCullingDebugState();
+                Entity owner = world.Create(new CullState { IsVisible = true, LOD = LODLevel.High });
+                worldHud.TryAdd(new WorldHudItem
+                {
+                    StableId = 991,
+                    DirtySerial = 1,
+                    Owner = owner,
+                    Kind = WorldHudItemKind.Bar,
+                    WorldPosition = new Vector3(10f, 2f, 0f),
+                    Width = 80f,
+                    Height = 8f,
+                    Value0 = 0.75f,
+                });
+
+                var system = new WorldHudToScreenSystem(
+                    world,
+                    worldHud,
+                    strings: null,
+                    projector: new FixedProjector(new Vector2(320f, 240f)),
+                    view: new FixedViewController(new Vector2(1920f, 1080f)),
+                    screenHud: screenHud,
+                    cullingDebug: cullingDebug);
+
+                system.Update(0f);
+                Assert.That(screenHud.BarCount, Is.EqualTo(1));
+
+                ref CullState ownerCull = ref world.Get<CullState>(owner);
+                ownerCull.IsVisible = false;
+                ownerCull.LOD = LODLevel.Culled;
+                cullingDebug.VisibilityRevision++;
+                system.Update(0f);
+
+                Assert.That(screenHud.BarCount, Is.EqualTo(0),
+                    "retained HUD projection must remove items when owner CullState changes even if projection and content are unchanged");
+            }
+            finally
+            {
+                World.Destroy(world);
+            }
+        }
+
+        [Test]
+        public void WorldHudToScreenSystem_ReusesOwnerProjection_ForNonAdjacentHudItems()
+        {
+            var world = World.Create();
+            try
+            {
+                var worldHud = new WorldHudBatchBuffer(8);
+                var screenHud = new ScreenHudBatchBuffer(8);
+                Entity owner = world.Create(new CullState { IsVisible = true, LOD = LODLevel.High });
+                var sharedPosition = new Vector3(10f, 2f, 0f);
+                worldHud.TryAdd(new WorldHudItem
+                {
+                    StableId = 1201,
+                    DirtySerial = 1,
+                    Owner = owner,
+                    Kind = WorldHudItemKind.Bar,
+                    WorldPosition = sharedPosition,
+                    Width = 80f,
+                    Height = 8f,
+                    Value0 = 0.75f,
+                });
+                worldHud.TryAdd(new WorldHudItem
+                {
+                    StableId = 1202,
+                    DirtySerial = 1,
+                    Owner = Entity.Null,
+                    Kind = WorldHudItemKind.Bar,
+                    WorldPosition = new Vector3(12f, 2f, 0f),
+                    Width = 80f,
+                    Height = 8f,
+                    Value0 = 0.5f,
+                });
+                worldHud.TryAdd(new WorldHudItem
+                {
+                    StableId = 1203,
+                    DirtySerial = 1,
+                    Owner = owner,
+                    Kind = WorldHudItemKind.Text,
+                    WorldPosition = sharedPosition,
+                    Width = 80f,
+                    Height = 16f,
+                    FontSize = 16,
+                });
+
+                var projector = new CountingProjector(new Vector2(320f, 240f));
+                var system = new WorldHudToScreenSystem(
+                    world,
+                    worldHud,
+                    strings: null,
+                    projector: projector,
+                    view: new FixedViewController(new Vector2(1920f, 1080f)),
+                    screenHud: screenHud,
+                    cullingDebug: new CameraCullingDebugState());
+
+                system.Update(0f);
+
+                Assert.That(screenHud.BarCount, Is.EqualTo(2));
+                Assert.That(screenHud.TextCount, Is.EqualTo(1));
+                Assert.That(projector.CallCount, Is.EqualTo(2),
+                    "The same owner/world-position pair should be projected once per frame even when HUD items are not adjacent.");
             }
             finally
             {
@@ -648,7 +780,7 @@ namespace Ludots.Tests.Presentation
         }
 
         private static (VirtualFileSystem vfs, ModLoader modLoader, ConfigPipeline pipeline, ConfigCatalog catalog)
-            BuildPipeline(string root, string[] modIds = null)
+            BuildPipeline(string root, string[]? modIds = null)
         {
             var vfs = new VirtualFileSystem();
             vfs.Mount("Core", Path.Combine(root, "Core"));
@@ -730,6 +862,24 @@ namespace Ludots.Tests.Presentation
             }
 
             public Vector2 WorldToScreen(Vector3 worldPosition) => _screen;
+        }
+
+        private sealed class CountingProjector : IScreenProjector
+        {
+            private readonly Vector2 _screen;
+
+            public CountingProjector(Vector2 screen)
+            {
+                _screen = screen;
+            }
+
+            public int CallCount { get; private set; }
+
+            public Vector2 WorldToScreen(Vector3 worldPosition)
+            {
+                CallCount++;
+                return _screen;
+            }
         }
 
         private sealed class SequenceProjector : IScreenProjector

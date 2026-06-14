@@ -1,0 +1,35 @@
+{
+  "Id": "mass_navigation_total_war",
+  "VisualHeightmapAsset": "assets/terrain/mass_navigation_total_war_relief.vhtm",
+  "Tags": [
+    "mass_navigation",
+    "total_war_movement"
+  ],
+  "Boards": [
+    {
+      "Name": "default",
+      "SpatialType": "Grid",
+      "WidthInTiles": 250,
+      "HeightInTiles": 250,
+      "GridCellSizeCm": 100,
+      "ChunkSizeCells": 64
+    }
+  ],
+  "DefaultCamera": {
+    "VirtualCameraId": "Camera.Profile.MassNavigationTactical",
+    "TargetXCm": 0,
+    "TargetYCm": -1800,
+    "Yaw": 180,
+    "Pitch": 47,
+    "DistanceCm": 15500,
+    "FovYDeg": 52
+  },
+  "Entities": [
+    {
+      "Template": "mass_navigation_local_player",
+      "Overrides": {
+        "Team": { "Id": 1 }
+      }
+    }
+  ]
+}

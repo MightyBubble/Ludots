@@ -9,8 +9,7 @@
         "graphBias": -0.25,
         "meshBias": 6.0,
         "graphCostWeight": 1.0,
-        "meshCostWeight": 1.0,
-        "fallback": "PreferGraph"
+        "meshCostWeight": 1.0
       },
       "navMesh": {
         "areaCosts": [
@@ -29,12 +28,11 @@
       "profileId": "Small",
       "layer": 0,
       "selection": {
-        "mode": "AutoCheapest",
+        "mode": "PreferGraph",
         "graphBias": 0.0,
         "meshBias": 0.0,
         "graphCostWeight": 1.0,
-        "meshCostWeight": 1.0,
-        "fallback": "PreferMesh"
+        "meshCostWeight": 1.0
       },
       "navMesh": {
         "areaCosts": [

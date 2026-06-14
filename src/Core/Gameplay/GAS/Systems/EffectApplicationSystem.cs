@@ -236,7 +236,7 @@ namespace Ludots.Core.Gameplay.GAS.Systems
                                 ref var attrBuffer = ref World.Get<AttributeBuffer>(context.Target);
                                 int primaryAttrId = modifiers.Count > 0 ? modifiers.Get(0).AttributeId : -1;
                                 float before = primaryAttrId >= 0 ? attrBuffer.GetCurrent(primaryAttrId) : 0f;
-                                EffectModifierOps.Apply(in modifiers, ref attrBuffer);
+                                AttributeMutationOps.ApplyModifiers(World, context.Target, in modifiers);
                                 float after = primaryAttrId >= 0 ? attrBuffer.GetCurrent(primaryAttrId) : 0f;
                                 float delta = after - before;
                                 if (_presentationEvents != null)
@@ -257,19 +257,8 @@ namespace Ludots.Core.Gameplay.GAS.Systems
                         }
                         else
                         {
-                            bool attachToActiveEffects = true;
-                            if (_templates != null && World.Has<EffectTemplateRef>(effectEntity))
-                            {
-                                int tplId3 = World.Get<EffectTemplateRef>(effectEntity).TemplateId;
-                                if (tplId3 > 0 && _templates.TryGetRef(tplId3, out int tplIdx3))
-                                {
-                                    ref readonly var tplData3 = ref _templates.GetRef(tplIdx3);
-                                    attachToActiveEffects = tplData3.PresetType == EffectPresetType.Buff;
-                                }
-                            }
-
                             bool attachRejectedByCapacity = false;
-                            if (attachToActiveEffects && World.IsAlive(context.Target))
+                            if (World.IsAlive(context.Target))
                             {
                                 if (World.Has<ActiveEffectContainer>(context.Target))
                                 {
@@ -278,6 +267,10 @@ namespace Ludots.Core.Gameplay.GAS.Systems
                                     {
                                         _activeEffectAttachDropped++;
                                         attachRejectedByCapacity = true;
+                                    }
+                                    else
+                                    {
+                                        MarkAggregateDirtyIfNeeded(context.Target, effectEntity);
                                     }
                                 }
                                 else
@@ -369,6 +362,10 @@ namespace Ludots.Core.Gameplay.GAS.Systems
                                 {
                                     _effectsToDestroy.Add(item.Effect);
                                 }
+                            }
+                            else
+                            {
+                                MarkAggregateDirtyIfNeeded(item.Target, item.Effect);
                             }
                         }
                         workUnits++;
@@ -483,6 +480,25 @@ namespace Ludots.Core.Gameplay.GAS.Systems
                 }
                 _sliceActive = false;
                 return true;
+            }
+        }
+
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        private void MarkAggregateDirtyIfNeeded(Entity target, Entity effect)
+        {
+            if (!World.IsAlive(target) || !World.IsAlive(effect))
+            {
+                return;
+            }
+
+            if (!World.Has<GameplayEffect>(effect) || !World.Get<GameplayEffect>(effect).AggregatesModifiers)
+            {
+                return;
+            }
+
+            if (!World.Has<AttributeAggregateDirty>(target))
+            {
+                World.Add(target, new AttributeAggregateDirty());
             }
         }
 
@@ -605,7 +621,8 @@ namespace Ludots.Core.Gameplay.GAS.Systems
                 tpl.TagId,
                 templateId,
                 in mergedConfig,
-                builtinRuntime);
+                builtinRuntime,
+                BuildExecutionSeed(effectEntity, phase, templateId, context));
 
             _graphApiHost?.ClearConfigContext();
 
@@ -654,6 +671,24 @@ namespace Ludots.Core.Gameplay.GAS.Systems
                     _listenerRegistrationDropped++;
                 }
             }
+        }
+
+        private static uint BuildExecutionSeed(Entity effectEntity, EffectPhaseId phase, int templateId, in EffectContext context)
+        {
+            uint hash = 2166136261u;
+            hash = Mix(hash, effectEntity.Id);
+            hash = Mix(hash, effectEntity.Version);
+            hash = Mix(hash, context.Source.Id);
+            hash = Mix(hash, context.Target.Id);
+            hash = Mix(hash, context.TargetContext.Id);
+            hash = Mix(hash, templateId);
+            hash = Mix(hash, (int)phase);
+            return hash == 0u ? 1u : hash;
+        }
+
+        private static uint Mix(uint hash, int value)
+        {
+            return (hash ^ unchecked((uint)value)) * 16777619u;
         }
     }
 }

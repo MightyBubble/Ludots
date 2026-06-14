@@ -5,6 +5,7 @@ using Ludots.Core.Components;
 using Ludots.Core.Gameplay.Components;
 using Ludots.Core.Gameplay.GAS.Components;
 using Ludots.Core.Gameplay.Spawning;
+using Ludots.Core.Mathematics;
 using Ludots.Core.Mathematics.FixedPoint;
 
 namespace Ludots.Core.Gameplay.GAS
@@ -38,9 +39,8 @@ namespace Ludots.Core.Gameplay.GAS
             if (!world.IsAlive(context.Target)) return;
             if (!world.Has<AttributeBuffer>(context.Target)) return;
 
-            ref var attrBuffer = ref world.Get<AttributeBuffer>(context.Target);
             var modifiers = templateData.Modifiers;
-            EffectModifierOps.Apply(in modifiers, ref attrBuffer);
+            AttributeMutationOps.ApplyModifiers(world, context.Target, in modifiers);
         }
 
         public static void HandleApplyForce(
@@ -56,11 +56,10 @@ namespace Ludots.Core.Gameplay.GAS
             mergedParams.TryGetFloat(EffectParamKeys.ForceXAttribute, out float fx);
             mergedParams.TryGetFloat(EffectParamKeys.ForceYAttribute, out float fy);
 
-            ref var attrBuffer = ref world.Get<AttributeBuffer>(context.Target);
             if (templateData.PresetAttribute0 > 0)
-                attrBuffer.SetCurrent(templateData.PresetAttribute0, attrBuffer.GetCurrent(templateData.PresetAttribute0) + fx);
+                AttributeMutationOps.AddCurrent(world, context.Target, templateData.PresetAttribute0, fx);
             if (templateData.PresetAttribute1 > 0)
-                attrBuffer.SetCurrent(templateData.PresetAttribute1, attrBuffer.GetCurrent(templateData.PresetAttribute1) + fy);
+                AttributeMutationOps.AddCurrent(world, context.Target, templateData.PresetAttribute1, fy);
         }
 
         public static void HandleSpatialQuery(
@@ -530,9 +529,7 @@ namespace Ludots.Core.Gameplay.GAS
 
             if (world.IsAlive(source) && world.Has<FacingDirection>(source))
             {
-                float angle = world.Get<FacingDirection>(source).AngleRad;
-                var angleFix = Fix64.FromFloat(angle);
-                direction = new Fix64Vec2(Fix64Math.Cos(angleFix), Fix64Math.Sin(angleFix));
+                direction = WorldPlane2D.Fix64DirectionFromFacingRad(world.Get<FacingDirection>(source).AngleRad);
                 return true;
             }
 
@@ -565,9 +562,7 @@ namespace Ludots.Core.Gameplay.GAS
                 Fix64 fraction = Fix64.HalfValue + Fix64.FromInt((int)((seed >> 9) & 1023)) / Fix64.FromInt(2047);
                 Fix64 radius = Fix64.FromInt(radiusCm) * fraction;
 
-                return new Fix64Vec2(
-                    radius * Fix64Math.Cos(angleRad),
-                    radius * Fix64Math.Sin(angleRad));
+                return WorldPlane2D.Fix64OffsetCmFromFacingRad(angleRad, radius);
             }
         }
 
@@ -606,9 +601,7 @@ namespace Ludots.Core.Gameplay.GAS
             Fix64 angleDeg = Fix64.FromInt(unit.PlacementStartAngleDeg) + angleStep * Fix64.FromInt(index);
             Fix64 angleRad = angleDeg * Fix64.Deg2Rad;
 
-            offsetCm = new Fix64Vec2(
-                radius * Fix64Math.Cos(angleRad),
-                radius * Fix64Math.Sin(angleRad));
+            offsetCm = WorldPlane2D.Fix64OffsetCmFromFacingRad(angleRad, radius);
 
             hasFacing = unit.FacingPattern != UnitCreationFacingPattern.PreserveTemplate;
             Fix64 quarterTurn = Fix64.Pi / Fix64.FromInt(2);

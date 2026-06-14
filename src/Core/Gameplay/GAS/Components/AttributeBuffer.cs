@@ -15,6 +15,7 @@ namespace Ludots.Core.Gameplay.GAS.Components
         public fixed float BaseValues[MAX_ATTRS];
         public fixed float CapValues[MAX_ATTRS];
         public fixed float CurrentValues[MAX_ATTRS];
+        public ulong DefinedMask;
         
         // Modifiers could be aggregated here or calculated on the fly.
         // For simplicity in this 0GC version, we update CurrentValues directly 
@@ -44,6 +45,16 @@ namespace Ludots.Core.Gameplay.GAS.Components
             return BaseValues[attributeId];
         }
 
+        public bool HasAttribute(int attributeId)
+        {
+            if (attributeId < 0 || attributeId >= MAX_ATTRS)
+            {
+                return false;
+            }
+
+            return (DefinedMask & (1UL << attributeId)) != 0UL;
+        }
+
         /// <summary>
         /// Sets the base value of an attribute by ID.
         /// Also re-applies constraints to CurrentValue (e.g. ClampCurrentToBase, Min/Max).
@@ -51,6 +62,7 @@ namespace Ludots.Core.Gameplay.GAS.Components
         public void SetBase(int attributeId, float value)
         {
             if (attributeId < 0 || attributeId >= MAX_ATTRS) return;
+            DefinedMask |= 1UL << attributeId;
             BaseValues[attributeId] = value;
             CapValues[attributeId] = value;
             // Re-apply current value through constraints.
@@ -71,6 +83,7 @@ namespace Ludots.Core.Gameplay.GAS.Components
         private void SetCurrentInternal(int attributeId, float value, bool clampToCapacity)
         {
             if (attributeId < 0 || attributeId >= MAX_ATTRS) return;
+            DefinedMask |= 1UL << attributeId;
             if (AttributeRegistry.TryGetConstraints(attributeId, out var constraints))
             {
                 if (clampToCapacity && constraints.ClampCurrentToBase)

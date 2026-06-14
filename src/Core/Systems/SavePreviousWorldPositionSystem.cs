@@ -1,6 +1,7 @@
 using System.Runtime.CompilerServices;
 using Arch.Core;
 using Ludots.Core.Components;
+using Ludots.Core.Presentation.Components;
 
 namespace Ludots.Core.Systems
 {
@@ -22,7 +23,8 @@ namespace Ludots.Core.Systems
     public sealed class SavePreviousWorldPositionSystem : BaseSystem<World, float>
     {
         private static readonly QueryDescription _query = new QueryDescription()
-            .WithAll<WorldPositionCm, PreviousWorldPositionCm>();
+            .WithAll<WorldPositionCm, PreviousWorldPositionCm>()
+            .WithNone<PresentationStaticTransform>();
 
         public SavePreviousWorldPositionSystem(World world) : base(world)
         {

@@ -1,6 +1,7 @@
 using System;
 using System.Collections.Generic;
 using System.Text.Json;
+using System.Text.Json.Nodes;
 using Ludots.Core.Config;
 
 namespace Ludots.Core.Gameplay.GAS.Config
@@ -31,9 +32,11 @@ namespace Ludots.Core.Gameplay.GAS.Config
         {
             _registry.Clear();
 
-            var entry = ConfigPipeline.GetEntryOrDefault(catalog, relativePath, ConfigMergePolicy.ArrayById, "id");
-            var merged = _pipeline.MergeArrayByIdFromCatalog(in entry, report);
-            var options = new JsonSerializerOptions { PropertyNameCaseInsensitive = true, IncludeFields = true };
+            var entry = ConfigPipeline.RequireEntry(catalog, relativePath, ConfigMergePolicy.ArrayById, "id");
+            var fragments = _pipeline.CollectFragmentsWithSources(entry.RelativePath);
+            ValidateRawIds(fragments, entry.RelativePath);
+            var merged = ConfigMerger.MergeArrayByIdToEntries(fragments, in entry, report);
+            var options = StrictJsonOptions.CreateCamelCase();
 
             for (int i = 0; i < merged.Count; i++)
             {
@@ -41,12 +44,7 @@ namespace Ludots.Core.Gameplay.GAS.Config
                 var cfg = entryItem.Node.Deserialize<TargetDispatchPresetConfig>(options)
                     ?? throw new InvalidOperationException($"Failed to deserialize target dispatch preset '{entryItem.Id}' from {relativePath}.");
 
-                if (string.IsNullOrWhiteSpace(cfg.Id))
-                {
-                    cfg.Id = entryItem.Id;
-                }
-
-                if (!string.Equals(cfg.Id, entryItem.Id, StringComparison.OrdinalIgnoreCase))
+                if (!string.Equals(cfg.Id, entryItem.Id, StringComparison.Ordinal))
                 {
                     throw new InvalidOperationException($"Target dispatch preset id mismatch in {relativePath}: '{entryItem.Id}' vs '{cfg.Id}'.");
                 }
@@ -64,34 +62,66 @@ namespace Ludots.Core.Gameplay.GAS.Config
 
         public static ContextSlot ParseContextSlotStrict(string slot, string ownerId, string fieldPath, string relativePath)
         {
-            if (string.IsNullOrWhiteSpace(slot))
+            slot = RequireCanonicalString(
+                slot,
+                $"'{ownerId}' in {relativePath}: {fieldPath}");
+
+            return slot switch
+            {
+                nameof(ContextSlot.OriginalSource) => ContextSlot.OriginalSource,
+                nameof(ContextSlot.OriginalTarget) => ContextSlot.OriginalTarget,
+                nameof(ContextSlot.OriginalTargetContext) => ContextSlot.OriginalTargetContext,
+                nameof(ContextSlot.ResolvedEntity) => ContextSlot.ResolvedEntity,
+                _ => throw new InvalidOperationException(
+                    $"'{ownerId}' in {relativePath}: unsupported {fieldPath} '{slot}'. Supported: OriginalSource, OriginalTarget, OriginalTargetContext, ResolvedEntity."),
+            };
+        }
+
+        private static void ValidateRawIds(IReadOnlyList<ConfigFragment> fragments, string relativePath)
+        {
+            for (int fragmentIndex = 0; fragmentIndex < fragments.Count; fragmentIndex++)
+            {
+                if (fragments[fragmentIndex].Node is not JsonArray arr)
+                {
+                    continue;
+                }
+
+                for (int entryIndex = 0; entryIndex < arr.Count; entryIndex++)
+                {
+                    if (arr[entryIndex] is not JsonObject obj)
+                    {
+                        throw new InvalidOperationException(
+                            $"{relativePath} entry at index {entryIndex} must be a JSON object.");
+                    }
+
+                    if (!obj.TryGetPropertyValue("id", out JsonNode? idNode) ||
+                        idNode is not JsonValue idValue ||
+                        !idValue.TryGetValue<string>(out string? id))
+                    {
+                        throw new InvalidOperationException(
+                            $"{relativePath} entry at index {entryIndex} must declare exact string field 'id'.");
+                    }
+
+                    RequireCanonicalString(id, $"{relativePath} entry id");
+                }
+            }
+        }
+
+        private static string RequireCanonicalString(string value, string context)
+        {
+            if (string.IsNullOrWhiteSpace(value))
             {
                 throw new InvalidOperationException(
-                    $"'{ownerId}' in {relativePath}: {fieldPath} requires one of OriginalSource, OriginalTarget, OriginalTargetContext, ResolvedEntity.");
+                    $"{context} requires one of OriginalSource, OriginalTarget, OriginalTargetContext, ResolvedEntity.");
             }
 
-            if (string.Equals(slot, nameof(ContextSlot.OriginalSource), StringComparison.OrdinalIgnoreCase))
+            string trimmed = value.Trim();
+            if (!string.Equals(value, trimmed, StringComparison.Ordinal))
             {
-                return ContextSlot.OriginalSource;
+                throw new InvalidOperationException($"{context} must not include leading or trailing whitespace.");
             }
 
-            if (string.Equals(slot, nameof(ContextSlot.OriginalTarget), StringComparison.OrdinalIgnoreCase))
-            {
-                return ContextSlot.OriginalTarget;
-            }
-
-            if (string.Equals(slot, nameof(ContextSlot.OriginalTargetContext), StringComparison.OrdinalIgnoreCase))
-            {
-                return ContextSlot.OriginalTargetContext;
-            }
-
-            if (string.Equals(slot, nameof(ContextSlot.ResolvedEntity), StringComparison.OrdinalIgnoreCase))
-            {
-                return ContextSlot.ResolvedEntity;
-            }
-
-            throw new InvalidOperationException(
-                $"'{ownerId}' in {relativePath}: unsupported {fieldPath} '{slot}'. Supported: OriginalSource, OriginalTarget, OriginalTargetContext, ResolvedEntity.");
+            return value;
         }
     }
 }

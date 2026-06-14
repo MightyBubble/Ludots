@@ -964,7 +964,7 @@ namespace Ludots.Tests.GAS.Production
             engine.SetService(CoreServiceKeys.ScreenProjector, screenProjector);
             engine.SetService(CoreServiceKeys.ScreenRayProvider, screenRayProvider);
 
-            var culling = new CameraCullingSystem(engine.World, engine.GameSession.Camera, engine.SpatialQueries, view, timingDiagnostics);
+            var culling = new CameraCullingSystem(engine.World, engine.GameSession.Camera, engine.SpatialQueries, view, cullingConfig: engine.MergedConfig.Presentation.CameraCulling, timingDiagnostics: timingDiagnostics);
             engine.RegisterPresentationSystem(culling);
             engine.SetService(CoreServiceKeys.CameraCullingDebugState, culling.DebugState);
             engine.GlobalContext[HeadlessCameraKey] = new HeadlessCameraRuntime(
@@ -1020,7 +1020,7 @@ namespace Ludots.Tests.GAS.Production
 
             Span<Entity> next = stackalloc Entity[1];
             next[0] = target;
-            selection.ReplaceSelection(owner, SelectionSetKeys.Ambient, next);
+            selection.ReplaceSelection(owner, SelectionSetKeys.LivePrimary, next);
             Tick(engine, 1, frameTimesMs);
             TickUntil(
                 engine,

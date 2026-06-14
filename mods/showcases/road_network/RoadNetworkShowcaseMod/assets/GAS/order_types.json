@@ -1,4 +1,5 @@
 {
+  "orderBlackboardKeys": {},
   "orderTypes": {
     "roadMoveFollow": {
       "orderTypeId": 171,
@@ -13,18 +14,18 @@
       "queuedModeMaxSize": 8,
       "allowQueuedMode": true,
       "clearQueueOnActivate": true,
-      "spatialBlackboardKey": 201,
-      "entityBlackboardKey": -1,
-      "intArg0BlackboardKey": -1,
-      "validationGraphId": 0
+      "spatialBlackboardKey": "Generic.TargetPosition",
+      "entityBlackboardKey": "none",
+      "intArg0BlackboardKey": "none",
+      "validationGraph": "none"
     }
   },
   "orderRules": {
     "roadMoveFollow": {
-      "orderTypeId": 171,
-      "blockedActiveOrderTypeIds": [],
-      "interruptsActiveOrderTypeIds": [
-        102
+      "orderTypeKey": "roadMoveFollow",
+      "blockedActiveOrderTypeKeys": [],
+      "interruptsActiveOrderTypeKeys": [
+        "attackTarget"
       ]
     }
   }

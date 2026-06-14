@@ -5,86 +5,86 @@ namespace Ludots.Core.Gameplay.GAS.Config
 {
     public sealed class EffectTemplateConfig : IIdentifiable
     {
-        public string Id { get; set; }
-        public List<string> Tags { get; set; }
+        public string Id { get; set; } = string.Empty;
+        public List<string>? Tags { get; set; }
 
         // ── Top-level structural fields ──
-        public string PresetType { get; set; }
+        public string? PresetType { get; set; }
 
         /// <summary>Lifetime kind: "Instant" | "After" | "Infinite".</summary>
-        public string Lifetime { get; set; }
+        public string? Lifetime { get; set; }
         /// <summary>
         /// Whether this effect participates in the ResponseChain.
-        /// Default: true. Set to false to exclude from response processing.
+        /// Must be explicit. Set to false to exclude from response processing.
         /// </summary>
-        public bool ParticipatesInResponse { get; set; } = true;
+        public bool? ParticipatesInResponse { get; set; }
 
         /// <summary>
         /// Optional tag-based expire condition. Effect expires when condition is no longer satisfied.
         /// Example: { "kind": "TagPresent", "tag": "Status.Stun" } — expires when tag is removed.
         /// </summary>
-        public ExpireConditionConfig ExpireCondition { get; set; }
+        public ExpireConditionConfig? ExpireCondition { get; set; }
 
         // ── Component blocks (new architecture) ──
 
         /// <summary>Duration component: durationTicks, periodTicks, clockId.</summary>
-        public DurationConfig Duration { get; set; }
+        public DurationConfig? Duration { get; set; }
         /// <summary>Attribute modifier list.</summary>
-        public List<ModifierConfig> Modifiers { get; set; }
+        public List<ModifierConfig>? Modifiers { get; set; }
         /// <summary>Target query strategy.</summary>
-        public TargetQueryConfig TargetQuery { get; set; }
+        public TargetQueryConfig? TargetQuery { get; set; }
         /// <summary>Target filter conditions.</summary>
-        public TargetFilterConfig TargetFilter { get; set; }
+        public TargetFilterConfig? TargetFilter { get; set; }
         /// <summary>Target dispatch configuration.</summary>
-        public TargetDispatchConfig TargetDispatch { get; set; }
+        public TargetDispatchConfig? TargetDispatch { get; set; }
         /// <summary>Projectile parameters.</summary>
-        public ProjectileConfig Projectile { get; set; }
+        public ProjectileConfig? Projectile { get; set; }
         /// <summary>Unit creation parameters.</summary>
-        public UnitCreationConfig UnitCreation { get; set; }
+        public UnitCreationConfig? UnitCreation { get; set; }
         /// <summary>Displacement parameters (dash / knockback / pull).</summary>
-        public DisplacementConfig Displacement { get; set; }
+        public DisplacementConfig? Displacement { get; set; }
         /// <summary>Entity relation parameters (garrison, detach, parent-child ownership).</summary>
-        public RelationConfig Relation { get; set; }
+        public RelationConfig? Relation { get; set; }
 
         // ── Capability blocks ──
 
         /// <summary>Per-phase graph bindings (Pre/Post/SkipMain).</summary>
-        public Dictionary<string, PhaseGraphConfig> PhaseGraphs { get; set; }
+        public Dictionary<string, PhaseGraphConfig>? PhaseGraphs { get; set; }
         /// <summary>Phase listeners bound to this effect's lifecycle.</summary>
-        public List<PhaseListenerConfig> PhaseListeners { get; set; }
+        public List<PhaseListenerConfig>? PhaseListeners { get; set; }
 
         /// <summary>
         /// Config parameters for graph parameterization.
         /// Keys are arbitrary config key names; values have "type" and "value".
         /// </summary>
-        public Dictionary<string, ConfigParamConfig> ConfigParams { get; set; }
+        public Dictionary<string, ConfigParamConfig>? ConfigParams { get; set; }
 
         /// <summary>
         /// Tags granted by this effect to the target entity.
         /// Tag counts are contributed based on formula and stack count.
         /// </summary>
-        public List<GrantedTagConfig> GrantedTags { get; set; }
+        public List<GrantedTagConfig>? GrantedTags { get; set; }
 
         /// <summary>
         /// Stack configuration for duration effects (optional).
         /// If omitted, each application creates a separate effect entity.
         /// </summary>
-        public StackConfig Stack { get; set; }
+        public StackConfig? Stack { get; set; }
 
     }
 
     public sealed class ModifierConfig
     {
-        public string Attribute { get; set; }
-        public string Op { get; set; }
-        public float Value { get; set; }
+        public string? Attribute { get; set; }
+        public string? Op { get; set; }
+        public float? Value { get; set; }
     }
 
     public sealed class ContextMappingConfig
     {
-        public string PayloadSource { get; set; }
-        public string PayloadTarget { get; set; }
-        public string PayloadTargetContext { get; set; }
+        public string? PayloadSource { get; set; }
+        public string? PayloadTarget { get; set; }
+        public string? PayloadTargetContext { get; set; }
     }
 
     /// <summary>
@@ -93,9 +93,9 @@ namespace Ludots.Core.Gameplay.GAS.Config
     public sealed class PhaseGraphConfig
     {
         /// <summary>Pre-slot graph program name (runs before preset Main).</summary>
-        public string Pre { get; set; }
+        public string? Pre { get; set; }
         /// <summary>Post-slot graph program name (runs after preset Main).</summary>
-        public string Post { get; set; }
+        public string? Post { get; set; }
         /// <summary>If true, skip the preset Main graph for this phase.</summary>
         public bool SkipMain { get; set; }
     }
@@ -106,9 +106,9 @@ namespace Ludots.Core.Gameplay.GAS.Config
     public sealed class ConfigParamConfig
     {
         /// <summary>"float", "int", or "effectTemplate"</summary>
-        public string Type { get; set; }
+        public string? Type { get; set; }
         /// <summary>Value (parsed based on Type). For effectTemplate, this is a template name string.</summary>
-        public object Value { get; set; }
+        public object? Value { get; set; }
     }
 
     /// <summary>
@@ -116,14 +116,14 @@ namespace Ludots.Core.Gameplay.GAS.Config
     /// </summary>
     public sealed class PhaseListenerConfig
     {
-        public string ListenTag { get; set; }
-        public string ListenEffectId { get; set; }
-        public string Phase { get; set; }
-        public string Scope { get; set; }
-        public string Action { get; set; }
-        public string GraphProgram { get; set; }
-        public string EventTag { get; set; }
-        public int Priority { get; set; }
+        public string? ListenTag { get; set; }
+        public string? ListenEffectId { get; set; }
+        public string? Phase { get; set; }
+        public string? Scope { get; set; }
+        public string? Action { get; set; }
+        public string? GraphProgram { get; set; }
+        public string? EventTag { get; set; }
+        public int? Priority { get; set; }
     }
 
     // ── New component config blocks ──
@@ -131,93 +131,93 @@ namespace Ludots.Core.Gameplay.GAS.Config
     /// <summary>Duration component configuration.</summary>
     public sealed class DurationConfig
     {
-        public int DurationTicks { get; set; }
-        public int PeriodTicks { get; set; }
-        public string ClockId { get; set; }
+        public int? DurationTicks { get; set; }
+        public int? PeriodTicks { get; set; }
+        public string? ClockId { get; set; }
     }
 
     /// <summary>Target query configuration (how to FIND targets).</summary>
     public sealed class TargetQueryConfig
     {
-        public string Kind { get; set; }          // "BuiltinSpatial" | "GraphProgram"
-        public string Shape { get; set; }         // "Circle" | "Cone" | "Rectangle" | "Line" | "Ring"
-        public int Radius { get; set; }
-        public int InnerRadius { get; set; }
-        public int HalfAngle { get; set; }
-        public int HalfWidth { get; set; }
-        public int HalfHeight { get; set; }
-        public int Rotation { get; set; }
-        public int Length { get; set; }
-        public int GraphProgramId { get; set; }
+        public string? Kind { get; set; }          // "BuiltinSpatial" | "GraphProgram"
+        public string? Shape { get; set; }         // "Circle" | "Cone" | "Rectangle" | "Line" | "Ring"
+        public int? Radius { get; set; }
+        public int? InnerRadius { get; set; }
+        public int? HalfAngle { get; set; }
+        public int? HalfWidth { get; set; }
+        public int? HalfHeight { get; set; }
+        public int? Rotation { get; set; }
+        public int? Length { get; set; }
+        public int? GraphProgramId { get; set; }
     }
 
     /// <summary>Target filter configuration (how to FILTER candidates).</summary>
     public sealed class TargetFilterConfig
     {
-        public string RelationFilter { get; set; }
-        public bool ExcludeSource { get; set; }
-        public int MaxTargets { get; set; }
-        public List<string> LayerMask { get; set; }
+        public string? RelationFilter { get; set; }
+        public bool? ExcludeSource { get; set; }
+        public int? MaxTargets { get; set; }
+        public List<string>? LayerMask { get; set; }
     }
 
     /// <summary>Target dispatch configuration (how to DISPATCH payload effects).</summary>
     public sealed class TargetDispatchConfig
     {
-        public string Preset { get; set; }
-        public string PayloadEffect { get; set; }
-        public ContextMappingConfig ContextMapping { get; set; }
+        public string? Preset { get; set; }
+        public string? PayloadEffect { get; set; }
+        public ContextMappingConfig? ContextMapping { get; set; }
     }
 
     /// <summary>Projectile component configuration.</summary>
     public sealed class ProjectileConfig
     {
-        public int Speed { get; set; }
-        public int Range { get; set; }
-        public int ArcHeight { get; set; }
-        public string ImpactEffect { get; set; }
-        public string HitEffect { get; set; }
-        public string PresentationEffect { get; set; }
-        public string TravelMode { get; set; }
-        public string ImpactPolicy { get; set; }
-        public int CollisionHalfWidth { get; set; }
-        public string CollisionRelationFilter { get; set; }
-        public bool CollisionExcludeSource { get; set; } = true;
-        public int MaxHitCount { get; set; }
+        public int? Speed { get; set; }
+        public int? Range { get; set; }
+        public int? ArcHeight { get; set; }
+        public string? ImpactEffect { get; set; }
+        public string? HitEffect { get; set; }
+        public string? PresentationEffect { get; set; }
+        public string? TravelMode { get; set; }
+        public string? ImpactPolicy { get; set; }
+        public int? CollisionHalfWidth { get; set; }
+        public string? CollisionRelationFilter { get; set; }
+        public bool? CollisionExcludeSource { get; set; }
+        public int? MaxHitCount { get; set; }
     }
 
     /// <summary>Unit creation component configuration.</summary>
     public sealed class UnitCreationConfig
     {
-        public string PlacementPattern { get; set; }
-        public string FacingPattern { get; set; }
-        public string UnitType { get; set; }
-        public string TemplateId { get; set; }
-        public int Count { get; set; } = 1;
-        public int OffsetRadius { get; set; }
-        public int PlacementRadiusCm { get; set; }
-        public int PlacementStartAngleDeg { get; set; }
-        public string OnSpawnEffect { get; set; }
-        public bool CopySourcePlayerOwner { get; set; }
-        public bool LinkSourceAsParent { get; set; }
+        public string? PlacementPattern { get; set; }
+        public string? FacingPattern { get; set; }
+        public string? UnitType { get; set; }
+        public string? TemplateId { get; set; }
+        public int? Count { get; set; }
+        public int? OffsetRadius { get; set; }
+        public int? PlacementRadiusCm { get; set; }
+        public int? PlacementStartAngleDeg { get; set; }
+        public string? OnSpawnEffect { get; set; }
+        public bool? CopySourcePlayerOwner { get; set; }
+        public bool? LinkSourceAsParent { get; set; }
     }
 
     /// <summary>Displacement component configuration.</summary>
     public sealed class DisplacementConfig
     {
-        public string DirectionMode { get; set; } = "ToTarget";
-        public int FixedDirectionDeg { get; set; }
-        public int TotalDistanceCm { get; set; }
-        public int TotalDurationTicks { get; set; }
-        public bool OverrideNavigation { get; set; } = true;
+        public string? DirectionMode { get; set; }
+        public int? FixedDirectionDeg { get; set; }
+        public int? TotalDistanceCm { get; set; }
+        public int? TotalDurationTicks { get; set; }
+        public bool? OverrideNavigation { get; set; }
     }
 
     /// <summary>Entity relation command configuration.</summary>
     public sealed class RelationConfig
     {
-        public string Operation { get; set; } = "SetParent";
-        public string Subject { get; set; } = "Source";
-        public string Parent { get; set; } = "Target";
-        public bool SnapSubjectToParentPosition { get; set; }
+        public string? Operation { get; set; }
+        public string? Subject { get; set; }
+        public string? Parent { get; set; }
+        public bool? SnapSubjectToParentPosition { get; set; }
     }
 
     /// <summary>
@@ -226,11 +226,11 @@ namespace Ludots.Core.Gameplay.GAS.Config
     public sealed class ExpireConditionConfig
     {
         /// <summary>"TagPresent" or "TagAbsent".</summary>
-        public string Kind { get; set; }
+        public string? Kind { get; set; }
         /// <summary>Tag name to check (e.g., "Status.Stun").</summary>
-        public string Tag { get; set; }
-        /// <summary>"Raw" or "Effective". Defaults to "Effective".</summary>
-        public string Sense { get; set; }
+        public string? Tag { get; set; }
+        /// <summary>"Raw" or "Effective". Must be explicit.</summary>
+        public string? Sense { get; set; }
     }
 
     /// <summary>
@@ -239,11 +239,11 @@ namespace Ludots.Core.Gameplay.GAS.Config
     public sealed class StackConfig
     {
         /// <summary>Maximum number of stacks allowed (0 = no limit).</summary>
-        public int Limit { get; set; }
-        /// <summary>"RefreshDuration" | "AddDuration" | "KeepDuration". Defaults to "RefreshDuration".</summary>
-        public string Policy { get; set; }
-        /// <summary>"RejectNew" | "RemoveOldest". Defaults to "RejectNew".</summary>
-        public string OverflowPolicy { get; set; }
+        public int? Limit { get; set; }
+        /// <summary>"RefreshDuration" | "AddDuration" | "KeepDuration". Must be explicit.</summary>
+        public string? Policy { get; set; }
+        /// <summary>"RejectNew" | "RemoveOldest". Must be explicit.</summary>
+        public string? OverflowPolicy { get; set; }
     }
 
     /// <summary>
@@ -252,14 +252,14 @@ namespace Ludots.Core.Gameplay.GAS.Config
     public sealed class GrantedTagConfig
     {
         /// <summary>Tag name (e.g., "Status.Slow").</summary>
-        public string Tag { get; set; }
-        /// <summary>"Fixed" | "Linear" | "LinearPlusBase" | "GraphProgram". Defaults to "Fixed".</summary>
-        public string Formula { get; set; }
+        public string? Tag { get; set; }
+        /// <summary>"Fixed" | "Linear" | "LinearPlusBase" | "GraphProgram". Must be explicit.</summary>
+        public string? Formula { get; set; }
         /// <summary>Coefficient for formula computation.</summary>
-        public int Amount { get; set; } = 1;
+        public int? Amount { get; set; }
         /// <summary>Base value for LinearPlusBase formula.</summary>
-        public int Base { get; set; }
+        public int? Base { get; set; }
         /// <summary>Graph program name for GraphProgram formula.</summary>
-        public string GraphProgram { get; set; }
+        public string? GraphProgram { get; set; }
     }
 }

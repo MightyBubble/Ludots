@@ -152,16 +152,10 @@ namespace Ludots.Core.Gameplay.Relationships
 
         private static ScriptContext CreateContext(GameEngine engine)
         {
-            var context = new ScriptContext();
-            context.Set(CoreServiceKeys.World, engine.World);
-            context.Set(CoreServiceKeys.WorldMap, engine.WorldMap);
-            context.Set(CoreServiceKeys.GameSession, engine.GameSession);
-            context.Set(CoreServiceKeys.Engine, engine);
-            context.Set(CoreServiceKeys.MapSession, engine.CurrentMapSession);
-            context.Set(CoreServiceKeys.MapId, engine.CurrentMapSession?.MapId ?? default);
-            foreach ((string key, object value) in engine.GlobalContext)
+            ScriptContext context = engine.CreateContext();
+            if (!context.TryGet(CoreServiceKeys.MapId, out _))
             {
-                context.Set(key, value);
+                throw new InvalidOperationException("Relationship callback events require an active MapId service.");
             }
 
             return context;

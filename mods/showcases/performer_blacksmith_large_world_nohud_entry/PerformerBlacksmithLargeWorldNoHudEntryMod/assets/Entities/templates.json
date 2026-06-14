@@ -1,0 +1,16 @@
+[
+  {
+    "id": "blacksmith_minimap_marker_ball_entity",
+    "onSpawnEffect": null,
+    "components": {
+      "Name": { "Value": "BlacksmithMinimapMarkerBall" },
+      "WorldPositionCm": { "Value": { "X": 0, "Y": 0 } },
+      "VisualHeightmapSampleState": {},
+      "FacingDirection": { "AngleRad": 0.0 },
+      "GameplayTagContainer": {},
+      "TagCountContainer": {},
+      "SpatialPartitionExcluded": {},
+      "MinimapMarkerBallMovementTag": {}
+    }
+  }
+]

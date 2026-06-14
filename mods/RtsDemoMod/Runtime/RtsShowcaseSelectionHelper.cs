@@ -22,7 +22,7 @@ namespace RtsDemoMod.Runtime
                 return;
             }
 
-            selection.TryBindView(owner, SelectionViewKeys.Primary, owner, SelectionSetKeys.Ambient);
+            selection.TryBindView(owner, SelectionViewKeys.Primary, owner, SelectionSetKeys.LivePrimary);
             engine.GlobalContext[CoreServiceKeys.SelectionViewViewerEntity.Name] = owner;
             engine.GlobalContext[CoreServiceKeys.SelectionViewKey.Name] = SelectionViewKeys.Primary;
         }
@@ -43,7 +43,7 @@ namespace RtsDemoMod.Runtime
 
             Span<Entity> next = stackalloc Entity[1];
             next[0] = target;
-            selection.ReplaceSelection(owner, SelectionSetKeys.Ambient, next);
+            selection.ReplaceSelection(owner, SelectionSetKeys.LivePrimary, next);
             EnsureSelectionViewBinding(engine);
             WriteCameraFocusRequests(engine, target, snapCamera);
             return true;

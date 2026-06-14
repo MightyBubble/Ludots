@@ -1,0 +1,10 @@
+[
+  {
+    "id": "blacksmith.worker.profile",
+    "animatorControllerId": "blacksmith.worker.locomotion",
+    "stateClips": [
+      { "packedStateIndex": 41, "clipAssetId": "blacksmith.worker.clip.idle" },
+      { "packedStateIndex": 42, "clipAssetId": "blacksmith.worker.clip.walk" }
+    ]
+  }
+]

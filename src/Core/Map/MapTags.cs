@@ -7,5 +7,7 @@ namespace Ludots.Core.Map
         public static readonly MapTag Gameplay = new MapTag("Gameplay");
         public static readonly MapTag Level = new MapTag("Level");
         public static readonly MapTag FeatureNavMeshOn = new MapTag("Feature.NavMesh:On");
+        public static readonly MapTag RaylibDeepBackground = new MapTag("Raylib.Background:Deep");
+        public static readonly MapTag RaylibHideDebugGuides = new MapTag("Raylib.DebugGuides:Off");
     }
 }

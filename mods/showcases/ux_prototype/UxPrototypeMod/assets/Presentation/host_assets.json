@@ -1,0 +1,149 @@
+[
+  {
+    "id": "ux.billboard.city.raylib",
+    "assetKind": "Mesh",
+    "assetId": "ux.billboard.city",
+    "backendId": "raylib",
+    "sourceUris": [ "UxPrototypeMod:assets/Presentation/billboards/city.png" ]
+  },
+  {
+    "id": "ux.billboard.barracks.raylib",
+    "assetKind": "Mesh",
+    "assetId": "ux.billboard.barracks",
+    "backendId": "raylib",
+    "sourceUris": [ "UxPrototypeMod:assets/Presentation/billboards/barracks.png" ]
+  },
+  {
+    "id": "ux.billboard.stable.raylib",
+    "assetKind": "Mesh",
+    "assetId": "ux.billboard.stable",
+    "backendId": "raylib",
+    "sourceUris": [ "UxPrototypeMod:assets/Presentation/billboards/stable.png" ]
+  },
+  {
+    "id": "ux.billboard.workshop.raylib",
+    "assetKind": "Mesh",
+    "assetId": "ux.billboard.workshop",
+    "backendId": "raylib",
+    "sourceUris": [ "UxPrototypeMod:assets/Presentation/billboards/workshop.png" ]
+  },
+  {
+    "id": "ux.billboard.farm.raylib",
+    "assetKind": "Mesh",
+    "assetId": "ux.billboard.farm",
+    "backendId": "raylib",
+    "sourceUris": [ "UxPrototypeMod:assets/Presentation/billboards/farm.png" ]
+  },
+  {
+    "id": "ux.billboard.mine.raylib",
+    "assetKind": "Mesh",
+    "assetId": "ux.billboard.mine",
+    "backendId": "raylib",
+    "sourceUris": [ "UxPrototypeMod:assets/Presentation/billboards/mine.png" ]
+  },
+  {
+    "id": "ux.billboard.tower.raylib",
+    "assetKind": "Mesh",
+    "assetId": "ux.billboard.tower",
+    "backendId": "raylib",
+    "sourceUris": [ "UxPrototypeMod:assets/Presentation/billboards/tower.png" ]
+  },
+  {
+    "id": "ux.billboard.watchtower.raylib",
+    "assetKind": "Mesh",
+    "assetId": "ux.billboard.watchtower",
+    "backendId": "raylib",
+    "sourceUris": [ "UxPrototypeMod:assets/Presentation/billboards/watchtower.png" ]
+  },
+  {
+    "id": "ux.billboard.fort.raylib",
+    "assetKind": "Mesh",
+    "assetId": "ux.billboard.fort",
+    "backendId": "raylib",
+    "sourceUris": [ "UxPrototypeMod:assets/Presentation/billboards/fort.png" ]
+  },
+  {
+    "id": "ux.billboard.worker.raylib",
+    "assetKind": "Mesh",
+    "assetId": "ux.billboard.worker",
+    "backendId": "raylib",
+    "sourceUris": [ "UxPrototypeMod:assets/Presentation/billboards/worker.png" ]
+  },
+  {
+    "id": "ux.billboard.soldier.raylib",
+    "assetKind": "Mesh",
+    "assetId": "ux.billboard.soldier",
+    "backendId": "raylib",
+    "sourceUris": [ "UxPrototypeMod:assets/Presentation/billboards/soldier.png" ]
+  },
+  {
+    "id": "ux.billboard.archer.raylib",
+    "assetKind": "Mesh",
+    "assetId": "ux.billboard.archer",
+    "backendId": "raylib",
+    "sourceUris": [ "UxPrototypeMod:assets/Presentation/billboards/archer.png" ]
+  },
+  {
+    "id": "ux.billboard.mage.raylib",
+    "assetKind": "Mesh",
+    "assetId": "ux.billboard.mage",
+    "backendId": "raylib",
+    "sourceUris": [ "UxPrototypeMod:assets/Presentation/billboards/mage.png" ]
+  },
+  {
+    "id": "ux.billboard.medic.raylib",
+    "assetKind": "Mesh",
+    "assetId": "ux.billboard.medic",
+    "backendId": "raylib",
+    "sourceUris": [ "UxPrototypeMod:assets/Presentation/billboards/medic.png" ]
+  },
+  {
+    "id": "ux.billboard.heavy_cavalry.raylib",
+    "assetKind": "Mesh",
+    "assetId": "ux.billboard.heavy_cavalry",
+    "backendId": "raylib",
+    "sourceUris": [ "UxPrototypeMod:assets/Presentation/billboards/heavy_cavalry.png" ]
+  },
+  {
+    "id": "ux.billboard.horse_archer.raylib",
+    "assetKind": "Mesh",
+    "assetId": "ux.billboard.horse_archer",
+    "backendId": "raylib",
+    "sourceUris": [ "UxPrototypeMod:assets/Presentation/billboards/horse_archer.png" ]
+  },
+  {
+    "id": "ux.billboard.ram.raylib",
+    "assetKind": "Mesh",
+    "assetId": "ux.billboard.ram",
+    "backendId": "raylib",
+    "sourceUris": [ "UxPrototypeMod:assets/Presentation/billboards/ram.png" ]
+  },
+  {
+    "id": "ux.billboard.catapult.raylib",
+    "assetKind": "Mesh",
+    "assetId": "ux.billboard.catapult",
+    "backendId": "raylib",
+    "sourceUris": [ "UxPrototypeMod:assets/Presentation/billboards/catapult.png" ]
+  },
+  {
+    "id": "ux.billboard.well_column.raylib",
+    "assetKind": "Mesh",
+    "assetId": "ux.billboard.well_column",
+    "backendId": "raylib",
+    "sourceUris": [ "UxPrototypeMod:assets/Presentation/billboards/well_column.png" ]
+  },
+  {
+    "id": "ux.billboard.gold_deposit.raylib",
+    "assetKind": "Mesh",
+    "assetId": "ux.billboard.gold_deposit",
+    "backendId": "raylib",
+    "sourceUris": [ "UxPrototypeMod:assets/Presentation/billboards/gold_deposit.png" ]
+  },
+  {
+    "id": "ux.billboard.enemy_raider.raylib",
+    "assetKind": "Mesh",
+    "assetId": "ux.billboard.enemy_raider",
+    "backendId": "raylib",
+    "sourceUris": [ "UxPrototypeMod:assets/Presentation/billboards/enemy_raider.png" ]
+  }
+]

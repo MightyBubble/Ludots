@@ -1,5 +1,6 @@
 using System.Runtime.CompilerServices;
 using Arch.Core;
+using Arch.System;
 using Ludots.Core.Components;
 using Ludots.Core.Map;
 
@@ -10,7 +11,6 @@ namespace Ludots.Core.Systems
         private readonly World _world;
         private readonly WorldMap _worldMap;
         private readonly QueryDescription _query;
-        private readonly ForEachWithEntity<Position, Velocity> _move;
         private readonly int _worldWidth;
         private readonly int _worldHeight;
 
@@ -19,7 +19,6 @@ namespace Ludots.Core.Systems
             _world = world;
             _worldMap = worldMap;
             _query = new QueryDescription().WithAll<Position, Velocity>();
-            _move = Move;
             _worldWidth = _worldMap.TotalWidth * WorldMap.WorldScale;
             _worldHeight = _worldMap.TotalHeight * WorldMap.WorldScale;
         }
@@ -27,24 +26,36 @@ namespace Ludots.Core.Systems
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
         public void Update(float dt)
         {
-            _world.Query(in _query, _move);
+            var job = new MoveJob
+            {
+                WorldWidth = _worldWidth,
+                WorldHeight = _worldHeight,
+            };
+            _world.InlineQuery<MoveJob, Position, Velocity>(in _query, ref job);
         }
 
-        [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        private void Move(Entity entity, ref Position pos, ref Velocity vel)
+        private struct MoveJob : IForEach<Position, Velocity>
         {
-            pos.GridPos += vel.Value;
+            public int WorldWidth;
+            public int WorldHeight;
 
-            if (pos.GridPos.X < 0 || pos.GridPos.X > _worldWidth)
+            [MethodImpl(MethodImplOptions.AggressiveInlining)]
+            public void Update(ref Position pos, ref Velocity vel)
             {
-                vel.Value.X = -vel.Value.X;
                 pos.GridPos.X += vel.Value.X;
-            }
-
-            if (pos.GridPos.Y < 0 || pos.GridPos.Y > _worldHeight)
-            {
-                vel.Value.Y = -vel.Value.Y;
                 pos.GridPos.Y += vel.Value.Y;
+
+                if (pos.GridPos.X < 0 || pos.GridPos.X > WorldWidth)
+                {
+                    vel.Value.X = -vel.Value.X;
+                    pos.GridPos.X += vel.Value.X;
+                }
+
+                if (pos.GridPos.Y < 0 || pos.GridPos.Y > WorldHeight)
+                {
+                    vel.Value.Y = -vel.Value.Y;
+                    pos.GridPos.Y += vel.Value.Y;
+                }
             }
         }
     }

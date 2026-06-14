@@ -1,0 +1,22 @@
+[
+  {
+    "id": "mass_navigation.agent.clip.idle",
+    "assetKind": "Clip",
+    "locators": [
+      {
+        "backendId": "raylib",
+        "assetRef": "MassNavigationMod:assets/Models/mass_navigation_agent_soldier.glb#anim:0"
+      }
+    ]
+  },
+  {
+    "id": "mass_navigation.agent.clip.walk",
+    "assetKind": "Clip",
+    "locators": [
+      {
+        "backendId": "raylib",
+        "assetRef": "MassNavigationMod:assets/Models/mass_navigation_agent_soldier.glb#anim:0"
+      }
+    ]
+  }
+]

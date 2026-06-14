@@ -7,9 +7,12 @@ using Ludots.Client.Raylib.Rendering;
 using Ludots.Core.Components;
 using Ludots.Core.Diagnostics;
 using Ludots.Core.Engine;
+using Ludots.Core.Gameplay.Camera;
 using Ludots.Core.Input.Runtime;
 using Ludots.Core.Input.Selection;
+using Ludots.Core.Map;
 using Ludots.Core.Mathematics;
+using Ludots.Core.Presentation;
 using Ludots.Core.Presentation.Camera;
 using Ludots.Core.Presentation.Systems;
 using Ludots.Core.Presentation.Assets;
@@ -17,7 +20,10 @@ using Ludots.Core.Presentation.Components;
 using Ludots.Core.Presentation.Config;
 using Ludots.Core.Presentation.DebugDraw;
 using Ludots.Core.Presentation.Hud;
+using Ludots.Core.Presentation.Minimap;
 using Ludots.Core.Presentation.Rendering;
+using Ludots.Core.Presentation.Terrain;
+using Ludots.Core.Presentation.Performers;
 using Ludots.Core.Scripting;
 using Ludots.Core.Systems;
 using Ludots.Platform.Abstractions;
@@ -35,6 +41,7 @@ namespace Ludots.Adapter.Raylib
     internal static class RaylibHostLoop
     {
         private const uint FlagWindowResizable = 4;
+        private static readonly ServiceKey<IRaylibBenchmarkRenderer> RaylibBenchmarkRendererKey = new("Platform.RaylibBenchmarkRenderer");
         private static bool _uiPointerCaptured;
         private static bool _emptyBufferWarned;
 
@@ -63,6 +70,13 @@ namespace Ludots.Adapter.Raylib
                 Ambient = 0.8f,
                 LightIntensity = 1.0f
             };
+            var visualHeightmapRenderer = new RaylibVisualHeightmapRenderer
+            {
+                VisibleRadiusCm = 140_000f,
+                LightPosition = new Vector3(50f, 200f, 100f),
+                Ambient = 0.45f,
+                LightIntensity = 0.55f
+            };
 
             try
             {
@@ -86,14 +100,7 @@ namespace Ludots.Adapter.Raylib
                 config.WindowWidth = screenWidth;
                 config.WindowHeight = screenHeight;
 
-                using var compositeRenderer = new RaylibSkiaRenderer(screenWidth, screenHeight);
-                using var underlayLayer = new SkiaRasterLayer();
-                using var uiLayer = new SkiaRasterLayer();
-                using var overlayLayer = new SkiaRasterLayer();
-                using var overlaySkiaRenderer = new SkiaOverlayRenderer();
-                underlayLayer.Resize(screenWidth, screenHeight);
-                uiLayer.Resize(screenWidth, screenHeight);
-                overlayLayer.Resize(screenWidth, screenHeight);
+                using var overlayCompositor = new RaylibOverlayCompositor(screenWidth, screenHeight);
                 uiRoot.Resize(screenWidth, screenHeight);
 
                 var initialCamera = new Camera3D
@@ -117,9 +124,21 @@ namespace Ludots.Adapter.Raylib
                 screenRayProvider.BindPresenter(cameraPresenter);
                 engine.SetService(CoreServiceKeys.ScreenProjector, (IScreenProjector)screenProjector);
                 engine.SetService(CoreServiceKeys.ScreenRayProvider, (IScreenRayProvider)screenRayProvider);
+                var cullingFocusOverride = new CameraCullingFocusOverride();
+                engine.SetService(CoreServiceKeys.CameraCullingFocusOverride, cullingFocusOverride);
 
-                var cullingSystem = new CameraCullingSystem(engine.World, engine.GameSession.Camera, engine.SpatialQueries, viewController, presentationTiming);
-                engine.RegisterPresentationSystem(cullingSystem);
+                var performerInstances = engine.GetService(CoreServiceKeys.PerformerEntityRuntime);
+                var cullingSystem = new CameraCullingSystem(
+                    engine.World,
+                    engine.GameSession.Camera,
+                    engine.SpatialQueries,
+                    viewController,
+                    loadedChunks: null,
+                    focusOverride: cullingFocusOverride,
+                    performers: performerInstances,
+                    timingDiagnostics: presentationTiming,
+                    cullingConfig: config.Presentation.CameraCulling);
+                engine.InsertPresentationSystemBefore<PresentationEntityLifecycleSystem>(cullingSystem);
                 engine.SetService(CoreServiceKeys.CameraCullingDebugState, cullingSystem.DebugState);
 
                 var renderCameraDebug = new RenderCameraDebugState();
@@ -139,12 +158,28 @@ namespace Ludots.Adapter.Raylib
                     PresentationTextCatalog? textCatalog = engine.GetService(CoreServiceKeys.PresentationTextCatalog);
                     PresentationTextLocaleSelection? localeSelection = engine.GetService(CoreServiceKeys.PresentationTextLocaleSelection);
                     screenOverlayBuffer = engine.GetService(CoreServiceKeys.ScreenOverlayBuffer);
-                    hudProjection = new WorldHudToScreenSystem(engine.World, worldHud, worldHudStrings, screenProjector, viewController, screenHud, presentationTiming);
-                    overlaySceneBuilder = new PresentationOverlaySceneBuilder(screenHud, worldHudStrings, textCatalog, localeSelection, screenOverlayBuffer);
-                    overlayScene = new PresentationOverlayScene(screenHud.Capacity + ScreenOverlayBuffer.MaxItems);
+                    MinimapScreenMarkerBuffer? minimapScreenMarkers = engine.GetService(CoreServiceKeys.MinimapScreenMarkerBuffer);
+                    CameraCullingDebugState? cullingDebug = engine.GetService(CoreServiceKeys.CameraCullingDebugState);
+                    hudProjection = new WorldHudToScreenSystem(engine.World, worldHud, worldHudStrings, screenProjector, viewController, screenHud, presentationTiming, cullingDebug);
+                    overlaySceneBuilder = new PresentationOverlaySceneBuilder(screenHud, worldHudStrings, textCatalog, localeSelection, screenOverlayBuffer, minimapScreenMarkers);
+                    overlayScene = new PresentationOverlayScene(screenHud.Capacity + ScreenOverlayBuffer.MaxItems + (minimapScreenMarkers?.Capacity ?? 0));
                 }
 
                 ValidateRequiredContextBeforeLoop(engine);
+
+                var debugDrawRenderer = new RaylibDebugDrawRenderer { PlaneY = 0.35f };
+                PresentationMaterialRegistry? materials = engine.GetService(CoreServiceKeys.PresentationMaterialRegistry);
+                using var primitiveRenderer = new RaylibPrimitiveRenderer(RaylibPrimitiveRenderMode.Instanced, engine.VFS, materials);
+                RaylibBenchmarkRenderService? benchmarkRenderer = null;
+                if (engine.TryGetService(CoreServiceKeys.PresentationMeshAssetRegistry, out MeshAssetRegistry benchmarkMeshes))
+                {
+                    ScreenHudBatchBuffer benchmarkHud = engine.GetService(CoreServiceKeys.PresentationScreenHudBuffer)
+                        ?? throw new InvalidOperationException("Raylib benchmark rendering requires PresentationScreenHudBuffer.");
+                    ScreenOverlayBuffer benchmarkOverlay = engine.GetService(CoreServiceKeys.ScreenOverlayBuffer)
+                        ?? throw new InvalidOperationException("Raylib benchmark rendering requires ScreenOverlayBuffer.");
+                    benchmarkRenderer = new RaylibBenchmarkRenderService(primitiveRenderer, benchmarkMeshes, benchmarkHud, benchmarkOverlay);
+                    engine.SetService(RaylibBenchmarkRendererKey, (IRaylibBenchmarkRenderer)benchmarkRenderer);
+                }
 
                 engine.Start();
                 if (string.IsNullOrWhiteSpace(config.StartupMapId))
@@ -153,18 +188,8 @@ namespace Ludots.Adapter.Raylib
                 }
                 engine.LoadMap(config.StartupMapId);
 
-                var debugDrawRenderer = new RaylibDebugDrawRenderer { PlaneY = 0.35f };
-                using var primitiveRenderer = new RaylibPrimitiveRenderer(RaylibPrimitiveRenderMode.Instanced, engine.VFS);
-
                 int lastW = screenWidth;
                 int lastH = screenHeight;
-                bool underlayHadContent = false;
-                bool overlayHadContent = false;
-                bool uiHadContent = false;
-                bool compositeHadContent = false;
-                int underlayLayerVersion = -1;
-                int topOverlayLayerVersion = -1;
-                var underlayPacer = new PresentationOverlayLanePacer(PresentationOverlayLayer.UnderUi);
                 string? screenshotPath = Environment.GetEnvironmentVariable("LUDOTS_TAKE_SCREENSHOT_PATH");
                 string? diagnosticPath = Environment.GetEnvironmentVariable("LUDOTS_RAYLIB_DIAGNOSTIC_PATH");
                 string? screenshotTargetPath = string.IsNullOrWhiteSpace(screenshotPath)
@@ -180,12 +205,43 @@ namespace Ludots.Adapter.Raylib
                 int screenshotFrame = int.TryParse(Environment.GetEnvironmentVariable("LUDOTS_TAKE_SCREENSHOT_FRAME"), out int parsedScreenshotFrame)
                     ? Math.Max(1, parsedScreenshotFrame)
                     : 60;
-                int frameIndex = 0;
-
-                while (!Rl.WindowShouldClose())
+                int autoExitFrame = int.TryParse(Environment.GetEnvironmentVariable("LUDOTS_AUTO_EXIT_FRAME"), out int parsedAutoExitFrame)
+                    ? Math.Max(0, parsedAutoExitFrame)
+                    : 0;
+                int timingLogIntervalFrames = int.TryParse(Environment.GetEnvironmentVariable("LUDOTS_RAYLIB_TIMING_LOG_INTERVAL_FRAMES"), out int parsedTimingLogIntervalFrames)
+                    ? Math.Max(0, parsedTimingLogIntervalFrames)
+                    : 0;
+                bool timingSystemBreakdownEnabled = timingLogIntervalFrames > 0 ||
+                    ReadEnvBoolOrDefault("LUDOTS_RAYLIB_TIMING_SYSTEM_BREAKDOWN", defaultValue: false);
+                if (presentationTiming != null)
                 {
+                    presentationTiming.SystemBreakdownEnabled = timingSystemBreakdownEnabled;
+                }
+                bool lightweightDiagnosticHudEnabled = ReadEnvBoolOrDefault(
+                    "LUDOTS_RAYLIB_LIGHTWEIGHT_DIAGNOSTIC_HUD",
+                    defaultValue: true);
+                float autoOrbitDegPerSecond = float.TryParse(Environment.GetEnvironmentVariable("LUDOTS_RAYLIB_AUTO_ORBIT_DEG_PER_SEC"), out float parsedAutoOrbitDegPerSecond)
+                    ? parsedAutoOrbitDegPerSecond
+                    : 0f;
+                int frameIndex = 0;
+                long previousLoopEnd = Stopwatch.GetTimestamp();
+
+                while (true)
+                {
+                    long windowPollStart = Stopwatch.GetTimestamp();
+                    bool shouldClose = Rl.WindowShouldClose();
+                    double windowPollMs = ElapsedMs(windowPollStart);
+                    if (shouldClose)
+                    {
+                        break;
+                    }
+
                     try
                     {
+                        long wallFrameStart = Stopwatch.GetTimestamp();
+                        presentationTiming?.ObserveHostLoopGap((wallFrameStart - previousLoopEnd) * 1000d / Stopwatch.Frequency);
+                        presentationTiming?.ObserveWindowPoll(windowPollMs);
+                        long preTickStart = wallFrameStart;
                         int w = Math.Max(1, Rl.GetScreenWidth());
                         int h = Math.Max(1, Rl.GetScreenHeight());
                         if (w != lastW || h != lastH)
@@ -194,18 +250,29 @@ namespace Ludots.Adapter.Raylib
                             lastH = h;
                             config.WindowWidth = w;
                             config.WindowHeight = h;
-                            compositeRenderer.Resize(w, h);
-                            underlayLayer.Resize(w, h);
-                            uiLayer.Resize(w, h);
-                            overlayLayer.Resize(w, h);
+                            overlayCompositor.Resize(w, h);
                             uiRoot.Resize(w, h);
                         }
 
                         float dt = Rl.GetFrameTime();
+                        presentationTiming?.ObserveFrame(dt * 1000d);
                         var renderDebug = ResolveRenderDebugState(engine);
-                        bool drawTerrain = renderDebug.DrawTerrain;
+                        bool activeMapRequestsDeepBackground = ActiveMapHasTag(engine, MapTags.RaylibDeepBackground);
+                        bool activeMapHidesDebugGuides = ActiveMapHasTag(engine, MapTags.RaylibHideDebugGuides);
+                        IBenchmarkSceneController? benchmarkController = engine.GetService(CoreServiceKeys.BenchmarkSceneController);
+                        bool cleanPerformanceMode = IsCleanPerformanceScene(benchmarkController);
+                        bool hostDiagnosticUiSuppressed = benchmarkController is { IsActive: true, SuppressHostDiagnosticUi: true };
+                        bool hostDebugGuidesSuppressed =
+                            activeMapHidesDebugGuides ||
+                            benchmarkController is { IsActive: true, SuppressHostDebugGuides: true };
+                        bool drawTerrain = renderDebug.DrawTerrain && !cleanPerformanceMode;
+                        bool drawVisualHeightmap = renderDebug.DrawTerrain;
+                        bool hasVisualHeightmap = engine.TryGetService(
+                            CoreServiceKeys.VisualHeightmap,
+                            out IVisualHeightmap? visualHeightmapForFrame) &&
+                            visualHeightmapForFrame is IVisualHeightmapRenderSource;
                         bool drawPrimitives = renderDebug.DrawPrimitives;
-                        bool drawDebugDraw = renderDebug.DrawDebugDraw;
+                        bool drawDebugDraw = renderDebug.DrawDebugDraw && !cleanPerformanceMode;
                         bool drawSkiaUi = renderDebug.DrawSkiaUi;
 
                         double uiInputMs = 0d;
@@ -219,12 +286,24 @@ namespace Ludots.Adapter.Raylib
 
                         presentationTiming?.ObserveUiInput(uiInputMs);
                         engine.SetService(CoreServiceKeys.UiCaptured, uiCaptured);
+                        presentationTiming?.ObserveHostPreTick(ElapsedMs(preTickStart));
 
                         engine.Tick(dt);
+                        long postTickStart = Stopwatch.GetTimestamp();
+                        if (autoOrbitDegPerSecond != 0f)
+                        {
+                            CameraState cameraState = engine.GameSession.Camera.State;
+                            engine.GameSession.Camera.ApplyPose(new CameraPoseRequest
+                            {
+                                Yaw = WorldPlane2D.NormalizeDegreesPositive(cameraState.Yaw + (autoOrbitDegPerSecond * dt))
+                            });
+                        }
 
                         float cameraAlpha = presentationFrameSetup?.GetInterpolationAlpha() ?? 1f;
                         cameraPresenter.Update(engine.GameSession.Camera, cameraAlpha, renderCameraDebug);
                         hudProjection?.Update(dt);
+                        benchmarkRenderer?.PrepareFrame(presentationTiming, lastW, lastH);
+
                         if (overlaySceneBuilder != null && overlayScene != null)
                         {
                             long overlayBuildStart = Stopwatch.GetTimestamp();
@@ -238,19 +317,26 @@ namespace Ludots.Adapter.Raylib
                         {
                             presentationTiming?.ObserveScreenOverlayBuild(0d, 0, 0);
                         }
+                        presentationTiming?.ObserveHostPostTick(ElapsedMs(postTickStart));
 
-                        string? activeMapId = engine.CurrentMapSession?.MapId.Value;
-                        bool uxPrototypeMapActive = string.Equals(activeMapId, "ux_prototype_battle", StringComparison.OrdinalIgnoreCase);
-
+                        long beginDrawingStart = Stopwatch.GetTimestamp();
                         Rl.BeginDrawing();
-                        Rl.ClearBackground(uxPrototypeMapActive
+                        presentationTiming?.ObserveBeginDrawing(ElapsedMs(beginDrawingStart));
+                        Restore3DDepthState();
+                        Rl.ClearBackground(activeMapRequestsDeepBackground
                             ? new Raylib_cs.Color(6, 10, 16, 255)
                             : new Raylib_cs.Color(0, 0, 0, 255));
 
                         var activeCamera = cameraAdapter.Camera;
-                        Rl.BeginMode3D(activeCamera);
+                        CameraRenderState3D activeCameraState = cameraPresenter.SmoothedRenderState;
+                        long mode3DStart = Stopwatch.GetTimestamp();
+                        Restore3DDepthState();
+                        BeginCoreMode3D(activeCamera, in activeCameraState);
+                        Restore3DDepthState();
 
-                        if (drawDebugDraw && !uxPrototypeMapActive)
+                        if (drawDebugDraw &&
+                            !(drawVisualHeightmap && hasVisualHeightmap) &&
+                            !hostDebugGuidesSuppressed)
                         {
                             DrawInfiniteGrid(activeCamera.target, 300, 1.0f, 10);
 
@@ -261,7 +347,19 @@ namespace Ludots.Adapter.Raylib
                         }
 
                         // 锚定到 target，网格以观察点为中心；halfCount 越大边界越远
-                        if (drawTerrain)
+                        if (drawVisualHeightmap &&
+                            engine.TryGetService(CoreServiceKeys.VisualHeightmap, out IVisualHeightmap? visualHeightmapForTerrain) &&
+                            visualHeightmapForTerrain is IVisualHeightmapRenderSource visualTerrainSource)
+                        {
+                            long terrainStart = Stopwatch.GetTimestamp();
+                            visualHeightmapRenderer.Render(visualTerrainSource, activeCamera);
+                            presentationTiming?.ObserveTerrain(
+                                ElapsedMs(terrainStart),
+                                visualHeightmapRenderer.ChunkBuildMsLastFrame,
+                                visualHeightmapRenderer.DrawnChunkCountLastFrame,
+                                visualHeightmapRenderer.BuiltChunkCountLastFrame);
+                        }
+                        else if (drawTerrain)
                         {
                             long terrainStart = Stopwatch.GetTimestamp();
                             terrainRenderer.Render(engine.VertexMap, activeCamera);
@@ -276,7 +374,14 @@ namespace Ludots.Adapter.Raylib
                             presentationTiming?.ObserveTerrain(0d, 0d, 0, 0);
                         }
 
-                        if (drawPrimitives &&
+                        bool benchmarkDrew = false;
+                        if (benchmarkRenderer != null)
+                        {
+                            benchmarkDrew = benchmarkRenderer.Draw(activeCamera);
+                        }
+
+                        if (!benchmarkDrew &&
+                            drawPrimitives &&
                             engine.TryGetService(CoreServiceKeys.PresentationPrimitiveDrawBuffer, out PrimitiveDrawBuffer draw) &&
                             engine.TryGetService(CoreServiceKeys.PresentationMeshAssetRegistry, out MeshAssetRegistry meshes))
                         {
@@ -288,12 +393,25 @@ namespace Ludots.Adapter.Raylib
                             long primitiveStart = Stopwatch.GetTimestamp();
                             PrimitiveDrawBuffer? snapshot = engine.GetService(CoreServiceKeys.PresentationVisualSnapshotBuffer);
                             SkinnedVisualBatchBuffer? skinnedBatch = engine.GetService(CoreServiceKeys.PresentationSkinnedVisualBatchBuffer);
-                            var visualHeightmap = engine.GetService(CoreServiceKeys.VisualHeightmap);
+                            engine.TryGetService(CoreServiceKeys.VisualHeightmap, out IVisualHeightmap? visualHeightmap);
                             primitiveRenderer.Draw(draw, activeCamera, snapshot, skinnedBatch, meshes, renderDebug.AcceptanceScaleMultiplier, visualHeightmap);
                             presentationTiming?.ObservePrimitiveRender(
                                 ElapsedMs(primitiveStart),
                                 primitiveRenderer.LastInstancedInstances,
-                                primitiveRenderer.LastInstancedBatches);
+                                primitiveRenderer.LastInstancedBatches,
+                                primitiveRenderer.LastInstancedMatrixBuildMs,
+                                primitiveRenderer.LastInstancedMeshDrawMs,
+                                primitiveRenderer.LastInstancedMatrixCacheHits,
+                                primitiveRenderer.LastInstancedMatrixCacheMisses,
+                                primitiveRenderer.LastPersistentSyncMs,
+                                primitiveRenderer.LastPersistentBucketDrawMs,
+                                primitiveRenderer.LastImmediateDrawMs,
+                                primitiveRenderer.LastImmediateSkippedCount,
+                                skinnedBatch?.Count ?? 0,
+                                primitiveRenderer.LastGpuSkinnedInstances,
+                                primitiveRenderer.LastGpuSkinnedBatches,
+                                primitiveRenderer.LastGpuSkinnedMatrixBuildMs,
+                                primitiveRenderer.LastGpuSkinnedMeshDrawMs);
                         }
                         else
                         {
@@ -301,146 +419,101 @@ namespace Ludots.Adapter.Raylib
                         }
 
                         // Draw ground overlays (range circles, cones, etc.)
-                        if (engine.TryGetService(CoreServiceKeys.GroundOverlayBuffer, out GroundOverlayBuffer overlays) &&
+                        if (!cleanPerformanceMode &&
+                            engine.TryGetService(CoreServiceKeys.GroundOverlayBuffer, out GroundOverlayBuffer overlays) &&
                             overlays.Count > 0)
                         {
+                            long groundOverlayStart = Stopwatch.GetTimestamp();
                             DrawGroundOverlays(overlays);
+                            presentationTiming?.ObserveGroundOverlayRender(ElapsedMs(groundOverlayStart), overlays.Count);
+                        }
+                        else
+                        {
+                            presentationTiming?.ObserveGroundOverlayRender(0d, 0);
                         }
 
-                        if (engine.GlobalContext.TryGetValue(CoreServiceKeys.RoadSplineBuffer.Name, out var splineObj) &&
+                        if (!cleanPerformanceMode &&
+                            engine.GlobalContext.TryGetValue(CoreServiceKeys.RoadSplineBuffer.Name, out var splineObj) &&
                             splineObj is RoadSplineBuffer roadSplines && roadSplines.Count > 0)
                         {
+                            long roadSplineStart = Stopwatch.GetTimestamp();
                             DrawRoadSplines(roadSplines);
+                            presentationTiming?.ObserveRoadSplineRender(ElapsedMs(roadSplineStart), roadSplines.Count);
+                        }
+                        else
+                        {
+                            presentationTiming?.ObserveRoadSplineRender(0d, 0);
                         }
 
                         if (drawDebugDraw &&
                             engine.TryGetService(CoreServiceKeys.DebugDrawCommandBuffer, out DebugDrawCommandBuffer dd))
                         {
+                            long debugDrawStart = Stopwatch.GetTimestamp();
                             debugDrawRenderer.Draw(dd);
+                            presentationTiming?.ObserveDebugDrawRender(
+                                ElapsedMs(debugDrawStart),
+                                dd.Lines.Count + dd.Circles.Count + dd.Boxes.Count);
+                        }
+                        else
+                        {
+                            presentationTiming?.ObserveDebugDrawRender(0d, 0);
                         }
 
-                        Rl.EndMode3D();
+                        EndCoreMode3D();
+                        presentationTiming?.ObserveMode3D(ElapsedMs(mode3DStart));
 
                         long overlayStart = Stopwatch.GetTimestamp();
-                        overlaySkiaRenderer.ResetFrameStats();
-
-                        bool hasUnderlay = overlayScene != null && overlayScene.ContainsLayer(PresentationOverlayLayer.UnderUi);
-                        bool hasTopOverlay = overlayScene != null && overlayScene.ContainsLayer(PresentationOverlayLayer.TopMost);
-                        bool hasUiLayer = drawSkiaUi && uiRoot.Scene != null;
-
-                        int currentUnderlayVersion = overlayScene?.GetLayerVersion(PresentationOverlayLayer.UnderUi) ?? 0;
-                        int currentTopOverlayVersion = overlayScene?.GetLayerVersion(PresentationOverlayLayer.TopMost) ?? 0;
-                        bool refreshUnderlay = overlayScene != null && (hasUnderlay || underlayHadContent) &&
-                            (currentUnderlayVersion != underlayLayerVersion || hasUnderlay != underlayHadContent);
-                        bool underlayCanvasChanged = false;
-                        if (refreshUnderlay)
-                        {
-                            PresentationOverlayLanePacer.LaneRefreshPlan underlayPlan = default;
-                            if (hasUnderlay)
-                            {
-                                underlayPlan = underlayPacer.BuildPlan(overlayScene!);
-                            }
-
-                            if (!hasUnderlay || underlayPlan.HasAnyRefresh)
-                            {
-                                underlayLayer.Clear();
-                                if (hasUnderlay)
-                                {
-                                    overlaySkiaRenderer.Render(overlayScene!, underlayLayer.Canvas,
-                                        PresentationOverlayLayer.UnderUi, underlayPlan);
-                                    underlayLayer.SetHasContent(true);
-                                }
-                                underlayCanvasChanged = true;
-                            }
-
-                            if (hasUnderlay)
-                                underlayPacer.MarkPresented(overlayScene!, underlayPlan);
-                            else
-                                underlayPacer.Reset();
-
-                            underlayHadContent = hasUnderlay;
-                            underlayLayerVersion = currentUnderlayVersion;
-                        }
-
-                        bool refreshUiLayer = hasUiLayer != uiHadContent || (drawSkiaUi && uiRoot.IsDirty);
-                        if (refreshUiLayer)
-                        {
-                            long uiRenderStart = Stopwatch.GetTimestamp();
-                            uiLayer.Clear();
-                            if (hasUiLayer)
-                            {
-                                skiaRenderer.SetCanvas(uiLayer.Canvas);
-                                uiRoot.Render();
-                                uiLayer.SetHasContent(true);
-                            }
-                            presentationTiming?.ObserveUiRender(ElapsedMs(uiRenderStart));
-                            uiHadContent = hasUiLayer;
-                        }
-                        else
-                        {
-                            presentationTiming?.ObserveUiRender(0d);
-                        }
-
-                        bool refreshTopOverlay = overlayScene != null && (hasTopOverlay || overlayHadContent) &&
-                            (currentTopOverlayVersion != topOverlayLayerVersion || hasTopOverlay != overlayHadContent);
-                        if (refreshTopOverlay)
-                        {
-                            overlayLayer.Clear();
-                            if (hasTopOverlay)
-                            {
-                                overlaySkiaRenderer.Render(overlayScene!, overlayLayer.Canvas, PresentationOverlayLayer.TopMost);
-                                overlayLayer.SetHasContent(true);
-                            }
-                            overlayHadContent = hasTopOverlay;
-                            topOverlayLayerVersion = currentTopOverlayVersion;
-                        }
-
-                        bool hasCompositeContent = hasUnderlay || hasUiLayer || hasTopOverlay;
-                        bool refreshComposite = underlayCanvasChanged || refreshUiLayer || refreshTopOverlay
-                            || hasCompositeContent != compositeHadContent;
-                        if (refreshComposite)
-                        {
-                            compositeRenderer.Canvas.Clear(SKColors.Transparent);
-                            if (hasUnderlay)
-                            {
-                                underlayLayer.DrawTo(compositeRenderer.Canvas);
-                            }
-
-                            if (hasUiLayer)
-                            {
-                                uiLayer.DrawTo(compositeRenderer.Canvas);
-                            }
-
-                            if (hasTopOverlay)
-                            {
-                                overlayLayer.DrawTo(compositeRenderer.Canvas);
-                            }
-
-                            long uiUploadStart = Stopwatch.GetTimestamp();
-                            compositeRenderer.UpdateTexture();
-                            presentationTiming?.ObserveUiUpload(hasCompositeContent ? ElapsedMs(uiUploadStart) : 0d);
-                            compositeHadContent = hasCompositeContent;
-                        }
-                        else
-                        {
-                            presentationTiming?.ObserveUiUpload(0d);
-                        }
-
-                        if (hasCompositeContent || compositeHadContent)
-                        {
-                            compositeRenderer.Draw();
-                        }
-
-                        presentationTiming?.ObserveCompositeSkip(!refreshComposite);
+                        OverlayCompositeResult overlayResult = overlayCompositor.Render(
+                            overlayScene,
+                            uiRoot,
+                            skiaRenderer,
+                            drawSkiaUi,
+                            hostDiagnosticUiSuppressed);
+                        presentationTiming?.ObserveUiRender(overlayResult.UiRenderMs);
+                        presentationTiming?.ObserveUiUpload(overlayResult.UploadMs);
+                        presentationTiming?.ObserveCompositeSkip(!overlayResult.RefreshComposite);
                         screenOverlayBuffer?.Clear();
                         presentationTiming?.ObserveScreenOverlayDraw(
                             ElapsedMs(overlayStart),
-                            overlaySkiaRenderer.RebuiltLaneCountLastFrame,
-                            overlaySkiaRenderer.CachedTextLayoutCount);
+                            overlayResult.PaintMs,
+                            overlayResult.CompositeMs,
+                            overlayResult.UploadMs,
+                            overlayResult.FinalDrawMs,
+                            overlayCompositor.OverlayRenderer.RebuiltLaneCountLastFrame,
+                            overlayCompositor.OverlayRenderer.CachedTextLayoutCount);
+                        if (timingLogIntervalFrames > 0 && frameIndex % timingLogIntervalFrames == 0)
+                        {
+                            SkiaOverlayRenderer overlaySkiaRenderer = overlayCompositor.OverlayRenderer;
+                            AppendRaylibDiagnostic(
+                                diagnosticPath,
+                                $"overlay-lanes backend=skia underBar={overlaySkiaRenderer.LastUnderUiBarMs:F2} underText={overlaySkiaRenderer.LastUnderUiTextMs:F2} barBuild={overlaySkiaRenderer.LastBarBatchBuildMs:F2} barDraw={overlaySkiaRenderer.LastBarBatchDrawMs:F2} barBuckets={overlaySkiaRenderer.LastBarBatchBucketCount} barCache={overlaySkiaRenderer.LastBarSpriteCacheHits}/{overlaySkiaRenderer.LastBarSpriteCacheMisses}/clear{overlaySkiaRenderer.LastBarSpriteCacheClears}/size{overlaySkiaRenderer.BarSpriteCacheCount} textBuild={overlaySkiaRenderer.LastTextBatchBuildMs:F2} textDraw={overlaySkiaRenderer.LastTextBatchDrawMs:F2} textBuckets={overlaySkiaRenderer.LastTextSpriteBatchBucketCount} markerBuild={overlaySkiaRenderer.LastMinimapMarkerBatchBuildMs:F2} markerDraw={overlaySkiaRenderer.LastMinimapMarkerBatchDrawMs:F2} markerBuckets={overlaySkiaRenderer.LastMinimapMarkerBatchBucketCount}/{overlaySkiaRenderer.LastMinimapMarkerOrientationBatchBucketCount} markerSpriteCache={overlaySkiaRenderer.LastMinimapMarkerSpriteCacheHits}/{overlaySkiaRenderer.LastMinimapMarkerSpriteCacheMisses}/clear{overlaySkiaRenderer.LastMinimapMarkerSpriteCacheClears}/size{overlaySkiaRenderer.MarkerSpriteCacheCount} textSpriteCache={overlaySkiaRenderer.LastTextSpriteCacheHits}/{overlaySkiaRenderer.LastTextSpriteCacheMisses}/clear{overlaySkiaRenderer.LastTextSpriteCacheClears}/size{overlaySkiaRenderer.TextSpriteCacheCount} textLayout={overlaySkiaRenderer.LastTextLayoutCacheHits}/{overlaySkiaRenderer.LastTextLayoutCacheMisses}/clear{overlaySkiaRenderer.LastTextLayoutCacheClears}/size{overlaySkiaRenderer.CachedTextLayoutCount}");
+                        }
 
+                        bool drawLightweightDiagnosticHud = lightweightDiagnosticHudEnabled;
+                        if (drawLightweightDiagnosticHud)
+                        {
+                            long nativeDiagnosticStart = Stopwatch.GetTimestamp();
+                            DrawLightweightDiagnosticHud(engine, presentationTiming);
+                            presentationTiming?.ObserveNativeDiagnosticHud(ElapsedMs(nativeDiagnosticStart));
+                        }
+                        else
+                        {
+                            presentationTiming?.ObserveNativeDiagnosticHud(0d);
+                        }
+
+                        long endDrawingStart = Stopwatch.GetTimestamp();
                         Rl.EndDrawing();
+                        presentationTiming?.ObserveEndDrawing(ElapsedMs(endDrawingStart));
+                        presentationTiming?.ObserveWallFrame(ElapsedMs(wallFrameStart));
+                        previousLoopEnd = Stopwatch.GetTimestamp();
 
                         frameIndex++;
+                        if (timingLogIntervalFrames > 0 && frameIndex % timingLogIntervalFrames == 0)
+                        {
+                            AppendRaylibDiagnostic(diagnosticPath, $"sample frame={frameIndex}");
+                            AppendRaylibDiagnostic(diagnosticPath, BuildTimingDiagnostic(engine, presentationTiming, overlayScene));
+                        }
+
                         if (screenshotPending && frameIndex >= screenshotFrame)
                         {
                             string fullScreenshotPath = screenshotTargetPath!;
@@ -453,8 +526,16 @@ namespace Ludots.Adapter.Raylib
                             AppendRaylibDiagnostic(
                                 diagnosticPath,
                                 $"screenshot frame={frameIndex} cameraPos=({activeCamera.position.X:F2},{activeCamera.position.Y:F2},{activeCamera.position.Z:F2}) cameraTarget=({activeCamera.target.X:F2},{activeCamera.target.Y:F2},{activeCamera.target.Z:F2})");
+                            AppendRaylibDiagnostic(diagnosticPath, BuildTimingDiagnostic(engine, presentationTiming, overlayScene));
+                            AppendRaylibDiagnostic(diagnosticPath, primitiveRenderer.BuildVisualKindDiagnosticSummary());
+                            if (engine.TryGetService(CoreServiceKeys.PresentationMeshAssetRegistry, out MeshAssetRegistry meshesForDiagnostics))
+                            {
+                                AppendRaylibDiagnostic(diagnosticPath, primitiveRenderer.BuildPrimitiveLaneDiagnosticSummary(meshesForDiagnostics));
+                            }
+
                             AppendRaylibDiagnostic(diagnosticPath, BuildInputSelectionDiagnostic(engine));
 
+                            long screenshotStart = Stopwatch.GetTimestamp();
                             Rl.TakeScreenshot(screenshotFileName!);
                             if (!string.IsNullOrWhiteSpace(screenshotWorkingPath) &&
                                 !string.Equals(screenshotWorkingPath, fullScreenshotPath, StringComparison.OrdinalIgnoreCase) &&
@@ -463,9 +544,17 @@ namespace Ludots.Adapter.Raylib
                                 File.Copy(screenshotWorkingPath, fullScreenshotPath, overwrite: true);
                                 File.Delete(screenshotWorkingPath);
                             }
+                            presentationTiming?.ObserveScreenshot(ElapsedMs(screenshotStart));
 
                             screenshotPending = false;
                             Log.Info(in LogChannels.Engine, $"Captured runtime screenshot: {fullScreenshotPath}");
+                        }
+
+                        if (autoExitFrame > 0 && frameIndex >= autoExitFrame)
+                        {
+                            AppendRaylibDiagnostic(diagnosticPath, $"auto-exit frame={frameIndex}");
+                            AppendRaylibDiagnostic(diagnosticPath, BuildTimingDiagnostic(engine, presentationTiming, overlayScene));
+                            break;
                         }
                     }
                     catch (Exception ex)
@@ -479,8 +568,61 @@ namespace Ludots.Adapter.Raylib
             {
                 if (windowOpened) Rl.CloseWindow();
                 terrainRenderer.Dispose();
-                engine.Stop();
+                visualHeightmapRenderer.Dispose();
+                engine.Dispose();
             }
+        }
+
+        private static unsafe void BeginCoreMode3D(in Camera3D camera, in CameraRenderState3D cameraState)
+        {
+            Rl.rlDrawRenderBatchActive();
+            Rl.rlMatrixMode((int)RlMatrixMode.RL_PROJECTION);
+            Rl.rlPushMatrix();
+            Rl.rlLoadIdentity();
+
+            CameraClipPlanes clipPlanes = CameraViewportUtil.ResolveClipPlanes(in cameraState);
+            float aspect = MathF.Max(0.001f, Rl.GetScreenWidth() / (float)Math.Max(1, Rl.GetScreenHeight()));
+            if (camera.projection == CameraProjection.CAMERA_ORTHOGRAPHIC)
+            {
+                double top = camera.fovy / 2.0;
+                double right = top * aspect;
+                Rl.rlOrtho(-right, right, -top, top, clipPlanes.NearMeters, clipPlanes.FarMeters);
+            }
+            else
+            {
+                double top = clipPlanes.NearMeters * Math.Tan(WorldPlane2D.DegToRadValue(camera.fovy) * 0.5);
+                double right = top * aspect;
+                Rl.rlFrustum(-right, right, -top, top, clipPlanes.NearMeters, clipPlanes.FarMeters);
+            }
+
+            Rl.rlMatrixMode((int)RlMatrixMode.RL_MODELVIEW);
+            Rl.rlLoadIdentity();
+            Matrix4x4 view = Matrix4x4.CreateLookAt(camera.position, camera.target, camera.up);
+            RaylibMatrix raylibView = RaylibMatrix.FromSystemNumerics(in view);
+            MultMatrix(in raylibView);
+            Rl.rlEnableDepthTest();
+        }
+
+        private static unsafe void MultMatrix(in RaylibMatrix matrix)
+        {
+            float* values = stackalloc float[16]
+            {
+                matrix.m0, matrix.m1, matrix.m2, matrix.m3,
+                matrix.m4, matrix.m5, matrix.m6, matrix.m7,
+                matrix.m8, matrix.m9, matrix.m10, matrix.m11,
+                matrix.m12, matrix.m13, matrix.m14, matrix.m15
+            };
+            Rl.rlMultMatrixf(values);
+        }
+
+        private static void EndCoreMode3D()
+        {
+            Rl.rlDrawRenderBatchActive();
+            Rl.rlMatrixMode((int)RlMatrixMode.RL_PROJECTION);
+            Rl.rlPopMatrix();
+            Rl.rlMatrixMode((int)RlMatrixMode.RL_MODELVIEW);
+            Rl.rlLoadIdentity();
+            Rl.rlDisableDepthTest();
         }
 
         private static void AppendRaylibDiagnostic(string? diagnosticPath, string message)
@@ -498,6 +640,232 @@ namespace Ludots.Adapter.Raylib
             }
 
             File.AppendAllText(fullPath, $"[{DateTime.UtcNow:O}] {message}{Environment.NewLine}");
+        }
+
+        private static bool IsCleanPerformanceScene(IBenchmarkSceneController? benchmarkController)
+        {
+            return benchmarkController is { IsActive: true, IsCleanPerformanceScene: true };
+        }
+
+        private static bool ActiveMapHasTag(GameEngine engine, MapTag tag)
+        {
+            MapSession? session = engine.CurrentMapSession;
+            IReadOnlyList<string>? tags = session?.MapConfig?.Tags;
+            if (tags == null || tags.Count == 0)
+            {
+                return false;
+            }
+
+            string required = tag.Name;
+            for (int i = 0; i < tags.Count; i++)
+            {
+                if (string.Equals(tags[i], required, StringComparison.Ordinal))
+                {
+                    return true;
+                }
+            }
+
+            return false;
+        }
+
+        private static bool ReadEnvBoolOrDefault(string key, bool defaultValue)
+        {
+            string? raw = Environment.GetEnvironmentVariable(key);
+            if (string.IsNullOrWhiteSpace(raw))
+            {
+                return defaultValue;
+            }
+
+            return raw.Equals("1", StringComparison.OrdinalIgnoreCase) ||
+                   raw.Equals("true", StringComparison.OrdinalIgnoreCase) ||
+                   raw.Equals("yes", StringComparison.OrdinalIgnoreCase) ||
+                   raw.Equals("on", StringComparison.OrdinalIgnoreCase);
+        }
+
+        private static void DrawLightweightDiagnosticHud(GameEngine engine, PresentationTimingDiagnostics? timing)
+        {
+            if (timing == null)
+            {
+                return;
+            }
+
+            ScreenHudBatchBuffer? screenHud = engine.GetService(CoreServiceKeys.PresentationScreenHudBuffer);
+            WorldHudBatchBuffer? worldHud = engine.GetService(CoreServiceKeys.PresentationWorldHudBuffer);
+            Ludots.Core.Gameplay.GAS.EffectRequestQueue? effectRequests = engine.GetService(CoreServiceKeys.EffectRequestQueue);
+            float frameMs = timing.LastWallFrameMs > 0.001f
+                ? timing.LastWallFrameMs
+                : (timing.WallFrameMs > 0.001f ? timing.WallFrameMs : timing.LastFrameMs);
+            float fps = frameMs > 0.001f ? 1000f / frameMs : 0f;
+            string line1 = $"FPS {FormatFixed(fps, 4, 0)}  FRAME {FormatFixed(frameMs, 5, 1)}MS  TICK {FormatFixed(timing.LastTotalTickMs, 5, 1)}MS";
+            string line2 = $"ISM {FormatFixed(timing.PrimitiveInstancesLastFrame, 6)}  SKIN {FormatFixed(timing.GpuSkinnedInstancesLastFrame, 6)}/{FormatFixed(timing.SkinnedRawLastFrame, 6)}  3D {FormatFixed(timing.LastMode3DMs, 5, 1)}MS";
+            string line3 = $"HUD {FormatFixed(timing.WorldHudProjectedLastFrame, 6)}/{FormatFixed(worldHud?.Count ?? 0, 6)}  BAR {FormatFixed(screenHud?.BarCount ?? 0, 6)}  TEXT {FormatFixed(screenHud?.TextCount ?? 0, 6)}";
+            string line4 = $"SKIA {FormatFixed(timing.LastScreenOverlayPaintMs, 5, 1)}MS  EMIT {FormatFixed(timing.LastPerformerEmitMs, 5, 1)}MS  BEHAV {FormatFixed(timing.LastPerformerBehaviorMs, 5, 1)}MS";
+            string line5 = $"FXQ {FormatFixed(effectRequests?.Count ?? 0, 6)}  OVF {FormatFixed(effectRequests?.OverflowCount ?? 0, 6)}  DROP {FormatFixed(effectRequests?.DroppedCount ?? 0, 6)}";
+
+            const int x = 10;
+            const int y = 10;
+            const int fontSize = 20;
+            const int lineHeight = 25;
+            const int panelWidth = 720;
+            const int panelHeight = 137;
+            var background = new Color(0, 0, 0, 238);
+            var border = new Color(80, 255, 150, 255);
+            Rl.DrawRectangle(x - 8, y - 8, panelWidth, panelHeight, background);
+            Rl.DrawRectangleLines(x - 8, y - 8, panelWidth, panelHeight, border);
+            DrawDiagnosticText(line1, x, y, fontSize, new Color(215, 255, 220, 255));
+            DrawDiagnosticText(line2, x, y + lineHeight, fontSize, new Color(220, 240, 255, 255));
+            DrawDiagnosticText(line3, x, y + lineHeight * 2, fontSize, new Color(255, 245, 185, 255));
+            DrawDiagnosticText(line4, x, y + lineHeight * 3, fontSize, new Color(245, 210, 255, 255));
+            DrawDiagnosticText(line5, x, y + lineHeight * 4, fontSize, new Color(255, 215, 180, 255));
+        }
+
+        private static string FormatFixed(float value, int width, int decimals)
+        {
+            string text = decimals <= 0 ? value.ToString("F0") : value.ToString($"F{decimals}");
+            return text.Length >= width ? text.Substring(text.Length - width, width) : text.PadLeft(width);
+        }
+
+        private static string FormatFixed(double value, int width, int decimals)
+        {
+            string text = decimals <= 0 ? value.ToString("F0") : value.ToString($"F{decimals}");
+            return text.Length >= width ? text.Substring(text.Length - width, width) : text.PadLeft(width);
+        }
+
+        private static string FormatFixed(int value, int width)
+        {
+            string text = value.ToString();
+            return text.Length >= width ? text.Substring(text.Length - width, width) : text.PadLeft(width);
+        }
+
+        private static void DrawDiagnosticText(string text, int x, int y, int fontSize, Color color)
+        {
+            _ = fontSize;
+            DrawBitmapText(text, x + 2, y + 2, 2, new Color(0, 0, 0, 255));
+            DrawBitmapText(text, x, y, 2, color);
+        }
+
+        private static void DrawBitmapText(string text, int x, int y, int scale, Color color)
+        {
+            int cursor = x;
+            for (int i = 0; i < text.Length; i++)
+            {
+                char c = char.ToUpperInvariant(text[i]);
+                if (c == ' ')
+                {
+                    cursor += 4 * scale;
+                    continue;
+                }
+
+                ulong glyph = GetDiagnosticGlyph(c);
+                for (int row = 0; row < 7; row++)
+                {
+                    int bits = (int)((glyph >> ((6 - row) * 5)) & 0b11111UL);
+                    for (int col = 0; col < 5; col++)
+                    {
+                        if ((bits & (1 << (4 - col))) == 0)
+                        {
+                            continue;
+                        }
+
+                        Rl.DrawRectangle(cursor + col * scale, y + row * scale, scale, scale, color);
+                    }
+                }
+
+                cursor += 6 * scale;
+            }
+        }
+
+        private static ulong PackDiagnosticGlyph(int r0, int r1, int r2, int r3, int r4, int r5, int r6)
+        {
+            return (((ulong)r0 & 0b11111UL) << 30) |
+                   (((ulong)r1 & 0b11111UL) << 25) |
+                   (((ulong)r2 & 0b11111UL) << 20) |
+                   (((ulong)r3 & 0b11111UL) << 15) |
+                   (((ulong)r4 & 0b11111UL) << 10) |
+                   (((ulong)r5 & 0b11111UL) << 5) |
+                   ((ulong)r6 & 0b11111UL);
+        }
+
+        private static ulong GetDiagnosticGlyph(char c)
+        {
+            return c switch
+            {
+                'A' => PackDiagnosticGlyph(0b01110, 0b10001, 0b10001, 0b11111, 0b10001, 0b10001, 0b10001),
+                'B' => PackDiagnosticGlyph(0b11110, 0b10001, 0b10001, 0b11110, 0b10001, 0b10001, 0b11110),
+                'C' => PackDiagnosticGlyph(0b01111, 0b10000, 0b10000, 0b10000, 0b10000, 0b10000, 0b01111),
+                'D' => PackDiagnosticGlyph(0b11110, 0b10001, 0b10001, 0b10001, 0b10001, 0b10001, 0b11110),
+                'E' => PackDiagnosticGlyph(0b11111, 0b10000, 0b10000, 0b11110, 0b10000, 0b10000, 0b11111),
+                'F' => PackDiagnosticGlyph(0b11111, 0b10000, 0b10000, 0b11110, 0b10000, 0b10000, 0b10000),
+                'G' => PackDiagnosticGlyph(0b01111, 0b10000, 0b10000, 0b10111, 0b10001, 0b10001, 0b01111),
+                'H' => PackDiagnosticGlyph(0b10001, 0b10001, 0b10001, 0b11111, 0b10001, 0b10001, 0b10001),
+                'I' => PackDiagnosticGlyph(0b11111, 0b00100, 0b00100, 0b00100, 0b00100, 0b00100, 0b11111),
+                'K' => PackDiagnosticGlyph(0b10001, 0b10010, 0b10100, 0b11000, 0b10100, 0b10010, 0b10001),
+                'L' => PackDiagnosticGlyph(0b10000, 0b10000, 0b10000, 0b10000, 0b10000, 0b10000, 0b11111),
+                'M' => PackDiagnosticGlyph(0b10001, 0b11011, 0b10101, 0b10101, 0b10001, 0b10001, 0b10001),
+                'N' => PackDiagnosticGlyph(0b10001, 0b11001, 0b10101, 0b10011, 0b10001, 0b10001, 0b10001),
+                'O' => PackDiagnosticGlyph(0b01110, 0b10001, 0b10001, 0b10001, 0b10001, 0b10001, 0b01110),
+                'P' => PackDiagnosticGlyph(0b11110, 0b10001, 0b10001, 0b11110, 0b10000, 0b10000, 0b10000),
+                'R' => PackDiagnosticGlyph(0b11110, 0b10001, 0b10001, 0b11110, 0b10100, 0b10010, 0b10001),
+                'S' => PackDiagnosticGlyph(0b01111, 0b10000, 0b10000, 0b01110, 0b00001, 0b00001, 0b11110),
+                'T' => PackDiagnosticGlyph(0b11111, 0b00100, 0b00100, 0b00100, 0b00100, 0b00100, 0b00100),
+                'U' => PackDiagnosticGlyph(0b10001, 0b10001, 0b10001, 0b10001, 0b10001, 0b10001, 0b01110),
+                'V' => PackDiagnosticGlyph(0b10001, 0b10001, 0b10001, 0b10001, 0b01010, 0b01010, 0b00100),
+                'W' => PackDiagnosticGlyph(0b10001, 0b10001, 0b10001, 0b10101, 0b10101, 0b10101, 0b01010),
+                'X' => PackDiagnosticGlyph(0b10001, 0b10001, 0b01010, 0b00100, 0b01010, 0b10001, 0b10001),
+                'Y' => PackDiagnosticGlyph(0b10001, 0b10001, 0b01010, 0b00100, 0b00100, 0b00100, 0b00100),
+                '0' => PackDiagnosticGlyph(0b01110, 0b10001, 0b10011, 0b10101, 0b11001, 0b10001, 0b01110),
+                '1' => PackDiagnosticGlyph(0b00100, 0b01100, 0b00100, 0b00100, 0b00100, 0b00100, 0b01110),
+                '2' => PackDiagnosticGlyph(0b01110, 0b10001, 0b00001, 0b00010, 0b00100, 0b01000, 0b11111),
+                '3' => PackDiagnosticGlyph(0b11110, 0b00001, 0b00001, 0b01110, 0b00001, 0b00001, 0b11110),
+                '4' => PackDiagnosticGlyph(0b00010, 0b00110, 0b01010, 0b10010, 0b11111, 0b00010, 0b00010),
+                '5' => PackDiagnosticGlyph(0b11111, 0b10000, 0b10000, 0b11110, 0b00001, 0b00001, 0b11110),
+                '6' => PackDiagnosticGlyph(0b01110, 0b10000, 0b10000, 0b11110, 0b10001, 0b10001, 0b01110),
+                '7' => PackDiagnosticGlyph(0b11111, 0b00001, 0b00010, 0b00100, 0b01000, 0b01000, 0b01000),
+                '8' => PackDiagnosticGlyph(0b01110, 0b10001, 0b10001, 0b01110, 0b10001, 0b10001, 0b01110),
+                '9' => PackDiagnosticGlyph(0b01110, 0b10001, 0b10001, 0b01111, 0b00001, 0b00001, 0b01110),
+                '.' => PackDiagnosticGlyph(0b00000, 0b00000, 0b00000, 0b00000, 0b00000, 0b01100, 0b01100),
+                '/' => PackDiagnosticGlyph(0b00001, 0b00010, 0b00010, 0b00100, 0b01000, 0b01000, 0b10000),
+                '-' => PackDiagnosticGlyph(0b00000, 0b00000, 0b00000, 0b11111, 0b00000, 0b00000, 0b00000),
+                ':' => PackDiagnosticGlyph(0b00000, 0b01100, 0b01100, 0b00000, 0b01100, 0b01100, 0b00000),
+                '|' => PackDiagnosticGlyph(0b00100, 0b00100, 0b00100, 0b00100, 0b00100, 0b00100, 0b00100),
+                _ => PackDiagnosticGlyph(0b11111, 0b10001, 0b00001, 0b00110, 0b00100, 0b00000, 0b00100),
+            };
+        }
+
+        private static void Restore3DDepthState()
+        {
+            Rl.rlEnableDepthTest();
+            Rl.rlEnableDepthMask();
+            Rl.rlEnableBackfaceCulling();
+        }
+
+        private static string BuildTimingDiagnostic(
+            GameEngine engine,
+            PresentationTimingDiagnostics? timing,
+            PresentationOverlayScene? overlayScene)
+        {
+            if (timing == null)
+            {
+                return "timing unavailable";
+            }
+
+            WorldHudBatchBuffer? worldHud = engine.GetService(CoreServiceKeys.PresentationWorldHudBuffer);
+            ScreenHudBatchBuffer? screenHud = engine.GetService(CoreServiceKeys.PresentationScreenHudBuffer);
+            PrimitiveDrawBuffer? primitives = engine.GetService(CoreServiceKeys.PresentationPrimitiveDrawBuffer);
+            PerformerEntityRuntime? performers = engine.GetService(CoreServiceKeys.PerformerEntityRuntime);
+            GroundOverlayBuffer? groundOverlay = engine.GetService(CoreServiceKeys.GroundOverlayBuffer);
+            RoadSplineBuffer? roadSpline = engine.GetService(CoreServiceKeys.RoadSplineBuffer);
+            DebugDrawCommandBuffer? debugDraw = engine.GetService(CoreServiceKeys.DebugDrawCommandBuffer);
+            string? activeMapId = engine.CurrentMapSession?.MapId.Value;
+            IBenchmarkSceneController? benchmarkController = engine.GetService(CoreServiceKeys.BenchmarkSceneController);
+            bool cleanPerformanceMode = IsCleanPerformanceScene(benchmarkController);
+            float frameMs = timing.LastWallFrameMs > 0.001f
+                ? timing.LastWallFrameMs
+                : (timing.WallFrameMs > 0.001f ? timing.WallFrameMs : timing.LastFrameMs);
+            float fps = frameMs > 0.001f ? 1000f / frameMs : 0f;
+            int rawDebugDrawCount = debugDraw == null ? 0 : debugDraw.Lines.Count + debugDraw.Circles.Count + debugDraw.Boxes.Count;
+            string performerDefs = performers?.BuildActiveDefinitionSummary(8) ?? string.Empty;
+            return $"timing frame={frameMs:F2}ms fps={fps:F1} cleanPerf={(cleanPerformanceMode ? 1 : 0)} visibleEntities={timing.VisibleEntitiesLastFrame} performerActive={performers?.ActiveCount ?? 0} performerDefs={performerDefs} primitiveRaw={primitives?.Count ?? 0} primitiveStaticRaw={primitives?.StaticMeshLaneItemCount ?? 0} skinnedRaw={timing.SkinnedRawLastFrame} gpuSkinned={timing.GpuSkinnedInstancesLastFrame}/{timing.GpuSkinnedBatchesLastFrame} gpuSkinBuild={timing.LastGpuSkinnedMatrixBuildMs:F2} gpuSkinDraw={timing.LastGpuSkinnedMeshDrawMs:F2} gap={timing.LastHostLoopGapMs:F2} poll={timing.LastWindowPollMs:F2} pre={timing.LastHostPreTickMs:F2} tick={timing.LastTotalTickMs:F2} post={timing.LastHostPostTickMs:F2} begin={timing.LastBeginDrawingMs:F2} sim={timing.LastSimulationMs:F2} simTop1={timing.LastSimulationTopSystem1Name}:{timing.LastSimulationTopSystem1Ms:F2} simTop2={timing.LastSimulationTopSystem2Name}:{timing.LastSimulationTopSystem2Ms:F2} simTop3={timing.LastSimulationTopSystem3Name}:{timing.LastSimulationTopSystem3Ms:F2} presentation={timing.LastPresentationMs:F2} presTop1={timing.LastPresentationTopSystem1Name}:{timing.LastPresentationTopSystem1Ms:F2} presTop2={timing.LastPresentationTopSystem2Name}:{timing.LastPresentationTopSystem2Ms:F2} presTop3={timing.LastPresentationTopSystem3Name}:{timing.LastPresentationTopSystem3Ms:F2} behavior={timing.LastPerformerBehaviorMs:F2} behaviorBoot={timing.PerformerBootstrapCountLastFrame} behaviorOwner={timing.PerformerOwnerChangesLastFrame} behaviorAttr={timing.PerformerOwnerAttributeChangesLastFrame} behaviorTag={timing.PerformerOwnerTagChangesLastFrame} behaviorTick={timing.PerformerTickDrivenCountLastFrame} animator={timing.LastPerformerAnimatorMs:F2} transformSync={timing.LastPerformerEntityTransformSyncMs:F2} minimapCollect={timing.LastPerformerMinimapMarkerMs:F2} minimapMarkers={timing.PerformerMinimapMarkersLastFrame}/{timing.PerformerMinimapDroppedLastFrame} minimapProject={timing.LastMinimapProjectionMs:F2} minimapScreen={timing.MinimapScreenMarkersLastFrame}/{timing.MinimapScreenMarkersDroppedLastFrame} heightSync={timing.LastTerrainHeightSyncMs:F2} heightSamples={timing.TerrainHeightSamplesLastFrame} requestFlush={timing.LastPresentationRequestFlushMs:F2} spawnBatch={timing.LastRuntimeSpawnBatchPrepareMs:F2}/{timing.LastRuntimeSpawnWorldCreateMs:F2}/{timing.LastRuntimeSpawnFillBatchMs:F2}/{timing.LastRuntimeSpawnPostSpawnMs:F2} spawnPerf={timing.LastRuntimeSpawnPerformerBatchMs:F2}/{timing.LastRuntimeSpawnPerformerCreateMs:F2}/{timing.LastRuntimeSpawnPerformerBootstrapMarkMs:F2} spawnPerfParts={timing.LastRuntimeSpawnPerformerCreateSetupMs:F2}/{timing.LastRuntimeSpawnPerformerWorldCreateMs:F2}/{timing.LastRuntimeSpawnPerformerComponentFillMs:F2}/{timing.LastRuntimeSpawnPerformerIndexWriteMs:F2}/{timing.LastRuntimeSpawnPerformerOwnerPayloadMs:F2}/{timing.LastRuntimeSpawnPerformerPostCreateMs:F2} spawnPerfChildParts={timing.LastRuntimeSpawnPerformerChildSetupMs:F2}/{timing.LastRuntimeSpawnPerformerChildWorldCreateMs:F2}/{timing.LastRuntimeSpawnPerformerChildComponentFillMs:F2}/{timing.LastRuntimeSpawnPerformerChildIndexWriteMs:F2}/{timing.LastRuntimeSpawnPerformerChildStableIdMs:F2} cull={timing.LastCameraCullingMs:F2} cullSpatial={timing.LastCameraCullingSpatialQueryMs:F2} cullStatic={timing.LastCameraCullingStaticProcessMs:F2} cullDyn={timing.LastCameraCullingDynamicProcessMs:F2} cullEntity={timing.LastCameraCullingEntityProcessMs:F2} cullSync={timing.LastCameraCullingPerformerSyncMs:F2} hudProj={timing.LastWorldHudProjectionMs:F2} hudRaw={timing.WorldHudItemsLastProjection} hudProjected={timing.WorldHudProjectedLastFrame} hudDensitySkip={timing.WorldHudDensitySkippedLastFrame} mode3D={timing.LastMode3DMs:F2} terrain={timing.LastTerrainRenderMs:F2} terrainChunks={timing.TerrainChunksDrawnLastFrame}/{timing.TerrainChunksBuiltLastFrame} primitive={timing.LastPrimitiveRenderMs:F2} primSync={timing.LastPrimitivePersistentSyncMs:F2} primBucket={timing.LastPrimitivePersistentBucketDrawMs:F2} primImmediate={timing.LastPrimitiveImmediateDrawMs:F2} primImmediateSkip={timing.PrimitiveImmediateSkippedLastFrame} primBuild={timing.LastPrimitiveMatrixBuildMs:F2} primDraw={timing.LastPrimitiveMeshDrawMs:F2} primInstances={timing.PrimitiveInstancesLastFrame} primBatches={timing.PrimitiveBatchesLastFrame} primCache={timing.PrimitiveMatrixCacheHitsLastFrame}/{timing.PrimitiveMatrixCacheMissesLastFrame} ground={timing.LastGroundOverlayRenderMs:F2} groundCount={timing.GroundOverlaysLastFrame} groundRaw={groundOverlay?.Count ?? 0} spline={timing.LastRoadSplineRenderMs:F2} splineCount={timing.RoadSplinesLastFrame} splineRaw={roadSpline?.Count ?? 0} debugDraw={timing.LastDebugDrawRenderMs:F2} debugDrawCount={timing.DebugDrawCommandsLastFrame} debugDrawRaw={rawDebugDrawCount} overlay={timing.LastScreenOverlayDrawMs:F2} overlayBuild={timing.LastScreenOverlayBuildMs:F2} overlayDirtyLanes={timing.ScreenOverlayDirtyLanesLastFrame} overlayItems={timing.ScreenOverlayItemsLastFrame} overlayRebuilt={timing.ScreenOverlayRebuiltLanesLastFrame} overlayPaint={timing.LastScreenOverlayPaintMs:F2} overlayComposite={timing.LastScreenOverlayCompositeMs:F2} uiRender={timing.LastUiRenderMs:F2} uiUpload={timing.LastUiUploadMs:F2} overlayFinal={timing.LastScreenOverlayFinalDrawMs:F2} nativeDiag={timing.LastNativeDiagnosticHudMs:F2} emit={timing.LastPerformerEmitMs:F2} emitDirty={timing.LastPerformerEmitDirtyProcessMs:F2} emitDirtyCount={timing.PerformerEmitDirtyCountLastFrame} emitRetained={timing.LastPerformerEmitRetainedProcessMs:F2} emitRetainedCount={timing.PerformerEmitRetainedCountLastFrame} emitRetainedDirectPath={timing.PerformerEmitRetainedDirectHitsLastFrame}/{timing.PerformerEmitRetainedFullPathLastFrame}/{timing.PerformerEmitRetainedDirectMissesLastFrame} endDraw={timing.LastEndDrawingMs:F2} screenshot={timing.LastScreenshotMs:F2} worldHud={worldHud?.Count ?? 0} screenBars={screenHud?.BarCount ?? 0} screenText={screenHud?.TextCount ?? 0} worldHudDrops={worldHud?.DroppedTotal ?? 0} screenHudDrops={screenHud?.DroppedTotal ?? 0} overlaySceneDrops={overlayScene?.DroppedTotal ?? 0}";
         }
 
         private static void ValidateRequiredContextBeforeLoop(GameEngine engine)

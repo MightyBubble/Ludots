@@ -1,5 +1,6 @@
 using System;
 using System.Numerics;
+using Ludots.Core.Mathematics;
 
 namespace Ludots.Core.Gameplay.Camera.Behaviors
 {
@@ -30,7 +31,7 @@ namespace Ludots.Core.Gameplay.Camera.Behaviors
                 return;
             }
 
-            float fovRad = state.FovYDeg * (MathF.PI / 180f);
+            float fovRad = WorldPlane2D.DegToRadValue(state.FovYDeg);
             float viewHeight = ctx.Viewport.Resolution.Y;
             if (viewHeight < 1f) return;
 

@@ -146,6 +146,71 @@ namespace Ludots.Tests.GAS
         }
 
         [Test]
+        public void EffectApplicationSystem_DoT_UsesActiveEffectContainerForStackMerge_ButDoesNotAggregateModifiers()
+        {
+            using var world = World.Create();
+            var requests = new EffectRequestQueue();
+            var templates = new EffectTemplateRegistry();
+            var proposal = new EffectProposalProcessingSystem(world, requests, templates: templates);
+            var application = new EffectApplicationSystem(world, requests, templates: templates);
+
+            var source = world.Create();
+            var target = world.Create(new AttributeBuffer(), new ActiveEffectContainer());
+
+            var modifiers = default(EffectModifiers);
+            modifiers.Add(attrId: 0, ModifierOp.Add, -5f);
+            templates.Register(2001, new EffectTemplateData
+            {
+                TagId = 10,
+                PresetType = EffectPresetType.DoT,
+                LifetimeKind = EffectLifetimeKind.After,
+                ClockId = GasClockId.Step,
+                DurationTicks = 30,
+                PeriodTicks = 10,
+                Modifiers = modifiers,
+                HasStackPolicy = true,
+                StackPolicy = StackPolicy.AddDuration,
+                StackOverflowPolicy = StackOverflowPolicy.RejectNew,
+                StackLimit = 5,
+            });
+
+            requests.Publish(new EffectRequest
+            {
+                RootId = 1,
+                Source = source,
+                Target = target,
+                TargetContext = Entity.Null,
+                TemplateId = 2001,
+            });
+            proposal.Update(0f);
+            application.Update(0f);
+
+            ref var container = ref world.Get<ActiveEffectContainer>(target);
+            That(container.Count, Is.EqualTo(1));
+
+            Entity activeEffect = container.GetEntity(0);
+            That(world.IsAlive(activeEffect), Is.True);
+            That(world.Has<EffectStack>(activeEffect), Is.True);
+            That(world.Get<EffectStack>(activeEffect).Count, Is.EqualTo(1));
+            That(world.Get<GameplayEffect>(activeEffect).AggregatesModifiers, Is.False);
+
+            requests.Publish(new EffectRequest
+            {
+                RootId = 2,
+                Source = source,
+                Target = target,
+                TargetContext = Entity.Null,
+                TemplateId = 2001,
+            });
+            proposal.Update(0f);
+            application.Update(0f);
+
+            That(container.Count, Is.EqualTo(1), "DoT re-apply should merge into the tracked active effect.");
+            That(world.Get<EffectStack>(activeEffect).Count, Is.EqualTo(2));
+            That(world.Get<GameplayEffect>(activeEffect).RemainingTicks, Is.EqualTo(60));
+        }
+
+        [Test]
         public void EffectPhaseExecutor_WhenListenerCollectionTruncates_TracksDroppedInBudget()
         {
             var world = World.Create();

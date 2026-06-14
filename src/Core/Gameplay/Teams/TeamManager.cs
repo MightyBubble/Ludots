@@ -48,46 +48,87 @@ namespace Ludots.Core.Gameplay.Teams
     {
         // Key = (TeamA << 32) | TeamB  — direction matters (A's view of B)
         private static readonly Dictionary<long, TeamRelationship> _relationships = new Dictionary<long, TeamRelationship>();
+        private static TeamRelationship _defaultRelationship = TeamRelationship.Neutral;
+        private static int _revision;
 
         /// <summary>
         /// Relationship returned for team pairs without explicit config.
         /// Set via <see cref="TeamConfig.DefaultRelationship"/> or directly at runtime.
         /// </summary>
-        public static TeamRelationship DefaultRelationship { get; set; } = TeamRelationship.Neutral;
+        public static TeamRelationship DefaultRelationship
+        {
+            get => _defaultRelationship;
+            set
+            {
+                if (_defaultRelationship == value)
+                {
+                    return;
+                }
+
+                _defaultRelationship = value;
+                IncrementRevision();
+            }
+        }
+
+        public static int Revision => _revision;
 
         public static void Clear()
         {
             _relationships.Clear();
-            DefaultRelationship = TeamRelationship.Neutral;
+            _defaultRelationship = TeamRelationship.Neutral;
+            IncrementRevision();
         }
 
         public static void LoadConfig(TeamConfig config)
         {
             Clear();
-            if (config == null) return;
-
-            // Parse configurable default
-            if (Enum.TryParse<TeamRelationship>(config.DefaultRelationship, true, out var defaultRel))
+            if (config == null)
             {
-                DefaultRelationship = defaultRel;
+                throw new ArgumentNullException(nameof(config));
             }
 
-            if (config.Relationships == null) return;
+            if (!TryParseRelationship(config.DefaultRelationship, out var defaultRel))
+            {
+                throw new InvalidOperationException(
+                    $"TeamConfig.DefaultRelationship is invalid: '{config.DefaultRelationship}'.");
+            }
+
+            DefaultRelationship = defaultRel;
+
+            if (config.Relationships == null)
+            {
+                throw new InvalidOperationException("TeamConfig.Relationships must be an explicit collection.");
+            }
 
             foreach (var entry in config.Relationships)
             {
-                if (Enum.TryParse<TeamRelationship>(entry.Attitude, true, out var rel))
+                if (!TryParseRelationship(entry.Attitude, out var rel))
                 {
-                    if (entry.Symmetric)
-                    {
-                        SetRelationshipSymmetric(entry.TeamA, entry.TeamB, rel);
-                    }
-                    else
-                    {
-                        SetRelationship(entry.TeamA, entry.TeamB, rel);
-                    }
+                    throw new InvalidOperationException(
+                        $"TeamConfig relationship [{entry.TeamA},{entry.TeamB}] is invalid: '{entry.Attitude}'.");
+                }
+
+                if (entry.Symmetric)
+                {
+                    SetRelationshipSymmetric(entry.TeamA, entry.TeamB, rel);
+                }
+                else
+                {
+                    SetRelationship(entry.TeamA, entry.TeamB, rel);
                 }
             }
+        }
+
+        public static bool TryParseRelationship(string value, out TeamRelationship relationship)
+        {
+            relationship = default;
+            if (string.IsNullOrWhiteSpace(value))
+            {
+                return false;
+            }
+
+            return Enum.TryParse(value, ignoreCase: false, out relationship) &&
+                   string.Equals(relationship.ToString(), value, StringComparison.Ordinal);
         }
 
         /// <summary>
@@ -95,7 +136,10 @@ namespace Ludots.Core.Gameplay.Teams
         /// </summary>
         public static void SetRelationship(int teamA, int teamB, TeamRelationship relation)
         {
-            _relationships[Combine(teamA, teamB)] = relation;
+            if (SetRelationshipCore(teamA, teamB, relation))
+            {
+                IncrementRevision();
+            }
         }
 
         /// <summary>
@@ -103,8 +147,12 @@ namespace Ludots.Core.Gameplay.Teams
         /// </summary>
         public static void SetRelationshipSymmetric(int teamA, int teamB, TeamRelationship relation)
         {
-            _relationships[Combine(teamA, teamB)] = relation;
-            _relationships[Combine(teamB, teamA)] = relation;
+            bool changed = SetRelationshipCore(teamA, teamB, relation);
+            changed |= SetRelationshipCore(teamB, teamA, relation);
+            if (changed)
+            {
+                IncrementRevision();
+            }
         }
 
         /// <summary>
@@ -126,6 +174,27 @@ namespace Ludots.Core.Gameplay.Teams
         private static long Combine(int a, int b)
         {
             return ((long)a << 32) | (uint)b;
+        }
+
+        private static bool SetRelationshipCore(int teamA, int teamB, TeamRelationship relation)
+        {
+            long key = Combine(teamA, teamB);
+            if (_relationships.TryGetValue(key, out TeamRelationship existing) &&
+                existing == relation)
+            {
+                return false;
+            }
+
+            _relationships[key] = relation;
+            return true;
+        }
+
+        private static void IncrementRevision()
+        {
+            unchecked
+            {
+                _revision++;
+            }
         }
     }
 }

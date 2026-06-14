@@ -1,29 +1,31 @@
 using System;
+using Arch.Buffer;
 using Arch.Core;
 using Arch.System;
 using Ludots.Core.Components;
 using Ludots.Core.Gameplay.GAS;
 using Ludots.Core.Presentation.Components;
-using Ludots.Core.Presentation.Projectiles;
 
 namespace Ludots.Core.Presentation.Systems
 {
+    /// <summary>
+    /// Ensures projectile entities expose the minimal presentation contract
+    /// needed by performer observers.
+    /// </summary>
     public sealed class ProjectilePresentationBootstrapSystem : BaseSystem<World, float>
     {
         private static readonly QueryDescription Query = new QueryDescription()
             .WithAll<ProjectileState, WorldPositionCm>()
             .WithNone<ProjectilePresentationBootstrapState>();
 
-        private readonly ProjectilePresentationBindingRegistry _bindings;
         private readonly PresentationStableIdAllocator _stableIds;
+        private readonly CommandBuffer _commandBuffer = new();
 
         public ProjectilePresentationBootstrapSystem(
             World world,
-            ProjectilePresentationBindingRegistry bindings,
             PresentationStableIdAllocator stableIds)
             : base(world)
         {
-            _bindings = bindings ?? throw new ArgumentNullException(nameof(bindings));
             _stableIds = stableIds ?? throw new ArgumentNullException(nameof(stableIds));
         }
 
@@ -36,57 +38,46 @@ namespace Ludots.Core.Presentation.Systems
                 for (int i = 0; i < chunk.Count; i++)
                 {
                     Entity entity = chunk.Entity(i);
-                    World.Add(entity, new ProjectilePresentationBootstrapState());
+                    _commandBuffer.Add(entity, new ProjectilePresentationBootstrapState());
 
-                    ref readonly var projectile = ref projectiles[i];
-                    int bindingEffectId = projectile.PresentationEffectTemplateId > 0
-                        ? projectile.PresentationEffectTemplateId
-                        : projectile.ImpactEffectTemplateId;
-                    if (!_bindings.TryGet(bindingEffectId, out var binding))
-                    {
-                        continue;
-                    }
+                    EnsurePresentationContract(entity);
 
-                    var startupPerformers = binding.StartupPerformers;
-                    EnsurePresentationBootstrap(entity, in startupPerformers);
                 }
             }
+
+            PlaybackStructuralChanges();
         }
 
-        private void EnsurePresentationBootstrap(Entity entity, in PresentationStartupPerformers startupPerformers)
+        private void EnsurePresentationContract(Entity entity)
         {
             if (!World.Has<VisualTransform>(entity))
             {
-                World.Add(entity, VisualTransform.Default);
+                _commandBuffer.Add(entity, VisualTransform.Default);
             }
 
             if (!World.Has<CullState>(entity))
             {
-                World.Add(entity, new CullState { IsVisible = true, LOD = LODLevel.High });
-            }
-
-            if (World.Has<PresentationStartupPerformers>(entity))
-            {
-                World.Set(entity, startupPerformers);
-            }
-            else
-            {
-                World.Add(entity, startupPerformers);
-            }
-
-            if (World.Has<PresentationStartupState>(entity))
-            {
-                World.Set(entity, new PresentationStartupState { Initialized = false });
-            }
-            else
-            {
-                World.Add(entity, new PresentationStartupState { Initialized = false });
+                _commandBuffer.Add(entity, new CullState { IsVisible = false, LOD = LODLevel.Low });
             }
 
             if (!World.Has<PresentationStableId>(entity))
             {
-                World.Add(entity, new PresentationStableId { Value = _stableIds.Allocate() });
+                _commandBuffer.Add(entity, new PresentationStableId { Value = _stableIds.Allocate() });
             }
+        }
+
+        private void PlaybackStructuralChanges()
+        {
+            if (_commandBuffer.Size > 0)
+            {
+                _commandBuffer.Playback(World);
+            }
+        }
+
+        public override void Dispose()
+        {
+            _commandBuffer.Dispose();
+            base.Dispose();
         }
     }
 }

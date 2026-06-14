@@ -16,7 +16,7 @@ namespace Ludots.Core.Presentation.Assets
             {
                 for (int i = 0; i < Locators.Length; i++)
                 {
-                    if (string.Equals(Locators[i].BackendId, backendId, StringComparison.OrdinalIgnoreCase))
+                    if (string.Equals(Locators[i].BackendId, backendId, StringComparison.Ordinal))
                     {
                         locator = Locators[i];
                         return true;

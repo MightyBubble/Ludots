@@ -1,0 +1,6 @@
+{
+  "name": "PerformerSchemaReferenceMod",
+  "version": "1.0.0",
+  "description": "Schema reference fixture exercising every performer field, BehaviorKind, and AssetKind.",
+  "dependencies": {}
+}

@@ -1222,9 +1222,7 @@ namespace CameraAcceptanceMod.UI
 
         private static string? ResolveSelectedEntityName(GameEngine engine)
         {
-            if (!engine.GlobalContext.TryGetValue(CoreServiceKeys.SelectedEntity.Name, out var value) ||
-                value is not Entity entity ||
-                entity == Entity.Null ||
+            if (!SelectionContextRuntime.TryGetCurrentPrimary(engine.World, engine.GlobalContext, out Entity entity) ||
                 !engine.World.IsAlive(entity) ||
                 !engine.World.Has<Name>(entity))
             {

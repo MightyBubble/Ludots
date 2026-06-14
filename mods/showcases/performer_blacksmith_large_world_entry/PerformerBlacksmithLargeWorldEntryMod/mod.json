@@ -1,0 +1,10 @@
+{
+  "name": "PerformerBlacksmithLargeWorldEntryMod",
+  "version": "1.0.0",
+  "description": "Direct launcher entry for performer blacksmith large-world minimap marker acceptance.",
+  "main": "bin/net8.0/PerformerBlacksmithLargeWorldEntryMod.dll",
+  "priority": 0,
+  "dependencies": {
+    "PerformerBlacksmithShowcaseMod": "^1.0.0"
+  }
+}

@@ -1,6 +1,7 @@
 using System;
 using System.Collections.Generic;
 using Arch.Core;
+using Ludots.Core.Gameplay.Teams;
 using Ludots.Core.Registry;
 
 namespace Ludots.Core.Input.Selection
@@ -10,29 +11,44 @@ namespace Ludots.Core.Input.Selection
         public int MutationApplyBudgetPerFrame { get; set; } = 4096;
         public float ClickPickRadiusPixels { get; set; } = 20f;
         public float DragThresholdPixels { get; set; } = 8f;
+        public SelectionTargetFilterConfig? TargetFilter { get; set; }
+        public string[] MovePathPreviewOrderTypeKeys { get; set; } = Array.Empty<string>();
+    }
+
+    public sealed class SelectionTargetFilterConfig
+    {
+        public string? RelationFilter { get; set; }
+
+        public RelationshipFilter ParseRelationFilter()
+        {
+            return RelationshipFilterUtil.Parse(RelationFilter ?? string.Empty);
+        }
     }
 
     public sealed class SelectionRuntime
     {
         private readonly World _world;
         private readonly SelectionRuntimeConfig _config;
-        private readonly StringIntRegistry _containerAliasRegistry;
+        private readonly RelationshipFilter _targetRelationFilter;
+        private readonly StringIntRegistry _setKeyRegistry;
         private readonly StringIntRegistry _viewKeyRegistry;
-        private readonly Dictionary<SelectionOwnerAliasKey, Entity> _containers = new();
+        private readonly Dictionary<SelectionOwnerSetKey, Entity> _containers = new();
         private readonly Dictionary<SelectionViewKey, Entity> _viewBindings = new();
         private readonly Dictionary<Entity, List<Entity>> _membersByContainer = new();
 
-        public SelectionRuntime(World world, SelectionRuntimeConfig config, StringIntRegistry containerAliasRegistry)
+        public SelectionRuntime(World world, SelectionRuntimeConfig config, StringIntRegistry setKeyRegistry)
         {
             _world = world ?? throw new ArgumentNullException(nameof(world));
             _config = config ?? throw new ArgumentNullException(nameof(config));
-            _containerAliasRegistry = containerAliasRegistry ?? throw new ArgumentNullException(nameof(containerAliasRegistry));
+            _targetRelationFilter = (_config.TargetFilter ?? throw new InvalidOperationException(
+                "selection.targetFilter must be explicitly configured.")).ParseRelationFilter();
+            _setKeyRegistry = setKeyRegistry ?? throw new ArgumentNullException(nameof(setKeyRegistry));
             _viewKeyRegistry = new StringIntRegistry(capacity: 32, startId: 1, invalidId: 0, comparer: StringComparer.Ordinal);
 
-            _containerAliasRegistry.Register(SelectionSetKeys.LivePrimary);
-            _containerAliasRegistry.Register(SelectionSetKeys.FormationPrimary);
-            _containerAliasRegistry.Register(SelectionSetKeys.CommandPreview);
-            _containerAliasRegistry.Register(SelectionSetKeys.CommandSnapshot);
+            _setKeyRegistry.Register(SelectionSetKeys.LivePrimary);
+            _setKeyRegistry.Register(SelectionSetKeys.FormationPrimary);
+            _setKeyRegistry.Register(SelectionSetKeys.CommandPreview);
+            _setKeyRegistry.Register(SelectionSetKeys.CommandSnapshot);
             _viewKeyRegistry.Register(SelectionViewKeys.Primary);
             _viewKeyRegistry.Register(SelectionViewKeys.Secondary);
             _viewKeyRegistry.Register(SelectionViewKeys.CommandPreview);
@@ -41,12 +57,13 @@ namespace Ludots.Core.Input.Selection
         }
 
         public SelectionRuntimeConfig Config => _config;
-        public StringIntRegistry ContainerAliasRegistry => _containerAliasRegistry;
+        public RelationshipFilter TargetRelationFilter => _targetRelationFilter;
+        public StringIntRegistry SetKeyRegistry => _setKeyRegistry;
 
-        public bool TryDescribeSelection(Entity owner, string aliasKey, out SelectionContainerDescriptor descriptor)
+        public bool TryDescribeSelection(Entity owner, string setKey, out SelectionContainerDescriptor descriptor)
         {
             descriptor = default;
-            return TryGetSelectionEntity(owner, aliasKey, out Entity container) &&
+            return TryGetSelectionEntity(owner, setKey, out Entity container) &&
                    TryDescribeContainer(container, out descriptor);
         }
 
@@ -59,8 +76,8 @@ namespace Ludots.Core.Input.Selection
             }
 
             Entity owner = _world.Get<SelectionContainerOwner>(container).Value;
-            int aliasId = _world.Get<SelectionContainerAliasId>(container).Value;
-            string aliasKey = _containerAliasRegistry.GetName(aliasId);
+            int setKeyId = _world.Get<SelectionContainerSetKeyId>(container).Value;
+            string setKey = _setKeyRegistry.GetName(setKeyId);
             SelectionContainerKind kind = _world.Has<SelectionContainerKindComponent>(container)
                 ? _world.Get<SelectionContainerKindComponent>(container).Kind
                 : SelectionContainerKind.Live;
@@ -74,7 +91,7 @@ namespace Ludots.Core.Input.Selection
             descriptor = new SelectionContainerDescriptor(
                 container,
                 owner,
-                aliasKey,
+                setKey,
                 kind,
                 revision,
                 memberCount,
@@ -91,11 +108,11 @@ namespace Ludots.Core.Input.Selection
                 return false;
             }
 
-            descriptor = new SelectionViewDescriptor(viewer, NormalizeViewKey(viewKey), containerDescriptor);
+            descriptor = new SelectionViewDescriptor(viewer, ResolveViewKey(viewKey), containerDescriptor);
             return true;
         }
 
-        public bool TryGetSelectionEntity(Entity owner, string aliasKey, out Entity selectionEntity)
+        public bool TryGetSelectionEntity(Entity owner, string setKey, out Entity selectionEntity)
         {
             selectionEntity = default;
             if (!_world.IsAlive(owner))
@@ -103,20 +120,22 @@ namespace Ludots.Core.Input.Selection
                 return false;
             }
 
-            if (!_containerAliasRegistry.TryGetId(NormalizeAlias(aliasKey), out int aliasId) || aliasId <= 0)
+            if (!TryResolveSetKey(setKey, out string resolvedSetKey) ||
+                !_setKeyRegistry.TryGetId(resolvedSetKey, out int setKeyId) ||
+                setKeyId <= 0)
             {
                 return false;
             }
 
-            return TryResolveContainer(new SelectionOwnerAliasKey(owner, aliasId), out selectionEntity);
+            return TryResolveContainer(new SelectionOwnerSetKey(owner, setKeyId), out selectionEntity);
         }
 
-        public bool TryGetOrCreateSelectionEntity(Entity owner, string aliasKey, out Entity selectionEntity)
+        public bool TryGetOrCreateSelectionEntity(Entity owner, string setKey, out Entity selectionEntity)
         {
-            return TryGetOrCreateContainer(owner, aliasKey, SelectionContainerKind.Live, out selectionEntity);
+            return TryGetOrCreateContainer(owner, setKey, SelectionContainerKind.Live, out selectionEntity);
         }
 
-        public bool TryGetOrCreateContainer(Entity owner, string aliasKey, SelectionContainerKind kind, out Entity container)
+        public bool TryGetOrCreateContainer(Entity owner, string setKey, SelectionContainerKind kind, out Entity container)
         {
             container = default;
             if (!_world.IsAlive(owner))
@@ -124,8 +143,13 @@ namespace Ludots.Core.Input.Selection
                 return false;
             }
 
-            int aliasId = _containerAliasRegistry.Register(NormalizeAlias(aliasKey));
-            var key = new SelectionOwnerAliasKey(owner, aliasId);
+            if (!TryResolveSetKey(setKey, out string resolvedSetKey))
+            {
+                return false;
+            }
+
+            int setKeyId = _setKeyRegistry.Register(resolvedSetKey);
+            var key = new SelectionOwnerSetKey(owner, setKeyId);
             if (TryResolveContainer(key, out container))
             {
                 return true;
@@ -134,7 +158,7 @@ namespace Ludots.Core.Input.Selection
             container = _world.Create(
                 default(SelectionContainerTag),
                 new SelectionContainerOwner { Value = owner },
-                new SelectionContainerAliasId { Value = aliasId },
+                new SelectionContainerSetKeyId { Value = setKeyId },
                 new SelectionContainerKindComponent { Kind = kind },
                 new SelectionContainerRevision { Value = 1u },
                 new SelectionContainerMemberCount { Value = 0 });
@@ -143,11 +167,11 @@ namespace Ludots.Core.Input.Selection
             return true;
         }
 
-        public bool TryCloneSelection(Entity sourceOwner, string sourceAliasKey, Entity cloneOwner, string cloneAliasKey, SelectionContainerKind kind, out Entity cloneContainer)
+        public bool TryCloneSelection(Entity sourceOwner, string sourceSetKey, Entity cloneOwner, string cloneSetKey, SelectionContainerKind kind, out Entity cloneContainer)
         {
             cloneContainer = default;
-            if (!TryGetSelectionEntity(sourceOwner, sourceAliasKey, out Entity sourceContainer) ||
-                !TryGetOrCreateContainer(cloneOwner, cloneAliasKey, kind, out cloneContainer))
+            if (!TryGetSelectionEntity(sourceOwner, sourceSetKey, out Entity sourceContainer) ||
+                !TryGetOrCreateContainer(cloneOwner, cloneSetKey, kind, out cloneContainer))
             {
                 return false;
             }
@@ -163,7 +187,7 @@ namespace Ludots.Core.Input.Selection
             return ReplaceSelection(cloneContainer, snapshot.AsSpan(0, written));
         }
 
-        public bool TryCreateSnapshotLease(Entity sourceOwner, string sourceAliasKey, string snapshotAliasKey, SelectionContainerKind kind, out Entity leaseOwner, out Entity snapshotContainer)
+        public bool TryCreateSnapshotLease(Entity sourceOwner, string sourceSetKey, string snapshotSetKey, SelectionContainerKind kind, out Entity leaseOwner, out Entity snapshotContainer)
         {
             leaseOwner = default;
             snapshotContainer = default;
@@ -174,7 +198,7 @@ namespace Ludots.Core.Input.Selection
             }
 
             leaseOwner = _world.Create(default(SelectionLeaseOwnerTag));
-            if (!TryCloneSelection(sourceOwner, sourceAliasKey, leaseOwner, snapshotAliasKey, kind, out snapshotContainer))
+            if (!TryCloneSelection(sourceOwner, sourceSetKey, leaseOwner, snapshotSetKey, kind, out snapshotContainer))
             {
                 if (_world.IsAlive(leaseOwner))
                 {
@@ -199,9 +223,9 @@ namespace Ludots.Core.Input.Selection
             return true;
         }
 
-        public bool ReplaceSelection(Entity owner, string aliasKey, ReadOnlySpan<Entity> next)
+        public bool ReplaceSelection(Entity owner, string setKey, ReadOnlySpan<Entity> next)
         {
-            return TryGetOrCreateSelectionEntity(owner, aliasKey, out Entity container) &&
+            return TryGetOrCreateSelectionEntity(owner, setKey, out Entity container) &&
                    ReplaceSelection(container, next);
         }
 
@@ -247,9 +271,9 @@ namespace Ludots.Core.Input.Selection
             return true;
         }
 
-        public bool AddToSelection(Entity owner, string aliasKey, Entity target)
+        public bool AddToSelection(Entity owner, string setKey, Entity target)
         {
-            if (!TryGetOrCreateSelectionEntity(owner, aliasKey, out Entity container))
+            if (!TryGetOrCreateSelectionEntity(owner, setKey, out Entity container))
             {
                 return false;
             }
@@ -287,9 +311,9 @@ namespace Ludots.Core.Input.Selection
             return true;
         }
 
-        public bool RemoveFromSelection(Entity owner, string aliasKey, Entity target)
+        public bool RemoveFromSelection(Entity owner, string setKey, Entity target)
         {
-            return TryGetSelectionEntity(owner, aliasKey, out Entity container) &&
+            return TryGetSelectionEntity(owner, setKey, out Entity container) &&
                    RemoveFromSelection(container, target);
         }
 
@@ -331,9 +355,9 @@ namespace Ludots.Core.Input.Selection
             return true;
         }
 
-        public bool ClearSelection(Entity owner, string aliasKey)
+        public bool ClearSelection(Entity owner, string setKey)
         {
-            return TryGetSelectionEntity(owner, aliasKey, out Entity container) &&
+            return TryGetSelectionEntity(owner, setKey, out Entity container) &&
                    ClearSelection(container);
         }
 
@@ -364,9 +388,9 @@ namespace Ludots.Core.Input.Selection
             return true;
         }
 
-        public int GetSelectionCount(Entity owner, string aliasKey)
+        public int GetSelectionCount(Entity owner, string setKey)
         {
-            return TryGetSelectionEntity(owner, aliasKey, out Entity container)
+            return TryGetSelectionEntity(owner, setKey, out Entity container)
                 ? GetSelectionCount(container)
                 : 0;
         }
@@ -386,10 +410,10 @@ namespace Ludots.Core.Input.Selection
             return GetOrCreateMemberList(container).Count;
         }
 
-        public bool TryGetPrimary(Entity owner, string aliasKey, out Entity primary)
+        public bool TryGetPrimary(Entity owner, string setKey, out Entity primary)
         {
             primary = default;
-            return TryGetSelectionEntity(owner, aliasKey, out Entity container) &&
+            return TryGetSelectionEntity(owner, setKey, out Entity container) &&
                    TryGetPrimary(container, out primary);
         }
 
@@ -423,9 +447,9 @@ namespace Ludots.Core.Input.Selection
             return false;
         }
 
-        public int CopySelection(Entity owner, string aliasKey, Span<Entity> destination)
+        public int CopySelection(Entity owner, string setKey, Span<Entity> destination)
         {
-            return TryGetSelectionEntity(owner, aliasKey, out Entity container)
+            return TryGetSelectionEntity(owner, setKey, out Entity container)
                 ? CopySelection(container, destination)
                 : 0;
         }
@@ -459,10 +483,10 @@ namespace Ludots.Core.Input.Selection
             return written;
         }
 
-        public bool TryGetSelectionAt(Entity owner, string aliasKey, int index, out Entity target)
+        public bool TryGetSelectionAt(Entity owner, string setKey, int index, out Entity target)
         {
             target = default;
-            return TryGetSelectionEntity(owner, aliasKey, out Entity container) &&
+            return TryGetSelectionEntity(owner, setKey, out Entity container) &&
                    TryGetSelectionAt(container, index, out target);
         }
 
@@ -496,9 +520,9 @@ namespace Ludots.Core.Input.Selection
             return true;
         }
 
-        public bool TryBindView(Entity viewer, string viewKey, Entity owner, string aliasKey)
+        public bool TryBindView(Entity viewer, string viewKey, Entity owner, string setKey)
         {
-            return TryGetOrCreateSelectionEntity(owner, aliasKey, out Entity container) &&
+            return TryGetOrCreateSelectionEntity(owner, setKey, out Entity container) &&
                    TryBindView(viewer, viewKey, container);
         }
 
@@ -509,7 +533,12 @@ namespace Ludots.Core.Input.Selection
                 return false;
             }
 
-            int viewKeyId = _viewKeyRegistry.Register(NormalizeViewKey(viewKey));
+            if (!TryResolveViewKey(viewKey, out string resolvedViewKey))
+            {
+                return false;
+            }
+
+            int viewKeyId = _viewKeyRegistry.Register(resolvedViewKey);
             var key = new SelectionViewKey(viewer, viewKeyId);
             if (TryResolveViewBindingEntity(key, out Entity binding))
             {
@@ -541,7 +570,9 @@ namespace Ludots.Core.Input.Selection
                 return false;
             }
 
-            if (!_viewKeyRegistry.TryGetId(NormalizeViewKey(viewKey), out int viewKeyId) || viewKeyId <= 0)
+            if (!TryResolveViewKey(viewKey, out string resolvedViewKey) ||
+                !_viewKeyRegistry.TryGetId(resolvedViewKey, out int viewKeyId) ||
+                viewKeyId <= 0)
             {
                 return false;
             }
@@ -577,7 +608,7 @@ namespace Ludots.Core.Input.Selection
         {
             bool changed = false;
 
-            var deadContainers = new List<SelectionOwnerAliasKey>();
+            var deadContainers = new List<SelectionOwnerSetKey>();
             foreach (var pair in _containers)
             {
                 if (!IsContainerAlive(pair.Value))
@@ -677,7 +708,7 @@ namespace Ludots.Core.Input.Selection
             return changed;
         }
 
-        private bool TryResolveContainer(in SelectionOwnerAliasKey key, out Entity container)
+        private bool TryResolveContainer(in SelectionOwnerSetKey key, out Entity container)
         {
             container = default;
             if (!_containers.TryGetValue(key, out Entity cached))
@@ -722,7 +753,7 @@ namespace Ludots.Core.Input.Selection
             return _world.IsAlive(container) &&
                    _world.Has<SelectionContainerTag>(container) &&
                    _world.Has<SelectionContainerOwner>(container) &&
-                   _world.Has<SelectionContainerAliasId>(container);
+                   _world.Has<SelectionContainerSetKeyId>(container);
         }
 
         private List<Entity> GetOrCreateMemberList(Entity container)
@@ -807,14 +838,63 @@ namespace Ludots.Core.Input.Selection
             }
         }
 
-        private static string NormalizeAlias(string? aliasKey)
+        private static bool TryResolveSetKey(string? setKey, out string resolvedSetKey)
         {
-            return string.IsNullOrWhiteSpace(aliasKey) ? SelectionSetKeys.LivePrimary : aliasKey.Trim();
+            resolvedSetKey = string.Empty;
+            if (string.IsNullOrWhiteSpace(setKey))
+            {
+                return false;
+            }
+
+            resolvedSetKey = setKey.Trim();
+            return true;
         }
 
-        private static string NormalizeViewKey(string? viewKey)
+        public void CopyContainerEntities(List<Entity> destination)
         {
-            return string.IsNullOrWhiteSpace(viewKey) ? SelectionViewKeys.Primary : viewKey.Trim();
+            if (destination == null)
+            {
+                throw new ArgumentNullException(nameof(destination));
+            }
+
+            destination.Clear();
+            foreach (KeyValuePair<SelectionOwnerSetKey, Entity> pair in _containers)
+            {
+                if (IsContainerAlive(pair.Value))
+                {
+                    destination.Add(pair.Value);
+                }
+            }
+        }
+
+        public bool TryGetSetKeyId(string setKey, out int setKeyId)
+        {
+            setKeyId = 0;
+            return TryResolveSetKey(setKey, out string resolvedSetKey) &&
+                   _setKeyRegistry.TryGetId(resolvedSetKey, out setKeyId) &&
+                   setKeyId > 0;
+        }
+
+        private static bool TryResolveViewKey(string? viewKey, out string resolvedViewKey)
+        {
+            resolvedViewKey = string.Empty;
+            if (string.IsNullOrWhiteSpace(viewKey))
+            {
+                return false;
+            }
+
+            resolvedViewKey = viewKey.Trim();
+            return true;
+        }
+
+        private static string ResolveViewKey(string viewKey)
+        {
+            if (!TryResolveViewKey(viewKey, out string resolvedViewKey))
+            {
+                throw new ArgumentException("Selection view key must not be null or whitespace.", nameof(viewKey));
+            }
+
+            return resolvedViewKey;
         }
 
         private static bool ContainsTarget(ReadOnlySpan<Entity> next, int uptoExclusive, Entity target)
@@ -830,37 +910,37 @@ namespace Ludots.Core.Input.Selection
             return false;
         }
 
-        private readonly struct SelectionOwnerAliasKey : IEquatable<SelectionOwnerAliasKey>
+        private readonly struct SelectionOwnerSetKey : IEquatable<SelectionOwnerSetKey>
         {
-            public SelectionOwnerAliasKey(Entity owner, int aliasId)
+            public SelectionOwnerSetKey(Entity owner, int setKeyId)
             {
                 OwnerId = owner.Id;
                 OwnerWorldId = owner.WorldId;
                 OwnerVersion = owner.Version;
-                AliasId = aliasId;
+                SetKeyId = setKeyId;
             }
 
             public int OwnerId { get; }
             public int OwnerWorldId { get; }
             public int OwnerVersion { get; }
-            public int AliasId { get; }
+            public int SetKeyId { get; }
 
-            public bool Equals(SelectionOwnerAliasKey other)
+            public bool Equals(SelectionOwnerSetKey other)
             {
                 return OwnerId == other.OwnerId &&
                        OwnerWorldId == other.OwnerWorldId &&
                        OwnerVersion == other.OwnerVersion &&
-                       AliasId == other.AliasId;
+                       SetKeyId == other.SetKeyId;
             }
 
             public override bool Equals(object? obj)
             {
-                return obj is SelectionOwnerAliasKey other && Equals(other);
+                return obj is SelectionOwnerSetKey other && Equals(other);
             }
 
             public override int GetHashCode()
             {
-                return HashCode.Combine(OwnerId, OwnerWorldId, OwnerVersion, AliasId);
+                return HashCode.Combine(OwnerId, OwnerWorldId, OwnerVersion, SetKeyId);
             }
         }
 

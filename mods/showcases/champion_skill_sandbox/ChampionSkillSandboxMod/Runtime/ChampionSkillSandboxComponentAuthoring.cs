@@ -1,5 +1,4 @@
 using System;
-using System.Globalization;
 using System.Text.Json;
 using System.Text.Json.Nodes;
 using Arch.Core;
@@ -24,29 +23,15 @@ namespace ChampionSkillSandboxMod.Runtime
         private static void SetCollider2D(Entity entity, JsonNode data)
         {
             JsonObject obj = RequireObject(data, "Collider2D");
-            if (TryReadInt(obj, "shapeDataIndex", "ShapeDataIndex", out int existingShapeIndex))
-            {
-                entity.Add(new Collider2D
-                {
-                    Type = ParseColliderType(ReadRequiredString(obj, "type", "Type")),
-                    ShapeDataIndex = existingShapeIndex
-                });
-                return;
-            }
+            ValidateProperties(obj, "Collider2D", "shape");
 
-            JsonObject shape = GetRequiredObject(obj, "shape", "Shape");
-            ColliderType2D type = ParseColliderType(ReadRequiredString(shape, "type", "Type"));
-            Fix64Vec2 localCenter = ParseOptionalVector2(shape, "localCenterCm", "LocalCenterCm", "localCenter", "LocalCenter");
+            JsonObject shape = GetRequiredObject(obj, "shape", "Collider2D");
+            ColliderType2D type = ParseColliderType(ReadRequiredString(shape, "type", "Collider2D.shape"));
             int shapeDataIndex = type switch
             {
-                ColliderType2D.Circle => ShapeDataStorage2D.RegisterCircle(
-                    Fix64.FromFloat(ReadRequiredFloat(shape, "radiusCm", "RadiusCm")),
-                    localCenter),
-                ColliderType2D.Box => ShapeDataStorage2D.RegisterBox(
-                    Fix64.FromFloat(ReadHalfExtent(shape, "halfWidthCm", "HalfWidthCm", "widthCm", "WidthCm")),
-                    Fix64.FromFloat(ReadHalfExtent(shape, "halfHeightCm", "HalfHeightCm", "heightCm", "HeightCm")),
-                    localCenter),
-                ColliderType2D.Polygon => ShapeDataStorage2D.RegisterPolygon(ParsePolygonVertices(shape)),
+                ColliderType2D.Circle => RegisterCircle(shape),
+                ColliderType2D.Box => RegisterBox(shape),
+                ColliderType2D.Polygon => RegisterPolygon(shape),
                 _ => throw new InvalidOperationException($"Unsupported Collider2D type '{type}'."),
             };
 
@@ -60,49 +45,80 @@ namespace ChampionSkillSandboxMod.Runtime
         private static void SetNavKinematics2D(Entity entity, JsonNode data)
         {
             JsonObject obj = RequireObject(data, "NavKinematics2D");
+            ValidateProperties(
+                obj,
+                "NavKinematics2D",
+                "maxSpeedCmPerSec",
+                "maxAccelCmPerSec2",
+                "radiusCm",
+                "neighborDistCm",
+                "timeHorizonSec",
+                "maxNeighbors");
+
             entity.Add(new NavKinematics2D
             {
-                MaxSpeedCmPerSec = Fix64.FromFloat(ReadOptionalFloat(obj, "maxSpeedCmPerSec", "MaxSpeedCmPerSec", 0f)),
-                MaxAccelCmPerSec2 = Fix64.FromFloat(ReadOptionalFloat(obj, "maxAccelCmPerSec2", "MaxAccelCmPerSec2", 0f)),
-                RadiusCm = Fix64.FromFloat(ReadOptionalFloat(obj, "radiusCm", "RadiusCm", 0f)),
-                NeighborDistCm = Fix64.FromFloat(ReadOptionalFloat(obj, "neighborDistCm", "NeighborDistCm", 0f)),
-                TimeHorizonSec = Fix64.FromFloat(ReadOptionalFloat(obj, "timeHorizonSec", "TimeHorizonSec", 0f)),
-                MaxNeighbors = ReadOptionalInt(obj, "maxNeighbors", "MaxNeighbors", 0)
+                MaxSpeedCmPerSec = Fix64.FromFloat(ReadRequiredFloat(obj, "maxSpeedCmPerSec", "NavKinematics2D")),
+                MaxAccelCmPerSec2 = Fix64.FromFloat(ReadRequiredFloat(obj, "maxAccelCmPerSec2", "NavKinematics2D")),
+                RadiusCm = Fix64.FromFloat(ReadRequiredFloat(obj, "radiusCm", "NavKinematics2D")),
+                NeighborDistCm = Fix64.FromFloat(ReadRequiredFloat(obj, "neighborDistCm", "NavKinematics2D")),
+                TimeHorizonSec = Fix64.FromFloat(ReadRequiredFloat(obj, "timeHorizonSec", "NavKinematics2D")),
+                MaxNeighbors = ReadRequiredInt(obj, "maxNeighbors", "NavKinematics2D")
             });
         }
 
         private static void SetPhysicsMaterial2D(Entity entity, JsonNode data)
         {
             JsonObject obj = RequireObject(data, "PhysicsMaterial2D");
+            ValidateProperties(obj, "PhysicsMaterial2D", "friction", "restitution", "baseDamping");
+
             entity.Add(new PhysicsMaterial2D
             {
-                Friction = Fix64.FromFloat(ReadOptionalFloat(obj, "friction", "Friction", PhysicsMaterial2D.Default.Friction.ToFloat())),
-                Restitution = Fix64.FromFloat(ReadOptionalFloat(obj, "restitution", "Restitution", PhysicsMaterial2D.Default.Restitution.ToFloat())),
-                BaseDamping = Fix64.FromFloat(ReadOptionalFloat(obj, "baseDamping", "BaseDamping", PhysicsMaterial2D.Default.BaseDamping.ToFloat()))
+                Friction = Fix64.FromFloat(ReadRequiredFloat(obj, "friction", "PhysicsMaterial2D")),
+                Restitution = Fix64.FromFloat(ReadRequiredFloat(obj, "restitution", "PhysicsMaterial2D")),
+                BaseDamping = Fix64.FromFloat(ReadRequiredFloat(obj, "baseDamping", "PhysicsMaterial2D"))
             });
         }
 
         private static ColliderType2D ParseColliderType(string type)
         {
-            return type.Trim().ToLowerInvariant() switch
+            return type switch
             {
-                "circle" => ColliderType2D.Circle,
-                "box" => ColliderType2D.Box,
-                "polygon" => ColliderType2D.Polygon,
-                _ => throw new InvalidOperationException($"Unsupported Collider2D type '{type}'."),
+                "Circle" => ColliderType2D.Circle,
+                "Box" => ColliderType2D.Box,
+                "Polygon" => ColliderType2D.Polygon,
+                _ => throw new InvalidOperationException($"Unsupported Collider2D type '{type}'. Expected Circle, Box, or Polygon."),
             };
+        }
+
+        private static int RegisterCircle(JsonObject shape)
+        {
+            ValidateProperties(shape, "Collider2D.shape Circle", "type", "radiusCm", "localCenterCm");
+            return ShapeDataStorage2D.RegisterCircle(
+                Fix64.FromFloat(ReadRequiredFloat(shape, "radiusCm", "Collider2D.shape Circle")),
+                ReadRequiredVector2(shape, "localCenterCm", "Collider2D.shape Circle"));
+        }
+
+        private static int RegisterBox(JsonObject shape)
+        {
+            ValidateProperties(shape, "Collider2D.shape Box", "type", "halfWidthCm", "halfHeightCm", "localCenterCm");
+            return ShapeDataStorage2D.RegisterBox(
+                Fix64.FromFloat(ReadRequiredFloat(shape, "halfWidthCm", "Collider2D.shape Box")),
+                Fix64.FromFloat(ReadRequiredFloat(shape, "halfHeightCm", "Collider2D.shape Box")),
+                ReadRequiredVector2(shape, "localCenterCm", "Collider2D.shape Box"));
+        }
+
+        private static int RegisterPolygon(JsonObject shape)
+        {
+            ValidateProperties(shape, "Collider2D.shape Polygon", "type", "verticesCm");
+            return ShapeDataStorage2D.RegisterPolygon(ParsePolygonVertices(shape));
         }
 
         private static Fix64Vec2[] ParsePolygonVertices(JsonObject shape)
         {
-            JsonNode? verticesNode =
-                GetOptionalProperty(shape, "verticesCm") ??
-                GetOptionalProperty(shape, "VerticesCm") ??
-                GetOptionalProperty(shape, "vertices") ??
-                GetOptionalProperty(shape, "Vertices");
+            JsonNode verticesNode = RequireProperty(shape, "verticesCm", "Collider2D.shape Polygon");
             if (verticesNode is not JsonArray vertices || vertices.Count < 3)
             {
-                throw new InvalidOperationException("Polygon Collider2D requires at least 3 vertices.");
+                throw new InvalidOperationException("Collider2D.shape Polygon requires at least 3 verticesCm entries.");
             }
 
             var result = new Fix64Vec2[vertices.Count];
@@ -111,51 +127,24 @@ namespace ChampionSkillSandboxMod.Runtime
                 JsonNode? vertex = vertices[i];
                 if (vertex == null)
                 {
-                    throw new InvalidOperationException("Polygon Collider2D vertices cannot contain null entries.");
+                    throw new InvalidOperationException("Collider2D.shape Polygon verticesCm cannot contain null entries.");
                 }
 
-                result[i] = ParseVector2(vertex);
+                result[i] = ParseVector2(vertex, $"Collider2D.shape Polygon.verticesCm[{i}]");
             }
 
             return result;
         }
 
-        private static float ReadHalfExtent(JsonObject obj, string halfPrimary, string halfSecondary, string fullPrimary, string fullSecondary)
+        private static JsonObject GetRequiredObject(JsonObject obj, string name, string context)
         {
-            if (TryReadFloat(obj, halfPrimary, halfSecondary, out float halfExtent))
+            JsonNode node = RequireProperty(obj, name, context);
+            if (node is JsonObject child)
             {
-                return halfExtent;
+                return child;
             }
 
-            return ReadRequiredFloat(obj, fullPrimary, fullSecondary) * 0.5f;
-        }
-
-        private static Fix64Vec2 ParseVector2(JsonNode node)
-        {
-            JsonObject obj = UnwrapObject(RequireObject(node, "vector2"));
-            return Fix64Vec2.FromFloat(
-                ReadRequiredFloat(obj, "x", "X"),
-                ReadRequiredFloat(obj, "y", "Y"));
-        }
-
-        private static Fix64Vec2 ParseOptionalVector2(JsonObject obj, string primary, string secondary, string fallbackPrimary, string fallbackSecondary)
-        {
-            JsonNode? node =
-                GetOptionalProperty(obj, primary) ??
-                GetOptionalProperty(obj, secondary) ??
-                GetOptionalProperty(obj, fallbackPrimary) ??
-                GetOptionalProperty(obj, fallbackSecondary);
-            return node != null ? ParseVector2(node) : Fix64Vec2.Zero;
-        }
-
-        private static JsonObject GetRequiredObject(JsonObject obj, string primary, string secondary)
-        {
-            if (!TryGetProperty(obj, primary, secondary, out JsonNode? node))
-            {
-                throw new InvalidOperationException($"Missing required object property '{primary}'.");
-            }
-
-            return RequireObject(node!, primary);
+            throw new InvalidOperationException($"{context}.{name} requires an object payload.");
         }
 
         private static JsonObject RequireObject(JsonNode node, string name)
@@ -168,145 +157,93 @@ namespace ChampionSkillSandboxMod.Runtime
             throw new InvalidOperationException($"{name} requires an object payload.");
         }
 
-        private static JsonObject UnwrapObject(JsonObject obj)
+        private static Fix64Vec2 ReadRequiredVector2(JsonObject obj, string name, string context)
         {
-            if (TryGetProperty(obj, "Value", "value", out JsonNode? valueNode) &&
-                valueNode is JsonObject valueObj)
-            {
-                return valueObj;
-            }
-
-            return obj;
+            JsonNode node = RequireProperty(obj, name, context);
+            return ParseVector2(node, $"{context}.{name}");
         }
 
-        private static string ReadRequiredString(JsonObject obj, string primary, string secondary)
+        private static Fix64Vec2 ParseVector2(JsonNode node, string context)
         {
-            if (TryReadString(obj, primary, secondary, out string? value))
+            if (node is not JsonObject obj)
             {
-                return value!;
+                throw new InvalidOperationException($"{context} requires an object payload.");
             }
 
-            throw new InvalidOperationException($"Missing required property '{primary}'.");
+            ValidateProperties(obj, context, "x", "y");
+            return Fix64Vec2.FromFloat(
+                ReadRequiredFloat(obj, "x", context),
+                ReadRequiredFloat(obj, "y", context));
         }
 
-        private static float ReadRequiredFloat(JsonObject obj, string primary, string secondary)
+        private static string ReadRequiredString(JsonObject obj, string name, string context)
         {
-            if (TryReadFloat(obj, primary, secondary, out float value))
+            JsonNode node = RequireProperty(obj, name, context);
+            if (node.GetValueKind() != JsonValueKind.String)
             {
-                return value;
+                throw new InvalidOperationException($"{context}.{name} requires a string value.");
             }
 
-            throw new InvalidOperationException($"Missing required numeric property '{primary}'.");
+            string value = node.GetValue<string>();
+            if (string.IsNullOrWhiteSpace(value))
+            {
+                throw new InvalidOperationException($"{context}.{name} requires a non-empty string value.");
+            }
+
+            return value;
         }
 
-        private static float ReadOptionalFloat(JsonObject obj, string primary, string secondary, float fallback)
+        private static float ReadRequiredFloat(JsonObject obj, string name, string context)
         {
-            return TryReadFloat(obj, primary, secondary, out float value) ? value : fallback;
+            JsonNode node = RequireProperty(obj, name, context);
+            if (node.GetValueKind() != JsonValueKind.Number)
+            {
+                throw new InvalidOperationException($"{context}.{name} requires a numeric value.");
+            }
+
+            return node.GetValue<float>();
         }
 
-        private static int ReadOptionalInt(JsonObject obj, string primary, string secondary, int fallback)
+        private static int ReadRequiredInt(JsonObject obj, string name, string context)
         {
-            return TryReadInt(obj, primary, secondary, out int value) ? value : fallback;
+            JsonNode node = RequireProperty(obj, name, context);
+            if (node.GetValueKind() != JsonValueKind.Number)
+            {
+                throw new InvalidOperationException($"{context}.{name} requires an integer value.");
+            }
+
+            return node.GetValue<int>();
         }
 
-        private static bool TryReadString(JsonObject obj, string primary, string secondary, out string? value)
+        private static JsonNode RequireProperty(JsonObject obj, string name, string context)
         {
-            value = null;
-            if (!TryGetProperty(obj, primary, secondary, out JsonNode? node) || node == null)
+            if (!obj.TryGetPropertyValue(name, out JsonNode? node) || node == null)
             {
-                return false;
+                throw new InvalidOperationException($"{context} requires explicit '{name}'.");
             }
 
-            if (node.GetValueKind() == JsonValueKind.String)
-            {
-                value = node.GetValue<string>();
-                return !string.IsNullOrWhiteSpace(value);
-            }
-
-            return false;
+            return node;
         }
 
-        private static bool TryReadFloat(JsonObject obj, string primary, string secondary, out float value)
+        private static void ValidateProperties(JsonObject obj, string context, params string[] allowedNames)
         {
-            value = 0f;
-            if (!TryGetProperty(obj, primary, secondary, out JsonNode? node) || node == null)
+            foreach (var kvp in obj)
             {
-                return false;
+                bool allowed = false;
+                for (int i = 0; i < allowedNames.Length; i++)
+                {
+                    if (string.Equals(kvp.Key, allowedNames[i], StringComparison.Ordinal))
+                    {
+                        allowed = true;
+                        break;
+                    }
+                }
+
+                if (!allowed)
+                {
+                    throw new InvalidOperationException($"{context} contains unsupported property '{kvp.Key}'.");
+                }
             }
-
-            return TryParseFloat(node, out value);
-        }
-
-        private static bool TryReadInt(JsonObject obj, string primary, string secondary, out int value)
-        {
-            value = 0;
-            if (!TryGetProperty(obj, primary, secondary, out JsonNode? node) || node == null)
-            {
-                return false;
-            }
-
-            return TryParseInt(node, out value);
-        }
-
-        private static bool TryParseFloat(JsonNode node, out float value)
-        {
-            JsonValueKind kind = node.GetValueKind();
-            if (kind == JsonValueKind.Number)
-            {
-                value = node.GetValue<float>();
-                return true;
-            }
-
-            if (kind == JsonValueKind.String &&
-                float.TryParse(node.GetValue<string>(), NumberStyles.Float, CultureInfo.InvariantCulture, out float parsed))
-            {
-                value = parsed;
-                return true;
-            }
-
-            value = 0f;
-            return false;
-        }
-
-        private static bool TryParseInt(JsonNode node, out int value)
-        {
-            JsonValueKind kind = node.GetValueKind();
-            if (kind == JsonValueKind.Number)
-            {
-                value = node.GetValue<int>();
-                return true;
-            }
-
-            if (kind == JsonValueKind.String &&
-                int.TryParse(node.GetValue<string>(), NumberStyles.Integer, CultureInfo.InvariantCulture, out int parsed))
-            {
-                value = parsed;
-                return true;
-            }
-
-            value = 0;
-            return false;
-        }
-
-        private static JsonNode? GetOptionalProperty(JsonObject obj, string name)
-        {
-            return obj.TryGetPropertyValue(name, out JsonNode? node) ? node : null;
-        }
-
-        private static bool TryGetProperty(JsonObject obj, string primary, string secondary, out JsonNode? node)
-        {
-            if (obj.TryGetPropertyValue(primary, out node) && node != null)
-            {
-                return true;
-            }
-
-            if (obj.TryGetPropertyValue(secondary, out node) && node != null)
-            {
-                return true;
-            }
-
-            node = null;
-            return false;
         }
     }
 }

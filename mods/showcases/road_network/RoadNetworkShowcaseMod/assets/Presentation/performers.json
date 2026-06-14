@@ -1,0 +1,37 @@
+[
+  {
+    "id": "road_surface_chunk",
+    "defaultLifetime": -1,
+    "surface": {
+      "kind": "SplineRibbon",
+      "profileId": "road_surface",
+      "geometrySource": {
+        "controlPointSource": {
+          "kind": "constant",
+          "id": "road_network_chunk_segments"
+        },
+        "widthSource": {
+          "kind": "constant",
+          "id": "road_network_chunk_width"
+        },
+        "segmentationPolicy": "Bezier12"
+      },
+      "chunkBake": {
+        "enabled": true,
+        "ownership": "PerChunk",
+        "chunkInfluencePolicy": "OwnerChunkOnly",
+        "rebakePolicy": "OnPayloadVersionChange",
+        "usageHint": "Static"
+      },
+      "materialSet": {
+        "primaryMaterialId": "default_surface",
+        "allowInstanceOverride": false
+      },
+      "lodProfileId": "default_surface_lod",
+      "grounding": {
+        "mode": "VisualHeight"
+      },
+      "boundsPolicy": "Auto"
+    }
+  }
+]

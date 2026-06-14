@@ -1,0 +1,24 @@
+[
+  {
+    "id": "Effect.MassNavigation.Agent.HealthDrift",
+    "tags": [
+      "Effect.MassNavigation.Agent.HealthDrift"
+    ],
+    "presetType": "Buff",
+    "lifetime": "Infinite",
+    "participatesInResponse": false,
+    "duration": {
+      "durationTicks": 0,
+      "periodTicks": 60,
+      "clockId": "FixedFrame"
+    },
+    "phaseGraphs": {
+      "OnApply": {
+        "post": "Graph.MassNavigation.Agent.HealthDrift"
+      },
+      "OnPeriod": {
+        "post": "Graph.MassNavigation.Agent.HealthDrift"
+      }
+    }
+  }
+]

@@ -65,10 +65,12 @@ namespace Ludots.Core.Spatial
         /// Set an optional ILoadedChunks reference. When set, queries may check
         /// whether entities belong to a loaded chunk (future optimization point).
         /// </summary>
-        public void SetLoadedChunks(ILoadedChunks loadedChunks)
+        public void SetLoadedChunks(ILoadedChunks? loadedChunks)
         {
             _loadedChunks = loadedChunks;
         }
+
+        public ILoadedChunks? LoadedChunks => _loadedChunks;
 
         /// <summary>
         /// Set the hex metrics for parameterized hex cell bounding box calculations.
@@ -288,17 +290,10 @@ namespace Ludots.Core.Spatial
 
         // ── Deterministic integer trig helpers (fixed-point / lookup table, no float) ──
 
-        private static readonly Fix64 _180 = Fix64.FromInt(180);
-
         /// <summary>Returns atan2 in degrees [0..360). Deterministic via Fix64Math.</summary>
         private static int Atan2Deg(int y, int x)
         {
-            var fy = Fix64.FromInt(y);
-            var fx = Fix64.FromInt(x);
-            var rad = Fix64Math.Atan2Fast(fy, fx);
-            int deg = (rad * _180 / Fix64.Pi).RoundToInt();
-            if (deg < 0) deg += 360;
-            return deg;
+            return WorldPlane2D.FacingDegreesPositiveFromDirection(x, y);
         }
 
         /// <summary>Absolute angular difference in [0..180].</summary>

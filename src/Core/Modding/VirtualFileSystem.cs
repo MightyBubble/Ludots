@@ -6,14 +6,20 @@ namespace Ludots.Core.Modding
 {
     public class VirtualFileSystem : IVirtualFileSystem
     {
-        private readonly Dictionary<string, string> _mountPoints = new Dictionary<string, string>();
+        private readonly Dictionary<string, string> _mountPoints = new Dictionary<string, string>(StringComparer.Ordinal);
 
         public void Mount(string modId, string physicalPath)
         {
-            if (string.IsNullOrEmpty(modId) || string.IsNullOrEmpty(physicalPath))
-                return;
-                
-            _mountPoints[modId] = physicalPath;
+            if (string.IsNullOrWhiteSpace(modId))
+                throw new ArgumentException("Mount mod id is required.", nameof(modId));
+            if (string.IsNullOrWhiteSpace(physicalPath))
+                throw new ArgumentException("Mount physical path is required.", nameof(physicalPath));
+
+            var fullPath = Path.GetFullPath(physicalPath);
+            if (!Directory.Exists(fullPath))
+                throw new DirectoryNotFoundException($"Mount physical path was not found: {fullPath}");
+
+            _mountPoints[modId] = fullPath;
         }
 
         public bool Unmount(string modId)
@@ -82,7 +88,7 @@ namespace Ludots.Core.Modding
                 ? rootFull
                 : rootFull + Path.DirectorySeparatorChar;
 
-            if (!candidate.StartsWith(rootWithSep, StringComparison.OrdinalIgnoreCase))
+            if (!candidate.StartsWith(rootWithSep, StringComparison.Ordinal))
             {
                 return false;
             }

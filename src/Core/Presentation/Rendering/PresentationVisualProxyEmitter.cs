@@ -22,6 +22,14 @@ namespace Ludots.Core.Presentation.Rendering
             _skinnedBatchBuffer = skinnedBatchBuffer;
         }
 
+        public void ClearProjectionTargets()
+        {
+            _drawBuffer.Clear();
+            _snapshotBuffer?.Clear();
+            _proxyBuffer?.Clear();
+            _skinnedBatchBuffer?.ClearProjection();
+        }
+
         public void Emit(in PresentationVisualProxy proxy)
         {
             if (_proxyBuffer != null && !_proxyBuffer.TryAdd(proxy))
@@ -32,21 +40,10 @@ namespace Ludots.Core.Presentation.Rendering
 
             var primitive = new PrimitiveDrawItem
             {
-                MeshAssetId = proxy.MeshAssetId,
-                Position = proxy.Position,
-                Rotation = proxy.Rotation,
-                Scale = proxy.Scale,
-                Color = proxy.Color,
-                StableId = proxy.StableId,
-                MaterialId = proxy.MaterialId,
-                TemplateId = proxy.TemplateId,
-                AnimationProfileId = proxy.AnimationProfileId,
-                RenderPath = proxy.RenderPath,
+                Payload = proxy.Payload,
                 Mobility = proxy.Mobility,
                 Flags = proxy.Flags,
-                Animator = proxy.Animator,
-                AnimationOverlay = proxy.AnimationOverlay,
-                Visibility = proxy.Visibility,
+                LOD = proxy.LOD,
             };
 
             if (_snapshotBuffer != null && !_snapshotBuffer.TryAdd(primitive))
@@ -59,19 +56,8 @@ namespace Ludots.Core.Presentation.Rendering
                 _skinnedBatchBuffer != null &&
                 !_skinnedBatchBuffer.TryAdd(new SkinnedVisualBatchItem
                 {
-                    StableId = proxy.StableId,
-                    MeshAssetId = proxy.MeshAssetId,
-                    MaterialId = proxy.MaterialId,
-                    TemplateId = proxy.TemplateId,
-                    AnimationProfileId = proxy.AnimationProfileId,
-                    RenderPath = proxy.RenderPath,
-                    Position = proxy.Position,
-                    Rotation = proxy.Rotation,
-                    Scale = proxy.Scale,
-                    Color = proxy.Color,
-                    Animator = proxy.Animator,
-                    AnimationOverlay = proxy.AnimationOverlay,
-                    Visibility = proxy.Visibility,
+                    Payload = proxy.Payload,
+                    LOD = proxy.LOD,
                 }))
             {
                 throw new InvalidOperationException(

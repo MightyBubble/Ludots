@@ -300,6 +300,11 @@ namespace Ludots.Adapter.Web.Services
                 "F3" => 51,
                 "F4" => 52,
                 "F5" => 53,
+                "F6" => 54,
+                "PAGEUP" => 55,
+                "PAGEDOWN" => 56,
+                "HOME" => 57,
+                "END" => 58,
                 _ => -1,
             };
         }

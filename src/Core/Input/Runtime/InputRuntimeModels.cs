@@ -48,6 +48,14 @@ namespace Ludots.Core.Input.Runtime
             ReleasedThisFrame = false;
             _wasTriggered = false;
         }
+
+        public void SuppressThisFrame()
+        {
+            Value = Vector3.Zero;
+            Triggered = false;
+            PressedThisFrame = false;
+            ReleasedThisFrame = false;
+        }
         
         public T ReadValue<T>() where T : struct
         {

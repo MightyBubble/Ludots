@@ -1,5 +1,6 @@
 using System;
 using System.Numerics;
+using Ludots.Core.Mathematics;
 
 namespace Ludots.Core.Presentation.Assets
 {
@@ -14,19 +15,12 @@ namespace Ludots.Core.Presentation.Assets
             out Quaternion childRotation,
             out Vector3 childScale)
         {
-            Quaternion normalizedParentRotation = NormalizeOrIdentity(parentRotation);
-            Quaternion normalizedLocalRotation = NormalizeOrIdentity(part.LocalRotation);
+            Quaternion normalizedParentRotation = WorldPlane2D.NormalizeOrIdentity(parentRotation);
+            Quaternion normalizedLocalRotation = WorldPlane2D.NormalizeOrIdentity(part.LocalRotation);
 
             childPosition = parentPosition + Vector3.Transform(part.LocalPosition * parentScale, normalizedParentRotation);
-            childRotation = Quaternion.Normalize(Quaternion.Concatenate(normalizedLocalRotation, normalizedParentRotation));
+            childRotation = WorldPlane2D.NormalizeOrIdentity(Quaternion.Concatenate(normalizedLocalRotation, normalizedParentRotation));
             childScale = parentScale * part.LocalScale;
-        }
-
-        public static Quaternion NormalizeOrIdentity(in Quaternion rotation)
-        {
-            return rotation.LengthSquared() > 0.000001f
-                ? Quaternion.Normalize(rotation)
-                : Quaternion.Identity;
         }
 
         public static int BuildChildStableId(int parentStableId, int depth, int childIndex, int meshAssetId)

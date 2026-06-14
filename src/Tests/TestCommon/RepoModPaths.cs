@@ -15,7 +15,7 @@ namespace Ludots.Tests
             }
 
             var discovered = ModDiscovery.DiscoverMods(new[] { Path.Combine(repoRoot, "mods") });
-            var byName = new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase);
+            var byName = new Dictionary<string, string>(StringComparer.Ordinal);
             for (int i = 0; i < discovered.Count; i++)
             {
                 var mod = discovered[i];

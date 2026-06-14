@@ -2,10 +2,10 @@ using System;
 using System.Collections.Generic;
 using Arch.Core;
 using Arch.System;
+using Ludots.Core.Gameplay.GAS.Components;
 using Ludots.Core.GraphRuntime;
 using Ludots.Core.Mathematics;
 using Ludots.Core.NodeLibraries.GASGraph;
-using Ludots.Core.Presentation.Commands;
 using Ludots.Core.Presentation.Components;
 using Ludots.Core.Presentation.Events;
 using Ludots.Core.Presentation.Performers;
@@ -16,7 +16,7 @@ namespace Ludots.Core.Presentation.Systems
     /// <summary>
     /// Matches <see cref="PresentationEvent"/>s against <see cref="PerformerRule"/>s
     /// from registered <see cref="PerformerDefinition"/>s. When an event matches and
-    /// the condition evaluates to true, a <see cref="PresentationCommand"/> is produced.
+    /// the condition evaluates to true, a <see cref="PerformerCommand"/> is produced.
     ///
     /// Replaces PresentationControlSystem's event-to-command mapping with a fully
     /// declarative, configuration-driven rule engine.
@@ -27,8 +27,9 @@ namespace Ludots.Core.Presentation.Systems
     public sealed class PerformerRuleSystem : BaseSystem<World, float>
     {
         private readonly PresentationEventStream _events;
-        private readonly PresentationCommandBuffer _commands;
+        private readonly PerformerCommandBuffer _commands;
         private readonly PerformerDefinitionRegistry _definitions;
+        private readonly PerformerEntityRuntime? _runtime;
         private readonly GraphProgramRegistry _programs;
         private readonly IGraphRuntimeApi _graphApi;
         private readonly Dictionary<string, object> _globals;
@@ -53,6 +54,7 @@ namespace Ludots.Core.Presentation.Systems
 
         private struct IndexedRule
         {
+            public int OwnerDefinitionId;
             public ConditionRef Condition;
             public PerformerCommand Command;
         }
@@ -60,8 +62,9 @@ namespace Ludots.Core.Presentation.Systems
         public PerformerRuleSystem(
             World world,
             PresentationEventStream events,
-            PresentationCommandBuffer commands,
+            PerformerCommandBuffer commands,
             PerformerDefinitionRegistry definitions,
+            PerformerEntityRuntime? runtime,
             GraphProgramRegistry programs,
             IGraphRuntimeApi graphApi,
             Dictionary<string, object> globals)
@@ -70,9 +73,11 @@ namespace Ludots.Core.Presentation.Systems
             _events = events;
             _commands = commands;
             _definitions = definitions;
+            _runtime = runtime;
             _programs = programs;
             _graphApi = graphApi;
             _globals = globals;
+            _runtime?.BindDefinitions(_definitions);
         }
 
         public override void Update(in float dt)
@@ -94,8 +99,8 @@ namespace Ludots.Core.Presentation.Systems
                 {
                     for (int ri = 0; ri < exactRules.Length; ri++)
                     {
-                        if (!EvaluateCondition(in exactRules[ri].Condition, in evt)) continue;
-                        EmitCommand(in exactRules[ri].Command, in evt);
+                        if (!EvaluateCondition(in exactRules[ri], in evt)) continue;
+                        EmitRule(exactRules[ri], in evt);
                     }
                 }
 
@@ -104,8 +109,8 @@ namespace Ludots.Core.Presentation.Systems
                 {
                     for (int ri = 0; ri < wildcardRules.Length; ri++)
                     {
-                        if (!EvaluateCondition(in wildcardRules[ri].Condition, in evt)) continue;
-                        EmitCommand(in wildcardRules[ri].Command, in evt);
+                        if (!EvaluateCondition(in wildcardRules[ri], in evt)) continue;
+                        EmitRule(wildcardRules[ri], in evt);
                     }
                 }
             }
@@ -132,8 +137,14 @@ namespace Ludots.Core.Presentation.Systems
                 for (int ri = 0; ri < def.Rules.Length; ri++)
                 {
                     ref var rule = ref def.Rules[ri];
+                    if (_definitions.BootstrapRegistry.IsRootBootstrapRule(in rule))
+                    {
+                        continue;
+                    }
+
                     var entry = new IndexedRule
                     {
+                        OwnerDefinitionId = rule.OwnerDefinitionId,
                         Condition = rule.Condition,
                         Command = rule.Command,
                     };
@@ -176,11 +187,12 @@ namespace Ludots.Core.Presentation.Systems
 
         // ── Condition Evaluation ──
 
-        private bool EvaluateCondition(in ConditionRef cond, in PresentationEvent evt)
+        private bool EvaluateCondition(in IndexedRule rule, in PresentationEvent evt)
         {
+            ref readonly ConditionRef cond = ref rule.Condition;
             // Inline fast path
             if (cond.Inline != InlineConditionKind.None)
-                return EvaluateInline(cond.Inline, in evt);
+                return EvaluateInline(cond.Inline, in evt, in rule);
 
             // Graph path
             if (cond.GraphProgramId > 0)
@@ -190,7 +202,7 @@ namespace Ludots.Core.Presentation.Systems
             return true;
         }
 
-        private bool EvaluateInline(InlineConditionKind kind, in PresentationEvent evt)
+        private bool EvaluateInline(InlineConditionKind kind, in PresentationEvent evt, in IndexedRule rule)
         {
             switch (kind)
             {
@@ -218,8 +230,14 @@ namespace Ludots.Core.Presentation.Systems
                 case InlineConditionKind.OwnerCullVisible:
                     return IsOwnerCullVisible(evt.Source);
 
+                case InlineConditionKind.SourceHasAttributes:
+                    return SourceSatisfiesAttributeRequirements(evt.Source, in rule);
+
+                case InlineConditionKind.SourceHasVisualTransform:
+                    return World.IsAlive(evt.Source) && World.Has<VisualTransform>(evt.Source);
+
                 default:
-                    return true;
+                    throw new InvalidOperationException($"Unsupported performer rule inline condition '{kind}'.");
             }
         }
 
@@ -236,14 +254,73 @@ namespace Ludots.Core.Presentation.Systems
             return World.Get<CullState>(owner).IsVisible;
         }
 
+        private bool SourceSatisfiesAttributeRequirements(Entity source, in IndexedRule rule)
+        {
+            if (!World.IsAlive(source) || !World.Has<AttributeBuffer>(source))
+            {
+                return false;
+            }
+
+            ref AttributeBuffer attributes = ref World.Get<AttributeBuffer>(source);
+            if (TryGetConditionTargetDefinition(in rule, out PerformerDefinition definition))
+            {
+                return DefinitionAttributesSatisfied(ref attributes, definition);
+            }
+
+            return true;
+        }
+
+        private bool TryGetConditionTargetDefinition(in IndexedRule rule, out PerformerDefinition definition)
+        {
+            definition = null!;
+            int definitionId = rule.Command.CommandKind == PerformerCommandKind.CreatePerformer
+                ? rule.Command.PerformerDefinitionId
+                : rule.OwnerDefinitionId;
+            if (definitionId > 0)
+            {
+                if (_definitions.TryGet(definitionId, out definition))
+                {
+                    return true;
+                }
+            }
+
+            return false;
+        }
+
+        private static bool DefinitionAttributesSatisfied(ref AttributeBuffer attributes, PerformerDefinition definition)
+        {
+            int[] required = definition.RequiredAttributeIds;
+            if (required == null || required.Length == 0)
+            {
+                return true;
+            }
+
+            for (int i = 0; i < required.Length; i++)
+            {
+                if (!attributes.HasAttribute(required[i]))
+                {
+                    return false;
+                }
+            }
+
+            return true;
+        }
+
         /// <summary>
         /// Execute a Graph program and read B[0] as the boolean result.
         /// Same register setup pattern as EffectPhaseExecutor.ExecuteGraph().
         /// </summary>
         private bool EvaluateGraph(int graphProgramId, Entity source, Entity target)
         {
-            if (!_programs.TryGetProgram(graphProgramId, out var program)) return false;
-            if (program.Length == 0) return false;
+            if (!_programs.TryGetProgram(graphProgramId, out var program))
+            {
+                throw new InvalidOperationException($"Performer rule condition references unknown graphProgramId={graphProgramId}.");
+            }
+
+            if (program.Length == 0)
+            {
+                throw new InvalidOperationException($"Performer rule condition graphProgramId={graphProgramId} has no instructions.");
+            }
 
             Array.Clear(_floatRegs, 0, _floatRegs.Length);
             Array.Clear(_intRegs, 0, _intRegs.Length);
@@ -278,26 +355,170 @@ namespace Ludots.Core.Presentation.Systems
 
         // ── Command Emission ──
 
-        private void EmitCommand(in PerformerCommand cmd, in PresentationEvent evt)
+        private void EmitRule(in IndexedRule rule, in PresentationEvent evt)
         {
-            _commands.TryAdd(new PresentationCommand
+            if (rule.OwnerDefinitionId > 0 &&
+                _runtime != null &&
+                EventTargetsExistingPerformerInstances(evt.Kind))
             {
-                LogicTickStamp = evt.LogicTickStamp,
-                Kind = cmd.CommandKind,
-                PerformerDefinitionId = cmd.CommandKind == PresentationCommandKind.CreatePerformer
-                    ? cmd.PerformerDefinitionId
-                    : 0,
-                PerformerHandle = cmd.PerformerHandle,
-                ScopeId = cmd.ScopeId,
-                Source = evt.Source,
-                Target = evt.Target,
-                FieldName = cmd.FieldName,
-                FieldValue = cmd.FieldValue,
-                LegacyParamValue = cmd.LegacyParamGraphProgramId > 0
-                    ? EvaluateGraphFloat(cmd.LegacyParamGraphProgramId, evt.Source, evt.Target)
-                    : cmd.LegacyParamValue,
-                LegacyParamKey = cmd.LegacyParamKey,
-            });
+                EmitForMatchingInstances(rule.OwnerDefinitionId, in rule.Command, in evt);
+                return;
+            }
+
+            EmitCommand(in rule.Command, in evt, performerEntity: Entity.Null, ownerDefinitionId: rule.OwnerDefinitionId);
+        }
+
+        private void EmitForMatchingInstances(int ownerDefinitionId, in PerformerCommand command, in PresentationEvent evt)
+        {
+            bool globalEvent = IsGlobalEvent(evt.Kind);
+            PerformerCommand localCmd = command;
+            PresentationEvent localEvt = evt;
+            IReadOnlyList<Entity> candidates = globalEvent
+                ? _runtime!.GetActiveByDefinition(ownerDefinitionId)
+                : _runtime!.GetActiveByOwnerDefinition(ownerDefinitionId, evt.Source);
+
+            for (int i = 0; i < candidates.Count; i++)
+            {
+                Entity entity = candidates[i];
+                if (!World.IsAlive(entity) || !World.Has<PerformerState>(entity))
+                {
+                    continue;
+                }
+
+                ref PerformerState state = ref World.Get<PerformerState>(entity);
+                if (state.DefId != ownerDefinitionId || (!globalEvent && state.OwnerEntity != localEvt.Source))
+                {
+                    continue;
+                }
+
+                EmitCommand(in localCmd, in localEvt, entity, ownerDefinitionId);
+            }
+        }
+
+        private void EmitCommand(in PerformerCommand cmd, in PresentationEvent evt, Entity performerEntity, int ownerDefinitionId)
+        {
+            int scopeId = cmd.ScopeSource switch
+            {
+                PerformerCommandScopeSource.EventPayloadA => evt.PayloadA,
+                PerformerCommandScopeSource.EventPayloadB => evt.PayloadB,
+                PerformerCommandScopeSource.EventKeyId => evt.KeyId,
+                PerformerCommandScopeSource.SourceStableId => ResolveSourceStableId(evt.Source),
+                _ => cmd.ScopeTag,
+            };
+
+            var emitted = cmd;
+            emitted.ScopeTag = scopeId;
+            emitted.ScopeSource = PerformerCommandScopeSource.Fixed;
+            emitted.AnchorKind = Commands.PresentationAnchorKind.Entity;
+            emitted.Source = evt.Source;
+            emitted.Target = evt.Target;
+            emitted.Position = default;
+            emitted.PerformerEntity = performerEntity;
+            Entity normalizedParent = NormalizeOptionalEntity(cmd.ParentEntity);
+            emitted.ParentEntity = normalizedParent != Entity.Null
+                ? normalizedParent
+                : ResolveImplicitParent(in evt);
+            emitted.ParamValue = cmd.ParamGraphProgramId > 0
+                ? EvaluateGraphFloat(cmd.ParamGraphProgramId, evt.Source, evt.Target)
+                : ResolveParamFloatValue(in cmd, in evt);
+            emitted.IntValue = ResolveParamIntValue(in cmd, in evt);
+            emitted.ParamGraphProgramId = 0;
+            emitted.ValueSource = PerformerCommandValueSource.Fixed;
+
+            if (emitted.CommandKind == PerformerCommandKind.CreatePerformer &&
+                emitted.ParentEntity == Entity.Null &&
+                performerEntity != Entity.Null &&
+                ownerDefinitionId > 0)
+            {
+                emitted.ParentEntity = performerEntity;
+            }
+
+            if (!_commands.TryAdd(in emitted))
+            {
+                throw new InvalidOperationException(
+                    $"PerformerCommandBuffer overflowed while emitting {emitted.CommandKind} from {evt.Kind}; capacity={_commands.Capacity}.");
+            }
+        }
+
+        private static Entity NormalizeOptionalEntity(Entity entity)
+        {
+            return entity == default || entity.Id < 0 ? Entity.Null : entity;
+        }
+
+        private Entity ResolveImplicitParent(in PresentationEvent evt)
+        {
+            if (evt.Kind == PresentationEventKind.PerformerCreated)
+            {
+                return NormalizeOptionalEntity(evt.PerformerEntity);
+            }
+
+            if (evt.Kind is PresentationEventKind.SelectionMemberAdded or PresentationEventKind.SelectionMemberRemoved &&
+                World.IsAlive(evt.Source) &&
+                World.Has<PresentationOwnerHasPerformerPayload>(evt.Source))
+            {
+                Entity parent = World.Get<PresentationOwnerHasPerformerPayload>(evt.Source).SingleRootPerformer;
+                return NormalizeOptionalEntity(parent);
+            }
+
+            return Entity.Null;
+        }
+
+        private static bool EventTargetsExistingPerformerInstances(PresentationEventKind kind)
+        {
+            return kind is PresentationEventKind.TagEffectiveChanged
+                or PresentationEventKind.SelectionMemberAdded
+                or PresentationEventKind.SelectionMemberRemoved
+                or PresentationEventKind.GlobalDayNight
+                or PresentationEventKind.GlobalRegionChanged
+                or PresentationEventKind.GlobalWeather
+                or PresentationEventKind.AttributeValueChanged;
+        }
+
+        private int ResolveSourceStableId(Entity source)
+        {
+            if (!World.IsAlive(source) || !World.Has<PresentationStableId>(source))
+            {
+                throw new InvalidOperationException("Performer command scopeSource=SourceStableId requires an alive source with PresentationStableId.");
+            }
+
+            int stableId = World.Get<PresentationStableId>(source).Value;
+            if (stableId <= 0)
+            {
+                throw new InvalidOperationException($"Performer command scopeSource=SourceStableId requires a positive PresentationStableId, got {stableId}.");
+            }
+
+            return stableId;
+        }
+
+        private static bool IsGlobalEvent(PresentationEventKind kind)
+        {
+            return kind is PresentationEventKind.GlobalDayNight
+                or PresentationEventKind.GlobalRegionChanged
+                or PresentationEventKind.GlobalWeather;
+        }
+
+        private static float ResolveParamFloatValue(in PerformerCommand cmd, in PresentationEvent evt)
+        {
+            return cmd.ValueSource switch
+            {
+                PerformerCommandValueSource.EventKeyId => evt.KeyId,
+                PerformerCommandValueSource.EventPayloadA => evt.PayloadA,
+                PerformerCommandValueSource.EventPayloadB => evt.PayloadB,
+                PerformerCommandValueSource.EventMagnitude => evt.Magnitude,
+                _ => cmd.ParamValue,
+            };
+        }
+
+        private static int ResolveParamIntValue(in PerformerCommand cmd, in PresentationEvent evt)
+        {
+            return cmd.ValueSource switch
+            {
+                PerformerCommandValueSource.EventKeyId => evt.KeyId,
+                PerformerCommandValueSource.EventPayloadA => evt.PayloadA,
+                PerformerCommandValueSource.EventPayloadB => evt.PayloadB,
+                PerformerCommandValueSource.EventMagnitude => (int)evt.Magnitude,
+                _ => cmd.IntValue,
+            };
         }
 
         /// <summary>
@@ -305,8 +526,15 @@ namespace Ludots.Core.Presentation.Systems
         /// </summary>
         private float EvaluateGraphFloat(int graphProgramId, Entity source, Entity target)
         {
-            if (!_programs.TryGetProgram(graphProgramId, out var program)) return 0f;
-            if (program.Length == 0) return 0f;
+            if (!_programs.TryGetProgram(graphProgramId, out var program))
+            {
+                throw new InvalidOperationException($"Performer command paramGraphProgramId={graphProgramId} references an unknown graph program.");
+            }
+
+            if (program.Length == 0)
+            {
+                throw new InvalidOperationException($"Performer command paramGraphProgramId={graphProgramId} has no instructions.");
+            }
 
             Array.Clear(_floatRegs, 0, _floatRegs.Length);
             Array.Clear(_intRegs, 0, _intRegs.Length);

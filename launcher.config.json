@@ -64,6 +64,38 @@
         "value": "mods/showcases/chunk_streaming/ChunkStreamingShowcaseMod",
         "projectPath": "ChunkStreamingShowcaseMod.csproj"
       }
+    },
+    {
+      "name": "performer_blacksmith_showcase",
+      "target": {
+        "type": "path",
+        "value": "mods/showcases/performer_blacksmith/PerformerBlacksmithShowcaseMod",
+        "projectPath": "PerformerBlacksmithShowcaseMod.csproj"
+      }
+    },
+    {
+      "name": "performer_blacksmith_large_world",
+      "target": {
+        "type": "path",
+        "value": "mods/showcases/performer_blacksmith_large_world_entry/PerformerBlacksmithLargeWorldEntryMod",
+        "projectPath": "PerformerBlacksmithLargeWorldEntryMod.csproj"
+      }
+    },
+    {
+      "name": "performer_blacksmith_large_world_nohud",
+      "target": {
+        "type": "path",
+        "value": "mods/showcases/performer_blacksmith_large_world_nohud_entry/PerformerBlacksmithLargeWorldNoHudEntryMod",
+        "projectPath": "PerformerBlacksmithLargeWorldNoHudEntryMod.csproj"
+      }
+    },
+    {
+      "name": "mass_navigation",
+      "target": {
+        "type": "path",
+        "value": "mods/capabilities/navigation/MassNavigationMod",
+        "projectPath": "MassNavigationMod.csproj"
+      }
     }
   ],
   "adapters": {

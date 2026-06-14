@@ -72,6 +72,10 @@ namespace Ludots.Core.Presentation.Systems
             state.Enabled = InterpolationEnabled;
             state.RenderDeltaTime = renderDeltaTime;
             state.FixedDeltaTime = Time.FixedDeltaTime;
+            unchecked
+            {
+                state.FrameId++;
+            }
             // Note: FixedUpdatesThisFrame would need to be tracked by Pacemaker
         }
         

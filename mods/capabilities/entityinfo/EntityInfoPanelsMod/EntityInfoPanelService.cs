@@ -54,7 +54,7 @@ public sealed partial class EntityInfoPanelService
     private readonly Entity[] _entityCollectionContainers = new Entity[PanelCapacity];
     private readonly Entity[] _entityCollectionPrimaries = new Entity[PanelCapacity];
     private readonly string[] _entityCollectionViewKeys = new string[PanelCapacity];
-    private readonly string[] _entityCollectionAliasKeys = new string[PanelCapacity];
+    private readonly string[] _entityCollectionSetKeys = new string[PanelCapacity];
     private readonly int[] _entityCollectionCounts = new int[PanelCapacity];
     private readonly uint[] _entityCollectionRevisions = new uint[PanelCapacity];
     private readonly int[] _entityCollectionCategoryCounts = new int[PanelCapacity];
@@ -255,7 +255,7 @@ public sealed partial class EntityInfoPanelService
     public int GetActiveLocaleId() => _insightTextResolver.ActiveLocaleId;
     public int GetEntityCollectionCount(int slot) => _entityCollectionCounts[slot];
     public string GetEntityCollectionViewKey(int slot) => _entityCollectionViewKeys[slot] ?? string.Empty;
-    public string GetEntityCollectionAliasKey(int slot) => _entityCollectionAliasKeys[slot] ?? string.Empty;
+    public string GetEntityCollectionSetKey(int slot) => _entityCollectionSetKeys[slot] ?? string.Empty;
     public int GetEntityCollectionCategoryCount(int slot) => _entityCollectionCategoryCounts[slot];
     public int GetComponentSectionCount(int slot) => _componentSectionCounts[slot];
     public int GetComponentSectionTypeId(int slot, int sectionIndex) => _componentSectionTypeIds[SectionIndex(slot, sectionIndex)];

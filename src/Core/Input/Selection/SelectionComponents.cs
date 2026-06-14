@@ -17,8 +17,7 @@ namespace Ludots.Core.Input.Selection
     public static class SelectionSetKeys
     {
         public const string ControlGroupPrefix = "selection.group.";
-        public const string Ambient = "selection.live.primary";
-        public const string LivePrimary = Ambient;
+        public const string LivePrimary = "selection.live.primary";
         public const string FormationPrimary = "selection.formation.primary";
         public const string CommandPreview = "selection.command.preview";
         public const string CommandSnapshot = "selection.command.snapshot";
@@ -59,7 +58,7 @@ namespace Ludots.Core.Input.Selection
         public Entity Value;
     }
 
-    public struct SelectionContainerAliasId
+    public struct SelectionContainerSetKeyId
     {
         public int Value;
     }

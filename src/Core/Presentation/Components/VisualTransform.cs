@@ -19,4 +19,16 @@ namespace Ludots.Core.Presentation.Components
             Scale = Vector3.One
         };
     }
+
+    /// <summary>
+    /// Frame-local provenance for VisualTransform.Y after terrain projection.
+    /// Consumers can use this to avoid re-sampling the same visual heightmap truth.
+    /// </summary>
+    public struct VisualHeightmapSampleState
+    {
+        public int FrameId;
+        public byte Sampled;
+
+        public readonly bool IsSampledForFrame(int frameId) => Sampled != 0 && FrameId == frameId;
+    }
 }

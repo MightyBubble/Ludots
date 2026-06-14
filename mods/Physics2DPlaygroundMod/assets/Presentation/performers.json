@@ -1,0 +1,25 @@
+[
+  {
+    "id": "physics2d_playground.spawned_box",
+    "defaultLifetime": -1,
+    "behaviors": [
+      {
+        "slot": "body",
+        "kind": "AssetBinding",
+        "activeByDefault": true,
+        "assetBinding": {
+          "assetKind": "Mesh",
+          "assetId": "cube",
+          "materialId": "default_surface",
+          "renderPath": "StaticMesh",
+          "mobility": "Movable",
+          "localScale": [
+            1,
+            0.5,
+            1
+          ]
+        }
+      }
+    ]
+  }
+]

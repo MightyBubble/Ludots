@@ -21,7 +21,10 @@ namespace Ludots.Tests.GAS
 
             var selection = new SelectionRuntime(
                 world,
-                new SelectionRuntimeConfig(),
+                new SelectionRuntimeConfig
+                {
+                    TargetFilter = new SelectionTargetFilterConfig { RelationFilter = "All" },
+                },
                 new StringIntRegistry(capacity: 16, startId: 1, invalidId: 0, comparer: System.StringComparer.Ordinal));
 
             var globals = new Dictionary<string, object>

@@ -143,6 +143,25 @@ namespace Raylib_cs
         CAMERA_THIRD_PERSON
     }
 
+    public enum BlendMode
+    {
+        BLEND_ALPHA = 0,
+        BLEND_ADDITIVE,
+        BLEND_MULTIPLIED,
+        BLEND_ADD_COLORS,
+        BLEND_SUBTRACT_COLORS,
+        BLEND_ALPHA_PREMULTIPLY,
+        BLEND_CUSTOM,
+        BLEND_CUSTOM_SEPARATE
+    }
+
+    public enum RlMatrixMode
+    {
+        RL_MODELVIEW = 0x1700,
+        RL_PROJECTION = 0x1701,
+        RL_TEXTURE = 0x1702
+    }
+
     [StructLayout(LayoutKind.Sequential)]
     public struct Rectangle
     {
@@ -231,6 +250,14 @@ namespace Raylib_cs
     }
 
     [StructLayout(LayoutKind.Sequential)]
+    public struct RenderTexture2D
+    {
+        public uint id;
+        public Texture2D texture;
+        public Texture2D depth;
+    }
+
+    [StructLayout(LayoutKind.Sequential)]
     public struct MaterialMap
     {
         public Texture2D texture;
@@ -273,8 +300,6 @@ namespace Raylib_cs
         public float* animNormals;
         public byte* boneIds;
         public float* boneWeights;
-        public RaylibMatrix* boneMatrices;
-        public int boneCount;
 
         // OpenGL identifiers
         public uint vaoId;
@@ -347,6 +372,30 @@ namespace Raylib_cs
 
         [DllImport(NativeLib, CallingConvention = CallingConvention.Cdecl)]
         public static extern void EndMode3D();
+
+        [DllImport(NativeLib, CallingConvention = CallingConvention.Cdecl)]
+        public static extern void rlDrawRenderBatchActive();
+
+        [DllImport(NativeLib, CallingConvention = CallingConvention.Cdecl)]
+        public static extern void rlMatrixMode(int mode);
+
+        [DllImport(NativeLib, CallingConvention = CallingConvention.Cdecl)]
+        public static extern void rlPushMatrix();
+
+        [DllImport(NativeLib, CallingConvention = CallingConvention.Cdecl)]
+        public static extern void rlPopMatrix();
+
+        [DllImport(NativeLib, CallingConvention = CallingConvention.Cdecl)]
+        public static extern void rlLoadIdentity();
+
+        [DllImport(NativeLib, CallingConvention = CallingConvention.Cdecl)]
+        public static extern void rlFrustum(double left, double right, double bottom, double top, double znear, double zfar);
+
+        [DllImport(NativeLib, CallingConvention = CallingConvention.Cdecl)]
+        public static extern void rlOrtho(double left, double right, double bottom, double top, double znear, double zfar);
+
+        [DllImport(NativeLib, CallingConvention = CallingConvention.Cdecl)]
+        public static extern unsafe void rlMultMatrixf(float* matf);
 
         [DllImport(NativeLib, CallingConvention = CallingConvention.Cdecl)]
         public static extern void DrawCube(Vector3 position, float width, float height, float length, Color color);
@@ -515,6 +564,21 @@ namespace Raylib_cs
             SHADER_LOC_MAP_BRDF
         }
 
+        public enum MaterialMapIndex
+        {
+            MATERIAL_MAP_ALBEDO = 0,
+            MATERIAL_MAP_METALNESS,
+            MATERIAL_MAP_NORMAL,
+            MATERIAL_MAP_ROUGHNESS,
+            MATERIAL_MAP_OCCLUSION,
+            MATERIAL_MAP_EMISSION,
+            MATERIAL_MAP_HEIGHT,
+            MATERIAL_MAP_CUBEMAP,
+            MATERIAL_MAP_IRRADIANCE,
+            MATERIAL_MAP_PREFILTER,
+            MATERIAL_MAP_BRDF
+        }
+
         [DllImport(NativeLib, CallingConvention = CallingConvention.Cdecl)]
         public static extern unsafe Image GenImageColor(int width, int height, Color color);
 
@@ -540,6 +604,27 @@ namespace Raylib_cs
         public static extern void DrawTexture(Texture2D texture, int posX, int posY, Color tint);
 
         [DllImport(NativeLib, CallingConvention = CallingConvention.Cdecl)]
+        public static extern RenderTexture2D LoadRenderTexture(int width, int height);
+
+        [DllImport(NativeLib, CallingConvention = CallingConvention.Cdecl)]
+        public static extern void UnloadRenderTexture(RenderTexture2D target);
+
+        [DllImport(NativeLib, CallingConvention = CallingConvention.Cdecl)]
+        public static extern void BeginTextureMode(RenderTexture2D target);
+
+        [DllImport(NativeLib, CallingConvention = CallingConvention.Cdecl)]
+        public static extern void EndTextureMode();
+
+        [DllImport(NativeLib, CallingConvention = CallingConvention.Cdecl)]
+        public static extern void DrawTextureRec(Texture2D texture, Rectangle source, Vector2 position, Color tint);
+
+        [DllImport(NativeLib, CallingConvention = CallingConvention.Cdecl)]
+        public static extern void BeginBlendMode(BlendMode mode);
+
+        [DllImport(NativeLib, CallingConvention = CallingConvention.Cdecl)]
+        public static extern void EndBlendMode();
+
+        [DllImport(NativeLib, CallingConvention = CallingConvention.Cdecl)]
         public static extern void DrawBillboardRec(Camera3D camera, Texture2D texture, Rectangle source, Vector3 position, Vector2 size, Color tint);
 
         [DllImport(NativeLib, CallingConvention = CallingConvention.Cdecl)]
@@ -553,6 +638,18 @@ namespace Raylib_cs
 
         [DllImport(NativeLib, CallingConvention = CallingConvention.Cdecl)]
         public static extern void rlEnableBackfaceCulling();
+
+        [DllImport(NativeLib, CallingConvention = CallingConvention.Cdecl)]
+        public static extern void rlEnableDepthTest();
+
+        [DllImport(NativeLib, CallingConvention = CallingConvention.Cdecl)]
+        public static extern void rlDisableDepthTest();
+
+        [DllImport(NativeLib, CallingConvention = CallingConvention.Cdecl)]
+        public static extern void rlEnableDepthMask();
+
+        [DllImport(NativeLib, CallingConvention = CallingConvention.Cdecl)]
+        public static extern void rlDisableDepthMask();
 
         // --- Model APIs ---
 

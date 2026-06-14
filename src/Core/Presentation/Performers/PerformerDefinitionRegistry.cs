@@ -14,15 +14,20 @@ namespace Ludots.Core.Presentation.Performers
         private readonly StringIntRegistry _ids;
         private PerformerDefinition[] _items;
         private bool[] _has;
+        private readonly CompiledPerformerBootstrapRegistry _bootstrapRegistry = new();
+        private bool _hasPerformerCreatedRules;
 
         public IReadOnlyList<int> RegisteredIds => _registeredIds;
         private readonly List<int> _registeredIds = new();
 
         public int Version { get; private set; }
 
+        public CompiledPerformerBootstrapRegistry BootstrapRegistry => _bootstrapRegistry;
+        public bool HasPerformerCreatedRules => _hasPerformerCreatedRules;
+
         public PerformerDefinitionRegistry(int capacity = 1024)
         {
-            _ids = new StringIntRegistry(capacity, startId: 1, invalidId: 0);
+            _ids = new StringIntRegistry(capacity, startId: 1, invalidId: 0, comparer: StringComparer.Ordinal);
             _items = new PerformerDefinition[capacity];
             _has = new bool[capacity];
         }
@@ -36,7 +41,10 @@ namespace Ludots.Core.Presentation.Performers
             int id = _ids.Register(key);
             EnsureCapacity(id);
             definition.Id = id;
+            StampRuleOwners(definition, id);
             definition.BuildBindingIndex();
+            definition.BuildRequiredAttributeIds();
+            definition.BuildBehaviorMetadata();
             _items[id] = definition;
             if (!_has[id])
             {
@@ -44,6 +52,8 @@ namespace Ludots.Core.Presentation.Performers
                 _registeredIds.Add(id);
             }
             Version++;
+            _bootstrapRegistry.Rebuild(this);
+            RebuildPerformerCreatedRuleFlag();
             return id;
         }
 
@@ -57,6 +67,33 @@ namespace Ludots.Core.Presentation.Performers
         public int GetOrRegisterId(string key) => _ids.Register(key);
 
         public string GetName(int id) => _ids.GetName(id);
+
+        public bool Unregister(string key)
+        {
+            int id = _ids.GetId(key);
+            bool removed = false;
+            if (id > 0 && id < _items.Length && _has[id])
+            {
+                _items[id] = null!;
+                _has[id] = false;
+                _registeredIds.Remove(id);
+                removed = true;
+            }
+
+            if (_ids.Unregister(key))
+            {
+                removed = true;
+            }
+
+            if (removed)
+            {
+                Version++;
+                _bootstrapRegistry.Rebuild(this);
+                RebuildPerformerCreatedRuleFlag();
+            }
+
+            return removed;
+        }
 
         public bool TryGet(int id, out PerformerDefinition definition)
         {
@@ -82,6 +119,53 @@ namespace Ludots.Core.Presentation.Performers
             int newLen = Math.Max(_items.Length * 2, id + 1);
             Array.Resize(ref _items, newLen);
             Array.Resize(ref _has, newLen);
+        }
+
+        private static void StampRuleOwners(PerformerDefinition definition, int id)
+        {
+            PerformerRule[] rules = definition.Rules;
+            if (rules == null || rules.Length == 0)
+            {
+                return;
+            }
+
+            for (int i = 0; i < rules.Length; i++)
+            {
+                rules[i].OwnerDefinitionId = id;
+            }
+        }
+
+        public void RebuildCompiledViews()
+        {
+            _bootstrapRegistry.Rebuild(this);
+            RebuildPerformerCreatedRuleFlag();
+        }
+
+        private void RebuildPerformerCreatedRuleFlag()
+        {
+            _hasPerformerCreatedRules = false;
+            for (int i = 0; i < _registeredIds.Count; i++)
+            {
+                if (!TryGet(_registeredIds[i], out PerformerDefinition definition))
+                {
+                    continue;
+                }
+
+                PerformerRule[] rules = definition.Rules;
+                if (rules == null)
+                {
+                    continue;
+                }
+
+                for (int r = 0; r < rules.Length; r++)
+                {
+                    if (rules[r].Event.Kind == Events.PresentationEventKind.PerformerCreated)
+                    {
+                        _hasPerformerCreatedRules = true;
+                        return;
+                    }
+                }
+            }
         }
     }
 }

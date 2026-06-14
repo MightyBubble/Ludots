@@ -1,5 +1,7 @@
 using System;
+using System.Collections.Generic;
 using System.Runtime.CompilerServices;
+using Arch.Buffer;
 using Arch.Core;
 using Arch.System;
 using Ludots.Core.Components;
@@ -22,6 +24,8 @@ namespace Ludots.Core.Gameplay.GAS.Systems
         private readonly float _defaultSpeedCmPerSec;
         private readonly float _stopRadiusCm;
         private readonly int _moveSpeedAttributeId;
+        private readonly CommandBuffer _commandBuffer = new();
+        private readonly List<Entity> _completedOrders = new(64);
 
         public MoveToWorldCmOrderSystem(
             World world,
@@ -44,6 +48,7 @@ namespace Ludots.Core.Gameplay.GAS.Systems
                 return;
             }
 
+            _completedOrders.Clear();
             foreach (ref var chunk in World.Query(in Query))
             {
                 var positions = chunk.GetSpan<WorldPositionCm>();
@@ -62,7 +67,7 @@ namespace Ludots.Core.Gameplay.GAS.Systems
                     if (!buffer.HasActive || buffer.ActiveOrder.Order.OrderTypeId != _moveToOrderTypeId)
                     {
                         SetSmartStopSuppression(entity, suppressed: false);
-                        ClearNavGoal(entity);
+                        ClearNavGoal(entity, _commandBuffer);
                         continue;
                     }
 
@@ -72,9 +77,9 @@ namespace Ludots.Core.Gameplay.GAS.Systems
                     if (!TryResolveTarget(in buffer.ActiveOrder.Order, currentWaypointIndex, out var target))
                     {
                         SetSmartStopSuppression(entity, suppressed: false);
-                        ClearNavGoal(entity);
+                        ClearNavGoal(entity, _commandBuffer);
                         ResetMoveRuntime(ref buffer.ActiveOrder);
-                        OrderSubmitter.NotifyOrderComplete(World, entity, _orderTypeRegistry);
+                        _completedOrders.Add(entity);
                         continue;
                     }
 
@@ -82,7 +87,7 @@ namespace Ludots.Core.Gameplay.GAS.Systems
                     if (speedCmPerSec <= 0f)
                     {
                         SetSmartStopSuppression(entity, suppressed: false);
-                        ClearNavGoal(entity);
+                        ClearNavGoal(entity, _commandBuffer);
                         continue;
                     }
 
@@ -92,9 +97,9 @@ namespace Ludots.Core.Gameplay.GAS.Systems
                         if (navCompleted)
                         {
                             SetSmartStopSuppression(entity, suppressed: false);
-                            ClearNavGoal(entity);
+                            ClearNavGoal(entity, _commandBuffer);
                             ResetMoveRuntime(ref buffer.ActiveOrder);
-                            OrderSubmitter.NotifyOrderComplete(World, entity, _orderTypeRegistry);
+                            _completedOrders.Add(entity);
                         }
 
                         continue;
@@ -107,13 +112,23 @@ namespace Ludots.Core.Gameplay.GAS.Systems
                     if (completed)
                     {
                         SetSmartStopSuppression(entity, suppressed: false);
-                        ClearNavGoal(entity);
+                        ClearNavGoal(entity, _commandBuffer);
                         ResetMoveRuntime(ref buffer.ActiveOrder);
-                        OrderSubmitter.NotifyOrderComplete(World, entity, _orderTypeRegistry);
+                        _completedOrders.Add(entity);
                     }
 
                     position.Value = current;
                 }
+            }
+
+            if (_commandBuffer.Size > 0)
+            {
+                _commandBuffer.Playback(World);
+            }
+
+            for (int i = 0; i < _completedOrders.Count; i++)
+            {
+                OrderSubmitter.NotifyOrderComplete(World, _completedOrders[i], _orderTypeRegistry);
             }
         }
 
@@ -142,12 +157,6 @@ namespace Ludots.Core.Gameplay.GAS.Systems
                 return false;
             }
 
-            if (!World.Has<NavGoal2D>(entity))
-            {
-                World.Add(entity, new NavGoal2D());
-            }
-
-            ref var goal = ref World.Get<NavGoal2D>(entity);
             if (World.Has<NavKinematics2D>(entity))
             {
                 ref var kinematics = ref World.Get<NavKinematics2D>(entity);
@@ -155,6 +164,9 @@ namespace Ludots.Core.Gameplay.GAS.Systems
             }
 
             ref var position = ref World.Get<Position2D>(entity);
+            NavGoal2D goal = World.Has<NavGoal2D>(entity)
+                ? World.Get<NavGoal2D>(entity)
+                : new NavGoal2D();
             goal.RadiusCm = Fix64.FromFloat(_stopRadiusCm);
 
             while (TryResolveCurrentTarget(in order, nextWaypointIndex, out var target))
@@ -165,6 +177,7 @@ namespace Ludots.Core.Gameplay.GAS.Systems
                 var delta = target - position.Value;
                 if (delta.LengthSquared() > goal.RadiusCm * goal.RadiusCm)
                 {
+                    CommitGoal(in goal);
                     return true;
                 }
 
@@ -172,16 +185,30 @@ namespace Ludots.Core.Gameplay.GAS.Systems
                 {
                     goal.Kind = NavGoalKind2D.None;
                     completed = true;
+                    CommitGoal(in goal);
                     return true;
                 }
             }
 
             goal.Kind = NavGoalKind2D.None;
             completed = true;
+            CommitGoal(in goal);
             return true;
+
+            void CommitGoal(in NavGoal2D value)
+            {
+                if (World.Has<NavGoal2D>(entity))
+                {
+                    World.Set(entity, value);
+                }
+                else
+                {
+                    _commandBuffer.Add(entity, value);
+                }
+            }
         }
 
-        private void ClearNavGoal(Entity entity)
+        private void ClearNavGoal(Entity entity, CommandBuffer commandBuffer)
         {
             if (!World.Has<NavGoal2D>(entity))
             {
@@ -335,6 +362,12 @@ namespace Ludots.Core.Gameplay.GAS.Systems
             float dx = delta.X.ToFloat();
             float dy = delta.Y.ToFloat();
             return MathF.Sqrt((dx * dx) + (dy * dy));
+        }
+
+        public override void Dispose()
+        {
+            _commandBuffer.Dispose();
+            base.Dispose();
         }
     }
 }

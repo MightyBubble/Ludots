@@ -29,9 +29,9 @@ namespace Ludots.Core.Input.Orders
         private readonly AbilityDefinitionRegistry _abilities;
         private readonly GroundOverlayBuffer _overlays;
         private readonly PerformerDefinitionRegistry? _performerDefinitions;
-        private readonly PerformerInstanceBuffer? _performers;
+        private readonly PerformerEntityRuntime? _performers;
         private readonly Dictionary<string, int> _previewPerformerIds = new(StringComparer.OrdinalIgnoreCase);
-        private int _previewHandle = -1;
+        private Entity _previewEntity;
         private int _previewDefinitionId;
 
         public AbilityIndicatorOverlayBridge(
@@ -39,7 +39,7 @@ namespace Ludots.Core.Input.Orders
             AbilityDefinitionRegistry abilities,
             GroundOverlayBuffer overlays,
             PerformerDefinitionRegistry? performerDefinitions = null,
-            PerformerInstanceBuffer? performers = null)
+            PerformerEntityRuntime? performers = null)
         {
             _world = world ?? throw new ArgumentNullException(nameof(world));
             _abilities = abilities ?? throw new ArgumentNullException(nameof(abilities));
@@ -144,12 +144,12 @@ namespace Ludots.Core.Input.Orders
 
         public void ClearPreview()
         {
-            if (_performers != null && _previewHandle >= 0)
+            if (_performers != null && _previewEntity != Entity.Null && _world.IsAlive(_previewEntity))
             {
-                _performers.Release(_previewHandle);
+                _performers.Destroy(_previewEntity);
             }
 
-            _previewHandle = -1;
+            _previewEntity = Entity.Null;
             _previewDefinitionId = 0;
         }
 
@@ -370,39 +370,43 @@ namespace Ludots.Core.Input.Orders
             Vector3 worldPosition = ToVisualMeters(centerWorldCm);
             worldPosition.Y += indicator.Preview.OffsetY;
 
-            if (_previewHandle < 0 || !_performers.IsActive(_previewHandle) || _previewDefinitionId != definitionId)
+            if (_previewEntity == Entity.Null || !_world.IsAlive(_previewEntity) || _previewDefinitionId != definitionId)
             {
                 ClearPreview();
-                if (!_performers.TryAllocate(
-                        definitionId,
-                        actor,
-                        PreviewScopeId,
-                        PresentationAnchorKind.WorldPosition,
-                        worldPosition,
-                        stableId: 0,
-                        out _previewHandle))
+                if (!_performerDefinitions.TryGet(definitionId, out var perfDef))
                 {
-                    _previewHandle = -1;
+                    _previewEntity = Entity.Null;
                     _previewDefinitionId = 0;
                     return;
                 }
 
+                _previewEntity = _performers.Create(
+                    definitionId,
+                    actor,
+                    PreviewScopeId,
+                    PresentationAnchorKind.WorldPosition,
+                    worldPosition,
+                    stableId: 0,
+                    Entity.Null,
+                    perfDef);
+
                 _previewDefinitionId = definitionId;
             }
 
-            ref var preview = ref _performers.Get(_previewHandle);
-            preview.WorldPosition = worldPosition;
-            preview.Owner = actor;
+            ref var pos = ref _world.Get<PerformerWorldPosition>(_previewEntity);
+            pos.Value = worldPosition;
+            ref var previewState = ref _world.Get<PerformerState>(_previewEntity);
+            previewState.OwnerEntity = actor;
 
             var color = ResolvePreviewColor(indicator, definition, valid);
             Vector3 scale = ResolvePreviewScale(selectionType, indicator);
-            _performers.SetParamOverride(_previewHandle, WellKnownPerformerParamKeys.MarkerScaleX, scale.X);
-            _performers.SetParamOverride(_previewHandle, WellKnownPerformerParamKeys.MarkerScaleY, scale.Y);
-            _performers.SetParamOverride(_previewHandle, WellKnownPerformerParamKeys.MarkerScaleZ, scale.Z);
-            _performers.SetParamOverride(_previewHandle, WellKnownPerformerParamKeys.MarkerColorR, color.X);
-            _performers.SetParamOverride(_previewHandle, WellKnownPerformerParamKeys.MarkerColorG, color.Y);
-            _performers.SetParamOverride(_previewHandle, WellKnownPerformerParamKeys.MarkerColorB, color.Z);
-            _performers.SetParamOverride(_previewHandle, WellKnownPerformerParamKeys.MarkerColorA, color.W);
+            _performers.SetParam(_previewEntity, WellKnownPerformerParamKeys.MarkerScaleX, ParamLane.Float, scale.X, 0, default);
+            _performers.SetParam(_previewEntity, WellKnownPerformerParamKeys.MarkerScaleY, ParamLane.Float, scale.Y, 0, default);
+            _performers.SetParam(_previewEntity, WellKnownPerformerParamKeys.MarkerScaleZ, ParamLane.Float, scale.Z, 0, default);
+            _performers.SetParam(_previewEntity, WellKnownPerformerParamKeys.MarkerColorR, ParamLane.Float, color.X, 0, default);
+            _performers.SetParam(_previewEntity, WellKnownPerformerParamKeys.MarkerColorG, ParamLane.Float, color.Y, 0, default);
+            _performers.SetParam(_previewEntity, WellKnownPerformerParamKeys.MarkerColorB, ParamLane.Float, color.Z, 0, default);
+            _performers.SetParam(_previewEntity, WellKnownPerformerParamKeys.MarkerColorA, ParamLane.Float, color.W, 0, default);
         }
 
         private int ResolvePreviewDefinitionId(string performerId)
@@ -498,7 +502,7 @@ namespace Ludots.Core.Input.Orders
                 var delta = toWorldCm - fromWorldCm;
                 if (delta.LengthSquared() > 0.001f)
                 {
-                    return MathF.Atan2(delta.Z, delta.X);
+                    return WorldPlane2D.FacingRadFromDirection(delta.X, delta.Z);
                 }
             }
 

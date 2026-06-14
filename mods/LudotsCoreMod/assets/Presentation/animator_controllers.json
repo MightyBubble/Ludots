@@ -12,33 +12,37 @@
         "fromStateIndex": 0,
         "toStateIndex": 1,
         "conditionKind": "FloatGreaterOrEqual",
-        "parameterIndex": 0,
+        "parameterIndex": "core.hero.locomotion.speed",
         "threshold": 0.20,
-        "durationSeconds": 0.08
+        "durationSeconds": 0.08,
+        "consumeTrigger": false
       },
       {
         "fromStateIndex": 1,
         "toStateIndex": 0,
         "conditionKind": "FloatLessOrEqual",
-        "parameterIndex": 0,
+        "parameterIndex": "core.hero.locomotion.speed",
         "threshold": 0.10,
-        "durationSeconds": 0.08
+        "durationSeconds": 0.08,
+        "consumeTrigger": false
       },
       {
         "fromStateIndex": 1,
         "toStateIndex": 2,
         "conditionKind": "FloatGreaterOrEqual",
-        "parameterIndex": 0,
+        "parameterIndex": "core.hero.locomotion.speed",
         "threshold": 0.72,
-        "durationSeconds": 0.06
+        "durationSeconds": 0.06,
+        "consumeTrigger": false
       },
       {
         "fromStateIndex": 2,
         "toStateIndex": 1,
         "conditionKind": "FloatLessOrEqual",
-        "parameterIndex": 0,
+        "parameterIndex": "core.hero.locomotion.speed",
         "threshold": 0.55,
-        "durationSeconds": 0.06
+        "durationSeconds": 0.06,
+        "consumeTrigger": false
       }
     ]
   }

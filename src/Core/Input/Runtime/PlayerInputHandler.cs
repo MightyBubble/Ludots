@@ -99,6 +99,17 @@ namespace Ludots.Core.Input.Runtime
             return _actionIndices.TryGetValue(actionId, out int actionIndex) && _actionStates[actionIndex].ReleasedThisFrame;
         }
 
+        public bool SuppressActionThisFrame(string actionId)
+        {
+            if (!_actionIndices.TryGetValue(actionId, out int actionIndex))
+            {
+                return false;
+            }
+
+            _actionStates[actionIndex].SuppressThisFrame();
+            return true;
+        }
+
         public void CaptureFrame(AuthoritativeInputAccumulator accumulator)
         {
             if (accumulator == null) throw new ArgumentNullException(nameof(accumulator));

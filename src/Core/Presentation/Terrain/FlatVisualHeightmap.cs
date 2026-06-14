@@ -5,8 +5,8 @@ using Ludots.Platform.Abstractions;
 namespace Ludots.Core.Presentation.Terrain
 {
     /// <summary>
-    /// Explicit flat-ground heightmap for maps that have not registered authored visual terrain data yet.
-    /// Consumers still read a single height SSOT instead of inventing their own ground projection fallback.
+    /// Explicit flat-ground heightmap for maps that author a flat visual terrain surface.
+    /// Consumers still read a single height SSOT instead of inventing independent ground projection rules.
     /// </summary>
     public sealed class FlatVisualHeightmap : IVisualHeightmap
     {

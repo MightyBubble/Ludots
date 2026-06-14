@@ -4,13 +4,13 @@ namespace RoadNetworkShowcaseMod.Runtime
 {
     internal static class RoadNetworkShowcaseComponentAuthoring
     {
-        public static void Register()
+        public static void Register(string modId)
         {
-            ComponentRegistry.Register<RoadColumnTag>("RoadColumnTag");
-            ComponentRegistry.Register<RoadFortTag>("RoadFortTag");
-            ComponentRegistry.Register<RoadAiControlledTag>("RoadAiControlledTag");
-            ComponentRegistry.Register<RoadMoveProfileRef>("RoadMoveProfileRef");
-            ComponentRegistry.Register<RoadFortControlState>("RoadFortControlState");
+            ComponentRegistry.Register<RoadColumnTag>("RoadColumnTag", modId);
+            ComponentRegistry.Register<RoadFortTag>("RoadFortTag", modId);
+            ComponentRegistry.Register<RoadAiControlledTag>("RoadAiControlledTag", modId);
+            ComponentRegistry.Register<RoadMoveProfileRef>("RoadMoveProfileRef", modId);
+            ComponentRegistry.Register<RoadFortControlState>("RoadFortControlState", modId);
         }
     }
 }

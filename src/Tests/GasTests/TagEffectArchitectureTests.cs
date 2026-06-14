@@ -526,46 +526,56 @@ namespace Ludots.Tests.GAS
         [Test]
         public void ProjectileRuntimeSystem_DestroyOnFirstHit_PublishesHitEffectAndDespawns()
         {
-            using var world = World.Create();
-            var requests = new EffectRequestQueue();
-            var caster = world.Create(
-                WorldPositionCm.FromCm(0, 0),
-                new Team { Id = 1 });
-            var hostile = world.Create(
-                WorldPositionCm.FromCm(260, 0),
-                new Team { Id = 2 });
-            var bystander = world.Create(
-                WorldPositionCm.FromCm(520, 0),
-                new Team { Id = 2 });
-            var projectile = world.Create(
-                new ProjectileState
-                {
-                    Speed = Fix64.FromInt(1200),
-                    Range = 900,
-                    HitEffectTemplateId = 88,
-                    PresentationEffectTemplateId = 88,
-                    TravelMode = ProjectileTravelMode.Direction,
-                    ImpactPolicy = ProjectileImpactPolicy.DestroyOnFirstHit,
-                    CollisionHalfWidthCm = 60,
-                    CollisionRelationFilter = RelationshipFilter.Hostile,
-                    CollisionExcludeSource = 1,
-                    MaxHitCount = 1,
-                    Source = caster,
-                    LaunchOriginCm = Fix64Vec2.Zero,
-                    HasLaunchOrigin = 1,
-                    Direction = Fix64Vec2.UnitX,
-                    HasDirection = 1,
-                },
-                WorldPositionCm.FromCm(0, 0),
-                new PreviousWorldPositionCm { Value = WorldPositionCm.FromCm(0, 0).Value });
+            TeamManager.Clear();
+            TeamManager.SetRelationshipSymmetric(1, 2, TeamRelationship.Hostile);
 
-            using var system = new ProjectileRuntimeSystem(world, requests, new TestLineQueryService(hostile, bystander));
-            system.Update(0.3f);
+            try
+            {
+                using var world = World.Create();
+                var requests = new EffectRequestQueue();
+                var caster = world.Create(
+                    WorldPositionCm.FromCm(0, 0),
+                    new Team { Id = 1 });
+                var hostile = world.Create(
+                    WorldPositionCm.FromCm(260, 0),
+                    new Team { Id = 2 });
+                var bystander = world.Create(
+                    WorldPositionCm.FromCm(520, 0),
+                    new Team { Id = 2 });
+                var projectile = world.Create(
+                    new ProjectileState
+                    {
+                        Speed = Fix64.FromInt(1200),
+                        Range = 900,
+                        HitEffectTemplateId = 88,
+                        PresentationEffectTemplateId = 88,
+                        TravelMode = ProjectileTravelMode.Direction,
+                        ImpactPolicy = ProjectileImpactPolicy.DestroyOnFirstHit,
+                        CollisionHalfWidthCm = 60,
+                        CollisionRelationFilter = RelationshipFilter.Hostile,
+                        CollisionExcludeSource = 1,
+                        MaxHitCount = 1,
+                        Source = caster,
+                        LaunchOriginCm = Fix64Vec2.Zero,
+                        HasLaunchOrigin = 1,
+                        Direction = Fix64Vec2.UnitX,
+                        HasDirection = 1,
+                    },
+                    WorldPositionCm.FromCm(0, 0),
+                    new PreviousWorldPositionCm { Value = WorldPositionCm.FromCm(0, 0).Value });
 
-            That(world.IsAlive(projectile), Is.False);
-            That(requests.Count, Is.EqualTo(1));
-            That(requests[0].TemplateId, Is.EqualTo(88));
-            That(requests[0].Target, Is.EqualTo(hostile));
+                using var system = new ProjectileRuntimeSystem(world, requests, new TestLineQueryService(hostile, bystander));
+                system.Update(0.3f);
+
+                That(world.IsAlive(projectile), Is.False);
+                That(requests.Count, Is.EqualTo(1));
+                That(requests[0].TemplateId, Is.EqualTo(88));
+                That(requests[0].Target, Is.EqualTo(hostile));
+            }
+            finally
+            {
+                TeamManager.Clear();
+            }
         }
 
         [Test]
@@ -668,11 +678,6 @@ namespace Ludots.Tests.GAS
                 requests,
                 templates,
                 templateKeys,
-                new Ludots.Core.Presentation.Config.PresentationAuthoringContext(
-                    new Ludots.Core.Presentation.Assets.VisualTemplateRegistry(),
-                    new Ludots.Core.Presentation.Performers.PerformerDefinitionRegistry(),
-                    new Ludots.Core.Presentation.Assets.AnimatorControllerRegistry(),
-                    stableIds),
                 stableIds,
                 effects);
 
@@ -703,8 +708,8 @@ namespace Ludots.Tests.GAS
                 That(position.Value, Is.EqualTo(Fix64Vec2.FromInt(420, 840)));
                 That(previous.Value, Is.EqualTo(Fix64Vec2.FromInt(420, 840)));
                 That(transform.Scale, Is.EqualTo(System.Numerics.Vector3.One));
-                That(cull.IsVisible, Is.True);
-                That(cull.LOD, Is.EqualTo(Ludots.Core.Presentation.Components.LODLevel.High));
+                That(cull.IsVisible, Is.False);
+                That(cull.LOD, Is.EqualTo(Ludots.Core.Presentation.Components.LODLevel.Low));
             });
 
             That(spawnCount, Is.EqualTo(1));
@@ -725,6 +730,114 @@ namespace Ludots.Tests.GAS
         }
 
         [Test]
+        public void RuntimeEntitySpawnSystem_SpawnTemplate_EmitsExplicitReceipt()
+        {
+            string templateJson = @"[
+              {
+                ""id"": ""test_receipt_template"",
+                ""components"": {
+                  ""Name"": { ""Value"": ""Template:Receipt"" },
+                  ""WorldPositionCm"": { ""Value"": { ""X"": 0, ""Y"": 0 } },
+                  ""FacingDirection"": { ""AngleRad"": 0.0 },
+                  ""AttributeBuffer"": { ""base"": {} },
+                  ""GameplayTagContainer"": {},
+                  ""TagCountContainer"": {}
+                }
+              }
+            ]";
+
+            var pipeline = CreateMinimalPipeline(@"{ ""id"": ""noop"", ""presetType"": ""None"" }", templateJson);
+            var templates = new DataRegistry<EntityTemplate>(pipeline);
+            templates.Load("Entities/templates.json", ConfigCatalogLoader.Load(pipeline));
+
+            using var world = World.Create();
+            var requests = new RuntimeEntitySpawnQueue(capacity: 4);
+            var receipts = new RuntimeEntitySpawnReceiptQueue(capacity: 4);
+            var templateKeys = new EntityTemplateKeyRegistry();
+            var stableIds = new Ludots.Core.Presentation.PresentationStableIdAllocator();
+            var system = new RuntimeEntitySpawnSystem(
+                world,
+                requests,
+                templates,
+                templateKeys,
+                stableIds,
+                receipts: receipts);
+
+            That(requests.TryEnqueue(new RuntimeEntitySpawnRequest
+            {
+                Kind = RuntimeEntitySpawnKind.Template,
+                TemplateId = "test_receipt_template",
+                WorldPositionCm = Fix64Vec2.FromInt(17, 23),
+                HasWorldPosition = 1,
+                ReceiptChannelId = 11,
+                ReceiptId = 701,
+                EmitReceipt = 1,
+            }), Is.True);
+
+            system.Update(0f);
+
+            That(receipts.TryDequeue(out RuntimeEntitySpawnReceipt receipt), Is.True);
+            That(receipt.ReceiptChannelId, Is.EqualTo(11));
+            That(receipt.ReceiptId, Is.EqualTo(701));
+            That(receipt.Kind, Is.EqualTo(RuntimeEntitySpawnKind.Template));
+            That(receipt.TemplateId, Is.EqualTo("test_receipt_template"));
+            That(world.IsAlive(receipt.Entity), Is.True);
+            That(world.Get<WorldPositionCm>(receipt.Entity).Value, Is.EqualTo(Fix64Vec2.FromInt(17, 23)));
+            That(receipts.Count, Is.EqualTo(0));
+        }
+
+        [Test]
+        public void RuntimeEntitySpawnReceiptQueue_ChannelOperations_DoNotConsumeOtherChannels()
+        {
+            var receipts = new RuntimeEntitySpawnReceiptQueue(capacity: 4);
+
+            That(receipts.TryEnqueue(new RuntimeEntitySpawnReceipt
+            {
+                ReceiptChannelId = 5,
+                ReceiptId = 1,
+                Kind = RuntimeEntitySpawnKind.Template,
+                Entity = Entity.Null,
+                TemplateId = "a",
+            }), Is.True);
+            That(receipts.TryEnqueue(new RuntimeEntitySpawnReceipt
+            {
+                ReceiptChannelId = 9,
+                ReceiptId = 2,
+                Kind = RuntimeEntitySpawnKind.Template,
+                Entity = Entity.Null,
+                TemplateId = "b",
+            }), Is.True);
+            That(receipts.TryEnqueue(new RuntimeEntitySpawnReceipt
+            {
+                ReceiptChannelId = 5,
+                ReceiptId = 3,
+                Kind = RuntimeEntitySpawnKind.Template,
+                Entity = Entity.Null,
+                TemplateId = "c",
+            }), Is.True);
+
+            That(receipts.Count, Is.EqualTo(3));
+            That(receipts.CountForChannel(5), Is.EqualTo(2));
+            That(receipts.CountForChannel(9), Is.EqualTo(1));
+
+            That(receipts.TryDequeueForChannel(5, out RuntimeEntitySpawnReceipt first), Is.True);
+            That(first.ReceiptId, Is.EqualTo(1));
+            That(receipts.Count, Is.EqualTo(2));
+            That(receipts.CountForChannel(5), Is.EqualTo(1));
+            That(receipts.CountForChannel(9), Is.EqualTo(1));
+
+            That(receipts.TryDequeueForChannel(5, out RuntimeEntitySpawnReceipt second), Is.True);
+            That(second.ReceiptId, Is.EqualTo(3));
+            That(receipts.TryDequeueForChannel(5, out _), Is.False);
+            That(receipts.Count, Is.EqualTo(1));
+
+            That(receipts.TryDequeue(out RuntimeEntitySpawnReceipt remaining), Is.True);
+            That(remaining.ReceiptChannelId, Is.EqualTo(9));
+            That(remaining.ReceiptId, Is.EqualTo(2));
+            That(receipts.Count, Is.EqualTo(0));
+        }
+
+        [Test]
         public void RuntimeEntitySpawnSystem_SpawnAssembly_CreatesProjectileEntity()
         {
             using var world = World.Create();
@@ -739,11 +852,6 @@ namespace Ludots.Tests.GAS
                 requests,
                 templates,
                 templateKeys,
-                new Ludots.Core.Presentation.Config.PresentationAuthoringContext(
-                    new Ludots.Core.Presentation.Assets.VisualTemplateRegistry(),
-                    new Ludots.Core.Presentation.Performers.PerformerDefinitionRegistry(),
-                    new Ludots.Core.Presentation.Assets.AnimatorControllerRegistry(),
-                    stableIds),
                 stableIds,
                 effects);
 
@@ -795,7 +903,7 @@ namespace Ludots.Tests.GAS
 
             var pipeline = CreateMinimalPipeline(@"{ ""id"": ""noop"", ""presetType"": ""None"" }", templateJson);
             var templates = new DataRegistry<EntityTemplate>(pipeline);
-            templates.Load("Entities/templates.json");
+            templates.Load("Entities/templates.json", ConfigCatalogLoader.Load(pipeline));
 
             using var world = World.Create();
             var source = world.Create(
@@ -810,11 +918,6 @@ namespace Ludots.Tests.GAS
                 requests,
                 templates,
                 templateKeys,
-                new Ludots.Core.Presentation.Config.PresentationAuthoringContext(
-                    new Ludots.Core.Presentation.Assets.VisualTemplateRegistry(),
-                    new Ludots.Core.Presentation.Performers.PerformerDefinitionRegistry(),
-                    new Ludots.Core.Presentation.Assets.AnimatorControllerRegistry(),
-                    stableIds),
                 stableIds);
 
             That(requests.TryEnqueue(new RuntimeEntitySpawnRequest
@@ -857,6 +960,203 @@ namespace Ludots.Tests.GAS
         }
 
         [Test]
+        public void RuntimeEntitySpawnSystem_BatchTemplate_AppliesAttributeCurrentAndPreseedsSnapshot()
+        {
+            int durabilityId = AttributeRegistry.Register("Test.Batch.Durability");
+            string templateJson = @"[
+              {
+                ""id"": ""test_attr_current_batch"",
+                ""components"": {
+                  ""Name"": { ""Value"": ""Template:AttrCurrent"" },
+                  ""WorldPositionCm"": { ""Value"": { ""X"": 0, ""Y"": 0 } },
+                  ""FacingDirection"": { ""AngleRad"": 0.0 },
+                  ""AttributeBuffer"": {
+                    ""base"": { ""Test.Batch.Durability"": 100 },
+                    ""current"": { ""Test.Batch.Durability"": 72 }
+                  },
+                  ""GameplayTagContainer"": {},
+                  ""TagCountContainer"": {}
+                }
+              }
+            ]";
+
+            var pipeline = CreateMinimalPipeline(@"{ ""id"": ""noop"", ""presetType"": ""None"" }", templateJson);
+            var templates = new DataRegistry<EntityTemplate>(pipeline);
+            templates.Load("Entities/templates.json", ConfigCatalogLoader.Load(pipeline));
+
+            using var world = World.Create();
+            var requests = new RuntimeEntitySpawnQueue(capacity: 4);
+            var receipts = new RuntimeEntitySpawnReceiptQueue(capacity: 4);
+            var templateKeys = new EntityTemplateKeyRegistry();
+            var stableIds = new Ludots.Core.Presentation.PresentationStableIdAllocator();
+            var system = new RuntimeEntitySpawnSystem(
+                world,
+                requests,
+                templates,
+                templateKeys,
+                stableIds,
+                receipts: receipts);
+
+            for (int i = 0; i < 2; i++)
+            {
+                That(requests.TryEnqueue(new RuntimeEntitySpawnRequest
+                {
+                    Kind = RuntimeEntitySpawnKind.Template,
+                    TemplateId = "test_attr_current_batch",
+                    WorldPositionCm = Fix64Vec2.FromInt(i * 100, 0),
+                    HasWorldPosition = 1,
+                    ReceiptChannelId = 12,
+                    ReceiptId = 800 + i,
+                    EmitReceipt = 1,
+                }), Is.True);
+            }
+
+            system.Update(0f);
+
+            Entity first = Entity.Null;
+            int count = 0;
+            var query = new QueryDescription().WithAll<Name, AttributeBuffer, AttributeLastSnapshot>();
+            world.Query(in query, (Entity entity, ref Name name, ref AttributeBuffer attributes, ref AttributeLastSnapshot snapshot) =>
+            {
+                if (!string.Equals(name.Value, "Template:AttrCurrent", StringComparison.Ordinal))
+                {
+                    return;
+                }
+
+                count++;
+                if (first == Entity.Null)
+                {
+                    first = entity;
+                }
+
+                That(attributes.GetBase(durabilityId), Is.EqualTo(100f));
+                That(attributes.GetCurrent(durabilityId), Is.EqualTo(72f));
+                unsafe { That(snapshot.Values[durabilityId], Is.EqualTo(72f)); }
+            });
+
+            That(count, Is.EqualTo(2));
+            That(first, Is.Not.EqualTo(Entity.Null));
+            That(receipts.TryDequeueForChannel(12, out RuntimeEntitySpawnReceipt firstReceipt), Is.True);
+            That(firstReceipt.ReceiptId, Is.EqualTo(800));
+            That(firstReceipt.TemplateId, Is.EqualTo("test_attr_current_batch"));
+            That(world.IsAlive(firstReceipt.Entity), Is.True);
+            That(receipts.TryDequeueForChannel(12, out RuntimeEntitySpawnReceipt secondReceipt), Is.True);
+            That(secondReceipt.ReceiptId, Is.EqualTo(801));
+            That(secondReceipt.TemplateId, Is.EqualTo("test_attr_current_batch"));
+            That(world.IsAlive(secondReceipt.Entity), Is.True);
+            That(receipts.Count, Is.EqualTo(0));
+
+            var queue = new DeferredTriggerQueue();
+            using var deferred = new DeferredTriggerCollectionSystem(world, queue);
+            AttributeMutationOps.AddCurrent(world, first, durabilityId, -2f);
+            deferred.Update(0.016f);
+
+            That(queue.AttributeTriggerCount, Is.EqualTo(1));
+            var trigger = queue.GetAttributeTrigger(0);
+            That(trigger.AttributeId, Is.EqualTo(durabilityId));
+            That(trigger.OldValue, Is.EqualTo(72f));
+            That(trigger.NewValue, Is.EqualTo(70f));
+        }
+
+        [Test]
+        public void RuntimeEntitySpawnSystem_BatchTemplate_RejectsFieldCaseAliases()
+        {
+            string templateJson = @"[
+              {
+                ""id"": ""test_batch_bad_case"",
+                ""components"": {
+                  ""Name"": { ""value"": ""Template:BadCase"" },
+                  ""WorldPositionCm"": { ""Value"": { ""X"": 0, ""Y"": 0 } },
+                  ""FacingDirection"": { ""AngleRad"": 0.0 },
+                  ""AttributeBuffer"": { ""base"": {} },
+                  ""GameplayTagContainer"": {},
+                  ""TagCountContainer"": {}
+                }
+              }
+            ]";
+
+            var pipeline = CreateMinimalPipeline(@"{ ""id"": ""noop"", ""presetType"": ""None"" }", templateJson);
+            var templates = new DataRegistry<EntityTemplate>(pipeline);
+            templates.Load("Entities/templates.json", ConfigCatalogLoader.Load(pipeline));
+
+            using var world = World.Create();
+            var requests = new RuntimeEntitySpawnQueue(capacity: 4);
+            var templateKeys = new EntityTemplateKeyRegistry();
+            var stableIds = new Ludots.Core.Presentation.PresentationStableIdAllocator();
+            var system = new RuntimeEntitySpawnSystem(world, requests, templates, templateKeys, stableIds);
+
+            for (int i = 0; i < 2; i++)
+            {
+                That(requests.TryEnqueue(new RuntimeEntitySpawnRequest
+                {
+                    Kind = RuntimeEntitySpawnKind.Template,
+                    TemplateId = "test_batch_bad_case",
+                    WorldPositionCm = Fix64Vec2.FromInt(i * 100, 0),
+                    HasWorldPosition = 1,
+                }), Is.True);
+            }
+
+            InvalidOperationException ex = Throws<InvalidOperationException>(() => system.Update(0f))!;
+            That(ex.Message, Does.Contain("unsupported property 'value'"));
+        }
+
+        [Test]
+        public void RuntimeEntitySpawnSystem_BatchTemplate_StaticTransformMatchesComponentRegistryMarkers()
+        {
+            string templateJson = @"[
+              {
+                ""id"": ""test_static_batch"",
+                ""components"": {
+                  ""Name"": { ""Value"": ""Template:StaticBatch"" },
+                  ""WorldPositionCm"": { ""Value"": { ""X"": 0, ""Y"": 0 } },
+                  ""FacingDirection"": { ""AngleRad"": 0.0 },
+                  ""PresentationStaticTransform"": {},
+                  ""AttributeBuffer"": { ""base"": {} },
+                  ""GameplayTagContainer"": {},
+                  ""TagCountContainer"": {}
+                }
+              }
+            ]";
+
+            var pipeline = CreateMinimalPipeline(@"{ ""id"": ""noop"", ""presetType"": ""None"" }", templateJson);
+            var templates = new DataRegistry<EntityTemplate>(pipeline);
+            templates.Load("Entities/templates.json", ConfigCatalogLoader.Load(pipeline));
+
+            using var world = World.Create();
+            var requests = new RuntimeEntitySpawnQueue(capacity: 4);
+            var templateKeys = new EntityTemplateKeyRegistry();
+            var stableIds = new Ludots.Core.Presentation.PresentationStableIdAllocator();
+            var system = new RuntimeEntitySpawnSystem(world, requests, templates, templateKeys, stableIds);
+
+            for (int i = 0; i < 2; i++)
+            {
+                That(requests.TryEnqueue(new RuntimeEntitySpawnRequest
+                {
+                    Kind = RuntimeEntitySpawnKind.Template,
+                    TemplateId = "test_static_batch",
+                    WorldPositionCm = Fix64Vec2.FromInt(i * 100, 0),
+                    HasWorldPosition = 1,
+                }), Is.True);
+            }
+
+            system.Update(0f);
+
+            int count = 0;
+            var query = new QueryDescription().WithAll<Name, PresentationStaticTransform, PresentationStaticVisualPending, PresentationStaticCullPending>();
+            world.Query(in query, (Entity entity, ref Name name, ref PresentationStaticTransform transform, ref PresentationStaticVisualPending visualPending, ref PresentationStaticCullPending cullPending) =>
+            {
+                if (!string.Equals(name.Value, "Template:StaticBatch", StringComparison.Ordinal))
+                {
+                    return;
+                }
+
+                count++;
+            });
+
+            That(count, Is.EqualTo(2));
+        }
+
+        [Test]
         public void RuntimeEntitySpawnSystem_SpawnUnitType_CopiesPlayerOwnerAndLinksParentWhenRequested()
         {
             UnitTypeRegistry.Clear();
@@ -876,11 +1176,6 @@ namespace Ludots.Tests.GAS
                 requests,
                 templates,
                 templateKeys,
-                new Ludots.Core.Presentation.Config.PresentationAuthoringContext(
-                    new Ludots.Core.Presentation.Assets.VisualTemplateRegistry(),
-                    new Ludots.Core.Presentation.Performers.PerformerDefinitionRegistry(),
-                    new Ludots.Core.Presentation.Assets.AnimatorControllerRegistry(),
-                    stableIds),
                 stableIds);
 
             That(requests.TryEnqueue(new RuntimeEntitySpawnRequest
@@ -934,12 +1229,13 @@ namespace Ludots.Tests.GAS
                     ""tags"": [""Test.Buff""],
                     ""presetType"": ""None"",
                     ""lifetime"": ""After"",
-                    ""duration"": { ""durationTicks"": 100 },
-                    ""expireCondition"": { ""kind"": ""TagPresent"", ""tag"": ""Status.Shield"" }
+                    ""duration"": { ""durationTicks"": 100, ""periodTicks"": 0, ""clockId"": ""FixedFrame"" },
+                    ""participatesInResponse"": true,
+                    ""expireCondition"": { ""kind"": ""TagPresent"", ""tag"": ""Status.Shield"", ""sense"": ""Effective"" }
                 }");
 
             var loader = new EffectTemplateLoader(pipeline, templates, conditions);
-            loader.Load(relativePath: "GAS/effects.json");
+            loader.Load(ConfigCatalogLoader.Load(pipeline), relativePath: "GAS/effects.json");
 
             int tplId = EffectTemplateIdRegistry.GetId("test_buff");
             That(tplId, Is.GreaterThan(0));
@@ -961,6 +1257,7 @@ namespace Ludots.Tests.GAS
                     ""id"": ""test_attach"",
                     ""presetType"": ""Relation"",
                     ""lifetime"": ""Instant"",
+                    ""participatesInResponse"": true,
                     ""relation"": {
                         ""operation"": ""SetParent"",
                         ""subject"": ""Source"",
@@ -970,7 +1267,7 @@ namespace Ludots.Tests.GAS
                 }");
 
             var loader = new EffectTemplateLoader(pipeline, templates, conditions);
-            loader.Load(relativePath: "GAS/effects.json");
+            loader.Load(ConfigCatalogLoader.Load(pipeline), relativePath: "GAS/effects.json");
 
             int tplId = EffectTemplateIdRegistry.GetId("test_attach");
             That(tplId, Is.GreaterThan(0));
@@ -998,15 +1295,16 @@ namespace Ludots.Tests.GAS
                     ""tags"": [""Test.Slow""],
                     ""presetType"": ""None"",
                     ""lifetime"": ""After"",
-                    ""duration"": { ""durationTicks"": 60 },
+                    ""duration"": { ""durationTicks"": 60, ""periodTicks"": 0, ""clockId"": ""FixedFrame"" },
+                    ""participatesInResponse"": true,
                     ""grantedTags"": [
-                        { ""tag"": ""Status.Slow"", ""formula"": ""Linear"", ""amount"": 6 },
-                        { ""tag"": ""Status.Weak"", ""formula"": ""Fixed"", ""amount"": 1 }
+                        { ""tag"": ""Status.Slow"", ""formula"": ""Linear"", ""amount"": 6, ""base"": 0 },
+                        { ""tag"": ""Status.Weak"", ""formula"": ""Fixed"", ""amount"": 1, ""base"": 0 }
                     ]
                 }");
 
             var loader = new EffectTemplateLoader(pipeline, templates, conditions);
-            loader.Load(relativePath: "GAS/effects.json");
+            loader.Load(ConfigCatalogLoader.Load(pipeline), relativePath: "GAS/effects.json");
 
             int tplId = EffectTemplateIdRegistry.GetId("test_slow");
             That(tplId, Is.GreaterThan(0));
@@ -1038,12 +1336,13 @@ namespace Ludots.Tests.GAS
                     ""tags"": [""Test.Stackable""],
                     ""presetType"": ""None"",
                     ""lifetime"": ""After"",
-                    ""duration"": { ""durationTicks"": 120 },
+                    ""duration"": { ""durationTicks"": 120, ""periodTicks"": 0, ""clockId"": ""FixedFrame"" },
+                    ""participatesInResponse"": true,
                     ""stack"": { ""limit"": 10, ""policy"": ""RefreshDuration"", ""overflowPolicy"": ""RejectNew"" }
                 }");
 
             var loader = new EffectTemplateLoader(pipeline, templates, conditions);
-            loader.Load(relativePath: "GAS/effects.json");
+            loader.Load(ConfigCatalogLoader.Load(pipeline), relativePath: "GAS/effects.json");
 
             int tplId = EffectTemplateIdRegistry.GetId("test_stackable");
             That(tplId, Is.GreaterThan(0));
@@ -1237,6 +1536,12 @@ namespace Ludots.Tests.GAS
             var gasDir = Path.Combine(root, "Configs", "GAS");
             Directory.CreateDirectory(gasDir);
             File.WriteAllText(Path.Combine(gasDir, "effects.json"), json);
+            File.WriteAllText(
+                Path.Combine(root, "Configs", "config_catalog.json"),
+                @"[
+  { ""Path"": ""GAS/effects.json"", ""Policy"": ""ArrayById"", ""IdField"": ""id"" },
+  { ""Path"": ""Entities/templates.json"", ""Policy"": ""ArrayById"", ""IdField"": ""id"" }
+]");
 
             if (!string.IsNullOrWhiteSpace(templatesJson))
             {

@@ -13,7 +13,7 @@ namespace Ludots.Tests.Presentation;
 public sealed class VisualTerrainEditorRuntimeConsistencyTests
 {
     [Test]
-    public void VisualTerrainEditor_RuntimeMeshVerticesMatchRuntimeHeightmapTruth()
+    public void VisualTerrainEditor_ProceduralMeshVerticesMatchRuntimeHeightmapTruth()
     {
         using var document = new VisualTerrainEditorDocument(
             new VisualTerrainAssetDescriptor(
@@ -26,7 +26,8 @@ public sealed class VisualTerrainEditorRuntimeConsistencyTests
                 samplesPerChunkRow: 9,
                 renderColumnsPerChunk: 9,
                 renderRowsPerChunk: 9,
-                defaultHeight01: 0.45f));
+                defaultHeight01: 0.45f),
+            defaultMaterialAssetId: 1);
 
         document.SetViewMode(TerrainViewMode.Eroded);
         document.EnsureChunkWindowLoaded(centerChunkX: 0, centerChunkY: 0, radius: 1);
@@ -37,10 +38,10 @@ public sealed class VisualTerrainEditorRuntimeConsistencyTests
         var runtime = (ChunkedVisualHeightmapRuntime)document.HeightmapRuntime;
         for (int chunkX = 0; chunkX < 2; chunkX++)
         {
-            Assert.That(document.TryGetChunkRuntimeMesh(chunkX, 0, out var runtimeMesh), Is.True);
-            for (int vertexIndex = 0; vertexIndex < runtimeMesh.VertexCount; vertexIndex++)
+            Assert.That(document.TryGetChunkProceduralMesh(chunkX, 0, out var proceduralMesh), Is.True);
+            for (int vertexIndex = 0; vertexIndex < proceduralMesh.VertexCount; vertexIndex++)
             {
-                Vector3 position = ReadPosition(runtimeMesh, vertexIndex);
+                Vector3 position = ReadPosition(proceduralMesh, vertexIndex);
                 float worldXCm = position.X * 100f;
                 float worldYCm = position.Z * 100f;
 
@@ -72,7 +73,8 @@ public sealed class VisualTerrainEditorRuntimeConsistencyTests
                     defaultHeight01: 0.45f,
                     storageLayout: VisualHeightmapStorageLayout.ChunkedRowMajorInt16Centimeters,
                     interpolationMode: VisualHeightmapInterpolationMode.TriangleHeightfield,
-                    sampleScale: VisualHeightSampleScale.IdentityCentimeters));
+                    sampleScale: VisualHeightSampleScale.IdentityCentimeters),
+                defaultMaterialAssetId: 1);
 
             document.EnsureChunkWindowLoaded(centerChunkX: 0, centerChunkY: 0, radius: 2);
             document.AdjustScale(0.03f);
@@ -118,12 +120,12 @@ public sealed class VisualTerrainEditorRuntimeConsistencyTests
         }
     }
 
-    private static Vector3 ReadPosition(Ludots.Core.Presentation.Assets.RuntimeMeshAssetData runtimeMesh, int vertexIndex)
+    private static Vector3 ReadPosition(Ludots.Core.Presentation.Assets.ProceduralMeshAssetData proceduralMesh, int vertexIndex)
     {
         int floatOffset = vertexIndex * 3;
         return new Vector3(
-            runtimeMesh.Vertices[floatOffset + 0],
-            runtimeMesh.Vertices[floatOffset + 1],
-            runtimeMesh.Vertices[floatOffset + 2]);
+            proceduralMesh.Positions[floatOffset + 0],
+            proceduralMesh.Positions[floatOffset + 1],
+            proceduralMesh.Positions[floatOffset + 2]);
     }
 }

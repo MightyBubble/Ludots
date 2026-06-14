@@ -1,6 +1,6 @@
 {
   "Id": "ux_prototype_battle",
-  "Tags": ["ux.prototype", "rts", "prototype"],
+  "Tags": ["ux.prototype", "rts", "prototype", "Raylib.Background:Deep", "Raylib.DebugGuides:Off"],
   "DefaultCamera": {
     "VirtualCameraId": "Camera.Profile.UxPrototypeTactical",
     "TargetXCm": 3840,

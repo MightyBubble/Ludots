@@ -238,10 +238,13 @@ namespace Ludots.Client.Raylib.Rendering
 
             if (_initialized)
             {
+                _terrainMaterial.shader = default;
                 Rl.UnloadMaterial(_terrainMaterial);
                 Rl.UnloadShader(_terrainShader);
+                _waterMaterial.shader = default;
                 Rl.UnloadMaterial(_waterMaterial);
                 Rl.UnloadShader(_waterShader);
+                _initialized = false;
             }
         }
 

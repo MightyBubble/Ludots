@@ -193,7 +193,7 @@ namespace Ludots.Core.Map
         private void MergeMapConfig(MapConfig target, MapConfig source)
         {
             if (!string.IsNullOrEmpty(source.ParentId)) target.ParentId = source.ParentId;
-            if (source.VisualHeightmap != null) target.VisualHeightmap = source.VisualHeightmap.Clone();
+            if (!string.IsNullOrWhiteSpace(source.VisualHeightmapAsset)) target.VisualHeightmapAsset = source.VisualHeightmapAsset;
 
             if (source.Dependencies != null)
             {
@@ -203,6 +203,13 @@ namespace Ludots.Core.Map
                 }
             }
             if (source.Entities != null) target.Entities.AddRange(source.Entities);
+            if (source.Metadata != null)
+            {
+                foreach (var kvp in source.Metadata)
+                {
+                    target.Metadata[kvp.Key] = kvp.Value?.DeepClone();
+                }
+            }
 
             // Merge Tags
             if (source.Tags != null)

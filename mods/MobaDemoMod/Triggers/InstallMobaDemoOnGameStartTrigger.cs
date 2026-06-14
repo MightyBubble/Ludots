@@ -82,8 +82,8 @@ namespace MobaDemoMod.Triggers
             if (engine.GlobalContext.TryGetValue(CoreServiceKeys.TransientMarkerBuffer.Name, out var markerObj) && markerObj is TransientMarkerBuffer tmb)
                 markerBuffer = tmb;
 
-            PresentationCommandBuffer cmdBuffer = null;
-            if (engine.GlobalContext.TryGetValue(CoreServiceKeys.PresentationCommandBuffer.Name, out var cmdObj) && cmdObj is PresentationCommandBuffer pcb)
+            PerformerCommandBuffer cmdBuffer = null;
+            if (engine.GlobalContext.TryGetValue(CoreServiceKeys.PerformerCommandBuffer.Name, out var cmdObj) && cmdObj is PerformerCommandBuffer pcb)
                 cmdBuffer = pcb;
 
             if (CoreInputRuntimeServices.TryGetEntitySelectionCallbacks(engine, out List<System.Action<WorldCmInt2, Entity>> selectionCallbacks))
@@ -94,18 +94,18 @@ namespace MobaDemoMod.Triggers
                 selectionCallbacks.Add((worldCm, entity) =>
                 {
                     if (capturedCmdBuffer == null) return;
-                    capturedCmdBuffer.TryAdd(new PresentationCommand
+                    capturedCmdBuffer.TryAdd(new PerformerCommand
                     {
-                        Kind = PresentationCommandKind.DestroyPerformerScope,
-                        ScopeId = mobaConfig.Presentation.SelectionScopeId
+                        CommandKind = PerformerCommandKind.DestroyPerformerScope,
+                        ScopeTag = mobaConfig.Presentation.SelectionScopeId
                     });
                     if (engine.World.IsAlive(entity))
                     {
-                        capturedCmdBuffer.TryAdd(new PresentationCommand
+                        capturedCmdBuffer.TryAdd(new PerformerCommand
                         {
-                            Kind = PresentationCommandKind.CreatePerformer,
+                            CommandKind = PerformerCommandKind.CreatePerformer,
                             PerformerDefinitionId = selectionIndicatorDefId,
-                            ScopeId = mobaConfig.Presentation.SelectionScopeId,
+                            ScopeTag = mobaConfig.Presentation.SelectionScopeId,
                             Source = entity
                         });
                     }
@@ -125,7 +125,7 @@ namespace MobaDemoMod.Triggers
                         var p = WorldUnits.WorldCmToVisualMeters(worldCm, yMeters: mk.YOffsetMeters);
                         var scale = new Vector3(mk.Scale[0], mk.Scale[1], mk.Scale[2]);
                         var color = new Vector4(mk.Color[0], mk.Color[1], mk.Color[2], mk.Color[3]);
-                        capturedMarkerBuffer.TryAdd(sphereMeshId, p, scale, color, mk.LifetimeSeconds);
+                        capturedMarkerBuffer.TryAddMesh(sphereMeshId, p, scale, color, mk.LifetimeSeconds);
                     }
                 });
             }

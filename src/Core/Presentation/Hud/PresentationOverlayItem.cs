@@ -17,5 +17,7 @@ namespace Ludots.Core.Presentation.Hud
         public Vector4 Color0;
         public Vector4 Color1;
         public float Value0;
+        public float Value1;
+        public float Value2;
     }
 }

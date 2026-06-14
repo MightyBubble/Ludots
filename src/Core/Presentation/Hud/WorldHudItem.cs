@@ -1,9 +1,11 @@
 using System.Numerics;
+using Arch.Core;
 
 namespace Ludots.Core.Presentation.Hud
 {
     public struct WorldHudItem
     {
+        public Entity Owner;
         public int StableId;
         public int DirtySerial;
         public WorldHudItemKind Kind;

@@ -32,7 +32,7 @@ namespace Ludots.Core.Gameplay.Narrative
 
         private void LoadVariables(ConfigCatalog? catalog, ConfigConflictReport? report)
         {
-            var entry = ConfigPipeline.GetEntryOrDefault(catalog, "Narrative/variables.json", ConfigMergePolicy.ArrayById, "id");
+            var entry = ConfigPipeline.RequireEntry(catalog, "Narrative/variables.json", ConfigMergePolicy.ArrayById, "id");
             var merged = _pipeline.MergeArrayByIdFromCatalog(in entry, report);
             for (int i = 0; i < merged.Count; i++)
             {
@@ -46,7 +46,7 @@ namespace Ludots.Core.Gameplay.Narrative
 
         private void LoadQuests(ConfigCatalog? catalog, ConfigConflictReport? report)
         {
-            var entry = ConfigPipeline.GetEntryOrDefault(catalog, "Narrative/quests.json", ConfigMergePolicy.ArrayById, "id");
+            var entry = ConfigPipeline.RequireEntry(catalog, "Narrative/quests.json", ConfigMergePolicy.ArrayById, "id");
             var merged = _pipeline.MergeArrayByIdFromCatalog(in entry, report);
             for (int i = 0; i < merged.Count; i++)
             {
@@ -60,7 +60,7 @@ namespace Ludots.Core.Gameplay.Narrative
 
         private void LoadDialogues(ConfigCatalog? catalog, ConfigConflictReport? report)
         {
-            var entry = ConfigPipeline.GetEntryOrDefault(catalog, "Narrative/dialogues.json", ConfigMergePolicy.ArrayById, "id");
+            var entry = ConfigPipeline.RequireEntry(catalog, "Narrative/dialogues.json", ConfigMergePolicy.ArrayById, "id");
             var merged = _pipeline.MergeArrayByIdFromCatalog(in entry, report);
             for (int i = 0; i < merged.Count; i++)
             {
@@ -74,7 +74,7 @@ namespace Ludots.Core.Gameplay.Narrative
 
         private void LoadCinematics(ConfigCatalog? catalog, ConfigConflictReport? report)
         {
-            var entry = ConfigPipeline.GetEntryOrDefault(catalog, "Narrative/cinematics.json", ConfigMergePolicy.ArrayById, "id");
+            var entry = ConfigPipeline.RequireEntry(catalog, "Narrative/cinematics.json", ConfigMergePolicy.ArrayById, "id");
             var merged = _pipeline.MergeArrayByIdFromCatalog(in entry, report);
             for (int i = 0; i < merged.Count; i++)
             {

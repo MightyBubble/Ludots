@@ -19,6 +19,19 @@ namespace Ludots.Core.Gameplay.GAS.Registry
 
         public static bool IsFrozen => _frozen;
 
+        public static void Clear()
+        {
+            if (_frozen)
+            {
+                throw new System.InvalidOperationException("AttributeRegistry is frozen.");
+            }
+
+            _nameToId.Clear();
+            _idToName.Clear();
+            System.Array.Clear(_constraints, 0, _constraints.Length);
+            _nextId = 0;
+        }
+
         public static void Freeze()
         {
             _frozen = true;

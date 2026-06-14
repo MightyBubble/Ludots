@@ -1,0 +1,28 @@
+{
+  "Id": "performer_blacksmith_mesh_ism_benchmark",
+  "Tags": ["showcase", "performer", "benchmark", "mesh", "ism"],
+  "VisualHeightmapAsset": "assets/terrain/performer_blacksmith_showcase_flat.vhtm",
+  "Metadata": {
+    "performerBlacksmith": {
+      "meshBenchmarkTotal": 30000,
+      "meshBenchmarkScatterSeed": 48611,
+      "meshBenchmarkScatterMinRadiusCm": 750.0,
+      "meshBenchmarkScatterMaxRadiusCm": 1250.0,
+      "meshBenchmarkScatterJitterCm": 210.0
+    }
+  },
+  "Boards": [
+    {
+      "Name": "default",
+      "SpatialType": "Grid",
+      "WidthInTiles": 1,
+      "HeightInTiles": 1,
+      "GridCellSizeCm": 100
+    }
+  ],
+  "DefaultCamera": {
+    "TargetXCm": 0,
+    "TargetYCm": 0
+  },
+  "Entities": []
+}

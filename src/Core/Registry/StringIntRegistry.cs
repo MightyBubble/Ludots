@@ -99,6 +99,30 @@ namespace Ludots.Core.Registry
         }
 
         /// <summary>
+        /// Remove a string key mapping without reusing its numeric id.
+        /// Existing ids remain opaque and monotonically assigned; removed ids are not recycled.
+        /// </summary>
+        public bool Unregister(string name)
+        {
+            if (string.IsNullOrWhiteSpace(name))
+            {
+                return false;
+            }
+
+            if (!_nameToId.Remove(name, out int id))
+            {
+                return false;
+            }
+
+            if ((uint)id < (uint)_idToName.Length)
+            {
+                _idToName[id] = null!;
+            }
+
+            return true;
+        }
+
+        /// <summary>
         /// Freeze the registry. No further registrations are allowed after this call.
         /// </summary>
         public void Freeze() => _frozen = true;

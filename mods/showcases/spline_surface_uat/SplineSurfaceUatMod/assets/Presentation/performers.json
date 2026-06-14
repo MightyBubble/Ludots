@@ -1,0 +1,137 @@
+[
+  {
+    "id": "uat_surface_road",
+    "defaultLifetime": -1,
+    "surface": {
+      "kind": "SplineRibbon",
+      "profileId": "uat_road_surface",
+      "geometrySource": {
+        "controlPointSource": {
+          "kind": "Constant",
+          "id": "uat_road_control_points"
+        },
+        "widthSource": {
+          "kind": "Constant",
+          "id": "uat_road_width"
+        },
+        "segmentationPolicy": "Bezier12"
+      },
+      "chunkBake": {
+        "enabled": true,
+        "ownership": "PerChunk",
+        "chunkInfluencePolicy": "ExplicitPayloadChunks",
+        "rebakePolicy": "OnPayloadVersionChange",
+        "usageHint": "Static"
+      },
+      "materialSet": {
+        "primaryMaterialId": "default_surface",
+        "allowInstanceOverride": false
+      },
+      "lodProfileId": "default_surface_lod",
+      "grounding": {
+        "mode": "VisualHeight"
+      },
+      "boundsPolicy": "Auto"
+    }
+  },
+  {
+    "id": "uat_surface_river",
+    "defaultLifetime": -1,
+    "surface": {
+      "kind": "SplineRibbon",
+      "profileId": "uat_river_surface",
+      "geometrySource": {
+        "controlPointSource": {
+          "kind": "Constant",
+          "id": "uat_river_control_points"
+        },
+        "widthSource": {
+          "kind": "Constant",
+          "id": "uat_river_width"
+        },
+        "flowDirectionSource": {
+          "kind": "Constant",
+          "id": "uat_river_flow"
+        },
+        "segmentationPolicy": "Bezier12"
+      },
+      "chunkBake": {
+        "enabled": true,
+        "ownership": "PerChunk",
+        "chunkInfluencePolicy": "ExplicitPayloadChunks",
+        "rebakePolicy": "OnPayloadVersionChange",
+        "usageHint": "Static"
+      },
+      "materialSet": {
+        "primaryMaterialId": "default_surface",
+        "allowInstanceOverride": false
+      },
+      "lodProfileId": "default_surface_lod",
+      "grounding": {
+        "mode": "VisualHeight"
+      },
+      "boundsPolicy": "Auto"
+    }
+  },
+  {
+    "id": "uat_surface_lake",
+    "defaultLifetime": -1,
+    "surface": {
+      "kind": "ClosedArea",
+      "profileId": "uat_lake_surface",
+      "geometrySource": {
+        "boundaryPointSource": {
+          "kind": "Constant",
+          "id": "uat_lake_boundary"
+        },
+        "triangulationPolicy": "Fan"
+      },
+      "chunkBake": {
+        "enabled": true,
+        "ownership": "PerChunk",
+        "chunkInfluencePolicy": "ExplicitPayloadChunks",
+        "rebakePolicy": "OnPayloadVersionChange",
+        "usageHint": "Static"
+      },
+      "materialSet": {
+        "primaryMaterialId": "default_surface",
+        "allowInstanceOverride": false
+      },
+      "lodProfileId": "default_surface_lod",
+      "grounding": {
+        "mode": "VisualHeight"
+      },
+      "boundsPolicy": "Auto"
+    }
+  },
+  {
+    "id": "uat_surface_raw",
+    "defaultLifetime": -1,
+    "surface": {
+      "kind": "RawProceduralMesh",
+      "profileId": "uat_raw_mesh_surface",
+      "geometrySource": {
+        "meshPayloadSource": {
+          "kind": "Constant",
+          "id": "uat_raw_mesh_payload"
+        }
+      },
+      "chunkBake": {
+        "enabled": true,
+        "ownership": "PerChunk",
+        "chunkInfluencePolicy": "ExplicitPayloadChunks",
+        "rebakePolicy": "OnPayloadVersionChange",
+        "usageHint": "Static"
+      },
+      "materialSet": {
+        "primaryMaterialId": "default_surface",
+        "allowInstanceOverride": false
+      },
+      "lodProfileId": "default_surface_lod",
+      "grounding": {
+        "mode": "VisualHeight"
+      },
+      "boundsPolicy": "Auto"
+    }
+  }
+]

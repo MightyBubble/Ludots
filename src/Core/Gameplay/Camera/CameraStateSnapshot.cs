@@ -1,10 +1,12 @@
 using System.Numerics;
+using Ludots.Core.Mathematics;
 
 namespace Ludots.Core.Gameplay.Camera
 {
     public struct CameraStateSnapshot
     {
         public Vector2 TargetCm;
+        public float TargetHeightCm;
         public float Yaw;
         public float Pitch;
         public float DistanceCm;
@@ -18,6 +20,7 @@ namespace Ludots.Core.Gameplay.Camera
             return new CameraStateSnapshot
             {
                 TargetCm = state.TargetCm,
+                TargetHeightCm = state.TargetHeightCm,
                 Yaw = state.Yaw,
                 Pitch = state.Pitch,
                 DistanceCm = state.DistanceCm,
@@ -31,6 +34,7 @@ namespace Ludots.Core.Gameplay.Camera
         public void ApplyTo(CameraState state)
         {
             state.TargetCm = TargetCm;
+            state.TargetHeightCm = TargetHeightCm;
             state.Yaw = Yaw;
             state.Pitch = Pitch;
             state.DistanceCm = DistanceCm;
@@ -45,7 +49,8 @@ namespace Ludots.Core.Gameplay.Camera
             return new CameraStateSnapshot
             {
                 TargetCm = Vector2.Lerp(from.TargetCm, to.TargetCm, t),
-                Yaw = LerpAngleDeg(from.Yaw, to.Yaw, t),
+                TargetHeightCm = LerpScalar(from.TargetHeightCm, to.TargetHeightCm, t),
+                Yaw = WorldPlane2D.LerpAngleDegrees(from.Yaw, to.Yaw, t),
                 Pitch = LerpScalar(from.Pitch, to.Pitch, t),
                 DistanceCm = LerpScalar(from.DistanceCm, to.DistanceCm, t),
                 FovYDeg = LerpScalar(from.FovYDeg, to.FovYDeg, t),
@@ -60,17 +65,5 @@ namespace Ludots.Core.Gameplay.Camera
             return from + ((to - from) * t);
         }
 
-        private static float LerpAngleDeg(float from, float to, float t)
-        {
-            float delta = ((to - from + 540f) % 360f) - 180f;
-            return Normalize360(from + (delta * t));
-        }
-
-        private static float Normalize360(float degrees)
-        {
-            degrees %= 360f;
-            if (degrees < 0f) degrees += 360f;
-            return degrees;
-        }
     }
 }

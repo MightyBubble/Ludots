@@ -3,6 +3,7 @@ using System.Collections.Generic;
 using System.Text.Json;
 using System.Text.Json.Nodes;
 using Arch.Core;
+using Arch.Core.Utils;
 using Arch.Core.Extensions;
 using Ludots.Core.Components;
 using Ludots.Core.Gameplay.GAS;
@@ -25,8 +26,9 @@ namespace Ludots.Core.Config
 
     public static class ComponentRegistry
     {
-        private static readonly Dictionary<string, ComponentSetter> _setters = new Dictionary<string, ComponentSetter>();
-        private static readonly Dictionary<string, string> _registrationSource = new Dictionary<string, string>();
+        private static readonly Dictionary<string, ComponentSetter> _setters = new Dictionary<string, ComponentSetter>(StringComparer.Ordinal);
+        private static readonly Dictionary<string, ComponentType> _componentTypes = new Dictionary<string, ComponentType>(StringComparer.Ordinal);
+        private static readonly Dictionary<string, string> _registrationSource = new Dictionary<string, string>(StringComparer.Ordinal);
         private static RegistrationConflictReport _conflictReport;
 
         static ComponentRegistry()
@@ -37,6 +39,7 @@ namespace Ludots.Core.Config
             Register<Name>("Name");
             Register<FacingDirection>("FacingDirection");
             Register("WorldPositionCm", SetWorldPositionCm);
+            Register<SpatialPartitionExcluded>("SpatialPartitionExcluded");
             Register<Ludots.Core.Gameplay.Components.Team>("Team");
             Register<Ludots.Core.Gameplay.Components.PlayerOwner>("PlayerOwner");
             Register<Ludots.Core.Gameplay.Components.TeamIdentity>("TeamIdentity");
@@ -52,6 +55,7 @@ namespace Ludots.Core.Config
             Register("OrderBuffer", SetOrderBuffer);
             Register<SelectionSelectableTag>("SelectionSelectableTag");
             Register("SelectionSelectableState", SetSelectionSelectableState);
+            Register<SelectionDragState>("SelectionDragState");
             Register("SpatialBounds", SetSpatialBounds);
             Register("SpatialBox3D", SetSpatialBox3D);
             Register("SpatialFootprint2D", SetSpatialFootprint2D);
@@ -60,19 +64,32 @@ namespace Ludots.Core.Config
             Register<BlackboardIntBuffer>("BlackboardIntBuffer");
             Register("AbilityExecAimSync", SetAbilityExecAimSync);
             Register<VisualTransform>("VisualTransform");
+            Register<VisualHeightmapSampleState>("VisualHeightmapSampleState");
+            Register("PresentationStaticTransform", SetPresentationStaticTransform);
+            Register<PresentationStaticHeightPending>("PresentationStaticHeightPending");
             Register("ManifestationObstacleIntent2D", SetManifestationObstacleIntent2D);
             Register("ManifestationObstaclePolygon2D", SetManifestationObstaclePolygon2D);
             Register("ManifestationMotion2D", SetManifestationMotion2D);
             Register("DestroyWhenParentExecutionEnds", SetDestroyWhenParentExecutionEnds);
         }
 
-        public static void Register<T>(string name)
+        public static void Register<T>(string name, string modId = null)
         {
             Register(name, (entity, json) =>
             {
-                T component = json.Deserialize<T>(new JsonSerializerOptions { IncludeFields = true });
+                T component;
+                try
+                {
+                    component = json.Deserialize<T>(StrictJsonOptions.CreateExact(includeFields: true))
+                        ?? throw new InvalidOperationException($"Component '{name}' failed to deserialize.");
+                }
+                catch (JsonException ex)
+                {
+                    throw new InvalidOperationException($"Component '{name}' failed strict deserialization: {ex.Message}", ex);
+                }
+
                 entity.Add<T>(component);
-            });
+            }, modId, Component<T>.ComponentType);
         }
 
         public static void SetConflictReport(RegistrationConflictReport report)
@@ -82,61 +99,147 @@ namespace Ludots.Core.Config
 
         public static void Register(string name, ComponentSetter setter, string modId = null)
         {
-#if DEBUG
-            if (_setters.ContainsKey(name))
+            Register(name, setter, modId, componentType: null);
+        }
+
+        private static void Register(string name, ComponentSetter setter, string modId, ComponentType? componentType)
+        {
+            if (string.IsNullOrWhiteSpace(name))
+            {
+                throw new InvalidOperationException("ComponentRegistry registration requires a non-empty component name.");
+            }
+
+            if (setter == null)
+            {
+                throw new InvalidOperationException($"ComponentRegistry registration '{name}' requires a setter.");
+            }
+
+            if (_setters.TryGetValue(name, out var existingSetter))
             {
                 string existingMod = _registrationSource.TryGetValue(name, out var em) ? em : "(core)";
                 string newMod = modId ?? "(core)";
-                Log.Warn(in LogChannels.Config, $"Component '{name}' registered by '{existingMod}', overwritten by '{newMod}' (last-wins).");
+                if (IsSameRegistration(name, existingSetter, setter, componentType, existingMod, newMod))
+                {
+                    return;
+                }
+
                 _conflictReport?.Add("ComponentRegistry", name, existingMod, newMod);
+                throw new InvalidOperationException(
+                    $"Component '{name}' already registered by '{existingMod}', cannot register duplicate from '{newMod}'.");
             }
-#endif
+
             _setters[name] = setter;
+            if (componentType.HasValue)
+            {
+                _componentTypes[name] = componentType.Value;
+            }
+            else
+            {
+                _componentTypes.Remove(name);
+            }
+
             _registrationSource[name] = modId ?? "(core)";
+        }
+
+        private static bool IsSameRegistration(
+            string name,
+            ComponentSetter existingSetter,
+            ComponentSetter newSetter,
+            ComponentType? newComponentType,
+            string existingMod,
+            string newMod)
+        {
+            if (!string.Equals(existingMod, newMod, StringComparison.Ordinal))
+            {
+                return false;
+            }
+
+            bool hasExistingType = _componentTypes.TryGetValue(name, out var existingType);
+            if (hasExistingType || newComponentType.HasValue)
+            {
+                return hasExistingType &&
+                    newComponentType.HasValue &&
+                    existingType.Equals(newComponentType.Value);
+            }
+
+            return existingSetter.Equals(newSetter);
+        }
+
+        public static int UnregisterSource(string modId)
+        {
+            if (string.IsNullOrWhiteSpace(modId))
+            {
+                throw new InvalidOperationException("ComponentRegistry unregister requires a non-empty mod id.");
+            }
+
+            if (string.Equals(modId, "(core)", StringComparison.Ordinal))
+            {
+                throw new InvalidOperationException("ComponentRegistry cannot unregister core component authoring.");
+            }
+
+            var names = new List<string>();
+            foreach (var kvp in _registrationSource)
+            {
+                if (string.Equals(kvp.Value, modId, StringComparison.Ordinal))
+                {
+                    names.Add(kvp.Key);
+                }
+            }
+
+            for (int i = 0; i < names.Count; i++)
+            {
+                string name = names[i];
+                _setters.Remove(name);
+                _componentTypes.Remove(name);
+                _registrationSource.Remove(name);
+            }
+
+            return names.Count;
+        }
+
+        public static bool TryGetComponentType(string componentName, out ComponentType componentType)
+        {
+            return _componentTypes.TryGetValue(componentName, out componentType);
         }
 
         public static void Apply(Entity entity, string componentName, JsonNode data)
         {
+            if (string.IsNullOrWhiteSpace(componentName))
+            {
+                throw new InvalidOperationException("ComponentRegistry requires a non-empty component name.");
+            }
+
             if (data == null)
             {
-                Log.Warn(in LogChannels.Config, $"Component '{componentName}' data is null, skipping.");
-                return;
+                throw new InvalidOperationException($"Component '{componentName}' requires non-null data.");
             }
+
             if (_setters.TryGetValue(componentName, out var setter))
             {
                 setter(entity, data);
+                return;
             }
-            else
-            {
-                // Log warning: Unknown component
-                Log.Warn(in LogChannels.Config, $"Unknown component '{componentName}'");
-            }
+
+            throw new InvalidOperationException($"Unknown component '{componentName}'.");
         }
 
         private static void SetOrderBuffer(Entity entity, JsonNode data)
         {
-            // OrderBuffer always starts empty; JSON data is ignored.
+            RequireEmptyObject(data, "OrderBuffer");
             entity.Add(OrderBuffer.CreateEmpty());
         }
 
         private static void SetSelectionSelectableState(Entity entity, JsonNode data)
         {
-            var state = SelectionSelectableState.EnabledByDefault;
-            if (data is JsonObject obj)
+            if (data is not JsonObject obj)
             {
-                if ((obj.TryGetPropertyValue("IsEnabled", out var isEnabledNode) ||
-                     obj.TryGetPropertyValue("isEnabled", out isEnabledNode)) &&
-                    isEnabledNode != null)
-                {
-                    state.IsEnabled = ParseSelectionEnabled(isEnabledNode);
-                }
-            }
-            else if (data != null)
-            {
-                state.IsEnabled = ParseSelectionEnabled(data);
+                throw new InvalidOperationException("SelectionSelectableState requires an object payload.");
             }
 
-            entity.Add(state);
+            ValidateProperties(obj, "SelectionSelectableState", "IsEnabled");
+            JsonNode isEnabledNode = RequireProperty(obj, "IsEnabled", "SelectionSelectableState");
+            byte enabled = ParseSelectionEnabled(isEnabledNode, "SelectionSelectableState.IsEnabled");
+            entity.Add(new SelectionSelectableState { IsEnabled = enabled });
         }
 
         private static void SetSpatialBounds(Entity entity, JsonNode data)
@@ -145,29 +248,36 @@ namespace Ludots.Core.Config
             {
                 throw new InvalidOperationException("SpatialBounds requires an object payload.");
             }
+            ValidateProperties(obj, "SpatialBounds", "kind", "localCenterCm", "localCenterXCm", "localCenterYCm", "localCenterZCm");
 
-            string kindRaw =
-                obj["kind"]?.GetValue<string>() ??
-                obj["Kind"]?.GetValue<string>() ??
-                throw new InvalidOperationException("SpatialBounds requires 'kind'.");
+            string kindRaw = RequireStringProperty(obj, "kind", "SpatialBounds");
 
             var bounds = new SpatialBounds
             {
                 Kind = ParseSpatialBoundsKind(kindRaw),
             };
 
-            if (TryReadPointProperty(obj, out var localCenter, "localCenterCm", "LocalCenterCm"))
+            bool hasLocalCenter = obj.TryGetPropertyValue("localCenterCm", out _);
+            bool hasSplitLocalCenter =
+                obj.TryGetPropertyValue("localCenterXCm", out _) ||
+                obj.TryGetPropertyValue("localCenterZCm", out _);
+            if (hasLocalCenter && hasSplitLocalCenter)
+            {
+                throw new InvalidOperationException("SpatialBounds must author either localCenterCm or localCenterXCm/localCenterZCm, not both.");
+            }
+
+            if (TryReadPointProperty(obj, out var localCenter, "localCenterCm", "SpatialBounds.localCenterCm"))
             {
                 bounds.LocalCenterXCm = localCenter.X;
                 bounds.LocalCenterZCm = localCenter.Y;
             }
             else
             {
-                bounds.LocalCenterXCm = ReadIntProperty(obj, "localCenterXCm", "LocalCenterXCm");
-                bounds.LocalCenterZCm = ReadIntProperty(obj, "localCenterZCm", "LocalCenterZCm");
+                bounds.LocalCenterXCm = ReadIntProperty(obj, "localCenterXCm", "SpatialBounds");
+                bounds.LocalCenterZCm = ReadIntProperty(obj, "localCenterZCm", "SpatialBounds");
             }
 
-            bounds.LocalCenterYCm = ReadIntProperty(obj, "localCenterYCm", "LocalCenterYCm");
+            bounds.LocalCenterYCm = ReadIntProperty(obj, "localCenterYCm", "SpatialBounds");
             entity.Add(bounds);
         }
 
@@ -177,12 +287,13 @@ namespace Ludots.Core.Config
             {
                 throw new InvalidOperationException("SpatialBox3D requires an object payload.");
             }
+            ValidateProperties(obj, "SpatialBox3D", "halfSizeXCm", "halfSizeYCm", "halfSizeZCm");
 
             entity.Add(new SpatialBox3D
             {
-                HalfSizeXCm = ReadIntProperty(obj, "halfSizeXCm", "HalfSizeXCm"),
-                HalfSizeYCm = ReadIntProperty(obj, "halfSizeYCm", "HalfSizeYCm"),
-                HalfSizeZCm = ReadIntProperty(obj, "halfSizeZCm", "HalfSizeZCm"),
+                HalfSizeXCm = ReadIntProperty(obj, "halfSizeXCm", "SpatialBox3D"),
+                HalfSizeYCm = ReadIntProperty(obj, "halfSizeYCm", "SpatialBox3D"),
+                HalfSizeZCm = ReadIntProperty(obj, "halfSizeZCm", "SpatialBox3D"),
             });
         }
 
@@ -192,13 +303,10 @@ namespace Ludots.Core.Config
             {
                 throw new InvalidOperationException("SpatialFootprint2D requires an object payload.");
             }
+            ValidateProperties(obj, "SpatialFootprint2D", "vertices", "polygons");
 
-            JsonArray? polygons =
-                obj["polygons"] as JsonArray ??
-                obj["Polygons"] as JsonArray;
-            JsonArray? vertices =
-                obj["vertices"] as JsonArray ??
-                obj["Vertices"] as JsonArray;
+            JsonArray? polygons = obj["polygons"] as JsonArray;
+            JsonArray? vertices = obj["vertices"] as JsonArray;
 
             var footprint = new SpatialFootprint2D();
             if (polygons != null)
@@ -233,12 +341,32 @@ namespace Ludots.Core.Config
         private static void SetAbilityStateBuffer(Entity entity, JsonNode data)
         {
             var buffer = default(AbilityStateBuffer);
-            if (data is JsonObject obj && obj.TryGetPropertyValue("abilityIds", out var idsNode) && idsNode is JsonArray arr)
+            if (data is not JsonObject obj)
             {
-                for (int i = 0; i < arr.Count && buffer.Count < AbilityStateBuffer.CAPACITY; i++)
+                throw new InvalidOperationException("AbilityStateBuffer requires an object payload.");
+            }
+            ValidateProperties(obj, "AbilityStateBuffer", "abilityIds");
+
+            if (obj.TryGetPropertyValue("abilityIds", out var idsNode))
+            {
+                if (idsNode is not JsonArray arr)
+                {
+                    throw new InvalidOperationException("AbilityStateBuffer.abilityIds requires an array.");
+                }
+
+                if (arr.Count > AbilityStateBuffer.CAPACITY)
+                {
+                    throw new InvalidOperationException(
+                        $"AbilityStateBuffer.abilityIds accepts at most {AbilityStateBuffer.CAPACITY} entries.");
+                }
+
+                for (int i = 0; i < arr.Count; i++)
                 {
                     var elem = arr[i];
-                    if (elem == null) continue;
+                    if (elem == null)
+                    {
+                        throw new InvalidOperationException($"AbilityStateBuffer.abilityIds[{i}] requires a non-null value.");
+                    }
 
                     int id;
                     if (elem.GetValueKind() == JsonValueKind.String)
@@ -246,7 +374,7 @@ namespace Ludots.Core.Config
                         var abilityConfigId = elem.GetValue<string>();
                         if (string.IsNullOrWhiteSpace(abilityConfigId))
                         {
-                            id = 0;
+                            throw new InvalidOperationException($"AbilityStateBuffer.abilityIds[{i}] requires a non-empty ability id.");
                         }
                         else
                         {
@@ -262,41 +390,36 @@ namespace Ludots.Core.Config
                         id = elem.GetValue<int>();
                     }
 
-                    if (id > 0) buffer.AddAbility(id);
+                    if (id <= 0)
+                    {
+                        throw new InvalidOperationException($"AbilityStateBuffer.abilityIds[{i}] resolved to invalid id '{id}'.");
+                    }
+
+                    buffer.AddAbility(id);
                 }
             }
             entity.Add(buffer);
         }
 
-        private static byte ParseSelectionEnabled(JsonNode node)
+        private static byte ParseSelectionEnabled(JsonNode node, string context)
         {
             return node.GetValueKind() switch
             {
                 JsonValueKind.True => 1,
                 JsonValueKind.False => 0,
-                JsonValueKind.Number => node.GetValue<int>() != 0 ? (byte)1 : (byte)0,
-                _ => 0,
+                _ => throw new InvalidOperationException($"{context} requires a boolean enabled value."),
             };
         }
 
         private static SpatialBoundsKind ParseSpatialBoundsKind(string value)
         {
-            if (string.Equals(value, "Point", StringComparison.OrdinalIgnoreCase))
+            return value switch
             {
-                return SpatialBoundsKind.Point;
-            }
-
-            if (string.Equals(value, "Footprint2D", StringComparison.OrdinalIgnoreCase))
-            {
-                return SpatialBoundsKind.Footprint2D;
-            }
-
-            if (string.Equals(value, "Box3D", StringComparison.OrdinalIgnoreCase))
-            {
-                return SpatialBoundsKind.Box3D;
-            }
-
-            throw new InvalidOperationException($"Unsupported SpatialBounds kind '{value}'. Expected Point, Footprint2D, or Box3D.");
+                "Point" => SpatialBoundsKind.Point,
+                "Footprint2D" => SpatialBoundsKind.Footprint2D,
+                "Box3D" => SpatialBoundsKind.Box3D,
+                _ => throw new InvalidOperationException($"Unsupported SpatialBounds kind '{value}'. Expected Point, Footprint2D, or Box3D."),
+            };
         }
 
         private static void SetFootprintPolygon(ref SpatialFootprint2D footprint, int polygonIndex, JsonArray vertices)
@@ -312,58 +435,60 @@ namespace Ludots.Core.Config
             {
                 if (vertices[i] is not JsonObject pointObj)
                 {
-                    throw new InvalidOperationException("SpatialFootprint2D vertices entries must be objects with X/Y.");
+                    throw new InvalidOperationException("SpatialFootprint2D vertices entries must be objects with x/y.");
                 }
 
                 footprint.SetVertex(
                     polygonIndex,
                     i,
                     new WorldCmInt2(
-                        ReadIntProperty(pointObj, "x", "X"),
-                        ReadIntProperty(pointObj, "y", "Y")));
+                        ReadIntProperty(pointObj, "x", "SpatialFootprint2D vertex"),
+                        ReadIntProperty(pointObj, "y", "SpatialFootprint2D vertex")));
             }
         }
 
         private static void SetWorldPositionCm(Entity entity, JsonNode data)
         {
-            int x = 0, y = 0;
-            if (data is JsonObject obj)
+            if (data is not JsonObject obj)
             {
-                // Support both "Value": {"X": ..., "Y": ...} and direct {"X": ..., "Y": ...}
-                JsonNode valueNode = obj;
-                if (obj.TryGetPropertyValue("Value", out var vNode) && vNode is JsonObject vObj)
-                {
-                    valueNode = vObj;
-                }
-                
-                if (valueNode is JsonObject valObj)
-                {
-                    if (valObj.TryGetPropertyValue("X", out var xNode)) x = xNode?.GetValue<int>() ?? 0;
-                    if (valObj.TryGetPropertyValue("Y", out var yNode)) y = yNode?.GetValue<int>() ?? 0;
-                }
+                throw new InvalidOperationException("WorldPositionCm requires an object payload.");
             }
+            ValidateProperties(obj, "WorldPositionCm", "Value");
+
+            JsonNode valueNode = RequireProperty(obj, "Value", "WorldPositionCm");
+            if (valueNode is not JsonObject valueObj)
+            {
+                throw new InvalidOperationException("WorldPositionCm.Value requires an object payload.");
+            }
+            ValidateProperties(valueObj, "WorldPositionCm.Value", "X", "Y");
+
+            int x = ReadIntProperty(valueObj, "X", "WorldPositionCm.Value");
+            int y = ReadIntProperty(valueObj, "Y", "WorldPositionCm.Value");
             var fix64Pos = Fix64Vec2.FromInt(x, y);
             entity.Add(new WorldPositionCm { Value = fix64Pos });
             // Add the companion components required by interpolation, rendering, and culling.
             entity.Add(new PreviousWorldPositionCm { Value = fix64Pos });
             entity.Add(VisualTransform.Default);
-            entity.Add(new CullState { IsVisible = true, LOD = LODLevel.High });
+            entity.Add(new CullState { IsVisible = false, LOD = LODLevel.Low });
+        }
+
+        private static void SetPresentationStaticTransform(Entity entity, JsonNode data)
+        {
+            RequireEmptyObject(data, "PresentationStaticTransform");
+            entity.Add(new PresentationStaticTransform());
+            entity.Add(new PresentationStaticVisualPending());
+            entity.Add(new PresentationStaticCullPending());
         }
 
         private static void SetAbilityFormSetRef(Entity entity, JsonNode data)
         {
-            string? formSetName = null;
-            if (data.GetValueKind() == JsonValueKind.String)
+            if (data is not JsonObject obj)
             {
-                formSetName = data.GetValue<string>();
-            }
-            else if (data is JsonObject obj)
-            {
-                formSetName =
-                    obj["formSetId"]?.GetValue<string>() ??
-                    obj["FormSetId"]?.GetValue<string>();
+                throw new InvalidOperationException("AbilityFormSetRef requires an object payload.");
             }
 
+            ValidateProperties(obj, "AbilityFormSetRef", "formSetId");
+            string formSetName = RequireStringProperty(obj, "formSetId", "AbilityFormSetRef");
             if (string.IsNullOrWhiteSpace(formSetName))
             {
                 throw new InvalidOperationException("AbilityFormSetRef requires a non-empty formSetId.");
@@ -384,37 +509,8 @@ namespace Ludots.Core.Config
 
         private static void SetEntityLayer(Entity entity, JsonNode data)
         {
-            uint category = 0;
-            uint mask = uint.MaxValue; // default: interact with all layers
-            if (data is JsonObject obj)
-            {
-                if (obj.TryGetPropertyValue("category", out var catNode) && catNode is JsonArray catArr)
-                {
-                    foreach (var item in catArr)
-                    {
-                        string name = item?.GetValue<string>();
-                        if (!string.IsNullOrEmpty(name))
-                        {
-                            int idx = LayerRegistry.GetIndex(name);
-                            if (idx >= 0) category |= 1u << idx;
-                        }
-                    }
-                }
-                if (obj.TryGetPropertyValue("mask", out var maskNode) && maskNode is JsonArray maskArr)
-                {
-                    mask = 0;
-                    foreach (var item in maskArr)
-                    {
-                        string name = item?.GetValue<string>();
-                        if (!string.IsNullOrEmpty(name))
-                        {
-                            int idx = LayerRegistry.GetIndex(name);
-                            if (idx >= 0) mask |= 1u << idx;
-                        }
-                    }
-                }
-            }
-            entity.Add(new Ludots.Core.Gameplay.Components.EntityLayer(category, mask));
+            LayerMask layerMask = EntityLayerAuthoring.ReadLayerMask(data, "EntityLayer component");
+            entity.Add(new Ludots.Core.Gameplay.Components.EntityLayer(layerMask));
         }
 
         private static unsafe void SetAttributeBuffer(Entity entity, JsonNode data)
@@ -422,22 +518,61 @@ namespace Ludots.Core.Config
             var buffer = default(AttributeBuffer);
             if (data is not JsonObject obj)
             {
-                entity.Add(buffer);
-                return;
+                throw new InvalidOperationException("AttributeBuffer requires an object payload.");
             }
+            ValidateProperties(obj, "AttributeBuffer", "base", "current");
 
-            if (obj.TryGetPropertyValue("base", out var baseNode) && baseNode is JsonObject baseObj)
+            if (obj.TryGetPropertyValue("base", out var baseNode))
             {
+                if (baseNode is not JsonObject baseObj)
+                {
+                    throw new InvalidOperationException("AttributeBuffer.base requires an object payload.");
+                }
+
                 foreach (var kvp in baseObj)
                 {
-                    if (kvp.Value == null) continue;
+                    if (kvp.Value == null)
+                    {
+                        throw new InvalidOperationException($"AttributeBuffer.base.{kvp.Key} requires a non-null numeric value.");
+                    }
+
                     float v = kvp.Value.GetValue<float>();
                     int attrId = AttributeRegistry.Register(kvp.Key);
                     buffer.SetBase(attrId, v);
                 }
             }
 
+            if (obj.TryGetPropertyValue("current", out var currentNode))
+            {
+                if (currentNode is not JsonObject currentObj)
+                {
+                    throw new InvalidOperationException("AttributeBuffer.current requires an object payload.");
+                }
+
+                foreach (var kvp in currentObj)
+                {
+                    if (kvp.Value == null)
+                    {
+                        throw new InvalidOperationException($"AttributeBuffer.current.{kvp.Key} requires a non-null numeric value.");
+                    }
+
+                    float v = kvp.Value.GetValue<float>();
+                    int attrId = AttributeRegistry.Register(kvp.Key);
+                    buffer.SetCurrent(attrId, v);
+                }
+            }
+
+            var snapshot = default(AttributeLastSnapshot);
+            ulong definedMask = buffer.DefinedMask;
+            while (definedMask != 0UL)
+            {
+                int attributeId = System.Numerics.BitOperations.TrailingZeroCount(definedMask);
+                definedMask &= definedMask - 1UL;
+                snapshot.Values[attributeId] = buffer.GetCurrent(attributeId);
+            }
+
             entity.Add(buffer);
+            entity.Add(snapshot);
         }
 
         private static void SetManifestationObstacleIntent2D(Entity entity, JsonNode data)
@@ -446,39 +581,63 @@ namespace Ludots.Core.Config
             {
                 throw new InvalidOperationException("ManifestationObstacleIntent2D requires an object payload.");
             }
+            ValidateProperties(
+                obj,
+                "ManifestationObstacleIntent2D",
+                "shape",
+                "sinkPhysicsCollider",
+                "sinkNavigationObstacle",
+                "navRadiusCm",
+                "radiusCm",
+                "halfWidthCm",
+                "halfHeightCm",
+                "localOffsetCm",
+                "localOffsetXCm",
+                "localOffsetYCm");
 
+            string shapeRaw = RequireStringProperty(obj, "shape", "ManifestationObstacleIntent2D");
             var intent = new ManifestationObstacleIntent2D
             {
-                Shape = ParseManifestationObstacleShape(obj["shape"]?.GetValue<string>() ?? obj["Shape"]?.GetValue<string>()),
-                SinkPhysicsCollider = ParseBooleanByte(obj["sinkPhysicsCollider"] ?? obj["SinkPhysicsCollider"], defaultValue: 1),
-                SinkNavigationObstacle = ParseBooleanByte(obj["sinkNavigationObstacle"] ?? obj["SinkNavigationObstacle"], defaultValue: 1),
-                NavRadiusCm = ReadIntProperty(obj, "navRadiusCm", "NavRadiusCm"),
+                Shape = ParseManifestationObstacleShape(shapeRaw),
+                SinkPhysicsCollider = ParseBooleanByte(RequireProperty(obj, "sinkPhysicsCollider", "ManifestationObstacleIntent2D"), "ManifestationObstacleIntent2D.sinkPhysicsCollider"),
+                SinkNavigationObstacle = ParseBooleanByte(RequireProperty(obj, "sinkNavigationObstacle", "ManifestationObstacleIntent2D"), "ManifestationObstacleIntent2D.sinkNavigationObstacle"),
+                NavRadiusCm = ReadIntProperty(obj, "navRadiusCm", "ManifestationObstacleIntent2D"),
             };
 
-            if (TryReadIntProperty(obj, out int radiusCm, "radiusCm", "RadiusCm"))
+            if (intent.Shape == ManifestationObstacleShape2D.Circle)
             {
-                intent.RadiusCm = radiusCm;
+                RequireAbsentProperties(obj, "ManifestationObstacleIntent2D Circle", "halfWidthCm", "halfHeightCm");
+                intent.RadiusCm = ReadIntProperty(obj, "radiusCm", "ManifestationObstacleIntent2D");
+            }
+            else if (intent.Shape == ManifestationObstacleShape2D.Box)
+            {
+                RequireAbsentProperties(obj, "ManifestationObstacleIntent2D Box", "radiusCm");
+                intent.HalfWidthCm = ReadIntProperty(obj, "halfWidthCm", "ManifestationObstacleIntent2D");
+                intent.HalfHeightCm = ReadIntProperty(obj, "halfHeightCm", "ManifestationObstacleIntent2D");
+            }
+            else
+            {
+                RequireAbsentProperties(obj, "ManifestationObstacleIntent2D Polygon", "radiusCm", "halfWidthCm", "halfHeightCm");
             }
 
-            if (TryReadIntProperty(obj, out int halfWidthCm, "halfWidthCm", "HalfWidthCm"))
+            bool hasLocalOffset = obj.TryGetPropertyValue("localOffsetCm", out _);
+            bool hasSplitLocalOffset =
+                obj.TryGetPropertyValue("localOffsetXCm", out _) ||
+                obj.TryGetPropertyValue("localOffsetYCm", out _);
+            if (hasLocalOffset && hasSplitLocalOffset)
             {
-                intent.HalfWidthCm = halfWidthCm;
+                throw new InvalidOperationException("ManifestationObstacleIntent2D must author either localOffsetCm or localOffsetXCm/localOffsetYCm, not both.");
             }
 
-            if (TryReadIntProperty(obj, out int halfHeightCm, "halfHeightCm", "HalfHeightCm"))
-            {
-                intent.HalfHeightCm = halfHeightCm;
-            }
-
-            if (TryReadPointProperty(obj, out var localOffset, "localOffsetCm", "LocalOffsetCm"))
+            if (TryReadPointProperty(obj, out var localOffset, "localOffsetCm", "ManifestationObstacleIntent2D.localOffsetCm"))
             {
                 intent.LocalOffsetXCm = localOffset.X;
                 intent.LocalOffsetYCm = localOffset.Y;
             }
             else
             {
-                intent.LocalOffsetXCm = ReadIntProperty(obj, "localOffsetXCm", "LocalOffsetXCm");
-                intent.LocalOffsetYCm = ReadIntProperty(obj, "localOffsetYCm", "LocalOffsetYCm");
+                intent.LocalOffsetXCm = ReadIntProperty(obj, "localOffsetXCm", "ManifestationObstacleIntent2D");
+                intent.LocalOffsetYCm = ReadIntProperty(obj, "localOffsetYCm", "ManifestationObstacleIntent2D");
             }
 
             entity.Add(intent);
@@ -490,8 +649,9 @@ namespace Ludots.Core.Config
             {
                 throw new InvalidOperationException("ManifestationObstaclePolygon2D requires an object payload.");
             }
+            ValidateProperties(obj, "ManifestationObstaclePolygon2D", "vertices");
 
-            JsonArray? vertices = obj["vertices"] as JsonArray ?? obj["Vertices"] as JsonArray;
+            JsonArray? vertices = obj["vertices"] as JsonArray;
             if (vertices == null)
             {
                 throw new InvalidOperationException("ManifestationObstaclePolygon2D requires a vertices array.");
@@ -511,12 +671,12 @@ namespace Ludots.Core.Config
             {
                 if (vertices[i] is not JsonObject pointObj)
                 {
-                    throw new InvalidOperationException("ManifestationObstaclePolygon2D vertices entries must be objects with X/Y.");
+                    throw new InvalidOperationException("ManifestationObstaclePolygon2D vertices entries must be objects with x/y.");
                 }
 
                 polygon.SetVertex(i, new WorldCmInt2(
-                    ReadIntProperty(pointObj, "x", "X"),
-                    ReadIntProperty(pointObj, "y", "Y")));
+                    ReadIntProperty(pointObj, "x", "ManifestationObstaclePolygon2D vertex"),
+                    ReadIntProperty(pointObj, "y", "ManifestationObstaclePolygon2D vertex")));
             }
 
             entity.Add(polygon);
@@ -528,11 +688,12 @@ namespace Ludots.Core.Config
             {
                 throw new InvalidOperationException("AbilityExecAimSync requires an object payload.");
             }
+            ValidateProperties(obj, "AbilityExecAimSync", "abilitySlot", "syncFacing");
 
             entity.Add(new AbilityExecAimSync
             {
-                AbilitySlot = ReadIntProperty(obj, "abilitySlot", "AbilitySlot"),
-                SyncFacing = ParseBooleanByte(obj["syncFacing"] ?? obj["SyncFacing"], defaultValue: 0),
+                AbilitySlot = ReadIntProperty(obj, "abilitySlot", "AbilityExecAimSync"),
+                SyncFacing = ParseBooleanByte(RequireProperty(obj, "syncFacing", "AbilityExecAimSync"), "AbilityExecAimSync.syncFacing"),
             });
         }
 
@@ -542,18 +703,20 @@ namespace Ludots.Core.Config
             {
                 throw new InvalidOperationException("ManifestationMotion2D requires an object payload.");
             }
+            ValidateProperties(obj, "ManifestationMotion2D", "followParentPosition", "facingSource", "sweepDegreesPerSecond", "forwardOffsetCm");
 
             entity.Add(new ManifestationMotion2D
             {
-                FollowParentPosition = ParseBooleanByte(obj["followParentPosition"] ?? obj["FollowParentPosition"], defaultValue: 1),
-                FacingSource = ParseManifestationFacingSource(obj["facingSource"]?.GetValue<string>() ?? obj["FacingSource"]?.GetValue<string>()),
-                SweepDegreesPerSecond = ReadFloatProperty(obj, "sweepDegreesPerSecond", "SweepDegreesPerSecond"),
-                ForwardOffsetCm = ReadIntProperty(obj, "forwardOffsetCm", "ForwardOffsetCm"),
+                FollowParentPosition = ParseBooleanByte(RequireProperty(obj, "followParentPosition", "ManifestationMotion2D"), "ManifestationMotion2D.followParentPosition"),
+                FacingSource = ParseManifestationFacingSource(RequireStringProperty(obj, "facingSource", "ManifestationMotion2D")),
+                SweepDegreesPerSecond = ReadFloatProperty(obj, "sweepDegreesPerSecond", "ManifestationMotion2D"),
+                ForwardOffsetCm = ReadIntProperty(obj, "forwardOffsetCm", "ManifestationMotion2D"),
             });
         }
 
         private static void SetDestroyWhenParentExecutionEnds(Entity entity, JsonNode data)
         {
+            RequireEmptyObject(data, "DestroyWhenParentExecutionEnds");
             entity.Add(new DestroyWhenParentExecutionEnds());
         }
 
@@ -561,14 +724,14 @@ namespace Ludots.Core.Config
         {
             if (string.IsNullOrWhiteSpace(raw))
             {
-                return ManifestationObstacleShape2D.Circle;
+                throw new InvalidOperationException("ManifestationObstacleIntent2D requires a non-empty shape.");
             }
 
-            return raw.Trim().ToLowerInvariant() switch
+            return raw switch
             {
-                "circle" => ManifestationObstacleShape2D.Circle,
-                "box" => ManifestationObstacleShape2D.Box,
-                "polygon" => ManifestationObstacleShape2D.Polygon,
+                "Circle" => ManifestationObstacleShape2D.Circle,
+                "Box" => ManifestationObstacleShape2D.Box,
+                "Polygon" => ManifestationObstacleShape2D.Polygon,
                 _ => throw new InvalidOperationException($"Unsupported ManifestationObstacleIntent2D shape '{raw}'.")
             };
         }
@@ -577,82 +740,166 @@ namespace Ludots.Core.Config
         {
             if (string.IsNullOrWhiteSpace(raw))
             {
-                return ManifestationFacingSource2D.None;
+                throw new InvalidOperationException("ManifestationMotion2D requires a non-empty facingSource.");
             }
 
-            return raw.Trim().ToLowerInvariant() switch
+            return raw switch
             {
-                "none" => ManifestationFacingSource2D.None,
-                "sweepvelocity" => ManifestationFacingSource2D.SweepVelocity,
-                "parentexecutiontarget" => ManifestationFacingSource2D.ParentExecutionTarget,
+                "None" => ManifestationFacingSource2D.None,
+                "SweepVelocity" => ManifestationFacingSource2D.SweepVelocity,
+                "ParentExecutionTarget" => ManifestationFacingSource2D.ParentExecutionTarget,
                 _ => throw new InvalidOperationException($"Unsupported ManifestationMotion2D facingSource '{raw}'.")
             };
         }
 
-        private static byte ParseBooleanByte(JsonNode? node, byte defaultValue)
+        private static byte ParseBooleanByte(JsonNode node, string context)
         {
-            if (node == null)
-            {
-                return defaultValue;
-            }
-
             return node.GetValueKind() switch
             {
                 JsonValueKind.True => 1,
                 JsonValueKind.False => 0,
-                JsonValueKind.Number => node.GetValue<int>() != 0 ? (byte)1 : (byte)0,
-                _ => defaultValue,
+                _ => throw new InvalidOperationException($"{context} requires a boolean value."),
             };
         }
 
-        private static bool TryReadIntProperty(JsonObject obj, out int value, params string[] names)
+        private static bool TryReadIntProperty(JsonObject obj, out int value, string name)
+        {
+            if (!obj.TryGetPropertyValue(name, out var node))
+            {
+                value = 0;
+                return false;
+            }
+
+            if (node == null)
+            {
+                throw new InvalidOperationException($"Property '{name}' requires a non-null integer value.");
+            }
+
+            if (node.GetValueKind() == JsonValueKind.Null)
+            {
+                throw new InvalidOperationException($"Property '{name}' requires a non-null integer value.");
+            }
+
+            if (node.GetValueKind() != JsonValueKind.Number)
+            {
+                throw new InvalidOperationException($"Property '{name}' requires an integer value.");
+            }
+
+            value = node.GetValue<int>();
+            return true;
+        }
+
+        private static void RequireEmptyObject(JsonNode data, string context)
+        {
+            if (data is not JsonObject obj)
+            {
+                throw new InvalidOperationException($"{context} requires an empty object payload.");
+            }
+
+            if (obj.Count != 0)
+            {
+                throw new InvalidOperationException($"{context} does not accept authored fields.");
+            }
+        }
+
+        private static void ValidateProperties(JsonObject obj, string context, params string[] allowedNames)
+        {
+            foreach (var kvp in obj)
+            {
+                bool allowed = false;
+                for (int i = 0; i < allowedNames.Length; i++)
+                {
+                    if (string.Equals(kvp.Key, allowedNames[i], StringComparison.Ordinal))
+                    {
+                        allowed = true;
+                        break;
+                    }
+                }
+
+                if (!allowed)
+                {
+                    throw new InvalidOperationException($"{context} contains unsupported property '{kvp.Key}'.");
+                }
+            }
+        }
+
+        private static void RequireAbsentProperties(JsonObject obj, string context, params string[] names)
         {
             for (int i = 0; i < names.Length; i++)
             {
-                if (obj.TryGetPropertyValue(names[i], out var node) && node != null)
+                if (obj.ContainsKey(names[i]))
                 {
-                    value = node.GetValue<int>();
-                    return true;
+                    throw new InvalidOperationException($"{context} must not author '{names[i]}'.");
                 }
             }
-
-            value = 0;
-            return false;
         }
 
-        private static int ReadIntProperty(JsonObject obj, params string[] names)
+        private static int ReadIntProperty(JsonObject obj, string name, string context)
         {
-            return TryReadIntProperty(obj, out int value, names) ? value : 0;
-        }
-
-        private static float ReadFloatProperty(JsonObject obj, params string[] names)
-        {
-            for (int i = 0; i < names.Length; i++)
+            if (TryReadIntProperty(obj, out int value, name))
             {
-                if (obj.TryGetPropertyValue(names[i], out var node) && node != null)
-                {
-                    return node.GetValue<float>();
-                }
+                return value;
             }
 
-            return 0f;
+            throw new InvalidOperationException($"{context} requires explicit '{name}'.");
         }
 
-        private static bool TryReadPointProperty(JsonObject obj, out WorldCmInt2 point, params string[] names)
+        private static bool TryReadPointProperty(JsonObject obj, out WorldCmInt2 point, string name, string context)
         {
-            for (int i = 0; i < names.Length; i++)
+            if (!obj.TryGetPropertyValue(name, out var node))
             {
-                if (obj.TryGetPropertyValue(names[i], out var node) && node is JsonObject pointObj)
-                {
-                    point = new WorldCmInt2(
-                        ReadIntProperty(pointObj, "x", "X"),
-                        ReadIntProperty(pointObj, "y", "Y"));
-                    return true;
-                }
+                point = WorldCmInt2.Zero;
+                return false;
             }
 
-            point = WorldCmInt2.Zero;
-            return false;
+            if (node is not JsonObject pointObj)
+            {
+                throw new InvalidOperationException($"{context} requires an object payload.");
+            }
+
+            ValidateProperties(pointObj, context, "x", "y");
+            point = new WorldCmInt2(
+                ReadIntProperty(pointObj, "x", context),
+                ReadIntProperty(pointObj, "y", context));
+            return true;
+        }
+
+        private static float ReadFloatProperty(JsonObject obj, string name, string context)
+        {
+            JsonNode node = RequireProperty(obj, name, context);
+            if (node.GetValueKind() != JsonValueKind.Number)
+            {
+                throw new InvalidOperationException($"{context}.{name} requires a numeric value.");
+            }
+
+            return node.GetValue<float>();
+        }
+
+        private static JsonNode RequireProperty(JsonObject obj, string name, string context)
+        {
+            if (!obj.TryGetPropertyValue(name, out JsonNode? node) || node == null)
+            {
+                throw new InvalidOperationException($"{context} requires explicit '{name}'.");
+            }
+
+            return node;
+        }
+
+        private static string RequireStringProperty(JsonObject obj, string name, string context)
+        {
+            JsonNode node = RequireProperty(obj, name, context);
+            if (node.GetValueKind() != JsonValueKind.String)
+            {
+                throw new InvalidOperationException($"{context}.{name} requires a string value.");
+            }
+
+            string value = node.GetValue<string>();
+            if (string.IsNullOrWhiteSpace(value))
+            {
+                throw new InvalidOperationException($"{context}.{name} requires a non-empty string value.");
+            }
+
+            return value;
         }
     }
 }

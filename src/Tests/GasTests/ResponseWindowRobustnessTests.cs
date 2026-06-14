@@ -1,6 +1,7 @@
 using Arch.Core;
 using Ludots.Core.Gameplay.GAS;
 using Ludots.Core.Gameplay.GAS.Components;
+using Ludots.Core.Gameplay.GAS.Registry;
 using Ludots.Core.Gameplay.GAS.Systems;
 using NUnit.Framework;
 using static NUnit.Framework.Assert;
@@ -16,7 +17,7 @@ namespace Ludots.Tests.GAS
             var world = World.Create();
             try
             {
-                int attrHealth = 0;
+                int attrHealth = EnsureAttribute("ResponseWindowRobustness.Health");
                 int tplInstant = 1001;
 
                 var templates = new EffectTemplateRegistry();
@@ -38,7 +39,9 @@ namespace Ludots.Tests.GAS
                 var queue = new EffectRequestQueue();
 
                 var target = world.Create(new AttributeBuffer());
-                world.Get<AttributeBuffer>(target).SetCurrent(attrHealth, 100f);
+                ref var attributes = ref world.Get<AttributeBuffer>(target);
+                attributes.SetBase(attrHealth, 100f);
+                attributes.SetCurrent(attrHealth, 100f);
 
                 queue.Publish(new EffectRequest
                 {
@@ -154,6 +157,12 @@ namespace Ludots.Tests.GAS
             {
                 world.Dispose();
             }
+        }
+
+        private static int EnsureAttribute(string name)
+        {
+            int id = AttributeRegistry.GetId(name);
+            return id != AttributeRegistry.InvalidId ? id : AttributeRegistry.Register(name);
         }
     }
 }

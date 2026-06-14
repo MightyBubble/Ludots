@@ -1,54 +1,195 @@
 [
   {
-    "_comment": "单位方块渲染 - entity-scoped, 查询所有有 VisualTransform 的实体",
     "id": "moba_unit_marker",
-    "visualKind": "Marker3D",
-    "entityScope": "AllWithVisualTransform",
-    "meshOrShapeId": "cube",
-    "defaultScale": 0.35,
     "maxVisibilityDistanceCm": 8000,
-    "positionOffset": [0, 0.25, 0],
-    "visibility": { "inline": "OwnerCullVisible" },
+    "positionOffset": [
+      0,
+      0.25,
+      0
+    ],
+    "visibility": {
+      "inline": "OwnerCullVisible"
+    },
     "bindings": [
-      { "paramKey": 4, "source": "entityColor", "sourceId": 0 },
-      { "paramKey": 5, "source": "entityColor", "sourceId": 1 },
-      { "paramKey": 6, "source": "entityColor", "sourceId": 2 },
-      { "paramKey": 7, "source": "entityColor", "sourceId": 3 }
+      {
+        "paramKey": "marker3d.color.r",
+        "source": "entityColor",
+        "sourceId": 0
+      },
+      {
+        "paramKey": "marker3d.color.g",
+        "source": "entityColor",
+        "sourceId": 1
+      },
+      {
+        "paramKey": "marker3d.color.b",
+        "source": "entityColor",
+        "sourceId": 2
+      },
+      {
+        "paramKey": "marker3d.color.a",
+        "source": "entityColor",
+        "sourceId": 3
+      }
+    ],
+    "rules": [
+      {
+        "event": {
+          "kind": "EntitySpawned",
+          "key": "*"
+        },
+        "condition": {
+          "inline": "SourceHasVisualTransform"
+        },
+        "command": {
+          "kind": "CreatePerformer",
+          "definitionId": "moba_unit_marker",
+          "scopeSource": "EventPayloadA"
+        }
+      },
+      {
+        "event": {
+          "kind": "EntityDestroyed",
+          "key": "*"
+        },
+        "command": {
+          "kind": "DestroyPerformerScope",
+          "scopeSource": "EventPayloadA"
+        }
+      }
+    ],
+    "behaviors": [
+      {
+        "slot": "body",
+        "kind": "AssetBinding",
+        "activeByDefault": true,
+        "assetBinding": {
+          "assetKind": "Mesh",
+          "assetId": "cube",
+          "renderPath": "StaticMesh",
+          "mobility": "Movable",
+          "localScale": [
+            0.35,
+            0.35,
+            0.35
+          ]
+        }
+      }
     ]
   },
   {
-    "_comment": "选中指示器 - instance-scoped, 黄色球体悬浮在选中单位头顶",
     "id": "moba_selection_indicator",
-    "visualKind": "Marker3D",
-    "meshOrShapeId": "sphere",
-    "defaultColor": [1, 1, 0, 1],
-    "defaultScale": 0.18,
+    "defaultColor": [
+      1,
+      1,
+      0,
+      1
+    ],
     "defaultLifetime": -1,
-    "positionOffset": [0, 0.85, 0]
+    "positionOffset": [
+      0,
+      0.85,
+      0
+    ],
+    "behaviors": [
+      {
+        "slot": "body",
+        "kind": "AssetBinding",
+        "activeByDefault": true,
+        "assetBinding": {
+          "assetKind": "Mesh",
+          "assetId": "sphere",
+          "renderPath": "StaticMesh",
+          "mobility": "Movable",
+          "localScale": [
+            0.18,
+            0.18,
+            0.18
+          ]
+        }
+      }
+    ]
   },
   {
-    "_comment": "选区范围标记 - instance-scoped, 紫色扁球短暂闪烁(CircleEnemy)",
     "id": "moba_area_marker",
-    "visualKind": "Marker3D",
-    "meshOrShapeId": "sphere",
-    "defaultColor": [0.8, 0.2, 1.0, 0.75],
+    "defaultColor": [
+      0.8,
+      0.2,
+      1,
+      0.75
+    ],
     "defaultLifetime": 0.35,
     "alphaFadeOverLifetime": true,
-    "positionOffset": [0, 0.1, 0],
+    "positionOffset": [
+      0,
+      0.1,
+      0
+    ],
     "bindings": [
-      { "paramKey": 1, "source": "constant", "constantValue": 1.2 },
-      { "paramKey": 2, "source": "constant", "constantValue": 0.08 },
-      { "paramKey": 3, "source": "constant", "constantValue": 1.2 }
+      {
+        "paramKey": "marker3d.scale.x",
+        "source": "constant",
+        "constantValue": 1.2
+      },
+      {
+        "paramKey": "marker3d.scale.y",
+        "source": "constant",
+        "constantValue": 0.08
+      },
+      {
+        "paramKey": "marker3d.scale.z",
+        "source": "constant",
+        "constantValue": 1.2
+      }
+    ],
+    "behaviors": [
+      {
+        "slot": "body",
+        "kind": "AssetBinding",
+        "activeByDefault": true,
+        "assetBinding": {
+          "assetKind": "Mesh",
+          "assetId": "sphere",
+          "renderPath": "StaticMesh",
+          "mobility": "Movable",
+          "localScale": [
+            1,
+            1,
+            1
+          ]
+        }
+      }
     ]
   },
   {
-    "_comment": "技能范围圈 - instance-scoped, 瞄准时的地面圆形指示器",
     "id": "moba_ability_range",
-    "visualKind": "GroundOverlay",
-    "meshOrShapeId": "circle",
-    "defaultColor": [0.3, 0.7, 1.0, 0.2],
-    "defaultScale": 6.0,
+    "defaultColor": [
+      0.3,
+      0.7,
+      1,
+      0.2
+    ],
     "defaultLifetime": -1,
-    "visibility": { "inline": "OwnerCullVisible" }
+    "visibility": {
+      "inline": "OwnerCullVisible"
+    },
+    "behaviors": [
+      {
+        "slot": "body",
+        "kind": "AssetBinding",
+        "activeByDefault": true,
+        "assetBinding": {
+          "assetKind": "GroundOverlay",
+          "assetId": "Circle",
+          "renderPath": "None",
+          "mobility": "Movable",
+          "localScale": [
+            6,
+            6,
+            6
+          ]
+        }
+      }
+    ]
   }
 ]

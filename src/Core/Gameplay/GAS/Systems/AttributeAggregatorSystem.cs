@@ -13,15 +13,15 @@ namespace Ludots.Core.Gameplay.GAS.Systems
     public class AttributeAggregatorSystem : BaseSystem<World, float>
     {
         private static readonly QueryDescription _withDirtyFlagsQuery = new QueryDescription()
-            .WithAll<AttributeBuffer, ActiveEffectContainer, DirtyFlags>();
+            .WithAll<AttributeBuffer, ActiveEffectContainer, AttributeAggregateDirty, DirtyFlags>();
 
         private static readonly QueryDescription _withoutDirtyFlagsQuery = new QueryDescription()
-            .WithAll<AttributeBuffer, ActiveEffectContainer>()
+            .WithAll<AttributeBuffer, ActiveEffectContainer, AttributeAggregateDirty>()
             .WithNone<DirtyFlags>();
 
-        private readonly CommandBuffer _commandBuffer = new CommandBuffer();
         private readonly GraphProgramRegistry _graphPrograms;
         private readonly IGraphRuntimeApi _graphApi;
+        private readonly CommandBuffer _commandBuffer = new();
 
         public AttributeAggregatorSystem(World world, GraphProgramRegistry graphPrograms = null, IGraphRuntimeApi graphApi = null) : base(world)
         {
@@ -34,6 +34,7 @@ namespace Ludots.Core.Gameplay.GAS.Systems
             var withDirtyJob = new AttributeAggregatorWithDirtyJob
             {
                 World = World,
+                CommandBuffer = _commandBuffer,
                 GraphPrograms = _graphPrograms,
                 GraphApi = _graphApi,
             };
@@ -48,7 +49,16 @@ namespace Ludots.Core.Gameplay.GAS.Systems
             };
             World.InlineEntityQuery<AttributeAggregatorWithoutDirtyJob, AttributeBuffer, ActiveEffectContainer>(in _withoutDirtyFlagsQuery, ref withoutDirtyJob);
 
-            _commandBuffer.Playback(World, dispose: true);
+            if (_commandBuffer.Size > 0)
+            {
+                _commandBuffer.Playback(World);
+            }
+        }
+
+        public override void Dispose()
+        {
+            _commandBuffer.Dispose();
+            base.Dispose();
         }
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
@@ -78,9 +88,83 @@ namespace Ludots.Core.Gameplay.GAS.Systems
             }
         }
 
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        private static unsafe ulong RecomputeEffectiveValues(
+            World world,
+            Entity entity,
+            ref AttributeBuffer attrBuffer,
+            ref ActiveEffectContainer effects,
+            GraphProgramRegistry graphPrograms,
+            IGraphRuntimeApi graphApi)
+        {
+            ulong touchedMask = 0UL;
+
+            for (int i = 0; i < AttributeBuffer.MAX_ATTRS; i++)
+            {
+                attrBuffer.CurrentValues[i] = attrBuffer.BaseValues[i];
+            }
+
+            if (effects.Count > 0)
+            {
+                for (int i = 0; i < effects.Count; i++)
+                {
+                    Entity effectEntity = effects.GetEntity(i);
+                    if (!world.IsAlive(effectEntity))
+                    {
+                        continue;
+                    }
+
+                    if (world.Has<GameplayEffect>(effectEntity) &&
+                        !world.Get<GameplayEffect>(effectEntity).AggregatesModifiers)
+                    {
+                        continue;
+                    }
+
+                    ref readonly var modifiers = ref world.Get<EffectModifiers>(effectEntity);
+                    touchedMask |= BuildTouchedMask(in modifiers);
+                    EffectModifierOps.ApplyAggregated(in modifiers, ref attrBuffer);
+                }
+            }
+
+            Span<float> beforeDerived = stackalloc float[AttributeBuffer.MAX_ATTRS];
+            for (int i = 0; i < AttributeBuffer.MAX_ATTRS; i++)
+            {
+                beforeDerived[i] = attrBuffer.CurrentValues[i];
+            }
+
+            ExecuteDerivedGraphs(world, entity, graphPrograms, graphApi);
+
+            for (int i = 0; i < AttributeBuffer.MAX_ATTRS; i++)
+            {
+                if (beforeDerived[i] != attrBuffer.CurrentValues[i])
+                {
+                    touchedMask |= 1UL << i;
+                }
+            }
+
+            return touchedMask;
+        }
+
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        private static unsafe ulong BuildTouchedMask(in EffectModifiers modifiers)
+        {
+            ulong mask = 0UL;
+            for (int i = 0; i < modifiers.Count; i++)
+            {
+                int attributeId = modifiers.Get(i).AttributeId;
+                if ((uint)attributeId < AttributeBuffer.MAX_ATTRS)
+                {
+                    mask |= 1UL << attributeId;
+                }
+            }
+
+            return mask;
+        }
+
         struct AttributeAggregatorWithDirtyJob : IForEachWithEntity<AttributeBuffer, ActiveEffectContainer, DirtyFlags>
         {
             public World World;
+            public CommandBuffer CommandBuffer;
             public GraphProgramRegistry GraphPrograms;
             public IGraphRuntimeApi GraphApi;
 
@@ -93,30 +177,16 @@ namespace Ludots.Core.Gameplay.GAS.Systems
                     oldValues[i] = attrBuffer.CurrentValues[i];
                 }
 
-                // 1. Reset Current = Base
-                for(int i=0; i<AttributeBuffer.MAX_ATTRS; i++)
-                {
-                    attrBuffer.CurrentValues[i] = attrBuffer.BaseValues[i];
-                }
-
-                // 2. Aggregate Active Effects
-                if (effects.Count > 0)
-                {
-                for (int i = 0; i < effects.Count; i++)
-                {
-                    Entity effectEntity = effects.GetEntity(i);
-
-                    if (World.IsAlive(effectEntity))
-                    {
-                        ref var modifiers = ref World.Get<EffectModifiers>(effectEntity);
-                        EffectModifierOps.ApplyAggregated(in modifiers, ref attrBuffer);
-                    }
-                    }
-                }
-
-                // 3. Execute derived graphs (non-linear attribute formulas)
-                ExecuteDerivedGraphs(World, entity, GraphPrograms, GraphApi);
-                RestorePersistentCurrentValues(ref attrBuffer, oldValues);
+                ulong touchedMask = RecomputeEffectiveValues(
+                    World,
+                    entity,
+                    ref attrBuffer,
+                    ref effects,
+                    GraphPrograms,
+                    GraphApi);
+                RestorePersistentCurrentValues(ref attrBuffer, oldValues, touchedMask);
+                bool hasPresentationChanged = World.Has<GameplayAttributeChangedBits>(entity);
+                GameplayAttributeChangedBits presentationChangedLocal = default;
 
                 // 4. 标记脏属性（用于延迟触发器）
                 for (int i = 0; i < AttributeBuffer.MAX_ATTRS; i++)
@@ -124,8 +194,16 @@ namespace Ludots.Core.Gameplay.GAS.Systems
                     if (oldValues[i] != attrBuffer.CurrentValues[i])
                     {
                         dirtyFlags.MarkAttributeDirty(i);
+                        MarkPresentationChanged(World, entity, i, ref presentationChangedLocal, ref hasPresentationChanged);
                     }
                 }
+
+                if (!hasPresentationChanged && presentationChangedLocal.IsAnyBitSet())
+                {
+                    CommandBuffer.Add(entity, presentationChangedLocal);
+                }
+
+                CommandBuffer.Remove<AttributeAggregateDirty>(entity);
             }
 
         }
@@ -146,58 +224,99 @@ namespace Ludots.Core.Gameplay.GAS.Systems
                     oldValues[i] = attrBuffer.CurrentValues[i];
                 }
 
-                for(int i=0; i<AttributeBuffer.MAX_ATTRS; i++)
-                {
-                    attrBuffer.CurrentValues[i] = attrBuffer.BaseValues[i];
-                }
-
-                if (effects.Count > 0)
-                {
-                    for (int i = 0; i < effects.Count; i++)
-                    {
-                        Entity effectEntity = effects.GetEntity(i);
-                        if (!World.IsAlive(effectEntity)) continue;
-
-                        ref var modifiers = ref World.Get<EffectModifiers>(effectEntity);
-                        EffectModifierOps.ApplyAggregated(in modifiers, ref attrBuffer);
-                    }
-                }
-
-                // Execute derived graphs (non-linear attribute formulas)
-                ExecuteDerivedGraphs(World, entity, GraphPrograms, GraphApi);
-                RestorePersistentCurrentValues(ref attrBuffer, oldValues);
+                ulong touchedMask = RecomputeEffectiveValues(
+                    World,
+                    entity,
+                    ref attrBuffer,
+                    ref effects,
+                    GraphPrograms,
+                    GraphApi);
+                RestorePersistentCurrentValues(ref attrBuffer, oldValues, touchedMask);
 
                 var dirtyFlags = new DirtyFlags();
                 bool anyDirty = false;
+                bool hasPresentationChanged = World.Has<GameplayAttributeChangedBits>(entity);
+                GameplayAttributeChangedBits presentationChangedLocal = default;
                 for (int i = 0; i < AttributeBuffer.MAX_ATTRS; i++)
                 {
                     if (oldValues[i] != attrBuffer.CurrentValues[i])
                     {
                         dirtyFlags.MarkAttributeDirty(i);
+                        MarkPresentationChanged(World, entity, i, ref presentationChangedLocal, ref hasPresentationChanged);
                         anyDirty = true;
                     }
                 }
 
-                if (anyDirty)
+                if (!hasPresentationChanged && presentationChangedLocal.IsAnyBitSet())
+                {
+                    CommandBuffer.Add(entity, presentationChangedLocal);
+                }
+
+                if (!anyDirty)
+                {
+                    return;
+                }
+
+                if (World.Has<DirtyFlags>(entity))
+                {
+                    ref DirtyFlags existingDirty = ref World.Get<DirtyFlags>(entity);
+                    for (int i = 0; i < AttributeBuffer.MAX_ATTRS; i++)
+                    {
+                        if (dirtyFlags.IsAttributeDirty(i))
+                        {
+                            existingDirty.MarkAttributeDirty(i);
+                        }
+                    }
+                }
+                else
                 {
                     CommandBuffer.Add(entity, dirtyFlags);
                 }
+
+                CommandBuffer.Remove<AttributeAggregateDirty>(entity);
             }
 
         }
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        private static unsafe void RestorePersistentCurrentValues(ref AttributeBuffer attrBuffer, Span<float> previousCurrentValues)
+        private static unsafe void RestorePersistentCurrentValues(ref AttributeBuffer attrBuffer, Span<float> previousCurrentValues, ulong touchedMask)
         {
+            ulong definedMask = attrBuffer.DefinedMask;
             for (int i = 0; i < AttributeBuffer.MAX_ATTRS; i++)
             {
+                ulong bit = 1UL << i;
+                if ((definedMask & bit) == 0UL)
+                {
+                    continue;
+                }
+
                 attrBuffer.CapValues[i] = attrBuffer.CurrentValues[i];
-                if (AttributeRegistry.TryGetConstraints(i, out var constraints) &&
-                    constraints.ClampCurrentToBase)
+                bool touchedByAggregation = (touchedMask & bit) != 0UL;
+                bool clampsToEffectiveCap =
+                    AttributeRegistry.TryGetConstraints(i, out var constraints) &&
+                    constraints.ClampCurrentToBase;
+                if (!touchedByAggregation || clampsToEffectiveCap)
                 {
                     attrBuffer.SetCurrent(i, previousCurrentValues[i]);
                 }
             }
+        }
+
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        private static void MarkPresentationChanged(
+            World world,
+            Entity entity,
+            int attributeId,
+            ref GameplayAttributeChangedBits presentationChangedLocal,
+            ref bool hasPresentationChanged)
+        {
+            if (hasPresentationChanged)
+            {
+                world.Get<GameplayAttributeChangedBits>(entity).Mark(attributeId);
+                return;
+            }
+
+            presentationChangedLocal.Mark(attributeId);
         }
     }
 }

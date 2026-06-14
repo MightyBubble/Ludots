@@ -63,13 +63,20 @@ namespace Ludots.Core.Gameplay.GAS.Systems
             };
             World.InlineQuery<OrderBufferUpdateJob, OrderBuffer>(in _orderBufferQuery, ref job);
 
-            World.Query(in _orderBufferQuery, (Entity entity, ref OrderBuffer buffer) =>
+            foreach (ref var chunk in World.Query(in _orderBufferQuery))
             {
-                if (!buffer.HasActive && buffer.HasQueued)
+                ref Entity entityFirst = ref chunk.Entity(0);
+                var buffers = chunk.GetSpan<OrderBuffer>();
+                foreach (var index in chunk)
                 {
-                    OrderSubmitter.TryPromoteNextQueuedToActive(World, entity, ref buffer, _orderTypeRegistry);
+                    ref OrderBuffer buffer = ref buffers[index];
+                    if (!buffer.HasActive && buffer.HasQueued)
+                    {
+                        Entity entity = Unsafe.Add(ref entityFirst, index);
+                        OrderSubmitter.TryPromoteNextQueuedToActive(World, entity, ref buffer, _orderTypeRegistry);
+                    }
                 }
-            });
+            }
         }
 
         private struct OrderBufferUpdateJob : IForEach<OrderBuffer>

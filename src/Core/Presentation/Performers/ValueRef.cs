@@ -35,6 +35,13 @@ namespace Ludots.Core.Presentation.Performers
         EntityColor = 5,
 
         /// <summary>
+        /// Read the full per-entity color vector from an injected resolver.
+        /// Typical use: bind TeamColorResolver output into the Vector lane for
+        /// AssetBinding.ColorParamKey.
+        /// </summary>
+        EntityColorVector = 8,
+
+        /// <summary>
         /// Read <see cref="Components.FacingDirection.AngleRad"/> from the owner.
         /// </summary>
         FacingRadians = 6,
@@ -102,6 +109,11 @@ namespace Ludots.Core.Presentation.Performers
         {
             Source = ValueSourceKind.EntityColor,
             SourceId = channelIndex
+        };
+
+        public static ValueRef FromEntityColorVector() => new()
+        {
+            Source = ValueSourceKind.EntityColorVector
         };
 
         public static ValueRef FromFacingRadians() => new()

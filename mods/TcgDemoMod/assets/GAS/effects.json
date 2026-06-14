@@ -1,34 +1,53 @@
 [
   {
     "id": "Effect.Tcg.Fireball",
-    "tags": ["Effect.Tcg.Spell"],
+    "tags": [
+      "Effect.Tcg.Spell"
+    ],
     "presetType": "InstantDamage",
     "lifetime": "Instant",
     "modifiers": [
-      { "attribute": "Health", "op": "Add", "value": -30 }
+      {
+        "attribute": "Health",
+        "op": "Add",
+        "value": -30
+      }
     ]
   },
   {
     "id": "Effect.Tcg.CounterBlast",
-    "tags": ["Effect.Tcg.Spell"],
+    "tags": [
+      "Effect.Tcg.Spell"
+    ],
     "presetType": "InstantDamage",
     "lifetime": "Instant",
     "modifiers": [
-      { "attribute": "Health", "op": "Add", "value": -15 }
+      {
+        "attribute": "Health",
+        "op": "Add",
+        "value": -15
+      }
     ]
   },
   {
     "id": "Effect.Tcg.PoisonCounter",
-    "tags": ["Effect.Tcg.Trap"],
+    "tags": [
+      "Effect.Tcg.Trap"
+    ],
     "presetType": "DoT",
     "lifetime": "After",
     "participatesInResponse": false,
     "duration": {
       "durationTicks": 120,
-      "periodTicks": 30
+      "periodTicks": 30,
+      "clockId": "FixedFrame"
     },
     "modifiers": [
-      { "attribute": "Health", "op": "Add", "value": -5 }
+      {
+        "attribute": "Health",
+        "op": "Add",
+        "value": -5
+      }
     ],
     "stack": {
       "limit": 5,
@@ -38,26 +57,41 @@
   },
   {
     "id": "Effect.Tcg.MagicBarrier",
-    "tags": ["Effect.Tcg.Enchantment"],
+    "tags": [
+      "Effect.Tcg.Enchantment"
+    ],
     "presetType": "Buff",
     "lifetime": "Infinite",
     "participatesInResponse": false,
     "grantedTags": [
-      { "tag": "Immune.Spell", "formula": "Fixed", "amount": 1 }
+      {
+        "tag": "Immune.Spell",
+        "formula": "Fixed",
+        "amount": 1
+      }
     ]
   },
   {
     "id": "Effect.Tcg.PowerBoost",
-    "tags": ["Effect.Tcg.Enchantment"],
+    "tags": [
+      "Effect.Tcg.Enchantment"
+    ],
     "presetType": "Buff",
     "lifetime": "Infinite",
     "participatesInResponse": false,
     "modifiers": [
-      { "attribute": "Attack", "op": "Add", "value": 20 }
+      {
+        "attribute": "Attack",
+        "op": "Add",
+        "value": 20
+      }
     ],
     "grantedTags": [
-      { "tag": "Status.Empowered", "formula": "Fixed", "amount": 1 }
+      {
+        "tag": "Status.Empowered",
+        "formula": "Fixed",
+        "amount": 1
+      }
     ]
   }
 ]
-

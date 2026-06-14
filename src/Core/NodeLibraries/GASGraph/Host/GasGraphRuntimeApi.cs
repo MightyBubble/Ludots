@@ -288,10 +288,7 @@ namespace Ludots.Core.NodeLibraries.GASGraph.Host
 
         public void ModifyAttributeAdd(Entity caster, Entity target, int attributeId, float delta)
         {
-            if (!_world.IsAlive(target) || !_world.Has<AttributeBuffer>(target)) return;
-            ref var attr = ref _world.Get<AttributeBuffer>(target);
-            float current = attr.GetCurrent(attributeId);
-            attr.SetCurrent(attributeId, current + delta);
+            AttributeMutationOps.AddCurrent(_world, target, attributeId, delta);
         }
 
         public void SendEvent(Entity caster, Entity target, int eventTagId, float magnitude)

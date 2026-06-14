@@ -25,7 +25,7 @@ namespace Ludots.Core.Gameplay.GAS.Config
         {
             _registry.Clear();
 
-            var entry = ConfigPipeline.GetEntryOrDefault(catalog, relativePath, ConfigMergePolicy.ArrayById, "id");
+            var entry = ConfigPipeline.RequireEntry(catalog, relativePath, ConfigMergePolicy.ArrayById, "id");
             var merged = _pipeline.MergeArrayByIdFromCatalog(in entry, report);
             for (int i = 0; i < merged.Count; i++)
             {

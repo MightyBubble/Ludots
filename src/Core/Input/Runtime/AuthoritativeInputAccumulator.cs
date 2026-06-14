@@ -42,6 +42,20 @@ namespace Ludots.Core.Input.Runtime
             input.CaptureFrame(this);
         }
 
+        public void SuppressActionThisTick(string actionId)
+        {
+            if (string.IsNullOrWhiteSpace(actionId) ||
+                !_states.TryGetValue(actionId, out var state))
+            {
+                return;
+            }
+
+            state.Value = Vector3.Zero;
+            state.IsDown = false;
+            state.PressedThisTick = false;
+            state.ReleasedThisTick = false;
+        }
+
         public void BuildTickSnapshot(FrozenInputActionReader snapshot)
         {
             if (snapshot == null) throw new ArgumentNullException(nameof(snapshot));

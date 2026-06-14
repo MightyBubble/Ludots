@@ -45,7 +45,6 @@ namespace Ludots.Core.Gameplay.GAS
     /// </summary>
     public static class TargetResolverFanOutHelper
     {
-        private static readonly Fix64 _180 = Fix64.FromInt(180);
 
         // ── OnResolve Phase: spatial query, returns raw candidates ──
 
@@ -365,10 +364,7 @@ namespace Ludots.Core.Gameplay.GAS
                 int dy = targetPos.Y - sourcePos.Y;
                 if (dx != 0 || dy != 0)
                 {
-                    var rad = Fix64Math.Atan2Fast(Fix64.FromInt(dy), Fix64.FromInt(dx));
-                    int deg = (rad * _180 / Fix64.Pi).RoundToInt();
-                    if (deg < 0) deg += 360;
-                    return deg;
+                    return WorldPlane2D.FacingDegreesPositiveFromDirection(dx, dy);
                 }
             }
             return 0;

@@ -5,6 +5,7 @@ using Ludots.Core.Engine;
 using Ludots.Core.Mathematics;
 using Ludots.Core.Presentation.Assets;
 using Ludots.Core.Presentation.Components;
+using Ludots.Core.Presentation.Performers;
 using Ludots.Core.Presentation.Rendering;
 using Ludots.Core.Presentation.Terrain;
 using Ludots.Core.Scripting;
@@ -86,47 +87,55 @@ public sealed class UE5SkinnedPrefabFinalizationTests
     }
 
     [Test]
-    public void UE5IsmRenderBridge_MixedStaticPrefab_ForwardsTypedVisualRequests()
+    public void UE5IsmRenderBridge_WhenGroundedPrefabHasNoVisualHeightmapTruth_ThrowsExplicitly()
     {
         var meshes = new MeshAssetRegistry();
         int cubeId = meshes.GetId(WellKnownMeshKeys.Cube);
-        int prefabId = meshes.Register(
-            "prefab.ue5.mixed",
-            MeshAssetDescriptor.Prefab(
-                0,
-                new PrefabPart
-                {
-                    Kind = PrefabPartKind.Mesh,
-                    MeshAssetId = cubeId,
-                    LocalPosition = Vector3.Zero,
-                    LocalRotation = Quaternion.Identity,
-                    LocalScale = Vector3.One,
-                    ColorTint = Vector4.One,
-                },
-                new PrefabPart
-                {
-                    Kind = PrefabPartKind.Decal,
-                    AssetKey = "decal.scorch",
-                    MaterialKey = "mat.scorch",
-                    LocalPosition = new Vector3(1f, 0f, 2f),
-                    LocalRotation = Quaternion.Identity,
-                    LocalScale = Vector3.One,
-                    ColorTint = Vector4.One,
-                }));
+        int sphereId = meshes.GetId(WellKnownMeshKeys.Sphere);
+        int prefabId = RegisterGroundedPrefab(meshes, cubeId, sphereId);
 
         using var engine = new GameEngine();
         engine.SetService(CoreServiceKeys.PresentationMeshAssetRegistry, meshes);
-        engine.SetService(CoreServiceKeys.VisualHeightmap, new FlatVisualHeightmap());
-        var visualRequests = new PresentationVisualRequestBuffer();
-        engine.SetService(CoreServiceKeys.PresentationVisualRequestBuffer, visualRequests);
-        engine.SetService(
-            CoreServiceKeys.PresentationAdapterCapabilities,
-            new PresentationAdapterCapabilities(PresentationVisualCapabilities.Decal));
+
+        var batch = new SkinnedVisualBatchBuffer();
+        Assert.That(batch.TryAdd(new SkinnedVisualBatchItem
+        {
+            StableId = 51,
+            MeshAssetId = prefabId,
+            AnimationProfileId = 9,
+            RenderPath = VisualRenderPath.SkinnedMesh,
+            Position = Vector3.Zero,
+            Rotation = Quaternion.Identity,
+            Scale = Vector3.One,
+            Color = Vector4.One,
+            Animator = AnimatorPackedState.Create(controllerId: 11),
+            Visibility = VisualVisibility.Visible,
+        }), Is.True);
+        engine.SetService(CoreServiceKeys.PresentationSkinnedVisualBatchBuffer, batch);
+
+        var bridge = new UE5IsmRenderBridge();
+        var ex = Assert.Throws<InvalidOperationException>(() => bridge.CollectBuckets(engine));
+        Assert.That(ex!.Message, Does.Contain("visual grounding"));
+        Assert.That(ex.Message, Does.Contain("unavailable"));
+    }
+
+    [Test]
+    public void UE5IsmRenderBridge_WhenPrefabFinalizesToTypedNonMeshVisual_ThrowsExplicitly()
+    {
+        var meshes = new MeshAssetRegistry();
+        int prefabId = meshes.Register(
+            "prefab.ue5.decal_only",
+            MeshAssetDescriptor.Prefab(
+                0,
+                PrefabPart.Decal(materialId: 17, size: new Vector2(2f, 3f))));
+
+        using var engine = new GameEngine();
+        engine.SetService(CoreServiceKeys.PresentationMeshAssetRegistry, meshes);
 
         var snapshot = new PrimitiveDrawBuffer();
         Assert.That(snapshot.TryAdd(new PrimitiveDrawItem
         {
-            StableId = 123,
+            StableId = 77,
             MeshAssetId = prefabId,
             RenderPath = VisualRenderPath.StaticMesh,
             Position = Vector3.Zero,
@@ -134,61 +143,70 @@ public sealed class UE5SkinnedPrefabFinalizationTests
             Scale = Vector3.One,
             Color = Vector4.One,
             Visibility = VisualVisibility.Visible,
+        }), Is.True);
+        engine.SetService(CoreServiceKeys.PresentationPrimitiveDrawBuffer, snapshot);
+
+        var bridge = new UE5IsmRenderBridge();
+        var ex = Assert.Throws<InvalidOperationException>(() => bridge.CollectBuckets(engine));
+        Assert.That(ex!.Message, Does.Contain("does not support finalized visual kind 'Decal'"));
+    }
+
+    [Test]
+    public void UE5IsmRenderBridge_SurfacePrimitive_CollectsSurfaceItemsOutsideStaticBuckets()
+    {
+        using var engine = new GameEngine();
+        var snapshot = new PrimitiveDrawBuffer();
+        var customData = new MaterialCustomDataPayload { Count = 2 };
+        customData.SetSlot(0, new Vector4(0.25f, 0.5f, 0.75f, 1f));
+        customData.SetSlot(1, new Vector4(2f, 3f, 4f, 5f));
+        Assert.That(snapshot.TryAdd(new PrimitiveDrawItem
+        {
+            StableId = 101,
+            MeshAssetId = 202,
+            MaterialId = 303,
+            AssetKind = AssetKind.Surface,
+            RenderPath = VisualRenderPath.Surface,
+            SurfaceLayerKey = "terrain.rvt",
+            SortId = 404,
+            Position = new Vector3(1f, 2f, 3f),
+            Rotation = Quaternion.Identity,
+            Scale = new Vector3(4f, 5f, 6f),
+            Visibility = VisualVisibility.Visible,
+            MaterialCustomData = customData,
         }), Is.True);
         engine.SetService(CoreServiceKeys.PresentationPrimitiveDrawBuffer, snapshot);
 
         var bridge = new UE5IsmRenderBridge();
         bridge.CollectBuckets(engine);
 
-        Assert.That(bridge.HismBuckets.Count, Is.EqualTo(1));
-        Assert.That(bridge.HismBuckets[0].MeshAssetId, Is.EqualTo(cubeId));
-        Assert.That(visualRequests.Count, Is.EqualTo(1));
-        var request = visualRequests.GetSpan()[0];
-        Assert.That(request.Kind, Is.EqualTo(PresentationVisualRequestKind.Decal));
-        Assert.That(request.AssetKey, Is.EqualTo("decal.scorch"));
-        Assert.That(request.MaterialKey, Is.EqualTo("mat.scorch"));
+        Assert.That(bridge.HismBuckets, Is.Empty);
+        Assert.That(bridge.AllegroItems, Is.Empty);
+        Assert.That(bridge.SurfaceItems.Count, Is.EqualTo(1));
+        SurfaceDrawItem item = bridge.SurfaceItems[0];
+        Assert.That(item.StableId, Is.EqualTo(101));
+        Assert.That(item.MeshAssetId, Is.EqualTo(202));
+        Assert.That(item.MaterialId, Is.EqualTo(303));
+        Assert.That(item.SurfaceLayerKey, Is.EqualTo("terrain.rvt"));
+        Assert.That(item.SortId, Is.EqualTo(404));
+        Assert.That(item.Position, Is.EqualTo(new Vector3(100f, 300f, 200f)));
+        Assert.That(item.Scale, Is.EqualTo(new Vector3(4f, 6f, 5f)));
+        Assert.That(item.Visibility, Is.EqualTo(VisualVisibility.Visible));
+        Assert.That(item.MaterialCustomData.Count, Is.EqualTo(2));
+        Assert.That(item.MaterialCustomData.GetSlot(0), Is.EqualTo(new Vector4(0.25f, 0.5f, 0.75f, 1f)));
+        Assert.That(item.MaterialCustomData.GetSlot(1), Is.EqualTo(new Vector4(2f, 3f, 4f, 5f)));
     }
 
     [Test]
-    public void UE5IsmRenderBridge_MixedStaticPrefab_RejectsUnsupportedTypedCapability()
+    public void UE5IsmRenderBridge_SurfaceRenderPathWithoutSurfaceAssetKind_ThrowsExplicitly()
     {
-        var meshes = new MeshAssetRegistry();
-        int cubeId = meshes.GetId(WellKnownMeshKeys.Cube);
-        int prefabId = meshes.Register(
-            "prefab.ue5.unsupported_decal",
-            MeshAssetDescriptor.Prefab(
-                0,
-                new PrefabPart
-                {
-                    Kind = PrefabPartKind.Mesh,
-                    MeshAssetId = cubeId,
-                    LocalRotation = Quaternion.Identity,
-                    LocalScale = Vector3.One,
-                    ColorTint = Vector4.One,
-                },
-                new PrefabPart
-                {
-                    Kind = PrefabPartKind.Decal,
-                    AssetKey = "decal.unsupported",
-                    LocalRotation = Quaternion.Identity,
-                    LocalScale = Vector3.One,
-                    ColorTint = Vector4.One,
-                }));
-
         using var engine = new GameEngine();
-        engine.SetService(CoreServiceKeys.PresentationMeshAssetRegistry, meshes);
-        engine.SetService(CoreServiceKeys.VisualHeightmap, new FlatVisualHeightmap());
-        engine.SetService(CoreServiceKeys.PresentationVisualRequestBuffer, new PresentationVisualRequestBuffer());
-        engine.SetService(
-            CoreServiceKeys.PresentationAdapterCapabilities,
-            new PresentationAdapterCapabilities(PresentationVisualCapabilities.None));
-
         var snapshot = new PrimitiveDrawBuffer();
         Assert.That(snapshot.TryAdd(new PrimitiveDrawItem
         {
-            StableId = 321,
-            MeshAssetId = prefabId,
-            RenderPath = VisualRenderPath.StaticMesh,
+            StableId = 102,
+            MeshAssetId = 202,
+            AssetKind = AssetKind.Mesh,
+            RenderPath = VisualRenderPath.Surface,
             Position = Vector3.Zero,
             Rotation = Quaternion.Identity,
             Scale = Vector3.One,
@@ -198,8 +216,8 @@ public sealed class UE5SkinnedPrefabFinalizationTests
         engine.SetService(CoreServiceKeys.PresentationPrimitiveDrawBuffer, snapshot);
 
         var bridge = new UE5IsmRenderBridge();
-        var ex = Assert.Throws<System.InvalidOperationException>(() => bridge.CollectBuckets(engine));
-        Assert.That(ex!.Message, Does.Contain("does not support"));
+        var ex = Assert.Throws<InvalidOperationException>(() => bridge.CollectBuckets(engine));
+        Assert.That(ex!.Message, Does.Contain("non-Surface assetKind"));
     }
 
     private static int RegisterGroundedPrefab(MeshAssetRegistry meshes, int cubeId, int sphereId)

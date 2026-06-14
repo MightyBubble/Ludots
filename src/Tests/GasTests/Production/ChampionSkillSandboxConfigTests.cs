@@ -22,13 +22,18 @@ using Ludots.Core.Input.Runtime;
 using Ludots.Core.Input.Selection;
 using Ludots.Core.Navigation2D.Components;
 using Ludots.Core.Navigation2D.Systems;
+using Ludots.Core.Presentation.Camera;
+using Ludots.Core.Presentation.Commands;
+using Ludots.Core.Presentation.Components;
 using Ludots.Core.Presentation.Performers;
+using Ludots.Core.Presentation.Events;
 using Ludots.Core.Presentation.Hud;
-using Ludots.Core.Presentation.Projectiles;
 using Ludots.Core.Presentation.Rendering;
+using Ludots.Core.Presentation.Systems;
 using Ludots.Core.Physics2D;
 using Ludots.Core.Physics2D.Components;
 using Ludots.Core.Scripting;
+using Ludots.Core.Systems;
 using Ludots.Core.UI.EntityCommandPanels;
 using Ludots.Platform.Abstractions;
 using Ludots.UI;
@@ -58,6 +63,7 @@ namespace Ludots.Tests.GAS.Production
         private const string AiTargetToolbarButtonId = "ChampionSkillSandbox.Selection.AI.Targets";
         private const string AiFormationToolbarButtonId = "ChampionSkillSandbox.Selection.AI.Formation";
         private const string CommandSnapshotToolbarButtonId = "ChampionSkillSandbox.Selection.Command.Snapshot";
+        private const string HeadlessCameraKey = "Tests.ChampionSkillSandboxConfig.HeadlessCamera";
         private static readonly string[] SandboxMods =
         {
             "LudotsCoreMod",
@@ -72,21 +78,14 @@ namespace Ludots.Tests.GAS.Production
         public void ChampionSkillSandbox_TemplateConfig_LoadsJayceFormRouting()
         {
             using var engine = CreateEngine();
+            LoadMap(engine, "champion_skill_sandbox");
 
-            var templates = new Dictionary<string, EntityTemplate>(StringComparer.OrdinalIgnoreCase);
-            foreach (var template in engine.MapLoader.TemplateRegistry.GetAll())
-            {
-                templates[template.Id] = template;
-            }
-
-            var entity = new EntityBuilder(engine.World, templates, engine.MapLoader.PresentationAuthoringContext)
-                .UseTemplate("champion_skill_sandbox_jayce")
-                .Build();
+            var entity = FindEntityByName(engine.World, "Jayce Hammer");
 
             Assert.That(engine.World.Has<AbilityStateBuffer>(entity), Is.True);
             Assert.That(engine.World.Has<AbilityFormSetRef>(entity), Is.True);
             Assert.That(engine.World.Has<AbilityFormSlotBuffer>(entity), Is.True);
-            Assert.That(engine.World.Has<PlayerOwner>(entity), Is.False, "Template should not hardcode scene ownership.");
+            Assert.That(engine.World.Has<PlayerOwner>(entity), Is.True, "Sandbox runtime should resolve live player ownership for Jayce.");
 
             ref var abilities = ref engine.World.Get<AbilityStateBuffer>(entity);
             Assert.That(abilities.Count, Is.EqualTo(4));
@@ -124,16 +123,14 @@ namespace Ludots.Tests.GAS.Production
         public void ChampionSkillSandbox_StressTemplates_AuthorCollisionAndNavRuntimeComponents()
         {
             using var engine = CreateEngine();
-
-            var templates = new Dictionary<string, EntityTemplate>(StringComparer.OrdinalIgnoreCase);
-            foreach (var template in engine.MapLoader.TemplateRegistry.GetAll())
+            LoadMap(engine, StressMapId, frames: 8);
+            TickUntil(engine, () =>
             {
-                templates[template.Id] = template;
-            }
+                StressCounts counts = ReadStressCounts(engine.World);
+                return counts.TeamA >= 48 && counts.TeamB >= 48;
+            }, maxFrames: 240);
 
-            var warrior = new EntityBuilder(engine.World, templates, engine.MapLoader.PresentationAuthoringContext)
-                .UseTemplate("champion_skill_stress_team_a_warrior")
-                .Build();
+            var warrior = FindEntityByName(engine.World, "StressWarriorA");
 
             Assert.That(engine.World.Has<Collider2D>(warrior), Is.True);
             Assert.That(engine.World.Has<PhysicsMaterial2D>(warrior), Is.True);
@@ -165,6 +162,13 @@ namespace Ludots.Tests.GAS.Production
             Assert.That(engine.World.Has<PreviousPosition2D>(warrior), Is.True);
             Assert.That(engine.World.Has<Velocity2D>(warrior), Is.True);
             Assert.That(engine.World.Has<Mass2D>(warrior), Is.True);
+
+            var performers = engine.GetService(CoreServiceKeys.PerformerEntityRuntime)
+                ?? throw new InvalidOperationException("PerformerEntityRuntime missing.");
+            Assert.That(
+                HasEntityAnchoredPerformer(engine.World, performers, warrior),
+                Is.True,
+                "Stress warrior should now participate in the performer mainline instead of relying on legacy presentation authoring.");
         }
 
         [Test]
@@ -703,40 +707,33 @@ namespace Ludots.Tests.GAS.Production
         }
 
         [Test]
-        public void ChampionSkillSandbox_ProjectileBindingsAndSkillCueConfigs_AreRegistered()
+        public void ChampionSkillSandbox_ProjectilePresentationAndSkillCueConfigs_AreRegistered()
         {
             using var engine = CreateEngine();
 
             var effects = engine.GetService(CoreServiceKeys.EffectTemplateRegistry)
                 ?? throw new InvalidOperationException("EffectTemplateRegistry missing.");
-            var projectileBindings = engine.GetService(CoreServiceKeys.ProjectilePresentationBindingRegistry)
-                ?? throw new InvalidOperationException("ProjectilePresentationBindingRegistry missing.");
             var performers = engine.GetService(CoreServiceKeys.PerformerDefinitionRegistry)
                 ?? throw new InvalidOperationException("PerformerDefinitionRegistry missing.");
 
             AssertProjectileUsesDirectPrimitiveFeedback(
                 effects,
-                projectileBindings,
                 projectileEffectKey: "Effect.Champion.Ezreal.ArcaneShiftBolt",
                 hitEffectKey: "Effect.Champion.Ezreal.ArcaneShiftBoltHit");
             AssertProjectileUsesDirectPrimitiveFeedback(
                 effects,
-                projectileBindings,
                 projectileEffectKey: "Effect.Champion.Ezreal.EssenceFlux",
                 hitEffectKey: "Effect.Champion.Ezreal.EssenceFluxHit");
             AssertProjectileUsesDirectPrimitiveFeedback(
                 effects,
-                projectileBindings,
                 projectileEffectKey: "Effect.Champion.Ezreal.MysticShot",
                 hitEffectKey: "Effect.Champion.Ezreal.MysticShotHit");
             AssertProjectileUsesDirectPrimitiveFeedback(
                 effects,
-                projectileBindings,
                 projectileEffectKey: "Effect.Champion.Ezreal.TrueshotBarrage",
                 hitEffectKey: "Effect.Champion.Ezreal.TrueshotBarrageHit");
             AssertProjectileEffect(
                 effects,
-                projectileBindings,
                 performers,
                 projectileEffectKey: "Effect.Champion.Jayce.Cannon.ShockBlast",
                 bindingEffectKey: "Effect.Champion.Jayce.Cannon.ShockBlastResolve",
@@ -744,7 +741,6 @@ namespace Ludots.Tests.GAS.Production
                 projectilePerformerKey: "champion_skill_sandbox.projectile.jayce_q");
             AssertProjectileEffect(
                 effects,
-                projectileBindings,
                 performers,
                 projectileEffectKey: "Effect.ChampionStress.FireMage.Fireball",
                 bindingEffectKey: "Effect.ChampionStress.FireMage.FireballResolve",
@@ -752,7 +748,6 @@ namespace Ludots.Tests.GAS.Production
                 projectilePerformerKey: "champion_skill_sandbox.projectile.stress_fireball");
             AssertProjectileEffect(
                 effects,
-                projectileBindings,
                 performers,
                 projectileEffectKey: "Effect.ChampionStress.LaserMage.Laser",
                 bindingEffectKey: "Effect.ChampionStress.LaserMage.LaserResolve",
@@ -868,6 +863,7 @@ namespace Ludots.Tests.GAS.Production
             engine.InitializeWithConfigPipeline(modPaths, assetsRoot);
             InstallInput(engine);
             InstallUi(engine);
+            InstallHeadlessPresentation(engine);
             engine.Start();
             return engine;
         }
@@ -894,6 +890,37 @@ namespace Ludots.Tests.GAS.Production
             engine.SetService(CoreServiceKeys.UIRoot, uiRoot);
             engine.SetService(CoreServiceKeys.UiTextMeasurer, (object)new SkiaTextMeasurer());
             engine.SetService(CoreServiceKeys.UiImageSizeProvider, (object)new SkiaImageSizeProvider());
+        }
+
+        private static void InstallHeadlessPresentation(GameEngine engine)
+        {
+            var view = new StubViewController(1920f, 1080f);
+            engine.SetService(CoreServiceKeys.ViewController, view);
+            var cameraAdapter = new StubCameraAdapter();
+            var timingDiagnostics = engine.GetService(CoreServiceKeys.PresentationTimingDiagnostics);
+            var cameraPresenter = new CameraPresenter(engine.SpatialCoords, cameraAdapter, timingDiagnostics);
+            var screenProjector = new CoreScreenProjector(engine.GameSession.Camera, view);
+            var screenRayProvider = new CoreScreenRayProvider(engine.GameSession.Camera, view);
+            screenProjector.BindPresenter(cameraPresenter);
+            screenRayProvider.BindPresenter(cameraPresenter);
+            engine.SetService(CoreServiceKeys.ScreenProjector, screenProjector);
+            engine.SetService(CoreServiceKeys.ScreenRayProvider, screenRayProvider);
+
+            var culling = new CameraCullingSystem(
+                engine.World,
+                engine.GameSession.Camera,
+                engine.SpatialQueries,
+                view,
+                loadedChunks: null,
+                focusOverride: null,
+                performers: engine.GetService(CoreServiceKeys.PerformerEntityRuntime),
+                timingDiagnostics: timingDiagnostics,
+                cullingConfig: engine.MergedConfig.Presentation.CameraCulling);
+            engine.InsertPresentationSystemBefore<PresentationEntityLifecycleSystem>(culling);
+            engine.SetService(CoreServiceKeys.CameraCullingDebugState, culling.DebugState);
+            engine.GlobalContext[HeadlessCameraKey] = new HeadlessCameraRuntime(
+                cameraPresenter,
+                engine.GetService(CoreServiceKeys.PresentationFrameSetup));
         }
 
         private static void LoadMap(GameEngine engine, string mapId, int frames = 12)
@@ -924,8 +951,21 @@ namespace Ludots.Tests.GAS.Production
         {
             for (int i = 0; i < frames; i++)
             {
+                UpdateHeadlessCamera(engine);
                 engine.Tick(DeltaTime);
             }
+        }
+
+        private static void UpdateHeadlessCamera(GameEngine engine)
+        {
+            if (!engine.GlobalContext.TryGetValue(HeadlessCameraKey, out object? runtimeObj) ||
+                runtimeObj is not HeadlessCameraRuntime runtime)
+            {
+                throw new InvalidOperationException("ChampionSkillSandboxConfigTests headless camera runtime was not installed.");
+            }
+
+            float alpha = runtime.PresentationFrameSetup?.GetInterpolationAlpha() ?? 1f;
+            runtime.CameraPresenter.Update(engine.GameSession.Camera, alpha);
         }
 
         private static void TickUntil(GameEngine engine, Func<bool> predicate, int maxFrames)
@@ -1072,7 +1112,7 @@ namespace Ludots.Tests.GAS.Production
             var query = new QueryDescription().WithAll<Name, Team, MapEntity, AbilityStateBuffer>();
             world.Query(in query, (Entity _, ref Name name, ref Team team, ref MapEntity mapEntity, ref AbilityStateBuffer __) =>
             {
-                if (!string.Equals(mapEntity.MapId.Value, StressMapId, StringComparison.OrdinalIgnoreCase))
+                if (!string.Equals(mapEntity.MapId.Value, StressMapId, StringComparison.Ordinal))
                 {
                     return;
                 }
@@ -1132,6 +1172,62 @@ namespace Ludots.Tests.GAS.Production
                 teamBPriests);
         }
 
+        private static bool HasEntityAnchoredPerformer(World world, PerformerEntityRuntime performers, Entity owner)
+        {
+            bool found = false;
+            var query = new QueryDescription().WithAll<PerformerState>();
+            world.Query(in query, (Entity entity, ref PerformerState state) =>
+            {
+                if (found)
+                {
+                    return;
+                }
+
+                if (state.AnchorKind == PresentationAnchorKind.Entity &&
+                    state.OwnerEntity == owner &&
+                    world.IsAlive(state.OwnerEntity))
+                {
+                    found = true;
+                }
+            });
+
+            return found;
+        }
+
+        private sealed class StubViewController : IViewController
+        {
+            public StubViewController(float width, float height)
+            {
+                Resolution = new Vector2(width, height);
+            }
+
+            public Vector2 Resolution { get; }
+            public float Fov => 60f;
+            public float AspectRatio => Resolution.Y <= 0f ? 1f : Resolution.X / Resolution.Y;
+        }
+
+        private sealed class StubCameraAdapter : ICameraAdapter
+        {
+            public CameraRenderState3D LastState { get; private set; }
+
+            public void UpdateCamera(in CameraRenderState3D state)
+            {
+                LastState = state;
+            }
+        }
+
+        private sealed class HeadlessCameraRuntime
+        {
+            public HeadlessCameraRuntime(CameraPresenter cameraPresenter, PresentationFrameSetupSystem? presentationFrameSetup)
+            {
+                CameraPresenter = cameraPresenter;
+                PresentationFrameSetup = presentationFrameSetup;
+            }
+
+            public CameraPresenter CameraPresenter { get; }
+            public PresentationFrameSetupSystem? PresentationFrameSetup { get; }
+        }
+
         private static float ComputeMinimumStressTeamClearance(World world, string mapId, int teamId)
         {
             var units = new List<StressBodySample>(128);
@@ -1139,7 +1235,7 @@ namespace Ludots.Tests.GAS.Production
             world.Query(in query, (Entity _, ref Team team, ref MapEntity mapEntity, ref AbilityStateBuffer __, ref WorldPositionCm position, ref Collider2D collider) =>
             {
                 if (team.Id != teamId ||
-                    !string.Equals(mapEntity.MapId.Value, mapId, StringComparison.OrdinalIgnoreCase) ||
+                    !string.Equals(mapEntity.MapId.Value, mapId, StringComparison.Ordinal) ||
                     collider.Type != ColliderType2D.Circle ||
                     !ShapeDataStorage2D.TryGetCircle(collider.ShapeDataIndex, out var circle))
                 {
@@ -1170,7 +1266,6 @@ namespace Ludots.Tests.GAS.Production
 
         private static void AssertProjectileEffect(
             EffectTemplateRegistry effects,
-            ProjectilePresentationBindingRegistry projectileBindings,
             PerformerDefinitionRegistry performers,
             string projectileEffectKey,
             string bindingEffectKey,
@@ -1195,15 +1290,23 @@ namespace Ludots.Tests.GAS.Production
                     Is.EqualTo(EffectTemplateIdRegistry.GetId(hitEffectKey)));
             }
 
-            Assert.That(projectileBindings.TryGet(bindingEffectId, out var binding), Is.True);
-            Assert.That(binding.ImpactEffectTemplateId, Is.EqualTo(bindingEffectId));
-            Assert.That(binding.StartupPerformers.Count, Is.EqualTo(1));
-            Assert.That(binding.StartupPerformers.Get(0), Is.EqualTo(projectilePerformerId));
+            Assert.That(performers.TryGet(projectilePerformerId, out var performer), Is.True);
+            AssertProjectileLifecycleRule(
+                performer,
+                projectilePerformerId,
+                PresentationEventKind.ProjectileSpawned,
+                bindingEffectId,
+                PerformerCommandKind.CreatePerformer);
+            AssertProjectileLifecycleRule(
+                performer,
+                projectilePerformerId,
+                PresentationEventKind.EntityDestroyed,
+                keyId: -1,
+                PerformerCommandKind.DestroyPerformerScope);
         }
 
         private static void AssertProjectileUsesDirectPrimitiveFeedback(
             EffectTemplateRegistry effects,
-            ProjectilePresentationBindingRegistry projectileBindings,
             string projectileEffectKey,
             string hitEffectKey)
         {
@@ -1216,10 +1319,38 @@ namespace Ludots.Tests.GAS.Production
             Assert.That(projectileEffect.PresetType, Is.EqualTo(EffectPresetType.LaunchProjectile));
             Assert.That(projectileEffect.Projectile.PresentationEffectTemplateId, Is.EqualTo(projectileEffectId));
             Assert.That(projectileEffect.Projectile.HitEffectTemplateId, Is.EqualTo(hitEffectId));
-            Assert.That(
-                projectileBindings.TryGet(projectileEffectId, out _),
-                Is.False,
-                $"{projectileEffectKey} should use champion sandbox direct primitive feedback instead of startup performers.");
+        }
+
+        private static void AssertProjectileLifecycleRule(
+            PerformerDefinition performer,
+            int performerId,
+            PresentationEventKind eventKind,
+            int keyId,
+            PerformerCommandKind commandKind)
+        {
+            for (int i = 0; i < performer.Rules.Length; i++)
+            {
+                var rule = performer.Rules[i];
+                if (rule.Event.Kind != eventKind || rule.Command.CommandKind != commandKind)
+                {
+                    continue;
+                }
+
+                if (keyId >= 0)
+                {
+                    Assert.That(rule.Event.KeyId, Is.EqualTo(keyId));
+                    Assert.That(rule.Command.PerformerDefinitionId, Is.EqualTo(performerId));
+                    Assert.That(rule.Command.ScopeSource, Is.EqualTo(PerformerCommandScopeSource.EventPayloadA));
+                }
+                else
+                {
+                    Assert.That(rule.Command.ScopeSource, Is.EqualTo(PerformerCommandScopeSource.EventPayloadA));
+                }
+
+                return;
+            }
+
+            Assert.Fail($"Expected performer lifecycle rule kind={eventKind}, command={commandKind}.");
         }
 
         private static void AssertEzrealProjectileEffect(

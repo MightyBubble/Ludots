@@ -23,6 +23,12 @@ namespace Ludots.Tests.GAS
             try
             {
                 Directory.CreateDirectory(Path.Combine(root, "Configs", "GAS"));
+                File.WriteAllText(Path.Combine(root, "Configs", "config_catalog.json"),
+                    """
+                    [
+                      { "Path": "GAS/attribute_bindings.json", "Policy": "ArrayById", "IdField": "id" }
+                    ]
+                    """);
                 File.WriteAllText(Path.Combine(root, "Configs", "GAS", "attribute_bindings.json"),
                     """
                     [
@@ -51,13 +57,14 @@ namespace Ludots.Tests.GAS
                 vfs.Mount("Core", root);
                 var modLoader = new ModLoader(vfs, new FunctionRegistry(), new TriggerManager());
                 var pipeline = new ConfigPipeline(vfs, modLoader);
+                var catalog = ConfigCatalogLoader.Load(pipeline);
 
                 var sinks = new AttributeSinkRegistry();
                 GasAttributeSinks.RegisterBuiltins(sinks);
 
                 var registry = new AttributeBindingRegistry();
                 var loader = new AttributeBindingLoader(pipeline, sinks, registry);
-                loader.Load(relativePath: "GAS/attribute_bindings.json");
+                loader.Load(catalog, relativePath: "GAS/attribute_bindings.json");
 
                 using var world = World.Create();
                 int fxId = AttributeRegistry.Register("Physics.ForceRequestX");

@@ -522,8 +522,8 @@ namespace InteractionShowcaseMod.UI
             }
 
             return mode == SelectionViewMode.Formation
-                ? $"Formation view via {descriptor.Container.AliasKey}"
-                : $"Live view via {descriptor.Container.AliasKey}";
+                ? $"Formation view via {descriptor.Container.SetKey}"
+                : $"Live view via {descriptor.Container.SetKey}";
         }
 
         private static int ResolveActiveControlGroup(GameEngine engine)

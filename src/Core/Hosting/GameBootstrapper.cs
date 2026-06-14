@@ -41,10 +41,8 @@ namespace Ludots.Core.Hosting
 
     public static class GameBootstrapper
     {
-        private static readonly JsonSerializerOptions BootstrapJsonOptions = new()
-        {
-            PropertyNameCaseInsensitive = true
-        };
+        private static readonly JsonSerializerOptions BootstrapJsonOptions = StrictJsonOptions.CreateExact();
+        private static readonly JsonSerializerOptions LaunchGraphJsonOptions = StrictJsonOptions.CreateCamelCase();
 
         public static GameBootstrapResult InitializeFromBaseDirectory(string baseDirectory)
         {
@@ -130,7 +128,7 @@ namespace Ludots.Core.Hosting
             try
             {
                 var json = File.ReadAllText(graphPath);
-                graphConfig = JsonSerializer.Deserialize<AppLaunchGraphConfig>(json, BootstrapJsonOptions);
+                graphConfig = JsonSerializer.Deserialize<AppLaunchGraphConfig>(json, LaunchGraphJsonOptions);
             }
             catch (Exception ex)
             {
@@ -149,7 +147,7 @@ namespace Ludots.Core.Hosting
             }
 
             if (!string.IsNullOrWhiteSpace(bootstrapConfig.PlanFingerprint) &&
-                !string.Equals(bootstrapConfig.PlanFingerprint, graphConfig.PlanFingerprint, StringComparison.OrdinalIgnoreCase))
+                !string.Equals(bootstrapConfig.PlanFingerprint, graphConfig.PlanFingerprint, StringComparison.Ordinal))
             {
                 throw new Exception(
                     $"Launch graph fingerprint mismatch: bootstrap expected {bootstrapConfig.PlanFingerprint}, graph was {graphConfig.PlanFingerprint ?? "<null>"}.");
@@ -172,8 +170,8 @@ namespace Ludots.Core.Hosting
             }
 
             var orderedMods = new List<ResolvedModLoadEntry>();
-            var seenOrderedIds = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
-            var seenRoots = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
+            var seenOrderedIds = new HashSet<string>(StringComparer.Ordinal);
+            var seenRoots = new HashSet<string>(StringComparer.Ordinal);
             for (int i = 0; i < graphConfig.PlannedMods.Count; i++)
             {
                 var mod = graphConfig.PlannedMods[i];
@@ -183,7 +181,7 @@ namespace Ludots.Core.Hosting
                 if (!seenOrderedIds.Add(graphConfig.OrderedModIds[i]))
                     throw new Exception($"Duplicate launch graph ordered mod id detected: {graphConfig.OrderedModIds[i]}");
 
-                if (!string.Equals(graphConfig.OrderedModIds[i], mod.Id, StringComparison.OrdinalIgnoreCase))
+                if (!string.Equals(graphConfig.OrderedModIds[i], mod.Id, StringComparison.Ordinal))
                 {
                     throw new Exception(
                         $"Launch graph is invalid: orderedModIds[{i}]='{graphConfig.OrderedModIds[i]}' does not match plannedMods[{i}].id='{mod.Id}'.");

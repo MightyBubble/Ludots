@@ -12,8 +12,7 @@
   "worldWidthInTiles": 64,
   "worldHeightInTiles": 64,
   "selection": {
-    "maxEntitiesPerSet": 64,
-    "maxSetsPerSelector": 8,
+    "targetFilter": { "relationFilter": "All" },
     "clickPickRadiusPixels": 20,
     "dragThresholdPixels": 8
   },

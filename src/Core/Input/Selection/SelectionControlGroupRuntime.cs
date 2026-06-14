@@ -24,13 +24,13 @@ namespace Ludots.Core.Input.Selection
                 return false;
             }
 
-            bool saved = TryCopyContainerToAlias(selection, viewer, sourceContainer, SelectionSetKeys.ControlGroup(groupIndex), SelectionContainerKind.Group);
+            bool saved = TryCopyContainerToSet(selection, viewer, sourceContainer, SelectionSetKeys.ControlGroup(groupIndex), SelectionContainerKind.Group);
             if (!saved || !mirrorToFormation)
             {
                 return saved;
             }
 
-            if (!TryCopyContainerToAlias(selection, viewer, sourceContainer, SelectionSetKeys.FormationPrimary, SelectionContainerKind.Formation))
+            if (!TryCopyContainerToSet(selection, viewer, sourceContainer, SelectionSetKeys.FormationPrimary, SelectionContainerKind.Formation))
             {
                 return false;
             }
@@ -56,7 +56,7 @@ namespace Ludots.Core.Input.Selection
                 return false;
             }
 
-            bool recalled = TryCopyContainerToAlias(selection, viewer, groupContainer, SelectionSetKeys.LivePrimary, SelectionContainerKind.Live);
+            bool recalled = TryCopyContainerToSet(selection, viewer, groupContainer, SelectionSetKeys.LivePrimary, SelectionContainerKind.Live);
             if (!recalled)
             {
                 return false;
@@ -71,7 +71,7 @@ namespace Ludots.Core.Input.Selection
                 return true;
             }
 
-            if (!TryCopyContainerToAlias(selection, viewer, groupContainer, SelectionSetKeys.FormationPrimary, SelectionContainerKind.Formation))
+            if (!TryCopyContainerToSet(selection, viewer, groupContainer, SelectionSetKeys.FormationPrimary, SelectionContainerKind.Formation))
             {
                 return false;
             }
@@ -92,17 +92,17 @@ namespace Ludots.Core.Input.Selection
                    selection.TryDescribeSelection(viewer, SelectionSetKeys.ControlGroup(groupIndex), out descriptor);
         }
 
-        private static bool TryCopyContainerToAlias(
+        private static bool TryCopyContainerToSet(
             SelectionRuntime selection,
             Entity owner,
             Entity sourceContainer,
-            string aliasKey,
+            string setKey,
             SelectionContainerKind kind)
         {
             int count = selection.GetSelectionCount(sourceContainer);
             if (count <= 0)
             {
-                return selection.TryGetOrCreateContainer(owner, aliasKey, kind, out Entity emptyTarget) &&
+                return selection.TryGetOrCreateContainer(owner, setKey, kind, out Entity emptyTarget) &&
                        (!selection.ClearSelection(emptyTarget) || selection.GetSelectionCount(emptyTarget) == 0);
             }
 
@@ -113,7 +113,7 @@ namespace Ludots.Core.Input.Selection
                 return false;
             }
 
-            return selection.TryGetOrCreateContainer(owner, aliasKey, kind, out Entity targetContainer) &&
+            return selection.TryGetOrCreateContainer(owner, setKey, kind, out Entity targetContainer) &&
                    selection.ReplaceSelection(targetContainer, snapshot.AsSpan(0, written));
         }
     }

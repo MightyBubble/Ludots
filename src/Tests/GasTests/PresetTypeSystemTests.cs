@@ -444,16 +444,14 @@ namespace Ludots.Tests.GAS
         }
 
         [Test]
-        public void PresetTypeLoader_UnknownPresetId_DefaultsToNone()
+        public void PresetTypeLoader_UnknownPresetId_IsRejected()
         {
             const string json = @"[
               { ""id"": ""FutureMagicType"", ""components"": [], ""activePhases"": [], ""allowedLifetimes"": [], ""defaultPhaseHandlers"": {} }
             ]";
 
             var reg = new PresetTypeRegistry();
-            PresetTypeLoader.LoadFromJson(reg, json);
-            // Unknown type maps to None
-            That(reg.IsRegistered(EffectPresetType.None), Is.True);
+            Throws<InvalidOperationException>(() => PresetTypeLoader.LoadFromJson(reg, json));
         }
 
         // ════════════════════════════════════════════════════════════════════

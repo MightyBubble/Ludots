@@ -1,0 +1,10 @@
+{
+  "name": "PerformanceVisualizationHud100kEntryMod",
+  "version": "1.0.0",
+  "description": "Direct launcher entry for the 100K direct screen HUD benchmark showcase.",
+  "main": "bin/net8.0/PerformanceVisualizationHud100kEntryMod.dll",
+  "priority": 0,
+  "dependencies": {
+    "PerformanceVisualizationMod": "^1.0.0"
+  }
+}

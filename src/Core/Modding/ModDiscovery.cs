@@ -16,11 +16,11 @@ namespace Ludots.Core.Modding
         public static List<string> DiscoverModDirectories(IEnumerable<string> roots)
         {
             var results = new List<string>();
-            var seen = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
+            var seen = new HashSet<string>(StringComparer.Ordinal);
 
             if (roots == null)
             {
-                return results;
+                throw new ArgumentNullException(nameof(roots));
             }
 
             foreach (var root in roots)
@@ -45,7 +45,10 @@ namespace Ludots.Core.Modding
             for (int i = 0; i < directories.Count; i++)
             {
                 var directory = directories[i];
-                var manifestPath = Path.Combine(directory, "mod.json");
+                if (!TryGetExactChildFile(directory, "mod.json", out var manifestPath))
+                {
+                    throw new FileNotFoundException($"Exact manifest file 'mod.json' was not found in discovered mod directory: {directory}");
+                }
 
                 try
                 {
@@ -55,6 +58,7 @@ namespace Ludots.Core.Modding
                 catch (Exception ex)
                 {
                     onError?.Invoke(directory, ex);
+                    throw;
                 }
             }
 
@@ -63,9 +67,14 @@ namespace Ludots.Core.Modding
 
         private static IEnumerable<string> DiscoverModDirectoriesFromRoot(string rootPath)
         {
-            if (string.IsNullOrWhiteSpace(rootPath) || !Directory.Exists(rootPath))
+            if (string.IsNullOrWhiteSpace(rootPath))
             {
-                yield break;
+                throw new ArgumentException("Mod discovery root path is required.", nameof(rootPath));
+            }
+
+            if (!Directory.Exists(rootPath))
+            {
+                throw new DirectoryNotFoundException($"Mod discovery root path was not found: {Path.GetFullPath(rootPath)}");
             }
 
             var pending = new Stack<string>();
@@ -79,8 +88,7 @@ namespace Ludots.Core.Modding
                     continue;
                 }
 
-                var manifestPath = Path.Combine(current, "mod.json");
-                if (File.Exists(manifestPath))
+                if (TryGetExactChildFile(current, "mod.json", out _))
                 {
                     yield return current;
                     continue;
@@ -91,12 +99,12 @@ namespace Ludots.Core.Modding
                 {
                     children = Directory.GetDirectories(current);
                 }
-                catch
+                catch (Exception ex)
                 {
-                    continue;
+                    throw new IOException($"Failed to enumerate mod discovery directory: {current}", ex);
                 }
 
-                Array.Sort(children, StringComparer.OrdinalIgnoreCase);
+                Array.Sort(children, StringComparer.Ordinal);
                 for (int i = children.Length - 1; i >= 0; i--)
                 {
                     pending.Push(children[i]);
@@ -107,10 +115,25 @@ namespace Ludots.Core.Modding
         private static bool ShouldIgnoreDirectory(string path)
         {
             var normalized = path.Replace('\\', '/');
-            return normalized.EndsWith("/bin", StringComparison.OrdinalIgnoreCase)
-                || normalized.EndsWith("/obj", StringComparison.OrdinalIgnoreCase)
-                || normalized.Contains("/bin/", StringComparison.OrdinalIgnoreCase)
-                || normalized.Contains("/obj/", StringComparison.OrdinalIgnoreCase);
+            return normalized.EndsWith("/bin", StringComparison.Ordinal)
+                || normalized.EndsWith("/obj", StringComparison.Ordinal)
+                || normalized.Contains("/bin/", StringComparison.Ordinal)
+                || normalized.Contains("/obj/", StringComparison.Ordinal);
+        }
+
+        private static bool TryGetExactChildFile(string directory, string fileName, out string fullPath)
+        {
+            foreach (var candidate in Directory.EnumerateFiles(directory))
+            {
+                if (string.Equals(Path.GetFileName(candidate), fileName, StringComparison.Ordinal))
+                {
+                    fullPath = Path.GetFullPath(candidate);
+                    return true;
+                }
+            }
+
+            fullPath = string.Empty;
+            return false;
         }
     }
 }

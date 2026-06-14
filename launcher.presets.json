@@ -63,6 +63,42 @@
       ],
       "adapterId": "raylib",
       "buildMode": "auto"
+    },
+    {
+      "id": "performer_blacksmith_showcase_raylib",
+      "name": "Performer Blacksmith Showcase Raylib",
+      "selectors": [
+        "$performer_blacksmith_showcase"
+      ],
+      "adapterId": "raylib",
+      "buildMode": "auto"
+    },
+    {
+      "id": "performer_blacksmith_large_world_raylib",
+      "name": "Performer Blacksmith Large World Raylib",
+      "selectors": [
+        "$performer_blacksmith_large_world"
+      ],
+      "adapterId": "raylib",
+      "buildMode": "auto"
+    },
+    {
+      "id": "performer_blacksmith_large_world_nohud_raylib",
+      "name": "Performer Blacksmith Large World No HUD/GAS Raylib",
+      "selectors": [
+        "$performer_blacksmith_large_world_nohud"
+      ],
+      "adapterId": "raylib",
+      "buildMode": "auto"
+    },
+    {
+      "id": "mass_navigation_raylib",
+      "name": "Mass Navigation Raylib",
+      "selectors": [
+        "$mass_navigation"
+      ],
+      "adapterId": "raylib",
+      "buildMode": "auto"
     }
   ]
 }

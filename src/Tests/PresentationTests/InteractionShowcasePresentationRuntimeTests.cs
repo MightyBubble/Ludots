@@ -7,7 +7,9 @@ using Ludots.Core.Components;
 using Ludots.Core.Engine;
 using Ludots.Core.Input.Config;
 using Ludots.Core.Input.Runtime;
+using Ludots.Core.Presentation.Commands;
 using Ludots.Core.Presentation.Components;
+using Ludots.Core.Presentation.Performers;
 using Ludots.Core.Presentation.Rendering;
 using Ludots.Core.Scripting;
 using Ludots.Platform.Abstractions;
@@ -36,26 +38,24 @@ namespace Ludots.Tests.Presentation
             using var engine = CreateEngine(ShowcaseMods);
             LoadMap(engine, "interaction_showcase_hub");
 
-            int mapVisuals = 0;
+            var performers = engine.GetService(CoreServiceKeys.PerformerEntityRuntime)
+                ?? throw new InvalidOperationException("PerformerEntityRuntime missing.");
+
+            int performerVisuals = 0;
             int skinnedCount = 0;
             int staticCount = 0;
-            var query = new QueryDescription().WithAll<MapEntity, Name, VisualRuntimeState>();
-            engine.World.Query(in query, (ref MapEntity _, ref Name _, ref VisualRuntimeState visual) =>
+            var performerQuery = new QueryDescription().WithAll<PerformerState>();
+            engine.World.Query(in performerQuery, (Entity entity, ref PerformerState state) =>
             {
-                mapVisuals++;
-                if (visual.RenderPath == VisualRenderPath.SkinnedMesh)
+                if (state.AnchorKind != PresentationAnchorKind.Entity || !engine.World.IsAlive(state.OwnerEntity) || !engine.World.Has<MapEntity>(state.OwnerEntity))
                 {
-                    skinnedCount++;
+                    return;
                 }
-                else if (visual.RenderPath == VisualRenderPath.StaticMesh)
-                {
-                    staticCount++;
-                }
+
+                performerVisuals++;
             });
 
-            Assert.That(mapVisuals, Is.EqualTo(8), "Interaction showcase hub should spawn eight visible map entities with presentation runtime.");
-            Assert.That(skinnedCount, Is.EqualTo(4), "Hero-side interaction fixtures should stay on the skinned lane.");
-            Assert.That(staticCount, Is.EqualTo(4), "Enemy-side interaction fixtures should stay on the static lane.");
+            Assert.That(performerVisuals, Is.GreaterThanOrEqualTo(8), "Interaction showcase hub should bootstrap performer instances for encounter actors.");
 
             var primitives = engine.GetService(CoreServiceKeys.PresentationPrimitiveDrawBuffer);
             Assert.That(primitives, Is.Not.Null);

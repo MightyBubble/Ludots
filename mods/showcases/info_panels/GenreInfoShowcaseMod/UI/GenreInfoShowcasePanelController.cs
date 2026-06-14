@@ -464,7 +464,7 @@ namespace GenreInfoShowcaseMod.UI
 
             if (SelectionContextRuntime.TryDescribeCurrentView(engine.World, engine.GlobalContext, out SelectionViewDescriptor descriptor))
             {
-                signature = $"{signature}|{descriptor.ViewKey}|{descriptor.Container.AliasKey}|{descriptor.Container.MemberCount}|{descriptor.Container.Revision}|{descriptor.Container.Primary.Id}";
+                signature = $"{signature}|{descriptor.ViewKey}|{descriptor.Container.SetKey}|{descriptor.Container.MemberCount}|{descriptor.Container.Revision}|{descriptor.Container.Primary.Id}";
             }
 
             return new GenreInfoShowcasePanelState(mapId, signature);
@@ -656,7 +656,7 @@ namespace GenreInfoShowcaseMod.UI
             string prefix = mode == SelectionViewMode.Formation
                 ? textResolver.ResolveRequiredTokenKey("genreinfo.view.formation")
                 : textResolver.ResolveRequiredTokenKey("genreinfo.view.live");
-            return $"{prefix} -> {descriptor.Container.AliasKey}";
+            return $"{prefix} -> {descriptor.Container.SetKey}";
         }
 
         private static SelectionGroupSummary ResolveControlGroupSummary(GameEngine engine, int groupIndex)

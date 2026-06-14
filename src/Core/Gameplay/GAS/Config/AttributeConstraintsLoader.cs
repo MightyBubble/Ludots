@@ -22,7 +22,7 @@ namespace Ludots.Core.Gameplay.GAS.Config
         {
             if (_pipeline == null) return;
 
-            var entry = ConfigPipeline.GetEntryOrDefault(catalog, relativePath, ConfigMergePolicy.DeepObject);
+            var entry = ConfigPipeline.RequireEntry(catalog, relativePath, ConfigMergePolicy.DeepObject);
             var mergedObject = _pipeline.MergeDeepObjectFromCatalog(in entry, report);
             if (mergedObject == null) return;
 

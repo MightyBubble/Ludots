@@ -42,14 +42,17 @@ using Ludots.Core.Navigation2D.Runtime;
 using Ludots.Core.Presentation;
 using Ludots.Core.Presentation.Assets;
 using Ludots.Core.Presentation.Camera;
+using Ludots.Core.Presentation.ChunkDebug;
 using Ludots.Core.Presentation.Commands;
 using Ludots.Core.Presentation.Config;
 using Ludots.Core.Presentation.DebugDraw;
 using Ludots.Core.Presentation.Events;
 using Ludots.Core.Presentation.Hud;
+using Ludots.Core.Presentation.Minimap;
 using Ludots.Core.Presentation.Performers;
-using Ludots.Core.Presentation.Projectiles;
+using Ludots.Core.Presentation.Requests;
 using Ludots.Core.Presentation.Rendering;
+using Ludots.Core.Presentation.Surfaces;
 using Ludots.Core.Presentation.Systems;
 using Ludots.Core.Presentation.Terrain;
 using Ludots.Core.Registry;
@@ -105,12 +108,16 @@ namespace Ludots.Core.Scripting
         public static readonly ServiceKey<PlayerInputHandler> InputHandler = new("InputHandler");
         public static readonly ServiceKey<IInputActionReader> AuthoritativeInput = new("AuthoritativeInput");
         public static readonly ServiceKey<AuthoritativePointerButtonSnapshot> AuthoritativePointerButtons = new("AuthoritativePointerButtons");
+        public static readonly ServiceKey<AuthoritativeGroundPointerOverride> AuthoritativeGroundPointerOverride = new("AuthoritativeGroundPointerOverride");
         public static readonly ServiceKey<IInputBackend> InputBackend = new("InputBackend");
+        public static readonly ServiceKey<List<IInputFrameConsumer>> InputFrameConsumers = new("InputFrameConsumers");
+        public static readonly ServiceKey<bool> PointerInputCaptured = new("PointerInputCaptured");
 
         // --- Camera & View ---
         public static readonly ServiceKey<IViewController> ViewController = new("ViewController");
         public static readonly ServiceKey<IScreenProjector> ScreenProjector = new("ScreenProjector");
         public static readonly ServiceKey<IScreenRayProvider> ScreenRayProvider = new("ScreenRayProvider");
+        public static readonly ServiceKey<CameraCullingFocusOverride> CameraCullingFocusOverride = new("CameraCullingFocusOverride");
         public static readonly ServiceKey<IVisualGroundProjector> VisualGroundProjector = new("VisualGroundProjector");
         public static readonly ServiceKey<IVisualHeightmap> VisualHeightmap = new("VisualHeightmap");
         public static readonly ServiceKey<CameraPoseRequest> CameraPoseRequest = new("CameraPoseRequest");
@@ -171,12 +178,14 @@ namespace Ludots.Core.Scripting
         public static readonly ServiceKey<SelectionRequestQueue> SelectionRequestQueue = new("SelectionRequestQueue");
         public static readonly ServiceKey<SelectionResponseBuffer> SelectionResponseBuffer = new("SelectionResponseBuffer");
         public static readonly ServiceKey<RuntimeEntitySpawnQueue> RuntimeEntitySpawnQueue = new("RuntimeEntitySpawnQueue");
+        public static readonly ServiceKey<RuntimeEntitySpawnReceiptChannelRegistry> RuntimeEntitySpawnReceiptChannelRegistry = new("RuntimeEntitySpawnReceiptChannelRegistry");
         public static readonly ServiceKey<EntityTemplateKeyRegistry> EntityTemplateKeyRegistry = new("EntityTemplateKeyRegistry");
         public static readonly ServiceKey<SelectionRuleRegistry> SelectionRuleRegistry = new("SelectionRuleRegistry");
         public static readonly ServiceKey<SelectionRuntime> SelectionRuntime = new("SelectionRuntime");
         public static readonly ServiceKey<SelectionRuntimeConfig> SelectionConfig = new("SelectionConfig");
         public static readonly ServiceKey<StringIntRegistry> SelectionSetKeyRegistry = new("SelectionSetKeyRegistry");
         public static readonly ServiceKey<InteractionActionBindings> InteractionActionBindings = new("InteractionActionBindings");
+        public static readonly ServiceKey<RuntimeEntitySpawnReceiptQueue> RuntimeEntitySpawnReceiptQueue = new("RuntimeEntitySpawnReceiptQueue");
         public static readonly ServiceKey<InputOrderMappingSystem> ActiveInputOrderMapping = new("ActiveInputOrderMapping");
         public static readonly ServiceKey<OrderQueue> OrderQueue = new("OrderQueue");
         public static readonly ServiceKey<OrderTypeRegistry> OrderTypeRegistry = new("OrderTypeRegistry");
@@ -195,41 +204,54 @@ namespace Ludots.Core.Scripting
 
         // --- Presentation ---
         public static readonly ServiceKey<PresentationEventStream> PresentationEventStream = new("PresentationEventStream");
-        public static readonly ServiceKey<PresentationCommandBuffer> PresentationCommandBuffer = new("PresentationCommandBuffer");
+        public static readonly ServiceKey<PresentationOwnerChangeBuffer> PresentationOwnerChangeBuffer = new("PresentationOwnerChangeBuffer");
+        public static readonly ServiceKey<PerformerCommandBuffer> PerformerCommandBuffer = new("PerformerCommandBuffer");
         public static readonly ServiceKey<PrefabRegistry> PresentationPrefabRegistry = new("PresentationPrefabRegistry");
         public static readonly ServiceKey<MeshAssetRegistry> PresentationMeshAssetRegistry = new("PresentationMeshAssetRegistry");
-        public static readonly ServiceKey<VisualTemplateRegistry> PresentationVisualTemplateRegistry = new("PresentationVisualTemplateRegistry");
+        public static readonly ServiceKey<PresentationMaterialRegistry> PresentationMaterialRegistry = new("PresentationMaterialRegistry");
+        public static readonly ServiceKey<PresentationBehaviorRegistry> PresentationBehaviorRegistry = new("PresentationBehaviorRegistry");
+        public static readonly ServiceKey<PresentationBehaviorResolver> PresentationBehaviorResolver = new("PresentationBehaviorResolver");
         public static readonly ServiceKey<AnimatorControllerRegistry> AnimatorControllerRegistry = new("AnimatorControllerRegistry");
         public static readonly ServiceKey<AnimationClipRegistry> AnimationClipRegistry = new("AnimationClipRegistry");
         public static readonly ServiceKey<AnimationProfileRegistry> AnimationProfileRegistry = new("AnimationProfileRegistry");
         public static readonly ServiceKey<PresentationStableIdAllocator> PresentationStableIdAllocator = new("PresentationStableIdAllocator");
+        public static readonly ServiceKey<StableDrawCache> PresentationStableDrawCache = new("PresentationStableDrawCache");
         public static readonly ServiceKey<PrimitiveDrawBuffer> PresentationPrimitiveDrawBuffer = new("PresentationPrimitiveDrawBuffer");
         public static readonly ServiceKey<PrimitiveDrawBuffer> PresentationVisualSnapshotBuffer = new("PresentationVisualSnapshotBuffer");
         public static readonly ServiceKey<PresentationVisualProxyBuffer> PresentationVisualProxyBuffer = new("PresentationVisualProxyBuffer");
         public static readonly ServiceKey<PresentationVisualRequestBuffer> PresentationVisualRequestBuffer = new("PresentationVisualRequestBuffer");
         public static readonly ServiceKey<PresentationAdapterCapabilities> PresentationAdapterCapabilities = new("PresentationAdapterCapabilities");
         public static readonly ServiceKey<SkinnedVisualBatchBuffer> PresentationSkinnedVisualBatchBuffer = new("PresentationSkinnedVisualBatchBuffer");
+        public static readonly ServiceKey<PresentationRequestBuffer> PresentationRequestBuffer = new("PresentationRequestBuffer");
         public static readonly ServiceKey<WorldHudBatchBuffer> PresentationWorldHudBuffer = new("PresentationWorldHudBuffer");
         public static readonly ServiceKey<WorldHudStringTable> PresentationWorldHudStrings = new("PresentationWorldHudStrings");
         public static readonly ServiceKey<PresentationTextCatalog> PresentationTextCatalog = new("PresentationTextCatalog");
         public static readonly ServiceKey<PresentationTextLocaleSelection> PresentationTextLocaleSelection = new("PresentationTextLocaleSelection");
         public static readonly ServiceKey<ScreenHudBatchBuffer> PresentationScreenHudBuffer = new("PresentationScreenHudBuffer");
         public static readonly ServiceKey<ScreenOverlayBuffer> ScreenOverlayBuffer = new("ScreenOverlayBuffer");
+        public static readonly ServiceKey<MinimapRuntime> MinimapRuntime = new("MinimapRuntime");
+        public static readonly ServiceKey<MinimapMarkerBuffer> MinimapMarkerBuffer = new("MinimapMarkerBuffer");
+        public static readonly ServiceKey<MinimapScreenMarkerBuffer> MinimapScreenMarkerBuffer = new("MinimapScreenMarkerBuffer");
+        public static readonly ServiceKey<ChunkDebugPanelRuntime> ChunkDebugPanelRuntime = new("ChunkDebugPanelRuntime");
         public static readonly ServiceKey<RenderDebugState> RenderDebugState = new("RenderDebugState");
         public static readonly ServiceKey<RenderCameraDebugState> RenderCameraDebugState = new("RenderCameraDebugState");
         public static readonly ServiceKey<CameraCullingDebugState> CameraCullingDebugState = new("CameraCullingDebugState");
         public static readonly ServiceKey<PresentationTimingDiagnostics> PresentationTimingDiagnostics = new("PresentationTimingDiagnostics");
         public static readonly ServiceKey<PresentationFrameSetupSystem> PresentationFrameSetup = new("PresentationFrameSetup");
+        public static readonly ServiceKey<IBenchmarkSceneController> BenchmarkSceneController = new("BenchmarkSceneController");
         public static readonly ServiceKey<TransientMarkerBuffer> TransientMarkerBuffer = new("TransientMarkerBuffer");
         public static readonly ServiceKey<GasPresentationEventBuffer> GasPresentationEventBuffer = new("GasPresentationEventBuffer");
+        public static readonly ServiceKey<GlobalPresentationEventBuffer> GlobalPresentationEventBuffer = new("GlobalPresentationEventBuffer");
         public static readonly ServiceKey<GroundOverlayBuffer> GroundOverlayBuffer = new("GroundOverlayBuffer");
         public static readonly ServiceKey<RoadSplineBuffer> RoadSplineBuffer = new("RoadSplineBuffer");
+        public static readonly ServiceKey<SoundRequestBuffer> SoundRequestBuffer = new("SoundRequestBuffer");
         public static readonly ServiceKey<DebugDrawCommandBuffer> DebugDrawCommandBuffer = new("DebugDrawCommandBuffer");
-        public static readonly ServiceKey<ProjectilePresentationBindingRegistry> ProjectilePresentationBindingRegistry = new("ProjectilePresentationBindingRegistry");
-
         // --- Performers ---
         public static readonly ServiceKey<PerformerDefinitionRegistry> PerformerDefinitionRegistry = new("PerformerDefinitionRegistry");
-        public static readonly ServiceKey<PerformerInstanceBuffer> PerformerInstanceBuffer = new("PerformerInstanceBuffer");
+        public static readonly ServiceKey<PerformerEntityRuntime> PerformerEntityRuntime = new("PerformerEntityRuntime");
+        public static readonly ServiceKey<PerformerAnimatorStateBuffer> PerformerAnimatorStateBuffer = new("PerformerAnimatorStateBuffer");
+        public static readonly ServiceKey<SurfaceSourcePayloadRegistry> SurfaceSourcePayloadRegistry = new("SurfaceSourcePayloadRegistry");
+        public static readonly ServiceKey<SurfaceSourceRuntimeRegistry> SurfaceSourceRuntimeRegistry = new("SurfaceSourceRuntimeRegistry");
 
         // --- Spatial ---
         public static readonly ServiceKey<WorldSizeSpec> WorldSizeSpec = new("WorldSizeSpec");
@@ -250,16 +272,10 @@ namespace Ludots.Core.Scripting
 
         // --- Entity Selection (presentation-layer) ---
         public static readonly ServiceKey<Entity> LocalPlayerEntity = new("LocalPlayerEntity");
-        [Obsolete("Legacy selection compatibility key. Do not use. Resolve viewed selection through SelectionContextRuntime or SelectionViewViewerEntity + SelectionViewKey.")]
-        public static readonly ServiceKey<Entity> SelectedEntity = new("SelectedEntity");
         public static readonly ServiceKey<Entity> HoveredEntity = new("HoveredEntity");
         public static readonly ServiceKey<Entity> TabTargetEntity = new("TabTargetEntity");
         public static readonly ServiceKey<Entity> SelectionViewViewerEntity = new("SelectionViewViewerEntity");
         public static readonly ServiceKey<string> SelectionViewKey = new("SelectionViewKey");
-        [Obsolete("Legacy pre-SSOT view key. Do not use. Resolve viewed selection through SelectionViewViewerEntity + SelectionViewKey.")]
-        public static readonly ServiceKey<Entity> SelectionViewOwnerEntity = new("SelectionViewOwnerEntity");
-        [Obsolete("Legacy pre-SSOT set key. Do not use. Resolve viewed selection through SelectionViewViewerEntity + SelectionViewKey.")]
-        public static readonly ServiceKey<string> SelectionViewSetKey = new("SelectionViewSetKey");
 
         // --- Config & AI ---
         public static readonly ServiceKey<ConfigCatalog> ConfigCatalog = new("ConfigCatalog");

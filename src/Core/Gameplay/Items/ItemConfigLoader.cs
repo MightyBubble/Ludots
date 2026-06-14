@@ -37,7 +37,7 @@ namespace Ludots.Core.Gameplay.Items
         {
             _shapes.Clear();
 
-            var entry = ConfigPipeline.GetEntryOrDefault(catalog, "Items/shapes.json", ConfigMergePolicy.ArrayById, "id");
+            var entry = ConfigPipeline.RequireEntry(catalog, "Items/shapes.json", ConfigMergePolicy.ArrayById, "id");
             var merged = _pipeline.MergeArrayByIdFromCatalog(in entry, report);
             var options = new JsonSerializerOptions { PropertyNameCaseInsensitive = true };
             var rowsById = new List<(string Id, ShapeConfig Cfg)>(merged.Count);
@@ -74,7 +74,7 @@ namespace Ludots.Core.Gameplay.Items
         {
             _layouts.Clear();
 
-            var entry = ConfigPipeline.GetEntryOrDefault(catalog, "Items/layouts.json", ConfigMergePolicy.ArrayById, "id");
+            var entry = ConfigPipeline.RequireEntry(catalog, "Items/layouts.json", ConfigMergePolicy.ArrayById, "id");
             var merged = _pipeline.MergeArrayByIdFromCatalog(in entry, report);
             var options = new JsonSerializerOptions { PropertyNameCaseInsensitive = true };
             var configs = new List<(string Id, LayoutConfig Cfg)>(merged.Count);
@@ -117,7 +117,7 @@ namespace Ludots.Core.Gameplay.Items
         {
             _definitions.Clear();
 
-            var entry = ConfigPipeline.GetEntryOrDefault(catalog, "Items/definitions.json", ConfigMergePolicy.ArrayById, "id");
+            var entry = ConfigPipeline.RequireEntry(catalog, "Items/definitions.json", ConfigMergePolicy.ArrayById, "id");
             var merged = _pipeline.MergeArrayByIdFromCatalog(in entry, report);
             var options = new JsonSerializerOptions { PropertyNameCaseInsensitive = true };
             var configs = new List<(string Id, ItemConfig Cfg)>(merged.Count);

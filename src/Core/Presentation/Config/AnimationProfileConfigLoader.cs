@@ -27,7 +27,7 @@ namespace Ludots.Core.Presentation.Config
 
         public void Load(ConfigCatalog catalog = null, ConfigConflictReport report = null)
         {
-            var entry = ConfigPipeline.GetEntryOrDefault(catalog, "Presentation/animation_profiles.json", ConfigMergePolicy.ArrayById, "id");
+            var entry = ConfigPipeline.RequireEntry(catalog, "Presentation/animation_profiles.json", ConfigMergePolicy.ArrayById, "id");
             var merged = _configs.MergeArrayByIdFromCatalog(in entry, report);
             for (int i = 0; i < merged.Count; i++)
             {
@@ -112,7 +112,7 @@ namespace Ludots.Core.Presentation.Config
                 }
 
                 string builtinClipText = bindingNode["builtinClipId"]?.GetValue<string>() ?? string.Empty;
-                if (!Enum.TryParse(builtinClipText, ignoreCase: true, out AnimatorBuiltinClipId builtinClipId) ||
+                if (!Enum.TryParse(builtinClipText, ignoreCase: false, out AnimatorBuiltinClipId builtinClipId) ||
                     builtinClipId == AnimatorBuiltinClipId.None)
                 {
                     throw new InvalidOperationException(

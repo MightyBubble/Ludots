@@ -63,7 +63,7 @@ namespace Ludots.Core.Scripting
         public const string AttributeSinkRegistry = "AttributeSinkRegistry";
         public const string AttributeBindingRegistry = "AttributeBindingRegistry";
         public const string PresentationEventStream = "PresentationEventStream";
-        public const string PresentationCommandBuffer = "PresentationCommandBuffer";
+        public const string PerformerCommandBuffer = "PerformerCommandBuffer";
         public const string PresentationPrefabRegistry = "PresentationPrefabRegistry";
         public const string PresentationMeshAssetRegistry = "PresentationMeshAssetRegistry";
         public const string PresentationPrimitiveDrawBuffer = "PresentationPrimitiveDrawBuffer";
@@ -93,16 +93,10 @@ namespace Ludots.Core.Scripting
         public const string VirtualCameraRegistry = "VirtualCameraRegistry";
         public const string PlatformManagedCameraDriverRegistry = "PlatformManagedCameraDriverRegistry";
         public const string LocalPlayerEntity = "LocalPlayerEntity";
-        [Obsolete("Legacy selection compatibility key. Do not use. Resolve viewed selection through SelectionContextRuntime or SelectionViewViewerEntity + SelectionViewKey.")]
-        public const string SelectedEntity = "SelectedEntity";
         public const string HoveredEntity = "HoveredEntity";
         public const string TabTargetEntity = "TabTargetEntity";
         public const string SelectionViewViewerEntity = "SelectionViewViewerEntity";
         public const string SelectionViewKey = "SelectionViewKey";
-        [Obsolete("Legacy pre-SSOT view key. Do not use. Resolve viewed selection through SelectionViewViewerEntity + SelectionViewKey.")]
-        public const string SelectionViewOwnerEntity = "SelectionViewOwnerEntity";
-        [Obsolete("Legacy pre-SSOT set key. Do not use. Resolve viewed selection through SelectionViewViewerEntity + SelectionViewKey.")]
-        public const string SelectionViewSetKey = "SelectionViewSetKey";
         public const string AbilityInputRequestQueue = "AbilityInputRequestQueue";
         public const string GameConfig = "GameConfig";
         public const string PresentationFrameSetup = "PresentationFrameSetup";
@@ -113,7 +107,7 @@ namespace Ludots.Core.Scripting
         public const string RoadSplineBuffer = "RoadSplineBuffer";
         // IndicatorRequestBuffer removed �?unified into Performer direct API
         public const string PerformerDefinitionRegistry = "PerformerDefinitionRegistry";
-        public const string PerformerInstanceBuffer = "PerformerInstanceBuffer";
+        public const string PerformerEntityRuntime = "PerformerEntityRuntime";
         public const string Navigation2DRuntime = "Navigation2DRuntime";
         public const string Navigation2DTickPolicy = "Navigation2DTickPolicy";
         public const string NavMeshBakeConfig = "NavMeshBakeConfig";
