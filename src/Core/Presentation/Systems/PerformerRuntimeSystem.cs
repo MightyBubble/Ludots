@@ -323,12 +323,12 @@ namespace Ludots.Core.Presentation.Systems
                 !World.Has<PerformerRootBootstrapHandled>(cmd.Source) ||
                 cmd.AnchorKind != PresentationAnchorKind.Entity ||
                 cmd.ParentEntity != Entity.Null ||
-                !World.Has<EntityTemplateKeyCm>(cmd.Source))
+                !World.Has<EntityTemplateKeyRef>(cmd.Source))
             {
                 return false;
             }
 
-            int templateKeyId = World.Get<EntityTemplateKeyCm>(cmd.Source).TemplateKeyId;
+            int templateKeyId = World.Get<EntityTemplateKeyRef>(cmd.Source).TemplateKeyId;
             if (templateKeyId <= 0 ||
                 !_definitions.BootstrapRegistry.TryGetEntitySpawnCreates(
                     templateKeyId,

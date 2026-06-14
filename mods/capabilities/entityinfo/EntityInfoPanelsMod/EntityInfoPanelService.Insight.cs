@@ -32,7 +32,7 @@ public sealed partial class EntityInfoPanelService
         profile = null!;
         if (entity == Entity.Null ||
             !world.IsAlive(entity) ||
-            !world.TryGet(entity, out EntityTemplateKeyCm templateKey) ||
+            !world.TryGet(entity, out EntityTemplateKeyRef templateKey) ||
             !_insightCatalog.TryGetProfileByTemplateKey(templateKey.TemplateKeyId, out profile))
         {
             return false;
@@ -269,11 +269,11 @@ public sealed partial class EntityInfoPanelService
             : $"Entity #{entity.Id}";
         dirty |= SetString(_titles, slot, title);
 
-        if (!world.TryGet(entity, out EntityTemplateKeyCm templateKey) ||
+        if (!world.TryGet(entity, out EntityTemplateKeyRef templateKey) ||
             !_insightCatalog.TryGetProfileIndex(templateKey.TemplateKeyId, out int profileIndex) ||
             !_insightCatalog.TryGetProfileByIndex(profileIndex, out EntityInsightProfile profile))
         {
-            string templateSubtitle = world.TryGet(entity, out EntityTemplateKeyCm resolvedTemplateKey)
+            string templateSubtitle = world.TryGet(entity, out EntityTemplateKeyRef resolvedTemplateKey)
                 ? $"Template `{resolvedTemplateKey.TemplateKeyId}` has no insight profile."
                 : "Template key is unavailable for this entity.";
             dirty |= SetString(_subtitles, slot, templateSubtitle);

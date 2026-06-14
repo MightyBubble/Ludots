@@ -1148,7 +1148,7 @@ namespace Ludots.Tests.Presentation
             var events = new PresentationEventStream(PresentationTestConstants.EventStreamCapacity);
             Entity entity = world.Create(
                 new PresentationStableId { Value = 99 },
-                new EntityTemplateKeyCm { TemplateKeyId = 1234 });
+                new EntityTemplateKeyRef { TemplateKeyId = 1234 });
 
             using var lifecycle = new PresentationEntityLifecycleSystem(world, events);
             using var finalize = new PresentationEntityFinalizeDestroySystem(world);

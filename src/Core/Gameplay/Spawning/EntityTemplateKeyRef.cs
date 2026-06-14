@@ -1,6 +1,6 @@
 namespace Ludots.Core.Gameplay.Spawning
 {
-    public struct EntityTemplateKeyCm
+    public struct EntityTemplateKeyRef
     {
         public int TemplateKeyId;
     }
