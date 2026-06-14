@@ -1530,6 +1530,27 @@ namespace Ludots.Tests.Presentation
             system.Update(0.016f);
             Assert.That(requests.Count, Is.EqualTo(0), "SurfaceSource must be retained by lifecycle, not kept alive by per-frame request spam.");
 
+            ref CullState ownerCull = ref world.Get<CullState>(owner);
+            ownerCull.IsVisible = false;
+            ownerCull.LOD = LODLevel.Culled;
+            instances.SyncCullVisibility();
+
+            system.Update(0.016f);
+            Assert.That(requests.Count, Is.EqualTo(0), "Temporary cull must not destroy the retained SurfaceSource.");
+
+            ownerCull.IsVisible = true;
+            ownerCull.LOD = LODLevel.High;
+            instances.SyncCullVisibility();
+
+            system.Update(0.016f);
+            Assert.That(requests.Count, Is.EqualTo(1));
+            Assert.That(requests.GetSpan()[0].Kind, Is.EqualTo(PresentationRequestKind.SurfaceSource));
+            Assert.That(requests.GetSpan()[0].StableId, Is.EqualTo(9701));
+            requests.Clear();
+
+            system.Update(0.016f);
+            Assert.That(requests.Count, Is.EqualTo(0), "Visible-again retained SurfaceSource should settle back to dirty-only emission.");
+
             world.Destroy(owner);
             system.Update(0.016f);
             Assert.That(requests.Count, Is.EqualTo(1));

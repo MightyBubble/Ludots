@@ -1840,7 +1840,7 @@ namespace Ludots.Tests.Presentation
         }
 
         [Test]
-        public void PerformerEmitSystem_StableCache_RemovesVisual_WhenOwnerBecomesCulled()
+        public void PerformerEmitSystem_StableCache_RetainsVisual_WhenOwnerBecomesCulled()
         {
             using var world = World.Create();
             var drawBuffer = new PrimitiveDrawBuffer();
@@ -1849,7 +1849,7 @@ namespace Ludots.Tests.Presentation
             var definitions = new PerformerDefinitionRegistry();
             int definitionId = RegisterStaticVisualDefinition(
                 definitions,
-                "stable.cull.removal",
+                "stable.cull.retained",
                 assetId: 31,
                 materialId: 41,
                 renderPath: VisualRenderPath.InstancedStaticMesh);
@@ -1894,9 +1894,14 @@ namespace Ludots.Tests.Presentation
 
             emit.Update(0.016f);
             Assert.That(stableDrawCache.Count, Is.EqualTo(1));
+            int visualStableId = PerformerBehaviorRuntimeUtility.ComposeVisualStableId(404, 0, AssetKind.Mesh, definitionId);
+            Assert.That(stableDrawCache.Contains(visualStableId), Is.True);
+            int initialRevision = stableDrawCache.ContentRevision;
             flush.Update(0.016f);
             Assert.That(snapshotBuffer.Count, Is.EqualTo(1));
             Assert.That(drawBuffer.Count, Is.EqualTo(1));
+            Assert.That(snapshotBuffer.GetSpan()[0].StableId, Is.EqualTo(visualStableId));
+            Assert.That(snapshotBuffer.GetSpan()[0].Visibility, Is.EqualTo(VisualVisibility.Visible));
 
             ref CullState ownerCull = ref world.Get<CullState>(owner);
             ownerCull.IsVisible = false;
@@ -1904,12 +1909,32 @@ namespace Ludots.Tests.Presentation
             instances.SyncCullVisibility();
 
             emit.Update(0.016f);
-            Assert.That(stableDrawCache.Count, Is.EqualTo(0));
+            Assert.That(stableDrawCache.Count, Is.EqualTo(1));
+            Assert.That(stableDrawCache.Contains(visualStableId), Is.True);
+            Assert.That(stableDrawCache.ContentRevision, Is.GreaterThan(initialRevision));
             drawBuffer.Clear();
             snapshotBuffer.Clear();
             flush.Update(0.016f);
-            Assert.That(snapshotBuffer.Count, Is.EqualTo(0));
+            Assert.That(snapshotBuffer.Count, Is.EqualTo(1));
             Assert.That(drawBuffer.Count, Is.EqualTo(0));
+            Assert.That(snapshotBuffer.GetSpan()[0].StableId, Is.EqualTo(visualStableId));
+            Assert.That(snapshotBuffer.GetSpan()[0].Visibility, Is.EqualTo(VisualVisibility.Culled));
+            Assert.That(snapshotBuffer.GetSpan()[0].LOD, Is.EqualTo(LODLevel.Culled));
+
+            ownerCull.IsVisible = true;
+            ownerCull.LOD = LODLevel.High;
+            instances.SyncCullVisibility();
+
+            emit.Update(0.016f);
+            Assert.That(stableDrawCache.Count, Is.EqualTo(1));
+            Assert.That(stableDrawCache.Contains(visualStableId), Is.True);
+            drawBuffer.Clear();
+            snapshotBuffer.Clear();
+            flush.Update(0.016f);
+            Assert.That(snapshotBuffer.Count, Is.EqualTo(1));
+            Assert.That(drawBuffer.Count, Is.EqualTo(1));
+            Assert.That(snapshotBuffer.GetSpan()[0].StableId, Is.EqualTo(visualStableId));
+            Assert.That(snapshotBuffer.GetSpan()[0].Visibility, Is.EqualTo(VisualVisibility.Visible));
         }
 
         [Test]

@@ -129,7 +129,8 @@ namespace Ludots.Core.Presentation.Systems
                 }
 
                 ref readonly AssetBindingConfig asset = ref slot.AssetBinding;
-                if (!IsWithinMaxLod(lod, in asset) || !ResolveAssetVisibility(entity, in asset))
+                if (lod != LODLevel.Culled &&
+                    (!IsWithinMaxLod(lod, in asset) || !ResolveAssetVisibility(entity, in asset)))
                 {
                     stableDrawCache.Remove(PerformerBehaviorRuntimeUtility.ComposeVisualStableId(state.StableId, slot.SlotIndex, asset.AssetKind, state.DefId));
                     continue;
