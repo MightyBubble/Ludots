@@ -331,7 +331,7 @@ namespace Ludots.Core.Physics2D.Collision
             }
 
             Fix64Vec2 boxCenter = boxPos + box.LocalCenter;
-            Fix64Vec2 polyCenter = polyPos + poly.LocalCenter;
+            Fix64Vec2 polyCenter = polyPos + poly.LocalOffset;
             Fix64Vec2 d = polyCenter - boxCenter;
             if (Fix64Vec2.Dot(d, normal) < Fix64.Zero)
             {
@@ -418,7 +418,7 @@ namespace Ludots.Core.Physics2D.Collision
                 }
             }
 
-            Fix64Vec2 polyCenter = polyPos + poly.LocalCenter;
+            Fix64Vec2 polyCenter = polyPos + poly.LocalOffset;
             Fix64Vec2 d = circleCenter - polyCenter;
             Fix64 sign = Fix64Vec2.Dot(d, bestAxis) >= Fix64.Zero ? Fix64.OneValue : -Fix64.OneValue;
             normal = bestAxis * sign;
@@ -492,7 +492,7 @@ namespace Ludots.Core.Physics2D.Collision
                 v0 = Rotate(v0, sin, cos);
             }
 
-            Fix64Vec2 w0 = polyPos + v0;
+            Fix64Vec2 w0 = polyPos + poly.LocalOffset + v0;
             Fix64 p0 = Fix64Vec2.Dot(w0, axis);
             min = p0;
             max = p0;
@@ -505,7 +505,7 @@ namespace Ludots.Core.Physics2D.Collision
                     v = Rotate(v, sin, cos);
                 }
 
-                Fix64Vec2 w = polyPos + v;
+                Fix64Vec2 w = polyPos + poly.LocalOffset + v;
                 Fix64 p = Fix64Vec2.Dot(w, axis);
                 min = Fix64.Min(min, p);
                 max = Fix64.Max(max, p);
@@ -533,7 +533,7 @@ namespace Ludots.Core.Physics2D.Collision
                     v = Rotate(v, sin, cos);
                 }
 
-                Fix64Vec2 w = polyPos + v;
+                Fix64Vec2 w = polyPos + poly.LocalOffset + v;
                 Fix64 d = Fix64Vec2.Dot(w, direction);
                 if (d > best)
                 {
@@ -563,7 +563,7 @@ namespace Ludots.Core.Physics2D.Collision
             {
                 prev = Rotate(prev, sin, cos);
             }
-            prev = polyPos + prev;
+            prev = polyPos + poly.LocalOffset + prev;
 
             for (int i = 0; i < poly.VertexCount; i++)
             {
@@ -572,7 +572,7 @@ namespace Ludots.Core.Physics2D.Collision
                 {
                     curr = Rotate(curr, sin, cos);
                 }
-                curr = polyPos + curr;
+                curr = polyPos + poly.LocalOffset + curr;
 
                 Fix64Vec2 closest = ClosestPointOnSegment(prev, curr, point);
                 Fix64 distSq = (point - closest).LengthSquared();
@@ -695,7 +695,7 @@ namespace Ludots.Core.Physics2D.Collision
                 {
                     v = Rotate(v, sin, cos);
                 }
-                dst[i] = polyPos + v;
+                dst[i] = polyPos + poly.LocalOffset + v;
             }
 
             return poly.VertexCount;

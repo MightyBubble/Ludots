@@ -4,6 +4,7 @@ using Arch.Core;
 using Arch.Core.Extensions;
 using Arch.System;
 using Ludots.Core.Input.Selection;
+using Ludots.Core.Gameplay.Spawning;
 using Ludots.Core.Mathematics.FixedPoint;
 using Ludots.Core.Presentation.Components;
 using Ludots.Core.Presentation.DebugDraw;
@@ -37,6 +38,13 @@ namespace Ludots.Core.Physics2D.Systems
 
         private readonly QueryDescription _rigidBodyWithoutVisualQuery = new QueryDescription()
             .WithAll<Position2D, Collider2D, Mass2D>()
+            .WithNone<VisualTransform>();
+
+        private readonly QueryDescription _compoundRigidBodyWithVisualQuery = new QueryDescription()
+            .WithAll<Position2D, CompoundObstacle2DState, Mass2D, VisualTransform>();
+
+        private readonly QueryDescription _compoundRigidBodyWithoutVisualQuery = new QueryDescription()
+            .WithAll<Position2D, CompoundObstacle2DState, Mass2D>()
             .WithNone<VisualTransform>();
 
         private readonly QueryDescription _collisionPairQuery = new QueryDescription().WithAll<CollisionPair, ActiveCollisionPairTag>();
@@ -94,6 +102,36 @@ namespace Ludots.Core.Physics2D.Systems
                 var drawPosM = pos.Value.ToVector2() * CmToM;
                 DrawRigidBodyMeters(entity, ref collider, ref mass, drawPosM);
             });
+
+            World.Query(in _compoundRigidBodyWithVisualQuery, (Entity entity, ref Position2D pos, ref CompoundObstacle2DState state, ref Mass2D mass, ref VisualTransform visual) =>
+            {
+                var drawPosM = new Vector2(visual.Position.X, visual.Position.Z);
+                DrawCompoundRigidBodyMeters(entity, ref state, ref mass, drawPosM);
+            });
+
+            World.Query(in _compoundRigidBodyWithoutVisualQuery, (Entity entity, ref Position2D pos, ref CompoundObstacle2DState state, ref Mass2D mass) =>
+            {
+                var drawPosM = pos.Value.ToVector2() * CmToM;
+                DrawCompoundRigidBodyMeters(entity, ref state, ref mass, drawPosM);
+            });
+        }
+
+        private void DrawCompoundRigidBodyMeters(Entity entity, ref CompoundObstacle2DState state, ref Mass2D mass, Vector2 drawPosM)
+        {
+            if (state.SinkPhysicsCollider == 0)
+            {
+                return;
+            }
+
+            for (int i = 0; i < state.PieceCount; i++)
+            {
+                var collider = new Collider2D
+                {
+                    Type = ToColliderType(state.GetShape(i)),
+                    ShapeDataIndex = state.GetShapeDataIndex(i)
+                };
+                DrawRigidBodyMeters(entity, ref collider, ref mass, drawPosM);
+            }
         }
 
         private void DrawRigidBodyMeters(Entity entity, ref Collider2D collider, ref Mass2D mass, Vector2 drawPosM)
@@ -142,8 +180,10 @@ namespace Ludots.Core.Physics2D.Systems
                     if (!ShapeDataStorage2D.TryGetPolygon(collider.ShapeDataIndex, out var poly) || poly.Vertices == null || poly.VertexCount < 3) return;
                     for (int i = 0; i < poly.VertexCount; i++)
                     {
-                        var a = drawPosM + poly.Vertices[i].ToVector2() * CmToM;
-                        var b = drawPosM + poly.Vertices[(i + 1) % poly.VertexCount].ToVector2() * CmToM;
+                        var aLocal = poly.LocalOffset + poly.Vertices[i] - poly.LocalCenter;
+                        var bLocal = poly.LocalOffset + poly.Vertices[(i + 1) % poly.VertexCount] - poly.LocalCenter;
+                        var a = drawPosM + aLocal.ToVector2() * CmToM;
+                        var b = drawPosM + bLocal.ToVector2() * CmToM;
                         _buffer.Lines.Add(new DebugDrawLine2D
                         {
                             A = a,
@@ -195,6 +235,17 @@ namespace Ludots.Core.Physics2D.Systems
                     });
                 }
             });
+        }
+
+        private static ColliderType2D ToColliderType(ManifestationObstacleShape2D shape)
+        {
+            return shape switch
+            {
+                ManifestationObstacleShape2D.Circle => ColliderType2D.Circle,
+                ManifestationObstacleShape2D.Box => ColliderType2D.Box,
+                ManifestationObstacleShape2D.Polygon => ColliderType2D.Polygon,
+                _ => throw new ArgumentOutOfRangeException(nameof(shape))
+            };
         }
     }
 }

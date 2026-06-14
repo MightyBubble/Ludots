@@ -4,6 +4,7 @@ using System.Runtime.CompilerServices;
 using Arch.Buffer;
 using Arch.Core;
 using Arch.System;
+using Ludots.Core.Gameplay.Spawning;
 using Ludots.Core.Mathematics.FixedPoint;
 using Ludots.Core.Navigation2D.Avoidance;
 using Ludots.Core.Navigation2D.Components;
@@ -36,6 +37,9 @@ namespace Ludots.Core.Physics2D.Systems
 
         private static readonly QueryDescription _flowObstacleQuery = new QueryDescription()
             .WithAll<NavObstacle2D, Position2D, NavKinematics2D>();
+
+        private static readonly QueryDescription _flowCompoundObstacleQuery = new QueryDescription()
+            .WithAll<CompoundObstacle2DState, Position2D, NavKinematics2D>();
 
         private static readonly QueryDescription _sleepingPointGoalQuery = new QueryDescription()
             .WithAll<NavAgent2D, NavGoal2D, SleepingTag>();
@@ -1674,6 +1678,43 @@ namespace Ludots.Core.Physics2D.Systems
                     }
                 }
             }
+
+            foreach (ref var chunk in World.Query(in _flowCompoundObstacleQuery))
+            {
+                ref var entityFirst = ref chunk.Entity(0);
+                var positions = chunk.GetSpan<Position2D>();
+                var states = chunk.GetSpan<CompoundObstacle2DState>();
+                foreach (var index in chunk)
+                {
+                    var state = states[index];
+                    if (state.SinkNavigationObstacle == 0)
+                    {
+                        continue;
+                    }
+
+                    var entity = System.Runtime.CompilerServices.Unsafe.Add(ref entityFirst, index);
+                    for (int pieceIndex = 0; pieceIndex < state.PieceCount; pieceIndex++)
+                    {
+                        var obstacle = new NavObstacle2D
+                        {
+                            Shape = ToNavObstacleShape(state.GetShape(pieceIndex)),
+                            ShapeDataIndex = state.GetShapeDataIndex(pieceIndex)
+                        };
+                        float haloCenterRadiusCm = StampFlowObstacleShape(entity, positions[index], obstacle);
+
+                        var discomfort = _runtime.Config.FlowCrowd.Discomfort;
+                        if (discomfort.Enabled && discomfort.ObstacleHaloRadiusCm > 0 && discomfort.ObstacleHaloValue > 0f)
+                        {
+                            _runtime.Surface.SplatDiscomfortCircle(
+                                positions[index].Value.ToVector2(),
+                                MathF.Max(haloCenterRadiusCm, state.GetNavRadiusCm(pieceIndex)) + discomfort.ObstacleHaloRadiusCm,
+                                discomfort.ObstacleHaloValue,
+                                discomfort.ObstacleHaloEdgeValue,
+                                createTilesIfMissing: false);
+                        }
+                    }
+                }
+            }
         }
 
         private float StampFlowObstacleShape(Entity entity, in Position2D position, in NavObstacle2D obstacle)
@@ -1742,7 +1783,7 @@ namespace Ludots.Core.Physics2D.Systems
                         (sin * local.X) + (cos * local.Y));
                 }
 
-                destination[i] = (worldPosition + local).ToVector2();
+                destination[i] = (worldPosition + polygon.LocalOffset + local).ToVector2();
             }
         }
 
@@ -1751,7 +1792,7 @@ namespace Ludots.Core.Physics2D.Systems
             float maxDistanceSq = 0f;
             for (int i = 0; i < polygon.VertexCount; i++)
             {
-                Vector2 delta = (polygon.Vertices[i] - polygon.LocalCenter).ToVector2();
+                Vector2 delta = (polygon.LocalOffset + polygon.Vertices[i] - polygon.LocalCenter).ToVector2();
                 float distanceSq = delta.LengthSquared();
                 if (distanceSq > maxDistanceSq)
                 {
@@ -1760,6 +1801,17 @@ namespace Ludots.Core.Physics2D.Systems
             }
 
             return maxDistanceSq > 0f ? MathF.Sqrt(maxDistanceSq) : 0f;
+        }
+
+        private static NavObstacleShape2D ToNavObstacleShape(ManifestationObstacleShape2D shape)
+        {
+            return shape switch
+            {
+                ManifestationObstacleShape2D.Circle => NavObstacleShape2D.Circle,
+                ManifestationObstacleShape2D.Box => NavObstacleShape2D.Box,
+                ManifestationObstacleShape2D.Polygon => NavObstacleShape2D.Polygon,
+                _ => throw new ArgumentOutOfRangeException(nameof(shape))
+            };
         }
 
         private void StampFlowCrowdDensity(ReadOnlySpan<Vector2> positions, ReadOnlySpan<Vector2> velocities)
