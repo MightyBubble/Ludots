@@ -47,6 +47,8 @@
 - 项目配置（`launcher.config.json`、`launcher.presets.json`）与用户偏好（`preferences.json`、`config.overlay.json`）必须分层。
 - 运行时 bootstrap（`launcher.runtime.json`）必须保持“仅承载启动必需数据”的约束。
 - 当前计划级真相应通过 launcher graph 工件沉淀，避免 build/runtime/adapter 各自推导一份真相。
+- launcher graph 的运行时可读合约由 Core 的 `LauncherGraphDocument` 统一拥有；launcher 写入和 `GameBootstrapper` 读取必须复用这份合约，不得在工具链和运行时各维护一套 DTO。
+- launcher graph 中的 adapter、build、runtimeArtifacts、diagnostics 等 metadata 属于 launcher-owned 官方 envelope；运行时必须接受这些已建模字段，但仍禁止静默吞掉未知字段。
 - runtime 读取 bootstrap 时，应直接消费 graph 中的有序 Mod 计划；`ModLoader` 只做计划校验与加载，不再重跑依赖拓扑。
 - `game.json` 仅保留 direct-debug/宿主兼容用途，不再作为产品启动主链的依赖真相。
 - lock 工件属于下一阶段，用于冻结跨环境复现所需的更强约束，而不是假装当前已经存在。
@@ -130,7 +132,9 @@
 - [ ] ModLoader 不存在 DLL 回退分支。
 - [ ] `mod.json.main` 全量指向 `bin/net8.0/*.dll`。
 - [ ] GUI/CLI/Tool 默认目录一致且依赖闭包一致。
-- [ ] 项目配置、用户偏好、运行时 bootstrap、内容配置职责边界清晰。
+- [x] 项目配置、用户偏好、运行时 bootstrap、内容配置职责边界清晰。
+- [x] launcher graph DTO 由 Core 拥有，launcher 写图与 runtime 读图共享同一合约。
+- [x] 官方 launcher metadata envelope 已建模，未知 graph 字段仍由 strict JSON 拒绝。
 - [x] launcher graph 工件可用于复现同一 launch plan。
 - [x] runtime 消费 launcher graph 顺序时不再二次解析依赖。
 - [ ] 后续 lock 工件冻结跨环境复现所需的额外输入（manifest/hash/shared assembly policy/sdk band）。
