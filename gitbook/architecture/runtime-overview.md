@@ -13,6 +13,7 @@
 ## 2 主要管线
 
 - Launcher Runtime Pipeline：selector → launcher graph artifact → `launcher.runtime.json` → adapter app → shared `ModLoadContext`
+- Launcher graph contract：`src/Core/Hosting/LauncherGraphDocument.cs` owns the runtime-readable DTO; launcher writes it and `GameBootstrapper` reads it, with no parallel launcher/runtime graph DTO.
 - ConfigPipeline：合并运行时配置
 - Mod Loading：解析 `mod.json`、排序依赖、挂载 VFS、调用 `IMod.OnLoad`
 - GAS Effect Pipeline：从 Ability 激活到 Effect 处理、属性计算与延迟触发

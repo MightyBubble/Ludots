@@ -116,13 +116,13 @@ TotalWarShowcaseRuntime
 
 | 文件 | 链路职责 |
 | --- | --- |
-| `assets/game.json` | 启动 map、capacity、presentation culling、selection preview order keys。 |
-| `assets/Maps/mass_navigation_total_war.json` | map id 和 visual heightmap 绑定。 |
-| `assets/MassNavigationConfig.json` | 导航世界、solver、profiles、obstacles、cadence、arrival、avoidance、camera profiles、view residency。 |
-| `assets/TotalWarShowcaseConfig.json` | 方阵场景、士兵 template/profile、slot layout、outline、obstacle overlay、initial selection。 |
-| `assets/Entities/templates.json` | 可 spawn 的 entity templates。 |
-| `assets/Presentation/performers.json` | performer definitions 和 lifecycle rules。 |
-| `assets/Configs/config_catalog.json` | showcase config catalog。 |
+| `mods/showcases/mass_navigation_total_war_entry/MassNavigationTotalWarEntryMod/assets/game.json` | 启动 map、capacity、presentation culling、selection preview order keys。 |
+| `mods/showcases/mass_navigation_total_war_entry/MassNavigationTotalWarEntryMod/assets/Maps/mass_navigation_total_war.json` | map id 和 visual heightmap 绑定。 |
+| `mods/showcases/mass_navigation_total_war_entry/MassNavigationTotalWarEntryMod/assets/MassNavigationConfig.json` | 导航世界、solver、profiles、obstacles、cadence、arrival、avoidance、camera profiles、view residency。 |
+| `mods/showcases/mass_navigation_total_war_entry/MassNavigationTotalWarEntryMod/assets/TotalWarShowcaseConfig.json` | 方阵场景、士兵 template/profile、slot layout、outline、obstacle overlay、initial selection。 |
+| `mods/showcases/mass_navigation_total_war_entry/MassNavigationTotalWarEntryMod/assets/Entities/templates.json` | 可 spawn 的 entity templates。 |
+| `mods/showcases/mass_navigation_total_war_entry/MassNavigationTotalWarEntryMod/assets/Presentation/performers.json` | performer definitions 和 lifecycle rules。 |
+| `mods/showcases/mass_navigation_total_war_entry/MassNavigationTotalWarEntryMod/assets/Configs/config_catalog.json` | showcase config catalog。 |
 
 ## 严格 authoring 规则
 

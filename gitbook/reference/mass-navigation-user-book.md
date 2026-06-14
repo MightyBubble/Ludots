@@ -44,13 +44,13 @@ Total War 示例的文件入口：
 
 | 文件 | 你在这里做什么 |
 | --- | --- |
-| `assets/game.json` | 配启动地图、presentation capacity、相机裁剪距离、小地图、selection 路径预览订单。 |
-| `assets/Maps/mass_navigation_total_war.json` | 配地图 id、visual heightmap、board/world 数据。 |
-| `assets/MassNavigationConfig.json` | 配导航世界、solver、agent profiles、障碍、cadence、arrival、avoidance、camera profiles、view residency。 |
-| `assets/TotalWarShowcaseConfig.json` | 配业务战场：方阵、士兵模板、slot 排列、轮廓、障碍物 overlay、初始选中。 |
-| `assets/Entities/templates.json` | 配方阵、士兵、障碍物 overlay 的 entity template。 |
-| `assets/Presentation/performers.json` | 配模型、marker、血条、小地图 marker、performer 生命周期规则。 |
-| `assets/Configs/config_catalog.json` | 告诉 ConfigPipeline 加载哪些 showcase 配置。 |
+| `mods/showcases/mass_navigation_total_war_entry/MassNavigationTotalWarEntryMod/assets/game.json` | 配启动地图、presentation capacity、相机裁剪距离、小地图、selection 路径预览订单。 |
+| `mods/showcases/mass_navigation_total_war_entry/MassNavigationTotalWarEntryMod/assets/Maps/mass_navigation_total_war.json` | 配地图 id、visual heightmap、board/world 数据。 |
+| `mods/showcases/mass_navigation_total_war_entry/MassNavigationTotalWarEntryMod/assets/MassNavigationConfig.json` | 配导航世界、solver、agent profiles、障碍、cadence、arrival、avoidance、camera profiles、view residency。 |
+| `mods/showcases/mass_navigation_total_war_entry/MassNavigationTotalWarEntryMod/assets/TotalWarShowcaseConfig.json` | 配业务战场：方阵、士兵模板、slot 排列、轮廓、障碍物 overlay、初始选中。 |
+| `mods/showcases/mass_navigation_total_war_entry/MassNavigationTotalWarEntryMod/assets/Entities/templates.json` | 配方阵、士兵、障碍物 overlay 的 entity template。 |
+| `mods/showcases/mass_navigation_total_war_entry/MassNavigationTotalWarEntryMod/assets/Presentation/performers.json` | 配模型、marker、血条、小地图 marker、performer 生命周期规则。 |
+| `mods/showcases/mass_navigation_total_war_entry/MassNavigationTotalWarEntryMod/assets/Configs/config_catalog.json` | 告诉 ConfigPipeline 加载哪些 showcase 配置。 |
 
 业务 runtime 入口：
 
@@ -129,7 +129,7 @@ Mod 作者不新建这些基础设施：
 
 ## 方阵怎么配置
 
-方阵在 `assets/TotalWarShowcaseConfig.json` 的 `formations[]` 里。
+方阵在 `mods/showcases/mass_navigation_total_war_entry/MassNavigationTotalWarEntryMod/assets/TotalWarShowcaseConfig.json` 的 `formations[]` 里。
 
 示例：
 
@@ -171,7 +171,7 @@ Mod 作者不新建这些基础设施：
 
 ## Agent Profile 怎么配
 
-agent profile 在 `assets/MassNavigationConfig.json` 的 `agentProfiles.profiles[]`。
+agent profile 在 `mods/showcases/mass_navigation_total_war_entry/MassNavigationTotalWarEntryMod/assets/MassNavigationConfig.json` 的 `agentProfiles.profiles[]`。
 
 当前示例有三类：
 
@@ -191,7 +191,7 @@ agent profile 在 `assets/MassNavigationConfig.json` 的 `agentProfiles.profiles
 
 ## Entity Template 怎么配
 
-模板在 `assets/Entities/templates.json`。
+模板在 `mods/showcases/mass_navigation_total_war_entry/MassNavigationTotalWarEntryMod/assets/Entities/templates.json`。
 
 方阵模板当前包含：
 
@@ -222,7 +222,7 @@ agent profile 在 `assets/MassNavigationConfig.json` 的 `agentProfiles.profiles
 
 ## Performer 怎么配
 
-表现写在 `assets/Presentation/performers.json`。
+表现写在 `mods/showcases/mass_navigation_total_war_entry/MassNavigationTotalWarEntryMod/assets/Presentation/performers.json`。
 
 当前 showcase 的生命周期规则是：
 
@@ -307,7 +307,7 @@ Local input
 
 ## 障碍物
 
-障碍在 `assets/MassNavigationConfig.json` 的 `world.obstacles[]`。
+障碍在 `mods/showcases/mass_navigation_total_war_entry/MassNavigationTotalWarEntryMod/assets/MassNavigationConfig.json` 的 `world.obstacles[]`。
 
 示例：
 
@@ -317,8 +317,8 @@ Local input
 
 玩家要看见障碍，所以 showcase 还配置了：
 
-- `assets/Entities/templates.json` 里的 obstacle overlay template。
-- `assets/TotalWarShowcaseConfig.json` 里的 `obstacleOverlay` 外观参数。
+- `mods/showcases/mass_navigation_total_war_entry/MassNavigationTotalWarEntryMod/assets/Entities/templates.json` 里的 obstacle overlay template。
+- `mods/showcases/mass_navigation_total_war_entry/MassNavigationTotalWarEntryMod/assets/TotalWarShowcaseConfig.json` 里的 `obstacleOverlay` 外观参数。
 - `Runtime/TotalWarObstacleOverlayPresentationSystem.cs` 发射 overlay 表现。
 
 不要用隐藏 debug draw 假装障碍可见。玩家要看的东西必须走明确表现链路。
@@ -327,8 +327,8 @@ Local input
 
 相机相关配置分两处：
 
-- `assets/game.json`：presentation culling distance 和 capacity。
-- `assets/MassNavigationConfig.json`：`cameraProfiles` 和 `viewResidency`。
+- `mods/showcases/mass_navigation_total_war_entry/MassNavigationTotalWarEntryMod/assets/game.json`：presentation culling distance 和 capacity。
+- `mods/showcases/mass_navigation_total_war_entry/MassNavigationTotalWarEntryMod/assets/MassNavigationConfig.json`：`cameraProfiles` 和 `viewResidency`。
 
 当前 `viewResidency.mode` 是 `Probe`，并且有 `retainSeconds` 和 `cameraProbes`。这对应产品需求：镜头离开一个地区后，表演单位可以保留一段时间；超过配置时间，再按表现预算处理。
 
@@ -338,11 +338,11 @@ Local input
 
 Total War 地图引用：
 
-`assets/terrain/mass_navigation_total_war_relief.vhtm`
+`mods/showcases/mass_navigation_total_war_entry/MassNavigationTotalWarEntryMod/assets/terrain/mass_navigation_total_war_relief.vhtm`
 
 地图文件：
 
-`assets/Maps/mass_navigation_total_war.json`
+`mods/showcases/mass_navigation_total_war_entry/MassNavigationTotalWarEntryMod/assets/Maps/mass_navigation_total_war.json`
 
 士兵、方阵轮廓、marker、障碍 overlay 都应该贴这个 visual heightmap。缺 heightmap service 应该 fail-fast，不应该静默退回平面。
 
