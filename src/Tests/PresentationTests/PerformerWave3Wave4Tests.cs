@@ -543,9 +543,13 @@ namespace Ludots.Tests.Presentation
             using var world = World.Create();
             Entity owner = world.Create(new CullState { IsVisible = false, LOD = LODLevel.Culled });
             var instances = new PerformerEntityRuntime(world);
+            var definitions = new PerformerDefinitionRegistry();
+            int parentDef = definitions.Register("culled.parent", new PerformerDefinition());
+            int childDef = definitions.Register("culled.child", new PerformerDefinition());
+            instances.BindDefinitions(definitions);
 
-            Entity parentPerformer = instances.Create(1, owner, 10, PresentationAnchorKind.Entity, Vector3.Zero, stableId: 701, Entity.Null, default);
-            Entity childPerformer = instances.Create(2, owner, 10, PresentationAnchorKind.Entity, Vector3.Zero, stableId: 702, parentPerformer, default);
+            Entity parentPerformer = instances.Create(parentDef, owner, 10, PresentationAnchorKind.Entity, Vector3.Zero, stableId: 701, Entity.Null, default);
+            Entity childPerformer = instances.Create(childDef, owner, 10, PresentationAnchorKind.Entity, Vector3.Zero, stableId: 702, parentPerformer, default);
 
             instances.SyncCullVisibility();
 
@@ -593,14 +597,9 @@ namespace Ludots.Tests.Presentation
             attributes.SetCurrent(3, 25f);
             Entity owner = world.Create(attributes, new CullState { IsVisible = false, LOD = LODLevel.Culled });
             var instances = new PerformerEntityRuntime(world);
-            Entity performer = instances.Create(1, owner, 10, PresentationAnchorKind.Entity, Vector3.Zero, stableId: 703, Entity.Null, default);
-            world.Get<PerformerState>(performer).BehaviorActiveMask = 1u;
-            instances.SyncCullVisibility();
-
             var definitions = new PerformerDefinitionRegistry();
-            definitions.Register("culled.behavior", new PerformerDefinition
+            int defId = definitions.Register("culled.behavior", new PerformerDefinition
             {
-                Id = 1,
                 Behaviors =
                 [
                     new BehaviorSlot
@@ -617,6 +616,11 @@ namespace Ludots.Tests.Presentation
                     },
                 ],
             });
+            instances.BindDefinitions(definitions);
+            Entity performer = instances.Create(defId, owner, 10, PresentationAnchorKind.Entity, Vector3.Zero, stableId: 703, Entity.Null, definitions.Get(defId));
+            world.Add(performer, new PerformerBootstrapPending());
+            world.Get<PerformerState>(performer).BehaviorActiveMask = 1u;
+            instances.SyncCullVisibility();
 
             using var system = new PerformerBehaviorSystem(
                 world,
@@ -974,6 +978,7 @@ namespace Ludots.Tests.Presentation
             var requests = new PresentationRequestBuffer();
 
             int meshDef = RegisterAssetDefinition(definitions, "culled.mesh", AssetKind.Mesh, assetId: 10, materialId: 20, slot: 0);
+            instances.BindDefinitions(definitions);
             Entity performer = AllocateActive(instances, world, meshDef, owner, 704);
             world.Get<PerformerState>(performer).AnchorKind = PresentationAnchorKind.Entity;
             instances.SyncCullVisibility();
