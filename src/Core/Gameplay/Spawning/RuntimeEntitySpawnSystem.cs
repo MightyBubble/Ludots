@@ -508,8 +508,8 @@ namespace Ludots.Core.Gameplay.Spawning
                 templateKeyId = _templateKeys.Register(templateId);
             }
 
-            var templateKey = new EntityTemplateKeyCm { TemplateKeyId = templateKeyId };
-            if (World.Has<EntityTemplateKeyCm>(entity))
+            var templateKey = new EntityTemplateKeyRef { TemplateKeyId = templateKeyId };
+            if (World.Has<EntityTemplateKeyRef>(entity))
             {
                 World.Set(entity, templateKey);
             }
@@ -716,8 +716,8 @@ namespace Ludots.Core.Gameplay.Spawning
                 return;
             }
 
-            int templateKeyId = World.Has<EntityTemplateKeyCm>(entity)
-                ? World.Get<EntityTemplateKeyCm>(entity).TemplateKeyId
+            int templateKeyId = World.Has<EntityTemplateKeyRef>(entity)
+                ? World.Get<EntityTemplateKeyRef>(entity).TemplateKeyId
                 : 0;
             if (!_presentationEvents.TryAdd(new PresentationEvent
                 {
@@ -1007,8 +1007,8 @@ namespace Ludots.Core.Gameplay.Spawning
                 }
             }
 
-            return World.Has<EntityTemplateKeyCm>(owner)
-                ? World.Get<EntityTemplateKeyCm>(owner).TemplateKeyId
+            return World.Has<EntityTemplateKeyRef>(owner)
+                ? World.Get<EntityTemplateKeyRef>(owner).TemplateKeyId
                 : 0;
         }
 

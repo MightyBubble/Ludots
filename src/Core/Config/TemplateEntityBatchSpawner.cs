@@ -237,7 +237,7 @@ namespace Ludots.Core.Config
                 Span<AttributeLastSnapshot> attributeSnapshots = chunk.GetSpan<AttributeLastSnapshot>();
                 Span<GameplayTagContainer> gameplayTags = chunk.GetSpan<GameplayTagContainer>();
                 Span<TagCountContainer> tagCounts = chunk.GetSpan<TagCountContainer>();
-                Span<EntityTemplateKeyCm> templateKeys = chunk.GetSpan<EntityTemplateKeyCm>();
+                Span<EntityTemplateKeyRef> templateKeys = chunk.GetSpan<EntityTemplateKeyRef>();
                 Span<MapEntity> mapEntities = includeMapEntity ? chunk.GetSpan<MapEntity>() : default;
                 Span<PresentationStableId> stableIds = includeStableId ? chunk.GetSpan<PresentationStableId>() : default;
                 Span<PresentationLifecycleState> lifecycleStates = includeLifecycleState ? chunk.GetSpan<PresentationLifecycleState>() : default;
@@ -431,7 +431,7 @@ namespace Ludots.Core.Config
             public readonly CullState CullState;
             public readonly GameplayTagContainer GameplayTags;
             public readonly TagCountContainer TagCounts;
-            public readonly EntityTemplateKeyCm TemplateKey;
+            public readonly EntityTemplateKeyRef TemplateKey;
             public readonly int OnSpawnEffectTemplateId;
             public readonly ComponentType[] TagComponentTypes;
             private readonly AttributeSeed[] _attributeSeeds;
@@ -448,7 +448,7 @@ namespace Ludots.Core.Config
                 CullState cullState,
                 GameplayTagContainer gameplayTags,
                 TagCountContainer tagCounts,
-                EntityTemplateKeyCm templateKey,
+                EntityTemplateKeyRef templateKey,
                 int onSpawnEffectTemplateId,
                 ComponentType[] tagComponentTypes,
                 AttributeSeed[] attributeSeeds)
@@ -627,7 +627,7 @@ namespace Ludots.Core.Config
                     Component<AttributeLastSnapshot>.Signature +
                     Component<GameplayTagContainer>.Signature +
                     Component<TagCountContainer>.Signature +
-                    Component<EntityTemplateKeyCm>.Signature;
+                    Component<EntityTemplateKeyRef>.Signature;
 
                 if (hasDynamicHeightSampling)
                 {
@@ -668,7 +668,7 @@ namespace Ludots.Core.Config
                     new CullState { IsVisible = false, LOD = LODLevel.Low },
                     default,
                     default,
-                    new EntityTemplateKeyCm { TemplateKeyId = templateKeyId },
+                    new EntityTemplateKeyRef { TemplateKeyId = templateKeyId },
                     onSpawnEffectTemplateId,
                     tagComponentTypes,
                     attributeSeeds);

@@ -348,8 +348,8 @@ namespace Ludots.Core.Systems
                 throw new InvalidOperationException($"Entity template key '{templateId}' is not registered.");
             }
 
-            var templateKey = new EntityTemplateKeyCm { TemplateKeyId = templateKeyId };
-            if (_world.Has<EntityTemplateKeyCm>(entity))
+            var templateKey = new EntityTemplateKeyRef { TemplateKeyId = templateKeyId };
+            if (_world.Has<EntityTemplateKeyRef>(entity))
             {
                 _world.Set(entity, templateKey);
             }

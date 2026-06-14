@@ -18,7 +18,7 @@
 
 - Registry: `src/Core/Gameplay/Spawning/EntityTemplateKeyRegistry.cs` — 把实体模板映射成稳定整数键，作为 profile 绑定入口
 - Registry: `src/Core/Gameplay/GAS/Registry/AttributeRegistry.cs` 与 `src/Core/Gameplay/GAS/Registry/TagRegistry.cs` — 复用属性与标签 ID，不新增 panel 私有字典
-- Pipeline: `src/Core/Gameplay/Spawning/RuntimeEntitySpawnSystem.cs` — runtime spawn 时写入 `EntityTemplateKeyCm`，让面板可直接按模板取 profile
+- Pipeline: `src/Core/Gameplay/Spawning/RuntimeEntitySpawnSystem.cs` — runtime spawn 时写入 `EntityTemplateKeyRef`，让面板可直接按模板取 profile
 - Pipeline: `mods/capabilities/entityinfo/EntityInfoPanelsMod/EntityInfoPanelService.Sample.cs` — 从 ECS / GAS 采样到固定槽位 SoA 缓冲，再驱动 UI 与 overlay
 - System: `src/Core/Input/Selection/SelectionRuntime.cs` 与 `src/Core/Input/Selection/SelectionControlGroupRuntime.cs` — 统一 live / formation / control group 选择真相
 - System: `mods/showcases/info_panels/GenreInfoShowcaseMod/Systems/GenreInfoShowcasePanelPresentationSystem.cs` — 只做刷新，不持有第二份选择态
@@ -32,7 +32,7 @@
 权威真相分三层，各层职责不得串位：
 
 - 实体语义真相：ECS 组件与模板键
-  - `src/Core/Gameplay/Spawning/EntityTemplateKeyCm.cs`
+  - `src/Core/Gameplay/Spawning/EntityTemplateKeyRef.cs`
   - `src/Core/Gameplay/Spawning/RuntimeEntitySpawnSystem.cs`
 - 选择真相：容器化 selection / view / control group
   - `src/Core/Input/Selection/SelectionComponents.cs`
@@ -144,7 +144,7 @@ RTS 多选时分成三层：
 
 端到端数据流如下：
 
-1. `MapLoader` / runtime spawn 创建实体，并在 `RuntimeEntitySpawnSystem` 写入 `EntityTemplateKeyCm`
+1. `MapLoader` / runtime spawn 创建实体，并在 `RuntimeEntitySpawnSystem` 写入 `EntityTemplateKeyRef`
 2. `GenreInfoShowcaseRuntime` 预设控制组与当前 view
 3. `SelectionRuntime` / `SelectionControlGroupRuntime` 维护 live、formation、control group 容器
 4. `EntityInfoPanelService.Refresh(...)` 按 slot 从 ECS / GAS 采样 stats、tips、actions

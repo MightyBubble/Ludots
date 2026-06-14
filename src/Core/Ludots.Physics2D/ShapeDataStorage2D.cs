@@ -60,7 +60,7 @@ namespace Ludots.Core.Physics2D
         /// <summary>
         /// 注册多边形碰撞体（定点数厘米）。
         /// </summary>
-        public static int RegisterPolygon(Fix64Vec2[] vertices)
+        public static int RegisterPolygon(Fix64Vec2[] vertices, Fix64Vec2 localOffset = default)
         {
             if (vertices == null || vertices.Length < 3)
             {
@@ -79,7 +79,13 @@ namespace Ludots.Core.Physics2D
             }
             center = center / Fix64.FromInt(vertices.Length);
 
-            PolygonShapes.Add(new PolygonShapeData { Vertices = vertices, VertexCount = vertices.Length, LocalCenter = center });
+            PolygonShapes.Add(new PolygonShapeData
+            {
+                Vertices = vertices,
+                VertexCount = vertices.Length,
+                LocalCenter = center,
+                LocalOffset = localOffset
+            });
             int index = _nextIndex++;
             IndexToTypeMap[index] = ColliderType2D.Polygon;
             IndexToPolygonLocalIndex[index] = PolygonShapes.Count - 1;

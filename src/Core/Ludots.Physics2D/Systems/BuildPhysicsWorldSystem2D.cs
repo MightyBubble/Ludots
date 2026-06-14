@@ -3,6 +3,7 @@ using System.Collections.Generic;
 using Arch.Core;
 using Arch.Core.Extensions;
 using Arch.System;
+using Ludots.Core.Gameplay.Spawning;
 using Ludots.Core.Mathematics.FixedPoint;
 using Ludots.Physics.Broadphase;
 using Ludots.Core.Physics2D.Components;
@@ -14,24 +15,32 @@ namespace Ludots.Core.Physics2D.Systems
     /// </summary>
     public sealed class BuildPhysicsWorldSystem2D : BaseSystem<World, float>
     {
-        private readonly QueryDescription _rigidBodyQuery;
+        private readonly QueryDescription _singleRigidBodyQuery;
+        private readonly QueryDescription _compoundRigidBodyQuery;
 
         public List<RigidBodyDesc> RigidBodyDescriptors { get; }
         public List<Entity> Entities { get; }
+        public List<byte> ShapeSlots { get; }
 
         public BuildPhysicsWorldSystem2D(World world) : base(world)
         {
-            _rigidBodyQuery = new QueryDescription().WithAll<Position2D, Collider2D, Mass2D>();
+            _singleRigidBodyQuery = new QueryDescription()
+                .WithAll<Position2D, Collider2D, Mass2D>()
+                .WithNone<CompoundObstacle2DState>();
+            _compoundRigidBodyQuery = new QueryDescription()
+                .WithAll<Position2D, CompoundObstacle2DState, Mass2D>();
             RigidBodyDescriptors = new List<RigidBodyDesc>(1024);
             Entities = new List<Entity>(1024);
+            ShapeSlots = new List<byte>(1024);
         }
 
         public override void Update(in float deltaTime)
         {
             RigidBodyDescriptors.Clear();
             Entities.Clear();
+            ShapeSlots.Clear();
 
-            World.Query(in _rigidBodyQuery, (Entity entity, ref Position2D position, ref Collider2D collider, ref Mass2D mass) =>
+            World.Query(in _singleRigidBodyQuery, (Entity entity, ref Position2D position, ref Collider2D collider, ref Mass2D mass) =>
             {
                 Fix64 rotation = Fix64.Zero;
                 if (World.TryGet(entity, out Rotation2D rot))
@@ -40,16 +49,47 @@ namespace Ludots.Core.Physics2D.Systems
                 }
 
                 var aabb = CalculateAabb(in position, rotation, in collider);
-
-                RigidBodyDescriptors.Add(new RigidBodyDesc
-                {
-                    EntityIndex = entity.Id,
-                    BoundingBox = aabb,
-                    IsStatic = mass.IsStatic
-                });
-
-                Entities.Add(entity);
+                AddRigidBody(entity, shapeSlot: 0, in aabb, mass.IsStatic);
             });
+
+            World.Query(in _compoundRigidBodyQuery, (Entity entity, ref Position2D position, ref CompoundObstacle2DState state, ref Mass2D mass) =>
+            {
+                if (state.SinkPhysicsCollider == 0)
+                {
+                    return;
+                }
+
+                Fix64 rotation = Fix64.Zero;
+                if (World.TryGet(entity, out Rotation2D rot))
+                {
+                    rotation = rot.Value;
+                }
+
+                for (int i = 0; i < state.PieceCount; i++)
+                {
+                    var collider = new Collider2D
+                    {
+                        Type = ToColliderType(state.GetShape(i)),
+                        ShapeDataIndex = state.GetShapeDataIndex(i)
+                    };
+                    var aabb = CalculateAabb(in position, rotation, in collider);
+                    AddRigidBody(entity, checked((byte)i), in aabb, mass.IsStatic);
+                }
+            });
+        }
+
+        private void AddRigidBody(Entity entity, byte shapeSlot, in Aabb aabb, bool isStatic)
+        {
+            RigidBodyDescriptors.Add(new RigidBodyDesc
+            {
+                Index = RigidBodyDescriptors.Count,
+                EntityIndex = entity.Id,
+                BoundingBox = aabb,
+                IsStatic = isStatic
+            });
+
+            Entities.Add(entity);
+            ShapeSlots.Add(shapeSlot);
         }
 
         private static Aabb CalculateAabb(in Position2D position, Fix64 rotation, in Collider2D collider)
@@ -152,8 +192,8 @@ namespace Ludots.Core.Physics2D.Systems
 
             return new Aabb
             {
-                Min = worldPos + min,
-                Max = worldPos + max
+                Min = worldPos + polygonData.LocalOffset + min,
+                Max = worldPos + polygonData.LocalOffset + max
             };
         }
 
@@ -163,6 +203,17 @@ namespace Ludots.Core.Physics2D.Systems
                 cos * v.X - sin * v.Y,
                 sin * v.X + cos * v.Y
             );
+        }
+
+        private static ColliderType2D ToColliderType(ManifestationObstacleShape2D shape)
+        {
+            return shape switch
+            {
+                ManifestationObstacleShape2D.Circle => ColliderType2D.Circle,
+                ManifestationObstacleShape2D.Box => ColliderType2D.Box,
+                ManifestationObstacleShape2D.Polygon => ColliderType2D.Polygon,
+                _ => throw new ArgumentOutOfRangeException(nameof(shape))
+            };
         }
     }
 }

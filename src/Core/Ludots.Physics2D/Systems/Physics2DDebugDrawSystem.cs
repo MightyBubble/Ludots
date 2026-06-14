@@ -142,8 +142,8 @@ namespace Ludots.Core.Physics2D.Systems
                     if (!ShapeDataStorage2D.TryGetPolygon(collider.ShapeDataIndex, out var poly) || poly.Vertices == null || poly.VertexCount < 3) return;
                     for (int i = 0; i < poly.VertexCount; i++)
                     {
-                        var a = drawPosM + poly.Vertices[i].ToVector2() * CmToM;
-                        var b = drawPosM + poly.Vertices[(i + 1) % poly.VertexCount].ToVector2() * CmToM;
+                        var a = drawPosM + (poly.LocalOffset + poly.Vertices[i]).ToVector2() * CmToM;
+                        var b = drawPosM + (poly.LocalOffset + poly.Vertices[(i + 1) % poly.VertexCount]).ToVector2() * CmToM;
                         _buffer.Lines.Add(new DebugDrawLine2D
                         {
                             A = a,

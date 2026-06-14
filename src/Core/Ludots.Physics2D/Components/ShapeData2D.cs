@@ -30,5 +30,6 @@ namespace Ludots.Core.Physics2D.Components
         public Fix64Vec2[] Vertices;
         public int VertexCount;
         public Fix64Vec2 LocalCenter;
+        public Fix64Vec2 LocalOffset;
     }
 }

@@ -124,6 +124,102 @@ namespace Ludots.Tests.GAS
         }
 
         [Test]
+        public void ComponentRegistry_ParsesCompoundObstacle_AndBridgeCreatesCompoundStateOnSameEntity()
+        {
+            using var world = World.Create();
+            var entity = world.Create(WorldPositionCm.FromCm(1000, 2000));
+
+            Ludots.Core.Config.ComponentRegistry.Apply(
+                entity,
+                "CompoundObstacle2D",
+                JsonNode.Parse("""
+                {
+                  "sinkPhysicsCollider": true,
+                  "sinkNavigationObstacle": true,
+                  "pieces": [
+                    {
+                      "shape": "Box",
+                      "halfWidthCm": 100,
+                      "halfHeightCm": 50,
+                      "navRadiusCm": 120,
+                      "localOffsetCm": { "x": -200, "y": 0 }
+                    },
+                    {
+                      "shape": "Polygon",
+                      "navRadiusCm": 90,
+                      "localOffsetCm": { "x": 160, "y": 0 },
+                      "vertices": [
+                        { "x": -40, "y": -40 },
+                        { "x": 40, "y": -40 },
+                        { "x": 0, "y": 60 }
+                      ]
+                    }
+                  ]
+                }
+                """)!);
+
+            var system = new ManifestationObstacleBridge2DSystem(world);
+            system.Update(0f);
+
+            That(world.Has<CompoundObstacle2D>(entity), Is.True);
+            That(world.Has<CompoundObstacle2DState>(entity), Is.True);
+            That(world.Has<Collider2D>(entity), Is.False, "Compound obstacles should not collapse into the legacy single-collider component.");
+            That(world.Has<NavObstacle2D>(entity), Is.False, "Compound obstacles should not collapse into the legacy single-nav-obstacle component.");
+            That(world.Has<Mass2D>(entity), Is.True);
+            That(world.Has<Velocity2D>(entity), Is.True);
+            That(world.Has<NavKinematics2D>(entity), Is.True);
+
+            var state = world.Get<CompoundObstacle2DState>(entity);
+            That(state.PieceCount, Is.EqualTo(2));
+            That(state.GetShape(0), Is.EqualTo(ManifestationObstacleShape2D.Box));
+            That(state.GetShape(1), Is.EqualTo(ManifestationObstacleShape2D.Polygon));
+            That(ShapeDataStorage2D.TryGetBox(state.GetShapeDataIndex(0), out var box), Is.True);
+            That(box.HalfWidth, Is.EqualTo(Fix64.FromInt(100)));
+            That(box.HalfHeight, Is.EqualTo(Fix64.FromInt(50)));
+            That(ShapeDataStorage2D.TryGetPolygon(state.GetShapeDataIndex(1), out var polygon), Is.True);
+            That(polygon.VertexCount, Is.EqualTo(3));
+
+            That(world.Get<NavKinematics2D>(entity).RadiusCm, Is.EqualTo(Fix64.FromInt(120)));
+        }
+
+        [Test]
+        public void ManifestationObstacleBridge2D_RejectsSingleAndCompoundObstacleOnSameEntity()
+        {
+            using var world = World.Create();
+            var entity = world.Create(
+                WorldPositionCm.FromCm(0, 0),
+                new ManifestationObstacleIntent2D
+                {
+                    Shape = ManifestationObstacleShape2D.Circle,
+                    SinkPhysicsCollider = 1,
+                    SinkNavigationObstacle = 1,
+                    RadiusCm = 10,
+                    NavRadiusCm = 10
+                });
+
+            var compound = new CompoundObstacle2D
+            {
+                SinkPhysicsCollider = 1,
+                SinkNavigationObstacle = 1
+            };
+            compound.SetPiece(
+                0,
+                ManifestationObstacleShape2D.Circle,
+                radiusCm: 20,
+                halfWidthCm: 0,
+                halfHeightCm: 0,
+                localOffsetXCm: 0,
+                localOffsetYCm: 0,
+                navRadiusCm: 20);
+            world.Add(entity, compound);
+
+            var system = new ManifestationObstacleBridge2DSystem(world);
+
+            InvalidOperationException ex = Throws<InvalidOperationException>(() => system.Update(0f))!;
+            That(ex.Message, Does.Contain("must not author both ManifestationObstacleIntent2D and CompoundObstacle2D"));
+        }
+
+        [Test]
         public void ComponentRegistry_RequiresExactSpatialBoundsKind()
         {
             using var world = World.Create();
@@ -190,6 +286,51 @@ namespace Ludots.Tests.GAS
                 "ManifestationObstacleIntent2D",
                 """{ "shape": "Circle", "sinkPhysicsCollider": 1, "sinkNavigationObstacle": true, "navRadiusCm": 10 }""",
                 "requires a boolean value");
+            AssertRejects(
+                world,
+                "CompoundObstacle2D",
+                """{ "sinkPhysicsCollider": true, "sinkNavigationObstacle": true, "pieces": [] }""",
+                "pieces count must be between");
+            AssertRejects(
+                world,
+                "CompoundObstacle2D",
+                """
+                {
+                  "sinkPhysicsCollider": true,
+                  "sinkNavigationObstacle": true,
+                  "pieces": [
+                    {
+                      "shape": "Polygon",
+                      "navRadiusCm": 1,
+                      "localOffsetCm": { "x": 0, "y": 0 },
+                      "vertices": [
+                        { "x": 0, "y": 0 },
+                        { "x": 1, "y": 0 }
+                      ]
+                    }
+                  ]
+                }
+                """,
+                "vertices count must be between");
+            AssertRejects(
+                world,
+                "CompoundObstacle2D",
+                """
+                {
+                  "sinkPhysicsCollider": true,
+                  "sinkNavigationObstacle": true,
+                  "pieces": [
+                    {
+                      "shape": "Circle",
+                      "radiusCm": 10,
+                      "navRadiusCm": 1,
+                      "localOffsetCm": { "x": 0, "y": 0 },
+                      "localOffsetXCm": 0
+                    }
+                  ]
+                }
+                """,
+                "must author either localOffsetCm or localOffsetXCm/localOffsetYCm");
             AssertRejects(
                 world,
                 "AbilityFormSetRef",

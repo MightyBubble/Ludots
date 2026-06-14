@@ -193,7 +193,7 @@ namespace Ludots.Tests.Presentation
 
             if (templateKeyId > 0)
             {
-                _world.Add(entity, new EntityTemplateKeyCm { TemplateKeyId = templateKeyId });
+                _world.Add(entity, new EntityTemplateKeyRef { TemplateKeyId = templateKeyId });
             }
 
             return entity;

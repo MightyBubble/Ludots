@@ -69,6 +69,7 @@ namespace Ludots.Core.Config
             Register<PresentationStaticHeightPending>("PresentationStaticHeightPending");
             Register("ManifestationObstacleIntent2D", SetManifestationObstacleIntent2D);
             Register("ManifestationObstaclePolygon2D", SetManifestationObstaclePolygon2D);
+            Register("CompoundObstacle2D", SetCompoundObstacle2D);
             Register("ManifestationMotion2D", SetManifestationMotion2D);
             Register("DestroyWhenParentExecutionEnds", SetDestroyWhenParentExecutionEnds);
         }
@@ -682,6 +683,150 @@ namespace Ludots.Core.Config
             entity.Add(polygon);
         }
 
+        private static void SetCompoundObstacle2D(Entity entity, JsonNode data)
+        {
+            if (data is not JsonObject obj)
+            {
+                throw new InvalidOperationException("CompoundObstacle2D requires an object payload.");
+            }
+            ValidateProperties(obj, "CompoundObstacle2D", "sinkPhysicsCollider", "sinkNavigationObstacle", "pieces");
+
+            var obstacle = new CompoundObstacle2D
+            {
+                SinkPhysicsCollider = ParseBooleanByte(RequireProperty(obj, "sinkPhysicsCollider", "CompoundObstacle2D"), "CompoundObstacle2D.sinkPhysicsCollider"),
+                SinkNavigationObstacle = ParseBooleanByte(RequireProperty(obj, "sinkNavigationObstacle", "CompoundObstacle2D"), "CompoundObstacle2D.sinkNavigationObstacle"),
+            };
+
+            if (RequireProperty(obj, "pieces", "CompoundObstacle2D") is not JsonArray pieces)
+            {
+                throw new InvalidOperationException("CompoundObstacle2D.pieces requires an array.");
+            }
+
+            if (pieces.Count == 0 || pieces.Count > CompoundObstacle2D.MaxPieces)
+            {
+                throw new InvalidOperationException($"CompoundObstacle2D pieces count must be between 1 and {CompoundObstacle2D.MaxPieces}.");
+            }
+
+            for (int i = 0; i < pieces.Count; i++)
+            {
+                if (pieces[i] is not JsonObject pieceObj)
+                {
+                    throw new InvalidOperationException($"CompoundObstacle2D.pieces[{i}] requires an object payload.");
+                }
+
+                SetCompoundObstaclePiece(ref obstacle, i, pieceObj);
+            }
+
+            entity.Add(obstacle);
+        }
+
+        private static void SetCompoundObstaclePiece(ref CompoundObstacle2D obstacle, int pieceIndex, JsonObject obj)
+        {
+            string context = $"CompoundObstacle2D.pieces[{pieceIndex}]";
+            ValidateProperties(
+                obj,
+                context,
+                "shape",
+                "navRadiusCm",
+                "radiusCm",
+                "halfWidthCm",
+                "halfHeightCm",
+                "localOffsetCm",
+                "localOffsetXCm",
+                "localOffsetYCm",
+                "vertices");
+
+            ManifestationObstacleShape2D shape = ParseManifestationObstacleShape(
+                RequireStringProperty(obj, "shape", context),
+                context);
+
+            int radiusCm = 0;
+            int halfWidthCm = 0;
+            int halfHeightCm = 0;
+            if (shape == ManifestationObstacleShape2D.Circle)
+            {
+                RequireAbsentProperties(obj, $"{context} Circle", "halfWidthCm", "halfHeightCm", "vertices");
+                radiusCm = ReadIntProperty(obj, "radiusCm", context);
+            }
+            else if (shape == ManifestationObstacleShape2D.Box)
+            {
+                RequireAbsentProperties(obj, $"{context} Box", "radiusCm", "vertices");
+                halfWidthCm = ReadIntProperty(obj, "halfWidthCm", context);
+                halfHeightCm = ReadIntProperty(obj, "halfHeightCm", context);
+            }
+            else
+            {
+                RequireAbsentProperties(obj, $"{context} Polygon", "radiusCm", "halfWidthCm", "halfHeightCm");
+            }
+
+            bool hasLocalOffset = obj.TryGetPropertyValue("localOffsetCm", out _);
+            bool hasSplitLocalOffset =
+                obj.TryGetPropertyValue("localOffsetXCm", out _) ||
+                obj.TryGetPropertyValue("localOffsetYCm", out _);
+            if (hasLocalOffset && hasSplitLocalOffset)
+            {
+                throw new InvalidOperationException($"{context} must author either localOffsetCm or localOffsetXCm/localOffsetYCm, not both.");
+            }
+
+            int localOffsetXCm;
+            int localOffsetYCm;
+            if (TryReadPointProperty(obj, out var localOffset, "localOffsetCm", $"{context}.localOffsetCm"))
+            {
+                localOffsetXCm = localOffset.X;
+                localOffsetYCm = localOffset.Y;
+            }
+            else
+            {
+                localOffsetXCm = ReadIntProperty(obj, "localOffsetXCm", context);
+                localOffsetYCm = ReadIntProperty(obj, "localOffsetYCm", context);
+            }
+
+            int navRadiusCm = ReadIntProperty(obj, "navRadiusCm", context);
+            obstacle.SetPiece(
+                pieceIndex,
+                shape,
+                radiusCm,
+                halfWidthCm,
+                halfHeightCm,
+                localOffsetXCm,
+                localOffsetYCm,
+                navRadiusCm);
+
+            if (shape == ManifestationObstacleShape2D.Polygon)
+            {
+                if (RequireProperty(obj, "vertices", context) is not JsonArray vertices)
+                {
+                    throw new InvalidOperationException($"{context}.vertices requires an array.");
+                }
+
+                if (vertices.Count < 3 || vertices.Count > CompoundObstacle2D.MaxVerticesPerPolygon)
+                {
+                    throw new InvalidOperationException(
+                        $"{context}.vertices count must be between 3 and {CompoundObstacle2D.MaxVerticesPerPolygon}.");
+                }
+
+                obstacle.SetPolygonVertexCount(pieceIndex, vertices.Count);
+                for (int i = 0; i < vertices.Count; i++)
+                {
+                    if (vertices[i] is not JsonObject pointObj)
+                    {
+                        throw new InvalidOperationException($"{context}.vertices entries must be objects with x/y.");
+                    }
+
+                    obstacle.SetVertex(
+                        pieceIndex,
+                        i,
+                        new WorldCmInt2(
+                            ReadIntProperty(pointObj, "x", $"{context}.vertices[{i}]"),
+                            ReadIntProperty(pointObj, "y", $"{context}.vertices[{i}]")));
+                }
+            }
+            else if (obj.ContainsKey("vertices"))
+            {
+                throw new InvalidOperationException($"{context} {shape} must not author 'vertices'.");
+            }
+        }
+
         private static void SetAbilityExecAimSync(Entity entity, JsonNode data)
         {
             if (data is not JsonObject obj)
@@ -722,9 +867,14 @@ namespace Ludots.Core.Config
 
         private static ManifestationObstacleShape2D ParseManifestationObstacleShape(string? raw)
         {
+            return ParseManifestationObstacleShape(raw, "ManifestationObstacleIntent2D");
+        }
+
+        private static ManifestationObstacleShape2D ParseManifestationObstacleShape(string? raw, string context)
+        {
             if (string.IsNullOrWhiteSpace(raw))
             {
-                throw new InvalidOperationException("ManifestationObstacleIntent2D requires a non-empty shape.");
+                throw new InvalidOperationException($"{context} requires a non-empty shape.");
             }
 
             return raw switch
@@ -732,7 +882,7 @@ namespace Ludots.Core.Config
                 "Circle" => ManifestationObstacleShape2D.Circle,
                 "Box" => ManifestationObstacleShape2D.Box,
                 "Polygon" => ManifestationObstacleShape2D.Polygon,
-                _ => throw new InvalidOperationException($"Unsupported ManifestationObstacleIntent2D shape '{raw}'.")
+                _ => throw new InvalidOperationException($"Unsupported {context} shape '{raw}'.")
             };
         }
 
