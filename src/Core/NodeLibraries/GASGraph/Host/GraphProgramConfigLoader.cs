@@ -6,6 +6,7 @@ using Ludots.Core.Config;
 using Ludots.Core.GraphRuntime;
 using Ludots.Core.Gameplay.GAS.Registry;
 using Ludots.Core.NodeLibraries.GASGraph;
+using Ludots.Core.Registry;
 
 namespace Ludots.Core.NodeLibraries.GASGraph.Host
 {
@@ -14,12 +15,22 @@ namespace Ludots.Core.NodeLibraries.GASGraph.Host
         private readonly ConfigPipeline _pipeline;
         private readonly GraphProgramRegistry _registry;
         private readonly IGraphSymbolResolver _symbolResolver;
+        private readonly GraphOutputSchemaRegistry? _outputSchemas;
+        private readonly StringIntRegistry? _outputValueKeys;
+        private readonly Dictionary<string, GraphOutputSchema> _pendingOutputSchemas = new(StringComparer.OrdinalIgnoreCase);
 
-        public GraphProgramConfigLoader(ConfigPipeline pipeline, GraphProgramRegistry registry, IGraphSymbolResolver symbolResolver)
+        public GraphProgramConfigLoader(
+            ConfigPipeline pipeline,
+            GraphProgramRegistry registry,
+            IGraphSymbolResolver symbolResolver,
+            GraphOutputSchemaRegistry? outputSchemas = null,
+            StringIntRegistry? outputValueKeys = null)
         {
             _pipeline = pipeline ?? throw new ArgumentNullException(nameof(pipeline));
             _registry = registry ?? throw new ArgumentNullException(nameof(registry));
             _symbolResolver = symbolResolver ?? throw new ArgumentNullException(nameof(symbolResolver));
+            _outputSchemas = outputSchemas;
+            _outputValueKeys = outputValueKeys;
         }
 
         public List<GraphProgramPackage> LoadIdsAndCompile(
@@ -29,6 +40,8 @@ namespace Ludots.Core.NodeLibraries.GASGraph.Host
         {
             _registry.Clear();
             GraphIdRegistry.Clear();
+            _pendingOutputSchemas.Clear();
+            _outputSchemas?.Clear();
 
             var entry = ConfigPipeline.RequireEntry(catalog, relativePath, ConfigMergePolicy.ArrayById, "id");
             var merged = _pipeline.MergeArrayByIdFromCatalog(in entry, report);
@@ -54,7 +67,7 @@ namespace Ludots.Core.NodeLibraries.GASGraph.Host
                         throw new InvalidOperationException($"Graph id mismatch: '{id}' vs '{cfg.Id}'.");
 
                     GraphIdRegistry.Register(id);
-                    var (pkg, diags) = GraphCompiler.Compile(cfg);
+                    var (pkg, outputSchema, diags) = GraphCompiler.CompileWithOutputs(cfg);
                     for (int d = 0; d < diags.Count; d++)
                     {
                         if (diags[d].Severity == GraphDiagnosticSeverity.Error)
@@ -65,6 +78,7 @@ namespace Ludots.Core.NodeLibraries.GASGraph.Host
                     if (pkg.HasValue)
                     {
                         packages.Add(pkg.Value);
+                        _pendingOutputSchemas[id] = outputSchema;
                     }
                 }
                 catch (Exception ex)
@@ -92,9 +106,52 @@ namespace Ludots.Core.NodeLibraries.GASGraph.Host
                 int id = GraphIdRegistry.GetId(name);
                 if (id <= 0) id = GraphIdRegistry.Register(name);
                 _registry.Register(id, program);
+                if (_outputSchemas != null)
+                {
+                    GraphOutputSchema schema = _pendingOutputSchemas.TryGetValue(name, out GraphOutputSchema pendingSchema)
+                        ? ResolveOutputValueKeys(pendingSchema)
+                        : GraphOutputSchema.Empty;
+                    _outputSchemas.Register(id, schema);
+                }
             }
 
             GraphIdRegistry.Freeze();
+        }
+
+        private GraphOutputSchema ResolveOutputValueKeys(GraphOutputSchema schema)
+        {
+            if (!schema.HasBindings)
+            {
+                return schema;
+            }
+
+            GraphOutputBinding[] source = schema.Bindings;
+            GraphOutputBinding[] resolved = new GraphOutputBinding[source.Length];
+            for (int i = 0; i < source.Length; i++)
+            {
+                GraphOutputBinding binding = source[i];
+                if (binding.Destination != GraphOutputDestinationKind.Summary)
+                {
+                    resolved[i] = binding;
+                    continue;
+                }
+
+                if (_outputValueKeys == null)
+                {
+                    throw new InvalidOperationException(
+                        $"Graph summary output '{binding.Id}' requires a GraphOutputValueKeyRegistry.");
+                }
+
+                if (string.IsNullOrWhiteSpace(binding.Key))
+                {
+                    throw new InvalidOperationException(
+                        $"Graph summary output '{binding.Id}' requires a key.");
+                }
+
+                resolved[i] = binding.WithResolvedKeyId(_outputValueKeys.Register(binding.Key));
+            }
+
+            return new GraphOutputSchema(resolved);
         }
 
         private void PatchSymbols(string[] symbols, GraphInstruction[] program)
@@ -109,13 +166,29 @@ namespace Ludots.Core.NodeLibraries.GASGraph.Host
                 switch (op)
                 {
                     case GraphNodeOp.QueryFilterTagAll:
+                    case GraphNodeOp.QueryFilterTagAny:
+                    case GraphNodeOp.QueryFilterTagNone:
                     case GraphNodeOp.SendEvent:
                     case GraphNodeOp.HasTag:
                         ins.Imm = _symbolResolver.ResolveTag(ResolveSymbol(symbols, ins.Imm));
                         break;
                     case GraphNodeOp.LoadAttribute:
                     case GraphNodeOp.ModifyAttributeAdd:
+                    case GraphNodeOp.QueryFilterAttributeRange:
+                    case GraphNodeOp.QuerySortByAttribute:
+                    case GraphNodeOp.AggSumAttribute:
+                    case GraphNodeOp.AggAverageAttribute:
+                    case GraphNodeOp.AggMaxAttribute:
+                    case GraphNodeOp.AggMinAttribute:
+                    case GraphNodeOp.AggMaxEntityByAttribute:
+                    case GraphNodeOp.AggMinEntityByAttribute:
                         ins.Imm = _symbolResolver.ResolveAttribute(ResolveSymbol(symbols, ins.Imm));
+                        break;
+                    case GraphNodeOp.QueryFilterTemplate:
+                        ins.Imm = _symbolResolver.ResolveEntityTemplate(ResolveSymbol(symbols, ins.Imm));
+                        break;
+                    case GraphNodeOp.QueryFromCollection:
+                        ins.Imm = ConfigKeyRegistry.Register(ResolveSymbol(symbols, ins.Imm));
                         break;
                     case GraphNodeOp.ApplyEffectTemplate:
                     case GraphNodeOp.FanOutApplyEffect:
@@ -146,6 +219,9 @@ namespace Ludots.Core.NodeLibraries.GASGraph.Host
                     case GraphNodeOp.RelationshipAggSumMetric:
                     case GraphNodeOp.RelationshipAggMaxMetric:
                     case GraphNodeOp.RelationshipAggAverageMetric:
+                    case GraphNodeOp.RelationshipAggMinMetric:
+                    case GraphNodeOp.RelationshipAggMaxEntityByMetric:
+                    case GraphNodeOp.RelationshipAggMinEntityByMetric:
                         if (ins.Imm >= 0)
                         {
                             ins.Imm = _symbolResolver.ResolveRelationshipMetric(ResolveSymbol(symbols, ins.Imm));
@@ -162,7 +238,10 @@ namespace Ludots.Core.NodeLibraries.GASGraph.Host
                              op == GraphNodeOp.RelationshipGetMetric ||
                              op == GraphNodeOp.RelationshipAggSumMetric ||
                              op == GraphNodeOp.RelationshipAggMaxMetric ||
-                             op == GraphNodeOp.RelationshipAggAverageMetric) &&
+                             op == GraphNodeOp.RelationshipAggAverageMetric ||
+                             op == GraphNodeOp.RelationshipAggMinMetric ||
+                             op == GraphNodeOp.RelationshipAggMaxEntityByMetric ||
+                             op == GraphNodeOp.RelationshipAggMinEntityByMetric) &&
                             ins.Flags != byte.MaxValue)
                         {
                             ins.Flags = checked((byte)_symbolResolver.ResolveRelationshipType(ResolveSymbol(symbols, ins.Flags)));

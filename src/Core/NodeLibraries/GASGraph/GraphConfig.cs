@@ -9,6 +9,7 @@ namespace Ludots.Core.NodeLibraries.GASGraph
         public string Kind { get; set; } = "Effect";
         public string Entry { get; set; } = string.Empty;
         public List<GraphNodeConfig> Nodes { get; set; } = new();
+        public List<GraphOutputConfig> Outputs { get; set; } = new();
     }
 
     public sealed class GraphNodeConfig
@@ -24,10 +25,13 @@ namespace Ludots.Core.NodeLibraries.GASGraph
 
         public string? Tag { get; set; }
         public string? Attribute { get; set; }
+        public string? Template { get; set; }
+        public string? CollectionKey { get; set; }
         public string? EffectTemplate { get; set; }
 
         public float Radius { get; set; }
         public int Limit { get; set; }
+        public int TeamId { get; set; }
         public string? Sort { get; set; }
         public string? RelationshipType { get; set; }
         public string? Metric { get; set; }
@@ -35,6 +39,19 @@ namespace Ludots.Core.NodeLibraries.GASGraph
         public string? Reason { get; set; }
         public string? PayloadPreset { get; set; }
         public bool Descending { get; set; }
+    }
+
+    public sealed class GraphOutputConfig
+    {
+        public string Id { get; set; } = string.Empty;
+        public string Destination { get; set; } = nameof(GraphOutputDestinationKind.Summary);
+        public string Type { get; set; } = string.Empty;
+        public string Source { get; set; } = string.Empty;
+        public string Key { get; set; } = string.Empty;
+        public string CollectionKey { get; set; } = string.Empty;
+        public string Role { get; set; } = string.Empty;
+        public string Title { get; set; } = string.Empty;
+        public string Summary { get; set; } = string.Empty;
     }
 }
 

@@ -1,5 +1,6 @@
 using System;
 using System.Collections.Generic;
+using Ludots.Core.EntityCollections;
 using Ludots.Core.GraphRuntime;
 
 namespace Ludots.Core.NodeLibraries.GASGraph
@@ -8,10 +9,16 @@ namespace Ludots.Core.NodeLibraries.GASGraph
     {
         public static (GraphProgramPackage? Package, List<GraphDiagnostic> Diagnostics) Compile(GraphConfig cfg)
         {
+            var (package, _, diagnostics) = CompileWithOutputs(cfg);
+            return (package, diagnostics);
+        }
+
+        public static (GraphProgramPackage? Package, GraphOutputSchema OutputSchema, List<GraphDiagnostic> Diagnostics) CompileWithOutputs(GraphConfig cfg)
+        {
             var diagnostics = GraphValidator.Validate(cfg);
             if (HasErrors(diagnostics))
             {
-                return (null, diagnostics);
+                return (null, GraphOutputSchema.Empty, diagnostics);
             }
 
             var nodesById = new Dictionary<string, GraphNodeConfig>(StringComparer.OrdinalIgnoreCase);
@@ -31,7 +38,7 @@ namespace Ludots.Core.NodeLibraries.GASGraph
                 if (!visited.Add(current))
                 {
                     diagnostics.Add(new GraphDiagnostic(GraphDiagnosticSeverity.Error, GraphDiagnosticCodes.NextCycle, $"Cycle detected in Next chain at node '{current}'.", cfg.Id, current));
-                    return (null, diagnostics);
+                    return (null, GraphOutputSchema.Empty, diagnostics);
                 }
                 ordered.Add(node);
                 current = node.Next ?? string.Empty;
@@ -79,7 +86,7 @@ namespace Ludots.Core.NodeLibraries.GASGraph
                     valueMap[node.Id] = (outType, dstReg);
                 }
 
-                if (HasErrors(diagnostics)) return (null, diagnostics);
+                if (HasErrors(diagnostics)) return (null, GraphOutputSchema.Empty, diagnostics);
 
                 var ins = new GraphInstruction { Op = (ushort)op, Dst = dstReg };
 
@@ -308,9 +315,56 @@ namespace Ludots.Core.NodeLibraries.GASGraph
                     case GraphNodeOp.RelationshipAggSumMetric:
                     case GraphNodeOp.RelationshipAggMaxMetric:
                     case GraphNodeOp.RelationshipAggAverageMetric:
+                    case GraphNodeOp.RelationshipAggMinMetric:
+                    case GraphNodeOp.RelationshipAggMaxEntityByMetric:
+                    case GraphNodeOp.RelationshipAggMinEntityByMetric:
                         ins.A = RequireInput(node, 0, GraphValueType.Entity, valueMap, cfg.Id, diagnostics);
                         ins.Imm = Intern(symbolToIndex, symbols, node.Metric);
                         ins.Flags = RequireRelationshipTypeSymbol(node.RelationshipType, symbolToIndex, symbols, cfg.Id, node.Id, diagnostics);
+                        break;
+                    case GraphNodeOp.QueryAllMapEntities:
+                        break;
+                    case GraphNodeOp.QueryFromCollection:
+                        ins.A = node.Inputs.Count > 0
+                            ? RequireInput(node, 0, GraphValueType.Entity, valueMap, cfg.Id, diagnostics)
+                            : (byte)0;
+                        ins.Imm = Intern(symbolToIndex, symbols, node.CollectionKey);
+                        break;
+                    case GraphNodeOp.QueryFilterTeam:
+                        if (node.Inputs.Count > 0)
+                        {
+                            ins.A = RequireInput(node, 0, GraphValueType.Int, valueMap, cfg.Id, diagnostics);
+                            ins.Flags = 1;
+                        }
+                        else
+                        {
+                            ins.Imm = node.TeamId != 0 ? node.TeamId : node.IntValue;
+                            ins.Flags = 0;
+                        }
+                        break;
+                    case GraphNodeOp.QueryFilterTemplate:
+                        ins.Imm = Intern(symbolToIndex, symbols, node.Template);
+                        break;
+                    case GraphNodeOp.QueryFilterAttributeRange:
+                        ins.B = RequireInput(node, 0, GraphValueType.Float, valueMap, cfg.Id, diagnostics);
+                        ins.C = RequireInput(node, 1, GraphValueType.Float, valueMap, cfg.Id, diagnostics);
+                        ins.Imm = Intern(symbolToIndex, symbols, node.Attribute);
+                        break;
+                    case GraphNodeOp.QueryFilterTagAny:
+                    case GraphNodeOp.QueryFilterTagNone:
+                        ins.Imm = Intern(symbolToIndex, symbols, node.Tag);
+                        break;
+                    case GraphNodeOp.QuerySortByAttribute:
+                        ins.Imm = Intern(symbolToIndex, symbols, node.Attribute);
+                        ins.Flags = node.Descending ? (byte)1 : (byte)0;
+                        break;
+                    case GraphNodeOp.AggSumAttribute:
+                    case GraphNodeOp.AggAverageAttribute:
+                    case GraphNodeOp.AggMaxAttribute:
+                    case GraphNodeOp.AggMinAttribute:
+                    case GraphNodeOp.AggMaxEntityByAttribute:
+                    case GraphNodeOp.AggMinEntityByAttribute:
+                        ins.Imm = Intern(symbolToIndex, symbols, node.Attribute);
                         break;
                 }
 
@@ -319,10 +373,16 @@ namespace Ludots.Core.NodeLibraries.GASGraph
 
             if (HasErrors(diagnostics))
             {
-                return (null, diagnostics);
+                return (null, GraphOutputSchema.Empty, diagnostics);
             }
 
-            return (new GraphProgramPackage(cfg.Id, symbols.ToArray(), instructions.ToArray()), diagnostics);
+            GraphOutputSchema outputSchema = CompileOutputSchema(cfg, valueMap, diagnostics);
+            if (HasErrors(diagnostics))
+            {
+                return (null, GraphOutputSchema.Empty, diagnostics);
+            }
+
+            return (new GraphProgramPackage(cfg.Id, symbols.ToArray(), instructions.ToArray()), outputSchema, diagnostics);
         }
 
         private static (GraphValueType Type, byte? FixedReg) GetOutputTypeAndFixedReg(GraphNodeOp op)
@@ -358,7 +418,225 @@ namespace Ludots.Core.NodeLibraries.GASGraph
                 GraphNodeOp.RelationshipAggSumMetric => (GraphValueType.Int, null),
                 GraphNodeOp.RelationshipAggMaxMetric => (GraphValueType.Int, null),
                 GraphNodeOp.RelationshipAggAverageMetric => (GraphValueType.Int, null),
+                GraphNodeOp.RelationshipAggMinMetric => (GraphValueType.Int, null),
+                GraphNodeOp.RelationshipAggMaxEntityByMetric => (GraphValueType.Entity, null),
+                GraphNodeOp.RelationshipAggMinEntityByMetric => (GraphValueType.Entity, null),
+                GraphNodeOp.AggSumAttribute => (GraphValueType.Float, null),
+                GraphNodeOp.AggAverageAttribute => (GraphValueType.Float, null),
+                GraphNodeOp.AggMaxAttribute => (GraphValueType.Float, null),
+                GraphNodeOp.AggMinAttribute => (GraphValueType.Float, null),
+                GraphNodeOp.AggMaxEntityByAttribute => (GraphValueType.Entity, null),
+                GraphNodeOp.AggMinEntityByAttribute => (GraphValueType.Entity, null),
                 _ => (GraphValueType.Void, null)
+            };
+        }
+
+        private static GraphOutputSchema CompileOutputSchema(
+            GraphConfig cfg,
+            Dictionary<string, (GraphValueType Type, byte Reg)> valueMap,
+            List<GraphDiagnostic> diagnostics)
+        {
+            if (cfg.Outputs == null || cfg.Outputs.Count == 0)
+            {
+                return GraphOutputSchema.Empty;
+            }
+
+            var bindings = new List<GraphOutputBinding>(cfg.Outputs.Count);
+            for (int i = 0; i < cfg.Outputs.Count; i++)
+            {
+                GraphOutputConfig output = cfg.Outputs[i];
+                if (output == null)
+                {
+                    continue;
+                }
+
+                string outputId = string.IsNullOrWhiteSpace(output.Id)
+                    ? $"output[{i}]"
+                    : output.Id;
+
+                if (!TryParseOutputDestination(output.Destination, out GraphOutputDestinationKind destination))
+                {
+                    diagnostics.Add(new GraphDiagnostic(
+                        GraphDiagnosticSeverity.Error,
+                        GraphDiagnosticCodes.TypeMismatch,
+                        $"Graph output '{outputId}' has unsupported destination '{output.Destination}'.",
+                        cfg.Id,
+                        outputId));
+                    continue;
+                }
+
+                if (!TryParseOutputValueKind(output.Type, out GraphOutputValueKind valueKind))
+                {
+                    diagnostics.Add(new GraphDiagnostic(
+                        GraphDiagnosticSeverity.Error,
+                        GraphDiagnosticCodes.TypeMismatch,
+                        $"Graph output '{outputId}' has unsupported type '{output.Type}'.",
+                        cfg.Id,
+                        outputId));
+                    continue;
+                }
+
+                if (destination == GraphOutputDestinationKind.EntityCollection)
+                {
+                    CompileCollectionOutput(cfg, output, outputId, valueKind, bindings, diagnostics);
+                    continue;
+                }
+
+                CompileSummaryOutput(cfg, output, outputId, valueKind, valueMap, bindings, diagnostics);
+            }
+
+            return bindings.Count == 0
+                ? GraphOutputSchema.Empty
+                : new GraphOutputSchema(bindings.ToArray());
+        }
+
+        private static void CompileCollectionOutput(
+            GraphConfig cfg,
+            GraphOutputConfig output,
+            string outputId,
+            GraphOutputValueKind valueKind,
+            List<GraphOutputBinding> bindings,
+            List<GraphDiagnostic> diagnostics)
+        {
+            if (valueKind != GraphOutputValueKind.TargetList)
+            {
+                diagnostics.Add(new GraphDiagnostic(
+                    GraphDiagnosticSeverity.Error,
+                    GraphDiagnosticCodes.TypeMismatch,
+                    $"Graph collection output '{outputId}' must use type TargetList.",
+                    cfg.Id,
+                    outputId));
+                return;
+            }
+
+            if (string.IsNullOrWhiteSpace(output.CollectionKey))
+            {
+                diagnostics.Add(new GraphDiagnostic(
+                    GraphDiagnosticSeverity.Error,
+                    GraphDiagnosticCodes.MissingNodeRef,
+                    $"Graph collection output '{outputId}' requires collectionKey.",
+                    cfg.Id,
+                    outputId));
+                return;
+            }
+
+            EntityCollectionRoleKind role = EntityCollectionRoleKind.Display;
+            if (!string.IsNullOrWhiteSpace(output.Role) &&
+                !Enum.TryParse(output.Role, ignoreCase: false, out role))
+            {
+                diagnostics.Add(new GraphDiagnostic(
+                    GraphDiagnosticSeverity.Error,
+                    GraphDiagnosticCodes.TypeMismatch,
+                    $"Graph collection output '{outputId}' has unsupported role '{output.Role}'.",
+                    cfg.Id,
+                    outputId));
+                return;
+            }
+
+            bindings.Add(new GraphOutputBinding(
+                outputId,
+                GraphOutputDestinationKind.EntityCollection,
+                GraphOutputValueKind.TargetList,
+                register: 0,
+                keyId: 0,
+                key: string.Empty,
+                collectionKey: output.CollectionKey.Trim(),
+                collectionRole: role,
+                title: output.Title,
+                summary: output.Summary));
+        }
+
+        private static void CompileSummaryOutput(
+            GraphConfig cfg,
+            GraphOutputConfig output,
+            string outputId,
+            GraphOutputValueKind valueKind,
+            Dictionary<string, (GraphValueType Type, byte Reg)> valueMap,
+            List<GraphOutputBinding> bindings,
+            List<GraphDiagnostic> diagnostics)
+        {
+            if (valueKind == GraphOutputValueKind.TargetList)
+            {
+                diagnostics.Add(new GraphDiagnostic(
+                    GraphDiagnosticSeverity.Error,
+                    GraphDiagnosticCodes.TypeMismatch,
+                    $"Graph summary output '{outputId}' cannot use type TargetList.",
+                    cfg.Id,
+                    outputId));
+                return;
+            }
+
+            if (string.IsNullOrWhiteSpace(output.Source) ||
+                !valueMap.TryGetValue(output.Source, out (GraphValueType Type, byte Reg) source))
+            {
+                diagnostics.Add(new GraphDiagnostic(
+                    GraphDiagnosticSeverity.Error,
+                    GraphDiagnosticCodes.MissingNodeRef,
+                    $"Graph summary output '{outputId}' references missing source '{output.Source}'.",
+                    cfg.Id,
+                    outputId));
+                return;
+            }
+
+            if (!MatchesOutputType(valueKind, source.Type))
+            {
+                diagnostics.Add(new GraphDiagnostic(
+                    GraphDiagnosticSeverity.Error,
+                    GraphDiagnosticCodes.TypeMismatch,
+                    $"Graph summary output '{outputId}' type {valueKind} does not match source '{output.Source}' type {source.Type}.",
+                    cfg.Id,
+                    outputId));
+                return;
+            }
+
+            string key = string.IsNullOrWhiteSpace(output.Key) ? outputId : output.Key.Trim();
+            bindings.Add(new GraphOutputBinding(
+                outputId,
+                GraphOutputDestinationKind.Summary,
+                valueKind,
+                source.Reg,
+                keyId: 0,
+                key,
+                collectionKey: string.Empty,
+                collectionRole: EntityCollectionRoleKind.Display,
+                title: output.Title,
+                summary: output.Summary));
+        }
+
+        private static bool TryParseOutputDestination(string value, out GraphOutputDestinationKind destination)
+        {
+            destination = GraphOutputDestinationKind.Summary;
+            if (string.IsNullOrWhiteSpace(value))
+            {
+                return false;
+            }
+
+            return Enum.TryParse(value, ignoreCase: false, out destination) &&
+                   Enum.IsDefined(typeof(GraphOutputDestinationKind), destination);
+        }
+
+        private static bool TryParseOutputValueKind(string value, out GraphOutputValueKind valueKind)
+        {
+            valueKind = default;
+            if (string.IsNullOrWhiteSpace(value))
+            {
+                return false;
+            }
+
+            return Enum.TryParse(value, ignoreCase: false, out valueKind) &&
+                   Enum.IsDefined(typeof(GraphOutputValueKind), valueKind);
+        }
+
+        private static bool MatchesOutputType(GraphOutputValueKind outputKind, GraphValueType graphType)
+        {
+            return outputKind switch
+            {
+                GraphOutputValueKind.Bool => graphType == GraphValueType.Bool,
+                GraphOutputValueKind.Int => graphType == GraphValueType.Int,
+                GraphOutputValueKind.Float => graphType == GraphValueType.Float,
+                GraphOutputValueKind.Entity => graphType == GraphValueType.Entity,
+                GraphOutputValueKind.TargetList => graphType == GraphValueType.TargetList,
+                _ => false,
             };
         }
 

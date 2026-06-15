@@ -1,4 +1,5 @@
 using System;
+using System.Runtime.CompilerServices;
 using Arch.Core;
 using Arch.Relationships;
 
@@ -287,26 +288,38 @@ namespace Ludots.Core.Gameplay.Relationships
             }
 
             int validatedTypeId = ValidateFilterTypeId(typeId);
-            var collected = new Entity[buffer.Length];
             int count = 0;
-            _world.Query(in RelationshipQuery, (Entity source, ref Relationship<RelationshipEdgeSet> relationships) =>
+            foreach (ref var chunk in _world.Query(in RelationshipQuery))
             {
-                if (count >= collected.Length)
+                ref Entity sourceFirst = ref chunk.Entity(0);
+                Span<Relationship<RelationshipEdgeSet>> relationshipSpans = chunk.GetSpan<Relationship<RelationshipEdgeSet>>();
+                foreach (int index in chunk)
                 {
-                    return;
-                }
-
-                foreach ((Entity key, RelationshipEdgeSet set) in relationships)
-                {
-                    if (key == target && MatchesType(set, validatedTypeId))
+                    if (count >= buffer.Length)
                     {
-                        collected[count++] = source;
+                        break;
+                    }
+
+                    Entity source = Unsafe.Add(ref sourceFirst, index);
+                    ref Relationship<RelationshipEdgeSet> relationships = ref relationshipSpans[index];
+                    foreach ((Entity key, RelationshipEdgeSet set) in relationships)
+                    {
+                        if (key != target || !MatchesType(set, validatedTypeId))
+                        {
+                            continue;
+                        }
+
+                        buffer[count++] = source;
                         break;
                     }
                 }
-            });
 
-            collected.AsSpan(0, count).CopyTo(buffer);
+                if (count >= buffer.Length)
+                {
+                    break;
+                }
+            }
+
             return count;
         }
 

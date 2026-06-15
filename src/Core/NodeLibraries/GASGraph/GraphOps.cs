@@ -112,6 +112,24 @@ namespace Ludots.Core.NodeLibraries.GASGraph
         RelationshipAggSumMetric = 374,
         RelationshipAggMaxMetric = 375,
         RelationshipAggAverageMetric = 376,
+
+        QueryAllMapEntities = 380,
+        QueryFromCollection = 381,
+        QueryFilterTeam = 382,
+        QueryFilterTemplate = 383,
+        QueryFilterAttributeRange = 384,
+        QueryFilterTagAny = 385,
+        QueryFilterTagNone = 386,
+        QuerySortByAttribute = 387,
+        AggSumAttribute = 388,
+        AggAverageAttribute = 389,
+        AggMaxAttribute = 390,
+        AggMinAttribute = 391,
+        AggMaxEntityByAttribute = 392,
+        AggMinEntityByAttribute = 393,
+        RelationshipAggMinMetric = 394,
+        RelationshipAggMaxEntityByMetric = 395,
+        RelationshipAggMinEntityByMetric = 396,
     }
 
     public static class GraphNodeOpParser

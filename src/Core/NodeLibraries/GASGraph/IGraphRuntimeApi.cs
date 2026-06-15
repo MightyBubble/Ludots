@@ -1,6 +1,7 @@
 using System;
 using Arch.Core;
 using Ludots.Core.Gameplay.Relationships;
+using Ludots.Core.Gameplay.Teams;
 using Ludots.Core.Mathematics;
 
 namespace Ludots.Core.NodeLibraries.GASGraph
@@ -41,6 +42,105 @@ namespace Ludots.Core.NodeLibraries.GASGraph
         int QueryCone(IntVector2 origin, int directionDeg, int halfAngleDeg, float rangeCm, Span<Entity> buffer);
         int QueryRectangle(IntVector2 center, int halfWidthCm, int halfHeightCm, int rotationDeg, Span<Entity> buffer);
         int QueryLine(IntVector2 origin, int directionDeg, int lengthCm, int halfWidthCm, Span<Entity> buffer);
+        int CollectMapEntities(Span<Entity> buffer)
+        {
+            throw new InvalidOperationException("Graph entity query runtime is not available.");
+        }
+
+        int CopyEntityCollection(Entity owner, int collectionKeyId, Span<Entity> buffer)
+        {
+            throw new InvalidOperationException("Graph entity collection runtime is not available.");
+        }
+
+        int FilterTeam(Span<Entity> entities, int count, int teamId)
+        {
+            throw new InvalidOperationException("Graph entity query runtime is not available.");
+        }
+
+        int FilterTeamRelationship(Span<Entity> entities, int count, Entity reference, RelationshipFilter filter)
+        {
+            throw new InvalidOperationException("Graph entity query runtime is not available.");
+        }
+
+        int FilterTemplate(Span<Entity> entities, int count, int templateKeyId)
+        {
+            throw new InvalidOperationException("Graph entity query runtime is not available.");
+        }
+
+        int FilterAttributeRange(Span<Entity> entities, int count, int attributeId, float minInclusive, float maxInclusive)
+        {
+            throw new InvalidOperationException("Graph entity query runtime is not available.");
+        }
+
+        int FilterTagAny(Span<Entity> entities, int count, int tagId)
+        {
+            throw new InvalidOperationException("Graph entity query runtime is not available.");
+        }
+
+        int FilterTagNone(Span<Entity> entities, int count, int tagId)
+        {
+            throw new InvalidOperationException("Graph entity query runtime is not available.");
+        }
+
+        int FilterLayer(Span<Entity> entities, int count, uint requiredMask)
+        {
+            throw new InvalidOperationException("Graph entity query runtime is not available.");
+        }
+
+        int FilterNotEntity(Span<Entity> entities, int count, Entity exclude)
+        {
+            throw new InvalidOperationException("Graph entity query runtime is not available.");
+        }
+
+        int SortStableDedup(Span<Entity> entities, int count)
+        {
+            throw new InvalidOperationException("Graph entity query runtime is not available.");
+        }
+
+        int Limit(Span<Entity> entities, int count, int limit)
+        {
+            throw new InvalidOperationException("Graph entity query runtime is not available.");
+        }
+
+        void SortByAttribute(Span<Entity> entities, int count, int attributeId, bool descending)
+        {
+            throw new InvalidOperationException("Graph entity query runtime is not available.");
+        }
+
+        float SumAttribute(ReadOnlySpan<Entity> entities, int attributeId)
+        {
+            throw new InvalidOperationException("Graph entity query runtime is not available.");
+        }
+
+        float AverageAttribute(ReadOnlySpan<Entity> entities, int attributeId)
+        {
+            throw new InvalidOperationException("Graph entity query runtime is not available.");
+        }
+
+        float MaxAttribute(ReadOnlySpan<Entity> entities, int attributeId)
+        {
+            throw new InvalidOperationException("Graph entity query runtime is not available.");
+        }
+
+        float MinAttribute(ReadOnlySpan<Entity> entities, int attributeId)
+        {
+            throw new InvalidOperationException("Graph entity query runtime is not available.");
+        }
+
+        bool TryMaxEntityByAttribute(ReadOnlySpan<Entity> entities, int attributeId, out Entity entity, out float value)
+        {
+            throw new InvalidOperationException("Graph entity query runtime is not available.");
+        }
+
+        bool TryMinEntityByAttribute(ReadOnlySpan<Entity> entities, int attributeId, out Entity entity, out float value)
+        {
+            throw new InvalidOperationException("Graph entity query runtime is not available.");
+        }
+
+        bool TryMinEntityByDistance(ReadOnlySpan<Entity> entities, IntVector2 center, out Entity entity, out long distanceSquared)
+        {
+            throw new InvalidOperationException("Graph entity query runtime is not available.");
+        }
 
         // ── Hex spatial queries ──
         int QueryHexRange(IntVector2 center, int hexRadius, Span<Entity> buffer);
@@ -57,54 +157,102 @@ namespace Ludots.Core.NodeLibraries.GASGraph
         int GetRelationship(int teamA, int teamB);
         void EnsureRelationshipLink(Entity source, Entity target, int typeId)
         {
+            throw new InvalidOperationException("Graph relationship runtime is not available.");
         }
 
         void RemoveRelationshipLink(Entity source, Entity target, int typeId)
         {
+            throw new InvalidOperationException("Graph relationship runtime is not available.");
         }
 
         short SetRelationshipMetric(Entity source, Entity target, int metricId, int value, int reasonId, int typeId)
         {
-            return 0;
+            throw new InvalidOperationException("Graph relationship runtime is not available.");
         }
 
         short AddRelationshipMetric(Entity source, Entity target, int metricId, int delta, int reasonId, int typeId)
         {
-            return 0;
+            throw new InvalidOperationException("Graph relationship runtime is not available.");
         }
 
         short GetRelationshipMetric(Entity source, Entity target, int metricId, int typeId)
         {
-            return 0;
+            throw new InvalidOperationException("Graph relationship runtime is not available.");
         }
 
         bool HasRelationshipFlag(Entity source, Entity target, int flagId, int typeId)
         {
-            return false;
+            throw new InvalidOperationException("Graph relationship runtime is not available.");
         }
 
         void SetRelationshipFlag(Entity source, Entity target, int flagId, bool enabled, int reasonId, int typeId)
         {
+            throw new InvalidOperationException("Graph relationship runtime is not available.");
         }
 
         int CollectOutgoing(Entity source, Span<Entity> buffer, int typeId = RelationshipTypeRegistry.AnyTypeId)
         {
-            return 0;
+            throw new InvalidOperationException("Graph relationship runtime is not available.");
         }
 
         int CollectIncoming(Entity target, Span<Entity> buffer, int typeId = RelationshipTypeRegistry.AnyTypeId)
         {
-            return 0;
+            throw new InvalidOperationException("Graph relationship runtime is not available.");
         }
 
         int CollectMutual(Entity first, Entity second, Span<Entity> buffer, int typeId = RelationshipTypeRegistry.AnyTypeId)
         {
-            return 0;
+            throw new InvalidOperationException("Graph relationship runtime is not available.");
         }
 
         int CollectBetweenPair(Entity source, Entity target, Span<Entity> buffer, int typeId = RelationshipTypeRegistry.AnyTypeId)
         {
-            return 0;
+            throw new InvalidOperationException("Graph relationship runtime is not available.");
+        }
+
+        int FilterRelationshipMetricRange(Span<Entity> entities, int count, Entity source, int typeId, int metricId, short minInclusive, short maxInclusive)
+        {
+            throw new InvalidOperationException("Graph relationship query runtime is not available.");
+        }
+
+        int FilterRelationshipFlag(Span<Entity> entities, int count, Entity source, int typeId, int flagId, bool expected)
+        {
+            throw new InvalidOperationException("Graph relationship query runtime is not available.");
+        }
+
+        void SortByRelationshipMetric(Span<Entity> entities, int count, Entity source, int typeId, int metricId, bool descending)
+        {
+            throw new InvalidOperationException("Graph relationship query runtime is not available.");
+        }
+
+        int SumRelationshipMetric(ReadOnlySpan<Entity> entities, Entity source, int typeId, int metricId)
+        {
+            throw new InvalidOperationException("Graph relationship query runtime is not available.");
+        }
+
+        int AverageRelationshipMetric(ReadOnlySpan<Entity> entities, Entity source, int typeId, int metricId)
+        {
+            throw new InvalidOperationException("Graph relationship query runtime is not available.");
+        }
+
+        int MaxRelationshipMetric(ReadOnlySpan<Entity> entities, Entity source, int typeId, int metricId)
+        {
+            throw new InvalidOperationException("Graph relationship query runtime is not available.");
+        }
+
+        int MinRelationshipMetric(ReadOnlySpan<Entity> entities, Entity source, int typeId, int metricId)
+        {
+            throw new InvalidOperationException("Graph relationship query runtime is not available.");
+        }
+
+        bool TryMaxEntityByRelationshipMetric(ReadOnlySpan<Entity> entities, Entity source, int typeId, int metricId, out Entity entity, out int value)
+        {
+            throw new InvalidOperationException("Graph relationship query runtime is not available.");
+        }
+
+        bool TryMinEntityByRelationshipMetric(ReadOnlySpan<Entity> entities, Entity source, int typeId, int metricId, out Entity entity, out int value)
+        {
+            throw new InvalidOperationException("Graph relationship query runtime is not available.");
         }
         void ApplyEffectTemplate(Entity caster, Entity target, int templateId);
         void ApplyEffectTemplate(Entity caster, Entity target, int templateId, in EffectArgs args);
@@ -144,5 +292,6 @@ namespace Ludots.Core.NodeLibraries.GASGraph
         int ResolveRelationshipFlag(string name);
         int ResolveRelationshipReason(string name);
         int ResolveTargetDispatchPreset(string name);
+        int ResolveEntityTemplate(string name);
     }
 }

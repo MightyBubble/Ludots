@@ -3,6 +3,7 @@ using Arch.Core;
 using Ludots.Core.Gameplay.GAS;
 using Ludots.Core.Gameplay.GAS.Components;
 using Ludots.Core.Gameplay.Relationships;
+using Ludots.Core.Gameplay.Teams;
 using Ludots.Core.GraphRuntime;
 
 namespace Ludots.Core.NodeLibraries.GASGraph
@@ -123,6 +124,23 @@ namespace Ludots.Core.NodeLibraries.GASGraph
             h[(ushort)GraphNodeOp.RelationshipAggSumMetric] = HandleRelationshipAggSumMetric;
             h[(ushort)GraphNodeOp.RelationshipAggMaxMetric] = HandleRelationshipAggMaxMetric;
             h[(ushort)GraphNodeOp.RelationshipAggAverageMetric] = HandleRelationshipAggAverageMetric;
+            h[(ushort)GraphNodeOp.RelationshipAggMinMetric] = HandleRelationshipAggMinMetric;
+            h[(ushort)GraphNodeOp.RelationshipAggMaxEntityByMetric] = HandleRelationshipAggMaxEntityByMetric;
+            h[(ushort)GraphNodeOp.RelationshipAggMinEntityByMetric] = HandleRelationshipAggMinEntityByMetric;
+            h[(ushort)GraphNodeOp.QueryAllMapEntities] = HandleQueryAllMapEntities;
+            h[(ushort)GraphNodeOp.QueryFromCollection] = HandleQueryFromCollection;
+            h[(ushort)GraphNodeOp.QueryFilterTeam] = HandleQueryFilterTeam;
+            h[(ushort)GraphNodeOp.QueryFilterTemplate] = HandleQueryFilterTemplate;
+            h[(ushort)GraphNodeOp.QueryFilterAttributeRange] = HandleQueryFilterAttributeRange;
+            h[(ushort)GraphNodeOp.QueryFilterTagAny] = HandleQueryFilterTagAny;
+            h[(ushort)GraphNodeOp.QueryFilterTagNone] = HandleQueryFilterTagNone;
+            h[(ushort)GraphNodeOp.QuerySortByAttribute] = HandleQuerySortByAttribute;
+            h[(ushort)GraphNodeOp.AggSumAttribute] = HandleAggSumAttribute;
+            h[(ushort)GraphNodeOp.AggAverageAttribute] = HandleAggAverageAttribute;
+            h[(ushort)GraphNodeOp.AggMaxAttribute] = HandleAggMaxAttribute;
+            h[(ushort)GraphNodeOp.AggMinAttribute] = HandleAggMinAttribute;
+            h[(ushort)GraphNodeOp.AggMaxEntityByAttribute] = HandleAggMaxEntityByAttribute;
+            h[(ushort)GraphNodeOp.AggMinEntityByAttribute] = HandleAggMinEntityByAttribute;
 
             // ── Int Math / Bool (29, 31-33) ──
             h[(ushort)GraphNodeOp.AddInt] = HandleAddInt;
@@ -283,32 +301,36 @@ namespace Ludots.Core.NodeLibraries.GASGraph
 
         private static void HandleQueryFilterTagAll(ref GraphExecutionState s, in GraphInstruction ins, ref int pc)
         {
-            s.TargetList.FilterRequireTag(s.World, s.Api, ins.Imm);
+            s.TargetList.SetCount(s.Api.FilterTagAny(s.Targets, s.TargetList.Count, ins.Imm));
         }
 
         private static void HandleQuerySortStable(ref GraphExecutionState s, in GraphInstruction ins, ref int pc)
         {
-            s.TargetList.SortStableDedup();
+            s.TargetList.SetCount(s.Api.SortStableDedup(s.Targets, s.TargetList.Count));
         }
 
         private static void HandleQueryLimit(ref GraphExecutionState s, in GraphInstruction ins, ref int pc)
         {
-            s.TargetList.Limit(ins.Imm);
+            s.TargetList.SetCount(s.Api.Limit(s.Targets, s.TargetList.Count, ins.Imm));
         }
 
         private static void HandleQueryFilterNotEntity(ref GraphExecutionState s, in GraphInstruction ins, ref int pc)
         {
-            s.TargetList.FilterNotEntity(s.E[ins.A]);
+            s.TargetList.SetCount(s.Api.FilterNotEntity(s.Targets, s.TargetList.Count, s.E[ins.A]));
         }
 
         private static void HandleQueryFilterLayer(ref GraphExecutionState s, in GraphInstruction ins, ref int pc)
         {
-            s.TargetList.FilterLayer(s.World, s.Api, unchecked((uint)ins.Imm));
+            s.TargetList.SetCount(s.Api.FilterLayer(s.Targets, s.TargetList.Count, unchecked((uint)ins.Imm)));
         }
 
         private static void HandleQueryFilterRelationship(ref GraphExecutionState s, in GraphInstruction ins, ref int pc)
         {
-            s.TargetList.FilterRelationship(s.World, s.Api, s.E[ins.A], ins.Imm);
+            s.TargetList.SetCount(s.Api.FilterTeamRelationship(
+                s.Targets,
+                s.TargetList.Count,
+                s.E[ins.A],
+                ParseRelationshipFilterMode(ins.Imm)));
         }
 
         // ── Aggregation ──
@@ -320,7 +342,9 @@ namespace Ludots.Core.NodeLibraries.GASGraph
 
         private static void HandleAggMinByDistance(ref GraphExecutionState s, in GraphInstruction ins, ref int pc)
         {
-            s.E[ins.Dst] = s.TargetList.MinByDistance(s.World, s.Api, s.TargetPos);
+            s.E[ins.Dst] = s.Api.TryMinEntityByDistance(s.TargetList.Span, s.TargetPos, out Entity entity, out _)
+                ? entity
+                : Entity.Null;
         }
 
         // ── Effect / Event Actions ──
@@ -482,26 +506,7 @@ namespace Ludots.Core.NodeLibraries.GASGraph
             int typeId = RequireExplicitRelationshipTypeId(ins.Dst);
             short min = (short)s.F[ins.B];
             short max = (short)s.F[ins.C];
-            int write = 0;
-            Span<Entity> span = s.TargetList.Span;
-            for (int read = 0; read < span.Length; read++)
-            {
-                Entity target = span[read];
-                if (!s.World.IsAlive(target))
-                {
-                    continue;
-                }
-
-                short value = s.Api.GetRelationshipMetric(source, target, ins.Imm, typeId);
-                if (value < min || value > max)
-                {
-                    continue;
-                }
-
-                s.Targets[write++] = target;
-            }
-
-            s.TargetList.SetCount(write);
+            s.TargetList.SetCount(s.Api.FilterRelationshipMetricRange(s.Targets, s.TargetList.Count, source, typeId, ins.Imm, min, max));
         }
 
         private static void HandleRelationshipFilterFlag(ref GraphExecutionState s, in GraphInstruction ins, ref int pc)
@@ -509,25 +514,7 @@ namespace Ludots.Core.NodeLibraries.GASGraph
             Entity source = s.E[ins.A];
             int typeId = RequireExplicitRelationshipTypeId(ins.Dst);
             bool expected = ins.Flags != 0 || s.B[ins.B] != 0;
-            int write = 0;
-            Span<Entity> span = s.TargetList.Span;
-            for (int read = 0; read < span.Length; read++)
-            {
-                Entity target = span[read];
-                if (!s.World.IsAlive(target))
-                {
-                    continue;
-                }
-
-                if (s.Api.HasRelationshipFlag(source, target, ins.Imm, typeId) != expected)
-                {
-                    continue;
-                }
-
-                s.Targets[write++] = target;
-            }
-
-            s.TargetList.SetCount(write);
+            s.TargetList.SetCount(s.Api.FilterRelationshipFlag(s.Targets, s.TargetList.Count, source, typeId, ins.Imm, expected));
         }
 
         private static void HandleRelationshipSortByMetric(ref GraphExecutionState s, in GraphInstruction ins, ref int pc)
@@ -535,90 +522,128 @@ namespace Ludots.Core.NodeLibraries.GASGraph
             Entity source = s.E[ins.A];
             int typeId = RequireExplicitRelationshipTypeId(ins.Dst);
             bool descending = ins.Flags != 0;
-            Span<Entity> span = s.TargetList.Span;
-            for (int i = 1; i < span.Length; i++)
-            {
-                Entity current = span[i];
-                short currentValue = s.Api.GetRelationshipMetric(source, current, ins.Imm, typeId);
-                int j = i - 1;
-                while (j >= 0)
-                {
-                    short leftValue = s.Api.GetRelationshipMetric(source, span[j], ins.Imm, typeId);
-                    bool shouldShift = descending ? leftValue < currentValue : leftValue > currentValue;
-                    if (!shouldShift)
-                    {
-                        break;
-                    }
-
-                    span[j + 1] = span[j];
-                    j--;
-                }
-
-                span[j + 1] = current;
-            }
+            s.Api.SortByRelationshipMetric(s.Targets, s.TargetList.Count, source, typeId, ins.Imm, descending);
         }
 
         private static void HandleRelationshipAggSumMetric(ref GraphExecutionState s, in GraphInstruction ins, ref int pc)
         {
             Entity source = s.E[ins.A];
             int typeId = RequireExplicitRelationshipTypeId(ins.Flags);
-            int sum = 0;
-            Span<Entity> span = s.TargetList.Span;
-            for (int i = 0; i < span.Length; i++)
-            {
-                if (s.World.IsAlive(span[i]))
-                {
-                    sum += s.Api.GetRelationshipMetric(source, span[i], ins.Imm, typeId);
-                }
-            }
-
-            s.I[ins.Dst] = sum;
+            s.I[ins.Dst] = s.Api.SumRelationshipMetric(s.TargetList.Span, source, typeId, ins.Imm);
         }
 
         private static void HandleRelationshipAggMaxMetric(ref GraphExecutionState s, in GraphInstruction ins, ref int pc)
         {
             Entity source = s.E[ins.A];
             int typeId = RequireExplicitRelationshipTypeId(ins.Flags);
-            int max = int.MinValue;
-            bool found = false;
-            Span<Entity> span = s.TargetList.Span;
-            for (int i = 0; i < span.Length; i++)
-            {
-                if (!s.World.IsAlive(span[i]))
-                {
-                    continue;
-                }
-
-                int value = s.Api.GetRelationshipMetric(source, span[i], ins.Imm, typeId);
-                if (!found || value > max)
-                {
-                    max = value;
-                    found = true;
-                }
-            }
-
-            s.I[ins.Dst] = found ? max : 0;
+            s.I[ins.Dst] = s.Api.MaxRelationshipMetric(s.TargetList.Span, source, typeId, ins.Imm);
         }
 
         private static void HandleRelationshipAggAverageMetric(ref GraphExecutionState s, in GraphInstruction ins, ref int pc)
         {
             Entity source = s.E[ins.A];
             int typeId = RequireExplicitRelationshipTypeId(ins.Flags);
-            int sum = 0;
-            int count = 0;
-            Span<Entity> span = s.TargetList.Span;
-            for (int i = 0; i < span.Length; i++)
-            {
-                if (!s.World.IsAlive(span[i]))
-                {
-                    continue;
-                }
+            s.I[ins.Dst] = s.Api.AverageRelationshipMetric(s.TargetList.Span, source, typeId, ins.Imm);
+        }
 
-                sum += s.Api.GetRelationshipMetric(source, span[i], ins.Imm, typeId);
-                count++;
-            }
+        private static void HandleRelationshipAggMinMetric(ref GraphExecutionState s, in GraphInstruction ins, ref int pc)
+        {
+            Entity source = s.E[ins.A];
+            int typeId = RequireExplicitRelationshipTypeId(ins.Flags);
+            s.I[ins.Dst] = s.Api.MinRelationshipMetric(s.TargetList.Span, source, typeId, ins.Imm);
+        }
 
-            s.I[ins.Dst] = count == 0 ? 0 : sum / count;
+        private static void HandleRelationshipAggMaxEntityByMetric(ref GraphExecutionState s, in GraphInstruction ins, ref int pc)
+        {
+            Entity source = s.E[ins.A];
+            int typeId = RequireExplicitRelationshipTypeId(ins.Flags);
+            s.E[ins.Dst] = s.Api.TryMaxEntityByRelationshipMetric(s.TargetList.Span, source, typeId, ins.Imm, out Entity entity, out _)
+                ? entity
+                : Entity.Null;
+        }
+
+        private static void HandleRelationshipAggMinEntityByMetric(ref GraphExecutionState s, in GraphInstruction ins, ref int pc)
+        {
+            Entity source = s.E[ins.A];
+            int typeId = RequireExplicitRelationshipTypeId(ins.Flags);
+            s.E[ins.Dst] = s.Api.TryMinEntityByRelationshipMetric(s.TargetList.Span, source, typeId, ins.Imm, out Entity entity, out _)
+                ? entity
+                : Entity.Null;
+        }
+
+        private static void HandleQueryAllMapEntities(ref GraphExecutionState s, in GraphInstruction ins, ref int pc)
+        {
+            s.TargetList.SetCount(s.Api.CollectMapEntities(s.Targets));
+        }
+
+        private static void HandleQueryFromCollection(ref GraphExecutionState s, in GraphInstruction ins, ref int pc)
+        {
+            s.TargetList.SetCount(s.Api.CopyEntityCollection(s.E[ins.A], ins.Imm, s.Targets));
+        }
+
+        private static void HandleQueryFilterTeam(ref GraphExecutionState s, in GraphInstruction ins, ref int pc)
+        {
+            int teamId = ins.Flags != 0 ? s.I[ins.A] : ins.Imm;
+            s.TargetList.SetCount(s.Api.FilterTeam(s.Targets, s.TargetList.Count, teamId));
+        }
+
+        private static void HandleQueryFilterTemplate(ref GraphExecutionState s, in GraphInstruction ins, ref int pc)
+        {
+            s.TargetList.SetCount(s.Api.FilterTemplate(s.Targets, s.TargetList.Count, ins.Imm));
+        }
+
+        private static void HandleQueryFilterAttributeRange(ref GraphExecutionState s, in GraphInstruction ins, ref int pc)
+        {
+            s.TargetList.SetCount(s.Api.FilterAttributeRange(s.Targets, s.TargetList.Count, ins.Imm, s.F[ins.B], s.F[ins.C]));
+        }
+
+        private static void HandleQueryFilterTagAny(ref GraphExecutionState s, in GraphInstruction ins, ref int pc)
+        {
+            s.TargetList.SetCount(s.Api.FilterTagAny(s.Targets, s.TargetList.Count, ins.Imm));
+        }
+
+        private static void HandleQueryFilterTagNone(ref GraphExecutionState s, in GraphInstruction ins, ref int pc)
+        {
+            s.TargetList.SetCount(s.Api.FilterTagNone(s.Targets, s.TargetList.Count, ins.Imm));
+        }
+
+        private static void HandleQuerySortByAttribute(ref GraphExecutionState s, in GraphInstruction ins, ref int pc)
+        {
+            s.Api.SortByAttribute(s.Targets, s.TargetList.Count, ins.Imm, ins.Flags != 0);
+        }
+
+        private static void HandleAggSumAttribute(ref GraphExecutionState s, in GraphInstruction ins, ref int pc)
+        {
+            s.F[ins.Dst] = s.Api.SumAttribute(s.TargetList.Span, ins.Imm);
+        }
+
+        private static void HandleAggAverageAttribute(ref GraphExecutionState s, in GraphInstruction ins, ref int pc)
+        {
+            s.F[ins.Dst] = s.Api.AverageAttribute(s.TargetList.Span, ins.Imm);
+        }
+
+        private static void HandleAggMaxAttribute(ref GraphExecutionState s, in GraphInstruction ins, ref int pc)
+        {
+            s.F[ins.Dst] = s.Api.MaxAttribute(s.TargetList.Span, ins.Imm);
+        }
+
+        private static void HandleAggMinAttribute(ref GraphExecutionState s, in GraphInstruction ins, ref int pc)
+        {
+            s.F[ins.Dst] = s.Api.MinAttribute(s.TargetList.Span, ins.Imm);
+        }
+
+        private static void HandleAggMaxEntityByAttribute(ref GraphExecutionState s, in GraphInstruction ins, ref int pc)
+        {
+            s.E[ins.Dst] = s.Api.TryMaxEntityByAttribute(s.TargetList.Span, ins.Imm, out Entity entity, out _)
+                ? entity
+                : Entity.Null;
+        }
+
+        private static void HandleAggMinEntityByAttribute(ref GraphExecutionState s, in GraphInstruction ins, ref int pc)
+        {
+            s.E[ins.Dst] = s.Api.TryMinEntityByAttribute(s.TargetList.Span, ins.Imm, out Entity entity, out _)
+                ? entity
+                : Entity.Null;
         }
 
         private static int RequireExplicitRelationshipTypeId(byte encoded)
@@ -634,6 +659,19 @@ namespace Ludots.Core.NodeLibraries.GASGraph
         private static int ResolveQueryTypeId(byte encoded)
         {
             return encoded == byte.MaxValue ? RelationshipTypeRegistry.AnyTypeId : encoded;
+        }
+
+        private static RelationshipFilter ParseRelationshipFilterMode(int mode)
+        {
+            return mode switch
+            {
+                1 => RelationshipFilter.Hostile,
+                2 => RelationshipFilter.Friendly,
+                3 => RelationshipFilter.Neutral,
+                4 => RelationshipFilter.NotFriendly,
+                5 => RelationshipFilter.NotHostile,
+                _ => throw new ArgumentOutOfRangeException(nameof(mode), mode, "Unsupported graph relationship filter mode.")
+            };
         }
 
         private static void HandleAddInt(ref GraphExecutionState s, in GraphInstruction ins, ref int pc)

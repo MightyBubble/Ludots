@@ -11,6 +11,7 @@ using Ludots.Core.Scripting;
 using Ludots.Core.Config;
 using Arch.Core;
 using Ludots.Core.EntityCollections;
+using Ludots.Core.EntityQueries;
 using Ludots.Core.Map;
 using Ludots.Core.Map.Hex;
 using Ludots.Core.Gameplay;
@@ -564,6 +565,7 @@ namespace Ludots.Core.Engine
                 relationshipBandRegistry,
                 relationshipReasonRegistry);
             var relationshipProcessingSystem = new RelationshipProcessingSystem(this, relationshipChangeBuffer, tagOps, teamEntityLookup);
+            var entitySetQueryRuntime = new EntitySetQueryRuntime(World, tagOps, relationshipRuntime);
             var effectTemplateRegistry = new EffectTemplateRegistry();
             effectTemplateRegistry.SetConflictReport(ConflictReport);
             var gasConditions = new GasConditionRegistry();
@@ -581,13 +583,21 @@ namespace Ludots.Core.Engine
             _navigation2DBaseHz = navigation2dClockConfig.NavigationHz;
             new AttributeConstraintsLoader(ConfigPipeline).Load(ConfigCatalog, ConfigConflictReport);
             var graphProgramRegistry = new GraphProgramRegistry();
+            var graphOutputSchemas = new GraphOutputSchemaRegistry();
+            var graphOutputValueKeyRegistry = new StringIntRegistry(capacity: 64, startId: 1, invalidId: 0, comparer: StringComparer.Ordinal);
             var graphSymbolResolver = new GasGraphSymbolResolver(
                 relationshipTypeRegistry,
                 relationshipMetricRegistry,
                 relationshipFlagRegistry,
                 relationshipReasonRegistry,
-                targetDispatchPresetRegistry);
-            var graphConfigLoader = new GraphProgramConfigLoader(ConfigPipeline, graphProgramRegistry, graphSymbolResolver);
+                targetDispatchPresetRegistry,
+                MapLoader.EntityTemplateKeys);
+            var graphConfigLoader = new GraphProgramConfigLoader(
+                ConfigPipeline,
+                graphProgramRegistry,
+                graphSymbolResolver,
+                graphOutputSchemas,
+                graphOutputValueKeyRegistry);
             var graphPackages = graphConfigLoader.LoadIdsAndCompile(ConfigCatalog, ConfigConflictReport);
             var presetTypes = new PresetTypeRegistry();
             var presetTypeLoader = new PresetTypeLoader(ConfigPipeline, presetTypes);
@@ -614,6 +624,9 @@ namespace Ludots.Core.Engine
             new ContextGroupConfigLoader(ConfigPipeline, contextGroups).Load(ConfigCatalog, ConfigConflictReport);
             new ItemConfigLoader(ConfigPipeline, itemShapes, itemLayouts, itemDefinitions).Load(ConfigCatalog, ConfigConflictReport);
             var inventoryRuntime = new InventoryRuntimeService(World, itemShapes, itemLayouts, itemDefinitions);
+            var entityCollectionKeyRegistry = new StringIntRegistry(capacity: 64, startId: 1, invalidId: 0, comparer: StringComparer.Ordinal);
+            var entityCollectionStore = new EntityCollectionStore(entityCollectionKeyRegistry, initialCollectionCapacity: 128, initialRowCapacity: 4096);
+            var graphOutputValueStore = new GraphOutputValueStore(graphOutputValueKeyRegistry, initialCapacity: 128);
             var gasGraphApi = new GasGraphRuntimeApi(
                 World,
                 SpatialQueries,
@@ -626,7 +639,16 @@ namespace Ludots.Core.Engine
                 relationshipMetricRegistry,
                 relationshipFlagRegistry,
                 relationshipReasonRegistry,
-                targetDispatchPresetRegistry);
+                targetDispatchPresetRegistry,
+                entityCollectionStore,
+                entitySetQueryRuntime);
+            var graphReturnWriter = new GraphReturnWriter(
+                World,
+                graphProgramRegistry,
+                graphOutputSchemas,
+                GasGraphOpHandlerTable.Instance,
+                entityCollectionStore,
+                graphOutputValueStore);
             var phaseExecutor = new EffectPhaseExecutor(graphProgramRegistry, presetTypes, builtinHandlers, GasGraphOpHandlerTable.Instance, effectTemplateRegistry, eventBus: EventBus, budget: gasBudget);
             var tagRules = new TagRuleSetLoader(ConfigPipeline).Load(ConfigCatalog, ConfigConflictReport);
             for (int i = 0; i < tagRules.Count; i++)
@@ -639,8 +661,6 @@ namespace Ludots.Core.Engine
             var selectionRequestQueue = new SelectionRequestQueue();
             var selectionResponseBuffer = new SelectionResponseBuffer();
             var selectionSetKeyRegistry = new StringIntRegistry(capacity: 32, startId: 1, invalidId: 0, comparer: StringComparer.Ordinal);
-            var entityCollectionKeyRegistry = new StringIntRegistry(capacity: 64, startId: 1, invalidId: 0, comparer: StringComparer.Ordinal);
-            var entityCollectionStore = new EntityCollectionStore(entityCollectionKeyRegistry, initialCollectionCapacity: 128, initialRowCapacity: 4096);
             var selectionConfig = config.Selection
                 ?? throw new InvalidOperationException("game.json selection must be explicitly configured.");
             var selectionRuntime = new SelectionRuntime(World, selectionConfig, selectionSetKeyRegistry);
@@ -897,6 +917,10 @@ namespace Ludots.Core.Engine
             SetService(CoreServiceKeys.EffectTemplateRegistry, effectTemplateRegistry);
             SetService(CoreServiceKeys.TargetDispatchPresetRegistry, targetDispatchPresetRegistry);
             SetService(CoreServiceKeys.GraphProgramRegistry, graphProgramRegistry);
+            SetService(CoreServiceKeys.GraphOutputSchemaRegistry, graphOutputSchemas);
+            SetService(CoreServiceKeys.GraphOutputValueKeyRegistry, graphOutputValueKeyRegistry);
+            SetService(CoreServiceKeys.GraphOutputValueStore, graphOutputValueStore);
+            SetService(CoreServiceKeys.GraphReturnWriter, graphReturnWriter);
             SetService(CoreServiceKeys.EffectRequestQueue, effectRequestQueue);
             SetService(CoreServiceKeys.TimeFlow, _timeFlow);
             SetService(CoreServiceKeys.Clock, (IClock)clock);
@@ -951,6 +975,7 @@ namespace Ludots.Core.Engine
             SetService(CoreServiceKeys.RelationshipCatalogConfig, relationshipCatalog);
             SetService(CoreServiceKeys.RelationshipCatalogRuntime, relationshipCatalogRuntime);
             SetService(CoreServiceKeys.TeamEntityLookup, teamEntityLookup);
+            SetService(CoreServiceKeys.EntitySetQueryRuntime, entitySetQueryRuntime);
             SetService(CoreServiceKeys.AuthoritativeInput, authoritativeInput);
             SetService(CoreServiceKeys.AuthoritativePointerButtons, authoritativePointerButtons);
             SetService(CoreServiceKeys.AuthoritativeGroundPointerOverride, authoritativeGroundPointerOverride);

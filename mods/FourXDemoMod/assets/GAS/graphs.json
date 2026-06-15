@@ -1,0 +1,71 @@
+[
+  {
+    "id": "fourx.graph.cityEconomyQuery",
+    "kind": "Query",
+    "entry": "minProduction",
+    "nodes": [
+      { "id": "minProduction", "op": "ConstFloat", "floatValue": 0, "next": "maxProduction" },
+      { "id": "maxProduction", "op": "ConstFloat", "floatValue": 1000, "next": "allMapEntities" },
+      { "id": "allMapEntities", "op": "QueryAllMapEntities", "next": "teamCities" },
+      { "id": "teamCities", "op": "QueryFilterTeam", "teamId": 2, "next": "federationCities" },
+      { "id": "federationCities", "op": "QueryFilterTemplate", "template": "fourx_federation_city", "next": "notBlockaded" },
+      { "id": "notBlockaded", "op": "QueryFilterTagNone", "tag": "State.4X.Blockaded", "next": "productionRange" },
+      { "id": "productionRange", "op": "QueryFilterAttributeRange", "attribute": "Production", "inputs": [ "minProduction", "maxProduction" ], "next": "sortProduction" },
+      { "id": "sortProduction", "op": "QuerySortByAttribute", "attribute": "Production", "descending": true, "next": "cityCount" },
+      { "id": "cityCount", "op": "AggCount", "next": "totalProduction" },
+      { "id": "totalProduction", "op": "AggSumAttribute", "attribute": "Production", "next": "totalGold" },
+      { "id": "totalGold", "op": "AggSumAttribute", "attribute": "Gold", "next": "bestProductionCity" },
+      { "id": "bestProductionCity", "op": "AggMaxEntityByAttribute", "attribute": "Production" }
+    ],
+    "outputs": [
+      {
+        "id": "cities",
+        "destination": "EntityCollection",
+        "type": "TargetList",
+        "collectionKey": "fourx.collection.team2.cities.economy",
+        "role": "Display",
+        "title": "Federation Cities",
+        "summary": "Team 2 cities filtered by template, state tag, and production."
+      },
+      { "id": "cityCount", "destination": "Summary", "type": "Int", "source": "cityCount", "key": "fourx.summary.cityCount" },
+      { "id": "totalProduction", "destination": "Summary", "type": "Float", "source": "totalProduction", "key": "fourx.summary.totalProduction" },
+      { "id": "totalGold", "destination": "Summary", "type": "Float", "source": "totalGold", "key": "fourx.summary.totalGold" },
+      { "id": "bestProductionCity", "destination": "Summary", "type": "Entity", "source": "bestProductionCity", "key": "fourx.summary.bestProductionCity" }
+    ]
+  },
+  {
+    "id": "fourx.graph.tradePartnersQuery",
+    "kind": "Query",
+    "entry": "source",
+    "nodes": [
+      { "id": "source", "op": "LoadCaster", "next": "minTrust" },
+      { "id": "minTrust", "op": "ConstFloat", "floatValue": 40, "next": "maxTrust" },
+      { "id": "maxTrust", "op": "ConstFloat", "floatValue": 100, "next": "outgoingDiplomacy" },
+      { "id": "outgoingDiplomacy", "op": "RelationshipQueryOutgoing", "relationshipType": "Diplomacy", "inputs": [ "source" ], "next": "trusted" },
+      { "id": "trusted", "op": "RelationshipFilterMetricRange", "relationshipType": "Diplomacy", "metric": "Trust", "inputs": [ "source", "minTrust", "maxTrust" ], "next": "tradePacts" },
+      { "id": "tradePacts", "op": "RelationshipFilterFlag", "relationshipType": "Diplomacy", "flag": "TradePact", "inputs": [ "source" ], "next": "sortTrust" },
+      { "id": "sortTrust", "op": "RelationshipSortByMetric", "relationshipType": "Diplomacy", "metric": "Trust", "inputs": [ "source" ], "descending": true, "next": "partnerCount" },
+      { "id": "partnerCount", "op": "AggCount", "next": "trustTotal" },
+      { "id": "trustTotal", "op": "RelationshipAggSumMetric", "relationshipType": "Diplomacy", "metric": "Trust", "inputs": [ "source" ], "next": "trustAverage" },
+      { "id": "trustAverage", "op": "RelationshipAggAverageMetric", "relationshipType": "Diplomacy", "metric": "Trust", "inputs": [ "source" ], "next": "tradeValueTotal" },
+      { "id": "tradeValueTotal", "op": "RelationshipAggSumMetric", "relationshipType": "Diplomacy", "metric": "TradeValue", "inputs": [ "source" ], "next": "bestPartner" },
+      { "id": "bestPartner", "op": "RelationshipAggMaxEntityByMetric", "relationshipType": "Diplomacy", "metric": "Trust", "inputs": [ "source" ] }
+    ],
+    "outputs": [
+      {
+        "id": "partners",
+        "destination": "EntityCollection",
+        "type": "TargetList",
+        "collectionKey": "fourx.collection.diplomacy.tradePartners",
+        "role": "Display",
+        "title": "Trade Partners",
+        "summary": "Outgoing Diplomacy links filtered by relation metric and relation flag."
+      },
+      { "id": "partnerCount", "destination": "Summary", "type": "Int", "source": "partnerCount", "key": "fourx.summary.tradePartnerCount" },
+      { "id": "trustTotal", "destination": "Summary", "type": "Int", "source": "trustTotal", "key": "fourx.summary.tradePartnerTrustTotal" },
+      { "id": "trustAverage", "destination": "Summary", "type": "Int", "source": "trustAverage", "key": "fourx.summary.tradePartnerTrustAverage" },
+      { "id": "tradeValueTotal", "destination": "Summary", "type": "Int", "source": "tradeValueTotal", "key": "fourx.summary.tradeValueTotal" },
+      { "id": "bestPartner", "destination": "Summary", "type": "Entity", "source": "bestPartner", "key": "fourx.summary.bestTradePartner" }
+    ]
+  }
+]
