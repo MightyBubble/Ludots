@@ -299,7 +299,11 @@ namespace Ludots.Core.Gameplay.Spawning
     {
         public int ShapeDataIndex;
         public int ShapeSignature;
-        public byte SinkPhysicsCollider;
-        public byte SinkNavigationObstacle;
+        public int PoseSignature;
+        public int SinkSignature;
+    }
+
+    public struct ManifestationObstacleBridge2DDirty
+    {
     }
 }

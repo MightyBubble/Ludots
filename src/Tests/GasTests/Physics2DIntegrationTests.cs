@@ -381,6 +381,7 @@ namespace GasTests
 
             obstacle.SinkPhysicsCollider = 0;
             world.Set(compoundEntity, obstacle);
+            world.Add(compoundEntity, new ManifestationObstacleBridge2DDirty());
 
             bridge.Update(0f);
             build.Update(0f);
@@ -484,6 +485,110 @@ namespace GasTests
             var e = build.Entities[results[0]];
             Assert.That(world.TryGet(e, out Position2D pos), Is.True);
             Assert.That(pos.Value.X.ToFloat(), Is.EqualTo(0f).Within(0.001f));
+        }
+
+        [Test]
+        public void StaticBodies_AreCachedAcrossSteadyStateBuilds()
+        {
+            using var world = World.Create();
+
+            int shape = ShapeDataStorage2D.RegisterBox(100f, 100f);
+            var obstacle = world.Create(
+                new Position2D { Value = Fix64Vec2.FromInt(500, 0) },
+                Mass2D.Static,
+                new Collider2D { Type = ColliderType2D.Box, ShapeDataIndex = shape });
+
+            var build = new BuildPhysicsWorldSystem2D(world);
+            var spatial = new AdaptiveSpatialSystem2D(world, build, maxCollisionPairs: 8);
+
+            build.Update(0f);
+            spatial.Update(0f);
+
+            Assert.That(build.StaticRigidBodyDescriptors.Count, Is.EqualTo(1));
+            Assert.That(build.DynamicRigidBodyDescriptors.Count, Is.EqualTo(0));
+            Assert.That(build.DirtyStaticBodyCountLastUpdate, Is.EqualTo(1));
+            int staticVersion = build.StaticBodyVersion;
+
+            var results = new List<int>();
+            var query = new Aabb
+            {
+                Min = Fix64Vec2.FromInt(450, -50),
+                Max = Fix64Vec2.FromInt(550, 50)
+            };
+            spatial.CurrentStrategy.QueryAABB(in query, results);
+            Assert.That(results.Count, Is.EqualTo(1));
+            Assert.That(build.ResolveBodyEntity(results[0]), Is.EqualTo(obstacle));
+
+            build.Update(0f);
+            spatial.Update(0f);
+
+            Assert.That(build.StaticBodyVersion, Is.EqualTo(staticVersion));
+            Assert.That(build.DirtyStaticBodyCountLastUpdate, Is.EqualTo(0));
+            Assert.That(build.StaticRigidBodyDescriptors.Count, Is.EqualTo(1));
+        }
+
+        [Test]
+        public void CompoundStaticBodies_AreCachedAcrossSteadyStateBuilds()
+        {
+            using var world = World.Create();
+
+            var obstacle = new CompoundObstacle2D
+            {
+                SinkPhysicsCollider = 1,
+                SinkNavigationObstacle = 0
+            };
+            obstacle.SetPiece(
+                0,
+                ManifestationObstacleShape2D.Box,
+                radiusCm: 0,
+                halfWidthCm: 40,
+                halfHeightCm: 40,
+                localOffsetXCm: -120,
+                localOffsetYCm: 0,
+                navRadiusCm: 0);
+            obstacle.SetPiece(
+                1,
+                ManifestationObstacleShape2D.Box,
+                radiusCm: 0,
+                halfWidthCm: 40,
+                halfHeightCm: 40,
+                localOffsetXCm: 120,
+                localOffsetYCm: 0,
+                navRadiusCm: 0);
+
+            var obstacleEntity = world.Create(
+                WorldPositionCm.FromCm(0, 0),
+                obstacle);
+
+            var bridge = new ManifestationObstacleBridge2DSystem(world);
+            var build = new BuildPhysicsWorldSystem2D(world);
+            var spatial = new AdaptiveSpatialSystem2D(world, build, maxCollisionPairs: 16);
+
+            bridge.Update(0f);
+            build.Update(0f);
+            spatial.Update(0f);
+
+            Assert.That(build.StaticRigidBodyDescriptors.Count, Is.EqualTo(2));
+            Assert.That(build.DynamicRigidBodyDescriptors.Count, Is.EqualTo(0));
+            Assert.That(build.DirtyStaticBodyCountLastUpdate, Is.EqualTo(1));
+            int staticVersion = build.StaticBodyVersion;
+
+            var results = new List<int>();
+            var query = new Aabb
+            {
+                Min = Fix64Vec2.FromInt(80, -40),
+                Max = Fix64Vec2.FromInt(160, 40)
+            };
+            spatial.CurrentStrategy.QueryAABB(in query, results);
+            Assert.That(results.Count, Is.EqualTo(1));
+            Assert.That(build.ResolveBodyEntity(results[0]), Is.EqualTo(obstacleEntity));
+
+            build.Update(0f);
+            spatial.Update(0f);
+
+            Assert.That(build.StaticBodyVersion, Is.EqualTo(staticVersion));
+            Assert.That(build.DirtyStaticBodyCountLastUpdate, Is.EqualTo(0));
+            Assert.That(build.StaticRigidBodyDescriptors.Count, Is.EqualTo(2));
         }
     }
 }

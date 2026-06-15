@@ -105,6 +105,7 @@ namespace Ludots.Tests.GAS
             intent.SinkPhysicsCollider = 0;
             intent.SinkNavigationObstacle = 0;
             world.Set(entity, intent);
+            world.Add(entity, new ManifestationObstacleBridge2DDirty());
 
             system.Update(0f);
 
@@ -207,7 +208,6 @@ namespace Ludots.Tests.GAS
             That(obstacle.ShapeDataIndex, Is.EqualTo(collider.ShapeDataIndex));
         }
 
-        [Test]
         public void ComponentRegistry_ParsesCompoundObstacle_AndBridgeCreatesCompoundStateOnSameEntity()
         {
             using var world = World.Create();
@@ -265,6 +265,52 @@ namespace Ludots.Tests.GAS
             That(polygon.LocalOffset, Is.EqualTo(Fix64Vec2.FromInt(160, 20)));
 
             That(world.Get<NavKinematics2D>(entity).RadiusCm, Is.EqualTo(Fix64.FromInt(120)));
+        }
+
+        [Test]
+        public void ManifestationObstacleBridge2D_DisablingPhysicsSink_DirtiesAndRemovesStaticBody()
+        {
+            using var world = World.Create();
+            var entity = world.Create(
+                WorldPositionCm.FromCm(1200, 900),
+                new ManifestationObstacleIntent2D
+                {
+                    Shape = ManifestationObstacleShape2D.Box,
+                    SinkPhysicsCollider = 1,
+                    SinkNavigationObstacle = 0,
+                    HalfWidthCm = 90,
+                    HalfHeightCm = 20
+                });
+
+            var bridge = new ManifestationObstacleBridge2DSystem(world);
+            var build = new BuildPhysicsWorldSystem2D(world);
+
+            bridge.Update(0f);
+            build.Update(0f);
+
+            That(world.Has<Physics2DStaticBodyState>(entity), Is.True);
+            That(world.Has<Physics2DStaticBodyDirty>(entity), Is.False);
+
+            world.Set(entity, new ManifestationObstacleIntent2D
+            {
+                Shape = ManifestationObstacleShape2D.Box,
+                SinkPhysicsCollider = 0,
+                SinkNavigationObstacle = 0,
+                HalfWidthCm = 90,
+                HalfHeightCm = 20
+            });
+            world.Add(entity, new ManifestationObstacleBridge2DDirty());
+
+            bridge.Update(0f);
+
+            That(world.Has<Collider2D>(entity), Is.False);
+            That(world.Has<Physics2DStaticBodyDirty>(entity), Is.True);
+
+            build.Update(0f);
+
+            That(world.Has<Physics2DStaticBodyState>(entity), Is.False);
+            That(world.Has<Physics2DStaticBodyDirty>(entity), Is.False);
+            That(build.StaticRigidBodyDescriptors.Count, Is.EqualTo(0));
         }
 
         [Test]
