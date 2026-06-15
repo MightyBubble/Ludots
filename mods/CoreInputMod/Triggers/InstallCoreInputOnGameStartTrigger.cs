@@ -13,6 +13,7 @@ using Ludots.Core.Mathematics;
 using Ludots.Core.Modding;
 using Ludots.Core.Presentation.Systems;
 using Ludots.Core.Scripting;
+using Ludots.Core.Systems;
 
 namespace CoreInputMod.Triggers
 {
@@ -69,7 +70,7 @@ namespace CoreInputMod.Triggers
             {
                 foreach (var cb in selectionCallbacks) cb(worldCm, entity);
             };
-            engine.RegisterSystem(currentSelection, SystemGroup.InputCollection);
+            engine.InsertSystemBeforeRequired<CameraRuntimeSystem>(currentSelection, SystemGroup.InputCollection);
 
             var gasSelection = new GasSelectionResponseSystem(engine.World, engine.GlobalContext, engine.SpatialQueries, selectionRules);
             gasSelection.OnSelectionTriggered = (req, worldCm) =>
@@ -86,7 +87,7 @@ namespace CoreInputMod.Triggers
             engine.RegisterPresentationSystem(new SelectedMovePathPresentationSystem(engine.World, engine.GlobalContext, selectionRuntime));
             engine.RegisterSystem(new TabTargetCycleSystem(engine.World, engine.GlobalContext), SystemGroup.InputCollection);
 
-            var vmManager = new ViewModeManager(engine.World, engine.GlobalContext, engine.GameSession.Camera);
+            var vmManager = new ViewModeManager(engine.GlobalContext);
             engine.SetService(CoreInputServiceKeys.ViewModeManager, vmManager);
             engine.RegisterSystem(new ViewModeSwitchSystem(engine.GlobalContext), SystemGroup.InputCollection);
 

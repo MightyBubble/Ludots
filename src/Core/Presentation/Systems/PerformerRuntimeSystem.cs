@@ -25,6 +25,7 @@ namespace Ludots.Core.Presentation.Systems
         private readonly PerformerDefinitionRegistry _definitions;
         private readonly PerformerAnimatorStateBuffer? _animatorStates;
         private readonly StableDrawCache? _stableDrawCache;
+        private readonly PerformerVisualStableIdTable? _visualStableIds;
         private int _lastCullSyncStructureVersion = -1;
 
         public PerformerRuntimeSystem(
@@ -37,7 +38,8 @@ namespace Ludots.Core.Presentation.Systems
             PresentationStableIdAllocator stableIds,
             PerformerDefinitionRegistry definitions,
             PerformerAnimatorStateBuffer? animatorStates = null,
-            StableDrawCache? stableDrawCache = null)
+            StableDrawCache? stableDrawCache = null,
+            PerformerVisualStableIdTable? visualStableIds = null)
             : base(world)
         {
             _commands = commands ?? throw new ArgumentNullException(nameof(commands));
@@ -49,6 +51,7 @@ namespace Ludots.Core.Presentation.Systems
             _definitions = definitions ?? throw new ArgumentNullException(nameof(definitions));
             _animatorStates = animatorStates;
             _stableDrawCache = stableDrawCache;
+            _visualStableIds = visualStableIds;
             _runtime.BindDefinitions(_definitions);
         }
         public override void Update(in float dt)
@@ -421,12 +424,20 @@ namespace Ludots.Core.Presentation.Systems
             for (int i = 0; i < behaviorIndices.Length; i++)
             {
                 ref readonly BehaviorSlot slot = ref behaviors[behaviorIndices[i]];
-                _stableDrawCache.Remove(PerformerBehaviorRuntimeUtility.ComposeVisualStableId(
-                    state.StableId,
-                    slot.SlotIndex,
-                    slot.AssetBinding.AssetKind,
-                    state.DefId));
+                if (_visualStableIds != null &&
+                    _visualStableIds.Remove(
+                        PerformerBehaviorRuntimeUtility.ComposeVisualStableKey(
+                            state.StableId,
+                            slot.SlotIndex,
+                            slot.AssetBinding.AssetKind,
+                            state.DefId),
+                        out int stableId))
+                {
+                    _stableDrawCache.Remove(stableId);
+                }
             }
+
+            _visualStableIds?.ReleasePerformer(state.StableId);
         }
 
         private void EmitRetainedPresentationRemovalIfPresent(Entity performer, in PerformerState state)

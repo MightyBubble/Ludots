@@ -12,16 +12,32 @@ namespace Ludots.Core.Physics2D.Systems
 {
     /// <summary>
     /// Bridges runtime manifestation blocker intent into lower-layer physics and navigation components.
-    /// This keeps spell/runtime authoring declarative while collision and nav remain owned by their subsystems.
+    /// Static manifestations are materialized once and revisited only through explicit dirty state.
     /// </summary>
     public sealed class ManifestationObstacleBridge2DSystem : BaseSystem<World, float>
     {
-        private static readonly QueryDescription _singleQuery = new QueryDescription()
+        private static readonly QueryDescription _newSingleQuery = new QueryDescription()
             .WithAll<WorldPositionCm, ManifestationObstacleIntent2D>()
+            .WithNone<ManifestationObstacleBridge2DState>()
             .WithNone<CompoundObstacle2D>();
 
-        private static readonly QueryDescription _compoundQuery = new QueryDescription()
-            .WithAll<WorldPositionCm, CompoundObstacle2D>();
+        private static readonly QueryDescription _dirtySingleQuery = new QueryDescription()
+            .WithAll<WorldPositionCm, ManifestationObstacleIntent2D, ManifestationObstacleBridge2DState, ManifestationObstacleBridge2DDirty>()
+            .WithNone<CompoundObstacle2D>();
+
+        private static readonly QueryDescription _movingSingleQuery = new QueryDescription()
+            .WithAll<WorldPositionCm, ManifestationObstacleIntent2D, ManifestationObstacleBridge2DState, ManifestationMotion2D>()
+            .WithNone<CompoundObstacle2D>();
+
+        private static readonly QueryDescription _newCompoundQuery = new QueryDescription()
+            .WithAll<WorldPositionCm, CompoundObstacle2D>()
+            .WithNone<CompoundObstacle2DState>();
+
+        private static readonly QueryDescription _dirtyCompoundQuery = new QueryDescription()
+            .WithAll<WorldPositionCm, CompoundObstacle2D, CompoundObstacle2DState, ManifestationObstacleBridge2DDirty>();
+
+        private static readonly QueryDescription _movingCompoundQuery = new QueryDescription()
+            .WithAll<WorldPositionCm, CompoundObstacle2D, CompoundObstacle2DState, ManifestationMotion2D>();
 
         public ManifestationObstacleBridge2DSystem(World world) : base(world)
         {
@@ -29,122 +45,254 @@ namespace Ludots.Core.Physics2D.Systems
 
         public override void Update(in float dt)
         {
-            World.Query(in _singleQuery, (Entity entity, ref WorldPositionCm worldPosition, ref ManifestationObstacleIntent2D intent) =>
+            World.Query(in _newSingleQuery, (Entity entity, ref WorldPositionCm worldPosition, ref ManifestationObstacleIntent2D intent) =>
             {
-                Upsert(entity, new Position2D { Value = worldPosition.Value });
-
-                if (World.TryGet(entity, out FacingDirection facing))
-                {
-                    Upsert(entity, new Rotation2D { Value = Fix64.FromFloat(facing.AngleRad) });
-                }
-
-                int signature = ComputeShapeSignature(in intent, entity);
-                int shapeDataIndex = EnsureShapeRegistered(entity, in intent, signature);
-
-                if (World.Has<CompoundObstacle2DState>(entity))
-                {
-                    World.Remove<CompoundObstacle2DState>(entity);
-                }
-
-                if (intent.SinkPhysicsCollider != 0)
-                {
-                    Upsert(entity, new Collider2D
-                    {
-                        Type = ToColliderType(intent.Shape),
-                        ShapeDataIndex = shapeDataIndex
-                    });
-                    Upsert(entity, Mass2D.Static);
-                    Upsert(entity, Velocity2D.Zero);
-                }
-
-                if (intent.SinkNavigationObstacle != 0)
-                {
-                    Upsert(entity, new NavObstacle2D
-                    {
-                        Shape = ToNavObstacleShape(intent.Shape),
-                        ShapeDataIndex = shapeDataIndex
-                    });
-                    Upsert(entity, new NavKinematics2D
-                    {
-                        MaxSpeedCmPerSec = Fix64.Zero,
-                        MaxAccelCmPerSec2 = Fix64.Zero,
-                        RadiusCm = ResolveNavRadiusCm(entity, in intent, shapeDataIndex),
-                        NeighborDistCm = Fix64.Zero,
-                        TimeHorizonSec = Fix64.Zero,
-                        MaxNeighbors = 0
-                    });
-                }
+                MaterializeSingle(entity, in worldPosition, in intent, removeDirty: false);
             });
 
-            World.Query(in _compoundQuery, (Entity entity, ref WorldPositionCm worldPosition, ref CompoundObstacle2D obstacle) =>
+            World.Query(in _dirtySingleQuery, (Entity entity, ref WorldPositionCm worldPosition, ref ManifestationObstacleIntent2D intent) =>
             {
-                if (World.Has<ManifestationObstacleIntent2D>(entity))
-                {
-                    throw new InvalidOperationException("Entity must not author both ManifestationObstacleIntent2D and CompoundObstacle2D.");
-                }
+                MaterializeSingle(entity, in worldPosition, in intent, removeDirty: true);
+            });
 
-                Upsert(entity, new Position2D { Value = worldPosition.Value });
+            World.Query(in _movingSingleQuery, (Entity entity, ref WorldPositionCm worldPosition, ref ManifestationObstacleIntent2D intent) =>
+            {
+                MaterializeSingle(entity, in worldPosition, in intent, removeDirty: false);
+            });
 
-                if (World.TryGet(entity, out FacingDirection facing))
-                {
-                    Upsert(entity, new Rotation2D { Value = Fix64.FromFloat(facing.AngleRad) });
-                }
+            World.Query(in _newCompoundQuery, (Entity entity, ref WorldPositionCm worldPosition, ref CompoundObstacle2D obstacle) =>
+            {
+                MaterializeCompound(entity, in worldPosition, in obstacle, removeDirty: false);
+            });
 
-                int signature = ComputeCompoundShapeSignature(in obstacle);
-                CompoundObstacle2DState state = EnsureCompoundStateRegistered(entity, in obstacle, signature);
+            World.Query(in _dirtyCompoundQuery, (Entity entity, ref WorldPositionCm worldPosition, ref CompoundObstacle2D obstacle) =>
+            {
+                MaterializeCompound(entity, in worldPosition, in obstacle, removeDirty: true);
+            });
 
-                if (World.Has<Collider2D>(entity))
-                {
-                    World.Remove<Collider2D>(entity);
-                }
-
-                if (World.Has<NavObstacle2D>(entity))
-                {
-                    World.Remove<NavObstacle2D>(entity);
-                }
-
-                if (World.Has<ManifestationObstacleBridge2DState>(entity))
-                {
-                    World.Remove<ManifestationObstacleBridge2DState>(entity);
-                }
-
-                if (obstacle.SinkPhysicsCollider != 0)
-                {
-                    Upsert(entity, Mass2D.Static);
-                    Upsert(entity, Velocity2D.Zero);
-                }
-
-                if (obstacle.SinkNavigationObstacle != 0)
-                {
-                    Upsert(entity, new NavKinematics2D
-                    {
-                        MaxSpeedCmPerSec = Fix64.Zero,
-                        MaxAccelCmPerSec2 = Fix64.Zero,
-                        RadiusCm = ResolveCompoundNavRadiusCm(in state),
-                        NeighborDistCm = Fix64.Zero,
-                        TimeHorizonSec = Fix64.Zero,
-                        MaxNeighbors = 0
-                    });
-                }
+            World.Query(in _movingCompoundQuery, (Entity entity, ref WorldPositionCm worldPosition, ref CompoundObstacle2D obstacle) =>
+            {
+                MaterializeCompound(entity, in worldPosition, in obstacle, removeDirty: false);
             });
         }
 
-        private int EnsureShapeRegistered(Entity entity, in ManifestationObstacleIntent2D intent, int signature)
+        private void MaterializeSingle(
+            Entity entity,
+            in WorldPositionCm worldPosition,
+            in ManifestationObstacleIntent2D intent,
+            bool removeDirty)
         {
-            if (World.TryGet(entity, out ManifestationObstacleBridge2DState bridgeState) &&
-                bridgeState.ShapeSignature == signature &&
-                bridgeState.ShapeDataIndex >= 0)
+            int shapeSignature = ComputeShapeSignature(in intent, entity);
+            int poseSignature = ComputePoseSignature(in worldPosition, entity);
+            int sinkSignature = ComputeSinkSignature(intent.SinkPhysicsCollider, intent.SinkNavigationObstacle);
+
+            bool hasState = World.TryGet(entity, out ManifestationObstacleBridge2DState previousState);
+            bool unchanged = hasState &&
+                previousState.ShapeSignature == shapeSignature &&
+                previousState.PoseSignature == poseSignature &&
+                previousState.SinkSignature == sinkSignature;
+            if (unchanged)
             {
-                return bridgeState.ShapeDataIndex;
+                if (removeDirty)
+                {
+                    RemoveIfPresent<ManifestationObstacleBridge2DDirty>(entity);
+                }
+
+                return;
             }
 
-            int shapeDataIndex = RegisterShape(entity, in intent);
+            UpsertPose(entity, in worldPosition);
+
+            bool wantsPhysicsSink = intent.SinkPhysicsCollider != 0;
+            bool wantsNavigationSink = intent.SinkNavigationObstacle != 0;
+            bool hadPhysicsSink = hasState && HasPhysicsSink(previousState.SinkSignature);
+            bool hadNavigationSink = hasState && HasNavigationSink(previousState.SinkSignature);
+            int shapeDataIndex = -1;
+            if (wantsPhysicsSink || wantsNavigationSink)
+            {
+                shapeDataIndex = EnsureShapeRegistered(entity, in intent, shapeSignature, in previousState, hasState);
+            }
+            else if (hasState && previousState.ShapeSignature == shapeSignature)
+            {
+                shapeDataIndex = previousState.ShapeDataIndex;
+            }
+
+            RemoveIfPresent<CompoundObstacle2DState>(entity);
+
+            if (wantsPhysicsSink)
+            {
+                Upsert(entity, new Collider2D
+                {
+                    Type = ToColliderType(intent.Shape),
+                    ShapeDataIndex = shapeDataIndex
+                });
+                Upsert(entity, Mass2D.Static);
+                Upsert(entity, Velocity2D.Zero);
+                MarkStaticBodyActive(entity);
+            }
+            else
+            {
+                if (hadPhysicsSink || World.Has<Physics2DStaticBodyState>(entity))
+                {
+                    RemovePhysicsDerivedState(entity);
+                    MarkStaticBodyRemoved(entity);
+                }
+            }
+
+            if (wantsNavigationSink)
+            {
+                Upsert(entity, new NavObstacle2D
+                {
+                    Shape = ToNavObstacleShape(intent.Shape),
+                    ShapeDataIndex = shapeDataIndex
+                });
+                Upsert(entity, new NavKinematics2D
+                {
+                    MaxSpeedCmPerSec = Fix64.Zero,
+                    MaxAccelCmPerSec2 = Fix64.Zero,
+                    RadiusCm = ResolveNavRadiusCm(entity, in intent, shapeDataIndex),
+                    NeighborDistCm = Fix64.Zero,
+                    TimeHorizonSec = Fix64.Zero,
+                    MaxNeighbors = 0
+                });
+            }
+            else
+            {
+                if (hadNavigationSink)
+                {
+                    RemoveNavigationDerivedState(entity);
+                }
+            }
+
             Upsert(entity, new ManifestationObstacleBridge2DState
             {
                 ShapeDataIndex = shapeDataIndex,
-                ShapeSignature = signature
+                ShapeSignature = shapeSignature,
+                PoseSignature = poseSignature,
+                SinkSignature = sinkSignature
             });
-            return shapeDataIndex;
+
+            if (removeDirty)
+            {
+                RemoveIfPresent<ManifestationObstacleBridge2DDirty>(entity);
+            }
+        }
+
+        private void MaterializeCompound(
+            Entity entity,
+            in WorldPositionCm worldPosition,
+            in CompoundObstacle2D obstacle,
+            bool removeDirty)
+        {
+            if (World.Has<ManifestationObstacleIntent2D>(entity))
+            {
+                throw new InvalidOperationException("Entity must not author both ManifestationObstacleIntent2D and CompoundObstacle2D.");
+            }
+
+            int shapeSignature = ComputeCompoundShapeSignature(in obstacle);
+            int poseSignature = ComputePoseSignature(in worldPosition, entity);
+            int sinkSignature = ComputeSinkSignature(obstacle.SinkPhysicsCollider, obstacle.SinkNavigationObstacle);
+
+            bool hasState = World.TryGet(entity, out CompoundObstacle2DState previousState);
+            bool unchanged = hasState &&
+                previousState.ShapeSignature == shapeSignature &&
+                previousState.PoseSignature == poseSignature &&
+                ComputeSinkSignature(previousState.SinkPhysicsCollider, previousState.SinkNavigationObstacle) == sinkSignature;
+            if (unchanged)
+            {
+                if (removeDirty)
+                {
+                    RemoveIfPresent<ManifestationObstacleBridge2DDirty>(entity);
+                }
+
+                return;
+            }
+
+            UpsertPose(entity, in worldPosition);
+
+            CompoundObstacle2DState state = EnsureCompoundStateRegistered(entity, in obstacle, shapeSignature);
+            bool hadPhysicsSink = hasState && previousState.SinkPhysicsCollider != 0;
+            bool hadNavigationSink = hasState && previousState.SinkNavigationObstacle != 0;
+            if (state.PoseSignature != poseSignature ||
+                state.SinkPhysicsCollider != obstacle.SinkPhysicsCollider ||
+                state.SinkNavigationObstacle != obstacle.SinkNavigationObstacle)
+            {
+                state.PoseSignature = poseSignature;
+                state.SinkPhysicsCollider = obstacle.SinkPhysicsCollider;
+                state.SinkNavigationObstacle = obstacle.SinkNavigationObstacle;
+                Upsert(entity, state);
+            }
+
+            RemoveIfPresent<Collider2D>(entity);
+            RemoveIfPresent<NavObstacle2D>(entity);
+            RemoveIfPresent<ManifestationObstacleBridge2DState>(entity);
+
+            if (obstacle.SinkPhysicsCollider != 0)
+            {
+                Upsert(entity, Mass2D.Static);
+                Upsert(entity, Velocity2D.Zero);
+                MarkStaticBodyActive(entity);
+            }
+            else
+            {
+                if (hadPhysicsSink || World.Has<Physics2DStaticBodyState>(entity))
+                {
+                    RemovePhysicsDerivedState(entity);
+                    MarkStaticBodyRemoved(entity);
+                }
+            }
+
+            if (obstacle.SinkNavigationObstacle != 0)
+            {
+                Upsert(entity, new NavKinematics2D
+                {
+                    MaxSpeedCmPerSec = Fix64.Zero,
+                    MaxAccelCmPerSec2 = Fix64.Zero,
+                    RadiusCm = ResolveCompoundNavRadiusCm(in state),
+                    NeighborDistCm = Fix64.Zero,
+                    TimeHorizonSec = Fix64.Zero,
+                    MaxNeighbors = 0
+                });
+            }
+            else
+            {
+                if (hadNavigationSink)
+                {
+                    RemoveNavigationDerivedState(entity);
+                }
+            }
+
+            if (removeDirty)
+            {
+                RemoveIfPresent<ManifestationObstacleBridge2DDirty>(entity);
+            }
+        }
+
+        private void UpsertPose(Entity entity, in WorldPositionCm worldPosition)
+        {
+            Upsert(entity, new Position2D { Value = worldPosition.Value });
+
+            if (World.TryGet(entity, out FacingDirection facing))
+            {
+                Upsert(entity, new Rotation2D { Value = Fix64.FromFloat(facing.AngleRad) });
+            }
+        }
+
+        private int EnsureShapeRegistered(
+            Entity entity,
+            in ManifestationObstacleIntent2D intent,
+            int signature,
+            in ManifestationObstacleBridge2DState previousState,
+            bool hasState)
+        {
+            if (hasState &&
+                previousState.ShapeSignature == signature &&
+                previousState.ShapeDataIndex >= 0)
+            {
+                return previousState.ShapeDataIndex;
+            }
+
+            return RegisterShape(entity, in intent);
         }
 
         private int RegisterShape(Entity entity, in ManifestationObstacleIntent2D intent)
@@ -189,28 +337,28 @@ namespace Ludots.Core.Physics2D.Systems
 
         private int ComputeShapeSignature(in ManifestationObstacleIntent2D intent, Entity entity)
         {
-            var hash = new HashCode();
-            hash.Add((byte)intent.Shape);
-            hash.Add(intent.RadiusCm);
-            hash.Add(intent.HalfWidthCm);
-            hash.Add(intent.HalfHeightCm);
-            hash.Add(intent.LocalOffsetXCm);
-            hash.Add(intent.LocalOffsetYCm);
-            hash.Add(intent.NavRadiusCm);
+            int hash = BeginSignature();
+            hash = MixSignature(hash, (byte)intent.Shape);
+            hash = MixSignature(hash, intent.RadiusCm);
+            hash = MixSignature(hash, intent.HalfWidthCm);
+            hash = MixSignature(hash, intent.HalfHeightCm);
+            hash = MixSignature(hash, intent.LocalOffsetXCm);
+            hash = MixSignature(hash, intent.LocalOffsetYCm);
+            hash = MixSignature(hash, intent.NavRadiusCm);
 
             if (intent.Shape == ManifestationObstacleShape2D.Polygon &&
                 World.TryGet(entity, out ManifestationObstaclePolygon2D polygon))
             {
-                hash.Add(polygon.VertexCount);
+                hash = MixSignature(hash, polygon.VertexCount);
                 for (int i = 0; i < polygon.VertexCount; i++)
                 {
                     var vertex = polygon.GetVertex(i);
-                    hash.Add(vertex.X);
-                    hash.Add(vertex.Y);
+                    hash = MixSignature(hash, vertex.X);
+                    hash = MixSignature(hash, vertex.Y);
                 }
             }
 
-            return hash.ToHashCode();
+            return hash;
         }
 
         private CompoundObstacle2DState EnsureCompoundStateRegistered(
@@ -296,35 +444,80 @@ namespace Ludots.Core.Physics2D.Systems
 
         private static int ComputeCompoundShapeSignature(in CompoundObstacle2D obstacle)
         {
-            var hash = new HashCode();
-            hash.Add(obstacle.SinkPhysicsCollider);
-            hash.Add(obstacle.SinkNavigationObstacle);
-            hash.Add(obstacle.PieceCount);
+            int hash = BeginSignature();
+            hash = MixSignature(hash, obstacle.PieceCount);
             for (int i = 0; i < obstacle.PieceCount; i++)
             {
                 ManifestationObstacleShape2D shape = obstacle.GetShape(i);
-                hash.Add((byte)shape);
-                hash.Add(obstacle.GetRadiusCm(i));
-                hash.Add(obstacle.GetHalfWidthCm(i));
-                hash.Add(obstacle.GetHalfHeightCm(i));
-                hash.Add(obstacle.GetLocalOffsetXCm(i));
-                hash.Add(obstacle.GetLocalOffsetYCm(i));
-                hash.Add(obstacle.GetNavRadiusCm(i));
+                hash = MixSignature(hash, (byte)shape);
+                hash = MixSignature(hash, obstacle.GetRadiusCm(i));
+                hash = MixSignature(hash, obstacle.GetHalfWidthCm(i));
+                hash = MixSignature(hash, obstacle.GetHalfHeightCm(i));
+                hash = MixSignature(hash, obstacle.GetLocalOffsetXCm(i));
+                hash = MixSignature(hash, obstacle.GetLocalOffsetYCm(i));
+                hash = MixSignature(hash, obstacle.GetNavRadiusCm(i));
 
                 if (shape == ManifestationObstacleShape2D.Polygon)
                 {
                     int vertexCount = obstacle.GetPolygonVertexCount(i);
-                    hash.Add(vertexCount);
+                    hash = MixSignature(hash, vertexCount);
                     for (int vertexIndex = 0; vertexIndex < vertexCount; vertexIndex++)
                     {
                         var vertex = obstacle.GetVertex(i, vertexIndex);
-                        hash.Add(vertex.X);
-                        hash.Add(vertex.Y);
+                        hash = MixSignature(hash, vertex.X);
+                        hash = MixSignature(hash, vertex.Y);
                     }
                 }
             }
 
-            return hash.ToHashCode();
+            return hash;
+        }
+
+        private int ComputePoseSignature(in WorldPositionCm worldPosition, Entity entity)
+        {
+            int hash = BeginSignature();
+            hash = MixSignature(hash, worldPosition.Value.X.RawValue);
+            hash = MixSignature(hash, worldPosition.Value.Y.RawValue);
+            hash = MixSignature(hash, World.TryGet(entity, out FacingDirection facing)
+                ? BitConverter.SingleToInt32Bits(facing.AngleRad)
+                : 0);
+            return hash;
+        }
+
+        private static int ComputeSinkSignature(byte physics, byte navigation)
+        {
+            return (physics & 0x1) |
+                   ((navigation & 0x1) << 1);
+        }
+
+        private static bool HasPhysicsSink(int sinkSignature)
+        {
+            return (sinkSignature & 0x1) != 0;
+        }
+
+        private static bool HasNavigationSink(int sinkSignature)
+        {
+            return (sinkSignature & 0x2) != 0;
+        }
+
+        private static int BeginSignature()
+        {
+            return unchecked((int)2166136261);
+        }
+
+        private static int MixSignature(int hash, int value)
+        {
+            unchecked
+            {
+                hash ^= value;
+                return hash * 16777619;
+            }
+        }
+
+        private static int MixSignature(int hash, long value)
+        {
+            hash = MixSignature(hash, (int)value);
+            return MixSignature(hash, (int)(value >> 32));
         }
 
         private static Fix64 ResolveNavRadiusCm(Entity entity, in ManifestationObstacleIntent2D intent, int shapeDataIndex)
@@ -349,7 +542,7 @@ namespace Ludots.Core.Physics2D.Systems
             Fix64 maxDistanceSq = Fix64.Zero;
             for (int i = 0; i < polygon.VertexCount; i++)
             {
-                Fix64Vec2 delta = polygon.LocalOffset + polygon.Vertices[i] - polygon.LocalCenter;
+                Fix64Vec2 delta = ShapeWorldTransform2D.GetPolygonLocalVertex(polygon, i);
                 Fix64 distanceSq = delta.LengthSquared();
                 if (distanceSq > maxDistanceSq)
                 {
@@ -430,6 +623,54 @@ namespace Ludots.Core.Physics2D.Systems
             else
             {
                 World.Add(entity, component);
+            }
+        }
+
+        private void RemoveIfPresent<T>(Entity entity)
+        {
+            if (World.Has<T>(entity))
+            {
+                World.Remove<T>(entity);
+            }
+        }
+
+        private void RemovePhysicsDerivedState(Entity entity)
+        {
+            RemoveIfPresent<Collider2D>(entity);
+            RemoveIfPresent<Mass2D>(entity);
+            RemoveIfPresent<Velocity2D>(entity);
+        }
+
+        private void RemoveNavigationDerivedState(Entity entity)
+        {
+            RemoveIfPresent<NavObstacle2D>(entity);
+            RemoveIfPresent<NavKinematics2D>(entity);
+        }
+
+        private void MarkStaticBodyActive(Entity entity)
+        {
+            if (!World.Has<Physics2DStaticBodyState>(entity))
+            {
+                World.Add(entity, new Physics2DStaticBodyState());
+            }
+
+            MarkStaticBodyDirty(entity);
+        }
+
+        private void MarkStaticBodyRemoved(Entity entity)
+        {
+            if (World.Has<Physics2DStaticBodyState>(entity))
+            {
+                World.Remove<Physics2DStaticBodyState>(entity);
+                MarkStaticBodyDirty(entity);
+            }
+        }
+
+        private void MarkStaticBodyDirty(Entity entity)
+        {
+            if (!World.Has<Physics2DStaticBodyDirty>(entity))
+            {
+                World.Add(entity, new Physics2DStaticBodyDirty());
             }
         }
     }

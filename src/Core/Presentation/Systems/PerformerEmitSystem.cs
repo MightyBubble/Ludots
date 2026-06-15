@@ -41,6 +41,7 @@ namespace Ludots.Core.Presentation.Systems
         private readonly StableDrawCache? _stableDrawCache;
         private readonly SkinnedVisualBatchBuffer? _skinnedVisualBatchBuffer;
         private readonly WorldHudBatchBuffer? _worldHudBuffer;
+        private readonly PerformerVisualStableIdTable? _visualStableIds;
         private readonly PresentationTimingDiagnostics? _timingDiagnostics;
         private readonly List<Entity> _pendingDestroy = new(256);
         private readonly Dictionary<Entity, PresentationRequest> _singleRequestReplayCache = new();
@@ -56,7 +57,8 @@ namespace Ludots.Core.Presentation.Systems
             PresentationTimingDiagnostics? timingDiagnostics = null,
             StableDrawCache? stableDrawCache = null,
             SkinnedVisualBatchBuffer? skinnedVisualBatchBuffer = null,
-            WorldHudBatchBuffer? worldHudBuffer = null)
+            WorldHudBatchBuffer? worldHudBuffer = null,
+            PerformerVisualStableIdTable? visualStableIds = null)
             : base(world)
         {
             _runtime = runtime ?? throw new ArgumentNullException(nameof(runtime));
@@ -67,9 +69,10 @@ namespace Ludots.Core.Presentation.Systems
             _stableDrawCache = stableDrawCache;
             _skinnedVisualBatchBuffer = skinnedVisualBatchBuffer;
             _worldHudBuffer = worldHudBuffer;
+            _visualStableIds = visualStableIds;
             _runtime.BindDefinitions(_definitions);
             _assetEmitter = new PerformerAssetEmitRuntime(
-                world, _runtime, requests, globals, animatorStates, soundRequests);
+                world, _runtime, requests, globals, animatorStates, soundRequests, visualStableIds);
         }
 
         public override void Update(in float dt)
@@ -152,7 +155,7 @@ namespace Ludots.Core.Presentation.Systems
                 Entity performer = _pendingDestroy[i];
                 if (World.IsAlive(performer))
                 {
-                    _runtime.Destroy(performer);
+                    _runtime.Destroy(performer, ReleaseDestroyedPerformerVisualStableIds);
                 }
             }
 
@@ -160,6 +163,19 @@ namespace Ludots.Core.Presentation.Systems
             {
                 _timingDiagnostics.ObservePerformerEmit((Stopwatch.GetTimestamp() - start) * 1000d / Stopwatch.Frequency);
             }
+        }
+
+        private void ReleaseDestroyedPerformerVisualStableIds(Entity performer, PerformerState state)
+        {
+            if (_definitions.TryGet(state.DefId, out PerformerDefinition definition) &&
+                World.IsAlive(performer) &&
+                World.Has<PerformerEmitCache>(performer))
+            {
+                ref PerformerEmitCache emitCache = ref World.Get<PerformerEmitCache>(performer);
+                RemoveStableCacheIfPresent(in state, in definition, ref emitCache);
+            }
+
+            _visualStableIds?.ReleasePerformer(state.StableId);
         }
 
         private bool ResolveCachedDefinition(
@@ -771,7 +787,6 @@ namespace Ludots.Core.Presentation.Systems
             {
                 ref Entity entityFirst = ref chunk.Entity(0);
                 var states = chunk.GetSpan<PerformerState>();
-                var culls = chunk.GetSpan<PerformerCullState>();
                 var emitCaches = chunk.GetSpan<PerformerEmitCache>();
                 foreach (var index in chunk)
                 {
@@ -796,9 +811,8 @@ namespace Ludots.Core.Presentation.Systems
 
                     bool ownerDead = state.AnchorKind == PresentationAnchorKind.Entity && !World.IsAlive(state.OwnerEntity);
                     bool lifetimeExpired = state.DefaultLifetime > 0f && state.Elapsed + deltaTime >= state.DefaultLifetime;
-                    bool hiddenByCull = !culls[index].OwnerCullVisible;
                     bool hiddenByDefinition = !EvaluateVisibility(definition, state.OwnerEntity);
-                    if (!ownerDead && !lifetimeExpired && !hiddenByCull && !hiddenByDefinition)
+                    if (!ownerDead && !lifetimeExpired && !hiddenByDefinition)
                     {
                         continue;
                     }
@@ -899,34 +913,26 @@ namespace Ludots.Core.Presentation.Systems
                 return;
             }
 
-            if (!ownerCullVisible && (stableCacheEligible || state.AnchorKind == PresentationAnchorKind.Entity))
+            bool retainedCullState = stableCacheEligible || definition.UsesRetainedPresentationRequest;
+            if (!ownerCullVisible && !retainedCullState)
             {
-                RemoveStableCacheIfPresent(in state, in definition, ref emitCache);
-                if (definition.UsesRetainedPresentationRequest)
-                {
-                    RemoveRetainedPresentationRequestIfPresent(in state, in definition, ref emitCache);
-                    RemoveSurfaceSourceIfPresent(in state, in definition, ref emitCache);
-                }
-
                 RemoveReplayCache(entity);
-                UpdateEmitCache(ref emitCache, state.Version, position.Value, false, true, cull.LOD, stableVisualPresent: 0, definition.UsesRetainedPresentationRequest ? (byte)0 : emitCache.RetainedRequestPresent);
-                ClearDirtyIfNeeded(entity, ref emitCache, clearDirtyAfterProcessing);
-                return;
-            }
-
-            if (!ownerCullVisible && definition.UsesRetainedPresentationRequest)
-            {
-                RemoveRetainedPresentationRequestIfPresent(in state, in definition, ref emitCache);
-                RemoveSurfaceSourceIfPresent(in state, in definition, ref emitCache);
-                RemoveReplayCache(entity);
-                UpdateEmitCache(ref emitCache, state.Version, position.Value, false, true, cull.LOD, emitCache.StableVisualPresent, retainedRequestPresent: 0);
+                UpdateEmitCache(
+                    ref emitCache,
+                    state.Version,
+                    position.Value,
+                    ownerCullVisible,
+                    true,
+                    cull.LOD,
+                    stableVisualPresent: 0,
+                    retainedRequestPresent: 0);
                 ClearDirtyIfNeeded(entity, ref emitCache, clearDirtyAfterProcessing);
                 return;
             }
 
             bool versionClean = emitCache.CachedVersion == state.Version;
             bool positionClean = emitCache.LastEmitPosition == position.Value;
-            bool ownerCullClean = emitCache.LastOwnerCullVisible == 1;
+            bool ownerCullClean = emitCache.LastOwnerCullVisible == (ownerCullVisible ? (byte)1 : (byte)0);
             bool definitionVisibleClean = emitCache.LastDefinitionVisible == 1;
             bool lodClean = emitCache.LastLod == cull.LOD;
             bool replayEligible = definition.SupportsSingleRequestReplay;
@@ -941,7 +947,7 @@ namespace Ludots.Core.Presentation.Systems
                 if (versionClean && !positionClean && ownerCullClean && definitionVisibleClean && lodClean)
                 {
                     UpdateStableVisualPositions(in state, in definition, position.Value);
-                    UpdateEmitCache(ref emitCache, state.Version, position.Value, true, true, cull.LOD, stableVisualPresent: 1, emitCache.RetainedRequestPresent);
+                    UpdateEmitCache(ref emitCache, state.Version, position.Value, ownerCullVisible, true, cull.LOD, stableVisualPresent: 1, emitCache.RetainedRequestPresent);
                     ClearDirtyIfNeeded(entity, ref emitCache, clearDirtyAfterProcessing);
                     return;
                 }
@@ -1014,7 +1020,7 @@ namespace Ludots.Core.Presentation.Systems
                 retainedRequestPresent = 1;
             }
 
-            if (!emittedStableVisual && _requests.Count == emitRequestStartCount && emitCache.CachedVersion != 0)
+            if (ownerCullVisible && !emittedStableVisual && _requests.Count == emitRequestStartCount && emitCache.CachedVersion != 0)
             {
                 if (definition.UsesRetainedPresentationRequest && emitCache.RetainedRequestPresent != 0)
                 {
@@ -1039,7 +1045,7 @@ namespace Ludots.Core.Presentation.Systems
                 ref emitCache,
                 state.Version,
                 position.Value,
-                true,
+                ownerCullVisible,
                 true,
                 cull.LOD,
                 stableCacheEligible && emittedStableVisual ? (byte)1 : (byte)0,
@@ -1253,7 +1259,7 @@ namespace Ludots.Core.Presentation.Systems
             emitCache.StableVisualPresent = stableVisualPresent;
             bool versionClean = emitCache.CachedVersion == state.Version;
             bool positionClean = emitCache.LastEmitPosition == position.Value;
-            bool ownerCullClean = emitCache.LastOwnerCullVisible == 1;
+            bool ownerCullClean = emitCache.LastOwnerCullVisible == (ownerCullVisible ? (byte)1 : (byte)0);
             bool definitionVisibleClean = emitCache.LastDefinitionVisible == 1;
             bool lodClean = emitCache.LastLod == cull.LOD;
 
@@ -1264,17 +1270,6 @@ namespace Ludots.Core.Presentation.Systems
                 RemoveSurfaceSourceIfPresent(in state, in definition, ref emitCache);
                 RemoveReplayCache(entity);
                 UpdateEmitCache(ref emitCache, state.Version, position.Value, ownerCullVisible, false, cull.LOD, stableVisualPresent: 0, retainedRequestPresent: 0);
-                _runtime.ClearStaticDirty(entity);
-                return;
-            }
-
-            if (!ownerCullVisible)
-            {
-                RemoveStableCacheIfPresent(in state, in definition, ref emitCache);
-                RemoveRetainedPresentationRequestIfPresent(in state, in definition, ref emitCache);
-                RemoveSurfaceSourceIfPresent(in state, in definition, ref emitCache);
-                RemoveReplayCache(entity);
-                UpdateEmitCache(ref emitCache, state.Version, position.Value, false, true, cull.LOD, stableVisualPresent: 0, retainedRequestPresent: 0);
                 _runtime.ClearStaticDirty(entity);
                 return;
             }
@@ -1290,7 +1285,7 @@ namespace Ludots.Core.Presentation.Systems
                 if (versionClean && !positionClean && ownerCullClean && definitionVisibleClean && lodClean)
                 {
                     UpdateStableVisualPositions(in state, in definition, position.Value);
-                    UpdateEmitCache(ref emitCache, state.Version, position.Value, true, true, cull.LOD, stableVisualPresent: 1, emitCache.RetainedRequestPresent);
+                    UpdateEmitCache(ref emitCache, state.Version, position.Value, ownerCullVisible, true, cull.LOD, stableVisualPresent: 1, emitCache.RetainedRequestPresent);
                     _runtime.ClearStaticDirty(entity);
                     return;
                 }
@@ -1317,7 +1312,7 @@ namespace Ludots.Core.Presentation.Systems
                 ref emitCache,
                 state.Version,
                 position.Value,
-                true,
+                ownerCullVisible,
                 true,
                 cull.LOD,
                 emittedStableVisual ? (byte)1 : (byte)0,
@@ -1674,11 +1669,13 @@ namespace Ludots.Core.Presentation.Systems
             for (int i = 0; i < cacheableAssetBehaviorIndices.Length; i++)
             {
                 ref readonly BehaviorSlot slot = ref behaviors[cacheableAssetBehaviorIndices[i]];
-                if (_stableDrawCache.Contains(PerformerBehaviorRuntimeUtility.ComposeVisualStableId(
-                        state.StableId,
+                if (_assetEmitter.TryGetStaticStableVisualId(
+                        in state,
                         slot.SlotIndex,
                         slot.AssetBinding.AssetKind,
-                        state.DefId)))
+                        state.DefId,
+                        out int stableId) &&
+                    _stableDrawCache.Contains(stableId))
                 {
                     return true;
                 }
@@ -1778,7 +1775,15 @@ namespace Ludots.Core.Presentation.Systems
             for (int i = 0; i < cacheableAssetBehaviorIndices.Length; i++)
             {
                 ref readonly BehaviorSlot slot = ref behaviors[cacheableAssetBehaviorIndices[i]];
-                _stableDrawCache.UpdatePosition(PerformerBehaviorRuntimeUtility.ComposeVisualStableId(state.StableId, slot.SlotIndex, slot.AssetBinding.AssetKind, state.DefId), position);
+                if (_assetEmitter.TryGetStaticStableVisualId(
+                    in state,
+                    slot.SlotIndex,
+                    slot.AssetBinding.AssetKind,
+                    state.DefId,
+                    out int stableId))
+                {
+                    _stableDrawCache.UpdatePosition(stableId, position);
+                }
             }
         }
 

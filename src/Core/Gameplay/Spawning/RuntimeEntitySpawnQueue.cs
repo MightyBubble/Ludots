@@ -173,6 +173,37 @@ namespace Ludots.Core.Gameplay.Spawning
             return removed;
         }
 
+        public int RemoveForMap(MapId mapId)
+        {
+            if (_count == 0 || string.IsNullOrWhiteSpace(mapId.Value))
+            {
+                return 0;
+            }
+
+            int originalCount = _count;
+            int removed = 0;
+            for (int i = 0; i < originalCount; i++)
+            {
+                if (!TryDequeue(out RuntimeEntitySpawnRequest request))
+                {
+                    break;
+                }
+
+                if (request.MapId == mapId)
+                {
+                    removed++;
+                    continue;
+                }
+
+                if (!TryEnqueue(in request))
+                {
+                    throw new InvalidOperationException("RuntimeEntitySpawnQueue failed to preserve request order while removing a map.");
+                }
+            }
+
+            return removed;
+        }
+
         public void Clear()
         {
             _head = 0;

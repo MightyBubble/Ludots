@@ -23,5 +23,14 @@ namespace Ludots.Core.Presentation.Performers
                 return hash == 0 ? 1 : hash;
             }
         }
+
+        public static PerformerVisualStableKey ComposeVisualStableKey(
+            int performerStableId,
+            int slotIndex,
+            AssetKind assetKind,
+            int discriminator)
+        {
+            return new PerformerVisualStableKey(performerStableId, slotIndex, assetKind, discriminator);
+        }
     }
 }

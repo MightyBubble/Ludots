@@ -550,6 +550,7 @@ namespace Ludots.Tests.Presentation
                 {
                     DefaultStateIndex = 0,
                     States = [ new AnimatorStateDefinition { PackedStateIndex = 3, DurationSeconds = 1f, PlaybackSpeed = 1f, Loop = true } ],
+                    Transitions = Array.Empty<AnimatorTransitionDefinition>(),
                 });
 
             var definitions = new PerformerDefinitionRegistry();
@@ -1409,6 +1410,9 @@ namespace Ludots.Tests.Presentation
             var snapshotBuffer = new PrimitiveDrawBuffer();
             var requests = new PresentationRequestBuffer();
             var definitions = new PerformerDefinitionRegistry();
+            var stableDrawCache = new StableDrawCache();
+            var stableIds = new PresentationStableIdAllocator();
+            var visualStableIds = new PerformerVisualStableIdTable(stableIds, capacity: 16);
             int visibleDef = RegisterStaticVisualDefinition(definitions, "visible", assetId: 10, materialId: 20);
             int hiddenDef = RegisterStaticVisualDefinition(definitions, "hidden", assetId: 11, materialId: 21, visibilityParamKey: 500);
             int culledDef = RegisterStaticVisualDefinition(definitions, "culled", assetId: 12, materialId: 22, renderPath: VisualRenderPath.InstancedStaticMesh);
@@ -1440,13 +1444,22 @@ namespace Ludots.Tests.Presentation
             world.Get<PerformerWorldRotation>(culledPerformer).Value = culledRotation;
             world.Get<PerformerWorldScale>(culledPerformer).Value = new Vector3(3f, 2f, 1f);
 
-            using var system = new PerformerEmitSystem(world, instances, definitions, requests, new Dictionary<string, object>(), null!, null!);
+            using var system = new PerformerEmitSystem(
+                world,
+                instances,
+                definitions,
+                requests,
+                new Dictionary<string, object>(),
+                null!,
+                null!,
+                stableDrawCache: stableDrawCache,
+                visualStableIds: visualStableIds);
             using var flush = new PresentationRequestFlushSystem(
                 world,
                 requests,
                 new PrefabRegistry(),
                 new MeshAssetRegistry(),
-                new StableDrawCache(),
+                stableDrawCache,
                 drawBuffer,
                 new GroundOverlayBuffer(),
                 new WorldHudBatchBuffer(),
@@ -1840,7 +1853,7 @@ namespace Ludots.Tests.Presentation
         }
 
         [Test]
-        public void PerformerEmitSystem_StableCache_RemovesVisual_WhenOwnerBecomesCulled()
+        public void PerformerEmitSystem_StableCache_RetainsVisual_WhenOwnerBecomesCulled()
         {
             using var world = World.Create();
             var drawBuffer = new PrimitiveDrawBuffer();
@@ -1849,13 +1862,15 @@ namespace Ludots.Tests.Presentation
             var definitions = new PerformerDefinitionRegistry();
             int definitionId = RegisterStaticVisualDefinition(
                 definitions,
-                "stable.cull.removal",
+                "stable.cull.retained",
                 assetId: 31,
                 materialId: 41,
                 renderPath: VisualRenderPath.InstancedStaticMesh);
             var instances = new PerformerEntityRuntime(world);
             instances.BindDefinitions(definitions);
             var stableDrawCache = new StableDrawCache();
+            var stableIds = new PresentationStableIdAllocator();
+            var visualStableIds = new PerformerVisualStableIdTable(stableIds, capacity: 16);
             Entity owner = world.Create(new CullState { IsVisible = true, LOD = LODLevel.High });
             Entity performer = instances.Create(
                 definitionId,
@@ -1877,7 +1892,8 @@ namespace Ludots.Tests.Presentation
                 null!,
                 null!,
                 null,
-                stableDrawCache);
+                stableDrawCache,
+                visualStableIds: visualStableIds);
             using var flush = new PresentationRequestFlushSystem(
                 world,
                 requests,
@@ -1894,9 +1910,16 @@ namespace Ludots.Tests.Presentation
 
             emit.Update(0.016f);
             Assert.That(stableDrawCache.Count, Is.EqualTo(1));
+            Assert.That(visualStableIds.TryGet(
+                PerformerBehaviorRuntimeUtility.ComposeVisualStableKey(404, 0, AssetKind.Mesh, definitionId),
+                out int visualStableId), Is.True);
+            Assert.That(stableDrawCache.Contains(visualStableId), Is.True);
+            int initialRevision = stableDrawCache.ContentRevision;
             flush.Update(0.016f);
             Assert.That(snapshotBuffer.Count, Is.EqualTo(1));
             Assert.That(drawBuffer.Count, Is.EqualTo(1));
+            Assert.That(snapshotBuffer.GetSpan()[0].StableId, Is.EqualTo(visualStableId));
+            Assert.That(snapshotBuffer.GetSpan()[0].Visibility, Is.EqualTo(VisualVisibility.Visible));
 
             ref CullState ownerCull = ref world.Get<CullState>(owner);
             ownerCull.IsVisible = false;
@@ -1904,12 +1927,32 @@ namespace Ludots.Tests.Presentation
             instances.SyncCullVisibility();
 
             emit.Update(0.016f);
-            Assert.That(stableDrawCache.Count, Is.EqualTo(0));
+            Assert.That(stableDrawCache.Count, Is.EqualTo(1));
+            Assert.That(stableDrawCache.Contains(visualStableId), Is.True);
+            Assert.That(stableDrawCache.ContentRevision, Is.GreaterThan(initialRevision));
             drawBuffer.Clear();
             snapshotBuffer.Clear();
             flush.Update(0.016f);
-            Assert.That(snapshotBuffer.Count, Is.EqualTo(0));
+            Assert.That(snapshotBuffer.Count, Is.EqualTo(1));
             Assert.That(drawBuffer.Count, Is.EqualTo(0));
+            Assert.That(snapshotBuffer.GetSpan()[0].StableId, Is.EqualTo(visualStableId));
+            Assert.That(snapshotBuffer.GetSpan()[0].Visibility, Is.EqualTo(VisualVisibility.Culled));
+            Assert.That(snapshotBuffer.GetSpan()[0].LOD, Is.EqualTo(LODLevel.Culled));
+
+            ownerCull.IsVisible = true;
+            ownerCull.LOD = LODLevel.High;
+            instances.SyncCullVisibility();
+
+            emit.Update(0.016f);
+            Assert.That(stableDrawCache.Count, Is.EqualTo(1));
+            Assert.That(stableDrawCache.Contains(visualStableId), Is.True);
+            drawBuffer.Clear();
+            snapshotBuffer.Clear();
+            flush.Update(0.016f);
+            Assert.That(snapshotBuffer.Count, Is.EqualTo(1));
+            Assert.That(drawBuffer.Count, Is.EqualTo(1));
+            Assert.That(snapshotBuffer.GetSpan()[0].StableId, Is.EqualTo(visualStableId));
+            Assert.That(snapshotBuffer.GetSpan()[0].Visibility, Is.EqualTo(VisualVisibility.Visible));
         }
 
         [Test]
@@ -1929,6 +1972,8 @@ namespace Ludots.Tests.Presentation
             var instances = new PerformerEntityRuntime(world);
             instances.BindDefinitions(definitions);
             var stableDrawCache = new StableDrawCache();
+            var stableIds = new PresentationStableIdAllocator();
+            var visualStableIds = new PerformerVisualStableIdTable(stableIds, capacity: 16);
             Entity owner = world.Create(new CullState { IsVisible = true, LOD = LODLevel.High });
             Entity performer = instances.Create(
                 definitionId,
@@ -1950,7 +1995,8 @@ namespace Ludots.Tests.Presentation
                 null!,
                 null!,
                 null,
-                stableDrawCache);
+                stableDrawCache,
+                visualStableIds: visualStableIds);
             using var flush = new PresentationRequestFlushSystem(
                 world,
                 requests,

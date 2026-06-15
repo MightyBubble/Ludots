@@ -911,38 +911,38 @@ namespace Ludots.Client.Raylib.Rendering
                 : new Vector4(0.95f, 0.9f, 0.4f, 1f);
 
             DrawOrientedCube(
-                TransformLocal(position, baseYaw, new Vector3(0f, unit * 0.52f + treadBob, 0f)),
-                new Vector3(unit * 2.2f, unit * 0.7f, unit * 3.0f),
+                TransformLocal(position, baseYaw, PrototypeLocal(0f, unit * 0.52f + treadBob, 0f)),
+                PrototypeSize(unit * 2.2f, unit * 0.7f, unit * 3.0f),
                 baseYaw,
                 hullColor);
 
             DrawOrientedCube(
-                TransformLocal(position, baseYaw, new Vector3(unit * 0.92f, unit * 0.26f + treadBob, 0f)),
-                new Vector3(unit * 0.38f, unit * 0.25f, unit * 2.7f),
+                TransformLocal(position, baseYaw, PrototypeLocal(unit * 0.92f, unit * 0.26f + treadBob, 0f)),
+                PrototypeSize(unit * 0.38f, unit * 0.25f, unit * 2.7f),
                 baseYaw,
                 MultiplyColor(hullColor, 0.8f, 0.8f, 0.8f, 1f));
 
             DrawOrientedCube(
-                TransformLocal(position, baseYaw, new Vector3(-unit * 0.92f, unit * 0.26f + treadBob, 0f)),
-                new Vector3(unit * 0.38f, unit * 0.25f, unit * 2.7f),
+                TransformLocal(position, baseYaw, PrototypeLocal(-unit * 0.92f, unit * 0.26f + treadBob, 0f)),
+                PrototypeSize(unit * 0.38f, unit * 0.25f, unit * 2.7f),
                 baseYaw,
                 MultiplyColor(hullColor, 0.8f, 0.8f, 0.8f, 1f));
 
-            Vector3 turretCenter = TransformLocal(position, baseYaw, new Vector3(0f, unit * 1.0f, 0f));
+            Vector3 turretCenter = TransformLocal(position, baseYaw, PrototypeLocal(0f, unit * 1.0f, 0f));
             DrawOrientedCube(
                 turretCenter,
-                new Vector3(unit * 1.1f, unit * 0.42f, unit * 1.3f),
+                PrototypeSize(unit * 1.1f, unit * 0.42f, unit * 1.3f),
                 turretYaw,
                 turretColor);
 
             DrawOrientedCube(
-                TransformLocal(turretCenter, turretYaw, new Vector3(0f, unit * 0.02f, unit * 1.15f - recoil)),
-                new Vector3(unit * 0.18f, unit * 0.18f, unit * 2.25f),
+                TransformLocal(turretCenter, turretYaw, PrototypeLocal(0f, unit * 0.02f, unit * 1.15f - recoil)),
+                PrototypeSize(unit * 0.18f, unit * 0.18f, unit * 2.25f),
                 turretYaw,
                 accentColor);
 
             DrawPrototypeSphere(
-                TransformLocal(turretCenter, turretYaw, new Vector3(0f, unit * 0.18f, unit * 2.15f - recoil)),
+                TransformLocal(turretCenter, turretYaw, PrototypeLocal(0f, unit * 0.18f, unit * 2.15f - recoil)),
                 unit * (0.1f + recoilPulse * 0.1f),
                 accentColor);
         }
@@ -969,58 +969,58 @@ namespace Ludots.Client.Raylib.Rendering
                 : new Vector4(0.9f, 0.9f, 0.95f, 1f);
 
             DrawOrientedCube(
-                TransformLocal(position, baseYaw, new Vector3(0f, unit * 0.55f, 0f)),
-                new Vector3(unit * 0.75f, unit * 0.55f, unit * 0.45f),
+                TransformLocal(position, baseYaw, PrototypeLocal(0f, unit * 0.55f, 0f)),
+                PrototypeSize(unit * 0.75f, unit * 0.55f, unit * 0.45f),
                 baseYaw,
                 legColor);
 
             DrawOrientedCube(
-                TransformLocal(position, baseYaw, new Vector3(unit * 0.2f, unit * 0.18f, stride)),
-                new Vector3(unit * 0.2f, unit * 0.78f, unit * 0.2f),
+                TransformLocal(position, baseYaw, PrototypeLocal(unit * 0.2f, unit * 0.18f, stride)),
+                PrototypeSize(unit * 0.2f, unit * 0.78f, unit * 0.2f),
                 baseYaw,
                 legColor);
 
             DrawOrientedCube(
-                TransformLocal(position, baseYaw, new Vector3(-unit * 0.2f, unit * 0.18f, -stride)),
-                new Vector3(unit * 0.2f, unit * 0.78f, unit * 0.2f),
+                TransformLocal(position, baseYaw, PrototypeLocal(-unit * 0.2f, unit * 0.18f, -stride)),
+                PrototypeSize(unit * 0.2f, unit * 0.78f, unit * 0.2f),
                 baseYaw,
                 legColor);
 
-            Vector3 chestCenter = TransformLocal(position, upperYaw, new Vector3(0f, unit * 1.3f + chestLift, 0f));
+            Vector3 chestCenter = TransformLocal(position, upperYaw, PrototypeLocal(0f, unit * 1.3f + chestLift, 0f));
             DrawOrientedCube(
                 chestCenter,
-                new Vector3(unit * 0.82f, unit * 0.92f, unit * 0.4f),
+                PrototypeSize(unit * 0.82f, unit * 0.92f, unit * 0.4f),
                 upperYaw,
                 torsoColor);
 
             DrawPrototypeSphere(
-                TransformLocal(chestCenter, upperYaw, new Vector3(0f, unit * 0.82f, 0f)),
+                TransformLocal(chestCenter, upperYaw, PrototypeLocal(0f, unit * 0.82f, 0f)),
                 unit * 0.28f,
                 MultiplyColor(color, 1f, 0.92f, 0.86f, 1f));
 
             DrawOrientedCube(
-                TransformLocal(chestCenter, upperYaw, new Vector3(-unit * 0.48f, unit * 0.05f, unit * 0.05f)),
-                new Vector3(unit * 0.16f, unit * 0.75f, unit * 0.16f),
+                TransformLocal(chestCenter, upperYaw, PrototypeLocal(-unit * 0.48f, unit * 0.05f, unit * 0.05f)),
+                PrototypeSize(unit * 0.16f, unit * 0.75f, unit * 0.16f),
                 upperYaw - aimWeight * 0.15f,
                 torsoColor);
 
             DrawOrientedCube(
-                TransformLocal(chestCenter, upperYaw, new Vector3(unit * 0.5f, unit * 0.02f, unit * (0.18f + aimWeight * 0.25f))),
-                new Vector3(unit * 0.16f, unit * 0.7f, unit * 0.16f),
+                TransformLocal(chestCenter, upperYaw, PrototypeLocal(unit * 0.5f, unit * 0.02f, unit * (0.18f + aimWeight * 0.25f))),
+                PrototypeSize(unit * 0.16f, unit * 0.7f, unit * 0.16f),
                 upperYaw + aimWeight * 0.35f,
                 torsoColor);
 
-            Vector3 weaponCenter = TransformLocal(chestCenter, upperYaw, new Vector3(unit * 0.18f, -unit * 0.02f, unit * 0.7f));
+            Vector3 weaponCenter = TransformLocal(chestCenter, upperYaw, PrototypeLocal(unit * 0.18f, -unit * 0.02f, unit * 0.7f));
             DrawOrientedCube(
                 weaponCenter,
-                new Vector3(unit * 0.14f, unit * 0.14f, unit * 0.95f),
+                PrototypeSize(unit * 0.14f, unit * 0.14f, unit * 0.95f),
                 upperYaw,
                 weaponColor);
 
             if (recoilPulse > 0.01f)
             {
                 DrawPrototypeSphere(
-                    TransformLocal(weaponCenter, upperYaw, new Vector3(0f, 0f, unit * 0.68f)),
+                    TransformLocal(weaponCenter, upperYaw, PrototypeLocal(0f, 0f, unit * 0.68f)),
                     unit * 0.14f,
                     new Vector4(1f, 0.62f, 0.2f, 1f));
             }
@@ -1054,6 +1054,16 @@ namespace Ludots.Client.Raylib.Rendering
         private void DrawOrientedCube(Vector3 center, Vector3 size, float yawRad, Vector4 color)
         {
             DrawWireBox(center, size, yawRad, color);
+        }
+
+        private static Vector3 PrototypeLocal(float right, float up, float forward)
+        {
+            return new Vector3(forward, up, right);
+        }
+
+        private static Vector3 PrototypeSize(float rightWidth, float height, float forwardDepth)
+        {
+            return new Vector3(forwardDepth, height, rightWidth);
         }
 
         private static void DrawPrototypeSphere(Vector3 center, float radius, Vector4 color)

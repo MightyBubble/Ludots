@@ -117,11 +117,14 @@ namespace Ludots.Adapter.Raylib
 
                 var viewController = new RaylibViewController(cameraAdapter);
                 engine.SetService(CoreServiceKeys.ViewController, (IViewController)viewController);
+                var presentationFrameSetup = engine.GetService(CoreServiceKeys.PresentationFrameSetup);
 
                 var screenProjector = new CoreScreenProjector(engine.GameSession.Camera, viewController);
                 var screenRayProvider = new CoreScreenRayProvider(engine.GameSession.Camera, viewController);
                 screenProjector.BindPresenter(cameraPresenter);
                 screenRayProvider.BindPresenter(cameraPresenter);
+                screenProjector.BindPresentationAlphaProvider(() => presentationFrameSetup?.GetInterpolationAlpha() ?? 1f);
+                screenRayProvider.BindPresentationAlphaProvider(() => presentationFrameSetup?.GetInterpolationAlpha() ?? 1f);
                 engine.SetService(CoreServiceKeys.ScreenProjector, (IScreenProjector)screenProjector);
                 engine.SetService(CoreServiceKeys.ScreenRayProvider, (IScreenRayProvider)screenRayProvider);
                 var cullingFocusOverride = new CameraCullingFocusOverride();
@@ -145,7 +148,6 @@ namespace Ludots.Adapter.Raylib
                 engine.SetService(CoreServiceKeys.RenderCameraDebugState, renderCameraDebug);
 
                 engine.RegisterPresentationSystem(new CullingVisualizationPresentationSystem(engine.GlobalContext));
-                var presentationFrameSetup = engine.GetService(CoreServiceKeys.PresentationFrameSetup);
 
                 WorldHudToScreenSystem? hudProjection = null;
                 PresentationOverlaySceneBuilder? overlaySceneBuilder = null;
@@ -219,7 +221,7 @@ namespace Ludots.Adapter.Raylib
                 }
                 bool lightweightDiagnosticHudEnabled = ReadEnvBoolOrDefault(
                     "LUDOTS_RAYLIB_LIGHTWEIGHT_DIAGNOSTIC_HUD",
-                    defaultValue: true);
+                    defaultValue: false);
                 float autoOrbitDegPerSecond = float.TryParse(Environment.GetEnvironmentVariable("LUDOTS_RAYLIB_AUTO_ORBIT_DEG_PER_SEC"), out float parsedAutoOrbitDegPerSecond)
                     ? parsedAutoOrbitDegPerSecond
                     : 0f;
@@ -896,8 +898,21 @@ namespace Ludots.Adapter.Raylib
         private static bool UpdateInput(UIRoot uiRoot)
         {
             var mousePos = Rl.GetMousePosition();
+            bool windowFocused = Rl.IsWindowFocused();
+            bool leftMouseDown = Rl.IsMouseButtonDown(MouseButton.MOUSE_LEFT_BUTTON);
+            bool leftMouseReleased = Rl.IsMouseButtonReleased(MouseButton.MOUSE_LEFT_BUTTON);
             UiNode? hitNode = uiRoot.Scene?.HitTest(mousePos.X, mousePos.Y);
             bool hitInteractiveUi = IsInteractiveUiNode(hitNode);
+
+            if (_uiPointerCaptured && (!windowFocused || (!leftMouseDown && !leftMouseReleased)))
+            {
+                if (windowFocused)
+                {
+                    uiRoot.HandleInput(new PointerEvent { DeviceType = InputDeviceType.Mouse, PointerId = 0, Action = PointerAction.Up, X = mousePos.X, Y = mousePos.Y });
+                }
+
+                _uiPointerCaptured = false;
+            }
 
             if (_uiPointerCaptured || hitInteractiveUi)
             {
@@ -913,7 +928,7 @@ namespace Ludots.Adapter.Raylib
                 }
             }
 
-            if (Rl.IsMouseButtonReleased(MouseButton.MOUSE_LEFT_BUTTON))
+            if (leftMouseReleased)
             {
                 if (_uiPointerCaptured)
                 {

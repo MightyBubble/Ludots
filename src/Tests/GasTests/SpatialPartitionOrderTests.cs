@@ -7,6 +7,7 @@ using Ludots.Core.Spatial;
 using Ludots.Core.Systems;
 using Ludots.Core.Physics2D.Components;
 using Ludots.Core.Physics2D.Systems;
+using Ludots.Core.Presentation.Components;
 
 namespace GasTests
 {
@@ -99,6 +100,37 @@ namespace GasTests
             spatialUpdate.Update(0.016f);
 
             _world.Add(entity, new SpatialPartitionExcluded());
+            spatialUpdate.Update(0.016f);
+
+            Assert.That(_world.Has<SpatialCellRef>(entity), Is.False);
+            (int cx, int cy) = WorldToCell(500, 0, _spec.GridCellSizeCm);
+            Assert.That(PartitionContains(entity, cx, cy), Is.False);
+        }
+
+        [Test]
+        public void PresentationDestroyPending_WorldPositionDoesNotJoinGameplayPartition()
+        {
+            var entity = _world.Create(
+                new WorldPositionCm { Value = Fix64Vec2.FromInt(500, 0) },
+                new PresentationDestroyPending());
+            var spatialUpdate = new SpatialPartitionUpdateSystem(_world, _partition, _spec);
+
+            spatialUpdate.Update(0.016f);
+
+            Assert.That(_world.Has<SpatialCellRef>(entity), Is.False);
+            (int cx, int cy) = WorldToCell(500, 0, _spec.GridCellSizeCm);
+            Assert.That(PartitionContains(entity, cx, cy), Is.False);
+        }
+
+        [Test]
+        public void PresentationDestroyPending_RemovesExistingGameplayPartitionRef()
+        {
+            var entity = _world.Create(
+                new WorldPositionCm { Value = Fix64Vec2.FromInt(500, 0) });
+            var spatialUpdate = new SpatialPartitionUpdateSystem(_world, _partition, _spec);
+            spatialUpdate.Update(0.016f);
+
+            _world.Add(entity, new PresentationDestroyPending());
             spatialUpdate.Update(0.016f);
 
             Assert.That(_world.Has<SpatialCellRef>(entity), Is.False);

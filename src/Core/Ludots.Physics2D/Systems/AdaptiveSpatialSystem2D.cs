@@ -63,6 +63,7 @@ namespace Ludots.Core.Physics2D.Systems
         private readonly List<PairKey> _unusedPairKeys;
 
         private ISpatialPartitionStrategy _currentStrategy = null!;
+        private int _observedStaticBodyVersion = -1;
 
         public CollisionPairOverflowPolicy2D OverflowPolicy { get; set; } = CollisionPairOverflowPolicy2D.Throw;
         public int DroppedPairsLastUpdate { get; private set; }
@@ -94,10 +95,23 @@ namespace Ludots.Core.Physics2D.Systems
         public override void Update(in float deltaTime)
         {
             DroppedPairsLastUpdate = 0;
-            var rigidBodies = _buildPhysicsWorld.RigidBodyDescriptors;
-            if (rigidBodies.Count == 0) return;
+            var dynamicBodies = _buildPhysicsWorld.DynamicRigidBodyDescriptors;
+            var staticBodies = _buildPhysicsWorld.StaticRigidBodyDescriptors;
+            bool rebuildStatic = _observedStaticBodyVersion != _buildPhysicsWorld.StaticBodyVersion;
 
-            _currentStrategy.Build(CollectionsMarshal.AsSpan(rigidBodies));
+            _currentStrategy.Build(
+                CollectionsMarshal.AsSpan(dynamicBodies),
+                CollectionsMarshal.AsSpan(staticBodies),
+                rebuildStatic);
+            _observedStaticBodyVersion = _buildPhysicsWorld.StaticBodyVersion;
+
+            if (dynamicBodies.Count == 0)
+            {
+                _potentialPairs.Clear();
+                _usedPairKeys.Clear();
+                RecycleUnusedPairs();
+                return;
+            }
 
             _potentialPairs.Clear();
             _currentStrategy.QueryPotentialCollisions(_potentialPairs);

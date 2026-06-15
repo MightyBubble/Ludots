@@ -1,6 +1,5 @@
 using System;
 using System.Collections.Generic;
-using Arch.Core;
 using CoreInputMod.Systems;
 using Ludots.Core.Gameplay.Camera;
 using Ludots.Core.Input.Orders;
@@ -17,19 +16,14 @@ namespace CoreInputMod.ViewMode
         private readonly List<ViewModeConfig> _modes = new();
         private readonly Dictionary<string, ViewModeConfig> _modeMap = new(StringComparer.OrdinalIgnoreCase);
         private readonly Dictionary<string, object> _globals;
-        private readonly World _world;
-        private readonly CameraManager _camera;
         private int _activeIndex = -1;
-        private string? _ownedVirtualCameraId;
 
         public ViewModeConfig? ActiveMode => _activeIndex >= 0 && _activeIndex < _modes.Count ? _modes[_activeIndex] : null;
         public IReadOnlyList<ViewModeConfig> Modes => _modes;
 
-        public ViewModeManager(World world, Dictionary<string, object> globals, CameraManager camera)
+        public ViewModeManager(Dictionary<string, object> globals)
         {
-            _world = world;
             _globals = globals;
-            _camera = camera;
         }
 
         public void Register(ViewModeConfig mode)
@@ -95,12 +89,6 @@ namespace CoreInputMod.ViewMode
                 }
             }
 
-            if (!string.IsNullOrWhiteSpace(_ownedVirtualCameraId))
-            {
-                _camera.DeactivateVirtualCamera(_ownedVirtualCameraId);
-                _ownedVirtualCameraId = null;
-            }
-
             _activeIndex = -1;
             _globals.Remove(ActiveModeIdKey);
             _globals.Remove(SkillBarOverlaySystem.SkillBarKeyLabelsKey);
@@ -122,34 +110,15 @@ namespace CoreInputMod.ViewMode
                 }
             }
 
-            ApplyCamera(previous, next);
+            ApplyCamera(next);
             ApplyInteractionMode(next);
             ApplySkillBar(next);
             _globals[ActiveModeIdKey] = next.Id;
         }
 
-        private void ApplyCamera(ViewModeConfig? previous, ViewModeConfig next)
+        private void ApplyCamera(ViewModeConfig next)
         {
-            if (!string.IsNullOrWhiteSpace(_ownedVirtualCameraId))
-            {
-                _camera.DeactivateVirtualCamera(_ownedVirtualCameraId);
-                _ownedVirtualCameraId = null;
-            }
-            else if (previous != null &&
-                     !string.IsNullOrWhiteSpace(previous.VirtualCameraId) &&
-                     !string.Equals(previous.VirtualCameraId, next.VirtualCameraId, StringComparison.OrdinalIgnoreCase) &&
-                     _camera.IsVirtualCameraActive(previous.VirtualCameraId))
-            {
-                // The previous mode may be the authoritative camera inherited from map default.
-                // In that case we leave it active and only swap the top mode-owned camera.
-            }
-
             if (string.IsNullOrWhiteSpace(next.VirtualCameraId))
-            {
-                return;
-            }
-
-            if (_camera.IsVirtualCameraActive(next.VirtualCameraId))
             {
                 return;
             }
@@ -168,12 +137,16 @@ namespace CoreInputMod.ViewMode
                     $"ViewMode '{next.Id}' declared unsupported FollowTargetKind '{next.FollowTargetKind}'.");
             }
 
-            _camera.ActivateVirtualCamera(
-                next.VirtualCameraId,
-                blendDurationSeconds: null,
-                followTarget: CameraFollowTargetFactory.Build(_world, _globals, followTargetKind),
-                snapToFollowTargetWhenAvailable: definition.SnapToFollowTargetWhenAvailable);
-            _ownedVirtualCameraId = next.VirtualCameraId;
+            var request = new VirtualCameraRequest
+            {
+                Id = next.VirtualCameraId,
+                FollowTargetKindOverride = followTargetKind,
+                SnapToFollowTargetWhenAvailable = definition.SnapToFollowTargetWhenAvailable,
+                ResetRuntimeState = true,
+                ReplaceActiveStack = true
+            };
+
+            _globals[CoreServiceKeys.VirtualCameraRequest.Name] = request;
         }
 
         private void ApplyInteractionMode(ViewModeConfig mode)

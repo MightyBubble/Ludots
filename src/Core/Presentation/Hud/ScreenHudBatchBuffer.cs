@@ -856,6 +856,7 @@ namespace Ludots.Core.Presentation.Hud
                     }
 
                     _bulkProjectedBuildChanged = true;
+                    _flattenedDirty = true;
                     continue;
                 }
 
@@ -863,6 +864,7 @@ namespace Ludots.Core.Presentation.Hud
                 {
                     _bars[write] = _bars[read];
                     _barProjectedBuildStamps[write] = _barProjectedBuildStamps[read];
+                    _flattenedDirty = true;
                 }
 
                 int movedStableId = _bars[write].StableId;
@@ -913,6 +915,7 @@ namespace Ludots.Core.Presentation.Hud
                     }
 
                     _bulkProjectedBuildChanged = true;
+                    _flattenedDirty = true;
                     continue;
                 }
 
@@ -920,6 +923,7 @@ namespace Ludots.Core.Presentation.Hud
                 {
                     _texts[write] = _texts[read];
                     _textProjectedBuildStamps[write] = _textProjectedBuildStamps[read];
+                    _flattenedDirty = true;
                 }
 
                 int movedStableId = _texts[write].StableId;

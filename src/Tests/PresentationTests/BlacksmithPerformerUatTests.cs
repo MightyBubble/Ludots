@@ -499,6 +499,7 @@ namespace Ludots.Tests.Presentation
                 var graphPrograms = new GraphProgramRegistry();
                 var graphApi = new GasGraphRuntimeApi(world);
                 var stableIds = new PresentationStableIdAllocator();
+                var visualStableIds = new PerformerVisualStableIdTable(stableIds, capacity: 512);
 
                 var entityLifecycle = new PresentationEntityLifecycleSystem(world, events, instances, definitions, stableIds);
                 var globalProjection = new GlobalPresentationEventProjectionSystem(world, globalEvents, events, gameSession);
@@ -513,7 +514,8 @@ namespace Ludots.Tests.Presentation
                     stableIds,
                     definitions,
                     animatorStates,
-                    stableDrawCache);
+                    stableDrawCache,
+                    visualStableIds);
                 var animator = new AnimatorRuntimeSystem(world, animatorControllers, instances, definitions, animatorStates);
                 var behavior = new PerformerBehaviorSystem(world, instances, definitions, events, ownerChanges, soundRequests, new FlatHeightmap());
                 var emit = new PerformerEmitSystem(
@@ -524,7 +526,8 @@ namespace Ludots.Tests.Presentation
                     new Dictionary<string, object>(),
                     animatorStates,
                     soundRequests,
-                    stableDrawCache: stableDrawCache);
+                    stableDrawCache: stableDrawCache,
+                    visualStableIds: visualStableIds);
                 var flush = new PresentationRequestFlushSystem(
                     world,
                     requests,

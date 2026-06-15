@@ -232,6 +232,43 @@ namespace Ludots.Tests.Presentation
         }
 
         [Test]
+        public void Sync_VisibleCulledVisible_KeepsBindingSlotWithoutRemoveCreate()
+        {
+            var planner = new StaticMeshAdapterSyncPlanner();
+            var visible = CreateItem(111, VisualRenderPath.InstancedStaticMesh, meshAssetId: 10, materialId: 1);
+
+            planner.Sync(new[] { visible });
+            Assert.That(planner.TryGetBinding(111, out var original), Is.True);
+
+            var culled = CreateItem(
+                111,
+                VisualRenderPath.InstancedStaticMesh,
+                meshAssetId: 10,
+                materialId: 1,
+                visibility: VisualVisibility.Culled);
+
+            planner.Sync(new[] { culled });
+            Assert.That(planner.Operations.Count, Is.EqualTo(1));
+            Assert.That(planner.Operations[0].Kind, Is.EqualTo(StaticMeshAdapterSyncOpKind.Update));
+            Assert.That(planner.LastRemoveCount, Is.EqualTo(0));
+            Assert.That(planner.LastCreateCount, Is.EqualTo(0));
+            Assert.That(planner.TryGetBinding(111, out var culledBinding), Is.True);
+            Assert.That(culledBinding.Slot, Is.EqualTo(original.Slot));
+            Assert.That(culledBinding.Generation, Is.EqualTo(original.Generation));
+            Assert.That(culledBinding.Item.Visibility, Is.EqualTo(VisualVisibility.Culled));
+
+            planner.Sync(new[] { visible });
+            Assert.That(planner.Operations.Count, Is.EqualTo(1));
+            Assert.That(planner.Operations[0].Kind, Is.EqualTo(StaticMeshAdapterSyncOpKind.Update));
+            Assert.That(planner.LastRemoveCount, Is.EqualTo(0));
+            Assert.That(planner.LastCreateCount, Is.EqualTo(0));
+            Assert.That(planner.TryGetBinding(111, out var visibleAgainBinding), Is.True);
+            Assert.That(visibleAgainBinding.Slot, Is.EqualTo(original.Slot));
+            Assert.That(visibleAgainBinding.Generation, Is.EqualTo(original.Generation));
+            Assert.That(visibleAgainBinding.Item.Visibility, Is.EqualTo(VisualVisibility.Visible));
+        }
+
+        [Test]
         public void Sync_RemoveAndReuse_RecyclesSlotWithIncrementedGeneration()
         {
             var planner = new StaticMeshAdapterSyncPlanner();

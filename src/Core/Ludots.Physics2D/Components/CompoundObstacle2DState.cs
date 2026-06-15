@@ -11,6 +11,7 @@ namespace Ludots.Core.Physics2D.Components
         public byte SinkPhysicsCollider;
         public byte SinkNavigationObstacle;
         public int ShapeSignature;
+        public int PoseSignature;
         public fixed byte ShapeValues[MaxPieces];
         public fixed int ShapeDataIndices[MaxPieces];
         public fixed int NavRadiusCms[MaxPieces];

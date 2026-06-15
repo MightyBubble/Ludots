@@ -1158,6 +1158,44 @@ namespace Ludots.Tests.GAS
         }
 
         [Test]
+        public void CurrentSelectionApplySystem_ClickPressedAndReleasedInOneSnapshot_SelectsHoveredEntity()
+        {
+            using var world = World.Create();
+
+            var input = new PlayerInputHandler(new NullInputBackend(), CreateInputConfig());
+            var local = world.Create();
+            var entity = world.Create(
+                WorldPositionCm.FromCm(1600, 1200),
+                new VisualTransform { Position = new Vector3(16f, 0f, 12f), Rotation = Quaternion.Identity, Scale = Vector3.One },
+                new CullState { IsVisible = true },
+                new SelectionSelectableTag(),
+                new SpatialBounds { Kind = SpatialBoundsKind.Footprint2D },
+                CreateRectFootprint(0, 0, 300, 200));
+
+            var globals = new Dictionary<string, object>
+            {
+                [CoreServiceKeys.AuthoritativeInput.Name] = input,
+                [CoreServiceKeys.AuthoritativePointerButtons.Name] = new AuthoritativePointerButtonSnapshot(),
+                [CoreServiceKeys.ScreenRayProvider.Name] = new WorldMappedScreenRayProvider(),
+                [CoreServiceKeys.VisualHeightmap.Name] = CreateFlatHeightmap(),
+                [CoreServiceKeys.ScreenProjector.Name] = new WorldMappedScreenProjector(),
+                [CoreServiceKeys.WorldSizeSpec.Name] = CreateWorldSizeSpec(),
+                [CoreServiceKeys.LocalPlayerEntity.Name] = local,
+                [CoreServiceKeys.InteractionActionBindings.Name] = new InteractionActionBindings(),
+            };
+            var selectionRuntime = CreateSelectionRuntime(world, globals);
+            var system = new CurrentSelectionApplySystem(world, globals);
+
+            SetConfirmSnapshot(globals, new Vector2(1700f, 1200f), pressedThisFrame: true, isDown: false, releasedThisFrame: true);
+            SetAuthoritativeGroundPoint(input, new WorldCmInt2(1700, 1200));
+            input.InjectAction("PointerPos", new Vector3(1700f, 1200f, 0f));
+            input.Update();
+            system.Update(0f);
+
+            AssertSelection(selectionRuntime, local, entity);
+        }
+
+        [Test]
         public void CurrentSelectionApplySystem_AdditiveModifierAddsWithoutReplacing()
         {
             using var world = World.Create();

@@ -342,6 +342,52 @@ public sealed class NativeSkiaOverlayTests
     }
 
     [Test]
+    public void RaylibOverlayCompositor_DoesNotDirectDrawTopMostWhenUnderUiHudExists()
+    {
+        string source = File.ReadAllText(Path.Combine(
+            FindRepoRoot(),
+            "src",
+            "Adapters",
+            "Raylib",
+            "Ludots.Adapter.Raylib",
+            "RaylibOverlayCompositor.cs"));
+
+        Assert.That(
+            source,
+            Does.Contain("hasTopOverlay && _useGpuDirectUnderlay && !hasUnderlay && !hasUiLayer"),
+            "TopMost direct overlay must stay disabled while UnderUi HUD exists; otherwise minimap is drawn under world HUD.");
+        Assert.That(
+            source,
+            Does.Contain("orderedDirectOverlayComposite = hasUnderlay && hasTopOverlay && !hasUiLayer && _useGpuDirectUnderlay"),
+            "UnderUi and TopMost may share a direct GPU path only when the compositor draws TopMost after the HUD.");
+        Assert.That(
+            source,
+            Does.Contain("_framebufferTopOverlaySurface.Render("),
+            "TopMost minimap must still render after direct UnderUi HUD so it occludes HUD bars/text.");
+    }
+
+    [Test]
+    public void RaylibHostLoop_KeepsNativeDiagnosticHudOptIn()
+    {
+        string source = File.ReadAllText(Path.Combine(
+            FindRepoRoot(),
+            "src",
+            "Adapters",
+            "Raylib",
+            "Ludots.Adapter.Raylib",
+            "RaylibHostLoop.cs"));
+
+        Assert.That(
+            source,
+            Does.Contain("\"LUDOTS_RAYLIB_LIGHTWEIGHT_DIAGNOSTIC_HUD\","),
+            "Native Raylib diagnostics should stay available for explicit profiling runs.");
+        Assert.That(
+            source,
+            Does.Contain("defaultValue: false"),
+            "Native Raylib diagnostics must be opt-in so showcase screenshots are not covered by debug text.");
+    }
+
+    [Test]
     public void SkiaOverlayRenderer_DrawsLargeUnderUiHudLanesImmediately_WhenDirty()
     {
         var scene = new PresentationOverlayScene(256);
@@ -1061,5 +1107,22 @@ public sealed class NativeSkiaOverlayTests
         locales[1] = new PresentationTextLocaleTable(1, "en-US", templates);
 
         return new PresentationTextCatalog(tokenIds, tokens, localeIds, locales, defaultLocaleId: 1);
+    }
+
+    private static string FindRepoRoot()
+    {
+        string current = TestContext.CurrentContext.WorkDirectory;
+        while (!string.IsNullOrEmpty(current))
+        {
+            if (Directory.Exists(Path.Combine(current, "mods")) &&
+                File.Exists(Path.Combine(current, "AGENTS.md")))
+            {
+                return current;
+            }
+
+            current = Path.GetDirectoryName(current)!;
+        }
+
+        throw new DirectoryNotFoundException("Repository root not found from test work directory.");
     }
 }

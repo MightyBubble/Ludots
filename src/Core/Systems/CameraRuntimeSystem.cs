@@ -85,6 +85,11 @@ namespace Ludots.Core.Systems
                 throw new InvalidOperationException("VirtualCameraRequest.Id is required when Clear=false.");
             }
 
+            if (request.ReplaceActiveStack)
+            {
+                _cameraManager.ResetVirtualCameras();
+            }
+
             var definition = _virtualCameraRegistry.Get(request.Id);
             var followTarget = CameraFollowTargetFactory.Build(
                 _world,
