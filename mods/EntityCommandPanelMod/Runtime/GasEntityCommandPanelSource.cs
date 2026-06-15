@@ -17,6 +17,7 @@ namespace EntityCommandPanelMod.Runtime
     {
         private readonly GameEngine _engine;
         private readonly Dictionary<int, string[]> _routeLabelCache = new();
+        private readonly string[] _skillActionIds = new string[AbilityStateBuffer.CAPACITY];
         private readonly AbilityDefinitionRegistry? _abilityDefinitions;
         private readonly EffectTemplateRegistry? _effectTemplates;
         private readonly OrderTypeRegistry? _orderTypes;
@@ -107,9 +108,10 @@ namespace EntityCommandPanelMod.Runtime
             if (inputMapping != null)
             {
                 revision = HashCombine(revision, (uint)inputMapping.InteractionMode);
+                inputMapping.CopyPrimarySkillActionIds(_skillActionIds.AsSpan(0, displayedSlots));
                 for (int slotIndex = 0; slotIndex < displayedSlots; slotIndex++)
                 {
-                    string actionId = ResolvePrimarySkillActionId(inputMapping, slotIndex);
+                    string actionId = _skillActionIds[slotIndex] ?? string.Empty;
                     if (!string.IsNullOrWhiteSpace(actionId))
                     {
                         revision = HashCombine(revision, (uint)actionId.GetHashCode(StringComparison.Ordinal));
@@ -257,7 +259,7 @@ namespace EntityCommandPanelMod.Runtime
             bool hasActorTags = _engine.World.TryGet(target, out GameplayTagContainer actorTags);
             AbilityDefinitionRegistry? abilityDefinitions = _engine.GetService(CoreServiceKeys.AbilityDefinitionRegistry);
             InputOrderMappingSystem? inputMapping = _engine.GetService(CoreServiceKeys.ActiveInputOrderMapping);
-            string interactionModeKey = inputMapping?.InteractionMode.ToString() ?? string.Empty;
+            InteractionModeType interactionMode = inputMapping?.InteractionMode ?? InteractionModeType.TargetFirst;
 
             if (!TryResolveGroup(target, groupIndex, out var kind, out int routeIndex, out AbilityFormSetDefinition formSet, out _))
             {
@@ -265,6 +267,16 @@ namespace EntityCommandPanelMod.Runtime
             }
 
             int count = Math.Min(destination.Length, ResolveDisplayedSlotCount(target, in baseSlots));
+            Span<string> actionIds = _skillActionIds.AsSpan(0, count);
+            if (inputMapping != null)
+            {
+                inputMapping.CopyPrimarySkillActionIds(actionIds);
+            }
+            else
+            {
+                actionIds.Clear();
+            }
+
             for (int slotIndex = 0; slotIndex < count; slotIndex++)
             {
                 AbilitySlotState effective = default;
@@ -338,15 +350,14 @@ namespace EntityCommandPanelMod.Runtime
                     flags |= EntityCommandSlotStateFlags.TemplateBacked;
                 }
 
-                string actionId = ResolvePrimarySkillActionId(inputMapping, slotIndex);
+                string actionId = actionIds[slotIndex] ?? string.Empty;
                 string displayLabel = string.Empty;
-                string detailLabel = BuildEmptyDetailLabel(actionId);
+                string detailLabel = string.Empty;
                 short cooldownPermille = 0;
                 if (effective.AbilityId > 0 &&
                     abilityDefinitions != null &&
                     abilityDefinitions.TryGet(effective.AbilityId, out var abilityDefinition))
                 {
-                    string abilityInteractionModeKey = ResolveAbilityInteractionModeKey(interactionModeKey, in abilityDefinition);
                     if (abilityDefinition.HasActivationBlockTags &&
                         IsBlocked(abilityDefinition.ActivationBlockTags, in actorTags, hasActorTags))
                     {
@@ -363,17 +374,45 @@ namespace EntityCommandPanelMod.Runtime
 
                     cooldownPermille = ResolveCooldownPermille(target, in abilityDefinition);
 
-                    string fallbackLabel = ResolveFallbackLabel(effective.AbilityId, effective.TemplateEntityId);
-                    string fallbackDetail = BuildDefaultDetailLabel(actionId, abilityInteractionModeKey);
-                    if (abilityDefinition.HasPresentation && abilityDefinition.Presentation != null)
+                    AbilityPresentationConfig? presentation = abilityDefinition.HasPresentation
+                        ? abilityDefinition.Presentation
+                        : null;
+                    if (presentation != null && !string.IsNullOrWhiteSpace(presentation.DisplayName))
                     {
-                        displayLabel = abilityDefinition.Presentation.ResolveDisplayName(fallbackLabel);
-                        detailLabel = abilityDefinition.Presentation.ResolveHintText(abilityInteractionModeKey, fallbackDetail);
+                        displayLabel = presentation.DisplayName;
                     }
                     else
                     {
-                        displayLabel = fallbackLabel;
-                        detailLabel = fallbackDetail;
+                        displayLabel = ResolveFallbackLabel(effective.AbilityId, effective.TemplateEntityId);
+                    }
+
+                    string abilityInteractionModeKey = string.Empty;
+                    if (presentation != null &&
+                        presentation.ModeHintOverrides.Count > 0)
+                    {
+                        abilityInteractionModeKey = ResolveAbilityInteractionModeKey(interactionMode, in abilityDefinition);
+                        if (presentation.ModeHintOverrides.TryGetValue(abilityInteractionModeKey, out string? overrideHint) &&
+                            !string.IsNullOrWhiteSpace(overrideHint))
+                        {
+                            detailLabel = overrideHint;
+                        }
+                    }
+
+                    if (string.IsNullOrWhiteSpace(detailLabel))
+                    {
+                        if (presentation != null && !string.IsNullOrWhiteSpace(presentation.HintText))
+                        {
+                            detailLabel = presentation.HintText;
+                        }
+                        else
+                        {
+                            if (string.IsNullOrEmpty(abilityInteractionModeKey))
+                            {
+                                abilityInteractionModeKey = ResolveAbilityInteractionModeKey(interactionMode, in abilityDefinition);
+                            }
+
+                            detailLabel = BuildDefaultDetailLabel(actionId, abilityInteractionModeKey);
+                        }
                     }
                 }
                 else if (!HasContent(in effective))
@@ -397,15 +436,15 @@ namespace EntityCommandPanelMod.Runtime
             return count;
         }
 
-        private static string ResolveAbilityInteractionModeKey(string interactionModeKey, in AbilityDefinition abilityDefinition)
+        private static string ResolveAbilityInteractionModeKey(InteractionModeType interactionMode, in AbilityDefinition abilityDefinition)
         {
             if (abilityDefinition.HasInputBindingOverride &&
                 abilityDefinition.InputBindingOverride.HasCastModeOverride)
             {
-                return abilityDefinition.InputBindingOverride.CastModeOverride.ToString();
+                return ResolveInteractionModeKey(abilityDefinition.InputBindingOverride.CastModeOverride);
             }
 
-            return interactionModeKey;
+            return ResolveInteractionModeKey(interactionMode);
         }
 
         private short ResolveCooldownPermille(Entity target, in AbilityDefinition abilityDefinition)
@@ -489,7 +528,13 @@ namespace EntityCommandPanelMod.Runtime
                 return false;
             }
 
-            string actionId = ResolvePrimarySkillActionId(inputMapping, slotIndex);
+            if ((uint)slotIndex >= (uint)_skillActionIds.Length)
+            {
+                return false;
+            }
+
+            inputMapping.CopyPrimarySkillActionIds(_skillActionIds.AsSpan(0, slotIndex + 1));
+            string actionId = _skillActionIds[slotIndex] ?? string.Empty;
             if (string.IsNullOrWhiteSpace(actionId))
             {
                 return false;
@@ -1099,6 +1144,20 @@ namespace EntityCommandPanelMod.Runtime
             };
         }
 
+        private static string ResolveInteractionModeKey(InteractionModeType mode)
+        {
+            return mode switch
+            {
+                InteractionModeType.TargetFirst => nameof(InteractionModeType.TargetFirst),
+                InteractionModeType.SmartCast => nameof(InteractionModeType.SmartCast),
+                InteractionModeType.AimCast => nameof(InteractionModeType.AimCast),
+                InteractionModeType.SmartCastWithIndicator => nameof(InteractionModeType.SmartCastWithIndicator),
+                InteractionModeType.PressReleaseAimCast => nameof(InteractionModeType.PressReleaseAimCast),
+                InteractionModeType.ContextScored => nameof(InteractionModeType.ContextScored),
+                _ => mode.ToString()
+            };
+        }
+
         private static string ResolveActionLabel(string actionId)
         {
             if (string.IsNullOrWhiteSpace(actionId))
@@ -1109,59 +1168,30 @@ namespace EntityCommandPanelMod.Runtime
             if (actionId.StartsWith("Skill", StringComparison.OrdinalIgnoreCase) &&
                 actionId.Length > "Skill".Length)
             {
+                if (string.Equals(actionId, "SkillQ", StringComparison.Ordinal))
+                {
+                    return "Q";
+                }
+
+                if (string.Equals(actionId, "SkillW", StringComparison.Ordinal))
+                {
+                    return "W";
+                }
+
+                if (string.Equals(actionId, "SkillE", StringComparison.Ordinal))
+                {
+                    return "E";
+                }
+
+                if (string.Equals(actionId, "SkillR", StringComparison.Ordinal))
+                {
+                    return "R";
+                }
+
                 return actionId["Skill".Length..].ToUpperInvariant();
             }
 
             return actionId;
-        }
-
-        private static string ResolvePrimarySkillActionId(InputOrderMappingSystem? inputMapping, int slotIndex)
-        {
-            if (inputMapping == null || slotIndex < 0)
-            {
-                return string.Empty;
-            }
-
-            string best = string.Empty;
-            int bestPriority = int.MaxValue;
-            foreach (string actionId in inputMapping.GetMappedActionIds())
-            {
-                InputOrderMapping? mapping = inputMapping.GetMapping(actionId);
-                if (!IsSkillSlotMapping(mapping, slotIndex))
-                {
-                    continue;
-                }
-
-                int priority = ResolveActionPriority(actionId);
-                if (priority < bestPriority ||
-                    (priority == bestPriority && string.CompareOrdinal(actionId, best) < 0))
-                {
-                    best = actionId;
-                    bestPriority = priority;
-                }
-            }
-
-            return best;
-        }
-
-        private static bool IsSkillSlotMapping(InputOrderMapping? mapping, int slotIndex)
-        {
-            return mapping != null &&
-                   mapping.IsSkillMapping &&
-                   mapping.ArgsTemplate.I0.HasValue &&
-                   mapping.ArgsTemplate.I0.Value == slotIndex;
-        }
-
-        private static int ResolveActionPriority(string actionId)
-        {
-            return actionId switch
-            {
-                "SkillQ" => 0,
-                "SkillW" => 1,
-                "SkillE" => 2,
-                "SkillR" => 3,
-                _ => 100
-            };
         }
 
         private static short ClampPermille(int current, int total)

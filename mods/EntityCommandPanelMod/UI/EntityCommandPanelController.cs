@@ -178,24 +178,22 @@ namespace EntityCommandPanelMod.UI
             }
 
             _runtime.TryGetSourceBySlot(slot, out IEntityCommandPanelSource source);
-            int groupCount = source?.GetGroupCount(state.TargetEntity) ?? 0;
+            var sourceContext = new EntityCommandPanelSourceContext(state.TargetEntity, state.SourceId, state.InstanceKey);
+            int groupCount = source == null ? 0 : EntityCommandPanelSourceDispatch.GetGroupCount(source, in sourceContext);
             EntityCommandPanelGroupView group = default;
             if (groupCount > 0)
             {
-                source!.TryGetGroup(state.TargetEntity, state.GroupIndex, out group);
+                EntityCommandPanelSourceDispatch.TryGetGroup(source!, in sourceContext, state.GroupIndex, out group);
             }
 
             var slots = new EntityCommandPanelSlotView[AbilityStateBuffer.CAPACITY];
-            int slotCount = source == null ? 0 : source.CopySlots(state.TargetEntity, state.GroupIndex, slots);
+            int slotCount = source == null
+                ? 0
+                : EntityCommandPanelSourceDispatch.CopySlots(source, in sourceContext, state.GroupIndex, slots);
             var statuses = new EntityCommandPanelStatusView[6];
             var queueItems = new EntityCommandPanelQueueItemView[8];
-            int statusCount = 0;
-            int queueItemCount = 0;
-            if (source is IEntityCommandPanelSupplementalSource supplementalSource)
-            {
-                statusCount = supplementalSource.CopyStatuses(state.TargetEntity, statuses);
-                queueItemCount = supplementalSource.CopyQueueItems(state.TargetEntity, queueItems);
-            }
+            int statusCount = source == null ? 0 : EntityCommandPanelSourceDispatch.CopyStatuses(source, in sourceContext, statuses);
+            int queueItemCount = source == null ? 0 : EntityCommandPanelSourceDispatch.CopyQueueItems(source, in sourceContext, queueItems);
 
             ResolvePanelPosition(state.Anchor, state.Size, viewportWidth, viewportHeight, out float left, out float top);
             string showcaseThemeId = ResolveShowcaseThemeId();
@@ -207,7 +205,7 @@ namespace EntityCommandPanelMod.UI
                     slotSnapshot[i] = slots[i];
                 }
 
-                return BuildShowcasePanel(showcaseThemeId, state, group, groupCount, source, slotSnapshot, left, top);
+                return BuildShowcasePanel(showcaseThemeId, state, sourceContext, group, groupCount, source, slotSnapshot, left, top);
             }
 
             RtsHudTheme theme = ResolveHudTheme(state.TargetEntity);
@@ -215,6 +213,7 @@ namespace EntityCommandPanelMod.UI
             {
                 EntityCommandPanelLayoutPreset.CommandDeck => BuildCommandDeckPanel(
                     state,
+                    sourceContext,
                     source,
                     slotCount,
                     slots,
@@ -238,6 +237,7 @@ namespace EntityCommandPanelMod.UI
                     theme),
                 _ => BuildStandardPanel(
                     state,
+                    sourceContext,
                     group,
                     groupCount,
                     source,
@@ -254,6 +254,7 @@ namespace EntityCommandPanelMod.UI
 
         private UiElementBuilder BuildStandardPanel(
             EntityCommandPanelInstanceState state,
+            EntityCommandPanelSourceContext sourceContext,
             EntityCommandPanelGroupView group,
             int groupCount,
             IEntityCommandPanelSource? source,
@@ -270,7 +271,7 @@ namespace EntityCommandPanelMod.UI
             return Ui.Card(
                     BuildHeader(state, group, groupCount),
                     BuildToolbar(state, state.GroupIndex == 0),
-                    BuildSlotSection(state.TargetEntity, state.GroupIndex, source, slotCount, slots, statusCount, statuses, queueItemCount, queueItems, slotSectionHeight))
+                    BuildSlotSection(sourceContext, state.GroupIndex, source, slotCount, slots, statusCount, statuses, queueItemCount, queueItems, slotSectionHeight))
                 .Id($"entity-command-panel-{state.Handle.Slot}")
                 .Width(Math.Max(220f, state.Size.WidthPx))
                 .Height(Math.Max(180f, state.Size.HeightPx))
@@ -287,6 +288,7 @@ namespace EntityCommandPanelMod.UI
         private UiElementBuilder BuildShowcasePanel(
             string themeId,
             EntityCommandPanelInstanceState state,
+            EntityCommandPanelSourceContext sourceContext,
             EntityCommandPanelGroupView group,
             int groupCount,
             IEntityCommandPanelSource? source,
@@ -296,14 +298,15 @@ namespace EntityCommandPanelMod.UI
         {
             return themeId switch
             {
-                var id when string.Equals(id, EntityCommandPanelShowcaseTheme.Dota2Id, StringComparison.Ordinal) => BuildDota2ShowcasePanel(state, group, groupCount, source, slots, left, top),
-                var id when string.Equals(id, EntityCommandPanelShowcaseTheme.Sc2Id, StringComparison.Ordinal) => BuildSc2ShowcasePanel(state, group, groupCount, source, slots, left, top),
-                _ => BuildLolShowcasePanel(state, group, groupCount, source, slots, left, top)
+                var id when string.Equals(id, EntityCommandPanelShowcaseTheme.Dota2Id, StringComparison.Ordinal) => BuildDota2ShowcasePanel(state, sourceContext, group, groupCount, source, slots, left, top),
+                var id when string.Equals(id, EntityCommandPanelShowcaseTheme.Sc2Id, StringComparison.Ordinal) => BuildSc2ShowcasePanel(state, sourceContext, group, groupCount, source, slots, left, top),
+                _ => BuildLolShowcasePanel(state, sourceContext, group, groupCount, source, slots, left, top)
             };
         }
 
         private UiElementBuilder BuildLolShowcasePanel(
             EntityCommandPanelInstanceState state,
+            EntityCommandPanelSourceContext sourceContext,
             EntityCommandPanelGroupView group,
             int groupCount,
             IEntityCommandPanelSource? source,
@@ -319,7 +322,7 @@ namespace EntityCommandPanelMod.UI
             for (int i = 0; i < primarySlots.Length; i++)
             {
                 primarySlots[i] = i < slots.Length
-                    ? BuildShowcaseSlotCard(themeId, state.TargetEntity, state.GroupIndex, source, in slots[i], interactionModeKey, 124f, 12f, false)
+                    ? BuildShowcaseSlotCard(themeId, sourceContext, state.GroupIndex, source, in slots[i], interactionModeKey, 124f, 12f, false)
                     : BuildShowcasePlaceholderCard(themeId, "-", string.Empty, "Unbound", "#415060", 124f, 12f, false);
             }
 
@@ -378,6 +381,7 @@ namespace EntityCommandPanelMod.UI
 
         private UiElementBuilder BuildDota2ShowcasePanel(
             EntityCommandPanelInstanceState state,
+            EntityCommandPanelSourceContext sourceContext,
             EntityCommandPanelGroupView group,
             int groupCount,
             IEntityCommandPanelSource? source,
@@ -393,7 +397,7 @@ namespace EntityCommandPanelMod.UI
             for (int i = 0; i < abilitySlots.Length; i++)
             {
                 abilitySlots[i] = i < slots.Length
-                    ? BuildShowcaseSlotCard(themeId, state.TargetEntity, state.GroupIndex, source, in slots[i], interactionModeKey, 116f, 11f, false)
+                    ? BuildShowcaseSlotCard(themeId, sourceContext, state.GroupIndex, source, in slots[i], interactionModeKey, 116f, 11f, false)
                     : BuildShowcasePlaceholderCard(themeId, "-", string.Empty, "Unbound", "#6A5647", 116f, 11f, false);
             }
 
@@ -451,6 +455,7 @@ namespace EntityCommandPanelMod.UI
 
         private UiElementBuilder BuildSc2ShowcasePanel(
             EntityCommandPanelInstanceState state,
+            EntityCommandPanelSourceContext sourceContext,
             EntityCommandPanelGroupView group,
             int groupCount,
             IEntityCommandPanelSource? source,
@@ -467,7 +472,7 @@ namespace EntityCommandPanelMod.UI
             {
                 if (i < slots.Length)
                 {
-                    cells[i] = BuildShowcaseSlotCard(themeId, state.TargetEntity, state.GroupIndex, source, in slots[i], interactionModeKey, 82f, 9f, false);
+                    cells[i] = BuildShowcaseSlotCard(themeId, sourceContext, state.GroupIndex, source, in slots[i], interactionModeKey, 82f, 9f, false);
                     continue;
                 }
 
@@ -533,7 +538,7 @@ namespace EntityCommandPanelMod.UI
 
         private UiElementBuilder BuildShowcaseSlotCard(
             string themeId,
-            Entity target,
+            EntityCommandPanelSourceContext sourceContext,
             int groupIndex,
             IEntityCommandPanelSource? source,
             in EntityCommandPanelSlotView slot,
@@ -582,11 +587,11 @@ namespace EntityCommandPanelMod.UI
                 .Padding(0f)
                 .Background(UiColor.Transparent);
 
-            if (source is IEntityCommandPanelActionSource actions &&
+            if (EntityCommandPanelSourceDispatch.CanActivate(source) &&
                 !slot.StateFlags.HasFlag(EntityCommandSlotStateFlags.Empty))
             {
                 int slotIndex = slot.SlotIndex;
-                card.OnClick(_ => { actions.ActivateSlot(target, groupIndex, slotIndex); });
+                card.OnClick(_ => { EntityCommandPanelSourceDispatch.ActivateSlot(source!, in sourceContext, groupIndex, slotIndex); });
             }
 
             return card;
@@ -796,6 +801,7 @@ namespace EntityCommandPanelMod.UI
 
         private UiElementBuilder BuildCommandDeckPanel(
             EntityCommandPanelInstanceState state,
+            EntityCommandPanelSourceContext sourceContext,
             IEntityCommandPanelSource? source,
             int slotCount,
             Span<EntityCommandPanelSlotView> slots,
@@ -837,7 +843,7 @@ namespace EntityCommandPanelMod.UI
                             BuildMetaPill(theme.RuleLabel))
                         .Gap(8f)
                         .Wrap(),
-                    BuildCommandDeckGrid(state.TargetEntity, state.GroupIndex, source, slotCount, slots, theme),
+                    BuildCommandDeckGrid(sourceContext, state.GroupIndex, source, slotCount, slots, theme),
                     BuildDeckFooter(statusCount, statuses, queueItemCount, queueItems, theme))
                 .Id($"entity-command-panel-{state.Handle.Slot}")
                 .Width(Math.Max(360f, state.Size.WidthPx))
@@ -904,7 +910,7 @@ namespace EntityCommandPanelMod.UI
         }
 
         private UiElementBuilder BuildCommandDeckGrid(
-            Entity target,
+            EntityCommandPanelSourceContext sourceContext,
             int groupIndex,
             IEntityCommandPanelSource? source,
             int slotCount,
@@ -920,7 +926,7 @@ namespace EntityCommandPanelMod.UI
                     continue;
                 }
 
-                cards.Add(BuildCommandDeckCard(target, groupIndex, source, in slot, theme));
+                cards.Add(BuildCommandDeckCard(sourceContext, groupIndex, source, in slot, theme));
             }
 
             if (cards.Count == 0)
@@ -940,7 +946,7 @@ namespace EntityCommandPanelMod.UI
         }
 
         private UiElementBuilder BuildCommandDeckCard(
-            Entity target,
+            EntityCommandPanelSourceContext sourceContext,
             int groupIndex,
             IEntityCommandPanelSource? source,
             in EntityCommandPanelSlotView slot,
@@ -948,7 +954,7 @@ namespace EntityCommandPanelMod.UI
         {
             bool blocked = slot.StateFlags.HasFlag(EntityCommandSlotStateFlags.Blocked);
             bool active = slot.StateFlags.HasFlag(EntityCommandSlotStateFlags.Active);
-            bool interactive = !blocked && source is IEntityCommandPanelActionSource;
+            bool interactive = !blocked && EntityCommandPanelSourceDispatch.CanActivate(source);
             string interactionModeKey = ResolveInteractionModeKey();
             string detailLabel = ResolveDetailLabel(in slot);
             string actionKey = ResolveActionKeyLabel(slot.ActionId);
@@ -989,7 +995,7 @@ namespace EntityCommandPanelMod.UI
             if (interactive)
             {
                 int slotIndex = slot.SlotIndex;
-                card.OnClick(_ => { ((IEntityCommandPanelActionSource)source!).ActivateSlot(target, groupIndex, slotIndex); });
+                card.OnClick(_ => { EntityCommandPanelSourceDispatch.ActivateSlot(source!, in sourceContext, groupIndex, slotIndex); });
             }
 
             return card;
@@ -1183,7 +1189,7 @@ namespace EntityCommandPanelMod.UI
         }
 
         private UiElementBuilder BuildSlotSection(
-            Entity target,
+            EntityCommandPanelSourceContext sourceContext,
             int groupIndex,
             IEntityCommandPanelSource? source,
             int slotCount,
@@ -1211,7 +1217,7 @@ namespace EntityCommandPanelMod.UI
             int rowIndex = 0;
             for (int i = 0; i < slotCount; i++)
             {
-                rows[rowIndex++] = BuildSlotRow(target, groupIndex, source, isInteractiveGroup, in slots[i]);
+                rows[rowIndex++] = BuildSlotRow(sourceContext, groupIndex, source, isInteractiveGroup, in slots[i]);
             }
 
             if (statusCount > 0)
@@ -1252,7 +1258,7 @@ namespace EntityCommandPanelMod.UI
         }
 
         private UiElementBuilder BuildSlotRow(
-            Entity target,
+            EntityCommandPanelSourceContext sourceContext,
             int groupIndex,
             IEntityCommandPanelSource? source,
             bool isInteractiveGroup,
@@ -1303,11 +1309,11 @@ namespace EntityCommandPanelMod.UI
                 .Background(isInteractiveGroup ? "#10202F" : "#0C1721");
 
             if (isInteractiveGroup &&
-                source is IEntityCommandPanelActionSource actions &&
+                EntityCommandPanelSourceDispatch.CanActivate(source) &&
                 !slot.StateFlags.HasFlag(EntityCommandSlotStateFlags.Empty))
             {
                 int slotIndex = slot.SlotIndex;
-                row.OnClick(_ => { actions.ActivateSlot(target, groupIndex, slotIndex); });
+                row.OnClick(_ => { EntityCommandPanelSourceDispatch.ActivateSlot(source!, in sourceContext, groupIndex, slotIndex); });
             }
 
             return row;

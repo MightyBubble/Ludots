@@ -10,6 +10,7 @@ using Ludots.Core.Modding;
 using Ludots.Core.Scripting;
 using Ludots.Core.Config;
 using Arch.Core;
+using Ludots.Core.EntityCollections;
 using Ludots.Core.Map;
 using Ludots.Core.Map.Hex;
 using Ludots.Core.Gameplay;
@@ -638,6 +639,8 @@ namespace Ludots.Core.Engine
             var selectionRequestQueue = new SelectionRequestQueue();
             var selectionResponseBuffer = new SelectionResponseBuffer();
             var selectionSetKeyRegistry = new StringIntRegistry(capacity: 32, startId: 1, invalidId: 0, comparer: StringComparer.Ordinal);
+            var entityCollectionKeyRegistry = new StringIntRegistry(capacity: 64, startId: 1, invalidId: 0, comparer: StringComparer.Ordinal);
+            var entityCollectionStore = new EntityCollectionStore(entityCollectionKeyRegistry, initialCollectionCapacity: 128, initialRowCapacity: 4096);
             var selectionConfig = config.Selection
                 ?? throw new InvalidOperationException("game.json selection must be explicitly configured.");
             var selectionRuntime = new SelectionRuntime(World, selectionConfig, selectionSetKeyRegistry);
@@ -917,6 +920,8 @@ namespace Ludots.Core.Engine
             SetService(CoreServiceKeys.SelectionRuntime, selectionRuntime);
             SetService(CoreServiceKeys.SelectionConfig, selectionConfig);
             SetService(CoreServiceKeys.SelectionSetKeyRegistry, selectionSetKeyRegistry);
+            SetService(CoreServiceKeys.EntityCollectionStore, entityCollectionStore);
+            SetService(CoreServiceKeys.EntityCollectionKeyRegistry, entityCollectionKeyRegistry);
             SetService(CoreServiceKeys.SelectionRuleRegistry, selectionRuleRegistry);
             SetService(CoreServiceKeys.InteractionActionBindings, interactionActionBindings);
             RemoveService(CoreServiceKeys.VisualHeightmap);

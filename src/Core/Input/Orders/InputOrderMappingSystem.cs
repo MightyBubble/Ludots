@@ -1246,6 +1246,57 @@ namespace Ludots.Core.Input.Orders
 
         public IEnumerable<string> GetMappedActionIds() => _mappingsByActionId.Keys;
 
+        public int CopyPrimarySkillActionIds(Span<string> destination)
+        {
+            if (destination.IsEmpty)
+            {
+                return 0;
+            }
+
+            Span<int> priorities = stackalloc int[destination.Length];
+            for (int i = 0; i < destination.Length; i++)
+            {
+                destination[i] = string.Empty;
+                priorities[i] = int.MaxValue;
+            }
+
+            int resolved = 0;
+            foreach (var pair in _mappingsByActionId)
+            {
+                string actionId = pair.Key;
+                InputOrderMapping mapping = _userOverrides.TryGetValue(actionId, out var overrideMapping)
+                    ? overrideMapping
+                    : pair.Value;
+                if (!mapping.IsSkillMapping ||
+                    !mapping.ArgsTemplate.I0.HasValue)
+                {
+                    continue;
+                }
+
+                int slotIndex = mapping.ArgsTemplate.I0.Value;
+                if ((uint)slotIndex >= (uint)destination.Length)
+                {
+                    continue;
+                }
+
+                int priority = ResolveSkillActionPriority(actionId);
+                string current = destination[slotIndex];
+                if (priority < priorities[slotIndex] ||
+                    (priority == priorities[slotIndex] && string.CompareOrdinal(actionId, current) < 0))
+                {
+                    if (string.IsNullOrEmpty(current))
+                    {
+                        resolved++;
+                    }
+
+                    destination[slotIndex] = actionId;
+                    priorities[slotIndex] = priority;
+                }
+            }
+
+            return resolved;
+        }
+
         /// <summary>
         /// Activates a mapped action programmatically.
         /// UI callers may prefer aiming over hold/release semantics when no key lifecycle exists.
@@ -1302,6 +1353,18 @@ namespace Ludots.Core.Input.Orders
 
             SubmitOrder(effectiveMapping, in order);
             return true;
+        }
+
+        private static int ResolveSkillActionPriority(string actionId)
+        {
+            return actionId switch
+            {
+                "SkillQ" => 0,
+                "SkillW" => 1,
+                "SkillE" => 2,
+                "SkillR" => 3,
+                _ => 100
+            };
         }
 
         public void SaveUserPreferences(string? path = null)

@@ -113,6 +113,64 @@ namespace Ludots.Core.UI.EntityCommandPanels
         public bool Visible { get; }
     }
 
+    public readonly struct EntityCommandPanelSourceContext
+    {
+        public EntityCommandPanelSourceContext(Entity targetEntity, string sourceId, string instanceKey)
+        {
+            TargetEntity = targetEntity;
+            SourceId = sourceId ?? string.Empty;
+            InstanceKey = instanceKey ?? string.Empty;
+        }
+
+        public Entity TargetEntity { get; }
+        public string SourceId { get; }
+        public string InstanceKey { get; }
+    }
+
+    public enum EntityCommandPanelCollectionFilterKind : byte
+    {
+        Any = 0,
+        Ready = 1,
+        Blocked = 2,
+        Active = 3,
+        AbilityId = 4,
+        ActionId = 5
+    }
+
+    public enum EntityCommandPanelCollectionSortKind : byte
+    {
+        SlotThenOwnerCountThenLabel = 0,
+        OwnerCountThenSlotThenLabel = 1,
+        LabelThenSlot = 2,
+        AbilityIdThenSlot = 3,
+        StatusThenSlotThenLabel = 4
+    }
+
+    public readonly record struct EntityCommandPanelCollectionFilter(
+        EntityCommandPanelCollectionFilterKind Kind,
+        int AbilityId = 0,
+        string ActionId = "")
+    {
+        public static EntityCommandPanelCollectionFilter Any { get; } =
+            new(EntityCommandPanelCollectionFilterKind.Any);
+    }
+
+    public sealed class EntityCommandPanelCollectionQueryConfig
+    {
+        public string Id { get; init; } = string.Empty;
+        public string CollectionKey { get; init; } = string.Empty;
+        public string Title { get; init; } = string.Empty;
+        public EntityCommandPanelCollectionFilter Filter { get; init; } = EntityCommandPanelCollectionFilter.Any;
+        public EntityCommandPanelCollectionSortKind Sort { get; init; } =
+            EntityCommandPanelCollectionSortKind.SlotThenOwnerCountThenLabel;
+    }
+
+    public interface IEntityCommandPanelCollectionQueryConfigRegistry
+    {
+        void Register(EntityCommandPanelCollectionQueryConfig config);
+        bool TryGet(string id, out EntityCommandPanelCollectionQueryConfig config);
+    }
+
     public readonly struct EntityCommandPanelGroupView
     {
         public EntityCommandPanelGroupView(int groupId, string groupLabel, byte slotCount)
@@ -229,15 +287,129 @@ namespace Ludots.Core.UI.EntityCommandPanels
         int CopySlots(Entity target, int groupIndex, Span<EntityCommandPanelSlotView> destination);
     }
 
+    public interface IEntityCommandPanelContextSource : IEntityCommandPanelSource
+    {
+        bool TryGetRevision(in EntityCommandPanelSourceContext context, out uint revision);
+        int GetGroupCount(in EntityCommandPanelSourceContext context);
+        bool TryGetGroup(in EntityCommandPanelSourceContext context, int groupIndex, out EntityCommandPanelGroupView group);
+        int CopySlots(in EntityCommandPanelSourceContext context, int groupIndex, Span<EntityCommandPanelSlotView> destination);
+    }
+
     public interface IEntityCommandPanelSupplementalSource
     {
         int CopyStatuses(Entity target, Span<EntityCommandPanelStatusView> destination);
         int CopyQueueItems(Entity target, Span<EntityCommandPanelQueueItemView> destination);
     }
 
+    public interface IEntityCommandPanelContextSupplementalSource : IEntityCommandPanelSupplementalSource
+    {
+        int CopyStatuses(in EntityCommandPanelSourceContext context, Span<EntityCommandPanelStatusView> destination);
+        int CopyQueueItems(in EntityCommandPanelSourceContext context, Span<EntityCommandPanelQueueItemView> destination);
+    }
+
     public interface IEntityCommandPanelActionSource
     {
         bool ActivateSlot(Entity target, int groupIndex, int slotIndex);
+    }
+
+    public interface IEntityCommandPanelContextActionSource : IEntityCommandPanelActionSource
+    {
+        bool ActivateSlot(in EntityCommandPanelSourceContext context, int groupIndex, int slotIndex);
+    }
+
+    public static class EntityCommandPanelSourceDispatch
+    {
+        public static bool TryGetRevision(
+            IEntityCommandPanelSource source,
+            in EntityCommandPanelSourceContext context,
+            out uint revision)
+        {
+            if (source is IEntityCommandPanelContextSource contextSource)
+            {
+                return contextSource.TryGetRevision(in context, out revision);
+            }
+
+            return source.TryGetRevision(context.TargetEntity, out revision);
+        }
+
+        public static int GetGroupCount(IEntityCommandPanelSource source, in EntityCommandPanelSourceContext context)
+        {
+            return source is IEntityCommandPanelContextSource contextSource
+                ? contextSource.GetGroupCount(in context)
+                : source.GetGroupCount(context.TargetEntity);
+        }
+
+        public static bool TryGetGroup(
+            IEntityCommandPanelSource source,
+            in EntityCommandPanelSourceContext context,
+            int groupIndex,
+            out EntityCommandPanelGroupView group)
+        {
+            return source is IEntityCommandPanelContextSource contextSource
+                ? contextSource.TryGetGroup(in context, groupIndex, out group)
+                : source.TryGetGroup(context.TargetEntity, groupIndex, out group);
+        }
+
+        public static int CopySlots(
+            IEntityCommandPanelSource source,
+            in EntityCommandPanelSourceContext context,
+            int groupIndex,
+            Span<EntityCommandPanelSlotView> destination)
+        {
+            return source is IEntityCommandPanelContextSource contextSource
+                ? contextSource.CopySlots(in context, groupIndex, destination)
+                : source.CopySlots(context.TargetEntity, groupIndex, destination);
+        }
+
+        public static int CopyStatuses(
+            IEntityCommandPanelSource source,
+            in EntityCommandPanelSourceContext context,
+            Span<EntityCommandPanelStatusView> destination)
+        {
+            if (source is IEntityCommandPanelContextSupplementalSource contextSource)
+            {
+                return contextSource.CopyStatuses(in context, destination);
+            }
+
+            return source is IEntityCommandPanelSupplementalSource supplementalSource
+                ? supplementalSource.CopyStatuses(context.TargetEntity, destination)
+                : 0;
+        }
+
+        public static int CopyQueueItems(
+            IEntityCommandPanelSource source,
+            in EntityCommandPanelSourceContext context,
+            Span<EntityCommandPanelQueueItemView> destination)
+        {
+            if (source is IEntityCommandPanelContextSupplementalSource contextSource)
+            {
+                return contextSource.CopyQueueItems(in context, destination);
+            }
+
+            return source is IEntityCommandPanelSupplementalSource supplementalSource
+                ? supplementalSource.CopyQueueItems(context.TargetEntity, destination)
+                : 0;
+        }
+
+        public static bool CanActivate(IEntityCommandPanelSource? source)
+        {
+            return source is IEntityCommandPanelActionSource or IEntityCommandPanelContextActionSource;
+        }
+
+        public static bool ActivateSlot(
+            IEntityCommandPanelSource source,
+            in EntityCommandPanelSourceContext context,
+            int groupIndex,
+            int slotIndex)
+        {
+            if (source is IEntityCommandPanelContextActionSource contextSource)
+            {
+                return contextSource.ActivateSlot(in context, groupIndex, slotIndex);
+            }
+
+            return source is IEntityCommandPanelActionSource actionSource &&
+                   actionSource.ActivateSlot(context.TargetEntity, groupIndex, slotIndex);
+        }
     }
 
     public interface IEntityCommandPanelSourceRegistry

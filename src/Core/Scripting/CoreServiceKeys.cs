@@ -8,6 +8,7 @@ using Ludots.Core.Engine.Navigation2D;
 using Ludots.Core.Engine.Pacemaker;
 using Ludots.Core.Engine.Physics2D;
 using Ludots.Core.Engine.TimeFlow;
+using Ludots.Core.EntityCollections;
 using Ludots.Core.Gameplay;
 using Ludots.Core.Gameplay.AI.Config;
 using Ludots.Core.Gameplay.Camera;
@@ -184,6 +185,8 @@ namespace Ludots.Core.Scripting
         public static readonly ServiceKey<SelectionRuntime> SelectionRuntime = new("SelectionRuntime");
         public static readonly ServiceKey<SelectionRuntimeConfig> SelectionConfig = new("SelectionConfig");
         public static readonly ServiceKey<StringIntRegistry> SelectionSetKeyRegistry = new("SelectionSetKeyRegistry");
+        public static readonly ServiceKey<EntityCollectionStore> EntityCollectionStore = new("EntityCollectionStore");
+        public static readonly ServiceKey<StringIntRegistry> EntityCollectionKeyRegistry = new("EntityCollectionKeyRegistry");
         public static readonly ServiceKey<InteractionActionBindings> InteractionActionBindings = new("InteractionActionBindings");
         public static readonly ServiceKey<RuntimeEntitySpawnReceiptQueue> RuntimeEntitySpawnReceiptQueue = new("RuntimeEntitySpawnReceiptQueue");
         public static readonly ServiceKey<InputOrderMappingSystem> ActiveInputOrderMapping = new("ActiveInputOrderMapping");
@@ -195,6 +198,8 @@ namespace Ludots.Core.Scripting
         public static readonly ServiceKey<ResponseChainTelemetryBuffer> ResponseChainTelemetryBuffer = new("ResponseChainTelemetryBuffer");
         public static readonly ServiceKey<OrderQueue> ChainOrderQueue = new("ChainOrderQueue");
         public static readonly ServiceKey<ResponseChainUiState> ResponseChainUiState = new("ResponseChainUiState");
+        public static readonly ServiceKey<IEntityCommandPanelCollectionQueryConfigRegistry> EntityCommandPanelCollectionQueryConfigRegistry =
+            new("EntityCommandPanelCollectionQueryConfigRegistry");
 
         // --- Simulation ---
         public static readonly ServiceKey<SimulationLoopController> SimulationLoopController = new("SimulationLoopController");

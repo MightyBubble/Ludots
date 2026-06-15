@@ -114,7 +114,7 @@
 
 ## 选取规则
 
-输入系统只负责把“选择变更意图”写进正式容器。
+输入系统只负责产生“选取结果”和可选的“选择变更意图”。点击、框选等 UI acquisition 不再天然等同于正式 selection mutation。
 
 当前选取系统：
 
@@ -130,6 +130,15 @@
 - `SelectionSelectableTag`
 - `SelectionSelectableState`
 - `SelectionEligibility`
+
+点击与框选先把命中实体写入 `EntityCollectionStore`：
+
+- 默认 acquisition collection：`collection.ui.selection.acquisition`
+- collection role：`AcquisitionPreview`
+- source kind：`UiAcquisition`
+- 配置入口：`SelectionAcquisitionConfig`
+
+`SelectionAcquisitionConfig.CommitToFormalSelection` 决定这次 acquisition 是否继续通过 `SelectionRuntime` 写入正式选择容器。也就是说，UI 框选、hover/query 结果、调试圈选都可以作为 collection 被面板读取，而不必污染正式 selection。
 
 当单位临时不可选时，已有选择不会被自动剔除；自动维护只移除已经死亡的成员。这样可以保持 AI、调试视图、订单快照等状态稳定，不把隐藏策略重写进维护系统。
 
@@ -151,6 +160,8 @@ viewed selection 与底层存储显式分离。
 - `src/Core/Input/Selection/SelectionContextRuntime.cs`
 
 消费者不得再创造第二套真相，例如 `SelectedEntity`、`SelectedTag` 或玩家私有缓冲区。
+
+需要展示或查询一组实体，但这组实体并不承担正式 selection 语义时，消费者应使用 `EntityCollectionStore`。collection 是 query/display 状态；只有 `SelectionRuntime` 管理的容器和成员关系实体是正式 selection SSOT。
 
 ## 订单与选择快照
 
@@ -240,8 +251,12 @@ viewed selection 与底层存储显式分离。
 - 对正式选择真相做静默截断
 - 把 `SelectedEntity` 或 `SelectedTag` 当成权威真相
 - 为同一份游戏真相再造一套 mod-local 选择存储
+- 把 UI acquisition collection 当成正式 selection truth
+- 在 collection consumer 中找不到配置时静默 fallback 到当前 selection
 
 `OrderSpatial.MaxPoints = 64` 是多点空间 payload 的预算，不是选择真相的上限，禁止复用为选择人数限制。
+
+通用 collection/query 基建见 `docs/architecture/entity_collection_query_infrastructure.md`。
 
 ## 验收证据
 
