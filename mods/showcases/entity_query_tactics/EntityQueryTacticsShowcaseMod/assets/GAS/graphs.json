@@ -1,0 +1,111 @@
+[
+  {
+    "id": "entityquery.tactics.graph.selectedFriendliesFromUiBox",
+    "kind": "Query",
+    "entry": "owner",
+    "nodes": [
+      { "id": "owner", "op": "LoadCaster", "next": "minCommand" },
+      { "id": "minCommand", "op": "ConstFloat", "floatValue": 0, "next": "maxCommand" },
+      { "id": "maxCommand", "op": "ConstFloat", "floatValue": 1000, "next": "fromUiBox" },
+      { "id": "fromUiBox", "op": "QueryFromCollection", "collectionKey": "entityquery.collection.ui.box", "inputs": ["owner"], "next": "teamBlue" },
+      { "id": "teamBlue", "op": "QueryFilterTeam", "teamId": 1, "next": "squadOnly" },
+      { "id": "squadOnly", "op": "QueryFilterTemplate", "template": "entityquery_tactics_ally_squad", "next": "commandable" },
+      { "id": "commandable", "op": "QueryFilterTagAny", "tag": "Unit.Commandable", "next": "notRouted" },
+      { "id": "notRouted", "op": "QueryFilterTagNone", "tag": "State.Routed", "next": "commandRange" },
+      { "id": "commandRange", "op": "QueryFilterAttributeRange", "attribute": "CommandPower", "inputs": ["minCommand", "maxCommand"], "next": "sortCommand" },
+      { "id": "sortCommand", "op": "QuerySortByAttribute", "attribute": "CommandPower", "descending": true, "next": "selectedCount" },
+      { "id": "selectedCount", "op": "AggCount", "next": "commandSum" },
+      { "id": "commandSum", "op": "AggSumAttribute", "attribute": "CommandPower", "next": "supplySum" },
+      { "id": "supplySum", "op": "AggSumAttribute", "attribute": "Supply", "next": "bestCommand" },
+      { "id": "bestCommand", "op": "AggMaxEntityByAttribute", "attribute": "CommandPower" }
+    ],
+    "outputs": [
+      {
+        "id": "selectedFriendlies",
+        "destination": "EntityCollection",
+        "type": "TargetList",
+        "collectionKey": "entityquery.collection.graph.selectedFriendlies",
+        "role": "Display",
+        "title": "Selected Friendlies",
+        "summary": "UI box collection filtered by team, squad template, attrs, and tags."
+      },
+      { "id": "selectedCount", "destination": "Summary", "type": "Int", "source": "selectedCount", "key": "entityquery.summary.selected.count" },
+      { "id": "commandSum", "destination": "Summary", "type": "Float", "source": "commandSum", "key": "entityquery.summary.selected.commandPower" },
+      { "id": "supplySum", "destination": "Summary", "type": "Float", "source": "supplySum", "key": "entityquery.summary.selected.supply" },
+      { "id": "bestCommand", "destination": "Summary", "type": "Entity", "source": "bestCommand", "key": "entityquery.summary.selected.bestEntity" }
+    ]
+  },
+  {
+    "id": "entityquery.tactics.graph.hostileThreatBoard",
+    "kind": "Query",
+    "entry": "source",
+    "nodes": [
+      { "id": "source", "op": "LoadCaster", "next": "minThreat" },
+      { "id": "minThreat", "op": "ConstFloat", "floatValue": 55, "next": "maxThreat" },
+      { "id": "maxThreat", "op": "ConstFloat", "floatValue": 2000, "next": "allMap" },
+      { "id": "allMap", "op": "QueryAllMapEntities", "next": "hostileTeam" },
+      { "id": "hostileTeam", "op": "QueryFilterTeam", "teamId": 2, "next": "enemyTemplate" },
+      { "id": "enemyTemplate", "op": "QueryFilterTemplate", "template": "entityquery_tactics_enemy_siege", "next": "threatValueRange" },
+      { "id": "threatValueRange", "op": "QueryFilterAttributeRange", "attribute": "ThreatValue", "inputs": ["minThreat", "maxThreat"], "next": "relationThreatRange" },
+      { "id": "relationThreatRange", "op": "RelationshipFilterMetricRange", "relationshipType": "TacticalIntel", "metric": "Threat", "inputs": ["source", "minThreat", "maxThreat"], "next": "priorityOnly" },
+      { "id": "priorityOnly", "op": "RelationshipFilterFlag", "relationshipType": "TacticalIntel", "flag": "PriorityTarget", "inputs": ["source"], "next": "sortThreat" },
+      { "id": "sortThreat", "op": "RelationshipSortByMetric", "relationshipType": "TacticalIntel", "metric": "Threat", "inputs": ["source"], "descending": true, "next": "threatCount" },
+      { "id": "threatCount", "op": "AggCount", "next": "threatSum" },
+      { "id": "threatSum", "op": "RelationshipAggSumMetric", "relationshipType": "TacticalIntel", "metric": "Threat", "inputs": ["source"], "next": "threatAverage" },
+      { "id": "threatAverage", "op": "RelationshipAggAverageMetric", "relationshipType": "TacticalIntel", "metric": "Threat", "inputs": ["source"], "next": "threatMax" },
+      { "id": "threatMax", "op": "RelationshipAggMaxMetric", "relationshipType": "TacticalIntel", "metric": "Threat", "inputs": ["source"], "next": "bestThreat" },
+      { "id": "bestThreat", "op": "RelationshipAggMaxEntityByMetric", "relationshipType": "TacticalIntel", "metric": "Threat", "inputs": ["source"] }
+    ],
+    "outputs": [
+      {
+        "id": "hostileThreats",
+        "destination": "EntityCollection",
+        "type": "TargetList",
+        "collectionKey": "entityquery.collection.graph.hostileThreats",
+        "role": "Display",
+        "title": "Hostile Threats",
+        "summary": "Hostile entities filtered by relationship metric and flag."
+      },
+      { "id": "threatCount", "destination": "Summary", "type": "Int", "source": "threatCount", "key": "entityquery.summary.threat.count" },
+      { "id": "threatSum", "destination": "Summary", "type": "Int", "source": "threatSum", "key": "entityquery.summary.threat.sum" },
+      { "id": "threatAverage", "destination": "Summary", "type": "Int", "source": "threatAverage", "key": "entityquery.summary.threat.average" },
+      { "id": "threatMax", "destination": "Summary", "type": "Int", "source": "threatMax", "key": "entityquery.summary.threat.max" },
+      { "id": "bestThreat", "destination": "Summary", "type": "Entity", "source": "bestThreat", "key": "entityquery.summary.threat.bestEntity" }
+    ]
+  },
+  {
+    "id": "entityquery.tactics.graph.formationCache",
+    "kind": "Query",
+    "entry": "owner",
+    "nodes": [
+      { "id": "owner", "op": "LoadCaster", "next": "minSupply" },
+      { "id": "minSupply", "op": "ConstFloat", "floatValue": 0, "next": "maxSupply" },
+      { "id": "maxSupply", "op": "ConstFloat", "floatValue": 1000, "next": "fromFormation" },
+      { "id": "fromFormation", "op": "QueryFromCollection", "collectionKey": "entityquery.collection.formation.primary", "inputs": ["owner"], "next": "teamBlue" },
+      { "id": "teamBlue", "op": "QueryFilterTeam", "teamId": 1, "next": "commandable" },
+      { "id": "commandable", "op": "QueryFilterTagAny", "tag": "Unit.Commandable", "next": "notRouted" },
+      { "id": "notRouted", "op": "QueryFilterTagNone", "tag": "State.Routed", "next": "supplyRange" },
+      { "id": "supplyRange", "op": "QueryFilterAttributeRange", "attribute": "Supply", "inputs": ["minSupply", "maxSupply"], "next": "sortCommand" },
+      { "id": "sortCommand", "op": "QuerySortByAttribute", "attribute": "CommandPower", "descending": true, "next": "formationCount" },
+      { "id": "formationCount", "op": "AggCount", "next": "maxCommand" },
+      { "id": "maxCommand", "op": "AggMaxAttribute", "attribute": "CommandPower", "next": "minSupplyAgg" },
+      { "id": "minSupplyAgg", "op": "AggMinAttribute", "attribute": "Supply", "next": "bestCommand" },
+      { "id": "bestCommand", "op": "AggMaxEntityByAttribute", "attribute": "CommandPower" }
+    ],
+    "outputs": [
+      {
+        "id": "formationCache",
+        "destination": "EntityCollection",
+        "type": "TargetList",
+        "collectionKey": "entityquery.collection.graph.formationCache",
+        "role": "Display",
+        "title": "Formation Cache",
+        "summary": "Formation snapshot materialized through retained collection diff."
+      },
+      { "id": "formationCount", "destination": "Summary", "type": "Int", "source": "formationCount", "key": "entityquery.summary.formation.count" },
+      { "id": "maxCommand", "destination": "Summary", "type": "Float", "source": "maxCommand", "key": "entityquery.summary.formation.maxCommandPower" },
+      { "id": "minSupplyAgg", "destination": "Summary", "type": "Float", "source": "minSupplyAgg", "key": "entityquery.summary.formation.minSupply" },
+      { "id": "bestCommand", "destination": "Summary", "type": "Entity", "source": "bestCommand", "key": "entityquery.summary.formation.bestEntity" }
+    ]
+  }
+]

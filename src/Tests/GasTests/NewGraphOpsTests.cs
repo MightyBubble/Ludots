@@ -1,5 +1,6 @@
 using System;
 using Arch.Core;
+using Ludots.Core.EntityQueries;
 using Ludots.Core.Gameplay.GAS;
 using Ludots.Core.Gameplay.GAS.Components;
 using Ludots.Core.Gameplay.Relationships;
@@ -764,6 +765,7 @@ namespace Ludots.Tests.GAS
             var bandRegistry = new RelationshipBandRegistry();
             var changeBuffer = new RelationshipChangeBuffer();
             var runtime = new RelationshipRuntime(world, typeRegistry, metricRegistry, flagRegistry, bandRegistry, changeBuffer);
+            var tagOps = new TagOps(new TagRuleRegistry(), new GasBudget());
 
             int socialBondTypeId = typeRegistry.Register("SocialBond");
             int hostilityTypeId = typeRegistry.Register("Hostility");
@@ -771,16 +773,19 @@ namespace Ludots.Tests.GAS
             int supportMetricId = metricRegistry.Register("Support", -100, 100, 0);
             int threatMetricId = metricRegistry.Register("Threat", 0, 200, 0);
             int trustedFlagId = flagRegistry.Register("Trusted");
+            var entityQueries = new EntitySetQueryRuntime(world, tagOps, runtime);
 
             var api = new GasGraphRuntimeApi(
                 world,
                 effectRequests: effectRequests,
+                tagOps: tagOps,
                 relationshipRuntime: runtime,
                 typeRegistry: typeRegistry,
                 metricRegistry: metricRegistry,
                 flagRegistry: flagRegistry,
                 reasonRegistry: reasonRegistry,
-                targetDispatchPresets: targetDispatchPresets);
+                targetDispatchPresets: targetDispatchPresets,
+                entityQueries: entityQueries);
 
             return new RelationshipApiSetup(api, runtime, socialBondTypeId, hostilityTypeId, loyaltyMetricId, supportMetricId, threatMetricId, trustedFlagId);
         }

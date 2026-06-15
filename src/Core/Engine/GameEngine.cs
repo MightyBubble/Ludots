@@ -623,6 +623,11 @@ namespace Ludots.Core.Engine
             _effectTemplateLoader.Load(ConfigCatalog, ConfigConflictReport);
             new AbilityExecLoader(ConfigPipeline, abilityDefinitions).Load(ConfigCatalog, ConfigConflictReport);
             new AbilityFormSetConfigLoader(ConfigPipeline, abilityFormSets).Load(ConfigCatalog, ConfigConflictReport);
+            var tagRules = new TagRuleSetLoader(ConfigPipeline).Load(ConfigCatalog, ConfigConflictReport);
+            for (int i = 0; i < tagRules.Count; i++)
+            {
+                tagOps.RegisterTagRuleSet(tagRules[i].TagId, tagRules[i].RuleSet);
+            }
             graphConfigLoader.PatchAndRegister(graphPackages);
             new ContextGroupConfigLoader(ConfigPipeline, contextGroups).Load(ConfigCatalog, ConfigConflictReport);
             new ItemConfigLoader(ConfigPipeline, itemShapes, itemLayouts, itemDefinitions).Load(ConfigCatalog, ConfigConflictReport);
@@ -651,11 +656,6 @@ namespace Ludots.Core.Engine
                 entityCollectionStore,
                 graphOutputValueStore);
             var phaseExecutor = new EffectPhaseExecutor(graphProgramRegistry, presetTypes, builtinHandlers, GasGraphOpHandlerTable.Instance, effectTemplateRegistry, eventBus: EventBus, budget: gasBudget);
-            var tagRules = new TagRuleSetLoader(ConfigPipeline).Load(ConfigCatalog, ConfigConflictReport);
-            for (int i = 0; i < tagRules.Count; i++)
-            {
-                tagOps.RegisterTagRuleSet(tagRules[i].TagId, tagRules[i].RuleSet);
-            }
             var inputRequestQueue = new InputRequestQueue();
             var abilityInputRequestQueue = new InputRequestQueue();
             var inputResponseBuffer = new InputResponseBuffer();
@@ -725,7 +725,21 @@ namespace Ludots.Core.Engine
             var surfacePayloads = new SurfaceSourcePayloadRegistry();
             var surfaceRuntime = new SurfaceSourceRuntimeRegistry();
             var presentationBehaviors = new PresentationBehaviorRegistry();
-            var performerGraphApi = new GasGraphRuntimeApi(World, spatialQueries: null, coords: null, eventBus: null);
+            var performerGraphApi = new GasGraphRuntimeApi(
+                World,
+                spatialQueries: null,
+                coords: null,
+                eventBus: null,
+                effectRequests: effectRequestQueue,
+                tagOps: tagOps,
+                relationshipRuntime: relationshipRuntime,
+                typeRegistry: relationshipTypeRegistry,
+                metricRegistry: relationshipMetricRegistry,
+                flagRegistry: relationshipFlagRegistry,
+                reasonRegistry: relationshipReasonRegistry,
+                targetDispatchPresets: targetDispatchPresetRegistry,
+                entityCollections: entityCollectionStore,
+                entityQueries: entitySetQueryRuntime);
             new MeshAssetConfigLoader(ConfigPipeline, meshAssets, presentationPrefabs).Load(ConfigCatalog, ConfigConflictReport);
             new PresentationMaterialConfigLoader(ConfigPipeline, materialAssets).Load(ConfigCatalog, ConfigConflictReport);
             new PresentationBehaviorConfigLoader(ConfigPipeline, presentationBehaviors, meshAssets).Load(ConfigCatalog, ConfigConflictReport);
@@ -735,7 +749,6 @@ namespace Ludots.Core.Engine
             new AnimationProfileConfigLoader(ConfigPipeline, animationProfiles, animatorControllers, animationClips).Load(ConfigCatalog, ConfigConflictReport);
             var presentationTextCatalog = new PresentationTextCatalogLoader(ConfigPipeline).Load(ConfigCatalog, ConfigConflictReport);
             var presentationTextLocaleSelection = new PresentationTextLocaleSelection(presentationTextCatalog);
-            performerDefinitions.RebuildCompiledViews();
             var performerRuleSystem = new PerformerRuleSystem(World, presentationEventStream, performerCommandBuffer, performerDefinitions, performerRuntime, graphProgramRegistry, performerGraphApi, GlobalContext);
             var presentationEntityLifecycleSystem = new PresentationEntityLifecycleSystem(
                 World,
@@ -822,6 +835,7 @@ namespace Ludots.Core.Engine
                     _ => 0,
                 },
                 selectionSetKeyRegistry.Register).Load(ConfigCatalog, ConfigConflictReport);
+            performerDefinitions.RebuildCompiledViews();
             MapLoader.SetPresentationRuntime(
                 presentationStableIds,
                 performerRuntime,

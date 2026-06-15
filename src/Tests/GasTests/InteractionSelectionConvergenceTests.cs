@@ -1450,6 +1450,7 @@ namespace Ludots.Tests.GAS
             var config = new SelectionRuntimeConfig
             {
                 TargetFilter = new SelectionTargetFilterConfig { RelationFilter = relationFilter },
+                Acquisition = new SelectionAcquisitionConfig { CommitToFormalSelection = true },
             };
             var registry = new Ludots.Core.Registry.StringIntRegistry(capacity: 8, startId: 1, invalidId: 0, comparer: StringComparer.Ordinal);
             var runtime = new SelectionRuntime(world, config, registry);

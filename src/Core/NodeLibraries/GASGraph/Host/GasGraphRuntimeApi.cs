@@ -1,4 +1,5 @@
 using System;
+using System.Collections.Generic;
 using Arch.Core;
 using Ludots.Core.Components;
 using Ludots.Core.EntityCollections;
@@ -10,6 +11,7 @@ using Ludots.Core.Gameplay.Components;
 using Ludots.Core.Gameplay.Teams;
 using Ludots.Core.Map.Hex;
 using Ludots.Core.Mathematics;
+using Ludots.Core.Scripting;
 using Ludots.Core.Spatial;
 using Ludots.Core.Gameplay.Relationships;
 
@@ -22,19 +24,55 @@ namespace Ludots.Core.NodeLibraries.GASGraph.Host
         private readonly ISpatialCoordinateConverter? _coords;
         private readonly GameplayEventBus? _eventBus;
         private readonly EffectRequestQueue? _effectRequests;
-        private readonly TagOps _tagOps;
-        private readonly RelationshipRuntime _relationshipRuntime;
-        private readonly RelationshipTypeRegistry _relationshipTypeRegistry;
-        private readonly RelationshipMetricRegistry _relationshipMetricRegistry;
-        private readonly RelationshipFlagRegistry _relationshipFlagRegistry;
-        private readonly RelationshipReasonRegistry _relationshipReasonRegistry;
-        private readonly TargetDispatchPresetRegistry _targetDispatchPresets;
+        private readonly TagOps? _tagOps;
+        private readonly RelationshipRuntime? _relationshipRuntime;
+        private readonly TargetDispatchPresetRegistry? _targetDispatchPresets;
         private readonly EntityCollectionStore? _entityCollections;
-        private readonly EntitySetQueryRuntime _entityQueries;
+        private readonly EntitySetQueryRuntime? _entityQueries;
 
         // ── Config context: set before each graph execution, cleared after ──
         private EffectConfigParams _currentConfigParams;
         private bool _hasConfigContext;
+
+        public static GasGraphRuntimeApi CreateProduction(
+            World world,
+            ISpatialQueryService? spatialQueries,
+            ISpatialCoordinateConverter? coords,
+            GameplayEventBus? eventBus,
+            EffectRequestQueue? effectRequests,
+            IReadOnlyDictionary<string, object> services)
+        {
+            if (services == null)
+            {
+                throw new ArgumentNullException(nameof(services));
+            }
+
+            return new GasGraphRuntimeApi(
+                world,
+                spatialQueries,
+                coords,
+                eventBus,
+                effectRequests,
+                RequireService(services, CoreServiceKeys.TagOps),
+                RequireService(services, CoreServiceKeys.RelationshipRuntime),
+                RequireService(services, CoreServiceKeys.RelationshipTypeRegistry),
+                RequireService(services, CoreServiceKeys.RelationshipMetricRegistry),
+                RequireService(services, CoreServiceKeys.RelationshipFlagRegistry),
+                RequireService(services, CoreServiceKeys.RelationshipReasonRegistry),
+                RequireService(services, CoreServiceKeys.TargetDispatchPresetRegistry),
+                RequireService(services, CoreServiceKeys.EntityCollectionStore),
+                RequireService(services, CoreServiceKeys.EntitySetQueryRuntime));
+        }
+
+        private static T RequireService<T>(IReadOnlyDictionary<string, object> services, ServiceKey<T> key)
+        {
+            if (!services.TryGetValue(key.Name, out object? value) || value is not T typed)
+            {
+                throw new InvalidOperationException($"Production GasGraphRuntimeApi requires engine-owned service `{key.Name}`.");
+            }
+
+            return typed;
+        }
 
         public GasGraphRuntimeApi(
             World world,
@@ -52,26 +90,40 @@ namespace Ludots.Core.NodeLibraries.GASGraph.Host
             EntityCollectionStore? entityCollections = null,
             EntitySetQueryRuntime? entityQueries = null)
         {
-            _world = world;
+            _world = world ?? throw new ArgumentNullException(nameof(world));
             _spatialQueries = spatialQueries;
             _coords = coords;
             _eventBus = eventBus;
             _effectRequests = effectRequests;
-            _tagOps = tagOps ?? new TagOps();
-            _relationshipTypeRegistry = typeRegistry ?? new RelationshipTypeRegistry();
-            _relationshipMetricRegistry = metricRegistry ?? new RelationshipMetricRegistry();
-            _relationshipFlagRegistry = flagRegistry ?? new RelationshipFlagRegistry();
-            _relationshipReasonRegistry = reasonRegistry ?? new RelationshipReasonRegistry();
-            _targetDispatchPresets = targetDispatchPresets ?? new TargetDispatchPresetRegistry();
-            _relationshipRuntime = relationshipRuntime ?? new RelationshipRuntime(
-                world,
-                _relationshipTypeRegistry,
-                _relationshipMetricRegistry,
-                _relationshipFlagRegistry,
-                new RelationshipBandRegistry(),
-                new RelationshipChangeBuffer());
+            _tagOps = tagOps;
+            _targetDispatchPresets = targetDispatchPresets;
+            _relationshipRuntime = relationshipRuntime;
             _entityCollections = entityCollections;
-            _entityQueries = entityQueries ?? new EntitySetQueryRuntime(world, _tagOps, _relationshipRuntime);
+            _entityQueries = entityQueries;
+            _ = typeRegistry;
+            _ = metricRegistry;
+            _ = flagRegistry;
+            _ = reasonRegistry;
+        }
+
+        private TagOps RequireTagOps()
+        {
+            return _tagOps ?? throw new InvalidOperationException("GAS.GRAPH.ERR.MissingTagOps");
+        }
+
+        private RelationshipRuntime RequireRelationshipRuntime()
+        {
+            return _relationshipRuntime ?? throw new InvalidOperationException("GAS.GRAPH.ERR.MissingRelationshipRuntime");
+        }
+
+        private TargetDispatchPresetRegistry RequireTargetDispatchPresets()
+        {
+            return _targetDispatchPresets ?? throw new InvalidOperationException("GAS.GRAPH.ERR.MissingTargetDispatchPresetRegistry");
+        }
+
+        private EntitySetQueryRuntime RequireEntityQueries()
+        {
+            return _entityQueries ?? throw new InvalidOperationException("GAS.GRAPH.ERR.MissingEntitySetQueryRuntime");
         }
 
         /// <summary>
@@ -109,7 +161,7 @@ namespace Ludots.Core.NodeLibraries.GASGraph.Host
         {
             if (!_world.IsAlive(entity) || !_world.Has<GameplayTagContainer>(entity)) return false;
             ref var tags = ref _world.Get<GameplayTagContainer>(entity);
-            return _tagOps.HasTag(ref tags, tagId, TagSense.Effective);
+            return RequireTagOps().HasTag(ref tags, tagId, TagSense.Effective);
         }
 
         public bool TryGetAttributeCurrent(Entity entity, int attributeId, out float value)
@@ -168,7 +220,7 @@ namespace Ludots.Core.NodeLibraries.GASGraph.Host
 
         public int CollectMapEntities(Span<Entity> buffer)
         {
-            return _entityQueries.CollectMapEntities(buffer);
+            return RequireEntityQueries().CollectMapEntities(buffer);
         }
 
         public int CopyEntityCollection(Entity owner, int collectionKeyId, Span<Entity> buffer)
@@ -183,97 +235,97 @@ namespace Ludots.Core.NodeLibraries.GASGraph.Host
                 throw new InvalidOperationException($"Graph references unknown entity collection key id {collectionKeyId}.");
             }
 
-            return _entityQueries.CopyCollection(_entityCollections, owner, collectionKeyId, buffer);
+            return RequireEntityQueries().CopyCollection(_entityCollections, owner, collectionKeyId, buffer);
         }
 
         public int FilterTeam(Span<Entity> entities, int count, int teamId)
         {
-            return _entityQueries.FilterTeam(entities, count, teamId);
+            return RequireEntityQueries().FilterTeam(entities, count, teamId);
         }
 
         public int FilterTeamRelationship(Span<Entity> entities, int count, Entity reference, RelationshipFilter filter)
         {
-            return _entityQueries.FilterTeamRelationship(entities, count, reference, filter);
+            return RequireEntityQueries().FilterTeamRelationship(entities, count, reference, filter);
         }
 
         public int FilterTemplate(Span<Entity> entities, int count, int templateKeyId)
         {
-            return _entityQueries.FilterTemplate(entities, count, templateKeyId);
+            return RequireEntityQueries().FilterTemplate(entities, count, templateKeyId);
         }
 
         public int FilterAttributeRange(Span<Entity> entities, int count, int attributeId, float minInclusive, float maxInclusive)
         {
-            return _entityQueries.FilterAttributeRange(entities, count, attributeId, minInclusive, maxInclusive);
+            return RequireEntityQueries().FilterAttributeRange(entities, count, attributeId, minInclusive, maxInclusive);
         }
 
         public int FilterTagAny(Span<Entity> entities, int count, int tagId)
         {
-            return _entityQueries.FilterTagAny(entities, count, tagId);
+            return RequireEntityQueries().FilterTagAny(entities, count, tagId);
         }
 
         public int FilterTagNone(Span<Entity> entities, int count, int tagId)
         {
-            return _entityQueries.FilterTagNone(entities, count, tagId);
+            return RequireEntityQueries().FilterTagNone(entities, count, tagId);
         }
 
         public int FilterLayer(Span<Entity> entities, int count, uint requiredMask)
         {
-            return _entityQueries.FilterLayer(entities, count, requiredMask);
+            return RequireEntityQueries().FilterLayer(entities, count, requiredMask);
         }
 
         public int FilterNotEntity(Span<Entity> entities, int count, Entity exclude)
         {
-            return _entityQueries.FilterNotEntity(entities, count, exclude);
+            return RequireEntityQueries().FilterNotEntity(entities, count, exclude);
         }
 
         public int SortStableDedup(Span<Entity> entities, int count)
         {
-            return _entityQueries.SortStableDedup(entities, count);
+            return RequireEntityQueries().SortStableDedup(entities, count);
         }
 
         public int Limit(Span<Entity> entities, int count, int limit)
         {
-            return _entityQueries.Limit(entities, count, limit);
+            return RequireEntityQueries().Limit(entities, count, limit);
         }
 
         public void SortByAttribute(Span<Entity> entities, int count, int attributeId, bool descending)
         {
-            _entityQueries.SortByAttribute(entities, count, attributeId, descending);
+            RequireEntityQueries().SortByAttribute(entities, count, attributeId, descending);
         }
 
         public float SumAttribute(ReadOnlySpan<Entity> entities, int attributeId)
         {
-            return _entityQueries.SumAttribute(entities, attributeId);
+            return RequireEntityQueries().SumAttribute(entities, attributeId);
         }
 
         public float AverageAttribute(ReadOnlySpan<Entity> entities, int attributeId)
         {
-            return _entityQueries.AverageAttribute(entities, attributeId);
+            return RequireEntityQueries().AverageAttribute(entities, attributeId);
         }
 
         public float MaxAttribute(ReadOnlySpan<Entity> entities, int attributeId)
         {
-            return _entityQueries.MaxAttribute(entities, attributeId);
+            return RequireEntityQueries().MaxAttribute(entities, attributeId);
         }
 
         public float MinAttribute(ReadOnlySpan<Entity> entities, int attributeId)
         {
-            return _entityQueries.MinAttribute(entities, attributeId);
+            return RequireEntityQueries().MinAttribute(entities, attributeId);
         }
 
         public bool TryMaxEntityByAttribute(ReadOnlySpan<Entity> entities, int attributeId, out Entity entity, out float value)
         {
-            return _entityQueries.TryMaxEntityByAttribute(entities, attributeId, out entity, out value);
+            return RequireEntityQueries().TryMaxEntityByAttribute(entities, attributeId, out entity, out value);
         }
 
         public bool TryMinEntityByAttribute(ReadOnlySpan<Entity> entities, int attributeId, out Entity entity, out float value)
         {
-            return _entityQueries.TryMinEntityByAttribute(entities, attributeId, out entity, out value);
+            return RequireEntityQueries().TryMinEntityByAttribute(entities, attributeId, out entity, out value);
         }
 
         public bool TryMinEntityByDistance(ReadOnlySpan<Entity> entities, IntVector2 center, out Entity entity, out long distanceSquared)
         {
-            return _entityQueries.TryMinEntityByDistance(entities, center, out entity, out distanceSquared);
+            return RequireEntityQueries().TryMinEntityByDistance(entities, center, out entity, out distanceSquared);
         }
 
         public int GetTeamId(Entity entity)
@@ -294,44 +346,44 @@ namespace Ludots.Core.NodeLibraries.GASGraph.Host
         {
             return (int)TeamManager.GetRelationship(teamA, teamB);
         }
-        public void EnsureRelationshipLink(Entity source, Entity target, int typeId) => _relationshipRuntime.EnsureLink(source, target, typeId);
-        public void RemoveRelationshipLink(Entity source, Entity target, int typeId) => _relationshipRuntime.RemoveLink(source, target, typeId);
+        public void EnsureRelationshipLink(Entity source, Entity target, int typeId) => RequireRelationshipRuntime().EnsureLink(source, target, typeId);
+        public void RemoveRelationshipLink(Entity source, Entity target, int typeId) => RequireRelationshipRuntime().RemoveLink(source, target, typeId);
         public short SetRelationshipMetric(Entity source, Entity target, int metricId, int value, int reasonId, int typeId)
-            => _relationshipRuntime.SetMetric(source, target, typeId, metricId, value, reasonId);
+            => RequireRelationshipRuntime().SetMetric(source, target, typeId, metricId, value, reasonId);
         public short AddRelationshipMetric(Entity source, Entity target, int metricId, int delta, int reasonId, int typeId)
-            => _relationshipRuntime.AddMetric(source, target, typeId, metricId, delta, reasonId);
+            => RequireRelationshipRuntime().AddMetric(source, target, typeId, metricId, delta, reasonId);
         public short GetRelationshipMetric(Entity source, Entity target, int metricId, int typeId)
-            => _relationshipRuntime.GetMetric(source, target, typeId, metricId);
+            => RequireRelationshipRuntime().GetMetric(source, target, typeId, metricId);
         public bool HasRelationshipFlag(Entity source, Entity target, int flagId, int typeId)
-            => _relationshipRuntime.HasFlag(source, target, typeId, flagId);
+            => RequireRelationshipRuntime().HasFlag(source, target, typeId, flagId);
         public void SetRelationshipFlag(Entity source, Entity target, int flagId, bool enabled, int reasonId, int typeId)
-            => _relationshipRuntime.SetFlag(source, target, typeId, flagId, enabled, reasonId);
+            => RequireRelationshipRuntime().SetFlag(source, target, typeId, flagId, enabled, reasonId);
         public int CollectOutgoing(Entity source, Span<Entity> buffer, int typeId = RelationshipTypeRegistry.AnyTypeId)
-            => _relationshipRuntime.CollectOutgoing(source, typeId, buffer);
+            => RequireRelationshipRuntime().CollectOutgoing(source, typeId, buffer);
         public int CollectIncoming(Entity target, Span<Entity> buffer, int typeId = RelationshipTypeRegistry.AnyTypeId)
-            => _relationshipRuntime.CollectIncoming(target, typeId, buffer);
+            => RequireRelationshipRuntime().CollectIncoming(target, typeId, buffer);
         public int CollectMutual(Entity first, Entity second, Span<Entity> buffer, int typeId = RelationshipTypeRegistry.AnyTypeId)
-            => _relationshipRuntime.CollectMutual(first, second, typeId, buffer);
+            => RequireRelationshipRuntime().CollectMutual(first, second, typeId, buffer);
         public int CollectBetweenPair(Entity source, Entity target, Span<Entity> buffer, int typeId = RelationshipTypeRegistry.AnyTypeId)
-            => _relationshipRuntime.CollectBetweenPair(source, target, typeId, buffer);
+            => RequireRelationshipRuntime().CollectBetweenPair(source, target, typeId, buffer);
         public int FilterRelationshipMetricRange(Span<Entity> entities, int count, Entity source, int typeId, int metricId, short minInclusive, short maxInclusive)
-            => _entityQueries.FilterRelationshipMetricRange(entities, count, source, typeId, metricId, minInclusive, maxInclusive);
+            => RequireEntityQueries().FilterRelationshipMetricRange(entities, count, source, typeId, metricId, minInclusive, maxInclusive);
         public int FilterRelationshipFlag(Span<Entity> entities, int count, Entity source, int typeId, int flagId, bool expected)
-            => _entityQueries.FilterRelationshipFlag(entities, count, source, typeId, flagId, expected);
+            => RequireEntityQueries().FilterRelationshipFlag(entities, count, source, typeId, flagId, expected);
         public void SortByRelationshipMetric(Span<Entity> entities, int count, Entity source, int typeId, int metricId, bool descending)
-            => _entityQueries.SortByRelationshipMetric(entities, count, source, typeId, metricId, descending);
+            => RequireEntityQueries().SortByRelationshipMetric(entities, count, source, typeId, metricId, descending);
         public int SumRelationshipMetric(ReadOnlySpan<Entity> entities, Entity source, int typeId, int metricId)
-            => _entityQueries.SumRelationshipMetric(entities, source, typeId, metricId);
+            => RequireEntityQueries().SumRelationshipMetric(entities, source, typeId, metricId);
         public int AverageRelationshipMetric(ReadOnlySpan<Entity> entities, Entity source, int typeId, int metricId)
-            => _entityQueries.AverageRelationshipMetric(entities, source, typeId, metricId);
+            => RequireEntityQueries().AverageRelationshipMetric(entities, source, typeId, metricId);
         public int MaxRelationshipMetric(ReadOnlySpan<Entity> entities, Entity source, int typeId, int metricId)
-            => _entityQueries.MaxRelationshipMetric(entities, source, typeId, metricId);
+            => RequireEntityQueries().MaxRelationshipMetric(entities, source, typeId, metricId);
         public int MinRelationshipMetric(ReadOnlySpan<Entity> entities, Entity source, int typeId, int metricId)
-            => _entityQueries.MinRelationshipMetric(entities, source, typeId, metricId);
+            => RequireEntityQueries().MinRelationshipMetric(entities, source, typeId, metricId);
         public bool TryMaxEntityByRelationshipMetric(ReadOnlySpan<Entity> entities, Entity source, int typeId, int metricId, out Entity entity, out int value)
-            => _entityQueries.TryMaxEntityByRelationshipMetric(entities, source, typeId, metricId, out entity, out value);
+            => RequireEntityQueries().TryMaxEntityByRelationshipMetric(entities, source, typeId, metricId, out entity, out value);
         public bool TryMinEntityByRelationshipMetric(ReadOnlySpan<Entity> entities, Entity source, int typeId, int metricId, out Entity entity, out int value)
-            => _entityQueries.TryMinEntityByRelationshipMetric(entities, source, typeId, metricId, out entity, out value);
+            => RequireEntityQueries().TryMinEntityByRelationshipMetric(entities, source, typeId, metricId, out entity, out value);
 
         public void ApplyEffectTemplate(Entity caster, Entity target, int templateId)
         {
@@ -383,7 +435,7 @@ namespace Ludots.Core.NodeLibraries.GASGraph.Host
                 return;
             }
 
-            TargetResolverContextMapping mapping = _targetDispatchPresets.Get(payloadPresetId);
+            TargetResolverContextMapping mapping = RequireTargetDispatchPresets().Get(payloadPresetId);
             TargetResolverFanOutHelper.PublishResolvedTargets(
                 rootId: 0,
                 source,

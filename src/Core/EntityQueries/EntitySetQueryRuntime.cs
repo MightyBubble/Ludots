@@ -391,7 +391,11 @@ namespace Ludots.Core.EntityQueries
                     continue;
                 }
 
-                short value = _relationships.GetMetric(source, target, typeId, metricId);
+                if (!_relationships.TryGetMetric(source, target, typeId, metricId, out short value))
+                {
+                    continue;
+                }
+
                 if (value < minInclusive || value > maxInclusive)
                 {
                     continue;
@@ -420,7 +424,8 @@ namespace Ludots.Core.EntityQueries
                     continue;
                 }
 
-                if (_relationships.HasFlag(source, target, typeId, flagId) != expected)
+                if (!_relationships.TryHasFlag(source, target, typeId, flagId, out bool enabled) ||
+                    enabled != expected)
                 {
                     continue;
                 }
@@ -447,9 +452,10 @@ namespace Ludots.Core.EntityQueries
             int sum = 0;
             for (int i = 0; i < entities.Length; i++)
             {
-                if (_world.IsAlive(entities[i]))
+                if (_world.IsAlive(entities[i]) &&
+                    _relationships.TryGetMetric(source, entities[i], typeId, metricId, out short value))
                 {
-                    sum += _relationships.GetMetric(source, entities[i], typeId, metricId);
+                    sum += value;
                 }
             }
 
@@ -467,12 +473,13 @@ namespace Ludots.Core.EntityQueries
             int count = 0;
             for (int i = 0; i < entities.Length; i++)
             {
-                if (!_world.IsAlive(entities[i]))
+                if (!_world.IsAlive(entities[i]) ||
+                    !_relationships.TryGetMetric(source, entities[i], typeId, metricId, out short value))
                 {
                     continue;
                 }
 
-                sum += _relationships.GetMetric(source, entities[i], typeId, metricId);
+                sum += value;
                 count++;
             }
 
@@ -584,7 +591,11 @@ namespace Ludots.Core.EntityQueries
                     continue;
                 }
 
-                int current = _relationships.GetMetric(source, candidate, typeId, metricId);
+                if (!_relationships.TryGetMetric(source, candidate, typeId, metricId, out short current))
+                {
+                    continue;
+                }
+
                 if (!found ||
                     (findMax ? current > value : current < value) ||
                     (current == value && CompareEntityStable(candidate, entity) < 0))
@@ -623,8 +634,10 @@ namespace Ludots.Core.EntityQueries
 
         private int GetSortRelationshipMetricValue(Entity source, Entity target, int typeId, int metricId)
         {
-            return _world.IsAlive(source) && _world.IsAlive(target)
-                ? _relationships.GetMetric(source, target, typeId, metricId)
+            return _world.IsAlive(source) &&
+                   _world.IsAlive(target) &&
+                   _relationships.TryGetMetric(source, target, typeId, metricId, out short value)
+                ? value
                 : 0;
         }
 

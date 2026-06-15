@@ -1,0 +1,5 @@
+[
+  { "id": "Unit.Commandable" },
+  { "id": "State.Routed" },
+  { "id": "Map.Objective" }
+]

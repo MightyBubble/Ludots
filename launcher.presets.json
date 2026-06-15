@@ -99,6 +99,15 @@
       ],
       "adapterId": "raylib",
       "buildMode": "auto"
+    },
+    {
+      "id": "entity_query_tactics_raylib",
+      "name": "Entity Query Tactics Raylib",
+      "selectors": [
+        "$entity_query_tactics"
+      ],
+      "adapterId": "raylib",
+      "buildMode": "auto"
     }
   ]
 }

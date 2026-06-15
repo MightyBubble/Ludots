@@ -96,6 +96,14 @@
         "value": "mods/capabilities/navigation/MassNavigationMod",
         "projectPath": "MassNavigationMod.csproj"
       }
+    },
+    {
+      "name": "entity_query_tactics",
+      "target": {
+        "type": "path",
+        "value": "mods/showcases/entity_query_tactics/EntityQueryTacticsShowcaseMod",
+        "projectPath": "EntityQueryTacticsShowcaseMod.csproj"
+      }
     }
   ],
   "adapters": {

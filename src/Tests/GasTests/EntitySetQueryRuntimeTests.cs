@@ -137,6 +137,52 @@ namespace Ludots.Tests.GAS
         }
 
         [Test]
+        public void CodeApi_RelationshipQueriesIgnoreMissingEdgesInsteadOfUsingMetricDefaults()
+        {
+            using var world = World.Create();
+            QueryRuntimeSetup setup = CreateQueryRuntime(world);
+            int typeId = setup.RelationshipTypes.Register("ThreatIntel");
+            int threatId = setup.RelationshipMetrics.Register("Threat", minValue: 0, maxValue: 100, defaultValue: 50);
+            int priorityFlagId = setup.RelationshipFlags.Register("Priority");
+
+            Entity source = world.Create();
+            Entity linked = world.Create();
+            Entity linkedFalseFlag = world.Create();
+            Entity missing = world.Create();
+
+            setup.Relationships.SetMetric(source, linked, typeId, threatId, 50);
+            setup.Relationships.SetFlag(source, linked, typeId, priorityFlagId, enabled: true);
+            setup.Relationships.SetMetric(source, linkedFalseFlag, typeId, threatId, 30);
+
+            Span<Entity> entities = stackalloc Entity[4];
+            entities[0] = linked;
+            entities[1] = missing;
+            entities[2] = linkedFalseFlag;
+
+            int metricCount = setup.EntityQueries.FilterRelationshipMetricRange(entities, 3, source, typeId, threatId, minInclusive: 50, maxInclusive: 50);
+            Assert.That(metricCount, Is.EqualTo(1));
+            Assert.That(entities[0], Is.EqualTo(linked));
+
+            entities[0] = linked;
+            entities[1] = missing;
+            entities[2] = linkedFalseFlag;
+            int falseFlagCount = setup.EntityQueries.FilterRelationshipFlag(entities, 3, source, typeId, priorityFlagId, expected: false);
+            Assert.That(falseFlagCount, Is.EqualTo(1));
+            Assert.That(entities[0], Is.EqualTo(linkedFalseFlag));
+
+            entities[0] = linked;
+            entities[1] = missing;
+            entities[2] = linkedFalseFlag;
+            ReadOnlySpan<Entity> all = entities.Slice(0, 3);
+            Assert.That(setup.EntityQueries.SumRelationshipMetric(all, source, typeId, threatId), Is.EqualTo(80));
+            Assert.That(setup.EntityQueries.AverageRelationshipMetric(all, source, typeId, threatId), Is.EqualTo(40));
+            Assert.That(setup.EntityQueries.MinRelationshipMetric(all, source, typeId, threatId), Is.EqualTo(30));
+            Assert.That(setup.EntityQueries.TryMaxEntityByRelationshipMetric(all, source, typeId, threatId, out Entity best, out int value), Is.True);
+            Assert.That(best, Is.EqualTo(linked));
+            Assert.That(value, Is.EqualTo(50));
+        }
+
+        [Test]
         public void CodeApi_TargetListUtilitiesShareTheSameSpanQueryPath()
         {
             using var world = World.Create();
@@ -498,8 +544,8 @@ namespace Ludots.Tests.GAS
                 new AttributeBuffer(),
                 new GameplayTagContainer());
             ref AttributeBuffer attributes = ref world.Get<AttributeBuffer>(entity);
-            attributes.SetCurrent(productionId, production);
-            attributes.SetCurrent(goldId, gold);
+            attributes.SetBase(productionId, production);
+            attributes.SetBase(goldId, gold);
 
             if (tagId > 0)
             {

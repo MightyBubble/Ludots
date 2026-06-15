@@ -176,7 +176,13 @@ namespace CoreInputMod.Systems
                 return false;
             }
 
-            var graphApi = new GasGraphRuntimeApi(_world, spatialQueries, spatialCoords, eventBus: null, effectRequests: null);
+            var graphApi = GasGraphRuntimeApi.CreateProduction(
+                _world,
+                spatialQueries,
+                spatialCoords,
+                eventBus: null,
+                effectRequests: null,
+                _globals);
             resolver = new ContextScoredOrderResolver(_world, contextGroups, graphPrograms, spatialQueries, graphApi);
             return true;
         }

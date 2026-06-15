@@ -1,0 +1,5 @@
+{
+  "CommandPower": { "min": 0 },
+  "Supply": { "min": 0 },
+  "ThreatValue": { "min": 0 }
+}

@@ -110,17 +110,10 @@ namespace Ludots.Core.Gameplay.Relationships
 
         public bool TryGetMetric(Entity source, Entity target, int typeId, int metricId, out short value)
         {
-            value = 0;
-            if (!TryGetEdge(source, target, typeId, out RelationshipEdge edge, out bool resized))
+            value = _metrics.Get(metricId).DefaultValue;
+            if (!TryGetEdge(source, target, typeId, out RelationshipEdge edge))
             {
                 return false;
-            }
-
-            if (resized)
-            {
-                RelationshipEdgeSet set = source.GetRelationship<RelationshipEdgeSet>(target);
-                set.Set(typeId, edge);
-                source.SetRelationship(target, set);
             }
 
             value = edge.GetMetric(metricId);
@@ -179,12 +172,19 @@ namespace Ludots.Core.Gameplay.Relationships
 
         public bool HasFlag(Entity source, Entity target, int typeId, int flagId)
         {
+            return TryHasFlag(source, target, typeId, flagId, out bool enabled) && enabled;
+        }
+
+        public bool TryHasFlag(Entity source, Entity target, int typeId, int flagId, out bool enabled)
+        {
+            enabled = false;
             if (!TryGetEdge(source, target, typeId, out RelationshipEdge edge))
             {
                 return false;
             }
 
-            return (edge.Flags & _flags.GetMask(flagId)) != 0;
+            enabled = (edge.Flags & _flags.GetMask(flagId)) != 0;
+            return true;
         }
 
         public void SetFlag(Entity source, Entity target, int typeId, int flagId, bool enabled, int reasonId = 0)
@@ -230,7 +230,11 @@ namespace Ludots.Core.Gameplay.Relationships
                     continue;
                 }
 
-                short current = GetMetric(source, candidate, typeId, metricId);
+                if (!TryGetMetric(source, candidate, typeId, metricId, out short current))
+                {
+                    continue;
+                }
+
                 if (!found || current > value)
                 {
                     target = candidate;
@@ -406,7 +410,6 @@ namespace Ludots.Core.Gameplay.Relationships
                 return false;
             }
 
-            resized = edge.EnsureMetricCapacity(_metrics);
             return true;
         }
 

@@ -2,7 +2,10 @@ using System.Collections.Generic;
 using System.IO;
 using Arch.Core;
 using Ludots.Core.Components;
+using Ludots.Core.EntityQueries;
+using Ludots.Core.Gameplay.GAS;
 using Ludots.Core.Gameplay.GAS.Components;
+using Ludots.Core.Gameplay.Relationships;
 using Ludots.Core.NodeLibraries.GASGraph;
 using Ludots.Core.NodeLibraries.GASGraph.Host;
 using GraphInstruction = Ludots.Core.GraphRuntime.GraphInstruction;
@@ -123,7 +126,23 @@ namespace Ludots.Tests.GAS
 
             var coords = new SpatialCoordinateConverter();
             var spatial = new SpatialQueryService(new PhysicsWorldSpatialBackend(physics, coords));
-            var api = new GasGraphRuntimeApi(world, spatial, coords, null);
+            var tagOps = new TagOps();
+            var relationshipRuntime = new RelationshipRuntime(
+                world,
+                new RelationshipTypeRegistry(),
+                new RelationshipMetricRegistry(),
+                new RelationshipFlagRegistry(),
+                new RelationshipBandRegistry(),
+                new RelationshipChangeBuffer());
+            var entityQueries = new EntitySetQueryRuntime(world, tagOps, relationshipRuntime);
+            var api = new GasGraphRuntimeApi(
+                world,
+                spatial,
+                coords,
+                null,
+                tagOps: tagOps,
+                relationshipRuntime: relationshipRuntime,
+                entityQueries: entityQueries);
 
             var program = new[]
             {
