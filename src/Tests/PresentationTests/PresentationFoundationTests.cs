@@ -1411,6 +1411,8 @@ namespace Ludots.Tests.Presentation
             var requests = new PresentationRequestBuffer();
             var definitions = new PerformerDefinitionRegistry();
             var stableDrawCache = new StableDrawCache();
+            var stableIds = new PresentationStableIdAllocator();
+            var visualStableIds = new PerformerVisualStableIdTable(stableIds, capacity: 16);
             int visibleDef = RegisterStaticVisualDefinition(definitions, "visible", assetId: 10, materialId: 20);
             int hiddenDef = RegisterStaticVisualDefinition(definitions, "hidden", assetId: 11, materialId: 21, visibilityParamKey: 500);
             int culledDef = RegisterStaticVisualDefinition(definitions, "culled", assetId: 12, materialId: 22, renderPath: VisualRenderPath.InstancedStaticMesh);
@@ -1442,7 +1444,16 @@ namespace Ludots.Tests.Presentation
             world.Get<PerformerWorldRotation>(culledPerformer).Value = culledRotation;
             world.Get<PerformerWorldScale>(culledPerformer).Value = new Vector3(3f, 2f, 1f);
 
-            using var system = new PerformerEmitSystem(world, instances, definitions, requests, new Dictionary<string, object>(), null!, null!, stableDrawCache: stableDrawCache);
+            using var system = new PerformerEmitSystem(
+                world,
+                instances,
+                definitions,
+                requests,
+                new Dictionary<string, object>(),
+                null!,
+                null!,
+                stableDrawCache: stableDrawCache,
+                visualStableIds: visualStableIds);
             using var flush = new PresentationRequestFlushSystem(
                 world,
                 requests,
@@ -1858,6 +1869,8 @@ namespace Ludots.Tests.Presentation
             var instances = new PerformerEntityRuntime(world);
             instances.BindDefinitions(definitions);
             var stableDrawCache = new StableDrawCache();
+            var stableIds = new PresentationStableIdAllocator();
+            var visualStableIds = new PerformerVisualStableIdTable(stableIds, capacity: 16);
             Entity owner = world.Create(new CullState { IsVisible = true, LOD = LODLevel.High });
             Entity performer = instances.Create(
                 definitionId,
@@ -1879,7 +1892,8 @@ namespace Ludots.Tests.Presentation
                 null!,
                 null!,
                 null,
-                stableDrawCache);
+                stableDrawCache,
+                visualStableIds: visualStableIds);
             using var flush = new PresentationRequestFlushSystem(
                 world,
                 requests,
@@ -1896,7 +1910,9 @@ namespace Ludots.Tests.Presentation
 
             emit.Update(0.016f);
             Assert.That(stableDrawCache.Count, Is.EqualTo(1));
-            int visualStableId = PerformerBehaviorRuntimeUtility.ComposeVisualStableId(404, 0, AssetKind.Mesh, definitionId);
+            Assert.That(visualStableIds.TryGet(
+                PerformerBehaviorRuntimeUtility.ComposeVisualStableKey(404, 0, AssetKind.Mesh, definitionId),
+                out int visualStableId), Is.True);
             Assert.That(stableDrawCache.Contains(visualStableId), Is.True);
             int initialRevision = stableDrawCache.ContentRevision;
             flush.Update(0.016f);
@@ -1956,6 +1972,8 @@ namespace Ludots.Tests.Presentation
             var instances = new PerformerEntityRuntime(world);
             instances.BindDefinitions(definitions);
             var stableDrawCache = new StableDrawCache();
+            var stableIds = new PresentationStableIdAllocator();
+            var visualStableIds = new PerformerVisualStableIdTable(stableIds, capacity: 16);
             Entity owner = world.Create(new CullState { IsVisible = true, LOD = LODLevel.High });
             Entity performer = instances.Create(
                 definitionId,
@@ -1977,7 +1995,8 @@ namespace Ludots.Tests.Presentation
                 null!,
                 null!,
                 null,
-                stableDrawCache);
+                stableDrawCache,
+                visualStableIds: visualStableIds);
             using var flush = new PresentationRequestFlushSystem(
                 world,
                 requests,

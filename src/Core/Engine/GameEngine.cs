@@ -688,6 +688,9 @@ namespace Ludots.Core.Engine
             var animationClips = new AnimationClipRegistry();
             var animationProfiles = new AnimationProfileRegistry();
             var presentationStableIds = new PresentationStableIdAllocator();
+            var performerVisualStableIds = new PerformerVisualStableIdTable(
+                presentationStableIds,
+                presentationConfig.VisualSnapshotBufferCapacity);
             var primitiveDrawBuffer = new PrimitiveDrawBuffer(presentationConfig.PrimitiveDrawBufferCapacity);
             var visualSnapshotBuffer = new PrimitiveDrawBuffer(presentationConfig.VisualSnapshotBufferCapacity);
             var visualProxyBuffer = new PresentationVisualProxyBuffer(presentationConfig.VisualProxyBufferCapacity);
@@ -775,7 +778,8 @@ namespace Ludots.Core.Engine
                 presentationStableIds,
                 performerDefinitions,
                 performerAnimatorStates,
-                stableDrawCache);
+                stableDrawCache,
+                performerVisualStableIds);
             var performerBehaviorSystem = new PerformerBehaviorSystem(
                 World,
                 performerRuntime,
@@ -799,7 +803,8 @@ namespace Ludots.Core.Engine
                 presentationTimingDiagnostics,
                 stableDrawCache,
                 skinnedVisualBatchBuffer,
-                worldHudBuffer);
+                worldHudBuffer,
+                performerVisualStableIds);
             var surfaceSourceFlushSystem = new SurfaceSourceFlushSystem(World, presentationRequestBuffer, surfacePayloads, surfaceRuntime);
             var surfaceSourceLifecycleSystem = new SurfaceSourceLifecycleSystem(World, surfaceRuntime, performerCommandBuffer);
             var chunkSurfaceBakeSystem = new ChunkSurfaceBakeSystem(World, surfaceRuntime, meshAssets, materialAssets, performerDefinitions, performerCommandBuffer, performerRuntime);
@@ -1010,6 +1015,7 @@ namespace Ludots.Core.Engine
             SetService(CoreServiceKeys.AnimationClipRegistry, animationClips);
             SetService(CoreServiceKeys.AnimationProfileRegistry, animationProfiles);
             SetService(CoreServiceKeys.PresentationStableIdAllocator, presentationStableIds);
+            SetService(CoreServiceKeys.PerformerVisualStableIdTable, performerVisualStableIds);
             SetService(CoreServiceKeys.PresentationStableDrawCache, stableDrawCache);
             SetService(CoreServiceKeys.PresentationTargetGeneration, presentationTargetGeneration);
             _primitiveDrawBuffer = primitiveDrawBuffer;

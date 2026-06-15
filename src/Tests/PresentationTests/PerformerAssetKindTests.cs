@@ -38,6 +38,101 @@ namespace Ludots.Tests.Presentation
         }
 
         [Test]
+        public void PerformerVisualStableIdTable_AllocatesDistinctHandles_ForLegacyHashCollision()
+        {
+            int legacyMesh = PerformerBehaviorRuntimeUtility.ComposeVisualStableId(1, 0, AssetKind.Mesh, 32);
+            int legacySkinned = PerformerBehaviorRuntimeUtility.ComposeVisualStableId(1, 0, AssetKind.SkinnedMesh, 1);
+            Assert.That(legacySkinned, Is.EqualTo(legacyMesh), "The legacy projected int is the collision reproduced by issue #170.");
+
+            var allocator = new PresentationStableIdAllocator();
+            var table = new PerformerVisualStableIdTable(allocator, capacity: 8);
+            PerformerVisualStableKey meshKey = PerformerBehaviorRuntimeUtility.ComposeVisualStableKey(1, 0, AssetKind.Mesh, 32);
+            PerformerVisualStableKey skinnedKey = PerformerBehaviorRuntimeUtility.ComposeVisualStableKey(1, 0, AssetKind.SkinnedMesh, 1);
+
+            int meshStableId = table.GetOrAllocate(meshKey);
+            int skinnedStableId = table.GetOrAllocate(skinnedKey);
+
+            Assert.That(skinnedStableId, Is.Not.EqualTo(meshStableId));
+            Assert.That(table.GetOrAllocate(meshKey), Is.EqualTo(meshStableId), "The table must remain stable for the same semantic key.");
+            Assert.That(table.TryGet(skinnedKey, out int resolvedSkinned), Is.True);
+            Assert.That(resolvedSkinned, Is.EqualTo(skinnedStableId));
+        }
+
+        [Test]
+        public void StaticStableVisual_ProductionPath_AllocatesDistinctHandles_WhenLegacyProjectionCollides()
+        {
+            const int meshPerformerStableId = 219_522;
+            const int vfxPerformerStableId = 247_666;
+            const int meshDefinitionId = 1;
+            const int vfxDefinitionId = 817;
+
+            int legacyMesh = PerformerBehaviorRuntimeUtility.ComposeVisualStableId(
+                meshPerformerStableId,
+                slotIndex: 1,
+                AssetKind.Mesh,
+                meshDefinitionId);
+            int legacyVfx = PerformerBehaviorRuntimeUtility.ComposeVisualStableId(
+                vfxPerformerStableId,
+                slotIndex: 0,
+                AssetKind.VFX,
+                vfxDefinitionId);
+            Assert.That(legacyVfx, Is.EqualTo(legacyMesh), "This pair reproduces a real static performer legacy StableId collision.");
+
+            using var world = World.Create();
+            Entity owner = world.Create(new CullState { IsVisible = true, LOD = LODLevel.High });
+            var instances = new PerformerEntityRuntime(world);
+            var definitions = new PerformerDefinitionRegistry();
+            var requests = new PresentationRequestBuffer();
+            var stableIds = new PresentationStableIdAllocator();
+            var visualStableIds = new PerformerVisualStableIdTable(stableIds, capacity: 4);
+            var stableDrawCache = new StableDrawCache(4);
+
+            int meshDefId = definitions.Register("collision.mesh", CreateStaticStableDefinition(1, AssetKind.Mesh, 101, 201));
+            Assert.That(meshDefId, Is.EqualTo(meshDefinitionId));
+            for (int id = meshDefinitionId + 1; id < vfxDefinitionId; id++)
+            {
+                Assert.That(definitions.Register($"collision.padding.{id}", new PerformerDefinition()), Is.EqualTo(id));
+            }
+
+            int vfxDefId = definitions.Register("collision.vfx", CreateStaticStableDefinition(0, AssetKind.VFX, 102, 202));
+            Assert.That(vfxDefId, Is.EqualTo(vfxDefinitionId));
+
+            PerformerDefinition meshDefinition = definitions.Get(meshDefId);
+            PerformerDefinition vfxDefinition = definitions.Get(vfxDefId);
+            instances.Create(meshDefId, owner, 0, PresentationAnchorKind.WorldPosition, Vector3.Zero, meshPerformerStableId, Entity.Null, meshDefinition);
+            instances.Create(vfxDefId, owner, 0, PresentationAnchorKind.WorldPosition, new Vector3(2f, 0f, 0f), vfxPerformerStableId, Entity.Null, vfxDefinition);
+
+            using var emit = new PerformerEmitSystem(
+                world,
+                instances,
+                definitions,
+                requests,
+                new Dictionary<string, object>(),
+                stableDrawCache: stableDrawCache,
+                visualStableIds: visualStableIds);
+
+            emit.Update(0.016f);
+
+            PerformerVisualStableKey meshKey = PerformerBehaviorRuntimeUtility.ComposeVisualStableKey(
+                meshPerformerStableId,
+                slotIndex: 1,
+                AssetKind.Mesh,
+                meshDefId);
+            PerformerVisualStableKey vfxKey = PerformerBehaviorRuntimeUtility.ComposeVisualStableKey(
+                vfxPerformerStableId,
+                slotIndex: 0,
+                AssetKind.VFX,
+                vfxDefId);
+            Assert.That(visualStableIds.TryGet(meshKey, out int meshStableId), Is.True);
+            Assert.That(visualStableIds.TryGet(vfxKey, out int vfxStableId), Is.True);
+            Assert.That(vfxStableId, Is.Not.EqualTo(meshStableId));
+            Assert.That(stableDrawCache.Count, Is.EqualTo(2));
+            Assert.That(stableDrawCache.Contains(meshStableId), Is.True);
+            Assert.That(stableDrawCache.Contains(vfxStableId), Is.True);
+            Assert.That(requests.Count, Is.EqualTo(0), "Static stable visuals must stay in StableDrawCache, not fall back to transient requests.");
+        }
+
+        [Test]
         public void AssetKindContract_ArchitecturePreservesExplicitEnumValues()
         {
             Assert.That((byte)AssetKind.Mesh, Is.EqualTo(1));
@@ -886,6 +981,8 @@ namespace Ludots.Tests.Presentation
             var definitions = new PerformerDefinitionRegistry();
             var requests = new PresentationRequestBuffer();
             var cache = new StableDrawCache(4);
+            var stableIds = new PresentationStableIdAllocator();
+            var visualStableIds = new PerformerVisualStableIdTable(stableIds, capacity: 4);
 
             int materialKey = 76;
             int defId = definitions.Register($"asset.{assetKind}.static", new PerformerDefinition
@@ -928,10 +1025,13 @@ namespace Ludots.Tests.Presentation
                 new Dictionary<string, object>(),
                 animatorStates: null!,
                 soundRequests: null!,
-                stableDrawCache: cache);
+                stableDrawCache: cache,
+                visualStableIds: visualStableIds);
 
             system.Update(0.016f);
-            int stableId = PerformerBehaviorRuntimeUtility.ComposeVisualStableId(9801, 0, assetKind, defId);
+            Assert.That(visualStableIds.TryGet(
+                PerformerBehaviorRuntimeUtility.ComposeVisualStableKey(9801, 0, assetKind, defId),
+                out int stableId), Is.True);
             Assert.That(cache.Contains(stableId), Is.True);
             Assert.That(requests.Count, Is.EqualTo(0), "Static stable visual subtypes must write directly into StableDrawCache, not spam PresentationRequest.");
             int revisionAfterFirstEmit = cache.ContentRevision;
@@ -948,6 +1048,43 @@ namespace Ludots.Tests.Presentation
             system.Update(0.016f);
 
             Assert.That(cache.Contains(stableId), Is.False, "Inactive cacheable visual subtypes must remove retained stable draw entries.");
+            Assert.That(visualStableIds.TryGet(
+                PerformerBehaviorRuntimeUtility.ComposeVisualStableKey(9801, 0, assetKind, defId),
+                out int retainedStableId), Is.True, "Behavior deactivation removes output, not semantic identity.");
+            Assert.That(retainedStableId, Is.EqualTo(stableId));
+
+            instances.SetBehaviorActive(performer, definition, 0, active: true);
+            system.Update(0.016f);
+
+            Assert.That(cache.Contains(stableId), Is.True, "Reactivated static visuals must reuse the same adapter-facing handle.");
+
+            var commands = new PerformerCommandBuffer();
+            var events = new PresentationEventStream(PresentationTestConstants.EventStreamCapacity);
+            var markers = new TransientMarkerBuffer();
+            using var runtime = new PerformerRuntimeSystem(
+                world,
+                commands,
+                events,
+                markers,
+                requests,
+                instances,
+                stableIds,
+                definitions,
+                stableDrawCache: cache,
+                visualStableIds: visualStableIds);
+            Assert.That(commands.TryAdd(new PerformerCommand
+            {
+                CommandKind = PerformerCommandKind.DestroyPerformer,
+                PerformerEntity = performer,
+            }), Is.True);
+
+            runtime.Update(0.016f);
+
+            Assert.That(world.IsAlive(performer), Is.False);
+            Assert.That(cache.Contains(stableId), Is.False);
+            Assert.That(visualStableIds.TryGet(
+                PerformerBehaviorRuntimeUtility.ComposeVisualStableKey(9801, 0, assetKind, defId),
+                out _), Is.False, "Performer destroy releases semantic visual keys; adapter handles remain non-reused by the allocator.");
         }
 
         [Test]
@@ -1376,6 +1513,7 @@ namespace Ludots.Tests.Presentation
             var markers = new TransientMarkerBuffer();
             var requests = new PresentationRequestBuffer();
             var stableIds = new PresentationStableIdAllocator();
+            var visualStableIds = new PerformerVisualStableIdTable(stableIds, capacity: 16);
             var soundRequests = new SoundRequestBuffer();
             var stableDrawCache = new StableDrawCache(16);
             int materialParamKey = 300;
@@ -1452,7 +1590,8 @@ namespace Ludots.Tests.Presentation
                 instances,
                 stableIds,
                 definitions,
-                stableDrawCache: stableDrawCache);
+                stableDrawCache: stableDrawCache,
+                visualStableIds: visualStableIds);
             using var behavior = new PerformerBehaviorSystem(world, instances, definitions, events, new PresentationOwnerChangeBuffer(8), soundRequests);
             using var emit = new PerformerEmitSystem(
                 world,
@@ -1460,7 +1599,8 @@ namespace Ludots.Tests.Presentation
                 definitions,
                 requests,
                 new Dictionary<string, object>(),
-                stableDrawCache: stableDrawCache);
+                stableDrawCache: stableDrawCache,
+                visualStableIds: visualStableIds);
 
             runtime.Update(0.016f);
             behavior.Update(0.016f);
@@ -1469,11 +1609,13 @@ namespace Ludots.Tests.Presentation
             IReadOnlyList<Entity> performers = instances.GetActiveByDefinition(defId);
             Assert.That(performers.Count, Is.EqualTo(1));
             Entity performer = performers[0];
-            int visualStableId = PerformerBehaviorRuntimeUtility.ComposeVisualStableId(
-                world.Get<PerformerState>(performer).StableId,
-                slotIndex: 0,
-                AssetKind.Mesh,
-                defId);
+            Assert.That(visualStableIds.TryGet(
+                PerformerBehaviorRuntimeUtility.ComposeVisualStableKey(
+                    world.Get<PerformerState>(performer).StableId,
+                    slotIndex: 0,
+                    AssetKind.Mesh,
+                    defId),
+                out int visualStableId), Is.True);
             Assert.That(ReadMaterialFromStableDrawCache(stableDrawCache, visualStableId, out int initialMaterial), Is.True);
             Assert.That(initialMaterial, Is.EqualTo(5001));
 
@@ -1561,6 +1703,37 @@ namespace Ludots.Tests.Presentation
         private static int ResolveRetainedAssetId(AssetKind assetKind)
         {
             return assetKind == AssetKind.GroundOverlay ? (int)GroundOverlayShape.Circle : 1;
+        }
+
+        private static PerformerDefinition CreateStaticStableDefinition(
+            int slotIndex,
+            AssetKind assetKind,
+            int assetId,
+            int materialId)
+        {
+            return new PerformerDefinition
+            {
+                Behaviors =
+                [
+                    new BehaviorSlot
+                    {
+                        SlotIndex = slotIndex,
+                        Kind = BehaviorKind.AssetBinding,
+                        ActiveByDefault = true,
+                        AssetBinding = new AssetBindingConfig
+                        {
+                            AssetKind = assetKind,
+                            AssetId = assetId,
+                            MaterialId = materialId,
+                            Mobility = VisualMobility.Static,
+                            RenderPath = VisualRenderPath.StaticMesh,
+                            LocalScale = Vector3.One,
+                            AssetIdParamKey = -1,
+                            AssetSwapParamKey = -1,
+                        },
+                    },
+                ],
+            };
         }
 
         private static bool ReadMaterialFromStableDrawCache(StableDrawCache cache, int stableId, out int materialId)

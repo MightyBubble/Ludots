@@ -41,6 +41,7 @@ namespace Ludots.Core.Presentation.Systems
         private readonly StableDrawCache? _stableDrawCache;
         private readonly SkinnedVisualBatchBuffer? _skinnedVisualBatchBuffer;
         private readonly WorldHudBatchBuffer? _worldHudBuffer;
+        private readonly PerformerVisualStableIdTable? _visualStableIds;
         private readonly PresentationTimingDiagnostics? _timingDiagnostics;
         private readonly List<Entity> _pendingDestroy = new(256);
         private readonly Dictionary<Entity, PresentationRequest> _singleRequestReplayCache = new();
@@ -56,7 +57,8 @@ namespace Ludots.Core.Presentation.Systems
             PresentationTimingDiagnostics? timingDiagnostics = null,
             StableDrawCache? stableDrawCache = null,
             SkinnedVisualBatchBuffer? skinnedVisualBatchBuffer = null,
-            WorldHudBatchBuffer? worldHudBuffer = null)
+            WorldHudBatchBuffer? worldHudBuffer = null,
+            PerformerVisualStableIdTable? visualStableIds = null)
             : base(world)
         {
             _runtime = runtime ?? throw new ArgumentNullException(nameof(runtime));
@@ -67,9 +69,10 @@ namespace Ludots.Core.Presentation.Systems
             _stableDrawCache = stableDrawCache;
             _skinnedVisualBatchBuffer = skinnedVisualBatchBuffer;
             _worldHudBuffer = worldHudBuffer;
+            _visualStableIds = visualStableIds;
             _runtime.BindDefinitions(_definitions);
             _assetEmitter = new PerformerAssetEmitRuntime(
-                world, _runtime, requests, globals, animatorStates, soundRequests);
+                world, _runtime, requests, globals, animatorStates, soundRequests, visualStableIds);
         }
 
         public override void Update(in float dt)
@@ -152,7 +155,7 @@ namespace Ludots.Core.Presentation.Systems
                 Entity performer = _pendingDestroy[i];
                 if (World.IsAlive(performer))
                 {
-                    _runtime.Destroy(performer);
+                    _runtime.Destroy(performer, ReleaseDestroyedPerformerVisualStableIds);
                 }
             }
 
@@ -160,6 +163,19 @@ namespace Ludots.Core.Presentation.Systems
             {
                 _timingDiagnostics.ObservePerformerEmit((Stopwatch.GetTimestamp() - start) * 1000d / Stopwatch.Frequency);
             }
+        }
+
+        private void ReleaseDestroyedPerformerVisualStableIds(Entity performer, PerformerState state)
+        {
+            if (_definitions.TryGet(state.DefId, out PerformerDefinition definition) &&
+                World.IsAlive(performer) &&
+                World.Has<PerformerEmitCache>(performer))
+            {
+                ref PerformerEmitCache emitCache = ref World.Get<PerformerEmitCache>(performer);
+                RemoveStableCacheIfPresent(in state, in definition, ref emitCache);
+            }
+
+            _visualStableIds?.ReleasePerformer(state.StableId);
         }
 
         private bool ResolveCachedDefinition(
@@ -1653,11 +1669,13 @@ namespace Ludots.Core.Presentation.Systems
             for (int i = 0; i < cacheableAssetBehaviorIndices.Length; i++)
             {
                 ref readonly BehaviorSlot slot = ref behaviors[cacheableAssetBehaviorIndices[i]];
-                if (_stableDrawCache.Contains(PerformerBehaviorRuntimeUtility.ComposeVisualStableId(
-                        state.StableId,
+                if (_assetEmitter.TryGetStaticStableVisualId(
+                        in state,
                         slot.SlotIndex,
                         slot.AssetBinding.AssetKind,
-                        state.DefId)))
+                        state.DefId,
+                        out int stableId) &&
+                    _stableDrawCache.Contains(stableId))
                 {
                     return true;
                 }
@@ -1757,7 +1775,15 @@ namespace Ludots.Core.Presentation.Systems
             for (int i = 0; i < cacheableAssetBehaviorIndices.Length; i++)
             {
                 ref readonly BehaviorSlot slot = ref behaviors[cacheableAssetBehaviorIndices[i]];
-                _stableDrawCache.UpdatePosition(PerformerBehaviorRuntimeUtility.ComposeVisualStableId(state.StableId, slot.SlotIndex, slot.AssetBinding.AssetKind, state.DefId), position);
+                if (_assetEmitter.TryGetStaticStableVisualId(
+                    in state,
+                    slot.SlotIndex,
+                    slot.AssetBinding.AssetKind,
+                    state.DefId,
+                    out int stableId))
+                {
+                    _stableDrawCache.UpdatePosition(stableId, position);
+                }
             }
         }
 

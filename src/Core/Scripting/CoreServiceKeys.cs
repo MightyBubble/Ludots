@@ -219,6 +219,7 @@ namespace Ludots.Core.Scripting
         public static readonly ServiceKey<AnimationClipRegistry> AnimationClipRegistry = new("AnimationClipRegistry");
         public static readonly ServiceKey<AnimationProfileRegistry> AnimationProfileRegistry = new("AnimationProfileRegistry");
         public static readonly ServiceKey<PresentationStableIdAllocator> PresentationStableIdAllocator = new("PresentationStableIdAllocator");
+        public static readonly ServiceKey<PerformerVisualStableIdTable> PerformerVisualStableIdTable = new("PerformerVisualStableIdTable");
         public static readonly ServiceKey<StableDrawCache> PresentationStableDrawCache = new("PresentationStableDrawCache");
         public static readonly ServiceKey<PresentationTargetGeneration> PresentationTargetGeneration = new("PresentationTargetGeneration");
         public static readonly ServiceKey<PrimitiveDrawBuffer> PresentationPrimitiveDrawBuffer = new("PresentationPrimitiveDrawBuffer");
