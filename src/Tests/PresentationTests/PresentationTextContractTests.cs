@@ -621,6 +621,60 @@ namespace Ludots.Tests.Presentation
         }
 
         [Test]
+        public void WorldHudToScreenSystem_RemovesProjectedStableItem_WhenWorldHudStableItemIsRemoved()
+        {
+            var world = World.Create();
+            try
+            {
+                var worldHud = new WorldHudBatchBuffer(4);
+                var screenHud = new ScreenHudBatchBuffer(4);
+                var builder = new PresentationOverlaySceneBuilder(screenHud, null, null, null, screenOverlay: null);
+                var scene = new PresentationOverlayScene(8);
+                worldHud.TryAdd(new WorldHudItem
+                {
+                    StableId = 1301,
+                    DirtySerial = 1,
+                    Kind = WorldHudItemKind.Text,
+                    WorldPosition = new Vector3(10f, 2f, 0f),
+                    Width = 48f,
+                    Height = 16f,
+                    FontSize = 16,
+                    Value0 = 7f,
+                    Id1 = (int)WorldHudValueMode.Constant,
+                });
+
+                var system = new WorldHudToScreenSystem(
+                    world,
+                    worldHud,
+                    strings: null,
+                    projector: new FixedProjector(new Vector2(320f, 240f)),
+                    view: new FixedViewController(new Vector2(1920f, 1080f)),
+                    screenHud: screenHud);
+
+                system.Update(0f);
+                builder.Build(scene);
+
+                Assert.That(screenHud.TextCount, Is.EqualTo(1));
+                Assert.That(scene.GetLaneSpan(PresentationOverlayLayer.UnderUi, PresentationOverlayItemKind.Text).Length, Is.EqualTo(1));
+
+                worldHud.Remove(1301);
+                system.Update(0f);
+                builder.Build(scene);
+
+                Assert.That(screenHud.TextCount, Is.EqualTo(0),
+                    "Removing a world HUD stable id must clear the authoritative screen HUD projection before adapters draw.");
+                Assert.That(screenHud.GetSpan().Length, Is.EqualTo(0),
+                    "Flattened screen HUD reads must not retain compacted projected items.");
+                Assert.That(scene.GetLaneSpan(PresentationOverlayLayer.UnderUi, PresentationOverlayItemKind.Text).Length, Is.EqualTo(0),
+                    "Overlay deltas must receive the projected HUD removal.");
+            }
+            finally
+            {
+                World.Destroy(world);
+            }
+        }
+
+        [Test]
         public void WorldHudToScreenSystem_ReusesOwnerProjection_ForNonAdjacentHudItems()
         {
             var world = World.Create();

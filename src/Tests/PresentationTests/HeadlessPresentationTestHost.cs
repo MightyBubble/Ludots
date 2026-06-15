@@ -27,6 +27,9 @@ namespace Ludots.Tests.Presentation
             var screenRayProvider = new CoreScreenRayProvider(engine.GameSession.Camera, view);
             screenProjector.BindPresenter(cameraPresenter);
             screenRayProvider.BindPresenter(cameraPresenter);
+            var presentationFrameSetup = engine.GetService(CoreServiceKeys.PresentationFrameSetup);
+            screenProjector.BindPresentationAlphaProvider(() => presentationFrameSetup?.GetInterpolationAlpha() ?? 1f);
+            screenRayProvider.BindPresentationAlphaProvider(() => presentationFrameSetup?.GetInterpolationAlpha() ?? 1f);
 
             engine.SetService(CoreServiceKeys.ScreenProjector, screenProjector);
             engine.SetService(CoreServiceKeys.ScreenRayProvider, screenRayProvider);
@@ -45,7 +48,7 @@ namespace Ludots.Tests.Presentation
             engine.SetService(CoreServiceKeys.CameraCullingDebugState, culling.DebugState);
             engine.GlobalContext["Tests.HeadlessPresentation.Camera"] = new HeadlessCameraRuntime(
                 cameraPresenter,
-                engine.GetService(CoreServiceKeys.PresentationFrameSetup));
+                presentationFrameSetup);
         }
 
         internal static void UpdateCamera(GameEngine engine)
@@ -58,6 +61,14 @@ namespace Ludots.Tests.Presentation
 
             float alpha = runtime.PresentationFrameSetup?.GetInterpolationAlpha() ?? 1f;
             runtime.CameraPresenter.Update(engine.GameSession.Camera, alpha);
+        }
+
+        internal static CameraPresenter? GetCameraPresenter(GameEngine engine)
+        {
+            return engine.GlobalContext.TryGetValue("Tests.HeadlessPresentation.Camera", out object? runtimeObj) &&
+                runtimeObj is HeadlessCameraRuntime runtime
+                    ? runtime.CameraPresenter
+                    : null;
         }
 
         private sealed class FixedViewController : IViewController

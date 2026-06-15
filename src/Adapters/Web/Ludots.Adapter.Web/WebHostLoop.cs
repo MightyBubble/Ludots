@@ -31,6 +31,7 @@ namespace Ludots.Adapter.Web
 
             var viewController = setup.ViewController;
             var cameraAdapter = setup.CameraAdapter;
+            var presentationFrameSetup = engine.GetService(CoreServiceKeys.PresentationFrameSetup);
 
             var screenProjector = new CoreScreenProjector(engine.GameSession.Camera, viewController);
             var screenRayProvider = new CoreScreenRayProvider(engine.GameSession.Camera, viewController);
@@ -41,6 +42,8 @@ namespace Ludots.Adapter.Web
             var cameraPresenter = new CameraPresenter(engine.SpatialCoords, cameraAdapter);
             screenProjector.BindPresenter(cameraPresenter);
             screenRayProvider.BindPresenter(cameraPresenter);
+            screenProjector.BindPresentationAlphaProvider(() => presentationFrameSetup?.GetInterpolationAlpha() ?? 1f);
+            screenRayProvider.BindPresentationAlphaProvider(() => presentationFrameSetup?.GetInterpolationAlpha() ?? 1f);
 
             var cullingSystem = new CameraCullingSystem(
                 engine.World,
@@ -65,7 +68,6 @@ namespace Ludots.Adapter.Web
             engine.SetService(CoreServiceKeys.RenderCameraDebugState, renderCameraDebug);
 
             engine.RegisterPresentationSystem(new CullingVisualizationPresentationSystem(engine.GlobalContext));
-            var presentationFrameSetup = engine.GetService(CoreServiceKeys.PresentationFrameSetup);
 
             WorldHudToScreenSystem? hudProjection = null;
             if (engine.GetService(CoreServiceKeys.PresentationWorldHudBuffer) is WorldHudBatchBuffer worldHud &&

@@ -1451,6 +1451,7 @@ namespace Ludots.Core.Engine
             var unloadCtx = CreateMapEventContext(session);
             CompleteLifecycleEvent(TriggerManager.FireMapEventAsync(mid, GameEvents.MapUnloaded, unloadCtx));
             TriggerManager.UnregisterMapTriggers(mid, unloadCtx);
+            RemoveRuntimeEntitySpawnRequestsForMap(mid);
 
             // Check if this map is at the top of the focus stack
             var focused = MapSessions.FocusedSession;
@@ -1478,6 +1479,12 @@ namespace Ludots.Core.Engine
                 ClearNavServices();
                 ClearPathingServices();
             }
+        }
+
+        private void RemoveRuntimeEntitySpawnRequestsForMap(MapId mapId)
+        {
+            RuntimeEntitySpawnQueue? spawnQueue = GetService(CoreServiceKeys.RuntimeEntitySpawnQueue);
+            spawnQueue?.RemoveForMap(mapId);
         }
 
         /// <summary>
@@ -1583,6 +1590,7 @@ namespace Ludots.Core.Engine
                 var unloadCtx = CreateMapEventContext(innerSession);
                 CompleteLifecycleEvent(TriggerManager.FireMapEventAsync(innerSession.MapId, GameEvents.MapUnloaded, unloadCtx));
                 TriggerManager.UnregisterMapTriggers(innerSession.MapId, unloadCtx);
+                RemoveRuntimeEntitySpawnRequestsForMap(innerSession.MapId);
             }
 
             // Pop focus — restores previous session
@@ -2481,17 +2489,25 @@ namespace Ludots.Core.Engine
                 timingDiagnostics!.BeginPresentationSystemBreakdown();
             }
 
-            for (int i = 0; i < _presentationSystems.Count; i++)
+            BeginPresentationCameraSnapshotScope();
+            try
             {
-                long systemStart = captureSystemBreakdown
-                    ? System.Diagnostics.Stopwatch.GetTimestamp()
-                    : 0L;
-                _presentationSystems[i].Update(dt);
-                if (captureSystemBreakdown)
+                for (int i = 0; i < _presentationSystems.Count; i++)
                 {
-                    double elapsedMs = (System.Diagnostics.Stopwatch.GetTimestamp() - systemStart) * 1000d / System.Diagnostics.Stopwatch.Frequency;
-                    timingDiagnostics!.ObservePresentationSystem(_presentationSystems[i].GetType().Name, elapsedMs);
+                    long systemStart = captureSystemBreakdown
+                        ? System.Diagnostics.Stopwatch.GetTimestamp()
+                        : 0L;
+                    _presentationSystems[i].Update(dt);
+                    if (captureSystemBreakdown)
+                    {
+                        double elapsedMs = (System.Diagnostics.Stopwatch.GetTimestamp() - systemStart) * 1000d / System.Diagnostics.Stopwatch.Frequency;
+                        timingDiagnostics!.ObservePresentationSystem(_presentationSystems[i].GetType().Name, elapsedMs);
+                    }
                 }
+            }
+            finally
+            {
+                EndPresentationCameraSnapshotScope();
             }
 
             if ((_instancedBatchRequestBuffer?.Count ?? 0) != 0 ||
@@ -2506,6 +2522,32 @@ namespace Ludots.Core.Engine
 
             // Clear GAS presentation events AFTER all presentation systems have consumed them
             _gasPresentationEvents?.Clear();
+        }
+
+        private void BeginPresentationCameraSnapshotScope()
+        {
+            if (GetService(CoreServiceKeys.ScreenProjector) is Ludots.Core.Presentation.Camera.IPresentationCameraSnapshotScope projectorScope)
+            {
+                projectorScope.BeginPresentationFrame();
+            }
+
+            if (GetService(CoreServiceKeys.ScreenRayProvider) is Ludots.Core.Presentation.Camera.IPresentationCameraSnapshotScope rayScope)
+            {
+                rayScope.BeginPresentationFrame();
+            }
+        }
+
+        private void EndPresentationCameraSnapshotScope()
+        {
+            if (GetService(CoreServiceKeys.ScreenProjector) is Ludots.Core.Presentation.Camera.IPresentationCameraSnapshotScope projectorScope)
+            {
+                projectorScope.EndPresentationFrame();
+            }
+
+            if (GetService(CoreServiceKeys.ScreenRayProvider) is Ludots.Core.Presentation.Camera.IPresentationCameraSnapshotScope rayScope)
+            {
+                rayScope.EndPresentationFrame();
+            }
         }
 
         private void EnsureCameraRuntimeConfigured()

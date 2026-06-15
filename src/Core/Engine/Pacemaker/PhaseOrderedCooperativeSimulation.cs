@@ -56,30 +56,18 @@ namespace Ludots.Core.Engine.Pacemaker
 
             while (_phaseIndex < PhaseOrder.Length)
             {
-                long elapsed = System.Diagnostics.Stopwatch.GetTimestamp() - start;
-                if (elapsed >= budgetTicks)
-                {
-                    return false;
-                }
-
                 var phase = PhaseOrder[_phaseIndex];
                 if (_systemGroups.TryGetValue(phase, out var systems))
                 {
                     for (int i = _systemIndex; i < systems.Count; i++)
                     {
-                        elapsed = System.Diagnostics.Stopwatch.GetTimestamp() - start;
-                        if (elapsed >= budgetTicks)
-                        {
-                            _systemIndex = i;
-                            return false;
-                        }
-
                         var sys = systems[i];
                         long systemStart = _timingDiagnostics?.SystemBreakdownEnabled == true
                             ? System.Diagnostics.Stopwatch.GetTimestamp()
                             : 0L;
                         if (sys is ITimeSlicedSystem timeSliced)
                         {
+                            long elapsed = System.Diagnostics.Stopwatch.GetTimestamp() - start;
                             int remainingMs = (int)((budgetTicks - elapsed) * 1000 / System.Diagnostics.Stopwatch.Frequency);
                             if (remainingMs <= 0) remainingMs = 1;
                             if (!timeSliced.UpdateSlice(fixedDt, remainingMs))

@@ -22,6 +22,8 @@ namespace CameraAcceptanceMod.Systems
             .WithAll<CameraAcceptanceHotpathCrowdTag, MapEntity, VisualTransform, CullState>();
 
         private readonly GameEngine _engine;
+        private readonly List<int> _previousLabelStableIds = new(CameraAcceptanceIds.HotpathSelectionLabelLimit);
+        private readonly List<int> _currentLabelStableIds = new(CameraAcceptanceIds.HotpathSelectionLabelLimit);
         private int _entityIdTokenId;
 
         public CameraAcceptanceSelectionOverlaySystem(GameEngine engine)
@@ -38,6 +40,7 @@ namespace CameraAcceptanceMod.Systems
             if (!string.Equals(mapId, CameraAcceptanceIds.ProjectionMapId, StringComparison.OrdinalIgnoreCase) &&
                 !string.Equals(mapId, CameraAcceptanceIds.HotpathMapId, StringComparison.OrdinalIgnoreCase))
             {
+                RemovePreviousLabels();
                 PublishHotpathSelectionCount(0);
                 Observe(start);
                 return;
@@ -45,12 +48,14 @@ namespace CameraAcceptanceMod.Systems
 
             if (_engine.GetService(CoreServiceKeys.PresentationWorldHudBuffer) is not WorldHudBatchBuffer worldHud)
             {
+                _previousLabelStableIds.Clear();
                 Observe(start);
                 return;
             }
 
             if (!TryResolveEntityIdToken(out int entityIdTokenId))
             {
+                RemovePreviousLabels(worldHud);
                 Observe(start);
                 return;
             }
@@ -58,11 +63,13 @@ namespace CameraAcceptanceMod.Systems
             if (_engine.GetService(CameraAcceptanceServiceKeys.DiagnosticsState) is not CameraAcceptanceDiagnosticsState diagnostics ||
                 !diagnostics.TextEnabled)
             {
+                RemovePreviousLabels(worldHud);
                 PublishHotpathSelectionCount(0);
                 Observe(start);
                 return;
             }
 
+            _currentLabelStableIds.Clear();
             if (string.Equals(mapId, CameraAcceptanceIds.HotpathMapId, StringComparison.OrdinalIgnoreCase))
             {
                 MapId currentMapId = _engine.CurrentMapSession?.MapId ?? default;
@@ -78,6 +85,7 @@ namespace CameraAcceptanceMod.Systems
 
                     if (TryQueueLabel(worldHud, entityIdTokenId, entity, transform.Position + new Vector3(0f, 1.35f, 0f)))
                     {
+                        _currentLabelStableIds.Add(ComposeLabelStableId(entity));
                         labelCount++;
                     }
                 });
@@ -96,12 +104,16 @@ namespace CameraAcceptanceMod.Systems
                         continue;
                     }
 
-                    TryQueueLabel(worldHud, entityIdTokenId, entity, transform.Position + new Vector3(0f, 1.35f, 0f));
+                    if (TryQueueLabel(worldHud, entityIdTokenId, entity, transform.Position + new Vector3(0f, 1.35f, 0f)))
+                    {
+                        _currentLabelStableIds.Add(ComposeLabelStableId(entity));
+                    }
                 }
 
                 PublishHotpathSelectionCount(0);
             }
 
+            ReconcilePreviousLabels(worldHud);
             Observe(start);
         }
 
@@ -156,7 +168,8 @@ namespace CameraAcceptanceMod.Systems
 
             return worldHud.TryAdd(new WorldHudItem
             {
-                StableId = HudItemIdentity.ComposeStableId(entity.Id, WorldHudItemKind.Text, discriminator: 3),
+                Owner = entity,
+                StableId = ComposeLabelStableId(entity),
                 DirtySerial = HudItemIdentity.ComposeTextDirtySerial(
                     fontSize: 14,
                     stringTableId: 0,
@@ -172,6 +185,50 @@ namespace CameraAcceptanceMod.Systems
                 Color0 = LabelColor,
                 Text = packet,
             });
+        }
+
+        private void RemovePreviousLabels()
+        {
+            if (_previousLabelStableIds.Count == 0 ||
+                _engine.GetService(CoreServiceKeys.PresentationWorldHudBuffer) is not WorldHudBatchBuffer worldHud)
+            {
+                _previousLabelStableIds.Clear();
+                return;
+            }
+
+            RemovePreviousLabels(worldHud);
+        }
+
+        private void RemovePreviousLabels(WorldHudBatchBuffer worldHud)
+        {
+            for (int i = 0; i < _previousLabelStableIds.Count; i++)
+            {
+                worldHud.Remove(_previousLabelStableIds[i]);
+            }
+
+            _previousLabelStableIds.Clear();
+            _currentLabelStableIds.Clear();
+        }
+
+        private void ReconcilePreviousLabels(WorldHudBatchBuffer worldHud)
+        {
+            for (int i = 0; i < _previousLabelStableIds.Count; i++)
+            {
+                int stableId = _previousLabelStableIds[i];
+                if (!_currentLabelStableIds.Contains(stableId))
+                {
+                    worldHud.Remove(stableId);
+                }
+            }
+
+            _previousLabelStableIds.Clear();
+            _previousLabelStableIds.AddRange(_currentLabelStableIds);
+            _currentLabelStableIds.Clear();
+        }
+
+        private static int ComposeLabelStableId(Entity entity)
+        {
+            return HudItemIdentity.ComposeStableId(entity.Id, WorldHudItemKind.Text, discriminator: 3);
         }
 
         private static bool MatchesMap(in MapEntity mapEntity, in MapId currentMapId)

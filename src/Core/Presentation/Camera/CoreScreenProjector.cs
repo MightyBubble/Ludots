@@ -1,3 +1,4 @@
+using System;
 using System.Numerics;
 using Ludots.Core.Gameplay.Camera;
 using Ludots.Core.Mathematics;
@@ -11,11 +12,13 @@ namespace Ludots.Core.Presentation.Camera
     /// ensuring HUD projection matches the actual 3D camera (no smoothing desync).
     /// Falls back to computing from logical <see cref="CameraState"/> if no presenter is set.
     /// </summary>
-    public sealed class CoreScreenProjector : IScreenProjector, IProjectionSnapshotProvider
+    public sealed class CoreScreenProjector : IScreenProjector, IProjectionSnapshotProvider, IPresentationCameraSnapshotScope
     {
         private readonly CameraManager _cameraManager;
         private readonly IViewController _view;
         private CameraPresenter _presenter;
+        private Func<float>? _presentationAlphaProvider;
+        private bool _presentationFrameActive;
         private int _projectionRevision = 1;
         private int _lastProjectionHash;
         private Matrix4x4 _viewProjection;
@@ -32,6 +35,21 @@ namespace Ludots.Core.Presentation.Camera
         /// that matches the 3D render camera exactly.
         /// </summary>
         public void BindPresenter(CameraPresenter presenter) => _presenter = presenter;
+
+        public void BindPresentationAlphaProvider(Func<float> presentationAlphaProvider)
+        {
+            _presentationAlphaProvider = presentationAlphaProvider ?? throw new ArgumentNullException(nameof(presentationAlphaProvider));
+        }
+
+        void IPresentationCameraSnapshotScope.BeginPresentationFrame()
+        {
+            _presentationFrameActive = true;
+        }
+
+        void IPresentationCameraSnapshotScope.EndPresentationFrame()
+        {
+            _presentationFrameActive = false;
+        }
 
         public int ProjectionRevision
         {
@@ -108,6 +126,12 @@ namespace Ludots.Core.Presentation.Camera
 
         private CameraRenderState3D ResolveCamera()
         {
+            if (_presentationFrameActive && _presentationAlphaProvider != null)
+            {
+                CameraStateSnapshot interpolatedState = _cameraManager.GetInterpolatedState(_presentationAlphaProvider());
+                return CameraViewportUtil.StateToRenderState(in interpolatedState);
+            }
+
             if (_presenter != null)
             {
                 return _presenter.SmoothedRenderState;

@@ -46,6 +46,12 @@ namespace CameraAcceptanceMod.Systems
         private readonly GameEngine _engine;
         private readonly List<Entity> _tagBuffer = new(CameraAcceptanceIds.HotpathCrowdTargetCount);
         private readonly List<Entity> _destroyBuffer = new(CameraAcceptanceIds.HotpathCrowdTargetCount);
+        private readonly List<int> _previousBarStableIds = new(CameraAcceptanceIds.HotpathCrowdTargetCount);
+        private readonly List<int> _previousTextStableIds = new(CameraAcceptanceIds.HotpathCrowdTargetCount);
+        private readonly List<int> _currentBarStableIds = new(CameraAcceptanceIds.HotpathCrowdTargetCount);
+        private readonly List<int> _currentTextStableIds = new(CameraAcceptanceIds.HotpathCrowdTargetCount);
+        private readonly HashSet<int> _currentBarStableIdSet = new();
+        private readonly HashSet<int> _currentTextStableIdSet = new();
         private int _cubeMeshAssetId;
         private int _sphereMeshAssetId;
         private bool _crowdRequested;
@@ -72,6 +78,7 @@ namespace CameraAcceptanceMod.Systems
             if (!string.Equals(currentMapId.Value, CameraAcceptanceIds.HotpathMapId, StringComparison.OrdinalIgnoreCase))
             {
                 ResetHotpathState();
+                RemovePreviousHudLanes();
                 return;
             }
 
@@ -92,6 +99,7 @@ namespace CameraAcceptanceMod.Systems
                 }
 
                 SetCrowdRequested(false);
+                RemovePreviousHudLanes();
                 diagnostics.ObserveHotpathBars(0d);
                 diagnostics.ObserveHotpathHudText(0d);
                 diagnostics.ObserveHotpathPrimitives(0d);
@@ -261,6 +269,7 @@ namespace CameraAcceptanceMod.Systems
                     Kind = RuntimeEntitySpawnKind.Template,
                     TemplateId = CameraAcceptanceIds.HotpathCrowdTemplateId,
                     WorldPositionCm = Fix64Vec2.FromInt(spawnWorldCm.X, spawnWorldCm.Y),
+                    HasWorldPosition = 1,
                     MapId = currentMapId,
                 };
 
@@ -300,9 +309,14 @@ namespace CameraAcceptanceMod.Systems
             int textCount = 0;
             bool emitBars = diagnostics.HotpathBarsEnabled;
             bool emitText = diagnostics.HotpathHudTextEnabled;
-            if ((emitBars || emitText) &&
-                _engine.GetService(CoreServiceKeys.PresentationWorldHudBuffer) is WorldHudBatchBuffer worldHud)
+            if (_engine.GetService(CoreServiceKeys.PresentationWorldHudBuffer) is not WorldHudBatchBuffer worldHud)
             {
+                _previousBarStableIds.Clear();
+                _previousTextStableIds.Clear();
+            }
+            else if (emitBars || emitText)
+            {
+                BeginHudLaneFrame();
                 _engine.World.Query(in TaggedCrowdVisualQuery, (Entity entity, ref MapEntity mapEntity, ref VisualTransform transform, ref CullState cull) =>
                 {
                     if (!MatchesMap(mapEntity, currentMapId) || !cull.IsVisible)
@@ -312,6 +326,7 @@ namespace CameraAcceptanceMod.Systems
 
                     if (emitBars)
                     {
+                        int stableId = HudItemIdentity.ComposeStableId(entity.Id, WorldHudItemKind.Bar, discriminator: 1);
                         float fill = 0.28f + ((entity.Id % 9) * 0.07f);
                         if (fill > 0.98f)
                         {
@@ -320,7 +335,8 @@ namespace CameraAcceptanceMod.Systems
 
                         if (worldHud.TryAdd(new WorldHudItem
                         {
-                            StableId = HudItemIdentity.ComposeStableId(entity.Id, WorldHudItemKind.Bar, discriminator: 1),
+                            Owner = entity,
+                            StableId = stableId,
                             DirtySerial = HudItemIdentity.ComposeBarDirtySerial(56f, 7f, fill, BarBackground, BarForeground),
                             Kind = WorldHudItemKind.Bar,
                             WorldPosition = transform.Position + new Vector3(0f, 1.65f, 0f),
@@ -331,39 +347,137 @@ namespace CameraAcceptanceMod.Systems
                             Color1 = BarForeground,
                         }))
                         {
+                            TrackCurrentBar(stableId);
                             barCount++;
                         }
                     }
 
-                    if (emitText &&
-                        worldHud.TryAdd(new WorldHudItem
+                    if (emitText)
                     {
-                        StableId = HudItemIdentity.ComposeStableId(entity.Id, WorldHudItemKind.Text, discriminator: 2),
-                        DirtySerial = HudItemIdentity.ComposeTextDirtySerial(
-                            fontSize: 14,
-                            stringTableId: 0,
-                            valueModeId: (int)WorldHudValueMode.Constant,
-                            value0: 100 + (entity.Id % 900),
-                            value1: 0f,
-                            color: TextColor,
-                            packet: default),
-                        Kind = WorldHudItemKind.Text,
-                        WorldPosition = transform.Position + new Vector3(0f, 2.15f, 0f),
-                        FontSize = 14,
-                        Color0 = TextColor,
-                        Value0 = 100 + (entity.Id % 900),
-                        Id1 = (int)WorldHudValueMode.Constant,
-                    }))
-                    {
-                        textCount++;
+                        int stableId = HudItemIdentity.ComposeStableId(entity.Id, WorldHudItemKind.Text, discriminator: 2);
+                        if (worldHud.TryAdd(new WorldHudItem
+                        {
+                            Owner = entity,
+                            StableId = stableId,
+                            DirtySerial = HudItemIdentity.ComposeTextDirtySerial(
+                                fontSize: 14,
+                                stringTableId: 0,
+                                valueModeId: (int)WorldHudValueMode.Constant,
+                                value0: 100 + (entity.Id % 900),
+                                value1: 0f,
+                                color: TextColor,
+                                packet: default),
+                            Kind = WorldHudItemKind.Text,
+                            WorldPosition = transform.Position + new Vector3(0f, 2.15f, 0f),
+                            FontSize = 14,
+                            Color0 = TextColor,
+                            Value0 = 100 + (entity.Id % 900),
+                            Id1 = (int)WorldHudValueMode.Constant,
+                        }))
+                        {
+                            TrackCurrentText(stableId);
+                            textCount++;
+                        }
                     }
                 });
+                EndHudLaneFrame(worldHud);
+            }
+            else
+            {
+                RemovePreviousHudLanes(worldHud);
             }
 
             double elapsedMs = (Stopwatch.GetTimestamp() - start) * 1000.0 / Stopwatch.Frequency;
             diagnostics.ObserveHotpathBars(emitBars ? elapsedMs : 0d);
             diagnostics.ObserveHotpathHudText(emitText ? elapsedMs : 0d);
             return (barCount, textCount);
+        }
+
+        private void BeginHudLaneFrame()
+        {
+            _currentBarStableIds.Clear();
+            _currentTextStableIds.Clear();
+            _currentBarStableIdSet.Clear();
+            _currentTextStableIdSet.Clear();
+        }
+
+        private void TrackCurrentBar(int stableId)
+        {
+            if (stableId > 0 && _currentBarStableIdSet.Add(stableId))
+            {
+                _currentBarStableIds.Add(stableId);
+            }
+        }
+
+        private void TrackCurrentText(int stableId)
+        {
+            if (stableId > 0 && _currentTextStableIdSet.Add(stableId))
+            {
+                _currentTextStableIds.Add(stableId);
+            }
+        }
+
+        private void EndHudLaneFrame(WorldHudBatchBuffer worldHud)
+        {
+            for (int i = 0; i < _previousBarStableIds.Count; i++)
+            {
+                int stableId = _previousBarStableIds[i];
+                if (!_currentBarStableIdSet.Contains(stableId))
+                {
+                    worldHud.Remove(stableId);
+                }
+            }
+
+            for (int i = 0; i < _previousTextStableIds.Count; i++)
+            {
+                int stableId = _previousTextStableIds[i];
+                if (!_currentTextStableIdSet.Contains(stableId))
+                {
+                    worldHud.Remove(stableId);
+                }
+            }
+
+            SwapCurrentIntoPrevious(_previousBarStableIds, _currentBarStableIds);
+            SwapCurrentIntoPrevious(_previousTextStableIds, _currentTextStableIds);
+            _currentBarStableIdSet.Clear();
+            _currentTextStableIdSet.Clear();
+        }
+
+        private void RemovePreviousHudLanes()
+        {
+            if (_engine.GetService(CoreServiceKeys.PresentationWorldHudBuffer) is WorldHudBatchBuffer worldHud)
+            {
+                RemovePreviousHudLanes(worldHud);
+                return;
+            }
+
+            _previousBarStableIds.Clear();
+            _previousTextStableIds.Clear();
+            BeginHudLaneFrame();
+        }
+
+        private void RemovePreviousHudLanes(WorldHudBatchBuffer worldHud)
+        {
+            for (int i = 0; i < _previousBarStableIds.Count; i++)
+            {
+                worldHud.Remove(_previousBarStableIds[i]);
+            }
+
+            for (int i = 0; i < _previousTextStableIds.Count; i++)
+            {
+                worldHud.Remove(_previousTextStableIds[i]);
+            }
+
+            _previousBarStableIds.Clear();
+            _previousTextStableIds.Clear();
+            BeginHudLaneFrame();
+        }
+
+        private static void SwapCurrentIntoPrevious(List<int> previous, List<int> current)
+        {
+            previous.Clear();
+            previous.AddRange(current);
+            current.Clear();
         }
 
         private int EmitPrimitives(CameraAcceptanceDiagnosticsState diagnostics, MapId currentMapId)

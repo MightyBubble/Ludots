@@ -8,11 +8,13 @@ namespace Ludots.Core.Gameplay.Camera
     internal sealed class CameraInputAccumulator
     {
         private readonly Dictionary<string, Vector3> _continuousValues = new(StringComparer.Ordinal);
+        private readonly Dictionary<string, Vector3> _latchedBoolValues = new(StringComparer.Ordinal);
         private readonly Dictionary<string, Vector3> _oneShotValues = new(StringComparer.Ordinal);
 
         public void Clear()
         {
             _continuousValues.Clear();
+            _latchedBoolValues.Clear();
             _oneShotValues.Clear();
         }
 
@@ -28,7 +30,16 @@ namespace Ludots.Core.Gameplay.Camera
 
         public void CaptureContinuous(string actionId, bool value)
         {
-            CaptureContinuous(actionId, value ? Vector3.One : Vector3.Zero);
+            if (string.IsNullOrWhiteSpace(actionId))
+            {
+                return;
+            }
+
+            _continuousValues[actionId] = value ? Vector3.One : Vector3.Zero;
+            if (value)
+            {
+                _latchedBoolValues[actionId] = Vector3.One;
+            }
         }
 
         public void CaptureContinuous(string actionId, float value)
@@ -84,11 +95,17 @@ namespace Ludots.Core.Gameplay.Camera
                 snapshot.SetActionValue(pair.Key, pair.Value);
             }
 
+            foreach (var pair in _latchedBoolValues)
+            {
+                snapshot.SetActionValue(pair.Key, pair.Value);
+            }
+
             foreach (var pair in _oneShotValues)
             {
                 snapshot.AddActionValue(pair.Key, pair.Value);
             }
 
+            _latchedBoolValues.Clear();
             _oneShotValues.Clear();
         }
     }

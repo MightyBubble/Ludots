@@ -13,6 +13,8 @@ namespace CameraAcceptanceMod
         public const string StackMapId = "camera_acceptance_stack";
 
         public const string RtsCameraId = "Shared3C.Profile.RtsMoba";
+        public const string ProjectionCameraId = "Camera.Acceptance.Profile.ProjectionFixed";
+        public const string HotpathCameraId = "Camera.Acceptance.Profile.HotpathOverview";
         public const string TpsCameraId = "Camera.Acceptance.Profile.TpsAim";
         public const string BlendBaseCameraId = "Camera.Acceptance.Profile.BlendBase";
         public const string FollowCloseCameraId = "Camera.Acceptance.Profile.FollowClose";
@@ -32,6 +34,7 @@ namespace CameraAcceptanceMod
         public const string TpsModeActionId = "CameraAcceptanceModeTps";
         public const string FollowCloseModeActionId = "CameraAcceptanceModeFollowClose";
         public const string FollowWideModeActionId = "CameraAcceptanceModeFollowWide";
+        public const string LocalAvatarMoveActionId = "CameraAcceptanceLocalAvatarMove";
 
         public const string BlendCutActionId = "CameraAcceptanceBlendCut";
         public const string BlendLinearActionId = "CameraAcceptanceBlendLinear";
@@ -88,9 +91,9 @@ namespace CameraAcceptanceMod
             return mapId switch
             {
                 ProjectionMapId => "Projection and raycast acceptance. Left click empty ground to spawn a random-scatter batch and a transient performer marker.",
-                HotpathMapId => "Presentation hotpath harness. Drive a 10k+ deterministic crowd with manual camera movement, inspect the live visible-entity panel, and toggle panel/diagnostic HUD/selection/HUD bars/HUD text/terrain/reference guides/primitives/culling load in one reproducible scene.",
-                RtsMapId => "RTS/MOBA shared profile acceptance. Validate the shared follow camera stays bound to the local player without camera-owned movement input.",
-                TpsMapId => "TPS behavior composition. Hold right mouse to aim/look, then use wheel zoom.",
+                HotpathMapId => "Presentation hotpath harness. Drive the local avatar through a 10k+ deterministic crowd while the virtual camera follows, inspect the live visible-entity panel, and toggle panel/diagnostic HUD/selection/HUD bars/HUD text/terrain/reference guides/primitives/culling load in one reproducible scene.",
+                RtsMapId => "RTS/MOBA shared profile acceptance. Validate the shared follow camera stays bound to the local player while WASD moves the avatar entity.",
+                TpsMapId => "TPS behavior composition. Use WASD to move the local avatar, hold right mouse to aim/look, then use wheel zoom.",
                 BlendMapId => "Blend acceptance. Pick a curve, then left click ground to move the camera there smoothly.",
                 FollowMapId => "Follow acceptance. Click an entity to select it; when the target is lost, the camera must stay in place.",
                 StackMapId => "Virtual camera stack acceptance. Base follow camera, reveal shot, nested alert shot, then clear back down.",
@@ -103,9 +106,9 @@ namespace CameraAcceptanceMod
             return mapId switch
             {
                 ProjectionMapId => "Use the panel to move between scenarios. On this map, press Q/E to decrease/increase the left-click spawn batch by 100 with a floor of 0, then left click empty ground and verify a random-scatter batch appears around the raycast point while the cue marker still appears then expires.",
-                HotpathMapId => "Move the camera manually in RTS mode across the 10k+ crowd and watch the panel print the currently visible entities. Use F6 panel, F7 diagnostics HUD, F8 selection labels, F9 HUD bars, F10 HUD text, F11 terrain, G guides, F12 primitives, and C to isolate culling load.",
-                RtsMapId => "Camera uses the shared follow profile. Drive gameplay from the local player SSOT and verify the camera keeps following that entity.",
-                TpsMapId => "Hold right mouse and drag to rotate. Wheel zooms. This map stays on the follow target while you aim.",
+                HotpathMapId => "Middle-drag to pan the overview camera. Use WASD to move the local avatar in RTS/TPS modes and watch the virtual camera follow while the panel prints the currently visible entities. Use F6 panel, F7 diagnostics HUD, F8 selection labels, F9 HUD bars, F10 HUD text, F11 terrain, G guides, F12 primitives, and C to isolate culling load.",
+                RtsMapId => "Use WASD to move the local avatar and verify the shared follow camera stays locked to that entity.",
+                TpsMapId => "Use WASD to move the local avatar, hold right mouse and drag to rotate, and use the wheel to zoom. The camera should stay bound to the follow target.",
                 BlendMapId => "Pick Cut / Linear / Smooth in the panel, then left click a ground point to trigger the blend.",
                 FollowMapId => "Click Hero or Captain in world to select, click empty ground to clear selection, move Captain deterministically, and switch Follow Close/Wide to verify no fallback.",
                 StackMapId => "Use panel buttons: Reveal -> Alert -> Clear -> Clear, and verify the stack walks back to the base follow camera.",

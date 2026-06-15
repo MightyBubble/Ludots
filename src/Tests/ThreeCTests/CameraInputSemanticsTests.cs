@@ -48,6 +48,47 @@ namespace Ludots.Tests.ThreeC
         }
 
         [Test]
+        public void VirtualCameraRuntime_DragRotate_PreservesHoldSampleAcrossVisualFramesUntilFixedTick()
+        {
+            var (backend, handler) = BuildCameraInputHandler();
+            var manager = CreateCameraManager(handler, new VirtualCameraDefinition
+            {
+                Id = "DragRotateLatchedHold",
+                Priority = 0,
+                RigKind = CameraRigKind.Orbit,
+                DistanceCm = 1000f,
+                Pitch = 45f,
+                FovYDeg = 60f,
+                Yaw = 180f,
+                PanMode = CameraPanMode.None,
+                RotateMode = CameraRotateMode.DragRotate,
+                RotateDegPerPixel = 0.28f,
+                MinPitchDeg = 10f,
+                MaxPitchDeg = 85f,
+                EnableZoom = false,
+                AllowUserInput = true
+            });
+
+            backend.MousePosition = new Vector2(320f, 240f);
+            handler.Update();
+            manager.CaptureVisualInput();
+
+            backend.Buttons["<Mouse>/MiddleButton"] = true;
+            backend.MousePosition = new Vector2(360f, 240f);
+            handler.Update();
+            manager.CaptureVisualInput();
+
+            backend.Buttons["<Mouse>/MiddleButton"] = false;
+            handler.Update();
+            manager.CaptureVisualInput();
+
+            manager.Update(0.016f);
+
+            Assert.That(manager.State.Yaw, Is.Not.EqualTo(180f),
+                "Drag hold sampled between fixed ticks must pair with the accumulated look delta on the next logic camera tick.");
+        }
+
+        [Test]
         public void VirtualCameraRuntime_GrabDragPan_DragRight_MovesTargetPositiveX()
         {
             var (backend, handler) = BuildCameraInputHandler();

@@ -22,6 +22,7 @@ namespace Ludots.Core.Gameplay.Camera
         }
 
         public bool HasActiveCamera => _resolved != null;
+        public int ActiveCameraCount => _active.Count;
         public bool IsBlending => _blendProgress.IsActive;
         public bool AllowsInput => _resolved != null && _resolved.Definition.AllowUserInput && !IsBlending;
         public string ActiveCameraId => _resolved?.Definition.Id ?? string.Empty;
