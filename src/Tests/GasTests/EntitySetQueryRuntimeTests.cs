@@ -265,6 +265,69 @@ namespace Ludots.Tests.GAS
         }
 
         [Test]
+        public void GraphConfig_QueryFromCollectionUsesEntityCollectionKeyRegistryAsSingleSourceOfTruth()
+        {
+            using var world = World.Create();
+            QueryRuntimeSetup setup = CreateQueryRuntime(world);
+            Entity owner = world.Create();
+            Entity first = world.Create();
+            Entity second = world.Create();
+
+            GraphRuntimeSetup graph = CreateGraphRuntime(setup, GraphCollectionQueryJson);
+            int graphId = GraphIdRegistry.GetId(CollectionQueryGraphId);
+            int collectionKeyId = graph.Collections.KeyRegistry.GetId(GraphCollectionKey);
+            Assert.That(collectionKeyId, Is.GreaterThan(0));
+            Assert.That(graph.Programs.TryGetProgram(graphId, out ReadOnlySpan<GraphInstruction> program), Is.True);
+            Assert.That(program.Length, Is.EqualTo(2));
+            Assert.That((GraphNodeOp)program[0].Op, Is.EqualTo(GraphNodeOp.LoadCaster));
+            Assert.That((GraphNodeOp)program[1].Op, Is.EqualTo(GraphNodeOp.QueryFromCollection));
+            Assert.That(program[1].Imm, Is.EqualTo(collectionKeyId));
+
+            var descriptor = EntityCollectionDescriptor.Create(
+                GraphCollectionKey,
+                EntityCollectionSourceKind.Explicit,
+                EntityCollectionRoleKind.Display);
+            graph.Collections.Replace(owner, descriptor, new[] { first, second });
+
+            var api = new GasGraphRuntimeApi(
+                world,
+                tagOps: setup.TagOps,
+                relationshipRuntime: setup.Relationships,
+                typeRegistry: setup.RelationshipTypes,
+                metricRegistry: setup.RelationshipMetrics,
+                flagRegistry: setup.RelationshipFlags,
+                reasonRegistry: setup.RelationshipReasons,
+                targetDispatchPresets: setup.TargetDispatchPresets,
+                entityCollections: graph.Collections,
+                entityQueries: setup.EntityQueries);
+
+            Span<float> floats = stackalloc float[GraphVmLimits.MaxFloatRegisters];
+            Span<int> ints = stackalloc int[GraphVmLimits.MaxIntRegisters];
+            Span<byte> bools = stackalloc byte[GraphVmLimits.MaxBoolRegisters];
+            Span<Entity> entities = stackalloc Entity[GraphVmLimits.MaxEntityRegisters];
+            Span<Entity> targets = stackalloc Entity[GraphVmLimits.MaxTargets];
+            var targetList = new GraphTargetList(targets);
+            var state = new GraphExecutionState
+            {
+                World = world,
+                Caster = owner,
+                Api = api,
+                F = floats,
+                I = ints,
+                B = bools,
+                E = entities,
+                Targets = targets,
+                TargetList = targetList,
+            };
+
+            GasGraphOpHandlerTable.Execute(ref state, program, GasGraphOpHandlerTable.Instance);
+
+            Assert.That(state.TargetList.Count, Is.EqualTo(2));
+            Assert.That(targets[0], Is.EqualTo(first));
+            Assert.That(targets[1], Is.EqualTo(second));
+        }
+
+        [Test]
         public void GraphReturnWriter_MissingOutputSchemaFailsExplicitly()
         {
             using var world = World.Create();
@@ -385,7 +448,7 @@ namespace Ludots.Tests.GAS
                 setup.RelationshipReasons,
                 setup.TargetDispatchPresets,
                 setup.TemplateKeys);
-            var loader = new GraphProgramConfigLoader(pipeline, programs, symbolResolver, schemas, outputKeys);
+            var loader = new GraphProgramConfigLoader(pipeline, programs, symbolResolver, schemas, outputKeys, collections);
             var packages = loader.LoadIdsAndCompile(catalog, relativePath: "GAS/graphs.json");
             loader.PatchAndRegister(packages);
 
@@ -540,6 +603,7 @@ namespace Ludots.Tests.GAS
         }
 
         private const string GraphId = "tests.graph.4x.cityEconomy";
+        private const string CollectionQueryGraphId = "tests.graph.collectionQuery";
         private const string GraphCollectionKey = "tests.graph.collection.cities";
 
         private const string GraphConfigJson = """
@@ -575,6 +639,19 @@ namespace Ludots.Tests.GAS
       { "id": "totalProduction", "destination": "Summary", "type": "Float", "source": "sumProduction", "key": "tests.graph.totalProduction" },
       { "id": "totalGold", "destination": "Summary", "type": "Float", "source": "sumGold", "key": "tests.graph.totalGold" },
       { "id": "bestProductionCity", "destination": "Summary", "type": "Entity", "source": "bestProductionCity", "key": "tests.graph.bestProductionCity" }
+    ]
+  }
+]
+""";
+
+        private const string GraphCollectionQueryJson = """
+[
+  {
+    "id": "tests.graph.collectionQuery",
+    "entry": "owner",
+    "nodes": [
+      { "id": "owner", "op": "LoadCaster", "next": "fromCollection" },
+      { "id": "fromCollection", "op": "QueryFromCollection", "collectionKey": "tests.graph.collection.cities", "inputs": [ "owner" ] }
     ]
   }
 ]

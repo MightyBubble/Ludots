@@ -90,7 +90,6 @@ namespace Ludots.Core.NodeLibraries.GASGraph
             h[(ushort)GraphNodeOp.CompareGtFloat] = HandleCompareGtFloat;
             h[(ushort)GraphNodeOp.SelectEntity] = HandleSelectEntity;
             h[(ushort)GraphNodeOp.QueryRadius] = HandleQueryRadius;
-            h[(ushort)GraphNodeOp.QueryFilterTagAll] = HandleQueryFilterTagAll;
             h[(ushort)GraphNodeOp.QuerySortStable] = HandleQuerySortStable;
             h[(ushort)GraphNodeOp.QueryLimit] = HandleQueryLimit;
             h[(ushort)GraphNodeOp.QueryCone] = HandleQueryCone;
@@ -298,11 +297,6 @@ namespace Ludots.Core.NodeLibraries.GASGraph
         }
 
         // ── Query Filters ──
-
-        private static void HandleQueryFilterTagAll(ref GraphExecutionState s, in GraphInstruction ins, ref int pc)
-        {
-            s.TargetList.SetCount(s.Api.FilterTagAny(s.Targets, s.TargetList.Count, ins.Imm));
-        }
 
         private static void HandleQuerySortStable(ref GraphExecutionState s, in GraphInstruction ins, ref int pc)
         {

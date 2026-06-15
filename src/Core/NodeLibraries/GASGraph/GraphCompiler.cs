@@ -148,9 +148,6 @@ namespace Ludots.Core.NodeLibraries.GASGraph
                     case GraphNodeOp.QueryRadius:
                         ins.ImmF = node.Radius;
                         break;
-                    case GraphNodeOp.QueryFilterTagAll:
-                        ins.Imm = Intern(symbolToIndex, symbols, node.Tag);
-                        break;
                     case GraphNodeOp.QuerySortStable:
                         break;
                     case GraphNodeOp.QueryLimit:

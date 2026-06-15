@@ -75,6 +75,22 @@ namespace Ludots.Core.EntityQueries
             return store.CopyEntities(owner, collectionKey, destination);
         }
 
+        public int CopyCollection(EntityCollectionStore store, Entity owner, int collectionKeyId, Span<Entity> destination)
+        {
+            ArgumentNullException.ThrowIfNull(store);
+            if (destination.IsEmpty)
+            {
+                return 0;
+            }
+
+            if (collectionKeyId <= 0)
+            {
+                throw new ArgumentOutOfRangeException(nameof(collectionKeyId));
+            }
+
+            return store.CopyEntities(owner, collectionKeyId, destination);
+        }
+
         public int FilterTeam(Span<Entity> entities, int count, int teamId)
         {
             count = ClampCount(entities, count);

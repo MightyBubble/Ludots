@@ -178,13 +178,12 @@ namespace Ludots.Core.NodeLibraries.GASGraph.Host
                 throw new InvalidOperationException("GAS.GRAPH.ERR.MissingEntityCollectionStore");
             }
 
-            string collectionKey = ConfigKeyRegistry.GetName(collectionKeyId);
-            if (string.IsNullOrWhiteSpace(collectionKey))
+            if (collectionKeyId <= 0)
             {
                 throw new InvalidOperationException($"Graph references unknown entity collection key id {collectionKeyId}.");
             }
 
-            return _entityQueries.CopyCollection(_entityCollections, owner, collectionKey, buffer);
+            return _entityQueries.CopyCollection(_entityCollections, owner, collectionKeyId, buffer);
         }
 
         public int FilterTeam(Span<Entity> entities, int count, int teamId)

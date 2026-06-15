@@ -3,6 +3,7 @@ using System.Collections.Generic;
 using System.Text.Json;
 using System.Text.Json.Nodes;
 using Ludots.Core.Config;
+using Ludots.Core.EntityCollections;
 using Ludots.Core.GraphRuntime;
 using Ludots.Core.Gameplay.GAS.Registry;
 using Ludots.Core.NodeLibraries.GASGraph;
@@ -17,6 +18,7 @@ namespace Ludots.Core.NodeLibraries.GASGraph.Host
         private readonly IGraphSymbolResolver _symbolResolver;
         private readonly GraphOutputSchemaRegistry? _outputSchemas;
         private readonly StringIntRegistry? _outputValueKeys;
+        private readonly EntityCollectionStore? _entityCollections;
         private readonly Dictionary<string, GraphOutputSchema> _pendingOutputSchemas = new(StringComparer.OrdinalIgnoreCase);
 
         public GraphProgramConfigLoader(
@@ -24,13 +26,15 @@ namespace Ludots.Core.NodeLibraries.GASGraph.Host
             GraphProgramRegistry registry,
             IGraphSymbolResolver symbolResolver,
             GraphOutputSchemaRegistry? outputSchemas = null,
-            StringIntRegistry? outputValueKeys = null)
+            StringIntRegistry? outputValueKeys = null,
+            EntityCollectionStore? entityCollections = null)
         {
             _pipeline = pipeline ?? throw new ArgumentNullException(nameof(pipeline));
             _registry = registry ?? throw new ArgumentNullException(nameof(registry));
             _symbolResolver = symbolResolver ?? throw new ArgumentNullException(nameof(symbolResolver));
             _outputSchemas = outputSchemas;
             _outputValueKeys = outputValueKeys;
+            _entityCollections = entityCollections;
         }
 
         public List<GraphProgramPackage> LoadIdsAndCompile(
@@ -165,7 +169,6 @@ namespace Ludots.Core.NodeLibraries.GASGraph.Host
                 var op = (GraphNodeOp)ins.Op;
                 switch (op)
                 {
-                    case GraphNodeOp.QueryFilterTagAll:
                     case GraphNodeOp.QueryFilterTagAny:
                     case GraphNodeOp.QueryFilterTagNone:
                     case GraphNodeOp.SendEvent:
@@ -188,7 +191,7 @@ namespace Ludots.Core.NodeLibraries.GASGraph.Host
                         ins.Imm = _symbolResolver.ResolveEntityTemplate(ResolveSymbol(symbols, ins.Imm));
                         break;
                     case GraphNodeOp.QueryFromCollection:
-                        ins.Imm = ConfigKeyRegistry.Register(ResolveSymbol(symbols, ins.Imm));
+                        ins.Imm = ResolveEntityCollectionKey(ResolveSymbol(symbols, ins.Imm));
                         break;
                     case GraphNodeOp.ApplyEffectTemplate:
                     case GraphNodeOp.FanOutApplyEffect:
@@ -306,6 +309,17 @@ namespace Ludots.Core.NodeLibraries.GASGraph.Host
                 throw new InvalidOperationException($"Graph symbol index out of range: {symbolIndex} (len={symbols.Length}).");
             }
             return symbols[symbolIndex] ?? string.Empty;
+        }
+
+        private int ResolveEntityCollectionKey(string key)
+        {
+            if (_entityCollections == null)
+            {
+                throw new InvalidOperationException(
+                    $"Graph collection query key '{key}' requires an EntityCollectionStore.");
+            }
+
+            return _entityCollections.KeyRegistry.Register(key);
         }
     }
 }

@@ -54,7 +54,7 @@ namespace Ludots.Tests.GAS
             var program = new[]
             {
                 new GraphInstruction { Op = (ushort)GraphNodeOp.ConstFloat, Dst = 0, ImmF = 1.0f },
-                new GraphInstruction { Op = (ushort)GraphNodeOp.QueryFilterTagAll, Imm = 0 }
+                new GraphInstruction { Op = (ushort)GraphNodeOp.QueryFilterTagAny, Imm = 0 }
             };
 
             var pkg = new GraphProgramPackage("G1", new[] { "Tag.A" }, program);
@@ -79,7 +79,7 @@ namespace Ludots.Tests.GAS
             That(readProgram, Is.Not.Null);
             That(readProgram.Length, Is.EqualTo(2));
             That(readProgram[0].Op, Is.EqualTo((ushort)GraphNodeOp.ConstFloat));
-            That(readProgram[1].Op, Is.EqualTo((ushort)GraphNodeOp.QueryFilterTagAll));
+            That(readProgram[1].Op, Is.EqualTo((ushort)GraphNodeOp.QueryFilterTagAny));
         }
     }
 
@@ -128,7 +128,7 @@ namespace Ludots.Tests.GAS
             var program = new[]
             {
                 new GraphInstruction { Op = (ushort)GraphNodeOp.QueryRadius, ImmF = 8.0f },
-                new GraphInstruction { Op = (ushort)GraphNodeOp.QueryFilterTagAll, Imm = 1 },
+                new GraphInstruction { Op = (ushort)GraphNodeOp.QueryFilterTagAny, Imm = 1 },
                 new GraphInstruction { Op = (ushort)GraphNodeOp.QuerySortStable },
                 new GraphInstruction { Op = (ushort)GraphNodeOp.QueryLimit, Imm = 1 },
                 new GraphInstruction { Op = (ushort)GraphNodeOp.AggMinByDistance, Dst = 2 },

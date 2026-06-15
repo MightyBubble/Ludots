@@ -42,7 +42,7 @@ namespace Ludots.Core.NodeLibraries.GASGraph
 
         SelectEntity = 40,
         QueryRadius = 100,
-        QueryFilterTagAll = 101,
+        // 101 removed (was QueryFilterTagAll; use explicit QueryFilterTagAny/QueryFilterTagNone; multi-tag All needs a real multi-tag data encoding)
         QuerySortStable = 102,
         QueryLimit = 103,
         QueryCone = 104,

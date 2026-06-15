@@ -252,6 +252,21 @@ namespace Ludots.Core.EntityCollections
             return true;
         }
 
+        public bool TryGet(Entity owner, int keyId, out EntityCollectionHandle handle)
+        {
+            handle = EntityCollectionHandle.Invalid;
+            if (owner == Entity.Null ||
+                keyId <= 0 ||
+                !TryFindSlot(owner, keyId, out int slot) ||
+                !_active[slot])
+            {
+                return false;
+            }
+
+            handle = new EntityCollectionHandle(slot, _revisions[slot]);
+            return true;
+        }
+
         public bool TryGetView(Entity owner, string key, out EntityCollectionView view)
         {
             view = default;
@@ -292,6 +307,13 @@ namespace Ludots.Core.EntityCollections
         public int CopyEntities(Entity owner, string key, Span<Entity> destination)
         {
             return TryGet(owner, key, out EntityCollectionHandle handle)
+                ? CopyEntities(handle, 0, destination)
+                : 0;
+        }
+
+        public int CopyEntities(Entity owner, int keyId, Span<Entity> destination)
+        {
+            return TryGet(owner, keyId, out EntityCollectionHandle handle)
                 ? CopyEntities(handle, 0, destination)
                 : 0;
         }

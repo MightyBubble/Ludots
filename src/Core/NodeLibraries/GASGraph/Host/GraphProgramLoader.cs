@@ -1,6 +1,6 @@
 using System;
 using System.IO;
-using Ludots.Core.Gameplay.GAS.Registry;
+using Ludots.Core.EntityCollections;
 using Ludots.Core.GraphRuntime;
 using Ludots.Core.Modding;
 using Ludots.Core.NodeLibraries.GASGraph;
@@ -13,13 +13,20 @@ namespace Ludots.Core.NodeLibraries.GASGraph.Host
         private readonly ModLoader _modLoader;
         private readonly GraphProgramRegistry _registry;
         private readonly IGraphSymbolResolver _symbolResolver;
+        private readonly EntityCollectionStore? _entityCollections;
 
-        public GraphProgramLoader(VirtualFileSystem vfs, ModLoader modLoader, GraphProgramRegistry registry, IGraphSymbolResolver symbolResolver)
+        public GraphProgramLoader(
+            VirtualFileSystem vfs,
+            ModLoader modLoader,
+            GraphProgramRegistry registry,
+            IGraphSymbolResolver symbolResolver,
+            EntityCollectionStore? entityCollections = null)
         {
             _vfs = vfs;
             _modLoader = modLoader;
             _registry = registry;
             _symbolResolver = symbolResolver ?? throw new ArgumentNullException(nameof(symbolResolver));
+            _entityCollections = entityCollections;
         }
 
         public void Load(string relativePath = "Compiled/GAS/graphs.bin")
@@ -89,7 +96,6 @@ namespace Ludots.Core.NodeLibraries.GASGraph.Host
                 var op = (GraphNodeOp)ins.Op;
                 switch (op)
                 {
-                        case GraphNodeOp.QueryFilterTagAll:
                         case GraphNodeOp.QueryFilterTagAny:
                         case GraphNodeOp.QueryFilterTagNone:
                         case GraphNodeOp.SendEvent:
@@ -112,7 +118,7 @@ namespace Ludots.Core.NodeLibraries.GASGraph.Host
                             ins.Imm = _symbolResolver.ResolveEntityTemplate(ResolveSymbol(symbols, ins.Imm));
                             break;
                         case GraphNodeOp.QueryFromCollection:
-                            ins.Imm = ConfigKeyRegistry.Register(ResolveSymbol(symbols, ins.Imm));
+                            ins.Imm = ResolveEntityCollectionKey(ResolveSymbol(symbols, ins.Imm));
                             break;
                         case GraphNodeOp.ApplyEffectTemplate:
                         case GraphNodeOp.FanOutApplyEffect:
@@ -229,6 +235,17 @@ namespace Ludots.Core.NodeLibraries.GASGraph.Host
                 throw new InvalidOperationException($"Graph symbol index out of range: {symbolIndex} (len={symbols.Length}).");
             }
             return symbols[symbolIndex] ?? string.Empty;
+        }
+
+        private int ResolveEntityCollectionKey(string key)
+        {
+            if (_entityCollections == null)
+            {
+                throw new InvalidOperationException(
+                    $"Graph collection query key '{key}' requires an EntityCollectionStore.");
+            }
+
+            return _entityCollections.KeyRegistry.Register(key);
         }
     }
 }
