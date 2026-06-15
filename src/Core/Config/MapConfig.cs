@@ -3,6 +3,7 @@ using System.Text.Json.Nodes;
 using System.Text.Json.Serialization;
 using Ludots.Core.Map.Board;
 using Ludots.Core.Mathematics;
+using Ludots.Core.Presentation.Terrain;
 
 namespace Ludots.Core.Config
 {
@@ -20,6 +21,13 @@ namespace Ludots.Core.Config
         /// Board configurations for this map. Each board is a spatial domain.
         /// </summary>
         public List<BoardConfig> Boards { get; set; } = new List<BoardConfig>();
+
+        /// <summary>
+        /// Map-owned visual height truth. When declared, map load must install this
+        /// as the core <see cref="IVisualHeightmap"/> service instead of relying on a
+        /// startup-time flat heightmap.
+        /// </summary>
+        public VisualHeightmapBindingConfig VisualHeightmap { get; set; }
 
         /// <summary>
         /// Trigger type names declared by this map (JSON data-first path).

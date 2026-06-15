@@ -5,5 +5,6 @@ namespace Ludots.Core.Presentation.AdapterSync
         Create = 0,
         Update = 1,
         Remove = 2,
+        Resync = 3,
     }
 }

@@ -16,7 +16,7 @@ namespace Ludots.Core.Presentation.Systems
         private readonly PresentationStableIdAllocator _stableIds;
         private readonly CommandBuffer _commandBuffer = new();
         private readonly QueryDescription _missingStableIdQuery = new QueryDescription()
-            .WithAll<EntityTemplateKeyCm>()
+            .WithAll<EntityTemplateKeyRef>()
             .WithNone<PresentationStableId>();
 
         public PresentationStableIdBootstrapSystem(World world, PresentationStableIdAllocator stableIds)

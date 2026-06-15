@@ -17,6 +17,7 @@ namespace Ludots.Core.Presentation.AdapterSync
         private readonly List<int> _pendingRemovals = new();
         private readonly List<StaticMeshAdapterSyncOp> _operations = new();
         private int _syncFrame;
+        private int _lastProjectionGeneration = -1;
 
         public StaticMeshAdapterSyncPlanner()
         {
@@ -33,6 +34,8 @@ namespace Ludots.Core.Presentation.AdapterSync
 
         public int LastRemoveCount { get; private set; }
 
+        public int LastProjectionResyncCount { get; private set; }
+
         public void Reset()
         {
             _bindingsByStableId.Clear();
@@ -40,9 +43,11 @@ namespace Ludots.Core.Presentation.AdapterSync
             _pendingRemovals.Clear();
             _operations.Clear();
             _syncFrame = 0;
+            _lastProjectionGeneration = -1;
             LastCreateCount = 0;
             LastUpdateCount = 0;
             LastRemoveCount = 0;
+            LastProjectionResyncCount = 0;
         }
 
         public bool TryGetBinding(int stableId, out StaticMeshAdapterBindingState binding)
@@ -59,16 +64,23 @@ namespace Ludots.Core.Presentation.AdapterSync
 
         public void Sync(PrimitiveDrawBuffer? snapshot)
         {
-            Sync(snapshot != null ? snapshot.GetSpan() : ReadOnlySpan<PrimitiveDrawItem>.Empty);
+            Sync(snapshot != null ? snapshot.GetSpan() : ReadOnlySpan<PrimitiveDrawItem>.Empty, snapshot?.ProjectionGeneration ?? 0);
         }
 
         public void SyncDeltas(ReadOnlySpan<PrimitiveDrawItem> changedItems, ReadOnlySpan<int> removedStableIds)
+        {
+            SyncDeltas(changedItems, removedStableIds, projectionGeneration: _lastProjectionGeneration < 0 ? 0 : _lastProjectionGeneration);
+        }
+
+        public void SyncDeltas(ReadOnlySpan<PrimitiveDrawItem> changedItems, ReadOnlySpan<int> removedStableIds, int projectionGeneration)
         {
             _operations.Clear();
             _pendingRemovals.Clear();
             LastCreateCount = 0;
             LastUpdateCount = 0;
             LastRemoveCount = 0;
+            LastProjectionResyncCount = 0;
+            bool projectionGenerationChanged = UpdateProjectionGeneration(projectionGeneration);
 
             for (int i = 0; i < removedStableIds.Length; i++)
             {
@@ -88,17 +100,29 @@ namespace Ludots.Core.Presentation.AdapterSync
                 }
 
                 ValidateStableId(item.StableId);
-                SyncDeltaItem(item.StableId, item);
+                SyncDeltaItem(item.StableId, item, projectionGeneration, projectionGenerationChanged);
+            }
+
+            if (projectionGenerationChanged)
+            {
+                EmitProjectionResyncOperations(projectionGeneration);
             }
         }
 
         public void Sync(ReadOnlySpan<PrimitiveDrawItem> snapshot)
+        {
+            Sync(snapshot, projectionGeneration: _lastProjectionGeneration < 0 ? 0 : _lastProjectionGeneration);
+        }
+
+        public void Sync(ReadOnlySpan<PrimitiveDrawItem> snapshot, int projectionGeneration)
         {
             _operations.Clear();
             _pendingRemovals.Clear();
             LastCreateCount = 0;
             LastUpdateCount = 0;
             LastRemoveCount = 0;
+            LastProjectionResyncCount = 0;
+            bool projectionGenerationChanged = UpdateProjectionGeneration(projectionGeneration);
             AdvanceSyncFrame();
             int supportedCount = 0;
 
@@ -111,7 +135,7 @@ namespace Ludots.Core.Presentation.AdapterSync
                 }
 
                 ValidateStableId(item.StableId);
-                SyncItem(item.StableId, item);
+                SyncItem(item.StableId, item, projectionGeneration, projectionGenerationChanged);
                 supportedCount++;
             }
 
@@ -149,12 +173,24 @@ namespace Ludots.Core.Presentation.AdapterSync
             _syncFrame++;
         }
 
-        private void SyncItem(int stableId, in PrimitiveDrawItem item)
+        private bool UpdateProjectionGeneration(int projectionGeneration)
+        {
+            if (_lastProjectionGeneration == projectionGeneration)
+            {
+                return false;
+            }
+
+            bool changed = _lastProjectionGeneration >= 0;
+            _lastProjectionGeneration = projectionGeneration;
+            return changed;
+        }
+
+        private void SyncItem(int stableId, in PrimitiveDrawItem item, int projectionGeneration, bool projectionGenerationChanged)
         {
             StaticMeshLaneKey lane = StaticMeshLaneKey.FromItem(item);
             if (!_bindingsByStableId.TryGetValue(stableId, out var entry))
             {
-                CreateBinding(stableId, lane, item);
+                CreateBinding(stableId, lane, item, projectionGeneration);
                 return;
             }
 
@@ -169,28 +205,43 @@ namespace Ludots.Core.Presentation.AdapterSync
             if (!current.Lane.Equals(lane))
             {
                 RemoveBinding(stableId);
-                CreateBinding(stableId, lane, item);
+                CreateBinding(stableId, lane, item, projectionGeneration);
                 return;
             }
 
             PrimitiveDrawItem currentItem = current.Item;
             if (ItemEquals(in currentItem, in item))
             {
+                if (projectionGenerationChanged && current.ProjectionGeneration != projectionGeneration)
+                {
+                    var resynced = current.WithProjectionGeneration(projectionGeneration);
+                    entry.Binding = resynced;
+                    _operations.Add(new StaticMeshAdapterSyncOp(StaticMeshAdapterSyncOpKind.Resync, resynced));
+                    LastProjectionResyncCount++;
+                }
+
                 return;
             }
 
-            var updated = current.WithItem(item);
+            var updated = current.WithItem(item, projectionGeneration);
             entry.Binding = updated;
+            if (projectionGenerationChanged)
+            {
+                _operations.Add(new StaticMeshAdapterSyncOp(StaticMeshAdapterSyncOpKind.Resync, updated));
+                LastProjectionResyncCount++;
+                return;
+            }
+
             _operations.Add(new StaticMeshAdapterSyncOp(StaticMeshAdapterSyncOpKind.Update, updated));
             LastUpdateCount++;
         }
 
-        private void SyncDeltaItem(int stableId, in PrimitiveDrawItem item)
+        private void SyncDeltaItem(int stableId, in PrimitiveDrawItem item, int projectionGeneration, bool projectionGenerationChanged)
         {
             StaticMeshLaneKey lane = StaticMeshLaneKey.FromItem(item);
             if (!_bindingsByStableId.TryGetValue(stableId, out var entry))
             {
-                CreateBinding(stableId, lane, item);
+                CreateBinding(stableId, lane, item, projectionGeneration);
                 return;
             }
 
@@ -198,7 +249,7 @@ namespace Ludots.Core.Presentation.AdapterSync
             if (!current.Lane.Equals(lane))
             {
                 RemoveBinding(stableId);
-                CreateBinding(stableId, lane, item);
+                CreateBinding(stableId, lane, item, projectionGeneration);
                 return;
             }
 
@@ -208,20 +259,45 @@ namespace Ludots.Core.Presentation.AdapterSync
                 return;
             }
 
-            var updated = current.WithItem(item);
+            var updated = current.WithItem(item, projectionGeneration);
             entry.Binding = updated;
+            if (projectionGenerationChanged)
+            {
+                _operations.Add(new StaticMeshAdapterSyncOp(StaticMeshAdapterSyncOpKind.Resync, updated));
+                LastProjectionResyncCount++;
+                return;
+            }
+
             _operations.Add(new StaticMeshAdapterSyncOp(StaticMeshAdapterSyncOpKind.Update, updated));
             LastUpdateCount++;
         }
 
-        private void CreateBinding(int stableId, in StaticMeshLaneKey lane, in PrimitiveDrawItem item)
+        private void CreateBinding(int stableId, in StaticMeshLaneKey lane, in PrimitiveDrawItem item, int projectionGeneration)
         {
             LaneState state = GetOrCreateLaneState(lane);
             (int slot, int generation) = state.Allocate();
-            var binding = new StaticMeshAdapterBindingState(stableId, lane, slot, generation, item);
+            var binding = new StaticMeshAdapterBindingState(stableId, lane, slot, generation, item, projectionGeneration);
             _bindingsByStableId[stableId] = new BindingEntry(binding, _syncFrame);
             _operations.Add(new StaticMeshAdapterSyncOp(StaticMeshAdapterSyncOpKind.Create, binding));
             LastCreateCount++;
+        }
+
+        private void EmitProjectionResyncOperations(int projectionGeneration)
+        {
+            foreach (var pair in _bindingsByStableId)
+            {
+                BindingEntry entry = pair.Value;
+                StaticMeshAdapterBindingState current = entry.Binding;
+                if (current.ProjectionGeneration == projectionGeneration)
+                {
+                    continue;
+                }
+
+                var resynced = current.WithProjectionGeneration(projectionGeneration);
+                entry.Binding = resynced;
+                _operations.Add(new StaticMeshAdapterSyncOp(StaticMeshAdapterSyncOpKind.Resync, resynced));
+                LastProjectionResyncCount++;
+            }
         }
 
         private void RemoveBinding(int stableId)

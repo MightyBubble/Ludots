@@ -79,18 +79,26 @@ public interface IWebUIBridge
     void SendToWeb(string eventName, object? payload = null);
 
     /// <summary>
-    /// 注册一个来自 Web 层的事件处理器（JS 触发，C# 响应）。
+    /// 注册无参数、无返回值的 Web 事件处理器。
     /// </summary>
-    /// <param name="eventName">Web 侧触发的事件名称。</param>
-    /// <param name="handler">
-    /// 异步处理器，接收事件负载字符串，返回可选的响应数据字符串。
-    /// 若返回值非 null，将作为该次调用的响应回传给 JS。
-    /// </param>
-    /// <param name="owner">
-    /// 事件所有者（弱引用追踪）。当 <paramref name="owner"/> 被 GC 回收后，
-    /// 该处理器将自动注销，防止悬挂引用。可传 null 表示全局生命周期。
-    /// </param>
-    void RegisterWebEvent(string eventName, Func<string?, Task<string?>> handler, object? owner = null);
+    void RegisterWebEvent(string eventName, Func<Task> handler, object? owner = null);
+
+    /// <summary>
+    /// 注册无参数、有返回值的 Web 事件处理器。返回值将回传给 JS。
+    /// </summary>
+    void RegisterWebEvent<TResponse>(string eventName, Func<Task<TResponse>> handler, object? owner = null);
+
+    /// <summary>
+    /// 注册有参数、无返回值的 Web 事件处理器。
+    /// <para>宿主平台负责将 Web 层 payload 转换为 <typeparamref name="TPayload"/>。</para>
+    /// </summary>
+    void RegisterWebEvent<TPayload>(string eventName, Func<TPayload, Task> handler, object? owner = null);
+
+    /// <summary>
+    /// 注册有参数、有返回值的 Web 事件处理器。返回值将回传给 JS。
+    /// <para>宿主平台负责将 Web 层 payload 转换为 <typeparamref name="TPayload"/>。</para>
+    /// </summary>
+    void RegisterWebEvent<TPayload, TResponse>(string eventName, Func<TPayload, Task<TResponse>> handler, object? owner = null);
 
     /// <summary>
     /// 注销指定事件名的所有处理器。

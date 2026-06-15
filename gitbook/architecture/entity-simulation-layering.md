@@ -122,7 +122,7 @@
 - `CullState` 只负责视觉
 - `CullState.IsVisible` 是 camera viewport / spatial / loaded chunk gate 的可见性结果
 - `CullState.LOD` 只表示视觉质量层级，不得作为剔除真相；距离 LOD 阈值不能形成相机跟随的圆形 visibility mask
-- `CameraCullingSystem` 的距离阈值来自全局 `GameConfig.Presentation.CameraCulling`，即 `assets/game.json` 经 `ConfigPipeline.MergeGameConfig()` 合并后的单例配置
+- `CameraCullingSystem` 的距离阈值来自全局 `GameConfig.Presentation.CameraCulling`，即 `assets/Configs/game.json` 与所选 `<Mod>/assets/game.json` 经 `ConfigPipeline.MergeGameConfig()` 合并后的单例配置
 - `SimulationLodState` 才是逻辑预算真相
 - 允许同一个 entity 视觉可见但仿真降频
 - 也允许同一个 entity 视觉不可见但仍保持后端真相更新

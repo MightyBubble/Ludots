@@ -245,22 +245,57 @@ namespace Ludots.Core.Systems
             out TemplateEntityBatchSpawner.TemplateBatchSpawnRequest request)
         {
             request = default;
-            if (entityData.Overrides == null || entityData.Overrides.Count == 0)
+            var worldPosition = default(Ludots.Core.Mathematics.FixedPoint.Fix64Vec2);
+            bool hasWorldPosition = false;
+            float facingAngleRad = 0f;
+            bool hasFacing = false;
+
+            if (entityData.Overrides != null && entityData.Overrides.Count > 0)
             {
-                request = new TemplateEntityBatchSpawner.TemplateBatchSpawnRequest(
-                    default,
-                    hasWorldPosition: false,
-                    mapEntity: mapEntity,
-                    hasMapEntity: true);
-                return true;
+                bool containsWorldPosition = entityData.Overrides.ContainsKey("WorldPositionCm");
+                bool containsFacing = entityData.Overrides.ContainsKey("FacingDirection");
+                int supportedOverrideCount = (containsWorldPosition ? 1 : 0) + (containsFacing ? 1 : 0);
+                if (entityData.Overrides.Count != supportedOverrideCount)
+                {
+                    return false;
+                }
+
+                if (containsWorldPosition)
+                {
+                    worldPosition = ParseWorldPositionOverride(
+                        mapId,
+                        entityData,
+                        entityData.Overrides["WorldPositionCm"]);
+                    hasWorldPosition = true;
+                }
+
+                if (containsFacing)
+                {
+                    facingAngleRad = ParseFacingOverride(
+                        mapId,
+                        entityData,
+                        entityData.Overrides["FacingDirection"]);
+                    hasFacing = true;
+                }
             }
 
-            if (entityData.Overrides.Count != 1 ||
-                !entityData.Overrides.TryGetValue("WorldPositionCm", out var worldPositionNode))
-            {
-                return false;
-            }
+            // Map-authored placement yaw is authored as core FacingDirection.
+            // Presentation VisualTransform.Rotation remains derived by presentation sync/static lowering.
+            request = new TemplateEntityBatchSpawner.TemplateBatchSpawnRequest(
+                worldPosition,
+                hasWorldPosition,
+                facingAngleRad,
+                hasFacing,
+                mapEntity,
+                hasMapEntity: true);
+            return true;
+        }
 
+        private static Ludots.Core.Mathematics.FixedPoint.Fix64Vec2 ParseWorldPositionOverride(
+            string mapId,
+            EntitySpawnData entityData,
+            JsonNode worldPositionNode)
+        {
             if (worldPositionNode is not JsonObject obj)
             {
                 throw new InvalidOperationException(
@@ -301,12 +336,32 @@ namespace Ludots.Core.Systems
 
             int x = xNode.GetValue<int>();
             int y = yNode.GetValue<int>();
-            request = new TemplateEntityBatchSpawner.TemplateBatchSpawnRequest(
-                Ludots.Core.Mathematics.FixedPoint.Fix64Vec2.FromInt(x, y),
-                hasWorldPosition: true,
-                mapEntity: mapEntity,
-                hasMapEntity: true);
-            return true;
+            return Ludots.Core.Mathematics.FixedPoint.Fix64Vec2.FromInt(x, y);
+        }
+
+        private static float ParseFacingOverride(
+            string mapId,
+            EntitySpawnData entityData,
+            JsonNode facingNode)
+        {
+            if (facingNode is not JsonObject obj)
+            {
+                throw new InvalidOperationException(
+                    $"Map '{mapId}' entity template '{entityData.Template}' FacingDirection override requires an object payload.");
+            }
+
+            ValidateProperties(obj, $"Map '{mapId}' entity template '{entityData.Template}' FacingDirection", "AngleRad");
+            JsonNode angleNode = RequireProperty(
+                obj,
+                "AngleRad",
+                $"Map '{mapId}' entity template '{entityData.Template}' FacingDirection");
+            if (angleNode.GetValueKind() != System.Text.Json.JsonValueKind.Number)
+            {
+                throw new InvalidOperationException(
+                    $"Map '{mapId}' entity template '{entityData.Template}' FacingDirection.AngleRad requires a numeric value.");
+            }
+
+            return angleNode.GetValue<float>();
         }
 
         private static void ValidateProperties(JsonObject obj, string context, params string[] allowedNames)
@@ -348,8 +403,8 @@ namespace Ludots.Core.Systems
                 throw new InvalidOperationException($"Entity template key '{templateId}' is not registered.");
             }
 
-            var templateKey = new EntityTemplateKeyCm { TemplateKeyId = templateKeyId };
-            if (_world.Has<EntityTemplateKeyCm>(entity))
+            var templateKey = new EntityTemplateKeyRef { TemplateKeyId = templateKeyId };
+            if (_world.Has<EntityTemplateKeyRef>(entity))
             {
                 _world.Set(entity, templateKey);
             }

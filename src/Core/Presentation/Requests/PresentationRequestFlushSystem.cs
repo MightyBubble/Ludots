@@ -14,6 +14,7 @@ namespace Ludots.Core.Presentation.Requests
         private readonly PresentationRequestBuffer _requests;
         private readonly PrefabRegistry _prefabs;
         private readonly StableDrawCache _stableDrawCache;
+        private readonly PresentationTargetGeneration? _targetGeneration;
         private readonly PresentationVisualProxyEmitter _visualProxyEmitter;
         private readonly PrimitiveDrawBuffer _snapshotBuffer;
         private readonly GroundOverlayBuffer _groundOverlays;
@@ -21,6 +22,7 @@ namespace Ludots.Core.Presentation.Requests
         private readonly RoadSplineBuffer _roadSplines;
         private readonly PresentationTimingDiagnostics? _timingDiagnostics;
         private int _lastProjectedRevision = -1;
+        private int _lastProjectedTargetGeneration = -1;
         private bool _hadTransientVisualProjection;
 
         public PresentationRequestFlushSystem(
@@ -36,13 +38,15 @@ namespace Ludots.Core.Presentation.Requests
             PrimitiveDrawBuffer snapshotBuffer,
             PresentationVisualProxyBuffer proxyBuffer,
             SkinnedVisualBatchBuffer skinnedBatchBuffer,
-            PresentationTimingDiagnostics? timingDiagnostics = null)
+            PresentationTimingDiagnostics? timingDiagnostics = null,
+            PresentationTargetGeneration? targetGeneration = null)
             : base(world)
         {
             _requests = requests ?? throw new ArgumentNullException(nameof(requests));
             _prefabs = prefabs ?? throw new ArgumentNullException(nameof(prefabs));
             _ = meshes ?? throw new ArgumentNullException(nameof(meshes));
             _stableDrawCache = stableDrawCache ?? throw new ArgumentNullException(nameof(stableDrawCache));
+            _targetGeneration = targetGeneration;
             _timingDiagnostics = timingDiagnostics;
             _snapshotBuffer = snapshotBuffer ?? throw new ArgumentNullException(nameof(snapshotBuffer));
             _visualProxyEmitter = new PresentationVisualProxyEmitter(
@@ -134,7 +138,10 @@ namespace Ludots.Core.Presentation.Requests
             }
 
             int contentRevision = _stableDrawCache.ContentRevision;
-            if (projectionTargetsCleared || _lastProjectedRevision != contentRevision)
+            int targetGeneration = _targetGeneration?.Generation ?? 0;
+            if (projectionTargetsCleared ||
+                _lastProjectedRevision != contentRevision ||
+                _lastProjectedTargetGeneration != targetGeneration)
             {
                 if (!projectionTargetsCleared)
                 {
@@ -143,7 +150,9 @@ namespace Ludots.Core.Presentation.Requests
 
                 _stableDrawCache.Project(_visualProxyEmitter, evictUntouched: false);
                 _lastProjectedRevision = contentRevision;
+                _lastProjectedTargetGeneration = targetGeneration;
                 _snapshotBuffer.SetRevision(contentRevision);
+                _snapshotBuffer.SetProjectionGeneration(targetGeneration);
                 _snapshotBuffer.SetStaticMeshGeometryRevision(_stableDrawCache.StaticMeshGeometryRevision);
                 _snapshotBuffer.SetStaticMeshDeltas(
                     _stableDrawCache.StaticMeshDeltaBaseRevision,

@@ -4,6 +4,7 @@ using System.Runtime.CompilerServices;
 using Arch.Buffer;
 using Arch.Core;
 using Arch.System;
+using Ludots.Core.Gameplay.Spawning;
 using Ludots.Core.Mathematics.FixedPoint;
 using Ludots.Core.Navigation2D.Avoidance;
 using Ludots.Core.Navigation2D.Components;
@@ -36,6 +37,9 @@ namespace Ludots.Core.Physics2D.Systems
 
         private static readonly QueryDescription _flowObstacleQuery = new QueryDescription()
             .WithAll<NavObstacle2D, Position2D, NavKinematics2D>();
+
+        private static readonly QueryDescription _flowCompoundObstacleQuery = new QueryDescription()
+            .WithAll<CompoundObstacle2DState, Position2D, NavKinematics2D>();
 
         private static readonly QueryDescription _sleepingPointGoalQuery = new QueryDescription()
             .WithAll<NavAgent2D, NavGoal2D, SleepingTag>();
@@ -1660,13 +1664,13 @@ namespace Ludots.Core.Physics2D.Systems
                 foreach (var index in chunk)
                 {
                     var entity = System.Runtime.CompilerServices.Unsafe.Add(ref entityFirst, index);
-                    float haloCenterRadiusCm = StampFlowObstacleShape(entity, positions[index], obstacles[index]);
+                    float haloCenterRadiusCm = StampFlowObstacleShape(entity, positions[index], obstacles[index], out Vector2 haloCenterCm);
 
                     var discomfort = _runtime.Config.FlowCrowd.Discomfort;
                     if (discomfort.Enabled && discomfort.ObstacleHaloRadiusCm > 0 && discomfort.ObstacleHaloValue > 0f)
                     {
                         _runtime.Surface.SplatDiscomfortCircle(
-                            positions[index].Value.ToVector2(),
+                            haloCenterCm,
                             MathF.Max(haloCenterRadiusCm, kinematics[index].RadiusCm.ToFloat()) + discomfort.ObstacleHaloRadiusCm,
                             discomfort.ObstacleHaloValue,
                             discomfort.ObstacleHaloEdgeValue,
@@ -1674,20 +1678,64 @@ namespace Ludots.Core.Physics2D.Systems
                     }
                 }
             }
+
+            foreach (ref var chunk in World.Query(in _flowCompoundObstacleQuery))
+            {
+                ref var entityFirst = ref chunk.Entity(0);
+                var positions = chunk.GetSpan<Position2D>();
+                var states = chunk.GetSpan<CompoundObstacle2DState>();
+                foreach (var index in chunk)
+                {
+                    var state = states[index];
+                    if (state.SinkNavigationObstacle == 0)
+                    {
+                        continue;
+                    }
+
+                    var entity = System.Runtime.CompilerServices.Unsafe.Add(ref entityFirst, index);
+                    for (int pieceIndex = 0; pieceIndex < state.PieceCount; pieceIndex++)
+                    {
+                        var obstacle = new NavObstacle2D
+                        {
+                            Shape = ToNavObstacleShape(state.GetShape(pieceIndex)),
+                            ShapeDataIndex = state.GetShapeDataIndex(pieceIndex)
+                        };
+                        float haloCenterRadiusCm = StampFlowObstacleShape(entity, positions[index], obstacle, out Vector2 haloCenterCm);
+
+                        var discomfort = _runtime.Config.FlowCrowd.Discomfort;
+                        if (discomfort.Enabled && discomfort.ObstacleHaloRadiusCm > 0 && discomfort.ObstacleHaloValue > 0f)
+                        {
+                            _runtime.Surface.SplatDiscomfortCircle(
+                                haloCenterCm,
+                                MathF.Max(haloCenterRadiusCm, state.GetNavRadiusCm(pieceIndex)) + discomfort.ObstacleHaloRadiusCm,
+                                discomfort.ObstacleHaloValue,
+                                discomfort.ObstacleHaloEdgeValue,
+                                createTilesIfMissing: false);
+                        }
+                    }
+                }
+            }
         }
 
         private float StampFlowObstacleShape(Entity entity, in Position2D position, in NavObstacle2D obstacle)
         {
+            return StampFlowObstacleShape(entity, position, obstacle, out _);
+        }
+
+        private float StampFlowObstacleShape(Entity entity, in Position2D position, in NavObstacle2D obstacle, out Vector2 centerCm)
+        {
             var rotation = World.TryGet(entity, out Rotation2D obstacleRotation) ? obstacleRotation : Rotation2D.Identity;
+            centerCm = position.Value.ToVector2();
 
             switch (obstacle.Shape)
             {
                 case NavObstacleShape2D.Circle:
                     if (ShapeDataStorage2D.TryGetCircle(obstacle.ShapeDataIndex, out var circle))
                     {
-                        Vector2 center = (position.Value + circle.LocalCenter).ToVector2();
+                        Vector2 center = ShapeWorldTransform2D.GetCircleCenter(position.Value, rotation.Value, circle).ToVector2();
                         float radiusCm = circle.Radius.ToFloat();
                         _runtime.Surface.SplatObstacleCircle(center, radiusCm, createTilesIfMissing: false);
+                        centerCm = center;
                         return radiusCm;
                     }
                     break;
@@ -1695,13 +1743,14 @@ namespace Ludots.Core.Physics2D.Systems
                 case NavObstacleShape2D.Box:
                     if (ShapeDataStorage2D.TryGetBox(obstacle.ShapeDataIndex, out var box))
                     {
-                        Vector2 center = (position.Value + box.LocalCenter).ToVector2();
+                        Vector2 center = ShapeWorldTransform2D.GetBoxCenter(position.Value, rotation.Value, box).ToVector2();
                         _runtime.Surface.SplatObstacleOrientedBox(
                             center,
                             box.HalfWidth.ToFloat(),
                             box.HalfHeight.ToFloat(),
                             rotation.Value.ToFloat(),
                             createTilesIfMissing: false);
+                        centerCm = center;
                         return MathF.Sqrt((box.HalfWidth * box.HalfWidth + box.HalfHeight * box.HalfHeight).ToFloat());
                     }
                     break;
@@ -1714,6 +1763,7 @@ namespace Ludots.Core.Physics2D.Systems
                         Span<Vector2> vertices = stackalloc Vector2[polygon.VertexCount];
                         FillPolygonWorldVertices(position.Value, rotation.Value, polygon, vertices);
                         _runtime.Surface.SplatObstaclePolygon(vertices.Slice(0, polygon.VertexCount), createTilesIfMissing: false);
+                        centerCm = ShapeWorldTransform2D.GetPolygonCenter(position.Value, rotation.Value, polygon).ToVector2();
                         return ComputePolygonBoundingRadiusCm(polygon);
                     }
                     break;
@@ -1734,7 +1784,7 @@ namespace Ludots.Core.Physics2D.Systems
 
             for (int i = 0; i < polygon.VertexCount; i++)
             {
-                Fix64Vec2 local = polygon.Vertices[i] - polygon.LocalCenter;
+                Fix64Vec2 local = ShapeWorldTransform2D.GetPolygonLocalVertex(polygon, i);
                 if (rotation != Fix64.Zero)
                 {
                     local = new Fix64Vec2(
@@ -1751,7 +1801,7 @@ namespace Ludots.Core.Physics2D.Systems
             float maxDistanceSq = 0f;
             for (int i = 0; i < polygon.VertexCount; i++)
             {
-                Vector2 delta = (polygon.Vertices[i] - polygon.LocalCenter).ToVector2();
+                Vector2 delta = ShapeWorldTransform2D.GetPolygonLocalVertex(polygon, i).ToVector2();
                 float distanceSq = delta.LengthSquared();
                 if (distanceSq > maxDistanceSq)
                 {
@@ -1760,6 +1810,17 @@ namespace Ludots.Core.Physics2D.Systems
             }
 
             return maxDistanceSq > 0f ? MathF.Sqrt(maxDistanceSq) : 0f;
+        }
+
+        private static NavObstacleShape2D ToNavObstacleShape(ManifestationObstacleShape2D shape)
+        {
+            return shape switch
+            {
+                ManifestationObstacleShape2D.Circle => NavObstacleShape2D.Circle,
+                ManifestationObstacleShape2D.Box => NavObstacleShape2D.Box,
+                ManifestationObstacleShape2D.Polygon => NavObstacleShape2D.Polygon,
+                _ => throw new ArgumentOutOfRangeException(nameof(shape))
+            };
         }
 
         private void StampFlowCrowdDensity(ReadOnlySpan<Vector2> positions, ReadOnlySpan<Vector2> velocities)

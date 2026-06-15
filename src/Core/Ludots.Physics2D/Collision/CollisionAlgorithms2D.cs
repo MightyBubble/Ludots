@@ -1,4 +1,5 @@
 using Ludots.Core.Mathematics.FixedPoint;
+using Ludots.Core.Physics2D;
 using Ludots.Core.Physics2D.Components;
 
 namespace Ludots.Core.Physics2D.Collision
@@ -22,17 +23,17 @@ namespace Ludots.Core.Physics2D.Collision
 
             if (colliderA.Type == ColliderType2D.Circle && colliderB.Type == ColliderType2D.Circle)
             {
-                return CircleCircle(posA, colliderA.ShapeDataIndex, posB, colliderB.ShapeDataIndex, out normal, out penetration, out contactPoint);
+                return CircleCircle(posA, rotA.Value, colliderA.ShapeDataIndex, posB, rotB.Value, colliderB.ShapeDataIndex, out normal, out penetration, out contactPoint);
             }
 
             if (colliderA.Type == ColliderType2D.Circle && colliderB.Type == ColliderType2D.Box)
             {
-                return CircleBox(posA, colliderA.ShapeDataIndex, posB, rotB.Value, colliderB.ShapeDataIndex, out normal, out penetration, out contactPoint);
+                return CircleBox(posA, rotA.Value, colliderA.ShapeDataIndex, posB, rotB.Value, colliderB.ShapeDataIndex, out normal, out penetration, out contactPoint);
             }
 
             if (colliderA.Type == ColliderType2D.Box && colliderB.Type == ColliderType2D.Circle)
             {
-                bool hit = CircleBox(posB, colliderB.ShapeDataIndex, posA, rotA.Value, colliderA.ShapeDataIndex, out normal, out penetration, out contactPoint);
+                bool hit = CircleBox(posB, rotB.Value, colliderB.ShapeDataIndex, posA, rotA.Value, colliderA.ShapeDataIndex, out normal, out penetration, out contactPoint);
                 normal = -normal;
                 return hit;
             }
@@ -49,12 +50,12 @@ namespace Ludots.Core.Physics2D.Collision
 
             if (colliderA.Type == ColliderType2D.Polygon && colliderB.Type == ColliderType2D.Circle)
             {
-                return PolygonCircle(posA, rotA.Value, colliderA.ShapeDataIndex, posB, colliderB.ShapeDataIndex, out normal, out penetration, out contactPoint);
+                return PolygonCircle(posA, rotA.Value, colliderA.ShapeDataIndex, posB, rotB.Value, colliderB.ShapeDataIndex, out normal, out penetration, out contactPoint);
             }
 
             if (colliderA.Type == ColliderType2D.Circle && colliderB.Type == ColliderType2D.Polygon)
             {
-                bool hit = PolygonCircle(posB, rotB.Value, colliderB.ShapeDataIndex, posA, colliderA.ShapeDataIndex, out normal, out penetration, out contactPoint);
+                bool hit = PolygonCircle(posB, rotB.Value, colliderB.ShapeDataIndex, posA, rotA.Value, colliderA.ShapeDataIndex, out normal, out penetration, out contactPoint);
                 normal = -normal;
                 return hit;
             }
@@ -75,8 +76,8 @@ namespace Ludots.Core.Physics2D.Collision
         }
 
         private static bool CircleCircle(
-            Fix64Vec2 posA, int shapeIndexA,
-            Fix64Vec2 posB, int shapeIndexB,
+            Fix64Vec2 posA, Fix64 rotA, int shapeIndexA,
+            Fix64Vec2 posB, Fix64 rotB, int shapeIndexB,
             out Fix64Vec2 normal,
             out Fix64 penetration,
             out Fix64Vec2 contactPoint)
@@ -91,8 +92,8 @@ namespace Ludots.Core.Physics2D.Collision
                 return false;
             }
 
-            Fix64Vec2 centerA = posA + a.LocalCenter;
-            Fix64Vec2 centerB = posB + b.LocalCenter;
+            Fix64Vec2 centerA = ShapeWorldTransform2D.GetCircleCenter(posA, rotA, a);
+            Fix64Vec2 centerB = ShapeWorldTransform2D.GetCircleCenter(posB, rotB, b);
             Fix64Vec2 delta = centerB - centerA;
             Fix64 distSq = delta.LengthSquared();
             Fix64 radiusSum = a.Radius + b.Radius;
@@ -118,7 +119,7 @@ namespace Ludots.Core.Physics2D.Collision
         }
 
         private static bool CircleBox(
-            Fix64Vec2 circlePos, int circleShapeIndex,
+            Fix64Vec2 circlePos, Fix64 circleRotation, int circleShapeIndex,
             Fix64Vec2 boxPos, Fix64 boxRotation, int boxShapeIndex,
             out Fix64Vec2 normal,
             out Fix64 penetration,
@@ -134,8 +135,8 @@ namespace Ludots.Core.Physics2D.Collision
                 return false;
             }
 
-            Fix64Vec2 circleCenter = circlePos + circle.LocalCenter;
-            Fix64Vec2 boxCenter = boxPos + box.LocalCenter;
+            Fix64Vec2 circleCenter = ShapeWorldTransform2D.GetCircleCenter(circlePos, circleRotation, circle);
+            Fix64Vec2 boxCenter = ShapeWorldTransform2D.GetBoxCenter(boxPos, boxRotation, box);
 
             Fix64Vec2 rel = circleCenter - boxCenter;
             Fix64Vec2 relLocal = rel;
@@ -217,8 +218,8 @@ namespace Ludots.Core.Physics2D.Collision
                 return false;
             }
 
-            Fix64Vec2 centerA = posA + a.LocalCenter;
-            Fix64Vec2 centerB = posB + b.LocalCenter;
+            Fix64Vec2 centerA = ShapeWorldTransform2D.GetBoxCenter(posA, rotA, a);
+            Fix64Vec2 centerB = ShapeWorldTransform2D.GetBoxCenter(posB, rotB, b);
             Fix64Vec2 d = centerB - centerA;
 
             Fix64 sinA = Fix64.Zero;
@@ -283,8 +284,8 @@ namespace Ludots.Core.Physics2D.Collision
             if (!TestPolygonAxes(posA, rotA, a, posB, rotB, b, ref minOverlap, ref bestAxis)) return false;
             if (!TestPolygonAxes(posB, rotB, b, posA, rotA, a, ref minOverlap, ref bestAxis)) return false;
 
-            Fix64Vec2 centerA = posA + a.LocalCenter;
-            Fix64Vec2 centerB = posB + b.LocalCenter;
+            Fix64Vec2 centerA = ShapeWorldTransform2D.GetPolygonCenter(posA, rotA, a);
+            Fix64Vec2 centerB = ShapeWorldTransform2D.GetPolygonCenter(posB, rotB, b);
             Fix64Vec2 d = centerB - centerA;
 
             Fix64 sign = Fix64Vec2.Dot(d, bestAxis) >= Fix64.Zero ? Fix64.OneValue : -Fix64.OneValue;
@@ -330,8 +331,8 @@ namespace Ludots.Core.Physics2D.Collision
                 return false;
             }
 
-            Fix64Vec2 boxCenter = boxPos + box.LocalCenter;
-            Fix64Vec2 polyCenter = polyPos + poly.LocalCenter;
+            Fix64Vec2 boxCenter = ShapeWorldTransform2D.GetBoxCenter(boxPos, boxRot, box);
+            Fix64Vec2 polyCenter = ShapeWorldTransform2D.GetPolygonCenter(polyPos, polyRot, poly);
             Fix64Vec2 d = polyCenter - boxCenter;
             if (Fix64Vec2.Dot(d, normal) < Fix64.Zero)
             {
@@ -343,7 +344,7 @@ namespace Ludots.Core.Physics2D.Collision
 
         private static bool PolygonCircle(
             Fix64Vec2 polyPos, Fix64 polyRot, int polyShapeIndex,
-            Fix64Vec2 circlePos, int circleShapeIndex,
+            Fix64Vec2 circlePos, Fix64 circleRot, int circleShapeIndex,
             out Fix64Vec2 normal,
             out Fix64 penetration,
             out Fix64Vec2 contactPoint)
@@ -358,7 +359,7 @@ namespace Ludots.Core.Physics2D.Collision
                 return false;
             }
 
-            Fix64Vec2 circleCenter = circlePos + circle.LocalCenter;
+            Fix64Vec2 circleCenter = ShapeWorldTransform2D.GetCircleCenter(circlePos, circleRot, circle);
 
             Fix64 sin = Fix64.Zero;
             Fix64 cos = Fix64.OneValue;
@@ -373,8 +374,8 @@ namespace Ludots.Core.Physics2D.Collision
 
             for (int i = 0; i < poly.VertexCount; i++)
             {
-                Fix64Vec2 a = poly.Vertices[i] - poly.LocalCenter;
-                Fix64Vec2 b = poly.Vertices[(i + 1) % poly.VertexCount] - poly.LocalCenter;
+                Fix64Vec2 a = ShapeWorldTransform2D.GetPolygonLocalVertex(poly, i);
+                Fix64Vec2 b = ShapeWorldTransform2D.GetPolygonLocalVertex(poly, (i + 1) % poly.VertexCount);
                 if (polyRot != Fix64.Zero)
                 {
                     a = Rotate(a, sin, cos);
@@ -418,7 +419,7 @@ namespace Ludots.Core.Physics2D.Collision
                 }
             }
 
-            Fix64Vec2 polyCenter = polyPos + poly.LocalCenter;
+            Fix64Vec2 polyCenter = ShapeWorldTransform2D.GetPolygonCenter(polyPos, polyRot, poly);
             Fix64Vec2 d = circleCenter - polyCenter;
             Fix64 sign = Fix64Vec2.Dot(d, bestAxis) >= Fix64.Zero ? Fix64.OneValue : -Fix64.OneValue;
             normal = bestAxis * sign;
@@ -443,8 +444,8 @@ namespace Ludots.Core.Physics2D.Collision
 
             for (int i = 0; i < a.VertexCount; i++)
             {
-                Fix64Vec2 va = a.Vertices[i] - a.LocalCenter;
-                Fix64Vec2 vb = a.Vertices[(i + 1) % a.VertexCount] - a.LocalCenter;
+                Fix64Vec2 va = ShapeWorldTransform2D.GetPolygonLocalVertex(a, i);
+                Fix64Vec2 vb = ShapeWorldTransform2D.GetPolygonLocalVertex(a, (i + 1) % a.VertexCount);
                 if (rotA != Fix64.Zero)
                 {
                     va = Rotate(va, sinA, cosA);
@@ -486,7 +487,7 @@ namespace Ludots.Core.Physics2D.Collision
                 cos = Fix64Math.Cos(rot);
             }
 
-            Fix64Vec2 v0 = poly.Vertices[0] - poly.LocalCenter;
+            Fix64Vec2 v0 = ShapeWorldTransform2D.GetPolygonLocalVertex(poly, 0);
             if (rot != Fix64.Zero)
             {
                 v0 = Rotate(v0, sin, cos);
@@ -499,7 +500,7 @@ namespace Ludots.Core.Physics2D.Collision
 
             for (int i = 1; i < poly.VertexCount; i++)
             {
-                Fix64Vec2 v = poly.Vertices[i] - poly.LocalCenter;
+                Fix64Vec2 v = ShapeWorldTransform2D.GetPolygonLocalVertex(poly, i);
                 if (rot != Fix64.Zero)
                 {
                     v = Rotate(v, sin, cos);
@@ -527,7 +528,7 @@ namespace Ludots.Core.Physics2D.Collision
 
             for (int i = 0; i < poly.VertexCount; i++)
             {
-                Fix64Vec2 v = poly.Vertices[i] - poly.LocalCenter;
+                Fix64Vec2 v = ShapeWorldTransform2D.GetPolygonLocalVertex(poly, i);
                 if (rot != Fix64.Zero)
                 {
                     v = Rotate(v, sin, cos);
@@ -558,7 +559,7 @@ namespace Ludots.Core.Physics2D.Collision
             Fix64 bestDistSq = Fix64.MaxValue;
             Fix64Vec2 best = Fix64Vec2.Zero;
 
-            Fix64Vec2 prev = poly.Vertices[poly.VertexCount - 1] - poly.LocalCenter;
+            Fix64Vec2 prev = ShapeWorldTransform2D.GetPolygonLocalVertex(poly, poly.VertexCount - 1);
             if (rot != Fix64.Zero)
             {
                 prev = Rotate(prev, sin, cos);
@@ -567,7 +568,7 @@ namespace Ludots.Core.Physics2D.Collision
 
             for (int i = 0; i < poly.VertexCount; i++)
             {
-                Fix64Vec2 curr = poly.Vertices[i] - poly.LocalCenter;
+                Fix64Vec2 curr = ShapeWorldTransform2D.GetPolygonLocalVertex(poly, i);
                 if (rot != Fix64.Zero)
                 {
                     curr = Rotate(curr, sin, cos);
@@ -657,7 +658,7 @@ namespace Ludots.Core.Physics2D.Collision
                 cos = Fix64Math.Cos(boxRot);
             }
 
-            Fix64Vec2 c = boxPos + box.LocalCenter;
+            Fix64Vec2 c = ShapeWorldTransform2D.GetBoxCenter(boxPos, boxRot, box);
             Fix64Vec2 v0 = new Fix64Vec2(-box.HalfWidth, -box.HalfHeight);
             Fix64Vec2 v1 = new Fix64Vec2(box.HalfWidth, -box.HalfHeight);
             Fix64Vec2 v2 = new Fix64Vec2(box.HalfWidth, box.HalfHeight);
@@ -690,7 +691,7 @@ namespace Ludots.Core.Physics2D.Collision
 
             for (int i = 0; i < poly.VertexCount; i++)
             {
-                Fix64Vec2 v = poly.Vertices[i] - poly.LocalCenter;
+                Fix64Vec2 v = ShapeWorldTransform2D.GetPolygonLocalVertex(poly, i);
                 if (polyRot != Fix64.Zero)
                 {
                     v = Rotate(v, sin, cos);

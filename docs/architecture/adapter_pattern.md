@@ -96,15 +96,22 @@ Adapter (Raylib/Web)   → 组装 Skia 实现并注入 UIRoot / UiScene
 
 详见 `docs/architecture/ui_runtime_architecture.md`。
 
-## 7 UE5 Host-Bound Map Session Contract
+## 7 商业引擎 Adapter 归属
 
-UE5 adapter 内与宿主 world / level ownership 相关的状态，必须遵守单一真相来源：
+Core 仓库只保留平台无关的 Ports 与运行时 contract。具体商业引擎宿主适配（例如 UE5 / Unity / Godot 的 world、level、component、script build 绑定）归开发者或应用仓库维护，作为 Core 的外部 adapter 消费正式输出。
+
+这意味着：
+
+- Core 可以定义 `IInputBackend`、`IViewController`、`ICameraAdapter`、`IMapLoadCompletionGate`、presentation proxy buffer、UI renderer port 等平台无关 contract
+- Core 不持有商业引擎 adapter 项目、host service keys、engine world/level snapshot、脚本生成或发布脚本
+- Core 测试覆盖 adapter-neutral contract；具体引擎 adapter 的 wiring、host lifecycle、渲染桥接测试放在 adapter 所属仓库
+- 如果某个商业引擎 adapter 需要共享新 contract，必须先证明它不是单一 adapter 私有语义，再提升到 Core 或 Platform.Abstractions
+
+以 host-bound map session 为例，具体实现可以留在开发者仓库的 UE5 adapter 中，但必须继续遵守 Core 单一真相来源：
 
 - focused Ludots map 以 `GameEngine.CurrentMapSession` / `MapSessionManager.FocusedSession` 为准
 - 是否进入 host-bound 路径，只能由 adapter-level 的显式 map binding resolver 决定
 - `HasPendingReturn` 必须直接复用 `MapSessionManager` 的正式嵌套 map 语义，不得在 adapter 里另造一套 push/pop bookkeeping
 - `MapLoaded` 不是“开始切 host world”，而是“Ludots map 完成加载”；只要 host world 或其必需 host-bound entities 还没 ready，`MapLoadStatus` 就必须保持 pending，`MapLoaded` 不能提前触发
 - host adapter 可以观察 `MapLoadStatus`，但不能再维护平行的 “host-ready” 真相来源
-- 产品 UI 只能观察 `HostBoundMapSessionSnapshot`，不得接管生命周期 bookkeeping
-
-这层 contract 只允许放在 `src/Adapters/UE5/Ludots.Adapter.UE5/`，不能把 menu、preview、scenario 选择等产品逻辑编码进 adapter 基建。
+- 产品 UI 只能观察 adapter 暴露的 host-bound snapshot，不得接管生命周期 bookkeeping

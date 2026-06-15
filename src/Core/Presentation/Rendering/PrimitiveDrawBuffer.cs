@@ -10,6 +10,7 @@ namespace Ludots.Core.Presentation.Rendering
         private int[] _staticMeshRemovedStableIds = Array.Empty<int>();
         private int _count;
         private int _revision;
+        private int _projectionGeneration;
         private int _staticMeshGeometryRevision;
         private int _staticMeshDeltaBaseRevision;
         private int _staticMeshLaneItemCount;
@@ -20,6 +21,7 @@ namespace Ludots.Core.Presentation.Rendering
         public int Count => _count;
         public int Capacity => _buffer.Length;
         public int Revision => _revision;
+        public int ProjectionGeneration => _projectionGeneration;
         public int StaticMeshGeometryRevision => _staticMeshGeometryRevision;
         public int StaticMeshDeltaBaseRevision => _staticMeshDeltaBaseRevision;
         public int StaticMeshLaneItemCount => _staticMeshLaneItemCount;
@@ -68,6 +70,11 @@ namespace Ludots.Core.Presentation.Rendering
         public void SetRevision(int revision)
         {
             _revision = revision;
+        }
+
+        public void SetProjectionGeneration(int generation)
+        {
+            _projectionGeneration = generation;
         }
 
         public void SetStaticMeshGeometryRevision(int revision)

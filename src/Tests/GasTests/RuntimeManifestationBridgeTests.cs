@@ -78,6 +78,91 @@ namespace Ludots.Tests.GAS
         }
 
         [Test]
+        public void ManifestationObstacleBridge2D_SingleSinkTogglesRemoveDerivedState()
+        {
+            using var world = World.Create();
+            var system = new ManifestationObstacleBridge2DSystem(world);
+            var entity = world.Create(
+                WorldPositionCm.FromCm(0, 0),
+                new ManifestationObstacleIntent2D
+                {
+                    Shape = ManifestationObstacleShape2D.Circle,
+                    SinkPhysicsCollider = 1,
+                    SinkNavigationObstacle = 1,
+                    RadiusCm = 50,
+                    NavRadiusCm = 50,
+                });
+
+            system.Update(0f);
+
+            That(world.Has<Collider2D>(entity), Is.True);
+            That(world.Has<Mass2D>(entity), Is.True);
+            That(world.Has<Velocity2D>(entity), Is.True);
+            That(world.Has<NavObstacle2D>(entity), Is.True);
+            That(world.Has<NavKinematics2D>(entity), Is.True);
+
+            var intent = world.Get<ManifestationObstacleIntent2D>(entity);
+            intent.SinkPhysicsCollider = 0;
+            intent.SinkNavigationObstacle = 0;
+            world.Set(entity, intent);
+            world.Add(entity, new ManifestationObstacleBridge2DDirty());
+
+            system.Update(0f);
+
+            That(world.Has<Collider2D>(entity), Is.False);
+            That(world.Has<Mass2D>(entity), Is.False);
+            That(world.Has<Velocity2D>(entity), Is.False);
+            That(world.Has<NavObstacle2D>(entity), Is.False);
+            That(world.Has<NavKinematics2D>(entity), Is.False);
+        }
+
+        [Test]
+        public void ManifestationObstacleBridge2D_DisabledInitialSinksDoNotRemoveAuthoredRuntimeComponents()
+        {
+            using var world = World.Create();
+            int authoredShapeIndex = ShapeDataStorage2D.RegisterBox(Fix64.FromInt(10), Fix64.FromInt(20));
+            var authoredVelocity = Velocity2D.FromCmPerSec(7f, 8f, 0.5f);
+            var authoredMass = Mass2D.FromFloat(1f, 2f);
+            var authoredNav = new NavKinematics2D
+            {
+                MaxSpeedCmPerSec = Fix64.FromInt(300),
+                MaxAccelCmPerSec2 = Fix64.FromInt(400),
+                RadiusCm = Fix64.FromInt(30),
+                NeighborDistCm = Fix64.FromInt(500),
+                TimeHorizonSec = Fix64.OneValue,
+                MaxNeighbors = 4
+            };
+
+            var entity = world.Create(
+                WorldPositionCm.FromCm(0, 0),
+                new Collider2D { Type = ColliderType2D.Box, ShapeDataIndex = authoredShapeIndex },
+                authoredMass,
+                authoredVelocity,
+                new NavObstacle2D { Shape = NavObstacleShape2D.Box, ShapeDataIndex = authoredShapeIndex },
+                authoredNav,
+                new ManifestationObstacleIntent2D
+                {
+                    Shape = ManifestationObstacleShape2D.Circle,
+                    SinkPhysicsCollider = 0,
+                    SinkNavigationObstacle = 0,
+                    RadiusCm = 50,
+                    NavRadiusCm = 50,
+                });
+
+            var system = new ManifestationObstacleBridge2DSystem(world);
+            system.Update(0f);
+
+            That(world.Get<Collider2D>(entity).ShapeDataIndex, Is.EqualTo(authoredShapeIndex));
+            That(world.Get<Mass2D>(entity).InverseMass, Is.EqualTo(authoredMass.InverseMass));
+            That(world.Get<Mass2D>(entity).InverseInertia, Is.EqualTo(authoredMass.InverseInertia));
+            That(world.Get<Velocity2D>(entity).Linear, Is.EqualTo(authoredVelocity.Linear));
+            That(world.Get<Velocity2D>(entity).Angular, Is.EqualTo(authoredVelocity.Angular));
+            That(world.Get<NavObstacle2D>(entity).ShapeDataIndex, Is.EqualTo(authoredShapeIndex));
+            That(world.Get<NavKinematics2D>(entity).MaxSpeedCmPerSec, Is.EqualTo(authoredNav.MaxSpeedCmPerSec));
+            That(world.Get<NavKinematics2D>(entity).MaxNeighbors, Is.EqualTo(authoredNav.MaxNeighbors));
+        }
+
+        [Test]
         public void ComponentRegistry_ParsesPolygonManifestationObstacle_AndBridgeCreatesPolygonObstacle()
         {
             using var world = World.Create();
@@ -123,41 +208,36 @@ namespace Ludots.Tests.GAS
             That(obstacle.ShapeDataIndex, Is.EqualTo(collider.ShapeDataIndex));
         }
 
-        [Test]
-        public void ComponentRegistry_ParsesObstacleGeometryProfile_AndBridgeCreatesCompoundObstacle()
+        public void ComponentRegistry_ParsesCompoundObstacle_AndBridgeCreatesCompoundStateOnSameEntity()
         {
             using var world = World.Create();
-            var entity = world.Create(WorldPositionCm.FromCm(1200, 900));
+            var entity = world.Create(WorldPositionCm.FromCm(1000, 2000));
 
             Ludots.Core.Config.ComponentRegistry.Apply(
                 entity,
-                "ManifestationObstacleIntent2D",
+                "CompoundObstacle2D",
                 JsonNode.Parse("""
                 {
-                  "shape": "GeometryProfile",
                   "sinkPhysicsCollider": true,
                   "sinkNavigationObstacle": true,
-                  "navRadiusCm": 420,
-                  "localOffsetCm": { "x": 0, "y": 0 }
-                }
-                """)!);
-            Ludots.Core.Config.ComponentRegistry.Apply(
-                entity,
-                "ObstacleGeometryProfile2D",
-                JsonNode.Parse("""
-                {
                   "pieces": [
-                    { "shape": "Box", "halfWidthCm": 90, "halfHeightCm": 20, "localOffsetCm": { "x": 0, "y": 0 } },
-                    { "shape": "Box", "halfWidthCm": 90, "halfHeightCm": 20, "localOffsetCm": { "x": 120, "y": 0 } },
-                    { "shape": "Circle", "radiusCm": 48, "localOffsetCm": { "x": -110, "y": 0 } },
-                    { "shape": "Circle", "radiusCm": 48, "localOffsetCm": { "x": 0, "y": 120 } },
-                    { "shape": "Polygon", "localOffsetCm": { "x": 0, "y": -120 }, "vertices": [
-                        { "x": -40, "y": -20 },
-                        { "x": 40, "y": -20 },
-                        { "x": 60, "y": 20 },
-                        { "x": 0, "y": 60 },
-                        { "x": -60, "y": 20 }
-                    ] }
+                    {
+                      "shape": "Box",
+                      "navRadiusCm": 120,
+                      "halfWidthCm": 100,
+                      "halfHeightCm": 40,
+                      "localOffsetCm": { "x": -120, "y": 0 }
+                    },
+                    {
+                      "shape": "Polygon",
+                      "navRadiusCm": 80,
+                      "localOffsetCm": { "x": 160, "y": 20 },
+                      "vertices": [
+                        { "x": -40, "y": -30 },
+                        { "x": 50, "y": -20 },
+                        { "x": 20, "y": 60 }
+                      ]
+                    }
                   ]
                 }
                 """)!);
@@ -165,48 +245,26 @@ namespace Ludots.Tests.GAS
             var system = new ManifestationObstacleBridge2DSystem(world);
             system.Update(0f);
 
-            That(world.Has<CompoundCollider2D>(entity), Is.True);
-            That(world.Has<Collider2D>(entity), Is.False);
-            That(world.Has<NavCompoundObstacle2D>(entity), Is.True);
-
-            var collider = world.Get<CompoundCollider2D>(entity);
-            That(collider.PieceCount, Is.EqualTo(5));
-            var nav = world.Get<NavCompoundObstacle2D>(entity);
-            That(nav.PieceCount, Is.EqualTo(5));
-            That(world.Has<ManifestationObstacleBridge2DState>(entity), Is.True);
-            That(world.Has<Physics2DStaticBodyDirty>(entity), Is.True);
+            That(world.Has<CompoundObstacle2D>(entity), Is.True);
+            That(world.Has<CompoundObstacle2DState>(entity), Is.True);
+            That(world.Has<Collider2D>(entity), Is.False, "Compound obstacles should not collapse into the legacy single-collider component.");
+            That(world.Has<NavObstacle2D>(entity), Is.False, "Compound obstacles should not collapse into the legacy single-nav-obstacle component.");
+            That(world.Has<Mass2D>(entity), Is.True);
+            That(world.Has<Velocity2D>(entity), Is.True);
             That(world.Has<NavKinematics2D>(entity), Is.True);
-        }
 
-        [Test]
-        public void ManifestationObstacleBridge2D_NavigationOnlyProfile_DoesNotLeavePhysicsDirty()
-        {
-            using var world = World.Create();
-            var profile = new ObstacleGeometryProfile2D();
-            profile.SetBox(0, 90, 20, 0, 0);
+            var state = world.Get<CompoundObstacle2DState>(entity);
+            That(state.PieceCount, Is.EqualTo(2));
+            That(state.GetShape(0), Is.EqualTo(ManifestationObstacleShape2D.Box));
+            That(state.GetShape(1), Is.EqualTo(ManifestationObstacleShape2D.Polygon));
+            That(ShapeDataStorage2D.TryGetBox(state.GetShapeDataIndex(0), out var box), Is.True);
+            That(box.HalfWidth, Is.EqualTo(Fix64.FromInt(100)));
+            That(box.HalfHeight, Is.EqualTo(Fix64.FromInt(40)));
+            That(ShapeDataStorage2D.TryGetPolygon(state.GetShapeDataIndex(1), out var polygon), Is.True);
+            That(polygon.VertexCount, Is.EqualTo(3));
+            That(polygon.LocalOffset, Is.EqualTo(Fix64Vec2.FromInt(160, 20)));
 
-            var entity = world.Create(
-                WorldPositionCm.FromCm(1200, 900),
-                new ManifestationObstacleIntent2D
-                {
-                    Shape = ManifestationObstacleShape2D.GeometryProfile,
-                    SinkPhysicsCollider = 0,
-                    SinkNavigationObstacle = 1,
-                    NavRadiusCm = 120,
-                    LocalOffsetXCm = 0,
-                    LocalOffsetYCm = 0
-                },
-                profile);
-
-            var system = new ManifestationObstacleBridge2DSystem(world);
-            system.Update(0f);
-
-            That(world.Has<NavCompoundObstacle2D>(entity), Is.True);
-            That(world.Has<NavKinematics2D>(entity), Is.True);
-            That(world.Has<CompoundCollider2D>(entity), Is.False);
-            That(world.Has<Collider2D>(entity), Is.False);
-            That(world.Has<Physics2DStaticBodyState>(entity), Is.False);
-            That(world.Has<Physics2DStaticBodyDirty>(entity), Is.False);
+            That(world.Get<NavKinematics2D>(entity).RadiusCm, Is.EqualTo(Fix64.FromInt(120)));
         }
 
         [Test]
@@ -253,6 +311,43 @@ namespace Ludots.Tests.GAS
             That(world.Has<Physics2DStaticBodyState>(entity), Is.False);
             That(world.Has<Physics2DStaticBodyDirty>(entity), Is.False);
             That(build.StaticRigidBodyDescriptors.Count, Is.EqualTo(0));
+        }
+
+        [Test]
+        public void ManifestationObstacleBridge2D_RejectsSingleAndCompoundObstacleOnSameEntity()
+        {
+            using var world = World.Create();
+            var entity = world.Create(
+                WorldPositionCm.FromCm(0, 0),
+                new ManifestationObstacleIntent2D
+                {
+                    Shape = ManifestationObstacleShape2D.Circle,
+                    SinkPhysicsCollider = 1,
+                    SinkNavigationObstacle = 1,
+                    RadiusCm = 10,
+                    NavRadiusCm = 10
+                });
+
+            var compound = new CompoundObstacle2D
+            {
+                SinkPhysicsCollider = 1,
+                SinkNavigationObstacle = 1
+            };
+            compound.SetPiece(
+                0,
+                ManifestationObstacleShape2D.Circle,
+                radiusCm: 10,
+                halfWidthCm: 0,
+                halfHeightCm: 0,
+                localOffsetXCm: 0,
+                localOffsetYCm: 0,
+                navRadiusCm: 10);
+            world.Add(entity, compound);
+
+            var system = new ManifestationObstacleBridge2DSystem(world);
+
+            InvalidOperationException ex = Throws<InvalidOperationException>(() => system.Update(0f))!;
+            That(ex.Message, Does.Contain("must not author both ManifestationObstacleIntent2D and CompoundObstacle2D"));
         }
 
         [Test]
@@ -322,6 +417,60 @@ namespace Ludots.Tests.GAS
                 "ManifestationObstacleIntent2D",
                 """{ "shape": "Circle", "sinkPhysicsCollider": 1, "sinkNavigationObstacle": true, "navRadiusCm": 10 }""",
                 "requires a boolean value");
+            AssertRejects(
+                world,
+                "ManifestationObstacleIntent2D",
+                """{ "shape": "Circle", "sinkPhysicsCollider": false, "sinkNavigationObstacle": false, "radiusCm": 10, "navRadiusCm": 10, "localOffsetCm": { "x": 0, "y": 0 } }""",
+                "requires at least one sink intent");
+            AssertRejects(
+                world,
+                "CompoundObstacle2D",
+                """{ "sinkPhysicsCollider": false, "sinkNavigationObstacle": false, "pieces": [ { "shape": "Circle", "radiusCm": 10, "navRadiusCm": 10, "localOffsetCm": { "x": 0, "y": 0 } } ] }""",
+                "requires at least one sink intent");
+            AssertRejects(
+                world,
+                "CompoundObstacle2D",
+                """{ "sinkPhysicsCollider": true, "sinkNavigationObstacle": true, "pieces": [] }""",
+                "pieces count must be between");
+            AssertRejects(
+                world,
+                "CompoundObstacle2D",
+                """
+                {
+                  "sinkPhysicsCollider": true,
+                  "sinkNavigationObstacle": true,
+                  "pieces": [
+                    {
+                      "shape": "Polygon",
+                      "navRadiusCm": 20,
+                      "localOffsetCm": { "x": 0, "y": 0 },
+                      "vertices": [ { "x": 0, "y": 0 }, { "x": 10, "y": 0 } ]
+                    }
+                  ]
+                }
+                """,
+                "vertices count must be between");
+            AssertRejects(
+                world,
+                "CompoundObstacle2D",
+                """
+                {
+                  "sinkPhysicsCollider": true,
+                  "sinkNavigationObstacle": true,
+                  "pieces": [
+                    {
+                      "shape": "Box",
+                      "navRadiusCm": 20,
+                      "halfWidthCm": 10,
+                      "halfHeightCm": 10,
+                      "localOffsetCm": { "x": 0, "y": 0 },
+                      "localOffsetXCm": 0,
+                      "localOffsetYCm": 0
+                    }
+                  ]
+                }
+                """,
+                "must author either localOffsetCm or localOffsetXCm/localOffsetYCm");
             AssertRejects(
                 world,
                 "AbilityFormSetRef",

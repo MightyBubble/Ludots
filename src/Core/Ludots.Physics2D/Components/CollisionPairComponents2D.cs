@@ -16,6 +16,8 @@ namespace Ludots.Core.Physics2D.Components
         public bool IsActive;
         public Entity EntityA;
         public Entity EntityB;
+        public byte ShapeSlotA;
+        public byte ShapeSlotB;
 
         public Velocity2D VelocityA;
         public Velocity2D VelocityB;

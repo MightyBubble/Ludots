@@ -47,6 +47,7 @@ using Ludots.Core.Presentation.Requests;
 using Ludots.Core.Presentation.Terrain;
 using Ludots.Core.Presentation.Rendering;
 using Ludots.Core.Presentation.Hud;
+using Ludots.Core.Presentation.Instancing;
 using Ludots.Core.Presentation.Minimap;
 using Ludots.Core.Gameplay.GAS.Presentation;
 using Ludots.Core.Presentation.Surfaces;
@@ -180,6 +181,15 @@ namespace Ludots.Core.Engine
         public bool RemoveService<T>(ServiceKey<T> key)
             => _engineServices.Remove(key);
 
+        public void RegisterPresentationAdapterCapabilities(PresentationAdapterCapabilities capabilities)
+        {
+            if (capabilities == null) throw new ArgumentNullException(nameof(capabilities));
+
+            TryGetService(CoreServiceKeys.PresentationTargetGeneration, out PresentationTargetGeneration targetGeneration);
+            PresentationVisualCapabilityValidator.ValidateTargetLifecycle(capabilities, targetGeneration);
+            SetService(CoreServiceKeys.PresentationAdapterCapabilities, capabilities);
+        }
+
         public GameSynchronizationContext SyncContext { get; private set; }
 
         // Systems - 按Phase分组
@@ -192,6 +202,8 @@ namespace Ludots.Core.Engine
         private Ludots.Core.Presentation.Rendering.SkinnedVisualBatchBuffer _skinnedVisualBatchBuffer;
         private Ludots.Core.Presentation.Requests.PresentationRequestBuffer _presentationRequestBuffer;
         private Ludots.Core.Presentation.Requests.SoundRequestBuffer _soundRequestBuffer;
+        private Ludots.Core.Presentation.Instancing.InstancedBatchRequestBuffer _instancedBatchRequestBuffer;
+        private Ludots.Core.Presentation.Instancing.InstancedBatchOperationBuffer _instancedBatchOperationBuffer;
         private GasPresentationEventBuffer _gasPresentationEvents;
         private Ludots.Core.Presentation.Rendering.GroundOverlayBuffer _groundOverlayBuffer;
         private Ludots.Core.Presentation.Rendering.RoadSplineBuffer _roadSplineBuffer;
@@ -668,6 +680,10 @@ namespace Ludots.Core.Engine
             var presentationPrefabs = new PrefabRegistry();
             var meshAssets = new MeshAssetRegistry();
             var materialAssets = new PresentationMaterialRegistry();
+            var instancedBatchAssets = new InstancedBatchAssetRegistry();
+            var instancedBatchRequests = new InstancedBatchRequestBuffer(presentationConfig.PresentationRequestCapacity);
+            var instancedBatchOperations = new InstancedBatchOperationBuffer(presentationConfig.PresentationRequestCapacity);
+            var instancedBatchSubmissionRuntime = new InstancedBatchSubmissionRuntime();
             var animatorControllers = new AnimatorControllerRegistry();
             var animationClips = new AnimationClipRegistry();
             var animationProfiles = new AnimationProfileRegistry();
@@ -677,6 +693,7 @@ namespace Ludots.Core.Engine
             var visualProxyBuffer = new PresentationVisualProxyBuffer(presentationConfig.VisualProxyBufferCapacity);
             var skinnedVisualBatchBuffer = new SkinnedVisualBatchBuffer(presentationConfig.SkinnedVisualBatchCapacity);
             var stableDrawCache = new StableDrawCache(presentationConfig.VisualSnapshotBufferCapacity);
+            var presentationTargetGeneration = new PresentationTargetGeneration();
             var presentationRequestBuffer = new PresentationRequestBuffer(presentationConfig.PresentationRequestCapacity);
             var transientMarkerBuffer = new TransientMarkerBuffer();
             var groundOverlayBuffer = new GroundOverlayBuffer(presentationConfig.GroundOverlayCapacity);
@@ -692,8 +709,46 @@ namespace Ludots.Core.Engine
             var surfaceRuntime = new SurfaceSourceRuntimeRegistry();
             var presentationBehaviors = new PresentationBehaviorRegistry();
             var performerGraphApi = new GasGraphRuntimeApi(World, spatialQueries: null, coords: null, eventBus: null);
+            int ResolveInstancedBatchGasEventKey(PresentationEventKind eventKind, string key)
+            {
+                return eventKind == PresentationEventKind.EffectApplied
+                    ? EffectTemplateIdRegistry.GetId(key)
+                    : AbilityIdRegistry.GetId(key);
+            }
+
+            int ResolveInstancedBatchPresentationEventKey(PresentationEventKind eventKind, string key)
+            {
+                return eventKind switch
+                {
+                    PresentationEventKind.EntitySpawned => MapLoader.EntityTemplateKeys.GetId(key),
+                    PresentationEventKind.EntityDestroyed => MapLoader.EntityTemplateKeys.GetId(key),
+                    PresentationEventKind.ProjectileSpawned => EffectTemplateIdRegistry.GetId(key),
+                    PresentationEventKind.TagEffectiveChanged => TagRegistry.GetId(key),
+                    PresentationEventKind.GameplayEvent => TagRegistry.GetId(key),
+                    PresentationEventKind.EffectApplied => EffectTemplateIdRegistry.GetId(key),
+                    PresentationEventKind.CastCommitted => AbilityIdRegistry.GetId(key),
+                    PresentationEventKind.CastFailed => AbilityIdRegistry.GetId(key),
+                    PresentationEventKind.SelectionMemberAdded => selectionSetKeyRegistry.GetId(key),
+                    PresentationEventKind.SelectionMemberRemoved => selectionSetKeyRegistry.GetId(key),
+                    PresentationEventKind.GlobalDayNight => TagRegistry.GetId(key),
+                    PresentationEventKind.GlobalRegionChanged => TagRegistry.GetId(key),
+                    PresentationEventKind.GlobalWeather => TagRegistry.GetId(key),
+                    PresentationEventKind.PerformerCreated => key == "*" ? -1 : 0,
+                    PresentationEventKind.PerformerDestroyed => key == "*" ? -1 : 0,
+                    _ => 0,
+                };
+            }
+
             new MeshAssetConfigLoader(ConfigPipeline, meshAssets, presentationPrefabs).Load(ConfigCatalog, ConfigConflictReport);
             new PresentationMaterialConfigLoader(ConfigPipeline, materialAssets).Load(ConfigCatalog, ConfigConflictReport);
+            new InstancedBatchAssetConfigLoader(
+                ConfigPipeline,
+                instancedBatchAssets,
+                meshAssets,
+                materialAssets,
+                Ludots.Core.Gameplay.GAS.Registry.AttributeRegistry.GetId,
+                ResolveInstancedBatchGasEventKey,
+                ResolveInstancedBatchPresentationEventKey).Load(ConfigCatalog, ConfigConflictReport);
             new PresentationBehaviorConfigLoader(ConfigPipeline, presentationBehaviors, meshAssets).Load(ConfigCatalog, ConfigConflictReport);
             var presentationBehaviorResolver = new PresentationBehaviorResolver(presentationBehaviors, meshAssets);
             new AnimatorControllerConfigLoader(ConfigPipeline, animatorControllers).Load(ConfigCatalog, ConfigConflictReport);
@@ -761,7 +816,8 @@ namespace Ludots.Core.Engine
                 visualSnapshotBuffer,
                 visualProxyBuffer,
                 skinnedVisualBatchBuffer,
-                presentationTimingDiagnostics);
+                presentationTimingDiagnostics,
+                presentationTargetGeneration);
             new PerformerDefinitionConfigLoader(
                 ConfigPipeline,
                 performerDefinitions,
@@ -786,7 +842,8 @@ namespace Ludots.Core.Engine
                     AssetKind.GroundOverlay => ResolveGroundOverlayShapeId(key),
                     _ => 0,
                 },
-                selectionSetKeyRegistry.Register).Load(ConfigCatalog, ConfigConflictReport);
+                selectionSetKeyRegistry.Register,
+                instancedBatchAssets.GetId).Load(ConfigCatalog, ConfigConflictReport);
             MapLoader.SetPresentationRuntime(
                 presentationStableIds,
                 performerRuntime,
@@ -944,6 +1001,9 @@ namespace Ludots.Core.Engine
             SetService(CoreServiceKeys.PresentationPrefabRegistry, presentationPrefabs);
             SetService(CoreServiceKeys.PresentationMeshAssetRegistry, meshAssets);
             SetService(CoreServiceKeys.PresentationMaterialRegistry, materialAssets);
+            SetService(CoreServiceKeys.InstancedBatchAssetRegistry, instancedBatchAssets);
+            SetService(CoreServiceKeys.InstancedBatchRequestBuffer, instancedBatchRequests);
+            SetService(CoreServiceKeys.InstancedBatchOperationBuffer, instancedBatchOperations);
             SetService(CoreServiceKeys.PresentationBehaviorRegistry, presentationBehaviors);
             SetService(CoreServiceKeys.PresentationBehaviorResolver, presentationBehaviorResolver);
             SetService(CoreServiceKeys.AnimatorControllerRegistry, animatorControllers);
@@ -951,12 +1011,15 @@ namespace Ludots.Core.Engine
             SetService(CoreServiceKeys.AnimationProfileRegistry, animationProfiles);
             SetService(CoreServiceKeys.PresentationStableIdAllocator, presentationStableIds);
             SetService(CoreServiceKeys.PresentationStableDrawCache, stableDrawCache);
+            SetService(CoreServiceKeys.PresentationTargetGeneration, presentationTargetGeneration);
             _primitiveDrawBuffer = primitiveDrawBuffer;
             _visualSnapshotBuffer = visualSnapshotBuffer;
             _visualProxyBuffer = visualProxyBuffer;
             _skinnedVisualBatchBuffer = skinnedVisualBatchBuffer;
             _presentationRequestBuffer = presentationRequestBuffer;
             _soundRequestBuffer = soundRequestBuffer;
+            _instancedBatchRequestBuffer = instancedBatchRequests;
+            _instancedBatchOperationBuffer = instancedBatchOperations;
             _gasPresentationEvents = gasPresentationEvents;
             _groundOverlayBuffer = groundOverlayBuffer;
             _roadSplineBuffer = roadSplineBuffer;
@@ -1175,10 +1238,25 @@ namespace Ludots.Core.Engine
             RegisterPresentationSystem(new ResponseChainUiSyncSystem(GlobalContext, responseChainUiState, orderTypeRegistry));
             RegisterPresentationSystem(globalPresentationEventProjectionSystem);
             RegisterPresentationSystem(new SelectionPresentationEventSystem(World, selectionRuntime, presentationEventStream));
+            RegisterPresentationSystem(new InstancedBatchBehaviorSystem(
+                World,
+                performerDefinitions,
+                performerRuntime,
+                instancedBatchAssets,
+                instancedBatchOperations,
+                presentationEventStream,
+                presentationOwnerChanges));
             // PerformerRuleSystem reads events and produces commands.
             RegisterPresentationSystem(performerRuleSystem);
             // PerformerRuntimeSystem consumes commands, manages instance lifecycle.
             RegisterPresentationSystem(performerRuntimeSystem);
+            RegisterPresentationSystem(new InstancedBatchEmissionSystem(
+                World,
+                performerDefinitions,
+                instancedBatchAssets,
+                instancedBatchRequests,
+                instancedBatchSubmissionRuntime,
+                presentationEventStream));
             // Entity-anchored performers follow owner VisualTransform before behavior/animator/emit reads them.
             RegisterPresentationSystem(new PerformerEntityTransformSyncSystem(World, performerRuntime, performerDefinitions, presentationTimingDiagnostics));
             // PerformerBehaviorSystem drives blackboard-bound behavior before animator and emit read it.
@@ -2391,6 +2469,8 @@ namespace Ludots.Core.Engine
         {
             _presentationRequestBuffer?.Clear();
             _soundRequestBuffer?.Clear();
+            _instancedBatchRequestBuffer?.Clear();
+            _instancedBatchOperationBuffer?.Clear();
             _groundOverlayBuffer?.ClearTransient();
             _roadSplineBuffer?.ClearTransient();
             _worldHudBuffer?.ClearTransient();
@@ -2413,6 +2493,17 @@ namespace Ludots.Core.Engine
                     timingDiagnostics!.ObservePresentationSystem(_presentationSystems[i].GetType().Name, elapsedMs);
                 }
             }
+
+            if ((_instancedBatchRequestBuffer?.Count ?? 0) != 0 ||
+                (_instancedBatchOperationBuffer?.Count ?? 0) != 0)
+            {
+                TryGetService(CoreServiceKeys.PresentationAdapterCapabilities, out PresentationAdapterCapabilities capabilities);
+                InstancedBatchCapabilityValidator.Validate(
+                    _instancedBatchRequestBuffer,
+                    _instancedBatchOperationBuffer,
+                    capabilities);
+            }
+
             // Clear GAS presentation events AFTER all presentation systems have consumed them
             _gasPresentationEvents?.Clear();
         }

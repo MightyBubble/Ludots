@@ -10,6 +10,7 @@ using Ludots.Core.Presentation.Config;
 using Ludots.Core.Presentation.Components;
 using Ludots.Core.Presentation.Hud;
 using Ludots.Core.Presentation.Performers;
+using Ludots.Core.Presentation.Rendering;
 using Ludots.Core.Presentation.Systems;
 using Ludots.Core.Scripting;
 using Ludots.Core.Systems;
@@ -319,6 +320,68 @@ namespace Ludots.Tests.Presentation
             }
 
             Assert.That(found, Is.True, "Expected WorldText token binding to resolve into a stable text token id.");
+        }
+
+        [Test]
+        public void PerformerDefinitionConfigLoader_ParsesAssetBindingAndSemanticParamBindings()
+        {
+            WriteFile("Core", "config_catalog.json",
+                @"[{ ""Path"": ""Presentation/performers.json"", ""Policy"": ""ArrayById"", ""IdField"": ""id"" }]");
+            WriteFile("Core", "Presentation/performers.json",
+                @"[
+  {
+    ""id"": ""scorch_decal"",
+    ""behaviors"": [
+      {
+        ""slot"": ""body"",
+        ""kind"": ""AssetBinding"",
+        ""activeByDefault"": true,
+        ""assetBinding"": {
+          ""assetKind"": ""Decal"",
+          ""assetId"": ""decal.scorch"",
+          ""materialId"": ""mat.scorch"",
+          ""renderPath"": ""StaticMesh"",
+          ""mobility"": ""Movable"",
+          ""colorParamKey"": ""decal.tint""
+        }
+      }
+    ],
+    ""bindings"": [
+      { ""paramKey"": ""decal.intensity"", ""source"": ""attribute"", ""attributeId"": ""burn"" }
+    ]
+  }
+]");
+
+            var (_, _, pipeline, catalog) = BuildPipeline(_root);
+            var registry = new PerformerDefinitionRegistry();
+            var loader = new PerformerDefinitionConfigLoader(
+                pipeline,
+                registry,
+                resolveAttributeName: key => string.Equals(key, "burn", StringComparison.Ordinal) ? 9 : -1,
+                resolveMaterialId: key => string.Equals(key, "mat.scorch", StringComparison.Ordinal) ? 23 : 0,
+                resolveBehaviorAssetId: (kind, key) =>
+                    kind == AssetKind.Decal && string.Equals(key, "decal.scorch", StringComparison.Ordinal) ? 17 : 0);
+
+            loader.Load(catalog);
+
+            int defId = registry.GetId("scorch_decal");
+            Assert.That(registry.TryGet(defId, out var def), Is.True);
+            Assert.That(def.Behaviors, Has.Length.EqualTo(1));
+            Assert.That(def.Behaviors[0].SlotIndex, Is.EqualTo(0));
+            Assert.That(def.Behaviors[0].Kind, Is.EqualTo(BehaviorKind.AssetBinding));
+            Assert.That(def.Behaviors[0].ActiveByDefault, Is.True);
+            Assert.That(def.Behaviors[0].AssetBinding.AssetKind, Is.EqualTo(AssetKind.Decal));
+            Assert.That(def.Behaviors[0].AssetBinding.AssetId, Is.EqualTo(17));
+            Assert.That(def.Behaviors[0].AssetBinding.MaterialId, Is.EqualTo(23));
+            Assert.That(def.Behaviors[0].AssetBinding.RenderPath, Is.EqualTo(VisualRenderPath.StaticMesh));
+            Assert.That(def.Behaviors[0].AssetBinding.Mobility, Is.EqualTo(VisualMobility.Movable));
+            Assert.That(
+                def.Behaviors[0].AssetBinding.ColorParamKey,
+                Is.EqualTo(PerformerParamKeyRegistry.Register("decal.tint")));
+            Assert.That(def.Bindings, Has.Length.EqualTo(1));
+            Assert.That(def.Bindings[0].ParamKey, Is.EqualTo(PerformerParamKeyRegistry.Register("decal.intensity")));
+            Assert.That(def.Bindings[0].Value.Source, Is.EqualTo(ValueSourceKind.Attribute));
+            Assert.That(def.Bindings[0].Value.SourceId, Is.EqualTo(9));
         }
 
         [Test]

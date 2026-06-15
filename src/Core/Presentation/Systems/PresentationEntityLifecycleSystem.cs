@@ -107,8 +107,8 @@ namespace Ludots.Core.Presentation.Systems
                 for (int i = 0; i < chunk.Count; i++)
                 {
                     Entity entity = chunk.Entity(i);
-                    int templateKeyId = World.Has<EntityTemplateKeyCm>(entity)
-                        ? World.Get<EntityTemplateKeyCm>(entity).TemplateKeyId
+                    int templateKeyId = World.Has<EntityTemplateKeyRef>(entity)
+                        ? World.Get<EntityTemplateKeyRef>(entity).TemplateKeyId
                         : 0;
 
                     if (!TryPublish(PresentationEventKind.EntitySpawned, entity, stableIds[i].Value, templateKeyId))
@@ -244,8 +244,8 @@ namespace Ludots.Core.Presentation.Systems
                 for (int i = 0; i < chunk.Count; i++)
                 {
                     Entity entity = chunk.Entity(i);
-                    int templateKeyId = World.Has<EntityTemplateKeyCm>(entity)
-                        ? World.Get<EntityTemplateKeyCm>(entity).TemplateKeyId
+                    int templateKeyId = World.Has<EntityTemplateKeyRef>(entity)
+                        ? World.Get<EntityTemplateKeyRef>(entity).TemplateKeyId
                         : 0;
 
                     if (!TryPublish(PresentationEventKind.EntityDestroyed, entity, stableIds[i].Value, templateKeyId))

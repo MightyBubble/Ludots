@@ -155,6 +155,8 @@ Prefab 的正式含义应该是：
 
 这个 issue 表面看是 UE5 问题，实际本质是 shared contract 一致性问题。
 
+Core 仓库只保留 shared contract 和平台无关测试；UE5 render bridge 的具体实现与 adapter wiring 测试归开发者仓库维护。
+
 ### Issue #119
 
 链接：
@@ -252,6 +254,6 @@ Prefab 的正式含义应该是：
 - `docs/architecture/presentation_snapshot_contract.md`
 - `docs/architecture/persistent_static_adapter_sync.md`
 - `src/Core/Presentation/Assets/PrefabFinalizationPipeline.cs`
-- `src/Adapters/UE5/Ludots.Adapter.UE5/UE5IsmRenderBridge.cs`
+- 开发者仓库中的商业引擎 adapter render bridge
 - `src/Tests/PresentationTests/PrefabFinalizationAndVisualHeightmapTests.cs`
 - `src/Tests/PresentationTests/PresentationFoundationTests.cs`

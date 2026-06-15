@@ -550,6 +550,7 @@ namespace Ludots.Tests.Presentation
                 {
                     DefaultStateIndex = 0,
                     States = [ new AnimatorStateDefinition { PackedStateIndex = 3, DurationSeconds = 1f, PlaybackSpeed = 1f, Loop = true } ],
+                    Transitions = Array.Empty<AnimatorTransitionDefinition>(),
                 });
 
             var definitions = new PerformerDefinitionRegistry();
@@ -1148,7 +1149,7 @@ namespace Ludots.Tests.Presentation
             var events = new PresentationEventStream(PresentationTestConstants.EventStreamCapacity);
             Entity entity = world.Create(
                 new PresentationStableId { Value = 99 },
-                new EntityTemplateKeyCm { TemplateKeyId = 1234 });
+                new EntityTemplateKeyRef { TemplateKeyId = 1234 });
 
             using var lifecycle = new PresentationEntityLifecycleSystem(world, events);
             using var finalize = new PresentationEntityFinalizeDestroySystem(world);
@@ -1409,6 +1410,7 @@ namespace Ludots.Tests.Presentation
             var snapshotBuffer = new PrimitiveDrawBuffer();
             var requests = new PresentationRequestBuffer();
             var definitions = new PerformerDefinitionRegistry();
+            var stableDrawCache = new StableDrawCache();
             int visibleDef = RegisterStaticVisualDefinition(definitions, "visible", assetId: 10, materialId: 20);
             int hiddenDef = RegisterStaticVisualDefinition(definitions, "hidden", assetId: 11, materialId: 21, visibilityParamKey: 500);
             int culledDef = RegisterStaticVisualDefinition(definitions, "culled", assetId: 12, materialId: 22, renderPath: VisualRenderPath.InstancedStaticMesh);
@@ -1440,13 +1442,13 @@ namespace Ludots.Tests.Presentation
             world.Get<PerformerWorldRotation>(culledPerformer).Value = culledRotation;
             world.Get<PerformerWorldScale>(culledPerformer).Value = new Vector3(3f, 2f, 1f);
 
-            using var system = new PerformerEmitSystem(world, instances, definitions, requests, new Dictionary<string, object>(), null!, null!);
+            using var system = new PerformerEmitSystem(world, instances, definitions, requests, new Dictionary<string, object>(), null!, null!, stableDrawCache: stableDrawCache);
             using var flush = new PresentationRequestFlushSystem(
                 world,
                 requests,
                 new PrefabRegistry(),
                 new MeshAssetRegistry(),
-                new StableDrawCache(),
+                stableDrawCache,
                 drawBuffer,
                 new GroundOverlayBuffer(),
                 new WorldHudBatchBuffer(),
@@ -1693,6 +1695,101 @@ namespace Ludots.Tests.Presentation
         }
 
         [Test]
+        public void PresentationRequestFlushSystem_TargetGenerationChange_ReprojectsRetainedStableContentWithoutContentRevisionChange()
+        {
+            using var world = World.Create();
+            var requests = new PresentationRequestBuffer();
+            var drawBuffer = new PrimitiveDrawBuffer();
+            var snapshotBuffer = new PrimitiveDrawBuffer();
+            var proxyBuffer = new PresentationVisualProxyBuffer();
+            var stableDrawCache = new StableDrawCache();
+            var targetGeneration = new PresentationTargetGeneration();
+            using var flush = new PresentationRequestFlushSystem(
+                world,
+                requests,
+                new PrefabRegistry(),
+                new MeshAssetRegistry(),
+                stableDrawCache,
+                drawBuffer,
+                new GroundOverlayBuffer(),
+                new WorldHudBatchBuffer(),
+                new RoadSplineBuffer(),
+                snapshotBuffer,
+                proxyBuffer,
+                new SkinnedVisualBatchBuffer(),
+                targetGeneration: targetGeneration);
+
+            requests.Add(PresentationRequest.FromVisualProxy(Entity.Null, new PresentationVisualProxy
+            {
+                ProxyKind = PresentationVisualProxyKind.Performer,
+                MeshAssetId = 10,
+                MaterialId = 20,
+                StableId = 9200,
+                TemplateId = 300,
+                Position = new Vector3(1f, 2f, 3f),
+                Rotation = Quaternion.Identity,
+                Scale = Vector3.One,
+                Color = Vector4.One,
+                RenderPath = VisualRenderPath.InstancedStaticMesh,
+                Mobility = VisualMobility.Static,
+                Visibility = VisualVisibility.Visible,
+                LOD = LODLevel.High,
+            }));
+
+            flush.Update(0.016f);
+            int contentRevision = stableDrawCache.ContentRevision;
+            int projectionGeneration = snapshotBuffer.ProjectionGeneration;
+            Assert.That(snapshotBuffer.Count, Is.EqualTo(1));
+            Assert.That(proxyBuffer.Count, Is.EqualTo(1));
+
+            snapshotBuffer.Clear();
+            drawBuffer.Clear();
+            proxyBuffer.Clear();
+            targetGeneration.MarkReady();
+
+            flush.Update(0.016f);
+
+            Assert.That(stableDrawCache.ContentRevision, Is.EqualTo(contentRevision));
+            Assert.That(snapshotBuffer.Revision, Is.EqualTo(contentRevision));
+            Assert.That(snapshotBuffer.ProjectionGeneration, Is.GreaterThan(projectionGeneration));
+            Assert.That(snapshotBuffer.Count, Is.EqualTo(1), "Target generation changes must replay retained snapshot content.");
+            Assert.That(drawBuffer.Count, Is.EqualTo(1), "Target generation changes must replay visible retained draw content.");
+            Assert.That(proxyBuffer.Count, Is.EqualTo(1), "Target generation changes must replay proxy content for adapter snapshot consumers.");
+            Assert.That(snapshotBuffer.GetSpan()[0].StableId, Is.EqualTo(9200));
+        }
+
+        [Test]
+        public void PresentationVisualCapabilityValidator_RequiresTargetGeneration_WhenAdapterDeclaresExternalTargetLifecycle()
+        {
+            var requests = new PresentationVisualRequestBuffer();
+            var capabilities = new PresentationAdapterCapabilities(PresentationVisualCapabilities.ExternalTargetLifecycle);
+
+            InvalidOperationException ex = Assert.Throws<InvalidOperationException>(
+                () => PresentationVisualCapabilityValidator.Validate(requests, capabilities, targetGeneration: null))!;
+
+            Assert.That(ex.Message, Does.Contain("external target lifecycle"));
+            Assert.That(ex.Message, Does.Contain(nameof(PresentationTargetGeneration)));
+        }
+
+        [Test]
+        public void RegisterPresentationAdapterCapabilities_ValidatesExternalTargetLifecycleWiring()
+        {
+            using var engine = new Ludots.Core.Engine.GameEngine();
+            var capabilities = new PresentationAdapterCapabilities(PresentationVisualCapabilities.ExternalTargetLifecycle);
+
+            InvalidOperationException ex = Assert.Throws<InvalidOperationException>(
+                () => engine.RegisterPresentationAdapterCapabilities(capabilities))!;
+            Assert.That(ex.Message, Does.Contain(nameof(PresentationTargetGeneration)));
+
+            var targetGeneration = new PresentationTargetGeneration();
+            engine.SetService(CoreServiceKeys.PresentationTargetGeneration, targetGeneration);
+
+            engine.RegisterPresentationAdapterCapabilities(capabilities);
+
+            Assert.That(engine.GetService(CoreServiceKeys.PresentationAdapterCapabilities), Is.SameAs(capabilities));
+        }
+
+        [Test]
         public void PresentationRequestFlushSystem_ClearsTransientProjection_WhenFrameStopsEmittingMovableProxy()
         {
             using var world = World.Create();
@@ -1745,7 +1842,7 @@ namespace Ludots.Tests.Presentation
         }
 
         [Test]
-        public void PerformerEmitSystem_StableCache_RemovesVisual_WhenOwnerBecomesCulled()
+        public void PerformerEmitSystem_StableCache_RetainsVisual_WhenOwnerBecomesCulled()
         {
             using var world = World.Create();
             var drawBuffer = new PrimitiveDrawBuffer();
@@ -1754,7 +1851,7 @@ namespace Ludots.Tests.Presentation
             var definitions = new PerformerDefinitionRegistry();
             int definitionId = RegisterStaticVisualDefinition(
                 definitions,
-                "stable.cull.removal",
+                "stable.cull.retained",
                 assetId: 31,
                 materialId: 41,
                 renderPath: VisualRenderPath.InstancedStaticMesh);
@@ -1799,9 +1896,14 @@ namespace Ludots.Tests.Presentation
 
             emit.Update(0.016f);
             Assert.That(stableDrawCache.Count, Is.EqualTo(1));
+            int visualStableId = PerformerBehaviorRuntimeUtility.ComposeVisualStableId(404, 0, AssetKind.Mesh, definitionId);
+            Assert.That(stableDrawCache.Contains(visualStableId), Is.True);
+            int initialRevision = stableDrawCache.ContentRevision;
             flush.Update(0.016f);
             Assert.That(snapshotBuffer.Count, Is.EqualTo(1));
             Assert.That(drawBuffer.Count, Is.EqualTo(1));
+            Assert.That(snapshotBuffer.GetSpan()[0].StableId, Is.EqualTo(visualStableId));
+            Assert.That(snapshotBuffer.GetSpan()[0].Visibility, Is.EqualTo(VisualVisibility.Visible));
 
             ref CullState ownerCull = ref world.Get<CullState>(owner);
             ownerCull.IsVisible = false;
@@ -1809,12 +1911,32 @@ namespace Ludots.Tests.Presentation
             instances.SyncCullVisibility();
 
             emit.Update(0.016f);
-            Assert.That(stableDrawCache.Count, Is.EqualTo(0));
+            Assert.That(stableDrawCache.Count, Is.EqualTo(1));
+            Assert.That(stableDrawCache.Contains(visualStableId), Is.True);
+            Assert.That(stableDrawCache.ContentRevision, Is.GreaterThan(initialRevision));
             drawBuffer.Clear();
             snapshotBuffer.Clear();
             flush.Update(0.016f);
-            Assert.That(snapshotBuffer.Count, Is.EqualTo(0));
+            Assert.That(snapshotBuffer.Count, Is.EqualTo(1));
             Assert.That(drawBuffer.Count, Is.EqualTo(0));
+            Assert.That(snapshotBuffer.GetSpan()[0].StableId, Is.EqualTo(visualStableId));
+            Assert.That(snapshotBuffer.GetSpan()[0].Visibility, Is.EqualTo(VisualVisibility.Culled));
+            Assert.That(snapshotBuffer.GetSpan()[0].LOD, Is.EqualTo(LODLevel.Culled));
+
+            ownerCull.IsVisible = true;
+            ownerCull.LOD = LODLevel.High;
+            instances.SyncCullVisibility();
+
+            emit.Update(0.016f);
+            Assert.That(stableDrawCache.Count, Is.EqualTo(1));
+            Assert.That(stableDrawCache.Contains(visualStableId), Is.True);
+            drawBuffer.Clear();
+            snapshotBuffer.Clear();
+            flush.Update(0.016f);
+            Assert.That(snapshotBuffer.Count, Is.EqualTo(1));
+            Assert.That(drawBuffer.Count, Is.EqualTo(1));
+            Assert.That(snapshotBuffer.GetSpan()[0].StableId, Is.EqualTo(visualStableId));
+            Assert.That(snapshotBuffer.GetSpan()[0].Visibility, Is.EqualTo(VisualVisibility.Visible));
         }
 
         [Test]

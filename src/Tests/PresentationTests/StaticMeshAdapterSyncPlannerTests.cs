@@ -147,6 +147,62 @@ namespace Ludots.Tests.Presentation
         }
 
         [Test]
+        public void Sync_WhenProjectionGenerationChanges_EmitsFullResyncWithoutItemChanges()
+        {
+            var planner = new StaticMeshAdapterSyncPlanner();
+            var first = CreateItem(101, VisualRenderPath.StaticMesh, meshAssetId: 10, materialId: 1, posX: 1f);
+            var second = CreateItem(202, VisualRenderPath.InstancedStaticMesh, meshAssetId: 11, materialId: 2, posX: 5f);
+            var snapshot = new[] { first, second };
+
+            planner.Sync(snapshot, projectionGeneration: 1);
+            Assert.That(planner.LastCreateCount, Is.EqualTo(2));
+            Assert.That(planner.LastProjectionResyncCount, Is.EqualTo(0));
+
+            planner.Sync(snapshot, projectionGeneration: 1);
+            Assert.That(planner.Operations, Is.Empty);
+            Assert.That(planner.LastProjectionResyncCount, Is.EqualTo(0));
+
+            planner.Sync(snapshot, projectionGeneration: 2);
+
+            Assert.That(planner.Operations.Count, Is.EqualTo(2));
+            Assert.That(planner.LastCreateCount, Is.EqualTo(0));
+            Assert.That(planner.LastUpdateCount, Is.EqualTo(0));
+            Assert.That(planner.LastRemoveCount, Is.EqualTo(0));
+            Assert.That(planner.LastProjectionResyncCount, Is.EqualTo(2));
+            Assert.That(planner.Operations[0].Kind, Is.EqualTo(StaticMeshAdapterSyncOpKind.Resync));
+            Assert.That(planner.Operations[1].Kind, Is.EqualTo(StaticMeshAdapterSyncOpKind.Resync));
+            Assert.That(planner.TryGetBinding(101, out var firstBinding), Is.True);
+            Assert.That(firstBinding.ProjectionGeneration, Is.EqualTo(2));
+            Assert.That(planner.TryGetBinding(202, out var secondBinding), Is.True);
+            Assert.That(secondBinding.ProjectionGeneration, Is.EqualTo(2));
+        }
+
+        [Test]
+        public void SyncDeltas_WhenProjectionGenerationChanges_ResyncsChangedAndUnchangedBindingsOnce()
+        {
+            var planner = new StaticMeshAdapterSyncPlanner();
+            var first = CreateItem(101, VisualRenderPath.StaticMesh, meshAssetId: 10, materialId: 1, posX: 1f);
+            var second = CreateItem(202, VisualRenderPath.InstancedStaticMesh, meshAssetId: 11, materialId: 2, posX: 5f);
+            planner.Sync(new[] { first, second }, projectionGeneration: 1);
+
+            var changedFirst = CreateItem(101, VisualRenderPath.StaticMesh, meshAssetId: 10, materialId: 1, posX: 9f);
+            planner.SyncDeltas(new[] { changedFirst }, System.Array.Empty<int>(), projectionGeneration: 2);
+
+            Assert.That(planner.Operations.Count, Is.EqualTo(2));
+            Assert.That(planner.LastUpdateCount, Is.EqualTo(0));
+            Assert.That(planner.LastProjectionResyncCount, Is.EqualTo(2));
+            Assert.That(planner.Operations[0].Kind, Is.EqualTo(StaticMeshAdapterSyncOpKind.Resync));
+            Assert.That(planner.Operations[0].Binding.StableId, Is.EqualTo(101));
+            Assert.That(planner.Operations[0].Binding.Item.Position.X, Is.EqualTo(9f).Within(0.001f));
+            Assert.That(planner.Operations[1].Kind, Is.EqualTo(StaticMeshAdapterSyncOpKind.Resync));
+            Assert.That(planner.Operations[1].Binding.StableId, Is.EqualTo(202));
+            Assert.That(planner.TryGetBinding(101, out var firstBinding), Is.True);
+            Assert.That(firstBinding.ProjectionGeneration, Is.EqualTo(2));
+            Assert.That(planner.TryGetBinding(202, out var secondBinding), Is.True);
+            Assert.That(secondBinding.ProjectionGeneration, Is.EqualTo(2));
+        }
+
+        [Test]
         public void Sync_VisibilityOrTransformChange_EmitsUpdate_WithoutReallocatingSlot()
         {
             var planner = new StaticMeshAdapterSyncPlanner();
@@ -173,6 +229,43 @@ namespace Ludots.Tests.Presentation
             Assert.That(updated.Generation, Is.EqualTo(original.Generation));
             Assert.That(updated.Item.Position.X, Is.EqualTo(9f).Within(0.001f));
             Assert.That(updated.Item.Visibility, Is.EqualTo(VisualVisibility.Culled));
+        }
+
+        [Test]
+        public void Sync_VisibleCulledVisible_KeepsBindingSlotWithoutRemoveCreate()
+        {
+            var planner = new StaticMeshAdapterSyncPlanner();
+            var visible = CreateItem(111, VisualRenderPath.InstancedStaticMesh, meshAssetId: 10, materialId: 1);
+
+            planner.Sync(new[] { visible });
+            Assert.That(planner.TryGetBinding(111, out var original), Is.True);
+
+            var culled = CreateItem(
+                111,
+                VisualRenderPath.InstancedStaticMesh,
+                meshAssetId: 10,
+                materialId: 1,
+                visibility: VisualVisibility.Culled);
+
+            planner.Sync(new[] { culled });
+            Assert.That(planner.Operations.Count, Is.EqualTo(1));
+            Assert.That(planner.Operations[0].Kind, Is.EqualTo(StaticMeshAdapterSyncOpKind.Update));
+            Assert.That(planner.LastRemoveCount, Is.EqualTo(0));
+            Assert.That(planner.LastCreateCount, Is.EqualTo(0));
+            Assert.That(planner.TryGetBinding(111, out var culledBinding), Is.True);
+            Assert.That(culledBinding.Slot, Is.EqualTo(original.Slot));
+            Assert.That(culledBinding.Generation, Is.EqualTo(original.Generation));
+            Assert.That(culledBinding.Item.Visibility, Is.EqualTo(VisualVisibility.Culled));
+
+            planner.Sync(new[] { visible });
+            Assert.That(planner.Operations.Count, Is.EqualTo(1));
+            Assert.That(planner.Operations[0].Kind, Is.EqualTo(StaticMeshAdapterSyncOpKind.Update));
+            Assert.That(planner.LastRemoveCount, Is.EqualTo(0));
+            Assert.That(planner.LastCreateCount, Is.EqualTo(0));
+            Assert.That(planner.TryGetBinding(111, out var visibleAgainBinding), Is.True);
+            Assert.That(visibleAgainBinding.Slot, Is.EqualTo(original.Slot));
+            Assert.That(visibleAgainBinding.Generation, Is.EqualTo(original.Generation));
+            Assert.That(visibleAgainBinding.Item.Visibility, Is.EqualTo(VisualVisibility.Visible));
         }
 
         [Test]

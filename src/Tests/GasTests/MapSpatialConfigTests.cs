@@ -40,7 +40,8 @@ namespace GasTests
                 HexEdgeLengthCm = 600,
                 ChunkSizeCells = 32,
                 NavigationEnabled = true,
-                DataFile = "Data/Maps/battle.vtxm"
+                DataFile = "Data/Maps/battle.vtxm",
+                VisualHeightmapAsset = "Data/Maps/battle.vhtm"
             };
 
             Assert.That(config.Name, Is.EqualTo("battle"));
@@ -52,6 +53,7 @@ namespace GasTests
             Assert.That(config.ChunkSizeCells, Is.EqualTo(32));
             Assert.That(config.NavigationEnabled, Is.True);
             Assert.That(config.DataFile, Is.EqualTo("Data/Maps/battle.vtxm"));
+            Assert.That(config.VisualHeightmapAsset, Is.EqualTo("Data/Maps/battle.vhtm"));
         }
 
         [Test]
@@ -62,7 +64,8 @@ namespace GasTests
                 Name = "world",
                 SpatialType = "Hex",
                 WidthInTiles = 256,
-                DataFile = "terrain.vtxm"
+                DataFile = "terrain.vtxm",
+                VisualHeightmapAsset = "terrain.vhtm"
             };
 
             var clone = original.Clone();
@@ -70,10 +73,13 @@ namespace GasTests
             Assert.That(clone.SpatialType, Is.EqualTo("Hex"));
             Assert.That(clone.WidthInTiles, Is.EqualTo(256));
             Assert.That(clone.DataFile, Is.EqualTo("terrain.vtxm"));
+            Assert.That(clone.VisualHeightmapAsset, Is.EqualTo("terrain.vhtm"));
 
             // Modify clone, original unchanged
             clone.WidthInTiles = 512;
+            clone.VisualHeightmapAsset = "other.vhtm";
             Assert.That(original.WidthInTiles, Is.EqualTo(256));
+            Assert.That(original.VisualHeightmapAsset, Is.EqualTo("terrain.vhtm"));
         }
 
         [Test]
@@ -87,7 +93,8 @@ namespace GasTests
                 "heightInTiles": 128,
                 "hexEdgeLengthCm": 600,
                 "chunkSizeCells": 32,
-                "navigationEnabled": true
+                "navigationEnabled": true,
+                "visualHeightmapAsset": "Data/Maps/strategic.vhtm"
             }
             """;
 
@@ -100,6 +107,7 @@ namespace GasTests
             Assert.That(config.HexEdgeLengthCm, Is.EqualTo(600));
             Assert.That(config.ChunkSizeCells, Is.EqualTo(32));
             Assert.That(config.NavigationEnabled, Is.True);
+            Assert.That(config.VisualHeightmapAsset, Is.EqualTo("Data/Maps/strategic.vhtm"));
         }
     }
 }

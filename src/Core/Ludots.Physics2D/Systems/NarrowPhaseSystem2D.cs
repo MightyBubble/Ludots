@@ -1,6 +1,7 @@
 using Arch.Core;
 using Arch.Core.Extensions;
 using Arch.System;
+using Ludots.Core.Gameplay.Spawning;
 using Ludots.Core.Mathematics.FixedPoint;
 using Ludots.Core.Physics2D.Collision;
 using Ludots.Core.Physics2D.Components;
@@ -30,8 +31,13 @@ namespace Ludots.Core.Physics2D.Systems
 
                 ref var posA = ref pair.EntityA.Get<Position2D>();
                 ref var posB = ref pair.EntityB.Get<Position2D>();
-                ref var colliderA = ref pair.EntityA.Get<Collider2D>();
-                ref var colliderB = ref pair.EntityB.Get<Collider2D>();
+                if (!TryResolveCollider(pair.EntityA, pair.ShapeSlotA, out var colliderA) ||
+                    !TryResolveCollider(pair.EntityB, pair.ShapeSlotB, out var colliderB))
+                {
+                    pair.ContactCount = 0;
+                    pair.Penetration = Fix64.Zero;
+                    return;
+                }
 
                 var rotA = World.TryGet(pair.EntityA, out Rotation2D ra) ? ra : Rotation2D.Identity;
                 var rotB = World.TryGet(pair.EntityB, out Rotation2D rb) ? rb : Rotation2D.Identity;
@@ -60,6 +66,44 @@ namespace Ludots.Core.Physics2D.Systems
                     pair.AccumulatedTangentImpulse1 = Fix64.Zero;
                 }
             });
+        }
+
+        private bool TryResolveCollider(Entity entity, byte shapeSlot, out Collider2D collider)
+        {
+            if (World.TryGet(entity, out CompoundObstacle2DState compoundState))
+            {
+                if (shapeSlot >= compoundState.PieceCount)
+                {
+                    collider = default;
+                    return false;
+                }
+
+                collider = new Collider2D
+                {
+                    Type = ToColliderType(compoundState.GetShape(shapeSlot)),
+                    ShapeDataIndex = compoundState.GetShapeDataIndex(shapeSlot)
+                };
+                return true;
+            }
+
+            if (shapeSlot == 0 && World.TryGet(entity, out collider))
+            {
+                return true;
+            }
+
+            collider = default;
+            return false;
+        }
+
+        private static ColliderType2D ToColliderType(ManifestationObstacleShape2D shape)
+        {
+            return shape switch
+            {
+                ManifestationObstacleShape2D.Circle => ColliderType2D.Circle,
+                ManifestationObstacleShape2D.Box => ColliderType2D.Box,
+                ManifestationObstacleShape2D.Polygon => ColliderType2D.Polygon,
+                _ => throw new ArgumentOutOfRangeException(nameof(shape))
+            };
         }
     }
 }

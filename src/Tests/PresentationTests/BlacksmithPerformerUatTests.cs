@@ -637,7 +637,7 @@ namespace Ludots.Tests.Presentation
 
                 return _world.Create(
                     new PresentationStableId { Value = _stableSeed++ },
-                    new EntityTemplateKeyCm { TemplateKeyId = _blacksmithTemplateKeyId },
+                    new EntityTemplateKeyRef { TemplateKeyId = _blacksmithTemplateKeyId },
                     new VisualTransform { Position = new Vector3(10f, 0f, 20f), Rotation = Quaternion.Identity, Scale = Vector3.One },
                     new CullState { IsVisible = true, LOD = LODLevel.High },
                     attributes,
