@@ -1,0 +1,58 @@
+[
+  {
+    "id": "static_obstacle_physics_compound_blocker",
+    "components": {
+      "Name": { "Value": "StaticObstaclePhysics.CompoundBlocker" },
+      "WorldPositionCm": { "Value": { "X": 0, "Y": 0 } },
+      "PresentationStaticTransform": {},
+      "FacingDirection": { "AngleRad": 0.0 },
+      "AttributeBuffer": {
+        "base": {
+          "Durability": 100
+        },
+        "current": {
+          "Durability": 100
+        }
+      },
+      "GameplayTagContainer": {},
+      "TagCountContainer": {},
+      "CompoundObstacle2D": {
+        "sinkPhysicsCollider": true,
+        "sinkNavigationObstacle": false,
+        "pieces": [
+          {
+            "shape": "Box",
+            "halfWidthCm": 90,
+            "halfHeightCm": 34,
+            "localOffsetCm": { "x": -105, "y": 0 },
+            "navRadiusCm": 98
+          },
+          {
+            "shape": "Box",
+            "halfWidthCm": 90,
+            "halfHeightCm": 34,
+            "localOffsetCm": { "x": 105, "y": 0 },
+            "navRadiusCm": 98
+          },
+          {
+            "shape": "Circle",
+            "radiusCm": 48,
+            "localOffsetCm": { "x": 0, "y": -88 },
+            "navRadiusCm": 48
+          },
+          {
+            "shape": "Polygon",
+            "localOffsetCm": { "x": 0, "y": 96 },
+            "navRadiusCm": 76,
+            "vertices": [
+              { "x": -72, "y": -40 },
+              { "x": 72, "y": -40 },
+              { "x": 42, "y": 64 },
+              { "x": -42, "y": 64 }
+            ]
+          }
+        ]
+      }
+    }
+  }
+]
