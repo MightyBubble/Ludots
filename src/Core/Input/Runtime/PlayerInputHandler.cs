@@ -43,6 +43,8 @@ namespace Ludots.Core.Input.Runtime
                 var context = config.Contexts[i];
                 _contextsById[context.Id] = CompileContext(context);
             }
+
+            _seenBindingContributions.EnsureCapacity(CountTopLevelBindings(config));
         }
 
         public void PushContext(string contextId)
@@ -320,6 +322,17 @@ namespace Ludots.Core.Input.Runtime
             }
 
             sb.Append(']');
+        }
+
+        private static int CountTopLevelBindings(InputConfigRoot config)
+        {
+            int count = 0;
+            for (int i = 0; i < config.Contexts.Count; i++)
+            {
+                count += config.Contexts[i].Bindings?.Count ?? 0;
+            }
+
+            return count;
         }
 
         private static CompiledProcessor[] CompileProcessors(List<InputModifierDef> processorDefs)

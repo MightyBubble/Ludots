@@ -50,8 +50,8 @@ namespace CameraAcceptanceMod.Systems
         private readonly List<int> _previousTextStableIds = new(CameraAcceptanceIds.HotpathCrowdTargetCount);
         private readonly List<int> _currentBarStableIds = new(CameraAcceptanceIds.HotpathCrowdTargetCount);
         private readonly List<int> _currentTextStableIds = new(CameraAcceptanceIds.HotpathCrowdTargetCount);
-        private readonly HashSet<int> _currentBarStableIdSet = new();
-        private readonly HashSet<int> _currentTextStableIdSet = new();
+        private readonly HashSet<int> _currentBarStableIdSet = new(CameraAcceptanceIds.HotpathCrowdTargetCount);
+        private readonly HashSet<int> _currentTextStableIdSet = new(CameraAcceptanceIds.HotpathCrowdTargetCount);
         private int _cubeMeshAssetId;
         private int _sphereMeshAssetId;
         private bool _crowdRequested;

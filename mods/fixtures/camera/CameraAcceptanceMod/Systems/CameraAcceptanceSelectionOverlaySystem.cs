@@ -162,7 +162,6 @@ namespace CameraAcceptanceMod.Systems
 
         private static bool TryQueueLabel(WorldHudBatchBuffer worldHud, int tokenId, Entity entity, Vector3 worldPosition)
         {
-            string label = CameraAcceptanceSelectionView.FormatEntityId(entity);
             var packet = PresentationTextPacket.FromToken(tokenId);
             packet.SetArg(0, PresentationTextArg.FromInt32(entity.Id));
 
@@ -180,11 +179,24 @@ namespace CameraAcceptanceMod.Systems
                     packet: packet),
                 Kind = WorldHudItemKind.Text,
                 WorldPosition = worldPosition,
-                Width = label.Length * 8f,
+                Width = CountEntityLabelCharacters(entity) * 8f,
                 FontSize = 14,
                 Color0 = LabelColor,
                 Text = packet,
             });
+        }
+
+        private static int CountEntityLabelCharacters(Entity entity)
+        {
+            int value = entity.Id;
+            int digits = 1;
+            while (value >= 10)
+            {
+                value /= 10;
+                digits++;
+            }
+
+            return digits + 1;
         }
 
         private void RemovePreviousLabels()
