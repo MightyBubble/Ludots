@@ -57,13 +57,15 @@ namespace CoreInputMod.Triggers
                 ?? throw new InvalidOperationException("SelectionRuleRegistry must be registered before CoreInputMod installs.");
             var selectionRuntime = engine.GetService(CoreServiceKeys.SelectionRuntime)
                 ?? throw new InvalidOperationException("SelectionRuntime must be registered before CoreInputMod installs.");
+            var entityCollections = engine.GetService(CoreServiceKeys.EntityCollectionStore)
+                ?? throw new InvalidOperationException("EntityCollectionStore must be registered before CoreInputMod installs.");
             var orderQueue = engine.GetService(CoreServiceKeys.OrderQueue)
                 ?? throw new InvalidOperationException("OrderQueue must be registered before CoreInputMod installs.");
 
             engine.RegisterSystem(new SelectionMaintenanceSystem(engine.World, selectionRuntime), SystemGroup.InputCollection);
             engine.RegisterSystem(new OrderSelectionLeaseCleanupSystem(engine.World, orderQueue), SystemGroup.Cleanup);
 
-            var currentSelection = new CurrentSelectionApplySystem(engine.World, engine.GlobalContext, selectionRuntime);
+            var currentSelection = new CurrentSelectionApplySystem(engine.World, engine.GlobalContext, selectionRuntime, entityCollections);
             currentSelection.OnEntitySelected = (worldCm, entity) =>
             {
                 foreach (var cb in selectionCallbacks) cb(worldCm, entity);

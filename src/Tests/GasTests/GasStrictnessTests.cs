@@ -2,13 +2,16 @@ using System;
 using System.IO;
 using Arch.Core;
 using Ludots.Core.Config;
+using Ludots.Core.GraphRuntime;
 using Ludots.Core.Gameplay.GAS;
 using Ludots.Core.Gameplay.GAS.Bindings;
 using Ludots.Core.Gameplay.GAS.Components;
 using Ludots.Core.Gameplay.GAS.Config;
+using Ludots.Core.Gameplay.Relationships;
 using Ludots.Core.Gameplay.Teams;
 using Ludots.Core.Modding;
 using Ludots.Core.NodeLibraries.GASGraph;
+using Ludots.Core.NodeLibraries.GASGraph.Host;
 using Ludots.Core.Scripting;
 using NUnit.Framework;
 using static NUnit.Framework.Assert;
@@ -265,9 +268,41 @@ namespace Ludots.Tests.GAS
 
         private static void ExecuteInvalidRelationshipFilterMode(World world)
         {
-            Span<Entity> buffer = stackalloc Entity[1];
-            var targets = new GraphTargetList(buffer);
-            targets.FilterRelationship(world, null!, Entity.Null, mode: 255);
+            var typeRegistry = new RelationshipTypeRegistry();
+            var metricRegistry = new RelationshipMetricRegistry();
+            var flagRegistry = new RelationshipFlagRegistry();
+            var bandRegistry = new RelationshipBandRegistry();
+            var changeBuffer = new RelationshipChangeBuffer();
+            var relationships = new RelationshipRuntime(world, typeRegistry, metricRegistry, flagRegistry, bandRegistry, changeBuffer);
+            var api = new GasGraphRuntimeApi(world, tagOps: new TagOps(), relationshipRuntime: relationships);
+
+            Span<float> floats = stackalloc float[GraphVmLimits.MaxFloatRegisters];
+            Span<int> ints = stackalloc int[GraphVmLimits.MaxIntRegisters];
+            Span<byte> bools = stackalloc byte[GraphVmLimits.MaxBoolRegisters];
+            Span<Entity> entities = stackalloc Entity[GraphVmLimits.MaxEntityRegisters];
+            Span<Entity> targets = stackalloc Entity[GraphVmLimits.MaxTargets];
+            Span<GraphInstruction> program = stackalloc GraphInstruction[1];
+            program[0] = new GraphInstruction
+            {
+                Op = (ushort)GraphNodeOp.QueryFilterRelationship,
+                A = 0,
+                Imm = 255,
+            };
+
+            var targetList = new GraphTargetList(targets);
+            var state = new GraphExecutionState
+            {
+                World = world,
+                Api = api,
+                F = floats,
+                I = ints,
+                B = bools,
+                E = entities,
+                Targets = targets,
+                TargetList = targetList,
+            };
+
+            GasGraphOpHandlerTable.Execute(ref state, program, GasGraphOpHandlerTable.Instance);
         }
 
         private static string CreateTempRoot(string prefix)

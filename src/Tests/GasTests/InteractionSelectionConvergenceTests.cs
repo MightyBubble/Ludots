@@ -5,6 +5,7 @@ using Arch.Core;
 using CoreInputMod.Systems;
 using Ludots.Core.Components;
 using Ludots.Core.Engine;
+using Ludots.Core.EntityCollections;
 using Ludots.Core.Gameplay.Components;
 using Ludots.Core.Gameplay.GAS;
 using Ludots.Core.Gameplay.GAS.Components;
@@ -837,6 +838,45 @@ namespace Ludots.Tests.GAS
         }
 
         [Test]
+        public void CurrentSelectionApplySystem_CollectionOnlyAcquisition_DoesNotMutateFormalSelection()
+        {
+            using var world = World.Create();
+
+            var input = new PlayerInputHandler(new NullInputBackend(), CreateInputConfig());
+            var local = world.Create();
+            var selected = world.Create(WorldPositionCm.FromCm(1600, 1200), new VisualTransform { Position = new Vector3(16f, 0f, 12f) }, new CullState { IsVisible = true }, new SelectionSelectableTag());
+            var acquired = world.Create(WorldPositionCm.FromCm(2600, 1600), new VisualTransform { Position = new Vector3(26f, 0f, 16f) }, new CullState { IsVisible = true }, new SelectionSelectableTag());
+
+            var globals = new Dictionary<string, object>
+            {
+                [CoreServiceKeys.AuthoritativeInput.Name] = input,
+                [CoreServiceKeys.AuthoritativePointerButtons.Name] = new AuthoritativePointerButtonSnapshot(),
+                [CoreServiceKeys.ScreenRayProvider.Name] = new WorldMappedScreenRayProvider(),
+                [CoreServiceKeys.VisualHeightmap.Name] = CreateFlatHeightmap(),
+                [CoreServiceKeys.ScreenProjector.Name] = new WorldMappedScreenProjector(),
+                [CoreServiceKeys.WorldSizeSpec.Name] = CreateWorldSizeSpec(),
+                [CoreServiceKeys.LocalPlayerEntity.Name] = local,
+                [CoreServiceKeys.InteractionActionBindings.Name] = new InteractionActionBindings(),
+            };
+            var selectionRuntime = CreateSelectionRuntime(world, globals);
+            selectionRuntime.Config.Acquisition.CommitToFormalSelection = false;
+            SeedLivePrimarySelection(world, globals, local, selected);
+            var collections = (EntityCollectionStore)globals[CoreServiceKeys.EntityCollectionStore.Name];
+            var system = new CurrentSelectionApplySystem(world, globals);
+
+            DragSelect(system, globals, input, new Vector2(2500f, 1500f), new Vector2(2700f, 1700f));
+
+            AssertSelection(selectionRuntime, local, selected);
+            That(collections.TryGet(local, EntityCollectionKeys.UiSelectionAcquisition, out EntityCollectionHandle handle), Is.True);
+            That(collections.TryGetView(handle, out EntityCollectionView view), Is.True);
+            That(view.SourceKind, Is.EqualTo(EntityCollectionSourceKind.UiAcquisition));
+            That(view.Role, Is.EqualTo(EntityCollectionRoleKind.AcquisitionPreview));
+            That(view.Count, Is.EqualTo(1));
+            That(collections.TryGetEntityAt(handle, 0, out Entity row), Is.True);
+            That(row, Is.EqualTo(acquired));
+        }
+
+        [Test]
         public void CurrentSelectionApplySystem_RuntimeDisabledEntity_IsNotSelectable()
         {
             using var world = World.Create();
@@ -1448,12 +1488,17 @@ namespace Ludots.Tests.GAS
             var config = new SelectionRuntimeConfig
             {
                 TargetFilter = new SelectionTargetFilterConfig { RelationFilter = relationFilter },
+                Acquisition = new SelectionAcquisitionConfig { CommitToFormalSelection = true },
             };
             var registry = new Ludots.Core.Registry.StringIntRegistry(capacity: 8, startId: 1, invalidId: 0, comparer: StringComparer.Ordinal);
             var runtime = new SelectionRuntime(world, config, registry);
+            var collectionRegistry = new Ludots.Core.Registry.StringIntRegistry(capacity: 8, startId: 1, invalidId: 0, comparer: StringComparer.Ordinal);
+            var collections = new EntityCollectionStore(collectionRegistry);
             globals[CoreServiceKeys.SelectionRuntime.Name] = runtime;
             globals[CoreServiceKeys.SelectionConfig.Name] = config;
             globals[CoreServiceKeys.SelectionSetKeyRegistry.Name] = registry;
+            globals[CoreServiceKeys.EntityCollectionStore.Name] = collections;
+            globals[CoreServiceKeys.EntityCollectionKeyRegistry.Name] = collectionRegistry;
             return runtime;
         }
 

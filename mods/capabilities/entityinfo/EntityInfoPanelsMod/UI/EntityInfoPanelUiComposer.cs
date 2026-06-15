@@ -340,8 +340,8 @@ public static class EntityInfoPanelUiComposer
         if (count <= 0)
         {
             return Ui.Column(
-                    Ui.Text("Current viewed selection").FontSize(12f).Bold().Color("#F6E2AF"),
-                    Ui.Text("Waiting for active selection view.")
+                    Ui.Text(service.GetEntityCollectionSourceTitle(slot)).FontSize(12f).Bold().Color("#F6E2AF"),
+                    Ui.Text(service.GetEntityCollectionSourceSummary(slot))
                         .FontSize(11f)
                         .Color("#9FB4C9")
                         .WhiteSpace(UiWhiteSpace.Normal))
@@ -377,8 +377,8 @@ public static class EntityInfoPanelUiComposer
         }
 
         return Ui.Column(
-                Ui.Text("Current viewed selection").FontSize(12f).Bold().Color("#F6E2AF"),
-                Ui.Text($"{service.GetEntityCollectionViewKey(slot)} -> {service.GetEntityCollectionSetKey(slot)} | {count} entities | {service.GetEntityCollectionCategoryCount(slot)} categories | rows {FormatVisibleRange(window)}")
+                Ui.Text(service.GetEntityCollectionSourceTitle(slot)).FontSize(12f).Bold().Color("#F6E2AF"),
+                Ui.Text($"{service.GetEntityCollectionSourceSummary(slot)} | {service.GetEntityCollectionCategoryCount(slot)} categories | rows {FormatVisibleRange(window)}")
                     .Id($"{hostId}-summary")
                     .FontSize(11f)
                     .Color("#9FB4C9")
@@ -442,6 +442,10 @@ public static class EntityInfoPanelUiComposer
 
     private static UiElementBuilder BuildEntityCollectionTile(int slot, EntityCollectionPanelRow row)
     {
+        string detail = string.IsNullOrWhiteSpace(row.TemplateSubtitle)
+            ? row.AttributesSummary
+            : row.TemplateSubtitle;
+        string accent = string.IsNullOrWhiteSpace(row.AccentColorHex) ? "#7395B8" : row.AccentColorHex;
         return Ui.Card(
                 Ui.Row(
                         Ui.Text($"{row.Index + 1:000}").FontSize(10f).Color("#60758A"),
@@ -463,7 +467,7 @@ public static class EntityInfoPanelUiComposer
                     .Bold()
                     .Color("#F5F7FA")
                     .WhiteSpace(UiWhiteSpace.Normal),
-                Ui.Text(row.AttributesSummary)
+                Ui.Text(detail)
                     .Id($"{GetEntityCollectionGridHostId(slot)}-tile-{row.Index:0000}-attrs")
                     .FontSize(10f)
                     .Color("#9FB4C9")
@@ -473,7 +477,7 @@ public static class EntityInfoPanelUiComposer
             .Padding(10f)
             .Radius(12f)
             .Background(row.IsPrimary ? "#183247" : "#162230")
-            .Border(1f, row.IsPrimary ? new UiColor(0x73, 0x95, 0xB8) : new UiColor(0x2B, 0x41, 0x58));
+            .Border(1f, row.IsPrimary ? ParseHexColor(accent, new UiColor(0x73, 0x95, 0xB8)) : new UiColor(0x2B, 0x41, 0x58));
     }
 
     private static UiElementBuilder BuildToggleButton(string label, bool active, Action<UiActionContext> onClick)

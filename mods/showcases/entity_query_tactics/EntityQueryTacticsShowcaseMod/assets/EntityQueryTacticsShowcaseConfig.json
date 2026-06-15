@@ -1,0 +1,125 @@
+{
+  "mapId": "entity_query_tactics_showcase",
+  "scenario": {
+    "playerTeamId": 1,
+    "enemyTeamId": 2,
+    "playerTeamName": "Blue Lance",
+    "enemyTeamName": "Crimson Pact",
+    "playerCommanderName": "Blue Commander",
+    "enemyCommanderName": "Crimson Commander",
+    "allies": [
+      { "name": "Aegis Captain", "template": "entityquery_tactics_ally_squad", "teamId": 1, "tags": ["Unit.Commandable"] },
+      { "name": "Spear One", "template": "entityquery_tactics_ally_squad", "teamId": 1, "tags": ["Unit.Commandable"] },
+      { "name": "Spear Two", "template": "entityquery_tactics_ally_squad", "teamId": 1, "tags": ["Unit.Commandable"] },
+      { "name": "Field Medic", "template": "entityquery_tactics_ally_squad", "teamId": 1, "tags": ["Unit.Commandable"] },
+      { "name": "Routed Scout", "template": "entityquery_tactics_ally_routed", "teamId": 1, "tags": ["Unit.Commandable", "State.Routed"] }
+    ],
+    "enemies": [
+      { "name": "Crimson Captain", "template": "entityquery_tactics_enemy_siege", "teamId": 2 },
+      { "name": "Raid Alpha", "template": "entityquery_tactics_enemy_siege", "teamId": 2 },
+      { "name": "Raid Beta", "template": "entityquery_tactics_enemy_raider", "teamId": 2 },
+      { "name": "Siege Runner", "template": "entityquery_tactics_enemy_siege", "teamId": 2 }
+    ],
+    "objectives": [
+      { "name": "Supply Beacon", "template": "entityquery_tactics_supply_beacon", "teamId": 0 }
+    ],
+    "relationSeeds": [
+      { "sourceName": "Blue Commander", "targetName": "Crimson Captain", "metric": "Threat", "value": 82, "flags": ["PriorityTarget"] },
+      { "sourceName": "Blue Commander", "targetName": "Raid Alpha", "metric": "Threat", "value": 64, "flags": ["PriorityTarget"] },
+      { "sourceName": "Blue Commander", "targetName": "Raid Beta", "metric": "Threat", "value": 48, "flags": [] },
+      { "sourceName": "Blue Commander", "targetName": "Siege Runner", "metric": "Threat", "value": 95, "flags": ["PriorityTarget"] },
+      { "sourceName": "Blue Commander", "targetName": "Crimson Captain", "metric": "Focus", "value": 35, "flags": [] }
+    ],
+    "pressurePulse": {
+      "targetName": "Siege Runner",
+      "metric": "Threat",
+      "delta": 17,
+      "flags": ["PriorityTarget"]
+    }
+  },
+  "actions": {
+    "commitSelection": "EntityQueryTactics.CommitSelection",
+    "executeGraphs": "EntityQueryTactics.ExecuteGraphs",
+    "rotateFormation": "EntityQueryTactics.RotateFormation",
+    "pressurePulse": "EntityQueryTactics.PressurePulse",
+    "cacheProbe": "EntityQueryTactics.CacheProbe"
+  },
+  "collections": {
+    "uiBox": "entityquery.collection.ui.box",
+    "formalSelectionMirror": "entityquery.collection.selection.live.primary",
+    "formationPrimary": "entityquery.collection.formation.primary",
+    "selectedFriendliesResult": "entityquery.collection.graph.selectedFriendlies",
+    "hostileThreatResult": "entityquery.collection.graph.hostileThreats",
+    "formationCacheResult": "entityquery.collection.graph.formationCache"
+  },
+  "graphs": {
+    "selectedFriendlies": "entityquery.tactics.graph.selectedFriendliesFromUiBox",
+    "hostileThreats": "entityquery.tactics.graph.hostileThreatBoard",
+    "formationCache": "entityquery.tactics.graph.formationCache"
+  },
+  "summaryKeys": {
+    "selectedCount": "entityquery.summary.selected.count",
+    "selectedCommandPower": "entityquery.summary.selected.commandPower",
+    "selectedSupply": "entityquery.summary.selected.supply",
+    "selectedBestEntity": "entityquery.summary.selected.bestEntity",
+    "threatCount": "entityquery.summary.threat.count",
+    "threatSum": "entityquery.summary.threat.sum",
+    "threatAverage": "entityquery.summary.threat.average",
+    "threatMax": "entityquery.summary.threat.max",
+    "threatBestEntity": "entityquery.summary.threat.bestEntity",
+    "formationCount": "entityquery.summary.formation.count",
+    "formationMaxCommandPower": "entityquery.summary.formation.maxCommandPower",
+    "formationMinSupply": "entityquery.summary.formation.minSupply",
+    "formationBestEntity": "entityquery.summary.formation.bestEntity"
+  },
+  "relationships": {
+    "tacticalIntel": "TacticalIntel"
+  },
+  "metrics": {
+    "threat": "Threat",
+    "focus": "Focus"
+  },
+  "flags": {
+    "priorityTarget": "PriorityTarget"
+  },
+  "tags": {
+    "commandable": "Unit.Commandable",
+    "routed": "State.Routed",
+    "objective": "Map.Objective"
+  },
+  "attributes": {
+    "commandPower": "CommandPower",
+    "supply": "Supply",
+    "threatValue": "ThreatValue"
+  },
+  "logs": {
+    "systemInstalled": "[EntityQueryTacticsShowcaseMod] production systems registered.",
+    "scenarioReady": "Scenario ready: selection, collection cache, relation metrics, and graph outputs are live.",
+    "selectionCommitted": "UI acquisition committed to formal SelectionRuntime.",
+    "graphsExecuted": "Graph ops executed through shared C# query API.",
+    "formationRotated": "Formation snapshot rotated from formal selection.",
+    "pressurePulse": "Threat metric pulse applied through RelationshipRuntime.",
+    "cacheProbe": "Retained collection cache probe executed."
+  },
+  "presentation": {
+    "title": "Entity Query Tactics",
+    "controlsLine": "Drag allies | Enter commit formal selection | 1 run graphs | 2 rotate formation | 3 pressure pulse | 4 cache probe",
+    "architectureLine": "SelectionRuntime -> EntityCollectionStore -> GraphReturnWriter -> EntitySetQueryRuntime / RelationshipRuntime"
+  },
+  "demoPlayback": {
+    "enabled": false,
+    "activationEnv": "LUDOTS_ENTITY_QUERY_TACTICS_DEMO_PLAYBACK",
+    "steps": [
+      {
+        "frame": 1,
+        "op": "WriteUiBox",
+        "entities": ["Aegis Captain", "Spear One", "Spear Two", "Field Medic", "Routed Scout"]
+      },
+      { "frame": 2, "op": "CommitSelection" },
+      { "frame": 3, "op": "ExecuteGraphs" },
+      { "frame": 4, "op": "RotateFormation" },
+      { "frame": 5, "op": "CacheProbe" },
+      { "frame": 6, "op": "PressurePulse" }
+    ]
+  }
+}

@@ -1,0 +1,29 @@
+{
+  "actions": [
+    { "id": "Select", "name": "Interaction_Select", "type": "Button" },
+    { "id": "Command", "name": "Interaction_Command", "type": "Button" },
+    { "id": "Cancel", "name": "Interaction_Cancel", "type": "Button" },
+    { "id": "EntityQueryTactics.CommitSelection", "name": "EntityQueryTactics_CommitSelection", "type": "Button" },
+    { "id": "EntityQueryTactics.ExecuteGraphs", "name": "EntityQueryTactics_ExecuteGraphs", "type": "Button" },
+    { "id": "EntityQueryTactics.RotateFormation", "name": "EntityQueryTactics_RotateFormation", "type": "Button" },
+    { "id": "EntityQueryTactics.PressurePulse", "name": "EntityQueryTactics_PressurePulse", "type": "Button" },
+    { "id": "EntityQueryTactics.CacheProbe", "name": "EntityQueryTactics_CacheProbe", "type": "Button" }
+  ],
+  "contexts": [
+    {
+      "id": "EntityQueryTactics.Controls",
+      "name": "Entity Query Tactics Controls",
+      "priority": 86,
+      "bindings": [
+        { "actionId": "Select", "path": "<Mouse>/LeftButton" },
+        { "actionId": "Command", "path": "<Mouse>/RightButton" },
+        { "actionId": "Cancel", "path": "<Keyboard>/escape" },
+        { "actionId": "EntityQueryTactics.CommitSelection", "path": "<Keyboard>/enter" },
+        { "actionId": "EntityQueryTactics.ExecuteGraphs", "path": "<Keyboard>/1" },
+        { "actionId": "EntityQueryTactics.RotateFormation", "path": "<Keyboard>/2" },
+        { "actionId": "EntityQueryTactics.PressurePulse", "path": "<Keyboard>/3" },
+        { "actionId": "EntityQueryTactics.CacheProbe", "path": "<Keyboard>/4" }
+      ]
+    }
+  ]
+}

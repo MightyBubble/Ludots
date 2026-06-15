@@ -2,6 +2,7 @@ using System;
 using Ludots.Core.Gameplay.GAS;
 using Ludots.Core.Gameplay.GAS.Registry;
 using Ludots.Core.Gameplay.Relationships;
+using Ludots.Core.Gameplay.Spawning;
 
 namespace Ludots.Core.NodeLibraries.GASGraph.Host
 {
@@ -16,19 +17,22 @@ namespace Ludots.Core.NodeLibraries.GASGraph.Host
         private readonly RelationshipFlagRegistry _flags;
         private readonly RelationshipReasonRegistry _reasons;
         private readonly TargetDispatchPresetRegistry _targetDispatchPresets;
+        private readonly EntityTemplateKeyRegistry? _entityTemplateKeys;
 
         public GasGraphSymbolResolver(
             RelationshipTypeRegistry types,
             RelationshipMetricRegistry metrics,
             RelationshipFlagRegistry flags,
             RelationshipReasonRegistry reasons,
-            TargetDispatchPresetRegistry targetDispatchPresets)
+            TargetDispatchPresetRegistry targetDispatchPresets,
+            EntityTemplateKeyRegistry? entityTemplateKeys = null)
         {
             _types = types ?? throw new ArgumentNullException(nameof(types));
             _metrics = metrics ?? throw new ArgumentNullException(nameof(metrics));
             _flags = flags ?? throw new ArgumentNullException(nameof(flags));
             _reasons = reasons ?? throw new ArgumentNullException(nameof(reasons));
             _targetDispatchPresets = targetDispatchPresets ?? throw new ArgumentNullException(nameof(targetDispatchPresets));
+            _entityTemplateKeys = entityTemplateKeys;
         }
 
         public int ResolveTag(string name)
@@ -87,6 +91,23 @@ namespace Ludots.Core.NodeLibraries.GASGraph.Host
         public int ResolveTargetDispatchPreset(string name)
         {
             return _targetDispatchPresets.GetId(name);
+        }
+
+        public int ResolveEntityTemplate(string name)
+        {
+            if (_entityTemplateKeys == null)
+            {
+                throw new InvalidOperationException(
+                    $"Graph references entity template '{name}', but no EntityTemplateKeyRegistry was provided.");
+            }
+
+            if (!_entityTemplateKeys.TryGetId(name, out int id) || id <= 0)
+            {
+                throw new InvalidOperationException(
+                    $"Graph references unknown entity template '{name}'. Register templates before loading graph programs.");
+            }
+
+            return id;
         }
     }
 }

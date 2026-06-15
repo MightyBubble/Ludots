@@ -1,0 +1,23 @@
+{
+  "types": [
+    { "id": "TacticalIntel", "isSymmetric": false }
+  ],
+  "metrics": [
+    { "id": "Threat", "minValue": 0, "maxValue": 2000, "defaultValue": 0 },
+    { "id": "Focus", "minValue": 0, "maxValue": 2000, "defaultValue": 0 }
+  ],
+  "flags": [
+    { "id": "PriorityTarget" },
+    { "id": "HighThreat" }
+  ],
+  "bands": [
+    { "id": "TacticalIntel.HighThreat", "typeId": "TacticalIntel", "metricId": "Threat", "flagId": "HighThreat", "threshold": 80, "comparison": "GreaterOrEqual" }
+  ],
+  "reasons": [
+    { "id": "Scenario.Setup" },
+    { "id": "Player.PressurePulse" },
+    { "id": "Graph.Query" }
+  ],
+  "callbacks": [],
+  "synergies": []
+}

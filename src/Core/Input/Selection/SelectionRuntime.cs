@@ -1,6 +1,7 @@
 using System;
 using System.Collections.Generic;
 using Arch.Core;
+using Ludots.Core.EntityCollections;
 using Ludots.Core.Gameplay.Teams;
 using Ludots.Core.Registry;
 
@@ -13,6 +14,15 @@ namespace Ludots.Core.Input.Selection
         public float DragThresholdPixels { get; set; } = 8f;
         public SelectionTargetFilterConfig? TargetFilter { get; set; }
         public string[] MovePathPreviewOrderTypeKeys { get; set; } = Array.Empty<string>();
+        public SelectionAcquisitionConfig Acquisition { get; set; } = new();
+    }
+
+    public sealed class SelectionAcquisitionConfig
+    {
+        public string CollectionKey { get; set; } = EntityCollectionKeys.UiSelectionAcquisition;
+        public bool CommitToFormalSelection { get; set; } = true;
+        public string FormalSelectionSetKey { get; set; } = SelectionSetKeys.LivePrimary;
+        public string Title { get; set; } = "UI acquisition";
     }
 
     public sealed class SelectionTargetFilterConfig

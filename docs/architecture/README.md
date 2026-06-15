@@ -8,6 +8,7 @@
 - [Camera Character Control](camera_character_control.md)
 - [Config Pipeline](config_pipeline.md)
 - [ECS and SoA](ecs_soa.md)
+- [Entity Collection Query Infrastructure](entity_collection_query_infrastructure.md)
 - [Entity Command Panel Infrastructure](entity_command_panel_infrastructure.md)
 - [Entity Insight Panel Architecture](entity_insight_panel_architecture.md)
 - [Item Inventory Equipment Architecture](item_inventory_equipment_architecture.md)

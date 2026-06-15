@@ -56,6 +56,12 @@
   },
   "selection": {
     "targetFilter": { "relationFilter": "All" },
+    "acquisition": {
+      "collectionKey": "collection.ui.selection.acquisition",
+      "commitToFormalSelection": true,
+      "formalSelectionSetKey": "selection.live.primary",
+      "title": "UI acquisition"
+    },
     "movePathPreviewOrderTypeKeys": [ "moveTo" ]
   }
 }

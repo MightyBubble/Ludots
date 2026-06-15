@@ -1,0 +1,155 @@
+[
+  {
+    "id": "entityquery_tactics_player_commander",
+    "components": {
+      "Name": { "Value": "Blue Commander" },
+      "Team": { "Id": 1 },
+      "PlayerOwner": { "PlayerId": 1 },
+      "WorldPositionCm": { "Value": { "X": 0, "Y": 0 } },
+      "FacingDirection": { "AngleRad": 0.0 },
+      "AttributeBuffer": {
+        "base": {
+          "Health": 220,
+          "CommandPower": 150,
+          "Supply": 80,
+          "ThreatValue": 0
+        }
+      },
+      "GameplayTagContainer": {},
+      "TagCountContainer": {},
+      "SpatialBounds": { "kind": "Box3D", "localCenterXCm": 0, "localCenterYCm": 80, "localCenterZCm": 0 },
+      "SpatialBox3D": { "halfSizeXCm": 55, "halfSizeYCm": 90, "halfSizeZCm": 55 }
+    }
+  },
+  {
+    "id": "entityquery_tactics_enemy_commander_owner",
+    "components": {
+      "Name": { "Value": "Crimson Commander" },
+      "Team": { "Id": 2 },
+      "WorldPositionCm": { "Value": { "X": 0, "Y": 0 } },
+      "FacingDirection": { "AngleRad": 3.14159 },
+      "AttributeBuffer": {
+        "base": {
+          "Health": 240,
+          "CommandPower": 170,
+          "Supply": 90,
+          "ThreatValue": 70
+        }
+      },
+      "GameplayTagContainer": {},
+      "TagCountContainer": {},
+      "SpatialBounds": { "kind": "Box3D", "localCenterXCm": 0, "localCenterYCm": 80, "localCenterZCm": 0 },
+      "SpatialBox3D": { "halfSizeXCm": 55, "halfSizeYCm": 90, "halfSizeZCm": 55 }
+    }
+  },
+  {
+    "id": "entityquery_tactics_ally_squad",
+    "components": {
+      "Name": { "Value": "Aegis Captain" },
+      "Team": { "Id": 1 },
+      "PlayerOwner": { "PlayerId": 1 },
+      "WorldPositionCm": { "Value": { "X": 0, "Y": 0 } },
+      "FacingDirection": { "AngleRad": 0.0 },
+      "AttributeBuffer": {
+        "base": {
+          "Health": 180,
+          "CommandPower": 96,
+          "Supply": 42,
+          "ThreatValue": 0
+        }
+      },
+      "GameplayTagContainer": {},
+      "TagCountContainer": {},
+      "SelectionSelectableTag": {},
+      "SpatialBounds": { "kind": "Box3D", "localCenterXCm": 0, "localCenterYCm": 80, "localCenterZCm": 0 },
+      "SpatialBox3D": { "halfSizeXCm": 50, "halfSizeYCm": 85, "halfSizeZCm": 50 }
+    }
+  },
+  {
+    "id": "entityquery_tactics_ally_routed",
+    "components": {
+      "Name": { "Value": "Routed Scout" },
+      "Team": { "Id": 1 },
+      "PlayerOwner": { "PlayerId": 1 },
+      "WorldPositionCm": { "Value": { "X": 0, "Y": 0 } },
+      "FacingDirection": { "AngleRad": 0.0 },
+      "AttributeBuffer": {
+        "base": {
+          "Health": 80,
+          "CommandPower": 44,
+          "Supply": 12,
+          "ThreatValue": 0
+        }
+      },
+      "GameplayTagContainer": {},
+      "TagCountContainer": {},
+      "SelectionSelectableTag": {},
+      "SpatialBounds": { "kind": "Box3D", "localCenterXCm": 0, "localCenterYCm": 70, "localCenterZCm": 0 },
+      "SpatialBox3D": { "halfSizeXCm": 42, "halfSizeYCm": 75, "halfSizeZCm": 42 }
+    }
+  },
+  {
+    "id": "entityquery_tactics_enemy_raider",
+    "components": {
+      "Name": { "Value": "Raid Alpha" },
+      "Team": { "Id": 2 },
+      "WorldPositionCm": { "Value": { "X": 0, "Y": 0 } },
+      "FacingDirection": { "AngleRad": 3.14159 },
+      "AttributeBuffer": {
+        "base": {
+          "Health": 135,
+          "CommandPower": 62,
+          "Supply": 34,
+          "ThreatValue": 64
+        }
+      },
+      "GameplayTagContainer": {},
+      "TagCountContainer": {},
+      "SelectionSelectableTag": {},
+      "SpatialBounds": { "kind": "Box3D", "localCenterXCm": 0, "localCenterYCm": 75, "localCenterZCm": 0 },
+      "SpatialBox3D": { "halfSizeXCm": 45, "halfSizeYCm": 80, "halfSizeZCm": 45 }
+    }
+  },
+  {
+    "id": "entityquery_tactics_enemy_siege",
+    "components": {
+      "Name": { "Value": "Siege Runner" },
+      "Team": { "Id": 2 },
+      "WorldPositionCm": { "Value": { "X": 0, "Y": 0 } },
+      "FacingDirection": { "AngleRad": 3.14159 },
+      "AttributeBuffer": {
+        "base": {
+          "Health": 210,
+          "CommandPower": 120,
+          "Supply": 28,
+          "ThreatValue": 95
+        }
+      },
+      "GameplayTagContainer": {},
+      "TagCountContainer": {},
+      "SelectionSelectableTag": {},
+      "SpatialBounds": { "kind": "Box3D", "localCenterXCm": 0, "localCenterYCm": 90, "localCenterZCm": 0 },
+      "SpatialBox3D": { "halfSizeXCm": 58, "halfSizeYCm": 95, "halfSizeZCm": 58 }
+    }
+  },
+  {
+    "id": "entityquery_tactics_supply_beacon",
+    "components": {
+      "Name": { "Value": "Supply Beacon" },
+      "WorldPositionCm": { "Value": { "X": 0, "Y": 0 } },
+      "FacingDirection": { "AngleRad": 0.0 },
+      "AttributeBuffer": {
+        "base": {
+          "Health": 500,
+          "CommandPower": 0,
+          "Supply": 160,
+          "ThreatValue": 0
+        }
+      },
+      "GameplayTagContainer": {},
+      "TagCountContainer": {},
+      "SpatialBounds": { "kind": "Box3D", "localCenterXCm": 0, "localCenterYCm": 100, "localCenterZCm": 0 },
+      "SpatialBox3D": { "halfSizeXCm": 70, "halfSizeYCm": 110, "halfSizeZCm": 70 }
+    }
+  }
+]

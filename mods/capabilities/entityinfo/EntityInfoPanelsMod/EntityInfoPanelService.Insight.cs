@@ -252,6 +252,7 @@ public sealed partial class EntityInfoPanelService
     private bool SampleInsightBrief(int slot, World world, Entity entity)
     {
         bool dirty = false;
+        EntityInfoPanelTemplateDescriptor template = ResolvePanelTemplate(slot);
 
         if (entity == Entity.Null || !world.IsAlive(entity))
         {
@@ -273,6 +274,7 @@ public sealed partial class EntityInfoPanelService
             !_insightCatalog.TryGetProfileIndex(templateKey.TemplateKeyId, out int profileIndex) ||
             !_insightCatalog.TryGetProfileByIndex(profileIndex, out EntityInsightProfile profile))
         {
+            _ = ResolveMissingTemplateProfile(template, entity, required: false);
             string templateSubtitle = world.TryGet(entity, out EntityTemplateKeyRef resolvedTemplateKey)
                 ? $"Template `{resolvedTemplateKey.TemplateKeyId}` has no insight profile."
                 : "Template key is unavailable for this entity.";
@@ -284,10 +286,17 @@ public sealed partial class EntityInfoPanelService
             return dirty;
         }
 
-        dirty |= SetString(_subtitles, slot, ResolveTextTokenId(profile.SubtitleTokenId));
+        string subtitle = (template.Sections & EntityInfoPanelTemplateSectionFlags.Subtitle) != 0
+            ? ResolveTextTokenId(profile.SubtitleTokenId)
+            : string.Empty;
+        dirty |= SetString(_subtitles, slot, subtitle);
         dirty |= SetInsightProfileIndex(slot, profileIndex + 1);
-        dirty |= SampleInsightStats(slot, world, entity, profile);
-        dirty |= SampleInsightActions(slot, world, entity, profile);
+        dirty |= (template.Sections & EntityInfoPanelTemplateSectionFlags.Stats) != 0
+            ? SampleInsightStats(slot, world, entity, profile)
+            : ClearInsightStats(slot);
+        dirty |= (template.Sections & EntityInfoPanelTemplateSectionFlags.Actions) != 0
+            ? SampleInsightActions(slot, world, entity, profile)
+            : ClearInsightActions(slot);
         return dirty;
     }
 
@@ -329,6 +338,20 @@ public sealed partial class EntityInfoPanelService
         return dirty;
     }
 
+    private bool ClearInsightStats(int slot)
+    {
+        bool dirty = false;
+        for (int statIndex = 0; statIndex < MaxInsightStatsPerPanel; statIndex++)
+        {
+            int valueIndex = InsightStatIndex(slot, statIndex);
+            dirty |= SetInsightStatValue(_insightStatCurrentValues, valueIndex, 0f);
+            dirty |= SetInsightStatValue(_insightStatBaseValues, valueIndex, 0f);
+        }
+
+        dirty |= SetInsightStatCount(slot, 0);
+        return dirty;
+    }
+
     private bool SampleInsightActions(int slot, World world, Entity entity, EntityInsightProfile profile)
     {
         bool dirty = false;
@@ -367,6 +390,18 @@ public sealed partial class EntityInfoPanelService
         }
 
         dirty |= SetInsightActionCount(slot, count);
+        return dirty;
+    }
+
+    private bool ClearInsightActions(int slot)
+    {
+        bool dirty = false;
+        for (int actionIndex = 0; actionIndex < MaxInsightActionsPerPanel; actionIndex++)
+        {
+            dirty |= SetInsightActionFlags(slot, actionIndex, EntityInsightActionRuntimeFlags.None);
+        }
+
+        dirty |= SetInsightActionCount(slot, 0);
         return dirty;
     }
 

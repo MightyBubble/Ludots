@@ -41,6 +41,32 @@ public enum EntityInfoPanelTargetKind : byte
     FixedEntity = 0,
     GlobalEntityKey = 1,
     CurrentSelectionView = 2,
+    EntityCollection = 3,
+}
+
+public enum EntityInfoPanelTemplateBindingKind : byte
+{
+    TargetEntity = 0,
+}
+
+public enum EntityInfoPanelTemplateLayoutMode : byte
+{
+    Compact = 0,
+    Full = 1,
+}
+
+[Flags]
+public enum EntityInfoPanelTemplateSectionFlags : ushort
+{
+    None = 0,
+    Title = 1 << 0,
+    Subtitle = 1 << 1,
+    Body = 1 << 2,
+    Badges = 1 << 3,
+    Stats = 1 << 4,
+    Tips = 1 << 5,
+    Actions = 1 << 6,
+    All = Title | Subtitle | Body | Badges | Stats | Tips | Actions,
 }
 
 [Flags]
@@ -71,6 +97,9 @@ public readonly record struct EntityInfoPanelTarget(
 
     public static EntityInfoPanelTarget CurrentSelectionView() =>
         new(EntityInfoPanelTargetKind.CurrentSelectionView, Entity.Null, string.Empty);
+
+    public static EntityInfoPanelTarget EntityCollection(Entity owner, string collectionKey) =>
+        new(EntityInfoPanelTargetKind.EntityCollection, owner, collectionKey ?? string.Empty);
 }
 
 public readonly record struct EntityCollectionPanelRow(
@@ -78,17 +107,42 @@ public readonly record struct EntityCollectionPanelRow(
     int EntityId,
     string Name,
     string AttributesSummary,
-    bool IsPrimary);
+    bool IsPrimary,
+    string TemplateId = "",
+    string TemplateSubtitle = "",
+    string TemplateBody = "",
+    string AccentColorHex = "");
 
 public readonly record struct EntityCollectionCategorySummary(
     string Label,
     int Count,
     bool ContainsPrimary);
 
-public readonly record struct EntityInfoPanelRequest(
-    EntityInfoPanelKind Kind,
-    EntityInfoPanelSurface Surface,
-    EntityInfoPanelTarget Target,
-    EntityInfoPanelLayout Layout,
-    EntityInfoGasDetailFlags GasDetailFlags,
-    bool Visible);
+public readonly record struct EntityInfoPanelRequest
+{
+    public EntityInfoPanelRequest(
+        EntityInfoPanelKind kind,
+        EntityInfoPanelSurface surface,
+        EntityInfoPanelTarget target,
+        EntityInfoPanelLayout layout,
+        EntityInfoGasDetailFlags gasDetailFlags,
+        bool visible,
+        string templateId = "")
+    {
+        Kind = kind;
+        Surface = surface;
+        Target = target;
+        Layout = layout;
+        GasDetailFlags = gasDetailFlags;
+        Visible = visible;
+        TemplateId = templateId ?? string.Empty;
+    }
+
+    public EntityInfoPanelKind Kind { get; init; }
+    public EntityInfoPanelSurface Surface { get; init; }
+    public EntityInfoPanelTarget Target { get; init; }
+    public EntityInfoPanelLayout Layout { get; init; }
+    public EntityInfoGasDetailFlags GasDetailFlags { get; init; }
+    public bool Visible { get; init; }
+    public string TemplateId { get; init; }
+}

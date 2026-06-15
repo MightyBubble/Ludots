@@ -20,6 +20,7 @@
 - Registry: `src/Core/Gameplay/GAS/Registry/AttributeRegistry.cs` 与 `src/Core/Gameplay/GAS/Registry/TagRegistry.cs` — 复用属性与标签 ID，不新增 panel 私有字典
 - Pipeline: `src/Core/Gameplay/Spawning/RuntimeEntitySpawnSystem.cs` — runtime spawn 时写入 `EntityTemplateKeyRef`，让面板可直接按模板取 profile
 - Pipeline: `mods/capabilities/entityinfo/EntityInfoPanelsMod/EntityInfoPanelService.Sample.cs` — 从 ECS / GAS 采样到固定槽位 SoA 缓冲，再驱动 UI 与 overlay
+- Pipeline: `src/Core/EntityCollections/EntityCollectionStore.cs` — 承载非 selection 语义的 query/display 实体集合
 - System: `src/Core/Input/Selection/SelectionRuntime.cs` 与 `src/Core/Input/Selection/SelectionControlGroupRuntime.cs` — 统一 live / formation / control group 选择真相
 - System: `mods/showcases/info_panels/GenreInfoShowcaseMod/Systems/GenreInfoShowcasePanelPresentationSystem.cs` — 只做刷新，不持有第二份选择态
 - Mod: `mods/capabilities/entityinfo/EntityInfoPanelsMod/` — 能力层负责 insight brief、采样、图标、文本解析
@@ -42,12 +43,16 @@
   - `mods/capabilities/entityinfo/EntityInfoPanelsMod/EntityInfoPanelService.cs`
   - `mods/capabilities/entityinfo/EntityInfoPanelsMod/EntityInfoPanelService.Storage.cs`
   - `mods/capabilities/entityinfo/EntityInfoPanelsMod/EntityInfoPanelService.Insight.cs`
+- 查询/展示集合：`EntityCollectionStore`
+  - `src/Core/EntityCollections/EntityCollectionStore.cs`
+  - `src/Core/EntityCollections/EntityCollectionTypes.cs`
 
 禁止做法：
 
 - 用名字、tag 文本或 UI element id 直接决定题材面板样式
 - 在 UI controller 里缓存第二份“当前选中实体”列表
 - 为 Skia / Raylib / Web 分别写三套信息面板数据模型
+- 把 collection 读取失败静默 fallback 到当前 selection
 
 ## Static Organization
 
@@ -152,6 +157,15 @@ RTS 多选时分成三层：
 6. `EntityInfoPanelUiComposer` 读取 sampled insight slot，生成右侧 insight brief
 7. `UIRoot` / `UiScene` 把统一 scene 交给具体 renderer
 
+EntityInfo 也可以直接查看 `EntityCollectionStore` 中的显式 collection：
+
+1. caller 用 `(owner entity, collection key)` 创建 `EntityInfoPanelTarget.EntityCollection(...)`
+2. `EntityInfoPanelService` 解析 collection view 和 row window
+3. 每个 row 仍走 insight profile、text resolver 和 icon factory
+4. UI composer 渲染 collection title、summary、row subtitle/accent/body
+
+这条路径用于 query/display collection，不改变 `SelectionRuntime` viewed selection。缺失 collection 或 template id 会显式失败。
+
 关键代码路径：
 
 - `mods/showcases/info_panels/GenreInfoShowcaseMod/Runtime/GenreInfoShowcaseRuntime.cs`
@@ -186,6 +200,7 @@ RTS 多选时分成三层：
 本方案的“零分配热路径”边界在 authoritative runtime 和 sampled state：
 
 - selection truth 通过 ECS 容器维护，不复制成 panel 私有集合
+- query/display rows 通过 `EntityCollectionStore.CopyWindow(...)` 进入 sampled state
 - insight stats / actions 刷新写回预分配数组
 - dirty 判定靠 revision，而不是每帧无脑重建
 
@@ -232,6 +247,17 @@ showcase 的 RTS 战群故意扩到 26 个单位，用于验证窗口化：
 - locale 切换只触发 panel refresh，不重建 gameplay state
 - capability 词表与 showcase 词表分层归属，避免 demo 反向污染能力层
 
+## Template Rules
+
+EntityInfo templates 是 presentation-only descriptor：
+
+- 模板注册在 `EntityInfoPanelTemplateCatalog`
+- request 使用 `EntityInfoPanelRequest.TemplateId`
+- 模板可以控制 section flags、collection row 字段、布局模式
+- 模板复用现有 profile、text token、icon 和 `UIRoot` 路径
+
+模板不能定义实体真相、selection 真相或独立文本系统。缺失模板、缺失必需 profile、缺失 token key 都必须显式失败。
+
 当前验收覆盖：
 
 - 英文 RTS 多选战群
@@ -259,3 +285,4 @@ showcase 的 RTS 战群故意扩到 26 个单位，用于验证窗口化：
 
 - glyph icon URI 目前以运行时生成字符串为主，如后续 profiling 证明有热点，可在 `EntityInsightIconFactory` 上增加缓存，但不能下沉成引擎私有图标分支
 - Component / GAS inspector 仍以诊断阅读为主，不属于本次题材化 panel 的视觉主路径
+- 通用 collection/query 基建见 `docs/architecture/entity_collection_query_infrastructure.md`

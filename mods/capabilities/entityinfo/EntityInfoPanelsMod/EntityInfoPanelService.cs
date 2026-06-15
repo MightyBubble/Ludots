@@ -3,9 +3,11 @@ using System.Collections.Generic;
 using System.Reflection;
 using Arch.Core;
 using EntityInfoPanelsMod.Insight;
+using Ludots.Core.EntityCollections;
 using Ludots.Core.Input.Selection;
 using Ludots.Core.Gameplay.GAS;
 using Ludots.Core.Presentation.Hud;
+using Ludots.Core.Scripting;
 
 namespace EntityInfoPanelsMod;
 
@@ -24,6 +26,7 @@ public sealed partial class EntityInfoPanelService
     private readonly EntityInsightProfileCatalog _insightCatalog;
     private readonly EntityInsightTextResolver _insightTextResolver;
     private readonly EntityInsightIconFactory _insightIconFactory = new();
+    private readonly IEntityInfoPanelTemplateCatalog _templates;
     private readonly AbilityDefinitionRegistry? _abilityDefinitions;
     private readonly TagOps _tagOps;
 
@@ -34,6 +37,8 @@ public sealed partial class EntityInfoPanelService
     private readonly EntityInfoPanelTarget[] _targets = new EntityInfoPanelTarget[PanelCapacity];
     private readonly EntityInfoPanelLayout[] _layouts = new EntityInfoPanelLayout[PanelCapacity];
     private readonly EntityInfoGasDetailFlags[] _gasFlags = new EntityInfoGasDetailFlags[PanelCapacity];
+    private readonly string[] _templateIds = new string[PanelCapacity];
+    private readonly EntityInfoPanelTemplateDescriptor[] _resolvedTemplates = new EntityInfoPanelTemplateDescriptor[PanelCapacity];
     private readonly bool[] _visible = new bool[PanelCapacity];
     private readonly Entity[] _resolvedTargets = new Entity[PanelCapacity];
     private readonly string[] _titles = new string[PanelCapacity];
@@ -53,6 +58,11 @@ public sealed partial class EntityInfoPanelService
     private readonly string[] _gasLines = new string[PanelCapacity * MaxGasLinesPerPanel];
     private readonly Entity[] _entityCollectionContainers = new Entity[PanelCapacity];
     private readonly Entity[] _entityCollectionPrimaries = new Entity[PanelCapacity];
+    private readonly Entity[] _entityCollectionOwners = new Entity[PanelCapacity];
+    private readonly EntityCollectionHandle[] _entityCollectionHandles = new EntityCollectionHandle[PanelCapacity];
+    private readonly EntityCollectionSourceKind[] _entityCollectionSourceKinds = new EntityCollectionSourceKind[PanelCapacity];
+    private readonly string[] _entityCollectionSourceTitles = new string[PanelCapacity];
+    private readonly string[] _entityCollectionSourceSummaries = new string[PanelCapacity];
     private readonly string[] _entityCollectionViewKeys = new string[PanelCapacity];
     private readonly string[] _entityCollectionSetKeys = new string[PanelCapacity];
     private readonly int[] _entityCollectionCounts = new int[PanelCapacity];
@@ -87,13 +97,15 @@ public sealed partial class EntityInfoPanelService
         PresentationTextCatalog? presentationTextCatalog = null,
         PresentationTextLocaleSelection? localeSelection = null,
         AbilityDefinitionRegistry? abilityDefinitions = null,
-        TagOps? tagOps = null)
+        TagOps? tagOps = null,
+        IEntityInfoPanelTemplateCatalog? templates = null)
     {
         PresentationTextCatalog effectiveCatalog = presentationTextCatalog ?? PresentationTextCatalog.Empty;
         PresentationTextLocaleSelection effectiveLocaleSelection = localeSelection ?? new PresentationTextLocaleSelection(effectiveCatalog);
 
         _insightCatalog = insightCatalog ?? EntityInsightProfileCatalog.Empty;
         _insightTextResolver = new EntityInsightTextResolver(effectiveCatalog, effectiveLocaleSelection);
+        _templates = templates ?? new EntityInfoPanelTemplateCatalog();
         _abilityDefinitions = abilityDefinitions;
         _tagOps = tagOps ?? new TagOps();
         _lastLocaleId = effectiveLocaleSelection.ActiveLocaleId;
@@ -117,6 +129,8 @@ public sealed partial class EntityInfoPanelService
         _targets[slot] = request.Target;
         _layouts[slot] = request.Layout;
         _gasFlags[slot] = request.GasDetailFlags;
+        _templateIds[slot] = ResolveTemplateId(request.TemplateId);
+        _resolvedTemplates[slot] = ResolveTemplateDescriptor(_templateIds[slot]);
         _visible[slot] = request.Visible;
         _resolvedTargets[slot] = Entity.Null;
         _titles[slot] = string.Empty;
@@ -143,6 +157,8 @@ public sealed partial class EntityInfoPanelService
         _visible[slot] = false;
         _surfaces[slot] = EntityInfoPanelSurface.None;
         _targets[slot] = default;
+        _templateIds[slot] = string.Empty;
+        _resolvedTemplates[slot] = null!;
         _resolvedTargets[slot] = Entity.Null;
         _titles[slot] = string.Empty;
         _subtitles[slot] = string.Empty;
@@ -187,6 +203,26 @@ public sealed partial class EntityInfoPanelService
         }
 
         _targets[slot] = target;
+        InvalidateSurface(_surfaces[slot]);
+        return true;
+    }
+
+    public bool UpdateTemplate(EntityInfoPanelHandle handle, string templateId)
+    {
+        if (!TryValidateHandle(handle, out int slot))
+        {
+            return false;
+        }
+
+        string resolved = ResolveTemplateId(templateId);
+        EntityInfoPanelTemplateDescriptor descriptor = ResolveTemplateDescriptor(resolved);
+        if (string.Equals(_templateIds[slot], resolved, StringComparison.Ordinal))
+        {
+            return false;
+        }
+
+        _templateIds[slot] = resolved;
+        _resolvedTemplates[slot] = descriptor;
         InvalidateSurface(_surfaces[slot]);
         return true;
     }
@@ -250,10 +286,13 @@ public sealed partial class EntityInfoPanelService
     public EntityInfoPanelKind GetKind(int slot) => _kinds[slot];
     public EntityInfoPanelLayout GetLayout(int slot) => _layouts[slot];
     public EntityInfoGasDetailFlags GetGasDetailFlags(int slot) => _gasFlags[slot];
+    public string GetTemplateId(int slot) => _templateIds[slot] ?? string.Empty;
     public string GetTitle(int slot) => _titles[slot] ?? string.Empty;
     public string GetSubtitle(int slot) => _subtitles[slot] ?? string.Empty;
     public int GetActiveLocaleId() => _insightTextResolver.ActiveLocaleId;
     public int GetEntityCollectionCount(int slot) => _entityCollectionCounts[slot];
+    public string GetEntityCollectionSourceTitle(int slot) => _entityCollectionSourceTitles[slot] ?? string.Empty;
+    public string GetEntityCollectionSourceSummary(int slot) => _entityCollectionSourceSummaries[slot] ?? string.Empty;
     public string GetEntityCollectionViewKey(int slot) => _entityCollectionViewKeys[slot] ?? string.Empty;
     public string GetEntityCollectionSetKey(int slot) => _entityCollectionSetKeys[slot] ?? string.Empty;
     public int GetEntityCollectionCategoryCount(int slot) => _entityCollectionCategoryCounts[slot];
@@ -280,15 +319,12 @@ public sealed partial class EntityInfoPanelService
             _kinds[slot] != EntityInfoPanelKind.EntityCollectionInspector ||
             index < 0 ||
             _sampledWorld == null ||
-            _sampledGlobals == null ||
-            !SelectionContextRuntime.TryGetRuntime(_sampledGlobals, out SelectionRuntime selection))
+            _sampledGlobals == null)
         {
             return false;
         }
 
-        Entity container = _entityCollectionContainers[slot];
-        if (container == Entity.Null ||
-            !selection.TryGetSelectionAt(container, index, out Entity entity) ||
+        if (!TryGetEntityCollectionEntityAt(slot, index, out Entity entity) ||
             !_sampledWorld.IsAlive(entity))
         {
             return false;
@@ -296,13 +332,54 @@ public sealed partial class EntityInfoPanelService
 
         string name = ResolveEntityDisplayName(_sampledWorld, entity);
         string attributesSummary = BuildEntityAttributePreview(_sampledWorld, entity);
+        EntityInfoPanelTemplateDescriptor template = ResolvePanelTemplate(slot);
+        string templateSubtitle = ResolveTemplateSubtitle(_sampledWorld, entity, template, required: false);
+        string templateBody = ResolveTemplateBody(_sampledWorld, entity, template, required: false);
+        string accent = ResolveTemplateAccent(_sampledWorld, entity, template, required: false);
         row = new EntityCollectionPanelRow(
             index,
             entity.Id,
             name,
             attributesSummary,
-            entity == _entityCollectionPrimaries[slot]);
+            entity == _entityCollectionPrimaries[slot],
+            template.Id,
+            templateSubtitle,
+            templateBody,
+            accent);
         return true;
+    }
+
+    private bool TryGetEntityCollectionEntityAt(int slot, int index, out Entity entity)
+    {
+        entity = default;
+        if (_sampledWorld == null ||
+            _sampledGlobals == null ||
+            (uint)slot >= (uint)PanelCapacity ||
+            _kinds[slot] != EntityInfoPanelKind.EntityCollectionInspector ||
+            index < 0)
+        {
+            return false;
+        }
+
+        if (_entityCollectionSourceKinds[slot] == EntityCollectionSourceKind.SelectionView)
+        {
+            if (!SelectionContextRuntime.TryGetRuntime(_sampledGlobals, out SelectionRuntime selection))
+            {
+                return false;
+            }
+
+            Entity container = _entityCollectionContainers[slot];
+            return container != Entity.Null &&
+                   selection.TryGetSelectionAt(container, index, out entity);
+        }
+
+        if (!_sampledGlobals.TryGetValue(CoreServiceKeys.EntityCollectionStore.Name, out object? storeObj) ||
+            storeObj is not EntityCollectionStore store)
+        {
+            return false;
+        }
+
+        return store.TryGetEntityAt(_entityCollectionHandles[slot], index, out entity);
     }
 
     public bool TryGetEntityCollectionCategory(int slot, int index, out EntityCollectionCategorySummary summary)
@@ -378,5 +455,93 @@ public sealed partial class EntityInfoPanelService
         {
             _pendingOverlayInvalidation = true;
         }
+    }
+
+    private static string ResolveTemplateId(string? templateId)
+    {
+        return string.IsNullOrWhiteSpace(templateId)
+            ? EntityInfoPanelTemplateCatalog.DefaultTemplateId
+            : templateId.Trim();
+    }
+
+    private EntityInfoPanelTemplateDescriptor ResolveTemplateDescriptor(string templateId)
+    {
+        if (!_templates.TryGet(templateId, out EntityInfoPanelTemplateDescriptor descriptor))
+        {
+            throw new InvalidOperationException($"Entity info panel template '{templateId}' is not registered.");
+        }
+
+        if (!string.IsNullOrWhiteSpace(descriptor.HeaderTokenKey))
+        {
+            _ = _insightTextResolver.ResolveRequiredTokenKey(descriptor.HeaderTokenKey);
+        }
+
+        if (!string.IsNullOrWhiteSpace(descriptor.EmptyTokenKey))
+        {
+            _ = _insightTextResolver.ResolveRequiredTokenKey(descriptor.EmptyTokenKey);
+        }
+
+        return descriptor;
+    }
+
+    private EntityInfoPanelTemplateDescriptor ResolvePanelTemplate(int slot)
+    {
+        EntityInfoPanelTemplateDescriptor? descriptor = _resolvedTemplates[slot];
+        if (descriptor != null)
+        {
+            return descriptor;
+        }
+
+        string templateId = ResolveTemplateId(_templateIds[slot]);
+        descriptor = ResolveTemplateDescriptor(templateId);
+        _templateIds[slot] = templateId;
+        _resolvedTemplates[slot] = descriptor;
+        return descriptor;
+    }
+
+    private string ResolveTemplateSubtitle(World world, Entity entity, EntityInfoPanelTemplateDescriptor template, bool required)
+    {
+        if ((template.Sections & EntityInfoPanelTemplateSectionFlags.Subtitle) == 0)
+        {
+            return string.Empty;
+        }
+
+        return TryGetEntityInsightProfile(world, entity, out EntityInsightProfile profile)
+            ? ResolveTextTokenId(profile.SubtitleTokenId)
+            : ResolveMissingTemplateProfile(template, entity, required);
+    }
+
+    private string ResolveTemplateBody(World world, Entity entity, EntityInfoPanelTemplateDescriptor template, bool required)
+    {
+        if ((template.Sections & EntityInfoPanelTemplateSectionFlags.Body) == 0)
+        {
+            return string.Empty;
+        }
+
+        return TryGetEntityInsightProfile(world, entity, out EntityInsightProfile profile)
+            ? ResolveTextTokenId(profile.BodyTokenId)
+            : ResolveMissingTemplateProfile(template, entity, required);
+    }
+
+    private string ResolveTemplateAccent(World world, Entity entity, EntityInfoPanelTemplateDescriptor template, bool required)
+    {
+        if (!TryGetEntityInsightProfile(world, entity, out EntityInsightProfile profile))
+        {
+            _ = ResolveMissingTemplateProfile(template, entity, required);
+            return string.Empty;
+        }
+
+        return profile.AccentColorHex;
+    }
+
+    private static string ResolveMissingTemplateProfile(EntityInfoPanelTemplateDescriptor template, Entity entity, bool required)
+    {
+        if (required || template.RequireInsightProfile)
+        {
+            throw new InvalidOperationException(
+                $"Entity info panel template '{template.Id}' requires an insight profile for entity {entity.Id}.");
+        }
+
+        return string.Empty;
     }
 }

@@ -3,13 +3,16 @@ using System.Linq;
 using System.Numerics;
 using Arch.Core;
 using EntityInfoPanelsMod;
+using EntityInfoPanelsMod.Insight;
 using Ludots.Core.Components;
+using Ludots.Core.EntityCollections;
 using Ludots.Core.Gameplay.GAS.Components;
 using Ludots.Core.Gameplay.GAS.Registry;
+using Ludots.Core.Gameplay.Spawning;
 using Ludots.Core.Input.Selection;
+using Ludots.Core.Presentation.Hud;
 using Ludots.Core.Registry;
 using Ludots.Core.Scripting;
-using Ludots.Core.Presentation.Hud;
 using NUnit.Framework;
 
 namespace Ludots.Tests.Presentation;
@@ -312,6 +315,212 @@ public sealed class EntityInfoPanelServiceTests
         Assert.That(secondCategory.Count, Is.EqualTo(1));
     }
 
+    [Test]
+    public void Refresh_ExplicitEntityCollectionInspector_RendersWithoutMutatingViewedSelection()
+    {
+        using var world = World.Create();
+        Entity viewer = world.Create();
+        Entity selected = world.Create(new Name { Value = "Selected Captain" });
+        Entity queryFirst = world.Create(new Name { Value = "Query Vanguard" });
+        Entity querySecond = world.Create(new Name { Value = "Query Scout" });
+
+        var selectionRegistry = new StringIntRegistry(capacity: 8, startId: 1, invalidId: 0, comparer: System.StringComparer.Ordinal);
+        var selection = new SelectionRuntime(
+            world,
+            new SelectionRuntimeConfig
+            {
+                TargetFilter = new SelectionTargetFilterConfig { RelationFilter = "All" },
+            },
+            selectionRegistry);
+        Assert.That(selection.ReplaceSelection(viewer, SelectionSetKeys.LivePrimary, new[] { selected }), Is.True);
+        Assert.That(selection.TryBindView(viewer, SelectionViewKeys.Primary, viewer, SelectionSetKeys.LivePrimary), Is.True);
+
+        var collectionRegistry = new StringIntRegistry(capacity: 8, startId: 1, invalidId: 0, comparer: System.StringComparer.Ordinal);
+        var collections = new EntityCollectionStore(collectionRegistry);
+        const string queryKey = "tests.entityinfo.query";
+        collections.Replace(
+            viewer,
+            EntityCollectionDescriptor.Create(
+                queryKey,
+                EntityCollectionSourceKind.RelationDerived,
+                EntityCollectionRoleKind.Display,
+                viewer,
+                queryFirst,
+                "Relation query",
+                "Assigned units | 2 entities"),
+            new[] { queryFirst, querySecond });
+
+        var globals = new Dictionary<string, object>
+        {
+            [CoreServiceKeys.SelectionRuntime.Name] = selection,
+            [CoreServiceKeys.SelectionViewViewerEntity.Name] = viewer,
+            [CoreServiceKeys.SelectionViewKey.Name] = SelectionViewKeys.Primary,
+            [CoreServiceKeys.EntityCollectionStore.Name] = collections,
+            [CoreServiceKeys.EntityCollectionKeyRegistry.Name] = collectionRegistry,
+        };
+
+        var service = new EntityInfoPanelService();
+        EntityInfoPanelHandle handle = service.Open(new EntityInfoPanelRequest(
+            EntityInfoPanelKind.EntityCollectionInspector,
+            EntityInfoPanelSurface.Ui,
+            EntityInfoPanelTarget.EntityCollection(viewer, queryKey),
+            new EntityInfoPanelLayout(EntityInfoPanelAnchor.BottomLeft, 16f, 16f, 480f, 280f),
+            EntityInfoGasDetailFlags.None,
+            true));
+
+        service.Refresh(world, globals);
+
+        Assert.That(selection.GetSelectionCount(viewer, SelectionSetKeys.LivePrimary), Is.EqualTo(1));
+        Assert.That(selection.TryGetSelectionAt(viewer, SelectionSetKeys.LivePrimary, 0, out Entity stillSelected), Is.True);
+        Assert.That(stillSelected, Is.EqualTo(selected));
+        Assert.That(service.GetEntityCollectionCount(handle.Slot), Is.EqualTo(2));
+        Assert.That(service.GetEntityCollectionSourceTitle(handle.Slot), Is.EqualTo("Relation query"));
+        Assert.That(service.GetEntityCollectionSourceSummary(handle.Slot), Is.EqualTo("Assigned units | 2 entities"));
+        Assert.That(service.GetEntityCollectionSetKey(handle.Slot), Is.EqualTo(queryKey));
+        Assert.That(service.TryGetEntityCollectionRow(handle.Slot, 0, out EntityCollectionPanelRow firstRow), Is.True);
+        Assert.That(firstRow.EntityId, Is.EqualTo(queryFirst.Id));
+        Assert.That(firstRow.Name, Is.EqualTo("Query Vanguard"));
+        Assert.That(firstRow.IsPrimary, Is.True);
+        Assert.That(service.TryGetEntityCollectionRow(handle.Slot, 1, out EntityCollectionPanelRow secondRow), Is.True);
+        Assert.That(secondRow.EntityId, Is.EqualTo(querySecond.Id));
+        Assert.That(secondRow.Name, Is.EqualTo("Query Scout"));
+        Assert.That(secondRow.IsPrimary, Is.False);
+    }
+
+    [Test]
+    public void Refresh_TemplateDrivenInsightAndCollectionRows_ReuseProfileAndTextPath()
+    {
+        using var world = World.Create();
+        int templateKeyId = 501;
+        int healthId = AttributeRegistry.Register("Tests.EntityInfo.Template.Health");
+        int abilityId = AbilityIdRegistry.Register("Tests.EntityInfo.Template.Ability");
+
+        var attributes = new AttributeBuffer();
+        attributes.SetBase(healthId, 90f);
+        attributes.SetCurrent(healthId, 45f);
+
+        var abilities = new AbilityStateBuffer();
+        abilities.AddAbility(abilityId);
+
+        Entity owner = world.Create();
+        Entity entity = world.Create(
+            new Name { Value = "Templated Vanguard" },
+            new EntityTemplateKeyRef { TemplateKeyId = templateKeyId },
+            attributes,
+            abilities);
+
+        var collectionRegistry = new StringIntRegistry(capacity: 8, startId: 1, invalidId: 0, comparer: System.StringComparer.Ordinal);
+        var collections = new EntityCollectionStore(collectionRegistry);
+        const string queryKey = "tests.entityinfo.template.collection";
+        collections.Replace(
+            owner,
+            EntityCollectionDescriptor.Create(
+                queryKey,
+                EntityCollectionSourceKind.Explicit,
+                EntityCollectionRoleKind.Display,
+                owner,
+                entity,
+                "Templated collection",
+                "1 templated entity"),
+            new[] { entity });
+
+        PresentationTextCatalog textCatalog = CreateTemplateTextCatalog();
+        var localeSelection = new PresentationTextLocaleSelection(textCatalog);
+        var profileCatalog = CreateTemplateProfileCatalog(templateKeyId, healthId, abilityId, textCatalog);
+        var templates = new EntityInfoPanelTemplateCatalog();
+        templates.Register(new EntityInfoPanelTemplateDescriptor
+        {
+            Id = "tests.entityinfo.template.compact",
+            Sections = EntityInfoPanelTemplateSectionFlags.Title |
+                       EntityInfoPanelTemplateSectionFlags.Subtitle |
+                       EntityInfoPanelTemplateSectionFlags.Body |
+                       EntityInfoPanelTemplateSectionFlags.Stats |
+                       EntityInfoPanelTemplateSectionFlags.Actions,
+            RequireInsightProfile = true
+        });
+
+        var service = new EntityInfoPanelService(profileCatalog, textCatalog, localeSelection, templates: templates);
+        EntityInfoPanelHandle standalone = service.Open(new EntityInfoPanelRequest(
+            EntityInfoPanelKind.InsightBrief,
+            EntityInfoPanelSurface.Ui,
+            EntityInfoPanelTarget.Fixed(entity),
+            new EntityInfoPanelLayout(EntityInfoPanelAnchor.TopLeft, 0f, 0f, 360f, 240f),
+            EntityInfoGasDetailFlags.None,
+            true,
+            "tests.entityinfo.template.compact"));
+        EntityInfoPanelHandle collection = service.Open(new EntityInfoPanelRequest(
+            EntityInfoPanelKind.EntityCollectionInspector,
+            EntityInfoPanelSurface.Ui,
+            EntityInfoPanelTarget.EntityCollection(owner, queryKey),
+            new EntityInfoPanelLayout(EntityInfoPanelAnchor.TopLeft, 0f, 0f, 360f, 240f),
+            EntityInfoGasDetailFlags.None,
+            true,
+            "tests.entityinfo.template.compact"));
+
+        service.Refresh(
+            world,
+            new Dictionary<string, object>
+            {
+                [CoreServiceKeys.EntityCollectionStore.Name] = collections,
+                [CoreServiceKeys.EntityCollectionKeyRegistry.Name] = collectionRegistry
+            });
+
+        Assert.That(service.GetTemplateId(standalone.Slot), Is.EqualTo("tests.entityinfo.template.compact"));
+        Assert.That(service.GetTitle(standalone.Slot), Is.EqualTo("Templated Vanguard"));
+        Assert.That(service.GetSubtitle(standalone.Slot), Is.EqualTo("Profile subtitle"));
+        Assert.That(service.GetInsightStatCount(standalone.Slot), Is.EqualTo(1));
+        Assert.That(service.GetInsightActionCount(standalone.Slot), Is.EqualTo(1));
+        Assert.That(service.TryGetEntityCollectionRow(collection.Slot, 0, out EntityCollectionPanelRow row), Is.True);
+        Assert.That(row.TemplateId, Is.EqualTo("tests.entityinfo.template.compact"));
+        Assert.That(row.TemplateSubtitle, Is.EqualTo("Profile subtitle"));
+        Assert.That(row.TemplateBody, Is.EqualTo("Profile body"));
+        Assert.That(row.AccentColorHex, Is.EqualTo("#55AAEE"));
+    }
+
+    [Test]
+    public void Open_MissingTemplate_FailsExplicitly()
+    {
+        var service = new EntityInfoPanelService(templates: new EntityInfoPanelTemplateCatalog());
+
+        InvalidOperationException ex = Assert.Throws<InvalidOperationException>(() => service.Open(new EntityInfoPanelRequest(
+            EntityInfoPanelKind.InsightBrief,
+            EntityInfoPanelSurface.Ui,
+            EntityInfoPanelTarget.Fixed(Entity.Null),
+            new EntityInfoPanelLayout(EntityInfoPanelAnchor.TopLeft, 0f, 0f, 240f, 160f),
+            EntityInfoGasDetailFlags.None,
+            true,
+            "tests.entityinfo.template.missing")))!;
+
+        Assert.That(ex.Message, Does.Contain("tests.entityinfo.template.missing"));
+    }
+
+    [Test]
+    public void Refresh_TemplateRequiresProfile_FailsWhenEntityHasNoInsightProfile()
+    {
+        using var world = World.Create();
+        Entity entity = world.Create(new Name { Value = "Unprofiled" });
+        var templates = new EntityInfoPanelTemplateCatalog();
+        templates.Register(new EntityInfoPanelTemplateDescriptor
+        {
+            Id = "tests.entityinfo.template.requires-profile",
+            Sections = EntityInfoPanelTemplateSectionFlags.Title | EntityInfoPanelTemplateSectionFlags.Subtitle,
+            RequireInsightProfile = true
+        });
+
+        var service = new EntityInfoPanelService(templates: templates);
+        service.Open(new EntityInfoPanelRequest(
+            EntityInfoPanelKind.InsightBrief,
+            EntityInfoPanelSurface.Ui,
+            EntityInfoPanelTarget.Fixed(entity),
+            new EntityInfoPanelLayout(EntityInfoPanelAnchor.TopLeft, 0f, 0f, 240f, 160f),
+            EntityInfoGasDetailFlags.None,
+            true,
+            "tests.entityinfo.template.requires-profile"));
+
+        InvalidOperationException ex = Assert.Throws<InvalidOperationException>(() => service.Refresh(world, new Dictionary<string, object>()))!;
+        Assert.That(ex.Message, Does.Contain("requires an insight profile"));
+    }
+
     private static string[] GetOverlayStrings(ScreenOverlayBuffer overlay, ReadOnlySpan<ScreenOverlayItem> items)
     {
         var lines = new List<string>(items.Length);
@@ -331,5 +540,99 @@ public sealed class EntityInfoPanelServiceTests
         }
 
         return lines.ToArray();
+    }
+
+    private static PresentationTextCatalog CreateTemplateTextCatalog()
+    {
+        var tokenIds = new StringIntRegistry(capacity: 16, startId: 1, invalidId: 0, comparer: System.StringComparer.Ordinal);
+        int subtitleTokenId = tokenIds.Register("tests.entityinfo.subtitle");
+        int bodyTokenId = tokenIds.Register("tests.entityinfo.body");
+        int genreTokenId = tokenIds.Register("tests.entityinfo.genre");
+        int statTokenId = tokenIds.Register("tests.entityinfo.stat.health");
+        int actionTitleTokenId = tokenIds.Register("tests.entityinfo.action.title");
+        int actionBodyTokenId = tokenIds.Register("tests.entityinfo.action.body");
+
+        var tokens = new PresentationTextTokenDefinition[tokenIds.Count + 1];
+        foreach (string key in new[]
+                 {
+                     "tests.entityinfo.subtitle",
+                     "tests.entityinfo.body",
+                     "tests.entityinfo.genre",
+                     "tests.entityinfo.stat.health",
+                     "tests.entityinfo.action.title",
+                     "tests.entityinfo.action.body"
+                 })
+        {
+            int id = tokenIds.GetId(key);
+            tokens[id] = new PresentationTextTokenDefinition { TokenId = id, Key = key, ArgCount = 0 };
+        }
+
+        var localeIds = new StringIntRegistry(capacity: 4, startId: 1, invalidId: 0, comparer: System.StringComparer.Ordinal);
+        int localeId = localeIds.Register("en-US");
+        var templates = new PresentationTextTemplate[tokenIds.Count + 1];
+        templates[subtitleTokenId] = Literal("Profile subtitle");
+        templates[bodyTokenId] = Literal("Profile body");
+        templates[genreTokenId] = Literal("Profile genre");
+        templates[statTokenId] = Literal("Health");
+        templates[actionTitleTokenId] = Literal("Template action");
+        templates[actionBodyTokenId] = Literal("Template action body");
+
+        var locales = new PresentationTextLocaleTable[localeIds.Count + 1];
+        locales[localeId] = new PresentationTextLocaleTable(localeId, "en-US", templates);
+        return new PresentationTextCatalog(tokenIds, tokens, localeIds, locales, defaultLocaleId: localeId);
+    }
+
+    private static EntityInsightProfileCatalog CreateTemplateProfileCatalog(
+        int templateKeyId,
+        int healthId,
+        int abilityId,
+        PresentationTextCatalog textCatalog)
+    {
+        var profile = new EntityInsightProfile
+        {
+            Id = "tests.entityinfo.profile",
+            TemplateKeyIds = new[] { templateKeyId },
+            AccentColorHex = "#55AAEE",
+            SurfaceColorHex = "#101820",
+            GenreGlyph = "G",
+            PortraitGlyph = "P",
+            GenreLabelTokenId = textCatalog.GetTokenId("tests.entityinfo.genre"),
+            SubtitleTokenId = textCatalog.GetTokenId("tests.entityinfo.subtitle"),
+            BodyTokenId = textCatalog.GetTokenId("tests.entityinfo.body"),
+            Badges = Array.Empty<EntityInsightBadgeProfile>(),
+            Stats = new[]
+            {
+                new EntityInsightStatProfile
+                {
+                    Glyph = "H",
+                    LabelTokenId = textCatalog.GetTokenId("tests.entityinfo.stat.health"),
+                    SourceKind = EntityInsightStatSourceKind.Attribute,
+                    DisplayMode = EntityInsightValueDisplayMode.CurrentOverBase,
+                    AttributeId = healthId
+                }
+            },
+            Tips = Array.Empty<EntityInsightTipProfile>(),
+            Actions = new[]
+            {
+                new EntityInsightActionProfile
+                {
+                    AbilityId = abilityId,
+                    Glyph = "A",
+                    TitleTokenId = textCatalog.GetTokenId("tests.entityinfo.action.title"),
+                    BodyTokenId = textCatalog.GetTokenId("tests.entityinfo.action.body")
+                }
+            }
+        };
+
+        return new EntityInsightProfileCatalog(
+            new[] { profile },
+            new Dictionary<int, int> { [templateKeyId] = 0 });
+    }
+
+    private static PresentationTextTemplate Literal(string text)
+    {
+        return new PresentationTextTemplate(
+            text,
+            new[] { new PresentationTextTemplatePart(PresentationTextTemplatePartKind.Literal, text, -1) });
     }
 }

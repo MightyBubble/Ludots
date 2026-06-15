@@ -1,0 +1,15 @@
+{
+  "name": "EntityQueryTacticsShowcaseMod",
+  "version": "1.0.0",
+  "description": "Playable entity collection/query showcase driven by production config, selection acquisition collections, graph outputs, teams, relationships, tags, templates, sorting, extremes, and aggregates.",
+  "main": "bin/net8.0/EntityQueryTacticsShowcaseMod.dll",
+  "priority": 0,
+  "dependencies": {
+    "LudotsCoreMod": "^1.0.0",
+    "CoreInputMod": "^1.0.0",
+    "CameraProfilesMod": "^1.0.0",
+    "NarrativeFrontendMod": "^1.0.0"
+  },
+  "author": "Ludots Team",
+  "tags": ["entity-query", "selection", "collection", "relationship", "showcase", "graph"]
+}
