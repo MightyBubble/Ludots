@@ -8,7 +8,7 @@ namespace Ludots.Core.Gameplay.Camera
     internal sealed class CameraInputAccumulator
     {
         private readonly Dictionary<string, Vector3> _continuousValues = new(StringComparer.Ordinal);
-        private readonly Dictionary<string, Vector3> _latchedBoolValues = new(StringComparer.Ordinal);
+        private readonly Dictionary<string, Vector3> _latchedBoolValues = new(8, StringComparer.Ordinal);
         private readonly Dictionary<string, Vector3> _oneShotValues = new(StringComparer.Ordinal);
 
         public void Clear()
