@@ -19,6 +19,7 @@
 - [Pacemaker](pacemaker.md)
 - [Runtime Entity Spawn Flow](runtime_entity_spawn_flow.md)
 - [Spatial Geometry SSOT](spatial_geometry_ssot.md)
+- [Capability Standard Showcases](../../gitbook/architecture/capability-standard-showcases.md)
 - [Startup Entrypoints](startup_entrypoints.md)
 - [Time Flow](time_flow.md)
 - [Trigger Guide](trigger_guide.md)

@@ -16,6 +16,7 @@
   - [实体仿真分层与车道](architecture/entity-simulation-layering.md)
   - [实体仿真工作流拆分](architecture/entity-simulation-workstreams.md)
   - [实体仿真阶段验收](architecture/entity-simulation-uat.md)
+  - [能力标准 Showcase](architecture/capability-standard-showcases.md)
   - [Prefab Grounding �?Visual Height](architecture/prefab-grounding-and-visual-height.md)
   - [Performer-as-Actor 架构总览](architecture/performer-as-actor-architecture.md)
   - [Performer 参数黑板�?Animator 统一](architecture/performer-param-blackboard.md)

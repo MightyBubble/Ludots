@@ -228,6 +228,63 @@ namespace Ludots.Tests.Architecture
         }
 
         [Test]
+        public void Launcher_ResolvesCapabilityStandardShowcases_AsOnlyAcceptanceRoots()
+        {
+            var repoRoot = FindRepoRoot();
+            var tempDirectory = Path.Combine(repoRoot, "artifacts", "tests", $"launcher-capability-standard-{Guid.NewGuid():N}");
+            Directory.CreateDirectory(tempDirectory);
+
+            try
+            {
+                var preferencesPath = Path.Combine(tempDirectory, "preferences.json");
+                var userConfigPath = Path.Combine(tempDirectory, "config.overlay.json");
+                File.WriteAllText(preferencesPath, "{}");
+                File.WriteAllText(userConfigPath, "{}");
+
+                var launcher = new LauncherService(
+                    repoRoot,
+                    Path.Combine(repoRoot, "launcher.config.json"),
+                    Path.Combine(repoRoot, "launcher.presets.json"),
+                    preferencesPath,
+                    userConfigPath);
+
+                AssertCapabilityStandardPlan(
+                    launcher.Resolve(
+                        new[] { "$capability_standard_static_performer_30k" },
+                        LauncherPlatformIds.Raylib,
+                        LauncherBuildMode.Never).Plan,
+                    expectedRootModId: "CapabilityStandardStaticPerformer30kMod",
+                    expectedStartupMapId: "capability_standard_static_performer_30k_showcase",
+                    allowedModIds: new[] { "LudotsCoreMod", "CoreInputMod", "CapabilityStandardStaticPerformer30kMod" });
+
+                AssertCapabilityStandardPlan(
+                    launcher.Resolve(
+                        new[] { "$capability_standard_mass_nav_large_world_10k" },
+                        LauncherPlatformIds.Raylib,
+                        LauncherBuildMode.Never).Plan,
+                    expectedRootModId: "CapabilityStandardMassNavigationLargeWorld10kMod",
+                    expectedStartupMapId: "mass_navigation",
+                    allowedModIds: new[] { "LudotsCoreMod", "CoreInputMod", "CameraProfilesMod", "MassNavigationMod", "CapabilityStandardMassNavigationLargeWorld10kMod" });
+
+                AssertCapabilityStandardPlan(
+                    launcher.Resolve(
+                        new[] { "$capability_standard_total_war_like" },
+                        LauncherPlatformIds.Raylib,
+                        LauncherBuildMode.Never).Plan,
+                    expectedRootModId: "CapabilityStandardTotalWarLikeMod",
+                    expectedStartupMapId: "mass_navigation_capability_standard_total_war_like",
+                    allowedModIds: new[] { "LudotsCoreMod", "CoreInputMod", "CameraProfilesMod", "MassNavigationMod", "CapabilityStandardTotalWarLikeMod" });
+            }
+            finally
+            {
+                if (Directory.Exists(tempDirectory))
+                {
+                    Directory.Delete(tempDirectory, recursive: true);
+                }
+            }
+        }
+
+        [Test]
         public void GameBootstrapper_RejectsUnknownLauncherMetadataFields()
         {
             var repoRoot = FindRepoRoot();
@@ -618,6 +675,24 @@ namespace Ludots.Tests.Architecture
                   "PlanSchemaVersion": 1
                 }
                 """);
+        }
+
+        private static void AssertCapabilityStandardPlan(
+            LauncherLaunchPlan plan,
+            string expectedRootModId,
+            string expectedStartupMapId,
+            string[] allowedModIds)
+        {
+            Assert.That(plan.RootModIds, Is.EqualTo(new[] { expectedRootModId }));
+            Assert.That(plan.OrderedModIds, Does.Contain(expectedRootModId));
+            Assert.That(plan.OrderedModIds, Is.SubsetOf(allowedModIds));
+            Assert.That(plan.OrderedModIds, Does.Not.Contain("PerformerBlacksmithShowcaseMod"));
+            Assert.That(plan.OrderedModIds, Does.Not.Contain("PerformerBlacksmithScatterHudTextBenchmarkEntryMod"));
+            Assert.That(plan.OrderedModIds, Does.Not.Contain("MassNavigationTotalWarEntryMod"));
+
+            var startupMapSetting = plan.Diagnostics.Settings.First(setting => string.Equals(setting.Key, "startupMapId", StringComparison.Ordinal));
+            Assert.That(startupMapSetting.EffectiveValue?.GetValue<string>(), Is.EqualTo(expectedStartupMapId));
+            Assert.That(startupMapSetting.EffectiveSource, Does.Contain(expectedRootModId));
         }
 
         private static FileSnapshot CaptureFile(string path)

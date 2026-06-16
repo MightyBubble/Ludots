@@ -1,0 +1,113 @@
+[
+  {
+    "id": "capability_static_performer_building",
+    "onSpawnEffect": "Effect.Showcase.CapabilityStaticPerformer.RandomDrift",
+    "components": {
+      "Name": { "Value": "CapabilityStaticPerformer" },
+      "WorldPositionCm": { "Value": { "X": 0, "Y": 0 } },
+      "PresentationStaticTransform": {},
+      "FacingDirection": { "AngleRad": 0.0 },
+      "AttributeBuffer": {
+        "base": {
+          "Durability": 100
+        },
+        "current": {
+          "Durability": 72
+        }
+      },
+      "GameplayTagContainer": {},
+      "TagCountContainer": {}
+    }
+  },
+  {
+    "id": "capability_static_performer_mesh_benchmark_entity",
+    "components": {
+      "Name": { "Value": "CapabilityStaticPerformerMeshBenchmark" },
+      "WorldPositionCm": { "Value": { "X": 0, "Y": 0 } },
+      "PresentationStaticTransform": {},
+      "FacingDirection": { "AngleRad": 0.0 },
+      "AttributeBuffer": {
+        "base": {}
+      },
+      "GameplayTagContainer": {},
+      "TagCountContainer": {}
+    }
+  },
+  {
+    "id": "capability_static_performer_mesh_hudbar_benchmark_entity",
+    "onSpawnEffect": "Effect.Showcase.CapabilityStaticPerformer.RandomDrift",
+    "components": {
+      "Name": { "Value": "CapabilityStaticPerformerMeshHudBarBenchmark" },
+      "WorldPositionCm": { "Value": { "X": 0, "Y": 0 } },
+      "PresentationStaticTransform": {},
+      "FacingDirection": { "AngleRad": 0.0 },
+      "AttributeBuffer": {
+        "base": {
+          "Durability": 100
+        },
+        "current": {
+          "Durability": 72
+        }
+      },
+      "GameplayTagContainer": {},
+      "TagCountContainer": {}
+    }
+  },
+  {
+    "id": "capability_static_performer_mesh_hudtext_benchmark_entity",
+    "onSpawnEffect": "Effect.Showcase.CapabilityStaticPerformer.RandomDrift",
+    "components": {
+      "Name": { "Value": "CapabilityStaticPerformerMeshHudTextBenchmark" },
+      "WorldPositionCm": { "Value": { "X": 0, "Y": 0 } },
+      "PresentationStaticTransform": {},
+      "FacingDirection": { "AngleRad": 0.0 },
+      "AttributeBuffer": {
+        "base": {
+          "Durability": 100
+        },
+        "current": {
+          "Durability": 72
+        }
+      },
+      "GameplayTagContainer": {},
+      "TagCountContainer": {}
+    }
+  },
+  {
+    "id": "capability_static_performer_dynamic_worker_entity",
+    "components": {
+      "Name": { "Value": "CapabilityStaticPerformerDynamicWorker" },
+      "WorldPositionCm": { "Value": { "X": 0, "Y": 0 } },
+      "VisualHeightmapSampleState": {},
+      "FacingDirection": { "AngleRad": 0.0 },
+      "AttributeBuffer": {
+        "base": {}
+      },
+      "GameplayTagContainer": {},
+      "TagCountContainer": {},
+      "DynamicWorkerCrowdTag": {}
+    }
+  },
+  {
+    "id": "capability_static_performer_minimap_marker_ball_entity",
+    "onSpawnEffect": "Effect.Showcase.CapabilityStaticPerformer.RandomDrift",
+    "components": {
+      "Name": { "Value": "CapabilityStaticPerformerMinimapMarkerBall" },
+      "WorldPositionCm": { "Value": { "X": 0, "Y": 0 } },
+      "VisualHeightmapSampleState": {},
+      "FacingDirection": { "AngleRad": 0.0 },
+      "AttributeBuffer": {
+        "base": {
+          "Durability": 100
+        },
+        "current": {
+          "Durability": 72
+        }
+      },
+      "GameplayTagContainer": {},
+      "TagCountContainer": {},
+      "SpatialPartitionExcluded": {},
+      "MinimapMarkerBallMovementTag": {}
+    }
+  }
+]
