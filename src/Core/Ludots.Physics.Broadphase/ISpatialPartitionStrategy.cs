@@ -6,7 +6,10 @@ namespace Ludots.Physics.Broadphase
 {
     public interface ISpatialPartitionStrategy : IDisposable
     {
-        void Build(ReadOnlySpan<RigidBodyDesc> bodies);
+        void Build(
+            ReadOnlySpan<RigidBodyDesc> dynamicBodies,
+            ReadOnlySpan<RigidBodyDesc> staticBodies,
+            bool rebuildStatic);
         void QueryPotentialCollisions(List<(int, int)> bodyPairs);
         void QueryAABB(in Aabb queryArea, List<int> results);
         void Update(int bodyIndex, in Aabb newAabb);

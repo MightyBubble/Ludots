@@ -8,5 +8,10 @@ namespace Ludots.Core.Physics2D.Components
         public double PhysicsUpdateMs;
         public int PotentialPairs;
         public int ContactPairs;
+        public int StaticBodyCount;
+        public int DynamicBodyCount;
+        public int DirtyStaticBodyCount;
+        public double StaticMaterializationMs;
+        public double DynamicBuildMs;
     }
 }

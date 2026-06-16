@@ -1,7 +1,8 @@
 using System;
 using System.Collections.Generic;
+using System.Diagnostics;
+using Arch.Buffer;
 using Arch.Core;
-using Arch.Core.Extensions;
 using Arch.System;
 using Ludots.Core.Mathematics.FixedPoint;
 using Ludots.Physics.Broadphase;
@@ -9,47 +10,363 @@ using Ludots.Core.Physics2D.Components;
 
 namespace Ludots.Core.Physics2D.Systems
 {
+    public readonly struct PhysicsBodyColliderDesc2D
+    {
+        public readonly ColliderType2D Type;
+        public readonly int ShapeDataIndex;
+
+        public PhysicsBodyColliderDesc2D(ColliderType2D type, int shapeDataIndex)
+        {
+            Type = type;
+            ShapeDataIndex = shapeDataIndex;
+        }
+    }
+
     /// <summary>
-    /// 物理世界构建系统 — 全定点数域 AABB 计算。
+    /// Builds dynamic rigid body descriptors every physics step and keeps static descriptors cached.
     /// </summary>
     public sealed class BuildPhysicsWorldSystem2D : BaseSystem<World, float>
     {
-        private readonly QueryDescription _rigidBodyQuery;
+        private readonly QueryDescription _untrackedSingleQuery;
+        private readonly QueryDescription _untrackedCompoundQuery;
+        private readonly QueryDescription _dirtySingleQuery;
+        private readonly QueryDescription _dirtyCompoundQuery;
+        private readonly QueryDescription _dirtyMissingColliderQuery;
+
+        private readonly CommandBuffer _commandBuffer = new(256);
+        private readonly Stopwatch _stopwatch = new();
 
         public List<RigidBodyDesc> RigidBodyDescriptors { get; }
         public List<Entity> Entities { get; }
+        public List<PhysicsBodyColliderDesc2D> BodyColliders { get; }
+
+        public List<RigidBodyDesc> DynamicRigidBodyDescriptors { get; }
+        public List<Entity> DynamicEntities { get; }
+        public List<PhysicsBodyColliderDesc2D> DynamicBodyColliders { get; }
+
+        public List<RigidBodyDesc> StaticRigidBodyDescriptors { get; }
+        public List<Entity> StaticEntities { get; }
+        public List<PhysicsBodyColliderDesc2D> StaticBodyColliders { get; }
+
+        public int StaticBodyVersion { get; private set; }
+        public int DirtyStaticBodyCountLastUpdate { get; private set; }
+        public double StaticMaterializationMsLastUpdate { get; private set; }
+        public double DynamicBuildMsLastUpdate { get; private set; }
 
         public BuildPhysicsWorldSystem2D(World world) : base(world)
         {
-            _rigidBodyQuery = new QueryDescription().WithAll<Position2D, Collider2D, Mass2D>();
+            _untrackedSingleQuery = new QueryDescription()
+                .WithAll<Position2D, Collider2D, Mass2D>()
+                .WithNone<Physics2DStaticBodyState, CompoundCollider2D>();
+            _untrackedCompoundQuery = new QueryDescription()
+                .WithAll<Position2D, CompoundCollider2D, Mass2D>()
+                .WithNone<Physics2DStaticBodyState>();
+            _dirtySingleQuery = new QueryDescription()
+                .WithAll<Physics2DStaticBodyState, Physics2DStaticBodyDirty, Position2D, Collider2D, Mass2D>()
+                .WithNone<CompoundCollider2D>();
+            _dirtyCompoundQuery = new QueryDescription()
+                .WithAll<Physics2DStaticBodyState, Physics2DStaticBodyDirty, Position2D, CompoundCollider2D, Mass2D>();
+            _dirtyMissingColliderQuery = new QueryDescription()
+                .WithAll<Physics2DStaticBodyState, Physics2DStaticBodyDirty>()
+                .WithNone<Collider2D, CompoundCollider2D>();
+
             RigidBodyDescriptors = new List<RigidBodyDesc>(1024);
             Entities = new List<Entity>(1024);
+            BodyColliders = new List<PhysicsBodyColliderDesc2D>(1024);
+
+            DynamicRigidBodyDescriptors = RigidBodyDescriptors;
+            DynamicEntities = Entities;
+            DynamicBodyColliders = BodyColliders;
+
+            StaticRigidBodyDescriptors = new List<RigidBodyDesc>(1024);
+            StaticEntities = new List<Entity>(1024);
+            StaticBodyColliders = new List<PhysicsBodyColliderDesc2D>(1024);
         }
 
         public override void Update(in float deltaTime)
         {
-            RigidBodyDescriptors.Clear();
-            Entities.Clear();
+            DirtyStaticBodyCountLastUpdate = 0;
+            StaticMaterializationMsLastUpdate = 0d;
+            DynamicBuildMsLastUpdate = 0d;
 
-            World.Query(in _rigidBodyQuery, (Entity entity, ref Position2D position, ref Collider2D collider, ref Mass2D mass) =>
+            DynamicRigidBodyDescriptors.Clear();
+            DynamicEntities.Clear();
+            DynamicBodyColliders.Clear();
+
+            _stopwatch.Restart();
+            ProcessUntrackedSingleBodies();
+            ProcessUntrackedCompoundBodies();
+            _stopwatch.Stop();
+            DynamicBuildMsLastUpdate = _stopwatch.Elapsed.TotalMilliseconds;
+
+            _stopwatch.Restart();
+            ProcessDirtySingleBodies();
+            ProcessDirtyCompoundBodies();
+            ProcessDirtyMissingColliderBodies();
+            _stopwatch.Stop();
+            StaticMaterializationMsLastUpdate = _stopwatch.Elapsed.TotalMilliseconds;
+
+            if (_commandBuffer.Size > 0)
             {
-                Fix64 rotation = Fix64.Zero;
-                if (World.TryGet(entity, out Rotation2D rot))
+                _commandBuffer.Playback(World);
+            }
+
+            if (DirtyStaticBodyCountLastUpdate > 0)
+            {
+                StaticBodyVersion++;
+            }
+        }
+
+        public bool TryResolveBody(
+            int bodyHandle,
+            out Entity entity,
+            out PhysicsBodyColliderDesc2D collider,
+            out bool isStatic)
+        {
+            if (bodyHandle >= 0)
+            {
+                isStatic = false;
+                if ((uint)bodyHandle < (uint)DynamicEntities.Count)
                 {
-                    rotation = rot.Value;
+                    entity = DynamicEntities[bodyHandle];
+                    collider = DynamicBodyColliders[bodyHandle];
+                    return true;
+                }
+            }
+            else
+            {
+                isStatic = true;
+                int staticIndex = StaticIndexFromHandle(bodyHandle);
+                if ((uint)staticIndex < (uint)StaticEntities.Count)
+                {
+                    entity = StaticEntities[staticIndex];
+                    collider = StaticBodyColliders[staticIndex];
+                    return true;
+                }
+            }
+
+            entity = default;
+            collider = default;
+            isStatic = false;
+            return false;
+        }
+
+        public Entity ResolveBodyEntity(int bodyHandle)
+        {
+            if (!TryResolveBody(bodyHandle, out Entity entity, out _, out _))
+            {
+                throw new ArgumentOutOfRangeException(nameof(bodyHandle));
+            }
+
+            return entity;
+        }
+
+        private void ProcessUntrackedSingleBodies()
+        {
+            World.Query(in _untrackedSingleQuery, (Entity entity, ref Position2D position, ref Collider2D collider, ref Mass2D mass) =>
+            {
+                if (mass.IsStatic)
+                {
+                    RemoveStaticBodies(entity);
+                    AddStaticBody(entity, CalculateAabb(in position, ResolveRotation(entity), in collider), new PhysicsBodyColliderDesc2D(collider.Type, collider.ShapeDataIndex));
+                    MarkStaticState(entity, bodyCount: 1);
+                    DirtyStaticBodyCountLastUpdate++;
+                    return;
                 }
 
-                var aabb = CalculateAabb(in position, rotation, in collider);
-
-                RigidBodyDescriptors.Add(new RigidBodyDesc
-                {
-                    EntityIndex = entity.Id,
-                    BoundingBox = aabb,
-                    IsStatic = mass.IsStatic
-                });
-
-                Entities.Add(entity);
+                AddDynamicBody(entity, CalculateAabb(in position, ResolveRotation(entity), in collider), new PhysicsBodyColliderDesc2D(collider.Type, collider.ShapeDataIndex));
             });
+        }
+
+        private void ProcessUntrackedCompoundBodies()
+        {
+            World.Query(in _untrackedCompoundQuery, (Entity entity, ref Position2D position, ref CompoundCollider2D compound, ref Mass2D mass) =>
+            {
+                if (mass.IsStatic)
+                {
+                    RemoveStaticBodies(entity);
+                    int bodyCount = AddCompoundStaticBodies(entity, in position, ResolveRotation(entity), in compound);
+                    MarkStaticState(entity, bodyCount);
+                    DirtyStaticBodyCountLastUpdate++;
+                    return;
+                }
+
+                AddCompoundDynamicBodies(entity, in position, ResolveRotation(entity), in compound);
+            });
+        }
+
+        private void ProcessDirtySingleBodies()
+        {
+            World.Query(in _dirtySingleQuery, (Entity entity, ref Position2D position, ref Collider2D collider, ref Mass2D mass) =>
+            {
+                RemoveStaticBodies(entity);
+                DirtyStaticBodyCountLastUpdate++;
+                if (mass.IsStatic)
+                {
+                    AddStaticBody(entity, CalculateAabb(in position, ResolveRotation(entity), in collider), new PhysicsBodyColliderDesc2D(collider.Type, collider.ShapeDataIndex));
+                    MarkStaticState(entity, bodyCount: 1);
+                }
+                else
+                {
+                    AddDynamicBody(entity, CalculateAabb(in position, ResolveRotation(entity), in collider), new PhysicsBodyColliderDesc2D(collider.Type, collider.ShapeDataIndex));
+                    _commandBuffer.Remove<Physics2DStaticBodyState>(entity);
+                }
+
+                _commandBuffer.Remove<Physics2DStaticBodyDirty>(entity);
+            });
+        }
+
+        private void ProcessDirtyCompoundBodies()
+        {
+            World.Query(in _dirtyCompoundQuery, (Entity entity, ref Position2D position, ref CompoundCollider2D compound, ref Mass2D mass) =>
+            {
+                RemoveStaticBodies(entity);
+                DirtyStaticBodyCountLastUpdate++;
+                if (mass.IsStatic)
+                {
+                    int bodyCount = AddCompoundStaticBodies(entity, in position, ResolveRotation(entity), in compound);
+                    MarkStaticState(entity, bodyCount);
+                }
+                else
+                {
+                    AddCompoundDynamicBodies(entity, in position, ResolveRotation(entity), in compound);
+                    _commandBuffer.Remove<Physics2DStaticBodyState>(entity);
+                }
+
+                _commandBuffer.Remove<Physics2DStaticBodyDirty>(entity);
+            });
+        }
+
+        private void ProcessDirtyMissingColliderBodies()
+        {
+            World.Query(in _dirtyMissingColliderQuery, (Entity entity) =>
+            {
+                RemoveStaticBodies(entity);
+                DirtyStaticBodyCountLastUpdate++;
+                _commandBuffer.Remove<Physics2DStaticBodyState>(entity);
+                _commandBuffer.Remove<Physics2DStaticBodyDirty>(entity);
+            });
+        }
+
+        private int AddCompoundStaticBodies(Entity entity, in Position2D position, Fix64 rotation, in CompoundCollider2D compound)
+        {
+            int added = 0;
+            for (int i = 0; i < compound.PieceCount; i++)
+            {
+                var (type, shapeDataIndex) = compound.GetPiece(i);
+                var collider = new Collider2D { Type = type, ShapeDataIndex = shapeDataIndex };
+                AddStaticBody(entity, CalculateAabb(in position, rotation, in collider), new PhysicsBodyColliderDesc2D(type, shapeDataIndex));
+                added++;
+            }
+
+            return added;
+        }
+
+        private void AddCompoundDynamicBodies(Entity entity, in Position2D position, Fix64 rotation, in CompoundCollider2D compound)
+        {
+            for (int i = 0; i < compound.PieceCount; i++)
+            {
+                var (type, shapeDataIndex) = compound.GetPiece(i);
+                var collider = new Collider2D { Type = type, ShapeDataIndex = shapeDataIndex };
+                AddDynamicBody(entity, CalculateAabb(in position, rotation, in collider), new PhysicsBodyColliderDesc2D(type, shapeDataIndex));
+            }
+        }
+
+        private void AddDynamicBody(Entity entity, in Aabb aabb, in PhysicsBodyColliderDesc2D collider)
+        {
+            int index = DynamicEntities.Count;
+            DynamicRigidBodyDescriptors.Add(new RigidBodyDesc
+            {
+                Index = index,
+                EntityIndex = entity.Id,
+                BoundingBox = aabb,
+                IsStatic = false
+            });
+            DynamicEntities.Add(entity);
+            DynamicBodyColliders.Add(collider);
+        }
+
+        private void AddStaticBody(Entity entity, in Aabb aabb, in PhysicsBodyColliderDesc2D collider)
+        {
+            int index = StaticEntities.Count;
+            StaticRigidBodyDescriptors.Add(new RigidBodyDesc
+            {
+                Index = StaticHandleFromIndex(index),
+                EntityIndex = entity.Id,
+                BoundingBox = aabb,
+                IsStatic = true
+            });
+            StaticEntities.Add(entity);
+            StaticBodyColliders.Add(collider);
+        }
+
+        private bool RemoveStaticBodies(Entity entity)
+        {
+            bool removed = false;
+            for (int i = StaticEntities.Count - 1; i >= 0; i--)
+            {
+                if (StaticEntities[i].Id != entity.Id)
+                {
+                    continue;
+                }
+
+                RemoveStaticBodyAt(i);
+                removed = true;
+            }
+
+            return removed;
+        }
+
+        private void RemoveStaticBodyAt(int index)
+        {
+            int last = StaticEntities.Count - 1;
+            if (index != last)
+            {
+                StaticRigidBodyDescriptors[index] = StaticRigidBodyDescriptors[last];
+                var descriptor = StaticRigidBodyDescriptors[index];
+                descriptor.Index = StaticHandleFromIndex(index);
+                StaticRigidBodyDescriptors[index] = descriptor;
+                StaticEntities[index] = StaticEntities[last];
+                StaticBodyColliders[index] = StaticBodyColliders[last];
+            }
+
+            StaticRigidBodyDescriptors.RemoveAt(last);
+            StaticEntities.RemoveAt(last);
+            StaticBodyColliders.RemoveAt(last);
+        }
+
+        private void MarkStaticState(Entity entity, int bodyCount)
+        {
+            var state = new Physics2DStaticBodyState
+            {
+                BodyCount = bodyCount
+            };
+
+            if (World.Has<Physics2DStaticBodyState>(entity))
+            {
+                _commandBuffer.Set(entity, state);
+            }
+            else
+            {
+                _commandBuffer.Add(entity, state);
+            }
+
+            _commandBuffer.Remove<Physics2DStaticBodyDirty>(entity);
+        }
+
+        private Fix64 ResolveRotation(Entity entity)
+        {
+            return World.TryGet(entity, out Rotation2D rot) ? rot.Value : Fix64.Zero;
+        }
+
+        private static int StaticHandleFromIndex(int index)
+        {
+            return -index - 1;
+        }
+
+        private static int StaticIndexFromHandle(int bodyHandle)
+        {
+            return -bodyHandle - 1;
         }
 
         private static Aabb CalculateAabb(in Position2D position, Fix64 rotation, in Collider2D collider)

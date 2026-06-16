@@ -99,6 +99,33 @@
       ],
       "adapterId": "raylib",
       "buildMode": "auto"
+    },
+    {
+      "id": "capability_standard_static_performer_30k_raylib",
+      "name": "Capability Standard Static Performer 30K Raylib",
+      "selectors": [
+        "$capability_standard_static_performer_30k"
+      ],
+      "adapterId": "raylib",
+      "buildMode": "auto"
+    },
+    {
+      "id": "capability_standard_mass_nav_large_world_10k_raylib",
+      "name": "Capability Standard Mass Navigation Large World 10K Raylib",
+      "selectors": [
+        "$capability_standard_mass_nav_large_world_10k"
+      ],
+      "adapterId": "raylib",
+      "buildMode": "auto"
+    },
+    {
+      "id": "capability_standard_total_war_like_raylib",
+      "name": "Capability Standard Total War Like Raylib",
+      "selectors": [
+        "$capability_standard_total_war_like"
+      ],
+      "adapterId": "raylib",
+      "buildMode": "auto"
     }
   ]
 }

@@ -1,0 +1,52 @@
+{
+  "startupMapId": "mass_navigation_capability_standard_total_war_like",
+  "windowTitle": "Ludots Engine - Capability Standard Total War Like Movement",
+  "targetFps": 0,
+  "windowWidth": 1600,
+  "windowHeight": 900,
+  "windowResizable": true,
+  "selection": {
+    "targetFilter": { "relationFilter": "Friendly" },
+    "movePathPreviewOrderTypeKeys": [ "massNavigationMove" ]
+  },
+  "presentation": {
+    "cameraCulling": {
+      "highLodDistanceCm": 18000,
+      "mediumLodDistanceCm": 42000,
+      "lowLodDistanceCm": 90000
+    },
+    "performerInstanceCapacity": 131072,
+    "gasPresentationEventCapacity": 131072,
+    "presentationEventStreamCapacity": 131072,
+    "presentationOwnerChangeCapacity": 131072,
+    "performerCommandCapacity": 262144,
+    "primitiveDrawBufferCapacity": 131072,
+    "visualSnapshotBufferCapacity": 131072,
+    "visualProxyBufferCapacity": 131072,
+    "presentationRequestCapacity": 262144,
+    "groundOverlayCapacity": 65536,
+    "roadSplineCapacity": 65536,
+    "worldHudCapacity": 131072,
+    "screenHudCapacity": 131072,
+    "skinnedVisualBatchCapacity": 131072,
+    "minimapMarkerCapacity": 131072,
+    "runtimeEntitySpawnQueueCapacity": 131072,
+    "runtimeEntitySpawnReceiptQueueCapacity": 131072,
+    "minimap": {
+      "initialZoomNormalized": 1.0,
+      "wheelZoomNormalizedStep": 0.08,
+      "buttonZoomNormalizedStep": 0.18,
+      "zoomSliderEnabled": true,
+      "modeToggleEnabled": true,
+      "rotateToggleEnabled": true,
+      "debugMarkerSampleCapacity": 128,
+      "minZoomExtentMode": "OneChunk",
+      "maxZoomExtentMode": "FullMap",
+      "minZoomExplicitHalfExtentCm": 750.0,
+      "maxZoomExplicitHalfExtentCm": 0.0
+    }
+  },
+  "navigation2D": {
+    "enabled": false
+  }
+}

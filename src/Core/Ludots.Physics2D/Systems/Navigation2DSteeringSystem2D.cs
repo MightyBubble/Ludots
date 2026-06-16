@@ -37,6 +37,9 @@ namespace Ludots.Core.Physics2D.Systems
         private static readonly QueryDescription _flowObstacleQuery = new QueryDescription()
             .WithAll<NavObstacle2D, Position2D, NavKinematics2D>();
 
+        private static readonly QueryDescription _flowCompoundObstacleQuery = new QueryDescription()
+            .WithAll<NavCompoundObstacle2D, Position2D, NavKinematics2D>();
+
         private static readonly QueryDescription _sleepingPointGoalQuery = new QueryDescription()
             .WithAll<NavAgent2D, NavGoal2D, SleepingTag>();
 
@@ -1674,6 +1677,53 @@ namespace Ludots.Core.Physics2D.Systems
                     }
                 }
             }
+
+            foreach (ref var chunk in World.Query(in _flowCompoundObstacleQuery))
+            {
+                ref var entityFirst = ref chunk.Entity(0);
+                var positions = chunk.GetSpan<Position2D>();
+                var obstacles = chunk.GetSpan<NavCompoundObstacle2D>();
+                var kinematics = chunk.GetSpan<NavKinematics2D>();
+                foreach (var index in chunk)
+                {
+                    var entity = System.Runtime.CompilerServices.Unsafe.Add(ref entityFirst, index);
+                    float haloCenterRadiusCm = StampFlowCompoundObstacleShape(entity, positions[index], obstacles[index]);
+
+                    var discomfort = _runtime.Config.FlowCrowd.Discomfort;
+                    if (discomfort.Enabled && discomfort.ObstacleHaloRadiusCm > 0 && discomfort.ObstacleHaloValue > 0f)
+                    {
+                        _runtime.Surface.SplatDiscomfortCircle(
+                            positions[index].Value.ToVector2(),
+                            MathF.Max(haloCenterRadiusCm, kinematics[index].RadiusCm.ToFloat()) + discomfort.ObstacleHaloRadiusCm,
+                            discomfort.ObstacleHaloValue,
+                            discomfort.ObstacleHaloEdgeValue,
+                            createTilesIfMissing: false);
+                    }
+                }
+            }
+        }
+
+        private float StampFlowCompoundObstacleShape(Entity entity, in Position2D position, in NavCompoundObstacle2D obstacle)
+        {
+            float radiusCm = 0f;
+            for (int i = 0; i < obstacle.PieceCount; i++)
+            {
+                var (shape, shapeDataIndex) = obstacle.GetPiece(i);
+                float pieceRadiusCm = StampFlowObstacleShape(
+                    entity,
+                    in position,
+                    new NavObstacle2D
+                    {
+                        Shape = shape,
+                        ShapeDataIndex = shapeDataIndex
+                    });
+                if (pieceRadiusCm > radiusCm)
+                {
+                    radiusCm = pieceRadiusCm;
+                }
+            }
+
+            return radiusCm;
         }
 
         private float StampFlowObstacleShape(Entity entity, in Position2D position, in NavObstacle2D obstacle)

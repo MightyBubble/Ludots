@@ -145,7 +145,12 @@ namespace Ludots.Core.Physics2D.Ticking
                 PhysicsStepsLastFixedTick = stepsToRun,
                 PhysicsUpdateMs = _stopwatch.Elapsed.TotalMilliseconds,
                 PotentialPairs = potentialPairs,
-                ContactPairs = contactPairs
+                ContactPairs = contactPairs,
+                StaticBodyCount = Build.StaticRigidBodyDescriptors.Count,
+                DynamicBodyCount = Build.DynamicRigidBodyDescriptors.Count,
+                DirtyStaticBodyCount = Build.DirtyStaticBodyCountLastUpdate,
+                StaticMaterializationMs = Build.StaticMaterializationMsLastUpdate,
+                DynamicBuildMs = Build.DynamicBuildMsLastUpdate
             };
             _world.Set(_statsEntity, stats);
         }

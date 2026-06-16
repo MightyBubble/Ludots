@@ -1,6 +1,8 @@
 using System;
 using System.Collections.Generic;
+using System.Globalization;
 using System.Numerics;
+using System.Text;
 using Ludots.Core.Input.Config;
 
 namespace Ludots.Core.Input.Runtime
@@ -12,6 +14,7 @@ namespace Ludots.Core.Input.Runtime
         private readonly Dictionary<string, CompiledContext> _contextsById = new(StringComparer.Ordinal);
         private readonly Dictionary<string, int> _actionIndices = new(StringComparer.Ordinal);
         private readonly Dictionary<string, Vector3> _injections = new(StringComparer.Ordinal);
+        private readonly HashSet<string> _seenBindingContributions = new(StringComparer.Ordinal);
         private readonly InputActionInstance[] _actionStates;
         private readonly Vector3[] _tempValues;
         private Vector2 _mousePosition;
@@ -154,6 +157,7 @@ namespace Ludots.Core.Input.Runtime
             }
 
             Array.Clear(_tempValues, 0, _tempValues.Length);
+            _seenBindingContributions.Clear();
 
             for (int contextIndex = 0; contextIndex < _activeContexts.Count; contextIndex++)
             {
@@ -163,6 +167,11 @@ namespace Ludots.Core.Input.Runtime
                 {
                     ref readonly var binding = ref bindings[bindingIndex];
                     if (binding.ActionIndex < 0)
+                    {
+                        continue;
+                    }
+
+                    if (!_seenBindingContributions.Add(binding.ContributionKey))
                     {
                         continue;
                     }
@@ -237,6 +246,7 @@ namespace Ludots.Core.Input.Runtime
                         BindingSourceKind.CompositeButtonChord,
                     _ => BindingSourceKind.Unsupported
                 };
+                compiled.ContributionKey = BuildContributionKey(compiled);
                 return compiled;
             }
 
@@ -261,7 +271,55 @@ namespace Ludots.Core.Input.Runtime
                 compiled.SourceKind = BindingSourceKind.Unsupported;
             }
 
+            compiled.ContributionKey = BuildContributionKey(compiled);
             return compiled;
+        }
+
+        private static string BuildContributionKey(CompiledBinding binding)
+        {
+            var sb = new StringBuilder();
+            AppendContributionKey(sb, binding);
+            return sb.ToString();
+        }
+
+        private static void AppendContributionKey(StringBuilder sb, CompiledBinding binding)
+        {
+            sb.Append(binding.ActionIndex)
+                .Append('|')
+                .Append((byte)binding.SourceKind)
+                .Append('|')
+                .Append(binding.Path)
+                .Append('|');
+
+            var processors = binding.Processors;
+            for (int i = 0; i < processors.Length; i++)
+            {
+                sb.Append((byte)processors[i].Kind)
+                    .Append(':')
+                    .Append(processors[i].Scalar.ToString("R", CultureInfo.InvariantCulture))
+                    .Append(':')
+                    .Append(processors[i].AxisMask)
+                    .Append(',');
+            }
+
+            var parts = binding.CompositeParts;
+            if (parts.Length == 0)
+            {
+                return;
+            }
+
+            sb.Append('[');
+            for (int i = 0; i < parts.Length; i++)
+            {
+                if (i > 0)
+                {
+                    sb.Append(';');
+                }
+
+                AppendContributionKey(sb, parts[i]);
+            }
+
+            sb.Append(']');
         }
 
         private static CompiledProcessor[] CompileProcessors(List<InputModifierDef> processorDefs)
@@ -467,6 +525,7 @@ namespace Ludots.Core.Input.Runtime
             public int ActionIndex { get; init; }
             public string Path { get; init; } = string.Empty;
             public BindingSourceKind SourceKind { get; set; }
+            public string ContributionKey { get; set; } = string.Empty;
             public CompiledBinding[] CompositeParts { get; set; } = Array.Empty<CompiledBinding>();
             public CompiledProcessor[] Processors { get; init; } = Array.Empty<CompiledProcessor>();
         }

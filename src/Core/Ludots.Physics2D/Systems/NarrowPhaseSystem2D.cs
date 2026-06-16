@@ -30,8 +30,16 @@ namespace Ludots.Core.Physics2D.Systems
 
                 ref var posA = ref pair.EntityA.Get<Position2D>();
                 ref var posB = ref pair.EntityB.Get<Position2D>();
-                ref var colliderA = ref pair.EntityA.Get<Collider2D>();
-                ref var colliderB = ref pair.EntityB.Get<Collider2D>();
+                var colliderA = new Collider2D
+                {
+                    Type = pair.ColliderTypeA,
+                    ShapeDataIndex = pair.ShapeDataIndexA
+                };
+                var colliderB = new Collider2D
+                {
+                    Type = pair.ColliderTypeB,
+                    ShapeDataIndex = pair.ShapeDataIndexB
+                };
 
                 var rotA = World.TryGet(pair.EntityA, out Rotation2D ra) ? ra : Rotation2D.Identity;
                 var rotB = World.TryGet(pair.EntityB, out Rotation2D rb) ? rb : Rotation2D.Identity;

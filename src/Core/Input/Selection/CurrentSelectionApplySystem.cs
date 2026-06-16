@@ -92,7 +92,14 @@ namespace Ludots.Core.Input.Selection
                 return;
             }
 
-            if (pointer.Confirm.PressedThisFrame)
+            if (pointer.Confirm.PressedThisFrame && pointer.Confirm.ReleasedThisFrame)
+            {
+                drag.Begin(pointer.Confirm.ResolvePressPointerOrCurrent(), ResolveAcquisitionMode());
+                drag.CurrentScreen = pointer.Confirm.ResolveReleasePointerOrCurrent();
+                ApplyCompletedSelectionGesture(owner, in drag, hovered, pointer);
+                drag.Clear();
+            }
+            else if (pointer.Confirm.PressedThisFrame)
             {
                 drag.Begin(pointer.Confirm.ResolvePressPointerOrCurrent(), ResolveAcquisitionMode());
             }
@@ -104,22 +111,7 @@ namespace Ludots.Core.Input.Selection
             if (pointer.Confirm.ReleasedThisFrame && drag.Active)
             {
                 drag.CurrentScreen = pointer.Confirm.ResolveReleasePointerOrCurrent();
-                SelectionAcquisitionMode acquisitionMode = drag.AcquisitionMode;
-
-                if (drag.ExceedsThreshold(_selection.Config.DragThresholdPixels))
-                {
-                    ApplyBoxSelection(owner, in drag, acquisitionMode);
-                }
-                else
-                {
-                    Entity acquired = ResolveClickAcquisition(owner, hovered);
-                    ApplyClickSelection(owner, acquired, acquisitionMode);
-                    if (pointer.HasGroundPoint)
-                    {
-                        OnEntitySelected?.Invoke(pointer.GroundWorldCm, acquired);
-                    }
-                }
-
+                ApplyCompletedSelectionGesture(owner, in drag, hovered, pointer);
                 drag.Clear();
             }
             else if (!pointer.Confirm.IsDown && drag.Active)
@@ -135,6 +127,24 @@ namespace Ludots.Core.Input.Selection
                    localObj is Entity local &&
                    _world.IsAlive(local) &&
                    (owner = local) != Entity.Null;
+        }
+
+        private void ApplyCompletedSelectionGesture(Entity owner, in SelectionDragState drag, Entity hovered, in PointerInteractionSnapshot pointer)
+        {
+            SelectionAcquisitionMode acquisitionMode = drag.AcquisitionMode;
+
+            if (drag.ExceedsThreshold(_selection.Config.DragThresholdPixels))
+            {
+                ApplyBoxSelection(owner, in drag, acquisitionMode);
+                return;
+            }
+
+            Entity acquired = ResolveClickAcquisition(owner, hovered);
+            ApplyClickSelection(owner, acquired, acquisitionMode);
+            if (pointer.HasGroundPoint)
+            {
+                OnEntitySelected?.Invoke(pointer.GroundWorldCm, acquired);
+            }
         }
 
         private bool IsSelectionSuppressed()

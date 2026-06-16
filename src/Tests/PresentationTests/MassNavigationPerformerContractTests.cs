@@ -272,6 +272,8 @@ namespace Ludots.Tests.Presentation
                 ?? throw new InvalidOperationException("MassNavigationConfig.cadence missing.");
             Assert.That(cadence["simulationHz"]?.GetValue<int>(), Is.GreaterThan(0));
             Assert.That(cadence["targetUpdateHz"]?.GetValue<int>(), Is.GreaterThanOrEqualTo(0));
+            Assert.That(cadence["targetUpdateMemberBudgetPerStep"]?.GetValue<int>(), Is.InRange(1, 4096),
+                "The 10k MassNavigation showcase must author a per-step target refresh budget so formation target updates do not spike a whole frame.");
             Assert.That(cadence["flowStepHz"]?.GetValue<int>(), Is.GreaterThanOrEqualTo(0));
             Assert.That(cadence["flowCrowdStampHz"]?.GetValue<int>(), Is.GreaterThanOrEqualTo(0));
             Assert.That(cadence["flowObstacleStampHz"]?.GetValue<int>(), Is.GreaterThanOrEqualTo(0));
@@ -315,6 +317,10 @@ namespace Ludots.Tests.Presentation
                 ?? throw new InvalidOperationException("MassNavigationConfig.semantics.obstacle missing.");
             Assert.That(obstacle.ContainsKey("agentBodyRadiusCm"), Is.False,
                 "Obstacle hard-block radius must use each agent profile bodyRadiusCm, not a global obstacle body radius.");
+            JsonObject steering = config["semantics"]?["steering"]?.AsObject()
+                ?? throw new InvalidOperationException("MassNavigationConfig.semantics.steering missing.");
+            Assert.That(steering["maxSeparationNeighborsPerUnit"]?.GetValue<int>(), Is.InRange(1, 64),
+                "The 10k MassNavigation showcase must cap per-agent soft-separation neighbor work; hard resolve remains the penetration backstop.");
 
             JsonObject legacyAvoidanceConfig = ReadObject(Path.Combine(modRoot, "assets", "MassNavigationConfig.json"));
             legacyAvoidanceConfig["avoidance"]!["lightNavMass"] = 1.0f;
@@ -440,6 +446,25 @@ namespace Ludots.Tests.Presentation
             Assert.That(config.World, Is.Not.Null);
             Assert.That(config.World!.SolverWindowWidthCm, Is.EqualTo(10_000));
             Assert.That(config.Presentation.ResolveAgentTemplateId(1, heavy: false), Is.EqualTo("mass_navigation_agent_azure_light"));
+        }
+
+        [Test]
+        public void AutoSpawnConfig_AuthorsInteractiveCapacitiesForFullScenarioSelection()
+        {
+            string modRoot = MassNavigationModRoot();
+            JsonObject configJson = ReadObject(Path.Combine(modRoot, "assets", "MassNavigationConfig.json"));
+            MassNavigationMod.Runtime.MassNavigationConfig config =
+                MassNavigationMod.Runtime.MassNavigationConfig.Load(configJson);
+
+            Assert.That(config.ScenarioRuntime.AutoSpawnConfiguredScenario, Is.True);
+            int authoredAgentCount = checked(config.Scenario.AgentsPerTeam * config.Scenario.Teams.Length);
+            Assert.That(config.ScenarioRuntime.InitialSelectionScratchCapacity, Is.GreaterThanOrEqualTo(authoredAgentCount));
+            Assert.That(config.ScenarioRuntime.InitialSelectedEntityCapacity, Is.GreaterThanOrEqualTo(authoredAgentCount));
+            Assert.That(config.ScenarioRuntime.RuntimeCapacity.SelectionMemberScratchCapacity, Is.GreaterThanOrEqualTo(authoredAgentCount));
+            Assert.That(config.ScenarioRuntime.RuntimeCapacity.GroupMemberCapacity, Is.GreaterThanOrEqualTo(authoredAgentCount));
+            Assert.That(config.ScenarioRuntime.RuntimeCapacity.OrderIngestionMemberCapacity, Is.GreaterThanOrEqualTo(authoredAgentCount));
+            Assert.That(config.ScenarioRuntime.PanelControls.Visible, Is.False);
+            Assert.That(config.ScenarioRuntime.PanelControls.PanelRefreshIntervalSeconds, Is.GreaterThanOrEqualTo(1f));
         }
 
         [Test]

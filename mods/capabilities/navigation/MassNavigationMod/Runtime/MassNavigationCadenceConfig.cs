@@ -7,6 +7,7 @@ public sealed class MassNavigationCadenceConfig
 {
     public int SimulationHz { get; set; } = 15;
     public int TargetUpdateHz { get; set; } = 15;
+    public int TargetUpdateMemberBudgetPerStep { get; set; }
     public int FlowStepHz { get; set; } = 5;
     public int FlowCrowdStampHz { get; set; } = 5;
     public int FlowObstacleStampHz { get; set; } = 2;
@@ -20,6 +21,11 @@ public sealed class MassNavigationCadenceConfig
     {
         ValidateHz(nameof(SimulationHz), SimulationHz, allowZero: false);
         ValidateHz(nameof(TargetUpdateHz), TargetUpdateHz, allowZero: true);
+        if (TargetUpdateMemberBudgetPerStep < 0)
+        {
+            throw new InvalidOperationException("Mass-nav cadence TargetUpdateMemberBudgetPerStep must be >= 0.");
+        }
+
         ValidateHz(nameof(FlowStepHz), FlowStepHz, allowZero: true);
         ValidateHz(nameof(FlowCrowdStampHz), FlowCrowdStampHz, allowZero: true);
         ValidateHz(nameof(FlowObstacleStampHz), FlowObstacleStampHz, allowZero: true);

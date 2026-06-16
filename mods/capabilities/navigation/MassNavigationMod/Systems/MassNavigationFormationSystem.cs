@@ -1,9 +1,6 @@
 using System.Diagnostics;
 using Arch.System;
 using Ludots.Core.Engine;
-using Ludots.Core.Gameplay.Camera;
-using Ludots.Core.Presentation.Camera;
-using Ludots.Core.Scripting;
 using MassNavigationMod.Runtime;
 
 namespace MassNavigationMod.Systems;
@@ -31,7 +28,7 @@ internal sealed class MassNavigationFormationSystem : ISystem<float>
             return;
         }
 
-        ObserveCameraFocus();
+        _simulation.AdvanceCommandFocusHoldTick();
         if (!_simulation.AgentState.HasBoundAgents(_simulation.MassFlow.UnitCount))
         {
             return;
@@ -51,7 +48,8 @@ internal sealed class MassNavigationFormationSystem : ISystem<float>
                     _simulation.MassFlow,
                     _simulation.AgentState,
                     _simulation.SelectedEntities,
-                    _simulation.FrameIndex);
+                    _simulation.FrameIndex,
+                    _simulation.Cadence.TargetUpdateMemberBudgetPerStep);
                 _simulation.ObserveFormationTargets((Stopwatch.GetTimestamp() - targetStart) * 1000.0 / Stopwatch.Frequency);
             }
 
@@ -86,22 +84,6 @@ internal sealed class MassNavigationFormationSystem : ISystem<float>
         }
     }
 
-    private void ObserveCameraFocus()
-    {
-        var camera = _engine.GameSession.Camera.State;
-        if (_engine.GetService(CoreServiceKeys.ViewController) is not IViewController view)
-        {
-            _simulation.ObserveCameraFocus(camera.TargetCm);
-            return;
-        }
-
-        var extent = CameraViewportUtil.ComputeViewportExtent(
-            camera.DistanceCm,
-            camera.FovYDeg,
-            camera.Pitch,
-            view.AspectRatio);
-        _simulation.ObserveCameraFocus(camera.TargetCm, extent.widthCm, extent.heightCm);
-    }
 }
 
 

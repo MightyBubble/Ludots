@@ -15,6 +15,8 @@
 - [Mod Architecture](mod_architecture.md)
 - [Mod Runtime Single Source of Truth](mod_runtime_single_source_of_truth.md)
 - [Launcher SSOT and User-First Endgame](launcher_ssot_user_first.md)
+- [Spatial Geometry SSOT](spatial_geometry_ssot.md)
+- [Capability Standard Showcases](../../gitbook/architecture/capability-standard-showcases.md)
 - [Pacemaker](pacemaker.md)
 - [Runtime Entity Spawn Flow](runtime_entity_spawn_flow.md)
 - [Startup Entrypoints](startup_entrypoints.md)

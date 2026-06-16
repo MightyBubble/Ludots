@@ -10,6 +10,8 @@
 - [实体仿真分层与车道](entity-simulation-layering.md)
 - [实体仿真工作流拆分](entity-simulation-workstreams.md)
 - [实体仿真阶段验收](entity-simulation-uat.md)
+- [空间几何与静态障碍 SSOT](spatial-geometry-ssot.md)
+- [能力标准 Showcase](capability-standard-showcases.md)
 - [UAT 可玩 Showcase 矩阵](uat-playable-showcase-matrix.md)
 - [Prefab Grounding 与 Visual Height](prefab-grounding-and-visual-height.md)
 - [Core Minimap Authoring](core-minimap-authoring.md)

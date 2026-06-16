@@ -152,6 +152,7 @@ public sealed class MassNavigationGroupSemantics
 public sealed class MassNavigationSteeringSemantics
 {
     public float SeparationRadiusCm { get; set; } = 200f;
+    public int MaxSeparationNeighborsPerUnit { get; set; } = 24;
     public float GoalArrivalRadiusCm { get; set; } = 1_200f;
     public float FlowObstacleAvoidanceScale { get; set; } = 1.2f;
     public float FormationSeparationScale { get; set; } = 2f;
@@ -161,6 +162,7 @@ public sealed class MassNavigationSteeringSemantics
     public void Validate()
     {
         RequirePositive(SeparationRadiusCm, nameof(SeparationRadiusCm));
+        RequirePositive(MaxSeparationNeighborsPerUnit, nameof(MaxSeparationNeighborsPerUnit));
         RequirePositive(GoalArrivalRadiusCm, nameof(GoalArrivalRadiusCm));
         RequireNonNegative(FlowObstacleAvoidanceScale, nameof(FlowObstacleAvoidanceScale));
         RequireNonNegative(FormationSeparationScale, nameof(FormationSeparationScale));
@@ -171,6 +173,14 @@ public sealed class MassNavigationSteeringSemantics
     private static void RequirePositive(float value, string name)
     {
         if (!(value > 0f))
+        {
+            throw new System.InvalidOperationException($"Mass-nav steering semantics requires {name} > 0.");
+        }
+    }
+
+    private static void RequirePositive(int value, string name)
+    {
+        if (value <= 0)
         {
             throw new System.InvalidOperationException($"Mass-nav steering semantics requires {name} > 0.");
         }

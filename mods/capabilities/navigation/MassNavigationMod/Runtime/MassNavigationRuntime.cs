@@ -11,8 +11,10 @@ using Ludots.Core.Modding;
 using Ludots.Core.Presentation.Minimap;
 using Ludots.Core.Presentation.Assets;
 using Ludots.Core.Presentation.Hud;
+using Ludots.Core.Presentation.Systems;
 using Ludots.Core.Scripting;
 using Ludots.Core.Spatial;
+using Ludots.Core.Systems;
 using Ludots.UI;
 using MassNavigationMod.Systems;
 using MassNavigationMod.UI;
@@ -65,6 +67,8 @@ internal sealed class MassNavigationRuntime
         engine.InsertSystemBeforeRequired<MassNavigationFormationSystem>(
             new MassNavigationPreSimulationStepSystem(),
             SystemGroup.PostMovement);
+        engine.InsertPresentationSystemBefore<CameraCullingSystem>(
+            new MassNavigationCameraFocusPresentationSystem(engine, simulation));
         engine.RegisterPresentationSystem(new MassNavigationHudPresentationSystem(engine, simulation));
         engine.RegisterPresentationSystem(new MassNavigationPanelPresentationSystem(
             engine,
@@ -177,13 +181,14 @@ internal sealed class MassNavigationRuntime
             return;
         }
 
-        if (engine.GetService(CoreServiceKeys.RenderDebugState) is RenderDebugState renderDebug)
-        {
-            renderDebug.DrawSkiaUi = true;
-        }
-
         MassNavigationSimulationRuntime simulation = engine.GetService(MassNavigationKeys.SimulationRuntime)
             ?? throw new System.InvalidOperationException("MassNavigationMod requires simulation runtime.");
+        if (!simulation.Config.ScenarioRuntime.PanelControls.Visible)
+        {
+            _panelController.ClearIfOwned(root);
+            return;
+        }
+
         _panelController.MountOrSync(engine, simulation);
     }
 

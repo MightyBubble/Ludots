@@ -327,6 +327,11 @@ namespace Ludots.Tests.Presentation
             Assert.That(solver["fieldWidthCm"]!.GetValue<int>(), Is.EqualTo(world["solverWindowWidthCm"]!.GetValue<int>()));
             Assert.That(solver["fieldHeightCm"]!.GetValue<int>(), Is.EqualTo(world["solverWindowHeightCm"]!.GetValue<int>()));
 
+            JsonObject steering = config["semantics"]?["steering"]?.AsObject()
+                ?? throw new InvalidOperationException("semantics.steering must be authored.");
+            Assert.That(steering["maxSeparationNeighborsPerUnit"]?.GetValue<int>(), Is.InRange(1, 64),
+                "Total-war mass navigation must keep bounded per-agent soft-separation work for live showcase scale.");
+
             JsonObject cameraProfiles = config["cameraProfiles"]?.AsObject()
                 ?? throw new InvalidOperationException("cameraProfiles must be authored.");
             Assert.That(RequireString(cameraProfiles, "tacticalProfileId"), Is.EqualTo("Camera.Profile.MassNavigationTactical"));
@@ -348,7 +353,8 @@ namespace Ludots.Tests.Presentation
 
             JsonObject residency = config["viewResidency"]?.AsObject()
                 ?? throw new InvalidOperationException("viewResidency must be authored.");
-            Assert.That(RequireString(residency, "mode"), Is.EqualTo("Probe"));
+            Assert.That(RequireString(residency, "mode"), Is.EqualTo("Camera"),
+                "Playable TotalWar defaults must keep culling residency on the real tactical camera; probe focus is a manual diagnostics mode.");
             Assert.That(residency["retainSeconds"]?.GetValue<float>(), Is.EqualTo(12f));
             Assert.That(residency["radiusCm"]?.GetValue<int>(), Is.EqualTo(24000));
             Assert.That(RequireString(residency, "initialProbeId"), Is.EqualTo("battlefield_overview"));
@@ -1324,6 +1330,55 @@ namespace Ludots.Tests.Presentation
         }
 
         [Test]
+        public void MassNavigationGroupRuntime_TargetRefreshBudgetSlicesLargeGroupsAcrossSteps()
+        {
+            using MassNavigationGroupRuntimeFixture fixture = CreateGroupRuntimeFixture(
+                new Vector2(1000f, 1000f),
+                new Vector2(1180f, 1000f),
+                new Vector2(1360f, 1000f),
+                new Vector2(1540f, 1000f));
+
+            int[] members = { 0, 1, 2, 3 };
+            fixture.Runtime.UpsertOrderMoveCommand(
+                fixture.Flow,
+                fixture.AgentState,
+                orderToken: 11,
+                memberIndices: members,
+                teamId: 1,
+                destinationWorldCm: new Vector2(8000f, 7000f),
+                formationMode: MassNavigationFormationMode.Line,
+                rotationRadians: 0f);
+
+            Vector2[] initialTargets = ReadUnitTargets(fixture.Flow, members);
+
+            fixture.Runtime.UpdateTargets(
+                fixture.World,
+                fixture.Flow,
+                fixture.AgentState,
+                Array.Empty<Entity>(),
+                frameIndex: 1,
+                memberBudgetPerStep: 2);
+            Vector2[] firstSliceTargets = ReadUnitTargets(fixture.Flow, members);
+
+            Assert.That(TargetDeltaSq(initialTargets[0], firstSliceTargets[0]), Is.GreaterThan(1f));
+            Assert.That(TargetDeltaSq(initialTargets[1], firstSliceTargets[1]), Is.GreaterThan(1f));
+            Assert.That(firstSliceTargets[2], Is.EqualTo(initialTargets[2]));
+            Assert.That(firstSliceTargets[3], Is.EqualTo(initialTargets[3]));
+
+            fixture.Runtime.UpdateTargets(
+                fixture.World,
+                fixture.Flow,
+                fixture.AgentState,
+                Array.Empty<Entity>(),
+                frameIndex: 2,
+                memberBudgetPerStep: 2);
+            Vector2[] secondSliceTargets = ReadUnitTargets(fixture.Flow, members);
+
+            Assert.That(TargetDeltaSq(initialTargets[2], secondSliceTargets[2]), Is.GreaterThan(1f));
+            Assert.That(TargetDeltaSq(initialTargets[3], secondSliceTargets[3]), Is.GreaterThan(1f));
+        }
+
+        [Test]
         public void MassNavigationGroupMemberRemoval_RewritesRemainingMemberOrderTargetsAndAnchors()
         {
             using MassNavigationGroupRuntimeFixture fixture = CreateGroupRuntimeFixture(
@@ -1740,7 +1795,7 @@ namespace Ludots.Tests.Presentation
 
             AssertFormationOutlines(engine);
             AssertObstacleOverlays(engine, simulation);
-            AssertCullingProbeAndDebugDraw(engine);
+            AssertDefaultCullingFollowsCameraAndDebugDraw(engine);
 
             Entity[] initialSelection = SelectionContextRuntime.SnapshotCurrentSelection(engine.World, engine.GlobalContext);
             DragSelect(engine, GetInputBackend(engine), ProjectEntitiesDragRect(engine, initialSelection));
@@ -1784,6 +1839,24 @@ namespace Ludots.Tests.Presentation
             Assert.That(simulation.HasCommandFocus, Is.True);
             Assert.That(simulation.CommandFocusXCm, Is.EqualTo(expectedMoveTarget.X).Within(1f));
             Assert.That(simulation.CommandFocusYCm, Is.EqualTo(expectedMoveTarget.Y).Within(1f));
+        }
+
+        [Test]
+        public void TotalWarRuntime_RefreshesMassNavigationCameraFocusBeforeCameraCulling()
+        {
+            using GameEngine engine = CreatePlayableTotalWarEngine();
+            engine.LoadMap("mass_navigation_total_war");
+
+            IReadOnlyList<object> presentationSystems = SnapshotPresentationSystems(engine);
+            int focusIndex = IndexOfSystem(presentationSystems, "MassNavigationCameraFocusPresentationSystem");
+            int cullingIndex = IndexOfSystem(presentationSystems, nameof(CameraCullingSystem));
+
+            Assert.That(focusIndex, Is.GreaterThanOrEqualTo(0),
+                "MassNavigationMod must install a presentation camera-focus system for real showcase residency/culling.");
+            Assert.That(cullingIndex, Is.GreaterThanOrEqualTo(0),
+                "Playable Total War showcase tests must mirror the real host culling pipeline.");
+            Assert.That(focusIndex, Is.LessThan(cullingIndex),
+                "MassNavigation camera focus must update before CameraCullingSystem reads camera-dependent residency/cull facts.");
         }
 
         [Test]
@@ -2652,6 +2725,8 @@ namespace Ludots.Tests.Presentation
             Assert.That(flowSource, Does.Contain("int hardResolveSearchRadius = _hardResolveHashSearchRadiusCellsByAgent[i]"));
             Assert.That(separationBody, Does.Not.Contain("_maxBodyRadiusCm * 2f"));
             Assert.That(hardResolveBody, Does.Not.Contain("+ _maxBodyRadiusCm +"));
+            Assert.That(hardResolveBody, Does.Not.Contain("HardResolveCandidateDistanceCm"),
+                "Hard resolve candidate distance may wake agents for correction, but the hard-overlap pair scan itself must stay bounded to body-radius overlap.");
         }
 
         private static bool PathHasSegment(string path, string segment)
@@ -2687,6 +2762,7 @@ namespace Ludots.Tests.Presentation
 
         private static GameEngine CreatePlayableTotalWarEngine()
         {
+            EnsureTotalWarAssemblyPreloaded();
             var engine = new GameEngine();
             engine.InitializeWithConfigPipeline(TotalWarDependencyPaths(), Path.Combine(FindRepoRoot(), "assets"));
             InstallPlayableInput(engine);
@@ -2709,6 +2785,11 @@ namespace Ludots.Tests.Presentation
 
             engine.Start();
             return engine;
+        }
+
+        private static void EnsureTotalWarAssemblyPreloaded()
+        {
+            _ = typeof(TotalWarFormationAgent).Assembly;
         }
 
         private static void InstallPlayableInput(GameEngine engine)
@@ -2762,6 +2843,27 @@ namespace Ludots.Tests.Presentation
             }
 
             Assert.That(predicate(), Is.True, failureMessage);
+        }
+
+        private static IReadOnlyList<object> SnapshotPresentationSystems(GameEngine engine)
+        {
+            FieldInfo field = typeof(GameEngine).GetField("_presentationSystems", BindingFlags.Instance | BindingFlags.NonPublic)
+                ?? throw new InvalidOperationException("GameEngine presentation system list field was not found.");
+            return field.GetValue(engine) as IReadOnlyList<object>
+                ?? throw new InvalidOperationException("GameEngine presentation system list had an unexpected type.");
+        }
+
+        private static int IndexOfSystem(IReadOnlyList<object> systems, string systemName)
+        {
+            for (int i = 0; i < systems.Count; i++)
+            {
+                if (string.Equals(systems[i].GetType().Name, systemName, StringComparison.Ordinal))
+                {
+                    return i;
+                }
+            }
+
+            return -1;
         }
 
         private static Vector2 WorldToScreen(GameEngine engine, Vector2 worldCm)
@@ -3390,16 +3492,19 @@ namespace Ludots.Tests.Presentation
             Assert.That(ringCount, Is.GreaterThanOrEqualTo(simulation.NavigationObstacleCount));
         }
 
-        private static void AssertCullingProbeAndDebugDraw(GameEngine engine)
+        private static void AssertDefaultCullingFollowsCameraAndDebugDraw(GameEngine engine)
         {
             CameraCullingFocusOverride focus = engine.GetService(CoreServiceKeys.CameraCullingFocusOverride)
                 ?? throw new InvalidOperationException("CameraCullingFocusOverride is missing.");
-            Assert.That(focus.Enabled, Is.True);
-            Assert.That(focus.SourceId, Is.EqualTo("battlefield_overview"));
+            Assert.That(focus.Enabled, Is.False,
+                "Playable TotalWar default must not pin culling to a static probe while the 3C tactical camera moves.");
+            Assert.That(focus.SourceId, Is.EqualTo(string.Empty));
 
             CameraCullingDebugState culling = engine.GetService(CoreServiceKeys.CameraCullingDebugState)
                 ?? throw new InvalidOperationException("CameraCullingDebugState is missing.");
             Assert.That(culling.VisibleEntityCount, Is.GreaterThan(0));
+            Assert.That(culling.CameraTargetCm.X, Is.EqualTo(engine.GameSession.Camera.State.TargetCm.X).Within(0.5f));
+            Assert.That(culling.CameraTargetCm.Y, Is.EqualTo(engine.GameSession.Camera.State.TargetCm.Y).Within(0.5f));
 
             RenderCameraDebugState renderDebug = engine.GetService(CoreServiceKeys.RenderCameraDebugState)
                 ?? throw new InvalidOperationException("RenderCameraDebugState is missing.");
@@ -3622,6 +3727,25 @@ namespace Ludots.Tests.Presentation
                 LoadedChunkCapacity = 16,
                 MetadataTeamCapacity = 4,
             };
+        }
+
+        private static Vector2[] ReadUnitTargets(MassFlowSimulationState flow, ReadOnlySpan<int> unitIndices)
+        {
+            var targets = new Vector2[unitIndices.Length];
+            for (int i = 0; i < unitIndices.Length; i++)
+            {
+                Assert.That(flow.TryGetUnitTarget(unitIndices[i], out float xCm, out float yCm), Is.True);
+                targets[i] = new Vector2(xCm, yCm);
+            }
+
+            return targets;
+        }
+
+        private static float TargetDeltaSq(Vector2 left, Vector2 right)
+        {
+            float dx = left.X - right.X;
+            float dy = left.Y - right.Y;
+            return (dx * dx) + (dy * dy);
         }
 
         private static string TotalWarModRoot()

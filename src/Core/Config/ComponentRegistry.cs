@@ -69,6 +69,7 @@ namespace Ludots.Core.Config
             Register<PresentationStaticHeightPending>("PresentationStaticHeightPending");
             Register("ManifestationObstacleIntent2D", SetManifestationObstacleIntent2D);
             Register("ManifestationObstaclePolygon2D", SetManifestationObstaclePolygon2D);
+            Register("ObstacleGeometryProfile2D", SetObstacleGeometryProfile2D);
             Register("ManifestationMotion2D", SetManifestationMotion2D);
             Register("DestroyWhenParentExecutionEnds", SetDestroyWhenParentExecutionEnds);
         }
@@ -615,9 +616,13 @@ namespace Ludots.Core.Config
                 intent.HalfWidthCm = ReadIntProperty(obj, "halfWidthCm", "ManifestationObstacleIntent2D");
                 intent.HalfHeightCm = ReadIntProperty(obj, "halfHeightCm", "ManifestationObstacleIntent2D");
             }
-            else
+            else if (intent.Shape == ManifestationObstacleShape2D.Polygon)
             {
                 RequireAbsentProperties(obj, "ManifestationObstacleIntent2D Polygon", "radiusCm", "halfWidthCm", "halfHeightCm");
+            }
+            else
+            {
+                RequireAbsentProperties(obj, "ManifestationObstacleIntent2D GeometryProfile", "radiusCm", "halfWidthCm", "halfHeightCm");
             }
 
             bool hasLocalOffset = obj.TryGetPropertyValue("localOffsetCm", out _);
@@ -682,6 +687,95 @@ namespace Ludots.Core.Config
             entity.Add(polygon);
         }
 
+        private static void SetObstacleGeometryProfile2D(Entity entity, JsonNode data)
+        {
+            if (data is not JsonObject obj)
+            {
+                throw new InvalidOperationException("ObstacleGeometryProfile2D requires an object payload.");
+            }
+            ValidateProperties(obj, "ObstacleGeometryProfile2D", "pieces");
+
+            JsonArray? pieces = obj["pieces"] as JsonArray;
+            if (pieces == null)
+            {
+                throw new InvalidOperationException("ObstacleGeometryProfile2D requires a pieces array.");
+            }
+
+            if (pieces.Count < 1 || pieces.Count > ObstacleGeometryProfile2D.MaxPieces)
+            {
+                throw new InvalidOperationException($"ObstacleGeometryProfile2D pieces count must be between 1 and {ObstacleGeometryProfile2D.MaxPieces}.");
+            }
+
+            var profile = new ObstacleGeometryProfile2D();
+            for (int i = 0; i < pieces.Count; i++)
+            {
+                if (pieces[i] is not JsonObject pieceObj)
+                {
+                    throw new InvalidOperationException("ObstacleGeometryProfile2D pieces entries must be objects.");
+                }
+
+                string context = $"ObstacleGeometryProfile2D pieces[{i}]";
+                ValidateProperties(
+                    pieceObj,
+                    context,
+                    "shape",
+                    "radiusCm",
+                    "halfWidthCm",
+                    "halfHeightCm",
+                    "localOffsetCm",
+                    "vertices");
+
+                var shape = ParseObstacleGeometryPieceShape(RequireStringProperty(pieceObj, "shape", context), context);
+                WorldCmInt2 localOffset = RequirePointProperty(pieceObj, "localOffsetCm", $"{context}.localOffsetCm");
+
+                if (shape == ObstacleGeometryPieceShape2D.Circle)
+                {
+                    RequireAbsentProperties(pieceObj, context, "halfWidthCm", "halfHeightCm", "vertices");
+                    profile.SetCircle(i, ReadIntProperty(pieceObj, "radiusCm", context), localOffset.X, localOffset.Y);
+                }
+                else if (shape == ObstacleGeometryPieceShape2D.Box)
+                {
+                    RequireAbsentProperties(pieceObj, context, "radiusCm", "vertices");
+                    profile.SetBox(
+                        i,
+                        ReadIntProperty(pieceObj, "halfWidthCm", context),
+                        ReadIntProperty(pieceObj, "halfHeightCm", context),
+                        localOffset.X,
+                        localOffset.Y);
+                }
+                else
+                {
+                    RequireAbsentProperties(pieceObj, context, "radiusCm", "halfWidthCm", "halfHeightCm");
+                    JsonArray? vertices = pieceObj["vertices"] as JsonArray;
+                    if (vertices == null)
+                    {
+                        throw new InvalidOperationException($"{context} Polygon requires a vertices array.");
+                    }
+
+                    if (vertices.Count < 3 || vertices.Count > ObstacleGeometryProfile2D.MaxPolygonVertices)
+                    {
+                        throw new InvalidOperationException($"{context} Polygon vertices count must be between 3 and {ObstacleGeometryProfile2D.MaxPolygonVertices}.");
+                    }
+
+                    profile.SetPolygonVertexCount(i, vertices.Count);
+                    profile.SetPieceLocalOffset(i, localOffset.X, localOffset.Y);
+                    for (int vertexIndex = 0; vertexIndex < vertices.Count; vertexIndex++)
+                    {
+                        if (vertices[vertexIndex] is not JsonObject pointObj)
+                        {
+                            throw new InvalidOperationException($"{context} Polygon vertices entries must be objects with x/y.");
+                        }
+
+                        profile.SetPolygonVertex(i, vertexIndex, new WorldCmInt2(
+                            ReadIntProperty(pointObj, "x", $"{context} Polygon vertex"),
+                            ReadIntProperty(pointObj, "y", $"{context} Polygon vertex")));
+                    }
+                }
+            }
+
+            entity.Add(profile);
+        }
+
         private static void SetAbilityExecAimSync(Entity entity, JsonNode data)
         {
             if (data is not JsonObject obj)
@@ -732,7 +826,24 @@ namespace Ludots.Core.Config
                 "Circle" => ManifestationObstacleShape2D.Circle,
                 "Box" => ManifestationObstacleShape2D.Box,
                 "Polygon" => ManifestationObstacleShape2D.Polygon,
+                "GeometryProfile" => ManifestationObstacleShape2D.GeometryProfile,
                 _ => throw new InvalidOperationException($"Unsupported ManifestationObstacleIntent2D shape '{raw}'.")
+            };
+        }
+
+        private static ObstacleGeometryPieceShape2D ParseObstacleGeometryPieceShape(string? raw, string context)
+        {
+            if (string.IsNullOrWhiteSpace(raw))
+            {
+                throw new InvalidOperationException($"{context} requires a non-empty shape.");
+            }
+
+            return raw switch
+            {
+                "Circle" => ObstacleGeometryPieceShape2D.Circle,
+                "Box" => ObstacleGeometryPieceShape2D.Box,
+                "Polygon" => ObstacleGeometryPieceShape2D.Polygon,
+                _ => throw new InvalidOperationException($"Unsupported {context} shape '{raw}'.")
             };
         }
 
@@ -862,6 +973,16 @@ namespace Ludots.Core.Config
                 ReadIntProperty(pointObj, "x", context),
                 ReadIntProperty(pointObj, "y", context));
             return true;
+        }
+
+        private static WorldCmInt2 RequirePointProperty(JsonObject obj, string name, string context)
+        {
+            if (TryReadPointProperty(obj, out var point, name, context))
+            {
+                return point;
+            }
+
+            throw new InvalidOperationException($"{context} requires explicit '{name}'.");
         }
 
         private static float ReadFloatProperty(JsonObject obj, string name, string context)

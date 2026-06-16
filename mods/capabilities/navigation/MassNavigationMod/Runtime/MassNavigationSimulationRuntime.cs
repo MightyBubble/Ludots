@@ -319,6 +319,7 @@ public sealed class MassNavigationSimulationRuntime
         MassFlow.Semantics.Group.FarSlotBlend = config.Semantics.Group.FarSlotBlend;
         MassFlow.Semantics.Group.NearSlotBlendDistanceSq = config.Semantics.Group.NearSlotBlendDistanceSq;
         MassFlow.Semantics.Steering.SeparationRadiusCm = config.Semantics.Steering.SeparationRadiusCm;
+        MassFlow.Semantics.Steering.MaxSeparationNeighborsPerUnit = config.Semantics.Steering.MaxSeparationNeighborsPerUnit;
         MassFlow.Semantics.Steering.GoalArrivalRadiusCm = config.Semantics.Steering.GoalArrivalRadiusCm;
         MassFlow.Semantics.Steering.FlowObstacleAvoidanceScale = config.Semantics.Steering.FlowObstacleAvoidanceScale;
         MassFlow.Semantics.Steering.FormationSeparationScale = config.Semantics.Steering.FormationSeparationScale;
@@ -380,6 +381,21 @@ public sealed class MassNavigationSimulationRuntime
         FrameMs = dt > 0f ? dt * 1000f : 0f;
         Fps = FrameMs > 0.001f ? 1000f / FrameMs : 0f;
         _viewResidencyClockSeconds += MathF.Max(0f, dt);
+    }
+
+    public void AdvanceCommandFocusHoldTick()
+    {
+        if (_commandFocusTicksRemaining <= 0)
+        {
+            _hasCommandFocus = false;
+            return;
+        }
+
+        _commandFocusTicksRemaining--;
+        if (_commandFocusTicksRemaining == 0)
+        {
+            _hasCommandFocus = false;
+        }
     }
 
     public void ObserveSelectionSync(double sampleMs) => SelectionSyncMs = Smooth(SelectionSyncMs, (float)sampleMs);
@@ -805,19 +821,6 @@ public sealed class MassNavigationSimulationRuntime
             _hasCommandFocus && _commandFocusTicksRemaining > 0 ? "camera budget + command hold" : "camera budget");
         CameraBudgetUpdatesFrame++;
         CameraBudgetUpdatesTotal++;
-        if (_commandFocusTicksRemaining > 0)
-        {
-            _commandFocusTicksRemaining--;
-            if (_commandFocusTicksRemaining == 0)
-            {
-                _hasCommandFocus = false;
-            }
-
-            UpdateStreamingWindow(ResolveViewResidencyFocus(cameraCenterCm));
-            return;
-        }
-
-        _hasCommandFocus = false;
         UpdateStreamingWindow(ResolveViewResidencyFocus(cameraCenterCm));
     }
 

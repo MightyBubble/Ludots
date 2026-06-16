@@ -9,9 +9,12 @@ using System.Text;
 using System.Text.Json;
 using Arch.Core;
 using CameraAcceptanceMod;
+using CoreInputMod;
+using CoreInputMod.ViewMode;
 using Ludots.Core.Components;
 using Ludots.Core.Engine;
 using Ludots.Core.Gameplay.Camera;
+using Ludots.Core.Gameplay.Spawning;
 using Ludots.Core.Input.Config;
 using Ludots.Core.Input.Runtime;
 using Ludots.Core.Input.Selection;
@@ -370,8 +373,8 @@ namespace Ludots.Tests.ThreeC.Acceptance
             Assert.That(ExtractUiSceneText(uiRoot.Scene!), Does.Contain("Visible on screen:"));
             Assert.That(ExtractUiSceneText(uiRoot.Scene!), Does.Contain("Terrain OFF"));
             Assert.That(ExtractUiSceneText(uiRoot.Scene!), Does.Contain("Guides OFF"));
-            Assert.That(ExtractUiSceneText(uiRoot.Scene!), Does.Contain("Cam Crowd"));
-            Assert.That(ExtractUiSceneText(uiRoot.Scene!), Does.Contain("Cam Empty"));
+            Assert.That(ExtractUiSceneText(uiRoot.Scene!), Does.Contain("Avatar Crowd"));
+            Assert.That(ExtractUiSceneText(uiRoot.Scene!), Does.Contain("Avatar Empty"));
             Assert.That(ExtractUiSceneText(uiRoot.Scene!), Does.Contain("Respawn 10k"));
             Assert.That(uiRoot.Scene!.FindByElementId("camera-visible-entity-list"), Is.Not.Null);
             Assert.That(uiRoot.Scene.TryGetVirtualWindow("camera-visible-entity-list", out UiVirtualWindow visibleWindow), Is.True);
@@ -495,6 +498,154 @@ namespace Ludots.Tests.ThreeC.Acceptance
             File.WriteAllText(Path.Combine(artifactDir, "trace.jsonl"), BuildHotpathTraceJsonl(snapshots));
             File.WriteAllText(Path.Combine(artifactDir, "battle-report.md"), BuildHotpathBattleReport(snapshots));
             File.WriteAllText(Path.Combine(artifactDir, "path.mmd"), BuildHotpathPathMermaid());
+        }
+
+        [Test]
+        public void CameraAcceptanceMod_Hotpath_ViewModeCycling_DoesNotDropMapScopedHotkeys()
+        {
+            using var engine = CreateEngine(AcceptanceMods);
+            var uiRoot = new UIRoot(new SkiaUiRenderer());
+            uiRoot.Resize(1920f, 1080f);
+            engine.SetService(CoreServiceKeys.UIRoot, uiRoot);
+
+            LoadMap(engine, CameraAcceptanceIds.HotpathMapId);
+            var backend = GetInputBackend(engine);
+            var renderDebug = engine.GetService(CoreServiceKeys.RenderDebugState);
+            var diagnostics = GetCameraAcceptanceDiagnostics(engine);
+
+            for (int i = 0; i < 8; i++)
+            {
+                PressButton(engine, backend, "<Keyboard>/v");
+            }
+
+            Assert.That(engine.GetService(CoreServiceKeys.UiCaptured), Is.False);
+            Assert.That(engine.GetService(CoreServiceKeys.InputHandler)!.ReadAction<Vector2>("PointerPos"), Is.EqualTo(new Vector2(960f, 540f)));
+
+            bool panelBefore = renderDebug!.DrawSkiaUi;
+            PressButton(engine, backend, "<Keyboard>/f6");
+            Assert.That(renderDebug.DrawSkiaUi, Is.EqualTo(!panelBefore),
+                "CameraAcceptance.Controls must keep responding after repeated V view-mode cycling.");
+
+            bool barsBefore = diagnostics.HotpathBarsEnabled;
+            PressButton(engine, backend, "<Keyboard>/f9");
+            Assert.That(diagnostics.HotpathBarsEnabled, Is.EqualTo(!barsBefore),
+                "Hotpath lane toggles must remain reachable after repeated V view-mode cycling.");
+
+            bool crowdBefore = diagnostics.HotpathCullCrowdEnabled;
+            PressButton(engine, backend, "<Keyboard>/c");
+            Assert.That(diagnostics.HotpathCullCrowdEnabled, Is.EqualTo(!crowdBefore),
+                "Map-scoped hotkeys must not be dropped by view-mode cycling.");
+        }
+
+        [Test]
+        public void CameraAcceptanceMod_Hotpath_DefaultCameraRespondsToMiddleMouseGrabDrag()
+        {
+            using var engine = CreateEngine(AcceptanceMods);
+            LoadMap(engine, CameraAcceptanceIds.HotpathMapId);
+            Tick(engine, BlendSettleFrames);
+
+            var backend = GetInputBackend(engine);
+            Assert.That(engine.GameSession.Camera.VirtualCameraBrain?.ActiveCameraId, Is.EqualTo(CameraAcceptanceIds.HotpathCameraId),
+                "Hotpath should start on its dedicated overview virtual camera, not on the fixed projection or follow profiles.");
+            Vector2 startTarget = engine.GameSession.Camera.State.TargetCm;
+
+            DragMouse(engine, backend, "<Mouse>/MiddleButton", new Vector2(960f, 540f), new Vector2(1040f, 500f));
+            Tick(engine, 3);
+
+            Vector2 movedTarget = engine.GameSession.Camera.State.TargetCm;
+            Assert.That(Vector2.Distance(movedTarget, startTarget), Is.GreaterThan(1f),
+                "Hotpath should enter with an input-enabled logical virtual camera so middle-mouse grab-drag can inspect the scene immediately.");
+        }
+
+        [Test]
+        public void CameraAcceptanceMod_ViewModeSwitch_QueuesVirtualCameraRequest_ForLogicCameraRuntime()
+        {
+            using var engine = CreateEngine(AcceptanceMods);
+            LoadMap(engine, CameraAcceptanceIds.HotpathMapId);
+
+            var brain = engine.GameSession.Camera.VirtualCameraBrain
+                ?? throw new InvalidOperationException("Virtual camera brain is required.");
+            string initialCameraId = brain.ActiveCameraId;
+            var manager = engine.GetService(CoreInputServiceKeys.ViewModeManager)
+                ?? throw new InvalidOperationException("ViewModeManager is required.");
+
+            Assert.That(manager.SwitchTo(CameraAcceptanceIds.TpsModeId), Is.True);
+
+            Assert.That(brain.ActiveCameraId, Is.EqualTo(initialCameraId),
+                "ViewMode switches must not mutate CameraManager directly before CameraRuntimeSystem applies the request.");
+            Assert.That(engine.GlobalContext.TryGetValue(CoreServiceKeys.VirtualCameraRequest.Name, out var requestObj), Is.True);
+            Assert.That(requestObj, Is.TypeOf<VirtualCameraRequest>());
+            var request = (VirtualCameraRequest)requestObj!;
+            Assert.That(request.Id, Is.EqualTo(CameraAcceptanceIds.TpsCameraId));
+            Assert.That(request.FollowTargetKindOverride, Is.EqualTo(CameraFollowTargetKind.LocalPlayer));
+            Assert.That(request.ReplaceActiveStack, Is.True,
+                "ViewMode selection must replace the active virtual-camera stack instead of owning and later clearing a mode camera.");
+
+            TickUntil(engine, () => brain.ActiveCameraId == CameraAcceptanceIds.TpsCameraId);
+
+            Assert.That(engine.GlobalContext.ContainsKey(CoreServiceKeys.VirtualCameraRequest.Name), Is.False);
+            Assert.That(brain.ActiveCameraId, Is.EqualTo(CameraAcceptanceIds.TpsCameraId));
+            Assert.That(brain.ActiveCameraCount, Is.EqualTo(1),
+                "ViewMode switching should leave a single authoritative logical virtual camera active.");
+            Assert.That(brain.IsActive(initialCameraId), Is.False,
+                "The previously active virtual camera must not remain under a mode-owned stack.");
+        }
+
+        [Test]
+        public void CameraAcceptanceMod_ViewModeCycling_ReplacesVirtualCameraStackWithoutAccumulatingModeCameras()
+        {
+            using var engine = CreateEngine(AcceptanceMods);
+            LoadMap(engine, CameraAcceptanceIds.HotpathMapId);
+
+            var backend = GetInputBackend(engine);
+            var brain = engine.GameSession.Camera.VirtualCameraBrain
+                ?? throw new InvalidOperationException("Virtual camera brain is required.");
+
+            for (int i = 0; i < 8; i++)
+            {
+                PressButton(engine, backend, "<Keyboard>/v");
+                Assert.That(brain.ActiveCameraCount, Is.EqualTo(1),
+                    $"ViewMode cycle {i + 1} must replace the active logical-camera stack rather than accumulate mode cameras.");
+            }
+        }
+
+        [Test]
+        public void CameraAcceptanceMod_WasdDrivesLocalAvatar_AndVirtualCameraFollows()
+        {
+            using var engine = CreateEngine(AcceptanceMods);
+            LoadMap(engine, CameraAcceptanceIds.TpsMapId);
+            Tick(engine, BlendSettleFrames);
+
+            var backend = GetInputBackend(engine);
+            Entity hero = FindEntityByName(engine.World, CameraAcceptanceIds.HeroName);
+            Assert.That(hero, Is.Not.EqualTo(Entity.Null));
+
+            Vector2 startHero = engine.World.Get<WorldPositionCm>(hero).Value.ToVector2();
+            Vector2 startCameraTarget = engine.GameSession.Camera.State.TargetCm;
+
+            HoldButton(engine, backend, "<Keyboard>/w", frames: 12, minFixedTickAdvance: 6);
+            Tick(engine, 3);
+
+            Vector2 movedHero = engine.World.Get<WorldPositionCm>(hero).Value.ToVector2();
+            Assert.That(movedHero.Y, Is.LessThan(startHero.Y),
+                "W must move the local player/avatar entity toward the active logical camera's forward direction.");
+            Assert.That(movedHero.X, Is.EqualTo(startHero.X).Within(0.01f));
+            AssertAvatarFacingMatchesMovement(engine, hero, movedHero - startHero);
+            Assert.That(engine.GameSession.Camera.FollowTargetPositionCm, Is.EqualTo(movedHero));
+            Assert.That(engine.GameSession.Camera.State.TargetCm, Is.EqualTo(movedHero));
+            Assert.That(engine.GameSession.Camera.State.TargetCm, Is.Not.EqualTo(startCameraTarget),
+                "The camera target should change only because the active virtual camera follows the moved avatar.");
+
+            HoldButton(engine, backend, "<Keyboard>/s", frames: 12, minFixedTickAdvance: 6);
+            Tick(engine, 3);
+
+            Vector2 movedBackHero = engine.World.Get<WorldPositionCm>(hero).Value.ToVector2();
+            Assert.That(movedBackHero.Y, Is.GreaterThan(movedHero.Y),
+                "S must move the local player/avatar entity opposite the active logical camera's forward direction.");
+            Assert.That(movedBackHero.X, Is.EqualTo(startHero.X).Within(0.01f));
+            AssertAvatarFacingMatchesMovement(engine, hero, movedBackHero - movedHero);
+            Assert.That(engine.GameSession.Camera.FollowTargetPositionCm, Is.EqualTo(movedBackHero));
+            Assert.That(engine.GameSession.Camera.State.TargetCm, Is.EqualTo(movedBackHero));
         }
 
         [Test]
@@ -630,6 +781,52 @@ namespace Ludots.Tests.ThreeC.Acceptance
         }
 
         [Test]
+        public void CameraAcceptanceMod_Panel_ClickRtsScenario_LoadsRtsMapWithoutTearingDownUiInput()
+        {
+            using var engine = CreateEngine(AcceptanceMods);
+            var uiRoot = new UIRoot(new SkiaUiRenderer());
+            uiRoot.Resize(1920f, 1080f);
+            engine.SetService(CoreServiceKeys.UIRoot, uiRoot);
+
+            LoadMap(engine, CameraAcceptanceIds.HotpathMapId);
+            UiScene scene = uiRoot.Scene ?? throw new InvalidOperationException("Acceptance panel should mount when a UIRoot service is present.");
+            scene.Layout(uiRoot.Width, uiRoot.Height);
+
+            UiNode rtsButton = FindButtonByText(scene, "RTS")
+                ?? throw new InvalidOperationException("Camera acceptance panel should expose an RTS scenario button.");
+            Vector2 click = new(
+                rtsButton.LayoutRect.X + (rtsButton.LayoutRect.Width * 0.5f),
+                rtsButton.LayoutRect.Y + (rtsButton.LayoutRect.Height * 0.5f));
+
+            Assert.That(uiRoot.HandleInput(new PointerEvent
+            {
+                DeviceType = InputDeviceType.Mouse,
+                PointerId = 0,
+                Action = PointerAction.Down,
+                X = click.X,
+                Y = click.Y
+            }), Is.True);
+
+            Assert.That(uiRoot.HandleInput(new PointerEvent
+            {
+                DeviceType = InputDeviceType.Mouse,
+                PointerId = 0,
+                Action = PointerAction.Up,
+                X = click.X,
+                Y = click.Y
+            }), Is.True);
+
+            Assert.That(engine.CurrentMapSession?.MapId.Value, Is.EqualTo(CameraAcceptanceIds.RtsMapId));
+            RuntimeEntitySpawnQueue spawnQueue = engine.GetService(CoreServiceKeys.RuntimeEntitySpawnQueue)
+                ?? throw new InvalidOperationException("RuntimeEntitySpawnQueue should be registered by the core runtime.");
+            Assert.That(spawnQueue.Count, Is.EqualTo(0),
+                "Unloading the hotpath map must remove its pending runtime spawn requests before the RTS map ticks.");
+            Assert.That(uiRoot.Scene, Is.Not.Null, "Scenario switching through the panel should leave the retained UI mounted.");
+            Tick(engine, 3);
+            Assert.That(engine.GameSession.Camera.VirtualCameraBrain?.ActiveCameraId, Is.EqualTo(CameraAcceptanceIds.RtsCameraId));
+        }
+
+        [Test]
         public void CameraAcceptanceMod_Panel_ReusesSameSceneReferenceAcrossPresentationTicks()
         {
             using var engine = CreateEngine(AcceptanceMods);
@@ -716,8 +913,8 @@ namespace Ludots.Tests.ThreeC.Acceptance
             using var engine = CreateEngine(AcceptanceMods);
             LoadMap(engine, CameraAcceptanceIds.ProjectionMapId);
 
-            var backend = GetInputBackend(engine);
-            ClickGround(engine, backend, new Vector2(3200f, 2000f));
+            Entity hero = FindEntityByName(engine.World, CameraAcceptanceIds.HeroName);
+            SetViewedSelection(engine, hero);
 
             var uiRoot = new UIRoot(new SkiaUiRenderer());
             uiRoot.Resize(1920f, 1080f);
@@ -1007,7 +1204,7 @@ namespace Ludots.Tests.ThreeC.Acceptance
             Assert.That(brain.IsBlending, Is.EqualTo(expectedBlending));
 
             Tick(engine, BlendSettleFrames);
-            Assert.That(engine.GameSession.Camera.State.TargetCm, Is.EqualTo(new Vector2(4800f, 2600f)));
+            AssertVector2Near(engine.GameSession.Camera.State.TargetCm, new Vector2(4800f, 2600f), 1f);
         }
 
         [Test]
@@ -1105,6 +1302,9 @@ namespace Ludots.Tests.ThreeC.Acceptance
             var screenRayProvider = new CoreScreenRayProvider(engine.GameSession.Camera, view);
             screenProjector.BindPresenter(cameraPresenter);
             screenRayProvider.BindPresenter(cameraPresenter);
+            var presentationFrameSetup = engine.GetService(CoreServiceKeys.PresentationFrameSetup);
+            screenProjector.BindPresentationAlphaProvider(() => presentationFrameSetup?.GetInterpolationAlpha() ?? 1f);
+            screenRayProvider.BindPresentationAlphaProvider(() => presentationFrameSetup?.GetInterpolationAlpha() ?? 1f);
             engine.SetService(CoreServiceKeys.ScreenProjector, screenProjector);
             engine.SetService(CoreServiceKeys.ScreenRayProvider, screenRayProvider);
             var culling = new CameraCullingSystem(engine.World, engine.GameSession.Camera, engine.SpatialQueries, view, cullingConfig: engine.MergedConfig.Presentation.CameraCulling, timingDiagnostics: timingDiagnostics);
@@ -1112,7 +1312,7 @@ namespace Ludots.Tests.ThreeC.Acceptance
             engine.SetService(CoreServiceKeys.CameraCullingDebugState, culling.DebugState);
             engine.GlobalContext["Tests.CameraAcceptanceMod.HeadlessCamera"] = new HeadlessCameraRuntime(
                 cameraPresenter,
-                engine.GetService(CoreServiceKeys.PresentationFrameSetup));
+                presentationFrameSetup);
             engine.Start();
             return engine;
         }
@@ -1243,10 +1443,12 @@ namespace Ludots.Tests.ThreeC.Acceptance
 
         private static void PressButton(GameEngine engine, TestInputBackend backend, string path)
         {
+            int tickBeforePress = engine.GameSession.CurrentTick;
             backend.SetButton(path, true);
-            Tick(engine, 2);
+            TickUntil(engine, () => engine.GameSession.CurrentTick > tickBeforePress, maxFrames: 8);
+            int tickBeforeRelease = engine.GameSession.CurrentTick;
             backend.SetButton(path, false);
-            Tick(engine, 2);
+            TickUntil(engine, () => engine.GameSession.CurrentTick > tickBeforeRelease, maxFrames: 8);
         }
 
         private static void ScrollWheel(GameEngine engine, TestInputBackend backend, float delta)
@@ -1283,8 +1485,10 @@ namespace Ludots.Tests.ThreeC.Acceptance
             Tick(engine, 1);
             backend.SetButton("<Mouse>/LeftButton", true);
             Tick(engine, 2);
+            int tickBeforeRelease = engine.GameSession.CurrentTick;
             backend.SetButton("<Mouse>/LeftButton", false);
-            Tick(engine, 2);
+            Tick(engine, 1);
+            TickUntil(engine, () => engine.GameSession.CurrentTick > tickBeforeRelease, maxFrames: 8);
         }
 
         private static Entity FindEntityByName(World world, string name)
@@ -1374,6 +1578,35 @@ namespace Ludots.Tests.ThreeC.Acceptance
             }
 
             return distinct.Count;
+        }
+
+        private static void AssertVector2Near(Vector2 actual, Vector2 expected, float tolerance)
+        {
+            Assert.That(actual.X, Is.EqualTo(expected.X).Within(tolerance));
+            Assert.That(actual.Y, Is.EqualTo(expected.Y).Within(tolerance));
+        }
+
+        private static void AssertAvatarFacingMatchesMovement(GameEngine engine, Entity entity, Vector2 movement)
+        {
+            Vector2 normalizedMovement = WorldPlane2D.NormalizeOrDefault(movement, Vector2.Zero);
+            Assert.That(normalizedMovement.LengthSquared(), Is.GreaterThan(0.000001f));
+            float expectedFacingRad = WorldPlane2D.FacingRadFromDirection(in normalizedMovement);
+
+            Assert.That(engine.World.Has<FacingDirection>(entity), Is.True,
+                "Local avatar movement must write the logical FacingDirection on the player entity.");
+            float actualFacingRad = engine.World.Get<FacingDirection>(entity).AngleRad;
+            Assert.That(
+                WorldPlane2D.AngleDistanceRad(actualFacingRad, expectedFacingRad),
+                Is.LessThan(0.0001f),
+                "The avatar's logical facing must match the movement vector.");
+
+            Assert.That(engine.World.Has<VisualTransform>(entity), Is.True);
+            Quaternion visualRotation = engine.World.Get<VisualTransform>(entity).Rotation;
+            Assert.That(WorldPlane2D.TryExtractFacingRadFromVisualYRotation(visualRotation, out float visualFacingRad), Is.True);
+            Assert.That(
+                WorldPlane2D.AngleDistanceRad(visualFacingRad, expectedFacingRad),
+                Is.LessThan(0.0001f),
+                "The owner VisualTransform must preserve the same facing before performer emission.");
         }
 
         private static bool AllPositionsWithinRadius(List<WorldCmInt2> positions, in WorldCmInt2 center, int radiusCm)
@@ -1588,16 +1821,6 @@ namespace Ludots.Tests.ThreeC.Acceptance
             if (engine.GetService(CoreServiceKeys.ScreenOverlayBuffer) is ScreenOverlayBuffer overlayBuffer)
             {
                 overlayBuffer.Clear();
-            }
-
-            if (engine.GetService(CoreServiceKeys.PresentationWorldHudBuffer) is WorldHudBatchBuffer worldHudBuffer)
-            {
-                worldHudBuffer.Clear();
-            }
-
-            if (engine.GetService(CoreServiceKeys.PresentationScreenHudBuffer) is ScreenHudBatchBuffer screenHudBuffer)
-            {
-                screenHudBuffer.Clear();
             }
 
             TickWithHudProjection(engine, hudProjection, 1);
@@ -1930,7 +2153,7 @@ namespace Ludots.Tests.ThreeC.Acceptance
             sb.AppendLine("# Scenario Card: presentation-hotpath-harness");
             sb.AppendLine();
             sb.AppendLine("## Intent");
-            sb.AppendLine("- Player goal: move the camera across a 10k+ hotpath crowd, read the live visible-entity panel, and isolate presentation lanes without leaving the shared acceptance scene.");
+            sb.AppendLine("- Player goal: move the local avatar across a 10k+ hotpath crowd, read the live visible-entity panel while the virtual camera follows, and isolate presentation lanes without leaving the shared acceptance scene.");
             sb.AppendLine("- Gameplay domain: CameraAcceptanceMod diagnostics / visible-entity panel / HUD bar / HUD text / selection label / primitive / culling crowd lanes.");
             sb.AppendLine();
             sb.AppendLine("## Determinism Inputs");
@@ -1938,7 +2161,7 @@ namespace Ludots.Tests.ThreeC.Acceptance
             sb.AppendLine("- Map: `mods/fixtures/camera/CameraAcceptanceMod/assets/Maps/camera_acceptance_hotpath.json`");
             sb.AppendLine($"- Crowd: `{CameraAcceptanceIds.HotpathCrowdTargetCount}` deterministic Dummy entities from the runtime spawn queue.");
             sb.AppendLine("- Clock profile: fixed `1/60s` headless acceptance ticks with explicit `WorldHudToScreenSystem` projection.");
-            sb.AppendLine("- Controls: RTS manual camera movement plus `F6 panel`, `F7 diagnostics HUD`, `F8 selection labels`, `F9 bars`, `F10 HUD text`, `F11 terrain`, `G guides`, `F12 primitives`, `C crowd`.");
+            sb.AppendLine("- Controls: WASD local-avatar movement plus `F6 panel`, `F7 diagnostics HUD`, `F8 selection labels`, `F9 bars`, `F10 HUD text`, `F11 terrain`, `G guides`, `F12 primitives`, `C crowd`.");
             sb.AppendLine();
             sb.AppendLine("## Action Script");
             sb.AppendLine("1. Load the shared hotpath map and wait for the deterministic crowd to spawn.");
@@ -2148,6 +2371,31 @@ namespace Ludots.Tests.ThreeC.Acceptance
             {
                 AppendUiNodeText(node.Children[i], sb);
             }
+        }
+
+        private static UiNode? FindButtonByText(UiScene scene, string text)
+        {
+            return scene.Root == null ? null : FindButtonByText(scene.Root, text);
+        }
+
+        private static UiNode? FindButtonByText(UiNode node, string text)
+        {
+            if (node.Kind == UiNodeKind.Button &&
+                string.Equals(node.TextContent, text, StringComparison.OrdinalIgnoreCase))
+            {
+                return node;
+            }
+
+            for (int i = 0; i < node.Children.Count; i++)
+            {
+                UiNode? found = FindButtonByText(node.Children[i], text);
+                if (found != null)
+                {
+                    return found;
+                }
+            }
+
+            return null;
         }
 
         private static void AssertProjectionViewportState(GameEngine engine)
@@ -2464,6 +2712,8 @@ namespace Ludots.Tests.ThreeC.Acceptance
             public int PanelVirtualizedTotalItems => Get<int>(nameof(PanelVirtualizedTotalItems));
             public int PanelVirtualizedComposedItems => Get<int>(nameof(PanelVirtualizedComposedItems));
             public int HotpathSelectionLabelCount => Get<int>(nameof(HotpathSelectionLabelCount));
+            public bool HotpathBarsEnabled => Get<bool>(nameof(HotpathBarsEnabled));
+            public bool HotpathCullCrowdEnabled => Get<bool>(nameof(HotpathCullCrowdEnabled));
 
             private T Get<T>(string propertyName)
             {

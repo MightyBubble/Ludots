@@ -28,6 +28,7 @@ namespace Ludots.Adapter.Raylib
         private bool _compositeHadContent;
         private int _underlayLayerVersion = -1;
         private int _topOverlayLayerVersion = -1;
+        private readonly PresentationOverlayLanePacer _underlayPacer = new(PresentationOverlayLayer.UnderUi);
         private readonly bool _useGpuDirectUnderlay;
         private readonly bool _useFramebufferDirectUnderlay;
 
@@ -70,11 +71,12 @@ namespace Ludots.Adapter.Raylib
             bool hasUnderlay = scene != null && scene.ContainsLayer(PresentationOverlayLayer.UnderUi);
             bool hasTopOverlay = scene != null && scene.ContainsLayer(PresentationOverlayLayer.TopMost);
             bool hasUiLayer = !suppressHostDiagnosticUi && drawSkiaUi && uiRoot.Scene != null;
-            bool directTopOverlayComposite = hasTopOverlay && _useGpuDirectUnderlay;
+            bool directTopOverlayComposite = hasTopOverlay && _useGpuDirectUnderlay && !hasUnderlay && !hasUiLayer;
+            bool orderedDirectOverlayComposite = hasUnderlay && hasTopOverlay && !hasUiLayer && _useGpuDirectUnderlay;
             bool framebufferDirectTopOverlay = directTopOverlayComposite && _useFramebufferDirectUnderlay;
             bool gpuDirectTopOverlay = directTopOverlayComposite && !framebufferDirectTopOverlay;
-            bool rasterTopOverlay = hasTopOverlay && !directTopOverlayComposite;
-            bool directUnderlayComposite = hasUnderlay && !hasUiLayer;
+            bool rasterTopOverlay = hasTopOverlay && !directTopOverlayComposite && !orderedDirectOverlayComposite;
+            bool directUnderlayComposite = hasUnderlay && !hasUiLayer && (!hasTopOverlay || orderedDirectOverlayComposite);
             bool framebufferDirectUnderlay = directUnderlayComposite && _useGpuDirectUnderlay && _useFramebufferDirectUnderlay;
             bool gpuDirectUnderlay = directUnderlayComposite && _useGpuDirectUnderlay && !framebufferDirectUnderlay;
 
@@ -91,7 +93,19 @@ namespace Ludots.Adapter.Raylib
             if (refreshUnderlay)
             {
                 long underlayRenderStart = Stopwatch.GetTimestamp();
-                RenderUnderlay(scene!, hasUnderlay, directUnderlayComposite, framebufferDirectUnderlay, gpuDirectUnderlay);
+                PresentationOverlayLanePacer.LaneRefreshPlan underlayPlan = hasUnderlay
+                    ? _underlayPacer.BuildPlan(scene!)
+                    : default;
+                RenderUnderlay(scene!, hasUnderlay, directUnderlayComposite, framebufferDirectUnderlay, gpuDirectUnderlay, underlayPlan);
+                if (hasUnderlay)
+                {
+                    _underlayPacer.MarkPresented(scene!, underlayPlan);
+                }
+                else
+                {
+                    _underlayPacer.Reset();
+                }
+
                 underlayCanvasChanged = true;
                 _underlayHadContent = hasUnderlay;
                 _underlayLayerVersion = currentUnderlayVersion;
@@ -147,6 +161,10 @@ namespace Ludots.Adapter.Raylib
                     _overlayLayer.SetHasContent(false);
                 }
                 else if (framebufferDirectTopOverlay)
+                {
+                    _overlayLayer.SetHasContent(false);
+                }
+                else if (orderedDirectOverlayComposite)
                 {
                     _overlayLayer.SetHasContent(false);
                 }
@@ -209,7 +227,7 @@ namespace Ludots.Adapter.Raylib
                 _compositeHadContent = hasCompositeContent;
             }
 
-            if (hasCompositeContent || _compositeHadContent || directTopOverlayComposite)
+            if (hasCompositeContent || _compositeHadContent || directTopOverlayComposite || orderedDirectOverlayComposite)
             {
                 long finalDrawStart = Stopwatch.GetTimestamp();
                 if (framebufferDirectUnderlay)
@@ -230,6 +248,16 @@ namespace Ludots.Adapter.Raylib
                     _gpuTopOverlaySurface?.Draw();
                 }
                 else if (framebufferDirectTopOverlay && hasTopOverlay)
+                {
+                    _framebufferTopOverlaySurface ??= new RaylibSkiaFramebufferOverlaySurface();
+                    _framebufferTopOverlaySurface.Render(
+                        scene!,
+                        _overlayRenderer,
+                        PresentationOverlayLayer.TopMost,
+                        _compositeRenderer.Width,
+                        _compositeRenderer.Height);
+                }
+                else if (orderedDirectOverlayComposite && hasTopOverlay)
                 {
                     _framebufferTopOverlaySurface ??= new RaylibSkiaFramebufferOverlaySurface();
                     _framebufferTopOverlaySurface.Render(
@@ -294,7 +322,8 @@ namespace Ludots.Adapter.Raylib
             bool hasUnderlay,
             bool directUnderlayComposite,
             bool framebufferDirectUnderlay,
-            bool gpuDirectUnderlay)
+            bool gpuDirectUnderlay,
+            in PresentationOverlayLanePacer.LaneRefreshPlan refreshPlan)
         {
             if (framebufferDirectUnderlay)
             {
@@ -324,6 +353,7 @@ namespace Ludots.Adapter.Raylib
                         scene,
                         _overlayRenderer,
                         PresentationOverlayLayer.UnderUi,
+                        refreshPlan,
                         _compositeRenderer.Width,
                         _compositeRenderer.Height);
 
@@ -338,6 +368,7 @@ namespace Ludots.Adapter.Raylib
                         scene,
                         _overlayRenderer,
                         PresentationOverlayLayer.UnderUi,
+                        refreshPlan,
                         _compositeRenderer.Width,
                         _compositeRenderer.Height))
                     {
@@ -352,7 +383,7 @@ namespace Ludots.Adapter.Raylib
                     ? _compositeRenderer.Canvas
                     : _underlayLayer.Canvas;
 
-                _overlayRenderer.Render(scene, targetCanvas, PresentationOverlayLayer.UnderUi);
+                _overlayRenderer.Render(scene, targetCanvas, PresentationOverlayLayer.UnderUi, refreshPlan);
 
                 _underlayLayer.SetHasContent(!directUnderlayComposite);
             }

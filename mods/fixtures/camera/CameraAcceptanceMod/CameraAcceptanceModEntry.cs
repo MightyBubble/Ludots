@@ -6,6 +6,8 @@ using Ludots.Core.Input.Runtime;
 using CameraAcceptanceMod.Runtime;
 using System.Threading.Tasks;
 using Ludots.Core.Engine;
+using Ludots.Core.Input.Systems;
+using Ludots.Core.Systems;
 
 namespace CameraAcceptanceMod
 {
@@ -26,6 +28,15 @@ namespace CameraAcceptanceMod
                     CameraAcceptanceRuntime.InitializeProjectionSpawnCount(engine);
                     engine.GlobalContext[CameraAcceptanceIds.ActiveBlendCameraIdKey] = CameraAcceptanceIds.BlendSmoothCameraId;
                     runtime.InstallSelectionCallbacks(engine);
+                    var inputOwnership = new CameraAcceptanceInputOwnershipSystem(engine);
+                    engine.InsertSystemBeforeRequired<AuthoritativeInputSnapshotSystem>(inputOwnership, SystemGroup.InputCollection);
+                    if (engine.GetService(CoreServiceKeys.InputFrameConsumers) is System.Collections.Generic.List<IInputFrameConsumer> consumers)
+                    {
+                        consumers.Add(inputOwnership);
+                    }
+                    engine.InsertSystemBeforeRequired<CameraRuntimeSystem>(
+                        new CameraAcceptanceLocalAvatarMoveSystem(engine),
+                        SystemGroup.InputCollection);
                     engine.RegisterSystem(new CameraAcceptanceDiagnosticsToggleSystem(engine), SystemGroup.InputCollection);
                     engine.RegisterSystem(new CameraAcceptanceProjectionSpawnControlSystem(engine), SystemGroup.InputCollection);
                     engine.RegisterSystem(new CameraBlendAcceptanceSystem(engine), SystemGroup.InputCollection);

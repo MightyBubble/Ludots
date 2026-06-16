@@ -12,9 +12,11 @@ using Ludots.Core.Engine;
 using Ludots.Core.Gameplay.Camera;
 using Ludots.Core.Gameplay.Spawning;
 using Ludots.Core.Input.Selection;
+using Ludots.Core.Mathematics;
 using Ludots.Core.Presentation.Camera;
 using Ludots.Core.Presentation.Components;
 using Ludots.Core.Presentation.Hud;
+using Ludots.Core.Presentation.Utils;
 using Ludots.Core.Systems;
 using Ludots.Core.Scripting;
 using Ludots.UI;
@@ -36,7 +38,7 @@ namespace CameraAcceptanceMod.UI
         private const float SelectionBufferHeight = 180f;
         private const float SelectionRowHeight = 22f;
         private const int SelectionRowPoolSize = 64;
-        private const string SelectionBufferHostId = "camera-selection-buffer-list";
+        private const string SelectionBufferHostId = "camera-selection-view-list";
         private const float VisibleEntityBufferHeight = 220f;
         private const float VisibleEntityRowHeight = 20f;
         private const string VisibleEntityBufferHostId = "camera-visible-entity-list";
@@ -384,7 +386,7 @@ namespace CameraAcceptanceMod.UI
         {
             UiVirtualWindow window = context.GetVerticalVirtualWindow(
                 SelectionBufferHostId,
-                SelectionRowPoolSize,
+                selectedIds.Count,
                 SelectionRowHeight,
                 SelectionBufferHeight,
                 overscan: 2);
@@ -407,8 +409,8 @@ namespace CameraAcceptanceMod.UI
             }
 
             return Ui.Column(
-                    Ui.Text("Selection Buffer").FontSize(12f).Bold().Color("#F4C77D"),
-                    Ui.Text($"Selected Slots: {selectedIds.Count}/{SelectionRowPoolSize} | Visible: {FormatVisibleRange(window)}").Id("camera-selection-buffer-summary").FontSize(11f).Color("#8EA2BD"),
+                    Ui.Text("Selection View").FontSize(12f).Bold().Color("#F4C77D"),
+                    Ui.Text($"Selected Slots: {selectedIds.Count} | Visible: {FormatVisibleRange(window)}").Id("camera-selection-buffer-summary").FontSize(11f).Color("#8EA2BD"),
                     Ui.ScrollView(rows.ToArray())
                         .Id(SelectionBufferHostId)
                         .Height(SelectionBufferHeight)
@@ -508,7 +510,7 @@ namespace CameraAcceptanceMod.UI
                     .Color("#8EA2BD")
                     .WhiteSpace(UiWhiteSpace.Normal),
                 CameraAcceptanceIds.HotpathMapId => Ui.Text(
-                        $"This scene auto-builds a deterministic {CameraAcceptanceIds.HotpathCrowdTargetCount} crowd. Move the camera manually, verify the visible-entity list changes with culling, and toggle lanes live to isolate panel, HUD, text, primitive, and culling costs.")
+                        $"This scene auto-builds a deterministic {CameraAcceptanceIds.HotpathCrowdTargetCount} crowd. Move the local avatar with WASD, verify the virtual camera follow changes the visible-entity list, and toggle lanes live to isolate panel, HUD, text, primitive, and culling costs.")
                     .FontSize(12f)
                     .Color("#8EA2BD")
                     .WhiteSpace(UiWhiteSpace.Normal),
@@ -546,7 +548,7 @@ namespace CameraAcceptanceMod.UI
 
         private UiElementBuilder BuildHotpathControls(CameraAcceptancePanelState state)
         {
-            const string hotpathCameraGuide = "Camera probes: Crowd = dense view, Center = traversal midpoint, Empty = empty-frustum verification.";
+            const string hotpathCameraGuide = "Avatar probes: Crowd = dense view, Center = traversal midpoint, Empty = empty-frustum verification.";
             return Ui.Column(
                     Ui.Text("Presentation Hotpath").FontSize(12f).Bold().Color("#F4C77D"),
                     Ui.Text(state.VisibleEntitySummary)
@@ -583,9 +585,9 @@ namespace CameraAcceptanceMod.UI
                         .Wrap()
                         .Gap(8f),
                     Ui.Row(
-                            BuildActionButton("Cam Crowd", false, MoveHotpathCameraCrowd),
-                            BuildActionButton("Cam Center", false, MoveHotpathCameraCenter),
-                            BuildActionButton("Cam Empty", false, MoveHotpathCameraEmpty))
+                            BuildActionButton("Avatar Crowd", false, MoveHotpathAvatarCrowd),
+                            BuildActionButton("Avatar Center", false, MoveHotpathAvatarCenter),
+                            BuildActionButton("Avatar Empty", false, MoveHotpathAvatarEmpty))
                         .Wrap()
                         .Gap(8f),
                     Ui.Row(
@@ -1029,29 +1031,48 @@ namespace CameraAcceptanceMod.UI
             }
         }
 
-        private void MoveHotpathCameraCrowd()
+        private void MoveHotpathAvatarCrowd()
         {
-            ApplyHotpathCameraTarget(new Vector2(CameraAcceptanceIds.HotpathSweepLeftX, CameraAcceptanceIds.HotpathSweepCenterY));
+            ApplyHotpathAvatarTarget(new Vector2(CameraAcceptanceIds.HotpathSweepLeftX, CameraAcceptanceIds.HotpathSweepCenterY));
         }
 
-        private void MoveHotpathCameraCenter()
+        private void MoveHotpathAvatarCenter()
         {
             float centerX = (CameraAcceptanceIds.HotpathSweepLeftX + CameraAcceptanceIds.HotpathSweepRightX) * 0.5f;
-            ApplyHotpathCameraTarget(new Vector2(centerX, CameraAcceptanceIds.HotpathSweepCenterY));
+            ApplyHotpathAvatarTarget(new Vector2(centerX, CameraAcceptanceIds.HotpathSweepCenterY));
         }
 
-        private void MoveHotpathCameraEmpty()
+        private void MoveHotpathAvatarEmpty()
         {
-            ApplyHotpathCameraTarget(new Vector2(CameraAcceptanceIds.HotpathSweepRightX, CameraAcceptanceIds.HotpathSweepCenterY));
+            ApplyHotpathAvatarTarget(new Vector2(CameraAcceptanceIds.HotpathSweepRightX, CameraAcceptanceIds.HotpathSweepCenterY));
         }
 
-        private void ApplyHotpathCameraTarget(Vector2 targetCm)
+        private void ApplyHotpathAvatarTarget(Vector2 targetCm)
         {
             GameEngine engine = RequireEngine();
-            engine.GameSession.Camera.ApplyPose(new CameraPoseRequest
+            if (!TryResolveLocalPlayerEntity(engine, out Entity localPlayer) ||
+                !engine.World.Has<WorldPositionCm>(localPlayer))
             {
-                TargetCm = targetCm
-            });
+                return;
+            }
+
+            WorldCmInt2 clamped = GroundRaycastUtil.ClampWorldCmToBounds(
+                new WorldCmInt2((int)MathF.Round(targetCm.X), (int)MathF.Round(targetCm.Y)),
+                engine.CurrentMapSession?.PrimaryBoard?.WorldSize.Bounds ?? engine.WorldSizeSpec.Bounds,
+                out _);
+
+            ref var position = ref engine.World.Get<WorldPositionCm>(localPlayer);
+            position = WorldPositionCm.FromCm(clamped.X, clamped.Y);
+            if (engine.World.Has<FacingDirection>(localPlayer))
+            {
+                ref var facing = ref engine.World.Get<FacingDirection>(localPlayer);
+                facing.AngleRad = 0f;
+            }
+            else
+            {
+                engine.World.Add(localPlayer, new FacingDirection { AngleRad = 0f });
+            }
+
             SyncMountedRoot();
         }
 
@@ -1220,6 +1241,20 @@ namespace CameraAcceptanceMod.UI
                 : CameraAcceptanceIds.BlendSmoothCameraId;
         }
 
+        private static bool TryResolveLocalPlayerEntity(GameEngine engine, out Entity localPlayer)
+        {
+            if (engine.GlobalContext.TryGetValue(CoreServiceKeys.LocalPlayerEntity.Name, out object? localObj) &&
+                localObj is Entity local &&
+                engine.World.IsAlive(local))
+            {
+                localPlayer = local;
+                return true;
+            }
+
+            localPlayer = Entity.Null;
+            return false;
+        }
+
         private static string? ResolveSelectedEntityName(GameEngine engine)
         {
             if (!SelectionContextRuntime.TryGetCurrentPrimary(engine.World, engine.GlobalContext, out Entity entity) ||
@@ -1234,15 +1269,14 @@ namespace CameraAcceptanceMod.UI
 
         private static string[] ResolveSelectedEntityIds(GameEngine engine)
         {
-            Span<Entity> selected = stackalloc Entity[SelectionRowPoolSize];
-            int count = CameraAcceptanceSelectionView.CopySelectedEntities(engine.World, engine.GlobalContext, selected);
-            if (count <= 0)
+            Entity[] selected = CameraAcceptanceSelectionView.SnapshotSelectedEntities(engine.World, engine.GlobalContext);
+            if (selected.Length <= 0)
             {
                 return Array.Empty<string>();
             }
 
-            string[] lines = new string[count];
-            for (int i = 0; i < count; i++)
+            string[] lines = new string[selected.Length];
+            for (int i = 0; i < selected.Length; i++)
             {
                 lines[i] = CameraAcceptanceSelectionView.FormatEntityId(selected[i]);
             }

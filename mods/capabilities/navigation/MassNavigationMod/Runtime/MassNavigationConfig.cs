@@ -105,6 +105,7 @@ public sealed class MassNavigationConfig
             "metadataTeamCapacity");
         RequireProperties(
             RequireProperty(scenarioRuntime, "panelControls"),
+            "visible",
             "maxAgentsPerTeam",
             "totalAgentStep",
             "totalAgentPresets",
@@ -194,6 +195,7 @@ public sealed class MassNavigationConfig
             cadence,
             "simulationHz",
             "targetUpdateHz",
+            "targetUpdateMemberBudgetPerStep",
             "flowStepHz",
             "flowCrowdStampHz",
             "flowObstacleStampHz",
@@ -333,6 +335,7 @@ public sealed class MassNavigationConfig
         RequireProperties(
             RequireProperty(semantics, "steering"),
             "separationRadiusCm",
+            "maxSeparationNeighborsPerUnit",
             "goalArrivalRadiusCm",
             "flowObstacleAvoidanceScale",
             "formationSeparationScale",
@@ -585,8 +588,13 @@ public sealed class MassNavigationRuntimeCapacityConfig
         }
     }
 
-    public void ValidateForScenario(int teamCount, int agentsPerTeam)
+    public void ValidateForScenario(MassNavigationScenarioRuntimeConfig scenarioRuntime, int teamCount, int agentsPerTeam)
     {
+        if (scenarioRuntime == null)
+        {
+            throw new InvalidOperationException("Mass-nav runtimeCapacity scenario validation requires scenarioRuntime.");
+        }
+
         if (teamCount <= 0)
         {
             throw new InvalidOperationException("Mass-nav runtimeCapacity scenario validation requires a positive team count.");
@@ -597,6 +605,35 @@ public sealed class MassNavigationRuntimeCapacityConfig
         {
             throw new InvalidOperationException(
                 $"Mass-nav scenarioRuntime.runtimeCapacity.groupMembershipAgentCapacity {GroupMembershipAgentCapacity} is smaller than authored scenario agent count {authoredAgentCount}.");
+        }
+
+        if (scenarioRuntime.AutoSpawnConfiguredScenario)
+        {
+            ValidateInteractiveAgentCapacity(
+                scenarioRuntime.InitialSelectionScratchCapacity,
+                authoredAgentCount,
+                "scenarioRuntime.initialSelectionScratchCapacity",
+                "authored scenario agent count");
+            ValidateInteractiveAgentCapacity(
+                scenarioRuntime.InitialSelectedEntityCapacity,
+                authoredAgentCount,
+                "scenarioRuntime.initialSelectedEntityCapacity",
+                "authored scenario agent count");
+            ValidateInteractiveAgentCapacity(
+                SelectionMemberScratchCapacity,
+                authoredAgentCount,
+                "scenarioRuntime.runtimeCapacity.selectionMemberScratchCapacity",
+                "authored scenario agent count");
+            ValidateInteractiveAgentCapacity(
+                GroupMemberCapacity,
+                authoredAgentCount,
+                "scenarioRuntime.runtimeCapacity.groupMemberCapacity",
+                "authored scenario agent count");
+            ValidateInteractiveAgentCapacity(
+                OrderIngestionMemberCapacity,
+                authoredAgentCount,
+                "scenarioRuntime.runtimeCapacity.orderIngestionMemberCapacity",
+                "authored scenario agent count");
         }
 
         if (teamCount > MetadataTeamCapacity)
@@ -656,6 +693,19 @@ public sealed class MassNavigationRuntimeCapacityConfig
         }
     }
 
+    private static void ValidateInteractiveAgentCapacity(
+        int capacity,
+        long required,
+        string capacityPath,
+        string requiredLabel)
+    {
+        if (capacity < required)
+        {
+            throw new InvalidOperationException(
+                $"Mass-nav {capacityPath} {capacity} is smaller than {requiredLabel} {required}.");
+        }
+    }
+
     private static int CountSquareChunksForRadius(int radiusCm, int chunkSizeCm)
     {
         if (radiusCm <= 0 || chunkSizeCm <= 0)
@@ -671,6 +721,7 @@ public sealed class MassNavigationRuntimeCapacityConfig
 
 public sealed class MassNavigationPanelControlsConfig
 {
+    public bool Visible { get; set; }
     public int MaxAgentsPerTeam { get; set; }
     public int TotalAgentStep { get; set; }
     public int[] TotalAgentPresets { get; set; } = Array.Empty<int>();
@@ -1622,7 +1673,7 @@ public sealed class MassNavigationScenarioConfig
                 $"Mass-nav config InitialSelectedTeamId {InitialSelectedTeamId} is not present in Scenario.Teams.");
         }
 
-        scenarioRuntime.RuntimeCapacity.ValidateForScenario(Teams.Length, AgentsPerTeam);
+        scenarioRuntime.RuntimeCapacity.ValidateForScenario(scenarioRuntime, Teams.Length, AgentsPerTeam);
         scenarioRuntime.PanelControls.ValidateForTeamCount(Teams.Length, AgentsPerTeam);
         scenarioRuntime.RuntimeCapacity.ValidateForPanelControls(Teams.Length, scenarioRuntime.PanelControls);
 

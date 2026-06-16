@@ -4,10 +4,13 @@
     { "id": "CameraAcceptanceModeTps", "name": "CameraAcceptanceModeTps", "type": "Button" },
     { "id": "CameraAcceptanceModeFollowClose", "name": "CameraAcceptanceModeFollowClose", "type": "Button" },
     { "id": "CameraAcceptanceModeFollowWide", "name": "CameraAcceptanceModeFollowWide", "type": "Button" },
+    { "id": "CameraAcceptanceLocalAvatarMove", "name": "CameraAcceptanceLocalAvatarMove", "type": "Axis2D" },
     { "id": "CameraAcceptanceBlendCut", "name": "CameraAcceptanceBlendCut", "type": "Button" },
     { "id": "CameraAcceptanceBlendLinear", "name": "CameraAcceptanceBlendLinear", "type": "Button" },
     { "id": "CameraAcceptanceBlendSmooth", "name": "CameraAcceptanceBlendSmooth", "type": "Button" },
     { "id": "CameraAcceptanceTpsAimHold", "name": "CameraAcceptanceTpsAimHold", "type": "Button" },
+    { "id": "Look", "name": "Gameplay_Look", "type": "Axis2D" },
+    { "id": "Zoom", "name": "Gameplay_Zoom", "type": "Axis1D" },
     { "id": "CameraAcceptanceStackReveal", "name": "CameraAcceptanceStackReveal", "type": "Button" },
     { "id": "CameraAcceptanceStackAlert", "name": "CameraAcceptanceStackAlert", "type": "Button" },
     { "id": "CameraAcceptanceStackClear", "name": "CameraAcceptanceStackClear", "type": "Button" },
@@ -33,10 +36,49 @@
         { "actionId": "CameraAcceptanceModeTps", "path": "<Keyboard>/f2" },
         { "actionId": "CameraAcceptanceModeFollowClose", "path": "<Keyboard>/f3" },
         { "actionId": "CameraAcceptanceModeFollowWide", "path": "<Keyboard>/f4" },
+        {
+          "actionId": "CameraAcceptanceLocalAvatarMove",
+          "compositeType": "Vector2",
+          "compositeParts": [
+            { "path": "<Keyboard>/w" },
+            { "path": "<Keyboard>/s" },
+            { "path": "<Keyboard>/a" },
+            { "path": "<Keyboard>/d" }
+          ],
+          "processors": [
+            { "type": "Normalize" }
+          ]
+        },
+        { "actionId": "Select", "path": "<Mouse>/LeftButton" },
+        { "actionId": "Command", "path": "<Mouse>/RightButton" },
+        { "actionId": "Cancel", "path": "<Keyboard>/escape" },
+        { "actionId": "PointerPos", "path": "<Mouse>/Pos" },
         { "actionId": "CameraAcceptanceBlendCut", "path": "<Keyboard>/1" },
         { "actionId": "CameraAcceptanceBlendLinear", "path": "<Keyboard>/2" },
         { "actionId": "CameraAcceptanceBlendSmooth", "path": "<Keyboard>/3" },
         { "actionId": "CameraAcceptanceTpsAimHold", "path": "<Mouse>/RightButton" },
+        {
+          "actionId": "Look",
+          "path": "<Mouse>/Delta",
+          "processors": [
+            {
+              "type": "Invert",
+              "parameters": [
+                {
+                  "name": "Y",
+                  "value": 1
+                }
+              ]
+            }
+          ]
+        },
+        {
+          "actionId": "Zoom",
+          "path": "<Mouse>/ScrollY",
+          "processors": [
+            { "type": "Scale", "parameters": [{ "name": "Factor", "value": 0.1 }] }
+          ]
+        },
         { "actionId": "CameraAcceptanceStackReveal", "path": "<Keyboard>/r" },
         { "actionId": "CameraAcceptanceStackAlert", "path": "<Keyboard>/t" },
         { "actionId": "CameraAcceptanceStackClear", "path": "<Keyboard>/enter" },

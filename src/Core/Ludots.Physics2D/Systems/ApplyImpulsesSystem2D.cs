@@ -43,9 +43,6 @@ namespace Ludots.Core.Physics2D.Systems
                 bool isBSleeping = World.Has<SleepingTag>(pair.EntityB);
                 if (isASleeping && isBSleeping) return;
 
-                ref var velocityA = ref pair.EntityA.Get<Velocity2D>();
-                ref var velocityB = ref pair.EntityB.Get<Velocity2D>();
-
                 // 全定点数冲量计算
                 var normalImpulseVector = pair.Normal * pair.AccumulatedNormalImpulse0;
                 var tangent = new Fix64Vec2(-pair.Normal.Y, pair.Normal.X);
@@ -54,11 +51,13 @@ namespace Ludots.Core.Physics2D.Systems
 
                 if (pair.MassA.IsDynamic && !isASleeping)
                 {
+                    ref var velocityA = ref pair.EntityA.Get<Velocity2D>();
                     velocityA.Linear = velocityA.Linear - totalImpulse * pair.MassA.InverseMass;
                 }
 
                 if (pair.MassB.IsDynamic && !isBSleeping)
                 {
+                    ref var velocityB = ref pair.EntityB.Get<Velocity2D>();
                     velocityB.Linear = velocityB.Linear + totalImpulse * pair.MassB.InverseMass;
                 }
             }

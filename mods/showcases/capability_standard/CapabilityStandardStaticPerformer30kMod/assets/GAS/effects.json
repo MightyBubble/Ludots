@@ -1,0 +1,78 @@
+[
+  {
+    "id": "Effect.Showcase.CapabilityStaticPerformer.RandomDrift",
+    "tags": [
+      "Effect.Showcase.CapabilityStaticPerformer.RandomDrift"
+    ],
+    "presetType": "DoT",
+    "lifetime": "Infinite",
+    "participatesInResponse": false,
+    "duration": {
+      "durationTicks": 0,
+      "periodTicks": 60,
+      "clockId": "FixedFrame"
+    },
+    "phaseGraphs": {
+      "OnPeriod": {
+        "post": "Graph.Showcase.CapabilityStaticPerformer.RandomDrift"
+      }
+    }
+  },
+  {
+    "id": "Effect.Showcase.CapabilityStaticPerformer.SetDurabilityIntact",
+    "tags": [
+      "Effect.Showcase.CapabilityStaticPerformer.Control"
+    ],
+    "presetType": "Buff",
+    "lifetime": "After",
+    "participatesInResponse": false,
+    "duration": {
+      "durationTicks": 1,
+      "periodTicks": 0,
+      "clockId": "FixedFrame"
+    },
+    "phaseGraphs": {
+      "OnApply": {
+        "post": "Graph.Showcase.CapabilityStaticPerformer.SetDurabilityIntact"
+      }
+    }
+  },
+  {
+    "id": "Effect.Showcase.CapabilityStaticPerformer.SetDurabilityDamaged",
+    "tags": [
+      "Effect.Showcase.CapabilityStaticPerformer.Control"
+    ],
+    "presetType": "Buff",
+    "lifetime": "After",
+    "participatesInResponse": false,
+    "duration": {
+      "durationTicks": 1,
+      "periodTicks": 0,
+      "clockId": "FixedFrame"
+    },
+    "phaseGraphs": {
+      "OnApply": {
+        "post": "Graph.Showcase.CapabilityStaticPerformer.SetDurabilityDamaged"
+      }
+    }
+  },
+  {
+    "id": "Effect.Showcase.CapabilityStaticPerformer.SetDurabilityRuined",
+    "tags": [
+      "Effect.Showcase.CapabilityStaticPerformer.Control"
+    ],
+    "presetType": "Buff",
+    "lifetime": "After",
+    "participatesInResponse": false,
+    "duration": {
+      "durationTicks": 1,
+      "periodTicks": 0,
+      "clockId": "FixedFrame"
+    },
+    "phaseGraphs": {
+      "OnApply": {
+        "post": "Graph.Showcase.CapabilityStaticPerformer.SetDurabilityRuined"
+      }
+    }
+  }
+]

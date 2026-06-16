@@ -16,11 +16,17 @@ namespace Ludots.Core.Physics2D.Components
         public bool IsActive;
         public Entity EntityA;
         public Entity EntityB;
+        public int BodyHandleA;
+        public int BodyHandleB;
 
         public Velocity2D VelocityA;
         public Velocity2D VelocityB;
         public Mass2D MassA;
         public Mass2D MassB;
+        public ColliderType2D ColliderTypeA;
+        public ColliderType2D ColliderTypeB;
+        public int ShapeDataIndexA;
+        public int ShapeDataIndexB;
 
         public Fix64 CombinedFriction;
         public Fix64 CombinedRestitution;

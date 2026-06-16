@@ -762,6 +762,7 @@ public sealed class MassFlowSimulationState
 
         float sepRadiusCm = Semantics.Steering.SeparationRadiusCm;
         float sepRadiusSq = sepRadiusCm * sepRadiusCm;
+        int maxSeparationNeighbors = Math.Max(1, Semantics.Steering.MaxSeparationNeighborsPerUnit);
         float arrivalRadiusCm = Semantics.Steering.GoalArrivalRadiusCm;
         float arrivalRadiusSq = arrivalRadiusCm * arrivalRadiusCm;
         float unitTargetStopThresholdCm = Semantics.Group.UnitTargetStopThresholdCm;
@@ -780,7 +781,7 @@ public sealed class MassFlowSimulationState
         if (workerCount <= 1 || UnitCount < Semantics.Solver.ParallelStepMinAgents)
         {
             long steeringStart = System.Diagnostics.Stopwatch.GetTimestamp();
-            StepRange(0, UnitCount, clampedDt, navGroupRuntime, sepRadiusSq, sepRadiusCm, arrivalRadiusCm, arrivalRadiusSq, unitTargetStopThresholdSq, hwm1, hhm1, invHashCell, flowObstacleNeighborRadiusCells, _useCandidateGating);
+            StepRange(0, UnitCount, clampedDt, navGroupRuntime, sepRadiusSq, sepRadiusCm, maxSeparationNeighbors, arrivalRadiusCm, arrivalRadiusSq, unitTargetStopThresholdSq, hwm1, hhm1, invHashCell, flowObstacleNeighborRadiusCells, _useCandidateGating);
             observeLocalSteering?.Invoke((System.Diagnostics.Stopwatch.GetTimestamp() - steeringStart) * 1000.0 / System.Diagnostics.Stopwatch.Frequency);
             ClampAllPositionsToWorldBounds();
             long resolveStart = System.Diagnostics.Stopwatch.GetTimestamp();
@@ -812,6 +813,7 @@ public sealed class MassFlowSimulationState
             job.NavGroupRuntime = navGroupRuntime;
             job.SepRadiusSq = sepRadiusSq;
             job.SepRadiusCm = sepRadiusCm;
+            job.MaxSeparationNeighbors = maxSeparationNeighbors;
             job.ArrivalRadiusCm = arrivalRadiusCm;
             job.ArrivalRadiusSq = arrivalRadiusSq;
             job.UnitTargetStopThresholdSq = unitTargetStopThresholdSq;
@@ -1642,6 +1644,7 @@ public sealed class MassFlowSimulationState
         MassNavigationGroupRuntime navGroupRuntime,
         float sepRadiusSq,
         float sepRadiusCm,
+        int maxSeparationNeighbors,
         float arrivalRadiusCm,
         float arrivalRadiusSq,
         float unitTargetStopThresholdSq,
@@ -1856,6 +1859,7 @@ public sealed class MassFlowSimulationState
 
             float separationX = 0f;
             float separationY = 0f;
+            int separationNeighborCount = 0;
             int cellX = (int)(px * invHashCell);
             int cellY = (int)(py * invHashCell);
             cellX = cellX < 0 ? 0 : (cellX > hashWidthMinusOne ? hashWidthMinusOne : cellX);
@@ -1904,11 +1908,18 @@ public sealed class MassFlowSimulationState
                                 float response = ComputeSeparationResponse(teamStateIndex, _teamRuntimeIndices[j], i, j);
                                 separationX += dx * invD * force * response;
                                 separationY += dy * invD * force * response;
+                                separationNeighborCount++;
+                                if (separationNeighborCount >= maxSeparationNeighbors)
+                                {
+                                    goto SeparationBudgetSatisfied;
+                                }
                             }
                         }
                     }
                 }
             }
+
+SeparationBudgetSatisfied:
 
             float obstaclePushX = 0f;
             float obstaclePushY = 0f;
@@ -2116,8 +2127,8 @@ public sealed class MassFlowSimulationState
 
     private int ResolveHardResolveHashSearchRadiusCells(int selfUnitIndex)
     {
-        float maxCandidateDistanceCm = _bodyRadiiCm[selfUnitIndex] + ResolveMaxInteractingBodyRadiusCm(selfUnitIndex) + Semantics.Obstacle.HardResolveCandidateDistanceCm;
-        return Math.Max(_hardResolveHashMinSearchRadiusCells, (int)MathF.Ceiling(maxCandidateDistanceCm / _hardResolveHashCellSizeCm));
+        float maxOverlapDistanceCm = _bodyRadiiCm[selfUnitIndex] + ResolveMaxInteractingBodyRadiusCm(selfUnitIndex);
+        return Math.Max(_hardResolveHashMinSearchRadiusCells, (int)MathF.Ceiling(maxOverlapDistanceCm / _hardResolveHashCellSizeCm));
     }
 
     private MassFlowPairAvoidancePolicy ResolvePolicy(TeamRelationship relationship, float selfMass, float otherMass)
@@ -2694,6 +2705,7 @@ public sealed class MassFlowSimulationState
         public MassNavigationGroupRuntime? NavGroupRuntime { get; set; }
         public float SepRadiusSq { get; set; }
         public float SepRadiusCm { get; set; }
+        public int MaxSeparationNeighbors { get; set; }
         public float ArrivalRadiusCm { get; set; }
         public float ArrivalRadiusSq { get; set; }
         public float UnitTargetStopThresholdSq { get; set; }
@@ -2712,6 +2724,7 @@ public sealed class MassFlowSimulationState
                 NavGroupRuntime!,
                 SepRadiusSq,
                 SepRadiusCm,
+                MaxSeparationNeighbors,
                 ArrivalRadiusCm,
                 ArrivalRadiusSq,
                 UnitTargetStopThresholdSq,

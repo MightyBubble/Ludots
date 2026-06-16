@@ -1,0 +1,22 @@
+[
+  {
+    "id": "capability_static_performer.worker.clip.idle",
+    "assetKind": "Clip",
+    "locators": [
+      {
+        "backendId": "raylib",
+        "assetRef": "CapabilityStandardStaticPerformer30kMod:assets/Models/Knight.glb#anim:0"
+      }
+    ]
+  },
+  {
+    "id": "capability_static_performer.worker.clip.walk",
+    "assetKind": "Clip",
+    "locators": [
+      {
+        "backendId": "raylib",
+        "assetRef": "CapabilityStandardStaticPerformer30kMod:assets/Models/Knight.glb#anim:0"
+      }
+    ]
+  }
+]

@@ -108,7 +108,7 @@ namespace Ludots.Tests.Presentation
         }
 
         [Test]
-        public void SimulationRuntime_PropagatesFormationGroupSemanticsToMassFlow()
+        public void SimulationRuntime_PropagatesCrowdSemanticsToMassFlow()
         {
             MassNavigationConfig config = MassNavigationConfig.Load(
                 ReadObject(Path.Combine(MassNavigationModRoot(), "assets", "MassNavigationConfig.json")));
@@ -120,9 +120,12 @@ namespace Ludots.Tests.Presentation
             group.FormationWedgeSpacingCm = 555f;
             group.FormationRotationEpsilonRadians = 0.0123f;
             group.FormationRotationSpeedRadiansPerSecond = 6.75f;
+            MassNavigationSteeringSemantics steering = config.Semantics.Steering;
+            steering.MaxSeparationNeighborsPerUnit = 12;
 
             var runtime = new MassNavigationSimulationRuntime(config);
             MassNavigationGroupSemantics massFlowGroup = runtime.MassFlow.Semantics.Group;
+            MassNavigationSteeringSemantics massFlowSteering = runtime.MassFlow.Semantics.Steering;
 
             Assert.That(massFlowGroup.FormationLineSpacingCm, Is.EqualTo(group.FormationLineSpacingCm));
             Assert.That(massFlowGroup.FormationSquareSpacingCm, Is.EqualTo(group.FormationSquareSpacingCm));
@@ -131,6 +134,7 @@ namespace Ludots.Tests.Presentation
             Assert.That(massFlowGroup.FormationWedgeSpacingCm, Is.EqualTo(group.FormationWedgeSpacingCm));
             Assert.That(massFlowGroup.FormationRotationEpsilonRadians, Is.EqualTo(group.FormationRotationEpsilonRadians));
             Assert.That(massFlowGroup.FormationRotationSpeedRadiansPerSecond, Is.EqualTo(group.FormationRotationSpeedRadiansPerSecond));
+            Assert.That(massFlowSteering.MaxSeparationNeighborsPerUnit, Is.EqualTo(steering.MaxSeparationNeighborsPerUnit));
         }
 
         private static MassFlowSimulationState CreateSpawnedFlow(int randomSeed)

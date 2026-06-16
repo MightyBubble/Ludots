@@ -4,6 +4,7 @@ using Arch.System;
 using Ludots.Core.Engine;
 using Ludots.Core.Presentation.Camera;
 using Ludots.Core.Presentation.Hud;
+using Ludots.Core.Presentation.Minimap;
 using Ludots.Core.Scripting;
 using MassNavigationMod.Runtime;
 
@@ -34,6 +35,10 @@ internal sealed class MassNavigationHudPresentationSystem : ISystem<float>
         }
 
         _simulation.ObserveHudTick();
+        if (_engine.GetService(CoreServiceKeys.MinimapRuntime) is MinimapRuntime { Visible: true })
+        {
+            return;
+        }
 
         ScreenOverlayBuffer overlay = _engine.GetService(CoreServiceKeys.ScreenOverlayBuffer)
             ?? throw new InvalidOperationException("MassNavigationMod requires ScreenOverlayBuffer for diagnostics HUD.");

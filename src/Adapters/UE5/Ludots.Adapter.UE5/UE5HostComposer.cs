@@ -258,7 +258,7 @@ namespace Ludots.Adapter.UE5
             engine.SetService(CoreServiceKeys.ViewController, (Ludots.Core.Presentation.Camera.IViewController)viewController);
 
             // 屏幕射线提供者（鼠标拾取）
-            var screenRayProvider = new UE5ScreenRayProvider(sharedState);
+            var screenRayProvider = new CoreScreenRayProvider(engine.GameSession.Camera, viewController);
             engine.SetService(CoreServiceKeys.ScreenRayProvider, (IScreenRayProvider)screenRayProvider);
 
             // 相机适配器 + 相机表现者
@@ -268,6 +268,10 @@ namespace Ludots.Adapter.UE5
             // 屏幕投影器（WorldHud 世界坐标 → 屏幕坐标）
             var screenProjector = new CoreScreenProjector(engine.GameSession.Camera, viewController);
             screenProjector.BindPresenter(cameraPresenter);
+            var presentationFrameSetup = engine.GetService(CoreServiceKeys.PresentationFrameSetup);
+            screenRayProvider.BindPresenter(cameraPresenter);
+            screenRayProvider.BindPresentationAlphaProvider(() => presentationFrameSetup?.GetInterpolationAlpha() ?? 1f);
+            screenProjector.BindPresentationAlphaProvider(() => presentationFrameSetup?.GetInterpolationAlpha() ?? 1f);
             engine.SetService(CoreServiceKeys.ScreenProjector, (IScreenProjector)screenProjector);
 
             // ── 5. Presentation 系统（对标 RaylibHostLoop）───────────────

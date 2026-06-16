@@ -24,21 +24,6 @@ namespace Ludots.Core.Hosting
         public string? PlanGeneratedAtUtc { get; set; }
     }
 
-    internal sealed class AppLaunchGraphConfig
-    {
-        public int SchemaVersion { get; set; }
-        public string? GeneratedAtUtc { get; set; }
-        public string? PlanFingerprint { get; set; }
-        public List<string> OrderedModIds { get; set; } = new List<string>();
-        public List<AppLaunchGraphMod> PlannedMods { get; set; } = new List<AppLaunchGraphMod>();
-    }
-
-    internal sealed class AppLaunchGraphMod
-    {
-        public string? Id { get; set; }
-        public string? RootPath { get; set; }
-    }
-
     public static class GameBootstrapper
     {
         private static readonly JsonSerializerOptions BootstrapJsonOptions = StrictJsonOptions.CreateExact();
@@ -124,11 +109,11 @@ namespace Ludots.Core.Hosting
 
         private static ResolvedModLoadPlan ResolveGraphPlan(string graphPath, AppBootstrapConfig bootstrapConfig)
         {
-            AppLaunchGraphConfig? graphConfig;
+            LauncherGraphDocument? graphConfig;
             try
             {
                 var json = File.ReadAllText(graphPath);
-                graphConfig = JsonSerializer.Deserialize<AppLaunchGraphConfig>(json, LaunchGraphJsonOptions);
+                graphConfig = JsonSerializer.Deserialize<LauncherGraphDocument>(json, LaunchGraphJsonOptions);
             }
             catch (Exception ex)
             {

@@ -42,13 +42,11 @@ namespace Ludots.Core.Physics2D.Systems
                     return;
                 }
 
-                ref var velocityA = ref pair.EntityA.Get<Velocity2D>();
-                ref var velocityB = ref pair.EntityB.Get<Velocity2D>();
                 ref var massA = ref pair.EntityA.Get<Mass2D>();
                 ref var massB = ref pair.EntityB.Get<Mass2D>();
 
-                pair.VelocityA = velocityA;
-                pair.VelocityB = velocityB;
+                pair.VelocityA = World.TryGet(pair.EntityA, out Velocity2D velocityA) ? velocityA : Velocity2D.Zero;
+                pair.VelocityB = World.TryGet(pair.EntityB, out Velocity2D velocityB) ? velocityB : Velocity2D.Zero;
                 pair.MassA = massA;
                 pair.MassB = massB;
 

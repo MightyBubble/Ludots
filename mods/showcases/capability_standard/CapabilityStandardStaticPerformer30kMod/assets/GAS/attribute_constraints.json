@@ -1,0 +1,10 @@
+{
+  "Durability": {
+    "clampToBase": true,
+    "min": 0
+  },
+  "Health": {
+    "clampToBase": true,
+    "min": 0
+  }
+}

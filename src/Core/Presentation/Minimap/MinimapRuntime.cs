@@ -10,6 +10,7 @@ using Ludots.Core.Mathematics;
 using Ludots.Core.Presentation;
 using Ludots.Core.Presentation.Hud;
 using Ludots.Core.Presentation.Performers;
+using Ludots.Core.Scripting;
 using Ludots.Platform.Abstractions;
 
 namespace Ludots.Core.Presentation.Minimap
@@ -639,7 +640,7 @@ namespace Ludots.Core.Presentation.Minimap
 
             if (Preset == MinimapPreset.FollowCamera)
             {
-                Vector2 cameraTarget = engine.GameSession.Camera.State.TargetCm;
+                Vector2 cameraTarget = ResolveCameraSnapshot(engine).TargetCm;
                 _centerXcm = cameraTarget.X;
                 _centerYcm = cameraTarget.Y;
                 _viewportInitialized = true;
@@ -851,7 +852,7 @@ namespace Ludots.Core.Presentation.Minimap
                 return;
             }
 
-            CameraState state = engine.GameSession.Camera.State;
+            CameraStateSnapshot state = ResolveCameraSnapshot(engine);
             WorldPlane2D.CameraMinimapBasisFromYawDegrees(state.Yaw, out Vector2 right, out Vector2 forward);
             _mapUp = WorldPlane2D.NormalizeOrDefault(forward, Vector2.UnitY);
             _mapRight = WorldPlane2D.NormalizeOrDefault(right, Vector2.UnitX);
@@ -860,7 +861,7 @@ namespace Ludots.Core.Presentation.Minimap
 
         private void UpdateCameraFrustum(GameEngine engine)
         {
-            CameraState state = engine.GameSession.Camera.State;
+            CameraStateSnapshot state = ResolveCameraSnapshot(engine);
             _cameraTargetXcm = state.TargetCm.X;
             _cameraTargetYcm = state.TargetCm.Y;
             _cameraFrustumVisible = false;
@@ -870,7 +871,7 @@ namespace Ludots.Core.Presentation.Minimap
             int screenHeight = Math.Max(1, engine.MergedConfig?.WindowHeight ?? 720);
             float aspect = screenWidth / (float)screenHeight;
             Vector2 resolution = new(screenWidth, screenHeight);
-            var camera = CameraViewportUtil.StateToRenderState(state);
+            var camera = CameraViewportUtil.StateToRenderState(in state);
 
             if (!TryProjectCameraCorner(new Vector2(0f, 0f), in camera, resolution, aspect, 0) ||
                 !TryProjectCameraCorner(new Vector2(screenWidth - 1f, 0f), in camera, resolution, aspect, 1) ||
@@ -883,6 +884,12 @@ namespace Ludots.Core.Presentation.Minimap
             _cameraFrustumPointCount = 4;
             EnsureCameraFrustumMinimumDisplaySize();
             _cameraFrustumVisible = true;
+        }
+
+        private static CameraStateSnapshot ResolveCameraSnapshot(GameEngine engine)
+        {
+            float alpha = engine.GetService(CoreServiceKeys.PresentationFrameSetup)?.GetInterpolationAlpha() ?? 1f;
+            return engine.GameSession.Camera.GetInterpolatedState(alpha);
         }
 
         private static bool TryResolveFollowPosition(GameEngine engine, Entity entity, out float worldXcm, out float worldYcm)

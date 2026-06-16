@@ -98,6 +98,7 @@
       "metadataTeamCapacity": 2
     },
     "panelControls": {
+      "visible": true,
       "maxAgentsPerTeam": 40000,
       "totalAgentStep": 2000,
       "totalAgentPresets": [5000, 10000, 20000, 40000],
@@ -126,6 +127,7 @@
   "cadence": {
     "simulationHz": 15,
     "targetUpdateHz": 15,
+    "targetUpdateMemberBudgetPerStep": 0,
     "flowStepHz": 5,
     "flowCrowdStampHz": 5,
     "flowObstacleStampHz": 2,
@@ -218,7 +220,7 @@
     "maxRetryCount": 2
   },
   "viewResidency": {
-    "mode": "Probe",
+    "mode": "Camera",
     "retainSeconds": 12.0,
     "radiusCm": 24000,
     "initialProbeId": "battlefield_overview",
@@ -312,6 +314,7 @@
     },
     "steering": {
       "separationRadiusCm": 200.0,
+      "maxSeparationNeighborsPerUnit": 24,
       "goalArrivalRadiusCm": 1200.0,
       "flowObstacleAvoidanceScale": 1.2,
       "formationSeparationScale": 2.0,

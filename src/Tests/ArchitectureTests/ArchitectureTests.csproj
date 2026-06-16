@@ -15,6 +15,7 @@
 
   <ItemGroup>
     <ProjectReference Include="..\..\Core\Ludots.Core.csproj" />
+    <ProjectReference Include="..\..\Tools\Ludots.Launcher.Backend\Ludots.Launcher.Backend.csproj" />
   </ItemGroup>
 
 </Project>

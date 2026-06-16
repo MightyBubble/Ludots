@@ -131,23 +131,24 @@
   },
   "scenarioRuntime": {
     "autoSpawnConfiguredScenario": true,
-    "initialSelectionScratchCapacity": 256,
-    "initialSelectedEntityCapacity": 64,
+    "initialSelectionScratchCapacity": 10000,
+    "initialSelectedEntityCapacity": 10000,
     "runtimeCapacity": {
       "navigationGroupCapacity": 256,
       "groupMembershipAgentCapacity": 160000,
-      "selectionMemberScratchCapacity": 256,
-      "groupMemberCapacity": 256,
+      "selectionMemberScratchCapacity": 10000,
+      "groupMemberCapacity": 10000,
       "orderIngestionTokenCapacity": 256,
-      "orderIngestionMemberCapacity": 256,
+      "orderIngestionMemberCapacity": 10000,
       "loadedChunkCapacity": 256,
       "metadataTeamCapacity": 4
     },
     "panelControls": {
+      "visible": false,
       "maxAgentsPerTeam": 40000,
       "totalAgentStep": 2000,
       "totalAgentPresets": [5000, 10000, 20000, 40000],
-      "panelRefreshIntervalSeconds": 0.25,
+      "panelRefreshIntervalSeconds": 1.0,
       "viewResidencyRetainSecondsStep": 2.0,
       "simulationBudgetStepMs": 1,
       "simulationBudgetMinMs": 1,
@@ -172,6 +173,7 @@
   "cadence": {
     "simulationHz": 15,
     "targetUpdateHz": 15,
+    "targetUpdateMemberBudgetPerStep": 2048,
     "flowStepHz": 5,
     "flowCrowdStampHz": 5,
     "flowObstacleStampHz": 2,
@@ -340,6 +342,7 @@
     },
     "steering": {
       "separationRadiusCm": 200.0,
+      "maxSeparationNeighborsPerUnit": 24,
       "goalArrivalRadiusCm": 1200.0,
       "flowObstacleAvoidanceScale": 1.2,
       "formationSeparationScale": 2.0,

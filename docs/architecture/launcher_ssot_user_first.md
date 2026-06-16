@@ -30,16 +30,25 @@ Required graph payload:
 - runtime bootstrap strategy and paths
 - diagnostics and conflict decisions used for the plan
 
+The graph DTO is Core-owned. `src/Core/Hosting/LauncherGraphDocument.cs` defines the
+runtime-readable launcher graph contract, `src/Tools/Ludots.Launcher.Backend/LauncherService.cs`
+writes that exact contract, and `src/Core/Hosting/GameBootstrapper.cs` reads it with strict
+camel-case JSON options. Launcher metadata such as adapter/build/runtime artifacts and diagnostics is
+known tooling metadata, not an arbitrary extension bag; unknown graph fields must still fail parsing.
+
 Evidence paths for current launcher planning model:
 
+- `src/Core/Hosting/LauncherGraphDocument.cs`
 - `src/Tools/Ludots.Launcher.Backend/LauncherModels.cs`
 - `src/Tools/Ludots.Launcher.Backend/LauncherService.cs`
+- `src/Core/Hosting/GameBootstrapper.cs`
+- `src/Tests/ArchitectureTests/LauncherBootstrapContractTests.cs`
 - `docs/architecture/startup_entrypoints.md`
 
 Current implementation note:
 
-- runtime currently consumes graph order + root paths + plan metadata
-- graph still carries richer planning information for launcher/build UX
+- runtime consumes graph order + root paths + integrity metadata from the Core-owned graph contract
+- graph also carries richer launcher-owned planning information for launcher/build UX
 - lock-level assembly/hash freezing remains a future step
 
 Future lock scope:

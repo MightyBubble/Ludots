@@ -3,6 +3,7 @@ using System.IO;
 using System.Linq;
 using NUnit.Framework;
 using Ludots.Core.Hosting;
+using Ludots.Launcher.Backend;
 
 namespace Ludots.Tests.Architecture
 {
@@ -55,6 +56,318 @@ namespace Ludots.Tests.Architecture
                 Assert.That(result.Engine, Is.Not.Null);
                 Assert.That(result.Config, Is.Not.Null);
                 Assert.That(result.AssetsRoot, Is.EqualTo(Path.Combine(repoRoot, "assets")));
+            }
+            finally
+            {
+                if (Directory.Exists(tempDirectory))
+                {
+                    Directory.Delete(tempDirectory, recursive: true);
+                }
+            }
+        }
+
+        [Test]
+        public void GameBootstrapper_AcceptsFullLauncherGraphMetadata()
+        {
+            var repoRoot = FindRepoRoot();
+            var tempDirectory = Path.Combine(repoRoot, "artifacts", "tests", $"bootstrap-full-graph-{Guid.NewGuid():N}");
+            Directory.CreateDirectory(tempDirectory);
+
+            var modRoot = Path.Combine(repoRoot, "mods", "LudotsCoreMod");
+            var graphPath = Path.Combine(tempDirectory, "raylib.launch.graph.json");
+            var bootstrapPath = Path.Combine(tempDirectory, "launcher.runtime.json");
+
+            try
+            {
+                File.WriteAllText(
+                    graphPath,
+                    $$"""
+                    {
+                      "schemaVersion": 1,
+                      "generatedAtUtc": "2026-04-01T00:00:00.0000000Z",
+                      "planFingerprint": "full-graph-fingerprint",
+                      "adapter": {
+                        "id": "raylib",
+                        "name": "Raylib",
+                        "hostKind": "desktop",
+                        "buildPipeline": "dotnet",
+                        "runtimeBootstrapSchema": "launcher.runtime.v1",
+                        "appProjectPath": "src/Apps/Raylib/Ludots.App.Raylib/Ludots.App.Raylib.csproj",
+                        "outputDirectory": "src/Apps/Raylib/Ludots.App.Raylib/bin/Release/net8.0",
+                        "clientProjectDirectory": "",
+                        "clientDistributionDirectory": "",
+                        "launchUrl": "",
+                        "runtimeBootstrapFileName": "launcher.runtime.json"
+                      },
+                      "buildMode": "auto",
+                      "selectors": [
+                        "mod:LudotsCoreMod"
+                      ],
+                      "rootModIds": [
+                        "LudotsCoreMod"
+                      ],
+                      "orderedModIds": [
+                        "LudotsCoreMod"
+                      ],
+                      "plannedMods": [
+                        {
+                          "id": "LudotsCoreMod",
+                          "rootPath": "{{modRoot.Replace("\\", "\\\\")}}",
+                          "projectPath": "{{Path.Combine(modRoot, "LudotsCoreMod.csproj").Replace("\\", "\\\\")}}",
+                          "mainAssemblyPath": "{{Path.Combine(modRoot, "bin", "net8.0", "LudotsCoreMod.dll").Replace("\\", "\\\\")}}",
+                          "kind": 2,
+                          "buildState": 4,
+                          "bindingNames": []
+                        }
+                      ],
+                      "runtimeArtifacts": {
+                        "bootstrapArtifactStrategy": "file",
+                        "bootstrapArtifactPath": "{{bootstrapPath.Replace("\\", "\\\\")}}",
+                        "graphArtifactPath": "{{graphPath.Replace("\\", "\\\\")}}",
+                        "appOutputDirectory": "src/Apps/Raylib/Ludots.App.Raylib/bin/Release/net8.0",
+                        "appAssemblyPath": "src/Apps/Raylib/Ludots.App.Raylib/bin/Release/net8.0/Ludots.App.Raylib.dll",
+                        "launchUrl": ""
+                      },
+                      "diagnostics": {
+                        "settings": [],
+                        "warnings": []
+                      }
+                    }
+                    """);
+
+                File.WriteAllText(
+                    bootstrapPath,
+                    """
+                    {
+                      "LaunchGraphPath": "raylib.launch.graph.json",
+                      "PlanFingerprint": "full-graph-fingerprint",
+                      "PlanSchemaVersion": 1
+                    }
+                    """);
+
+                var result = GameBootstrapper.InitializeFromBaseDirectory(tempDirectory, "launcher.runtime.json");
+
+                Assert.That(result.Engine, Is.Not.Null);
+                Assert.That(result.Config, Is.Not.Null);
+                Assert.That(result.AssetsRoot, Is.EqualTo(Path.Combine(repoRoot, "assets")));
+            }
+            finally
+            {
+                if (Directory.Exists(tempDirectory))
+                {
+                    Directory.Delete(tempDirectory, recursive: true);
+                }
+            }
+        }
+
+        [Test]
+        public void GameBootstrapper_ReadsGraphEmittedByOfficialLauncherBackend()
+        {
+            var repoRoot = FindRepoRoot();
+            var tempDirectory = Path.Combine(repoRoot, "artifacts", "tests", $"bootstrap-official-graph-{Guid.NewGuid():N}");
+            Directory.CreateDirectory(tempDirectory);
+
+            var graphPath = Path.Combine(repoRoot, "artifacts", "launcher", "raylib.launch.graph.json");
+            var bootstrapPath = Path.Combine(
+                repoRoot,
+                "src",
+                "Apps",
+                "Raylib",
+                "Ludots.App.Raylib",
+                "bin",
+                "Release",
+                "net8.0",
+                "launcher.runtime.json");
+            var originalGraph = CaptureFile(graphPath);
+            var originalBootstrap = CaptureFile(bootstrapPath);
+
+            try
+            {
+                var preferencesPath = Path.Combine(tempDirectory, "preferences.json");
+                var userConfigPath = Path.Combine(tempDirectory, "config.overlay.json");
+                File.WriteAllText(preferencesPath, "{}");
+                File.WriteAllText(userConfigPath, "{}");
+
+                var launcher = new LauncherService(
+                    repoRoot,
+                    Path.Combine(repoRoot, "launcher.config.json"),
+                    Path.Combine(repoRoot, "launcher.presets.json"),
+                    preferencesPath,
+                    userConfigPath);
+
+                var resolve = launcher.Resolve(new[] { "mod:LudotsCoreMod" }, LauncherPlatformIds.Raylib, LauncherBuildMode.Never);
+                var writtenBootstrapPath = launcher.WriteBootstrap(resolve.Plan);
+
+                Assert.That(resolve.Plan.GraphArtifactPath, Is.EqualTo(graphPath));
+                Assert.That(writtenBootstrapPath, Is.EqualTo(bootstrapPath));
+                Assert.That(File.Exists(graphPath), Is.True);
+                Assert.That(File.Exists(bootstrapPath), Is.True);
+
+                var result = GameBootstrapper.InitializeFromBaseDirectory(resolve.Plan.AppOutputDirectory, bootstrapPath);
+
+                try
+                {
+                    Assert.That(result.Engine.ModLoader.LoadedModIds, Is.EqualTo(resolve.Plan.OrderedModIds));
+                    Assert.That(result.Config, Is.Not.Null);
+                    Assert.That(result.AssetsRoot, Is.EqualTo(Path.Combine(repoRoot, "assets")));
+                }
+                finally
+                {
+                    result.Engine.Dispose();
+                }
+            }
+            finally
+            {
+                RestoreFile(graphPath, originalGraph);
+                RestoreFile(bootstrapPath, originalBootstrap);
+                if (Directory.Exists(tempDirectory))
+                {
+                    Directory.Delete(tempDirectory, recursive: true);
+                }
+            }
+        }
+
+        [Test]
+        public void Launcher_ResolvesCapabilityStandardShowcases_AsOnlyAcceptanceRoots()
+        {
+            var repoRoot = FindRepoRoot();
+            var tempDirectory = Path.Combine(repoRoot, "artifacts", "tests", $"launcher-capability-standard-{Guid.NewGuid():N}");
+            Directory.CreateDirectory(tempDirectory);
+
+            try
+            {
+                var preferencesPath = Path.Combine(tempDirectory, "preferences.json");
+                var userConfigPath = Path.Combine(tempDirectory, "config.overlay.json");
+                File.WriteAllText(preferencesPath, "{}");
+                File.WriteAllText(userConfigPath, "{}");
+
+                var launcher = new LauncherService(
+                    repoRoot,
+                    Path.Combine(repoRoot, "launcher.config.json"),
+                    Path.Combine(repoRoot, "launcher.presets.json"),
+                    preferencesPath,
+                    userConfigPath);
+
+                AssertCapabilityStandardPlan(
+                    launcher.Resolve(
+                        new[] { "$capability_standard_static_performer_30k" },
+                        LauncherPlatformIds.Raylib,
+                        LauncherBuildMode.Never).Plan,
+                    expectedRootModId: "CapabilityStandardStaticPerformer30kMod",
+                    expectedStartupMapId: "capability_standard_static_performer_30k_showcase",
+                    allowedModIds: new[] { "LudotsCoreMod", "CoreInputMod", "CapabilityStandardStaticPerformer30kMod" });
+
+                AssertCapabilityStandardPlan(
+                    launcher.Resolve(
+                        new[] { "$capability_standard_mass_nav_large_world_10k" },
+                        LauncherPlatformIds.Raylib,
+                        LauncherBuildMode.Never).Plan,
+                    expectedRootModId: "CapabilityStandardMassNavigationLargeWorld10kMod",
+                    expectedStartupMapId: "mass_navigation",
+                    allowedModIds: new[] { "LudotsCoreMod", "CoreInputMod", "CameraProfilesMod", "MassNavigationMod", "CapabilityStandardMassNavigationLargeWorld10kMod" });
+
+                AssertCapabilityStandardPlan(
+                    launcher.Resolve(
+                        new[] { "$capability_standard_total_war_like" },
+                        LauncherPlatformIds.Raylib,
+                        LauncherBuildMode.Never).Plan,
+                    expectedRootModId: "CapabilityStandardTotalWarLikeMod",
+                    expectedStartupMapId: "mass_navigation_capability_standard_total_war_like",
+                    allowedModIds: new[] { "LudotsCoreMod", "CoreInputMod", "CameraProfilesMod", "MassNavigationMod", "CapabilityStandardTotalWarLikeMod" });
+            }
+            finally
+            {
+                if (Directory.Exists(tempDirectory))
+                {
+                    Directory.Delete(tempDirectory, recursive: true);
+                }
+            }
+        }
+
+        [Test]
+        public void GameBootstrapper_RejectsUnknownLauncherMetadataFields()
+        {
+            var repoRoot = FindRepoRoot();
+            var tempDirectory = Path.Combine(repoRoot, "artifacts", "tests", $"bootstrap-unknown-metadata-{Guid.NewGuid():N}");
+            Directory.CreateDirectory(tempDirectory);
+
+            var modRoot = Path.Combine(repoRoot, "mods", "LudotsCoreMod");
+            var graphPath = Path.Combine(tempDirectory, "raylib.launch.graph.json");
+            var bootstrapPath = Path.Combine(tempDirectory, "launcher.runtime.json");
+
+            try
+            {
+                File.WriteAllText(
+                    graphPath,
+                    $$"""
+                    {
+                      "schemaVersion": 1,
+                      "generatedAtUtc": "2026-04-01T00:00:00.0000000Z",
+                      "planFingerprint": "unknown-metadata-fingerprint",
+                      "adapter": {
+                        "id": "raylib",
+                        "name": "Raylib",
+                        "hostKind": "desktop",
+                        "buildPipeline": "dotnet",
+                        "runtimeBootstrapSchema": "launcher.runtime.v1",
+                        "appProjectPath": "src/Apps/Raylib/Ludots.App.Raylib/Ludots.App.Raylib.csproj",
+                        "outputDirectory": "src/Apps/Raylib/Ludots.App.Raylib/bin/Release/net8.0",
+                        "clientProjectDirectory": "",
+                        "clientDistributionDirectory": "",
+                        "launchUrl": "",
+                        "runtimeBootstrapFileName": "launcher.runtime.json",
+                        "unexpectedAdapterField": "must not be silently ignored"
+                      },
+                      "buildMode": "auto",
+                      "selectors": [
+                        "mod:LudotsCoreMod"
+                      ],
+                      "rootModIds": [
+                        "LudotsCoreMod"
+                      ],
+                      "orderedModIds": [
+                        "LudotsCoreMod"
+                      ],
+                      "plannedMods": [
+                        {
+                          "id": "LudotsCoreMod",
+                          "rootPath": "{{modRoot.Replace("\\", "\\\\")}}",
+                          "projectPath": "{{Path.Combine(modRoot, "LudotsCoreMod.csproj").Replace("\\", "\\\\")}}",
+                          "mainAssemblyPath": "{{Path.Combine(modRoot, "bin", "net8.0", "LudotsCoreMod.dll").Replace("\\", "\\\\")}}",
+                          "kind": 2,
+                          "buildState": 4,
+                          "bindingNames": []
+                        }
+                      ],
+                      "runtimeArtifacts": {
+                        "bootstrapArtifactStrategy": "file",
+                        "bootstrapArtifactPath": "{{bootstrapPath.Replace("\\", "\\\\")}}",
+                        "graphArtifactPath": "{{graphPath.Replace("\\", "\\\\")}}",
+                        "appOutputDirectory": "src/Apps/Raylib/Ludots.App.Raylib/bin/Release/net8.0",
+                        "appAssemblyPath": "src/Apps/Raylib/Ludots.App.Raylib/bin/Release/net8.0/Ludots.App.Raylib.dll",
+                        "launchUrl": ""
+                      },
+                      "diagnostics": {
+                        "settings": [],
+                        "warnings": []
+                      }
+                    }
+                    """);
+
+                File.WriteAllText(
+                    bootstrapPath,
+                    """
+                    {
+                      "LaunchGraphPath": "raylib.launch.graph.json",
+                      "PlanFingerprint": "unknown-metadata-fingerprint",
+                      "PlanSchemaVersion": 1
+                    }
+                    """);
+
+                var ex = Assert.Throws<Exception>(
+                    () => GameBootstrapper.InitializeFromBaseDirectory(tempDirectory, "launcher.runtime.json"));
+
+                Assert.That(ex!.Message, Does.Contain("unexpectedAdapterField"));
             }
             finally
             {
@@ -364,6 +677,51 @@ namespace Ludots.Tests.Architecture
                 """);
         }
 
+        private static void AssertCapabilityStandardPlan(
+            LauncherLaunchPlan plan,
+            string expectedRootModId,
+            string expectedStartupMapId,
+            string[] allowedModIds)
+        {
+            Assert.That(plan.RootModIds, Is.EqualTo(new[] { expectedRootModId }));
+            Assert.That(plan.OrderedModIds, Does.Contain(expectedRootModId));
+            Assert.That(plan.OrderedModIds, Is.SubsetOf(allowedModIds));
+            Assert.That(plan.OrderedModIds, Does.Not.Contain("PerformerBlacksmithShowcaseMod"));
+            Assert.That(plan.OrderedModIds, Does.Not.Contain("PerformerBlacksmithScatterHudTextBenchmarkEntryMod"));
+            Assert.That(plan.OrderedModIds, Does.Not.Contain("MassNavigationTotalWarEntryMod"));
+
+            var startupMapSetting = plan.Diagnostics.Settings.First(setting => string.Equals(setting.Key, "startupMapId", StringComparison.Ordinal));
+            Assert.That(startupMapSetting.EffectiveValue?.GetValue<string>(), Is.EqualTo(expectedStartupMapId));
+            Assert.That(startupMapSetting.EffectiveSource, Does.Contain(expectedRootModId));
+        }
+
+        private static FileSnapshot CaptureFile(string path)
+        {
+            return File.Exists(path)
+                ? new FileSnapshot(true, File.ReadAllText(path))
+                : new FileSnapshot(false, string.Empty);
+        }
+
+        private static void RestoreFile(string path, FileSnapshot snapshot)
+        {
+            if (snapshot.Exists)
+            {
+                var directory = Path.GetDirectoryName(path);
+                if (!string.IsNullOrWhiteSpace(directory))
+                {
+                    Directory.CreateDirectory(directory);
+                }
+
+                File.WriteAllText(path, snapshot.Contents);
+                return;
+            }
+
+            if (File.Exists(path))
+            {
+                File.Delete(path);
+            }
+        }
+
         private static string FindRepoRoot()
         {
             var current = new DirectoryInfo(AppDomain.CurrentDomain.BaseDirectory);
@@ -380,5 +738,7 @@ namespace Ludots.Tests.Architecture
 
             throw new DirectoryNotFoundException("Could not locate repo root containing src/Core/Ludots.Core.csproj");
         }
+
+        private readonly record struct FileSnapshot(bool Exists, string Contents);
     }
 }
