@@ -313,7 +313,12 @@ namespace Ludots.Tests.Presentation
         "parameterIndex": "semantic.anim.speed",
         "threshold": 0.2,
         "durationSeconds": 0.1,
-        "consumeTrigger": false
+        "durationMode": "Seconds",
+        "consumeTrigger": false,
+        "hasExitTime": false,
+        "exitTime": 0.0,
+        "interruptSource": "None",
+        "orderedInterruption": false
       }
     ]
   }
@@ -371,7 +376,12 @@ namespace Ludots.Tests.Presentation
         "parameterIndex": "semantic.anim.speed",
         "threshold": 0.2,
         "durationSeconds": 0.1,
-        "consumeTrigger": false
+        "durationMode": "Seconds",
+        "consumeTrigger": false,
+        "hasExitTime": false,
+        "exitTime": 0.0,
+        "interruptSource": "None",
+        "orderedInterruption": false
       }
     ]
   }
@@ -419,7 +429,12 @@ namespace Ludots.Tests.Presentation
         "parameterIndex": 0,
         "threshold": 0.2,
         "durationSeconds": 0.1,
-        "consumeTrigger": false
+        "durationMode": "Seconds",
+        "consumeTrigger": false,
+        "hasExitTime": false,
+        "exitTime": 0.0,
+        "interruptSource": "None",
+        "orderedInterruption": false
       }
     ]
   }

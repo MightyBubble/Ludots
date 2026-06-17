@@ -86,7 +86,19 @@ namespace Ludots.Core.Presentation.Config
                     ParameterIndex = ParseParamKey(transitionNode["parameterIndex"], $"Animator controller '{key}' transition[{i}].parameterIndex"),
                     Threshold = RequireFiniteFloat(transitionNode["threshold"], $"Animator controller '{key}' transition[{i}].threshold"),
                     DurationSeconds = RequireNonNegativeFloat(transitionNode["durationSeconds"], $"Animator controller '{key}' transition[{i}].durationSeconds"),
+                    DurationMode = RequireEnum<AnimatorTransitionDurationMode>(
+                        transitionNode["durationMode"],
+                        $"Animator controller '{key}' transition[{i}].durationMode"),
                     ConsumeTrigger = RequireBool(transitionNode["consumeTrigger"], $"Animator controller '{key}' transition[{i}].consumeTrigger"),
+                    HasExitTime = RequireBool(transitionNode["hasExitTime"], $"Animator controller '{key}' transition[{i}].hasExitTime"),
+                    ExitTime = RequireFiniteFloat(transitionNode["exitTime"], $"Animator controller '{key}' transition[{i}].exitTime"),
+                    InterruptSource = RequireEnum<AnimatorTransitionInterruptSource>(
+                        transitionNode["interruptSource"],
+                        $"Animator controller '{key}' transition[{i}].interruptSource"),
+                    OrderedInterruption = RequireBool(
+                        transitionNode["orderedInterruption"],
+                        $"Animator controller '{key}' transition[{i}].orderedInterruption"),
+                    DefinitionIndex = i,
                 };
 
                 ValidateTransition(key, i, states.Length, in transitions[i]);
@@ -182,6 +194,44 @@ namespace Ludots.Core.Presentation.Config
             {
                 throw new InvalidOperationException(
                     $"Animator controller '{key}' transition[{transitionIndex}].consumeTrigger can be true only when conditionKind is Trigger.");
+            }
+
+            ValidateTransitionAuthoringFields(key, transitionIndex, in transition);
+        }
+
+        private static void ValidateTransitionAuthoringFields(
+            string key,
+            int transitionIndex,
+            in AnimatorTransitionDefinition transition)
+        {
+            if (transition.HasExitTime && (transition.ExitTime < 0f || transition.ExitTime > 1f))
+            {
+                throw new InvalidOperationException(
+                    $"Animator controller '{key}' transition[{transitionIndex}].exitTime must be in [0, 1] when hasExitTime is true.");
+            }
+
+            if (!transition.HasExitTime && transition.ExitTime != 0f)
+            {
+                throw new InvalidOperationException(
+                    $"Animator controller '{key}' transition[{transitionIndex}].exitTime must be 0 when hasExitTime is false.");
+            }
+
+            if (!Enum.IsDefined(typeof(AnimatorTransitionDurationMode), transition.DurationMode))
+            {
+                throw new InvalidOperationException(
+                    $"Animator controller '{key}' transition[{transitionIndex}].durationMode has invalid value '{transition.DurationMode}'.");
+            }
+
+            if (!Enum.IsDefined(typeof(AnimatorTransitionInterruptSource), transition.InterruptSource))
+            {
+                throw new InvalidOperationException(
+                    $"Animator controller '{key}' transition[{transitionIndex}].interruptSource has invalid value '{transition.InterruptSource}'.");
+            }
+
+            if (transition.OrderedInterruption && transition.InterruptSource == AnimatorTransitionInterruptSource.None)
+            {
+                throw new InvalidOperationException(
+                    $"Animator controller '{key}' transition[{transitionIndex}].orderedInterruption requires a non-None interruptSource.");
             }
         }
 

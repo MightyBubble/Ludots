@@ -44,7 +44,7 @@ namespace Ludots.Core.Config
             Register<Ludots.Core.Gameplay.Components.PlayerOwner>("PlayerOwner");
             Register<Ludots.Core.Gameplay.Components.TeamIdentity>("TeamIdentity");
             Register<Ludots.Core.Gameplay.Components.TeamEntityRef>("TeamEntityRef");
-            Register("EntityLayer", SetEntityLayer);
+            Register("EntityLayer", SetEntityLayer, null, Component<Ludots.Core.Gameplay.Components.EntityLayer>.ComponentType);
             Register("AttributeBuffer", SetAttributeBuffer);
             Register("AbilityStateBuffer", SetAbilityStateBuffer);
             Register("AbilityFormSetRef", SetAbilityFormSetRef);
@@ -52,9 +52,9 @@ namespace Ludots.Core.Config
             Register<GameplayTagContainer>("GameplayTagContainer");
             Register<TagCountContainer>("TagCountContainer");
             Register<TimedTagBuffer>("TimedTagBuffer");
-            Register("OrderBuffer", SetOrderBuffer);
+            Register("OrderBuffer", SetOrderBuffer, null, Component<OrderBuffer>.ComponentType);
             Register<SelectionSelectableTag>("SelectionSelectableTag");
-            Register("SelectionSelectableState", SetSelectionSelectableState);
+            Register("SelectionSelectableState", SetSelectionSelectableState, null, Component<SelectionSelectableState>.ComponentType);
             Register<SelectionDragState>("SelectionDragState");
             Register("SpatialBounds", SetSpatialBounds);
             Register("SpatialBox3D", SetSpatialBox3D);

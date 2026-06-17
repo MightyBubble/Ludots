@@ -6,7 +6,6 @@ using Arch.Core;
 using Ludots.Core.Presentation.Assets;
 using Ludots.Core.Presentation.Commands;
 using Ludots.Core.Presentation.Components;
-using Ludots.Core.Presentation.Components;
 using Ludots.Core.Presentation.Performers;
 using Ludots.Core.Presentation.Systems;
 using NUnit.Framework;
@@ -216,6 +215,194 @@ namespace Ludots.Tests.Presentation
             Assert.That(instances.ResolveInt(performer, stateParamKey + 3), Is.EqualTo(1));
             Assert.That(instances.ResolveFloat(performer, stateParamKey + 4), Is.EqualTo(1f).Within(0.001f));
             Assert.That(instances.ResolveFloat(performer, stateParamKey + 5), Is.EqualTo(0f).Within(0.001f));
+        }
+
+        [Test]
+        public void AnimatorRuntimeSystem_ComposesExitTimeGateWithParameterCondition()
+        {
+            using var world = World.Create();
+            var controllers = new AnimatorControllerRegistry();
+            int controllerId = controllers.Register(
+                "hero.exit-time",
+                new AnimatorControllerDefinition
+                {
+                    DefaultStateIndex = 0,
+                    States =
+                    [
+                        new AnimatorStateDefinition { PackedStateIndex = 5, DurationSeconds = 1f, PlaybackSpeed = 1f, Loop = false },
+                        new AnimatorStateDefinition { PackedStateIndex = 9, DurationSeconds = 1f, PlaybackSpeed = 1f, Loop = true },
+                    ],
+                    Transitions =
+                    [
+                        new AnimatorTransitionDefinition
+                        {
+                            FromStateIndex = 0,
+                            ToStateIndex = 1,
+                            ConditionKind = AnimatorConditionKind.FloatGreaterOrEqual,
+                            ParameterIndex = 12,
+                            Threshold = 0.5f,
+                            DurationSeconds = 0f,
+                            DurationMode = AnimatorTransitionDurationMode.Seconds,
+                            ConsumeTrigger = false,
+                            HasExitTime = true,
+                            ExitTime = 0.6f,
+                            InterruptSource = AnimatorTransitionInterruptSource.None,
+                            OrderedInterruption = false,
+                        },
+                    ],
+                });
+
+            var definitions = new PerformerDefinitionRegistry();
+            int defId = RegisterAnimatorDefinition(definitions, controllerId, stateParamKey: 20);
+            var instances = new PerformerEntityRuntime(world);
+            instances.BindDefinitions(definitions);
+            var animatorStates = new PerformerAnimatorStateBuffer(4);
+            Entity performer = AllocateActiveAnimator(instances, world, world.Create(), defId);
+            instances.SetParam(performer, 12, ParamLane.Float, 0.75f, 0, default);
+
+            using var system = new AnimatorRuntimeSystem(world, controllers, instances, definitions, animatorStates);
+            system.Update(0.4f);
+
+            Assert.That(animatorStates.GetRuntimeState(performer).CurrentStateIndex, Is.EqualTo(0));
+            Assert.That(animatorStates.GetPackedState(performer).GetPrimaryStateIndex(), Is.EqualTo(5));
+
+            system.Update(0.2f);
+
+            Assert.That(animatorStates.GetRuntimeState(performer).CurrentStateIndex, Is.EqualTo(1));
+            Assert.That(animatorStates.GetPackedState(performer).GetPrimaryStateIndex(), Is.EqualTo(9));
+        }
+
+        [Test]
+        public void AnimatorRuntimeSystem_ResolvesNormalizedSourceStateTransitionDuration()
+        {
+            using var world = World.Create();
+            var controllers = new AnimatorControllerRegistry();
+            int controllerId = controllers.Register(
+                "hero.normalized-duration",
+                new AnimatorControllerDefinition
+                {
+                    DefaultStateIndex = 0,
+                    States =
+                    [
+                        new AnimatorStateDefinition { PackedStateIndex = 5, DurationSeconds = 2f, PlaybackSpeed = 1f, Loop = true },
+                        new AnimatorStateDefinition { PackedStateIndex = 9, DurationSeconds = 1f, PlaybackSpeed = 1f, Loop = true },
+                    ],
+                    Transitions =
+                    [
+                        new AnimatorTransitionDefinition
+                        {
+                            FromStateIndex = 0,
+                            ToStateIndex = 1,
+                            ConditionKind = AnimatorConditionKind.Trigger,
+                            ParameterIndex = 12,
+                            Threshold = 0f,
+                            DurationSeconds = 0.5f,
+                            DurationMode = AnimatorTransitionDurationMode.NormalizedSourceState,
+                            ConsumeTrigger = true,
+                            HasExitTime = false,
+                            ExitTime = 0f,
+                            InterruptSource = AnimatorTransitionInterruptSource.None,
+                            OrderedInterruption = false,
+                        },
+                    ],
+                });
+
+            var definitions = new PerformerDefinitionRegistry();
+            int stateParamKey = 20;
+            int defId = RegisterAnimatorDefinition(definitions, controllerId, stateParamKey);
+            var instances = new PerformerEntityRuntime(world);
+            instances.BindDefinitions(definitions);
+            var animatorStates = new PerformerAnimatorStateBuffer(4);
+            Entity performer = AllocateActiveAnimator(instances, world, world.Create(), defId);
+            instances.SetParam(performer, 12, ParamLane.Int, 0f, 1, default);
+
+            using var system = new AnimatorRuntimeSystem(world, controllers, instances, definitions, animatorStates);
+            system.Update(0.1f);
+
+            ref readonly AnimatorRuntimeState runtime = ref animatorStates.GetRuntimeState(performer);
+            ref readonly AnimatorPackedState packed = ref animatorStates.GetPackedState(performer);
+            Assert.That(runtime.TransitionDurationSeconds, Is.EqualTo(1f).Within(0.001f));
+            Assert.That(packed.GetTransitionProgress01(), Is.EqualTo(0.1f).Within(0.01f));
+            Assert.That(instances.ResolveFloat(performer, stateParamKey + 5), Is.EqualTo(1f).Within(0.001f));
+        }
+
+        [Test]
+        public void AnimatorRuntimeSystem_InterruptsActiveTransitionFromDeclaredSource()
+        {
+            using var world = World.Create();
+            var controllers = new AnimatorControllerRegistry();
+            int controllerId = controllers.Register(
+                "hero.interrupt",
+                new AnimatorControllerDefinition
+                {
+                    DefaultStateIndex = 0,
+                    States =
+                    [
+                        new AnimatorStateDefinition { PackedStateIndex = 5, DurationSeconds = 1f, PlaybackSpeed = 1f, Loop = true },
+                        new AnimatorStateDefinition { PackedStateIndex = 9, DurationSeconds = 1f, PlaybackSpeed = 1f, Loop = true },
+                        new AnimatorStateDefinition { PackedStateIndex = 13, DurationSeconds = 1f, PlaybackSpeed = 1f, Loop = true },
+                    ],
+                    Transitions =
+                    [
+                        new AnimatorTransitionDefinition
+                        {
+                            FromStateIndex = 0,
+                            ToStateIndex = 1,
+                            ConditionKind = AnimatorConditionKind.Trigger,
+                            ParameterIndex = 12,
+                            Threshold = 0f,
+                            DurationSeconds = 1f,
+                            DurationMode = AnimatorTransitionDurationMode.Seconds,
+                            ConsumeTrigger = true,
+                            HasExitTime = false,
+                            ExitTime = 0f,
+                            InterruptSource = AnimatorTransitionInterruptSource.CurrentState,
+                            OrderedInterruption = false,
+                        },
+                        new AnimatorTransitionDefinition
+                        {
+                            FromStateIndex = 0,
+                            ToStateIndex = 2,
+                            ConditionKind = AnimatorConditionKind.Trigger,
+                            ParameterIndex = 13,
+                            Threshold = 0f,
+                            DurationSeconds = 0.2f,
+                            DurationMode = AnimatorTransitionDurationMode.Seconds,
+                            ConsumeTrigger = true,
+                            HasExitTime = false,
+                            ExitTime = 0f,
+                            InterruptSource = AnimatorTransitionInterruptSource.None,
+                            OrderedInterruption = false,
+                        },
+                    ],
+                });
+
+            var definitions = new PerformerDefinitionRegistry();
+            int defId = RegisterAnimatorDefinition(definitions, controllerId, stateParamKey: 20);
+            var instances = new PerformerEntityRuntime(world);
+            instances.BindDefinitions(definitions);
+            var animatorStates = new PerformerAnimatorStateBuffer(4);
+            Entity performer = AllocateActiveAnimator(instances, world, world.Create(), defId);
+            instances.SetParam(performer, 12, ParamLane.Int, 0f, 1, default);
+
+            using var system = new AnimatorRuntimeSystem(world, controllers, instances, definitions, animatorStates);
+            system.Update(0.1f);
+
+            Assert.That(animatorStates.GetRuntimeState(performer).NextStateIndex, Is.EqualTo(1));
+            Assert.That(animatorStates.GetPackedState(performer).GetSecondaryStateIndex(), Is.EqualTo(9));
+
+            instances.SetParam(performer, 13, ParamLane.Int, 0f, 1, default);
+            system.Update(0.1f);
+
+            ref readonly AnimatorRuntimeState runtime = ref animatorStates.GetRuntimeState(performer);
+            ref readonly AnimatorPackedState packed = ref animatorStates.GetPackedState(performer);
+            Assert.That(runtime.CurrentStateIndex, Is.EqualTo(0));
+            Assert.That(runtime.NextStateIndex, Is.EqualTo(2));
+            Assert.That(runtime.TransitionDurationSeconds, Is.EqualTo(0.2f).Within(0.001f));
+            Assert.That(packed.GetPrimaryStateIndex(), Is.EqualTo(5));
+            Assert.That(packed.GetSecondaryStateIndex(), Is.EqualTo(13));
+            Assert.That(packed.GetTransitionProgress01(), Is.EqualTo(0.5f).Within(0.01f));
+            Assert.That(instances.ResolveInt(performer, 13), Is.EqualTo(0), "Interrupting trigger should be consumed through the same transition path.");
         }
 
         private static int RegisterAnimatorDefinition(PerformerDefinitionRegistry definitions, int controllerId, int stateParamKey)

@@ -14,7 +14,12 @@
         "parameterIndex": "blacksmith.worker.locomotion.speed",
         "threshold": 0.2,
         "durationSeconds": 0.08,
-        "consumeTrigger": false
+        "durationMode": "Seconds",
+        "consumeTrigger": false,
+        "hasExitTime": false,
+        "exitTime": 0.0,
+        "interruptSource": "None",
+        "orderedInterruption": false
       },
       {
         "fromStateIndex": 1,
@@ -23,7 +28,12 @@
         "parameterIndex": "blacksmith.worker.locomotion.speed",
         "threshold": 0.1,
         "durationSeconds": 0.08,
-        "consumeTrigger": false
+        "durationMode": "Seconds",
+        "consumeTrigger": false,
+        "hasExitTime": false,
+        "exitTime": 0.0,
+        "interruptSource": "None",
+        "orderedInterruption": false
       }
     ]
   }
