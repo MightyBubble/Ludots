@@ -233,7 +233,7 @@ namespace Ludots.Core.Presentation.Systems
             float duration = currentState.DurationSeconds;
             float normalizedTime = ResolveNormalizedTime(runtime.StateElapsedSeconds, duration, currentState.Loop);
 
-            TryStartTransition(
+            TryStartOrInterruptTransition(
                 entity,
                 config,
                 definition,
@@ -242,13 +242,22 @@ namespace Ludots.Core.Presentation.Systems
                 ref floatParams,
                 ref floatDefaults,
                 in parent,
-                normalizedTime);
+                currentState,
+                normalizedTime,
+                speed);
             if (!runtime.IsTransitioning)
             {
                 currentState = RequireState(definition, runtime.CurrentStateIndex, controllerId, "current");
                 duration = currentState.DurationSeconds;
                 normalizedTime = ResolveNormalizedTime(runtime.StateElapsedSeconds, duration, currentState.Loop);
             }
+            else
+            {
+                currentState = RequireState(definition, runtime.CurrentStateIndex, controllerId, "current");
+                duration = currentState.DurationSeconds;
+                normalizedTime = ResolveNormalizedTime(runtime.StateElapsedSeconds, duration, currentState.Loop);
+            }
+
             if (runtime.IsTransitioning)
             {
                 AnimatorStateDefinition nextState = RequireState(definition, runtime.NextStateIndex, controllerId, "next");
@@ -271,6 +280,9 @@ namespace Ludots.Core.Presentation.Systems
                     runtime.StateElapsedSeconds = 0f;
                     runtime.TransitionElapsedSeconds = 0f;
                     runtime.TransitionDurationSeconds = 0f;
+                    runtime.ActiveTransitionIndex = -1;
+                    runtime.ActiveTransitionInterruptSource = AnimatorTransitionInterruptSource.None;
+                    runtime.ActiveTransitionOrderedInterruption = false;
                     packed.SetSecondaryStateIndex(0);
                     packed.SetTransitionProgress01(0f);
                     currentState = nextState;
@@ -305,7 +317,7 @@ namespace Ludots.Core.Presentation.Systems
                 _runtime.SetParam(entity, config.StateParamKey, ParamLane.Int, 0f, runtime.CurrentStateIndex, default);
         }
 
-        private void TryStartTransition(
+        private void TryStartOrInterruptTransition(
             Entity entity,
             in AnimatorConfig config,
             AnimatorControllerDefinition definition,
@@ -314,13 +326,202 @@ namespace Ludots.Core.Presentation.Systems
             ref PerformerFloatParams floatParams,
             ref PerformerFloatDefaults floatDefaults,
             in PerformerParent parent,
-            float normalizedTime)
+            in AnimatorStateDefinition currentState,
+            float normalizedTime,
+            float currentPlaybackSpeed)
         {
-            if (runtime.IsTransitioning) return;
+            if (runtime.IsTransitioning)
+            {
+                TryInterruptTransition(
+                    entity,
+                    config,
+                    definition,
+                    ref runtime,
+                    ref feedback,
+                    ref floatParams,
+                    ref floatDefaults,
+                    in parent,
+                    in currentState,
+                    normalizedTime,
+                    currentPlaybackSpeed);
+                return;
+            }
+
+            TryStartTransitionFromState(
+                entity,
+                config,
+                definition,
+                ref runtime,
+                ref feedback,
+                ref floatParams,
+                ref floatDefaults,
+                in parent,
+                runtime.CurrentStateIndex,
+                in currentState,
+                normalizedTime,
+                runtime.StateElapsedSeconds,
+                currentPlaybackSpeed,
+                isInterruption: false);
+        }
+
+        private bool TryInterruptTransition(
+            Entity entity,
+            in AnimatorConfig config,
+            AnimatorControllerDefinition definition,
+            ref AnimatorRuntimeState runtime,
+            ref AnimatorFeedbackBuffer feedback,
+            ref PerformerFloatParams floatParams,
+            ref PerformerFloatDefaults floatDefaults,
+            in PerformerParent parent,
+            in AnimatorStateDefinition currentState,
+            float currentNormalizedTime,
+            float currentPlaybackSpeed)
+        {
+            if (runtime.ActiveTransitionInterruptSource == AnimatorTransitionInterruptSource.None)
+            {
+                return false;
+            }
+
+            AnimatorStateDefinition nextState = RequireState(
+                definition,
+                runtime.NextStateIndex,
+                definition.ControllerId,
+                "next");
+            float nextPlaybackSpeed = ResolvePlaybackSpeed(entity, config, nextState, ref floatParams, ref floatDefaults, in parent);
+            float nextElapsedSeconds = runtime.TransitionElapsedSeconds * nextPlaybackSpeed;
+            float nextNormalizedTime = ResolveNormalizedTime(nextElapsedSeconds, nextState.DurationSeconds, nextState.Loop);
+
+            return runtime.ActiveTransitionInterruptSource switch
+            {
+                AnimatorTransitionInterruptSource.CurrentState => TryStartTransitionFromState(
+                    entity,
+                    config,
+                    definition,
+                    ref runtime,
+                    ref feedback,
+                    ref floatParams,
+                    ref floatDefaults,
+                    in parent,
+                    runtime.CurrentStateIndex,
+                    in currentState,
+                    currentNormalizedTime,
+                    runtime.StateElapsedSeconds,
+                    currentPlaybackSpeed,
+                    isInterruption: true),
+                AnimatorTransitionInterruptSource.NextState => TryStartTransitionFromState(
+                    entity,
+                    config,
+                    definition,
+                    ref runtime,
+                    ref feedback,
+                    ref floatParams,
+                    ref floatDefaults,
+                    in parent,
+                    runtime.NextStateIndex,
+                    in nextState,
+                    nextNormalizedTime,
+                    nextElapsedSeconds,
+                    nextPlaybackSpeed,
+                    isInterruption: true),
+                AnimatorTransitionInterruptSource.CurrentThenNext =>
+                    TryStartTransitionFromState(
+                        entity,
+                        config,
+                        definition,
+                        ref runtime,
+                        ref feedback,
+                        ref floatParams,
+                        ref floatDefaults,
+                        in parent,
+                        runtime.CurrentStateIndex,
+                        in currentState,
+                        currentNormalizedTime,
+                        runtime.StateElapsedSeconds,
+                        currentPlaybackSpeed,
+                        isInterruption: true) ||
+                    TryStartTransitionFromState(
+                        entity,
+                        config,
+                        definition,
+                        ref runtime,
+                        ref feedback,
+                        ref floatParams,
+                        ref floatDefaults,
+                        in parent,
+                        runtime.NextStateIndex,
+                        in nextState,
+                        nextNormalizedTime,
+                        nextElapsedSeconds,
+                        nextPlaybackSpeed,
+                        isInterruption: true),
+                AnimatorTransitionInterruptSource.NextThenCurrent =>
+                    TryStartTransitionFromState(
+                        entity,
+                        config,
+                        definition,
+                        ref runtime,
+                        ref feedback,
+                        ref floatParams,
+                        ref floatDefaults,
+                        in parent,
+                        runtime.NextStateIndex,
+                        in nextState,
+                        nextNormalizedTime,
+                        nextElapsedSeconds,
+                        nextPlaybackSpeed,
+                        isInterruption: true) ||
+                    TryStartTransitionFromState(
+                        entity,
+                        config,
+                        definition,
+                        ref runtime,
+                        ref feedback,
+                        ref floatParams,
+                        ref floatDefaults,
+                        in parent,
+                        runtime.CurrentStateIndex,
+                        in currentState,
+                        currentNormalizedTime,
+                        runtime.StateElapsedSeconds,
+                        currentPlaybackSpeed,
+                        isInterruption: true),
+                _ => throw new InvalidOperationException(
+                    $"Animator controller {definition.ControllerId} has unsupported interrupt source '{runtime.ActiveTransitionInterruptSource}'."),
+            };
+        }
+
+        private bool TryStartTransitionFromState(
+            Entity entity,
+            in AnimatorConfig config,
+            AnimatorControllerDefinition definition,
+            ref AnimatorRuntimeState runtime,
+            ref AnimatorFeedbackBuffer feedback,
+            ref PerformerFloatParams floatParams,
+            ref PerformerFloatDefaults floatDefaults,
+            in PerformerParent parent,
+            int sourceStateIndex,
+            in AnimatorStateDefinition sourceState,
+            float normalizedTime,
+            float sourceElapsedSeconds,
+            float sourcePlaybackSpeed,
+            bool isInterruption)
+        {
             ReadOnlySpan<AnimatorTransitionDefinition> transitions = definition.GetTransitionsFromState(runtime.CurrentStateIndex);
+            if (isInterruption)
+            {
+                transitions = definition.GetTransitionsFromState(sourceStateIndex);
+            }
+
             for (int i = 0; i < transitions.Length; i++)
             {
                 ref readonly AnimatorTransitionDefinition transition = ref transitions[i];
+                if (isInterruption &&
+                    (transition.DefinitionIndex == runtime.ActiveTransitionIndex ||
+                     (runtime.ActiveTransitionOrderedInterruption && transition.DefinitionIndex >= runtime.ActiveTransitionIndex)))
+                {
+                    continue;
+                }
+
                 bool matches = transition.ConditionKind switch
                 {
                     AnimatorConditionKind.None => true,
@@ -334,33 +535,68 @@ namespace Ludots.Core.Presentation.Systems
                     AnimatorConditionKind.AutoOnNormalizedTime => normalizedTime >= transition.Threshold,
                     _ => throw new InvalidOperationException($"Animator controller {definition.ControllerId} has unsupported condition kind '{transition.ConditionKind}'."),
                 };
+                matches &= !transition.HasExitTime || normalizedTime >= transition.ExitTime;
                 if (!matches) continue;
                 if (transition.ConditionKind == AnimatorConditionKind.Trigger && transition.ConsumeTrigger && transition.ParameterIndex >= 0)
                     _runtime.SetParam(entity, transition.ParameterIndex, ParamLane.Int, 0f, 0, default);
+                float resolvedDurationSeconds = ResolveTransitionDurationSeconds(in transition, in sourceState, sourcePlaybackSpeed);
                 var evt = new AnimatorFeedbackEvent
                 {
                     Kind = AnimatorFeedbackKind.TransitionStarted, ControllerId = definition.ControllerId,
-                    FromStateIndex = runtime.CurrentStateIndex, ToStateIndex = transition.ToStateIndex,
-                    NormalizedTime01 = normalizedTime, Value0 = transition.DurationSeconds,
+                    FromStateIndex = sourceStateIndex, ToStateIndex = transition.ToStateIndex,
+                    NormalizedTime01 = normalizedTime, Value0 = resolvedDurationSeconds,
                 };
                 feedback.Push(evt);
                 WriteFeedbackToBlackboard(entity, config, evt);
-                if (transition.DurationSeconds == 0f)
+                runtime.CurrentStateIndex = sourceStateIndex;
+                runtime.StateElapsedSeconds = sourceElapsedSeconds;
+                if (resolvedDurationSeconds == 0f)
                 {
                     runtime.CurrentStateIndex = transition.ToStateIndex;
                     runtime.NextStateIndex = AnimatorRuntimeState.NoState;
                     runtime.StateElapsedSeconds = 0f;
                     runtime.TransitionElapsedSeconds = 0f;
                     runtime.TransitionDurationSeconds = 0f;
+                    runtime.ActiveTransitionIndex = -1;
+                    runtime.ActiveTransitionInterruptSource = AnimatorTransitionInterruptSource.None;
+                    runtime.ActiveTransitionOrderedInterruption = false;
                 }
                 else
                 {
                     runtime.NextStateIndex = transition.ToStateIndex;
                     runtime.TransitionElapsedSeconds = 0f;
-                    runtime.TransitionDurationSeconds = transition.DurationSeconds;
+                    runtime.TransitionDurationSeconds = resolvedDurationSeconds;
+                    runtime.ActiveTransitionIndex = transition.DefinitionIndex;
+                    runtime.ActiveTransitionInterruptSource = transition.InterruptSource;
+                    runtime.ActiveTransitionOrderedInterruption = transition.OrderedInterruption;
                 }
-                return;
+                return true;
             }
+
+            return false;
+        }
+
+        private static float ResolveTransitionDurationSeconds(
+            in AnimatorTransitionDefinition transition,
+            in AnimatorStateDefinition sourceState,
+            float sourcePlaybackSpeed)
+        {
+            float duration = transition.DurationMode switch
+            {
+                AnimatorTransitionDurationMode.Seconds => transition.DurationSeconds,
+                AnimatorTransitionDurationMode.NormalizedSourceState => sourcePlaybackSpeed > 0f
+                    ? transition.DurationSeconds * sourceState.DurationSeconds / sourcePlaybackSpeed
+                    : throw new InvalidOperationException("Animator normalized-source transition duration requires positive source playback speed."),
+                _ => throw new InvalidOperationException($"Unsupported animator transition duration mode '{transition.DurationMode}'."),
+            };
+
+            if (!float.IsFinite(duration) || duration < 0f)
+            {
+                throw new InvalidOperationException(
+                    $"Animator transition duration resolved to invalid seconds value {duration}.");
+            }
+
+            return duration;
         }
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]

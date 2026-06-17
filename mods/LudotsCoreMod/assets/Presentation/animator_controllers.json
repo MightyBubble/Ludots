@@ -15,7 +15,12 @@
         "parameterIndex": "core.hero.locomotion.speed",
         "threshold": 0.20,
         "durationSeconds": 0.08,
-        "consumeTrigger": false
+        "durationMode": "Seconds",
+        "consumeTrigger": false,
+        "hasExitTime": false,
+        "exitTime": 0.0,
+        "interruptSource": "None",
+        "orderedInterruption": false
       },
       {
         "fromStateIndex": 1,
@@ -24,7 +29,12 @@
         "parameterIndex": "core.hero.locomotion.speed",
         "threshold": 0.10,
         "durationSeconds": 0.08,
-        "consumeTrigger": false
+        "durationMode": "Seconds",
+        "consumeTrigger": false,
+        "hasExitTime": false,
+        "exitTime": 0.0,
+        "interruptSource": "None",
+        "orderedInterruption": false
       },
       {
         "fromStateIndex": 1,
@@ -33,7 +43,12 @@
         "parameterIndex": "core.hero.locomotion.speed",
         "threshold": 0.72,
         "durationSeconds": 0.06,
-        "consumeTrigger": false
+        "durationMode": "Seconds",
+        "consumeTrigger": false,
+        "hasExitTime": false,
+        "exitTime": 0.0,
+        "interruptSource": "None",
+        "orderedInterruption": false
       },
       {
         "fromStateIndex": 2,
@@ -42,7 +57,12 @@
         "parameterIndex": "core.hero.locomotion.speed",
         "threshold": 0.55,
         "durationSeconds": 0.06,
-        "consumeTrigger": false
+        "durationMode": "Seconds",
+        "consumeTrigger": false,
+        "hasExitTime": false,
+        "exitTime": 0.0,
+        "interruptSource": "None",
+        "orderedInterruption": false
       }
     ]
   }

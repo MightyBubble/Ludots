@@ -90,6 +90,7 @@ namespace Ludots.Core.Presentation.Assets
                 ?? throw new InvalidOperationException($"Animator controller '{key}' transitions array must be explicitly initialized.");
             for (int i = 0; i < transitions.Length; i++)
             {
+                transitions[i].DefinitionIndex = i;
                 ValidateTransition(key, i, states.Length, in transitions[i]);
             }
         }
@@ -162,6 +163,36 @@ namespace Ludots.Core.Presentation.Assets
             {
                 throw new InvalidOperationException(
                     $"Animator controller '{key}' transition[{transitionIndex}].consumeTrigger can be true only when conditionKind is Trigger.");
+            }
+
+            if (!Enum.IsDefined(typeof(AnimatorTransitionDurationMode), transition.DurationMode))
+            {
+                throw new InvalidOperationException(
+                    $"Animator controller '{key}' transition[{transitionIndex}].durationMode has invalid value '{transition.DurationMode}'.");
+            }
+
+            if (transition.HasExitTime && (transition.ExitTime < 0f || transition.ExitTime > 1f))
+            {
+                throw new InvalidOperationException(
+                    $"Animator controller '{key}' transition[{transitionIndex}].exitTime must be in [0, 1] when hasExitTime is true.");
+            }
+
+            if (!transition.HasExitTime && transition.ExitTime != 0f)
+            {
+                throw new InvalidOperationException(
+                    $"Animator controller '{key}' transition[{transitionIndex}].exitTime must be 0 when hasExitTime is false.");
+            }
+
+            if (!Enum.IsDefined(typeof(AnimatorTransitionInterruptSource), transition.InterruptSource))
+            {
+                throw new InvalidOperationException(
+                    $"Animator controller '{key}' transition[{transitionIndex}].interruptSource has invalid value '{transition.InterruptSource}'.");
+            }
+
+            if (transition.OrderedInterruption && transition.InterruptSource == AnimatorTransitionInterruptSource.None)
+            {
+                throw new InvalidOperationException(
+                    $"Animator controller '{key}' transition[{transitionIndex}].orderedInterruption requires a non-None interruptSource.");
             }
         }
 
