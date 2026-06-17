@@ -5,7 +5,7 @@ using Ludots.Core.Gameplay.GAS.Orders;
 
 namespace MassNavigationMod.Runtime;
 
-internal readonly struct MassNavigationMoveOrderArgs
+public readonly struct MassNavigationMoveOrderArgs
 {
     private MassNavigationMoveOrderArgs(
         Vector2 destinationCm,

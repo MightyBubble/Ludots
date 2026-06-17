@@ -140,6 +140,15 @@ namespace Ludots.Tests.Architecture
                     """
                     {
                       "LaunchGraphPath": "raylib.launch.graph.json",
+                      "PlanSelectors": [
+                        "mod:LudotsCoreMod"
+                      ],
+                      "PlanRootModIds": [
+                        "LudotsCoreMod"
+                      ],
+                      "PlanOrderedModIds": [
+                        "LudotsCoreMod"
+                      ],
                       "PlanFingerprint": "full-graph-fingerprint",
                       "PlanSchemaVersion": 1
                     }
@@ -150,6 +159,99 @@ namespace Ludots.Tests.Architecture
                 Assert.That(result.Engine, Is.Not.Null);
                 Assert.That(result.Config, Is.Not.Null);
                 Assert.That(result.AssetsRoot, Is.EqualTo(Path.Combine(repoRoot, "assets")));
+            }
+            finally
+            {
+                if (Directory.Exists(tempDirectory))
+                {
+                    Directory.Delete(tempDirectory, recursive: true);
+                }
+            }
+        }
+
+        [Test]
+        public void GameBootstrapper_RejectsOfficialGraph_WhenBootstrapOmitsFreshnessMetadata()
+        {
+            var repoRoot = FindRepoRoot();
+            var tempDirectory = Path.Combine(repoRoot, "artifacts", "tests", $"bootstrap-missing-freshness-{Guid.NewGuid():N}");
+            Directory.CreateDirectory(tempDirectory);
+
+            var modRoot = Path.Combine(repoRoot, "mods", "LudotsCoreMod");
+            var graphPath = Path.Combine(tempDirectory, "raylib.launch.graph.json");
+            var bootstrapPath = Path.Combine(tempDirectory, "launcher.runtime.json");
+
+            try
+            {
+                File.WriteAllText(
+                    graphPath,
+                    $$"""
+                    {
+                      "schemaVersion": 1,
+                      "generatedAtUtc": "2026-04-01T00:00:00.0000000Z",
+                      "planFingerprint": "missing-freshness-fingerprint",
+                      "adapter": {
+                        "id": "raylib",
+                        "name": "Raylib",
+                        "hostKind": "desktop",
+                        "buildPipeline": "dotnet",
+                        "runtimeBootstrapSchema": "launcher.runtime.v1",
+                        "appProjectPath": "src/Apps/Raylib/Ludots.App.Raylib/Ludots.App.Raylib.csproj",
+                        "outputDirectory": "src/Apps/Raylib/Ludots.App.Raylib/bin/Release/net8.0",
+                        "clientProjectDirectory": "",
+                        "clientDistributionDirectory": "",
+                        "launchUrl": "",
+                        "runtimeBootstrapFileName": "launcher.runtime.json"
+                      },
+                      "buildMode": "auto",
+                      "selectors": [
+                        "mod:LudotsCoreMod"
+                      ],
+                      "rootModIds": [
+                        "LudotsCoreMod"
+                      ],
+                      "orderedModIds": [
+                        "LudotsCoreMod"
+                      ],
+                      "plannedMods": [
+                        {
+                          "id": "LudotsCoreMod",
+                          "rootPath": "{{modRoot.Replace("\\", "\\\\")}}",
+                          "projectPath": "{{Path.Combine(modRoot, "LudotsCoreMod.csproj").Replace("\\", "\\\\")}}",
+                          "mainAssemblyPath": "{{Path.Combine(modRoot, "bin", "net8.0", "LudotsCoreMod.dll").Replace("\\", "\\\\")}}",
+                          "kind": 2,
+                          "buildState": 4,
+                          "bindingNames": []
+                        }
+                      ],
+                      "runtimeArtifacts": {
+                        "bootstrapArtifactStrategy": "file",
+                        "bootstrapArtifactPath": "{{bootstrapPath.Replace("\\", "\\\\")}}",
+                        "graphArtifactPath": "{{graphPath.Replace("\\", "\\\\")}}",
+                        "appOutputDirectory": "src/Apps/Raylib/Ludots.App.Raylib/bin/Release/net8.0",
+                        "appAssemblyPath": "src/Apps/Raylib/Ludots.App.Raylib/bin/Release/net8.0/Ludots.App.Raylib.dll",
+                        "launchUrl": ""
+                      },
+                      "diagnostics": {
+                        "settings": [],
+                        "warnings": []
+                      }
+                    }
+                    """);
+
+                File.WriteAllText(
+                    bootstrapPath,
+                    """
+                    {
+                      "LaunchGraphPath": "raylib.launch.graph.json",
+                      "PlanFingerprint": "missing-freshness-fingerprint",
+                      "PlanSchemaVersion": 1
+                    }
+                    """);
+
+                var ex = Assert.Throws<InvalidOperationException>(
+                    () => GameBootstrapper.InitializeFromBaseDirectory(tempDirectory, "launcher.runtime.json"));
+
+                Assert.That(ex!.Message, Does.Contain("missing plan freshness metadata"));
             }
             finally
             {
@@ -202,6 +304,10 @@ namespace Ludots.Tests.Architecture
                 Assert.That(writtenBootstrapPath, Is.EqualTo(bootstrapPath));
                 Assert.That(File.Exists(graphPath), Is.True);
                 Assert.That(File.Exists(bootstrapPath), Is.True);
+                var bootstrapJson = File.ReadAllText(bootstrapPath);
+                Assert.That(bootstrapJson, Does.Contain("PlanSelectors"));
+                Assert.That(bootstrapJson, Does.Contain("PlanRootModIds"));
+                Assert.That(bootstrapJson, Does.Contain("PlanOrderedModIds"));
 
                 var result = GameBootstrapper.InitializeFromBaseDirectory(resolve.Plan.AppOutputDirectory, bootstrapPath);
 
@@ -220,6 +326,113 @@ namespace Ludots.Tests.Architecture
             {
                 RestoreFile(graphPath, originalGraph);
                 RestoreFile(bootstrapPath, originalBootstrap);
+                if (Directory.Exists(tempDirectory))
+                {
+                    Directory.Delete(tempDirectory, recursive: true);
+                }
+            }
+        }
+
+        [Test]
+        public void GameBootstrapper_RejectsStaleGraph_WhenBootstrapPlanDiffers()
+        {
+            var repoRoot = FindRepoRoot();
+            var tempDirectory = Path.Combine(repoRoot, "artifacts", "tests", $"bootstrap-stale-plan-{Guid.NewGuid():N}");
+            Directory.CreateDirectory(tempDirectory);
+
+            var coreInputRoot = Path.Combine(repoRoot, "mods", "CoreInputMod");
+            var coreRoot = Path.Combine(repoRoot, "mods", "LudotsCoreMod");
+            var graphPath = Path.Combine(tempDirectory, "raylib.launch.graph.json");
+            var bootstrapPath = Path.Combine(tempDirectory, "launcher.runtime.json");
+
+            try
+            {
+                File.WriteAllText(
+                    graphPath,
+                    $$"""
+                    {
+                      "schemaVersion": 1,
+                      "generatedAtUtc": "2026-04-01T00:00:00.0000000Z",
+                      "planFingerprint": "stale-plan-fingerprint",
+                      "adapter": {
+                        "id": "raylib",
+                        "name": "Raylib",
+                        "hostKind": "desktop",
+                        "buildPipeline": "dotnet",
+                        "runtimeBootstrapSchema": "launcher.runtime.v1",
+                        "appProjectPath": "src/Apps/Raylib/Ludots.App.Raylib/Ludots.App.Raylib.csproj",
+                        "outputDirectory": "src/Apps/Raylib/Ludots.App.Raylib/bin/Release/net8.0",
+                        "clientProjectDirectory": "",
+                        "clientDistributionDirectory": "",
+                        "launchUrl": "",
+                        "runtimeBootstrapFileName": "launcher.runtime.json"
+                      },
+                      "buildMode": "never",
+                      "selectors": [
+                        "mod:LudotsCoreMod"
+                      ],
+                      "rootModIds": [
+                        "LudotsCoreMod"
+                      ],
+                      "orderedModIds": [
+                        "LudotsCoreMod"
+                      ],
+                      "plannedMods": [
+                        {
+                          "id": "LudotsCoreMod",
+                          "rootPath": "{{coreRoot.Replace("\\", "\\\\")}}",
+                          "projectPath": "{{Path.Combine(coreRoot, "LudotsCoreMod.csproj").Replace("\\", "\\\\")}}",
+                          "mainAssemblyPath": "{{Path.Combine(coreRoot, "bin", "net8.0", "LudotsCoreMod.dll").Replace("\\", "\\\\")}}",
+                          "kind": 2,
+                          "buildState": 4,
+                          "bindingNames": []
+                        }
+                      ],
+                      "runtimeArtifacts": {
+                        "bootstrapArtifactStrategy": "file",
+                        "bootstrapArtifactPath": "{{bootstrapPath.Replace("\\", "\\\\")}}",
+                        "graphArtifactPath": "{{graphPath.Replace("\\", "\\\\")}}",
+                        "appOutputDirectory": "src/Apps/Raylib/Ludots.App.Raylib/bin/Release/net8.0",
+                        "appAssemblyPath": "src/Apps/Raylib/Ludots.App.Raylib/bin/Release/net8.0/Ludots.App.Raylib.dll",
+                        "launchUrl": ""
+                      },
+                      "diagnostics": {
+                        "settings": [],
+                        "warnings": []
+                      }
+                    }
+                    """);
+
+                File.WriteAllText(
+                    bootstrapPath,
+                    """
+                    {
+                      "LaunchGraphPath": "raylib.launch.graph.json",
+                      "PlanSelectors": [
+                        "mod:CoreInputMod"
+                      ],
+                      "PlanRootModIds": [
+                        "CoreInputMod"
+                      ],
+                      "PlanOrderedModIds": [
+                        "LudotsCoreMod",
+                        "CoreInputMod"
+                      ],
+                      "PlanFingerprint": "stale-plan-fingerprint",
+                      "PlanSchemaVersion": 1
+                    }
+                    """);
+
+                Assert.That(coreInputRoot, Does.Exist);
+
+                var ex = Assert.Throws<InvalidOperationException>(
+                    () => GameBootstrapper.InitializeFromBaseDirectory(tempDirectory, "launcher.runtime.json"));
+
+                Assert.That(ex!.Message, Does.Contain("Stale launch graph rejected"));
+                Assert.That(ex.Message, Does.Contain("selectors"));
+            }
+            finally
+            {
                 if (Directory.Exists(tempDirectory))
                 {
                     Directory.Delete(tempDirectory, recursive: true);

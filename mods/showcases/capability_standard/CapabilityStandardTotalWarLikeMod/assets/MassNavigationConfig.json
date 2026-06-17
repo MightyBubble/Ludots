@@ -87,6 +87,9 @@
     "autoSpawnConfiguredScenario": false,
     "initialSelectionScratchCapacity": 512,
     "initialSelectedEntityCapacity": 128,
+    "panel": {
+      "mode": "Hidden"
+    },
     "runtimeCapacity": {
       "navigationGroupCapacity": 512,
       "groupMembershipAgentCapacity": 80000,
@@ -98,7 +101,6 @@
       "metadataTeamCapacity": 2
     },
     "panelControls": {
-      "visible": true,
       "maxAgentsPerTeam": 40000,
       "totalAgentStep": 2000,
       "totalAgentPresets": [5000, 10000, 20000, 40000],

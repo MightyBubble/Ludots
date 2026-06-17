@@ -19,6 +19,9 @@ namespace Ludots.Core.Hosting
     {
         public string? LaunchGraphPath { get; set; }
         public string? LaunchGraphFullPath { get; set; }
+        public IReadOnlyList<string>? PlanSelectors { get; set; }
+        public IReadOnlyList<string>? PlanRootModIds { get; set; }
+        public IReadOnlyList<string>? PlanOrderedModIds { get; set; }
         public string? PlanFingerprint { get; set; }
         public int? PlanSchemaVersion { get; set; }
         public string? PlanGeneratedAtUtc { get; set; }
@@ -71,7 +74,7 @@ namespace Ludots.Core.Hosting
                 throw new Exception("Failed to parse launcher bootstrap: deserialized config is null.");
 
             string graphPath = ResolveRequiredGraphPath(baseDir, gameJsonPath, bootstrapConfig);
-            var resolvedPlan = ResolveGraphPlan(graphPath, bootstrapConfig);
+            var resolvedPlan = ResolveGraphPlan(graphPath, gameJsonPath, bootstrapConfig);
 
             // Step 2 & 3: Initialize engine with launcher-resolved plan
             // Engine will internally use ConfigPipeline to merge game.json
@@ -86,19 +89,35 @@ namespace Ludots.Core.Hosting
 
         private static string ResolveRequiredGraphPath(string baseDir, string bootstrapPath, AppBootstrapConfig bootstrapConfig)
         {
-            var candidate = !string.IsNullOrWhiteSpace(bootstrapConfig.LaunchGraphFullPath)
-                ? bootstrapConfig.LaunchGraphFullPath
-                : bootstrapConfig.LaunchGraphPath;
-            if (string.IsNullOrWhiteSpace(candidate))
+            string? graphPath = null;
+            if (!string.IsNullOrWhiteSpace(bootstrapConfig.LaunchGraphPath))
+            {
+                graphPath = ResolveBootstrapRelativePath(baseDir, bootstrapPath, bootstrapConfig.LaunchGraphPath);
+            }
+
+            string? fullGraphPath = null;
+            if (!string.IsNullOrWhiteSpace(bootstrapConfig.LaunchGraphFullPath))
+            {
+                fullGraphPath = ResolveBootstrapRelativePath(baseDir, bootstrapPath, bootstrapConfig.LaunchGraphFullPath);
+            }
+
+            if (graphPath != null &&
+                fullGraphPath != null &&
+                !PathsEqual(graphPath, fullGraphPath))
+            {
+                throw new InvalidOperationException(
+                    $"Launcher bootstrap '{bootstrapPath}' has conflicting launch graph pointers: " +
+                    $"LaunchGraphPath resolved to '{graphPath}', LaunchGraphFullPath resolved to '{fullGraphPath}'.");
+            }
+
+            var resolved = fullGraphPath ?? graphPath;
+            if (string.IsNullOrWhiteSpace(resolved))
             {
                 throw new InvalidOperationException(
                     $"Launcher bootstrap '{bootstrapPath}' is missing launch graph metadata. " +
                     "Product runtime bootstrap must point to a launcher-resolved graph artifact.");
             }
 
-            var resolved = Path.IsPathRooted(candidate)
-                ? Path.GetFullPath(candidate)
-                : Path.GetFullPath(Path.Combine(Path.GetDirectoryName(bootstrapPath) ?? baseDir, candidate));
             if (!File.Exists(resolved))
             {
                 throw new FileNotFoundException($"Launch graph not found: {resolved}");
@@ -107,7 +126,21 @@ namespace Ludots.Core.Hosting
             return resolved;
         }
 
-        private static ResolvedModLoadPlan ResolveGraphPlan(string graphPath, AppBootstrapConfig bootstrapConfig)
+        private static string ResolveBootstrapRelativePath(string baseDir, string bootstrapPath, string candidate)
+        {
+            if (string.IsNullOrWhiteSpace(candidate))
+            {
+                throw new InvalidOperationException(
+                    $"Launcher bootstrap '{bootstrapPath}' is missing launch graph metadata. " +
+                    "Product runtime bootstrap must point to a launcher-resolved graph artifact.");
+            }
+
+            return Path.IsPathRooted(candidate)
+                ? Path.GetFullPath(candidate)
+                : Path.GetFullPath(Path.Combine(Path.GetDirectoryName(bootstrapPath) ?? baseDir, candidate));
+        }
+
+        private static ResolvedModLoadPlan ResolveGraphPlan(string graphPath, string bootstrapPath, AppBootstrapConfig bootstrapConfig)
         {
             LauncherGraphDocument? graphConfig;
             try
@@ -124,6 +157,8 @@ namespace Ludots.Core.Hosting
             {
                 throw new Exception("Failed to parse launch graph: deserialized graph is null.");
             }
+
+            ValidateGraphArtifactFreshness(graphPath, bootstrapPath, graphConfig);
 
             if (bootstrapConfig.PlanSchemaVersion.HasValue && graphConfig.SchemaVersion != bootstrapConfig.PlanSchemaVersion.Value)
             {
@@ -153,6 +188,11 @@ namespace Ludots.Core.Hosting
                 throw new Exception(
                     $"Launch graph is invalid: orderedModIds count ({graphConfig.OrderedModIds.Count}) does not match plannedMods count ({graphConfig.PlannedMods.Count}).");
             }
+
+            ValidateBootstrapPlanFreshness(
+                bootstrapConfig,
+                graphConfig,
+                requiresPlanMetadata: graphConfig.RuntimeArtifacts != null);
 
             var orderedMods = new List<ResolvedModLoadEntry>();
             var seenOrderedIds = new HashSet<string>(StringComparer.Ordinal);
@@ -200,6 +240,112 @@ namespace Ludots.Core.Hosting
                 graphConfig.PlanFingerprint,
                 graphConfig.GeneratedAtUtc ?? bootstrapConfig.PlanGeneratedAtUtc,
                 graphPath);
+        }
+
+        private static void ValidateGraphArtifactFreshness(string graphPath, string bootstrapPath, LauncherGraphDocument graphConfig)
+        {
+            if (graphConfig.RuntimeArtifacts == null)
+            {
+                return;
+            }
+
+            ValidateRuntimeArtifactPath(
+                "graphArtifactPath",
+                graphConfig.RuntimeArtifacts.GraphArtifactPath,
+                graphPath,
+                graphPath);
+            ValidateRuntimeArtifactPath(
+                "bootstrapArtifactPath",
+                graphConfig.RuntimeArtifacts.BootstrapArtifactPath,
+                graphPath,
+                bootstrapPath);
+        }
+
+        private static void ValidateRuntimeArtifactPath(
+            string fieldName,
+            string artifactPath,
+            string graphPath,
+            string actualPath)
+        {
+            if (string.IsNullOrWhiteSpace(artifactPath))
+            {
+                throw new InvalidOperationException(
+                    $"Launch graph runtimeArtifacts.{fieldName} is required for freshness validation.");
+            }
+
+            string resolvedArtifactPath = Path.IsPathRooted(artifactPath)
+                ? Path.GetFullPath(artifactPath)
+                : Path.GetFullPath(Path.Combine(Path.GetDirectoryName(graphPath) ?? AppContext.BaseDirectory, artifactPath));
+            if (!PathsEqual(resolvedArtifactPath, actualPath))
+            {
+                throw new InvalidOperationException(
+                    $"Stale launch graph artifact rejected: runtimeArtifacts.{fieldName}='{resolvedArtifactPath}' " +
+                    $"does not match the selected runtime artifact '{Path.GetFullPath(actualPath)}'.");
+            }
+        }
+
+        private static void ValidateBootstrapPlanFreshness(
+            AppBootstrapConfig bootstrapConfig,
+            LauncherGraphDocument graphConfig,
+            bool requiresPlanMetadata)
+        {
+            ValidatePlanList("selectors", bootstrapConfig.PlanSelectors, graphConfig.Selectors, requiresPlanMetadata);
+            ValidatePlanList("rootModIds", bootstrapConfig.PlanRootModIds, graphConfig.RootModIds, requiresPlanMetadata);
+            ValidatePlanList("orderedModIds", bootstrapConfig.PlanOrderedModIds, graphConfig.OrderedModIds, requiresPlanMetadata);
+        }
+
+        private static void ValidatePlanList(
+            string fieldName,
+            IReadOnlyList<string>? expected,
+            IReadOnlyList<string>? actual,
+            bool required)
+        {
+            if (expected == null)
+            {
+                if (required)
+                {
+                    throw new InvalidOperationException(
+                        $"Launcher bootstrap is missing plan freshness metadata: Plan{ToPascalCase(fieldName)} is required when the launch graph declares runtimeArtifacts.");
+                }
+
+                return;
+            }
+
+            if (actual == null)
+            {
+                throw new InvalidOperationException(
+                    $"Stale launch graph rejected: bootstrap expected plan {fieldName}, but the launch graph does not declare {fieldName}.");
+            }
+
+            if (expected.Count != actual.Count)
+            {
+                throw new InvalidOperationException(
+                    $"Stale launch graph rejected: bootstrap plan {fieldName} count {expected.Count} does not match graph count {actual.Count}.");
+            }
+
+            for (int i = 0; i < expected.Count; i++)
+            {
+                if (!string.Equals(expected[i], actual[i], StringComparison.Ordinal))
+                {
+                    throw new InvalidOperationException(
+                        $"Stale launch graph rejected: bootstrap plan {fieldName}[{i}]='{expected[i]}' does not match graph {fieldName}[{i}]='{actual[i]}'.");
+                }
+            }
+        }
+
+        private static string ToPascalCase(string value)
+        {
+            if (string.IsNullOrEmpty(value))
+            {
+                return value;
+            }
+
+            return char.ToUpperInvariant(value[0]) + value[1..];
+        }
+
+        private static bool PathsEqual(string left, string right)
+        {
+            return string.Equals(Path.GetFullPath(left), Path.GetFullPath(right), StringComparison.OrdinalIgnoreCase);
         }
 
         private static string FindAssetsRootStrict(string startPath)

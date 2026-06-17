@@ -2539,8 +2539,9 @@ namespace Ludots.Tests.Presentation
             Assert.That(systemSource, Does.Not.Contain("PanelRefreshIntervalSeconds = 0.25f"));
 
             string refreshBody = ExtractMethodBody(runtimeSource, "public void RefreshPanel");
+            Assert.That(refreshBody, Does.Contain("if (!config.ScenarioRuntime.Panel.IsOwned)"));
+            Assert.That(refreshBody, Does.Contain("ClearPanelIfOwned(engine)"));
             Assert.That(refreshBody, Does.Contain("_panelController.MountOrSync(engine, simulation)"));
-            Assert.That(refreshBody, Does.Not.Contain("ClearPanelIfOwned(engine)"));
             string updateBody = ExtractMethodBody(systemSource, "public void Update");
             int resetIndex = updateBody.IndexOf("_refreshAccumulatorSeconds = _refreshIntervalSeconds;", StringComparison.Ordinal);
             int returnIndex = updateBody.IndexOf("return;", resetIndex, StringComparison.Ordinal);

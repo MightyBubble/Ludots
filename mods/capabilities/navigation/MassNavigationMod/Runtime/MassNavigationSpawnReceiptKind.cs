@@ -3,14 +3,16 @@ using Arch.Core;
 
 namespace MassNavigationMod.Runtime;
 
-internal enum MassNavigationSpawnReceiptKind : byte
+public enum MassNavigationSpawnReceiptKind : byte
 {
     Agent = 1,
     Blocker = 2,
     WorldMarker = 3,
 }
 
-internal readonly struct MassNavigationSpawnReceiptBinding
+public delegate void MassNavigationSpawnReceiptPostBind(World world, Entity entity, in MassNavigationSpawnReceiptBinding binding);
+
+public readonly struct MassNavigationSpawnReceiptBinding
 {
     private readonly AgentSpawnReceiptPayload? _agentPayload;
     private readonly BlockerSpawnReceiptPayload? _blockerPayload;
@@ -19,12 +21,14 @@ internal readonly struct MassNavigationSpawnReceiptBinding
         MassNavigationSpawnReceiptKind kind,
         AgentSpawnReceiptPayload? agentPayload,
         BlockerSpawnReceiptPayload? blockerPayload,
-        string templateId)
+        string templateId,
+        MassNavigationSpawnReceiptPostBind? postBind)
     {
         Kind = kind;
         _agentPayload = agentPayload;
         _blockerPayload = blockerPayload;
         TemplateId = templateId;
+        PostBind = postBind;
     }
 
     public MassNavigationSpawnReceiptKind Kind { get; }
@@ -101,6 +105,7 @@ internal readonly struct MassNavigationSpawnReceiptBinding
     }
 
     public string TemplateId { get; }
+    public MassNavigationSpawnReceiptPostBind? PostBind { get; }
 
     public static MassNavigationSpawnReceiptBinding ForAgent(
         int agentIndex,
@@ -147,7 +152,23 @@ internal readonly struct MassNavigationSpawnReceiptBinding
             MassNavigationSpawnReceiptKind.Agent,
             new AgentSpawnReceiptPayload(agentIndex, expectedTeamId, heavy, navMass, visualScale, bodyRadiusCm, speedCmPerSecond),
             blockerPayload: null,
-            templateId);
+            templateId,
+            postBind: null);
+    }
+
+    public static MassNavigationSpawnReceiptBinding ForAgent(
+        int agentIndex,
+        int expectedTeamId,
+        bool heavy,
+        float navMass,
+        float visualScale,
+        float bodyRadiusCm,
+        float speedCmPerSecond,
+        string templateId,
+        MassNavigationSpawnReceiptPostBind? postBind)
+    {
+        return ForAgent(agentIndex, expectedTeamId, heavy, navMass, visualScale, bodyRadiusCm, speedCmPerSecond, templateId)
+            .WithPostBind(postBind);
     }
 
     public static MassNavigationSpawnReceiptBinding ForBlocker(float blockerRadiusCm, string templateId)
@@ -162,7 +183,16 @@ internal readonly struct MassNavigationSpawnReceiptBinding
             MassNavigationSpawnReceiptKind.Blocker,
             agentPayload: null,
             new BlockerSpawnReceiptPayload(blockerRadiusCm),
-            templateId);
+            templateId,
+            postBind: null);
+    }
+
+    public static MassNavigationSpawnReceiptBinding ForBlocker(
+        float blockerRadiusCm,
+        string templateId,
+        MassNavigationSpawnReceiptPostBind? postBind)
+    {
+        return ForBlocker(blockerRadiusCm, templateId).WithPostBind(postBind);
     }
 
     public static MassNavigationSpawnReceiptBinding ForWorldMarker(string templateId)
@@ -172,7 +202,25 @@ internal readonly struct MassNavigationSpawnReceiptBinding
             MassNavigationSpawnReceiptKind.WorldMarker,
             agentPayload: null,
             blockerPayload: null,
-            templateId);
+            templateId,
+            postBind: null);
+    }
+
+    public static MassNavigationSpawnReceiptBinding ForWorldMarker(
+        string templateId,
+        MassNavigationSpawnReceiptPostBind? postBind)
+    {
+        return ForWorldMarker(templateId).WithPostBind(postBind);
+    }
+
+    public MassNavigationSpawnReceiptBinding WithPostBind(MassNavigationSpawnReceiptPostBind? postBind)
+    {
+        return new MassNavigationSpawnReceiptBinding(
+            Kind,
+            _agentPayload,
+            _blockerPayload,
+            TemplateId,
+            postBind);
     }
 
     private void RequireKind(MassNavigationSpawnReceiptKind expected, string memberName)

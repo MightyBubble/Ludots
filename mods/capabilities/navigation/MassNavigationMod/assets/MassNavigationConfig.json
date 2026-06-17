@@ -133,6 +133,9 @@
     "autoSpawnConfiguredScenario": true,
     "initialSelectionScratchCapacity": 256,
     "initialSelectedEntityCapacity": 64,
+    "panel": {
+      "mode": "Owned"
+    },
     "runtimeCapacity": {
       "navigationGroupCapacity": 256,
       "groupMembershipAgentCapacity": 160000,

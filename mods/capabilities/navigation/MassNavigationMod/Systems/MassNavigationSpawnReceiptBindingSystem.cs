@@ -67,7 +67,8 @@ internal sealed class MassNavigationSpawnReceiptBindingSystem : ISystem<float>
 
         RuntimeEntitySpawnReceiptChannelRegistry channels = _engine.GetService(CoreServiceKeys.RuntimeEntitySpawnReceiptChannelRegistry)
             ?? throw new InvalidOperationException("MassNavigationMod requires RuntimeEntitySpawnReceiptChannelRegistry.");
-        _receiptChannelId = channels.Register(MassNavigationIds.RuntimeSpawnReceiptChannelKey);
+        _receiptChannelId = _simulation.BindRuntimeSpawnReceiptChannel(
+            channels.Register(MassNavigationIds.RuntimeSpawnReceiptChannelKey));
         return _receiptChannelId;
     }
 
@@ -94,12 +95,15 @@ internal sealed class MassNavigationSpawnReceiptBindingSystem : ISystem<float>
         {
             case MassNavigationSpawnReceiptKind.Agent:
                 BindAgent(entity, in binding);
+                InvokePostBind(entity, in binding);
                 return;
             case MassNavigationSpawnReceiptKind.Blocker:
                 BindBlocker(entity, in binding);
+                InvokePostBind(entity, in binding);
                 return;
             case MassNavigationSpawnReceiptKind.WorldMarker:
                 BindWorldMarker(entity, in binding);
+                InvokePostBind(entity, in binding);
                 return;
             default:
                 throw new InvalidOperationException($"MassNavigationMod unsupported spawn receipt kind {binding.Kind}.");
@@ -163,6 +167,11 @@ internal sealed class MassNavigationSpawnReceiptBindingSystem : ISystem<float>
         RequireComponent<PreviousWorldPositionCm>(entity, binding.TemplateId);
         RequireComponent<VisualTransform>(entity, binding.TemplateId);
         _simulation.AgentState.RegisterWorldMarker(entity);
+    }
+
+    private void InvokePostBind(Entity entity, in MassNavigationSpawnReceiptBinding binding)
+    {
+        binding.PostBind?.Invoke(_engine.World, entity, in binding);
     }
 
     private void RequireComponent<T>(Entity entity, string templateId)

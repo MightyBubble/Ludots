@@ -209,6 +209,8 @@ public sealed class MassFlowSimulationState
     public float GetSpeedCmPerSecond(int index) => _speedsCmPerSecond[index];
     public bool IsHeavyProfile(int index) => _heavyProfileFlags[index] != 0;
     public bool IsSelected(int index) => _selectedFlags[index] != 0;
+    public bool HasUnitTarget(int index) => (uint)index < (uint)UnitCount && _hasUnitTarget[index] != 0;
+    public bool IsUnitSettled(int index) => (uint)index < (uint)UnitCount && _unitSettledFlags[index] != 0;
     public float GetObstacleX(int index) => _obsX[index];
     public float GetObstacleY(int index) => _obsY[index];
     public float GetObstacleWorldX(int index) => _obsWorldX[index];

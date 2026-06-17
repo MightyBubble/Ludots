@@ -1368,6 +1368,9 @@ public sealed class LauncherService
         {
             LaunchGraphPath = graphRelativePath,
             LaunchGraphFullPath = graphPath,
+            PlanSelectors = plan.Selectors,
+            PlanRootModIds = plan.RootModIds,
+            PlanOrderedModIds = plan.OrderedModIds,
             PlanFingerprint = plan.PlanFingerprint,
             PlanSchemaVersion = plan.SchemaVersion,
             PlanGeneratedAtUtc = plan.GeneratedAtUtc
