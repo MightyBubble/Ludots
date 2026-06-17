@@ -22,6 +22,7 @@ namespace Ludots.Core.Presentation.Requests
         private readonly RoadSplineBuffer _roadSplines;
         private readonly PresentationTimingDiagnostics? _timingDiagnostics;
         private int _lastProjectedRevision = -1;
+        private int _lastProjectedNonStaticRevision = -1;
         private int _lastProjectedTargetGeneration = -1;
         private bool _hadTransientVisualProjection;
 
@@ -138,10 +139,12 @@ namespace Ludots.Core.Presentation.Requests
             }
 
             int contentRevision = _stableDrawCache.ContentRevision;
+            int nonStaticRevision = _stableDrawCache.NonStaticContentRevision;
             int targetGeneration = _targetGeneration?.Generation ?? 0;
-            if (projectionTargetsCleared ||
-                _lastProjectedRevision != contentRevision ||
-                _lastProjectedTargetGeneration != targetGeneration)
+            bool needsFullProjection = projectionTargetsCleared ||
+                _lastProjectedTargetGeneration != targetGeneration ||
+                _lastProjectedNonStaticRevision != nonStaticRevision;
+            if (needsFullProjection)
             {
                 if (!projectionTargetsCleared)
                 {
@@ -149,16 +152,14 @@ namespace Ludots.Core.Presentation.Requests
                 }
 
                 _stableDrawCache.Project(_visualProxyEmitter, evictUntouched: false);
-                _lastProjectedRevision = contentRevision;
-                _lastProjectedTargetGeneration = targetGeneration;
-                _snapshotBuffer.SetRevision(contentRevision);
-                _snapshotBuffer.SetProjectionGeneration(targetGeneration);
-                _snapshotBuffer.SetStaticMeshGeometryRevision(_stableDrawCache.StaticMeshGeometryRevision);
-                _snapshotBuffer.SetStaticMeshDeltas(
-                    _stableDrawCache.StaticMeshDeltaBaseRevision,
+                PublishStaticProjectionState(contentRevision, nonStaticRevision, targetGeneration);
+            }
+            else if (_lastProjectedRevision != contentRevision)
+            {
+                _visualProxyEmitter.ApplyStaticInstanceDelta(
                     _stableDrawCache.StaticMeshDeltaItems,
                     _stableDrawCache.StaticMeshRemovedStableIds);
-                _stableDrawCache.ClearStaticMeshDeltas();
+                PublishStaticProjectionState(contentRevision, nonStaticRevision, targetGeneration);
             }
             _requests.Clear();
 
@@ -166,6 +167,21 @@ namespace Ludots.Core.Presentation.Requests
             {
                 _timingDiagnostics.ObservePresentationRequestFlush((Stopwatch.GetTimestamp() - start) * 1000d / Stopwatch.Frequency);
             }
+        }
+
+        private void PublishStaticProjectionState(int contentRevision, int nonStaticRevision, int targetGeneration)
+        {
+            _lastProjectedRevision = contentRevision;
+            _lastProjectedNonStaticRevision = nonStaticRevision;
+            _lastProjectedTargetGeneration = targetGeneration;
+            _snapshotBuffer.SetRevision(contentRevision);
+            _snapshotBuffer.SetProjectionGeneration(targetGeneration);
+            _snapshotBuffer.SetStaticMeshGeometryRevision(_stableDrawCache.StaticMeshGeometryRevision);
+            _snapshotBuffer.SetStaticMeshDeltas(
+                _stableDrawCache.StaticMeshDeltaBaseRevision,
+                _stableDrawCache.StaticMeshDeltaItems,
+                _stableDrawCache.StaticMeshRemovedStableIds);
+            _stableDrawCache.ClearStaticMeshDeltas();
         }
 
         private void EmitPrefab(in PresentationRequest request)

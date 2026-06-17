@@ -11,8 +11,13 @@ using Ludots.Core.Gameplay.GAS.Components;
 using Ludots.Core.Map;
 using Ludots.Core.Mathematics.FixedPoint;
 using Ludots.Core.Modding;
+using Ludots.Core.Presentation;
 using Ludots.Core.Presentation.Components;
+using Ludots.Core.Presentation.Commands;
+using Ludots.Core.Presentation.Events;
+using Ludots.Core.Presentation.Performers;
 using Ludots.Core.Scripting;
+using Ludots.Core.Spatial;
 using Ludots.Core.Systems;
 using NUnit.Framework;
 using static NUnit.Framework.Assert;
@@ -30,6 +35,7 @@ namespace GasTests
         [TestCase("position", true, false, 0f)]
         [TestCase("facing", true, true, 1.25f)]
         [TestCase("position-facing", true, true, 2.5f)]
+        [TestCase("position-facing-performer-param", true, true, 2.5f)]
         [TestCase("position-facing-health", false, false, 0f)]
         public void TryBuildBatchRequest_ClassifiesPlacementOverrides(
             string? overrideShape,
@@ -37,7 +43,7 @@ namespace GasTests
             bool expectedHasFacing,
             float expectedFacing)
         {
-            var spawn = CreateSpawn(CreateOverrides(overrideShape));
+            var spawn = CreateSpawnForShape(overrideShape);
             bool fastPath = InvokeTryBuildBatchRequest(spawn, out object request);
 
             That(fastPath, Is.EqualTo(expectedFastPath));
@@ -47,6 +53,8 @@ namespace GasTests
             }
 
             That(GetRequestBool(request, "HasFacing"), Is.EqualTo(expectedHasFacing));
+            That(GetRequestParamOverrideCount(request), Is.EqualTo(
+                overrideShape == "position-facing-performer-param" ? 1 : 0));
             if (expectedHasFacing)
             {
                 That(GetRequestFloat(request, "FacingAngleRad"), Is.EqualTo(expectedFacing).Within(0.0001f));
@@ -107,6 +115,156 @@ namespace GasTests
             ref readonly Health health = ref world.Get<Health>(entity);
             That(health.Current, Is.EqualTo(7));
             That(health.Max, Is.EqualTo(11));
+        }
+
+        [Test]
+        public void TryBuildBatchRequest_PerformerParamOverride_RequiresExplicitLane()
+        {
+            var spawn = CreateSpawn(CreateOverrides("position-facing"));
+            spawn.PerformerParamOverrides.Add(new ParamOverrideData
+            {
+                ParamKey = "test.map.batch.slope",
+                FloatValue = 0.5f,
+            });
+
+            TargetInvocationException ex = Throws<TargetInvocationException>(() => InvokeTryBuildBatchRequest(spawn, out _))!;
+            That(ex.InnerException, Is.TypeOf<InvalidOperationException>());
+            That(ex.InnerException!.Message, Does.Contain("Lane requires an explicit param lane"));
+        }
+
+        [Test]
+        public void TryBuildBatchRequest_VectorPerformerParamOverride_RequiresExactlyFourValues()
+        {
+            var spawn = CreateSpawn(CreateOverrides("position-facing"));
+            spawn.PerformerParamOverrides.Add(new ParamOverrideData
+            {
+                ParamKey = "test.map.batch.vector",
+                Lane = ParamLane.Vector,
+                VectorValue = [1f, 2f, 3f],
+            });
+
+            TargetInvocationException ex = Throws<TargetInvocationException>(() => InvokeTryBuildBatchRequest(spawn, out _))!;
+            That(ex.InnerException, Is.TypeOf<InvalidOperationException>());
+            That(ex.InnerException!.Message, Does.Contain("VectorValue requires four numeric values"));
+        }
+
+        [Test]
+        public void LoadEntities_PerformerParamOverride_RequiresPresentationRuntime()
+        {
+            using var world = World.Create();
+            var loader = CreateLoader(world);
+            var map = new MapConfig { Id = MapId };
+            map.Entities.Add(CreateSpawnWithPerformerParam(CreateOverrides("position-facing"), 0.25f));
+
+            InvalidOperationException ex = Throws<InvalidOperationException>(() => loader.LoadEntities(map))!;
+            That(ex.Message, Does.Contain("presentation runtime is not installed"));
+        }
+
+        [Test]
+        public void LoadEntities_PerformerParamOverride_RequiresDirectPerformerBootstrap()
+        {
+            using var world = World.Create();
+            var loader = CreateLoader(world);
+            var definitions = new PerformerDefinitionRegistry();
+            loader.SetPresentationRuntime(
+                new PresentationStableIdAllocator(),
+                new PerformerEntityRuntime(world),
+                definitions,
+                new ChunkedGridSpatialPartitionWorld(chunkSizeCells: 4),
+                new WorldSizeSpec(new Ludots.Core.Mathematics.WorldAabbCm(-10_000, -10_000, 20_000, 20_000), 100));
+            var map = new MapConfig { Id = MapId };
+            map.Entities.Add(CreateSpawnWithPerformerParam(CreateOverrides("position-facing"), 0.25f));
+
+            InvalidOperationException ex = Throws<InvalidOperationException>(() => loader.LoadEntities(map))!;
+            That(ex.Message, Does.Contain("has no direct performer bootstrap"));
+        }
+
+        [Test]
+        public void LoadEntities_PerformerParamOverride_RequiresBatchPath()
+        {
+            using var world = World.Create();
+            var loader = CreateLoader(world);
+            var map = new MapConfig { Id = MapId };
+            map.Entities.Add(CreateSpawnWithPerformerParam(CreateOverrides("position-facing-health"), 0.25f));
+
+            InvalidOperationException ex = Throws<InvalidOperationException>(() => loader.LoadEntities(map))!;
+            That(ex.Message, Does.Contain("not compatible with the map template batch path"));
+        }
+
+        [Test]
+        public void LoadEntities_BatchTemplate_AppliesPerInstancePerformerParamOverrides()
+        {
+            using var world = World.Create();
+            var loader = CreateLoader(world);
+            var performerRuntime = new PerformerEntityRuntime(world);
+            var definitions = new PerformerDefinitionRegistry();
+            int slopeParamKey = PerformerParamKeyRegistry.Register("test.map.batch.slope");
+            int templateKeyId = loader.EntityTemplateKeys.GetId(TemplateId);
+            int rootDefinitionId = definitions.GetOrRegisterId("test.map.batch.root");
+            definitions.Register("test.map.batch.root", new PerformerDefinition
+            {
+                ParamDefaults =
+                [
+                    new ParamDefault
+                    {
+                        ParamKey = slopeParamKey,
+                        Lane = ParamLane.Float,
+                        FloatValue = 0f,
+                    },
+                ],
+                Rules =
+                [
+                    new PerformerRule
+                    {
+                        Event = new EventFilter
+                        {
+                            Kind = PresentationEventKind.EntitySpawned,
+                            KeyId = templateKeyId,
+                        },
+                        Command = new PerformerCommand
+                        {
+                            CommandKind = PerformerCommandKind.CreatePerformer,
+                            PerformerDefinitionId = rootDefinitionId,
+                            ScopeSource = PerformerCommandScopeSource.EventPayloadA,
+                            AnchorKind = PresentationAnchorKind.Entity,
+                        },
+                    },
+                ],
+            });
+            performerRuntime.BindDefinitions(definitions);
+            loader.SetPresentationRuntime(
+                new PresentationStableIdAllocator(),
+                performerRuntime,
+                definitions,
+                new ChunkedGridSpatialPartitionWorld(chunkSizeCells: 4),
+                new WorldSizeSpec(new Ludots.Core.Mathematics.WorldAabbCm(-10_000, -10_000, 20_000, 20_000), 100));
+
+            var map = new MapConfig { Id = MapId };
+            map.Entities.Add(CreateSpawnWithPerformerParam(
+                CreateOverrides("position-facing"),
+                -0.375f));
+            map.Entities.Add(CreateSpawnWithPerformerParam(
+                new Dictionary<string, JsonNode>
+                {
+                    ["WorldPositionCm"] = WorldPosition(1200, -800),
+                    ["FacingDirection"] = Facing(-1.25f),
+                },
+                0.875f));
+
+            loader.LoadEntities(map);
+
+            var owners = FindTemplateEntities(world);
+            That(owners.Count, Is.EqualTo(2));
+            Entity rootA = world.Get<PresentationOwnerHasPerformerPayload>(owners[0]).SingleRootPerformer;
+            Entity rootB = world.Get<PresentationOwnerHasPerformerPayload>(owners[1]).SingleRootPerformer;
+            That(world.IsAlive(rootA), Is.True);
+            That(world.IsAlive(rootB), Is.True);
+            That(world.Get<PerformerState>(rootA).DefId, Is.EqualTo(rootDefinitionId));
+            That(world.Get<PerformerState>(rootB).DefId, Is.EqualTo(rootDefinitionId));
+            That(performerRuntime.TryResolveFloat(rootA, slopeParamKey, out float slopeA), Is.True);
+            That(performerRuntime.TryResolveFloat(rootB, slopeParamKey, out float slopeB), Is.True);
+            That(slopeA, Is.EqualTo(-0.375f).Within(0.0001f));
+            That(slopeB, Is.EqualTo(0.875f).Within(0.0001f));
         }
 
         [Test]
@@ -181,6 +339,20 @@ namespace GasTests
             return spawn;
         }
 
+        private static EntitySpawnData CreateSpawnWithPerformerParam(
+            Dictionary<string, JsonNode>? overrides,
+            float value = 0.25f)
+        {
+            var spawn = CreateSpawn(overrides);
+            spawn.PerformerParamOverrides.Add(new ParamOverrideData
+            {
+                ParamKey = "test.map.batch.slope",
+                Lane = ParamLane.Float,
+                FloatValue = value,
+            });
+            return spawn;
+        }
+
         private static Dictionary<string, JsonNode>? CreateOverrides(string? shape)
         {
             return shape switch
@@ -199,6 +371,11 @@ namespace GasTests
                     ["WorldPositionCm"] = WorldPosition(-300, 400),
                     ["FacingDirection"] = Facing(2.5f),
                 },
+                "position-facing-performer-param" => new Dictionary<string, JsonNode>
+                {
+                    ["WorldPositionCm"] = WorldPosition(-300, 400),
+                    ["FacingDirection"] = Facing(2.5f),
+                },
                 "position-facing-health" => new Dictionary<string, JsonNode>
                 {
                     ["WorldPositionCm"] = WorldPosition(777, 888),
@@ -207,6 +384,13 @@ namespace GasTests
                 },
                 _ => throw new ArgumentOutOfRangeException(nameof(shape), shape, null),
             };
+        }
+
+        private static EntitySpawnData CreateSpawnForShape(string? shape)
+        {
+            return shape == "position-facing-performer-param"
+                ? CreateSpawnWithPerformerParam(CreateOverrides(shape))
+                : CreateSpawn(CreateOverrides(shape));
         }
 
         private static JsonNode WorldPosition(int x, int y)
@@ -250,6 +434,14 @@ namespace GasTests
             PropertyInfo property = request.GetType().GetProperty(propertyName)!;
             That(property, Is.Not.Null);
             return (float)property.GetValue(request)!;
+        }
+
+        private static int GetRequestParamOverrideCount(object request)
+        {
+            PropertyInfo property = request.GetType().GetProperty("PerformerParamOverrides")!;
+            That(property, Is.Not.Null);
+            var overrides = (ParamDefault[])property.GetValue(request)!;
+            return overrides.Length;
         }
 
         private static List<Entity> FindTemplateEntities(World world)

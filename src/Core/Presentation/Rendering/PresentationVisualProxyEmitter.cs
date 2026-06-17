@@ -30,6 +30,12 @@ namespace Ludots.Core.Presentation.Rendering
             _skinnedBatchBuffer?.ClearProjection();
         }
 
+        public void ApplyStaticInstanceDelta(ReadOnlySpan<PrimitiveDrawItem> changedItems, ReadOnlySpan<int> removedStableIds)
+        {
+            _snapshotBuffer?.ApplyStaticMeshDelta(changedItems, removedStableIds, visibleOnly: false);
+            _drawBuffer.ApplyStaticMeshDelta(changedItems, removedStableIds, visibleOnly: true);
+        }
+
         public void Emit(in PresentationVisualProxy proxy)
         {
             if (_proxyBuffer != null && !_proxyBuffer.TryAdd(proxy))

@@ -16,6 +16,8 @@
 - [Core Minimap Authoring](core-minimap-authoring.md)
 - [Performer-as-Actor 架构总览](performer-as-actor-architecture.md)
 - [Instanced Batch 外部 Source Contract](instanced-batch-source-contract.md)
+- [Map Batch Performer Param Overrides](map-batch-performer-param-overrides.md)
+- [Retained Static Incremental Projection](retained-static-incremental-projection.md)
 - [Performer 参数黑板与 Animator 统一](performer-param-blackboard.md)
 - [Performer Transform、Grounding 与 Attachment](performer-transform-and-attachment.md)
 - [Performer Raylib UAT 测试计划](performer-raylib-uat.md)

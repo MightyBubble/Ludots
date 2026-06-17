@@ -919,6 +919,119 @@ namespace Ludots.Tests.Presentation
         }
 
         [Test]
+        public void EntityAnchoredRootBatch_AppliesPerRootParamOverrides_BeforeChildrenResolveParentParams()
+        {
+            using var world = World.Create();
+            var instances = new PerformerEntityRuntime(world);
+            var definitions = new PerformerDefinitionRegistry();
+            int slopeParamKey = PerformerParamKeyRegistry.Register("test.static.wall.slope");
+
+            Entity ownerA = world.Create(
+                WorldPositionCm.FromCm(1000, 2000),
+                new VisualTransform
+                {
+                    Position = new Vector3(10f, 0f, 20f),
+                    Rotation = Quaternion.Identity,
+                    Scale = Vector3.One,
+                },
+                new CullState { IsVisible = true, LOD = LODLevel.High });
+            Entity ownerB = world.Create(
+                WorldPositionCm.FromCm(3000, 4000),
+                new VisualTransform
+                {
+                    Position = new Vector3(30f, 0f, 40f),
+                    Rotation = Quaternion.Identity,
+                    Scale = Vector3.One,
+                },
+                new CullState { IsVisible = true, LOD = LODLevel.High });
+
+            int childDefId = definitions.Register("batch.param.child", new PerformerDefinition
+            {
+                Behaviors =
+                [
+                    new BehaviorSlot
+                    {
+                        SlotIndex = 0,
+                        Kind = BehaviorKind.AssetBinding,
+                        ActiveByDefault = true,
+                        AssetBinding = new AssetBindingConfig
+                        {
+                            AssetKind = AssetKind.Mesh,
+                            AssetId = 1,
+                            RenderPath = VisualRenderPath.InstancedStaticMesh,
+                            Mobility = VisualMobility.Static,
+                            AssetIdParamKey = -1,
+                            MaterialCustomData = new MaterialCustomDataBinding
+                            {
+                                Slots =
+                                [
+                                    new MaterialCustomDataSlotBinding
+                                    {
+                                        Slot = 0,
+                                        Lane = MaterialCustomDataLane.Float,
+                                        ParamKey = slopeParamKey,
+                                    },
+                                ],
+                            },
+                        },
+                    },
+                ],
+            });
+
+            int rootDefId = definitions.Register("batch.param.root", new PerformerDefinition
+            {
+                ParamDefaults =
+                [
+                    new ParamDefault
+                    {
+                        ParamKey = slopeParamKey,
+                        Lane = ParamLane.Float,
+                        FloatValue = 0f,
+                    },
+                ],
+                Children = [new ChildPerformerRef { DefinitionId = childDefId, ScopeTag = 1 }],
+            });
+            instances.BindDefinitions(definitions);
+
+            Entity[] owners = [ownerA, ownerB];
+            int[] scopes = [11, 12];
+            int[] stableIds = [101, 102];
+            VisualTransform[] transforms = [world.Get<VisualTransform>(ownerA), world.Get<VisualTransform>(ownerB)];
+            CullState[] culls = [world.Get<CullState>(ownerA), world.Get<CullState>(ownerB)];
+            ParamDefault[][] overrides =
+            [
+                [new ParamDefault { ParamKey = slopeParamKey, Lane = ParamLane.Float, FloatValue = -0.25f }],
+                [new ParamDefault { ParamKey = slopeParamKey, Lane = ParamLane.Float, FloatValue = 0.75f }],
+            ];
+            Entity[] created = new Entity[2];
+
+            int count = instances.CreateEntityAnchoredRootBatch(
+                definitions,
+                rootDefId,
+                owners,
+                scopes,
+                stableIds,
+                transforms,
+                culls,
+                definitions.Get(rootDefId),
+                created,
+                rootParamOverrides: overrides);
+
+            Assert.That(count, Is.EqualTo(2));
+            Assert.That(instances.TryResolveFloat(created[0], slopeParamKey, out float rootAValue), Is.True);
+            Assert.That(instances.TryResolveFloat(created[1], slopeParamKey, out float rootBValue), Is.True);
+            Assert.That(rootAValue, Is.EqualTo(-0.25f).Within(0.0001f));
+            Assert.That(rootBValue, Is.EqualTo(0.75f).Within(0.0001f));
+
+            Entity childA = world.Get<PerformerChildren>(created[0]).Get(0);
+            Entity childB = world.Get<PerformerChildren>(created[1]).Get(0);
+            Assert.That(instances.TryResolveFloat(childA, slopeParamKey, out float childAValue), Is.True);
+            Assert.That(instances.TryResolveFloat(childB, slopeParamKey, out float childBValue), Is.True);
+            Assert.That(childAValue, Is.EqualTo(-0.25f).Within(0.0001f));
+            Assert.That(childBValue, Is.EqualTo(0.75f).Within(0.0001f));
+        }
+
+        [Test]
         public void Attachment_TargetParent_ChildFollowsEntityAnchoredParentTransformSync()
         {
             using var world = World.Create();

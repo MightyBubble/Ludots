@@ -1,4 +1,5 @@
 using System;
+using System.Collections.Generic;
 using Ludots.Core.Presentation.Components;
 
 namespace Ludots.Core.Presentation.Rendering
@@ -6,6 +7,7 @@ namespace Ludots.Core.Presentation.Rendering
     public sealed class PrimitiveDrawBuffer
     {
         private readonly PrimitiveDrawItem[] _buffer;
+        private readonly Dictionary<int, int> _staticSlotByStableId = new();
         private PrimitiveDrawItem[] _staticMeshDeltaItems = Array.Empty<PrimitiveDrawItem>();
         private int[] _staticMeshRemovedStableIds = Array.Empty<int>();
         private int _count;
@@ -46,10 +48,12 @@ namespace Ludots.Core.Presentation.Rendering
                 return false;
             }
 
-            _buffer[_count++] = item;
+            int slot = _count++;
+            _buffer[slot] = item;
             if (item.RenderPath.IsStaticInstanceLane())
             {
                 _staticMeshLaneItemCount++;
+                _staticSlotByStableId[item.StableId] = slot;
             }
             else if (item.RenderPath.IsSkinnedLane())
             {
@@ -57,6 +61,68 @@ namespace Ludots.Core.Presentation.Rendering
             }
 
             return true;
+        }
+
+        public void ApplyStaticMeshDelta(
+            ReadOnlySpan<PrimitiveDrawItem> changedItems,
+            ReadOnlySpan<int> removedStableIds,
+            bool visibleOnly = false)
+        {
+            for (int i = 0; i < removedStableIds.Length; i++)
+            {
+                RemoveStaticMeshInstance(removedStableIds[i]);
+            }
+
+            for (int i = 0; i < changedItems.Length; i++)
+            {
+                ref readonly PrimitiveDrawItem item = ref changedItems[i];
+                if (!item.RenderPath.IsStaticInstanceLane())
+                {
+                    throw new InvalidOperationException(
+                        $"ApplyStaticMeshDelta received a non-static-instance-lane item stableId={item.StableId}, renderPath={item.RenderPath}.");
+                }
+
+                bool keep = !visibleOnly || item.Visibility == VisualVisibility.Visible;
+                if (_staticSlotByStableId.TryGetValue(item.StableId, out int slot))
+                {
+                    if (keep)
+                    {
+                        _buffer[slot] = item;
+                    }
+                    else
+                    {
+                        RemoveStaticMeshInstance(item.StableId);
+                    }
+                }
+                else if (keep)
+                {
+                    TryAdd(item);
+                }
+            }
+        }
+
+        private void RemoveStaticMeshInstance(int stableId)
+        {
+            if (stableId <= 0 || !_staticSlotByStableId.TryGetValue(stableId, out int slot))
+            {
+                return;
+            }
+
+            _staticSlotByStableId.Remove(stableId);
+            _staticMeshLaneItemCount--;
+            int last = _count - 1;
+            if (slot != last)
+            {
+                PrimitiveDrawItem moved = _buffer[last];
+                _buffer[slot] = moved;
+                if (moved.RenderPath.IsStaticInstanceLane())
+                {
+                    _staticSlotByStableId[moved.StableId] = slot;
+                }
+            }
+
+            _buffer[last] = default;
+            _count = last;
         }
 
         public ReadOnlySpan<PrimitiveDrawItem> GetSpan() => new ReadOnlySpan<PrimitiveDrawItem>(_buffer, 0, _count);
@@ -104,6 +170,7 @@ namespace Ludots.Core.Presentation.Rendering
         public void Clear()
         {
             _count = 0;
+            _staticSlotByStableId.Clear();
             _staticMeshLaneItemCount = 0;
             _skinnedLaneItemCount = 0;
             _staticMeshDeltaBaseRevision = _revision;

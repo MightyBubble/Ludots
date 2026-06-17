@@ -15,6 +15,7 @@ using Ludots.Core.Map;
 using Ludots.Core.Mathematics;
 using Ludots.Core.Presentation;
 using Ludots.Core.Presentation.Components;
+using Ludots.Core.Presentation.Performers;
 using Ludots.Core.Spatial;
 
 namespace Ludots.Core.Config
@@ -389,7 +390,8 @@ namespace Ludots.Core.Config
                 in MapEntity mapEntity = default,
                 bool hasMapEntity = false,
                 int presentationStableId = 0,
-                bool hasPresentationStableId = false)
+                bool hasPresentationStableId = false,
+                ParamDefault[]? performerParamOverrides = null)
             {
                 WorldPositionCm = worldPositionCm;
                 HasWorldPosition = hasWorldPosition;
@@ -399,6 +401,7 @@ namespace Ludots.Core.Config
                 HasMapEntity = hasMapEntity;
                 PresentationStableId = presentationStableId;
                 HasPresentationStableId = hasPresentationStableId;
+                PerformerParamOverrides = performerParamOverrides ?? Array.Empty<ParamDefault>();
             }
 
             public Ludots.Core.Mathematics.FixedPoint.Fix64Vec2 WorldPositionCm { get; }
@@ -416,6 +419,8 @@ namespace Ludots.Core.Config
             public int PresentationStableId { get; }
 
             public bool HasPresentationStableId { get; }
+
+            public ParamDefault[] PerformerParamOverrides { get; }
         }
 
         private readonly struct TemplateSpawnDescriptor
