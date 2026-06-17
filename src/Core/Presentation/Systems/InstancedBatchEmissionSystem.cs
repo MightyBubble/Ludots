@@ -81,7 +81,7 @@ namespace Ludots.Core.Presentation.Systems
                 for (int groupIndex = 0; groupIndex < groups.Length; groupIndex++)
                 {
                     ref readonly InstancedBatchGroup group = ref groups[groupIndex];
-                    int totalInstances = group.Transforms?.Length ?? 0;
+                    int totalInstances = group.InstanceCount;
                     int budget = asset.ProgressiveSubmission.MaxInstancesPerFlush;
                     if (!_submissionRuntime.ShouldSubmit(
                             performer,

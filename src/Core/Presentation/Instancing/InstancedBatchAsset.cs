@@ -36,6 +36,11 @@ namespace Ludots.Core.Presentation.Instancing
         public string InstanceSpanId;
         public InstancedBatchAddress Address;
         public InstancedBatchTransform[] Transforms;
+        public InstancedBatchInstanceSource Source;
+
+        public int InstanceCount => Source.IsValid
+            ? Source.InstanceCount
+            : Transforms?.Length ?? 0;
     }
 
     public struct InstancedBatchTransform
@@ -43,6 +48,30 @@ namespace Ludots.Core.Presentation.Instancing
         public Vector3 PositionCm;
         public Quaternion Rotation;
         public Vector3 Scale;
+    }
+
+    public readonly struct InstancedBatchInstanceSource
+    {
+        public InstancedBatchInstanceSource(
+            string format,
+            string assetUri,
+            string setId,
+            int instanceCount,
+            bool groundToVisualHeightmap)
+        {
+            Format = format ?? string.Empty;
+            AssetUri = assetUri ?? string.Empty;
+            SetId = setId ?? string.Empty;
+            InstanceCount = instanceCount;
+            GroundToVisualHeightmap = groundToVisualHeightmap;
+        }
+
+        public string Format { get; }
+        public string AssetUri { get; }
+        public string SetId { get; }
+        public int InstanceCount { get; }
+        public bool GroundToVisualHeightmap { get; }
+        public bool IsValid => InstanceCount > 0 && Format.Length > 0 && AssetUri.Length > 0 && SetId.Length > 0;
     }
 
     public struct InstancedBatchCustomDataChannel

@@ -87,11 +87,65 @@ namespace Ludots.Tests.Presentation
             Assert.That(asset.Groups[0].Address.Equals(address), Is.True);
         }
 
+        [Test]
+        public void Load_AcceptsSourceBackedBatchAndPreservesMetadata()
+        {
+            string root = CreateTempCoreRoot();
+            WritePresentationFile(root, "instanced_batches.json",
+                """
+                [
+                  {
+                    "id": "batch.external",
+                    "renderPath": "HierarchicalInstancedStaticMesh",
+                    "ownerStableId": "owner.external",
+                    "groups": [
+                      {
+                        "id": "group.external",
+                        "meshAssetId": "mesh.unit",
+                        "bucketId": "bucket.external",
+                        "instanceSpanId": "span.external",
+                        "source": {
+                          "format": "ludots.instanced_transform_factorized.v1",
+                          "assetUri": "ExampleMod:assets/Presentation/example_instanced_source.json",
+                          "setId": "set.alpha",
+                          "instanceCount": 50000,
+                          "groundToVisualHeightmap": true
+                        }
+                      }
+                    ]
+                  }
+                ]
+                """);
+
+            var loader = BuildLoader(root, out InstancedBatchAssetRegistry registry);
+            loader.Load(BuildCatalog());
+
+            int id = registry.GetId("batch.external");
+            Assert.That(registry.TryGet(id, out InstancedBatchAsset asset), Is.True);
+            InstancedBatchGroup group = asset.Groups[0];
+            Assert.That(group.Transforms, Is.Empty);
+            Assert.That(group.Source.IsValid, Is.True);
+            Assert.That(group.Source.Format, Is.EqualTo("ludots.instanced_transform_factorized.v1"));
+            Assert.That(group.Source.AssetUri, Is.EqualTo("ExampleMod:assets/Presentation/example_instanced_source.json"));
+            Assert.That(group.Source.SetId, Is.EqualTo("set.alpha"));
+            Assert.That(group.Source.InstanceCount, Is.EqualTo(50000));
+            Assert.That(group.Source.GroundToVisualHeightmap, Is.True);
+            Assert.That(group.InstanceCount, Is.EqualTo(50000));
+            Assert.That(asset.AddressTable.TryResolve("group.external", "bucket.external", "span.external", out InstancedBatchAddress address), Is.True);
+            Assert.That(group.Address.Equals(address), Is.True);
+        }
+
         [TestCase("unknown mesh asset 'missing.mesh'", "{ \"id\": \"group.a\", \"meshAssetId\": \"missing.mesh\", \"bucketId\": \"bucket.a\", \"instanceSpanId\": \"span.a\", \"transforms\": [ { \"positionCm\": [1,2,3] } ] }")]
         [TestCase("unknown material asset 'missing.material'", "{ \"id\": \"group.a\", \"meshAssetId\": \"mesh.unit\", \"materialId\": \"missing.material\", \"bucketId\": \"bucket.a\", \"instanceSpanId\": \"span.a\", \"transforms\": [ { \"positionCm\": [1,2,3] } ] }")]
         [TestCase("non-empty groups array", "")]
         [TestCase("bucketId must be a string", "{ \"id\": \"group.a\", \"meshAssetId\": \"mesh.unit\", \"instanceSpanId\": \"span.a\", \"transforms\": [ { \"positionCm\": [1,2,3] } ] }")]
         [TestCase("requires exactly 3 numeric array entries", "{ \"id\": \"group.a\", \"meshAssetId\": \"mesh.unit\", \"bucketId\": \"bucket.a\", \"instanceSpanId\": \"span.a\", \"transforms\": [ { \"positionCm\": [1,2] } ] }")]
+        [TestCase("must not declare both transforms and source", "{ \"id\": \"group.a\", \"meshAssetId\": \"mesh.unit\", \"bucketId\": \"bucket.a\", \"instanceSpanId\": \"span.a\", \"transforms\": [ { \"positionCm\": [1,2,3] } ], \"source\": { \"format\": \"ludots.instanced_transform_factorized.v1\", \"assetUri\": \"ExampleMod:assets/Presentation/source.json\", \"setId\": \"set.alpha\", \"instanceCount\": 5 } }")]
+        [TestCase("must declare either a non-empty transforms array or a source object", "{ \"id\": \"group.a\", \"meshAssetId\": \"mesh.unit\", \"bucketId\": \"bucket.a\", \"instanceSpanId\": \"span.a\" }")]
+        [TestCase("source must be an object", "{ \"id\": \"group.a\", \"meshAssetId\": \"mesh.unit\", \"bucketId\": \"bucket.a\", \"instanceSpanId\": \"span.a\", \"source\": [] }")]
+        [TestCase("source.format must be a string", "{ \"id\": \"group.a\", \"meshAssetId\": \"mesh.unit\", \"bucketId\": \"bucket.a\", \"instanceSpanId\": \"span.a\", \"source\": { \"assetUri\": \"ExampleMod:assets/Presentation/source.json\", \"setId\": \"set.alpha\", \"instanceCount\": 5 } }")]
+        [TestCase("source.instanceCount must be positive", "{ \"id\": \"group.a\", \"meshAssetId\": \"mesh.unit\", \"bucketId\": \"bucket.a\", \"instanceSpanId\": \"span.a\", \"source\": { \"format\": \"ludots.instanced_transform_factorized.v1\", \"assetUri\": \"ExampleMod:assets/Presentation/source.json\", \"setId\": \"set.alpha\", \"instanceCount\": 0 } }")]
+        [TestCase("source.groundToVisualHeightmap must be a boolean", "{ \"id\": \"group.a\", \"meshAssetId\": \"mesh.unit\", \"bucketId\": \"bucket.a\", \"instanceSpanId\": \"span.a\", \"source\": { \"format\": \"ludots.instanced_transform_factorized.v1\", \"assetUri\": \"ExampleMod:assets/Presentation/source.json\", \"setId\": \"set.alpha\", \"instanceCount\": 5, \"groundToVisualHeightmap\": \"true\" } }")]
         public void Load_RejectsMalformedBatchData(string expectedMessage, string groupJson)
         {
             string root = CreateTempCoreRoot();
@@ -1225,6 +1279,84 @@ namespace Ludots.Tests.Presentation
             Assert.That(requests.Count, Is.EqualTo(1));
             Assert.That(requests.GetSpan()[0].Kind, Is.EqualTo(InstancedBatchRequestKind.Remove));
             Assert.That(requests.GetSpan()[0].PerformerStableId, Is.EqualTo(900));
+        }
+
+        [Test]
+        public void EmissionSystem_UsesSourceBackedInstanceCountForChunks()
+        {
+            string root = CreateTempCoreRoot();
+            WritePresentationFile(root, "instanced_batches.json",
+                """
+                [
+                  {
+                    "id": "batch.external",
+                    "renderPath": "HierarchicalInstancedStaticMesh",
+                    "ownerStableId": "owner.external",
+                    "progressiveSubmission": { "maxInstancesPerFlush": 2 },
+                    "groups": [
+                      {
+                        "id": "group.external",
+                        "meshAssetId": "mesh.unit",
+                        "bucketId": "bucket.external",
+                        "instanceSpanId": "span.external",
+                        "source": {
+                          "format": "ludots.instanced_transform_factorized.v1",
+                          "assetUri": "ExampleMod:assets/Presentation/example_instanced_source.json",
+                          "setId": "set.alpha",
+                          "instanceCount": 5,
+                          "groundToVisualHeightmap": true
+                        }
+                      }
+                    ]
+                  }
+                ]
+                """);
+            var loader = BuildLoader(root, out InstancedBatchAssetRegistry batches);
+            loader.Load(BuildCatalog());
+            int batchId = batches.GetId("batch.external");
+            Assert.That(batches.TryGet(batchId, out InstancedBatchAsset asset), Is.True);
+            Assert.That(asset.Groups[0].Transforms, Is.Empty);
+            Assert.That(asset.Groups[0].Source.IsValid, Is.True);
+            Assert.That(asset.Groups[0].InstanceCount, Is.EqualTo(5));
+
+            using var world = World.Create();
+            var definitions = new PerformerDefinitionRegistry();
+            int defId = definitions.Register("performer.external.batch", new PerformerDefinition
+            {
+                InstancedBatches = new[] { new InstancedBatchBinding(batchId) },
+            });
+            Entity owner = world.Create();
+            world.Create(new PerformerState
+            {
+                DefId = defId,
+                StableId = 901,
+                OwnerEntity = owner,
+                AnchorKind = PresentationAnchorKind.Entity,
+            });
+            var requests = new InstancedBatchRequestBuffer();
+            var events = new PresentationEventStream(8);
+            var runtime = new InstancedBatchSubmissionRuntime();
+            using var system = new InstancedBatchEmissionSystem(world, definitions, batches, requests, runtime, events);
+
+            system.Update(0.016f);
+            Assert.That(requests.Count, Is.EqualTo(1));
+            Assert.That(requests.GetSpan()[0].InstanceStart, Is.EqualTo(0));
+            Assert.That(requests.GetSpan()[0].InstanceCount, Is.EqualTo(2));
+            Assert.That(requests.GetSpan()[0].FinalChunk, Is.False);
+
+            requests.Clear();
+            system.Update(0.016f);
+            Assert.That(requests.Count, Is.EqualTo(1));
+            Assert.That(requests.GetSpan()[0].InstanceStart, Is.EqualTo(2));
+            Assert.That(requests.GetSpan()[0].InstanceCount, Is.EqualTo(2));
+            Assert.That(requests.GetSpan()[0].FinalChunk, Is.False);
+
+            requests.Clear();
+            system.Update(0.016f);
+            Assert.That(requests.Count, Is.EqualTo(1));
+            Assert.That(requests.GetSpan()[0].InstanceStart, Is.EqualTo(4));
+            Assert.That(requests.GetSpan()[0].InstanceCount, Is.EqualTo(1));
+            Assert.That(requests.GetSpan()[0].FinalChunk, Is.True);
         }
 
         [Test]

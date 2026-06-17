@@ -109,7 +109,8 @@ namespace Ludots.Core.Presentation.Config
                     "materialId",
                     "bucketId",
                     "instanceSpanId",
-                    "transforms");
+                    "transforms",
+                    "source");
 
                 string groupId = RequireString(obj["id"], $"Instanced batch '{batchKey}' groups[{i}].id");
                 string meshKey = RequireString(obj["meshAssetId"], $"Instanced batch '{batchKey}' group '{groupId}' meshAssetId");
@@ -123,7 +124,8 @@ namespace Ludots.Core.Presentation.Config
                     MaterialId = materialId,
                     BucketId = ResolveBucketId(obj["bucketId"], batchKey, groupId),
                     InstanceSpanId = RequireString(obj["instanceSpanId"], $"Instanced batch '{batchKey}' group '{groupId}' instanceSpanId"),
-                    Transforms = ParseTransforms(obj["transforms"], batchKey, groupId),
+                    Transforms = ParseTransforms(obj["transforms"], obj["source"], batchKey, groupId),
+                    Source = ParseInstanceSource(obj["source"], obj["transforms"], batchKey, groupId),
                 };
             }
 
@@ -162,8 +164,25 @@ namespace Ludots.Core.Presentation.Config
             }
         }
 
-        private InstancedBatchTransform[] ParseTransforms(JsonNode? node, string batchKey, string groupId)
+        private InstancedBatchTransform[] ParseTransforms(JsonNode? node, JsonNode? sourceNode, string batchKey, string groupId)
         {
+            if (node == null)
+            {
+                if (sourceNode != null)
+                {
+                    return Array.Empty<InstancedBatchTransform>();
+                }
+
+                throw new InvalidOperationException(
+                    $"Instanced batch '{batchKey}' group '{groupId}' must declare either a non-empty transforms array or a source object.");
+            }
+
+            if (sourceNode != null)
+            {
+                throw new InvalidOperationException(
+                    $"Instanced batch '{batchKey}' group '{groupId}' must not declare both transforms and source.");
+            }
+
             if (node is not JsonArray arr || arr.Count == 0)
             {
                 throw new InvalidOperationException(
@@ -195,6 +214,51 @@ namespace Ludots.Core.Presentation.Config
             }
 
             return transforms;
+        }
+
+        private static InstancedBatchInstanceSource ParseInstanceSource(JsonNode? node, JsonNode? transformsNode, string batchKey, string groupId)
+        {
+            if (node == null)
+            {
+                return default;
+            }
+
+            if (transformsNode != null)
+            {
+                throw new InvalidOperationException(
+                    $"Instanced batch '{batchKey}' group '{groupId}' must not declare both transforms and source.");
+            }
+
+            if (node is not JsonObject obj)
+            {
+                throw new InvalidOperationException(
+                    $"Instanced batch '{batchKey}' group '{groupId}' source must be an object.");
+            }
+
+            ValidateObjectFields(
+                obj,
+                $"Instanced batch '{batchKey}' group '{groupId}' source",
+                "format",
+                "assetUri",
+                "setId",
+                "instanceCount",
+                "groundToVisualHeightmap");
+
+            string format = RequireString(obj["format"], $"Instanced batch '{batchKey}' group '{groupId}' source.format");
+            string assetUri = RequireString(obj["assetUri"], $"Instanced batch '{batchKey}' group '{groupId}' source.assetUri");
+            string setId = RequireString(obj["setId"], $"Instanced batch '{batchKey}' group '{groupId}' source.setId");
+            int instanceCount = ParseRequiredInt(obj["instanceCount"], $"Instanced batch '{batchKey}' group '{groupId}' source.instanceCount");
+            if (instanceCount <= 0)
+            {
+                throw new InvalidOperationException(
+                    $"Instanced batch '{batchKey}' group '{groupId}' source.instanceCount must be positive.");
+            }
+
+            bool groundToVisualHeightmap = ParseOptionalBool(
+                obj["groundToVisualHeightmap"],
+                defaultValue: false,
+                $"Instanced batch '{batchKey}' group '{groupId}' source.groundToVisualHeightmap");
+            return new InstancedBatchInstanceSource(format, assetUri, setId, instanceCount, groundToVisualHeightmap);
         }
 
         private InstancedBatchCustomDataChannel[] ParseCustomDataChannels(JsonNode? node, string batchKey)
@@ -889,6 +953,21 @@ namespace Ludots.Core.Presentation.Config
             }
 
             return ParseRequiredInt(node, context);
+        }
+
+        private static bool ParseOptionalBool(JsonNode? node, bool defaultValue, string context)
+        {
+            if (node == null)
+            {
+                return defaultValue;
+            }
+
+            if (node is JsonValue value && value.TryGetValue<bool>(out bool parsed))
+            {
+                return parsed;
+            }
+
+            throw new InvalidOperationException($"{context} must be a boolean.");
         }
 
         private static float ParseRequiredFiniteFloat(JsonNode? node, string context)
