@@ -1,0 +1,1489 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>大世界导航入门 Slide Deck</title>
+  <style>
+    :root {
+      color-scheme: light;
+      --bg: #f6f7f4;
+      --paper: #ffffff;
+      --ink: #172029;
+      --muted: #5b6470;
+      --line: #d8ddd6;
+      --line-strong: #9aa7a0;
+      --nav: #2368c4;
+      --route: #7b3ff2;
+      --flow: #11926f;
+      --dirty: #d99112;
+      --danger: #d7462f;
+      --road: #6f5930;
+      --hash: #4e7f8d;
+      --soft: #eef2ed;
+      --shadow: 0 18px 50px rgba(31, 42, 55, 0.12);
+      --radius: 8px;
+      --mono: "Cascadia Mono", "SFMono-Regular", Consolas, monospace;
+      --sans: "Segoe UI", "Microsoft YaHei", Arial, sans-serif;
+    }
+
+    * {
+      box-sizing: border-box;
+    }
+
+    html,
+    body {
+      margin: 0;
+      min-height: 100%;
+      background: var(--bg);
+      color: var(--ink);
+      font-family: var(--sans);
+      letter-spacing: 0;
+    }
+
+    body {
+      overflow: hidden;
+    }
+
+    button {
+      font: inherit;
+    }
+
+    .deck-shell {
+      display: grid;
+      grid-template-columns: 292px minmax(0, 1fr);
+      height: 100vh;
+    }
+
+    .sidebar {
+      border-right: 1px solid var(--line);
+      background: #fbfcfa;
+      display: flex;
+      flex-direction: column;
+      min-width: 0;
+    }
+
+    .brand {
+      padding: 22px 20px 18px;
+      border-bottom: 1px solid var(--line);
+    }
+
+    .brand h1 {
+      margin: 0 0 8px;
+      font-size: 20px;
+      line-height: 1.16;
+      font-weight: 760;
+    }
+
+    .brand p {
+      margin: 0;
+      color: var(--muted);
+      font-size: 13px;
+      line-height: 1.55;
+    }
+
+    .slide-list {
+      padding: 12px;
+      overflow: auto;
+    }
+
+    .toc-item {
+      width: 100%;
+      border: 1px solid transparent;
+      background: transparent;
+      color: var(--muted);
+      text-align: left;
+      padding: 9px 10px;
+      border-radius: var(--radius);
+      display: grid;
+      grid-template-columns: 30px minmax(0, 1fr);
+      gap: 8px;
+      cursor: pointer;
+      font-size: 13px;
+      line-height: 1.25;
+    }
+
+    .toc-item:hover {
+      background: var(--soft);
+      color: var(--ink);
+    }
+
+    .toc-item.active {
+      background: #e7eef8;
+      border-color: #bfd1ec;
+      color: var(--ink);
+    }
+
+    .toc-num {
+      font-family: var(--mono);
+      color: var(--nav);
+      font-size: 12px;
+    }
+
+    .main {
+      display: grid;
+      grid-template-rows: auto minmax(0, 1fr) auto;
+      min-width: 0;
+    }
+
+    .topbar {
+      height: 58px;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      border-bottom: 1px solid var(--line);
+      padding: 0 20px;
+      background: rgba(246, 247, 244, 0.92);
+    }
+
+    .topbar-title {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      min-width: 0;
+    }
+
+    .meter {
+      width: 152px;
+      height: 8px;
+      border: 1px solid var(--line-strong);
+      background: #fff;
+      border-radius: 999px;
+      overflow: hidden;
+      flex: 0 0 auto;
+    }
+
+    .meter > span {
+      display: block;
+      height: 100%;
+      width: 0%;
+      background: linear-gradient(90deg, var(--nav), var(--flow), var(--dirty));
+    }
+
+    .topbar h2 {
+      margin: 0;
+      font-size: 14px;
+      font-weight: 680;
+      white-space: nowrap;
+      overflow: hidden;
+      text-overflow: ellipsis;
+    }
+
+    .controls {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+    }
+
+    .icon-button {
+      width: 36px;
+      height: 36px;
+      border: 1px solid var(--line);
+      border-radius: var(--radius);
+      background: var(--paper);
+      color: var(--ink);
+      display: inline-grid;
+      place-items: center;
+      cursor: pointer;
+    }
+
+    .icon-button:hover {
+      border-color: var(--line-strong);
+      background: var(--soft);
+    }
+
+    .icon-button svg {
+      width: 18px;
+      height: 18px;
+      stroke: currentColor;
+      stroke-width: 2;
+      fill: none;
+      stroke-linecap: round;
+      stroke-linejoin: round;
+    }
+
+    .stage {
+      position: relative;
+      overflow: hidden;
+      padding: 22px;
+    }
+
+    .slide {
+      display: none;
+      height: calc(100vh - 116px);
+      overflow: auto;
+      background: var(--paper);
+      border: 1px solid var(--line);
+      border-radius: var(--radius);
+      box-shadow: var(--shadow);
+      padding: 34px;
+    }
+
+    .slide.active {
+      display: block;
+    }
+
+    .slide-kicker {
+      margin: 0 0 10px;
+      font-family: var(--mono);
+      font-size: 12px;
+      color: var(--nav);
+      text-transform: uppercase;
+    }
+
+    .slide h2 {
+      margin: 0;
+      max-width: 980px;
+      font-size: 38px;
+      line-height: 1.1;
+      font-weight: 780;
+    }
+
+    .lead {
+      max-width: 940px;
+      color: var(--muted);
+      font-size: 18px;
+      line-height: 1.62;
+      margin: 18px 0 24px;
+    }
+
+    .two-col {
+      display: grid;
+      grid-template-columns: minmax(0, 1.02fr) minmax(340px, 0.98fr);
+      gap: 28px;
+      align-items: start;
+    }
+
+    .three-col {
+      display: grid;
+      grid-template-columns: repeat(3, minmax(0, 1fr));
+      gap: 16px;
+    }
+
+    .panel,
+    .card {
+      border: 1px solid var(--line);
+      border-radius: var(--radius);
+      background: var(--paper);
+      padding: 16px;
+      min-width: 0;
+    }
+
+    .panel {
+      background: #fbfcfa;
+      padding: 18px;
+    }
+
+    .panel h3,
+    .card h3 {
+      margin: 0 0 10px;
+      font-size: 17px;
+      line-height: 1.25;
+    }
+
+    .panel p,
+    .card p {
+      margin: 0;
+      color: var(--muted);
+      line-height: 1.58;
+      font-size: 14px;
+    }
+
+    .plain-list {
+      margin: 0;
+      padding: 0;
+      list-style: none;
+      display: grid;
+      gap: 10px;
+    }
+
+    .plain-list li {
+      border: 1px solid var(--line);
+      border-radius: var(--radius);
+      padding: 12px;
+      background: #fbfcfa;
+      color: var(--muted);
+      line-height: 1.5;
+      font-size: 14px;
+    }
+
+    .plain-list strong {
+      color: var(--ink);
+    }
+
+    .note {
+      border-left: 4px solid var(--dirty);
+      background: #fff8e7;
+      padding: 13px 15px;
+      color: #4d3d14;
+      line-height: 1.55;
+      border-radius: 0 var(--radius) var(--radius) 0;
+    }
+
+    .ok {
+      border-left-color: var(--flow);
+      background: #edf9f4;
+      color: #164d3e;
+    }
+
+    .danger {
+      border-left-color: var(--danger);
+      background: #fff0ed;
+      color: #673026;
+    }
+
+    .scale-table {
+      width: 100%;
+      border-collapse: collapse;
+      table-layout: fixed;
+      font-size: 14px;
+      line-height: 1.35;
+    }
+
+    .scale-table th,
+    .scale-table td {
+      border-bottom: 1px solid var(--line);
+      padding: 10px 8px;
+      vertical-align: top;
+      text-align: left;
+      overflow-wrap: anywhere;
+    }
+
+    .scale-table th {
+      color: var(--muted);
+      font-size: 12px;
+      font-weight: 700;
+      text-transform: uppercase;
+      background: #f4f6f3;
+    }
+
+    .scale-table td:first-child {
+      font-weight: 700;
+      color: var(--ink);
+    }
+
+    .mono {
+      font-family: var(--mono);
+      font-size: 0.92em;
+    }
+
+    .pill-row {
+      display: flex;
+      gap: 8px;
+      flex-wrap: wrap;
+      margin: 12px 0 0;
+    }
+
+    .pill {
+      display: inline-flex;
+      align-items: center;
+      min-height: 28px;
+      padding: 4px 9px;
+      border-radius: 999px;
+      border: 1px solid var(--line);
+      background: var(--paper);
+      color: var(--muted);
+      font-size: 12px;
+      font-family: var(--mono);
+    }
+
+    .diagram {
+      position: relative;
+      min-height: 310px;
+      border: 1px solid var(--line);
+      border-radius: var(--radius);
+      background:
+        linear-gradient(90deg, rgba(23, 32, 41, 0.045) 1px, transparent 1px),
+        linear-gradient(rgba(23, 32, 41, 0.045) 1px, transparent 1px),
+        #fbfcfa;
+      background-size: 28px 28px;
+      overflow: hidden;
+      padding: 18px;
+    }
+
+    .diagram-title {
+      position: relative;
+      z-index: 2;
+      font-size: 13px;
+      font-weight: 700;
+      color: var(--muted);
+      margin-bottom: 12px;
+    }
+
+    .scale-ladder {
+      display: grid;
+      gap: 10px;
+      margin-top: 10px;
+    }
+
+    .ladder-row {
+      display: grid;
+      grid-template-columns: 150px minmax(0, 1fr) 94px;
+      align-items: center;
+      gap: 10px;
+      font-size: 13px;
+    }
+
+    .ladder-name {
+      font-weight: 700;
+    }
+
+    .ladder-bar {
+      height: 22px;
+      border: 1px solid rgba(0, 0, 0, 0.12);
+      background: var(--paper);
+      border-radius: 4px;
+      overflow: hidden;
+    }
+
+    .ladder-fill {
+      height: 100%;
+      min-width: 4px;
+      background: var(--nav);
+    }
+
+    .ladder-value {
+      font-family: var(--mono);
+      color: var(--muted);
+      text-align: right;
+    }
+
+    .world-stack {
+      position: relative;
+      height: 336px;
+      margin-top: 8px;
+    }
+
+    .world-layer {
+      position: absolute;
+      border: 2px solid currentColor;
+      border-radius: 4px;
+      background: rgba(255, 255, 255, 0.6);
+    }
+
+    .world-layer span {
+      position: absolute;
+      left: 8px;
+      top: 7px;
+      font-size: 12px;
+      font-weight: 760;
+      background: rgba(255, 255, 255, 0.86);
+      padding: 3px 6px;
+      border-radius: 4px;
+    }
+
+    .world {
+      left: 12px;
+      top: 12px;
+      right: 12px;
+      bottom: 12px;
+      color: var(--line-strong);
+    }
+
+    .macro {
+      left: 64px;
+      top: 54px;
+      width: 235px;
+      height: 235px;
+      color: var(--dirty);
+      background-image:
+        linear-gradient(90deg, rgba(217, 145, 18, 0.26) 1px, transparent 1px),
+        linear-gradient(rgba(217, 145, 18, 0.26) 1px, transparent 1px);
+      background-size: 29px 29px;
+    }
+
+    .stream {
+      left: 132px;
+      top: 118px;
+      width: 120px;
+      height: 120px;
+      color: var(--flow);
+      background: rgba(17, 146, 111, 0.08);
+    }
+
+    .solver {
+      left: 154px;
+      top: 140px;
+      width: 75px;
+      height: 75px;
+      color: var(--route);
+      background:
+        linear-gradient(90deg, rgba(123, 63, 242, 0.2) 1px, transparent 1px),
+        linear-gradient(rgba(123, 63, 242, 0.2) 1px, transparent 1px),
+        rgba(123, 63, 242, 0.08);
+      background-size: 7.5px 7.5px;
+    }
+
+    .flow-field {
+      height: 280px;
+      display: grid;
+      grid-template-columns: repeat(10, 1fr);
+      grid-template-rows: repeat(10, 1fr);
+      gap: 1px;
+      background: #dfe5de;
+      border: 1px solid var(--line);
+      border-radius: var(--radius);
+      overflow: hidden;
+    }
+
+    .flow-cell {
+      background: #eef7f3;
+      display: grid;
+      place-items: center;
+      color: var(--flow);
+      font-size: 16px;
+      font-weight: 800;
+    }
+
+    .flow-cell.hot {
+      background: #ffe9d7;
+      color: var(--danger);
+    }
+
+    .mesh-diagram {
+      height: 300px;
+      position: relative;
+      background: #f7faf9;
+      border: 1px solid var(--line);
+      border-radius: var(--radius);
+      overflow: hidden;
+    }
+
+    .mesh-diagram svg {
+      width: 100%;
+      height: 100%;
+      display: block;
+    }
+
+    .legend {
+      display: grid;
+      grid-template-columns: repeat(2, minmax(0, 1fr));
+      gap: 8px;
+      margin-top: 12px;
+    }
+
+    .legend-item {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      color: var(--muted);
+      font-size: 13px;
+      line-height: 1.35;
+    }
+
+    .swatch {
+      width: 16px;
+      height: 16px;
+      border-radius: 4px;
+      border: 1px solid rgba(0, 0, 0, 0.12);
+      flex: 0 0 auto;
+    }
+
+    .timeline {
+      display: grid;
+      gap: 12px;
+      margin-top: 10px;
+    }
+
+    .timeline-step {
+      display: grid;
+      grid-template-columns: 38px minmax(0, 1fr);
+      gap: 12px;
+      align-items: start;
+    }
+
+    .timeline-num {
+      width: 32px;
+      height: 32px;
+      border-radius: 50%;
+      background: var(--nav);
+      color: white;
+      display: grid;
+      place-items: center;
+      font-family: var(--mono);
+      font-size: 13px;
+      font-weight: 800;
+    }
+
+    .timeline-step h3 {
+      margin: 0 0 4px;
+      font-size: 16px;
+    }
+
+    .timeline-step p {
+      margin: 0;
+      color: var(--muted);
+      line-height: 1.52;
+      font-size: 14px;
+    }
+
+    .footer {
+      height: 58px;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      border-top: 1px solid var(--line);
+      padding: 0 20px;
+      color: var(--muted);
+      font-size: 12px;
+      background: rgba(246, 247, 244, 0.94);
+    }
+
+    .kbd {
+      display: inline-flex;
+      align-items: center;
+      min-width: 22px;
+      height: 22px;
+      justify-content: center;
+      padding: 0 6px;
+      border: 1px solid var(--line-strong);
+      border-bottom-width: 2px;
+      border-radius: 5px;
+      background: var(--paper);
+      color: var(--ink);
+      font-family: var(--mono);
+      font-size: 12px;
+    }
+
+    .tiny {
+      font-size: 12px;
+      color: var(--muted);
+      line-height: 1.45;
+    }
+
+    .formula {
+      padding: 14px;
+      background: #172029;
+      color: #eef7f3;
+      border-radius: var(--radius);
+      font-family: var(--mono);
+      font-size: 13px;
+      line-height: 1.55;
+      overflow: auto;
+      white-space: pre-wrap;
+    }
+
+    .compare-grid {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 14px;
+    }
+
+    .good-bad {
+      border: 1px solid var(--line);
+      border-radius: var(--radius);
+      overflow: hidden;
+      background: var(--paper);
+    }
+
+    .good-bad h3 {
+      margin: 0;
+      padding: 10px 12px;
+      font-size: 14px;
+      background: var(--soft);
+      border-bottom: 1px solid var(--line);
+    }
+
+    .good-bad ul {
+      margin: 0;
+      padding: 12px 18px 14px 30px;
+      color: var(--muted);
+      line-height: 1.48;
+      font-size: 14px;
+    }
+
+    @media (max-width: 980px) {
+      html,
+      body {
+        max-width: 100%;
+        overflow-x: hidden;
+      }
+
+      body {
+        overflow-y: auto;
+      }
+
+      .deck-shell {
+        display: block;
+        height: auto;
+        width: 100%;
+        overflow-x: hidden;
+      }
+
+      .sidebar {
+        position: static;
+        border-right: 0;
+        border-bottom: 1px solid var(--line);
+        overflow: hidden;
+      }
+
+      .slide-list {
+        display: flex;
+        width: 100%;
+        max-width: 100vw;
+        overflow-x: auto;
+        overflow-y: hidden;
+        gap: 8px;
+      }
+
+      .toc-item {
+        width: min(220px, calc(100vw - 32px));
+        flex: 0 0 min(220px, calc(100vw - 32px));
+      }
+
+      .topbar {
+        position: sticky;
+        top: 0;
+        z-index: 10;
+      }
+
+      .stage {
+        padding: 14px;
+      }
+
+      .slide {
+        height: auto;
+        min-height: calc(100vh - 160px);
+        padding: 24px;
+      }
+
+      .slide h2 {
+        font-size: 30px;
+      }
+
+      .lead {
+        font-size: 17px;
+      }
+
+      .two-col,
+      .three-col,
+      .compare-grid {
+        grid-template-columns: 1fr;
+      }
+
+      .ladder-row {
+        grid-template-columns: 112px minmax(0, 1fr) 82px;
+      }
+    }
+
+    @media print {
+      body {
+        overflow: visible;
+        background: #fff;
+      }
+
+      .deck-shell {
+        display: block;
+        height: auto;
+      }
+
+      .sidebar,
+      .topbar,
+      .footer {
+        display: none;
+      }
+
+      .stage {
+        padding: 0;
+        overflow: visible;
+      }
+
+      .slide {
+        display: block !important;
+        height: auto;
+        overflow: visible;
+        border: 0;
+        box-shadow: none;
+        page-break-after: always;
+        padding: 24px 0;
+      }
+    }
+  </style>
+</head>
+<body>
+  <div class="deck-shell">
+    <aside class="sidebar" aria-label="Slide navigation">
+      <div class="brand">
+        <h1>大世界导航入门</h1>
+        <p>给 0 基础、0 项目上下文的新同学看的 Mass Navigation 概念课。</p>
+      </div>
+      <nav id="slideList" class="slide-list"></nav>
+    </aside>
+
+    <main class="main">
+      <header class="topbar">
+        <div class="topbar-title">
+          <div class="meter" aria-hidden="true"><span id="progressBar"></span></div>
+          <h2 id="currentTitle">大世界导航入门</h2>
+        </div>
+        <div class="controls" aria-label="Slide controls">
+          <button id="prevBtn" class="icon-button" type="button" aria-label="上一页">
+            <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M15 18l-6-6 6-6"></path></svg>
+          </button>
+          <button id="nextBtn" class="icon-button" type="button" aria-label="下一页">
+            <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M9 18l6-6-6-6"></path></svg>
+          </button>
+        </div>
+      </header>
+
+      <section class="stage" aria-live="polite">
+        <article class="slide active" data-title="先说人话：导航是什么">
+          <p class="slide-kicker">00 / start here</p>
+          <h2>导航，就是游戏帮单位从这里走到那里。</h2>
+          <p class="lead">你不需要先懂 ECS、Recast、NavMesh、HPA。先记住玩家看到的一件事：框选单位，点一个地方，单位应该绕开墙、山、建筑和别的单位，最后到达目标。</p>
+          <div class="three-col">
+            <div class="card">
+              <h3>玩家看见</h3>
+              <p>我点了目标，单位走过去；如果走不过去，游戏告诉我原因，而不是没反应。</p>
+            </div>
+            <div class="card">
+              <h3>设计师关心</h3>
+              <p>哪些地方能走，哪里是路、桥、坡、森林，哪些单位能通过哪些区域。</p>
+            </div>
+            <div class="card">
+              <h3>工程关心</h3>
+              <p>64km 大世界不能每帧全图暴算。要分层、分块、缓存、只更新变化的地方。</p>
+            </div>
+          </div>
+          <div class="note ok" style="margin-top:18px;">这套课件的读法：先看“它解决什么玩家问题”，再看术语名。术语只是给问题贴标签。</div>
+        </article>
+
+        <article class="slide" data-title="一次右键发生了什么">
+          <p class="slide-kicker">01 / player action</p>
+          <h2>一次右键移动，底层通常拆成六步。</h2>
+          <p class="lead">从玩家角度只有一个命令；从引擎角度，它会经过点选、粗路线、局部绕障、群体执行、避让、缓存和诊断。</p>
+          <div class="timeline">
+            <div class="timeline-step"><div class="timeline-num">1</div><div><h3>把鼠标点变成世界坐标</h3><p>用户点到地图上的哪里，先要变成 runtime 可计算的位置。</p></div></div>
+            <div class="timeline-step"><div class="timeline-num">2</div><div><h3>远距离先找大方向</h3><p>几十公里外的目标，先用 Road Graph / Macro Chunk 找一条战略路线。</p></div></div>
+            <div class="timeline-step"><div class="timeline-num">3</div><div><h3>到附近再看细节</h3><p>建筑、坡道、桥口、墙角这些“最后一公里”交给 NavMesh。</p></div></div>
+            <div class="timeline-step"><div class="timeline-num">4</div><div><h3>大群体共享执行</h3><p>10k 单位不应该每个人一条完整路线，MassFlow 让一群人共享方向场。</p></div></div>
+            <div class="timeline-step"><div class="timeline-num">5</div><div><h3>局部避让和防重叠</h3><p>空间 Hash 帮单位快速找到附近的人和障碍，避免 O(n²) 全场互看。</p></div></div>
+            <div class="timeline-step"><div class="timeline-num">6</div><div><h3>缓存和证据</h3><p>重复查询要快；地图变了要失效；showcase 要能把这些层画出来。</p></div></div>
+          </div>
+        </article>
+
+        <article class="slide" data-title="为什么要分层">
+          <p class="slide-kicker">02 / why layers</p>
+          <h2>大世界导航不能只靠一张超级细的网。</h2>
+          <p class="lead">64km 世界很大，1m 精度又很细。如果把全世界每个细节都放进一次寻路里，性能会爆；如果全都粗算，单位又会穿墙或卡住。所以要分层。</p>
+          <div class="two-col">
+            <div class="compare-grid">
+              <div class="good-bad">
+                <h3>粗层解决</h3>
+                <ul>
+                  <li>远距离往哪个方向走。</li>
+                  <li>经过哪条路、桥、关口。</li>
+                  <li>跨哪些大 chunk。</li>
+                  <li>小地图上画整条战略路线。</li>
+                </ul>
+              </div>
+              <div class="good-bad">
+                <h3>细层解决</h3>
+                <ul>
+                  <li>最后几十米怎么绕建筑。</li>
+                  <li>坡度和地形高低能不能走。</li>
+                  <li>单位之间怎么排队。</li>
+                  <li>画了新障碍后怎么局部更新。</li>
+                </ul>
+              </div>
+            </div>
+            <div class="diagram">
+              <div class="diagram-title">越往下越细、越贵、越局部</div>
+              <div class="scale-ladder">
+                <div class="ladder-row"><div class="ladder-name">World</div><div class="ladder-bar"><div class="ladder-fill" style="width:100%; background:var(--line-strong)"></div></div><div class="ladder-value">64km</div></div>
+                <div class="ladder-row"><div class="ladder-name">Road / Macro</div><div class="ladder-bar"><div class="ladder-fill" style="width:58%; background:var(--dirty)"></div></div><div class="ladder-value">250m</div></div>
+                <div class="ladder-row"><div class="ladder-name">Streaming</div><div class="ladder-bar"><div class="ladder-fill" style="width:32%; background:var(--flow)"></div></div><div class="ladder-value">64m</div></div>
+                <div class="ladder-row"><div class="ladder-name">Flow window</div><div class="ladder-bar"><div class="ladder-fill" style="width:38%; background:var(--route)"></div></div><div class="ladder-value">100m</div></div>
+                <div class="ladder-row"><div class="ladder-name">Grid cell</div><div class="ladder-bar"><div class="ladder-fill" style="width:8%; background:var(--nav)"></div></div><div class="ladder-value">1m</div></div>
+                <div class="ladder-row"><div class="ladder-name">Hard resolve</div><div class="ladder-bar"><div class="ladder-fill" style="width:4%; background:var(--danger)"></div></div><div class="ladder-value">0.5m</div></div>
+              </div>
+              <p class="tiny">条形是教学示意，不是严格比例。真实比例太悬殊，64km 和 0.5m 放同一张图会看不见。</p>
+            </div>
+          </div>
+        </article>
+
+        <article class="slide" data-title="单位：cm、m、km">
+          <p class="slide-kicker">03 / units</p>
+          <h2>km 是给人看的，cm 才是 Ludots 现在真实计算用的单位。</h2>
+          <p class="lead">策划可以说“这是 64km 地图”。工程里，点击点、障碍物、路径缓存、dirty bounds 都应该落到 world cm，避免不同系统各自换算。</p>
+          <div class="two-col">
+            <table class="scale-table">
+              <thead><tr><th>说法</th><th>换算</th><th>谁在用</th></tr></thead>
+              <tbody>
+                <tr><td>64km</td><td>给人看的地图尺度</td><td>策划、文档、小地图标注</td></tr>
+                <tr><td>64,000m</td><td>渲染或世界观常用</td><td>表现层可能需要</td></tr>
+                <tr><td>6,400,000cm</td><td>当前 runtime 世界宽度</td><td>导航、障碍、点选、缓存</td></tr>
+                <tr><td>int cm</td><td>厘米整数</td><td>Ludots 当前权威坐标</td></tr>
+              </tbody>
+            </table>
+            <div class="panel">
+              <h3>为什么这很重要</h3>
+              <p>如果障碍物用米，NavMesh 用局部厘米，小地图又用另一套比例，就会出现“我画的障碍和路径没关系”“mesh 像只铺了一小块”的问题。</p>
+              <div class="formula" style="margin-top:16px;">64km = 64,000m = 6,400,000cm
+worldMin = -3,200,000cm
+worldMax =  3,200,000cm</div>
+            </div>
+          </div>
+        </article>
+
+        <article class="slide" data-title="三种坐标别混">
+          <p class="slide-kicker">04 / coordinate spaces</p>
+          <h2>初学者最容易晕的点：同一个点，可能在三种空间里。</h2>
+          <p class="lead">先别背类名。只记一句：用户操作用世界坐标，bake 文件有自己的局部坐标，画到屏幕上还要变成表现坐标。</p>
+          <div class="three-col">
+            <div class="card">
+              <h3>World cm</h3>
+              <p>玩家点击、路径起终点、运行时障碍、dirty 区域、path cache 都应该在这里对齐。</p>
+              <div class="pill-row"><span class="pill">真实运行时</span><span class="pill">全世界</span></div>
+            </div>
+            <div class="card">
+              <h3>Baked local cm</h3>
+              <p>.lhtm / .ntil 文件里的局部 tile 坐标。它不能不换算就直接画到 world。</p>
+              <div class="pill-row"><span class="pill">文件内部</span><span class="pill">局部坐标</span></div>
+            </div>
+            <div class="card">
+              <h3>Visual space</h3>
+              <p>渲染线、地表高度、UI overlay 用的空间。它负责看起来在哪，不负责改变寻路真相。</p>
+              <div class="pill-row"><span class="pill">表现层</span><span class="pill">通常 cm -> m</span></div>
+            </div>
+          </div>
+          <div class="note danger" style="margin-top:18px;">给 0 基础用户的排错口诀：如果“画出来的位置”和“寻路算的位置”不一样，先查是不是坐标空间混了。</div>
+        </article>
+
+        <article class="slide" data-title="Grid cell：地图小格子">
+          <p class="slide-kicker">05 / grid cell</p>
+          <h2>Grid cell 就是地图语义的最小小格子。</h2>
+          <p class="lead">当前一个 Grid cell 是 100cm，也就是 1m。它用来描述“这里多高、能不能走、是不是水、是不是高代价区域”。它不是单位碰撞的唯一精度。</p>
+          <div class="two-col">
+            <div class="diagram">
+              <div class="diagram-title">1m 小格子承载地图语义</div>
+              <div class="flow-field" aria-hidden="true">
+                <div class="flow-cell">.</div><div class="flow-cell">.</div><div class="flow-cell">.</div><div class="flow-cell hot">X</div><div class="flow-cell hot">X</div><div class="flow-cell">.</div><div class="flow-cell">.</div><div class="flow-cell">.</div><div class="flow-cell">.</div><div class="flow-cell">.</div>
+                <div class="flow-cell">.</div><div class="flow-cell">.</div><div class="flow-cell hot">X</div><div class="flow-cell hot">X</div><div class="flow-cell hot">X</div><div class="flow-cell">.</div><div class="flow-cell">.</div><div class="flow-cell">.</div><div class="flow-cell">.</div><div class="flow-cell">.</div>
+                <div class="flow-cell">.</div><div class="flow-cell">.</div><div class="flow-cell">.</div><div class="flow-cell hot">X</div><div class="flow-cell">.</div><div class="flow-cell">.</div><div class="flow-cell">.</div><div class="flow-cell">.</div><div class="flow-cell">.</div><div class="flow-cell">.</div>
+                <div class="flow-cell">.</div><div class="flow-cell">.</div><div class="flow-cell">.</div><div class="flow-cell">.</div><div class="flow-cell">.</div><div class="flow-cell">.</div><div class="flow-cell">.</div><div class="flow-cell hot">X</div><div class="flow-cell">.</div><div class="flow-cell">.</div>
+                <div class="flow-cell">.</div><div class="flow-cell">.</div><div class="flow-cell">.</div><div class="flow-cell">.</div><div class="flow-cell">.</div><div class="flow-cell">.</div><div class="flow-cell hot">X</div><div class="flow-cell hot">X</div><div class="flow-cell">.</div><div class="flow-cell">.</div>
+                <div class="flow-cell">.</div><div class="flow-cell">.</div><div class="flow-cell">.</div><div class="flow-cell">.</div><div class="flow-cell">.</div><div class="flow-cell">.</div><div class="flow-cell">.</div><div class="flow-cell hot">X</div><div class="flow-cell">.</div><div class="flow-cell">.</div>
+                <div class="flow-cell">.</div><div class="flow-cell">.</div><div class="flow-cell">.</div><div class="flow-cell">.</div><div class="flow-cell">.</div><div class="flow-cell">.</div><div class="flow-cell">.</div><div class="flow-cell">.</div><div class="flow-cell">.</div><div class="flow-cell">.</div>
+                <div class="flow-cell">.</div><div class="flow-cell">.</div><div class="flow-cell">.</div><div class="flow-cell">.</div><div class="flow-cell">.</div><div class="flow-cell">.</div><div class="flow-cell">.</div><div class="flow-cell">.</div><div class="flow-cell">.</div><div class="flow-cell">.</div>
+                <div class="flow-cell">.</div><div class="flow-cell">.</div><div class="flow-cell">.</div><div class="flow-cell">.</div><div class="flow-cell">.</div><div class="flow-cell">.</div><div class="flow-cell">.</div><div class="flow-cell">.</div><div class="flow-cell">.</div><div class="flow-cell">.</div>
+                <div class="flow-cell">.</div><div class="flow-cell">.</div><div class="flow-cell">.</div><div class="flow-cell">.</div><div class="flow-cell">.</div><div class="flow-cell">.</div><div class="flow-cell">.</div><div class="flow-cell">.</div><div class="flow-cell">.</div><div class="flow-cell">.</div>
+              </div>
+              <div class="legend"><div class="legend-item"><span class="swatch" style="background:#eef7f3"></span>普通可走</div><div class="legend-item"><span class="swatch" style="background:#ffe9d7"></span>不可走或高代价</div></div>
+            </div>
+            <table class="scale-table">
+              <thead><tr><th>它适合描述</th><th>1m 是否够</th><th>原因</th></tr></thead>
+              <tbody>
+                <tr><td>山坡、河、森林</td><td>够用</td><td>RTS 不需要每 5cm 一个地形语义。</td></tr>
+                <tr><td>建筑占地</td><td>基本够</td><td>建筑通常占多个 cell，边缘再交给 NavMesh。</td></tr>
+                <tr><td>单位硬碰撞</td><td>不够单独用</td><td>单位之间还需要局部 hash 和 steering。</td></tr>
+                <tr><td>很窄的缝</td><td>看需求</td><td>SC2-like 可以更细到 0.5m。</td></tr>
+              </tbody>
+            </table>
+          </div>
+        </article>
+
+        <article class="slide" data-title="LogicHeightmap：导航底图">
+          <p class="slide-kicker">06 / logic heightmap</p>
+          <h2>LogicHeightmap 是给导航看的“地图底图”。</h2>
+          <p class="lead">美术地形负责好看；LogicHeightmap 负责告诉导航：这里高度多少、能不能走、什么区域、有没有坡。它是生成 NavMesh 之前的中间层。</p>
+          <div class="two-col">
+            <div class="timeline">
+              <div class="timeline-step"><div class="timeline-num">A</div><div><h3>美术或地图源</h3><p>地形、quad grid、视觉高度、静态障碍，先汇总成逻辑语义。</p></div></div>
+              <div class="timeline-step"><div class="timeline-num">B</div><div><h3>LogicHeightmap chunk</h3><p>当前每块 64 x 64 cells。如果 cell 是 1m，一块就是 64m x 64m。</p></div></div>
+              <div class="timeline-step"><div class="timeline-num">C</div><div><h3>NavMesh bake</h3><p>Recast 读取这份底图，生成可走多边形和 tile 数据。</p></div></div>
+            </div>
+            <div class="panel">
+              <h3>业务场景</h3>
+              <p>如果策划说“这片沼泽能走但很慢”，它不应该只是一张贴图颜色。导航数据里要能看到它是一个 high-cost area，寻路才会少走或绕开。</p>
+              <div class="note ok" style="margin-top:16px;">验收时不要只问“有没有 mesh”。还要问：这个 mesh 用的 height、blocked、area、cost 是不是对的。</div>
+            </div>
+          </div>
+        </article>
+
+        <article class="slide" data-title="Chunk：把世界切小块">
+          <p class="slide-kicker">07 / chunk basics</p>
+          <h2>Chunk 的人话解释：把大地图切成很多小块，方便加载、计算和更新。</h2>
+          <p class="lead">“chunk”不是一种东西，而是一类做法。不同系统会按自己的业务切块，所以必须带上前缀说清楚：streaming chunk、nav macro chunk、logic chunk、road chunk。</p>
+          <table class="scale-table">
+            <thead><tr><th>名字</th><th>人话解释</th><th>当前或建议尺寸</th><th>用在什么场景</th></tr></thead>
+            <tbody>
+              <tr><td>Streaming chunk</td><td>加载工作区</td><td>64m</td><td>相机附近、热数据、流送</td></tr>
+              <tr><td>Nav macro chunk</td><td>大世界导航索引块</td><td>250m</td><td>256 x 256 全世界 nav tile / macro 查询</td></tr>
+              <tr><td>Logic chunk</td><td>导航底图块</td><td>64m</td><td>.lhtm，64 x 64 cells</td></tr>
+              <tr><td>Road chunk</td><td>路网组织块</td><td>道路/portal 级</td><td>远距离战略路线、桥、隘口</td></tr>
+              <tr><td>Flow window</td><td>战斗执行窗口</td><td>100m</td><td>MassFlow、10k 单位局部执行</td></tr>
+            </tbody>
+          </table>
+          <div class="note danger" style="margin-top:16px;">如果只说“chunk”，但不说是哪一种，新同学一定会误解。验收界面也必须标清楚 overlay 当前画的是哪种 chunk。</div>
+        </article>
+
+        <article class="slide" data-title="Mod 作者改哪里">
+          <p class="slide-kicker">07A / config map</p>
+          <h2>你开发 Mod 时，不是“配置 chunk”，而是配置四层密度。</h2>
+          <p class="lead">先别管术语。你真正要回答的是：地图有多大、导航切多少块、相机附近加载多大、战斗执行窗口多细。这四件事分散在不同配置里。</p>
+          <table class="scale-table">
+            <thead><tr><th>你想控制什么</th><th>配置位置</th><th>当前值</th><th>改了会怎样</th></tr></thead>
+            <tbody>
+              <tr><td>地图真实大小和基础格子</td><td><span class="mono">assets/Maps/*.json</span><br><span class="mono">Boards[].WidthInTiles / HeightInTiles / GridCellSizeCm</span></td><td>250 x 250, 100cm</td><td>决定 world cm 范围。当前公式得到 64km x 64km。</td></tr>
+              <tr><td>空间分区/加载基础块</td><td><span class="mono">assets/Maps/*.json</span><br><span class="mono">Boards[].ChunkSizeCells</span></td><td>64 cells</td><td>配合 1m cell 得到 64m chunk，影响 loaded chunks 和 graph projection。</td></tr>
+              <tr><td>MassNavigation 流送工作集</td><td><span class="mono">assets/MassNavigationConfig.json</span><br><span class="mono">world.streamingChunkSizeCm / streamingRadiusCm</span></td><td>6400cm / 16000cm</td><td>决定相机附近哪些块进入工作区。太小频繁切换，太大热数据变多。</td></tr>
+              <tr><td>Nav macro chunk 密度</td><td><span class="mono">assets/MassNavigationConfig.json</span><br><span class="mono">bakeData.macroChunkColumns / macroChunkRows</span></td><td>256 x 256</td><td>决定 64km 世界被切成多少个 runtime nav macro tile。越多越细，文件和查询管理也更多。</td></tr>
+              <tr><td>NavMesh agent / layer / area</td><td><span class="mono">assets/Configs/Navigation/navmesh.json</span></td><td>GroundLight 等 profile</td><td>决定半径、高度、坡度、区域代价。它不是 chunk 密度，但会影响能不能过窄口。</td></tr>
+              <tr><td>MassFlow cell / hash</td><td><span class="mono">MassFlowSimulationState.cs</span></td><td>100m field, 1m cell, 0.5m hard hash</td><td>当前不是 Mod 配置。配置里的 solverWindow 必须匹配它，否则会直接报错。</td></tr>
+            </tbody>
+          </table>
+        </article>
+
+        <article class="slide" data-title="配置了会发生什么">
+          <p class="slide-kicker">07B / consequences</p>
+          <h2>改密度不是“更大更好”，而是在精度、数量、更新成本之间换。</h2>
+          <p class="lead">同样 64km 世界，macroChunkColumns 改一下，所有 tile 尺寸和数量都会变。你看到的 dirty 边框、NavMesh 覆盖范围、runtime bake 粒度也会跟着变。</p>
+          <div class="two-col">
+            <div>
+              <table class="scale-table">
+                <thead><tr><th>配置</th><th>每块多大</th><th>全图块数</th><th>结果</th></tr></thead>
+                <tbody>
+                  <tr><td>128 x 128</td><td>500m</td><td>16,384</td><td>块少，索引和文件少；dirty bake 更粗，一画障碍可能重烘更大范围。</td></tr>
+                  <tr><td>256 x 256</td><td>250m</td><td>65,536</td><td>当前 U16 口径；大世界验收用这个证明 256 x 256 live NavMesh。</td></tr>
+                  <tr><td>512 x 512</td><td>125m</td><td>262,144</td><td>dirty 更细；tile 数量变 4 倍，bake 数据、索引、加载和诊断压力也上去。</td></tr>
+                </tbody>
+              </table>
+            </div>
+            <div class="panel">
+              <h3>计算公式</h3>
+              <p>先由地图配置算 world，再由 macro rows/columns 切 runtime nav tile。不要拿 streaming chunk 尺寸去解释 nav macro tile。</p>
+              <div class="formula" style="margin-top:16px;">worldWidthCm = WidthInTiles * 256 * GridCellSizeCm
+当前 = 250 * 256 * 100 = 6,400,000cm
+
+navMacroTileWidthCm = worldWidthCm / macroChunkColumns
+256 列 = 25,000cm = 250m</div>
+            </div>
+          </div>
+          <div class="note ok" style="margin-top:16px;">Mod 作者判断法：远距离组织可以用 128m-512m 级 macro；战术最后一公里不要靠 macro 精度解决，要交给 NavMesh / Flow / steering。</div>
+        </article>
+
+        <article class="slide" data-title="不配行不行">
+          <p class="slide-kicker">07C / defaults and failures</p>
+          <h2>不配分三种：继承示例值、走代码默认值、直接启动失败。</h2>
+          <p class="lead">所以答案不是简单“行”或“不行”。如果你的 Mod 就是复用 MassNavigation 示例地图，可以少配；如果是自己的地图和单位规模，就必须显式配，否则结果会和你的世界不匹配。</p>
+          <table class="scale-table">
+            <thead><tr><th>不配的是谁</th><th>会怎样</th><th>风险</th></tr></thead>
+            <tbody>
+              <tr><td>不写自己的 override，只依赖 MassNavigationMod</td><td>会继承当前示例配置：64km、1m grid、64m streaming、256 x 256 macro、100m MassFlow window。</td><td>能跑 showcase；但你的 Mod 地图不是这个尺度时，overlay、bake、路径预算都会不贴合。</td></tr>
+              <tr><td><span class="mono">assets/Maps/*.json</span> 里省略 Board 字段</td><td><span class="mono">BoardConfig</span> 有代码默认：64 x 64 tiles、100cm grid、64 cells chunk。</td><td>会变成约 16.384km 世界，不是 64km；你以为没配，实际是在用默认小世界。</td></tr>
+              <tr><td><span class="mono">MassNavigationConfig.json</span> 顶层缺 world / bakeData 等</td><td>加载器会直接报错：Mass-nav config requires explicit ...</td><td>这是好事，避免半套配置静默跑错。</td></tr>
+              <tr><td><span class="mono">world.streamingChunkSizeCm</span> 或 <span class="mono">bakeData.macroChunkColumns</span> 是 0 / 缺失且没有继承值</td><td>验证失败，启动或加载配置失败。</td><td>不会悄悄猜一个值。</td></tr>
+              <tr><td><span class="mono">world.solverWindowWidthCm / HeightCm</span> 不等于 10000</td><td>当前会直接报错，因为 MassFlow SoA cache 现在固定 100m x 100m。</td><td>MassFlow 窗口尺寸目前不是自由 Mod 配置。</td></tr>
+              <tr><td><span class="mono">navmesh.json</span> profiles 为空</td><td>NavMeshBakeConfig 加载失败。</td><td>没有 agent profile，就不知道按什么半径、高度、坡度 bake。</td></tr>
+            </tbody>
+          </table>
+          <div class="note danger" style="margin-top:16px;">一句话：做真实 Mod，不要“懒得配”。可以继承基础配置，但要明确知道自己继承了什么，并在 showcase 面板里显示这些最终值。</div>
+        </article>
+
+        <article class="slide" data-title="这些块怎么套在一起">
+          <p class="slide-kicker">08 / nesting</p>
+          <h2>大世界、导航块、加载块、战斗窗口，是套在一起的。</h2>
+          <p class="lead">下面这张图是概念图，不是严格比例图。它只表达职责关系：外层管远距离，内层管当前附近，最内层管正在发生的战斗。</p>
+          <div class="two-col">
+            <div class="diagram">
+              <div class="world-stack">
+                <div class="world-layer world"><span>World: 64km x 64km</span></div>
+                <div class="world-layer macro"><span>Nav macro: 250m</span></div>
+                <div class="world-layer stream"><span>Streaming: 64m</span></div>
+                <div class="world-layer solver"><span>MassFlow: 100m / 1m cells</span></div>
+              </div>
+            </div>
+            <ul class="plain-list">
+              <li><strong>World</strong>：整张地图，玩家可能在小地图上看到。</li>
+              <li><strong>Nav macro</strong>：让远距离查询不用盯着每个 1m 小格。</li>
+              <li><strong>Streaming</strong>：让相机附近的数据先热起来，远处不要全进热路径。</li>
+              <li><strong>MassFlow window</strong>：让眼前这场战斗的 10k 单位共享执行方向。</li>
+            </ul>
+          </div>
+        </article>
+
+        <article class="slide" data-title="Road Graph：远距离路线">
+          <p class="slide-kicker">09 / road graph</p>
+          <h2>Road Graph 负责“走哪条大路”，不是负责每一步踩哪里。</h2>
+          <p class="lead">它像地图软件里的高速公路网络：先告诉部队应该经过哪条路、桥、山口、入口，再把最后的局部细节交给 NavMesh 和 Flow。</p>
+          <div class="two-col">
+            <div class="mesh-diagram">
+              <svg viewBox="0 0 520 300" role="img" aria-label="Road graph diagram">
+                <rect width="520" height="300" fill="#fbfcfa"></rect>
+                <g stroke="#d8ddd6" stroke-width="1">
+                  <path d="M65 0v300M130 0v300M195 0v300M260 0v300M325 0v300M390 0v300M455 0v300"></path>
+                  <path d="M0 75h520M0 150h520M0 225h520"></path>
+                </g>
+                <path d="M46 245 C100 208, 122 124, 204 132 S320 208, 382 120 S424 58, 484 52" fill="none" stroke="#6f5930" stroke-width="12" stroke-linecap="round"></path>
+                <path d="M46 245 C100 208, 122 124, 204 132 S320 208, 382 120 S424 58, 484 52" fill="none" stroke="#ffe6a3" stroke-width="4" stroke-linecap="round"></path>
+                <g fill="#fff" stroke="#6f5930" stroke-width="4">
+                  <circle cx="46" cy="245" r="13"></circle><circle cx="204" cy="132" r="13"></circle><circle cx="382" cy="120" r="13"></circle><circle cx="484" cy="52" r="13"></circle>
+                </g>
+              </svg>
+            </div>
+            <div>
+              <ul class="plain-list">
+                <li><strong>Road edge</strong>：一段道路，带 cost、通行 profile、tag。</li>
+                <li><strong>Portal</strong>：区域之间的入口，比如桥头、城门、山口。</li>
+                <li><strong>Road chunk</strong>：按区域管理路网，方便远距离查询和流送。</li>
+                <li><strong>业务用法</strong>：小地图上显示完整战略路线，主视图只展开当前活跃段。</li>
+              </ul>
+            </div>
+          </div>
+        </article>
+
+        <article class="slide" data-title="NavMesh：最后一公里">
+          <p class="slide-kicker">10 / navmesh</p>
+          <h2>NavMesh 是一张“哪里可以走”的多边形网。</h2>
+          <p class="lead">它适合解决建筑边缘、坡道、墙角、局部障碍这些细节。玩家不需要知道三角形，但 showcase 要能把 polygon、portal、blocked area 画出来。</p>
+          <div class="two-col">
+            <div class="mesh-diagram">
+              <svg viewBox="0 0 520 300" role="img" aria-label="NavMesh polygons">
+                <rect width="520" height="300" fill="#fbfcfa"></rect>
+                <polygon points="20,260 80,180 155,225 140,285" fill="#dceefe" stroke="#2368c4" stroke-width="2"></polygon>
+                <polygon points="80,180 145,82 210,155 155,225" fill="#e8f5ff" stroke="#2368c4" stroke-width="2"></polygon>
+                <polygon points="145,82 240,45 300,120 210,155" fill="#dceefe" stroke="#2368c4" stroke-width="2"></polygon>
+                <polygon points="210,155 300,120 368,185 285,238" fill="#e8f5ff" stroke="#2368c4" stroke-width="2"></polygon>
+                <polygon points="155,225 210,155 285,238 198,280" fill="#dceefe" stroke="#2368c4" stroke-width="2"></polygon>
+                <polygon points="300,120 420,70 492,145 368,185" fill="#dceefe" stroke="#2368c4" stroke-width="2"></polygon>
+                <polygon points="368,185 492,145 500,254 408,276" fill="#e8f5ff" stroke="#2368c4" stroke-width="2"></polygon>
+                <rect x="254" y="146" width="70" height="48" rx="6" fill="#fff0ed" stroke="#d7462f" stroke-width="3"></rect>
+                <path d="M38 248 C118 186, 180 190, 245 206 S388 210, 480 160" fill="none" stroke="#7b3ff2" stroke-width="6" stroke-linecap="round"></path>
+              </svg>
+            </div>
+            <table class="scale-table">
+              <thead><tr><th>术语</th><th>人话解释</th><th>看它干什么</th></tr></thead>
+              <tbody>
+                <tr><td>Polygon</td><td>一块可走区域</td><td>看哪里能站人</td></tr>
+                <tr><td>Portal</td><td>多边形之间的门</td><td>看路径怎么穿过区域</td></tr>
+                <tr><td>Agent radius</td><td>单位半径</td><td>决定窄缝能不能过</td></tr>
+                <tr><td>Area cost</td><td>区域代价</td><td>让沼泽、坡、路有不同偏好</td></tr>
+              </tbody>
+            </table>
+          </div>
+        </article>
+
+        <article class="slide" data-title="Recast：把底图烘成 NavMesh">
+          <p class="slide-kicker">11 / recast</p>
+          <h2>Recast 可以先理解成“NavMesh 烘焙器”。</h2>
+          <p class="lead">它把 LogicHeightmap 和障碍数据采样成 cell，再生成可走多边形。Unity 和 Unreal 的 NavMesh 也有类似的 cell、voxel、tile、agent radius 概念。</p>
+          <table class="scale-table">
+            <thead><tr><th>概念</th><th>0 基础解释</th><th>调大/调小影响</th></tr></thead>
+            <tbody>
+              <tr><td>Cell / voxel size</td><td>烘焙时采样多细</td><td>越小越精细，也越慢、越占内存</td></tr>
+              <tr><td>Tile size</td><td>NavMesh 分块多大</td><td>越小越适合局部更新，块太多管理成本更高</td></tr>
+              <tr><td>Agent radius</td><td>单位要留多宽通道</td><td>半径越大，能走的窄路越少</td></tr>
+              <tr><td>Agent slope</td><td>最大可走坡度</td><td>坡太陡就被标成不可走</td></tr>
+            </tbody>
+          </table>
+          <div class="note ok" style="margin-top:16px;">Ludots 当前 GroundLight profile：radius 30cm、height 180cm、slope 45。当前 Recast cell size 由 agent 半径推导并夹在 1m 到 2m 范围内。</div>
+        </article>
+
+        <article class="slide" data-title="Dirty Bake：只重烘变化区域">
+          <p class="slide-kicker">12 / runtime bake</p>
+          <h2>Runtime bake 的人话解释：地图运行时变了，只重算被改脏的小块。</h2>
+          <p class="lead">玩家或工具画了一个多边形障碍，正确结果不是全世界卡住重烘，而是找到被影响的 nav tile，局部 bake，替换数据，让新路径绕开障碍。</p>
+          <div class="two-col">
+            <div class="timeline">
+              <div class="timeline-step"><div class="timeline-num">1</div><div><h3>画障碍</h3><p>多边形点位必须是 world cm，不是屏幕像素，也不是 baked local。</p></div></div>
+              <div class="timeline-step"><div class="timeline-num">2</div><div><h3>标 dirty tile</h3><p>按 runtime nav tile 的世界范围找受影响的块。</p></div></div>
+              <div class="timeline-step"><div class="timeline-num">3</div><div><h3>局部 Recast bake</h3><p>把世界坐标映射到 bake 空间，重烘受影响块。</p></div></div>
+              <div class="timeline-step"><div class="timeline-num">4</div><div><h3>替换 NavData</h3><p>NavTileStore 更新，revision 增加，旧路径缓存失效。</p></div></div>
+            </div>
+            <div class="panel">
+              <h3>showcase 应该让用户看见</h3>
+              <p>障碍物、dirty tile 边框、新 NavMesh、旧路径失效、新路径绕行。颜色必须明确分开，不能和普通 NavMesh 线混在一起。</p>
+              <div class="note danger" style="margin-top:16px;">如果点了 Update NavData 画面没变化，0 基础用户会认为功能坏了。验收界面必须给出“baked 几块、changed 几块、revision 几号”。</div>
+            </div>
+          </div>
+        </article>
+
+        <article class="slide" data-title="Path Cache：重复查询要快">
+          <p class="slide-kicker">13 / path cache</p>
+          <h2>Path cache 是“同样的问题别重复算”，但地图变了必须失效。</h2>
+          <p class="lead">如果很多单位去同一个目标，重复寻路要命中缓存。可是 runtime bake 后，旧路径可能已经穿过新障碍，所以 cache key 必须受 NavData revision 约束。</p>
+          <div class="compare-grid">
+            <div class="good-bad">
+              <h3>正确</h3>
+              <ul>
+                <li>同起点/同目标/同 profile 的查询可以复用。</li>
+                <li>并发路径查询不共享危险可变状态。</li>
+                <li>NavData revision 变化后旧结果失效。</li>
+                <li>showcase 显示 cache hit / miss。</li>
+              </ul>
+            </div>
+            <div class="good-bad">
+              <h3>错误</h3>
+              <ul>
+                <li>画了障碍后还沿旧路穿过去。</li>
+                <li>只用起终点做 key，不看 profile/layer/revision。</li>
+                <li>远距离查询一多就卡死。</li>
+                <li>失败时只说 no path，没有原因。</li>
+              </ul>
+            </div>
+          </div>
+          <div class="formula" style="margin-top:18px;">cache identity:
+start + goal + profile + layer + strategy + navDataRevision + normalized goal bucket</div>
+        </article>
+
+        <article class="slide" data-title="Spatial Hash：快速找附近对象">
+          <p class="slide-kicker">14 / spatial hash</p>
+          <h2>空间 Hash 不负责找路，它负责快速找附近的人和障碍。</h2>
+          <p class="lead">10k 单位互相避让时，不能每个单位都检查其他 9999 个单位。空间 Hash 把世界切成小格，每个单位只看自己附近几个格子。</p>
+          <div class="two-col">
+            <table class="scale-table">
+              <thead><tr><th>Hash</th><th>当前 cell</th><th>解决什么</th></tr></thead>
+              <tbody>
+                <tr><td>Separation hash</td><td>1m</td><td>找附近单位，做分离和排队</td></tr>
+                <tr><td>Hard resolve hash</td><td>0.5m</td><td>处理硬重叠、卡住、推开</td></tr>
+                <tr><td>Search radius</td><td>附近几格</td><td>不扫全场，只查局部邻居</td></tr>
+              </tbody>
+            </table>
+            <div class="mesh-diagram">
+              <svg viewBox="0 0 520 300" role="img" aria-label="Spatial hash buckets">
+                <rect width="520" height="300" fill="#fbfcfa"></rect>
+                <g stroke="#d8ddd6" stroke-width="2">
+                  <path d="M52 0v300M104 0v300M156 0v300M208 0v300M260 0v300M312 0v300M364 0v300M416 0v300M468 0v300"></path>
+                  <path d="M0 50h520M0 100h520M0 150h520M0 200h520M0 250h520"></path>
+                </g>
+                <rect x="208" y="100" width="156" height="100" fill="rgba(78,127,141,0.13)" stroke="#4e7f8d" stroke-width="4"></rect>
+                <g fill="#2368c4" opacity="0.92">
+                  <circle cx="238" cy="132" r="8"></circle><circle cx="276" cy="122" r="8"></circle><circle cx="312" cy="154" r="8"></circle><circle cx="342" cy="182" r="8"></circle><circle cx="288" cy="188" r="8"></circle>
+                </g>
+                <g fill="#9aa7a0" opacity="0.55">
+                  <circle cx="78" cy="62" r="7"></circle><circle cx="450" cy="252" r="7"></circle><circle cx="406" cy="88" r="7"></circle><circle cx="118" cy="236" r="7"></circle>
+                </g>
+                <text x="214" y="92" fill="#4e7f8d" font-size="16" font-weight="700">只查附近 bucket</text>
+              </svg>
+            </div>
+          </div>
+        </article>
+
+        <article class="slide" data-title="MassFlow：大群体共享方向">
+          <p class="slide-kicker">15 / massflow</p>
+          <h2>MassFlow 不是另一套地图，而是大群体执行命令的方向场。</h2>
+          <p class="lead">当 10k 单位朝一个目标移动时，不应该每个单位都保存一条完整路线。Flowfield 让局部区域里的单位共享方向和代价，再配合 steering 避让。</p>
+          <div class="two-col">
+            <div class="diagram">
+              <div class="diagram-title">每格存方向/代价，单位按附近方向走</div>
+              <div class="flow-field" aria-hidden="true">
+                <div class="flow-cell">↘</div><div class="flow-cell">→</div><div class="flow-cell">→</div><div class="flow-cell">→</div><div class="flow-cell">↗</div><div class="flow-cell">↑</div><div class="flow-cell">↑</div><div class="flow-cell">↖</div><div class="flow-cell">←</div><div class="flow-cell">←</div>
+                <div class="flow-cell">↓</div><div class="flow-cell">↘</div><div class="flow-cell">→</div><div class="flow-cell">↗</div><div class="flow-cell">↑</div><div class="flow-cell">↑</div><div class="flow-cell">↖</div><div class="flow-cell">←</div><div class="flow-cell">←</div><div class="flow-cell">↙</div>
+                <div class="flow-cell">↓</div><div class="flow-cell">↓</div><div class="flow-cell">↘</div><div class="flow-cell">↗</div><div class="flow-cell hot">X</div><div class="flow-cell hot">X</div><div class="flow-cell">↖</div><div class="flow-cell">←</div><div class="flow-cell">↙</div><div class="flow-cell">↓</div>
+                <div class="flow-cell">↓</div><div class="flow-cell">↘</div><div class="flow-cell">→</div><div class="flow-cell">↗</div><div class="flow-cell hot">X</div><div class="flow-cell hot">X</div><div class="flow-cell">↖</div><div class="flow-cell">←</div><div class="flow-cell">↙</div><div class="flow-cell">↓</div>
+                <div class="flow-cell">↘</div><div class="flow-cell">→</div><div class="flow-cell">→</div><div class="flow-cell">→</div><div class="flow-cell">→</div><div class="flow-cell">←</div><div class="flow-cell">←</div><div class="flow-cell">←</div><div class="flow-cell">←</div><div class="flow-cell">↙</div>
+                <div class="flow-cell">↗</div><div class="flow-cell">→</div><div class="flow-cell">→</div><div class="flow-cell">→</div><div class="flow-cell">●</div><div class="flow-cell">●</div><div class="flow-cell">←</div><div class="flow-cell">←</div><div class="flow-cell">←</div><div class="flow-cell">↖</div>
+                <div class="flow-cell">↑</div><div class="flow-cell">↗</div><div class="flow-cell">→</div><div class="flow-cell">↘</div><div class="flow-cell">↓</div><div class="flow-cell">↓</div><div class="flow-cell">↙</div><div class="flow-cell">←</div><div class="flow-cell">↖</div><div class="flow-cell">↑</div>
+                <div class="flow-cell">↑</div><div class="flow-cell">↑</div><div class="flow-cell">↗</div><div class="flow-cell">↘</div><div class="flow-cell">↓</div><div class="flow-cell">↓</div><div class="flow-cell">↙</div><div class="flow-cell">↖</div><div class="flow-cell">↑</div><div class="flow-cell">↑</div>
+                <div class="flow-cell">↗</div><div class="flow-cell">↑</div><div class="flow-cell">↑</div><div class="flow-cell">↗</div><div class="flow-cell">→</div><div class="flow-cell">←</div><div class="flow-cell">↖</div><div class="flow-cell">↑</div><div class="flow-cell">↑</div><div class="flow-cell">↖</div>
+                <div class="flow-cell">→</div><div class="flow-cell">↗</div><div class="flow-cell">↑</div><div class="flow-cell">↑</div><div class="flow-cell">↗</div><div class="flow-cell">↖</div><div class="flow-cell">↑</div><div class="flow-cell">↑</div><div class="flow-cell">↖</div><div class="flow-cell">←</div>
+              </div>
+            </div>
+            <table class="scale-table">
+              <thead><tr><th>MassFlow 参数</th><th>当前值</th><th>新手解释</th></tr></thead>
+              <tbody>
+                <tr><td>Field</td><td>100m x 100m</td><td>当前战斗执行窗口</td></tr>
+                <tr><td>Cell</td><td>1m</td><td>方向和代价的小格</td></tr>
+                <tr><td>目标</td><td>10k 级单位</td><td>让大群体共享执行数据</td></tr>
+                <tr><td>局部障碍</td><td>预算内处理</td><td>不是 40k 静态障碍每帧动态重算</td></tr>
+              </tbody>
+            </table>
+          </div>
+        </article>
+
+        <article class="slide" data-title="Unity / Unreal 怎么看这些概念">
+          <p class="slide-kicker">16 / industry mapping</p>
+          <h2>这些不是 Ludots 自己编的词，主流引擎也在解决同一类问题。</h2>
+          <p class="lead">Unity 通常把 1 world unit 当 1m；Unreal 默认长度单位是 cm。它们都会用 agent、cell/voxel、tile、area cost、runtime rebuild 这类概念管理导航。</p>
+          <table class="scale-table">
+            <thead><tr><th>概念</th><th>Unity / Unreal 常见语境</th><th>Ludots 当前语境</th></tr></thead>
+            <tbody>
+              <tr><td>世界单位</td><td>Unity 常按米；Unreal 默认厘米</td><td>runtime 使用 int cm</td></tr>
+              <tr><td>NavMesh</td><td>可走区域、多边形、agent 配置</td><td>.ntil tile + runtime query</td></tr>
+              <tr><td>Voxel / cell</td><td>烘焙采样精度</td><td>LogicHeightmap / Recast cell</td></tr>
+              <tr><td>Tile</td><td>分块生成和动态重建</td><td>nav macro tile、baked tile、dirty tile 要区分</td></tr>
+              <tr><td>Runtime update</td><td>动态障碍或局部重建</td><td>dirty chunk runtime bake + revision</td></tr>
+            </tbody>
+          </table>
+        </article>
+
+        <article class="slide" data-title="RA3 / SC2 风格颗粒度">
+          <p class="slide-kicker">17 / rts granularity</p>
+          <h2>如果目标是 RA3 / SC2 类 RTS，战术层建议 0.5m 到 1m。</h2>
+          <p class="lead">RTS 不需要 FPS 级别的厘米地形采样，但建筑缝、桥口、坡道、队形通过宽度不能太粗。宏观路线可以粗，最后一公里不能粗。</p>
+          <table class="scale-table">
+            <thead><tr><th>层</th><th>推荐范围</th><th>Ludots 当前</th><th>结论</th></tr></thead>
+            <tbody>
+              <tr><td>运行时坐标</td><td>cm 或 m float 都可</td><td>cm int</td><td>足够细</td></tr>
+              <tr><td>地图语义 cell</td><td>0.5m - 1m</td><td>1m</td><td>合理</td></tr>
+              <tr><td>NavMesh bake cell</td><td>0.5m - 1m 常见</td><td>约 1m - 2m</td><td>普通 RTS 可用，窄口要关注</td></tr>
+              <tr><td>战术 tile</td><td>32m - 128m</td><td>baked 64m</td><td>合理</td></tr>
+              <tr><td>macro chunk</td><td>128m - 512m</td><td>250m</td><td>适合远距离组织</td></tr>
+              <tr><td>局部硬碰撞</td><td>0.25m - 0.5m</td><td>0.5m</td><td>合理</td></tr>
+            </tbody>
+          </table>
+          <div class="note ok" style="margin-top:16px;">核心建议：250m macro 可以继续管大世界；最后一公里 NavMesh 和 MassFlow cell 要保持 0.5m - 1m 级有效精度。</div>
+        </article>
+
+        <article class="slide" data-title="Showcase 应该怎么教用户">
+          <p class="slide-kicker">18 / showcase ux</p>
+          <h2>验收 showcase 要像教学工具，不像调试器倾倒内部变量。</h2>
+          <p class="lead">0 基础用户打开后，应该先能完成普通操作，再逐层打开证据：路径、NavMesh、dirty tile、Flow、chunk、小地图、性能。</p>
+          <div class="three-col">
+            <div class="card">
+              <h3>第一层：能玩</h3>
+              <p>框选单位，左键/右键设置起终点，能看清路径和到达状态。</p>
+            </div>
+            <div class="card">
+              <h3>第二层：能看懂</h3>
+              <p>颜色清楚区分：障碍、dirty、NavMesh、起点、终点、路径。</p>
+            </div>
+            <div class="card">
+              <h3>第三层：能验收</h3>
+              <p>显示 baked / changed / revision / cache hit / query time / failure reason。</p>
+            </div>
+          </div>
+          <div class="note" style="margin-top:18px;">好的第一屏应该告诉用户：这是多大的世界、当前在哪个 chunk、你可以点哪里、按哪个按钮 bake、bake 后应该看见什么变化。</div>
+        </article>
+
+        <article class="slide" data-title="颜色和图层怎么约定">
+          <p class="slide-kicker">19 / visual language</p>
+          <h2>路线、障碍、NavMesh、dirty tile 必须长得不一样。</h2>
+          <p class="lead">0 基础用户不会读底层结构，只会读颜色和形状。验收画面如果线都一种颜色，就是把学习成本丢给用户。</p>
+          <table class="scale-table">
+            <thead><tr><th>图层</th><th>建议视觉</th><th>用户要读出的信息</th></tr></thead>
+            <tbody>
+              <tr><td>Start</td><td>绿色实心点</td><td>路线从哪里开始</td></tr>
+              <tr><td>Goal</td><td>紫色实心点或旗标</td><td>目标在哪里</td></tr>
+              <tr><td>Path</td><td>高亮紫色粗线</td><td>单位实际会怎么走</td></tr>
+              <tr><td>NavMesh</td><td>蓝色细线 / 半透明面</td><td>哪里可走</td></tr>
+              <tr><td>Obstacle</td><td>红色填充多边形</td><td>哪里被挡住</td></tr>
+              <tr><td>Dirty tile</td><td>橙色粗边框</td><td>哪些块被重烘</td></tr>
+              <tr><td>Flow</td><td>绿色箭头或热力</td><td>群体朝哪移动</td></tr>
+            </tbody>
+          </table>
+        </article>
+
+        <article class="slide" data-title="最终速查表">
+          <p class="slide-kicker">20 / cheat sheet</p>
+          <h2>把所有名词压成一张新手速查表。</h2>
+          <table class="scale-table">
+            <thead><tr><th>名词</th><th>人话</th><th>业务场景</th></tr></thead>
+            <tbody>
+              <tr><td>World cm</td><td>运行时真实坐标</td><td>点击、路径、障碍、缓存</td></tr>
+              <tr><td>Grid cell</td><td>地图语义小格</td><td>高度、blocked、area、cost</td></tr>
+              <tr><td>LogicHeightmap</td><td>给导航看的地图底图</td><td>从地形生成 NavMesh 前的输入</td></tr>
+              <tr><td>Chunk</td><td>把大地图切小块</td><td>加载、查询、bake、诊断</td></tr>
+              <tr><td>Road Graph</td><td>远距离大路线</td><td>路、桥、隘口、战略通道</td></tr>
+              <tr><td>Road Chunk</td><td>路网的区域块</td><td>远距离路线分区和 portal</td></tr>
+              <tr><td>NavMesh</td><td>局部可走多边形</td><td>建筑边缘、坡道、最后一公里</td></tr>
+              <tr><td>Recast</td><td>NavMesh 烘焙器</td><td>从底图和障碍生成可走网</td></tr>
+              <tr><td>Dirty Bake</td><td>只重烘变化区域</td><td>运行时画障碍、更新 NavData</td></tr>
+              <tr><td>Path Cache</td><td>重复路径查询复用</td><td>并发和重复命令提速</td></tr>
+              <tr><td>Spatial Hash</td><td>快速找附近对象</td><td>避让、分离、碰撞修正</td></tr>
+              <tr><td>MassFlow</td><td>大群体共享方向场</td><td>10k 单位移动和拥堵</td></tr>
+            </tbody>
+          </table>
+        </article>
+
+        <article class="slide" data-title="来源与维护">
+          <p class="slide-kicker">21 / sources</p>
+          <h2>这份课件只解释现有项目语境，不另造一套术语。</h2>
+          <p class="lead">如果以后改了 cell、chunk、tile、solver window、HPA 或 runtime bake 链路，这份入门课和尺寸说明文档要一起更新。</p>
+          <div class="two-col">
+            <table class="scale-table">
+              <thead><tr><th>来源</th><th>用了什么</th></tr></thead>
+              <tbody>
+                <tr><td>mass-navigation-scale-and-runtime-bake.md</td><td>世界尺寸、坐标空间、runtime bake 口径</td></tr>
+                <tr><td>mass-navigation-showcase-acceptance.md</td><td>showcase 验收目标和用户视角</td></tr>
+                <tr><td>mass_navigation.json</td><td>64km world、1m grid、64m streaming chunk</td></tr>
+                <tr><td>MassNavigationConfig.json</td><td>streaming、macro、MassFlow 配置</td></tr>
+                <tr><td>navmesh.json</td><td>agent radius、height、slope</td></tr>
+                <tr><td>MassFlowSimulationState.cs</td><td>100m field、1m / 0.5m hash</td></tr>
+              </tbody>
+            </table>
+            <div class="panel">
+              <h3>维护原则</h3>
+              <p>这份 slide 是面向 0 基础用户的入口。深层算法细节放到专门设计文档；这里优先保证第一次打开的人能知道自己在看什么、该怎么验收。</p>
+              <div class="pill-row">
+                <span class="pill">不替代源码</span>
+                <span class="pill">不替代 UAT</span>
+                <span class="pill">先讲人话</span>
+                <span class="pill">再给术语</span>
+              </div>
+            </div>
+          </div>
+        </article>
+      </section>
+
+      <footer class="footer">
+        <span>键盘：<span class="kbd">←</span> / <span class="kbd">→</span> 翻页，<span class="kbd">Home</span> / <span class="kbd">End</span> 跳转</span>
+        <span id="slideCounter">1 / 25</span>
+      </footer>
+    </main>
+  </div>
+
+  <script>
+    const slides = Array.from(document.querySelectorAll(".slide"));
+    const slideList = document.getElementById("slideList");
+    const currentTitle = document.getElementById("currentTitle");
+    const slideCounter = document.getElementById("slideCounter");
+    const progressBar = document.getElementById("progressBar");
+    const prevBtn = document.getElementById("prevBtn");
+    const nextBtn = document.getElementById("nextBtn");
+
+    let index = Number.parseInt(new URLSearchParams(location.search).get("slide") || "0", 10);
+    if (!Number.isFinite(index) || index < 0 || index >= slides.length) {
+      index = 0;
+    }
+
+    const tocButtons = slides.map((slide, i) => {
+      const button = document.createElement("button");
+      button.type = "button";
+      button.className = "toc-item";
+      button.innerHTML = `<span class="toc-num">${String(i + 1).padStart(2, "0")}</span><span>${slide.dataset.title || "Slide"}</span>`;
+      button.addEventListener("click", () => show(i));
+      slideList.appendChild(button);
+      return button;
+    });
+
+    function show(nextIndex) {
+      index = Math.max(0, Math.min(slides.length - 1, nextIndex));
+      slides.forEach((slide, i) => slide.classList.toggle("active", i === index));
+      tocButtons.forEach((button, i) => button.classList.toggle("active", i === index));
+      const title = slides[index].dataset.title || "大世界导航入门";
+      currentTitle.textContent = title;
+      slideCounter.textContent = `${index + 1} / ${slides.length}`;
+      progressBar.style.width = `${((index + 1) / slides.length) * 100}%`;
+      prevBtn.disabled = index === 0;
+      nextBtn.disabled = index === slides.length - 1;
+      tocButtons[index].scrollIntoView({ block: "nearest", inline: "nearest" });
+      const url = new URL(location.href);
+      url.searchParams.set("slide", String(index));
+      history.replaceState(null, "", url);
+    }
+
+    prevBtn.addEventListener("click", () => show(index - 1));
+    nextBtn.addEventListener("click", () => show(index + 1));
+
+    window.addEventListener("keydown", (event) => {
+      if (event.key === "ArrowLeft" || event.key === "PageUp") {
+        event.preventDefault();
+        show(index - 1);
+      } else if (event.key === "ArrowRight" || event.key === "PageDown" || event.key === " ") {
+        event.preventDefault();
+        show(index + 1);
+      } else if (event.key === "Home") {
+        event.preventDefault();
+        show(0);
+      } else if (event.key === "End") {
+        event.preventDefault();
+        show(slides.length - 1);
+      }
+    });
+
+    show(index);
+  </script>
+</body>
+</html>
