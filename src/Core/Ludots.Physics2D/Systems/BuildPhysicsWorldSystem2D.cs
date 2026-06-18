@@ -33,6 +33,7 @@ namespace Ludots.Core.Physics2D.Systems
 
         public int StaticBodyVersion { get; private set; }
         public int DirtyStaticBodyCountLastUpdate { get; private set; }
+        private int _observedWorldSize = -1;
 
         public BuildPhysicsWorldSystem2D(World world) : base(world)
         {
@@ -66,6 +67,13 @@ namespace Ludots.Core.Physics2D.Systems
             _dynamicShapeSlots.Clear();
 
             bool staticCacheDirty = ConsumeStaticDirtyMarkers();
+            if (!staticCacheDirty &&
+                _staticEntities.Count > 0 &&
+                _observedWorldSize >= 0 &&
+                World.Size < _observedWorldSize)
+            {
+                staticCacheDirty = HasInvalidCachedStaticBodies();
+            }
 
             World.Query(in _singleRigidBodyQuery, (Entity entity, ref Position2D position, ref Collider2D collider, ref Mass2D mass) =>
             {
@@ -119,6 +127,7 @@ namespace Ludots.Core.Physics2D.Systems
             }
 
             BuildCombinedBodySnapshot();
+            _observedWorldSize = World.Size;
         }
 
         public Entity ResolveBodyEntity(int bodyIndex)
@@ -162,6 +171,20 @@ namespace Ludots.Core.Physics2D.Systems
             });
 
             return staticCacheDirty;
+        }
+
+        private bool HasInvalidCachedStaticBodies()
+        {
+            for (int i = 0; i < _staticEntities.Count; i++)
+            {
+                if (!CanMaterializeStaticBody(_staticEntities[i]))
+                {
+                    DirtyStaticBodyCountLastUpdate++;
+                    return true;
+                }
+            }
+
+            return false;
         }
 
         private bool CanMaterializeStaticBody(Entity entity)

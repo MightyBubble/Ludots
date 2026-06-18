@@ -212,6 +212,7 @@ namespace Ludots.Core.Scripting
         // --- Simulation ---
         public static readonly ServiceKey<SimulationLoopController> SimulationLoopController = new("SimulationLoopController");
         public static readonly ServiceKey<Physics2DTickPolicy> Physics2DTickPolicy = new("Physics2DTickPolicy");
+        public static readonly ServiceKey<Physics2DBroadphasePolicy> Physics2DBroadphasePolicy = new("Physics2DBroadphasePolicy");
         public static readonly ServiceKey<Physics2DController> Physics2DController = new("Physics2DController");
         public static readonly ServiceKey<Navigation2DTickPolicy> Navigation2DTickPolicy = new("Navigation2DTickPolicy");
 

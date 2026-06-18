@@ -4,6 +4,7 @@ using System.Runtime.InteropServices;
 using Arch.Core;
 using Arch.Core.Extensions;
 using Arch.System;
+using Ludots.Core.Engine.Physics2D;
 using Ludots.Core.Mathematics.FixedPoint;
 using Ludots.Physics.Broadphase;
 using Ludots.Physics.Broadphase.Strategies;
@@ -64,9 +65,12 @@ namespace Ludots.Core.Physics2D.Systems
 
         private ISpatialPartitionStrategy _currentStrategy = null!;
         private int _observedStaticBodyVersion = -1;
+        private int _observedBroadphasePolicyVersion = -1;
 
         public CollisionPairOverflowPolicy2D OverflowPolicy { get; set; } = CollisionPairOverflowPolicy2D.Throw;
         public int DroppedPairsLastUpdate { get; private set; }
+        public Physics2DBroadphaseStrategyKind CurrentStrategyKind { get; private set; } = Physics2DBroadphaseStrategyKind.SortAndSweep;
+        public int CurrentCellSizeCm { get; private set; }
 
         public AdaptiveSpatialSystem2D(World world, BuildPhysicsWorldSystem2D buildPhysicsWorld, int maxCollisionPairs = 100_000) : base(world)
         {
@@ -91,6 +95,28 @@ namespace Ludots.Core.Physics2D.Systems
         }
 
         public ISpatialPartitionStrategy CurrentStrategy => _currentStrategy;
+
+        public void ApplyBroadphasePolicy(Physics2DBroadphasePolicy policy)
+        {
+            ArgumentNullException.ThrowIfNull(policy);
+            if (_observedBroadphasePolicyVersion == policy.Version)
+            {
+                return;
+            }
+
+            ISpatialPartitionStrategy strategy = policy.Strategy switch
+            {
+                Physics2DBroadphaseStrategyKind.SortAndSweep => new SortAndSweepStrategy(),
+                Physics2DBroadphaseStrategyKind.UniformGrid => new UniformGridStrategy(policy.CellSizeCm),
+                _ => throw new ArgumentOutOfRangeException(nameof(policy), policy.Strategy, "Unknown Physics2D broadphase strategy.")
+            };
+
+            SetStrategy(strategy);
+            CurrentStrategyKind = policy.Strategy;
+            CurrentCellSizeCm = policy.CellSizeCm;
+            _observedBroadphasePolicyVersion = policy.Version;
+            _observedStaticBodyVersion = -1;
+        }
 
         public override void Update(in float deltaTime)
         {

@@ -1,0 +1,8 @@
+{
+  "PhysicsHz": 15,
+  "MaxStepsPerFixedTick": 4,
+  "Broadphase": {
+    "Strategy": "UniformGrid",
+    "CellSizeCm": 256
+  }
+}
