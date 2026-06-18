@@ -38,7 +38,13 @@ jobs:
       - name: Setup .NET
         uses: actions/setup-dotnet@v4
         with:
-          dotnet-version: 8.0.x
+          dotnet-version: |
+            8.0.x
+            9.0.x
+
+      - name: Pin camera baseline SDK
+        shell: pwsh
+        run: dotnet new globaljson --sdk-version 9.0.100 --roll-forward latestFeature --force
 
       - name: Build core
         shell: pwsh
