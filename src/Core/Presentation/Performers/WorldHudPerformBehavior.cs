@@ -1,6 +1,7 @@
 using System.Collections.Generic;
 using Arch.Core;
-using Ludots.Core.Gameplay.Relationships;
+using Ludots.Core.Engine;
+using Ludots.Core.Knowledge;
 using Ludots.Core.Presentation.Components;
 using Ludots.Core.Scripting;
 
@@ -19,6 +20,7 @@ namespace Ludots.Core.Presentation.Performers
             Dictionary<string, object> globals,
             Entity owner,
             LODLevel defaultLod,
+            ReadOnlySpan<int> requiredAttributeIds,
             out PerformPhaseResult phaseResult)
         {
             PerformAudienceContext audience = ResolveAudienceContext(world, globals);
@@ -36,11 +38,32 @@ namespace Ludots.Core.Presentation.Performers
                 return true;
             }
 
-            RelationshipRuntime? relationships = TryResolveRelationshipRuntime(globals);
-            PerformPhaseInput input = _phaseResolver.CreateInput(world, owner, audience, relationships, hasVision: true);
+            PerformProjectionFacts projection = ResolveProjectionFacts(globals, audience.Viewer, owner);
+            PerformPhaseInput input = _phaseResolver.CreateInput(
+                world,
+                owner,
+                audience,
+                in projection,
+                requiredAttributeIds);
             phaseResult = _phaseResolver.Resolve(input);
 
             return phaseResult.AllowWorldHudProjection;
+        }
+
+        public bool TryResolveProjection(
+            World world,
+            Dictionary<string, object> globals,
+            Entity owner,
+            LODLevel defaultLod,
+            out PerformPhaseResult phaseResult)
+        {
+            return TryResolveProjection(
+                world,
+                globals,
+                owner,
+                defaultLod,
+                ReadOnlySpan<int>.Empty,
+                out phaseResult);
         }
 
         private PerformAudienceContext ResolveAudienceContext(World world, Dictionary<string, object> globals)
@@ -56,16 +79,32 @@ namespace Ludots.Core.Presentation.Performers
             return PerformAudienceContext.Default;
         }
 
-        private static RelationshipRuntime? TryResolveRelationshipRuntime(Dictionary<string, object> globals)
+        private static PerformProjectionFacts ResolveProjectionFacts(
+            Dictionary<string, object> globals,
+            Entity viewer,
+            Entity owner)
         {
             if (globals != null &&
-                globals.TryGetValue(CoreServiceKeys.RelationshipRuntime.Name, out object runtimeObj) &&
-                runtimeObj is RelationshipRuntime runtime)
+                globals.TryGetValue(CoreServiceKeys.KnowledgeProjectionResolver.Name, out object resolverObj) &&
+                resolverObj is KnowledgeProjectionResolver resolver &&
+                resolver.TryResolve(viewer, owner, ResolveCurrentTick(globals), out KnowledgeProjection projection))
             {
-                return runtime;
+                return new PerformProjectionFacts(in projection);
             }
 
-            return null;
+            return default;
+        }
+
+        private static int ResolveCurrentTick(Dictionary<string, object> globals)
+        {
+            if (globals != null &&
+                globals.TryGetValue(CoreServiceKeys.Clock.Name, out object clockObj) &&
+                clockObj is IClock clock)
+            {
+                return clock.Now(ClockDomainId.Step);
+            }
+
+            return 0;
         }
     }
 }
