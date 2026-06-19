@@ -18,6 +18,9 @@ namespace Ludots.Core.Config
         public List<string> Tags { get; set; } = new List<string>();
         public Dictionary<string, JsonNode> Metadata { get; set; } = new Dictionary<string, JsonNode>();
         public List<EntitySpawnData> Entities { get; set; } = new List<EntitySpawnData>();
+        public List<TeamBindingData> Teams { get; set; } = new List<TeamBindingData>();
+        public List<PlayerBindingData> Players { get; set; } = new List<PlayerBindingData>();
+        public ParticipantRelationshipConfig ParticipantRelationships { get; set; } = new ParticipantRelationshipConfig();
 
         /// <summary>
         /// Board configurations for this map. Each board is a spatial domain.
@@ -67,10 +70,57 @@ namespace Ludots.Core.Config
 
     public class EntitySpawnData
     {
+        public string InstanceId { get; set; }
         public string Template { get; set; }
         public IntVector2 Position { get; set; }
         public Dictionary<string, JsonNode> Overrides { get; set; }
         public List<ParamOverrideData> PerformerParamOverrides { get; set; } = new List<ParamOverrideData>();
+    }
+
+    public class TeamBindingData
+    {
+        public int TeamId { get; set; }
+        public string RepresentativeInstanceId { get; set; }
+    }
+
+    public class PlayerBindingData
+    {
+        public int PlayerId { get; set; }
+        public int TeamId { get; set; }
+        public string RepresentativeInstanceId { get; set; }
+        public bool IsLocal { get; set; }
+    }
+
+    public class ParticipantRelationshipConfig
+    {
+        public List<TeamRelationshipBindingData> Teams { get; set; } = new List<TeamRelationshipBindingData>();
+        public List<PlayerRelationshipBindingData> Players { get; set; } = new List<PlayerRelationshipBindingData>();
+        public List<PlayerTeamRelationshipBindingData> PlayerTeams { get; set; } = new List<PlayerTeamRelationshipBindingData>();
+    }
+
+    public class TeamRelationshipBindingData
+    {
+        public int TeamA { get; set; }
+        public int TeamB { get; set; }
+        public string TypeId { get; set; } = string.Empty;
+        public string Attitude { get; set; } = string.Empty;
+        public bool Symmetric { get; set; } = true;
+    }
+
+    public class PlayerRelationshipBindingData
+    {
+        public int PlayerA { get; set; }
+        public int PlayerB { get; set; }
+        public string TypeId { get; set; } = string.Empty;
+        public bool Symmetric { get; set; } = true;
+    }
+
+    public class PlayerTeamRelationshipBindingData
+    {
+        public int PlayerId { get; set; }
+        public int TeamId { get; set; }
+        public string TypeId { get; set; } = string.Empty;
+        public bool Symmetric { get; set; }
     }
 
     public class ParamOverrideData

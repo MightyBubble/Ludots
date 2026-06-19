@@ -1,0 +1,13 @@
+{
+  "name": "CapabilityStandardParticipantViewsMod",
+  "version": "1.0.0",
+  "description": "Standard capability showcase for map-owned player/team participants projected through the formal selection view.",
+  "main": "bin/net8.0/CapabilityStandardParticipantViewsMod.dll",
+  "priority": 0,
+  "dependencies": {
+    "ParticipantViewCapabilityMod": "^1.0.0",
+    "MassNavigationMod": "^1.0.0"
+  },
+  "author": "Ludots Team",
+  "tags": ["showcase", "capability-standard", "participant", "selection"]
+}

@@ -53,7 +53,11 @@ namespace ArpgDemoMod.Systems
 
             if (_globals.TryGetValue(CoreServiceKeys.LocalPlayerEntity.Name, out var localObj) && localObj is Entity local && _world.IsAlive(local))
             {
-                _mapping.SetLocalPlayer(local, 1);
+                if (!_helper.TrySetLocalPlayer(_mapping, local))
+                {
+                    return;
+                }
+
                 _mapping.Update(dt);
             }
         }

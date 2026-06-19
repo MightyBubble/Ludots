@@ -117,7 +117,9 @@ namespace CoreInputMod.Systems
             });
             mapping.SetActorProvider((out Entity entity) =>
             {
-                entity = _context.GetControlledActor();
+                entity = TryGetLocalPlayerId(out int playerId)
+                    ? _context.GetControlledActor(playerId)
+                    : default;
                 return _world.IsAlive(entity);
             });
             mapping.SetSelectedEntityProvider((string setKey, out Entity entity) => _context.TryGetSelectedEntity(setKey, out entity));
@@ -156,9 +158,30 @@ namespace CoreInputMod.Systems
             return mapping;
         }
 
-        public Entity GetControlledActor(int playerId = 1)
+        public bool TryGetLocalPlayerId(out int playerId)
         {
-            return _context.GetControlledActor(playerId);
+            return _context.TryGetLocalPlayerId(out playerId);
+        }
+
+        public bool TrySetLocalPlayer(InputOrderMappingSystem mapping, Entity actor)
+        {
+            if (mapping == null ||
+                actor == Entity.Null ||
+                !_world.IsAlive(actor) ||
+                !TryGetLocalPlayerId(out int playerId))
+            {
+                return false;
+            }
+
+            mapping.SetLocalPlayer(actor, playerId);
+            return true;
+        }
+
+        public Entity GetControlledActor()
+        {
+            return TryGetLocalPlayerId(out int playerId)
+                ? _context.GetControlledActor(playerId)
+                : default;
         }
 
         private bool TryCreateContextScoredResolver(out ContextScoredOrderResolver resolver)

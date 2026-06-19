@@ -1,4 +1,5 @@
 using System.Collections.Generic;
+using System;
 using Ludots.Core.Gameplay.Camera;
 
 namespace Ludots.Core.Gameplay
@@ -13,10 +14,15 @@ namespace Ludots.Core.Gameplay
         public int CurrentTick { get; private set; } = 0;
 
         public CameraManager Camera { get; } = new CameraManager();
+        public int LocalPlayerId { get; private set; }
 
         public void AddPlayer(Player player)
         {
             _players.Add(player);
+            if (LocalPlayerId <= 0)
+            {
+                LocalPlayerId = player.Id;
+            }
         }
 
         public void RemovePlayer(Player player)
@@ -53,5 +59,15 @@ namespace Ludots.Core.Gameplay
         }
 
         public IReadOnlyList<Player> Players => _players;
+
+        public void SelectLocalPlayer(int playerId)
+        {
+            if (playerId <= 0)
+            {
+                throw new ArgumentOutOfRangeException(nameof(playerId), "Local player id must be positive.");
+            }
+
+            LocalPlayerId = playerId;
+        }
     }
 }

@@ -107,6 +107,7 @@ namespace RtsDemoMod.Runtime
 
             owner = engine.World.Create(new PlayerOwner { PlayerId = 1 });
             engine.SetService(CoreServiceKeys.LocalPlayerEntity, owner);
+            engine.SetService(CoreServiceKeys.LocalPlayerId, 1);
             return owner;
         }
     }

@@ -412,6 +412,7 @@ internal sealed class MassNavigationRuntime
             throw new System.InvalidOperationException("MassNavigationMod LocalPlayerEntity must author PlayerOwner.");
         }
 
+        engine.GlobalContext[CoreServiceKeys.LocalPlayerId.Name] = engine.World.Get<PlayerOwner>(owner).PlayerId;
         EnsureSelectionOwner(engine.World, owner, selection, engine.GlobalContext);
     }
 

@@ -7,6 +7,7 @@ using Ludots.Core.Diagnostics;
 using Ludots.Core.Map.Board;
 using Ludots.Core.Presentation.Components;
 using Ludots.Core.Presentation.Terrain;
+using Ludots.Core.Gameplay.Teams;
 using Ludots.Core.Scripting;
 
 namespace Ludots.Core.Map
@@ -22,6 +23,11 @@ namespace Ludots.Core.Map
         public MapSessionState State { get; set; }
         public MapContext Context { get; }
         public IVisualHeightmap? VisualHeightmap { get; set; }
+        public TeamEntityLookup TeamEntityLookup { get; set; } = new TeamEntityLookup();
+        public PlayerEntityLookup PlayerEntityLookup { get; set; } = new PlayerEntityLookup();
+        public int LocalPlayerId { get; set; }
+        public Entity LocalPlayerEntity { get; set; }
+        public TeamRelationshipSnapshot? TeamRelationships { get; set; }
 
         private readonly Dictionary<string, IBoard> _boards = new Dictionary<string, IBoard>(StringComparer.OrdinalIgnoreCase);
         private readonly List<Trigger> _triggers = new List<Trigger>();

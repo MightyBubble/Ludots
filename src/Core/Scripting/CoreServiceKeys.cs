@@ -170,6 +170,7 @@ namespace Ludots.Core.Scripting
         public static readonly ServiceKey<RelationshipCatalogConfig> RelationshipCatalogConfig = new("RelationshipCatalogConfig");
         public static readonly ServiceKey<RelationshipCatalogRuntime> RelationshipCatalogRuntime = new("RelationshipCatalogRuntime");
         public static readonly ServiceKey<TeamEntityLookup> TeamEntityLookup = new("TeamEntityLookup");
+        public static readonly ServiceKey<PlayerEntityLookup> PlayerEntityLookup = new("PlayerEntityLookup");
         public static readonly ServiceKey<EntitySetQueryRuntime> EntitySetQueryRuntime = new("EntitySetQueryRuntime");
         public static readonly ServiceKey<Entity> RelationshipEventSource = new("RelationshipEvent.Source");
         public static readonly ServiceKey<Entity> RelationshipEventTarget = new("RelationshipEvent.Target");
@@ -289,6 +290,7 @@ namespace Ludots.Core.Scripting
         public static readonly ServiceKey<IPathService> PathService = new("PathService");
 
         // --- Entity Selection (presentation-layer) ---
+        public static readonly ServiceKey<int> LocalPlayerId = new("LocalPlayerId");
         public static readonly ServiceKey<Entity> LocalPlayerEntity = new("LocalPlayerEntity");
         public static readonly ServiceKey<Entity> HoveredEntity = new("HoveredEntity");
         public static readonly ServiceKey<Entity> TabTargetEntity = new("TabTargetEntity");

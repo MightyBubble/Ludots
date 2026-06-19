@@ -59,7 +59,11 @@ namespace RoadNetworkShowcaseMod.Systems
                 return;
             }
 
-            _mapping.SetLocalPlayer(actor, 1);
+            if (!_helper.TrySetLocalPlayer(_mapping, actor))
+            {
+                return;
+            }
+
             _mapping.Update(dt);
         }
 

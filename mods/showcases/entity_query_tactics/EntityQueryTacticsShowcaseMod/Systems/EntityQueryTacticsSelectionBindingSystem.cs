@@ -81,6 +81,11 @@ namespace EntityQueryTacticsShowcaseMod.Systems
                 ?? throw new InvalidOperationException("SelectionRuntime is missing.");
 
             _engine.SetService(CoreServiceKeys.LocalPlayerEntity, owner);
+            if (_world.TryGet(owner, out PlayerOwner playerOwner) && playerOwner.PlayerId > 0)
+            {
+                _engine.SetService(CoreServiceKeys.LocalPlayerId, playerOwner.PlayerId);
+            }
+
             selection.TryGetOrCreateSelectionEntity(owner, SelectionSetKeys.LivePrimary, out _);
             selection.TryGetOrCreateSelectionEntity(owner, SelectionSetKeys.FormationPrimary, out _);
             if (!SelectionContextRuntime.TrySetCurrentView(

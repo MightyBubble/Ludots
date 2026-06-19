@@ -43,6 +43,7 @@ namespace Ludots.Core.Config
             Register<Ludots.Core.Gameplay.Components.Team>("Team");
             Register<Ludots.Core.Gameplay.Components.PlayerOwner>("PlayerOwner");
             Register<Ludots.Core.Gameplay.Components.TeamIdentity>("TeamIdentity");
+            Register<Ludots.Core.Gameplay.Components.PlayerIdentity>("PlayerIdentity");
             Register<Ludots.Core.Gameplay.Components.TeamEntityRef>("TeamEntityRef");
             Register("EntityLayer", SetEntityLayer, null, Component<Ludots.Core.Gameplay.Components.EntityLayer>.ComponentType);
             Register("AttributeBuffer", SetAttributeBuffer);

@@ -1,0 +1,13 @@
+{
+  "name": "ParticipantViewCapabilityMod",
+  "version": "1.0.0",
+  "description": "Reusable participant view selector that projects map-owned player/team participants into the formal selection view.",
+  "main": "bin/net8.0/ParticipantViewCapabilityMod.dll",
+  "priority": 0,
+  "dependencies": {
+    "LudotsCoreMod": "^1.0.0",
+    "CoreInputMod": "^1.0.0"
+  },
+  "author": "Ludots Team",
+  "tags": ["capability", "participant", "selection", "showcase"]
+}

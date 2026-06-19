@@ -17,4 +17,12 @@ namespace Ludots.Core.Gameplay.Components
     {
         public int PlayerId;
     }
+
+    /// <summary>
+    /// Marker component for Player representative entities in ECS.
+    /// </summary>
+    public struct PlayerIdentity
+    {
+        public int PlayerId;
+    }
 }

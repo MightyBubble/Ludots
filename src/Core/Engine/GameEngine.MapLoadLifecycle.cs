@@ -1,8 +1,10 @@
 using System;
 using System.Collections.Generic;
+using Arch.Core;
 using Ludots.Core.Components;
 using Ludots.Core.Config;
 using Ludots.Core.Diagnostics;
+using Ludots.Core.Gameplay.Teams;
 using Ludots.Core.Map;
 using Ludots.Core.Map.Board;
 using Ludots.Core.Scripting;
@@ -68,6 +70,7 @@ namespace Ludots.Core.Engine
                 RemoveService(CoreServiceKeys.MapFeatureFlags);
                 RemoveService(CoreServiceKeys.MapLoadStatus);
                 RemoveService(CoreServiceKeys.VisualHeightmap);
+                ParticipantBindingResolver.ClearFocused(GlobalContext);
                 PublishFocusedMapLoadState();
                 return;
             }
@@ -84,6 +87,7 @@ namespace Ludots.Core.Engine
             {
                 RemoveService(CoreServiceKeys.VisualHeightmap);
             }
+            PublishSessionParticipants(session);
             PublishFocusedMapLoadState();
         }
 
@@ -150,6 +154,7 @@ namespace Ludots.Core.Engine
 
             LoadPathingForSession(session);
             SetMapEntitiesSuspended(session.MapId, GetMapLoadStatus(session.MapId).Succeeded ? false : true);
+            PublishSessionParticipants(session);
         }
 
         private bool TryStartPendingMapLoad(MapSession session, MapConfig mapConfig, bool isPush, out MapLoadStatus loadStatus)
@@ -343,6 +348,74 @@ namespace Ludots.Core.Engine
             ScriptContext finalCtx = CreateMapEventContext(session);
             Diagnostics.Log.Info(in LogChannels.Engine, $"Firing MapLoaded event for {session.MapId.Value}...");
             CompleteLifecycleEvent(TriggerManager.FireMapEventAsync(session.MapId, GameEvents.MapLoaded, finalCtx));
+            CaptureFocusedParticipantOverrides(session);
+            session.TeamRelationships = TeamManager.CaptureSnapshot();
+        }
+
+        private void SetSessionParticipants(MapSession session, ParticipantBindingResult participants)
+        {
+            session.TeamEntityLookup = participants.Teams;
+            session.PlayerEntityLookup = participants.Players;
+            session.LocalPlayerId = participants.LocalPlayerId;
+            session.LocalPlayerEntity = participants.LocalPlayerEntity;
+            session.TeamRelationships = participants.TeamRelationships;
+            if (participants.LocalPlayerId > 0)
+            {
+                GameSession.SelectLocalPlayer(participants.LocalPlayerId);
+            }
+
+            if (CurrentMapSession == session)
+            {
+                ParticipantBindingResolver.PublishFocused(GlobalContext, participants);
+            }
+        }
+
+        private void PublishSessionParticipants(MapSession session)
+        {
+            if (session == null)
+            {
+                ParticipantBindingResolver.ClearFocused(GlobalContext);
+                return;
+            }
+
+            ParticipantBindingResolver.PublishFocused(
+                GlobalContext,
+                new ParticipantBindingResult(
+                    session.TeamEntityLookup,
+                    session.PlayerEntityLookup,
+                    session.LocalPlayerId,
+                    session.LocalPlayerEntity,
+                    session.TeamRelationships));
+        }
+
+        private void CaptureFocusedParticipantOverrides(MapSession session)
+        {
+            if (session == null || CurrentMapSession != session)
+            {
+                return;
+            }
+
+            if (GlobalContext.TryGetValue(CoreServiceKeys.LocalPlayerEntity.Name, out object entityObj) &&
+                entityObj is Entity localPlayerEntity)
+            {
+                session.LocalPlayerEntity = localPlayerEntity;
+            }
+            else
+            {
+                session.LocalPlayerEntity = Entity.Null;
+            }
+
+            if (GlobalContext.TryGetValue(CoreServiceKeys.LocalPlayerId.Name, out object playerIdObj) &&
+                playerIdObj is int localPlayerId &&
+                localPlayerId > 0)
+            {
+                session.LocalPlayerId = localPlayerId;
+                GameSession.SelectLocalPlayer(localPlayerId);
+            }
+            else
+            {
+                session.LocalPlayerId = 0;
+            }
         }
 
         private void CompleteMapResume(MapSession session, MapLoadStatus loadStatus)
@@ -362,6 +435,8 @@ namespace Ludots.Core.Engine
 
             ScriptContext resumeCtx = CreateMapEventContext(session);
             CompleteLifecycleEvent(TriggerManager.FireMapEventAsync(session.MapId, GameEvents.MapResumed, resumeCtx));
+            CaptureFocusedParticipantOverrides(session);
+            session.TeamRelationships = TeamManager.CaptureSnapshot();
         }
 
         private void CancelPendingMapLoad(MapId mapId, string reason, bool markFailed)

@@ -198,6 +198,67 @@ namespace GasTests
             }
         }
 
+        [Test]
+        public void LoadMap_WhenChildInheritsParticipantBindings_MergesParticipantAuthoring()
+        {
+            var tempRoot = CreateTempDir();
+            try
+            {
+                WriteMapConfig(tempRoot, "parent", """
+                {
+                  "id": "parent",
+                  "entities": [
+                    { "instanceId": "team.alpha", "template": "logical.team" },
+                    { "instanceId": "player.local", "template": "logical.player" }
+                  ],
+                  "teams": [
+                    { "teamId": 10, "representativeInstanceId": "team.alpha" }
+                  ],
+                  "players": [
+                    { "playerId": 7, "teamId": 10, "representativeInstanceId": "player.local", "isLocal": true }
+                  ],
+                  "participantRelationships": {
+                    "playerTeams": [
+                      { "playerId": 7, "teamId": 10, "typeId": "Membership" }
+                    ]
+                  }
+                }
+                """);
+
+                WriteMapConfig(tempRoot, "child", """
+                {
+                  "id": "child",
+                  "parentId": "parent",
+                  "entities": [
+                    { "instanceId": "team.beta", "template": "logical.team" }
+                  ],
+                  "teams": [
+                    { "teamId": 20, "representativeInstanceId": "team.beta" }
+                  ],
+                  "participantRelationships": {
+                    "teams": [
+                      { "teamA": 10, "teamB": 20, "typeId": "Alliance", "attitude": "Friendly" }
+                    ]
+                  }
+                }
+                """);
+
+                var manager = CreateMapManager(tempRoot);
+                var cfg = manager.LoadMap("child");
+
+                Assert.That(cfg, Is.Not.Null);
+                Assert.That(cfg!.Entities.Select(e => e.InstanceId), Is.EquivalentTo(new[] { "team.alpha", "player.local", "team.beta" }));
+                Assert.That(cfg.Teams.Select(t => t.TeamId), Is.EquivalentTo(new[] { 10, 20 }));
+                Assert.That(cfg.Players.Select(p => p.PlayerId), Is.EquivalentTo(new[] { 7 }));
+                Assert.That(cfg.ParticipantRelationships.PlayerTeams.Count, Is.EqualTo(1));
+                Assert.That(cfg.ParticipantRelationships.Teams.Count, Is.EqualTo(1));
+            }
+            finally
+            {
+                TryDelete(tempRoot);
+            }
+        }
+
         private static MapManager CreateMapManager(string coreRoot)
         {
             var vfs = new VirtualFileSystem();

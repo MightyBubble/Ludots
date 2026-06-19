@@ -96,6 +96,11 @@ namespace Ludots.Core.Systems
 
         public void LoadEntities(MapConfig mapConfig)
         {
+            LoadEntitiesAndIndex(mapConfig);
+        }
+
+        public MapLoadEntityIndex LoadEntitiesAndIndex(MapConfig mapConfig)
+        {
             if (mapConfig == null)
             {
                 throw new ArgumentNullException(nameof(mapConfig));
@@ -120,7 +125,9 @@ namespace Ludots.Core.Systems
 
             var builder = new EntityBuilder(_world, templates);
             var mapEntityTag = new MapEntity { MapId = new MapId(mapConfig.Id) };
+            var entityIndex = new MapLoadEntityIndex();
             var pendingBatchRequests = new List<TemplateEntityBatchSpawner.TemplateBatchSpawnRequest>(_templateBatchSpawner.ScratchCapacity);
+            var pendingBatchEntityData = new List<EntitySpawnData>(_templateBatchSpawner.ScratchCapacity);
             string? activeBatchTemplateId = null;
 
             void FlushPendingTemplateBatch()
@@ -128,6 +135,7 @@ namespace Ludots.Core.Systems
                 if (activeBatchTemplateId == null || pendingBatchRequests.Count == 0)
                 {
                     pendingBatchRequests.Clear();
+                    pendingBatchEntityData.Clear();
                     activeBatchTemplateId = null;
                     return;
                 }
@@ -184,6 +192,7 @@ namespace Ludots.Core.Systems
 
                 for (int i = 0; i < created.Length; i++)
                 {
+                    entityIndex.Register(mapConfig.Id, pendingBatchEntityData[i].InstanceId, created[i]);
                     PublishTemplateOnSpawnEffect(created[i], activeBatchTemplateId);
                 }
 
@@ -214,6 +223,7 @@ namespace Ludots.Core.Systems
                 }
 
                 pendingBatchRequests.Clear();
+                pendingBatchEntityData.Clear();
                 activeBatchTemplateId = null;
             }
             
@@ -245,6 +255,7 @@ namespace Ludots.Core.Systems
 
                     activeBatchTemplateId = entityData.Template;
                     pendingBatchRequests.Add(batchRequest);
+                    pendingBatchEntityData.Add(entityData);
                     continue;
                 }
 
@@ -269,10 +280,12 @@ namespace Ludots.Core.Systems
                 var entity = builder.Build();
                 TryApplyTemplateKey(entity, entityData.Template);
                 _world.Add(entity, mapEntityTag);
+                entityIndex.Register(mapConfig.Id, entityData.InstanceId, entity);
                 PublishTemplateOnSpawnEffect(entity, entityData.Template);
             }
 
             FlushPendingTemplateBatch();
+            return entityIndex;
         }
 
         private static bool TryBuildBatchRequest(
