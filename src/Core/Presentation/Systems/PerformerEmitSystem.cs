@@ -45,6 +45,7 @@ namespace Ludots.Core.Presentation.Systems
         private readonly PresentationTimingDiagnostics? _timingDiagnostics;
         private readonly List<Entity> _pendingDestroy = new(256);
         private readonly Dictionary<Entity, PresentationRequest> _singleRequestReplayCache = new();
+        private readonly WorldHudPerformBehavior _worldHudBehavior = new();
 
         public PerformerEmitSystem(
             World world,
@@ -413,7 +414,15 @@ namespace Ludots.Core.Presentation.Systems
 
             int stableId = HudItemIdentity.ComposeStableId(state.StableId, kind, state.DefId);
 
+            bool hasProjection = _worldHudBehavior.TryResolveProjection(
+                World,
+                _globals,
+                state.OwnerEntity,
+                cull.LOD,
+                definition.RequiredAttributeIds,
+                out PerformPhaseResult phaseResult);
             bool visible = cull.OwnerCullVisible &&
+                           hasProjection &&
                            EvaluateVisibility(definition, state.OwnerEntity) &&
                            IsWithinMaxLod(cull.LOD, in asset) &&
                            ResolveAssetVisibility(entity, in asset) &&

@@ -13,6 +13,9 @@ namespace Ludots.Core.Presentation.Performers
         public bool IsVisible;
         public bool IsCulled;
         public bool HasVision;
+        public bool HasKnowledgeProjection;
+        public bool RequiresAttributeProjection;
+        public bool HasAttributeProjection;
         public LODLevel LOD;
         public TeamRelationship TeamRelationship;
         public bool IsOwnedByAudience;

@@ -31,6 +31,7 @@ using Ludots.Core.Input.Interaction;
 using Ludots.Core.Input.Orders;
 using Ludots.Core.Input.Runtime;
 using Ludots.Core.Input.Selection;
+using Ludots.Core.Knowledge;
 using Ludots.Core.Map;
 using Ludots.Core.Map.Board;
 using Ludots.Core.Map.Hex;
@@ -172,6 +173,7 @@ namespace Ludots.Core.Scripting
         public static readonly ServiceKey<TeamEntityLookup> TeamEntityLookup = new("TeamEntityLookup");
         public static readonly ServiceKey<PlayerEntityLookup> PlayerEntityLookup = new("PlayerEntityLookup");
         public static readonly ServiceKey<EntitySetQueryRuntime> EntitySetQueryRuntime = new("EntitySetQueryRuntime");
+        public static readonly ServiceKey<KnowledgeProjectionResolver> KnowledgeProjectionResolver = new("KnowledgeProjectionResolver");
         public static readonly ServiceKey<Entity> RelationshipEventSource = new("RelationshipEvent.Source");
         public static readonly ServiceKey<Entity> RelationshipEventTarget = new("RelationshipEvent.Target");
         public static readonly ServiceKey<Entity> RelationshipEventTeam = new("RelationshipEvent.Team");

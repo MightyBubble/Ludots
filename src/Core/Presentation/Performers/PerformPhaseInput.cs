@@ -20,10 +20,13 @@ namespace Ludots.Core.Presentation.Performers
         public bool IsVisible;
         public bool IsCulled;
         public bool HasVision;
+        public bool RequiresAttributeProjection;
+        public bool HasAttributeProjection;
         public bool HasRelationshipLink;
         public bool HasTeamRelationship;
         public bool IsOwnedByAudience;
         public TeamRelationship TeamRelationship;
+        public PerformProjectionFacts Projection;
         public LODLevel LOD;
     }
 }

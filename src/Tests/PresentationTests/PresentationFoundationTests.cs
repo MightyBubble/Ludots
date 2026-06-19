@@ -23,6 +23,7 @@ using Ludots.Core.Presentation.Terrain;
 using Ludots.Core.GraphRuntime;
 using Ludots.Core.Gameplay.Components;
 using Ludots.Core.Gameplay.Teams;
+using Ludots.Core.Knowledge;
 using Ludots.Core.Map.Hex;
 using Ludots.Core.Scripting;
 using Ludots.Platform.Abstractions;
@@ -885,14 +886,21 @@ namespace Ludots.Tests.Presentation
 
                 TeamManager.SetRelationshipSymmetric(10, 20, TeamRelationship.Hostile);
 
+                var projectionStore = new KnowledgeProjectionStore(initialCapacity: 8);
+                var projectionResolver = new KnowledgeProjectionResolver(projectionStore);
+                UpsertPerformerKnowledge(projectionStore, ownerAudience, owner, KnowledgePresence.LiveVisible, KnowledgePositionAccess.Live);
+                UpsertPerformerKnowledge(projectionStore, hostileAudience, owner, KnowledgePresence.LiveVisible, KnowledgePositionAccess.Live);
+
                 var behavior = new WorldHudPerformBehavior();
                 var ownerGlobals = new Dictionary<string, object>
                 {
                     [CoreServiceKeys.LocalPlayerEntity.Name] = ownerAudience,
+                    [CoreServiceKeys.KnowledgeProjectionResolver.Name] = projectionResolver,
                 };
                 var hostileGlobals = new Dictionary<string, object>
                 {
                     [CoreServiceKeys.LocalPlayerEntity.Name] = hostileAudience,
+                    [CoreServiceKeys.KnowledgeProjectionResolver.Name] = projectionResolver,
                 };
 
                 bool ownerVisible = behavior.TryResolveProjection(world, ownerGlobals, owner, LODLevel.High, out PerformPhaseResult ownerPhase);
@@ -912,6 +920,171 @@ namespace Ludots.Tests.Presentation
             {
                 TeamManager.Clear();
             }
+        }
+
+        [Test]
+        public void WorldHudPerformBehavior_ProjectsAllyAudienceFromProjectionAndTeamRelationship()
+        {
+            using var world = World.Create();
+            TeamManager.Clear();
+
+            try
+            {
+                Entity owner = world.Create(
+                    new Team { Id = 10 },
+                    new PlayerOwner { PlayerId = 10 },
+                    new CullState { IsVisible = true, LOD = LODLevel.High });
+                Entity allyAudience = world.Create(
+                    new Team { Id = 20 },
+                    new PlayerOwner { PlayerId = 20 });
+
+                TeamManager.SetRelationshipSymmetric(10, 20, TeamRelationship.Friendly);
+                var projectionStore = new KnowledgeProjectionStore();
+                var projectionResolver = new KnowledgeProjectionResolver(projectionStore);
+                UpsertPerformerKnowledge(projectionStore, allyAudience, owner, KnowledgePresence.LiveVisible, KnowledgePositionAccess.Live);
+
+                var behavior = new WorldHudPerformBehavior();
+                var globals = new Dictionary<string, object>
+                {
+                    [CoreServiceKeys.LocalPlayerEntity.Name] = allyAudience,
+                    [CoreServiceKeys.KnowledgeProjectionResolver.Name] = projectionResolver,
+                };
+
+                bool projected = behavior.TryResolveProjection(world, globals, owner, LODLevel.High, out PerformPhaseResult phase);
+
+                Assert.That(projected, Is.True);
+                Assert.That(phase.IsFriendly, Is.True);
+                Assert.That(phase.HasKnowledgeProjection, Is.True);
+                Assert.That(phase.ShouldPresent, Is.True);
+                Assert.That(phase.AllowWorldHudProjection, Is.True);
+            }
+            finally
+            {
+                TeamManager.Clear();
+            }
+        }
+
+        [Test]
+        public void WorldHudPerformBehavior_SuppressesKnownAudienceWithoutRequiredAttributeProjection()
+        {
+            using var world = World.Create();
+
+            const int healthAttributeId = 7;
+            Entity owner = world.Create(
+                new Team { Id = 10 },
+                new PlayerOwner { PlayerId = 10 },
+                new CullState { IsVisible = true, LOD = LODLevel.High });
+            Entity audience = world.Create(
+                new Team { Id = 10 },
+                new PlayerOwner { PlayerId = 10 });
+
+            var projectionStore = new KnowledgeProjectionStore();
+            var projectionResolver = new KnowledgeProjectionResolver(projectionStore);
+            UpsertPerformerKnowledge(
+                projectionStore,
+                audience,
+                owner,
+                KnowledgePresence.LiveVisible,
+                KnowledgePositionAccess.Live,
+                KnowledgeIdMask256.Empty);
+            var behavior = new WorldHudPerformBehavior();
+            var globals = new Dictionary<string, object>
+            {
+                [CoreServiceKeys.LocalPlayerEntity.Name] = audience,
+                [CoreServiceKeys.KnowledgeProjectionResolver.Name] = projectionResolver,
+            };
+            ReadOnlySpan<int> requiredAttributes = stackalloc int[1] { healthAttributeId };
+
+            bool projected = behavior.TryResolveProjection(world, globals, owner, LODLevel.High, requiredAttributes, out PerformPhaseResult phase);
+
+            Assert.That(projected, Is.False);
+            Assert.That(phase.HasKnowledgeProjection, Is.True);
+            Assert.That(phase.RequiresAttributeProjection, Is.True);
+            Assert.That(phase.HasAttributeProjection, Is.False);
+            Assert.That(phase.ShouldPresent, Is.True);
+            Assert.That(phase.AllowWorldHudProjection, Is.False);
+        }
+
+        [Test]
+        public void WorldHudPerformBehavior_SuppressesUnknownAudienceWithoutKnowledgeProjection()
+        {
+            using var world = World.Create();
+
+            Entity owner = world.Create(
+                new Team { Id = 10 },
+                new PlayerOwner { PlayerId = 10 },
+                new CullState { IsVisible = true, LOD = LODLevel.High });
+            Entity audience = world.Create(
+                new Team { Id = 10 },
+                new PlayerOwner { PlayerId = 10 });
+
+            var projectionStore = new KnowledgeProjectionStore();
+            var projectionResolver = new KnowledgeProjectionResolver(projectionStore);
+            var behavior = new WorldHudPerformBehavior();
+            var globals = new Dictionary<string, object>
+            {
+                [CoreServiceKeys.LocalPlayerEntity.Name] = audience,
+                [CoreServiceKeys.KnowledgeProjectionResolver.Name] = projectionResolver,
+            };
+
+            bool projected = behavior.TryResolveProjection(world, globals, owner, LODLevel.High, out PerformPhaseResult phase);
+
+            Assert.That(projected, Is.False);
+            Assert.That(phase.ShouldPresent, Is.False);
+            Assert.That(phase.HasVision, Is.False);
+            Assert.That(phase.AllowWorldHudProjection, Is.False);
+        }
+
+        [Test]
+        public void WorldHudPerformBehavior_ProjectionChecksAllocateZeroAfterWarmup()
+        {
+            using var world = World.Create();
+
+            const int healthAttributeId = 7;
+            Entity owner = world.Create(
+                new Team { Id = 10 },
+                new PlayerOwner { PlayerId = 10 },
+                new CullState { IsVisible = true, LOD = LODLevel.High });
+            Entity audience = world.Create(
+                new Team { Id = 10 },
+                new PlayerOwner { PlayerId = 10 });
+
+            var projectionStore = new KnowledgeProjectionStore();
+            var projectionResolver = new KnowledgeProjectionResolver(projectionStore);
+            UpsertPerformerKnowledge(
+                projectionStore,
+                audience,
+                owner,
+                KnowledgePresence.LiveVisible,
+                KnowledgePositionAccess.Live,
+                KnowledgeIdMask256.Empty.WithId(healthAttributeId));
+            var behavior = new WorldHudPerformBehavior();
+            var globals = new Dictionary<string, object>
+            {
+                [CoreServiceKeys.LocalPlayerEntity.Name] = audience,
+                [CoreServiceKeys.KnowledgeProjectionResolver.Name] = projectionResolver,
+            };
+            int[] requiredAttributes = [healthAttributeId];
+
+            Assert.That(behavior.TryResolveProjection(world, globals, owner, LODLevel.High, requiredAttributes, out _), Is.True);
+            GC.Collect();
+            GC.WaitForPendingFinalizers();
+            GC.Collect();
+            GC.GetAllocatedBytesForCurrentThread();
+            long before = GC.GetAllocatedBytesForCurrentThread();
+
+            int projectedCount = 0;
+            for (int i = 0; i < 128; i++)
+            {
+                if (behavior.TryResolveProjection(world, globals, owner, LODLevel.High, requiredAttributes, out _))
+                {
+                    projectedCount++;
+                }
+            }
+
+            long allocated = GC.GetAllocatedBytesForCurrentThread() - before;
+            Assert.That(projectedCount, Is.EqualTo(128));
+            Assert.That(allocated, Is.EqualTo(0));
         }
 
         [Test]
@@ -974,9 +1147,15 @@ namespace Ludots.Tests.Presentation
                 Entity performer = instances.Create(definitionId, owner, scopeId: 9101, PresentationAnchorKind.Entity, Vector3.Zero, stableId: 8101, Entity.Null, default);
                 world.Get<PerformerState>(performer).BehaviorActiveMask = 1u;
 
+                var projectionStore = new KnowledgeProjectionStore(initialCapacity: 8);
+                var projectionResolver = new KnowledgeProjectionResolver(projectionStore);
+                UpsertPerformerKnowledge(projectionStore, ownerAudience, owner, KnowledgePresence.LiveVisible, KnowledgePositionAccess.Live);
+                UpsertPerformerKnowledge(projectionStore, hostileAudience, owner, KnowledgePresence.LiveVisible, KnowledgePositionAccess.Live);
+
                 var ownerGlobals = new Dictionary<string, object>
                 {
                     [CoreServiceKeys.LocalPlayerEntity.Name] = ownerAudience,
+                    [CoreServiceKeys.KnowledgeProjectionResolver.Name] = projectionResolver,
                 };
                 using var behaviorSystem = new PerformerBehaviorSystem(
                     world,
@@ -1003,6 +1182,7 @@ namespace Ludots.Tests.Presentation
                 var hostileGlobals = new Dictionary<string, object>
                 {
                     [CoreServiceKeys.LocalPlayerEntity.Name] = hostileAudience,
+                    [CoreServiceKeys.KnowledgeProjectionResolver.Name] = projectionResolver,
                 };
 
                 using (var hostileSystem = new PerformerEmitSystem(
@@ -2076,6 +2256,30 @@ namespace Ludots.Tests.Presentation
                         },
                     ],
                 });
+        }
+
+        private static void UpsertPerformerKnowledge(
+            KnowledgeProjectionStore store,
+            Entity viewer,
+            Entity target,
+            KnowledgePresence presence,
+            KnowledgePositionAccess position,
+            KnowledgeIdMask256 attributeMask = default)
+        {
+            store.Upsert(
+                viewer,
+                target,
+                new KnowledgeDisclosureRecord(
+                    presence,
+                    position,
+                    attributeMask,
+                    KnowledgeIdMask256.Empty,
+                    KnowledgeIdMask256.Empty,
+                    viewer,
+                    observedTick: 1,
+                    expiryTick: 0,
+                    confidencePermille: 1000,
+                    revision: 1));
         }
 
         private static void AssertQuaternionEquivalent(Quaternion actual, Quaternion expected, float epsilon = 0.0001f)

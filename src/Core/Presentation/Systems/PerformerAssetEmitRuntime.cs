@@ -447,7 +447,13 @@ namespace Ludots.Core.Presentation.Systems
                 return;
             }
 
-            if (!_worldHudBehavior.TryResolveProjection(_world, _globals, state.OwnerEntity, lod, out PerformPhaseResult phaseResult))
+            if (!_worldHudBehavior.TryResolveProjection(
+                    _world,
+                    _globals,
+                    state.OwnerEntity,
+                    lod,
+                    definition.RequiredAttributeIds,
+                    out PerformPhaseResult phaseResult))
             {
                 return;
             }
@@ -482,7 +488,13 @@ namespace Ludots.Core.Presentation.Systems
                 return;
             }
 
-            if (!_worldHudBehavior.TryResolveProjection(_world, _globals, state.OwnerEntity, lod, out PerformPhaseResult phaseResult))
+            if (!_worldHudBehavior.TryResolveProjection(
+                    _world,
+                    _globals,
+                    state.OwnerEntity,
+                    lod,
+                    definition.RequiredAttributeIds,
+                    out PerformPhaseResult phaseResult))
             {
                 return;
             }
