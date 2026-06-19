@@ -316,7 +316,14 @@ namespace Ludots.Tests.GAS.Production
             timeline.Add("[T+005] War3 training: Barracks queues Footman production with a Training tag clip, then spawns a second Footman outside the building.");
 
             CastAbility(engine, trainedFootman, guardTower, slot: 1);
-            TickUntil(engine, frameTimesMs, () => world.Has<ChildOf>(trainedFootman), maxFrames: 12, "Footman should garrison into the Guard Tower.");
+            TickUntil(
+                engine,
+                frameTimesMs,
+                () => world.Has<ChildOf>(trainedFootman) &&
+                      world.Has<SelectionSelectableState>(trainedFootman) &&
+                      !world.Get<SelectionSelectableState>(trainedFootman).Enabled,
+                maxFrames: 12,
+                "Footman should garrison into the Guard Tower and become unselectable.");
             Assert.That(world.Get<ChildOf>(trainedFootman).Parent, Is.EqualTo(guardTower));
             Assert.That(world.Get<SelectionSelectableState>(trainedFootman).Enabled, Is.False);
             CastAbility(engine, guardTower, guardTower, slot: 2);
@@ -402,7 +409,14 @@ namespace Ludots.Tests.GAS.Production
             CastAbilityAtWorldPoint(engine, gateway, slot: 0, new Vector2(300f, 2380f));
             TickUntil(engine, frameTimesMs, () => CountEntitiesByName(world, "Zealot") == zealotIdsBeforeWarp.Count + 1, maxFrames: 20, "Warp Gate slot override should warp a Zealot.");
             Entity warpedZealot = FindNewestEntityByName(world, "Zealot", zealotIdsBeforeWarp);
-            TickUntil(engine, frameTimesMs, () => HasEffectiveTag(world, tagOps, warpedZealot, warpingTagId), maxFrames: 20, "Warped Zealot should receive its warp-in state.");
+            TickUntil(
+                engine,
+                frameTimesMs,
+                () => HasEffectiveTag(world, tagOps, warpedZealot, warpingTagId) &&
+                      world.Has<SelectionSelectableState>(warpedZealot) &&
+                      !world.Get<SelectionSelectableState>(warpedZealot).Enabled,
+                maxFrames: 20,
+                "Warped Zealot should receive its warp-in state and become temporarily unselectable.");
             Assert.That(HasEffectiveTag(world, tagOps, warpedZealot, warpingTagId), Is.True, "Warped Zealot should begin inside the Warping state.");
             Assert.That(world.Get<SelectionSelectableState>(warpedZealot).Enabled, Is.False, "Warping units should be temporarily unselectable.");
             TickUntil(engine, frameTimesMs, () => !HasEffectiveTag(world, tagOps, warpedZealot, warpingTagId), maxFrames: 600, "Warping state should expire.");
