@@ -1,0 +1,810 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Ludots 科技树作者配置指南</title>
+  <style>
+    :root {
+      color-scheme: light;
+      --ink: #202733;
+      --muted: #647184;
+      --paper: #ffffff;
+      --surface: #f6f8fb;
+      --line: #d6e0ea;
+      --navy: #10243d;
+      --teal: #08767c;
+      --green: #23744d;
+      --blue: #315f9f;
+      --amber: #996716;
+      --red: #a23d42;
+      --shadow: 0 12px 32px rgba(20, 36, 56, 0.10);
+    }
+
+    * {
+      box-sizing: border-box;
+    }
+
+    body {
+      margin: 0;
+      font-family: "Microsoft YaHei", "Segoe UI", system-ui, -apple-system, BlinkMacSystemFont, sans-serif;
+      color: var(--ink);
+      background: #edf2f6;
+      line-height: 1.62;
+    }
+
+    .page {
+      max-width: 1180px;
+      margin: 0 auto;
+      padding: 30px 24px 58px;
+    }
+
+    header {
+      padding: 34px 38px;
+      border-radius: 10px;
+      color: #f7fbff;
+      background: linear-gradient(135deg, rgba(16, 36, 61, 0.98), rgba(8, 118, 124, 0.94) 55%, rgba(49, 95, 159, 0.96));
+      box-shadow: var(--shadow);
+    }
+
+    h1 {
+      margin: 0;
+      font-size: 34px;
+      line-height: 1.18;
+      letter-spacing: 0;
+    }
+
+    h2 {
+      margin: 0 0 14px;
+      color: var(--navy);
+      font-size: 24px;
+      letter-spacing: 0;
+    }
+
+    h3 {
+      margin: 24px 0 8px;
+      color: var(--navy);
+      font-size: 18px;
+      letter-spacing: 0;
+    }
+
+    h4 {
+      margin: 18px 0 8px;
+      color: var(--teal);
+      font-size: 15px;
+      letter-spacing: 0;
+    }
+
+    p {
+      margin: 8px 0 12px;
+    }
+
+    header p {
+      max-width: 940px;
+      margin: 12px 0 0;
+      color: #dceaf4;
+      font-size: 17px;
+    }
+
+    a {
+      color: var(--blue);
+      text-decoration: none;
+      font-weight: 700;
+    }
+
+    code {
+      padding: 1px 5px;
+      border: 1px solid #cbd7e4;
+      border-radius: 4px;
+      background: #f8fafc;
+      color: #22364c;
+      font-family: Consolas, "Cascadia Mono", monospace;
+      font-size: 0.94em;
+    }
+
+    pre {
+      overflow: auto;
+      margin: 12px 0 0;
+      padding: 14px 16px;
+      border: 1px solid #253447;
+      border-radius: 8px;
+      background: #16202d;
+      color: #eef5fb;
+      font-family: Consolas, "Cascadia Mono", monospace;
+      font-size: 13px;
+      line-height: 1.55;
+    }
+
+    pre code {
+      padding: 0;
+      border: 0;
+      border-radius: 0;
+      background: transparent;
+      color: inherit;
+      font-size: inherit;
+    }
+
+    nav {
+      display: grid;
+      grid-template-columns: repeat(5, minmax(0, 1fr));
+      gap: 12px;
+      margin: 18px 0;
+    }
+
+    nav a {
+      display: block;
+      min-height: 48px;
+      padding: 12px 14px;
+      border: 1px solid var(--line);
+      border-radius: 8px;
+      color: var(--navy);
+      background: var(--paper);
+      box-shadow: 0 6px 16px rgba(22, 38, 55, 0.06);
+    }
+
+    section {
+      margin-top: 18px;
+      padding: 26px 30px;
+      border: 1px solid var(--line);
+      border-radius: 10px;
+      background: var(--paper);
+      box-shadow: 0 8px 22px rgba(22, 38, 55, 0.06);
+    }
+
+    .lead {
+      color: var(--muted);
+      font-size: 16px;
+    }
+
+    .meta {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 10px;
+      margin-top: 22px;
+    }
+
+    .pill {
+      display: inline-flex;
+      align-items: center;
+      min-height: 30px;
+      padding: 5px 10px;
+      border: 1px solid rgba(255, 255, 255, 0.26);
+      border-radius: 999px;
+      color: #eef7ff;
+      background: rgba(255, 255, 255, 0.12);
+      font-size: 13px;
+      white-space: nowrap;
+    }
+
+    .grid {
+      display: grid;
+      grid-template-columns: repeat(3, minmax(0, 1fr));
+      gap: 14px;
+      margin-top: 14px;
+    }
+
+    .grid.two {
+      grid-template-columns: repeat(2, minmax(0, 1fr));
+    }
+
+    .card {
+      min-height: 100%;
+      padding: 16px;
+      border: 1px solid var(--line);
+      border-radius: 8px;
+      background: var(--surface);
+    }
+
+    .card strong {
+      display: block;
+      margin-bottom: 6px;
+      color: var(--navy);
+      font-size: 15px;
+    }
+
+    .card p {
+      margin: 0;
+      color: var(--muted);
+      font-size: 14px;
+    }
+
+    .flow {
+      display: grid;
+      grid-template-columns: repeat(4, minmax(0, 1fr));
+      gap: 10px;
+      margin-top: 16px;
+    }
+
+    .step {
+      min-height: 118px;
+      padding: 14px 12px;
+      border: 1px solid var(--line);
+      border-radius: 8px;
+      background: #fbfcfe;
+    }
+
+    .step b {
+      display: block;
+      color: var(--teal);
+      font-size: 14px;
+    }
+
+    .step span {
+      display: block;
+      margin-top: 6px;
+      color: var(--muted);
+      font-size: 13px;
+    }
+
+    .table {
+      width: 100%;
+      margin-top: 14px;
+      border-collapse: collapse;
+      overflow: hidden;
+      border: 1px solid var(--line);
+      border-radius: 8px;
+      font-size: 14px;
+    }
+
+    .table th,
+    .table td {
+      padding: 10px 12px;
+      border-bottom: 1px solid var(--line);
+      text-align: left;
+      vertical-align: top;
+    }
+
+    .table th {
+      color: var(--navy);
+      background: #edf3f8;
+      font-weight: 800;
+    }
+
+    .table tr:last-child td {
+      border-bottom: 0;
+    }
+
+    .recipe {
+      margin-top: 18px;
+      padding: 22px;
+      border: 1px solid var(--line);
+      border-radius: 10px;
+      background: #fbfcfe;
+    }
+
+    .recipe h3 {
+      margin-top: 0;
+    }
+
+    .callout {
+      margin-top: 14px;
+      padding: 14px 16px;
+      border-left: 4px solid var(--teal);
+      border-radius: 8px;
+      background: #eef8f8;
+    }
+
+    .callout.warning {
+      border-left-color: var(--amber);
+      background: #fff7e8;
+    }
+
+    .callout.danger {
+      border-left-color: var(--red);
+      background: #fff0f1;
+    }
+
+    .checklist {
+      display: grid;
+      gap: 8px;
+      margin: 12px 0 0;
+      padding: 0;
+      list-style: none;
+    }
+
+    .checklist li {
+      padding: 10px 12px;
+      border: 1px solid var(--line);
+      border-radius: 8px;
+      background: #fbfcfe;
+    }
+
+    .small {
+      color: var(--muted);
+      font-size: 13px;
+    }
+
+    @media (max-width: 940px) {
+      nav,
+      .grid,
+      .grid.two,
+      .flow {
+        grid-template-columns: 1fr;
+      }
+
+      header,
+      section {
+        padding: 24px 20px;
+      }
+    }
+  </style>
+</head>
+<body>
+  <div class="page">
+    <header>
+      <h1>Ludots 科技树作者配置指南</h1>
+      <p>这页给内容作者和玩法设计用：你不需要先理解 Evaluator 或 ECS 内部结构，只要按“我要表达什么玩法”选择 scope，然后补齐几个 JSON，就能把科技、升级、英雄解锁、区域条件挂到实体上。</p>
+      <div class="meta">
+        <span class="pill">作者视角</span>
+        <span class="pill">Entity-scoped tech</span>
+        <span class="pill">Cookbook cases</span>
+        <span class="pill">不使用 map tag 做 feature 开关</span>
+      </div>
+    </header>
+
+    <nav aria-label="目录">
+      <a href="#quick-start">四步上手</a>
+      <a href="#scope">选 Scope</a>
+      <a href="#recipes">常见配方</a>
+      <a href="#fields">字段速查</a>
+      <a href="#pitfalls">避坑</a>
+    </nav>
+
+    <section id="quick-start">
+      <h2>四步上手</h2>
+      <p class="lead">任何科技树 case 都可以拆成四个作者动作：定义作用域、放置作用域实体、写条件、把条件挂到按钮或效果上。</p>
+      <div class="flow">
+        <div class="step"><b>1. 声明 scope</b><span>在 <code>Technology/scopes.json</code> 里声明 <code>city</code>、<code>faction</code>、<code>region</code> 这类玩法作用域。</span></div>
+        <div class="step"><b>2. 放 host 和 member</b><span>host 是保存科技状态的实体；member 是会使用这个科技的建筑、英雄或单位。</span></div>
+        <div class="step"><b>3. 写 requirement</b><span>在 <code>Technology/requirements.json</code> 写“按钮何时显示/可用”的条件。</span></div>
+        <div class="step"><b>4. 挂 ability/effect</b><span>Ability 用 <code>showRequirement</code> 或 <code>useRequirement</code>；升级用 <code>CompleteTechnology</code> effect。</span></div>
+      </div>
+
+      <h3>最小文件清单</h3>
+      <table class="table">
+        <thead>
+          <tr><th>文件</th><th>作者写什么</th><th>什么时候需要</th></tr>
+        </thead>
+        <tbody>
+          <tr><td><code>assets/Technology/scopes.json</code></td><td>作用域名字，例如 <code>city</code>、<code>faction</code></td><td>只要不是本体升级，都建议声明。</td></tr>
+          <tr><td><code>assets/Technology/technologies.json</code></td><td>科技 id 和默认 scope</td><td>每个科技都要有。</td></tr>
+          <tr><td><code>assets/Technology/requirements.json</code></td><td>按钮显示、按钮可用、升级前置条件</td><td>需要解锁逻辑时写。</td></tr>
+          <tr><td><code>assets/Entities/templates.json</code></td><td><code>TechnologyScopeHost</code> 和 <code>TechnologyScopeBinding</code></td><td>需要城池、势力、区域、省份等作用域时写。</td></tr>
+          <tr><td><code>assets/GAS/abilities.json</code></td><td><code>showRequirement</code> / <code>useRequirement</code></td><td>需要控制按钮可见或可用时写。</td></tr>
+          <tr><td><code>assets/GAS/effects.json</code></td><td><code>presetType: CompleteTechnology</code></td><td>需要点击、事件或脚本完成科技时写。</td></tr>
+        </tbody>
+      </table>
+    </section>
+
+    <section id="scope">
+      <h2>先选 Scope</h2>
+      <p class="lead">作者最重要的决定不是“科技属于哪个 player”，而是“这个科技状态应该存在哪个实体上”。</p>
+      <table class="table">
+        <thead>
+          <tr><th>玩法需求</th><th>推荐 scope</th><th>科技状态放在哪里</th><th>作者提示</th></tr>
+        </thead>
+        <tbody>
+          <tr><td>建筑自己升级自己</td><td><code>self</code></td><td>建筑实体自己</td><td>给建筑模板加 <code>TechnologyStateBuffer: {}</code>，不需要 hostKey。</td></tr>
+          <tr><td>一个城池控制城内建筑可造什么兵</td><td><code>city</code></td><td>城池 scope host</td><td>城池是 host，兵营是 member，兵营绑定到该城池。</td></tr>
+          <tr><td>势力全局科技</td><td><code>faction</code></td><td>势力 scope host</td><td>势力 host 可以是真实君主/主城，也可以是不可见数据实体。</td></tr>
+          <tr><td>区域内有某英雄才解锁</td><td><code>region</code></td><td>区域 scope host</td><td>英雄和建筑都绑定到同一个 region；英雄 tag 可由模板、effect 或 runtime 授予。</td></tr>
+          <tr><td>省份、岛屿、战区共享科技</td><td><code>province</code> 或自定义 key</td><td>该区域的 scope host</td><td>按玩法语言命名，不要拿 map tag 临时切功能。</td></tr>
+          <tr><td>升级效果由外部 UI 指定目标</td><td><code>explicit</code></td><td><code>TargetContext</code> 指向的实体</td><td>只有当调用方能明确传入目标 scope host 时使用。</td></tr>
+        </tbody>
+      </table>
+
+      <div class="callout warning">
+        <strong>经验法则：</strong>能用 named scope 就优先用 named scope，例如 <code>city</code>、<code>faction</code>、<code>region</code>。<code>explicit</code> 很强，但作者必须保证 ability/effect 执行时真的带了 <code>TargetContext</code>。
+      </div>
+    </section>
+
+    <section id="recipes">
+      <h2>常见配方</h2>
+
+      <article class="recipe">
+        <h3>Case 1：城池科技解锁兵营训练</h3>
+        <p>目标：长安城完成“练兵”科技后，长安兵营的“训练民兵”按钮可用。</p>
+        <h4>1. 声明 city scope 和科技</h4>
+        <pre><code>// Technology/scopes.json
+[
+  { "id": "city" }
+]
+
+// Technology/technologies.json
+[
+  { "id": "Tech.City.Drill", "scope": "city" }
+]</code></pre>
+        <h4>2. 城池做 host，兵营绑定到城池</h4>
+        <pre><code>// Entities/templates.json
+{
+  "id": "city_chang_an_scope",
+  "components": {
+    "Name": { "Value": "Chang An City Scope" },
+    "TechnologyScopeHost": { "scope": "city", "hostKey": "chang_an" }
+  }
+}
+
+{
+  "id": "chang_an_barracks",
+  "components": {
+    "Name": { "Value": "Chang An Barracks" },
+    "AbilityStateBuffer": { "abilityIds": ["Ability.TrainMilitia"] },
+    "TechnologyScopeBinding": { "scope": "city", "hostKey": "chang_an" }
+  }
+}</code></pre>
+        <h4>3. 兵营按钮要求 city scope 已完成该科技</h4>
+        <pre><code>// Technology/requirements.json
+[
+  {
+    "id": "Req.City.Drill.Done",
+    "root": {
+      "kind": "TechCompleted",
+      "technology": "Tech.City.Drill",
+      "scope": "city",
+      "entitySource": "ScopeHost"
+    }
+  }
+]
+
+// GAS/abilities.json
+[
+  {
+    "id": "Ability.TrainMilitia",
+    "useRequirement": "Req.City.Drill.Done",
+    "exec": { "clockId": "FixedFrame", "items": [{ "kind": "End", "tick": 0 }] },
+    "presentation": { "displayName": "Train Militia", "iconGlyph": "MI" }
+  }
+]</code></pre>
+        <p class="small">按钮会显示，但科技未完成时不可用。想完全隐藏按钮，把 <code>useRequirement</code> 改成 <code>showRequirement</code>。</p>
+      </article>
+
+      <article class="recipe">
+        <h3>Case 2：势力科技解锁隐藏精锐单位</h3>
+        <p>目标：蜀势力完成“王命”前，精锐按钮不出现；完成后按钮才出现。</p>
+        <pre><code>// Technology/scopes.json
+[
+  { "id": "faction" }
+]
+
+// Technology/technologies.json
+[
+  { "id": "Tech.Faction.Mandate", "scope": "faction" }
+]
+
+// Entities/templates.json
+{
+  "id": "shu_faction_scope",
+  "components": {
+    "Name": { "Value": "Shu Faction Scope" },
+    "TechnologyScopeHost": { "scope": "faction", "hostKey": "shu" }
+  }
+}
+
+{
+  "id": "shu_barracks",
+  "components": {
+    "AbilityStateBuffer": { "abilityIds": ["Ability.RaiseElite"] },
+    "TechnologyScopeBinding": { "scope": "faction", "hostKey": "shu" }
+  }
+}</code></pre>
+        <pre><code>// Technology/requirements.json
+[
+  {
+    "id": "Req.Faction.Mandate.Done",
+    "root": {
+      "kind": "TechCompleted",
+      "technology": "Tech.Faction.Mandate",
+      "scope": "faction",
+      "entitySource": "ScopeHost"
+    }
+  }
+]
+
+// GAS/abilities.json
+[
+  {
+    "id": "Ability.RaiseElite",
+    "showRequirement": "Req.Faction.Mandate.Done",
+    "exec": { "clockId": "FixedFrame", "items": [{ "kind": "End", "tick": 0 }] },
+    "presentation": { "displayName": "Raise Elite", "iconGlyph": "EL" }
+  }
+]</code></pre>
+        <p class="small"><code>showRequirement</code> 对应“未研究前玩家不知道这项能力存在”的设计。需要让玩家看到目标但不能点，就用 <code>useRequirement</code>。</p>
+      </article>
+
+      <article class="recipe">
+        <h3>Case 3：同一区域有谋士英雄才解锁计略</h3>
+        <p>目标：荆州区域内有带 <code>Hero.Strategist</code> tag 的英雄时，该区域建筑可以使用“区域计略”。</p>
+        <pre><code>// Technology/scopes.json
+[
+  { "id": "region" }
+]
+
+// Entities/templates.json
+{
+  "id": "jing_region_scope",
+  "components": {
+    "Name": { "Value": "Jing Region Scope" },
+    "TechnologyScopeHost": { "scope": "region", "hostKey": "jing" }
+  }
+}
+
+{
+  "id": "jing_command_post",
+  "components": {
+    "AbilityStateBuffer": { "abilityIds": ["Ability.RegionStratagem"] },
+    "TechnologyScopeBinding": { "scope": "region", "hostKey": "jing" }
+  }
+}
+
+{
+  "id": "strategist_hero",
+  "components": {
+    "Name": { "Value": "Strategist Hero" },
+    "GameplayTagContainer": {},
+    "TagCountContainer": {},
+    "TechnologyScopeBinding": { "scope": "region", "hostKey": "jing" }
+  }
+}</code></pre>
+        <pre><code>// Technology/requirements.json
+[
+  {
+    "id": "Req.Region.HasStrategist",
+    "root": {
+      "kind": "EntityCount",
+      "scope": "region",
+      "entitySource": "ScopeMembers",
+      "count": 1,
+      "tags": ["Hero.Strategist"]
+    }
+  }
+]
+
+// GAS/abilities.json
+[
+  {
+    "id": "Ability.RegionStratagem",
+    "useRequirement": "Req.Region.HasStrategist",
+    "exec": { "clockId": "FixedFrame", "items": [{ "kind": "End", "tick": 0 }] },
+    "presentation": { "displayName": "Regional Stratagem", "iconGlyph": "ST" }
+  }
+]</code></pre>
+        <div class="callout">
+          <strong>tag 从哪里来：</strong>当前科技 requirement 只负责读取 tag。英雄 tag 可以由模板扩展、初始化 runtime、装备/状态 effect、剧情脚本等系统授予。showcase 验收测试里就是运行时给英雄加 <code>Hero.Showcase.Strategist</code> 后触发解锁。
+        </div>
+      </article>
+
+      <article class="recipe">
+        <h3>Case 4：省份物流科技解锁运输能力</h3>
+        <p>目标：关中省份完成“物流”科技后，省份内建筑可以使用运输队能力。</p>
+        <pre><code>// Technology/scopes.json
+[
+  { "id": "province" }
+]
+
+// Technology/technologies.json
+[
+  { "id": "Tech.Province.Logistics", "scope": "province" }
+]
+
+// Entities/templates.json
+{
+  "id": "guanzhong_province_scope",
+  "components": {
+    "Name": { "Value": "Guanzhong Province Scope" },
+    "TechnologyScopeHost": { "scope": "province", "hostKey": "guanzhong" }
+  }
+}
+
+{
+  "id": "guanzhong_depot",
+  "components": {
+    "AbilityStateBuffer": { "abilityIds": ["Ability.ProvinceConvoy"] },
+    "TechnologyScopeBinding": { "scope": "province", "hostKey": "guanzhong" }
+  }
+}</code></pre>
+        <pre><code>// Technology/requirements.json
+[
+  {
+    "id": "Req.Province.Logistics.Done",
+    "root": {
+      "kind": "TechCompleted",
+      "technology": "Tech.Province.Logistics",
+      "scope": "province",
+      "entitySource": "ScopeHost"
+    }
+  }
+]
+
+// GAS/abilities.json
+[
+  {
+    "id": "Ability.ProvinceConvoy",
+    "useRequirement": "Req.Province.Logistics.Done",
+    "exec": { "clockId": "FixedFrame", "items": [{ "kind": "End", "tick": 0 }] },
+    "presentation": { "displayName": "Province Convoy", "iconGlyph": "CV" }
+  }
+]</code></pre>
+      </article>
+
+      <article class="recipe">
+        <h3>Case 5：建筑本体升级</h3>
+        <p>目标：某个铁匠铺自己升到 2 级后，解锁高级打造按钮。这个 case 不需要城市、势力或区域 host。</p>
+        <pre><code>// Technology/technologies.json
+[
+  { "id": "Tech.Blacksmith.ForgeLevel", "scope": "self" }
+]
+
+// Entities/templates.json
+{
+  "id": "blacksmith",
+  "components": {
+    "Name": { "Value": "Blacksmith" },
+    "TechnologyStateBuffer": {},
+    "AbilityStateBuffer": {
+      "abilityIds": ["Ability.AdvancedForge"]
+    }
+  }
+}</code></pre>
+        <pre><code>// Technology/requirements.json
+[
+  {
+    "id": "Req.Blacksmith.ForgeLevel2",
+    "root": {
+      "kind": "TechLevelAtLeast",
+      "technology": "Tech.Blacksmith.ForgeLevel",
+      "scope": "self",
+      "level": 2,
+      "entitySource": "Subject"
+    }
+  }
+]
+
+// GAS/abilities.json
+[
+  {
+    "id": "Ability.AdvancedForge",
+    "useRequirement": "Req.Blacksmith.ForgeLevel2",
+    "exec": { "clockId": "FixedFrame", "items": [{ "kind": "End", "tick": 0 }] },
+    "presentation": { "displayName": "Advanced Forge", "iconGlyph": "AF" }
+  }
+]</code></pre>
+        <p class="small">如果 effect 要提升这个建筑自己的科技等级，用 <code>technology.scope: "self"</code>，并确保 effect 的 target 或 subject 就是该建筑。</p>
+      </article>
+
+      <article class="recipe">
+        <h3>Case 6：点击研究按钮完成科技</h3>
+        <p>目标：研究完成时，把科技写到某个 scope host 上。这里演示 effect 片段，按钮或触发器如何发出 effect 由具体 feature 决定。</p>
+        <pre><code>// GAS/effects.json
+[
+  {
+    "id": "Effect.CompleteCityDrill",
+    "tags": ["Effect.Tech"],
+    "presetType": "CompleteTechnology",
+    "lifetime": "Instant",
+    "participatesInResponse": false,
+    "technology": {
+      "id": "Tech.City.Drill",
+      "scope": "explicit",
+      "level": 1
+    }
+  }
+]</code></pre>
+        <p class="small">这里的 <code>explicit</code> 表示 effect 执行时必须把目标城池 host 作为 <code>TargetContext</code> 传进来。没有这个上下文时，不要用 <code>explicit</code>。</p>
+        <pre><code>// 如果研究按钮就在绑定了 city 的建筑上，也可以让 effect 用 named scope。
+{
+  "id": "Effect.CompleteCityDrillFromBarracks",
+  "tags": ["Effect.Tech"],
+  "presetType": "CompleteTechnology",
+  "lifetime": "Instant",
+  "participatesInResponse": false,
+  "technology": {
+    "id": "Tech.City.Drill",
+    "scope": "city",
+    "level": 1
+  }
+}</code></pre>
+      </article>
+
+      <article class="recipe">
+        <h3>Case 7：多个条件同时满足</h3>
+        <p>目标：需要“城池练兵科技完成”并且“区域内有谋士”才允许使用大计略。</p>
+        <pre><code>// Technology/requirements.json
+[
+  {
+    "id": "Req.GrandPlan.Use",
+    "root": {
+      "kind": "All",
+      "children": [
+        {
+          "kind": "TechCompleted",
+          "technology": "Tech.City.Drill",
+          "scope": "city",
+          "entitySource": "ScopeHost"
+        },
+        {
+          "kind": "EntityCount",
+          "scope": "region",
+          "entitySource": "ScopeMembers",
+          "count": 1,
+          "tags": ["Hero.Strategist"]
+        }
+      ]
+    }
+  }
+]</code></pre>
+        <p class="small">如果是“满足任意一个条件即可”，把 <code>kind</code> 从 <code>All</code> 改成 <code>Any</code>。如果要反向条件，用 <code>Not</code> 加一个 <code>child</code>。</p>
+      </article>
+    </section>
+
+    <section id="fields">
+      <h2>字段速查</h2>
+      <div class="grid two">
+        <div class="card">
+          <strong>TechnologyScopeHost</strong>
+          <p>写在保存科技状态的实体上。支持单项 <code>{ "scope": "...", "hostKey": "..." }</code>，也支持 <code>entries</code> 数组。</p>
+        </div>
+        <div class="card">
+          <strong>TechnologyScopeBinding</strong>
+          <p>写在要使用某个 scope 的实体上。一个建筑可以同时绑定 city、faction、region、province。</p>
+        </div>
+        <div class="card">
+          <strong>showRequirement</strong>
+          <p>控制按钮是否出现。失败时玩家看不到该按钮。</p>
+        </div>
+        <div class="card">
+          <strong>useRequirement</strong>
+          <p>控制按钮能否使用。失败时按钮可以显示，但不可用或执行失败。</p>
+        </div>
+      </div>
+
+      <h3>Requirement 节点</h3>
+      <table class="table">
+        <thead>
+          <tr><th>kind</th><th>常用字段</th><th>作者用途</th></tr>
+        </thead>
+        <tbody>
+          <tr><td><code>TechCompleted</code></td><td><code>technology</code>、<code>scope</code></td><td>某科技已完成。</td></tr>
+          <tr><td><code>TechLevelAtLeast</code></td><td><code>technology</code>、<code>scope</code>、<code>level</code></td><td>某科技达到指定等级。</td></tr>
+          <tr><td><code>EntityCount</code></td><td><code>scope</code>、<code>count</code>、<code>tags</code></td><td>同一 scope 内有多少个满足 tag 的实体。</td></tr>
+          <tr><td><code>TagAll</code></td><td><code>entitySource</code>、<code>tags</code></td><td>actor、subject 或 scope host 拥有全部 tag。</td></tr>
+          <tr><td><code>All</code></td><td><code>children</code></td><td>所有子条件都满足。</td></tr>
+          <tr><td><code>Any</code></td><td><code>children</code></td><td>任一子条件满足。</td></tr>
+          <tr><td><code>Not</code></td><td><code>child</code></td><td>反向条件。</td></tr>
+          <tr><td><code>GraphValidation</code></td><td><code>graph</code></td><td>复杂条件交给已有 condition func graph。</td></tr>
+        </tbody>
+      </table>
+
+      <h3>entitySource 怎么选</h3>
+      <table class="table">
+        <thead>
+          <tr><th>entitySource</th><th>检查谁</th><th>典型用途</th></tr>
+        </thead>
+        <tbody>
+          <tr><td><code>ScopeMembers</code></td><td>同一 scope 里的成员实体</td><td>区域内有没有英雄、城内有没有建筑。</td></tr>
+          <tr><td><code>ScopeHost</code></td><td>scope host 实体</td><td>城池本体、势力本体、省份本体是否有科技或 tag。</td></tr>
+          <tr><td><code>Actor</code></td><td>发起 ability/effect 的实体</td><td>施法者、按钮所属实体。</td></tr>
+          <tr><td><code>Subject</code></td><td>被检查或被作用的目标实体</td><td>目标单位、当前选择对象。</td></tr>
+        </tbody>
+      </table>
+    </section>
+
+    <section id="pitfalls">
+      <h2>避坑清单</h2>
+      <ul class="checklist">
+        <li><strong>不要用 map tag 当 feature 开关。</strong>一个 feature 一个 mod，一个 showcase 一个 map；map tag 只表达地图分类。</li>
+        <li><strong>不要再建 player 科技表。</strong>科技状态应该落在 entity 上：城池、势力、区域、建筑本体都可以是实体。</li>
+        <li><strong>不要随手用 explicit。</strong>只有调用方能提供 <code>TargetContext</code> 时才用 explicit；否则优先使用 named scope。</li>
+        <li><strong>hostKey 要稳定。</strong><code>city:chang_an</code>、<code>faction:shu</code> 这类 key 是配置身份，不要因为显示名变化而改。</li>
+        <li><strong>member 必须绑定到它要读取的 scope。</strong>兵营要读 city 科技，就要有 city binding；要读 faction 科技，就再加 faction binding。</li>
+        <li><strong>科技完成 effect 必须是 Instant。</strong><code>CompleteTechnology</code> 要配 <code>lifetime: "Instant"</code>，并显式写 <code>participatesInResponse</code>。</li>
+        <li><strong>多级升级用 level 或 delta，不要同时写。</strong><code>technology.level</code> 和 <code>technology.delta</code> 互斥。</li>
+        <li><strong>复杂条件先看是否能组合。</strong>能用 <code>All/Any/EntityCount/TechLevelAtLeast</code> 表达就不要上 graph；需要跨系统判断时再用 <code>GraphValidation</code>。</li>
+      </ul>
+      <div class="callout">
+        <strong>工程参考：</strong>需要看系统边界、缓存和 0alloc 策略时，读 <a href="entity_scoped_technology_tree_architecture_report.html">Entity-Scoped Technology Tree 架构汇报</a>。
+      </div>
+    </section>
+  </div>
+</body>
+</html>
