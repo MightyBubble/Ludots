@@ -5,7 +5,7 @@ using Ludots.Core.Components;
 using Ludots.Core.Gameplay.Components;
 using Ludots.Core.Gameplay.GAS.Components;
 using Ludots.Core.Gameplay.Spawning;
-using Ludots.Core.Gameplay.Technology;
+using Ludots.Core.Gameplay.Progression;
 using Ludots.Core.Mathematics;
 using Ludots.Core.Mathematics.FixedPoint;
 
@@ -28,7 +28,7 @@ namespace Ludots.Core.Gameplay.GAS
             registry.Register(BuiltinHandlerId.CreateUnit, HandleCreateUnit);
             registry.Register(BuiltinHandlerId.ApplyDisplacement, HandleApplyDisplacement);
             registry.Register(BuiltinHandlerId.ApplyRelation, HandleApplyRelation);
-            registry.Register(BuiltinHandlerId.CompleteTechnology, HandleCompleteTechnology);
+            registry.Register(BuiltinHandlerId.CompleteProgression, HandleCompleteProgression);
         }
 
         public static void HandleApplyModifiers(
@@ -390,36 +390,36 @@ namespace Ludots.Core.Gameplay.GAS
             }
         }
 
-        public static void HandleCompleteTechnology(
+        public static void HandleCompleteProgression(
             World world,
             Entity effectEntity,
             ref EffectContext context,
             in EffectConfigParams mergedParams,
             in EffectTemplateData templateData)
         {
-            if (templateData.TechnologyId <= 0)
+            if (templateData.ProgressionId <= 0)
             {
-                throw new InvalidOperationException("CompleteTechnology requires a valid technology id.");
+                throw new InvalidOperationException("CompleteProgression requires a valid progression id.");
             }
 
             var runtime = BuiltinHandlerRuntimeScope.Current;
-            if (runtime?.TechnologyEvaluator == null)
+            if (runtime?.ProgressionEvaluator == null)
             {
-                throw new InvalidOperationException("CompleteTechnology requires TechnologyRequirementEvaluator in BuiltinHandlerExecutionContext.");
+                throw new InvalidOperationException("CompleteProgression requires ProgressionRequirementEvaluator in BuiltinHandlerExecutionContext.");
             }
 
-            var evaluationContext = new TechnologyRequirementEvaluationContext(
+            var evaluationContext = new ProgressionRequirementEvaluationContext(
                 context.Source,
                 world.IsAlive(context.Target) ? context.Target : context.Source,
                 context.TargetContext);
-            if (!runtime.TechnologyEvaluator.TryResolveScopeHost(templateData.TechnologyScope, in evaluationContext, out Entity scopeHost))
+            if (!runtime.ProgressionEvaluator.TryResolveScopeHost(templateData.ProgressionScope, in evaluationContext, out Entity scopeHost))
             {
-                throw new InvalidOperationException("CompleteTechnology could not resolve its configured technology scope.");
+                throw new InvalidOperationException("CompleteProgression could not resolve its configured progression scope.");
             }
 
-            if (!runtime.TechnologyEvaluator.TryApply(scopeHost, templateData.TechnologyId, templateData.TechnologyChange))
+            if (!runtime.ProgressionEvaluator.TryApply(scopeHost, templateData.ProgressionId, templateData.ProgressionChange))
             {
-                throw new InvalidOperationException("CompleteTechnology requires the resolved scope host to author TechnologyStateBuffer before effects run.");
+                throw new InvalidOperationException("CompleteProgression requires the resolved scope host to author ProgressionStateBuffer before effects run.");
             }
         }
 

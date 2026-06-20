@@ -11,8 +11,8 @@ using Ludots.Core.Diagnostics;
 using Ludots.Core.Gameplay.GAS.Components;
 using Ludots.Core.Gameplay.GAS.Registry;
 using Ludots.Core.Gameplay.Spawning;
-using Ludots.Core.Gameplay.Technology.Components;
-using Ludots.Core.Gameplay.Technology.Registry;
+using Ludots.Core.Gameplay.Progression.Components;
+using Ludots.Core.Gameplay.Progression.Registry;
 using Ludots.Core.Mathematics;
 using Ludots.Core.Mathematics.FixedPoint;
 using Ludots.Core.Layers;
@@ -49,10 +49,10 @@ namespace Ludots.Core.Config
             Register("EntityLayer", SetEntityLayer, null, Component<Ludots.Core.Gameplay.Components.EntityLayer>.ComponentType);
             Register("AttributeBuffer", SetAttributeBuffer);
             Register("AbilityStateBuffer", SetAbilityStateBuffer);
-            Register("AbilityTechnologyRequirements", SetAbilityTechnologyRequirements);
-            Register("TechnologyStateBuffer", SetTechnologyStateBuffer);
-            Register("TechnologyScopeHost", SetTechnologyScopeHost);
-            Register("TechnologyScopeBinding", SetTechnologyScopeBinding);
+            Register("AbilityProgressionRequirements", SetAbilityProgressionRequirements);
+            Register("ProgressionStateBuffer", SetProgressionStateBuffer);
+            Register("ProgressionScopeHost", SetProgressionScopeHost);
+            Register("ProgressionScopeBinding", SetProgressionScopeBinding);
             Register("AbilityFormSetRef", SetAbilityFormSetRef);
             Register<ForceInput2D>("ForceInput2D");
             Register<GameplayTagContainer>("GameplayTagContainer");
@@ -408,53 +408,53 @@ namespace Ludots.Core.Config
             entity.Add(buffer);
         }
 
-        private static void SetAbilityTechnologyRequirements(Entity entity, JsonNode data)
+        private static void SetAbilityProgressionRequirements(Entity entity, JsonNode data)
         {
             if (data is not JsonObject obj)
             {
-                throw new InvalidOperationException("AbilityTechnologyRequirements requires an object payload.");
+                throw new InvalidOperationException("AbilityProgressionRequirements requires an object payload.");
             }
 
-            ValidateProperties(obj, "AbilityTechnologyRequirements", "useRequirement", "showRequirement");
-            var requirements = default(AbilityTechnologyRequirements);
+            ValidateProperties(obj, "AbilityProgressionRequirements", "useRequirement", "showRequirement");
+            var requirements = default(AbilityProgressionRequirements);
             if (obj.TryGetPropertyValue("useRequirement", out JsonNode useNode))
             {
-                string requirementName = ReadStringNode(useNode, "AbilityTechnologyRequirements.useRequirement");
-                requirements.UseRequirementId = ResolveTechnologyRequirementId(requirementName, "AbilityTechnologyRequirements.useRequirement");
+                string requirementName = ReadStringNode(useNode, "AbilityProgressionRequirements.useRequirement");
+                requirements.UseRequirementId = ResolveProgressionRequirementId(requirementName, "AbilityProgressionRequirements.useRequirement");
             }
 
             if (obj.TryGetPropertyValue("showRequirement", out JsonNode showNode))
             {
-                string requirementName = ReadStringNode(showNode, "AbilityTechnologyRequirements.showRequirement");
-                requirements.ShowRequirementId = ResolveTechnologyRequirementId(requirementName, "AbilityTechnologyRequirements.showRequirement");
+                string requirementName = ReadStringNode(showNode, "AbilityProgressionRequirements.showRequirement");
+                requirements.ShowRequirementId = ResolveProgressionRequirementId(requirementName, "AbilityProgressionRequirements.showRequirement");
             }
 
             entity.Add(requirements);
         }
 
-        private static void SetTechnologyStateBuffer(Entity entity, JsonNode data)
+        private static void SetProgressionStateBuffer(Entity entity, JsonNode data)
         {
-            RequireEmptyObject(data, "TechnologyStateBuffer");
-            entity.Add(new TechnologyStateBuffer());
+            RequireEmptyObject(data, "ProgressionStateBuffer");
+            entity.Add(new ProgressionStateBuffer());
         }
 
-        private static void SetTechnologyScopeHost(Entity entity, JsonNode data)
+        private static void SetProgressionScopeHost(Entity entity, JsonNode data)
         {
-            if (!entity.Has<TechnologyStateBuffer>())
+            if (!entity.Has<ProgressionStateBuffer>())
             {
-                entity.Add(new TechnologyStateBuffer());
+                entity.Add(new ProgressionStateBuffer());
             }
 
-            if (!entity.Has<TechnologyScopeMembershipRevision>())
+            if (!entity.Has<ProgressionScopeMembershipRevision>())
             {
-                entity.Add(new TechnologyScopeMembershipRevision());
+                entity.Add(new ProgressionScopeMembershipRevision());
             }
 
-            var authoring = entity.Has<TechnologyScopeHostAuthoring>()
-                ? entity.Get<TechnologyScopeHostAuthoring>()
+            var authoring = entity.Has<ProgressionScopeHostAuthoring>()
+                ? entity.Get<ProgressionScopeHostAuthoring>()
                 : default;
-            AddTechnologyScopeEntries(ref authoring, data, "TechnologyScopeHost");
-            if (entity.Has<TechnologyScopeHostAuthoring>())
+            AddProgressionScopeEntries(ref authoring, data, "ProgressionScopeHost");
+            if (entity.Has<ProgressionScopeHostAuthoring>())
             {
                 entity.Set(authoring);
             }
@@ -464,23 +464,23 @@ namespace Ludots.Core.Config
             }
         }
 
-        private static void SetTechnologyScopeBinding(Entity entity, JsonNode data)
+        private static void SetProgressionScopeBinding(Entity entity, JsonNode data)
         {
-            if (!entity.Has<TechnologyScopeRefBuffer>())
+            if (!entity.Has<ProgressionScopeRefBuffer>())
             {
-                entity.Add(new TechnologyScopeRefBuffer());
+                entity.Add(new ProgressionScopeRefBuffer());
             }
 
-            if (!entity.Has<TechnologyScopeMemberTag>())
+            if (!entity.Has<ProgressionScopeMemberTag>())
             {
-                entity.Add(new TechnologyScopeMemberTag());
+                entity.Add(new ProgressionScopeMemberTag());
             }
 
-            var authoring = entity.Has<TechnologyScopeBindingAuthoring>()
-                ? entity.Get<TechnologyScopeBindingAuthoring>()
+            var authoring = entity.Has<ProgressionScopeBindingAuthoring>()
+                ? entity.Get<ProgressionScopeBindingAuthoring>()
                 : default;
-            AddTechnologyScopeEntries(ref authoring, data, "TechnologyScopeBinding");
-            if (entity.Has<TechnologyScopeBindingAuthoring>())
+            AddProgressionScopeEntries(ref authoring, data, "ProgressionScopeBinding");
+            if (entity.Has<ProgressionScopeBindingAuthoring>())
             {
                 entity.Set(authoring);
             }
@@ -988,7 +988,7 @@ namespace Ludots.Core.Config
             return true;
         }
 
-        private static void AddTechnologyScopeEntries(ref TechnologyScopeHostAuthoring authoring, JsonNode data, string context)
+        private static void AddProgressionScopeEntries(ref ProgressionScopeHostAuthoring authoring, JsonNode data, string context)
         {
             if (data is not JsonObject obj)
             {
@@ -1010,16 +1010,16 @@ namespace Ludots.Core.Config
                         throw new InvalidOperationException($"{context}.entries[{i}] requires an object payload.");
                     }
 
-                    AddTechnologyScopeEntry(ref authoring, entryObj, $"{context}.entries[{i}]");
+                    AddProgressionScopeEntry(ref authoring, entryObj, $"{context}.entries[{i}]");
                 }
 
                 return;
             }
 
-            AddTechnologyScopeEntry(ref authoring, obj, context);
+            AddProgressionScopeEntry(ref authoring, obj, context);
         }
 
-        private static void AddTechnologyScopeEntries(ref TechnologyScopeBindingAuthoring authoring, JsonNode data, string context)
+        private static void AddProgressionScopeEntries(ref ProgressionScopeBindingAuthoring authoring, JsonNode data, string context)
         {
             if (data is not JsonObject obj)
             {
@@ -1041,43 +1041,43 @@ namespace Ludots.Core.Config
                         throw new InvalidOperationException($"{context}.entries[{i}] requires an object payload.");
                     }
 
-                    AddTechnologyScopeEntry(ref authoring, entryObj, $"{context}.entries[{i}]");
+                    AddProgressionScopeEntry(ref authoring, entryObj, $"{context}.entries[{i}]");
                 }
 
                 return;
             }
 
-            AddTechnologyScopeEntry(ref authoring, obj, context);
+            AddProgressionScopeEntry(ref authoring, obj, context);
         }
 
-        private static void AddTechnologyScopeEntry(ref TechnologyScopeHostAuthoring authoring, JsonObject obj, string context)
+        private static void AddProgressionScopeEntry(ref ProgressionScopeHostAuthoring authoring, JsonObject obj, string context)
         {
             ValidateProperties(obj, context, "scope", "hostKey");
             int scopeNameKeyId = ConfigKeyRegistry.Register(RequireStringProperty(obj, "scope", context));
             int hostKeyId = ConfigKeyRegistry.Register(RequireStringProperty(obj, "hostKey", context));
             if (!authoring.TryAdd(scopeNameKeyId, hostKeyId))
             {
-                throw new InvalidOperationException($"{context} exceeds TechnologyScopeHost capacity.");
+                throw new InvalidOperationException($"{context} exceeds ProgressionScopeHost capacity.");
             }
         }
 
-        private static void AddTechnologyScopeEntry(ref TechnologyScopeBindingAuthoring authoring, JsonObject obj, string context)
+        private static void AddProgressionScopeEntry(ref ProgressionScopeBindingAuthoring authoring, JsonObject obj, string context)
         {
             ValidateProperties(obj, context, "scope", "hostKey");
             int scopeNameKeyId = ConfigKeyRegistry.Register(RequireStringProperty(obj, "scope", context));
             int hostKeyId = ConfigKeyRegistry.Register(RequireStringProperty(obj, "hostKey", context));
             if (!authoring.TryAdd(scopeNameKeyId, hostKeyId))
             {
-                throw new InvalidOperationException($"{context} exceeds TechnologyScopeBinding capacity.");
+                throw new InvalidOperationException($"{context} exceeds ProgressionScopeBinding capacity.");
             }
         }
 
-        private static int ResolveTechnologyRequirementId(string requirementName, string context)
+        private static int ResolveProgressionRequirementId(string requirementName, string context)
         {
-            int requirementId = TechnologyRequirementIdRegistry.GetId(requirementName);
+            int requirementId = ProgressionRequirementIdRegistry.GetId(requirementName);
             if (requirementId <= 0)
             {
-                throw new InvalidOperationException($"{context} references unknown technology requirement '{requirementName}'.");
+                throw new InvalidOperationException($"{context} references unknown progression requirement '{requirementName}'.");
             }
 
             return requirementId;

@@ -1,8 +1,8 @@
-﻿using System;
+using System;
 using System.Collections.Generic;
 using Arch.Core;
 using Ludots.Core.Gameplay.Spawning;
-using Ludots.Core.Gameplay.Technology;
+using Ludots.Core.Gameplay.Progression;
 using Ludots.Core.Spatial;
 
 namespace Ludots.Core.Gameplay.GAS
@@ -19,7 +19,7 @@ namespace Ludots.Core.Gameplay.GAS
         public List<FanOutCommand>? FanOutCommands { get; set; }
         public Entity[]? ResolverBuffer { get; set; }
         public RuntimeEntitySpawnQueue? SpawnRequests { get; set; }
-        public TechnologyRequirementEvaluator? TechnologyEvaluator { get; set; }
+        public ProgressionRequirementEvaluator? ProgressionEvaluator { get; set; }
 
         public int ResolvedCandidateCount { get; private set; }
         public int DroppedCount { get; private set; }

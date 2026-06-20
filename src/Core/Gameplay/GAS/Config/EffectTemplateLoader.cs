@@ -7,8 +7,8 @@ using System.Text.Json.Serialization;
 using Ludots.Core.Config;
 using Ludots.Core.Gameplay.GAS.Components;
 using Ludots.Core.Gameplay.GAS.Registry;
-using Ludots.Core.Gameplay.Technology;
-using Ludots.Core.Gameplay.Technology.Registry;
+using Ludots.Core.Gameplay.Progression;
+using Ludots.Core.Gameplay.Progression.Registry;
 using Ludots.Core.Gameplay.Teams;
 using Ludots.Core.Layers;
 using Ludots.Core.NodeLibraries.GASGraph.Host;
@@ -21,8 +21,8 @@ namespace Ludots.Core.Gameplay.GAS.Config
         private readonly EffectTemplateRegistry _registry;
         private readonly GasConditionRegistry _conditions;
         private readonly TargetDispatchPresetRegistry _targetDispatchPresets;
-        private readonly TechnologyScopeKeyRegistry? _technologyScopeKeys;
-        private readonly TechnologyDefinitionRegistry? _technologyDefinitions;
+        private readonly ProgressionScopeKeyRegistry? _progressionScopeKeys;
+        private readonly ProgressionDefinitionRegistry? _progressionDefinitions;
 
         private static readonly JsonSerializerOptions JsonOptions = new()
         {
@@ -37,15 +37,15 @@ namespace Ludots.Core.Gameplay.GAS.Config
             EffectTemplateRegistry registry,
             GasConditionRegistry conditions = null,
             TargetDispatchPresetRegistry targetDispatchPresets = null,
-            TechnologyScopeKeyRegistry? technologyScopeKeys = null,
-            TechnologyDefinitionRegistry? technologyDefinitions = null)
+            ProgressionScopeKeyRegistry? progressionScopeKeys = null,
+            ProgressionDefinitionRegistry? progressionDefinitions = null)
         {
             _pipeline = pipeline;
             _registry = registry;
             _conditions = conditions;
             _targetDispatchPresets = targetDispatchPresets;
-            _technologyScopeKeys = technologyScopeKeys;
-            _technologyDefinitions = technologyDefinitions;
+            _progressionScopeKeys = progressionScopeKeys;
+            _progressionDefinitions = progressionDefinitions;
         }
 
         public void Load(
@@ -266,9 +266,9 @@ namespace Ludots.Core.Gameplay.GAS.Config
             var unitCreation = CompileUnitCreation(cfg.UnitCreation, cfg.Id, relativePath);
             var displacement = CompileDisplacement(cfg.Displacement, cfg.Id, relativePath);
             var relation = CompileRelation(cfg.Relation, cfg.Id, relativePath);
-            var technologyScope = TechnologyScopeSpec.Self;
-            var technologyChange = TechnologyLevelChange.Complete;
-            int technologyId = 0;
+            var progressionScope = ProgressionScopeSpec.Self;
+            var progressionChange = ProgressionLevelChange.Complete;
+            int progressionId = 0;
 
             if (cfg.Displacement != null && presetType != EffectPresetType.Displacement)
             {
@@ -308,34 +308,34 @@ namespace Ludots.Core.Gameplay.GAS.Config
                 }
             }
 
-            if (cfg.Technology != null && presetType != EffectPresetType.CompleteTechnology)
+            if (cfg.Progression != null && presetType != EffectPresetType.CompleteProgression)
             {
                 throw new InvalidOperationException(
-                    $"Effect template '{cfg.Id}' in {relativePath}: 'technology' block is only valid when presetType=CompleteTechnology.");
+                    $"Effect template '{cfg.Id}' in {relativePath}: 'progression' block is only valid when presetType=CompleteProgression.");
             }
-            if (presetType == EffectPresetType.CompleteTechnology)
+            if (presetType == EffectPresetType.CompleteProgression)
             {
                 if (lifetimeKind != EffectLifetimeKind.Instant)
                 {
                     throw new InvalidOperationException(
-                        $"Effect template '{cfg.Id}' in {relativePath}: presetType CompleteTechnology requires lifetime=Instant.");
+                        $"Effect template '{cfg.Id}' in {relativePath}: presetType CompleteProgression requires lifetime=Instant.");
                 }
-                if (cfg.Technology == null)
+                if (cfg.Progression == null)
                 {
                     throw new InvalidOperationException(
-                        $"Effect template '{cfg.Id}' in {relativePath}: presetType CompleteTechnology requires a 'technology' block.");
+                        $"Effect template '{cfg.Id}' in {relativePath}: presetType CompleteProgression requires a 'progression' block.");
                 }
 
-                string techName = RequireString(cfg.Technology.Id, cfg.Id, relativePath, "technology.id");
-                technologyId = TechnologyIdRegistry.GetId(techName);
-                if (technologyId <= 0)
+                string progressionName = RequireString(cfg.Progression.Id, cfg.Id, relativePath, "progression.id");
+                progressionId = ProgressionIdRegistry.GetId(progressionName);
+                if (progressionId <= 0)
                 {
                     throw new InvalidOperationException(
-                        $"Effect template '{cfg.Id}' in {relativePath}: technology.id '{techName}' is not registered.");
+                        $"Effect template '{cfg.Id}' in {relativePath}: progression.id '{progressionName}' is not registered.");
                 }
 
-                technologyScope = ResolveTechnologyScope(cfg.Technology.Scope, technologyId, cfg.Id, relativePath);
-                technologyChange = CompileTechnologyChange(cfg.Technology, cfg.Id, relativePath);
+                progressionScope = ResolveProgressionScope(cfg.Progression.Scope, progressionId, cfg.Id, relativePath);
+                progressionChange = CompileProgressionChange(cfg.Progression, cfg.Id, relativePath);
             }
 
             if (cfg.Projectile != null && presetType != EffectPresetType.LaunchProjectile)
@@ -396,9 +396,9 @@ namespace Ludots.Core.Gameplay.GAS.Config
                 UnitCreation = unitCreation,
                 Displacement = displacement,
                 Relation = relation,
-                TechnologyScope = technologyScope,
-                TechnologyChange = technologyChange,
-                TechnologyId = technologyId,
+                ProgressionScope = progressionScope,
+                ProgressionChange = progressionChange,
+                ProgressionId = progressionId,
                 PhaseGraphBindings = behaviorTemplate,
                 ConfigParams = configParams,
                 ListenerSetup = listenerSetup,
@@ -994,51 +994,51 @@ namespace Ludots.Core.Gameplay.GAS.Config
             _ => throw new InvalidOperationException($"Unknown GasClockId '{value}'. Supported: FixedFrame, Step, Turn."),
         };
 
-        private TechnologyScopeSpec ResolveTechnologyScope(string? rawValue, int technologyId, string effectId, string path)
+        private ProgressionScopeSpec ResolveProgressionScope(string? rawValue, int progressionId, string effectId, string path)
         {
             if (string.IsNullOrWhiteSpace(rawValue))
             {
-                return _technologyDefinitions != null &&
-                       technologyId > 0 &&
-                       _technologyDefinitions.TryGet(technologyId, out var definition)
+                return _progressionDefinitions != null &&
+                       progressionId > 0 &&
+                       _progressionDefinitions.TryGet(progressionId, out var definition)
                     ? definition.DefaultScope
-                    : TechnologyScopeSpec.Self;
+                    : ProgressionScopeSpec.Self;
             }
 
-            return ParseTechnologyScope(rawValue.Trim(), effectId, path);
+            return ParseProgressionScope(rawValue.Trim(), effectId, path);
         }
 
-        private TechnologyScopeSpec ParseTechnologyScope(string value, string effectId, string path)
+        private ProgressionScopeSpec ParseProgressionScope(string value, string effectId, string path)
         {
-            if (_technologyScopeKeys == null)
+            if (_progressionScopeKeys == null)
             {
                 throw new InvalidOperationException(
-                    $"Effect template '{effectId}' in {path}: technology.scope requires TechnologyScopeKeyRegistry.");
+                    $"Effect template '{effectId}' in {path}: progression.scope requires ProgressionScopeKeyRegistry.");
             }
 
             switch (value)
             {
                 case "self":
-                    return TechnologyScopeSpec.Self;
+                    return ProgressionScopeSpec.Self;
                 case "explicit":
-                    return new TechnologyScopeSpec(TechnologyScopeKind.Explicit);
+                    return new ProgressionScopeSpec(ProgressionScopeKind.Explicit);
                 default:
-                    if (_technologyScopeKeys.TryGetId(value, out int scopeKeyId) && scopeKeyId > 0)
+                    if (_progressionScopeKeys.TryGetId(value, out int scopeKeyId) && scopeKeyId > 0)
                     {
-                        return new TechnologyScopeSpec(TechnologyScopeKind.Named, scopeKeyId);
+                        return new ProgressionScopeSpec(ProgressionScopeKind.Named, scopeKeyId);
                     }
 
                     throw new InvalidOperationException(
-                        $"Effect template '{effectId}' in {path}: technology.scope '{value}' is not registered by Technology config.");
+                        $"Effect template '{effectId}' in {path}: progression.scope '{value}' is not registered by Progression config.");
             }
         }
 
-        private static TechnologyLevelChange CompileTechnologyChange(TechnologyCompletionConfig cfg, string effectId, string path)
+        private static ProgressionLevelChange CompileProgressionChange(ProgressionCompletionConfig cfg, string effectId, string path)
         {
             if (cfg.Level.HasValue && cfg.Delta.HasValue)
             {
                 throw new InvalidOperationException(
-                    $"Effect template '{effectId}' in {path}: technology.level and technology.delta are mutually exclusive.");
+                    $"Effect template '{effectId}' in {path}: progression.level and progression.delta are mutually exclusive.");
             }
 
             if (cfg.Level.HasValue)
@@ -1047,10 +1047,10 @@ namespace Ludots.Core.Gameplay.GAS.Config
                 if (level <= 0)
                 {
                     throw new InvalidOperationException(
-                        $"Effect template '{effectId}' in {path}: technology.level must be greater than zero.");
+                        $"Effect template '{effectId}' in {path}: progression.level must be greater than zero.");
                 }
 
-                return new TechnologyLevelChange(level, 0);
+                return new ProgressionLevelChange(level, 0);
             }
 
             if (cfg.Delta.HasValue)
@@ -1059,13 +1059,13 @@ namespace Ludots.Core.Gameplay.GAS.Config
                 if (delta <= 0)
                 {
                     throw new InvalidOperationException(
-                        $"Effect template '{effectId}' in {path}: technology.delta must be greater than zero.");
+                        $"Effect template '{effectId}' in {path}: progression.delta must be greater than zero.");
                 }
 
-                return new TechnologyLevelChange(0, delta);
+                return new ProgressionLevelChange(0, delta);
             }
 
-            return TechnologyLevelChange.Complete;
+            return ProgressionLevelChange.Complete;
         }
 
         private static TargetQueryDescriptor CompileTargetQuery(TargetQueryConfig cfg, string effectId, string path)

@@ -139,10 +139,10 @@ namespace Ludots.Core.Gameplay.GAS
         public bool HasInputBindingOverride;
         public AbilityInputBindingOverride InputBindingOverride;
 
-        public int UseTechnologyRequirementId;
-        public bool HasUseTechnologyRequirement;
-        public int ShowTechnologyRequirementId;
-        public bool HasShowTechnologyRequirement;
+        public int UseProgressionRequirementId;
+        public bool HasUseProgressionRequirement;
+        public int ShowProgressionRequirementId;
+        public bool HasShowProgressionRequirement;
     }
 
     public sealed class AbilityDefinitionRegistry
@@ -225,19 +225,19 @@ namespace Ludots.Core.Gameplay.GAS
             {
                 def.ActivationPrecondition = world.Get<AbilityActivationPrecondition>(templateEntity);
             }
-            if (world.Has<AbilityTechnologyRequirements>(templateEntity))
+            if (world.Has<AbilityProgressionRequirements>(templateEntity))
             {
-                var requirements = world.Get<AbilityTechnologyRequirements>(templateEntity);
+                var requirements = world.Get<AbilityProgressionRequirements>(templateEntity);
                 if (requirements.UseRequirementId > 0)
                 {
-                    def.UseTechnologyRequirementId = requirements.UseRequirementId;
-                    def.HasUseTechnologyRequirement = true;
+                    def.UseProgressionRequirementId = requirements.UseRequirementId;
+                    def.HasUseProgressionRequirement = true;
                 }
 
                 if (requirements.ShowRequirementId > 0)
                 {
-                    def.ShowTechnologyRequirementId = requirements.ShowRequirementId;
-                    def.HasShowTechnologyRequirement = true;
+                    def.ShowProgressionRequirementId = requirements.ShowRequirementId;
+                    def.HasShowProgressionRequirement = true;
                 }
             }
             Register(abilityId, in def);

@@ -7,7 +7,7 @@ using Ludots.Core.Gameplay.GAS;
 using Ludots.Core.Gameplay.GAS.Components;
 using Ludots.Core.Gameplay.GAS.Registry;
 using Ludots.Core.Gameplay.GAS.Orders;
-using Ludots.Core.Gameplay.Technology;
+using Ludots.Core.Gameplay.Progression;
 using Ludots.Core.Input.Orders;
 using Ludots.Core.Scripting;
 using Ludots.Core.UI.EntityCommandPanels;
@@ -21,7 +21,7 @@ namespace EntityCommandPanelMod.Runtime
         private readonly AbilityDefinitionRegistry? _abilityDefinitions;
         private readonly EffectTemplateRegistry? _effectTemplates;
         private readonly OrderTypeRegistry? _orderTypes;
-        private readonly TechnologyRequirementEvaluator? _technologyRequirements;
+        private readonly ProgressionRequirementEvaluator? _progressionRequirements;
         private readonly IClock? _clock;
 
         public GasEntityCommandPanelSource(GameEngine engine)
@@ -30,7 +30,7 @@ namespace EntityCommandPanelMod.Runtime
             _abilityDefinitions = engine.GetService(CoreServiceKeys.AbilityDefinitionRegistry);
             _effectTemplates = engine.GetService(CoreServiceKeys.EffectTemplateRegistry);
             _orderTypes = engine.GetService(CoreServiceKeys.OrderTypeRegistry);
-            _technologyRequirements = engine.GetService(CoreServiceKeys.TechnologyRequirementEvaluator);
+            _progressionRequirements = engine.GetService(CoreServiceKeys.ProgressionRequirementEvaluator);
             _clock = engine.GetService(CoreServiceKeys.Clock);
         }
 
@@ -81,7 +81,7 @@ namespace EntityCommandPanelMod.Runtime
                     revision = HashCombine(revision, (uint)_engine.World.Get<AbilityFormSetRef>(target).FormSetId);
                 }
 
-                revision = HashTechnologyRequirementRevisions(revision, target, in baseSlots);
+                revision = HashProgressionRequirementRevisions(revision, target, in baseSlots);
             }
 
             if (_engine.World.Has<AbilityExecInstance>(target))
@@ -352,20 +352,20 @@ namespace EntityCommandPanelMod.Runtime
                     abilityDefinitions != null &&
                     abilityDefinitions.TryGet(effective.AbilityId, out abilityDefinition);
                 Entity templateEntity = ResolveTemplateEntity(in effective);
-                var technologyPreview = EvaluateTechnologyPreview(target, target, default, hasAbilityDefinition, in abilityDefinition, templateEntity);
-                if (technologyPreview.Show == TechnologyRequirementPreviewResult.Failed)
+                var progressionPreview = EvaluateProgressionPreview(target, target, default, hasAbilityDefinition, in abilityDefinition, templateEntity);
+                if (progressionPreview.Show == ProgressionRequirementPreviewResult.Failed)
                 {
                     destination[slotIndex] = BuildEmptySlot(slotIndex, actionId);
                     continue;
                 }
 
-                if (technologyPreview.Show == TechnologyRequirementPreviewResult.Deferred ||
-                    technologyPreview.Use == TechnologyRequirementPreviewResult.Deferred)
+                if (progressionPreview.Show == ProgressionRequirementPreviewResult.Deferred ||
+                    progressionPreview.Use == ProgressionRequirementPreviewResult.Deferred)
                 {
                     flags |= EntityCommandSlotStateFlags.PendingTarget;
                 }
 
-                if (technologyPreview.Use == TechnologyRequirementPreviewResult.Failed)
+                if (progressionPreview.Use == ProgressionRequirementPreviewResult.Failed)
                 {
                     flags |= EntityCommandSlotStateFlags.Blocked;
                 }
@@ -438,7 +438,7 @@ namespace EntityCommandPanelMod.Runtime
                 actionId);
         }
 
-        private TechnologyRequirementPreview EvaluateTechnologyPreview(
+        private ProgressionRequirementPreview EvaluateProgressionPreview(
             Entity actor,
             Entity subject,
             Entity explicitScopeHost,
@@ -446,93 +446,93 @@ namespace EntityCommandPanelMod.Runtime
             in AbilityDefinition definition,
             Entity templateEntity)
         {
-            var preview = new TechnologyRequirementPreview
+            var preview = new ProgressionRequirementPreview
             {
                 Show = hasAbilityDefinition
-                    ? EvaluateTechnologyShowRequirement(actor, subject, explicitScopeHost, in definition)
-                    : TechnologyRequirementPreviewResult.Satisfied,
+                    ? EvaluateProgressionShowRequirement(actor, subject, explicitScopeHost, in definition)
+                    : ProgressionRequirementPreviewResult.Satisfied,
                 Use = hasAbilityDefinition
-                    ? EvaluateTechnologyUseRequirement(actor, subject, explicitScopeHost, in definition)
-                    : TechnologyRequirementPreviewResult.Satisfied
+                    ? EvaluateProgressionUseRequirement(actor, subject, explicitScopeHost, in definition)
+                    : ProgressionRequirementPreviewResult.Satisfied
             };
 
             if (_engine.World.IsAlive(templateEntity) &&
-                _engine.World.Has<AbilityTechnologyRequirements>(templateEntity))
+                _engine.World.Has<AbilityProgressionRequirements>(templateEntity))
             {
-                ref readonly var requirements = ref _engine.World.Get<AbilityTechnologyRequirements>(templateEntity);
-                preview.Show = CombinePreview(preview.Show, EvaluateTechnologyRequirement(actor, subject, explicitScopeHost, requirements.ShowRequirementId));
-                preview.Use = CombinePreview(preview.Use, EvaluateTechnologyRequirement(actor, subject, explicitScopeHost, requirements.UseRequirementId));
+                ref readonly var requirements = ref _engine.World.Get<AbilityProgressionRequirements>(templateEntity);
+                preview.Show = CombinePreview(preview.Show, EvaluateProgressionRequirement(actor, subject, explicitScopeHost, requirements.ShowRequirementId));
+                preview.Use = CombinePreview(preview.Use, EvaluateProgressionRequirement(actor, subject, explicitScopeHost, requirements.UseRequirementId));
             }
 
             return preview;
         }
 
-        private static TechnologyRequirementPreviewResult CombinePreview(
-            TechnologyRequirementPreviewResult current,
-            TechnologyRequirementPreviewResult next)
+        private static ProgressionRequirementPreviewResult CombinePreview(
+            ProgressionRequirementPreviewResult current,
+            ProgressionRequirementPreviewResult next)
         {
-            if (current == TechnologyRequirementPreviewResult.Failed ||
-                next == TechnologyRequirementPreviewResult.Failed)
+            if (current == ProgressionRequirementPreviewResult.Failed ||
+                next == ProgressionRequirementPreviewResult.Failed)
             {
-                return TechnologyRequirementPreviewResult.Failed;
+                return ProgressionRequirementPreviewResult.Failed;
             }
 
-            if (current == TechnologyRequirementPreviewResult.Deferred ||
-                next == TechnologyRequirementPreviewResult.Deferred)
+            if (current == ProgressionRequirementPreviewResult.Deferred ||
+                next == ProgressionRequirementPreviewResult.Deferred)
             {
-                return TechnologyRequirementPreviewResult.Deferred;
+                return ProgressionRequirementPreviewResult.Deferred;
             }
 
-            return TechnologyRequirementPreviewResult.Satisfied;
+            return ProgressionRequirementPreviewResult.Satisfied;
         }
 
-        private TechnologyRequirementPreviewResult EvaluateTechnologyShowRequirement(Entity actor, Entity subject, Entity explicitScopeHost, in AbilityDefinition definition)
+        private ProgressionRequirementPreviewResult EvaluateProgressionShowRequirement(Entity actor, Entity subject, Entity explicitScopeHost, in AbilityDefinition definition)
         {
-            if (!definition.HasShowTechnologyRequirement)
+            if (!definition.HasShowProgressionRequirement)
             {
-                return TechnologyRequirementPreviewResult.Satisfied;
+                return ProgressionRequirementPreviewResult.Satisfied;
             }
 
-            return EvaluateTechnologyRequirement(actor, subject, explicitScopeHost, definition.ShowTechnologyRequirementId);
+            return EvaluateProgressionRequirement(actor, subject, explicitScopeHost, definition.ShowProgressionRequirementId);
         }
 
-        private TechnologyRequirementPreviewResult EvaluateTechnologyUseRequirement(Entity actor, Entity subject, Entity explicitScopeHost, in AbilityDefinition definition)
+        private ProgressionRequirementPreviewResult EvaluateProgressionUseRequirement(Entity actor, Entity subject, Entity explicitScopeHost, in AbilityDefinition definition)
         {
-            if (!definition.HasUseTechnologyRequirement)
+            if (!definition.HasUseProgressionRequirement)
             {
-                return TechnologyRequirementPreviewResult.Satisfied;
+                return ProgressionRequirementPreviewResult.Satisfied;
             }
 
-            return EvaluateTechnologyRequirement(actor, subject, explicitScopeHost, definition.UseTechnologyRequirementId);
+            return EvaluateProgressionRequirement(actor, subject, explicitScopeHost, definition.UseProgressionRequirementId);
         }
 
-        private TechnologyRequirementPreviewResult EvaluateTechnologyRequirement(Entity actor, Entity subject, Entity explicitScopeHost, int requirementId)
+        private ProgressionRequirementPreviewResult EvaluateProgressionRequirement(Entity actor, Entity subject, Entity explicitScopeHost, int requirementId)
         {
             if (requirementId <= 0)
             {
-                return TechnologyRequirementPreviewResult.Satisfied;
+                return ProgressionRequirementPreviewResult.Satisfied;
             }
 
-            TechnologyRequirementEvaluator evaluator = RequireTechnologyRequirements();
+            ProgressionRequirementEvaluator evaluator = RequireProgressionRequirements();
             if (!_engine.World.IsAlive(explicitScopeHost) && evaluator.RequiresExplicitScope(requirementId))
             {
-                return TechnologyRequirementPreviewResult.Deferred;
+                return ProgressionRequirementPreviewResult.Deferred;
             }
 
-            var context = new TechnologyRequirementEvaluationContext(actor, subject, explicitScopeHost);
+            var context = new ProgressionRequirementEvaluationContext(actor, subject, explicitScopeHost);
             return evaluator.Evaluate(requirementId, in context)
-                ? TechnologyRequirementPreviewResult.Satisfied
-                : TechnologyRequirementPreviewResult.Failed;
+                ? ProgressionRequirementPreviewResult.Satisfied
+                : ProgressionRequirementPreviewResult.Failed;
         }
 
-        private TechnologyRequirementEvaluator RequireTechnologyRequirements()
+        private ProgressionRequirementEvaluator RequireProgressionRequirements()
         {
-            if (_technologyRequirements == null)
+            if (_progressionRequirements == null)
             {
-                throw new InvalidOperationException("Ability technology requirement is configured, but TechnologyRequirementEvaluator is not registered.");
+                throw new InvalidOperationException("Ability progression requirement is configured, but ProgressionRequirementEvaluator is not registered.");
             }
 
-            return _technologyRequirements;
+            return _progressionRequirements;
         }
 
         private static string ResolveAbilityInteractionModeKey(string interactionModeKey, in AbilityDefinition abilityDefinition)
@@ -622,7 +622,7 @@ namespace EntityCommandPanelMod.Runtime
                 return false;
             }
 
-            if (!CanActivateTechnologyRequirement(target, slotIndex))
+            if (!CanActivateProgressionRequirement(target, slotIndex))
             {
                 return false;
             }
@@ -642,7 +642,7 @@ namespace EntityCommandPanelMod.Runtime
             return inputMapping.TryActivateMappedAction(actionId, preferUiAiming: true);
         }
 
-        private bool CanActivateTechnologyRequirement(Entity target, int slotIndex)
+        private bool CanActivateProgressionRequirement(Entity target, int slotIndex)
         {
             ref readonly var baseSlots = ref _engine.World.Get<AbilityStateBuffer>(target);
             AbilitySlotState slot = ResolveEffectiveSlot(target, in baseSlots, slotIndex);
@@ -652,9 +652,9 @@ namespace EntityCommandPanelMod.Runtime
                 _abilityDefinitions != null &&
                 _abilityDefinitions.TryGet(slot.AbilityId, out definition);
 
-            var preview = EvaluateTechnologyPreview(target, target, default, hasDefinition, in definition, templateEntity);
-            return preview.Show != TechnologyRequirementPreviewResult.Failed &&
-                   preview.Use != TechnologyRequirementPreviewResult.Failed;
+            var preview = EvaluateProgressionPreview(target, target, default, hasDefinition, in definition, templateEntity);
+            return preview.Show != ProgressionRequirementPreviewResult.Failed &&
+                   preview.Use != ProgressionRequirementPreviewResult.Failed;
         }
 
         private bool TryBuildAbilityStatus(Entity target, out EntityCommandPanelStatusView status)
@@ -1335,9 +1335,9 @@ namespace EntityCommandPanelMod.Runtime
             return (short)Math.Clamp(value, 0, 1000);
         }
 
-        private uint HashTechnologyRequirementRevisions(uint current, Entity target, in AbilityStateBuffer baseSlots)
+        private uint HashProgressionRequirementRevisions(uint current, Entity target, in AbilityStateBuffer baseSlots)
         {
-            if (_technologyRequirements == null)
+            if (_progressionRequirements == null)
             {
                 return current;
             }
@@ -1352,42 +1352,42 @@ namespace EntityCommandPanelMod.Runtime
                     _abilityDefinitions != null &&
                     _abilityDefinitions.TryGet(slot.AbilityId, out definition);
 
-                var context = new TechnologyRequirementEvaluationContext(target, target);
-                if (hasDefinition && definition.HasShowTechnologyRequirement)
+                var context = new ProgressionRequirementEvaluationContext(target, target);
+                if (hasDefinition && definition.HasShowProgressionRequirement)
                 {
-                    current = HashTechnologyRequirementRevision(current, definition.ShowTechnologyRequirementId, in context);
+                    current = HashProgressionRequirementRevision(current, definition.ShowProgressionRequirementId, in context);
                 }
 
-                if (hasDefinition && definition.HasUseTechnologyRequirement)
+                if (hasDefinition && definition.HasUseProgressionRequirement)
                 {
-                    current = HashTechnologyRequirementRevision(current, definition.UseTechnologyRequirementId, in context);
+                    current = HashProgressionRequirementRevision(current, definition.UseProgressionRequirementId, in context);
                 }
 
                 if (_engine.World.IsAlive(templateEntity) &&
-                    _engine.World.Has<AbilityTechnologyRequirements>(templateEntity))
+                    _engine.World.Has<AbilityProgressionRequirements>(templateEntity))
                 {
-                    ref readonly var requirements = ref _engine.World.Get<AbilityTechnologyRequirements>(templateEntity);
-                    current = HashTechnologyRequirementRevision(current, requirements.ShowRequirementId, in context);
-                    current = HashTechnologyRequirementRevision(current, requirements.UseRequirementId, in context);
+                    ref readonly var requirements = ref _engine.World.Get<AbilityProgressionRequirements>(templateEntity);
+                    current = HashProgressionRequirementRevision(current, requirements.ShowRequirementId, in context);
+                    current = HashProgressionRequirementRevision(current, requirements.UseRequirementId, in context);
                 }
             }
 
             return current;
         }
 
-        private uint HashTechnologyRequirementRevision(uint current, int requirementId, in TechnologyRequirementEvaluationContext context)
+        private uint HashProgressionRequirementRevision(uint current, int requirementId, in ProgressionRequirementEvaluationContext context)
         {
-            if (requirementId <= 0 || _technologyRequirements == null)
+            if (requirementId <= 0 || _progressionRequirements == null)
             {
                 return current;
             }
 
-            current = HashCombine(current, _technologyRequirements.ComputeScopeRevision(requirementId, in context));
-            if (_technologyRequirements.UsesGraphValidation(requirementId))
+            current = HashCombine(current, _progressionRequirements.ComputeScopeRevision(requirementId, in context));
+            if (_progressionRequirements.UsesGraphValidation(requirementId))
             {
                 if (_clock == null)
                 {
-                    throw new InvalidOperationException("Graph-backed technology command requirements require the engine clock for UI cache invalidation.");
+                    throw new InvalidOperationException("Graph-backed progression command requirements require the engine clock for UI cache invalidation.");
                 }
 
                 current = HashCombine(current, (uint)_clock.Now(ClockDomainId.FixedFrame));
@@ -1537,17 +1537,17 @@ namespace EntityCommandPanelMod.Runtime
             Granted
         }
 
-        private enum TechnologyRequirementPreviewResult : byte
+        private enum ProgressionRequirementPreviewResult : byte
         {
             Satisfied,
             Failed,
             Deferred
         }
 
-        private struct TechnologyRequirementPreview
+        private struct ProgressionRequirementPreview
         {
-            public TechnologyRequirementPreviewResult Show;
-            public TechnologyRequirementPreviewResult Use;
+            public ProgressionRequirementPreviewResult Show;
+            public ProgressionRequirementPreviewResult Use;
         }
     }
 }

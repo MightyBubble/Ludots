@@ -56,10 +56,10 @@
       "buildMode": "auto"
     },
     {
-      "id": "tech_tree_scope_raylib",
-      "name": "Tech Tree Scope Raylib",
+      "id": "progression_scope_raylib",
+      "name": "Progression Scope Raylib",
       "selectors": [
-        "$tech_tree_scope"
+        "$progression_scope"
       ],
       "adapterId": "raylib",
       "buildMode": "auto"

@@ -76,9 +76,9 @@ using Ludots.Core.Navigation.Pathing.Config;
 using Ludots.Core.Registry;
 using Ludots.Core.Gameplay.Items;
 using Ludots.Core.Hosting;
-using Ludots.Core.Gameplay.Technology;
-using Ludots.Core.Gameplay.Technology.Config;
-using Ludots.Core.Gameplay.Technology.Systems;
+using Ludots.Core.Gameplay.Progression;
+using Ludots.Core.Gameplay.Progression.Config;
+using Ludots.Core.Gameplay.Progression.Systems;
 
 namespace Ludots.Core.Engine
 {
@@ -561,9 +561,9 @@ namespace Ludots.Core.Engine
             effectTemplateRegistry.SetConflictReport(ConflictReport);
             var gasConditions = new GasConditionRegistry();
             var targetDispatchPresetRegistry = new TargetDispatchPresetRegistry();
-            var technologyDefinitions = new TechnologyDefinitionRegistry();
-            var technologyRequirements = new TechnologyRequirementRegistry();
-            var technologyScopeKeys = new TechnologyScopeKeyRegistry();
+            var progressionDefinitions = new ProgressionDefinitionRegistry();
+            var progressionRequirements = new ProgressionRequirementRegistry();
+            var progressionScopeKeys = new ProgressionScopeKeyRegistry();
             var targetDispatchPresetLoader = new TargetDispatchPresetLoader(ConfigPipeline, targetDispatchPresetRegistry);
             targetDispatchPresetLoader.Load(ConfigCatalog, ConfigConflictReport);
             _effectTemplateLoader = new EffectTemplateLoader(
@@ -571,8 +571,8 @@ namespace Ludots.Core.Engine
                 effectTemplateRegistry,
                 gasConditions,
                 targetDispatchPresetRegistry,
-                technologyScopeKeys,
-                technologyDefinitions);
+                progressionScopeKeys,
+                progressionDefinitions);
             var gasClockConfigLoader = new GasClockConfigLoader(ConfigPipeline);
             var gasClockConfig = gasClockConfigLoader.Load(ConfigCatalog, ConfigConflictReport);
             var physics2dClockConfigLoader = new Physics2DClockConfigLoader(ConfigPipeline);
@@ -609,7 +609,7 @@ namespace Ludots.Core.Engine
             EffectParamKeys.Initialize();
             AbilityFormSetIdRegistry.Clear();
             ContextGroupIdRegistry.Clear();
-            new TechnologyConfigLoader(ConfigPipeline, technologyDefinitions, technologyRequirements, technologyScopeKeys).Load(ConfigCatalog, ConfigConflictReport);
+            new ProgressionConfigLoader(ConfigPipeline, progressionDefinitions, progressionRequirements, progressionScopeKeys).Load(ConfigCatalog, ConfigConflictReport);
             _effectTemplateLoader.Load(ConfigCatalog, ConfigConflictReport);
             new AbilityExecLoader(ConfigPipeline, abilityDefinitions).Load(ConfigCatalog, ConfigConflictReport);
             new AbilityFormSetConfigLoader(ConfigPipeline, abilityFormSets).Load(ConfigCatalog, ConfigConflictReport);
@@ -630,10 +630,10 @@ namespace Ludots.Core.Engine
                 relationshipFlagRegistry,
                 relationshipReasonRegistry,
                 targetDispatchPresetRegistry);
-            var technologyEvaluator = new TechnologyRequirementEvaluator(
+            var progressionEvaluator = new ProgressionRequirementEvaluator(
                 World,
-                technologyRequirements,
-                technologyScopeKeys,
+                progressionRequirements,
+                progressionScopeKeys,
                 graphProgramRegistry,
                 gasGraphApi,
                 tagOps);
@@ -831,7 +831,7 @@ namespace Ludots.Core.Engine
                 new MinimapInputConsumer(minimapRuntime)
             };
 
-            var abilitySystem = new AbilitySystem(World, effectRequestQueue, abilityDefinitions, tagOps, graphProgramRegistry, gasGraphApi, technologyEvaluator);
+            var abilitySystem = new AbilitySystem(World, effectRequestQueue, abilityDefinitions, tagOps, graphProgramRegistry, gasGraphApi, progressionEvaluator);
             var reactionSystem = new ReactionSystem(World, abilitySystem, EventBus);
             var attributeSinks = new AttributeSinkRegistry();
             GasAttributeSinks.RegisterBuiltins(attributeSinks);
@@ -889,7 +889,7 @@ namespace Ludots.Core.Engine
                 World, clock, orderTypeRegistry, orderRuleRegistry,
                 orderQueue, stepRateHz,
                 graphProgramRegistry, gasGraphApi);
-            var abilityExecSystem = new AbilityExecSystem(World, clock, abilityInputRequestQueue, inputResponseBuffer, selectionRequestQueue, selectionResponseBuffer, effectRequestQueue, abilityDefinitions, EventBus, cfgCastAbility, cfgCastAbilityStart, gasPresentationEvents, phaseExecutor: phaseExecutor, graphPrograms: graphProgramRegistry, graphApi: gasGraphApi, tagOps: tagOps, orderTypeRegistry: orderTypeRegistry, technologyRequirements: technologyEvaluator);
+            var abilityExecSystem = new AbilityExecSystem(World, clock, abilityInputRequestQueue, inputResponseBuffer, selectionRequestQueue, selectionResponseBuffer, effectRequestQueue, abilityDefinitions, EventBus, cfgCastAbility, cfgCastAbilityStart, gasPresentationEvents, phaseExecutor: phaseExecutor, graphPrograms: graphProgramRegistry, graphApi: gasGraphApi, tagOps: tagOps, orderTypeRegistry: orderTypeRegistry, progressionRequirements: progressionEvaluator);
             var abilityEndOrderSystem = new AbilityEndOrderSystem(World, orderTypeRegistry, cfgCastAbilityEnd);
             var stopOrderSystem = new StopOrderSystem(World, orderTypeRegistry, cfgStop);
             var moveToOrderSystem = new MoveToWorldCmOrderSystem(World, orderTypeRegistry, cfgMoveTo);
@@ -917,10 +917,10 @@ namespace Ludots.Core.Engine
             SetService(CoreServiceKeys.TagOps, tagOps);
             SetService(CoreServiceKeys.AbilityDefinitionRegistry, abilityDefinitions);
             SetService(CoreServiceKeys.AbilityFormSetRegistry, abilityFormSets);
-            SetService(CoreServiceKeys.TechnologyDefinitionRegistry, technologyDefinitions);
-            SetService(CoreServiceKeys.TechnologyRequirementRegistry, technologyRequirements);
-            SetService(CoreServiceKeys.TechnologyScopeKeyRegistry, technologyScopeKeys);
-            SetService(CoreServiceKeys.TechnologyRequirementEvaluator, technologyEvaluator);
+            SetService(CoreServiceKeys.ProgressionDefinitionRegistry, progressionDefinitions);
+            SetService(CoreServiceKeys.ProgressionRequirementRegistry, progressionRequirements);
+            SetService(CoreServiceKeys.ProgressionScopeKeyRegistry, progressionScopeKeys);
+            SetService(CoreServiceKeys.ProgressionRequirementEvaluator, progressionEvaluator);
             SetService(CoreServiceKeys.ContextGroupRegistry, contextGroups);
             SetService(CoreServiceKeys.InputRequestQueue, inputRequestQueue);
             SetService(CoreServiceKeys.AbilityInputRequestQueue, abilityInputRequestQueue);
@@ -1043,7 +1043,7 @@ namespace Ludots.Core.Engine
             RegisterSystem(cameraRuntimeSystem, SystemGroup.InputCollection);
             RegisterSystem(clockSystem, SystemGroup.InputCollection);
             RegisterSystem(timedTagSystem, SystemGroup.InputCollection);
-            RegisterSystem(new TechnologyScopeBindingSystem(World, technologyEvaluator, technologyScopeKeys), SystemGroup.InputCollection);
+            RegisterSystem(new ProgressionScopeBindingSystem(World, progressionEvaluator, progressionScopeKeys), SystemGroup.InputCollection);
             RegisterSystem(new InventoryEquipmentGrantSyncSystem(World, inventoryRuntime, effectRequestQueue), SystemGroup.InputCollection);
             RegisterSystem(new AbilityFormRoutingSystem(World, abilityFormSets, tagOps), SystemGroup.InputCollection);
             _worldToGridSyncSystem = new WorldToGridSyncSystem(World, SpatialCoords);
@@ -1122,7 +1122,7 @@ namespace Ludots.Core.Engine
             };
             RegisterSystem(new DestroyWhenParentExecutionEndsSystem(World), SystemGroup.EffectProcessing);
             RegisterSystem(new ManifestationMotion2DSystem(World), SystemGroup.EffectProcessing);
-            RegisterSystem(new EffectProcessingLoopSystem(World, effectRequestQueue, clock, gasConditions, gasBudget, effectTemplateRegistry, inputRequestQueue, chainOrderQueue, responseChainTelemetry, orderRequestQueue, responseChainOrderTypes, gasPresentationEvents, SpatialQueries, runtimeEntitySpawnQueue, phaseExecutor: phaseExecutor, graphApi: gasGraphApi, tagOps: tagOps, technologyEvaluator: technologyEvaluator), SystemGroup.EffectProcessing);
+            RegisterSystem(new EffectProcessingLoopSystem(World, effectRequestQueue, clock, gasConditions, gasBudget, effectTemplateRegistry, inputRequestQueue, chainOrderQueue, responseChainTelemetry, orderRequestQueue, responseChainOrderTypes, gasPresentationEvents, SpatialQueries, runtimeEntitySpawnQueue, phaseExecutor: phaseExecutor, graphApi: gasGraphApi, tagOps: tagOps, progressionEvaluator: progressionEvaluator), SystemGroup.EffectProcessing);
             RegisterSystem(new ProjectileRuntimeSystem(World, effectRequestQueue, SpatialQueries), SystemGroup.EffectProcessing);
             RegisterSystem(
                 new RuntimeEntitySpawnSystem(
@@ -1173,7 +1173,7 @@ namespace Ludots.Core.Engine
             // Changed-bit components must remain readable until presentation systems consume them,
             // so the actual clear runs at the tail of the presentation pipeline.
             RegisterSystem(gameplayPresentationProjectionSystem, SystemGroup.ClearPresentationFlags);
-            RegisterSystem(new TechnologyScopeTagRevisionSystem(World), SystemGroup.ClearPresentationFlags);
+            RegisterSystem(new ProgressionScopeTagRevisionSystem(World), SystemGroup.ClearPresentationFlags);
             _cooperativeSimulation = new PhaseOrderedCooperativeSimulation(
                 _systemGroups,
                 OnFixedStepCompleted,

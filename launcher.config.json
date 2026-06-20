@@ -42,11 +42,11 @@
       }
     },
     {
-      "name": "tech_tree_scope",
+      "name": "progression_scope",
       "target": {
         "type": "path",
-        "value": "mods/showcases/tech_tree_scope/TechTreeScopeShowcaseMod",
-        "projectPath": "TechTreeScopeShowcaseMod.csproj"
+        "value": "mods/showcases/progression_scope/ProgressionScopeShowcaseMod",
+        "projectPath": "ProgressionScopeShowcaseMod.csproj"
       }
     },
     {
