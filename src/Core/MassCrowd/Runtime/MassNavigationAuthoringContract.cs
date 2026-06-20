@@ -47,16 +47,16 @@ internal sealed class MassNavigationAuthoringContract
         }
 
         EntityTemplateKeyRegistry templateKeys = engine.GetService(CoreServiceKeys.EntityTemplateKeyRegistry)
-            ?? throw new InvalidOperationException("MassNavigationMod requires EntityTemplateKeyRegistry.");
+            ?? throw new InvalidOperationException("MassCrowd runtime requires EntityTemplateKeyRegistry.");
         PerformerDefinitionRegistry performers = engine.GetService(CoreServiceKeys.PerformerDefinitionRegistry)
-            ?? throw new InvalidOperationException("MassNavigationMod requires PerformerDefinitionRegistry.");
+            ?? throw new InvalidOperationException("MassCrowd runtime requires PerformerDefinitionRegistry.");
         MeshAssetRegistry meshAssets = engine.GetService(CoreServiceKeys.PresentationMeshAssetRegistry)
-            ?? throw new InvalidOperationException("MassNavigationMod requires PresentationMeshAssetRegistry.");
+            ?? throw new InvalidOperationException("MassCrowd runtime requires PresentationMeshAssetRegistry.");
         IVisualHeightmap visualHeightmap = engine.GetService(CoreServiceKeys.VisualHeightmap)
-            ?? throw new InvalidOperationException("MassNavigationMod requires a map-owned VisualHeightmapAsset bound through CoreServiceKeys.VisualHeightmap.");
+            ?? throw new InvalidOperationException("MassCrowd runtime requires a map-owned VisualHeightmapAsset bound through CoreServiceKeys.VisualHeightmap.");
         if (visualHeightmap is not IVisualHeightmapRenderSource)
         {
-            throw new InvalidOperationException("MassNavigationMod requires VisualHeightmap to implement IVisualHeightmapRenderSource so the large-world terrain is visible.");
+            throw new InvalidOperationException("MassCrowd runtime requires VisualHeightmap to implement IVisualHeightmapRenderSource so the large-world terrain is visible.");
         }
 
         var templates = new Dictionary<string, EntityTemplate>(StringComparer.Ordinal);
@@ -79,7 +79,7 @@ internal sealed class MassNavigationAuthoringContract
     {
         if (!_templateKeys.TryGetId(templateId, out int templateKeyId) || templateKeyId <= 0)
         {
-            throw new InvalidOperationException($"MassNavigationMod template '{templateId}' was not registered in EntityTemplateKeyRegistry.");
+            throw new InvalidOperationException($"MassCrowd runtime template '{templateId}' was not registered in EntityTemplateKeyRegistry.");
         }
 
         return templateKeyId;
@@ -89,12 +89,12 @@ internal sealed class MassNavigationAuthoringContract
     {
         if (string.IsNullOrWhiteSpace(templateId))
         {
-            throw new InvalidOperationException("MassNavigationMod template id must be non-empty.");
+            throw new InvalidOperationException("MassCrowd runtime template id must be non-empty.");
         }
 
         if (!_templates.ContainsKey(templateId))
         {
-            throw new InvalidOperationException($"MassNavigationMod requires configured entity template '{templateId}'.");
+            throw new InvalidOperationException($"MassCrowd runtime requires configured entity template '{templateId}'.");
         }
 
         RequireTemplateKey(templateId);
@@ -136,13 +136,13 @@ internal sealed class MassNavigationAuthoringContract
     {
         if (string.IsNullOrWhiteSpace(performerId))
         {
-            throw new InvalidOperationException("MassNavigationMod performer id must be non-empty.");
+            throw new InvalidOperationException("MassCrowd runtime performer id must be non-empty.");
         }
 
         int performerDefinitionId = _performers.GetId(performerId);
         if (performerDefinitionId <= 0 || !_performers.TryGet(performerDefinitionId, out _))
         {
-            throw new InvalidOperationException($"MassNavigationMod requires configured performer definition '{performerId}'.");
+            throw new InvalidOperationException($"MassCrowd runtime requires configured performer definition '{performerId}'.");
         }
     }
 
@@ -155,25 +155,25 @@ internal sealed class MassNavigationAuthoringContract
             if (runtimeId <= 0 ||
                 !_meshAssets.TryGetDescriptor(runtimeId, out MeshAssetDescriptor descriptor))
             {
-                throw new InvalidOperationException($"MassNavigationMod requires configured mesh asset '{meshAssetId}'.");
+                throw new InvalidOperationException($"MassCrowd runtime requires configured mesh asset '{meshAssetId}'.");
             }
 
             if (descriptor.Type != MeshAssetType.Model && descriptor.Type != MeshAssetType.Billboard)
             {
                 throw new InvalidOperationException(
-                    $"MassNavigationMod mesh asset '{meshAssetId}' must be a configured Model or Billboard asset, actual={descriptor.Type}.");
+                    $"MassCrowd runtime mesh asset '{meshAssetId}' must be a configured Model or Billboard asset, actual={descriptor.Type}.");
             }
 
             if (descriptor.SourceUris == null || descriptor.SourceUris.Length == 0)
             {
-                throw new InvalidOperationException($"MassNavigationMod mesh asset '{meshAssetId}' must have backend sourceUris from Presentation/host_assets.json.");
+                throw new InvalidOperationException($"MassCrowd runtime mesh asset '{meshAssetId}' must have backend sourceUris from Presentation/host_assets.json.");
             }
 
             for (int uriIndex = 0; uriIndex < descriptor.SourceUris.Length; uriIndex++)
             {
                 if (string.IsNullOrWhiteSpace(descriptor.SourceUris[uriIndex]))
                 {
-                    throw new InvalidOperationException($"MassNavigationMod mesh asset '{meshAssetId}' has an empty sourceUri at index {uriIndex}.");
+                    throw new InvalidOperationException($"MassCrowd runtime mesh asset '{meshAssetId}' has an empty sourceUri at index {uriIndex}.");
                 }
             }
         }

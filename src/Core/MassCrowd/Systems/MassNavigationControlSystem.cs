@@ -86,7 +86,7 @@ internal sealed class MassNavigationControlSystem : ISystem<float>
             _engine,
             _simulation,
             _engine.GetService(CoreServiceKeys.TeamEntityLookup)
-                ?? throw new InvalidOperationException("MassNavigationMod requires TeamEntityLookup."));
+                ?? throw new InvalidOperationException("MassCrowd runtime requires TeamEntityLookup."));
         MassNavigationRuntime.RequestTacticalCameraReset(_engine);
         MassNavigationRuntime.RequestMinimapStrategicWorldView(_engine);
 
@@ -104,7 +104,7 @@ internal sealed class MassNavigationControlSystem : ISystem<float>
     private void RemovePendingScenarioSpawns()
     {
         RuntimeEntitySpawnQueue spawnQueue = _engine.GetService(CoreServiceKeys.RuntimeEntitySpawnQueue)
-            ?? throw new InvalidOperationException("MassNavigationMod requires RuntimeEntitySpawnQueue.");
+            ?? throw new InvalidOperationException("MassCrowd runtime requires RuntimeEntitySpawnQueue.");
         if (_engine.CurrentMapSession != null)
         {
             spawnQueue.RemoveForMap(_engine.CurrentMapSession.MapId);
@@ -137,12 +137,12 @@ internal sealed class MassNavigationControlSystem : ISystem<float>
             localObj is not Arch.Core.Entity local ||
             !_engine.World.IsAlive(local))
         {
-            throw new InvalidOperationException("MassNavigationMod requires LocalPlayerEntity before rotating formations.");
+            throw new InvalidOperationException("MassCrowd runtime requires LocalPlayerEntity before rotating formations.");
         }
 
         if (!_engine.World.TryGet(local, out Ludots.Core.Gameplay.Components.PlayerOwner owner))
         {
-            throw new InvalidOperationException("MassNavigationMod LocalPlayerEntity must author PlayerOwner before rotating formations.");
+            throw new InvalidOperationException("MassCrowd runtime LocalPlayerEntity must author PlayerOwner before rotating formations.");
         }
 
         return owner.PlayerId;

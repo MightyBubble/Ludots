@@ -905,20 +905,15 @@ namespace Ludots.Core.Config
             }
 
             ValidateProperties(obj, "MassCrowdBlocker", "radiusCm");
-            float radiusCm = 0f;
-            if (obj.TryGetPropertyValue("radiusCm", out JsonNode? radiusNode) && radiusNode != null)
+            JsonNode radiusNode = RequireProperty(obj, "radiusCm", "MassCrowdBlocker");
+            if (radiusNode is not JsonValue radiusValue || !radiusValue.TryGetValue(out float radiusCm))
             {
-                if (radiusNode is not JsonValue radiusValue || !radiusValue.TryGetValue(out float parsedRadius))
-                {
-                    throw new InvalidOperationException("MassCrowdBlocker.radiusCm requires a numeric value.");
-                }
+                throw new InvalidOperationException("MassCrowdBlocker.radiusCm requires a numeric value.");
+            }
 
-                if (!(parsedRadius > 0f))
-                {
-                    throw new InvalidOperationException("MassCrowdBlocker.radiusCm must be > 0 when authored.");
-                }
-
-                radiusCm = parsedRadius;
+            if (!(radiusCm > 0f))
+            {
+                throw new InvalidOperationException("MassCrowdBlocker.radiusCm must be > 0.");
             }
 
             entity.Add(new MassCrowdBlocker { RadiusCm = radiusCm });
@@ -974,12 +969,6 @@ namespace Ludots.Core.Config
             }
 
             ValidateProperties(obj, "MassCrowdFormationAnchor", "formationId", "slotCount");
-            if (obj.Count == 0)
-            {
-                entity.Add(default(MassCrowdFormationAnchor));
-                return;
-            }
-
             string formationId = RequireStringProperty(obj, "formationId", "MassCrowdFormationAnchor");
             int slotCount = ReadIntProperty(obj, "slotCount", "MassCrowdFormationAnchor");
             if (slotCount <= 0)
@@ -1002,18 +991,18 @@ namespace Ludots.Core.Config
             }
 
             ValidateProperties(obj, "MassCrowdFormationFollower", "formationId", "slotIndex", "localOffsetXCm", "localOffsetYCm");
-            if (obj.Count == 0)
+            string formationId = RequireStringProperty(obj, "formationId", "MassCrowdFormationFollower");
+            int slotIndex = ReadIntProperty(obj, "slotIndex", "MassCrowdFormationFollower");
+            if (slotIndex < 0)
             {
-                entity.Add(default(MassCrowdFormationFollower));
-                return;
+                throw new InvalidOperationException("MassCrowdFormationFollower.slotIndex must be >= 0.");
             }
 
-            string formationId = RequireStringProperty(obj, "formationId", "MassCrowdFormationFollower");
             entity.Add(new MassCrowdFormationFollower
             {
                 FormationId = MassCrowdFormationRegistry.Register(formationId),
                 Anchor = Entity.Null,
-                SlotIndex = ReadIntProperty(obj, "slotIndex", "MassCrowdFormationFollower"),
+                SlotIndex = slotIndex,
                 LocalOffsetXCm = ReadFloatProperty(obj, "localOffsetXCm", "MassCrowdFormationFollower"),
                 LocalOffsetYCm = ReadFloatProperty(obj, "localOffsetYCm", "MassCrowdFormationFollower"),
             });

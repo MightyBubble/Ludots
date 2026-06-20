@@ -266,11 +266,8 @@ internal sealed class MassCrowdFormationFollowerSystem : ISystem<float>
             return locomotion;
         }
 
-        return new MassCrowdFollowerLocomotion
-        {
-            TargetChangeEpsilonCm = 1f,
-            FacingChangeEpsilonRadians = 0.00001f,
-        };
+        throw new InvalidOperationException(
+            $"MassCrowdFormationAnchor '{MassCrowdFormationRegistry.GetName(formationId)}' requires explicit MassCrowdFollowerLocomotion.");
     }
 
     private static float NormalizeAngleRadians(float angle)

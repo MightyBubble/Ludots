@@ -1,6 +1,8 @@
 using System;
 using System.Collections.Generic;
+using System.Runtime.CompilerServices;
 using System.Runtime.InteropServices;
+using Arch.Buffer;
 using Arch.Core;
 using Arch.System;
 using Ludots.Core.Components;
@@ -24,6 +26,7 @@ internal sealed class MassCrowdEnvironmentBindingSystem : ISystem<float>
     private readonly GameEngine _engine;
     private readonly MassNavigationSimulationRuntime _simulation;
     private readonly List<MassNavigationObstacleSnapshot> _blockerObstacles = new();
+    private readonly CommandBuffer _commandBuffer = new();
     private long _lastSignature;
 
     public MassCrowdEnvironmentBindingSystem(GameEngine engine, MassNavigationSimulationRuntime simulation)
@@ -35,7 +38,10 @@ internal sealed class MassCrowdEnvironmentBindingSystem : ISystem<float>
     public void Initialize() { }
     public void BeforeUpdate(in float dt) { }
     public void AfterUpdate(in float dt) { }
-    public void Dispose() { }
+    public void Dispose()
+    {
+        _commandBuffer.Dispose();
+    }
 
     public void Update(in float dt)
     {
@@ -64,22 +70,38 @@ internal sealed class MassCrowdEnvironmentBindingSystem : ISystem<float>
         long hash = 1469598103934665603L;
         int blockerCount = 0;
         int markerCount = 0;
-        _engine.World.Query(in BlockersQuery, (Entity entity, ref MassCrowdBlocker blocker, ref WorldPositionCm position) =>
+        foreach (ref var chunk in _engine.World.Query(in BlockersQuery))
         {
-            blockerCount++;
-            hash = Mix(hash, entity.Id);
-            hash = Mix(hash, blocker.RadiusCm.GetHashCode());
-            hash = Mix(hash, position.Value.X.GetHashCode());
-            hash = Mix(hash, position.Value.Y.GetHashCode());
-        });
+            ref Entity entityFirst = ref chunk.Entity(0);
+            Span<MassCrowdBlocker> blockers = chunk.GetSpan<MassCrowdBlocker>();
+            Span<WorldPositionCm> positions = chunk.GetSpan<WorldPositionCm>();
+            foreach (int index in chunk)
+            {
+                Entity entity = Unsafe.Add(ref entityFirst, index);
+                MassCrowdBlocker blocker = blockers[index];
+                WorldPositionCm position = positions[index];
+                blockerCount++;
+                hash = Mix(hash, entity.Id);
+                hash = Mix(hash, blocker.RadiusCm.GetHashCode());
+                hash = Mix(hash, position.Value.X.GetHashCode());
+                hash = Mix(hash, position.Value.Y.GetHashCode());
+            }
+        }
 
-        _engine.World.Query(in MarkersQuery, (Entity entity, ref MassCrowdHotspotMarker _, ref WorldPositionCm position) =>
+        foreach (ref var chunk in _engine.World.Query(in MarkersQuery))
         {
-            markerCount++;
-            hash = Mix(hash, entity.Id);
-            hash = Mix(hash, position.Value.X.GetHashCode());
-            hash = Mix(hash, position.Value.Y.GetHashCode());
-        });
+            ref Entity entityFirst = ref chunk.Entity(0);
+            Span<WorldPositionCm> positions = chunk.GetSpan<WorldPositionCm>();
+            foreach (int index in chunk)
+            {
+                Entity entity = Unsafe.Add(ref entityFirst, index);
+                WorldPositionCm position = positions[index];
+                markerCount++;
+                hash = Mix(hash, entity.Id);
+                hash = Mix(hash, position.Value.X.GetHashCode());
+                hash = Mix(hash, position.Value.Y.GetHashCode());
+            }
+        }
 
         return new MassCrowdEnvironmentSignature(hash, blockerCount, markerCount);
     }
@@ -87,38 +109,57 @@ internal sealed class MassCrowdEnvironmentBindingSystem : ISystem<float>
     private void BindBlockers()
     {
         _blockerObstacles.Clear();
-        _engine.World.Query(in BlockersQuery, (Entity entity, ref MassCrowdBlocker blocker, ref WorldPositionCm position) =>
+        foreach (ref var chunk in _engine.World.Query(in BlockersQuery))
         {
-            if (!(blocker.RadiusCm > 0f))
+            ref Entity entityFirst = ref chunk.Entity(0);
+            Span<MassCrowdBlocker> blockers = chunk.GetSpan<MassCrowdBlocker>();
+            Span<WorldPositionCm> positions = chunk.GetSpan<WorldPositionCm>();
+            foreach (int index in chunk)
             {
-                throw new InvalidOperationException($"MassCrowdBlocker entity {entity.Id} requires radiusCm > 0.");
-            }
+                Entity entity = Unsafe.Add(ref entityFirst, index);
+                MassCrowdBlocker blocker = blockers[index];
+                WorldPositionCm position = positions[index];
+                if (!(blocker.RadiusCm > 0f))
+                {
+                    throw new InvalidOperationException($"MassCrowdBlocker entity {entity.Id} requires radiusCm > 0.");
+                }
 
-            var profile = new MassCrowdBlockerProfile { RadiusCm = blocker.RadiusCm };
-            if (_engine.World.Has<MassCrowdBlockerProfile>(entity))
-            {
-                _engine.World.Set(entity, profile);
-            }
-            else
-            {
-                _engine.World.Add(entity, profile);
-            }
+                var profile = new MassCrowdBlockerProfile { RadiusCm = blocker.RadiusCm };
+                if (_engine.World.Has<MassCrowdBlockerProfile>(entity))
+                {
+                    _engine.World.Set(entity, profile);
+                }
+                else
+                {
+                    _commandBuffer.Add(entity, profile);
+                }
 
-            _simulation.AgentState.RegisterBlocker(entity);
-            _blockerObstacles.Add(new MassNavigationObstacleSnapshot(
-                position.Value.X.ToFloat(),
-                position.Value.Y.ToFloat(),
-                blocker.RadiusCm));
-        });
+                _simulation.AgentState.RegisterBlocker(entity);
+                _blockerObstacles.Add(new MassNavigationObstacleSnapshot(
+                    position.Value.X.ToFloat(),
+                    position.Value.Y.ToFloat(),
+                    blocker.RadiusCm));
+            }
+        }
+
+        if (_commandBuffer.Size > 0)
+        {
+            _commandBuffer.Playback(_engine.World);
+        }
+
         _simulation.RebuildRuntimeObstacles(CollectionsMarshal.AsSpan(_blockerObstacles));
     }
 
     private void BindMarkers()
     {
-        _engine.World.Query(in MarkersQuery, (Entity entity, ref MassCrowdHotspotMarker _, ref WorldPositionCm _) =>
+        foreach (ref var chunk in _engine.World.Query(in MarkersQuery))
         {
-            _simulation.AgentState.RegisterWorldMarker(entity);
-        });
+            ref Entity entityFirst = ref chunk.Entity(0);
+            foreach (int index in chunk)
+            {
+                _simulation.AgentState.RegisterWorldMarker(Unsafe.Add(ref entityFirst, index));
+            }
+        }
     }
 
     private static long Mix(long hash, int value)

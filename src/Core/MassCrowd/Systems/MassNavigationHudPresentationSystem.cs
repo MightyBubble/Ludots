@@ -36,11 +36,11 @@ internal sealed class MassNavigationHudPresentationSystem : ISystem<float>
         _simulation.ObserveHudTick();
 
         ScreenOverlayBuffer overlay = _engine.GetService(CoreServiceKeys.ScreenOverlayBuffer)
-            ?? throw new InvalidOperationException("MassNavigationMod requires ScreenOverlayBuffer for diagnostics HUD.");
+            ?? throw new InvalidOperationException("MassCrowd runtime requires ScreenOverlayBuffer for diagnostics HUD.");
         PresentationTimingDiagnostics timing = _engine.GetService(CoreServiceKeys.PresentationTimingDiagnostics)
-            ?? throw new InvalidOperationException("MassNavigationMod requires PresentationTimingDiagnostics for real FPS HUD.");
+            ?? throw new InvalidOperationException("MassCrowd runtime requires PresentationTimingDiagnostics for real FPS HUD.");
         IViewController viewport = _engine.GetService(CoreServiceKeys.ViewController)
-            ?? throw new InvalidOperationException("MassNavigationMod requires ViewController for diagnostics HUD layout.");
+            ?? throw new InvalidOperationException("MassCrowd runtime requires ViewController for diagnostics HUD layout.");
         Vector2 resolution = viewport.Resolution;
         int left = Math.Max(16, (int)resolution.X - 260);
         float frameMs = ResolveFrameMs(timing);

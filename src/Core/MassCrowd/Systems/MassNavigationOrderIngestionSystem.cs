@@ -138,7 +138,7 @@ internal sealed class MassNavigationOrderIngestionSystem : ISystem<float>
         }
 
         OrderBufferSystem orderBufferSystem = _engine.GetService(CoreServiceKeys.OrderBufferSystem)
-            ?? throw new InvalidOperationException("MassNavigationMod requires OrderBufferSystem to complete MassNavigation move orders.");
+            ?? throw new InvalidOperationException("MassCrowd runtime requires OrderBufferSystem to complete MassNavigation move orders.");
 
         for (int bucketIndex = 0; bucketIndex < _usedBucketCount; bucketIndex++)
         {
@@ -181,7 +181,7 @@ internal sealed class MassNavigationOrderIngestionSystem : ISystem<float>
         if (_engine.GetService(CoreServiceKeys.OrderTypeRegistry) is not Ludots.Core.Gameplay.GAS.Orders.OrderTypeRegistry registry ||
             !registry.TryGetId(MassNavigationOrderKeys.Move, out _moveOrderTypeId))
         {
-            throw new InvalidOperationException($"MassNavigationMod requires GAS/order_types.json to define '{MassNavigationOrderKeys.Move}'.");
+            throw new InvalidOperationException($"MassCrowd runtime requires GAS/order_types.json to define '{MassNavigationOrderKeys.Move}'.");
         }
 
         return _moveOrderTypeId;
@@ -192,19 +192,19 @@ internal sealed class MassNavigationOrderIngestionSystem : ISystem<float>
         if (!_simulation.AgentState.TryGetControllableEntity(agentIndex, out Entity entity))
         {
             throw new InvalidOperationException(
-                $"MassNavigationMod order {orderToken} references controllable agent index {agentIndex}, but no controllable entity is bound at that MassNavigation agent index.");
+                $"MassCrowd runtime order {orderToken} references controllable agent index {agentIndex}, but no controllable entity is bound at that MassNavigation agent index.");
         }
 
         if (!_engine.World.IsAlive(entity))
         {
             throw new InvalidOperationException(
-                $"MassNavigationMod order {orderToken} references controllable agent index {agentIndex}, but the bound entity is not alive.");
+                $"MassCrowd runtime order {orderToken} references controllable agent index {agentIndex}, but the bound entity is not alive.");
         }
 
         if (!_engine.World.Has<OrderBuffer>(entity))
         {
             throw new InvalidOperationException(
-                $"MassNavigationMod order {orderToken} references controllable agent index {agentIndex}, but the bound entity does not author OrderBuffer.");
+                $"MassCrowd runtime order {orderToken} references controllable agent index {agentIndex}, but the bound entity does not author OrderBuffer.");
         }
 
         return entity;

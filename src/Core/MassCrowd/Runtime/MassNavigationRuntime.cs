@@ -74,7 +74,7 @@ public sealed class MassNavigationRuntime
             new MassNavigationLocomotionAnimatorParamSystem(engine.World, simulation));
         engine.RegisterPresentationSystem(new MassNavigationHudPresentationSystem(engine, simulation));
         _systemsInstalled = true;
-        _context.Log("[MassNavigationMod] Installed mass-navigation runtime.");
+        _context.Log("[MassCrowd runtime] Installed mass-navigation runtime.");
     }
 
     private MassNavigationConfig EnsureConfig(GameEngine engine)
@@ -86,7 +86,7 @@ public sealed class MassNavigationRuntime
 
         if (engine.ConfigPipeline == null)
         {
-            throw new System.InvalidOperationException("MassNavigationMod requires ConfigPipeline before loading MassNavigationConfig.");
+            throw new System.InvalidOperationException("MassCrowd runtime requires ConfigPipeline before loading MassNavigationConfig.");
         }
 
         _config = new MassNavigationConfigLoader(engine.ConfigPipeline).Load(
@@ -180,12 +180,12 @@ public sealed class MassNavigationRuntime
         }
 
         MassNavigationSimulationRuntime simulation = engine.GetService(MassNavigationKeys.SimulationRuntime)
-            ?? throw new System.InvalidOperationException("MassNavigationMod requires simulation runtime.");
+            ?? throw new System.InvalidOperationException("MassCrowd runtime requires simulation runtime.");
         MassNavigationScenarioBootstrap.SpawnConfiguredScenario(
             engine,
             simulation,
             engine.GetService(CoreServiceKeys.TeamEntityLookup)
-                ?? throw new System.InvalidOperationException("MassNavigationMod requires TeamEntityLookup."));
+                ?? throw new System.InvalidOperationException("MassCrowd runtime requires TeamEntityLookup."));
         _scenarioSpawned = true;
         _obstacleBlockersSeeded = true;
     }
@@ -198,7 +198,7 @@ public sealed class MassNavigationRuntime
         }
 
         MassNavigationSimulationRuntime simulation = engine.GetService(MassNavigationKeys.SimulationRuntime)
-            ?? throw new System.InvalidOperationException("MassNavigationMod requires simulation runtime.");
+            ?? throw new System.InvalidOperationException("MassCrowd runtime requires simulation runtime.");
         MassNavigationScenarioBootstrap.EnqueueConfiguredObstacleBlockers(engine, simulation);
         _obstacleBlockersSeeded = true;
     }
@@ -206,18 +206,18 @@ public sealed class MassNavigationRuntime
     private static void BindBoardWorld(GameEngine engine)
     {
         MapSession session = engine.CurrentMapSession
-            ?? throw new System.InvalidOperationException("MassNavigationMod requires an active MapSession.");
+            ?? throw new System.InvalidOperationException("MassCrowd runtime requires an active MapSession.");
         var board = session.PrimaryBoard
-            ?? throw new System.InvalidOperationException("MassNavigationMod requires a primary board.");
+            ?? throw new System.InvalidOperationException("MassCrowd runtime requires a primary board.");
         MassNavigationSimulationRuntime simulation = engine.GetService(MassNavigationKeys.SimulationRuntime)
-            ?? throw new System.InvalidOperationException("MassNavigationMod requires simulation runtime.");
+            ?? throw new System.InvalidOperationException("MassCrowd runtime requires simulation runtime.");
         simulation.BindBoardWorld(board.WorldSize);
     }
 
     private void BindMassNavigationLoadedChunks(GameEngine engine)
     {
         MassNavigationSimulationRuntime simulation = engine.GetService(MassNavigationKeys.SimulationRuntime)
-            ?? throw new System.InvalidOperationException("MassNavigationMod requires simulation runtime.");
+            ?? throw new System.InvalidOperationException("MassCrowd runtime requires simulation runtime.");
         if (_loadedChunksOverrideActive &&
             engine.GetService(CoreServiceKeys.LoadedChunks) is ILoadedChunks current &&
             ReferenceEquals(current, simulation.LoadedChunks) &&
@@ -239,7 +239,7 @@ public sealed class MassNavigationRuntime
         _savedLoadedChunksValid = engine.GlobalContext.TryGetValue(CoreServiceKeys.LoadedChunks.Name, out object? savedRaw);
         if (savedRaw != null && savedRaw is not ILoadedChunks)
         {
-            throw new System.InvalidOperationException("MassNavigationMod loaded chunks override found a non-ILoadedChunks service value.");
+            throw new System.InvalidOperationException("MassCrowd runtime loaded chunks override found a non-ILoadedChunks service value.");
         }
 
         _savedLoadedChunks = savedRaw as ILoadedChunks;
@@ -294,7 +294,7 @@ public sealed class MassNavigationRuntime
     {
         MassNavigationSimulationRuntime simulation = RequireSimulationRuntime(engine, "configuring minimap");
         MinimapRuntime minimap = engine.GetService(CoreServiceKeys.MinimapRuntime)
-            ?? throw new System.InvalidOperationException("MassNavigationMod requires core MinimapRuntime.");
+            ?? throw new System.InvalidOperationException("MassCrowd runtime requires core MinimapRuntime.");
         ApplyConfiguredMinimapPreset(minimap, simulation.Config.Minimap);
         minimap.Visible = simulation.Config.Minimap.Visible;
     }
@@ -312,19 +312,19 @@ public sealed class MassNavigationRuntime
                 return;
             default:
                 throw new System.InvalidOperationException(
-                    $"MassNavigationMod minimap preset '{config.InitialPreset}' was not validated.");
+                    $"MassCrowd runtime minimap preset '{config.InitialPreset}' was not validated.");
         }
     }
 
     public static void ApplyCullingFocusOverride(GameEngine engine)
     {
         MassNavigationSimulationRuntime simulation = engine.GetService(MassNavigationKeys.SimulationRuntime)
-            ?? throw new System.InvalidOperationException("MassNavigationMod requires simulation runtime before culling focus override.");
+            ?? throw new System.InvalidOperationException("MassCrowd runtime requires simulation runtime before culling focus override.");
         if (engine.GetService(CoreServiceKeys.CameraCullingFocusOverride) is not Ludots.Core.Presentation.Camera.CameraCullingFocusOverride focus)
         {
             if (simulation.ViewResidency.UsesProbeFocus)
             {
-                throw new System.InvalidOperationException("MassNavigationMod viewResidency mode 'Probe' requires CameraCullingFocusOverride service.");
+                throw new System.InvalidOperationException("MassCrowd runtime viewResidency mode 'Probe' requires CameraCullingFocusOverride service.");
             }
 
             return;
@@ -385,7 +385,7 @@ public sealed class MassNavigationRuntime
     private static void BindLocalSelectionOwner(GameEngine engine)
     {
         SelectionRuntime selection = engine.GetService(CoreServiceKeys.SelectionRuntime)
-            ?? throw new System.InvalidOperationException("MassNavigationMod requires SelectionRuntime.");
+            ?? throw new System.InvalidOperationException("MassCrowd runtime requires SelectionRuntime.");
         if (!engine.GlobalContext.TryGetValue(CoreServiceKeys.LocalPlayerEntity.Name, out var localObj) ||
             localObj is not Entity owner ||
             !engine.World.IsAlive(owner))
@@ -396,7 +396,7 @@ public sealed class MassNavigationRuntime
 
         if (!engine.World.Has<PlayerOwner>(owner))
         {
-            throw new System.InvalidOperationException("MassNavigationMod LocalPlayerEntity must author PlayerOwner.");
+            throw new System.InvalidOperationException("MassCrowd runtime LocalPlayerEntity must author PlayerOwner.");
         }
 
         EnsureSelectionOwner(engine.World, owner, selection, engine.GlobalContext);
@@ -415,8 +415,8 @@ public sealed class MassNavigationRuntime
         return count switch
         {
             1 => resolved,
-            0 => throw new System.InvalidOperationException("MassNavigationMod requires the map to author exactly one PlayerOwner local player entity."),
-            _ => throw new System.InvalidOperationException("MassNavigationMod found multiple PlayerOwner entities before LocalPlayerEntity was resolved; author one local player or bind CoreServiceKeys.LocalPlayerEntity explicitly.")
+            0 => throw new System.InvalidOperationException("MassCrowd runtime requires the map to author exactly one PlayerOwner local player entity."),
+            _ => throw new System.InvalidOperationException("MassCrowd runtime found multiple PlayerOwner entities before LocalPlayerEntity was resolved; author one local player or bind CoreServiceKeys.LocalPlayerEntity explicitly.")
         };
     }
 
@@ -424,7 +424,7 @@ public sealed class MassNavigationRuntime
     {
         if (!world.Has<SelectionDragState>(owner))
         {
-            throw new System.InvalidOperationException("MassNavigationMod local player template must author SelectionDragState.");
+            throw new System.InvalidOperationException("MassCrowd runtime local player template must author SelectionDragState.");
         }
 
         if (!SelectionContextRuntime.TrySetCurrentView(
@@ -437,7 +437,7 @@ public sealed class MassNavigationRuntime
                 SelectionSetKeys.LivePrimary,
                 out _))
         {
-            throw new System.InvalidOperationException("MassNavigationMod failed to bind LivePrimary as the primary selection view.");
+            throw new System.InvalidOperationException("MassCrowd runtime failed to bind LivePrimary as the primary selection view.");
         }
     }
 
@@ -542,7 +542,7 @@ public sealed class MassNavigationRuntime
     private static MassNavigationSimulationRuntime RequireSimulationRuntime(GameEngine engine, string action)
     {
         return engine.GetService(MassNavigationKeys.SimulationRuntime) as MassNavigationSimulationRuntime
-            ?? throw new System.InvalidOperationException($"MassNavigationMod requires simulation runtime before {action}.");
+            ?? throw new System.InvalidOperationException($"MassCrowd runtime requires simulation runtime before {action}.");
     }
 
     private static VirtualCameraRequest CreateCameraRequest(
@@ -562,7 +562,7 @@ public sealed class MassNavigationRuntime
     {
         if (engine.GetService(MassNavigationKeys.SimulationRuntime) is not MassNavigationSimulationRuntime simulation)
         {
-            throw new System.InvalidOperationException("MassNavigationMod requires simulation runtime before camera reset.");
+            throw new System.InvalidOperationException("MassCrowd runtime requires simulation runtime before camera reset.");
         }
 
         return new Vector2(simulation.SolverWindowCenterXCm, simulation.SolverWindowCenterYCm);

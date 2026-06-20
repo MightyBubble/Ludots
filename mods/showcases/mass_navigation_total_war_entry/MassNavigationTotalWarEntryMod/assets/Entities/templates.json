@@ -42,7 +42,6 @@
       "MassCrowdAgent": {
         "profileId": "formation"
       },
-      "MassCrowdFormationAnchor": {},
       "MassCrowdFollowerLocomotion": {
         "targetChangeEpsilonCm": 12.0,
         "facingChangeEpsilonRadians": 0.035
@@ -75,8 +74,7 @@
       },
       "MassCrowdAgent": {
         "profileId": "light"
-      },
-      "MassCrowdFormationFollower": {}
+      }
     }
   },
   {
@@ -105,8 +103,7 @@
       },
       "MassCrowdAgent": {
         "profileId": "heavy"
-      },
-      "MassCrowdFormationFollower": {}
+      }
     }
   },
   {
@@ -135,8 +132,7 @@
       },
       "MassCrowdAgent": {
         "profileId": "light"
-      },
-      "MassCrowdFormationFollower": {}
+      }
     }
   },
   {
@@ -165,8 +161,7 @@
       },
       "MassCrowdAgent": {
         "profileId": "heavy"
-      },
-      "MassCrowdFormationFollower": {}
+      }
     }
   },
   {

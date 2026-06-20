@@ -1191,12 +1191,12 @@ public sealed class MassNavigationSimulationRuntime
 
         if (!SelectionContextRuntime.TryGetCurrentContainer(world, globals, out Entity selectionContainer))
         {
-            throw new InvalidOperationException("MassNavigationMod requires a current selection container before submitting move orders.");
+            throw new InvalidOperationException("MassCrowd runtime requires a current selection container before submitting move orders.");
         }
 
         if (!orderTypeRegistry.TryGetId(MassNavigationOrderKeys.Move, out int moveOrderTypeId))
         {
-            throw new InvalidOperationException($"MassNavigationMod requires GAS/order_types.json to define '{MassNavigationOrderKeys.Move}'.");
+            throw new InvalidOperationException($"MassCrowd runtime requires GAS/order_types.json to define '{MassNavigationOrderKeys.Move}'.");
         }
 
         int sharedOrderId = AllocateSharedOrderId();

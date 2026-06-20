@@ -1,4 +1,5 @@
 using System;
+using System.Text.Json.Nodes;
 using Arch.Core;
 using Ludots.Core.Gameplay.GAS;
 using Ludots.Core.Map;
@@ -15,6 +16,8 @@ namespace Ludots.Core.Gameplay.Spawning
         Assembly = 3,
     }
 
+    public readonly record struct RuntimeEntitySpawnComponentPatch(string ComponentName, JsonNode Data);
+
     public struct RuntimeEntitySpawnRequest
     {
         public RuntimeEntitySpawnKind Kind;
@@ -30,14 +33,7 @@ namespace Ludots.Core.Gameplay.Spawning
         public MapId MapId;
         public int TeamIdOverride;
         public int PlayerOwnerIdOverride;
-        public float MassCrowdBlockerRadiusCmOverride;
-        public int MassCrowdFormationIdOverride;
-        public int MassCrowdFormationSlotIndexOverride;
-        public int MassCrowdFormationSlotCountOverride;
-        public float MassCrowdFormationLocalOffsetXCmOverride;
-        public float MassCrowdFormationLocalOffsetYCmOverride;
-        public byte HasMassCrowdFormationAnchorOverride;
-        public byte HasMassCrowdFormationFollowerOverride;
+        public RuntimeEntitySpawnComponentPatch[] ComponentPatches;
         public byte CopySourceTeam;
         public byte CopySourcePlayerOwner;
         public Entity Parent;

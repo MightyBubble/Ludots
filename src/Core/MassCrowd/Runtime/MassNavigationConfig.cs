@@ -892,18 +892,18 @@ public sealed class MassNavigationConfigLoader
 
         if (!catalog.TryGet(relativePath, out ConfigCatalogEntry entry))
         {
-            throw new InvalidOperationException($"MassNavigationMod config '{relativePath}' must be registered in config_catalog.json.");
+            throw new InvalidOperationException($"MassCrowd runtime config '{relativePath}' must be registered in config_catalog.json.");
         }
 
         if (entry.MergePolicy != ConfigMergePolicy.Replace)
         {
-            throw new InvalidOperationException($"MassNavigationMod config '{relativePath}' must use Replace merge policy.");
+            throw new InvalidOperationException($"MassCrowd runtime config '{relativePath}' must use Replace merge policy.");
         }
 
         JsonObject? merged = _pipeline.MergeFromCatalog(in entry, report) as JsonObject;
         if (merged == null)
         {
-            throw new InvalidOperationException($"MassNavigationMod requires config '{relativePath}' through ConfigPipeline.");
+            throw new InvalidOperationException($"MassCrowd runtime requires config '{relativePath}' through ConfigPipeline.");
         }
 
         return MassNavigationConfig.Load(merged);

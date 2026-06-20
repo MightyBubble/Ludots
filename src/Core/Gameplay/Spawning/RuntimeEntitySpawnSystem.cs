@@ -11,7 +11,6 @@ using Ludots.Core.Gameplay.GAS.Components;
 using Ludots.Core.Gameplay.GAS;
 using Ludots.Core.Gameplay.GAS.Registry;
 using Ludots.Core.Map;
-using Ludots.Core.MassCrowd.Runtime;
 using Ludots.Core.Presentation;
 using Ludots.Core.Presentation.Commands;
 using Ludots.Core.Presentation.Components;
@@ -19,6 +18,7 @@ using Ludots.Core.Presentation.Events;
 using Ludots.Core.Presentation.Hud;
 using Ludots.Core.Presentation.Performers;
 using Ludots.Core.Spatial;
+using CoreComponentRegistry = Ludots.Core.Config.ComponentRegistry;
 
 namespace Ludots.Core.Gameplay.Spawning
 {
@@ -94,6 +94,7 @@ namespace Ludots.Core.Gameplay.Spawning
             while (_requests.TryPeek(out var peek))
             {
                 if (peek.Kind == RuntimeEntitySpawnKind.Template &&
+                    !HasComponentPatches(in peek) &&
                     !string.IsNullOrWhiteSpace(peek.TemplateId) &&
                     TryGetTemplate(peek.TemplateId, out EntityTemplate template) &&
                     _templateBatchSpawner.IsBatchCompatible(peek.TemplateId, template))
@@ -165,8 +166,7 @@ namespace Ludots.Core.Gameplay.Spawning
             TryApplyFacing(in request, entity);
             TryApplyTeam(in request, entity);
             TryApplyPlayerOwner(in request, entity);
-            TryApplyMassCrowdBlockerRadius(in request, entity);
-            TryApplyMassCrowdFormationOverrides(in request, entity);
+            ApplyComponentPatches(in request, entity);
             TryApplyMapOwnership(in request, entity);
             TryApplyParentLink(in request, entity);
             return entity;
@@ -180,7 +180,9 @@ namespace Ludots.Core.Gameplay.Spawning
             }
 
             EnsureTemplateLoaded(request.TemplateId);
-            var entity = _builder.UseTemplate(request.TemplateId).Build();
+            var builder = _builder.UseTemplate(request.TemplateId);
+            ApplyTemplateComponentPatches(builder, in request);
+            var entity = builder.Build();
             ApplyTemplateKey(entity, request.TemplateId);
 
             if (request.HasWorldPosition != 0)
@@ -195,8 +197,6 @@ namespace Ludots.Core.Gameplay.Spawning
             TryApplyFacing(in request, entity);
             TryApplyTeam(in request, entity);
             TryApplyPlayerOwner(in request, entity);
-            TryApplyMassCrowdBlockerRadius(in request, entity);
-            TryApplyMassCrowdFormationOverrides(in request, entity);
             TryApplyMapOwnership(in request, entity);
             TryApplyParentLink(in request, entity);
             TryBootstrapPerformer(entity, request.TemplateId);
@@ -214,6 +214,7 @@ namespace Ludots.Core.Gameplay.Spawning
             while (count < _batchRequests.Length &&
                    _requests.TryPeek(out var next) &&
                    next.Kind == RuntimeEntitySpawnKind.Template &&
+                   !HasComponentPatches(in next) &&
                    string.Equals(next.TemplateId, templateId, StringComparison.Ordinal))
             {
                 if (!_requests.TryDequeue(out _batchRequests[count]))
@@ -242,11 +243,7 @@ namespace Ludots.Core.Gameplay.Spawning
                     facingAngleRad: request.FacingAngleRad,
                     hasFacing: request.HasFacing != 0,
                     mapEntity: mapEntity ?? default,
-                    hasMapEntity: mapEntity.HasValue,
-                    massCrowdFormationAnchorOverride: CreateMassCrowdFormationAnchorOverride(in request),
-                    hasMassCrowdFormationAnchorOverride: request.HasMassCrowdFormationAnchorOverride != 0,
-                    massCrowdFormationFollowerOverride: CreateMassCrowdFormationFollowerOverride(in request),
-                    hasMassCrowdFormationFollowerOverride: request.HasMassCrowdFormationFollowerOverride != 0);
+                    hasMapEntity: mapEntity.HasValue);
             }
 
             int templateKeyId = ResolveOrRegisterTemplateKeyId(templateId);
@@ -254,8 +251,6 @@ namespace Ludots.Core.Gameplay.Spawning
             bool publishSpawnedEvent = ShouldPublishSpawnedEvent(templateKeyId, hasDirectBootstrap);
             bool hasTeamWork = false;
             bool hasPlayerOwnerWork = false;
-            bool hasMassCrowdBlockerWork = false;
-            bool hasMassCrowdFormationWork = false;
             bool hasParentWork = false;
             bool hasRequestOnSpawnEffect = false;
             bool hasReceiptWork = false;
@@ -264,9 +259,6 @@ namespace Ludots.Core.Gameplay.Spawning
                 ref readonly var request = ref _batchRequests[i];
                 hasTeamWork |= request.TeamIdOverride > 0 || request.CopySourceTeam != 0;
                 hasPlayerOwnerWork |= request.PlayerOwnerIdOverride > 0 || request.CopySourcePlayerOwner != 0;
-                hasMassCrowdBlockerWork |= request.MassCrowdBlockerRadiusCmOverride > 0f;
-                hasMassCrowdFormationWork |= request.HasMassCrowdFormationAnchorOverride != 0 ||
-                                             request.HasMassCrowdFormationFollowerOverride != 0;
                 hasParentWork |= request.LinkSourceAsParent != 0 || World.IsAlive(request.Parent);
                 hasRequestOnSpawnEffect |= request.OnSpawnEffectTemplateId > 0;
                 hasReceiptWork |= request.EmitReceipt != 0;
@@ -309,8 +301,6 @@ namespace Ludots.Core.Gameplay.Spawning
             bool requiresPostSpawnLoop =
                 hasTeamWork ||
                 hasPlayerOwnerWork ||
-                hasMassCrowdBlockerWork ||
-                hasMassCrowdFormationWork ||
                 hasParentWork ||
                 publishSpawnedEvent ||
                 hasRequestOnSpawnEffect ||
@@ -332,16 +322,6 @@ namespace Ludots.Core.Gameplay.Spawning
                     if (hasPlayerOwnerWork)
                     {
                         TryApplyPlayerOwner(in request, entity);
-                    }
-
-                    if (hasMassCrowdBlockerWork)
-                    {
-                        TryApplyMassCrowdBlockerRadius(in request, entity);
-                    }
-
-                    if (hasMassCrowdFormationWork)
-                    {
-                        TryApplyMassCrowdFormationOverrides(in request, entity);
                     }
 
                     if (!allHaveMapEntity)
@@ -486,8 +466,7 @@ namespace Ludots.Core.Gameplay.Spawning
             TryApplyFacing(in request, entity);
             TryApplyTeam(in request, entity);
             TryApplyPlayerOwner(in request, entity);
-            TryApplyMassCrowdBlockerRadius(in request, entity);
-            TryApplyMassCrowdFormationOverrides(in request, entity);
+            ApplyComponentPatches(in request, entity);
             TryApplyMapOwnership(in request, entity);
             TryApplyParentLink(in request, entity);
             return entity;
@@ -651,98 +630,65 @@ namespace Ludots.Core.Gameplay.Spawning
             }
         }
 
-        private void TryApplyMassCrowdBlockerRadius(in RuntimeEntitySpawnRequest request, Entity entity)
+        private void ApplyTemplateComponentPatches(EntityBuilder builder, in RuntimeEntitySpawnRequest request)
         {
-            if (!(request.MassCrowdBlockerRadiusCmOverride > 0f))
+            if (!HasComponentPatches(in request))
             {
                 return;
             }
 
-            if (!World.Has<MassCrowdBlocker>(entity))
+            RuntimeEntitySpawnComponentPatch[] patches = request.ComponentPatches;
+            for (int i = 0; i < patches.Length; i++)
             {
-                throw new InvalidOperationException(
-                    $"Runtime template spawn request for '{request.TemplateId}' supplied MassCrowdBlockerRadiusCmOverride but the template does not author MassCrowdBlocker.");
+                RuntimeEntitySpawnComponentPatch patch = patches[i];
+                ValidateComponentPatch(in patch, i);
+                builder.WithOverride(patch.ComponentName, patch.Data);
             }
-
-            var blocker = World.Get<MassCrowdBlocker>(entity);
-            blocker.RadiusCm = request.MassCrowdBlockerRadiusCmOverride;
-            World.Set(entity, blocker);
         }
 
-        private void TryApplyMassCrowdFormationOverrides(in RuntimeEntitySpawnRequest request, Entity entity)
+        private void ApplyComponentPatches(in RuntimeEntitySpawnRequest request, Entity entity)
         {
-            if (request.HasMassCrowdFormationAnchorOverride != 0)
+            if (!HasComponentPatches(in request))
             {
-                if (!World.Has<MassCrowdFormationAnchor>(entity))
+                return;
+            }
+
+            RuntimeEntitySpawnComponentPatch[] patches = request.ComponentPatches;
+            for (int i = 0; i < patches.Length; i++)
+            {
+                RuntimeEntitySpawnComponentPatch patch = patches[i];
+                ValidateComponentPatch(in patch, i);
+                if (!CoreComponentRegistry.TryGetComponentType(patch.ComponentName, out var componentType))
                 {
-                    throw new InvalidOperationException(
-                        $"Runtime template spawn request for '{request.TemplateId}' supplied MassCrowdFormationAnchor override but the template does not author MassCrowdFormationAnchor.");
+                    throw new InvalidOperationException($"Runtime entity spawn component patch '{patch.ComponentName}' is not registered.");
                 }
 
-                World.Set(entity, CreateMassCrowdFormationAnchorOverride(in request));
-            }
-
-            if (request.HasMassCrowdFormationFollowerOverride != 0)
-            {
-                if (!World.Has<MassCrowdFormationFollower>(entity))
+                if (World.Has(entity, componentType))
                 {
                     throw new InvalidOperationException(
-                        $"Runtime template spawn request for '{request.TemplateId}' supplied MassCrowdFormationFollower override but the template does not author MassCrowdFormationFollower.");
+                        $"Runtime entity spawn component patch '{patch.ComponentName}' cannot overwrite an existing component outside the template override path.");
                 }
 
-                World.Set(entity, CreateMassCrowdFormationFollowerOverride(in request));
+                CoreComponentRegistry.Apply(entity, patch.ComponentName, patch.Data);
             }
         }
 
-        private static MassCrowdFormationAnchor CreateMassCrowdFormationAnchorOverride(in RuntimeEntitySpawnRequest request)
+        private static bool HasComponentPatches(in RuntimeEntitySpawnRequest request)
         {
-            if (request.HasMassCrowdFormationAnchorOverride == 0)
-            {
-                return default;
-            }
-
-            if (request.MassCrowdFormationIdOverride <= 0)
-            {
-                throw new InvalidOperationException("Runtime spawn MassCrowdFormationAnchor override requires a positive MassCrowdFormationIdOverride.");
-            }
-
-            if (request.MassCrowdFormationSlotCountOverride <= 0)
-            {
-                throw new InvalidOperationException("Runtime spawn MassCrowdFormationAnchor override requires MassCrowdFormationSlotCountOverride > 0.");
-            }
-
-            return new MassCrowdFormationAnchor
-            {
-                FormationId = request.MassCrowdFormationIdOverride,
-                SlotCount = request.MassCrowdFormationSlotCountOverride,
-            };
+            return request.ComponentPatches is { Length: > 0 };
         }
 
-        private static MassCrowdFormationFollower CreateMassCrowdFormationFollowerOverride(in RuntimeEntitySpawnRequest request)
+        private static void ValidateComponentPatch(in RuntimeEntitySpawnComponentPatch patch, int index)
         {
-            if (request.HasMassCrowdFormationFollowerOverride == 0)
+            if (string.IsNullOrWhiteSpace(patch.ComponentName))
             {
-                return default;
+                throw new InvalidOperationException($"Runtime entity spawn component patch at index {index} requires a non-empty component name.");
             }
 
-            if (request.MassCrowdFormationIdOverride <= 0)
+            if (patch.Data == null)
             {
-                throw new InvalidOperationException("Runtime spawn MassCrowdFormationFollower override requires a positive MassCrowdFormationIdOverride.");
+                throw new InvalidOperationException($"Runtime entity spawn component patch '{patch.ComponentName}' requires non-null data.");
             }
-
-            if (request.MassCrowdFormationSlotIndexOverride < 0)
-            {
-                throw new InvalidOperationException("Runtime spawn MassCrowdFormationFollower override requires a non-negative MassCrowdFormationSlotIndexOverride.");
-            }
-
-            return new MassCrowdFormationFollower
-            {
-                FormationId = request.MassCrowdFormationIdOverride,
-                Anchor = Entity.Null,
-                SlotIndex = request.MassCrowdFormationSlotIndexOverride,
-                LocalOffsetXCm = request.MassCrowdFormationLocalOffsetXCmOverride,
-                LocalOffsetYCm = request.MassCrowdFormationLocalOffsetYCmOverride,
-            };
         }
 
         private void TryApplyFacing(in RuntimeEntitySpawnRequest request, Entity entity)

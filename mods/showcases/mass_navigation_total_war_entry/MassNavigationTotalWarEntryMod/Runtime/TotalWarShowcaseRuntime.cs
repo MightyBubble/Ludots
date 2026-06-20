@@ -2,6 +2,7 @@ using System;
 using System.Collections.Generic;
 using System.Numerics;
 using System.Runtime.CompilerServices;
+using System.Text.Json.Nodes;
 using System.Threading.Tasks;
 using Arch.Core;
 using Ludots.Core.Components;
@@ -230,11 +231,11 @@ internal sealed class TotalWarShowcaseRuntime
                 FacingAngleRad = plan.FacingRad,
                 HasFacing = 1,
                 TeamIdOverride = plan.TeamId,
-                MassCrowdFormationIdOverride = MassCrowdFormationRegistry.Register(_formationPlans[plan.FormationIndex].Id),
-                MassCrowdFormationSlotIndexOverride = plan.SlotIndex,
-                MassCrowdFormationLocalOffsetXCmOverride = plan.SlotOffsetXCm,
-                MassCrowdFormationLocalOffsetYCmOverride = plan.SlotOffsetYCm,
-                HasMassCrowdFormationFollowerOverride = 1,
+                ComponentPatches = CreateFormationFollowerPatch(
+                    _formationPlans[plan.FormationIndex].Id,
+                    plan.SlotIndex,
+                    plan.SlotOffsetXCm,
+                    plan.SlotOffsetYCm),
             };
 
             if (!spawnQueue.TryEnqueue(in request))
@@ -714,9 +715,7 @@ internal sealed class TotalWarShowcaseRuntime
                 HasFacing = 1,
                 TeamIdOverride = plan.TeamId,
                 PlayerOwnerIdOverride = formation.OwnerPlayerId,
-                MassCrowdFormationIdOverride = MassCrowdFormationRegistry.Register(plan.Id),
-                MassCrowdFormationSlotCountOverride = plan.SoldierCount,
-                HasMassCrowdFormationAnchorOverride = 1,
+                ComponentPatches = CreateFormationAnchorPatch(plan.Id, plan.SoldierCount),
             };
 
             if (!spawnQueue.TryEnqueue(in request))
@@ -724,6 +723,40 @@ internal sealed class TotalWarShowcaseRuntime
                 throw new InvalidOperationException("Total War showcase failed to enqueue formation agent spawn request.");
             }
         }
+    }
+
+    private static RuntimeEntitySpawnComponentPatch[] CreateFormationAnchorPatch(string formationId, int slotCount)
+    {
+        return
+        [
+            new RuntimeEntitySpawnComponentPatch(
+                "MassCrowdFormationAnchor",
+                new JsonObject
+                {
+                    ["formationId"] = formationId,
+                    ["slotCount"] = slotCount,
+                }),
+        ];
+    }
+
+    private static RuntimeEntitySpawnComponentPatch[] CreateFormationFollowerPatch(
+        string formationId,
+        int slotIndex,
+        float localOffsetXCm,
+        float localOffsetYCm)
+    {
+        return
+        [
+            new RuntimeEntitySpawnComponentPatch(
+                "MassCrowdFormationFollower",
+                new JsonObject
+                {
+                    ["formationId"] = formationId,
+                    ["slotIndex"] = slotIndex,
+                    ["localOffsetXCm"] = localOffsetXCm,
+                    ["localOffsetYCm"] = localOffsetYCm,
+                }),
+        ];
     }
 
     private void EnqueueObstacleOverlaySpawns(

@@ -100,8 +100,8 @@ namespace Ludots.Tests.Presentation
                 "Formation footprint is derived from TotalWarShowcaseConfig outline during scenario binding, not authored in the template.");
             Assert.That(components.ContainsKey("SpatialFootprint2D"), Is.False,
                 "Formation footprint vertices must not drift away from the configured outline.");
-            Assert.That(components.ContainsKey("MassCrowdFormationAnchor"), Is.True,
-                "Formation behavior is optional and only enabled by authoring the core MassCrowdFormationAnchor component.");
+            Assert.That(components.ContainsKey("MassCrowdFormationAnchor"), Is.False,
+                "Formation identity is per spawned formation and must be applied by runtime component patch, not an empty template placeholder.");
             Assert.That(components.ContainsKey("MassCrowdFollowerLocomotion"), Is.True,
                 "Follower sync tuning belongs to component authoring, not a showcase-only runtime config block.");
 
@@ -147,8 +147,8 @@ namespace Ludots.Tests.Presentation
                 JsonObject soldierComponents = soldierTemplate["components"]?.AsObject()
                     ?? throw new InvalidOperationException("TotalWar soldier template must author components.");
                 Assert.That(soldierComponents.ContainsKey("MassCrowdAgent"), Is.True);
-                Assert.That(soldierComponents.ContainsKey("MassCrowdFormationFollower"), Is.True,
-                    "Soldier formation behavior is optional and enabled by the core MassCrowdFormationFollower component.");
+                Assert.That(soldierComponents.ContainsKey("MassCrowdFormationFollower"), Is.False,
+                    "Soldier slot binding is per spawned soldier and must be applied by runtime component patch, not an empty template placeholder.");
                 Assert.That(soldierComponents.ContainsKey("Team"), Is.False,
                     "Soldier team is owned by the formation config and applied by the generic runtime spawn request; templates must not author a second team SSOT.");
                 Assert.That(soldierComponents.ContainsKey("OrderBuffer"), Is.False);
@@ -553,7 +553,8 @@ namespace Ludots.Tests.Presentation
             Assert.That(source, Does.Not.Contain("ApplyCarriedAgentSlotTarget"));
             Assert.That(source, Does.Not.Contain("ResolveCarriedAgentSlotTarget"));
             Assert.That(source, Does.Contain("MassCrowdFormationFollower"));
-            Assert.That(source, Does.Contain("HasMassCrowdFormationFollowerOverride = 1"));
+            Assert.That(source, Does.Contain("CreateFormationFollowerPatch"));
+            Assert.That(source, Does.Contain("\"MassCrowdFormationFollower\""));
 
             string coreFollowerSystem = File.ReadAllText(Path.Combine(
                 FindRepoRoot(),
@@ -682,7 +683,7 @@ namespace Ludots.Tests.Presentation
         }
 
         [Test]
-        public void RuntimeSpawnMassCrowdBlockerRadiusOverride_FeedsMassFlowObstacleRadius()
+        public void RuntimeSpawnComponentPatch_FeedsMassFlowObstacleRadius()
         {
             const string templateId = "mass_navigation_test_blocker_override";
             string templateJson = """
@@ -691,8 +692,7 @@ namespace Ludots.Tests.Presentation
     "id": "mass_navigation_test_blocker_override",
     "components": {
       "Name": { "Value": "MassNavigation.TestBlockerOverride" },
-      "WorldPositionCm": { "Value": { "X": 0, "Y": 0 } },
-      "MassCrowdBlocker": {}
+      "WorldPositionCm": { "Value": { "X": 0, "Y": 0 } }
     }
   }
 ]
@@ -717,7 +717,15 @@ namespace Ludots.Tests.Presentation
                     TemplateId = templateId,
                     WorldPositionCm = Fix64Vec2.FromInt(2222, 3333),
                     HasWorldPosition = 1,
-                    MassCrowdBlockerRadiusCmOverride = 260f,
+                    ComponentPatches =
+                    [
+                        new RuntimeEntitySpawnComponentPatch(
+                            "MassCrowdBlocker",
+                            new JsonObject
+                            {
+                                ["radiusCm"] = 260f,
+                            }),
+                    ],
                 }), Is.True);
                 spawnSystem.Update(0f);
 
@@ -1765,7 +1773,7 @@ namespace Ludots.Tests.Presentation
         }
 
         [Test]
-        public void RuntimeTemplateSpawnBatch_KeepsControllableMassNavigationAgentTemplatesOnFastPath()
+        public void RuntimeTemplateSpawn_UsesGenericComponentRegistryForMassCrowdTemplates()
         {
             LayerRegistry.Register(MassNavigationAgentLayerName);
             string templateJson = """
@@ -1796,15 +1804,13 @@ namespace Ludots.Tests.Presentation
             var requests = new RuntimeEntitySpawnQueue(capacity: 8);
             var receipts = new RuntimeEntitySpawnReceiptQueue(capacity: 8);
             var templateKeys = new EntityTemplateKeyRegistry();
-            var timings = new PresentationTimingDiagnostics();
             var system = new RuntimeEntitySpawnSystem(
                 world,
                 requests,
                 templates,
                 templateKeys,
                 new Ludots.Core.Presentation.PresentationStableIdAllocator(),
-                receipts: receipts,
-                timingDiagnostics: timings);
+                receipts: receipts);
 
             const int receiptChannel = 101;
             for (int i = 0; i < 3; i++)
@@ -1825,8 +1831,6 @@ namespace Ludots.Tests.Presentation
 
             system.Update(0f);
 
-            Assert.That(timings.RuntimeSpawnBatchCountLastFrame, Is.EqualTo(3),
-                "MassCrowd-authored templates should stay on the validated runtime template batch path.");
             Assert.That(receipts.CountForChannel(receiptChannel), Is.EqualTo(3));
 
             int spawned = 0;
@@ -2973,6 +2977,11 @@ namespace Ludots.Tests.Presentation
                 {
                     FormationId = formationId,
                     SlotCount = slotCount,
+                },
+                new MassCrowdFollowerLocomotion
+                {
+                    TargetChangeEpsilonCm = 1f,
+                    FacingChangeEpsilonRadians = 0.00001f,
                 },
                 new FacingDirection { AngleRad = 0f });
             world.Add(entity, new PresentationStableId { Value = entity.Id });

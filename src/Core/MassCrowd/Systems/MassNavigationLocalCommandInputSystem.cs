@@ -77,7 +77,7 @@ internal sealed class MassNavigationLocalCommandInputSystem : ISystem<float>
     {
         if (_engine.GetService(CoreServiceKeys.OrderBufferSystem) is not OrderBufferSystem orderBufferSystem)
         {
-            throw new InvalidOperationException("MassNavigationMod requires OrderBufferSystem for selection move commands.");
+            throw new InvalidOperationException("MassCrowd runtime requires OrderBufferSystem for selection move commands.");
         }
 
         return orderBufferSystem;
@@ -87,7 +87,7 @@ internal sealed class MassNavigationLocalCommandInputSystem : ISystem<float>
     {
         if (_engine.GetService(CoreServiceKeys.OrderTypeRegistry) is not Ludots.Core.Gameplay.GAS.Orders.OrderTypeRegistry registry)
         {
-            throw new InvalidOperationException($"MassNavigationMod requires GAS/order_types.json to define '{MassNavigationOrderKeys.Move}'.");
+            throw new InvalidOperationException($"MassCrowd runtime requires GAS/order_types.json to define '{MassNavigationOrderKeys.Move}'.");
         }
 
         return registry;
@@ -99,12 +99,12 @@ internal sealed class MassNavigationLocalCommandInputSystem : ISystem<float>
             localObj is not Entity local ||
             !_engine.World.IsAlive(local))
         {
-            throw new InvalidOperationException("MassNavigationMod requires LocalPlayerEntity before submitting move orders.");
+            throw new InvalidOperationException("MassCrowd runtime requires LocalPlayerEntity before submitting move orders.");
         }
 
         if (!_engine.World.TryGet(local, out PlayerOwner owner))
         {
-            throw new InvalidOperationException("MassNavigationMod LocalPlayerEntity must author PlayerOwner.");
+            throw new InvalidOperationException("MassCrowd runtime LocalPlayerEntity must author PlayerOwner.");
         }
 
         return owner.PlayerId;

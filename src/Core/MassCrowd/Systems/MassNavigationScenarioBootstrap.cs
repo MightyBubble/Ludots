@@ -6,6 +6,7 @@ using Ludots.Core.Map;
 using Ludots.Core.Mathematics.FixedPoint;
 using Ludots.Core.Scripting;
 using Ludots.Core.MassCrowd.Runtime;
+using System.Text.Json.Nodes;
 
 namespace Ludots.Core.MassCrowd.Systems;
 
@@ -19,7 +20,7 @@ internal static class MassNavigationScenarioBootstrap
 
         MassNavigationAuthoringContract authoring = MassNavigationAuthoringContract.Require(engine, simulation.Config);
         RuntimeEntitySpawnQueue spawnQueue = engine.GetService(CoreServiceKeys.RuntimeEntitySpawnQueue)
-            ?? throw new InvalidOperationException("MassNavigationMod requires RuntimeEntitySpawnQueue.");
+            ?? throw new InvalidOperationException("MassCrowd runtime requires RuntimeEntitySpawnQueue.");
 
         simulation.AgentState.Reset();
         ReadOnlySpan<int> teamIds = simulation.TeamIds;
@@ -45,7 +46,7 @@ internal static class MassNavigationScenarioBootstrap
         if (spawnQueue.FreeCapacity < requested)
         {
             throw new InvalidOperationException(
-                $"MassNavigationMod requires RuntimeEntitySpawnQueue free capacity {requested}, actual {spawnQueue.FreeCapacity}.");
+                $"MassCrowd runtime requires RuntimeEntitySpawnQueue free capacity {requested}, actual {spawnQueue.FreeCapacity}.");
         }
 
         MapId mapId = RequireCurrentMapId(engine, simulation.Config.MapId);
@@ -101,12 +102,12 @@ internal static class MassNavigationScenarioBootstrap
         ArgumentNullException.ThrowIfNull(simulation);
 
         RuntimeEntitySpawnQueue spawnQueue = engine.GetService(CoreServiceKeys.RuntimeEntitySpawnQueue)
-            ?? throw new InvalidOperationException("MassNavigationMod requires RuntimeEntitySpawnQueue.");
+            ?? throw new InvalidOperationException("MassCrowd runtime requires RuntimeEntitySpawnQueue.");
         ReadOnlySpan<MassNavigationObstacleConfig> obstacles = simulation.WorldConfig.Obstacles;
         if (spawnQueue.FreeCapacity < obstacles.Length)
         {
             throw new InvalidOperationException(
-                $"MassNavigationMod requires RuntimeEntitySpawnQueue free capacity {obstacles.Length}, actual {spawnQueue.FreeCapacity}.");
+                $"MassCrowd runtime requires RuntimeEntitySpawnQueue free capacity {obstacles.Length}, actual {spawnQueue.FreeCapacity}.");
         }
 
         MapId mapId = RequireCurrentMapId(engine, simulation.Config.MapId);
@@ -140,7 +141,7 @@ internal static class MassNavigationScenarioBootstrap
             }
         }
 
-        return resolved ?? throw new InvalidOperationException("MassNavigationMod requires at least one configured presentation team.");
+        return resolved ?? throw new InvalidOperationException("MassCrowd runtime requires at least one configured presentation team.");
     }
 
     private static void RequireSameLayer(
@@ -156,7 +157,7 @@ internal static class MassNavigationScenarioBootstrap
         }
 
         throw new InvalidOperationException(
-            $"MassNavigationMod scenario auto-spawn requires one explicit agent layer across generated agent templates; '{actualLabel}' differs from '{expectedLabel}'.");
+            $"MassCrowd runtime scenario auto-spawn requires one explicit agent layer across generated agent templates; '{actualLabel}' differs from '{expectedLabel}'.");
     }
 
     private static void EnqueueConfiguredObstacleBlockers(
@@ -178,7 +179,7 @@ internal static class MassNavigationScenarioBootstrap
                 Fix64Vec2.FromInt(
                     (int)MathF.Round(simulation.ToWorldXCm(obstacle.LocalXCm)),
                     (int)MathF.Round(simulation.ToWorldYCm(obstacle.LocalYCm))),
-                blockerRadiusCmOverride: obstacle.RadiusCm);
+                componentPatches: CreateBlockerRadiusPatch(obstacle.RadiusCm));
         }
     }
 
@@ -186,19 +187,19 @@ internal static class MassNavigationScenarioBootstrap
     {
         if (string.IsNullOrWhiteSpace(templateId))
         {
-            throw new InvalidOperationException("MassNavigationMod template id must be non-empty.");
+            throw new InvalidOperationException("MassCrowd runtime template id must be non-empty.");
         }
 
         if (!engine.MapLoader.TemplateRegistry.Contains(templateId))
         {
-            throw new InvalidOperationException($"MassNavigationMod requires configured entity template '{templateId}'.");
+            throw new InvalidOperationException($"MassCrowd runtime requires configured entity template '{templateId}'.");
         }
 
         EntityTemplateKeyRegistry templateKeys = engine.GetService(CoreServiceKeys.EntityTemplateKeyRegistry)
-            ?? throw new InvalidOperationException("MassNavigationMod requires EntityTemplateKeyRegistry.");
+            ?? throw new InvalidOperationException("MassCrowd runtime requires EntityTemplateKeyRegistry.");
         if (!templateKeys.TryGetId(templateId, out int templateKeyId) || templateKeyId <= 0)
         {
-            throw new InvalidOperationException($"MassNavigationMod template '{templateId}' was not registered in EntityTemplateKeyRegistry.");
+            throw new InvalidOperationException($"MassCrowd runtime template '{templateId}' was not registered in EntityTemplateKeyRegistry.");
         }
     }
 
@@ -208,7 +209,7 @@ internal static class MassNavigationScenarioBootstrap
         string templateId,
         Fix64Vec2 worldPosition,
         int teamIdOverride = 0,
-        float blockerRadiusCmOverride = 0f)
+        RuntimeEntitySpawnComponentPatch[]? componentPatches = null)
     {
         var request = new RuntimeEntitySpawnRequest
         {
@@ -218,25 +219,43 @@ internal static class MassNavigationScenarioBootstrap
             WorldPositionCm = worldPosition,
             HasWorldPosition = 1,
             TeamIdOverride = teamIdOverride,
-            MassCrowdBlockerRadiusCmOverride = blockerRadiusCmOverride,
+            ComponentPatches = componentPatches ?? Array.Empty<RuntimeEntitySpawnComponentPatch>(),
         };
 
         if (!spawnQueue.TryEnqueue(in request))
         {
-            throw new InvalidOperationException("MassNavigationMod failed to enqueue runtime entity spawn request.");
+            throw new InvalidOperationException("MassCrowd runtime failed to enqueue runtime entity spawn request.");
         }
     }
 
     private static MapId RequireCurrentMapId(GameEngine engine, string configuredMapId)
     {
         MapSession session = engine.CurrentMapSession
-            ?? throw new InvalidOperationException("MassNavigationMod requires an active map session before scenario bootstrap.");
+            ?? throw new InvalidOperationException("MassCrowd runtime requires an active map session before scenario bootstrap.");
         if (!string.Equals(session.MapId.Value, configuredMapId, StringComparison.Ordinal))
         {
             throw new InvalidOperationException(
-                $"MassNavigationMod scenario bootstrap requires active map '{configuredMapId}', got '{session.MapId.Value}'.");
+                $"MassCrowd runtime scenario bootstrap requires active map '{configuredMapId}', got '{session.MapId.Value}'.");
         }
 
         return session.MapId;
+    }
+
+    private static RuntimeEntitySpawnComponentPatch[] CreateBlockerRadiusPatch(float blockerRadiusCm)
+    {
+        if (!(blockerRadiusCm > 0f))
+        {
+            throw new InvalidOperationException("MassCrowd runtime blocker spawn patch requires radiusCm > 0.");
+        }
+
+        return
+        [
+            new RuntimeEntitySpawnComponentPatch(
+                "MassCrowdBlocker",
+                new JsonObject
+                {
+                    ["radiusCm"] = blockerRadiusCm,
+                }),
+        ];
     }
 }
