@@ -4,7 +4,7 @@ using SkiaSharp;
 
 namespace Ludots.UI.Skia;
 
-public sealed class UiCanvasContent : IUiCanvasContent
+public sealed class UiCanvasContent : IUiCanvasContent, ISkiaUiCanvasContent
 {
 	private readonly Action<SKCanvas, SKRect> _draw;
 

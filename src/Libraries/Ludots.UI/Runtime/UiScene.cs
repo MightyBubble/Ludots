@@ -240,6 +240,13 @@ public sealed class UiScene
 		return list;
 	}
 
+	public IEnumerable<UiNode> EnumerateVisualNodes()
+	{
+		return Root == null
+			? Array.Empty<UiNode>()
+			: EnumerateNodes(Root);
+	}
+
 	public UiNode? HitTest(float x, float y)
 	{
 		return (Root == null) ? null : HitTest(Root, x, y);
@@ -1213,6 +1220,14 @@ public sealed class UiScene
 				return uiNode;
 			}
 		}
-		return flag ? node : null;
+		if (!flag)
+		{
+			return null;
+		}
+
+		return node.CanvasContent is IUiCanvasHitTestSink hitTestSink &&
+			!hitTestSink.HitTest(node, localPoint.X, localPoint.Y)
+				? null
+				: node;
 	}
 }

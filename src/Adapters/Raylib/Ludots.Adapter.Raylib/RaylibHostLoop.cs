@@ -29,6 +29,7 @@ using Ludots.Core.Systems;
 using Ludots.Platform.Abstractions;
 using Ludots.Presentation.Skia;
 using Ludots.UI;
+using Ludots.UI.Browser;
 using Ludots.UI.Input;
 using Ludots.UI.Runtime;
 using Ludots.UI.Skia;
@@ -43,7 +44,84 @@ namespace Ludots.Adapter.Raylib
         private const uint FlagWindowResizable = 4;
         private static readonly ServiceKey<IRaylibBenchmarkRenderer> RaylibBenchmarkRendererKey = new("Platform.RaylibBenchmarkRenderer");
         private static bool _uiPointerCaptured;
+        private static bool _hasLastUiPointerMove;
+        private static float _lastUiPointerMoveX;
+        private static float _lastUiPointerMoveY;
         private static bool _emptyBufferWarned;
+        private static readonly KeyboardKey[] BrowserForwardedKeys =
+        {
+            KeyboardKey.KEY_ENTER,
+            KeyboardKey.KEY_TAB,
+            KeyboardKey.KEY_BACKSPACE,
+            KeyboardKey.KEY_DELETE,
+            KeyboardKey.KEY_ESCAPE,
+            KeyboardKey.KEY_LEFT,
+            KeyboardKey.KEY_RIGHT,
+            KeyboardKey.KEY_UP,
+            KeyboardKey.KEY_DOWN,
+            KeyboardKey.KEY_HOME,
+            KeyboardKey.KEY_END,
+            KeyboardKey.KEY_PAGE_UP,
+            KeyboardKey.KEY_PAGE_DOWN,
+            KeyboardKey.KEY_SPACE,
+            KeyboardKey.KEY_A,
+            KeyboardKey.KEY_B,
+            KeyboardKey.KEY_C,
+            KeyboardKey.KEY_D,
+            KeyboardKey.KEY_E,
+            KeyboardKey.KEY_F,
+            KeyboardKey.KEY_G,
+            KeyboardKey.KEY_H,
+            KeyboardKey.KEY_I,
+            KeyboardKey.KEY_J,
+            KeyboardKey.KEY_K,
+            KeyboardKey.KEY_L,
+            KeyboardKey.KEY_M,
+            KeyboardKey.KEY_N,
+            KeyboardKey.KEY_O,
+            KeyboardKey.KEY_P,
+            KeyboardKey.KEY_Q,
+            KeyboardKey.KEY_R,
+            KeyboardKey.KEY_S,
+            KeyboardKey.KEY_T,
+            KeyboardKey.KEY_U,
+            KeyboardKey.KEY_V,
+            KeyboardKey.KEY_W,
+            KeyboardKey.KEY_X,
+            KeyboardKey.KEY_Y,
+            KeyboardKey.KEY_Z,
+            KeyboardKey.KEY_ZERO,
+            KeyboardKey.KEY_ONE,
+            KeyboardKey.KEY_TWO,
+            KeyboardKey.KEY_THREE,
+            KeyboardKey.KEY_FOUR,
+            KeyboardKey.KEY_FIVE,
+            KeyboardKey.KEY_SIX,
+            KeyboardKey.KEY_SEVEN,
+            KeyboardKey.KEY_EIGHT,
+            KeyboardKey.KEY_NINE
+        };
+
+        private sealed class SyntheticUiPlayback
+        {
+            public bool Enabled { get; init; }
+
+            public int StartFrame { get; init; }
+
+            public int EndFrame { get; init; }
+
+            public float StartX { get; init; }
+
+            public float StartY { get; init; }
+
+            public float EndX { get; init; }
+
+            public float EndY { get; init; }
+
+            public int ScrollFrame { get; init; }
+
+            public float ScrollDeltaY { get; init; }
+        }
 
         public static void Run(RaylibHostSetup setup)
         {
@@ -101,6 +179,7 @@ namespace Ludots.Adapter.Raylib
                 config.WindowHeight = screenHeight;
 
                 using var overlayCompositor = new RaylibOverlayCompositor(screenWidth, screenHeight);
+                using var browserLayerRenderer = new RaylibBrowserLayerRenderer();
                 uiRoot.Resize(screenWidth, screenHeight);
 
                 var initialCamera = new Camera3D
@@ -210,6 +289,7 @@ namespace Ludots.Adapter.Raylib
                 int autoExitFrame = int.TryParse(Environment.GetEnvironmentVariable("LUDOTS_AUTO_EXIT_FRAME"), out int parsedAutoExitFrame)
                     ? Math.Max(0, parsedAutoExitFrame)
                     : 0;
+                int minRuntimeMsBeforeScreenshot = ReadEnvIntOrDefault("LUDOTS_MIN_RUNTIME_MS_BEFORE_SCREENSHOT", 0);
                 int timingLogIntervalFrames = int.TryParse(Environment.GetEnvironmentVariable("LUDOTS_RAYLIB_TIMING_LOG_INTERVAL_FRAMES"), out int parsedTimingLogIntervalFrames)
                     ? Math.Max(0, parsedTimingLogIntervalFrames)
                     : 0;
@@ -225,7 +305,9 @@ namespace Ludots.Adapter.Raylib
                 float autoOrbitDegPerSecond = float.TryParse(Environment.GetEnvironmentVariable("LUDOTS_RAYLIB_AUTO_ORBIT_DEG_PER_SEC"), out float parsedAutoOrbitDegPerSecond)
                     ? parsedAutoOrbitDegPerSecond
                     : 0f;
+                SyntheticUiPlayback syntheticUiPlayback = ReadSyntheticUiPlayback();
                 int frameIndex = 0;
+                Stopwatch runtimeStopwatch = Stopwatch.StartNew();
                 long previousLoopEnd = Stopwatch.GetTimestamp();
 
                 while (true)
@@ -282,12 +364,12 @@ namespace Ludots.Adapter.Raylib
                         if (drawSkiaUi)
                         {
                             long uiInputStart = Stopwatch.GetTimestamp();
-                            uiCaptured = UpdateInput(uiRoot);
+                            uiCaptured = UpdateInput(uiRoot, syntheticUiPlayback, frameIndex, diagnosticPath);
                             uiInputMs = ElapsedMs(uiInputStart);
                         }
 
                         presentationTiming?.ObserveUiInput(uiInputMs);
-                        engine.SetService(CoreServiceKeys.UiCaptured, uiCaptured);
+                        engine.SetService(CoreServiceKeys.UiCaptured, uiCaptured || uiRoot.HasFocusedCanvas);
                         presentationTiming?.ObserveHostPreTick(ElapsedMs(preTickStart));
 
                         engine.Tick(dt);
@@ -464,6 +546,11 @@ namespace Ludots.Adapter.Raylib
                         EndCoreMode3D();
                         presentationTiming?.ObserveMode3D(ElapsedMs(mode3DStart));
 
+                        if (drawSkiaUi)
+                        {
+                            browserLayerRenderer.Render(uiRoot.Scene, lastW, lastH);
+                        }
+
                         long overlayStart = Stopwatch.GetTimestamp();
                         OverlayCompositeResult overlayResult = overlayCompositor.Render(
                             overlayScene,
@@ -516,7 +603,8 @@ namespace Ludots.Adapter.Raylib
                             AppendRaylibDiagnostic(diagnosticPath, BuildTimingDiagnostic(engine, presentationTiming, overlayScene));
                         }
 
-                        if (screenshotPending && frameIndex >= screenshotFrame)
+                        if (screenshotPending && frameIndex >= screenshotFrame &&
+                            runtimeStopwatch.ElapsedMilliseconds >= minRuntimeMsBeforeScreenshot)
                         {
                             string fullScreenshotPath = screenshotTargetPath!;
                             string? screenshotDirectory = Path.GetDirectoryName(fullScreenshotPath);
@@ -552,7 +640,7 @@ namespace Ludots.Adapter.Raylib
                             Log.Info(in LogChannels.Engine, $"Captured runtime screenshot: {fullScreenshotPath}");
                         }
 
-                        if (autoExitFrame > 0 && frameIndex >= autoExitFrame)
+                        if (autoExitFrame > 0 && frameIndex >= autoExitFrame && !screenshotPending)
                         {
                             AppendRaylibDiagnostic(diagnosticPath, $"auto-exit frame={frameIndex}");
                             AppendRaylibDiagnostic(diagnosticPath, BuildTimingDiagnostic(engine, presentationTiming, overlayScene));
@@ -682,6 +770,44 @@ namespace Ludots.Adapter.Raylib
                    raw.Equals("true", StringComparison.OrdinalIgnoreCase) ||
                    raw.Equals("yes", StringComparison.OrdinalIgnoreCase) ||
                    raw.Equals("on", StringComparison.OrdinalIgnoreCase);
+        }
+
+        private static SyntheticUiPlayback ReadSyntheticUiPlayback()
+        {
+            bool enabled = ReadEnvBoolOrDefault("LUDOTS_RAYLIB_SYNTHETIC_UI_PLAYBACK", defaultValue: false);
+            int startFrame = ReadEnvIntOrDefault("LUDOTS_RAYLIB_SYNTHETIC_UI_START_FRAME", 180);
+            int endFrame = ReadEnvIntOrDefault("LUDOTS_RAYLIB_SYNTHETIC_UI_END_FRAME", 260);
+            if (endFrame <= startFrame)
+            {
+                endFrame = startFrame + 1;
+            }
+
+            return new SyntheticUiPlayback
+            {
+                Enabled = enabled,
+                StartFrame = startFrame,
+                EndFrame = endFrame,
+                StartX = ReadEnvFloatOrDefault("LUDOTS_RAYLIB_SYNTHETIC_UI_START_X", 190f),
+                StartY = ReadEnvFloatOrDefault("LUDOTS_RAYLIB_SYNTHETIC_UI_START_Y", 205f),
+                EndX = ReadEnvFloatOrDefault("LUDOTS_RAYLIB_SYNTHETIC_UI_END_X", 310f),
+                EndY = ReadEnvFloatOrDefault("LUDOTS_RAYLIB_SYNTHETIC_UI_END_Y", 270f),
+                ScrollFrame = ReadEnvIntOrDefault("LUDOTS_RAYLIB_SYNTHETIC_UI_SCROLL_FRAME", -1),
+                ScrollDeltaY = ReadEnvFloatOrDefault("LUDOTS_RAYLIB_SYNTHETIC_UI_SCROLL_DELTA_Y", 0f)
+            };
+        }
+
+        private static int ReadEnvIntOrDefault(string key, int defaultValue)
+        {
+            return int.TryParse(Environment.GetEnvironmentVariable(key), out int value)
+                ? value
+                : defaultValue;
+        }
+
+        private static float ReadEnvFloatOrDefault(string key, float defaultValue)
+        {
+            return float.TryParse(Environment.GetEnvironmentVariable(key), out float value)
+                ? value
+                : defaultValue;
         }
 
         private static void DrawLightweightDiagnosticHud(GameEngine engine, PresentationTimingDiagnostics? timing)
@@ -895,14 +1021,22 @@ namespace Ludots.Adapter.Raylib
             throw new InvalidOperationException($"Required service missing or invalid: {CoreServiceKeys.RenderDebugState.Name} expected {typeof(RenderDebugState).FullName}");
         }
 
-        private static bool UpdateInput(UIRoot uiRoot)
+        private static bool UpdateInput(UIRoot uiRoot, SyntheticUiPlayback syntheticUiPlayback, int frameIndex, string? diagnosticPath)
         {
+            if (syntheticUiPlayback.Enabled &&
+                HandleSyntheticUiPlayback(uiRoot, syntheticUiPlayback, frameIndex, diagnosticPath))
+            {
+                ForwardKeyboardInput(uiRoot);
+                return _uiPointerCaptured;
+            }
+
             var mousePos = Rl.GetMousePosition();
             bool windowFocused = Rl.IsWindowFocused();
             bool leftMouseDown = Rl.IsMouseButtonDown(MouseButton.MOUSE_LEFT_BUTTON);
             bool leftMouseReleased = Rl.IsMouseButtonReleased(MouseButton.MOUSE_LEFT_BUTTON);
-            UiNode? hitNode = uiRoot.Scene?.HitTest(mousePos.X, mousePos.Y);
-            bool hitInteractiveUi = IsInteractiveUiNode(hitNode);
+            float mouseWheel = Rl.GetMouseWheelMove();
+            UiNode? hitNode = _uiPointerCaptured ? null : uiRoot.Scene?.HitTest(mousePos.X, mousePos.Y);
+            bool hitInteractiveUi = !_uiPointerCaptured && IsInteractiveUiNode(hitNode);
 
             if (_uiPointerCaptured && (!windowFocused || (!leftMouseDown && !leftMouseReleased)))
             {
@@ -912,11 +1046,26 @@ namespace Ludots.Adapter.Raylib
                 }
 
                 _uiPointerCaptured = false;
+                ResetUiPointerMoveCache();
             }
 
-            if (_uiPointerCaptured || hitInteractiveUi)
+            if ((_uiPointerCaptured || hitInteractiveUi) && ShouldForwardUiPointerMove(mousePos.X, mousePos.Y))
             {
                 uiRoot.HandleInput(new PointerEvent { DeviceType = InputDeviceType.Mouse, PointerId = 0, Action = PointerAction.Move, X = mousePos.X, Y = mousePos.Y });
+            }
+
+            if ((hitInteractiveUi || _uiPointerCaptured) && Math.Abs(mouseWheel) > float.Epsilon)
+            {
+                uiRoot.HandleInput(new PointerEvent
+                {
+                    DeviceType = InputDeviceType.Mouse,
+                    PointerId = 0,
+                    Action = PointerAction.Scroll,
+                    X = mousePos.X,
+                    Y = mousePos.Y,
+                    DeltaX = 0f,
+                    DeltaY = -mouseWheel * 120f
+                });
             }
 
             if (Rl.IsMouseButtonPressed(MouseButton.MOUSE_LEFT_BUTTON))
@@ -925,6 +1074,7 @@ namespace Ludots.Adapter.Raylib
                     uiRoot.HandleInput(new PointerEvent { DeviceType = InputDeviceType.Mouse, PointerId = 0, Action = PointerAction.Down, X = mousePos.X, Y = mousePos.Y }))
                 {
                     _uiPointerCaptured = true;
+                    ResetUiPointerMoveCache();
                 }
             }
 
@@ -934,10 +1084,250 @@ namespace Ludots.Adapter.Raylib
                 {
                     uiRoot.HandleInput(new PointerEvent { DeviceType = InputDeviceType.Mouse, PointerId = 0, Action = PointerAction.Up, X = mousePos.X, Y = mousePos.Y });
                     _uiPointerCaptured = false;
+                    ResetUiPointerMoveCache();
                 }
             }
 
+            ForwardKeyboardInput(uiRoot);
             return _uiPointerCaptured;
+        }
+
+        private static bool ShouldForwardUiPointerMove(float x, float y)
+        {
+            if (!_hasLastUiPointerMove ||
+                Math.Abs(_lastUiPointerMoveX - x) > 0.01f ||
+                Math.Abs(_lastUiPointerMoveY - y) > 0.01f)
+            {
+                _hasLastUiPointerMove = true;
+                _lastUiPointerMoveX = x;
+                _lastUiPointerMoveY = y;
+                return true;
+            }
+
+            return false;
+        }
+
+        private static void ResetUiPointerMoveCache()
+        {
+            _hasLastUiPointerMove = false;
+            _lastUiPointerMoveX = 0f;
+            _lastUiPointerMoveY = 0f;
+        }
+
+        private static void ForwardKeyboardInput(UIRoot uiRoot)
+        {
+            if (!uiRoot.HasFocusedCanvas)
+            {
+                DrainCharQueue();
+                return;
+            }
+
+            int modifiers = ReadBrowserInputModifiers();
+            foreach (KeyboardKey key in BrowserForwardedKeys)
+            {
+                if (Rl.IsKeyPressed(key))
+                {
+                    uiRoot.HandleInput(new KeyboardEvent
+                    {
+                        DeviceType = InputDeviceType.Keyboard,
+                        Action = KeyboardAction.Down,
+                        Key = MapKeyboardKey(key),
+                        Code = key.ToString(),
+                        Modifiers = modifiers
+                    });
+                }
+
+                if (Rl.IsKeyReleased(key))
+                {
+                    uiRoot.HandleInput(new KeyboardEvent
+                    {
+                        DeviceType = InputDeviceType.Keyboard,
+                        Action = KeyboardAction.Up,
+                        Key = MapKeyboardKey(key),
+                        Code = key.ToString(),
+                        Modifiers = modifiers
+                    });
+                }
+            }
+
+            while (true)
+            {
+                int codePoint = Rl.GetCharPressed();
+                if (codePoint == 0)
+                {
+                    break;
+                }
+
+                string text = char.ConvertFromUtf32(codePoint);
+                uiRoot.HandleInput(new KeyboardEvent
+                {
+                    DeviceType = InputDeviceType.Keyboard,
+                    Action = KeyboardAction.Character,
+                    Key = text,
+                    Text = text,
+                    Modifiers = modifiers
+                });
+            }
+        }
+
+        private static void DrainCharQueue()
+        {
+            while (Rl.GetCharPressed() != 0)
+            {
+            }
+        }
+
+        private static int ReadBrowserInputModifiers()
+        {
+            BrowserInputModifiers modifiers = BrowserInputModifiers.None;
+            if (Rl.IsKeyDown(KeyboardKey.KEY_LEFT_SHIFT) || Rl.IsKeyDown(KeyboardKey.KEY_RIGHT_SHIFT))
+            {
+                modifiers |= BrowserInputModifiers.Shift;
+            }
+
+            if (Rl.IsKeyDown(KeyboardKey.KEY_LEFT_CONTROL) || Rl.IsKeyDown(KeyboardKey.KEY_RIGHT_CONTROL))
+            {
+                modifiers |= BrowserInputModifiers.Control;
+            }
+
+            if (Rl.IsKeyDown(KeyboardKey.KEY_LEFT_ALT) || Rl.IsKeyDown(KeyboardKey.KEY_RIGHT_ALT))
+            {
+                modifiers |= BrowserInputModifiers.Alt;
+            }
+
+            if (Rl.IsKeyDown(KeyboardKey.KEY_LEFT_SUPER) || Rl.IsKeyDown(KeyboardKey.KEY_RIGHT_SUPER))
+            {
+                modifiers |= BrowserInputModifiers.Meta;
+            }
+
+            return (int)modifiers;
+        }
+
+        private static string MapKeyboardKey(KeyboardKey key)
+        {
+            return key switch
+            {
+                KeyboardKey.KEY_ENTER => "Enter",
+                KeyboardKey.KEY_TAB => "Tab",
+                KeyboardKey.KEY_BACKSPACE => "Backspace",
+                KeyboardKey.KEY_DELETE => "Delete",
+                KeyboardKey.KEY_ESCAPE => "Escape",
+                KeyboardKey.KEY_LEFT => "ArrowLeft",
+                KeyboardKey.KEY_RIGHT => "ArrowRight",
+                KeyboardKey.KEY_UP => "ArrowUp",
+                KeyboardKey.KEY_DOWN => "ArrowDown",
+                KeyboardKey.KEY_HOME => "Home",
+                KeyboardKey.KEY_END => "End",
+                KeyboardKey.KEY_PAGE_UP => "PageUp",
+                KeyboardKey.KEY_PAGE_DOWN => "PageDown",
+                KeyboardKey.KEY_SPACE => "Space",
+                KeyboardKey.KEY_ZERO => "0",
+                KeyboardKey.KEY_ONE => "1",
+                KeyboardKey.KEY_TWO => "2",
+                KeyboardKey.KEY_THREE => "3",
+                KeyboardKey.KEY_FOUR => "4",
+                KeyboardKey.KEY_FIVE => "5",
+                KeyboardKey.KEY_SIX => "6",
+                KeyboardKey.KEY_SEVEN => "7",
+                KeyboardKey.KEY_EIGHT => "8",
+                KeyboardKey.KEY_NINE => "9",
+                >= KeyboardKey.KEY_A and <= KeyboardKey.KEY_Z => key.ToString()[4..],
+                _ => key.ToString()
+            };
+        }
+
+        private static bool HandleSyntheticUiPlayback(UIRoot uiRoot, SyntheticUiPlayback playback, int frameIndex, string? diagnosticPath)
+        {
+            if (frameIndex < playback.StartFrame)
+            {
+                return false;
+            }
+
+            if (frameIndex == playback.StartFrame)
+            {
+                uiRoot.HandleInput(new PointerEvent
+                {
+                    DeviceType = InputDeviceType.Mouse,
+                    PointerId = 0,
+                    Action = PointerAction.Move,
+                    X = playback.StartX,
+                    Y = playback.StartY
+                });
+                _uiPointerCaptured = uiRoot.HandleInput(new PointerEvent
+                {
+                    DeviceType = InputDeviceType.Mouse,
+                    PointerId = 0,
+                    Action = PointerAction.Down,
+                    X = playback.StartX,
+                    Y = playback.StartY
+                });
+                AppendRaylibDiagnostic(diagnosticPath, $"synthetic-ui down frame={frameIndex} x={playback.StartX:F1} y={playback.StartY:F1} captured={_uiPointerCaptured}");
+                return true;
+            }
+
+            if (frameIndex > playback.StartFrame && frameIndex < playback.EndFrame)
+            {
+                (float x, float y) = InterpolateSyntheticPointer(playback, frameIndex);
+                uiRoot.HandleInput(new PointerEvent
+                {
+                    DeviceType = InputDeviceType.Mouse,
+                    PointerId = 0,
+                    Action = PointerAction.Move,
+                    X = x,
+                    Y = y
+                });
+
+                if (playback.ScrollFrame == frameIndex && Math.Abs(playback.ScrollDeltaY) > float.Epsilon)
+                {
+                    uiRoot.HandleInput(new PointerEvent
+                    {
+                        DeviceType = InputDeviceType.Mouse,
+                        PointerId = 0,
+                        Action = PointerAction.Scroll,
+                        X = x,
+                        Y = y,
+                        DeltaX = 0f,
+                        DeltaY = playback.ScrollDeltaY
+                    });
+                    AppendRaylibDiagnostic(diagnosticPath, $"synthetic-ui scroll frame={frameIndex} x={x:F1} y={y:F1} deltaY={playback.ScrollDeltaY:F1}");
+                }
+
+                return true;
+            }
+
+            if (frameIndex == playback.EndFrame)
+            {
+                uiRoot.HandleInput(new PointerEvent
+                {
+                    DeviceType = InputDeviceType.Mouse,
+                    PointerId = 0,
+                    Action = PointerAction.Move,
+                    X = playback.EndX,
+                    Y = playback.EndY
+                });
+                uiRoot.HandleInput(new PointerEvent
+                {
+                    DeviceType = InputDeviceType.Mouse,
+                    PointerId = 0,
+                    Action = PointerAction.Up,
+                    X = playback.EndX,
+                    Y = playback.EndY
+                });
+                AppendRaylibDiagnostic(diagnosticPath, $"synthetic-ui up frame={frameIndex} x={playback.EndX:F1} y={playback.EndY:F1}");
+                _uiPointerCaptured = false;
+                return true;
+            }
+
+            return false;
+        }
+
+        private static (float X, float Y) InterpolateSyntheticPointer(SyntheticUiPlayback playback, int frameIndex)
+        {
+            int moveFrames = Math.Max(1, playback.EndFrame - playback.StartFrame);
+            float progress = Math.Clamp((frameIndex - playback.StartFrame) / (float)moveFrames, 0f, 1f);
+            float x = playback.StartX + ((playback.EndX - playback.StartX) * progress);
+            float y = playback.StartY + ((playback.EndY - playback.StartY) * progress);
+            return (x, y);
         }
 
         private static bool IsInteractiveUiNode(UiNode? node)
@@ -945,6 +1335,11 @@ namespace Ludots.Adapter.Raylib
             for (UiNode? current = node; current != null; current = current.Parent)
             {
                 if (current.ActionHandles.Count > 0)
+                {
+                    return true;
+                }
+
+                if (current.CanvasContent is Ludots.UI.Runtime.IUiCanvasInputSink)
                 {
                     return true;
                 }

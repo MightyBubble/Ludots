@@ -1,0 +1,15 @@
+<Project Sdk="Microsoft.NET.Sdk">
+  <PropertyGroup>
+    <AssemblyName>Ludots.UI.Browser.Skia</AssemblyName>
+    <GenerateAssemblyInfo>False</GenerateAssemblyInfo>
+    <TargetFramework>net8.0</TargetFramework>
+    <LangVersion>12.0</LangVersion>
+    <Nullable>enable</Nullable>
+  </PropertyGroup>
+  <ItemGroup>
+    <ProjectReference Include="..\Ludots.UI\Ludots.UI.csproj" />
+    <ProjectReference Include="..\Ludots.UI.Browser\Ludots.UI.Browser.csproj" />
+    <ProjectReference Include="..\Ludots.UI.Skia\Ludots.UI.Skia.csproj" />
+    <ProjectReference Include="..\SkiaSharp\SkiaSharp\SkiaSharp.csproj" />
+  </ItemGroup>
+</Project>

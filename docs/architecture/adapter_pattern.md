@@ -89,12 +89,16 @@ UI 体系同样遵循六边形架构原则。`Ludots.UI` 程序集零平台依�
 ```
 Ludots.UI              → 零渲染依赖
 Ludots.UI.Skia         → Ludots.UI + SkiaSharp + Svg.Skia
+Ludots.UI.Browser      → 零平台/渲染/浏览器引擎依赖
+Ludots.UI.Browser.Skia → Ludots.UI + Ludots.UI.Browser + Ludots.UI.Skia + SkiaSharp
 Adapter (Raylib/Web)   → 组装 Skia 实现并注入 UIRoot / UiScene
 ```
 
 `Ludots.UI` 使用 `UiColor`（平台无关 RGBA struct）替代 `SKColor`，使用 `System.Numerics.Matrix3x2` 替代 `SKMatrix`。边界转换由 `Ludots.UI.Skia/UiSkiaExtensions` 提供（`ToSKColor()`、`ToUiColor()`、`ToSKMatrix()`）。
 
-详见 `docs/architecture/ui_runtime_architecture.md`。
+浏览器 UI 另有独立的 surface contract：`Ludots.UI.Browser` 定义 `IBrowserRuntime` / `IBrowserSurface` / `IBrowserMessageBridge` / `BrowserFrame`，正式内置 provider 只保留 CEF 与 Ultralight；`Ludots.UI.Browser.Skia` 只负责把 browser frame 画进现有 `Ui.Canvas(...)`。
+
+详见 `docs/architecture/ui_runtime_architecture.md` 与 `docs/architecture/browser_ui_runtime.md`。
 
 ## 7 商业引擎 Adapter 归属
 

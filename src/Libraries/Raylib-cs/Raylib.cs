@@ -442,6 +442,14 @@ namespace Raylib_cs
 
         [DllImport(NativeLib, CallingConvention = CallingConvention.Cdecl)]
         [return: MarshalAs(UnmanagedType.I1)]
+        public static extern bool IsKeyPressed(KeyboardKey key);
+
+        [DllImport(NativeLib, CallingConvention = CallingConvention.Cdecl)]
+        [return: MarshalAs(UnmanagedType.I1)]
+        public static extern bool IsKeyReleased(KeyboardKey key);
+
+        [DllImport(NativeLib, CallingConvention = CallingConvention.Cdecl)]
+        [return: MarshalAs(UnmanagedType.I1)]
         public static extern bool IsWindowFocused();
 
         [DllImport(NativeLib, CallingConvention = CallingConvention.Cdecl)]
@@ -601,6 +609,9 @@ namespace Raylib_cs
         public static extern unsafe void UpdateTexture(Texture2D texture, void* pixels);
 
         [DllImport(NativeLib, CallingConvention = CallingConvention.Cdecl)]
+        public static extern unsafe void UpdateTextureRec(Texture2D texture, Rectangle rec, void* pixels);
+
+        [DllImport(NativeLib, CallingConvention = CallingConvention.Cdecl)]
         public static extern void DrawTexture(Texture2D texture, int posX, int posY, Color tint);
 
         [DllImport(NativeLib, CallingConvention = CallingConvention.Cdecl)]
@@ -619,6 +630,9 @@ namespace Raylib_cs
         public static extern void DrawTextureRec(Texture2D texture, Rectangle source, Vector2 position, Color tint);
 
         [DllImport(NativeLib, CallingConvention = CallingConvention.Cdecl)]
+        public static extern void DrawTexturePro(Texture2D texture, Rectangle source, Rectangle dest, Vector2 origin, float rotation, Color tint);
+
+        [DllImport(NativeLib, CallingConvention = CallingConvention.Cdecl)]
         public static extern void BeginBlendMode(BlendMode mode);
 
         [DllImport(NativeLib, CallingConvention = CallingConvention.Cdecl)]
@@ -629,6 +643,9 @@ namespace Raylib_cs
 
         [DllImport(NativeLib, CallingConvention = CallingConvention.Cdecl)]
         public static extern Vector2 GetWorldToScreen(Vector3 position, Camera3D camera);
+
+        [DllImport(NativeLib, CallingConvention = CallingConvention.Cdecl)]
+        public static extern KeyboardKey GetKeyPressed();
 
         [DllImport(NativeLib, CallingConvention = CallingConvention.Cdecl)]
         public static extern int GetCharPressed();

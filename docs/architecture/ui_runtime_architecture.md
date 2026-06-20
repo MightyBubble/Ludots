@@ -112,6 +112,35 @@ Markup 不负责：
 - 浏览器兼容层
 - 第二套渲染树
 
+### 4.4 Browser UI
+
+Browser UI 是独立的 browser surface runtime，用于运行真正的 Web App。它不改变 Markup 的边界，也不把 JS Runtime 引入 Compose / Reactive / Markup。
+
+入口位于：
+
+- `src/Libraries/Ludots.UI.Browser/`
+- `src/Libraries/Ludots.UI.Browser.Skia/`
+
+Browser UI 负责：
+
+- 定义平台无关 `IBrowserRuntime` / `IBrowserSurface`
+- 接收浏览器引擎输出的 `BrowserFrame` 像素帧与 dirty rect
+- 通过 `BrowserCanvasContent` 复用 `Ui.Canvas(...)` 嵌入现有 `UiScene`
+- 通过 `IBrowserMessageBridge` 连接 Web App 与 C# host API
+- 为现有 `Ludots.WebUI` 这类上层 Mod 事件桥提供底层 transport
+
+Browser UI 不负责：
+
+- CEF / Ultralight 的具体进程、线程与原生生命周期
+- UE5 / Unity / Godot 等商业引擎 adapter wiring
+- 把 native Markup 升级成浏览器兼容层
+- 替代 `Ludots.WebUI` 的 Mod-facing event facade
+
+正式内置 provider 只保留：
+
+- CEF：完整 Chromium 兼容基线，面向“任意 Web App”
+- Ultralight：轻量游戏 UI provider，面向 Ludots 自有 Web bundle
+
 ## 5 外部依赖单源真相
 
 | 组件 | 源码唯一入口 | 编译归属 | 直接消费者 |
@@ -121,12 +150,18 @@ Markup 不负责：
 | ExCSS | `src/Libraries/Ludots.UI.HtmlEngine/External/ExCSS/src/` | `ExCSS.csproj` | `UiCssParser.cs`、`Svg.Custom.csproj` |
 | SkiaSharp | `src/Libraries/SkiaSharp/` | `SkiaSharp.csproj` | `Ludots.UI.Skia/SkiaUiRenderer.cs` |
 | Svg.Skia | `src/Libraries/Svg.Skia/` | `Svg.Skia.csproj` | `Ludots.UI.Skia/SkiaUiRenderer.cs`、`UiShowcaseImageAssets.cs` |
+| Browser UI contracts | `src/Libraries/Ludots.UI.Browser/` | `Ludots.UI.Browser.csproj` | CEF/Ultralight provider adapters, `Ludots.UI.Browser.Skia` |
+| Browser UI Skia adapter | `src/Libraries/Ludots.UI.Browser.Skia/` | `Ludots.UI.Browser.Skia.csproj` | platform adapters that host browser surfaces through Skia UI |
 
 关键规则：
 
 - `Ludots.UI.csproj` 不引用 SkiaSharp 或 Svg.Skia
 - `Ludots.UI.Skia.csproj` 是 SkiaSharp 和 Svg.Skia 的唯一 UI 侧消费者
 - `Ludots.UI.HtmlEngine.csproj` 只显式编译 `Markup/`、`Properties/` 与 `External/AngleSharp/src/`
+- `Ludots.UI.Browser.csproj` 不引用 SkiaSharp、CEF native、Ultralight native 或任何平台 Adapter
+- 浏览器内核实现必须作为 `IBrowserRuntime` / `IBrowserSurface` 的 adapter 接入
+- 正式内置 provider 只允许 CEF 与 Ultralight；Core 主线不接收第三种 browser provider
+- `Ludots.WebUI` 是上层事件/API 门面；如果需要接真实 browser surface，应在实现层复用 `IBrowserMessageBridge`，不要另建平行 browser runtime
 
 ## 6 原生渲染与运行时加载
 
@@ -164,6 +199,8 @@ Skia 原生库必须与可执行文件位于同级输出根目录，而不是仅
 ## 8 相关文档
 
 - 架构决策：`docs/adr/ADR-0002-unified-ui-runtime-and-authoring-models.md`
+- 浏览器 UI 决策：`docs/adr/ADR-0003-browser-ui-runtime-contract.md`
+- 浏览器 UI Runtime：`docs/architecture/browser_ui_runtime.md`
 - 适配器模式与平台抽象：`docs/architecture/adapter_pattern.md`
 - 表现层与渲染分层：`docs/architecture/presentation_performer.md`
 - Mod 运行时单一真相：`docs/architecture/mod_runtime_single_source_of_truth.md`

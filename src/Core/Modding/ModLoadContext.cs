@@ -9,6 +9,11 @@ namespace Ludots.Core.Modding
 {
     internal sealed class ModLoadContext : AssemblyLoadContext
     {
+        private static readonly HashSet<string> ProcessSharedAssemblyNames = new(StringComparer.Ordinal)
+        {
+            "Ludots.UI.Browser"
+        };
+
         private readonly List<AssemblyDependencyResolver> _resolvers = new();
         private readonly Dictionary<string, Assembly> _managedAssembliesByPath = new(StringComparer.Ordinal);
         private readonly HashSet<string> _registeredMainAssemblyPaths = new(StringComparer.Ordinal);
@@ -40,6 +45,11 @@ namespace Ludots.Core.Modding
 
         protected override Assembly Load(AssemblyName assemblyName)
         {
+            if (TryLoadProcessSharedAssembly(assemblyName, out var processShared))
+            {
+                return processShared;
+            }
+
             var alreadyLoaded = Assemblies.FirstOrDefault(a =>
                 string.Equals(a.GetName().Name, assemblyName.Name, StringComparison.Ordinal));
             if (alreadyLoaded != null)
@@ -84,6 +94,53 @@ namespace Ludots.Core.Modding
             return null;
         }
 
+        private bool TryLoadProcessSharedAssembly(AssemblyName assemblyName, out Assembly assembly)
+        {
+            assembly = null;
+            if (string.IsNullOrWhiteSpace(assemblyName.Name) ||
+                !ProcessSharedAssemblyNames.Contains(assemblyName.Name))
+            {
+                return false;
+            }
+
+            assembly = AssemblyLoadContext.Default.Assemblies.FirstOrDefault(candidate =>
+                AssemblyName.ReferenceMatchesDefinition(assemblyName, candidate.GetName()));
+            if (assembly != null)
+            {
+                return true;
+            }
+
+            var hostAlc = AssemblyLoadContext.GetLoadContext(typeof(ModLoadContext).Assembly);
+            if (hostAlc != null && hostAlc != AssemblyLoadContext.Default)
+            {
+                assembly = hostAlc.Assemblies.FirstOrDefault(candidate =>
+                    AssemblyName.ReferenceMatchesDefinition(assemblyName, candidate.GetName()));
+                if (assembly != null)
+                {
+                    return true;
+                }
+            }
+
+            var sharedModAssembly = _sharedAssemblyResolver?.Invoke(assemblyName);
+            if (sharedModAssembly != null)
+            {
+                assembly = sharedModAssembly;
+                return true;
+            }
+
+            for (int i = 0; i < _resolvers.Count; i++)
+            {
+                var path = _resolvers[i].ResolveAssemblyToPath(assemblyName);
+                if (path != null)
+                {
+                    assembly = LoadProcessAssemblyFromPath(path);
+                    return true;
+                }
+            }
+
+            return false;
+        }
+
         protected override IntPtr LoadUnmanagedDll(string unmanagedDllName)
         {
             for (int i = 0; i < _resolvers.Count; i++)
@@ -111,14 +168,35 @@ namespace Ludots.Core.Modding
                 return loadedAssembly;
             }
 
-            using var assemblyStream = OpenReadStream(fullPath);
-            using var pdbStream = TryOpenSymbolStream(fullPath);
-            loadedAssembly = pdbStream != null
-                ? LoadFromStream(assemblyStream, pdbStream)
-                : LoadFromStream(assemblyStream);
+            loadedAssembly = RequiresProcessAssemblyLoad(fullPath)
+                ? LoadProcessAssemblyFromPath(fullPath)
+                : LoadManagedAssemblyFromStream(fullPath);
 
             _managedAssembliesByPath[fullPath] = loadedAssembly;
             return loadedAssembly;
+        }
+
+        private Assembly LoadManagedAssemblyFromStream(string fullPath)
+        {
+            using var assemblyStream = OpenReadStream(fullPath);
+            using var pdbStream = TryOpenSymbolStream(fullPath);
+            return pdbStream != null
+                ? LoadFromStream(assemblyStream, pdbStream)
+                : LoadFromStream(assemblyStream);
+        }
+
+        private static Assembly LoadProcessAssemblyFromPath(string fullPath)
+        {
+            AssemblyName assemblyName = AssemblyName.GetAssemblyName(fullPath);
+            var loadedAssembly = AssemblyLoadContext.Default.Assemblies.FirstOrDefault(assembly =>
+                AssemblyName.ReferenceMatchesDefinition(assemblyName, assembly.GetName()));
+            return loadedAssembly ?? AssemblyLoadContext.Default.LoadFromAssemblyPath(fullPath);
+        }
+
+        private static bool RequiresProcessAssemblyLoad(string fullPath)
+        {
+            string assemblyName = Path.GetFileNameWithoutExtension(fullPath);
+            return assemblyName.StartsWith("CefSharp", StringComparison.OrdinalIgnoreCase);
         }
 
         private static FileStream OpenReadStream(string fullPath)

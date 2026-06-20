@@ -58,6 +58,28 @@ namespace GasTests
         }
 
         [Test]
+        public void UnloadAll_UnloadsCodeModsInReverseLoadOrder()
+        {
+            var tempRoot = CreateTempDir();
+            try
+            {
+                var modSet = CreateCodeModSet(tempRoot, emitUnloadLog: true);
+                var vfs = new VirtualFileSystem();
+                var loader = new ModLoader(vfs, new FunctionRegistry(), new TriggerManager());
+
+                loader.LoadMods(new[] { modSet.ConsumerDirectory, modSet.ProviderDirectory });
+                loader.UnloadAll();
+
+                string[] lines = File.ReadAllLines(modSet.UnloadLogPath!);
+                Assert.That(lines, Is.EqualTo(new[] { modSet.ConsumerName, modSet.ProviderName }));
+            }
+            finally
+            {
+                TryDelete(tempRoot);
+            }
+        }
+
+        [Test]
         public void LoadResolvedPlan_RejectsManifestNameCaseAliases()
         {
             var tempRoot = CreateTempDir();
@@ -236,12 +258,19 @@ namespace GasTests
             Assert.That(loader.LoadedModIds, Is.Empty);
         }
 
-        private static CodeModSet CreateCodeModSet(string tempRoot)
+        private static CodeModSet CreateCodeModSet(string tempRoot, bool emitUnloadLog = false)
         {
             var repoRoot = FindRepoRoot();
             var providerName = "StreamLoadProvider" + Guid.NewGuid().ToString("N");
             var consumerName = "StreamLoadConsumer" + Guid.NewGuid().ToString("N");
             var coreProjectPath = Path.Combine(repoRoot, "src", "Core", "Ludots.Core.csproj");
+            var unloadLogPath = emitUnloadLog ? Path.Combine(tempRoot, "unload-order.log") : null;
+            string providerUnloadBody = emitUnloadLog
+                ? $"System.IO.File.AppendAllLines({CSharpStringLiteral(unloadLogPath!)}, new[] {{ {CSharpStringLiteral(providerName)} }});"
+                : string.Empty;
+            string consumerUnloadBody = emitUnloadLog
+                ? $"System.IO.File.AppendAllLines({CSharpStringLiteral(unloadLogPath!)}, new[] {{ {CSharpStringLiteral(consumerName)} }});"
+                : string.Empty;
 
             var providerDirectory = CreateCodeModProject(
                 tempRoot,
@@ -272,6 +301,7 @@ namespace GasTests
 
                     public void OnUnload()
                     {
+                        {{providerUnloadBody}}
                     }
                 }
                 """,
@@ -299,6 +329,7 @@ namespace GasTests
 
                     public void OnUnload()
                     {
+                        {{consumerUnloadBody}}
                     }
                 }
                 """,
@@ -312,7 +343,8 @@ namespace GasTests
                 providerDirectory,
                 consumerDirectory,
                 Path.Combine(providerDirectory, "bin", "net8.0", providerName + ".dll"),
-                Path.Combine(consumerDirectory, "bin", "net8.0", consumerName + ".dll"));
+                Path.Combine(consumerDirectory, "bin", "net8.0", consumerName + ".dll"),
+                unloadLogPath);
         }
 
         private static string CreateCodeModProject(
@@ -466,12 +498,18 @@ namespace GasTests
             }
         }
 
+        private static string CSharpStringLiteral(string value)
+        {
+            return "\"" + value.Replace("\\", "\\\\").Replace("\"", "\\\"") + "\"";
+        }
+
         private sealed record CodeModSet(
             string ProviderName,
             string ConsumerName,
             string ProviderDirectory,
             string ConsumerDirectory,
             string ProviderDllPath,
-            string ConsumerDllPath);
+            string ConsumerDllPath,
+            string? UnloadLogPath);
     }
 }

@@ -209,8 +209,9 @@ namespace Ludots.Core.Modding
 
         private void ResetLoadedState()
         {
-            foreach (var mod in _loadedMods)
+            for (int i = _loadedMods.Count - 1; i >= 0; i--)
             {
+                var mod = _loadedMods[i];
                 try
                 {
                     mod.OnUnload();
@@ -520,8 +521,9 @@ namespace Ludots.Core.Modding
 
         public void UnloadAll()
         {
-            foreach(var mod in _loadedMods)
+            for (int i = _loadedMods.Count - 1; i >= 0; i--)
             {
+                var mod = _loadedMods[i];
                 try
                 {
                     mod.OnUnload();
