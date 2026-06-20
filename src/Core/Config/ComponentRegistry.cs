@@ -11,6 +11,8 @@ using Ludots.Core.Diagnostics;
 using Ludots.Core.Gameplay.GAS.Components;
 using Ludots.Core.Gameplay.GAS.Registry;
 using Ludots.Core.Gameplay.Spawning;
+using Ludots.Core.Gameplay.Technology.Components;
+using Ludots.Core.Gameplay.Technology.Registry;
 using Ludots.Core.Mathematics;
 using Ludots.Core.Mathematics.FixedPoint;
 using Ludots.Core.Layers;
@@ -48,6 +50,10 @@ namespace Ludots.Core.Config
             Register("EntityLayer", SetEntityLayer, null, Component<Ludots.Core.Gameplay.Components.EntityLayer>.ComponentType);
             Register("AttributeBuffer", SetAttributeBuffer);
             Register("AbilityStateBuffer", SetAbilityStateBuffer);
+            Register("AbilityTechnologyRequirements", SetAbilityTechnologyRequirements);
+            Register("TechnologyStateBuffer", SetTechnologyStateBuffer);
+            Register("TechnologyScopeHost", SetTechnologyScopeHost);
+            Register("TechnologyScopeBinding", SetTechnologyScopeBinding);
             Register("AbilityFormSetRef", SetAbilityFormSetRef);
             Register<ForceInput2D>("ForceInput2D");
             Register<GameplayTagContainer>("GameplayTagContainer");
@@ -401,6 +407,88 @@ namespace Ludots.Core.Config
                 }
             }
             entity.Add(buffer);
+        }
+
+        private static void SetAbilityTechnologyRequirements(Entity entity, JsonNode data)
+        {
+            if (data is not JsonObject obj)
+            {
+                throw new InvalidOperationException("AbilityTechnologyRequirements requires an object payload.");
+            }
+
+            ValidateProperties(obj, "AbilityTechnologyRequirements", "useRequirement", "showRequirement");
+            var requirements = default(AbilityTechnologyRequirements);
+            if (obj.TryGetPropertyValue("useRequirement", out JsonNode useNode))
+            {
+                string requirementName = ReadStringNode(useNode, "AbilityTechnologyRequirements.useRequirement");
+                requirements.UseRequirementId = ResolveTechnologyRequirementId(requirementName, "AbilityTechnologyRequirements.useRequirement");
+            }
+
+            if (obj.TryGetPropertyValue("showRequirement", out JsonNode showNode))
+            {
+                string requirementName = ReadStringNode(showNode, "AbilityTechnologyRequirements.showRequirement");
+                requirements.ShowRequirementId = ResolveTechnologyRequirementId(requirementName, "AbilityTechnologyRequirements.showRequirement");
+            }
+
+            entity.Add(requirements);
+        }
+
+        private static void SetTechnologyStateBuffer(Entity entity, JsonNode data)
+        {
+            RequireEmptyObject(data, "TechnologyStateBuffer");
+            entity.Add(new TechnologyStateBuffer());
+        }
+
+        private static void SetTechnologyScopeHost(Entity entity, JsonNode data)
+        {
+            if (!entity.Has<TechnologyStateBuffer>())
+            {
+                entity.Add(new TechnologyStateBuffer());
+            }
+
+            if (!entity.Has<TechnologyScopeMembershipRevision>())
+            {
+                entity.Add(new TechnologyScopeMembershipRevision());
+            }
+
+            var authoring = entity.Has<TechnologyScopeHostAuthoring>()
+                ? entity.Get<TechnologyScopeHostAuthoring>()
+                : default;
+            AddTechnologyScopeEntries(ref authoring, data, "TechnologyScopeHost");
+            if (entity.Has<TechnologyScopeHostAuthoring>())
+            {
+                entity.Set(authoring);
+            }
+            else
+            {
+                entity.Add(authoring);
+            }
+        }
+
+        private static void SetTechnologyScopeBinding(Entity entity, JsonNode data)
+        {
+            if (!entity.Has<TechnologyScopeRefBuffer>())
+            {
+                entity.Add(new TechnologyScopeRefBuffer());
+            }
+
+            if (!entity.Has<TechnologyScopeMemberTag>())
+            {
+                entity.Add(new TechnologyScopeMemberTag());
+            }
+
+            var authoring = entity.Has<TechnologyScopeBindingAuthoring>()
+                ? entity.Get<TechnologyScopeBindingAuthoring>()
+                : default;
+            AddTechnologyScopeEntries(ref authoring, data, "TechnologyScopeBinding");
+            if (entity.Has<TechnologyScopeBindingAuthoring>())
+            {
+                entity.Set(authoring);
+            }
+            else
+            {
+                entity.Add(authoring);
+            }
         }
 
         private static byte ParseSelectionEnabled(JsonNode node, string context)
@@ -945,6 +1033,122 @@ namespace Ludots.Core.Config
 
             value = node.GetValue<int>();
             return true;
+        }
+
+        private static void AddTechnologyScopeEntries(ref TechnologyScopeHostAuthoring authoring, JsonNode data, string context)
+        {
+            if (data is not JsonObject obj)
+            {
+                throw new InvalidOperationException($"{context} requires an object payload.");
+            }
+
+            ValidateProperties(obj, context, "scope", "hostKey", "entries");
+            if (obj.TryGetPropertyValue("entries", out JsonNode entriesNode))
+            {
+                if (entriesNode is not JsonArray entries)
+                {
+                    throw new InvalidOperationException($"{context}.entries requires an array.");
+                }
+
+                for (int i = 0; i < entries.Count; i++)
+                {
+                    if (entries[i] is not JsonObject entryObj)
+                    {
+                        throw new InvalidOperationException($"{context}.entries[{i}] requires an object payload.");
+                    }
+
+                    AddTechnologyScopeEntry(ref authoring, entryObj, $"{context}.entries[{i}]");
+                }
+
+                return;
+            }
+
+            AddTechnologyScopeEntry(ref authoring, obj, context);
+        }
+
+        private static void AddTechnologyScopeEntries(ref TechnologyScopeBindingAuthoring authoring, JsonNode data, string context)
+        {
+            if (data is not JsonObject obj)
+            {
+                throw new InvalidOperationException($"{context} requires an object payload.");
+            }
+
+            ValidateProperties(obj, context, "scope", "hostKey", "entries");
+            if (obj.TryGetPropertyValue("entries", out JsonNode entriesNode))
+            {
+                if (entriesNode is not JsonArray entries)
+                {
+                    throw new InvalidOperationException($"{context}.entries requires an array.");
+                }
+
+                for (int i = 0; i < entries.Count; i++)
+                {
+                    if (entries[i] is not JsonObject entryObj)
+                    {
+                        throw new InvalidOperationException($"{context}.entries[{i}] requires an object payload.");
+                    }
+
+                    AddTechnologyScopeEntry(ref authoring, entryObj, $"{context}.entries[{i}]");
+                }
+
+                return;
+            }
+
+            AddTechnologyScopeEntry(ref authoring, obj, context);
+        }
+
+        private static void AddTechnologyScopeEntry(ref TechnologyScopeHostAuthoring authoring, JsonObject obj, string context)
+        {
+            ValidateProperties(obj, context, "scope", "hostKey");
+            int scopeNameKeyId = ConfigKeyRegistry.Register(RequireStringProperty(obj, "scope", context));
+            int hostKeyId = ConfigKeyRegistry.Register(RequireStringProperty(obj, "hostKey", context));
+            if (!authoring.TryAdd(scopeNameKeyId, hostKeyId))
+            {
+                throw new InvalidOperationException($"{context} exceeds TechnologyScopeHost capacity.");
+            }
+        }
+
+        private static void AddTechnologyScopeEntry(ref TechnologyScopeBindingAuthoring authoring, JsonObject obj, string context)
+        {
+            ValidateProperties(obj, context, "scope", "hostKey");
+            int scopeNameKeyId = ConfigKeyRegistry.Register(RequireStringProperty(obj, "scope", context));
+            int hostKeyId = ConfigKeyRegistry.Register(RequireStringProperty(obj, "hostKey", context));
+            if (!authoring.TryAdd(scopeNameKeyId, hostKeyId))
+            {
+                throw new InvalidOperationException($"{context} exceeds TechnologyScopeBinding capacity.");
+            }
+        }
+
+        private static int ResolveTechnologyRequirementId(string requirementName, string context)
+        {
+            int requirementId = TechnologyRequirementIdRegistry.GetId(requirementName);
+            if (requirementId <= 0)
+            {
+                throw new InvalidOperationException($"{context} references unknown technology requirement '{requirementName}'.");
+            }
+
+            return requirementId;
+        }
+
+        private static string ReadStringNode(JsonNode node, string context)
+        {
+            if (node == null || node.GetValueKind() == JsonValueKind.Null)
+            {
+                throw new InvalidOperationException($"{context} requires a non-null string value.");
+            }
+
+            if (node.GetValueKind() != JsonValueKind.String)
+            {
+                throw new InvalidOperationException($"{context} requires a string value.");
+            }
+
+            string value = node.GetValue<string>();
+            if (string.IsNullOrWhiteSpace(value))
+            {
+                throw new InvalidOperationException($"{context} requires a non-empty string value.");
+            }
+
+            return value;
         }
 
         private static void RequireEmptyObject(JsonNode data, string context)

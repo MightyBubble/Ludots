@@ -1,0 +1,39 @@
+[
+  {
+    "id": "Req.Showcase.CityDrill.Use",
+    "root": {
+      "kind": "TechCompleted",
+      "technology": "Tech.Showcase.CityDrill",
+      "scope": "city",
+      "entitySource": "ScopeHost"
+    }
+  },
+  {
+    "id": "Req.Showcase.FactionMandate.Use",
+    "root": {
+      "kind": "TechCompleted",
+      "technology": "Tech.Showcase.FactionMandate",
+      "scope": "faction",
+      "entitySource": "ScopeHost"
+    }
+  },
+  {
+    "id": "Req.Showcase.RegionStrategist.Use",
+    "root": {
+      "kind": "EntityCount",
+      "scope": "region",
+      "entitySource": "ScopeMembers",
+      "count": 1,
+      "tags": ["Hero.Showcase.Strategist"]
+    }
+  },
+  {
+    "id": "Req.Showcase.ProvinceLogistics.Use",
+    "root": {
+      "kind": "TechCompleted",
+      "technology": "Tech.Showcase.ProvinceLogistics",
+      "scope": "province",
+      "entitySource": "ScopeHost"
+    }
+  }
+]

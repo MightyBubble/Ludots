@@ -19,6 +19,10 @@
   { "Path": "GAS/clock.json", "Policy": "DeepObject" },
   { "Path": "GAS/order_types.json", "Policy": "DeepObject" },
 
+  { "Path": "Technology/scopes.json", "Policy": "ArrayById", "IdField": "id" },
+  { "Path": "Technology/technologies.json", "Policy": "ArrayById", "IdField": "id" },
+  { "Path": "Technology/requirements.json", "Policy": "ArrayById", "IdField": "id" },
+
   { "Path": "Engine/clock.json", "Policy": "DeepObject" },
   { "Path": "Physics2D/clock.json", "Policy": "DeepObject" },
   { "Path": "Navigation2D/clock.json", "Policy": "DeepObject" },

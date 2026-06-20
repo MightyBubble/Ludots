@@ -42,6 +42,14 @@
       }
     },
     {
+      "name": "tech_tree_scope",
+      "target": {
+        "type": "path",
+        "value": "mods/showcases/tech_tree_scope/TechTreeScopeShowcaseMod",
+        "projectPath": "TechTreeScopeShowcaseMod.csproj"
+      }
+    },
+    {
       "name": "spatial_bounds_showcase",
       "target": {
         "type": "path",

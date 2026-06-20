@@ -38,5 +38,8 @@ namespace Ludots.Core.Gameplay.GAS
         // ── Entity relations ──
         /// <summary>Read RelationParams and mutate entity parent-child relationships.</summary>
         ApplyRelation = 50,
+
+        /// <summary>Complete an entity-scoped technology through the Technology runtime.</summary>
+        CompleteTechnology = 60,
     }
 }

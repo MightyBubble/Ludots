@@ -368,6 +368,29 @@ namespace Ludots.Tests.GAS
         }
 
         [Test]
+        public void AbilityDefinitionRegistry_RegisterFromEntity_CopiesTechnologyRequirements()
+        {
+            using var world = World.Create();
+            var template = world.Create(
+                new AbilityTemplate(),
+                new AbilityExecSpec(),
+                new AbilityTechnologyRequirements
+                {
+                    UseRequirementId = 1201,
+                    ShowRequirementId = 1202
+                });
+
+            var defs = new AbilityDefinitionRegistry();
+            defs.RegisterFromEntity(world, template, abilityId: 6011);
+
+            That(defs.TryGet(6011, out var def), Is.True);
+            That(def.HasUseTechnologyRequirement, Is.True);
+            That(def.UseTechnologyRequirementId, Is.EqualTo(1201));
+            That(def.HasShowTechnologyRequirement, Is.True);
+            That(def.ShowTechnologyRequirementId, Is.EqualTo(1202));
+        }
+
+        [Test]
         public void OrderBufferSystem_PromoteQueued_WritesBlackboard()
         {
             using var world = World.Create();

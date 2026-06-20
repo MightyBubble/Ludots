@@ -1,0 +1,96 @@
+[
+  {
+    "id": "tech_scope_city_host",
+    "components": {
+      "Name": { "Value": "Chang An City Scope" },
+      "Team": { "Id": 1 },
+      "WorldPositionCm": { "Value": { "X": 5200, "Y": 5200 } },
+      "GameplayTagContainer": {},
+      "TagCountContainer": {},
+      "TechnologyScopeHost": { "scope": "city", "hostKey": "chang_an" }
+    }
+  },
+  {
+    "id": "tech_scope_faction_host",
+    "components": {
+      "Name": { "Value": "Shu Faction Scope" },
+      "Team": { "Id": 1 },
+      "WorldPositionCm": { "Value": { "X": 5600, "Y": 5200 } },
+      "GameplayTagContainer": {},
+      "TagCountContainer": {},
+      "TechnologyScopeHost": { "scope": "faction", "hostKey": "shu" }
+    }
+  },
+  {
+    "id": "tech_scope_region_host",
+    "components": {
+      "Name": { "Value": "Jing Region Scope" },
+      "Team": { "Id": 1 },
+      "WorldPositionCm": { "Value": { "X": 6000, "Y": 5200 } },
+      "GameplayTagContainer": {},
+      "TagCountContainer": {},
+      "TechnologyScopeHost": { "scope": "region", "hostKey": "jing" }
+    }
+  },
+  {
+    "id": "tech_scope_province_host",
+    "components": {
+      "Name": { "Value": "Guanzhong Province Scope" },
+      "Team": { "Id": 1 },
+      "WorldPositionCm": { "Value": { "X": 6400, "Y": 5200 } },
+      "GameplayTagContainer": {},
+      "TagCountContainer": {},
+      "TechnologyScopeHost": { "scope": "province", "hostKey": "guanzhong" }
+    }
+  },
+  {
+    "id": "tech_scope_barracks",
+    "components": {
+      "Name": { "Value": "Chang An Barracks" },
+      "Team": { "Id": 1 },
+      "SelectionSelectableTag": {},
+      "SelectionSelectableState": { "IsEnabled": true },
+      "WorldPositionCm": { "Value": { "X": 5800, "Y": 6000 } },
+      "AttributeBuffer": { "base": { "Health": 1200 } },
+      "AbilityStateBuffer": {
+        "abilityIds": [
+          "Ability.Showcase.TrainMilitia",
+          "Ability.Showcase.HiddenElite",
+          "Ability.Showcase.RegionStrategist",
+          "Ability.Showcase.ProvinceConvoy"
+        ]
+      },
+      "GameplayTagContainer": {},
+      "TagCountContainer": {},
+      "TimedTagBuffer": {},
+      "OrderBuffer": {},
+      "BlackboardSpatialBuffer": {},
+      "BlackboardEntityBuffer": {},
+      "BlackboardIntBuffer": {},
+      "TechnologyScopeBinding": {
+        "entries": [
+          { "scope": "city", "hostKey": "chang_an" },
+          { "scope": "faction", "hostKey": "shu" },
+          { "scope": "region", "hostKey": "jing" },
+          { "scope": "province", "hostKey": "guanzhong" }
+        ]
+      }
+    }
+  },
+  {
+    "id": "tech_scope_hero",
+    "components": {
+      "Name": { "Value": "Strategist Hero" },
+      "Team": { "Id": 1 },
+      "SelectionSelectableTag": {},
+      "SelectionSelectableState": { "IsEnabled": true },
+      "WorldPositionCm": { "Value": { "X": 6200, "Y": 6500 } },
+      "AttributeBuffer": { "base": { "Health": 900 } },
+      "GameplayTagContainer": {},
+      "TagCountContainer": {},
+      "TimedTagBuffer": {},
+      "OrderBuffer": {},
+      "TechnologyScopeBinding": { "scope": "region", "hostKey": "jing" }
+    }
+  }
+]

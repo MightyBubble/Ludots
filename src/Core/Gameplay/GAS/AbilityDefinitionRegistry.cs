@@ -138,6 +138,11 @@ namespace Ludots.Core.Gameplay.GAS
         public AbilityPresentationConfig? Presentation;
         public bool HasInputBindingOverride;
         public AbilityInputBindingOverride InputBindingOverride;
+
+        public int UseTechnologyRequirementId;
+        public bool HasUseTechnologyRequirement;
+        public int ShowTechnologyRequirementId;
+        public bool HasShowTechnologyRequirement;
     }
 
     public sealed class AbilityDefinitionRegistry
@@ -219,6 +224,21 @@ namespace Ludots.Core.Gameplay.GAS
             if (def.HasActivationPrecondition)
             {
                 def.ActivationPrecondition = world.Get<AbilityActivationPrecondition>(templateEntity);
+            }
+            if (world.Has<AbilityTechnologyRequirements>(templateEntity))
+            {
+                var requirements = world.Get<AbilityTechnologyRequirements>(templateEntity);
+                if (requirements.UseRequirementId > 0)
+                {
+                    def.UseTechnologyRequirementId = requirements.UseRequirementId;
+                    def.HasUseTechnologyRequirement = true;
+                }
+
+                if (requirements.ShowRequirementId > 0)
+                {
+                    def.ShowTechnologyRequirementId = requirements.ShowRequirementId;
+                    def.HasShowTechnologyRequirement = true;
+                }
             }
             Register(abilityId, in def);
         }

@@ -5,6 +5,7 @@ using Ludots.Core.Components;
 using Ludots.Core.Gameplay.Components;
 using Ludots.Core.Gameplay.GAS.Components;
 using Ludots.Core.Gameplay.Spawning;
+using Ludots.Core.Gameplay.Technology;
 using Ludots.Core.Mathematics;
 using Ludots.Core.Mathematics.FixedPoint;
 
@@ -27,6 +28,7 @@ namespace Ludots.Core.Gameplay.GAS
             registry.Register(BuiltinHandlerId.CreateUnit, HandleCreateUnit);
             registry.Register(BuiltinHandlerId.ApplyDisplacement, HandleApplyDisplacement);
             registry.Register(BuiltinHandlerId.ApplyRelation, HandleApplyRelation);
+            registry.Register(BuiltinHandlerId.CompleteTechnology, HandleCompleteTechnology);
         }
 
         public static void HandleApplyModifiers(
@@ -385,6 +387,39 @@ namespace Ludots.Core.Gameplay.GAS
                 case RelationOperation.RemoveParent:
                     RelationOps.RemoveParent(world, subject);
                     break;
+            }
+        }
+
+        public static void HandleCompleteTechnology(
+            World world,
+            Entity effectEntity,
+            ref EffectContext context,
+            in EffectConfigParams mergedParams,
+            in EffectTemplateData templateData)
+        {
+            if (templateData.TechnologyId <= 0)
+            {
+                throw new InvalidOperationException("CompleteTechnology requires a valid technology id.");
+            }
+
+            var runtime = BuiltinHandlerRuntimeScope.Current;
+            if (runtime?.TechnologyEvaluator == null)
+            {
+                throw new InvalidOperationException("CompleteTechnology requires TechnologyRequirementEvaluator in BuiltinHandlerExecutionContext.");
+            }
+
+            var evaluationContext = new TechnologyRequirementEvaluationContext(
+                context.Source,
+                world.IsAlive(context.Target) ? context.Target : context.Source,
+                context.TargetContext);
+            if (!runtime.TechnologyEvaluator.TryResolveScopeHost(templateData.TechnologyScope, in evaluationContext, out Entity scopeHost))
+            {
+                throw new InvalidOperationException("CompleteTechnology could not resolve its configured technology scope.");
+            }
+
+            if (!runtime.TechnologyEvaluator.TryApply(scopeHost, templateData.TechnologyId, templateData.TechnologyChange))
+            {
+                throw new InvalidOperationException("CompleteTechnology requires the resolved scope host to author TechnologyStateBuffer before effects run.");
             }
         }
 

@@ -45,6 +45,8 @@ namespace Ludots.Core.Gameplay.GAS.Config
         public DisplacementConfig? Displacement { get; set; }
         /// <summary>Entity relation parameters (garrison, detach, parent-child ownership).</summary>
         public RelationConfig? Relation { get; set; }
+        /// <summary>Entity-scoped technology completion parameters.</summary>
+        public TechnologyCompletionConfig? Technology { get; set; }
 
         // ── Capability blocks ──
 
@@ -218,6 +220,14 @@ namespace Ludots.Core.Gameplay.GAS.Config
         public string? Subject { get; set; }
         public string? Parent { get; set; }
         public bool? SnapSubjectToParentPosition { get; set; }
+    }
+
+    public sealed class TechnologyCompletionConfig
+    {
+        public string? Id { get; set; }
+        public string? Scope { get; set; }
+        public int? Level { get; set; }
+        public int? Delta { get; set; }
     }
 
     /// <summary>

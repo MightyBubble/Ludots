@@ -27,6 +27,7 @@ namespace Ludots.Core.Gameplay.GAS.Config
             { "CreateUnit", EffectPresetType.CreateUnit },
             { "Displacement", EffectPresetType.Displacement },
             { "Relation", EffectPresetType.Relation },
+            { "CompleteTechnology", EffectPresetType.CompleteTechnology },
         };
 
         /// <summary>
@@ -179,6 +180,7 @@ namespace Ludots.Core.Gameplay.GAS.Config
             { "CreateUnit", BuiltinHandlerId.CreateUnit },
             { "ApplyDisplacement", BuiltinHandlerId.ApplyDisplacement },
             { "ApplyRelation", BuiltinHandlerId.ApplyRelation },
+            { "CompleteTechnology", BuiltinHandlerId.CompleteTechnology },
         };
 
         /// <summary>

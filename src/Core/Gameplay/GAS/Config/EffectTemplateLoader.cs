@@ -7,6 +7,8 @@ using System.Text.Json.Serialization;
 using Ludots.Core.Config;
 using Ludots.Core.Gameplay.GAS.Components;
 using Ludots.Core.Gameplay.GAS.Registry;
+using Ludots.Core.Gameplay.Technology;
+using Ludots.Core.Gameplay.Technology.Registry;
 using Ludots.Core.Gameplay.Teams;
 using Ludots.Core.Layers;
 using Ludots.Core.NodeLibraries.GASGraph.Host;
@@ -19,6 +21,8 @@ namespace Ludots.Core.Gameplay.GAS.Config
         private readonly EffectTemplateRegistry _registry;
         private readonly GasConditionRegistry _conditions;
         private readonly TargetDispatchPresetRegistry _targetDispatchPresets;
+        private readonly TechnologyScopeKeyRegistry? _technologyScopeKeys;
+        private readonly TechnologyDefinitionRegistry? _technologyDefinitions;
 
         private static readonly JsonSerializerOptions JsonOptions = new()
         {
@@ -32,12 +36,16 @@ namespace Ludots.Core.Gameplay.GAS.Config
             ConfigPipeline pipeline,
             EffectTemplateRegistry registry,
             GasConditionRegistry conditions = null,
-            TargetDispatchPresetRegistry targetDispatchPresets = null)
+            TargetDispatchPresetRegistry targetDispatchPresets = null,
+            TechnologyScopeKeyRegistry? technologyScopeKeys = null,
+            TechnologyDefinitionRegistry? technologyDefinitions = null)
         {
             _pipeline = pipeline;
             _registry = registry;
             _conditions = conditions;
             _targetDispatchPresets = targetDispatchPresets;
+            _technologyScopeKeys = technologyScopeKeys;
+            _technologyDefinitions = technologyDefinitions;
         }
 
         public void Load(
@@ -258,6 +266,9 @@ namespace Ludots.Core.Gameplay.GAS.Config
             var unitCreation = CompileUnitCreation(cfg.UnitCreation, cfg.Id, relativePath);
             var displacement = CompileDisplacement(cfg.Displacement, cfg.Id, relativePath);
             var relation = CompileRelation(cfg.Relation, cfg.Id, relativePath);
+            var technologyScope = TechnologyScopeSpec.Self;
+            var technologyChange = TechnologyLevelChange.Complete;
+            int technologyId = 0;
 
             if (cfg.Displacement != null && presetType != EffectPresetType.Displacement)
             {
@@ -295,6 +306,36 @@ namespace Ludots.Core.Gameplay.GAS.Config
                     throw new InvalidOperationException(
                         $"Effect template '{cfg.Id}' in {relativePath}: presetType Relation requires a 'relation' block.");
                 }
+            }
+
+            if (cfg.Technology != null && presetType != EffectPresetType.CompleteTechnology)
+            {
+                throw new InvalidOperationException(
+                    $"Effect template '{cfg.Id}' in {relativePath}: 'technology' block is only valid when presetType=CompleteTechnology.");
+            }
+            if (presetType == EffectPresetType.CompleteTechnology)
+            {
+                if (lifetimeKind != EffectLifetimeKind.Instant)
+                {
+                    throw new InvalidOperationException(
+                        $"Effect template '{cfg.Id}' in {relativePath}: presetType CompleteTechnology requires lifetime=Instant.");
+                }
+                if (cfg.Technology == null)
+                {
+                    throw new InvalidOperationException(
+                        $"Effect template '{cfg.Id}' in {relativePath}: presetType CompleteTechnology requires a 'technology' block.");
+                }
+
+                string techName = RequireString(cfg.Technology.Id, cfg.Id, relativePath, "technology.id");
+                technologyId = TechnologyIdRegistry.GetId(techName);
+                if (technologyId <= 0)
+                {
+                    throw new InvalidOperationException(
+                        $"Effect template '{cfg.Id}' in {relativePath}: technology.id '{techName}' is not registered.");
+                }
+
+                technologyScope = ResolveTechnologyScope(cfg.Technology.Scope, technologyId, cfg.Id, relativePath);
+                technologyChange = CompileTechnologyChange(cfg.Technology, cfg.Id, relativePath);
             }
 
             if (cfg.Projectile != null && presetType != EffectPresetType.LaunchProjectile)
@@ -355,6 +396,9 @@ namespace Ludots.Core.Gameplay.GAS.Config
                 UnitCreation = unitCreation,
                 Displacement = displacement,
                 Relation = relation,
+                TechnologyScope = technologyScope,
+                TechnologyChange = technologyChange,
+                TechnologyId = technologyId,
                 PhaseGraphBindings = behaviorTemplate,
                 ConfigParams = configParams,
                 ListenerSetup = listenerSetup,
@@ -949,6 +993,80 @@ namespace Ludots.Core.Gameplay.GAS.Config
             "Turn" => GasClockId.Turn,
             _ => throw new InvalidOperationException($"Unknown GasClockId '{value}'. Supported: FixedFrame, Step, Turn."),
         };
+
+        private TechnologyScopeSpec ResolveTechnologyScope(string? rawValue, int technologyId, string effectId, string path)
+        {
+            if (string.IsNullOrWhiteSpace(rawValue))
+            {
+                return _technologyDefinitions != null &&
+                       technologyId > 0 &&
+                       _technologyDefinitions.TryGet(technologyId, out var definition)
+                    ? definition.DefaultScope
+                    : TechnologyScopeSpec.Self;
+            }
+
+            return ParseTechnologyScope(rawValue.Trim(), effectId, path);
+        }
+
+        private TechnologyScopeSpec ParseTechnologyScope(string value, string effectId, string path)
+        {
+            if (_technologyScopeKeys == null)
+            {
+                throw new InvalidOperationException(
+                    $"Effect template '{effectId}' in {path}: technology.scope requires TechnologyScopeKeyRegistry.");
+            }
+
+            switch (value)
+            {
+                case "self":
+                    return TechnologyScopeSpec.Self;
+                case "explicit":
+                    return new TechnologyScopeSpec(TechnologyScopeKind.Explicit);
+                default:
+                    if (_technologyScopeKeys.TryGetId(value, out int scopeKeyId) && scopeKeyId > 0)
+                    {
+                        return new TechnologyScopeSpec(TechnologyScopeKind.Named, scopeKeyId);
+                    }
+
+                    throw new InvalidOperationException(
+                        $"Effect template '{effectId}' in {path}: technology.scope '{value}' is not registered by Technology config.");
+            }
+        }
+
+        private static TechnologyLevelChange CompileTechnologyChange(TechnologyCompletionConfig cfg, string effectId, string path)
+        {
+            if (cfg.Level.HasValue && cfg.Delta.HasValue)
+            {
+                throw new InvalidOperationException(
+                    $"Effect template '{effectId}' in {path}: technology.level and technology.delta are mutually exclusive.");
+            }
+
+            if (cfg.Level.HasValue)
+            {
+                int level = cfg.Level.Value;
+                if (level <= 0)
+                {
+                    throw new InvalidOperationException(
+                        $"Effect template '{effectId}' in {path}: technology.level must be greater than zero.");
+                }
+
+                return new TechnologyLevelChange(level, 0);
+            }
+
+            if (cfg.Delta.HasValue)
+            {
+                int delta = cfg.Delta.Value;
+                if (delta <= 0)
+                {
+                    throw new InvalidOperationException(
+                        $"Effect template '{effectId}' in {path}: technology.delta must be greater than zero.");
+                }
+
+                return new TechnologyLevelChange(0, delta);
+            }
+
+            return TechnologyLevelChange.Complete;
+        }
 
         private static TargetQueryDescriptor CompileTargetQuery(TargetQueryConfig cfg, string effectId, string path)
         {

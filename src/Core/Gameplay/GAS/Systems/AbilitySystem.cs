@@ -3,6 +3,7 @@ using Arch.Core;
 using Arch.Core.Extensions;
 using Ludots.Core.Gameplay.GAS.Components;
 using Ludots.Core.Gameplay.Items;
+using Ludots.Core.Gameplay.Technology;
 using Ludots.Core.GraphRuntime;
 using Ludots.Core.NodeLibraries.GASGraph;
 
@@ -15,6 +16,7 @@ namespace Ludots.Core.Gameplay.GAS.Systems
         private readonly TagOps _tagOps;
         private readonly GraphProgramRegistry _graphPrograms;
         private readonly IGraphRuntimeApi _graphApi;
+        private readonly TechnologyRequirementEvaluator _technologyRequirements;
 
         public AbilitySystem(
             World world,
@@ -22,13 +24,15 @@ namespace Ludots.Core.Gameplay.GAS.Systems
             AbilityDefinitionRegistry abilityDefinitions = null,
             TagOps tagOps = null,
             GraphProgramRegistry graphPrograms = null,
-            IGraphRuntimeApi graphApi = null) : base(world)
+            IGraphRuntimeApi graphApi = null,
+            TechnologyRequirementEvaluator technologyRequirements = null) : base(world)
         {
             _effectRequests = effectRequests;
             _abilityDefinitions = abilityDefinitions;
             _tagOps = tagOps ?? new TagOps();
             _graphPrograms = graphPrograms;
             _graphApi = graphApi;
+            _technologyRequirements = technologyRequirements;
         }
 
         public override void Update(in float dt) { }
@@ -114,6 +118,11 @@ namespace Ludots.Core.Gameplay.GAS.Systems
                     }
                 }
 
+                if (!EvaluateTechnologyUseRequirement(caster, ResolveValidationTarget(in args), args.TargetContext, in def))
+                {
+                    return false;
+                }
+
                 if (_effectRequests == null) return true;
                 if (!def.HasOnActivateEffects || def.OnActivateEffects.Count <= 0) return true;
 
@@ -178,6 +187,13 @@ namespace Ludots.Core.Gameplay.GAS.Systems
                 {
                     return false;
                 }
+            }
+
+            ref var technologyRequirementsEntity = ref World.TryGetRef<AbilityTechnologyRequirements>(templateEntity, out bool hasTechnologyRequirementsEntity);
+            if (hasTechnologyRequirementsEntity &&
+                !EvaluateTechnologyUseRequirement(caster, ResolveValidationTarget(in args), args.TargetContext, in technologyRequirementsEntity))
+            {
+                return false;
             }
 
             if (_effectRequests == null) return true;
@@ -245,6 +261,41 @@ namespace Ludots.Core.Gameplay.GAS.Systems
             }
 
             return default;
+        }
+
+        private bool EvaluateTechnologyUseRequirement(Entity caster, Entity subject, Entity explicitScopeHost, in AbilityDefinition definition)
+        {
+            if (!definition.HasUseTechnologyRequirement)
+            {
+                return true;
+            }
+
+            return EvaluateTechnologyRequirement(caster, subject, explicitScopeHost, definition.UseTechnologyRequirementId);
+        }
+
+        private bool EvaluateTechnologyUseRequirement(Entity caster, Entity subject, Entity explicitScopeHost, in AbilityTechnologyRequirements requirements)
+        {
+            if (requirements.UseRequirementId <= 0)
+            {
+                return true;
+            }
+
+            return EvaluateTechnologyRequirement(caster, subject, explicitScopeHost, requirements.UseRequirementId);
+        }
+
+        private bool EvaluateTechnologyRequirement(Entity caster, Entity subject, Entity explicitScopeHost, int requirementId)
+        {
+            if (_technologyRequirements == null)
+            {
+                throw new InvalidOperationException("Ability technology requirement is configured, but TechnologyRequirementEvaluator is not registered.");
+            }
+
+            Entity resolvedSubject = World.IsAlive(subject) ? subject : caster;
+            Entity resolvedExplicitScopeHost = World.IsAlive(explicitScopeHost)
+                ? explicitScopeHost
+                : default;
+            var context = new TechnologyRequirementEvaluationContext(caster, resolvedSubject, resolvedExplicitScopeHost);
+            return _technologyRequirements.Evaluate(requirementId, in context);
         }
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]

@@ -25,6 +25,8 @@ namespace Ludots.Core.Gameplay.GAS
         Displacement = 11,
         /// <summary>Entity relation effect: garrison, detach, or link parent-child state.</summary>
         Relation = 12,
+        /// <summary>Completes an entity-scoped technology through the Technology runtime.</summary>
+        CompleteTechnology = 13,
     }
 
     // ── TargetResolver: pluggable target fan-out for effects ──
@@ -315,6 +317,9 @@ namespace Ludots.Core.Gameplay.GAS
         public UnitCreationDescriptor UnitCreation;
         public DisplacementDescriptor Displacement;
         public RelationDescriptor Relation;
+        public Ludots.Core.Gameplay.Technology.TechnologyScopeSpec TechnologyScope;
+        public Ludots.Core.Gameplay.Technology.TechnologyLevelChange TechnologyChange;
+        public int TechnologyId;
 
         // ── Phase Graph bindings ──
         public EffectPhaseGraphBindings PhaseGraphBindings;
