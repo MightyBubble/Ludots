@@ -1,0 +1,643 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Ludots 树状科技树 Authoring Compiler 设计</title>
+  <style>
+    :root {
+      color-scheme: light;
+      --ink: #1f2933;
+      --muted: #607086;
+      --paper: #ffffff;
+      --surface: #f5f8fb;
+      --line: #d4dfeb;
+      --navy: #10243d;
+      --teal: #08767c;
+      --blue: #315f9f;
+      --green: #24724d;
+      --amber: #9a6a12;
+      --red: #a23d42;
+      --shadow: 0 12px 30px rgba(16, 36, 61, 0.10);
+    }
+
+    * {
+      box-sizing: border-box;
+    }
+
+    body {
+      margin: 0;
+      font-family: "Microsoft YaHei", "Segoe UI", system-ui, -apple-system, BlinkMacSystemFont, sans-serif;
+      color: var(--ink);
+      background: #edf2f6;
+      line-height: 1.62;
+    }
+
+    .page {
+      max-width: 1200px;
+      margin: 0 auto;
+      padding: 30px 24px 58px;
+    }
+
+    header {
+      padding: 34px 38px;
+      border-radius: 10px;
+      color: #f7fbff;
+      background: linear-gradient(135deg, rgba(16, 36, 61, 0.98), rgba(8, 118, 124, 0.94) 56%, rgba(49, 95, 159, 0.96));
+      box-shadow: var(--shadow);
+    }
+
+    h1 {
+      margin: 0;
+      font-size: 34px;
+      line-height: 1.18;
+      letter-spacing: 0;
+    }
+
+    h2 {
+      margin: 0 0 14px;
+      color: var(--navy);
+      font-size: 24px;
+      letter-spacing: 0;
+    }
+
+    h3 {
+      margin: 24px 0 8px;
+      color: var(--navy);
+      font-size: 18px;
+      letter-spacing: 0;
+    }
+
+    h4 {
+      margin: 18px 0 8px;
+      color: var(--teal);
+      font-size: 15px;
+      letter-spacing: 0;
+    }
+
+    p {
+      margin: 8px 0 12px;
+    }
+
+    header p {
+      max-width: 950px;
+      margin: 12px 0 0;
+      color: #dceaf4;
+      font-size: 17px;
+    }
+
+    a {
+      color: var(--blue);
+      text-decoration: none;
+      font-weight: 700;
+    }
+
+    code {
+      padding: 1px 5px;
+      border: 1px solid #cbd7e4;
+      border-radius: 4px;
+      background: #f8fafc;
+      color: #22364c;
+      font-family: Consolas, "Cascadia Mono", monospace;
+      font-size: 0.94em;
+    }
+
+    pre {
+      overflow: auto;
+      margin: 12px 0 0;
+      padding: 14px 16px;
+      border: 1px solid #253447;
+      border-radius: 8px;
+      background: #16202d;
+      color: #eef5fb;
+      font-family: Consolas, "Cascadia Mono", monospace;
+      font-size: 13px;
+      line-height: 1.55;
+    }
+
+    pre code {
+      padding: 0;
+      border: 0;
+      border-radius: 0;
+      background: transparent;
+      color: inherit;
+      font-size: inherit;
+    }
+
+    nav {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
+      gap: 12px;
+      margin: 18px 0;
+    }
+
+    nav a {
+      display: block;
+      min-height: 48px;
+      padding: 12px 14px;
+      border: 1px solid var(--line);
+      border-radius: 8px;
+      color: var(--navy);
+      background: var(--paper);
+      box-shadow: 0 6px 16px rgba(22, 38, 55, 0.06);
+    }
+
+    section {
+      margin-top: 18px;
+      padding: 26px 30px;
+      border: 1px solid var(--line);
+      border-radius: 10px;
+      background: var(--paper);
+      box-shadow: 0 8px 22px rgba(22, 38, 55, 0.06);
+    }
+
+    .lead {
+      color: var(--muted);
+      font-size: 16px;
+    }
+
+    .meta {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 10px;
+      margin-top: 22px;
+    }
+
+    .pill {
+      display: inline-flex;
+      align-items: center;
+      min-height: 30px;
+      padding: 5px 10px;
+      border: 1px solid rgba(255, 255, 255, 0.26);
+      border-radius: 999px;
+      color: #eef7ff;
+      background: rgba(255, 255, 255, 0.12);
+      font-size: 13px;
+      white-space: nowrap;
+    }
+
+    .grid {
+      display: grid;
+      grid-template-columns: repeat(3, minmax(0, 1fr));
+      gap: 14px;
+      margin-top: 14px;
+    }
+
+    .grid.two {
+      grid-template-columns: repeat(2, minmax(0, 1fr));
+    }
+
+    .card {
+      min-height: 100%;
+      padding: 16px;
+      border: 1px solid var(--line);
+      border-radius: 8px;
+      background: var(--surface);
+    }
+
+    .card strong {
+      display: block;
+      margin-bottom: 6px;
+      color: var(--navy);
+      font-size: 15px;
+    }
+
+    .card p {
+      margin: 0;
+      color: var(--muted);
+      font-size: 14px;
+    }
+
+    .flow {
+      display: grid;
+      grid-template-columns: repeat(5, minmax(0, 1fr));
+      gap: 10px;
+      margin-top: 16px;
+    }
+
+    .step {
+      min-height: 128px;
+      padding: 14px 12px;
+      border: 1px solid var(--line);
+      border-radius: 8px;
+      background: #fbfcfe;
+    }
+
+    .step b {
+      display: block;
+      color: var(--teal);
+      font-size: 14px;
+    }
+
+    .step span {
+      display: block;
+      margin-top: 6px;
+      color: var(--muted);
+      font-size: 13px;
+    }
+
+    .table {
+      width: 100%;
+      margin-top: 14px;
+      border-collapse: collapse;
+      overflow: hidden;
+      border: 1px solid var(--line);
+      border-radius: 8px;
+      font-size: 14px;
+    }
+
+    .table th,
+    .table td {
+      padding: 10px 12px;
+      border-bottom: 1px solid var(--line);
+      text-align: left;
+      vertical-align: top;
+    }
+
+    .table th {
+      color: var(--navy);
+      background: #edf3f8;
+      font-weight: 800;
+    }
+
+    .table tr:last-child td {
+      border-bottom: 0;
+    }
+
+    .callout {
+      margin-top: 14px;
+      padding: 14px 16px;
+      border-left: 4px solid var(--teal);
+      border-radius: 8px;
+      background: #eef8f8;
+    }
+
+    .callout.warning {
+      border-left-color: var(--amber);
+      background: #fff7e8;
+    }
+
+    .callout.danger {
+      border-left-color: var(--red);
+      background: #fff0f1;
+    }
+
+    .diagram {
+      display: grid;
+      grid-template-columns: 1fr 1fr 1fr;
+      gap: 14px;
+      margin-top: 16px;
+      align-items: stretch;
+    }
+
+    .diagram-col {
+      padding: 14px;
+      border: 1px solid var(--line);
+      border-radius: 8px;
+      background: #fbfcfe;
+    }
+
+    .diagram-col b {
+      display: block;
+      margin-bottom: 8px;
+      color: var(--navy);
+    }
+
+    .file-list {
+      display: grid;
+      gap: 8px;
+      margin: 10px 0 0;
+      padding: 0;
+      list-style: none;
+    }
+
+    .file-list li {
+      padding: 9px 10px;
+      border: 1px solid var(--line);
+      border-radius: 7px;
+      background: #ffffff;
+      color: var(--muted);
+      font-size: 13px;
+    }
+
+    .small {
+      color: var(--muted);
+      font-size: 13px;
+    }
+
+    @media (max-width: 960px) {
+      .grid,
+      .grid.two,
+      .flow,
+      .diagram {
+        grid-template-columns: 1fr;
+      }
+
+      header,
+      section {
+        padding: 24px 20px;
+      }
+    }
+  </style>
+</head>
+<body>
+  <div class="page">
+    <header>
+      <h1>树状科技树 Authoring Compiler 设计</h1>
+      <p>这份设计回答一个作者体验问题：mod 作者能不能像编辑科技树一样拖节点、连前置、选作用域，然后自动得到 Ludots 现在需要的 Technology、Requirement、Ability 和 Effect 配置。答案是可以，但这应该是 authoring 层，不是新的 runtime 科技系统。</p>
+      <div class="meta">
+        <span class="pill">Authoring source</span>
+        <span class="pill">Deterministic compiler</span>
+        <span class="pill">复用 Technology/GAS/Graph</span>
+        <span class="pill">不进 runtime hot path</span>
+      </div>
+    </header>
+
+    <nav aria-label="目录">
+      <a href="#answer">结论</a>
+      <a href="#author-flow">作者流程</a>
+      <a href="#schema">Schema</a>
+      <a href="#compiler">编译映射</a>
+      <a href="#editor">编辑器</a>
+      <a href="#validation">校验</a>
+      <a href="#uat">UAT</a>
+    </nav>
+
+    <section id="answer">
+      <h2>结论</h2>
+      <p class="lead">新增一层 <code>TechnologyTreeAuthoring</code>，让作者编辑树状文件；新增 compiler，把树转成现有 runtime 配置。runtime 不认识“树编辑器”、节点坐标、分组、备注，也不新增 player 科技表。</p>
+
+      <div class="diagram">
+        <div class="diagram-col">
+          <b>作者文件</b>
+          <ul class="file-list">
+            <li><code>assets/Authoring/Technology/trees.json</code></li>
+            <li>节点、连线、位置、分组、scope、条件、按钮绑定</li>
+            <li>只给编辑器和 compiler 读取</li>
+          </ul>
+        </div>
+        <div class="diagram-col">
+          <b>Compiler</b>
+          <ul class="file-list">
+            <li><code>ludots technology compile</code>，拟新增</li>
+            <li>Editor Bridge 调同一个 compiler</li>
+            <li>校验、排序、生成、写入 report</li>
+          </ul>
+        </div>
+        <div class="diagram-col">
+          <b>运行时配置</b>
+          <ul class="file-list">
+            <li><code>assets/Configs/Technology/scopes.json</code></li>
+            <li><code>assets/Configs/Technology/technologies.json</code></li>
+            <li><code>assets/Configs/Technology/requirements.json</code></li>
+            <li><code>assets/Configs/GAS/effects.json</code></li>
+            <li><code>assets/Configs/GAS/abilities.json</code></li>
+            <li>仅限 <code>config_catalog.json</code> 已登记的相对路径</li>
+          </ul>
+        </div>
+      </div>
+
+      <div class="callout">
+        <strong>为什么产物放 <code>assets/Configs</code>：</strong><code>ConfigPipeline</code> 对同一个相对路径会读取 mod 的 <code>assets/&lt;path&gt;</code> 和 <code>assets/Configs/&lt;path&gt;</code>。所以 generated 文件可以挂到正式合并链路，不需要给 Technology 建平行 loader。
+      </div>
+    </section>
+
+    <section id="author-flow">
+      <h2>作者流程</h2>
+      <div class="flow">
+        <div class="step"><b>1. 新建科技树</b><span>选择默认 scope，例如 city、faction、self。scope 名字仍然来自配置声明。</span></div>
+        <div class="step"><b>2. 拖节点</b><span>节点有标题、稳定 id、图标、描述、等级和编辑器坐标。</span></div>
+        <div class="step"><b>3. 连前置</b><span>父节点连到子节点，compiler 自动生成 <code>TechCompleted</code> 或 <code>TechLevelAtLeast</code>。</span></div>
+        <div class="step"><b>4. 加条件</b><span>简单条件用 tag/entity count；复杂条件引用现有 graph validation。</span></div>
+        <div class="step"><b>5. 生成配置</b><span>保存时生成 runtime JSON 和 validation report，作者不手改 generated 文件。</span></div>
+      </div>
+
+      <table class="table">
+        <thead>
+          <tr><th>作者看到的概念</th><th>对应运行时概念</th><th>备注</th></tr>
+        </thead>
+        <tbody>
+          <tr><td>科技节点</td><td><code>TechnologyConfig</code></td><td>只有永久科技节点生成 technology。</td></tr>
+          <tr><td>前置线</td><td><code>TechCompleted</code> / <code>TechLevelAtLeast</code></td><td>父节点 id 编译为稳定 technology id。</td></tr>
+          <tr><td>门槛节点</td><td><code>EntityCount</code> / <code>TagAll</code> / <code>GraphValidation</code></td><td>门槛是当前状态，不写科技状态。</td></tr>
+          <tr><td>研究完成</td><td><code>CompleteTechnology</code> effect</td><td>走 GAS Effect Pipeline，不让 UI 直接写 state。</td></tr>
+          <tr><td>按钮隐藏/禁用</td><td><code>showRequirement</code> / <code>useRequirement</code></td><td>与 SC2 Requirement 的 Show/Use 语义对齐。</td></tr>
+        </tbody>
+      </table>
+    </section>
+
+    <section id="schema">
+      <h2>Authoring Schema</h2>
+      <p class="lead">schema 要保持作者友好，但字段必须能确定性落到现有 runtime 配置。UI 可读字段和 runtime 语义字段分开，避免布局泄漏进 runtime。</p>
+
+      <pre><code>[
+  {
+    "id": "Tree.Shu.CityMilitary",
+    "displayName": "蜀国城池军备",
+    "defaultScope": "city",
+    "idPrefix": "Shu.CityMilitary",
+    "scopes": [
+      { "id": "city" },
+      { "id": "region" }
+    ],
+    "nodes": [
+      {
+        "id": "basic_drill",
+        "title": "基础募兵",
+        "description": "允许城内兵营训练民兵。",
+        "position": { "x": 120, "y": 180 },
+        "unlock": {
+          "mode": "PermanentTech",
+          "level": 1,
+          "completeEffect": true
+        },
+        "bindings": [
+          { "ability": "Ability.TrainMilitia", "gate": "use" }
+        ]
+      },
+      {
+        "id": "elite_training",
+        "title": "精兵训练",
+        "position": { "x": 420, "y": 180 },
+        "parents": [
+          { "node": "basic_drill", "level": 1 }
+        ],
+        "conditions": [
+          {
+            "kind": "EntityCount",
+            "scope": "region",
+            "entitySource": "ScopeMembers",
+            "count": 1,
+            "tags": ["Hero.Strategist"]
+          }
+        ],
+        "unlock": {
+          "mode": "PermanentTech",
+          "level": 1
+        },
+        "bindings": [
+          { "ability": "Ability.RaiseElite", "gate": "show" }
+        ]
+      }
+    ]
+  }
+]</code></pre>
+
+      <h3>字段约定</h3>
+      <table class="table">
+        <thead>
+          <tr><th>字段</th><th>归属</th><th>规则</th></tr>
+        </thead>
+        <tbody>
+          <tr><td><code>id</code></td><td>作者身份</td><td>稳定，不随标题和位置变化。用于生成 deterministic id。</td></tr>
+          <tr><td><code>displayName</code>、<code>title</code>、<code>description</code></td><td>编辑器/UI</td><td>可以参与生成 presentation，但不参与 runtime 判断。</td></tr>
+          <tr><td><code>position</code>、<code>group</code></td><td>编辑器布局</td><td>只保留在 authoring source，不写入 <code>Technology/*.json</code>。</td></tr>
+          <tr><td><code>scopes</code></td><td>作者声明</td><td>tree 会用到的 named scope。compiler 可以据此生成 <code>Technology/scopes.json</code>，或校验它们已在手写配置中存在。</td></tr>
+          <tr><td><code>defaultScope</code>、<code>scope</code></td><td>运行时语义</td><td>必须是 <code>self</code>、<code>explicit</code>、tree 的 <code>scopes</code> 声明，或已存在的 named scope。</td></tr>
+          <tr><td><code>parents</code></td><td>前置关系</td><td>只允许引用同一 tree 内节点；compiler 做环检测。</td></tr>
+          <tr><td><code>conditions</code></td><td>Requirement</td><td>直接映射到现有 requirement node，复杂条件引用 graph id。</td></tr>
+          <tr><td><code>bindings</code></td><td>Ability gate</td><td>只声明绑定意图；是否覆盖已有 ability 必须显式配置。</td></tr>
+        </tbody>
+      </table>
+    </section>
+
+    <section id="compiler">
+      <h2>Compiler 映射</h2>
+      <p class="lead">compiler 是薄而确定的转换层。它不引入新领域判断，不在 runtime 热路径分配对象，也不替代 <code>TechnologyRequirementEvaluator</code>。</p>
+
+      <h3>拟新增命令入口</h3>
+      <pre><code>dotnet run --project src/Tools/Ludots.Tool/Ludots.Tool.csproj -- \
+  technology compile \
+  --modPath mods/showcases/tech_tree_scope/TechTreeScopeShowcaseMod \
+  --input assets/Authoring/Technology/trees.json \
+  --out assets/Configs \
+  --writeReport</code></pre>
+
+      <h3>生成文件</h3>
+      <table class="table">
+        <thead>
+          <tr><th>输出</th><th>内容</th><th>合并方式</th></tr>
+        </thead>
+        <tbody>
+          <tr><td><code>Technology/scopes.json</code></td><td>tree 显式声明的 named scopes。项目可选择由 compiler 生成，或要求作者提前声明后只校验。</td><td><code>ArrayById</code></td></tr>
+          <tr><td><code>Technology/technologies.json</code></td><td><code>PermanentTech</code> 节点对应的 technology。</td><td><code>ArrayById</code></td></tr>
+          <tr><td><code>Technology/requirements.json</code></td><td>父节点、conditions、按钮 gate 的组合 requirement。</td><td><code>ArrayById</code></td></tr>
+          <tr><td><code>GAS/effects.json</code></td><td>研究完成节点对应的 <code>CompleteTechnology</code> effect。</td><td><code>ArrayById</code></td></tr>
+          <tr><td><code>GAS/abilities.json</code></td><td>可选。只在作者显式允许 generated ability overlay 时写。</td><td><code>ArrayById</code></td></tr>
+          <tr><td><code>Authoring/Technology/compile_report.json</code></td><td>校验结果、生成 id、未绑定项、冲突列表。</td><td>不进 runtime</td></tr>
+        </tbody>
+      </table>
+
+      <h3>稳定 id 策略</h3>
+      <pre><code>Technology:  Tech.&lt;idPrefix&gt;.&lt;nodeId&gt;
+Use req:     Req.&lt;idPrefix&gt;.&lt;nodeId&gt;.Use
+Show req:    Req.&lt;idPrefix&gt;.&lt;nodeId&gt;.Show
+Done req:    Req.&lt;idPrefix&gt;.&lt;nodeId&gt;.Done
+Effect:      Effect.&lt;idPrefix&gt;.&lt;nodeId&gt;.Complete</code></pre>
+
+      <div class="callout warning">
+        <strong>不要偷偷 patch 手写文件：</strong>如果 ability 已存在，默认只生成 binding plan 和 report。只有作者在 tree 里显式设置 <code>"emitAbilityOverlay": true</code>，compiler 才写 generated <code>GAS/abilities.json</code> 片段。
+      </div>
+
+      <h3>PermanentTech 与 ReversibleGate</h3>
+      <table class="table">
+        <thead>
+          <tr><th>模式</th><th>生成 technology</th><th>生成 CompleteTechnology</th><th>可作为父节点</th><th>会回退</th></tr>
+        </thead>
+        <tbody>
+          <tr><td><code>PermanentTech</code></td><td>是</td><td>可选，默认生成</td><td>是</td><td>否</td></tr>
+          <tr><td><code>ReversibleGate</code></td><td>否</td><td>否</td><td>可作为 requirement 片段，不作为 tech parent</td><td>是</td></tr>
+        </tbody>
+      </table>
+    </section>
+
+    <section id="editor">
+      <h2>Editor 设计</h2>
+      <p class="lead">Editor React 负责作者体验，Editor Bridge 负责文件读写和调用 compiler。两者共享 authoring schema，不直接调用 runtime registry。</p>
+
+      <div class="grid two">
+        <div class="card">
+          <strong>React 视图</strong>
+          <p>新增 Technology Tree 面板：左侧树列表，中间节点画布，右侧属性 inspector。节点支持拖拽、连线、复制、禁用、搜索和错误定位。</p>
+        </div>
+        <div class="card">
+          <strong>拟新增 Bridge API</strong>
+          <p><code>GET /api/mods/{modId}/technology/trees</code> 读取 authoring source；<code>PUT</code> 保存；<code>POST /compile</code> 调 compiler 并返回 report。这些是本设计建议新增的 endpoint，不是当前已存在的 Bridge API。</p>
+        </div>
+        <div class="card">
+          <strong>Compiler 共享</strong>
+          <p>CLI 和 Bridge 调同一套 compiler 类型，避免一个命令行版本、一个编辑器版本。</p>
+        </div>
+        <div class="card">
+          <strong>图条件入口</strong>
+          <p>复杂条件只引用 graph id。编辑器可以显示 graph 选择器，但不在科技树面板里重做 graph 编辑器。</p>
+        </div>
+      </div>
+
+      <div class="callout">
+        <strong>清晰职责：</strong>React 管交互；Bridge 管 repo/mod 路径和文件；compiler 管 schema 到 runtime JSON；runtime 管合并、registry、evaluation 和 effect apply。
+      </div>
+    </section>
+
+    <section id="validation">
+      <h2>校验规则</h2>
+      <p class="lead">校验要在保存和 compile 时给作者明确反馈。错误应该定位到 tree、node、field，而不是等 runtime 启动后抛 registry 异常。</p>
+
+      <table class="table">
+        <thead>
+          <tr><th>级别</th><th>规则</th><th>示例</th></tr>
+        </thead>
+        <tbody>
+          <tr><td>错误</td><td>重复 tree id 或 node id</td><td><code>Tree.Shu.CityMilitary/basic_drill</code> 出现两次。</td></tr>
+          <tr><td>错误</td><td>前置环</td><td>A 需要 B，B 又需要 A。</td></tr>
+          <tr><td>错误</td><td>未知 scope</td><td><code>scope: city</code> 未在 tree 的 <code>scopes</code> 或 <code>Technology/scopes.json</code> 声明。</td></tr>
+          <tr><td>错误</td><td>未知 graph</td><td><code>Graph.RequireRegionControl</code> 不存在或未编译。</td></tr>
+          <tr><td>错误</td><td>binding 指向未知 ability</td><td><code>Ability.RaiseElite</code> 不在合并后的 ability 配置里。</td></tr>
+          <tr><td>警告</td><td>generated id 与手写 id 冲突</td><td>作者手写了同名 <code>Req.*</code>。</td></tr>
+          <tr><td>警告</td><td>ReversibleGate 被当作永久父科技</td><td>应该改成 <code>conditions</code>，不要生成 tech state。</td></tr>
+          <tr><td>提示</td><td>节点没有 binding</td><td>可能是剧情奖励科技，也可能是漏配按钮。</td></tr>
+        </tbody>
+      </table>
+
+      <div class="callout danger">
+        <strong>禁止隐式 scope：</strong>compiler 不应该根据 title 猜 <code>city</code>、<code>faction</code>、<code>region</code>。scope 使用点可以继承 tree 默认值，但 named scope 的定义必须来自 tree 的 <code>scopes</code> 或已声明 config。
+      </div>
+    </section>
+
+    <section id="uat">
+      <h2>UAT 与实现顺序</h2>
+      <p class="lead">先做可验证的竖切，再做完整编辑体验。第一版不需要万能 showcase，也不需要 map tag 开关。</p>
+
+      <h3>实现顺序</h3>
+      <table class="table">
+        <thead>
+          <tr><th>阶段</th><th>交付</th><th>验收</th></tr>
+        </thead>
+        <tbody>
+          <tr><td>1. Compiler core</td><td>DTO、validator、deterministic emitter、unit tests</td><td>输入 authoring tree，输出三类 Technology JSON 和 GAS effect JSON。</td></tr>
+          <tr><td>2. CLI</td><td>新增 <code>technology compile</code> 命令</td><td>showcase mod 可一键重新生成配置，diff 稳定。</td></tr>
+          <tr><td>3. Editor Bridge</td><td>读取、保存、compile API</td><td>保存后返回 compile report，错误可定位到节点。</td></tr>
+          <tr><td>4. React 面板</td><td>树列表、节点画布、属性 inspector、错误定位</td><td>作者不用手写 requirement 就能配置常见前置。</td></tr>
+          <tr><td>5. Showcase</td><td>独立 mod、独立 map</td><td>城池科技、势力科技、英雄在场 gate、graph validation 各自可验收。</td></tr>
+        </tbody>
+      </table>
+
+      <h3>0alloc 口径</h3>
+      <p>authoring compiler 和 editor 可以正常分配，因为它们不在 runtime hot path。0alloc 约束放在 runtime evaluator、scope binding、effect application 这类每帧或高频路径。compiler 产物仍然进入现有 registry 和 compact requirement node 数组。</p>
+
+      <h3>验收 case</h3>
+      <ul class="file-list">
+        <li>树上连 <code>basic_drill -> elite_training</code>，生成 <code>TechCompleted</code> 前置。</li>
+        <li>节点条件选择 <code>EntityCount + Hero.Strategist</code>，英雄离开后按钮重新锁定。</li>
+        <li>节点条件选择 <code>GraphValidation</code>，graph 改判定后无需改科技 runtime。</li>
+        <li>同一 tree 重排节点位置，生成 runtime JSON 没有无意义 diff。</li>
+        <li>删除一个节点，compiler 明确报告受影响的 child、ability binding 和 effect。</li>
+      </ul>
+
+      <div class="callout">
+        <strong>相关文档：</strong>作者如何配置玩法 case 见 <a href="entity_scoped_technology_tree_author_guide.html">科技树作者配置指南</a>；runtime 边界见 <a href="entity_scoped_technology_tree_architecture_report.html">Entity-Scoped Technology Tree 架构汇报</a>。
+      </div>
+    </section>
+  </div>
+</body>
+</html>

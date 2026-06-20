@@ -22,6 +22,8 @@
   * CRPG / JRPG / 自走棋 / 三国英雄题材的关系机制抽象、Ludots 基建复用清单、配置与 showcase 验收口径
 * [Entity-Scoped Technology Tree 作者配置指南](entity_scoped_technology_tree_author_guide.html)
   * 面向内容作者的科技树 cookbook：scope 选择、城池/势力/区域/英雄/本体升级等常见 case 配置片段
+* [Entity-Scoped Technology Tree 树状 Authoring Compiler 设计](entity_scoped_technology_tree_authoring_compiler_design.html)
+  * mod 作者编辑树状科技树、compiler 生成 Technology/GAS runtime 配置的 schema、工具入口、校验和 UAT 设计
 * [Entity-Scoped Technology Tree 架构汇报](entity_scoped_technology_tree_architecture_report.html)
   * 实体作用域科技树的 DDD 边界、scope 配置、requirement 节点、GAS/UI 集成与 UAT showcase 验收口径
 
