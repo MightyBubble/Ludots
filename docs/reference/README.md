@@ -20,6 +20,8 @@
   * `ChampionSkillSandboxMod` 的复用基线、交付内容与当前实现切片回写
 * [关系系统：市场案例抽象与 Ludots 复用设计](relationship_system_market_abstraction.md)
   * CRPG / JRPG / 自走棋 / 三国英雄题材的关系机制抽象、Ludots 基建复用清单、配置与 showcase 验收口径
+* [Entity-Scoped Technology Tree 架构汇报](entity_scoped_technology_tree_architecture_report.html)
+  * 实体作用域科技树的 DDD 边界、scope 配置、requirement 节点、GAS/UI 集成与 UAT showcase 验收口径
 
 ## 2 相关文档
 
