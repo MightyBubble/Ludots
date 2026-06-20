@@ -134,7 +134,7 @@
 
     nav {
       display: grid;
-      grid-template-columns: repeat(4, minmax(0, 1fr));
+      grid-template-columns: repeat(5, minmax(0, 1fr));
       gap: 12px;
       margin: 18px 0;
     }
@@ -385,11 +385,15 @@
       <a href="#architecture">架构边界</a>
       <a href="#configuration">配置方式</a>
       <a href="#showcase">UAT Showcase</a>
+      <a href="entity_scoped_technology_tree_author_guide.html">作者配置指南</a>
     </nav>
 
     <section id="conclusion">
       <h2>结论</h2>
       <p class="lead">本 PR 新增的是一个通用的 entity-scoped technology runtime，而不是某个 RTS showcase 的私有逻辑。它可以表达“城池科技”“势力科技”“区域科技”“英雄在场解锁”“建筑本体升级”等不同作用域，且作用域必须由配置显式声明。</p>
+      <div class="callout">
+        <strong>给内容作者：</strong>如果你要按玩法 case 配城池、势力、区域英雄、省份或建筑本体升级，先看 <a href="entity_scoped_technology_tree_author_guide.html">Entity-Scoped Technology Tree 作者配置指南</a>。
+      </div>
       <div class="kpi">
         <div><b>Entity</b><span>科技状态挂在实体上，不挂 player。</span></div>
         <div><b>Scope</b><span>作用域通过 self / explicit / named 解析。</span></div>
