@@ -126,7 +126,7 @@
 
     nav {
       display: grid;
-      grid-template-columns: repeat(5, minmax(0, 1fr));
+      grid-template-columns: repeat(auto-fit, minmax(145px, 1fr));
       gap: 12px;
       margin: 18px 0;
     }
@@ -314,11 +314,75 @@
       font-size: 13px;
     }
 
+    .tree-preview {
+      display: grid;
+      grid-template-columns: 0.8fr 1fr 1fr;
+      gap: 16px;
+      align-items: center;
+      margin-top: 18px;
+      padding: 18px;
+      border: 1px solid var(--line);
+      border-radius: 10px;
+      background: linear-gradient(180deg, #fbfcfe, #f2f6fa);
+    }
+
+    .tree-lane {
+      display: grid;
+      gap: 12px;
+      align-content: center;
+    }
+
+    .tree-node {
+      min-height: 68px;
+      padding: 12px 14px;
+      border: 2px solid #b7c8d8;
+      border-radius: 8px;
+      background: #ffffff;
+      box-shadow: 0 6px 16px rgba(16, 36, 61, 0.08);
+    }
+
+    .tree-node b {
+      display: block;
+      color: var(--navy);
+      font-size: 14px;
+    }
+
+    .tree-node span {
+      display: block;
+      margin-top: 4px;
+      color: var(--muted);
+      font-size: 12px;
+    }
+
+    .tree-node.gate {
+      border-color: #d8b866;
+      background: #fffaf0;
+    }
+
+    .tree-arrow {
+      position: relative;
+      height: 2px;
+      background: #7c91a6;
+    }
+
+    .tree-arrow::after {
+      content: "";
+      position: absolute;
+      right: -1px;
+      top: -5px;
+      width: 0;
+      height: 0;
+      border-top: 6px solid transparent;
+      border-bottom: 6px solid transparent;
+      border-left: 9px solid #7c91a6;
+    }
+
     @media (max-width: 940px) {
       nav,
       .grid,
       .grid.two,
-      .flow {
+      .flow,
+      .tree-preview {
         grid-template-columns: 1fr;
       }
 
@@ -344,6 +408,7 @@
 
     <nav aria-label="目录">
       <a href="#quick-start">四步上手</a>
+      <a href="#tree-authoring">树状编辑</a>
       <a href="#scope">选 Scope</a>
       <a href="#unlock-modes">解锁模式</a>
       <a href="#recipes">常见配方</a>
@@ -375,6 +440,122 @@
           <tr><td><code>assets/GAS/effects.json</code></td><td><code>presetType: CompleteTechnology</code></td><td>需要点击、事件或脚本完成科技时写。</td></tr>
         </tbody>
       </table>
+    </section>
+
+    <section id="tree-authoring">
+      <h2>树状科技树 Authoring</h2>
+      <p class="lead">可以让 mod 作者在 authoring 阶段轻松编辑一棵树。推荐做法不是让作者手写所有 runtime JSON，而是新增一个 authoring source：编辑器保存树、compiler 把树展开成现在的 <code>Technology</code> 和 <code>GAS</code> 配置。</p>
+
+      <div class="tree-preview" aria-label="树状科技树示意">
+        <div class="tree-lane">
+          <div class="tree-node"><b>基础募兵</b><span>scope: city</span></div>
+        </div>
+        <div class="tree-arrow"></div>
+        <div class="tree-lane">
+          <div class="tree-node"><b>精兵训练</b><span>requires: 基础募兵</span></div>
+          <div class="tree-node gate"><b>谋士在场</b><span>可回退状态门槛</span></div>
+        </div>
+      </div>
+
+      <div class="callout">
+        <strong>作者只编辑一份树：</strong><code>assets/Authoring/Technology/trees.json</code>。这里可以保存节点位置、分组、连线、设计备注、默认 scope、解锁模式和按钮绑定。运行时不直接加载这份文件。
+      </div>
+
+      <table class="table">
+        <thead>
+          <tr><th>作者在树上做什么</th><th>compiler 生成什么</th><th>运行时谁消费</th></tr>
+        </thead>
+        <tbody>
+          <tr><td>创建一个科技节点</td><td><code>assets/Configs/Technology/technologies.json</code> 里的 technology entry</td><td><code>TechnologyConfigLoader</code></td></tr>
+          <tr><td>连一条前置线</td><td><code>TechCompleted</code> 或 <code>TechLevelAtLeast</code> requirement 子节点</td><td><code>TechnologyRequirementEvaluator</code></td></tr>
+          <tr><td>选择“完成后永久解锁”</td><td><code>CompleteTechnology</code> effect</td><td>GAS Effect Pipeline</td></tr>
+          <tr><td>选择“当前条件满足才开放”</td><td><code>EntityCount</code>、<code>TagAll</code> 或 <code>GraphValidation</code> requirement</td><td>Ability 的 <code>showRequirement</code> / <code>useRequirement</code></td></tr>
+          <tr><td>把节点绑定到按钮</td><td>带 <code>showRequirement</code> 或 <code>useRequirement</code> 的 ability 片段，或生成给作者复制/确认的 binding plan</td><td><code>AbilityExecLoader</code></td></tr>
+        </tbody>
+      </table>
+
+      <h3>推荐的 authoring 源文件</h3>
+      <pre><code>// assets/Authoring/Technology/trees.json
+[
+  {
+    "id": "Tree.Shu.CityMilitary",
+    "defaultScope": "city",
+    "idPrefix": "Shu.CityMilitary",
+    "scopes": [
+      { "id": "city" },
+      { "id": "region" }
+    ],
+    "nodes": [
+      {
+        "id": "basic_drill",
+        "title": "基础募兵",
+        "position": { "x": 120, "y": 180 },
+        "unlock": { "mode": "PermanentTech", "level": 1 },
+        "bindings": [
+          { "ability": "Ability.TrainMilitia", "gate": "use" }
+        ]
+      },
+      {
+        "id": "elite_training",
+        "title": "精兵训练",
+        "position": { "x": 380, "y": 180 },
+        "parents": ["basic_drill"],
+        "unlock": { "mode": "PermanentTech", "level": 1 },
+        "conditions": [
+          {
+            "kind": "EntityCount",
+            "scope": "region",
+            "entitySource": "ScopeMembers",
+            "count": 1,
+            "tags": ["Hero.Strategist"]
+          }
+        ],
+        "bindings": [
+          { "ability": "Ability.RaiseElite", "gate": "show" }
+        ]
+      }
+    ]
+  }
+]</code></pre>
+      <p class="small"><code>position</code>、<code>title</code>、分组和备注只属于 editor。compiler 校验它们，但不会把布局写进 runtime config。<code>scope</code> 仍然必须是 <code>self</code>、<code>explicit</code>、tree 的 <code>scopes</code> 声明，或 <code>Technology/scopes.json</code> 已声明过的 named scope。</p>
+
+      <h3>生成结果的边界</h3>
+      <div class="grid two">
+        <div class="card">
+          <strong>生成文件放在 Configs</strong>
+          <p>产物建议写到 <code>assets/Configs/Technology/scopes.json</code>、<code>technologies.json</code>、<code>requirements.json</code>，以及 catalog 已登记的 <code>assets/Configs/GAS/effects.json</code> / <code>abilities.json</code>。现有 <code>ConfigPipeline</code> 会按相同相对路径合并这些文件，不需要 runtime 新 loader。</p>
+        </div>
+        <div class="card">
+          <strong>作者文件和生成文件分开</strong>
+          <p>作者编辑 <code>Authoring</code>；compiler 独占 <code>Configs</code> 下的 generated 文件。不要在保存树时偷偷改作者手写的 <code>assets/GAS/abilities.json</code>。</p>
+        </div>
+        <div class="card">
+          <strong>id 稳定且可预测</strong>
+          <p>例如 <code>Tech.Shu.CityMilitary.basic_drill</code>、<code>Req.Shu.CityMilitary.elite_training.Use</code>、<code>Effect.Shu.CityMilitary.elite_training.Complete</code>。节点重排不改 id。</p>
+        </div>
+        <div class="card">
+          <strong>校验早于运行</strong>
+          <p>compiler 要检查重复 id、环、未知 scope、未知 parent、未知 graph、binding 指向不存在的 ability，以及 PermanentTech / ReversibleGate 是否混用错误。</p>
+        </div>
+      </div>
+
+      <h3>作者需要理解的三个开关</h3>
+      <table class="table">
+        <thead>
+          <tr><th>树节点设置</th><th>作者含义</th><th>编译策略</th></tr>
+        </thead>
+        <tbody>
+          <tr><td><code>unlock.mode: PermanentTech</code></td><td>这是真正被研究、奖励或升级写入的科技。</td><td>生成 technology、前置 requirement、<code>CompleteTechnology</code> effect；后续节点用 <code>TechCompleted</code> / <code>TechLevelAtLeast</code> 依赖它。</td></tr>
+          <tr><td><code>unlock.mode: ReversibleGate</code></td><td>这不是科技状态，只是当前条件。</td><td>不生成 technology，不生成 completion effect；只生成 requirement，条件消失后 gate 自动关闭。</td></tr>
+          <tr><td><code>bindings[].gate</code></td><td>决定按钮是隐藏还是禁用。</td><td><code>show</code> 编译为 <code>showRequirement</code>；<code>use</code> 编译为 <code>useRequirement</code>。</td></tr>
+        </tbody>
+      </table>
+
+      <div class="callout warning">
+        <strong>树是作者体验，不是玩法开关：</strong>一个 feature 仍然应该是一个 mod、一个 showcase map。不要通过 map tag 隐式切换不同科技树，也不要让一张万能 showcase map 负责展示所有 feature。
+      </div>
+
+      <p class="small">更完整的 schema、CLI、Editor Bridge API 和验收规则见 <a href="entity_scoped_technology_tree_authoring_compiler_design.html">树状科技树 Authoring Compiler 设计</a>。</p>
     </section>
 
     <section id="scope">
