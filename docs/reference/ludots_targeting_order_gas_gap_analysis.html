@@ -1,0 +1,909 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Ludots 索敌、警戒、炮台与 Order/GAS 映射缺口分析</title>
+  <style>
+    :root {
+      --bg: #ffffff;
+      --ink: #17202a;
+      --muted: #66717e;
+      --line: #d9e2ec;
+      --soft: #f5f7fa;
+      --blue-soft: #edf4ff;
+      --green-soft: #edf7f1;
+      --amber-soft: #fff4df;
+      --red-soft: #fff0ee;
+      --blue: #2563eb;
+      --teal: #0f766e;
+      --green: #2f855a;
+      --amber: #b45309;
+      --red: #b42318;
+      --violet: #6d28d9;
+      --radius: 8px;
+      --shadow: 0 8px 24px rgba(23, 32, 42, 0.07);
+    }
+
+    * { box-sizing: border-box; }
+    html { scroll-behavior: smooth; }
+
+    body {
+      margin: 0;
+      font-family: "Segoe UI", "Microsoft YaHei", Arial, sans-serif;
+      color: var(--ink);
+      background: var(--bg);
+      line-height: 1.72;
+      letter-spacing: 0;
+    }
+
+    a { color: var(--blue); text-decoration: none; }
+    a:hover { text-decoration: underline; }
+
+    code {
+      font-family: Consolas, "Cascadia Mono", "SFMono-Regular", monospace;
+      font-size: 0.92em;
+      background: #eef2f6;
+      border: 1px solid #d8e0e8;
+      border-radius: 6px;
+      padding: 0.08rem 0.32rem;
+      overflow-wrap: anywhere;
+    }
+
+    .hero {
+      border-bottom: 6px solid var(--red);
+      background: #17202a;
+      color: #f8fafc;
+    }
+
+    .hero-inner {
+      width: min(1180px, calc(100% - 32px));
+      margin: 0 auto;
+      padding: 48px 0 42px;
+      display: grid;
+      grid-template-columns: minmax(0, 1.16fr) minmax(300px, 0.84fr);
+      gap: 28px;
+      align-items: end;
+    }
+
+    .hero h1 {
+      margin: 0 0 16px;
+      max-width: 900px;
+      font-size: 2.24rem;
+      line-height: 1.16;
+      font-weight: 850;
+      letter-spacing: 0;
+    }
+
+    .hero p {
+      margin: 0;
+      max-width: 870px;
+      color: #dfe7f0;
+      font-size: 1.02rem;
+    }
+
+    .hero code {
+      color: #f8fafc;
+      background: rgba(255, 255, 255, 0.1);
+      border-color: rgba(255, 255, 255, 0.22);
+    }
+
+    .summary {
+      display: grid;
+      gap: 12px;
+      padding: 18px;
+      border: 1px solid rgba(255, 255, 255, 0.18);
+      border-radius: var(--radius);
+      background: rgba(255, 255, 255, 0.08);
+      box-shadow: var(--shadow);
+    }
+
+    .summary b {
+      color: #ffffff;
+      font-size: 1.02rem;
+    }
+
+    .summary span {
+      color: #dfe7f0;
+      font-size: 0.93rem;
+    }
+
+    .layout {
+      width: min(1180px, calc(100% - 32px));
+      margin: 0 auto;
+      display: grid;
+      grid-template-columns: 266px minmax(0, 1fr);
+      gap: 28px;
+      padding: 32px 0 72px;
+    }
+
+    .toc {
+      position: sticky;
+      top: 18px;
+      align-self: start;
+      padding: 14px;
+      border: 1px solid var(--line);
+      border-radius: var(--radius);
+      background: #ffffff;
+      box-shadow: var(--shadow);
+    }
+
+    .toc h2 {
+      margin: 0 0 10px;
+      color: var(--muted);
+      font-size: 0.9rem;
+    }
+
+    .toc a {
+      display: block;
+      padding: 8px;
+      border-radius: 6px;
+      color: #263442;
+      font-size: 0.9rem;
+    }
+
+    .toc a:hover {
+      background: var(--soft);
+      text-decoration: none;
+    }
+
+    main { min-width: 0; }
+
+    section {
+      margin-bottom: 34px;
+      padding: 30px 0;
+      border-top: 1px solid var(--line);
+    }
+
+    section:first-child {
+      border-top: 0;
+      padding-top: 0;
+    }
+
+    h2 {
+      margin: 0 0 16px;
+      font-size: 1.46rem;
+      line-height: 1.25;
+      letter-spacing: 0;
+    }
+
+    h3 {
+      margin: 0 0 10px;
+      font-size: 1.05rem;
+      line-height: 1.35;
+      letter-spacing: 0;
+    }
+
+    p { margin: 0 0 13px; }
+    ul { margin: 0; padding-left: 1.16rem; }
+    li { margin: 6px 0; }
+
+    table {
+      width: 100%;
+      border-collapse: collapse;
+      border: 1px solid var(--line);
+      border-radius: var(--radius);
+      overflow: hidden;
+      background: #ffffff;
+      font-size: 0.94rem;
+    }
+
+    th, td {
+      padding: 11px 12px;
+      border-bottom: 1px solid var(--line);
+      vertical-align: top;
+      text-align: left;
+    }
+
+    th {
+      background: #f1f5f9;
+      color: #334155;
+      font-weight: 750;
+    }
+
+    tr:last-child td { border-bottom: 0; }
+
+    .table-wrap {
+      width: 100%;
+      overflow-x: auto;
+      margin: 16px 0;
+      border-radius: var(--radius);
+    }
+
+    .label {
+      display: inline-block;
+      margin-bottom: 10px;
+      color: var(--red);
+      font-size: 0.78rem;
+      font-weight: 800;
+      text-transform: uppercase;
+      letter-spacing: 0;
+    }
+
+    .callout {
+      margin: 16px 0;
+      padding: 16px 18px;
+      border: 1px solid var(--line);
+      border-left: 5px solid var(--blue);
+      border-radius: var(--radius);
+      background: var(--blue-soft);
+    }
+
+    .callout.warn {
+      border-left-color: var(--amber);
+      background: var(--amber-soft);
+    }
+
+    .callout.danger {
+      border-left-color: var(--red);
+      background: var(--red-soft);
+    }
+
+    .grid {
+      display: grid;
+      grid-template-columns: repeat(3, minmax(0, 1fr));
+      gap: 14px;
+      margin: 16px 0;
+    }
+
+    .tile {
+      min-width: 0;
+      padding: 16px;
+      border: 1px solid var(--line);
+      border-radius: var(--radius);
+      background: #ffffff;
+      box-shadow: var(--shadow);
+    }
+
+    .tile.blue { border-top: 4px solid var(--blue); }
+    .tile.green { border-top: 4px solid var(--green); }
+    .tile.amber { border-top: 4px solid var(--amber); }
+    .tile.red { border-top: 4px solid var(--red); }
+    .tile.teal { border-top: 4px solid var(--teal); }
+    .tile.violet { border-top: 4px solid var(--violet); }
+
+    .flow {
+      display: grid;
+      grid-template-columns: repeat(7, minmax(0, 1fr));
+      gap: 10px;
+      margin: 18px 0;
+    }
+
+    .flow-step {
+      min-height: 128px;
+      padding: 13px;
+      border: 1px solid var(--line);
+      border-top: 4px solid var(--blue);
+      border-radius: var(--radius);
+      background: #ffffff;
+      box-shadow: var(--shadow);
+    }
+
+    .flow-step:nth-child(2) { border-top-color: var(--teal); }
+    .flow-step:nth-child(3) { border-top-color: var(--green); }
+    .flow-step:nth-child(4) { border-top-color: var(--amber); }
+    .flow-step:nth-child(5) { border-top-color: var(--violet); }
+    .flow-step:nth-child(6) { border-top-color: var(--red); }
+    .flow-step:nth-child(7) { border-top-color: #475569; }
+
+    .flow-step strong {
+      display: block;
+      margin-bottom: 7px;
+      line-height: 1.3;
+    }
+
+    .flow-step span {
+      color: var(--muted);
+      font-size: 0.89rem;
+    }
+
+    .two-col {
+      display: grid;
+      grid-template-columns: repeat(2, minmax(0, 1fr));
+      gap: 16px;
+      margin: 16px 0;
+    }
+
+    .source-list {
+      columns: 2;
+      column-gap: 24px;
+    }
+
+    .source-list li {
+      break-inside: avoid;
+      margin-bottom: 8px;
+    }
+
+    .status-gap {
+      color: var(--red);
+      font-weight: 780;
+    }
+
+    .status-partial {
+      color: var(--amber);
+      font-weight: 780;
+    }
+
+    .status-good {
+      color: var(--green);
+      font-weight: 780;
+    }
+
+    @media (max-width: 980px) {
+      .hero-inner,
+      .layout,
+      .two-col {
+        grid-template-columns: 1fr;
+      }
+
+      .toc {
+        position: static;
+      }
+
+      .grid,
+      .flow {
+        grid-template-columns: repeat(2, minmax(0, 1fr));
+      }
+
+      .source-list {
+        columns: 1;
+      }
+    }
+
+    @media (max-width: 640px) {
+      .hero-inner,
+      .layout {
+        width: min(100% - 24px, 1180px);
+      }
+
+      .hero h1 {
+        font-size: 1.72rem;
+      }
+
+      .grid,
+      .flow {
+        grid-template-columns: 1fr;
+      }
+    }
+  </style>
+</head>
+<body>
+  <header class="hero">
+    <div class="hero-inner">
+      <div>
+        <span class="label">Ludots Gap Report</span>
+        <h1>Ludots 索敌、警戒、炮台与 Order/GAS 映射缺口分析</h1>
+        <p>
+          这份报告按 OpenRA 的基础单位战斗模型反查 Ludots。结论不绕：Ludots 已有 Order、GAS、Team、TargetResolver、
+          Projectile、Navigation2D 的关键基础设施，但缺少一个可复用的单位级自动索敌模块，也缺少把 attack-move、guard、脱战、
+          炮台朝向纳入 Order/GAS 的正式合同。
+        </p>
+      </div>
+      <div class="summary" aria-label="结论摘要">
+        <b>直接结论</b>
+        <span>现有 FireballDuel 是 showcase-local 目标派发，不是通用 auto-target。</span>
+        <span>GAS Search 是效果命中 fan-out，不等于单位 idle 扫描和目标选择。</span>
+        <span>Order 管线足够承载结果，但还没有 attackMove / guard / stance 的标准 order 语义。</span>
+        <span>炮台目前主要停在表现和动画原型，没有 gameplay-authoritative turret state。</span>
+      </div>
+    </div>
+  </header>
+
+  <div class="layout">
+    <nav class="toc" aria-label="目录">
+      <h2>目录</h2>
+      <a href="#scope">1. 分析口径</a>
+      <a href="#existing">2. 现有可复用模块</a>
+      <a href="#not-enough">3. 不能误判为已具备</a>
+      <a href="#gap-table">4. 缺口表</a>
+      <a href="#order-map">5. 映射到 Order</a>
+      <a href="#gas-map">6. 映射到 GAS</a>
+      <a href="#targeting-module">7. Targeting 模块形状</a>
+      <a href="#turret">8. 炮台缺口</a>
+      <a href="#phases">9. 系统相位</a>
+      <a href="#acceptance">10. 验收测试</a>
+      <a href="#sequence">11. 建议顺序</a>
+      <a href="#sources">12. 证据索引</a>
+    </nav>
+
+    <main>
+      <section id="scope">
+        <span class="label">Scope</span>
+        <h2>1. 分析口径</h2>
+        <p>
+          这里不评价 Ludots 是否“有战斗系统”。Ludots 已经有 GAS、Effect、Projectile、Search、Team 关系、OrderQueue。
+          问题是：能不能像 OpenRA 一样，让任意 RTS 单位在 idle、被打、attack-move、guard、炮塔开火场景下，用同一套可配置规则完成自动战斗。
+        </p>
+        <div class="callout danger">
+          <p>
+            当前答案是不能。现有模块能执行“已知目标的能力释放”和“效果命中后的目标分发”，但没有生产级的“单位自行找目标并决定是否把能力释放 order 提交出去”的模块。
+          </p>
+        </div>
+      </section>
+
+      <section id="existing">
+        <span class="label">Existing Infrastructure</span>
+        <h2>2. 现有可复用模块</h2>
+        <div class="grid">
+          <div class="tile blue">
+            <h3>OrderQueue / OrderBuffer</h3>
+            <p><code>OrderQueue</code> 是跨系统入口；<code>OrderBufferSystem</code> 写 active/queued/pending，并把空间、实体、int 参数写进 blackboard。</p>
+          </div>
+          <div class="tile green">
+            <h3>CompositeOrderPlanner</h3>
+            <p>已支持范围外 <code>castAbility</code> 拆成 <code>moveTo</code> + continuation cast，说明“移动到施法点再放技能”的基础已经存在。</p>
+          </div>
+          <div class="tile teal">
+            <h3>MoveTo + Navigation2D</h3>
+            <p><code>MoveToWorldCmOrderSystem</code> 已能把 <code>moveTo</code> 转成 <code>NavGoal2D</code>，不是直接改速度或位置。</p>
+          </div>
+          <div class="tile violet">
+            <h3>AbilityExecSystem</h3>
+            <p>从 <code>OrderBuffer</code> 与 blackboard 读取 slot、target entity、target position，创建 <code>AbilityExecInstance</code>，再发布 EffectRequest。</p>
+          </div>
+          <div class="tile amber">
+            <h3>GAS Search / TargetResolver</h3>
+            <p><code>TargetResolverFanOutHelper</code> 支持空间查询、关系过滤、layer filter、max targets 和 payload effect fan-out。</p>
+          </div>
+          <div class="tile red">
+            <h3>Team / RelationshipFilter</h3>
+            <p><code>TeamManager</code> 与 <code>RelationshipFilter</code> 已能表达 Friendly、Hostile、Neutral、NotFriendly、NotHostile。</p>
+          </div>
+        </div>
+      </section>
+
+      <section id="not-enough">
+        <span class="label">False Positives</span>
+        <h2>3. 不能误判为已具备</h2>
+        <div class="table-wrap">
+          <table>
+            <thead>
+              <tr>
+                <th>已有东西</th>
+                <th>为什么不等于 OpenRA 的能力</th>
+              </tr>
+            </thead>
+            <tbody>
+              <tr>
+                <td><code>TargetSelector</code></td>
+                <td>它描述 ability target shape、relationship filter、range、radius，不保存单位当前目标、扫描间隔、警戒半径、last-seen、stance 或 priority profile。</td>
+              </tr>
+              <tr>
+                <td>GAS <code>Search</code></td>
+                <td>它发生在 effect resolve/apply 期间，用于“技能命中谁”。OpenRA 的 <code>AutoTarget</code> 发生在能力释放之前，用于“单位要不要提交攻击 order”。</td>
+              </tr>
+              <tr>
+                <td><code>CapabilityStandardFireballDuelSystem</code></td>
+                <td>它按固定红蓝队、anchor 和 wave cursor 提交 <code>castAbility</code>，目标是固定 anchor，不扫描周围敌人，不处理 stance、警戒、脱战、target priority。</td>
+              </tr>
+              <tr>
+                <td><code>RtsRelationRuntimeSystem</code></td>
+                <td>它处理施工挂接、出驻、亲子关系和选择可用性，不是战斗索敌或威胁系统。</td>
+              </tr>
+              <tr>
+                <td><code>AbilityExecAimSyncSystem</code></td>
+                <td>它是本地输入侧持续刷新瞄准点并可同步整机 <code>FacingDirection</code>，不是多炮塔 gameplay ready 检查。</td>
+              </tr>
+              <tr>
+                <td>Raylib tank turret rendering</td>
+                <td><code>RaylibPrimitiveRenderer</code> 里有 turret yaw 和 recoil 绘制，但动画验收文档明确说 tank turret yaw/recoil 仍在 adapter prototype layer，不是 gameplay authority。</td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
+      </section>
+
+      <section id="gap-table">
+        <span class="label">Gap Table</span>
+        <h2>4. 缺口表</h2>
+        <div class="table-wrap">
+          <table>
+            <thead>
+              <tr>
+                <th>能力</th>
+                <th>当前状态</th>
+                <th>缺口</th>
+              </tr>
+            </thead>
+            <tbody>
+              <tr>
+                <td>单位自动索敌</td>
+                <td><span class="status-gap">缺失</span></td>
+                <td>没有通用 <code>TargetingState</code> / scan system / scan interval / priority profile。现有 showcase 自己决定目标。</td>
+              </tr>
+              <tr>
+                <td>目标优先级</td>
+                <td><span class="status-gap">缺失</span></td>
+                <td>没有等价 <code>AutoTargetPriority</code> 的数据合同，无法按关系、target tag/layer、priority、条件切换 profile。</td>
+              </tr>
+              <tr>
+                <td>姿态</td>
+                <td><span class="status-gap">缺失</span></td>
+                <td>没有 entity-level <code>HoldFire / ReturnFire / Defend / AttackAnything</code> 语义，也没有 <code>setCombatStance</code> order。</td>
+              </tr>
+              <tr>
+                <td>被打反击</td>
+                <td><span class="status-gap">缺失</span></td>
+                <td>Effect/Gameplay event 有基础，但没有“受到敌对伤害后，如果 idle 且 stance 允许，则反击或重新扫描高优先级目标”的系统。</td>
+              </tr>
+              <tr>
+                <td>AttackMove</td>
+                <td><span class="status-partial">部分具备基础</span></td>
+                <td>移动与 cast continuation 已有，但缺少“移动过程中插入攻击，攻击结束恢复同一 attackMove 目标”的 active-order runtime。</td>
+              </tr>
+              <tr>
+                <td>Guard</td>
+                <td><span class="status-gap">缺失</span></td>
+                <td>没有 <code>guard</code> order、<code>GuardAnchor</code>、跟随半径、保护目标失效策略、守卫中插入攻击后恢复跟随。</td>
+              </tr>
+              <tr>
+                <td>脱战/放弃</td>
+                <td><span class="status-gap">缺失</span></td>
+                <td>没有 last-seen target、leash radius、target invalidation、target memory TTL、combat exit tag 或 idle transition。</td>
+              </tr>
+              <tr>
+                <td>炮台 gameplay</td>
+                <td><span class="status-partial">表现层有原型</span></td>
+                <td>没有 <code>TurretState</code>、turn speed、desired yaw、ready check、muzzle offset、ability activation 前的 turret gate。</td>
+              </tr>
+              <tr>
+                <td>GAS 发射与伤害</td>
+                <td><span class="status-good">可复用</span></td>
+                <td>这块不应该重写。自动索敌只应提交 <code>castAbility</code>，伤害、投射物、Search fan-out 继续走 GAS。</td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
+      </section>
+
+      <section id="order-map">
+        <span class="label">Order Mapping</span>
+        <h2>5. 映射到 Order</h2>
+        <p>
+          OpenRA 的单位行为落到 Ludots，不应该让 targeting system 直接调用 GAS 内部实现，也不应该直接写 <code>NavDesiredVelocity2D</code>。
+          它应该把结果表达为标准 order 或 active-order runtime 状态。
+        </p>
+        <div class="table-wrap">
+          <table>
+            <thead>
+              <tr>
+                <th>OpenRA 概念</th>
+                <th>Ludots Order 映射</th>
+                <th>必要规则</th>
+              </tr>
+            </thead>
+            <tbody>
+              <tr>
+                <td><code>SetUnitStance</code></td>
+                <td>新增 <code>setCombatStance</code> order；写入 <code>CombatStance</code> 或同等组件。</td>
+                <td>不能只作为 UI 状态。姿态必须参与 target scan、反击、attackMove profile 切换。</td>
+              </tr>
+              <tr>
+                <td>Idle auto-target</td>
+                <td>Targeting system 在单位 idle 且 stance 允许时提交 <code>castAbility</code> 或写入 auto-attack intent。</td>
+                <td>优先走 <code>OrderQueue</code> / <code>CompositeOrderPlanner</code>，让现有 blackboard 和 ability activation 接管。</td>
+              </tr>
+              <tr>
+                <td>AttackMove</td>
+                <td>新增 <code>attackMove</code> order，payload 使用 <code>OrderSpatialKind.WorldCm</code> 目标点，runtime 持有 authored destination。</td>
+                <td>移动子过程写 <code>NavGoal2D</code>；发现目标时提交/激活攻击；攻击结束后恢复同一个 attackMove destination。</td>
+              </tr>
+              <tr>
+                <td>Guard</td>
+                <td>新增 <code>guard</code> order，payload 使用 <code>Target</code> entity 和 guard radius。</td>
+                <td>目标失效时 order 完成或取消；守卫移动仍通过 <code>NavGoal2D</code>，不直接改位置。</td>
+              </tr>
+              <tr>
+                <td>Stop</td>
+                <td>复用 <code>StopOrderSystem</code> 与 <code>OrderSubmitter.CancelAll/CancelCurrent</code>。</td>
+                <td>Stop 必须清理 current target、guard anchor、attackMove runtime、turret aim desire。</td>
+              </tr>
+              <tr>
+                <td>被打反击</td>
+                <td>伤害事件转换为 retaliate intent；只有 idle 或可中断 order 才提交 <code>castAbility</code>。</td>
+                <td>不能在 damage effect 里直接开火，否则会绕过 Order/GAS 分层。</td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
+      </section>
+
+      <section id="gas-map">
+        <span class="label">GAS Mapping</span>
+        <h2>6. 映射到 GAS</h2>
+        <p>
+          GAS 负责“能力释放之后发生什么”，Targeting/Order 负责“什么时候释放什么能力、朝谁释放”。这条线要分清，否则会把单位 AI 写进 effect phase。
+        </p>
+        <div class="flow" aria-label="建议链路">
+          <div class="flow-step">
+            <strong>Targeting Scan</strong>
+            <span>扫描 candidate，按 profile 选出 target entity 或 target point。</span>
+          </div>
+          <div class="flow-step">
+            <strong>OrderQueue</strong>
+            <span>提交 <code>castAbility</code>，携带 slot、target entity、target position。</span>
+          </div>
+          <div class="flow-step">
+            <strong>OrderBufferSystem</strong>
+            <span>把目标写进 <code>Cast_TargetEntity</code> / <code>Cast_TargetPosition</code> blackboard。</span>
+          </div>
+          <div class="flow-step">
+            <strong>AbilityExecSystem</strong>
+            <span>读取 blackboard，创建 <code>AbilityExecInstance</code>，执行 block tag 和 precondition。</span>
+          </div>
+          <div class="flow-step">
+            <strong>EffectRequest</strong>
+            <span>能力 timeline 发布 <code>LaunchProjectile</code>、<code>InstantDamage</code> 或其他 effect。</span>
+          </div>
+          <div class="flow-step">
+            <strong>Effect Processing</strong>
+            <span><code>Search</code> / TargetResolver 做命中 fan-out，关系过滤与 payload dispatch 在这里发生。</span>
+          </div>
+          <div class="flow-step">
+            <strong>Runtime Spawn</strong>
+            <span>投射物继续走 <code>RuntimeEntitySpawnQueue</code> 与 <code>ProjectileRuntimeSystem</code>。</span>
+          </div>
+        </div>
+        <div class="callout warn">
+          <p>
+            不要把 OpenRA 的 <code>ChooseTarget</code> 直接塞进 GAS <code>Search</code>。Search 是 effect 内部“命中谁”的解析；
+            auto-target 是 effect 之前“谁值得被释放能力”的解析。两者都用空间查询和关系过滤，但生命周期和输出完全不同。
+          </p>
+        </div>
+      </section>
+
+      <section id="targeting-module">
+        <span class="label">Targeting Module</span>
+        <h2>7. Targeting 模块形状</h2>
+        <p>
+          这里需要的是 Core 或可复用 capability 级模块，不是某个 showcase 里临时扫描。至少需要以下运行时状态与 authoring 配置。
+        </p>
+        <div class="two-col">
+          <div class="tile blue">
+            <h3>运行时组件</h3>
+            <ul>
+              <li><code>CombatStance</code>：HoldFire、ReturnFire、Defend、AttackAnything。</li>
+              <li><code>TargetingProfileRef</code>：实体使用哪套索敌配置。</li>
+              <li><code>TargetingState</code>：next scan tick、current target、source、reason。</li>
+              <li><code>TargetMemory</code>：last seen position、last valid tick、target owner/team snapshot。</li>
+              <li><code>AttackMoveState</code>：authored destination、当前是否被攻击子行为打断。</li>
+              <li><code>GuardAnchor</code>：被保护 entity、follow radius、leash policy。</li>
+              <li><code>CombatLeash</code>：最大追击距离、超出后放弃并返回原 order。</li>
+            </ul>
+          </div>
+          <div class="tile green">
+            <h3>配置字段</h3>
+            <ul>
+              <li><code>scanRadiusCm</code>、<code>scanIntervalMin/MaxTicks</code>。</li>
+              <li><code>validRelationship</code>，复用 <code>RelationshipFilter</code>。</li>
+              <li><code>validTags</code>、<code>invalidTags</code>、<code>layerMask</code>。</li>
+              <li><code>priority</code>，高优先级先于距离。</li>
+              <li><code>requiresTags</code> 或 condition，用于 stance / attackMove profile 切换。</li>
+              <li><code>abilitySlot</code> 或 attack ability id，用来提交 <code>castAbility</code>。</li>
+              <li><code>allowMove</code>、<code>allowTurn</code>、<code>leashRadiusCm</code>。</li>
+            </ul>
+          </div>
+        </div>
+        <div class="callout danger">
+          <p>
+            这里的缺口不是“缺一个函数”。缺的是一条 pipeline：空间候选、关系/tag/layer 过滤、priority 排序、距离 tie-break、
+            target memory、order 提交、order 完成后恢复。把这些散写在 AI showcase 里，会很快复制出多套不一致的自动攻击。
+          </p>
+        </div>
+      </section>
+
+      <section id="turret">
+        <span class="label">Turret Gap</span>
+        <h2>8. 炮台缺口</h2>
+        <p>
+          Ludots 已有 <code>FacingDirection</code>、<code>AbilityExecAimSync</code>、动画 <code>AimYawOffset</code>、Raylib tank turret 绘制。
+          这些不足以支撑 OpenRA 式炮台，因为它们没有决定“能不能开火”。
+        </p>
+        <div class="table-wrap">
+          <table>
+            <thead>
+              <tr>
+                <th>需要补的 gameplay 合同</th>
+                <th>原因</th>
+                <th>映射点</th>
+              </tr>
+            </thead>
+            <tbody>
+              <tr>
+                <td><code>TurretState</code></td>
+                <td>保存当前 yaw、desired yaw、turn speed、ready tolerance、realign delay、turret name。</td>
+                <td>放在 gameplay ECS，不放在 Raylib renderer。</td>
+              </tr>
+              <tr>
+                <td><code>WeaponMount</code> / ability mount</td>
+                <td>能力或武器需要知道自己绑定哪个 turret，以及 muzzle offset。</td>
+                <td>可挂在 ability authoring 或 entity equipment/mount 配置上。</td>
+              </tr>
+              <tr>
+                <td>Turret Aim System</td>
+                <td>根据 current target 或 active cast target 逐 tick 转向，写 ready flag。</td>
+                <td>在 AbilityActivation 前运行，保证是否 ready 可被 order/ability 检查。</td>
+              </tr>
+              <tr>
+                <td>Ability precondition</td>
+                <td>炮塔未对准时，自动攻击不能直接释放 projectile。</td>
+                <td>走 <code>AbilityActivationPrecondition</code> 或新增标准 precondition，不绕过 <code>AbilityExecSystem</code>。</td>
+              </tr>
+              <tr>
+                <td>Muzzle resolve</td>
+                <td>投射物起点应来自炮塔/炮管 offset，而不是总从 actor 中心发射。</td>
+                <td><code>LaunchProjectile</code> caller params 或 spawn request 需要接收 resolved muzzle。</td>
+              </tr>
+              <tr>
+                <td>Presentation bridge</td>
+                <td>表现应消费 gameplay turret yaw/recoil，而不是自己推导一个并影响不了开火。</td>
+                <td>Animator / performer 读取 <code>TurretState</code> 快照，Raylib/UE5/Unity 都同源。</td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
+      </section>
+
+      <section id="phases">
+        <span class="label">System Phase</span>
+        <h2>9. 系统相位</h2>
+        <p>
+          目标选择应该在 Order 和 Ability 之前完成，但不要写进输入系统。建议拆成两个系统层次。
+        </p>
+        <div class="grid">
+          <div class="tile blue">
+            <h3>Intent 生成</h3>
+            <p><code>AutoTargetAcquisitionSystem</code> 在 <code>InputCollection</code> 或紧邻 order intake 前运行，扫描并提交 <code>OrderQueue</code>。</p>
+          </div>
+          <div class="tile teal">
+            <h3>Order runtime</h3>
+            <p><code>AttackMoveOrderSystem</code> / <code>GuardOrderSystem</code> 维护 active order 的恢复、跟随、完成、取消。</p>
+          </div>
+          <div class="tile green">
+            <h3>Navigation sink</h3>
+            <p>需要移动时只写 <code>NavGoal2D</code>，不直接写 <code>NavDesiredVelocity2D</code>、<code>ForceInput2D</code> 或位置。</p>
+          </div>
+          <div class="tile amber">
+            <h3>Ability gate</h3>
+            <p>炮塔 ready、silence/disarm/stun、射程预条件进入 <code>AbilityActivation</code>，失败则 cancel/promote order。</p>
+          </div>
+          <div class="tile violet">
+            <h3>Effect</h3>
+            <p>伤害、Search、投射物、on-hit 继续放在 <code>EffectProcessing</code>。不要让 targeting system 私算伤害。</p>
+          </div>
+          <div class="tile red">
+            <h3>Cleanup</h3>
+            <p>Stop、死亡、目标失效、team 改变时清理 target memory、guard anchor、turret desired aim 和 continuation。</p>
+          </div>
+        </div>
+      </section>
+
+      <section id="acceptance">
+        <span class="label">Acceptance</span>
+        <h2>10. 验收测试</h2>
+        <div class="table-wrap">
+          <table>
+            <thead>
+              <tr>
+                <th>测试</th>
+                <th>必须证明什么</th>
+              </tr>
+            </thead>
+            <tbody>
+              <tr>
+                <td>priority 高于距离</td>
+                <td>高优先级远目标压过低优先级近目标；同优先级才选最近。</td>
+              </tr>
+              <tr>
+                <td>stance gate</td>
+                <td>HoldFire 不扫，ReturnFire 只反击，Defend 不主动追，AttackAnything 可追击。</td>
+              </tr>
+              <tr>
+                <td>attackMove 恢复</td>
+                <td>单位移动途中发现敌人，攻击结束后继续原 attackMove destination。</td>
+              </tr>
+              <tr>
+                <td>guard 跟随</td>
+                <td>守卫单位保持 guard radius；插入攻击后回到保护目标；保护目标死亡后 order 清理。</td>
+              </tr>
+              <tr>
+                <td>last-seen 脱战</td>
+                <td>目标失效或离视野后追到最后位置；超时或到达后放弃。</td>
+              </tr>
+              <tr>
+                <td>炮塔 ready</td>
+                <td>目标在射程内但炮塔未转到位时不产生 <code>LaunchProjectile</code>；转到位后才释放。</td>
+              </tr>
+              <tr>
+                <td>Order/GAS 合同</td>
+                <td>自动索敌只能通过 <code>OrderQueue(castAbility)</code> 进入 <code>AbilityExecSystem</code>，不能直接发布 effect 或 spawn projectile。</td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
+      </section>
+
+      <section id="sequence">
+        <span class="label">Implementation Sequence</span>
+        <h2>11. 建议顺序</h2>
+        <div class="table-wrap">
+          <table>
+            <thead>
+              <tr>
+                <th>优先级</th>
+                <th>切片</th>
+                <th>理由</th>
+              </tr>
+            </thead>
+            <tbody>
+              <tr>
+                <td>P0</td>
+                <td>Target identity 与 profile</td>
+                <td>先定义 <code>CombatStance</code>、<code>TargetingProfile</code>、<code>TargetingState</code>，否则 attackMove/guard 都会各写一套。</td>
+              </tr>
+              <tr>
+                <td>P0</td>
+                <td>AutoTargetAcquisitionSystem</td>
+                <td>实现空间候选、关系/tag/layer 过滤、priority、scan interval，并提交 <code>castAbility</code>。</td>
+              </tr>
+              <tr>
+                <td>P1</td>
+                <td>attackMove active order runtime</td>
+                <td>复用 <code>moveTo</code> / <code>NavGoal2D</code>，补“攻击插入后恢复移动”的运行时状态。</td>
+              </tr>
+              <tr>
+                <td>P1</td>
+                <td>guard runtime</td>
+                <td>在 attackMove runtime 上增加 protected target 和 follow radius，不独立造一套战斗循环。</td>
+              </tr>
+              <tr>
+                <td>P1</td>
+                <td>disengage / leash</td>
+                <td>补 last-seen、TTL、leash、target invalidation，避免单位无限追杀或目标失效后卡 active order。</td>
+              </tr>
+              <tr>
+                <td>P1</td>
+                <td>gameplay turret</td>
+                <td>炮台一旦影响开火，就必须先有 authoritative state，再接表现。</td>
+              </tr>
+              <tr>
+                <td>P2</td>
+                <td>UI 与 debug overlay</td>
+                <td>显示 stance、current target、scan radius、guard link、turret ready，用来调试但不能先于核心语义。</td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
+      </section>
+
+      <section id="sources">
+        <span class="label">Evidence</span>
+        <h2>12. 证据索引</h2>
+        <ul class="source-list">
+          <li><a href="../architecture/gas_layered_architecture.md">gas_layered_architecture.md</a></li>
+          <li><a href="../architecture/gas_combat_infrastructure.md">gas_combat_infrastructure.md</a></li>
+          <li><a href="../architecture/order_navigation_movement.md">order_navigation_movement.md</a></li>
+          <li><a href="../architecture/interaction/order_continuation_and_composite_planning.md">order_continuation_and_composite_planning.md</a></li>
+          <li><a href="../architecture/interaction/order_navigation_backed_move_runtime.md">order_navigation_backed_move_runtime.md</a></li>
+          <li><a href="../../gitbook/architecture/capability-standard-showcases.md">capability-standard-showcases.md</a></li>
+          <li><a href="../../src/Core/Gameplay/GAS/Orders/OrderQueue.cs">OrderQueue.cs</a></li>
+          <li><a href="../../src/Core/Gameplay/GAS/Systems/OrderBufferSystem.cs">OrderBufferSystem.cs</a></li>
+          <li><a href="../../src/Core/Gameplay/GAS/Orders/OrderSubmitter.cs">OrderSubmitter.cs</a></li>
+          <li><a href="../../src/Core/Gameplay/GAS/Orders/CompositeOrderPlanner.cs">CompositeOrderPlanner.cs</a></li>
+          <li><a href="../../src/Core/Gameplay/GAS/Systems/MoveToWorldCmOrderSystem.cs">MoveToWorldCmOrderSystem.cs</a></li>
+          <li><a href="../../src/Core/Gameplay/GAS/Systems/AbilityExecSystem.cs">AbilityExecSystem.cs</a></li>
+          <li><a href="../../src/Core/Gameplay/GAS/TargetResolverFanOutHelper.cs">TargetResolverFanOutHelper.cs</a></li>
+          <li><a href="../../src/Core/Gameplay/Teams/RelationshipFilter.cs">RelationshipFilter.cs</a></li>
+          <li><a href="../../src/Core/Gameplay/Teams/TeamManager.cs">TeamManager.cs</a></li>
+          <li><a href="../../mods/showcases/capability_standard/CapabilityStandardFireballDuelMod/Systems/CapabilityStandardFireballDuelSystem.cs">CapabilityStandardFireballDuelSystem.cs</a></li>
+          <li><a href="../../mods/showcases/capability_standard/CapabilityStandardFireballDuelMod/assets/GAS/effects.json">FireballDuel effects.json</a></li>
+          <li><a href="../../mods/RtsDemoMod/Systems/RtsRelationRuntimeSystem.cs">RtsRelationRuntimeSystem.cs</a></li>
+          <li><a href="../../mods/CoreInputMod/Systems/AbilityExecAimSyncSystem.cs">AbilityExecAimSyncSystem.cs</a></li>
+          <li><a href="../../src/Client/Ludots.Client.Raylib/Rendering/RaylibPrimitiveRenderer.cs">RaylibPrimitiveRenderer.cs</a></li>
+          <li><a href="../../mods/fixtures/animation/AnimationAcceptanceMod/Runtime/AnimationAcceptanceRigCatalog.cs">AnimationAcceptanceRigCatalog.cs</a></li>
+        </ul>
+      </section>
+    </main>
+  </div>
+</body>
+</html>

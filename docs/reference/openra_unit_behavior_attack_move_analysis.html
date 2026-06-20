@@ -1,0 +1,1424 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>OpenRA 用户输入动作与基础单位指令源码剖面</title>
+  <style>
+    :root {
+      --bg: #ffffff;
+      --ink: #18212a;
+      --muted: #64717f;
+      --line: #d9e1ea;
+      --soft: #f5f7fa;
+      --soft-blue: #edf4ff;
+      --soft-green: #edf7f1;
+      --soft-amber: #fff4df;
+      --soft-red: #fff0ee;
+      --blue: #2563eb;
+      --teal: #0f766e;
+      --green: #2f855a;
+      --amber: #b45309;
+      --red: #b42318;
+      --violet: #6d28d9;
+      --shadow: 0 8px 24px rgba(24, 33, 42, 0.07);
+      --radius: 8px;
+    }
+
+    * {
+      box-sizing: border-box;
+    }
+
+    html {
+      scroll-behavior: smooth;
+    }
+
+    body {
+      margin: 0;
+      font-family: "Segoe UI", "Microsoft YaHei", Arial, sans-serif;
+      color: var(--ink);
+      background: var(--bg);
+      line-height: 1.7;
+      letter-spacing: 0;
+    }
+
+    a {
+      color: var(--blue);
+      text-decoration: none;
+    }
+
+    a:hover {
+      text-decoration: underline;
+    }
+
+    code {
+      font-family: Consolas, "Cascadia Mono", "SFMono-Regular", monospace;
+      font-size: 0.92em;
+      background: #eef2f6;
+      border: 1px solid #d8e0e8;
+      border-radius: 6px;
+      padding: 0.08rem 0.32rem;
+      overflow-wrap: anywhere;
+    }
+
+    .hero {
+      color: #f8fafc;
+      background:
+        linear-gradient(120deg, rgba(37, 99, 235, 0.22), transparent 34%),
+        linear-gradient(180deg, #16212c, #121820);
+      border-bottom: 6px solid var(--amber);
+    }
+
+    .hero-inner {
+      width: min(1180px, calc(100% - 32px));
+      margin: 0 auto;
+      padding: 50px 0 42px;
+      display: grid;
+      grid-template-columns: minmax(0, 1.18fr) minmax(300px, 0.82fr);
+      gap: 28px;
+      align-items: end;
+    }
+
+    .hero h1 {
+      margin: 0 0 16px;
+      max-width: 880px;
+      font-size: 2.32rem;
+      line-height: 1.16;
+      font-weight: 850;
+      letter-spacing: 0;
+    }
+
+    .hero p {
+      margin: 0;
+      max-width: 850px;
+      color: #dfe7f0;
+      font-size: 1.03rem;
+    }
+
+    .hero code {
+      color: #f8fafc;
+      background: rgba(255, 255, 255, 0.1);
+      border-color: rgba(255, 255, 255, 0.2);
+    }
+
+    .summary {
+      display: grid;
+      gap: 12px;
+      background: rgba(255, 255, 255, 0.08);
+      border: 1px solid rgba(255, 255, 255, 0.18);
+      border-radius: var(--radius);
+      padding: 18px;
+      box-shadow: var(--shadow);
+    }
+
+    .summary b {
+      color: #ffffff;
+      font-size: 1.02rem;
+    }
+
+    .summary span {
+      color: #dfe7f0;
+      font-size: 0.92rem;
+    }
+
+    .layout {
+      width: min(1180px, calc(100% - 32px));
+      margin: 0 auto;
+      display: grid;
+      grid-template-columns: 255px minmax(0, 1fr);
+      gap: 28px;
+      padding: 32px 0 72px;
+    }
+
+    .toc {
+      position: sticky;
+      top: 18px;
+      align-self: start;
+      border: 1px solid var(--line);
+      border-radius: var(--radius);
+      padding: 14px;
+      background: #ffffff;
+      box-shadow: var(--shadow);
+    }
+
+    .toc h2 {
+      margin: 0 0 10px;
+      color: var(--muted);
+      font-size: 0.9rem;
+    }
+
+    .toc a {
+      display: block;
+      padding: 8px;
+      border-radius: 6px;
+      color: #263442;
+      font-size: 0.92rem;
+    }
+
+    .toc a:hover {
+      background: var(--soft);
+      text-decoration: none;
+    }
+
+    main {
+      min-width: 0;
+    }
+
+    section {
+      margin-bottom: 34px;
+      padding: 30px 0;
+      border-top: 1px solid var(--line);
+    }
+
+    section:first-child {
+      border-top: 0;
+      padding-top: 0;
+    }
+
+    h2 {
+      margin: 0 0 16px;
+      font-size: 1.48rem;
+      line-height: 1.25;
+      letter-spacing: 0;
+    }
+
+    h3 {
+      margin: 0 0 10px;
+      font-size: 1.05rem;
+      line-height: 1.35;
+      letter-spacing: 0;
+    }
+
+    p {
+      margin: 0 0 13px;
+    }
+
+    ul {
+      margin: 0;
+      padding-left: 1.16rem;
+    }
+
+    li {
+      margin: 6px 0;
+    }
+
+    table {
+      width: 100%;
+      border-collapse: collapse;
+      overflow: hidden;
+      border: 1px solid var(--line);
+      border-radius: var(--radius);
+      background: #ffffff;
+      font-size: 0.95rem;
+    }
+
+    .table-wrap {
+      width: 100%;
+      overflow-x: auto;
+      margin: 16px 0;
+      border-radius: var(--radius);
+    }
+
+    .table-wrap table {
+      min-width: 860px;
+      margin: 0;
+    }
+
+    th,
+    td {
+      padding: 12px 13px;
+      border-bottom: 1px solid var(--line);
+      vertical-align: top;
+      text-align: left;
+    }
+
+    th {
+      background: #f1f5f9;
+      color: #263442;
+      font-weight: 780;
+    }
+
+    tr:last-child td {
+      border-bottom: 0;
+    }
+
+    .label {
+      display: inline-flex;
+      align-items: center;
+      border: 1px solid rgba(37, 99, 235, 0.26);
+      border-radius: 999px;
+      padding: 4px 9px;
+      margin-bottom: 10px;
+      background: var(--soft-blue);
+      color: var(--blue);
+      font-size: 0.8rem;
+      font-weight: 760;
+    }
+
+    .panel {
+      border: 1px solid var(--line);
+      border-radius: var(--radius);
+      background: #ffffff;
+      padding: 16px;
+      box-shadow: var(--shadow);
+    }
+
+    .panel h3 {
+      color: #1f2a35;
+    }
+
+    .grid-2 {
+      display: grid;
+      grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
+      gap: 16px;
+    }
+
+    .grid-3 {
+      display: grid;
+      grid-template-columns: repeat(3, minmax(0, 1fr));
+      gap: 14px;
+    }
+
+    .callout {
+      border-left: 5px solid var(--teal);
+      border-radius: var(--radius);
+      background: var(--soft-green);
+      padding: 14px 16px;
+      margin: 16px 0;
+    }
+
+    .warn {
+      border-left-color: var(--amber);
+      background: var(--soft-amber);
+    }
+
+    .danger {
+      border-left-color: var(--red);
+      background: var(--soft-red);
+    }
+
+    .flow {
+      display: grid;
+      grid-template-columns: repeat(6, minmax(0, 1fr));
+      gap: 10px;
+      margin: 18px 0;
+    }
+
+    .flow-step {
+      min-height: 118px;
+      border: 1px solid var(--line);
+      border-top: 5px solid var(--blue);
+      border-radius: var(--radius);
+      background: #ffffff;
+      padding: 12px;
+      box-shadow: var(--shadow);
+    }
+
+    .flow-step:nth-child(2) {
+      border-top-color: var(--teal);
+    }
+
+    .flow-step:nth-child(3) {
+      border-top-color: var(--green);
+    }
+
+    .flow-step:nth-child(4) {
+      border-top-color: var(--amber);
+    }
+
+    .flow-step:nth-child(5) {
+      border-top-color: var(--violet);
+    }
+
+    .flow-step:nth-child(6) {
+      border-top-color: var(--red);
+    }
+
+    .flow-step strong {
+      display: block;
+      margin-bottom: 7px;
+      color: #1f2a35;
+    }
+
+    .flow-step span {
+      color: var(--muted);
+      font-size: 0.9rem;
+    }
+
+    .state-machine {
+      display: grid;
+      grid-template-columns: minmax(0, 1fr);
+      gap: 12px;
+      margin: 18px 0;
+    }
+
+    .state-row {
+      display: grid;
+      grid-template-columns: 160px minmax(0, 1fr);
+      border: 1px solid var(--line);
+      border-radius: var(--radius);
+      overflow: hidden;
+      background: #ffffff;
+    }
+
+    .state-name {
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      padding: 14px;
+      color: #ffffff;
+      background: #1f2a35;
+      font-weight: 790;
+      text-align: center;
+    }
+
+    .state-row:nth-child(2) .state-name {
+      background: var(--teal);
+    }
+
+    .state-row:nth-child(3) .state-name {
+      background: var(--amber);
+    }
+
+    .state-row:nth-child(4) .state-name {
+      background: var(--red);
+    }
+
+    .state-body {
+      padding: 13px 15px;
+    }
+
+    .mini-code {
+      margin: 14px 0 0;
+      border: 1px solid #cfd8e3;
+      border-radius: var(--radius);
+      background: #111827;
+      color: #e5e7eb;
+      overflow-x: auto;
+    }
+
+    .mini-code pre {
+      margin: 0;
+      padding: 14px 16px;
+      font-size: 0.9rem;
+      line-height: 1.55;
+      white-space: pre-wrap;
+    }
+
+    .pill-list {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 8px;
+      margin: 12px 0 0;
+      padding: 0;
+      list-style: none;
+    }
+
+    .pill-list li {
+      margin: 0;
+      padding: 6px 9px;
+      border: 1px solid var(--line);
+      border-radius: 999px;
+      background: #ffffff;
+      color: #344252;
+      font-size: 0.88rem;
+    }
+
+    .source-list {
+      columns: 2;
+      column-gap: 24px;
+      font-size: 0.93rem;
+    }
+
+    .source-list li {
+      break-inside: avoid;
+      margin-bottom: 8px;
+    }
+
+    @media (max-width: 980px) {
+      .hero-inner,
+      .layout,
+      .grid-2,
+      .grid-3 {
+        grid-template-columns: 1fr;
+      }
+
+      .toc {
+        position: static;
+      }
+
+      .flow {
+        grid-template-columns: repeat(2, minmax(0, 1fr));
+      }
+
+      .source-list {
+        columns: 1;
+      }
+    }
+
+    @media (max-width: 640px) {
+      .hero-inner {
+        width: min(100% - 24px, 1180px);
+        padding: 34px 0 30px;
+      }
+
+      .hero h1 {
+        font-size: 1.74rem;
+      }
+
+      .layout {
+        width: min(100% - 24px, 1180px);
+        padding-top: 22px;
+      }
+
+      .flow {
+        grid-template-columns: 1fr;
+      }
+
+      .state-row {
+        grid-template-columns: 1fr;
+      }
+
+      th,
+      td {
+        padding: 10px;
+      }
+    }
+  </style>
+</head>
+<body>
+  <header class="hero">
+    <div class="hero-inner">
+      <div>
+        <h1>OpenRA 用户输入动作与基础单位指令源码剖面</h1>
+        <p>
+          从玩家视角看，OpenRA 的单位控制可以归纳为几类输入动作：默认上下文点击、带修饰键点击、命令栏确认模式、即时命令、姿态切换和特殊多步输入。
+          屏幕上表现为光标变化、按钮高亮、目标线、语音反馈和单位动作；源码里则落到 <code>Order</code>、<code>IResolveOrder</code> 和活动树。
+        </p>
+      </div>
+      <aside class="summary" aria-label="结论摘要">
+        <b>一句话结论</b>
+        <span>用户看到的是“点哪里、按什么键、光标怎么变、单位怎么动”。</span>
+        <span>引擎看到的是“哪个 targeter 接单、生成什么 Order、哪个 trait 排入什么 activity”。</span>
+      </aside>
+    </div>
+  </header>
+
+  <div class="layout">
+    <nav class="toc" aria-label="目录">
+      <h2>目录</h2>
+      <a href="#scope">0. 本报告范围</a>
+      <a href="#input-actions">1. 用户输入动作总览</a>
+      <a href="#screen-feedback">2. 屏幕反馈</a>
+      <a href="#pipeline">3. 输入到活动链路</a>
+      <a href="#basic-orders">4. 基础指令全图</a>
+      <a href="#context-orders">5. 默认上下文点击</a>
+      <a href="#direct-orders">6. 命令栏与姿态</a>
+      <a href="#attack-move">7. AttackMove 状态机</a>
+      <a href="#autotarget">8. AutoTarget 索敌层</a>
+      <a href="#attack">9. 攻击 trait 层</a>
+      <a href="#movement">10. 移动 activity 层</a>
+      <a href="#weapon">11. 武器发射层</a>
+      <a href="#rules">12. RA 配置例子</a>
+      <a href="#ludots">13. 给 Ludots 的启发</a>
+      <a href="#sources">14. 源码索引</a>
+    </nav>
+
+    <main>
+      <section id="scope">
+        <span class="label">Scope</span>
+        <h2>0. 本报告范围</h2>
+        <div class="grid-2">
+          <div class="panel">
+            <h3>分析对象</h3>
+            <p>
+              本报告按玩家实际输入动作组织：选中单位后点击地面、点击敌人、点击友军或建筑、按住 Ctrl/Alt/Shift 点击、点击命令栏按钮、按热键、切换姿态，以及布雷这类多步输入。
+              每类输入都说明用户会看到什么，以及源码里如何变成单位行为。
+            </p>
+          </div>
+          <div class="panel">
+            <h3>源码范围</h3>
+            <p>
+              重点覆盖普通单位常见基础指令：移动、停止、散开、攻击、强攻、攻击移动、守卫、姿态、部署、采集、修理、占领、运输、停靠、布雷、爆破、空军降落与返航。
+              生产队列、建筑摆放、支援技能和全局玩家命令只作为边界参考。
+            </p>
+          </div>
+        </div>
+        <div class="callout warn">
+          <p>
+            注意许可证边界：OpenRA 是 GPL 项目，这里只做架构学习和行为拆解。Ludots 可以学习它的分层思想、数据驱动方式和调度模式，不应直接复制实现代码。
+          </p>
+        </div>
+      </section>
+
+      <section id="input-actions">
+        <span class="label">Input Model</span>
+        <h2>1. 用户输入动作总览</h2>
+        <p>
+          从用户角度，OpenRA 的单位操作可以分成六类。每一类看起来是不同 UI 行为，但都会被规整成 <code>Order</code>，再交给单位 trait 解析。
+        </p>
+
+        <div class="table-wrap">
+          <table>
+            <thead>
+              <tr>
+                <th>输入动作</th>
+                <th>用户会看到什么</th>
+                <th>典型结果</th>
+                <th>源码入口</th>
+                <th>落到的命令</th>
+              </tr>
+            </thead>
+            <tbody>
+              <tr>
+                <td>默认上下文点击</td>
+                <td>鼠标悬停时光标随目标变化；点击后出现目标线、语音和单位动作。</td>
+                <td>点空地移动，点敌人攻击，点矿采集，点修理厂修理，点运输车上车。</td>
+                <td><code>UnitOrderGenerator</code></td>
+                <td><code>Move</code>、<code>Attack</code>、<code>Harvest</code>、<code>Repair</code>、<code>EnterTransport</code> 等。</td>
+              </tr>
+              <tr>
+                <td>带修饰键点击</td>
+                <td>光标和可执行语义改变；Shift 会把新命令排队，Ctrl/Alt 会改变目标解释。</td>
+                <td>Ctrl 强攻，Alt 强制移动，Shift 队列命令。</td>
+                <td><code>ForceModifiersOrderGenerator</code> / <code>TargetModifiers</code></td>
+                <td><code>ForceAttack</code>、<code>Land</code>、<code>ForceDock</code> 或带 <code>Queued</code> 的普通命令。</td>
+              </tr>
+              <tr>
+                <td>确认模式按钮</td>
+                <td>按钮高亮，鼠标进入专用模式；再次点击目标后退出或继续保持队列模式。</td>
+                <td>Attack Move、Guard、强制攻击、强制移动。</td>
+                <td><code>CommandBarLogic</code> + 专用 <code>OrderGenerator</code></td>
+                <td><code>AttackMove</code>、<code>AssaultMove</code>、<code>Guard</code>、<code>ForceAttack</code>、<code>Move</code>。</td>
+              </tr>
+              <tr>
+                <td>即时按钮/热键</td>
+                <td>按钮短暂高亮；单位立刻响应，不需要再点目标。</td>
+                <td>Stop、Scatter、Deploy、Unload、Return to Base。</td>
+                <td><code>CommandBarLogic</code> / <code>IIssueDeployOrder</code></td>
+                <td><code>Stop</code>、<code>Scatter</code>、<code>DeployTransform</code>、<code>Unload</code>、<code>ReturnToBase</code>。</td>
+              </tr>
+              <tr>
+                <td>姿态切换</td>
+                <td>姿态按钮高亮变化；单位后续自动开火、还击和追击策略改变。</td>
+                <td>Hold Fire、Return Fire、Defend、Attack Anything。</td>
+                <td><code>StanceSelectorLogic</code></td>
+                <td><code>SetUnitStance</code>。</td>
+              </tr>
+              <tr>
+                <td>特殊多步输入</td>
+                <td>进入专用绘制/选择流程，可能需要拖出区域或连续点多个目标。</td>
+                <td>布雷区、建筑放置、信标等；本报告只展开单位布雷。</td>
+                <td><code>MinefieldOrderGenerator</code> 等</td>
+                <td><code>BeginMinefield</code>、<code>PlaceMinefield</code>、<code>PlaceMine</code>。</td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
+      </section>
+
+      <section id="screen-feedback">
+        <span class="label">Feedback</span>
+        <h2>2. 屏幕反馈：玩家看到的行为语言</h2>
+        <p>
+          OpenRA 不只生成命令，还会在命令生成前后给玩家反馈。多数反馈并不改变单位逻辑，但它们决定用户是否能理解“这个点击会做什么”。
+        </p>
+
+        <div class="grid-3">
+          <div class="panel">
+            <h3>光标</h3>
+            <p>
+              targeter 在 <code>CanTarget</code> 中返回 cursor。可移动、不可移动、攻击、强攻、采集、进入、修理、卸载等都会显示不同光标。
+            </p>
+          </div>
+          <div class="panel">
+            <h3>按钮高亮</h3>
+            <p>
+              命令栏按钮通过 <code>IsHighlighted</code> 表示当前模式，例如 attack move、guard、force move、force attack 和 queue orders。
+            </p>
+          </div>
+          <div class="panel">
+            <h3>目标线</h3>
+            <p>
+              resolver 成功排入活动后通常调用 <code>ShowTargetLines</code>。活动的 <code>TargetLineNodes</code> 决定线指向目的地、目标 actor 或子活动目标。
+            </p>
+          </div>
+          <div class="panel">
+            <h3>语音</h3>
+            <p>
+              <code>IOrderVoice</code> 根据命令名和目标有效性返回语音 key。无效命令通常不会播放确认语音。
+            </p>
+          </div>
+          <div class="panel">
+            <h3>单位动作</h3>
+            <p>
+              玩家最终看到的是活动树运行结果：移动、转向、停下、追击、起飞、降落、进入建筑、装载、卸载或发射武器。
+            </p>
+          </div>
+          <div class="panel">
+            <h3>失败反馈</h3>
+            <p>
+              不可部署、不可进入、不可移动会表现为 blocked cursor、通知文本、语音提示或没有订单生成；复杂检查留在 trait 内部。
+            </p>
+          </div>
+        </div>
+      </section>
+
+      <section id="pipeline">
+        <span class="label">Order Pipeline</span>
+        <h2>3. 从输入到单位活动树</h2>
+        <p>
+          OpenRA 的关键设计是：玩家 UI、Lua 脚本和 bot 最后都走同一条 <code>Order</code> 通道。bot 没有私有的“瞬移式单位控制权”，它只是像玩家一样提交
+          <code>AttackMove</code>、<code>Move</code>、<code>Attack</code>、<code>Harvest</code>、<code>Dock</code> 等命令。真正的单位行为发生在 actor trait 和 activity 系统里。
+        </p>
+
+        <div class="flow" aria-label="命令链路">
+          <div class="flow-step">
+            <strong>1. 生成命令</strong>
+            <span>UI、bot 或脚本创建 <code>Order</code>，可带分组选中单位或额外数据。</span>
+          </div>
+          <div class="flow-step">
+            <strong>2. 分发订单</strong>
+            <span><code>UnitOrders</code> 校验订单；分组订单会拆成每个 actor 自己的订单。</span>
+          </div>
+          <div class="flow-step">
+            <strong>3. trait 接单</strong>
+            <span><code>Actor.ResolveOrder</code> 遍历所有 <code>IResolveOrder</code> trait。</span>
+          </div>
+          <div class="flow-step">
+            <strong>4. trait 解析</strong>
+            <span>命令名命中哪个 trait，就由哪个 trait 校验目标并队列化 activity。</span>
+          </div>
+          <div class="flow-step">
+            <strong>5. Actor.Tick</strong>
+            <span>每 tick 通过 <code>ActivityUtils.RunActivity</code> 跑当前活动树。</span>
+          </div>
+          <div class="flow-step">
+            <strong>6. 子系统落地</strong>
+            <span>移动、索敌、攻击、武器、弹体分别由自己的 trait/activity 执行。</span>
+          </div>
+        </div>
+
+        <div class="mini-code" aria-label="命令链路伪代码">
+          <pre>伪代码视角：
+Order("Move" / "Attack" / "Harvest" / "AttackMove" / ...)
+  -> UnitOrders 展开分组并做订单校验
+  -> Actor.ResolveOrder(order)
+  -> 所有 IResolveOrder trait 逐个尝试解析
+  -> 命中的 trait 调 Actor.QueueActivity(...)
+  -> Actor.Tick()
+  -> ActivityUtils.RunActivity(CurrentActivity)</pre>
+        </div>
+
+        <div class="callout">
+          <p>
+            这就是 OpenRA 的第一层分离：战略 AI 只负责“下什么命令”，单位 trait 负责“这个命令在每个 tick 怎么执行”。因此基础单位指令
+            同时服务玩家输入、bot 分队和脚本，不会被锁死在某个 AI 模块里。
+          </p>
+        </div>
+      </section>
+
+      <section id="basic-orders">
+        <span class="label">Order Map</span>
+        <h2>4. 基础单位指令全图</h2>
+        <p>
+          同一个点击动作在不同目标上会变成不同指令。表格从玩家可感知的动作出发，列出屏幕反馈、命令名和底层执行者。
+          OpenRA 没有一个“单位基础指令总开关”；每种能力 trait 都能把自己的命令挂到单位身上。
+        </p>
+
+        <div class="table-wrap">
+          <table>
+            <thead>
+              <tr>
+                <th>用户动作</th>
+                <th>屏幕反馈</th>
+                <th>命令名</th>
+                <th>解析 trait</th>
+                <th>核心 activity / 行为</th>
+                <th>要点</th>
+              </tr>
+            </thead>
+            <tbody>
+              <tr>
+                <td>选中地面单位，点空地</td>
+                <td>移动光标、橙色目标线、移动语音。</td>
+                <td><code>Move</code></td>
+                <td><code>Mobile</code></td>
+                <td><code>Move</code></td>
+                <td>校验迷雾和地形，找最近可移动格，进入路径、阻塞、半格移动系统。</td>
+              </tr>
+              <tr>
+                <td>选中飞机，点空地；Alt 点可降落格</td>
+                <td>飞行/降落光标，目标线指向格子。</td>
+                <td><code>Move</code> / <code>Land</code></td>
+                <td><code>Aircraft</code></td>
+                <td><code>Fly</code> / <code>Land</code></td>
+                <td>Alt force move 可把可降落地形转成 <code>Land</code>；普通点地是飞行移动。</td>
+              </tr>
+              <tr>
+                <td>点 Stop 或 Scatter 按钮/热键</td>
+                <td>按钮短暂高亮，单位停止或小幅避让。</td>
+                <td><code>Stop</code> / <code>Scatter</code></td>
+                <td><code>Mobile</code>、<code>Aircraft</code>、<code>AttackBase</code></td>
+                <td><code>CancelActivity</code> / <code>Nudge</code></td>
+                <td><code>Stop</code> 取消活动，但保留补给等特殊活动；<code>Scatter</code> 排入短距离避让。</td>
+              </tr>
+              <tr>
+                <td>点敌人；Ctrl 点敌人或地面</td>
+                <td>攻击/强攻光标，红色目标线，武器开火。</td>
+                <td><code>Attack</code> / <code>ForceAttack</code></td>
+                <td><code>AttackBase</code> 派生 trait</td>
+                <td><code>Attack</code> / <code>AttackFollow.AttackActivity</code> / <code>SetTarget</code></td>
+                <td>目标过滤、射程、关系、地面强攻都在 targeter 和 <code>ChooseArmamentsForTarget</code> 中完成。</td>
+              </tr>
+              <tr>
+                <td>点 Attack Move 按钮，再点地面；Ctrl 确认变突击移动</td>
+                <td>按钮高亮，attack move 光标，行军中遇敌停下攻击。</td>
+                <td><code>AttackMove</code> / <code>AssaultMove</code></td>
+                <td><code>AttackMove</code></td>
+                <td><code>AttackMoveActivity</code></td>
+                <td>边走边由 <code>AutoTarget</code> 扫描目标，遇敌取消移动并挂攻击活动。</td>
+              </tr>
+              <tr>
+                <td>点 Guard 按钮，再点友军</td>
+                <td>guard 光标，目标线连向友军，单位跟随保护。</td>
+                <td><code>Guard</code></td>
+                <td><code>Guard</code></td>
+                <td><code>AttackMoveActivity</code> + <code>MoveFollow</code></td>
+                <td>守卫本质是跟随友军到范围内，同时复用 attack move 的自动交战逻辑。</td>
+              </tr>
+              <tr>
+                <td>点击姿态按钮</td>
+                <td>对应姿态按钮高亮，单位自动交战规则改变。</td>
+                <td><code>SetUnitStance</code></td>
+                <td><code>AutoTarget</code></td>
+                <td>设置 stance condition，通知当前活动</td>
+                <td>影响 idle 扫描、受击还击、是否允许移动追击，以及当前攻击活动是否继续。</td>
+              </tr>
+              <tr>
+                <td>点击 Deploy 按钮/热键</td>
+                <td>按钮短暂高亮；可部署则变形，不可部署显示阻塞反馈。</td>
+                <td><code>DeployTransform</code></td>
+                <td><code>Transforms</code></td>
+                <td><code>Transform</code> 派生活动</td>
+                <td>MCV 展开、单位部署等走统一 deploy 接口 <code>IIssueDeployOrder</code>。</td>
+              </tr>
+              <tr>
+                <td>选中采集单位，点已探索资源格</td>
+                <td>采集光标，目标线，采集单位开始找矿和回厂。</td>
+                <td><code>Harvest</code></td>
+                <td><code>Harvester</code></td>
+                <td><code>FindAndDeliverResources</code></td>
+                <td>只对已探索资源格暴露命令，活动内部负责找资源、采集、回厂、交付循环。</td>
+              </tr>
+              <tr>
+                <td>受损或缺弹单位点维修/补给建筑</td>
+                <td>进入/修理光标，单位驶向建筑或飞机返航。</td>
+                <td><code>Repair</code> / <code>RepairNear</code> / <code>InstantRepair</code></td>
+                <td><code>Repairable</code>、<code>RepairableNear</code>、<code>InstantlyRepairs</code></td>
+                <td><code>Resupply</code> / <code>InstantRepair</code></td>
+                <td>普通地面单位排 <code>Resupply</code>，空军把 <code>Repair</code> 合流到 <code>ReturnToBase</code>。</td>
+              </tr>
+              <tr>
+                <td>工程/爆破/修桥单位点有效目标</td>
+                <td>进入、capture、C4 或修桥光标，单位靠近目标执行交互。</td>
+                <td><code>CaptureActor</code> / <code>C4</code> / <code>RepairBridge</code></td>
+                <td><code>Captures</code>、<code>Demolition</code>、<code>RepairsBridges</code></td>
+                <td><code>CaptureActor</code> / <code>Demolish</code> / <code>RepairBridge</code></td>
+                <td>这些是“进入目标并执行交互”的命令族，关系、目标类型和是否强攻由 targeter 判定。</td>
+              </tr>
+              <tr>
+                <td>乘客点运输载具；载具点 Unload</td>
+                <td>进入光标、卸载按钮，单位进出载具。</td>
+                <td><code>EnterTransport</code> / <code>Unload</code></td>
+                <td><code>Passenger</code>、<code>Cargo</code></td>
+                <td><code>RideTransport</code> / <code>UnloadCargo</code></td>
+                <td>乘客负责上车，载具负责卸载；载具会预留空间、锁定状态、把乘客放回地图。</td>
+              </tr>
+              <tr>
+                <td>单位点可停靠建筑或隧道入口</td>
+                <td>进入/停靠光标，目标线指向入口或宿主建筑。</td>
+                <td><code>Dock</code> / <code>ForceDock</code> / <code>EnterTunnel</code></td>
+                <td><code>DockClientManager</code>、<code>EntersTunnels</code></td>
+                <td><code>MoveToDock</code> / 连续 <code>MoveTo</code></td>
+                <td>停靠有预约和 host/client 回调；隧道入口直接排入口移动和出口移动两个 activity。</td>
+              </tr>
+              <tr>
+                <td>吊运机点友军单位，或 Alt 点投放地点</td>
+                <td>吊起/投放光标，飞机靠近、吊起、飞到投放点。</td>
+                <td><code>PickupUnit</code> / <code>DeliverUnit</code> / <code>Unload</code></td>
+                <td><code>Carryall</code></td>
+                <td><code>PickupUnit</code> / <code>DeliverUnit</code></td>
+                <td>空中运输与普通 cargo 分开，pickup、drop-off、当前地点卸载都是独立活动。</td>
+              </tr>
+              <tr>
+                <td>布雷单位点布雷按钮或拖出雷区</td>
+                <td>布雷光标/雷区选择流程，单位移动并逐格放雷。</td>
+                <td><code>BeginMinefield</code> / <code>PlaceMinefield</code> / <code>PlaceMine</code></td>
+                <td><code>Minelayer</code></td>
+                <td><code>LayMines</code></td>
+                <td>单点布雷走 deploy，多点雷区会临时切换 order generator 收集矩形雷区。</td>
+              </tr>
+              <tr>
+                <td>携带现金/经验的单位点可接受目标</td>
+                <td>进入光标，单位靠近后完成交付。</td>
+                <td><code>DeliverCash</code> / <code>DeliverExperience</code></td>
+                <td><code>DeliversCash</code>、<code>DeliversExperience</code></td>
+                <td><code>DonateCash</code> / <code>DonateExperience</code></td>
+                <td>用于把载荷或等级交给可接受目标，是“进入交互”模式的轻量变体。</td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
+
+        <div class="callout">
+          <p>
+            这张表背后的统一规律是：指令名只是薄薄的消息，复杂度不在 <code>Order</code> 里，而在 trait 的 targeter、resolver 和 activity 中。OpenRA 因此可以让 bot、玩家、Lua 脚本共用同一套单位行为。
+          </p>
+        </div>
+      </section>
+
+      <section id="context-orders">
+        <span class="label">Context Orders</span>
+        <h2>5. 默认上下文点击怎么选出命令</h2>
+        <p>
+          普通右键不是固定等于移动。<code>UnitOrderGenerator.OrderForUnit</code> 会对当前 target 做两轮判断：先问 actor/frozen actor 上能否交互；如果没有命中，再退回 terrain cell。Ctrl、Shift、Alt 分别转成
+          <code>ForceAttack</code>、<code>ForceQueue</code>、<code>ForceMove</code>，传给每个 targeter 自行解释。
+        </p>
+
+        <div class="flow" aria-label="右键上下文命令选择">
+          <div class="flow-step">
+            <strong>收集 target</strong>
+            <span>鼠标下优先真实 actor，其次 frozen actor，最后 terrain cell。</span>
+          </div>
+          <div class="flow-step">
+            <strong>收集 orders</strong>
+            <span>从单位所有 <code>IIssueOrder</code> trait 取 targeter。</span>
+          </div>
+          <div class="flow-step">
+            <strong>按优先级</strong>
+            <span>高优先级如采集/卸载可压过普通移动。</span>
+          </div>
+          <div class="flow-step">
+            <strong>修饰键</strong>
+            <span>Ctrl 强攻，Alt 强制移动，Shift 队列。</span>
+          </div>
+          <div class="flow-step">
+            <strong>生成 Order</strong>
+            <span>命中的 trait 调 <code>IssueOrder</code> 返回具体命令名。</span>
+          </div>
+          <div class="flow-step">
+            <strong>解析执行</strong>
+            <span>网络订单回到 actor，再由 resolver 排入 activity。</span>
+          </div>
+        </div>
+
+        <div class="grid-2">
+          <div class="panel">
+            <h3>为什么右键矿是采集，右键空地是移动</h3>
+            <p>
+              <code>Harvester</code> 暴露 <code>HarvestOrderTargeter</code>，优先级高于普通移动，只在已探索资源格上返回可用；资源不匹配时它不接单，<code>Mobile</code> 的移动 targeter 才接管。
+            </p>
+          </div>
+          <div class="panel">
+            <h3>为什么 Alt 能强制走过去</h3>
+            <p>
+              多个 targeter 会显式检查 <code>TargetModifiers.ForceMove</code>。攻击、爆破、采集等目标交互通常在 force move 下让位，移动 targeter 则可覆盖选择行为。
+            </p>
+          </div>
+        </div>
+      </section>
+
+      <section id="direct-orders">
+        <span class="label">Direct Orders</span>
+        <h2>6. 命令栏、热键与姿态命令</h2>
+        <p>
+          命令栏按钮不会走完整的右键 targeter 竞争，而是直接发特定订单或切换专用 <code>OrderGenerator</code>。例如 <code>AttackMove</code>、<code>Guard</code> 先进入确认模式，
+          <code>Stop</code>、<code>Scatter</code>、<code>Deploy</code> 直接对当前选择发订单。
+        </p>
+
+        <table>
+          <thead>
+            <tr>
+              <th>入口</th>
+              <th>源码位置</th>
+              <th>行为</th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr>
+              <td>命令栏</td>
+              <td><code>CommandBarLogic</code></td>
+              <td>绑定 attack move、force move、force attack、guard、scatter、deploy、stop、queue orders 等按钮。</td>
+            </tr>
+            <tr>
+              <td>部署热键</td>
+              <td><code>IIssueDeployOrder</code></td>
+              <td>各 trait 自己决定 deploy 对应什么：变形、卸载、返航补给、放雷、激活条件都可以挂上来。</td>
+            </tr>
+            <tr>
+              <td>姿态面板</td>
+              <td><code>StanceSelectorLogic</code></td>
+              <td>发 <code>SetUnitStance</code>，由 <code>AutoTarget</code> 设置 <code>HoldFire/ReturnFire/Defend/AttackAnything</code>。</td>
+            </tr>
+            <tr>
+              <td>强制修饰模式</td>
+              <td><code>ForceModifiersOrderGenerator</code></td>
+              <td>临时把 Ctrl/Alt/Shift 注入下一次右键，复用普通 targeter 流程。</td>
+            </tr>
+          </tbody>
+        </table>
+
+        <div class="callout warn">
+          <p>
+            姿态命令虽然不排移动 activity，但它会改变单位后续基础行为：idle 是否扫描、受击是否还击、attack move 是否允许追击、当前攻击活动是否因姿态收紧而取消目标。
+          </p>
+        </div>
+      </section>
+
+      <section id="attack-move">
+        <span class="label">AttackMoveActivity</span>
+        <h2>7. Attack Move 的核心状态机</h2>
+        <p>
+          从玩家角度，attack move 是一个两步确认动作：先点命令栏按钮，按钮进入高亮确认模式；再点地图目的地。普通确认生成 <code>AttackMove</code>，按住 Ctrl 确认生成 <code>AssaultMove</code>。
+          单位会沿目标地点移动，路上发现目标就停下攻击，攻击结束后继续向目的地前进。
+        </p>
+        <p>
+          <code>AttackMove.ResolveOrder</code> 做的事很少：它确认订单是 <code>AttackMove</code> 或 <code>AssaultMove</code>，检查目标有效性和是否允许进入未探索区域，然后把目标 cell 修正成可移动 cell，最后排入
+          <code>AttackMoveActivity</code>。真正的行为循环在 <code>AttackMoveActivity.Tick</code>。
+        </p>
+
+        <div class="state-machine">
+          <div class="state-row">
+            <div class="state-name">初始化</div>
+            <div class="state-body">
+              首次运行时，如果单位缺少 <code>AttackMove</code> 或 <code>AutoTarget</code>，活动退化成普通移动；如果具备条件，则给 actor 临时授予
+              <code>AttackMoveCondition</code> 或 <code>AssaultMoveCondition</code>。
+            </div>
+          </div>
+          <div class="state-row">
+            <div class="state-name">移动阶段</div>
+            <div class="state-body">
+              活动通过传入的 <code>getMove</code> 函数创建移动子活动。普通点地 attack move 里，这个子活动来自 <code>IMove.MoveTo(targetLocation)</code>。
+              关键细节是 <code>ChildHasPriority = false</code>，父活动可以在移动子活动运行期间继续扫描敌人。
+            </div>
+          </div>
+          <div class="state-row">
+            <div class="state-name">索敌阶段</div>
+            <div class="state-body">
+              当当前没有子活动，或正在跑移动子活动时，调用 <code>AutoTarget.ScanForTarget</code>。如果移动还在跑，使用标准扫描间隔；如果刚打完一个目标，则忽略间隔立即重新找目标，避免单位刚开火结束就白走一小段。
+            </div>
+          </div>
+          <div class="state-row">
+            <div class="state-name">攻击阶段</div>
+            <div class="state-body">
+              找到目标后取消移动子活动，然后让每个可用 <code>AttackBase</code> 生成攻击子活动。攻击子活动结束后，<code>AttackMoveActivity</code>
+              不直接结束，而是重新进入索敌/移动循环。只有移动子活动完成并且没有目标时，整个 attack move 才结束。
+            </div>
+          </div>
+        </div>
+
+        <div class="grid-2">
+          <div class="panel">
+            <h3><code>AttackMove</code> 和 <code>AssaultMove</code> 的差别</h3>
+            <p>
+              两者走同一个活动类。区别主要是 <code>AssaultMove</code> 会授予另一个 condition，让规则数据切换自动索敌优先级。例如 RA 规则中，
+              assault move 可以把结构物纳入更激进的自动目标集合。
+            </p>
+          </div>
+          <div class="panel">
+            <h3>UI 层的保护</h3>
+            <p>
+              <code>AttackMoveOrderGenerator</code> 在选中单位没有 <code>AutoTargetInfo</code> 时会退出该输入模式，因为没有自动索敌的单位无法完成“边走边打”的语义。活动层仍有兜底：缺 trait 时只移动。
+            </p>
+          </div>
+        </div>
+
+        <div class="callout warn">
+          <p>
+            一个细节很重要：<code>AttackMove</code> 不天然等于“主动追杀全图敌人”。它把 <code>autoTarget.AllowMove</code> 传给索敌和攻击活动。是否允许为了目标移动追击，取决于自动索敌姿态和单位配置。
+          </p>
+        </div>
+      </section>
+
+      <section id="autotarget">
+        <span class="label">AutoTarget</span>
+        <h2>8. AutoTarget 索敌层：目标选择被数据和姿态约束</h2>
+        <p>
+          <code>AutoTarget</code> 是 attack move 的眼睛。它不是简单地“找最近敌人”，而是带着姿态、扫描间隔、目标类型、关系、武器可用性、视野和射界一起筛选。
+        </p>
+
+        <table>
+          <thead>
+            <tr>
+              <th>机制</th>
+              <th>作用</th>
+              <th>对 Attack Move 的影响</th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr>
+              <td>姿态</td>
+              <td><code>HoldFire</code>、<code>ReturnFire</code>、<code>Defend</code>、<code>AttackAnything</code>。</td>
+              <td>是否允许自动移动追击由 <code>AllowMove</code> 决定，通常只有更激进姿态才会打开。</td>
+            </tr>
+            <tr>
+              <td>扫描间隔</td>
+              <td>默认在一个短随机 tick 区间内节流，减少大量单位同时扫描的性能压力。</td>
+              <td>移动中遵守间隔；刚打完目标后可立即再扫描，保持行为顺滑。</td>
+            </tr>
+            <tr>
+              <td>目标优先级</td>
+              <td><code>AutoTargetPriority</code> 以规则数据定义目标类型、关系和优先级。</td>
+              <td><code>AssaultMoveCondition</code> 可以切换优先级配置，不需要新写一套行为代码。</td>
+            </tr>
+            <tr>
+              <td>武器过滤</td>
+              <td>目标必须至少能被某个 armament 有效攻击，且在不允许移动时还要处在射程内。</td>
+              <td>单位不会为了打不了的目标停下来，也不会在禁止追击时选择太远目标。</td>
+            </tr>
+            <tr>
+              <td>视野和冻结目标</td>
+              <td>可攻击真实 actor，也可按配置考虑迷雾中的 frozen actor。</td>
+              <td>远程炮击、迷雾记忆和 bot 视野限制都收敛在目标选择层。</td>
+            </tr>
+          </tbody>
+        </table>
+
+        <div class="callout">
+          <p>
+            这层最值得 Ludots 借鉴的是：目标选择是数据策略，不是硬编码在 <code>AttackMoveActivity</code> 里的分支。移动行为只问“现在有没有目标”，至于目标是谁，由
+            <code>AutoTarget</code> 和规则配置决定。
+          </p>
+        </div>
+      </section>
+
+      <section id="attack">
+        <span class="label">Attack Traits</span>
+        <h2>9. 攻击 trait 层：同一命令适配不同武器形态</h2>
+        <p>
+          <code>AttackMoveActivity</code> 找到目标后，不自己开火，而是把目标交给 actor 上的 <code>AttackBase</code> 派生 trait。这样同一个 attack move 命令可以驱动坦克炮塔、正面开火单位、全向攻击单位和更多 mod 自定义攻击方式。
+        </p>
+
+        <table>
+          <thead>
+            <tr>
+              <th>类型</th>
+              <th>主要职责</th>
+              <th>行为含义</th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr>
+              <td><code>AttackBase</code></td>
+              <td>订单入口、武器筛选、射程计算、攻击活动工厂。</td>
+              <td>所有攻击 trait 的共同合同，attack move 只依赖这个抽象。</td>
+            </tr>
+            <tr>
+              <td><code>AttackFollow</code></td>
+              <td>记录请求目标和机会目标，必要时移动到射程内，目标消失时使用最后可见位置。</td>
+              <td>移动单位和炮塔单位的主力攻击活动，能追击、卡距离、保持目标。</td>
+            </tr>
+            <tr>
+              <td><code>AttackTurreted</code></td>
+              <td>继承 <code>AttackFollow</code>，攻击前让炮塔朝向目标。</td>
+              <td>坦克这类单位不用转整个车身也能开火，炮塔准备好后才发射。</td>
+            </tr>
+            <tr>
+              <td><code>AttackFrontal</code></td>
+              <td>要求单位面向目标，生成通用 <code>Activities.Attack</code>。</td>
+              <td>适合必须朝前射击的单位，活动里处理转向和范围。</td>
+            </tr>
+            <tr>
+              <td><code>AttackOmni</code></td>
+              <td>设置目标并持续调用攻击，不承担追击隐藏目标的复杂逻辑。</td>
+              <td>适合全向或更简单的攻击模型。</td>
+            </tr>
+          </tbody>
+        </table>
+
+        <div class="grid-2">
+          <div class="panel">
+            <h3>攻击活动不是只开一枪</h3>
+            <p>
+              <code>AttackFollow.AttackActivity</code> 会持续重算目标。如果目标还可见且在射程内，活动等待 trait tick 去发射；如果目标离开射程且允许移动，则挂
+              <code>MoveWithinRange</code> 子活动追到合适距离。
+            </p>
+          </div>
+          <div class="panel">
+            <h3>AttackMove 有独特限制</h3>
+            <p>
+              当武器耗尽弹药且单位支持补给时，普通攻击可以转去补给；但来源是 <code>AttackSource.AttackMove</code> 时，攻击活动直接结束，不把单位从行军任务里拉去补给。
+            </p>
+          </div>
+        </div>
+      </section>
+
+      <section id="movement">
+        <span class="label">Movement</span>
+        <h2>10. 移动 activity 层：路径、阻塞、贴近和卡射程</h2>
+        <p>
+          OpenRA 的移动也不是由 attack move 手写。<code>Mobile</code> 提供 <code>IMove</code>，把不同移动意图转换成 activity：去某个 cell、靠近目标、跟随目标、移动到射程环内。
+        </p>
+
+        <div class="grid-3">
+          <div class="panel">
+            <h3><code>Move</code></h3>
+            <p>
+              寻路到目标 cell，按不同阻塞策略尝试路径。遇到临时阻塞会等待、通知阻塞者、重寻路，必要时后退让路。
+            </p>
+          </div>
+          <div class="panel">
+            <h3><code>MoveAdjacentTo</code></h3>
+            <p>
+              面向移动目标，目标移动后取消旧路径并重新规划。目标隐藏时使用最后可见位置作为退路。
+            </p>
+          </div>
+          <div class="panel">
+            <h3><code>MoveWithinRange</code></h3>
+            <p>
+              在最小射程和最大射程之间找候选格，进入正确距离就停下，是追击和卡射程的关键组件。
+            </p>
+          </div>
+        </div>
+
+        <div class="callout">
+          <p>
+            这层解释了为什么 <code>AttackMoveActivity</code> 可以很薄：它只把“走向目的地”和“进入攻击距离”表达成移动活动，实际寻路、阻塞处理、半格移动插值、actor map 更新都在移动系统内部。
+          </p>
+        </div>
+      </section>
+
+      <section id="weapon">
+        <span class="label">Armament</span>
+        <h2>11. 武器发射层：行为最终落到 projectile</h2>
+        <p>
+          当攻击 trait 判断“可以开火”后，最后一跳是 <code>Armament.CheckFire</code>。它检查装填、暂停、炮塔朝向、最大/最小射程和武器目标类型，然后按 burst、barrel、fire delay 创建 projectile 参数并把 projectile 加进 world。
+        </p>
+
+        <div class="flow" aria-label="武器发射链路">
+          <div class="flow-step">
+            <strong>AttackActivity</strong>
+            <span>确认目标有效，距离和射界满足。</span>
+          </div>
+          <div class="flow-step">
+            <strong>AttackBase</strong>
+            <span>选择可用 armament，调用 <code>DoAttack</code>。</span>
+          </div>
+          <div class="flow-step">
+            <strong>Armament</strong>
+            <span>检查 reload、range、turret、target type。</span>
+          </div>
+          <div class="flow-step">
+            <strong>FireBarrel</strong>
+            <span>计算 muzzle、passive target 和 guided target。</span>
+          </div>
+          <div class="flow-step">
+            <strong>Projectile</strong>
+            <span>根据 weapon projectile 工厂创建弹体。</span>
+          </div>
+          <div class="flow-step">
+            <strong>World.Add</strong>
+            <span>弹体进入 world，之后由弹体/warhead 系统处理命中和伤害。</span>
+          </div>
+        </div>
+
+        <div class="callout danger">
+          <p>
+            所以不要把 <code>AttackMove</code> 理解成“自动扣血”。它只是一段单位行为调度。伤害发生在更后面的 projectile 和 warhead 链路中，这让命令、行为、武器和伤害保持清晰边界。
+          </p>
+        </div>
+      </section>
+
+      <section id="rules">
+        <span class="label">Rules Data</span>
+        <h2>12. RA 规则配置里的真实用法</h2>
+        <p>
+          OpenRA 的 RA mod 把这套行为放进规则继承链中。典型车辆基底包含 <code>Mobile</code> 和 <code>AttackMove</code>，具体单位再组合
+          <code>AutoTarget</code>、<code>Armament</code>、<code>AttackTurreted</code> 或 <code>AttackFrontal</code>。
+        </p>
+
+        <table>
+          <thead>
+            <tr>
+              <th>配置对象</th>
+              <th>组合方式</th>
+              <th>行为效果</th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr>
+              <td><code>^Vehicle</code></td>
+              <td>基底 traits 中包含 <code>Mobile</code>、<code>AttackMove</code> 等。</td>
+              <td>让车辆天然可移动、可接受 attack move 命令。</td>
+            </tr>
+            <tr>
+              <td><code>^AutoTargetGroundAssaultMove</code></td>
+              <td>继承地面自动索敌，并让 <code>AssaultMoveCondition</code> 打开 assault profile。</td>
+              <td>Ctrl attack move 可以切换更激进的目标优先级。</td>
+            </tr>
+            <tr>
+              <td><code>1TNK</code></td>
+              <td>继承车辆和地面 assault auto target，挂炮塔、武器和 <code>AttackTurreted</code>。</td>
+              <td>典型坦克：边走边扫目标，遇敌停下或追击到合适距离，炮塔对准后开火。</td>
+            </tr>
+            <tr>
+              <td><code>V2RL</code></td>
+              <td>使用远程武器、较大扫描半径和 <code>AttackFrontal</code>。</td>
+              <td>典型正面远程单位：需要朝向和距离，部分配置允许打 frozen actor。</td>
+            </tr>
+            <tr>
+              <td><code>E1</code></td>
+              <td>步兵同样继承 auto target assault move profile。</td>
+              <td>说明这套行为不专属于车辆，而是 trait 组合出的通用单位能力。</td>
+            </tr>
+          </tbody>
+        </table>
+
+        <div class="callout">
+          <p>
+            这个配置方式很漂亮：<code>AttackMove</code> 只是能力入口，<code>AutoTargetPriority</code> 是目标政策，<code>AttackBase</code> 派生 trait 是攻击形态，<code>Armament</code>
+            是武器。一个单位能不能 attack move，不靠继承一个巨型 Unit 类，而靠 traits 组合。
+          </p>
+        </div>
+      </section>
+
+      <section id="ludots">
+        <span class="label">For Ludots</span>
+        <h2>13. 给 Ludots 的单位行为启发</h2>
+        <p>
+          对 Ludots 来说，OpenRA 这块最有价值的不是具体 C# 写法，而是用户输入、命令语义、单位行为调度、目标选择、移动、攻击、武器发射之间的边界。
+          用户看到的是简洁输入动作；系统内部必须把这些动作拆给正确的能力模块。
+        </p>
+
+        <table>
+          <thead>
+            <tr>
+              <th>OpenRA 模式</th>
+              <th>Ludots 可映射方向</th>
+              <th>价值</th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr>
+              <td>能力 trait 暴露自己的 <code>IIssueOrder</code></td>
+              <td>单位基础命令不要集中在单个巨大输入系统里；每个能力模块注册自己的 targeter 和 resolver。</td>
+              <td>新能力可以自然长出新右键语义，例如采集、运输、占领、治疗、建造，不污染移动或攻击系统。</td>
+            </tr>
+            <tr>
+              <td>玩家、bot、脚本共用 <code>Order</code></td>
+              <td>人类输入、AI commander、脚本都提交同一种运行时命令。</td>
+              <td>避免 AI 旁路 Core 行为，也方便 replay、调试和测试。</td>
+            </tr>
+            <tr>
+              <td><code>AttackMoveActivity</code> 是薄编排器</td>
+              <td>在 Ludots 中用 per-entity intent/task/activity 表达组合行为。</td>
+              <td>attack move 不吞掉导航、索敌、武器系统职责。</td>
+            </tr>
+            <tr>
+              <td><code>AutoTargetPriority</code> 数据化</td>
+              <td>用配置定义目标类型、阵营关系、优先级、姿态条件。</td>
+              <td>不同 mod 可以调政策，不必复制行为系统。</td>
+            </tr>
+            <tr>
+              <td><code>AssaultMoveCondition</code> 切目标 profile</td>
+              <td>用 condition/tag 切换 targeting profile，例如普通行军、突击行军、守点。</td>
+              <td>一套行为，多种战术语义。</td>
+            </tr>
+            <tr>
+              <td><code>MoveWithinRange</code> 独立</td>
+              <td>导航层提供“进入射程环”的标准能力，而不是攻击系统自己寻路。</td>
+              <td>远程、近战、施法、采集都能复用同类距离约束。</td>
+            </tr>
+            <tr>
+              <td><code>Armament.CheckFire</code> 独立收口</td>
+              <td>GAS/武器执行层负责冷却、射程、弹体、效果。</td>
+              <td>命令层不会直接造成伤害，战斗规则更可测。</td>
+            </tr>
+          </tbody>
+        </table>
+
+        <div class="grid-2">
+          <div class="panel">
+            <h3>Ludots 已经做得好的方向</h3>
+            <ul>
+              <li>已有 Mod、ConfigPipeline、GAS Effect Pipeline 和 SystemGroup 概念，适合承接数据驱动单位行为。</li>
+              <li>已有导航、输入、GAS、表现层等模块边界，天然适合把 attack move 拆成多个正式管线能力。</li>
+              <li>六边形架构和“一切皆 Mod”的原则，和 OpenRA trait 组合思想相容。</li>
+            </ul>
+          </div>
+          <div class="panel">
+            <h3>仍然需要补的关键能力</h3>
+            <ul>
+              <li>统一的单位命令合同：玩家输入、AI 和脚本共用，不允许 AI 直接改运动或战斗状态。</li>
+              <li>上下文命令 targeter：按优先级决定右键是移动、攻击、采集、修理、装载还是占领。</li>
+              <li>可组合的 per-entity 行为调度：能表达父任务、子任务、取消、排队、完成和继续扫描。</li>
+              <li>数据化自动索敌 profile：目标类型、阵营关系、姿态、扫描间隔、优先级都应配置化。</li>
+              <li>标准“进入能力范围”导航意图：移动系统负责路径和距离环，能力系统只声明需求。</li>
+            </ul>
+          </div>
+        </div>
+
+        <div class="callout">
+          <p>
+            最推荐的 Ludots 落地顺序：先统一命令入口，再做右键上下文 targeter，再做轻量单位行为调度，再接数据化自动索敌，最后让 attack move 只组合“移动到目的地”和“有目标时执行攻击能力”。这样不会一上来把所有逻辑塞进一个 RTS AI 系统。
+          </p>
+        </div>
+      </section>
+
+      <section id="sources">
+        <span class="label">Source Map</span>
+        <h2>14. 源码索引</h2>
+        <p>本报告主要参考以下本地 OpenRA 源码文件：</p>
+        <ul class="source-list">
+          <li><a href="../../external/reference/OpenRA/OpenRA.Mods.Common/Traits/AttackMove.cs">AttackMove.cs</a></li>
+          <li><a href="../../external/reference/OpenRA/OpenRA.Mods.Common/Activities/Move/AttackMoveActivity.cs">AttackMoveActivity.cs</a></li>
+          <li><a href="../../external/reference/OpenRA/OpenRA.Mods.Common/Orders/UnitOrderGenerator.cs">UnitOrderGenerator.cs</a></li>
+          <li><a href="../../external/reference/OpenRA/OpenRA.Mods.Common/Orders/UnitOrderTargeter.cs">UnitOrderTargeter.cs</a></li>
+          <li><a href="../../external/reference/OpenRA/OpenRA.Mods.Common/Orders/DeployOrderTargeter.cs">DeployOrderTargeter.cs</a></li>
+          <li><a href="../../external/reference/OpenRA/OpenRA.Mods.Common/Orders/ForceModifiersOrderGenerator.cs">ForceModifiersOrderGenerator.cs</a></li>
+          <li><a href="../../external/reference/OpenRA/OpenRA.Mods.Common/Orders/GuardOrderGenerator.cs">GuardOrderGenerator.cs</a></li>
+          <li><a href="../../external/reference/OpenRA/OpenRA.Mods.Common/Widgets/Logic/Ingame/CommandBarLogic.cs">CommandBarLogic.cs</a></li>
+          <li><a href="../../external/reference/OpenRA/OpenRA.Mods.Common/Widgets/Logic/Ingame/StanceSelectorLogic.cs">StanceSelectorLogic.cs</a></li>
+          <li><a href="../../external/reference/OpenRA/OpenRA.Mods.Common/Traits/AutoTarget.cs">AutoTarget.cs</a></li>
+          <li><a href="../../external/reference/OpenRA/OpenRA.Mods.Common/Traits/Attack/AttackBase.cs">AttackBase.cs</a></li>
+          <li><a href="../../external/reference/OpenRA/OpenRA.Mods.Common/Traits/Attack/AttackFollow.cs">AttackFollow.cs</a></li>
+          <li><a href="../../external/reference/OpenRA/OpenRA.Mods.Common/Traits/Attack/AttackTurreted.cs">AttackTurreted.cs</a></li>
+          <li><a href="../../external/reference/OpenRA/OpenRA.Mods.Common/Traits/Attack/AttackFrontal.cs">AttackFrontal.cs</a></li>
+          <li><a href="../../external/reference/OpenRA/OpenRA.Mods.Common/Traits/Attack/AttackOmni.cs">AttackOmni.cs</a></li>
+          <li><a href="../../external/reference/OpenRA/OpenRA.Mods.Common/Traits/Mobile.cs">Mobile.cs</a></li>
+          <li><a href="../../external/reference/OpenRA/OpenRA.Mods.Common/Traits/Air/Aircraft.cs">Aircraft.cs</a></li>
+          <li><a href="../../external/reference/OpenRA/OpenRA.Mods.Common/Traits/Guard.cs">Guard.cs</a></li>
+          <li><a href="../../external/reference/OpenRA/OpenRA.Mods.Common/Traits/Harvester.cs">Harvester.cs</a></li>
+          <li><a href="../../external/reference/OpenRA/OpenRA.Mods.Common/Traits/Captures.cs">Captures.cs</a></li>
+          <li><a href="../../external/reference/OpenRA/OpenRA.Mods.Common/Traits/Passenger.cs">Passenger.cs</a></li>
+          <li><a href="../../external/reference/OpenRA/OpenRA.Mods.Common/Traits/Cargo.cs">Cargo.cs</a></li>
+          <li><a href="../../external/reference/OpenRA/OpenRA.Mods.Common/Traits/Carryall.cs">Carryall.cs</a></li>
+          <li><a href="../../external/reference/OpenRA/OpenRA.Mods.Common/Traits/Repairable.cs">Repairable.cs</a></li>
+          <li><a href="../../external/reference/OpenRA/OpenRA.Mods.Common/Traits/RepairableNear.cs">RepairableNear.cs</a></li>
+          <li><a href="../../external/reference/OpenRA/OpenRA.Mods.Common/Traits/InstantlyRepairs.cs">InstantlyRepairs.cs</a></li>
+          <li><a href="../../external/reference/OpenRA/OpenRA.Mods.Common/Traits/DockClientManager.cs">DockClientManager.cs</a></li>
+          <li><a href="../../external/reference/OpenRA/OpenRA.Mods.Common/Traits/EntersTunnels.cs">EntersTunnels.cs</a></li>
+          <li><a href="../../external/reference/OpenRA/OpenRA.Mods.Common/Traits/Transforms.cs">Transforms.cs</a></li>
+          <li><a href="../../external/reference/OpenRA/OpenRA.Mods.Common/Traits/Minelayer.cs">Minelayer.cs</a></li>
+          <li><a href="../../external/reference/OpenRA/OpenRA.Mods.Common/Traits/Demolition.cs">Demolition.cs</a></li>
+          <li><a href="../../external/reference/OpenRA/OpenRA.Mods.Common/Traits/RepairsBridges.cs">RepairsBridges.cs</a></li>
+          <li><a href="../../external/reference/OpenRA/OpenRA.Mods.Common/Traits/DeliversCash.cs">DeliversCash.cs</a></li>
+          <li><a href="../../external/reference/OpenRA/OpenRA.Mods.Common/Traits/DeliversExperience.cs">DeliversExperience.cs</a></li>
+          <li><a href="../../external/reference/OpenRA/OpenRA.Mods.Common/Activities/Move/Move.cs">Move.cs</a></li>
+          <li><a href="../../external/reference/OpenRA/OpenRA.Mods.Common/Activities/Move/MoveAdjacentTo.cs">MoveAdjacentTo.cs</a></li>
+          <li><a href="../../external/reference/OpenRA/OpenRA.Mods.Common/Activities/Move/MoveWithinRange.cs">MoveWithinRange.cs</a></li>
+          <li><a href="../../external/reference/OpenRA/OpenRA.Mods.Common/Traits/Armament.cs">Armament.cs</a></li>
+          <li><a href="../../external/reference/OpenRA/OpenRA.Game/Activities/Activity.cs">Activity.cs</a></li>
+          <li><a href="../../external/reference/OpenRA/OpenRA.Game/Traits/ActivityUtils.cs">ActivityUtils.cs</a></li>
+          <li><a href="../../external/reference/OpenRA/OpenRA.Game/Actor.cs">Actor.cs</a></li>
+          <li><a href="../../external/reference/OpenRA/OpenRA.Game/Network/UnitOrders.cs">UnitOrders.cs</a></li>
+          <li><a href="../../external/reference/OpenRA/mods/ra/rules/defaults.yaml">RA defaults.yaml</a></li>
+          <li><a href="../../external/reference/OpenRA/mods/ra/rules/vehicles.yaml">RA vehicles.yaml</a></li>
+          <li><a href="../../external/reference/OpenRA/mods/ra/rules/infantry.yaml">RA infantry.yaml</a></li>
+        </ul>
+      </section>
+    </main>
+  </div>
+</body>
+</html>
