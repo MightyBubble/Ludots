@@ -80,6 +80,9 @@ internal sealed class TotalWarFormationOutlinePresentationSystem : ISystem<float
         _currentStableIds.Clear();
         _currentStableIdSet.Clear();
         _currentOwnerStableIds.Clear();
+        CollectCurrentOwnerStableIds();
+        RemoveStaleEmissionStates();
+
         int emitted = 0;
         foreach (ref var chunk in _engine.World.Query(in FormationOutlineQuery))
         {
@@ -102,7 +105,6 @@ internal sealed class TotalWarFormationOutlinePresentationSystem : ISystem<float
         }
 
         RemoveStaleSplines();
-        RemoveStaleEmissionStates();
         PublishFormationOutlineCountIfChanged(emitted);
     }
 
@@ -129,7 +131,6 @@ internal sealed class TotalWarFormationOutlinePresentationSystem : ISystem<float
             throw new InvalidOperationException("Total War formation outline requires a positive PresentationStableId.");
         }
 
-        TrackOwnerStableId(ownerStableId);
         OutlineEmissionState nextState = OutlineEmissionState.From(in state, in outline, in transform);
         if (_emittedStateByOwnerStableId.TryGetValue(ownerStableId, out OutlineEmissionState previousState) &&
             previousState.Equals(nextState, outline.EmissionPositionEpsilonM, outline.EmissionFacingEpsilonRadians))
@@ -354,6 +355,24 @@ internal sealed class TotalWarFormationOutlinePresentationSystem : ISystem<float
 
         _previousStableIds.Clear();
         CopyCurrentStableIdsToPrevious();
+    }
+
+    private void CollectCurrentOwnerStableIds()
+    {
+        foreach (ref var chunk in _engine.World.Query(in FormationOutlineQuery))
+        {
+            Span<PresentationStableId> stableIds = chunk.GetSpan<PresentationStableId>();
+            foreach (int index in chunk)
+            {
+                int ownerStableId = stableIds[index].Value;
+                if (ownerStableId <= 0)
+                {
+                    throw new InvalidOperationException("Total War formation outline requires a positive PresentationStableId.");
+                }
+
+                TrackOwnerStableId(ownerStableId);
+            }
+        }
     }
 
     private void RemoveStaleEmissionStates()

@@ -1,16 +1,11 @@
 {
   "mapId": "mass_navigation_capability_standard_total_war_like",
-  "runtimeSpawnReceiptChannelKey": "massNavigation.totalWar.runtimeSpawnReceipts",
   "formationAgent": {
     "templateId": "mass_navigation_capability_standard_total_war_like_formation_agent",
     "profileId": "formation"
   },
   "initialSelectionFormationId": "shu_left_vanguard",
   "initialSelectionEntityCapacity": 1,
-  "soldierTargetSync": {
-    "targetChangeEpsilonCm": 12.0,
-    "facingChangeEpsilonRadians": 0.035
-  },
   "obstacleOverlay": {
     "templateId": "mass_navigation_capability_standard_total_war_like_obstacle_overlay",
     "heightOffsetM": 0.28,

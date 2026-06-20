@@ -99,6 +99,10 @@ namespace Ludots.Core.Engine
         
         // Phase 3: Effect处理（含响应链）
         EffectProcessing,
+
+        // Phase 3.5: 运行时实体创建后的能力绑定
+        // 目的：让 RuntimeEntitySpawnSystem 创建的 ECS-authored 实体由各 capability runtime 统一发现、验证并绑定
+        RuntimeEntityBinding,
         
         // Phase 4: 属性计算
         AttributeCalculation,

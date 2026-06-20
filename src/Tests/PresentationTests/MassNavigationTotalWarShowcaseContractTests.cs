@@ -6,6 +6,7 @@ using System.Numerics;
 using System.Reflection;
 using System.Text.Json.Nodes;
 using Arch.Core;
+using Arch.System;
 using Ludots.Core.Components;
 using Ludots.Core.Config;
 using Ludots.Core.Engine;
@@ -19,6 +20,9 @@ using Ludots.Core.Input.Runtime;
 using Ludots.Core.Input.Selection;
 using Ludots.Core.Layers;
 using Ludots.Core.Map;
+using Ludots.Core.MassCrowd;
+using Ludots.Core.MassCrowd.Runtime;
+using Ludots.Core.MassCrowd.Systems;
 using Ludots.Core.Mathematics;
 using Ludots.Core.Mathematics.FixedPoint;
 using Ludots.Core.Presentation.Commands;
@@ -37,7 +41,6 @@ using Ludots.Core.Spatial;
 using Ludots.Core.Systems;
 using Ludots.Platform.Abstractions;
 using MassNavigationTotalWarEntryMod.Runtime;
-using MassNavigationMod.Runtime;
 using NUnit.Framework;
 
 namespace Ludots.Tests.Presentation
@@ -84,20 +87,23 @@ namespace Ludots.Tests.Presentation
             Assert.That(components.ContainsKey("VisualHeightmapSampleState"), Is.True,
                 "Formation outline height must follow the visual-heightmap SSOT through the agent visual transform.");
             Assert.That(components.ContainsKey("FacingDirection"), Is.True);
-            Assert.That(components.ContainsKey("MassNavigationAgentTag"), Is.True);
-            Assert.That(components.ContainsKey("MassNavigationControllable"), Is.True);
+            Assert.That(components.ContainsKey("MassCrowdAgent"), Is.True);
             Assert.That(components.ContainsKey("OrderBuffer"), Is.True);
             Assert.That(components.ContainsKey("SelectionSelectableTag"), Is.True);
             Assert.That(components.ContainsKey("SelectionSelectableState"), Is.True);
             Assert.That(components.ContainsKey("Team"), Is.False,
-                "Formation template must not bake scene team; TotalWarShowcaseConfig teamId is applied at receipt binding.");
+                "Formation template must not bake scene team; TotalWarShowcaseConfig teamId is applied by the generic runtime spawn request.");
             Assert.That(components.ContainsKey("PlayerOwner"), Is.False,
-                "Formation template must not bake scene ownership; TotalWarShowcaseConfig ownerPlayerId is applied at receipt binding.");
+                "Formation template must not bake scene ownership; TotalWarShowcaseConfig ownerPlayerId is applied by the generic runtime spawn request.");
             Assert.That(components.ContainsKey("AttributeBuffer"), Is.True);
             Assert.That(components.ContainsKey("SpatialBounds"), Is.False,
-                "Formation footprint is derived from TotalWarShowcaseConfig outline at receipt binding time, not authored in the template.");
+                "Formation footprint is derived from TotalWarShowcaseConfig outline during scenario binding, not authored in the template.");
             Assert.That(components.ContainsKey("SpatialFootprint2D"), Is.False,
                 "Formation footprint vertices must not drift away from the configured outline.");
+            Assert.That(components.ContainsKey("MassCrowdFormationAnchor"), Is.True,
+                "Formation behavior is optional and only enabled by authoring the core MassCrowdFormationAnchor component.");
+            Assert.That(components.ContainsKey("MassCrowdFollowerLocomotion"), Is.True,
+                "Follower sync tuning belongs to component authoring, not a showcase-only runtime config block.");
 
             JsonArray formations = config["formations"]?.AsArray()
                 ?? throw new InvalidOperationException("TotalWar config must author formations.");
@@ -108,16 +114,10 @@ namespace Ludots.Tests.Presentation
             Assert.That(shapes, Does.Contain("Rectangle"));
             Assert.That(shapes, Does.Contain("Circle"));
 
-            JsonObject soldierTargetSync = config["soldierTargetSync"]?.AsObject()
-                ?? throw new InvalidOperationException("TotalWar config must author soldierTargetSync.");
-            AssertPositive(soldierTargetSync, "targetChangeEpsilonCm");
-            AssertPositive(soldierTargetSync, "facingChangeEpsilonRadians");
+            Assert.That(config.ContainsKey("soldierTargetSync"), Is.False,
+                "Follower sync tuning must be authored through MassCrowdFollowerLocomotion on formation templates.");
             Assert.That(config.ContainsKey("formationSync"), Is.False,
                 "TotalWar config must not keep empty sync sections without runtime semantics.");
-            Assert.That(soldierTargetSync.ContainsKey("orderPathLookaheadCm"), Is.False,
-                "TotalWar carrier-mode soldier sync must not author stale order-path knobs.");
-            Assert.That(soldierTargetSync.ContainsKey("orderPathAnchorUpdateEpsilonCm"), Is.False,
-                "TotalWar carrier-mode soldier sync must not author stale order-path knobs.");
             JsonObject obstacleOverlay = config["obstacleOverlay"]?.AsObject()
                 ?? throw new InvalidOperationException("TotalWar config must author obstacleOverlay.");
             AssertPositive(obstacleOverlay, "borderWidthCm");
@@ -146,10 +146,11 @@ namespace Ludots.Tests.Presentation
                 JsonObject soldierTemplate = FindObjectById(templates, RequireString(soldierAgent, "templateId"));
                 JsonObject soldierComponents = soldierTemplate["components"]?.AsObject()
                     ?? throw new InvalidOperationException("TotalWar soldier template must author components.");
-                Assert.That(soldierComponents.ContainsKey("MassNavigationAgentTag"), Is.True);
+                Assert.That(soldierComponents.ContainsKey("MassCrowdAgent"), Is.True);
+                Assert.That(soldierComponents.ContainsKey("MassCrowdFormationFollower"), Is.True,
+                    "Soldier formation behavior is optional and enabled by the core MassCrowdFormationFollower component.");
                 Assert.That(soldierComponents.ContainsKey("Team"), Is.False,
-                    "Soldier team is owned by the formation config and applied through spawn receipt binding; templates must not author a second team SSOT.");
-                Assert.That(soldierComponents.ContainsKey("MassNavigationControllable"), Is.False);
+                    "Soldier team is owned by the formation config and applied by the generic runtime spawn request; templates must not author a second team SSOT.");
                 Assert.That(soldierComponents.ContainsKey("OrderBuffer"), Is.False);
                 Assert.That(soldierComponents.ContainsKey("SelectionSelectableTag"), Is.False);
                 Assert.That(soldierComponents.ContainsKey("SelectionSelectableState"), Is.False);
@@ -293,7 +294,8 @@ namespace Ludots.Tests.Presentation
                 "TotalWar owns formation/soldier spawning through TotalWarShowcaseConfig; MassNavigation generic auto-spawn team mappings must stay empty to avoid a second template SSOT.");
             Assert.That(presentation.ContainsKey("blockerPerformerId"), Is.False);
             Assert.That(presentation.ContainsKey("hotspotPerformerId"), Is.False);
-            Assert.That(presentation.ContainsKey("blockerTemplateId"), Is.False);
+            Assert.That(presentation["blockerTemplateId"]?.GetValue<string>(), Is.EqualTo("mass_navigation_blocker"),
+                "Configured obstacles seed core-owned MassCrowdBlocker entities through the runtime template spawn path even when agents are externally authored.");
             Assert.That(presentation.ContainsKey("hotspotTemplateId"), Is.False);
             JsonArray requiredMeshAssetIds = presentation["requiredMeshAssetIds"]?.AsArray()
                 ?? throw new InvalidOperationException("presentation.requiredMeshAssetIds must be authored.");
@@ -521,17 +523,21 @@ namespace Ludots.Tests.Presentation
         }
 
         [Test]
-        public void TotalWarRuntime_UsesTemplateSpawnReceiptsAndPresentationLifecycle()
+        public void TotalWarRuntime_UsesComponentAuthoredRuntimeBindingAndPresentationLifecycle()
         {
             string runtimePath = Path.Combine(TotalWarModRoot(), "Runtime", "TotalWarShowcaseRuntime.cs");
             string source = File.ReadAllText(runtimePath);
 
             Assert.That(source, Does.Contain("RuntimeEntitySpawnQueue"));
-            Assert.That(source, Does.Contain("TotalWarSpawnReceiptBinding.ForFormationAgent"));
+            Assert.That(source, Does.Contain("MassCrowdFormationAnchor"));
+            Assert.That(source, Does.Contain("MassCrowdFormationFollower"));
+            Assert.That(source, Does.Contain("BindComponentAuthoredScenarioEntities"));
             Assert.That(source, Does.Contain("RegisterSpawnedFormationAgent(GameEngine engine"));
             Assert.That(source, Does.Contain("RegisterSpawnedObstacleOverlay"));
             Assert.That(source, Does.Contain("DestroyShowcaseOwnedEntities"));
             Assert.That(source, Does.Contain("PresentationDestroyPending"));
+            Assert.That(source, Does.Not.Contain("EmitReceipt"));
+            Assert.That(source, Does.Not.Contain("ReceiptChannelId"));
             Assert.That(source, Does.Not.Contain("World.Create("),
                 "TotalWar formation agents must be spawned through the runtime template spawn path.");
             Assert.That(source, Does.Not.Contain("World.Destroy("),
@@ -539,109 +545,216 @@ namespace Ludots.Tests.Presentation
         }
 
         [Test]
-        public void TotalWarRuntime_CachesSlotOffsetsAndSyncsSoldierTargetsFromFormationOrders()
+        public void TotalWarRuntime_DelegatesSoldierSlotTargetsToCoreMassCrowdFormationFollowerSystem()
         {
             string source = File.ReadAllText(Path.Combine(TotalWarModRoot(), "Runtime", "TotalWarShowcaseRuntime.cs"));
-            string syncBody = ExtractMethodBody(source, "private void SyncSoldierTargetsFromFormationAgents");
 
-            Assert.That(syncBody, Does.Contain("targetSync.TargetChangeEpsilonCm"));
-            Assert.That(syncBody, Does.Contain("targetSync.FacingChangeEpsilonRadians"));
-            Assert.That(syncBody, Does.Not.Contain("IntervalTicks"),
-                "Soldier slot orders must be derived from formation order/target changes, not a tick cadence chase loop.");
-            Assert.That(syncBody, Does.Contain("formationWorldX"));
-            Assert.That(syncBody, Does.Contain("LastCarrierCenterWorldXCm"),
-                "Carrier snapshots must use world coordinates; solver local coordinates are rebased when the navigation window moves.");
-            Assert.That(syncBody, Does.Contain("_formationPlans[formationIndex] = plan;"),
-                "Carrier snapshots must be committed even when soldier slot target writes are skipped by the epsilon gate.");
-            Assert.That(syncBody, Does.Contain("SyncCarriedAgentRangeToCarrier"),
-                "Soldiers must inherit the formation agent's resolved MassNavigation displacement through the core carrier/member API.");
-            Assert.That(syncBody, Does.Not.Contain("ApplyAgentWorldDisplacementRange"),
-                "TotalWar must not directly drive raw solver displacement.");
-            Assert.That(syncBody, Does.Contain("soldierAgentPlan.SlotOffsetXCm"));
-            Assert.That(syncBody, Does.Contain("soldierAgentPlan.SlotOffsetYCm"));
-            Assert.That(syncBody, Does.Not.Contain("TryGetGroupMemberOrderTarget"),
-                "Soldier target sync must use the MassNavigation order-path anchor SSOT without repeating order target lookups in the showcase hot path.");
-            Assert.That(syncBody, Does.Not.Contain("OrderPathLookaheadCm"),
-                "Carrier-mode soldiers must not chase the formation order-path lookahead; the formation's resolved displacement carries them through macro obstacles.");
-            Assert.That(syncBody, Does.Not.Contain("OrderPathAnchorUpdateEpsilonCm"));
-            Assert.That(syncBody, Does.Not.Contain("TryUpdateGroupMemberFollowerAnchor"));
-            Assert.That(syncBody, Does.Not.Contain("TryUpdateGroupMemberOrderPathAnchor"),
-                "TotalWar soldiers must not consume the pure order-path anchor in carrier mode.");
-            Assert.That(syncBody, Does.Not.Contain("ResolveOrderPathLookaheadAnchor"),
-                "TotalWar must not recompute its own chase anchor.");
-            Assert.That(syncBody, Does.Contain("ResolveCarriedAgentSlotTarget"),
-                "Soldier slot targets must use MassNavigation's carrier/member slot projection before writing navigation targets.");
-            Assert.That(syncBody, Does.Contain("ApplyCarriedAgentSlotTarget"),
-                "Soldier target writes must go through the core carrier/member API.");
-            Assert.That(syncBody, Does.Not.Contain("ResolveAgentGroupSlotTargetLocalCm"),
-                "TotalWar must not call raw MassNavigation slot target projection helpers.");
-            Assert.That(syncBody, Does.Not.Contain("SetAgentTargetLocalCm"),
-                "TotalWar must not directly write raw solver targets.");
-            Assert.That(syncBody, Does.Not.Contain("TryGetUnitTarget"),
-                "Soldier target sync must not read raw solver unit targets; order slot targets are the MassNavigation SSOT.");
-            Assert.That(syncBody, Does.Not.Contain("TryGetGroupDestination"),
-                "Soldier target sync must not collapse all soldiers to a group destination.");
-            Assert.That(syncBody, Does.Contain("ResolveFormationFacing"),
-                "Soldier slot rotation must come from the formation entity's explicit FacingDirection.");
-            Assert.That(syncBody, Does.Not.Contain("GetVelocityCmPerSecond"),
-                "Soldier target sync must not infer formation facing from movement velocity.");
-            Assert.That(syncBody, Does.Contain("ShouldWriteSoldierTarget"),
-                "Soldier target sync must avoid re-writing unchanged per-soldier targets into navigation hot state.");
-            Assert.That(syncBody, Does.Contain("resolvedTarget.WorldXCm"),
-                "Target write de-duplication must compare world coordinates so solver-window rebases do not stale the cache.");
-            Assert.That(syncBody, Does.Contain("resetRecovery: targetChanged"),
-                "Soldier agents must only reset arrival recovery when formation-derived orders actually change.");
-            Assert.That(syncBody, Does.Contain("if (facingChanged)"),
-                "Soldier facing writes must be split from anchor-only target updates.");
-            Assert.That(syncBody, Does.Not.Contain("ResolveSlotOffset"),
-                "Soldier target sync must use BuildScenarioPlans cached slot offsets instead of reparsing formation layout every tick.");
-            Assert.That(syncBody, Does.Not.Contain("ActiveConfig"),
-                "Soldier target sync must be driven by explicit method inputs, not hidden runtime config lookups.");
-            Assert.That(syncBody, Does.Not.Contain("MassFlow"),
-                "TotalWar must use MassNavigationSimulationRuntime's public navigation API instead of piercing solver internals.");
+            Assert.That(source, Does.Not.Contain("SyncSoldierTargetsFromFormationAgents"));
+            Assert.That(source, Does.Not.Contain("ApplyCarriedAgentSlotTarget"));
+            Assert.That(source, Does.Not.Contain("ResolveCarriedAgentSlotTarget"));
+            Assert.That(source, Does.Contain("MassCrowdFormationFollower"));
+            Assert.That(source, Does.Contain("HasMassCrowdFormationFollowerOverride = 1"));
+
+            string coreFollowerSystem = File.ReadAllText(Path.Combine(
+                FindRepoRoot(),
+                "src",
+                "Core",
+                "MassCrowd",
+                "Systems",
+                "MassCrowdFormationFollowerSystem.cs"));
+            Assert.That(coreFollowerSystem, Does.Contain("SyncCarriedAgentsToCarrier"));
+            Assert.That(coreFollowerSystem, Does.Contain("ResolveCarriedAgentSlotTarget"));
+            Assert.That(coreFollowerSystem, Does.Contain("ApplyCarriedAgentSlotTarget"));
         }
 
         [Test]
-        public void TotalWarSoldierBinding_UsesMassFlowAgentProfileSsot()
+        public void MassCrowdFormationFollowerSystem_ResetRebuildDoesNotApplyPreviousCarrierDelta()
+        {
+            MassNavigationSimulationRuntime simulation = CreateFocusedMassCrowdSimulation(out GameEngine engine);
+            using (engine)
+            {
+                int formationId = MassCrowdFormationRegistry.Register("tests.masscrowd.reset.rebuild");
+                Entity firstAnchor = CreateFormationAnchor(engine.World, formationId, slotCount: 1);
+                Entity firstFollower = CreateFormationFollower(engine.World, formationId, slotIndex: 0, localOffsetXCm: 100f, localOffsetYCm: 0f);
+                simulation.RebuildFromAuthoredAgents(
+                    engine.World,
+                    new[] { firstAnchor, firstFollower },
+                    new[]
+                    {
+                        CreateAgentSeed(simulation, worldXCm: 1000f, worldYCm: 1000f),
+                        CreateAgentSeed(simulation, worldXCm: 1100f, worldYCm: 1000f),
+                    },
+                    new[] { true, false });
+
+                ISystem<float> followerSystem = CreateMassCrowdRuntimeSystem(
+                    "Ludots.Core.MassCrowd.Systems.MassCrowdFormationFollowerSystem",
+                    engine,
+                    simulation);
+                UpdateSystem(followerSystem);
+                Assert.That(simulation.GetAgentWorldPositionCm(1).X, Is.EqualTo(1100f).Within(0.001f));
+
+                simulation.ResetRuntimeState(engine.World);
+                Entity rebuiltAnchor = CreateFormationAnchor(engine.World, formationId, slotCount: 1);
+                Entity rebuiltFollower = CreateFormationFollower(engine.World, formationId, slotIndex: 0, localOffsetXCm: 100f, localOffsetYCm: 0f);
+                simulation.RebuildFromAuthoredAgents(
+                    engine.World,
+                    new[] { rebuiltAnchor, rebuiltFollower },
+                    new[]
+                    {
+                        CreateAgentSeed(simulation, worldXCm: 3000f, worldYCm: 1000f),
+                        CreateAgentSeed(simulation, worldXCm: 3100f, worldYCm: 1000f),
+                    },
+                    new[] { true, false });
+
+                UpdateSystem(followerSystem);
+
+                Vector2 followerWorld = simulation.GetAgentWorldPositionCm(1);
+                Assert.That(followerWorld.X, Is.EqualTo(3100f).Within(0.001f),
+                    "Reusing a formation id after reset/rebuild must not displace the new follower by the previous carrier's delta.");
+                Assert.That(followerWorld.Y, Is.EqualTo(1000f).Within(0.001f));
+            }
+        }
+
+        [Test]
+        public void MassCrowdFormationFollowerSystem_PrunesSyncStateWhenAnchorsDisappear()
+        {
+            MassNavigationSimulationRuntime simulation = CreateFocusedMassCrowdSimulation(out GameEngine engine);
+            using (engine)
+            {
+                int formationA = MassCrowdFormationRegistry.Register("tests.masscrowd.prune.a");
+                int formationB = MassCrowdFormationRegistry.Register("tests.masscrowd.prune.b");
+                Entity anchorA = CreateFormationAnchor(engine.World, formationA, slotCount: 1);
+                Entity followerA = CreateFormationFollower(engine.World, formationA, slotIndex: 0, localOffsetXCm: 100f, localOffsetYCm: 0f);
+                Entity anchorB = CreateFormationAnchor(engine.World, formationB, slotCount: 1);
+                Entity followerB = CreateFormationFollower(engine.World, formationB, slotIndex: 0, localOffsetXCm: 100f, localOffsetYCm: 0f);
+                simulation.RebuildFromAuthoredAgents(
+                    engine.World,
+                    new[] { anchorA, followerA, anchorB, followerB },
+                    new[]
+                    {
+                        CreateAgentSeed(simulation, worldXCm: 1000f, worldYCm: 1000f),
+                        CreateAgentSeed(simulation, worldXCm: 1100f, worldYCm: 1000f),
+                        CreateAgentSeed(simulation, worldXCm: 3000f, worldYCm: 1000f),
+                        CreateAgentSeed(simulation, worldXCm: 3100f, worldYCm: 1000f),
+                    },
+                    new[] { true, false, true, false });
+
+                ISystem<float> followerSystem = CreateMassCrowdRuntimeSystem(
+                    "Ludots.Core.MassCrowd.Systems.MassCrowdFormationFollowerSystem",
+                    engine,
+                    simulation);
+                UpdateSystem(followerSystem);
+                Assert.That(GetFollowerSyncStateCount(followerSystem), Is.EqualTo(2));
+
+                engine.World.Destroy(anchorB);
+                UpdateSystem(followerSystem);
+
+                Assert.That(GetFollowerSyncStateCount(followerSystem), Is.EqualTo(1),
+                    "Formation sync state must be pruned when a formation anchor leaves the authored ECS query.");
+            }
+        }
+
+        [Test]
+        public void MassCrowdEnvironmentBindingSystem_BindsEcsBlockersIntoMassFlowObstacles()
+        {
+            MassNavigationSimulationRuntime simulation = CreateFocusedMassCrowdSimulation(out GameEngine engine);
+            using (engine)
+            {
+                Entity blocker = engine.World.Create(
+                    new MassCrowdBlocker { RadiusCm = 175f },
+                    new WorldPositionCm { Value = Fix64Vec2.FromInt(1234, 2345) });
+                ISystem<float> environmentSystem = CreateMassCrowdRuntimeSystem(
+                    "Ludots.Core.MassCrowd.Systems.MassCrowdEnvironmentBindingSystem",
+                    engine,
+                    simulation);
+
+                UpdateSystem(environmentSystem);
+
+                Assert.That(engine.World.Has<MassCrowdBlockerProfile>(blocker), Is.True);
+                Assert.That(engine.World.Get<MassCrowdBlockerProfile>(blocker).RadiusCm, Is.EqualTo(175f));
+                Assert.That(simulation.AgentState.BlockerCount, Is.EqualTo(1));
+                Assert.That(simulation.NavigationObstacleCount, Is.EqualTo(1));
+                MassNavigationObstacleSnapshot obstacle = simulation.GetObstacleWorldSnapshot(0);
+                Assert.That(obstacle.WorldXCm, Is.EqualTo(1234f).Within(0.001f));
+                Assert.That(obstacle.WorldYCm, Is.EqualTo(2345f).Within(0.001f));
+                Assert.That(obstacle.RadiusCm, Is.EqualTo(175f).Within(0.001f));
+            }
+        }
+
+        [Test]
+        public void RuntimeSpawnMassCrowdBlockerRadiusOverride_FeedsMassFlowObstacleRadius()
+        {
+            const string templateId = "mass_navigation_test_blocker_override";
+            string templateJson = """
+[
+  {
+    "id": "mass_navigation_test_blocker_override",
+    "components": {
+      "Name": { "Value": "MassNavigation.TestBlockerOverride" },
+      "WorldPositionCm": { "Value": { "X": 0, "Y": 0 } },
+      "MassCrowdBlocker": {}
+    }
+  }
+]
+""";
+
+            using TempTemplatePipeline temp = TempTemplatePipeline.Create(templateJson);
+            var templates = new DataRegistry<EntityTemplate>(temp.Pipeline);
+            templates.Load("Entities/templates.json", temp.Catalog);
+            MassNavigationSimulationRuntime simulation = CreateFocusedMassCrowdSimulation(out GameEngine engine);
+            using (engine)
+            {
+                var requests = new RuntimeEntitySpawnQueue(capacity: 4);
+                var spawnSystem = new RuntimeEntitySpawnSystem(
+                    engine.World,
+                    requests,
+                    templates,
+                    new EntityTemplateKeyRegistry(),
+                    new Ludots.Core.Presentation.PresentationStableIdAllocator());
+                Assert.That(requests.TryEnqueue(new RuntimeEntitySpawnRequest
+                {
+                    Kind = RuntimeEntitySpawnKind.Template,
+                    TemplateId = templateId,
+                    WorldPositionCm = Fix64Vec2.FromInt(2222, 3333),
+                    HasWorldPosition = 1,
+                    MassCrowdBlockerRadiusCmOverride = 260f,
+                }), Is.True);
+                spawnSystem.Update(0f);
+
+                ISystem<float> environmentSystem = CreateMassCrowdRuntimeSystem(
+                    "Ludots.Core.MassCrowd.Systems.MassCrowdEnvironmentBindingSystem",
+                    engine,
+                    simulation);
+                UpdateSystem(environmentSystem);
+
+                Assert.That(simulation.NavigationObstacleCount, Is.EqualTo(1));
+                MassNavigationObstacleSnapshot obstacle = simulation.GetObstacleWorldSnapshot(0);
+                Assert.That(obstacle.WorldXCm, Is.EqualTo(2222f).Within(0.001f));
+                Assert.That(obstacle.WorldYCm, Is.EqualTo(3333f).Within(0.001f));
+                Assert.That(obstacle.RadiusCm, Is.EqualTo(260f).Within(0.001f));
+            }
+        }
+
+        [Test]
+        public void TotalWarSoldierBinding_UsesCoreOwnedMassCrowdRuntimeBinding()
         {
             string modRoot = TotalWarModRoot();
-            string bindingSource = File.ReadAllText(Path.Combine(modRoot, "Runtime", "TotalWarSpawnReceiptBindingSystem.cs"));
-            string bindSoldier = ExtractMethodBody(bindingSource, "private void BindSoldier");
+            string bindingSource = File.ReadAllText(Path.Combine(modRoot, "Runtime", "TotalWarShowcaseRuntime.cs"));
+            string bindBody = ExtractMethodBody(bindingSource, "public void BindComponentAuthoredScenarioEntities");
 
-            Assert.That(bindSoldier, Does.Contain("RejectComponent<Team>"));
-            Assert.That(bindSoldier, Does.Contain("_simulation.BindSpawnedAgent"));
-            Assert.That(bindSoldier, Does.Contain("binding.MassNavAgentIndex"));
-            Assert.That(bindSoldier, Does.Not.Contain("binding.TeamId"));
-            Assert.That(bindSoldier, Does.Not.Contain("binding.NavMass"));
-            Assert.That(bindSoldier, Does.Not.Contain("binding.VisualScale"));
-            Assert.That(bindSoldier, Does.Not.Contain("binding.BodyRadiusCm"));
-            Assert.That(bindSoldier, Does.Not.Contain("binding.SpeedCmPerSecond"));
-            Assert.That(bindSoldier, Does.Not.Contain("new Team"));
-            Assert.That(bindSoldier, Does.Not.Contain("RequireComponent<Team>"));
-            Assert.That(bindSoldier, Does.Not.Contain("RequireTeam("));
-        }
+            Assert.That(bindBody, Does.Contain("MassCrowdFormationFollower"));
+            Assert.That(bindingSource, Does.Contain("FormationFollowerCandidateQuery = new QueryDescription()"));
+            Assert.That(bindingSource, Does.Contain(".WithAll<MassCrowdFormationFollower, MassCrowdAgentIndex>()"));
+            Assert.That(bindBody, Does.Not.Contain("_simulation.BindSpawnedAgent"));
+            Assert.That(bindBody, Does.Not.Contain("new Team"));
+            Assert.That(bindBody, Does.Not.Contain("Heavy"));
+            Assert.That(bindBody, Does.Not.Contain("NavMass"));
+            Assert.That(bindBody, Does.Not.Contain("VisualScale"));
+            Assert.That(bindBody, Does.Not.Contain("BodyRadiusCm"));
+            Assert.That(bindBody, Does.Not.Contain("SpeedCmPerSecond"));
 
-        [Test]
-        public void TotalWarSpawnReceiptBinding_HasKindGuardedPayloadWithoutAgentProfileSentinels()
-        {
-            string source = File.ReadAllText(Path.Combine(
-                TotalWarModRoot(),
-                "Runtime",
-                "TotalWarSpawnReceiptRuntime.cs"));
-
-            Assert.That(source, Does.Contain("SoldierSpawnReceiptPayload"));
-            Assert.That(source, Does.Contain("FormationAgentSpawnReceiptPayload"));
-            Assert.That(source, Does.Contain("ObstacleOverlaySpawnReceiptPayload"));
-            Assert.That(source, Does.Contain("RequireKind"));
-            Assert.That(source, Does.Not.Contain("TeamId"));
-            Assert.That(source, Does.Not.Contain("Heavy"));
-            Assert.That(source, Does.Not.Contain("NavMass"));
-            Assert.That(source, Does.Not.Contain("VisualScale"));
-            Assert.That(source, Does.Not.Contain("BodyRadiusCm"));
-            Assert.That(source, Does.Not.Contain("SpeedCmPerSecond"));
-            Assert.That(source, Does.Not.Contain("obstacleRadiusCm: 0f"));
-            Assert.That(source, Does.Not.Contain("massNavAgentIndex: 0"));
-            Assert.That(source, Does.Not.Contain("slotIndex: 0"));
+            string scenarioBindingSource = File.ReadAllText(Path.Combine(modRoot, "Runtime", "TotalWarScenarioBindingSystem.cs"));
+            Assert.That(scenarioBindingSource, Does.Contain("BindComponentAuthoredScenarioEntities"));
         }
 
         [Test]
@@ -649,15 +762,21 @@ namespace Ludots.Tests.Presentation
         {
             string runtimeSource = File.ReadAllText(Path.Combine(TotalWarModRoot(), "Runtime", "TotalWarShowcaseRuntime.cs"));
             string spawnBody = ExtractMethodBody(runtimeSource, "private void SpawnScenario");
+            string bindingBody = ExtractMethodBody(runtimeSource, "public void BindComponentAuthoredScenarioEntities");
+            string ensureOverlayBody = ExtractMethodBody(runtimeSource, "private void EnsureObstacleOverlaySpawnsQueued");
 
-            int resetIndex = spawnBody.IndexOf("simulation.ResetRuntimeState(engine.World, _agentSeeds)", StringComparison.Ordinal);
+            int planIndex = spawnBody.IndexOf("BuildAgentPlans(engine, simulation, config)", StringComparison.Ordinal);
             int obstaclePlanIndex = spawnBody.IndexOf("BuildObstacleOverlayPlans(simulation)", StringComparison.Ordinal);
             int enqueueIndex = spawnBody.IndexOf("EnqueueObstacleOverlaySpawns(engine", StringComparison.Ordinal);
 
-            Assert.That(resetIndex, Is.GreaterThanOrEqualTo(0));
-            Assert.That(obstaclePlanIndex, Is.GreaterThan(resetIndex),
-                "Obstacle overlays must be planned from MassNavigation after ResetRuntimeState has loaded WorldConfig.Obstacles.");
-            Assert.That(enqueueIndex, Is.GreaterThan(obstaclePlanIndex));
+            Assert.That(planIndex, Is.GreaterThanOrEqualTo(0));
+            Assert.That(obstaclePlanIndex, Is.EqualTo(-1),
+                "Obstacle overlays must not be planned during scenario spawn; core MassCrowd environment binding owns the obstacle SSOT.");
+            Assert.That(enqueueIndex, Is.EqualTo(-1));
+            Assert.That(bindingBody, Does.Contain("EnsureObstacleOverlaySpawnsQueued"));
+            Assert.That(ensureOverlayBody, Does.Contain("simulation.NavigationObstacleCount"));
+            Assert.That(ensureOverlayBody, Does.Contain("BuildObstacleOverlayPlans(simulation)"));
+            Assert.That(ensureOverlayBody, Does.Contain("EnqueueObstacleOverlaySpawns("));
         }
 
         [Test]
@@ -676,9 +795,8 @@ namespace Ludots.Tests.Presentation
             Assert.That(components.ContainsKey("TotalWarObstacleOverlay"), Is.False,
                 "Obstacle overlay values come from TotalWarShowcaseConfig and MassNavigation obstacle radius.");
 
-            string bindingSource = File.ReadAllText(Path.Combine(modRoot, "Runtime", "TotalWarSpawnReceiptBindingSystem.cs"));
-            string bindObstacle = ExtractMethodBody(bindingSource, "private void BindObstacleOverlay");
-            Assert.That(bindObstacle, Does.Contain("must not author component"));
+            string runtimeSource = File.ReadAllText(Path.Combine(modRoot, "Runtime", "TotalWarShowcaseRuntime.cs"));
+            string bindObstacle = ExtractMethodBody(runtimeSource, "private void RegisterSpawnedObstacleOverlay");
             Assert.That(bindObstacle, Does.Contain("ActiveConfig.ObstacleOverlay.ToComponent"));
         }
 
@@ -785,10 +903,9 @@ namespace Ludots.Tests.Presentation
         {
             string source = File.ReadAllText(Path.Combine(
                 FindRepoRoot(),
-                "mods",
-                "capabilities",
-                "navigation",
-                "MassNavigationMod",
+                "src",
+                "Core",
+                "MassCrowd",
                 "Runtime",
                 "MassFlowSimulationState.cs"));
 
@@ -828,15 +945,16 @@ namespace Ludots.Tests.Presentation
         {
             string source = File.ReadAllText(Path.Combine(
                 FindRepoRoot(),
-                "mods",
-                "capabilities",
-                "navigation",
-                "MassNavigationMod",
+                "src",
+                "Core",
+                "MassCrowd",
                 "Systems",
                 "MassNavigationOrderIngestionSystem.cs"));
 
-            Assert.That(source, Does.Contain("MassNavigationControllable"),
-                "OrderIngestion must make controllability a MassNavigation contract, not a showcase template accident.");
+            Assert.That(source, Does.Contain("OrderBuffer"),
+                "OrderIngestion must make controllability a component-composition contract, not a showcase template accident.");
+            Assert.That(source, Does.Contain("MassCrowdAgentIndex"),
+                "OrderIngestion must consume Core-owned MassCrowd runtime bindings.");
             Assert.That(source, Does.Contain("ResolveControllableAgent"),
                 "Order completion must fail fast when a move order references an unbound controllable agent slot.");
             Assert.That(source, Does.Contain("TryGetControllableEntity"),
@@ -852,10 +970,9 @@ namespace Ludots.Tests.Presentation
         {
             string source = File.ReadAllText(Path.Combine(
                 FindRepoRoot(),
-                "mods",
-                "capabilities",
-                "navigation",
-                "MassNavigationMod",
+                "src",
+                "Core",
+                "MassCrowd",
                 "Systems",
                 "MassNavigationOrderIngestionSystem.cs"));
 
@@ -887,10 +1004,9 @@ namespace Ludots.Tests.Presentation
         {
             string source = File.ReadAllText(Path.Combine(
                 FindRepoRoot(),
-                "mods",
-                "capabilities",
-                "navigation",
-                "MassNavigationMod",
+                "src",
+                "Core",
+                "MassCrowd",
                 "Systems",
                 "MassNavigationAgentMetadataSyncSystem.cs"));
 
@@ -923,10 +1039,9 @@ namespace Ludots.Tests.Presentation
         {
             string flowSource = File.ReadAllText(Path.Combine(
                 FindRepoRoot(),
-                "mods",
-                "capabilities",
-                "navigation",
-                "MassNavigationMod",
+                "src",
+                "Core",
+                "MassCrowd",
                 "Runtime",
                 "MassFlowSimulationState.cs"));
             string performerSource = File.ReadAllText(Path.Combine(
@@ -945,12 +1060,12 @@ namespace Ludots.Tests.Presentation
         public void TotalWarSystems_AreGatedByShowcaseMapNotMassNavigationConfig()
         {
             string modRoot = TotalWarModRoot();
-            string receiptSystem = File.ReadAllText(Path.Combine(modRoot, "Runtime", "TotalWarSpawnReceiptBindingSystem.cs"));
+            string scenarioBindingSystem = File.ReadAllText(Path.Combine(modRoot, "Runtime", "TotalWarScenarioBindingSystem.cs"));
             string formationSystem = File.ReadAllText(Path.Combine(modRoot, "Runtime", "TotalWarFormationRuntimeSystem.cs"));
 
-            Assert.That(receiptSystem, Does.Contain("_runtime.IsCurrentShowcaseMap(_engine)"));
+            Assert.That(scenarioBindingSystem, Does.Contain("_runtime.IsCurrentShowcaseMap(_engine)"));
             Assert.That(formationSystem, Does.Contain("_runtime.IsCurrentShowcaseMap(_engine)"));
-            Assert.That(receiptSystem, Does.Not.Contain("MassNavigationIds.IsCurrentNavigationMap"));
+            Assert.That(scenarioBindingSystem, Does.Not.Contain("MassNavigationIds.IsCurrentNavigationMap"));
             Assert.That(formationSystem, Does.Not.Contain("MassNavigationIds.IsCurrentNavigationMap"));
         }
 
@@ -961,10 +1076,9 @@ namespace Ludots.Tests.Presentation
             var state = new MassNavigationAgentState();
             Entity performerRoot = world.Create();
             Entity agent = world.Create(
-                new MassNavigationAgentTag(),
-                new MassNavigationControllable(),
-                new MassNavigationAgentIndex { Value = 0 },
-                new MassNavigationAgentProfile { Heavy = false, NavMass = 1f, VisualScale = 0.2f, BodyRadiusCm = 20f },
+                new MassCrowdAgent { ProfileId = MassCrowdProfileRegistry.Register("light") },
+                new MassCrowdAgentIndex { Value = 0 },
+                new MassCrowdAgentProfile { Heavy = false, NavMass = 1f, VisualScale = 0.2f, BodyRadiusCm = 20f },
                 new PresentationStableId { Value = 1001 },
                 new PresentationDestroyEventPublished(),
                 new PresentationOwnerHasPerformerPayload { Count = 1, RootCount = 1, SingleRootPerformer = performerRoot });
@@ -975,10 +1089,9 @@ namespace Ludots.Tests.Presentation
             Assert.That(world.IsAlive(agent), Is.True);
             Assert.That(world.Has<PresentationDestroyPending>(agent), Is.True);
             Assert.That(world.Has<PresentationDestroyEventPublished>(agent), Is.False);
-            Assert.That(world.Has<MassNavigationAgentTag>(agent), Is.False);
-            Assert.That(world.Has<MassNavigationControllable>(agent), Is.False);
-            Assert.That(world.Has<MassNavigationAgentIndex>(agent), Is.False);
-            Assert.That(world.Has<MassNavigationAgentProfile>(agent), Is.False);
+            Assert.That(world.Has<MassCrowdAgent>(agent), Is.True);
+            Assert.That(world.Has<MassCrowdAgentIndex>(agent), Is.False);
+            Assert.That(world.Has<MassCrowdAgentProfile>(agent), Is.False);
             Assert.That(state.TotalAgents, Is.EqualTo(0));
             Assert.That(state.ControllableAgentCount, Is.EqualTo(0));
             Assert.That(state.ControllableAgentSlotCount, Is.EqualTo(0));
@@ -989,7 +1102,7 @@ namespace Ludots.Tests.Presentation
         {
             var world = World.Create();
             var state = new MassNavigationAgentState();
-            Entity agent = world.Create(new MassNavigationAgentTag());
+            Entity agent = world.Create(new MassCrowdAgent { ProfileId = MassCrowdProfileRegistry.Register("light") });
 
             state.RegisterAgentAtIndex(agent, agentIndex: 0, controllable: true);
 
@@ -1010,7 +1123,7 @@ namespace Ludots.Tests.Presentation
 
             Assert.That(state.TotalAgents, Is.EqualTo(6));
             Assert.That(state.ControllableAgentCount, Is.EqualTo(1));
-            Assert.That(state.ControllableAgentSlotCount, Is.EqualTo(6));
+            Assert.That(state.ControllableAgentSlotCount, Is.EqualTo(1));
             Assert.That(state.AllAgents[0], Is.EqualTo(Entity.Null));
             Assert.That(state.AllAgents[5], Is.EqualTo(first));
             Assert.That(state.ControllableAgentSlots[5], Is.EqualTo(first));
@@ -1058,7 +1171,7 @@ namespace Ludots.Tests.Presentation
                 new MassNavigationObstacleConfig { LocalXCm = 5_000f, LocalYCm = 5_000f, RadiusCm = 100f },
             };
 
-            flow.Reset(seeds, obstacles);
+            flow.ResetAuthoredAgents(seeds, obstacles);
 
             Assert.Throws<InvalidOperationException>(() => flow.SetUnitRuntimeProfile(0, 1, 0f, 1f, 20f, 800f, layer));
             Assert.That(flow.GetNavMass(0), Is.EqualTo(1f));
@@ -1094,7 +1207,7 @@ namespace Ludots.Tests.Presentation
                 new MassNavigationObstacleConfig { LocalXCm = 5_000f, LocalYCm = 5_000f, RadiusCm = 100f },
             };
 
-            flow.Reset(seeds, obstacles);
+            flow.ResetAuthoredAgents(seeds, obstacles);
 
             Assert.Throws<InvalidOperationException>(() => flow.SetUnitTarget(flow.UnitCount, 100f, 100f));
             Assert.Throws<InvalidOperationException>(() => flow.ReleaseUnitToTeamTarget(flow.UnitCount));
@@ -1129,7 +1242,7 @@ namespace Ludots.Tests.Presentation
                     speedCmPerSecond: 800f,
                     layer),
             };
-            flow.Reset(seeds, new[]
+            flow.ResetAuthoredAgents(seeds, new[]
             {
                 new MassNavigationObstacleConfig { LocalXCm = 5_000f, LocalYCm = 5_000f, RadiusCm = 100f },
             });
@@ -1166,7 +1279,7 @@ namespace Ludots.Tests.Presentation
                     speedCmPerSecond: 800f,
                     layer),
             };
-            flow.Reset(seeds, new[]
+            flow.ResetAuthoredAgents(seeds, new[]
             {
                 new MassNavigationObstacleConfig { Id = "anchor-test-obstacle", LocalXCm = 9000f, LocalYCm = 9000f, RadiusCm = 100f },
             });
@@ -1232,7 +1345,7 @@ namespace Ludots.Tests.Presentation
                     speedCmPerSecond: 800f,
                     layer),
             };
-            flow.Reset(seeds, new[]
+            flow.ResetAuthoredAgents(seeds, new[]
             {
                 new MassNavigationObstacleConfig { Id = "follower-anchor-test-obstacle", LocalXCm = 9000f, LocalYCm = 9000f, RadiusCm = 100f },
             });
@@ -1416,7 +1529,7 @@ namespace Ludots.Tests.Presentation
                 DefaultRelationship = "Hostile",
                 Relationships = new List<RelationshipEntry>(),
             });
-            flow.Reset(seeds, new[]
+            flow.ResetAuthoredAgents(seeds, new[]
             {
                 new MassNavigationObstacleConfig { Id = "far_contract_obstacle", LocalXCm = 9_000f, LocalYCm = 9_000f, RadiusCm = 100f },
             });
@@ -1453,7 +1566,7 @@ namespace Ludots.Tests.Presentation
                     layer),
             };
 
-            flow.Reset(seeds, new[]
+            flow.ResetAuthoredAgents(seeds, new[]
             {
                 new MassNavigationObstacleConfig { Id = "target-projection-obstacle", LocalXCm = 5_000f, LocalYCm = 5_000f, RadiusCm = 200f },
             });
@@ -1475,10 +1588,10 @@ namespace Ludots.Tests.Presentation
         }
 
         [Test]
-        public void RuntimeSpawnReceiptQueue_CanDrainPendingTotalWarReceiptsBeforeReset()
+        public void RuntimeSpawnReceiptQueue_CanDrainPendingReceiptsByChannel()
         {
             var channels = new RuntimeEntitySpawnReceiptChannelRegistry();
-            int totalWarChannel = channels.Register("massNavigation.totalWar.runtimeSpawnReceipts");
+            int targetChannel = channels.Register("test.runtimeSpawnReceipts");
             int otherChannel = channels.Register("some.other.runtimeSpawnReceipts");
             var queue = new RuntimeEntitySpawnReceiptQueue();
 
@@ -1492,7 +1605,7 @@ namespace Ludots.Tests.Presentation
             }), Is.True);
             Assert.That(queue.TryEnqueue(new RuntimeEntitySpawnReceipt
             {
-                ReceiptChannelId = totalWarChannel,
+                ReceiptChannelId = targetChannel,
                 ReceiptId = 11,
                 Kind = RuntimeEntitySpawnKind.Template,
                 TemplateId = "mass_navigation_total_war_formation_agent",
@@ -1500,7 +1613,7 @@ namespace Ludots.Tests.Presentation
             }), Is.True);
             Assert.That(queue.TryEnqueue(new RuntimeEntitySpawnReceipt
             {
-                ReceiptChannelId = totalWarChannel,
+                ReceiptChannelId = targetChannel,
                 ReceiptId = 12,
                 Kind = RuntimeEntitySpawnKind.Template,
                 TemplateId = "mass_navigation_total_war_soldier_azure_light",
@@ -1508,73 +1621,55 @@ namespace Ludots.Tests.Presentation
             }), Is.True);
 
             int drained = 0;
-            while (queue.TryDequeueForChannel(totalWarChannel, out _))
+            while (queue.TryDequeueForChannel(targetChannel, out _))
             {
                 drained++;
             }
 
             Assert.That(drained, Is.EqualTo(2));
-            Assert.That(queue.CountForChannel(totalWarChannel), Is.EqualTo(0));
+            Assert.That(queue.CountForChannel(targetChannel), Is.EqualTo(0));
             Assert.That(queue.Count, Is.EqualTo(1), "Draining a showcase receipt channel must not consume unrelated receipt channels.");
             Assert.That(queue.TryDequeueForChannel(otherChannel, out RuntimeEntitySpawnReceipt other), Is.True);
             Assert.That(other.TemplateId, Is.EqualTo("other_template"));
         }
 
         [Test]
-        public void TotalWarRuntime_ResetDrainsOwnReceiptChannelWithoutTouchingOtherChannels()
+        public void TotalWarRuntime_ResetRemovesOwnPendingSpawnRequestsByMap()
         {
-            var runtime = new TotalWarShowcaseRuntime();
-            var engine = new Ludots.Core.Engine.GameEngine();
             var spawnQueue = new RuntimeEntitySpawnQueue();
-            var receipts = new RuntimeEntitySpawnReceiptQueue();
-            var channels = new RuntimeEntitySpawnReceiptChannelRegistry();
-            engine.SetService(CoreServiceKeys.RuntimeEntitySpawnQueue, spawnQueue);
-            engine.SetService(CoreServiceKeys.RuntimeEntitySpawnReceiptQueue, receipts);
-            engine.SetService(CoreServiceKeys.RuntimeEntitySpawnReceiptChannelRegistry, channels);
-
             JsonObject configJson = ReadObject(Path.Combine(TotalWarModRoot(), "assets", "TotalWarShowcaseConfig.json"));
             TotalWarShowcaseConfig config = TotalWarShowcaseConfig.Load(configJson);
-            int totalWarChannel = runtime.ResolveReceiptChannelId(engine, config);
-            int otherChannel = channels.Register("other.runtimeSpawnReceipts");
+            var mapId = new MapId(config.MapId);
             Assert.That(spawnQueue.TryEnqueue(new RuntimeEntitySpawnRequest
             {
                 Kind = RuntimeEntitySpawnKind.Template,
                 TemplateId = "mass_navigation_total_war_formation_agent",
-                EmitReceipt = 1,
-                ReceiptChannelId = totalWarChannel,
-                ReceiptId = 11,
+                MapId = mapId,
             }), Is.True);
             Assert.That(spawnQueue.TryEnqueue(new RuntimeEntitySpawnRequest
             {
                 Kind = RuntimeEntitySpawnKind.Template,
-                TemplateId = "unrelated_template",
-                EmitReceipt = 1,
-                ReceiptChannelId = otherChannel,
-                ReceiptId = 12,
+                TemplateId = "mass_navigation_blocker",
+                MapId = mapId,
             }), Is.True);
-            Assert.That(receipts.TryEnqueue(new RuntimeEntitySpawnReceipt
+            Assert.That(spawnQueue.TryEnqueue(new RuntimeEntitySpawnRequest
             {
-                ReceiptChannelId = totalWarChannel,
-                ReceiptId = 1,
-                Kind = RuntimeEntitySpawnKind.Template,
-                TemplateId = "mass_navigation_total_war_formation_agent",
-                MapId = new MapId(config.MapId),
-            }), Is.True);
-            Assert.That(receipts.TryEnqueue(new RuntimeEntitySpawnReceipt
-            {
-                ReceiptChannelId = otherChannel,
-                ReceiptId = 2,
                 Kind = RuntimeEntitySpawnKind.Template,
                 TemplateId = "unrelated_template",
                 MapId = new MapId("other_map"),
             }), Is.True);
 
-            runtime.ResetSpawnReceiptsForTests(engine, config);
+            Assert.That(
+                spawnQueue.RemoveForMapAndTemplates(
+                    mapId,
+                    new[] { config.FormationAgent.TemplateId, config.ObstacleOverlay.TemplateId }),
+                Is.EqualTo(1));
 
-            Assert.That(spawnQueue.CountForReceiptChannel(totalWarChannel), Is.EqualTo(0));
-            Assert.That(spawnQueue.CountForReceiptChannel(otherChannel), Is.EqualTo(1));
-            Assert.That(receipts.CountForChannel(totalWarChannel), Is.EqualTo(0));
-            Assert.That(receipts.CountForChannel(otherChannel), Is.EqualTo(1));
+            Assert.That(spawnQueue.Count, Is.EqualTo(2));
+            Assert.That(spawnQueue.TryDequeue(out RuntimeEntitySpawnRequest remaining), Is.True);
+            Assert.That(remaining.TemplateId, Is.EqualTo("mass_navigation_blocker"));
+            Assert.That(spawnQueue.TryDequeue(out remaining), Is.True);
+            Assert.That(remaining.TemplateId, Is.EqualTo("unrelated_template"));
         }
 
         [Test]
@@ -1672,7 +1767,6 @@ namespace Ludots.Tests.Presentation
         [Test]
         public void RuntimeTemplateSpawnBatch_KeepsControllableMassNavigationAgentTemplatesOnFastPath()
         {
-            MassNavigationComponentAuthoring.Register("MassNavigationMod");
             LayerRegistry.Register(MassNavigationAgentLayerName);
             string templateJson = """
 [
@@ -1685,21 +1779,11 @@ namespace Ludots.Tests.Presentation
       "FacingDirection": { "AngleRad": 0.0 },
       "Team": { "Id": 7 },
       "PlayerOwner": { "PlayerId": 3 },
-      "OrderBuffer": {},
-      "SelectionSelectableTag": {},
-      "SelectionSelectableState": { "IsEnabled": true },
-      "AttributeBuffer": {
-        "base": { "Health": 100 },
-        "current": { "Health": 75 }
-      },
-      "GameplayTagContainer": {},
-      "TagCountContainer": {},
-      "MassNavigationAgentTag": {},
+      "MassCrowdAgent": { "profileId": "light" },
       "EntityLayer": {
         "category": [ "massNavigation.agent" ],
         "mask": [ "massNavigation.agent" ]
-      },
-      "MassNavigationControllable": {}
+      }
     }
   }
 ]
@@ -1742,7 +1826,7 @@ namespace Ludots.Tests.Presentation
             system.Update(0f);
 
             Assert.That(timings.RuntimeSpawnBatchCountLastFrame, Is.EqualTo(3),
-                "Controllable MassNavigation templates should stay on the validated runtime template batch path.");
+                "MassCrowd-authored templates should stay on the validated runtime template batch path.");
             Assert.That(receipts.CountForChannel(receiptChannel), Is.EqualTo(3));
 
             int spawned = 0;
@@ -1750,12 +1834,7 @@ namespace Ludots.Tests.Presentation
             {
                 Entity entity = receipt.Entity;
                 Assert.That(world.IsAlive(entity), Is.True);
-                Assert.That(world.Has<MassNavigationAgentTag>(entity), Is.True);
-                Assert.That(world.Has<MassNavigationControllable>(entity), Is.True);
-                Assert.That(world.Has<OrderBuffer>(entity), Is.True);
-                Assert.That(world.Get<OrderBuffer>(entity).HasActive, Is.False);
-                Assert.That(world.Has<SelectionSelectableTag>(entity), Is.True);
-                Assert.That(world.Get<SelectionSelectableState>(entity).Enabled, Is.True);
+                Assert.That(world.Has<MassCrowdAgent>(entity), Is.True);
                 Assert.That(world.Get<Team>(entity).Id, Is.EqualTo(7));
                 Assert.That(world.Get<PlayerOwner>(entity).PlayerId, Is.EqualTo(3));
                 Assert.That(world.Get<Ludots.Core.Gameplay.Components.EntityLayer>(entity).Value.Category, Is.EqualTo(LayerRegistry.GetBit(MassNavigationAgentLayerName)));
@@ -1825,14 +1904,15 @@ namespace Ludots.Tests.Presentation
             MassNavigationSimulationRuntime simulation = RequireSimulation(engine);
             TickUntil(
                 engine,
-                () => simulation.AgentState.TotalAgents == TotalWarAcceptance.ExpectedTotalAgents &&
+                () => IsTotalWarScenarioReady(engine, simulation) &&
                       simulation.SelectedCount == TotalWarAcceptance.ExpectedInitialSelection,
                 maxFrames: TotalWarAcceptance.FrameBudgetForScenarioReady,
-                failureMessage: "Total War scenario should spawn formation and soldier agents, bind receipts, and seed the authored formation selection.");
+                failureMessage: "Total War scenario should spawn MassCrowd-authored formation and soldier agents, bind showcase-authored sidecars, and seed the authored formation selection.");
 
             Assert.That(simulation.AgentState.TotalAgents, Is.EqualTo(TotalWarAcceptance.ExpectedTotalAgents));
             Assert.That(simulation.AgentState.ControllableAgentCount, Is.EqualTo(TotalWarAcceptance.ExpectedTotalFormations));
             Assert.That(simulation.AgentState.ControllableAgentSlotCount, Is.EqualTo(TotalWarAcceptance.ExpectedTotalFormations));
+            AssertConfiguredObstaclesAreEcsBlockers(engine, simulation);
             AssertFormationAgentsDoNotOverlap(engine, simulation);
             Assert.That(SelectionContextRuntime.SnapshotCurrentSelection(engine.World, engine.GlobalContext).Length,
                 Is.EqualTo(TotalWarAcceptance.ExpectedInitialSelection));
@@ -1898,13 +1978,13 @@ namespace Ludots.Tests.Presentation
             MassNavigationSimulationRuntime simulation = RequireSimulation(engine);
             TickUntil(
                 engine,
-                () => simulation.AgentState.TotalAgents == TotalWarAcceptance.ExpectedTotalAgents &&
+                () => IsTotalWarScenarioReady(engine, simulation) &&
                       simulation.SelectedCount == TotalWarAcceptance.ExpectedInitialSelection,
                 maxFrames: TotalWarAcceptance.FrameBudgetForScenarioReady,
                 failureMessage: "Total War scenario should be fully spawned and selected before movement/facing verification.");
 
             Entity formation = SelectionContextRuntime.SnapshotCurrentSelection(engine.World, engine.GlobalContext)[0];
-            Assert.That(engine.World.TryGet(formation, out MassNavigationAgentIndex formationAgentIndex), Is.True);
+            Assert.That(engine.World.TryGet(formation, out MassCrowdAgentIndex formationAgentIndex), Is.True);
             Assert.That(engine.World.TryGet(formation, out TotalWarFormationAgent formationAgent), Is.True);
             float initialFacing = engine.World.Get<FacingDirection>(formation).AngleRad;
             int soldierAgentIndex = FindFirstSoldierAgentIndex(engine, formationAgent.FormationIndex);
@@ -1975,7 +2055,7 @@ namespace Ludots.Tests.Presentation
             MassNavigationSimulationRuntime simulation = RequireSimulation(engine);
             TickUntil(
                 engine,
-                () => simulation.AgentState.TotalAgents == TotalWarAcceptance.ExpectedTotalAgents &&
+                () => IsTotalWarScenarioReady(engine, simulation) &&
                       simulation.SelectedCount == TotalWarAcceptance.ExpectedInitialSelection,
                 maxFrames: TotalWarAcceptance.FrameBudgetForScenarioReady,
                 failureMessage: "Total War scenario should be fully spawned before non-local formation command verification.");
@@ -1983,7 +2063,7 @@ namespace Ludots.Tests.Presentation
             AssertLocalPlayerOwnerFormations(engine);
             int localPlayerId = ResolveLocalPlayerOwnerId(engine);
             Entity enemyFormation = FindNonLocalPlayerOwnerFormation(engine, localPlayerId);
-            Assert.That(engine.World.TryGet(enemyFormation, out MassNavigationAgentIndex enemyAgentIndex), Is.True);
+            Assert.That(engine.World.TryGet(enemyFormation, out MassCrowdAgentIndex enemyAgentIndex), Is.True);
             Assert.That(engine.World.TryGet(enemyFormation, out PlayerOwner enemyOwner), Is.True);
             Assert.That(enemyOwner.PlayerId, Is.Not.EqualTo(localPlayerId));
             Assert.That(simulation.NavGroupRuntime.TryGetGroupMemberOrderTarget(
@@ -2043,7 +2123,7 @@ namespace Ludots.Tests.Presentation
             MassNavigationSimulationRuntime simulation = RequireSimulation(engine);
             TickUntil(
                 engine,
-                () => simulation.AgentState.TotalAgents == TotalWarAcceptance.ExpectedTotalAgents &&
+                () => IsTotalWarScenarioReady(engine, simulation) &&
                       simulation.SelectedCount == TotalWarAcceptance.ExpectedInitialSelection,
                 maxFrames: TotalWarAcceptance.FrameBudgetForScenarioReady,
                 failureMessage: "Total War scenario should be fully spawned before box selection ownership verification.");
@@ -2079,7 +2159,7 @@ namespace Ludots.Tests.Presentation
             MassNavigationSimulationRuntime simulation = RequireSimulation(engine);
             TickUntil(
                 engine,
-                () => simulation.AgentState.TotalAgents == TotalWarAcceptance.ExpectedTotalAgents &&
+                () => IsTotalWarScenarioReady(engine, simulation) &&
                       simulation.SelectedCount == TotalWarAcceptance.ExpectedInitialSelection,
                 maxFrames: TotalWarAcceptance.FrameBudgetForScenarioReady,
                 failureMessage: "Total War scenario should be fully spawned before mixed selection rotate verification.");
@@ -2125,13 +2205,13 @@ namespace Ludots.Tests.Presentation
             MassNavigationSimulationRuntime simulation = RequireSimulation(engine);
             TickUntil(
                 engine,
-                () => simulation.AgentState.TotalAgents == TotalWarAcceptance.ExpectedTotalAgents &&
+                () => IsTotalWarScenarioReady(engine, simulation) &&
                       simulation.SelectedCount == TotalWarAcceptance.ExpectedInitialSelection,
                 maxFrames: TotalWarAcceptance.FrameBudgetForScenarioReady,
                 failureMessage: "Total War scenario should be ready before solver-window rebase verification.");
 
             Entity formation = SelectionContextRuntime.SnapshotCurrentSelection(engine.World, engine.GlobalContext)[0];
-            Assert.That(engine.World.TryGet(formation, out MassNavigationAgentIndex formationAgentIndex), Is.True);
+            Assert.That(engine.World.TryGet(formation, out MassCrowdAgentIndex formationAgentIndex), Is.True);
             Assert.That(engine.World.TryGet(formation, out TotalWarFormationAgent formationAgent), Is.True);
             int soldierAgentIndex = FindFirstSoldierAgentIndex(engine, formationAgent.FormationIndex);
             Tick(engine, TotalWarAcceptance.FrameBudgetForInteraction);
@@ -2159,7 +2239,7 @@ namespace Ludots.Tests.Presentation
             MassNavigationSimulationRuntime simulation = RequireSimulation(engine);
             TickUntil(
                 engine,
-                () => simulation.AgentState.TotalAgents == TotalWarAcceptance.ExpectedTotalAgents &&
+                () => IsTotalWarScenarioReady(engine, simulation) &&
                       simulation.SelectedCount == TotalWarAcceptance.ExpectedInitialSelection,
                 maxFrames: TotalWarAcceptance.FrameBudgetForScenarioReady,
                 failureMessage: "Total War scenario should be fully spawned before multi-formation order verification.");
@@ -2198,7 +2278,7 @@ namespace Ludots.Tests.Presentation
             MassNavigationSimulationRuntime simulation = RequireSimulation(engine);
             TickUntil(
                 engine,
-                () => simulation.AgentState.TotalAgents == TotalWarAcceptance.ExpectedTotalAgents &&
+                () => IsTotalWarScenarioReady(engine, simulation) &&
                       simulation.SelectedCount == TotalWarAcceptance.ExpectedInitialSelection &&
                       CountSelectionMarkerPerformers(engine) == TotalWarAcceptance.ExpectedInitialSelection,
                 maxFrames: TotalWarAcceptance.FrameBudgetForScenarioReady,
@@ -2341,7 +2421,7 @@ namespace Ludots.Tests.Presentation
         [Test]
         public void MassNavigationRuntime_UnloadGatesByMapAndClearsCullingOverride()
         {
-            var runtime = new MassNavigationMod.Runtime.MassNavigationRuntime(new NullModContext());
+            var runtime = new MassNavigationRuntime(new NullModContext());
             var engine = new Ludots.Core.Engine.GameEngine();
             var focus = new CameraCullingFocusOverride
             {
@@ -2377,7 +2457,7 @@ namespace Ludots.Tests.Presentation
         [Test]
         public void MassNavigationRuntime_SuspendClearsCullingOverrideWithoutResettingScenario()
         {
-            var runtime = new MassNavigationMod.Runtime.MassNavigationRuntime(new NullModContext());
+            var runtime = new MassNavigationRuntime(new NullModContext());
             var engine = new Ludots.Core.Engine.GameEngine();
             var focus = new CameraCullingFocusOverride
             {
@@ -2395,7 +2475,7 @@ namespace Ludots.Tests.Presentation
                 "assets",
                 "MassNavigationConfig.json"))));
             simulation.MarkScenarioSpawned();
-            engine.SetService(MassNavigationMod.MassNavigationKeys.SimulationRuntime, simulation);
+            engine.SetService(MassNavigationKeys.SimulationRuntime, simulation);
             Assert.That(simulation.ScenarioSpawnCount, Is.EqualTo(1));
 
             var unrelated = engine.CreateContext();
@@ -2419,43 +2499,18 @@ namespace Ludots.Tests.Presentation
         [Test]
         public void MassNavigationControlSystem_ResetRemovesOwnPendingSpawnRequests()
         {
-            var engine = new Ludots.Core.Engine.GameEngine();
-            engine.InitializeWithConfigPipeline(MassNavigationDependencyPaths(), Path.Combine(FindRepoRoot(), "assets"));
-            var spawnQueue = new RuntimeEntitySpawnQueue();
-            var channels = new RuntimeEntitySpawnReceiptChannelRegistry();
-            engine.SetService(CoreServiceKeys.RuntimeEntitySpawnQueue, spawnQueue);
-            engine.SetService(CoreServiceKeys.RuntimeEntitySpawnReceiptChannelRegistry, channels);
-            var simulation = new MassNavigationSimulationRuntime(MassNavigationConfig.Load(ReadObject(Path.Combine(
+            string source = File.ReadAllText(Path.Combine(
                 FindRepoRoot(),
-                "mods",
-                "capabilities",
-                "navigation",
-                "MassNavigationMod",
-                "assets",
-                "MassNavigationConfig.json"))));
-            int massNavChannel = channels.Register(MassNavigationMod.MassNavigationIds.RuntimeSpawnReceiptChannelKey);
-            int otherChannel = channels.Register("other.runtimeSpawnReceipts");
-            Assert.That(spawnQueue.TryEnqueue(new RuntimeEntitySpawnRequest
-            {
-                Kind = RuntimeEntitySpawnKind.Template,
-                TemplateId = "mass_navigation_total_war_soldier_azure_light",
-                EmitReceipt = 1,
-                ReceiptChannelId = massNavChannel,
-            }), Is.True);
-            Assert.That(spawnQueue.TryEnqueue(new RuntimeEntitySpawnRequest
-            {
-                Kind = RuntimeEntitySpawnKind.Template,
-                TemplateId = "other_template",
-                EmitReceipt = 1,
-                ReceiptChannelId = otherChannel,
-            }), Is.True);
+                "src",
+                "Core",
+                "MassCrowd",
+                "Systems",
+                "MassNavigationControlSystem.cs"));
 
-            var control = new MassNavigationMod.Systems.MassNavigationControlSystem(engine, simulation);
-            InvokePrivate(control, "ResetRuntimeState");
-
-            Assert.That(spawnQueue.CountForReceiptChannel(massNavChannel), Is.EqualTo(0));
-            Assert.That(spawnQueue.CountForReceiptChannel(otherChannel), Is.EqualTo(1));
-            engine.Dispose();
+            string resetBody = ExtractMethodBody(source, "private void RemovePendingScenarioSpawns");
+            Assert.That(resetBody, Does.Contain("RemoveForMap"));
+            Assert.That(resetBody, Does.Not.Contain("RemoveForReceiptChannel"));
+            Assert.That(source, Does.Not.Contain("RuntimeSpawnReceiptChannelKey"));
         }
 
         [Test]
@@ -2463,10 +2518,9 @@ namespace Ludots.Tests.Presentation
         {
             string runtimeSource = File.ReadAllText(Path.Combine(
                 FindRepoRoot(),
-                "mods",
-                "capabilities",
-                "navigation",
-                "MassNavigationMod",
+                "src",
+                "Core",
+                "MassCrowd",
                 "Runtime",
                 "MassNavigationRuntime.cs"));
 
@@ -2506,14 +2560,13 @@ namespace Ludots.Tests.Presentation
         public void MassNavigationPanel_UsesConfiguredPresentationCadenceAndMountsOnMap()
         {
             string repoRoot = FindRepoRoot();
-            string runtimeSource = File.ReadAllText(Path.Combine(
+            string entrySource = File.ReadAllText(Path.Combine(
                 repoRoot,
                 "mods",
                 "capabilities",
                 "navigation",
                 "MassNavigationMod",
-                "Runtime",
-                "MassNavigationRuntime.cs"));
+                "MassNavigationModEntry.cs"));
             string systemSource = File.ReadAllText(Path.Combine(
                 repoRoot,
                 "mods",
@@ -2522,6 +2575,14 @@ namespace Ludots.Tests.Presentation
                 "MassNavigationMod",
                 "Systems",
                 "MassNavigationPanelPresentationSystem.cs"));
+            string panelPresenterSource = File.ReadAllText(Path.Combine(
+                repoRoot,
+                "mods",
+                "capabilities",
+                "navigation",
+                "MassNavigationMod",
+                "UI",
+                "MassNavigationPanelPresenter.cs"));
             string controllerSource = File.ReadAllText(Path.Combine(
                 repoRoot,
                 "mods",
@@ -2531,19 +2592,18 @@ namespace Ludots.Tests.Presentation
                 "UI",
                 "MassNavigationPanelController.cs"));
 
-            Assert.That(runtimeSource, Does.Contain("new MassNavigationPanelPresentationSystem("));
-            Assert.That(runtimeSource, Does.Contain("PanelRefreshIntervalSeconds"));
-            Assert.That(systemSource, Does.Contain("_refreshIntervalSeconds"));
+            Assert.That(entrySource, Does.Contain("new MassNavigationPanelPresentationSystem(engine, panelPresenter)"));
+            Assert.That(systemSource, Does.Contain("PanelRefreshIntervalSeconds"));
+            Assert.That(systemSource, Does.Contain("_refreshAccumulatorSeconds"));
+            Assert.That(panelPresenterSource, Does.Contain("MassNavigationKeys.SimulationRuntime"));
+            Assert.That(panelPresenterSource, Does.Contain("if (!simulation.Config.ScenarioRuntime.Panel.IsOwned)"));
+            Assert.That(panelPresenterSource, Does.Contain("ClearPanelIfOwned(engine)"));
+            Assert.That(panelPresenterSource, Does.Contain("_panelController.MountOrSync(engine, simulation)"));
             Assert.That(controllerSource, Does.Contain("PanelRefreshIntervalSeconds"));
             Assert.That(controllerSource, Does.Not.Contain("TimeSpan.TicksPerSecond / 4"));
             Assert.That(systemSource, Does.Not.Contain("PanelRefreshIntervalSeconds = 0.25f"));
-
-            string refreshBody = ExtractMethodBody(runtimeSource, "public void RefreshPanel");
-            Assert.That(refreshBody, Does.Contain("if (!config.ScenarioRuntime.Panel.IsOwned)"));
-            Assert.That(refreshBody, Does.Contain("ClearPanelIfOwned(engine)"));
-            Assert.That(refreshBody, Does.Contain("_panelController.MountOrSync(engine, simulation)"));
             string updateBody = ExtractMethodBody(systemSource, "public void Update");
-            int resetIndex = updateBody.IndexOf("_refreshAccumulatorSeconds = _refreshIntervalSeconds;", StringComparison.Ordinal);
+            int resetIndex = updateBody.IndexOf("_refreshAccumulatorSeconds = refreshIntervalSeconds;", StringComparison.Ordinal);
             int returnIndex = updateBody.IndexOf("return;", resetIndex, StringComparison.Ordinal);
             Assert.That(resetIndex, Is.GreaterThanOrEqualTo(0));
             Assert.That(returnIndex, Is.GreaterThan(resetIndex));
@@ -2617,73 +2677,67 @@ namespace Ludots.Tests.Presentation
             string engineSource = File.ReadAllText(Path.Combine(repoRoot, "src", "Core", "Engine", "GameEngine.cs"));
             string runtimeSource = File.ReadAllText(Path.Combine(
                 repoRoot,
-                "mods",
-                "capabilities",
-                "navigation",
-                "MassNavigationMod",
+                "src",
+                "Core",
+                "MassCrowd",
                 "Runtime",
                 "MassNavigationRuntime.cs"));
 
             Assert.That(engineSource, Does.Contain("InsertSystemBeforeRequired"));
             Assert.That(runtimeSource, Does.Contain("InsertSystemBeforeRequired<MassNavigationFormationSystem>"));
-            Assert.That(runtimeSource, Does.Contain("InsertSystemBeforeRequired<MassNavigationOrderIngestionSystem>"));
+            Assert.That(runtimeSource, Does.Contain("new MassNavigationOrderIngestionSystem(engine, simulation)"));
             Assert.That(runtimeSource, Does.Not.Contain("CommandApply"));
             Assert.That(runtimeSource.IndexOf("new MassNavigationFormationSystem", StringComparison.Ordinal),
                 Is.LessThan(runtimeSource.IndexOf("InsertSystemBeforeRequired<MassNavigationFormationSystem>", StringComparison.Ordinal)));
         }
 
         [Test]
-        public void MassNavigationRuntimeBoundaries_UseExplicitAgentTermsAndKindSpecificReceipts()
+        public void MassNavigationRuntimeBoundaries_UseExplicitAgentTermsAndCoreOwnedBinding()
         {
             string repoRoot = FindRepoRoot();
             string agentStateSource = File.ReadAllText(Path.Combine(
                 repoRoot,
-                "mods",
-                "capabilities",
-                "navigation",
-                "MassNavigationMod",
+                "src",
+                "Core",
+                "MassCrowd",
                 "Runtime",
                 "MassNavigationAgentState.cs"));
-            string receiptSource = File.ReadAllText(Path.Combine(
+            string authoredBindingSource = File.ReadAllText(Path.Combine(
                 repoRoot,
-                "mods",
-                "capabilities",
-                "navigation",
-                "MassNavigationMod",
-                "Runtime",
-                "MassNavigationSpawnReceiptKind.cs"));
+                "src",
+                "Core",
+                "MassCrowd",
+                "Systems",
+                "MassCrowdAuthoredAgentBindingSystem.cs"));
             string bootstrapSource = File.ReadAllText(Path.Combine(
                 repoRoot,
-                "mods",
-                "capabilities",
-                "navigation",
-                "MassNavigationMod",
+                "src",
+                "Core",
+                "MassCrowd",
                 "Systems",
                 "MassNavigationScenarioBootstrap.cs"));
             string orderIngestionSource = File.ReadAllText(Path.Combine(
                 repoRoot,
-                "mods",
-                "capabilities",
-                "navigation",
-                "MassNavigationMod",
+                "src",
+                "Core",
+                "MassCrowd",
                 "Systems",
                 "MassNavigationOrderIngestionSystem.cs"));
             string moveOrderArgsSource = File.ReadAllText(Path.Combine(
                 repoRoot,
-                "mods",
-                "capabilities",
-                "navigation",
-                "MassNavigationMod",
+                "src",
+                "Core",
+                "MassCrowd",
                 "Runtime",
                 "MassNavigationMoveOrderArgs.cs"));
 
             Assert.That(agentStateSource, Does.Contain("ControllableAgentCount"));
             Assert.That(agentStateSource, Does.Contain("ControllableAgentSlotCount"));
             Assert.That(agentStateSource, Does.Not.Contain("ControllableCount"));
-            Assert.That(receiptSource, Does.Contain("ForAgent"));
-            Assert.That(receiptSource, Does.Contain("ForBlocker"));
-            Assert.That(receiptSource, Does.Contain("ForWorldMarker"));
-            Assert.That(receiptSource, Does.Not.Contain("?? string.Empty"));
+            Assert.That(authoredBindingSource, Does.Contain("MassCrowdAgent"));
+            Assert.That(authoredBindingSource, Does.Contain("MassCrowdAgentIndex"));
+            Assert.That(authoredBindingSource, Does.Contain("OrderBuffer"));
+            Assert.That(authoredBindingSource, Does.Not.Contain("Receipt"));
             Assert.That(bootstrapSource, Does.Contain("SpawnConfiguredScenario"));
             Assert.That(bootstrapSource, Does.Not.Contain("SpawnDefaultScenario"));
             Assert.That(orderIngestionSource, Does.Contain("MassNavigationMoveOrderArgs.Decode"));
@@ -2699,10 +2753,9 @@ namespace Ludots.Tests.Presentation
             string repoRoot = FindRepoRoot();
             string groupRuntimeSource = File.ReadAllText(Path.Combine(
                 repoRoot,
-                "mods",
-                "capabilities",
-                "navigation",
-                "MassNavigationMod",
+                "src",
+                "Core",
+                "MassCrowd",
                 "Runtime",
                 "MassNavigationGroupRuntime.cs"));
             string orderUpsertBody = ExtractMethodBody(groupRuntimeSource, "public int UpsertOrderMoveCommand");
@@ -2730,10 +2783,9 @@ namespace Ludots.Tests.Presentation
             string repoRoot = FindRepoRoot();
             string flowSource = File.ReadAllText(Path.Combine(
                 repoRoot,
-                "mods",
-                "capabilities",
-                "navigation",
-                "MassNavigationMod",
+                "src",
+                "Core",
+                "MassCrowd",
                 "Runtime",
                 "MassFlowSimulationState.cs"));
             string separationBody = ExtractMethodBody(flowSource, "private int ResolveSeparationHashSearchRadiusCells");
@@ -2790,6 +2842,7 @@ namespace Ludots.Tests.Presentation
 
         private static GameEngine CreatePlayableTotalWarEngine()
         {
+            EnsureTotalWarEntryAssemblyPreloaded();
             var engine = new GameEngine();
             engine.InitializeWithConfigPipeline(TotalWarDependencyPaths(), Path.Combine(FindRepoRoot(), "assets"));
             InstallPlayableInput(engine);
@@ -2812,6 +2865,11 @@ namespace Ludots.Tests.Presentation
 
             engine.Start();
             return engine;
+        }
+
+        private static void EnsureTotalWarEntryAssemblyPreloaded()
+        {
+            GC.KeepAlive(typeof(TotalWarFormationAgent).Assembly);
         }
 
         private static void InstallPlayableInput(GameEngine engine)
@@ -2838,7 +2896,7 @@ namespace Ludots.Tests.Presentation
 
         private static MassNavigationSimulationRuntime RequireSimulation(GameEngine engine)
         {
-            return engine.GetService(MassNavigationMod.MassNavigationKeys.SimulationRuntime)
+            return engine.GetService(MassNavigationKeys.SimulationRuntime)
                 ?? throw new InvalidOperationException("MassNavigationSimulationRuntime is missing.");
         }
 
@@ -2850,6 +2908,110 @@ namespace Ludots.Tests.Presentation
                 engine.Tick(TotalWarAcceptance.FrameSeconds);
                 HeadlessPresentationTestHost.UpdateCamera(engine);
             }
+        }
+
+        private static MassNavigationSimulationRuntime CreateFocusedMassCrowdSimulation(out GameEngine engine)
+        {
+            engine = new GameEngine();
+            engine.InitializeWithConfigPipeline(
+                new List<string> { Path.Combine(FindRepoRoot(), "mods", "LudotsCoreMod") },
+                Path.Combine(FindRepoRoot(), "assets"));
+
+            MassNavigationConfig config = MassNavigationLocalCommandInputSystemTests.CreateConfigForTests();
+            var simulation = new MassNavigationSimulationRuntime(config);
+            simulation.BindBoardWorld(new WorldSizeSpec(new WorldAabbCm(0, 0, 25_000, 25_000), 100));
+            engine.SetService(MassNavigationKeys.SimulationRuntime, simulation);
+            FocusCurrentMapSession(engine, config.MapId);
+            return simulation;
+        }
+
+        private static void FocusCurrentMapSession(GameEngine engine, string mapId)
+        {
+            MethodInfo method = typeof(GameEngine).GetMethod("SetCurrentMapSession", BindingFlags.Instance | BindingFlags.NonPublic)
+                ?? throw new MissingMethodException(typeof(GameEngine).FullName, "SetCurrentMapSession");
+            var session = new MapSession(new MapId(mapId), new MapConfig { Id = mapId });
+            method.Invoke(engine, new object[] { session });
+        }
+
+        private static ISystem<float> CreateMassCrowdRuntimeSystem(
+            string typeName,
+            GameEngine engine,
+            MassNavigationSimulationRuntime simulation)
+        {
+            Type type = typeof(MassNavigationSimulationRuntime).Assembly.GetType(typeName)
+                ?? throw new InvalidOperationException($"Core MassCrowd runtime system '{typeName}' was not found.");
+            return (ISystem<float>)(Activator.CreateInstance(
+                    type,
+                    BindingFlags.Instance | BindingFlags.Public | BindingFlags.NonPublic,
+                    binder: null,
+                    args: new object[] { engine, simulation },
+                    culture: null)
+                ?? throw new InvalidOperationException($"Core MassCrowd runtime system '{typeName}' could not be created."));
+        }
+
+        private static void UpdateSystem(ISystem<float> system)
+        {
+            float dt = 0f;
+            system.Update(in dt);
+        }
+
+        private static int GetFollowerSyncStateCount(ISystem<float> followerSystem)
+        {
+            FieldInfo field = followerSystem.GetType().GetField("_syncStateByFormationId", BindingFlags.Instance | BindingFlags.NonPublic)
+                ?? throw new MissingFieldException(followerSystem.GetType().FullName, "_syncStateByFormationId");
+            object state = field.GetValue(followerSystem)
+                ?? throw new InvalidOperationException("MassCrowdFormationFollowerSystem sync state field was null.");
+            PropertyInfo count = state.GetType().GetProperty("Count")
+                ?? throw new MissingMemberException(state.GetType().FullName, "Count");
+            return (int)(count.GetValue(state) ?? 0);
+        }
+
+        private static Entity CreateFormationAnchor(World world, int formationId, int slotCount)
+        {
+            Entity entity = world.Create(
+                new MassCrowdFormationAnchor
+                {
+                    FormationId = formationId,
+                    SlotCount = slotCount,
+                },
+                new FacingDirection { AngleRad = 0f });
+            world.Add(entity, new PresentationStableId { Value = entity.Id });
+            return entity;
+        }
+
+        private static Entity CreateFormationFollower(
+            World world,
+            int formationId,
+            int slotIndex,
+            float localOffsetXCm,
+            float localOffsetYCm)
+        {
+            Entity entity = world.Create(new MassCrowdFormationFollower
+            {
+                FormationId = formationId,
+                SlotIndex = slotIndex,
+                LocalOffsetXCm = localOffsetXCm,
+                LocalOffsetYCm = localOffsetYCm,
+            });
+            world.Add(entity, new PresentationStableId { Value = entity.Id });
+            return entity;
+        }
+
+        private static MassNavigationAgentSeed CreateAgentSeed(
+            MassNavigationSimulationRuntime simulation,
+            float worldXCm,
+            float worldYCm)
+        {
+            return new MassNavigationAgentSeed(
+                teamId: 1,
+                localPositionXCm: simulation.ToLocalXCm(worldXCm),
+                localPositionYCm: simulation.ToLocalYCm(worldYCm),
+                heavy: false,
+                navMass: 1f,
+                visualScale: 1f,
+                bodyRadiusCm: 20f,
+                speedCmPerSecond: 800f,
+                new MassNavigationAgentLayer(categoryMask: 1u, interactionMask: 1u));
         }
 
         private static void TickUntil(GameEngine engine, Func<bool> predicate, int maxFrames, string failureMessage)
@@ -2864,7 +3026,7 @@ namespace Ludots.Tests.Presentation
                 Tick(engine);
             }
 
-            Assert.That(predicate(), Is.True, failureMessage);
+            Assert.That(predicate(), Is.True, $"{failureMessage} {BuildFormationAgentDiagnostics(engine)}");
         }
 
         private static Vector2 WorldToScreen(GameEngine engine, Vector2 worldCm)
@@ -3013,10 +3175,9 @@ namespace Ludots.Tests.Presentation
             {
                 Entity entity = entities[i];
                 if (engine.World.IsAlive(entity) &&
-                    (engine.World.Has<MassNavigationAgentTag>(entity) ||
-                     engine.World.Has<MassNavigationControllable>(entity) ||
-                     engine.World.Has<MassNavigationAgentIndex>(entity) ||
-                     engine.World.Has<MassNavigationAgentProfile>(entity)))
+                    (engine.World.Has<MassCrowdAgent>(entity) ||
+                     engine.World.Has<MassCrowdAgentIndex>(entity) ||
+                     engine.World.Has<MassCrowdAgentProfile>(entity)))
                 {
                     count++;
                 }
@@ -3028,8 +3189,8 @@ namespace Ludots.Tests.Presentation
         private static int FindFirstSoldierAgentIndex(GameEngine engine, int formationIndex)
         {
             int agentIndex = -1;
-            var query = new QueryDescription().WithAll<TotalWarFormationSoldier, MassNavigationAgentIndex>();
-            engine.World.Query(in query, (ref TotalWarFormationSoldier soldier, ref MassNavigationAgentIndex index) =>
+            var query = new QueryDescription().WithAll<TotalWarFormationSoldier, MassCrowdAgentIndex>();
+            engine.World.Query(in query, (ref TotalWarFormationSoldier soldier, ref MassCrowdAgentIndex index) =>
             {
                 if (agentIndex < 0 && soldier.FormationIndex == formationIndex)
                 {
@@ -3265,7 +3426,7 @@ namespace Ludots.Tests.Presentation
             Entity formation,
             bool useOrderTarget)
         {
-            Assert.That(engine.World.TryGet(formation, out MassNavigationAgentIndex agentIndex), Is.True);
+            Assert.That(engine.World.TryGet(formation, out MassCrowdAgentIndex agentIndex), Is.True);
             if (useOrderTarget)
             {
                 Assert.That(simulation.NavGroupRuntime.TryGetGroupMemberOrderTarget(
@@ -3407,7 +3568,7 @@ namespace Ludots.Tests.Presentation
                 Assert.That(engine.World.Get<Name>(entity).Value, Is.EqualTo("MassNavigation.TotalWar.FormationAgent"));
                 Assert.That(engine.World.Has<OrderBuffer>(entity), Is.True);
                 Assert.That(engine.World.Has<AttributeBuffer>(entity), Is.True);
-                Assert.That(engine.World.Has<MassNavigationControllable>(entity), Is.True);
+                Assert.That(engine.World.Has<OrderBuffer>(entity), Is.True);
             }
         }
 
@@ -3415,8 +3576,8 @@ namespace Ludots.Tests.Presentation
         {
             int[] agentIndices = new int[TotalWarAcceptance.ExpectedTotalFormations];
             int count = 0;
-            var query = new QueryDescription().WithAll<TotalWarFormationAgent, MassNavigationAgentIndex>();
-            engine.World.Query(in query, (ref TotalWarFormationAgent _, ref MassNavigationAgentIndex agentIndex) =>
+            var query = new QueryDescription().WithAll<TotalWarFormationAgent, MassCrowdAgentIndex>();
+            engine.World.Query(in query, (ref TotalWarFormationAgent _, ref MassCrowdAgentIndex agentIndex) =>
             {
                 if (count >= agentIndices.Length)
                 {
@@ -3426,7 +3587,7 @@ namespace Ludots.Tests.Presentation
                 agentIndices[count++] = agentIndex.Value;
             });
 
-            Assert.That(count, Is.EqualTo(TotalWarAcceptance.ExpectedTotalFormations));
+            Assert.That(count, Is.EqualTo(TotalWarAcceptance.ExpectedTotalFormations), BuildFormationAgentDiagnostics(engine));
             for (int i = 0; i < count; i++)
             {
                 for (int j = i + 1; j < count; j++)
@@ -3445,11 +3606,81 @@ namespace Ludots.Tests.Presentation
             }
         }
 
+        private static bool IsTotalWarScenarioReady(GameEngine engine, MassNavigationSimulationRuntime simulation)
+        {
+            return simulation.AgentState.TotalAgents == TotalWarAcceptance.ExpectedTotalAgents &&
+                   CountFormationAgents(engine) == TotalWarAcceptance.ExpectedTotalFormations &&
+                   CountFormationSoldiers(engine) == TotalWarAcceptance.ExpectedTotalSoldiers &&
+                   CountMassCrowdBlockers(engine) == simulation.WorldConfig.Obstacles.Length &&
+                   simulation.NavigationObstacleCount == simulation.WorldConfig.Obstacles.Length;
+        }
+
+        private static void AssertConfiguredObstaclesAreEcsBlockers(GameEngine engine, MassNavigationSimulationRuntime simulation)
+        {
+            Assert.That(CountMassCrowdBlockers(engine), Is.EqualTo(simulation.WorldConfig.Obstacles.Length),
+                "Configured MassNavigation obstacles must seed ECS MassCrowdBlocker entities before solver binding.");
+            Assert.That(simulation.AgentState.BlockerCount, Is.EqualTo(simulation.WorldConfig.Obstacles.Length));
+            Assert.That(simulation.NavigationObstacleCount, Is.EqualTo(simulation.WorldConfig.Obstacles.Length));
+        }
+
+        private static int CountMassCrowdBlockers(GameEngine engine)
+        {
+            int count = 0;
+            var query = new QueryDescription().WithAll<MassCrowdBlocker, MassCrowdBlockerProfile, WorldPositionCm>();
+            engine.World.Query(in query, (ref MassCrowdBlocker _, ref MassCrowdBlockerProfile _, ref WorldPositionCm _) => count++);
+            return count;
+        }
+
+        private static int CountFormationAgents(GameEngine engine)
+        {
+            int count = 0;
+            var query = new QueryDescription().WithAll<TotalWarFormationAgent, MassCrowdAgentIndex>();
+            engine.World.Query(in query, (ref TotalWarFormationAgent _, ref MassCrowdAgentIndex _) => count++);
+            return count;
+        }
+
+        private static int CountFormationSoldiers(GameEngine engine)
+        {
+            int count = 0;
+            var query = new QueryDescription().WithAll<TotalWarFormationSoldier, MassCrowdAgentIndex>();
+            engine.World.Query(in query, (ref TotalWarFormationSoldier _, ref MassCrowdAgentIndex _) => count++);
+            return count;
+        }
+
+        private static string BuildFormationAgentDiagnostics(GameEngine engine)
+        {
+            int formationOnly = 0;
+            int indexOnly = 0;
+            int orderable = 0;
+            int anchorOnly = 0;
+            int indexedAnchor = 0;
+            int destroyPendingAnchor = 0;
+            int totalWarAnchor = 0;
+            int followerOnly = 0;
+            var formationQuery = new QueryDescription().WithAll<TotalWarFormationAgent>();
+            engine.World.Query(in formationQuery, (ref TotalWarFormationAgent _) => formationOnly++);
+            var indexQuery = new QueryDescription().WithAll<MassCrowdAgentIndex>();
+            engine.World.Query(in indexQuery, (ref MassCrowdAgentIndex _) => indexOnly++);
+            var orderableQuery = new QueryDescription().WithAll<MassCrowdAgentIndex, OrderBuffer>();
+            engine.World.Query(in orderableQuery, (ref MassCrowdAgentIndex _, ref OrderBuffer _) => orderable++);
+            var anchorQuery = new QueryDescription().WithAll<MassCrowdFormationAnchor>();
+            engine.World.Query(in anchorQuery, (ref MassCrowdFormationAnchor _) => anchorOnly++);
+            var indexedAnchorQuery = new QueryDescription().WithAll<MassCrowdFormationAnchor, MassCrowdAgentIndex>();
+            engine.World.Query(in indexedAnchorQuery, (ref MassCrowdFormationAnchor _, ref MassCrowdAgentIndex _) => indexedAnchor++);
+            var destroyPendingAnchorQuery = new QueryDescription().WithAll<MassCrowdFormationAnchor, PresentationDestroyPending>();
+            engine.World.Query(in destroyPendingAnchorQuery, (ref MassCrowdFormationAnchor _, ref PresentationDestroyPending _) => destroyPendingAnchor++);
+            var totalWarAnchorQuery = new QueryDescription().WithAll<MassCrowdFormationAnchor, TotalWarFormationAgent>();
+            engine.World.Query(in totalWarAnchorQuery, (ref MassCrowdFormationAnchor _, ref TotalWarFormationAgent _) => totalWarAnchor++);
+            var followerQuery = new QueryDescription().WithAll<MassCrowdFormationFollower>();
+            engine.World.Query(in followerQuery, (ref MassCrowdFormationFollower _) => followerOnly++);
+            return $"formationOnly={formationOnly} anchor={anchorOnly} indexedAnchor={indexedAnchor} destroyPendingAnchor={destroyPendingAnchor} totalWarAnchor={totalWarAnchor} follower={followerOnly} indexed={indexOnly} orderable={orderable} {BuildSelectionDiagnostics(engine)}";
+        }
+
         private static int ResolveMassNavigationMoveOrderTypeId(GameEngine engine)
         {
             OrderTypeRegistry registry = engine.GetService(CoreServiceKeys.OrderTypeRegistry)
                 ?? throw new InvalidOperationException("OrderTypeRegistry is missing.");
-            if (!registry.TryGetId(MassNavigationMod.Runtime.MassNavigationOrderKeys.Move, out int id))
+            if (!registry.TryGetId(MassNavigationOrderKeys.Move, out int id))
             {
                 throw new InvalidOperationException("massNavigationMove order type is not registered.");
             }
@@ -3501,7 +3732,53 @@ namespace Ludots.Tests.Presentation
                 }
             }
 
-            Assert.That(ringCount, Is.GreaterThanOrEqualTo(simulation.NavigationObstacleCount));
+            Assert.That(
+                ringCount,
+                Is.GreaterThanOrEqualTo(simulation.NavigationObstacleCount),
+                BuildObstacleOverlayDiagnostics(engine));
+        }
+
+        private static string BuildObstacleOverlayDiagnostics(GameEngine engine)
+        {
+            int overlayOnly = 0;
+            int overlayVisual = 0;
+            int overlayStable = 0;
+            int overlayRenderable = 0;
+            int obstacleTemplate = 0;
+            int obstacleTemplateVisualStable = 0;
+            int obstacleTemplateKeyId = 0;
+            if (engine.GetService(CoreServiceKeys.EntityTemplateKeyRegistry) is EntityTemplateKeyRegistry templateKeys)
+            {
+                obstacleTemplateKeyId = templateKeys.GetId("mass_navigation_total_war_obstacle_overlay");
+            }
+
+            var overlayQuery = new QueryDescription().WithAll<TotalWarObstacleOverlay>();
+            engine.World.Query(in overlayQuery, (ref TotalWarObstacleOverlay _) => overlayOnly++);
+            var overlayVisualQuery = new QueryDescription().WithAll<TotalWarObstacleOverlay, VisualTransform>();
+            engine.World.Query(in overlayVisualQuery, (ref TotalWarObstacleOverlay _, ref VisualTransform _) => overlayVisual++);
+            var overlayStableQuery = new QueryDescription().WithAll<TotalWarObstacleOverlay, PresentationStableId>();
+            engine.World.Query(in overlayStableQuery, (ref TotalWarObstacleOverlay _, ref PresentationStableId _) => overlayStable++);
+            var overlayRenderableQuery = new QueryDescription().WithAll<TotalWarObstacleOverlay, VisualTransform, PresentationStableId>();
+            engine.World.Query(in overlayRenderableQuery, (ref TotalWarObstacleOverlay _, ref VisualTransform _, ref PresentationStableId _) => overlayRenderable++);
+            var templateQuery = new QueryDescription().WithAll<EntityTemplateKeyRef>();
+            engine.World.Query(in templateQuery, (Entity entity, ref EntityTemplateKeyRef templateKey) =>
+            {
+                if (templateKey.TemplateKeyId != obstacleTemplateKeyId)
+                {
+                    return;
+                }
+
+                obstacleTemplate++;
+                if (engine.World.Has<VisualTransform>(entity) &&
+                    engine.World.Has<PresentationStableId>(entity))
+                {
+                    obstacleTemplateVisualStable++;
+                }
+            });
+
+            GroundOverlayBuffer overlays = engine.GetService(CoreServiceKeys.GroundOverlayBuffer)
+                ?? throw new InvalidOperationException("GroundOverlayBuffer is missing.");
+            return $"obstacleTemplateKey={obstacleTemplateKeyId} obstacleTemplates={obstacleTemplate} obstacleTemplateVisualStable={obstacleTemplateVisualStable} overlay={overlayOnly} overlayVisual={overlayVisual} overlayStable={overlayStable} overlayRenderable={overlayRenderable} groundOverlayCount={overlays.Count}";
         }
 
         private static void AssertCullingProbeAndDebugDraw(GameEngine engine)
@@ -3530,7 +3807,10 @@ namespace Ludots.Tests.Presentation
         private static string BuildSelectionDiagnostics(GameEngine engine)
         {
             MassNavigationSimulationRuntime simulation = RequireSimulation(engine);
-            return $"selection={simulation.SelectedCount} markers={CountSelectionMarkerPerformers(engine)} agents={simulation.AgentState.TotalAgents}";
+            string view = SelectionContextRuntime.TryDescribeCurrentView(engine.World, engine.GlobalContext, out SelectionViewDescriptor descriptor)
+                ? $"viewCount={descriptor.Container.MemberCount} viewRev={descriptor.Container.Revision} viewOwner={descriptor.Container.Owner.Id} viewContainer={descriptor.Container.Container.Id}"
+                : "view=<none>";
+            return $"selection={simulation.SelectedCount} simRev={simulation.SelectionRevision} {view} markers={CountSelectionMarkerPerformers(engine)} agents={simulation.AgentState.TotalAgents}";
         }
 
         private static void InvokePrivate(object target, string methodName)
@@ -3693,7 +3973,7 @@ namespace Ludots.Tests.Presentation
                     layer);
             }
 
-            flow.Reset(seeds, new[]
+            flow.ResetAuthoredAgents(seeds, new[]
             {
                 new MassNavigationObstacleConfig { Id = "group-fixture-obstacle", LocalXCm = 9000f, LocalYCm = 9000f, RadiusCm = 100f },
             });

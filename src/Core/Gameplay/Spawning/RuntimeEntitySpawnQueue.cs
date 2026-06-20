@@ -28,6 +28,16 @@ namespace Ludots.Core.Gameplay.Spawning
         public string TemplateId;
         public int OnSpawnEffectTemplateId;
         public MapId MapId;
+        public int TeamIdOverride;
+        public int PlayerOwnerIdOverride;
+        public float MassCrowdBlockerRadiusCmOverride;
+        public int MassCrowdFormationIdOverride;
+        public int MassCrowdFormationSlotIndexOverride;
+        public int MassCrowdFormationSlotCountOverride;
+        public float MassCrowdFormationLocalOffsetXCmOverride;
+        public float MassCrowdFormationLocalOffsetYCmOverride;
+        public byte HasMassCrowdFormationAnchorOverride;
+        public byte HasMassCrowdFormationFollowerOverride;
         public byte CopySourceTeam;
         public byte CopySourcePlayerOwner;
         public Entity Parent;
@@ -204,11 +214,60 @@ namespace Ludots.Core.Gameplay.Spawning
             return removed;
         }
 
+        public int RemoveForMapAndTemplates(MapId mapId, ReadOnlySpan<string> templateIds)
+        {
+            if (_count == 0 || string.IsNullOrWhiteSpace(mapId.Value) || templateIds.Length <= 0)
+            {
+                return 0;
+            }
+
+            int originalCount = _count;
+            int removed = 0;
+            for (int i = 0; i < originalCount; i++)
+            {
+                if (!TryDequeue(out RuntimeEntitySpawnRequest request))
+                {
+                    break;
+                }
+
+                if (request.MapId == mapId && ContainsTemplate(templateIds, request.TemplateId))
+                {
+                    removed++;
+                    continue;
+                }
+
+                if (!TryEnqueue(in request))
+                {
+                    throw new InvalidOperationException("RuntimeEntitySpawnQueue failed to preserve request order while removing map templates.");
+                }
+            }
+
+            return removed;
+        }
+
         public void Clear()
         {
             _head = 0;
             _tail = 0;
             _count = 0;
+        }
+
+        private static bool ContainsTemplate(ReadOnlySpan<string> templateIds, string templateId)
+        {
+            if (string.IsNullOrWhiteSpace(templateId))
+            {
+                return false;
+            }
+
+            for (int i = 0; i < templateIds.Length; i++)
+            {
+                if (string.Equals(templateIds[i], templateId, StringComparison.Ordinal))
+                {
+                    return true;
+                }
+            }
+
+            return false;
         }
     }
 

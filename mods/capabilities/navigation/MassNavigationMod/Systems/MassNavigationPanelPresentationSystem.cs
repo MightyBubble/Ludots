@@ -1,7 +1,8 @@
 using System;
 using Arch.System;
 using Ludots.Core.Engine;
-using MassNavigationMod.Runtime;
+using Ludots.Core.MassCrowd;
+using Ludots.Core.MassCrowd.Runtime;
 using MassNavigationMod.UI;
 
 namespace MassNavigationMod.Systems;
@@ -9,25 +10,14 @@ namespace MassNavigationMod.Systems;
 internal sealed class MassNavigationPanelPresentationSystem : ISystem<float>
 {
     private readonly GameEngine _engine;
-    private readonly MassNavigationRuntime _runtime;
-    private readonly float _refreshIntervalSeconds;
+    private readonly MassNavigationPanelPresenter _presenter;
+    private float _refreshIntervalSeconds;
     private float _refreshAccumulatorSeconds;
 
-    public MassNavigationPanelPresentationSystem(
-        GameEngine engine,
-        MassNavigationRuntime runtime,
-        float refreshIntervalSeconds)
+    public MassNavigationPanelPresentationSystem(GameEngine engine, MassNavigationPanelPresenter presenter)
     {
-        _engine = engine;
-        _runtime = runtime;
-        if (!(refreshIntervalSeconds > 0f))
-        {
-            throw new InvalidOperationException(
-                "MassNavigation panel presentation requires scenarioRuntime.panelControls.panelRefreshIntervalSeconds > 0.");
-        }
-
-        _refreshIntervalSeconds = refreshIntervalSeconds;
-        _refreshAccumulatorSeconds = refreshIntervalSeconds;
+        _engine = engine ?? throw new ArgumentNullException(nameof(engine));
+        _presenter = presenter ?? throw new ArgumentNullException(nameof(presenter));
     }
 
     public void Initialize() { }
@@ -37,10 +27,31 @@ internal sealed class MassNavigationPanelPresentationSystem : ISystem<float>
 
     public void Update(in float dt)
     {
-        if (!MassNavigationIds.IsCurrentNavigationMap(_engine))
+        if (_engine.GetService(MassNavigationKeys.SimulationRuntime) is not MassNavigationSimulationRuntime simulation)
         {
             _refreshAccumulatorSeconds = _refreshIntervalSeconds;
             return;
+        }
+
+        float refreshIntervalSeconds = simulation.Config.ScenarioRuntime.PanelControls.PanelRefreshIntervalSeconds;
+        if (!(refreshIntervalSeconds > 0f))
+        {
+            throw new InvalidOperationException(
+                "MassNavigation panel presentation requires scenarioRuntime.panelControls.panelRefreshIntervalSeconds > 0.");
+        }
+
+        if (!MassNavigationIds.IsCurrentNavigationMap(_engine))
+        {
+            _presenter.ClearPanelIfOwned(_engine);
+            _refreshIntervalSeconds = refreshIntervalSeconds;
+            _refreshAccumulatorSeconds = refreshIntervalSeconds;
+            return;
+        }
+
+        if (Math.Abs(_refreshIntervalSeconds - refreshIntervalSeconds) > float.Epsilon)
+        {
+            _refreshIntervalSeconds = refreshIntervalSeconds;
+            _refreshAccumulatorSeconds = refreshIntervalSeconds;
         }
 
         _refreshAccumulatorSeconds += dt;
@@ -50,12 +61,7 @@ internal sealed class MassNavigationPanelPresentationSystem : ISystem<float>
         }
 
         _refreshAccumulatorSeconds = 0f;
-        if (_engine.GetService(MassNavigationKeys.SimulationRuntime) is MassNavigationSimulationRuntime simulation)
-        {
-            simulation.ObservePanelTick();
-        }
-
-        _runtime.RefreshPanel(_engine);
+        simulation.ObservePanelTick();
+        _presenter.RefreshPanel(_engine);
     }
 }
-

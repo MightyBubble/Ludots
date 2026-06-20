@@ -20,6 +20,8 @@ using Ludots.Core.Input.Config;
 using Ludots.Core.Input.Selection;
 using Ludots.Core.Map.Board;
 using Ludots.Core.Input.Runtime;
+using Ludots.Core.MassCrowd;
+using Ludots.Core.MassCrowd.Runtime;
 using Ludots.Core.Mathematics;
 using Ludots.Core.Navigation2D.Components;
 using Ludots.Core.Navigation2D.Runtime;
@@ -40,8 +42,6 @@ using Ludots.Platform.Abstractions;
 using Ludots.UI;
 using Ludots.UI.HtmlEngine.Markup;
 using Ludots.UI.Skia;
-using MassNavigationMod;
-using MassNavigationMod.Runtime;
 using Navigation2DPlaygroundMod;
 using Navigation2DPlaygroundMod.Systems;
 using Raylib_cs;
@@ -88,16 +88,16 @@ public static class LauncherEvidenceRecorder
         .WithAll<NavFlowGoal2D>();
 
     private static readonly QueryDescription MassNavigationAgentQuery = new QueryDescription()
-        .WithAll<MassNavigationAgentTag, MassNavigationAgentIndex, WorldPositionCm>();
+        .WithAll<MassCrowdAgent, MassCrowdAgentIndex, WorldPositionCm>();
 
-    private static readonly QueryDescription MassNavigationControllableQuery = new QueryDescription()
-        .WithAll<MassNavigationAgentTag, MassNavigationAgentIndex, MassNavigationControllable, Team, OrderBuffer, WorldPositionCm, SelectionSelectableTag, PresentationOwnerHasPerformerPayload>();
+    private static readonly QueryDescription OrderableMassCrowdAgentQuery = new QueryDescription()
+        .WithAll<MassCrowdAgent, MassCrowdAgentIndex, Team, OrderBuffer, WorldPositionCm, SelectionSelectableTag, PresentationOwnerHasPerformerPayload>();
 
     private static readonly QueryDescription MassNavigationBlockerQuery = new QueryDescription()
-        .WithAll<MassNavigationBlocker, MassNavigationBlockerProfile, WorldPositionCm, PresentationOwnerHasPerformerPayload>();
+        .WithAll<MassCrowdBlocker, MassCrowdBlockerProfile, WorldPositionCm, PresentationOwnerHasPerformerPayload>();
 
     private static readonly QueryDescription MassNavigationHotspotMarkerQuery = new QueryDescription()
-        .WithAll<MassNavigationHotspotMarker, WorldPositionCm, PresentationOwnerHasPerformerPayload>();
+        .WithAll<MassCrowdHotspotMarker, WorldPositionCm, PresentationOwnerHasPerformerPayload>();
 
     private const float DeltaTime = 1f / 60f;
     private const int DefaultWidth = 1920;
@@ -1979,7 +1979,7 @@ public static class LauncherEvidenceRecorder
         WaitForMassNavigationScenario(runtime, simulation, frameTimesMs, maxTicks: 240);
         CaptureMassNavigationSnapshot(runtime, simulation, screensDir, frameTimesMs, timeline, captureFrames, 0, "000_boot", captureImage: true);
 
-        Entity[] selected = SelectFirstMassNavigationControllables(runtime.Engine, simulation, MassNavigationSelectionSampleCount);
+        Entity[] selected = SelectFirstOrderableMassCrowdAgents(runtime.Engine, simulation, MassNavigationSelectionSampleCount);
         Tick(runtime, 3, frameTimesMs);
         Vector2 commandTarget = new(
             simulation.FlowWorkAreaCenterXCm + (simulation.SolverWindowWidthCm * 0.34f),
@@ -2053,10 +2053,10 @@ public static class LauncherEvidenceRecorder
         }
 
         throw new InvalidOperationException(
-            $"MassNavigation scenario did not finish binding spawn receipts: agents={simulation.AgentState.TotalAgents}/{expectedAgents}, blockers={simulation.AgentState.BlockerCount}/{expectedBlockers}, markers={simulation.AgentState.WorldMarkerCount}/{expectedMarkers}.");
+            $"MassNavigation scenario did not finish core-authored MassCrowd binding: agents={simulation.AgentState.TotalAgents}/{expectedAgents}, blockers={simulation.AgentState.BlockerCount}/{expectedBlockers}, markers={simulation.AgentState.WorldMarkerCount}/{expectedMarkers}.");
     }
 
-    private static Entity[] SelectFirstMassNavigationControllables(GameEngine engine, MassNavigationSimulationRuntime simulation, int requestedCount)
+    private static Entity[] SelectFirstOrderableMassCrowdAgents(GameEngine engine, MassNavigationSimulationRuntime simulation, int requestedCount)
     {
         SelectionRuntime selection = engine.GetService(CoreServiceKeys.SelectionRuntime)
             ?? throw new InvalidOperationException("MassNavigation UAT requires SelectionRuntime.");
@@ -2070,7 +2070,7 @@ public static class LauncherEvidenceRecorder
         int count = Math.Min(requestedCount, simulation.AgentState.ControllableAgentSlotCount);
         if (count <= 0)
         {
-            throw new InvalidOperationException("MassNavigation UAT found no controllable MassNavigation agents.");
+            throw new InvalidOperationException("MassNavigation UAT found no OrderBuffer-backed MassCrowd agents.");
         }
 
         var selected = new Entity[count];
@@ -2226,7 +2226,7 @@ public static class LauncherEvidenceRecorder
         int ecsAgentCount = 0;
         int performerPayloadCount = 0;
         var samplePositions = new List<MassNavigationAgentSample>(Math.Min(512, simulation.AgentState.TotalAgents));
-        engine.World.Query(in MassNavigationControllableQuery, (Entity entity, ref MassNavigationAgentIndex agentIndex, ref Team team, ref WorldPositionCm position, ref PresentationOwnerHasPerformerPayload payload) =>
+        engine.World.Query(in OrderableMassCrowdAgentQuery, (Entity entity, ref MassCrowdAgentIndex agentIndex, ref Team team, ref WorldPositionCm position, ref PresentationOwnerHasPerformerPayload payload) =>
         {
             ecsAgentCount++;
             teamCounts.TryGetValue(team.Id, out int current);
@@ -2244,7 +2244,7 @@ public static class LauncherEvidenceRecorder
 
         int blockerCount = 0;
         int blockerPayloadCount = 0;
-        engine.World.Query(in MassNavigationBlockerQuery, (Entity entity, ref MassNavigationBlockerProfile blocker, ref WorldPositionCm position, ref PresentationOwnerHasPerformerPayload payload) =>
+        engine.World.Query(in MassNavigationBlockerQuery, (Entity entity, ref MassCrowdBlockerProfile blocker, ref WorldPositionCm position, ref PresentationOwnerHasPerformerPayload payload) =>
         {
             blockerCount++;
             if (payload.Count > 0)
@@ -2401,7 +2401,7 @@ public static class LauncherEvidenceRecorder
         sb.AppendLine();
         sb.AppendLine("## Intent");
         sb.AppendLine("- Player goal: verify MassNavigation is the massflow SSOT and runs through performer + core minimap on a 64km RTS map.");
-        sb.AppendLine("- Gameplay domain: real launcher bootstrap, template spawn receipts, SelectionRuntime, OrderBuffer, performer runtime and core MinimapRuntime.");
+        sb.AppendLine("- Gameplay domain: real launcher bootstrap, component-authored MassCrowd binding, SelectionRuntime, OrderBuffer, performer runtime and core MinimapRuntime.");
         sb.AppendLine();
         sb.AppendLine("## Determinism Inputs");
         sb.AppendLine("- Map: `mods/capabilities/navigation/MassNavigationMod/assets/Maps/mass_navigation.json`");
@@ -2410,7 +2410,7 @@ public static class LauncherEvidenceRecorder
         sb.AppendLine($"- Evidence images: {evidenceImages}");
         sb.AppendLine();
         sb.AppendLine("## Action Script");
-        sb.AppendLine("1. Boot the real MassNavigation launcher preset and wait for MassNavigation spawn receipts to bind.");
+        sb.AppendLine("1. Boot the real MassNavigation launcher preset and wait for core MassCrowd runtime binding to settle.");
         sb.AppendLine("2. Write LivePrimary selection through SelectionRuntime and submit a `massNavigationMove` order through OrderBufferSystem.");
         sb.AppendLine("3. Jump the core minimap camera to a remote 64km hot-zone landmark, then jump back to the original area.");
         sb.AppendLine("4. Fail if units are recreated/reset, performer payloads are missing, minimap markers drop, or core minimap is not the visible RTS full-map preset.");
@@ -2443,7 +2443,7 @@ public static class LauncherEvidenceRecorder
         sb.AppendLine($"- median headless tick: `{medianTickMs:F3}ms`");
         sb.AppendLine($"- max headless tick: `{maxTickMs:F3}ms`");
         sb.AppendLine($"- normalized signature: `{acceptance.NormalizedSignature}`");
-        sb.AppendLine("- reusable wiring: `RuntimeEntitySpawnQueue`, `RuntimeEntitySpawnReceiptQueue`, `SelectionRuntime`, `OrderBufferSystem`, `PerformerEntityRuntime`, `MinimapRuntime`, `PresentationTimingDiagnostics`");
+        sb.AppendLine("- reusable wiring: `RuntimeEntitySpawnQueue`, `RuntimeEntitySpawnSystem`, `SystemGroup.RuntimeEntityBinding`, `SelectionRuntime`, `OrderBufferSystem`, `PerformerEntityRuntime`, `MinimapRuntime`, `PresentationTimingDiagnostics`");
         return sb.ToString();
     }
 
@@ -2502,7 +2502,7 @@ public static class LauncherEvidenceRecorder
         return string.Join(Environment.NewLine, new[]
         {
             "flowchart TD",
-            "    A[Boot mass_navigation launcher] --> B[Bind template spawn receipts]",
+            "    A[Boot mass_navigation launcher] --> B[Run core MassCrowd runtime binding]",
             "    B --> C[Verify performer owners and minimap markers]",
             "    C --> D[Write LivePrimary selection]",
             "    D --> E[Submit massNavigationMove through OrderBuffer]",

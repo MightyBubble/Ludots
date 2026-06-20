@@ -73,6 +73,7 @@
       "mass_navigation.agent.soldier",
       "mass_navigation.selection.marker"
     ],
+    "blockerTemplateId": "mass_navigation_blocker",
     "teams": []
   },
   "scenario": {

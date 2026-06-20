@@ -1,7 +1,7 @@
 using System;
 using Arch.System;
 using Ludots.Core.Engine;
-using MassNavigationMod.Runtime;
+using Ludots.Core.MassCrowd.Runtime;
 
 namespace CapabilityStandardTotalWarLikeMod.Runtime;
 

@@ -14,6 +14,7 @@ using Ludots.Core.Gameplay.Spawning;
 using Ludots.Core.Input.Selection;
 using Ludots.Core.Layers;
 using Ludots.Core.Map;
+using Ludots.Core.MassCrowd.Runtime;
 using Ludots.Core.Mathematics;
 using Ludots.Core.Presentation;
 using Ludots.Core.Presentation.Components;
@@ -139,6 +140,24 @@ namespace Ludots.Core.Config
                 }
             }
 
+            for (int i = 0; i < requests.Length; i++)
+            {
+                ref readonly TemplateBatchSpawnRequest request = ref requests[i];
+                if (request.HasMassCrowdFormationAnchorOverride &&
+                    !descriptor.HasMassCrowdFormationAnchor)
+                {
+                    throw new InvalidOperationException(
+                        $"Runtime template batch spawn request for '{templateId}' supplied MassCrowdFormationAnchor override but the template does not author MassCrowdFormationAnchor.");
+                }
+
+                if (request.HasMassCrowdFormationFollowerOverride &&
+                    !descriptor.HasMassCrowdFormationFollower)
+                {
+                    throw new InvalidOperationException(
+                        $"Runtime template batch spawn request for '{templateId}' supplied MassCrowdFormationFollower override but the template does not author MassCrowdFormationFollower.");
+                }
+            }
+
             Signature signature = descriptor.BaseSignature;
             if ((features & TemplateBatchSpawnFeatures.MapEntity) != 0)
             {
@@ -236,16 +255,21 @@ namespace Ludots.Core.Config
                     ? chunk.GetSpan<VisualHeightmapSampleState>()
                     : default;
                 Span<CullState> culls = chunk.GetSpan<CullState>();
-                Span<AttributeBuffer> attributes = chunk.GetSpan<AttributeBuffer>();
-                Span<AttributeLastSnapshot> attributeSnapshots = chunk.GetSpan<AttributeLastSnapshot>();
-                Span<GameplayTagContainer> gameplayTags = chunk.GetSpan<GameplayTagContainer>();
-                Span<TagCountContainer> tagCounts = chunk.GetSpan<TagCountContainer>();
+                Span<AttributeBuffer> attributes = descriptor.HasAttributeBuffer ? chunk.GetSpan<AttributeBuffer>() : default;
+                Span<AttributeLastSnapshot> attributeSnapshots = descriptor.HasAttributeBuffer ? chunk.GetSpan<AttributeLastSnapshot>() : default;
+                Span<GameplayTagContainer> gameplayTags = descriptor.HasGameplayTagContainer ? chunk.GetSpan<GameplayTagContainer>() : default;
+                Span<TagCountContainer> tagCounts = descriptor.HasTagCountContainer ? chunk.GetSpan<TagCountContainer>() : default;
                 Span<EntityTemplateKeyRef> templateKeys = chunk.GetSpan<EntityTemplateKeyRef>();
                 Span<OrderBuffer> orderBuffers = descriptor.HasOrderBuffer ? chunk.GetSpan<OrderBuffer>() : default;
                 Span<SelectionSelectableState> selectionStates = descriptor.HasSelectionSelectableState ? chunk.GetSpan<SelectionSelectableState>() : default;
                 Span<Ludots.Core.Gameplay.Components.EntityLayer> entityLayers = descriptor.HasEntityLayer ? chunk.GetSpan<Ludots.Core.Gameplay.Components.EntityLayer>() : default;
                 Span<Team> teams = descriptor.HasTeam ? chunk.GetSpan<Team>() : default;
                 Span<PlayerOwner> playerOwners = descriptor.HasPlayerOwner ? chunk.GetSpan<PlayerOwner>() : default;
+                Span<MassCrowdAgent> massCrowdAgents = descriptor.HasMassCrowdAgent ? chunk.GetSpan<MassCrowdAgent>() : default;
+                Span<MassCrowdBlocker> massCrowdBlockers = descriptor.HasMassCrowdBlocker ? chunk.GetSpan<MassCrowdBlocker>() : default;
+                Span<MassCrowdFormationAnchor> massCrowdFormationAnchors = descriptor.HasMassCrowdFormationAnchor ? chunk.GetSpan<MassCrowdFormationAnchor>() : default;
+                Span<MassCrowdFormationFollower> massCrowdFormationFollowers = descriptor.HasMassCrowdFormationFollower ? chunk.GetSpan<MassCrowdFormationFollower>() : default;
+                Span<MassCrowdFollowerLocomotion> massCrowdFollowerLocomotions = descriptor.HasMassCrowdFollowerLocomotion ? chunk.GetSpan<MassCrowdFollowerLocomotion>() : default;
                 Span<MapEntity> mapEntities = includeMapEntity ? chunk.GetSpan<MapEntity>() : default;
                 Span<PresentationStableId> stableIds = includeStableId ? chunk.GetSpan<PresentationStableId>() : default;
                 Span<PresentationLifecycleState> lifecycleStates = includeLifecycleState ? chunk.GetSpan<PresentationLifecycleState>() : default;
@@ -280,11 +304,22 @@ namespace Ludots.Core.Config
                     }
 
                     culls[componentIndex] = cull;
-                    AttributeBuffer attributeBuffer = descriptor.CreateAttributeBuffer();
-                    attributes[componentIndex] = attributeBuffer;
-                    attributeSnapshots[componentIndex] = descriptor.CreateAttributeLastSnapshot(ref attributeBuffer);
-                    gameplayTags[componentIndex] = descriptor.GameplayTags;
-                    tagCounts[componentIndex] = descriptor.TagCounts;
+                    if (descriptor.HasAttributeBuffer)
+                    {
+                        AttributeBuffer attributeBuffer = descriptor.CreateAttributeBuffer();
+                        attributes[componentIndex] = attributeBuffer;
+                        attributeSnapshots[componentIndex] = descriptor.CreateAttributeLastSnapshot(ref attributeBuffer);
+                    }
+
+                    if (descriptor.HasGameplayTagContainer)
+                    {
+                        gameplayTags[componentIndex] = descriptor.GameplayTags;
+                    }
+
+                    if (descriptor.HasTagCountContainer)
+                    {
+                        tagCounts[componentIndex] = descriptor.TagCounts;
+                    }
                     templateKeys[componentIndex] = descriptor.TemplateKey;
                     if (descriptor.HasOrderBuffer)
                     {
@@ -309,6 +344,35 @@ namespace Ludots.Core.Config
                     if (descriptor.HasPlayerOwner)
                     {
                         playerOwners[componentIndex] = descriptor.PlayerOwner;
+                    }
+
+                    if (descriptor.HasMassCrowdAgent)
+                    {
+                        massCrowdAgents[componentIndex] = descriptor.MassCrowdAgent;
+                    }
+
+                    if (descriptor.HasMassCrowdBlocker)
+                    {
+                        massCrowdBlockers[componentIndex] = descriptor.MassCrowdBlocker;
+                    }
+
+                    if (descriptor.HasMassCrowdFormationAnchor)
+                    {
+                        massCrowdFormationAnchors[componentIndex] = request.HasMassCrowdFormationAnchorOverride
+                            ? request.MassCrowdFormationAnchorOverride
+                            : descriptor.MassCrowdFormationAnchor;
+                    }
+
+                    if (descriptor.HasMassCrowdFormationFollower)
+                    {
+                        massCrowdFormationFollowers[componentIndex] = request.HasMassCrowdFormationFollowerOverride
+                            ? request.MassCrowdFormationFollowerOverride
+                            : descriptor.MassCrowdFormationFollower;
+                    }
+
+                    if (descriptor.HasMassCrowdFollowerLocomotion)
+                    {
+                        massCrowdFollowerLocomotions[componentIndex] = descriptor.MassCrowdFollowerLocomotion;
                     }
 
                     if (includeMapEntity)
@@ -422,6 +486,10 @@ namespace Ludots.Core.Config
                 bool hasMapEntity = false,
                 int presentationStableId = 0,
                 bool hasPresentationStableId = false,
+                MassCrowdFormationAnchor massCrowdFormationAnchorOverride = default,
+                bool hasMassCrowdFormationAnchorOverride = false,
+                MassCrowdFormationFollower massCrowdFormationFollowerOverride = default,
+                bool hasMassCrowdFormationFollowerOverride = false,
                 ParamDefault[]? performerParamOverrides = null)
             {
                 WorldPositionCm = worldPositionCm;
@@ -432,6 +500,10 @@ namespace Ludots.Core.Config
                 HasMapEntity = hasMapEntity;
                 PresentationStableId = presentationStableId;
                 HasPresentationStableId = hasPresentationStableId;
+                MassCrowdFormationAnchorOverride = massCrowdFormationAnchorOverride;
+                HasMassCrowdFormationAnchorOverride = hasMassCrowdFormationAnchorOverride;
+                MassCrowdFormationFollowerOverride = massCrowdFormationFollowerOverride;
+                HasMassCrowdFormationFollowerOverride = hasMassCrowdFormationFollowerOverride;
                 PerformerParamOverrides = performerParamOverrides ?? Array.Empty<ParamDefault>();
             }
 
@@ -451,6 +523,14 @@ namespace Ludots.Core.Config
 
             public bool HasPresentationStableId { get; }
 
+            public MassCrowdFormationAnchor MassCrowdFormationAnchorOverride { get; }
+
+            public bool HasMassCrowdFormationAnchorOverride { get; }
+
+            public MassCrowdFormationFollower MassCrowdFormationFollowerOverride { get; }
+
+            public bool HasMassCrowdFormationFollowerOverride { get; }
+
             public ParamDefault[] PerformerParamOverrides { get; }
         }
 
@@ -465,6 +545,9 @@ namespace Ludots.Core.Config
             public readonly FacingDirection Facing;
             public readonly VisualTransform VisualTransform;
             public readonly CullState CullState;
+            public readonly bool HasAttributeBuffer;
+            public readonly bool HasGameplayTagContainer;
+            public readonly bool HasTagCountContainer;
             public readonly GameplayTagContainer GameplayTags;
             public readonly TagCountContainer TagCounts;
             public readonly EntityTemplateKeyRef TemplateKey;
@@ -477,6 +560,16 @@ namespace Ludots.Core.Config
             public readonly Team Team;
             public readonly bool HasPlayerOwner;
             public readonly PlayerOwner PlayerOwner;
+            public readonly bool HasMassCrowdAgent;
+            public readonly MassCrowdAgent MassCrowdAgent;
+            public readonly bool HasMassCrowdBlocker;
+            public readonly MassCrowdBlocker MassCrowdBlocker;
+            public readonly bool HasMassCrowdFormationAnchor;
+            public readonly MassCrowdFormationAnchor MassCrowdFormationAnchor;
+            public readonly bool HasMassCrowdFormationFollower;
+            public readonly MassCrowdFormationFollower MassCrowdFormationFollower;
+            public readonly bool HasMassCrowdFollowerLocomotion;
+            public readonly MassCrowdFollowerLocomotion MassCrowdFollowerLocomotion;
             public readonly int OnSpawnEffectTemplateId;
             public readonly ComponentType[] TagComponentTypes;
             private readonly AttributeSeed[] _attributeSeeds;
@@ -491,6 +584,9 @@ namespace Ludots.Core.Config
                 FacingDirection facing,
                 VisualTransform visualTransform,
                 CullState cullState,
+                bool hasAttributeBuffer,
+                bool hasGameplayTagContainer,
+                bool hasTagCountContainer,
                 GameplayTagContainer gameplayTags,
                 TagCountContainer tagCounts,
                 EntityTemplateKeyRef templateKey,
@@ -503,6 +599,16 @@ namespace Ludots.Core.Config
                 bool hasTeam,
                 PlayerOwner playerOwner,
                 bool hasPlayerOwner,
+                MassCrowdAgent massCrowdAgent,
+                bool hasMassCrowdAgent,
+                MassCrowdBlocker massCrowdBlocker,
+                bool hasMassCrowdBlocker,
+                MassCrowdFormationAnchor massCrowdFormationAnchor,
+                bool hasMassCrowdFormationAnchor,
+                MassCrowdFormationFollower massCrowdFormationFollower,
+                bool hasMassCrowdFormationFollower,
+                MassCrowdFollowerLocomotion massCrowdFollowerLocomotion,
+                bool hasMassCrowdFollowerLocomotion,
                 int onSpawnEffectTemplateId,
                 ComponentType[] tagComponentTypes,
                 AttributeSeed[] attributeSeeds)
@@ -516,6 +622,9 @@ namespace Ludots.Core.Config
                 Facing = facing;
                 VisualTransform = visualTransform;
                 CullState = cullState;
+                HasAttributeBuffer = hasAttributeBuffer;
+                HasGameplayTagContainer = hasGameplayTagContainer;
+                HasTagCountContainer = hasTagCountContainer;
                 GameplayTags = gameplayTags;
                 TagCounts = tagCounts;
                 TemplateKey = templateKey;
@@ -528,6 +637,16 @@ namespace Ludots.Core.Config
                 HasTeam = hasTeam;
                 PlayerOwner = playerOwner;
                 HasPlayerOwner = hasPlayerOwner;
+                MassCrowdAgent = massCrowdAgent;
+                HasMassCrowdAgent = hasMassCrowdAgent;
+                MassCrowdBlocker = massCrowdBlocker;
+                HasMassCrowdBlocker = hasMassCrowdBlocker;
+                MassCrowdFormationAnchor = massCrowdFormationAnchor;
+                HasMassCrowdFormationAnchor = hasMassCrowdFormationAnchor;
+                MassCrowdFormationFollower = massCrowdFormationFollower;
+                HasMassCrowdFormationFollower = hasMassCrowdFormationFollower;
+                MassCrowdFollowerLocomotion = massCrowdFollowerLocomotion;
+                HasMassCrowdFollowerLocomotion = hasMassCrowdFollowerLocomotion;
                 OnSpawnEffectTemplateId = onSpawnEffectTemplateId;
                 TagComponentTypes = tagComponentTypes ?? Array.Empty<ComponentType>();
                 _attributeSeeds = attributeSeeds ?? Array.Empty<AttributeSeed>();
@@ -592,64 +711,15 @@ namespace Ludots.Core.Config
 
                 if (!IsBatchCandidate(template.Components))
                 {
-                    return new TemplateSpawnDescriptor(
-                        isCompatible: false,
-                        default,
-                        false,
-                        false,
-                        default,
-                        default,
-                        default,
-                        default,
-                        default,
-                        default,
-                        default,
-                        default,
-                        false,
-                        default,
-                        false,
-                        default,
-                        false,
-                        default,
-                        false,
-                        default,
-                        false,
-                        onSpawnEffectTemplateId,
-                        Array.Empty<ComponentType>(),
-                        Array.Empty<AttributeSeed>());
+                    return Incompatible(onSpawnEffectTemplateId);
                 }
 
                 if (!TryValidateSupportedComponents(template.Components))
                 {
-                    return new TemplateSpawnDescriptor(
-                        isCompatible: false,
-                        default,
-                        false,
-                        false,
-                        default,
-                        default,
-                        default,
-                        default,
-                        default,
-                        default,
-                        default,
-                        default,
-                        false,
-                        default,
-                        false,
-                        default,
-                        false,
-                        default,
-                        false,
-                        default,
-                        false,
-                        onSpawnEffectTemplateId,
-                        Array.Empty<ComponentType>(),
-                        Array.Empty<AttributeSeed>());
+                    return Incompatible(onSpawnEffectTemplateId);
                 }
 
                 Name name = ParseName(templateId, template.Components);
-                AttributeSeed[] attributeSeeds = ParseAttributeSeeds(templateId, template.Components);
                 ComponentType[] tagComponentTypes = CollectTagComponentTypes(templateId, template.Components);
 
                 var defaultWorldPosition = default(Ludots.Core.Mathematics.FixedPoint.Fix64Vec2);
@@ -674,11 +744,19 @@ namespace Ludots.Core.Config
                 bool hasStaticHeightPending = template.Components.ContainsKey("PresentationStaticHeightPending");
                 bool hasDynamicHeightSampling = template.Components.ContainsKey("VisualHeightmapSampleState");
                 bool hasSpatialPartitionExcluded = template.Components.ContainsKey("SpatialPartitionExcluded");
+                bool hasAttributeBuffer = template.Components.ContainsKey("AttributeBuffer");
+                bool hasGameplayTagContainer = template.Components.ContainsKey("GameplayTagContainer");
+                bool hasTagCountContainer = template.Components.ContainsKey("TagCountContainer");
                 bool hasOrderBuffer = template.Components.ContainsKey("OrderBuffer");
                 bool hasSelectionSelectableState = template.Components.ContainsKey("SelectionSelectableState");
                 bool hasEntityLayer = template.Components.ContainsKey("EntityLayer");
                 bool hasTeam = template.Components.ContainsKey("Team");
                 bool hasPlayerOwner = template.Components.ContainsKey("PlayerOwner");
+                bool hasMassCrowdAgent = template.Components.ContainsKey("MassCrowdAgent");
+                bool hasMassCrowdBlocker = template.Components.ContainsKey("MassCrowdBlocker");
+                bool hasMassCrowdFormationAnchor = template.Components.ContainsKey("MassCrowdFormationAnchor");
+                bool hasMassCrowdFormationFollower = template.Components.ContainsKey("MassCrowdFormationFollower");
+                bool hasMassCrowdFollowerLocomotion = template.Components.ContainsKey("MassCrowdFollowerLocomotion");
                 SelectionSelectableState selectionSelectableState = hasSelectionSelectableState
                     ? ParseSelectionSelectableState(templateId, template.Components["SelectionSelectableState"])
                     : default;
@@ -687,9 +765,35 @@ namespace Ludots.Core.Config
                     : default;
                 Team team = hasTeam ? ParseTeam(templateId, template.Components["Team"]) : default;
                 PlayerOwner playerOwner = hasPlayerOwner ? ParsePlayerOwner(templateId, template.Components["PlayerOwner"]) : default;
+                MassCrowdAgent massCrowdAgent = hasMassCrowdAgent
+                    ? ParseMassCrowdAgent(templateId, template.Components["MassCrowdAgent"])
+                    : default;
+                MassCrowdBlocker massCrowdBlocker = hasMassCrowdBlocker
+                    ? ParseMassCrowdBlocker(templateId, template.Components["MassCrowdBlocker"])
+                    : default;
+                MassCrowdFormationAnchor massCrowdFormationAnchor = hasMassCrowdFormationAnchor
+                    ? ParseMassCrowdFormationAnchor(templateId, template.Components["MassCrowdFormationAnchor"])
+                    : default;
+                MassCrowdFormationFollower massCrowdFormationFollower = hasMassCrowdFormationFollower
+                    ? ParseMassCrowdFormationFollower(templateId, template.Components["MassCrowdFormationFollower"])
+                    : default;
+                MassCrowdFollowerLocomotion massCrowdFollowerLocomotion = hasMassCrowdFollowerLocomotion
+                    ? ParseMassCrowdFollowerLocomotion(templateId, template.Components["MassCrowdFollowerLocomotion"])
+                    : default;
+                AttributeSeed[] attributeSeeds = hasAttributeBuffer
+                    ? ParseAttributeSeeds(templateId, template.Components)
+                    : Array.Empty<AttributeSeed>();
 
-                RequireEmptyObject(templateId, template.Components, "GameplayTagContainer");
-                RequireEmptyObject(templateId, template.Components, "TagCountContainer");
+                if (hasGameplayTagContainer)
+                {
+                    RequireEmptyObject(templateId, template.Components, "GameplayTagContainer");
+                }
+
+                if (hasTagCountContainer)
+                {
+                    RequireEmptyObject(templateId, template.Components, "TagCountContainer");
+                }
+
                 if (hasOrderBuffer)
                 {
                     RequireEmptyObject(templateId, template.Components, "OrderBuffer");
@@ -722,11 +826,23 @@ namespace Ludots.Core.Config
                     Component<FacingDirection>.Signature +
                     Component<VisualTransform>.Signature +
                     Component<CullState>.Signature +
-                    Component<AttributeBuffer>.Signature +
-                    Component<AttributeLastSnapshot>.Signature +
-                    Component<GameplayTagContainer>.Signature +
-                    Component<TagCountContainer>.Signature +
                     Component<EntityTemplateKeyRef>.Signature;
+
+                if (hasAttributeBuffer)
+                {
+                    signature += Component<AttributeBuffer>.Signature;
+                    signature += Component<AttributeLastSnapshot>.Signature;
+                }
+
+                if (hasGameplayTagContainer)
+                {
+                    signature += Component<GameplayTagContainer>.Signature;
+                }
+
+                if (hasTagCountContainer)
+                {
+                    signature += Component<TagCountContainer>.Signature;
+                }
 
                 if (hasDynamicHeightSampling)
                 {
@@ -775,6 +891,31 @@ namespace Ludots.Core.Config
                     signature += Component<PlayerOwner>.Signature;
                 }
 
+                if (hasMassCrowdAgent)
+                {
+                    signature += Component<MassCrowdAgent>.Signature;
+                }
+
+                if (hasMassCrowdBlocker)
+                {
+                    signature += Component<MassCrowdBlocker>.Signature;
+                }
+
+                if (hasMassCrowdFormationAnchor)
+                {
+                    signature += Component<MassCrowdFormationAnchor>.Signature;
+                }
+
+                if (hasMassCrowdFormationFollower)
+                {
+                    signature += Component<MassCrowdFormationFollower>.Signature;
+                }
+
+                if (hasMassCrowdFollowerLocomotion)
+                {
+                    signature += Component<MassCrowdFollowerLocomotion>.Signature;
+                }
+
                 for (int i = 0; i < tagComponentTypes.Length; i++)
                 {
                     signature += new Signature(tagComponentTypes[i]);
@@ -790,6 +931,9 @@ namespace Ludots.Core.Config
                     new FacingDirection { AngleRad = facingAngle },
                     VisualTransform.Default,
                     new CullState { IsVisible = false, LOD = LODLevel.Low },
+                    hasAttributeBuffer,
+                    hasGameplayTagContainer,
+                    hasTagCountContainer,
                     default,
                     default,
                     new EntityTemplateKeyRef { TemplateKeyId = templateKeyId },
@@ -802,19 +946,68 @@ namespace Ludots.Core.Config
                     hasTeam,
                     playerOwner,
                     hasPlayerOwner,
+                    massCrowdAgent,
+                    hasMassCrowdAgent,
+                    massCrowdBlocker,
+                    hasMassCrowdBlocker,
+                    massCrowdFormationAnchor,
+                    hasMassCrowdFormationAnchor,
+                    massCrowdFormationFollower,
+                    hasMassCrowdFormationFollower,
+                    massCrowdFollowerLocomotion,
+                    hasMassCrowdFollowerLocomotion,
                     onSpawnEffectTemplateId,
                     tagComponentTypes,
                     attributeSeeds);
+            }
+
+            private static TemplateSpawnDescriptor Incompatible(int onSpawnEffectTemplateId)
+            {
+                return new TemplateSpawnDescriptor(
+                    isCompatible: false,
+                    default,
+                    false,
+                    false,
+                    default,
+                    default,
+                    default,
+                    default,
+                    default,
+                    false,
+                    false,
+                    false,
+                    default,
+                    default,
+                    default,
+                    false,
+                    default,
+                    false,
+                    default,
+                    false,
+                    default,
+                    false,
+                    default,
+                    false,
+                    default,
+                    false,
+                    default,
+                    false,
+                    default,
+                    false,
+                    default,
+                    false,
+                    default,
+                    false,
+                    onSpawnEffectTemplateId,
+                    Array.Empty<ComponentType>(),
+                    Array.Empty<AttributeSeed>());
             }
 
             private static bool IsBatchCandidate(IReadOnlyDictionary<string, JsonNode> components)
             {
                 return components.ContainsKey("Name") &&
                        components.ContainsKey("WorldPositionCm") &&
-                       components.ContainsKey("FacingDirection") &&
-                       components.ContainsKey("AttributeBuffer") &&
-                       components.ContainsKey("GameplayTagContainer") &&
-                       components.ContainsKey("TagCountContainer");
+                       components.ContainsKey("FacingDirection");
             }
 
             private static bool TryValidateSupportedComponents(IReadOnlyDictionary<string, JsonNode> components)
@@ -833,6 +1026,11 @@ namespace Ludots.Core.Config
                         string.Equals(componentName, "EntityLayer", StringComparison.Ordinal) ||
                         string.Equals(componentName, "Team", StringComparison.Ordinal) ||
                         string.Equals(componentName, "PlayerOwner", StringComparison.Ordinal) ||
+                        string.Equals(componentName, "MassCrowdAgent", StringComparison.Ordinal) ||
+                        string.Equals(componentName, "MassCrowdBlocker", StringComparison.Ordinal) ||
+                        string.Equals(componentName, "MassCrowdFormationAnchor", StringComparison.Ordinal) ||
+                        string.Equals(componentName, "MassCrowdFormationFollower", StringComparison.Ordinal) ||
+                        string.Equals(componentName, "MassCrowdFollowerLocomotion", StringComparison.Ordinal) ||
                         string.Equals(componentName, "PresentationStaticTransform", StringComparison.Ordinal) ||
                         string.Equals(componentName, "PresentationStaticCullPending", StringComparison.Ordinal) ||
                         string.Equals(componentName, "PresentationStaticHeightPending", StringComparison.Ordinal) ||
@@ -893,6 +1091,11 @@ namespace Ludots.Core.Config
                        string.Equals(componentName, "EntityLayer", StringComparison.Ordinal) ||
                        string.Equals(componentName, "Team", StringComparison.Ordinal) ||
                        string.Equals(componentName, "PlayerOwner", StringComparison.Ordinal) ||
+                       string.Equals(componentName, "MassCrowdAgent", StringComparison.Ordinal) ||
+                       string.Equals(componentName, "MassCrowdBlocker", StringComparison.Ordinal) ||
+                       string.Equals(componentName, "MassCrowdFormationAnchor", StringComparison.Ordinal) ||
+                       string.Equals(componentName, "MassCrowdFormationFollower", StringComparison.Ordinal) ||
+                       string.Equals(componentName, "MassCrowdFollowerLocomotion", StringComparison.Ordinal) ||
                        string.Equals(componentName, "PresentationStaticTransform", StringComparison.Ordinal) ||
                        string.Equals(componentName, "PresentationStaticCullPending", StringComparison.Ordinal) ||
                        string.Equals(componentName, "PresentationStaticHeightPending", StringComparison.Ordinal) ||
@@ -951,6 +1154,45 @@ namespace Ludots.Core.Config
                 }
 
                 return node;
+            }
+
+            private static string ParseRequiredString(JsonObject obj, string name, string context)
+            {
+                JsonNode node = RequireProperty(obj, name, context);
+                if (node.GetValueKind() != JsonValueKind.String)
+                {
+                    throw new InvalidOperationException($"{context}.{name} requires a string value.");
+                }
+
+                string value = node.GetValue<string>();
+                if (string.IsNullOrWhiteSpace(value))
+                {
+                    throw new InvalidOperationException($"{context}.{name} requires a non-empty string value.");
+                }
+
+                return value;
+            }
+
+            private static int ParseRequiredInt(JsonObject obj, string name, string context)
+            {
+                JsonNode node = RequireProperty(obj, name, context);
+                if (node.GetValueKind() != JsonValueKind.Number)
+                {
+                    throw new InvalidOperationException($"{context}.{name} requires an integer value.");
+                }
+
+                return node.GetValue<int>();
+            }
+
+            private static float ParseRequiredFloat(JsonObject obj, string name, string context)
+            {
+                JsonNode node = RequireProperty(obj, name, context);
+                if (node.GetValueKind() != JsonValueKind.Number)
+                {
+                    throw new InvalidOperationException($"{context}.{name} requires a numeric value.");
+                }
+
+                return node.GetValue<float>();
             }
 
             private static Name ParseName(string templateId, IReadOnlyDictionary<string, JsonNode> components)
@@ -1033,6 +1275,132 @@ namespace Ludots.Core.Config
                 }
 
                 return new PlayerOwner { PlayerId = idNode.GetValue<int>() };
+            }
+
+            private static MassCrowdAgent ParseMassCrowdAgent(string templateId, JsonNode node)
+            {
+                if (node is not JsonObject obj)
+                {
+                    throw new InvalidOperationException($"Entity template '{templateId}' MassCrowdAgent requires an object payload.");
+                }
+
+                ValidateProperties(obj, $"Entity template '{templateId}' MassCrowdAgent", "profileId");
+                JsonNode profileNode = RequireProperty(obj, "profileId", $"Entity template '{templateId}' MassCrowdAgent");
+                if (profileNode.GetValueKind() != JsonValueKind.String)
+                {
+                    throw new InvalidOperationException($"Entity template '{templateId}' MassCrowdAgent.profileId requires a string value.");
+                }
+
+                string profileId = profileNode.GetValue<string>();
+                if (string.IsNullOrWhiteSpace(profileId))
+                {
+                    throw new InvalidOperationException($"Entity template '{templateId}' MassCrowdAgent.profileId requires a non-empty string value.");
+                }
+
+                return new MassCrowdAgent { ProfileId = MassCrowdProfileRegistry.Register(profileId) };
+            }
+
+            private static MassCrowdBlocker ParseMassCrowdBlocker(string templateId, JsonNode node)
+            {
+                if (node is not JsonObject obj)
+                {
+                    throw new InvalidOperationException($"Entity template '{templateId}' MassCrowdBlocker requires an object payload.");
+                }
+
+                ValidateProperties(obj, $"Entity template '{templateId}' MassCrowdBlocker", "radiusCm");
+                float radiusCm = 0f;
+                if (obj.TryGetPropertyValue("radiusCm", out JsonNode radiusNode) && radiusNode != null)
+                {
+                    if (radiusNode.GetValueKind() != JsonValueKind.Number)
+                    {
+                        throw new InvalidOperationException($"Entity template '{templateId}' MassCrowdBlocker.radiusCm requires a numeric value.");
+                    }
+
+                    radiusCm = radiusNode.GetValue<float>();
+                    if (!(radiusCm > 0f))
+                    {
+                        throw new InvalidOperationException($"Entity template '{templateId}' MassCrowdBlocker.radiusCm must be > 0 when authored.");
+                    }
+                }
+
+                return new MassCrowdBlocker { RadiusCm = radiusCm };
+            }
+
+            private static MassCrowdFormationAnchor ParseMassCrowdFormationAnchor(string templateId, JsonNode node)
+            {
+                if (node is not JsonObject obj)
+                {
+                    throw new InvalidOperationException($"Entity template '{templateId}' MassCrowdFormationAnchor requires an object payload.");
+                }
+
+                ValidateProperties(obj, $"Entity template '{templateId}' MassCrowdFormationAnchor", "formationId", "slotCount");
+                if (obj.Count == 0)
+                {
+                    return default;
+                }
+
+                string formationId = ParseRequiredString(obj, "formationId", $"Entity template '{templateId}' MassCrowdFormationAnchor");
+                int slotCount = ParseRequiredInt(obj, "slotCount", $"Entity template '{templateId}' MassCrowdFormationAnchor");
+                if (slotCount <= 0)
+                {
+                    throw new InvalidOperationException($"Entity template '{templateId}' MassCrowdFormationAnchor.slotCount must be > 0.");
+                }
+
+                return new MassCrowdFormationAnchor
+                {
+                    FormationId = MassCrowdFormationRegistry.Register(formationId),
+                    SlotCount = slotCount,
+                };
+            }
+
+            private static MassCrowdFormationFollower ParseMassCrowdFormationFollower(string templateId, JsonNode node)
+            {
+                if (node is not JsonObject obj)
+                {
+                    throw new InvalidOperationException($"Entity template '{templateId}' MassCrowdFormationFollower requires an object payload.");
+                }
+
+                ValidateProperties(obj, $"Entity template '{templateId}' MassCrowdFormationFollower", "formationId", "slotIndex", "localOffsetXCm", "localOffsetYCm");
+                if (obj.Count == 0)
+                {
+                    return default;
+                }
+
+                return new MassCrowdFormationFollower
+                {
+                    FormationId = MassCrowdFormationRegistry.Register(ParseRequiredString(obj, "formationId", $"Entity template '{templateId}' MassCrowdFormationFollower")),
+                    Anchor = Entity.Null,
+                    SlotIndex = ParseRequiredInt(obj, "slotIndex", $"Entity template '{templateId}' MassCrowdFormationFollower"),
+                    LocalOffsetXCm = ParseRequiredFloat(obj, "localOffsetXCm", $"Entity template '{templateId}' MassCrowdFormationFollower"),
+                    LocalOffsetYCm = ParseRequiredFloat(obj, "localOffsetYCm", $"Entity template '{templateId}' MassCrowdFormationFollower"),
+                };
+            }
+
+            private static MassCrowdFollowerLocomotion ParseMassCrowdFollowerLocomotion(string templateId, JsonNode node)
+            {
+                if (node is not JsonObject obj)
+                {
+                    throw new InvalidOperationException($"Entity template '{templateId}' MassCrowdFollowerLocomotion requires an object payload.");
+                }
+
+                ValidateProperties(obj, $"Entity template '{templateId}' MassCrowdFollowerLocomotion", "targetChangeEpsilonCm", "facingChangeEpsilonRadians");
+                float targetChangeEpsilonCm = ParseRequiredFloat(obj, "targetChangeEpsilonCm", $"Entity template '{templateId}' MassCrowdFollowerLocomotion");
+                float facingChangeEpsilonRadians = ParseRequiredFloat(obj, "facingChangeEpsilonRadians", $"Entity template '{templateId}' MassCrowdFollowerLocomotion");
+                if (!(targetChangeEpsilonCm > 0f))
+                {
+                    throw new InvalidOperationException($"Entity template '{templateId}' MassCrowdFollowerLocomotion.targetChangeEpsilonCm must be > 0.");
+                }
+
+                if (!(facingChangeEpsilonRadians > 0f))
+                {
+                    throw new InvalidOperationException($"Entity template '{templateId}' MassCrowdFollowerLocomotion.facingChangeEpsilonRadians must be > 0.");
+                }
+
+                return new MassCrowdFollowerLocomotion
+                {
+                    TargetChangeEpsilonCm = targetChangeEpsilonCm,
+                    FacingChangeEpsilonRadians = facingChangeEpsilonRadians,
+                };
             }
 
             private static float ParseFacing(string templateId, JsonNode node)
