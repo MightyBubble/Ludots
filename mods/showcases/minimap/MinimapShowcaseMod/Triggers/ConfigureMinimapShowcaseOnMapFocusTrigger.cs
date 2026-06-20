@@ -3,6 +3,7 @@ using System.Threading.Tasks;
 using Arch.Core;
 using Ludots.Core.Components;
 using Ludots.Core.Engine;
+using Ludots.Core.Gameplay.Components;
 using Ludots.Core.Gameplay.GAS;
 using Ludots.Core.Gameplay.GAS.Components;
 using Ludots.Core.Gameplay.GAS.Registry;
@@ -121,6 +122,11 @@ internal sealed class ConfigureMinimapShowcaseOnMapFocusTrigger : Trigger
         }
 
         engine.GlobalContext[CoreServiceKeys.LocalPlayerEntity.Name] = playerCapital;
+        if (engine.World.TryGet(playerCapital, out PlayerOwner playerOwner) && playerOwner.PlayerId > 0)
+        {
+            engine.GlobalContext[CoreServiceKeys.LocalPlayerId.Name] = playerOwner.PlayerId;
+        }
+
         engine.GlobalContext[CoreServiceKeys.SelectionViewViewerEntity.Name] = playerCapital;
         engine.GlobalContext[CoreServiceKeys.SelectionViewKey.Name] = SelectionViewKeys.Primary;
         selection.ReplaceSelection(playerCapital, SelectionSetKeys.LivePrimary, stackalloc[] { playerCapital });

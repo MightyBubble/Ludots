@@ -423,7 +423,7 @@ namespace GasTests
             var startInfo = new ProcessStartInfo
             {
                 FileName = "dotnet",
-                Arguments = $"build \"{projectPath}\" -c Debug --nologo",
+                Arguments = $"build \"{projectPath}\" -c Debug --nologo -p:BuildInParallel=false -m:1 -nodeReuse:false",
                 RedirectStandardOutput = true,
                 RedirectStandardError = true,
                 UseShellExecute = false,
@@ -436,9 +436,23 @@ namespace GasTests
                 throw new InvalidOperationException("Failed to start dotnet build process.");
             }
 
-            var output = process.StandardOutput.ReadToEnd();
-            var error = process.StandardError.ReadToEnd();
-            process.WaitForExit();
+            var outputTask = process.StandardOutput.ReadToEndAsync();
+            var errorTask = process.StandardError.ReadToEndAsync();
+            if (!process.WaitForExit(TimeSpan.FromMinutes(2)))
+            {
+                try
+                {
+                    process.Kill(entireProcessTree: true);
+                }
+                catch
+                {
+                }
+
+                throw new TimeoutException($"dotnet build timed out for '{projectPath}'.");
+            }
+
+            var output = outputTask.GetAwaiter().GetResult();
+            var error = errorTask.GetAwaiter().GetResult();
 
             if (process.ExitCode != 0)
             {

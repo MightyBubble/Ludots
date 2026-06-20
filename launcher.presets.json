@@ -128,6 +128,15 @@
       "buildMode": "auto"
     },
     {
+      "id": "capability_standard_participant_views_raylib",
+      "name": "Capability Standard Participant Views Raylib",
+      "selectors": [
+        "$capability_standard_participant_views"
+      ],
+      "adapterId": "raylib",
+      "buildMode": "auto"
+    },
+    {
       "id": "entity_query_tactics_raylib",
       "name": "Entity Query Tactics Raylib",
       "selectors": [

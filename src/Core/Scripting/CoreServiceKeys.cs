@@ -31,6 +31,7 @@ using Ludots.Core.Input.Interaction;
 using Ludots.Core.Input.Orders;
 using Ludots.Core.Input.Runtime;
 using Ludots.Core.Input.Selection;
+using Ludots.Core.Knowledge;
 using Ludots.Core.Map;
 using Ludots.Core.Map.Board;
 using Ludots.Core.Map.Hex;
@@ -170,7 +171,12 @@ namespace Ludots.Core.Scripting
         public static readonly ServiceKey<RelationshipCatalogConfig> RelationshipCatalogConfig = new("RelationshipCatalogConfig");
         public static readonly ServiceKey<RelationshipCatalogRuntime> RelationshipCatalogRuntime = new("RelationshipCatalogRuntime");
         public static readonly ServiceKey<TeamEntityLookup> TeamEntityLookup = new("TeamEntityLookup");
+        public static readonly ServiceKey<PlayerEntityLookup> PlayerEntityLookup = new("PlayerEntityLookup");
         public static readonly ServiceKey<EntitySetQueryRuntime> EntitySetQueryRuntime = new("EntitySetQueryRuntime");
+        public static readonly ServiceKey<KnowledgeProjectionStore> KnowledgeProjectionStore = new("KnowledgeProjectionStore");
+        public static readonly ServiceKey<KnowledgeRelationCollectionGrantStore> KnowledgeRelationCollectionGrantStore = new("KnowledgeRelationCollectionGrantStore");
+        public static readonly ServiceKey<KnowledgeRelationCollectionProjector> KnowledgeRelationCollectionProjector = new("KnowledgeRelationCollectionProjector");
+        public static readonly ServiceKey<KnowledgeProjectionResolver> KnowledgeProjectionResolver = new("KnowledgeProjectionResolver");
         public static readonly ServiceKey<Entity> RelationshipEventSource = new("RelationshipEvent.Source");
         public static readonly ServiceKey<Entity> RelationshipEventTarget = new("RelationshipEvent.Target");
         public static readonly ServiceKey<Entity> RelationshipEventTeam = new("RelationshipEvent.Team");
@@ -289,6 +295,7 @@ namespace Ludots.Core.Scripting
         public static readonly ServiceKey<IPathService> PathService = new("PathService");
 
         // --- Entity Selection (presentation-layer) ---
+        public static readonly ServiceKey<int> LocalPlayerId = new("LocalPlayerId");
         public static readonly ServiceKey<Entity> LocalPlayerEntity = new("LocalPlayerEntity");
         public static readonly ServiceKey<Entity> HoveredEntity = new("HoveredEntity");
         public static readonly ServiceKey<Entity> TabTargetEntity = new("TabTargetEntity");

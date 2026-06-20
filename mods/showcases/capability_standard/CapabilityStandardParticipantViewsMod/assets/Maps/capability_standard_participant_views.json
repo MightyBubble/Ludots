@@ -1,0 +1,386 @@
+{
+  "Id": "capability_standard_participant_views",
+  "VisualHeightmapAsset": "assets/terrain/mass_navigation_large_world_relief.vhtm",
+  "Tags": [
+    "capability_standard_participant_views",
+    "capability.participant_view"
+  ],
+  "Metadata": {
+    "participantViewKnowledge": {
+      "Projections": [
+        {
+          "Viewers": [ "player:1" ],
+          "Targets": { "Kind": "playerMembers", "PlayerId": 1 },
+          "Presence": "LiveVisible",
+          "Position": "Live",
+          "Source": "viewer",
+          "Attributes": [ "Health" ],
+          "RelationshipTypes": [ "Participant" ],
+          "ConfidencePermille": 1000
+        },
+        {
+          "Viewers": [ "team:1" ],
+          "Targets": { "Kind": "teamMembers", "TeamId": 1 },
+          "Presence": "LiveVisible",
+          "Position": "Live",
+          "Source": "viewer",
+          "Attributes": [ "Health" ],
+          "RelationshipTypes": [ "Participant" ],
+          "ConfidencePermille": 1000
+        },
+        {
+          "Viewers": [ "team:2" ],
+          "Targets": { "Kind": "teamMembers", "TeamId": 2 },
+          "Presence": "LiveVisible",
+          "Position": "Live",
+          "Source": "viewer",
+          "Attributes": [ "Health" ],
+          "RelationshipTypes": [ "Participant" ],
+          "ConfidencePermille": 1000
+        },
+        {
+          "Viewers": [ "team:3" ],
+          "Targets": { "Kind": "teamMembers", "TeamId": 3 },
+          "Presence": "LiveVisible",
+          "Position": "Live",
+          "Source": "viewer",
+          "Attributes": [ "Health" ],
+          "RelationshipTypes": [ "Participant" ],
+          "ConfidencePermille": 1000
+        },
+        {
+          "Viewers": [ "team:4" ],
+          "Targets": { "Kind": "teamMembers", "TeamId": 4 },
+          "Presence": "LiveVisible",
+          "Position": "Live",
+          "Source": "viewer",
+          "Attributes": [ "Health" ],
+          "RelationshipTypes": [ "Participant" ],
+          "ConfidencePermille": 1000
+        }
+      ],
+      "Relations": [
+        {
+          "Viewers": [ "player:1" ],
+          "Target": "entity:npc-amber-envoy",
+          "RelationshipType": "Participant"
+        }
+      ],
+      "Collections": [
+        {
+          "Owner": "player:2",
+          "Key": "participant_view.ally.share",
+          "Entities": [
+            "entity:unit-azure-beta-1",
+            "entity:unit-azure-beta-2"
+          ],
+          "Title": "Ally disclosure",
+          "Summary": "Player 2 exposes only its chosen unit collection to Player 1."
+        },
+        {
+          "Owner": "entity:npc-amber-envoy",
+          "Key": "participant_view.neutral.rumor",
+          "Entities": [
+            "entity:unit-amber-alpha-1",
+            "entity:unit-amber-alpha-2"
+          ],
+          "Title": "Neutral envoy rumor",
+          "Summary": "A neutral entity discloses last-known positions for selected Amber units."
+        }
+      ],
+      "Grants": [
+        {
+          "RelationshipType": "Participant",
+          "CollectionKey": "participant_view.ally.share",
+          "Presence": "HiddenWithSource",
+          "Position": "LastKnown",
+          "Attributes": [ "Health" ],
+          "RelationshipTypes": [ "Participant" ],
+          "ConfidencePermille": 760
+        },
+        {
+          "RelationshipType": "Participant",
+          "CollectionKey": "participant_view.neutral.rumor",
+          "Presence": "HiddenWithSource",
+          "Position": "LastKnown",
+          "Attributes": [ "Health" ],
+          "ConfidencePermille": 520
+        }
+      ]
+    }
+  },
+  "Boards": [
+    {
+      "Name": "default",
+      "SpatialType": "Grid",
+      "WidthInTiles": 250,
+      "HeightInTiles": 250,
+      "GridCellSizeCm": 100,
+      "ChunkSizeCells": 64
+    }
+  ],
+  "DefaultCamera": {
+    "VirtualCameraId": "Camera.Profile.MassNavigationTactical",
+    "TargetXCm": 0,
+    "TargetYCm": 0,
+    "Yaw": 180,
+    "Pitch": 52,
+    "DistanceCm": 14500,
+    "FovYDeg": 50
+  },
+  "Entities": [
+    {
+      "InstanceId": "team-azure",
+      "Template": "capability_standard_participant_views_team",
+      "Overrides": {
+        "Name": { "Value": "Azure Vanguard" },
+        "AttributeBuffer": { "base": { "CommandPower": 90, "Morale": 72 } }
+      }
+    },
+    {
+      "InstanceId": "team-crimson",
+      "Template": "capability_standard_participant_views_team",
+      "Overrides": {
+        "Name": { "Value": "Crimson Column" },
+        "AttributeBuffer": { "base": { "CommandPower": 84, "Morale": 61 } }
+      }
+    },
+    {
+      "InstanceId": "team-amber",
+      "Template": "capability_standard_participant_views_team",
+      "Overrides": {
+        "Name": { "Value": "Amber Phalanx" },
+        "AttributeBuffer": { "base": { "CommandPower": 76, "Morale": 88 } }
+      }
+    },
+    {
+      "InstanceId": "team-emerald",
+      "Template": "capability_standard_participant_views_team",
+      "Overrides": {
+        "Name": { "Value": "Emerald Guard" },
+        "AttributeBuffer": { "base": { "CommandPower": 79, "Morale": 80 } }
+      }
+    },
+    {
+      "InstanceId": "player-azure-alpha",
+      "Template": "capability_standard_participant_views_player",
+      "Overrides": {
+        "Name": { "Value": "Azure Alpha" },
+        "AttributeBuffer": { "base": { "Focus": 100 } }
+      }
+    },
+    {
+      "InstanceId": "player-azure-beta",
+      "Template": "capability_standard_participant_views_player",
+      "Overrides": {
+        "Name": { "Value": "Azure Beta" },
+        "AttributeBuffer": { "base": { "Focus": 68 } }
+      }
+    },
+    {
+      "InstanceId": "player-crimson-alpha",
+      "Template": "capability_standard_participant_views_player",
+      "Overrides": {
+        "Name": { "Value": "Crimson Alpha" },
+        "AttributeBuffer": { "base": { "Focus": 91 } }
+      }
+    },
+    {
+      "InstanceId": "player-crimson-beta",
+      "Template": "capability_standard_participant_views_player",
+      "Overrides": {
+        "Name": { "Value": "Crimson Beta" },
+        "AttributeBuffer": { "base": { "Focus": 63 } }
+      }
+    },
+    {
+      "InstanceId": "player-amber-alpha",
+      "Template": "capability_standard_participant_views_player",
+      "Overrides": {
+        "Name": { "Value": "Amber Alpha" },
+        "AttributeBuffer": { "base": { "Focus": 86 } }
+      }
+    },
+    {
+      "InstanceId": "player-emerald-alpha",
+      "Template": "capability_standard_participant_views_player",
+      "Overrides": {
+        "Name": { "Value": "Emerald Alpha" },
+        "AttributeBuffer": { "base": { "Focus": 74 } }
+      }
+    },
+
+    {
+      "InstanceId": "unit-azure-alpha-1",
+      "Template": "mass_navigation_agent_azure_light",
+      "Overrides": {
+        "Name": { "Value": "Azure Alpha Spear 1" },
+        "WorldPositionCm": { "Value": { "X": -3600, "Y": -1800 } },
+        "Team": { "Id": 1 },
+        "PlayerOwner": { "PlayerId": 1 }
+      }
+    },
+    {
+      "InstanceId": "unit-azure-alpha-2",
+      "Template": "mass_navigation_agent_azure_heavy",
+      "Overrides": {
+        "Name": { "Value": "Azure Alpha Guard" },
+        "WorldPositionCm": { "Value": { "X": -3000, "Y": -1400 } },
+        "Team": { "Id": 1 },
+        "PlayerOwner": { "PlayerId": 1 }
+      }
+    },
+    {
+      "InstanceId": "unit-azure-beta-1",
+      "Template": "mass_navigation_agent_azure_light",
+      "Overrides": {
+        "Name": { "Value": "Azure Beta Spear 1" },
+        "WorldPositionCm": { "Value": { "X": -2300, "Y": -2100 } },
+        "Team": { "Id": 1 },
+        "PlayerOwner": { "PlayerId": 2 }
+      }
+    },
+    {
+      "InstanceId": "unit-azure-beta-2",
+      "Template": "mass_navigation_agent_azure_heavy",
+      "Overrides": {
+        "Name": { "Value": "Azure Beta Guard" },
+        "WorldPositionCm": { "Value": { "X": -1800, "Y": -1600 } },
+        "Team": { "Id": 1 },
+        "PlayerOwner": { "PlayerId": 2 }
+      }
+    },
+
+    {
+      "InstanceId": "unit-crimson-alpha-1",
+      "Template": "mass_navigation_agent_crimson_light",
+      "Overrides": {
+        "Name": { "Value": "Crimson Alpha Spear 1" },
+        "WorldPositionCm": { "Value": { "X": 2200, "Y": -1700 } },
+        "Team": { "Id": 2 },
+        "PlayerOwner": { "PlayerId": 3 }
+      }
+    },
+    {
+      "InstanceId": "unit-crimson-alpha-2",
+      "Template": "mass_navigation_agent_crimson_heavy",
+      "Overrides": {
+        "Name": { "Value": "Crimson Alpha Guard" },
+        "WorldPositionCm": { "Value": { "X": 2800, "Y": -1200 } },
+        "Team": { "Id": 2 },
+        "PlayerOwner": { "PlayerId": 3 }
+      }
+    },
+    {
+      "InstanceId": "unit-crimson-beta-1",
+      "Template": "mass_navigation_agent_crimson_light",
+      "Overrides": {
+        "Name": { "Value": "Crimson Beta Spear 1" },
+        "WorldPositionCm": { "Value": { "X": 3500, "Y": -2100 } },
+        "Team": { "Id": 2 },
+        "PlayerOwner": { "PlayerId": 4 }
+      }
+    },
+    {
+      "InstanceId": "unit-crimson-beta-2",
+      "Template": "mass_navigation_agent_crimson_heavy",
+      "Overrides": {
+        "Name": { "Value": "Crimson Beta Guard" },
+        "WorldPositionCm": { "Value": { "X": 4100, "Y": -1600 } },
+        "Team": { "Id": 2 },
+        "PlayerOwner": { "PlayerId": 4 }
+      }
+    },
+
+    {
+      "InstanceId": "unit-amber-alpha-1",
+      "Template": "mass_navigation_agent_amber_light",
+      "Overrides": {
+        "Name": { "Value": "Amber Alpha Spear 1" },
+        "WorldPositionCm": { "Value": { "X": -1200, "Y": 2100 } },
+        "Team": { "Id": 3 },
+        "PlayerOwner": { "PlayerId": 5 }
+      }
+    },
+    {
+      "InstanceId": "unit-amber-alpha-2",
+      "Template": "mass_navigation_agent_amber_heavy",
+      "Overrides": {
+        "Name": { "Value": "Amber Alpha Guard" },
+        "WorldPositionCm": { "Value": { "X": -700, "Y": 2700 } },
+        "Team": { "Id": 3 },
+        "PlayerOwner": { "PlayerId": 5 }
+      }
+    },
+
+    {
+      "InstanceId": "unit-emerald-alpha-1",
+      "Template": "mass_navigation_agent_emerald_light",
+      "Overrides": {
+        "Name": { "Value": "Emerald Alpha Spear 1" },
+        "WorldPositionCm": { "Value": { "X": 1700, "Y": 2100 } },
+        "Team": { "Id": 4 },
+        "PlayerOwner": { "PlayerId": 6 }
+      }
+    },
+    {
+      "InstanceId": "unit-emerald-alpha-2",
+      "Template": "mass_navigation_agent_emerald_heavy",
+      "Overrides": {
+        "Name": { "Value": "Emerald Alpha Guard" },
+        "WorldPositionCm": { "Value": { "X": 2300, "Y": 2600 } },
+        "Team": { "Id": 4 },
+        "PlayerOwner": { "PlayerId": 6 }
+      }
+    },
+    {
+      "InstanceId": "npc-amber-envoy",
+      "Template": "mass_navigation_agent_amber_light",
+      "Overrides": {
+        "Name": { "Value": "Amber Envoy" },
+        "WorldPositionCm": { "Value": { "X": 400, "Y": 1700 } },
+        "Team": { "Id": 3 }
+      }
+    }
+  ],
+  "Teams": [
+    { "TeamId": 1, "RepresentativeInstanceId": "team-azure" },
+    { "TeamId": 2, "RepresentativeInstanceId": "team-crimson" },
+    { "TeamId": 3, "RepresentativeInstanceId": "team-amber" },
+    { "TeamId": 4, "RepresentativeInstanceId": "team-emerald" }
+  ],
+  "Players": [
+    { "PlayerId": 1, "TeamId": 1, "RepresentativeInstanceId": "player-azure-alpha", "IsLocal": true },
+    { "PlayerId": 2, "TeamId": 1, "RepresentativeInstanceId": "player-azure-beta", "IsLocal": false },
+    { "PlayerId": 3, "TeamId": 2, "RepresentativeInstanceId": "player-crimson-alpha", "IsLocal": false },
+    { "PlayerId": 4, "TeamId": 2, "RepresentativeInstanceId": "player-crimson-beta", "IsLocal": false },
+    { "PlayerId": 5, "TeamId": 3, "RepresentativeInstanceId": "player-amber-alpha", "IsLocal": false },
+    { "PlayerId": 6, "TeamId": 4, "RepresentativeInstanceId": "player-emerald-alpha", "IsLocal": false }
+  ],
+  "ParticipantRelationships": {
+    "Teams": [
+      { "TeamA": 1, "TeamB": 1, "TypeId": "Participant", "Attitude": "Friendly", "Symmetric": true },
+      { "TeamA": 2, "TeamB": 2, "TypeId": "Participant", "Attitude": "Friendly", "Symmetric": true },
+      { "TeamA": 3, "TeamB": 3, "TypeId": "Participant", "Attitude": "Friendly", "Symmetric": true },
+      { "TeamA": 4, "TeamB": 4, "TypeId": "Participant", "Attitude": "Friendly", "Symmetric": true },
+      { "TeamA": 1, "TeamB": 2, "TypeId": "Participant", "Attitude": "Hostile", "Symmetric": true },
+      { "TeamA": 1, "TeamB": 3, "TypeId": "Participant", "Attitude": "Neutral", "Symmetric": true },
+      { "TeamA": 1, "TeamB": 4, "TypeId": "Participant", "Attitude": "Hostile", "Symmetric": true },
+      { "TeamA": 2, "TeamB": 3, "TypeId": "Participant", "Attitude": "Hostile", "Symmetric": true },
+      { "TeamA": 2, "TeamB": 4, "TypeId": "Participant", "Attitude": "Neutral", "Symmetric": true },
+      { "TeamA": 3, "TeamB": 4, "TypeId": "Participant", "Attitude": "Friendly", "Symmetric": true }
+    ],
+    "Players": [
+      { "PlayerA": 1, "PlayerB": 2, "TypeId": "Participant", "Symmetric": true },
+      { "PlayerA": 3, "PlayerB": 4, "TypeId": "Participant", "Symmetric": true }
+    ],
+    "PlayerTeams": [
+      { "PlayerId": 1, "TeamId": 1, "TypeId": "Participant", "Symmetric": false },
+      { "PlayerId": 2, "TeamId": 1, "TypeId": "Participant", "Symmetric": false },
+      { "PlayerId": 3, "TeamId": 2, "TypeId": "Participant", "Symmetric": false },
+      { "PlayerId": 4, "TeamId": 2, "TypeId": "Participant", "Symmetric": false },
+      { "PlayerId": 5, "TeamId": 3, "TypeId": "Participant", "Symmetric": false },
+      { "PlayerId": 6, "TeamId": 4, "TypeId": "Participant", "Symmetric": false }
+    ]
+  }
+}

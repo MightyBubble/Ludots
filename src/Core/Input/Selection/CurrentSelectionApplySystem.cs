@@ -73,10 +73,12 @@ namespace Ludots.Core.Input.Selection
                 _suppressConfirmRelease = true;
             }
 
-            Entity hovered = FindNearestEntity(pointer.Pointer, _selection.Config.ClickPickRadiusPixels);
+            bool hasOwner = TryGetSelectionOwner(out var owner);
+            Entity hovered = hasOwner
+                ? FindNearestEntity(owner, pointer.Pointer, _selection.Config.ClickPickRadiusPixels)
+                : Entity.Null;
             UpdateHoveredEntity(hovered);
 
-            bool hasOwner = TryGetSelectionOwner(out var owner);
             if (!hasOwner)
             {
                 if (_suppressConfirmRelease && pointer.Confirm.ReleasedThisFrame)
@@ -247,7 +249,7 @@ namespace Ludots.Core.Input.Selection
             _world.Query(in SelectableQuery, (Entity entity, ref VisualTransform transform, ref CullState cull, ref SelectionSelectableTag selectable) =>
             {
                 if (!cull.IsVisible ||
-                    !SelectionEligibility.CanAcquire(_world, owner, entity, targetRelationFilter))
+                    !SelectionEligibility.CanAcquire(_world, _globals, owner, entity, targetRelationFilter))
                 {
                     return;
                 }
@@ -281,7 +283,7 @@ namespace Ludots.Core.Input.Selection
             Array.Resize(ref _boxSelectionScratch, nextSize);
         }
 
-        private Entity FindNearestEntity(Vector2 pointer, float radiusPixels)
+        private Entity FindNearestEntity(Entity owner, Vector2 pointer, float radiusPixels)
         {
             if (!_globals.TryGetValue(CoreServiceKeys.ScreenProjector.Name, out var projectorObj) || projectorObj is not IScreenProjector projector)
             {
@@ -294,7 +296,7 @@ namespace Ludots.Core.Input.Selection
 
             _world.Query(in SelectableQuery, (Entity entity, ref VisualTransform transform, ref CullState cull, ref SelectionSelectableTag selectable) =>
             {
-                if (!cull.IsVisible || !SelectionEligibility.IsSelectableNow(_world, entity))
+                if (!cull.IsVisible || !SelectionEligibility.CanInspectLive(_world, _globals, owner, entity))
                 {
                     return;
                 }
@@ -324,7 +326,7 @@ namespace Ludots.Core.Input.Selection
 
         private Entity ResolveClickAcquisition(Entity owner, Entity hovered)
         {
-            return _world.IsAlive(hovered) && SelectionEligibility.CanAcquire(_world, owner, hovered, _selection.TargetRelationFilter)
+            return _world.IsAlive(hovered) && SelectionEligibility.CanAcquire(_world, _globals, owner, hovered, _selection.TargetRelationFilter)
                 ? hovered
                 : Entity.Null;
         }

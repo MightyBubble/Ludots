@@ -65,8 +65,27 @@ namespace CoreInputMod.Systems
             return AuthoritativeGroundPointerHelper.TryRead(input, out worldCm);
         }
 
-        public Entity GetControlledActor(int playerId = 1)
+        public bool TryGetLocalPlayerId(out int playerId)
         {
+            playerId = 0;
+            if (!_globals.TryGetValue(CoreServiceKeys.LocalPlayerId.Name, out object? value) ||
+                value is not int candidate ||
+                candidate <= 0)
+            {
+                return false;
+            }
+
+            playerId = candidate;
+            return true;
+        }
+
+        public Entity GetControlledActor(int playerId)
+        {
+            if (playerId <= 0)
+            {
+                return default;
+            }
+
             if (TryGetSelectedEntity(SelectionSetKeys.LivePrimary, out var selected) &&
                 _world.IsAlive(selected) &&
                 _world.TryGet(selected, out PlayerOwner owner) &&

@@ -551,6 +551,7 @@ namespace Ludots.Core.Engine
             var gasBudget = new GasBudget();
             TeamManager.DefaultRelationship = TeamRelationship.Hostile;
             var teamEntityLookup = new TeamEntityLookup();
+            var playerEntityLookup = new PlayerEntityLookup();
             var relationshipTypeRegistry = new RelationshipTypeRegistry();
             var relationshipMetricRegistry = new RelationshipMetricRegistry();
             var relationshipFlagRegistry = new RelationshipFlagRegistry();
@@ -1041,6 +1042,7 @@ namespace Ludots.Core.Engine
             SetService(CoreServiceKeys.RelationshipCatalogConfig, relationshipCatalog);
             SetService(CoreServiceKeys.RelationshipCatalogRuntime, relationshipCatalogRuntime);
             SetService(CoreServiceKeys.TeamEntityLookup, teamEntityLookup);
+            SetService(CoreServiceKeys.PlayerEntityLookup, playerEntityLookup);
             SetService(CoreServiceKeys.EntitySetQueryRuntime, entitySetQueryRuntime);
             SetService(CoreServiceKeys.AuthoritativeInput, authoritativeInput);
             SetService(CoreServiceKeys.AuthoritativePointerButtons, authoritativePointerButtons);
@@ -1451,7 +1453,16 @@ namespace Ludots.Core.Engine
                 LoadNavForMap(mapId, mapConfig);
                 LoadPathingForSession(session);
                 Diagnostics.Log.Info(in LogChannels.Engine, "Creating Entities from MapConfig...");
-                MapLoader.LoadEntities(mapConfig);
+                var entityIndex = MapLoader.LoadEntitiesAndIndex(mapConfig);
+                session.EntityIndex = entityIndex;
+                SetSessionParticipants(
+                    session,
+                    ParticipantBindingResolver.Resolve(
+                        session,
+                        World,
+                        entityIndex,
+                        GetService(CoreServiceKeys.RelationshipRuntime),
+                        GetService(CoreServiceKeys.RelationshipTypeRegistry)));
                 SetMapEntitiesSuspended(mid, true);
 
                 // Instantiate map triggers + apply decorators
@@ -1593,7 +1604,16 @@ namespace Ludots.Core.Engine
             }
             LoadPathingForSession(session);
 
-            MapLoader.LoadEntities(mapConfig);
+            var entityIndex = MapLoader.LoadEntitiesAndIndex(mapConfig);
+            session.EntityIndex = entityIndex;
+            SetSessionParticipants(
+                session,
+                ParticipantBindingResolver.Resolve(
+                    session,
+                    World,
+                    entityIndex,
+                    GetService(CoreServiceKeys.RelationshipRuntime),
+                    GetService(CoreServiceKeys.RelationshipTypeRegistry)));
             SetMapEntitiesSuspended(inner, true);
 
             // Fire MapSuspended on outer (scoped)

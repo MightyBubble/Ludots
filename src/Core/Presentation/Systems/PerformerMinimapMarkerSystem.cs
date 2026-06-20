@@ -230,6 +230,7 @@ namespace Ludots.Core.Presentation.Systems
                         Markers.WriteReserved(
                             writeIndex + emitted,
                             stableId,
+                            state.OwnerEntity,
                             worldPlanePosition.X,
                             worldPlanePosition.Y,
                             in color,
@@ -397,6 +398,7 @@ namespace Ludots.Core.Presentation.Systems
                     Markers.WriteReserved(
                         writeIndex + emitted,
                         stableId,
+                        state.OwnerEntity,
                         worldPlanePosition.X,
                         worldPlanePosition.Y,
                         in plan.SingleColor,

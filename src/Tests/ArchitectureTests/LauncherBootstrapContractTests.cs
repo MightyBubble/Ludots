@@ -487,6 +487,23 @@ namespace Ludots.Tests.Architecture
                     expectedRootModId: "CapabilityStandardTotalWarLikeMod",
                     expectedStartupMapId: "mass_navigation_capability_standard_total_war_like",
                     allowedModIds: new[] { "LudotsCoreMod", "CoreInputMod", "CameraProfilesMod", "MassNavigationMod", "CapabilityStandardTotalWarLikeMod" });
+
+                AssertCapabilityStandardPlan(
+                    launcher.Resolve(
+                        new[] { "$capability_standard_participant_views" },
+                        LauncherPlatformIds.Raylib,
+                        LauncherBuildMode.Never).Plan,
+                    expectedRootModId: "CapabilityStandardParticipantViewsMod",
+                    expectedStartupMapId: "capability_standard_participant_views",
+                    allowedModIds: new[]
+                    {
+                        "LudotsCoreMod",
+                        "CoreInputMod",
+                        "CameraProfilesMod",
+                        "MassNavigationMod",
+                        "ParticipantViewCapabilityMod",
+                        "CapabilityStandardParticipantViewsMod"
+                    });
             }
             finally
             {

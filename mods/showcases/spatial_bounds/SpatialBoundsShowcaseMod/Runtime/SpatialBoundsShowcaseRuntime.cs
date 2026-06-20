@@ -117,6 +117,11 @@ namespace SpatialBoundsShowcaseMod.Runtime
             selection.TryBindView(_selectionOwner, SelectionViewKeys.Primary, _selectionOwner, SelectionSetKeys.LivePrimary);
 
             engine.GlobalContext[CoreServiceKeys.LocalPlayerEntity.Name] = _selectionOwner;
+            if (engine.World.TryGet(_selectionOwner, out PlayerOwner playerOwner) && playerOwner.PlayerId > 0)
+            {
+                engine.GlobalContext[CoreServiceKeys.LocalPlayerId.Name] = playerOwner.PlayerId;
+            }
+
             engine.GlobalContext[CoreServiceKeys.SelectionViewViewerEntity.Name] = _selectionOwner;
             engine.GlobalContext[CoreServiceKeys.SelectionViewKey.Name] = SelectionViewKeys.Primary;
         }

@@ -122,6 +122,14 @@
       }
     },
     {
+      "name": "capability_standard_participant_views",
+      "target": {
+        "type": "path",
+        "value": "mods/showcases/capability_standard/CapabilityStandardParticipantViewsMod",
+        "projectPath": "CapabilityStandardParticipantViewsMod.csproj"
+      }
+    },
+    {
       "name": "entity_query_tactics",
       "target": {
         "type": "path",

@@ -1,6 +1,7 @@
 using System;
 using System.Numerics;
 using System.Threading;
+using Arch.Core;
 
 namespace Ludots.Core.Presentation.Minimap
 {
@@ -19,6 +20,7 @@ namespace Ludots.Core.Presentation.Minimap
         private readonly float[] _orientationRad;
         private readonly float[] _orientationLengthPx;
         private readonly uint[] _flags;
+        private readonly Entity[] _owners;
         private readonly MinimapMarkerRenderBucketKey[] _styleBucketKeys;
         private int _count;
         private int _droppedSinceClear;
@@ -40,6 +42,7 @@ namespace Ludots.Core.Presentation.Minimap
             _orientationRad = new float[capacity];
             _orientationLengthPx = new float[capacity];
             _flags = new uint[capacity];
+            _owners = new Entity[capacity];
             _styleBucketKeys = new MinimapMarkerRenderBucketKey[capacity];
         }
 
@@ -67,6 +70,29 @@ namespace Ludots.Core.Presentation.Minimap
             float orientationRad = 0f,
             float orientationLengthPx = 0f)
         {
+            return TryAdd(
+                stableId,
+                Entity.Null,
+                worldXcm,
+                worldYcm,
+                in color,
+                sizePx,
+                flags,
+                orientationRad,
+                orientationLengthPx);
+        }
+
+        public bool TryAdd(
+            int stableId,
+            Entity owner,
+            float worldXcm,
+            float worldYcm,
+            in Vector4 color,
+            float sizePx,
+            uint flags = 0u,
+            float orientationRad = 0f,
+            float orientationLengthPx = 0f)
+        {
             int index = _count;
             if ((uint)index >= (uint)Capacity)
             {
@@ -76,12 +102,35 @@ namespace Ludots.Core.Presentation.Minimap
             }
 
             _count = index + 1;
-            Write(index, stableId, worldXcm, worldYcm, in color, sizePx, flags, orientationRad, orientationLengthPx);
+            Write(index, stableId, owner, worldXcm, worldYcm, in color, sizePx, flags, orientationRad, orientationLengthPx);
             return true;
         }
 
         public bool TryAddThreadSafe(
             int stableId,
+            float worldXcm,
+            float worldYcm,
+            in Vector4 color,
+            float sizePx,
+            uint flags = 0u,
+            float orientationRad = 0f,
+            float orientationLengthPx = 0f)
+        {
+            return TryAddThreadSafe(
+                stableId,
+                Entity.Null,
+                worldXcm,
+                worldYcm,
+                in color,
+                sizePx,
+                flags,
+                orientationRad,
+                orientationLengthPx);
+        }
+
+        public bool TryAddThreadSafe(
+            int stableId,
+            Entity owner,
             float worldXcm,
             float worldYcm,
             in Vector4 color,
@@ -98,7 +147,7 @@ namespace Ludots.Core.Presentation.Minimap
                 return false;
             }
 
-            Write(index, stableId, worldXcm, worldYcm, in color, sizePx, flags, orientationRad, orientationLengthPx);
+            Write(index, stableId, owner, worldXcm, worldYcm, in color, sizePx, flags, orientationRad, orientationLengthPx);
             return true;
         }
 
@@ -141,12 +190,37 @@ namespace Ludots.Core.Presentation.Minimap
             float orientationRad = 0f,
             float orientationLengthPx = 0f)
         {
+            WriteReserved(
+                index,
+                stableId,
+                Entity.Null,
+                worldXcm,
+                worldYcm,
+                in color,
+                sizePx,
+                flags,
+                orientationRad,
+                orientationLengthPx);
+        }
+
+        public void WriteReserved(
+            int index,
+            int stableId,
+            Entity owner,
+            float worldXcm,
+            float worldYcm,
+            in Vector4 color,
+            float sizePx,
+            uint flags = 0u,
+            float orientationRad = 0f,
+            float orientationLengthPx = 0f)
+        {
             if ((uint)index >= (uint)Capacity)
             {
                 throw new ArgumentOutOfRangeException(nameof(index));
             }
 
-            Write(index, stableId, worldXcm, worldYcm, in color, sizePx, flags, orientationRad, orientationLengthPx);
+            Write(index, stableId, owner, worldXcm, worldYcm, in color, sizePx, flags, orientationRad, orientationLengthPx);
         }
 
         public int GetStableId(int index) => _stableIds[index];
@@ -164,6 +238,8 @@ namespace Ludots.Core.Presentation.Minimap
         public float GetOrientationLengthPx(int index) => _orientationLengthPx[index];
 
         public uint GetFlags(int index) => _flags[index];
+
+        public Entity GetOwner(int index) => _owners[index];
 
         public MinimapMarkerRenderBucketKey GetStyleBucketKey(int index) => _styleBucketKeys[index];
 
@@ -183,11 +259,14 @@ namespace Ludots.Core.Presentation.Minimap
 
         public ReadOnlySpan<uint> Flags => _flags.AsSpan(0, Count);
 
+        public ReadOnlySpan<Entity> Owners => _owners.AsSpan(0, Count);
+
         public ReadOnlySpan<MinimapMarkerRenderBucketKey> StyleBucketKeys => _styleBucketKeys.AsSpan(0, Count);
 
         private void Write(
             int index,
             int stableId,
+            Entity owner,
             float worldXcm,
             float worldYcm,
             in Vector4 color,
@@ -204,6 +283,7 @@ namespace Ludots.Core.Presentation.Minimap
             _orientationRad[index] = orientationRad;
             _orientationLengthPx[index] = orientationLengthPx;
             _flags[index] = flags;
+            _owners[index] = owner;
             _styleBucketKeys[index] = MinimapScreenMarkerBuffer.CreateStyleKey(
                 in color,
                 sizePx,

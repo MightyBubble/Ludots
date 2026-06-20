@@ -172,7 +172,7 @@ namespace Ludots.Core.Input.Orders
         
         // Context
         private Entity _localPlayer;
-        private int _playerId = 1;
+        private int _playerId;
         private float _elapsedSeconds;
         private readonly List<Entity> _selectedActorsScratch = new(16);
 
@@ -278,6 +278,16 @@ namespace Ludots.Core.Input.Orders
         
         public void SetLocalPlayer(Entity entity, int playerId)
         {
+            if (entity == Entity.Null)
+            {
+                throw new ArgumentException("InputOrderMappingSystem requires a non-null local player entity.", nameof(entity));
+            }
+
+            if (playerId <= 0)
+            {
+                throw new ArgumentOutOfRangeException(nameof(playerId), "InputOrderMappingSystem requires a positive player id.");
+            }
+
             _localPlayer = entity;
             _playerId = playerId;
         }
@@ -727,6 +737,7 @@ namespace Ludots.Core.Input.Orders
         private bool TryBuildOrderWithOrderTypeSuffix(InputOrderMapping mapping, Entity actor, string orderTypeSuffix, out Order order)
         {
             order = default;
+            if (!HasExplicitLocalPlayer()) return false;
             int orderTypeId = _orderTypeKeyResolver!(mapping.OrderTypeKey + orderTypeSuffix);
             if (orderTypeId <= 0) return false;
             var args = new OrderArgs();
@@ -830,6 +841,7 @@ namespace Ludots.Core.Input.Orders
         private bool TryBuildContextScoredOrder(InputOrderMapping mapping, Entity hoveredEntity, out Order order)
         {
             order = default;
+            if (!HasExplicitLocalPlayer()) return false;
 
             int orderTypeId = _orderTypeKeyResolver!(mapping.OrderTypeKey);
             if (orderTypeId <= 0)
@@ -863,6 +875,7 @@ namespace Ludots.Core.Input.Orders
         private bool TryBuildOrderSmartCast(InputOrderMapping mapping, out Order order)
         {
             order = default;
+            if (!HasExplicitLocalPlayer()) return false;
 
             int orderTypeId = _orderTypeKeyResolver!(mapping.OrderTypeKey);
             if (orderTypeId <= 0) return false;
@@ -976,6 +989,7 @@ namespace Ludots.Core.Input.Orders
         private bool TryBuildVectorOrder(InputOrderMapping mapping, Vector3 origin, Vector3 endpoint, out Order order)
         {
             order = default;
+            if (!HasExplicitLocalPlayer()) return false;
             
             int orderTypeId = _orderTypeKeyResolver!(mapping.OrderTypeKey);
             if (orderTypeId <= 0) return false;
@@ -1005,6 +1019,7 @@ namespace Ludots.Core.Input.Orders
         private bool TryBuildOrder(InputOrderMapping mapping, out Order order)
         {
             order = default;
+            if (!HasExplicitLocalPlayer()) return false;
             
             int orderTypeId = _orderTypeKeyResolver!(mapping.OrderTypeKey);
             if (orderTypeId <= 0) return false;
@@ -1091,6 +1106,11 @@ namespace Ludots.Core.Input.Orders
             }
 
             return _localPlayer;
+        }
+
+        private bool HasExplicitLocalPlayer()
+        {
+            return _playerId > 0 && _localPlayer != Entity.Null;
         }
 
         private bool TryCaptureSelectedContainer(string selectionSetKey, ref OrderSelectionReference selection)

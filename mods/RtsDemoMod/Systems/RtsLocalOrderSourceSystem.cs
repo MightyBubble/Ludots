@@ -52,9 +52,8 @@ namespace RtsDemoMod.Systems
             }
 
             var actor = _helper.GetControlledActor();
-            if (_world.IsAlive(actor))
+            if (_helper.TrySetLocalPlayer(_mapping, actor))
             {
-                _mapping.SetLocalPlayer(actor, 1);
                 _mapping.Update(dt);
             }
         }

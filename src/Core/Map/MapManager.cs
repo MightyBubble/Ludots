@@ -203,6 +203,31 @@ namespace Ludots.Core.Map
                 }
             }
             if (source.Entities != null) target.Entities.AddRange(source.Entities);
+            if (source.Teams != null) target.Teams.AddRange(source.Teams);
+            if (source.Players != null) target.Players.AddRange(source.Players);
+            if (source.ParticipantRelationships != null)
+            {
+                if (target.ParticipantRelationships == null)
+                {
+                    target.ParticipantRelationships = new ParticipantRelationshipConfig();
+                }
+
+                if (source.ParticipantRelationships.Teams != null)
+                {
+                    target.ParticipantRelationships.Teams.AddRange(source.ParticipantRelationships.Teams);
+                }
+
+                if (source.ParticipantRelationships.Players != null)
+                {
+                    target.ParticipantRelationships.Players.AddRange(source.ParticipantRelationships.Players);
+                }
+
+                if (source.ParticipantRelationships.PlayerTeams != null)
+                {
+                    target.ParticipantRelationships.PlayerTeams.AddRange(source.ParticipantRelationships.PlayerTeams);
+                }
+            }
+
             if (source.Metadata != null)
             {
                 foreach (var kvp in source.Metadata)
