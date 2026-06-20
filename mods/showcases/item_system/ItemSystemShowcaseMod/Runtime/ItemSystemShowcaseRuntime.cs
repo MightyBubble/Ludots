@@ -5,6 +5,7 @@ using Arch.Core;
 using ItemSystemShowcaseMod.UI;
 using Ludots.Core.Components;
 using Ludots.Core.Engine;
+using Ludots.Core.Gameplay.Exchange;
 using Ludots.Core.Gameplay.GAS;
 using Ludots.Core.Gameplay.GAS.Components;
 using Ludots.Core.Gameplay.GAS.Registry;
@@ -58,6 +59,10 @@ internal sealed class ItemSystemShowcaseRuntime
     private int _artifactDefId;
     private int _crimsonGemDefId;
     private int _azureGemDefId;
+    private int _buyApAmmoExchangeId;
+    private int _sellArtifactExchangeId;
+    private int _forgeCrimsonGemExchangeId;
+    private int _forgeAzureGemExchangeId;
 
     public ItemSystemShowcaseRuntime()
     {
@@ -352,47 +357,29 @@ internal sealed class ItemSystemShowcaseRuntime
     public void BuyApAmmo(GameEngine engine)
     {
         EnsureScenario(engine);
-        if (Inventory(engine).CountStackUnits(_hero, _creditDefId) < 20)
+        ExchangeExecutionResult result = ExecuteExchange(engine, _buyApAmmoExchangeId);
+        Log(result.Status switch
         {
-            Log("Vendor purchase blocked: insufficient credits.");
-            return;
-        }
-
-        Entity ammo = FindByDef(engine, _apAmmoDefId, _vendorGrid);
-        if (ammo == Entity.Null)
-        {
-            Log("Vendor is out of AP ammo.");
-            return;
-        }
-
-        if (!Inventory(engine).TryTransferItem(ammo, _stash))
-        {
-            Log("Could not place purchased AP ammo into stash.");
-            return;
-        }
-
-        Inventory(engine).ConsumeStackUnits(_hero, _creditDefId, 20);
-        Log("Bought one AP ammo stack for 20 credits.");
+            ExchangeExecutionStatus.Success => "Bought one AP ammo stack for 20 credits.",
+            ExchangeExecutionStatus.InsufficientInput => "Vendor purchase blocked: insufficient credits.",
+            ExchangeExecutionStatus.MissingSourceItem => "Vendor is out of AP ammo.",
+            ExchangeExecutionStatus.OutputBlocked => "Could not place purchased AP ammo into stash.",
+            _ => $"Vendor purchase failed: {result.Status}."
+        });
     }
 
     public void SellArtifact(GameEngine engine)
     {
         EnsureScenario(engine);
-        Entity artifact = FindPlayerItem(engine, _artifactDefId);
-        if (artifact == Entity.Null)
+        ExchangeExecutionResult result = ExecuteExchange(engine, _sellArtifactExchangeId);
+        Log(result.Status switch
         {
-            Log("No Raid Artifact available to sell.");
-            return;
-        }
-
-        if (!Inventory(engine).TryTransferItem(artifact, _vendorGrid))
-        {
-            Log("Could not transfer artifact to vendor.");
-            return;
-        }
-
-        GrantToStash(engine, _creditDefId, 45);
-        Log("Sold Raid Artifact and received 45 credits.");
+            ExchangeExecutionStatus.Success => "Sold Raid Artifact and received 45 credits.",
+            ExchangeExecutionStatus.MissingSourceItem => "No Raid Artifact available to sell.",
+            ExchangeExecutionStatus.OutputBlocked when result.DetailIndex == 0 => "Could not transfer artifact to vendor.",
+            ExchangeExecutionStatus.OutputBlocked => "Could not place sale credits into stash.",
+            _ => $"Artifact sale failed: {result.Status}."
+        });
     }
 
     public void SplitAmmo(GameEngine engine)
@@ -544,86 +531,30 @@ internal sealed class ItemSystemShowcaseRuntime
 
     private void ExecuteRecipe(GameEngine engine, string recipeId)
     {
-        switch (recipeId)
+        int operationId = recipeId switch
         {
-            case "forge_crimson_gem":
-                if (!CanAutoPlaceFreshItem(engine, _crimsonGemDefId, _stash))
-                {
-                    Log("Crimson Gem recipe blocked: need one free stash placement for the crafted gem.");
-                    return;
-                }
+            "forge_crimson_gem" => _forgeCrimsonGemExchangeId,
+            "forge_azure_gem" => _forgeAzureGemExchangeId,
+            _ => 0
+        };
 
-                if (Inventory(engine).CountStackUnits(_hero, _artifactDefId) < 1 || Inventory(engine).CountStackUnits(_hero, _creditDefId) < 20)
-                {
-                    Log("Crimson Gem recipe blocked: need 1 Raid Artifact and 20 credits.");
-                    return;
-                }
-
-                bool consumedArtifact = Inventory(engine).ConsumeStackUnits(_hero, _artifactDefId, 1);
-                bool consumedCrimsonCredits = consumedArtifact && Inventory(engine).ConsumeStackUnits(_hero, _creditDefId, 20);
-                if (!consumedArtifact || !consumedCrimsonCredits)
-                {
-                    bool refunded = RefundConsumedUnits(engine, _artifactDefId, consumedArtifact ? 1 : 0) &&
-                                    RefundConsumedUnits(engine, _creditDefId, consumedCrimsonCredits ? 20 : 0);
-                    Log(refunded
-                        ? "Crimson Gem crafting failed while consuming ingredients and was rolled back."
-                        : "Crimson Gem crafting failed while consuming ingredients and refund was only partial.");
-                    return;
-                }
-
-                if (!TryPlaceFreshItem(engine, _crimsonGemDefId, _stash))
-                {
-                    bool refunded = RefundConsumedUnits(engine, _artifactDefId, 1) &&
-                                    RefundConsumedUnits(engine, _creditDefId, 20);
-                    Log(refunded
-                        ? "Crimson Gem crafting rolled back because the stash had no free placement."
-                        : "Crimson Gem crafting failed after consumption and refund was only partial.");
-                    return;
-                }
-
-                Log("Forged one Crimson Gem from artifact salvage and credits.");
-                return;
-            case "forge_azure_gem":
-                if (!CanAutoPlaceFreshItem(engine, _azureGemDefId, _stash))
-                {
-                    Log("Azure Gem recipe blocked: need one free stash placement for the crafted gem.");
-                    return;
-                }
-
-                if (Inventory(engine).CountStackUnits(_hero, _ammoDefId) < 30 || Inventory(engine).CountStackUnits(_hero, _creditDefId) < 10)
-                {
-                    Log("Azure Gem recipe blocked: need 30 FMJ and 10 credits.");
-                    return;
-                }
-
-                bool consumedAmmo = Inventory(engine).ConsumeStackUnits(_hero, _ammoDefId, 30);
-                bool consumedAzureCredits = consumedAmmo && Inventory(engine).ConsumeStackUnits(_hero, _creditDefId, 10);
-                if (!consumedAmmo || !consumedAzureCredits)
-                {
-                    bool refunded = RefundConsumedUnits(engine, _ammoDefId, consumedAmmo ? 30 : 0) &&
-                                    RefundConsumedUnits(engine, _creditDefId, consumedAzureCredits ? 10 : 0);
-                    Log(refunded
-                        ? "Azure Gem crafting failed while consuming ingredients and was rolled back."
-                        : "Azure Gem crafting failed while consuming ingredients and refund was only partial.");
-                    return;
-                }
-
-                if (!TryPlaceFreshItem(engine, _azureGemDefId, _stash))
-                {
-                    bool refunded = RefundConsumedUnits(engine, _ammoDefId, 30) &&
-                                    RefundConsumedUnits(engine, _creditDefId, 10);
-                    Log(refunded
-                        ? "Azure Gem crafting rolled back because the stash had no free placement."
-                        : "Azure Gem crafting failed after consumption and refund was only partial.");
-                    return;
-                }
-
-                Log("Forged one Azure Gem from FMJ scrap and credits.");
-                return;
-            default:
-                Log($"Unknown recipe '{recipeId}'.");
-                return;
+        if (operationId <= 0)
+        {
+            Log($"Unknown recipe '{recipeId}'.");
+            return;
         }
+
+        ExchangeExecutionResult result = ExecuteExchange(engine, operationId);
+        Log((recipeId, result.Status) switch
+        {
+            ("forge_crimson_gem", ExchangeExecutionStatus.Success) => "Forged one Crimson Gem from artifact salvage and credits.",
+            ("forge_crimson_gem", ExchangeExecutionStatus.OutputBlocked) => "Crimson Gem recipe blocked: need one free stash placement for the crafted gem.",
+            ("forge_crimson_gem", ExchangeExecutionStatus.InsufficientInput) => "Crimson Gem recipe blocked: need 1 Raid Artifact and 20 credits.",
+            ("forge_azure_gem", ExchangeExecutionStatus.Success) => "Forged one Azure Gem from FMJ scrap and credits.",
+            ("forge_azure_gem", ExchangeExecutionStatus.OutputBlocked) => "Azure Gem recipe blocked: need one free stash placement for the crafted gem.",
+            ("forge_azure_gem", ExchangeExecutionStatus.InsufficientInput) => "Azure Gem recipe blocked: need 30 FMJ and 10 credits.",
+            _ => $"Recipe execution failed: {result.Status}."
+        });
     }
 
     private void EnsureScenario(GameEngine engine)
@@ -667,6 +598,20 @@ internal sealed class ItemSystemShowcaseRuntime
         _artifactDefId = definitions.GetId("itm_extraction_artifact");
         _crimsonGemDefId = definitions.GetId("itm_gem_crimson");
         _azureGemDefId = definitions.GetId("itm_gem_azure");
+
+        var exchanges = engine.GetService(CoreServiceKeys.ExchangeOperationRegistry)
+            ?? throw new InvalidOperationException("ExchangeOperationRegistry missing.");
+        _buyApAmmoExchangeId = exchanges.GetId("item_showcase.buy_ap_ammo");
+        _sellArtifactExchangeId = exchanges.GetId("item_showcase.sell_artifact");
+        _forgeCrimsonGemExchangeId = exchanges.GetId("item_showcase.forge_crimson_gem");
+        _forgeAzureGemExchangeId = exchanges.GetId("item_showcase.forge_azure_gem");
+        if (_buyApAmmoExchangeId <= 0 ||
+            _sellArtifactExchangeId <= 0 ||
+            _forgeCrimsonGemExchangeId <= 0 ||
+            _forgeAzureGemExchangeId <= 0)
+        {
+            throw new InvalidOperationException("Item showcase Exchange operations are missing from config.");
+        }
     }
 
     private void Seed(GameEngine engine, ItemSystemShowcaseSceneKind sceneKind)
@@ -817,6 +762,14 @@ internal sealed class ItemSystemShowcaseRuntime
     {
         return engine.GetService(CoreServiceKeys.InventoryRuntimeService)
             ?? throw new InvalidOperationException("InventoryRuntimeService missing.");
+    }
+
+    private ExchangeExecutionResult ExecuteExchange(GameEngine engine, int operationId, int scopeKey = 0)
+    {
+        var exchange = engine.GetService(CoreServiceKeys.ExchangeRuntime)
+            ?? throw new InvalidOperationException("ExchangeRuntime missing.");
+        var context = new ExchangeExecutionContext(_hero, _vendor, Entity.Null, scopeKey);
+        return exchange.TryExecute(new ExchangeOperationKey(operationId, scopeKey), in context);
     }
 
     private int Layout(GameEngine engine, string id)
@@ -1294,51 +1247,6 @@ internal sealed class ItemSystemShowcaseRuntime
                FindByDef(engine, defId, secure);
     }
 
-    private void GrantToStash(GameEngine engine, int defId, int amount)
-    {
-        Entity existing = FindByDef(engine, defId, _stash);
-        if (existing != Entity.Null && engine.World.Has<ItemInstanceCm>(existing))
-        {
-            ref ItemInstanceCm instance = ref engine.World.Get<ItemInstanceCm>(existing);
-            instance.StackCount += amount;
-            return;
-        }
-
-        if (!TryPlaceFreshItem(engine, defId, _stash, stackCount: amount))
-        {
-            throw new InvalidOperationException($"Could not grant definition {defId} into stash.");
-        }
-    }
-
-    private bool RefundConsumedUnits(GameEngine engine, int definitionId, int amount)
-    {
-        if (amount <= 0)
-        {
-            return true;
-        }
-
-        var definitions = engine.GetService(CoreServiceKeys.ItemDefinitionRegistry)
-            ?? throw new InvalidOperationException("ItemDefinitionRegistry missing.");
-        if (!definitions.TryGet(definitionId, out ItemDefinition definition))
-        {
-            throw new InvalidOperationException($"Missing item definition id {definitionId}.");
-        }
-
-        if (definition.MaxStack > 1)
-        {
-            GrantToStash(engine, definitionId, amount);
-            return true;
-        }
-
-        bool refunded = true;
-        for (int i = 0; i < amount; i++)
-        {
-            refunded &= TryPlaceFreshItem(engine, definitionId, _stash);
-        }
-
-        return refunded;
-    }
-
     private Entity CreateTrackedContainer(GameEngine engine, Entity owner, ItemContainerOwnerKind ownerKind, string layoutId)
     {
         Entity container = Inventory(engine).CreateContainer(owner, ownerKind, Layout(engine, layoutId));
@@ -1364,138 +1272,6 @@ internal sealed class ItemSystemShowcaseRuntime
         if (engine.World.IsAlive(item))
         {
             engine.World.Destroy(item);
-        }
-
-        return false;
-    }
-
-    private bool CanAutoPlaceFreshItem(GameEngine engine, int definitionId, Entity container)
-    {
-        if (!engine.World.IsAlive(container) || !engine.World.Has<ItemContainerCm>(container))
-        {
-            return false;
-        }
-
-        var definitions = engine.GetService(CoreServiceKeys.ItemDefinitionRegistry)
-            ?? throw new InvalidOperationException("ItemDefinitionRegistry missing.");
-        var layouts = engine.GetService(CoreServiceKeys.ItemLayoutRegistry)
-            ?? throw new InvalidOperationException("ItemLayoutRegistry missing.");
-        var shapes = engine.GetService(CoreServiceKeys.ItemShapeRegistry)
-            ?? throw new InvalidOperationException("ItemShapeRegistry missing.");
-        if (!definitions.TryGet(definitionId, out ItemDefinition definition))
-        {
-            throw new InvalidOperationException($"Missing item definition id {definitionId}.");
-        }
-
-        ItemContainerCm containerData = engine.World.Get<ItemContainerCm>(container);
-        if (!layouts.TryGet(containerData.LayoutId, out ItemLayoutDefinition layout))
-        {
-            throw new InvalidOperationException($"Missing layout id {containerData.LayoutId}.");
-        }
-
-        for (int slotIndex = 0; slotIndex < layout.NamedSlots.Length; slotIndex++)
-        {
-            ItemNamedSlotDefinition? slot = layout.GetNamedSlot(slotIndex);
-            if (slot == null)
-            {
-                continue;
-            }
-
-            GameplayTagContainer requiredAll = slot.RequiredAll;
-            GameplayTagContainer blockedAny = slot.BlockedAny;
-            if (definition.AllowsNamedSlot(slot.Id) &&
-                definition.Tags.ContainsAll(in requiredAll) &&
-                !definition.Tags.Intersects(in blockedAny) &&
-                SlotItem(engine, container, slot.Id) == Entity.Null)
-            {
-                return true;
-            }
-        }
-
-        if (!layout.HasGrid || !shapes.TryGet(definition.ShapeId, out ItemShapeDefinition shape))
-        {
-            return false;
-        }
-
-        var placedItems = new List<Entity>(32);
-        Inventory(engine).CollectItemsInContainer(container, placedItems);
-        for (int rotation = 0; rotation < shape.Rotations.Length; rotation++)
-        {
-            ItemShapeRotation rotated = shape.GetRotation(rotation);
-            for (int y = 0; y <= layout.Height - rotated.Height; y++)
-            {
-                for (int x = 0; x <= layout.Width - rotated.Width; x++)
-                {
-                    if (CanPlaceFreshShape(engine, container, layout, placedItems, rotated, x, y))
-                    {
-                        return true;
-                    }
-                }
-            }
-        }
-
-        return false;
-    }
-
-    private bool CanPlaceFreshShape(
-        GameEngine engine,
-        Entity container,
-        ItemLayoutDefinition layout,
-        IReadOnlyList<Entity> placedItems,
-        ItemShapeRotation shape,
-        int x,
-        int y)
-    {
-        for (int sy = 0; sy < shape.Height; sy++)
-        {
-            for (int sx = 0; sx < shape.Width; sx++)
-            {
-                if (!shape.IsOccupied(sx, sy))
-                {
-                    continue;
-                }
-
-                int tx = x + sx;
-                int ty = y + sy;
-                if (layout.IsBlockedCell(tx, ty) || GridCellOccupied(engine, container, placedItems, tx, ty))
-                {
-                    return false;
-                }
-            }
-        }
-
-        return true;
-    }
-
-    private bool GridCellOccupied(GameEngine engine, Entity container, IReadOnlyList<Entity> placedItems, int gridX, int gridY)
-    {
-        for (int i = 0; i < placedItems.Count; i++)
-        {
-            Entity item = placedItems[i];
-            if (!engine.World.IsAlive(item) || !engine.World.Has<ItemInstanceCm>(item) || !engine.World.Has<ItemLocationCm>(item))
-            {
-                continue;
-            }
-
-            ItemLocationCm location = engine.World.Get<ItemLocationCm>(item);
-            if (location.Container != container || location.PlacementKind != ItemPlacementKind.Grid)
-            {
-                continue;
-            }
-
-            ItemShapeRotation placedShape = ShapeFor(engine, item, location.RotationQuarterTurns);
-            for (int sy = 0; sy < placedShape.Height; sy++)
-            {
-                for (int sx = 0; sx < placedShape.Width; sx++)
-                {
-                    if (placedShape.IsOccupied(sx, sy) &&
-                        location.GridX + sx == gridX &&
-                        location.GridY + sy == gridY)
-                    {
-                        return true;
-                    }
-                }
-            }
         }
 
         return false;

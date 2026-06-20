@@ -11,6 +11,7 @@
 - [Entity Collection Query Infrastructure](entity_collection_query_infrastructure.md)
 - [Entity Command Panel Infrastructure](entity_command_panel_infrastructure.md)
 - [Entity Insight Panel Architecture](entity_insight_panel_architecture.md)
+- [Exchange Architecture](exchange_architecture.md)
 - [Item Inventory Equipment Architecture](item_inventory_equipment_architecture.md)
 - [Map, Mod, and Spatial Ownership](map_mod_spatial.md)
 - [Mod Architecture](mod_architecture.md)

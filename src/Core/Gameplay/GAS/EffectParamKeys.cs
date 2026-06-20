@@ -53,6 +53,10 @@ namespace Ludots.Core.Gameplay.GAS
         public static int UnitOffsetRadius;
         public static int OnSpawnEffectId;
 
+        // ── ExchangeParams ──
+        public static int ExchangeOperationId;
+        public static int ExchangeScopeKey;
+
         /// <summary>
         /// Register all _ep.* keys with the ConfigKeyRegistry.
         /// Must be called once during GasController initialization,
@@ -98,6 +102,10 @@ namespace Ludots.Core.Gameplay.GAS
             UnitCount = ConfigKeyRegistry.Register("_ep.unitCount");
             UnitOffsetRadius = ConfigKeyRegistry.Register("_ep.unitOffsetRadius");
             OnSpawnEffectId = ConfigKeyRegistry.Register("_ep.onSpawnEffectId");
+
+            // ExchangeParams
+            ExchangeOperationId = ConfigKeyRegistry.Register("_ep.exchangeOperationId");
+            ExchangeScopeKey = ConfigKeyRegistry.Register("_ep.exchangeScopeKey");
         }
     }
 }

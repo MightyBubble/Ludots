@@ -3,6 +3,7 @@ using Arch.Core;
 using Arch.Core.Extensions;
 using Ludots.Core.Components;
 using Ludots.Core.Gameplay.Components;
+using Ludots.Core.Gameplay.Exchange;
 using Ludots.Core.Gameplay.GAS.Components;
 using Ludots.Core.Gameplay.Spawning;
 using Ludots.Core.Mathematics;
@@ -27,6 +28,7 @@ namespace Ludots.Core.Gameplay.GAS
             registry.Register(BuiltinHandlerId.CreateUnit, HandleCreateUnit);
             registry.Register(BuiltinHandlerId.ApplyDisplacement, HandleApplyDisplacement);
             registry.Register(BuiltinHandlerId.ApplyRelation, HandleApplyRelation);
+            registry.Register(BuiltinHandlerId.ExecuteExchange, HandleExecuteExchange);
         }
 
         public static void HandleApplyModifiers(
@@ -385,6 +387,39 @@ namespace Ludots.Core.Gameplay.GAS
                 case RelationOperation.RemoveParent:
                     RelationOps.RemoveParent(world, subject);
                     break;
+            }
+        }
+
+        public static void HandleExecuteExchange(
+            World world,
+            Entity effectEntity,
+            ref EffectContext context,
+            in EffectConfigParams mergedParams,
+            in EffectTemplateData templateData)
+        {
+            var runtime = BuiltinHandlerRuntimeScope.Current;
+            if (runtime?.Exchange == null)
+            {
+                throw new InvalidOperationException("ExecuteExchange requires ExchangeRuntime in BuiltinHandlerExecutionContext.");
+            }
+
+            if (!mergedParams.TryGetInt(EffectParamKeys.ExchangeOperationId, out int operationId) || operationId <= 0)
+            {
+                throw new InvalidOperationException("ExecuteExchange requires _ep.exchangeOperationId.");
+            }
+
+            mergedParams.TryGetInt(EffectParamKeys.ExchangeScopeKey, out int scopeKey);
+            var exchangeContext = new ExchangeExecutionContext(
+                context.Source,
+                context.Target,
+                context.TargetContext,
+                scopeKey);
+            ExchangeExecutionResult result = runtime.Exchange.TryExecute(
+                new ExchangeOperationKey(operationId, scopeKey),
+                in exchangeContext);
+            if (!result.Succeeded)
+            {
+                throw new InvalidOperationException($"ExecuteExchange failed: status={result.Status} operationId={operationId} detailIndex={result.DetailIndex}.");
             }
         }
 

@@ -1,0 +1,318 @@
+using System;
+using System.Collections.Generic;
+using Arch.Core;
+using Ludots.Core.Gameplay.GAS;
+using Ludots.Core.Gameplay.Items;
+
+namespace Ludots.Core.Gameplay.Exchange
+{
+    public sealed class ExchangeRuntime
+    {
+        private readonly World _world;
+        private readonly ExchangeOperationRegistry _operations;
+        private readonly ExchangeScopedOperationStore _scopedOperations;
+        private readonly InventoryRuntimeService _inventory;
+        private readonly EffectRequestQueue _effects;
+        private readonly List<ItemConsumptionRecord> _consumed = new(16);
+        private readonly List<CreatedItemRecord> _created = new(8);
+        private readonly List<MovedItemRecord> _moved = new(8);
+
+        public ExchangeRuntime(
+            World world,
+            ExchangeOperationRegistry operations,
+            ExchangeScopedOperationStore scopedOperations,
+            InventoryRuntimeService inventory,
+            EffectRequestQueue effects)
+        {
+            _world = world ?? throw new ArgumentNullException(nameof(world));
+            _operations = operations ?? throw new ArgumentNullException(nameof(operations));
+            _scopedOperations = scopedOperations ?? throw new ArgumentNullException(nameof(scopedOperations));
+            _inventory = inventory ?? throw new ArgumentNullException(nameof(inventory));
+            _effects = effects ?? throw new ArgumentNullException(nameof(effects));
+        }
+
+        public ExchangeExecutionResult TryExecute(int operationId, in ExchangeExecutionContext context)
+        {
+            return TryExecute(new ExchangeOperationKey(operationId, context.ScopeKey), in context);
+        }
+
+        public ExchangeExecutionResult TryExecute(ExchangeOperationKey key, in ExchangeExecutionContext context)
+        {
+            _consumed.Clear();
+            _created.Clear();
+            _moved.Clear();
+
+            if (!TryResolveOperation(in key, out ExchangeOperationDefinition operation))
+            {
+                return new ExchangeExecutionResult(ExchangeExecutionStatus.MissingOperation, key.OperationId);
+            }
+
+            ExchangeExecutionResult check = Validate(key.OperationId, operation, in context);
+            if (!check.Succeeded)
+            {
+                return check;
+            }
+
+            for (int i = 0; i < operation.Inputs.Length; i++)
+            {
+                ExchangeInputDefinition input = operation.Inputs[i];
+                Entity actor = context.Resolve(input.Actor);
+                if (!_inventory.ConsumeStackUnits(actor, input.ItemDefinitionId, input.Quantity, _consumed))
+                {
+                    Rollback();
+                    return new ExchangeExecutionResult(ExchangeExecutionStatus.InsufficientInput, key.OperationId, i);
+                }
+            }
+
+            for (int i = 0; i < operation.Outputs.Length; i++)
+            {
+                ExchangeOutputDefinition output = operation.Outputs[i];
+                if (output.Kind == ExchangeOutputKind.EffectRequest)
+                {
+                    continue;
+                }
+
+                if (!ApplyItemOutput(output, in context))
+                {
+                    Rollback();
+                    return new ExchangeExecutionResult(ExchangeExecutionStatus.ExecutionFailed, key.OperationId, i);
+                }
+            }
+
+            PublishEffects(operation, in context);
+            _consumed.Clear();
+            _created.Clear();
+            _moved.Clear();
+            return new ExchangeExecutionResult(ExchangeExecutionStatus.Success, key.OperationId);
+        }
+
+        public ExchangeExecutionResult TryExecute(string operationId, in ExchangeExecutionContext context)
+        {
+            int id = _operations.GetId(operationId);
+            return TryExecute(id, in context);
+        }
+
+        private bool TryResolveOperation(in ExchangeOperationKey key, out ExchangeOperationDefinition operation)
+        {
+            if (key.HasScope && _scopedOperations.TryGet(key.OperationId, key.ScopeKey, out operation))
+            {
+                return true;
+            }
+
+            return _operations.TryGet(key.OperationId, out operation);
+        }
+
+        private ExchangeExecutionResult Validate(int operationId, ExchangeOperationDefinition operation, in ExchangeExecutionContext context)
+        {
+            for (int i = 0; i < operation.Inputs.Length; i++)
+            {
+                ExchangeInputDefinition input = operation.Inputs[i];
+                Entity actor = context.Resolve(input.Actor);
+                if (!IsLiveActor(actor))
+                {
+                    return new ExchangeExecutionResult(ExchangeExecutionStatus.MissingActor, operationId, i);
+                }
+
+                if (_inventory.CountStackUnits(actor, input.ItemDefinitionId) < input.Quantity)
+                {
+                    return new ExchangeExecutionResult(ExchangeExecutionStatus.InsufficientInput, operationId, i);
+                }
+            }
+
+            for (int i = 0; i < operation.Outputs.Length; i++)
+            {
+                ExchangeOutputDefinition output = operation.Outputs[i];
+                ExchangeExecutionResult result = ValidateOutput(operationId, output, in context, i);
+                if (!result.Succeeded)
+                {
+                    return result;
+                }
+            }
+
+            return new ExchangeExecutionResult(ExchangeExecutionStatus.Success, operationId);
+        }
+
+        private ExchangeExecutionResult ValidateOutput(int operationId, ExchangeOutputDefinition output, in ExchangeExecutionContext context, int index)
+        {
+            if (output.Kind == ExchangeOutputKind.EffectRequest)
+            {
+                return ValidateEffectOutput(operationId, output, in context, index);
+            }
+
+            Entity actor = context.Resolve(output.Actor);
+            if (!IsLiveActor(actor))
+            {
+                return new ExchangeExecutionResult(ExchangeExecutionStatus.MissingActor, operationId, index);
+            }
+
+            if (!_inventory.TryFindOwnedContainer(actor, output.Purpose, out Entity container))
+            {
+                return new ExchangeExecutionResult(ExchangeExecutionStatus.MissingContainer, operationId, index);
+            }
+
+            if (output.Kind == ExchangeOutputKind.CreateItem)
+            {
+                return _inventory.CanAutoPlaceItemDefinition(container, output.ItemDefinitionId)
+                    ? new ExchangeExecutionResult(ExchangeExecutionStatus.Success, operationId)
+                    : new ExchangeExecutionResult(ExchangeExecutionStatus.OutputBlocked, operationId, index);
+            }
+
+            if (output.Kind == ExchangeOutputKind.MoveItem)
+            {
+                Entity fromActor = context.Resolve(output.FromActor);
+                if (!IsLiveActor(fromActor))
+                {
+                    return new ExchangeExecutionResult(ExchangeExecutionStatus.MissingActor, operationId, index);
+                }
+
+                if (!_inventory.TryFindOwnedItem(fromActor, output.ItemDefinitionId, output.FromPurpose, out Entity item))
+                {
+                    return new ExchangeExecutionResult(ExchangeExecutionStatus.MissingSourceItem, operationId, index);
+                }
+
+                return _inventory.CanAutoPlaceItem(item, container)
+                    ? new ExchangeExecutionResult(ExchangeExecutionStatus.Success, operationId)
+                    : new ExchangeExecutionResult(ExchangeExecutionStatus.OutputBlocked, operationId, index);
+            }
+
+            return new ExchangeExecutionResult(ExchangeExecutionStatus.ExecutionFailed, operationId, index);
+        }
+
+        private ExchangeExecutionResult ValidateEffectOutput(int operationId, ExchangeOutputDefinition output, in ExchangeExecutionContext context, int index)
+        {
+            if (output.EffectTemplateId <= 0 ||
+                !IsLiveActor(context.Resolve(output.EffectSource)) ||
+                !IsLiveActor(context.Resolve(output.EffectTarget)))
+            {
+                return new ExchangeExecutionResult(ExchangeExecutionStatus.MissingActor, operationId, index);
+            }
+
+            return new ExchangeExecutionResult(ExchangeExecutionStatus.Success, operationId);
+        }
+
+        private bool ApplyItemOutput(ExchangeOutputDefinition output, in ExchangeExecutionContext context)
+        {
+            Entity actor = context.Resolve(output.Actor);
+            if (!_inventory.TryFindOwnedContainer(actor, output.Purpose, out Entity container))
+            {
+                return false;
+            }
+
+            if (output.Kind == ExchangeOutputKind.CreateItem)
+            {
+                if (!_inventory.TryCreateAndPlaceItem(
+                    container,
+                    output.ItemDefinitionId,
+                    output.Quantity,
+                    output.Charges,
+                    output.Durability,
+                    out Entity item))
+                {
+                    return false;
+                }
+
+                _created.Add(new CreatedItemRecord(item));
+                return true;
+            }
+
+            if (output.Kind == ExchangeOutputKind.MoveItem)
+            {
+                Entity fromActor = context.Resolve(output.FromActor);
+                if (!_inventory.TryFindOwnedItem(fromActor, output.ItemDefinitionId, output.FromPurpose, out Entity item))
+                {
+                    return false;
+                }
+
+                bool hadLocation = _world.Has<ItemLocationCm>(item);
+                ItemLocationCm previous = hadLocation ? _world.Get<ItemLocationCm>(item) : default;
+                if (!_inventory.TryTransferItem(item, container))
+                {
+                    return false;
+                }
+
+                _moved.Add(new MovedItemRecord(item, hadLocation, previous));
+                return true;
+            }
+
+            return false;
+        }
+
+        private void PublishEffects(ExchangeOperationDefinition operation, in ExchangeExecutionContext context)
+        {
+            for (int i = 0; i < operation.Outputs.Length; i++)
+            {
+                ExchangeOutputDefinition output = operation.Outputs[i];
+                if (output.Kind != ExchangeOutputKind.EffectRequest)
+                {
+                    continue;
+                }
+
+                _effects.Publish(new EffectRequest
+                {
+                    Source = context.Resolve(output.EffectSource),
+                    Target = context.Resolve(output.EffectTarget),
+                    TargetContext = context.Resolve(output.EffectContext),
+                    TemplateId = output.EffectTemplateId
+                });
+            }
+        }
+
+        private void Rollback()
+        {
+            for (int i = _created.Count - 1; i >= 0; i--)
+            {
+                Entity item = _created[i].Item;
+                if (_world.IsAlive(item))
+                {
+                    _inventory.DestroyItemTree(item);
+                }
+            }
+
+            for (int i = _moved.Count - 1; i >= 0; i--)
+            {
+                MovedItemRecord record = _moved[i];
+                if (_world.IsAlive(record.Item))
+                {
+                    ItemLocationCm location = record.Location;
+                    _inventory.RestoreItemLocation(record.Item, record.HadLocation, in location);
+                }
+            }
+
+            _inventory.RestoreConsumedUnits(_consumed);
+            _consumed.Clear();
+            _created.Clear();
+            _moved.Clear();
+        }
+
+        private bool IsLiveActor(Entity entity)
+        {
+            return entity != Entity.Null && _world.IsAlive(entity);
+        }
+
+        private readonly struct CreatedItemRecord
+        {
+            public CreatedItemRecord(Entity item)
+            {
+                Item = item;
+            }
+
+            public Entity Item { get; }
+        }
+
+        private readonly struct MovedItemRecord
+        {
+            public MovedItemRecord(Entity item, bool hadLocation, ItemLocationCm location)
+            {
+                Item = item;
+                HadLocation = hadLocation;
+                Location = location;
+            }
+
+            public Entity Item { get; }
+
+            public bool HadLocation { get; }
+
+            public ItemLocationCm Location { get; }
+        }
+    }
+}

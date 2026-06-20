@@ -25,6 +25,8 @@ namespace Ludots.Core.Gameplay.GAS
         Displacement = 11,
         /// <summary>Entity relation effect: garrison, detach, or link parent-child state.</summary>
         Relation = 12,
+        /// <summary>Rule-constrained settlement through the Exchange runtime.</summary>
+        Exchange = 13,
     }
 
     // ── TargetResolver: pluggable target fan-out for effects ──

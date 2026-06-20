@@ -7,6 +7,7 @@
 - [运行时总览](runtime-overview.md)
 - [Mod 架构](mod-architecture.md)
 - [GAS 分层架构](gas-layered-architecture.md)
+- [Exchange Operations](exchange-operations.md)
 - [实体仿真分层与车道](entity-simulation-layering.md)
 - [实体仿真工作流拆分](entity-simulation-workstreams.md)
 - [实体仿真阶段验收](entity-simulation-uat.md)
@@ -29,7 +30,7 @@
 ## 当前主线重点
 
 - launcher 已进入 graph-backed SSOT 阶段，运行时由 launcher graph artifact 驱动
-- Core 现已包含 `TimeFlow`、`Items`、`Narrative`、`Relationships` 等正式运行时能力
+- Core 现已包含 `TimeFlow`、`Items`、`Exchange`、`Narrative`、`Relationships` 等正式运行时能力
 - 输入、选择、实体信息面板、路网移动与 narrative frontend 都已有主线实现和 showcase 入口
 - 大规模实体场景的下一阶段主线，是把 `Authority` 与 `Budgeted` 仿真车道、碰撞层过滤、AOI/LOD 调度和 mass crowd 展示收敛成同一套正式组件规范
 - Raylib 侧已补充一个“脱离 performer/entity 行为”的直接 ISM benchmark，用于隔离最终绘制瓶颈；当前证据表明 30K 黑铁匠铺 mesh 的平台层 instanced draw 已能稳定跑通，优先暴露出的风险点在 Skia final overlay，而不是平台层 mesh draw

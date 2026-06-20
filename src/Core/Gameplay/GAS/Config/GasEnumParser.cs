@@ -27,6 +27,7 @@ namespace Ludots.Core.Gameplay.GAS.Config
             { "CreateUnit", EffectPresetType.CreateUnit },
             { "Displacement", EffectPresetType.Displacement },
             { "Relation", EffectPresetType.Relation },
+            { "Exchange", EffectPresetType.Exchange },
         };
 
         /// <summary>
@@ -179,6 +180,7 @@ namespace Ludots.Core.Gameplay.GAS.Config
             { "CreateUnit", BuiltinHandlerId.CreateUnit },
             { "ApplyDisplacement", BuiltinHandlerId.ApplyDisplacement },
             { "ApplyRelation", BuiltinHandlerId.ApplyRelation },
+            { "ExecuteExchange", BuiltinHandlerId.ExecuteExchange },
         };
 
         /// <summary>

@@ -5,6 +5,7 @@ using System.Text.Json;
 using System.Text.Json.Nodes;
 using System.Text.Json.Serialization;
 using Ludots.Core.Config;
+using Ludots.Core.Gameplay.Exchange;
 using Ludots.Core.Gameplay.GAS.Components;
 using Ludots.Core.Gameplay.GAS.Registry;
 using Ludots.Core.Gameplay.Teams;
@@ -19,6 +20,7 @@ namespace Ludots.Core.Gameplay.GAS.Config
         private readonly EffectTemplateRegistry _registry;
         private readonly GasConditionRegistry _conditions;
         private readonly TargetDispatchPresetRegistry _targetDispatchPresets;
+        private readonly ExchangeOperationRegistry? _exchangeOperations;
 
         private static readonly JsonSerializerOptions JsonOptions = new()
         {
@@ -32,12 +34,14 @@ namespace Ludots.Core.Gameplay.GAS.Config
             ConfigPipeline pipeline,
             EffectTemplateRegistry registry,
             GasConditionRegistry conditions = null,
-            TargetDispatchPresetRegistry targetDispatchPresets = null)
+            TargetDispatchPresetRegistry targetDispatchPresets = null,
+            ExchangeOperationRegistry? exchangeOperations = null)
         {
             _pipeline = pipeline;
             _registry = registry;
             _conditions = conditions;
             _targetDispatchPresets = targetDispatchPresets;
+            _exchangeOperations = exchangeOperations;
         }
 
         public void Load(
@@ -294,6 +298,21 @@ namespace Ludots.Core.Gameplay.GAS.Config
                 {
                     throw new InvalidOperationException(
                         $"Effect template '{cfg.Id}' in {relativePath}: presetType Relation requires a 'relation' block.");
+                }
+            }
+
+            if (presetType == EffectPresetType.Exchange)
+            {
+                if (lifetimeKind != EffectLifetimeKind.Instant)
+                {
+                    throw new InvalidOperationException(
+                        $"Effect template '{cfg.Id}' in {relativePath}: presetType Exchange requires lifetime=Instant.");
+                }
+
+                if (!configParams.TryGetInt(EffectParamKeys.ExchangeOperationId, out int operationId) || operationId <= 0)
+                {
+                    throw new InvalidOperationException(
+                        $"Effect template '{cfg.Id}' in {relativePath}: presetType Exchange requires configParams \"_ep.exchangeOperationId\" with type \"Int\".");
                 }
             }
 
@@ -774,7 +793,7 @@ namespace Ludots.Core.Gameplay.GAS.Config
 
         // ── Config Params compilation ──
 
-        private static void CompileConfigParams(
+        private void CompileConfigParams(
             Dictionary<string, ConfigParamConfig> configParams,
             ref EffectConfigParams result,
             string ownerId,
@@ -846,9 +865,34 @@ namespace Ludots.Core.Gameplay.GAS.Config
                         throw new InvalidOperationException($"Effect template '{ownerId}' in {relativePath}: configParams exceeded capacity ({EffectConfigParams.MAX_PARAMS}).");
                     }
                 }
+                else if (type == "ExchangeOperation")
+                {
+                    string operationName = paramCfg.Value.ToString()
+                        ?? throw new InvalidOperationException($"Effect template '{ownerId}' in {relativePath}: configParams.{kvp.Key}.value must convert to a string.");
+                    if (string.IsNullOrWhiteSpace(operationName))
+                    {
+                        throw new InvalidOperationException($"Effect template '{ownerId}' in {relativePath}: configParams.{kvp.Key} exchange operation type requires a non-empty operation id.");
+                    }
+
+                    if (_exchangeOperations == null)
+                    {
+                        throw new InvalidOperationException($"Effect template '{ownerId}' in {relativePath}: ExchangeOperation config param requires ExchangeOperationRegistry.");
+                    }
+
+                    int operationId = _exchangeOperations.GetId(operationName);
+                    if (operationId <= 0)
+                    {
+                        throw new InvalidOperationException($"Effect template '{ownerId}' in {relativePath}: configParams.{kvp.Key} references unknown exchange operation '{operationName}'.");
+                    }
+
+                    if (!result.TryAddInt(keyId, operationId))
+                    {
+                        throw new InvalidOperationException($"Effect template '{ownerId}' in {relativePath}: configParams exceeded capacity ({EffectConfigParams.MAX_PARAMS}).");
+                    }
+                }
                 else
                 {
-                    throw new InvalidOperationException($"Effect template '{ownerId}' in {relativePath}: configParams.{kvp.Key} has unsupported type '{type}'. Supported: Float, Int, EffectTemplate, Attribute.");
+                    throw new InvalidOperationException($"Effect template '{ownerId}' in {relativePath}: configParams.{kvp.Key} has unsupported type '{type}'. Supported: Float, Int, EffectTemplate, Attribute, ExchangeOperation.");
                 }
             }
         }

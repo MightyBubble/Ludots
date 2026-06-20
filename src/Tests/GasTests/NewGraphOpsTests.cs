@@ -246,7 +246,7 @@ namespace Ludots.Tests.GAS
 
             var target = world.Create(new ActiveEffectContainer());
             var effect = world.Create(
-                new GameplayEffect { LifetimeKind = EffectLifetimeKind.After, ClockId = GasClockId.FixedFrame },
+                new GameplayEffect { LifetimeKind = EffectLifetimeKind.After, ClockId = GasClockId.FixedFrame, AggregatesModifiers = true },
                 new EffectTemplateRef { TemplateId = 91 });
 
             ref var container = ref world.Get<ActiveEffectContainer>(target);
@@ -261,6 +261,7 @@ namespace Ludots.Tests.GAS
             ExecuteProgram(world, api, caster: Entity.Null, target, program);
 
             That(world.Get<GameplayEffect>(effect).CancelRequested, Is.True);
+            That(world.Has<AttributeAggregateDirty>(target), Is.True);
         }
 
         // ════════════════════════════════════════════════════════════════════

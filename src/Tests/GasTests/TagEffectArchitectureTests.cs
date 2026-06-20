@@ -289,7 +289,7 @@ namespace Ludots.Tests.GAS
         // ════════════════════════════════════════════════════════════════════
 
         [Test]
-        public void BuiltinHandlers_RegisterAll_RegistersAllNine()
+        public void BuiltinHandlers_RegisterAll_RegistersAllTen()
         {
             var registry = new BuiltinHandlerRegistry();
             BuiltinHandlers.RegisterAll(registry);
@@ -303,6 +303,7 @@ namespace Ludots.Tests.GAS
             That(registry.IsRegistered(BuiltinHandlerId.CreateUnit), Is.True);
             That(registry.IsRegistered(BuiltinHandlerId.ApplyDisplacement), Is.True);
             That(registry.IsRegistered(BuiltinHandlerId.ApplyRelation), Is.True);
+            That(registry.IsRegistered(BuiltinHandlerId.ExecuteExchange), Is.True);
         }
 
         [Test]
@@ -315,14 +316,14 @@ namespace Ludots.Tests.GAS
             var ctx = new EffectContext { Source = effect, Target = target };
             var tpl = new EffectTemplateData();
             tpl.Modifiers = new EffectModifiers();
-            // Use attrId 1 for testing
-            tpl.Modifiers.Add(1, ModifierOp.Add, 42f);
+            int attributeId = AttributeRegistry.Register($"Test.Builtin.ApplyModifiers.{Guid.NewGuid():N}");
+            tpl.Modifiers.Add(attributeId, ModifierOp.Add, 42f);
 
             var mergedParams = new EffectConfigParams();
             BuiltinHandlers.HandleApplyModifiers(world, effect, ref ctx, in mergedParams, in tpl);
 
             ref var attrBuf = ref world.Get<AttributeBuffer>(target);
-            That(attrBuf.GetCurrent(1), Is.EqualTo(42f));
+            That(attrBuf.GetCurrent(attributeId), Is.EqualTo(42f));
         }
 
         [Test]

@@ -98,6 +98,14 @@ namespace Ludots.Core.Registry
             return !string.IsNullOrWhiteSpace(name) && _nameToId.ContainsKey(name);
         }
 
+        public void Clear()
+        {
+            _nameToId.Clear();
+            Array.Clear(_idToName, 0, _idToName.Length);
+            _nextId = _startId;
+            _frozen = false;
+        }
+
         /// <summary>
         /// Remove a string key mapping without reusing its numeric id.
         /// Existing ids remain opaque and monotonically assigned; removed ids are not recycled.
