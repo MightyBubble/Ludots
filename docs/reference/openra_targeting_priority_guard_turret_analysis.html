@@ -1,0 +1,806 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>OpenRA 索敌优先级、脱战警戒与炮台机制源码剖面</title>
+  <style>
+    :root {
+      --bg: #ffffff;
+      --ink: #17202a;
+      --muted: #66717e;
+      --line: #d9e2ec;
+      --soft: #f5f7fa;
+      --blue-soft: #edf4ff;
+      --green-soft: #edf7f1;
+      --amber-soft: #fff4df;
+      --red-soft: #fff0ee;
+      --blue: #2563eb;
+      --teal: #0f766e;
+      --green: #2f855a;
+      --amber: #b45309;
+      --red: #b42318;
+      --violet: #6d28d9;
+      --radius: 8px;
+      --shadow: 0 8px 24px rgba(23, 32, 42, 0.07);
+    }
+
+    * { box-sizing: border-box; }
+    html { scroll-behavior: smooth; }
+
+    body {
+      margin: 0;
+      font-family: "Segoe UI", "Microsoft YaHei", Arial, sans-serif;
+      color: var(--ink);
+      background: var(--bg);
+      line-height: 1.72;
+      letter-spacing: 0;
+    }
+
+    a { color: var(--blue); text-decoration: none; }
+    a:hover { text-decoration: underline; }
+
+    code {
+      font-family: Consolas, "Cascadia Mono", "SFMono-Regular", monospace;
+      font-size: 0.92em;
+      background: #eef2f6;
+      border: 1px solid #d8e0e8;
+      border-radius: 6px;
+      padding: 0.08rem 0.32rem;
+      overflow-wrap: anywhere;
+    }
+
+    .hero {
+      border-bottom: 6px solid var(--amber);
+      background: #17202a;
+      color: #f8fafc;
+    }
+
+    .hero-inner {
+      width: min(1180px, calc(100% - 32px));
+      margin: 0 auto;
+      padding: 48px 0 42px;
+      display: grid;
+      grid-template-columns: minmax(0, 1.18fr) minmax(300px, 0.82fr);
+      gap: 28px;
+      align-items: end;
+    }
+
+    .hero h1 {
+      margin: 0 0 16px;
+      max-width: 880px;
+      font-size: 2.28rem;
+      line-height: 1.16;
+      font-weight: 850;
+      letter-spacing: 0;
+    }
+
+    .hero p {
+      margin: 0;
+      max-width: 860px;
+      color: #dfe7f0;
+      font-size: 1.02rem;
+    }
+
+    .hero code {
+      color: #f8fafc;
+      background: rgba(255, 255, 255, 0.1);
+      border-color: rgba(255, 255, 255, 0.22);
+    }
+
+    .summary {
+      display: grid;
+      gap: 12px;
+      padding: 18px;
+      border: 1px solid rgba(255, 255, 255, 0.18);
+      border-radius: var(--radius);
+      background: rgba(255, 255, 255, 0.08);
+      box-shadow: var(--shadow);
+    }
+
+    .summary b {
+      color: #ffffff;
+      font-size: 1.02rem;
+    }
+
+    .summary span {
+      color: #dfe7f0;
+      font-size: 0.93rem;
+    }
+
+    .layout {
+      width: min(1180px, calc(100% - 32px));
+      margin: 0 auto;
+      display: grid;
+      grid-template-columns: 260px minmax(0, 1fr);
+      gap: 28px;
+      padding: 32px 0 72px;
+    }
+
+    .toc {
+      position: sticky;
+      top: 18px;
+      align-self: start;
+      padding: 14px;
+      border: 1px solid var(--line);
+      border-radius: var(--radius);
+      background: #ffffff;
+      box-shadow: var(--shadow);
+    }
+
+    .toc h2 {
+      margin: 0 0 10px;
+      color: var(--muted);
+      font-size: 0.9rem;
+    }
+
+    .toc a {
+      display: block;
+      padding: 8px;
+      border-radius: 6px;
+      color: #263442;
+      font-size: 0.91rem;
+    }
+
+    .toc a:hover {
+      background: var(--soft);
+      text-decoration: none;
+    }
+
+    main { min-width: 0; }
+
+    section {
+      margin-bottom: 34px;
+      padding: 30px 0;
+      border-top: 1px solid var(--line);
+    }
+
+    section:first-child {
+      border-top: 0;
+      padding-top: 0;
+    }
+
+    h2 {
+      margin: 0 0 16px;
+      font-size: 1.46rem;
+      line-height: 1.25;
+      letter-spacing: 0;
+    }
+
+    h3 {
+      margin: 0 0 10px;
+      font-size: 1.05rem;
+      line-height: 1.35;
+      letter-spacing: 0;
+    }
+
+    p { margin: 0 0 13px; }
+    ul { margin: 0; padding-left: 1.16rem; }
+    li { margin: 6px 0; }
+
+    table {
+      width: 100%;
+      border-collapse: collapse;
+      border: 1px solid var(--line);
+      border-radius: var(--radius);
+      overflow: hidden;
+      background: #ffffff;
+      font-size: 0.94rem;
+    }
+
+    th, td {
+      padding: 11px 12px;
+      border-bottom: 1px solid var(--line);
+      vertical-align: top;
+      text-align: left;
+    }
+
+    th {
+      background: #f1f5f9;
+      color: #334155;
+      font-weight: 750;
+    }
+
+    tr:last-child td { border-bottom: 0; }
+
+    .table-wrap {
+      width: 100%;
+      overflow-x: auto;
+      margin: 16px 0;
+      border-radius: var(--radius);
+    }
+
+    .label {
+      display: inline-block;
+      margin-bottom: 10px;
+      color: var(--amber);
+      font-size: 0.78rem;
+      font-weight: 800;
+      text-transform: uppercase;
+      letter-spacing: 0;
+    }
+
+    .callout {
+      margin: 16px 0;
+      padding: 16px 18px;
+      border: 1px solid var(--line);
+      border-left: 5px solid var(--blue);
+      border-radius: var(--radius);
+      background: var(--blue-soft);
+    }
+
+    .callout.warn {
+      border-left-color: var(--amber);
+      background: var(--amber-soft);
+    }
+
+    .callout.danger {
+      border-left-color: var(--red);
+      background: var(--red-soft);
+    }
+
+    .grid {
+      display: grid;
+      grid-template-columns: repeat(3, minmax(0, 1fr));
+      gap: 14px;
+      margin: 16px 0;
+    }
+
+    .tile {
+      min-width: 0;
+      padding: 16px;
+      border: 1px solid var(--line);
+      border-radius: var(--radius);
+      background: #ffffff;
+      box-shadow: var(--shadow);
+    }
+
+    .tile.blue { border-top: 4px solid var(--blue); }
+    .tile.green { border-top: 4px solid var(--green); }
+    .tile.amber { border-top: 4px solid var(--amber); }
+    .tile.red { border-top: 4px solid var(--red); }
+    .tile.teal { border-top: 4px solid var(--teal); }
+    .tile.violet { border-top: 4px solid var(--violet); }
+
+    .flow {
+      display: grid;
+      grid-template-columns: repeat(7, minmax(0, 1fr));
+      gap: 10px;
+      margin: 18px 0;
+    }
+
+    .flow-step {
+      min-height: 126px;
+      padding: 13px;
+      border: 1px solid var(--line);
+      border-top: 4px solid var(--blue);
+      border-radius: var(--radius);
+      background: #ffffff;
+      box-shadow: var(--shadow);
+    }
+
+    .flow-step:nth-child(2) { border-top-color: var(--teal); }
+    .flow-step:nth-child(3) { border-top-color: var(--green); }
+    .flow-step:nth-child(4) { border-top-color: var(--amber); }
+    .flow-step:nth-child(5) { border-top-color: var(--violet); }
+    .flow-step:nth-child(6) { border-top-color: var(--red); }
+    .flow-step:nth-child(7) { border-top-color: #475569; }
+
+    .flow-step strong {
+      display: block;
+      margin-bottom: 7px;
+      line-height: 1.3;
+    }
+
+    .flow-step span {
+      color: var(--muted);
+      font-size: 0.89rem;
+    }
+
+    .two-col {
+      display: grid;
+      grid-template-columns: repeat(2, minmax(0, 1fr));
+      gap: 16px;
+      margin: 16px 0;
+    }
+
+    .source-list {
+      columns: 2;
+      column-gap: 24px;
+    }
+
+    .source-list li {
+      break-inside: avoid;
+      margin-bottom: 8px;
+    }
+
+    @media (max-width: 980px) {
+      .hero-inner,
+      .layout,
+      .two-col {
+        grid-template-columns: 1fr;
+      }
+
+      .toc {
+        position: static;
+      }
+
+      .grid,
+      .flow {
+        grid-template-columns: repeat(2, minmax(0, 1fr));
+      }
+
+      .source-list {
+        columns: 1;
+      }
+    }
+
+    @media (max-width: 640px) {
+      .hero-inner,
+      .layout {
+        width: min(100% - 24px, 1180px);
+      }
+
+      .hero h1 {
+        font-size: 1.76rem;
+      }
+
+      .grid,
+      .flow {
+        grid-template-columns: 1fr;
+      }
+    }
+  </style>
+</head>
+<body>
+  <header class="hero">
+    <div class="hero-inner">
+      <div>
+        <span class="label">OpenRA Source Report</span>
+        <h1>索敌优先级、脱战警戒与炮台机制源码剖面</h1>
+        <p>
+          OpenRA 的基础战斗行为不是一个集中式 AI 子系统，而是单位 trait 与 activity 的组合：
+          <code>AutoTarget</code> 负责发现目标，<code>AttackFollow</code> 负责追击与放弃，
+          <code>Guard</code> 复用 attack-move 跟随保护，<code>Turreted</code> 以 gameplay 状态约束开火。
+        </p>
+      </div>
+      <div class="summary" aria-label="结论摘要">
+        <b>核心结论</b>
+        <span>优先级先于距离；距离只在同优先级目标之间做 tie-break。</span>
+        <span>警戒范围分两层：索敌扫描范围与 Guard 跟随范围不是同一个概念。</span>
+        <span>炮台不是纯动画；炮塔未转到目标方向时，武器不会发射。</span>
+        <span>所谓脱战主要是 activity 结束、目标清理、回到移动或 idle，没有独立 combat-state manager。</span>
+      </div>
+    </div>
+  </header>
+
+  <div class="layout">
+    <nav class="toc" aria-label="目录">
+      <h2>目录</h2>
+      <a href="#scope">1. 范围与源码</a>
+      <a href="#pipeline">2. 运行链路</a>
+      <a href="#user-facing">3. 玩家会看到什么</a>
+      <a href="#stance">4. 姿态与移动门控</a>
+      <a href="#priority">5. 优先级算法</a>
+      <a href="#profiles">6. 数据配置画像</a>
+      <a href="#disengage">7. 脱战与放弃</a>
+      <a href="#guard">8. 警戒与保护</a>
+      <a href="#turret">9. 炮台实现</a>
+      <a href="#takeaways">10. 设计要点</a>
+      <a href="#sources">11. 源码索引</a>
+    </nav>
+
+    <main>
+      <section id="scope">
+        <span class="label">Scope</span>
+        <h2>1. 范围与源码</h2>
+        <p>
+          本报告只分析 OpenRA 基础单位行为中的自动索敌、目标优先级、脱战、警戒范围与炮台开火链路。
+          它不分析 skirmish bot 的战略层，因为这里讨论的是任意单位在收到命令或处于 idle 时如何自行开火。
+        </p>
+        <div class="callout">
+          <p>
+            关键文件包括 <code>AutoTarget.cs</code>、<code>AutoTargetPriority.cs</code>、
+            <code>AttackFollow.cs</code>、<code>AttackMoveActivity.cs</code>、<code>Guard.cs</code>、
+            <code>Turreted.cs</code>、<code>AttackTurreted.cs</code>、<code>Armament.cs</code>，
+            以及 RA mod 的 <code>defaults.yaml</code>、<code>vehicles.yaml</code>、<code>structures.yaml</code>、<code>ships.yaml</code>。
+          </p>
+        </div>
+      </section>
+
+      <section id="pipeline">
+        <span class="label">Runtime Chain</span>
+        <h2>2. 运行链路</h2>
+        <p>
+          OpenRA 的索敌和攻击链路是分层的，但不是以“AI 管理器”命名。单位身上的 trait 在 tick、idle、damage、order resolver
+          等入口被调用，每一层只做自己的事。
+        </p>
+        <div class="flow" aria-label="OpenRA 索敌攻击链路">
+          <div class="flow-step">
+            <strong>Idle / Damage / Order</strong>
+            <span>单位 idle、受到伤害、收到 AttackMove/Guard/Attack 命令时进入战斗链路。</span>
+          </div>
+          <div class="flow-step">
+            <strong>AutoTarget</strong>
+            <span>按姿态、扫描间隔、武器与目标类型选择候选目标。</span>
+          </div>
+          <div class="flow-step">
+            <strong>ChooseTarget</strong>
+            <span>关系、可见性、target type、priority、距离、射界逐层过滤。</span>
+          </div>
+          <div class="flow-step">
+            <strong>AttackBase</strong>
+            <span>把目标包装成 attack activity，并选择可用 armament。</span>
+          </div>
+          <div class="flow-step">
+            <strong>AttackFollow</strong>
+            <span>追击、靠近、记忆最后可见位置、决定何时放弃。</span>
+          </div>
+          <div class="flow-step">
+            <strong>AttackTurreted</strong>
+            <span>如果有炮塔，先让炮塔转向；至少一个炮塔 ready 才允许开火。</span>
+          </div>
+          <div class="flow-step">
+            <strong>Armament</strong>
+            <span>检查 reload、range、min range、turret facing，然后生成弹体。</span>
+          </div>
+        </div>
+      </section>
+
+      <section id="user-facing">
+        <span class="label">Visible Behavior</span>
+        <h2>3. 玩家会看到什么</h2>
+        <div class="table-wrap">
+          <table>
+            <thead>
+              <tr>
+                <th>场景</th>
+                <th>屏幕表现</th>
+                <th>源码路径</th>
+              </tr>
+            </thead>
+            <tbody>
+              <tr>
+                <td>单位原地待命</td>
+                <td>如果姿态允许，单位会按随机间隔扫周围目标；发现目标后攻击。默认人类玩家姿态是 <code>Defend</code>，通常只攻击武器范围内目标。</td>
+                <td><code>INotifyIdle.TickIdle</code> 调 <code>ScanAndAttack</code>。</td>
+              </tr>
+              <tr>
+                <td>单位被攻击</td>
+                <td>姿态至少为 <code>ReturnFire</code> 时，空闲单位会反击攻击者；如果姿态更主动，还会先重新扫描更高优先级目标。</td>
+                <td><code>INotifyDamage.Damaged</code>，随后 <code>Attack(Target.FromActor(Aggressor))</code>。</td>
+              </tr>
+              <tr>
+                <td>Attack Move</td>
+                <td>单位沿目标点移动；途中发现目标会停下攻击；攻击活动结束后继续走原路线。Ctrl 触发的 AssaultMove 会切换 priority profile，通常把建筑也纳入自动攻击。</td>
+                <td><code>AttackMove.ResolveOrder</code> 进入 <code>AttackMoveActivity</code>。</td>
+              </tr>
+              <tr>
+                <td>Guard</td>
+                <td>单位跟随被保护目标，在保护范围内移动；途中发现敌人则和 attack-move 一样插入攻击活动，结束后继续跟随。</td>
+                <td><code>Guard.GuardTarget</code> 创建 <code>AttackMoveActivity</code>，移动子活动是 <code>MoveFollow</code>。</td>
+              </tr>
+              <tr>
+                <td>炮塔单位开火</td>
+                <td>车体或建筑可以不立刻转身，炮塔先转向目标；炮塔没转到位时不出弹。攻击结束后炮塔可按 <code>RealignDelay</code> 回正。</td>
+                <td><code>AttackTurreted.CanAttack</code> 与 <code>Armament.CanFire</code> 双重约束。</td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
+      </section>
+
+      <section id="stance">
+        <span class="label">Stance Gates</span>
+        <h2>4. 姿态与移动门控</h2>
+        <p>
+          <code>UnitStance</code> 有四档：<code>HoldFire</code>、<code>ReturnFire</code>、<code>Defend</code>、<code>AttackAnything</code>。
+          它不只是 UI 下拉框，而是直接改变自动攻击入口和追击权限。
+        </p>
+        <div class="grid">
+          <div class="tile red">
+            <h3>HoldFire</h3>
+            <p>自动索敌基本关闭。强制攻击命令仍由 attack trait 处理，但 idle scan 不会启动。</p>
+          </div>
+          <div class="tile amber">
+            <h3>ReturnFire</h3>
+            <p>不会主动扫描，但受到伤害且空闲时会反击。治疗类负伤害不会触发反击。</p>
+          </div>
+          <div class="tile green">
+            <h3>Defend</h3>
+            <p>空闲时扫描并攻击，但 <code>AllowMove</code> 为 false，通常不会为了自动目标主动追出武器范围。</p>
+          </div>
+          <div class="tile violet">
+            <h3>AttackAnything</h3>
+            <p><code>AllowMove</code> 变为 true，单位可以为了自动目标移动追击；RA 数据也会切到包含 Structure 的优先级 profile。</p>
+          </div>
+          <div class="tile blue">
+            <h3>AI 默认值</h3>
+            <p>bot 或不可玩 owner 默认 <code>InitialStanceAI = AttackAnything</code>，人类默认 <code>InitialStance = Defend</code>。</p>
+          </div>
+          <div class="tile teal">
+            <h3>条件联动</h3>
+            <p>姿态可授予 condition，例如 <code>stance-attackanything</code>，YAML 用它启停不同 <code>AutoTargetPriority</code>。</p>
+          </div>
+        </div>
+        <div class="callout warn">
+          <p>
+            <code>AttackMove</code> 本身不会无条件打开追击。它会在移动途中扫描目标，但是否允许移动追击仍看 <code>autoTarget.AllowMove</code>。
+            RA 的 AssaultMove 主要通过 <code>assault-move</code> condition 切换 priority profile，例如让建筑也成为自动目标。
+          </p>
+        </div>
+      </section>
+
+      <section id="priority">
+        <span class="label">Priority Algorithm</span>
+        <h2>5. 优先级算法</h2>
+        <p>
+          <code>AutoTargetPriorityInfo</code> 的字段很少：<code>ValidTargets</code>、<code>InvalidTargets</code>、
+          <code>ValidRelationships</code>、<code>Priority</code>。真正的行为来自 <code>AutoTarget.ChooseTarget</code> 的过滤顺序。
+        </p>
+        <div class="flow" aria-label="ChooseTarget 过滤顺序">
+          <div class="flow-step">
+            <strong>1. 候选范围</strong>
+            <span><code>ScanRadius</code> 大于 0 时使用它；否则使用 attack trait 的最大武器射程。</span>
+          </div>
+          <div class="flow-step">
+            <strong>2. 空间查询</strong>
+            <span><code>World.FindActorsInCircle</code> 找真实 actor；允许移动或允许冻雾目标时再加入 frozen actor。</span>
+          </div>
+          <div class="flow-step">
+            <strong>3. 基础可打性</strong>
+            <span>跳过友军优化、不可见目标、禁止被自动索敌的目标、失效 frozen actor。</span>
+          </div>
+          <div class="flow-step">
+            <strong>4. Priority Profile</strong>
+            <span>按 <code>Priority</code> 降序缓存；关系与 target type 必须匹配，invalid target type 优先否决。</span>
+          </div>
+          <div class="flow-step">
+            <strong>5. 武器检查</strong>
+            <span><code>ChooseArmamentsForTarget</code> 必须能选出可用武器；不能移动时还要求当前距离可开火。</span>
+          </div>
+          <div class="flow-step">
+            <strong>6. 射界检查</strong>
+            <span>不能转向时必须已在 firing arc 内；能转向时之后交给 attack activity 或炮塔处理。</span>
+          </div>
+          <div class="flow-step">
+            <strong>7. 最终选择</strong>
+            <span>更高 <code>Priority</code> 压过距离；同优先级才选最近。</span>
+          </div>
+        </div>
+        <div class="callout danger">
+          <p>
+            结论很具体：OpenRA 的自动索敌不是“最近敌人优先”。它是“最高有效 priority 优先，同 priority 最近”。
+            如果数据没有显式拉开 <code>Priority</code>，看起来才会像最近目标优先。
+          </p>
+        </div>
+      </section>
+
+      <section id="profiles">
+        <span class="label">YAML Profiles</span>
+        <h2>6. 数据配置画像</h2>
+        <p>
+          RA mod 的默认配置显示，OpenRA 把“什么目标值得自动打”交给 YAML profile，不写死在 C# 里。
+        </p>
+        <div class="table-wrap">
+          <table>
+            <thead>
+              <tr>
+                <th>Profile</th>
+                <th>默认行为</th>
+                <th>切换条件</th>
+              </tr>
+            </thead>
+            <tbody>
+              <tr>
+                <td><code>^AutoTargetGround</code></td>
+                <td>默认自动打 Infantry、Vehicle、Ship、Underwater、Defense、Mine；不打 <code>NoAutoTarget</code>。</td>
+                <td><code>stance-attackanything</code> 时切到包含 Structure 的 profile。</td>
+              </tr>
+              <tr>
+                <td><code>^AutoTargetGroundAssaultMove</code></td>
+                <td>继承 ground profile，但 AssaultMove 时也启用 attack-anything profile。</td>
+                <td><code>RequiresCondition: stance-attackanything || assault-move</code>。</td>
+              </tr>
+              <tr>
+                <td><code>^AutoTargetAir</code></td>
+                <td>只自动打 <code>AirborneActor</code>，用于防空炮、SAM 等。</td>
+                <td>无额外 stance condition。</td>
+              </tr>
+              <tr>
+                <td><code>^AutoTargetAll</code></td>
+                <td>默认包含地面、水面、水下、空中与防御类，attack-anything 时包含 Structure。</td>
+                <td>用于能对多域目标开火的单位。</td>
+              </tr>
+              <tr>
+                <td>单位局部覆盖</td>
+                <td>例如 V2RL 设置 <code>AutoTarget.ScanRadius: 10</code>，潜艇重写 target types，巡洋舰配置多炮塔。</td>
+                <td>每个 actor YAML 可覆盖 inherited trait。</td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
+      </section>
+
+      <section id="disengage">
+        <span class="label">Disengage</span>
+        <h2>7. 脱战与放弃</h2>
+        <p>
+          OpenRA 没有一个全局的“脱战系统”。脱战来自 activity 的结束条件、target 失效、姿态变化和 stop order。
+          单位从攻击活动退出来后，要么继续原本的移动/guard 子活动，要么回到 idle，再由 <code>AutoTarget</code> 决定是否下一次扫描。
+        </p>
+        <div class="two-col">
+          <div class="tile red">
+            <h3>攻击活动什么时候结束</h3>
+            <ul>
+              <li>目标死亡、隐藏或失效，且没有可用 last-visible fallback。</li>
+              <li>已经走到最后可见位置或射程附近，但目标仍不可见。</li>
+              <li>没有可用武器，或武器 min/max range 不成立。</li>
+              <li>需要移动进射程，但当前攻击不允许移动。</li>
+              <li>AttackMove 来源下出现补给需求时，不去补给，直接结束这段攻击活动。</li>
+            </ul>
+          </div>
+          <div class="tile amber">
+            <h3>目标什么时候被清理</h3>
+            <ul>
+              <li><code>OnStopOrder</code> 会取消当前 activity，清空 requested/opportunity target。</li>
+              <li>owner 改变会清空目标。</li>
+              <li>姿态变得更保守时，如果当前 opportunity target 不再符合 priority profile，会被丢弃。</li>
+              <li><code>AttackActivity.OnLastRun</code> 调 <code>ClearRequestedTarget</code>；若 <code>PersistentTargeting</code> 为 true，会转成 opportunity target。</li>
+            </ul>
+          </div>
+        </div>
+        <div class="callout">
+          <p>
+            <code>AttackFollow</code> 的 last-visible target 是脱战的关键：它让单位在目标短暂进雾或离开视野时向最后位置靠近，
+            但到达后仍找不到目标就结束。这里没有无限追杀的默认保证。
+          </p>
+        </div>
+      </section>
+
+      <section id="guard">
+        <span class="label">Guard And Alert Range</span>
+        <h2>8. 警戒与保护</h2>
+        <p>
+          OpenRA 至少有三种“范围”，不能混在一起。
+        </p>
+        <div class="table-wrap">
+          <table>
+            <thead>
+              <tr>
+                <th>范围</th>
+                <th>来源</th>
+                <th>含义</th>
+              </tr>
+            </thead>
+            <tbody>
+              <tr>
+                <td>索敌扫描范围</td>
+                <td><code>AutoTargetInfo.ScanRadius</code> 或 <code>AttackBase.GetMaximumRange()</code></td>
+                <td>决定自动索敌能看多远。默认不单独配置时，基本等于武器最大射程。</td>
+              </tr>
+              <tr>
+                <td>Guard 跟随范围</td>
+                <td><code>GuardableInfo.Range</code>，默认 2 cells；建筑常见 3 cells。</td>
+                <td>守卫单位与被保护目标保持的最大跟随距离，不等于警戒发现距离。</td>
+              </tr>
+              <tr>
+                <td>攻击进退范围</td>
+                <td>武器 <code>MinRange</code>/<code>MaxRange</code> 与 <code>AttackFollowInfo.RangeMargin</code></td>
+                <td>追击时移动到能开火的距离环；目标移动时用 margin 减少抖动。</td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
+        <p>
+          <code>Guard</code> 的实现非常短：目标必须是 actor，并且目标 actor 的规则里必须有 <code>GuardableInfo</code>。
+          然后它创建一个 <code>AttackMoveActivity</code>，移动子活动是 <code>move.MoveFollow(self, target, WDist.Zero, range)</code>。
+          所以 Guard 不是单独战斗 AI；它是“跟随目标 + attack-move 插入攻击”的复合活动。
+        </p>
+      </section>
+
+      <section id="turret">
+        <span class="label">Turret</span>
+        <h2>9. 炮台实现</h2>
+        <p>
+          OpenRA 的炮塔由三层协作：<code>Turreted</code> 保存炮塔朝向和偏移，<code>AttackTurreted</code> 在攻击前让炮塔转向，
+          <code>Armament</code> 绑定具体武器到某个 turret，并在开火前再次检查炮塔是否已经就位。
+        </p>
+        <div class="grid">
+          <div class="tile blue">
+            <h3><code>TurretedInfo</code></h3>
+            <p>数据包括 <code>Turret</code> 名称、<code>TurnSpeed</code>、<code>InitialFacing</code>、<code>RealignDelay</code>、<code>Offset</code>。</p>
+          </div>
+          <div class="tile green">
+            <h3><code>AttackTurreted</code></h3>
+            <p><code>CanAttack</code> 遍历所有匹配炮塔，调用 <code>FaceTarget</code>。循环不会提前 break，因为多个炮塔都要转向。</p>
+          </div>
+          <div class="tile amber">
+            <h3><code>Armament</code></h3>
+            <p><code>ArmamentInfo.Turret</code> 指向炮塔名；<code>CanFire</code> 中如果 <code>turret.HasAchievedDesiredFacing</code> 为 false，直接拒绝发射。</p>
+          </div>
+          <div class="tile teal">
+            <h3>表现层</h3>
+            <p><code>WithSpriteTurret</code>、<code>WithSpriteBarrel</code>、<code>WithTurretAttackAnimation</code> 等读取同一 turret/armament 名称做渲染。</p>
+          </div>
+          <div class="tile violet">
+            <h3>多炮塔</h3>
+            <p>巡洋舰等单位可以有 <code>Turreted@PRIMARY</code> 与 <code>Turreted@SECONDARY</code>，<code>AttackTurreted.Turrets</code> 同时列出。</p>
+          </div>
+          <div class="tile red">
+            <h3>回正</h3>
+            <p>不攻击时，<code>Turreted.Tick</code> 根据 <code>RealignDelay</code> 决定是否回到初始角度；<code>-1</code> 关闭回正。</p>
+          </div>
+        </div>
+        <div class="callout danger">
+          <p>
+            炮塔 ready 是 gameplay 条件，不是渲染建议。即使 <code>AttackTurreted.CanAttack</code> 允许攻击，
+            <code>Armament.CanFire</code> 仍会二次拦截未对准炮塔。这个设计避免表现和命中判定脱节。
+          </p>
+        </div>
+      </section>
+
+      <section id="takeaways">
+        <span class="label">Takeaways</span>
+        <h2>10. 设计要点</h2>
+        <div class="table-wrap">
+          <table>
+            <thead>
+              <tr>
+                <th>要点</th>
+                <th>具体含义</th>
+              </tr>
+            </thead>
+            <tbody>
+              <tr>
+                <td>索敌是单位能力，不是 bot 特权</td>
+                <td><code>AutoTarget</code> 挂在 actor trait 上，人类单位、AI 单位、脚本单位都能复用。</td>
+              </tr>
+              <tr>
+                <td>目标优先级必须数据驱动</td>
+                <td>C# 只提供关系、target type、priority、condition 的筛选框架；具体哪些目标自动打由规则数据决定。</td>
+              </tr>
+              <tr>
+                <td>AttackMove 是可恢复 activity</td>
+                <td>它不是“移动 order + 攻击 order”简单排队，而是在一个 activity 内暂停移动、攻击、再恢复移动。</td>
+              </tr>
+              <tr>
+                <td>Guard 是复合移动，不是独立战斗系统</td>
+                <td>它把 follow target 当移动子活动，把战斗插入交给 <code>AttackMoveActivity</code>。</td>
+              </tr>
+              <tr>
+                <td>炮塔需要 gameplay authority</td>
+                <td>炮塔朝向、转速、ready 状态、muzzle 偏移会影响能否开火和弹体生成位置。</td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
+      </section>
+
+      <section id="sources">
+        <span class="label">Source Map</span>
+        <h2>11. 源码索引</h2>
+        <ul class="source-list">
+          <li><a href="../../external/reference/OpenRA/OpenRA.Mods.Common/Traits/AutoTarget.cs">AutoTarget.cs</a></li>
+          <li><a href="../../external/reference/OpenRA/OpenRA.Mods.Common/Traits/AutoTargetPriority.cs">AutoTargetPriority.cs</a></li>
+          <li><a href="../../external/reference/OpenRA/OpenRA.Mods.Common/Traits/AttackMove.cs">AttackMove.cs</a></li>
+          <li><a href="../../external/reference/OpenRA/OpenRA.Mods.Common/Activities/Move/AttackMoveActivity.cs">AttackMoveActivity.cs</a></li>
+          <li><a href="../../external/reference/OpenRA/OpenRA.Mods.Common/Traits/Attack/AttackBase.cs">AttackBase.cs</a></li>
+          <li><a href="../../external/reference/OpenRA/OpenRA.Mods.Common/Traits/Attack/AttackFollow.cs">AttackFollow.cs</a></li>
+          <li><a href="../../external/reference/OpenRA/OpenRA.Mods.Common/Activities/Attack.cs">Attack.cs</a></li>
+          <li><a href="../../external/reference/OpenRA/OpenRA.Mods.Common/Traits/Guard.cs">Guard.cs</a></li>
+          <li><a href="../../external/reference/OpenRA/OpenRA.Mods.Common/Traits/Guardable.cs">Guardable.cs</a></li>
+          <li><a href="../../external/reference/OpenRA/OpenRA.Mods.Common/Traits/Turreted.cs">Turreted.cs</a></li>
+          <li><a href="../../external/reference/OpenRA/OpenRA.Mods.Common/Traits/Attack/AttackTurreted.cs">AttackTurreted.cs</a></li>
+          <li><a href="../../external/reference/OpenRA/OpenRA.Mods.Common/Traits/Armament.cs">Armament.cs</a></li>
+          <li><a href="../../external/reference/OpenRA/OpenRA.Mods.Common/Traits/Targetable.cs">Targetable.cs</a></li>
+          <li><a href="../../external/reference/OpenRA/mods/ra/rules/defaults.yaml">RA defaults.yaml</a></li>
+          <li><a href="../../external/reference/OpenRA/mods/ra/rules/vehicles.yaml">RA vehicles.yaml</a></li>
+          <li><a href="../../external/reference/OpenRA/mods/ra/rules/structures.yaml">RA structures.yaml</a></li>
+          <li><a href="../../external/reference/OpenRA/mods/ra/rules/ships.yaml">RA ships.yaml</a></li>
+        </ul>
+      </section>
+    </main>
+  </div>
+</body>
+</html>

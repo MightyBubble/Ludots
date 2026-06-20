@@ -1,0 +1,925 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>OpenRA AI 分层架构剖面</title>
+  <style>
+    :root {
+      --bg: #ffffff;
+      --ink: #16202a;
+      --muted: #5f6b76;
+      --line: #d7dde3;
+      --soft: #f5f7f9;
+      --soft-2: #eef6f4;
+      --teal: #0f766e;
+      --green: #2f855a;
+      --amber: #b45309;
+      --red: #b42318;
+      --blue: #2563eb;
+      --violet: #6d28d9;
+      --shadow: 0 10px 28px rgba(22, 32, 42, 0.08);
+      --radius: 8px;
+    }
+
+    * {
+      box-sizing: border-box;
+    }
+
+    html {
+      scroll-behavior: smooth;
+    }
+
+    body {
+      margin: 0;
+      font-family: "Segoe UI", "Microsoft YaHei", Arial, sans-serif;
+      color: var(--ink);
+      background: var(--bg);
+      line-height: 1.72;
+      letter-spacing: 0;
+    }
+
+    a {
+      color: var(--blue);
+      text-decoration: none;
+    }
+
+    a:hover {
+      text-decoration: underline;
+    }
+
+    code {
+      font-family: Consolas, "Cascadia Mono", "SFMono-Regular", monospace;
+      font-size: 0.92em;
+      background: #eef2f6;
+      border: 1px solid #d8e0e8;
+      border-radius: 6px;
+      padding: 0.08rem 0.32rem;
+      word-break: break-word;
+    }
+
+    .hero {
+      background:
+        linear-gradient(90deg, rgba(15, 118, 110, 0.16), transparent 32%),
+        linear-gradient(180deg, #18212b, #111820);
+      color: #f8fafc;
+      border-bottom: 6px solid var(--teal);
+    }
+
+    .hero-inner {
+      width: min(1180px, calc(100% - 32px));
+      margin: 0 auto;
+      padding: 54px 0 46px;
+      display: grid;
+      grid-template-columns: minmax(0, 1.25fr) minmax(300px, 0.75fr);
+      gap: 28px;
+      align-items: end;
+    }
+
+    .hero h1 {
+      margin: 0 0 18px;
+      font-size: 2.45rem;
+      line-height: 1.16;
+      font-weight: 800;
+      letter-spacing: 0;
+    }
+
+    .hero p {
+      margin: 0;
+      max-width: 780px;
+      color: #dbe4ed;
+      font-size: 1.04rem;
+    }
+
+    .hero strong {
+      color: #ffffff;
+    }
+
+    .stamp {
+      display: grid;
+      gap: 10px;
+      background: rgba(255, 255, 255, 0.08);
+      border: 1px solid rgba(255, 255, 255, 0.18);
+      border-radius: var(--radius);
+      padding: 18px;
+      box-shadow: var(--shadow);
+    }
+
+    .stamp span {
+      display: flex;
+      justify-content: space-between;
+      gap: 16px;
+      border-bottom: 1px solid rgba(255, 255, 255, 0.14);
+      padding-bottom: 8px;
+      color: #dbe4ed;
+      font-size: 0.92rem;
+    }
+
+    .stamp span:last-child {
+      border-bottom: 0;
+      padding-bottom: 0;
+    }
+
+    .stamp b {
+      color: #ffffff;
+      font-weight: 700;
+      text-align: right;
+    }
+
+    .layout {
+      width: min(1180px, calc(100% - 32px));
+      margin: 0 auto;
+      display: grid;
+      grid-template-columns: 250px minmax(0, 1fr);
+      gap: 28px;
+      padding: 32px 0 72px;
+    }
+
+    .toc {
+      position: sticky;
+      top: 18px;
+      align-self: start;
+      border: 1px solid var(--line);
+      border-radius: var(--radius);
+      padding: 14px;
+      background: #ffffff;
+      box-shadow: var(--shadow);
+    }
+
+    .toc h2 {
+      margin: 0 0 10px;
+      font-size: 0.9rem;
+      color: var(--muted);
+    }
+
+    .toc a {
+      display: block;
+      padding: 8px 8px;
+      border-radius: 6px;
+      color: #233142;
+      font-size: 0.92rem;
+    }
+
+    .toc a:hover {
+      background: var(--soft);
+      text-decoration: none;
+    }
+
+    main {
+      min-width: 0;
+    }
+
+    section {
+      margin-bottom: 28px;
+      padding: 26px;
+      background: #ffffff;
+      border: 1px solid var(--line);
+      border-radius: var(--radius);
+      box-shadow: var(--shadow);
+    }
+
+    section.band {
+      background: var(--soft);
+      box-shadow: none;
+    }
+
+    h2 {
+      margin: 0 0 16px;
+      font-size: 1.45rem;
+      line-height: 1.25;
+      letter-spacing: 0;
+    }
+
+    h3 {
+      margin: 0 0 10px;
+      font-size: 1.05rem;
+      line-height: 1.35;
+    }
+
+    p {
+      margin: 0 0 13px;
+    }
+
+    ul {
+      margin: 0;
+      padding-left: 1.15rem;
+    }
+
+    li {
+      margin: 6px 0;
+    }
+
+    .thesis {
+      display: grid;
+      grid-template-columns: repeat(3, minmax(0, 1fr));
+      gap: 14px;
+      margin-top: 16px;
+    }
+
+    .signal {
+      border: 1px solid var(--line);
+      border-top: 4px solid var(--teal);
+      border-radius: var(--radius);
+      padding: 16px;
+      background: #ffffff;
+    }
+
+    .signal:nth-child(2) {
+      border-top-color: var(--amber);
+    }
+
+    .signal:nth-child(3) {
+      border-top-color: var(--green);
+    }
+
+    .signal b {
+      display: block;
+      margin-bottom: 6px;
+      font-size: 1rem;
+    }
+
+    .signal span {
+      color: var(--muted);
+      font-size: 0.94rem;
+    }
+
+    .flow {
+      display: grid;
+      gap: 10px;
+      margin-top: 18px;
+    }
+
+    .flow-row {
+      display: grid;
+      grid-template-columns: 188px minmax(0, 1fr) 132px;
+      gap: 10px;
+      align-items: stretch;
+    }
+
+    .flow-cell {
+      border: 1px solid var(--line);
+      border-radius: var(--radius);
+      padding: 13px 14px;
+      background: #ffffff;
+      min-height: 78px;
+    }
+
+    .flow-cell.layer {
+      border-left: 5px solid var(--teal);
+      font-weight: 750;
+    }
+
+    .flow-cell.action {
+      color: #263442;
+    }
+
+    .flow-cell.guard {
+      border-color: rgba(180, 83, 9, 0.45);
+      background: #fff7ed;
+      color: #7c2d12;
+      font-weight: 650;
+    }
+
+    .arrow {
+      height: 12px;
+      margin-left: 92px;
+      border-left: 2px solid var(--line);
+    }
+
+    .layer-grid {
+      display: grid;
+      grid-template-columns: repeat(2, minmax(0, 1fr));
+      gap: 14px;
+    }
+
+    .layer-card {
+      border: 1px solid var(--line);
+      border-radius: var(--radius);
+      padding: 16px;
+      background: #ffffff;
+    }
+
+    .layer-card h3 {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+    }
+
+    .num {
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      width: 26px;
+      height: 26px;
+      border-radius: 50%;
+      background: #e0f2f1;
+      color: var(--teal);
+      font-weight: 800;
+      flex: 0 0 auto;
+      font-size: 0.86rem;
+    }
+
+    .source-list {
+      display: grid;
+      gap: 7px;
+      margin-top: 12px;
+    }
+
+    .source-list a,
+    .source-list span {
+      display: block;
+      color: #36536f;
+      font-size: 0.88rem;
+      overflow-wrap: anywhere;
+    }
+
+    .module-board {
+      display: grid;
+      grid-template-columns: repeat(3, minmax(0, 1fr));
+      gap: 12px;
+    }
+
+    .module {
+      border: 1px solid var(--line);
+      border-radius: var(--radius);
+      padding: 14px;
+      background: #ffffff;
+      min-height: 154px;
+    }
+
+    .module b {
+      display: block;
+      margin-bottom: 7px;
+    }
+
+    .module p {
+      color: var(--muted);
+      font-size: 0.93rem;
+      margin-bottom: 0;
+    }
+
+    .tagline {
+      display: inline-flex;
+      align-items: center;
+      border: 1px solid rgba(15, 118, 110, 0.35);
+      border-radius: 999px;
+      padding: 4px 9px;
+      color: var(--teal);
+      background: #eef6f4;
+      font-size: 0.8rem;
+      font-weight: 700;
+      margin-bottom: 10px;
+    }
+
+    .split {
+      display: grid;
+      grid-template-columns: minmax(0, 1fr) minmax(280px, 0.85fr);
+      gap: 18px;
+      align-items: start;
+    }
+
+    .quote-box {
+      border-left: 5px solid var(--amber);
+      background: #fff7ed;
+      padding: 16px 18px;
+      border-radius: var(--radius);
+      color: #4a2c12;
+    }
+
+    .matrix {
+      width: 100%;
+      border-collapse: collapse;
+      font-size: 0.94rem;
+      background: #ffffff;
+      border: 1px solid var(--line);
+      border-radius: var(--radius);
+      overflow: hidden;
+      display: table;
+    }
+
+    .matrix th,
+    .matrix td {
+      text-align: left;
+      vertical-align: top;
+      padding: 12px 13px;
+      border-bottom: 1px solid var(--line);
+    }
+
+    .matrix th {
+      background: #eef2f6;
+      font-weight: 800;
+      color: #243341;
+    }
+
+    .matrix tr:last-child td {
+      border-bottom: 0;
+    }
+
+    .ok {
+      color: var(--green);
+      font-weight: 750;
+    }
+
+    .warn {
+      color: var(--amber);
+      font-weight: 750;
+    }
+
+    .risk {
+      color: var(--red);
+      font-weight: 750;
+    }
+
+    .route {
+      border: 1px solid var(--line);
+      border-radius: var(--radius);
+      background: #ffffff;
+      padding: 16px;
+      display: grid;
+      gap: 10px;
+      font-family: Consolas, "Cascadia Mono", monospace;
+      font-size: 0.9rem;
+      overflow-x: auto;
+    }
+
+    .route span {
+      white-space: nowrap;
+    }
+
+    .note {
+      color: var(--muted);
+      font-size: 0.94rem;
+    }
+
+    footer {
+      width: min(1180px, calc(100% - 32px));
+      margin: 0 auto 38px;
+      color: var(--muted);
+      font-size: 0.9rem;
+    }
+
+    @media (max-width: 960px) {
+      .hero-inner,
+      .layout,
+      .split {
+        grid-template-columns: 1fr;
+      }
+
+      .toc {
+        position: static;
+      }
+
+      .thesis,
+      .module-board,
+      .layer-grid {
+        grid-template-columns: 1fr;
+      }
+
+      .flow-row {
+        grid-template-columns: 1fr;
+      }
+
+      .arrow {
+        margin-left: 18px;
+      }
+    }
+
+    @media (max-width: 560px) {
+      .hero-inner {
+        width: min(100% - 22px, 1180px);
+        padding: 34px 0;
+      }
+
+      .hero h1 {
+        font-size: 1.8rem;
+      }
+
+      .layout {
+        width: min(100% - 22px, 1180px);
+        padding-top: 18px;
+      }
+
+      section {
+        padding: 18px;
+      }
+
+      .matrix {
+        display: block;
+        overflow-x: auto;
+      }
+    }
+  </style>
+</head>
+<body>
+  <header class="hero">
+    <div class="hero-inner">
+      <div>
+        <h1>OpenRA AI 分层架构剖面</h1>
+        <p>
+          这份报告把 OpenRA 的 skirmish AI 拆成从大厅配置到世界变更的完整剖面。
+          核心结论很锋利：<strong>AI 不拥有第二套玩法运行时，它只是正式命令链路的生产者。</strong>
+          经济、扩张、建造、分队和技能都被拆成玩家级模块，最后统一排队为 Order。
+        </p>
+      </div>
+      <aside class="stamp" aria-label="版本信息">
+        <span>源码位置 <b>external/reference/OpenRA</b></span>
+        <span>OpenRA 分支 <b>bleed</b></span>
+        <span>下载前 HEAD <b>cb4671f6</b></span>
+        <span>报告类型 <b>外部架构参考</b></span>
+      </aside>
+    </div>
+  </header>
+
+  <div class="layout">
+    <nav class="toc" aria-label="目录">
+      <h2>目录</h2>
+      <a href="#thesis">一句话总览</a>
+      <a href="#pipeline">完整命令剖面</a>
+      <a href="#layers">十层拆解</a>
+      <a href="#modules">模块生态</a>
+      <a href="#profiles">配置性格</a>
+      <a href="#performance">性能与回放</a>
+      <a href="#debug">调试观察</a>
+      <a href="#lessons">给 Ludots 的启发</a>
+      <a href="#evidence">证据索引</a>
+    </nav>
+
+    <main>
+      <section id="thesis" class="band">
+        <span class="tagline">Architecture Thesis</span>
+        <h2>OpenRA AI 的真面目：玩家级模块，命令级出口</h2>
+        <p>
+          OpenRA 的 AI 不是全局大脑，也不是统一行为树。它挂在 <code>SystemActors.Player</code> 上，
+          通过 <code>ModularBot</code> 调度一组 bot module。模块读世界、维护索引、做启发式判断，
+          但不会直接写 gameplay state。所有动作都要变成 <code>Order</code>，再进入和人类玩家相同的
+          <code>World.IssueOrder</code>、<code>OrderManager</code>、<code>UnitOrders</code>、
+          <code>Actor.ResolveOrder</code> 链路。
+        </p>
+        <div class="thesis">
+          <div class="signal">
+            <b>边界漂亮</b>
+            <span>AI 的输出是 Order，不是组件修改。同步、回放、校验都围绕命令流。</span>
+          </div>
+          <div class="signal">
+            <b>模块很实战</b>
+            <span>经济、建筑、生产、采矿、扩张、分队、支援技能各管一块。</span>
+          </div>
+          <div class="signal">
+            <b>策略靠数据调味</b>
+            <span>Rush、Normal、Turtle、Naval 主要通过 YAML condition 和参数组合出来。</span>
+          </div>
+        </div>
+      </section>
+
+      <section id="pipeline">
+        <h2>完整命令剖面</h2>
+        <p>
+          如果把 OpenRA AI 想成一条流水线，它最像一个“参谋部”：参谋部只写命令，真正执行命令的是军队既有系统。
+          这条链路是理解它底层设计的主轴。
+        </p>
+        <div class="flow" aria-label="OpenRA AI 命令流">
+          <div class="flow-row">
+            <div class="flow-cell layer">Lobby / YAML</div>
+            <div class="flow-cell action"><code>IBotInfo.Type</code> 暴露可选 bot，地图规则声明 <code>ModularBot@RushAI</code> 等 profile。</div>
+            <div class="flow-cell guard">数据入口</div>
+          </div>
+          <div class="arrow"></div>
+          <div class="flow-row">
+            <div class="flow-cell layer">Player 激活</div>
+            <div class="flow-cell action"><code>Player.cs</code> 根据 session 中的 bot type，在 host 侧激活 PlayerActor 上的 <code>IBot</code>。</div>
+            <div class="flow-cell guard">只在 host 决策</div>
+          </div>
+          <div class="arrow"></div>
+          <div class="flow-row">
+            <div class="flow-cell layer">ModularBot 调度</div>
+            <div class="flow-cell action"><code>IBotTick</code> 模块在 <code>Sync.RunUnsynced</code> 中被逐个 tick，模块调用 <code>QueueOrder</code>。</div>
+            <div class="flow-cell guard">AI 不改世界</div>
+          </div>
+          <div class="arrow"></div>
+          <div class="flow-row">
+            <div class="flow-cell layer">Order 派发</div>
+            <div class="flow-cell action">pending order 被分批送入 <code>World.IssueOrder</code>，再走 <code>OrderManager</code> 和 <code>UnitOrders</code>。</div>
+            <div class="flow-cell guard">限流与校验</div>
+          </div>
+          <div class="arrow"></div>
+          <div class="flow-row">
+            <div class="flow-cell layer">Actor / Trait 执行</div>
+            <div class="flow-cell action"><code>IResolveOrder</code> trait 解析命令，生成 activity 或 gameplay 变更。</div>
+            <div class="flow-cell guard">正式玩法系统</div>
+          </div>
+        </div>
+      </section>
+
+      <section id="layers">
+        <h2>十层架构拆解</h2>
+        <div class="layer-grid">
+          <article class="layer-card">
+            <h3><span class="num">1</span>大厅与 Bot Profile 层</h3>
+            <p>
+              这一层回答“玩家能选哪种 AI”。<code>IBotInfo</code> 提供 <code>Type</code> 与 <code>Name</code>，
+              RA/CnC/D2k/TS 各自用 YAML 在 Player actor 上声明不同 <code>ModularBot</code>。
+            </p>
+            <p class="note">架构味道：AI 类型不是 C# 继承树，而是规则数据暴露出的 profile。</p>
+            <div class="source-list">
+              <a href="../../external/reference/OpenRA/OpenRA.Game/Traits/TraitsInterfaces.cs">OpenRA.Game/Traits/TraitsInterfaces.cs</a>
+              <a href="../../external/reference/OpenRA/mods/ra/rules/ai.yaml">mods/ra/rules/ai.yaml</a>
+            </div>
+          </article>
+
+          <article class="layer-card">
+            <h3><span class="num">2</span>PlayerActor 激活层</h3>
+            <p>
+              Runtime Player 构造时读取 session 中的 bot type，只在 host 侧找到匹配的 <code>IBot</code> 并调用
+              <code>Activate</code>。其他客户端不跑 AI 决策，只接收 host 发出的 order。
+            </p>
+            <p class="note">架构味道：AI 内部启发式不进入同步模拟，减少 desync 风险。</p>
+            <div class="source-list">
+              <a href="../../external/reference/OpenRA/OpenRA.Game/Player.cs">OpenRA.Game/Player.cs</a>
+              <a href="../../external/reference/OpenRA/OpenRA.Mods.Common/Traits/World/CreateMapPlayers.cs">CreateMapPlayers.cs</a>
+            </div>
+          </article>
+
+          <article class="layer-card">
+            <h3><span class="num">3</span>ModularBot 调度层</h3>
+            <p>
+              <code>ModularBot</code> 收集 <code>IBotTick</code>、<code>IBotRespondToAttack</code>、
+              <code>IBotEnabled</code> 等模块接口。它像一个很薄的 bot kernel：tick 模块、缓存 order、分批发 order。
+            </p>
+            <p class="note">架构味道：调度器轻，策略厚度下沉到模块。</p>
+            <div class="source-list">
+              <a href="../../external/reference/OpenRA/OpenRA.Mods.Common/Traits/Player/ModularBot.cs">ModularBot.cs</a>
+            </div>
+          </article>
+
+          <article class="layer-card">
+            <h3><span class="num">4</span>模块通信层</h3>
+            <p>
+              模块之间不共享一个巨大基类，而是通过小接口互相请求。例如采矿模块请求补矿车，基地建造模块要求暂停单位生产，
+              扩张模块通知新基地位置。
+            </p>
+            <p class="note">架构味道：这是轻量端口模型，代价是调用关系需要追源码。</p>
+            <div class="source-list">
+              <a href="../../external/reference/OpenRA/OpenRA.Mods.Common/TraitsInterfaces.cs">OpenRA.Mods.Common/TraitsInterfaces.cs</a>
+            </div>
+          </article>
+
+          <article class="layer-card">
+            <h3><span class="num">5</span>空间认知层</h3>
+            <p>
+              <code>ResourceMapBotModule</code> 把地图切成粗粒度资源区块，缓存资源中心、矿车、矿厂、敌军、敌方建筑、友方单位等信息。
+              它不像完整 blackboard，但已经承担了 AI 空间记忆的角色。
+            </p>
+            <p class="note">架构味道：低成本、分帧更新、为经济和扩张服务。</p>
+            <div class="source-list">
+              <a href="../../external/reference/OpenRA/OpenRA.Mods.Common/Traits/BotModules/ResourceMapBotModule.cs">ResourceMapBotModule.cs</a>
+            </div>
+          </article>
+
+          <article class="layer-card">
+            <h3><span class="num">6</span>战略经营层</h3>
+            <p>
+              基地建造、生产比例、采矿维护、MCV 部署和扩张评分都在这里。它们不是通用 planner，
+              而是大量 RTS 老经验：低电先电厂、钱少补矿厂、钱多补产能、建不下就扩张。
+            </p>
+            <p class="note">架构味道：启发式厚，但边界清楚，最后仍然只发 Order。</p>
+            <div class="source-list">
+              <a href="../../external/reference/OpenRA/OpenRA.Mods.Common/Traits/BotModules/BaseBuilderBotModule.cs">BaseBuilderBotModule.cs</a>
+              <a href="../../external/reference/OpenRA/OpenRA.Mods.Common/Traits/BotModules/UnitBuilderBotModule.cs">UnitBuilderBotModule.cs</a>
+              <a href="../../external/reference/OpenRA/OpenRA.Mods.Common/Traits/BotModules/HarvesterBotModule.cs">HarvesterBotModule.cs</a>
+            </div>
+          </article>
+
+          <article class="layer-card">
+            <h3><span class="num">7</span>战术分队层</h3>
+            <p>
+              <code>SquadManagerBotModule</code> 把新单位归入空军、海军、突击、防御等 squad。每个 squad 用轻状态机处理 idle、attack、
+              flee，并用局部 fuzzy 判断该打还是撤。
+            </p>
+            <p class="note">架构味道：战术不是逐单位大脑，而是分队级状态机。</p>
+            <div class="source-list">
+              <a href="../../external/reference/OpenRA/OpenRA.Mods.Common/Traits/BotModules/SquadManagerBotModule.cs">SquadManagerBotModule.cs</a>
+              <a href="../../external/reference/OpenRA/OpenRA.Mods.Common/Traits/BotModules/Squads/Squad.cs">Squads/Squad.cs</a>
+              <a href="../../external/reference/OpenRA/OpenRA.Mods.Common/Traits/BotModules/Squads/AttackOrFleeFuzzy.cs">AttackOrFleeFuzzy.cs</a>
+            </div>
+          </article>
+
+          <article class="layer-card">
+            <h3><span class="num">8</span>技能与响应层</h3>
+            <p>
+              支援技能、维修、断电管理、占领、布雷等小能力都被拆成独立模块。许多模块是事件触发加周期扫描，
+              避免把所有判断塞进一个巨型 tick。
+            </p>
+            <p class="note">架构味道：能力型模块按玩法边界分拆，接入同一个 order 出口。</p>
+            <div class="source-list">
+              <a href="../../external/reference/OpenRA/OpenRA.Mods.Common/Traits/BotModules/SupportPowerBotModule.cs">SupportPowerBotModule.cs</a>
+              <a href="../../external/reference/OpenRA/OpenRA.Mods.Common/Traits/BotModules/BuildingRepairBotModule.cs">BuildingRepairBotModule.cs</a>
+              <a href="../../external/reference/OpenRA/OpenRA.Mods.Common/Traits/BotModules/CaptureManagerBotModule.cs">CaptureManagerBotModule.cs</a>
+            </div>
+          </article>
+
+          <article class="layer-card">
+            <h3><span class="num">9</span>Order 边界层</h3>
+            <p>
+              这是系统最硬的一层。AI 发出的 <code>StartProduction</code>、<code>PlaceBuilding</code>、
+              <code>AttackMove</code>、<code>Harvest</code> 等命令，与玩家 UI 命令同构。校验仍由正式订单链路处理。
+            </p>
+            <p class="note">架构味道：AI 没有暗门，作弊和合法性在 Order 侧统一看。</p>
+            <div class="source-list">
+              <a href="../../external/reference/OpenRA/OpenRA.Game/World.cs">OpenRA.Game/World.cs</a>
+              <a href="../../external/reference/OpenRA/OpenRA.Game/Network/UnitOrders.cs">UnitOrders.cs</a>
+              <a href="../../external/reference/OpenRA/OpenRA.Mods.Common/Traits/World/ValidateOrder.cs">ValidateOrder.cs</a>
+            </div>
+          </article>
+
+          <article class="layer-card">
+            <h3><span class="num">10</span>玩法执行层</h3>
+            <p>
+              最终改变世界的是 actor trait、activity、production queue、movement、support power 等正式系统。
+              AI 不复制这些能力，只是调用它们已经暴露出来的命令入口。
+            </p>
+            <p class="note">架构味道：复用既有 gameplay runtime，避免第二套隐形玩法系统。</p>
+            <div class="source-list">
+              <a href="../../external/reference/OpenRA/OpenRA.Game/Actor.cs">OpenRA.Game/Actor.cs</a>
+              <a href="../../external/reference/OpenRA/OpenRA.Game/Traits/TraitsInterfaces.cs">IResolveOrder interfaces</a>
+            </div>
+          </article>
+        </div>
+      </section>
+
+      <section id="modules">
+        <h2>模块生态：一组老练的 RTS 小脑</h2>
+        <p>
+          OpenRA 的模块不是追求抽象优雅，而是追求在真实 RTS 对局里“活下来”。它们各自有缓存、延迟、阈值、比例和失败回退。
+        </p>
+        <div class="module-board">
+          <article class="module">
+            <b>ResourceMap</b>
+            <p>维护资源区块、敌军、矿厂、矿车和基地分布，是经济与扩张的空间底图。</p>
+          </article>
+          <article class="module">
+            <b>BaseBuilder</b>
+            <p>按电力、经济、产能、防御、海军需求决定建筑队列，并寻找合法放置位置。</p>
+          </article>
+          <article class="module">
+            <b>UnitBuilder</b>
+            <p>按配置比例训练单位，支持单位上限、延迟和其他模块的指定生产请求。</p>
+          </article>
+          <article class="module">
+            <b>Harvester</b>
+            <p>给 idle 矿车找资源，被攻击时回矿厂，矿车不足时请求补造。</p>
+          </article>
+          <article class="module">
+            <b>MCV / Expansion</b>
+            <p>部署基地车、评分新资源点、选择扩张位置，必要时让基地搬家。</p>
+          </article>
+          <article class="module">
+            <b>SquadManager</b>
+            <p>组织突击、防御、空军、海军 squad，用状态机和 fuzzy 判断打还是撤。</p>
+          </article>
+          <article class="module">
+            <b>SupportPower</b>
+            <p>扫描候选区域，用 consideration 对目标打分，再发支援技能 order。</p>
+          </article>
+          <article class="module">
+            <b>Repair / PowerDown</b>
+            <p>维修受损建筑，电力不足时关闭指定建筑，电力恢复后再逐步打开。</p>
+          </article>
+          <article class="module">
+            <b>Capture / Minelayer</b>
+            <p>占领高价值目标，或根据冲突位置布雷，体现了能力模块的可插拔性。</p>
+          </article>
+        </div>
+      </section>
+
+      <section id="profiles" class="band">
+        <h2>配置性格：AI 风格来自组合，不来自子类</h2>
+        <div class="split">
+          <div>
+            <p>
+              RA 的 <code>rush</code>、<code>normal</code>、<code>turtle</code>、<code>naval</code>，
+              CnC 的 <code>cabal</code>、<code>watson</code>、<code>hal9001</code>，都是通过 YAML condition 激活模块和参数。
+              <code>GrantConditionOnBotOwner</code> 根据 bot type 授予 condition，模块再用 <code>RequiresCondition</code> 决定是否运行。
+            </p>
+            <p>
+              这意味着 C# 提供能力，YAML 调性格：建筑比例、单位比例、上限、延迟、攻击规模、扩张阈值、技能评分都能由数据层调整。
+            </p>
+          </div>
+          <aside class="quote-box">
+            <strong>像调音台，而不是换发动机。</strong>
+            同一个 <code>BaseBuilderBotModule</code> 可以在 rush 里更激进，也可以在 turtle 里更防御。
+            模块是乐器，condition 和参数是混音台。
+          </aside>
+        </div>
+      </section>
+
+      <section id="performance">
+        <h2>性能与回放：它知道 RTS AI 贵在哪里</h2>
+        <table class="matrix">
+          <thead>
+            <tr>
+              <th>策略</th>
+              <th>OpenRA 做法</th>
+              <th>价值</th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr>
+              <td><span class="ok">分帧扫描</span></td>
+              <td>ResourceMap 每次更新一个区块，SquadManager 把 pending update 摊到多个 tick。</td>
+              <td>避免全图扫描集中在同一帧。</td>
+            </tr>
+            <tr>
+              <td><span class="ok">索引缓存</span></td>
+              <td>ActorIndex 订阅 actor add/remove，常用集合不靠每帧临时搜。</td>
+              <td>降低查询成本，减少瞬时分配和过滤。</td>
+            </tr>
+            <tr>
+              <td><span class="ok">昂贵操作限流</span></td>
+              <td>采矿寻路、支援技能扫描、建筑放置都有 cooldown 或局部候选。</td>
+              <td>把寻路和目标评分从每 tick 暴力计算中拿出来。</td>
+            </tr>
+            <tr>
+              <td><span class="ok">Order 限流</span></td>
+              <td><code>ModularBot.MinOrderQuotientPerTick</code> 控制 pending order 派发量。</td>
+              <td>防止 bot 瞬间刷爆命令链路。</td>
+            </tr>
+            <tr>
+              <td><span class="warn">回放分离</span></td>
+              <td>Bot 决策不在 replay 中重跑，回放只消费记录过的 order。</td>
+              <td>AI 内部状态无需成为回放确定性的唯一来源。</td>
+            </tr>
+          </tbody>
+        </table>
+      </section>
+
+      <section id="debug">
+        <h2>调试观察：能看到 AI 在想什么，但还不够结构化</h2>
+        <p>
+          OpenRA 有 <code>AIUtils.BotDebug</code>、<code>Game.Settings.Debug.BotDebug</code>、
+          <code>RenderDebugState</code> 等直接工具，可以把 squad 类型和目标画到单位上。这种可视化非常适合 RTS：
+          当一个小队发呆、撤退或乱冲，调试信息能马上告诉你它属于哪个 squad、目标是谁。
+        </p>
+        <p>
+          但 OpenRA 没有统一的结构化 decision trace。很多判断散落在模块内部的比例、阈值、随机扰动、cooldown 和特殊规则里。
+          它是很会打仗的工程系统，不是一本干净的 AI 教科书。
+        </p>
+      </section>
+
+      <section id="lessons" class="band">
+        <h2>给 Ludots 的启发</h2>
+        <div class="route" aria-label="Ludots 可借鉴路径">
+          <span>AI snapshot/query</span>
+          <span>-&gt; AI module / planner produces command intent</span>
+          <span>-&gt; command proposal merge and cap</span>
+          <span>-&gt; formal OrderBuffer / GAS order validation</span>
+          <span>-&gt; existing gameplay systems mutate ECS state</span>
+        </div>
+        <p>
+          最值得借鉴的不是具体模块代码，而是边界设计：<strong>AI 是命令生产者，正式玩法系统才是世界修改者。</strong>
+          如果 Ludots 做 RTS/战略 AI，应把 OpenRA 的经验翻译到自己的 Arch ECS、Mod、ConfigPipeline、SystemGroup 和 Order/GAS 管线里，
+          不应复制 GPL 代码，也不应让 AI 模块跨越职责直接写玩法组件。
+        </p>
+      </section>
+
+      <section id="evidence">
+        <h2>证据索引</h2>
+        <p class="note">以下路径均为本地参考源码或本仓库报告入口，方便继续深挖。</p>
+        <table class="matrix">
+          <thead>
+            <tr>
+              <th>主题</th>
+              <th>路径</th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr>
+              <td>深度 Markdown 报告</td>
+              <td><a href="openra_ai_system_analysis.md">docs/reference/openra_ai_system_analysis.md</a></td>
+            </tr>
+            <tr>
+              <td>Bot 入口</td>
+              <td><a href="../../external/reference/OpenRA/OpenRA.Mods.Common/Traits/Player/ModularBot.cs">external/reference/OpenRA/OpenRA.Mods.Common/Traits/Player/ModularBot.cs</a></td>
+            </tr>
+            <tr>
+              <td>Order 链路</td>
+              <td><a href="../../external/reference/OpenRA/OpenRA.Game/Network/UnitOrders.cs">external/reference/OpenRA/OpenRA.Game/Network/UnitOrders.cs</a></td>
+            </tr>
+            <tr>
+              <td>RA AI 配置</td>
+              <td><a href="../../external/reference/OpenRA/mods/ra/rules/ai.yaml">external/reference/OpenRA/mods/ra/rules/ai.yaml</a></td>
+            </tr>
+            <tr>
+              <td>Common BotModules</td>
+              <td><a href="../../external/reference/OpenRA/OpenRA.Mods.Common/Traits/BotModules">external/reference/OpenRA/OpenRA.Mods.Common/Traits/BotModules</a></td>
+            </tr>
+          </tbody>
+        </table>
+      </section>
+    </main>
+  </div>
+
+  <footer>
+    本 HTML 是 Ludots 仓库中的外部参考材料。OpenRA 为 GPL 项目，本报告只做架构阅读和思想分析，不复制其源码实现。
+  </footer>
+</body>
+</html>

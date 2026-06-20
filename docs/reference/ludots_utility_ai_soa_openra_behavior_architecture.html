@@ -1,0 +1,1486 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Ludots 通用 Utility AI SoA 架构方案</title>
+  <style>
+    :root {
+      --ink: #18212a;
+      --muted: #5f6d7a;
+      --line: #d9e1ea;
+      --soft: #f5f7fa;
+      --paper: #ffffff;
+      --night: #17202a;
+      --blue: #2563eb;
+      --blue-soft: #edf4ff;
+      --green: #2f855a;
+      --green-soft: #edf7f1;
+      --amber: #b45309;
+      --amber-soft: #fff4df;
+      --red: #b42318;
+      --red-soft: #fff0ee;
+      --teal: #0f766e;
+      --teal-soft: #e9f7f5;
+      --violet: #6d28d9;
+      --violet-soft: #f1edff;
+      --radius: 8px;
+      --shadow: 0 8px 24px rgba(24, 33, 42, 0.07);
+    }
+
+    * { box-sizing: border-box; }
+    html { scroll-behavior: smooth; }
+    body {
+      margin: 0;
+      font-family: "Segoe UI", "Microsoft YaHei", Arial, sans-serif;
+      color: var(--ink);
+      background: var(--paper);
+      line-height: 1.72;
+      letter-spacing: 0;
+    }
+
+    a { color: var(--blue); text-decoration: none; }
+    a:hover { text-decoration: underline; }
+
+    code {
+      font-family: Consolas, "Cascadia Mono", "SFMono-Regular", monospace;
+      font-size: 0.92em;
+      background: #eef2f6;
+      border: 1px solid #d8e0e8;
+      border-radius: 6px;
+      padding: 0.08rem 0.32rem;
+      overflow-wrap: anywhere;
+    }
+
+    pre {
+      margin: 0;
+      overflow-x: auto;
+      white-space: pre;
+      font-family: Consolas, "Cascadia Mono", "SFMono-Regular", monospace;
+      font-size: 0.86rem;
+      line-height: 1.56;
+      background: #111827;
+      color: #e5edf7;
+      border-radius: var(--radius);
+      padding: 16px;
+    }
+
+    table {
+      width: 100%;
+      border-collapse: collapse;
+      font-size: 0.94rem;
+      background: #fff;
+    }
+
+    th, td {
+      border: 1px solid var(--line);
+      padding: 10px 12px;
+      vertical-align: top;
+      text-align: left;
+    }
+
+    th {
+      background: #f0f4f8;
+      font-weight: 750;
+    }
+
+    .hero {
+      color: #f8fafc;
+      background: var(--night);
+      border-bottom: 6px solid var(--teal);
+    }
+
+    .hero-inner {
+      width: min(1220px, calc(100% - 32px));
+      margin: 0 auto;
+      padding: 46px 0 40px;
+      display: grid;
+      grid-template-columns: minmax(0, 1.15fr) minmax(300px, 0.85fr);
+      gap: 28px;
+      align-items: end;
+    }
+
+    .hero h1 {
+      margin: 0 0 16px;
+      max-width: 900px;
+      font-size: 2.24rem;
+      line-height: 1.16;
+      font-weight: 850;
+      letter-spacing: 0;
+    }
+
+    .hero p {
+      margin: 0;
+      max-width: 900px;
+      color: #dfe7f0;
+      font-size: 1.02rem;
+    }
+
+    .summary {
+      display: grid;
+      gap: 12px;
+      padding: 18px;
+      border: 1px solid rgba(255, 255, 255, 0.18);
+      border-radius: var(--radius);
+      background: rgba(255, 255, 255, 0.08);
+      box-shadow: var(--shadow);
+    }
+
+    .summary b { color: #ffffff; font-size: 1.02rem; }
+    .summary span { color: #dfe7f0; font-size: 0.93rem; }
+
+    .layout {
+      width: min(1220px, calc(100% - 32px));
+      margin: 0 auto;
+      display: grid;
+      grid-template-columns: 278px minmax(0, 1fr);
+      gap: 28px;
+      padding: 32px 0 72px;
+    }
+
+    .toc {
+      position: sticky;
+      top: 18px;
+      align-self: start;
+      border: 1px solid var(--line);
+      border-radius: var(--radius);
+      background: #fff;
+      box-shadow: var(--shadow);
+      padding: 18px;
+      max-height: calc(100vh - 36px);
+      overflow: auto;
+    }
+
+    .toc strong {
+      display: block;
+      margin-bottom: 10px;
+      font-size: 0.96rem;
+    }
+
+    .toc a {
+      display: block;
+      padding: 7px 0;
+      color: #334155;
+      border-top: 1px solid #eef2f6;
+      font-size: 0.92rem;
+    }
+
+    .content { display: grid; gap: 28px; min-width: 0; }
+
+    section {
+      border: 1px solid var(--line);
+      border-radius: var(--radius);
+      background: #fff;
+      box-shadow: var(--shadow);
+      padding: 24px;
+    }
+
+    section h2 {
+      margin: 0 0 14px;
+      font-size: 1.46rem;
+      line-height: 1.28;
+      letter-spacing: 0;
+    }
+
+    section h3 {
+      margin: 22px 0 10px;
+      font-size: 1.1rem;
+      letter-spacing: 0;
+    }
+
+    section p { margin: 10px 0; }
+    section ul, section ol { margin: 10px 0 0; padding-left: 1.25rem; }
+    section li { margin: 6px 0; }
+
+    .lead {
+      color: #39495a;
+      font-size: 1.02rem;
+    }
+
+    .verdict {
+      border-left: 5px solid var(--red);
+      background: var(--red-soft);
+      padding: 14px 16px;
+      border-radius: 0 var(--radius) var(--radius) 0;
+      margin: 16px 0;
+    }
+
+    .ok {
+      border-left: 5px solid var(--green);
+      background: var(--green-soft);
+      padding: 14px 16px;
+      border-radius: 0 var(--radius) var(--radius) 0;
+      margin: 16px 0;
+    }
+
+    .note {
+      border-left: 5px solid var(--blue);
+      background: var(--blue-soft);
+      padding: 14px 16px;
+      border-radius: 0 var(--radius) var(--radius) 0;
+      margin: 16px 0;
+    }
+
+    .warn {
+      border-left: 5px solid var(--amber);
+      background: var(--amber-soft);
+      padding: 14px 16px;
+      border-radius: 0 var(--radius) var(--radius) 0;
+      margin: 16px 0;
+    }
+
+    .grid-2 {
+      display: grid;
+      grid-template-columns: repeat(2, minmax(0, 1fr));
+      gap: 16px;
+    }
+
+    .grid-3 {
+      display: grid;
+      grid-template-columns: repeat(3, minmax(0, 1fr));
+      gap: 14px;
+    }
+
+    .metric {
+      border: 1px solid var(--line);
+      border-radius: var(--radius);
+      padding: 14px;
+      background: #fff;
+    }
+
+    .metric b {
+      display: block;
+      margin-bottom: 6px;
+      font-size: 1.02rem;
+    }
+
+    .metric span {
+      display: block;
+      color: var(--muted);
+      font-size: 0.93rem;
+    }
+
+    .tag {
+      display: inline-flex;
+      align-items: center;
+      min-height: 26px;
+      border: 1px solid var(--line);
+      border-radius: 6px;
+      padding: 2px 8px;
+      margin: 2px 4px 2px 0;
+      background: #fff;
+      color: #334155;
+      font-size: 0.82rem;
+      letter-spacing: 0;
+    }
+
+    .tag.green { background: var(--green-soft); border-color: #b7dfc6; color: #1f6844; }
+    .tag.red { background: var(--red-soft); border-color: #f0b8b1; color: #8f1f16; }
+    .tag.amber { background: var(--amber-soft); border-color: #f2d19a; color: #8a4a05; }
+    .tag.blue { background: var(--blue-soft); border-color: #bfd3fb; color: #1e4fc4; }
+    .tag.teal { background: var(--teal-soft); border-color: #b5e2dc; color: #0c5c55; }
+    .tag.violet { background: var(--violet-soft); border-color: #d5c9ff; color: #5421aa; }
+
+    .flow {
+      display: grid;
+      gap: 8px;
+      margin: 16px 0;
+    }
+
+    .flow-row {
+      display: grid;
+      grid-template-columns: 180px minmax(0, 1fr);
+      gap: 10px;
+      align-items: stretch;
+    }
+
+    .flow-key {
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      border: 1px solid var(--line);
+      border-radius: var(--radius);
+      padding: 10px;
+      background: #f8fafc;
+      font-weight: 750;
+      text-align: center;
+      min-height: 52px;
+    }
+
+    .flow-val {
+      border: 1px solid var(--line);
+      border-radius: var(--radius);
+      padding: 10px 12px;
+      background: #fff;
+      min-height: 52px;
+    }
+
+    .pipe {
+      display: grid;
+      grid-template-columns: repeat(7, minmax(110px, 1fr));
+      gap: 8px;
+      margin: 16px 0;
+    }
+
+    .pipe div {
+      min-height: 74px;
+      padding: 10px;
+      border: 1px solid var(--line);
+      border-radius: var(--radius);
+      background: #f8fafc;
+    }
+
+    .pipe b {
+      display: block;
+      margin-bottom: 6px;
+      color: #0f172a;
+    }
+
+    .pipe span {
+      display: block;
+      color: var(--muted);
+      font-size: 0.88rem;
+    }
+
+    .layer-map {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 14px;
+      margin: 16px 0;
+    }
+
+    .stack {
+      display: grid;
+      gap: 8px;
+    }
+
+    .band {
+      border: 1px solid var(--line);
+      border-left: 6px solid var(--blue);
+      border-radius: var(--radius);
+      background: #fff;
+      padding: 10px 12px;
+    }
+
+    .band.green { border-left-color: var(--green); background: var(--green-soft); }
+    .band.amber { border-left-color: var(--amber); background: var(--amber-soft); }
+    .band.red { border-left-color: var(--red); background: var(--red-soft); }
+    .band.teal { border-left-color: var(--teal); background: var(--teal-soft); }
+    .band.violet { border-left-color: var(--violet); background: var(--violet-soft); }
+
+    .decision-card {
+      border: 1px solid var(--line);
+      border-radius: var(--radius);
+      padding: 14px;
+      background: #fff;
+    }
+
+    .decision-card h3 { margin-top: 0; }
+
+    .matrix td:first-child, .matrix th:first-child {
+      width: 22%;
+      font-weight: 750;
+    }
+
+    .phase {
+      display: grid;
+      grid-template-columns: 68px minmax(0, 1fr);
+      gap: 12px;
+      border-top: 1px solid #eef2f6;
+      padding: 14px 0;
+    }
+
+    .phase:first-child { border-top: 0; }
+
+    .phase-num {
+      width: 50px;
+      height: 50px;
+      border-radius: var(--radius);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      background: var(--night);
+      color: #fff;
+      font-weight: 800;
+    }
+
+    .phase h3 {
+      margin: 0 0 6px;
+    }
+
+    .compact-list {
+      display: grid;
+      grid-template-columns: repeat(2, minmax(0, 1fr));
+      gap: 8px 16px;
+      padding-left: 0;
+      list-style: none;
+    }
+
+    .compact-list li {
+      border: 1px solid #e5ebf2;
+      border-radius: var(--radius);
+      padding: 8px 10px;
+      margin: 0;
+      background: #fbfdff;
+    }
+
+    .sources li { overflow-wrap: anywhere; }
+
+    @media (max-width: 980px) {
+      .hero-inner, .layout, .grid-2, .grid-3, .layer-map {
+        grid-template-columns: 1fr;
+      }
+
+      .toc { position: relative; top: auto; max-height: none; }
+      .pipe { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+      .compact-list { grid-template-columns: 1fr; }
+    }
+
+    @media (max-width: 560px) {
+      .hero h1 { font-size: 1.72rem; }
+      section { padding: 18px; }
+      .flow-row { grid-template-columns: 1fr; }
+      .pipe { grid-template-columns: 1fr; }
+    }
+  </style>
+</head>
+<body>
+  <header class="hero">
+    <div class="hero-inner">
+      <div>
+        <h1>Ludots 通用 Utility AI SoA 架构方案</h1>
+        <p>
+          目标不是再写一个局部 Bot，而是把现有 Utility / GOAP / HTN 雏形深化成一套通用 AI Module：
+          SoA 热路径、0Alloc 运行、配置驱动 OpenRA 基础单位行为、Order 与 Ability 分离、Decision 与 Execution 分离、评分机制数据驱动、Graph 函数可扩展。
+        </p>
+      </div>
+      <div class="summary">
+        <b>结论</b>
+        <span>远端与本地已有 AI 骨架，但没有覆盖 Uintel 式完整 AI 基建。应复用现有 AI / Order / GAS / Graph / Team / Spatial 基建，补齐目标过滤、感知、decision-target pair 评分、执行器、姿态、索敌、执行前置条件和 OpenRA 行为包。</span>
+      </div>
+    </div>
+  </header>
+
+  <div class="layout">
+    <nav class="toc">
+      <strong>目录</strong>
+      <a href="#answer">1. 直接回答</a>
+      <a href="#evidence">2. 远端 PR 与本地现状</a>
+      <a href="#uintel">3. Uintel 文档拆解</a>
+      <a href="#gap">4. 当前缺口</a>
+      <a href="#target">5. 目标架构</a>
+      <a href="#runtime">6. SoA / 0Alloc 运行时</a>
+      <a href="#scoring">7. 评分与 Graph</a>
+      <a href="#orders">8. Order / Ability 映射</a>
+      <a href="#openra">9. OpenRA 行为配置包</a>
+      <a href="#readiness">10. 执行器就绪门控</a>
+      <a href="#systems">11. SystemGroup 排布</a>
+      <a href="#schema">12. 配置 Schema 草案</a>
+      <a href="#phases">13. 落地阶段</a>
+      <a href="#tests">14. 验收标准</a>
+      <a href="#sources">15. 证据来源</a>
+    </nav>
+
+    <main class="content">
+      <section id="answer">
+        <h2>1. 直接回答</h2>
+        <div class="verdict">
+          <b>远端 PR 有没有已经处理类似 Uintel 的 AI 基建？</b>
+          <p>
+            没有发现一个已经覆盖“完整通用 Utility AI / SoA runtime / decision-target pair / 数据化评分 / OpenRA 基础行为”的远端 PR。
+            但远端 `origin/main` 和当前本地已经有 AI 骨架：`UtilityGoalSelectorCompiled256`、`GoapAStarPlanner256`、`HtnPlanner256`、`AIPlanExecutionSystem`、`AiConfigLoader`、`AIDemoMod`、`AIInspectorMod`。
+          </p>
+        </div>
+        <div class="ok">
+          <b>现有 AI 基建有没有这块内容？</b>
+          <p>
+            有一半：已经有 goal 级 utility、256-bit world state、GOAP/HTN plan、plan 到 `OrderQueue` 的提交、10k agent 0Alloc benchmark。
+            没有另一半：没有通用 target filter、没有 decision-target pair 评分、没有输入归一化与曲线库、没有 OpenRA 式 stance / auto-target / attack-move / guard / disengage / 执行器就绪门控，也没有发现 AI 系统已接进 `GameEngine` 主循环。
+          </p>
+        </div>
+        <div class="note">
+          <b>推荐方向</b>
+          <p>
+            不要另起一套平行 AI。应把 `src/Core/Gameplay/AI` 深化成一个深 Module：配置编译为只读数组，运行时用 SoA runtime 和固定 scratch，decision 只产出 intent，execution 只提交 Order，Ability 和 Effect 仍由 GAS 负责。
+          </p>
+        </div>
+
+        <div class="grid-3">
+          <div class="metric">
+            <b>复用</b>
+            <span>现有 AI / Order / GAS / Graph / Spatial / Team / Relationship / Navigation2D。</span>
+          </div>
+          <div class="metric">
+            <b>新增</b>
+            <span>Perception、TargetFilter、Input、Normalization、Consideration、Decision、Executor、Stance、CombatMemory、ActuatorReadiness。</span>
+          </div>
+          <div class="metric">
+            <b>原则</b>
+            <span>AI 不直接扣血、不生成 Effect、不绕过 Order 校验；所有战斗执行仍走 Order 和 GAS。</span>
+          </div>
+        </div>
+      </section>
+
+      <section id="evidence">
+        <h2>2. 远端 PR 与本地现状</h2>
+        <p class="lead">
+          这里的判断来自 `gh pr list`、`gh search prs`、`git ls-tree origin/main`、本地 `rg` 与源码读取。结论不是“没有 AI”，而是“现有 AI 还不是一套可承载 OpenRA 基础行为的通用 AI Module”。
+        </p>
+
+        <h3>远端 PR 证据</h3>
+        <table>
+          <thead>
+            <tr>
+              <th>项</th>
+              <th>状态</th>
+              <th>判断</th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr>
+              <td>Open PR 搜索 `Utility / GOAP / HTN / Decision / Scoring / AutoTarget / AIPlan`</td>
+              <td>无命中</td>
+              <td>没有看到专门处理 Uintel 式通用 AI 基建的开放 PR。</td>
+            </tr>
+            <tr>
+              <td>PR #39 `feat(ui): ship native runtime showcase baseline`</td>
+              <td>开放</td>
+              <td>历史 diff 涉及 AI glue、OrderQueue、AbilityExec 等，但主题不是完整 AI 基建。</td>
+            </tr>
+            <tr>
+              <td>PR #35 `refactor(gas): converge order and interaction governance`</td>
+              <td>已合并</td>
+              <td>处理过 AI plan 到 Order/GAS 收敛的一部分，是现有骨架来源之一。</td>
+            </tr>
+            <tr>
+              <td>PR #42 / #43 `feat(nav2d-soa-merge`</td>
+              <td>已合并</td>
+              <td>Navigation2D SoA，不是 AI SoA runtime。</td>
+            </tr>
+            <tr>
+              <td>PR #87 Relationship showcase</td>
+              <td>开放</td>
+              <td>Threat / Focus 可作为 AI 输入来源，但不是自动战斗 AI 本体。</td>
+            </tr>
+          </tbody>
+        </table>
+
+        <h3>本地已有 AI 骨架</h3>
+        <div class="grid-2">
+          <div>
+            <ul>
+              <li><code>src/Core/Gameplay/AI/Utility/UtilityGoalSelectorCompiled256.cs</code>：goal 级 utility，多 consideration 乘法，已有 momentum / compensation 开关。</li>
+              <li><code>src/Core/Gameplay/AI/Planning/GoapAStarPlanner256.cs</code>：GOAP A*，用 256-bit world state。</li>
+              <li><code>src/Core/Gameplay/AI/Planning/HtnPlanner256.cs</code>：HTN planning。</li>
+              <li><code>src/Core/Gameplay/AI/Config/AiConfigLoader.cs</code>：从 `ConfigPipeline` 编译 AI 配置。</li>
+              <li><code>src/Core/Gameplay/AI/Systems/AIPlanExecutionSystem.cs</code>：把 action 通过 `PlanExecutor` 提交到 `OrderQueue`。</li>
+            </ul>
+          </div>
+          <div>
+            <ul>
+              <li><code>src/Tests/GasTests/AiBenchmarkTests.cs</code>：覆盖 `Utility+GOAP+OrderSubmit` 10k agent 零分配。</li>
+              <li><code>mods/AIDemoMod/assets/Configs/AI/*.json</code>：有最小 AI 配置样例。</li>
+              <li><code>mods/AIInspectorMod</code>：能打印 AI config。</li>
+              <li><code>GameEngine.AiRuntime</code>：加载和热重建已存在。</li>
+              <li>当前源码搜索未发现 AI 系统注册到主循环的证据。</li>
+            </ul>
+          </div>
+        </div>
+
+        <h3>本地可复用基础设施</h3>
+        <ul class="compact-list">
+          <li><code>ConfigPipeline</code> / <code>ConfigCatalog</code>：AI 配置必须走这里。</li>
+          <li><code>OrderQueue</code> / <code>OrderBufferSystem</code> / <code>OrderSubmitter</code>：AI 执行必须提交 Order。</li>
+          <li><code>OrderTypeRegistry</code> / <code>OrderRuleRegistry</code>：Order 校验、打断、队列策略继续复用。</li>
+          <li><code>AbilityDefinitionRegistry</code> / <code>AbilityExecSystem</code>：攻击、施法、技能执行继续归 GAS。</li>
+          <li><code>GraphExecutor.ExecuteScore</code> / <code>GraphProgramRegistry</code>：AI 自定义评分函数可复用 Graph VM。</li>
+          <li><code>TargetResolverFanOutHelper</code>：目标查询和过滤的分层思想可复用，但 AI 需要自己的无副作用版本。</li>
+          <li><code>ISpatialQueryService</code> / <code>WorldPositionCm</code> / <code>SpatialPartitionUpdateSystem</code>：索敌候选来源。</li>
+          <li><code>TeamManager</code> / <code>RelationshipFilter</code> / Relationship runtime：敌我关系、Threat、Focus 输入来源。</li>
+          <li><code>Navigation2D</code> / <code>NavGoal2D</code> / <code>MoveToWorldCmOrderSystem</code>：移动执行路径。</li>
+          <li><code>BlackboardIntBuffer</code> / <code>BlackboardEntityBuffer</code> / <code>BlackboardSpatialBuffer</code>：Order 参数和 AI runtime 共享槽。</li>
+        </ul>
+      </section>
+
+      <section id="uintel">
+        <h2>3. Uintel 文档拆解</h2>
+        <p class="lead">
+          Uintel ECS 文档的关键不是 Unity DOTS 细节，而是清晰的职责链：感知输入、归一化、consideration、decision、decision maker、action task。运行时再拆成决策阶段和执行阶段。
+        </p>
+
+        <div class="pipe">
+          <div><b>Input</b><span>读取 agent、target、环境、blackboard，输出 raw input。</span></div>
+          <div><b>Normalization</b><span>把 raw input 归一到 0..1。</span></div>
+          <div><b>Consideration</b><span>input + normalization + response curve。</span></div>
+          <div><b>Decision</b><span>一组 considerations + target filters + action tasks。</span></div>
+          <div><b>DecisionMaker</b><span>在 decision-target pair 中选最高分。</span></div>
+          <div><b>State Machine</b><span>控制当前 decision 切换，处理 momentum。</span></div>
+          <div><b>ActionTask</b><span>Sequence / Parallel / ParallelComplete 执行。</span></div>
+        </div>
+
+        <h3>最值得复刻的思想</h3>
+        <table class="matrix">
+          <thead>
+            <tr>
+              <th>Uintel 思路</th>
+              <th>对 Ludots 的价值</th>
+              <th>不能照搬的部分</th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr>
+              <td>Decision-making 与 execution 分离</td>
+              <td>可以保证 scoring 是纯读，execution 才提交 Order，符合 Ludots Order/GAS 职责。</td>
+              <td>不要把 Unity job/executor 类型原样搬进 Ludots。</td>
+            </tr>
+            <tr>
+              <td>Decision-target pair 评分</td>
+              <td>非常适合索敌、守卫、攻击、修理、采集、运输等“动作和目标一起选”的 RTS 行为。</td>
+              <td>不能只做 goal 级评分，否则无法表达“打谁”。</td>
+            </tr>
+            <tr>
+              <td>Target filter 前置裁剪</td>
+              <td>先用关系、layer、tag、距离、视野、武器资格过滤，避免对全场实体跑评分。</td>
+              <td>不要用 managed LINQ / 临时 List 做热路径筛选。</td>
+            </tr>
+            <tr>
+              <td>Blob + runtime executor</td>
+              <td>对应 Ludots 的 compiled arrays + SoA runtime：配置只读，执行状态独立。</td>
+              <td>不照搬 Unity BlobAssetReference / Baker / SubScene。</td>
+            </tr>
+            <tr>
+              <td>Blackboard</td>
+              <td>Ludots 已有黑板 buffer，可承载 Order 参数、感知记忆、target cache。</td>
+              <td>不要新增平行黑板协议；要复用现有 blackboard key registry。</td>
+            </tr>
+            <tr>
+              <td>Optimization tricks</td>
+              <td>决策间隔、跨帧分摊、target filter、并行/分桶、固定内存池都适合 Ludots。</td>
+              <td>“启用 Burst”这类 Unity 专属项不能照搬。</td>
+            </tr>
+          </tbody>
+        </table>
+
+        <div class="warn">
+          <b>和 Ludots 规范冲突的一点</b>
+          <p>
+            Uintel 文档里提到 fallback decision / idle fallback 的设计。在 Ludots 里不应做平台级 fallback。Idle、Hold、ReturnFire 都应是显式配置的 decision 或 order state；配置缺失时 fail-fast，而不是运行时兜底。
+          </p>
+        </div>
+      </section>
+
+      <section id="gap">
+        <h2>4. 当前缺口</h2>
+        <p class="lead">
+          现有 Ludots AI 的 Interface 还偏窄：它能“选 goal、做 plan、提交 order”，但还不能表达“对哪个目标、为什么此时切换、怎么持续执行、什么时候脱战、执行器当前是否满足开火/施法前置条件”。
+        </p>
+
+        <table>
+          <thead>
+            <tr>
+              <th>缺口</th>
+              <th>当前表现</th>
+              <th>需要补的 Module</th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr>
+              <td>目标候选与过滤</td>
+              <td>Input mapping 有 `AutoTargetPolicy`，GAS TargetResolver 有 fan-out，但没有 AI 通用无副作用 target filter。</td>
+              <td><code>AITargetFilterCompiled</code>、<code>AITargetAcquisitionSystem</code>。</td>
+            </tr>
+            <tr>
+              <td>decision-target pair</td>
+              <td>Utility 只选 goal，不选目标。</td>
+              <td><code>AIDecisionEvaluator</code>、<code>AITargetCandidateSoA</code>、<code>AIDecisionIntent</code>。</td>
+            </tr>
+            <tr>
+              <td>输入归一化和曲线</td>
+              <td>目前是 bool consideration，无法表达距离曲线、血量曲线、威胁分、优先级桶。</td>
+              <td><code>AIInputProviderRegistry</code>、<code>AINormalizationCompiled</code>、<code>AIResponseCurveCompiled</code>。</td>
+            </tr>
+            <tr>
+              <td>执行持续性</td>
+              <td>Plan action 提交 Order 后就 advance，缺少 action task 的 running / finished / cancel 语义。</td>
+              <td><code>AIExecutionStateSoA</code>、<code>AITaskExecutor</code>。</td>
+            </tr>
+            <tr>
+              <td>OpenRA 基础行为</td>
+              <td>Order blackboard 已有 Attack/Move/Stop/Hold/Patrol key，但缺 attack-move、guard、stance、retaliate、auto-target runtime。</td>
+              <td><code>OpenRaBehaviorPack</code> 配置和 executor adapters。</td>
+            </tr>
+            <tr>
+              <td>脱战/警戒/索敌</td>
+              <td>没有通用 target memory、last seen、leash、scan interval、target priority。</td>
+              <td><code>AICombatMemory</code>、<code>AIStanceProfile</code>、<code>AIAutoTargetProfile</code>。</td>
+            </tr>
+            <tr>
+              <td>执行器就绪门控</td>
+              <td>攻击、施法、采集、建造、炮台转向都可能有“正在准备但尚不能执行”的 gameplay 状态；目前 AI 没有统一读取这类 readiness 的入口。</td>
+              <td><code>ActuatorReadinessInput</code>、<code>AimGate</code>、<code>AbilityPreconditionAdapter</code>；炮台只是一个 adapter 案例。</td>
+            </tr>
+            <tr>
+              <td>主循环接入</td>
+              <td>`AiRuntime` 会加载，但当前搜索未发现 AI systems 注册到 `GameEngine` simulation loop。</td>
+              <td>AI bootstrap / SystemFactory / SystemGroup 排布。</td>
+            </tr>
+          </tbody>
+        </table>
+      </section>
+
+      <section id="target">
+        <h2>5. 目标架构</h2>
+        <p class="lead">
+          目标是一个深 Module：外部 Interface 是“给 agent 配 AI profile，系统自动产出 Order intent”；内部 Implementation 才包含 perception、filters、inputs、scoring、task executor、OpenRA 行为包。
+        </p>
+
+        <div class="layer-map">
+          <div class="stack">
+            <div class="band red"><b>Authoring Layer</b><br>Mod 配置：AI profile、filters、inputs、curves、decisions、tasks、stance、actuator readiness adapters。</div>
+            <div class="band amber"><b>Compile Layer</b><br>ConfigPipeline 合并后编译为 id、array、range、programId；热路径不保留 string。</div>
+            <div class="band teal"><b>Decision Layer</b><br>target candidates、raw inputs、normalization、consideration、decision-target pair score。</div>
+            <div class="band violet"><b>Execution Layer</b><br>Sequence / Parallel task executor，输出 Order intent，不直接触发 Effect。</div>
+            <div class="band green"><b>Gameplay Layer</b><br>OrderBufferSystem、AbilityExecSystem、EffectProcessing、ProjectileRuntimeSystem 执行实际 gameplay。</div>
+          </div>
+          <div class="stack">
+            <div class="flow-row">
+              <div class="flow-key">Interface</div>
+              <div class="flow-val">`AIAgentProfileRef` + `AICompiledRuntime` + `AIOrderIntentQueue`。调用方只知道配置和 Order，不知道内部评分细节。</div>
+            </div>
+            <div class="flow-row">
+              <div class="flow-key">Seam</div>
+              <div class="flow-val">Input provider、normalization、curve、target filter、task executor、order adapter、graph score adapter。</div>
+            </div>
+            <div class="flow-row">
+              <div class="flow-key">Adapter</div>
+              <div class="flow-val">`OrderTaskAdapter`、`AbilityCastOrderAdapter`、`MoveOrderAdapter`、`GraphConsiderationAdapter`、`RelationshipThreatInputAdapter`。</div>
+            </div>
+            <div class="flow-row">
+              <div class="flow-key">Depth</div>
+              <div class="flow-val">一个配置 profile 覆盖 idle auto-target、attack move、guard、patrol、retaliate、execution readiness、ability cast。</div>
+            </div>
+          </div>
+        </div>
+
+        <h3>Module 切分</h3>
+        <table>
+          <thead>
+            <tr>
+              <th>Module</th>
+              <th>Interface</th>
+              <th>Implementation 要点</th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr>
+              <td><code>AIConfigCompiler</code></td>
+              <td>输入 `ConfigCatalog`，输出 `AICompiledRuntime`。</td>
+              <td>解析 AI/*.json，注册 ids，编译 flat arrays 和 range tables，校验所有引用。</td>
+            </tr>
+            <tr>
+              <td><code>AIAgentRuntimeSoA</code></td>
+              <td>按 agent index 读取/写入状态。</td>
+              <td>profileId、lastDecisionId、currentTarget、thinkBucket、cooldown、score、executor pc。</td>
+            </tr>
+            <tr>
+              <td><code>AITargetAcquisition</code></td>
+              <td>给 decision maker 返回候选目标 span。</td>
+              <td>spatial query + target filter + target cache + last seen；不产生 gameplay side effect。</td>
+            </tr>
+            <tr>
+              <td><code>AIInputSampling</code></td>
+              <td>按 inputId 读取 raw value。</td>
+              <td>距离、生命、tag、attribute、cooldown、threat、actuator readiness、order state、graph score。</td>
+            </tr>
+            <tr>
+              <td><code>AIUtilityEvaluator</code></td>
+              <td>输出 best decision-target pair。</td>
+              <td>normalization、curve、veto、multiply、weighted sum、priority bucket、momentum、hysteresis。</td>
+            </tr>
+            <tr>
+              <td><code>AIDecisionStateMachine</code></td>
+              <td>控制是否切换 current decision。</td>
+              <td>keep running、min duration、cooldown、interrupt policy、score margin。</td>
+            </tr>
+            <tr>
+              <td><code>AIExecution</code></td>
+              <td>把 decision intent 转为 running tasks。</td>
+              <td>Sequence / Parallel / ParallelComplete；任务只提交 Order intent 或维护 AI runtime state。</td>
+            </tr>
+            <tr>
+              <td><code>AIOrderAdapter</code></td>
+              <td>把 task intent 转为 `Order`。</td>
+              <td>填 Actor、Target、TargetContext、Spatial、Args、SubmitMode，交给 `OrderQueue`。</td>
+            </tr>
+            <tr>
+              <td><code>OpenRaBehaviorPack</code></td>
+              <td>一套可选配置 profile。</td>
+              <td>Move、Stop、Attack、AttackMove、Guard、Patrol、Hold、Stance、AutoTarget；炮台/采集器/建造器等放到对应 actuator adapter。</td>
+            </tr>
+          </tbody>
+        </table>
+      </section>
+
+      <section id="runtime">
+        <h2>6. SoA / 0Alloc 运行时</h2>
+        <p class="lead">
+          现有 `UtilityGoalSelectorCompiled256` 已经是数组化思路。新系统要把这个思路推到全链路：配置只读数组，运行状态 SoA，scratch 固定容量，Update 内不分配。
+        </p>
+
+        <h3>核心数据布局</h3>
+        <pre><code>AICompiledRuntime
+  DecisionMakerIds[]
+  DecisionMakerRanges[]          // offset + count into DecisionIds
+  DecisionIds[]
+  DecisionTargetFilterId[]
+  DecisionConsiderationRanges[]  // offset + count into Considerations
+  DecisionTaskRanges[]           // offset + count into Tasks
+  ConsiderationInputId[]
+  ConsiderationNormalizationId[]
+  ConsiderationCurveId[]
+  ConsiderationWeight[]
+  ConsiderationFlags[]           // Veto, Targeted, Graph, Invert
+  TargetFilterOps[]
+  InputDefs[]
+  NormalizationDefs[]
+  CurveDefs[]
+  TaskDefs[]
+  OrderAdapterDefs[]
+  GraphProgramIds[]</code></pre>
+
+        <pre><code>AIAgentRuntimeSoA
+  Entity[] Agents
+  int[] ProfileId
+  int[] DecisionMakerCursor
+  int[] CurrentDecisionId
+  Entity[] CurrentTarget
+  int[] CurrentTaskOffset
+  byte[] CurrentTaskStatus
+  float[] CurrentScore
+  int[] LastSwitchStep
+  int[] NextThinkStep
+  int[] CombatMemoryHead
+  int[] TargetCacheOffset
+  int[] TargetCacheCount</code></pre>
+
+        <h3>0Alloc 规则</h3>
+        <ul>
+          <li>配置加载阶段可以用 `List<T>` 和 JSON object；编译完成后热路径只读 arrays / spans。</li>
+          <li>Update 内禁止 LINQ、`new List<>`、闭包、字符串查找、反射、字典枚举。</li>
+          <li>所有 string id 在 compile 阶段变成 int id；运行时只比较 int / bitset / enum。</li>
+          <li>目标候选使用固定 `Entity[]` 或 `Span<Entity>` scratch，容量来自 profile，例如 `maxCandidates=64`。</li>
+          <li>Top target 选择使用单 pass best 或小容量 insertion sort，不做全量排序。</li>
+          <li>Graph score 用 stackalloc registers；AI 侧 Graph adapter 禁止 effect write op，只允许 pure read / math / query / relationship read。</li>
+          <li>多 agent 分桶：`NextThinkStep` 和 `DecisionMakingFrame1..N` 类似 Uintel 的跨帧分摊，避免所有 agent 同帧评分。</li>
+          <li>结构变化集中到 CommandBuffer 或 OrderQueue；decision 阶段不 Add/Remove ECS 数据。</li>
+          <li>QueryDescription 静态缓存；空间查询 buffer 由 system 持有并复用。</li>
+        </ul>
+
+        <h3>热路径伪代码</h3>
+        <pre><code>for each agent in think bucket:
+  candidates = targetAcquisition.Collect(agent, profile, scratch)
+  bestScore = 0
+  bestDecision = None
+  bestTarget = Null
+
+  for each decisionMaker in profile:
+    for each decision in decisionMaker:
+      span = FilterTargets(decision.targetFilter, candidates)
+      for each target in span or NullTarget:
+        score = EvaluateDecision(agent, target, decision)
+        score = ApplyMomentumHysteresis(agent, decision, target, score)
+        if score &gt; bestScore:
+          best = decision-target pair
+
+  stateMachine.TrySwitch(agent, best)
+  executor.Tick(agent, currentDecision, currentTarget)</code></pre>
+      </section>
+
+      <section id="scoring">
+        <h2>7. 评分与 Graph</h2>
+        <p class="lead">
+          Ludots 需要的不是单一乘法公式，而是一套数据驱动 score graph。默认足够快，必要时允许 Graph 函数参与单个 input / consideration / decision score。
+        </p>
+
+        <h3>评分结构</h3>
+        <div class="flow">
+          <div class="flow-row">
+            <div class="flow-key">Target Filter</div>
+            <div class="flow-val">关系、layer、tag、距离、视野、weapon eligibility、是否可被攻击、是否可被 repair/capture/harvest。</div>
+          </div>
+          <div class="flow-row">
+            <div class="flow-key">Input</div>
+            <div class="flow-val">raw value：distanceCm、healthRatio、threat、cooldownElapsed、ammoRatio、readiness01、aimDelta、orderState、blackboard value。</div>
+          </div>
+          <div class="flow-row">
+            <div class="flow-key">Normalization</div>
+            <div class="flow-val">linear、inverse、range、threshold、comparison、cooldown、piecewise、graph。</div>
+          </div>
+          <div class="flow-row">
+            <div class="flow-key">Curve</div>
+            <div class="flow-val">constant、linear、quadratic、logistic、step、remap table、graph。</div>
+          </div>
+          <div class="flow-row">
+            <div class="flow-key">Aggregation</div>
+            <div class="flow-val">veto、multiply、weighted sum、min gate、max bonus、priority bucket、tie nearest。</div>
+          </div>
+        </div>
+
+        <h3>OpenRA 优先级如何表达</h3>
+        <p>
+          OpenRA 的 `AutoTargetPriority` 先按 priority 选更高优先级，再用距离做 tie-break。Ludots 不应把这写死在 attack move 里，而应作为 target scoring profile：
+        </p>
+        <pre><code>{
+  "id": "TargetScore.OpenRA.Ground",
+  "mode": "PriorityBucketThenDistance",
+  "buckets": [
+    { "tag": "TargetType.Defense", "relationship": "Hostile", "priority": 60 },
+    { "tag": "TargetType.Vehicle", "relationship": "Hostile", "priority": 50 },
+    { "tag": "TargetType.Infantry", "relationship": "Hostile", "priority": 40 }
+  ],
+  "tieBreak": "Nearest"
+}</code></pre>
+
+        <h3>Graph 扩展点</h3>
+        <p>
+          现有 `GraphExecutor.ExecuteScore` 返回 `F[0]`，`ExecuteValidation` 返回 `B[0]`，并使用 stackalloc registers。这正好可以成为 AI scoring 的 Adapter，但需要加一层 `AIGraphRuntimeApi` 或 `AIGraphOpPolicy`。
+        </p>
+        <table>
+          <thead>
+            <tr>
+              <th>Graph 用途</th>
+              <th>允许</th>
+              <th>禁止</th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr>
+              <td>Input score</td>
+              <td>读 attribute、tag、relationship、blackboard、position、distance、target list。</td>
+              <td>ApplyEffect、ModifyAttribute、WriteBlackboard、SendEvent。</td>
+            </tr>
+            <tr>
+              <td>Target filter</td>
+              <td>返回 `B[0]` 判断候选是否保留。</td>
+              <td>创建实体、发 effect、提交 order。</td>
+            </tr>
+            <tr>
+              <td>Decision score</td>
+              <td>返回 `F[0]` 作为最终补正分。</td>
+              <td>改变 gameplay state。</td>
+            </tr>
+            <tr>
+              <td>Task condition</td>
+              <td>判断 running / finished / cancel。</td>
+              <td>绕过 `OrderQueue` 直接执行 ability。</td>
+            </tr>
+          </tbody>
+        </table>
+      </section>
+
+      <section id="orders">
+        <h2>8. Order / Ability 映射</h2>
+        <p class="lead">
+          AI 的执行层只能表达 intent，不能拥有伤害和技能执行权。真正的 gameplay 变化仍由 Order、Ability、Effect、Projectile 链路完成。
+        </p>
+
+        <div class="pipe">
+          <div><b>Decision</b><span>选中 AttackTarget / Move / Guard / Repair。</span></div>
+          <div><b>Execution</b><span>把 decision 展开成 task。</span></div>
+          <div><b>Order Adapter</b><span>写 Actor / Target / Spatial / Args。</span></div>
+          <div><b>OrderQueue</b><span>进入玩家同构订单入口。</span></div>
+          <div><b>OrderBufferSystem</b><span>打断、排队、黑板写入。</span></div>
+          <div><b>AbilityExec</b><span>按 ability spec 执行 timeline。</span></div>
+          <div><b>Effect</b><span>应用伤害、buff、projectile。</span></div>
+        </div>
+
+        <h3>Order 和 Ability 的切分</h3>
+        <table>
+          <thead>
+            <tr>
+              <th>问题</th>
+              <th>归 Order</th>
+              <th>归 Ability/GAS</th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr>
+              <td>我要去哪里</td>
+              <td>`moveTo`、`attackMove`、`guardFollow` 写空间目标或跟随目标。</td>
+              <td>不负责寻路。</td>
+            </tr>
+            <tr>
+              <td>我要打谁</td>
+              <td>`attack` order 写 `Attack.TargetEntity`。</td>
+              <td>校验 range、cooldown、ammo、actuator readiness、发射 projectile。</td>
+            </tr>
+            <tr>
+              <td>我要用哪个技能</td>
+              <td>`castAbility` order 写 slot/abilityId/target/position。</td>
+              <td>Ability timeline、effect request、target resolver、cost、block tags。</td>
+            </tr>
+            <tr>
+              <td>我要保护谁</td>
+              <td>`guard` order 写 guarded entity 和 follow range。</td>
+              <td>保护行为选出的攻击动作仍走 attack/cast ability。</td>
+            </tr>
+            <tr>
+              <td>我要停下</td>
+              <td>`stop` order 清 active/queue 和 AI execution state。</td>
+              <td>取消能力实例由 existing stop/ability end 系统处理。</td>
+            </tr>
+          </tbody>
+        </table>
+
+        <div class="warn">
+          <b>当前一个配置契约风险</b>
+          <p>
+            `mods/AIDemoMod/assets/Configs/AI/goap_actions.json` 中样例写了 `OrderTagId`，但 `AiConfigLoader` 读取的是 `OrderTypeId`。这说明现有 AI demo 只能当雏形，正式方案必须先统一 AI action 到 OrderTypeRegistry 的配置契约，并做 fail-fast 校验。
+          </p>
+        </div>
+      </section>
+
+      <section id="openra">
+        <h2>9. OpenRA 行为配置包</h2>
+        <p class="lead">
+          OpenRA 基础行为的核心不是“攻击移动写死”，而是命令薄、行为编排薄、索敌策略数据化、攻击执行交给 attack trait。映射到 Ludots，就是 order 薄、AI task 薄、target/score 数据化、攻击执行交给 Ability/GAS。
+        </p>
+
+        <table>
+          <thead>
+            <tr>
+              <th>用户看到的输入动作</th>
+              <th>AI/Order 语义</th>
+              <th>Ludots 配置实现</th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr>
+              <td>右键地面 / Move</td>
+              <td>移动到目标点，不主动扫描攻击。</td>
+              <td>`Task.SubmitOrder(moveTo)`，写 `Generic.TargetPosition` 或 movement spatial key。</td>
+            </tr>
+            <tr>
+              <td>右键敌人 / Attack</td>
+              <td>锁定目标，必要时跟进，进入攻击距离后 cast attack ability。</td>
+              <td>`Decision.AttackTarget` + `Task.ChaseUntilInRange` + `Task.CastAbility(PrimaryWeapon)`。</td>
+            </tr>
+            <tr>
+              <td>Attack Move</td>
+              <td>向目的地移动，途中按 auto-target 策略找敌；遇敌暂停移动，攻击结束后继续目的地。</td>
+              <td>`Task.Composite.AttackMove`: move subtask + scan subtask + interrupt/resume state。</td>
+            </tr>
+            <tr>
+              <td>Assault Move</td>
+              <td>类似 Attack Move，但允许更积极追击。</td>
+              <td>同一 task，profile 设置 `allowMoveChase=true`、`maxLeashCm` 更大。</td>
+            </tr>
+            <tr>
+              <td>Guard</td>
+              <td>跟随友军或建筑，扫描威胁并攻击，超出 guard range 回到保护目标。</td>
+              <td>`Decision.GuardProtect` 使用 guarded target、nearby hostile、attacker memory。</td>
+            </tr>
+            <tr>
+              <td>Stop</td>
+              <td>停止当前活动，清理攻击/移动子活动。</td>
+              <td>`stop` order + `AIExecution.CancelCurrent` + 清 target memory optional。</td>
+            </tr>
+            <tr>
+              <td>Hold Position</td>
+              <td>不主动移动，可按姿态还击或开火。</td>
+              <td>`AIStanceProfile.HoldPosition` + `allowMove=false` + attack range gate。</td>
+            </tr>
+            <tr>
+              <td>Stance 切换</td>
+              <td>HoldFire / ReturnFire / Defend / AttackAnything。</td>
+              <td>`AIStanceState` + `SetStance` order 或 tag effect，影响 target filter 和 allowMove。</td>
+            </tr>
+            <tr>
+              <td>Patrol</td>
+              <td>沿 waypoint 往返，途中可按 auto-target 策略接战。</td>
+              <td>`Task.PatrolMove` + `Decision.AutoAttackWhileMoving`。</td>
+            </tr>
+            <tr>
+              <td>Deploy / Repair / Capture / Harvest / Transport</td>
+              <td>本质是不同 target filter + ability/order task。</td>
+              <td>作为 OpenRA behavior pack 的可选 decisions，不写入 AI core 特例。</td>
+            </tr>
+          </tbody>
+        </table>
+
+        <h3>Stance 配置</h3>
+        <pre><code>{
+  "id": "Stance.OpenRA.Default",
+  "stances": [
+    {
+      "id": "HoldFire",
+      "autoAcquire": false,
+      "retaliate": false,
+      "allowMoveChase": false
+    },
+    {
+      "id": "ReturnFire",
+      "autoAcquire": false,
+      "retaliate": true,
+      "targetSource": "RecentAttackers",
+      "allowMoveChase": false
+    },
+    {
+      "id": "Defend",
+      "autoAcquire": true,
+      "targetSource": "ScanRadius",
+      "relationship": "Hostile",
+      "allowMoveChase": false
+    },
+    {
+      "id": "AttackAnything",
+      "autoAcquire": true,
+      "targetSource": "ScanRadius",
+      "relationship": "Hostile",
+      "allowMoveChase": true
+    }
+  ]
+}</code></pre>
+
+        <h3>Attack Move task 状态</h3>
+        <div class="flow">
+          <div class="flow-row"><div class="flow-key">Moving</div><div class="flow-val">维持目的地 order 或 NavGoal；按 scan interval 扫描候选。</div></div>
+          <div class="flow-row"><div class="flow-key">Acquire</div><div class="flow-val">通过 target filter + priority profile 选择目标；若无目标继续 Moving。</div></div>
+          <div class="flow-row"><div class="flow-key">Engage</div><div class="flow-val">暂停移动；提交 attack / castAbility order；跟踪 target validity。</div></div>
+          <div class="flow-row"><div class="flow-key">Disengage</div><div class="flow-val">目标死亡、失效、超出 leash、不可见、无法攻击、攻击 order 完成。</div></div>
+          <div class="flow-row"><div class="flow-key">Resume</div><div class="flow-val">回到原 attack-move 目的地；如果刚脱战可立即再扫一次，避免空走。</div></div>
+        </div>
+      </section>
+
+      <section id="readiness">
+        <h2>10. 执行器就绪门控</h2>
+        <p class="lead">
+          这里不能把“炮台”升格为 AI Core 概念。通用架构只需要表达：某个执行器当前是否 ready、为什么不 ready、预计何时 ready、是否需要先执行准备动作。OpenRA 的炮台只是这个抽象下的一个案例。
+        </p>
+
+        <table>
+          <thead>
+            <tr>
+              <th>抽象 Module</th>
+              <th>Core 语义</th>
+              <th>炮台案例如何挂接</th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr>
+              <td><code>ActuatorProfile</code></td>
+              <td>描述一个可执行能力的准备条件：范围、冷却、资源、弹药、朝向、通道、占用、目标合法性。</td>
+              <td><code>TurretProfile</code> 是 weapon actuator 的配置扩展，不属于 AI Core。</td>
+            </tr>
+            <tr>
+              <td><code>ActuatorReadiness</code></td>
+              <td>运行时只暴露 <code>ready01</code>、<code>blockReason</code>、<code>etaSteps</code>、<code>requiresPreparation</code>。</td>
+              <td>炮台 adapter 把 yaw delta、turn speed、facing tolerance 转成 readiness。</td>
+            </tr>
+            <tr>
+              <td><code>AimGate</code></td>
+              <td>面向所有需要方向/朝向的执行器：炮台、正面攻击、蓄力技能、采集朝向、施工朝向。</td>
+              <td><code>TurretFacingSystem</code> 是 AimGate 的一个 gameplay implementation。</td>
+            </tr>
+            <tr>
+              <td><code>AbilityPrecondition</code></td>
+              <td>最终执行门控仍归 Ability/GAS；AI 只能读取 readiness 或提交准备/执行 order。</td>
+              <td>攻击 ability 在炮台未对准时阻塞、等待或进入准备阶段。</td>
+            </tr>
+            <tr>
+              <td><code>Presentation Adapter</code></td>
+              <td>表现读取 gameplay state，不参与 AI 决策合同。</td>
+              <td>炮管转向和 recoil 从 turret runtime 投影到表现层。</td>
+            </tr>
+          </tbody>
+        </table>
+
+        <div class="note">
+          <b>边界结论</b>
+          <p>
+            AI Core 不认识炮台，只认识执行器 readiness。炮台、正面开火、采集器朝向、建造者占用、施法蓄力都通过 adapter 映射到同一个 readiness 输入。这样业务语义留在能力 Mod / gameplay implementation 里，架构只保留可复用的执行前置条件。
+          </p>
+        </div>
+      </section>
+
+      <section id="systems">
+        <h2>11. SystemGroup 排布</h2>
+        <p class="lead">
+          AI 必须在 `OrderBufferSystem` 前产出 order，才能同 tick 进入现有 Order/GAS 链路。感知又应在空间索引更新之后运行，避免用上一帧位置做索敌。
+        </p>
+
+        <table>
+          <thead>
+            <tr>
+              <th>SystemGroup</th>
+              <th>AI 系统</th>
+              <th>原因</th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr>
+              <td><code>SchemaUpdate</code></td>
+              <td>`AIConfigReloadApplySystem` 可选</td>
+              <td>只处理配置版本切换和 runtime swap，不做决策。</td>
+            </tr>
+            <tr>
+              <td><code>InputCollection</code></td>
+              <td>`AIThinkScheduleSystem`、低成本 blackboard projection</td>
+              <td>读取输入、cooldown、order state，确定本 tick 哪些 agent 要思考。</td>
+            </tr>
+            <tr>
+              <td><code>PostMovement</code></td>
+              <td>`AIPerceptionSystem`、`AITargetAcquisitionSystem`、`AIDecisionSystem`、`AIExecutionSystem`、`AIOrderIntentSubmitSystem`</td>
+              <td>在 `WorldToGridSyncSystem` / `SpatialPartitionUpdateSystem` 后、`OrderBufferSystem` 前运行，使用最新空间索引，并让 order 同 tick 生效。</td>
+            </tr>
+            <tr>
+              <td><code>AbilityActivation</code></td>
+              <td>不新增 AI 决策；必要时用 `InsertSystemBeforeRequired&lt;OrderBufferSystem&gt;` 放置 order submit adapter</td>
+              <td>避免错过 OrderBufferSystem；AI 不应插在 AbilityExec 后面。</td>
+            </tr>
+            <tr>
+              <td><code>EffectProcessing</code></td>
+              <td>无 AI 决策</td>
+              <td>Effect / projectile 已经是执行结果，AI 不在这里反向改决策。</td>
+            </tr>
+            <tr>
+              <td><code>Cleanup</code></td>
+              <td>`AICombatMemoryCleanupSystem`</td>
+              <td>清理死亡 target、过期 last-seen、过期 threat cache。</td>
+            </tr>
+          </tbody>
+        </table>
+      </section>
+
+      <section id="schema">
+        <h2>12. 配置 Schema 草案</h2>
+        <p class="lead">
+          下面是配置形状，不是最终字段名。关键是所有行为都能由配置表达，Core 只提供通用 Module、Registry、Adapter 和 fail-fast 编译。
+        </p>
+
+        <pre><code>{
+  "profiles": [
+    {
+      "id": "AIProfile.OpenRA.Rifleman",
+      "decisionIntervalSteps": 6,
+      "maxCandidates": 48,
+      "stanceProfile": "Stance.OpenRA.Default",
+      "decisionMakers": ["DM.OpenRA.Combat", "DM.OpenRA.OrderContinuation"]
+    }
+  ],
+  "targetFilters": [
+    {
+      "id": "TF.HostileGroundVisible",
+      "ops": [
+        { "kind": "Relationship", "value": "Hostile" },
+        { "kind": "LayerMask", "value": "GroundUnit|Defense" },
+        { "kind": "Distance", "maxCm": 900 },
+        { "kind": "HasNoneTag", "tags": ["Target.NoAutoTarget"] }
+      ]
+    }
+  ],
+  "inputs": [
+    { "id": "Input.DistanceToTarget", "kind": "DistanceToTarget" },
+    { "id": "Input.TargetPriorityBucket", "kind": "TargetPriority", "profile": "TargetScore.OpenRA.Ground" },
+    { "id": "Input.PrimaryActuatorReady", "kind": "ActuatorReadiness01", "actuator": "PrimaryWeapon" },
+    { "id": "Input.Graph.CustomThreat", "kind": "GraphScore", "graph": "Graph.AI.ThreatScore" }
+  ],
+  "decisions": [
+    {
+      "id": "Decision.AttackVisibleHostile",
+      "targetFilter": "TF.HostileGroundVisible",
+      "weight": 1.0,
+      "momentumBonus": 1.15,
+      "keepRunningUntilFinished": false,
+      "considerations": [
+        { "input": "Input.TargetPriorityBucket", "normalization": "Identity", "curve": "Linear", "aggregate": "PriorityBucket" },
+        { "input": "Input.DistanceToTarget", "normalization": "RangeInverse.0.900", "curve": "Linear", "aggregate": "Multiply" },
+        { "input": "Input.PrimaryActuatorReady", "normalization": "Identity", "curve": "Linear", "aggregate": "Multiply" }
+      ],
+      "tasks": [
+        { "kind": "SubmitOrder", "order": "attack", "target": "DecisionTarget" }
+      ]
+    }
+  ]
+}</code></pre>
+
+        <h3>建议文件分组</h3>
+        <ul class="compact-list">
+          <li><code>assets/Configs/AI/profiles.json</code></li>
+          <li><code>assets/Configs/AI/decision_makers.json</code></li>
+          <li><code>assets/Configs/AI/decisions.json</code></li>
+          <li><code>assets/Configs/AI/target_filters.json</code></li>
+          <li><code>assets/Configs/AI/inputs.json</code></li>
+          <li><code>assets/Configs/AI/normalizations.json</code></li>
+          <li><code>assets/Configs/AI/curves.json</code></li>
+          <li><code>assets/Configs/AI/tasks.json</code></li>
+          <li><code>assets/Configs/AI/stances.json</code></li>
+          <li><code>assets/Configs/AI/actuators.json</code></li>
+        </ul>
+      </section>
+
+      <section id="phases">
+        <h2>13. 落地阶段</h2>
+        <div class="phase">
+          <div class="phase-num">1</div>
+          <div>
+            <h3>RFC 与契约收敛</h3>
+            <p>先写架构 RFC：明确 AI 不绕过 Order/GAS；统一 `OrderTypeId` / `OrderTypeKey`；列出复用基础设施和新增 Module。</p>
+            <span class="tag red">必须先做</span><span class="tag blue">文档 + schema</span>
+          </div>
+        </div>
+        <div class="phase">
+          <div class="phase-num">2</div>
+          <div>
+            <h3>AI config compiler v2</h3>
+            <p>扩展 `AiConfigLoader` 或新增 `AiUtilityConfigCompiler`，把 Uintel 链路编译成 flat arrays，所有引用 fail-fast。</p>
+            <span class="tag teal">ConfigPipeline</span><span class="tag green">0Alloc ready</span>
+          </div>
+        </div>
+        <div class="phase">
+          <div class="phase-num">3</div>
+          <div>
+            <h3>Target filter 与 decision-target evaluator</h3>
+            <p>实现无副作用 target acquisition、priority bucket、distance tie-break、relationship filter、tag/layer filter、score aggregation。</p>
+            <span class="tag amber">索敌核心</span><span class="tag violet">OpenRA priority</span>
+          </div>
+        </div>
+        <div class="phase">
+          <div class="phase-num">4</div>
+          <div>
+            <h3>Execution task 与 Order adapter</h3>
+            <p>实现 Sequence / Parallel / ParallelComplete、SubmitOrder task、Move / Attack / CastAbility adapters，接到 `OrderQueue`。</p>
+            <span class="tag green">Order 同构</span><span class="tag red">禁止直接 Effect</span>
+          </div>
+        </div>
+        <div class="phase">
+          <div class="phase-num">5</div>
+          <div>
+            <h3>OpenRA behavior pack</h3>
+            <p>用配置交付 Move、Attack、AttackMove、AssaultMove、Guard、Stop、Hold、Patrol、Stance、AutoTarget、Disengage。</p>
+            <span class="tag blue">行为包</span><span class="tag teal">可复用 Mod</span>
+          </div>
+        </div>
+        <div class="phase">
+          <div class="phase-num">6</div>
+          <div>
+            <h3>Actuator readiness adapters</h3>
+            <p>先落通用 readiness 输入和 Ability precondition adapter；炮台转向、正面攻击、蓄力施法等业务能力分别提供 adapter。</p>
+            <span class="tag amber">Readiness</span><span class="tag green">Ability gate</span>
+          </div>
+        </div>
+        <div class="phase">
+          <div class="phase-num">7</div>
+          <div>
+            <h3>调试与验收</h3>
+            <p>AI inspector 显示每个 decision-target pair 的候选、过滤原因、分数、当前 task、提交 order；补齐 0Alloc 和 deterministic tests。</p>
+            <span class="tag violet">debug</span><span class="tag green">tests</span>
+          </div>
+        </div>
+      </section>
+
+      <section id="tests">
+        <h2>14. 验收标准</h2>
+        <p class="lead">
+          这套系统是否成立，不看 demo 演得像不像，看这些测试能否稳定通过。
+        </p>
+
+        <table>
+          <thead>
+            <tr>
+              <th>验收项</th>
+              <th>必须证明</th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr>
+              <td>0Alloc</td>
+              <td>10k agent 在 fixed iterations 中 `AIPerception + Decision + Execution + OrderSubmit` allocation 小于等于现有 AI benchmark 级别。</td>
+            </tr>
+            <tr>
+              <td>OpenRA priority</td>
+              <td>高 priority target 永远胜过低 priority target；同 priority 下最近者胜出。</td>
+            </tr>
+            <tr>
+              <td>Stance</td>
+              <td>HoldFire 不索敌不还击；ReturnFire 只打 recent attacker；Defend 扫描但不追出 leash；AttackAnything 可追击。</td>
+            </tr>
+            <tr>
+              <td>AttackMove</td>
+              <td>移动途中遇敌暂停、攻击 order 完成后恢复原目的地；目标死亡/失效/超 leash 正确脱战。</td>
+            </tr>
+            <tr>
+              <td>Guard</td>
+              <td>跟随保护目标；保护目标附近有 hostile 或 recent attacker 时攻击；离开 guard range 后回位。</td>
+            </tr>
+            <tr>
+              <td>Order/GAS 同构</td>
+              <td>AI 和玩家使用同一 `OrderQueue`、`OrderBufferSystem`、`AbilityExecSystem`；AI 不能直接发 EffectRequest。</td>
+            </tr>
+            <tr>
+              <td>Graph score</td>
+              <td>自定义 Graph 可影响 score；AI Graph policy 拒绝 effect write / attribute write / event op。</td>
+            </tr>
+            <tr>
+              <td>Actuator readiness gate</td>
+              <td>执行器未 ready 时 ability 被阻塞、等待或先准备；ready 后同一 target 能执行；表现读取 gameplay state。</td>
+            </tr>
+            <tr>
+              <td>主循环接入</td>
+              <td>AI systems 在 `SpatialPartitionUpdateSystem` 后、`OrderBufferSystem` 前运行；同 tick order 可被消费。</td>
+            </tr>
+            <tr>
+              <td>配置 fail-fast</td>
+              <td>未知 input、filter、order type、ability id、graph id、blackboard key 均在加载阶段报错。</td>
+            </tr>
+          </tbody>
+        </table>
+
+        <div class="verdict">
+          <b>不该做的实现</b>
+          <p>
+            不在某个 showcase 里硬写 AttackMove；不让 AI 直接扣血或发 Effect；不新增平行配置加载器；不把 Idle 做成平台 fallback；不把 Unity DOTS/Burst/BlobAssetReference 当成 Ludots 架构；不把炮台、采集器、建造者这类业务名词写进 AI Core。
+          </p>
+        </div>
+      </section>
+
+      <section id="sources">
+        <h2>15. 证据来源</h2>
+        <h3>本地源码与文档</h3>
+        <ul class="sources">
+          <li><a href="../../src/Core/Gameplay/AI/Utility/UtilityGoalSelectorCompiled256.cs">src/Core/Gameplay/AI/Utility/UtilityGoalSelectorCompiled256.cs</a></li>
+          <li><a href="../../src/Core/Gameplay/AI/Config/AiConfigLoader.cs">src/Core/Gameplay/AI/Config/AiConfigLoader.cs</a></li>
+          <li><a href="../../src/Core/Gameplay/AI/Systems/AIPlanExecutionSystem.cs">src/Core/Gameplay/AI/Systems/AIPlanExecutionSystem.cs</a></li>
+          <li><a href="../../src/Core/Gameplay/AI/Planning/PlanExecutor.cs">src/Core/Gameplay/AI/Planning/PlanExecutor.cs</a></li>
+          <li><a href="../../src/Tests/GasTests/AiBenchmarkTests.cs">src/Tests/GasTests/AiBenchmarkTests.cs</a></li>
+          <li><a href="../../src/Core/Gameplay/GAS/Orders/OrderSubmitter.cs">src/Core/Gameplay/GAS/Orders/OrderSubmitter.cs</a></li>
+          <li><a href="../../src/Core/Gameplay/GAS/Orders/OrderBlackboardKeys.cs">src/Core/Gameplay/GAS/Orders/OrderBlackboardKeys.cs</a></li>
+          <li><a href="../../src/Core/NodeLibraries/GASGraph/GraphExecutor.cs">src/Core/NodeLibraries/GASGraph/GraphExecutor.cs</a></li>
+          <li><a href="../../src/Core/NodeLibraries/GASGraph/GasGraphOpHandlerTable.cs">src/Core/NodeLibraries/GASGraph/GasGraphOpHandlerTable.cs</a></li>
+          <li><a href="openra_unit_behavior_attack_move_analysis.html">OpenRA 用户输入动作与基础单位指令源码剖面</a></li>
+          <li><a href="openra_targeting_priority_guard_turret_analysis.html">OpenRA 索敌优先级、脱战警戒与炮台机制源码剖面</a></li>
+          <li><a href="ludots_targeting_order_gas_gap_analysis.html">Ludots 索敌、警戒、炮台与 Order/GAS 映射缺口分析</a></li>
+        </ul>
+
+        <h3>外部文档</h3>
+        <ul class="sources">
+          <li><a href="https://uintel-ecs.utilityworlds.com/Documentation/">Utility Intelligence ECS Documentation</a></li>
+          <li><a href="https://uintel-ecs.utilityworlds.com/sitemap.xml">Utility Intelligence ECS sitemap</a></li>
+          <li><a href="https://uintel-ecs.utilityworlds.com/Documentation/UtilityIntelligence/">Utility Intelligence</a></li>
+          <li><a href="https://uintel-ecs.utilityworlds.com/Documentation/UtilityIntelligence/Inputs/">Inputs</a></li>
+          <li><a href="https://uintel-ecs.utilityworlds.com/Documentation/UtilityIntelligence/InputNormalizations/">Input Normalizations</a></li>
+          <li><a href="https://uintel-ecs.utilityworlds.com/Documentation/UtilityIntelligence/Considerations/">Considerations</a></li>
+          <li><a href="https://uintel-ecs.utilityworlds.com/Documentation/UtilityIntelligence/Decisions/">Decisions</a></li>
+          <li><a href="https://uintel-ecs.utilityworlds.com/Documentation/UtilityIntelligence/DecisionMakers/">Decision Makers</a></li>
+          <li><a href="https://uintel-ecs.utilityworlds.com/Documentation/UtilityIntelligence/ActionTasks/">Action Tasks</a></li>
+          <li><a href="https://uintel-ecs.utilityworlds.com/Documentation/UtilityIntelligence/TargetFilters/">Target Filters</a></li>
+          <li><a href="https://uintel-ecs.utilityworlds.com/Documentation/UtilityIntelligence/Blackboard/">Blackboard</a></li>
+          <li><a href="https://uintel-ecs.utilityworlds.com/Documentation/TipsAndTricks/OptimizationTricks/">Optimization Tricks</a></li>
+          <li><a href="https://package.uintel-ecs.utilityworlds.com/API/index.html">Utility Intelligence ECS API Reference</a></li>
+          <li><a href="https://uintel-go.utilityworlds.com/sitemap.xml">Utility Intelligence GO sitemap</a></li>
+        </ul>
+      </section>
+    </main>
+  </div>
+</body>
+</html>

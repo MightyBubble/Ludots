@@ -1,0 +1,553 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Ludots AI 现状、困境与参考地图</title>
+  <style>
+    :root {
+      --bg: #ffffff;
+      --ink: #17202a;
+      --muted: #66717e;
+      --line: #d9e1ea;
+      --soft: #f5f7fa;
+      --blue-soft: #edf4ff;
+      --green-soft: #edf7f1;
+      --amber-soft: #fff4df;
+      --red-soft: #fff0ee;
+      --blue: #2563eb;
+      --green: #2f855a;
+      --amber: #b45309;
+      --red: #b42318;
+      --violet: #6d28d9;
+      --radius: 8px;
+      --shadow: 0 8px 24px rgba(23, 32, 42, 0.07);
+    }
+
+    * { box-sizing: border-box; }
+    html { scroll-behavior: smooth; }
+    body {
+      margin: 0;
+      font-family: "Segoe UI", "Microsoft YaHei", Arial, sans-serif;
+      color: var(--ink);
+      background: var(--bg);
+      line-height: 1.72;
+      letter-spacing: 0;
+    }
+
+    a { color: var(--blue); text-decoration: none; }
+    a:hover { text-decoration: underline; }
+
+    code {
+      font-family: Consolas, "Cascadia Mono", "SFMono-Regular", monospace;
+      font-size: 0.92em;
+      background: #eef2f6;
+      border: 1px solid #d8e0e8;
+      border-radius: 6px;
+      padding: 0.08rem 0.32rem;
+      overflow-wrap: anywhere;
+    }
+
+    table {
+      width: 100%;
+      border-collapse: collapse;
+      background: #fff;
+      font-size: 0.94rem;
+    }
+
+    th, td {
+      border: 1px solid var(--line);
+      padding: 10px 12px;
+      vertical-align: top;
+      text-align: left;
+    }
+
+    th {
+      background: #f0f4f8;
+      font-weight: 750;
+    }
+
+    .hero {
+      background: #17202a;
+      color: #f8fafc;
+      border-bottom: 6px solid var(--blue);
+    }
+
+    .hero-inner {
+      width: min(1180px, calc(100% - 32px));
+      margin: 0 auto;
+      padding: 46px 0 40px;
+      display: grid;
+      grid-template-columns: minmax(0, 1.16fr) minmax(300px, 0.84fr);
+      gap: 28px;
+      align-items: end;
+    }
+
+    .hero h1 {
+      margin: 0 0 16px;
+      max-width: 900px;
+      font-size: 2.24rem;
+      line-height: 1.16;
+      font-weight: 850;
+      letter-spacing: 0;
+    }
+
+    .hero p {
+      margin: 0;
+      max-width: 900px;
+      color: #dfe7f0;
+      font-size: 1.02rem;
+    }
+
+    .summary {
+      display: grid;
+      gap: 12px;
+      padding: 18px;
+      border: 1px solid rgba(255, 255, 255, 0.18);
+      border-radius: var(--radius);
+      background: rgba(255, 255, 255, 0.08);
+      box-shadow: var(--shadow);
+    }
+
+    .summary b { color: #ffffff; font-size: 1.02rem; }
+    .summary span { color: #dfe7f0; font-size: 0.93rem; }
+
+    .layout {
+      width: min(1180px, calc(100% - 32px));
+      margin: 0 auto;
+      display: grid;
+      grid-template-columns: 276px minmax(0, 1fr);
+      gap: 28px;
+      padding: 32px 0 72px;
+    }
+
+    .toc {
+      position: sticky;
+      top: 18px;
+      align-self: start;
+      border: 1px solid var(--line);
+      border-radius: var(--radius);
+      background: #fff;
+      box-shadow: var(--shadow);
+      padding: 18px;
+      max-height: calc(100vh - 36px);
+      overflow: auto;
+    }
+
+    .toc strong {
+      display: block;
+      margin-bottom: 10px;
+      font-size: 0.96rem;
+    }
+
+    .toc a {
+      display: block;
+      padding: 7px 0;
+      color: #334155;
+      border-top: 1px solid #eef2f6;
+      font-size: 0.92rem;
+    }
+
+    .content { display: grid; gap: 28px; min-width: 0; }
+
+    section {
+      border: 1px solid var(--line);
+      border-radius: var(--radius);
+      background: #fff;
+      box-shadow: var(--shadow);
+      padding: 24px;
+    }
+
+    section h2 {
+      margin: 0 0 14px;
+      font-size: 1.46rem;
+      line-height: 1.28;
+      letter-spacing: 0;
+    }
+
+    section h3 {
+      margin: 22px 0 10px;
+      font-size: 1.1rem;
+      letter-spacing: 0;
+    }
+
+    section p { margin: 10px 0; }
+    section ul { margin: 10px 0 0; padding-left: 1.25rem; }
+    section li { margin: 6px 0; }
+
+    .lead {
+      color: #39495a;
+      font-size: 1.02rem;
+    }
+
+    .grid-3 {
+      display: grid;
+      grid-template-columns: repeat(3, minmax(0, 1fr));
+      gap: 14px;
+    }
+
+    .card {
+      border: 1px solid var(--line);
+      border-radius: var(--radius);
+      padding: 14px;
+      background: #fff;
+    }
+
+    .card b {
+      display: block;
+      margin-bottom: 6px;
+      font-size: 1.02rem;
+    }
+
+    .card span {
+      display: block;
+      color: var(--muted);
+      font-size: 0.93rem;
+    }
+
+    .tag {
+      display: inline-flex;
+      align-items: center;
+      min-height: 26px;
+      border: 1px solid var(--line);
+      border-radius: 6px;
+      padding: 2px 8px;
+      margin: 2px 4px 2px 0;
+      background: #fff;
+      color: #334155;
+      font-size: 0.82rem;
+    }
+
+    .tag.green { background: var(--green-soft); border-color: #b7dfc6; color: #1f6844; }
+    .tag.red { background: var(--red-soft); border-color: #f0b8b1; color: #8f1f16; }
+    .tag.amber { background: var(--amber-soft); border-color: #f2d19a; color: #8a4a05; }
+    .tag.blue { background: var(--blue-soft); border-color: #bfd3fb; color: #1e4fc4; }
+    .tag.violet { background: #f1edff; border-color: #d5c9ff; color: #5421aa; }
+
+    .pill-row { display: flex; flex-wrap: wrap; gap: 4px; }
+
+    .warn {
+      border-left: 5px solid var(--amber);
+      background: var(--amber-soft);
+      padding: 14px 16px;
+      border-radius: 0 var(--radius) var(--radius) 0;
+      margin: 16px 0;
+    }
+
+    .ok {
+      border-left: 5px solid var(--green);
+      background: var(--green-soft);
+      padding: 14px 16px;
+      border-radius: 0 var(--radius) var(--radius) 0;
+      margin: 16px 0;
+    }
+
+    .bad {
+      border-left: 5px solid var(--red);
+      background: var(--red-soft);
+      padding: 14px 16px;
+      border-radius: 0 var(--radius) var(--radius) 0;
+      margin: 16px 0;
+    }
+
+    .flow {
+      display: grid;
+      gap: 8px;
+      margin-top: 12px;
+    }
+
+    .flow-row {
+      display: grid;
+      grid-template-columns: 190px minmax(0, 1fr);
+      gap: 10px;
+      align-items: stretch;
+    }
+
+    .flow-key {
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      border: 1px solid var(--line);
+      border-radius: var(--radius);
+      padding: 10px;
+      background: #f8fafc;
+      font-weight: 750;
+      text-align: center;
+      min-height: 52px;
+    }
+
+    .flow-val {
+      border: 1px solid var(--line);
+      border-radius: var(--radius);
+      padding: 10px 12px;
+      background: #fff;
+      min-height: 52px;
+    }
+
+    @media (max-width: 980px) {
+      .hero-inner, .layout, .grid-3 { grid-template-columns: 1fr; }
+      .toc { position: relative; top: auto; max-height: none; }
+      .flow-row { grid-template-columns: 1fr; }
+    }
+
+    @media (max-width: 560px) {
+      .hero h1 { font-size: 1.72rem; }
+      section { padding: 18px; }
+    }
+  </style>
+</head>
+<body>
+  <header class="hero">
+    <div class="hero-inner">
+      <div>
+        <h1>Ludots AI 现状、困境与参考地图</h1>
+        <p>
+          这是一个上层总览文档，不再讲单点实现，而是把现状、问题、取舍和所有相关分析文档串成一张图。
+          目标是让后续任何 AI 架构决策先看到已知事实，再看还没定下来的地方。
+        </p>
+      </div>
+      <div class="summary">
+        <b>当前结论</b>
+        <span>AI 骨架已存在，缺的是通用化的 target / score / readiness / execution 分层。业务语义要留在 behavior pack 和 adapter 里，别把炮台、采集器、建造者写进 AI Core。</span>
+      </div>
+    </div>
+  </header>
+
+  <div class="layout">
+    <nav class="toc">
+      <strong>目录</strong>
+      <a href="#snapshot">1. 现状快照</a>
+      <a href="#map">2. 现状文档地图</a>
+      <a href="#dilemmas">3. 困境与问题</a>
+      <a href="#tradeoffs">4. 取舍方向</a>
+      <a href="#reading">5. 建议阅读顺序</a>
+      <a href="#refs">6. 参考文档</a>
+    </nav>
+
+    <main class="content">
+      <section id="snapshot">
+        <h2>1. 现状快照</h2>
+        <p class="lead">
+          这部分已经可以算“总结到位”，但不是最终定论。当前最重要的事实是：Ludots 不是没 AI，而是已有一条骨架链路，缺一个能承载 OpenRA 基础行为和 Uintel 式 decision-target 评分的通用 AI Module。
+        </p>
+
+        <div class="grid-3">
+          <div class="card">
+            <b>已经有的</b>
+            <span>Utility / GOAP / HTN 编译结构、256-bit world state、AI plan 到 OrderQueue、AI demo 配置、benchmark。</span>
+          </div>
+          <div class="card">
+            <b>还缺的</b>
+            <span>通用 target filter、input/normalization/curve、decision-target pair、combat memory、stance policy、readiness gate、主循环接入。</span>
+          </div>
+          <div class="card">
+            <b>不能做的</b>
+            <span>不能让 AI 直接发 Effect 或扣血，不能把业务名词写进 AI Core，不能用 fallback 代替显式决策。</span>
+          </div>
+        </div>
+      </section>
+
+      <section id="map">
+        <h2>2. 现状文档地图</h2>
+        <p class="lead">下面这些是当前已经形成的“现状文档”。它们不是重复劳动，而是分别回答不同层面的同一个问题。</p>
+
+        <table>
+          <thead>
+            <tr>
+              <th>文档</th>
+              <th>它在说什么</th>
+              <th>当前状态</th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr>
+              <td><a href="openra_ai_system_analysis.md">OpenRA AI 底层系统源码分析</a></td>
+              <td>OpenRA skirmish AI 的 Player trait 入口、BotModule、Order 边界、分队状态机。</td>
+              <td>已完成基础剖面。</td>
+            </tr>
+            <tr>
+              <td><a href="openra_ai_layered_architecture.html">OpenRA AI 分层架构剖面</a></td>
+              <td>从大厅配置、Player 激活、BotModule 调度到 Order 执行的完整分层。</td>
+              <td>已完成可视化版。</td>
+            </tr>
+            <tr>
+              <td><a href="openra_ludots_ai_comparison.html">OpenRA AI 与 Ludots 架构对比分析</a></td>
+              <td>对比 OpenRA RTS bot 与 Ludots 现有 AI / Mod / ConfigPipeline / Order 基建。</td>
+              <td>已完成对比版。</td>
+            </tr>
+            <tr>
+              <td><a href="openra_unit_behavior_attack_move_analysis.html">OpenRA 用户输入动作与基础单位指令源码剖面</a></td>
+              <td>Move / Attack / Stop / Guard / Stance / Deploy / Harvest / Repair / Capture / Transport 等基础指令。</td>
+              <td>已完成基础行为拆解。</td>
+            </tr>
+            <tr>
+              <td><a href="openra_targeting_priority_guard_turret_analysis.html">OpenRA 索敌优先级、脱战警戒与炮台机制源码剖面</a></td>
+              <td>AutoTarget / AutoTargetPriority / AttackFollow / Guard / Turreted / Armament 的实际行为规则。</td>
+              <td>已完成索敌与门控拆解。</td>
+            </tr>
+            <tr>
+              <td><a href="ludots_targeting_order_gas_gap_analysis.html">Ludots 索敌、警戒、炮台与 Order/GAS 映射缺口分析</a></td>
+              <td>把 OpenRA 的单位行为映射到 Ludots 现有 Order / GAS / Navigation / Team / TargetResolver。</td>
+              <td>已完成缺口分析。</td>
+            </tr>
+            <tr>
+              <td><a href="ludots_utility_ai_soa_openra_behavior_architecture.html">Ludots 通用 Utility AI SoA 架构方案</a></td>
+              <td>把 Uintel 式 Utility AI 思路复刻到 Ludots：SoA、0Alloc、decision-target pair、OpenRA 行为包。</td>
+              <td>已完成主方案。</td>
+            </tr>
+            <tr>
+              <td><a href="ludots_ai_utility_autocast_ssot_plan.html">Ludots 通用 Utility AI 与 Autocast 仲裁 SSOT 方案</a></td>
+              <td>核心命题"普攻=autocast、多能力仲裁=Utility 入口"，复刻 Uintel + OpenRA stance/order 业务包，给出 Epic + 10 sub-issue 拆解与验收。</td>
+              <td>已完成交付方案（待 issue 开单）。</td>
+            </tr>
+          </tbody>
+        </table>
+      </section>
+
+      <section id="dilemmas">
+        <h2>3. 困境与问题</h2>
+        <p class="lead">
+          这些不是实现 bug，而是架构取舍点。它们决定这套 AI 会不会变成一堆局部特化，还是一个能长期复用的深 Module。
+        </p>
+
+        <div class="flow">
+          <div class="flow-row">
+            <div class="flow-key">AI Core vs 业务能力</div>
+            <div class="flow-val">核心必须抽象，业务能力要沉到 behavior pack / adapter。炮台、采集器、建造者都不该进 Core。</div>
+          </div>
+          <div class="flow-row">
+            <div class="flow-key">stance 放哪</div>
+            <div class="flow-val">stance 是战斗政策状态，不是行为树，也不是 utility 本体；它更像 target filter 的输入和 order/AI state。</div>
+          </div>
+          <div class="flow-row">
+            <div class="flow-key">Graph 作用边界</div>
+            <div class="flow-val">Graph 适合做 score / validation / read-only query，不适合当执行总线，更不能绕过 Order/GAS。</div>
+          </div>
+          <div class="flow-row">
+            <div class="flow-key">Order vs Ability</div>
+            <div class="flow-val">Order 是 intent，Ability 是执行。AI 只产出 intent，不负责伤害、特效和投射物。</div>
+          </div>
+          <div class="flow-row">
+            <div class="flow-key">OpenRA 行为包</div>
+            <div class="flow-val">AttackMove / Guard / Stance / AutoTarget 应该作为行为包提供，不作为 AI Core 特例。</div>
+          </div>
+          <div class="flow-row">
+            <div class="flow-key">主循环接入</div>
+            <div class="flow-val">AiRuntime 已能加载，但还没看到它进入主 simulation loop；这意味着“有配置”不等于“有运行”。</div>
+          </div>
+        </div>
+      </section>
+
+      <section id="tradeoffs">
+        <h2>4. 取舍方向</h2>
+        <p class="lead">
+          这里给的是我目前的判断，不是死规矩。后续如果要改，也应该是改这张表，而不是让单个系统偷偷长歪。
+        </p>
+
+        <table>
+          <thead>
+            <tr>
+              <th>取舍点</th>
+              <th>建议方向</th>
+              <th>原因</th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr>
+              <td>stance</td>
+              <td>放在 AI state / target policy / order 语义里</td>
+              <td>它是交战规则，不是具体执行动作。</td>
+            </tr>
+            <tr>
+              <td>炮台</td>
+              <td>放在 actuator / readiness adapter 里</td>
+              <td>炮台是一个业务案例，不应变成 AI Core 的通用词表。</td>
+            </tr>
+            <tr>
+              <td>utility</td>
+              <td>负责评分，不负责执行</td>
+              <td>utility 选谁去做，不替代 task / FSM / Ability。</td>
+            </tr>
+            <tr>
+              <td>Graph</td>
+              <td>用于可自定义 score / condition</td>
+              <td>图适合扩展规则，不适合接管副作用。</td>
+            </tr>
+            <tr>
+              <td>行为包</td>
+              <td>OpenRA 基础行为做成可配置 pack</td>
+              <td>Move / Guard / AttackMove / Stance 等要能被别的 mod 复用。</td>
+            </tr>
+            <tr>
+              <td>fallback</td>
+              <td>不用平台 fallback，改成显式决策</td>
+              <td>缺省行为会把问题藏起来，和当前规范冲突。</td>
+            </tr>
+          </tbody>
+        </table>
+
+        <div class="warn">
+          <b>目前最容易混进去的业务语义</b>
+          <p>
+            炮台、采集器、建造者、正面攻击、蓄力施法这些词都很具体。它们应该留在业务能力层，AI Core 只保留更通用的词：<code>ActuatorReadiness</code>、<code>AimGate</code>、<code>ExecutionPrecondition</code>、<code>TargetFilter</code>、<code>DecisionIntent</code>。
+          </p>
+        </div>
+      </section>
+
+      <section id="reading">
+        <h2>5. 建议阅读顺序</h2>
+        <div class="ok">
+          <b>先看这个顺序，最省时间</b>
+          <p>
+            1. <a href="openra_unit_behavior_attack_move_analysis.html">OpenRA 用户输入动作与基础单位指令源码剖面</a><br>
+            2. <a href="openra_targeting_priority_guard_turret_analysis.html">OpenRA 索敌优先级、脱战警戒与炮台机制源码剖面</a><br>
+            3. <a href="ludots_targeting_order_gas_gap_analysis.html">Ludots 索敌、警戒、炮台与 Order/GAS 映射缺口分析</a><br>
+            4. <a href="ludots_utility_ai_soa_openra_behavior_architecture.html">Ludots 通用 Utility AI SoA 架构方案</a><br>
+            5. 再回头看 <a href="openra_ai_system_analysis.md">OpenRA AI 底层系统源码分析</a> 和 <a href="openra_ai_layered_architecture.html">OpenRA AI 分层架构剖面</a>。
+          </p>
+        </div>
+      </section>
+
+      <section id="refs">
+        <h2>6. 参考文档</h2>
+        <p class="lead">这些是这张地图背后的支撑文档，不是 AI 本体，但决定了最终实现要怎么落。</p>
+
+        <table>
+          <thead>
+            <tr>
+              <th>文档</th>
+              <th>用途</th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr>
+              <td><a href="relationship_system_market_abstraction.md">关系系统：市场案例抽象与 Ludots 复用设计</a></td>
+              <td>Threat / Focus / relationship metric 的概念底座。</td>
+            </tr>
+            <tr>
+              <td><a href="config_data_merge_best_practices.md">配置数据合并最佳实践</a></td>
+              <td>AI 配置必须走 ConfigPipeline 和 fail-fast 合并，不另起一套解析器。</td>
+            </tr>
+            <tr>
+              <td><a href="arch_ecs_libraries.md">Arch ECS 外部依赖入口</a></td>
+              <td>确认底层 ECS 约束，避免把库能力想象得比实际更强。</td>
+            </tr>
+            <tr>
+              <td><a href="README.md">docs/reference/README.md</a></td>
+              <td>所有参考文档的入口索引，后续新文档应先补这里。</td>
+            </tr>
+            <tr>
+              <td><a href="https://uintel-ecs.utilityworlds.com/Documentation/">Uintel ECS 文档</a></td>
+              <td>Utility Intelligence 的原始思想来源。</td>
+            </tr>
+            <tr>
+              <td><a href="https://uintel-ecs.utilityworlds.com/sitemap.xml">Uintel ECS sitemap</a></td>
+              <td>确认文档结构和页面范围。</td>
+            </tr>
+          </tbody>
+        </table>
+      </section>
+    </main>
+  </div>
+</body>
+</html>

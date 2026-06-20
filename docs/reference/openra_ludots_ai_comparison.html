@@ -1,0 +1,849 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>OpenRA AI 与 Ludots 架构对比分析</title>
+  <style>
+    :root {
+      --bg: #ffffff;
+      --ink: #17212b;
+      --muted: #66727f;
+      --line: #d8dee6;
+      --soft: #f5f7fa;
+      --mint: #edf7f4;
+      --teal: #0f766e;
+      --green: #2f855a;
+      --amber: #b45309;
+      --red: #b42318;
+      --blue: #2563eb;
+      --cyan: #0e7490;
+      --shadow: 0 8px 24px rgba(23, 33, 43, 0.07);
+      --radius: 8px;
+    }
+
+    * {
+      box-sizing: border-box;
+    }
+
+    html {
+      scroll-behavior: smooth;
+    }
+
+    body {
+      margin: 0;
+      font-family: "Segoe UI", "Microsoft YaHei", Arial, sans-serif;
+      color: var(--ink);
+      background: var(--bg);
+      line-height: 1.7;
+      letter-spacing: 0;
+    }
+
+    a {
+      color: var(--blue);
+      text-decoration: none;
+    }
+
+    a:hover {
+      text-decoration: underline;
+    }
+
+    code {
+      font-family: Consolas, "Cascadia Mono", "SFMono-Regular", monospace;
+      font-size: 0.92em;
+      background: #eef2f6;
+      border: 1px solid #d8e0e8;
+      border-radius: 6px;
+      padding: 0.08rem 0.32rem;
+      overflow-wrap: anywhere;
+    }
+
+    .hero {
+      background:
+        linear-gradient(115deg, rgba(15, 118, 110, 0.18), transparent 34%),
+        linear-gradient(180deg, #15212d, #10171f);
+      color: #f8fafc;
+      border-bottom: 6px solid var(--cyan);
+    }
+
+    .hero-inner {
+      width: min(1180px, calc(100% - 32px));
+      margin: 0 auto;
+      padding: 52px 0 44px;
+      display: grid;
+      grid-template-columns: minmax(0, 1.2fr) minmax(300px, 0.8fr);
+      gap: 28px;
+      align-items: end;
+    }
+
+    .hero h1 {
+      margin: 0 0 16px;
+      font-size: 2.35rem;
+      line-height: 1.16;
+      font-weight: 850;
+      letter-spacing: 0;
+    }
+
+    .hero p {
+      margin: 0;
+      max-width: 820px;
+      color: #dce5ee;
+      font-size: 1.04rem;
+    }
+
+    .hero strong {
+      color: #ffffff;
+    }
+
+    .verdict {
+      display: grid;
+      gap: 12px;
+      background: rgba(255, 255, 255, 0.08);
+      border: 1px solid rgba(255, 255, 255, 0.18);
+      border-radius: var(--radius);
+      padding: 18px;
+      box-shadow: var(--shadow);
+    }
+
+    .verdict b {
+      color: #ffffff;
+      font-size: 1.02rem;
+    }
+
+    .verdict span {
+      color: #dce5ee;
+      font-size: 0.92rem;
+    }
+
+    .layout {
+      width: min(1180px, calc(100% - 32px));
+      margin: 0 auto;
+      display: grid;
+      grid-template-columns: 250px minmax(0, 1fr);
+      gap: 28px;
+      padding: 32px 0 72px;
+    }
+
+    .toc {
+      position: sticky;
+      top: 18px;
+      align-self: start;
+      border: 1px solid var(--line);
+      border-radius: var(--radius);
+      padding: 14px;
+      background: #ffffff;
+      box-shadow: var(--shadow);
+    }
+
+    .toc h2 {
+      margin: 0 0 10px;
+      color: var(--muted);
+      font-size: 0.9rem;
+    }
+
+    .toc a {
+      display: block;
+      padding: 8px;
+      border-radius: 6px;
+      color: #263442;
+      font-size: 0.92rem;
+    }
+
+    .toc a:hover {
+      background: var(--soft);
+      text-decoration: none;
+    }
+
+    main {
+      min-width: 0;
+    }
+
+    section {
+      margin-bottom: 34px;
+      padding: 30px 0;
+      border-top: 1px solid var(--line);
+    }
+
+    section:first-child {
+      border-top: 0;
+      padding-top: 0;
+    }
+
+    h2 {
+      margin: 0 0 16px;
+      font-size: 1.48rem;
+      line-height: 1.25;
+      letter-spacing: 0;
+    }
+
+    h3 {
+      margin: 0 0 10px;
+      font-size: 1.05rem;
+      line-height: 1.35;
+    }
+
+    p {
+      margin: 0 0 13px;
+    }
+
+    ul {
+      margin: 0;
+      padding-left: 1.16rem;
+    }
+
+    li {
+      margin: 6px 0;
+    }
+
+    .label {
+      display: inline-flex;
+      align-items: center;
+      border: 1px solid rgba(15, 118, 110, 0.34);
+      border-radius: 999px;
+      padding: 4px 9px;
+      margin-bottom: 10px;
+      background: var(--mint);
+      color: var(--teal);
+      font-size: 0.8rem;
+      font-weight: 760;
+    }
+
+    .two-col {
+      display: grid;
+      grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
+      gap: 16px;
+    }
+
+    .card {
+      border: 1px solid var(--line);
+      border-radius: var(--radius);
+      background: #ffffff;
+      padding: 17px;
+      box-shadow: var(--shadow);
+    }
+
+    .card.good {
+      border-top: 4px solid var(--green);
+    }
+
+    .card.gap {
+      border-top: 4px solid var(--red);
+    }
+
+    .card.watch {
+      border-top: 4px solid var(--amber);
+    }
+
+    .card.info {
+      border-top: 4px solid var(--cyan);
+    }
+
+    .card b {
+      display: block;
+      margin-bottom: 6px;
+    }
+
+    .card p {
+      color: var(--muted);
+      font-size: 0.94rem;
+      margin-bottom: 0;
+    }
+
+    .scoreboard {
+      display: grid;
+      grid-template-columns: repeat(4, minmax(0, 1fr));
+      gap: 12px;
+      margin-top: 18px;
+    }
+
+    .score {
+      border: 1px solid var(--line);
+      border-radius: var(--radius);
+      padding: 15px;
+      background: #ffffff;
+      min-height: 150px;
+    }
+
+    .score span {
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      min-width: 32px;
+      height: 28px;
+      border-radius: 999px;
+      padding: 0 9px;
+      color: #ffffff;
+      font-weight: 820;
+      margin-bottom: 8px;
+      background: var(--teal);
+      font-size: 0.86rem;
+    }
+
+    .score:nth-child(2) span {
+      background: var(--blue);
+    }
+
+    .score:nth-child(3) span {
+      background: var(--amber);
+    }
+
+    .score:nth-child(4) span {
+      background: var(--red);
+    }
+
+    .matrix-wrap {
+      border: 1px solid var(--line);
+      border-radius: var(--radius);
+      overflow: hidden;
+      background: #ffffff;
+      box-shadow: var(--shadow);
+    }
+
+    table {
+      width: 100%;
+      border-collapse: collapse;
+      font-size: 0.93rem;
+    }
+
+    th,
+    td {
+      text-align: left;
+      vertical-align: top;
+      padding: 12px 13px;
+      border-bottom: 1px solid var(--line);
+    }
+
+    th {
+      background: #eef2f6;
+      color: #253443;
+      font-weight: 820;
+    }
+
+    tr:last-child td {
+      border-bottom: 0;
+    }
+
+    .pill {
+      display: inline-flex;
+      border-radius: 999px;
+      padding: 3px 8px;
+      font-size: 0.78rem;
+      font-weight: 760;
+      white-space: nowrap;
+      border: 1px solid transparent;
+    }
+
+    .pill.good {
+      background: #ecfdf3;
+      color: #166534;
+      border-color: #bbf7d0;
+    }
+
+    .pill.mid {
+      background: #eff6ff;
+      color: #1d4ed8;
+      border-color: #bfdbfe;
+    }
+
+    .pill.warn {
+      background: #fff7ed;
+      color: #9a3412;
+      border-color: #fed7aa;
+    }
+
+    .pill.gap {
+      background: #fef2f2;
+      color: #991b1b;
+      border-color: #fecaca;
+    }
+
+    .stack {
+      display: grid;
+      gap: 10px;
+    }
+
+    .lane {
+      display: grid;
+      grid-template-columns: 184px minmax(0, 1fr);
+      gap: 12px;
+      align-items: stretch;
+      border: 1px solid var(--line);
+      border-radius: var(--radius);
+      background: #ffffff;
+      overflow: hidden;
+    }
+
+    .lane b {
+      display: flex;
+      align-items: center;
+      padding: 14px;
+      background: var(--soft);
+      border-right: 1px solid var(--line);
+    }
+
+    .lane span {
+      padding: 14px;
+      color: #334155;
+      overflow-wrap: anywhere;
+    }
+
+    .roadmap {
+      display: grid;
+      grid-template-columns: repeat(3, minmax(0, 1fr));
+      gap: 14px;
+    }
+
+    .step {
+      border: 1px solid var(--line);
+      border-radius: var(--radius);
+      padding: 16px;
+      background: #ffffff;
+      min-height: 182px;
+      position: relative;
+    }
+
+    .step strong {
+      display: block;
+      color: var(--teal);
+      margin-bottom: 7px;
+    }
+
+    .step p {
+      color: var(--muted);
+      font-size: 0.94rem;
+      margin-bottom: 0;
+    }
+
+    .callout {
+      border-left: 5px solid var(--teal);
+      background: var(--mint);
+      border-radius: var(--radius);
+      padding: 17px 18px;
+    }
+
+    .callout p:last-child {
+      margin-bottom: 0;
+    }
+
+    .sources {
+      display: grid;
+      grid-template-columns: repeat(2, minmax(0, 1fr));
+      gap: 12px;
+    }
+
+    .source {
+      border: 1px solid var(--line);
+      border-radius: var(--radius);
+      padding: 14px;
+      background: #ffffff;
+      min-height: 124px;
+    }
+
+    .source b {
+      display: block;
+      margin-bottom: 8px;
+    }
+
+    .source a,
+    .source span {
+      display: block;
+      font-size: 0.88rem;
+      color: #36536f;
+      overflow-wrap: anywhere;
+      margin-top: 5px;
+    }
+
+    footer {
+      width: min(1180px, calc(100% - 32px));
+      margin: 0 auto 38px;
+      color: var(--muted);
+      font-size: 0.9rem;
+    }
+
+    @media (max-width: 980px) {
+      .hero-inner,
+      .layout,
+      .two-col,
+      .sources {
+        grid-template-columns: 1fr;
+      }
+
+      .toc {
+        position: static;
+      }
+
+      .scoreboard,
+      .roadmap {
+        grid-template-columns: 1fr;
+      }
+    }
+
+    @media (max-width: 620px) {
+      .hero-inner,
+      .layout {
+        width: min(100% - 22px, 1180px);
+      }
+
+      .hero-inner {
+        padding: 34px 0;
+      }
+
+      .hero h1 {
+        font-size: 1.82rem;
+      }
+
+      .layout {
+        padding-top: 18px;
+      }
+
+      .lane {
+        grid-template-columns: 1fr;
+      }
+
+      .lane b {
+        border-right: 0;
+        border-bottom: 1px solid var(--line);
+      }
+
+      .matrix-wrap {
+        overflow-x: auto;
+      }
+    }
+  </style>
+</head>
+<body>
+  <header class="hero">
+    <div class="hero-inner">
+      <div>
+        <h1>OpenRA AI 与 Ludots 架构对比分析</h1>
+        <p>
+          OpenRA 给我们展示的是一套成熟 RTS bot 的工程打法；Ludots 已经有更正式的 ECS、Mod、ConfigPipeline、GAS Order
+          和通用 AI 编译运行时。真正的差距不是“有没有 AI”，而是：<strong>Ludots 还缺一套阵营级 RTS AI 套件，把通用 AI 能力接到经济、基地、分队和调试上。</strong>
+        </p>
+      </div>
+      <aside class="verdict">
+        <b>总判断</b>
+        <span>OpenRA 的强项是可打对局的 RTS bot 模块群。Ludots 的强项是更硬的架构边界和可复用管线。</span>
+        <b>最短路线</b>
+        <span>保留 Ludots 的 Order/GAS 边界，把 OpenRA 的“Player-level bot modules”翻译成 Commander/Faction AI Mod。</span>
+      </aside>
+    </div>
+  </header>
+
+  <div class="layout">
+    <nav class="toc" aria-label="目录">
+      <h2>目录</h2>
+      <a href="#verdict">结论先行</a>
+      <a href="#what-ludots-has">Ludots 已有基础</a>
+      <a href="#matrix">逐项对比</a>
+      <a href="#good">我们做得好的</a>
+      <a href="#missing">我们缺什么</a>
+      <a href="#roadmap">建议路线</a>
+      <a href="#risk">风险边界</a>
+      <a href="#sources">证据索引</a>
+    </nav>
+
+    <main>
+      <section id="verdict">
+        <span class="label">Executive View</span>
+        <h2>结论先行：Ludots 有骨架，OpenRA 有战场肌肉</h2>
+        <p>
+          OpenRA 的 AI 是“玩家级模块群 + Order 出口”。它已经有经济、基地、单位生产、采矿、扩张、分队、支援技能、维修、占领等可用模块，
+          对 RTS skirmish 来说非常完整。Ludots 目前已经有 <code>Gameplay.AI</code> 通用核心：
+          <code>WorldStateProjection</code>、<code>UtilityGoalSelection</code>、<code>GOAP</code>、<code>HTN</code>、
+          <code>AIPlanExecution</code> 和 <code>OrderQueue</code> 提交边界。
+        </p>
+        <p>
+          所以对比后的重点不是重造一个 AI 框架，而是补齐“RTS 领域层”：Commander/Faction host、AI profile schema、
+          资源/威胁地图、经济/建造/采矿/分队模块、AI 调度预算、决策 trace 和可视化。
+        </p>
+        <div class="scoreboard">
+          <article class="score">
+            <span>强</span>
+            <h3>Ludots 架构边界</h3>
+            <p>Order/GAS、ConfigPipeline、Mod、SystemGroup、测试都更正式，AI 不必越权改世界。</p>
+          </article>
+          <article class="score">
+            <span>强</span>
+            <h3>OpenRA RTS 成熟度</h3>
+            <p>已经有可玩的 skirmish bot 模块群，覆盖经营、战术、响应和性能细节。</p>
+          </article>
+          <article class="score">
+            <span>缺</span>
+            <h3>Ludots RTS AI 套件</h3>
+            <p>缺阵营级 AI host、领域 blackboard、基地/经济/分队模块和 profile 组合。</p>
+          </article>
+          <article class="score">
+            <span>忌</span>
+            <h3>照搬 GPL 源码</h3>
+            <p>只能学边界和模式，不能复制 OpenRA 实现。Ludots 要用自己的 ECS 和管线重写。</p>
+          </article>
+        </div>
+      </section>
+
+      <section id="what-ludots-has">
+        <h2>Ludots 已有基础：不是空地，是一座还没装 RTS 指挥塔的城市</h2>
+        <div class="stack">
+          <div class="lane">
+            <b>通用 AI Runtime</b>
+            <span><code>src/Core/Gameplay/AI</code> 已有 256-bit world state、Utility goal selector、GOAP、HTN、plan execution 和 task node 基础。</span>
+          </div>
+          <div class="lane">
+            <b>命令边界</b>
+            <span><code>AIPlanExecutionSystem</code> 通过 <code>PlanExecutor.TrySubmitOrder</code> 把行动提交到 <code>OrderQueue</code>，和 OpenRA “AI 只发 Order”同构。</span>
+          </div>
+          <div class="lane">
+            <b>配置管线</b>
+            <span><code>AiConfigLoader</code> 复用 <code>ConfigPipeline</code> 与 <code>ConfigCatalog</code>，AI atoms、projection、utility、GOAP、HTN 都从 Mod 配置合并。</span>
+          </div>
+          <div class="lane">
+            <b>验证基线</b>
+            <span><code>AiBenchmarkTests</code> 已覆盖 10k agents 的 Utility+GOAP+OrderSubmit 零分配回归；<code>AiConfigLoaderTests</code> 覆盖 VFS/Mod 配置合并。</span>
+          </div>
+          <div class="lane">
+            <b>观察入口</b>
+            <span><code>AIInspectorMod</code> 能打印编译后 AI runtime 规模，<code>AIDemoMod</code> 提供最小配置样例。</span>
+          </div>
+        </div>
+      </section>
+
+      <section id="matrix">
+        <h2>逐项对比</h2>
+        <div class="matrix-wrap">
+          <table>
+            <thead>
+              <tr>
+                <th>维度</th>
+                <th>OpenRA</th>
+                <th>Ludots 当前状态</th>
+                <th>判断</th>
+              </tr>
+            </thead>
+            <tbody>
+              <tr>
+                <td>AI 与世界边界</td>
+                <td>Bot 模块只排队 <code>Order</code>，世界变更走正式 order/activity/trait 链路。</td>
+                <td><code>AIPlanExecutionSystem</code> 提交 <code>OrderQueue</code>，GAS/Order 管线负责后续执行。</td>
+                <td><span class="pill good">Ludots 很好</span></td>
+              </tr>
+              <tr>
+                <td>AI host</td>
+                <td>AI 挂在 <code>SystemActors.Player</code>，天然是玩家/阵营级状态。</td>
+                <td>已有 <code>AIAgent</code> 组件，但缺 RTS 专用 Commander/Faction host 语义和生命周期规范。</td>
+                <td><span class="pill gap">缺领域 host</span></td>
+              </tr>
+              <tr>
+                <td>AI profile 组合</td>
+                <td>YAML 通过 <code>ModularBot@RushAI</code> 和 condition 组合不同性格。</td>
+                <td>AI 配置已进 ConfigPipeline，但缺“RTS bot profile/module enable/预算/参数”的 schema。</td>
+                <td><span class="pill warn">需要补层</span></td>
+              </tr>
+              <tr>
+                <td>规划算法</td>
+                <td>主要是启发式模块、轻状态机和局部 fuzzy，少统一 planner。</td>
+                <td>已有 Utility、GOAP、HTN、world state projection，抽象能力更强。</td>
+                <td><span class="pill good">Ludots 更强</span></td>
+              </tr>
+              <tr>
+                <td>RTS 经营模块</td>
+                <td>BaseBuilder、UnitBuilder、Harvester、MCV、Expansion 都已可用。</td>
+                <td>未看到等价的经济/基地/采矿/扩张 bot module 套件。</td>
+                <td><span class="pill gap">OpenRA 成熟</span></td>
+              </tr>
+              <tr>
+                <td>战术分队</td>
+                <td>SquadManager 组织 assault、air、naval、protection squad，带状态机。</td>
+                <td>有 order/nav/GAS 基础，但缺 RTS squad blackboard、集结、进攻、防守、撤退模块。</td>
+                <td><span class="pill gap">缺 squad 层</span></td>
+              </tr>
+              <tr>
+                <td>移动与命令</td>
+                <td>AI 复用玩家 AttackMove、Harvest、Move 等命令。</td>
+                <td>OrderBuffer、导航目标、NavGoal2D/NavDesiredVelocity2D 分离已经很清楚。</td>
+                <td><span class="pill good">Ludots 基础更规整</span></td>
+              </tr>
+              <tr>
+                <td>技能系统</td>
+                <td>SupportPowerBotModule 按 consideration 扫描目标并发技能 order。</td>
+                <td>GAS Effect Pipeline、AbilityActivation、AttributeSink 更正式，但缺 RTS AI 技能目标评分模块。</td>
+                <td><span class="pill mid">底座强，领域缺</span></td>
+              </tr>
+              <tr>
+                <td>性能预算</td>
+                <td>大量手写 stagger tick、ActorIndex、delayed scan、order throttling。</td>
+                <td>有 10k AI benchmark 和零分配约束，但缺 AI 模块级预算、分帧扫描和输出 cap 规范。</td>
+                <td><span class="pill warn">需要工程化</span></td>
+              </tr>
+              <tr>
+                <td>调试可视化</td>
+                <td>BotDebug 与 RenderDebugState 可显示 squad/目标状态。</td>
+                <td>AIInspector 能打印 runtime 规模，但缺决策 trace、地图 overlay、模块耗时和 order 来源追踪。</td>
+                <td><span class="pill gap">缺可视化闭环</span></td>
+              </tr>
+              <tr>
+                <td>Mod/配置治理</td>
+                <td>YAML 灵活，但 actor names 和 condition 字符串耦合重。</td>
+                <td>ConfigPipeline、catalog merge、launcher graph、Mod loading、Registry 约束更硬。</td>
+                <td><span class="pill good">Ludots 更强</span></td>
+              </tr>
+              <tr>
+                <td>战役脚本</td>
+                <td>skirmish bot 与大量 Lua campaign AI 并存。</td>
+                <td>Trigger pipeline、FunctionRegistry、TriggerDecorators 适合剧情/地图逻辑，但需和 AI runtime 明确边界。</td>
+                <td><span class="pill mid">能力相当，需整合</span></td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
+      </section>
+
+      <section id="good">
+        <h2>我们做得好的是什么</h2>
+        <div class="two-col">
+          <article class="card good">
+            <b>1. AI 已经走正式命令出口</b>
+            <p>这点非常关键。<code>PlanExecutor</code> 创建 <code>Order</code> 并进入 <code>OrderQueue</code>，没有让 AI 直接改玩法组件。</p>
+          </article>
+          <article class="card good">
+            <b>2. 通用 AI 能力比 OpenRA 更抽象</b>
+            <p>Utility、GOAP、HTN、256-bit world state、compiled runtime 为多类型游戏提供了统一底座。</p>
+          </article>
+          <article class="card good">
+            <b>3. 配置并入 ConfigPipeline</b>
+            <p>AI 配置和其他 gameplay 配置一样通过 VFS、Mod、catalog 和 merge policy 进入系统，治理上更强。</p>
+          </article>
+          <article class="card good">
+            <b>4. SystemGroup 和管线意识更强</b>
+            <p>Ludots 已经明确 SchemaUpdate、InputCollection、AbilityActivation、EffectProcessing 等 phase，AI 可以按职责挂靠。</p>
+          </article>
+          <article class="card good">
+            <b>5. GAS/Order/Nav 的分工清楚</b>
+            <p>命令、技能效果、属性落点、导航目标各自有正式链路，不需要 AI 复制一套执行器。</p>
+          </article>
+          <article class="card good">
+            <b>6. 性能红线已经有测试意识</b>
+            <p>10k agents 零分配 benchmark 是很好的地基，后续 RTS AI 模块也应该继承这个习惯。</p>
+          </article>
+        </div>
+      </section>
+
+      <section id="missing">
+        <h2>我们缺什么</h2>
+        <div class="two-col">
+          <article class="card gap">
+            <b>1. Commander/Faction AI host</b>
+            <p>OpenRA 的 AI 天然挂在 PlayerActor。Ludots 需要明确“阵营/指挥官实体”承载 RTS AI 状态，而不是把战略脑散到单位上。</p>
+          </article>
+          <article class="card gap">
+            <b>2. RTS AI profile schema</b>
+            <p>需要类似 Rush/Normal/Turtle/Naval 的 profile，但用 Ludots 的 ConfigPipeline 表达 module enable、预算、比例、阈值和命令输出。</p>
+          </article>
+          <article class="card gap">
+            <b>3. 资源/威胁/基地 blackboard</b>
+            <p>通用 world state 只有 256-bit 事实层还不够 RTS。还要有空间索引、资源图、威胁图、基地中心、扩张候选。</p>
+          </article>
+          <article class="card gap">
+            <b>4. 经济与基地模块</b>
+            <p>缺 OpenRA 那类 BaseBuilder、UnitBuilder、Harvester、Expansion 的 Ludots 版本。</p>
+          </article>
+          <article class="card gap">
+            <b>5. Squad 战术模块</b>
+            <p>缺分队组织、攻击集结、防守响应、撤退判断、目标选择和支援技能协同。</p>
+          </article>
+          <article class="card gap">
+            <b>6. AI 专用调度预算</b>
+            <p>需要模块级 tick interval、stagger offset、query cache、昂贵扫描配额、每帧 order cap 和耗时统计。</p>
+          </article>
+          <article class="card gap">
+            <b>7. 决策 trace 与地图 overlay</b>
+            <p>AIInspector 的统计打印还不够。需要能看到某个 Commander 为什么造电厂、为什么撤退、为什么没有扩张。</p>
+          </article>
+          <article class="card gap">
+            <b>8. RTS AI 验收地图</b>
+            <p>已有 RTS training showcase，但还需要专门验证 AI 经营闭环：开局、采矿、补产能、组队、进攻、防守、恢复。</p>
+          </article>
+        </div>
+      </section>
+
+      <section id="roadmap">
+        <h2>建议路线：从边界到可玩 bot，不绕路</h2>
+        <div class="roadmap">
+          <article class="step">
+            <strong>阶段 1：定契约</strong>
+            <p>写清楚 AI 只能产生命令，不直接写 gameplay components。明确 AI 运行 phase、输入快照、输出 OrderQueue 的时机。</p>
+          </article>
+          <article class="step">
+            <strong>阶段 2：建 CommanderAiMod</strong>
+            <p>新增阵营级 host entity、AiProfileRef、AiBudget、AiCommandQueue，并用 ConfigPipeline 加载 profile。</p>
+          </article>
+          <article class="step">
+            <strong>阶段 3：做 RTS Blackboard</strong>
+            <p>资源图、威胁图、基地中心、敌方已知建筑、己方产能和单位池都走分帧更新。</p>
+          </article>
+          <article class="step">
+            <strong>阶段 4：最小经营闭环</strong>
+            <p>先实现采矿维护、基础生产和低电/低资源处理，让 AI 能维持经济，不追求聪明进攻。</p>
+          </article>
+          <article class="step">
+            <strong>阶段 5：最小分队闭环</strong>
+            <p>按单位池组建 attack/defense squad，支持集结、AttackMove、防守响应和撤退。</p>
+          </article>
+          <article class="step">
+            <strong>阶段 6：调试与验收</strong>
+            <p>每个模块输出 decision trace、预算计数和 order 来源，showcase 地图验证完整开局到交战。</p>
+          </article>
+        </div>
+      </section>
+
+      <section id="risk">
+        <h2>风险边界</h2>
+        <div class="callout">
+          <p>
+            <strong>不要把 OpenRA 的模块直接搬进来。</strong>
+            OpenRA 是 GPL 项目，这次只能做架构学习。实现时应该沿用 Ludots 的 Arch ECS、Mod、ConfigPipeline、SystemGroup、
+            OrderQueue、GAS 和导航基础，重新设计自己的 Commander/Faction AI。
+          </p>
+          <p>
+            也不要让“通用 GOAP/HTN 框架”吞掉全部 RTS 逻辑。OpenRA 的经验说明，RTS bot 真正难的是资源图、基地布局、寻路预算、
+            分队组织、失败恢复和调试可见性。规划器可以参与，但领域模块不能省。
+          </p>
+        </div>
+      </section>
+
+      <section id="sources">
+        <h2>证据索引</h2>
+        <div class="sources">
+          <article class="source">
+            <b>OpenRA AI 报告</b>
+            <a href="openra_ai_system_analysis.md">docs/reference/openra_ai_system_analysis.md</a>
+            <a href="openra_ai_layered_architecture.html">docs/reference/openra_ai_layered_architecture.html</a>
+          </article>
+          <article class="source">
+            <b>OpenRA 关键源码</b>
+            <a href="../../external/reference/OpenRA/OpenRA.Mods.Common/Traits/Player/ModularBot.cs">external/reference/OpenRA/OpenRA.Mods.Common/Traits/Player/ModularBot.cs</a>
+            <a href="../../external/reference/OpenRA/OpenRA.Mods.Common/Traits/BotModules">external/reference/OpenRA/OpenRA.Mods.Common/Traits/BotModules</a>
+            <a href="../../external/reference/OpenRA/mods/ra/rules/ai.yaml">external/reference/OpenRA/mods/ra/rules/ai.yaml</a>
+          </article>
+          <article class="source">
+            <b>Ludots AI 核心</b>
+            <a href="../../src/Core/Gameplay/AI/Config/AiConfigLoader.cs">src/Core/Gameplay/AI/Config/AiConfigLoader.cs</a>
+            <a href="../../src/Core/Gameplay/AI/Systems/AIPlanExecutionSystem.cs">src/Core/Gameplay/AI/Systems/AIPlanExecutionSystem.cs</a>
+            <a href="../../src/Core/Gameplay/AI/Planning/PlanExecutor.cs">src/Core/Gameplay/AI/Planning/PlanExecutor.cs</a>
+          </article>
+          <article class="source">
+            <b>Ludots 架构与测试</b>
+            <a href="../../gitbook/architecture/runtime-overview.md">gitbook/architecture/runtime-overview.md</a>
+            <a href="../../docs/architecture/order_navigation_movement.md">docs/architecture/order_navigation_movement.md</a>
+            <a href="../../src/Tests/GasTests/AiBenchmarkTests.cs">src/Tests/GasTests/AiBenchmarkTests.cs</a>
+            <a href="../../mods/AIInspectorMod/Triggers/PrintAiConfigTrigger.cs">mods/AIInspectorMod/Triggers/PrintAiConfigTrigger.cs</a>
+          </article>
+        </div>
+      </section>
+    </main>
+  </div>
+
+  <footer>
+    本 HTML 是 Ludots 内部参考分析。它对比架构模式与能力缺口，不代表要复制 OpenRA 源码实现。
+  </footer>
+</body>
+</html>
