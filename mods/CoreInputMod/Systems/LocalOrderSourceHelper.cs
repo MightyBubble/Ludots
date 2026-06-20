@@ -14,6 +14,7 @@ using Ludots.Core.Input.Interaction;
 using Ludots.Core.Input.Orders;
 using Ludots.Core.Input.Runtime;
 using Ludots.Core.Input.Selection;
+using Ludots.Core.Knowledge;
 using Ludots.Core.Mathematics;
 using Ludots.Core.Modding;
 using Ludots.Core.NodeLibraries.GASGraph.Host;
@@ -125,7 +126,7 @@ namespace CoreInputMod.Systems
             mapping.SetSelectedEntityProvider((string setKey, out Entity entity) => _context.TryGetSelectedEntity(setKey, out entity));
             mapping.SetSelectedContainerProvider((string setKey, out Entity container) => _context.TryGetSelectedContainer(setKey, out container));
             mapping.SetSelectedEntityListProvider((string setKey, List<Entity> entities) => _context.TryGetSelectedEntities(setKey, entities));
-            mapping.SetHoveredEntityProvider((out Entity entity) => _context.TryGetEntity(CoreServiceKeys.HoveredEntity.Name, out entity));
+            mapping.SetHoveredEntityProvider(TryResolveHoveredCommandTarget);
             var bindings = InteractionActionBindingsResolver.Require(_globals, nameof(LocalOrderSourceHelper));
             mapping.ConfirmActionId = bindings.ConfirmActionId;
             mapping.CancelActionId = bindings.CancelActionId;
@@ -232,7 +233,30 @@ namespace CoreInputMod.Systems
                 return false;
             }
 
-            resolver = new AutoTargetResolver(_world, spatialQueries);
+            resolver = new AutoTargetResolver(_world, _globals, spatialQueries);
+            return true;
+        }
+
+        private bool TryResolveHoveredCommandTarget(out Entity entity)
+        {
+            entity = Entity.Null;
+            if (!_context.TryGetEntity(CoreServiceKeys.HoveredEntity.Name, out Entity candidate))
+            {
+                return false;
+            }
+
+            Entity viewer = _context.TryGetSelectionOwner(out Entity owner) ? owner : Entity.Null;
+            if (!SelectionEligibility.CanTargetCommand(
+                    _world,
+                    _globals,
+                    viewer,
+                    candidate,
+                    KnowledgePositionAccess.Live))
+            {
+                return false;
+            }
+
+            entity = candidate;
             return true;
         }
 
@@ -359,11 +383,13 @@ namespace CoreInputMod.Systems
         private sealed class AutoTargetResolver
         {
             private readonly World _world;
+            private readonly Dictionary<string, object> _globals;
             private readonly ISpatialQueryService _spatialQueries;
 
-            public AutoTargetResolver(World world, ISpatialQueryService spatialQueries)
+            public AutoTargetResolver(World world, Dictionary<string, object> globals, ISpatialQueryService spatialQueries)
             {
                 _world = world;
+                _globals = globals;
                 _spatialQueries = spatialQueries;
             }
 
@@ -413,7 +439,15 @@ namespace CoreInputMod.Systems
                 for (int i = 0; i < candidateCount; i++)
                 {
                     Entity candidate = candidates[i];
-                    if (!_world.IsAlive(candidate) || candidate == actor || !_world.Has<WorldPositionCm>(candidate))
+                    if (!_world.IsAlive(candidate) ||
+                        candidate == actor ||
+                        !_world.Has<WorldPositionCm>(candidate) ||
+                        !SelectionEligibility.CanTargetCommand(
+                            _world,
+                            _globals,
+                            actor,
+                            candidate,
+                            KnowledgePositionAccess.Live))
                     {
                         continue;
                     }

@@ -69,6 +69,11 @@ namespace CoreInputMod.Systems
                     return;
                 }
 
+                if (!SelectionEligibility.CanInspectLive(_world, _globals, local, entity))
+                {
+                    return;
+                }
+
                 if (_world.Has<Team>(entity))
                 {
                     var entityTeam = _world.Get<Team>(entity).Id;

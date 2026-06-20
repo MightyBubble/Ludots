@@ -1454,6 +1454,7 @@ namespace Ludots.Core.Engine
                 LoadPathingForSession(session);
                 Diagnostics.Log.Info(in LogChannels.Engine, "Creating Entities from MapConfig...");
                 var entityIndex = MapLoader.LoadEntitiesAndIndex(mapConfig);
+                session.EntityIndex = entityIndex;
                 SetSessionParticipants(
                     session,
                     ParticipantBindingResolver.Resolve(
@@ -1604,6 +1605,7 @@ namespace Ludots.Core.Engine
             LoadPathingForSession(session);
 
             var entityIndex = MapLoader.LoadEntitiesAndIndex(mapConfig);
+            session.EntityIndex = entityIndex;
             SetSessionParticipants(
                 session,
                 ParticipantBindingResolver.Resolve(

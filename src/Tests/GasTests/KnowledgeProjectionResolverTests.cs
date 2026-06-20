@@ -1,8 +1,10 @@
+using System.Collections.Generic;
 using Arch.Core;
 using Ludots.Core.EntityCollections;
 using Ludots.Core.Gameplay.Relationships;
 using Ludots.Core.Knowledge;
 using Ludots.Core.Registry;
+using Ludots.Core.Scripting;
 using NUnit.Framework;
 
 namespace Ludots.Tests.GAS
@@ -192,7 +194,52 @@ namespace Ludots.Tests.GAS
         }
 
         [Test]
-        public void TryResolve_AllocatesZeroAfterWarmup()
+        public void TryResolve_DirectLiveProjectionWinsOverFiniteDisclosureWhenMerged()
+        {
+            using World world = World.Create();
+            Entity player = world.Create();
+            Entity allyIntelSource = world.Create();
+            Entity target = world.Create();
+            var store = new KnowledgeProjectionStore();
+            store.Upsert(
+                player,
+                target,
+                CreateRecord(
+                    KnowledgePresence.LiveVisible,
+                    KnowledgePositionAccess.Live,
+                    player,
+                    observedTick: 10,
+                    expiryTick: 0,
+                    confidencePermille: 1000,
+                    attributeMask: KnowledgeIdMask256.Empty.WithId(1),
+                    relationshipMask: KnowledgeIdMask256.Empty,
+                    tagMask: KnowledgeIdMask256.Empty));
+            store.Upsert(
+                allyIntelSource,
+                target,
+                CreateRecord(
+                    KnowledgePresence.HiddenWithSource,
+                    KnowledgePositionAccess.LastKnown,
+                    allyIntelSource,
+                    observedTick: 11,
+                    expiryTick: 0,
+                    confidencePermille: 600,
+                    attributeMask: KnowledgeIdMask256.Empty,
+                    relationshipMask: KnowledgeIdMask256.Empty.WithId(2),
+                    tagMask: KnowledgeIdMask256.Empty));
+            var resolver = new KnowledgeProjectionResolver(store);
+            Span<Entity> scopes = stackalloc Entity[2] { player, allyIntelSource };
+
+            Assert.That(resolver.TryResolve(player, target, currentTick: 12, scopes, out KnowledgeProjection projection), Is.True);
+            Assert.That(projection.Presence, Is.EqualTo(KnowledgePresence.LiveVisible));
+            Assert.That(projection.Position, Is.EqualTo(KnowledgePositionAccess.Live));
+            Assert.That(projection.Source, Is.EqualTo(player));
+            Assert.That(projection.CanReadAttribute(1), Is.True);
+            Assert.That(projection.CanReadRelationship(2), Is.True);
+        }
+
+        [Test]
+        public void Issue200_TryResolveWithRelationGrants_AllocatesZeroAfterWarmup()
         {
             using World world = World.Create();
             TestRuntime runtime = CreateRuntime(world);
@@ -249,6 +296,56 @@ namespace Ludots.Tests.GAS
             for (int i = 0; i < 10_000; i++)
             {
                 resolver.TryResolve(player, target, 2, scopes, allyTypeId, relationSources, relationTargets, out _);
+            }
+
+            long allocated = GC.GetAllocatedBytesForCurrentThread() - before;
+            Assert.That(allocated, Is.EqualTo(0));
+        }
+
+        [Test]
+        public void Issue200_KnowledgeProjectionConsumer_TryResolve_AllocatesZeroAfterWarmup()
+        {
+            using World world = World.Create();
+            TestRuntime runtime = CreateRuntime(world);
+            int allyTypeId = runtime.RelationshipTypes.Register("Ally");
+            int scoutKeyId = runtime.CollectionKeys.Register("collection.scouts");
+            Entity viewer = world.Create();
+            Entity ally = world.Create();
+            Entity scout = world.Create();
+            runtime.Relationships.EnsureLink(viewer, ally, allyTypeId);
+            runtime.Collections.Replace(
+                ally,
+                EntityCollectionDescriptor.Create("collection.scouts", EntityCollectionSourceKind.RelationDerived, EntityCollectionRoleKind.Display),
+                new[] { scout });
+            var store = new KnowledgeProjectionStore(initialCapacity: 4);
+            var grants = new KnowledgeRelationCollectionGrantStore();
+            grants.Upsert(new KnowledgeRelationCollectionGrant(
+                allyTypeId,
+                scoutKeyId,
+                CreateRecord(
+                    KnowledgePresence.Known,
+                    KnowledgePositionAccess.LastKnown,
+                    ally,
+                    observedTick: 1,
+                    expiryTick: 0,
+                    confidencePermille: 700,
+                    attributeMask: KnowledgeIdMask256.Empty.WithId(2),
+                    relationshipMask: KnowledgeIdMask256.Empty.WithId(allyTypeId),
+                    tagMask: KnowledgeIdMask256.Empty)));
+            var projector = new KnowledgeRelationCollectionProjector(runtime.Relationships, runtime.Collections, grants, store);
+            var globals = new Dictionary<string, object>
+            {
+                [CoreServiceKeys.KnowledgeProjectionResolver.Name] = new KnowledgeProjectionResolver(store, projector),
+                [CoreServiceKeys.SelectionViewViewerEntity.Name] = viewer,
+            };
+
+            Assert.That(KnowledgeProjectionConsumer.TryResolve(world, globals, Entity.Null, scout, out _), Is.True);
+
+            GC.GetAllocatedBytesForCurrentThread();
+            long before = GC.GetAllocatedBytesForCurrentThread();
+            for (int i = 0; i < 10_000; i++)
+            {
+                KnowledgeProjectionConsumer.TryResolve(world, globals, Entity.Null, scout, out _);
             }
 
             long allocated = GC.GetAllocatedBytesForCurrentThread() - before;

@@ -6,6 +6,7 @@ using Ludots.Core.Components;
 using Ludots.Core.Engine;
 using Ludots.Core.Gameplay.Camera;
 using Ludots.Core.Input.Selection;
+using Ludots.Core.Knowledge;
 using Ludots.Core.Mathematics;
 using Ludots.Core.Presentation;
 using Ludots.Core.Presentation.Hud;
@@ -28,6 +29,16 @@ namespace Ludots.Core.Presentation.Minimap
         FollowCamera = 2,
     }
 
+    public enum MinimapKnowledgeState : byte
+    {
+        Unfiltered = 0,
+        Unknown = 1,
+        Known = 2,
+        LiveVisible = 3,
+        LastKnown = 4,
+        Disclosed = 5,
+    }
+
     public readonly record struct MinimapDebugMarker(
         int StableId,
         float WorldXcm,
@@ -38,7 +49,8 @@ namespace Ludots.Core.Presentation.Minimap
         float SizePx,
         float OrientationRad,
         float OrientationLengthPx,
-        uint Flags);
+        uint Flags,
+        MinimapKnowledgeState KnowledgeState);
 
     public sealed record MinimapDebugSnapshot(
         string MapId,
@@ -339,7 +351,7 @@ namespace Ludots.Core.Presentation.Minimap
             UpdateMapBasis(engine);
             ZoomBand = ResolveZoomBand(_halfExtentCm, in bounds);
             UpdateCameraFrustum(engine);
-            ProjectMarkers(markers, screenMarkers);
+            ProjectMarkers(engine, markers, screenMarkers);
         }
 
         public void Render(ScreenOverlayBuffer overlay)
@@ -676,7 +688,7 @@ namespace Ludots.Core.Presentation.Minimap
             }
         }
 
-        private void ProjectMarkers(MinimapMarkerBuffer markers, MinimapScreenMarkerBuffer screenMarkers)
+        private void ProjectMarkers(GameEngine engine, MinimapMarkerBuffer markers, MinimapScreenMarkerBuffer screenMarkers)
         {
             screenMarkers.BeginBucketedFrame();
             screenMarkers.SetFieldBounds(_fieldX, _fieldY, _fieldSize);
@@ -700,6 +712,7 @@ namespace Ludots.Core.Presentation.Minimap
             ReadOnlySpan<float> orientationRadValues = markers.OrientationRad;
             ReadOnlySpan<float> orientationLengthPxValues = markers.OrientationLengthPx;
             ReadOnlySpan<uint> flagsValues = markers.Flags;
+            ReadOnlySpan<Entity> owners = markers.Owners;
             ReadOnlySpan<MinimapMarkerRenderBucketKey> styleBucketKeys = markers.StyleBucketKeys;
             bool axisAligned = !RotateWithCamera;
             Span<MinimapMarkerRenderBucketKey> cachedBucketKeys = stackalloc MinimapMarkerRenderBucketKey[MinimapScreenMarkerBuffer.OrientationBucketCount];
@@ -707,10 +720,36 @@ namespace Ludots.Core.Presentation.Minimap
             cachedBucketIndices.Fill(-1);
 
             bool captureDebugMarkers = _debugMarkerSampleCapacity > 0;
+            bool hasKnowledgeResolver = KnowledgeProjectionConsumer.HasResolver(engine.GlobalContext);
             for (int i = 0; i < count; i++)
             {
                 float worldXcm = worldXcmValues[i];
                 float worldYcm = worldYcmValues[i];
+                MinimapKnowledgeState knowledgeState = MinimapKnowledgeState.Unfiltered;
+                Vector4 markerColor = colors[i];
+                float markerSizePx = sizesPx[i];
+                bool useAuthoredStyleBucket = true;
+                if (hasKnowledgeResolver)
+                {
+                    Entity owner = owners[i];
+                    if (owner == Entity.Null ||
+                        !KnowledgeProjectionConsumer.TryResolve(
+                            engine.World,
+                            engine.GlobalContext,
+                            Entity.Null,
+                            owner,
+                            out KnowledgeProjection projection) ||
+                        !projection.CanReadPosition(KnowledgePositionAccess.LastKnown))
+                    {
+                        continue;
+                    }
+
+                    knowledgeState = ResolveKnowledgeState(in projection);
+                    ApplyKnowledgeMarkerStyle(knowledgeState, ref markerColor, ref markerSizePx);
+                    useAuthoredStyleBucket = knowledgeState == MinimapKnowledgeState.LiveVisible ||
+                                             knowledgeState == MinimapKnowledgeState.Unfiltered;
+                }
+
                 bool projected = axisAligned
                     ? WorldPlane2D.TryProjectWorldCmToScreenAxisAligned(
                         worldXcm,
@@ -763,8 +802,11 @@ namespace Ludots.Core.Presentation.Minimap
                     orientationLengthPx = orientationLengthPxValues[i];
                 }
 
+                MinimapMarkerRenderBucketKey styleKey = useAuthoredStyleBucket
+                    ? styleBucketKeys[i]
+                    : MinimapScreenMarkerBuffer.CreateStyleKey(in markerColor, markerSizePx, flags, orientationLengthPxValues[i]);
                 MinimapMarkerRenderBucketKey bucketKey = MinimapScreenMarkerBuffer.WithOrientationBucket(
-                    styleBucketKeys[i],
+                    styleKey,
                     orientationBucket);
                 int bucketSlot = bucketKey.HasOrientation ? bucketKey.OrientationBucket : 0;
                 int stableId = ComposeMarkerStableId(stableIds[i]);
@@ -811,15 +853,71 @@ namespace Ludots.Core.Presentation.Minimap
                         worldYcm,
                         normalizedX,
                         normalizedY,
-                        colors[i],
-                        sizesPx[i],
+                        markerColor,
+                        markerSizePx,
                         orientationRad,
                         orientationLengthPx,
-                    flags));
+                        flags,
+                        knowledgeState));
                 }
             }
 
             screenMarkers.MaterializeStagedBucketKeys();
+        }
+
+        private static MinimapKnowledgeState ResolveKnowledgeState(in KnowledgeProjection projection)
+        {
+            if (projection.Presence == KnowledgePresence.LiveVisible &&
+                projection.Position == KnowledgePositionAccess.Live)
+            {
+                return KnowledgePresenceSourceIsDisclosed(in projection)
+                    ? MinimapKnowledgeState.Disclosed
+                    : MinimapKnowledgeState.LiveVisible;
+            }
+
+            if (KnowledgePresenceSourceIsDisclosed(in projection))
+            {
+                return MinimapKnowledgeState.Disclosed;
+            }
+
+            if (projection.Position == KnowledgePositionAccess.LastKnown)
+            {
+                return MinimapKnowledgeState.LastKnown;
+            }
+
+            return projection.CanKnowEntity
+                ? MinimapKnowledgeState.Known
+                : MinimapKnowledgeState.Unknown;
+        }
+
+        private static bool KnowledgePresenceSourceIsDisclosed(in KnowledgeProjection projection)
+        {
+            return projection.Source != Entity.Null &&
+                   projection.Source != projection.Viewer &&
+                   projection.Source != projection.Target;
+        }
+
+        private static void ApplyKnowledgeMarkerStyle(
+            MinimapKnowledgeState state,
+            ref Vector4 color,
+            ref float sizePx)
+        {
+            switch (state)
+            {
+                case MinimapKnowledgeState.LastKnown:
+                    color = new Vector4(color.X * 0.62f, color.Y * 0.62f, color.Z * 0.62f, MathF.Min(color.W, 0.62f));
+                    sizePx = MathF.Max(3f, sizePx * 0.82f);
+                    return;
+
+                case MinimapKnowledgeState.Disclosed:
+                    color = new Vector4(
+                        MathF.Min(1f, (color.X * 0.55f) + 0.45f),
+                        MathF.Min(1f, (color.Y * 0.55f) + 0.36f),
+                        color.Z * 0.45f,
+                        MathF.Min(color.W, 0.78f));
+                    sizePx = MathF.Max(4f, sizePx * 0.92f);
+                    return;
+            }
         }
 
         private static int ComposeMarkerStableId(int stableId)

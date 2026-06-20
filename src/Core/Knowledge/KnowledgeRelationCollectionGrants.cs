@@ -200,6 +200,42 @@ namespace Ludots.Core.Knowledge
             return projected;
         }
 
+        public int ProjectOutgoing(
+            Entity viewer,
+            int currentTick,
+            Span<Entity> sourceBuffer,
+            Span<Entity> targetBuffer)
+        {
+            if (viewer == Entity.Null || sourceBuffer.IsEmpty || targetBuffer.IsEmpty)
+            {
+                return 0;
+            }
+
+            int projected = 0;
+            for (int grantIndex = 0; grantIndex < _grants.Count; grantIndex++)
+            {
+                if (!_grants.TryGetAt(grantIndex, out KnowledgeRelationCollectionGrant grant))
+                {
+                    continue;
+                }
+
+                int sourceCount = _relationships.CollectOutgoing(viewer, grant.RelationshipTypeId, sourceBuffer);
+                for (int sourceIndex = 0; sourceIndex < sourceCount; sourceIndex++)
+                {
+                    projected += ProjectSource(
+                        viewer,
+                        sourceBuffer[sourceIndex],
+                        grant.RelationshipTypeId,
+                        grant.CollectionKeyId,
+                        currentTick,
+                        in grant.Disclosure,
+                        targetBuffer);
+                }
+            }
+
+            return projected;
+        }
+
         private int ProjectSource(
             Entity viewer,
             Entity source,
@@ -234,6 +270,42 @@ namespace Ludots.Core.Knowledge
                     _projection.Upsert(viewer, target, record);
                     projected++;
                 }
+            }
+
+            return projected;
+        }
+
+        private int ProjectSource(
+            Entity viewer,
+            Entity source,
+            int relationshipTypeId,
+            int collectionKeyId,
+            int currentTick,
+            in KnowledgeDisclosureRecord disclosure,
+            Span<Entity> targetBuffer)
+        {
+            if (viewer == Entity.Null ||
+                source == Entity.Null ||
+                relationshipTypeId < 0 ||
+                collectionKeyId <= 0 ||
+                targetBuffer.IsEmpty)
+            {
+                return 0;
+            }
+
+            int targetCount = _collections.CopyEntities(source, collectionKeyId, targetBuffer);
+            KnowledgeDisclosureRecord record = CreateProjectedRecord(source, currentTick, disclosure);
+            int projected = 0;
+            for (int targetIndex = 0; targetIndex < targetCount; targetIndex++)
+            {
+                Entity target = targetBuffer[targetIndex];
+                if (target == Entity.Null)
+                {
+                    continue;
+                }
+
+                _projection.Upsert(viewer, target, record);
+                projected++;
             }
 
             return projected;

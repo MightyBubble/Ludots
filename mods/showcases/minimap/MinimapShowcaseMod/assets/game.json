@@ -1,3 +1,10 @@
 {
-  "startupMapId": "minimap_showcase"
+  "startupMapId": "minimap_showcase",
+  "presentation": {
+    "minimap": {
+      "minZoomExtentMode": "ExplicitCm",
+      "minZoomExplicitHalfExtentCm": 750.0,
+      "maxZoomExtentMode": "FullMap"
+    }
+  }
 }

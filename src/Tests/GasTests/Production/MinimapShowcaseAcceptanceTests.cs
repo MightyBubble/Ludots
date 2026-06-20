@@ -6,8 +6,12 @@ using System.Linq;
 using System.Numerics;
 using System.Text;
 using System.Text.Json;
+using Arch.Core;
+using Ludots.Core.EntityCollections;
 using Ludots.Core.Engine;
+using Ludots.Core.Gameplay.Relationships;
 using Ludots.Core.Input.Runtime;
+using Ludots.Core.Knowledge;
 using Ludots.Core.Mathematics;
 using Ludots.Core.Presentation.Camera;
 using Ludots.Core.Presentation.Hud;
@@ -43,7 +47,8 @@ public sealed class MinimapShowcaseAcceptanceTests
         float SizePx,
         float OrientationRad,
         float OrientationLengthPx,
-        uint Flags);
+        uint Flags,
+        MinimapKnowledgeState KnowledgeState);
 
     private sealed record SnapshotView(
         string MapId,
@@ -483,7 +488,8 @@ public sealed class MinimapShowcaseAcceptanceTests
                 marker.SizePx,
                 marker.OrientationRad,
                 marker.OrientationLengthPx,
-                marker.Flags));
+                marker.Flags,
+                marker.KnowledgeState));
         }
 
         return new SnapshotView(
@@ -544,6 +550,88 @@ public sealed class MinimapShowcaseAcceptanceTests
             $"beforeExtent={before.HalfExtentCm:0.###} afterExtent={after.HalfExtentCm:0.###} " +
             $"beforeIds=[{string.Join(",", before.VisibleMarkers.Select(marker => marker.StableId))}] " +
             $"afterIds=[{string.Join(",", after.VisibleMarkers.Select(marker => marker.StableId))}]");
+    }
+
+    private static void InstallKnowledgeServices(
+        GameEngine engine,
+        KnowledgeProjectionStore store,
+        KnowledgeRelationCollectionGrantStore? grants,
+        KnowledgeRelationCollectionProjector? projector)
+    {
+        engine.SetService(CoreServiceKeys.KnowledgeProjectionStore, store);
+        if (grants != null)
+        {
+            engine.SetService(CoreServiceKeys.KnowledgeRelationCollectionGrantStore, grants);
+        }
+
+        if (projector != null)
+        {
+            engine.SetService(CoreServiceKeys.KnowledgeRelationCollectionProjector, projector);
+        }
+
+        engine.SetService(CoreServiceKeys.KnowledgeProjectionResolver, new KnowledgeProjectionResolver(store, projector));
+    }
+
+    private static void SeedKnowledgeMarkers(MinimapMarkerBuffer markers, params Entity[] owners)
+    {
+        markers.BeginFrame();
+        var color = new Vector4(0.12f, 0.82f, 1f, 1f);
+        for (int i = 0; i < owners.Length; i++)
+        {
+            Assert.That(markers.TryAdd(
+                8001 + i,
+                owners[i],
+                1000f * (i + 1),
+                0f,
+                in color,
+                8f), Is.True);
+        }
+    }
+
+    private static KnowledgeDisclosureRecord CreateKnowledgeRecord(
+        KnowledgePresence presence,
+        KnowledgePositionAccess position,
+        Entity source,
+        int expiryTick = 0)
+    {
+        return new KnowledgeDisclosureRecord(
+            presence,
+            position,
+            KnowledgeIdMask256.Empty.WithId(1),
+            KnowledgeIdMask256.Empty.WithId(2),
+            KnowledgeIdMask256.Empty,
+            source,
+            observedTick: 1,
+            expiryTick,
+            confidencePermille: 900,
+            revision: 0);
+    }
+
+    private static int CountState(SnapshotView snapshot, MinimapKnowledgeState state)
+    {
+        int count = 0;
+        for (int i = 0; i < snapshot.VisibleMarkers.Count; i++)
+        {
+            if (snapshot.VisibleMarkers[i].KnowledgeState == state)
+            {
+                count++;
+            }
+        }
+
+        return count;
+    }
+
+    private static MarkerView FindMarkerByWorldX(SnapshotView snapshot, float worldXcm)
+    {
+        for (int i = 0; i < snapshot.VisibleMarkers.Count; i++)
+        {
+            if (MathF.Abs(snapshot.VisibleMarkers[i].WorldXcm - worldXcm) <= 0.001f)
+            {
+                return snapshot.VisibleMarkers[i];
+            }
+        }
+
+        throw new InvalidOperationException($"Marker at worldX={worldXcm} was not visible.");
     }
 
     private static float DistanceBetweenMarkers(SnapshotView snapshot, int stableIdA, int stableIdB)

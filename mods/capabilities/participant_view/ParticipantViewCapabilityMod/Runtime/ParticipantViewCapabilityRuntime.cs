@@ -3,6 +3,7 @@ using System.Threading.Tasks;
 using Arch.Core;
 using Ludots.Core.Engine;
 using Ludots.Core.Input.Selection;
+using Ludots.Core.Map;
 using Ludots.Core.Scripting;
 using Ludots.UI;
 using ParticipantViewCapabilityMod.Systems;
@@ -164,9 +165,15 @@ internal sealed class ParticipantViewCapabilityRuntime
         }
 
         if (!engine.GlobalContext.TryGetValue(CoreServiceKeys.LocalPlayerEntity.Name, out object? localObj) ||
-            localObj is not Entity viewer ||
-            viewer == Entity.Null ||
-            !engine.World.IsAlive(viewer))
+            localObj is not Entity selectionOwner ||
+            selectionOwner == Entity.Null ||
+            !engine.World.IsAlive(selectionOwner))
+        {
+            return;
+        }
+
+        Entity viewViewer = ResolveCurrentViewerEntity(engine, session);
+        if (viewViewer == Entity.Null || !engine.World.IsAlive(viewViewer))
         {
             return;
         }
@@ -179,14 +186,14 @@ internal sealed class ParticipantViewCapabilityRuntime
                 ? ParticipantViewProjection.ResolveTeamMembers(engine.World, session, _selectedTeamId)
                 : Array.Empty<Entity>();
 
-        ReplaceSelectionIfChanged(selection, viewer, members);
+        ReplaceSelectionIfChanged(selection, selectionOwner, members);
         if (!SelectionContextRuntime.TrySetCurrentView(
                 engine.World,
                 engine.GlobalContext,
                 selection,
-                viewer,
+                viewViewer,
                 SelectionViewKeys.Primary,
-                viewer,
+                selectionOwner,
                 SelectionSetKeys.LivePrimary,
                 out _))
         {
@@ -264,6 +271,27 @@ internal sealed class ParticipantViewCapabilityRuntime
         return teamId > 0 &&
                engine.CurrentMapSession?.TeamEntityLookup.TryGet(teamId, out entity) == true &&
                engine.World.IsAlive(entity);
+    }
+
+    private Entity ResolveCurrentViewerEntity(GameEngine engine, MapSession session)
+    {
+        if (_mode == ParticipantViewMode.Players &&
+            _selectedPlayerId > 0 &&
+            session.PlayerEntityLookup.TryGet(_selectedPlayerId, out Entity playerRepresentative) &&
+            engine.World.IsAlive(playerRepresentative))
+        {
+            return playerRepresentative;
+        }
+
+        if (_mode == ParticipantViewMode.Teams &&
+            _selectedTeamId > 0 &&
+            session.TeamEntityLookup.TryGet(_selectedTeamId, out Entity teamRepresentative) &&
+            engine.World.IsAlive(teamRepresentative))
+        {
+            return teamRepresentative;
+        }
+
+        return Entity.Null;
     }
 
     private static void ReplaceSelectionIfChanged(

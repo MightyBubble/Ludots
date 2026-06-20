@@ -5,6 +5,110 @@
     "capability_standard_participant_views",
     "capability.participant_view"
   ],
+  "Metadata": {
+    "participantViewKnowledge": {
+      "Projections": [
+        {
+          "Viewers": [ "player:1" ],
+          "Targets": { "Kind": "playerMembers", "PlayerId": 1 },
+          "Presence": "LiveVisible",
+          "Position": "Live",
+          "Source": "viewer",
+          "Attributes": [ "Health" ],
+          "RelationshipTypes": [ "Participant" ],
+          "ConfidencePermille": 1000
+        },
+        {
+          "Viewers": [ "team:1" ],
+          "Targets": { "Kind": "teamMembers", "TeamId": 1 },
+          "Presence": "LiveVisible",
+          "Position": "Live",
+          "Source": "viewer",
+          "Attributes": [ "Health" ],
+          "RelationshipTypes": [ "Participant" ],
+          "ConfidencePermille": 1000
+        },
+        {
+          "Viewers": [ "team:2" ],
+          "Targets": { "Kind": "teamMembers", "TeamId": 2 },
+          "Presence": "LiveVisible",
+          "Position": "Live",
+          "Source": "viewer",
+          "Attributes": [ "Health" ],
+          "RelationshipTypes": [ "Participant" ],
+          "ConfidencePermille": 1000
+        },
+        {
+          "Viewers": [ "team:3" ],
+          "Targets": { "Kind": "teamMembers", "TeamId": 3 },
+          "Presence": "LiveVisible",
+          "Position": "Live",
+          "Source": "viewer",
+          "Attributes": [ "Health" ],
+          "RelationshipTypes": [ "Participant" ],
+          "ConfidencePermille": 1000
+        },
+        {
+          "Viewers": [ "team:4" ],
+          "Targets": { "Kind": "teamMembers", "TeamId": 4 },
+          "Presence": "LiveVisible",
+          "Position": "Live",
+          "Source": "viewer",
+          "Attributes": [ "Health" ],
+          "RelationshipTypes": [ "Participant" ],
+          "ConfidencePermille": 1000
+        }
+      ],
+      "Relations": [
+        {
+          "Viewers": [ "player:1" ],
+          "Target": "entity:npc-amber-envoy",
+          "RelationshipType": "Participant"
+        }
+      ],
+      "Collections": [
+        {
+          "Owner": "player:2",
+          "Key": "participant_view.ally.share",
+          "Entities": [
+            "entity:unit-azure-beta-1",
+            "entity:unit-azure-beta-2"
+          ],
+          "Title": "Ally disclosure",
+          "Summary": "Player 2 exposes only its chosen unit collection to Player 1."
+        },
+        {
+          "Owner": "entity:npc-amber-envoy",
+          "Key": "participant_view.neutral.rumor",
+          "Entities": [
+            "entity:unit-amber-alpha-1",
+            "entity:unit-amber-alpha-2"
+          ],
+          "Title": "Neutral envoy rumor",
+          "Summary": "A neutral entity discloses last-known positions for selected Amber units."
+        }
+      ],
+      "Grants": [
+        {
+          "RelationshipType": "Participant",
+          "CollectionKey": "participant_view.ally.share",
+          "Presence": "HiddenWithSource",
+          "Position": "LastKnown",
+          "Attributes": [ "Health" ],
+          "RelationshipTypes": [ "Participant" ],
+          "ConfidencePermille": 760
+        },
+        {
+          "RelationshipType": "Participant",
+          "CollectionKey": "participant_view.neutral.rumor",
+          "Presence": "HiddenWithSource",
+          "Position": "LastKnown",
+          "Attributes": [ "Health" ],
+          "ConfidencePermille": 520
+        }
+      ]
+    }
+  },
   "Boards": [
     {
       "Name": "default",
@@ -227,6 +331,15 @@
         "WorldPositionCm": { "Value": { "X": 2300, "Y": 2600 } },
         "Team": { "Id": 4 },
         "PlayerOwner": { "PlayerId": 6 }
+      }
+    },
+    {
+      "InstanceId": "npc-amber-envoy",
+      "Template": "mass_navigation_agent_amber_light",
+      "Overrides": {
+        "Name": { "Value": "Amber Envoy" },
+        "WorldPositionCm": { "Value": { "X": 400, "Y": 1700 } },
+        "Team": { "Id": 3 }
       }
     }
   ],

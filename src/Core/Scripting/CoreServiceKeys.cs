@@ -173,6 +173,9 @@ namespace Ludots.Core.Scripting
         public static readonly ServiceKey<TeamEntityLookup> TeamEntityLookup = new("TeamEntityLookup");
         public static readonly ServiceKey<PlayerEntityLookup> PlayerEntityLookup = new("PlayerEntityLookup");
         public static readonly ServiceKey<EntitySetQueryRuntime> EntitySetQueryRuntime = new("EntitySetQueryRuntime");
+        public static readonly ServiceKey<KnowledgeProjectionStore> KnowledgeProjectionStore = new("KnowledgeProjectionStore");
+        public static readonly ServiceKey<KnowledgeRelationCollectionGrantStore> KnowledgeRelationCollectionGrantStore = new("KnowledgeRelationCollectionGrantStore");
+        public static readonly ServiceKey<KnowledgeRelationCollectionProjector> KnowledgeRelationCollectionProjector = new("KnowledgeRelationCollectionProjector");
         public static readonly ServiceKey<KnowledgeProjectionResolver> KnowledgeProjectionResolver = new("KnowledgeProjectionResolver");
         public static readonly ServiceKey<Entity> RelationshipEventSource = new("RelationshipEvent.Source");
         public static readonly ServiceKey<Entity> RelationshipEventTarget = new("RelationshipEvent.Target");

@@ -179,6 +179,34 @@ namespace Ludots.Core.Knowledge
             return TryResolve(viewer, target, currentTick, viewerScopes, out projection);
         }
 
+        public bool TryResolveWithRelationGrants(
+            Entity viewer,
+            Entity target,
+            int currentTick,
+            ReadOnlySpan<Entity> viewerScopes,
+            Span<Entity> relationSourceBuffer,
+            Span<Entity> relationTargetBuffer,
+            out KnowledgeProjection projection)
+        {
+            if (TryResolve(viewer, target, currentTick, viewerScopes, out projection))
+            {
+                return true;
+            }
+
+            if (_relationProjector != null &&
+                !relationSourceBuffer.IsEmpty &&
+                !relationTargetBuffer.IsEmpty)
+            {
+                _relationProjector.ProjectOutgoing(
+                    viewer,
+                    currentTick,
+                    relationSourceBuffer,
+                    relationTargetBuffer);
+            }
+
+            return TryResolve(viewer, target, currentTick, viewerScopes, out projection);
+        }
+
         private struct ProjectionAccumulator
         {
             private bool _hasAny;
@@ -216,7 +244,7 @@ namespace Ludots.Core.Knowledge
                     _source = record.Source;
                 }
 
-                if (record.Presence > _presence)
+                if (PresenceRank(record.Presence) > PresenceRank(_presence))
                 {
                     _presence = record.Presence;
                 }
@@ -261,8 +289,21 @@ namespace Ludots.Core.Knowledge
 
             private bool IsStrongerSource(in KnowledgeDisclosureRecord record)
             {
-                return record.Presence > _presence ||
-                       (record.Presence == _presence && record.Position > _position);
+                int recordRank = PresenceRank(record.Presence);
+                int currentRank = PresenceRank(_presence);
+                return recordRank > currentRank ||
+                       (recordRank == currentRank && record.Position > _position);
+            }
+
+            private static int PresenceRank(KnowledgePresence presence)
+            {
+                return presence switch
+                {
+                    KnowledgePresence.LiveVisible => 3,
+                    KnowledgePresence.HiddenWithSource => 2,
+                    KnowledgePresence.Known => 1,
+                    _ => 0,
+                };
             }
 
             private static int MergeExpiry(int left, int right)

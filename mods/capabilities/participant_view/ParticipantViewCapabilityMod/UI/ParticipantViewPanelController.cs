@@ -9,6 +9,7 @@ using Ludots.Core.Gameplay.GAS.Registry;
 using Ludots.Core.Gameplay.Relationships;
 using Ludots.Core.Gameplay.Teams;
 using Ludots.Core.Input.Selection;
+using Ludots.Core.Knowledge;
 using Ludots.Core.Map;
 using Ludots.Core.Mathematics;
 using Ludots.Core.Scripting;
@@ -252,11 +253,15 @@ internal sealed class ParticipantViewPanelController
                 Ui.Text(detail.Summary).FontSize(11f).Color("#8EA2BD").WhiteSpace(UiWhiteSpace.Normal),
                 BuildInfoBlock("Representative", detail.RepresentativeHeader, detail.RepresentativeLines),
                 BuildInfoBlock("Projection", detail.ProjectionHeader, detail.ProjectionLines),
+                BuildInfoBlock("Knowledge", detail.KnowledgeHeader, detail.KnowledgeLines),
                 BuildInfoBlock("Resources", detail.ResourceHeader, detail.ResourceLines),
                 BuildInfoBlock("Members", detail.MemberHeader, detail.MemberLines),
                 Ui.ScrollView(memberRows)
                     .Gap(6f)
-                    .Height(180f))
+                    .Height(132f),
+                Ui.ScrollView(BuildMemberRows(detail.KnowledgeRows))
+                    .Gap(6f)
+                    .Height(132f))
             .Padding(12f)
             .Gap(8f)
             .Radius(8f)
@@ -481,6 +486,8 @@ internal sealed class ParticipantViewPanelController
             $"SelectionRuntime.LivePrimary count: {members.Length}"
         };
 
+        KnowledgeRowSnapshot[] knowledgeRows = BuildKnowledgeSnapshots(engine, session, representative);
+        string[] knowledgeLines = BuildKnowledgeSummaryLines(knowledgeRows);
         string[] resourceLines = BuildResourceLines(engine.World, representative);
         string memberHeader = members.Length == 0
             ? "No runtime members were projected."
@@ -497,13 +504,18 @@ internal sealed class ParticipantViewPanelController
             RepresentativeLines: representativeLines,
             ProjectionHeader: projectionHeader,
             ProjectionLines: projectionLines,
+            KnowledgeHeader: knowledgeRows.Length == 0
+                ? "No map member entities available for knowledge projection."
+                : $"{knowledgeRows.Length} map member entity(s) evaluated through KnowledgeProjectionResolver.",
+            KnowledgeLines: knowledgeLines,
             ResourceHeader: resourceLines.Length == 0
                 ? "Representative has no authored resources or tags."
                 : "Representative resources live directly on the ECS entity.",
             ResourceLines: resourceLines.Length == 0 ? new[] { "AttributeBuffer / GameplayTagContainer / TagCountContainer are empty." } : resourceLines,
             MemberHeader: memberHeader,
             MemberLines: memberLines,
-            Members: BuildMemberSnapshots(engine.World, members));
+            Members: BuildMemberSnapshots(engine.World, members),
+            KnowledgeRows: ToMemberSnapshots(knowledgeRows));
     }
 
     private static MemberSnapshot[] BuildMemberSnapshots(World world, Entity[] members)
@@ -519,6 +531,175 @@ internal sealed class ParticipantViewPanelController
         }
 
         return snapshots;
+    }
+
+    private static KnowledgeRowSnapshot[] BuildKnowledgeSnapshots(GameEngine engine, MapSession session, Entity viewer)
+    {
+        Entity[] targets = ParticipantViewProjection.ResolveMapMembers(engine.World, session);
+        var snapshots = new KnowledgeRowSnapshot[targets.Length];
+        KnowledgeProjectionResolver? resolver = engine.GetService(CoreServiceKeys.KnowledgeProjectionResolver);
+        int currentTick = KnowledgeProjectionConsumer.ResolveCurrentTick(engine.GlobalContext);
+        for (int i = 0; i < targets.Length; i++)
+        {
+            Entity target = targets[i];
+            ParticipantKnowledgeSnapshot knowledge = ParticipantViewProjection.ResolveKnowledgeSnapshot(
+                engine.World,
+                resolver,
+                viewer,
+                target,
+                currentTick);
+            string label = ResolveEntityLabel(engine.World, target, $"Entity {target.Id}");
+            snapshots[i] = new KnowledgeRowSnapshot(
+                Row: new MemberSnapshot(
+                    Label: $"{label}  |  {DescribeKnowledgeState(knowledge)}",
+                    Detail: $"{DescribeIdentity(engine.World, target)}  |  {DescribeWorldPosition(engine.World, target)}  |  {DescribeFiniteDisclosure(engine, knowledge)}"),
+                Knowledge: knowledge);
+        }
+
+        return snapshots;
+    }
+
+    private static string[] BuildKnowledgeSummaryLines(KnowledgeRowSnapshot[] rows)
+    {
+        int unknown = 0;
+        int known = 0;
+        int live = 0;
+        int lastKnown = 0;
+        int disclosed = 0;
+        int finiteAttr = 0;
+        int finiteRel = 0;
+        int finiteTag = 0;
+        for (int i = 0; i < rows.Length; i++)
+        {
+            ParticipantKnowledgeSnapshot knowledge = rows[i].Knowledge;
+            if (!knowledge.IsKnown)
+            {
+                unknown++;
+                continue;
+            }
+
+            known++;
+            if (knowledge.IsLiveVisible)
+            {
+                live++;
+            }
+
+            if (knowledge.IsLastKnown)
+            {
+                lastKnown++;
+            }
+
+            if (knowledge.IsDisclosed)
+            {
+                disclosed++;
+            }
+
+            if (knowledge.HasFiniteAttributes)
+            {
+                finiteAttr++;
+            }
+
+            if (knowledge.HasFiniteRelationships)
+            {
+                finiteRel++;
+            }
+
+            if (knowledge.HasFiniteTags)
+            {
+                finiteTag++;
+            }
+        }
+
+        return new[]
+        {
+            $"states unknown {unknown} | known {known} | live-visible {live} | last-known {lastKnown} | disclosed {disclosed}",
+            $"finite aspects attr {finiteAttr} | relationship {finiteRel} | tag {finiteTag}"
+        };
+    }
+
+    private static string DescribeKnowledgeState(ParticipantKnowledgeSnapshot knowledge)
+    {
+        if (!knowledge.IsKnown)
+        {
+            return "unknown";
+        }
+
+        if (knowledge.IsDisclosed)
+        {
+            return knowledge.IsLiveVisible ? "disclosed live-visible" : "disclosed last-known";
+        }
+
+        if (knowledge.IsLiveVisible)
+        {
+            return "live-visible";
+        }
+
+        if (knowledge.IsLastKnown)
+        {
+            return "last-known";
+        }
+
+        return "known";
+    }
+
+    private static MemberSnapshot[] ToMemberSnapshots(KnowledgeRowSnapshot[] rows)
+    {
+        var snapshots = new MemberSnapshot[rows.Length];
+        for (int i = 0; i < rows.Length; i++)
+        {
+            snapshots[i] = rows[i].Row;
+        }
+
+        return snapshots;
+    }
+
+    private static string DescribeFiniteDisclosure(GameEngine engine, ParticipantKnowledgeSnapshot knowledge)
+    {
+        string attr = DescribeMask(knowledge.AttributeMask, AttributeRegistry.GetName, prefix: "attr");
+        string relation = DescribeMask(
+            knowledge.RelationshipTypeMask,
+            id => ResolveRelationshipTypeName(engine, id),
+            prefix: "relation");
+        string tag = DescribeMask(knowledge.TagMask, TagRegistry.GetName, prefix: "tag");
+        string source = knowledge.IsDisclosed && knowledge.Source != Entity.Null
+            ? $"source #{knowledge.Source.Id}"
+            : "source self";
+        return $"{attr}  |  {relation}  |  {tag}  |  {source}  |  confidence {knowledge.ConfidencePermille}";
+    }
+
+    private static string DescribeMask(KnowledgeIdMask256 mask, Func<int, string> resolveName, string prefix)
+    {
+        var names = new string[8];
+        int count = 0;
+        for (int id = 0; id < 256 && count < names.Length; id++)
+        {
+            if (!mask.ContainsId(id))
+            {
+                continue;
+            }
+
+            string name = resolveName(id);
+            names[count++] = string.IsNullOrWhiteSpace(name) ? id.ToString() : name;
+        }
+
+        if (count == 0)
+        {
+            return $"{prefix} -";
+        }
+
+        return $"{prefix} {string.Join(",", names, 0, count)}";
+    }
+
+    private static string ResolveRelationshipTypeName(GameEngine engine, int relationshipTypeId)
+    {
+        if (engine.GetService(CoreServiceKeys.RelationshipTypeRegistry) is RelationshipTypeRegistry registry &&
+            relationshipTypeId >= 0 &&
+            relationshipTypeId < registry.Count)
+        {
+            return registry.Get(relationshipTypeId).Name;
+        }
+
+        return relationshipTypeId.ToString();
     }
 
     private static string DescribeIdentity(World world, Entity entity)
@@ -715,11 +896,14 @@ internal sealed class ParticipantViewPanelController
         string[] RepresentativeLines,
         string ProjectionHeader,
         string[] ProjectionLines,
+        string KnowledgeHeader,
+        string[] KnowledgeLines,
         string ResourceHeader,
         string[] ResourceLines,
         string MemberHeader,
         string[] MemberLines,
-        MemberSnapshot[] Members);
+        MemberSnapshot[] Members,
+        MemberSnapshot[] KnowledgeRows);
 
     private readonly record struct ParticipantOption(
         int Id,
@@ -731,4 +915,8 @@ internal sealed class ParticipantViewPanelController
     private readonly record struct MemberSnapshot(
         string Label,
         string Detail);
+
+    private readonly record struct KnowledgeRowSnapshot(
+        MemberSnapshot Row,
+        ParticipantKnowledgeSnapshot Knowledge);
 }
