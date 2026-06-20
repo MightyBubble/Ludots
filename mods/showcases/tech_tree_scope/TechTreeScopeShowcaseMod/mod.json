@@ -1,0 +1,14 @@
+{
+  "name": "TechTreeScopeShowcaseMod",
+  "version": "1.0.0",
+  "description": "Focused entity-scoped technology requirement showcase.",
+  "main": "bin/net8.0/TechTreeScopeShowcaseMod.dll",
+  "priority": 130,
+  "dependencies": {
+    "LudotsCoreMod": "^1.0.0",
+    "CoreInputMod": "^1.0.0",
+    "EntityCommandPanelMod": "^1.0.0"
+  },
+  "author": "OpenAI Codex",
+  "tags": ["showcase", "technology", "entity-scope"]
+}

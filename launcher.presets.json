@@ -56,6 +56,15 @@
       "buildMode": "auto"
     },
     {
+      "id": "tech_tree_scope_raylib",
+      "name": "Tech Tree Scope Raylib",
+      "selectors": [
+        "$tech_tree_scope"
+      ],
+      "adapterId": "raylib",
+      "buildMode": "auto"
+    },
+    {
       "id": "spatial_bounds_showcase_raylib",
       "name": "Spatial Bounds Showcase Raylib",
       "selectors": [

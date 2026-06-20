@@ -7,6 +7,7 @@ using Ludots.Core.Gameplay.GAS;
 using Ludots.Core.Gameplay.GAS.Components;
 using Ludots.Core.Gameplay.GAS.Registry;
 using Ludots.Core.Gameplay.GAS.Orders;
+using Ludots.Core.Gameplay.Technology;
 using Ludots.Core.Input.Orders;
 using Ludots.Core.Scripting;
 using Ludots.Core.UI.EntityCommandPanels;
@@ -20,6 +21,7 @@ namespace EntityCommandPanelMod.Runtime
         private readonly AbilityDefinitionRegistry? _abilityDefinitions;
         private readonly EffectTemplateRegistry? _effectTemplates;
         private readonly OrderTypeRegistry? _orderTypes;
+        private readonly TechnologyRequirementEvaluator? _technologyRequirements;
         private readonly IClock? _clock;
 
         public GasEntityCommandPanelSource(GameEngine engine)
@@ -28,6 +30,7 @@ namespace EntityCommandPanelMod.Runtime
             _abilityDefinitions = engine.GetService(CoreServiceKeys.AbilityDefinitionRegistry);
             _effectTemplates = engine.GetService(CoreServiceKeys.EffectTemplateRegistry);
             _orderTypes = engine.GetService(CoreServiceKeys.OrderTypeRegistry);
+            _technologyRequirements = engine.GetService(CoreServiceKeys.TechnologyRequirementEvaluator);
             _clock = engine.GetService(CoreServiceKeys.Clock);
         }
 
@@ -77,6 +80,8 @@ namespace EntityCommandPanelMod.Runtime
                 {
                     revision = HashCombine(revision, (uint)_engine.World.Get<AbilityFormSetRef>(target).FormSetId);
                 }
+
+                revision = HashTechnologyRequirementRevisions(revision, target, in baseSlots);
             }
 
             if (_engine.World.Has<AbilityExecInstance>(target))
@@ -342,9 +347,30 @@ namespace EntityCommandPanelMod.Runtime
                 string displayLabel = string.Empty;
                 string detailLabel = BuildEmptyDetailLabel(actionId);
                 short cooldownPermille = 0;
-                if (effective.AbilityId > 0 &&
+                AbilityDefinition abilityDefinition = default;
+                bool hasAbilityDefinition = effective.AbilityId > 0 &&
                     abilityDefinitions != null &&
-                    abilityDefinitions.TryGet(effective.AbilityId, out var abilityDefinition))
+                    abilityDefinitions.TryGet(effective.AbilityId, out abilityDefinition);
+                Entity templateEntity = ResolveTemplateEntity(in effective);
+                var technologyPreview = EvaluateTechnologyPreview(target, target, default, hasAbilityDefinition, in abilityDefinition, templateEntity);
+                if (technologyPreview.Show == TechnologyRequirementPreviewResult.Failed)
+                {
+                    destination[slotIndex] = BuildEmptySlot(slotIndex, actionId);
+                    continue;
+                }
+
+                if (technologyPreview.Show == TechnologyRequirementPreviewResult.Deferred ||
+                    technologyPreview.Use == TechnologyRequirementPreviewResult.Deferred)
+                {
+                    flags |= EntityCommandSlotStateFlags.PendingTarget;
+                }
+
+                if (technologyPreview.Use == TechnologyRequirementPreviewResult.Failed)
+                {
+                    flags |= EntityCommandSlotStateFlags.Blocked;
+                }
+
+                if (hasAbilityDefinition)
                 {
                     string abilityInteractionModeKey = ResolveAbilityInteractionModeKey(interactionModeKey, in abilityDefinition);
                     if (abilityDefinition.HasActivationBlockTags &&
@@ -395,6 +421,118 @@ namespace EntityCommandPanelMod.Runtime
             }
 
             return count;
+        }
+
+        private static EntityCommandPanelSlotView BuildEmptySlot(int slotIndex, string actionId)
+        {
+            return new EntityCommandPanelSlotView(
+                slotIndex,
+                0,
+                0,
+                EntityCommandSlotStateFlags.Empty,
+                0,
+                0,
+                0,
+                string.Empty,
+                BuildEmptyDetailLabel(actionId),
+                actionId);
+        }
+
+        private TechnologyRequirementPreview EvaluateTechnologyPreview(
+            Entity actor,
+            Entity subject,
+            Entity explicitScopeHost,
+            bool hasAbilityDefinition,
+            in AbilityDefinition definition,
+            Entity templateEntity)
+        {
+            var preview = new TechnologyRequirementPreview
+            {
+                Show = hasAbilityDefinition
+                    ? EvaluateTechnologyShowRequirement(actor, subject, explicitScopeHost, in definition)
+                    : TechnologyRequirementPreviewResult.Satisfied,
+                Use = hasAbilityDefinition
+                    ? EvaluateTechnologyUseRequirement(actor, subject, explicitScopeHost, in definition)
+                    : TechnologyRequirementPreviewResult.Satisfied
+            };
+
+            if (_engine.World.IsAlive(templateEntity) &&
+                _engine.World.Has<AbilityTechnologyRequirements>(templateEntity))
+            {
+                ref readonly var requirements = ref _engine.World.Get<AbilityTechnologyRequirements>(templateEntity);
+                preview.Show = CombinePreview(preview.Show, EvaluateTechnologyRequirement(actor, subject, explicitScopeHost, requirements.ShowRequirementId));
+                preview.Use = CombinePreview(preview.Use, EvaluateTechnologyRequirement(actor, subject, explicitScopeHost, requirements.UseRequirementId));
+            }
+
+            return preview;
+        }
+
+        private static TechnologyRequirementPreviewResult CombinePreview(
+            TechnologyRequirementPreviewResult current,
+            TechnologyRequirementPreviewResult next)
+        {
+            if (current == TechnologyRequirementPreviewResult.Failed ||
+                next == TechnologyRequirementPreviewResult.Failed)
+            {
+                return TechnologyRequirementPreviewResult.Failed;
+            }
+
+            if (current == TechnologyRequirementPreviewResult.Deferred ||
+                next == TechnologyRequirementPreviewResult.Deferred)
+            {
+                return TechnologyRequirementPreviewResult.Deferred;
+            }
+
+            return TechnologyRequirementPreviewResult.Satisfied;
+        }
+
+        private TechnologyRequirementPreviewResult EvaluateTechnologyShowRequirement(Entity actor, Entity subject, Entity explicitScopeHost, in AbilityDefinition definition)
+        {
+            if (!definition.HasShowTechnologyRequirement)
+            {
+                return TechnologyRequirementPreviewResult.Satisfied;
+            }
+
+            return EvaluateTechnologyRequirement(actor, subject, explicitScopeHost, definition.ShowTechnologyRequirementId);
+        }
+
+        private TechnologyRequirementPreviewResult EvaluateTechnologyUseRequirement(Entity actor, Entity subject, Entity explicitScopeHost, in AbilityDefinition definition)
+        {
+            if (!definition.HasUseTechnologyRequirement)
+            {
+                return TechnologyRequirementPreviewResult.Satisfied;
+            }
+
+            return EvaluateTechnologyRequirement(actor, subject, explicitScopeHost, definition.UseTechnologyRequirementId);
+        }
+
+        private TechnologyRequirementPreviewResult EvaluateTechnologyRequirement(Entity actor, Entity subject, Entity explicitScopeHost, int requirementId)
+        {
+            if (requirementId <= 0)
+            {
+                return TechnologyRequirementPreviewResult.Satisfied;
+            }
+
+            TechnologyRequirementEvaluator evaluator = RequireTechnologyRequirements();
+            if (!_engine.World.IsAlive(explicitScopeHost) && evaluator.RequiresExplicitScope(requirementId))
+            {
+                return TechnologyRequirementPreviewResult.Deferred;
+            }
+
+            var context = new TechnologyRequirementEvaluationContext(actor, subject, explicitScopeHost);
+            return evaluator.Evaluate(requirementId, in context)
+                ? TechnologyRequirementPreviewResult.Satisfied
+                : TechnologyRequirementPreviewResult.Failed;
+        }
+
+        private TechnologyRequirementEvaluator RequireTechnologyRequirements()
+        {
+            if (_technologyRequirements == null)
+            {
+                throw new InvalidOperationException("Ability technology requirement is configured, but TechnologyRequirementEvaluator is not registered.");
+            }
+
+            return _technologyRequirements;
         }
 
         private static string ResolveAbilityInteractionModeKey(string interactionModeKey, in AbilityDefinition abilityDefinition)
@@ -478,7 +616,13 @@ namespace EntityCommandPanelMod.Runtime
         {
             if (groupIndex != 0 ||
                 slotIndex < 0 ||
-                !_engine.World.IsAlive(target))
+                !_engine.World.IsAlive(target) ||
+                !_engine.World.Has<AbilityStateBuffer>(target))
+            {
+                return false;
+            }
+
+            if (!CanActivateTechnologyRequirement(target, slotIndex))
             {
                 return false;
             }
@@ -496,6 +640,21 @@ namespace EntityCommandPanelMod.Runtime
             }
 
             return inputMapping.TryActivateMappedAction(actionId, preferUiAiming: true);
+        }
+
+        private bool CanActivateTechnologyRequirement(Entity target, int slotIndex)
+        {
+            ref readonly var baseSlots = ref _engine.World.Get<AbilityStateBuffer>(target);
+            AbilitySlotState slot = ResolveEffectiveSlot(target, in baseSlots, slotIndex);
+            Entity templateEntity = ResolveTemplateEntity(in slot);
+            AbilityDefinition definition = default;
+            bool hasDefinition = slot.AbilityId > 0 &&
+                _abilityDefinitions != null &&
+                _abilityDefinitions.TryGet(slot.AbilityId, out definition);
+
+            var preview = EvaluateTechnologyPreview(target, target, default, hasDefinition, in definition, templateEntity);
+            return preview.Show != TechnologyRequirementPreviewResult.Failed &&
+                   preview.Use != TechnologyRequirementPreviewResult.Failed;
         }
 
         private bool TryBuildAbilityStatus(Entity target, out EntityCommandPanelStatusView status)
@@ -815,6 +974,7 @@ namespace EntityCommandPanelMod.Runtime
                 AbilityExecRunState.Committed => "Committed",
                 AbilityExecRunState.Finished => "Finished",
                 AbilityExecRunState.Interrupted => "Interrupted",
+                AbilityExecRunState.Failed => "Failed",
                 _ => "Ability"
             };
         }
@@ -1175,6 +1335,92 @@ namespace EntityCommandPanelMod.Runtime
             return (short)Math.Clamp(value, 0, 1000);
         }
 
+        private uint HashTechnologyRequirementRevisions(uint current, Entity target, in AbilityStateBuffer baseSlots)
+        {
+            if (_technologyRequirements == null)
+            {
+                return current;
+            }
+
+            int displayedSlots = ResolveDisplayedSlotCount(target, in baseSlots);
+            for (int slotIndex = 0; slotIndex < displayedSlots; slotIndex++)
+            {
+                AbilitySlotState slot = ResolveEffectiveSlot(target, in baseSlots, slotIndex);
+                Entity templateEntity = ResolveTemplateEntity(in slot);
+                AbilityDefinition definition = default;
+                bool hasDefinition = slot.AbilityId > 0 &&
+                    _abilityDefinitions != null &&
+                    _abilityDefinitions.TryGet(slot.AbilityId, out definition);
+
+                var context = new TechnologyRequirementEvaluationContext(target, target);
+                if (hasDefinition && definition.HasShowTechnologyRequirement)
+                {
+                    current = HashTechnologyRequirementRevision(current, definition.ShowTechnologyRequirementId, in context);
+                }
+
+                if (hasDefinition && definition.HasUseTechnologyRequirement)
+                {
+                    current = HashTechnologyRequirementRevision(current, definition.UseTechnologyRequirementId, in context);
+                }
+
+                if (_engine.World.IsAlive(templateEntity) &&
+                    _engine.World.Has<AbilityTechnologyRequirements>(templateEntity))
+                {
+                    ref readonly var requirements = ref _engine.World.Get<AbilityTechnologyRequirements>(templateEntity);
+                    current = HashTechnologyRequirementRevision(current, requirements.ShowRequirementId, in context);
+                    current = HashTechnologyRequirementRevision(current, requirements.UseRequirementId, in context);
+                }
+            }
+
+            return current;
+        }
+
+        private uint HashTechnologyRequirementRevision(uint current, int requirementId, in TechnologyRequirementEvaluationContext context)
+        {
+            if (requirementId <= 0 || _technologyRequirements == null)
+            {
+                return current;
+            }
+
+            current = HashCombine(current, _technologyRequirements.ComputeScopeRevision(requirementId, in context));
+            if (_technologyRequirements.UsesGraphValidation(requirementId))
+            {
+                if (_clock == null)
+                {
+                    throw new InvalidOperationException("Graph-backed technology command requirements require the engine clock for UI cache invalidation.");
+                }
+
+                current = HashCombine(current, (uint)_clock.Now(ClockDomainId.FixedFrame));
+                current = HashCombine(current, (uint)_clock.Now(ClockDomainId.Step));
+            }
+
+            return current;
+        }
+
+        private AbilitySlotState ResolveEffectiveSlot(Entity target, in AbilityStateBuffer baseSlots, int slotIndex)
+        {
+            bool hasForm = _engine.World.Has<AbilityFormSlotBuffer>(target);
+            AbilityFormSlotBuffer formSlots = hasForm ? _engine.World.Get<AbilityFormSlotBuffer>(target) : default;
+            bool hasItemGranted = _engine.World.Has<Ludots.Core.Gameplay.Items.ItemGrantedSlotBuffer>(target);
+            Ludots.Core.Gameplay.Items.ItemGrantedSlotBuffer itemGrantedSlots = hasItemGranted
+                ? _engine.World.Get<Ludots.Core.Gameplay.Items.ItemGrantedSlotBuffer>(target)
+                : default;
+            bool hasGranted = _engine.World.Has<GrantedSlotBuffer>(target);
+            GrantedSlotBuffer grantedSlots = hasGranted ? _engine.World.Get<GrantedSlotBuffer>(target) : default;
+            return AbilitySlotResolver.Resolve(in baseSlots, in formSlots, hasForm, in itemGrantedSlots, hasItemGranted, in grantedSlots, hasGranted, slotIndex);
+        }
+
+        private Entity ResolveTemplateEntity(in AbilitySlotState slot)
+        {
+            if (slot.TemplateEntityId <= 0)
+            {
+                return default;
+            }
+
+            Entity templateEntity = EntityUtil.Reconstruct(slot.TemplateEntityId, slot.TemplateEntityWorldId, slot.TemplateEntityVersion);
+            return _engine.World.IsAlive(templateEntity) ? templateEntity : default;
+        }
+
         private static uint HashAbilityExec(uint current, in AbilityExecInstance exec)
         {
             current = HashCombine(current, (uint)exec.AbilityId);
@@ -1289,6 +1535,19 @@ namespace EntityCommandPanelMod.Runtime
             Base,
             RoutePreview,
             Granted
+        }
+
+        private enum TechnologyRequirementPreviewResult : byte
+        {
+            Satisfied,
+            Failed,
+            Deferred
+        }
+
+        private struct TechnologyRequirementPreview
+        {
+            public TechnologyRequirementPreviewResult Show;
+            public TechnologyRequirementPreviewResult Use;
         }
     }
 }

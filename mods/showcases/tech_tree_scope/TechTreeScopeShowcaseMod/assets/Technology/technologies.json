@@ -1,0 +1,5 @@
+[
+  { "id": "Tech.Showcase.CityDrill", "scope": "city" },
+  { "id": "Tech.Showcase.FactionMandate", "scope": "faction" },
+  { "id": "Tech.Showcase.ProvinceLogistics", "scope": "province" }
+]

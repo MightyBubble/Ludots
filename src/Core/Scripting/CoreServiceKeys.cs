@@ -22,6 +22,7 @@ using Ludots.Core.Gameplay.Relationships;
 using Ludots.Core.Gameplay.Relationships.Config;
 using Ludots.Core.Gameplay.Spawning;
 using Ludots.Core.Gameplay.GAS.Systems;
+using Ludots.Core.Gameplay.Technology;
 using Ludots.Core.Gameplay.Teams;
 using Ludots.Core.GraphRuntime;
 using Ludots.Core.Hosting;
@@ -141,6 +142,10 @@ namespace Ludots.Core.Scripting
         public static readonly ServiceKey<EffectRequestQueue> EffectRequestQueue = new("EffectRequestQueue");
         public static readonly ServiceKey<AbilityDefinitionRegistry> AbilityDefinitionRegistry = new("AbilityDefinitionRegistry");
         public static readonly ServiceKey<AbilityFormSetRegistry> AbilityFormSetRegistry = new("AbilityFormSetRegistry");
+        public static readonly ServiceKey<TechnologyDefinitionRegistry> TechnologyDefinitionRegistry = new("TechnologyDefinitionRegistry");
+        public static readonly ServiceKey<TechnologyRequirementRegistry> TechnologyRequirementRegistry = new("TechnologyRequirementRegistry");
+        public static readonly ServiceKey<TechnologyScopeKeyRegistry> TechnologyScopeKeyRegistry = new("TechnologyScopeKeyRegistry");
+        public static readonly ServiceKey<TechnologyRequirementEvaluator> TechnologyRequirementEvaluator = new("TechnologyRequirementEvaluator");
         public static readonly ServiceKey<ContextGroupRegistry> ContextGroupRegistry = new("ContextGroupRegistry");
         public static readonly ServiceKey<GraphProgramRegistry> GraphProgramRegistry = new("GraphProgramRegistry");
         public static readonly ServiceKey<ExtensionAttributeRegistry> ExtensionAttributeRegistry = new("ExtensionAttributeRegistry");

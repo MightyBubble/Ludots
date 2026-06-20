@@ -76,6 +76,8 @@ namespace Ludots.Core.Gameplay.GAS.Components
         Finished = 3,
         /// <summary>Execution was interrupted (e.g., stun).</summary>
         Interrupted = 4,
+        /// <summary>Execution failed after startup and already emitted a CastFailed event.</summary>
+        Failed = 5,
     }
 
     /// <summary>
@@ -219,6 +221,9 @@ namespace Ludots.Core.Gameplay.GAS.Components
         public GasClockId ActiveClockId;
         /// <summary>True when this instance is executing a toggle ability's deactivate timeline.</summary>
         public bool IsToggleDeactivating;
+        /// <summary>Technology Use requirement needs target context from a later input/selection gate.</summary>
+        public byte PendingTechnologyUseRequirement;
+        public int PendingTechnologyRequirementId;
 
         public void AddMultiTarget(Entity entity)
         {

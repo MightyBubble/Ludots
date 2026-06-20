@@ -1,0 +1,12 @@
+{
+  "WindowWidth": 1280,
+  "WindowHeight": 720,
+  "WindowTitle": "Ludots Engine - Tech Tree Scope Showcase",
+  "TargetFps": 60,
+  "ModPaths": [
+    "../../../../../../../mods/LudotsCoreMod",
+    "../../../../../../../mods/CoreInputMod",
+    "../../../../../../../mods/EntityCommandPanelMod",
+    "../../../../../../../mods/showcases/tech_tree_scope/TechTreeScopeShowcaseMod"
+  ]
+}
