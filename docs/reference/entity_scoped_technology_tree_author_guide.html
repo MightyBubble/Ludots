@@ -354,7 +354,7 @@
       <h2>四步上手</h2>
       <p class="lead">任何科技树 case 都可以拆成四个作者动作：定义作用域、放置作用域实体、写条件、把条件挂到按钮或效果上。</p>
       <div class="flow">
-        <div class="step"><b>1. 声明 scope</b><span>在 <code>Technology/scopes.json</code> 里声明 <code>city</code>、<code>faction</code>、<code>region</code> 这类玩法作用域。</span></div>
+        <div class="step"><b>1. 声明 scope</b><span>在 <code>Technology/scopes.json</code> 里声明作者自己的玩法作用域，例如 <code>city</code>、<code>faction</code>、<code>region</code>。</span></div>
         <div class="step"><b>2. 放 host 和 member</b><span>host 是保存科技状态的实体；member 是会使用这个科技的建筑、英雄或单位。</span></div>
         <div class="step"><b>3. 写 requirement</b><span>在 <code>Technology/requirements.json</code> 写“按钮何时显示/可用”的条件。</span></div>
         <div class="step"><b>4. 挂 ability/effect</b><span>Ability 用 <code>showRequirement</code> 或 <code>useRequirement</code>；升级用 <code>CompleteTechnology</code> effect。</span></div>
@@ -366,7 +366,7 @@
           <tr><th>文件</th><th>作者写什么</th><th>什么时候需要</th></tr>
         </thead>
         <tbody>
-          <tr><td><code>assets/Technology/scopes.json</code></td><td>作用域名字，例如 <code>city</code>、<code>faction</code></td><td>只要不是本体升级，都建议声明。</td></tr>
+          <tr><td><code>assets/Technology/scopes.json</code></td><td>作者自定义作用域名字，例如 <code>city</code>、<code>faction</code></td><td>只要不是本体升级，都建议声明。</td></tr>
           <tr><td><code>assets/Technology/technologies.json</code></td><td>科技 id 和默认 scope</td><td>每个科技都要有。</td></tr>
           <tr><td><code>assets/Technology/requirements.json</code></td><td>按钮显示、按钮可用、升级前置条件</td><td>需要解锁逻辑时写。</td></tr>
           <tr><td><code>assets/Entities/templates.json</code></td><td><code>TechnologyScopeHost</code> 和 <code>TechnologyScopeBinding</code></td><td>需要城池、势力、区域、省份等作用域时写。</td></tr>
@@ -379,6 +379,9 @@
     <section id="scope">
       <h2>先选 Scope</h2>
       <p class="lead">作者最重要的决定不是“科技属于哪个 player”，而是“这个科技状态应该存在哪个实体上”。</p>
+      <div class="callout">
+        <strong>不是硬编码：</strong>引擎只内置三种解析方式：<code>self</code>、<code>explicit</code>、<code>named scope</code>。<code>city</code>、<code>faction</code>、<code>region</code>、<code>province</code> 都只是作者在 <code>Technology/scopes.json</code> 里注册出来的 named scope，换成 <code>kingdom</code>、<code>armyGroup</code>、<code>tradeRoute</code> 也可以。
+      </div>
       <table class="table">
         <thead>
           <tr><th>玩法需求</th><th>推荐 scope</th><th>科技状态放在哪里</th><th>作者提示</th></tr>
@@ -388,13 +391,13 @@
           <tr><td>一个城池控制城内建筑可造什么兵</td><td><code>city</code></td><td>城池 scope host</td><td>城池是 host，兵营是 member，兵营绑定到该城池。</td></tr>
           <tr><td>势力全局科技</td><td><code>faction</code></td><td>势力 scope host</td><td>势力 host 可以是真实君主/主城，也可以是不可见数据实体。</td></tr>
           <tr><td>区域内有某英雄才解锁</td><td><code>region</code></td><td>区域 scope host</td><td>英雄和建筑都绑定到同一个 region；英雄 tag 可由模板、effect 或 runtime 授予。</td></tr>
-          <tr><td>省份、岛屿、战区共享科技</td><td><code>province</code> 或自定义 key</td><td>该区域的 scope host</td><td>按玩法语言命名，不要拿 map tag 临时切功能。</td></tr>
+          <tr><td>省份、岛屿、战区共享科技</td><td><code>province</code> 或任意作者 key</td><td>该区域的 scope host</td><td>按玩法语言命名，不要拿 map tag 临时切功能。</td></tr>
           <tr><td>升级效果由外部 UI 指定目标</td><td><code>explicit</code></td><td><code>TargetContext</code> 指向的实体</td><td>只有当调用方能明确传入目标 scope host 时使用。</td></tr>
         </tbody>
       </table>
 
       <div class="callout warning">
-        <strong>经验法则：</strong>能用 named scope 就优先用 named scope，例如 <code>city</code>、<code>faction</code>、<code>region</code>。<code>explicit</code> 很强，但作者必须保证 ability/effect 执行时真的带了 <code>TargetContext</code>。
+        <strong>经验法则：</strong>能用 named scope 就优先用 named scope。示例里用了 <code>city</code>、<code>faction</code>、<code>region</code>，项目里可以换成自己的领域词。<code>explicit</code> 很强，但作者必须保证 ability/effect 执行时真的带了 <code>TargetContext</code>。
       </div>
     </section>
 
@@ -746,7 +749,7 @@
         </div>
         <div class="card">
           <strong>TechnologyScopeBinding</strong>
-          <p>写在要使用某个 scope 的实体上。一个建筑可以同时绑定 city、faction、region、province。</p>
+          <p>写在要使用某个 scope 的实体上。一个建筑可以同时绑定多个作者声明的 named scope，例如 city、faction、region、province。</p>
         </div>
         <div class="card">
           <strong>showRequirement</strong>
@@ -794,6 +797,7 @@
       <ul class="checklist">
         <li><strong>不要用 map tag 当 feature 开关。</strong>一个 feature 一个 mod，一个 showcase 一个 map；map tag 只表达地图分类。</li>
         <li><strong>不要再建 player 科技表。</strong>科技状态应该落在 entity 上：城池、势力、区域、建筑本体都可以是实体。</li>
+        <li><strong>不要把示例 scope 当内置概念。</strong><code>city</code>、<code>faction</code>、<code>region</code>、<code>province</code> 都来自配置声明，不是 C# 硬编码枚举。</li>
         <li><strong>不要随手用 explicit。</strong>只有调用方能提供 <code>TargetContext</code> 时才用 explicit；否则优先使用 named scope。</li>
         <li><strong>hostKey 要稳定。</strong><code>city:chang_an</code>、<code>faction:shu</code> 这类 key 是配置身份，不要因为显示名变化而改。</li>
         <li><strong>member 必须绑定到它要读取的 scope。</strong>兵营要读 city 科技，就要有 city binding；要读 faction 科技，就再加 faction binding。</li>
