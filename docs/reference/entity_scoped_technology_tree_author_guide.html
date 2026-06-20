@@ -345,6 +345,7 @@
     <nav aria-label="目录">
       <a href="#quick-start">四步上手</a>
       <a href="#scope">选 Scope</a>
+      <a href="#unlock-modes">解锁模式</a>
       <a href="#recipes">常见配方</a>
       <a href="#fields">字段速查</a>
       <a href="#pitfalls">避坑</a>
@@ -399,6 +400,126 @@
       <div class="callout warning">
         <strong>经验法则：</strong>能用 named scope 就优先用 named scope。示例里用了 <code>city</code>、<code>faction</code>、<code>region</code>，项目里可以换成自己的领域词。<code>explicit</code> 很强，但作者必须保证 ability/effect 执行时真的带了 <code>TargetContext</code>。
       </div>
+    </section>
+
+    <section id="unlock-modes">
+      <h2>一次性解锁 vs 可回退解锁</h2>
+      <p class="lead">科技树里有两种完全不同的“解锁”。一种是研究完成后永久写入科技状态；另一种是当前世界状态满足时临时开放，不满足时自动收回。复杂条件可以调用现有 graph ops，但要先选对这两种模式。</p>
+
+      <table class="table">
+        <thead>
+          <tr><th>模式</th><th>作者意图</th><th>怎么配</th><th>会不会回退</th></tr>
+        </thead>
+        <tbody>
+          <tr><td>一次性科技解锁</td><td>研究完成、剧情授予、任务奖励、一次性升级</td><td><code>CompleteTechnology</code> effect 写入 scope host；按钮用 <code>TechCompleted</code> 或 <code>TechLevelAtLeast</code> 检查</td><td>不会。写入后就是该 scope 的科技状态。</td></tr>
+          <tr><td>可回退状态门槛</td><td>英雄在场、建筑存活、区域被控制、buff 存在、关系当前满足</td><td>不要写科技状态；直接把 <code>EntityCount</code>、<code>TagAll</code> 或 <code>GraphValidation</code> 挂到 ability 的 <code>useRequirement</code>/<code>showRequirement</code></td><td>会。条件消失后按钮会重新锁定或隐藏。</td></tr>
+          <tr><td>复杂可回退条件</td><td>条件跨 tag、attribute、空间查询、关系、blackboard 等多个系统</td><td>在 <code>GAS/graphs.json</code> 定义 validation graph，再在 requirement 里用 <code>kind: "GraphValidation"</code> 引用</td><td>会。graph 每次评估都读取当前世界状态。</td></tr>
+        </tbody>
+      </table>
+
+      <div class="callout">
+        <strong>GraphValidation 可以用现有 graph ops：</strong>Technology Requirement 会把 <code>actor</code> 和解析后的 <code>graphTarget</code> 传给 GASGraph 的 validation 执行器。Graph 可以使用现有的 tag、attribute、空间查询、target list 聚合、relationship、blackboard 等 ops 来判断通过/拒绝。
+      </div>
+
+      <div class="callout warning">
+        <strong>GraphValidation 不负责写科技状态：</strong>它是“当前是否满足”的验证条件。需要永久写入“已研究/已升级”时，仍然用 <code>CompleteTechnology</code> effect。
+      </div>
+
+      <h3>一次性解锁：研究完成后永久开放</h3>
+      <pre><code>// GAS/effects.json
+[
+  {
+    "id": "Effect.CompleteCityDrill",
+    "tags": ["Effect.Tech"],
+    "presetType": "CompleteTechnology",
+    "lifetime": "Instant",
+    "participatesInResponse": false,
+    "technology": {
+      "id": "Tech.City.Drill",
+      "scope": "city",
+      "level": 1
+    }
+  }
+]
+
+// Technology/requirements.json
+[
+  {
+    "id": "Req.City.Drill.Done",
+    "root": {
+      "kind": "TechCompleted",
+      "technology": "Tech.City.Drill",
+      "scope": "city",
+      "entitySource": "ScopeHost"
+    }
+  }
+]</code></pre>
+
+      <h3>可回退解锁：英雄在场才开放</h3>
+      <pre><code>// Technology/requirements.json
+[
+  {
+    "id": "Req.Region.HasStrategist",
+    "root": {
+      "kind": "EntityCount",
+      "scope": "region",
+      "entitySource": "ScopeMembers",
+      "count": 1,
+      "tags": ["Hero.Strategist"]
+    }
+  }
+]
+
+// GAS/abilities.json
+[
+  {
+    "id": "Ability.RegionStratagem",
+    "useRequirement": "Req.Region.HasStrategist",
+    "exec": { "clockId": "FixedFrame", "items": [{ "kind": "End", "tick": 0 }] },
+    "presentation": { "displayName": "Regional Stratagem", "iconGlyph": "ST" }
+  }
+]</code></pre>
+
+      <h3>复杂可回退解锁：交给 graph 判断</h3>
+      <pre><code>// Technology/requirements.json
+[
+  {
+    "id": "Req.Region.AdvancedControl",
+    "root": {
+      "kind": "GraphValidation",
+      "scope": "region",
+      "entitySource": "ScopeHost",
+      "graph": "Graph.RequireRegionControl"
+    }
+  }
+]</code></pre>
+      <p class="small">graph 具体节点写在 <code>GAS/graphs.json</code>。在 technology requirement 里，<code>entitySource</code> 决定 graph 的 target：可以是 <code>ScopeHost</code>、<code>Actor</code>、<code>Subject</code>，或者通过 scope 解析出的目标。graph 的 validation 输出通过/拒绝即可。</p>
+
+      <h3>组合：一次性科技 + 可回退状态</h3>
+      <p>很多 RTS/SLG 规则是“研究过科技，并且当前条件仍然满足”。这种不要把临时条件写进科技状态，用 <code>All</code> 组合即可。</p>
+      <pre><code>// Technology/requirements.json
+[
+  {
+    "id": "Req.EliteTraining.Use",
+    "root": {
+      "kind": "All",
+      "children": [
+        {
+          "kind": "TechCompleted",
+          "technology": "Tech.City.EliteTraining",
+          "scope": "city",
+          "entitySource": "ScopeHost"
+        },
+        {
+          "kind": "GraphValidation",
+          "scope": "region",
+          "entitySource": "ScopeHost",
+          "graph": "Graph.RequireStableSupplyLine"
+        }
+      ]
+    }
+  }
+]</code></pre>
     </section>
 
     <section id="recipes">
@@ -774,7 +895,7 @@
           <tr><td><code>All</code></td><td><code>children</code></td><td>所有子条件都满足。</td></tr>
           <tr><td><code>Any</code></td><td><code>children</code></td><td>任一子条件满足。</td></tr>
           <tr><td><code>Not</code></td><td><code>child</code></td><td>反向条件。</td></tr>
-          <tr><td><code>GraphValidation</code></td><td><code>graph</code></td><td>复杂条件交给已有 condition func graph。</td></tr>
+          <tr><td><code>GraphValidation</code></td><td><code>graph</code>、<code>scope</code>、<code>entitySource</code></td><td>复杂、可回退的当前状态条件交给已有 graph ops。</td></tr>
         </tbody>
       </table>
 
@@ -803,7 +924,8 @@
         <li><strong>member 必须绑定到它要读取的 scope。</strong>兵营要读 city 科技，就要有 city binding；要读 faction 科技，就再加 faction binding。</li>
         <li><strong>科技完成 effect 必须是 Instant。</strong><code>CompleteTechnology</code> 要配 <code>lifetime: "Instant"</code>，并显式写 <code>participatesInResponse</code>。</li>
         <li><strong>多级升级用 level 或 delta，不要同时写。</strong><code>technology.level</code> 和 <code>technology.delta</code> 互斥。</li>
-        <li><strong>复杂条件先看是否能组合。</strong>能用 <code>All/Any/EntityCount/TechLevelAtLeast</code> 表达就不要上 graph；需要跨系统判断时再用 <code>GraphValidation</code>。</li>
+        <li><strong>复杂条件先看是否能组合。</strong>能用 <code>All/Any/EntityCount/TechLevelAtLeast</code> 表达就不要上 graph；需要跨 tag、attribute、空间查询、关系或 blackboard 判断时再用 <code>GraphValidation</code>。</li>
+        <li><strong>一次性解锁和可回退门槛不要混写。</strong>研究完成、任务奖励用 <code>CompleteTechnology</code>；英雄在场、建筑存活、区域控制这类当前状态用 requirement 或 <code>GraphValidation</code>。</li>
       </ul>
       <div class="callout">
         <strong>工程参考：</strong>需要看系统边界、缓存和 0alloc 策略时，读 <a href="entity_scoped_technology_tree_architecture_report.html">Entity-Scoped Technology Tree 架构汇报</a>。

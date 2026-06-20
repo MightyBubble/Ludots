@@ -498,6 +498,9 @@
       <div class="callout warning">
         <strong>复杂条件建议：</strong>简单事实用 tag，科技/等级用 TechnologyStateBuffer，实体数量用 EntityCount；当条件需要跨多个领域聚合时再用 GraphValidation。
       </div>
+      <div class="callout">
+        <strong>GraphValidation 语义：</strong>它调用现有 GASGraph validation runtime，读取当前世界状态并返回通过/拒绝。它不写科技状态；一次性研究完成仍由 <code>CompleteTechnology</code> effect 写入 scope host。
+      </div>
     </section>
 
     <section id="configuration">
