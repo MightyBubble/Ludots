@@ -105,7 +105,7 @@ namespace Ludots.Core.Gameplay.Progression.Config
                     var definition = new ProgressionDefinition
                     {
                         ProgressionId = progressionId,
-                        DefaultScope = ParseScope(cfg.Scope, defaultScope: ProgressionScopeSpec.Self, $"Progression '{cfg.Id}'")
+                        DeclaredScope = ParseRequiredScope(cfg.Scope, $"Progression '{cfg.Id}'.scope")
                     };
                     _progressions.Register(progressionId, in definition);
                 }
@@ -265,8 +265,8 @@ namespace Ludots.Core.Gameplay.Progression.Config
 
             nodes[nodeIndex] = new ProgressionRequirementNode(
                 kind,
-                ParseScope(cfg.Scope, ResolveDefaultScope(progressionId), $"{ownerId}.{path}.scope"),
-                ParseEntitySource(cfg.EntitySource),
+                ParseRequiredScope(cfg.Scope, $"{ownerId}.{path}.scope"),
+                ParseRequiredEntitySource(cfg.EntitySource, $"{ownerId}.{path}.entitySource"),
                 firstChild,
                 childCount,
                 progressionId,
@@ -293,18 +293,15 @@ namespace Ludots.Core.Gameplay.Progression.Config
             };
         }
 
-        private ProgressionScopeSpec ResolveDefaultScope(int progressionId)
+        private static ProgressionRequirementEntitySource ParseRequiredEntitySource(string? raw, string context)
         {
-            return progressionId > 0 && _progressions.TryGet(progressionId, out var definition)
-                ? definition.DefaultScope
-                : ProgressionScopeSpec.Self;
-        }
-
-        private static ProgressionRequirementEntitySource ParseEntitySource(string? raw)
-        {
-            return raw switch
+            if (string.IsNullOrWhiteSpace(raw))
             {
-                null or "" => ProgressionRequirementEntitySource.ScopeMembers,
+                throw new InvalidOperationException($"{context} is required. Use 'ScopeMembers', 'ScopeHost', 'Actor', or 'Subject'.");
+            }
+
+            return raw.Trim() switch
+            {
                 "ScopeMembers" => ProgressionRequirementEntitySource.ScopeMembers,
                 "ScopeHost" => ProgressionRequirementEntitySource.ScopeHost,
                 "Actor" => ProgressionRequirementEntitySource.Actor,
@@ -313,11 +310,11 @@ namespace Ludots.Core.Gameplay.Progression.Config
             };
         }
 
-        private ProgressionScopeSpec ParseScope(string? raw, ProgressionScopeSpec defaultScope, string context)
+        private ProgressionScopeSpec ParseRequiredScope(string? raw, string context)
         {
             if (string.IsNullOrWhiteSpace(raw))
             {
-                return defaultScope;
+                throw new InvalidOperationException($"{context} is required. Use 'self', 'explicit', or a named scope declared in Progression/scopes.json.");
             }
 
             string value = raw.Trim();

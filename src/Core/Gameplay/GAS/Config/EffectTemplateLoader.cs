@@ -22,7 +22,6 @@ namespace Ludots.Core.Gameplay.GAS.Config
         private readonly GasConditionRegistry _conditions;
         private readonly TargetDispatchPresetRegistry _targetDispatchPresets;
         private readonly ProgressionScopeKeyRegistry? _progressionScopeKeys;
-        private readonly ProgressionDefinitionRegistry? _progressionDefinitions;
 
         private static readonly JsonSerializerOptions JsonOptions = new()
         {
@@ -37,15 +36,13 @@ namespace Ludots.Core.Gameplay.GAS.Config
             EffectTemplateRegistry registry,
             GasConditionRegistry conditions = null,
             TargetDispatchPresetRegistry targetDispatchPresets = null,
-            ProgressionScopeKeyRegistry? progressionScopeKeys = null,
-            ProgressionDefinitionRegistry? progressionDefinitions = null)
+            ProgressionScopeKeyRegistry? progressionScopeKeys = null)
         {
             _pipeline = pipeline;
             _registry = registry;
             _conditions = conditions;
             _targetDispatchPresets = targetDispatchPresets;
             _progressionScopeKeys = progressionScopeKeys;
-            _progressionDefinitions = progressionDefinitions;
         }
 
         public void Load(
@@ -334,7 +331,7 @@ namespace Ludots.Core.Gameplay.GAS.Config
                         $"Effect template '{cfg.Id}' in {relativePath}: progression.id '{progressionName}' is not registered.");
                 }
 
-                progressionScope = ResolveProgressionScope(cfg.Progression.Scope, progressionId, cfg.Id, relativePath);
+                progressionScope = ResolveProgressionScope(cfg.Progression.Scope, cfg.Id, relativePath);
                 progressionChange = CompileProgressionChange(cfg.Progression, cfg.Id, relativePath);
             }
 
@@ -994,15 +991,12 @@ namespace Ludots.Core.Gameplay.GAS.Config
             _ => throw new InvalidOperationException($"Unknown GasClockId '{value}'. Supported: FixedFrame, Step, Turn."),
         };
 
-        private ProgressionScopeSpec ResolveProgressionScope(string? rawValue, int progressionId, string effectId, string path)
+        private ProgressionScopeSpec ResolveProgressionScope(string? rawValue, string effectId, string path)
         {
             if (string.IsNullOrWhiteSpace(rawValue))
             {
-                return _progressionDefinitions != null &&
-                       progressionId > 0 &&
-                       _progressionDefinitions.TryGet(progressionId, out var definition)
-                    ? definition.DefaultScope
-                    : ProgressionScopeSpec.Self;
+                throw new InvalidOperationException(
+                    $"Effect template '{effectId}' in {path}: progression.scope is required. Use 'self', 'explicit', or a named scope declared in Progression/scopes.json.");
             }
 
             return ParseProgressionScope(rawValue.Trim(), effectId, path);

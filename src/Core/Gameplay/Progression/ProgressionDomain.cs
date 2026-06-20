@@ -49,7 +49,7 @@ namespace Ludots.Core.Gameplay.Progression
     public struct ProgressionDefinition
     {
         public int ProgressionId;
-        public ProgressionScopeSpec DefaultScope;
+        public ProgressionScopeSpec DeclaredScope;
     }
 
     public readonly struct ProgressionLevelChange

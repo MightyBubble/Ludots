@@ -964,7 +964,7 @@ namespace Ludots.Tests.GAS
         }
 
         [Test]
-        public void ProgressionConfigLoader_UsesProgressionDefaultScopeAndFreezesNamedScopes()
+        public void ProgressionConfigLoader_LoadsExplicitScopesAndFreezesNamedScopes()
         {
             string root = CreateTempRoot();
             try
@@ -989,18 +989,30 @@ namespace Ludots.Tests.GAS
                     [
                       {
                         "id": "Req.CityArchery2",
-                        "root": { "kind": "ProgressionLevelAtLeast", "progression": "Progression.CityArchery", "level": 2 }
+                        "root": {
+                          "kind": "ProgressionLevelAtLeast",
+                          "progression": "Progression.CityArchery",
+                          "scope": "city",
+                          "entitySource": "ScopeHost",
+                          "level": 2
+                        }
                       }
                     ]
                     """);
 
-                var loader = CreateProgressionLoader(root, out var requirements, out var scopeKeys);
+                var loader = CreateProgressionLoader(root, out var requirements, out var scopeKeys, out var progressions, out _);
                 loader.Load(CreateProgressionCatalog());
+
+                int progressionId = ProgressionIdRegistry.GetId("Progression.CityArchery");
+                Assert.That(progressions.TryGet(progressionId, out var progression), Is.True);
+                Assert.That(progression.DeclaredScope.Kind, Is.EqualTo(ProgressionScopeKind.Named));
+                Assert.That(progression.DeclaredScope.ScopeKeyId, Is.EqualTo(scopeKeys.GetId("city")));
 
                 int requirementId = ProgressionRequirementIdRegistry.GetId("Req.CityArchery2");
                 Assert.That(requirements.TryGet(requirementId, out var requirement), Is.True);
                 Assert.That(requirement.Nodes[0].Scope.Kind, Is.EqualTo(ProgressionScopeKind.Named));
                 Assert.That(requirement.Nodes[0].Scope.ScopeKeyId, Is.EqualTo(scopeKeys.GetId("city")));
+                Assert.That(requirement.Nodes[0].EntitySource, Is.EqualTo(ProgressionRequirementEntitySource.ScopeHost));
 
                 using var world = World.Create();
                 var evaluator = new ProgressionRequirementEvaluator(world, requirements, scopeKeys);
@@ -1018,7 +1030,184 @@ namespace Ludots.Tests.GAS
         }
 
         [Test]
-        public void EffectTemplateLoader_CompleteProgression_UsesDefinitionDefaultScopeAndLevel()
+        public void ProgressionConfigLoader_RequiresExplicitProgressionScope()
+        {
+            string root = CreateTempRoot();
+            try
+            {
+                Directory.CreateDirectory(Path.Combine(root, "Configs", "Progression"));
+                File.WriteAllText(Path.Combine(root, "Configs", "Progression", "scopes.json"),
+                    """
+                    [
+                      { "id": "city" }
+                    ]
+                    """);
+                File.WriteAllText(Path.Combine(root, "Configs", "Progression", "progressions.json"),
+                    """
+                    [
+                      { "id": "Progression.CityArchery" }
+                    ]
+                    """);
+                File.WriteAllText(Path.Combine(root, "Configs", "Progression", "requirements.json"), "[]");
+
+                var loader = CreateProgressionLoader(root, out _, out _);
+                var ex = Assert.Throws<AggregateException>(() => loader.Load(CreateProgressionCatalog()));
+                Assert.That(ex!.InnerException?.Message, Does.Contain("Progression 'Progression.CityArchery'.scope is required"));
+            }
+            finally
+            {
+                TryDeleteDirectory(root);
+            }
+        }
+
+        [Test]
+        public void ProgressionConfigLoader_RequiresExplicitRequirementScope()
+        {
+            string root = CreateTempRoot();
+            try
+            {
+                Directory.CreateDirectory(Path.Combine(root, "Configs", "Progression"));
+                File.WriteAllText(Path.Combine(root, "Configs", "Progression", "scopes.json"),
+                    """
+                    [
+                      { "id": "city" }
+                    ]
+                    """);
+                File.WriteAllText(Path.Combine(root, "Configs", "Progression", "progressions.json"),
+                    """
+                    [
+                      { "id": "Progression.CityArchery", "scope": "city" }
+                    ]
+                    """);
+                File.WriteAllText(Path.Combine(root, "Configs", "Progression", "requirements.json"),
+                    """
+                    [
+                      {
+                        "id": "Req.CityArchery2",
+                        "root": {
+                          "kind": "ProgressionLevelAtLeast",
+                          "progression": "Progression.CityArchery",
+                          "entitySource": "ScopeHost",
+                          "level": 2
+                        }
+                      }
+                    ]
+                    """);
+
+                var loader = CreateProgressionLoader(root, out _, out _);
+                var ex = Assert.Throws<AggregateException>(() => loader.Load(CreateProgressionCatalog()));
+                Assert.That(ex!.InnerException?.Message, Does.Contain("Req.CityArchery2.root.scope is required"));
+            }
+            finally
+            {
+                TryDeleteDirectory(root);
+            }
+        }
+
+        [Test]
+        public void ProgressionConfigLoader_RequiresExplicitRequirementEntitySource()
+        {
+            string root = CreateTempRoot();
+            try
+            {
+                Directory.CreateDirectory(Path.Combine(root, "Configs", "Progression"));
+                File.WriteAllText(Path.Combine(root, "Configs", "Progression", "scopes.json"),
+                    """
+                    [
+                      { "id": "city" }
+                    ]
+                    """);
+                File.WriteAllText(Path.Combine(root, "Configs", "Progression", "progressions.json"),
+                    """
+                    [
+                      { "id": "Progression.CityArchery", "scope": "city" }
+                    ]
+                    """);
+                File.WriteAllText(Path.Combine(root, "Configs", "Progression", "requirements.json"),
+                    """
+                    [
+                      {
+                        "id": "Req.CityArchery2",
+                        "root": {
+                          "kind": "ProgressionLevelAtLeast",
+                          "progression": "Progression.CityArchery",
+                          "scope": "city",
+                          "level": 2
+                        }
+                      }
+                    ]
+                    """);
+
+                var loader = CreateProgressionLoader(root, out _, out _);
+                var ex = Assert.Throws<AggregateException>(() => loader.Load(CreateProgressionCatalog()));
+                Assert.That(ex!.InnerException?.Message, Does.Contain("Req.CityArchery2.root.entitySource is required"));
+            }
+            finally
+            {
+                TryDeleteDirectory(root);
+            }
+        }
+
+        [Test]
+        public void EffectTemplateLoader_CompleteProgression_LoadsExplicitScopeAndLevel()
+        {
+            string root = CreateTempRoot();
+            try
+            {
+                Directory.CreateDirectory(Path.Combine(root, "Configs", "Progression"));
+                Directory.CreateDirectory(Path.Combine(root, "Configs", "GAS"));
+                File.WriteAllText(Path.Combine(root, "Configs", "Progression", "scopes.json"),
+                    """
+                    [
+                      { "id": "city" }
+                    ]
+                    """);
+                File.WriteAllText(Path.Combine(root, "Configs", "Progression", "progressions.json"),
+                    """
+                    [
+                      { "id": "Progression.CityArmor", "scope": "city" }
+                    ]
+                    """);
+                File.WriteAllText(Path.Combine(root, "Configs", "Progression", "requirements.json"), "[]");
+                File.WriteAllText(Path.Combine(root, "Configs", "GAS", "effects.json"),
+                    """
+                    [
+                      {
+                        "id": "Effect.CompleteCityArmor2",
+                        "presetType": "CompleteProgression",
+                        "lifetime": "Instant",
+                        "participatesInResponse": false,
+                        "progression": { "id": "Progression.CityArmor", "scope": "city", "level": 2 }
+                      }
+                    ]
+                    """);
+
+                var progressionLoader = CreateProgressionLoader(root, out _, out var scopeKeys, out _, out var pipeline);
+                progressionLoader.Load(CreateProgressionCatalog());
+
+                var effects = new EffectTemplateRegistry();
+                var effectLoader = new EffectTemplateLoader(
+                    pipeline,
+                    effects,
+                    progressionScopeKeys: scopeKeys);
+                effectLoader.Load(CreateEffectsCatalog(), relativePath: "GAS/effects.json");
+
+                int templateId = EffectTemplateIdRegistry.GetId("Effect.CompleteCityArmor2");
+                Assert.That(effects.TryGet(templateId, out var template), Is.True);
+                Assert.That(template.PresetType, Is.EqualTo(EffectPresetType.CompleteProgression));
+                Assert.That(template.ProgressionScope.Kind, Is.EqualTo(ProgressionScopeKind.Named));
+                Assert.That(template.ProgressionScope.ScopeKeyId, Is.EqualTo(scopeKeys.GetId("city")));
+                Assert.That(template.ProgressionChange.Level, Is.EqualTo(2));
+                Assert.That(template.ProgressionChange.Delta, Is.EqualTo(0));
+            }
+            finally
+            {
+                TryDeleteDirectory(root);
+            }
+        }
+
+        [Test]
+        public void EffectTemplateLoader_CompleteProgression_RequiresExplicitScope()
         {
             string root = CreateTempRoot();
             try
@@ -1051,24 +1240,17 @@ namespace Ludots.Tests.GAS
                     ]
                     """);
 
-                var techLoader = CreateProgressionLoader(root, out _, out var scopeKeys, out var progressions, out var pipeline);
-                techLoader.Load(CreateProgressionCatalog());
+                var progressionLoader = CreateProgressionLoader(root, out _, out var scopeKeys, out _, out var pipeline);
+                progressionLoader.Load(CreateProgressionCatalog());
 
                 var effects = new EffectTemplateRegistry();
                 var effectLoader = new EffectTemplateLoader(
                     pipeline,
                     effects,
-                    progressionScopeKeys: scopeKeys,
-                    progressionDefinitions: progressions);
-                effectLoader.Load(CreateEffectsCatalog(), relativePath: "GAS/effects.json");
-
-                int templateId = EffectTemplateIdRegistry.GetId("Effect.CompleteCityArmor2");
-                Assert.That(effects.TryGet(templateId, out var template), Is.True);
-                Assert.That(template.PresetType, Is.EqualTo(EffectPresetType.CompleteProgression));
-                Assert.That(template.ProgressionScope.Kind, Is.EqualTo(ProgressionScopeKind.Named));
-                Assert.That(template.ProgressionScope.ScopeKeyId, Is.EqualTo(scopeKeys.GetId("city")));
-                Assert.That(template.ProgressionChange.Level, Is.EqualTo(2));
-                Assert.That(template.ProgressionChange.Delta, Is.EqualTo(0));
+                    progressionScopeKeys: scopeKeys);
+                var ex = Assert.Throws<InvalidOperationException>(() =>
+                    effectLoader.Load(CreateEffectsCatalog(), relativePath: "GAS/effects.json"));
+                Assert.That(ex!.Message, Does.Contain("progression.scope is required"));
             }
             finally
             {

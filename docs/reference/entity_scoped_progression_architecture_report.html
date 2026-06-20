@@ -371,7 +371,7 @@
   <div class="page">
     <header>
       <h1>Ludots Entity-Scoped Progression Tree 架构汇报</h1>
-      <p>这套科技树/升级系统已经按“绑定实体而非绑定 player”的方向落地：科技状态存在于 scope host entity 上，建筑、英雄、区域、城池、势力都可以成为 scope host 或 scope member；Requirement 负责声明解锁条件，GAS effect 负责改变科技状态，UI 只消费显式的 show/use 语义。</p>
+      <p>这套 progression/升级系统已经按“绑定实体而非绑定 player”的方向落地：状态存在于 scope host entity 上，建筑、英雄、区域、城池、势力都可以成为 scope host 或 scope member；Requirement 负责声明解锁条件，GAS effect 负责改变 progression 状态，UI 只消费显式的 show/use 语义。</p>
       <div class="meta">
         <span class="pill">PR #201</span>
         <span class="pill">PR #201 branch</span>
@@ -397,14 +397,17 @@
       <div class="callout warning">
         <strong>Scope 语义不是硬编码：</strong><code>city</code>、<code>faction</code>、<code>region</code>、<code>province</code> 是 showcase 通过 <code>Progression/scopes.json</code> 声明的 named scope。Core 只内置 <code>self</code>、<code>explicit</code> 和 named scope 解析。
       </div>
+      <div class="callout danger">
+        <strong>SSOT：</strong>运行时只从 config catalog 登记的 <code>Progression/scopes.json</code>、<code>Progression/progressions.json</code>、<code>Progression/requirements.json</code> 读取 progression 数据。<code>progression.scope</code>、requirement node 的 <code>scope</code> / <code>entitySource</code>、以及 <code>CompleteProgression.progression.scope</code> 都必须显式配置，缺失即 fail-fast。
+      </div>
       <div class="kpi">
-        <div><b>Entity</b><span>科技状态挂在实体上，不挂 player。</span></div>
+        <div><b>Entity</b><span>progression 状态挂在实体上，不挂 player。</span></div>
         <div><b>Scope</b><span>作用域通过 self / explicit / named 解析。</span></div>
         <div><b>GAS</b><span>升级落地走 CompleteProgression effect。</span></div>
         <div><b>UI</b><span>showRequirement 隐藏，useRequirement 锁定。</span></div>
       </div>
       <div class="callout danger">
-        <strong>Showcase 原则：</strong>科技树 showcase 是独立 mod、独立 map、独立 Raylib preset。map tag 不承担“隐形 feature toggle”，只保留它原本应有的语义分类职责。
+        <strong>Showcase 原则：</strong>Progression showcase 是独立 mod、独立 map、独立 Raylib preset。map tag 不承担“隐形 feature toggle”，只保留它原本应有的语义分类职责。
       </div>
     </section>
 
@@ -414,7 +417,7 @@
       <div class="grid">
         <div class="card">
           <strong>ProgressionDefinition</strong>
-          <p>声明科技 id 和默认 scope。科技本身不是 player 全局表，而是可以落到任何可解析的 scope host entity 上。</p>
+          <p>声明 progression id 和显式 scope。progression 本身不是 player 全局表，而是可以落到任何可解析的 scope host entity 上。</p>
         </div>
         <div class="card">
           <strong>ProgressionStateBuffer</strong>
@@ -444,7 +447,7 @@
           <tr><th>基建</th><th>复用方式</th><th>职责边界</th></tr>
         </thead>
         <tbody>
-          <tr><td><code>ConfigPipeline</code></td><td>加载 <code>Progression/scopes.json</code>、<code>progressions.json</code>、<code>requirements.json</code></td><td>只负责数据合并和编译，不做运行时判断。</td></tr>
+          <tr><td><code>ConfigPipeline</code></td><td>加载 <code>Progression/scopes.json</code>、<code>progressions.json</code>、<code>requirements.json</code></td><td>只负责数据合并和编译；这是 progression SSOT。</td></tr>
           <tr><td><code>TagRegistry</code> / <code>TagOps</code></td><td>Requirement 的 <code>tags</code> 字段使用正式 tag 容器判断</td><td>tag 表达实体事实，不被用作 showcase feature switch。</td></tr>
           <tr><td><code>GraphRuntime</code></td><td><code>GraphValidation</code> 节点执行已编译 graph program</td><td>复杂条件外包给图，但 scope 仍由科技系统明确传入。</td></tr>
           <tr><td><code>GAS Effect Pipeline</code></td><td><code>CompleteProgression</code> preset 在 effect 阶段写入科技状态</td><td>升级是 effect 结果，不是 UI 或 command panel 私改状态。</td></tr>
@@ -505,7 +508,7 @@
 
     <section id="configuration">
       <h2>怎么配置不同 feature</h2>
-      <p class="lead">新增一个科技 feature 时，不需要改 map tag，也不需要写私有开关。按以下四步配置数据即可。</p>
+      <p class="lead">新增一个 progression feature 时，不需要改 map tag，也不需要写私有开关。按以下四步配置数据即可。</p>
 
       <h3>1. 声明 scope key</h3>
       <pre><code>[
@@ -515,7 +518,7 @@
   { "id": "province" }
 ]</code></pre>
 
-      <h3>2. 声明科技和默认 scope</h3>
+      <h3>2. 声明 progression 和显式 scope</h3>
       <pre><code>[
   { "id": "Progression.Showcase.CityDrill", "scope": "city" },
   { "id": "Progression.Showcase.FactionMandate", "scope": "faction" },
@@ -629,7 +632,7 @@
 
     <section id="showcase">
       <h2>UAT Showcase</h2>
-      <p class="lead">科技树 showcase 已拆成单独 feature root，不复用全能 showcase，也不通过 map tag 偷偷切 feature。</p>
+      <p class="lead">Progression showcase 已拆成单独 feature root，不复用全能 showcase，也不通过 map tag 偷偷切 feature。</p>
       <div class="grid">
         <div class="card"><strong>Mod</strong><p><code>mods/showcases/progression_scope/ProgressionScopeShowcaseMod</code></p></div>
         <div class="card"><strong>Map</strong><p><code>progression_scope_showcase</code></p></div>
@@ -663,7 +666,7 @@
         <li><code>src/Core/Gameplay/Progression/Systems/ProgressionScopeBindingSystem.cs</code> <span class="small">scope host/member 绑定。</span></li>
         <li><code>src/Core/Gameplay/Progression/Systems/ProgressionScopeTagRevisionSystem.cs</code> <span class="small">tag 变化驱动 scope revision。</span></li>
         <li><code>mods/EntityCommandPanelMod/Runtime/GasEntityCommandPanelSource.cs</code> <span class="small">命令面板 show/use requirement 预览。</span></li>
-        <li><code>mods/showcases/progression_scope/ProgressionScopeShowcaseMod/assets/Progression/*.json</code> <span class="small">UAT showcase 的科技配置。</span></li>
+        <li><code>mods/showcases/progression_scope/ProgressionScopeShowcaseMod/assets/Progression/*.json</code> <span class="small">UAT showcase 的 progression 配置。</span></li>
       </ul>
     </section>
   </div>

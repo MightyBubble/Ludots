@@ -587,8 +587,7 @@ namespace Ludots.Core.Engine
                 effectTemplateRegistry,
                 gasConditions,
                 targetDispatchPresetRegistry,
-                progressionScopeKeys,
-                progressionDefinitions);
+                progressionScopeKeys);
             var gasClockConfigLoader = new GasClockConfigLoader(ConfigPipeline);
             var gasClockConfig = gasClockConfigLoader.Load(ConfigCatalog, ConfigConflictReport);
             var physics2dClockConfigLoader = new Physics2DClockConfigLoader(ConfigPipeline);
