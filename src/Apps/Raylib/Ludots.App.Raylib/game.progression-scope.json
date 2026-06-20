@@ -1,0 +1,12 @@
+{
+  "WindowWidth": 1280,
+  "WindowHeight": 720,
+  "WindowTitle": "Ludots Engine - Progression Scope Showcase",
+  "TargetFps": 60,
+  "ModPaths": [
+    "../../../../../../../mods/LudotsCoreMod",
+    "../../../../../../../mods/CoreInputMod",
+    "../../../../../../../mods/EntityCommandPanelMod",
+    "../../../../../../../mods/showcases/progression_scope/ProgressionScopeShowcaseMod"
+  ]
+}

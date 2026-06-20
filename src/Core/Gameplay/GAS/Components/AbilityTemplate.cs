@@ -4,7 +4,7 @@ namespace Ludots.Core.Gameplay.GAS.Components
     {
     }
 
-    public struct AbilityTechnologyRequirements
+    public struct AbilityProgressionRequirements
     {
         public int UseRequirementId;
         public int ShowRequirementId;

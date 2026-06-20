@@ -3,7 +3,7 @@ using Arch.Core;
 using Arch.Core.Extensions;
 using Ludots.Core.Gameplay.GAS.Components;
 using Ludots.Core.Gameplay.Items;
-using Ludots.Core.Gameplay.Technology;
+using Ludots.Core.Gameplay.Progression;
 using Ludots.Core.GraphRuntime;
 using Ludots.Core.NodeLibraries.GASGraph;
 
@@ -16,7 +16,7 @@ namespace Ludots.Core.Gameplay.GAS.Systems
         private readonly TagOps _tagOps;
         private readonly GraphProgramRegistry _graphPrograms;
         private readonly IGraphRuntimeApi _graphApi;
-        private readonly TechnologyRequirementEvaluator _technologyRequirements;
+        private readonly ProgressionRequirementEvaluator _progressionRequirements;
 
         public AbilitySystem(
             World world,
@@ -25,14 +25,14 @@ namespace Ludots.Core.Gameplay.GAS.Systems
             TagOps tagOps = null,
             GraphProgramRegistry graphPrograms = null,
             IGraphRuntimeApi graphApi = null,
-            TechnologyRequirementEvaluator technologyRequirements = null) : base(world)
+            ProgressionRequirementEvaluator progressionRequirements = null) : base(world)
         {
             _effectRequests = effectRequests;
             _abilityDefinitions = abilityDefinitions;
             _tagOps = tagOps ?? new TagOps();
             _graphPrograms = graphPrograms;
             _graphApi = graphApi;
-            _technologyRequirements = technologyRequirements;
+            _progressionRequirements = progressionRequirements;
         }
 
         public override void Update(in float dt) { }
@@ -118,7 +118,7 @@ namespace Ludots.Core.Gameplay.GAS.Systems
                     }
                 }
 
-                if (!EvaluateTechnologyUseRequirement(caster, ResolveValidationTarget(in args), args.TargetContext, in def))
+                if (!EvaluateProgressionUseRequirement(caster, ResolveValidationTarget(in args), args.TargetContext, in def))
                 {
                     return false;
                 }
@@ -189,9 +189,9 @@ namespace Ludots.Core.Gameplay.GAS.Systems
                 }
             }
 
-            ref var technologyRequirementsEntity = ref World.TryGetRef<AbilityTechnologyRequirements>(templateEntity, out bool hasTechnologyRequirementsEntity);
-            if (hasTechnologyRequirementsEntity &&
-                !EvaluateTechnologyUseRequirement(caster, ResolveValidationTarget(in args), args.TargetContext, in technologyRequirementsEntity))
+            ref var progressionRequirementsEntity = ref World.TryGetRef<AbilityProgressionRequirements>(templateEntity, out bool hasProgressionRequirementsEntity);
+            if (hasProgressionRequirementsEntity &&
+                !EvaluateProgressionUseRequirement(caster, ResolveValidationTarget(in args), args.TargetContext, in progressionRequirementsEntity))
             {
                 return false;
             }
@@ -263,39 +263,39 @@ namespace Ludots.Core.Gameplay.GAS.Systems
             return default;
         }
 
-        private bool EvaluateTechnologyUseRequirement(Entity caster, Entity subject, Entity explicitScopeHost, in AbilityDefinition definition)
+        private bool EvaluateProgressionUseRequirement(Entity caster, Entity subject, Entity explicitScopeHost, in AbilityDefinition definition)
         {
-            if (!definition.HasUseTechnologyRequirement)
+            if (!definition.HasUseProgressionRequirement)
             {
                 return true;
             }
 
-            return EvaluateTechnologyRequirement(caster, subject, explicitScopeHost, definition.UseTechnologyRequirementId);
+            return EvaluateProgressionRequirement(caster, subject, explicitScopeHost, definition.UseProgressionRequirementId);
         }
 
-        private bool EvaluateTechnologyUseRequirement(Entity caster, Entity subject, Entity explicitScopeHost, in AbilityTechnologyRequirements requirements)
+        private bool EvaluateProgressionUseRequirement(Entity caster, Entity subject, Entity explicitScopeHost, in AbilityProgressionRequirements requirements)
         {
             if (requirements.UseRequirementId <= 0)
             {
                 return true;
             }
 
-            return EvaluateTechnologyRequirement(caster, subject, explicitScopeHost, requirements.UseRequirementId);
+            return EvaluateProgressionRequirement(caster, subject, explicitScopeHost, requirements.UseRequirementId);
         }
 
-        private bool EvaluateTechnologyRequirement(Entity caster, Entity subject, Entity explicitScopeHost, int requirementId)
+        private bool EvaluateProgressionRequirement(Entity caster, Entity subject, Entity explicitScopeHost, int requirementId)
         {
-            if (_technologyRequirements == null)
+            if (_progressionRequirements == null)
             {
-                throw new InvalidOperationException("Ability technology requirement is configured, but TechnologyRequirementEvaluator is not registered.");
+                throw new InvalidOperationException("Ability progression requirement is configured, but ProgressionRequirementEvaluator is not registered.");
             }
 
             Entity resolvedSubject = World.IsAlive(subject) ? subject : caster;
             Entity resolvedExplicitScopeHost = World.IsAlive(explicitScopeHost)
                 ? explicitScopeHost
                 : default;
-            var context = new TechnologyRequirementEvaluationContext(caster, resolvedSubject, resolvedExplicitScopeHost);
-            return _technologyRequirements.Evaluate(requirementId, in context);
+            var context = new ProgressionRequirementEvaluationContext(caster, resolvedSubject, resolvedExplicitScopeHost);
+            return _progressionRequirements.Evaluate(requirementId, in context);
         }
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]

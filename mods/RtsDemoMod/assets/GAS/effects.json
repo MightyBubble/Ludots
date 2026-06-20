@@ -375,7 +375,7 @@
     "participatesInResponse": false,
     "grantedTags": [
       {
-        "tag": "Tech.Rts.WarpGate",
+        "tag": "Progression.Rts.WarpGate",
         "formula": "Fixed",
         "amount": 1
       }

@@ -89,7 +89,7 @@ Resolution:
 - Rebased `RtsDemoLog` from obsolete SCV/Marine/Zergling scripting onto the current `rts_entry` sandbox semantics.
 - Added the real UI/runtime dependencies used by the current RTS flow (`CoreInputMod`, `EntityCommandPanelMod`, `UIRoot`, `SkiaTextMeasurer`, `SkiaImageSizeProvider`).
 - Updated order submission to the same contract used by RTS acceptance tests (`PlayerId = 1`, `SubmitMode = Immediate`).
-- Fixed the Protoss section to wait for `Tech.Rts.WarpGate` and slot-override refresh before issuing the warp command.
+- Fixed the Protoss section to wait for `Progression.Rts.WarpGate` and slot-override refresh before issuing the warp command.
 
 Impact:
 

@@ -7,7 +7,7 @@ using Ludots.Core.Gameplay.GAS.Input;
 using Ludots.Core.Gameplay.GAS.Orders;
 using Ludots.Core.Gameplay.GAS.Presentation;
 using Ludots.Core.Gameplay.Spawning;
-using Ludots.Core.Gameplay.Technology;
+using Ludots.Core.Gameplay.Progression;
 using Ludots.Core.Spatial;
 
 namespace Ludots.Core.Gameplay.GAS.Systems
@@ -57,7 +57,7 @@ namespace Ludots.Core.Gameplay.GAS.Systems
         public int MaxWorkUnitsPerSlice { get; set; } = int.MaxValue;
         public byte DebugProposalWindowPhase => _proposal.DebugWindowPhase;
 
-        public EffectProcessingLoopSystem(World world, EffectRequestQueue effectRequests, IClock clock, GasConditionRegistry conditions, GasBudget budget = null, EffectTemplateRegistry templates = null, InputRequestQueue inputRequests = null, OrderQueue chainOrders = null, ResponseChainTelemetryBuffer telemetry = null, OrderRequestQueue orderRequests = null, ResponseChainOrderTypes? responseChainOrderTypes = null, GasPresentationEventBuffer presentationEvents = null, ISpatialQueryService spatialQueries = null, RuntimeEntitySpawnQueue spawnRequests = null, EffectPhaseExecutor phaseExecutor = null, Ludots.Core.NodeLibraries.GASGraph.Host.GasGraphRuntimeApi graphApi = null, TagOps tagOps = null, TechnologyRequirementEvaluator technologyEvaluator = null)
+        public EffectProcessingLoopSystem(World world, EffectRequestQueue effectRequests, IClock clock, GasConditionRegistry conditions, GasBudget budget = null, EffectTemplateRegistry templates = null, InputRequestQueue inputRequests = null, OrderQueue chainOrders = null, ResponseChainTelemetryBuffer telemetry = null, OrderRequestQueue orderRequests = null, ResponseChainOrderTypes? responseChainOrderTypes = null, GasPresentationEventBuffer presentationEvents = null, ISpatialQueryService spatialQueries = null, RuntimeEntitySpawnQueue spawnRequests = null, EffectPhaseExecutor phaseExecutor = null, Ludots.Core.NodeLibraries.GASGraph.Host.GasGraphRuntimeApi graphApi = null, TagOps tagOps = null, ProgressionRequirementEvaluator progressionEvaluator = null)
             : base(world)
         {
             _effectRequests = effectRequests;
@@ -66,8 +66,8 @@ namespace Ludots.Core.Gameplay.GAS.Systems
             _orderRequests = orderRequests;
 
             _proposal = new EffectProposalProcessingSystem(world, effectRequests, budget, templates, inputRequests, chainOrders, telemetry, orderRequests, responseChainOrderTypes, presentationEvents, phaseExecutor, graphApi);
-            _application = new EffectApplicationSystem(world, effectRequests, budget, presentationEvents, templates, spatialQueries, spawnRequests, phaseExecutor, graphApi, tagOps, technologyEvaluator);
-            _lifetime = new EffectLifetimeSystem(world, clock, conditions, effectRequests, budget, templates, spatialQueries, spawnRequests, phaseExecutor, graphApi, tagOps, technologyEvaluator);
+            _application = new EffectApplicationSystem(world, effectRequests, budget, presentationEvents, templates, spatialQueries, spawnRequests, phaseExecutor, graphApi, tagOps, progressionEvaluator);
+            _lifetime = new EffectLifetimeSystem(world, clock, conditions, effectRequests, budget, templates, spatialQueries, spawnRequests, phaseExecutor, graphApi, tagOps, progressionEvaluator);
             _runtimeStateEntity = world.Create(new GasRuntimeState());
         }
 

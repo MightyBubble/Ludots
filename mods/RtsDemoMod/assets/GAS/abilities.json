@@ -241,7 +241,7 @@
       ]
     },
     "blockTags": {
-      "blockedAny": ["Status.Rts.Training", "State.Rts.Constructing", "Tech.Rts.WarpGate"]
+      "blockedAny": ["Status.Rts.Training", "State.Rts.Constructing", "Progression.Rts.WarpGate"]
     },
     "presentation": {
       "displayName": "训练狂热者",
@@ -262,7 +262,7 @@
       ]
     },
     "blockTags": {
-      "blockedAny": ["Status.Rts.Researching", "Tech.Rts.WarpGate", "State.Rts.Constructing"]
+      "blockedAny": ["Status.Rts.Researching", "Progression.Rts.WarpGate", "State.Rts.Constructing"]
     },
     "presentation": {
       "displayName": "研究折跃门",
@@ -282,7 +282,7 @@
       ]
     },
     "blockTags": {
-      "requiredAll": ["Tech.Rts.WarpGate"],
+      "requiredAll": ["Progression.Rts.WarpGate"],
       "blockedAny": ["State.Rts.Constructing"]
     },
     "indicator": {

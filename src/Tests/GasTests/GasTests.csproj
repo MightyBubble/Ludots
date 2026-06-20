@@ -72,7 +72,7 @@
     <ProjectReference Include="..\..\..\mods\showcases\rts_training_sc2\RtsSc2TrainingShowcaseMod\RtsSc2TrainingShowcaseMod.csproj" />
     <ProjectReference Include="..\..\..\mods\showcases\static_obstacle_physics\StaticObstaclePhysicsShowcaseMod\StaticObstaclePhysicsShowcaseMod.csproj" />
     <ProjectReference Include="..\..\..\mods\showcases\capability_standard\CapabilityStandardParticipantViewsMod\CapabilityStandardParticipantViewsMod.csproj" />
-    <ProjectReference Include="..\..\..\mods\showcases\tech_tree_scope\TechTreeScopeShowcaseMod\TechTreeScopeShowcaseMod.csproj" />
+    <ProjectReference Include="..\..\..\mods\showcases\progression_scope\ProgressionScopeShowcaseMod\ProgressionScopeShowcaseMod.csproj" />
     <ProjectReference Include="..\..\..\mods\Navigation2DPlaygroundMod\Navigation2DPlaygroundMod.csproj" />
     <ProjectReference Include="..\..\Libraries\Ludots.UI.Skia\Ludots.UI.Skia.csproj" />
   </ItemGroup>

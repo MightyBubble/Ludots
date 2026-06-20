@@ -368,13 +368,13 @@ namespace Ludots.Tests.GAS
         }
 
         [Test]
-        public void AbilityDefinitionRegistry_RegisterFromEntity_CopiesTechnologyRequirements()
+        public void AbilityDefinitionRegistry_RegisterFromEntity_CopiesProgressionRequirements()
         {
             using var world = World.Create();
             var template = world.Create(
                 new AbilityTemplate(),
                 new AbilityExecSpec(),
-                new AbilityTechnologyRequirements
+                new AbilityProgressionRequirements
                 {
                     UseRequirementId = 1201,
                     ShowRequirementId = 1202
@@ -384,10 +384,10 @@ namespace Ludots.Tests.GAS
             defs.RegisterFromEntity(world, template, abilityId: 6011);
 
             That(defs.TryGet(6011, out var def), Is.True);
-            That(def.HasUseTechnologyRequirement, Is.True);
-            That(def.UseTechnologyRequirementId, Is.EqualTo(1201));
-            That(def.HasShowTechnologyRequirement, Is.True);
-            That(def.ShowTechnologyRequirementId, Is.EqualTo(1202));
+            That(def.HasUseProgressionRequirement, Is.True);
+            That(def.UseProgressionRequirementId, Is.EqualTo(1201));
+            That(def.HasShowProgressionRequirement, Is.True);
+            That(def.ShowProgressionRequirementId, Is.EqualTo(1202));
         }
 
         [Test]

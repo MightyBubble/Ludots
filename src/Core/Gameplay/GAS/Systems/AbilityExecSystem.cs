@@ -1,4 +1,4 @@
-﻿using System;
+using System;
 using System.Collections.Generic;
 using Arch.Core;
 using Arch.Core.Extensions;
@@ -9,7 +9,7 @@ using Ludots.Core.Gameplay.GAS.Input;
 using Ludots.Core.Gameplay.GAS.Orders;
 using Ludots.Core.Gameplay.GAS.Presentation;
 using Ludots.Core.Gameplay.Items;
-using Ludots.Core.Gameplay.Technology;
+using Ludots.Core.Gameplay.Progression;
 using Ludots.Core.GraphRuntime;
 using Ludots.Core.NodeLibraries.GASGraph;
 using Ludots.Core.Mathematics;
@@ -37,7 +37,7 @@ namespace Ludots.Core.Gameplay.GAS.Systems
         private readonly GraphProgramRegistry _graphPrograms;
         private readonly IGraphRuntimeApi _graphApi;
         private readonly TagOps _tagOps;
-        private readonly TechnologyRequirementEvaluator _technologyRequirements;
+        private readonly ProgressionRequirementEvaluator _progressionRequirements;
 
         private readonly int _castAbilityOrderTypeId;
         private readonly int _castAbilityStartOrderTypeId;
@@ -75,7 +75,7 @@ namespace Ludots.Core.Gameplay.GAS.Systems
             IGraphRuntimeApi graphApi = null,
             TagOps tagOps = null,
             OrderTypeRegistry orderTypeRegistry = null,
-            TechnologyRequirementEvaluator technologyRequirements = null)
+            ProgressionRequirementEvaluator progressionRequirements = null)
             : base(world)
         {
             _clock = clock;
@@ -94,7 +94,7 @@ namespace Ludots.Core.Gameplay.GAS.Systems
             _graphApi = graphApi;
             _tagOps = tagOps ?? new TagOps();
             _orderTypeRegistry = orderTypeRegistry;
-            _technologyRequirements = technologyRequirements;
+            _progressionRequirements = progressionRequirements;
         }
 
         /// <summary>
@@ -276,8 +276,8 @@ namespace Ludots.Core.Gameplay.GAS.Systems
                         : hasTemplateEntity && World.Has<AbilityExecSpec>(templateEntity)
                             ? World.Get<AbilityExecSpec>(templateEntity)
                             : default;
-                    int useRequirementId = ResolveUseTechnologyRequirementId(hasAbilityDef, in abilityDef, hasTemplateEntity, templateEntity);
-                    bool pendingTechnologyUseRequirement = false;
+                    int useRequirementId = ResolveUseProgressionRequirementId(hasAbilityDef, in abilityDef, hasTemplateEntity, templateEntity);
+                    bool pendingProgressionUseRequirement = false;
                     if (useRequirementId > 0)
                     {
                         bool requiresExplicitScope = RequiresExplicitScope(useRequirementId);
@@ -285,9 +285,9 @@ namespace Ludots.Core.Gameplay.GAS.Systems
                             !World.IsAlive(targetContext) &&
                             AbilityCanResolveTargetContextBeforeSideEffects(in startSpec))
                         {
-                            pendingTechnologyUseRequirement = true;
+                            pendingProgressionUseRequirement = true;
                         }
-                        else if (!EvaluateTechnologyRequirement(actor, targetEntity, targetContext, useRequirementId))
+                        else if (!EvaluateProgressionRequirement(actor, targetEntity, targetContext, useRequirementId))
                         {
                             CancelAbilityStart(actor, targetEntity, slotIndex, slot.AbilityId, AbilityCastFailReason.PreconditionFailed);
                             continue;
@@ -392,8 +392,8 @@ namespace Ludots.Core.Gameplay.GAS.Systems
                     exec.WaitRequestId = 0;
                     exec.ActiveClockId = defaultClockId;
                     exec.IsToggleDeactivating = false;
-                    exec.PendingTechnologyUseRequirement = (byte)(pendingTechnologyUseRequirement ? 1 : 0);
-                    exec.PendingTechnologyRequirementId = pendingTechnologyUseRequirement ? useRequirementId : 0;
+                    exec.PendingProgressionUseRequirement = (byte)(pendingProgressionUseRequirement ? 1 : 0);
+                    exec.PendingProgressionRequirementId = pendingProgressionUseRequirement ? useRequirementId : 0;
 
                     PublishCastStartedAndCommitted(actor, targetEntity, slotIndex, slot.AbilityId);
                     workUnits++;
@@ -588,16 +588,16 @@ namespace Ludots.Core.Gameplay.GAS.Systems
                    (_castAbilityStartOrderTypeId > 0 && orderTypeId == _castAbilityStartOrderTypeId);
         }
 
-        private int ResolveUseTechnologyRequirementId(bool hasAbilityDef, in AbilityDefinition abilityDef, bool hasTemplateEntity, Entity templateEntity)
+        private int ResolveUseProgressionRequirementId(bool hasAbilityDef, in AbilityDefinition abilityDef, bool hasTemplateEntity, Entity templateEntity)
         {
-            if (hasAbilityDef && abilityDef.HasUseTechnologyRequirement)
+            if (hasAbilityDef && abilityDef.HasUseProgressionRequirement)
             {
-                return abilityDef.UseTechnologyRequirementId;
+                return abilityDef.UseProgressionRequirementId;
             }
 
-            if (hasTemplateEntity && World.Has<AbilityTechnologyRequirements>(templateEntity))
+            if (hasTemplateEntity && World.Has<AbilityProgressionRequirements>(templateEntity))
             {
-                return World.Get<AbilityTechnologyRequirements>(templateEntity).UseRequirementId;
+                return World.Get<AbilityProgressionRequirements>(templateEntity).UseRequirementId;
             }
 
             return 0;
@@ -605,32 +605,32 @@ namespace Ludots.Core.Gameplay.GAS.Systems
 
         private bool RequiresExplicitScope(int requirementId)
         {
-            if (_technologyRequirements == null)
+            if (_progressionRequirements == null)
             {
-                throw new InvalidOperationException("Ability technology requirement is configured, but TechnologyRequirementEvaluator is not registered.");
+                throw new InvalidOperationException("Ability progression requirement is configured, but ProgressionRequirementEvaluator is not registered.");
             }
 
-            return _technologyRequirements.RequiresExplicitScope(requirementId);
+            return _progressionRequirements.RequiresExplicitScope(requirementId);
         }
 
-        private bool EvaluateTechnologyRequirement(Entity actor, Entity subject, Entity explicitScopeHost, int requirementId)
+        private bool EvaluateProgressionRequirement(Entity actor, Entity subject, Entity explicitScopeHost, int requirementId)
         {
             if (requirementId <= 0)
             {
                 return true;
             }
 
-            if (_technologyRequirements == null)
+            if (_progressionRequirements == null)
             {
-                throw new InvalidOperationException("Ability technology requirement is configured, but TechnologyRequirementEvaluator is not registered.");
+                throw new InvalidOperationException("Ability progression requirement is configured, but ProgressionRequirementEvaluator is not registered.");
             }
 
             Entity resolvedSubject = World.IsAlive(subject) ? subject : actor;
             Entity resolvedExplicitScopeHost = World.IsAlive(explicitScopeHost)
                 ? explicitScopeHost
                 : default;
-            var context = new TechnologyRequirementEvaluationContext(actor, resolvedSubject, resolvedExplicitScopeHost);
-            return _technologyRequirements.Evaluate(requirementId, in context);
+            var context = new ProgressionRequirementEvaluationContext(actor, resolvedSubject, resolvedExplicitScopeHost);
+            return _progressionRequirements.Evaluate(requirementId, in context);
         }
 
         private static bool AbilityCanResolveTargetContextBeforeSideEffects(in AbilityExecSpec spec)
@@ -654,29 +654,29 @@ namespace Ludots.Core.Gameplay.GAS.Systems
             return false;
         }
 
-        private bool TrySatisfyPendingTechnologyUseRequirement(Entity actor, ref AbilityExecInstance inst)
+        private bool TrySatisfyPendingProgressionUseRequirement(Entity actor, ref AbilityExecInstance inst)
         {
-            if (inst.PendingTechnologyUseRequirement == 0)
+            if (inst.PendingProgressionUseRequirement == 0)
             {
                 return true;
             }
 
-            if (EvaluateTechnologyRequirement(actor, inst.Target, inst.TargetContext, inst.PendingTechnologyRequirementId))
+            if (EvaluateProgressionRequirement(actor, inst.Target, inst.TargetContext, inst.PendingProgressionRequirementId))
             {
-                inst.PendingTechnologyUseRequirement = 0;
-                inst.PendingTechnologyRequirementId = 0;
+                inst.PendingProgressionUseRequirement = 0;
+                inst.PendingProgressionRequirementId = 0;
                 return true;
             }
 
-            FailPendingTechnologyUseRequirement(actor, ref inst);
+            FailPendingProgressionUseRequirement(actor, ref inst);
             return false;
         }
 
-        private void FailPendingTechnologyUseRequirement(Entity actor, ref AbilityExecInstance inst)
+        private void FailPendingProgressionUseRequirement(Entity actor, ref AbilityExecInstance inst)
         {
             inst.State = AbilityExecRunState.Failed;
-            inst.PendingTechnologyUseRequirement = 0;
-            inst.PendingTechnologyRequirementId = 0;
+            inst.PendingProgressionUseRequirement = 0;
+            inst.PendingProgressionRequirementId = 0;
             _presentationEvents?.Publish(new GasPresentationEvent
             {
                 Kind = GasPresentationEventKind.CastFailed,
@@ -728,11 +728,11 @@ namespace Ludots.Core.Gameplay.GAS.Systems
                 // Not yet time for this item
                 if (itemTick > inst.CurrentTick) return;
 
-                if (inst.PendingTechnologyUseRequirement != 0 &&
+                if (inst.PendingProgressionUseRequirement != 0 &&
                     kind != ExecItemKind.InputGate &&
                     kind != ExecItemKind.SelectionGate)
                 {
-                    FailPendingTechnologyUseRequirement(actor, ref inst);
+                    FailPendingProgressionUseRequirement(actor, ref inst);
                     return;
                 }
 
@@ -1060,7 +1060,7 @@ namespace Ludots.Core.Gameplay.GAS.Systems
                     {
                         if (World.IsAlive(resp.Target)) inst.Target = resp.Target;
                         if (World.IsAlive(resp.TargetContext)) inst.TargetContext = resp.TargetContext;
-                        if (!TrySatisfyPendingTechnologyUseRequirement(actor, ref inst))
+                        if (!TrySatisfyPendingProgressionUseRequirement(actor, ref inst))
                         {
                             return;
                         }
@@ -1103,7 +1103,7 @@ namespace Ludots.Core.Gameplay.GAS.Systems
                         {
                             inst.TargetContext = resp.TargetContext;
                         }
-                        if (!TrySatisfyPendingTechnologyUseRequirement(actor, ref inst))
+                        if (!TrySatisfyPendingProgressionUseRequirement(actor, ref inst))
                         {
                             return;
                         }
@@ -1232,8 +1232,8 @@ namespace Ludots.Core.Gameplay.GAS.Systems
                 exec.WaitRequestId = 0;
                 exec.ActiveClockId = toggleSpec.DeactivateExecSpec.ClockId;
                 exec.IsToggleDeactivating = true;
-                exec.PendingTechnologyUseRequirement = 0;
-                exec.PendingTechnologyRequirementId = 0;
+                exec.PendingProgressionUseRequirement = 0;
+                exec.PendingProgressionRequirementId = 0;
                 
                 PublishCastStartedAndCommitted(actor, targetEntity, slotIndex, abilityId);
             }

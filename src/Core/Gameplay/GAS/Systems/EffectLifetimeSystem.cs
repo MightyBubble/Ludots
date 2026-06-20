@@ -1,11 +1,11 @@
-﻿using Arch.Core;
+using Arch.Core;
 using Arch.Core.Extensions;
 using Arch.Buffer;
 using Ludots.Core.Gameplay.GAS.Components;
 using Ludots.Core.Gameplay.Components;
 using Ludots.Core.Gameplay.Teams;
 using Ludots.Core.Gameplay.Spawning;
-using Ludots.Core.Gameplay.Technology;
+using Ludots.Core.Gameplay.Progression;
 using Ludots.Core.Components;
 using Ludots.Core.Spatial;
 using Ludots.Core.Mathematics;
@@ -79,7 +79,7 @@ namespace Ludots.Core.Gameplay.GAS.Systems
         private readonly List<PhaseGraphEntry> _expirePhaseGraphs = new(64);
         private readonly List<PhaseGraphEntry> _removePhaseGraphs = new(64);
 
-        public EffectLifetimeSystem(World world, Ludots.Core.Engine.IClock clock, GasConditionRegistry conditions, EffectRequestQueue effectRequests = null, GasBudget budget = null, EffectTemplateRegistry templates = null, ISpatialQueryService spatialQueries = null, RuntimeEntitySpawnQueue spawnRequests = null, EffectPhaseExecutor phaseExecutor = null, Ludots.Core.NodeLibraries.GASGraph.Host.GasGraphRuntimeApi graphApi = null, TagOps tagOps = null, TechnologyRequirementEvaluator technologyEvaluator = null) : base(world)
+        public EffectLifetimeSystem(World world, Ludots.Core.Engine.IClock clock, GasConditionRegistry conditions, EffectRequestQueue effectRequests = null, GasBudget budget = null, EffectTemplateRegistry templates = null, ISpatialQueryService spatialQueries = null, RuntimeEntitySpawnQueue spawnRequests = null, EffectPhaseExecutor phaseExecutor = null, Ludots.Core.NodeLibraries.GASGraph.Host.GasGraphRuntimeApi graphApi = null, TagOps tagOps = null, ProgressionRequirementEvaluator progressionEvaluator = null) : base(world)
         {
             _effectRequests = effectRequests;
             _budget = budget;
@@ -96,7 +96,7 @@ namespace Ludots.Core.Gameplay.GAS.Systems
             _builtinRuntime.FanOutCommands = _fanOutCommands;
             _builtinRuntime.ResolverBuffer = _resolverBuffer;
             _builtinRuntime.SpawnRequests = spawnRequests;
-            _builtinRuntime.TechnologyEvaluator = technologyEvaluator;
+            _builtinRuntime.ProgressionEvaluator = progressionEvaluator;
 
         }
 

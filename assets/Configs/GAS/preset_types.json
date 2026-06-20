@@ -111,12 +111,12 @@
     }
   },
   {
-    "id": "CompleteTechnology",
+    "id": "CompleteProgression",
     "components": [],
     "activePhases": ["OnApply"],
     "allowedLifetimes": ["Instant"],
     "defaultPhaseHandlers": {
-      "OnApply": { "type": "builtin", "id": "CompleteTechnology" }
+      "OnApply": { "type": "builtin", "id": "CompleteProgression" }
     }
   }
 ]

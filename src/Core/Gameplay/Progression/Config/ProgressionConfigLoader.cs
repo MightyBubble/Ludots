@@ -1,0 +1,365 @@
+using System;
+using System.Collections.Generic;
+using System.Text.Json;
+using System.Text.Json.Nodes;
+using Ludots.Core.Config;
+using Ludots.Core.Gameplay.GAS.Components;
+using Ludots.Core.Gameplay.GAS.Registry;
+using Ludots.Core.Gameplay.Progression.Registry;
+using Ludots.Core.NodeLibraries.GASGraph.Host;
+
+namespace Ludots.Core.Gameplay.Progression.Config
+{
+    public sealed class ProgressionConfigLoader
+    {
+        private readonly ConfigPipeline _pipeline;
+        private readonly ProgressionDefinitionRegistry _progressions;
+        private readonly ProgressionRequirementRegistry _requirements;
+        private readonly ProgressionScopeKeyRegistry _scopeKeys;
+
+        public ProgressionConfigLoader(
+            ConfigPipeline pipeline,
+            ProgressionDefinitionRegistry progressions,
+            ProgressionRequirementRegistry requirements,
+            ProgressionScopeKeyRegistry scopeKeys)
+        {
+            _pipeline = pipeline ?? throw new ArgumentNullException(nameof(pipeline));
+            _progressions = progressions ?? throw new ArgumentNullException(nameof(progressions));
+            _requirements = requirements ?? throw new ArgumentNullException(nameof(requirements));
+            _scopeKeys = scopeKeys ?? throw new ArgumentNullException(nameof(scopeKeys));
+        }
+
+        public void Load(ConfigCatalog catalog, ConfigConflictReport report = null)
+        {
+            LoadScopes(catalog, report);
+            LoadProgressions(catalog, report);
+            LoadRequirements(catalog, report);
+        }
+
+        private void LoadScopes(ConfigCatalog catalog, ConfigConflictReport report)
+        {
+            var entry = ConfigPipeline.RequireEntry(catalog, "Progression/scopes.json", ConfigMergePolicy.ArrayById, "id");
+            var merged = _pipeline.MergeArrayByIdFromCatalog(in entry, report);
+            var sorted = ToSortedEntries(merged);
+
+            var errors = new List<string>();
+            for (int i = 0; i < sorted.Count; i++)
+            {
+                try
+                {
+                    var cfg = sorted[i].Node.Deserialize<ProgressionScopeConfig>(Options)
+                        ?? throw new InvalidOperationException("Failed to deserialize progression scope config.");
+                    if (string.IsNullOrWhiteSpace(cfg.Id))
+                    {
+                        cfg.Id = sorted[i].Id;
+                    }
+
+                    if (!string.Equals(cfg.Id, sorted[i].Id, StringComparison.OrdinalIgnoreCase))
+                    {
+                        throw new InvalidOperationException($"Progression scope id mismatch: '{sorted[i].Id}' vs '{cfg.Id}'.");
+                    }
+
+                    _scopeKeys.Register(cfg.Id);
+                }
+                catch (Exception ex)
+                {
+                    errors.Add($"Scope '{sorted[i].Id}': {ex.Message}");
+                }
+            }
+
+            ThrowIfErrors(errors, "Progression/scopes.json");
+        }
+
+        private void LoadProgressions(ConfigCatalog catalog, ConfigConflictReport report)
+        {
+            _progressions.Clear();
+            ProgressionIdRegistry.Clear();
+
+            var entry = ConfigPipeline.RequireEntry(catalog, "Progression/progressions.json", ConfigMergePolicy.ArrayById, "id");
+            var merged = _pipeline.MergeArrayByIdFromCatalog(in entry, report);
+            var sorted = ToSortedEntries(merged);
+
+            for (int i = 0; i < sorted.Count; i++)
+            {
+                ProgressionIdRegistry.Register(sorted[i].Id);
+            }
+
+            var errors = new List<string>();
+            for (int i = 0; i < sorted.Count; i++)
+            {
+                try
+                {
+                    var cfg = sorted[i].Node.Deserialize<ProgressionConfig>(Options)
+                        ?? throw new InvalidOperationException("Failed to deserialize progression config.");
+                    if (string.IsNullOrWhiteSpace(cfg.Id))
+                    {
+                        cfg.Id = sorted[i].Id;
+                    }
+
+                    if (!string.Equals(cfg.Id, sorted[i].Id, StringComparison.OrdinalIgnoreCase))
+                    {
+                        throw new InvalidOperationException($"Progression id mismatch: '{sorted[i].Id}' vs '{cfg.Id}'.");
+                    }
+
+                    int progressionId = ProgressionIdRegistry.GetId(cfg.Id);
+                    var definition = new ProgressionDefinition
+                    {
+                        ProgressionId = progressionId,
+                        DefaultScope = ParseScope(cfg.Scope, defaultScope: ProgressionScopeSpec.Self, $"Progression '{cfg.Id}'")
+                    };
+                    _progressions.Register(progressionId, in definition);
+                }
+                catch (Exception ex)
+                {
+                    errors.Add($"Progression '{sorted[i].Id}': {ex.Message}");
+                }
+            }
+
+            ThrowIfErrors(errors, "Progression/progressions.json");
+        }
+
+        private void LoadRequirements(ConfigCatalog catalog, ConfigConflictReport report)
+        {
+            _requirements.Clear();
+            ProgressionRequirementIdRegistry.Clear();
+
+            var entry = ConfigPipeline.RequireEntry(catalog, "Progression/requirements.json", ConfigMergePolicy.ArrayById, "id");
+            var merged = _pipeline.MergeArrayByIdFromCatalog(in entry, report);
+            var sorted = ToSortedEntries(merged);
+
+            for (int i = 0; i < sorted.Count; i++)
+            {
+                ProgressionRequirementIdRegistry.Register(sorted[i].Id);
+            }
+
+            var errors = new List<string>();
+            for (int i = 0; i < sorted.Count; i++)
+            {
+                try
+                {
+                    var cfg = sorted[i].Node.Deserialize<ProgressionRequirementConfig>(Options)
+                        ?? throw new InvalidOperationException("Failed to deserialize progression requirement config.");
+                    if (string.IsNullOrWhiteSpace(cfg.Id))
+                    {
+                        cfg.Id = sorted[i].Id;
+                    }
+
+                    if (!string.Equals(cfg.Id, sorted[i].Id, StringComparison.OrdinalIgnoreCase))
+                    {
+                        throw new InvalidOperationException($"Progression requirement id mismatch: '{sorted[i].Id}' vs '{cfg.Id}'.");
+                    }
+
+                    var nodes = new List<ProgressionRequirementNode>(16);
+                    var childIndices = new List<int>(16);
+                    AddNode(nodes, childIndices, cfg.Root, cfg.Id, "root");
+                    int requirementId = ProgressionRequirementIdRegistry.GetId(cfg.Id);
+                    _requirements.Register(requirementId, new ProgressionRequirementDefinition(requirementId, nodes.ToArray(), childIndices.ToArray()));
+                }
+                catch (Exception ex)
+                {
+                    errors.Add($"Requirement '{sorted[i].Id}': {ex.Message}");
+                }
+            }
+
+            ThrowIfErrors(errors, "Progression/requirements.json");
+            ProgressionIdRegistry.Freeze();
+            ProgressionRequirementIdRegistry.Freeze();
+            _scopeKeys.Freeze();
+        }
+
+        private int AddNode(
+            List<ProgressionRequirementNode> nodes,
+            List<int> childIndices,
+            ProgressionRequirementNodeConfig cfg,
+            string ownerId,
+            string path)
+        {
+            if (cfg == null)
+            {
+                throw new InvalidOperationException($"{path} must be an object.");
+            }
+
+            ProgressionRequirementNodeKind kind = ParseNodeKind(cfg.Kind, ownerId, path);
+            int nodeIndex = nodes.Count;
+            nodes.Add(default);
+
+            int firstChild = childIndices.Count;
+            int childCount = 0;
+            if (kind is ProgressionRequirementNodeKind.All or ProgressionRequirementNodeKind.Any)
+            {
+                if (cfg.Children == null || cfg.Children.Count == 0)
+                {
+                    throw new InvalidOperationException($"{path}.children must declare at least one child.");
+                }
+
+                for (int i = 0; i < cfg.Children.Count; i++)
+                {
+                    childIndices.Add(AddNode(nodes, childIndices, cfg.Children[i], ownerId, $"{path}.children[{i}]"));
+                    childCount++;
+                }
+            }
+            else if (kind == ProgressionRequirementNodeKind.Not)
+            {
+                if (cfg.Child == null)
+                {
+                    throw new InvalidOperationException($"{path}.child is required for kind Not.");
+                }
+
+                childIndices.Add(AddNode(nodes, childIndices, cfg.Child, ownerId, $"{path}.child"));
+                childCount = 1;
+            }
+
+            var requiredTags = default(GameplayTagContainer);
+            if (cfg.Tags != null)
+            {
+                for (int i = 0; i < cfg.Tags.Count; i++)
+                {
+                    if (string.IsNullOrWhiteSpace(cfg.Tags[i]))
+                    {
+                        throw new InvalidOperationException($"{path}.tags[{i}] must not be empty.");
+                    }
+
+                    requiredTags.AddTag(TagRegistry.Register(cfg.Tags[i]));
+                }
+            }
+
+            int progressionId = 0;
+            if (!string.IsNullOrWhiteSpace(cfg.Progression))
+            {
+                progressionId = ProgressionIdRegistry.GetId(cfg.Progression);
+                if (progressionId <= 0)
+                {
+                    throw new InvalidOperationException($"{path}.progression references unknown progression '{cfg.Progression}'.");
+                }
+            }
+
+            int graphProgramId = 0;
+            if (!string.IsNullOrWhiteSpace(cfg.Graph))
+            {
+                graphProgramId = GraphIdRegistry.GetId(cfg.Graph);
+                if (graphProgramId <= 0)
+                {
+                    throw new InvalidOperationException($"{path}.graph references unknown graph '{cfg.Graph}'.");
+                }
+            }
+
+            int requiredCount = cfg.Count;
+            if (kind == ProgressionRequirementNodeKind.ProgressionLevelAtLeast)
+            {
+                if (progressionId <= 0)
+                {
+                    throw new InvalidOperationException($"{path}.progression is required for kind ProgressionLevelAtLeast.");
+                }
+
+                if (cfg.Level <= 0)
+                {
+                    throw new InvalidOperationException($"{path}.level must be greater than zero for kind ProgressionLevelAtLeast.");
+                }
+
+                requiredCount = cfg.Level;
+            }
+            else if (kind == ProgressionRequirementNodeKind.ProgressionCompleted && progressionId <= 0)
+            {
+                throw new InvalidOperationException($"{path}.progression is required for kind ProgressionCompleted.");
+            }
+
+            nodes[nodeIndex] = new ProgressionRequirementNode(
+                kind,
+                ParseScope(cfg.Scope, ResolveDefaultScope(progressionId), $"{ownerId}.{path}.scope"),
+                ParseEntitySource(cfg.EntitySource),
+                firstChild,
+                childCount,
+                progressionId,
+                requiredCount,
+                graphProgramId,
+                in requiredTags);
+
+            return nodeIndex;
+        }
+
+        private static ProgressionRequirementNodeKind ParseNodeKind(string raw, string ownerId, string path)
+        {
+            return raw switch
+            {
+                "All" => ProgressionRequirementNodeKind.All,
+                "Any" => ProgressionRequirementNodeKind.Any,
+                "Not" => ProgressionRequirementNodeKind.Not,
+                "ProgressionCompleted" => ProgressionRequirementNodeKind.ProgressionCompleted,
+                "EntityCount" => ProgressionRequirementNodeKind.EntityCount,
+                "TagAll" => ProgressionRequirementNodeKind.TagAll,
+                "GraphValidation" => ProgressionRequirementNodeKind.GraphValidation,
+                "ProgressionLevelAtLeast" => ProgressionRequirementNodeKind.ProgressionLevelAtLeast,
+                _ => throw new InvalidOperationException($"Requirement '{ownerId}' {path}.kind has unsupported value '{raw}'.")
+            };
+        }
+
+        private ProgressionScopeSpec ResolveDefaultScope(int progressionId)
+        {
+            return progressionId > 0 && _progressions.TryGet(progressionId, out var definition)
+                ? definition.DefaultScope
+                : ProgressionScopeSpec.Self;
+        }
+
+        private static ProgressionRequirementEntitySource ParseEntitySource(string? raw)
+        {
+            return raw switch
+            {
+                null or "" => ProgressionRequirementEntitySource.ScopeMembers,
+                "ScopeMembers" => ProgressionRequirementEntitySource.ScopeMembers,
+                "ScopeHost" => ProgressionRequirementEntitySource.ScopeHost,
+                "Actor" => ProgressionRequirementEntitySource.Actor,
+                "Subject" => ProgressionRequirementEntitySource.Subject,
+                _ => throw new InvalidOperationException($"Unsupported progression requirement entitySource '{raw}'.")
+            };
+        }
+
+        private ProgressionScopeSpec ParseScope(string? raw, ProgressionScopeSpec defaultScope, string context)
+        {
+            if (string.IsNullOrWhiteSpace(raw))
+            {
+                return defaultScope;
+            }
+
+            string value = raw.Trim();
+            return value switch
+            {
+                "self" => ProgressionScopeSpec.Self,
+                "explicit" => new ProgressionScopeSpec(ProgressionScopeKind.Explicit),
+                _ => _scopeKeys.TryGetId(value, out int scopeKeyId) && scopeKeyId > 0
+                    ? new ProgressionScopeSpec(ProgressionScopeKind.Named, scopeKeyId)
+                    : throw new InvalidOperationException($"{context} references unknown progression scope '{value}'. Declare it in Progression/scopes.json.")
+            };
+        }
+
+        private static List<(string Id, JsonObject Node)> ToSortedEntries(IReadOnlyList<MergedConfigEntry> merged)
+        {
+            var sorted = new List<(string Id, JsonObject Node)>(merged.Count);
+            for (int i = 0; i < merged.Count; i++)
+            {
+                sorted.Add((merged[i].Id, merged[i].Node));
+            }
+
+            sorted.Sort((a, b) => StringComparer.OrdinalIgnoreCase.Compare(a.Id, b.Id));
+            return sorted;
+        }
+
+        private static void ThrowIfErrors(List<string> errors, string relativePath)
+        {
+            if (errors.Count == 0)
+            {
+                return;
+            }
+
+            throw new AggregateException(
+                $"[ProgressionConfigLoader] {errors.Count} compilation error(s) in '{relativePath}'.",
+                errors.ConvertAll(e => (Exception)new InvalidOperationException(e)));
+        }
+
+        private static readonly JsonSerializerOptions Options = new()
+        {
+            PropertyNameCaseInsensitive = false,
+            PropertyNamingPolicy = JsonNamingPolicy.CamelCase,
+            UnmappedMemberHandling = System.Text.Json.Serialization.JsonUnmappedMemberHandling.Disallow
+        };
+    }
+}
