@@ -24,6 +24,7 @@ namespace Ludots.Core.Modding
         private readonly List<ModLoadContext> _loadContexts = new List<ModLoadContext>();
         private readonly Dictionary<string, Assembly> _sharedAssemblies = new Dictionary<string, Assembly>(StringComparer.Ordinal);
         private readonly Dictionary<string, string> _modDirectories = new Dictionary<string, string>(StringComparer.Ordinal);
+        private readonly HashSet<string> _processSharedAssemblyNames = new HashSet<string>(StringComparer.Ordinal);
         private ModLoadContext? _activePlanLoadContext;
 
         public IMapManager MapManager { get; set; }
@@ -169,7 +170,8 @@ namespace Ludots.Core.Modding
                 _vfs.Mount(item.Manifest.Name, item.ModDirectory);
             }
 
-            _activePlanLoadContext = new ModLoadContext(ResolveSharedAssembly);
+            ConfigureProcessSharedAssemblies(validatedMods.Select(item => item.Manifest));
+            _activePlanLoadContext = new ModLoadContext(ResolveSharedAssembly, _processSharedAssemblyNames);
             _loadContexts.Add(_activePlanLoadContext);
 
             foreach (var item in validatedMods)
@@ -253,7 +255,28 @@ namespace Ludots.Core.Modding
             LoadedModIds.Clear();
             _modDirectories.Clear();
             _sharedAssemblies.Clear();
+            _processSharedAssemblyNames.Clear();
             _activePlanLoadContext = null;
+        }
+
+        private void ConfigureProcessSharedAssemblies(IEnumerable<ModManifest> manifests)
+        {
+            _processSharedAssemblyNames.Clear();
+            foreach (var manifest in manifests)
+            {
+                if (manifest.ProcessSharedAssemblies == null)
+                {
+                    continue;
+                }
+
+                foreach (var assemblyName in manifest.ProcessSharedAssemblies)
+                {
+                    if (!string.IsNullOrWhiteSpace(assemblyName))
+                    {
+                        _processSharedAssemblyNames.Add(assemblyName.Trim());
+                    }
+                }
+            }
         }
 
         private static void UnregisterModComponentAuthoring(IEnumerable<string> modIds)
@@ -347,7 +370,7 @@ namespace Ludots.Core.Modding
                     else
                     {
                         Log.Info(in LogChannels.ModLoader, $"Loading DLL for {manifest.Name} at {dllPath}");
-                        var loadContext = _activePlanLoadContext ?? new ModLoadContext(ResolveSharedAssembly);
+                        var loadContext = _activePlanLoadContext ?? new ModLoadContext(ResolveSharedAssembly, _processSharedAssemblyNames);
                         if (_activePlanLoadContext == null)
                         {
                             _activePlanLoadContext = loadContext;
@@ -559,6 +582,7 @@ namespace Ludots.Core.Modding
             LoadedModIds.Clear();
             _modDirectories.Clear();
             _sharedAssemblies.Clear();
+            _processSharedAssemblyNames.Clear();
             _activePlanLoadContext = null;
 
             GC.Collect();

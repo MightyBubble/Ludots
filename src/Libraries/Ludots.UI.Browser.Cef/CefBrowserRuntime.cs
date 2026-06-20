@@ -252,7 +252,7 @@ public sealed class CefBrowserRuntime : IBrowserRuntime
 	private static string ResolveVersion()
 	{
 		return string.IsNullOrWhiteSpace(global::CefSharp.Cef.CefSharpVersion)
-			? "148.0.90"
+			? "unknown"
 			: global::CefSharp.Cef.CefSharpVersion;
 	}
 

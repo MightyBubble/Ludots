@@ -58,6 +58,36 @@ namespace GasTests
         }
 
         [Test]
+        public void LoadMods_ManifestProcessSharedAssemblies_LoadsDeclaredDependencyInDefaultContext()
+        {
+            var tempRoot = CreateTempDir();
+            try
+            {
+                var modSet = CreateProcessSharedDependencyModSet(tempRoot);
+                var vfs = new VirtualFileSystem();
+                var loader = new ModLoader(vfs, new FunctionRegistry(), new TriggerManager());
+
+                loader.LoadMods(new[] { modSet.ModDirectory });
+
+                var modAssembly = FindLoadedAssembly(modSet.ModName);
+                var dependencyAssembly = FindLoadedAssembly(modSet.SharedAssemblyName);
+                var modLoadContext = AssemblyLoadContext.GetLoadContext(modAssembly);
+                var dependencyLoadContext = AssemblyLoadContext.GetLoadContext(dependencyAssembly);
+
+                Assert.That(modLoadContext, Is.Not.Null);
+                Assert.That(modLoadContext, Is.Not.SameAs(AssemblyLoadContext.Default));
+                Assert.That(modLoadContext!.IsCollectible, Is.True);
+                Assert.That(dependencyLoadContext, Is.SameAs(AssemblyLoadContext.Default));
+                Assert.That(modAssembly.Location, Is.Empty);
+                Assert.That(dependencyAssembly.Location, Is.Not.Empty);
+            }
+            finally
+            {
+                TryDelete(tempRoot);
+            }
+        }
+
+        [Test]
         public void UnloadAll_UnloadsCodeModsInReverseLoadOrder()
         {
             var tempRoot = CreateTempDir();
@@ -347,6 +377,111 @@ namespace GasTests
                 unloadLogPath);
         }
 
+        private static ProcessSharedDependencyModSet CreateProcessSharedDependencyModSet(string tempRoot)
+        {
+            var repoRoot = FindRepoRoot();
+            var modName = "ProcessSharedConsumer" + Guid.NewGuid().ToString("N");
+            var sharedAssemblyName = "ProcessSharedHelper" + Guid.NewGuid().ToString("N");
+            var coreProjectPath = Path.Combine(repoRoot, "src", "Core", "Ludots.Core.csproj");
+            var helperProjectPath = CreateHelperLibraryProject(
+                tempRoot,
+                sharedAssemblyName,
+                $$"""
+                namespace {{sharedAssemblyName}};
+
+                public static class ProcessSharedMarker
+                {
+                    public static string Ping() => "process-shared";
+                }
+                """);
+
+            var modDir = Path.Combine(tempRoot, modName);
+            Directory.CreateDirectory(modDir);
+
+            var projectXml = $$"""
+            <Project Sdk="Microsoft.NET.Sdk">
+              <PropertyGroup>
+                <TargetFramework>net8.0</TargetFramework>
+                <ImplicitUsings>enable</ImplicitUsings>
+                <Nullable>enable</Nullable>
+                <BaseOutputPath>bin\</BaseOutputPath>
+                <OutputPath>bin\</OutputPath>
+                <CopyLocalLockFileAssemblies>true</CopyLocalLockFileAssemblies>
+              </PropertyGroup>
+
+              <ItemGroup>
+                <ProjectReference Include="{{coreProjectPath}}">
+                  <Private>false</Private>
+                </ProjectReference>
+                <ProjectReference Include="{{helperProjectPath}}">
+                  <Private>true</Private>
+                </ProjectReference>
+              </ItemGroup>
+            </Project>
+            """;
+
+            var source = $$"""
+            using Ludots.Core.Modding;
+            using {{sharedAssemblyName}};
+
+            namespace {{modName}};
+
+            public sealed class {{modName}}Entry : IMod
+            {
+                public void OnLoad(IModContext context)
+                {
+                    context.Log(ProcessSharedMarker.Ping());
+                }
+
+                public void OnUnload()
+                {
+                }
+            }
+            """;
+
+            var manifestJson = $$"""
+            {
+              "name": "{{modName}}",
+              "version": "1.0.0",
+              "description": "temp process shared dependency mod",
+              "main": "bin/net8.0/{{modName}}.dll",
+              "priority": 0,
+              "dependencies": {},
+              "processSharedAssemblies": [
+                "{{sharedAssemblyName}}"
+              ]
+            }
+            """;
+
+            File.WriteAllText(Path.Combine(modDir, modName + ".csproj"), projectXml);
+            File.WriteAllText(Path.Combine(modDir, "ModEntry.cs"), source);
+            File.WriteAllText(Path.Combine(modDir, "mod.json"), manifestJson);
+            BuildProject(Path.Combine(modDir, modName + ".csproj"));
+
+            return new ProcessSharedDependencyModSet(modName, sharedAssemblyName, modDir);
+        }
+
+        private static string CreateHelperLibraryProject(string tempRoot, string assemblyName, string source)
+        {
+            var helperDir = Path.Combine(tempRoot, assemblyName);
+            Directory.CreateDirectory(helperDir);
+            var projectPath = Path.Combine(helperDir, assemblyName + ".csproj");
+            var projectXml = $$"""
+            <Project Sdk="Microsoft.NET.Sdk">
+              <PropertyGroup>
+                <TargetFramework>net8.0</TargetFramework>
+                <ImplicitUsings>enable</ImplicitUsings>
+                <Nullable>enable</Nullable>
+                <AssemblyName>{{assemblyName}}</AssemblyName>
+              </PropertyGroup>
+            </Project>
+            """;
+
+            File.WriteAllText(projectPath, projectXml);
+            File.WriteAllText(Path.Combine(helperDir, "ProcessSharedMarker.cs"), source);
+            return projectPath;
+        }
+
         private static string CreateCodeModProject(
             string tempRoot,
             string modName,
@@ -525,5 +660,10 @@ namespace GasTests
             string ProviderDllPath,
             string ConsumerDllPath,
             string? UnloadLogPath);
+
+        private sealed record ProcessSharedDependencyModSet(
+            string ModName,
+            string SharedAssemblyName,
+            string ModDirectory);
     }
 }

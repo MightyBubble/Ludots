@@ -7,6 +7,13 @@
   "dependencies": {
     "LudotsCoreMod": "^1.0.0"
   },
+  "processSharedAssemblies": [
+    "Ludots.UI.Browser",
+    "CefSharp",
+    "CefSharp.Core",
+    "CefSharp.Core.Runtime",
+    "CefSharp.OffScreen"
+  ],
   "author": "Ludots Team",
   "tags": ["browser-ui", "cef", "runtime"]
 }

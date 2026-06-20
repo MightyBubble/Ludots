@@ -13,6 +13,7 @@ public interface IWebUiTopicProducer
 
 public sealed class WebUiDataPlaneRuntime : IDisposable, IAsyncDisposable
 {
+	private readonly object _sync = new();
 	private readonly Dictionary<string, IWebUiTopicProducer> _topics = new(StringComparer.Ordinal);
 	private readonly Dictionary<string, WebUiDataPlaneSession> _sessions = new(StringComparer.Ordinal);
 	private readonly WebUiCommandRouter? _commandRouter;
@@ -23,7 +24,16 @@ public sealed class WebUiDataPlaneRuntime : IDisposable, IAsyncDisposable
 		_commandRouter = commandRouter;
 	}
 
-	public int SessionCount => _sessions.Count;
+	public int SessionCount
+	{
+		get
+		{
+			lock (_sync)
+			{
+				return _sessions.Count;
+			}
+		}
+	}
 
 	public void RegisterTopic(IWebUiTopicProducer producer)
 	{
@@ -34,7 +44,11 @@ public sealed class WebUiDataPlaneRuntime : IDisposable, IAsyncDisposable
 			throw new ArgumentException("Topic producer requires a topic.", nameof(producer));
 		}
 
-		_topics[producer.Topic] = producer;
+		lock (_sync)
+		{
+			ObjectDisposedException.ThrowIf(_disposed, this);
+			_topics[producer.Topic] = producer;
+		}
 	}
 
 	public WebUiDataPlaneSession AttachSession(string sessionId, IWebUiDataTransport transport)
@@ -47,22 +61,38 @@ public sealed class WebUiDataPlaneRuntime : IDisposable, IAsyncDisposable
 
 		ArgumentNullException.ThrowIfNull(transport);
 		sessionId = sessionId.Trim();
-		if (_sessions.Remove(sessionId, out WebUiDataPlaneSession? existing))
+		WebUiDataPlaneSession? existing = null;
+		WebUiDataPlaneSession session;
+		lock (_sync)
 		{
-			existing.Dispose();
+			ObjectDisposedException.ThrowIf(_disposed, this);
+			if (_sessions.Remove(sessionId, out WebUiDataPlaneSession? removed))
+			{
+				existing = removed;
+			}
+
+			session = new WebUiDataPlaneSession(sessionId, transport, HandlePacketAsync);
+			_sessions[session.SessionId] = session;
 		}
 
-		var session = new WebUiDataPlaneSession(sessionId, transport, HandlePacketAsync);
-		_sessions[session.SessionId] = session;
+		existing?.Dispose();
 		return session;
 	}
 
 	public bool DetachSession(string sessionId)
 	{
-		if (string.IsNullOrWhiteSpace(sessionId) ||
-			!_sessions.Remove(sessionId.Trim(), out WebUiDataPlaneSession? session))
+		if (string.IsNullOrWhiteSpace(sessionId))
 		{
 			return false;
+		}
+
+		WebUiDataPlaneSession? session;
+		lock (_sync)
+		{
+			if (!_sessions.Remove(sessionId.Trim(), out session))
+			{
+				return false;
+			}
 		}
 
 		session.Dispose();
@@ -72,7 +102,14 @@ public sealed class WebUiDataPlaneRuntime : IDisposable, IAsyncDisposable
 	public async ValueTask PublishAsync(WebUiOutboundPacket packet, CancellationToken cancellationToken = default)
 	{
 		ObjectDisposedException.ThrowIf(_disposed, this);
-		foreach (WebUiDataPlaneSession session in _sessions.Values)
+		WebUiDataPlaneSession[] sessions;
+		lock (_sync)
+		{
+			ObjectDisposedException.ThrowIf(_disposed, this);
+			sessions = _sessions.Values.ToArray();
+		}
+
+		foreach (WebUiDataPlaneSession session in sessions)
 		{
 			if (!session.IsSubscribed(packet.Topic))
 			{
@@ -160,7 +197,13 @@ public sealed class WebUiDataPlaneRuntime : IDisposable, IAsyncDisposable
 		WebUiControlEnvelope envelope,
 		CancellationToken cancellationToken)
 	{
-		if (!_topics.TryGetValue(envelope.Topic, out IWebUiTopicProducer? producer))
+		IWebUiTopicProducer? producer;
+		lock (_sync)
+		{
+			_topics.TryGetValue(envelope.Topic, out producer);
+		}
+
+		if (producer == null)
 		{
 			session.Enqueue(WebUiDataPlaneProtocol.CreateControlResponse(
 				session.SessionId,
@@ -207,39 +250,50 @@ public sealed class WebUiDataPlaneRuntime : IDisposable, IAsyncDisposable
 
 	public async ValueTask DisposeAsync()
 	{
-		if (_disposed)
+		WebUiDataPlaneSession[] sessions;
+		lock (_sync)
 		{
-			return;
+			if (_disposed)
+			{
+				return;
+			}
+
+			_disposed = true;
+			sessions = _sessions.Values.ToArray();
+			_sessions.Clear();
 		}
 
-		_disposed = true;
-		foreach (WebUiDataPlaneSession session in _sessions.Values)
+		foreach (WebUiDataPlaneSession session in sessions)
 		{
 			await session.DisposeAsync().ConfigureAwait(false);
 		}
-
-		_sessions.Clear();
 	}
 
 	public void Dispose()
 	{
-		if (_disposed)
+		WebUiDataPlaneSession[] sessions;
+		lock (_sync)
 		{
-			return;
+			if (_disposed)
+			{
+				return;
+			}
+
+			_disposed = true;
+			sessions = _sessions.Values.ToArray();
+			_sessions.Clear();
 		}
 
-		_disposed = true;
-		foreach (WebUiDataPlaneSession session in _sessions.Values)
+		foreach (WebUiDataPlaneSession session in sessions)
 		{
 			session.Dispose();
 		}
-
-		_sessions.Clear();
 	}
 }
 
 public sealed class WebUiDataPlaneSession : IDisposable, IAsyncDisposable
 {
+	private readonly object _sync = new();
 	private readonly IWebUiDataTransport _transport;
 	private readonly Func<WebUiDataPlaneSession, WebUiInboundPacket, CancellationToken, ValueTask> _packetHandler;
 	private readonly HashSet<string> _subscriptions = new(StringComparer.Ordinal);
@@ -267,21 +321,63 @@ public sealed class WebUiDataPlaneSession : IDisposable, IAsyncDisposable
 
 	public WebUiDataPlaneDiagnostics Diagnostics => Queue.Diagnostics;
 
-	public bool Subscribe(string topic) => !string.IsNullOrWhiteSpace(topic) && _subscriptions.Add(topic.Trim());
+	public bool Subscribe(string topic)
+	{
+		if (string.IsNullOrWhiteSpace(topic))
+		{
+			return false;
+		}
 
-	public bool Unsubscribe(string topic) => !string.IsNullOrWhiteSpace(topic) && _subscriptions.Remove(topic.Trim());
+		lock (_sync)
+		{
+			ObjectDisposedException.ThrowIf(_disposed, this);
+			return _subscriptions.Add(topic.Trim());
+		}
+	}
 
-	public bool IsSubscribed(string topic) => !string.IsNullOrWhiteSpace(topic) && _subscriptions.Contains(topic.Trim());
+	public bool Unsubscribe(string topic)
+	{
+		if (string.IsNullOrWhiteSpace(topic))
+		{
+			return false;
+		}
+
+		lock (_sync)
+		{
+			return !_disposed && _subscriptions.Remove(topic.Trim());
+		}
+	}
+
+	public bool IsSubscribed(string topic)
+	{
+		if (string.IsNullOrWhiteSpace(topic))
+		{
+			return false;
+		}
+
+		lock (_sync)
+		{
+			return !_disposed && _subscriptions.Contains(topic.Trim());
+		}
+	}
 
 	public void Enqueue(WebUiOutboundPacket packet)
 	{
-		ObjectDisposedException.ThrowIf(_disposed, this);
+		lock (_sync)
+		{
+			ObjectDisposedException.ThrowIf(_disposed, this);
+		}
+
 		Queue.Enqueue(packet);
 	}
 
 	public ValueTask FlushAsync(CancellationToken cancellationToken = default)
 	{
-		ObjectDisposedException.ThrowIf(_disposed, this);
+		lock (_sync)
+		{
+			ObjectDisposedException.ThrowIf(_disposed, this);
+		}
+
 		return Queue.FlushAsync(_transport, cancellationToken);
 	}
 
@@ -297,14 +393,17 @@ public sealed class WebUiDataPlaneSession : IDisposable, IAsyncDisposable
 
 	public void Dispose()
 	{
-		if (_disposed)
+		lock (_sync)
 		{
-			return;
-		}
+			if (_disposed)
+			{
+				return;
+			}
 
-		_disposed = true;
-		_transport.PacketReceived -= OnPacketReceived;
-		_subscriptions.Clear();
+			_disposed = true;
+			_transport.PacketReceived -= OnPacketReceived;
+			_subscriptions.Clear();
+		}
 	}
 
 	public async ValueTask DisposeAsync()

@@ -94,6 +94,49 @@ internal sealed class FakeBrowserMessageBridge : IBrowserMessageBridge
 	}
 }
 
+internal sealed class ReentrancyDetectingWebUiDataTransport : IWebUiDataTransport
+{
+	private readonly ConcurrentQueue<WebUiOutboundPacket> _sent = new();
+	private int _activeSendCount;
+	private int _concurrentSendCount;
+
+	public WebUiTransportCapabilities Capabilities { get; } = WebUiTransportCapabilities.StringBridge();
+
+	public event EventHandler<WebUiInboundPacket>? PacketReceived;
+
+	public IReadOnlyCollection<WebUiOutboundPacket> Sent => _sent.ToArray();
+
+	public int ConcurrentSendCount => Volatile.Read(ref _concurrentSendCount);
+
+	public async ValueTask SendAsync(WebUiOutboundPacket packet, CancellationToken cancellationToken = default)
+	{
+		if (Interlocked.Increment(ref _activeSendCount) > 1)
+		{
+			Interlocked.Increment(ref _concurrentSendCount);
+		}
+
+		try
+		{
+			await Task.Yield();
+			_sent.Enqueue(packet);
+		}
+		finally
+		{
+			Interlocked.Decrement(ref _activeSendCount);
+		}
+	}
+
+	public void Receive(WebUiInboundPacket packet)
+	{
+		PacketReceived?.Invoke(this, packet);
+	}
+
+	public ValueTask DisposeAsync()
+	{
+		return ValueTask.CompletedTask;
+	}
+}
+
 internal sealed class FakeTopicProducer : IWebUiTopicProducer
 {
 	private readonly Func<WebUiTopicContext, WebUiOutboundPacket> _snapshotFactory;

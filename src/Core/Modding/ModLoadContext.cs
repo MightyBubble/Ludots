@@ -9,19 +9,22 @@ namespace Ludots.Core.Modding
 {
     internal sealed class ModLoadContext : AssemblyLoadContext
     {
-        private static readonly HashSet<string> ProcessSharedAssemblyNames = new(StringComparer.Ordinal)
-        {
-            "Ludots.UI.Browser"
-        };
-
         private readonly List<AssemblyDependencyResolver> _resolvers = new();
         private readonly Dictionary<string, Assembly> _managedAssembliesByPath = new(StringComparer.Ordinal);
         private readonly HashSet<string> _registeredMainAssemblyPaths = new(StringComparer.Ordinal);
+        private readonly HashSet<string> _processSharedAssemblyNames;
         private readonly Func<AssemblyName, Assembly> _sharedAssemblyResolver;
 
-        public ModLoadContext(Func<AssemblyName, Assembly> sharedAssemblyResolver) : base(isCollectible: true)
+        public ModLoadContext(
+            Func<AssemblyName, Assembly> sharedAssemblyResolver,
+            IEnumerable<string> processSharedAssemblyNames) : base(isCollectible: true)
         {
             _sharedAssemblyResolver = sharedAssemblyResolver;
+            _processSharedAssemblyNames = processSharedAssemblyNames == null
+                ? new HashSet<string>(StringComparer.Ordinal)
+                : new HashSet<string>(
+                    processSharedAssemblyNames.Where(name => !string.IsNullOrWhiteSpace(name)).Select(name => name.Trim()),
+                    StringComparer.Ordinal);
         }
 
         public void RegisterMainAssemblyPath(string modMainAssemblyPath)
@@ -98,7 +101,7 @@ namespace Ludots.Core.Modding
         {
             assembly = null;
             if (string.IsNullOrWhiteSpace(assemblyName.Name) ||
-                !ProcessSharedAssemblyNames.Contains(assemblyName.Name))
+                !_processSharedAssemblyNames.Contains(assemblyName.Name))
             {
                 return false;
             }
@@ -193,10 +196,10 @@ namespace Ludots.Core.Modding
             return loadedAssembly ?? AssemblyLoadContext.Default.LoadFromAssemblyPath(fullPath);
         }
 
-        private static bool RequiresProcessAssemblyLoad(string fullPath)
+        private bool RequiresProcessAssemblyLoad(string fullPath)
         {
             string assemblyName = Path.GetFileNameWithoutExtension(fullPath);
-            return assemblyName.StartsWith("CefSharp", StringComparison.OrdinalIgnoreCase);
+            return _processSharedAssemblyNames.Contains(assemblyName);
         }
 
         private static FileStream OpenReadStream(string fullPath)

@@ -52,6 +52,31 @@ public sealed class WebUiDataPlaneRuntimeTests
 	}
 
 	[Test]
+	public async Task PublishAsync_SerializesConcurrentFlushesForTheSameSession()
+	{
+		await using var runtime = new WebUiDataPlaneRuntime();
+		var transport = new ReentrancyDetectingWebUiDataTransport();
+		WebUiDataPlaneSession session = runtime.AttachSession("session-a", transport);
+		session.Subscribe("topic.units");
+
+		Task[] publishers = Enumerable.Range(0, 64)
+			.Select(tick => runtime.PublishAsync(new WebUiOutboundPacket(
+				string.Empty,
+				"topic.units",
+				WebUiPacketKind.Delta,
+				WebUiDeliverySemantics.ReliableOrdered,
+				Encoding.UTF8.GetBytes($"{{\"tick\":{tick}}}")),
+				TestContext.CurrentContext.CancellationToken).AsTask())
+			.ToArray();
+
+		await Task.WhenAll(publishers);
+
+		Assert.That(transport.ConcurrentSendCount, Is.EqualTo(0));
+		Assert.That(transport.Sent, Has.Count.EqualTo(64));
+		Assert.That(session.Diagnostics.SentPackets, Is.EqualTo(64));
+	}
+
+	[Test]
 	public async Task Unsubscribe_StopsFutureDelta()
 	{
 		await using var runtime = new WebUiDataPlaneRuntime();

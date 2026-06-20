@@ -13,7 +13,6 @@
     "../../../../../../../mods/PerformanceVisualizationMod",
     "../../../../../../../mods/Physics2DPlaygroundMod",
     "../../../../../../../mods/DiagnosticsOverlayMod",
-    "../../../../../../../mods/FeatureHubMod",
-    "../../../../../../../mods/showcases/browser_ui/BrowserUiShowcaseMod"
+    "../../../../../../../mods/FeatureHubMod"
   ]
 }
