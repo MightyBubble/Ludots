@@ -82,6 +82,7 @@ namespace GasTests
                 .ToArray();
 
             Assert.That(processSharedAssemblies, Does.Contain("Ludots.UI.Browser"));
+            Assert.That(processSharedAssemblies, Does.Contain("Ludots.UI.Browser.Cef"));
             Assert.That(processSharedAssemblies, Does.Contain("CefSharp"));
             Assert.That(processSharedAssemblies, Does.Contain("CefSharp.Core"));
             Assert.That(processSharedAssemblies, Does.Contain("CefSharp.Core.Runtime"));

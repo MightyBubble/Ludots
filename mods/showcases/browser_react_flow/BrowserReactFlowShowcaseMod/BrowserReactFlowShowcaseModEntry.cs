@@ -16,6 +16,8 @@ public sealed class BrowserReactFlowShowcaseModEntry : IMod
 {
     private const string BrowserServiceKey = "BrowserRuntime";
     private const string AssetIndexPath = "BrowserReactFlowShowcaseMod:Assets/react-flow-app/index.html";
+    private const string PerfModeEnvironmentKey = "LUDOTS_BROWSER_REACT_FLOW_MODE";
+    private const string HitTestModeEnvironmentKey = "LUDOTS_BROWSER_REACT_FLOW_HIT_TEST";
 
     private IBrowserSurface? _surface;
     private BrowserSurfaceCanvasContent? _browserContent;
@@ -25,6 +27,8 @@ public sealed class BrowserReactFlowShowcaseModEntry : IMod
     private CancellationTokenSource? _publisherCts;
     private Task? _publisherTask;
     private IModContext? _modContext;
+    private bool _perfBaselineMode;
+    private int _alphaPassThroughClicks;
 
     public void OnLoad(IModContext context)
     {
@@ -68,17 +72,28 @@ public sealed class BrowserReactFlowShowcaseModEntry : IMod
         var viewport = new BrowserViewport(
             Math.Max(1280, (int)MathF.Ceiling(root.Width)),
             Math.Max(720, (int)MathF.Ceiling(root.Height)));
+        _perfBaselineMode = IsPerfBaselineMode();
 
         _surface = await runtime.CreateSurfaceAsync(viewport, resolver).ConfigureAwait(false);
-        SetupDataPlane(_surface);
+        if (!_perfBaselineMode)
+        {
+            SetupDataPlane(_surface);
+        }
 
         _browserContent = new BrowserSurfaceCanvasContent(
             _surface,
-            hitTestOptions: BrowserSurfaceHitTestOptions.Alpha());
-        root.MountScene(BuildBrowserScene(textMeasurer, imageSizeProvider, _browserContent));
+            hitTestOptions: ResolveHitTestOptions());
+        root.MountScene(BuildBrowserScene(
+            textMeasurer,
+            imageSizeProvider,
+            _browserContent,
+            BuildAlphaPassThroughPanel(root, textMeasurer, imageSizeProvider)));
         root.IsDirty = true;
 
-        await _surface.NavigateAsync(new BrowserNavigationRequest(new Uri("ludots-browser-showcase:///"))).ConfigureAwait(false);
+        Uri navigationUri = _perfBaselineMode
+            ? new Uri("ludots-browser-showcase:///?perf=baseline")
+            : new Uri("ludots-browser-showcase:///");
+        await _surface.NavigateAsync(new BrowserNavigationRequest(navigationUri)).ConfigureAwait(false);
     }
 
     private void SetupDataPlane(IBrowserSurface surface)
@@ -154,15 +169,63 @@ public sealed class BrowserReactFlowShowcaseModEntry : IMod
     private static UiScene BuildBrowserScene(
         IUiTextMeasurer textMeasurer,
         IUiImageSizeProvider imageSizeProvider,
-        BrowserSurfaceCanvasContent browserContent)
+        BrowserSurfaceCanvasContent browserContent,
+        UiElementBuilder passThroughPanel)
     {
-        UiElementBuilder root = Ui.Canvas(browserContent)
-            .Id("react-flow-browser-surface")
+        UiElementBuilder root = Ui.Panel(
+                passThroughPanel,
+                Ui.Canvas(browserContent)
+                    .Id("react-flow-browser-surface")
+                    .WidthPercent(100f)
+                    .HeightPercent(100f)
+                    .Absolute(0f, 0f)
+                    .ZIndex(20))
+            .Id("react-flow-browser-stack")
             .WidthPercent(100f)
-            .HeightPercent(100f)
-            .FlexGrow(1f);
+            .HeightPercent(100f);
 
         return UiSceneComposer.Compose(textMeasurer, imageSizeProvider, root);
+    }
+
+    private UiElementBuilder BuildAlphaPassThroughPanel(
+        UIRoot root,
+        IUiTextMeasurer textMeasurer,
+        IUiImageSizeProvider imageSizeProvider)
+    {
+        return Ui.Column(
+                Ui.Text("Native Ludots hit-test layer").FontSize(16f).Bold(),
+                Ui.Text($"Transparent web pixels pass through here: {_alphaPassThroughClicks}").FontSize(13f),
+                Ui.Button("Native Click Target", _ =>
+                {
+                    _alphaPassThroughClicks++;
+                    BrowserSurfaceCanvasContent browserContent = _browserContent
+                        ?? throw new InvalidOperationException("Browser content is not mounted.");
+                    root.MountScene(BuildBrowserScene(
+                        textMeasurer,
+                        imageSizeProvider,
+                        browserContent,
+                        BuildAlphaPassThroughPanel(root, textMeasurer, imageSizeProvider)));
+                    root.IsDirty = true;
+                }))
+            .Id("react-flow-alpha-pass-through-target")
+            .Width(320f)
+            .Height(160f)
+            .Padding(14f)
+            .Gap(10f)
+            .Background("#113026")
+            .Outline(2f, RequireUiColor("#7EE7B2"))
+            .Absolute(520f, 300f)
+            .ZIndex(5);
+    }
+
+    private static UiColor RequireUiColor(string color)
+    {
+        if (!UiColor.TryParse(color, out UiColor parsed))
+        {
+            throw new InvalidOperationException($"Invalid UI color literal: {color}");
+        }
+
+        return parsed;
     }
 
     private static UiScene BuildMissingRuntimeScene(IUiTextMeasurer textMeasurer, IUiImageSizeProvider imageSizeProvider)
@@ -212,5 +275,20 @@ public sealed class BrowserReactFlowShowcaseModEntry : IMod
         }
 
         throw new DirectoryNotFoundException($"React Flow browser app assets were not found: {AssetIndexPath}");
+    }
+
+    private static bool IsPerfBaselineMode()
+    {
+        string? mode = Environment.GetEnvironmentVariable(PerfModeEnvironmentKey);
+        return string.Equals(mode, "baseline", StringComparison.OrdinalIgnoreCase) ||
+            string.Equals(mode, "perf", StringComparison.OrdinalIgnoreCase);
+    }
+
+    private static BrowserSurfaceHitTestOptions ResolveHitTestOptions()
+    {
+        string? mode = Environment.GetEnvironmentVariable(HitTestModeEnvironmentKey);
+        return string.Equals(mode, "bounds", StringComparison.OrdinalIgnoreCase)
+            ? BrowserSurfaceHitTestOptions.Bounds
+            : BrowserSurfaceHitTestOptions.Alpha();
     }
 }

@@ -9,6 +9,7 @@
   },
   "processSharedAssemblies": [
     "Ludots.UI.Browser",
+    "Ludots.UI.Browser.Cef",
     "CefSharp",
     "CefSharp.Core",
     "CefSharp.Core.Runtime",

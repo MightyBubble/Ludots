@@ -22,6 +22,7 @@ public sealed class BrowserCefRuntimeModEntry : IMod
 	{
 		ArgumentNullException.ThrowIfNull(context);
 		_runtimeRootPath = ResolveRuntimeRootPath(context);
+		CefBrowserRuntime.PrepareAssemblyResolution(_runtimeRootPath);
 		context.Log($"[BrowserCefRuntimeMod] Prepared CEF runtime root: {_runtimeRootPath}");
 		context.OnEvent(GameEvents.GameStart, InstallRuntimeAsync);
 	}

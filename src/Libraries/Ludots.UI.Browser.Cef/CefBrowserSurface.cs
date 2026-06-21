@@ -332,10 +332,11 @@ internal sealed class CefBrowserSurface : IBrowserSurface
 
 	private static void SendWheelEvent(IBrowserHost host, BrowserWheelEvent wheel)
 	{
+		CefWheelDelta delta = CefBrowserInputTranslator.ToCefWheelDelta(wheel);
 		host.SendMouseWheelEvent(
 			new MouseEvent((int)MathF.Round(wheel.X), (int)MathF.Round(wheel.Y), CefEventFlags.None),
-			(int)MathF.Round(wheel.DeltaX),
-			(int)MathF.Round(wheel.DeltaY));
+			delta.DeltaX,
+			delta.DeltaY);
 	}
 
 	private static void SendKeyEvent(IBrowserHost host, BrowserKeyEvent key)

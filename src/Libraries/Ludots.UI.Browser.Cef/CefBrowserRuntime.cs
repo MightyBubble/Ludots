@@ -42,6 +42,11 @@ public sealed class CefBrowserRuntime : IBrowserRuntime
 
 	public BrowserRuntimeInfo Info { get; }
 
+	public static void PrepareAssemblyResolution(string runtimeRootPath)
+	{
+		EnsureDefaultAssemblyResolution(runtimeRootPath);
+	}
+
 	public ValueTask<IBrowserSurface> CreateSurfaceAsync(
 		BrowserViewport viewport,
 		IBrowserResourceResolver? resourceResolver = null,

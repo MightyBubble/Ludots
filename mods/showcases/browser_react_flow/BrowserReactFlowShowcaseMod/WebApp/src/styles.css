@@ -19,9 +19,35 @@ body,
 }
 
 .showcase-shell {
+  position: relative;
   width: 100%;
   height: 100%;
   background: transparent;
+}
+
+.react-flow-alpha-cutout {
+  -webkit-mask:
+    linear-gradient(#000 0 0),
+    linear-gradient(#000 0 0);
+  -webkit-mask-position:
+    0 0,
+    520px 300px;
+  -webkit-mask-repeat: no-repeat;
+  -webkit-mask-size:
+    100% 100%,
+    320px 160px;
+  -webkit-mask-composite: xor;
+  mask:
+    linear-gradient(#000 0 0),
+    linear-gradient(#000 0 0);
+  mask-composite: exclude;
+  mask-position:
+    0 0,
+    520px 300px;
+  mask-repeat: no-repeat;
+  mask-size:
+    100% 100%,
+    320px 160px;
 }
 
 .react-flow {
@@ -277,6 +303,41 @@ body,
   box-shadow: 0 16px 42px rgba(0, 0, 0, 0.28);
 }
 
+.keyboard-probe {
+  display: grid;
+  gap: 6px;
+  border: 1px solid rgba(126, 231, 178, 0.32);
+  border-radius: 8px;
+  background: rgba(7, 18, 28, 0.72);
+  padding: 9px;
+}
+
+.keyboard-probe label,
+.keyboard-probe span {
+  color: rgba(218, 255, 234, 0.74);
+  font-size: 11px;
+}
+
+.keyboard-probe input,
+.perf-panel input {
+  width: 100%;
+  min-width: 0;
+  border: 1px solid rgba(255, 255, 255, 0.22);
+  border-radius: 6px;
+  background: rgba(255, 255, 255, 0.92);
+  color: #06101f;
+  font: inherit;
+  font-size: 13px;
+  padding: 8px 9px;
+  outline: none;
+}
+
+.keyboard-probe input:focus,
+.perf-panel input:focus {
+  border-color: rgba(126, 231, 178, 0.95);
+  box-shadow: 0 0 0 3px rgba(126, 231, 178, 0.22);
+}
+
 .dataplane-head {
   display: grid;
   gap: 2px;
@@ -358,5 +419,71 @@ body,
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
+  font-size: 12px;
+}
+
+.alpha-panel {
+  display: grid;
+  gap: 6px;
+  border: 1px solid rgba(126, 231, 178, 0.38);
+  border-radius: 8px;
+  background: rgba(4, 10, 18, 0.78);
+  padding: 10px;
+}
+
+.alpha-panel button {
+  border: 1px solid rgba(126, 231, 178, 0.7);
+  border-radius: 6px;
+  background: rgba(126, 231, 178, 0.18);
+  color: white;
+  font: inherit;
+  font-size: 12px;
+  font-weight: 700;
+  padding: 8px 10px;
+  cursor: pointer;
+}
+
+.alpha-panel button:hover {
+  background: rgba(126, 231, 178, 0.28);
+}
+
+.alpha-panel span {
+  color: rgba(218, 255, 234, 0.72);
+  font-size: 11px;
+}
+
+.perf-shell {
+  position: relative;
+  width: 100%;
+  height: 100%;
+  background: transparent;
+}
+
+.perf-canvas {
+  position: absolute;
+  inset: 0;
+  background: transparent;
+}
+
+.perf-panel {
+  position: absolute;
+  right: 18px;
+  top: 18px;
+  width: 240px;
+  display: grid;
+  gap: 7px;
+  border: 1px solid rgba(100, 210, 255, 0.34);
+  border-radius: 8px;
+  background: rgba(4, 10, 18, 0.78);
+  padding: 10px;
+}
+
+.perf-panel strong {
+  color: white;
+  font-size: 20px;
+}
+
+.perf-panel span {
+  color: rgba(224, 243, 255, 0.72);
   font-size: 12px;
 }

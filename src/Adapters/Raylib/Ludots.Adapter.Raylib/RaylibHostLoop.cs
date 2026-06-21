@@ -121,7 +121,15 @@ namespace Ludots.Adapter.Raylib
             public int ScrollFrame { get; init; }
 
             public float ScrollDeltaY { get; init; }
+
+            public int KeyFrame { get; init; }
+
+            public string Key { get; init; } = string.Empty;
+
+            public string KeyText { get; init; } = string.Empty;
         }
+
+        private readonly record struct UiInputFrameResult(bool Handled, bool PointerCaptured, bool WheelCaptured);
 
         public static void Run(RaylibHostSetup setup)
         {
@@ -361,15 +369,19 @@ namespace Ludots.Adapter.Raylib
 
                         double uiInputMs = 0d;
                         bool uiCaptured = false;
+                        bool uiWheelCaptured = false;
                         if (drawSkiaUi)
                         {
                             long uiInputStart = Stopwatch.GetTimestamp();
-                            uiCaptured = UpdateInput(uiRoot, syntheticUiPlayback, frameIndex, diagnosticPath);
+                            UiInputFrameResult uiInput = UpdateInput(uiRoot, syntheticUiPlayback, frameIndex, diagnosticPath);
+                            uiCaptured = uiInput.PointerCaptured;
+                            uiWheelCaptured = uiInput.WheelCaptured;
                             uiInputMs = ElapsedMs(uiInputStart);
                         }
 
                         presentationTiming?.ObserveUiInput(uiInputMs);
                         engine.SetService(CoreServiceKeys.UiCaptured, uiCaptured || uiRoot.HasFocusedCanvas);
+                        engine.SetService(CoreServiceKeys.UiWheelCaptured, uiWheelCaptured);
                         presentationTiming?.ObserveHostPreTick(ElapsedMs(preTickStart));
 
                         engine.Tick(dt);
@@ -792,7 +804,10 @@ namespace Ludots.Adapter.Raylib
                 EndX = ReadEnvFloatOrDefault("LUDOTS_RAYLIB_SYNTHETIC_UI_END_X", 310f),
                 EndY = ReadEnvFloatOrDefault("LUDOTS_RAYLIB_SYNTHETIC_UI_END_Y", 270f),
                 ScrollFrame = ReadEnvIntOrDefault("LUDOTS_RAYLIB_SYNTHETIC_UI_SCROLL_FRAME", -1),
-                ScrollDeltaY = ReadEnvFloatOrDefault("LUDOTS_RAYLIB_SYNTHETIC_UI_SCROLL_DELTA_Y", 0f)
+                ScrollDeltaY = ReadEnvFloatOrDefault("LUDOTS_RAYLIB_SYNTHETIC_UI_SCROLL_DELTA_Y", 0f),
+                KeyFrame = ReadEnvIntOrDefault("LUDOTS_RAYLIB_SYNTHETIC_UI_KEY_FRAME", -1),
+                Key = Environment.GetEnvironmentVariable("LUDOTS_RAYLIB_SYNTHETIC_UI_KEY") ?? string.Empty,
+                KeyText = Environment.GetEnvironmentVariable("LUDOTS_RAYLIB_SYNTHETIC_UI_KEY_TEXT") ?? string.Empty
             };
         }
 
@@ -1021,13 +1036,13 @@ namespace Ludots.Adapter.Raylib
             throw new InvalidOperationException($"Required service missing or invalid: {CoreServiceKeys.RenderDebugState.Name} expected {typeof(RenderDebugState).FullName}");
         }
 
-        private static bool UpdateInput(UIRoot uiRoot, SyntheticUiPlayback syntheticUiPlayback, int frameIndex, string? diagnosticPath)
+        private static UiInputFrameResult UpdateInput(UIRoot uiRoot, SyntheticUiPlayback syntheticUiPlayback, int frameIndex, string? diagnosticPath)
         {
             if (syntheticUiPlayback.Enabled &&
-                HandleSyntheticUiPlayback(uiRoot, syntheticUiPlayback, frameIndex, diagnosticPath))
+                HandleSyntheticUiPlayback(uiRoot, syntheticUiPlayback, frameIndex, diagnosticPath) is { Handled: true } syntheticResult)
             {
                 ForwardKeyboardInput(uiRoot);
-                return _uiPointerCaptured;
+                return syntheticResult;
             }
 
             var mousePos = Rl.GetMousePosition();
@@ -1037,6 +1052,7 @@ namespace Ludots.Adapter.Raylib
             float mouseWheel = Rl.GetMouseWheelMove();
             UiNode? hitNode = _uiPointerCaptured ? null : uiRoot.Scene?.HitTest(mousePos.X, mousePos.Y);
             bool hitInteractiveUi = !_uiPointerCaptured && IsInteractiveUiNode(hitNode);
+            bool uiWheelCaptured = false;
 
             if (_uiPointerCaptured && (!windowFocused || (!leftMouseDown && !leftMouseReleased)))
             {
@@ -1056,7 +1072,7 @@ namespace Ludots.Adapter.Raylib
 
             if ((hitInteractiveUi || _uiPointerCaptured) && Math.Abs(mouseWheel) > float.Epsilon)
             {
-                uiRoot.HandleInput(new PointerEvent
+                uiWheelCaptured = uiRoot.HandleInput(new PointerEvent
                 {
                     DeviceType = InputDeviceType.Mouse,
                     PointerId = 0,
@@ -1089,7 +1105,7 @@ namespace Ludots.Adapter.Raylib
             }
 
             ForwardKeyboardInput(uiRoot);
-            return _uiPointerCaptured;
+            return new UiInputFrameResult(Handled: false, PointerCaptured: _uiPointerCaptured, WheelCaptured: uiWheelCaptured);
         }
 
         private static bool ShouldForwardUiPointerMove(float x, float y)
@@ -1236,11 +1252,11 @@ namespace Ludots.Adapter.Raylib
             };
         }
 
-        private static bool HandleSyntheticUiPlayback(UIRoot uiRoot, SyntheticUiPlayback playback, int frameIndex, string? diagnosticPath)
+        private static UiInputFrameResult HandleSyntheticUiPlayback(UIRoot uiRoot, SyntheticUiPlayback playback, int frameIndex, string? diagnosticPath)
         {
             if (frameIndex < playback.StartFrame)
             {
-                return false;
+                return default;
             }
 
             if (frameIndex == playback.StartFrame)
@@ -1262,7 +1278,7 @@ namespace Ludots.Adapter.Raylib
                     Y = playback.StartY
                 });
                 AppendRaylibDiagnostic(diagnosticPath, $"synthetic-ui down frame={frameIndex} x={playback.StartX:F1} y={playback.StartY:F1} captured={_uiPointerCaptured}");
-                return true;
+                return new UiInputFrameResult(Handled: true, PointerCaptured: _uiPointerCaptured, WheelCaptured: false);
             }
 
             if (frameIndex > playback.StartFrame && frameIndex < playback.EndFrame)
@@ -1277,9 +1293,10 @@ namespace Ludots.Adapter.Raylib
                     Y = y
                 });
 
+                bool uiWheelCaptured = false;
                 if (playback.ScrollFrame == frameIndex && Math.Abs(playback.ScrollDeltaY) > float.Epsilon)
                 {
-                    uiRoot.HandleInput(new PointerEvent
+                    uiWheelCaptured = uiRoot.HandleInput(new PointerEvent
                     {
                         DeviceType = InputDeviceType.Mouse,
                         PointerId = 0,
@@ -1292,7 +1309,22 @@ namespace Ludots.Adapter.Raylib
                     AppendRaylibDiagnostic(diagnosticPath, $"synthetic-ui scroll frame={frameIndex} x={x:F1} y={y:F1} deltaY={playback.ScrollDeltaY:F1}");
                 }
 
-                return true;
+                if (playback.KeyFrame == frameIndex)
+                {
+                    if (!string.IsNullOrWhiteSpace(playback.Key))
+                    {
+                        RaylibSyntheticKeyboardInput.SendKeyStroke(uiRoot, playback.Key);
+                    }
+
+                    if (!string.IsNullOrEmpty(playback.KeyText))
+                    {
+                        RaylibSyntheticKeyboardInput.SendTextInput(uiRoot, playback.KeyText);
+                    }
+
+                    AppendRaylibDiagnostic(diagnosticPath, $"synthetic-ui key frame={frameIndex} key={playback.Key} textLength={playback.KeyText.Length}");
+                }
+
+                return new UiInputFrameResult(Handled: true, PointerCaptured: _uiPointerCaptured, WheelCaptured: uiWheelCaptured);
             }
 
             if (frameIndex == playback.EndFrame)
@@ -1315,10 +1347,10 @@ namespace Ludots.Adapter.Raylib
                 });
                 AppendRaylibDiagnostic(diagnosticPath, $"synthetic-ui up frame={frameIndex} x={playback.EndX:F1} y={playback.EndY:F1}");
                 _uiPointerCaptured = false;
-                return true;
+                return new UiInputFrameResult(Handled: true, PointerCaptured: false, WheelCaptured: false);
             }
 
-            return false;
+            return default;
         }
 
         private static (float X, float Y) InterpolateSyntheticPointer(SyntheticUiPlayback playback, int frameIndex)

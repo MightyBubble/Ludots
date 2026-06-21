@@ -83,6 +83,13 @@ const initialDataPlaneState = {
   rows: []
 };
 
+function resolveShowcaseMode() {
+  const params = new URLSearchParams(window.location.search);
+  return params.get('perf') === 'baseline' || params.get('mode') === 'baseline'
+    ? 'baseline'
+    : 'react-flow';
+}
+
 function buildInitialGraph() {
   const nodes = [];
   const edges = [];
@@ -355,6 +362,8 @@ function FlowShowcase() {
   const rawInputFrameRef = useRef(0);
   const [interaction, setInteraction] = useState(initialInteractionState);
   const [rawInput, setRawInput] = useState(initialRawInputState);
+  const [keyboardProbe, setKeyboardProbe] = useState('');
+  const [keyboardStatus, setKeyboardStatus] = useState('waiting for text input');
   const nodeTypes = useMemo(() => ({ stageNode: StageNode }), []);
   const dataPlane = useLudotsDataPlane();
 
@@ -701,6 +710,7 @@ function FlowShowcase() {
   return (
     <div className="showcase-shell">
       <ReactFlow
+        className="react-flow-alpha-cutout"
         nodes={nodes}
         edges={edges}
         nodeTypes={nodeTypes}
@@ -745,6 +755,34 @@ function FlowShowcase() {
           <div><strong>{dataPlane.state.tick}</strong><span>tick</span></div>
         </Panel>
         <Panel position="top-right" className="dataplane-panel">
+          <div className="keyboard-probe">
+            <label htmlFor="keyboard-probe-input">Keyboard probe</label>
+            <input
+              id="keyboard-probe-input"
+              value={keyboardProbe}
+              onChange={(event) => {
+                const value = event.target.value;
+                setKeyboardProbe(value);
+                setKeyboardStatus(`input: ${value || 'empty'}`);
+                window.__LUDOTS_REACT_FLOW_KEYBOARD__ = {
+                  ...(window.__LUDOTS_REACT_FLOW_KEYBOARD__ ?? {}),
+                  value,
+                  event: 'input'
+                };
+              }}
+              onKeyDown={(event) => {
+                window.__LUDOTS_REACT_FLOW_KEYBOARD__ = {
+                  value: event.currentTarget.value,
+                  key: event.key,
+                  code: event.code,
+                  event: 'keydown'
+                };
+                setKeyboardStatus(`key: ${event.key}`);
+              }}
+              placeholder="click and type"
+            />
+            <span>{keyboardStatus}</span>
+          </div>
           <div className="dataplane-head">
             <strong>{dataPlane.state.phase}</strong>
             <span>{dataPlane.state.transport}</span>
@@ -778,12 +816,121 @@ function FlowShowcase() {
           <div><strong>{rawInput.down}/{rawInput.move}/{rawInput.up}</strong><span>{rawInput.last} b{rawInput.button}/{rawInput.buttons}</span></div>
           <div><strong>{rawInput.pointerDown}/{rawInput.pointerMove}/{rawInput.pointerUp}</strong><span>ptr {rawInput.pointerLast} {rawInput.target}</span></div>
         </Panel>
+        <Panel position="bottom-left" className="alpha-panel">
+          <button
+            type="button"
+            onClick={() => {
+              window.__LUDOTS_REACT_FLOW_ALPHA_HUD__ = (window.__LUDOTS_REACT_FLOW_ALPHA_HUD__ ?? 0) + 1;
+            }}
+          >
+            Web HUD click target
+          </button>
+          <span>opaque browser pixels</span>
+        </Panel>
       </ReactFlow>
     </div>
   );
 }
 
+function PerfBaselineApp() {
+  const canvasRef = useRef(null);
+  const [stats, setStats] = useState({
+    frames: 0,
+    fps: 0,
+    lastInput: 'none',
+    keyEcho: ''
+  });
+
+  React.useEffect(() => {
+    const canvas = canvasRef.current;
+    if (!canvas) {
+      return undefined;
+    }
+
+    const context = canvas.getContext('2d', { alpha: true });
+    let frame = 0;
+    let raf = 0;
+    let lastSample = performance.now();
+    let sampleFrames = 0;
+
+    const resize = () => {
+      const dpr = window.devicePixelRatio || 1;
+      canvas.width = Math.max(1, Math.floor(window.innerWidth * dpr));
+      canvas.height = Math.max(1, Math.floor(window.innerHeight * dpr));
+      canvas.style.width = `${window.innerWidth}px`;
+      canvas.style.height = `${window.innerHeight}px`;
+      context.setTransform(dpr, 0, 0, dpr, 0, 0);
+    };
+
+    const draw = (time) => {
+      frame += 1;
+      sampleFrames += 1;
+      context.clearRect(0, 0, window.innerWidth, window.innerHeight);
+      context.fillStyle = 'rgba(4, 10, 18, 0.68)';
+      context.fillRect(24, 24, 360, 126);
+      context.strokeStyle = 'rgba(126, 231, 178, 0.92)';
+      context.lineWidth = 2;
+      context.strokeRect(24, 24, 360, 126);
+      context.fillStyle = '#f7fbff';
+      context.font = '600 18px system-ui, sans-serif';
+      context.fillText('Browser perf baseline', 44, 64);
+      context.font = '13px system-ui, sans-serif';
+      context.fillStyle = 'rgba(232, 244, 255, 0.78)';
+      context.fillText('No React Flow, no DataPlane publisher, one deterministic canvas.', 44, 94);
+      context.fillText(`frame ${frame}  pulse ${Math.round((Math.sin(time * 0.004) + 1) * 50)}`, 44, 122);
+
+      const elapsed = time - lastSample;
+      if (elapsed >= 500) {
+        const fps = Math.round((sampleFrames * 1000) / elapsed);
+        setStats((current) => ({
+          ...current,
+          frames: frame,
+          fps
+        }));
+        lastSample = time;
+        sampleFrames = 0;
+      }
+
+      raf = window.requestAnimationFrame(draw);
+    };
+
+    resize();
+    window.addEventListener('resize', resize);
+    raf = window.requestAnimationFrame(draw);
+    window.__LUDOTS_BROWSER_PERF_BASELINE_READY__ = true;
+
+    return () => {
+      window.cancelAnimationFrame(raf);
+      window.removeEventListener('resize', resize);
+    };
+  }, []);
+
+  return (
+    <div
+      className="perf-shell"
+      onPointerDown={(event) => setStats((current) => ({ ...current, lastInput: `pointer ${Math.round(event.clientX)},${Math.round(event.clientY)}` }))}
+      onWheel={(event) => setStats((current) => ({ ...current, lastInput: `wheel ${Math.round(event.deltaY)}` }))}
+    >
+      <canvas ref={canvasRef} className="perf-canvas" />
+      <div className="perf-panel">
+        <strong>{stats.fps} fps</strong>
+        <span>{stats.frames} frames</span>
+        <span>{stats.lastInput}</span>
+        <input
+          value={stats.keyEcho}
+          onChange={(event) => setStats((current) => ({ ...current, keyEcho: event.target.value }))}
+          placeholder="keyboard probe"
+        />
+      </div>
+    </div>
+  );
+}
+
 function App() {
+  if (resolveShowcaseMode() === 'baseline') {
+    return <PerfBaselineApp />;
+  }
+
   return (
     <ReactFlowProvider>
       <FlowShowcase />
