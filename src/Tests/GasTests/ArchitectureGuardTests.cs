@@ -223,6 +223,107 @@ namespace GasTests
             }
         }
 
+        [Test]
+        public void ExchangeCore_RemainsSemanticAndDoesNotAdoptScenarioNames()
+        {
+            var repoRoot = FindRepoRoot();
+            string exchangeDir = Path.Combine(repoRoot, "src", "Core", "Gameplay", "Exchange");
+            Assert.That(Directory.Exists(exchangeDir), Is.True, $"Missing {exchangeDir}");
+
+            string[] forbidden =
+            {
+                "merchant",
+                "vendor",
+                "forge",
+                "recipe",
+                "trade"
+            };
+
+            var hits = new List<string>();
+            foreach (var file in Directory.EnumerateFiles(exchangeDir, "*.cs", SearchOption.AllDirectories))
+            {
+                string[] lines = File.ReadAllLines(file);
+                for (int lineIndex = 0; lineIndex < lines.Length; lineIndex++)
+                {
+                    string line = lines[lineIndex];
+                    for (int tokenIndex = 0; tokenIndex < forbidden.Length; tokenIndex++)
+                    {
+                        if (line.Contains(forbidden[tokenIndex], StringComparison.OrdinalIgnoreCase))
+                        {
+                            hits.Add($"{ToRepoRelativePath(repoRoot, file)}:{lineIndex + 1}: {forbidden[tokenIndex]}: {line.Trim()}");
+                            break;
+                        }
+                    }
+                }
+            }
+
+            if (hits.Count > 0)
+            {
+                Assert.Fail(
+                    "Core Exchange must stay scenario-agnostic; commerce, crafting, and diplomacy names belong in config/mod layers:\n" +
+                    string.Join("\n", hits));
+            }
+        }
+
+        [Test]
+        public void ExchangeHotPath_DoesNotUseLinqOrTransientCollections()
+        {
+            var repoRoot = FindRepoRoot();
+            string[] files =
+            {
+                Path.Combine(repoRoot, "src", "Core", "Gameplay", "Exchange", "ExchangeRuntime.cs"),
+                Path.Combine(repoRoot, "src", "Core", "Gameplay", "Exchange", "ExchangeScopedOperationStore.cs")
+            };
+            string[] forbidden =
+            {
+                "using System.Linq",
+                ".Where(",
+                ".Select(",
+                ".ToArray(",
+                ".ToList(",
+                "yield return",
+                "IEnumerator",
+                "IEnumerable<",
+                "new List<",
+                "new Dictionary<"
+            };
+
+            var hits = new List<string>();
+            for (int fileIndex = 0; fileIndex < files.Length; fileIndex++)
+            {
+                string file = files[fileIndex];
+                Assert.That(File.Exists(file), Is.True, $"Missing Exchange hot-path source file {file}");
+                string[] lines = File.ReadAllLines(file);
+                for (int lineIndex = 0; lineIndex < lines.Length; lineIndex++)
+                {
+                    string line = lines[lineIndex];
+                    if (line.Contains("private readonly", StringComparison.Ordinal) &&
+                        (line.Contains("new List<", StringComparison.Ordinal) ||
+                         line.Contains("new Dictionary<", StringComparison.Ordinal)))
+                    {
+                        continue;
+                    }
+
+                    for (int tokenIndex = 0; tokenIndex < forbidden.Length; tokenIndex++)
+                    {
+                        string token = forbidden[tokenIndex];
+                        if (line.Contains(token, StringComparison.Ordinal))
+                        {
+                            hits.Add($"{ToRepoRelativePath(repoRoot, file)}:{lineIndex + 1}: {token}: {line.Trim()}");
+                            break;
+                        }
+                    }
+                }
+            }
+
+            if (hits.Count > 0)
+            {
+                Assert.Fail(
+                    "Exchange runtime hot path should stay allocation-conscious and avoid LINQ/iterator patterns:\n" +
+                    string.Join("\n", hits));
+            }
+        }
+
         private static string FindRepoRoot()
         {
             var dir = new DirectoryInfo(AppContext.BaseDirectory);

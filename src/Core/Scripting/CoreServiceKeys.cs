@@ -13,6 +13,7 @@ using Ludots.Core.EntityQueries;
 using Ludots.Core.Gameplay;
 using Ludots.Core.Gameplay.AI.Config;
 using Ludots.Core.Gameplay.Camera;
+using Ludots.Core.Gameplay.Exchange;
 using Ludots.Core.Gameplay.Narrative;
 using Ludots.Core.Gameplay.GAS;
 using Ludots.Core.Gameplay.GAS.Bindings;
@@ -161,6 +162,9 @@ namespace Ludots.Core.Scripting
         public static readonly ServiceKey<ItemLayoutRegistry> ItemLayoutRegistry = new("ItemLayoutRegistry");
         public static readonly ServiceKey<ItemDefinitionRegistry> ItemDefinitionRegistry = new("ItemDefinitionRegistry");
         public static readonly ServiceKey<InventoryRuntimeService> InventoryRuntimeService = new("InventoryRuntimeService");
+        public static readonly ServiceKey<ExchangeOperationRegistry> ExchangeOperationRegistry = new("ExchangeOperationRegistry");
+        public static readonly ServiceKey<ExchangeScopedOperationStore> ExchangeScopedOperationStore = new("ExchangeScopedOperationStore");
+        public static readonly ServiceKey<ExchangeRuntime> ExchangeRuntime = new("ExchangeRuntime");
         public static readonly ServiceKey<RelationshipTypeRegistry> RelationshipTypeRegistry = new("RelationshipTypeRegistry");
         public static readonly ServiceKey<RelationshipMetricRegistry> RelationshipMetricRegistry = new("RelationshipMetricRegistry");
         public static readonly ServiceKey<RelationshipFlagRegistry> RelationshipFlagRegistry = new("RelationshipFlagRegistry");

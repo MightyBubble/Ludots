@@ -38,5 +38,9 @@ namespace Ludots.Core.Gameplay.GAS
         // ── Entity relations ──
         /// <summary>Read RelationParams and mutate entity parent-child relationships.</summary>
         ApplyRelation = 50,
+
+        // ── Exchange settlement ──
+        /// <summary>Read Exchange params and execute an Exchange operation.</summary>
+        ExecuteExchange = 60,
     }
 }

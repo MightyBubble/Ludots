@@ -16,7 +16,8 @@
    * 通过 `ConfigPipeline` + `config_catalog.json` 合并 `Items/shapes.json`、`Items/layouts.json`、`Items/definitions.json`。
 2. Core runtime 层
    * 物品实例、容器实例、放置关系是 ECS 实体与组件。
-   * 复杂布局校验、移动、拆分、旋转、交易由 `InventoryRuntimeService` 统一执行。
+   * 复杂布局校验、移动、拆分、旋转由 `InventoryRuntimeService` 统一执行。
+   * 受规则约束的交易、合成、配方和未来 4X 价值转换由 `ExchangeRuntime` 统一编排，并继续落到 Inventory SSOT。
 3. GAS / UI 联动层
    * 装备产生的属性、标签、buff 通过正式 GAS effect 生效与撤销。
    * 装备授能能力槽通过单独的 item-granted slot 层接入 `AbilitySlotResolver`。
@@ -154,13 +155,18 @@
 
 ## 6 交易与搜打撤离语义
 
-交易不是专用子系统，而是容器间的受规则约束转移：
+交易、合成和配方不是场景专用子系统，而是 Exchange operation：
 
-* 卖给商人：玩家容器 -> 商人容器 / 结算池
-* 买入物资：商人容器 -> 玩家仓储容器
-* 撤离存入：战局背包容器 -> 藏身处仓储容器
+* 买入物资：玩家输入货币，输出物品创建或转移到玩家仓储容器。
+* 卖出物品：玩家输入物品，输出货币或 GAS settlement effect。
+* 合成配方：玩家输入材料，输出成品或嵌入/授能效果。
+* 未来 4X 交易：玩家或阵营输入资源，输出资源转换、外交结算或贸易路线收益。
 
-价格、货币、声望、黑名单等规则由内容层定义，执行仍落在 `InventoryRuntimeService` 的原子操作上。
+`Merchant`、`Vendor`、`Forge`、`Recipe`、`Market`、`TradeRoute` 等词只能作为 Mod/content/UI/display skin。Core 的正式泛化名称是 `Exchange`。
+
+Exchange 使用 `operationId` 表达静态模板或操作语义，并用可选 `scopeKey` 表达动态运行时实例。动态配方、动态报价和未来 4X 谈判结果优先按 `(operationId, scopeKey)` 解析，再回落到静态 `operationId` 定义。
+
+价格、货币、声望、黑名单等规则由内容层或 GAS requirement 定义。执行仍落在 `InventoryRuntimeService` 的原子操作上，效果仍通过 GAS pipeline 发布。
 
 ## 7 Showcase 设计
 
@@ -240,7 +246,9 @@ showcase 必须提供：
 ## 9 相关路径
 
 * `src/Core/Gameplay/Items/`
+* `src/Core/Gameplay/Exchange/`
 * `assets/Configs/config_catalog.json`
+* `docs/architecture/exchange_architecture.md`
 * `docs/architecture/gas_layered_architecture.md`
 * `docs/architecture/ui_runtime_architecture.md`
 * `docs/architecture/runtime_entity_spawn_flow.md`

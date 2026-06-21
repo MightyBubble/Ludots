@@ -472,6 +472,10 @@ namespace Ludots.Core.NodeLibraries.GASGraph.Host
 
                 ref var gameplayEffect = ref _world.Get<GameplayEffect>(effectEntity);
                 gameplayEffect.CancelRequested = true;
+                if (gameplayEffect.AggregatesModifiers && !_world.Has<AttributeAggregateDirty>(target))
+                {
+                    _world.Add(target, new AttributeAggregateDirty());
+                }
             }
         }
 

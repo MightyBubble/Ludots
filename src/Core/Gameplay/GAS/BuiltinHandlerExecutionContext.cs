@@ -1,6 +1,7 @@
 ﻿using System;
 using System.Collections.Generic;
 using Arch.Core;
+using Ludots.Core.Gameplay.Exchange;
 using Ludots.Core.Gameplay.Spawning;
 using Ludots.Core.Spatial;
 
@@ -18,14 +19,19 @@ namespace Ludots.Core.Gameplay.GAS
         public List<FanOutCommand>? FanOutCommands { get; set; }
         public Entity[]? ResolverBuffer { get; set; }
         public RuntimeEntitySpawnQueue? SpawnRequests { get; set; }
+        public ExchangeRuntime? Exchange { get; set; }
 
         public int ResolvedCandidateCount { get; private set; }
         public int DroppedCount { get; private set; }
+        public bool HasExchangeResult { get; private set; }
+        public ExchangeExecutionResult LastExchangeResult { get; private set; }
 
         public void ResetPerEffect()
         {
             ResolvedCandidateCount = 0;
             DroppedCount = 0;
+            HasExchangeResult = false;
+            LastExchangeResult = default;
         }
 
         public void SetResolvedCandidateCount(int count)
@@ -44,6 +50,12 @@ namespace Ludots.Core.Gameplay.GAS
             {
                 DroppedCount += dropped;
             }
+        }
+
+        public void RecordExchangeResult(ExchangeExecutionResult result)
+        {
+            HasExchangeResult = true;
+            LastExchangeResult = result;
         }
     }
 

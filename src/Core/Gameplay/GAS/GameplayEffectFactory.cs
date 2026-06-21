@@ -145,7 +145,7 @@ namespace Ludots.Core.Gameplay.GAS
                 world.Add(entity, new EffectPeriodicTick());
             }
 
-            if (effect.LifetimeKind == EffectLifetimeKind.After || effect.ExpireCondition.IsValid)
+            if (effect.LifetimeKind != EffectLifetimeKind.Instant || effect.ExpireCondition.IsValid)
             {
                 world.Add(entity, new EffectExpirationCheck());
             }
@@ -159,7 +159,7 @@ namespace Ludots.Core.Gameplay.GAS
                 commandBuffer.Add(entity, new EffectPeriodicTick());
             }
 
-            if (effect.LifetimeKind == EffectLifetimeKind.After || effect.ExpireCondition.IsValid)
+            if (effect.LifetimeKind != EffectLifetimeKind.Instant || effect.ExpireCondition.IsValid)
             {
                 commandBuffer.Add(entity, new EffectExpirationCheck());
             }

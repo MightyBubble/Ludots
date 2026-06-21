@@ -1,5 +1,6 @@
 ﻿using Arch.Core;
 using Arch.Core.Extensions;
+using Ludots.Core.Gameplay.Exchange;
 using Ludots.Core.Gameplay.GAS.Components;
 using Ludots.Core.Gameplay.GAS;
 using Ludots.Core.Gameplay.GAS.Presentation;
@@ -112,7 +113,7 @@ namespace Ludots.Core.Gameplay.GAS.Systems
         private readonly Ludots.Core.NodeLibraries.GASGraph.IGraphRuntimeApi _graphApi;
         private readonly Ludots.Core.NodeLibraries.GASGraph.Host.GasGraphRuntimeApi _graphApiHost;
 
-        public EffectApplicationSystem(World world, EffectRequestQueue effectRequests = null, GasBudget budget = null, GasPresentationEventBuffer presentationEvents = null, EffectTemplateRegistry templates = null, ISpatialQueryService spatialQueries = null, RuntimeEntitySpawnQueue spawnRequests = null, EffectPhaseExecutor phaseExecutor = null, Ludots.Core.NodeLibraries.GASGraph.Host.GasGraphRuntimeApi graphApi = null, TagOps tagOps = null) : base(world)
+        public EffectApplicationSystem(World world, EffectRequestQueue effectRequests = null, GasBudget budget = null, GasPresentationEventBuffer presentationEvents = null, EffectTemplateRegistry templates = null, ISpatialQueryService spatialQueries = null, RuntimeEntitySpawnQueue spawnRequests = null, EffectPhaseExecutor phaseExecutor = null, Ludots.Core.NodeLibraries.GASGraph.Host.GasGraphRuntimeApi graphApi = null, TagOps tagOps = null, ExchangeRuntime exchangeRuntime = null) : base(world)
         {
             _effectRequests = effectRequests;
             _budget = budget;
@@ -128,6 +129,7 @@ namespace Ludots.Core.Gameplay.GAS.Systems
             _builtinRuntime.FanOutCommands = _fanOutCommands;
             _builtinRuntime.ResolverBuffer = _resolverBuffer;
             _builtinRuntime.SpawnRequests = spawnRequests;
+            _builtinRuntime.Exchange = exchangeRuntime;
         }
 
         public override void Update(in float dt)

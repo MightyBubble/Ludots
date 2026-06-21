@@ -36,6 +36,7 @@
     "tags": ["Effect.ItemShowcase.Passive"],
     "presetType": "Buff",
     "lifetime": "Infinite",
+    "duration": { "durationTicks": 0, "periodTicks": 0, "clockId": "FixedFrame" },
     "participatesInResponse": false,
     "modifiers": [
       { "attribute": "MoveSpeed", "op": "Add", "value": 18.0 }
@@ -46,6 +47,7 @@
     "tags": ["Effect.ItemShowcase.Passive"],
     "presetType": "Buff",
     "lifetime": "Infinite",
+    "duration": { "durationTicks": 0, "periodTicks": 0, "clockId": "FixedFrame" },
     "participatesInResponse": false,
     "modifiers": [
       { "attribute": "AttackDamage", "op": "Add", "value": 12.0 },
@@ -57,6 +59,7 @@
     "tags": ["Effect.ItemShowcase.Passive"],
     "presetType": "Buff",
     "lifetime": "Infinite",
+    "duration": { "durationTicks": 0, "periodTicks": 0, "clockId": "FixedFrame" },
     "participatesInResponse": false,
     "modifiers": [
       { "attribute": "Shield", "op": "Add", "value": 10.0 },
@@ -68,6 +71,7 @@
     "tags": ["Effect.ItemShowcase.Passive"],
     "presetType": "Buff",
     "lifetime": "Infinite",
+    "duration": { "durationTicks": 0, "periodTicks": 0, "clockId": "FixedFrame" },
     "participatesInResponse": false,
     "modifiers": [
       { "attribute": "Health", "op": "Add", "value": 8.0 },
@@ -79,6 +83,7 @@
     "tags": ["Effect.ItemShowcase.Passive"],
     "presetType": "Buff",
     "lifetime": "Infinite",
+    "duration": { "durationTicks": 0, "periodTicks": 0, "clockId": "FixedFrame" },
     "participatesInResponse": false,
     "modifiers": [
       { "attribute": "AttackDamage", "op": "Add", "value": 7.0 },
@@ -90,6 +95,7 @@
     "tags": ["Effect.ItemShowcase.Passive"],
     "presetType": "Buff",
     "lifetime": "Infinite",
+    "duration": { "durationTicks": 0, "periodTicks": 0, "clockId": "FixedFrame" },
     "participatesInResponse": false,
     "modifiers": [
       { "attribute": "Shield", "op": "Add", "value": 20.0 }
@@ -100,6 +106,7 @@
     "tags": ["Effect.ItemShowcase.Passive"],
     "presetType": "Buff",
     "lifetime": "Infinite",
+    "duration": { "durationTicks": 0, "periodTicks": 0, "clockId": "FixedFrame" },
     "participatesInResponse": false,
     "modifiers": [
       { "attribute": "AttackDamage", "op": "Add", "value": 9.0 }
@@ -110,6 +117,7 @@
     "tags": ["Effect.ItemShowcase.Passive"],
     "presetType": "Buff",
     "lifetime": "Infinite",
+    "duration": { "durationTicks": 0, "periodTicks": 0, "clockId": "FixedFrame" },
     "participatesInResponse": false,
     "modifiers": [
       { "attribute": "AttackDamage", "op": "Add", "value": 3.0 }
@@ -120,12 +128,13 @@
     "tags": ["Effect.ItemShowcase.Passive"],
     "presetType": "Buff",
     "lifetime": "Infinite",
+    "duration": { "durationTicks": 0, "periodTicks": 0, "clockId": "FixedFrame" },
     "participatesInResponse": false,
     "modifiers": [
       { "attribute": "Armor", "op": "Add", "value": 2.0 }
     ],
     "grantedTags": [
-      { "tag": "Weapon.State.Suppressed", "formula": "Fixed", "amount": 1 }
+      { "tag": "Weapon.State.Suppressed", "formula": "Fixed", "amount": 1, "base": 0 }
     ]
   },
   {
@@ -133,6 +142,7 @@
     "tags": ["Effect.ItemShowcase.Passive"],
     "presetType": "Buff",
     "lifetime": "Infinite",
+    "duration": { "durationTicks": 0, "periodTicks": 0, "clockId": "FixedFrame" },
     "participatesInResponse": false,
     "modifiers": [
       { "attribute": "Armor", "op": "Add", "value": 3.0 }
@@ -143,6 +153,7 @@
     "tags": ["Effect.ItemShowcase.Passive"],
     "presetType": "Buff",
     "lifetime": "Infinite",
+    "duration": { "durationTicks": 0, "periodTicks": 0, "clockId": "FixedFrame" },
     "participatesInResponse": false,
     "modifiers": [
       { "attribute": "AttackDamage", "op": "Add", "value": 6.0 }
@@ -153,6 +164,7 @@
     "tags": ["Effect.ItemShowcase.Passive"],
     "presetType": "Buff",
     "lifetime": "Infinite",
+    "duration": { "durationTicks": 0, "periodTicks": 0, "clockId": "FixedFrame" },
     "participatesInResponse": false,
     "modifiers": [
       { "attribute": "Shield", "op": "Add", "value": 14.0 },

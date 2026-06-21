@@ -101,6 +101,11 @@ namespace Ludots.Core.Gameplay.GAS.Systems
 
             for (int i = 0; i < AttributeBuffer.MAX_ATTRS; i++)
             {
+                if (attrBuffer.CapValues[i] != attrBuffer.BaseValues[i])
+                {
+                    touchedMask |= 1UL << i;
+                }
+
                 attrBuffer.CurrentValues[i] = attrBuffer.BaseValues[i];
             }
 
@@ -114,8 +119,17 @@ namespace Ludots.Core.Gameplay.GAS.Systems
                         continue;
                     }
 
-                    if (world.Has<GameplayEffect>(effectEntity) &&
-                        !world.Get<GameplayEffect>(effectEntity).AggregatesModifiers)
+                    if (world.Has<GameplayEffect>(effectEntity))
+                    {
+                        ref readonly GameplayEffect effect = ref world.Get<GameplayEffect>(effectEntity);
+                        if (effect.CancelRequested ||
+                            effect.State < EffectState.Committed ||
+                            !effect.AggregatesModifiers)
+                        {
+                            continue;
+                        }
+                    }
+                    else
                     {
                         continue;
                     }
@@ -252,12 +266,7 @@ namespace Ludots.Core.Gameplay.GAS.Systems
                     CommandBuffer.Add(entity, presentationChangedLocal);
                 }
 
-                if (!anyDirty)
-                {
-                    return;
-                }
-
-                if (World.Has<DirtyFlags>(entity))
+                if (anyDirty && World.Has<DirtyFlags>(entity))
                 {
                     ref DirtyFlags existingDirty = ref World.Get<DirtyFlags>(entity);
                     for (int i = 0; i < AttributeBuffer.MAX_ATTRS; i++)
@@ -268,7 +277,7 @@ namespace Ludots.Core.Gameplay.GAS.Systems
                         }
                     }
                 }
-                else
+                else if (anyDirty)
                 {
                     CommandBuffer.Add(entity, dirtyFlags);
                 }

@@ -677,6 +677,7 @@ namespace Ludots.Tests.GAS
             That(reg.IsRegistered(EffectPresetType.CreateUnit), Is.True);
             That(reg.IsRegistered(EffectPresetType.Displacement), Is.True);
             That(reg.IsRegistered(EffectPresetType.Relation), Is.True);
+            That(reg.IsRegistered(EffectPresetType.Exchange), Is.True);
 
             // Spot-check ApplyForce2D builtin handler
             ref readonly var af = ref reg.Get(EffectPresetType.ApplyForce2D);
@@ -694,6 +695,10 @@ namespace Ludots.Tests.GAS
             That(relation.HasComponent(ComponentFlags.RelationParams), Is.True);
             That(relation.DefaultPhaseHandlers[EffectPhaseId.OnApply].HandlerId,
                 Is.EqualTo((int)BuiltinHandlerId.ApplyRelation));
+
+            ref readonly var exchange = ref reg.Get(EffectPresetType.Exchange);
+            That(exchange.DefaultPhaseHandlers[EffectPhaseId.OnApply].HandlerId,
+                Is.EqualTo((int)BuiltinHandlerId.ExecuteExchange));
         }
 
         // ════════════════════════════════════════════════════════════════════

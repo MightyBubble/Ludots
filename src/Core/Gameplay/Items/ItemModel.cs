@@ -1,5 +1,6 @@
 using System;
 using System.Collections.Generic;
+using Arch.Core;
 using Ludots.Core.Gameplay.GAS.Components;
 
 namespace Ludots.Core.Gameplay.Items
@@ -239,6 +240,41 @@ namespace Ludots.Core.Gameplay.Items
 
             return false;
         }
+    }
+
+    public readonly struct ItemPlacementReservation
+    {
+        public ItemPlacementReservation(
+            Entity container,
+            int definitionId,
+            ItemPlacementKind kind,
+            short gridX,
+            short gridY,
+            short namedSlotIndex,
+            byte rotationQuarterTurns)
+        {
+            Container = container;
+            DefinitionId = definitionId;
+            Kind = kind;
+            GridX = gridX;
+            GridY = gridY;
+            NamedSlotIndex = namedSlotIndex;
+            RotationQuarterTurns = rotationQuarterTurns;
+        }
+
+        public Entity Container { get; }
+
+        public int DefinitionId { get; }
+
+        public ItemPlacementKind Kind { get; }
+
+        public short GridX { get; }
+
+        public short GridY { get; }
+
+        public short NamedSlotIndex { get; }
+
+        public byte RotationQuarterTurns { get; }
     }
 
     public sealed class ItemShapeRegistry
