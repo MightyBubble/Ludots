@@ -93,6 +93,11 @@ namespace Ludots.Core.Registry
             return _idToName[id] ?? string.Empty;
         }
 
+        public RegistryMapping[] SnapshotMappings()
+        {
+            return RegistryMappingSnapshot.FromNameToId(_nameToId);
+        }
+
         public bool Contains(string name)
         {
             return !string.IsNullOrWhiteSpace(name) && _nameToId.ContainsKey(name);

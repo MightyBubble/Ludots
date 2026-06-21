@@ -7,6 +7,7 @@ using Ludots.Core.Diagnostics;
 using Ludots.Core.Gameplay.Teams;
 using Ludots.Core.Map;
 using Ludots.Core.Map.Board;
+using Ludots.Core.Persistence;
 using Ludots.Core.Scripting;
 
 namespace Ludots.Core.Engine
@@ -58,6 +59,27 @@ namespace Ludots.Core.Engine
             BoardIdRegistry = new BoardIdRegistry();
             SetService(CoreServiceKeys.MapSessions, MapSessions);
             SetService(CoreServiceKeys.BoardIdRegistry, BoardIdRegistry);
+            EnsureSaveParticipantRegistry();
+        }
+
+        private void EnsureSaveParticipantRegistry()
+        {
+            if (GetService(CoreServiceKeys.SaveParticipants) != null)
+            {
+                return;
+            }
+
+            if (GameSession == null ||
+                MapSessions == null ||
+                GetService(CoreServiceKeys.TimeFlow) == null ||
+                GetService(CoreServiceKeys.NarrativeDirector) == null)
+            {
+                return;
+            }
+
+            var registry = new SaveParticipantRegistry();
+            CoreSaveParticipants.RegisterCore(this, registry);
+            SetService(CoreServiceKeys.SaveParticipants, registry);
         }
 
         private void SetCurrentMapSession(MapSession session)
