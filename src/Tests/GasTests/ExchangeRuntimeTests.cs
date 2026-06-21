@@ -4,6 +4,8 @@ using Ludots.Core.Gameplay.Exchange;
 using Ludots.Core.Gameplay.GAS;
 using Ludots.Core.Gameplay.GAS.Components;
 using Ludots.Core.Gameplay.Items;
+using Ludots.Core.Gameplay.Relationships;
+using Ludots.Core.Gameplay.Relationships.Config;
 using NUnit.Framework;
 using static NUnit.Framework.Assert;
 
@@ -30,7 +32,7 @@ namespace Ludots.Tests.GAS
             using World world = World.Create();
             var fixture = CreateFixture(world, stashWidth: 3, stashHeight: 2);
             Entity actor = world.Create();
-            Entity stash = fixture.Inventory.CreateContainer(actor, ItemContainerOwnerKind.Actor, fixture.StashLayout, ItemContainerPurpose.Stash);
+            Entity stash = fixture.Inventory.CreateContainer(actor, fixture.StashLayout, ItemContainerPurpose.Stash);
             Put(fixture.Inventory, CreditDef, stash, 0, 0, stack: 20);
             Put(fixture.Inventory, ArtifactDef, stash, 1, 0);
 
@@ -62,7 +64,7 @@ namespace Ludots.Tests.GAS
             using World world = World.Create();
             var fixture = CreateFixture(world, stashWidth: 2, stashHeight: 1);
             Entity actor = world.Create();
-            Entity stash = fixture.Inventory.CreateContainer(actor, ItemContainerOwnerKind.Actor, fixture.StashLayout, ItemContainerPurpose.Stash);
+            Entity stash = fixture.Inventory.CreateContainer(actor, fixture.StashLayout, ItemContainerPurpose.Stash);
             Put(fixture.Inventory, CreditDef, stash, 0, 0, stack: 20);
             Put(fixture.Inventory, ArtifactDef, stash, 1, 0);
 
@@ -93,8 +95,8 @@ namespace Ludots.Tests.GAS
             var fixture = CreateFixture(world, stashWidth: 2, stashHeight: 2, targetWidth: 2, targetHeight: 1);
             Entity source = world.Create();
             Entity target = world.Create();
-            Entity stash = fixture.Inventory.CreateContainer(source, ItemContainerOwnerKind.Actor, fixture.StashLayout, ItemContainerPurpose.Stash);
-            Entity targetStash = fixture.Inventory.CreateContainer(target, ItemContainerOwnerKind.Actor, fixture.TargetLayout, ItemContainerPurpose.Stash);
+            Entity stash = fixture.Inventory.CreateContainer(source, fixture.StashLayout, ItemContainerPurpose.Stash);
+            Entity targetStash = fixture.Inventory.CreateContainer(target, fixture.TargetLayout, ItemContainerPurpose.Stash);
             Entity artifact = Put(fixture.Inventory, ArtifactDef, stash, 0, 0);
             Put(fixture.Inventory, CreditDef, stash, 1, 0, stack: 10);
             Put(fixture.Inventory, TokenDef, targetStash, 0, 0);
@@ -128,8 +130,8 @@ namespace Ludots.Tests.GAS
             var fixture = CreateFixture(world, stashWidth: 2, stashHeight: 2, targetWidth: 1, targetHeight: 1);
             Entity source = world.Create();
             Entity target = world.Create();
-            Entity stash = fixture.Inventory.CreateContainer(source, ItemContainerOwnerKind.Actor, fixture.StashLayout, ItemContainerPurpose.Stash);
-            Entity targetStash = fixture.Inventory.CreateContainer(target, ItemContainerOwnerKind.Actor, fixture.TargetLayout, ItemContainerPurpose.Stash);
+            Entity stash = fixture.Inventory.CreateContainer(source, fixture.StashLayout, ItemContainerPurpose.Stash);
+            Entity targetStash = fixture.Inventory.CreateContainer(target, fixture.TargetLayout, ItemContainerPurpose.Stash);
             Entity artifact = Put(fixture.Inventory, ArtifactDef, stash, 0, 0);
             Put(fixture.Inventory, CreditDef, stash, 1, 0, stack: 10);
 
@@ -162,7 +164,7 @@ namespace Ludots.Tests.GAS
             using World world = World.Create();
             var fixture = CreateFixture(world, stashWidth: 3, stashHeight: 2);
             Entity actor = world.Create();
-            Entity stash = fixture.Inventory.CreateContainer(actor, ItemContainerOwnerKind.Actor, fixture.StashLayout, ItemContainerPurpose.Stash);
+            Entity stash = fixture.Inventory.CreateContainer(actor, fixture.StashLayout, ItemContainerPurpose.Stash);
             Put(fixture.Inventory, CreditDef, stash, 0, 0, stack: 20);
             Put(fixture.Inventory, ArtifactDef, stash, 1, 0);
 
@@ -186,7 +188,7 @@ namespace Ludots.Tests.GAS
             using World world = World.Create();
             var fixture = CreateFixture(world, stashWidth: 4, stashHeight: 1);
             Entity actor = world.Create();
-            Entity stash = fixture.Inventory.CreateContainer(actor, ItemContainerOwnerKind.Actor, fixture.StashLayout, ItemContainerPurpose.Stash);
+            Entity stash = fixture.Inventory.CreateContainer(actor, fixture.StashLayout, ItemContainerPurpose.Stash);
             Put(fixture.Inventory, CreditDef, stash, 0, 0, stack: 30);
 
             int operationId = fixture.Operations.Register("test.dynamic", new ExchangeOperationDefinition
@@ -230,7 +232,7 @@ namespace Ludots.Tests.GAS
             using World world = World.Create();
             var fixture = CreateFixture(world, stashWidth: 4, stashHeight: 1);
             Entity actor = world.Create();
-            Entity stash = fixture.Inventory.CreateContainer(actor, ItemContainerOwnerKind.Actor, fixture.StashLayout, ItemContainerPurpose.Stash);
+            Entity stash = fixture.Inventory.CreateContainer(actor, fixture.StashLayout, ItemContainerPurpose.Stash);
             Put(fixture.Inventory, CreditDef, stash, 0, 0, stack: 30);
 
             int operationA = fixture.Operations.Register("test.dynamic.a", new ExchangeOperationDefinition
@@ -287,7 +289,7 @@ namespace Ludots.Tests.GAS
             using World world = World.Create();
             var fixture = CreateFixture(world, stashWidth: 3, stashHeight: 1);
             Entity actor = world.Create();
-            Entity stash = fixture.Inventory.CreateContainer(actor, ItemContainerOwnerKind.Actor, fixture.StashLayout, ItemContainerPurpose.Stash);
+            Entity stash = fixture.Inventory.CreateContainer(actor, fixture.StashLayout, ItemContainerPurpose.Stash);
             Put(fixture.Inventory, CreditDef, stash, 0, 0, stack: 10);
 
             int operationId = fixture.Operations.Register("test.gas.exchange", new ExchangeOperationDefinition
@@ -322,7 +324,7 @@ namespace Ludots.Tests.GAS
             using World world = World.Create();
             var fixture = CreateFixture(world, stashWidth: 2, stashHeight: 1);
             Entity actor = world.Create();
-            Entity stash = fixture.Inventory.CreateContainer(actor, ItemContainerOwnerKind.Actor, fixture.StashLayout, ItemContainerPurpose.Stash);
+            Entity stash = fixture.Inventory.CreateContainer(actor, fixture.StashLayout, ItemContainerPurpose.Stash);
             Put(fixture.Inventory, CreditDef, stash, 0, 0, stack: 2);
 
             int operationId = fixture.Operations.Register("test.gas.exchange.failure", new ExchangeOperationDefinition
@@ -361,7 +363,7 @@ namespace Ludots.Tests.GAS
             using World world = World.Create();
             var fixture = CreateFixture(world, stashWidth: 4, stashHeight: 1);
             Entity actor = world.Create();
-            Entity stash = fixture.Inventory.CreateContainer(actor, ItemContainerOwnerKind.Actor, fixture.StashLayout, ItemContainerPurpose.Stash);
+            Entity stash = fixture.Inventory.CreateContainer(actor, fixture.StashLayout, ItemContainerPurpose.Stash);
             Put(fixture.Inventory, CreditDef, stash, 0, 0, stack: 30);
 
             int operationId = fixture.Operations.Register("test.scope.override", new ExchangeOperationDefinition
@@ -438,7 +440,31 @@ namespace Ludots.Tests.GAS
             definitions.Register("token", new ItemDefinition { Id = "token", DisplayName = "Token", ShapeId = oneByOne });
             definitions.Register("large", new ItemDefinition { Id = "large", DisplayName = "Large", ShapeId = twoByOne });
 
-            var inventory = new InventoryRuntimeService(world, shapes, layouts, definitions);
+            var relationshipTypes = new RelationshipTypeRegistry();
+            var relationshipMetrics = new RelationshipMetricRegistry();
+            var relationshipFlags = new RelationshipFlagRegistry();
+            var relationshipBands = new RelationshipBandRegistry();
+            var relationshipReasons = new RelationshipReasonRegistry();
+            var relationships = new RelationshipRuntime(
+                world,
+                relationshipTypes,
+                relationshipMetrics,
+                relationshipFlags,
+                relationshipBands,
+                new RelationshipChangeBuffer(capacity: 8));
+            RelationshipCatalogInstaller.RegisterCatalog(
+                new RelationshipCatalogConfig
+                {
+                    Types = { new RelationshipTypeConfig { Id = "Owns" } },
+                },
+                relationshipTypes,
+                relationshipMetrics,
+                relationshipFlags,
+                relationshipBands,
+                relationshipReasons);
+            int ownsTypeId = relationshipTypes.GetId("Owns");
+            var ownership = new OwnershipResolver(relationships, ownsTypeId);
+            var inventory = new InventoryRuntimeService(world, shapes, layouts, definitions, ownership);
             var operations = new ExchangeOperationRegistry();
             var scoped = new ExchangeScopedOperationStore();
             var effects = new EffectRequestQueue();

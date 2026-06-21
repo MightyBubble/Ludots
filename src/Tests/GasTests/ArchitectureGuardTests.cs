@@ -544,6 +544,43 @@ namespace GasTests
         }
 
         [Test]
+        public void Issue248_OwnershipUsesOwnsRelationAndItemContainersDoNotCarryLogicalOwnerFields()
+        {
+            var repoRoot = FindRepoRoot();
+            string containerPath = Path.Combine(repoRoot, "src", "Core", "Gameplay", "Items", "ItemComponents.cs");
+            string inventoryPath = Path.Combine(repoRoot, "src", "Core", "Gameplay", "Items", "InventoryRuntimeService.cs");
+            string ownershipPath = Path.Combine(repoRoot, "src", "Core", "Association", "OwnershipResolver.cs");
+            string relationshipCatalogPath = Path.Combine(repoRoot, "assets", "Configs", "Relationships", "catalog.json");
+            string showcasePath = Path.Combine(repoRoot, "mods", "showcases", "ownership_cascade", "OwnershipCascadeShowcaseMod", "mod.json");
+
+            Assert.That(File.Exists(containerPath), Is.True, $"Missing {containerPath}");
+            Assert.That(File.Exists(inventoryPath), Is.True, $"Missing {inventoryPath}");
+            Assert.That(File.Exists(ownershipPath), Is.True, $"Missing {ownershipPath}");
+            Assert.That(File.Exists(relationshipCatalogPath), Is.True, $"Missing {relationshipCatalogPath}");
+            Assert.That(File.Exists(showcasePath), Is.True, $"Missing AAC-5 showcase mod {showcasePath}");
+
+            string container = File.ReadAllText(containerPath);
+            string inventory = File.ReadAllText(inventoryPath);
+            string ownership = File.ReadAllText(ownershipPath);
+            string catalog = File.ReadAllText(relationshipCatalogPath);
+
+            Assert.Multiple(() =>
+            {
+                Assert.That(container, Does.Contain("public struct ItemContainerCm"));
+                Assert.That(container, Does.Not.Contain("public Entity Owner"));
+                Assert.That(container, Does.Not.Contain("OwnerKind"));
+                Assert.That(inventory, Does.Contain("OwnershipResolver"));
+                Assert.That(inventory, Does.Contain("_ownership.EnsureOwnership"));
+                Assert.That(inventory, Does.Contain("_ownership.IsOwnedBy"));
+                Assert.That(inventory, Does.Not.Contain("ItemContainerOwnerKind"));
+                Assert.That(ownership, Does.Contain("RelationshipRuntime"));
+                Assert.That(ownership, Does.Contain("CollectIncoming"));
+                Assert.That(ownership, Does.Contain("CollectOutgoing"));
+                Assert.That(catalog, Does.Contain("\"Owns\""));
+            });
+        }
+
+        [Test]
         public void Issue244_PendingCompositionContracts()
         {
             Assert.Ignore("AAC-5..AAC-8/#248..#251 will make Ownership relations, Relationship-gated Exchange, Collection+Relationship-fed Progression membership, and Inventory settlement executable contracts.");
