@@ -4,6 +4,7 @@ using System.Diagnostics;
 using System.IO;
 using System.Linq;
 using Arch.Core;
+using Ludots.Core.Association;
 using Ludots.Core.Components;
 using Ludots.Core.Engine;
 using Ludots.Core.Gameplay.GAS;
@@ -46,7 +47,7 @@ namespace Ludots.Tests.GAS.Production
 
             Assert.That(engine.GetService(CoreServiceKeys.ProgressionDefinitionRegistry), Is.Not.Null);
             Assert.That(engine.GetService(CoreServiceKeys.ProgressionRequirementRegistry), Is.Not.Null);
-            Assert.That(engine.GetService(CoreServiceKeys.ProgressionScopeKeyRegistry), Is.Not.Null);
+            Assert.That(engine.GetService(CoreServiceKeys.ScopeKeyRegistry), Is.Not.Null);
             Assert.That(engine.GetService(CoreServiceKeys.ProgressionRequirementEvaluator), Is.Not.Null);
             Assert.That(engine.GetService(CoreServiceKeys.EntityCommandPanelSourceRegistry), Is.Not.Null);
 
@@ -62,8 +63,8 @@ namespace Ludots.Tests.GAS.Production
             Assert.That(world.Has<ProgressionStateBuffer>(factionHost), Is.True);
             Assert.That(world.Has<ProgressionStateBuffer>(regionHost), Is.True);
             Assert.That(world.Has<ProgressionStateBuffer>(provinceHost), Is.True);
-            Assert.That(world.Has<ProgressionScopeRefBuffer>(barracks), Is.True);
-            Assert.That(world.Has<ProgressionScopeRefBuffer>(hero), Is.True);
+            Assert.That(world.Has<ScopeRefBuffer>(barracks), Is.True);
+            Assert.That(world.Has<ScopeRefBuffer>(hero), Is.True);
 
             IReadOnlyList<EntityCommandPanelSlotView> initialSlots = ResolveSlots(engine, barracks);
             AssertBlocked(initialSlots, "Train Militia");
@@ -100,7 +101,7 @@ namespace Ludots.Tests.GAS.Production
             var requirements = engine.GetService(CoreServiceKeys.ProgressionRequirementEvaluator)
                 ?? throw new InvalidOperationException("ProgressionRequirementEvaluator service is missing.");
             int regionReqId = ProgressionRequirementIdRegistry.GetId("Req.Showcase.RegionStrategist.Use");
-            var context = new ProgressionRequirementEvaluationContext(barracks, barracks);
+            var context = new RoleResolverContext(actor: barracks, subject: barracks);
             Assert.That(requirements.Evaluate(regionReqId, in context), Is.True);
         }
 

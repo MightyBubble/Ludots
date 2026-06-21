@@ -1,6 +1,7 @@
 using System;
 using Arch.Core;
 using Arch.System;
+using Ludots.Core.Association;
 using Ludots.Core.Gameplay.GAS;
 using Ludots.Core.Gameplay.GAS.Components;
 using Ludots.Core.Gameplay.Progression.Components;
@@ -13,11 +14,11 @@ namespace Ludots.Core.Gameplay.Progression
     public sealed class ProgressionRequirementEvaluator
     {
         private static readonly QueryDescription ScopeMemberQuery = new QueryDescription()
-            .WithAll<ProgressionScopeRefBuffer>();
+            .WithAll<ScopeRefBuffer>();
 
         private readonly World _world;
         private readonly ProgressionRequirementRegistry _requirements;
-        private readonly ProgressionScopeKeyRegistry _scopeKeys;
+        private readonly ScopeKeyRegistry _scopeKeys;
         private readonly GraphProgramRegistry? _graphPrograms;
         private readonly IGraphRuntimeApi? _graphApi;
         private readonly TagOps _tagOps;
@@ -25,7 +26,7 @@ namespace Ludots.Core.Gameplay.Progression
         public ProgressionRequirementEvaluator(
             World world,
             ProgressionRequirementRegistry requirements,
-            ProgressionScopeKeyRegistry scopeKeys,
+            ScopeKeyRegistry scopeKeys,
             GraphProgramRegistry? graphPrograms = null,
             IGraphRuntimeApi? graphApi = null,
             TagOps? tagOps = null)
@@ -38,9 +39,9 @@ namespace Ludots.Core.Gameplay.Progression
             _tagOps = tagOps ?? new TagOps();
         }
 
-        public ProgressionScopeKeyRegistry ScopeKeys => _scopeKeys;
+        public ScopeKeyRegistry ScopeKeys => _scopeKeys;
 
-        public bool Evaluate(int requirementId, in ProgressionRequirementEvaluationContext context)
+        public bool Evaluate(int requirementId, in RoleResolverContext context)
         {
             if (requirementId <= 0)
             {
@@ -60,7 +61,7 @@ namespace Ludots.Core.Gameplay.Progression
             return EvaluateNode(definition, 0, in context);
         }
 
-        public uint ComputeRevision(int requirementId, in ProgressionRequirementEvaluationContext context)
+        public uint ComputeRevision(int requirementId, in RoleResolverContext context)
         {
             if (requirementId <= 0)
             {
@@ -84,7 +85,7 @@ namespace Ludots.Core.Gameplay.Progression
             return revision;
         }
 
-        public uint ComputeScopeRevision(int requirementId, in ProgressionRequirementEvaluationContext context)
+        public uint ComputeScopeRevision(int requirementId, in RoleResolverContext context)
         {
             if (requirementId <= 0)
             {
@@ -123,7 +124,7 @@ namespace Ludots.Core.Gameplay.Progression
             ProgressionRequirementNode[] nodes = definition.Nodes;
             for (int i = 0; i < nodes.Length; i++)
             {
-                if (nodes[i].Scope.Kind == ProgressionScopeKind.Explicit)
+                if (nodes[i].Scope.Kind == ScopeKind.Explicit)
                 {
                     return true;
                 }
@@ -175,21 +176,21 @@ namespace Ludots.Core.Gameplay.Progression
             return ApplyChange(ref state, progressionId, in change);
         }
 
-        public bool TryComplete(Entity actor, ProgressionScopeSpec scope, int progressionId)
+        public bool TryComplete(Entity actor, ScopeKey scope, int progressionId)
             => TryApply(actor, scope, progressionId, ProgressionLevelChange.Complete);
 
-        public bool TryApply(Entity actor, ProgressionScopeSpec scope, int progressionId, ProgressionLevelChange change)
+        public bool TryApply(Entity actor, ScopeKey scope, int progressionId, ProgressionLevelChange change)
         {
-            var context = new ProgressionRequirementEvaluationContext(actor, actor);
+            var context = new RoleResolverContext(actor: actor, subject: actor);
             return TryApply(in context, scope, progressionId, in change);
         }
 
-        public bool TryComplete(in ProgressionRequirementEvaluationContext context, ProgressionScopeSpec scope, int progressionId)
+        public bool TryComplete(in RoleResolverContext context, ScopeKey scope, int progressionId)
             => TryApply(in context, scope, progressionId, ProgressionLevelChange.Complete);
 
         public bool TryApply(
-            in ProgressionRequirementEvaluationContext context,
-            ProgressionScopeSpec scope,
+            in RoleResolverContext context,
+            ScopeKey scope,
             int progressionId,
             in ProgressionLevelChange change)
         {
@@ -201,12 +202,12 @@ namespace Ludots.Core.Gameplay.Progression
             return TryApply(scopeHost, progressionId, change);
         }
 
-        public bool TryResolveScopeHost(ProgressionScopeSpec scope, in ProgressionRequirementEvaluationContext context, out Entity scopeHost)
+        public bool TryResolveScopeHost(ScopeKey scope, in RoleResolverContext context, out Entity scopeHost)
         {
             return TryResolveScopeHostInternal(in scope, in context, out scopeHost);
         }
 
-        public bool TryGetScopeProgressionRevision(in ProgressionScopeSpec scope, in ProgressionRequirementEvaluationContext context, out uint revision)
+        public bool TryGetScopeProgressionRevision(in ScopeKey scope, in RoleResolverContext context, out uint revision)
         {
             revision = 0;
             if (!TryResolveScopeHostInternal(in scope, in context, out Entity scopeHost) ||
@@ -238,14 +239,14 @@ namespace Ludots.Core.Gameplay.Progression
                 return false;
             }
 
-            if (!_world.Has<ProgressionScopeRefBuffer>(entity) ||
-                !_world.Has<ProgressionScopeMemberTag>(entity) ||
-                !_world.Has<ProgressionScopeMembershipRevision>(scopeHost))
+            if (!_world.Has<ScopeRefBuffer>(entity) ||
+                !_world.Has<ScopeMemberTag>(entity) ||
+                !_world.Has<ScopeMembershipRevision>(scopeHost))
             {
                 return false;
             }
 
-            ref var refs = ref _world.Get<ProgressionScopeRefBuffer>(entity);
+            ref var refs = ref _world.Get<ScopeRefBuffer>(entity);
             if (!refs.TryAdd(scopeKeyId, scopeHost, out bool changed, out Entity previousScopeHost))
             {
                 return false;
@@ -256,21 +257,21 @@ namespace Ludots.Core.Gameplay.Progression
                 return true;
             }
 
-            ref var revision = ref _world.Get<ProgressionScopeMembershipRevision>(scopeHost);
+            ref var revision = ref _world.Get<ScopeMembershipRevision>(scopeHost);
             revision.Revision++;
             if (_world.IsAlive(previousScopeHost) &&
                 (previousScopeHost.Id != scopeHost.Id ||
                  previousScopeHost.WorldId != scopeHost.WorldId ||
                  previousScopeHost.Version != scopeHost.Version) &&
-                _world.Has<ProgressionScopeMembershipRevision>(previousScopeHost))
+                _world.Has<ScopeMembershipRevision>(previousScopeHost))
             {
-                ref var previousRevision = ref _world.Get<ProgressionScopeMembershipRevision>(previousScopeHost);
+                ref var previousRevision = ref _world.Get<ScopeMembershipRevision>(previousScopeHost);
                 previousRevision.Revision++;
             }
             return true;
         }
 
-        private bool EvaluateNode(ProgressionRequirementDefinition definition, int nodeIndex, in ProgressionRequirementEvaluationContext context)
+        private bool EvaluateNode(ProgressionRequirementDefinition definition, int nodeIndex, in RoleResolverContext context)
         {
             ProgressionRequirementNode[] nodes = definition.Nodes;
             if ((uint)nodeIndex >= (uint)nodes.Length)
@@ -306,7 +307,7 @@ namespace Ludots.Core.Gameplay.Progression
             }
         }
 
-        private bool EvaluateAll(ProgressionRequirementDefinition definition, in ProgressionRequirementNode node, in ProgressionRequirementEvaluationContext context)
+        private bool EvaluateAll(ProgressionRequirementDefinition definition, in ProgressionRequirementNode node, in RoleResolverContext context)
         {
             for (int i = 0; i < node.ChildCount; i++)
             {
@@ -320,7 +321,7 @@ namespace Ludots.Core.Gameplay.Progression
             return true;
         }
 
-        private bool EvaluateAny(ProgressionRequirementDefinition definition, in ProgressionRequirementNode node, in ProgressionRequirementEvaluationContext context)
+        private bool EvaluateAny(ProgressionRequirementDefinition definition, in ProgressionRequirementNode node, in RoleResolverContext context)
         {
             for (int i = 0; i < node.ChildCount; i++)
             {
@@ -347,7 +348,7 @@ namespace Ludots.Core.Gameplay.Progression
             return childIndex >= 0;
         }
 
-        private bool EvaluateProgressionLevelAtLeast(in ProgressionRequirementNode node, in ProgressionRequirementEvaluationContext context, int requiredLevel)
+        private bool EvaluateProgressionLevelAtLeast(in ProgressionRequirementNode node, in RoleResolverContext context, int requiredLevel)
         {
             if (!TryResolveScopeHostInternal(in node.Scope, in context, out Entity scopeHost) ||
                 !_world.IsAlive(scopeHost) ||
@@ -375,15 +376,15 @@ namespace Ludots.Core.Gameplay.Progression
             return state.TryComplete(progressionId);
         }
 
-        private bool EvaluateTagAll(in ProgressionRequirementNode node, in ProgressionRequirementEvaluationContext context)
+        private bool EvaluateTagAll(in ProgressionRequirementNode node, in RoleResolverContext context)
         {
             switch (node.EntitySource)
             {
-                case ProgressionRequirementEntitySource.Actor:
+                case RoleSlot.Actor:
                     return HasRequiredTags(context.Actor, in node.RequiredTags);
-                case ProgressionRequirementEntitySource.Subject:
+                case RoleSlot.Subject:
                     return HasRequiredTags(context.Subject, in node.RequiredTags);
-                case ProgressionRequirementEntitySource.ScopeHost:
+                case RoleSlot.ScopeHost:
                     return TryResolveScopeHostInternal(in node.Scope, in context, out Entity scopeHost) &&
                            HasRequiredTags(scopeHost, in node.RequiredTags);
                 default:
@@ -391,7 +392,7 @@ namespace Ludots.Core.Gameplay.Progression
             }
         }
 
-        private bool EvaluateGraphValidation(in ProgressionRequirementNode node, in ProgressionRequirementEvaluationContext context)
+        private bool EvaluateGraphValidation(in ProgressionRequirementNode node, in RoleResolverContext context)
         {
             if (node.GraphProgramId <= 0)
             {
@@ -418,7 +419,7 @@ namespace Ludots.Core.Gameplay.Progression
                 _graphApi);
         }
 
-        private int CountMatchingEntities(in ProgressionRequirementNode node, in ProgressionRequirementEvaluationContext context)
+        private int CountMatchingEntities(in ProgressionRequirementNode node, in RoleResolverContext context)
         {
             Entity direct = ResolveDirectEntitySource(node.EntitySource, in node.Scope, in context);
             if (_world.IsAlive(direct))
@@ -440,11 +441,11 @@ namespace Ludots.Core.Gameplay.Progression
                 TagOps = _tagOps,
                 Count = 0
             };
-            _world.InlineEntityQuery<CountScopeMembersJob, ProgressionScopeRefBuffer>(in ScopeMemberQuery, ref job);
+            _world.InlineEntityQuery<CountScopeMembersJob, ScopeRefBuffer>(in ScopeMemberQuery, ref job);
             return job.Count;
         }
 
-        private Entity ResolveEntitySource(ProgressionRequirementEntitySource source, in ProgressionScopeSpec scope, in ProgressionRequirementEvaluationContext context)
+        private Entity ResolveEntitySource(RoleSlot source, in ScopeKey scope, in RoleResolverContext context)
         {
             Entity direct = ResolveDirectEntitySource(source, in scope, in context);
             if (_world.IsAlive(direct))
@@ -455,26 +456,26 @@ namespace Ludots.Core.Gameplay.Progression
             return TryResolveScopeHostInternal(in scope, in context, out Entity scopeHost) ? scopeHost : Entity.Null;
         }
 
-        private Entity ResolveDirectEntitySource(ProgressionRequirementEntitySource source, in ProgressionScopeSpec scope, in ProgressionRequirementEvaluationContext context)
+        private Entity ResolveDirectEntitySource(RoleSlot source, in ScopeKey scope, in RoleResolverContext context)
         {
             return source switch
             {
-                ProgressionRequirementEntitySource.Actor => context.Actor,
-                ProgressionRequirementEntitySource.Subject => context.Subject,
-                ProgressionRequirementEntitySource.ScopeHost when TryResolveScopeHostInternal(in scope, in context, out Entity scopeHost) => scopeHost,
+                RoleSlot.Actor => context.Actor,
+                RoleSlot.Subject => context.Subject,
+                RoleSlot.ScopeHost when TryResolveScopeHostInternal(in scope, in context, out Entity scopeHost) => scopeHost,
                 _ => Entity.Null,
             };
         }
 
-        private bool TryResolveScopeHostInternal(in ProgressionScopeSpec scope, in ProgressionRequirementEvaluationContext context, out Entity scopeHost)
+        private bool TryResolveScopeHostInternal(in ScopeKey scope, in RoleResolverContext context, out Entity scopeHost)
         {
-            if (scope.Kind == ProgressionScopeKind.Explicit)
+            if (scope.Kind == ScopeKind.Explicit)
             {
                 scopeHost = context.ExplicitScopeHost;
                 return _world.IsAlive(scopeHost);
             }
 
-            if (scope.Kind == ProgressionScopeKind.Self)
+            if (scope.Kind == ScopeKind.Self)
             {
                 scopeHost = _world.IsAlive(context.Subject) ? context.Subject : context.Actor;
                 return _world.IsAlive(scopeHost);
@@ -497,13 +498,13 @@ namespace Ludots.Core.Gameplay.Progression
 
         private bool TryResolveScopeHostFrom(Entity entity, int scopeKeyId, out Entity scopeHost)
         {
-            if (!_world.IsAlive(entity) || !_world.Has<ProgressionScopeRefBuffer>(entity))
+            if (!_world.IsAlive(entity) || !_world.Has<ScopeRefBuffer>(entity))
             {
                 scopeHost = Entity.Null;
                 return false;
             }
 
-            ref readonly var refs = ref _world.Get<ProgressionScopeRefBuffer>(entity);
+            ref readonly var refs = ref _world.Get<ScopeRefBuffer>(entity);
             return refs.TryGet(scopeKeyId, out scopeHost) && _world.IsAlive(scopeHost);
         }
 
@@ -528,7 +529,7 @@ namespace Ludots.Core.Gameplay.Progression
             return _tagOps.ContainsAll(ref tags, in requiredTags, TagSense.Effective);
         }
 
-        private uint HashNodeRevision(uint revision, in ProgressionRequirementNode node, in ProgressionRequirementEvaluationContext context)
+        private uint HashNodeRevision(uint revision, in ProgressionRequirementNode node, in RoleResolverContext context)
         {
             revision = HashCombine(revision, (uint)node.Kind);
             revision = HashCombine(revision, (uint)node.Scope.Kind);
@@ -554,13 +555,13 @@ namespace Ludots.Core.Gameplay.Progression
                     ref readonly var state = ref _world.Get<ProgressionStateBuffer>(scopeHost);
                     revision = HashCombine(revision, state.Revision);
                 }
-                if (_world.Has<ProgressionScopeMembershipRevision>(scopeHost))
+                if (_world.Has<ScopeMembershipRevision>(scopeHost))
                 {
-                    ref readonly var membership = ref _world.Get<ProgressionScopeMembershipRevision>(scopeHost);
+                    ref readonly var membership = ref _world.Get<ScopeMembershipRevision>(scopeHost);
                     revision = HashCombine(revision, membership.Revision);
                 }
 
-                if (node.EntitySource == ProgressionRequirementEntitySource.ScopeMembers &&
+                if (node.EntitySource == RoleSlot.ScopeMembers &&
                     node.Scope.ScopeKeyId > 0)
                 {
                     var job = new HashScopeMembersJob
@@ -570,7 +571,7 @@ namespace Ludots.Core.Gameplay.Progression
                         ScopeHost = scopeHost,
                         Revision = revision
                     };
-                    _world.InlineEntityQuery<HashScopeMembersJob, ProgressionScopeRefBuffer>(in ScopeMemberQuery, ref job);
+                    _world.InlineEntityQuery<HashScopeMembersJob, ScopeRefBuffer>(in ScopeMemberQuery, ref job);
                     revision = job.Revision;
                 }
             }
@@ -578,7 +579,7 @@ namespace Ludots.Core.Gameplay.Progression
             return revision;
         }
 
-        private uint HashNodeScopeRevision(uint revision, in ProgressionRequirementNode node, in ProgressionRequirementEvaluationContext context)
+        private uint HashNodeScopeRevision(uint revision, in ProgressionRequirementNode node, in RoleResolverContext context)
         {
             revision = HashCombine(revision, (uint)node.Kind);
             revision = HashCombine(revision, (uint)node.Scope.Kind);
@@ -600,9 +601,9 @@ namespace Ludots.Core.Gameplay.Progression
                     revision = HashCombine(revision, state.Revision);
                 }
 
-                if (_world.Has<ProgressionScopeMembershipRevision>(scopeHost))
+                if (_world.Has<ScopeMembershipRevision>(scopeHost))
                 {
-                    ref readonly var membership = ref _world.Get<ProgressionScopeMembershipRevision>(scopeHost);
+                    ref readonly var membership = ref _world.Get<ScopeMembershipRevision>(scopeHost);
                     revision = HashCombine(revision, membership.Revision);
                 }
             }
@@ -639,7 +640,7 @@ namespace Ludots.Core.Gameplay.Progression
             }
         }
 
-        private struct CountScopeMembersJob : IForEachWithEntity<ProgressionScopeRefBuffer>
+        private struct CountScopeMembersJob : IForEachWithEntity<ScopeRefBuffer>
         {
             public World World;
             public int ScopeKeyId;
@@ -648,7 +649,7 @@ namespace Ludots.Core.Gameplay.Progression
             public TagOps TagOps;
             public int Count;
 
-            public void Update(Entity entity, ref ProgressionScopeRefBuffer refs)
+            public void Update(Entity entity, ref ScopeRefBuffer refs)
             {
                 if (!refs.TryGet(ScopeKeyId, out Entity host) ||
                     host.Id != ScopeHost.Id ||
@@ -677,14 +678,14 @@ namespace Ludots.Core.Gameplay.Progression
             }
         }
 
-        private struct HashScopeMembersJob : IForEachWithEntity<ProgressionScopeRefBuffer>
+        private struct HashScopeMembersJob : IForEachWithEntity<ScopeRefBuffer>
         {
             public World World;
             public int ScopeKeyId;
             public Entity ScopeHost;
             public uint Revision;
 
-            public void Update(Entity entity, ref ProgressionScopeRefBuffer refs)
+            public void Update(Entity entity, ref ScopeRefBuffer refs)
             {
                 if (!refs.TryGet(ScopeKeyId, out Entity host) ||
                     host.Id != ScopeHost.Id ||

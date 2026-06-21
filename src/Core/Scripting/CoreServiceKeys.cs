@@ -1,6 +1,7 @@
 using System;
 using System.Collections.Generic;
 using Arch.Core;
+using Ludots.Core.Association;
 using Ludots.Core.Config;
 using Ludots.Core.Diagnostics;
 using Ludots.Core.Engine;
@@ -150,7 +151,8 @@ namespace Ludots.Core.Scripting
         public static readonly ServiceKey<AbilityFormSetRegistry> AbilityFormSetRegistry = new("AbilityFormSetRegistry");
         public static readonly ServiceKey<ProgressionDefinitionRegistry> ProgressionDefinitionRegistry = new("ProgressionDefinitionRegistry");
         public static readonly ServiceKey<ProgressionRequirementRegistry> ProgressionRequirementRegistry = new("ProgressionRequirementRegistry");
-        public static readonly ServiceKey<ProgressionScopeKeyRegistry> ProgressionScopeKeyRegistry = new("ProgressionScopeKeyRegistry");
+        public static readonly ServiceKey<ScopeKeyRegistry> ScopeKeyRegistry = new("ScopeKeyRegistry");
+        public static readonly ServiceKey<ScopeResolver> ScopeResolver = new("ScopeResolver");
         public static readonly ServiceKey<ProgressionRequirementEvaluator> ProgressionRequirementEvaluator = new("ProgressionRequirementEvaluator");
         public static readonly ServiceKey<ContextGroupRegistry> ContextGroupRegistry = new("ContextGroupRegistry");
         public static readonly ServiceKey<GraphProgramRegistry> GraphProgramRegistry = new("GraphProgramRegistry");

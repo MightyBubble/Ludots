@@ -6,6 +6,7 @@ using System.Text.Json;
 using System.Text.Json.Nodes;
 using System.Text.Json.Serialization;
 using System.Collections.Generic;
+using Ludots.Core.Association;
 using Ludots.Core.Modding;
 using Ludots.Core.Scripting;
 using Ludots.Core.Config;
@@ -31,6 +32,7 @@ using Ludots.Core.Physics;
 using Ludots.Core.Gameplay.GAS;
 using Ludots.Core.Gameplay.GAS.Config;
 using Ludots.Core.GraphRuntime;
+using Ludots.Core.Knowledge;
 using Ludots.Core.NodeLibraries.GASGraph.Host;
 using Ludots.Core.Gameplay.GAS.Input;
 using Ludots.Core.Gameplay.GAS.Orders;
@@ -587,7 +589,8 @@ namespace Ludots.Core.Engine
             var targetDispatchPresetRegistry = new TargetDispatchPresetRegistry();
             var progressionDefinitions = new ProgressionDefinitionRegistry();
             var progressionRequirements = new ProgressionRequirementRegistry();
-            var progressionScopeKeys = new ProgressionScopeKeyRegistry();
+            var progressionScopeKeys = new ScopeKeyRegistry();
+            var scopeResolver = new ScopeResolver(World);
             var targetDispatchPresetLoader = new TargetDispatchPresetLoader(ConfigPipeline, targetDispatchPresetRegistry);
             targetDispatchPresetLoader.Load(ConfigCatalog, ConfigConflictReport);
             _effectTemplateLoader = new EffectTemplateLoader(
@@ -610,6 +613,17 @@ namespace Ludots.Core.Engine
             var graphOutputValueKeyRegistry = new StringIntRegistry(capacity: 64, startId: 1, invalidId: 0, comparer: StringComparer.Ordinal);
             var entityCollectionKeyRegistry = new StringIntRegistry(capacity: 64, startId: 1, invalidId: 0, comparer: StringComparer.Ordinal);
             var entityCollectionStore = new EntityCollectionStore(entityCollectionKeyRegistry, initialCollectionCapacity: 128, initialRowCapacity: 4096);
+            var knowledgeProjectionStore = new KnowledgeProjectionStore(initialCapacity: 128);
+            var knowledgeRelationCollectionGrants = new KnowledgeRelationCollectionGrantStore();
+            var knowledgeRelationCollectionProjector = new KnowledgeRelationCollectionProjector(
+                relationshipRuntime,
+                entityCollectionStore,
+                knowledgeRelationCollectionGrants,
+                knowledgeProjectionStore);
+            var knowledgeProjectionResolver = new KnowledgeProjectionResolver(
+                knowledgeProjectionStore,
+                knowledgeRelationCollectionProjector,
+                scopeResolver);
             var graphSymbolResolver = new GasGraphSymbolResolver(
                 relationshipTypeRegistry,
                 relationshipMetricRegistry,
@@ -1045,7 +1059,8 @@ namespace Ludots.Core.Engine
             SetService(CoreServiceKeys.AbilityFormSetRegistry, abilityFormSets);
             SetService(CoreServiceKeys.ProgressionDefinitionRegistry, progressionDefinitions);
             SetService(CoreServiceKeys.ProgressionRequirementRegistry, progressionRequirements);
-            SetService(CoreServiceKeys.ProgressionScopeKeyRegistry, progressionScopeKeys);
+            SetService(CoreServiceKeys.ScopeKeyRegistry, progressionScopeKeys);
+            SetService(CoreServiceKeys.ScopeResolver, scopeResolver);
             SetService(CoreServiceKeys.ProgressionRequirementEvaluator, progressionEvaluator);
             SetService(CoreServiceKeys.ContextGroupRegistry, contextGroups);
             SetService(CoreServiceKeys.InputRequestQueue, inputRequestQueue);
@@ -1058,6 +1073,10 @@ namespace Ludots.Core.Engine
             SetService(CoreServiceKeys.SelectionSetKeyRegistry, selectionSetKeyRegistry);
             SetService(CoreServiceKeys.EntityCollectionStore, entityCollectionStore);
             SetService(CoreServiceKeys.EntityCollectionKeyRegistry, entityCollectionKeyRegistry);
+            SetService(CoreServiceKeys.KnowledgeProjectionStore, knowledgeProjectionStore);
+            SetService(CoreServiceKeys.KnowledgeRelationCollectionGrantStore, knowledgeRelationCollectionGrants);
+            SetService(CoreServiceKeys.KnowledgeRelationCollectionProjector, knowledgeRelationCollectionProjector);
+            SetService(CoreServiceKeys.KnowledgeProjectionResolver, knowledgeProjectionResolver);
             SetService(CoreServiceKeys.SelectionRuleRegistry, selectionRuleRegistry);
             SetService(CoreServiceKeys.InteractionActionBindings, interactionActionBindings);
             RemoveService(CoreServiceKeys.VisualHeightmap);

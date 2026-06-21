@@ -470,7 +470,56 @@ namespace GasTests
         [Test]
         public void Issue244_PendingAac4_SingleScopeKeyContract()
         {
-            Assert.Ignore("AAC-4 (#247) will land the single ScopeKey identity and role-resolution helper reused by Exchange, Progression, Knowledge, and Relationship.");
+            var repoRoot = FindRepoRoot();
+            string scopePath = Path.Combine(repoRoot, "src", "Core", "Association", "ScopeKey.cs");
+            string exchangeModelPath = Path.Combine(repoRoot, "src", "Core", "Gameplay", "Exchange", "ExchangeModel.cs");
+            string progressionDomainPath = Path.Combine(repoRoot, "src", "Core", "Gameplay", "Progression", "ProgressionDomain.cs");
+            string knowledgeResolverPath = Path.Combine(repoRoot, "src", "Core", "Knowledge", "KnowledgeProjectionResolver.cs");
+
+            Assert.That(File.Exists(scopePath), Is.True, $"Missing shared scope contract {scopePath}");
+            Assert.That(File.Exists(exchangeModelPath), Is.True, $"Missing {exchangeModelPath}");
+            Assert.That(File.Exists(progressionDomainPath), Is.True, $"Missing {progressionDomainPath}");
+            Assert.That(File.Exists(knowledgeResolverPath), Is.True, $"Missing {knowledgeResolverPath}");
+
+            string scope = File.ReadAllText(scopePath);
+            string exchange = File.ReadAllText(exchangeModelPath);
+            string progression = File.ReadAllText(progressionDomainPath);
+            string knowledge = File.ReadAllText(knowledgeResolverPath);
+
+            Assert.Multiple(() =>
+            {
+                Assert.That(scope, Does.Contain("public readonly struct ScopeKey"));
+                Assert.That(scope, Does.Contain("public enum RoleSlot"));
+                Assert.That(scope, Does.Contain("public sealed class ScopeResolver"));
+                Assert.That(exchange, Does.Contain("RoleSlot"));
+                Assert.That(exchange, Does.Contain("ScopeKey"));
+                Assert.That(progression, Does.Contain("ScopeKey"));
+                Assert.That(progression, Does.Contain("RoleSlot"));
+                Assert.That(knowledge, Does.Contain("ScopeKey"));
+                Assert.That(knowledge, Does.Contain("RoleResolverContext"));
+            });
+
+            string[] directories =
+            {
+                Path.Combine(repoRoot, "src", "Core"),
+                Path.Combine(repoRoot, "mods", "capabilities", "participant_view"),
+                Path.Combine(repoRoot, "mods", "showcases", "item_system")
+            };
+            string[] forbidden =
+            {
+                "ExchangeActorSlot",
+                "ProgressionScopeSpec",
+                "ProgressionScopeKind",
+                "ProgressionRequirementEntitySource",
+                "viewerScopes"
+            };
+
+            List<string> hits = FindForbiddenSourceTokens(repoRoot, directories, forbidden);
+            Assert.That(
+                hits,
+                Is.Empty,
+                "AAC-4 (#247) requires Exchange, Progression, Knowledge, and participant-view consumers to use the shared ScopeKey/RoleSlot contract:\n" +
+                string.Join("\n", hits));
         }
 
         [Test]

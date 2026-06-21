@@ -1,6 +1,7 @@
 using System;
 using System.IO;
 using Arch.Core;
+using Ludots.Core.Association;
 using Ludots.Core.Config;
 using Ludots.Core.Engine;
 using Ludots.Core.Gameplay.GAS;
@@ -45,15 +46,15 @@ namespace Ludots.Tests.GAS
             using var world = World.Create();
             int progressionId = ProgressionIdRegistry.Register("Progression.CitySpears");
             int reqId = ProgressionRequirementIdRegistry.Register("Req.CitySpears");
-            var scopeKeys = new ProgressionScopeKeyRegistry();
+            var scopeKeys = new ScopeKeyRegistry();
             int cityScopeId = RegisterCityScope(scopeKeys);
 
             var requirements = new ProgressionRequirementRegistry();
             requirements.Register(reqId, CreateSingleNodeRequirement(
                 reqId,
                 ProgressionRequirementNodeKind.ProgressionCompleted,
-                new ProgressionScopeSpec(ProgressionScopeKind.Named, cityScopeId),
-                ProgressionRequirementEntitySource.ScopeMembers,
+                new ScopeKey(ScopeKind.Named, cityScopeId),
+                RoleSlot.ScopeMembers,
                 progressionId));
 
             var evaluator = new ProgressionRequirementEvaluator(world, requirements, scopeKeys);
@@ -70,8 +71,8 @@ namespace Ludots.Tests.GAS
             Assert.That(evaluator.TryBindScope(barracksB, cityScopeId, cityB), Is.True);
             Assert.That(evaluator.TryComplete(cityA, progressionId), Is.True);
 
-            var contextA = new ProgressionRequirementEvaluationContext(barracksA, barracksA);
-            var contextB = new ProgressionRequirementEvaluationContext(barracksB, barracksB);
+            var contextA = new RoleResolverContext(actor: barracksA, subject: barracksA);
+            var contextB = new RoleResolverContext(actor: barracksB, subject: barracksB);
             Assert.That(evaluator.Evaluate(reqId, in contextA), Is.True);
             Assert.That(evaluator.Evaluate(reqId, in contextB), Is.False);
         }
@@ -82,7 +83,7 @@ namespace Ludots.Tests.GAS
             using var world = World.Create();
             int heroTag = TagRegistry.Register("Hero.GuanYu");
             int reqId = ProgressionRequirementIdRegistry.Register("Req.GuanYuInCity");
-            var scopeKeys = new ProgressionScopeKeyRegistry();
+            var scopeKeys = new ScopeKeyRegistry();
             int cityScopeId = RegisterCityScope(scopeKeys);
 
             var tags = default(GameplayTagContainer);
@@ -92,8 +93,8 @@ namespace Ludots.Tests.GAS
             requirements.Register(reqId, CreateSingleNodeRequirement(
                 reqId,
                 ProgressionRequirementNodeKind.EntityCount,
-                new ProgressionScopeSpec(ProgressionScopeKind.Named, cityScopeId),
-                ProgressionRequirementEntitySource.ScopeMembers,
+                new ScopeKey(ScopeKind.Named, cityScopeId),
+                RoleSlot.ScopeMembers,
                 progressionId: 0,
                 requiredCount: 1,
                 requiredTags: in tags));
@@ -114,8 +115,8 @@ namespace Ludots.Tests.GAS
             Assert.That(evaluator.TryBindScope(barracksB, cityScopeId, cityB), Is.True);
             Assert.That(evaluator.TryBindScope(hero, cityScopeId, cityA), Is.True);
 
-            var contextA = new ProgressionRequirementEvaluationContext(barracksA, barracksA);
-            var contextB = new ProgressionRequirementEvaluationContext(barracksB, barracksB);
+            var contextA = new RoleResolverContext(actor: barracksA, subject: barracksA);
+            var contextB = new RoleResolverContext(actor: barracksB, subject: barracksB);
             Assert.That(evaluator.Evaluate(reqId, in contextA), Is.True);
             Assert.That(evaluator.Evaluate(reqId, in contextB), Is.False);
         }
@@ -131,14 +132,14 @@ namespace Ludots.Tests.GAS
             requirements.Register(level2ReqId, CreateSingleNodeRequirement(
                 level2ReqId,
                 ProgressionRequirementNodeKind.ProgressionLevelAtLeast,
-                ProgressionScopeSpec.Self,
-                ProgressionRequirementEntitySource.ScopeHost,
+                ScopeKey.Self,
+                RoleSlot.ScopeHost,
                 progressionId,
                 requiredCount: 2));
 
-            var evaluator = new ProgressionRequirementEvaluator(world, requirements, new ProgressionScopeKeyRegistry());
+            var evaluator = new ProgressionRequirementEvaluator(world, requirements, new ScopeKeyRegistry());
             Entity city = world.Create(new ProgressionStateBuffer());
-            var context = new ProgressionRequirementEvaluationContext(city, city);
+            var context = new RoleResolverContext(actor: city, subject: city);
 
             Assert.That(evaluator.TryApply(city, progressionId, new ProgressionLevelChange(level: 1, delta: 0)), Is.True);
             Assert.That(evaluator.Evaluate(level2ReqId, in context), Is.False);
@@ -157,15 +158,15 @@ namespace Ludots.Tests.GAS
             int abilityId = AbilityIdRegistry.Register("Ability.TrainGuard");
             int progressionId = ProgressionIdRegistry.Register("Progression.GuardTraining");
             int reqId = ProgressionRequirementIdRegistry.Register("Req.GuardTraining");
-            var scopeKeys = new ProgressionScopeKeyRegistry();
+            var scopeKeys = new ScopeKeyRegistry();
             int cityScopeId = RegisterCityScope(scopeKeys);
 
             var requirements = new ProgressionRequirementRegistry();
             requirements.Register(reqId, CreateSingleNodeRequirement(
                 reqId,
                 ProgressionRequirementNodeKind.ProgressionCompleted,
-                new ProgressionScopeSpec(ProgressionScopeKind.Named, cityScopeId),
-                ProgressionRequirementEntitySource.ScopeHost,
+                new ScopeKey(ScopeKind.Named, cityScopeId),
+                RoleSlot.ScopeHost,
                 progressionId));
 
             var evaluator = new ProgressionRequirementEvaluator(world, requirements, scopeKeys);
@@ -201,7 +202,7 @@ namespace Ludots.Tests.GAS
             var evaluator = new ProgressionRequirementEvaluator(
                 world,
                 new ProgressionRequirementRegistry(),
-                new ProgressionScopeKeyRegistry());
+                new ScopeKeyRegistry());
             var runtime = new BuiltinHandlerExecutionContext { ProgressionEvaluator = evaluator };
 
             var registry = new BuiltinHandlerRegistry();
@@ -219,7 +220,7 @@ namespace Ludots.Tests.GAS
             var template = new EffectTemplateData
             {
                 ProgressionId = progressionId,
-                ProgressionScope = new ProgressionScopeSpec(ProgressionScopeKind.Explicit),
+                ProgressionScope = new ScopeKey(ScopeKind.Explicit),
                 ProgressionChange = new ProgressionLevelChange(level: 2, delta: 0)
             };
             var parameters = default(EffectConfigParams);
@@ -246,7 +247,7 @@ namespace Ludots.Tests.GAS
             var evaluator = new ProgressionRequirementEvaluator(
                 world,
                 new ProgressionRequirementRegistry(),
-                new ProgressionScopeKeyRegistry());
+                new ScopeKeyRegistry());
             var runtime = new BuiltinHandlerExecutionContext { ProgressionEvaluator = evaluator };
 
             var registry = new BuiltinHandlerRegistry();
@@ -263,7 +264,7 @@ namespace Ludots.Tests.GAS
             var template = new EffectTemplateData
             {
                 ProgressionId = progressionId,
-                ProgressionScope = new ProgressionScopeSpec(ProgressionScopeKind.Explicit),
+                ProgressionScope = new ScopeKey(ScopeKind.Explicit),
                 ProgressionChange = new ProgressionLevelChange(level: 1, delta: 0)
             };
             var parameters = default(EffectConfigParams);
@@ -289,7 +290,7 @@ namespace Ludots.Tests.GAS
             var evaluator = new ProgressionRequirementEvaluator(
                 world,
                 new ProgressionRequirementRegistry(),
-                new ProgressionScopeKeyRegistry());
+                new ScopeKeyRegistry());
             var runtime = new BuiltinHandlerExecutionContext { ProgressionEvaluator = evaluator };
 
             var registry = new BuiltinHandlerRegistry();
@@ -306,7 +307,7 @@ namespace Ludots.Tests.GAS
             var template = new EffectTemplateData
             {
                 ProgressionId = progressionId,
-                ProgressionScope = new ProgressionScopeSpec(ProgressionScopeKind.Explicit),
+                ProgressionScope = new ScopeKey(ScopeKind.Explicit),
                 ProgressionChange = new ProgressionLevelChange(level: 1, delta: 0)
             };
             var parameters = default(EffectConfigParams);
@@ -332,7 +333,7 @@ namespace Ludots.Tests.GAS
             var evaluator = new ProgressionRequirementEvaluator(
                 world,
                 new ProgressionRequirementRegistry(),
-                new ProgressionScopeKeyRegistry());
+                new ScopeKeyRegistry());
 
             var presetTypes = new PresetTypeRegistry();
             var preset = new PresetTypeDefinition
@@ -354,7 +355,7 @@ namespace Ludots.Tests.GAS
                 PresetType = EffectPresetType.CompleteProgression,
                 LifetimeKind = EffectLifetimeKind.Instant,
                 ProgressionId = progressionId,
-                ProgressionScope = new ProgressionScopeSpec(ProgressionScopeKind.Explicit),
+                ProgressionScope = new ScopeKey(ScopeKind.Explicit),
                 ProgressionChange = new ProgressionLevelChange(level: 2, delta: 0)
             });
 
@@ -405,11 +406,11 @@ namespace Ludots.Tests.GAS
             requirements.Register(reqId, CreateSingleNodeRequirement(
                 reqId,
                 ProgressionRequirementNodeKind.ProgressionCompleted,
-                new ProgressionScopeSpec(ProgressionScopeKind.Explicit),
-                ProgressionRequirementEntitySource.ScopeHost,
+                new ScopeKey(ScopeKind.Explicit),
+                RoleSlot.ScopeHost,
                 progressionId));
 
-            var evaluator = new ProgressionRequirementEvaluator(world, requirements, new ProgressionScopeKeyRegistry());
+            var evaluator = new ProgressionRequirementEvaluator(world, requirements, new ScopeKeyRegistry());
             var definitions = new AbilityDefinitionRegistry();
             var definition = new AbilityDefinition
             {
@@ -445,11 +446,11 @@ namespace Ludots.Tests.GAS
             requirements.Register(reqId, CreateSingleNodeRequirement(
                 reqId,
                 ProgressionRequirementNodeKind.ProgressionCompleted,
-                new ProgressionScopeSpec(ProgressionScopeKind.Explicit),
-                ProgressionRequirementEntitySource.ScopeHost,
+                new ScopeKey(ScopeKind.Explicit),
+                RoleSlot.ScopeHost,
                 progressionId));
 
-            var evaluator = new ProgressionRequirementEvaluator(world, requirements, new ProgressionScopeKeyRegistry());
+            var evaluator = new ProgressionRequirementEvaluator(world, requirements, new ScopeKeyRegistry());
             Entity city = world.Create(new ProgressionStateBuffer());
             Entity actor = CreateCastActor(world, abilityId, castAbilityOrderTypeId, orderId: 21);
             Entity target = world.Create();
@@ -535,11 +536,11 @@ namespace Ludots.Tests.GAS
             requirements.Register(reqId, CreateSingleNodeRequirement(
                 reqId,
                 ProgressionRequirementNodeKind.ProgressionCompleted,
-                new ProgressionScopeSpec(ProgressionScopeKind.Explicit),
-                ProgressionRequirementEntitySource.ScopeHost,
+                new ScopeKey(ScopeKind.Explicit),
+                RoleSlot.ScopeHost,
                 progressionId));
 
-            var evaluator = new ProgressionRequirementEvaluator(world, requirements, new ProgressionScopeKeyRegistry());
+            var evaluator = new ProgressionRequirementEvaluator(world, requirements, new ScopeKeyRegistry());
             Entity cityWithoutTech = world.Create(new ProgressionStateBuffer());
             Entity actor = CreateCastActor(world, abilityId, castAbilityOrderTypeId, orderId: 22);
             Entity target = world.Create();
@@ -613,11 +614,11 @@ namespace Ludots.Tests.GAS
             requirements.Register(reqId, CreateSingleNodeRequirement(
                 reqId,
                 ProgressionRequirementNodeKind.ProgressionCompleted,
-                new ProgressionScopeSpec(ProgressionScopeKind.Explicit),
-                ProgressionRequirementEntitySource.ScopeHost,
+                new ScopeKey(ScopeKind.Explicit),
+                RoleSlot.ScopeHost,
                 progressionId));
 
-            var evaluator = new ProgressionRequirementEvaluator(world, requirements, new ProgressionScopeKeyRegistry());
+            var evaluator = new ProgressionRequirementEvaluator(world, requirements, new ScopeKeyRegistry());
             Entity actor = CreateCastActor(world, abilityId, castAbilityOrderTypeId, orderId: 23);
 
             var spec = default(AbilityExecSpec);
@@ -674,11 +675,11 @@ namespace Ludots.Tests.GAS
             requirements.Register(reqId, CreateSingleNodeRequirement(
                 reqId,
                 ProgressionRequirementNodeKind.ProgressionCompleted,
-                new ProgressionScopeSpec(ProgressionScopeKind.Explicit),
-                ProgressionRequirementEntitySource.ScopeHost,
+                new ScopeKey(ScopeKind.Explicit),
+                RoleSlot.ScopeHost,
                 progressionId));
 
-            var evaluator = new ProgressionRequirementEvaluator(world, requirements, new ProgressionScopeKeyRegistry());
+            var evaluator = new ProgressionRequirementEvaluator(world, requirements, new ScopeKeyRegistry());
             Entity actor = CreateCastActor(world, abilityId, castAbilityOrderTypeId, orderId: 24);
 
             var spec = default(AbilityExecSpec);
@@ -730,8 +731,8 @@ namespace Ludots.Tests.GAS
             {
                 new ProgressionRequirementNode(
                     ProgressionRequirementNodeKind.All,
-                    ProgressionScopeSpec.Self,
-                    ProgressionRequirementEntitySource.Subject,
+                    ScopeKey.Self,
+                    RoleSlot.Subject,
                     firstChild: 0,
                     childCount: 1,
                     progressionId: 0,
@@ -740,8 +741,8 @@ namespace Ludots.Tests.GAS
                     in emptyTags),
                 new ProgressionRequirementNode(
                     ProgressionRequirementNodeKind.GraphValidation,
-                    ProgressionScopeSpec.Self,
-                    ProgressionRequirementEntitySource.Subject,
+                    ScopeKey.Self,
+                    RoleSlot.Subject,
                     firstChild: 0,
                     childCount: 0,
                     progressionId: 0,
@@ -751,7 +752,7 @@ namespace Ludots.Tests.GAS
             };
             requirements.Register(graphReqId, new ProgressionRequirementDefinition(graphReqId, nodes, new[] { 1 }));
 
-            var evaluator = new ProgressionRequirementEvaluator(world, requirements, new ProgressionScopeKeyRegistry());
+            var evaluator = new ProgressionRequirementEvaluator(world, requirements, new ScopeKeyRegistry());
 
             Assert.That(evaluator.UsesGraphValidation(graphReqId), Is.True);
         }
@@ -762,7 +763,7 @@ namespace Ludots.Tests.GAS
             using var world = World.Create();
             int heroTag = TagRegistry.Register("Hero.GuanYu");
             int reqId = ProgressionRequirementIdRegistry.Register("Req.GuanYuInCity");
-            var scopeKeys = new ProgressionScopeKeyRegistry();
+            var scopeKeys = new ScopeKeyRegistry();
             int cityScopeId = RegisterCityScope(scopeKeys);
 
             var requiredTags = default(GameplayTagContainer);
@@ -772,8 +773,8 @@ namespace Ludots.Tests.GAS
             requirements.Register(reqId, CreateSingleNodeRequirement(
                 reqId,
                 ProgressionRequirementNodeKind.EntityCount,
-                new ProgressionScopeSpec(ProgressionScopeKind.Named, cityScopeId),
-                ProgressionRequirementEntitySource.ScopeMembers,
+                new ScopeKey(ScopeKind.Named, cityScopeId),
+                RoleSlot.ScopeMembers,
                 progressionId: 0,
                 requiredCount: 1,
                 requiredTags: in requiredTags));
@@ -788,7 +789,7 @@ namespace Ludots.Tests.GAS
             Assert.That(evaluator.TryBindScope(barracks, cityScopeId, city), Is.True);
             Assert.That(evaluator.TryBindScope(hero, cityScopeId, city), Is.True);
 
-            var context = new ProgressionRequirementEvaluationContext(barracks, barracks);
+            var context = new RoleResolverContext(actor: barracks, subject: barracks);
             uint before = evaluator.ComputeRevision(reqId, in context);
             Assert.That(evaluator.Evaluate(reqId, in context), Is.False);
 
@@ -806,7 +807,7 @@ namespace Ludots.Tests.GAS
             using var world = World.Create();
             int heroTag = TagRegistry.Register("Hero.GuanYu");
             int reqId = ProgressionRequirementIdRegistry.Register("Req.GuanYuInCity");
-            var scopeKeys = new ProgressionScopeKeyRegistry();
+            var scopeKeys = new ScopeKeyRegistry();
             int cityScopeId = RegisterCityScope(scopeKeys);
 
             var requiredTags = default(GameplayTagContainer);
@@ -816,8 +817,8 @@ namespace Ludots.Tests.GAS
             requirements.Register(reqId, CreateSingleNodeRequirement(
                 reqId,
                 ProgressionRequirementNodeKind.EntityCount,
-                new ProgressionScopeSpec(ProgressionScopeKind.Named, cityScopeId),
-                ProgressionRequirementEntitySource.ScopeMembers,
+                new ScopeKey(ScopeKind.Named, cityScopeId),
+                RoleSlot.ScopeMembers,
                 progressionId: 0,
                 requiredCount: 1,
                 requiredTags: in requiredTags));
@@ -832,9 +833,9 @@ namespace Ludots.Tests.GAS
             Assert.That(evaluator.TryBindScope(barracks, cityScopeId, city), Is.True);
             Assert.That(evaluator.TryBindScope(hero, cityScopeId, city), Is.True);
 
-            var context = new ProgressionRequirementEvaluationContext(barracks, barracks);
+            var context = new RoleResolverContext(actor: barracks, subject: barracks);
             uint before = evaluator.ComputeScopeRevision(reqId, in context);
-            uint hostRevisionBefore = world.Get<ProgressionScopeMembershipRevision>(city).Revision;
+            uint hostRevisionBefore = world.Get<ScopeMembershipRevision>(city).Revision;
 
             ref var heroTags = ref world.Get<GameplayTagContainer>(hero);
             ref var heroCounts = ref world.Get<TagCountContainer>(hero);
@@ -851,7 +852,7 @@ namespace Ludots.Tests.GAS
             revisionSystem.Update(0f);
 
             uint after = evaluator.ComputeScopeRevision(reqId, in context);
-            Assert.That(world.Get<ProgressionScopeMembershipRevision>(city).Revision, Is.GreaterThan(hostRevisionBefore));
+            Assert.That(world.Get<ScopeMembershipRevision>(city).Revision, Is.GreaterThan(hostRevisionBefore));
             Assert.That(after, Is.Not.EqualTo(before));
             Assert.That(evaluator.Evaluate(reqId, in context), Is.True);
         }
@@ -862,7 +863,7 @@ namespace Ludots.Tests.GAS
             using var world = World.Create();
             int heroTag = TagRegistry.Register("Hero.GuanYu");
             int reqId = ProgressionRequirementIdRegistry.Register("Req.GuanYuInCity");
-            var scopeKeys = new ProgressionScopeKeyRegistry();
+            var scopeKeys = new ScopeKeyRegistry();
             int cityScopeId = RegisterCityScope(scopeKeys);
 
             var requiredTags = default(GameplayTagContainer);
@@ -872,8 +873,8 @@ namespace Ludots.Tests.GAS
             requirements.Register(reqId, CreateSingleNodeRequirement(
                 reqId,
                 ProgressionRequirementNodeKind.EntityCount,
-                new ProgressionScopeSpec(ProgressionScopeKind.Named, cityScopeId),
-                ProgressionRequirementEntitySource.ScopeMembers,
+                new ScopeKey(ScopeKind.Named, cityScopeId),
+                RoleSlot.ScopeMembers,
                 progressionId: 0,
                 requiredCount: 1,
                 requiredTags: in requiredTags));
@@ -895,8 +896,8 @@ namespace Ludots.Tests.GAS
             Assert.That(evaluator.TryBindScope(barracksB, cityScopeId, cityB), Is.True);
             Assert.That(evaluator.TryBindScope(hero, cityScopeId, cityA), Is.True);
 
-            var contextA = new ProgressionRequirementEvaluationContext(barracksA, barracksA);
-            var contextB = new ProgressionRequirementEvaluationContext(barracksB, barracksB);
+            var contextA = new RoleResolverContext(actor: barracksA, subject: barracksA);
+            var contextB = new RoleResolverContext(actor: barracksB, subject: barracksB);
             Assert.That(evaluator.Evaluate(reqId, in contextA), Is.True);
             Assert.That(evaluator.Evaluate(reqId, in contextB), Is.False);
             uint revisionA = evaluator.ComputeScopeRevision(reqId, in contextA);
@@ -916,7 +917,7 @@ namespace Ludots.Tests.GAS
             using var world = World.Create();
             int fortifiedTag = TagRegistry.Register("City.Fortified");
             int reqId = ProgressionRequirementIdRegistry.Register("Req.CityFortified");
-            var scopeKeys = new ProgressionScopeKeyRegistry();
+            var scopeKeys = new ScopeKeyRegistry();
             int cityScopeId = RegisterCityScope(scopeKeys);
 
             var requiredTags = default(GameplayTagContainer);
@@ -926,8 +927,8 @@ namespace Ludots.Tests.GAS
             requirements.Register(reqId, CreateSingleNodeRequirement(
                 reqId,
                 ProgressionRequirementNodeKind.TagAll,
-                new ProgressionScopeSpec(ProgressionScopeKind.Named, cityScopeId),
-                ProgressionRequirementEntitySource.ScopeHost,
+                new ScopeKey(ScopeKind.Named, cityScopeId),
+                RoleSlot.ScopeHost,
                 progressionId: 0,
                 requiredTags: in requiredTags));
 
@@ -938,9 +939,9 @@ namespace Ludots.Tests.GAS
             PrepareScopeMember(world, barracks);
             Assert.That(evaluator.TryBindScope(barracks, cityScopeId, city), Is.True);
 
-            var context = new ProgressionRequirementEvaluationContext(barracks, barracks);
+            var context = new RoleResolverContext(actor: barracks, subject: barracks);
             uint before = evaluator.ComputeScopeRevision(reqId, in context);
-            uint hostRevisionBefore = world.Get<ProgressionScopeMembershipRevision>(city).Revision;
+            uint hostRevisionBefore = world.Get<ScopeMembershipRevision>(city).Revision;
             Assert.That(evaluator.Evaluate(reqId, in context), Is.False);
 
             ref var cityTags = ref world.Get<GameplayTagContainer>(city);
@@ -958,7 +959,7 @@ namespace Ludots.Tests.GAS
             revisionSystem.Update(0f);
 
             uint after = evaluator.ComputeScopeRevision(reqId, in context);
-            Assert.That(world.Get<ProgressionScopeMembershipRevision>(city).Revision, Is.GreaterThan(hostRevisionBefore));
+            Assert.That(world.Get<ScopeMembershipRevision>(city).Revision, Is.GreaterThan(hostRevisionBefore));
             Assert.That(after, Is.Not.EqualTo(before));
             Assert.That(evaluator.Evaluate(reqId, in context), Is.True);
         }
@@ -1005,14 +1006,14 @@ namespace Ludots.Tests.GAS
 
                 int progressionId = ProgressionIdRegistry.GetId("Progression.CityArchery");
                 Assert.That(progressions.TryGet(progressionId, out var progression), Is.True);
-                Assert.That(progression.DeclaredScope.Kind, Is.EqualTo(ProgressionScopeKind.Named));
+                Assert.That(progression.DeclaredScope.Kind, Is.EqualTo(ScopeKind.Named));
                 Assert.That(progression.DeclaredScope.ScopeKeyId, Is.EqualTo(scopeKeys.GetId("city")));
 
                 int requirementId = ProgressionRequirementIdRegistry.GetId("Req.CityArchery2");
                 Assert.That(requirements.TryGet(requirementId, out var requirement), Is.True);
-                Assert.That(requirement.Nodes[0].Scope.Kind, Is.EqualTo(ProgressionScopeKind.Named));
+                Assert.That(requirement.Nodes[0].Scope.Kind, Is.EqualTo(ScopeKind.Named));
                 Assert.That(requirement.Nodes[0].Scope.ScopeKeyId, Is.EqualTo(scopeKeys.GetId("city")));
-                Assert.That(requirement.Nodes[0].EntitySource, Is.EqualTo(ProgressionRequirementEntitySource.ScopeHost));
+                Assert.That(requirement.Nodes[0].EntitySource, Is.EqualTo(RoleSlot.ScopeHost));
 
                 using var world = World.Create();
                 var evaluator = new ProgressionRequirementEvaluator(world, requirements, scopeKeys);
@@ -1195,7 +1196,7 @@ namespace Ludots.Tests.GAS
                 int templateId = EffectTemplateIdRegistry.GetId("Effect.CompleteCityArmor2");
                 Assert.That(effects.TryGet(templateId, out var template), Is.True);
                 Assert.That(template.PresetType, Is.EqualTo(EffectPresetType.CompleteProgression));
-                Assert.That(template.ProgressionScope.Kind, Is.EqualTo(ProgressionScopeKind.Named));
+                Assert.That(template.ProgressionScope.Kind, Is.EqualTo(ScopeKind.Named));
                 Assert.That(template.ProgressionScope.ScopeKeyId, Is.EqualTo(scopeKeys.GetId("city")));
                 Assert.That(template.ProgressionChange.Level, Is.EqualTo(2));
                 Assert.That(template.ProgressionChange.Delta, Is.EqualTo(0));
@@ -1264,15 +1265,15 @@ namespace Ludots.Tests.GAS
             using var world = World.Create();
             int progressionId = ProgressionIdRegistry.Register("Progression.CityDrill");
             int reqId = ProgressionRequirementIdRegistry.Register("Req.CityDrill");
-            var scopeKeys = new ProgressionScopeKeyRegistry();
+            var scopeKeys = new ScopeKeyRegistry();
             int cityScopeId = RegisterCityScope(scopeKeys);
 
             var requirements = new ProgressionRequirementRegistry();
             requirements.Register(reqId, CreateSingleNodeRequirement(
                 reqId,
                 ProgressionRequirementNodeKind.ProgressionCompleted,
-                new ProgressionScopeSpec(ProgressionScopeKind.Named, cityScopeId),
-                ProgressionRequirementEntitySource.ScopeHost,
+                new ScopeKey(ScopeKind.Named, cityScopeId),
+                RoleSlot.ScopeHost,
                 progressionId));
 
             var evaluator = new ProgressionRequirementEvaluator(world, requirements, scopeKeys);
@@ -1290,21 +1291,21 @@ namespace Ludots.Tests.GAS
             bindingSystem.Update(0f);
             Assert.That(evaluator.TryComplete(cityA, progressionId), Is.True);
 
-            var contextA = new ProgressionRequirementEvaluationContext(barracksA, barracksA);
-            var contextB = new ProgressionRequirementEvaluationContext(barracksB, barracksB);
+            var contextA = new RoleResolverContext(actor: barracksA, subject: barracksA);
+            var contextB = new RoleResolverContext(actor: barracksB, subject: barracksB);
             Assert.That(evaluator.Evaluate(reqId, in contextA), Is.True);
             Assert.That(evaluator.Evaluate(reqId, in contextB), Is.False);
 
-            uint before = world.Get<ProgressionScopeMembershipRevision>(cityA).Revision;
+            uint before = world.Get<ScopeMembershipRevision>(cityA).Revision;
             bindingSystem.Update(0f);
-            Assert.That(world.Get<ProgressionScopeMembershipRevision>(cityA).Revision, Is.EqualTo(before));
+            Assert.That(world.Get<ScopeMembershipRevision>(cityA).Revision, Is.EqualTo(before));
         }
 
         [Test]
         public void ProgressionScopeAuthoring_FailsFastWhenBindingHostIsMissing()
         {
             using var world = World.Create();
-            var scopeKeys = new ProgressionScopeKeyRegistry();
+            var scopeKeys = new ScopeKeyRegistry();
             scopeKeys.Register("city");
             var evaluator = new ProgressionRequirementEvaluator(
                 world,
@@ -1325,7 +1326,7 @@ namespace Ludots.Tests.GAS
         public void TryBindScope_RequiresPreallocatedAuthoringComponents()
         {
             using var world = World.Create();
-            var scopeKeys = new ProgressionScopeKeyRegistry();
+            var scopeKeys = new ScopeKeyRegistry();
             int cityScopeId = RegisterCityScope(scopeKeys);
             var evaluator = new ProgressionRequirementEvaluator(
                 world,
@@ -1344,8 +1345,8 @@ namespace Ludots.Tests.GAS
         private static ProgressionRequirementDefinition CreateSingleNodeRequirement(
             int requirementId,
             ProgressionRequirementNodeKind kind,
-            ProgressionScopeSpec scope,
-            ProgressionRequirementEntitySource entitySource,
+            ScopeKey scope,
+            RoleSlot entitySource,
             int progressionId,
             int requiredCount = 1,
             int graphProgramId = 0,
@@ -1367,29 +1368,29 @@ namespace Ludots.Tests.GAS
             return new ProgressionRequirementDefinition(requirementId, nodes, Array.Empty<int>());
         }
 
-        private static int RegisterCityScope(ProgressionScopeKeyRegistry scopeKeys)
+        private static int RegisterCityScope(ScopeKeyRegistry scopeKeys)
         {
             return scopeKeys.Register("city");
         }
 
         private static void PrepareScopeHost(World world, Entity entity)
         {
-            if (!world.Has<ProgressionScopeMembershipRevision>(entity))
+            if (!world.Has<ScopeMembershipRevision>(entity))
             {
-                world.Add(entity, new ProgressionScopeMembershipRevision());
+                world.Add(entity, new ScopeMembershipRevision());
             }
         }
 
         private static void PrepareScopeMember(World world, Entity entity)
         {
-            if (!world.Has<ProgressionScopeRefBuffer>(entity))
+            if (!world.Has<ScopeRefBuffer>(entity))
             {
-                world.Add(entity, new ProgressionScopeRefBuffer());
+                world.Add(entity, new ScopeRefBuffer());
             }
 
-            if (!world.Has<ProgressionScopeMemberTag>(entity))
+            if (!world.Has<ScopeMemberTag>(entity))
             {
-                world.Add(entity, new ProgressionScopeMemberTag());
+                world.Add(entity, new ScopeMemberTag());
             }
         }
 
@@ -1450,7 +1451,7 @@ namespace Ludots.Tests.GAS
         private static ProgressionConfigLoader CreateProgressionLoader(
             string root,
             out ProgressionRequirementRegistry requirements,
-            out ProgressionScopeKeyRegistry scopeKeys)
+            out ScopeKeyRegistry scopeKeys)
         {
             return CreateProgressionLoader(root, out requirements, out scopeKeys, out _, out _);
         }
@@ -1458,7 +1459,7 @@ namespace Ludots.Tests.GAS
         private static ProgressionConfigLoader CreateProgressionLoader(
             string root,
             out ProgressionRequirementRegistry requirements,
-            out ProgressionScopeKeyRegistry scopeKeys,
+            out ScopeKeyRegistry scopeKeys,
             out ProgressionDefinitionRegistry progressions,
             out ConfigPipeline pipeline)
         {
@@ -1468,7 +1469,7 @@ namespace Ludots.Tests.GAS
             pipeline = new ConfigPipeline(vfs, modLoader);
             progressions = new ProgressionDefinitionRegistry();
             requirements = new ProgressionRequirementRegistry();
-            scopeKeys = new ProgressionScopeKeyRegistry();
+            scopeKeys = new ScopeKeyRegistry();
             return new ProgressionConfigLoader(pipeline, progressions, requirements, scopeKeys);
         }
 

@@ -4,6 +4,7 @@ using System.Globalization;
 using System.Text.Json;
 using System.Text.Json.Nodes;
 using System.Text.Json.Serialization;
+using Ludots.Core.Association;
 using Ludots.Core.Config;
 using Ludots.Core.Gameplay.Exchange;
 using Ludots.Core.Gameplay.GAS.Components;
@@ -23,7 +24,7 @@ namespace Ludots.Core.Gameplay.GAS.Config
         private readonly GasConditionRegistry _conditions;
         private readonly TargetDispatchPresetRegistry _targetDispatchPresets;
         private readonly ExchangeOperationRegistry? _exchangeOperations;
-        private readonly ProgressionScopeKeyRegistry? _progressionScopeKeys;
+        private readonly ScopeKeyRegistry? _progressionScopeKeys;
 
         private static readonly JsonSerializerOptions JsonOptions = new()
         {
@@ -39,7 +40,7 @@ namespace Ludots.Core.Gameplay.GAS.Config
             GasConditionRegistry conditions = null,
             TargetDispatchPresetRegistry targetDispatchPresets = null,
             ExchangeOperationRegistry? exchangeOperations = null,
-            ProgressionScopeKeyRegistry? progressionScopeKeys = null)
+            ScopeKeyRegistry? progressionScopeKeys = null)
         {
             _pipeline = pipeline;
             _registry = registry;
@@ -267,7 +268,7 @@ namespace Ludots.Core.Gameplay.GAS.Config
             var unitCreation = CompileUnitCreation(cfg.UnitCreation, cfg.Id, relativePath);
             var displacement = CompileDisplacement(cfg.Displacement, cfg.Id, relativePath);
             var relation = CompileRelation(cfg.Relation, cfg.Id, relativePath);
-            var progressionScope = ProgressionScopeSpec.Self;
+            var progressionScope = ScopeKey.Self;
             var progressionChange = ProgressionLevelChange.Complete;
             int progressionId = 0;
 
@@ -1036,7 +1037,7 @@ namespace Ludots.Core.Gameplay.GAS.Config
             _ => throw new InvalidOperationException($"Unknown GasClockId '{value}'. Supported: FixedFrame, Step, Turn."),
         };
 
-        private ProgressionScopeSpec ResolveProgressionScope(string? rawValue, string effectId, string path)
+        private ScopeKey ResolveProgressionScope(string? rawValue, string effectId, string path)
         {
             if (string.IsNullOrWhiteSpace(rawValue))
             {
@@ -1047,24 +1048,24 @@ namespace Ludots.Core.Gameplay.GAS.Config
             return ParseProgressionScope(rawValue.Trim(), effectId, path);
         }
 
-        private ProgressionScopeSpec ParseProgressionScope(string value, string effectId, string path)
+        private ScopeKey ParseProgressionScope(string value, string effectId, string path)
         {
             if (_progressionScopeKeys == null)
             {
                 throw new InvalidOperationException(
-                    $"Effect template '{effectId}' in {path}: progression.scope requires ProgressionScopeKeyRegistry.");
+                    $"Effect template '{effectId}' in {path}: progression.scope requires ScopeKeyRegistry.");
             }
 
             switch (value)
             {
                 case "self":
-                    return ProgressionScopeSpec.Self;
+                    return ScopeKey.Self;
                 case "explicit":
-                    return new ProgressionScopeSpec(ProgressionScopeKind.Explicit);
+                    return new ScopeKey(ScopeKind.Explicit);
                 default:
                     if (_progressionScopeKeys.TryGetId(value, out int scopeKeyId) && scopeKeyId > 0)
                     {
-                        return new ProgressionScopeSpec(ProgressionScopeKind.Named, scopeKeyId);
+                        return new ScopeKey(ScopeKind.Named, scopeKeyId);
                     }
 
                     throw new InvalidOperationException(

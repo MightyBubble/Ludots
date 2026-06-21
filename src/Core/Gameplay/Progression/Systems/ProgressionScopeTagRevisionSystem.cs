@@ -1,18 +1,18 @@
 using Arch.Core;
 using Arch.System;
+using Ludots.Core.Association;
 using Ludots.Core.Gameplay.GAS;
 using Ludots.Core.Gameplay.GAS.Components;
-using Ludots.Core.Gameplay.Progression.Components;
 
 namespace Ludots.Core.Gameplay.Progression.Systems
 {
     public sealed class ProgressionScopeTagRevisionSystem : BaseSystem<World, float>
     {
         private static readonly QueryDescription ScopeMemberChangedTagQuery = new QueryDescription()
-            .WithAll<ProgressionScopeRefBuffer, GameplayTagEffectiveChangedBits>();
+            .WithAll<ScopeRefBuffer, GameplayTagEffectiveChangedBits>();
 
         private static readonly QueryDescription ScopeHostChangedTagQuery = new QueryDescription()
-            .WithAll<ProgressionScopeMembershipRevision, GameplayTagEffectiveChangedBits>();
+            .WithAll<ScopeMembershipRevision, GameplayTagEffectiveChangedBits>();
 
         public ProgressionScopeTagRevisionSystem(World world) : base(world)
         {
@@ -24,21 +24,21 @@ namespace Ludots.Core.Gameplay.Progression.Systems
             {
                 World = World
             };
-            World.InlineEntityQuery<BumpScopeRevisionJob, ProgressionScopeRefBuffer, GameplayTagEffectiveChangedBits>(
+            World.InlineEntityQuery<BumpScopeRevisionJob, ScopeRefBuffer, GameplayTagEffectiveChangedBits>(
                 in ScopeMemberChangedTagQuery,
                 ref job);
 
             var hostJob = new BumpHostRevisionJob();
-            World.InlineEntityQuery<BumpHostRevisionJob, ProgressionScopeMembershipRevision, GameplayTagEffectiveChangedBits>(
+            World.InlineEntityQuery<BumpHostRevisionJob, ScopeMembershipRevision, GameplayTagEffectiveChangedBits>(
                 in ScopeHostChangedTagQuery,
                 ref hostJob);
         }
 
-        private struct BumpScopeRevisionJob : IForEachWithEntity<ProgressionScopeRefBuffer, GameplayTagEffectiveChangedBits>
+        private struct BumpScopeRevisionJob : IForEachWithEntity<ScopeRefBuffer, GameplayTagEffectiveChangedBits>
         {
             public World World;
 
-            public void Update(Entity entity, ref ProgressionScopeRefBuffer refs, ref GameplayTagEffectiveChangedBits changedBits)
+            public void Update(Entity entity, ref ScopeRefBuffer refs, ref GameplayTagEffectiveChangedBits changedBits)
             {
                 if (!changedBits.IsAnyBitSet())
                 {
@@ -57,20 +57,20 @@ namespace Ludots.Core.Gameplay.Progression.Systems
                     }
 
                     if (!World.IsAlive(scopeHost) ||
-                        !World.Has<ProgressionScopeMembershipRevision>(scopeHost))
+                        !World.Has<ScopeMembershipRevision>(scopeHost))
                     {
                         continue;
                     }
 
-                    ref var revision = ref World.Get<ProgressionScopeMembershipRevision>(scopeHost);
+                    ref var revision = ref World.Get<ScopeMembershipRevision>(scopeHost);
                     revision.Revision++;
                 }
             }
         }
 
-        private struct BumpHostRevisionJob : IForEachWithEntity<ProgressionScopeMembershipRevision, GameplayTagEffectiveChangedBits>
+        private struct BumpHostRevisionJob : IForEachWithEntity<ScopeMembershipRevision, GameplayTagEffectiveChangedBits>
         {
-            public void Update(Entity entity, ref ProgressionScopeMembershipRevision revision, ref GameplayTagEffectiveChangedBits changedBits)
+            public void Update(Entity entity, ref ScopeMembershipRevision revision, ref GameplayTagEffectiveChangedBits changedBits)
             {
                 if (changedBits.IsAnyBitSet())
                 {

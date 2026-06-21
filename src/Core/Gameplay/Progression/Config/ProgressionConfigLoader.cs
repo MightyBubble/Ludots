@@ -2,6 +2,7 @@ using System;
 using System.Collections.Generic;
 using System.Text.Json;
 using System.Text.Json.Nodes;
+using Ludots.Core.Association;
 using Ludots.Core.Config;
 using Ludots.Core.Gameplay.GAS.Components;
 using Ludots.Core.Gameplay.GAS.Registry;
@@ -15,13 +16,13 @@ namespace Ludots.Core.Gameplay.Progression.Config
         private readonly ConfigPipeline _pipeline;
         private readonly ProgressionDefinitionRegistry _progressions;
         private readonly ProgressionRequirementRegistry _requirements;
-        private readonly ProgressionScopeKeyRegistry _scopeKeys;
+        private readonly ScopeKeyRegistry _scopeKeys;
 
         public ProgressionConfigLoader(
             ConfigPipeline pipeline,
             ProgressionDefinitionRegistry progressions,
             ProgressionRequirementRegistry requirements,
-            ProgressionScopeKeyRegistry scopeKeys)
+            ScopeKeyRegistry scopeKeys)
         {
             _pipeline = pipeline ?? throw new ArgumentNullException(nameof(pipeline));
             _progressions = progressions ?? throw new ArgumentNullException(nameof(progressions));
@@ -293,7 +294,7 @@ namespace Ludots.Core.Gameplay.Progression.Config
             };
         }
 
-        private static ProgressionRequirementEntitySource ParseRequiredEntitySource(string? raw, string context)
+        private static RoleSlot ParseRequiredEntitySource(string? raw, string context)
         {
             if (string.IsNullOrWhiteSpace(raw))
             {
@@ -302,15 +303,15 @@ namespace Ludots.Core.Gameplay.Progression.Config
 
             return raw.Trim() switch
             {
-                "ScopeMembers" => ProgressionRequirementEntitySource.ScopeMembers,
-                "ScopeHost" => ProgressionRequirementEntitySource.ScopeHost,
-                "Actor" => ProgressionRequirementEntitySource.Actor,
-                "Subject" => ProgressionRequirementEntitySource.Subject,
+                "ScopeMembers" => RoleSlot.ScopeMembers,
+                "ScopeHost" => RoleSlot.ScopeHost,
+                "Actor" => RoleSlot.Actor,
+                "Subject" => RoleSlot.Subject,
                 _ => throw new InvalidOperationException($"Unsupported progression requirement entitySource '{raw}'.")
             };
         }
 
-        private ProgressionScopeSpec ParseRequiredScope(string? raw, string context)
+        private ScopeKey ParseRequiredScope(string? raw, string context)
         {
             if (string.IsNullOrWhiteSpace(raw))
             {
@@ -320,10 +321,10 @@ namespace Ludots.Core.Gameplay.Progression.Config
             string value = raw.Trim();
             return value switch
             {
-                "self" => ProgressionScopeSpec.Self,
-                "explicit" => new ProgressionScopeSpec(ProgressionScopeKind.Explicit),
+                "self" => ScopeKey.Self,
+                "explicit" => new ScopeKey(ScopeKind.Explicit),
                 _ => _scopeKeys.TryGetId(value, out int scopeKeyId) && scopeKeyId > 0
-                    ? new ProgressionScopeSpec(ProgressionScopeKind.Named, scopeKeyId)
+                    ? new ScopeKey(ScopeKind.Named, scopeKeyId)
                     : throw new InvalidOperationException($"{context} references unknown progression scope '{value}'. Declare it in Progression/scopes.json.")
             };
         }

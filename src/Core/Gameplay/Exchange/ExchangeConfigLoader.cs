@@ -1,6 +1,7 @@
 using System;
 using System.Collections.Generic;
 using System.Text.Json;
+using Ludots.Core.Association;
 using Ludots.Core.Config;
 using Ludots.Core.Gameplay.GAS.Registry;
 using Ludots.Core.Gameplay.Items;
@@ -156,12 +157,12 @@ namespace Ludots.Core.Gameplay.Exchange
                 RequirePositive(cfg.Quantity, ownerId, relativePath, $"outputs[{index}].quantity"),
                 cfg.Charges ?? 0,
                 cfg.Durability ?? 0,
-                ExchangeActorSlot.None,
+                RoleSlot.None,
                 ItemContainerPurpose.None,
                 0,
-                ExchangeActorSlot.None,
-                ExchangeActorSlot.None,
-                ExchangeActorSlot.None);
+                RoleSlot.None,
+                RoleSlot.None,
+                RoleSlot.None);
         }
 
         private ExchangeOutputDefinition CompileMoveOutput(OutputConfig cfg, string ownerId, string relativePath, int index)
@@ -177,9 +178,9 @@ namespace Ludots.Core.Gameplay.Exchange
                 ParseActorSlot(cfg.FromActor, ownerId, relativePath, $"outputs[{index}].fromActor"),
                 ParseOptionalPurpose(cfg.FromPurpose, ownerId, relativePath, $"outputs[{index}].fromPurpose"),
                 0,
-                ExchangeActorSlot.None,
-                ExchangeActorSlot.None,
-                ExchangeActorSlot.None);
+                RoleSlot.None,
+                RoleSlot.None,
+                RoleSlot.None);
         }
 
         private ExchangeOutputDefinition CompileEffectOutput(OutputConfig cfg, string ownerId, string relativePath, int index)
@@ -193,13 +194,13 @@ namespace Ludots.Core.Gameplay.Exchange
 
             return new ExchangeOutputDefinition(
                 ExchangeOutputKind.EffectRequest,
-                ExchangeActorSlot.None,
+                RoleSlot.None,
                 ItemContainerPurpose.None,
                 0,
                 0,
                 0,
                 0,
-                ExchangeActorSlot.None,
+                RoleSlot.None,
                 ItemContainerPurpose.None,
                 effectId,
                 ParseActorSlot(cfg.EffectSource, ownerId, relativePath, $"outputs[{index}].effectSource"),
@@ -241,14 +242,14 @@ namespace Ludots.Core.Gameplay.Exchange
             };
         }
 
-        private static ExchangeActorSlot ParseActorSlot(string? value, string ownerId, string relativePath, string field)
+        private static RoleSlot ParseActorSlot(string? value, string ownerId, string relativePath, string field)
         {
             string raw = RequireString(value, ownerId, relativePath, field);
             return raw switch
             {
-                "Source" => ExchangeActorSlot.Source,
-                "Target" => ExchangeActorSlot.Target,
-                "Context" => ExchangeActorSlot.Context,
+                "Source" => RoleSlot.Source,
+                "Target" => RoleSlot.Target,
+                "Context" => RoleSlot.Context,
                 _ => throw new InvalidOperationException($"Exchange operation '{ownerId}' in {relativePath}: {field} has unsupported actor slot '{raw}'.")
             };
         }

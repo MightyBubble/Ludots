@@ -1,16 +1,10 @@
 using System;
 using Arch.Core;
+using Ludots.Core.Association;
 using Ludots.Core.Gameplay.GAS.Components;
 
 namespace Ludots.Core.Gameplay.Progression
 {
-    public enum ProgressionScopeKind : byte
-    {
-        Self = 0,
-        Explicit = 1,
-        Named = 2,
-    }
-
     public enum ProgressionRequirementNodeKind : byte
     {
         None = 0,
@@ -24,32 +18,10 @@ namespace Ludots.Core.Gameplay.Progression
         ProgressionLevelAtLeast = 8,
     }
 
-    public enum ProgressionRequirementEntitySource : byte
-    {
-        ScopeMembers = 0,
-        ScopeHost = 1,
-        Actor = 2,
-        Subject = 3,
-    }
-
-    public readonly struct ProgressionScopeSpec
-    {
-        public readonly ProgressionScopeKind Kind;
-        public readonly int ScopeKeyId;
-
-        public ProgressionScopeSpec(ProgressionScopeKind kind, int scopeKeyId = 0)
-        {
-            Kind = kind;
-            ScopeKeyId = scopeKeyId;
-        }
-
-        public static ProgressionScopeSpec Self => new(ProgressionScopeKind.Self);
-    }
-
     public struct ProgressionDefinition
     {
         public int ProgressionId;
-        public ProgressionScopeSpec DeclaredScope;
+        public ScopeKey DeclaredScope;
     }
 
     public readonly struct ProgressionLevelChange
@@ -68,25 +40,11 @@ namespace Ludots.Core.Gameplay.Progression
         public readonly int RequiredLevelOrCompleted => Level > 0 ? Level : 1;
     }
 
-    public readonly struct ProgressionRequirementEvaluationContext
-    {
-        public readonly Entity Actor;
-        public readonly Entity Subject;
-        public readonly Entity ExplicitScopeHost;
-
-        public ProgressionRequirementEvaluationContext(Entity actor, Entity subject, Entity explicitScopeHost = default)
-        {
-            Actor = actor;
-            Subject = subject;
-            ExplicitScopeHost = explicitScopeHost;
-        }
-    }
-
     public readonly struct ProgressionRequirementNode
     {
         public readonly ProgressionRequirementNodeKind Kind;
-        public readonly ProgressionScopeSpec Scope;
-        public readonly ProgressionRequirementEntitySource EntitySource;
+        public readonly ScopeKey Scope;
+        public readonly RoleSlot EntitySource;
         public readonly int FirstChild;
         public readonly int ChildCount;
         public readonly int ProgressionId;
@@ -96,8 +54,8 @@ namespace Ludots.Core.Gameplay.Progression
 
         public ProgressionRequirementNode(
             ProgressionRequirementNodeKind kind,
-            ProgressionScopeSpec scope,
-            ProgressionRequirementEntitySource entitySource,
+            ScopeKey scope,
+            RoleSlot entitySource,
             int firstChild,
             int childCount,
             int progressionId,

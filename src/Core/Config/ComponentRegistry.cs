@@ -5,6 +5,7 @@ using System.Text.Json.Nodes;
 using Arch.Core;
 using Arch.Core.Utils;
 using Arch.Core.Extensions;
+using Ludots.Core.Association;
 using Ludots.Core.Components;
 using Ludots.Core.Gameplay.GAS;
 using Ludots.Core.Diagnostics;
@@ -446,16 +447,16 @@ namespace Ludots.Core.Config
                 entity.Add(new ProgressionStateBuffer());
             }
 
-            if (!entity.Has<ProgressionScopeMembershipRevision>())
+            if (!entity.Has<ScopeMembershipRevision>())
             {
-                entity.Add(new ProgressionScopeMembershipRevision());
+                entity.Add(new ScopeMembershipRevision());
             }
 
-            var authoring = entity.Has<ProgressionScopeHostAuthoring>()
-                ? entity.Get<ProgressionScopeHostAuthoring>()
+            var authoring = entity.Has<ScopeHostAuthoring>()
+                ? entity.Get<ScopeHostAuthoring>()
                 : default;
             AddProgressionScopeEntries(ref authoring, data, "ProgressionScopeHost");
-            if (entity.Has<ProgressionScopeHostAuthoring>())
+            if (entity.Has<ScopeHostAuthoring>())
             {
                 entity.Set(authoring);
             }
@@ -467,21 +468,21 @@ namespace Ludots.Core.Config
 
         private static void SetProgressionScopeBinding(Entity entity, JsonNode data)
         {
-            if (!entity.Has<ProgressionScopeRefBuffer>())
+            if (!entity.Has<ScopeRefBuffer>())
             {
-                entity.Add(new ProgressionScopeRefBuffer());
+                entity.Add(new ScopeRefBuffer());
             }
 
-            if (!entity.Has<ProgressionScopeMemberTag>())
+            if (!entity.Has<ScopeMemberTag>())
             {
-                entity.Add(new ProgressionScopeMemberTag());
+                entity.Add(new ScopeMemberTag());
             }
 
-            var authoring = entity.Has<ProgressionScopeBindingAuthoring>()
-                ? entity.Get<ProgressionScopeBindingAuthoring>()
+            var authoring = entity.Has<ScopeBindingAuthoring>()
+                ? entity.Get<ScopeBindingAuthoring>()
                 : default;
             AddProgressionScopeEntries(ref authoring, data, "ProgressionScopeBinding");
-            if (entity.Has<ProgressionScopeBindingAuthoring>())
+            if (entity.Has<ScopeBindingAuthoring>())
             {
                 entity.Set(authoring);
             }
@@ -1035,7 +1036,7 @@ namespace Ludots.Core.Config
             return true;
         }
 
-        private static void AddProgressionScopeEntries(ref ProgressionScopeHostAuthoring authoring, JsonNode data, string context)
+        private static void AddProgressionScopeEntries(ref ScopeHostAuthoring authoring, JsonNode data, string context)
         {
             if (data is not JsonObject obj)
             {
@@ -1066,7 +1067,7 @@ namespace Ludots.Core.Config
             AddProgressionScopeEntry(ref authoring, obj, context);
         }
 
-        private static void AddProgressionScopeEntries(ref ProgressionScopeBindingAuthoring authoring, JsonNode data, string context)
+        private static void AddProgressionScopeEntries(ref ScopeBindingAuthoring authoring, JsonNode data, string context)
         {
             if (data is not JsonObject obj)
             {
@@ -1097,7 +1098,7 @@ namespace Ludots.Core.Config
             AddProgressionScopeEntry(ref authoring, obj, context);
         }
 
-        private static void AddProgressionScopeEntry(ref ProgressionScopeHostAuthoring authoring, JsonObject obj, string context)
+        private static void AddProgressionScopeEntry(ref ScopeHostAuthoring authoring, JsonObject obj, string context)
         {
             ValidateProperties(obj, context, "scope", "hostKey");
             int scopeNameKeyId = ConfigKeyRegistry.Register(RequireStringProperty(obj, "scope", context));
@@ -1108,7 +1109,7 @@ namespace Ludots.Core.Config
             }
         }
 
-        private static void AddProgressionScopeEntry(ref ProgressionScopeBindingAuthoring authoring, JsonObject obj, string context)
+        private static void AddProgressionScopeEntry(ref ScopeBindingAuthoring authoring, JsonObject obj, string context)
         {
             ValidateProperties(obj, context, "scope", "hostKey");
             int scopeNameKeyId = ConfigKeyRegistry.Register(RequireStringProperty(obj, "scope", context));

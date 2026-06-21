@@ -3,6 +3,7 @@ using System.Collections.Generic;
 using System.Threading.Tasks;
 using Arch.Core;
 using ItemSystemShowcaseMod.UI;
+using Ludots.Core.Association;
 using Ludots.Core.Components;
 using Ludots.Core.Engine;
 using Ludots.Core.Gameplay.Exchange;
@@ -768,8 +769,9 @@ internal sealed class ItemSystemShowcaseRuntime
     {
         var exchange = engine.GetService(CoreServiceKeys.ExchangeRuntime)
             ?? throw new InvalidOperationException("ExchangeRuntime missing.");
-        var context = new ExchangeExecutionContext(_hero, _vendor, Entity.Null, scopeKey);
-        return exchange.TryExecute(new ExchangeOperationKey(operationId, scopeKey), in context);
+        ScopeKey exchangeScope = scopeKey > 0 ? ScopeKey.Named(scopeKey) : default;
+        var context = new ExchangeExecutionContext(_hero, _vendor, Entity.Null, exchangeScope);
+        return exchange.TryExecute(new ExchangeOperationKey(operationId, exchangeScope), in context);
     }
 
     private int Layout(GameEngine engine, string id)

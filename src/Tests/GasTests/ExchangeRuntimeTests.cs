@@ -1,4 +1,5 @@
 using Arch.Core;
+using Ludots.Core.Association;
 using Ludots.Core.Gameplay.Exchange;
 using Ludots.Core.Gameplay.GAS;
 using Ludots.Core.Gameplay.GAS.Components;
@@ -38,12 +39,12 @@ namespace Ludots.Tests.GAS
                 Id = "test.exchange",
                 Inputs = new[]
                 {
-                    new ExchangeInputDefinition(ExchangeInputKind.ItemStack, ExchangeActorSlot.Source, CreditDef, 10),
-                    new ExchangeInputDefinition(ExchangeInputKind.ItemStack, ExchangeActorSlot.Source, ArtifactDef, 1)
+                    new ExchangeInputDefinition(ExchangeInputKind.ItemStack, RoleSlot.Source, CreditDef, 10),
+                    new ExchangeInputDefinition(ExchangeInputKind.ItemStack, RoleSlot.Source, ArtifactDef, 1)
                 },
                 Outputs = new[]
                 {
-                    CreateItem(ExchangeActorSlot.Source, ItemContainerPurpose.Stash, GemDef, 1)
+                    CreateItem(RoleSlot.Source, ItemContainerPurpose.Stash, GemDef, 1)
                 }
             });
 
@@ -70,11 +71,11 @@ namespace Ludots.Tests.GAS
                 Id = "test.blocked",
                 Inputs = new[]
                 {
-                    new ExchangeInputDefinition(ExchangeInputKind.ItemStack, ExchangeActorSlot.Source, CreditDef, 10)
+                    new ExchangeInputDefinition(ExchangeInputKind.ItemStack, RoleSlot.Source, CreditDef, 10)
                 },
                 Outputs = new[]
                 {
-                    CreateItem(ExchangeActorSlot.Source, ItemContainerPurpose.Stash, GemDef, 1)
+                    CreateItem(RoleSlot.Source, ItemContainerPurpose.Stash, GemDef, 1)
                 }
             });
 
@@ -103,12 +104,12 @@ namespace Ludots.Tests.GAS
                 Id = "test.move.rollback",
                 Inputs = new[]
                 {
-                    new ExchangeInputDefinition(ExchangeInputKind.ItemStack, ExchangeActorSlot.Source, CreditDef, 5)
+                    new ExchangeInputDefinition(ExchangeInputKind.ItemStack, RoleSlot.Source, CreditDef, 5)
                 },
                 Outputs = new[]
                 {
-                    MoveItem(ExchangeActorSlot.Target, ItemContainerPurpose.Stash, ArtifactDef, ExchangeActorSlot.Source),
-                    CreateItem(ExchangeActorSlot.Target, ItemContainerPurpose.Stash, GemDef, 1)
+                    MoveItem(RoleSlot.Target, ItemContainerPurpose.Stash, ArtifactDef, RoleSlot.Source),
+                    CreateItem(RoleSlot.Target, ItemContainerPurpose.Stash, GemDef, 1)
                 }
             });
 
@@ -137,12 +138,12 @@ namespace Ludots.Tests.GAS
                 Id = "test.cumulative.output.blocked",
                 Inputs = new[]
                 {
-                    new ExchangeInputDefinition(ExchangeInputKind.ItemStack, ExchangeActorSlot.Source, CreditDef, 5)
+                    new ExchangeInputDefinition(ExchangeInputKind.ItemStack, RoleSlot.Source, CreditDef, 5)
                 },
                 Outputs = new[]
                 {
-                    MoveItem(ExchangeActorSlot.Target, ItemContainerPurpose.Stash, ArtifactDef, ExchangeActorSlot.Source),
-                    CreateItem(ExchangeActorSlot.Target, ItemContainerPurpose.Stash, GemDef, 1)
+                    MoveItem(RoleSlot.Target, ItemContainerPurpose.Stash, ArtifactDef, RoleSlot.Source),
+                    CreateItem(RoleSlot.Target, ItemContainerPurpose.Stash, GemDef, 1)
                 }
             });
 
@@ -193,29 +194,29 @@ namespace Ludots.Tests.GAS
                 Id = "test.dynamic",
                 Inputs = new[]
                 {
-                    new ExchangeInputDefinition(ExchangeInputKind.ItemStack, ExchangeActorSlot.Source, CreditDef, 20)
+                    new ExchangeInputDefinition(ExchangeInputKind.ItemStack, RoleSlot.Source, CreditDef, 20)
                 },
                 Outputs = new[]
                 {
-                    CreateItem(ExchangeActorSlot.Source, ItemContainerPurpose.Stash, GemDef, 1)
+                    CreateItem(RoleSlot.Source, ItemContainerPurpose.Stash, GemDef, 1)
                 }
             });
-            fixture.Scoped.Set(operationId, scopeKey: 77, new ExchangeOperationDefinition
+            fixture.Scoped.Set(operationId, ScopeKey.Named(77), new ExchangeOperationDefinition
             {
                 Id = "test.dynamic#77",
                 Inputs = new[]
                 {
-                    new ExchangeInputDefinition(ExchangeInputKind.ItemStack, ExchangeActorSlot.Source, CreditDef, 5)
+                    new ExchangeInputDefinition(ExchangeInputKind.ItemStack, RoleSlot.Source, CreditDef, 5)
                 },
                 Outputs = new[]
                 {
-                    CreateItem(ExchangeActorSlot.Source, ItemContainerPurpose.Stash, TokenDef, 1)
+                    CreateItem(RoleSlot.Source, ItemContainerPurpose.Stash, TokenDef, 1)
                 }
             });
 
             ExchangeExecutionResult result = fixture.Runtime.TryExecute(
-                new ExchangeOperationKey(operationId, 77),
-                new ExchangeExecutionContext(actor, scopeKey: 77));
+                new ExchangeOperationKey(operationId, ScopeKey.Named(77)),
+                new ExchangeExecutionContext(actor, scope: ScopeKey.Named(77)));
 
             That(result.Succeeded, Is.True);
             That(fixture.Inventory.CountStackUnits(actor, CreditDef), Is.EqualTo(25));
@@ -237,11 +238,11 @@ namespace Ludots.Tests.GAS
                 Id = "test.dynamic.a",
                 Inputs = new[]
                 {
-                    new ExchangeInputDefinition(ExchangeInputKind.ItemStack, ExchangeActorSlot.Source, CreditDef, 20)
+                    new ExchangeInputDefinition(ExchangeInputKind.ItemStack, RoleSlot.Source, CreditDef, 20)
                 },
                 Outputs = new[]
                 {
-                    CreateItem(ExchangeActorSlot.Source, ItemContainerPurpose.Stash, GemDef, 1)
+                    CreateItem(RoleSlot.Source, ItemContainerPurpose.Stash, GemDef, 1)
                 }
             });
             int operationB = fixture.Operations.Register("test.dynamic.b", new ExchangeOperationDefinition
@@ -249,29 +250,29 @@ namespace Ludots.Tests.GAS
                 Id = "test.dynamic.b",
                 Inputs = new[]
                 {
-                    new ExchangeInputDefinition(ExchangeInputKind.ItemStack, ExchangeActorSlot.Source, CreditDef, 7)
+                    new ExchangeInputDefinition(ExchangeInputKind.ItemStack, RoleSlot.Source, CreditDef, 7)
                 },
                 Outputs = new[]
                 {
-                    CreateItem(ExchangeActorSlot.Source, ItemContainerPurpose.Stash, LargeDef, 1)
+                    CreateItem(RoleSlot.Source, ItemContainerPurpose.Stash, LargeDef, 1)
                 }
             });
-            fixture.Scoped.Set(operationA, scopeKey: 77, new ExchangeOperationDefinition
+            fixture.Scoped.Set(operationA, ScopeKey.Named(77), new ExchangeOperationDefinition
             {
                 Id = "test.dynamic.a#77",
                 Inputs = new[]
                 {
-                    new ExchangeInputDefinition(ExchangeInputKind.ItemStack, ExchangeActorSlot.Source, CreditDef, 5)
+                    new ExchangeInputDefinition(ExchangeInputKind.ItemStack, RoleSlot.Source, CreditDef, 5)
                 },
                 Outputs = new[]
                 {
-                    CreateItem(ExchangeActorSlot.Source, ItemContainerPurpose.Stash, TokenDef, 1)
+                    CreateItem(RoleSlot.Source, ItemContainerPurpose.Stash, TokenDef, 1)
                 }
             });
 
             ExchangeExecutionResult result = fixture.Runtime.TryExecute(
-                new ExchangeOperationKey(operationB, 77),
-                new ExchangeExecutionContext(actor, scopeKey: 77));
+                new ExchangeOperationKey(operationB, ScopeKey.Named(77)),
+                new ExchangeExecutionContext(actor, scope: ScopeKey.Named(77)));
 
             That(result.Succeeded, Is.True);
             That(fixture.Inventory.CountStackUnits(actor, CreditDef), Is.EqualTo(23));
@@ -294,11 +295,11 @@ namespace Ludots.Tests.GAS
                 Id = "test.gas.exchange",
                 Inputs = new[]
                 {
-                    new ExchangeInputDefinition(ExchangeInputKind.ItemStack, ExchangeActorSlot.Source, CreditDef, 3)
+                    new ExchangeInputDefinition(ExchangeInputKind.ItemStack, RoleSlot.Source, CreditDef, 3)
                 },
                 Outputs = new[]
                 {
-                    CreateItem(ExchangeActorSlot.Source, ItemContainerPurpose.Stash, GemDef, 1)
+                    CreateItem(RoleSlot.Source, ItemContainerPurpose.Stash, GemDef, 1)
                 }
             });
 
@@ -329,11 +330,11 @@ namespace Ludots.Tests.GAS
                 Id = "test.gas.exchange.failure",
                 Inputs = new[]
                 {
-                    new ExchangeInputDefinition(ExchangeInputKind.ItemStack, ExchangeActorSlot.Source, CreditDef, 3)
+                    new ExchangeInputDefinition(ExchangeInputKind.ItemStack, RoleSlot.Source, CreditDef, 3)
                 },
                 Outputs = new[]
                 {
-                    CreateItem(ExchangeActorSlot.Source, ItemContainerPurpose.Stash, GemDef, 1)
+                    CreateItem(RoleSlot.Source, ItemContainerPurpose.Stash, GemDef, 1)
                 }
             });
 
@@ -368,29 +369,29 @@ namespace Ludots.Tests.GAS
                 Id = "test.scope.override",
                 Inputs = new[]
                 {
-                    new ExchangeInputDefinition(ExchangeInputKind.ItemStack, ExchangeActorSlot.Source, CreditDef, 20)
+                    new ExchangeInputDefinition(ExchangeInputKind.ItemStack, RoleSlot.Source, CreditDef, 20)
                 },
                 Outputs = new[]
                 {
-                    CreateItem(ExchangeActorSlot.Source, ItemContainerPurpose.Stash, GemDef, 1)
+                    CreateItem(RoleSlot.Source, ItemContainerPurpose.Stash, GemDef, 1)
                 }
             });
-            fixture.Scoped.Set(operationId, scopeKey: 77, new ExchangeOperationDefinition
+            fixture.Scoped.Set(operationId, ScopeKey.Named(77), new ExchangeOperationDefinition
             {
                 Id = "test.scope.override#77",
                 Inputs = new[]
                 {
-                    new ExchangeInputDefinition(ExchangeInputKind.ItemStack, ExchangeActorSlot.Source, CreditDef, 5)
+                    new ExchangeInputDefinition(ExchangeInputKind.ItemStack, RoleSlot.Source, CreditDef, 5)
                 },
                 Outputs = new[]
                 {
-                    CreateItem(ExchangeActorSlot.Source, ItemContainerPurpose.Stash, TokenDef, 1)
+                    CreateItem(RoleSlot.Source, ItemContainerPurpose.Stash, TokenDef, 1)
                 }
             });
 
             ExchangeExecutionResult result = fixture.Runtime.TryExecute(
-                new ExchangeOperationKey(operationId, 77),
-                new ExchangeExecutionContext(actor, scopeKey: 12));
+                new ExchangeOperationKey(operationId, ScopeKey.Named(77)),
+                new ExchangeExecutionContext(actor, scope: ScopeKey.Named(12)));
 
             That(result.Succeeded, Is.True);
             That(fixture.Inventory.CountStackUnits(actor, CreditDef), Is.EqualTo(25));
@@ -465,7 +466,7 @@ namespace Ludots.Tests.GAS
             return count;
         }
 
-        private static ExchangeOutputDefinition CreateItem(ExchangeActorSlot actor, ItemContainerPurpose purpose, int definitionId, int quantity)
+        private static ExchangeOutputDefinition CreateItem(RoleSlot actor, ItemContainerPurpose purpose, int definitionId, int quantity)
         {
             return new ExchangeOutputDefinition(
                 ExchangeOutputKind.CreateItem,
@@ -475,19 +476,19 @@ namespace Ludots.Tests.GAS
                 quantity,
                 0,
                 0,
-                ExchangeActorSlot.None,
+                RoleSlot.None,
                 ItemContainerPurpose.None,
                 0,
-                ExchangeActorSlot.None,
-                ExchangeActorSlot.None,
-                ExchangeActorSlot.None);
+                RoleSlot.None,
+                RoleSlot.None,
+                RoleSlot.None);
         }
 
         private static ExchangeOutputDefinition MoveItem(
-            ExchangeActorSlot actor,
+            RoleSlot actor,
             ItemContainerPurpose purpose,
             int definitionId,
-            ExchangeActorSlot fromActor,
+            RoleSlot fromActor,
             ItemContainerPurpose fromPurpose = ItemContainerPurpose.None)
         {
             return new ExchangeOutputDefinition(
@@ -501,9 +502,9 @@ namespace Ludots.Tests.GAS
                 fromActor,
                 fromPurpose,
                 0,
-                ExchangeActorSlot.None,
-                ExchangeActorSlot.None,
-                ExchangeActorSlot.None);
+                RoleSlot.None,
+                RoleSlot.None,
+                RoleSlot.None);
         }
 
         private readonly record struct ExchangeFixture(

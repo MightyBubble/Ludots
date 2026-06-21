@@ -1,6 +1,7 @@
 using System;
 using System.Collections.Generic;
 using Arch.Core;
+using Ludots.Core.Association;
 using Ludots.Core.Components;
 using Ludots.Core.Engine;
 using Ludots.Core.Gameplay.GAS;
@@ -558,7 +559,10 @@ namespace EntityCommandPanelMod.Runtime
                 return ProgressionRequirementPreviewResult.Deferred;
             }
 
-            var context = new ProgressionRequirementEvaluationContext(actor, subject, explicitScopeHost);
+            var context = new RoleResolverContext(
+                actor: actor,
+                subject: subject,
+                explicitScopeHost: explicitScopeHost);
             return evaluator.Evaluate(requirementId, in context)
                 ? ProgressionRequirementPreviewResult.Satisfied
                 : ProgressionRequirementPreviewResult.Failed;
@@ -1382,7 +1386,7 @@ namespace EntityCommandPanelMod.Runtime
                     _abilityDefinitions != null &&
                     _abilityDefinitions.TryGet(slot.AbilityId, out definition);
 
-                var context = new ProgressionRequirementEvaluationContext(target, target);
+                var context = new RoleResolverContext(actor: target, subject: target);
                 if (hasDefinition && definition.HasShowProgressionRequirement)
                 {
                     current = HashProgressionRequirementRevision(current, definition.ShowProgressionRequirementId, in context);
@@ -1405,7 +1409,7 @@ namespace EntityCommandPanelMod.Runtime
             return current;
         }
 
-        private uint HashProgressionRequirementRevision(uint current, int requirementId, in ProgressionRequirementEvaluationContext context)
+        private uint HashProgressionRequirementRevision(uint current, int requirementId, in RoleResolverContext context)
         {
             if (requirementId <= 0 || _progressionRequirements == null)
             {

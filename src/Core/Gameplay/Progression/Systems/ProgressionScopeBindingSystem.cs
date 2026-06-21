@@ -1,8 +1,8 @@
 using System;
 using Arch.Core;
 using Arch.System;
+using Ludots.Core.Association;
 using Ludots.Core.Gameplay.GAS.Registry;
-using Ludots.Core.Gameplay.Progression.Components;
 
 namespace Ludots.Core.Gameplay.Progression.Systems
 {
@@ -11,20 +11,20 @@ namespace Ludots.Core.Gameplay.Progression.Systems
         private const int MaxHosts = 512;
 
         private static readonly QueryDescription HostQuery = new QueryDescription()
-            .WithAll<ProgressionScopeHostAuthoring>();
+            .WithAll<ScopeHostAuthoring>();
 
         private static readonly QueryDescription BindingQuery = new QueryDescription()
-            .WithAll<ProgressionScopeBindingAuthoring>();
+            .WithAll<ScopeBindingAuthoring>();
 
         private readonly ProgressionRequirementEvaluator _evaluator;
-        private readonly ProgressionScopeKeyRegistry _scopeKeys;
+        private readonly ScopeKeyRegistry _scopeKeys;
         private readonly HostEntry[] _hosts = new HostEntry[MaxHosts];
         private int _hostCount;
 
         public ProgressionScopeBindingSystem(
             World world,
             ProgressionRequirementEvaluator evaluator,
-            ProgressionScopeKeyRegistry scopeKeys)
+            ScopeKeyRegistry scopeKeys)
             : base(world)
         {
             _evaluator = evaluator ?? throw new ArgumentNullException(nameof(evaluator));
@@ -38,13 +38,13 @@ namespace Ludots.Core.Gameplay.Progression.Systems
             {
                 System = this
             };
-            World.InlineEntityQuery<CollectHostJob, ProgressionScopeHostAuthoring>(in HostQuery, ref collectJob);
+            World.InlineEntityQuery<CollectHostJob, ScopeHostAuthoring>(in HostQuery, ref collectJob);
 
             var bindJob = new BindMembersJob
             {
                 System = this
             };
-            World.InlineEntityQuery<BindMembersJob, ProgressionScopeBindingAuthoring>(in BindingQuery, ref bindJob);
+            World.InlineEntityQuery<BindMembersJob, ScopeBindingAuthoring>(in BindingQuery, ref bindJob);
         }
 
         private void AddHost(Entity entity, int scopeNameKeyId, int hostKeyId)
@@ -105,11 +105,11 @@ namespace Ludots.Core.Gameplay.Progression.Systems
             }
         }
 
-        private struct CollectHostJob : IForEachWithEntity<ProgressionScopeHostAuthoring>
+        private struct CollectHostJob : IForEachWithEntity<ScopeHostAuthoring>
         {
             public ProgressionScopeBindingSystem System;
 
-            public void Update(Entity entity, ref ProgressionScopeHostAuthoring authoring)
+            public void Update(Entity entity, ref ScopeHostAuthoring authoring)
             {
                 unsafe
                 {
@@ -121,11 +121,11 @@ namespace Ludots.Core.Gameplay.Progression.Systems
             }
         }
 
-        private struct BindMembersJob : IForEachWithEntity<ProgressionScopeBindingAuthoring>
+        private struct BindMembersJob : IForEachWithEntity<ScopeBindingAuthoring>
         {
             public ProgressionScopeBindingSystem System;
 
-            public void Update(Entity entity, ref ProgressionScopeBindingAuthoring authoring)
+            public void Update(Entity entity, ref ScopeBindingAuthoring authoring)
             {
                 unsafe
                 {

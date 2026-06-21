@@ -1,6 +1,7 @@
 using System;
 using System.Collections.Generic;
 using Arch.Core;
+using Ludots.Core.Association;
 using Ludots.Core.Gameplay.GAS;
 using Ludots.Core.Gameplay.Items;
 
@@ -34,7 +35,7 @@ namespace Ludots.Core.Gameplay.Exchange
 
         public ExchangeExecutionResult TryExecute(int operationId, in ExchangeExecutionContext context)
         {
-            return TryExecute(new ExchangeOperationKey(operationId, context.ScopeKey), in context);
+            return TryExecute(new ExchangeOperationKey(operationId, context.Scope), in context);
         }
 
         public ExchangeExecutionResult TryExecute(ExchangeOperationKey key, in ExchangeExecutionContext context)
@@ -97,9 +98,13 @@ namespace Ludots.Core.Gameplay.Exchange
 
         private bool TryResolveOperation(in ExchangeOperationKey key, out ExchangeOperationDefinition operation)
         {
-            if (key.HasScope && _scopedOperations.TryGet(key.OperationId, key.ScopeKey, out operation))
+            if (key.HasScope)
             {
-                return true;
+                ScopeKey scope = key.Scope;
+                if (_scopedOperations.TryGet(key.OperationId, in scope, out operation))
+                {
+                    return true;
+                }
             }
 
             return _operations.TryGet(key.OperationId, out operation);

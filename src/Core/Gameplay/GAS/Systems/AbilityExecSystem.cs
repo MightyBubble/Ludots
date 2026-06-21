@@ -3,6 +3,7 @@ using System.Collections.Generic;
 using Arch.Core;
 using Arch.Core.Extensions;
 using Arch.System;
+using Ludots.Core.Association;
 using Ludots.Core.Engine;
 using Ludots.Core.Gameplay.GAS.Components;
 using Ludots.Core.Gameplay.GAS.Input;
@@ -629,7 +630,10 @@ namespace Ludots.Core.Gameplay.GAS.Systems
             Entity resolvedExplicitScopeHost = World.IsAlive(explicitScopeHost)
                 ? explicitScopeHost
                 : default;
-            var context = new ProgressionRequirementEvaluationContext(actor, resolvedSubject, resolvedExplicitScopeHost);
+            var context = new RoleResolverContext(
+                actor: actor,
+                subject: resolvedSubject,
+                explicitScopeHost: resolvedExplicitScopeHost);
             return _progressionRequirements.Evaluate(requirementId, in context);
         }
 

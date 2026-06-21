@@ -2,6 +2,7 @@ using System;
 using Arch.Core;
 using Arch.Core.Extensions;
 using Ludots.Core.Components;
+using Ludots.Core.Association;
 using Ludots.Core.Gameplay.Components;
 using Ludots.Core.Gameplay.Exchange;
 using Ludots.Core.Gameplay.GAS.Components;
@@ -411,13 +412,14 @@ namespace Ludots.Core.Gameplay.GAS
             }
 
             mergedParams.TryGetInt(EffectParamKeys.ExchangeScopeKey, out int scopeKey);
+            ScopeKey exchangeScope = scopeKey > 0 ? ScopeKey.Named(scopeKey) : default;
             var exchangeContext = new ExchangeExecutionContext(
                 context.Source,
                 context.Target,
                 context.TargetContext,
-                scopeKey);
+                exchangeScope);
             ExchangeExecutionResult result = runtime.Exchange.TryExecute(
-                new ExchangeOperationKey(operationId, scopeKey),
+                new ExchangeOperationKey(operationId, exchangeScope),
                 in exchangeContext);
             runtime.RecordExchangeResult(result);
             if (!result.Succeeded)
@@ -444,10 +446,10 @@ namespace Ludots.Core.Gameplay.GAS
                 throw new InvalidOperationException("CompleteProgression requires ProgressionRequirementEvaluator in BuiltinHandlerExecutionContext.");
             }
 
-            var evaluationContext = new ProgressionRequirementEvaluationContext(
-                context.Source,
-                world.IsAlive(context.Target) ? context.Target : context.Source,
-                context.TargetContext);
+            var evaluationContext = new RoleResolverContext(
+                actor: context.Source,
+                subject: world.IsAlive(context.Target) ? context.Target : context.Source,
+                explicitScopeHost: context.TargetContext);
             if (!runtime.ProgressionEvaluator.TryResolveScopeHost(templateData.ProgressionScope, in evaluationContext, out Entity scopeHost))
             {
                 throw new InvalidOperationException("CompleteProgression could not resolve its configured progression scope.");

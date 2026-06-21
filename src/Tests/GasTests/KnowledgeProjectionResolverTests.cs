@@ -1,5 +1,6 @@
 using System.Collections.Generic;
 using Arch.Core;
+using Ludots.Core.Association;
 using Ludots.Core.EntityCollections;
 using Ludots.Core.Gameplay.Relationships;
 using Ludots.Core.Knowledge;
@@ -54,14 +55,18 @@ namespace Ludots.Tests.GAS
         }
 
         [Test]
-        public void TryResolve_WithViewerScopesCombinesPlayerAndTeamRecordsDeterministically()
+        public void TryResolve_WithNamedScopeCombinesViewerAndScopeMemberRecordsDeterministically()
         {
             using World world = World.Create();
             Entity player = world.Create();
             Entity team = world.Create();
+            Entity teamScopeHost = world.Create(new ScopeMembershipRevision());
             Entity target = world.Create();
             Entity playerSource = world.Create();
             Entity teamSource = world.Create();
+            int teamScopeId = 7;
+            AddScopeRef(world, player, teamScopeId, teamScopeHost);
+            AddScopeRef(world, team, teamScopeId, teamScopeHost);
             var store = new KnowledgeProjectionStore();
             uint playerRevision = store.Upsert(
                 player,
@@ -89,10 +94,18 @@ namespace Ludots.Tests.GAS
                     KnowledgeIdMask256.Empty.WithId(2),
                     KnowledgeIdMask256.Empty.WithId(4),
                     KnowledgeIdMask256.Empty));
-            var resolver = new KnowledgeProjectionResolver(store);
-            Span<Entity> scopes = stackalloc Entity[2] { player, team };
+            var scopeResolver = new ScopeResolver(world);
+            var resolver = new KnowledgeProjectionResolver(store, scopeResolver);
+            ScopeKey viewerScope = ScopeKey.Named(teamScopeId);
+            var roleContext = new RoleResolverContext(
+                actor: player,
+                subject: player,
+                viewer: player);
+            Span<Entity> scopeMembers = stackalloc Entity[4];
 
-            Assert.That(resolver.TryResolve(player, target, currentTick: 3, scopes, out KnowledgeProjection projection), Is.True);
+            Assert.That(
+                resolver.TryResolve(player, target, currentTick: 3, in viewerScope, in roleContext, scopeMembers, out KnowledgeProjection projection),
+                Is.True);
             Assert.That(projection.Viewer, Is.EqualTo(player));
             Assert.That(projection.Target, Is.EqualTo(target));
             Assert.That(projection.Source, Is.EqualTo(teamSource));
@@ -137,7 +150,12 @@ namespace Ludots.Tests.GAS
             var store = new KnowledgeProjectionStore(initialCapacity: 4);
             var projector = new KnowledgeRelationCollectionProjector(runtime.Relationships, runtime.Collections, grants, store);
             var resolver = new KnowledgeProjectionResolver(store, projector);
-            Span<Entity> scopes = stackalloc Entity[1] { viewer };
+            ScopeKey viewerScope = ScopeKey.Self;
+            var roleContext = new RoleResolverContext(
+                actor: viewer,
+                subject: viewer,
+                viewer: viewer);
+            Span<Entity> scopeMembers = stackalloc Entity[1];
             Span<Entity> relationSources = stackalloc Entity[2];
             Span<Entity> relationTargets = stackalloc Entity[2];
 
@@ -146,7 +164,9 @@ namespace Ludots.Tests.GAS
                     viewer,
                     scout,
                     currentTick: 6,
-                    scopes,
+                    in viewerScope,
+                    in roleContext,
+                    scopeMembers,
                     allyTypeId,
                     relationSources,
                     relationTargets,
@@ -199,7 +219,11 @@ namespace Ludots.Tests.GAS
             using World world = World.Create();
             Entity player = world.Create();
             Entity allyIntelSource = world.Create();
+            Entity allyScopeHost = world.Create(new ScopeMembershipRevision());
             Entity target = world.Create();
+            int allyScopeId = 9;
+            AddScopeRef(world, player, allyScopeId, allyScopeHost);
+            AddScopeRef(world, allyIntelSource, allyScopeId, allyScopeHost);
             var store = new KnowledgeProjectionStore();
             store.Upsert(
                 player,
@@ -227,10 +251,18 @@ namespace Ludots.Tests.GAS
                     attributeMask: KnowledgeIdMask256.Empty,
                     relationshipMask: KnowledgeIdMask256.Empty.WithId(2),
                     tagMask: KnowledgeIdMask256.Empty));
-            var resolver = new KnowledgeProjectionResolver(store);
-            Span<Entity> scopes = stackalloc Entity[2] { player, allyIntelSource };
+            var scopeResolver = new ScopeResolver(world);
+            var resolver = new KnowledgeProjectionResolver(store, scopeResolver);
+            ScopeKey viewerScope = ScopeKey.Named(allyScopeId);
+            var roleContext = new RoleResolverContext(
+                actor: player,
+                subject: player,
+                viewer: player);
+            Span<Entity> scopeMembers = stackalloc Entity[4];
 
-            Assert.That(resolver.TryResolve(player, target, currentTick: 12, scopes, out KnowledgeProjection projection), Is.True);
+            Assert.That(
+                resolver.TryResolve(player, target, currentTick: 12, in viewerScope, in roleContext, scopeMembers, out KnowledgeProjection projection),
+                Is.True);
             Assert.That(projection.Presence, Is.EqualTo(KnowledgePresence.LiveVisible));
             Assert.That(projection.Position, Is.EqualTo(KnowledgePositionAccess.Live));
             Assert.That(projection.Source, Is.EqualTo(player));
@@ -247,8 +279,12 @@ namespace Ludots.Tests.GAS
             int scoutKeyId = runtime.CollectionKeys.Register("collection.scouts");
             Entity player = world.Create();
             Entity team = world.Create();
+            Entity teamScopeHost = world.Create(new ScopeMembershipRevision());
             Entity ally = world.Create();
             Entity target = world.Create();
+            int teamScopeId = 11;
+            AddScopeRef(world, player, teamScopeId, teamScopeHost);
+            AddScopeRef(world, team, teamScopeId, teamScopeHost);
             runtime.Relationships.EnsureLink(player, ally, allyTypeId);
             runtime.Collections.Replace(
                 ally,
@@ -283,19 +319,30 @@ namespace Ludots.Tests.GAS
                     KnowledgeIdMask256.Empty.WithId(allyTypeId),
                     KnowledgeIdMask256.Empty.WithId(3))));
             var projector = new KnowledgeRelationCollectionProjector(runtime.Relationships, runtime.Collections, grants, store);
-            var resolver = new KnowledgeProjectionResolver(store, projector);
-            Span<Entity> scopes = stackalloc Entity[2] { player, team };
+            var scopeResolver = new ScopeResolver(world);
+            var resolver = new KnowledgeProjectionResolver(store, projector, scopeResolver);
+            ScopeKey viewerScope = ScopeKey.Named(teamScopeId);
+            var roleContext = new RoleResolverContext(
+                actor: player,
+                subject: player,
+                viewer: player);
+            Span<Entity> scopeMembers = stackalloc Entity[4];
             Span<Entity> relationSources = stackalloc Entity[4];
             Span<Entity> relationTargets = stackalloc Entity[4];
             Assert.That(
-                resolver.TryResolve(player, target, 2, scopes, allyTypeId, relationSources, relationTargets, out _),
+                resolver.TryResolve(player, target, 2, in viewerScope, in roleContext, scopeMembers, allyTypeId, relationSources, relationTargets, out _),
                 Is.True);
+
+            for (int i = 0; i < 64; i++)
+            {
+                resolver.TryResolve(player, target, 2, in viewerScope, in roleContext, scopeMembers, allyTypeId, relationSources, relationTargets, out _);
+            }
 
             GC.GetAllocatedBytesForCurrentThread();
             long before = GC.GetAllocatedBytesForCurrentThread();
             for (int i = 0; i < 10_000; i++)
             {
-                resolver.TryResolve(player, target, 2, scopes, allyTypeId, relationSources, relationTargets, out _);
+                resolver.TryResolve(player, target, 2, in viewerScope, in roleContext, scopeMembers, allyTypeId, relationSources, relationTargets, out _);
             }
 
             long allocated = GC.GetAllocatedBytesForCurrentThread() - before;
@@ -396,5 +443,12 @@ namespace Ludots.Tests.GAS
             RelationshipRuntime Relationships,
             StringIntRegistry CollectionKeys,
             EntityCollectionStore Collections);
+
+        private static void AddScopeRef(World world, Entity entity, int scopeKeyId, Entity scopeHost)
+        {
+            var refs = new ScopeRefBuffer();
+            Assert.That(refs.TryAdd(scopeKeyId, scopeHost), Is.True);
+            world.Add(entity, refs);
+        }
     }
 }
