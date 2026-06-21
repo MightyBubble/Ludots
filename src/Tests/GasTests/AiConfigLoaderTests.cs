@@ -4,14 +4,18 @@ using Ludots.Core.Config;
 using Ludots.Core.Gameplay.AI.Config;
 using Ludots.Core.Gameplay.AI.WorldState;
 using Ludots.Core.Gameplay.GAS;
-using Ludots.Core.Gameplay.GAS.Orders;
 using Ludots.Core.Gameplay.GAS.Registry;
+using Ludots.Core.Gameplay.GAS.Orders;
+using Ludots.Core.GraphRuntime;
 using Ludots.Core.Modding;
+using Ludots.Core.NodeLibraries.GASGraph;
+using Ludots.Core.NodeLibraries.GASGraph.Host;
 using NUnit.Framework;
 
 namespace Ludots.Tests.GAS
 {
     [TestFixture]
+    [NonParallelizable]
     public class AiConfigLoaderTests
     {
         private const int AttackOrderTypeId = 102;
@@ -82,18 +86,139 @@ namespace Ludots.Tests.GAS
             Assert.That(ex!.Message, Does.Contain("unknown ability key 'Ability.Missing'"));
         }
 
+        [Test]
+        public void AiConfigLoader_CompilesUtilityAiV2ToFlatArrays()
+        {
+            using var fixture = AiConfigFixture.Create();
+            fixture.WriteUtilityV2();
+
+            var runtime = fixture.Load();
+
+            Assert.That(runtime.UtilityRuntime.IsEnabled, Is.True);
+            Assert.That(runtime.UtilityRuntime.Profiles.Length, Is.EqualTo(1));
+            Assert.That(runtime.UtilityRuntime.DecisionMakers.Length, Is.EqualTo(1));
+            Assert.That(runtime.UtilityRuntime.Decisions.Length, Is.EqualTo(1));
+            Assert.That(runtime.UtilityRuntime.Considerations.Length, Is.EqualTo(1));
+            Assert.That(runtime.UtilityRuntime.TargetFilters.Length, Is.EqualTo(1));
+            Assert.That(runtime.UtilityRuntime.TargetFilterOps.Length, Is.EqualTo(2));
+            Assert.That(runtime.UtilityRuntime.Tasks.Length, Is.EqualTo(1));
+            Assert.That(runtime.UtilityRuntime.Tasks[0].OrderTypeId, Is.EqualTo(AttackOrderTypeId));
+            Assert.That(runtime.UtilityRuntime.Decisions[0].AutocastAbilityId, Is.EqualTo(fixture.AttackAbilityId));
+            Assert.That(runtime.UtilityRuntime.Decisions[0].SharedCooldownTagId, Is.EqualTo(fixture.SharedCooldownTagId));
+        }
+
+        [Test]
+        public void AiConfigLoader_RejectsUtilityAiV2UnknownTargetFilter()
+        {
+            using var fixture = AiConfigFixture.Create();
+            fixture.WriteUtilityV2(decisionTargetFilter: "TF.Missing");
+
+            var ex = Assert.Throws<InvalidOperationException>(() => fixture.Load());
+
+            Assert.That(ex!.Message, Does.Contain("unknown target filter 'TF.Missing'"));
+        }
+
+        [Test]
+        public void AiConfigLoader_RejectsUtilityAiV2UnknownInput()
+        {
+            using var fixture = AiConfigFixture.Create();
+            fixture.WriteUtilityV2(considerationInput: "Input.Missing");
+
+            var ex = Assert.Throws<InvalidOperationException>(() => fixture.Load());
+
+            Assert.That(ex!.Message, Does.Contain("unknown input 'Input.Missing'"));
+        }
+
+        [Test]
+        public void AiConfigLoader_RejectsUtilityAiV2UnknownOrderType()
+        {
+            using var fixture = AiConfigFixture.Create();
+            fixture.WriteUtilityV2(taskOrderTypeKey: "missingOrder");
+
+            var ex = Assert.Throws<InvalidOperationException>(() => fixture.Load());
+
+            Assert.That(ex!.Message, Does.Contain("unknown order type key 'missingOrder'"));
+        }
+
+        [Test]
+        public void AiConfigLoader_RejectsUtilityAiV2UnknownAbility()
+        {
+            using var fixture = AiConfigFixture.Create();
+            fixture.WriteUtilityV2(decisionAbilityKey: "Ability.Missing");
+
+            var ex = Assert.Throws<InvalidOperationException>(() => fixture.Load());
+
+            Assert.That(ex!.Message, Does.Contain("unknown ability key 'Ability.Missing'"));
+        }
+
+        [Test]
+        public void AiConfigLoader_RejectsUtilityAiV2UnknownGraph()
+        {
+            using var fixture = AiConfigFixture.Create();
+            fixture.WriteUtilityV2(includeGraphInput: true, graphKey: "Graph.Missing");
+
+            var ex = Assert.Throws<InvalidOperationException>(() => fixture.Load());
+
+            Assert.That(ex!.Message, Does.Contain("unknown graph key 'Graph.Missing'"));
+        }
+
+        [Test]
+        public void AiConfigLoader_RejectsUtilityAiV2GraphScoreWriteOp()
+        {
+            using var fixture = AiConfigFixture.Create();
+            fixture.RegisterScoreGraph(new GraphInstruction { Op = (ushort)GraphNodeOp.WriteBlackboardFloat });
+            fixture.WriteUtilityV2(includeGraphInput: true, considerationInput: "Input.Graph");
+
+            var ex = Assert.Throws<InvalidOperationException>(() => fixture.Load());
+
+            Assert.That(ex!.Message, Does.Contain("GraphScore graph"));
+            Assert.That(ex.Message, Does.Contain("WriteBlackboardFloat"));
+        }
+
+        [Test]
+        public void AiConfigLoader_RejectsUtilityAiV2UnknownTag()
+        {
+            using var fixture = AiConfigFixture.Create();
+            fixture.WriteUtilityV2(sharedCooldownTag: "Cooldown.Missing");
+
+            var ex = Assert.Throws<InvalidOperationException>(() => fixture.Load());
+
+            Assert.That(ex!.Message, Does.Contain("unknown gameplay tag 'Cooldown.Missing'"));
+        }
+
         private sealed class AiConfigFixture : IDisposable
         {
             private readonly string _root;
+            private readonly string _core;
             private readonly ConfigPipeline _pipeline;
             private readonly AiConfigValidationContext _validation;
+            private readonly GraphProgramRegistry _graphs;
 
-            private AiConfigFixture(string root, ConfigPipeline pipeline, AiConfigValidationContext validation)
+            private AiConfigFixture(
+                string root,
+                string core,
+                ConfigPipeline pipeline,
+                AiConfigValidationContext validation,
+                GraphProgramRegistry graphs,
+                int attackAbilityId,
+                int sharedCooldownTagId,
+                int scoreGraphId)
             {
                 _root = root;
+                _core = core;
                 _pipeline = pipeline;
                 _validation = validation;
+                _graphs = graphs;
+                AttackAbilityId = attackAbilityId;
+                SharedCooldownTagId = sharedCooldownTagId;
+                ScoreGraphId = scoreGraphId;
             }
+
+            public int AttackAbilityId { get; }
+
+            public int SharedCooldownTagId { get; }
+
+            public int ScoreGraphId { get; }
 
             public static AiConfigFixture Create(string? orderJson = null)
             {
@@ -131,11 +256,66 @@ namespace Ludots.Tests.GAS
                 });
 
                 AbilityIdRegistry.Clear();
+                TagRegistry.Clear();
+                GraphIdRegistry.Clear();
                 int abilityId = AbilityIdRegistry.Register("Ability.Test.Attack");
                 var abilities = new AbilityDefinitionRegistry();
                 abilities.Register(abilityId, new AbilityDefinition());
+                int sharedCooldownTagId = TagRegistry.Register("Cooldown.Global.Attack");
 
-                return new AiConfigFixture(root, pipeline, new AiConfigValidationContext(orderTypes, abilities));
+                var graphs = new GraphProgramRegistry();
+                int graphId = GraphIdRegistry.Register("Graph.AI.Score");
+                graphs.Register(graphId, Array.Empty<GraphInstruction>());
+
+                return new AiConfigFixture(root, core, pipeline, new AiConfigValidationContext(orderTypes, abilities, graphs), graphs, abilityId, sharedCooldownTagId, graphId);
+            }
+
+            public void RegisterScoreGraph(params GraphInstruction[] program)
+            {
+                _graphs.Register(ScoreGraphId, program);
+            }
+
+            public void WriteUtilityV2(
+                string decisionTargetFilter = "TF.Hostile",
+                string considerationInput = "Input.Distance",
+                string taskOrderTypeKey = "attackTarget",
+                string decisionAbilityKey = "Ability.Test.Attack",
+                string sharedCooldownTag = "Cooldown.Global.Attack",
+                bool includeGraphInput = false,
+                string graphKey = "Graph.AI.Score")
+            {
+                string ai = Path.Combine(_core, "Configs", "AI");
+                File.WriteAllText(Path.Combine(ai, "target_filters.json"),
+                    "[ { \"id\": \"TF.Hostile\", \"MaxResults\": 32, \"Ops\": [ " +
+                    "{ \"Kind\": \"SpatialRadius\", \"RadiusCm\": 900 }, " +
+                    "{ \"Kind\": \"Relationship\", \"Value\": \"Hostile\" } ] } ]");
+
+                string inputGraph = includeGraphInput
+                    ? $", {{ \"id\": \"Input.Graph\", \"Kind\": \"GraphScore\", \"GraphKey\": \"{graphKey}\" }}"
+                    : string.Empty;
+                File.WriteAllText(Path.Combine(ai, "inputs.json"),
+                    "[ { \"id\": \"Input.Distance\", \"Kind\": \"DistanceToTarget\" }" + inputGraph + " ]");
+                File.WriteAllText(Path.Combine(ai, "normalizations.json"),
+                    "[ { \"id\": \"Norm.Close\", \"Kind\": \"RangeInverse\", \"Min\": 0, \"Max\": 900 } ]");
+                File.WriteAllText(Path.Combine(ai, "curves.json"),
+                    "[ { \"id\": \"Curve.Linear\", \"Kind\": \"Linear\" } ]");
+                File.WriteAllText(Path.Combine(ai, "tasks.json"),
+                    $"[ {{ \"id\": \"Task.Attack\", \"Kind\": \"SubmitOrder\", \"OrderTypeKey\": \"{taskOrderTypeKey}\", \"SubmitMode\": 0, \"PlayerId\": 0 }} ]");
+                File.WriteAllText(Path.Combine(ai, "decisions.json"),
+                    "[ { \"id\": \"Decision.Attack\", " +
+                    $"\"TargetFilter\": \"{decisionTargetFilter}\", " +
+                    "\"Priority\": 10, \"BaseScore\": 1, \"Weight\": 1, " +
+                    $"\"AbilityKey\": \"{decisionAbilityKey}\", \"AbilitySlotIndex\": 0, \"SharedCooldownTag\": \"{sharedCooldownTag}\", " +
+                    "\"Autocast\": true, \"OrdinaryAttack\": true, \"RequiresTarget\": true, " +
+                    "\"Considerations\": [ { " +
+                    $"\"Input\": \"{considerationInput}\", \"Normalization\": \"Norm.Close\", \"Curve\": \"Curve.Linear\", \"Aggregate\": \"Multiply\" }} ], " +
+                    "\"Tasks\": [ \"Task.Attack\" ] } ]");
+                File.WriteAllText(Path.Combine(ai, "decision_makers.json"),
+                    "[ { \"id\": \"DM.Combat\", \"SelectionMode\": \"FixedPriority\", \"Decisions\": [ \"Decision.Attack\" ] } ]");
+                File.WriteAllText(Path.Combine(ai, "profiles.json"),
+                    "[ { \"id\": \"Profile.Basic\", \"DecisionIntervalSteps\": 1, \"MaxCandidates\": 32, \"DecisionMakers\": [ \"DM.Combat\" ] } ]");
+                File.WriteAllText(Path.Combine(ai, "stances.json"), "[]");
+                File.WriteAllText(Path.Combine(ai, "actuators.json"), "[]");
             }
 
             public AiCompiledRuntime Load()

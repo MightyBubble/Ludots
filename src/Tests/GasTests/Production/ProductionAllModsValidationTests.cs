@@ -173,6 +173,24 @@ namespace Ludots.Tests.GAS.Production
                 .SetName("ProdModSmoke_ReactiveTestMod");
 
             yield return new TestCaseData(new ModCase(
+                    "AIDemoMod",
+                    new[] { "LudotsCoreMod", "AIDemoMod" },
+                    true))
+                .SetName("ProdModSmoke_AIDemoMod");
+
+            yield return new TestCaseData(new ModCase(
+                    "AIInspectorMod",
+                    new[] { "LudotsCoreMod", "AIDemoMod", "AIInspectorMod" },
+                    true))
+                .SetName("ProdModSmoke_AIInspectorMod");
+
+            yield return new TestCaseData(new ModCase(
+                    "OpenRaStanceBehaviorMod",
+                    new[] { "LudotsCoreMod", "OpenRaStanceBehaviorMod" },
+                    true))
+                .SetName("ProdModSmoke_OpenRaStanceBehaviorMod");
+
+            yield return new TestCaseData(new ModCase(
                     "DepConsumerMod",
                     new[] { "LudotsCoreMod", "DepApiMod", "DepConsumerMod" },
                     true))

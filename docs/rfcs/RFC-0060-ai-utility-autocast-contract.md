@@ -56,3 +56,12 @@ SSOT 参考材料来自 `docs/ai-utility-autocast-ssot` 分支：
 - 未知 ability id/key 加载期报错。
 - 现有 AI loader happy path 正常编译。
 - 现有 AI 相关测试不回归。
+
+## Epic #224 后续落地
+
+#225 的契约切片已被后续实现复用：
+
+- Utility AI v2 编译结果进入 `AiCompiledRuntime.UtilityRuntime`。
+- target acquisition、decision-target evaluator、共享 cooldown 仲裁、order task submission、actuator gate、主循环接入由 `src/Tests/GasTests/UtilityAiRuntimeTests.cs` 覆盖。
+- OpenRA stance 业务行为留在 `mods/OpenRaStanceBehaviorMod`，不进入 AI Core；该 Mod 通过 GAS/order config 声明业务 order，并只提交 `Order` intent。
+- AI Inspector 补充 Utility AI v2 runtime inventory 与 opt-in trace 摘要，用于调试候选、过滤原因、分数、task status 和已提交 order。

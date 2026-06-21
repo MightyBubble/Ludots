@@ -1,0 +1,12 @@
+{
+  "name": "OpenRaStanceBehaviorMod",
+  "version": "1.0.0",
+  "description": "OpenRA-style stance and tactical order behavior pack backed by GAS order intents.",
+  "main": "bin/net8.0/OpenRaStanceBehaviorMod.dll",
+  "priority": 0,
+  "dependencies": {
+    "LudotsCoreMod": "^1.0.0"
+  },
+  "author": "Ludots Team",
+  "tags": ["ai", "rts", "behavior-pack"]
+}
