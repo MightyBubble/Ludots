@@ -324,6 +324,121 @@ namespace GasTests
             }
         }
 
+        [Test]
+        public void Issue244_EntityAssociationAdr_UsesIssueSsotAndDoesNotCreateRepositoryAdr()
+        {
+            var repoRoot = FindRepoRoot();
+
+            string gitbookArchitectureIndex = Path.Combine(repoRoot, "gitbook", "architecture", "README.md");
+            string agents = Path.Combine(repoRoot, "AGENTS.md");
+            string claude = Path.Combine(repoRoot, "CLAUDE.md");
+
+            Assert.That(File.Exists(gitbookArchitectureIndex), Is.True, $"Missing {gitbookArchitectureIndex}");
+            Assert.That(File.Exists(agents), Is.True, $"Missing {agents}");
+            Assert.That(File.Exists(claude), Is.True, $"Missing {claude}");
+
+            string gitbookIndex = File.ReadAllText(gitbookArchitectureIndex);
+            string agentsText = File.ReadAllText(agents);
+            string claudeText = File.ReadAllText(claude);
+
+            Assert.Multiple(() =>
+            {
+                Assert.That(gitbookIndex, Does.Contain("Entity Association Core"));
+                Assert.That(gitbookIndex, Does.Contain("#239"));
+                Assert.That(gitbookIndex, Does.Contain("#244"));
+                Assert.That(gitbookIndex, Does.Contain("ADR SSOT"));
+                Assert.That(agentsText, Does.Contain("#239"));
+                Assert.That(agentsText, Does.Contain("#244"));
+                Assert.That(claudeText, Does.Contain("#239"));
+                Assert.That(claudeText, Does.Contain("#244"));
+            });
+
+            string adrDir = Path.Combine(repoRoot, "docs", "adr");
+            Assert.That(Directory.Exists(adrDir), Is.True, $"Missing {adrDir}");
+
+            var forbiddenAdrFiles = Directory
+                .EnumerateFiles(adrDir, "*.md", SearchOption.TopDirectoryOnly)
+                .Where(path =>
+                {
+                    string name = Path.GetFileName(path);
+                    if (name.Equals("README.md", StringComparison.OrdinalIgnoreCase))
+                    {
+                        return false;
+                    }
+
+                    string lowerName = name.ToLowerInvariant();
+                    if (lowerName.Contains("entity-association", StringComparison.Ordinal) ||
+                        lowerName.Contains("aac", StringComparison.Ordinal))
+                    {
+                        return true;
+                    }
+
+                    string text = File.ReadAllText(path);
+                    return text.Contains("Entity Association Core", StringComparison.Ordinal) ||
+                           text.Contains("AAC-", StringComparison.Ordinal);
+                })
+                .Select(path => ToRepoRelativePath(repoRoot, path))
+                .ToArray();
+
+            Assert.That(
+                forbiddenAdrFiles,
+                Is.Empty,
+                "Issue #244 is the Entity Association Core ADR SSOT; do not create repository ADR files for AAC.");
+        }
+
+        [Test]
+        public void Issue244_EntityAssociationAdr_DefinesUatShowcaseStandardAndExceptions()
+        {
+            var repoRoot = FindRepoRoot();
+            string gitbookArchitectureIndex = Path.Combine(repoRoot, "gitbook", "architecture", "README.md");
+            string text = File.ReadAllText(gitbookArchitectureIndex);
+
+            string[] required =
+            {
+                "UAT showcase capability mod",
+                "2.5",
+                "#245",
+                "#246",
+                "#247",
+                "#248",
+                "#249",
+                "#250",
+                "#251",
+                "#253",
+                "#244",
+                "#252",
+                "#254",
+                "#255"
+            };
+
+            var missing = required
+                .Where(token => !text.Contains(token, StringComparison.Ordinal))
+                .ToArray();
+
+            Assert.That(
+                missing,
+                Is.Empty,
+                "Issue #244 ADR clause 2.5 requires the architecture entry to point to the showcase-producing child issues and meta exceptions.");
+        }
+
+        [Test]
+        public void Issue244_PendingAac2_SingleEntityKeyedSoaTableContract()
+        {
+            Assert.Ignore("AAC-2 (#245) will replace KnowledgeProjectionStore and EntityCollectionStore duplicate sparse table internals with EntityKeyedSoaTable.");
+        }
+
+        [Test]
+        public void Issue244_PendingAac4_SingleScopeKeyContract()
+        {
+            Assert.Ignore("AAC-4 (#247) will land the single ScopeKey identity and role-resolution helper reused by Exchange, Progression, Knowledge, and Relationship.");
+        }
+
+        [Test]
+        public void Issue244_PendingCompositionContracts()
+        {
+            Assert.Ignore("AAC-5..AAC-8/#248..#251 will make Ownership relations, Relationship-gated Exchange, Collection+Relationship-fed Progression membership, and Inventory settlement executable contracts.");
+        }
+
         private static string FindRepoRoot()
         {
             var dir = new DirectoryInfo(AppContext.BaseDirectory);
