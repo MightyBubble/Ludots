@@ -1,0 +1,152 @@
+[
+  {
+    "id": "capability_standard_physics2d_polygon_wall",
+    "components": {
+      "Name": { "Value": "CapabilityStandardPhysics2D.PolygonWall" },
+      "PresentationStaticTransform": {},
+      "FacingDirection": { "AngleRad": 0.0 },
+      "CapabilityStandardPhysics2D.RigidBody": {
+        "positionCm": { "x": 0, "y": 0 },
+        "rotationRad": 0.0,
+        "velocityCmPerSec": { "x": 0, "y": 0 },
+        "angularVelocityRadPerSec": 0.0,
+        "inverseMass": 0.0,
+        "inverseInertia": 0.0,
+        "shape": {
+          "type": "Polygon",
+          "verticesCm": [
+            { "x": -90, "y": -310 },
+            { "x": 90, "y": -310 },
+            { "x": 130, "y": 310 },
+            { "x": -130, "y": 310 }
+          ]
+        },
+        "material": {
+          "friction": 0.18,
+          "restitution": 0.9,
+          "baseDamping": 1.0
+        }
+      }
+    }
+  },
+  {
+    "id": "capability_standard_physics2d_bouncing_stone",
+    "components": {
+      "Name": { "Value": "CapabilityStandardPhysics2D.BouncingStone" },
+      "PresentationStaticTransform": {},
+      "FacingDirection": { "AngleRad": 0.0 },
+      "CapabilityStandardPhysics2D.RigidBody": {
+        "positionCm": { "x": -360, "y": 0 },
+        "rotationRad": 0.0,
+        "velocityCmPerSec": { "x": 720, "y": 0 },
+        "angularVelocityRadPerSec": 0.0,
+        "inverseMass": 1.0,
+        "inverseInertia": 1.0,
+        "shape": {
+          "type": "Circle",
+          "radiusCm": 45,
+          "localCenterCm": { "x": 0, "y": 0 }
+        },
+        "material": {
+          "friction": 0.05,
+          "restitution": 0.95,
+          "baseDamping": 1.0
+        }
+      }
+    }
+  },
+  {
+    "id": "capability_standard_physics2d_knockback_target",
+    "components": {
+      "Name": { "Value": "CapabilityStandardPhysics2D.KnockbackTarget" },
+      "PresentationStaticTransform": {},
+      "FacingDirection": { "AngleRad": 0.0 },
+      "CapabilityStandardPhysics2D.RigidBody": {
+        "positionCm": { "x": -900, "y": -420 },
+        "rotationRad": 0.0,
+        "velocityCmPerSec": { "x": 0, "y": 0 },
+        "angularVelocityRadPerSec": 0.0,
+        "inverseMass": 1.0,
+        "inverseInertia": 1.0,
+        "shape": {
+          "type": "Box",
+          "halfWidthCm": 48,
+          "halfHeightCm": 48,
+          "localCenterCm": { "x": 0, "y": 0 }
+        },
+        "material": {
+          "friction": 0.4,
+          "restitution": 0.0,
+          "baseDamping": 0.995
+        },
+        "forceCmPerSec2": { "x": 900, "y": 260 }
+      }
+    }
+  },
+  {
+    "id": "capability_standard_physics2d_damping_field",
+    "components": {
+      "Name": { "Value": "CapabilityStandardPhysics2D.DampingField" },
+      "PresentationStaticTransform": {},
+      "FacingDirection": { "AngleRad": 0.0 },
+      "CapabilityStandardPhysics2D.DampingField": {
+        "positionCm": { "x": 850, "y": 360 },
+        "radiusCm": 520,
+        "dampingValue": 0.55
+      }
+    }
+  },
+  {
+    "id": "capability_standard_physics2d_damping_probe",
+    "components": {
+      "Name": { "Value": "CapabilityStandardPhysics2D.DampingProbe" },
+      "PresentationStaticTransform": {},
+      "FacingDirection": { "AngleRad": 0.0 },
+      "CapabilityStandardPhysics2D.RigidBody": {
+        "positionCm": { "x": 850, "y": 360 },
+        "rotationRad": 0.0,
+        "velocityCmPerSec": { "x": 420, "y": 0 },
+        "angularVelocityRadPerSec": 0.0,
+        "inverseMass": 1.0,
+        "inverseInertia": 1.0,
+        "shape": {
+          "type": "Circle",
+          "radiusCm": 36,
+          "localCenterCm": { "x": 0, "y": 0 }
+        },
+        "material": {
+          "friction": 0.2,
+          "restitution": 0.1,
+          "baseDamping": 1.0
+        }
+      }
+    }
+  },
+  {
+    "id": "capability_standard_physics2d_kinematic_rotating_door",
+    "components": {
+      "Name": { "Value": "CapabilityStandardPhysics2D.KinematicRotatingDoor" },
+      "PresentationStaticTransform": {},
+      "FacingDirection": { "AngleRad": 0.0 },
+      "CapabilityStandardPhysics2D.RigidBody": {
+        "positionCm": { "x": 720, "y": -420 },
+        "rotationRad": 0.0,
+        "velocityCmPerSec": { "x": 0, "y": 0 },
+        "angularVelocityRadPerSec": 1.2,
+        "inverseMass": 1.0,
+        "inverseInertia": 1.0,
+        "shape": {
+          "type": "Box",
+          "halfWidthCm": 170,
+          "halfHeightCm": 28,
+          "localCenterCm": { "x": 0, "y": 0 }
+        },
+        "material": {
+          "friction": 0.6,
+          "restitution": 0.0,
+          "baseDamping": 1.0
+        }
+      }
+    }
+  }
+]

@@ -63,7 +63,7 @@ namespace Ludots.Tests.Navigation2D
                 new ForceInput2D { Force = Fix64Vec2.Zero },
                 new NavDesiredVelocity2D { ValueCmPerSec = Fix64Vec2.Zero });
 
-            var system = new Navigation2DSteeringSystem2D(world, runtime);
+            var system = new Navigation2DSteeringSystem2D(world, runtime, new Ludots.Core.Physics2D.ShapeDataStorage2D());
             system.Update(DeltaTime);
 
             var flow = runtime.Flows[0];
@@ -107,7 +107,7 @@ namespace Ludots.Tests.Navigation2D
                 new ForceInput2D { Force = Fix64Vec2.Zero },
                 new NavDesiredVelocity2D { ValueCmPerSec = Fix64Vec2.Zero });
 
-            var system = new Navigation2DSteeringSystem2D(world, runtime);
+            var system = new Navigation2DSteeringSystem2D(world, runtime, new Ludots.Core.Physics2D.ShapeDataStorage2D());
             system.Update(DeltaTime);
 
             var flow = runtime.Flows[0];
@@ -158,7 +158,7 @@ namespace Ludots.Tests.Navigation2D
                 new ForceInput2D { Force = Fix64Vec2.Zero },
                 new NavDesiredVelocity2D { ValueCmPerSec = Fix64Vec2.Zero });
 
-            var system = new Navigation2DSteeringSystem2D(world, runtime);
+            var system = new Navigation2DSteeringSystem2D(world, runtime, new Ludots.Core.Physics2D.ShapeDataStorage2D());
             var flow = runtime.Flows[0];
             var timeline = new StringBuilder();
             var trace = new StringBuilder();

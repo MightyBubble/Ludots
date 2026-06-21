@@ -1,0 +1,48 @@
+{
+  "mapId": "capability_standard_physics2d",
+  "spawnScratchCapacity": 8,
+  "spawns": [
+    {
+      "id": "polygon_wall",
+      "templateId": "capability_standard_physics2d_polygon_wall",
+      "worldXCm": 0,
+      "worldYCm": 0,
+      "facingRad": 0.0
+    },
+    {
+      "id": "bouncing_stone",
+      "templateId": "capability_standard_physics2d_bouncing_stone",
+      "worldXCm": -360,
+      "worldYCm": 0,
+      "facingRad": 0.0
+    },
+    {
+      "id": "knockback_target",
+      "templateId": "capability_standard_physics2d_knockback_target",
+      "worldXCm": -900,
+      "worldYCm": -420,
+      "facingRad": 0.0
+    },
+    {
+      "id": "damping_field",
+      "templateId": "capability_standard_physics2d_damping_field",
+      "worldXCm": 850,
+      "worldYCm": 360,
+      "facingRad": 0.0
+    },
+    {
+      "id": "damping_probe",
+      "templateId": "capability_standard_physics2d_damping_probe",
+      "worldXCm": 850,
+      "worldYCm": 360,
+      "facingRad": 0.0
+    },
+    {
+      "id": "kinematic_rotating_door",
+      "templateId": "capability_standard_physics2d_kinematic_rotating_door",
+      "worldXCm": 720,
+      "worldYCm": -420,
+      "facingRad": 0.0
+    }
+  ]
+}

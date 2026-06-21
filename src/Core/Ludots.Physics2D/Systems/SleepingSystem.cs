@@ -1,24 +1,29 @@
+using System;
 using System.Collections.Generic;
+using System.Runtime.CompilerServices;
 using Arch.Core;
 using Arch.Core.Extensions;
 using Arch.System;
+using Ludots.Core.Engine.Physics2D;
 using Ludots.Core.Physics2D.Components;
 
 namespace Ludots.Core.Physics2D.Systems
 {
     public sealed class SleepingSystem : BaseSystem<World, float>
     {
-        private const int TimeToSleep = 60;
-
         private readonly Dictionary<int, List<Entity>> _islands = new();
         private readonly HashSet<int> _islandsToWake = new();
+        private readonly Physics2DSolverConfig _config;
+        private readonly Physics2DTickPolicy _tickPolicy;
 
         private readonly QueryDescription _activeEntitiesQuery;
         private readonly QueryDescription _sleepingEntitiesQuery;
         private readonly QueryDescription _collisionPairQuery;
 
-        public SleepingSystem(World world) : base(world)
+        public SleepingSystem(World world, Physics2DSolverConfig config, Physics2DTickPolicy tickPolicy) : base(world)
         {
+            _config = config ?? throw new ArgumentNullException(nameof(config));
+            _tickPolicy = tickPolicy ?? throw new ArgumentNullException(nameof(tickPolicy));
             _activeEntitiesQuery = new QueryDescription().WithAll<Island, Motion, Mass2D>().WithNone<SleepingTag>();
             _sleepingEntitiesQuery = new QueryDescription().WithAll<Island, SleepingTag>();
             _collisionPairQuery = new QueryDescription().WithAll<CollisionPair, ActiveCollisionPairTag>();
@@ -31,18 +36,11 @@ namespace Ludots.Core.Physics2D.Systems
                 list.Clear();
             }
 
-            World.Query(in _activeEntitiesQuery, (Entity entity, ref Island island, ref Mass2D mass) =>
+            var collectJob = new CollectActiveIslandEntitiesJob
             {
-                if (mass.IsStatic) return;
-
-                if (!_islands.TryGetValue(island.IslandId, out var entityList))
-                {
-                    entityList = new List<Entity>();
-                    _islands[island.IslandId] = entityList;
-                }
-
-                entityList.Add(entity);
-            });
+                Islands = _islands
+            };
+            World.InlineEntityQuery<CollectActiveIslandEntitiesJob, Island, Motion, Mass2D>(in _activeEntitiesQuery, ref collectJob);
 
             foreach (var kvp in _islands)
             {
@@ -53,7 +51,7 @@ namespace Ludots.Core.Physics2D.Systems
                 for (int i = 0; i < entities.Count; i++)
                 {
                     var entity = entities[i];
-                    if (!World.TryGet(entity, out Motion motion) || motion.SleepTimer < TimeToSleep)
+                    if (!World.TryGet(entity, out Motion motion) || motion.SleepTimer < SleepFrameThreshold)
                     {
                         canSleep = false;
                         break;
@@ -74,7 +72,68 @@ namespace Ludots.Core.Physics2D.Systems
 
             _islandsToWake.Clear();
 
-            World.Query(in _collisionPairQuery, (ref CollisionPair pair) =>
+            var wakeIslandJob = new CollectWakeIslandsJob
+            {
+                World = World,
+                IslandsToWake = _islandsToWake
+            };
+            World.InlineQuery<CollectWakeIslandsJob, CollisionPair>(in _collisionPairQuery, ref wakeIslandJob);
+
+            if (_islandsToWake.Count == 0) return;
+
+            var wakeEntitiesJob = new WakeSleepingEntitiesJob
+            {
+                World = World,
+                IslandsToWake = _islandsToWake
+            };
+            World.InlineEntityQuery<WakeSleepingEntitiesJob, Island>(in _sleepingEntitiesQuery, ref wakeEntitiesJob);
+        }
+
+        private int SleepFrameThreshold
+        {
+            get
+            {
+                if (_config.SleepTimeSeconds <= 0f)
+                {
+                    return 0;
+                }
+
+                int physicsHz = Math.Max(0, _tickPolicy.TargetHz);
+                if (physicsHz == 0)
+                {
+                    return int.MaxValue;
+                }
+
+                return Math.Max(1, (int)MathF.Ceiling(_config.SleepTimeSeconds * physicsHz));
+            }
+        }
+
+        private struct CollectActiveIslandEntitiesJob : IForEachWithEntity<Island, Motion, Mass2D>
+        {
+            public Dictionary<int, List<Entity>> Islands;
+
+            [MethodImpl(MethodImplOptions.AggressiveInlining)]
+            public void Update(Entity entity, ref Island island, ref Motion motion, ref Mass2D mass)
+            {
+                if (mass.IsStatic) return;
+
+                if (!Islands.TryGetValue(island.IslandId, out var entityList))
+                {
+                    entityList = new List<Entity>();
+                    Islands[island.IslandId] = entityList;
+                }
+
+                entityList.Add(entity);
+            }
+        }
+
+        private struct CollectWakeIslandsJob : IForEach<CollisionPair>
+        {
+            public World World;
+            public HashSet<int> IslandsToWake;
+
+            [MethodImpl(MethodImplOptions.AggressiveInlining)]
+            public void Update(ref CollisionPair pair)
             {
                 if (!World.IsAlive(pair.EntityA) || !World.IsAlive(pair.EntityB)) return;
                 if (pair.ContactCount == 0) return;
@@ -91,23 +150,28 @@ namespace Ludots.Core.Physics2D.Systems
                 {
                     if (World.TryGet(pair.EntityB, out Island islandB))
                     {
-                        _islandsToWake.Add(islandB.IslandId);
+                        IslandsToWake.Add(islandB.IslandId);
                     }
                 }
                 else if (isASleeping && !isBSleeping)
                 {
                     if (World.TryGet(pair.EntityA, out Island islandA))
                     {
-                        _islandsToWake.Add(islandA.IslandId);
+                        IslandsToWake.Add(islandA.IslandId);
                     }
                 }
-            });
+            }
+        }
 
-            if (_islandsToWake.Count == 0) return;
+        private struct WakeSleepingEntitiesJob : IForEachWithEntity<Island>
+        {
+            public World World;
+            public HashSet<int> IslandsToWake;
 
-            World.Query(in _sleepingEntitiesQuery, (Entity entity, ref Island island) =>
+            [MethodImpl(MethodImplOptions.AggressiveInlining)]
+            public void Update(Entity entity, ref Island island)
             {
-                if (!_islandsToWake.Contains(island.IslandId)) return;
+                if (!IslandsToWake.Contains(island.IslandId)) return;
 
                 World.Remove<SleepingTag>(entity);
 
@@ -116,7 +180,7 @@ namespace Ludots.Core.Physics2D.Systems
                     motion.SleepTimer = 0;
                     World.Set(entity, motion);
                 }
-            });
+            }
         }
     }
 }

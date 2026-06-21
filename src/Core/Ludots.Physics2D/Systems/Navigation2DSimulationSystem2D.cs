@@ -23,13 +23,18 @@ namespace Ludots.Core.Physics2D.Systems
         private int _navHz;
         private DiscreteRateTickDistributor? _distributor;
 
-        public Navigation2DSimulationSystem2D(World world, Navigation2DRuntime runtime, IClock clock, Navigation2DTickPolicy tickPolicy)
+        public Navigation2DSimulationSystem2D(
+            World world,
+            Navigation2DRuntime runtime,
+            IClock clock,
+            Navigation2DTickPolicy tickPolicy,
+            ShapeDataStorage2D shapeStorage)
         {
             _world = world;
             _runtime = runtime ?? throw new ArgumentNullException(nameof(runtime));
             _clock = clock ?? throw new ArgumentNullException(nameof(clock));
             _tickPolicy = tickPolicy ?? throw new ArgumentNullException(nameof(tickPolicy));
-            _steering = new Navigation2DSteeringSystem2D(world, runtime);
+            _steering = new Navigation2DSteeringSystem2D(world, runtime, shapeStorage);
         }
 
         public void Initialize()

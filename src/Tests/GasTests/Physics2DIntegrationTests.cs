@@ -4,6 +4,7 @@ using Ludots.Core.Components;
 using Ludots.Core.Gameplay.Spawning;
 using Ludots.Core.Mathematics;
 using Ludots.Core.Mathematics.FixedPoint;
+using Ludots.Core.Engine.Physics2D;
 using Ludots.Core.Navigation2D.Components;
 using Ludots.Core.Navigation2D.Config;
 using Ludots.Core.Navigation2D.Runtime;
@@ -19,16 +20,20 @@ namespace GasTests
     [TestFixture]
     public sealed class Physics2DIntegrationTests
     {
+        private ShapeDataStorage2D _shapeStorage = null!;
+        private Physics2DSolverConfig _solverConfig = null!;
+
         [SetUp]
         public void SetUp()
         {
-            ShapeDataStorage2D.Clear();
+            _shapeStorage = new ShapeDataStorage2D();
+            _solverConfig = new Physics2DSolverConfig();
         }
 
         [Test]
         public void ShapeStorage_FailFast_WhenMissingIndex()
         {
-            Assert.Throws<KeyNotFoundException>(() => ShapeDataStorage2D.GetShapeType(123));
+            Assert.Throws<KeyNotFoundException>(() => _shapeStorage.GetShapeType(123));
         }
 
         [Test]
@@ -36,7 +41,7 @@ namespace GasTests
         {
             using var world = World.Create();
 
-            int shape = ShapeDataStorage2D.RegisterBox(0.5f, 0.5f);
+            int shape = _shapeStorage.RegisterBox(0.5f, 0.5f);
             world.Create(
                 new Position2D { Value = Fix64Vec2.FromFloat(0f, 0f) },
                 new Velocity2D { Linear = Fix64Vec2.Zero, Angular = Fix64.Zero },
@@ -50,9 +55,9 @@ namespace GasTests
                 new Collider2D { Type = ColliderType2D.Box, ShapeDataIndex = shape }
             );
 
-            var build = new BuildPhysicsWorldSystem2D(world);
-            var spatial = new AdaptiveSpatialSystem2D(world, build, maxCollisionPairs: 32);
-            var narrow = new NarrowPhaseSystem2D(world);
+            var build = new BuildPhysicsWorldSystem2D(world, _shapeStorage);
+            var spatial = new AdaptiveSpatialSystem2D(world, build, WithPairLimit(32));
+            var narrow = new NarrowPhaseSystem2D(world, _shapeStorage);
             var cleanup = new CleanupSystem2D(world);
 
             build.Update(0f);
@@ -115,17 +120,17 @@ namespace GasTests
                 WorldPositionCm.FromCm(0, 0),
                 obstacle);
 
-            var dynamicShape = ShapeDataStorage2D.RegisterBox(Fix64.FromInt(25), Fix64.FromInt(25));
+            var dynamicShape = _shapeStorage.RegisterBox(Fix64.FromInt(25), Fix64.FromInt(25));
             world.Create(
                 new Position2D { Value = Fix64Vec2.FromInt(200, 0) },
                 new Velocity2D { Linear = Fix64Vec2.Zero, Angular = Fix64.Zero },
                 Mass2D.FromFloat(1f, 1f),
                 new Collider2D { Type = ColliderType2D.Box, ShapeDataIndex = dynamicShape });
 
-            var bridge = new ManifestationObstacleBridge2DSystem(world);
-            var build = new BuildPhysicsWorldSystem2D(world);
-            var spatial = new AdaptiveSpatialSystem2D(world, build, maxCollisionPairs: 32);
-            var narrow = new NarrowPhaseSystem2D(world);
+            var bridge = new ManifestationObstacleBridge2DSystem(world, _shapeStorage);
+            var build = new BuildPhysicsWorldSystem2D(world, _shapeStorage);
+            var spatial = new AdaptiveSpatialSystem2D(world, build, WithPairLimit(32));
+            var narrow = new NarrowPhaseSystem2D(world, _shapeStorage);
 
             bridge.Update(0f);
             build.Update(0f);
@@ -178,17 +183,17 @@ namespace GasTests
                 new FacingDirection { AngleRad = MathF.PI / 2f },
                 obstacle);
 
-            var dynamicShape = ShapeDataStorage2D.RegisterBox(Fix64.FromInt(25), Fix64.FromInt(25));
+            var dynamicShape = _shapeStorage.RegisterBox(Fix64.FromInt(25), Fix64.FromInt(25));
             world.Create(
                 new Position2D { Value = Fix64Vec2.FromInt(0, 200) },
                 new Velocity2D { Linear = Fix64Vec2.Zero, Angular = Fix64.Zero },
                 Mass2D.FromFloat(1f, 1f),
                 new Collider2D { Type = ColliderType2D.Box, ShapeDataIndex = dynamicShape });
 
-            var bridge = new ManifestationObstacleBridge2DSystem(world);
-            var build = new BuildPhysicsWorldSystem2D(world);
-            var spatial = new AdaptiveSpatialSystem2D(world, build, maxCollisionPairs: 16);
-            var narrow = new NarrowPhaseSystem2D(world);
+            var bridge = new ManifestationObstacleBridge2DSystem(world, _shapeStorage);
+            var build = new BuildPhysicsWorldSystem2D(world, _shapeStorage);
+            var spatial = new AdaptiveSpatialSystem2D(world, build, WithPairLimit(16));
+            var narrow = new NarrowPhaseSystem2D(world, _shapeStorage);
 
             bridge.Update(0f);
             build.Update(0f);
@@ -270,8 +275,8 @@ namespace GasTests
             };
             runtime.Surface.GetOrCreateTile(Nav2DKeyPacking.PackInt2(0, 0));
 
-            var bridge = new ManifestationObstacleBridge2DSystem(world);
-            using var steering = new Navigation2DSteeringSystem2D(world, runtime);
+            var bridge = new ManifestationObstacleBridge2DSystem(world, _shapeStorage);
+            using var steering = new Navigation2DSteeringSystem2D(world, runtime, _shapeStorage);
 
             bridge.Update(0f);
             steering.Update(0.016f);
@@ -335,8 +340,8 @@ namespace GasTests
             };
             runtime.Surface.GetOrCreateTile(Nav2DKeyPacking.PackInt2(0, 0));
 
-            var bridge = new ManifestationObstacleBridge2DSystem(world);
-            using var steering = new Navigation2DSteeringSystem2D(world, runtime);
+            var bridge = new ManifestationObstacleBridge2DSystem(world, _shapeStorage);
+            using var steering = new Navigation2DSteeringSystem2D(world, runtime, _shapeStorage);
 
             bridge.Update(0f);
             steering.Update(0.016f);
@@ -369,8 +374,8 @@ namespace GasTests
                 WorldPositionCm.FromCm(0, 0),
                 obstacle);
 
-            var bridge = new ManifestationObstacleBridge2DSystem(world);
-            var build = new BuildPhysicsWorldSystem2D(world);
+            var bridge = new ManifestationObstacleBridge2DSystem(world, _shapeStorage);
+            var build = new BuildPhysicsWorldSystem2D(world, _shapeStorage);
 
             bridge.Update(0f);
             build.Update(0f);
@@ -419,17 +424,17 @@ namespace GasTests
                 WorldPositionCm.FromCm(0, 0),
                 obstacle);
 
-            var dynamicShape = ShapeDataStorage2D.RegisterBox(Fix64.FromInt(15), Fix64.FromInt(15));
+            var dynamicShape = _shapeStorage.RegisterBox(Fix64.FromInt(15), Fix64.FromInt(15));
             world.Create(
                 new Position2D { Value = Fix64Vec2.FromInt(300, 0) },
                 new Velocity2D { Linear = Fix64Vec2.Zero, Angular = Fix64.Zero },
                 Mass2D.FromFloat(1f, 1f),
                 new Collider2D { Type = ColliderType2D.Box, ShapeDataIndex = dynamicShape });
 
-            var bridge = new ManifestationObstacleBridge2DSystem(world);
-            var build = new BuildPhysicsWorldSystem2D(world);
-            var spatial = new AdaptiveSpatialSystem2D(world, build, maxCollisionPairs: 16);
-            var narrow = new NarrowPhaseSystem2D(world);
+            var bridge = new ManifestationObstacleBridge2DSystem(world, _shapeStorage);
+            var build = new BuildPhysicsWorldSystem2D(world, _shapeStorage);
+            var spatial = new AdaptiveSpatialSystem2D(world, build, WithPairLimit(16));
+            var narrow = new NarrowPhaseSystem2D(world, _shapeStorage);
 
             bridge.Update(0f);
             build.Update(0f);
@@ -455,7 +460,7 @@ namespace GasTests
         {
             using var world = World.Create();
 
-            int shape = ShapeDataStorage2D.RegisterBox(0.5f, 0.5f);
+            int shape = _shapeStorage.RegisterBox(0.5f, 0.5f);
             world.Create(
                 new Position2D { Value = Fix64Vec2.FromFloat(0f, 0f) },
                 Mass2D.FromFloat(1f, 1f),
@@ -467,8 +472,8 @@ namespace GasTests
                 new Collider2D { Type = ColliderType2D.Box, ShapeDataIndex = shape }
             );
 
-            var build = new BuildPhysicsWorldSystem2D(world);
-            var spatial = new AdaptiveSpatialSystem2D(world, build, maxCollisionPairs: 8);
+            var build = new BuildPhysicsWorldSystem2D(world, _shapeStorage);
+            var spatial = new AdaptiveSpatialSystem2D(world, build, WithPairLimit(8));
 
             build.Update(0f);
             spatial.Update(0f);
@@ -492,14 +497,14 @@ namespace GasTests
         {
             using var world = World.Create();
 
-            int shape = ShapeDataStorage2D.RegisterBox(100f, 100f);
+            int shape = _shapeStorage.RegisterBox(100f, 100f);
             var obstacle = world.Create(
                 new Position2D { Value = Fix64Vec2.FromInt(500, 0) },
                 Mass2D.Static,
                 new Collider2D { Type = ColliderType2D.Box, ShapeDataIndex = shape });
 
-            var build = new BuildPhysicsWorldSystem2D(world);
-            var spatial = new AdaptiveSpatialSystem2D(world, build, maxCollisionPairs: 8);
+            var build = new BuildPhysicsWorldSystem2D(world, _shapeStorage);
+            var spatial = new AdaptiveSpatialSystem2D(world, build, WithPairLimit(8));
 
             build.Update(0f);
             spatial.Update(0f);
@@ -560,9 +565,9 @@ namespace GasTests
                 WorldPositionCm.FromCm(0, 0),
                 obstacle);
 
-            var bridge = new ManifestationObstacleBridge2DSystem(world);
-            var build = new BuildPhysicsWorldSystem2D(world);
-            var spatial = new AdaptiveSpatialSystem2D(world, build, maxCollisionPairs: 16);
+            var bridge = new ManifestationObstacleBridge2DSystem(world, _shapeStorage);
+            var build = new BuildPhysicsWorldSystem2D(world, _shapeStorage);
+            var spatial = new AdaptiveSpatialSystem2D(world, build, WithPairLimit(16));
 
             bridge.Update(0f);
             build.Update(0f);
@@ -589,6 +594,16 @@ namespace GasTests
             Assert.That(build.StaticBodyVersion, Is.EqualTo(staticVersion));
             Assert.That(build.DirtyStaticBodyCountLastUpdate, Is.EqualTo(0));
             Assert.That(build.StaticRigidBodyDescriptors.Count, Is.EqualTo(2));
+        }
+
+        private static Physics2DSolverConfig WithPairLimit(int maxCollisionPairs)
+        {
+            return new Physics2DSolverConfig
+            {
+                MaxCollisionPairs = maxCollisionPairs,
+                CollisionPairInitialCapacity = 0,
+                CollisionPairGrowthStep = 1
+            };
         }
     }
 }

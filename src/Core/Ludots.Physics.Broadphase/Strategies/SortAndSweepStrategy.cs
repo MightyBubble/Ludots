@@ -25,6 +25,7 @@ namespace Ludots.Physics.Broadphase.Strategies
         private readonly List<EndpointMarker> _dynamicEndpoints = new();
         private readonly List<EndpointMarker> _staticEndpoints = new();
         private readonly List<int> _activeList = new();
+        private int _lastPotentialPairCount;
         private bool _staticEndpointsSorted = true;
 
         public void Build(
@@ -32,8 +33,13 @@ namespace Ludots.Physics.Broadphase.Strategies
             ReadOnlySpan<RigidBodyDesc> staticBodies,
             bool rebuildStatic)
         {
+            bool sameDynamicEndpointShape = _dynamicBodies.Count == dynamicBodies.Length &&
+                _dynamicEndpoints.Count == dynamicBodies.Length * 2;
             _dynamicBodies.Clear();
-            _dynamicEndpoints.Clear();
+            if (!sameDynamicEndpointShape)
+            {
+                _dynamicEndpoints.Clear();
+            }
 
             _dynamicBodies.EnsureCapacity(dynamicBodies.Length);
             _dynamicEndpoints.EnsureCapacity(dynamicBodies.Length * 2);
@@ -42,8 +48,22 @@ namespace Ludots.Physics.Broadphase.Strategies
             {
                 RigidBodyDesc body = dynamicBodies[i];
                 _dynamicBodies.Add(body);
-                _dynamicEndpoints.Add(new EndpointMarker(body.BoundingBox.Min.X, i, isMin: true));
-                _dynamicEndpoints.Add(new EndpointMarker(body.BoundingBox.Max.X, i, isMin: false));
+                if (!sameDynamicEndpointShape)
+                {
+                    _dynamicEndpoints.Add(new EndpointMarker(body.BoundingBox.Min.X, i, isMin: true));
+                    _dynamicEndpoints.Add(new EndpointMarker(body.BoundingBox.Max.X, i, isMin: false));
+                }
+            }
+
+            if (sameDynamicEndpointShape)
+            {
+                for (int i = 0; i < _dynamicEndpoints.Count; i++)
+                {
+                    EndpointMarker marker = _dynamicEndpoints[i];
+                    RigidBodyDesc body = dynamicBodies[marker.BodyIndex];
+                    marker.Value = marker.IsMin ? body.BoundingBox.Min.X : body.BoundingBox.Max.X;
+                    _dynamicEndpoints[i] = marker;
+                }
             }
 
             if (!rebuildStatic)
@@ -69,9 +89,13 @@ namespace Ludots.Physics.Broadphase.Strategies
         public void QueryPotentialCollisions(List<(int, int)> bodyPairs)
         {
             bodyPairs.Clear();
-            if (_dynamicEndpoints.Count == 0) return;
+            if (_dynamicEndpoints.Count == 0)
+            {
+                _lastPotentialPairCount = 0;
+                return;
+            }
 
-            _dynamicEndpoints.Sort(static (a, b) => a.Value.CompareTo(b.Value));
+            InsertionSortEndpoints(_dynamicEndpoints);
             if (!_staticEndpointsSorted)
             {
                 _staticEndpoints.Sort(static (a, b) => a.Value.CompareTo(b.Value));
@@ -125,9 +149,11 @@ namespace Ludots.Physics.Broadphase.Strategies
                 }
                 else
                 {
-                    _activeList.Remove(bodyIndex);
+                    RemoveActiveSwapBack(bodyIndex);
                 }
             }
+
+            _lastPotentialPairCount = bodyPairs.Count;
         }
 
         public void QueryAABB(in Aabb queryArea, List<int> results)
@@ -153,19 +179,13 @@ namespace Ludots.Physics.Broadphase.Strategies
             }
         }
 
-        public void Update(int bodyIndex, in Aabb newAabb)
-        {
-        }
-
-        public void Remove(int bodyIndex)
-        {
-        }
-
         public SpatialMetrics GetMetrics()
         {
             return new SpatialMetrics
             {
-                TotalDynamicEntities = _dynamicBodies.Count
+                TotalDynamicEntities = _dynamicBodies.Count,
+                TotalStaticEntities = _staticBodies.Count,
+                PotentialPairCount = _lastPotentialPairCount
             };
         }
 
@@ -177,6 +197,7 @@ namespace Ludots.Physics.Broadphase.Strategies
             _staticEndpoints.Clear();
             _activeList.Clear();
             _staticEndpointsSorted = true;
+            _lastPotentialPairCount = 0;
         }
 
         public void Dispose()
@@ -196,6 +217,38 @@ namespace Ludots.Physics.Broadphase.Strategies
             return bodyIndex < _dynamicBodies.Count
                 ? _dynamicBodies[bodyIndex]
                 : _staticBodies[bodyIndex - _dynamicBodies.Count];
+        }
+
+        private static void InsertionSortEndpoints(List<EndpointMarker> endpoints)
+        {
+            for (int i = 1; i < endpoints.Count; i++)
+            {
+                EndpointMarker key = endpoints[i];
+                int j = i - 1;
+                while (j >= 0 && endpoints[j].Value > key.Value)
+                {
+                    endpoints[j + 1] = endpoints[j];
+                    j--;
+                }
+
+                endpoints[j + 1] = key;
+            }
+        }
+
+        private void RemoveActiveSwapBack(int bodyIndex)
+        {
+            for (int i = 0; i < _activeList.Count; i++)
+            {
+                if (_activeList[i] != bodyIndex)
+                {
+                    continue;
+                }
+
+                int last = _activeList.Count - 1;
+                _activeList[i] = _activeList[last];
+                _activeList.RemoveAt(last);
+                return;
+            }
         }
     }
 }

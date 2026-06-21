@@ -1,10 +1,13 @@
+using System;
 using Arch.Core;
 using Arch.Core.Extensions;
+using Ludots.Core.Engine.Physics2D;
 using Ludots.Core.Mathematics.FixedPoint;
 using Ludots.Core.Physics2D;
 using Ludots.Core.Physics2D.Collision;
 using Ludots.Core.Physics2D.Components;
 using Ludots.Core.Physics2D.Systems;
+using Ludots.Core.Physics2D.Ticking;
 using NUnit.Framework;
 
 namespace GasTests.Physics2D
@@ -12,22 +15,25 @@ namespace GasTests.Physics2D
     [TestFixture]
     public sealed class Physics2DFeatureTests
     {
+        private ShapeDataStorage2D _shapeStorage = null!;
+
         [SetUp]
         public void SetUp()
         {
-            ShapeDataStorage2D.Clear();
+            _shapeStorage = new ShapeDataStorage2D();
         }
 
         [Test]
         public void CircleCircle_Overlaps_ReturnsCollision()
         {
-            int aIndex = ShapeDataStorage2D.RegisterCircle(radius: 10f);
-            int bIndex = ShapeDataStorage2D.RegisterCircle(radius: 10f);
+            int aIndex = _shapeStorage.RegisterCircle(radius: 10f);
+            int bIndex = _shapeStorage.RegisterCircle(radius: 10f);
 
             var colliderA = new Collider2D { Type = ColliderType2D.Circle, ShapeDataIndex = aIndex };
             var colliderB = new Collider2D { Type = ColliderType2D.Circle, ShapeDataIndex = bIndex };
 
             bool hit = CollisionAlgorithms2D.Detect(
+                _shapeStorage,
                 posA: Fix64Vec2.FromInt(0, 0),
                 rotA: Rotation2D.Identity,
                 colliderA: colliderA,
@@ -35,8 +41,7 @@ namespace GasTests.Physics2D
                 rotB: Rotation2D.Identity,
                 colliderB: colliderB,
                 out _,
-                out Fix64 penetration,
-                out _);
+                out Fix64 penetration);
 
             Assert.That(hit, Is.True);
             Assert.That(penetration > Fix64.Zero, Is.True);
@@ -45,12 +50,13 @@ namespace GasTests.Physics2D
         [Test]
         public void BoxBox_WithRotation_Overlaps_ReturnsCollision()
         {
-            int boxIndex = ShapeDataStorage2D.RegisterBox(halfWidth: 10f, halfHeight: 10f);
+            int boxIndex = _shapeStorage.RegisterBox(halfWidth: 10f, halfHeight: 10f);
 
             var colliderA = new Collider2D { Type = ColliderType2D.Box, ShapeDataIndex = boxIndex };
             var colliderB = new Collider2D { Type = ColliderType2D.Box, ShapeDataIndex = boxIndex };
 
             bool hit = CollisionAlgorithms2D.Detect(
+                _shapeStorage,
                 posA: Fix64Vec2.FromInt(0, 0),
                 rotA: Rotation2D.FromDegrees(45f),
                 colliderA: colliderA,
@@ -58,8 +64,7 @@ namespace GasTests.Physics2D
                 rotB: Rotation2D.FromDegrees(-15f),
                 colliderB: colliderB,
                 out _,
-                out Fix64 penetration,
-                out _);
+                out Fix64 penetration);
 
             Assert.That(hit, Is.True);
             Assert.That(penetration > Fix64.Zero, Is.True);
@@ -74,13 +79,14 @@ namespace GasTests.Physics2D
                 Fix64Vec2.FromInt(20, 0),
                 Fix64Vec2.FromInt(0, 20)
             };
-            int polyIndex = ShapeDataStorage2D.RegisterPolygon(tri);
-            int circleIndex = ShapeDataStorage2D.RegisterCircle(radius: 3f);
+            int polyIndex = _shapeStorage.RegisterPolygon(tri);
+            int circleIndex = _shapeStorage.RegisterCircle(radius: 3f);
 
             var colliderPoly = new Collider2D { Type = ColliderType2D.Polygon, ShapeDataIndex = polyIndex };
             var colliderCircle = new Collider2D { Type = ColliderType2D.Circle, ShapeDataIndex = circleIndex };
 
             bool hit = CollisionAlgorithms2D.Detect(
+                _shapeStorage,
                 posA: Fix64Vec2.FromInt(0, 0),
                 rotA: Rotation2D.Identity,
                 colliderA: colliderPoly,
@@ -88,8 +94,7 @@ namespace GasTests.Physics2D
                 rotB: Rotation2D.Identity,
                 colliderB: colliderCircle,
                 out _,
-                out Fix64 penetration,
-                out _);
+                out Fix64 penetration);
 
             Assert.That(hit, Is.True);
             Assert.That(penetration > Fix64.Zero, Is.True);
@@ -123,15 +128,23 @@ namespace GasTests.Physics2D
         {
             using var world = World.Create();
 
-            int circleIndex = ShapeDataStorage2D.RegisterCircle(radius: 10f);
+            int circleIndex = _shapeStorage.RegisterCircle(radius: 10f);
             var collider = new Collider2D { Type = ColliderType2D.Circle, ShapeDataIndex = circleIndex };
             var mass = Mass2D.FromFloat(inverseMass: 1f, inverseInertia: 0f);
 
             world.Create(new Position2D { Value = Fix64Vec2.FromInt(0, 0) }, collider, mass);
             world.Create(new Position2D { Value = Fix64Vec2.FromInt(5, 0) }, collider, mass);
 
-            var build = new BuildPhysicsWorldSystem2D(world);
-            var spatial = new AdaptiveSpatialSystem2D(world, buildPhysicsWorld: build, maxCollisionPairs: 0)
+            var build = new BuildPhysicsWorldSystem2D(world, _shapeStorage);
+            var spatial = new AdaptiveSpatialSystem2D(
+                world,
+                buildPhysicsWorld: build,
+                solverConfig: new Physics2DSolverConfig
+                {
+                    MaxCollisionPairs = 0,
+                    CollisionPairInitialCapacity = 0,
+                    CollisionPairGrowthStep = 1
+                })
             {
                 OverflowPolicy = CollisionPairOverflowPolicy2D.Drop
             };
@@ -140,6 +153,71 @@ namespace GasTests.Physics2D
             spatial.Update(0.016f);
 
             Assert.That(spatial.DroppedPairsLastUpdate, Is.EqualTo(1));
+        }
+
+        [Test]
+        public void ProductionPipeline_HotPathAllocatesZeroAfterWarmup()
+        {
+            using var world = World.Create();
+
+            int circleIndex = _shapeStorage.RegisterCircle(radius: 10f);
+            var collider = new Collider2D { Type = ColliderType2D.Circle, ShapeDataIndex = circleIndex };
+            var mass = Mass2D.FromFloat(inverseMass: 1f, inverseInertia: 0f);
+
+            world.Create(
+                new Position2D { Value = Fix64Vec2.FromInt(0, 0) },
+                Velocity2D.Zero,
+                mass,
+                collider);
+            world.Create(
+                new Position2D { Value = Fix64Vec2.FromInt(5, 0) },
+                Velocity2D.Zero,
+                mass,
+                collider);
+
+            var solverConfig = new Physics2DSolverConfig
+            {
+                DefaultBaseDamping = 1f,
+                PositionCorrectionPercentage = 0f,
+                SleepTimeSeconds = 10_000f,
+                CollisionPairInitialCapacity = 4,
+                CollisionPairGrowthStep = 4,
+                MaxCollisionPairs = 4
+            };
+            var tickPolicy = new Physics2DTickPolicy(targetHz: 15, maxStepsPerFixedTick: 8);
+            var pipeline = Physics2DPipelineFactory.CreateProduction(world, solverConfig, tickPolicy, _shapeStorage);
+
+            for (int i = 0; i < pipeline.Systems.Length; i++)
+            {
+                pipeline.Systems[i].Initialize();
+            }
+
+            for (int i = 0; i < 64; i++)
+            {
+                StepPipeline(pipeline);
+            }
+
+            GC.Collect();
+            GC.WaitForPendingFinalizers();
+            GC.Collect();
+            GC.GetAllocatedBytesForCurrentThread();
+
+            long before = GC.GetAllocatedBytesForCurrentThread();
+            for (int i = 0; i < 1_000; i++)
+            {
+                StepPipeline(pipeline);
+            }
+            long after = GC.GetAllocatedBytesForCurrentThread();
+
+            Assert.That(after - before, Is.LessThanOrEqualTo(64));
+        }
+
+        private static void StepPipeline(Physics2DPipelineDefinition pipeline)
+        {
+            for (int i = 0; i < pipeline.Systems.Length; i++)
+            {
+                pipeline.Systems[i].Update(1f / 15f);
+            }
         }
     }
 }

@@ -9,6 +9,7 @@ namespace Ludots.Core.Config
         private readonly World _world;
         private readonly Dictionary<string, EntityTemplate> _templates;
         private readonly IReadOnlyDictionary<string, string> _templateSources;
+        private readonly ComponentAuthoringContext _authoringContext;
         
         // Temporary storage for components to apply
         private EntityTemplate _activeTemplate;
@@ -19,11 +20,23 @@ namespace Ludots.Core.Config
         public EntityBuilder(
             World world,
             Dictionary<string, EntityTemplate> templates,
-            IReadOnlyDictionary<string, string> templateSources = null)
+            IReadOnlyDictionary<string, string> templateSources = null,
+            ComponentAuthoringContext authoringContext = null)
         {
             _world = world;
             _templates = templates;
             _templateSources = templateSources;
+            _authoringContext = authoringContext ?? ComponentAuthoringContext.Empty;
+        }
+
+        public EntityBuilder(
+            World world,
+            Dictionary<string, EntityTemplate> templates,
+            ComponentAuthoringContext authoringContext)
+        {
+            _world = world;
+            _templates = templates;
+            _authoringContext = authoringContext ?? ComponentAuthoringContext.Empty;
         }
 
         public EntityBuilder UseTemplate(string templateId)
@@ -105,7 +118,12 @@ namespace Ludots.Core.Config
                     "Entity template component 'Presentation' has been removed. Migrate entity visuals to Presentation/performers.json keyed lifecycle rules.");
             }
 
-            ComponentRegistry.Apply(entity, componentName, data, BuildComponentContext(componentName, isOverride));
+            ComponentRegistry.Apply(
+                entity,
+                componentName,
+                data,
+                _authoringContext,
+                BuildComponentContext(componentName, isOverride));
         }
 
         private string BuildComponentContext(string componentName, bool isOverride)

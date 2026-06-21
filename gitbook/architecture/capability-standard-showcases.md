@@ -10,6 +10,7 @@ This page is the SSOT for production-grade capability acceptance showcase roots 
 | Large World Mass Navigation | `capability_standard_mass_nav_large_world_10k` | `mods/showcases/capability_standard/CapabilityStandardMassNavigationLargeWorld10kMod` | 10K nav agents, large-world residency, performers, HUD bar/text, effect/minimap changes |
 | Total War Like | `capability_standard_total_war_like` | `mods/showcases/capability_standard/CapabilityStandardTotalWarLikeMod` | Formation command, mass movement, selection, path preview, large battle presentation |
 | Participant Views | `capability_standard_participant_views` | `mods/showcases/capability_standard/CapabilityStandardParticipantViewsMod` | Map-owned teams/players, local player binding, player/team view projection through formal selection |
+| Physics2D | `capability_standard_physics2d` | `mods/showcases/capability_standard/CapabilityStandardPhysics2DMod` | Pure Physics2D startup, static polygon wall, restitution bounce, ForceInput knockback, damping field, kinematic rotating door |
 
 Standard launch commands:
 
@@ -18,6 +19,7 @@ Standard launch commands:
 .\scripts\run-mod-launcher.cmd cli launch '$capability_standard_mass_nav_large_world_10k' --adapter raylib
 .\scripts\run-mod-launcher.cmd cli launch '$capability_standard_total_war_like' --adapter raylib
 .\scripts\run-mod-launcher.cmd cli launch '$capability_standard_participant_views' --adapter raylib
+.\scripts\run-mod-launcher.cmd cli launch '$capability_standard_physics2d' --adapter raylib
 ```
 
 Preset launch commands:
@@ -27,6 +29,7 @@ Preset launch commands:
 .\scripts\run-mod-launcher.cmd cli launch 'preset:capability_standard_mass_nav_large_world_10k_raylib'
 .\scripts\run-mod-launcher.cmd cli launch 'preset:capability_standard_total_war_like_raylib'
 .\scripts\run-mod-launcher.cmd cli launch 'preset:capability_standard_participant_views_raylib'
+.\scripts\run-mod-launcher.cmd cli launch 'preset:capability_standard_physics2d_raylib'
 ```
 
 ## Dependency Path
@@ -44,6 +47,7 @@ Adapter authors should verify:
 
 - launcher bindings and presets resolve to the same ordered mod IDs;
 - `game.json`, `config_catalog.json`, map, presentation, GAS, input, and camera configs enter runtime through ConfigPipeline;
+- Physics2D root keeps `physics2D.enabled=true` and `navigation2D.enabled=false`, with runtime bodies spawned through `RuntimeEntitySpawnQueue`;
 - HUD bars, HUD text, minimap, selection, and path preview use formal platform rendering paths;
 - asset references resolve through `ModId:assets/...`;
 - adapters do not hardcode private paths or business names for these showcases.

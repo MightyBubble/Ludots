@@ -1,3 +1,4 @@
+using System;
 using Ludots.Core.Mathematics.FixedPoint;
 using Ludots.Core.Physics2D;
 using Ludots.Core.Physics2D.Components;
@@ -7,6 +8,7 @@ namespace Ludots.Core.Physics2D.Collision
     public static class CollisionAlgorithms2D
     {
         public static bool Detect(
+            ShapeDataStorage2D shapeStorage,
             in Fix64Vec2 posA,
             in Rotation2D rotA,
             in Collider2D colliderA,
@@ -14,60 +16,59 @@ namespace Ludots.Core.Physics2D.Collision
             in Rotation2D rotB,
             in Collider2D colliderB,
             out Fix64Vec2 normal,
-            out Fix64 penetration,
-            out Fix64Vec2 contactPoint)
+            out Fix64 penetration)
         {
+            ArgumentNullException.ThrowIfNull(shapeStorage);
             normal = Fix64Vec2.Zero;
             penetration = Fix64.Zero;
-            contactPoint = Fix64Vec2.Zero;
 
             if (colliderA.Type == ColliderType2D.Circle && colliderB.Type == ColliderType2D.Circle)
             {
-                return CircleCircle(posA, rotA.Value, colliderA.ShapeDataIndex, posB, rotB.Value, colliderB.ShapeDataIndex, out normal, out penetration, out contactPoint);
+                return CircleCircle(shapeStorage, posA, rotA.Value, colliderA.ShapeDataIndex, posB, rotB.Value, colliderB.ShapeDataIndex, out normal, out penetration);
             }
 
             if (colliderA.Type == ColliderType2D.Circle && colliderB.Type == ColliderType2D.Box)
             {
-                return CircleBox(posA, rotA.Value, colliderA.ShapeDataIndex, posB, rotB.Value, colliderB.ShapeDataIndex, out normal, out penetration, out contactPoint);
+                return CircleBox(shapeStorage, posA, rotA.Value, colliderA.ShapeDataIndex, posB, rotB.Value, colliderB.ShapeDataIndex, out normal, out penetration);
             }
 
             if (colliderA.Type == ColliderType2D.Box && colliderB.Type == ColliderType2D.Circle)
             {
-                bool hit = CircleBox(posB, rotB.Value, colliderB.ShapeDataIndex, posA, rotA.Value, colliderA.ShapeDataIndex, out normal, out penetration, out contactPoint);
+                bool hit = CircleBox(shapeStorage, posB, rotB.Value, colliderB.ShapeDataIndex, posA, rotA.Value, colliderA.ShapeDataIndex, out normal, out penetration);
                 normal = -normal;
                 return hit;
             }
 
             if (colliderA.Type == ColliderType2D.Box && colliderB.Type == ColliderType2D.Box)
             {
-                return BoxBox(posA, rotA.Value, colliderA.ShapeDataIndex, posB, rotB.Value, colliderB.ShapeDataIndex, out normal, out penetration, out contactPoint);
+                return BoxBox(shapeStorage, posA, rotA.Value, colliderA.ShapeDataIndex, posB, rotB.Value, colliderB.ShapeDataIndex, out normal, out penetration);
             }
 
             if (colliderA.Type == ColliderType2D.Polygon && colliderB.Type == ColliderType2D.Polygon)
             {
-                return PolygonPolygon(posA, rotA.Value, colliderA.ShapeDataIndex, posB, rotB.Value, colliderB.ShapeDataIndex, out normal, out penetration, out contactPoint);
+                return PolygonPolygon(shapeStorage, posA, rotA.Value, colliderA.ShapeDataIndex, posB, rotB.Value, colliderB.ShapeDataIndex, out normal, out penetration);
             }
 
             if (colliderA.Type == ColliderType2D.Polygon && colliderB.Type == ColliderType2D.Circle)
             {
-                return PolygonCircle(posA, rotA.Value, colliderA.ShapeDataIndex, posB, rotB.Value, colliderB.ShapeDataIndex, out normal, out penetration, out contactPoint);
+                return PolygonCircle(shapeStorage, posA, rotA.Value, colliderA.ShapeDataIndex, posB, rotB.Value, colliderB.ShapeDataIndex, out normal, out penetration);
             }
 
             if (colliderA.Type == ColliderType2D.Circle && colliderB.Type == ColliderType2D.Polygon)
             {
-                bool hit = PolygonCircle(posB, rotB.Value, colliderB.ShapeDataIndex, posA, rotA.Value, colliderA.ShapeDataIndex, out normal, out penetration, out contactPoint);
+                bool hit = PolygonCircle(shapeStorage, posB, rotB.Value, colliderB.ShapeDataIndex, posA, rotA.Value, colliderA.ShapeDataIndex, out normal, out penetration);
                 normal = -normal;
                 return hit;
             }
 
             if (colliderA.Type == ColliderType2D.Box && colliderB.Type == ColliderType2D.Polygon)
             {
-                return BoxPolygon(posA, rotA.Value, colliderA.ShapeDataIndex, posB, rotB.Value, colliderB.ShapeDataIndex, out normal, out penetration, out contactPoint);
+                return BoxPolygon(shapeStorage, posA, rotA.Value, colliderA.ShapeDataIndex, posB, rotB.Value, colliderB.ShapeDataIndex, out normal, out penetration);
             }
 
             if (colliderA.Type == ColliderType2D.Polygon && colliderB.Type == ColliderType2D.Box)
             {
-                bool hit = BoxPolygon(posB, rotB.Value, colliderB.ShapeDataIndex, posA, rotA.Value, colliderA.ShapeDataIndex, out normal, out penetration, out contactPoint);
+                bool hit = BoxPolygon(shapeStorage, posB, rotB.Value, colliderB.ShapeDataIndex, posA, rotA.Value, colliderA.ShapeDataIndex, out normal, out penetration);
                 normal = -normal;
                 return hit;
             }
@@ -76,18 +77,17 @@ namespace Ludots.Core.Physics2D.Collision
         }
 
         private static bool CircleCircle(
+            ShapeDataStorage2D shapeStorage,
             Fix64Vec2 posA, Fix64 rotA, int shapeIndexA,
             Fix64Vec2 posB, Fix64 rotB, int shapeIndexB,
             out Fix64Vec2 normal,
-            out Fix64 penetration,
-            out Fix64Vec2 contactPoint)
+            out Fix64 penetration)
         {
             normal = Fix64Vec2.Zero;
             penetration = Fix64.Zero;
-            contactPoint = Fix64Vec2.Zero;
 
-            if (!ShapeDataStorage2D.TryGetCircle(shapeIndexA, out var a) ||
-                !ShapeDataStorage2D.TryGetCircle(shapeIndexB, out var b))
+            if (!shapeStorage.TryGetCircle(shapeIndexA, out var a) ||
+                !shapeStorage.TryGetCircle(shapeIndexB, out var b))
             {
                 return false;
             }
@@ -114,23 +114,21 @@ namespace Ludots.Core.Physics2D.Collision
             }
 
             penetration = radiusSum - dist;
-            contactPoint = centerA + normal * a.Radius;
             return true;
         }
 
         private static bool CircleBox(
+            ShapeDataStorage2D shapeStorage,
             Fix64Vec2 circlePos, Fix64 circleRotation, int circleShapeIndex,
             Fix64Vec2 boxPos, Fix64 boxRotation, int boxShapeIndex,
             out Fix64Vec2 normal,
-            out Fix64 penetration,
-            out Fix64Vec2 contactPoint)
+            out Fix64 penetration)
         {
             normal = Fix64Vec2.Zero;
             penetration = Fix64.Zero;
-            contactPoint = Fix64Vec2.Zero;
 
-            if (!ShapeDataStorage2D.TryGetCircle(circleShapeIndex, out var circle) ||
-                !ShapeDataStorage2D.TryGetBox(boxShapeIndex, out var box))
+            if (!shapeStorage.TryGetCircle(circleShapeIndex, out var circle) ||
+                !shapeStorage.TryGetBox(boxShapeIndex, out var box))
             {
                 return false;
             }
@@ -175,7 +173,6 @@ namespace Ludots.Core.Physics2D.Collision
             {
                 normal = diff / dist;
                 penetration = circle.Radius - dist;
-                contactPoint = closestWorld;
                 return true;
             }
 
@@ -197,23 +194,21 @@ namespace Ludots.Core.Physics2D.Collision
                 normal = Rotate(normal, sin, cos);
             }
 
-            contactPoint = circleCenter - normal * circle.Radius;
             return true;
         }
 
         private static bool BoxBox(
+            ShapeDataStorage2D shapeStorage,
             Fix64Vec2 posA, Fix64 rotA, int shapeIndexA,
             Fix64Vec2 posB, Fix64 rotB, int shapeIndexB,
             out Fix64Vec2 normal,
-            out Fix64 penetration,
-            out Fix64Vec2 contactPoint)
+            out Fix64 penetration)
         {
             normal = Fix64Vec2.Zero;
             penetration = Fix64.Zero;
-            contactPoint = Fix64Vec2.Zero;
 
-            if (!ShapeDataStorage2D.TryGetBox(shapeIndexA, out var a) ||
-                !ShapeDataStorage2D.TryGetBox(shapeIndexB, out var b))
+            if (!shapeStorage.TryGetBox(shapeIndexA, out var a) ||
+                !shapeStorage.TryGetBox(shapeIndexB, out var b))
             {
                 return false;
             }
@@ -254,26 +249,21 @@ namespace Ludots.Core.Physics2D.Collision
             Fix64 sign = Fix64Vec2.Dot(d, bestAxis) >= Fix64.Zero ? Fix64.OneValue : -Fix64.OneValue;
             normal = bestAxis * sign;
             penetration = minOverlap;
-
-            Fix64Vec2 supportA = SupportBox(centerA, uA, vA, a, normal);
-            Fix64Vec2 supportB = SupportBox(centerB, uB, vB, b, -normal);
-            contactPoint = (supportA + supportB) * Fix64.HalfValue;
             return true;
         }
 
         private static bool PolygonPolygon(
+            ShapeDataStorage2D shapeStorage,
             Fix64Vec2 posA, Fix64 rotA, int shapeIndexA,
             Fix64Vec2 posB, Fix64 rotB, int shapeIndexB,
             out Fix64Vec2 normal,
-            out Fix64 penetration,
-            out Fix64Vec2 contactPoint)
+            out Fix64 penetration)
         {
             normal = Fix64Vec2.Zero;
             penetration = Fix64.Zero;
-            contactPoint = Fix64Vec2.Zero;
 
-            if (!ShapeDataStorage2D.TryGetPolygon(shapeIndexA, out var a) ||
-                !ShapeDataStorage2D.TryGetPolygon(shapeIndexB, out var b))
+            if (!shapeStorage.TryGetPolygon(shapeIndexA, out var a) ||
+                !shapeStorage.TryGetPolygon(shapeIndexB, out var b))
             {
                 return false;
             }
@@ -291,26 +281,21 @@ namespace Ludots.Core.Physics2D.Collision
             Fix64 sign = Fix64Vec2.Dot(d, bestAxis) >= Fix64.Zero ? Fix64.OneValue : -Fix64.OneValue;
             normal = bestAxis * sign;
             penetration = minOverlap;
-
-            Fix64Vec2 supportA = SupportPolygon(posA, rotA, a, normal);
-            Fix64Vec2 supportB = SupportPolygon(posB, rotB, b, -normal);
-            contactPoint = (supportA + supportB) * Fix64.HalfValue;
             return true;
         }
 
         private static bool BoxPolygon(
+            ShapeDataStorage2D shapeStorage,
             Fix64Vec2 boxPos, Fix64 boxRot, int boxShapeIndex,
             Fix64Vec2 polyPos, Fix64 polyRot, int polyShapeIndex,
             out Fix64Vec2 normal,
-            out Fix64 penetration,
-            out Fix64Vec2 contactPoint)
+            out Fix64 penetration)
         {
             normal = Fix64Vec2.Zero;
             penetration = Fix64.Zero;
-            contactPoint = Fix64Vec2.Zero;
 
-            if (!ShapeDataStorage2D.TryGetBox(boxShapeIndex, out var box) ||
-                !ShapeDataStorage2D.TryGetPolygon(polyShapeIndex, out var poly))
+            if (!shapeStorage.TryGetBox(boxShapeIndex, out var box) ||
+                !shapeStorage.TryGetPolygon(polyShapeIndex, out var poly))
             {
                 return false;
             }
@@ -325,8 +310,7 @@ namespace Ludots.Core.Physics2D.Collision
                 boxVerts.Slice(0, boxCount),
                 polyVerts.Slice(0, polyCount),
                 out normal,
-                out penetration,
-                out contactPoint))
+                out penetration))
             {
                 return false;
             }
@@ -343,18 +327,17 @@ namespace Ludots.Core.Physics2D.Collision
         }
 
         private static bool PolygonCircle(
+            ShapeDataStorage2D shapeStorage,
             Fix64Vec2 polyPos, Fix64 polyRot, int polyShapeIndex,
             Fix64Vec2 circlePos, Fix64 circleRot, int circleShapeIndex,
             out Fix64Vec2 normal,
-            out Fix64 penetration,
-            out Fix64Vec2 contactPoint)
+            out Fix64 penetration)
         {
             normal = Fix64Vec2.Zero;
             penetration = Fix64.Zero;
-            contactPoint = Fix64Vec2.Zero;
 
-            if (!ShapeDataStorage2D.TryGetPolygon(polyShapeIndex, out var poly) ||
-                !ShapeDataStorage2D.TryGetCircle(circleShapeIndex, out var circle))
+            if (!shapeStorage.TryGetPolygon(polyShapeIndex, out var poly) ||
+                !shapeStorage.TryGetCircle(circleShapeIndex, out var circle))
             {
                 return false;
             }
@@ -424,7 +407,6 @@ namespace Ludots.Core.Physics2D.Collision
             Fix64 sign = Fix64Vec2.Dot(d, bestAxis) >= Fix64.Zero ? Fix64.OneValue : -Fix64.OneValue;
             normal = bestAxis * sign;
             penetration = minOverlap;
-            contactPoint = circleCenter - normal * circle.Radius;
             return true;
         }
 
@@ -513,39 +495,6 @@ namespace Ludots.Core.Physics2D.Collision
             }
         }
 
-        private static Fix64Vec2 SupportPolygon(Fix64Vec2 polyPos, Fix64 rot, in PolygonShapeData poly, Fix64Vec2 direction)
-        {
-            Fix64 sin = Fix64.Zero;
-            Fix64 cos = Fix64.OneValue;
-            if (rot != Fix64.Zero)
-            {
-                sin = Fix64Math.Sin(rot);
-                cos = Fix64Math.Cos(rot);
-            }
-
-            Fix64 best = Fix64.MinValue;
-            Fix64Vec2 bestV = Fix64Vec2.Zero;
-
-            for (int i = 0; i < poly.VertexCount; i++)
-            {
-                Fix64Vec2 v = ShapeWorldTransform2D.GetPolygonLocalVertex(poly, i);
-                if (rot != Fix64.Zero)
-                {
-                    v = Rotate(v, sin, cos);
-                }
-
-                Fix64Vec2 w = polyPos + v;
-                Fix64 d = Fix64Vec2.Dot(w, direction);
-                if (d > best)
-                {
-                    best = d;
-                    bestV = w;
-                }
-            }
-
-            return bestV;
-        }
-
         private static Fix64Vec2 ClosestPointOnPolygon(Fix64Vec2 polyPos, Fix64 rot, in PolygonShapeData poly, Fix64Vec2 point)
         {
             Fix64 sin = Fix64.Zero;
@@ -629,15 +578,6 @@ namespace Ludots.Core.Physics2D.Collision
             return true;
         }
 
-        private static Fix64Vec2 SupportBox(Fix64Vec2 center, Fix64Vec2 u, Fix64Vec2 v, in BoxShapeData box, Fix64Vec2 direction)
-        {
-            Fix64 du = Fix64Vec2.Dot(direction, u);
-            Fix64 dv = Fix64Vec2.Dot(direction, v);
-            Fix64 su = du >= Fix64.Zero ? box.HalfWidth : -box.HalfWidth;
-            Fix64 sv = dv >= Fix64.Zero ? box.HalfHeight : -box.HalfHeight;
-            return center + u * su + v * sv;
-        }
-
         private static Fix64Vec2 Rotate(Fix64Vec2 v, Fix64 sin, Fix64 cos)
         {
             return new Fix64Vec2(cos * v.X - sin * v.Y, sin * v.X + cos * v.Y);
@@ -706,12 +646,10 @@ namespace Ludots.Core.Physics2D.Collision
             ReadOnlySpan<Fix64Vec2> a,
             ReadOnlySpan<Fix64Vec2> b,
             out Fix64Vec2 normal,
-            out Fix64 penetration,
-            out Fix64Vec2 contactPoint)
+            out Fix64 penetration)
         {
             normal = Fix64Vec2.Zero;
             penetration = Fix64.Zero;
-            contactPoint = Fix64Vec2.Zero;
 
             Fix64 minOverlap = Fix64.MaxValue;
             Fix64Vec2 bestAxis = Fix64Vec2.Zero;
@@ -721,10 +659,6 @@ namespace Ludots.Core.Physics2D.Collision
 
             normal = bestAxis;
             penetration = minOverlap;
-
-            Fix64Vec2 supportA = SupportVertices(a, normal);
-            Fix64Vec2 supportB = SupportVertices(b, -normal);
-            contactPoint = (supportA + supportB) * Fix64.HalfValue;
             return true;
         }
 
@@ -776,21 +710,5 @@ namespace Ludots.Core.Physics2D.Collision
             }
         }
 
-        private static Fix64Vec2 SupportVertices(ReadOnlySpan<Fix64Vec2> verts, Fix64Vec2 direction)
-        {
-            Fix64 best = Fix64.MinValue;
-            Fix64Vec2 bestV = verts[0];
-            for (int i = 0; i < verts.Length; i++)
-            {
-                Fix64 d = Fix64Vec2.Dot(verts[i], direction);
-                if (d > best)
-                {
-                    best = d;
-                    bestV = verts[i];
-                }
-            }
-
-            return bestV;
-        }
     }
 }

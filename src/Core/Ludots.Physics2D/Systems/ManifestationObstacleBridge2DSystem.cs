@@ -39,8 +39,11 @@ namespace Ludots.Core.Physics2D.Systems
         private static readonly QueryDescription _movingCompoundQuery = new QueryDescription()
             .WithAll<WorldPositionCm, CompoundObstacle2D, CompoundObstacle2DState, ManifestationMotion2D>();
 
-        public ManifestationObstacleBridge2DSystem(World world) : base(world)
+        private readonly ShapeDataStorage2D _shapeStorage;
+
+        public ManifestationObstacleBridge2DSystem(World world, ShapeDataStorage2D shapeStorage) : base(world)
         {
+            _shapeStorage = shapeStorage ?? throw new ArgumentNullException(nameof(shapeStorage));
         }
 
         public override void Update(in float dt)
@@ -299,10 +302,10 @@ namespace Ludots.Core.Physics2D.Systems
         {
             return intent.Shape switch
             {
-                ManifestationObstacleShape2D.Circle => ShapeDataStorage2D.RegisterCircle(
+                ManifestationObstacleShape2D.Circle => _shapeStorage.RegisterCircle(
                     Fix64.FromInt(intent.RadiusCm),
                     Fix64Vec2.FromInt(intent.LocalOffsetXCm, intent.LocalOffsetYCm)),
-                ManifestationObstacleShape2D.Box => ShapeDataStorage2D.RegisterBox(
+                ManifestationObstacleShape2D.Box => _shapeStorage.RegisterBox(
                     Fix64.FromInt(intent.HalfWidthCm),
                     Fix64.FromInt(intent.HalfHeightCm),
                     Fix64Vec2.FromInt(intent.LocalOffsetXCm, intent.LocalOffsetYCm)),
@@ -330,7 +333,7 @@ namespace Ludots.Core.Physics2D.Systems
                 vertices[i] = ToFix64Vec2(polygon.GetVertex(i));
             }
 
-            return ShapeDataStorage2D.RegisterPolygon(
+            return _shapeStorage.RegisterPolygon(
                 vertices,
                 Fix64Vec2.FromInt(intent.LocalOffsetXCm, intent.LocalOffsetYCm));
         }
@@ -410,10 +413,10 @@ namespace Ludots.Core.Physics2D.Systems
         {
             return shape switch
             {
-                ManifestationObstacleShape2D.Circle => ShapeDataStorage2D.RegisterCircle(
+                ManifestationObstacleShape2D.Circle => _shapeStorage.RegisterCircle(
                     Fix64.FromInt(obstacle.GetRadiusCm(pieceIndex)),
                     Fix64Vec2.FromInt(obstacle.GetLocalOffsetXCm(pieceIndex), obstacle.GetLocalOffsetYCm(pieceIndex))),
-                ManifestationObstacleShape2D.Box => ShapeDataStorage2D.RegisterBox(
+                ManifestationObstacleShape2D.Box => _shapeStorage.RegisterBox(
                     Fix64.FromInt(obstacle.GetHalfWidthCm(pieceIndex)),
                     Fix64.FromInt(obstacle.GetHalfHeightCm(pieceIndex)),
                     Fix64Vec2.FromInt(obstacle.GetLocalOffsetXCm(pieceIndex), obstacle.GetLocalOffsetYCm(pieceIndex))),
@@ -437,7 +440,7 @@ namespace Ludots.Core.Physics2D.Systems
                 vertices[i] = ToFix64Vec2(obstacle.GetVertex(pieceIndex, i));
             }
 
-            return ShapeDataStorage2D.RegisterPolygon(
+            return _shapeStorage.RegisterPolygon(
                 vertices,
                 Fix64Vec2.FromInt(obstacle.GetLocalOffsetXCm(pieceIndex), obstacle.GetLocalOffsetYCm(pieceIndex)));
         }
@@ -520,7 +523,7 @@ namespace Ludots.Core.Physics2D.Systems
             return MixSignature(hash, (int)(value >> 32));
         }
 
-        private static Fix64 ResolveNavRadiusCm(Entity entity, in ManifestationObstacleIntent2D intent, int shapeDataIndex)
+        private Fix64 ResolveNavRadiusCm(Entity entity, in ManifestationObstacleIntent2D intent, int shapeDataIndex)
         {
             if (intent.NavRadiusCm > 0)
             {
@@ -529,10 +532,10 @@ namespace Ludots.Core.Physics2D.Systems
 
             return intent.Shape switch
             {
-                ManifestationObstacleShape2D.Circle when ShapeDataStorage2D.TryGetCircle(shapeDataIndex, out var circle) => circle.Radius,
-                ManifestationObstacleShape2D.Box when ShapeDataStorage2D.TryGetBox(shapeDataIndex, out var box) =>
+                ManifestationObstacleShape2D.Circle when _shapeStorage.TryGetCircle(shapeDataIndex, out var circle) => circle.Radius,
+                ManifestationObstacleShape2D.Box when _shapeStorage.TryGetBox(shapeDataIndex, out var box) =>
                     Fix64Math.Sqrt(box.HalfWidth * box.HalfWidth + box.HalfHeight * box.HalfHeight),
-                ManifestationObstacleShape2D.Polygon when ShapeDataStorage2D.TryGetPolygon(shapeDataIndex, out var polygon) => ResolvePolygonRadius(polygon),
+                ManifestationObstacleShape2D.Polygon when _shapeStorage.TryGetPolygon(shapeDataIndex, out var polygon) => ResolvePolygonRadius(polygon),
                 _ => Fix64.Zero
             };
         }
@@ -553,7 +556,7 @@ namespace Ludots.Core.Physics2D.Systems
             return maxDistanceSq > Fix64.Zero ? Fix64Math.Sqrt(maxDistanceSq) : Fix64.Zero;
         }
 
-        private static int ResolveCompoundPieceNavRadiusCm(
+        private int ResolveCompoundPieceNavRadiusCm(
             in CompoundObstacle2D obstacle,
             int pieceIndex,
             ManifestationObstacleShape2D shape,
@@ -567,10 +570,10 @@ namespace Ludots.Core.Physics2D.Systems
 
             return shape switch
             {
-                ManifestationObstacleShape2D.Circle when ShapeDataStorage2D.TryGetCircle(shapeDataIndex, out var circle) => circle.Radius.ToInt(),
-                ManifestationObstacleShape2D.Box when ShapeDataStorage2D.TryGetBox(shapeDataIndex, out var box) =>
+                ManifestationObstacleShape2D.Circle when _shapeStorage.TryGetCircle(shapeDataIndex, out var circle) => circle.Radius.ToInt(),
+                ManifestationObstacleShape2D.Box when _shapeStorage.TryGetBox(shapeDataIndex, out var box) =>
                     Fix64Math.Sqrt(box.HalfWidth * box.HalfWidth + box.HalfHeight * box.HalfHeight).ToInt(),
-                ManifestationObstacleShape2D.Polygon when ShapeDataStorage2D.TryGetPolygon(shapeDataIndex, out var polygon) =>
+                ManifestationObstacleShape2D.Polygon when _shapeStorage.TryGetPolygon(shapeDataIndex, out var polygon) =>
                     ResolvePolygonRadius(polygon).ToInt(),
                 _ => 0
             };

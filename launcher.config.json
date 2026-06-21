@@ -138,6 +138,14 @@
       }
     },
     {
+      "name": "capability_standard_physics2d",
+      "target": {
+        "type": "path",
+        "value": "mods/showcases/capability_standard/CapabilityStandardPhysics2DMod",
+        "projectPath": "CapabilityStandardPhysics2DMod.csproj"
+      }
+    },
+    {
       "name": "entity_query_tactics",
       "target": {
         "type": "path",

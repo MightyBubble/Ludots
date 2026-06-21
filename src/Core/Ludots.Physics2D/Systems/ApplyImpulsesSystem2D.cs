@@ -39,8 +39,8 @@ namespace Ludots.Core.Physics2D.Systems
                     return;
                 }
 
-                bool isASleeping = World.Has<SleepingTag>(pair.EntityA);
-                bool isBSleeping = World.Has<SleepingTag>(pair.EntityB);
+                bool isASleeping = pair.IsSleepingA != 0;
+                bool isBSleeping = pair.IsSleepingB != 0;
                 if (isASleeping && isBSleeping) return;
 
                 ref var velocityA = ref pair.EntityA.Get<Velocity2D>();

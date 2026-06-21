@@ -1,25 +1,18 @@
+using System;
 using System.Runtime.CompilerServices;
 using Arch.Buffer;
 using Arch.Core;
-using Arch.Core.Extensions;
 using Arch.System;
+using Ludots.Core.Engine.Physics2D;
 using Ludots.Core.Mathematics.FixedPoint;
+using Ludots.Core.Navigation2D.Components;
 using Ludots.Core.Physics;
 using Ludots.Core.Physics2D.Components;
 
 namespace Ludots.Core.Physics2D.Systems
 {
-    /// <summary>
-    /// 2D 积分系统 — 全定点数确定性物理积分。
-    /// 
-    /// 职责：欧拉积分 + 组合阻尼（固有 × 场阻尼）。
-    /// 执行时机：在 ApplyImpulsesSystem 和 FieldDetectorSystem 之后。
-    /// </summary>
     public sealed class IntegrationSystem2D : BaseSystem<World, float>
     {
-        private static readonly Fix64 DefaultBaseDamping = PhysicsMaterial2D.Default.BaseDamping;
-        private static readonly Fix64 MinVelocitySq = Fix64.FromFloat(0.0001f);
-
         private static readonly QueryDescription _dynamicQuery = new QueryDescription()
             .WithAll<Position2D, Velocity2D, Mass2D>()
             .WithNone<SleepingTag>();
@@ -29,48 +22,76 @@ namespace Ludots.Core.Physics2D.Systems
             .WithNone<SleepingTag, PreviousPosition2D>();
 
         private readonly CommandBuffer _commandBuffer = new();
+        private readonly Physics2DSolverConfig _config;
 
-        public IntegrationSystem2D(World world) : base(world)
+        public IntegrationSystem2D(World world, Physics2DSolverConfig config) : base(world)
         {
+            _config = config ?? throw new ArgumentNullException(nameof(config));
         }
 
         public override void Update(in float deltaTime)
         {
-            var dt = Fix64.FromFloat(deltaTime);
-
             InitializeMissingPrevPos();
 
-            var fixedDt = dt;
+            var job = new IntegrationJob
+            {
+                World = World,
+                FixedDt = Fix64.FromFloat(deltaTime),
+                DefaultBaseDamping = _config.DefaultBaseDampingFix64,
+                MinVelocitySq = _config.MinVelocitySqFix64
+            };
+            World.InlineEntityQuery<IntegrationJob, Position2D, Velocity2D, Mass2D>(
+                in _dynamicQuery,
+                ref job);
+        }
 
-            World.Query(in _dynamicQuery, (Entity entity,
-                ref Position2D position,
-                ref Velocity2D velocity,
-                ref Mass2D mass) =>
+        private void InitializeMissingPrevPos()
+        {
+            var job = new InitializePrevPosJob { CommandBuffer = _commandBuffer };
+            World.InlineEntityQuery<InitializePrevPosJob, Position2D>(in _needsPrevPosQuery, ref job);
+
+            if (_commandBuffer.Size > 0)
+            {
+                _commandBuffer.Playback(World);
+            }
+        }
+
+        private struct IntegrationJob : IForEachWithEntity<Position2D, Velocity2D, Mass2D>
+        {
+            public World World;
+            public Fix64 FixedDt;
+            public Fix64 DefaultBaseDamping;
+            public Fix64 MinVelocitySq;
+
+            [MethodImpl(MethodImplOptions.AggressiveInlining)]
+            public void Update(Entity entity, ref Position2D position, ref Velocity2D velocity, ref Mass2D mass)
             {
                 if (mass.IsStatic) return;
 
+                if (World.TryGet(entity, out NavDesiredVelocity2D desiredVelocity))
+                {
+                    velocity.Linear = desiredVelocity.ValueCmPerSec;
+                }
+
                 if (World.TryGet(entity, out ForceInput2D input))
                 {
-                    velocity.Linear = velocity.Linear + input.Force * fixedDt;
+                    velocity.Linear = velocity.Linear + input.Force * FixedDt;
                     World.Set(entity, new ForceInput2D { Force = Fix64Vec2.Zero });
                 }
 
-                // 存储前一帧位置（渲染插值用）
-                if (World.TryGet<PreviousPosition2D>(entity, out var prevPos))
+                if (World.TryGet<PreviousPosition2D>(entity, out _))
                 {
                     World.Set(entity, new PreviousPosition2D { Value = position.Value });
                 }
 
-                // 欧拉积分: position += velocity * dt
-                position.Value = position.Value + velocity.Linear * fixedDt;
+                position.Value = position.Value + velocity.Linear * FixedDt;
 
                 if (World.TryGet<Rotation2D>(entity, out var rotation))
                 {
-                    rotation.Value = rotation.Value + velocity.Angular * fixedDt;
+                    rotation.Value = rotation.Value + velocity.Angular * FixedDt;
                     World.Set(entity, rotation);
                 }
 
-                // 组合阻尼: baseDamping × fieldDamping（全定点数，无转换）
                 Fix64 baseDamping = DefaultBaseDamping;
                 if (World.TryGet(entity, out PhysicsMaterial2D material))
                 {
@@ -87,7 +108,6 @@ namespace Ludots.Core.Physics2D.Systems
                 velocity.Linear = velocity.Linear * finalDamping;
                 velocity.Angular = velocity.Angular * finalDamping;
 
-                // 速度阈值归零
                 if (velocity.Linear.LengthSquared() < MinVelocitySq)
                 {
                     velocity.Linear = Fix64Vec2.Zero;
@@ -97,19 +117,17 @@ namespace Ludots.Core.Physics2D.Systems
                 {
                     velocity.Angular = Fix64.Zero;
                 }
-            });
+            }
         }
 
-        private void InitializeMissingPrevPos()
+        private struct InitializePrevPosJob : IForEachWithEntity<Position2D>
         {
-            World.Query(in _needsPrevPosQuery, (Entity entity, ref Position2D position) =>
-            {
-                _commandBuffer.Add(entity, new PreviousPosition2D { Value = position.Value });
-            });
+            public CommandBuffer CommandBuffer;
 
-            if (_commandBuffer.Size > 0)
+            [MethodImpl(MethodImplOptions.AggressiveInlining)]
+            public void Update(Entity entity, ref Position2D position)
             {
-                _commandBuffer.Playback(World);
+                CommandBuffer.Add(entity, new PreviousPosition2D { Value = position.Value });
             }
         }
     }

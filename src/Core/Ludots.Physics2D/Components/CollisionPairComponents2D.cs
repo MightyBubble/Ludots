@@ -19,23 +19,31 @@ namespace Ludots.Core.Physics2D.Components
         public byte ShapeSlotA;
         public byte ShapeSlotB;
 
+        public Position2D PositionA;
+        public Position2D PositionB;
+        public Rotation2D RotationA;
+        public Rotation2D RotationB;
+        public Collider2D ColliderA;
+        public Collider2D ColliderB;
         public Velocity2D VelocityA;
         public Velocity2D VelocityB;
         public Mass2D MassA;
         public Mass2D MassB;
+        public PhysicsMaterial2D MaterialA;
+        public PhysicsMaterial2D MaterialB;
+        public byte HasMaterialA;
+        public byte HasMaterialB;
+        public byte IsSleepingA;
+        public byte IsSleepingB;
 
         public Fix64 CombinedFriction;
         public Fix64 CombinedRestitution;
 
         public Fix64Vec2 Normal;
         public Fix64 Penetration;
-        public Fix64Vec2 LocalContactPoint0;
-        public Fix64Vec2 LocalContactPoint1;
         public int ContactCount;
 
         public Fix64 AccumulatedNormalImpulse0;
         public Fix64 AccumulatedTangentImpulse0;
-        public Fix64 AccumulatedNormalImpulse1;
-        public Fix64 AccumulatedTangentImpulse1;
     }
 }

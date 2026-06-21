@@ -45,15 +45,17 @@ namespace Ludots.Core.Physics2D.Systems
             .WithAll<NavAgent2D, NavGoal2D, SleepingTag>();
 
         private readonly Navigation2DRuntime _runtime;
+        private readonly ShapeDataStorage2D _shapeStorage;
         private readonly CommandBuffer _commandBuffer = new();
         private int _flowStreamingTick;
         private int _steeringFrameTick;
 
         private const int MaxNeighborsHard = 64;
 
-        public Navigation2DSteeringSystem2D(World world, Navigation2DRuntime runtime) : base(world)
+        public Navigation2DSteeringSystem2D(World world, Navigation2DRuntime runtime, ShapeDataStorage2D shapeStorage) : base(world)
         {
             _runtime = runtime ?? throw new ArgumentNullException(nameof(runtime));
+            _shapeStorage = shapeStorage ?? throw new ArgumentNullException(nameof(shapeStorage));
         }
 
         public override void Update(in float deltaTime)
@@ -389,17 +391,13 @@ namespace Ludots.Core.Physics2D.Systems
             float invDeltaTime,
             float maxAccel)
         {
-            Vector2 accel = (newVelocity - currentVelocity) * invDeltaTime;
-            float accelLenSq = accel.LengthSquared();
-            float maxAccelSq = maxAccel * maxAccel;
-            if (accelLenSq > maxAccelSq && accelLenSq > 1e-12f)
-            {
-                accel *= maxAccel / MathF.Sqrt(accelLenSq);
-            }
+            _ = currentVelocity;
+            _ = invDeltaTime;
+            _ = maxAccel;
 
             force = new ForceInput2D
             {
-                Force = Fix64Vec2.FromFloat(accel.X, accel.Y)
+                Force = Fix64Vec2.Zero
             };
             desiredVelocity = new NavDesiredVelocity2D
             {
@@ -1730,7 +1728,7 @@ namespace Ludots.Core.Physics2D.Systems
             switch (obstacle.Shape)
             {
                 case NavObstacleShape2D.Circle:
-                    if (ShapeDataStorage2D.TryGetCircle(obstacle.ShapeDataIndex, out var circle))
+                    if (_shapeStorage.TryGetCircle(obstacle.ShapeDataIndex, out var circle))
                     {
                         Vector2 center = ShapeWorldTransform2D.GetCircleCenter(position.Value, rotation.Value, circle).ToVector2();
                         float radiusCm = circle.Radius.ToFloat();
@@ -1741,7 +1739,7 @@ namespace Ludots.Core.Physics2D.Systems
                     break;
 
                 case NavObstacleShape2D.Box:
-                    if (ShapeDataStorage2D.TryGetBox(obstacle.ShapeDataIndex, out var box))
+                    if (_shapeStorage.TryGetBox(obstacle.ShapeDataIndex, out var box))
                     {
                         Vector2 center = ShapeWorldTransform2D.GetBoxCenter(position.Value, rotation.Value, box).ToVector2();
                         _runtime.Surface.SplatObstacleOrientedBox(
@@ -1756,7 +1754,7 @@ namespace Ludots.Core.Physics2D.Systems
                     break;
 
                 case NavObstacleShape2D.Polygon:
-                    if (ShapeDataStorage2D.TryGetPolygon(obstacle.ShapeDataIndex, out var polygon) &&
+                    if (_shapeStorage.TryGetPolygon(obstacle.ShapeDataIndex, out var polygon) &&
                         polygon.Vertices != null &&
                         polygon.VertexCount >= 3)
                     {
@@ -1911,5 +1909,3 @@ namespace Ludots.Core.Physics2D.Systems
 
     }
 }
-
-
