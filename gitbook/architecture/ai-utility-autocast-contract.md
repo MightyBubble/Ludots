@@ -54,6 +54,18 @@ AI Core 只保留跨题材通用词：
 
 Stance、AttackMove、Guard、Patrol、AutoTarget profile 属于 behavior pack；炮台、采集器、建造者、蓄力施法等业务名词属于对应 gameplay ability / actuator adapter，不进入 AI Core。
 
+## 数据挂载 authoring 契约
+
+AI / stance 运行时组件可以由 `Entities/templates.json` 或 map `components` 数据挂载，但 authoring 必须使用字符串 key，加载期解析成运行时 int：
+
+- `UtilityAiAgent` 写 `{ "profile": "Profile.Basic" }`，由 `AiRuntime.UtilityRuntime.Authoring` 解析 profile index；`profileId` / `ProfileId` 数字字段直接报错。
+- `UtilityAiTargetPriority` 写 `{ "bucket": "High" }`，bucket 只能是 `None` / `Low` / `Normal` / `High` / `Critical` 枚举名；`Bucket` 数字字段直接报错。
+- `ActuatorReadiness` / `AimGate` 写 `{ "actuator": "Actuator.Primary" }`，由 `AI/actuators.json` 的 `id` 解析 actuator index；`actuatorId` / `ActuatorId` 数字字段直接报错。可选初始字段必须使用 `initialReady01` / `initialBlockReason` / `initialEtaSteps` / `requiresPreparation`，不暴露热路径内部步进字段。
+- `CombatStanceState` 属于 `CombatStanceBehaviorMod`，由该 Mod 注册 authoring。数据写 `{ "stance": "ReturnFire" }`，stance 只能是 `HoldFire` / `ReturnFire` / `Defend` / `AttackAnything`；`stanceId` / `Stance` 数字字段直接报错。
+- `AI/profiles.json` 的默认 stance 写 `DefaultStance` 字符串 key；`DefaultStanceId` 数字字段直接报错。
+
+`ComponentRegistry.Apply` 的 fail-fast 信息必须带上组件挂载上下文。模板路径通过 `ConfigConflictReport` 的 winner source URI 传入，map / runtime spawn 路径传入 map id、entity instance 或 template id，方便定位未知 profile、stance、bucket、actuator 等引用。
+
 ## 代码锚点
 
 - `src/Core/Gameplay/AI/Config/AiConfigLoader.cs`：AI 配置加载与引用 fail-fast。

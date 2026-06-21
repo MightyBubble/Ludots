@@ -177,7 +177,10 @@ namespace Ludots.Core.Gameplay.Spawning
             }
 
             EnsureTemplateLoaded(request.TemplateId);
-            var entity = _builder.UseTemplate(request.TemplateId).Build();
+            var entity = _builder
+                .UseTemplate(request.TemplateId)
+                .WithEntityContext($"RuntimeEntitySpawn template '{request.TemplateId}'")
+                .Build();
             ApplyTemplateKey(entity, request.TemplateId);
 
             if (request.HasWorldPosition != 0)

@@ -466,6 +466,7 @@ namespace Ludots.Core.Engine
             if (ConfigPipeline == null)
             {
                 AiRuntime = default;
+                Ludots.Core.Config.ComponentRegistry.SetUtilityAiAuthoringCatalog(null);
                 return;
             }
 
@@ -482,6 +483,7 @@ namespace Ludots.Core.Engine
             var loader = new Ludots.Core.Gameplay.AI.Config.AiConfigLoader(ConfigPipeline, atoms, validation);
             var catalog = ConfigCatalog ?? Ludots.Core.Gameplay.AI.Config.AiConfigCatalog.CreateDefault();
             AiRuntime = loader.LoadAndCompile(catalog, ConfigConflictReport);
+            Ludots.Core.Config.ComponentRegistry.SetUtilityAiAuthoringCatalog(AiRuntime.UtilityRuntime.Authoring);
         }
 
         public void ReloadConfigs(string? group = null, string? relativePath = null)
