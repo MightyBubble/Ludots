@@ -14,11 +14,11 @@ namespace Ludots.Core.Map.Board
         /// <summary>Spatial type: "Grid", "HexGrid", or "NodeGraph".</summary>
         public string SpatialType { get; set; } = "Grid";
 
-        /// <summary>Board width in tiles.</summary>
-        public int WidthInTiles { get; set; } = SpatialScaleDefaults.DefaultWorldWidthMacroTiles;
+        /// <summary>Board width in 256-cell macro tiles.</summary>
+        public int WidthInMacroTiles { get; set; } = SpatialScaleDefaults.DefaultWorldWidthMacroTiles;
 
-        /// <summary>Board height in tiles.</summary>
-        public int HeightInTiles { get; set; } = SpatialScaleDefaults.DefaultWorldHeightMacroTiles;
+        /// <summary>Board height in 256-cell macro tiles.</summary>
+        public int HeightInMacroTiles { get; set; } = SpatialScaleDefaults.DefaultWorldHeightMacroTiles;
 
         /// <summary>Grid cell size in centimeters.</summary>
         public int GridCellSizeCm { get; set; } = SpatialScaleDefaults.CellCm;
@@ -46,8 +46,8 @@ namespace Ludots.Core.Map.Board
             {
                 Name = Name,
                 SpatialType = SpatialType,
-                WidthInTiles = WidthInTiles,
-                HeightInTiles = HeightInTiles,
+                WidthInMacroTiles = WidthInMacroTiles,
+                HeightInMacroTiles = HeightInMacroTiles,
                 GridCellSizeCm = GridCellSizeCm,
                 HexEdgeLengthCm = HexEdgeLengthCm,
                 ChunkSizeCells = ChunkSizeCells,

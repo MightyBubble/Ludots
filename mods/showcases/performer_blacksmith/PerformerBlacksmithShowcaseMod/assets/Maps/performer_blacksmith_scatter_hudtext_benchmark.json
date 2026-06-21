@@ -14,8 +14,8 @@
     {
       "Name": "default",
       "SpatialType": "Grid",
-      "WidthInTiles": 2,
-      "HeightInTiles": 2,
+      "WidthInMacroTiles": 2,
+      "HeightInMacroTiles": 2,
       "GridCellSizeCm": 100
     }
   ],

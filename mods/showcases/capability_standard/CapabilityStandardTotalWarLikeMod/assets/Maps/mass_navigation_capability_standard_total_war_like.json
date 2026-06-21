@@ -9,8 +9,8 @@
     {
       "Name": "default",
       "SpatialType": "Grid",
-      "WidthInTiles": 250,
-      "HeightInTiles": 250,
+      "WidthInMacroTiles": 250,
+      "HeightInMacroTiles": 250,
       "GridCellSizeCm": 100,
       "ChunkSizeCells": 64
     }

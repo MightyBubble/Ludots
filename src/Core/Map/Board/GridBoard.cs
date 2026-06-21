@@ -23,12 +23,11 @@ namespace Ludots.Core.Map.Board
             Id = id;
             Name = name;
 
-            int gridCellSizeCm = config.GridCellSizeCm;
-            int worldWidthCm = config.WidthInTiles * SpatialScaleDefaults.MacroTileCells * gridCellSizeCm;
-            int worldHeightCm = config.HeightInTiles * SpatialScaleDefaults.MacroTileCells * gridCellSizeCm;
-            WorldSize = new WorldSizeSpec(
-                new Mathematics.WorldAabbCm(-worldWidthCm / 2, -worldHeightCm / 2, worldWidthCm, worldHeightCm),
-                gridCellSizeCm);
+            var worldExtent = new WorldExtentSpec(
+                config.WidthInMacroTiles,
+                config.HeightInMacroTiles,
+                config.GridCellSizeCm);
+            WorldSize = worldExtent.ToWorldSizeSpec();
             CoordinateConverter = new SpatialCoordinateConverter(WorldSize);
 
             var partition = new ChunkedGridSpatialPartitionWorld(chunkSizeCells: config.ChunkSizeCells);

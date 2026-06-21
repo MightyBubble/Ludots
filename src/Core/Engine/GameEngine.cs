@@ -417,18 +417,17 @@ namespace Ludots.Core.Engine
             SetService(CoreServiceKeys.AiRuntime, AiRuntime);
 
             // 4. Setup ECS & Session using merged config values
-            InitializeWorld(MergedConfig.WorldWidthInTiles, MergedConfig.WorldHeightInTiles);
+            InitializeWorld(MergedConfig.WorldWidthInMacroTiles, MergedConfig.WorldHeightInMacroTiles);
             SetService(CoreServiceKeys.World, World);
-            WorldMap = new WorldMap(MergedConfig.WorldWidthInTiles, MergedConfig.WorldHeightInTiles);
+            WorldMap = new WorldMap(MergedConfig.WorldWidthInMacroTiles, MergedConfig.WorldHeightInMacroTiles);
             SetService(CoreServiceKeys.WorldMap, WorldMap);
             GameSession = new GameSession();
             SetService(CoreServiceKeys.GameSession, GameSession);
             int gridCellSizeCm = MergedConfig.GridCellSizeCm;
-            int worldWidthCm = WorldMap.TotalWidth * gridCellSizeCm;
-            int worldHeightCm = WorldMap.TotalHeight * gridCellSizeCm;
-            WorldSizeSpec = new WorldSizeSpec(
-                new WorldAabbCm(-worldWidthCm / 2, -worldHeightCm / 2, worldWidthCm, worldHeightCm),
-                gridCellSizeCm: gridCellSizeCm);
+            WorldSizeSpec = new WorldExtentSpec(
+                MergedConfig.WorldWidthInMacroTiles,
+                MergedConfig.WorldHeightInMacroTiles,
+                gridCellSizeCm).ToWorldSizeSpec();
             SpatialCoords = new SpatialCoordinateConverter(WorldSizeSpec);
             _spatialPartition = new ChunkedGridSpatialPartitionWorld(chunkSizeCells: 64);
             SpatialQueries = new SpatialQueryService(new ChunkedGridSpatialPartitionBackend(_spatialPartition, WorldSizeSpec));
@@ -502,10 +501,10 @@ namespace Ludots.Core.Engine
             SetService(CoreServiceKeys.AiRuntime, AiRuntime);
         }
 
-        private void InitializeWorld(int widthInTiles, int heightInTiles)
+        private void InitializeWorld(int widthInMacroTiles, int heightInMacroTiles)
         {
             World = World.Create();
-            PhysicsWorld = new PhysicsWorld(widthInChunks: widthInTiles, heightInChunks: heightInTiles);
+            PhysicsWorld = new PhysicsWorld(widthInChunks: widthInMacroTiles, heightInChunks: heightInMacroTiles);
             EventBus = new GameplayEventBus(); // Initialize EventBus
             
             // Initialize JobScheduler if not already set (Static per AppDomain usually, but we manage it here)

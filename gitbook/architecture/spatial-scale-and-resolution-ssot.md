@@ -1,6 +1,6 @@
-# 空间尺度与分辨率 SSOT
+﻿# 空间尺度与分辨率 SSOT
 
-所属总单：[Epic #281](https://github.com/MightyBubble/Ludots/issues/281)。本页落实 [NAV-0 #282](https://github.com/MightyBubble/Ludots/issues/282)，是后续 NAV-1 到 NAV-8 的尺度词汇唯一来源。
+所属总单：[Epic #281](https://github.com/MightyBubble/Ludots/issues/281)。本页落实 [NAV-0 #282](https://github.com/MightyBubble/Ludots/issues/282)，是后续 NAV-1 到 NAV-9 的尺度词汇唯一来源。
 
 ## 背景（现状）
 
@@ -40,8 +40,8 @@ In scope：
 Out of scope：
 
 - NAV-0 不改 board 计算语义，不改 map json 键名。
-- `WidthInTiles` / `HeightInTiles` 的破坏式迁移在 #283 做。
-- `WorldExtentSpec` 在 #283 引入；它是 authoring/计算对象，产出既有 `src/Core/Spatial/WorldSizeSpec.cs`，不替换后者。
+- `WidthInTiles` / `HeightInTiles` 的破坏式迁移由 #283 完成；迁移后目标键是 `WidthInMacroTiles` / `HeightInMacroTiles`，旧键 fail-fast、无别名兼容。
+- `WorldExtentSpec` 由 #283 引入；它是 authoring/计算对象，产出既有 `src/Core/Spatial/WorldSizeSpec.cs`，不替换后者。
 - 逻辑地形高度保持 4-bit 共 16 档，拓扑解耦在 #286 做。
 - 障碍数据源使用主线已有 `ManifestationObstacleIntent2D` + `ShapeDataStorage2D` + `CompoundObstacle2DState`，不要新建 `ObstacleGeometryProfile2D`。
 
@@ -53,9 +53,9 @@ Out of scope：
 | `PartitionChunk` | `PartitionChunkCells`，默认 64 | `PartitionChunkCells * CellCm` | `BoardConfig.ChunkSizeCells` / `SpatialScaleDefaults.PartitionChunkCells` | 空间分区、AOI、query backend | 是 | 必须 > 0 且为 2 的幂 |
 | `TerrainChunk` | `TerrainChunkCells`，固定 64 | `TerrainChunkCells * CellCm` 的逻辑足迹；hex bake 还会乘 hex metric | `VertexChunk.ChunkSize` / `SpatialScaleDefaults.TerrainChunkCells` | 逻辑地形块；当前等于 NavTile 足迹 | 否 | 当前固定 64；grid/hex 共用抽象在 #286 落地 |
 | `NavTile footprint` | = `TerrainChunk` | = `TerrainChunk` footprint | NavMesh bake (`NavTileBuilder` / `BakePipeline`) | navmesh 产物 tile 足迹 | 否 | 只作为 `TerrainChunk` 的用途，不再单独命名尺度 |
-| `MacroTile` | `MacroTileCells` = `MapTile.Size` = 256 | `MacroTileCells * CellCm` | `MapTile.Size` / `SpatialScaleDefaults.MacroTileCells` | IO/寻址宏块、世界范围 authoring 数量 | 否，数量可配 | `MacroTileCells` 引用 `MapTile.Size`；`WidthInTiles` 后续正名为 `WidthInMacroTiles` |
+| `MacroTile` | `MacroTileCells` = `MapTile.Size` = 256 | `MacroTileCells * CellCm` | `MapTile.Size` / `SpatialScaleDefaults.MacroTileCells` | IO/寻址宏块、世界范围 authoring 数量 | 否，数量可配 | `MacroTileCells` 引用 `MapTile.Size`；数量字段正名为 `WidthInMacroTiles` / `HeightInMacroTiles` |
 | `StreamingChunk` | N x `PartitionChunk` | N x `PartitionChunkCells * CellCm` | streaming/loaded chunk owner；NodeGraph 当前通过 `WorldGridLoadedChunks` 消费 | 流式加载、loaded graph rebuild | 是 | 必须显式配置或由 board 分区推导；禁止私有 loader fallback |
-| `WorldExtent` | `WidthInMacroTiles * MacroTileCells` / `HeightInMacroTiles * MacroTileCells` | cells x `CellCm` | #283 `WorldExtentSpec`，产出既有 `WorldSizeSpec` | board 世界范围、坐标转换、minimap/full-map bounds | 是 | 旧 `WidthInTiles` / `HeightInTiles` 出现时 #283 起 fail-fast |
+| `WorldExtent` | `WidthInMacroTiles * MacroTileCells` / `HeightInMacroTiles * MacroTileCells` | cells x `CellCm` | `WorldExtentSpec`，产出既有 `WorldSizeSpec` | board 世界范围、坐标转换、minimap/full-map bounds | 是 | 旧 `WidthInTiles` / `HeightInTiles` 出现时 fail-fast |
 | `FlowWindow` | `FieldWidthCm / CellCm` by `FieldHeightCm / CellCm` | `FieldWidthCm` x `FieldHeightCm` | MassFlow solver config | 执行层滑窗/工作区 | 是 | 宽高必须 > 0；必须能被 `FlowCell`、`AvoidanceHashCell` 整除 |
 | `FlowCell` | `FlowCellSizeCm / CellCm` | 默认 100 | MassFlow solver `flowCellSizeCm` / `SpatialScaleDefaults.FlowCellCm` | 流场网格 cell | 是 | 必须 > 0；`FlowWindow` 宽高必须整除它 |
 | `AvoidanceHashCell` | `separationHashCellSizeCm / CellCm` 或 `hardResolveHashCellSizeCm / CellCm` | separation 默认 100；hard-resolve 默认 50 | MassFlow solver / `SpatialScaleDefaults.Avoidance*HashCellCm` | 分离邻居哈希、硬解析候选哈希 | 是 | 必须 > 0；`FlowWindow` 宽高必须整除它 |
@@ -65,12 +65,12 @@ Out of scope：
 
 ## 命名 Taxonomy
 
-- `Cell`：sim 原子格。唯一基准字段名为 `CellCm`；历史 `GridCellSizeCm` 在 #283 之前保留为 board config 字段。
+- `Cell`：sim 原子格。唯一基准字段名为 `CellCm`；历史 `GridCellSizeCm` 仍作为 board config 输入。
 - `PartitionChunk`：空间分区块。只描述 query/AOI 分区，不描述地形或 navmesh。
 - `TerrainChunk`：逻辑地形块。当前 hex owner 是 `VertexChunk`；#286 后 grid/hex 共用地形抽象仍沿用此名。
 - `MacroTile`：256-cell IO/寻址宏块。owner 是 `MapTile.Size`，常量模块只引用它。
 - `StreamingChunk`：流式加载块。不要用 `chunk` 裸词。
-- `WorldExtent`：世界范围 authoring/计算概念。#283 的 `WorldExtentSpec` 产出 `WorldSizeSpec`。
+- `WorldExtent`：世界范围 authoring/计算概念。`WorldExtentSpec` 产出 `WorldSizeSpec`。
 - `FlowWindow` + `FlowCell`：MassFlow 执行层滑窗与流场分辨率。
 - `AvoidanceHashCell`：MassFlow 分离/硬解析哈希 cell。
 - `PhysicsBroadphaseCell`：physics broadphase cell。
@@ -79,7 +79,7 @@ Out of scope：
 
 | 现状名 | 目标名 | NAV-0 动作 | 后续动作 |
 |---|---|---|---|
-| `BoardConfig.GridCellSizeCm` | `CellCm` | 默认值引用 `SpatialScaleDefaults.CellCm` | #283 继续作为 `WorldExtentSpec` 输入；是否改字段名另立 |
+| `BoardConfig.GridCellSizeCm` | `CellCm` | 默认值引用 `SpatialScaleDefaults.CellCm` | 继续作为 `WorldExtentSpec` 输入；是否改字段名另立 |
 | `MapTile.Size` | `MacroTileCells` | `SpatialScaleDefaults.MacroTileCells` 引用它 | 保持 owner，不复制新 owner |
 | `WorldMap.TileSize` | `MacroTileCells` | 引用 `SpatialScaleDefaults.MacroTileCells` | 后续可移除重复旧名 |
 | `BoardConfig.WidthInTiles` | `WidthInMacroTiles` | 仅文档映射，不改 JSON/API | #283 破坏式迁移；旧键 fail-fast，无别名兼容 |
@@ -122,8 +122,8 @@ NAV-0 不新增配置 schema。现有配置项按本文口径解释：
 | 配置项 | 目标概念 | 单位 | 范围 / 约束 | 归属 |
 |---|---|---:|---|---|
 | `BoardConfig.GridCellSizeCm` | `CellCm` | cm | > 0 | board authoring |
-| `BoardConfig.WidthInTiles` | `WidthInMacroTiles` | macro tiles | #283 起旧名 fail-fast | board/world extent authoring |
-| `BoardConfig.HeightInTiles` | `HeightInMacroTiles` | macro tiles | #283 起旧名 fail-fast | board/world extent authoring |
+| `BoardConfig.WidthInMacroTiles` | `WidthInMacroTiles` | macro tiles | 旧键 fail-fast | board/world extent authoring |
+| `BoardConfig.HeightInMacroTiles` | `HeightInMacroTiles` | macro tiles | 旧键 fail-fast | board/world extent authoring |
 | `BoardConfig.ChunkSizeCells` | `PartitionChunkCells` | cells | > 0 且 2 的幂 | spatial partition |
 | `MassFlowSolverConfig.fieldWidthCm` / `fieldHeightCm` | `FlowWindow` | cm | > 0；被 FlowCell/hash cell 整除 | MassFlow solver |
 | `MassFlowSolverConfig.flowCellSizeCm` | `FlowCell` | cm | > 0 | MassFlow solver |
@@ -136,7 +136,7 @@ NAV-0 不新增配置 schema。现有配置项按本文口径解释：
 
 | 改动 | 预期行为 | 自动化钉死 |
 |---|---|---|
-| 修改 `CellCm` 或 board `GridCellSizeCm` | board `WorldSizeSpec.Bounds` 按相同 macro tile 数成比例变化 | #283 添加尺度 showcase 与 contract |
+| 修改 `CellCm` 或 board `GridCellSizeCm` | board `WorldSizeSpec.Bounds` 按相同 macro tile 数成比例变化 | #283 尺度 contract |
 | 修改 `PartitionChunkCells` 或 `ChunkSizeCells` | spatial query/AOI 分区粒度变化，世界范围不变化 | 现有 spatial partition tests + #283 补充 |
 | 修改 `FlowCellSizeCm` | MassFlow grid 宽高按 `FieldWidthCm / FlowCellSizeCm` 改变 | 现有 `MassFlowSimulationStateConfigurationTests` + #288 补充 |
 | 在 board/bake/MassFlow 代码内联 `256` / `64` / `100` | 不允许 | `NavigationSpatialScaleMagicNumberContractTests` 失败并打印文件行号 |
@@ -155,7 +155,7 @@ NAV-0 不合并任何外部分支，不试合 PR #235/#186。复用项：
 
 - 数据驱动：尺度默认值集中在 `SpatialScaleDefaults`，配置项继续显式输入。
 - 无 fallback：NAV-0 不新增任何缺失配置兜底。
-- 无重复数据源：`MacroTileCells` 引用 `MapTile.Size`；`WorldExtentSpec` 后续产出 `WorldSizeSpec`，不替换。
+- 无重复数据源：`MacroTileCells` 引用 `MapTile.Size`；`WorldExtentSpec` 产出 `WorldSizeSpec`，不替换。
 - 大小写严格 fail-fast：本步不改变 loader；后续 #283/#285/#287 迁移时沿用严格 loader。
 - 附 contract test：`NavigationSpatialScaleMagicNumberContractTests` 扫描 board/bake/MassFlow 代码。
 - 更新 GitBook：本页加入 `gitbook/architecture/README.md` 与 `gitbook/SUMMARY.md`，配置查表加入 `gitbook/reference/`。

@@ -29,8 +29,8 @@ namespace Ludots.Tests.Gas
             File.WriteAllText(Path.Combine(_coreRoot, "Configs", "game.json"), """
             {
               "startupMapId": "outer_map",
-              "worldWidthInTiles": 16,
-              "worldHeightInTiles": 16,
+              "worldWidthInMacroTiles": 16,
+              "worldHeightInMacroTiles": 16,
               "gridCellSizeCm": 100
             }
             """);

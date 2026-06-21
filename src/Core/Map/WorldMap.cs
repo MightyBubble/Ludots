@@ -7,12 +7,12 @@ namespace Ludots.Core.Map
     public class WorldMap
     {
         // Dimensions now configurable
-        public int WidthInTiles { get; private set; }
-        public int HeightInTiles { get; private set; }
+        public int WidthInMacroTiles { get; private set; }
+        public int HeightInMacroTiles { get; private set; }
         public const int TileSize = SpatialScaleDefaults.MacroTileCells;
         
-        public int TotalWidth => WidthInTiles * TileSize;
-        public int TotalHeight => HeightInTiles * TileSize;
+        public int TotalWidth => WidthInMacroTiles * TileSize;
+        public int TotalHeight => HeightInMacroTiles * TileSize;
         
         public const int MaxHeightLevel = SpatialScaleDefaults.LogicTerrainMaxHeightLevel;
         public const int WorldScale = 1000; // 1 Grid = 1000 IntVector units
@@ -23,24 +23,26 @@ namespace Ludots.Core.Map
             SpatialScaleDefaults.DefaultWorldWidthMacroTiles,
             SpatialScaleDefaults.DefaultWorldHeightMacroTiles) { }
 
-        public WorldMap(int widthInChunks, int heightInChunks)
+        public WorldMap(int widthInMacroTiles, int heightInMacroTiles)
         {
-            Initialize(widthInChunks, heightInChunks);
+            Initialize(widthInMacroTiles, heightInMacroTiles);
         }
 
-        public void Initialize(int widthInChunks, int heightInChunks)
+        public void Initialize(int widthInMacroTiles, int heightInMacroTiles)
         {
-            WidthInTiles = widthInChunks;
-            HeightInTiles = heightInChunks;
-            _tiles = new MapTile[WidthInTiles * HeightInTiles];
+            if (widthInMacroTiles <= 0) throw new ArgumentOutOfRangeException(nameof(widthInMacroTiles));
+            if (heightInMacroTiles <= 0) throw new ArgumentOutOfRangeException(nameof(heightInMacroTiles));
+            WidthInMacroTiles = widthInMacroTiles;
+            HeightInMacroTiles = heightInMacroTiles;
+            _tiles = new MapTile[WidthInMacroTiles * HeightInMacroTiles];
         }
 
         public MapTile GetOrCreateTile(int tileX, int tileY)
         {
-            if (tileX < 0 || tileX >= WidthInTiles || tileY < 0 || tileY >= HeightInTiles)
+            if (tileX < 0 || tileX >= WidthInMacroTiles || tileY < 0 || tileY >= HeightInMacroTiles)
                 return null;
 
-            int index = tileY * WidthInTiles + tileX;
+            int index = tileY * WidthInMacroTiles + tileX;
             if (_tiles[index] == null)
             {
                 _tiles[index] = new MapTile();

@@ -43,8 +43,8 @@ namespace Ludots.Core.Config
 
         public int GridCellSizeCm { get; set; } = 100;
 
-        public int WorldWidthInTiles { get; set; } = 64;
-        public int WorldHeightInTiles { get; set; } = 64;
+        public int WorldWidthInMacroTiles { get; set; } = 64;
+        public int WorldHeightInMacroTiles { get; set; } = 64;
 
         public Navigation2DConfig Navigation2D { get; set; } = new Navigation2DConfig();
 

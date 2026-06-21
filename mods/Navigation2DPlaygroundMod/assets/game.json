@@ -1,7 +1,7 @@
 {
   "startupMapId": "nav2d_playground",
-  "worldWidthInTiles": 512,
-  "worldHeightInTiles": 512,
+  "worldWidthInMacroTiles": 512,
+  "worldHeightInMacroTiles": 512,
   "navigation2D": {
     "enabled": true,
     "maxAgents": 50000,
