@@ -6,6 +6,7 @@ using Ludots.Core.Config;
 using Ludots.Core.Gameplay.AI.Planning;
 using Ludots.Core.Gameplay.AI.Utility;
 using Ludots.Core.Gameplay.AI.WorldState;
+using Ludots.Core.Gameplay.GAS.Registry;
 using Ludots.Core.Gameplay.GAS.Orders;
 
 namespace Ludots.Core.Gameplay.AI.Config
@@ -14,11 +15,13 @@ namespace Ludots.Core.Gameplay.AI.Config
     {
         private readonly ConfigPipeline _pipeline;
         private readonly AtomRegistry _atoms;
+        private readonly AiConfigValidationContext? _validation;
 
-        public AiConfigLoader(ConfigPipeline pipeline, AtomRegistry atoms)
+        public AiConfigLoader(ConfigPipeline pipeline, AtomRegistry atoms, AiConfigValidationContext? validation = null)
         {
-            _pipeline = pipeline;
-            _atoms = atoms;
+            _pipeline = pipeline ?? throw new ArgumentNullException(nameof(pipeline));
+            _atoms = atoms ?? throw new ArgumentNullException(nameof(atoms));
+            _validation = validation;
         }
 
         public AiCompiledRuntime LoadAndCompile(ConfigCatalog catalog, ConfigConflictReport? report = null)
@@ -29,8 +32,13 @@ namespace Ludots.Core.Gameplay.AI.Config
             {
                 for (int i = 0; i < atomsArr.Count; i++)
                 {
-                    if (atomsArr[i] is not JsonObject obj) continue;
-                    if (!TryReadString(obj, "id", out string id)) continue;
+                    string path = $"AI/atoms.json[{i}]";
+                    if (atomsArr[i] is not JsonObject obj)
+                    {
+                        throw Fail(path, "Expected an object.");
+                    }
+
+                    string id = RequireString(obj, "id", path);
                     _atoms.GetOrAdd(id);
                 }
             }
@@ -43,11 +51,19 @@ namespace Ludots.Core.Gameplay.AI.Config
                 var tmp = new List<WorldStateProjectionRule>(projArr.Count);
                 for (int i = 0; i < projArr.Count; i++)
                 {
-                    if (projArr[i] is not JsonObject obj) continue;
-                    if (!TryReadString(obj, "Atom", out string atomName)) continue;
-                    int atomId = _atoms.GetOrAdd(atomName);
-                    if (!TryReadString(obj, "Op", out string op)) continue;
-                    if (!TryParseProjectionOp(op, out var pOp)) continue;
+                    string path = $"AI/projection.json[{i}]";
+                    if (projArr[i] is not JsonObject obj)
+                    {
+                        throw Fail(path, "Expected an object.");
+                    }
+
+                    string id = ReadRecordId(obj, path);
+                    int atomId = RequireAtomId(RequireString(obj, "Atom", path), $"AI/projection.json:{id}.Atom");
+                    string op = RequireString(obj, "Op", path);
+                    if (!TryParseProjectionOp(op, out var pOp))
+                    {
+                        throw Fail($"AI/projection.json:{id}.Op", $"Unsupported projection op '{op}'.");
+                    }
 
                     int intKey = TryReadInt(obj, "IntKey", out int ik) ? ik : -1;
                     int intValue = TryReadInt(obj, "IntValue", out int iv) ? iv : 0;
@@ -68,10 +84,15 @@ namespace Ludots.Core.Gameplay.AI.Config
                 var tmp = new List<UtilityGoalPresetDefinition>(goalsArr.Count);
                 for (int i = 0; i < goalsArr.Count; i++)
                 {
-                    if (goalsArr[i] is not JsonObject obj) continue;
+                    string path = $"AI/utility.json[{i}]";
+                    if (goalsArr[i] is not JsonObject obj)
+                    {
+                        throw Fail(path, "Expected an object.");
+                    }
 
-                    int goalPresetId = TryReadInt(obj, "GoalPresetId", out int gpid) ? gpid : 0;
-                    int planningStrategyId = TryReadInt(obj, "PlanningStrategyId", out int psid) ? psid : 0;
+                    string id = ReadRecordId(obj, path);
+                    int goalPresetId = RequirePositiveInt(obj, "GoalPresetId", path);
+                    int planningStrategyId = RequirePlanningStrategyId(obj, "PlanningStrategyId", path);
                     float weight = TryReadFloat(obj, "Weight", out float w) ? w : 1f;
 
                     var boolCons = Array.Empty<UtilityConsiderationBool256>();
@@ -80,9 +101,13 @@ namespace Ludots.Core.Gameplay.AI.Config
                         var bc = new List<UtilityConsiderationBool256>(boolArr.Count);
                         for (int c = 0; c < boolArr.Count; c++)
                         {
-                            if (boolArr[c] is not JsonObject bObj) continue;
-                            if (!TryReadString(bObj, "Atom", out string atomName)) continue;
-                            int atomId = _atoms.GetOrAdd(atomName);
+                            string considerationPath = $"AI/utility.json:{id}.Bool[{c}]";
+                            if (boolArr[c] is not JsonObject bObj)
+                            {
+                                throw Fail(considerationPath, "Expected an object.");
+                            }
+
+                            int atomId = RequireAtomId(RequireString(bObj, "Atom", considerationPath), $"{considerationPath}.Atom");
                             float ts = TryReadFloat(bObj, "TrueScore", out float tsv) ? tsv : 1f;
                             float fs = TryReadFloat(bObj, "FalseScore", out float fsv) ? fsv : 1f;
                             bc.Add(new UtilityConsiderationBool256(atomId, ts, fs));
@@ -105,20 +130,27 @@ namespace Ludots.Core.Gameplay.AI.Config
                 var tmp = new List<ActionOpDefinition256>(actArr.Count);
                 for (int i = 0; i < actArr.Count; i++)
                 {
-                    if (actArr[i] is not JsonObject obj) continue;
+                    string path = $"AI/goap_actions.json[{i}]";
+                    if (actArr[i] is not JsonObject obj)
+                    {
+                        throw Fail(path, "Expected an object.");
+                    }
+
+                    string id = ReadRecordId(obj, path);
                     int cost = TryReadInt(obj, "Cost", out int c) ? c : 1;
 
-                    var pre = ReadCondition(obj, "Pre", _atoms);
-                    var post = ReadCondition(obj, "Post", _atoms);
+                    var pre = ReadCondition(obj, "Pre", _atoms, $"AI/goap_actions.json:{id}.Pre");
+                    var post = ReadCondition(obj, "Post", _atoms, $"AI/goap_actions.json:{id}.Post");
 
                     var orderSpec = default(ActionOrderSpec);
                     var execKind = ActionExecutorKind.SubmitOrder;
                     if (obj.TryGetPropertyValue("Order", out var orderNode) && orderNode is JsonObject orderObj)
                     {
-                        int orderTypeId = TryReadInt(orderObj, "OrderTypeId", out int ot) ? ot : 0;
-                        byte submitModeByte = TryReadByte(orderObj, "SubmitMode", out byte sm) ? sm : (byte)OrderSubmitMode.Immediate;
-                        int playerId = TryReadInt(orderObj, "PlayerId", out int pid) ? pid : 0;
-                        orderSpec = new ActionOrderSpec(orderTypeId, (OrderSubmitMode)submitModeByte, playerId);
+                        orderSpec = ReadOrderSpec(orderObj, $"AI/goap_actions.json:{id}.Order");
+                    }
+                    else
+                    {
+                        throw Fail($"AI/goap_actions.json:{id}.Order", "SubmitOrder action must declare an Order object.");
                     }
 
                     var bindings = Array.Empty<ActionBinding>();
@@ -127,10 +159,19 @@ namespace Ludots.Core.Gameplay.AI.Config
                         var btmp = new List<ActionBinding>(bindArr.Count);
                         for (int b = 0; b < bindArr.Count; b++)
                         {
-                            if (bindArr[b] is not JsonObject bObj) continue;
-                            if (!TryReadString(bObj, "Op", out string op)) continue;
-                            if (!TryParseBindingOp(op, out var bop)) continue;
-                            if (!TryReadInt(bObj, "SourceKey", out int sk)) continue;
+                            string bindingPath = $"AI/goap_actions.json:{id}.Bindings[{b}]";
+                            if (bindArr[b] is not JsonObject bObj)
+                            {
+                                throw Fail(bindingPath, "Expected an object.");
+                            }
+
+                            string op = RequireString(bObj, "Op", bindingPath);
+                            if (!TryParseBindingOp(op, out var bop))
+                            {
+                                throw Fail($"{bindingPath}.Op", $"Unsupported binding op '{op}'.");
+                            }
+
+                            int sk = RequireInt(bObj, "SourceKey", bindingPath);
                             btmp.Add(new ActionBinding(bop, sk));
                         }
                         bindings = btmp.ToArray();
@@ -159,10 +200,16 @@ namespace Ludots.Core.Gameplay.AI.Config
                 var tmp = new List<GoapGoalPreset256>(gArr.Count);
                 for (int i = 0; i < gArr.Count; i++)
                 {
-                    if (gArr[i] is not JsonObject obj) continue;
-                    int goalPresetId = TryReadInt(obj, "GoalPresetId", out int gpid) ? gpid : 0;
+                    string path = $"AI/goap_goals.json[{i}]";
+                    if (gArr[i] is not JsonObject obj)
+                    {
+                        throw Fail(path, "Expected an object.");
+                    }
+
+                    string id = ReadRecordId(obj, path);
+                    int goalPresetId = RequirePositiveInt(obj, "GoalPresetId", path);
                     int hw = TryReadInt(obj, "HeuristicWeight", out int hwi) ? hwi : 1;
-                    var cond = ReadCondition(obj, "Goal", _atoms);
+                    var cond = ReadCondition(obj, "Goal", _atoms, $"AI/goap_goals.json:{id}.Goal");
                     var goalCond = new WorldStateCondition256(in cond.Mask, in cond.Values);
                     tmp.Add(new GoapGoalPreset256(goalPresetId, in goalCond, hw));
                 }
@@ -185,35 +232,94 @@ namespace Ludots.Core.Gameplay.AI.Config
                     var tasks = new HtnCompoundTask[tArr.Count];
                     for (int i = 0; i < tArr.Count; i++)
                     {
-                        if (tArr[i] is not JsonObject o) continue;
-                        if (!TryReadInt(o, "TaskId", out int tid)) continue;
+                        string path = $"AI/htn_domain.json.Tasks[{i}]";
+                        if (tArr[i] is not JsonObject o)
+                        {
+                            throw Fail(path, "Expected an object.");
+                        }
+
+                        int tid = RequireInt(o, "TaskId", path);
                         int fm = TryReadInt(o, "FirstMethod", out int x) ? x : 0;
                         int mc = TryReadInt(o, "MethodCount", out int y) ? y : 0;
-                        if ((uint)tid < (uint)tasks.Length) tasks[tid] = new HtnCompoundTask(fm, mc);
+                        if ((uint)tid >= (uint)tasks.Length)
+                        {
+                            throw Fail($"{path}.TaskId", $"Task id {tid} is outside task table length {tasks.Length}.");
+                        }
+
+                        tasks[tid] = new HtnCompoundTask(fm, mc);
                     }
 
                     var methods = new HtnMethod256[mArr.Count];
                     for (int i = 0; i < mArr.Count; i++)
                     {
-                        if (mArr[i] is not JsonObject o) continue;
-                        if (!TryReadInt(o, "MethodId", out int mid)) continue;
+                        string path = $"AI/htn_domain.json.Methods[{i}]";
+                        if (mArr[i] is not JsonObject o)
+                        {
+                            throw Fail(path, "Expected an object.");
+                        }
+
+                        int mid = RequireInt(o, "MethodId", path);
                         int cost = TryReadInt(o, "Cost", out int cc) ? cc : 0;
                         int off = TryReadInt(o, "SubtaskOffset", out int so) ? so : 0;
                         int cnt = TryReadInt(o, "SubtaskCount", out int sc) ? sc : 0;
-                        var cond = ReadCondition(o, "Condition", _atoms);
+                        var cond = ReadCondition(o, "Condition", _atoms, $"{path}.Condition");
                         var cnd = new WorldStateCondition256(in cond.Mask, in cond.Values);
-                        if ((uint)mid < (uint)methods.Length) methods[mid] = new HtnMethod256(in cnd, off, cnt, cost);
+                        if ((uint)mid >= (uint)methods.Length)
+                        {
+                            throw Fail($"{path}.MethodId", $"Method id {mid} is outside method table length {methods.Length}.");
+                        }
+
+                        if (off < 0 || cnt < 0 || off + cnt > sArr.Count)
+                        {
+                            throw Fail(path, $"Method {mid} subtask range [{off}, {off + cnt}) exceeds subtask table length {sArr.Count}.");
+                        }
+
+                        methods[mid] = new HtnMethod256(in cnd, off, cnt, cost);
                     }
 
                     var subtasks = new HtnSubtask[sArr.Count];
                     for (int i = 0; i < sArr.Count; i++)
                     {
-                        if (sArr[i] is not JsonObject o) continue;
-                        if (!TryReadInt(o, "Index", out int idx)) continue;
-                        if (!TryReadString(o, "Kind", out string kind)) continue;
-                        if (!TryReadInt(o, "RefId", out int rid)) continue;
-                        var k = string.Equals(kind, "Compound", StringComparison.OrdinalIgnoreCase) ? HtnSubtaskKind.Compound : HtnSubtaskKind.Action;
-                        if ((uint)idx < (uint)subtasks.Length) subtasks[idx] = new HtnSubtask(k, rid);
+                        string path = $"AI/htn_domain.json.Subtasks[{i}]";
+                        if (sArr[i] is not JsonObject o)
+                        {
+                            throw Fail(path, "Expected an object.");
+                        }
+
+                        int idx = RequireInt(o, "Index", path);
+                        string kind = RequireString(o, "Kind", path);
+                        int rid = RequireInt(o, "RefId", path);
+                        var k = string.Equals(kind, "Compound", StringComparison.OrdinalIgnoreCase)
+                            ? HtnSubtaskKind.Compound
+                            : string.Equals(kind, "Action", StringComparison.OrdinalIgnoreCase)
+                                ? HtnSubtaskKind.Action
+                                : throw Fail($"{path}.Kind", $"Unsupported subtask kind '{kind}'.");
+
+                        if ((uint)idx >= (uint)subtasks.Length)
+                        {
+                            throw Fail($"{path}.Index", $"Subtask index {idx} is outside subtask table length {subtasks.Length}.");
+                        }
+
+                        if (k == HtnSubtaskKind.Compound && (uint)rid >= (uint)tasks.Length)
+                        {
+                            throw Fail($"{path}.RefId", $"Subtask references unknown compound task id {rid}.");
+                        }
+
+                        if (k == HtnSubtaskKind.Action && (uint)rid >= (uint)goapActions.Length)
+                        {
+                            throw Fail($"{path}.RefId", $"Subtask references unknown action id {rid}.");
+                        }
+
+                        subtasks[idx] = new HtnSubtask(k, rid);
+                    }
+
+                    for (int i = 0; i < tasks.Length; i++)
+                    {
+                        ref readonly var task = ref tasks[i];
+                        if (task.FirstMethod < 0 || task.MethodCount < 0 || task.FirstMethod + task.MethodCount > methods.Length)
+                        {
+                            throw Fail($"AI/htn_domain.json.Tasks[{i}]", $"Task method range [{task.FirstMethod}, {task.FirstMethod + task.MethodCount}) exceeds method table length {methods.Length}.");
+                        }
                     }
 
                     htnDomain = new HtnDomainCompiled256(tasks, methods, subtasks);
@@ -225,9 +331,19 @@ namespace Ludots.Core.Gameplay.AI.Config
                     int count = 0;
                     for (int i = 0; i < rArr.Count; i++)
                     {
-                        if (rArr[i] is not JsonObject o) continue;
-                        if (!TryReadInt(o, "GoalPresetId", out int gpid)) continue;
-                        if (!TryReadInt(o, "RootTaskId", out int rid)) continue;
+                        string path = $"AI/htn_domain.json.Roots[{i}]";
+                        if (rArr[i] is not JsonObject o)
+                        {
+                            throw Fail(path, "Expected an object.");
+                        }
+
+                        int gpid = RequirePositiveInt(o, "GoalPresetId", path);
+                        int rid = RequireInt(o, "RootTaskId", path);
+                        if (htnDomain.Tasks.Length > 0 && (uint)rid >= (uint)htnDomain.Tasks.Length)
+                        {
+                            throw Fail($"{path}.RootTaskId", $"Root references unknown task id {rid}.");
+                        }
+
                         roots[count++] = (gpid, rid);
                     }
                     if (count != roots.Length) Array.Resize(ref roots, count);
@@ -236,6 +352,112 @@ namespace Ludots.Core.Gameplay.AI.Config
             }
 
             return new AiCompiledRuntime(_atoms, projectionTable, goalSelector, actionLibrary, goapGoalTable, htnDomain, htnRoots);
+        }
+
+        private ActionOrderSpec ReadOrderSpec(JsonObject orderObj, string path)
+        {
+            if (orderObj.ContainsKey("OrderTagId"))
+            {
+                throw Fail($"{path}.OrderTagId", "OrderTagId is not a supported AI order contract field. Use OrderTypeKey or OrderTypeId.");
+            }
+
+            if (_validation == null)
+            {
+                throw Fail(path, "AI Order references require AiConfigValidationContext with OrderTypeRegistry.");
+            }
+
+            int orderTypeId = 0;
+            if (TryReadString(orderObj, "OrderTypeKey", out string orderTypeKey))
+            {
+                if (!_validation.OrderTypes.TryGetId(orderTypeKey, out orderTypeId) ||
+                    orderTypeId <= 0 ||
+                    !_validation.OrderTypes.IsRegistered(orderTypeId))
+                {
+                    throw Fail($"{path}.OrderTypeKey", $"References unknown order type key '{orderTypeKey}'.");
+                }
+            }
+
+            if (TryReadInt(orderObj, "OrderTypeId", out int authoredOrderTypeId))
+            {
+                if (authoredOrderTypeId <= 0)
+                {
+                    throw Fail($"{path}.OrderTypeId", "OrderTypeId must be positive.");
+                }
+
+                if (_validation != null && !_validation.OrderTypes.IsRegistered(authoredOrderTypeId))
+                {
+                    throw Fail($"{path}.OrderTypeId", $"References unknown order type id {authoredOrderTypeId}.");
+                }
+
+                if (orderTypeId > 0 && orderTypeId != authoredOrderTypeId)
+                {
+                    throw Fail(path, $"OrderTypeKey resolved to {orderTypeId}, but OrderTypeId is {authoredOrderTypeId}.");
+                }
+
+                orderTypeId = authoredOrderTypeId;
+            }
+
+            if (orderTypeId <= 0)
+            {
+                throw Fail(path, "Order must declare OrderTypeKey or OrderTypeId.");
+            }
+
+            byte submitModeByte = TryReadByte(orderObj, "SubmitMode", out byte sm)
+                ? sm
+                : (byte)OrderSubmitMode.Immediate;
+            if (!Enum.IsDefined(typeof(OrderSubmitMode), submitModeByte))
+            {
+                throw Fail($"{path}.SubmitMode", $"Unsupported submit mode value {submitModeByte}.");
+            }
+
+            int playerId = TryReadInt(orderObj, "PlayerId", out int pid) ? pid : 0;
+            int abilityId = ResolveAbilityId(orderObj, path);
+            return new ActionOrderSpec(orderTypeId, (OrderSubmitMode)submitModeByte, playerId, abilityId);
+        }
+
+        private int ResolveAbilityId(JsonObject orderObj, string path)
+        {
+            int abilityId = 0;
+            if (TryReadString(orderObj, "AbilityKey", out string abilityKey))
+            {
+                if (_validation == null || _validation.Abilities == null)
+                {
+                    throw Fail($"{path}.AbilityKey", "AbilityKey requires AiConfigValidationContext with AbilityDefinitionRegistry.");
+                }
+
+                abilityId = AbilityIdRegistry.GetId(abilityKey);
+                if (abilityId <= 0 || !_validation.Abilities.TryGet(abilityId, out _))
+                {
+                    throw Fail($"{path}.AbilityKey", $"References unknown ability key '{abilityKey}'.");
+                }
+            }
+
+            if (TryReadInt(orderObj, "AbilityId", out int authoredAbilityId))
+            {
+                if (authoredAbilityId <= 0)
+                {
+                    throw Fail($"{path}.AbilityId", "AbilityId must be positive.");
+                }
+
+                if (_validation == null || _validation.Abilities == null)
+                {
+                    throw Fail($"{path}.AbilityId", "AbilityId requires AiConfigValidationContext with AbilityDefinitionRegistry.");
+                }
+
+                if (!_validation.Abilities.TryGet(authoredAbilityId, out _))
+                {
+                    throw Fail($"{path}.AbilityId", $"References unknown ability id {authoredAbilityId}.");
+                }
+
+                if (abilityId > 0 && abilityId != authoredAbilityId)
+                {
+                    throw Fail(path, $"AbilityKey resolved to {abilityId}, but AbilityId is {authoredAbilityId}.");
+                }
+
+                abilityId = authoredAbilityId;
+            }
+
+            return abilityId;
         }
 
         private JsonNode? Merge(in ConfigCatalogEntry entry, ConfigConflictReport? report)
@@ -250,7 +472,7 @@ namespace Ludots.Core.Gameplay.AI.Config
             return new ConfigCatalogEntry(relativePath, policy, idField);
         }
 
-        private static (WorldStateBits256 Mask, WorldStateBits256 Values) ReadCondition(JsonObject obj, string propertyName, AtomRegistry atoms)
+        private static (WorldStateBits256 Mask, WorldStateBits256 Values) ReadCondition(JsonObject obj, string propertyName, AtomRegistry atoms, string path)
         {
             var mask = new WorldStateBits256();
             var values = new WorldStateBits256();
@@ -261,8 +483,12 @@ namespace Ludots.Core.Gameplay.AI.Config
             {
                 for (int i = 0; i < maskArr.Count; i++)
                 {
-                    if (maskArr[i] == null) continue;
-                    int id = atoms.GetOrAdd(maskArr[i]!.ToString());
+                    if (maskArr[i] == null)
+                    {
+                        throw Fail($"{path}.Mask[{i}]", "Atom id is required.");
+                    }
+
+                    int id = RequireAtomId(atoms, maskArr[i]!.ToString(), $"{path}.Mask[{i}]");
                     mask.SetBit(id, true);
                 }
             }
@@ -271,13 +497,87 @@ namespace Ludots.Core.Gameplay.AI.Config
             {
                 for (int i = 0; i < valArr.Count; i++)
                 {
-                    if (valArr[i] == null) continue;
-                    int id = atoms.GetOrAdd(valArr[i]!.ToString());
+                    if (valArr[i] == null)
+                    {
+                        throw Fail($"{path}.Values[{i}]", "Atom id is required.");
+                    }
+
+                    int id = RequireAtomId(atoms, valArr[i]!.ToString(), $"{path}.Values[{i}]");
                     values.SetBit(id, true);
                 }
             }
 
             return (mask, values);
+        }
+
+        private int RequireAtomId(string atomName, string path)
+        {
+            return RequireAtomId(_atoms, atomName, path);
+        }
+
+        private static int RequireAtomId(AtomRegistry atoms, string atomName, string path)
+        {
+            if (string.IsNullOrWhiteSpace(atomName) || !atoms.TryGetId(atomName, out int atomId))
+            {
+                throw Fail(path, $"References unknown AI atom '{atomName}'. Declare it in AI/atoms.json.");
+            }
+
+            return atomId;
+        }
+
+        private static string ReadRecordId(JsonObject obj, string path)
+        {
+            return TryReadString(obj, "id", out string id) ? id : path;
+        }
+
+        private static int RequirePlanningStrategyId(JsonObject obj, string key, string path)
+        {
+            int value = RequireInt(obj, key, path);
+            if (value != AIPlanningStrategyIds.None &&
+                value != AIPlanningStrategyIds.Goap &&
+                value != AIPlanningStrategyIds.Htn &&
+                value != AIPlanningStrategyIds.DirectTask)
+            {
+                throw Fail($"{path}.{key}", $"Unknown planning strategy id {value}.");
+            }
+
+            return value;
+        }
+
+        private static int RequirePositiveInt(JsonObject obj, string key, string path)
+        {
+            int value = RequireInt(obj, key, path);
+            if (value <= 0)
+            {
+                throw Fail($"{path}.{key}", "Value must be positive.");
+            }
+
+            return value;
+        }
+
+        private static int RequireInt(JsonObject obj, string key, string path)
+        {
+            if (!TryReadInt(obj, key, out int value))
+            {
+                throw Fail($"{path}.{key}", "Integer value is required.");
+            }
+
+            return value;
+        }
+
+        private static string RequireString(JsonObject obj, string key, string path)
+        {
+            if (!TryReadString(obj, key, out string value))
+            {
+                throw Fail($"{path}.{key}", "Non-empty string value is required.");
+            }
+
+            return value;
+        }
+
+        private static InvalidOperationException Fail(string path, string message)
+        {
+            return new InvalidOperationException($"[AiConfigLoader] {path}: {message}");
         }
 
         private static bool TryParseProjectionOp(string op, out WorldStateProjectionOp result)
