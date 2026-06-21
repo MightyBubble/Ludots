@@ -87,10 +87,10 @@ namespace Ludots.Tests.GAS
         }
 
         [Test]
-        public void AiConfigLoader_CompilesUtilityAiV2ToFlatArrays()
+        public void AiConfigLoader_CompilesUtilityAiToFlatArrays()
         {
             using var fixture = AiConfigFixture.Create();
-            fixture.WriteUtilityV2();
+            fixture.WriteUtilityConfig();
 
             var runtime = fixture.Load();
 
@@ -108,10 +108,10 @@ namespace Ludots.Tests.GAS
         }
 
         [Test]
-        public void AiConfigLoader_RejectsUtilityAiV2UnknownTargetFilter()
+        public void AiConfigLoader_RejectsUtilityAiUnknownTargetFilter()
         {
             using var fixture = AiConfigFixture.Create();
-            fixture.WriteUtilityV2(decisionTargetFilter: "TF.Missing");
+            fixture.WriteUtilityConfig(decisionTargetFilter: "TF.Missing");
 
             var ex = Assert.Throws<InvalidOperationException>(() => fixture.Load());
 
@@ -119,10 +119,10 @@ namespace Ludots.Tests.GAS
         }
 
         [Test]
-        public void AiConfigLoader_RejectsUtilityAiV2UnknownInput()
+        public void AiConfigLoader_RejectsUtilityAiUnknownInput()
         {
             using var fixture = AiConfigFixture.Create();
-            fixture.WriteUtilityV2(considerationInput: "Input.Missing");
+            fixture.WriteUtilityConfig(considerationInput: "Input.Missing");
 
             var ex = Assert.Throws<InvalidOperationException>(() => fixture.Load());
 
@@ -130,10 +130,10 @@ namespace Ludots.Tests.GAS
         }
 
         [Test]
-        public void AiConfigLoader_RejectsUtilityAiV2UnknownOrderType()
+        public void AiConfigLoader_RejectsUtilityAiUnknownOrderType()
         {
             using var fixture = AiConfigFixture.Create();
-            fixture.WriteUtilityV2(taskOrderTypeKey: "missingOrder");
+            fixture.WriteUtilityConfig(taskOrderTypeKey: "missingOrder");
 
             var ex = Assert.Throws<InvalidOperationException>(() => fixture.Load());
 
@@ -141,10 +141,10 @@ namespace Ludots.Tests.GAS
         }
 
         [Test]
-        public void AiConfigLoader_RejectsUtilityAiV2UnknownAbility()
+        public void AiConfigLoader_RejectsUtilityAiUnknownAbility()
         {
             using var fixture = AiConfigFixture.Create();
-            fixture.WriteUtilityV2(decisionAbilityKey: "Ability.Missing");
+            fixture.WriteUtilityConfig(decisionAbilityKey: "Ability.Missing");
 
             var ex = Assert.Throws<InvalidOperationException>(() => fixture.Load());
 
@@ -152,10 +152,10 @@ namespace Ludots.Tests.GAS
         }
 
         [Test]
-        public void AiConfigLoader_RejectsUtilityAiV2UnknownGraph()
+        public void AiConfigLoader_RejectsUtilityAiUnknownGraph()
         {
             using var fixture = AiConfigFixture.Create();
-            fixture.WriteUtilityV2(includeGraphInput: true, graphKey: "Graph.Missing");
+            fixture.WriteUtilityConfig(includeGraphInput: true, graphKey: "Graph.Missing");
 
             var ex = Assert.Throws<InvalidOperationException>(() => fixture.Load());
 
@@ -163,11 +163,11 @@ namespace Ludots.Tests.GAS
         }
 
         [Test]
-        public void AiConfigLoader_RejectsUtilityAiV2GraphScoreWriteOp()
+        public void AiConfigLoader_RejectsUtilityAiGraphScoreWriteOp()
         {
             using var fixture = AiConfigFixture.Create();
             fixture.RegisterScoreGraph(new GraphInstruction { Op = (ushort)GraphNodeOp.WriteBlackboardFloat });
-            fixture.WriteUtilityV2(includeGraphInput: true, considerationInput: "Input.Graph");
+            fixture.WriteUtilityConfig(includeGraphInput: true, considerationInput: "Input.Graph");
 
             var ex = Assert.Throws<InvalidOperationException>(() => fixture.Load());
 
@@ -176,10 +176,10 @@ namespace Ludots.Tests.GAS
         }
 
         [Test]
-        public void AiConfigLoader_RejectsUtilityAiV2UnknownTag()
+        public void AiConfigLoader_RejectsUtilityAiUnknownTag()
         {
             using var fixture = AiConfigFixture.Create();
-            fixture.WriteUtilityV2(sharedCooldownTag: "Cooldown.Missing");
+            fixture.WriteUtilityConfig(sharedCooldownTag: "Cooldown.Missing");
 
             var ex = Assert.Throws<InvalidOperationException>(() => fixture.Load());
 
@@ -275,7 +275,7 @@ namespace Ludots.Tests.GAS
                 _graphs.Register(ScoreGraphId, program);
             }
 
-            public void WriteUtilityV2(
+            public void WriteUtilityConfig(
                 string decisionTargetFilter = "TF.Hostile",
                 string considerationInput = "Input.Distance",
                 string taskOrderTypeKey = "attackTarget",

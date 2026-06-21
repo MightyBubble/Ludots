@@ -63,10 +63,10 @@ Stance、AttackMove、Guard、Patrol、AutoTarget profile 属于 behavior pack�
 
 ## 已实现快照
 
-- `AiConfigLoader` 已将 Utility AI v2 authoring 编译为 SoA runtime arrays：`profiles`、`decision_makers`、`decisions`、`considerations`、`target_filters`、`target_filter_ops`、`inputs`、`normalizations`、`curves`、`tasks`、`stances`、`actuators`。
+- `AiConfigLoader` 已将 Utility AI authoring 编译为 SoA runtime arrays：`profiles`、`decision_makers`、`decisions`、`considerations`、`target_filters`、`target_filter_ops`、`inputs`、`normalizations`、`curves`、`tasks`、`stances`、`actuators`。
 - Utility AI 配置引用在加载期 fail-fast。未知 order type、ability、graph、tag、atom、input、filter、curve 或本地 runtime 引用都会报错，不 fallback 到 `0`。
 - `GameEngine` 在 order type、ability、graph 注册后重建 `AiRuntime`，并将 Utility AI 接入主循环：`InputCollection` 做 think scheduling，`PostMovement` 在 spatial refresh 后、`OrderBufferSystem` 前做 decision/order intent submit，`Cleanup` 做 combat memory expiry。
 - Utility AI runtime 只提交 order intent。它可以根据配置提交 `moveTo`、`attackTarget` 或其它 order，但不发布 `EffectRequest`、不扣 mana、不写 cooldown、不绕过 GAS 校验。
 - `ActuatorReadiness` 与 `AimGate` 是 AI Core 的通用 gate；它们和 cooldown tag、activation block tag、activation precondition 进入同一 autocast 候选流水线，不把炮台等业务词带入 Core。
 - `mods/OpenRaStanceBehaviorMod` 是 OpenRA stance 业务行为包。它拥有 `attackMove`、`assaultMove`、`guard`、`setCombatStance`、`scatter`，并把这些业务 order 转换为已有基础 order intent，例如 `moveTo` 与 `attackTarget`。
-- AI Inspector 会打印 Utility AI v2 runtime 表规模，并读取 opt-in `UtilityAiDecisionTrace` 输出候选数、最佳 decision、readiness block、task status、最后提交的 order/ability。
+- AI Inspector 会打印 Utility AI runtime 表规模，并读取 opt-in `UtilityAiDecisionTrace` 输出候选数、最佳 decision、readiness block、task status、最后提交的 order/ability。

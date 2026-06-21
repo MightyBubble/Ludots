@@ -44,26 +44,26 @@ namespace AIInspectorMod.Triggers
 
         private void LogUtilityRuntime(in UtilityAiCompiledRuntime runtime)
         {
-            _modContext.Log($"[AIInspectorMod] UtilityV2.Enabled: {runtime.IsEnabled}");
-            _modContext.Log($"[AIInspectorMod] UtilityV2.Profiles: {runtime.Profiles.Length}");
-            _modContext.Log($"[AIInspectorMod] UtilityV2.DecisionMakers: {runtime.DecisionMakers.Length}");
-            _modContext.Log($"[AIInspectorMod] UtilityV2.Decisions: {runtime.Decisions.Length}");
-            _modContext.Log($"[AIInspectorMod] UtilityV2.Considerations: {runtime.Considerations.Length}");
-            _modContext.Log($"[AIInspectorMod] UtilityV2.TargetFilters: {runtime.TargetFilters.Length}");
-            _modContext.Log($"[AIInspectorMod] UtilityV2.TargetFilterOps: {runtime.TargetFilterOps.Length}");
-            _modContext.Log($"[AIInspectorMod] UtilityV2.Inputs: {runtime.Inputs.Length}");
-            _modContext.Log($"[AIInspectorMod] UtilityV2.Normalizations: {runtime.Normalizations.Length}");
-            _modContext.Log($"[AIInspectorMod] UtilityV2.Curves: {runtime.Curves.Length}");
-            _modContext.Log($"[AIInspectorMod] UtilityV2.Tasks: {runtime.Tasks.Length}");
-            _modContext.Log($"[AIInspectorMod] UtilityV2.Stances: {runtime.Stances.Length}");
-            _modContext.Log($"[AIInspectorMod] UtilityV2.Actuators: {runtime.Actuators.Length}");
+            _modContext.Log($"[AIInspectorMod] Utility.Enabled: {runtime.IsEnabled}");
+            _modContext.Log($"[AIInspectorMod] Utility.Profiles: {runtime.Profiles.Length}");
+            _modContext.Log($"[AIInspectorMod] Utility.DecisionMakers: {runtime.DecisionMakers.Length}");
+            _modContext.Log($"[AIInspectorMod] Utility.Decisions: {runtime.Decisions.Length}");
+            _modContext.Log($"[AIInspectorMod] Utility.Considerations: {runtime.Considerations.Length}");
+            _modContext.Log($"[AIInspectorMod] Utility.TargetFilters: {runtime.TargetFilters.Length}");
+            _modContext.Log($"[AIInspectorMod] Utility.TargetFilterOps: {runtime.TargetFilterOps.Length}");
+            _modContext.Log($"[AIInspectorMod] Utility.Inputs: {runtime.Inputs.Length}");
+            _modContext.Log($"[AIInspectorMod] Utility.Normalizations: {runtime.Normalizations.Length}");
+            _modContext.Log($"[AIInspectorMod] Utility.Curves: {runtime.Curves.Length}");
+            _modContext.Log($"[AIInspectorMod] Utility.Tasks: {runtime.Tasks.Length}");
+            _modContext.Log($"[AIInspectorMod] Utility.Stances: {runtime.Stances.Length}");
+            _modContext.Log($"[AIInspectorMod] Utility.Actuators: {runtime.Actuators.Length}");
         }
 
         private void LogUtilityTraces(World world)
         {
             if (world == null)
             {
-                _modContext.Log("[AIInspectorMod] UtilityV2.TraceEntities: 0");
+                _modContext.Log("[AIInspectorMod] Utility.TraceEntities: 0");
                 return;
             }
 
@@ -76,12 +76,12 @@ namespace AIInspectorMod.Triggers
                 {
                     ref readonly var trace = ref traces[index];
                     _modContext.Log(
-                        $"[AIInspectorMod] UtilityV2.Trace[{count}]: candidates={trace.CandidateCount} bestDecision={trace.BestDecisionId} bestScore={trace.BestScore} bestPriorityBucket={trace.BestPriorityBucket} bestDistanceSq={trace.BestDistanceSq} filterReject={trace.LastFilterRejectReason} readinessBlock={trace.LastReadinessBlockReason} submittedOrderType={trace.LastSubmittedOrderTypeId} submittedAbility={trace.LastSubmittedAbilityId} taskKind={trace.LastTaskKind} taskStatus={trace.LastTaskStatus}");
+                        $"[AIInspectorMod] Utility.Trace[{count}]: candidates={trace.CandidateCount} bestDecision={trace.BestDecisionId} bestScore={trace.BestScore} bestPriorityBucket={trace.BestPriorityBucket} bestDistanceSq={trace.BestDistanceSq} filterReject={trace.LastFilterRejectReason} readinessBlock={trace.LastReadinessBlockReason} submittedOrderType={trace.LastSubmittedOrderTypeId} submittedAbility={trace.LastSubmittedAbilityId} taskKind={trace.LastTaskKind} taskStatus={trace.LastTaskStatus}");
                     count++;
                 }
             }
 
-            _modContext.Log($"[AIInspectorMod] UtilityV2.TraceEntities: {count}");
+            _modContext.Log($"[AIInspectorMod] Utility.TraceEntities: {count}");
         }
     }
 }

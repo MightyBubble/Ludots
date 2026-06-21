@@ -373,7 +373,7 @@ namespace Ludots.Core.Gameplay.AI.Config
             var stanceNode = Merge(GetEntry(catalog, "AI/stances.json", ConfigMergePolicy.ArrayById, idField: "id"), report);
             var actuatorNode = Merge(GetEntry(catalog, "AI/actuators.json", ConfigMergePolicy.ArrayById, idField: "id"), report);
 
-            bool anyV2 =
+            bool hasUtilityConfig =
                 HasArrayItems(targetFilterNode) ||
                 HasArrayItems(inputNode) ||
                 HasArrayItems(normalizationNode) ||
@@ -385,14 +385,14 @@ namespace Ludots.Core.Gameplay.AI.Config
                 HasArrayItems(stanceNode) ||
                 HasArrayItems(actuatorNode);
 
-            if (!anyV2)
+            if (!hasUtilityConfig)
             {
                 return UtilityAiCompiledRuntime.Empty;
             }
 
             if (_validation == null)
             {
-                throw Fail("AI v2", "Utility AI v2 config requires AiConfigValidationContext.");
+                throw Fail("AI/utility", "Utility AI config requires AiConfigValidationContext.");
             }
 
             var targetFilters = new List<UtilityAiTargetFilterDefinition>();
@@ -437,7 +437,7 @@ namespace Ludots.Core.Gameplay.AI.Config
 
             if (profiles.Count == 0)
             {
-                throw Fail("AI/profiles.json", "Utility AI v2 config must declare at least one profile.");
+                throw Fail("AI/profiles.json", "Utility AI config must declare at least one profile.");
             }
 
             return new UtilityAiCompiledRuntime(
