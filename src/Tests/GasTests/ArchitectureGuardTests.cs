@@ -581,6 +581,39 @@ namespace GasTests
         }
 
         [Test]
+        public void Issue249_ExchangeRelationshipGate_IsConfigDrivenAndValidatedBeforeReservations()
+        {
+            var repoRoot = FindRepoRoot();
+            string modelPath = Path.Combine(repoRoot, "src", "Core", "Gameplay", "Exchange", "ExchangeModel.cs");
+            string runtimePath = Path.Combine(repoRoot, "src", "Core", "Gameplay", "Exchange", "ExchangeRuntime.cs");
+            string loaderPath = Path.Combine(repoRoot, "src", "Core", "Gameplay", "Exchange", "ExchangeConfigLoader.cs");
+            string showcasePath = Path.Combine(repoRoot, "mods", "showcases", "diplomacy_trade_gate", "DiplomacyTradeGateShowcaseMod", "mod.json");
+
+            Assert.That(File.Exists(modelPath), Is.True, $"Missing {modelPath}");
+            Assert.That(File.Exists(runtimePath), Is.True, $"Missing {runtimePath}");
+            Assert.That(File.Exists(loaderPath), Is.True, $"Missing {loaderPath}");
+            Assert.That(File.Exists(showcasePath), Is.True, $"Missing AAC-6 showcase mod {showcasePath}");
+
+            string model = File.ReadAllText(modelPath);
+            string runtime = File.ReadAllText(runtimePath);
+            string loader = File.ReadAllText(loaderPath);
+
+            Assert.Multiple(() =>
+            {
+                Assert.That(model, Does.Contain("RelationshipDenied"));
+                Assert.That(model, Does.Contain("ExchangeRelationshipRequirement"));
+                Assert.That(model, Does.Contain("RelationshipRequirements"));
+                Assert.That(loader, Does.Contain("relationshipRequirements"));
+                Assert.That(loader, Does.Contain("ResolveRelationshipType"));
+                Assert.That(loader, Does.Contain("ResolveRelationshipMetric"));
+                Assert.That(loader, Does.Contain("ResolveRelationshipFlag"));
+                Assert.That(runtime, Does.Contain("ValidateRelationships"));
+                Assert.That(runtime.IndexOf("ValidateRelationships", StringComparison.Ordinal), Is.LessThan(runtime.IndexOf("_reservations.Add", StringComparison.Ordinal)));
+                Assert.That(runtime, Does.Contain("ExchangeExecutionStatus.RelationshipDenied"));
+            });
+        }
+
+        [Test]
         public void Issue244_PendingCompositionContracts()
         {
             Assert.Ignore("AAC-5..AAC-8/#248..#251 will make Ownership relations, Relationship-gated Exchange, Collection+Relationship-fed Progression membership, and Inventory settlement executable contracts.");

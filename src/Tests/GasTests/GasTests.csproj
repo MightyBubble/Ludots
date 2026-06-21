@@ -82,6 +82,7 @@
     <ProjectReference Include="..\..\..\mods\showcases\fog_vision_decay\FogVisionDecayShowcaseMod\FogVisionDecayShowcaseMod.csproj" />
     <ProjectReference Include="..\..\..\mods\showcases\team_research\TeamResearchShowcaseMod\TeamResearchShowcaseMod.csproj" />
     <ProjectReference Include="..\..\..\mods\showcases\ownership_cascade\OwnershipCascadeShowcaseMod\OwnershipCascadeShowcaseMod.csproj" />
+    <ProjectReference Include="..\..\..\mods\showcases\diplomacy_trade_gate\DiplomacyTradeGateShowcaseMod\DiplomacyTradeGateShowcaseMod.csproj" />
     <ProjectReference Include="..\..\..\mods\Navigation2DPlaygroundMod\Navigation2DPlaygroundMod.csproj" />
     <ProjectReference Include="..\..\Libraries\Ludots.UI.Skia\Ludots.UI.Skia.csproj" />
   </ItemGroup>

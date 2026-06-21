@@ -4,6 +4,7 @@ using Arch.Core;
 using Ludots.Core.Association;
 using Ludots.Core.Gameplay.GAS;
 using Ludots.Core.Gameplay.Items;
+using Ludots.Core.Gameplay.Relationships;
 
 namespace Ludots.Core.Gameplay.Exchange
 {
@@ -14,6 +15,7 @@ namespace Ludots.Core.Gameplay.Exchange
         private readonly ExchangeScopedOperationStore _scopedOperations;
         private readonly InventoryRuntimeService _inventory;
         private readonly EffectRequestQueue _effects;
+        private readonly RelationshipRuntime _relationships;
         private readonly List<ItemConsumptionRecord> _consumed = new(16);
         private readonly List<CreatedItemRecord> _created = new(8);
         private readonly List<MovedItemRecord> _moved = new(8);
@@ -24,13 +26,15 @@ namespace Ludots.Core.Gameplay.Exchange
             ExchangeOperationRegistry operations,
             ExchangeScopedOperationStore scopedOperations,
             InventoryRuntimeService inventory,
-            EffectRequestQueue effects)
+            EffectRequestQueue effects,
+            RelationshipRuntime relationships)
         {
             _world = world ?? throw new ArgumentNullException(nameof(world));
             _operations = operations ?? throw new ArgumentNullException(nameof(operations));
             _scopedOperations = scopedOperations ?? throw new ArgumentNullException(nameof(scopedOperations));
             _inventory = inventory ?? throw new ArgumentNullException(nameof(inventory));
             _effects = effects ?? throw new ArgumentNullException(nameof(effects));
+            _relationships = relationships ?? throw new ArgumentNullException(nameof(relationships));
         }
 
         public ExchangeExecutionResult TryExecute(int operationId, in ExchangeExecutionContext context)
@@ -128,6 +132,12 @@ namespace Ludots.Core.Gameplay.Exchange
                 }
             }
 
+            ExchangeExecutionResult relationshipCheck = ValidateRelationships(operationId, operation, in context);
+            if (!relationshipCheck.Succeeded)
+            {
+                return relationshipCheck;
+            }
+
             for (int i = 0; i < operation.Outputs.Length; i++)
             {
                 ExchangeOutputDefinition output = operation.Outputs[i];
@@ -139,6 +149,57 @@ namespace Ludots.Core.Gameplay.Exchange
             }
 
             return new ExchangeExecutionResult(ExchangeExecutionStatus.Success, operationId);
+        }
+
+        private ExchangeExecutionResult ValidateRelationships(int operationId, ExchangeOperationDefinition operation, in ExchangeExecutionContext context)
+        {
+            for (int i = 0; i < operation.RelationshipRequirements.Length; i++)
+            {
+                ExchangeRelationshipRequirement requirement = operation.RelationshipRequirements[i];
+                if (!RelationshipPasses(requirement, in context))
+                {
+                    return new ExchangeExecutionResult(ExchangeExecutionStatus.RelationshipDenied, operationId, i);
+                }
+            }
+
+            return new ExchangeExecutionResult(ExchangeExecutionStatus.Success, operationId);
+        }
+
+        private bool RelationshipPasses(ExchangeRelationshipRequirement requirement, in ExchangeExecutionContext context)
+        {
+            Entity source = context.Resolve(requirement.Source);
+            Entity target = context.Resolve(requirement.Target);
+            if (!_relationships.HasLink(source, target, requirement.TypeId))
+            {
+                return false;
+            }
+
+            if (requirement.MetricComparison != ExchangeRelationshipMetricComparison.None &&
+                (!_relationships.TryGetMetric(source, target, requirement.TypeId, requirement.MetricId, out short metricValue) ||
+                 !MetricPasses(metricValue, requirement)))
+            {
+                return false;
+            }
+
+            if (requirement.HasFlagRequirement &&
+                (!_relationships.TryHasFlag(source, target, requirement.TypeId, requirement.FlagId, out bool enabled) ||
+                 enabled != requirement.RequiredFlagValue))
+            {
+                return false;
+            }
+
+            return true;
+        }
+
+        private static bool MetricPasses(short value, ExchangeRelationshipRequirement requirement)
+        {
+            return requirement.MetricComparison switch
+            {
+                ExchangeRelationshipMetricComparison.GreaterOrEqual => value >= requirement.MinimumMetric,
+                ExchangeRelationshipMetricComparison.LessOrEqual => value <= requirement.MaximumMetric,
+                ExchangeRelationshipMetricComparison.RangeInclusive => value >= requirement.MinimumMetric && value <= requirement.MaximumMetric,
+                _ => true
+            };
         }
 
         private ExchangeExecutionResult ValidateOutput(int operationId, ExchangeOutputDefinition output, in ExchangeExecutionContext context, int index)

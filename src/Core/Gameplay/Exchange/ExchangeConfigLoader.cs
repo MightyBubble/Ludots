@@ -5,6 +5,7 @@ using Ludots.Core.Association;
 using Ludots.Core.Config;
 using Ludots.Core.Gameplay.GAS.Registry;
 using Ludots.Core.Gameplay.Items;
+using Ludots.Core.Gameplay.Relationships;
 
 namespace Ludots.Core.Gameplay.Exchange
 {
@@ -19,15 +20,24 @@ namespace Ludots.Core.Gameplay.Exchange
         private readonly ConfigPipeline _pipeline;
         private readonly ExchangeOperationRegistry _registry;
         private readonly ItemDefinitionRegistry _items;
+        private readonly RelationshipTypeRegistry _relationshipTypes;
+        private readonly RelationshipMetricRegistry _relationshipMetrics;
+        private readonly RelationshipFlagRegistry _relationshipFlags;
 
         public ExchangeConfigLoader(
             ConfigPipeline pipeline,
             ExchangeOperationRegistry registry,
-            ItemDefinitionRegistry items)
+            ItemDefinitionRegistry items,
+            RelationshipTypeRegistry relationshipTypes,
+            RelationshipMetricRegistry relationshipMetrics,
+            RelationshipFlagRegistry relationshipFlags)
         {
             _pipeline = pipeline ?? throw new ArgumentNullException(nameof(pipeline));
             _registry = registry ?? throw new ArgumentNullException(nameof(registry));
             _items = items ?? throw new ArgumentNullException(nameof(items));
+            _relationshipTypes = relationshipTypes ?? throw new ArgumentNullException(nameof(relationshipTypes));
+            _relationshipMetrics = relationshipMetrics ?? throw new ArgumentNullException(nameof(relationshipMetrics));
+            _relationshipFlags = relationshipFlags ?? throw new ArgumentNullException(nameof(relationshipFlags));
         }
 
         public void Load(
@@ -65,6 +75,7 @@ namespace Ludots.Core.Gameplay.Exchange
                 _registry.Register(rows[i].Id, new ExchangeOperationDefinition
                 {
                     Id = rows[i].Id,
+                    RelationshipRequirements = CompileRelationshipRequirements(cfg.RelationshipRequirements, rows[i].Id, relativePath),
                     Inputs = CompileInputs(cfg.Inputs, rows[i].Id, relativePath),
                     Outputs = CompileOutputs(cfg.Outputs, rows[i].Id, relativePath)
                 });
@@ -95,6 +106,49 @@ namespace Ludots.Core.Gameplay.Exchange
             _registry.ClearDefinitions();
         }
 
+        private ExchangeRelationshipRequirement[] CompileRelationshipRequirements(
+            RelationshipRequirementConfig[]? configs,
+            string ownerId,
+            string relativePath)
+        {
+            if (configs == null || configs.Length == 0)
+            {
+                return Array.Empty<ExchangeRelationshipRequirement>();
+            }
+
+            var output = new ExchangeRelationshipRequirement[configs.Length];
+            for (int i = 0; i < configs.Length; i++)
+            {
+                RelationshipRequirementConfig cfg = configs[i]
+                    ?? throw new InvalidOperationException($"Exchange operation '{ownerId}' in {relativePath}: relationshipRequirements[{i}] must be an object.");
+                short? minimum = ToShort(cfg.MinimumMetric, ownerId, relativePath, $"relationshipRequirements[{i}].minimumMetric");
+                short? maximum = ToShort(cfg.MaximumMetric, ownerId, relativePath, $"relationshipRequirements[{i}].maximumMetric");
+                int metricId = minimum.HasValue || maximum.HasValue
+                    ? ResolveRelationshipMetric(cfg.Metric, ownerId, relativePath, $"relationshipRequirements[{i}].metric")
+                    : -1;
+                int flagId = string.IsNullOrWhiteSpace(cfg.Flag)
+                    ? -1
+                    : ResolveRelationshipFlag(cfg.Flag, ownerId, relativePath, $"relationshipRequirements[{i}].flag");
+                if (metricId < 0 && flagId < 0)
+                {
+                    throw new InvalidOperationException(
+                        $"Exchange operation '{ownerId}' in {relativePath}: relationshipRequirements[{i}] must require a metric bound or a flag.");
+                }
+
+                output[i] = new ExchangeRelationshipRequirement(
+                    ParseActorSlot(cfg.Source, ownerId, relativePath, $"relationshipRequirements[{i}].source"),
+                    ParseActorSlot(cfg.Target, ownerId, relativePath, $"relationshipRequirements[{i}].target"),
+                    ResolveRelationshipType(cfg.Type, ownerId, relativePath, $"relationshipRequirements[{i}].type"),
+                    metricId,
+                    minimum,
+                    maximum,
+                    flagId,
+                    cfg.FlagValue ?? true);
+            }
+
+            return output;
+        }
+
         private ExchangeInputDefinition[] CompileInputs(InputConfig[]? configs, string ownerId, string relativePath)
         {
             if (configs == null || configs.Length == 0)
@@ -121,6 +175,24 @@ namespace Ludots.Core.Gameplay.Exchange
             }
 
             return output;
+        }
+
+        private int ResolveRelationshipType(string? value, string ownerId, string relativePath, string field)
+        {
+            string typeId = RequireString(value, ownerId, relativePath, field);
+            return _relationshipTypes.GetId(typeId);
+        }
+
+        private int ResolveRelationshipMetric(string? value, string ownerId, string relativePath, string field)
+        {
+            string metricId = RequireString(value, ownerId, relativePath, field);
+            return _relationshipMetrics.GetId(metricId);
+        }
+
+        private int ResolveRelationshipFlag(string? value, string ownerId, string relativePath, string field)
+        {
+            string flagId = RequireString(value, ownerId, relativePath, field);
+            return _relationshipFlags.GetId(flagId);
         }
 
         private ExchangeOutputDefinition[] CompileOutputs(OutputConfig[]? configs, string ownerId, string relativePath)
@@ -301,13 +373,49 @@ namespace Ludots.Core.Gameplay.Exchange
             return result;
         }
 
+        private static short? ToShort(int? value, string ownerId, string relativePath, string field)
+        {
+            if (!value.HasValue)
+            {
+                return null;
+            }
+
+            if (value.Value < short.MinValue || value.Value > short.MaxValue)
+            {
+                throw new InvalidOperationException($"Exchange operation '{ownerId}' in {relativePath}: {field} must fit in Int16.");
+            }
+
+            return (short)value.Value;
+        }
+
         private sealed class OperationConfig
         {
             public string? Id { get; set; }
 
+            public RelationshipRequirementConfig[]? RelationshipRequirements { get; set; }
+
             public InputConfig[]? Inputs { get; set; }
 
             public OutputConfig[]? Outputs { get; set; }
+        }
+
+        private sealed class RelationshipRequirementConfig
+        {
+            public string? Source { get; set; }
+
+            public string? Target { get; set; }
+
+            public string? Type { get; set; }
+
+            public string? Metric { get; set; }
+
+            public int? MinimumMetric { get; set; }
+
+            public int? MaximumMetric { get; set; }
+
+            public string? Flag { get; set; }
+
+            public bool? FlagValue { get; set; }
         }
 
         private sealed class InputConfig

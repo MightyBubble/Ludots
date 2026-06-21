@@ -661,7 +661,13 @@ namespace Ludots.Core.Engine
             AbilityFormSetIdRegistry.Clear();
             ContextGroupIdRegistry.Clear();
             var itemConfigLoader = new ItemConfigLoader(ConfigPipeline, itemShapes, itemLayouts, itemDefinitions);
-            var exchangeLoader = new ExchangeConfigLoader(ConfigPipeline, exchangeOperations, itemDefinitions);
+            var exchangeLoader = new ExchangeConfigLoader(
+                ConfigPipeline,
+                exchangeOperations,
+                itemDefinitions,
+                relationshipTypeRegistry,
+                relationshipMetricRegistry,
+                relationshipFlagRegistry);
             exchangeLoader.LoadIds(ConfigCatalog, ConfigConflictReport);
             new ProgressionConfigLoader(
                 ConfigPipeline,
@@ -690,7 +696,13 @@ namespace Ludots.Core.Engine
             itemConfigLoader.Load(ConfigCatalog, ConfigConflictReport);
             exchangeLoader.Load(ConfigCatalog, ConfigConflictReport);
             var inventoryRuntime = new InventoryRuntimeService(World, itemShapes, itemLayouts, itemDefinitions, ownershipResolver);
-            var exchangeRuntime = new ExchangeRuntime(World, exchangeOperations, exchangeScopedOperations, inventoryRuntime, effectRequestQueue);
+            var exchangeRuntime = new ExchangeRuntime(
+                World,
+                exchangeOperations,
+                exchangeScopedOperations,
+                inventoryRuntime,
+                effectRequestQueue,
+                relationshipRuntime);
             var graphOutputValueStore = new GraphOutputValueStore(graphOutputValueKeyRegistry, initialCapacity: 128);
             var gasGraphApi = new GasGraphRuntimeApi(
                 World,

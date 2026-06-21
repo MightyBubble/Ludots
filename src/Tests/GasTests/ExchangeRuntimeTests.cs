@@ -1,11 +1,16 @@
+using System;
+using System.IO;
 using Arch.Core;
 using Ludots.Core.Association;
+using Ludots.Core.Config;
 using Ludots.Core.Gameplay.Exchange;
 using Ludots.Core.Gameplay.GAS;
 using Ludots.Core.Gameplay.GAS.Components;
 using Ludots.Core.Gameplay.Items;
 using Ludots.Core.Gameplay.Relationships;
 using Ludots.Core.Gameplay.Relationships.Config;
+using Ludots.Core.Modding;
+using Ludots.Core.Scripting;
 using NUnit.Framework;
 using static NUnit.Framework.Assert;
 
@@ -401,6 +406,160 @@ namespace Ludots.Tests.GAS
             That(fixture.Inventory.CountStackUnits(actor, GemDef), Is.EqualTo(0));
         }
 
+        [Test]
+        public void TryExecute_RelationshipRequirementDeniesBeforeOutputReservationAndAllowsQualifiedRelationship()
+        {
+            using World world = World.Create();
+            var fixture = CreateFixture(world, stashWidth: 3, stashHeight: 1, targetWidth: 1, targetHeight: 1);
+            Entity source = world.Create();
+            Entity target = world.Create();
+            Entity sourceStash = fixture.Inventory.CreateContainer(source, fixture.StashLayout, ItemContainerPurpose.Stash);
+            Entity targetStash = fixture.Inventory.CreateContainer(target, fixture.TargetLayout, ItemContainerPurpose.Stash);
+            Put(fixture.Inventory, CreditDef, sourceStash, 0, 0, stack: 20);
+            Put(fixture.Inventory, TokenDef, targetStash, 0, 0);
+
+            int operationId = fixture.Operations.Register("test.relationship.gated", new ExchangeOperationDefinition
+            {
+                Id = "test.relationship.gated",
+                RelationshipRequirements = new[]
+                {
+                    new ExchangeRelationshipRequirement(
+                        RoleSlot.Source,
+                        RoleSlot.Target,
+                        fixture.DiplomacyTypeId,
+                        fixture.TrustMetricId,
+                        minimumMetric: 50,
+                        maximumMetric: null,
+                        fixture.EmbargoFlagId,
+                        requiredFlagValue: false)
+                },
+                Inputs = new[]
+                {
+                    new ExchangeInputDefinition(ExchangeInputKind.ItemStack, RoleSlot.Source, CreditDef, 5)
+                },
+                Outputs = new[]
+                {
+                    CreateItem(RoleSlot.Target, ItemContainerPurpose.Stash, GemDef, 1)
+                }
+            });
+
+            ExchangeExecutionResult noRelationship = fixture.Runtime.TryExecute(operationId, new ExchangeExecutionContext(source, target));
+
+            That(noRelationship.Status, Is.EqualTo(ExchangeExecutionStatus.RelationshipDenied));
+            That(fixture.Inventory.CountStackUnits(source, CreditDef), Is.EqualTo(20));
+            That(fixture.Inventory.CountStackUnits(target, GemDef), Is.EqualTo(0));
+
+            fixture.Relationships.SetMetric(source, target, fixture.DiplomacyTypeId, fixture.TrustMetricId, 60);
+            That(fixture.Inventory.ConsumeStackUnits(target, TokenDef, 1), Is.True);
+
+            ExchangeExecutionResult allowed = fixture.Runtime.TryExecute(operationId, new ExchangeExecutionContext(source, target));
+
+            That(allowed.Succeeded, Is.True);
+            That(fixture.Inventory.CountStackUnits(source, CreditDef), Is.EqualTo(15));
+            That(fixture.Inventory.CountStackUnits(target, GemDef), Is.EqualTo(1));
+
+            fixture.Relationships.SetFlag(source, target, fixture.DiplomacyTypeId, fixture.EmbargoFlagId, enabled: true);
+
+            ExchangeExecutionResult embargoed = fixture.Runtime.TryExecute(operationId, new ExchangeExecutionContext(source, target));
+
+            That(embargoed.Status, Is.EqualTo(ExchangeExecutionStatus.RelationshipDenied));
+            That(fixture.Inventory.CountStackUnits(source, CreditDef), Is.EqualTo(15));
+            That(fixture.Inventory.CountStackUnits(target, GemDef), Is.EqualTo(1));
+        }
+
+        [Test]
+        public void ExchangeConfigLoader_CompilesRelationshipRequirementsFromRegistryNames()
+        {
+            string root = Path.Combine(Path.GetTempPath(), "Ludots_ExchangeRelGate", Guid.NewGuid().ToString("N"));
+            try
+            {
+                Directory.CreateDirectory(Path.Combine(root, "Core", "Configs", "Exchange"));
+                File.WriteAllText(
+                    Path.Combine(root, "Core", "Configs", "config_catalog.json"),
+                    """
+                    [
+                      { "Path": "Exchange/operations.json", "Policy": "ArrayById", "IdField": "id" }
+                    ]
+                    """);
+                File.WriteAllText(
+                    Path.Combine(root, "Core", "Configs", "Exchange", "operations.json"),
+                    """
+                    [
+                      {
+                        "id": "test.relationship.config",
+                        "relationshipRequirements": [
+                          {
+                            "source": "Source",
+                            "target": "Target",
+                            "type": "Diplomacy",
+                            "metric": "Trust",
+                            "minimumMetric": 50,
+                            "flag": "Embargo",
+                            "flagValue": false
+                          }
+                        ],
+                        "inputs": [
+                          { "kind": "ItemStack", "actor": "Source", "item": "credit", "quantity": 5 }
+                        ],
+                        "outputs": [
+                          { "kind": "CreateItem", "actor": "Target", "purpose": "Stash", "item": "gem", "quantity": 1 }
+                        ]
+                      }
+                    ]
+                    """);
+
+                var vfs = new VirtualFileSystem();
+                vfs.Mount("Core", Path.Combine(root, "Core"));
+                var pipeline = new ConfigPipeline(vfs, new ModLoader(vfs, new FunctionRegistry(), new TriggerManager()));
+                ConfigCatalog catalog = ConfigCatalogLoader.Load(pipeline);
+
+                var items = new ItemDefinitionRegistry();
+                int creditId = items.Register("credit", new ItemDefinition { Id = "credit", DisplayName = "Credit", ShapeId = 1 });
+                int gemId = items.Register("gem", new ItemDefinition { Id = "gem", DisplayName = "Gem", ShapeId = 1 });
+                var relationshipTypes = new RelationshipTypeRegistry();
+                var relationshipMetrics = new RelationshipMetricRegistry();
+                var relationshipFlags = new RelationshipFlagRegistry();
+                int diplomacyId = relationshipTypes.Register("Diplomacy");
+                int trustId = relationshipMetrics.Register("Trust");
+                int embargoId = relationshipFlags.Register("Embargo");
+                var operations = new ExchangeOperationRegistry();
+                var loader = new ExchangeConfigLoader(
+                    pipeline,
+                    operations,
+                    items,
+                    relationshipTypes,
+                    relationshipMetrics,
+                    relationshipFlags);
+
+                loader.Load(catalog);
+
+                int operationId = operations.GetId("test.relationship.config");
+                That(operations.TryGet(operationId, out ExchangeOperationDefinition operation), Is.True);
+                That(operation.RelationshipRequirements.Length, Is.EqualTo(1));
+                ExchangeRelationshipRequirement requirement = operation.RelationshipRequirements[0];
+                That(requirement.Source, Is.EqualTo(RoleSlot.Source));
+                That(requirement.Target, Is.EqualTo(RoleSlot.Target));
+                That(requirement.TypeId, Is.EqualTo(diplomacyId));
+                That(requirement.MetricId, Is.EqualTo(trustId));
+                That(requirement.MetricComparison, Is.EqualTo(ExchangeRelationshipMetricComparison.GreaterOrEqual));
+                That(requirement.MinimumMetric, Is.EqualTo(50));
+                That(requirement.FlagId, Is.EqualTo(embargoId));
+                That(requirement.RequiredFlagValue, Is.False);
+                That(operation.Inputs[0].ItemDefinitionId, Is.EqualTo(creditId));
+                That(operation.Outputs[0].ItemDefinitionId, Is.EqualTo(gemId));
+            }
+            finally
+            {
+                try
+                {
+                    Directory.Delete(root, recursive: true);
+                }
+                catch
+                {
+                }
+            }
+        }
+
         private static ExchangeFixture CreateFixture(World world, int stashWidth, int stashHeight, int targetWidth = 0, int targetHeight = 0)
         {
             var shapes = new ItemShapeRegistry();
@@ -455,7 +614,19 @@ namespace Ludots.Tests.GAS
             RelationshipCatalogInstaller.RegisterCatalog(
                 new RelationshipCatalogConfig
                 {
-                    Types = { new RelationshipTypeConfig { Id = "Owns" } },
+                    Types =
+                    {
+                        new RelationshipTypeConfig { Id = "Owns" },
+                        new RelationshipTypeConfig { Id = "Diplomacy" }
+                    },
+                    Metrics =
+                    {
+                        new RelationshipMetricConfig { Id = "Trust", MinValue = -100, MaxValue = 100, DefaultValue = 0 }
+                    },
+                    Flags =
+                    {
+                        new RelationshipFlagConfig { Id = "Embargo" }
+                    }
                 },
                 relationshipTypes,
                 relationshipMetrics,
@@ -463,13 +634,16 @@ namespace Ludots.Tests.GAS
                 relationshipBands,
                 relationshipReasons);
             int ownsTypeId = relationshipTypes.GetId("Owns");
+            int diplomacyTypeId = relationshipTypes.GetId("Diplomacy");
+            int trustMetricId = relationshipMetrics.GetId("Trust");
+            int embargoFlagId = relationshipFlags.GetId("Embargo");
             var ownership = new OwnershipResolver(relationships, ownsTypeId);
             var inventory = new InventoryRuntimeService(world, shapes, layouts, definitions, ownership);
             var operations = new ExchangeOperationRegistry();
             var scoped = new ExchangeScopedOperationStore();
             var effects = new EffectRequestQueue();
-            var runtime = new ExchangeRuntime(world, operations, scoped, inventory, effects);
-            return new ExchangeFixture(inventory, operations, scoped, runtime, stashLayout, targetLayout);
+            var runtime = new ExchangeRuntime(world, operations, scoped, inventory, effects, relationships);
+            return new ExchangeFixture(inventory, operations, scoped, runtime, relationships, stashLayout, targetLayout, diplomacyTypeId, trustMetricId, embargoFlagId);
         }
 
         private static Entity Put(InventoryRuntimeService inventory, int definitionId, Entity container, int x, int y, int stack = 1)
@@ -538,7 +712,11 @@ namespace Ludots.Tests.GAS
             ExchangeOperationRegistry Operations,
             ExchangeScopedOperationStore Scoped,
             ExchangeRuntime Runtime,
+            RelationshipRuntime Relationships,
             int StashLayout,
-            int TargetLayout);
+            int TargetLayout,
+            int DiplomacyTypeId,
+            int TrustMetricId,
+            int EmbargoFlagId);
     }
 }

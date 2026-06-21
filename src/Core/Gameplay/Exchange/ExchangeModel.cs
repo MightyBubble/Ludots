@@ -27,7 +27,16 @@ namespace Ludots.Core.Gameplay.Exchange
         InsufficientInput = 4,
         MissingSourceItem = 5,
         OutputBlocked = 6,
-        ExecutionFailed = 7
+        ExecutionFailed = 7,
+        RelationshipDenied = 8
+    }
+
+    public enum ExchangeRelationshipMetricComparison : byte
+    {
+        None = 0,
+        GreaterOrEqual = 1,
+        LessOrEqual = 2,
+        RangeInclusive = 3
     }
 
     public readonly struct ExchangeExecutionContext
@@ -99,6 +108,117 @@ namespace Ludots.Core.Gameplay.Exchange
         public int DetailIndex { get; }
 
         public bool Succeeded => Status == ExchangeExecutionStatus.Success;
+    }
+
+    public readonly struct ExchangeRelationshipRequirement
+    {
+        public ExchangeRelationshipRequirement(
+            RoleSlot source,
+            RoleSlot target,
+            int typeId,
+            int metricId,
+            short minimumMetric,
+            short maximumMetric,
+            int flagId,
+            bool requiredFlagValue)
+        {
+            Source = source;
+            Target = target;
+            TypeId = typeId;
+            MetricId = metricId;
+            MetricComparison = ExchangeRelationshipMetricComparison.RangeInclusive;
+            MinimumMetric = minimumMetric;
+            MaximumMetric = maximumMetric;
+            FlagId = flagId;
+            HasFlagRequirement = flagId >= 0;
+            RequiredFlagValue = requiredFlagValue;
+        }
+
+        public ExchangeRelationshipRequirement(
+            RoleSlot source,
+            RoleSlot target,
+            int typeId,
+            int metricId,
+            short threshold,
+            ExchangeRelationshipMetricComparison metricComparison,
+            int flagId,
+            bool requiredFlagValue)
+        {
+            Source = source;
+            Target = target;
+            TypeId = typeId;
+            MetricId = metricId;
+            MetricComparison = metricComparison;
+            MinimumMetric = threshold;
+            MaximumMetric = threshold;
+            FlagId = flagId;
+            HasFlagRequirement = flagId >= 0;
+            RequiredFlagValue = requiredFlagValue;
+        }
+
+        public ExchangeRelationshipRequirement(
+            RoleSlot source,
+            RoleSlot target,
+            int typeId,
+            int metricId,
+            short? minimumMetric,
+            short? maximumMetric,
+            int flagId,
+            bool requiredFlagValue)
+        {
+            Source = source;
+            Target = target;
+            TypeId = typeId;
+            MetricId = metricId;
+            if (minimumMetric.HasValue && maximumMetric.HasValue)
+            {
+                MetricComparison = ExchangeRelationshipMetricComparison.RangeInclusive;
+                MinimumMetric = minimumMetric.Value;
+                MaximumMetric = maximumMetric.Value;
+            }
+            else if (minimumMetric.HasValue)
+            {
+                MetricComparison = ExchangeRelationshipMetricComparison.GreaterOrEqual;
+                MinimumMetric = minimumMetric.Value;
+                MaximumMetric = minimumMetric.Value;
+            }
+            else if (maximumMetric.HasValue)
+            {
+                MetricComparison = ExchangeRelationshipMetricComparison.LessOrEqual;
+                MinimumMetric = maximumMetric.Value;
+                MaximumMetric = maximumMetric.Value;
+            }
+            else
+            {
+                MetricComparison = ExchangeRelationshipMetricComparison.None;
+                MinimumMetric = 0;
+                MaximumMetric = 0;
+            }
+
+            FlagId = flagId;
+            HasFlagRequirement = flagId >= 0;
+            RequiredFlagValue = requiredFlagValue;
+        }
+
+        public RoleSlot Source { get; }
+
+        public RoleSlot Target { get; }
+
+        public int TypeId { get; }
+
+        public int MetricId { get; }
+
+        public ExchangeRelationshipMetricComparison MetricComparison { get; }
+
+        public short MinimumMetric { get; }
+
+        public short MaximumMetric { get; }
+
+        public int FlagId { get; }
+
+        public bool HasFlagRequirement { get; }
+
+        public bool RequiredFlagValue { get; }
     }
 
     public readonly struct ExchangeInputDefinition
@@ -182,6 +302,8 @@ namespace Ludots.Core.Gameplay.Exchange
     public sealed class ExchangeOperationDefinition
     {
         public string Id { get; init; } = string.Empty;
+
+        public ExchangeRelationshipRequirement[] RelationshipRequirements { get; init; } = System.Array.Empty<ExchangeRelationshipRequirement>();
 
         public ExchangeInputDefinition[] Inputs { get; init; } = System.Array.Empty<ExchangeInputDefinition>();
 
