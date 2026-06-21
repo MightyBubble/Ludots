@@ -286,7 +286,14 @@ namespace Ludots.Core.Navigation.Pathing
 
             _store.TryWrite(in handle, _xScratch, _yScratch, count);
             travelCost = r.TravelCost;
-            result = new PathResult(request.RequestId, request.Actor, PathStatus.Found, handle, r.Expanded, errorCode: 0);
+            result = new PathResult(
+                request.RequestId,
+                request.Actor,
+                PathStatus.Found,
+                handle,
+                r.Expanded,
+                errorCode: 0,
+                resolvedDomain: PathDomain.NodeGraph);
             return true;
         }
 
@@ -338,7 +345,14 @@ namespace Ludots.Core.Navigation.Pathing
 
             _store.TryWrite(in handle, r.PathXcm, r.PathZcm, count);
             travelCost = r.TravelCost.ToFloat();
-            result = new PathResult(request.RequestId, request.Actor, PathStatus.Found, handle, expanded: 0, errorCode: 0);
+            result = new PathResult(
+                request.RequestId,
+                request.Actor,
+                PathStatus.Found,
+                handle,
+                expanded: 0,
+                errorCode: 0,
+                resolvedDomain: PathDomain.NavMesh);
             return true;
         }
 

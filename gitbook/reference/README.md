@@ -12,6 +12,7 @@
 - [Logic Terrain and Topology](logic-terrain-and-topology.md)
 - [NavBakeContext 与统一烘焙服务](nav-bake-context.md)
 - [MassNavigation Execution Avoidance and Targets](mass-navigation-execution-avoidance-and-targets.md)
+- [Routing To Mass Execution](routing-to-mass-execution.md)
 - [空间尺度配置查表](spatial-scale-configuration.md)
 - [项目地图](project-map.md)
 - [发布与访问](publishing-and-access.md)
