@@ -734,10 +734,294 @@ namespace GasTests
         }
 
         [Test]
+        public void Issue254_FeatureShowcaseCapabilityModsAndAcceptanceTests_ArePresent()
+        {
+            var repoRoot = FindRepoRoot();
+            string gasTestsProject = Path.Combine(repoRoot, "src", "Tests", "GasTests", "GasTests.csproj");
+            Assert.That(File.Exists(gasTestsProject), Is.True, $"Missing {gasTestsProject}");
+            string gasTestsProjectText = File.ReadAllText(gasTestsProject);
+
+            ShowcaseCapabilitySpec[] specs =
+            {
+                new(
+                    Issue: "#245",
+                    ModName: "AssociationStressShowcaseMod",
+                    ModDirectory: Path.Combine(repoRoot, "mods", "showcases", "association_stress", "AssociationStressShowcaseMod"),
+                    EntryFileName: "AssociationStressShowcaseModEntry.cs",
+                    ProjectFileName: "AssociationStressShowcaseMod.csproj",
+                    AcceptanceTestPath: Path.Combine(repoRoot, "src", "Tests", "GasTests", "Production", "AssociationStressShowcaseAcceptanceTests.cs"),
+                    ArtifactFolder: "association-stress-showcase"),
+                new(
+                    Issue: "#246",
+                    ModName: "FogVisionDecayShowcaseMod",
+                    ModDirectory: Path.Combine(repoRoot, "mods", "showcases", "fog_vision_decay", "FogVisionDecayShowcaseMod"),
+                    EntryFileName: "FogVisionDecayShowcaseModEntry.cs",
+                    ProjectFileName: "FogVisionDecayShowcaseMod.csproj",
+                    AcceptanceTestPath: Path.Combine(repoRoot, "src", "Tests", "GasTests", "Production", "FogVisionDecayShowcaseAcceptanceTests.cs"),
+                    ArtifactFolder: "fog-vision-decay-showcase"),
+                new(
+                    Issue: "#247",
+                    ModName: "ScopeSwitchShowcaseMod",
+                    ModDirectory: Path.Combine(repoRoot, "mods", "showcases", "scope_switch", "ScopeSwitchShowcaseMod"),
+                    EntryFileName: "ScopeSwitchShowcaseModEntry.cs",
+                    ProjectFileName: "ScopeSwitchShowcaseMod.csproj",
+                    AcceptanceTestPath: Path.Combine(repoRoot, "src", "Tests", "GasTests", "Production", "ScopeSwitchShowcaseAcceptanceTests.cs"),
+                    ArtifactFolder: "scope-switch-showcase"),
+                new(
+                    Issue: "#248",
+                    ModName: "OwnershipCascadeShowcaseMod",
+                    ModDirectory: Path.Combine(repoRoot, "mods", "showcases", "ownership_cascade", "OwnershipCascadeShowcaseMod"),
+                    EntryFileName: "OwnershipCascadeShowcaseModEntry.cs",
+                    ProjectFileName: "OwnershipCascadeShowcaseMod.csproj",
+                    AcceptanceTestPath: Path.Combine(repoRoot, "src", "Tests", "GasTests", "Production", "OwnershipCascadeShowcaseAcceptanceTests.cs"),
+                    ArtifactFolder: "ownership-cascade-showcase"),
+                new(
+                    Issue: "#249",
+                    ModName: "DiplomacyTradeGateShowcaseMod",
+                    ModDirectory: Path.Combine(repoRoot, "mods", "showcases", "diplomacy_trade_gate", "DiplomacyTradeGateShowcaseMod"),
+                    EntryFileName: "DiplomacyTradeGateShowcaseModEntry.cs",
+                    ProjectFileName: "DiplomacyTradeGateShowcaseMod.csproj",
+                    AcceptanceTestPath: Path.Combine(repoRoot, "src", "Tests", "GasTests", "Production", "DiplomacyTradeGateShowcaseAcceptanceTests.cs"),
+                    ArtifactFolder: "diplomacy-trade-gate-showcase"),
+                new(
+                    Issue: "#250",
+                    ModName: "GoldMarketShowcaseMod",
+                    ModDirectory: Path.Combine(repoRoot, "mods", "showcases", "gold_market", "GoldMarketShowcaseMod"),
+                    EntryFileName: "GoldMarketShowcaseModEntry.cs",
+                    ProjectFileName: "GoldMarketShowcaseMod.csproj",
+                    AcceptanceTestPath: Path.Combine(repoRoot, "src", "Tests", "GasTests", "Production", "GoldMarketShowcaseAcceptanceTests.cs"),
+                    ArtifactFolder: "gold-market-showcase"),
+                new(
+                    Issue: "#251",
+                    ModName: "TeamResearchShowcaseMod",
+                    ModDirectory: Path.Combine(repoRoot, "mods", "showcases", "team_research", "TeamResearchShowcaseMod"),
+                    EntryFileName: "TeamResearchShowcaseModEntry.cs",
+                    ProjectFileName: "TeamResearchShowcaseMod.csproj",
+                    AcceptanceTestPath: Path.Combine(repoRoot, "src", "Tests", "GasTests", "Production", "TeamResearchShowcaseAcceptanceTests.cs"),
+                    ArtifactFolder: "team-research-showcase")
+            };
+
+            var missing = new List<string>();
+            for (int i = 0; i < specs.Length; i++)
+            {
+                ShowcaseCapabilitySpec spec = specs[i];
+                AssertShowcaseCapability(repoRoot, gasTestsProjectText, spec, missing);
+            }
+
+            Assert.That(
+                missing,
+                Is.Empty,
+                "AAC-11 (#254) requires every player-visible Entity Association Core feature child issue to carry a real showcase mod and headless acceptance test:\n" +
+                string.Join("\n", missing));
+        }
+
+        [Test]
+        public void Issue254_AssociationCoreHotPaths_DoNotUseLinqOrIteratorBlocks()
+        {
+            var repoRoot = FindRepoRoot();
+            string[] files =
+            {
+                Path.Combine(repoRoot, "src", "Core", "Association", "EntityKeyedSoaTable.cs"),
+                Path.Combine(repoRoot, "src", "Core", "Association", "ScopeKey.cs"),
+                Path.Combine(repoRoot, "src", "Core", "EntityCollections", "EntityCollectionStore.cs"),
+                Path.Combine(repoRoot, "src", "Core", "Knowledge", "KnowledgeProjectionStore.cs"),
+                Path.Combine(repoRoot, "src", "Core", "Knowledge", "KnowledgeRelationCollectionGrants.cs"),
+                Path.Combine(repoRoot, "src", "Core", "Gameplay", "Exchange", "ExchangeRuntime.cs"),
+                Path.Combine(repoRoot, "src", "Core", "Gameplay", "Exchange", "ExchangeScopedOperationStore.cs"),
+                Path.Combine(repoRoot, "src", "Core", "Gameplay", "Progression", "ProgressionRequirementEvaluator.cs")
+            };
+            string[] forbidden =
+            {
+                "using System.Linq",
+                ".Where(",
+                ".Select(",
+                ".ToArray(",
+                ".ToList(",
+                "yield return",
+                "IEnumerator",
+                "IEnumerable<",
+                "new List<",
+                "new Dictionary<"
+            };
+
+            var hits = new List<string>();
+            for (int fileIndex = 0; fileIndex < files.Length; fileIndex++)
+            {
+                string file = files[fileIndex];
+                Assert.That(File.Exists(file), Is.True, $"Missing AAC hot-path source file {file}");
+                AppendForbiddenSourceTokens(repoRoot, file, forbidden, hits);
+            }
+
+            Assert.That(
+                hits,
+                Is.Empty,
+                "AAC-11 (#254) keeps Entity Association Core hot paths allocation-conscious; use cached query descriptions, arrays/spans, and registries instead of LINQ/iterator/transient collection patterns:\n" +
+                string.Join("\n", hits));
+        }
+
+        [Test]
+        public void Issue254_Aac10IntegratedShowcase_ExistsAndReferencesFeatureShowcases()
+        {
+            var repoRoot = FindRepoRoot();
+            string modDir = Path.Combine(repoRoot, "mods", "showcases", "fourx_association", "FourXAssociationShowcaseMod");
+            string modJsonPath = Path.Combine(modDir, "mod.json");
+            string entryPath = Path.Combine(modDir, "FourXAssociationShowcaseModEntry.cs");
+            string projectPath = Path.Combine(modDir, "FourXAssociationShowcaseMod.csproj");
+            string configPath = Path.Combine(modDir, "assets", "FourXAssociation", "fourx_association_config.json");
+            string acceptancePath = Path.Combine(repoRoot, "src", "Tests", "GasTests", "Production", "FourXAssociationShowcaseAcceptanceTests.cs");
+
+            Assert.That(Directory.Exists(modDir), Is.True, $"Missing {modDir}");
+            Assert.That(File.Exists(modJsonPath), Is.True, $"Missing {modJsonPath}");
+            Assert.That(File.Exists(entryPath), Is.True, $"Missing {entryPath}");
+            Assert.That(File.Exists(projectPath), Is.True, $"Missing {projectPath}");
+            Assert.That(File.Exists(configPath), Is.True, $"Missing {configPath}");
+            Assert.That(File.Exists(acceptancePath), Is.True, $"Missing {acceptancePath}");
+
+            string modJson = File.ReadAllText(modJsonPath);
+            string config = File.ReadAllText(configPath);
+            string acceptance = File.ReadAllText(acceptancePath);
+
+            string[] requiredShowcaseReferences =
+            {
+                "AssociationStressShowcaseMod",
+                "FogVisionDecayShowcaseMod",
+                "ScopeSwitchShowcaseMod",
+                "OwnershipCascadeShowcaseMod",
+                "DiplomacyTradeGateShowcaseMod",
+                "GoldMarketShowcaseMod",
+                "TeamResearchShowcaseMod"
+            };
+
+            Assert.Multiple(() =>
+            {
+                Assert.That(modJson, Does.Contain("FourXAssociationShowcaseMod"));
+                Assert.That(acceptance, Does.Contain("fourx-association-showcase"));
+                Assert.That(acceptance, Does.Contain("Path.Combine(repoRoot, \"artifacts\", \"acceptance\""));
+                for (int i = 0; i < requiredShowcaseReferences.Length; i++)
+                {
+                    string reference = requiredShowcaseReferences[i];
+                    Assert.That(modJson.Contains(reference, StringComparison.Ordinal) || config.Contains(reference, StringComparison.Ordinal), Is.True, $"Integrated 4X showcase must reference {reference}.");
+                }
+            });
+        }
+
+        [Test]
         public void Issue244_PendingCompositionContracts()
         {
-            Assert.Ignore("AAC-5..AAC-8/#248..#251 will make Ownership relations, Relationship-gated Exchange, Collection+Relationship-fed Progression membership, and Inventory settlement executable contracts.");
+            var repoRoot = FindRepoRoot();
+            string selectionPath = Path.Combine(repoRoot, "src", "Core", "Input", "Selection", "SelectionEligibility.cs");
+            string resolverPath = Path.Combine(repoRoot, "src", "Core", "Knowledge", "KnowledgeProjectionResolver.cs");
+            string exchangeModelPath = Path.Combine(repoRoot, "src", "Core", "Gameplay", "Exchange", "ExchangeModel.cs");
+            string exchangeRuntimePath = Path.Combine(repoRoot, "src", "Core", "Gameplay", "Exchange", "ExchangeRuntime.cs");
+            string progressionPath = Path.Combine(repoRoot, "src", "Core", "Gameplay", "Progression", "ProgressionRequirementEvaluator.cs");
+            string scopePath = Path.Combine(repoRoot, "src", "Core", "Association", "ScopeKey.cs");
+            string ownershipPath = Path.Combine(repoRoot, "src", "Core", "Association", "OwnershipResolver.cs");
+            string gameEnginePath = Path.Combine(repoRoot, "src", "Core", "Engine", "GameEngine.cs");
+
+            string selection = File.ReadAllText(selectionPath);
+            string resolver = File.ReadAllText(resolverPath);
+            string exchangeModel = File.ReadAllText(exchangeModelPath);
+            string exchangeRuntime = File.ReadAllText(exchangeRuntimePath);
+            string progression = File.ReadAllText(progressionPath);
+            string scope = File.ReadAllText(scopePath);
+            string ownership = File.ReadAllText(ownershipPath);
+            string gameEngine = File.ReadAllText(gameEnginePath);
+
+            Assert.Multiple(() =>
+            {
+                Assert.That(selection, Does.Contain("KnowledgeProjectionConsumer"));
+                Assert.That(selection, Does.Contain("CanInspectLive"));
+                Assert.That(resolver, Does.Contain("ScopeKey"));
+                Assert.That(exchangeRuntime, Does.Contain("RelationshipRuntime"));
+                Assert.That(exchangeRuntime, Does.Contain("ValidateRelationships"));
+                Assert.That(exchangeModel, Does.Contain("AttributeCost"));
+                Assert.That(progression, Does.Contain("ScopeResolver"));
+                Assert.That(progression, Does.Contain("ResolveMembers"));
+                Assert.That(ownership, Does.Contain("RelationshipRuntime"));
+                Assert.That(ownership, Does.Contain("CollectIncoming"));
+                Assert.That(ownership, Does.Contain("CollectOutgoing"));
+                Assert.That(gameEngine, Does.Contain("GetId(\"Owns\")"));
+                Assert.That(scope, Does.Contain("RoleSlot"));
+            });
         }
+
+        private static void AssertShowcaseCapability(
+            string repoRoot,
+            string gasTestsProject,
+            ShowcaseCapabilitySpec spec,
+            List<string> missing)
+        {
+            string modJsonPath = Path.Combine(spec.ModDirectory, "mod.json");
+            string entryPath = Path.Combine(spec.ModDirectory, spec.EntryFileName);
+            string projectPath = Path.Combine(spec.ModDirectory, spec.ProjectFileName);
+            if (!Directory.Exists(spec.ModDirectory))
+            {
+                missing.Add($"{spec.Issue}: missing mod directory {ToRepoRelativePath(repoRoot, spec.ModDirectory)}");
+                return;
+            }
+
+            if (!File.Exists(modJsonPath))
+            {
+                missing.Add($"{spec.Issue}: missing mod.json {ToRepoRelativePath(repoRoot, modJsonPath)}");
+            }
+            else
+            {
+                string modJson = File.ReadAllText(modJsonPath);
+                if (!modJson.Contains(spec.ModName, StringComparison.Ordinal))
+                {
+                    missing.Add($"{spec.Issue}: mod.json does not declare {spec.ModName}");
+                }
+            }
+
+            if (!File.Exists(entryPath))
+            {
+                missing.Add($"{spec.Issue}: missing mod entry {ToRepoRelativePath(repoRoot, entryPath)}");
+            }
+
+            if (!File.Exists(projectPath))
+            {
+                missing.Add($"{spec.Issue}: missing project file {ToRepoRelativePath(repoRoot, projectPath)}");
+            }
+
+            if (!File.Exists(spec.AcceptanceTestPath))
+            {
+                missing.Add($"{spec.Issue}: missing acceptance test {ToRepoRelativePath(repoRoot, spec.AcceptanceTestPath)}");
+            }
+            else
+            {
+                string acceptance = File.ReadAllText(spec.AcceptanceTestPath);
+                if (!acceptance.Contains("[Test]", StringComparison.Ordinal))
+                {
+                    missing.Add($"{spec.Issue}: acceptance test has no NUnit [Test] method");
+                }
+
+                if (!acceptance.Contains("Path.Combine(repoRoot, \"artifacts\", \"acceptance\"", StringComparison.Ordinal) &&
+                    !acceptance.Contains("Path.Combine(FindRepoRoot(), \"artifacts\", \"acceptance\"", StringComparison.Ordinal))
+                {
+                    missing.Add($"{spec.Issue}: acceptance test does not write artifacts/acceptance evidence");
+                }
+
+                if (!acceptance.Contains(spec.ArtifactFolder, StringComparison.Ordinal))
+                {
+                    missing.Add($"{spec.Issue}: acceptance test does not name artifact folder {spec.ArtifactFolder}");
+                }
+            }
+
+            string normalizedProjectFile = spec.ProjectFileName.Replace('\\', '/');
+            if (!gasTestsProject.Contains(normalizedProjectFile, StringComparison.Ordinal))
+            {
+                missing.Add($"{spec.Issue}: GasTests.csproj does not reference {spec.ProjectFileName}");
+            }
+        }
+
+        private readonly record struct ShowcaseCapabilitySpec(
+            string Issue,
+            string ModName,
+            string ModDirectory,
+            string EntryFileName,
+            string ProjectFileName,
+            string AcceptanceTestPath,
+            string ArtifactFolder);
 
         private static string FindRepoRoot()
         {
