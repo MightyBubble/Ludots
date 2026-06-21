@@ -89,7 +89,8 @@ namespace Ludots.Tests.GAS
 
                 var proposalSys = new Ludots.Core.Gameplay.GAS.Systems.EffectProposalProcessingSystem(
                     world, requests, budget: null, templates: templates,
-                    inputRequests: null, chainOrders: chainOrders);
+                    inputRequests: null, chainOrders: chainOrders,
+                    responseChainOrderTypes: TestResponseChainOrderTypeIds.Types);
                 proposalSys.Update(0.016f);
 
                 ref var attr = ref world.Get<AttributeBuffer>(target);
@@ -147,7 +148,8 @@ namespace Ludots.Tests.GAS
 
                 var proposalSys = new Ludots.Core.Gameplay.GAS.Systems.EffectProposalProcessingSystem(
                     world, requests, budget: null, templates: templates,
-                    inputRequests: null, chainOrders: chainOrders);
+                    inputRequests: null, chainOrders: chainOrders,
+                    responseChainOrderTypes: TestResponseChainOrderTypeIds.Types);
                 proposalSys.Update(0.016f);
 
                 // Without CallerParams, force values should be 0 (template doesn't define them in configParams)

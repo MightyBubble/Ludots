@@ -146,7 +146,14 @@ namespace Ludots.Tests.GAS
                 chainOrders.TryEnqueue(new Order { OrderTypeId = TestResponseChainOrderTypeIds.ChainPass });
                 chainOrders.TryEnqueue(new Order { OrderTypeId = TestResponseChainOrderTypeIds.ChainPass });
 
-                var proposal = new Ludots.Core.Gameplay.GAS.Systems.EffectProposalProcessingSystem(world, requests, budget: null, templates: templates, inputRequests: null, chainOrders: chainOrders);
+                var proposal = new Ludots.Core.Gameplay.GAS.Systems.EffectProposalProcessingSystem(
+                    world,
+                    requests,
+                    budget: null,
+                    templates: templates,
+                    inputRequests: null,
+                    chainOrders: chainOrders,
+                    responseChainOrderTypes: TestResponseChainOrderTypeIds.Types);
                 proposal.Update(0.016f);
 
                 ref var attr = ref world.Get<AttributeBuffer>(target);
