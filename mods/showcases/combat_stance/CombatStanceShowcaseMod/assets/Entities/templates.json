@@ -1,5 +1,37 @@
 [
   {
+    "id": "combat_stance_team_one",
+    "components": {
+      "Name": { "Value": "Combat Stance Team One" },
+      "GameplayTagContainer": {},
+      "TagCountContainer": {}
+    }
+  },
+  {
+    "id": "combat_stance_team_two",
+    "components": {
+      "Name": { "Value": "Combat Stance Team Two" },
+      "GameplayTagContainer": {},
+      "TagCountContainer": {}
+    }
+  },
+  {
+    "id": "combat_stance_player_one",
+    "components": {
+      "Name": { "Value": "Combat Stance Player One" },
+      "GameplayTagContainer": {},
+      "TagCountContainer": {}
+    }
+  },
+  {
+    "id": "combat_stance_player_two",
+    "components": {
+      "Name": { "Value": "Combat Stance Player Two" },
+      "GameplayTagContainer": {},
+      "TagCountContainer": {}
+    }
+  },
+  {
     "id": "combat_stance_vanguard",
     "components": {
       "Name": { "Value": "Combat Stance Vanguard" },

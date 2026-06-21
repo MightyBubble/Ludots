@@ -21,6 +21,10 @@
     }
   ],
   "Entities": [
+    { "InstanceId": "combat-stance-team-one", "Template": "combat_stance_team_one" },
+    { "InstanceId": "combat-stance-team-two", "Template": "combat_stance_team_two" },
+    { "InstanceId": "combat-stance-player-one", "Template": "combat_stance_player_one" },
+    { "InstanceId": "combat-stance-player-two", "Template": "combat_stance_player_two" },
     { "InstanceId": "combat-stance-vanguard", "Template": "combat_stance_vanguard" },
     { "InstanceId": "combat-stance-roadblock", "Template": "combat_stance_roadblock" },
     { "InstanceId": "combat-stance-guardian", "Template": "combat_stance_guardian" },
@@ -33,18 +37,19 @@
     { "InstanceId": "combat-stance-priority-critical-far", "Template": "combat_stance_priority_critical_far" }
   ],
   "Teams": [
-    { "TeamId": 1, "RepresentativeInstanceId": "combat-stance-vanguard" },
-    { "TeamId": 2, "RepresentativeInstanceId": "combat-stance-roadblock" }
+    { "TeamId": 1, "RepresentativeInstanceId": "combat-stance-team-one" },
+    { "TeamId": 2, "RepresentativeInstanceId": "combat-stance-team-two" }
   ],
   "Players": [
-    { "PlayerId": 1, "TeamId": 1, "RepresentativeInstanceId": "combat-stance-vanguard", "IsLocal": true },
-    { "PlayerId": 2, "TeamId": 2, "RepresentativeInstanceId": "combat-stance-roadblock", "IsLocal": false }
+    { "PlayerId": 1, "TeamId": 1, "RepresentativeInstanceId": "combat-stance-player-one", "IsLocal": true },
+    { "PlayerId": 2, "TeamId": 2, "RepresentativeInstanceId": "combat-stance-player-two", "IsLocal": false }
   ],
   "ParticipantRelationships": {
     "Teams": [
       { "TeamA": 1, "TeamB": 1, "TypeId": "CombatStance.Participant", "Attitude": "Friendly", "Symmetric": true },
       { "TeamA": 2, "TeamB": 2, "TypeId": "CombatStance.Participant", "Attitude": "Friendly", "Symmetric": true },
-      { "TeamA": 1, "TeamB": 2, "TypeId": "CombatStance.Participant", "Attitude": "Hostile", "Symmetric": true }
+      { "TeamA": 1, "TeamB": 2, "TypeId": "CombatStance.Participant", "Attitude": "Hostile", "Symmetric": true },
+      { "TeamA": 1, "TeamB": 2, "TypeId": "CombatStance.Hostile", "Attitude": "Hostile", "Symmetric": true }
     ],
     "Players": [
       { "PlayerA": 1, "PlayerB": 2, "TypeId": "CombatStance.Participant", "Symmetric": true }

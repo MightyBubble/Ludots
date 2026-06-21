@@ -9,6 +9,7 @@ using Ludots.Core.Gameplay.GAS;
 using Ludots.Core.Gameplay.GAS.Components;
 using Ludots.Core.Gameplay.GAS.Orders;
 using Ludots.Core.Gameplay.GAS.Registry;
+using Ludots.Core.Gameplay.Relationships;
 using Ludots.Core.Gameplay.Teams;
 using Ludots.Core.Mathematics;
 using Ludots.Core.Spatial;
@@ -220,6 +221,9 @@ public sealed class CombatStanceBehaviorTests
             ChunkedGridSpatialPartitionWorld partition,
             WorldSizeSpec spec,
             SpatialQueryService spatial,
+            RelationshipRuntime relationships,
+            TeamEntityLookup teamLookup,
+            int hostileRelationshipTypeId,
             CombatStanceOrderSystem system)
         {
             World = world;
@@ -230,6 +234,9 @@ public sealed class CombatStanceBehaviorTests
             Partition = partition;
             Spec = spec;
             Spatial = spatial;
+            Relationships = relationships;
+            TeamLookup = teamLookup;
+            HostileRelationshipTypeId = hostileRelationshipTypeId;
             System = system;
             AttackMoveOrderTypeId = orderTypes.GetId(StanceOrderKeys.AttackMove);
             AssaultMoveOrderTypeId = orderTypes.GetId(StanceOrderKeys.AssaultMove);
@@ -249,6 +256,9 @@ public sealed class CombatStanceBehaviorTests
         public ChunkedGridSpatialPartitionWorld Partition { get; }
         public WorldSizeSpec Spec { get; }
         public SpatialQueryService Spatial { get; }
+        public RelationshipRuntime Relationships { get; }
+        public TeamEntityLookup TeamLookup { get; }
+        public int HostileRelationshipTypeId { get; }
         public CombatStanceOrderSystem System { get; }
         public int AttackMoveOrderTypeId { get; }
         public int AssaultMoveOrderTypeId { get; }
@@ -268,8 +278,14 @@ public sealed class CombatStanceBehaviorTests
             var orderTypes = CreateOrderTypes();
             TagRegistry.Clear();
             TagRegistry.Register("Event.DamageTaken");
-            TeamManager.Clear();
-            TeamManager.SetRelationshipSymmetric(1, 2, TeamRelationship.Hostile);
+            var relationshipTypes = new RelationshipTypeRegistry();
+            int hostileRelationshipTypeId = relationshipTypes.Register("CombatStance.Hostile", isSymmetric: true);
+            var relationshipMetrics = new RelationshipMetricRegistry();
+            var relationshipFlags = new RelationshipFlagRegistry();
+            var relationshipBands = new RelationshipBandRegistry();
+            var relationshipChanges = new RelationshipChangeBuffer();
+            var relationships = new RelationshipRuntime(world, relationshipTypes, relationshipMetrics, relationshipFlags, relationshipBands, relationshipChanges);
+            var teamLookup = new TeamEntityLookup();
             var partition = new ChunkedGridSpatialPartitionWorld(64);
             var spec = new WorldSizeSpec(new WorldAabbCm(-5000, -5000, 10000, 10000), 100);
             var spatial = new SpatialQueryService(new ChunkedGridSpatialPartitionBackend(partition, spec));
@@ -282,9 +298,9 @@ public sealed class CombatStanceBehaviorTests
 
                 return world.Get<WorldPositionCm>(entity).ToWorldCmInt2();
             });
-            var settings = new CombatStanceBehaviorSettings(arrivalRadiusCm: 50, defaultRetaliationTtlSteps: 180);
-            var system = new CombatStanceOrderSystem(world, clock, orders, orderTypes, spatial, settings, events);
-            return new StanceFixture(world, clock, orders, orderTypes, events, partition, spec, spatial, system);
+            var settings = new CombatStanceBehaviorSettings(arrivalRadiusCm: 50, defaultRetaliationTtlSteps: 180, hostileRelationshipTypeId);
+            var system = new CombatStanceOrderSystem(world, clock, orders, orderTypes, spatial, settings, relationships, teamLookup, events);
+            return new StanceFixture(world, clock, orders, orderTypes, events, partition, spec, spatial, relationships, teamLookup, hostileRelationshipTypeId, system);
         }
 
         public Entity CreateActor(int x, int y, int stance, int leashRadiusCm = 0)
@@ -299,6 +315,7 @@ public sealed class CombatStanceBehaviorTests
                     RetaliationTtlSteps = 180
                 },
                 WorldPositionCm.FromCm(x, y));
+            RegisterTeamRepresentativeIfMissing(1, actor);
             Partition.Add(actor, x / Spec.GridCellSizeCm, y / Spec.GridCellSizeCm);
             return actor;
         }
@@ -309,6 +326,7 @@ public sealed class CombatStanceBehaviorTests
                 new OrderBuffer { ActiveIndex = -1 },
                 new Team { Id = 1 },
                 WorldPositionCm.FromCm(x, y));
+            RegisterTeamRepresentativeIfMissing(1, entity);
             Partition.Add(entity, x / Spec.GridCellSizeCm, y / Spec.GridCellSizeCm);
             return entity;
         }
@@ -318,8 +336,30 @@ public sealed class CombatStanceBehaviorTests
             Entity entity = priority > 0
                 ? World.Create(new Team { Id = 2 }, new UtilityAiTargetPriority { Bucket = priority }, WorldPositionCm.FromCm(x, y))
                 : World.Create(new Team { Id = 2 }, WorldPositionCm.FromCm(x, y));
+            RegisterTeamRepresentativeIfMissing(2, entity);
+            EnsureHostileTeamRelationship();
             Partition.Add(entity, x / Spec.GridCellSizeCm, y / Spec.GridCellSizeCm);
             return entity;
+        }
+
+        private void RegisterTeamRepresentativeIfMissing(int teamId, Entity entity)
+        {
+            if (!TeamLookup.TryGet(teamId, out _))
+            {
+                TeamLookup.Register(teamId, entity);
+            }
+        }
+
+        private void EnsureHostileTeamRelationship()
+        {
+            if (!TeamLookup.TryGet(1, out Entity friendlyTeam) ||
+                !TeamLookup.TryGet(2, out Entity hostileTeam))
+            {
+                return;
+            }
+
+            Relationships.EnsureLink(friendlyTeam, hostileTeam, HostileRelationshipTypeId);
+            Relationships.EnsureLink(hostileTeam, friendlyTeam, HostileRelationshipTypeId);
         }
 
         public void Activate(Entity actor, int orderTypeId, OrderMutator mutate)

@@ -1,6 +1,8 @@
 ﻿using System.Threading.Tasks;
 using Ludots.Core.Engine;
 using Ludots.Core.Gameplay.GAS.Orders;
+using Ludots.Core.Gameplay.Relationships;
+using Ludots.Core.Gameplay.Teams;
 using Ludots.Core.Modding;
 using Ludots.Core.Scripting;
 using Ludots.Core.Spatial;
@@ -43,13 +45,20 @@ public sealed class InstallCombatStanceBehaviorOnGameStartTrigger : Trigger
             ?? throw new System.InvalidOperationException("CombatStanceBehaviorMod requires OrderQueue.");
         IClock clock = engine.GetService(CoreServiceKeys.Clock)
             ?? throw new System.InvalidOperationException("CombatStanceBehaviorMod requires IClock.");
+        RelationshipRuntime relationships = engine.GetService(CoreServiceKeys.RelationshipRuntime)
+            ?? throw new System.InvalidOperationException("CombatStanceBehaviorMod requires RelationshipRuntime.");
+        RelationshipTypeRegistry relationshipTypes = engine.GetService(CoreServiceKeys.RelationshipTypeRegistry)
+            ?? throw new System.InvalidOperationException("CombatStanceBehaviorMod requires RelationshipTypeRegistry.");
+        TeamEntityLookup teams = engine.GetService(CoreServiceKeys.TeamEntityLookup)
+            ?? throw new System.InvalidOperationException("CombatStanceBehaviorMod requires TeamEntityLookup.");
         CombatStanceBehaviorSettings settings = new CombatStanceBehaviorSettingsLoader(engine.ConfigPipeline)
             .Load(
                 engine.ConfigCatalog ?? throw new System.InvalidOperationException("CombatStanceBehaviorMod requires ConfigCatalog."),
-                engine.ConfigConflictReport ?? throw new System.InvalidOperationException("CombatStanceBehaviorMod requires ConfigConflictReport."));
+                engine.ConfigConflictReport ?? throw new System.InvalidOperationException("CombatStanceBehaviorMod requires ConfigConflictReport."),
+                relationshipTypes);
 
         engine.RegisterSystem(
-            new CombatStanceOrderSystem(engine.World, clock, orders, orderTypes, spatial, settings, engine.EventBus),
+            new CombatStanceOrderSystem(engine.World, clock, orders, orderTypes, spatial, settings, relationships, teams, engine.EventBus),
             SystemGroup.PostMovement);
         _context.Log("[CombatStanceBehaviorMod] Combat stance behavior system registered");
         return Task.CompletedTask;

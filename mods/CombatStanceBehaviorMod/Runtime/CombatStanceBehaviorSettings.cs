@@ -2,12 +2,16 @@ using System;
 using System.Text.Json;
 using System.Text.Json.Nodes;
 using Ludots.Core.Config;
+using Ludots.Core.Gameplay.Relationships;
 
 namespace CombatStanceBehaviorMod.Runtime;
 
 public readonly struct CombatStanceBehaviorSettings
 {
-    public CombatStanceBehaviorSettings(int arrivalRadiusCm, int defaultRetaliationTtlSteps)
+    public CombatStanceBehaviorSettings(
+        int arrivalRadiusCm,
+        int defaultRetaliationTtlSteps,
+        int hostileRelationshipTypeId)
     {
         if (arrivalRadiusCm <= 0)
         {
@@ -19,18 +23,26 @@ public readonly struct CombatStanceBehaviorSettings
             throw new ArgumentOutOfRangeException(nameof(defaultRetaliationTtlSteps), "Combat stance default retaliation TTL must be positive.");
         }
 
+        if (hostileRelationshipTypeId < 0)
+        {
+            throw new ArgumentOutOfRangeException(nameof(hostileRelationshipTypeId), "Combat stance hostile relationship type id must be registered.");
+        }
+
         ArrivalRadiusCm = arrivalRadiusCm;
         DefaultRetaliationTtlSteps = defaultRetaliationTtlSteps;
+        HostileRelationshipTypeId = hostileRelationshipTypeId;
     }
 
     public int ArrivalRadiusCm { get; }
     public int DefaultRetaliationTtlSteps { get; }
+    public int HostileRelationshipTypeId { get; }
 }
 
 internal sealed class CombatStanceBehaviorConfig
 {
     public int? ArrivalRadiusCm { get; set; }
     public int? DefaultRetaliationTtlSteps { get; set; }
+    public string HostileRelationshipType { get; set; } = string.Empty;
 }
 
 internal sealed class CombatStanceBehaviorSettingsLoader
@@ -44,7 +56,10 @@ internal sealed class CombatStanceBehaviorSettingsLoader
         _pipeline = pipeline ?? throw new ArgumentNullException(nameof(pipeline));
     }
 
-    public CombatStanceBehaviorSettings Load(ConfigCatalog catalog, ConfigConflictReport report)
+    public CombatStanceBehaviorSettings Load(
+        ConfigCatalog catalog,
+        ConfigConflictReport report,
+        RelationshipTypeRegistry relationshipTypes)
     {
         if (catalog == null)
         {
@@ -54,6 +69,11 @@ internal sealed class CombatStanceBehaviorSettingsLoader
         if (report == null)
         {
             throw new ArgumentNullException(nameof(report));
+        }
+
+        if (relationshipTypes == null)
+        {
+            throw new ArgumentNullException(nameof(relationshipTypes));
         }
 
         if (!catalog.TryGet(RelativePath, out ConfigCatalogEntry entry))
@@ -77,7 +97,8 @@ internal sealed class CombatStanceBehaviorSettingsLoader
 
         int arrivalRadiusCm = RequirePositive(cfg.ArrivalRadiusCm, "arrivalRadiusCm");
         int defaultRetaliationTtlSteps = RequirePositive(cfg.DefaultRetaliationTtlSteps, "defaultRetaliationTtlSteps");
-        return new CombatStanceBehaviorSettings(arrivalRadiusCm, defaultRetaliationTtlSteps);
+        int hostileRelationshipTypeId = relationshipTypes.GetId(RequireNonEmpty(cfg.HostileRelationshipType, "hostileRelationshipType"));
+        return new CombatStanceBehaviorSettings(arrivalRadiusCm, defaultRetaliationTtlSteps, hostileRelationshipTypeId);
     }
 
     private static int RequirePositive(int? value, string field)
@@ -93,5 +114,20 @@ internal sealed class CombatStanceBehaviorSettingsLoader
         }
 
         return value.Value;
+    }
+
+    private static string RequireNonEmpty(string value, string field)
+    {
+        if (string.IsNullOrWhiteSpace(value))
+        {
+            throw new InvalidOperationException($"Combat stance behavior config requires '{field}'.");
+        }
+
+        if (!string.Equals(value, value.Trim(), StringComparison.Ordinal))
+        {
+            throw new InvalidOperationException($"Combat stance behavior config '{field}' must be trimmed.");
+        }
+
+        return value;
     }
 }

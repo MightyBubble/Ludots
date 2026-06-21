@@ -53,6 +53,8 @@ public sealed class CombatStanceShowcasePlayableAcceptanceTests
         Entity priorityCritical = FindEntity(world, "Combat Stance Priority Critical Far");
 
         AssertParticipantRelationships(engine);
+        Assert.That(world.Has<OrderBuffer>(switchUnit), Is.True, "switch unit should load with OrderBuffer.");
+        Assert.That(world.Has<CombatStanceState>(switchUnit), Is.True, "switch unit should load with CombatStanceState.");
 
         Order vanguardAttack = TickUntilActiveOrder(engine, world, vanguard, attackTargetOrderTypeId, roadblock, maxFrames: 60);
         Assert.That(vanguardAttack.Target, Is.EqualTo(roadblock));
@@ -135,18 +137,17 @@ public sealed class CombatStanceShowcasePlayableAcceptanceTests
         Assert.That(players.TryGet(2, out Entity hostilePlayer), Is.True);
 
         int participantTypeId = types.GetId("CombatStance.Participant");
+        int hostileTypeId = types.GetId("CombatStance.Hostile");
         Assert.Multiple(() =>
         {
             Assert.That(relationships.HasLink(friendlyTeam, hostileTeam, participantTypeId), Is.True);
             Assert.That(relationships.HasLink(hostileTeam, friendlyTeam, participantTypeId), Is.True);
+            Assert.That(relationships.HasLink(friendlyTeam, hostileTeam, hostileTypeId), Is.True);
+            Assert.That(relationships.HasLink(hostileTeam, friendlyTeam, hostileTypeId), Is.True);
             Assert.That(relationships.HasLink(localPlayer, hostilePlayer, participantTypeId), Is.True);
             Assert.That(relationships.HasLink(hostilePlayer, localPlayer, participantTypeId), Is.True);
             Assert.That(relationships.HasLink(localPlayer, friendlyTeam, participantTypeId), Is.True);
             Assert.That(relationships.HasLink(hostilePlayer, hostileTeam, participantTypeId), Is.True);
-            Assert.That(TeamManager.GetRelationship(1, 1), Is.EqualTo(TeamRelationship.Friendly));
-            Assert.That(TeamManager.GetRelationship(2, 2), Is.EqualTo(TeamRelationship.Friendly));
-            Assert.That(TeamManager.GetRelationship(1, 2), Is.EqualTo(TeamRelationship.Hostile));
-            Assert.That(TeamManager.GetRelationship(2, 1), Is.EqualTo(TeamRelationship.Hostile));
         });
     }
 

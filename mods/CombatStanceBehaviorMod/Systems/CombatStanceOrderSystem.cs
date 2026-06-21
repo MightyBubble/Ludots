@@ -11,6 +11,7 @@ using Ludots.Core.Gameplay.Components;
 using Ludots.Core.Gameplay.GAS.Components;
 using Ludots.Core.Gameplay.GAS.Orders;
 using Ludots.Core.Gameplay.GAS.Registry;
+using Ludots.Core.Gameplay.Relationships;
 using Ludots.Core.Gameplay.Teams;
 using Ludots.Core.Mathematics;
 using Ludots.Core.Spatial;
@@ -32,6 +33,8 @@ public sealed class CombatStanceOrderSystem : BaseSystem<World, float>
     private readonly OrderQueue _orders;
     private readonly OrderTypeRegistry _orderTypes;
     private readonly ISpatialQueryService _spatial;
+    private readonly RelationshipRuntime _relationships;
+    private readonly TeamEntityLookup _teams;
     private readonly GameplayEventBus? _events;
     private readonly CombatStanceBehaviorSettings _settings;
     private readonly Entity[] _targets;
@@ -59,6 +62,8 @@ public sealed class CombatStanceOrderSystem : BaseSystem<World, float>
         OrderTypeRegistry orderTypes,
         ISpatialQueryService spatial,
         CombatStanceBehaviorSettings settings,
+        RelationshipRuntime relationships,
+        TeamEntityLookup teams,
         GameplayEventBus? events = null,
         int targetCapacity = DefaultTargetCapacity)
         : base(world)
@@ -67,6 +72,8 @@ public sealed class CombatStanceOrderSystem : BaseSystem<World, float>
         _orders = orders ?? throw new ArgumentNullException(nameof(orders));
         _orderTypes = orderTypes ?? throw new ArgumentNullException(nameof(orderTypes));
         _spatial = spatial ?? throw new ArgumentNullException(nameof(spatial));
+        _relationships = relationships ?? throw new ArgumentNullException(nameof(relationships));
+        _teams = teams ?? throw new ArgumentNullException(nameof(teams));
         _events = events;
         _settings = settings;
         _targets = new Entity[targetCapacity < 16 ? 16 : targetCapacity];
@@ -525,7 +532,13 @@ public sealed class CombatStanceOrderSystem : BaseSystem<World, float>
 
         int actorTeam = World.Get<Team>(actor).Id;
         int targetTeam = World.Get<Team>(target).Id;
-        return TeamManager.GetRelationship(actorTeam, targetTeam) == TeamRelationship.Hostile;
+        if (!_teams.TryGet(actorTeam, out Entity actorTeamEntity) ||
+            !_teams.TryGet(targetTeam, out Entity targetTeamEntity))
+        {
+            return false;
+        }
+
+        return _relationships.HasLink(actorTeamEntity, targetTeamEntity, _settings.HostileRelationshipTypeId);
     }
 
     private int ResolveConfiguredStance(Entity entity)
