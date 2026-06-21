@@ -1,5 +1,6 @@
 using System.Text;
 using System.Text.Json;
+using System.Reflection;
 using Ludots.WebUI.DataPlane;
 using NUnit.Framework;
 
@@ -20,6 +21,15 @@ public sealed class WebUiDataPlaneContractTests
 		Assert.That(ContainsAscii(bytes, "Unreal"), Is.False);
 		Assert.That(ContainsAscii(bytes, "UE5"), Is.False);
 		Assert.That(ContainsAscii(bytes, "BLUI"), Is.False);
+	}
+
+	[Test]
+	public void WebUiContextKeys_OnlyExposeTheFactoryKey()
+	{
+		Type type = typeof(Ludots.WebUI.WebUIContextKeys);
+
+		Assert.That(type.GetField("BridgeFactory", BindingFlags.Public | BindingFlags.Static), Is.Not.Null);
+		Assert.That(type.GetField("Bridge", BindingFlags.Public | BindingFlags.Static), Is.Null);
 	}
 
 	[Test]

@@ -67,6 +67,19 @@ namespace Ludots.Tests.ThreeC
             Assert.That(handler.IsDown("MoveUp"), Is.False);
         }
 
+        [Test]
+        public void WebInputBackend_EnqueueMiddlePointerDown_PreservesMiddleButton()
+        {
+            var backend = new WebInputBackend();
+
+            backend.ApplyStateMessage(CreateInputStateMessage(buttonMask: 0, mouseX: 640f, mouseY: 360f, mouseWheel: 0f, keyBits: 0));
+            backend.EnqueuePointerMessage(CreatePointerMessage(PointerAction.Down, InputProtocol.ButtonMaskMiddle, 640f, 360f));
+
+            Assert.That(backend.TryDequeuePointerEvent(out var pointerEvent), Is.True);
+            Assert.That(pointerEvent!.Action, Is.EqualTo(PointerAction.Down));
+            Assert.That(pointerEvent!.Button, Is.EqualTo(PointerButton.Middle));
+        }
+
         private static PlayerInputHandler CreateHandler(IInputBackend backend)
         {
             var config = new InputConfigRoot

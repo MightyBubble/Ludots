@@ -154,14 +154,18 @@ public class UIRoot
 			flag = Scene.Dispatch(new UiPointerEvent(UiPointerEventType.Move, pointerEvent.PointerId, pointerEvent.X, pointerEvent.Y, uiNodeId)).Handled;
 			break;
 		case PointerAction.Down:
-			_pressedNodeId = uiNodeId;
+		{
+			PointerButton button = RequirePointerButton(pointerEvent);
+			_pressedNodeId = button == PointerButton.Left ? uiNodeId : null;
 			flag = Scene.Dispatch(new UiPointerEvent(UiPointerEventType.Down, pointerEvent.PointerId, pointerEvent.X, pointerEvent.Y, uiNodeId)).Handled;
 			break;
+		}
 		case PointerAction.Up:
 		{
 			flag = Scene.Dispatch(new UiPointerEvent(UiPointerEventType.Up, pointerEvent.PointerId, pointerEvent.X, pointerEvent.Y, uiNodeId)).Handled;
 			UiNodeId? pressedNodeId = _pressedNodeId;
-			if (pressedNodeId.HasValue)
+			PointerButton button = RequirePointerButton(pointerEvent);
+			if (pressedNodeId.HasValue && button == PointerButton.Left)
 			{
 				UiNodeId valueOrDefault = pressedNodeId.GetValueOrDefault();
 				if (valueOrDefault.IsValid && uiNodeId == valueOrDefault)
@@ -281,5 +285,11 @@ public class UIRoot
 		Scene.Layout(Width, Height);
 		IsDirty = true;
 		return true;
+	}
+
+	private static PointerButton RequirePointerButton(PointerEvent pointerEvent)
+	{
+		return pointerEvent.Button
+			?? throw new InvalidOperationException("Pointer Down/Up input must include an explicit button.");
 	}
 }

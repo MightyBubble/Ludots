@@ -309,7 +309,7 @@ internal sealed class CefBrowserSurface : IBrowserSurface
 	{
 		int x = (int)MathF.Round(pointer.X);
 		int y = (int)MathF.Round(pointer.Y);
-		CefEventFlags flags = pointer.IsPrimaryButtonDown ? CefEventFlags.LeftMouseButton : CefEventFlags.None;
+		CefEventFlags flags = pointer.IsPrimaryButtonDown ? ToMouseButtonFlag(pointer.Button) : CefEventFlags.None;
 
 		switch (pointer.EventType)
 		{
@@ -384,7 +384,18 @@ internal sealed class CefBrowserSurface : IBrowserSurface
 			BrowserPointerButton.Left => MouseButtonType.Left,
 			BrowserPointerButton.Middle => MouseButtonType.Middle,
 			BrowserPointerButton.Right => MouseButtonType.Right,
-			_ => MouseButtonType.Left
+			_ => throw new ArgumentOutOfRangeException(nameof(button), button, "Unsupported browser pointer button.")
+		};
+	}
+
+	private static CefEventFlags ToMouseButtonFlag(BrowserPointerButton button)
+	{
+		return button switch
+		{
+			BrowserPointerButton.Left => CefEventFlags.LeftMouseButton,
+			BrowserPointerButton.Middle => CefEventFlags.MiddleMouseButton,
+			BrowserPointerButton.Right => CefEventFlags.RightMouseButton,
+			_ => throw new ArgumentOutOfRangeException(nameof(button), button, "Unsupported browser pointer button.")
 		};
 	}
 
@@ -442,17 +453,6 @@ internal sealed class CefBrowserSurface : IBrowserSurface
 
 	private static string ResolveNavigationUrl(Uri uri)
 	{
-		if (string.Equals(uri.Scheme, "ludots-browser-showcase", StringComparison.OrdinalIgnoreCase))
-		{
-			string absolutePath = string.IsNullOrWhiteSpace(uri.AbsolutePath) ? "/" : uri.AbsolutePath;
-			if (!absolutePath.StartsWith("/", StringComparison.Ordinal))
-			{
-				absolutePath = "/" + absolutePath;
-			}
-
-			return $"{CefBrowserRuntime.LocalAppSchemeName}://{CefBrowserRuntime.LocalAppHostName}{absolutePath}{uri.Query}{uri.Fragment}";
-		}
-
 		return uri.ToString();
 	}
 

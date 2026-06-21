@@ -8,7 +8,7 @@ public class BrowserSurfaceCanvasContent : IUiCanvasContent, IUiBrowserCanvasCon
 {
 	private readonly IBrowserSurface _surface;
 	private readonly BrowserSurfaceHitTestOptions _hitTestOptions;
-	private bool _primaryPointerDown;
+	private PointerButton? _activePointerButton;
 	private bool _focused;
 	private bool _disposed;
 	private bool _hasPointerMapping;
@@ -41,7 +41,7 @@ public class BrowserSurfaceCanvasContent : IUiCanvasContent, IUiBrowserCanvasCon
 			return false;
 		}
 
-		if (_primaryPointerDown || _hitTestOptions.Mode == BrowserSurfaceHitTestMode.Bounds)
+		if (_activePointerButton.HasValue || _hitTestOptions.Mode == BrowserSurfaceHitTestMode.Bounds)
 		{
 			return true;
 		}
@@ -60,11 +60,18 @@ public class BrowserSurfaceCanvasContent : IUiCanvasContent, IUiBrowserCanvasCon
 		ArgumentNullException.ThrowIfNull(pointerEvent);
 		ThrowIfDisposed();
 
+		if (pointerEvent.Action is PointerAction.Down or PointerAction.Up &&
+			!pointerEvent.Button.HasValue)
+		{
+			throw new InvalidOperationException("Browser pointer Down/Up input must include an explicit button.");
+		}
+		PointerButton? pointerButton = pointerEvent.Button;
+
 		UiRect contentRect = GetContentRect(node);
 		if (!contentRect.Contains(pointerEvent.X, pointerEvent.Y) &&
 			pointerEvent.Action != PointerAction.Up &&
 			pointerEvent.Action != PointerAction.Cancel &&
-			!_primaryPointerDown)
+			!_activePointerButton.HasValue)
 		{
 			return false;
 		}
@@ -72,19 +79,33 @@ public class BrowserSurfaceCanvasContent : IUiCanvasContent, IUiBrowserCanvasCon
 		BrowserPointerMapping pointerMapping = GetPointerMapping(contentRect);
 		float localX = Math.Clamp((pointerEvent.X - contentRect.X) * pointerMapping.ScaleX, 0f, pointerMapping.Viewport.Width - 1f);
 		float localY = Math.Clamp((pointerEvent.Y - contentRect.Y) * pointerMapping.ScaleY, 0f, pointerMapping.Viewport.Height - 1f);
-
 		if (pointerEvent.Action == PointerAction.Down)
 		{
-			_primaryPointerDown = true;
+			_activePointerButton = pointerButton;
 			SetBrowserFocus(true);
 		}
 
-		bool primaryPointerDown = _primaryPointerDown || pointerEvent.Action == PointerAction.Down;
+		PointerButton? activeButton = pointerEvent.Action switch
+		{
+			PointerAction.Move => _activePointerButton,
+			PointerAction.Down => pointerButton,
+			PointerAction.Up => pointerButton,
+			PointerAction.Cancel => _activePointerButton,
+			_ => null
+		};
+		BrowserPointerButton browserButton = activeButton switch
+		{
+			PointerButton.Left => BrowserPointerButton.Left,
+			PointerButton.Middle => BrowserPointerButton.Middle,
+			PointerButton.Right => BrowserPointerButton.Right,
+			_ => BrowserPointerButton.None
+		};
+		bool buttonDown = activeButton.HasValue && pointerEvent.Action != PointerAction.Up && pointerEvent.Action != PointerAction.Cancel;
 		BrowserInputEvent? browserEvent = pointerEvent.Action switch
 		{
-			PointerAction.Move => new BrowserPointerEvent(BrowserPointerEventType.Move, pointerEvent.PointerId, localX, localY, BrowserPointerButton.None, primaryPointerDown),
-			PointerAction.Down => new BrowserPointerEvent(BrowserPointerEventType.Down, pointerEvent.PointerId, localX, localY, BrowserPointerButton.Left, true),
-			PointerAction.Up => new BrowserPointerEvent(BrowserPointerEventType.Up, pointerEvent.PointerId, localX, localY, BrowserPointerButton.Left, false),
+			PointerAction.Move => new BrowserPointerEvent(BrowserPointerEventType.Move, pointerEvent.PointerId, localX, localY, browserButton, buttonDown),
+			PointerAction.Down => new BrowserPointerEvent(BrowserPointerEventType.Down, pointerEvent.PointerId, localX, localY, browserButton, true),
+			PointerAction.Up => new BrowserPointerEvent(BrowserPointerEventType.Up, pointerEvent.PointerId, localX, localY, browserButton, false),
 			PointerAction.Scroll => new BrowserWheelEvent(localX, localY, pointerEvent.DeltaX * pointerMapping.ScaleX, pointerEvent.DeltaY * pointerMapping.ScaleY),
 			PointerAction.Cancel => new BrowserPointerEvent(BrowserPointerEventType.Leave, pointerEvent.PointerId, localX, localY, BrowserPointerButton.None, false),
 			_ => null
@@ -98,7 +119,7 @@ public class BrowserSurfaceCanvasContent : IUiCanvasContent, IUiBrowserCanvasCon
 		_ = _surface.SendInputAsync(browserEvent);
 		if (pointerEvent.Action is PointerAction.Up or PointerAction.Cancel)
 		{
-			_primaryPointerDown = false;
+			_activePointerButton = null;
 		}
 
 		return true;

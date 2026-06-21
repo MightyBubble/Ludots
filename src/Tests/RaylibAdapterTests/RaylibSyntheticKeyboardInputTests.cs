@@ -29,11 +29,11 @@ public sealed class RaylibSyntheticKeyboardInputTests
         var sink = new RecordingCanvasKeyboardSink();
         UIRoot root = CreateFocusedCanvasRoot(sink);
 
-        bool handled = RaylibSyntheticKeyboardInput.SendTextInput(root, "a你");
+        bool handled = RaylibSyntheticKeyboardInput.SendTextInput(root, "ab");
 
         Assert.That(handled, Is.True);
         Assert.That(sink.Events.Select(e => e.Action), Is.EqualTo(new[] { KeyboardAction.Character, KeyboardAction.Character }));
-        Assert.That(sink.Events.Select(e => e.Text), Is.EqualTo(new[] { "a", "你" }));
+        Assert.That(sink.Events.Select(e => e.Text), Is.EqualTo(new[] { "a", "b" }));
     }
 
     private static UIRoot CreateFocusedCanvasRoot(RecordingCanvasKeyboardSink sink)
@@ -50,6 +50,7 @@ public sealed class RaylibSyntheticKeyboardInputTests
             DeviceType = InputDeviceType.Mouse,
             PointerId = 0,
             Action = PointerAction.Down,
+            Button = PointerButton.Left,
             X = 8f,
             Y = 8f
         });

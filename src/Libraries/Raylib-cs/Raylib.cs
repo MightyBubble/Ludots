@@ -1,3 +1,4 @@
+using System;
 using System.Numerics;
 using System.Runtime.InteropServices;
 
@@ -451,6 +452,12 @@ namespace Raylib_cs
         [DllImport(NativeLib, CallingConvention = CallingConvention.Cdecl)]
         [return: MarshalAs(UnmanagedType.I1)]
         public static extern bool IsWindowFocused();
+
+        [DllImport(NativeLib, CallingConvention = CallingConvention.Cdecl)]
+        public static extern Vector2 GetWindowPosition();
+
+        [DllImport(NativeLib, CallingConvention = CallingConvention.Cdecl)]
+        public static extern IntPtr GetWindowHandle();
 
         [DllImport(NativeLib, CallingConvention = CallingConvention.Cdecl)]
         public static extern Vector2 GetMousePosition();

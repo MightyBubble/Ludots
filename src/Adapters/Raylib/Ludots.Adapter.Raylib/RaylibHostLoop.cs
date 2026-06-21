@@ -44,10 +44,17 @@ namespace Ludots.Adapter.Raylib
         private const uint FlagWindowResizable = 4;
         private static readonly ServiceKey<IRaylibBenchmarkRenderer> RaylibBenchmarkRendererKey = new("Platform.RaylibBenchmarkRenderer");
         private static bool _uiPointerCaptured;
+        private static PointerButton? _uiCapturedPointerButton;
         private static bool _hasLastUiPointerMove;
         private static float _lastUiPointerMoveX;
         private static float _lastUiPointerMoveY;
         private static bool _emptyBufferWarned;
+        private static readonly MouseButton[] MouseButtonsInPriorityOrder =
+        {
+            MouseButton.MOUSE_LEFT_BUTTON,
+            MouseButton.MOUSE_RIGHT_BUTTON,
+            MouseButton.MOUSE_MIDDLE_BUTTON
+        };
         private static readonly KeyboardKey[] BrowserForwardedKeys =
         {
             KeyboardKey.KEY_ENTER,
@@ -131,6 +138,14 @@ namespace Ludots.Adapter.Raylib
 
         private readonly record struct UiInputFrameResult(bool Handled, bool PointerCaptured, bool WheelCaptured);
 
+        internal static bool ShouldCaptureWorldPointer(
+            bool pointerCaptured,
+            bool wheelCaptured,
+            bool inputHandled)
+        {
+            return pointerCaptured || wheelCaptured || inputHandled;
+        }
+
         public static void Run(RaylibHostSetup setup)
         {
             var engine = setup.Engine;
@@ -142,7 +157,7 @@ namespace Ludots.Adapter.Raylib
             int screenWidth = config.WindowWidth <= 0 ? 1280 : config.WindowWidth;
             int screenHeight = config.WindowHeight <= 0 ? 720 : config.WindowHeight;
             string title = string.IsNullOrWhiteSpace(config.WindowTitle) ? "Ludots Engine" : config.WindowTitle;
-            // targetFps = 0 表示不锁帧，< 0 使用默认 60
+            // targetFps = 0 琛ㄧず涓嶉攣甯э紝< 0 浣跨敤榛樿 60
             int targetFps = config.TargetFps == 0 ? 0 : (config.TargetFps < 0 ? 60 : config.TargetFps);
             bool windowOpened = false;
             bool windowResizable = config.WindowResizable || config.WindowStartMaximized;
@@ -180,6 +195,7 @@ namespace Ludots.Adapter.Raylib
 
                 Rl.SetExitKey(0);
                 Rl.SetTargetFPS(targetFps);
+                IntPtr nativeWindowHandle = Rl.GetWindowHandle();
 
                 screenWidth = Math.Max(1, Rl.GetScreenWidth());
                 screenHeight = Math.Max(1, Rl.GetScreenHeight());
@@ -188,6 +204,7 @@ namespace Ludots.Adapter.Raylib
 
                 using var overlayCompositor = new RaylibOverlayCompositor(screenWidth, screenHeight);
                 using var browserLayerRenderer = new RaylibBrowserLayerRenderer();
+                var windowRepaintGuard = new RaylibWindowRepaintGuard();
                 uiRoot.Resize(screenWidth, screenHeight);
 
                 var initialCamera = new Camera3D
@@ -336,6 +353,7 @@ namespace Ludots.Adapter.Raylib
                         long preTickStart = wallFrameStart;
                         int w = Math.Max(1, Rl.GetScreenWidth());
                         int h = Math.Max(1, Rl.GetScreenHeight());
+                        windowRepaintGuard.ObserveWindowRect(nativeWindowHandle, Rl.GetWindowPosition(), w, h);
                         if (w != lastW || h != lastH)
                         {
                             lastW = w;
@@ -370,17 +388,24 @@ namespace Ludots.Adapter.Raylib
                         double uiInputMs = 0d;
                         bool uiCaptured = false;
                         bool uiWheelCaptured = false;
+                        bool uiInputHandled = false;
                         if (drawSkiaUi)
                         {
                             long uiInputStart = Stopwatch.GetTimestamp();
                             UiInputFrameResult uiInput = UpdateInput(uiRoot, syntheticUiPlayback, frameIndex, diagnosticPath);
                             uiCaptured = uiInput.PointerCaptured;
                             uiWheelCaptured = uiInput.WheelCaptured;
+                            uiInputHandled = uiInput.Handled;
                             uiInputMs = ElapsedMs(uiInputStart);
                         }
 
                         presentationTiming?.ObserveUiInput(uiInputMs);
-                        engine.SetService(CoreServiceKeys.UiCaptured, uiCaptured || uiRoot.HasFocusedCanvas);
+                        engine.SetService(
+                            CoreServiceKeys.UiCaptured,
+                            ShouldCaptureWorldPointer(
+                                uiCaptured,
+                                uiWheelCaptured,
+                                uiInputHandled));
                         engine.SetService(CoreServiceKeys.UiWheelCaptured, uiWheelCaptured);
                         presentationTiming?.ObserveHostPreTick(ElapsedMs(preTickStart));
 
@@ -442,7 +467,7 @@ namespace Ludots.Adapter.Raylib
                             Rl.DrawLine3D(target, target + new Vector3(0, 2.0f, 0), Color.GREEN);
                         }
 
-                        // 锚定到 target，网格以观察点为中心；halfCount 越大边界越远
+                        // 閿氬畾鍒?target锛岀綉鏍间互瑙傚療鐐逛负涓績锛沨alfCount 瓒婂ぇ杈圭晫瓒婅繙
                         if (drawVisualHeightmap &&
                             engine.TryGetService(CoreServiceKeys.VisualHeightmap, out IVisualHeightmap? visualHeightmapForTerrain) &&
                             visualHeightmapForTerrain is IVisualHeightmapRenderSource visualTerrainSource)
@@ -483,7 +508,7 @@ namespace Ludots.Adapter.Raylib
                         {
                             if (!_emptyBufferWarned && draw.GetSpan().Length == 0)
                             {
-                                System.Diagnostics.Debug.WriteLine("[RaylibHostLoop] PrimitiveDrawBuffer is empty on first render frame — no Marker3D performers emitting?");
+                                System.Diagnostics.Debug.WriteLine("[RaylibHostLoop] PrimitiveDrawBuffer is empty on first render frame 鈥?no Marker3D performers emitting?");
                                 _emptyBufferWarned = true;
                             }
                             long primitiveStart = Stopwatch.GetTimestamp();
@@ -604,6 +629,7 @@ namespace Ludots.Adapter.Raylib
 
                         long endDrawingStart = Stopwatch.GetTimestamp();
                         Rl.EndDrawing();
+                        windowRepaintGuard.AfterPresent();
                         presentationTiming?.ObserveEndDrawing(ElapsedMs(endDrawingStart));
                         presentationTiming?.ObserveWallFrame(ElapsedMs(wallFrameStart));
                         previousLoopEnd = Stopwatch.GetTimestamp();
@@ -1047,30 +1073,54 @@ namespace Ludots.Adapter.Raylib
 
             var mousePos = Rl.GetMousePosition();
             bool windowFocused = Rl.IsWindowFocused();
-            bool leftMouseDown = Rl.IsMouseButtonDown(MouseButton.MOUSE_LEFT_BUTTON);
-            bool leftMouseReleased = Rl.IsMouseButtonReleased(MouseButton.MOUSE_LEFT_BUTTON);
             float mouseWheel = Rl.GetMouseWheelMove();
             UiNode? hitNode = _uiPointerCaptured ? null : uiRoot.Scene?.HitTest(mousePos.X, mousePos.Y);
             bool hitInteractiveUi = !_uiPointerCaptured && IsInteractiveUiNode(hitNode);
             bool uiWheelCaptured = false;
+            bool uiInputHandled = false;
 
-            if (_uiPointerCaptured && (!windowFocused || (!leftMouseDown && !leftMouseReleased)))
+            if (_uiPointerCaptured)
             {
-                if (windowFocused)
-                {
-                    uiRoot.HandleInput(new PointerEvent { DeviceType = InputDeviceType.Mouse, PointerId = 0, Action = PointerAction.Up, X = mousePos.X, Y = mousePos.Y });
-                }
+                bool capturedButtonDown = _uiCapturedPointerButton.HasValue &&
+                    Rl.IsMouseButtonDown(ToMouseButton(_uiCapturedPointerButton.Value));
+                bool capturedButtonReleased = _uiCapturedPointerButton.HasValue &&
+                    Rl.IsMouseButtonReleased(ToMouseButton(_uiCapturedPointerButton.Value));
 
-                _uiPointerCaptured = false;
-                ResetUiPointerMoveCache();
+                if (!windowFocused || (!_uiCapturedPointerButton.HasValue && !capturedButtonDown && !capturedButtonReleased) || capturedButtonReleased)
+                {
+                    if (windowFocused && _uiCapturedPointerButton.HasValue && capturedButtonReleased)
+                    {
+                        uiInputHandled |= uiRoot.HandleInput(new PointerEvent
+                        {
+                            DeviceType = InputDeviceType.Mouse,
+                            PointerId = 0,
+                            Action = PointerAction.Up,
+                            Button = _uiCapturedPointerButton.Value,
+                            X = mousePos.X,
+                            Y = mousePos.Y
+                        });
+                    }
+
+                    _uiPointerCaptured = false;
+                    _uiCapturedPointerButton = null;
+                    ResetUiPointerMoveCache();
+                }
             }
 
             if ((_uiPointerCaptured || hitInteractiveUi) && ShouldForwardUiPointerMove(mousePos.X, mousePos.Y))
             {
-                uiRoot.HandleInput(new PointerEvent { DeviceType = InputDeviceType.Mouse, PointerId = 0, Action = PointerAction.Move, X = mousePos.X, Y = mousePos.Y });
+                uiRoot.HandleInput(new PointerEvent
+                {
+                    DeviceType = InputDeviceType.Mouse,
+                    PointerId = 0,
+                    Action = PointerAction.Move,
+                    Button = _uiCapturedPointerButton,
+                    X = mousePos.X,
+                    Y = mousePos.Y
+                });
             }
 
-            if ((hitInteractiveUi || _uiPointerCaptured) && Math.Abs(mouseWheel) > float.Epsilon)
+            if ((_uiPointerCaptured || hitInteractiveUi) && Math.Abs(mouseWheel) > float.Epsilon)
             {
                 uiWheelCaptured = uiRoot.HandleInput(new PointerEvent
                 {
@@ -1084,28 +1134,41 @@ namespace Ludots.Adapter.Raylib
                 });
             }
 
-            if (Rl.IsMouseButtonPressed(MouseButton.MOUSE_LEFT_BUTTON))
+            bool shouldRouteMouseDownToUi = hitInteractiveUi || uiRoot.HasFocusedCanvas || _uiPointerCaptured;
+            foreach (MouseButton mouseButton in MouseButtonsInPriorityOrder)
             {
-                if (hitInteractiveUi &&
-                    uiRoot.HandleInput(new PointerEvent { DeviceType = InputDeviceType.Mouse, PointerId = 0, Action = PointerAction.Down, X = mousePos.X, Y = mousePos.Y }))
+                if (!Rl.IsMouseButtonPressed(mouseButton))
+                {
+                    continue;
+                }
+
+                PointerButton pointerButton = ToPointerButton(mouseButton);
+                if (!shouldRouteMouseDownToUi)
+                {
+                    continue;
+                }
+
+                bool handled = uiRoot.HandleInput(new PointerEvent
+                {
+                    DeviceType = InputDeviceType.Mouse,
+                    PointerId = 0,
+                    Action = PointerAction.Down,
+                    Button = pointerButton,
+                    X = mousePos.X,
+                    Y = mousePos.Y
+                });
+
+                uiInputHandled |= handled;
+                if (handled)
                 {
                     _uiPointerCaptured = true;
-                    ResetUiPointerMoveCache();
-                }
-            }
-
-            if (leftMouseReleased)
-            {
-                if (_uiPointerCaptured)
-                {
-                    uiRoot.HandleInput(new PointerEvent { DeviceType = InputDeviceType.Mouse, PointerId = 0, Action = PointerAction.Up, X = mousePos.X, Y = mousePos.Y });
-                    _uiPointerCaptured = false;
+                    _uiCapturedPointerButton = pointerButton;
                     ResetUiPointerMoveCache();
                 }
             }
 
             ForwardKeyboardInput(uiRoot);
-            return new UiInputFrameResult(Handled: false, PointerCaptured: _uiPointerCaptured, WheelCaptured: uiWheelCaptured);
+            return new UiInputFrameResult(Handled: uiInputHandled, PointerCaptured: _uiPointerCaptured, WheelCaptured: uiWheelCaptured);
         }
 
         private static bool ShouldForwardUiPointerMove(float x, float y)
@@ -1128,6 +1191,28 @@ namespace Ludots.Adapter.Raylib
             _hasLastUiPointerMove = false;
             _lastUiPointerMoveX = 0f;
             _lastUiPointerMoveY = 0f;
+        }
+
+        private static MouseButton ToMouseButton(PointerButton button)
+        {
+            return button switch
+            {
+                PointerButton.Left => MouseButton.MOUSE_LEFT_BUTTON,
+                PointerButton.Middle => MouseButton.MOUSE_MIDDLE_BUTTON,
+                PointerButton.Right => MouseButton.MOUSE_RIGHT_BUTTON,
+                _ => throw new ArgumentOutOfRangeException(nameof(button), button, "Unsupported pointer button.")
+            };
+        }
+
+        private static PointerButton ToPointerButton(MouseButton button)
+        {
+            return button switch
+            {
+                MouseButton.MOUSE_LEFT_BUTTON => PointerButton.Left,
+                MouseButton.MOUSE_MIDDLE_BUTTON => PointerButton.Middle,
+                MouseButton.MOUSE_RIGHT_BUTTON => PointerButton.Right,
+                _ => throw new ArgumentOutOfRangeException(nameof(button), button, "Unsupported mouse button.")
+            };
         }
 
         private static void ForwardKeyboardInput(UIRoot uiRoot)
@@ -1274,6 +1359,7 @@ namespace Ludots.Adapter.Raylib
                     DeviceType = InputDeviceType.Mouse,
                     PointerId = 0,
                     Action = PointerAction.Down,
+                    Button = PointerButton.Left,
                     X = playback.StartX,
                     Y = playback.StartY
                 });
@@ -1289,6 +1375,7 @@ namespace Ludots.Adapter.Raylib
                     DeviceType = InputDeviceType.Mouse,
                     PointerId = 0,
                     Action = PointerAction.Move,
+                    Button = PointerButton.Left,
                     X = x,
                     Y = y
                 });
@@ -1334,6 +1421,7 @@ namespace Ludots.Adapter.Raylib
                     DeviceType = InputDeviceType.Mouse,
                     PointerId = 0,
                     Action = PointerAction.Move,
+                    Button = PointerButton.Left,
                     X = playback.EndX,
                     Y = playback.EndY
                 });
@@ -1342,6 +1430,7 @@ namespace Ludots.Adapter.Raylib
                     DeviceType = InputDeviceType.Mouse,
                     PointerId = 0,
                     Action = PointerAction.Up,
+                    Button = PointerButton.Left,
                     X = playback.EndX,
                     Y = playback.EndY
                 });

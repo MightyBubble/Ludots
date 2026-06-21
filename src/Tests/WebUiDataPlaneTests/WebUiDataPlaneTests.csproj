@@ -15,6 +15,7 @@
   <ItemGroup>
     <ProjectReference Include="..\..\Core\Ludots.Core.csproj" />
     <ProjectReference Include="..\..\Libraries\Ludots.UI.Browser\Ludots.UI.Browser.csproj" />
+    <ProjectReference Include="..\..\Libraries\Ludots.WebUI\Ludots.WebUI.csproj" />
     <ProjectReference Include="..\..\Libraries\Ludots.WebUI.Browser\Ludots.WebUI.Browser.csproj" />
     <ProjectReference Include="..\..\Libraries\Ludots.WebUI.DataPlane\Ludots.WebUI.DataPlane.csproj" />
   </ItemGroup>

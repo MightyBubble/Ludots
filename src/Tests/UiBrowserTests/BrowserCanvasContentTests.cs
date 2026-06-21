@@ -105,6 +105,7 @@ public sealed class BrowserCanvasContentTests
 		{
 			PointerId = 0,
 			Action = PointerAction.Down,
+			Button = PointerButton.Left,
 			X = 40,
 			Y = 30
 		});
@@ -121,7 +122,55 @@ public sealed class BrowserCanvasContentTests
 		Assert.That(surface.InputEvents.Count, Is.EqualTo(3));
 		Assert.That(surface.InputEvents[0], Is.TypeOf<BrowserFocusEvent>());
 		Assert.That(surface.InputEvents[1], Is.EqualTo(new BrowserPointerEvent(BrowserPointerEventType.Down, 0, 40, 30, BrowserPointerButton.Left, true)));
-		Assert.That(surface.InputEvents[2], Is.EqualTo(new BrowserPointerEvent(BrowserPointerEventType.Move, 0, 60, 45, BrowserPointerButton.None, true)));
+		Assert.That(surface.InputEvents[2], Is.EqualTo(new BrowserPointerEvent(BrowserPointerEventType.Move, 0, 60, 45, BrowserPointerButton.Left, true)));
+	}
+
+	[Test]
+	public void HandleInput_MiddleDownThenMove_SendsMiddleButtonDragToBrowser()
+	{
+		BrowserFrame frame = CreateSolidFrame(200, 100, b: 10, g: 20, r: 30, a: 255);
+		var surface = new TestBrowserSurface(frame);
+		var content = new BrowserSurfaceCanvasContent(surface);
+		UiScene scene = UiSceneComposer.Compose(
+			new SkiaTextMeasurer(),
+			new SkiaImageSizeProvider(),
+			Ui.Canvas(content).Width(200).Height(100));
+		var root = new UIRoot(new NullUiRenderer());
+		root.MountScene(scene);
+		root.Resize(200, 100);
+
+		bool downHandled = root.HandleInput(new PointerEvent
+		{
+			PointerId = 0,
+			Action = PointerAction.Down,
+			Button = PointerButton.Middle,
+			X = 40,
+			Y = 30
+		});
+		bool moveHandled = root.HandleInput(new PointerEvent
+		{
+			PointerId = 0,
+			Action = PointerAction.Move,
+			Button = PointerButton.Middle,
+			X = 60,
+			Y = 45
+		});
+		bool upHandled = root.HandleInput(new PointerEvent
+		{
+			PointerId = 0,
+			Action = PointerAction.Up,
+			Button = PointerButton.Middle,
+			X = 60,
+			Y = 45
+		});
+
+		Assert.That(downHandled, Is.True);
+		Assert.That(moveHandled, Is.True);
+		Assert.That(upHandled, Is.True);
+		Assert.That(surface.InputEvents[0], Is.TypeOf<BrowserFocusEvent>());
+		Assert.That(surface.InputEvents[1], Is.EqualTo(new BrowserPointerEvent(BrowserPointerEventType.Down, 0, 40, 30, BrowserPointerButton.Middle, true)));
+		Assert.That(surface.InputEvents[2], Is.EqualTo(new BrowserPointerEvent(BrowserPointerEventType.Move, 0, 60, 45, BrowserPointerButton.Middle, true)));
+		Assert.That(surface.InputEvents[^1], Is.EqualTo(new BrowserPointerEvent(BrowserPointerEventType.Up, 0, 60, 45, BrowserPointerButton.Middle, false)));
 	}
 
 	[Test]
@@ -142,6 +191,7 @@ public sealed class BrowserCanvasContentTests
 		{
 			PointerId = 0,
 			Action = PointerAction.Down,
+			Button = PointerButton.Left,
 			X = 40,
 			Y = 30
 		});
@@ -149,6 +199,7 @@ public sealed class BrowserCanvasContentTests
 		{
 			PointerId = 0,
 			Action = PointerAction.Up,
+			Button = PointerButton.Left,
 			X = 260,
 			Y = 180
 		});
@@ -210,6 +261,7 @@ public sealed class BrowserCanvasContentTests
 		{
 			PointerId = 0,
 			Action = PointerAction.Down,
+			Button = PointerButton.Left,
 			X = 40,
 			Y = 50
 		});
@@ -236,6 +288,7 @@ public sealed class BrowserCanvasContentTests
 		{
 			PointerId = 0,
 			Action = PointerAction.Down,
+			Button = PointerButton.Left,
 			X = 160,
 			Y = 50
 		});
@@ -264,6 +317,7 @@ public sealed class BrowserCanvasContentTests
 		{
 			PointerId = 0,
 			Action = PointerAction.Down,
+			Button = PointerButton.Left,
 			X = 40,
 			Y = 30
 		});
@@ -298,6 +352,7 @@ public sealed class BrowserCanvasContentTests
 		{
 			PointerId = 0,
 			Action = PointerAction.Down,
+			Button = PointerButton.Left,
 			X = 160,
 			Y = 50
 		});
@@ -305,6 +360,7 @@ public sealed class BrowserCanvasContentTests
 		{
 			PointerId = 0,
 			Action = PointerAction.Up,
+			Button = PointerButton.Left,
 			X = 160,
 			Y = 50
 		});
@@ -313,6 +369,7 @@ public sealed class BrowserCanvasContentTests
 		{
 			PointerId = 0,
 			Action = PointerAction.Down,
+			Button = PointerButton.Left,
 			X = 40,
 			Y = 50
 		});
@@ -359,6 +416,7 @@ public sealed class BrowserCanvasContentTests
 		{
 			PointerId = 0,
 			Action = PointerAction.Down,
+			Button = PointerButton.Left,
 			X = 40,
 			Y = 30
 		});

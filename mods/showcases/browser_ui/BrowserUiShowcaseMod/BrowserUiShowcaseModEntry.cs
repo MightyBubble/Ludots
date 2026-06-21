@@ -108,7 +108,7 @@ public sealed class BrowserUiShowcaseModEntry : IMod
         return Ui.Card(
                 Ui.Text("Diagnostic preview").Class("page-card-title"),
                 Ui.Text("No browser runtime is registered yet, so Raylib renders this native probe instead of pretending to be a browser.").Class("page-copy"),
-                Ui.Canvas(new UiCanvasContent(DrawFallbackPreview)).Class("browser-canvas").WidthPercent(100f).Height(320f))
+                Ui.Canvas(new UiCanvasContent(DrawDiagnosticPreview)).Class("browser-canvas").WidthPercent(100f).Height(320f))
             .Class("skin-card")
             .FlexGrow(2f)
             .FlexShrink(1f)
@@ -155,7 +155,7 @@ public sealed class BrowserUiShowcaseModEntry : IMod
                     "host",
                     $"Host ack received {DateTime.Now:HH:mm:ss}: {message.Payload}"));
             };
-            await surface.NavigateAsync(new BrowserNavigationRequest(new Uri("ludots-browser-showcase:///"))).ConfigureAwait(false);
+            await surface.NavigateAsync(new BrowserNavigationRequest(new Uri("ludots-app://app/"))).ConfigureAwait(false);
             await surface.Messages.PostMessageAsync(new BrowserScriptMessage(
                 "host",
                 "CEF browser surface is live inside Raylib with transparent background enabled.")).ConfigureAwait(false);
@@ -201,7 +201,7 @@ public sealed class BrowserUiShowcaseModEntry : IMod
         return AppContext.BaseDirectory;
     }
 
-    private static void DrawFallbackPreview(SKCanvas canvas, SKRect rect)
+    private static void DrawDiagnosticPreview(SKCanvas canvas, SKRect rect)
     {
         canvas.Clear(SKColor.Parse("#0b1120"));
         using var titlePaint = new SKPaint { IsAntialias = true, Color = SKColors.White };
