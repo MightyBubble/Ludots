@@ -20,6 +20,7 @@ namespace GasTests
                 nameof(SystemGroup.PostMovement),
                 nameof(SystemGroup.AbilityActivation),
                 nameof(SystemGroup.EffectProcessing),
+                nameof(SystemGroup.RuntimeEntityBinding),
                 nameof(SystemGroup.AttributeCalculation),
                 nameof(SystemGroup.DeferredTriggerCollection),
                 nameof(SystemGroup.Cleanup),

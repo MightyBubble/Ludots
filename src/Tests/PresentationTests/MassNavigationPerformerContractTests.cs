@@ -6,6 +6,7 @@ using System.Text.Json;
 using System.Text.Json.Nodes;
 using Ludots.Core.Gameplay.GAS.Orders;
 using Ludots.Core.Input.Selection;
+using Ludots.Core.MassCrowd.Runtime;
 using Ludots.Core.NodeLibraries.GASGraph;
 using NUnit.Framework;
 
@@ -319,13 +320,13 @@ namespace Ludots.Tests.Presentation
             JsonObject legacyAvoidanceConfig = ReadObject(Path.Combine(modRoot, "assets", "MassNavigationConfig.json"));
             legacyAvoidanceConfig["avoidance"]!["lightNavMass"] = 1.0f;
             JsonException legacyAvoidanceField = Assert.Throws<JsonException>(
-                () => MassNavigationMod.Runtime.MassNavigationConfig.Load(legacyAvoidanceConfig))!;
+                () => MassNavigationConfig.Load(legacyAvoidanceConfig))!;
             Assert.That(legacyAvoidanceField.Message, Does.Contain("lightNavMass"));
 
             JsonObject legacyObstacleConfig = ReadObject(Path.Combine(modRoot, "assets", "MassNavigationConfig.json"));
             legacyObstacleConfig["semantics"]!["obstacle"]!["agentBodyRadiusCm"] = 20.0f;
             JsonException legacyObstacleField = Assert.Throws<JsonException>(
-                () => MassNavigationMod.Runtime.MassNavigationConfig.Load(legacyObstacleConfig))!;
+                () => MassNavigationConfig.Load(legacyObstacleConfig))!;
             Assert.That(legacyObstacleField.Message, Does.Contain("agentBodyRadiusCm"));
         }
 
@@ -334,31 +335,34 @@ namespace Ludots.Tests.Presentation
         {
             string repoRoot = FindRepoRoot();
             string modRoot = MassNavigationModRoot();
-            AssertSourceDoesNotContain(Path.Combine(modRoot, "Runtime", "MassFlowSimulationState.cs"), "CacheDefaultObstacles");
-            AssertSourceDoesNotContain(Path.Combine(modRoot, "Runtime", "MassNavigationRuntime.cs"), "new PlayerOwner");
+            string coreMassCrowdRoot = Path.Combine(repoRoot, "src", "Core", "MassCrowd");
+            string coreRuntimeRoot = Path.Combine(coreMassCrowdRoot, "Runtime");
+            string coreSystemsRoot = Path.Combine(coreMassCrowdRoot, "Systems");
+            AssertSourceDoesNotContain(Path.Combine(coreRuntimeRoot, "MassFlowSimulationState.cs"), "CacheDefaultObstacles");
+            AssertSourceDoesNotContain(Path.Combine(coreRuntimeRoot, "MassNavigationRuntime.cs"), "new PlayerOwner");
             AssertSourceDoesNotContain(Path.Combine(modRoot, "MassNavigationModEntry.cs"), "GetResource");
-            AssertSourceContains(Path.Combine(modRoot, "Runtime", "MassNavigationConfig.cs"), "must use Replace merge policy");
-            AssertSourceDoesNotContain(Path.Combine(modRoot, "Runtime", "MassNavigationConfig.cs"), "MergeDeepObjectFromCatalog");
-            AssertSourceContains(Path.Combine(modRoot, "Runtime", "MassNavigationConfig.cs"), "config_catalog.json");
-            AssertSourceContains(Path.Combine(modRoot, "Runtime", "MassNavigationAgentState.cs"), "PresentationEntityLifecycle.RequestDestroy");
-            AssertSourceContains(Path.Combine(modRoot, "Runtime", "MassNavigationAgentState.cs"), "RemoveMassNavigationRuntimeTags");
-            AssertSourceDoesNotContain(Path.Combine(modRoot, "Runtime", "MassNavigationAgentState.cs"), "PresentationOwnerHasPerformerPayload");
-            AssertSourceDoesNotContain(Path.Combine(modRoot, "Runtime", "MassNavigationSimulationRuntime.cs"), "ValidateHotZonesInsideBoard");
-            AssertSourceDoesNotContain(Path.Combine(modRoot, "Runtime", "MassNavigationSimulationRuntime.cs"), "WorldConfig.WorldWidthCm");
-            AssertSourceDoesNotContain(Path.Combine(modRoot, "Runtime", "MassNavigationSimulationRuntime.cs"), "WorldConfig.WorldHeightCm");
-            AssertSourceDoesNotContain(Path.Combine(modRoot, "Runtime", "MassNavigationSimulationRuntime.cs"), "positive board world bounds");
-            AssertSourceDoesNotContain(Path.Combine(modRoot, "Systems", "MassNavigationOrderIngestionSystem.cs"), "TryResolveMoveOrderType");
-            AssertSourceDoesNotContain(Path.Combine(modRoot, "Systems", "MassNavigationHudPresentationSystem.cs"), "PresentationTimingDiagnostics? timing");
+            AssertSourceContains(Path.Combine(coreRuntimeRoot, "MassNavigationConfig.cs"), "must use Replace merge policy");
+            AssertSourceDoesNotContain(Path.Combine(coreRuntimeRoot, "MassNavigationConfig.cs"), "MergeDeepObjectFromCatalog");
+            AssertSourceContains(Path.Combine(coreRuntimeRoot, "MassNavigationConfig.cs"), "config_catalog.json");
+            AssertSourceContains(Path.Combine(coreRuntimeRoot, "MassNavigationAgentState.cs"), "PresentationEntityLifecycle.RequestDestroy");
+            AssertSourceContains(Path.Combine(coreRuntimeRoot, "MassNavigationAgentState.cs"), "RemoveMassCrowdRuntimeBindings");
+            AssertSourceDoesNotContain(Path.Combine(coreRuntimeRoot, "MassNavigationAgentState.cs"), "PresentationOwnerHasPerformerPayload");
+            AssertSourceDoesNotContain(Path.Combine(coreRuntimeRoot, "MassNavigationSimulationRuntime.cs"), "ValidateHotZonesInsideBoard");
+            AssertSourceDoesNotContain(Path.Combine(coreRuntimeRoot, "MassNavigationSimulationRuntime.cs"), "WorldConfig.WorldWidthCm");
+            AssertSourceDoesNotContain(Path.Combine(coreRuntimeRoot, "MassNavigationSimulationRuntime.cs"), "WorldConfig.WorldHeightCm");
+            AssertSourceDoesNotContain(Path.Combine(coreRuntimeRoot, "MassNavigationSimulationRuntime.cs"), "positive board world bounds");
+            AssertSourceDoesNotContain(Path.Combine(coreSystemsRoot, "MassNavigationOrderIngestionSystem.cs"), "TryResolveMoveOrderType");
+            AssertSourceDoesNotContain(Path.Combine(coreSystemsRoot, "MassNavigationHudPresentationSystem.cs"), "PresentationTimingDiagnostics? timing");
             AssertSourceDoesNotContain(Path.Combine(modRoot, "UI", "MassNavigationPanelController.cs"), "PresentationTimingDiagnostics? timing");
-            AssertSourceDoesNotContain(Path.Combine(modRoot, "Runtime", "MassFlowSimulationState.cs"), "localIndex % 7");
-            AssertSourceDoesNotContain(Path.Combine(modRoot, "Runtime", "MassNavigationCrowdSemantics.cs"), "AgentBodyRadiusCm");
-            AssertSourceDoesNotContain(Path.Combine(modRoot, "Runtime", "MassNavigationCrowdSemantics.cs"), "ResolveHardBlockRadiusCm");
-            AssertSourceDoesNotContain(Path.Combine(modRoot, "Runtime", "MassFlowSimulationState.cs"), "GetObstacleHardBlockRadius");
-            AssertSourceDoesNotContain(Path.Combine(modRoot, "Runtime", "MassNavigationSimulationRuntime.cs"), "ObstacleAgentBodyRadiusCm");
+            AssertSourceDoesNotContain(Path.Combine(coreRuntimeRoot, "MassFlowSimulationState.cs"), "localIndex % 7");
+            AssertSourceDoesNotContain(Path.Combine(coreRuntimeRoot, "MassNavigationCrowdSemantics.cs"), "AgentBodyRadiusCm");
+            AssertSourceDoesNotContain(Path.Combine(coreRuntimeRoot, "MassNavigationCrowdSemantics.cs"), "ResolveHardBlockRadiusCm");
+            AssertSourceDoesNotContain(Path.Combine(coreRuntimeRoot, "MassFlowSimulationState.cs"), "GetObstacleHardBlockRadius");
+            AssertSourceDoesNotContain(Path.Combine(coreRuntimeRoot, "MassNavigationSimulationRuntime.cs"), "ObstacleAgentBodyRadiusCm");
             AssertSourceDoesNotContain(Path.Combine(repoRoot, "mods", "CoreInputMod", "Systems", "SelectedMovePathPresentationSystem.cs"), "massNavigationMove");
-            AssertSourceContains(Path.Combine(modRoot, "Runtime", "MassFlowSimulationState.cs"), "profileSet.ResolveForLocalIndex(localIndex)");
-            AssertSourceContains(Path.Combine(modRoot, "Runtime", "MassFlowSimulationState.cs"), "MarkMovedEntitiesDirty()");
-            AssertSourceContains(Path.Combine(modRoot, "Runtime", "MassFlowSimulationState.cs"), "_entitySyncDirtyAgents");
+            AssertSourceContains(Path.Combine(coreRuntimeRoot, "MassFlowSimulationState.cs"), "profileSet.ResolveForLocalIndex(localIndex)");
+            AssertSourceContains(Path.Combine(coreRuntimeRoot, "MassFlowSimulationState.cs"), "MarkMovedEntitiesDirty()");
+            AssertSourceContains(Path.Combine(coreRuntimeRoot, "MassFlowSimulationState.cs"), "_entitySyncDirtyAgents");
             Assert.That(
                 File.Exists(Path.Combine(modRoot, "Systems", "MassNavigationSelectionPerformerSyncSystem.cs")),
                 Is.False,
@@ -375,8 +379,8 @@ namespace Ludots.Tests.Presentation
             AssertSourceDoesNotContain(Path.Combine(modRoot, "assets", "GAS", "order_types.json"), "Generic.IntParam");
             AssertSourceDoesNotContain(Path.Combine(modRoot, "assets", "GAS", "order_types.json"), "\"moveTo\"");
             AssertSourceDoesNotContain(Path.Combine(modRoot, "assets", "game.json"), "\"moveTo\"");
-            AssertSourceDoesNotContain(Path.Combine(modRoot, "Runtime", "MassNavigationComponentAuthoring.cs"), "RegisterOrderBlackboardKeys");
-            AssertSourceDoesNotContain(Path.Combine(modRoot, "Runtime", "MassNavigationComponentAuthoring.cs"), "OrderBlackboardKeyRegistry.Register");
+            Assert.That(File.Exists(Path.Combine(modRoot, "Runtime", "MassNavigationComponentAuthoring.cs")), Is.False);
+            AssertSourceDoesNotContain(Path.Combine(repoRoot, "src", "Core", "Config", "ComponentRegistry.cs"), "RegisterOrderBlackboardKeys");
             AssertSourceDoesNotContain(Path.Combine(modRoot, "MassNavigationMod.csproj"), "CoreInputMod");
             AssertSourceDoesNotContain(Path.Combine(modRoot, "mod.json"), "CoreInputMod");
             AssertSourceContains(Path.Combine(repoRoot, "src", "Core", "Config", "ComponentRegistry.cs"), "Register<SelectionDragState>(\"SelectionDragState\")");
@@ -434,7 +438,7 @@ namespace Ludots.Tests.Presentation
             Assert.That(catalog.TryGet("MassNavigationConfig.json", out Ludots.Core.Config.ConfigCatalogEntry entry), Is.True);
             Assert.That(entry.MergePolicy, Is.EqualTo(Ludots.Core.Config.ConfigMergePolicy.Replace));
             var report = new Ludots.Core.Config.ConfigConflictReport();
-            var config = new MassNavigationMod.Runtime.MassNavigationConfigLoader(pipeline).Load(catalog, report);
+            var config = new MassNavigationConfigLoader(pipeline).Load(catalog, report);
 
             Assert.That(config.MapId, Is.EqualTo("mass_navigation"));
             Assert.That(config.World, Is.Not.Null);
@@ -450,7 +454,7 @@ namespace Ludots.Tests.Presentation
                 ?? throw new InvalidOperationException("MassNavigationConfig.presentation missing.");
             autoSpawnPresentation.Remove("blockerTemplateId");
 
-            InvalidOperationException missingTemplate = Assert.Throws<InvalidOperationException>(() => MassNavigationMod.Runtime.MassNavigationConfig.Load(missingAutoSpawnTemplateConfig))!;
+            InvalidOperationException missingTemplate = Assert.Throws<InvalidOperationException>(() => MassNavigationConfig.Load(missingAutoSpawnTemplateConfig))!;
             Assert.That(missingTemplate.Message, Does.Contain("blockerTemplateId"));
 
             JsonObject config = ReadObject(Path.Combine(MassNavigationModRoot(), "assets", "MassNavigationConfig.json"));
@@ -458,7 +462,7 @@ namespace Ludots.Tests.Presentation
                 ?? throw new InvalidOperationException("MassNavigationConfig.presentation.teams missing.");
             teams.Clear();
 
-            InvalidOperationException ex = Assert.Throws<InvalidOperationException>(() => MassNavigationMod.Runtime.MassNavigationConfig.Load(config))!;
+            InvalidOperationException ex = Assert.Throws<InvalidOperationException>(() => MassNavigationConfig.Load(config))!;
             Assert.That(ex.Message, Does.Contain("presentation team style count must match scenario teams"));
 
             config["scenarioRuntime"]!["autoSpawnConfiguredScenario"] = false;
@@ -467,15 +471,18 @@ namespace Ludots.Tests.Presentation
                 ?? throw new InvalidOperationException("MassNavigationConfig.presentation missing.");
             presentation.Remove("blockerPerformerId");
             presentation.Remove("hotspotPerformerId");
-            presentation.Remove("blockerTemplateId");
             presentation.Remove("hotspotTemplateId");
-            MassNavigationMod.Runtime.MassNavigationConfig formationOwnedConfig =
-                MassNavigationMod.Runtime.MassNavigationConfig.Load(config);
+            MassNavigationConfig formationOwnedConfig =
+                MassNavigationConfig.Load(config);
 
             Assert.That(formationOwnedConfig.ScenarioRuntime.AutoSpawnConfiguredScenario, Is.False);
             Assert.That(formationOwnedConfig.Presentation.Teams, Is.Empty);
-            Assert.That(formationOwnedConfig.Presentation.BlockerTemplateId, Is.EqualTo(string.Empty));
+            Assert.That(formationOwnedConfig.Presentation.BlockerTemplateId, Is.EqualTo("mass_navigation_blocker"));
             Assert.That(formationOwnedConfig.Presentation.HotspotTemplateId, Is.EqualTo(string.Empty));
+
+            presentation.Remove("blockerTemplateId");
+            InvalidOperationException missingExternalBlockerTemplate = Assert.Throws<InvalidOperationException>(() => MassNavigationConfig.Load(config))!;
+            Assert.That(missingExternalBlockerTemplate.Message, Does.Contain("blockerTemplateId"));
         }
 
         private static void AssertAgentBodyUsesMassNavigationSoldier(JsonObject definition, string definitionId, float expectedScale)

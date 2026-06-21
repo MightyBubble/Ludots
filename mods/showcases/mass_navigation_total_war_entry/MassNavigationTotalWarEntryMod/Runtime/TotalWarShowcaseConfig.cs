@@ -4,20 +4,18 @@ using System.Numerics;
 using System.Text.Json;
 using System.Text.Json.Nodes;
 using Ludots.Core.Config;
+using Ludots.Core.MassCrowd.Runtime;
 using Ludots.Core.Mathematics;
 using Ludots.Core.Spatial;
-using MassNavigationMod.Runtime;
 
 namespace MassNavigationTotalWarEntryMod.Runtime;
 
 internal sealed class TotalWarShowcaseConfig
 {
     public string MapId { get; set; } = string.Empty;
-    public string RuntimeSpawnReceiptChannelKey { get; set; } = string.Empty;
     public TotalWarAgentAuthoringConfig FormationAgent { get; set; } = new();
     public string InitialSelectionFormationId { get; set; } = string.Empty;
     public int InitialSelectionEntityCapacity { get; set; }
-    public TotalWarSoldierTargetSyncConfig SoldierTargetSync { get; set; } = new();
     public TotalWarObstacleOverlayConfig ObstacleOverlay { get; set; } = new();
     public TotalWarFormationConfig[] Formations { get; set; } = Array.Empty<TotalWarFormationConfig>();
     public int FormationOutlineOwnerCapacity => Formations.Length;
@@ -56,15 +54,9 @@ internal sealed class TotalWarShowcaseConfig
     private static void ValidateRequiredProperties(JsonElement root)
     {
         RequireProperty(root, "mapId");
-        RequireProperty(root, "runtimeSpawnReceiptChannelKey");
         RequireAgentAuthoring(RequireProperty(root, "formationAgent"), "formationAgent");
         RequireProperty(root, "initialSelectionFormationId");
         RequireProperty(root, "initialSelectionEntityCapacity");
-        JsonElement soldierTargetSync = RequireProperty(root, "soldierTargetSync");
-        RequireProperties(
-            soldierTargetSync,
-            "targetChangeEpsilonCm",
-            "facingChangeEpsilonRadians");
         JsonElement obstacleOverlay = RequireProperty(root, "obstacleOverlay");
         RequireProperties(obstacleOverlay, "templateId", "heightOffsetM", "borderWidthCm", "fillColor", "borderColor");
         JsonElement formations = RequireProperty(root, "formations");
@@ -172,7 +164,6 @@ internal sealed class TotalWarShowcaseConfig
     private void Validate()
     {
         RequireNonEmpty(MapId, nameof(MapId));
-        RequireNonEmpty(RuntimeSpawnReceiptChannelKey, nameof(RuntimeSpawnReceiptChannelKey));
         FormationAgent.Validate(nameof(FormationAgent));
         RequireNonEmpty(InitialSelectionFormationId, nameof(InitialSelectionFormationId));
         if (InitialSelectionEntityCapacity <= 0)
@@ -180,7 +171,6 @@ internal sealed class TotalWarShowcaseConfig
             throw new InvalidOperationException("Total War showcase config requires initialSelectionEntityCapacity > 0.");
         }
 
-        SoldierTargetSync.Validate();
         ObstacleOverlay.Validate();
         if (Formations.Length <= 0)
         {
@@ -273,25 +263,6 @@ internal sealed class TotalWarShowcaseConfig
         }
     }
 
-}
-
-internal sealed class TotalWarSoldierTargetSyncConfig
-{
-    public float TargetChangeEpsilonCm { get; set; }
-    public float FacingChangeEpsilonRadians { get; set; }
-
-    public void Validate()
-    {
-        if (!(TargetChangeEpsilonCm > 0f))
-        {
-            throw new InvalidOperationException("Total War showcase soldierTargetSync requires TargetChangeEpsilonCm > 0.");
-        }
-
-        if (!(FacingChangeEpsilonRadians > 0f))
-        {
-            throw new InvalidOperationException("Total War showcase soldierTargetSync requires FacingChangeEpsilonRadians > 0.");
-        }
-    }
 }
 
 internal sealed class TotalWarObstacleOverlayConfig
