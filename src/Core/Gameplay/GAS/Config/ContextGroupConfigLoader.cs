@@ -60,19 +60,39 @@ namespace Ludots.Core.Gameplay.GAS.Config
             {
                 if (candidatesNode[i] is not JsonObject candidateNode)
                 {
-                    continue;
+                    throw new InvalidOperationException($"Context group '{groupName}' candidates[{i}] must be an object.");
                 }
 
                 int abilityId = ResolveAbilityId(candidateNode["abilityId"]?.GetValue<string>(), groupName, $"candidates[{i}].abilityId");
                 int preconditionGraphId = ResolveGraphId(candidateNode["preconditionGraph"]?.GetValue<string>());
                 int scoreGraphId = ResolveGraphId(candidateNode["scoreGraph"]?.GetValue<string>());
-                float basePriority = candidateNode["basePriority"]?.GetValue<float>() ?? 0f;
-                int maxDistanceCm = candidateNode["maxDistanceCm"]?.GetValue<int>() ?? 0;
-                float distanceWeight = candidateNode["distanceWeight"]?.GetValue<float>() ?? 0f;
-                int maxAngleDeg = candidateNode["maxAngleDeg"]?.GetValue<int>() ?? 0;
-                float angleWeight = candidateNode["angleWeight"]?.GetValue<float>() ?? 0f;
-                float hoveredBiasScore = candidateNode["hoveredBiasScore"]?.GetValue<float>() ?? 0f;
                 bool requiresTarget = candidateNode["requiresTarget"]?.GetValue<bool>() ?? true;
+                float basePriority = RequireFloat(candidateNode, "basePriority", groupName, i);
+                int maxDistanceCm = requiresTarget
+                    ? RequireInt(candidateNode, "maxDistanceCm", groupName, i)
+                    : ReadOptionalNonNegativeInt(candidateNode, "maxDistanceCm", groupName, i);
+                float distanceWeight = requiresTarget
+                    ? RequireFloat(candidateNode, "distanceWeight", groupName, i)
+                    : ReadOptionalFloat(candidateNode, "distanceWeight", groupName, i);
+                int maxAngleDeg = requiresTarget
+                    ? RequireInt(candidateNode, "maxAngleDeg", groupName, i)
+                    : ReadOptionalNonNegativeInt(candidateNode, "maxAngleDeg", groupName, i);
+                float angleWeight = requiresTarget
+                    ? RequireFloat(candidateNode, "angleWeight", groupName, i)
+                    : ReadOptionalFloat(candidateNode, "angleWeight", groupName, i);
+                float hoveredBiasScore = requiresTarget
+                    ? RequireFloat(candidateNode, "hoveredBiasScore", groupName, i)
+                    : ReadOptionalFloat(candidateNode, "hoveredBiasScore", groupName, i);
+
+                if (maxDistanceCm < 0)
+                {
+                    throw new InvalidOperationException($"Context group '{groupName}' candidates[{i}].maxDistanceCm must be non-negative.");
+                }
+
+                if (maxAngleDeg < 0)
+                {
+                    throw new InvalidOperationException($"Context group '{groupName}' candidates[{i}].maxAngleDeg must be non-negative.");
+                }
 
                 candidates.Add(new ContextGroupCandidate(
                     abilityId,
@@ -120,6 +140,52 @@ namespace Ludots.Core.Gameplay.GAS.Config
             }
 
             return graphId;
+        }
+
+        private static float RequireFloat(JsonObject obj, string fieldName, string groupName, int candidateIndex)
+        {
+            if (obj[fieldName] is not JsonNode node)
+            {
+                throw new InvalidOperationException($"Context group '{groupName}' requires candidates[{candidateIndex}].{fieldName}.");
+            }
+
+            return node.GetValue<float>();
+        }
+
+        private static int RequireInt(JsonObject obj, string fieldName, string groupName, int candidateIndex)
+        {
+            if (obj[fieldName] is not JsonNode node)
+            {
+                throw new InvalidOperationException($"Context group '{groupName}' requires candidates[{candidateIndex}].{fieldName}.");
+            }
+
+            return node.GetValue<int>();
+        }
+
+        private static float ReadOptionalFloat(JsonObject obj, string fieldName, string groupName, int candidateIndex)
+        {
+            if (obj[fieldName] is not JsonNode node)
+            {
+                return 0f;
+            }
+
+            return node.GetValue<float>();
+        }
+
+        private static int ReadOptionalNonNegativeInt(JsonObject obj, string fieldName, string groupName, int candidateIndex)
+        {
+            if (obj[fieldName] is not JsonNode node)
+            {
+                return 0;
+            }
+
+            int value = node.GetValue<int>();
+            if (value < 0)
+            {
+                throw new InvalidOperationException($"Context group '{groupName}' candidates[{candidateIndex}].{fieldName} must be non-negative.");
+            }
+
+            return value;
         }
     }
 }

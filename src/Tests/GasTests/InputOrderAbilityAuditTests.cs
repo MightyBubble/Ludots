@@ -335,7 +335,8 @@ namespace Ludots.Tests.GAS
                     "angleDeg": 45,
                     "showRangeCircle": true,
                     "validColor": "#33CC66AA",
-                    "invalidColor": [1.0, 0.2, 0.2, 0.5]
+                    "invalidColor": [1.0, 0.2, 0.2, 0.5],
+                    "rangeCircleColor": "#3366FF44"
                   }
                 }
                 """)!.AsObject();

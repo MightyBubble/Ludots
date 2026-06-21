@@ -34,7 +34,8 @@
     "indicator": {
       "shape": "Single",
       "range": 1200,
-      "showRangeCircle": true
+      "showRangeCircle": true,
+      "rangeCircleColor": "#3366FF55"
     },
     "presentation": {
       "displayName": "进驻",
@@ -78,6 +79,7 @@
       "range": 1600,
       "radius": 240,
       "showRangeCircle": true,
+      "rangeCircleColor": "#3366FF55",
       "preview": {
         "performerId": "core_input_preview_build_site",
         "scaleY": 1.1,
@@ -110,6 +112,7 @@
       "range": 1500,
       "radius": 220,
       "showRangeCircle": true,
+      "rangeCircleColor": "#3366FF55",
       "preview": {
         "performerId": "core_input_preview_build_site",
         "scaleY": 1.45,
@@ -159,6 +162,7 @@
       "range": 2200,
       "radius": 280,
       "showRangeCircle": true,
+      "rangeCircleColor": "#3366FF55",
       "preview": {
         "performerId": "core_input_preview_build_site",
         "scaleY": 0.82,
@@ -187,6 +191,7 @@
       "range": 2200,
       "radius": 300,
       "showRangeCircle": true,
+      "rangeCircleColor": "#3366FF55",
       "preview": {
         "performerId": "core_input_preview_build_site",
         "scaleY": 1.25,
@@ -290,6 +295,7 @@
       "range": 2600,
       "radius": 180,
       "showRangeCircle": true,
+      "rangeCircleColor": "#3366FF55",
       "preview": {
         "performerId": "core_input_preview_warp_site",
         "scaleY": 2.4,
@@ -322,6 +328,7 @@
       "range": 1500,
       "radius": 260,
       "showRangeCircle": true,
+      "rangeCircleColor": "#3366FF55",
       "preview": {
         "performerId": "core_input_preview_morph_site",
         "scaleY": 1.8,

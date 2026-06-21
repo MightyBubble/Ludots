@@ -450,10 +450,11 @@ namespace ChampionSkillSandboxMod.Runtime
                 return;
             }
 
+            engine.GlobalContext[ChampionSkillSandboxIds.CameraFollowModeKey] = ChampionSkillSandboxIds.FreeCameraToolbarButtonId;
             engine.GameSession.Camera.ActivateVirtualCamera(
                 virtualCameraId,
                 blendDurationSeconds: 0f,
-                followTarget: CameraFollowTargetFactory.Build(engine.World, engine.GlobalContext, definition.FollowTargetKind),
+                followTarget: null,
                 snapToFollowTargetWhenAvailable: definition.SnapToFollowTargetWhenAvailable,
                 resetRuntimeState: true);
 
@@ -473,6 +474,7 @@ namespace ChampionSkillSandboxMod.Runtime
                 DistanceCm = cameraConfig.DistanceCm,
                 FovYDeg = cameraConfig.FovYDeg,
             });
+            engine.GameSession.Camera.SynchronizeActiveVirtualCameraBoundsAndHeight();
         }
 
         private static void SyncCameraFollow(GameEngine engine)

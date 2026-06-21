@@ -10,7 +10,7 @@
         { "kind": "End", "tick": 5 }
       ]
     },
-    "indicator": { "shape": "Circle", "range": 440, "radius": 120, "showRangeCircle": true, "validColor": "#4FD7F077", "invalidColor": "#E2575788" },
+    "indicator": { "shape": "Circle", "range": 440, "radius": 120, "showRangeCircle": true, "validColor": "#4FD7F077", "invalidColor": "#E2575788", "rangeCircleColor": "#3366FF55" },
     "blockTags": { "blockedAny": ["Cooldown.Champion.Ezreal.E"] },
     "input": {
       "autoTargetPolicy": "NearestEnemyInRange",
@@ -37,7 +37,7 @@
         { "kind": "End", "tick": 0 }
       ]
     },
-    "indicator": { "shape": "Line", "range": 760, "radius": 85, "showRangeCircle": true, "validColor": "#F0C35A77", "invalidColor": "#E2575788" },
+    "indicator": { "shape": "Line", "range": 760, "radius": 85, "showRangeCircle": true, "validColor": "#F0C35A77", "invalidColor": "#E2575788", "rangeCircleColor": "#3366FF55" },
     "blockTags": { "blockedAny": ["Cooldown.Champion.Ezreal.W"] },
     "presentation": {
       "displayName": "Essence Flux",
@@ -60,7 +60,7 @@
         { "kind": "End", "tick": 0 }
       ]
     },
-    "indicator": { "shape": "Line", "range": 840, "radius": 70, "showRangeCircle": true, "validColor": "#61C3FF77", "invalidColor": "#E2575788" },
+    "indicator": { "shape": "Line", "range": 840, "radius": 70, "showRangeCircle": true, "validColor": "#61C3FF77", "invalidColor": "#E2575788", "rangeCircleColor": "#3366FF55" },
     "blockTags": { "blockedAny": ["Cooldown.Champion.Ezreal.Q"] },
     "presentation": {
       "displayName": "Mystic Shot",
@@ -83,7 +83,7 @@
         { "kind": "End", "tick": 0 }
       ]
     },
-    "indicator": { "shape": "Line", "range": 2200, "radius": 120, "showRangeCircle": true, "validColor": "#9BE0FF77", "invalidColor": "#E2575788" },
+    "indicator": { "shape": "Line", "range": 2200, "radius": 120, "showRangeCircle": true, "validColor": "#9BE0FF77", "invalidColor": "#E2575788", "rangeCircleColor": "#3366FF55" },
     "blockTags": { "blockedAny": ["Cooldown.Champion.Ezreal.R"] },
     "presentation": {
       "displayName": "Trueshot Barrage",
@@ -115,7 +115,7 @@
         ]
       }
     },
-    "indicator": { "shape": "Circle", "range": 0, "radius": 220, "showRangeCircle": false, "validColor": "#C9E98766", "invalidColor": "#E2575788" },
+    "indicator": { "shape": "Circle", "radius": 220, "showRangeCircle": false, "validColor": "#C9E98766", "invalidColor": "#E2575788" },
     "blockTags": { "blockedAny": ["Cooldown.Champion.Garen.W"] },
     "presentation": {
       "displayName": "Courage",
@@ -138,7 +138,7 @@
         { "kind": "End", "tick": 0 }
       ]
     },
-    "indicator": { "shape": "Circle", "range": 320, "radius": 100, "showRangeCircle": true, "validColor": "#F6D37A77", "invalidColor": "#E2575788" },
+    "indicator": { "shape": "Circle", "range": 320, "radius": 100, "showRangeCircle": true, "validColor": "#F6D37A77", "invalidColor": "#E2575788", "rangeCircleColor": "#3366FF55" },
     "blockTags": { "blockedAny": ["Cooldown.Champion.Garen.Q"] },
     "presentation": {
       "displayName": "Decisive Strike",
@@ -161,7 +161,7 @@
         { "kind": "End", "tick": 0 }
       ]
     },
-    "indicator": { "shape": "Circle", "range": 520, "radius": 150, "showRangeCircle": true, "validColor": "#FF8B76AA", "invalidColor": "#E2575788" },
+    "indicator": { "shape": "Circle", "range": 520, "radius": 150, "showRangeCircle": true, "validColor": "#FF8B76AA", "invalidColor": "#E2575788", "rangeCircleColor": "#3366FF55" },
     "blockTags": { "blockedAny": ["Cooldown.Champion.Garen.R"] },
     "presentation": {
       "displayName": "Demacian Justice",
@@ -184,7 +184,7 @@
         { "kind": "End", "tick": 0 }
       ]
     },
-    "indicator": { "shape": "Circle", "range": 0, "radius": 260, "showRangeCircle": false, "validColor": "#E5A95A77", "invalidColor": "#E2575788" },
+    "indicator": { "shape": "Circle", "radius": 260, "showRangeCircle": false, "validColor": "#E5A95A77", "invalidColor": "#E2575788" },
     "blockTags": { "blockedAny": ["Cooldown.Champion.Garen.E"] },
     "presentation": {
       "displayName": "Judgment",
@@ -207,7 +207,7 @@
         { "kind": "End", "tick": 0 }
       ]
     },
-    "indicator": { "shape": "Circle", "range": 720, "radius": 110, "showRangeCircle": true, "validColor": "#86E2A977", "invalidColor": "#E2575788" },
+    "indicator": { "shape": "Circle", "range": 720, "radius": 110, "showRangeCircle": true, "validColor": "#86E2A977", "invalidColor": "#E2575788", "rangeCircleColor": "#3366FF55" },
     "blockTags": { "blockedAny": ["Cooldown.Champion.Geomancer.Q"] },
     "presentation": {
       "displayName": "Runic Beacon",
@@ -230,7 +230,7 @@
         { "kind": "End", "tick": 0 }
       ]
     },
-    "indicator": { "shape": "Circle", "range": 720, "radius": 220, "showRangeCircle": true, "validColor": "#D7F08B77", "invalidColor": "#E2575788" },
+    "indicator": { "shape": "Circle", "range": 720, "radius": 220, "showRangeCircle": true, "validColor": "#D7F08B77", "invalidColor": "#E2575788", "rangeCircleColor": "#3366FF55" },
     "blockTags": { "blockedAny": ["Cooldown.Champion.Geomancer.W"] },
     "presentation": {
       "displayName": "Rune Field",
@@ -253,7 +253,7 @@
         { "kind": "End", "tick": 0 }
       ]
     },
-    "indicator": { "shape": "Circle", "range": 720, "radius": 140, "showRangeCircle": true, "validColor": "#F0B36C77", "invalidColor": "#E2575788" },
+    "indicator": { "shape": "Circle", "range": 720, "radius": 140, "showRangeCircle": true, "validColor": "#F0B36C77", "invalidColor": "#E2575788", "rangeCircleColor": "#3366FF55" },
     "blockTags": { "blockedAny": ["Cooldown.Champion.Geomancer.E"] },
     "presentation": {
       "displayName": "Stone Pillar",
@@ -276,7 +276,7 @@
         { "kind": "End", "tick": 0 }
       ]
     },
-    "indicator": { "shape": "Line", "range": 920, "radius": 80, "showRangeCircle": true, "validColor": "#78E2FF77", "invalidColor": "#E2575788" },
+    "indicator": { "shape": "Line", "range": 920, "radius": 80, "showRangeCircle": true, "validColor": "#78E2FF77", "invalidColor": "#E2575788", "rangeCircleColor": "#3366FF55" },
     "blockTags": { "blockedAny": ["Cooldown.Champion.Geomancer.R"] },
     "presentation": {
       "displayName": "Prismatic Beam",
@@ -299,7 +299,7 @@
         { "kind": "End", "tick": 0 }
       ]
     },
-    "indicator": { "shape": "Rectangle", "range": 640, "radius": 220, "showRangeCircle": true, "validColor": "#8ED9A977", "invalidColor": "#E2575788" },
+    "indicator": { "shape": "Rectangle", "range": 640, "radius": 220, "showRangeCircle": true, "validColor": "#8ED9A977", "invalidColor": "#E2575788", "rangeCircleColor": "#3366FF55" },
     "blockTags": { "blockedAny": ["Cooldown.Champion.Jayce.E"] },
     "presentation": {
       "displayName": "Acceleration Gate",
@@ -322,7 +322,7 @@
         { "kind": "End", "tick": 0 }
       ]
     },
-    "indicator": { "shape": "Circle", "range": 0, "radius": 220, "showRangeCircle": false, "validColor": "#B4F0C277", "invalidColor": "#E2575788" },
+    "indicator": { "shape": "Circle", "radius": 220, "showRangeCircle": false, "validColor": "#B4F0C277", "invalidColor": "#E2575788" },
     "blockTags": { "blockedAny": ["Cooldown.Champion.Jayce.W"] },
     "presentation": {
       "displayName": "Hyper Charge",
@@ -345,7 +345,7 @@
         { "kind": "End", "tick": 0 }
       ]
     },
-    "indicator": { "shape": "Line", "range": 880, "radius": 90, "showRangeCircle": true, "validColor": "#67D4FF77", "invalidColor": "#E2575788" },
+    "indicator": { "shape": "Line", "range": 880, "radius": 90, "showRangeCircle": true, "validColor": "#67D4FF77", "invalidColor": "#E2575788", "rangeCircleColor": "#3366FF55" },
     "blockTags": { "blockedAny": ["Cooldown.Champion.Jayce.Q"] },
     "presentation": {
       "displayName": "Shock Blast",
@@ -368,7 +368,7 @@
         { "kind": "End", "tick": 0 }
       ]
     },
-    "indicator": { "shape": "Ring", "range": 0, "radius": 280, "innerRadius": 90, "showRangeCircle": false, "validColor": "#FFD27B77", "invalidColor": "#E2575788" },
+    "indicator": { "shape": "Ring", "radius": 280, "innerRadius": 90, "showRangeCircle": false, "validColor": "#FFD27B77", "invalidColor": "#E2575788" },
     "blockTags": { "blockedAny": ["Cooldown.Champion.Jayce.W"] },
     "presentation": {
       "displayName": "Lightning Field",
@@ -391,7 +391,7 @@
         { "kind": "End", "tick": 0 }
       ]
     },
-    "indicator": { "shape": "Cone", "range": 300, "radius": 300, "angleDeg": 40, "showRangeCircle": true, "validColor": "#FFA76777", "invalidColor": "#E2575788" },
+    "indicator": { "shape": "Cone", "range": 300, "radius": 300, "angleDeg": 40, "showRangeCircle": true, "validColor": "#FFA76777", "invalidColor": "#E2575788", "rangeCircleColor": "#3366FF55" },
     "blockTags": { "blockedAny": ["Cooldown.Champion.Jayce.E"] },
     "presentation": {
       "displayName": "Thundering Blow",
@@ -414,7 +414,7 @@
         { "kind": "End", "tick": 0 }
       ]
     },
-    "indicator": { "shape": "Circle", "range": 520, "radius": 170, "showRangeCircle": true, "validColor": "#FFB85B77", "invalidColor": "#E2575788" },
+    "indicator": { "shape": "Circle", "range": 520, "radius": 170, "showRangeCircle": true, "validColor": "#FFB85B77", "invalidColor": "#E2575788", "rangeCircleColor": "#3366FF55" },
     "blockTags": { "blockedAny": ["Cooldown.Champion.Jayce.Q"] },
     "presentation": {
       "displayName": "To The Skies!",
@@ -445,7 +445,7 @@
         ]
       }
     },
-    "indicator": { "shape": "Circle", "range": 0, "radius": 200, "showRangeCircle": false, "validColor": "#8AA8FF66", "invalidColor": "#E2575788" },
+    "indicator": { "shape": "Circle", "radius": 200, "showRangeCircle": false, "validColor": "#8AA8FF66", "invalidColor": "#E2575788" },
     "blockTags": { "blockedAny": ["Cooldown.Champion.Jayce.R"] },
     "presentation": {
       "displayName": "Mercury Cannon",
@@ -476,7 +476,7 @@
         ]
       }
     },
-    "indicator": { "shape": "Circle", "range": 0, "radius": 200, "showRangeCircle": false, "validColor": "#FFB55C66", "invalidColor": "#E2575788" },
+    "indicator": { "shape": "Circle", "radius": 200, "showRangeCircle": false, "validColor": "#FFB55C66", "invalidColor": "#E2575788" },
     "blockTags": { "blockedAny": ["Cooldown.Champion.Jayce.R"] },
     "presentation": {
       "displayName": "Mercury Hammer",
@@ -499,7 +499,7 @@
         { "kind": "End", "tick": 0 }
       ]
     },
-    "indicator": { "shape": "Circle", "range": 180, "radius": 180, "showRangeCircle": true, "validColor": "#F1A45E77", "invalidColor": "#E2575788" },
+    "indicator": { "shape": "Circle", "range": 180, "radius": 180, "showRangeCircle": true, "validColor": "#F1A45E77", "invalidColor": "#E2575788", "rangeCircleColor": "#3366FF55" },
     "blockTags": { "blockedAny": ["Cooldown.ChampionStress.Warrior.Q"] },
     "presentation": {
       "displayName": "Cleave",
@@ -522,7 +522,7 @@
         { "kind": "End", "tick": 0 }
       ]
     },
-    "indicator": { "shape": "Circle", "range": 1200, "radius": 180, "showRangeCircle": true, "validColor": "#FF8B5F77", "invalidColor": "#E2575788" },
+    "indicator": { "shape": "Circle", "range": 1200, "radius": 180, "showRangeCircle": true, "validColor": "#FF8B5F77", "invalidColor": "#E2575788", "rangeCircleColor": "#3366FF55" },
     "blockTags": { "blockedAny": ["Cooldown.ChampionStress.FireMage.Q"] },
     "presentation": {
       "displayName": "Fireball",
@@ -545,7 +545,7 @@
         { "kind": "End", "tick": 0 }
       ]
     },
-    "indicator": { "shape": "Line", "range": 1400, "radius": 80, "showRangeCircle": true, "validColor": "#63D8FF77", "invalidColor": "#E2575788" },
+    "indicator": { "shape": "Line", "range": 1400, "radius": 80, "showRangeCircle": true, "validColor": "#63D8FF77", "invalidColor": "#E2575788", "rangeCircleColor": "#3366FF55" },
     "blockTags": { "blockedAny": ["Cooldown.ChampionStress.LaserMage.Q"] },
     "presentation": {
       "displayName": "Laser Bolt",
@@ -568,7 +568,7 @@
         { "kind": "End", "tick": 0 }
       ]
     },
-    "indicator": { "shape": "Circle", "range": 900, "radius": 140, "showRangeCircle": true, "validColor": "#83E7A177", "invalidColor": "#E2575788" },
+    "indicator": { "shape": "Circle", "range": 900, "radius": 140, "showRangeCircle": true, "validColor": "#83E7A177", "invalidColor": "#E2575788", "rangeCircleColor": "#3366FF55" },
     "blockTags": { "blockedAny": ["Cooldown.ChampionStress.Priest.Q"] },
     "presentation": {
       "displayName": "Renew",
@@ -591,7 +591,7 @@
         { "kind": "End", "tick": 0 }
       ]
     },
-    "indicator": { "shape": "Circle", "range": 760, "radius": 110, "showRangeCircle": true, "validColor": "#73E1FF77", "invalidColor": "#E2575788" },
+    "indicator": { "shape": "Circle", "range": 760, "radius": 110, "showRangeCircle": true, "validColor": "#73E1FF77", "invalidColor": "#E2575788", "rangeCircleColor": "#3366FF55" },
     "blockTags": { "blockedAny": ["Cooldown.Champion.SpellEngineer.Q"] },
     "presentation": {
       "displayName": "Spell Beacon",
@@ -614,7 +614,7 @@
         { "kind": "End", "tick": 0 }
       ]
     },
-    "indicator": { "shape": "Circle", "range": 760, "radius": 240, "showRangeCircle": true, "validColor": "#78AFFF77", "invalidColor": "#E2575788" },
+    "indicator": { "shape": "Circle", "range": 760, "radius": 240, "showRangeCircle": true, "validColor": "#78AFFF77", "invalidColor": "#E2575788", "rangeCircleColor": "#3366FF55" },
     "blockTags": { "blockedAny": ["Cooldown.Champion.SpellEngineer.W"] },
     "presentation": {
       "displayName": "Gravity Well",
@@ -638,7 +638,7 @@
         { "kind": "End", "tick": 0 }
       ]
     },
-    "indicator": { "shape": "Circle", "range": 700, "radius": 300, "showRangeCircle": true, "validColor": "#FF9D6F77", "invalidColor": "#E2575788" },
+    "indicator": { "shape": "Circle", "range": 700, "radius": 300, "showRangeCircle": true, "validColor": "#FF9D6F77", "invalidColor": "#E2575788", "rangeCircleColor": "#3366FF55" },
     "blockTags": { "blockedAny": ["Cooldown.Champion.SpellEngineer.E"] },
     "presentation": {
       "displayName": "Cataclysm Ring",
@@ -662,7 +662,7 @@
         { "kind": "End", "tick": 0 }
       ]
     },
-    "indicator": { "shape": "Line", "range": 1050, "radius": 75, "showRangeCircle": true, "validColor": "#B07CFF77", "invalidColor": "#E2575788" },
+    "indicator": { "shape": "Line", "range": 1050, "radius": 75, "showRangeCircle": true, "validColor": "#B07CFF77", "invalidColor": "#E2575788", "rangeCircleColor": "#3366FF55" },
     "blockTags": { "blockedAny": ["Cooldown.Champion.SpellEngineer.R"] },
     "input": {
       "trigger": "Held",
