@@ -1,10 +1,10 @@
 ﻿using System.Threading.Tasks;
 using Ludots.Core.Engine;
 using Ludots.Core.Gameplay.GAS.Orders;
-using Ludots.Core.Gameplay.GAS.Systems;
 using Ludots.Core.Modding;
 using Ludots.Core.Scripting;
 using Ludots.Core.Spatial;
+using CombatStanceBehaviorMod.Runtime;
 using CombatStanceBehaviorMod.Systems;
 
 namespace CombatStanceBehaviorMod.Triggers;
@@ -43,9 +43,13 @@ public sealed class InstallCombatStanceBehaviorOnGameStartTrigger : Trigger
             ?? throw new System.InvalidOperationException("CombatStanceBehaviorMod requires OrderQueue.");
         IClock clock = engine.GetService(CoreServiceKeys.Clock)
             ?? throw new System.InvalidOperationException("CombatStanceBehaviorMod requires IClock.");
+        CombatStanceBehaviorSettings settings = new CombatStanceBehaviorSettingsLoader(engine.ConfigPipeline)
+            .Load(
+                engine.ConfigCatalog ?? throw new System.InvalidOperationException("CombatStanceBehaviorMod requires ConfigCatalog."),
+                engine.ConfigConflictReport ?? throw new System.InvalidOperationException("CombatStanceBehaviorMod requires ConfigConflictReport."));
 
-        engine.InsertSystemBeforeRequired<OrderBufferSystem>(
-            new CombatStanceOrderSystem(engine.World, clock, orders, orderTypes, spatial, engine.EventBus),
+        engine.RegisterSystem(
+            new CombatStanceOrderSystem(engine.World, clock, orders, orderTypes, spatial, settings, engine.EventBus),
             SystemGroup.PostMovement);
         _context.Log("[CombatStanceBehaviorMod] Combat stance behavior system registered");
         return Task.CompletedTask;

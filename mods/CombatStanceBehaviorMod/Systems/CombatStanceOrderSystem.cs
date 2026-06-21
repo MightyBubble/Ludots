@@ -15,6 +15,7 @@ using Ludots.Core.Gameplay.Teams;
 using Ludots.Core.Mathematics;
 using Ludots.Core.Spatial;
 using CombatStanceBehaviorMod.Components;
+using CombatStanceBehaviorMod.Runtime;
 
 namespace CombatStanceBehaviorMod.Systems;
 
@@ -22,8 +23,6 @@ public sealed class CombatStanceOrderSystem : BaseSystem<World, float>
 {
     private const int DefaultTargetCapacity = 256;
     private const int PendingEntityCapacity = 1024;
-    private const int ArrivalRadiusCm = 50;
-    private const int DefaultRetaliationTtlSteps = 180;
     private const string DamageTakenEventTag = "Event.DamageTaken";
 
     private static readonly QueryDescription Query = new QueryDescription()
@@ -34,6 +33,7 @@ public sealed class CombatStanceOrderSystem : BaseSystem<World, float>
     private readonly OrderTypeRegistry _orderTypes;
     private readonly ISpatialQueryService _spatial;
     private readonly GameplayEventBus? _events;
+    private readonly CombatStanceBehaviorSettings _settings;
     private readonly Entity[] _targets;
     private readonly CommandBuffer _commandBuffer = new();
     private readonly Entity[] _completedOrders = new Entity[PendingEntityCapacity];
@@ -58,6 +58,7 @@ public sealed class CombatStanceOrderSystem : BaseSystem<World, float>
         OrderQueue orders,
         OrderTypeRegistry orderTypes,
         ISpatialQueryService spatial,
+        CombatStanceBehaviorSettings settings,
         GameplayEventBus? events = null,
         int targetCapacity = DefaultTargetCapacity)
         : base(world)
@@ -67,6 +68,7 @@ public sealed class CombatStanceOrderSystem : BaseSystem<World, float>
         _orderTypes = orderTypes ?? throw new ArgumentNullException(nameof(orderTypes));
         _spatial = spatial ?? throw new ArgumentNullException(nameof(spatial));
         _events = events;
+        _settings = settings;
         _targets = new Entity[targetCapacity < 16 ? 16 : targetCapacity];
 
         _attackMoveOrderTypeId = RequireOrderTypeId(orderTypes, StanceOrderKeys.AttackMove);
@@ -245,7 +247,7 @@ public sealed class CombatStanceOrderSystem : BaseSystem<World, float>
         }
 
         int leashRadiusCm = order.Args.I1;
-        int retaliationTtlSteps = order.Args.I2 > 0 ? order.Args.I2 : DefaultRetaliationTtlSteps;
+        int retaliationTtlSteps = order.Args.I2 > 0 ? order.Args.I2 : _settings.DefaultRetaliationTtlSteps;
         if (stance != CombatStances.HoldFire && leashRadiusCm <= 0)
         {
             throw new InvalidOperationException("Combat stance setCombatStance requires Args.I1 leash radius for non-HoldFire stances.");
@@ -296,7 +298,7 @@ public sealed class CombatStanceOrderSystem : BaseSystem<World, float>
             return;
         }
 
-        if (!IsWithinRadius(actorPosition, destination, ArrivalRadiusCm))
+        if (!IsWithinRadius(actorPosition, destination, _settings.ArrivalRadiusCm))
         {
             EnqueueMove(entity, destination.X, destination.Y, step);
         }
@@ -363,7 +365,7 @@ public sealed class CombatStanceOrderSystem : BaseSystem<World, float>
             return;
         }
 
-        if (IsWithinRadius(actorPosition, destination, ArrivalRadiusCm))
+        if (IsWithinRadius(actorPosition, destination, _settings.ArrivalRadiusCm))
         {
             QueuePendingEntity(_removeAttackMoveRuntime, ref _removeAttackMoveRuntimeCount, entity, "Combat stance attack-move removal queue");
             return;
@@ -460,7 +462,7 @@ public sealed class CombatStanceOrderSystem : BaseSystem<World, float>
         var memory = World.Get<RetaliationMemory>(actor);
         int ttl = World.Has<CombatStanceState>(actor)
             ? World.Get<CombatStanceState>(actor).RetaliationTtlSteps
-            : DefaultRetaliationTtlSteps;
+            : _settings.DefaultRetaliationTtlSteps;
         if (memory.LastAttacker == default ||
             !World.IsAlive(memory.LastAttacker) ||
             step - memory.LastAttackerStep > ttl ||

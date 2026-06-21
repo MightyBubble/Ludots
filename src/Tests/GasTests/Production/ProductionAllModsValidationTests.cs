@@ -197,6 +197,12 @@ namespace Ludots.Tests.GAS.Production
                 .SetName("ProdModSmoke_UtilityAutocastShowcaseMod");
 
             yield return new TestCaseData(new ModCase(
+                    "CombatStanceShowcaseMod",
+                    new[] { "LudotsCoreMod", "CombatStanceBehaviorMod", "CombatStanceShowcaseMod" },
+                    true))
+                .SetName("ProdModSmoke_CombatStanceShowcaseMod");
+
+            yield return new TestCaseData(new ModCase(
                     "DepConsumerMod",
                     new[] { "LudotsCoreMod", "DepApiMod", "DepConsumerMod" },
                     true))

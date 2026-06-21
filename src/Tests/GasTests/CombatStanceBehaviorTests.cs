@@ -14,6 +14,7 @@ using Ludots.Core.Mathematics;
 using Ludots.Core.Spatial;
 using NUnit.Framework;
 using CombatStanceBehaviorMod.Components;
+using CombatStanceBehaviorMod.Runtime;
 using CombatStanceBehaviorMod.Systems;
 
 namespace Ludots.Tests.GAS;
@@ -281,7 +282,8 @@ public sealed class CombatStanceBehaviorTests
 
                 return world.Get<WorldPositionCm>(entity).ToWorldCmInt2();
             });
-            var system = new CombatStanceOrderSystem(world, clock, orders, orderTypes, spatial, events);
+            var settings = new CombatStanceBehaviorSettings(arrivalRadiusCm: 50, defaultRetaliationTtlSteps: 180);
+            var system = new CombatStanceOrderSystem(world, clock, orders, orderTypes, spatial, settings, events);
             return new StanceFixture(world, clock, orders, orderTypes, events, partition, spec, spatial, system);
         }
 
