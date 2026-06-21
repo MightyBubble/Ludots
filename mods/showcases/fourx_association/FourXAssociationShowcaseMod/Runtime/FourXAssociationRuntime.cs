@@ -311,7 +311,7 @@ public sealed class FourXAssociationRuntime
     private void ResolveIds(GameEngine engine)
     {
         FourXAssociationConfig config = _config!;
-        _goldAttributeId = AttributeRegistry.GetId(config.GoldAttribute);
+        _goldAttributeId = AttributeRegistry.Register(config.GoldAttribute);
         RelationshipTypeRegistry relationshipTypes = engine.GetService(CoreServiceKeys.RelationshipTypeRegistry)
             ?? throw new InvalidOperationException("RelationshipTypeRegistry missing.");
         RelationshipMetricRegistry relationshipMetrics = engine.GetService(CoreServiceKeys.RelationshipMetricRegistry)
@@ -334,7 +334,7 @@ public sealed class FourXAssociationRuntime
         _supplyItemId = items.GetId(config.SupplyItem);
         _cityStashLayoutId = layouts.GetId(config.CityStashLayout);
         _teamScopeId = scopeKeys.GetId(config.TeamScope);
-        if (_goldAttributeId <= 0 ||
+        if (_goldAttributeId < 0 ||
             _diplomacyTypeId < 0 ||
             _trustMetricId < 0 ||
             _tradePactFlagId < 0 ||
