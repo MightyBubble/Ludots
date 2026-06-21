@@ -1,0 +1,21 @@
+{
+  "actions": [
+    { "id": "GoldMarket.Buy", "name": "GoldMarket_Buy", "type": "Button" },
+    { "id": "GoldMarket.Expensive", "name": "GoldMarket_Expensive", "type": "Button" },
+    { "id": "GoldMarket.AtomicFailure", "name": "GoldMarket_AtomicFailure", "type": "Button" },
+    { "id": "GoldMarket.Refill", "name": "GoldMarket_Refill", "type": "Button" }
+  ],
+  "contexts": [
+    {
+      "id": "GoldMarket.Controls",
+      "name": "Gold Market Controls",
+      "priority": 88,
+      "bindings": [
+        { "actionId": "GoldMarket.Buy", "path": "<Keyboard>/b" },
+        { "actionId": "GoldMarket.Expensive", "path": "<Keyboard>/x" },
+        { "actionId": "GoldMarket.AtomicFailure", "path": "<Keyboard>/f" },
+        { "actionId": "GoldMarket.Refill", "path": "<Keyboard>/r" }
+      ]
+    }
+  ]
+}

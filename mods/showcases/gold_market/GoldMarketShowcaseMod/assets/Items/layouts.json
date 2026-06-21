@@ -1,0 +1,4 @@
+[
+  { "id": "gold_market_buyer_stash", "purpose": "Stash", "width": 2, "height": 1 },
+  { "id": "gold_market_market_stash", "purpose": "Stash", "width": 2, "height": 1 }
+]

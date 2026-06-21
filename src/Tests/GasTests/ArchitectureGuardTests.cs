@@ -614,6 +614,53 @@ namespace GasTests
         }
 
         [Test]
+        public void Issue250_ExchangeAttributeCostInput_UsesGasAttributesAndShowcaseMod()
+        {
+            var repoRoot = FindRepoRoot();
+            string modelPath = Path.Combine(repoRoot, "src", "Core", "Gameplay", "Exchange", "ExchangeModel.cs");
+            string runtimePath = Path.Combine(repoRoot, "src", "Core", "Gameplay", "Exchange", "ExchangeRuntime.cs");
+            string loaderPath = Path.Combine(repoRoot, "src", "Core", "Gameplay", "Exchange", "ExchangeConfigLoader.cs");
+            string showcasePath = Path.Combine(repoRoot, "mods", "showcases", "gold_market", "GoldMarketShowcaseMod", "mod.json");
+
+            Assert.That(File.Exists(modelPath), Is.True, $"Missing {modelPath}");
+            Assert.That(File.Exists(runtimePath), Is.True, $"Missing {runtimePath}");
+            Assert.That(File.Exists(loaderPath), Is.True, $"Missing {loaderPath}");
+            Assert.That(File.Exists(showcasePath), Is.True, $"Missing AAC-7 showcase mod {showcasePath}");
+
+            string model = File.ReadAllText(modelPath);
+            string runtime = File.ReadAllText(runtimePath);
+            string loader = File.ReadAllText(loaderPath);
+
+            Assert.Multiple(() =>
+            {
+                Assert.That(model, Does.Contain("AttributeCost"));
+                Assert.That(model, Does.Contain("AttributeId"));
+                Assert.That(runtime, Does.Contain("AttributeBuffer"));
+                Assert.That(runtime, Does.Contain("_attributeCosts"));
+                Assert.That(runtime, Does.Contain("AttributeCostRecord"));
+                Assert.That(runtime, Does.Contain("attributes.SetCurrent"));
+                Assert.That(loader, Does.Contain("AttributeRegistry.Register"));
+                Assert.That(loader, Does.Contain("inputs[{index}].attribute"));
+            });
+
+            string[] forbidden =
+            {
+                "GoldMarket",
+                "currency",
+                "merchant",
+                "vendor",
+                "shop"
+            };
+            var hits = new List<string>();
+            AppendForbiddenSourceTokens(repoRoot, modelPath, forbidden, hits);
+            AppendForbiddenSourceTokens(repoRoot, runtimePath, forbidden, hits);
+            Assert.That(
+                hits,
+                Is.Empty,
+                "AAC-7 (#250) keeps Exchange Core semantic; market/currency terms belong in the showcase/config layer.");
+        }
+
+        [Test]
         public void Issue244_PendingCompositionContracts()
         {
             Assert.Ignore("AAC-5..AAC-8/#248..#251 will make Ownership relations, Relationship-gated Exchange, Collection+Relationship-fed Progression membership, and Inventory settlement executable contracts.");

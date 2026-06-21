@@ -3,6 +3,7 @@ using System.Collections.Generic;
 using Arch.Core;
 using Ludots.Core.Association;
 using Ludots.Core.Gameplay.GAS;
+using Ludots.Core.Gameplay.GAS.Components;
 using Ludots.Core.Gameplay.Items;
 using Ludots.Core.Gameplay.Relationships;
 
@@ -17,6 +18,7 @@ namespace Ludots.Core.Gameplay.Exchange
         private readonly EffectRequestQueue _effects;
         private readonly RelationshipRuntime _relationships;
         private readonly List<ItemConsumptionRecord> _consumed = new(16);
+        private readonly List<AttributeCostRecord> _attributeCosts = new(8);
         private readonly List<CreatedItemRecord> _created = new(8);
         private readonly List<MovedItemRecord> _moved = new(8);
         private readonly List<ItemPlacementReservation> _reservations = new(8);
@@ -45,6 +47,7 @@ namespace Ludots.Core.Gameplay.Exchange
         public ExchangeExecutionResult TryExecute(ExchangeOperationKey key, in ExchangeExecutionContext context)
         {
             _consumed.Clear();
+            _attributeCosts.Clear();
             _created.Clear();
             _moved.Clear();
             _reservations.Clear();
@@ -63,8 +66,7 @@ namespace Ludots.Core.Gameplay.Exchange
             for (int i = 0; i < operation.Inputs.Length; i++)
             {
                 ExchangeInputDefinition input = operation.Inputs[i];
-                Entity actor = context.Resolve(input.Actor);
-                if (!_inventory.ConsumeStackUnits(actor, input.ItemDefinitionId, input.Quantity, _consumed))
+                if (!ApplyInput(input, in context))
                 {
                     Rollback();
                     return new ExchangeExecutionResult(ExchangeExecutionStatus.InsufficientInput, key.OperationId, i);
@@ -88,6 +90,7 @@ namespace Ludots.Core.Gameplay.Exchange
 
             PublishEffects(operation, in context);
             _consumed.Clear();
+            _attributeCosts.Clear();
             _created.Clear();
             _moved.Clear();
             _reservations.Clear();
@@ -120,15 +123,10 @@ namespace Ludots.Core.Gameplay.Exchange
             for (int i = 0; i < operation.Inputs.Length; i++)
             {
                 ExchangeInputDefinition input = operation.Inputs[i];
-                Entity actor = context.Resolve(input.Actor);
-                if (!IsLiveActor(actor))
+                ExchangeExecutionResult inputCheck = ValidateInput(operationId, input, in context, i);
+                if (!inputCheck.Succeeded)
                 {
-                    return new ExchangeExecutionResult(ExchangeExecutionStatus.MissingActor, operationId, i);
-                }
-
-                if (_inventory.CountStackUnits(actor, input.ItemDefinitionId) < input.Quantity)
-                {
-                    return new ExchangeExecutionResult(ExchangeExecutionStatus.InsufficientInput, operationId, i);
+                    return inputCheck;
                 }
             }
 
@@ -149,6 +147,43 @@ namespace Ludots.Core.Gameplay.Exchange
             }
 
             return new ExchangeExecutionResult(ExchangeExecutionStatus.Success, operationId);
+        }
+
+        private ExchangeExecutionResult ValidateInput(int operationId, ExchangeInputDefinition input, in ExchangeExecutionContext context, int index)
+        {
+            Entity actor = context.Resolve(input.Actor);
+            if (!IsLiveActor(actor))
+            {
+                return new ExchangeExecutionResult(ExchangeExecutionStatus.MissingActor, operationId, index);
+            }
+
+            if (input.Kind == ExchangeInputKind.ItemStack)
+            {
+                if (_inventory.CountStackUnits(actor, input.ItemDefinitionId) < input.Quantity)
+                {
+                    return new ExchangeExecutionResult(ExchangeExecutionStatus.InsufficientInput, operationId, index);
+                }
+
+                return new ExchangeExecutionResult(ExchangeExecutionStatus.Success, operationId);
+            }
+
+            if (input.Kind == ExchangeInputKind.AttributeCost)
+            {
+                if (!_world.Has<AttributeBuffer>(actor))
+                {
+                    return new ExchangeExecutionResult(ExchangeExecutionStatus.InsufficientInput, operationId, index);
+                }
+
+                AttributeBuffer attributes = _world.Get<AttributeBuffer>(actor);
+                if (attributes.GetCurrent(input.AttributeId) < input.Quantity)
+                {
+                    return new ExchangeExecutionResult(ExchangeExecutionStatus.InsufficientInput, operationId, index);
+                }
+
+                return new ExchangeExecutionResult(ExchangeExecutionStatus.Success, operationId);
+            }
+
+            return new ExchangeExecutionResult(ExchangeExecutionStatus.ExecutionFailed, operationId, index);
         }
 
         private ExchangeExecutionResult ValidateRelationships(int operationId, ExchangeOperationDefinition operation, in ExchangeExecutionContext context)
@@ -315,6 +350,36 @@ namespace Ludots.Core.Gameplay.Exchange
             return false;
         }
 
+        private bool ApplyInput(ExchangeInputDefinition input, in ExchangeExecutionContext context)
+        {
+            Entity actor = context.Resolve(input.Actor);
+            if (input.Kind == ExchangeInputKind.ItemStack)
+            {
+                return _inventory.ConsumeStackUnits(actor, input.ItemDefinitionId, input.Quantity, _consumed);
+            }
+
+            if (input.Kind == ExchangeInputKind.AttributeCost)
+            {
+                if (!_world.Has<AttributeBuffer>(actor))
+                {
+                    return false;
+                }
+
+                ref AttributeBuffer attributes = ref _world.Get<AttributeBuffer>(actor);
+                float previousValue = attributes.GetCurrent(input.AttributeId);
+                if (previousValue < input.Quantity)
+                {
+                    return false;
+                }
+
+                _attributeCosts.Add(new AttributeCostRecord(actor, input.AttributeId, previousValue));
+                attributes.SetCurrent(input.AttributeId, previousValue - input.Quantity);
+                return true;
+            }
+
+            return false;
+        }
+
         private void PublishEffects(ExchangeOperationDefinition operation, in ExchangeExecutionContext context)
         {
             for (int i = 0; i < operation.Outputs.Length; i++)
@@ -357,7 +422,18 @@ namespace Ludots.Core.Gameplay.Exchange
             }
 
             _inventory.RestoreConsumedUnits(_consumed);
+            for (int i = _attributeCosts.Count - 1; i >= 0; i--)
+            {
+                AttributeCostRecord record = _attributeCosts[i];
+                if (_world.IsAlive(record.Actor) && _world.Has<AttributeBuffer>(record.Actor))
+                {
+                    ref AttributeBuffer attributes = ref _world.Get<AttributeBuffer>(record.Actor);
+                    attributes.SetCurrent(record.AttributeId, record.PreviousValue);
+                }
+            }
+
             _consumed.Clear();
+            _attributeCosts.Clear();
             _created.Clear();
             _moved.Clear();
         }
@@ -365,6 +441,22 @@ namespace Ludots.Core.Gameplay.Exchange
         private bool IsLiveActor(Entity entity)
         {
             return entity != Entity.Null && _world.IsAlive(entity);
+        }
+
+        private readonly struct AttributeCostRecord
+        {
+            public AttributeCostRecord(Entity actor, int attributeId, float previousValue)
+            {
+                Actor = actor;
+                AttributeId = attributeId;
+                PreviousValue = previousValue;
+            }
+
+            public Entity Actor { get; }
+
+            public int AttributeId { get; }
+
+            public float PreviousValue { get; }
         }
 
         private readonly struct CreatedItemRecord

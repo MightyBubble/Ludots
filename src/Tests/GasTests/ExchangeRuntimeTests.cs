@@ -6,6 +6,7 @@ using Ludots.Core.Config;
 using Ludots.Core.Gameplay.Exchange;
 using Ludots.Core.Gameplay.GAS;
 using Ludots.Core.Gameplay.GAS.Components;
+using Ludots.Core.Gameplay.GAS.Registry;
 using Ludots.Core.Gameplay.Items;
 using Ludots.Core.Gameplay.Relationships;
 using Ludots.Core.Gameplay.Relationships.Config;
@@ -468,6 +469,142 @@ namespace Ludots.Tests.GAS
         }
 
         [Test]
+        public void TryExecute_AttributeCostInput_UsesGasAttributeAndBlocksWhenInsufficient()
+        {
+            using World world = World.Create();
+            var fixture = CreateFixture(world, stashWidth: 3, stashHeight: 1);
+            Entity actor = world.Create(new AttributeBuffer());
+            fixture.Inventory.CreateContainer(actor, fixture.StashLayout, ItemContainerPurpose.Stash);
+            int goldId = AttributeRegistry.Register("Exchange.Tests.Gold");
+            world.Get<AttributeBuffer>(actor).SetCurrent(goldId, 8f);
+
+            int operationId = fixture.Operations.Register("test.attribute.cost.insufficient", new ExchangeOperationDefinition
+            {
+                Id = "test.attribute.cost.insufficient",
+                Inputs = new[]
+                {
+                    ExchangeInputDefinition.AttributeCost(RoleSlot.Source, goldId, 10)
+                },
+                Outputs = new[]
+                {
+                    CreateItem(RoleSlot.Source, ItemContainerPurpose.Stash, GemDef, 1)
+                }
+            });
+
+            ExchangeExecutionResult result = fixture.Runtime.TryExecute(operationId, new ExchangeExecutionContext(actor));
+
+            That(result.Status, Is.EqualTo(ExchangeExecutionStatus.InsufficientInput));
+            That(result.DetailIndex, Is.EqualTo(0));
+            That(world.Get<AttributeBuffer>(actor).GetCurrent(goldId), Is.EqualTo(8f));
+            That(fixture.Inventory.CountStackUnits(actor, GemDef), Is.EqualTo(0));
+        }
+
+        [Test]
+        public void TryExecute_AttributeCostInput_SubtractsAttributeAndCreatesOutput()
+        {
+            using World world = World.Create();
+            var fixture = CreateFixture(world, stashWidth: 3, stashHeight: 1);
+            Entity actor = world.Create(new AttributeBuffer());
+            fixture.Inventory.CreateContainer(actor, fixture.StashLayout, ItemContainerPurpose.Stash);
+            int goldId = AttributeRegistry.Register("Exchange.Tests.SpendableGold");
+            world.Get<AttributeBuffer>(actor).SetCurrent(goldId, 30f);
+
+            int operationId = fixture.Operations.Register("test.attribute.cost.success", new ExchangeOperationDefinition
+            {
+                Id = "test.attribute.cost.success",
+                Inputs = new[]
+                {
+                    ExchangeInputDefinition.AttributeCost(RoleSlot.Source, goldId, 12)
+                },
+                Outputs = new[]
+                {
+                    CreateItem(RoleSlot.Source, ItemContainerPurpose.Stash, GemDef, 1)
+                }
+            });
+
+            ExchangeExecutionResult result = fixture.Runtime.TryExecute(operationId, new ExchangeExecutionContext(actor));
+
+            That(result.Succeeded, Is.True);
+            That(world.Get<AttributeBuffer>(actor).GetCurrent(goldId), Is.EqualTo(18f));
+            That(fixture.Inventory.CountStackUnits(actor, GemDef), Is.EqualTo(1));
+        }
+
+        [Test]
+        public void TryExecute_OutputFailure_RollsBackAttributeCostAndPriorCreatedItems()
+        {
+            using World world = World.Create();
+            var fixture = CreateFixture(world, stashWidth: 2, stashHeight: 1);
+            Entity actor = world.Create(new AttributeBuffer());
+            Entity stash = fixture.Inventory.CreateContainer(actor, fixture.StashLayout, ItemContainerPurpose.Stash);
+            Put(fixture.Inventory, CreditDef, stash, 0, 0);
+            int goldId = AttributeRegistry.Register("Exchange.Tests.RollbackGold");
+            world.Get<AttributeBuffer>(actor).SetCurrent(goldId, 25f);
+
+            int operationId = fixture.Operations.Register("test.attribute.cost.rollback", new ExchangeOperationDefinition
+            {
+                Id = "test.attribute.cost.rollback",
+                Inputs = new[]
+                {
+                    ExchangeInputDefinition.AttributeCost(RoleSlot.Source, goldId, 7)
+                },
+                Outputs = new[]
+                {
+                    CreateItem(RoleSlot.Source, ItemContainerPurpose.Stash, GemDef, 1),
+                    CreateItem(RoleSlot.Source, ItemContainerPurpose.Stash, TokenDef, 1)
+                }
+            });
+
+            ExchangeExecutionResult result = fixture.Runtime.TryExecute(operationId, new ExchangeExecutionContext(actor));
+
+            That(result.Status, Is.EqualTo(ExchangeExecutionStatus.OutputBlocked));
+            That(world.Get<AttributeBuffer>(actor).GetCurrent(goldId), Is.EqualTo(25f));
+            That(fixture.Inventory.CountStackUnits(actor, GemDef), Is.EqualTo(0));
+            That(fixture.Inventory.CountStackUnits(actor, TokenDef), Is.EqualTo(0));
+            That(fixture.Inventory.CountStackUnits(actor, CreditDef), Is.EqualTo(1));
+        }
+
+        [Test]
+        public void TryExecute_AttributeCostInput_HotPathAllocatesZeroAfterWarmup()
+        {
+            using World world = World.Create();
+            var fixture = CreateFixture(world, stashWidth: 100, stashHeight: 1);
+            Entity actor = world.Create(new AttributeBuffer());
+            fixture.Inventory.CreateContainer(actor, fixture.StashLayout, ItemContainerPurpose.Stash);
+            int goldId = AttributeRegistry.Register("Exchange.Tests.HotPathGold");
+            world.Get<AttributeBuffer>(actor).SetCurrent(goldId, 10_000f);
+
+            int operationId = fixture.Operations.Register("test.attribute.cost.hotpath", new ExchangeOperationDefinition
+            {
+                Id = "test.attribute.cost.hotpath",
+                Inputs = new[]
+                {
+                    ExchangeInputDefinition.AttributeCost(RoleSlot.Source, goldId, 1)
+                },
+                Outputs = Array.Empty<ExchangeOutputDefinition>()
+            });
+
+            var context = new ExchangeExecutionContext(actor);
+            for (int i = 0; i < 32; i++)
+            {
+                That(fixture.Runtime.TryExecute(operationId, in context).Succeeded, Is.True);
+            }
+
+            GC.Collect();
+            GC.WaitForPendingFinalizers();
+            GC.Collect();
+            GC.GetAllocatedBytesForCurrentThread();
+            long before = GC.GetAllocatedBytesForCurrentThread();
+
+            for (int i = 0; i < 512; i++)
+            {
+                fixture.Runtime.TryExecute(operationId, in context);
+            }
+
+            long allocated = GC.GetAllocatedBytesForCurrentThread() - before;
+            That(allocated, Is.EqualTo(0), "Exchange AttributeCost hot path must allocate 0 bytes after warmup.");
+        }
+
+        [Test]
         public void ExchangeConfigLoader_CompilesRelationshipRequirementsFromRegistryNames()
         {
             string root = Path.Combine(Path.GetTempPath(), "Ludots_ExchangeRelGate", Guid.NewGuid().ToString("N"));
@@ -546,6 +683,77 @@ namespace Ludots.Tests.GAS
                 That(requirement.FlagId, Is.EqualTo(embargoId));
                 That(requirement.RequiredFlagValue, Is.False);
                 That(operation.Inputs[0].ItemDefinitionId, Is.EqualTo(creditId));
+                That(operation.Outputs[0].ItemDefinitionId, Is.EqualTo(gemId));
+            }
+            finally
+            {
+                try
+                {
+                    Directory.Delete(root, recursive: true);
+                }
+                catch
+                {
+                }
+            }
+        }
+
+        [Test]
+        public void ExchangeConfigLoader_CompilesAttributeCostInputFromAttributeRegistryName()
+        {
+            string root = Path.Combine(Path.GetTempPath(), "Ludots_ExchangeAttributeCost", Guid.NewGuid().ToString("N"));
+            try
+            {
+                Directory.CreateDirectory(Path.Combine(root, "Core", "Configs", "Exchange"));
+                File.WriteAllText(
+                    Path.Combine(root, "Core", "Configs", "config_catalog.json"),
+                    """
+                    [
+                      { "Path": "Exchange/operations.json", "Policy": "ArrayById", "IdField": "id" }
+                    ]
+                    """);
+                File.WriteAllText(
+                    Path.Combine(root, "Core", "Configs", "Exchange", "operations.json"),
+                    """
+                    [
+                      {
+                        "id": "test.attribute.config",
+                        "inputs": [
+                          { "kind": "AttributeCost", "actor": "Source", "attribute": "Gold", "quantity": 25 }
+                        ],
+                        "outputs": [
+                          { "kind": "CreateItem", "actor": "Source", "purpose": "Stash", "item": "gem", "quantity": 1 }
+                        ]
+                      }
+                    ]
+                    """);
+
+                var vfs = new VirtualFileSystem();
+                vfs.Mount("Core", Path.Combine(root, "Core"));
+                var pipeline = new ConfigPipeline(vfs, new ModLoader(vfs, new FunctionRegistry(), new TriggerManager()));
+                ConfigCatalog catalog = ConfigCatalogLoader.Load(pipeline);
+
+                var items = new ItemDefinitionRegistry();
+                int gemId = items.Register("gem", new ItemDefinition { Id = "gem", DisplayName = "Gem", ShapeId = 1 });
+                var operations = new ExchangeOperationRegistry();
+                var loader = new ExchangeConfigLoader(
+                    pipeline,
+                    operations,
+                    items,
+                    new RelationshipTypeRegistry(),
+                    new RelationshipMetricRegistry(),
+                    new RelationshipFlagRegistry());
+
+                loader.Load(catalog);
+
+                int operationId = operations.GetId("test.attribute.config");
+                That(operations.TryGet(operationId, out ExchangeOperationDefinition operation), Is.True);
+                That(operation.Inputs.Length, Is.EqualTo(1));
+                int goldId = AttributeRegistry.GetId("Gold");
+                That(goldId, Is.GreaterThanOrEqualTo(0));
+                That(operation.Inputs[0].Kind, Is.EqualTo(ExchangeInputKind.AttributeCost));
+                That(operation.Inputs[0].Actor, Is.EqualTo(RoleSlot.Source));
+                That(operation.Inputs[0].AttributeId, Is.EqualTo(goldId));
+                That(operation.Inputs[0].Quantity, Is.EqualTo(25));
                 That(operation.Outputs[0].ItemDefinitionId, Is.EqualTo(gemId));
             }
             finally

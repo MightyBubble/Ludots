@@ -7,7 +7,8 @@ namespace Ludots.Core.Gameplay.Exchange
     public enum ExchangeInputKind : byte
     {
         None = 0,
-        ItemStack = 1
+        ItemStack = 1,
+        AttributeCost = 2
     }
 
     public enum ExchangeOutputKind : byte
@@ -224,10 +225,16 @@ namespace Ludots.Core.Gameplay.Exchange
     public readonly struct ExchangeInputDefinition
     {
         public ExchangeInputDefinition(ExchangeInputKind kind, RoleSlot actor, int itemDefinitionId, int quantity)
+            : this(kind, actor, itemDefinitionId, attributeId: -1, quantity)
+        {
+        }
+
+        public ExchangeInputDefinition(ExchangeInputKind kind, RoleSlot actor, int itemDefinitionId, int attributeId, int quantity)
         {
             Kind = kind;
             Actor = actor;
             ItemDefinitionId = itemDefinitionId;
+            AttributeId = attributeId;
             Quantity = quantity;
         }
 
@@ -237,7 +244,14 @@ namespace Ludots.Core.Gameplay.Exchange
 
         public int ItemDefinitionId { get; }
 
+        public int AttributeId { get; }
+
         public int Quantity { get; }
+
+        public static ExchangeInputDefinition AttributeCost(RoleSlot actor, int attributeId, int quantity)
+        {
+            return new ExchangeInputDefinition(ExchangeInputKind.AttributeCost, actor, itemDefinitionId: 0, attributeId, quantity);
+        }
     }
 
     public readonly struct ExchangeOutputDefinition

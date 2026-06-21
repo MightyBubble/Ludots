@@ -161,20 +161,34 @@ namespace Ludots.Core.Gameplay.Exchange
             {
                 InputConfig cfg = configs[i] ?? throw new InvalidOperationException($"Exchange operation '{ownerId}' in {relativePath}: inputs[{i}] must be an object.");
                 ExchangeInputKind kind = ParseInputKind(cfg.Kind, ownerId, relativePath, i);
-                if (kind != ExchangeInputKind.ItemStack)
+                output[i] = kind switch
                 {
-                    throw new InvalidOperationException($"Exchange operation '{ownerId}' in {relativePath}: inputs[{i}] uses unsupported kind '{cfg.Kind}'.");
-                }
-
-                int quantity = RequirePositive(cfg.Quantity, ownerId, relativePath, $"inputs[{i}].quantity");
-                output[i] = new ExchangeInputDefinition(
-                    kind,
-                    ParseActorSlot(cfg.Actor, ownerId, relativePath, $"inputs[{i}].actor"),
-                    ResolveItem(cfg.Item, ownerId, relativePath, $"inputs[{i}].item"),
-                    quantity);
+                    ExchangeInputKind.ItemStack => CompileItemStackInput(cfg, ownerId, relativePath, i),
+                    ExchangeInputKind.AttributeCost => CompileAttributeCostInput(cfg, ownerId, relativePath, i),
+                    _ => throw new InvalidOperationException($"Exchange operation '{ownerId}' in {relativePath}: inputs[{i}] uses unsupported kind '{cfg.Kind}'.")
+                };
             }
 
             return output;
+        }
+
+        private ExchangeInputDefinition CompileItemStackInput(InputConfig cfg, string ownerId, string relativePath, int index)
+        {
+            return new ExchangeInputDefinition(
+                ExchangeInputKind.ItemStack,
+                ParseActorSlot(cfg.Actor, ownerId, relativePath, $"inputs[{index}].actor"),
+                ResolveItem(cfg.Item, ownerId, relativePath, $"inputs[{index}].item"),
+                RequirePositive(cfg.Quantity, ownerId, relativePath, $"inputs[{index}].quantity"));
+        }
+
+        private static ExchangeInputDefinition CompileAttributeCostInput(InputConfig cfg, string ownerId, string relativePath, int index)
+        {
+            string attribute = RequireString(cfg.Attribute, ownerId, relativePath, $"inputs[{index}].attribute");
+            int attributeId = AttributeRegistry.Register(attribute);
+            return ExchangeInputDefinition.AttributeCost(
+                ParseActorSlot(cfg.Actor, ownerId, relativePath, $"inputs[{index}].actor"),
+                attributeId,
+                RequirePositive(cfg.Quantity, ownerId, relativePath, $"inputs[{index}].quantity"));
         }
 
         private int ResolveRelationshipType(string? value, string ownerId, string relativePath, string field)
@@ -298,6 +312,7 @@ namespace Ludots.Core.Gameplay.Exchange
             return raw switch
             {
                 "ItemStack" => ExchangeInputKind.ItemStack,
+                "AttributeCost" => ExchangeInputKind.AttributeCost,
                 _ => throw new InvalidOperationException($"Exchange operation '{ownerId}' in {relativePath}: unsupported inputs[{index}].kind '{raw}'.")
             };
         }
@@ -425,6 +440,8 @@ namespace Ludots.Core.Gameplay.Exchange
             public string? Actor { get; set; }
 
             public string? Item { get; set; }
+
+            public string? Attribute { get; set; }
 
             public int? Quantity { get; set; }
         }
