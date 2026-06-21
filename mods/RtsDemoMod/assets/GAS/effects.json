@@ -171,14 +171,9 @@
     "unitCreation": {
       "templateId": "rts_war3_lumber_mill_site",
       "placementPattern": "Scatter",
-      "facingPattern": "PreserveTemplate",
       "count": 1,
-      "offsetRadius": 0,
-      "placementRadiusCm": 0,
-      "placementStartAngleDeg": 0,
-      "copySourcePlayerOwner": true,
-      "linkSourceAsParent": false,
-      "onSpawnEffect": "Effect.Rts.Shared.Construction.War3"
+      "onSpawnEffect": "Effect.Rts.Shared.Construction.War3",
+      "copySourcePlayerOwner": true
     }
   },
   {
@@ -192,14 +187,9 @@
     "unitCreation": {
       "templateId": "rts_war3_guard_tower_site",
       "placementPattern": "Scatter",
-      "facingPattern": "PreserveTemplate",
       "count": 1,
-      "offsetRadius": 0,
-      "placementRadiusCm": 0,
-      "placementStartAngleDeg": 0,
-      "copySourcePlayerOwner": true,
-      "linkSourceAsParent": false,
-      "onSpawnEffect": "Effect.Rts.Shared.Construction.War3"
+      "onSpawnEffect": "Effect.Rts.Shared.Construction.War3",
+      "copySourcePlayerOwner": true
     }
   },
   {
@@ -213,13 +203,9 @@
     "unitCreation": {
       "templateId": "rts_war3_footman",
       "placementPattern": "Scatter",
-      "facingPattern": "PreserveTemplate",
       "count": 1,
       "offsetRadius": 280,
-      "placementRadiusCm": 280,
-      "placementStartAngleDeg": 0,
-      "copySourcePlayerOwner": true,
-      "linkSourceAsParent": false
+      "copySourcePlayerOwner": true
     }
   },
   {
@@ -297,14 +283,9 @@
     "unitCreation": {
       "templateId": "rts_ra2_power_plant",
       "placementPattern": "Scatter",
-      "facingPattern": "PreserveTemplate",
       "count": 1,
-      "offsetRadius": 0,
-      "placementRadiusCm": 0,
-      "placementStartAngleDeg": 0,
-      "copySourcePlayerOwner": true,
-      "linkSourceAsParent": false,
-      "onSpawnEffect": "Effect.Rts.Shared.Construction.Cnc"
+      "onSpawnEffect": "Effect.Rts.Shared.Construction.Cnc",
+      "copySourcePlayerOwner": true
     }
   },
   {
@@ -318,14 +299,9 @@
     "unitCreation": {
       "templateId": "rts_ra2_refinery",
       "placementPattern": "Scatter",
-      "facingPattern": "PreserveTemplate",
       "count": 1,
-      "offsetRadius": 0,
-      "placementRadiusCm": 0,
-      "placementStartAngleDeg": 0,
-      "copySourcePlayerOwner": true,
-      "linkSourceAsParent": false,
-      "onSpawnEffect": "Effect.Rts.Shared.Construction.Cnc"
+      "onSpawnEffect": "Effect.Rts.Shared.Construction.Cnc",
+      "copySourcePlayerOwner": true
     }
   },
   {
@@ -339,13 +315,9 @@
     "unitCreation": {
       "templateId": "rts_ra2_rhino",
       "placementPattern": "Scatter",
-      "facingPattern": "PreserveTemplate",
       "count": 1,
       "offsetRadius": 340,
-      "placementRadiusCm": 340,
-      "placementStartAngleDeg": 0,
-      "copySourcePlayerOwner": true,
-      "linkSourceAsParent": false
+      "copySourcePlayerOwner": true
     }
   },
   {
@@ -412,13 +384,9 @@
     "unitCreation": {
       "templateId": "rts_sc2_zealot",
       "placementPattern": "Scatter",
-      "facingPattern": "PreserveTemplate",
       "count": 1,
       "offsetRadius": 260,
-      "placementRadiusCm": 260,
-      "placementStartAngleDeg": 0,
-      "copySourcePlayerOwner": true,
-      "linkSourceAsParent": false
+      "copySourcePlayerOwner": true
     }
   },
   {
@@ -454,14 +422,9 @@
     "unitCreation": {
       "templateId": "rts_sc2_zealot",
       "placementPattern": "Scatter",
-      "facingPattern": "PreserveTemplate",
       "count": 1,
-      "offsetRadius": 0,
-      "placementRadiusCm": 0,
-      "placementStartAngleDeg": 0,
-      "copySourcePlayerOwner": true,
-      "linkSourceAsParent": false,
-      "onSpawnEffect": "Effect.Rts.Shared.WarpIn"
+      "onSpawnEffect": "Effect.Rts.Shared.WarpIn",
+      "copySourcePlayerOwner": true
     }
   },
   {
@@ -491,14 +454,9 @@
     "unitCreation": {
       "templateId": "rts_zerg_spawning_pool",
       "placementPattern": "Scatter",
-      "facingPattern": "PreserveTemplate",
       "count": 1,
-      "offsetRadius": 0,
-      "placementRadiusCm": 0,
-      "placementStartAngleDeg": 0,
-      "copySourcePlayerOwner": true,
-      "linkSourceAsParent": false,
-      "onSpawnEffect": "Effect.Rts.Shared.Construction.Zerg"
+      "onSpawnEffect": "Effect.Rts.Shared.Construction.Zerg",
+      "copySourcePlayerOwner": true
     }
   }
 ]

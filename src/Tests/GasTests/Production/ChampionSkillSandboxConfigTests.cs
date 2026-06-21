@@ -871,7 +871,7 @@ namespace Ludots.Tests.GAS.Production
         private static void InstallInput(GameEngine engine)
         {
             var inputConfig = new InputConfigPipelineLoader(engine.ConfigPipeline).Load();
-            var backend = new NullInputBackend();
+            var backend = new NullInputBackend(new Vector2(960f, 540f));
             var inputHandler = new PlayerInputHandler(backend, inputConfig);
             for (int i = 0; i < engine.MergedConfig.StartupInputContexts.Count; i++)
             {
@@ -1569,9 +1569,16 @@ namespace Ludots.Tests.GAS.Production
 
         private sealed class NullInputBackend : IInputBackend
         {
+            private readonly Vector2 _mousePosition;
+
+            public NullInputBackend(Vector2 mousePosition)
+            {
+                _mousePosition = mousePosition;
+            }
+
             public float GetAxis(string devicePath) => 0f;
             public bool GetButton(string devicePath) => false;
-            public System.Numerics.Vector2 GetMousePosition() => System.Numerics.Vector2.Zero;
+            public Vector2 GetMousePosition() => _mousePosition;
             public float GetMouseWheel() => 0f;
             public void EnableIME(bool enable) { }
             public void SetIMECandidatePosition(int x, int y) { }

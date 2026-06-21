@@ -13,6 +13,7 @@ using Ludots.Core.Gameplay.GAS.Orders;
 using Ludots.Core.Gameplay.GAS.Systems;
 using Ludots.Core.Gameplay.GAS.Presentation;
 using Ludots.Core.Gameplay.GAS.Registry;
+using Ludots.Core.Gameplay.AI.Planning;
 using Ludots.Core.GraphRuntime;
 using Ludots.Core.Mathematics;
 using Ludots.Core.NodeLibraries.GASGraph;
@@ -146,6 +147,41 @@ namespace Ludots.Tests.GAS
             var ex = Throws<KeyNotFoundException>(() => registry.Get(999));
 
             That(ex!.Message, Does.Contain("999"));
+        }
+
+        [Test]
+        public void OrderQueue_InvalidOrderTypeId_Throws()
+        {
+            var queue = new OrderQueue();
+            var order = new Order { OrderTypeId = 0 };
+
+            var ex = Throws<InvalidOperationException>(() => queue.TryEnqueue(in order));
+
+            That(ex!.Message, Does.Contain("OrderQueue"));
+            That(ex.Message, Does.Contain("0"));
+        }
+
+        [Test]
+        public void PlanExecutor_UnregisteredOrderTypeId_Throws()
+        {
+            var queue = new OrderQueue();
+            var orderTypes = new OrderTypeRegistry();
+            var spec = new ActionOrderSpec(orderTypeId: 42, submitMode: OrderSubmitMode.Immediate);
+            var ints = new BlackboardIntBuffer();
+            var entities = new BlackboardEntityBuffer();
+
+            var ex = Throws<InvalidOperationException>(() =>
+                PlanExecutor.TrySubmitOrder(
+                    in spec,
+                    ReadOnlySpan<ActionBinding>.Empty,
+                    Entity.Null,
+                    ref ints,
+                    ref entities,
+                    submitStep: 0,
+                    queue,
+                    orderTypes));
+
+            That(ex!.Message, Does.Contain("unregistered order type id 42"));
         }
 
         [Test]
@@ -299,7 +335,8 @@ namespace Ludots.Tests.GAS
                     "angleDeg": 45,
                     "showRangeCircle": true,
                     "validColor": "#33CC66AA",
-                    "invalidColor": [1.0, 0.2, 0.2, 0.5]
+                    "invalidColor": [1.0, 0.2, 0.2, 0.5],
+                    "rangeCircleColor": "#3366FF44"
                   }
                 }
                 """)!.AsObject();

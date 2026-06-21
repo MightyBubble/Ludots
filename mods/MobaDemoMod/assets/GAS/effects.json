@@ -51,12 +51,7 @@
       "maxTargets": 8
     },
     "targetDispatch": {
-      "payloadEffect": "Effect.Moba.Cone.E.Hit",
-      "contextMapping": {
-        "payloadSource": "OriginalSource",
-        "payloadTarget": "ResolvedEntity",
-        "payloadTargetContext": "OriginalTarget"
-      }
+      "payloadEffect": "Effect.Moba.Cone.E.Hit"
     }
   },
   {
@@ -216,7 +211,9 @@
       "range": 2000,
       "arcHeight": 0,
       "impactEffect": "Effect.Moba.Damage.R",
-      "collisionRelationFilter": "All"
+      "presentationEffect": "Effect.Moba.Damage.R",
+      "travelMode": "Legacy",
+      "impactPolicy": "Legacy"
     }
   },
   {
@@ -229,8 +226,10 @@
     "participatesInResponse": false,
     "unitCreation": {
       "unitType": "Unit.Skeleton",
+      "placementPattern": "Scatter",
       "count": 1,
-      "offsetRadius": 200
+      "offsetRadius": 200,
+      "copySourcePlayerOwner": true
     }
   },
   {
@@ -256,9 +255,9 @@
     "phaseListeners": [
       {
         "listenTag": "Effect.Moba.Damage",
-        "phase": "onHit",
-        "scope": "target",
-        "action": "graph",
+        "phase": "OnHit",
+        "scope": "Target",
+        "action": "Graph",
         "graphProgram": "Graph.Shield.Absorb",
         "priority": 100
       }
@@ -393,7 +392,6 @@
     "participatesInResponse": true,
     "displacement": {
       "directionMode": "AwayFromSource",
-      "fixedDirectionDeg": 0,
       "totalDistanceCm": 350,
       "totalDurationTicks": 12,
       "overrideNavigation": true

@@ -22,13 +22,6 @@ namespace Ludots.Core.Gameplay.GAS.Systems
         public int ChainPass;
         public int ChainNegate;
         public int ChainActivateEffect;
-        
-        public static ResponseChainOrderTypes Default => new ResponseChainOrderTypes
-        {
-            ChainPass = 1,
-            ChainNegate = 2,
-            ChainActivateEffect = 3
-        };
     }
 
     public sealed class EffectProposalProcessingSystem : BaseSystem<World, float>, ITimeSlicedSystem
@@ -245,7 +238,13 @@ namespace Ludots.Core.Gameplay.GAS.Systems
             _chainOrders = chainOrders;
             _telemetry = telemetry;
             _orderRequests = orderRequests;
-            _responseChainOrderTypes = responseChainOrderTypes ?? ResponseChainOrderTypes.Default;
+            if ((chainOrders != null || orderRequests != null) && responseChainOrderTypes == null)
+            {
+                throw new InvalidOperationException(
+                    $"{nameof(EffectProposalProcessingSystem)} requires configured response-chain order type ids when response-chain queues are enabled.");
+            }
+
+            _responseChainOrderTypes = responseChainOrderTypes ?? default;
             _presentationEvents = presentationEvents;
             _tagOps = tagOps ?? new TagOps();
             _phaseExecutor = phaseExecutor;

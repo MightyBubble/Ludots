@@ -1007,9 +1007,12 @@ namespace EntityCommandPanelMod.Runtime
             return string.Empty;
         }
 
-        private static string ResolveOrderActionDetail(in Order order)
+        private string ResolveOrderActionDetail(in Order order)
         {
-            return order.OrderTypeId == 100 && order.Args.I0 >= 0
+            return _orderTypes != null &&
+                   _orderTypes.TryGet(order.OrderTypeId, out var config) &&
+                   string.Equals(config.Key, "castAbility", StringComparison.OrdinalIgnoreCase) &&
+                   order.Args.I0 >= 0
                 ? $"slot {order.Args.I0}"
                 : string.Empty;
         }

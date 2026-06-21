@@ -146,6 +146,12 @@ namespace Ludots.Tests.GAS
             var obj = JsonNode.Parse(
                 """
                 {
+                  "exec": {
+                    "clockId": "FixedFrame",
+                    "items": [
+                      { "kind": "End", "tick": 0 }
+                    ]
+                  },
                   "presentation": {
                     "displayName": "Mystic Shot",
                     "iconGlyph": "Q",

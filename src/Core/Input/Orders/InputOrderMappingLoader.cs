@@ -1,4 +1,5 @@
 using System;
+using System.Collections.Generic;
 using System.Text.Json;
 using System.Text.Json.Nodes;
 using Ludots.Core.Config;
@@ -36,10 +37,14 @@ namespace Ludots.Core.Input.Orders
             var mergedObject = _pipeline.MergeDeepObjectFromCatalog(in entry, report);
 
             if (mergedObject == null)
-                return CreateDefaultMobaConfig();
+            {
+                throw new InvalidOperationException($"Missing required config '{relativePath}'.");
+            }
 
             var config = mergedObject.Deserialize<InputOrderMappingConfig>(JsonOptions);
-            return config ?? CreateDefaultMobaConfig();
+            config = config ?? throw new InvalidOperationException($"Failed to deserialize '{relativePath}'.");
+            Validate(config, relativePath);
+            return config;
         }
 
         /// <summary>
@@ -52,7 +57,9 @@ namespace Ludots.Core.Input.Orders
 
             var content = System.IO.File.ReadAllText(filePath);
             var config = JsonSerializer.Deserialize<InputOrderMappingConfig>(content, JsonOptions);
-            return config ?? new InputOrderMappingConfig();
+            config ??= new InputOrderMappingConfig();
+            Validate(config, filePath);
+            return config;
         }
 
         /// <summary>
@@ -62,7 +69,9 @@ namespace Ludots.Core.Input.Orders
         {
             if (stream == null) throw new ArgumentNullException(nameof(stream));
             var config = JsonSerializer.Deserialize<InputOrderMappingConfig>(stream, JsonOptions);
-            return config ?? throw new InvalidOperationException("Deserialized null from input_order_mappings stream.");
+            config = config ?? throw new InvalidOperationException("Deserialized null from input_order_mappings stream.");
+            Validate(config, "input_order_mappings stream");
+            return config;
         }
 
         /// <summary>
@@ -92,74 +101,67 @@ namespace Ludots.Core.Input.Orders
             System.IO.File.WriteAllText(filePath, json);
         }
 
-        /// <summary>
-        /// Create default mappings for MOBA-style gameplay.
-        /// </summary>
-        public static InputOrderMappingConfig CreateDefaultMobaConfig()
+        public static void Validate(InputOrderMappingConfig config, string source)
         {
-            return new InputOrderMappingConfig
+            if (config == null) throw new ArgumentNullException(nameof(config));
+            if (config.Mappings == null)
             {
-                InteractionMode = InteractionModeType.TargetFirst,
-                Mappings = new()
+                throw new InvalidOperationException($"Input order mapping config '{source}' must explicitly define mappings.");
+            }
+
+            var actionIds = new HashSet<string>(StringComparer.Ordinal);
+            for (int i = 0; i < config.Mappings.Count; i++)
+            {
+                InputOrderMapping mapping = config.Mappings[i] ??
+                    throw new InvalidOperationException($"Input order mapping '{source}' mappings[{i}] must be an object.");
+
+                string path = $"{source}.mappings[{i}]";
+                if (string.IsNullOrWhiteSpace(mapping.ActionId))
                 {
-                    new InputOrderMapping
-                    {
-                        ActionId = "SkillQ",
-                        Trigger = InputTriggerType.PressedThisFrame,
-                        OrderTypeKey = "castAbility",
-                        ArgsTemplate = new OrderArgsTemplate { I0 = 0 },
-                        RequireSelection = false,
-                        SelectionType = OrderSelectionType.Entity,
-                        IsSkillMapping = true
-                    },
-                    new InputOrderMapping
-                    {
-                        ActionId = "SkillW",
-                        Trigger = InputTriggerType.PressedThisFrame,
-                        OrderTypeKey = "castAbility",
-                        ArgsTemplate = new OrderArgsTemplate { I0 = 1 },
-                        RequireSelection = false,
-                        SelectionType = OrderSelectionType.None,
-                        IsSkillMapping = true
-                    },
-                    new InputOrderMapping
-                    {
-                        ActionId = "SkillE",
-                        Trigger = InputTriggerType.PressedThisFrame,
-                        OrderTypeKey = "castAbility",
-                        ArgsTemplate = new OrderArgsTemplate { I0 = 2 },
-                        RequireSelection = false,
-                        SelectionType = OrderSelectionType.Entity,
-                        IsSkillMapping = true
-                    },
-                    new InputOrderMapping
-                    {
-                        ActionId = "SkillR",
-                        Trigger = InputTriggerType.PressedThisFrame,
-                        OrderTypeKey = "castAbility",
-                        ArgsTemplate = new OrderArgsTemplate { I0 = 3 },
-                        RequireSelection = false,
-                        SelectionType = OrderSelectionType.Entity,
-                        IsSkillMapping = true
-                    },
-                    new InputOrderMapping
-                    {
-                        ActionId = "Command",
-                        Trigger = InputTriggerType.PressedThisFrame,
-                        OrderTypeKey = "castAbility",
-                        ArgsTemplate = new OrderArgsTemplate { I0 = 4 },
-                        RequireSelection = true,
-                        SelectionType = OrderSelectionType.Ground,
-                        IsSkillMapping = false
-                    }
-                },
-                UserOverrides = new UserOverrideSettings
-                {
-                    Enabled = true,
-                    PersistPath = "user://input_preferences.json"
+                    throw new InvalidOperationException($"{path}.actionId must be a non-empty string.");
                 }
-            };
+
+                if (!string.Equals(mapping.ActionId, mapping.ActionId.Trim(), StringComparison.Ordinal))
+                {
+                    throw new InvalidOperationException($"{path}.actionId must not contain leading or trailing whitespace.");
+                }
+
+                if (!actionIds.Add(mapping.ActionId))
+                {
+                    throw new InvalidOperationException(
+                        $"{path}.actionId duplicates input action '{mapping.ActionId}'.");
+                }
+
+                if (string.IsNullOrWhiteSpace(mapping.OrderTypeKey))
+                {
+                    throw new InvalidOperationException($"{path}.orderTypeKey must be a non-empty string.");
+                }
+
+                if (!string.Equals(mapping.OrderTypeKey, mapping.OrderTypeKey.Trim(), StringComparison.Ordinal))
+                {
+                    throw new InvalidOperationException($"{path}.orderTypeKey must not contain leading or trailing whitespace.");
+                }
+
+                if (mapping.HeldPolicy == HeldPolicy.StartEnd && mapping.Trigger != InputTriggerType.Held)
+                {
+                    throw new InvalidOperationException(
+                        $"{path}.heldPolicy StartEnd requires trigger Held.");
+                }
+
+                if (mapping.AutoTargetPolicy != AutoTargetPolicy.None && mapping.AutoTargetRangeCm <= 0)
+                {
+                    throw new InvalidOperationException(
+                        $"{path}.autoTargetRangeCm must be positive when autoTargetPolicy is {mapping.AutoTargetPolicy}.");
+                }
+
+                if (mapping.CursorTargetPolicy != AutoTargetPolicy.None && mapping.CursorTargetRangeCm <= 0)
+                {
+                    throw new InvalidOperationException(
+                        $"{path}.cursorTargetRangeCm must be positive when cursorTargetPolicy is {mapping.CursorTargetPolicy}.");
+                }
+            }
         }
+
     }
 }
 

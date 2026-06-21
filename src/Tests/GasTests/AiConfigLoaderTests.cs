@@ -212,6 +212,41 @@ namespace Ludots.Tests.GAS
             Assert.That(ex!.Message, Does.Contain("unknown gameplay tag 'Cooldown.Missing'"));
         }
 
+        [Test]
+        public void AiConfigLoader_RejectsNumericProjectionEntityKey()
+        {
+            using var fixture = AiConfigFixture.Create(
+                projectionJson: "[ { \"id\": \"R0\", \"Atom\": \"HasEnemy\", \"Op\": \"EntityIsNonNull\", \"EntityKey\": 1 } ]");
+
+            var ex = Assert.Throws<InvalidOperationException>(() => fixture.Load());
+
+            Assert.That(ex!.Message, Does.Contain("EntityKey"));
+            Assert.That(ex.Message, Does.Contain("semantic string"));
+        }
+
+        [Test]
+        public void AiConfigLoader_RejectsMissingProjectionIntValue()
+        {
+            using var fixture = AiConfigFixture.Create(
+                projectionJson: "[ { \"id\": \"R0\", \"Atom\": \"HasEnemy\", \"Op\": \"IntEquals\", \"IntKey\": \"Generic.IntParam\" } ]");
+
+            var ex = Assert.Throws<InvalidOperationException>(() => fixture.Load());
+
+            Assert.That(ex!.Message, Does.Contain("IntValue"));
+        }
+
+        [Test]
+        public void AiConfigLoader_RejectsWrongProjectionFieldForOp()
+        {
+            using var fixture = AiConfigFixture.Create(
+                projectionJson: "[ { \"id\": \"R0\", \"Atom\": \"HasEnemy\", \"Op\": \"EntityIsNonNull\", \"EntityKey\": \"Attack.TargetEntity\", \"IntValue\": 0 } ]");
+
+            var ex = Assert.Throws<InvalidOperationException>(() => fixture.Load());
+
+            Assert.That(ex!.Message, Does.Contain("IntValue"));
+            Assert.That(ex.Message, Does.Contain("EntityIsNonNull"));
+        }
+
         private sealed class AiConfigFixture : IDisposable
         {
             private readonly string _root;
@@ -246,7 +281,7 @@ namespace Ludots.Tests.GAS
 
             public int ScoreGraphId { get; }
 
-            public static AiConfigFixture Create(string? orderJson = null)
+            public static AiConfigFixture Create(string? orderJson = null, string? projectionJson = null)
             {
                 string root = Path.Combine(Path.GetTempPath(), "Ludots_AiConfigLoaderTests", Guid.NewGuid().ToString("N"));
                 Directory.CreateDirectory(root);
@@ -257,9 +292,10 @@ namespace Ludots.Tests.GAS
                 Directory.CreateDirectory(Path.Combine(mod, "assets", "Configs", "AI"));
 
                 orderJson ??= "{ \"OrderTypeKey\": \"attackTarget\", \"SubmitMode\": 0, \"PlayerId\": 0 }";
+                projectionJson ??= "[ { \"id\": \"R0\", \"Atom\": \"HasEnemy\", \"Op\": \"EntityIsNonNull\", \"EntityKey\": \"Attack.TargetEntity\" } ]";
 
                 File.WriteAllText(Path.Combine(core, "Configs", "AI", "atoms.json"), "[ { \"id\": \"HasEnemy\" } ]");
-                File.WriteAllText(Path.Combine(core, "Configs", "AI", "projection.json"), "[ { \"id\": \"R0\", \"Atom\": \"HasEnemy\", \"Op\": \"EntityIsNonNull\", \"EntityKey\": 1 } ]");
+                File.WriteAllText(Path.Combine(core, "Configs", "AI", "projection.json"), projectionJson);
                 File.WriteAllText(Path.Combine(core, "Configs", "AI", "utility.json"), "[ { \"id\": \"G0\", \"GoalPresetId\": 1, \"PlanningStrategyId\": 1, \"Weight\": 1, \"Bool\": [ { \"Atom\": \"HasEnemy\", \"TrueScore\": 1, \"FalseScore\": 0 } ] } ]");
                 File.WriteAllText(Path.Combine(core, "Configs", "AI", "goap_actions.json"), $"[ {{ \"id\": \"A0\", \"Cost\": 1, \"Pre\": {{\"Mask\":[],\"Values\":[]}}, \"Post\": {{\"Mask\":[],\"Values\":[]}}, \"Order\": {orderJson}, \"Bindings\": [] }} ]");
                 File.WriteAllText(Path.Combine(core, "Configs", "AI", "goap_goals.json"), "[ { \"id\": \"GG0\", \"GoalPresetId\": 1, \"HeuristicWeight\": 1, \"Goal\": { \"Mask\": [\"HasEnemy\"], \"Values\": [\"HasEnemy\"] } } ]");
