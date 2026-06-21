@@ -118,5 +118,14 @@
     "defaultPhaseHandlers": {
       "OnApply": { "type": "builtin", "id": "ExecuteExchange" }
     }
+  },
+  {
+    "id": "CompleteProgression",
+    "components": [],
+    "activePhases": ["OnApply"],
+    "allowedLifetimes": ["Instant"],
+    "defaultPhaseHandlers": {
+      "OnApply": { "type": "builtin", "id": "CompleteProgression" }
+    }
   }
 ]

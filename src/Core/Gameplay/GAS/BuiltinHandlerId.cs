@@ -42,5 +42,8 @@ namespace Ludots.Core.Gameplay.GAS
         // ── Exchange settlement ──
         /// <summary>Read Exchange params and execute an Exchange operation.</summary>
         ExecuteExchange = 60,
+
+        /// <summary>Complete an entity-scoped progression through the Progression runtime.</summary>
+        CompleteProgression = 61,
     }
 }

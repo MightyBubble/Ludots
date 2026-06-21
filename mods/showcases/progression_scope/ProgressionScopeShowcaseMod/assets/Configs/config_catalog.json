@@ -1,0 +1,3 @@
+[
+  { "Path": "Camera/virtual_cameras.json", "Policy": "ArrayById", "IdField": "id" }
+]

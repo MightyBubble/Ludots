@@ -1,0 +1,15 @@
+{
+  "types": [
+    { "id": "FourXAssociation.Diplomacy", "isSymmetric": false }
+  ],
+  "metrics": [
+    { "id": "FourXAssociation.Trust", "minValue": -100, "maxValue": 100, "defaultValue": 0 }
+  ],
+  "flags": [
+    { "id": "FourXAssociation.TradePact" }
+  ],
+  "bands": [],
+  "reasons": [],
+  "callbacks": [],
+  "synergies": []
+}

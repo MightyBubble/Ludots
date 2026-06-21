@@ -18,15 +18,6 @@ namespace Ludots.Core.Gameplay.Items
         WeaponInternal = 8
     }
 
-    public enum ItemContainerOwnerKind : byte
-    {
-        None = 0,
-        Actor = 1,
-        Item = 2,
-        World = 3,
-        Vendor = 4
-    }
-
     public sealed class ItemShapeRotation
     {
         private readonly bool[] _occupiedMask;

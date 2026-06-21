@@ -1,7 +1,9 @@
 using System;
 using System.Collections.Generic;
+using Ludots.Core.EntityCollections;
 using Ludots.Core.Gameplay.GAS.Registry;
 using Ludots.Core.Gameplay.Relationships.Config;
+using Ludots.Core.Knowledge;
 using Ludots.Core.Scripting;
 
 namespace Ludots.Core.Gameplay.Relationships
@@ -131,15 +133,20 @@ namespace Ludots.Core.Gameplay.Relationships
     {
         public List<RelationshipCallbackRule> Callbacks { get; } = new();
         public List<RelationshipSynergyRule> Synergies { get; } = new();
+        private KnowledgeRelationCollectionGrant[] _knowledgeGrants = Array.Empty<KnowledgeRelationCollectionGrant>();
+
+        public int KnowledgeGrantCount => _knowledgeGrants.Length;
 
         public static RelationshipCatalogRuntime Compile(
             RelationshipCatalogConfig catalog,
             RelationshipTypeRegistry types,
-            RelationshipMetricRegistry metrics)
+            RelationshipMetricRegistry metrics,
+            EntityCollectionStore collections)
         {
             ArgumentNullException.ThrowIfNull(catalog);
             ArgumentNullException.ThrowIfNull(types);
             ArgumentNullException.ThrowIfNull(metrics);
+            ArgumentNullException.ThrowIfNull(collections);
 
             var runtime = new RelationshipCatalogRuntime();
             for (int i = 0; i < catalog.Callbacks.Count; i++)
@@ -179,7 +186,21 @@ namespace Ludots.Core.Gameplay.Relationships
                     new EventKey(config.EventKey ?? string.Empty)));
             }
 
+            runtime._knowledgeGrants = CompileKnowledgeGrants(catalog.KnowledgeGrants, types, collections);
+
             return runtime;
+        }
+
+        public bool TryGetKnowledgeGrantAt(int index, out KnowledgeRelationCollectionGrant grant)
+        {
+            grant = default;
+            if ((uint)index >= (uint)_knowledgeGrants.Length)
+            {
+                return false;
+            }
+
+            grant = _knowledgeGrants[index];
+            return true;
         }
 
         private static int[] ResolveTags(List<string>? names)
@@ -209,6 +230,106 @@ namespace Ludots.Core.Gameplay.Relationships
 
             Array.Resize(ref ids, count);
             return ids;
+        }
+
+        private static KnowledgeRelationCollectionGrant[] CompileKnowledgeGrants(
+            List<RelationshipKnowledgeGrantConfig>? configs,
+            RelationshipTypeRegistry types,
+            EntityCollectionStore collections)
+        {
+            if (configs == null || configs.Count == 0)
+            {
+                return Array.Empty<KnowledgeRelationCollectionGrant>();
+            }
+
+            var grants = new KnowledgeRelationCollectionGrant[configs.Count];
+            int count = 0;
+            for (int i = 0; i < configs.Count; i++)
+            {
+                RelationshipKnowledgeGrantConfig? config = configs[i];
+                if (config == null)
+                {
+                    continue;
+                }
+
+                int relationshipTypeId = types.GetId(RequireNonEmpty(config.TypeId, $"relationship catalog knowledgeGrants[{i}].typeId"));
+                int collectionKeyId = collections.KeyRegistry.Register(RequireNonEmpty(config.CollectionKey, $"relationship catalog knowledgeGrants[{i}].collectionKey"));
+                grants[count++] = new KnowledgeRelationCollectionGrant(
+                    relationshipTypeId,
+                    collectionKeyId,
+                    new KnowledgeDisclosureRecord(
+                        config.Presence,
+                        config.Position,
+                        BuildMask(config.AttributeIds, config.Attributes, ResolveAttributeId, $"relationship catalog knowledgeGrants[{i}].attributes"),
+                        BuildMask(config.RelationshipTypeIds, config.RelationshipTypes, types.GetId, $"relationship catalog knowledgeGrants[{i}].relationshipTypes"),
+                        BuildMask(config.TagIds, config.Tags, ResolveTagId, $"relationship catalog knowledgeGrants[{i}].tags"),
+                        source: default,
+                        config.ObservedTick,
+                        config.ExpiryTick,
+                        config.ConfidencePermille <= 0 ? 1000 : config.ConfidencePermille,
+                        revision: 0));
+            }
+
+            if (count == grants.Length)
+            {
+                return grants;
+            }
+
+            Array.Resize(ref grants, count);
+            return grants;
+        }
+
+        private static KnowledgeIdMask256 BuildMask(
+            List<int>? ids,
+            List<string>? names,
+            Func<string, int> resolveName,
+            string context)
+        {
+            KnowledgeIdMask256 mask = KnowledgeIdMask256.Empty;
+            if (ids != null)
+            {
+                for (int i = 0; i < ids.Count; i++)
+                {
+                    mask = mask.WithId(ids[i]);
+                }
+            }
+
+            if (names != null)
+            {
+                for (int i = 0; i < names.Count; i++)
+                {
+                    int resolved = resolveName(RequireNonEmpty(names[i], $"{context}[{i}]"));
+                    mask = mask.WithId(resolved);
+                }
+            }
+
+            return mask;
+        }
+
+        private static int ResolveAttributeId(string name)
+        {
+            return AttributeRegistry.Register(name);
+        }
+
+        private static int ResolveTagId(string name)
+        {
+            return TagRegistry.Register(name);
+        }
+
+        private static string RequireNonEmpty(string? value, string context)
+        {
+            if (string.IsNullOrWhiteSpace(value))
+            {
+                throw new InvalidOperationException($"{context} requires a non-empty value.");
+            }
+
+            string trimmed = value.Trim();
+            if (!string.Equals(trimmed, value, StringComparison.Ordinal))
+            {
+                throw new InvalidOperationException($"{context} must be trimmed.");
+            }
+
+            return trimmed;
         }
     }
 }

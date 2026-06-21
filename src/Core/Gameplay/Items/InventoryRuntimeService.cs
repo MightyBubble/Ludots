@@ -1,6 +1,7 @@
 using System;
 using System.Collections.Generic;
 using Arch.Core;
+using Ludots.Core.Association;
 using Ludots.Core.Gameplay.GAS.Components;
 
 namespace Ludots.Core.Gameplay.Items
@@ -15,6 +16,7 @@ namespace Ludots.Core.Gameplay.Items
         private readonly ItemShapeRegistry _shapes;
         private readonly ItemLayoutRegistry _layouts;
         private readonly ItemDefinitionRegistry _definitions;
+        private readonly OwnershipResolver _ownership;
         private readonly List<Entity> _ownedContainerScratch = new(32);
         private readonly List<Entity> _ownedItemScratch = new(128);
         private readonly List<Entity> _destroyItemScratch = new(64);
@@ -27,12 +29,14 @@ namespace Ludots.Core.Gameplay.Items
             World world,
             ItemShapeRegistry shapes,
             ItemLayoutRegistry layouts,
-            ItemDefinitionRegistry definitions)
+            ItemDefinitionRegistry definitions,
+            OwnershipResolver ownership)
         {
             _world = world ?? throw new ArgumentNullException(nameof(world));
             _shapes = shapes ?? throw new ArgumentNullException(nameof(shapes));
             _layouts = layouts ?? throw new ArgumentNullException(nameof(layouts));
             _definitions = definitions ?? throw new ArgumentNullException(nameof(definitions));
+            _ownership = ownership ?? throw new ArgumentNullException(nameof(ownership));
         }
 
         public bool TryGetDefinition(int definitionId, out ItemDefinition definition)
@@ -42,10 +46,14 @@ namespace Ludots.Core.Gameplay.Items
 
         public Entity CreateContainer(
             Entity owner,
-            ItemContainerOwnerKind ownerKind,
             int layoutId,
             ItemContainerPurpose purpose = ItemContainerPurpose.None)
         {
+            if (owner == Entity.Null || !_world.IsAlive(owner))
+            {
+                throw new InvalidOperationException("Item container owner must be a live entity.");
+            }
+
             if (!_layouts.TryGet(layoutId, out ItemLayoutDefinition layout))
             {
                 throw new InvalidOperationException($"Missing item layout id {layoutId}.");
@@ -56,18 +64,18 @@ namespace Ludots.Core.Gameplay.Items
                 purpose = layout.Purpose;
             }
 
-            return _world.Create(new ItemContainerCm
+            Entity container = _world.Create(new ItemContainerCm
             {
                 LayoutId = layoutId,
-                Owner = owner,
-                OwnerKind = ownerKind,
                 Purpose = purpose
             });
+            _ownership.EnsureOwnership(owner, container);
+            return container;
         }
 
         public Entity CreateMountedContainer(Entity item, int mountIndex, int layoutId, ItemContainerPurpose purpose)
         {
-            Entity container = CreateContainer(item, ItemContainerOwnerKind.Item, layoutId, purpose);
+            Entity container = CreateContainer(item, layoutId, purpose);
             _world.Add(container, new ItemMountedContainerCm
             {
                 ParentItem = item,
@@ -297,7 +305,7 @@ namespace Ludots.Core.Gameplay.Items
 
             if (_world.IsAlive(item))
             {
-                _world.Destroy(item);
+                DestroyItemEntity(item);
             }
 
             item = Entity.Null;
@@ -326,7 +334,7 @@ namespace Ludots.Core.Gameplay.Items
             {
                 if (!TryAutoPlaceItem(splitItem, location.Container))
                 {
-                    _world.Destroy(splitItem);
+                    DestroyItemEntity(splitItem);
                     splitItem = Entity.Null;
                     instance.StackCount += splitCount;
                     return false;
@@ -336,7 +344,7 @@ namespace Ludots.Core.Gameplay.Items
             {
                 if (!TryAutoPlaceItem(splitItem, location.Container))
                 {
-                    _world.Destroy(splitItem);
+                    DestroyItemEntity(splitItem);
                     splitItem = Entity.Null;
                     instance.StackCount += splitCount;
                     return false;
@@ -437,7 +445,7 @@ namespace Ludots.Core.Gameplay.Items
                 if (instance.StackCount <= 0)
                 {
                     Entity container = _world.Has<ItemLocationCm>(item) ? _world.Get<ItemLocationCm>(item).Container : Entity.Null;
-                    _world.Destroy(item);
+                    DestroyItemEntity(item);
                     if (container != Entity.Null)
                     {
                         MarkEquipmentDirtyFromContainer(container);
@@ -504,7 +512,7 @@ namespace Ludots.Core.Gameplay.Items
                 remaining -= consumed;
                 if (instance.StackCount <= 0)
                 {
-                    _world.Destroy(item);
+                    DestroyItemEntity(item);
                     if (container != Entity.Null)
                     {
                         MarkEquipmentDirtyFromContainer(container);
@@ -604,6 +612,7 @@ namespace Ludots.Core.Gameplay.Items
             else if (_world.Has<ItemLocationCm>(item))
             {
                 _world.Remove<ItemLocationCm>(item);
+                _ownership.ClearOwnership(item);
             }
 
             if (previousContainer != Entity.Null)
@@ -657,7 +666,7 @@ namespace Ludots.Core.Gameplay.Items
                 }
 
                 Entity container = _world.Has<ItemLocationCm>(currentItem) ? _world.Get<ItemLocationCm>(currentItem).Container : Entity.Null;
-                _world.Destroy(currentItem);
+                DestroyItemEntity(currentItem);
                 if (container != Entity.Null)
                 {
                     MarkEquipmentDirtyFromContainer(container);
@@ -669,6 +678,7 @@ namespace Ludots.Core.Gameplay.Items
                 Entity container = _destroyContainerScratch[i];
                 if (_world.IsAlive(container))
                 {
+                    _ownership.ClearOwnership(container);
                     _world.Destroy(container);
                 }
             }
@@ -687,9 +697,8 @@ namespace Ludots.Core.Gameplay.Items
                     return;
                 }
 
-                if (data.Owner == owner &&
-                    (data.OwnerKind == ItemContainerOwnerKind.Actor || data.OwnerKind == ItemContainerOwnerKind.Vendor) &&
-                    data.Purpose == purpose)
+                if (data.Purpose == purpose &&
+                    _ownership.IsOwnedBy(owner, entity))
                 {
                     found = entity;
                 }
@@ -788,8 +797,7 @@ namespace Ludots.Core.Gameplay.Items
             _grantContainerScratch.Clear();
             _world.Query(in ContainerQuery, (Entity entity, ref ItemContainerCm data) =>
             {
-                if (data.Owner == actor &&
-                    data.OwnerKind == ItemContainerOwnerKind.Actor &&
+                if (_ownership.IsOwnedBy(actor, entity) &&
                     data.Purpose == ItemContainerPurpose.Equipment)
                 {
                     _grantContainerScratch.Add(entity);
@@ -821,20 +829,9 @@ namespace Ludots.Core.Gameplay.Items
                 return false;
             }
 
-            ItemContainerCm data = _world.Get<ItemContainerCm>(container);
-            if (data.OwnerKind == ItemContainerOwnerKind.Actor ||
-                data.OwnerKind == ItemContainerOwnerKind.Vendor)
-            {
-                actor = data.Owner;
-                return actor != Entity.Null && _world.IsAlive(actor);
-            }
-
-            if (data.OwnerKind == ItemContainerOwnerKind.Item)
-            {
-                return TryResolveOwningActorFromItem(data.Owner, out actor);
-            }
-
-            return false;
+            return _ownership.TryResolveRootOwner(container, out actor) &&
+                   actor != Entity.Null &&
+                   _world.IsAlive(actor);
         }
 
         private void CollectOwnedContainers(Entity owner, List<Entity> output)
@@ -1024,6 +1021,17 @@ namespace Ludots.Core.Gameplay.Items
                 SetItemLocation(restored, record.Location);
                 MarkEquipmentDirtyFromContainer(record.Location.Container);
             }
+        }
+
+        private void DestroyItemEntity(Entity item)
+        {
+            if (!_world.IsAlive(item))
+            {
+                return;
+            }
+
+            _ownership.ClearOwnership(item);
+            _world.Destroy(item);
         }
 
         private bool TryGetItemAndContainer(Entity item, Entity container, out ItemInstanceCm itemInstance, out ItemContainerCm containerComponent)
@@ -1298,10 +1306,14 @@ namespace Ludots.Core.Gameplay.Items
                 _world.Add(item, nextLocation);
             }
 
+            _ownership.EnsureOwnership(nextLocation.Container, item);
+
             if (previousContainer != Entity.Null)
             {
                 MarkEquipmentDirtyFromContainer(previousContainer);
             }
+
+            MarkEquipmentDirtyFromContainer(nextLocation.Container);
         }
 
         private bool WouldCreateOwnershipCycle(Entity item, Entity container)
@@ -1311,45 +1323,7 @@ namespace Ludots.Core.Gameplay.Items
                 return false;
             }
 
-            ItemContainerCm containerData = _world.Get<ItemContainerCm>(container);
-            if (containerData.OwnerKind != ItemContainerOwnerKind.Item)
-            {
-                return false;
-            }
-
-            if (containerData.Owner == item)
-            {
-                return true;
-            }
-
-            return TryIsContainedWithin(containerData.Owner, item);
-        }
-
-        private bool TryIsContainedWithin(Entity item, Entity possibleAncestor)
-        {
-            if (!_world.IsAlive(item) || !_world.Has<ItemLocationCm>(item))
-            {
-                return false;
-            }
-
-            ItemLocationCm location = _world.Get<ItemLocationCm>(item);
-            if (!_world.IsAlive(location.Container) || !_world.Has<ItemContainerCm>(location.Container))
-            {
-                return false;
-            }
-
-            ItemContainerCm container = _world.Get<ItemContainerCm>(location.Container);
-            if (container.OwnerKind != ItemContainerOwnerKind.Item)
-            {
-                return false;
-            }
-
-            if (container.Owner == possibleAncestor)
-            {
-                return true;
-            }
-
-            return TryIsContainedWithin(container.Owner, possibleAncestor);
+            return _ownership.IsOwnedBy(item, container);
         }
 
         private void MarkEquipmentDirtyFromContainer(Entity container)

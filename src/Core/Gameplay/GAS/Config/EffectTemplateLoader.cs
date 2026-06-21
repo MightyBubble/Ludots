@@ -4,10 +4,13 @@ using System.Globalization;
 using System.Text.Json;
 using System.Text.Json.Nodes;
 using System.Text.Json.Serialization;
+using Ludots.Core.Association;
 using Ludots.Core.Config;
 using Ludots.Core.Gameplay.Exchange;
 using Ludots.Core.Gameplay.GAS.Components;
 using Ludots.Core.Gameplay.GAS.Registry;
+using Ludots.Core.Gameplay.Progression;
+using Ludots.Core.Gameplay.Progression.Registry;
 using Ludots.Core.Gameplay.Teams;
 using Ludots.Core.Layers;
 using Ludots.Core.NodeLibraries.GASGraph.Host;
@@ -21,6 +24,7 @@ namespace Ludots.Core.Gameplay.GAS.Config
         private readonly GasConditionRegistry _conditions;
         private readonly TargetDispatchPresetRegistry _targetDispatchPresets;
         private readonly ExchangeOperationRegistry? _exchangeOperations;
+        private readonly ScopeKeyRegistry? _progressionScopeKeys;
 
         private static readonly JsonSerializerOptions JsonOptions = new()
         {
@@ -35,13 +39,15 @@ namespace Ludots.Core.Gameplay.GAS.Config
             EffectTemplateRegistry registry,
             GasConditionRegistry conditions = null,
             TargetDispatchPresetRegistry targetDispatchPresets = null,
-            ExchangeOperationRegistry? exchangeOperations = null)
+            ExchangeOperationRegistry? exchangeOperations = null,
+            ScopeKeyRegistry? progressionScopeKeys = null)
         {
             _pipeline = pipeline;
             _registry = registry;
             _conditions = conditions;
             _targetDispatchPresets = targetDispatchPresets;
             _exchangeOperations = exchangeOperations;
+            _progressionScopeKeys = progressionScopeKeys;
         }
 
         public void Load(
@@ -262,6 +268,9 @@ namespace Ludots.Core.Gameplay.GAS.Config
             var unitCreation = CompileUnitCreation(cfg.UnitCreation, cfg.Id, relativePath);
             var displacement = CompileDisplacement(cfg.Displacement, cfg.Id, relativePath);
             var relation = CompileRelation(cfg.Relation, cfg.Id, relativePath);
+            var progressionScope = ScopeKey.Self;
+            var progressionChange = ProgressionLevelChange.Complete;
+            int progressionId = 0;
 
             if (cfg.Displacement != null && presetType != EffectPresetType.Displacement)
             {
@@ -302,6 +311,7 @@ namespace Ludots.Core.Gameplay.GAS.Config
             }
 
             if (presetType == EffectPresetType.Exchange)
+            if (presetType == EffectPresetType.Exchange)
             {
                 if (lifetimeKind != EffectLifetimeKind.Instant)
                 {
@@ -314,6 +324,36 @@ namespace Ludots.Core.Gameplay.GAS.Config
                     throw new InvalidOperationException(
                         $"Effect template '{cfg.Id}' in {relativePath}: presetType Exchange requires configParams \"_ep.exchangeOperationId\" with type \"Int\".");
                 }
+            }
+
+            if (cfg.Progression != null && presetType != EffectPresetType.CompleteProgression)
+            {
+                throw new InvalidOperationException(
+                    $"Effect template '{cfg.Id}' in {relativePath}: 'progression' block is only valid when presetType=CompleteProgression.");
+            }
+            if (presetType == EffectPresetType.CompleteProgression)
+            {
+                if (lifetimeKind != EffectLifetimeKind.Instant)
+                {
+                    throw new InvalidOperationException(
+                        $"Effect template '{cfg.Id}' in {relativePath}: presetType CompleteProgression requires lifetime=Instant.");
+                }
+                if (cfg.Progression == null)
+                {
+                    throw new InvalidOperationException(
+                        $"Effect template '{cfg.Id}' in {relativePath}: presetType CompleteProgression requires a 'progression' block.");
+                }
+
+                string progressionName = RequireString(cfg.Progression.Id, cfg.Id, relativePath, "progression.id");
+                progressionId = ProgressionIdRegistry.GetId(progressionName);
+                if (progressionId <= 0)
+                {
+                    throw new InvalidOperationException(
+                        $"Effect template '{cfg.Id}' in {relativePath}: progression.id '{progressionName}' is not registered.");
+                }
+
+                progressionScope = ResolveProgressionScope(cfg.Progression.Scope, cfg.Id, relativePath);
+                progressionChange = CompileProgressionChange(cfg.Progression, cfg.Id, relativePath);
             }
 
             if (cfg.Projectile != null && presetType != EffectPresetType.LaunchProjectile)
@@ -374,6 +414,9 @@ namespace Ludots.Core.Gameplay.GAS.Config
                 UnitCreation = unitCreation,
                 Displacement = displacement,
                 Relation = relation,
+                ProgressionScope = progressionScope,
+                ProgressionChange = progressionChange,
+                ProgressionId = progressionId,
                 PhaseGraphBindings = behaviorTemplate,
                 ConfigParams = configParams,
                 ListenerSetup = listenerSetup,
@@ -993,6 +1036,77 @@ namespace Ludots.Core.Gameplay.GAS.Config
             "Turn" => GasClockId.Turn,
             _ => throw new InvalidOperationException($"Unknown GasClockId '{value}'. Supported: FixedFrame, Step, Turn."),
         };
+
+        private ScopeKey ResolveProgressionScope(string? rawValue, string effectId, string path)
+        {
+            if (string.IsNullOrWhiteSpace(rawValue))
+            {
+                throw new InvalidOperationException(
+                    $"Effect template '{effectId}' in {path}: progression.scope is required. Use 'self', 'explicit', or a named scope declared in Progression/scopes.json.");
+            }
+
+            return ParseProgressionScope(rawValue.Trim(), effectId, path);
+        }
+
+        private ScopeKey ParseProgressionScope(string value, string effectId, string path)
+        {
+            if (_progressionScopeKeys == null)
+            {
+                throw new InvalidOperationException(
+                    $"Effect template '{effectId}' in {path}: progression.scope requires ScopeKeyRegistry.");
+            }
+
+            switch (value)
+            {
+                case "self":
+                    return ScopeKey.Self;
+                case "explicit":
+                    return new ScopeKey(ScopeKind.Explicit);
+                default:
+                    if (_progressionScopeKeys.TryGetId(value, out int scopeKeyId) && scopeKeyId > 0)
+                    {
+                        return new ScopeKey(ScopeKind.Named, scopeKeyId);
+                    }
+
+                    throw new InvalidOperationException(
+                        $"Effect template '{effectId}' in {path}: progression.scope '{value}' is not registered by Progression config.");
+            }
+        }
+
+        private static ProgressionLevelChange CompileProgressionChange(ProgressionCompletionConfig cfg, string effectId, string path)
+        {
+            if (cfg.Level.HasValue && cfg.Delta.HasValue)
+            {
+                throw new InvalidOperationException(
+                    $"Effect template '{effectId}' in {path}: progression.level and progression.delta are mutually exclusive.");
+            }
+
+            if (cfg.Level.HasValue)
+            {
+                int level = cfg.Level.Value;
+                if (level <= 0)
+                {
+                    throw new InvalidOperationException(
+                        $"Effect template '{effectId}' in {path}: progression.level must be greater than zero.");
+                }
+
+                return new ProgressionLevelChange(level, 0);
+            }
+
+            if (cfg.Delta.HasValue)
+            {
+                int delta = cfg.Delta.Value;
+                if (delta <= 0)
+                {
+                    throw new InvalidOperationException(
+                        $"Effect template '{effectId}' in {path}: progression.delta must be greater than zero.");
+                }
+
+                return new ProgressionLevelChange(0, delta);
+            }
+
+            return ProgressionLevelChange.Complete;
+        }
 
         private static TargetQueryDescriptor CompileTargetQuery(TargetQueryConfig cfg, string effectId, string path)
         {

@@ -298,7 +298,8 @@ namespace Ludots.Tests.GAS
                 setup.RelationshipMetrics,
                 setup.RelationshipFlags,
                 setup.RelationshipBands,
-                setup.RelationshipReasons);
+                setup.RelationshipReasons,
+                setup.Collections);
 
             GraphRuntimeSetup graph = CreateGraphRuntime(setup, File.ReadAllText(graphsPath));
             int cityGraphId = GraphIdRegistry.GetId("fourx.graph.cityEconomyQuery");
@@ -483,10 +484,6 @@ namespace Ludots.Tests.GAS
             var schemas = new GraphOutputSchemaRegistry();
             var outputKeys = new StringIntRegistry(capacity: 16, startId: 1, invalidId: 0, comparer: StringComparer.Ordinal);
             var outputValues = new GraphOutputValueStore(outputKeys, initialCapacity: 16);
-            var collections = new EntityCollectionStore(
-                new StringIntRegistry(capacity: 16, startId: 1, invalidId: 0, comparer: StringComparer.Ordinal),
-                initialCollectionCapacity: 4,
-                initialRowCapacity: 16);
             var symbolResolver = new GasGraphSymbolResolver(
                 setup.RelationshipTypes,
                 setup.RelationshipMetrics,
@@ -494,11 +491,11 @@ namespace Ludots.Tests.GAS
                 setup.RelationshipReasons,
                 setup.TargetDispatchPresets,
                 setup.TemplateKeys);
-            var loader = new GraphProgramConfigLoader(pipeline, programs, symbolResolver, schemas, outputKeys, collections);
+            var loader = new GraphProgramConfigLoader(pipeline, programs, symbolResolver, schemas, outputKeys, setup.Collections);
             var packages = loader.LoadIdsAndCompile(catalog, relativePath: "GAS/graphs.json");
             loader.PatchAndRegister(packages);
 
-            return new GraphRuntimeSetup(programs, schemas, collections, outputValues);
+            return new GraphRuntimeSetup(programs, schemas, setup.Collections, outputValues);
         }
 
         private static QueryRuntimeSetup CreateQueryRuntime(World world)
@@ -514,6 +511,8 @@ namespace Ludots.Tests.GAS
             var entityQueries = new EntitySetQueryRuntime(world, tagOps, relationships);
             var templateKeys = new EntityTemplateKeyRegistry();
             var targetDispatchPresets = new TargetDispatchPresetRegistry();
+            var collectionKeys = new StringIntRegistry(capacity: 16, startId: 1, invalidId: 0, comparer: StringComparer.Ordinal);
+            var collections = new EntityCollectionStore(collectionKeys, initialCollectionCapacity: 4, initialRowCapacity: 16);
             return new QueryRuntimeSetup(
                 tagOps,
                 relationships,
@@ -524,7 +523,8 @@ namespace Ludots.Tests.GAS
                 reasonRegistry,
                 entityQueries,
                 templateKeys,
-                targetDispatchPresets);
+                targetDispatchPresets,
+                collections);
         }
 
         private static Entity CreateMapEntity(
@@ -713,7 +713,8 @@ namespace Ludots.Tests.GAS
             RelationshipReasonRegistry RelationshipReasons,
             EntitySetQueryRuntime EntityQueries,
             EntityTemplateKeyRegistry TemplateKeys,
-            TargetDispatchPresetRegistry TargetDispatchPresets);
+            TargetDispatchPresetRegistry TargetDispatchPresets,
+            EntityCollectionStore Collections);
 
         private sealed record GraphRuntimeSetup(
             GraphProgramRegistry Programs,

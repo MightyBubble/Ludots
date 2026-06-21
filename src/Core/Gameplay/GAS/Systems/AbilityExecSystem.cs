@@ -1,14 +1,16 @@
-﻿using System;
+using System;
 using System.Collections.Generic;
 using Arch.Core;
 using Arch.Core.Extensions;
 using Arch.System;
+using Ludots.Core.Association;
 using Ludots.Core.Engine;
 using Ludots.Core.Gameplay.GAS.Components;
 using Ludots.Core.Gameplay.GAS.Input;
 using Ludots.Core.Gameplay.GAS.Orders;
 using Ludots.Core.Gameplay.GAS.Presentation;
 using Ludots.Core.Gameplay.Items;
+using Ludots.Core.Gameplay.Progression;
 using Ludots.Core.GraphRuntime;
 using Ludots.Core.NodeLibraries.GASGraph;
 using Ludots.Core.Mathematics;
@@ -36,6 +38,7 @@ namespace Ludots.Core.Gameplay.GAS.Systems
         private readonly GraphProgramRegistry _graphPrograms;
         private readonly IGraphRuntimeApi _graphApi;
         private readonly TagOps _tagOps;
+        private readonly ProgressionRequirementEvaluator _progressionRequirements;
 
         private readonly int _castAbilityOrderTypeId;
         private readonly int _castAbilityStartOrderTypeId;
@@ -72,7 +75,8 @@ namespace Ludots.Core.Gameplay.GAS.Systems
             GraphProgramRegistry graphPrograms = null,
             IGraphRuntimeApi graphApi = null,
             TagOps tagOps = null,
-            OrderTypeRegistry orderTypeRegistry = null)
+            OrderTypeRegistry orderTypeRegistry = null,
+            ProgressionRequirementEvaluator progressionRequirements = null)
             : base(world)
         {
             _clock = clock;
@@ -91,6 +95,7 @@ namespace Ludots.Core.Gameplay.GAS.Systems
             _graphApi = graphApi;
             _tagOps = tagOps ?? new TagOps();
             _orderTypeRegistry = orderTypeRegistry;
+            _progressionRequirements = progressionRequirements;
         }
 
         /// <summary>
@@ -172,6 +177,9 @@ namespace Ludots.Core.Gameplay.GAS.Systems
                         ref var bbEntities = ref World.Get<BlackboardEntityBuffer>(actor);
                         bbEntities.TryGet(OrderBlackboardKeys.Cast_TargetEntity, out targetEntity);
                     }
+                    Entity targetContext = World.IsAlive(orderBuffer.ActiveOrder.Order.TargetContext)
+                        ? orderBuffer.ActiveOrder.Order.TargetContext
+                        : default;
 
                     AbilityDefinition abilityDef = default;
                     bool hasAbilityDef = slot.AbilityId > 0 &&
@@ -264,6 +272,29 @@ namespace Ludots.Core.Gameplay.GAS.Systems
                         hasActivationPrecondition = true;
                     }
 
+                    AbilityExecSpec startSpec = hasAbilityDef
+                        ? abilityDef.ExecSpec
+                        : hasTemplateEntity && World.Has<AbilityExecSpec>(templateEntity)
+                            ? World.Get<AbilityExecSpec>(templateEntity)
+                            : default;
+                    int useRequirementId = ResolveUseProgressionRequirementId(hasAbilityDef, in abilityDef, hasTemplateEntity, templateEntity);
+                    bool pendingProgressionUseRequirement = false;
+                    if (useRequirementId > 0)
+                    {
+                        bool requiresExplicitScope = RequiresExplicitScope(useRequirementId);
+                        if (requiresExplicitScope &&
+                            !World.IsAlive(targetContext) &&
+                            AbilityCanResolveTargetContextBeforeSideEffects(in startSpec))
+                        {
+                            pendingProgressionUseRequirement = true;
+                        }
+                        else if (!EvaluateProgressionRequirement(actor, targetEntity, targetContext, useRequirementId))
+                        {
+                            CancelAbilityStart(actor, targetEntity, slotIndex, slot.AbilityId, AbilityCastFailReason.PreconditionFailed);
+                            continue;
+                        }
+                    }
+
                     Fix64Vec2 targetOriginPosCm = default;
                     bool hasTargetOriginPos = false;
                     Fix64Vec2 targetPosCm = default;
@@ -329,7 +360,7 @@ namespace Ludots.Core.Gameplay.GAS.Systems
                         World.Add(actor, new AbilityExecInstance());
                     }
 
-                    GasClockId defaultClockId = hasAbilityDef ? abilityDef.ExecSpec.ClockId : GasClockId.Step;
+                    GasClockId defaultClockId = startSpec.ClockId != 0 ? startSpec.ClockId : GasClockId.Step;
 
                     // Read OrderId from active OrderBuffer entry
                     int orderId = 0;
@@ -347,7 +378,7 @@ namespace Ludots.Core.Gameplay.GAS.Systems
                     exec.AbilitySlot = slotIndex;
                     exec.AbilityId = slot.AbilityId;
                     exec.Target = targetEntity;
-                    exec.TargetContext = default;
+                    exec.TargetContext = targetContext;
                     exec.TargetPosCm = targetPosCm;
                     exec.HasTargetPos = (byte)(hasTargetPos ? 1 : 0);
                     exec.TargetOriginPosCm = targetOriginPosCm;
@@ -361,6 +392,9 @@ namespace Ludots.Core.Gameplay.GAS.Systems
                     exec.WaitTagId = 0;
                     exec.WaitRequestId = 0;
                     exec.ActiveClockId = defaultClockId;
+                    exec.IsToggleDeactivating = false;
+                    exec.PendingProgressionUseRequirement = (byte)(pendingProgressionUseRequirement ? 1 : 0);
+                    exec.PendingProgressionRequirementId = pendingProgressionUseRequirement ? useRequirementId : 0;
 
                     PublishCastStartedAndCommitted(actor, targetEntity, slotIndex, slot.AbilityId);
                     workUnits++;
@@ -414,7 +448,19 @@ namespace Ludots.Core.Gameplay.GAS.Systems
                 AbilityOnActivateEffects onActivateEffects = default;
                 bool hasOnActivate = false;
 
-                if (slot.AbilityId <= 0 || _abilityDefinitions == null || !_abilityDefinitions.TryGet(slot.AbilityId, out var def))
+                AbilityDefinition def = default;
+                bool hasDefinition = slot.AbilityId > 0 &&
+                    _abilityDefinitions != null &&
+                    _abilityDefinitions.TryGet(slot.AbilityId, out def);
+                Entity templateEntity = default;
+                bool hasTemplateEntity = false;
+                if (slot.TemplateEntityId > 0)
+                {
+                    templateEntity = EntityUtil.Reconstruct(slot.TemplateEntityId, slot.TemplateEntityWorldId, slot.TemplateEntityVersion);
+                    hasTemplateEntity = World.IsAlive(templateEntity);
+                }
+
+                if (!hasDefinition && (!hasTemplateEntity || !World.Has<AbilityExecSpec>(templateEntity)))
                 {
                     // No valid ability definition found 锟?fail-fast, remove exec instance
                     World.Remove<AbilityExecInstance>(actor);
@@ -423,18 +469,39 @@ namespace Ludots.Core.Gameplay.GAS.Systems
                 }
 
                 // Toggle deactivate uses the DeactivateExecSpec instead of normal ExecSpec
-                if (instance.IsToggleDeactivating && def.HasToggleSpec)
+                if (hasDefinition && instance.IsToggleDeactivating && def.HasToggleSpec)
                 {
                     spec = def.ToggleSpec.DeactivateExecSpec;
                 }
-                else
+                else if (hasDefinition)
                 {
                     spec = def.ExecSpec;
                 }
-                callerPool = def.ExecCallerParamsPool;
-                hasCallerPool = def.HasExecCallerParamsPool;
-                hasOnActivate = def.HasOnActivateEffects;
-                onActivateEffects = def.OnActivateEffects;
+                else
+                {
+                    spec = World.Get<AbilityExecSpec>(templateEntity);
+                }
+                if (hasDefinition)
+                {
+                    callerPool = def.ExecCallerParamsPool;
+                    hasCallerPool = def.HasExecCallerParamsPool;
+                    hasOnActivate = def.HasOnActivateEffects;
+                    onActivateEffects = def.OnActivateEffects;
+                }
+                else
+                {
+                    if (World.Has<AbilityExecCallerParamsPool>(templateEntity))
+                    {
+                        callerPool = World.Get<AbilityExecCallerParamsPool>(templateEntity);
+                        hasCallerPool = true;
+                    }
+
+                    if (World.Has<AbilityOnActivateEffects>(templateEntity))
+                    {
+                        onActivateEffects = World.Get<AbilityOnActivateEffects>(templateEntity);
+                        hasOnActivate = true;
+                    }
+                }
 
                 // Interrupt check
                 ref var actorTags = ref World.TryGetRef<GameplayTagContainer>(actor, out bool hasActorTags);
@@ -455,20 +522,25 @@ namespace Ludots.Core.Gameplay.GAS.Systems
                     ProcessGate(actor, ref spec, ref instance);
                 }
 
-                // Cleanup finished/interrupted
-                if (instance.State == AbilityExecRunState.Finished || instance.State == AbilityExecRunState.Interrupted)
+                // Cleanup terminal states
+                if (instance.State == AbilityExecRunState.Finished ||
+                    instance.State == AbilityExecRunState.Interrupted ||
+                    instance.State == AbilityExecRunState.Failed)
                 {
-                    var finishKind = instance.State == AbilityExecRunState.Interrupted
-                        ? GasPresentationEventKind.CastInterrupted
-                        : GasPresentationEventKind.CastFinished;
-                    _presentationEvents?.Publish(new GasPresentationEvent
+                    if (instance.State != AbilityExecRunState.Failed)
                     {
-                        Kind = finishKind,
-                        Actor = actor,
-                        Target = instance.Target,
-                        AbilitySlot = instance.AbilitySlot,
-                        AbilityId = instance.AbilityId
-                    });
+                        var finishKind = instance.State == AbilityExecRunState.Interrupted
+                            ? GasPresentationEventKind.CastInterrupted
+                            : GasPresentationEventKind.CastFinished;
+                        _presentationEvents?.Publish(new GasPresentationEvent
+                        {
+                            Kind = finishKind,
+                            Actor = actor,
+                            Target = instance.Target,
+                            AbilitySlot = instance.AbilitySlot,
+                            AbilityId = instance.AbilityId
+                        });
+                    }
                     
                     // Toggle activation: when the activate timeline (not deactivate) finishes successfully,
                     // add the toggle tag and apply infinite effects.
@@ -517,6 +589,127 @@ namespace Ludots.Core.Gameplay.GAS.Systems
                    (_castAbilityStartOrderTypeId > 0 && orderTypeId == _castAbilityStartOrderTypeId);
         }
 
+        private int ResolveUseProgressionRequirementId(bool hasAbilityDef, in AbilityDefinition abilityDef, bool hasTemplateEntity, Entity templateEntity)
+        {
+            if (hasAbilityDef && abilityDef.HasUseProgressionRequirement)
+            {
+                return abilityDef.UseProgressionRequirementId;
+            }
+
+            if (hasTemplateEntity && World.Has<AbilityProgressionRequirements>(templateEntity))
+            {
+                return World.Get<AbilityProgressionRequirements>(templateEntity).UseRequirementId;
+            }
+
+            return 0;
+        }
+
+        private bool RequiresExplicitScope(int requirementId)
+        {
+            if (_progressionRequirements == null)
+            {
+                throw new InvalidOperationException("Ability progression requirement is configured, but ProgressionRequirementEvaluator is not registered.");
+            }
+
+            return _progressionRequirements.RequiresExplicitScope(requirementId);
+        }
+
+        private bool EvaluateProgressionRequirement(Entity actor, Entity subject, Entity explicitScopeHost, int requirementId)
+        {
+            if (requirementId <= 0)
+            {
+                return true;
+            }
+
+            if (_progressionRequirements == null)
+            {
+                throw new InvalidOperationException("Ability progression requirement is configured, but ProgressionRequirementEvaluator is not registered.");
+            }
+
+            Entity resolvedSubject = World.IsAlive(subject) ? subject : actor;
+            Entity resolvedExplicitScopeHost = World.IsAlive(explicitScopeHost)
+                ? explicitScopeHost
+                : default;
+            var context = new RoleResolverContext(
+                actor: actor,
+                subject: resolvedSubject,
+                explicitScopeHost: resolvedExplicitScopeHost);
+            return _progressionRequirements.Evaluate(requirementId, in context);
+        }
+
+        private static bool AbilityCanResolveTargetContextBeforeSideEffects(in AbilityExecSpec spec)
+        {
+            for (int i = 0; i < spec.ItemCount; i++)
+            {
+                ExecItemKind kind = spec.GetKind(i);
+                if (kind == ExecItemKind.InputGate || kind == ExecItemKind.SelectionGate)
+                {
+                    return true;
+                }
+
+                if (kind == ExecItemKind.None)
+                {
+                    continue;
+                }
+
+                return false;
+            }
+
+            return false;
+        }
+
+        private bool TrySatisfyPendingProgressionUseRequirement(Entity actor, ref AbilityExecInstance inst)
+        {
+            if (inst.PendingProgressionUseRequirement == 0)
+            {
+                return true;
+            }
+
+            if (EvaluateProgressionRequirement(actor, inst.Target, inst.TargetContext, inst.PendingProgressionRequirementId))
+            {
+                inst.PendingProgressionUseRequirement = 0;
+                inst.PendingProgressionRequirementId = 0;
+                return true;
+            }
+
+            FailPendingProgressionUseRequirement(actor, ref inst);
+            return false;
+        }
+
+        private void FailPendingProgressionUseRequirement(Entity actor, ref AbilityExecInstance inst)
+        {
+            inst.State = AbilityExecRunState.Failed;
+            inst.PendingProgressionUseRequirement = 0;
+            inst.PendingProgressionRequirementId = 0;
+            _presentationEvents?.Publish(new GasPresentationEvent
+            {
+                Kind = GasPresentationEventKind.CastFailed,
+                Actor = actor,
+                Target = inst.Target,
+                AbilitySlot = inst.AbilitySlot,
+                AbilityId = inst.AbilityId,
+                FailReason = AbilityCastFailReason.PreconditionFailed
+            });
+        }
+
+        private void CancelAbilityStart(Entity actor, Entity targetEntity, int slotIndex, int abilityId, AbilityCastFailReason reason)
+        {
+            if (_orderTypeRegistry != null)
+            {
+                OrderSubmitter.CancelCurrent(World, actor, _orderTypeRegistry);
+            }
+
+            _presentationEvents?.Publish(new GasPresentationEvent
+            {
+                Kind = GasPresentationEventKind.CastFailed,
+                Actor = actor,
+                Target = targetEntity,
+                AbilitySlot = slotIndex,
+                AbilityId = abilityId,
+                FailReason = reason
+            });
+        }
+
         // 鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€ Item processing 鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€鈹€
 
         private void AdvanceItems(Entity actor, ref AbilityExecSpec spec,
@@ -538,6 +731,14 @@ namespace Ludots.Core.Gameplay.GAS.Systems
 
                 // Not yet time for this item
                 if (itemTick > inst.CurrentTick) return;
+
+                if (inst.PendingProgressionUseRequirement != 0 &&
+                    kind != ExecItemKind.InputGate &&
+                    kind != ExecItemKind.SelectionGate)
+                {
+                    FailPendingProgressionUseRequirement(actor, ref inst);
+                    return;
+                }
 
                 switch (kind)
                 {
@@ -863,6 +1064,10 @@ namespace Ludots.Core.Gameplay.GAS.Systems
                     {
                         if (World.IsAlive(resp.Target)) inst.Target = resp.Target;
                         if (World.IsAlive(resp.TargetContext)) inst.TargetContext = resp.TargetContext;
+                        if (!TrySatisfyPendingProgressionUseRequirement(actor, ref inst))
+                        {
+                            return;
+                        }
                         inst.WaitRequestId = 0;
                         inst.NextItemIndex++;
                         inst.State = AbilityExecRunState.Running;
@@ -901,6 +1106,10 @@ namespace Ludots.Core.Gameplay.GAS.Systems
                         if (World.IsAlive(resp.TargetContext))
                         {
                             inst.TargetContext = resp.TargetContext;
+                        }
+                        if (!TrySatisfyPendingProgressionUseRequirement(actor, ref inst))
+                        {
+                            return;
                         }
                         if (resp.TryGetWorldPoint(out var worldPoint))
                         {
@@ -1027,6 +1236,8 @@ namespace Ludots.Core.Gameplay.GAS.Systems
                 exec.WaitRequestId = 0;
                 exec.ActiveClockId = toggleSpec.DeactivateExecSpec.ClockId;
                 exec.IsToggleDeactivating = true;
+                exec.PendingProgressionUseRequirement = 0;
+                exec.PendingProgressionRequirementId = 0;
                 
                 PublishCastStartedAndCommitted(actor, targetEntity, slotIndex, abilityId);
             }

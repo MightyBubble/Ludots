@@ -3,6 +3,7 @@ using System.Collections.Generic;
 using System.Threading.Tasks;
 using Arch.Core;
 using ItemSystemShowcaseMod.UI;
+using Ludots.Core.Association;
 using Ludots.Core.Components;
 using Ludots.Core.Engine;
 using Ludots.Core.Gameplay.Exchange;
@@ -642,9 +643,9 @@ internal sealed class ItemSystemShowcaseRuntime
 
         _vendor = world.Create(new Name { Value = "Quartermaster" });
         TrackMapEntity(engine, _vendor);
-        _equipment = CreateTrackedContainer(engine, _hero, ItemContainerOwnerKind.Actor, "layout_equipment_actor");
-        _stash = CreateTrackedContainer(engine, _hero, ItemContainerOwnerKind.Actor, "layout_stash_grid");
-        _vendorGrid = CreateTrackedContainer(engine, _vendor, ItemContainerOwnerKind.Vendor, "layout_vendor_grid");
+        _equipment = CreateTrackedContainer(engine, _hero, "layout_equipment_actor");
+        _stash = CreateTrackedContainer(engine, _hero, "layout_stash_grid");
+        _vendorGrid = CreateTrackedContainer(engine, _vendor, "layout_vendor_grid");
 
         EquipNamed(engine, CreateTrackedItem(engine, _bootsDefId), "feet");
         _forgeAmuletItem = sceneKind == ItemSystemShowcaseSceneKind.ForgeSocketLab
@@ -768,8 +769,9 @@ internal sealed class ItemSystemShowcaseRuntime
     {
         var exchange = engine.GetService(CoreServiceKeys.ExchangeRuntime)
             ?? throw new InvalidOperationException("ExchangeRuntime missing.");
-        var context = new ExchangeExecutionContext(_hero, _vendor, Entity.Null, scopeKey);
-        return exchange.TryExecute(new ExchangeOperationKey(operationId, scopeKey), in context);
+        ScopeKey exchangeScope = scopeKey > 0 ? ScopeKey.Named(scopeKey) : default;
+        var context = new ExchangeExecutionContext(_hero, _vendor, Entity.Null, exchangeScope);
+        return exchange.TryExecute(new ExchangeOperationKey(operationId, exchangeScope), in context);
     }
 
     private int Layout(GameEngine engine, string id)
@@ -1247,9 +1249,9 @@ internal sealed class ItemSystemShowcaseRuntime
                FindByDef(engine, defId, secure);
     }
 
-    private Entity CreateTrackedContainer(GameEngine engine, Entity owner, ItemContainerOwnerKind ownerKind, string layoutId)
+    private Entity CreateTrackedContainer(GameEngine engine, Entity owner, string layoutId)
     {
-        Entity container = Inventory(engine).CreateContainer(owner, ownerKind, Layout(engine, layoutId));
+        Entity container = Inventory(engine).CreateContainer(owner, Layout(engine, layoutId));
         TrackMapEntity(engine, container);
         return container;
     }

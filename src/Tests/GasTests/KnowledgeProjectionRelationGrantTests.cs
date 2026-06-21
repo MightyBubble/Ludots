@@ -1,6 +1,7 @@
 using Arch.Core;
 using Ludots.Core.EntityCollections;
 using Ludots.Core.Gameplay.Relationships;
+using Ludots.Core.Gameplay.Relationships.Config;
 using Ludots.Core.Knowledge;
 using Ludots.Core.Registry;
 using NUnit.Framework;
@@ -43,10 +44,16 @@ namespace Ludots.Tests.GAS
                 ally,
                 EntityCollectionDescriptor.Create("collection.secrets", EntityCollectionSourceKind.RelationDerived, EntityCollectionRoleKind.Display),
                 new[] { secret });
-            var grants = new KnowledgeRelationCollectionGrantStore(initialGrantCapacity: 2);
-            grants.Upsert(new KnowledgeRelationCollectionGrant(allyTypeId, scoutsKeyId, allyProfile));
+            RelationshipCatalogRuntime catalogRuntime = CreateCatalogRuntime(
+                runtime,
+                "Ally",
+                "collection.scouts",
+                allyProfile,
+                attributeId: 1,
+                relationshipTypeId: allyTypeId,
+                tagId: 3);
             var projection = new KnowledgeProjectionStore(initialCapacity: 4);
-            var projector = new KnowledgeRelationCollectionProjector(runtime.Relationships, runtime.Collections, grants, projection);
+            var projector = new KnowledgeRelationCollectionProjector(runtime.Relationships, runtime.Collections, catalogRuntime, projection);
 
             Span<Entity> sources = stackalloc Entity[4];
             Span<Entity> targets = stackalloc Entity[4];
@@ -90,10 +97,16 @@ namespace Ludots.Tests.GAS
                 npc,
                 EntityCollectionDescriptor.Create("collection.rumors", EntityCollectionSourceKind.RelationDerived, EntityCollectionRoleKind.Display),
                 new[] { hiddenCamp });
-            var grants = new KnowledgeRelationCollectionGrantStore();
-            grants.Upsert(new KnowledgeRelationCollectionGrant(rumorTypeId, rumorKeyId, rumorProfile));
+            RelationshipCatalogRuntime catalogRuntime = CreateCatalogRuntime(
+                runtime,
+                "Rumor",
+                "collection.rumors",
+                rumorProfile,
+                attributeId: 4,
+                relationshipTypeId: rumorTypeId,
+                tagId: 5);
             var projection = new KnowledgeProjectionStore();
-            var projector = new KnowledgeRelationCollectionProjector(runtime.Relationships, runtime.Collections, grants, projection);
+            var projector = new KnowledgeRelationCollectionProjector(runtime.Relationships, runtime.Collections, catalogRuntime, projection);
 
             Span<Entity> sources = stackalloc Entity[2];
             Span<Entity> targets = stackalloc Entity[2];
@@ -125,13 +138,16 @@ namespace Ludots.Tests.GAS
                 stranger,
                 EntityCollectionDescriptor.Create("collection.scouts", EntityCollectionSourceKind.RelationDerived, EntityCollectionRoleKind.Display),
                 new[] { scout });
-            var grants = new KnowledgeRelationCollectionGrantStore();
-            grants.Upsert(new KnowledgeRelationCollectionGrant(
-                allyTypeId,
-                scoutsKeyId,
-                CreateRecord(KnowledgePresence.Known, KnowledgePositionAccess.LastKnown, stranger, 1, 0, 800, 1, allyTypeId, 2)));
+            RelationshipCatalogRuntime catalogRuntime = CreateCatalogRuntime(
+                runtime,
+                "Ally",
+                "collection.scouts",
+                CreateRecord(KnowledgePresence.Known, KnowledgePositionAccess.LastKnown, stranger, 1, 0, 800, 1, allyTypeId, 2),
+                attributeId: 1,
+                relationshipTypeId: allyTypeId,
+                tagId: 2);
             var projection = new KnowledgeProjectionStore();
-            var projector = new KnowledgeRelationCollectionProjector(runtime.Relationships, runtime.Collections, grants, projection);
+            var projector = new KnowledgeRelationCollectionProjector(runtime.Relationships, runtime.Collections, catalogRuntime, projection);
 
             Span<Entity> sources = stackalloc Entity[2];
             Span<Entity> targets = stackalloc Entity[2];
@@ -164,13 +180,16 @@ namespace Ludots.Tests.GAS
                 allyOfAlly,
                 EntityCollectionDescriptor.Create("collection.scouts", EntityCollectionSourceKind.RelationDerived, EntityCollectionRoleKind.Display),
                 new[] { transitiveScout });
-            var grants = new KnowledgeRelationCollectionGrantStore();
-            grants.Upsert(new KnowledgeRelationCollectionGrant(
-                allyTypeId,
-                scoutsKeyId,
-                CreateRecord(KnowledgePresence.Known, KnowledgePositionAccess.LastKnown, ally, 5, 0, 800, 1, allyTypeId, 2)));
+            RelationshipCatalogRuntime catalogRuntime = CreateCatalogRuntime(
+                runtime,
+                "Ally",
+                "collection.scouts",
+                CreateRecord(KnowledgePresence.Known, KnowledgePositionAccess.LastKnown, ally, 5, 0, 800, 1, allyTypeId, 2),
+                attributeId: 1,
+                relationshipTypeId: allyTypeId,
+                tagId: 2);
             var projection = new KnowledgeProjectionStore();
-            var projector = new KnowledgeRelationCollectionProjector(runtime.Relationships, runtime.Collections, grants, projection);
+            var projector = new KnowledgeRelationCollectionProjector(runtime.Relationships, runtime.Collections, catalogRuntime, projection);
 
             Span<Entity> sources = stackalloc Entity[4];
             Span<Entity> targets = stackalloc Entity[4];
@@ -204,13 +223,16 @@ namespace Ludots.Tests.GAS
                 allyB,
                 EntityCollectionDescriptor.Create("collection.scouts", EntityCollectionSourceKind.RelationDerived, EntityCollectionRoleKind.Display),
                 new[] { scoutB });
-            var grants = new KnowledgeRelationCollectionGrantStore(initialGrantCapacity: 1);
-            grants.Upsert(new KnowledgeRelationCollectionGrant(
-                allyTypeId,
-                scoutsKeyId,
-                CreateRecord(KnowledgePresence.LiveVisible, KnowledgePositionAccess.Live, allyA, 0, 0, 1000, 1, allyTypeId, 2)));
+            RelationshipCatalogRuntime catalogRuntime = CreateCatalogRuntime(
+                runtime,
+                "Ally",
+                "collection.scouts",
+                CreateRecord(KnowledgePresence.LiveVisible, KnowledgePositionAccess.Live, allyA, 0, 0, 1000, 1, allyTypeId, 2),
+                attributeId: 1,
+                relationshipTypeId: allyTypeId,
+                tagId: 2);
             var projection = new KnowledgeProjectionStore(initialCapacity: 4);
-            var projector = new KnowledgeRelationCollectionProjector(runtime.Relationships, runtime.Collections, grants, projection);
+            var projector = new KnowledgeRelationCollectionProjector(runtime.Relationships, runtime.Collections, catalogRuntime, projection);
             Span<Entity> sources = stackalloc Entity[4];
             Span<Entity> targets = stackalloc Entity[4];
 
@@ -224,6 +246,41 @@ namespace Ludots.Tests.GAS
 
             long allocated = GC.GetAllocatedBytesForCurrentThread() - before;
             Assert.That(allocated, Is.EqualTo(0));
+        }
+
+        private static RelationshipCatalogRuntime CreateCatalogRuntime(
+            TestRuntime runtime,
+            string typeId,
+            string collectionKey,
+            in KnowledgeDisclosureRecord profile,
+            int attributeId,
+            int relationshipTypeId,
+            int tagId)
+        {
+            return RelationshipCatalogRuntime.Compile(
+                new RelationshipCatalogConfig
+                {
+                    KnowledgeGrants =
+                    {
+                        new RelationshipKnowledgeGrantConfig
+                        {
+                            Id = $"{typeId}.{collectionKey}",
+                            TypeId = typeId,
+                            CollectionKey = collectionKey,
+                            Presence = profile.Presence,
+                            Position = profile.Position,
+                            AttributeIds = { attributeId },
+                            RelationshipTypeIds = { relationshipTypeId },
+                            TagIds = { tagId },
+                            ObservedTick = profile.ObservedTick,
+                            ExpiryTick = profile.ExpiryTick,
+                            ConfidencePermille = profile.ConfidencePermille
+                        }
+                    }
+                },
+                runtime.RelationshipTypes,
+                new RelationshipMetricRegistry(),
+                runtime.Collections);
         }
 
         private static TestRuntime CreateRuntime(World world)

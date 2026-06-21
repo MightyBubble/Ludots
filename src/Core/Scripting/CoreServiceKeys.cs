@@ -1,6 +1,7 @@
 using System;
 using System.Collections.Generic;
 using Arch.Core;
+using Ludots.Core.Association;
 using Ludots.Core.Config;
 using Ludots.Core.Diagnostics;
 using Ludots.Core.Engine;
@@ -25,6 +26,7 @@ using Ludots.Core.Gameplay.Relationships;
 using Ludots.Core.Gameplay.Relationships.Config;
 using Ludots.Core.Gameplay.Spawning;
 using Ludots.Core.Gameplay.GAS.Systems;
+using Ludots.Core.Gameplay.Progression;
 using Ludots.Core.Gameplay.Teams;
 using Ludots.Core.GraphRuntime;
 using Ludots.Core.Hosting;
@@ -149,6 +151,11 @@ namespace Ludots.Core.Scripting
         public static readonly ServiceKey<EffectRequestQueue> EffectRequestQueue = new("EffectRequestQueue");
         public static readonly ServiceKey<AbilityDefinitionRegistry> AbilityDefinitionRegistry = new("AbilityDefinitionRegistry");
         public static readonly ServiceKey<AbilityFormSetRegistry> AbilityFormSetRegistry = new("AbilityFormSetRegistry");
+        public static readonly ServiceKey<ProgressionDefinitionRegistry> ProgressionDefinitionRegistry = new("ProgressionDefinitionRegistry");
+        public static readonly ServiceKey<ProgressionRequirementRegistry> ProgressionRequirementRegistry = new("ProgressionRequirementRegistry");
+        public static readonly ServiceKey<ScopeKeyRegistry> ScopeKeyRegistry = new("ScopeKeyRegistry");
+        public static readonly ServiceKey<ScopeResolver> ScopeResolver = new("ScopeResolver");
+        public static readonly ServiceKey<ProgressionRequirementEvaluator> ProgressionRequirementEvaluator = new("ProgressionRequirementEvaluator");
         public static readonly ServiceKey<ContextGroupRegistry> ContextGroupRegistry = new("ContextGroupRegistry");
         public static readonly ServiceKey<GraphProgramRegistry> GraphProgramRegistry = new("GraphProgramRegistry");
         public static readonly ServiceKey<GraphOutputSchemaRegistry> GraphOutputSchemaRegistry = new("GraphOutputSchemaRegistry");
@@ -163,6 +170,7 @@ namespace Ludots.Core.Scripting
         public static readonly ServiceKey<ItemShapeRegistry> ItemShapeRegistry = new("ItemShapeRegistry");
         public static readonly ServiceKey<ItemLayoutRegistry> ItemLayoutRegistry = new("ItemLayoutRegistry");
         public static readonly ServiceKey<ItemDefinitionRegistry> ItemDefinitionRegistry = new("ItemDefinitionRegistry");
+        public static readonly ServiceKey<OwnershipResolver> OwnershipResolver = new("OwnershipResolver");
         public static readonly ServiceKey<InventoryRuntimeService> InventoryRuntimeService = new("InventoryRuntimeService");
         public static readonly ServiceKey<ExchangeOperationRegistry> ExchangeOperationRegistry = new("ExchangeOperationRegistry");
         public static readonly ServiceKey<ExchangeScopedOperationStore> ExchangeScopedOperationStore = new("ExchangeScopedOperationStore");
@@ -180,7 +188,6 @@ namespace Ludots.Core.Scripting
         public static readonly ServiceKey<PlayerEntityLookup> PlayerEntityLookup = new("PlayerEntityLookup");
         public static readonly ServiceKey<EntitySetQueryRuntime> EntitySetQueryRuntime = new("EntitySetQueryRuntime");
         public static readonly ServiceKey<KnowledgeProjectionStore> KnowledgeProjectionStore = new("KnowledgeProjectionStore");
-        public static readonly ServiceKey<KnowledgeRelationCollectionGrantStore> KnowledgeRelationCollectionGrantStore = new("KnowledgeRelationCollectionGrantStore");
         public static readonly ServiceKey<KnowledgeRelationCollectionProjector> KnowledgeRelationCollectionProjector = new("KnowledgeRelationCollectionProjector");
         public static readonly ServiceKey<KnowledgeProjectionResolver> KnowledgeProjectionResolver = new("KnowledgeProjectionResolver");
         public static readonly ServiceKey<Entity> RelationshipEventSource = new("RelationshipEvent.Source");
@@ -319,6 +326,4 @@ namespace Ludots.Core.Scripting
         public static readonly ServiceKey<ILogBackend> LogBackend = new("LogBackend");
     }
 }
-
-
 

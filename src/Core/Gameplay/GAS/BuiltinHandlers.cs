@@ -2,10 +2,12 @@ using System;
 using Arch.Core;
 using Arch.Core.Extensions;
 using Ludots.Core.Components;
+using Ludots.Core.Association;
 using Ludots.Core.Gameplay.Components;
 using Ludots.Core.Gameplay.Exchange;
 using Ludots.Core.Gameplay.GAS.Components;
 using Ludots.Core.Gameplay.Spawning;
+using Ludots.Core.Gameplay.Progression;
 using Ludots.Core.Mathematics;
 using Ludots.Core.Mathematics.FixedPoint;
 
@@ -29,6 +31,7 @@ namespace Ludots.Core.Gameplay.GAS
             registry.Register(BuiltinHandlerId.ApplyDisplacement, HandleApplyDisplacement);
             registry.Register(BuiltinHandlerId.ApplyRelation, HandleApplyRelation);
             registry.Register(BuiltinHandlerId.ExecuteExchange, HandleExecuteExchange);
+            registry.Register(BuiltinHandlerId.CompleteProgression, HandleCompleteProgression);
         }
 
         public static void HandleApplyModifiers(
@@ -409,18 +412,52 @@ namespace Ludots.Core.Gameplay.GAS
             }
 
             mergedParams.TryGetInt(EffectParamKeys.ExchangeScopeKey, out int scopeKey);
+            ScopeKey exchangeScope = scopeKey > 0 ? ScopeKey.Named(scopeKey) : default;
             var exchangeContext = new ExchangeExecutionContext(
                 context.Source,
                 context.Target,
                 context.TargetContext,
-                scopeKey);
+                exchangeScope);
             ExchangeExecutionResult result = runtime.Exchange.TryExecute(
-                new ExchangeOperationKey(operationId, scopeKey),
+                new ExchangeOperationKey(operationId, exchangeScope),
                 in exchangeContext);
             runtime.RecordExchangeResult(result);
             if (!result.Succeeded)
             {
                 return;
+            }
+        }
+
+        public static void HandleCompleteProgression(
+            World world,
+            Entity effectEntity,
+            ref EffectContext context,
+            in EffectConfigParams mergedParams,
+            in EffectTemplateData templateData)
+        {
+            if (templateData.ProgressionId <= 0)
+            {
+                throw new InvalidOperationException("CompleteProgression requires a valid progression id.");
+            }
+
+            var runtime = BuiltinHandlerRuntimeScope.Current;
+            if (runtime?.ProgressionEvaluator == null)
+            {
+                throw new InvalidOperationException("CompleteProgression requires ProgressionRequirementEvaluator in BuiltinHandlerExecutionContext.");
+            }
+
+            var evaluationContext = new RoleResolverContext(
+                actor: context.Source,
+                subject: world.IsAlive(context.Target) ? context.Target : context.Source,
+                explicitScopeHost: context.TargetContext);
+            if (!runtime.ProgressionEvaluator.TryResolveScopeHost(templateData.ProgressionScope, in evaluationContext, out Entity scopeHost))
+            {
+                throw new InvalidOperationException("CompleteProgression could not resolve its configured progression scope.");
+            }
+
+            if (!runtime.ProgressionEvaluator.TryApply(scopeHost, templateData.ProgressionId, templateData.ProgressionChange))
+            {
+                throw new InvalidOperationException("CompleteProgression requires the resolved scope host to author ProgressionStateBuffer before effects run.");
             }
         }
 

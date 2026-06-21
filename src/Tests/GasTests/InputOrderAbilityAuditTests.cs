@@ -368,6 +368,29 @@ namespace Ludots.Tests.GAS
         }
 
         [Test]
+        public void AbilityDefinitionRegistry_RegisterFromEntity_CopiesProgressionRequirements()
+        {
+            using var world = World.Create();
+            var template = world.Create(
+                new AbilityTemplate(),
+                new AbilityExecSpec(),
+                new AbilityProgressionRequirements
+                {
+                    UseRequirementId = 1201,
+                    ShowRequirementId = 1202
+                });
+
+            var defs = new AbilityDefinitionRegistry();
+            defs.RegisterFromEntity(world, template, abilityId: 6011);
+
+            That(defs.TryGet(6011, out var def), Is.True);
+            That(def.HasUseProgressionRequirement, Is.True);
+            That(def.UseProgressionRequirementId, Is.EqualTo(1201));
+            That(def.HasShowProgressionRequirement, Is.True);
+            That(def.ShowProgressionRequirementId, Is.EqualTo(1202));
+        }
+
+        [Test]
         public void OrderBufferSystem_PromoteQueued_WritesBlackboard()
         {
             using var world = World.Create();

@@ -6,12 +6,15 @@ using System.Text.Json.Nodes;
 using Arch.Core;
 using Arch.Core.Utils;
 using Arch.Core.Extensions;
+using Ludots.Core.Association;
 using Ludots.Core.Components;
 using Ludots.Core.Gameplay.GAS;
 using Ludots.Core.Diagnostics;
 using Ludots.Core.Gameplay.GAS.Components;
 using Ludots.Core.Gameplay.GAS.Registry;
 using Ludots.Core.Gameplay.Spawning;
+using Ludots.Core.Gameplay.Progression.Components;
+using Ludots.Core.Gameplay.Progression.Registry;
 using Ludots.Core.Mathematics;
 using Ludots.Core.Mathematics.FixedPoint;
 using Ludots.Core.Layers;
@@ -49,6 +52,10 @@ namespace Ludots.Core.Config
             Register("EntityLayer", SetEntityLayer, null, Component<Ludots.Core.Gameplay.Components.EntityLayer>.ComponentType);
             Register("AttributeBuffer", SetAttributeBuffer);
             Register("AbilityStateBuffer", SetAbilityStateBuffer);
+            Register("AbilityProgressionRequirements", SetAbilityProgressionRequirements);
+            Register("ProgressionStateBuffer", SetProgressionStateBuffer);
+            Register("ProgressionScopeHost", SetProgressionScopeHost);
+            Register("ProgressionScopeBinding", SetProgressionScopeBinding);
             Register("AbilityFormSetRef", SetAbilityFormSetRef);
             Register<ForceInput2D>("ForceInput2D");
             Register<GameplayTagContainer>("GameplayTagContainer");
@@ -408,6 +415,88 @@ namespace Ludots.Core.Config
                 }
             }
             entity.Add(buffer);
+        }
+
+        private static void SetAbilityProgressionRequirements(Entity entity, JsonNode data)
+        {
+            if (data is not JsonObject obj)
+            {
+                throw new InvalidOperationException("AbilityProgressionRequirements requires an object payload.");
+            }
+
+            ValidateProperties(obj, "AbilityProgressionRequirements", "useRequirement", "showRequirement");
+            var requirements = default(AbilityProgressionRequirements);
+            if (obj.TryGetPropertyValue("useRequirement", out JsonNode useNode))
+            {
+                string requirementName = ReadStringNode(useNode, "AbilityProgressionRequirements.useRequirement");
+                requirements.UseRequirementId = ResolveProgressionRequirementId(requirementName, "AbilityProgressionRequirements.useRequirement");
+            }
+
+            if (obj.TryGetPropertyValue("showRequirement", out JsonNode showNode))
+            {
+                string requirementName = ReadStringNode(showNode, "AbilityProgressionRequirements.showRequirement");
+                requirements.ShowRequirementId = ResolveProgressionRequirementId(requirementName, "AbilityProgressionRequirements.showRequirement");
+            }
+
+            entity.Add(requirements);
+        }
+
+        private static void SetProgressionStateBuffer(Entity entity, JsonNode data)
+        {
+            RequireEmptyObject(data, "ProgressionStateBuffer");
+            entity.Add(new ProgressionStateBuffer());
+        }
+
+        private static void SetProgressionScopeHost(Entity entity, JsonNode data)
+        {
+            if (!entity.Has<ProgressionStateBuffer>())
+            {
+                entity.Add(new ProgressionStateBuffer());
+            }
+
+            if (!entity.Has<ScopeMembershipRevision>())
+            {
+                entity.Add(new ScopeMembershipRevision());
+            }
+
+            var authoring = entity.Has<ScopeHostAuthoring>()
+                ? entity.Get<ScopeHostAuthoring>()
+                : default;
+            AddProgressionScopeEntries(ref authoring, data, "ProgressionScopeHost");
+            if (entity.Has<ScopeHostAuthoring>())
+            {
+                entity.Set(authoring);
+            }
+            else
+            {
+                entity.Add(authoring);
+            }
+        }
+
+        private static void SetProgressionScopeBinding(Entity entity, JsonNode data)
+        {
+            if (!entity.Has<ScopeRefBuffer>())
+            {
+                entity.Add(new ScopeRefBuffer());
+            }
+
+            if (!entity.Has<ScopeMemberTag>())
+            {
+                entity.Add(new ScopeMemberTag());
+            }
+
+            var authoring = entity.Has<ScopeBindingAuthoring>()
+                ? entity.Get<ScopeBindingAuthoring>()
+                : default;
+            AddProgressionScopeEntries(ref authoring, data, "ProgressionScopeBinding");
+            if (entity.Has<ScopeBindingAuthoring>())
+            {
+                entity.Set(authoring);
+            }
+            else
+            {
+                entity.Add(authoring);
+            }
         }
 
         private static byte ParseSelectionEnabled(JsonNode node, string context)
@@ -952,6 +1041,122 @@ namespace Ludots.Core.Config
 
             value = node.GetValue<int>();
             return true;
+        }
+
+        private static void AddProgressionScopeEntries(ref ScopeHostAuthoring authoring, JsonNode data, string context)
+        {
+            if (data is not JsonObject obj)
+            {
+                throw new InvalidOperationException($"{context} requires an object payload.");
+            }
+
+            ValidateProperties(obj, context, "scope", "hostKey", "entries");
+            if (obj.TryGetPropertyValue("entries", out JsonNode entriesNode))
+            {
+                if (entriesNode is not JsonArray entries)
+                {
+                    throw new InvalidOperationException($"{context}.entries requires an array.");
+                }
+
+                for (int i = 0; i < entries.Count; i++)
+                {
+                    if (entries[i] is not JsonObject entryObj)
+                    {
+                        throw new InvalidOperationException($"{context}.entries[{i}] requires an object payload.");
+                    }
+
+                    AddProgressionScopeEntry(ref authoring, entryObj, $"{context}.entries[{i}]");
+                }
+
+                return;
+            }
+
+            AddProgressionScopeEntry(ref authoring, obj, context);
+        }
+
+        private static void AddProgressionScopeEntries(ref ScopeBindingAuthoring authoring, JsonNode data, string context)
+        {
+            if (data is not JsonObject obj)
+            {
+                throw new InvalidOperationException($"{context} requires an object payload.");
+            }
+
+            ValidateProperties(obj, context, "scope", "hostKey", "entries");
+            if (obj.TryGetPropertyValue("entries", out JsonNode entriesNode))
+            {
+                if (entriesNode is not JsonArray entries)
+                {
+                    throw new InvalidOperationException($"{context}.entries requires an array.");
+                }
+
+                for (int i = 0; i < entries.Count; i++)
+                {
+                    if (entries[i] is not JsonObject entryObj)
+                    {
+                        throw new InvalidOperationException($"{context}.entries[{i}] requires an object payload.");
+                    }
+
+                    AddProgressionScopeEntry(ref authoring, entryObj, $"{context}.entries[{i}]");
+                }
+
+                return;
+            }
+
+            AddProgressionScopeEntry(ref authoring, obj, context);
+        }
+
+        private static void AddProgressionScopeEntry(ref ScopeHostAuthoring authoring, JsonObject obj, string context)
+        {
+            ValidateProperties(obj, context, "scope", "hostKey");
+            int scopeNameKeyId = ConfigKeyRegistry.Register(RequireStringProperty(obj, "scope", context));
+            int hostKeyId = ConfigKeyRegistry.Register(RequireStringProperty(obj, "hostKey", context));
+            if (!authoring.TryAdd(scopeNameKeyId, hostKeyId))
+            {
+                throw new InvalidOperationException($"{context} exceeds ProgressionScopeHost capacity.");
+            }
+        }
+
+        private static void AddProgressionScopeEntry(ref ScopeBindingAuthoring authoring, JsonObject obj, string context)
+        {
+            ValidateProperties(obj, context, "scope", "hostKey");
+            int scopeNameKeyId = ConfigKeyRegistry.Register(RequireStringProperty(obj, "scope", context));
+            int hostKeyId = ConfigKeyRegistry.Register(RequireStringProperty(obj, "hostKey", context));
+            if (!authoring.TryAdd(scopeNameKeyId, hostKeyId))
+            {
+                throw new InvalidOperationException($"{context} exceeds ProgressionScopeBinding capacity.");
+            }
+        }
+
+        private static int ResolveProgressionRequirementId(string requirementName, string context)
+        {
+            int requirementId = ProgressionRequirementIdRegistry.GetId(requirementName);
+            if (requirementId <= 0)
+            {
+                throw new InvalidOperationException($"{context} references unknown progression requirement '{requirementName}'.");
+            }
+
+            return requirementId;
+        }
+
+        private static string ReadStringNode(JsonNode node, string context)
+        {
+            if (node == null || node.GetValueKind() == JsonValueKind.Null)
+            {
+                throw new InvalidOperationException($"{context} requires a non-null string value.");
+            }
+
+            if (node.GetValueKind() != JsonValueKind.String)
+            {
+                throw new InvalidOperationException($"{context} requires a string value.");
+            }
+
+            string value = node.GetValue<string>();
+            if (string.IsNullOrWhiteSpace(value))
+            {
+                throw new InvalidOperationException($"{context} requires a non-empty string value.");
+            }
+
+            return value;
         }
 
         private static void RequireEmptyObject(JsonNode data, string context)

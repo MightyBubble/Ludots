@@ -140,6 +140,11 @@ namespace Ludots.Core.Gameplay.GAS
         public AbilityPresentationConfig? Presentation;
         public bool HasInputBindingOverride;
         public AbilityInputBindingOverride InputBindingOverride;
+
+        public int UseProgressionRequirementId;
+        public bool HasUseProgressionRequirement;
+        public int ShowProgressionRequirementId;
+        public bool HasShowProgressionRequirement;
     }
 
     public sealed class AbilityDefinitionRegistry
@@ -226,6 +231,21 @@ namespace Ludots.Core.Gameplay.GAS
             if (def.HasActivationPrecondition)
             {
                 def.ActivationPrecondition = world.Get<AbilityActivationPrecondition>(templateEntity);
+            }
+            if (world.Has<AbilityProgressionRequirements>(templateEntity))
+            {
+                var requirements = world.Get<AbilityProgressionRequirements>(templateEntity);
+                if (requirements.UseRequirementId > 0)
+                {
+                    def.UseProgressionRequirementId = requirements.UseRequirementId;
+                    def.HasUseProgressionRequirement = true;
+                }
+
+                if (requirements.ShowRequirementId > 0)
+                {
+                    def.ShowProgressionRequirementId = requirements.ShowRequirementId;
+                    def.HasShowProgressionRequirement = true;
+                }
             }
             Register(abilityId, in def);
         }

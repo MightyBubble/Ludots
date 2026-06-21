@@ -1,0 +1,14 @@
+{
+  "Id": "fog_vision_decay_showcase",
+  "Tags": ["showcase", "knowledge", "fog_vision_decay"],
+  "DefaultCamera": {
+    "VirtualCameraId": "Tactical",
+    "TargetXCm": 0,
+    "TargetYCm": 0,
+    "DistanceCm": 16000,
+    "Pitch": 62,
+    "Yaw": 180,
+    "FovYDeg": 48
+  },
+  "Entities": []
+}

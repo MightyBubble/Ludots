@@ -32,8 +32,6 @@ namespace Ludots.Core.Gameplay.Items
     public struct ItemContainerCm
     {
         public int LayoutId;
-        public Entity Owner;
-        public ItemContainerOwnerKind OwnerKind;
         public ItemContainerPurpose Purpose;
     }
 

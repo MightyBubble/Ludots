@@ -1,0 +1,22 @@
+{
+  "MapId": "team_research_showcase",
+  "Header": "Team Research Showcase",
+  "Summary": "A team meta-entity owns one shared technology. Add more researchers, pulse research, and watch the unlock apply to the whole team.",
+  "Controls": "A add member | Space research pulse | R reset",
+  "TeamScope": "team",
+  "CollectionKey": "team.members",
+  "ProgressionId": "Progression.Showcase.TeamResearch.SignalRelay",
+  "RequirementId": "Req.Showcase.TeamResearch.SignalRelay.Use",
+  "RequiredMembers": 2,
+  "ResearchCost": 100,
+  "ContributionPerMember": 10,
+  "UnlockLabel": "Signal Relay",
+  "MemberTag": "Role.Showcase.Researcher",
+  "TeamHostName": "Team Research Cell",
+  "ResearcherName": "Lead Researcher",
+  "Members": [
+    { "Id": "lead", "Label": "Lead Researcher", "ContributionMultiplier": 2, "StartsActive": true },
+    { "Id": "scribe", "Label": "Field Scribe", "ContributionMultiplier": 1, "StartsActive": false },
+    { "Id": "engineer", "Label": "Relay Engineer", "ContributionMultiplier": 1, "StartsActive": false }
+  ]
+}
