@@ -74,6 +74,7 @@ public sealed class MassFlowSimulationState
     private int[] _separationHashSearchRadiusCellsByAgent = Array.Empty<int>();
     private int[] _hardResolveHashSearchRadiusCellsByAgent = Array.Empty<int>();
     private float[] _unitTargetsCm = Array.Empty<float>();
+    private float[] _unitTargetStopThresholdsCm = Array.Empty<float>();
     private byte[] _hasUnitTarget = Array.Empty<byte>();
     private byte[] _selectedFlags = Array.Empty<byte>();
     private byte[] _hardResolveCandidates = Array.Empty<byte>();
@@ -532,16 +533,30 @@ public sealed class MassFlowSimulationState
 
     public bool SetUnitTarget(int index, float xCm, float yCm, bool resetRecovery = false)
     {
+        return SetUnitTarget(index, xCm, yCm, stopThresholdCm: 0f, resetRecovery);
+    }
+
+    public bool SetUnitTarget(int index, float xCm, float yCm, float stopThresholdCm, bool resetRecovery = false)
+    {
         if ((uint)index >= (uint)UnitCount)
         {
             throw new InvalidOperationException(
                 $"MassFlow unit target index {index} exceeds current unit count {UnitCount}.");
         }
 
+        if (stopThresholdCm < 0f)
+        {
+            throw new InvalidOperationException("MassFlow unit target stop threshold requires stopThresholdCm >= 0.");
+        }
+
         int offset = index << 1;
         bool wasInactive = _hasUnitTarget[index] == 0;
         ClampLocalToWorldBounds(ref xCm, ref yCm, _bodyRadiiCm[index]);
-        bool targetChanged = wasInactive || _unitTargetsCm[offset] != xCm || _unitTargetsCm[offset + 1] != yCm;
+        bool targetChanged =
+            wasInactive ||
+            _unitTargetsCm[offset] != xCm ||
+            _unitTargetsCm[offset + 1] != yCm ||
+            _unitTargetStopThresholdsCm[index] != stopThresholdCm;
         if (!targetChanged && !resetRecovery)
         {
             return false;
@@ -549,6 +564,7 @@ public sealed class MassFlowSimulationState
 
         _unitTargetsCm[offset] = xCm;
         _unitTargetsCm[offset + 1] = yCm;
+        _unitTargetStopThresholdsCm[index] = stopThresholdCm;
         _hasUnitTarget[index] = 1;
         if (targetChanged)
         {
@@ -719,6 +735,7 @@ public sealed class MassFlowSimulationState
 
         ResetUnitArrivalState(index, clearRetryCount: true);
         _hasUnitTarget[index] = 0;
+        _unitTargetStopThresholdsCm[index] = 0f;
         _arrivalEventEmittedFlags[index] = 0;
         MarkEntityDirty(index);
     }
@@ -736,6 +753,7 @@ public sealed class MassFlowSimulationState
         float y = _positionsCm[offset + 1];
         _unitTargetsCm[offset] = x;
         _unitTargetsCm[offset + 1] = y;
+        _unitTargetStopThresholdsCm[index] = 0f;
         _hasUnitTarget[index] = 1;
         _unitRetryCounts[index] = 0;
         _arrivalEventEmittedFlags[index] = 0;
@@ -1134,6 +1152,7 @@ public sealed class MassFlowSimulationState
             Array.Resize(ref _speedsCmPerSecond, unitCount);
             Array.Resize(ref _separationHashSearchRadiusCellsByAgent, unitCount);
             Array.Resize(ref _hardResolveHashSearchRadiusCellsByAgent, unitCount);
+            Array.Resize(ref _unitTargetStopThresholdsCm, unitCount);
             Array.Resize(ref _hasUnitTarget, unitCount);
             Array.Resize(ref _selectedFlags, unitCount);
             Array.Resize(ref _hardResolveCandidates, unitCount);
@@ -1258,6 +1277,7 @@ public sealed class MassFlowSimulationState
         _maxBodyRadiusCm = 0f;
         Array.Clear(_velocitiesCm, 0, UnitCount * 2);
         Array.Clear(_unitTargetsCm, 0, UnitCount * 2);
+        Array.Clear(_unitTargetStopThresholdsCm, 0, UnitCount);
         Array.Clear(_hasUnitTarget, 0, UnitCount);
         Array.Clear(_selectedFlags, 0, UnitCount);
         Array.Clear(_heavyProfileFlags, 0, UnitCount);
@@ -1501,6 +1521,7 @@ public sealed class MassFlowSimulationState
         _maxBodyRadiusCm = 0f;
         Array.Clear(_velocitiesCm, 0, UnitCount * 2);
         Array.Clear(_unitTargetsCm, 0, UnitCount * 2);
+        Array.Clear(_unitTargetStopThresholdsCm, 0, UnitCount);
         Array.Clear(_hasUnitTarget, 0, UnitCount);
         Array.Clear(_selectedFlags, 0, UnitCount);
         Array.Clear(_heavyProfileFlags, 0, UnitCount);
@@ -1815,19 +1836,24 @@ public sealed class MassFlowSimulationState
             float unitArrivalFactor = 1f;
             bool suppressTargetMotion = false;
             bool hasGoalTarget = false;
+            bool hasUnitNavigationTarget = false;
+            float activeTargetStopThresholdSq = unitTargetStopThresholdSq;
             float speed = _speedsCmPerSecond[i];
 
             if (_hasUnitTarget[i] != 0)
             {
                 hasGoalTarget = true;
+                hasUnitNavigationTarget = true;
                 targetX = _unitTargetsCm[i2];
                 targetY = _unitTargetsCm[i2 + 1];
+                float targetStopThresholdSq = ResolveUnitTargetStopThresholdSq(i, unitTargetStopThresholdSq);
+                activeTargetStopThresholdSq = targetStopThresholdSq;
                 float toTargetX = targetX - px;
                 float toTargetY = targetY - py;
                 float targetDistSq = toTargetX * toTargetX + toTargetY * toTargetY;
                 if (ArrivalTuning.Enabled && _unitSettledFlags[i] != 0)
                 {
-                    if (ShouldRetryTargetAfterPush(i, px, py, targetDistSq, unitTargetStopThresholdSq))
+                    if (ShouldRetryTargetAfterPush(i, px, py, targetDistSq, targetStopThresholdSq))
                     {
                         ExitSettledState(i, px, py);
                     }
@@ -1839,7 +1865,7 @@ public sealed class MassFlowSimulationState
 
                 if (!suppressTargetMotion && ArrivalTuning.Enabled)
                 {
-                    if (targetDistSq <= unitTargetStopThresholdSq)
+                    if (targetDistSq <= targetStopThresholdSq)
                     {
                         EnterSettledState(i, px, py);
                         suppressTargetMotion = true;
@@ -1859,7 +1885,7 @@ public sealed class MassFlowSimulationState
                     ResetUnitProgressAnchor(i, px, py);
                 }
 
-                if (!suppressTargetMotion && targetDistSq > unitTargetStopThresholdSq)
+                if (!suppressTargetMotion && targetDistSq > targetStopThresholdSq)
                 {
                     float invDist = FastInvSqrt(targetDistSq);
                     desiredX = toTargetX * invDist;
@@ -2010,6 +2036,11 @@ public sealed class MassFlowSimulationState
             float effectiveArrivalCm = inFormation
                 ? Semantics.Group.FormationFlowSlowRadiusCm
                 : arrivalRadiusCm;
+            if (hasUnitNavigationTarget)
+            {
+                effectiveArrivalCm = MathF.Sqrt(MathF.Max(activeTargetStopThresholdSq, Semantics.Solver.DirectionEpsilonSq));
+            }
+
             float effectiveArrivalSq = effectiveArrivalCm * effectiveArrivalCm;
             if (!suppressTargetMotion && hasGoalTarget && directTargetSq < effectiveArrivalSq)
             {
@@ -2455,6 +2486,14 @@ public sealed class MassFlowSimulationState
         float dy = py - _unitSettledAnchorCm[i2 + 1];
         float wakeDistanceCm = ArrivalTuning.WakePushDistanceCm;
         return (dx * dx) + (dy * dy) >= wakeDistanceCm * wakeDistanceCm;
+    }
+
+    private float ResolveUnitTargetStopThresholdSq(int index, float configuredStopThresholdSq)
+    {
+        float explicitStopThresholdCm = _unitTargetStopThresholdsCm[index];
+        return explicitStopThresholdCm > 0f
+            ? explicitStopThresholdCm * explicitStopThresholdCm
+            : configuredStopThresholdSq;
     }
 
     private void EnterSettledState(int index, float px, float py)

@@ -16,6 +16,8 @@ namespace Ludots.Core.MassCrowd.Systems;
 
 internal sealed class MassNavigationLocalCommandInputSystem : ISystem<float>
 {
+    private static readonly QueryDescription AuthoredPlayerOwnerQuery = new QueryDescription().WithAll<PlayerOwner>();
+
     private readonly GameEngine _engine;
     private readonly MassNavigationSimulationRuntime _simulation;
 
@@ -99,7 +101,8 @@ internal sealed class MassNavigationLocalCommandInputSystem : ISystem<float>
             localObj is not Entity local ||
             !_engine.World.IsAlive(local))
         {
-            throw new InvalidOperationException("MassCrowd runtime requires LocalPlayerEntity before submitting move orders.");
+            local = ResolveSingleAuthoredPlayerOwner();
+            _engine.GlobalContext[CoreServiceKeys.LocalPlayerEntity.Name] = local;
         }
 
         if (!_engine.World.TryGet(local, out PlayerOwner owner))
@@ -108,5 +111,23 @@ internal sealed class MassNavigationLocalCommandInputSystem : ISystem<float>
         }
 
         return owner.PlayerId;
+    }
+
+    private Entity ResolveSingleAuthoredPlayerOwner()
+    {
+        Entity resolved = Entity.Null;
+        int count = 0;
+        _engine.World.Query(in AuthoredPlayerOwnerQuery, (Entity entity, ref PlayerOwner _) =>
+        {
+            resolved = entity;
+            count++;
+        });
+
+        return count switch
+        {
+            1 => resolved,
+            0 => throw new InvalidOperationException("MassCrowd runtime requires LocalPlayerEntity or exactly one authored PlayerOwner before submitting move orders."),
+            _ => throw new InvalidOperationException("MassCrowd runtime found multiple PlayerOwner entities before LocalPlayerEntity was resolved; author one local player or bind CoreServiceKeys.LocalPlayerEntity explicitly.")
+        };
     }
 }

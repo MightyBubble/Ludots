@@ -4,7 +4,8 @@ using Arch.System;
 using Ludots.Core.Components;
 using Ludots.Core.Gameplay.GAS.Components;
 using Ludots.Core.Gameplay.GAS.Orders;
-using RoadNetworkShowcaseMod.Gameplay;
+using Ludots.Core.MassCrowd.Runtime;
+using Ludots.Core.MovePlanning;
 using RoadNetworkShowcaseMod.Runtime;
 
 namespace RoadNetworkShowcaseMod.Systems
@@ -15,15 +16,16 @@ namespace RoadNetworkShowcaseMod.Systems
             .WithAll<RoadColumnTag, OrderBuffer, WorldPositionCm>();
 
         private readonly int _roadMoveFollowOrderTypeId;
-        private readonly RoadNavPlanStore _plans;
-        private readonly RoadMoveRuntimeService _runtime;
-        private readonly RoadRouteWalkStrategy _walk = new();
+        private readonly MovePlanStore _plans;
+        private readonly MovePlanRuntimeService _runtime;
+        private readonly IMovePlanExecutionSink _executionSink;
 
-        public RoadMoveOrderBindingSystem(World world, int roadMoveFollowOrderTypeId, RoadNavPlanStore plans, RoadMoveRuntimeService runtime) : base(world)
+        public RoadMoveOrderBindingSystem(World world, int roadMoveFollowOrderTypeId, MovePlanStore plans, MovePlanRuntimeService runtime, MassNavigationSimulationRuntime simulation) : base(world)
         {
             _roadMoveFollowOrderTypeId = roadMoveFollowOrderTypeId;
             _plans = plans ?? throw new ArgumentNullException(nameof(plans));
             _runtime = runtime ?? throw new ArgumentNullException(nameof(runtime));
+            _executionSink = new MassMovePlanExecutionSink(simulation ?? throw new ArgumentNullException(nameof(simulation)));
         }
 
         public override void Update(in float dt)
@@ -43,22 +45,21 @@ namespace RoadNetworkShowcaseMod.Systems
                     ref var buffer = ref buffers[index];
                     if (!buffer.HasActive || buffer.ActiveOrder.Order.OrderTypeId != _roadMoveFollowOrderTypeId)
                     {
-                        _walk.Clear(World, entity);
+                        _executionSink.Clear(World, entity);
                         _runtime.Clear(entity);
                         continue;
                     }
 
                     ref readonly Order activeOrder = ref buffer.ActiveOrder.Order;
-                    ref RoadMoveOrderRuntime orderRuntime = ref _runtime.EnsureOrderRuntime(entity);
-                    ref RoadNavPlanRuntime planRuntime = ref _runtime.EnsurePlanRuntime(entity);
-                    bool hasPlan = _plans.TryGetPlan(entity, activeOrder.OrderId, out RoadNavPlanView plan);
+                    ref MovePlanOrderRuntime orderRuntime = ref _runtime.EnsureOrderRuntime(entity);
+                    ref MovePlanRuntime planRuntime = ref _runtime.EnsurePlanRuntime(entity);
+                    bool hasPlan = _plans.TryGetPlan(entity, activeOrder.OrderId, out _);
                     bool needsBind =
                         orderRuntime.ActiveOrderId != activeOrder.OrderId ||
-                        orderRuntime.LifecycleState == RoadMoveLifecycleState.None ||
+                        orderRuntime.LifecycleState == MovePlanLifecycleState.None ||
                         planRuntime.BoundOrderId != activeOrder.OrderId ||
                         !hasPlan ||
-                        planRuntime.PlanGeneration != plan.PlanGeneration ||
-                        !World.Has<RoadMoveExecutionIntent>(entity);
+                        !World.Has<MovePlanExecutionIntent>(entity);
                     if (!needsBind)
                     {
                         continue;

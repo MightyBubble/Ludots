@@ -927,6 +927,26 @@ public sealed class MassNavigationSimulationRuntime
         return ToWorldCm(GetAgentLocalPositionCm(agentIndex));
     }
 
+    public bool TryGetAgentWorldPositionCm(World world, Entity agent, out System.Numerics.Vector2 worldCm)
+    {
+        ArgumentNullException.ThrowIfNull(world);
+        worldCm = default;
+        if (!world.IsAlive(agent) ||
+            !world.TryGet(agent, out MassCrowdAgentIndex index))
+        {
+            return false;
+        }
+
+        int agentIndex = index.Value;
+        if ((uint)agentIndex >= (uint)MassFlow.UnitCount)
+        {
+            return false;
+        }
+
+        worldCm = GetAgentWorldPositionCm(agentIndex);
+        return true;
+    }
+
     public MassNavigationGroupSemantics GetRuntimeGroupSemantics()
     {
         return MassFlow.Semantics.Group;
@@ -1073,10 +1093,37 @@ public sealed class MassNavigationSimulationRuntime
         return MassFlow.SetUnitTarget(agentIndex, xCm, yCm, resetRecovery);
     }
 
+    public bool SetAgentNavigationTargetLocalCm(
+        int agentIndex,
+        float xCm,
+        float yCm,
+        float stopThresholdCm,
+        bool resetRecovery = false)
+    {
+        RequireAgentIndex(agentIndex);
+        return MassFlow.SetUnitTarget(agentIndex, xCm, yCm, stopThresholdCm, resetRecovery);
+    }
+
     public bool SetAgentNavigationTargetWorldCm(int agentIndex, float worldXCm, float worldYCm, bool resetRecovery = false)
     {
         RequireAgentIndex(agentIndex);
         return MassFlow.SetUnitTarget(agentIndex, ToLocalXCm(worldXCm), ToLocalYCm(worldYCm), resetRecovery);
+    }
+
+    public bool SetAgentNavigationTargetWorldCm(
+        int agentIndex,
+        float worldXCm,
+        float worldYCm,
+        float stopThresholdCm,
+        bool resetRecovery = false)
+    {
+        RequireAgentIndex(agentIndex);
+        return MassFlow.SetUnitTarget(
+            agentIndex,
+            ToLocalXCm(worldXCm),
+            ToLocalYCm(worldYCm),
+            stopThresholdCm,
+            resetRecovery);
     }
 
     public bool SetAgentNavigationTargetWorldCm(Entity agent, Vector2 worldCm, bool resetRecovery = false)
@@ -1087,6 +1134,26 @@ public sealed class MassNavigationSimulationRuntime
         }
 
         return SetAgentNavigationTargetWorldCm(agentIndex, worldCm.X, worldCm.Y, resetRecovery);
+    }
+
+    public bool SetAgentNavigationTargetWorldCm(
+        Entity agent,
+        Vector2 worldCm,
+        float stopThresholdCm,
+        bool resetRecovery = false)
+    {
+        if (!AgentState.TryGetControllableIndex(agent, out int agentIndex))
+        {
+            return false;
+        }
+
+        return SetAgentNavigationTargetWorldCm(agentIndex, worldCm.X, worldCm.Y, stopThresholdCm, resetRecovery);
+    }
+
+    public void ReleaseAgentNavigationTarget(int agentIndex)
+    {
+        RequireAgentIndex(agentIndex);
+        MassFlow.ReleaseUnitToTeamTarget(agentIndex);
     }
 
     public int DrainArrivalEvents(Span<MassNavigationArrivalEvent> destination)

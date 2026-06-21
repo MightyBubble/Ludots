@@ -1,14 +1,14 @@
 using System;
-using Ludots.Core.Mathematics.FixedPoint;
-using RoadNetworkShowcaseMod.Runtime;
+using System.Numerics;
+using Ludots.Core.MovePlanning;
 
 namespace RoadNetworkShowcaseMod.Gameplay
 {
     internal sealed class RoadRouteTimeoutPolicy
     {
         public bool Update(
-            ref RoadNavPlanRuntime state,
-            Fix64Vec2 position,
+            ref MovePlanRuntime state,
+            Vector2 position,
             int waypointIndex,
             float dt,
             float minProgressCm,
@@ -23,7 +23,7 @@ namespace RoadNetworkShowcaseMod.Gameplay
             minProgressCm = Math.Max(0f, minProgressCm);
             stallTimeoutSeconds = Math.Max(0.05f, stallTimeoutSeconds);
             bool progressed = waypointIndex != state.LastResolvedWaypointIndex ||
-                              DistanceSquaredCm(position, state.LastProgressPosition) >= minProgressCm * minProgressCm;
+                              DistanceSquaredCm(position, state.LastProgressPositionCm) >= minProgressCm * minProgressCm;
             if (progressed)
             {
                 Reset(ref state, position, waypointIndex);
@@ -34,24 +34,24 @@ namespace RoadNetworkShowcaseMod.Gameplay
             return state.StallSeconds >= stallTimeoutSeconds;
         }
 
-        public void Reset(ref RoadNavPlanRuntime state, Fix64Vec2 position, int waypointIndex)
+        public void Reset(ref MovePlanRuntime state, Vector2 position, int waypointIndex)
         {
-            state.LastProgressPosition = position;
+            state.LastProgressPositionCm = position;
             state.LastResolvedWaypointIndex = waypointIndex;
             state.StallSeconds = 0f;
             state.Initialized = 1;
         }
 
-        public void Clear(ref RoadNavPlanRuntime state)
+        public void Clear(ref MovePlanRuntime state)
         {
             state = default;
         }
 
-        private static float DistanceSquaredCm(Fix64Vec2 current, Fix64Vec2 target)
+        private static float DistanceSquaredCm(Vector2 current, Vector2 target)
         {
             var delta = target - current;
-            float dx = delta.X.ToFloat();
-            float dy = delta.Y.ToFloat();
+            float dx = delta.X;
+            float dy = delta.Y;
             return (dx * dx) + (dy * dy);
         }
     }

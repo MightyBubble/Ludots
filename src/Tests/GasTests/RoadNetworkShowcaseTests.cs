@@ -1,6 +1,7 @@
 using System.Collections.Generic;
 using System.IO;
 using System.Numerics;
+using System.Linq;
 using System.Text;
 using System.Text.Json;
 using Arch.Core;
@@ -9,27 +10,26 @@ using Ludots.Core.Components;
 using Ludots.Core.Engine;
 using Ludots.Core.Gameplay.GAS.Components;
 using Ludots.Core.Gameplay.GAS.Orders;
+using Ludots.Core.Gameplay.Components;
 using Ludots.Core.Input.Config;
 using Ludots.Core.Input.Runtime;
-using Ludots.Core.Mathematics.FixedPoint;
 using Ludots.Core.Mathematics;
 using Ludots.Core.Input.Selection;
+using Ludots.Core.MassCrowd;
+using Ludots.Core.MassCrowd.Runtime;
+using Ludots.Core.MovePlanning;
 using Ludots.Core.Navigation.GraphWorld;
 using Ludots.Core.Navigation.AgentProfiles;
 using Ludots.Core.Navigation.NavMesh;
 using Ludots.Core.Navigation.NavMesh.Config;
 using Ludots.Core.Navigation.Pathing;
 using Ludots.Core.Navigation.Pathing.Config;
-using Ludots.Core.Navigation2D.Config;
-using Ludots.Core.Navigation2D.Components;
-using Ludots.Core.Navigation2D.Runtime;
 using Ludots.Core.Map.Board;
 using Ludots.Core.Presentation.Camera;
 using Ludots.Core.Presentation.Components;
 using Ludots.Core.Presentation.Rendering;
-using Ludots.Core.Physics2D.Components;
-using Ludots.Core.Physics2D.Systems;
 using Ludots.Core.Scripting;
+using Ludots.Core.Spatial;
 using Ludots.Core.Systems;
 using Ludots.Platform.Abstractions;
 using Ludots.UI;
@@ -159,12 +159,12 @@ namespace Ludots.Tests.GAS
             Entity actor = world.Create();
             Order order = CreateRouteOrder(actor, roadMoveFollowOrderTypeId: 171, (0, 0), (250, 120), (500, 240));
             order.Args.Spatial.A0 = 2;
-            var plans = new RoadNavPlanStore();
+            var plans = new MovePlanStore(new RoadRouteFinalTargetMovePlanResolver());
             Assert.That(plans.TryBindFromOrder(actor, in order, out _, out _), Is.True);
-            Assert.That(plans.TryGetPlan(actor, order.OrderId, out RoadNavPlanView plan), Is.True);
+            Assert.That(plans.TryGetPlan(actor, order.OrderId, out MovePlanView plan), Is.True);
 
             var strategy = new RoadRouteSelectionStrategy();
-            bool selected = strategy.TrySelect(in plan, Fix64Vec2.FromInt(330, 170), currentWaypointIndex: 1, stopRadiusCm: 40f, out RoadRouteSelection selection);
+            bool selected = strategy.TrySelect(in plan, new Vector2(330f, 170f), currentWaypointIndex: 1, stopRadiusCm: 40f, out RoadRouteSelection selection);
 
             Assert.That(selected, Is.True);
             Assert.That(selection.Completed, Is.False);
@@ -184,17 +184,15 @@ namespace Ludots.Tests.GAS
             Entity actor = world.Create(
                 new Name { Value = "Runtime Cursor Column" },
                 new RoadColumnTag(),
+                new Team { Id = 1 },
+                new PlayerOwner { PlayerId = 1 },
+                new EntityLayer(category: 1u, mask: 1u),
+                new MassCrowdAgent { ProfileId = MassCrowdProfileRegistry.Register("Small") },
                 WorldPositionCm.FromCm(330, 170),
-                new Position2D { Value = Fix64Vec2.FromInt(330, 170) },
-                new NavAgent2D(),
-                new NavKinematics2D
-                {
-                    MaxSpeedCmPerSec = Fix64.FromInt(600),
-                    MaxAccelCmPerSec2 = Fix64.FromInt(1200)
-                },
                 OrderBuffer.CreateEmpty(),
                 new AttributeBuffer(),
                 new GameplayTagContainer());
+            MassNavigationSimulationRuntime simulation = CreateRoadMassRuntime(world, actor);
 
             ref var attributes = ref world.Get<AttributeBuffer>(actor);
             int moveSpeedId = Ludots.Core.Gameplay.GAS.Registry.AttributeRegistry.Register("MoveSpeed");
@@ -205,61 +203,175 @@ namespace Ludots.Tests.GAS
             routeOrder.Args.Spatial.A0 = 2;
             ref var buffer = ref world.Get<OrderBuffer>(actor);
             buffer.SetActiveDirect(in routeOrder, priority: 100);
-            var plans = new RoadNavPlanStore();
-            var runtime = new RoadMoveRuntimeService(world, plans);
+            var plans = new MovePlanStore(new RoadRouteFinalTargetMovePlanResolver());
+            var runtime = new MovePlanRuntimeService(world, plans);
             Assert.That(runtime.TryBindActiveOrder(actor, in routeOrder, preserveTimeoutCount: false, out _, out _), Is.True);
-            ref var planRuntime = ref world.Get<RoadNavPlanRuntime>(actor);
+            ref var planRuntime = ref world.Get<MovePlanRuntime>(actor);
             planRuntime.CurrentWaypointIndex = 1;
 
-            var system = new RoadMovePlanSelectionSystem(world, roadMoveFollowOrderTypeId, plans, runtime);
+            var system = new RoadMovePlanSelectionSystem(world, roadMoveFollowOrderTypeId, plans, runtime, simulation);
             system.Update(0.1f);
 
             ref readonly var activeOrder = ref world.Get<OrderBuffer>(actor).ActiveOrder.Order;
-            ref readonly var runtimeState = ref world.Get<RoadNavPlanRuntime>(actor);
+            ref readonly var runtimeState = ref world.Get<MovePlanRuntime>(actor);
             Assert.That(activeOrder.Args.Spatial.A0, Is.EqualTo(2), "Follow execution must not overwrite authored order payload.");
-            Assert.That(world.Get<RoadMoveOrderRuntime>(actor).ActiveOrderId, Is.EqualTo(44));
+            Assert.That(world.Get<MovePlanOrderRuntime>(actor).ActiveOrderId, Is.EqualTo(44));
             Assert.That(runtimeState.CurrentWaypointIndex, Is.EqualTo(1));
+            Assert.That(world.Get<MovePlanExecutionIntent>(actor).HasTarget, Is.EqualTo(1), "Follow execution must publish a MassCrowd move-plan intent.");
         }
 
         [Test]
-        public void RoadNavPlanStore_TryBindFromOrder_TrimsCurvedPrefixToProjectedActorPosition()
+        public void RoadNetworkShowcaseMovePlanExecution_DoesNotReferenceNavigation2DExecutionComponents()
+        {
+            string repoRoot = FindRepoRoot();
+            string showcaseRoot = Path.Combine(repoRoot, "mods", "showcases", "road_network", "RoadNetworkShowcaseMod");
+            string[] forbiddenTokens =
+            {
+                "NavGoal2D",
+                "NavAgent2D",
+                "NavKinematics2D",
+                "Navigation2D",
+            };
+
+            List<string> hits = Directory.EnumerateFiles(showcaseRoot, "*.cs", SearchOption.AllDirectories)
+                .SelectMany(file => File.ReadLines(file)
+                    .Select((line, lineIndex) => new { file, line, lineIndex })
+                    .Where(item => forbiddenTokens.Any(token => item.line.Contains(token, StringComparison.Ordinal)))
+                    .Select(item => $"{Path.GetRelativePath(repoRoot, item.file)}:{item.lineIndex + 1}: {item.line.Trim()}"))
+                .ToList();
+
+            Assert.That(hits, Is.Empty, "Road-network move-plan execution must stay on Core MovePlanning + MassFlow, not the deprecated Navigation2D sink:" + Environment.NewLine + string.Join(Environment.NewLine, hits));
+        }
+
+        [Test]
+        public void CoreMovePlanningSeam_DoesNotReferenceRoadShowcasePolicy()
+        {
+            string repoRoot = FindRepoRoot();
+            string seamRoot = Path.Combine(repoRoot, "src", "Core", "MovePlanning");
+            string[] forbiddenTokens =
+            {
+                "Road",
+                "Corridor",
+                "Fort",
+                "RoadNetwork",
+                "RoadRoute",
+            };
+
+            List<string> hits = Directory.EnumerateFiles(seamRoot, "*.cs", SearchOption.AllDirectories)
+                .SelectMany(file => File.ReadLines(file)
+                    .Select((line, lineIndex) => new { file, line, lineIndex })
+                    .Where(item => forbiddenTokens.Any(token => item.line.Contains(token, StringComparison.Ordinal)))
+                    .Select(item => $"{Path.GetRelativePath(repoRoot, item.file)}:{item.lineIndex + 1}: {item.line.Trim()}"))
+                .ToList();
+
+            Assert.That(hits, Is.Empty, "Core MovePlanning must remain a generic seam; route policy belongs to RoadNetworkShowcaseMod:" + Environment.NewLine + string.Join(Environment.NewLine, hits));
+        }
+
+        [Test]
+        public void RoadMovePlanRuntimeCursor_DoesNotUseOrderSpatialA0()
+        {
+            string repoRoot = FindRepoRoot();
+            string showcaseRoot = Path.Combine(repoRoot, "mods", "showcases", "road_network", "RoadNetworkShowcaseMod");
+            string[] scannedFiles =
+            {
+                Path.Combine(showcaseRoot, "Systems", "RoadMoveOrderBindingSystem.cs"),
+                Path.Combine(showcaseRoot, "Systems", "RoadMovePlanSelectionSystem.cs"),
+                Path.Combine(showcaseRoot, "Systems", "RoadMoveLifecycleSystem.cs"),
+                Path.Combine(showcaseRoot, "Systems", "RoadMoveExecutionSystem.cs"),
+                Path.Combine(showcaseRoot, "Runtime", "RoadNetworkShowcasePanelStateBuilder.cs"),
+                Path.Combine(showcaseRoot, "Gameplay", "RoadRoutePreviewSplineBuilder.cs"),
+            };
+
+            List<string> hits = scannedFiles
+                .SelectMany(file => File.ReadLines(file)
+                    .Select((line, lineIndex) => new { file, line, lineIndex })
+                    .Where(item => item.line.Contains(".A0", StringComparison.Ordinal) ||
+                                   item.line.Contains("Spatial.A0", StringComparison.Ordinal))
+                    .Select(item => $"{Path.GetRelativePath(repoRoot, item.file)}:{item.lineIndex + 1}: {item.line.Trim()}"))
+                .ToList();
+
+            Assert.That(hits, Is.Empty, "Road move-plan execution cursor must live in MovePlanRuntime.CurrentWaypointIndex, not OrderArgs.Spatial.A0:" + Environment.NewLine + string.Join(Environment.NewLine, hits));
+        }
+
+        [Test]
+        public void MassMovePlanExecutionSink_RequiresMassCrowdAgentIndex()
         {
             using var world = World.Create();
             Entity actor = world.Create(
-                new Position2D { Value = Fix64Vec2.FromInt(40, 340) },
-                WorldPositionCm.FromCm(40, 340));
+                new Name { Value = "Unbound Column" },
+                new RoadColumnTag(),
+                WorldPositionCm.FromCm(0, 0));
+            MassNavigationSimulationRuntime simulation = CreateRoadMassRuntimeWithoutAgents();
+            var sink = new MassMovePlanExecutionSink(simulation);
 
-            Order routeOrder = CreateRouteOrder(actor, roadMoveFollowOrderTypeId: 171, (-600, -120), (-300, 80), (0, 300), (300, 620), (600, 900));
-            var plans = new RoadNavPlanStore();
+            bool applied = sink.TryApply(world, actor, new MovePlanExecutionIntent
+            {
+                HasTarget = 1,
+                TargetWorldCm = new Vector2(400f, 0f),
+                SpeedCmPerSec = 1200f,
+                StopRadiusCm = 40f,
+            });
 
-            Assert.That(plans.TryBindFromOrder(actor, in routeOrder, Fix64Vec2.FromInt(40, 340), out _, out _), Is.True);
-            Assert.That(plans.TryGetPlan(actor, routeOrder.OrderId, out RoadNavPlanView plan), Is.True);
-            Assert.That(plan.Count, Is.EqualTo(3), "Execution slice should drop the curved path prefix that is already behind the actor and keep only the local projected start plus the remaining suffix.");
-            Assert.That(plan.TryGetWaypoint(0, out Fix64Vec2 projectedStart), Is.True);
-            Assert.That(projectedStart.X.ToInt(), Is.EqualTo(39).Within(1));
-            Assert.That(projectedStart.Y.ToInt(), Is.EqualTo(341).Within(1));
-            Assert.That(plan.TryGetWaypoint(1, out Fix64Vec2 firstForwardWaypoint), Is.True);
-            Assert.That(firstForwardWaypoint.X.ToInt(), Is.EqualTo(300));
-            Assert.That(firstForwardWaypoint.Y.ToInt(), Is.EqualTo(620));
-            Assert.That(plan.TryGetWaypoint(2, out Fix64Vec2 secondForwardWaypoint), Is.True);
-            Assert.That(secondForwardWaypoint.X.ToInt(), Is.EqualTo(600));
-            Assert.That(secondForwardWaypoint.Y.ToInt(), Is.EqualTo(900));
+            Assert.That(applied, Is.False, "MassFlow execution sink must fail explicitly when the entity has not been bound to MassCrowdAgentIndex.");
+            Assert.That(world.Has<MassCrowdAgentIndex>(actor), Is.False);
+            Assert.That(simulation.NavigationAgentCount, Is.EqualTo(0));
         }
 
         [Test]
-        public void RoadMoveRuntimeService_RebindsCurvedRoute_FromProjectedLocalSliceForEachDirection()
+        public void MassMovePlanExecutionSink_UnchangedHeldTarget_ReturnsSuccess()
+        {
+            using var world = World.Create();
+            Entity actor = CreateRoadMassAgent(world, "Held Target Column", xcm: 0, ycm: 0);
+            MassNavigationSimulationRuntime simulation = CreateRoadMassRuntime(world, actor);
+            var sink = new MassMovePlanExecutionSink(simulation);
+            var intent = new MovePlanExecutionIntent
+            {
+                HasTarget = 1,
+                TargetWorldCm = new Vector2(600f, 150f),
+                SpeedCmPerSec = 1200f,
+                StopRadiusCm = 45f,
+            };
+
+            Assert.That(sink.TryApply(world, actor, in intent), Is.True);
+            Assert.That(sink.TryApply(world, actor, in intent), Is.True, "A held MassFlow target reports unchanged at the lower layer, but the move-plan sink must treat that as successfully maintained.");
+
+            int agentIndex = world.Get<MassCrowdAgentIndex>(actor).Value;
+            Assert.That(simulation.TryGetAgentNavigationTargetWorldCm(agentIndex, out float targetX, out float targetY), Is.True);
+            Assert.That(targetX, Is.EqualTo(intent.TargetWorldCm.X).Within(0.01f));
+            Assert.That(targetY, Is.EqualTo(intent.TargetWorldCm.Y).Within(0.01f));
+        }
+
+        [Test]
+        public void MovePlanStore_TryBindFromOrder_TrimsCurvedPrefixToProjectedActorPosition()
+        {
+            using var world = World.Create();
+            Entity actor = world.Create(
+                WorldPositionCm.FromCm(40, 340));
+
+            Order routeOrder = CreateRouteOrder(actor, roadMoveFollowOrderTypeId: 171, (-600, -120), (-300, 80), (0, 300), (300, 620), (600, 900));
+            var plans = new MovePlanStore(new RoadRouteFinalTargetMovePlanResolver());
+
+            Assert.That(plans.TryBindFromOrder(actor, in routeOrder, new Vector2(40f, 340f), out _, out _), Is.True);
+            Assert.That(plans.TryGetPlan(actor, routeOrder.OrderId, out MovePlanView plan), Is.True);
+            Assert.That(plan.Count, Is.EqualTo(3), "Execution slice should drop the curved path prefix that is already behind the actor and keep only the local projected start plus the remaining suffix.");
+            Assert.That(plan.TryGetWaypoint(0, out Vector2 projectedStart), Is.True);
+            Assert.That(projectedStart.X, Is.EqualTo(39f).Within(1f));
+            Assert.That(projectedStart.Y, Is.EqualTo(341f).Within(1f));
+            Assert.That(plan.TryGetWaypoint(1, out Vector2 firstForwardWaypoint), Is.True);
+            Assert.That(firstForwardWaypoint.X, Is.EqualTo(300f));
+            Assert.That(firstForwardWaypoint.Y, Is.EqualTo(620f));
+            Assert.That(plan.TryGetWaypoint(2, out Vector2 secondForwardWaypoint), Is.True);
+            Assert.That(secondForwardWaypoint.X, Is.EqualTo(600f));
+            Assert.That(secondForwardWaypoint.Y, Is.EqualTo(900f));
+        }
+
+        [Test]
+        public void MovePlanRuntimeService_RebindsCurvedRoute_FromProjectedLocalSliceForEachDirection()
         {
             using var world = World.Create();
             Entity actor = world.Create(
                 new RoadColumnTag(),
                 WorldPositionCm.FromCm(40, 340),
-                new Position2D { Value = Fix64Vec2.FromInt(40, 340) },
-                new NavAgent2D(),
-                new NavKinematics2D
-                {
-                    MaxSpeedCmPerSec = Fix64.FromInt(600),
-                    MaxAccelCmPerSec2 = Fix64.FromInt(1200)
-                },
                 OrderBuffer.CreateEmpty(),
                 new AttributeBuffer(),
                 new GameplayTagContainer());
@@ -269,20 +381,20 @@ namespace Ludots.Tests.GAS
             Order westbound = CreateRouteOrder(actor, roadMoveFollowOrderTypeId: 171, (600, 900), (300, 620), (0, 300), (-300, 80), (-600, -120));
             westbound.OrderId = 102;
 
-            var plans = new RoadNavPlanStore();
-            var runtime = new RoadMoveRuntimeService(world, plans);
+            var plans = new MovePlanStore(new RoadRouteFinalTargetMovePlanResolver());
+            var runtime = new MovePlanRuntimeService(world, plans);
             var selection = new RoadRouteSelectionStrategy();
-            Fix64Vec2 actorPosition = world.Get<Position2D>(actor).Value;
+            Vector2 actorPosition = world.Get<WorldPositionCm>(actor).Value.ToVector2();
 
             Assert.That(runtime.TryBindActiveOrder(actor, in eastbound, preserveTimeoutCount: false, out _, out _), Is.True);
-            Assert.That(plans.TryGetPlan(actor, eastbound.OrderId, out RoadNavPlanView eastPlan), Is.True);
+            Assert.That(plans.TryGetPlan(actor, eastbound.OrderId, out MovePlanView eastPlan), Is.True);
             Assert.That(selection.TrySelect(in eastPlan, actorPosition, currentWaypointIndex: 0, stopRadiusCm: 40f, out RoadRouteSelection eastSelection), Is.True);
-            Assert.That(eastSelection.Target.X.ToFloat(), Is.GreaterThan(actorPosition.X.ToFloat()), "Eastbound rebind should immediately target the local forward suffix, not a waypoint from the curved prefix behind the actor.");
+            Assert.That(eastSelection.Target.X, Is.GreaterThan(actorPosition.X), "Eastbound rebind should immediately target the local forward suffix, not a waypoint from the curved prefix behind the actor.");
 
             Assert.That(runtime.TryBindActiveOrder(actor, in westbound, preserveTimeoutCount: false, out _, out _), Is.True);
-            Assert.That(plans.TryGetPlan(actor, westbound.OrderId, out RoadNavPlanView westPlan), Is.True);
+            Assert.That(plans.TryGetPlan(actor, westbound.OrderId, out MovePlanView westPlan), Is.True);
             Assert.That(selection.TrySelect(in westPlan, actorPosition, currentWaypointIndex: 0, stopRadiusCm: 40f, out RoadRouteSelection westSelection), Is.True);
-            Assert.That(westSelection.Target.X.ToFloat(), Is.LessThan(actorPosition.X.ToFloat()), "Westbound rebind should immediately target the local reverse suffix, instead of twitching back to the old curved prefix.");
+            Assert.That(westSelection.Target.X, Is.LessThan(actorPosition.X), "Westbound rebind should immediately target the local reverse suffix, instead of twitching back to the old curved prefix.");
         }
 
         [Test]
@@ -370,7 +482,8 @@ namespace Ludots.Tests.GAS
                 new AutoPathService(runtime, CreateNavRegistry(), CreateNavProfiles(agentProfiles), agentProfiles, pathStore, CreatePathingConfig()),
                 pathStore,
                 moveToOrderTypeId: 77);
-            globals[CoreServiceKeys.LoadedChunks.Name] = loadedChunks;
+            globals[CoreServiceKeys.LoadedChunks.Name] = new WorldGridLoadedChunks(chunkSizeCm);
+            globals[RoadNetworkShowcaseIds.GraphLoadedChunksServiceKey] = loadedChunks;
 
             Entity actor = world.Create(
                 new RoadColumnTag(),
@@ -489,9 +602,9 @@ namespace Ludots.Tests.GAS
             Assert.That(engine.CurrentMapSession!.PrimaryBoard, Is.TypeOf<NodeGraphBoard>());
             Assert.That(engine.GetService(CoreServiceKeys.PathService), Is.TypeOf<AutoPathService>());
             Assert.That(
-                engine.MergedConfig.Navigation2D.Steering.SmartStop.Enabled,
-                Is.False,
-                "Road-network waypoint following must not inherit crowd queue SmartStop, or columns can halt behind shared intermediate road nodes.");
+                engine.GetService(MassNavigationKeys.SimulationRuntime),
+                Is.TypeOf<MassNavigationSimulationRuntime>(),
+                "Road-network waypoint following must bootstrap the MassCrowd execution runtime instead of the deleted Navigation2D steering stack.");
 
             var board = (NodeGraphBoard)engine.CurrentMapSession.PrimaryBoard;
             RoadNetworkScenarioDefinition scenario = RoadNetworkScenarioDefinition.Create(board.LoadedChunksSource.ChunkSizeCm);
@@ -667,9 +780,9 @@ namespace Ludots.Tests.GAS
 
             TickUntil(
                 engine,
-                () => HasNonZeroDesiredVelocity(engine, "Blue Vanguard") &&
-                      HasNonZeroDesiredVelocity(engine, "Blue North Column") &&
-                      HasNonZeroDesiredVelocity(engine, "Blue South Column"),
+                () => HasActiveMassNavigationTarget(engine, "Blue Vanguard") &&
+                      HasActiveMassNavigationTarget(engine, "Blue North Column") &&
+                      HasActiveMassNavigationTarget(engine, "Blue South Column"),
                 maxFrames: 20,
                 failureMessage: BuildPlayableMoveDiagnostics(engine, "Blue Vanguard", "Blue North Column", "Blue South Column"));
 
@@ -710,9 +823,9 @@ namespace Ludots.Tests.GAS
             bool startedMoving = false;
             for (int i = 0; i < 20; i++)
             {
-                if (HasNonZeroDesiredVelocity(engine, "Blue Vanguard") &&
-                    HasNonZeroDesiredVelocity(engine, "Blue North Column") &&
-                    HasNonZeroDesiredVelocity(engine, "Blue South Column"))
+                if (HasActiveMassNavigationTarget(engine, "Blue Vanguard") &&
+                    HasActiveMassNavigationTarget(engine, "Blue North Column") &&
+                    HasActiveMassNavigationTarget(engine, "Blue South Column"))
                 {
                     startedMoving = true;
                     break;
@@ -764,7 +877,7 @@ namespace Ludots.Tests.GAS
                 statusKey: string.Empty);
 
             var order = CreateMoveOrder(actor, moveToOrderTypeId, xcm: 18000, ycm: 0, submitMode: OrderSubmitMode.Immediate);
-            Assert.That(expander.TrySubmit(in order), Is.True);
+            Assert.That(expander.TrySubmit(in order), Is.True, ReadRoadStatus(engine));
             Assert.That(orderQueue.Count, Is.EqualTo(1), "Expanded road move should enter the engine order queue before the next fixed-step drain.");
 
             int furthestXcm = engine.World.Get<WorldPositionCm>(actor).ToWorldCmInt2().X;
@@ -1081,20 +1194,8 @@ namespace Ludots.Tests.GAS
             Dictionary<string, object> globals = CreateGlobals(pathService, pathStore, moveToOrderTypeId, roadMoveFollowOrderTypeId);
             OrderTypeRegistry orderTypes = CreateTimeoutOrderTypeRegistry(moveToOrderTypeId, roadMoveFollowOrderTypeId);
 
-            Entity actor = world.Create(
-                new Name { Value = "Timeout Column" },
-                new RoadColumnTag(),
-                WorldPositionCm.FromCm(0, 0),
-                new Position2D { Value = Fix64Vec2.FromInt(0, 0) },
-                new NavAgent2D(),
-                new NavKinematics2D
-                {
-                    MaxSpeedCmPerSec = Fix64.FromInt(600),
-                    MaxAccelCmPerSec2 = Fix64.FromInt(1200)
-                },
-                OrderBuffer.CreateEmpty(),
-                new AttributeBuffer(),
-                new GameplayTagContainer());
+            Entity actor = CreateRoadMassAgent(world, "Timeout Column", xcm: 0, ycm: 0);
+            MassNavigationSimulationRuntime simulation = CreateRoadMassRuntime(world, actor);
 
             ref var attributes = ref world.Get<AttributeBuffer>(actor);
             int moveSpeedId = Ludots.Core.Gameplay.GAS.Registry.AttributeRegistry.Register("MoveSpeed");
@@ -1108,12 +1209,12 @@ namespace Ludots.Tests.GAS
             ref var buffer = ref world.Get<OrderBuffer>(actor);
             buffer.SetActiveDirect(in followOrder, priority: 100);
 
-            var plans = new RoadNavPlanStore();
-            var runtime = new RoadMoveRuntimeService(world, plans);
-            var bindSystem = new RoadMoveOrderBindingSystem(world, roadMoveFollowOrderTypeId, plans, runtime);
-            var selectionSystem = new RoadMovePlanSelectionSystem(world, roadMoveFollowOrderTypeId, plans, runtime);
-            var executionSystem = new RoadMoveExecutionSystem(world);
-            var lifecycleSystem = new RoadMoveLifecycleSystem(world, globals, orderTypes, roadMoveFollowOrderTypeId, plans, runtime);
+            var plans = new MovePlanStore(new RoadRouteFinalTargetMovePlanResolver());
+            var runtime = new MovePlanRuntimeService(world, plans);
+            var bindSystem = new RoadMoveOrderBindingSystem(world, roadMoveFollowOrderTypeId, plans, runtime, simulation);
+            var selectionSystem = new RoadMovePlanSelectionSystem(world, roadMoveFollowOrderTypeId, plans, runtime, simulation);
+            var executionSystem = new RoadMoveExecutionSystem(world, simulation);
+            var lifecycleSystem = new RoadMoveLifecycleSystem(world, globals, orderTypes, roadMoveFollowOrderTypeId, plans, runtime, simulation);
             string status = string.Empty;
             for (int step = 0; step < 12; step++)
             {
@@ -1147,33 +1248,32 @@ namespace Ludots.Tests.GAS
             Dictionary<string, object> globals = CreateGlobals(new FailingPathService(), pathStore, moveToOrderTypeId, roadMoveFollowOrderTypeId);
             OrderTypeRegistry orderTypes = CreateTimeoutOrderTypeRegistry(moveToOrderTypeId, roadMoveFollowOrderTypeId);
 
-            Entity actor = world.Create(
-                new Name { Value = "Foreign Order Column" },
-                new RoadColumnTag(),
-                WorldPositionCm.FromCm(0, 0),
-                new Position2D { Value = Fix64Vec2.FromInt(0, 0) },
-                new NavAgent2D(),
-                new NavKinematics2D
-                {
-                    MaxSpeedCmPerSec = Fix64.FromInt(600),
-                    MaxAccelCmPerSec2 = Fix64.FromInt(1200)
-                },
-                OrderBuffer.CreateEmpty(),
-                new AttributeBuffer(),
-                new GameplayTagContainer(),
-                default(RoadMoveOrderRuntime),
-                default(RoadNavPlanRuntime),
-                default(RoadMoveExecutionIntent));
+            Entity actor = CreateRoadMassAgent(world, "Foreign Order Column", xcm: 0, ycm: 0);
+            MassNavigationSimulationRuntime simulation = CreateRoadMassRuntime(world, actor);
+            if (!world.Has<MovePlanOrderRuntime>(actor))
+            {
+                world.Add(actor, default(MovePlanOrderRuntime));
+            }
+
+            if (!world.Has<MovePlanRuntime>(actor))
+            {
+                world.Add(actor, default(MovePlanRuntime));
+            }
+
+            if (!world.Has<MovePlanExecutionIntent>(actor))
+            {
+                world.Add(actor, default(MovePlanExecutionIntent));
+            }
 
             Order moveOrder = CreateMoveOrder(actor, moveToOrderTypeId, xcm: 600, ycm: 0, submitMode: OrderSubmitMode.Immediate);
             moveOrder.OrderId = 9001;
             ref var buffer = ref world.Get<OrderBuffer>(actor);
             buffer.SetActiveDirect(in moveOrder, priority: 100);
 
-            var plans = new RoadNavPlanStore();
-            var runtime = new RoadMoveRuntimeService(world, plans);
-            var selectionSystem = new RoadMovePlanSelectionSystem(world, roadMoveFollowOrderTypeId, plans, runtime);
-            var lifecycleSystem = new RoadMoveLifecycleSystem(world, globals, orderTypes, roadMoveFollowOrderTypeId, plans, runtime);
+            var plans = new MovePlanStore(new RoadRouteFinalTargetMovePlanResolver());
+            var runtime = new MovePlanRuntimeService(world, plans);
+            var selectionSystem = new RoadMovePlanSelectionSystem(world, roadMoveFollowOrderTypeId, plans, runtime, simulation);
+            var lifecycleSystem = new RoadMoveLifecycleSystem(world, globals, orderTypes, roadMoveFollowOrderTypeId, plans, runtime, simulation);
 
             selectionSystem.Update(0.1f);
             lifecycleSystem.Update(0.1f);
@@ -1200,20 +1300,8 @@ namespace Ludots.Tests.GAS
             Dictionary<string, object> globals = CreateGlobals(pathService, pathStore, moveToOrderTypeId, roadMoveFollowOrderTypeId);
             OrderTypeRegistry orderTypes = CreateTimeoutOrderTypeRegistry(moveToOrderTypeId, roadMoveFollowOrderTypeId);
 
-            Entity actor = world.Create(
-                new Name { Value = "Refresh Column" },
-                new RoadColumnTag(),
-                WorldPositionCm.FromCm(0, 0),
-                new Position2D { Value = Fix64Vec2.FromInt(0, 0) },
-                new NavAgent2D(),
-                new NavKinematics2D
-                {
-                    MaxSpeedCmPerSec = Fix64.FromInt(600),
-                    MaxAccelCmPerSec2 = Fix64.FromInt(1200)
-                },
-                OrderBuffer.CreateEmpty(),
-                new AttributeBuffer(),
-                new GameplayTagContainer());
+            Entity actor = CreateRoadMassAgent(world, "Refresh Column", xcm: 0, ycm: 0);
+            MassNavigationSimulationRuntime simulation = CreateRoadMassRuntime(world, actor);
 
             ref var attributes = ref world.Get<AttributeBuffer>(actor);
             int moveSpeedId = Ludots.Core.Gameplay.GAS.Registry.AttributeRegistry.Register("MoveSpeed");
@@ -1224,19 +1312,19 @@ namespace Ludots.Tests.GAS
             ref var buffer = ref world.Get<OrderBuffer>(actor);
             buffer.SetActiveDirect(in staleRoute, priority: 100);
 
-            var plans = new RoadNavPlanStore();
-            var runtime = new RoadMoveRuntimeService(world, plans);
+            var plans = new MovePlanStore(new RoadRouteFinalTargetMovePlanResolver());
+            var runtime = new MovePlanRuntimeService(world, plans);
             Assert.That(runtime.TryBindActiveOrder(actor, in staleRoute, preserveTimeoutCount: false, out _, out _), Is.True);
 
-            ref var orderRuntime = ref world.Get<RoadMoveOrderRuntime>(actor);
-            ref var planRuntime = ref world.Get<RoadNavPlanRuntime>(actor);
-            orderRuntime.LifecycleState = RoadMoveLifecycleState.NeedsReplan;
+            ref var orderRuntime = ref world.Get<MovePlanOrderRuntime>(actor);
+            ref var planRuntime = ref world.Get<MovePlanRuntime>(actor);
+            orderRuntime.LifecycleState = MovePlanLifecycleState.NeedsReplan;
             orderRuntime.TimeoutCount = 1;
             planRuntime.Initialized = 1;
-            planRuntime.LastProgressPosition = Fix64Vec2.FromInt(0, 0);
+            planRuntime.LastProgressPositionCm = Vector2.Zero;
             planRuntime.LastResolvedWaypointIndex = 0;
 
-            var lifecycle = new RoadMoveLifecycleSystem(world, globals, orderTypes, roadMoveFollowOrderTypeId, plans, runtime);
+            var lifecycle = new RoadMoveLifecycleSystem(world, globals, orderTypes, roadMoveFollowOrderTypeId, plans, runtime, simulation);
             lifecycle.Update(0.1f);
 
             ref readonly Order refreshedActive = ref world.Get<OrderBuffer>(actor).ActiveOrder.Order;
@@ -1244,50 +1332,7 @@ namespace Ludots.Tests.GAS
             Assert.That(OrderWorldSpatialResolver.GetSpatialPointCount(in refreshedActive.Args.Spatial), Is.GreaterThanOrEqualTo(3));
             Assert.That(OrderWorldSpatialResolver.TryResolveMoveWaypoint(in refreshedActive, 1, out Vector3 refreshedWaypoint), Is.True);
             Assert.That(refreshedWaypoint.Z, Is.GreaterThan(0f), "Timeout refresh should replace the stale straight-line payload with the replanned curved road route.");
-            Assert.That(world.Get<RoadMoveOrderRuntime>(actor).LifecycleState, Is.EqualTo(RoadMoveLifecycleState.Active));
-        }
-
-        [Test]
-        public void Navigation2DSteeringSystem2D_PointGoal_WakesSleepingAgent()
-        {
-            using var world = World.Create();
-            using var runtime = new Navigation2DRuntime(new Navigation2DConfig
-            {
-                Enabled = true,
-                MaxAgents = 8
-            }, gridCellSizeCm: 100, loadedChunks: null);
-
-            Entity actor = world.Create(
-                new NavAgent2D(),
-                new Position2D { Value = Fix64Vec2.FromInt(0, 0) },
-                Velocity2D.Zero,
-                new NavKinematics2D
-                {
-                    MaxSpeedCmPerSec = Fix64.FromInt(600),
-                    MaxAccelCmPerSec2 = Fix64.FromInt(1200),
-                    RadiusCm = Fix64.FromInt(40),
-                    NeighborDistCm = Fix64.FromInt(400),
-                    TimeHorizonSec = Fix64.FromInt(2),
-                    MaxNeighbors = 8
-                },
-                new NavGoal2D
-                {
-                    Kind = NavGoalKind2D.Point,
-                    TargetCm = Fix64Vec2.FromInt(600, 0),
-                    RadiusCm = Fix64.FromInt(30)
-                },
-                new SleepingTag(),
-                new Motion
-                {
-                    SleepTimer = 99
-                });
-
-            var steering = new Navigation2DSteeringSystem2D(world, runtime);
-            steering.Update(1f / 60f);
-
-            Assert.That(world.Has<SleepingTag>(actor), Is.False, "Point-goal navigation should wake a sleeping body before physics integration, otherwise the first movement command can stall and timeout.");
-            Assert.That(world.Get<Motion>(actor).SleepTimer, Is.EqualTo(0));
-            Assert.That(world.Has<NavDesiredVelocity2D>(actor), Is.True);
+            Assert.That(world.Get<MovePlanOrderRuntime>(actor).LifecycleState, Is.EqualTo(MovePlanLifecycleState.Active));
         }
 
         private static OrderTypeRegistry CreateTimeoutOrderTypeRegistry(int moveToOrderTypeId, int roadMoveFollowOrderTypeId)
@@ -1617,6 +1662,85 @@ namespace Ludots.Tests.GAS
             };
         }
 
+        private static Entity CreateRoadMassAgent(World world, string name, int xcm, int ycm)
+        {
+            int profileId = MassCrowdProfileRegistry.Register("Small");
+            return world.Create(
+                new Name { Value = name },
+                new RoadColumnTag(),
+                new Team { Id = 1 },
+                new PlayerOwner { PlayerId = 1 },
+                new EntityLayer(category: 1u, mask: 1u),
+                new MassCrowdAgent { ProfileId = profileId },
+                WorldPositionCm.FromCm(xcm, ycm),
+                OrderBuffer.CreateEmpty(),
+                new AttributeBuffer(),
+                new GameplayTagContainer());
+        }
+
+        private static MassNavigationSimulationRuntime CreateRoadMassRuntime(World world, Entity actor)
+        {
+            MassNavigationConfig config = CreateRoadMassConfigForTests();
+            var simulation = new MassNavigationSimulationRuntime(config);
+            simulation.BindBoardWorld(new WorldSizeSpec(new WorldAabbCm(-25_000, -25_000, 50_000, 50_000), 100));
+
+            Vector2 worldPosition = world.Get<WorldPositionCm>(actor).Value.ToVector2();
+            var layer = new MassNavigationAgentLayer(categoryMask: 1u, interactionMask: 1u);
+            simulation.RebuildFromAuthoredAgents(
+                world,
+                new[] { actor },
+                new[]
+                {
+                    new MassNavigationAgentSeed(
+                        teamId: 1,
+                        localPositionXCm: simulation.ToLocalXCm(worldPosition.X),
+                        localPositionYCm: simulation.ToLocalYCm(worldPosition.Y),
+                        heavy: false,
+                        navMass: 1f,
+                        visualScale: 1f,
+                        bodyRadiusCm: 30f,
+                        speedCmPerSecond: 1200f,
+                        layer),
+                },
+                new[] { true });
+            return simulation;
+        }
+
+        private static MassNavigationSimulationRuntime CreateRoadMassRuntimeWithoutAgents()
+        {
+            MassNavigationConfig config = CreateRoadMassConfigForTests();
+            var simulation = new MassNavigationSimulationRuntime(config);
+            simulation.BindBoardWorld(new WorldSizeSpec(new WorldAabbCm(-25_000, -25_000, 50_000, 50_000), 100));
+            return simulation;
+        }
+
+        private static MassNavigationConfig CreateRoadMassConfigForTests()
+        {
+            string configPath = Path.Combine(
+                FindRepoRoot(),
+                "mods",
+                "showcases",
+                "road_network",
+                "RoadNetworkShowcaseMod",
+                "assets",
+                "MassNavigationConfig.json");
+            using FileStream stream = File.OpenRead(configPath);
+            MassNavigationConfig config = MassNavigationConfig.Load(stream);
+            config.AgentProfiles.BindAgentProfiles(new AgentProfileRegistry(new[]
+            {
+                new AgentProfileConfig
+                {
+                    Id = "Small",
+                    RadiusCm = 30,
+                    HeightCm = 180,
+                    ClearanceCm = 40,
+                    Mass = 1,
+                    Layer = 0,
+                },
+            }));
+            return config;
+        }
+
         private static GameEngine CreateRoadShowcaseEngine()
         {
             string repoRoot = FindRepoRoot();
@@ -1626,6 +1750,7 @@ namespace Ludots.Tests.GAS
                 Path.Combine(repoRoot, "mods", "LudotsCoreMod"),
                 Path.Combine(repoRoot, "mods", "CoreInputMod"),
                 Path.Combine(repoRoot, "mods", "capabilities", "camera", "CameraProfilesMod"),
+                Path.Combine(repoRoot, "mods", "capabilities", "navigation", "MassNavigationMod"),
                 Path.Combine(repoRoot, "mods", "showcases", "road_network", "RoadNetworkShowcaseMod"),
             };
 
@@ -1686,6 +1811,15 @@ namespace Ludots.Tests.GAS
             }
         }
 
+        private static void TickPastFixedStep(GameEngine engine)
+        {
+            float fixedDt = Ludots.Core.Engine.Time.FixedDeltaTime;
+            int frames = fixedDt > 0f
+                ? Math.Max(1, (int)MathF.Ceiling((fixedDt * 60f) + 0.01f))
+                : 1;
+            Tick(engine, frames);
+        }
+
         private static void TickUntil(GameEngine engine, Func<bool> predicate, int maxFrames = 60, string? failureMessage = null)
         {
             for (int i = 0; i < maxFrames; i++)
@@ -1715,9 +1849,9 @@ namespace Ludots.Tests.GAS
             backend.SetMousePosition(screenPosition);
             Tick(engine, 1);
             backend.SetButton("<Mouse>/RightButton", true);
-            Tick(engine, 2);
+            TickPastFixedStep(engine);
             backend.SetButton("<Mouse>/RightButton", false);
-            Tick(engine, 2);
+            TickPastFixedStep(engine);
         }
 
         private static void DragSelectNamed(GameEngine engine, TestInputBackend backend, params string[] names)
@@ -1746,15 +1880,15 @@ namespace Ludots.Tests.GAS
             gestureDiagnostics.Append("phase0=");
             gestureDiagnostics.Append(BuildSelectionInputDiagnostics(engine, dragStart, dragEnd, names));
             backend.SetButton("<Mouse>/LeftButton", true);
-            Tick(engine, 2);
+            TickPastFixedStep(engine);
             gestureDiagnostics.Append(" || phase1=");
             gestureDiagnostics.Append(BuildSelectionInputDiagnostics(engine, dragStart, dragEnd, names));
             backend.SetMousePosition(dragEnd);
-            Tick(engine, 2);
+            TickPastFixedStep(engine);
             gestureDiagnostics.Append(" || phase2=");
             gestureDiagnostics.Append(BuildSelectionInputDiagnostics(engine, dragStart, dragEnd, names));
             backend.SetButton("<Mouse>/LeftButton", false);
-            Tick(engine, 2);
+            TickPastFixedStep(engine);
             gestureDiagnostics.Append(" || phase3=");
             gestureDiagnostics.Append(BuildSelectionInputDiagnostics(engine, dragStart, dragEnd, names));
 
@@ -1846,16 +1980,17 @@ namespace Ludots.Tests.GAS
             return world.Get<WorldPositionCm>(entity).Value.ToVector2();
         }
 
-        private static bool HasNonZeroDesiredVelocity(GameEngine engine, string name)
+        private static bool HasActiveMassNavigationTarget(GameEngine engine, string name)
         {
             Entity entity = FindEntityByName(engine.World, name);
-            if (entity == Entity.Null || !engine.World.Has<NavDesiredVelocity2D>(entity))
+            if (entity == Entity.Null ||
+                !engine.World.TryGet(entity, out MassCrowdAgentIndex agentIndex) ||
+                engine.GetService(MassNavigationKeys.SimulationRuntime) is not MassNavigationSimulationRuntime simulation)
             {
                 return false;
             }
 
-            var velocity = engine.World.Get<NavDesiredVelocity2D>(entity).ValueCmPerSec;
-            return MathF.Abs(velocity.X.ToFloat()) > 0.1f || MathF.Abs(velocity.Y.ToFloat()) > 0.1f;
+            return simulation.TryGetAgentNavigationTargetWorldCm(agentIndex.Value, out _, out _);
         }
 
         private static string BuildPlayableMoveDiagnostics(GameEngine engine, params string[] names)
@@ -1892,18 +2027,19 @@ namespace Ludots.Tests.GAS
                 sb.Append(world.Y.ToString("0.##"));
                 sb.Append(')');
 
-                if (engine.World.Has<NavDesiredVelocity2D>(entity))
+                if (engine.World.TryGet(entity, out MassCrowdAgentIndex agentIndex) &&
+                    engine.GetService(MassNavigationKeys.SimulationRuntime) is MassNavigationSimulationRuntime simulation &&
+                    simulation.TryGetAgentNavigationTargetWorldCm(agentIndex.Value, out float targetX, out float targetY))
                 {
-                    var desired = engine.World.Get<NavDesiredVelocity2D>(entity).ValueCmPerSec;
-                    sb.Append(" desired=(");
-                    sb.Append(desired.X.ToFloat().ToString("0.##"));
+                    sb.Append(" massTarget=(");
+                    sb.Append(targetX.ToString("0.##"));
                     sb.Append(',');
-                    sb.Append(desired.Y.ToFloat().ToString("0.##"));
+                    sb.Append(targetY.ToString("0.##"));
                     sb.Append(')');
                 }
                 else
                 {
-                    sb.Append(" desired=<none>");
+                    sb.Append(" massTarget=<none>");
                 }
 
                 if (engine.World.Has<OrderBuffer>(entity))
@@ -1915,9 +2051,9 @@ namespace Ludots.Tests.GAS
                     sb.Append(buffer.QueuedCount);
                 }
 
-                if (engine.World.Has<RoadMoveOrderRuntime>(entity))
+                if (engine.World.Has<MovePlanOrderRuntime>(entity))
                 {
-                    ref readonly RoadMoveOrderRuntime runtime = ref engine.World.Get<RoadMoveOrderRuntime>(entity);
+                    ref readonly MovePlanOrderRuntime runtime = ref engine.World.Get<MovePlanOrderRuntime>(entity);
                     sb.Append(" lifecycle=");
                     sb.Append(runtime.LifecycleState);
                     sb.Append('/');

@@ -1,0 +1,299 @@
+{
+  "mapId": "road_network_showcase_chunked",
+  "world": {
+    "solverWindowWidthCm": 50000,
+    "solverWindowHeightCm": 50000,
+    "streamingChunkSizeCm": 6400,
+    "streamingRadiusCm": 32000,
+    "cameraFocusShiftThresholdCm": 12000,
+    "commandFocusHoldTicks": 90,
+    "workAreaPaddingCm": 4000,
+    "workAreaMaxWidthCm": 50000,
+    "workAreaMaxHeightCm": 50000,
+    "activeHotZoneId": "road_core",
+    "hotZones": [
+      {
+        "id": "road_core",
+        "label": "Road Core",
+        "centerXCm": 0,
+        "centerYCm": 0,
+        "widthCm": 50000,
+        "heightCm": 50000
+      }
+    ]
+  },
+  "solver": {
+    "fieldWidthCm": 50000,
+    "fieldHeightCm": 50000,
+    "flowCellSizeCm": 100,
+    "maxObstacleCount": 64,
+    "parallelWorkerCount": 1,
+    "separationHashCellSizeCm": 100,
+    "separationHashMinSearchRadiusCells": 2,
+    "hardResolveHashCellSizeCm": 50,
+    "hardResolveHashMinSearchRadiusCells": 1,
+    "playAreaMinXCm": 50,
+    "playAreaMaxXCm": 49950,
+    "playAreaMinYCm": 50,
+    "playAreaMaxYCm": 49950
+  },
+  "presentation": {
+    "requiredMeshAssetIds": [
+      "mass_navigation.agent.soldier",
+      "mass_navigation.selection.marker",
+      "mass_navigation.blocker.rock",
+      "mass_navigation.hotspot.obelisk"
+    ],
+    "blockerTemplateId": "road_network_unused_blocker",
+    "teams": []
+  },
+  "scenario": {
+    "agentsPerTeam": 0,
+    "initialSelectedTeamId": 1,
+    "teams": [
+      {
+        "id": 1,
+        "name": "Blue Road Columns"
+      },
+      {
+        "id": 2,
+        "name": "Red Road Columns"
+      }
+    ]
+  },
+  "scenarioRuntime": {
+    "autoSpawnConfiguredScenario": false,
+    "initialSelectionScratchCapacity": 32,
+    "initialSelectedEntityCapacity": 16,
+    "panel": {
+      "mode": "Hidden"
+    },
+    "runtimeCapacity": {
+      "navigationGroupCapacity": 32,
+      "groupMembershipAgentCapacity": 128,
+      "selectionMemberScratchCapacity": 32,
+      "groupMemberCapacity": 32,
+      "orderIngestionTokenCapacity": 32,
+      "orderIngestionMemberCapacity": 32,
+      "loadedChunkCapacity": 256,
+      "metadataTeamCapacity": 2
+    },
+    "panelControls": {
+      "maxAgentsPerTeam": 64,
+      "totalAgentStep": 2,
+      "totalAgentPresets": [
+        6
+      ],
+      "panelRefreshIntervalSeconds": 0.25,
+      "viewResidencyRetainSecondsStep": 2,
+      "simulationBudgetStepMs": 1,
+      "simulationBudgetMinMs": 1,
+      "simulationBudgetMaxMs": 64,
+      "simulationSliceStep": 1,
+      "simulationSliceMin": 1,
+      "simulationSliceMax": 64,
+      "enginePolicyHzStep": 5,
+      "enginePolicyHzMin": 0,
+      "enginePolicyHzMax": 240,
+      "enginePolicyMaxStepsStep": 1,
+      "enginePolicyMaxStepsMin": 1,
+      "enginePolicyMaxStepsMax": 32,
+      "arrivalTimeoutStepMs": 250,
+      "arrivalProgressStepCm": 10,
+      "arrivalWakePushStepCm": 10,
+      "arrivalRetryStep": 1,
+      "flowIterationStep": 128,
+      "flowCadenceHzStep": 1
+    }
+  },
+  "cadence": {
+    "simulationHz": 30,
+    "targetUpdateHz": 30,
+    "flowStepHz": 5,
+    "flowCrowdStampHz": 5,
+    "flowObstacleStampHz": 2,
+    "hardResolveHz": 30,
+    "entitySyncHz": 30,
+    "maxStepsPerFixedTick": 2,
+    "hardResolveCandidateThresholdAgents": 1,
+    "orderIdleScanIntervalFrames": 6
+  },
+  "agentProfiles": {
+    "defaultProfileId": "Small",
+    "profiles": [
+      {
+        "id": "Small",
+        "heavy": false,
+        "visualScale": 1.0,
+        "speedCmPerSecond": 1400,
+        "everyNth": 0,
+        "nthOffset": 0
+      }
+    ]
+  },
+  "cameraProfiles": {
+    "tacticalProfileId": "RoadNetwork.Camera.Tactical",
+    "strategicProfileId": "RoadNetwork.Camera.Strategic",
+    "requestPolicy": {
+      "blendDurationSeconds": 0,
+      "resetRuntimeState": true,
+      "snapToFollowTargetWhenAvailable": false,
+      "strategicTargetXCm": 0,
+      "strategicTargetYCm": 0
+    }
+  },
+  "minimap": {
+    "visible": false,
+    "initialPreset": "RtsFullMap",
+    "followCameraHalfExtentCm": 14000,
+    "rotateWithCamera": true
+  },
+  "teamRelationships": {
+    "defaultRelationship": "Hostile",
+    "relationships": []
+  },
+  "flow": {
+    "enabled": false,
+    "iterationsPerStep": 4096,
+    "maxIterationsPerStep": 131072,
+    "stepIntervalTicks": 1,
+    "crowdStampIntervalTicks": 1,
+    "obstacleStampIntervalTicks": 1,
+    "forceRefreshFlow": false,
+    "forceRefreshCrowd": false,
+    "forceRefreshObstacles": false
+  },
+  "arrival": {
+    "enabled": true,
+    "timeoutMs": 1500,
+    "timeoutMinMs": 250,
+    "timeoutMaxMs": 10000,
+    "progressDistanceCm": 60,
+    "progressDistanceMinCm": 10,
+    "progressDistanceMaxCm": 500,
+    "wakePushDistanceCm": 80,
+    "wakePushDistanceMinCm": 10,
+    "wakePushDistanceMaxCm": 500,
+    "maxRetryCountMin": 0,
+    "maxRetryCountMax": 16,
+    "maxRetryCount": 2
+  },
+  "viewResidency": {
+    "mode": "Camera",
+    "retainSeconds": 12,
+    "radiusCm": 32000,
+    "initialProbeId": "road_overview",
+    "cameraProbes": [
+      {
+        "id": "road_overview",
+        "label": "Road Overview",
+        "targetXCm": 0,
+        "targetYCm": 0,
+        "distanceCm": 26000,
+        "yaw": 180,
+        "pitch": 54,
+        "fovYDeg": 50
+      }
+    ]
+  },
+  "avoidance": {
+    "mode": "Separation",
+    "orca": {
+      "timeHorizonSeconds": 0.85,
+      "maxNeighbors": 16
+    },
+    "sonar": {
+      "maxSteerAngleDeg": 280,
+      "backwardPenaltyAngleDeg": 230,
+      "predictionTimeScale": 0.9,
+      "ignoreBehindMovingAgents": true,
+      "blockedStop": false,
+      "usePreferredVelocityWhenBlocked": true,
+      "timeHorizonSeconds": 0.85,
+      "maxNeighbors": 16
+    },
+    "dominantMassRatio": 2.25,
+    "friendlyResponseScale": 1.1,
+    "friendlyResponseMin": 0.35,
+    "friendlyResponseMax": 2.75,
+    "nonFriendlyResponseScale": 1.25,
+    "nonFriendlyResponseMin": 0.25,
+    "nonFriendlyResponseMax": 3.25,
+    "dominantPushResponseScale": 1.6,
+    "dominantPushResponseMin": 0.15,
+    "dominantPushResponseMax": 4.5,
+    "friendlyCorrectionShareMin": 0.18,
+    "friendlyCorrectionShareMax": 0.82,
+    "dominantCorrectionOtherMassWeight": 1.8,
+    "dominantCorrectionShareMin": 0.05,
+    "dominantCorrectionShareMax": 0.95,
+    "nonFriendlyCorrectionOtherMassWeight": 1.2,
+    "nonFriendlyCorrectionShareMin": 0.08,
+    "nonFriendlyCorrectionShareMax": 0.92
+  },
+  "semantics": {
+    "obstacle": {
+      "hardResolveCandidateDistanceCm": 100,
+      "softPushPaddingCm": 350,
+      "softPushForceScale": 8
+    },
+    "targetProjection": {
+      "teamTargetClearanceCm": 60,
+      "groupCenterClearanceCm": 60,
+      "teamSlotClearanceCm": 45,
+      "groupSlotClearanceCm": 50,
+      "looseTargetClearanceCm": 50
+    },
+    "group": {
+      "spawnSpacingCm": 46,
+      "spawnJitterCm": 12,
+      "teamSlotSpacingCm": 90,
+      "formationLineSpacingCm": 180,
+      "formationSquareSpacingCm": 80,
+      "formationCircleSpacingCm": 180,
+      "formationCircleMinRadiusCm": 200,
+      "formationWedgeSpacingCm": 180,
+      "formationRotationEpsilonRadians": 0.00001,
+      "formationRotationSpeedRadiansPerSecond": 2.5,
+      "pullDeadZoneCm": 50,
+      "pullClampCm": 2000,
+      "arrivedRadiusCm": 150,
+      "formationArriveThresholdCm": 200,
+      "looseArriveThresholdCm": 300,
+      "unitTargetStopThresholdCm": 50,
+      "formationFlowSlowRadiusCm": 400,
+      "nearSlotBlend": 0.82,
+      "farSlotBlend": 0.38,
+      "nearSlotBlendDistanceSq": 4000000
+    },
+    "steering": {
+      "separationRadiusCm": 200,
+      "goalArrivalRadiusCm": 1200,
+      "flowObstacleAvoidanceScale": 1.2,
+      "formationSeparationScale": 2,
+      "looseSeparationScale": 4,
+      "velocityBlendPerSecond": 5
+    },
+    "solver": {
+      "minNavMass": 0.001,
+      "minVisualScale": 0.01,
+      "maxStepDtSeconds": 0.05,
+      "parallelStepMinAgents": 2048,
+      "directionEpsilonSq": 0.0001,
+      "normalizationEpsilonSq": 0.000001,
+      "inverseSqrtMinValue": 1e-8,
+      "entitySyncPositionEpsilonSq": 0.25,
+      "entitySyncVelocityEpsilonSq": 0.01,
+      "facingVelocityEpsilonSq": 0.01,
+      "flowBlockedCellCost": 99999,
+      "flowBlockedCellThreshold": 9999,
+      "flowTargetStopDistanceSq": 1,
+      "flowObstacleNeighborRadiusCells": 4,
+      "flowObstacleNeighborWeight": 5,
+      "flowObstacleAvoidanceWeight": 1.5,
+      "coincidentPairHashBucketCount": 1024,
+      "coincidentPairHashPrimeA": 73856093,
+      "coincidentPairHashPrimeB": 19349663
+    }
+  }
+}
