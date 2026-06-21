@@ -44,38 +44,6 @@
         "widthCm": 10000,
         "heightCm": 10000
       }
-    ],
-    "obstacles": [
-      {
-        "id": "west_gate",
-        "localXCm": 3000,
-        "localYCm": 5000,
-        "radiusCm": 500
-      },
-      {
-        "id": "south_gate",
-        "localXCm": 5000,
-        "localYCm": 3000,
-        "radiusCm": 400
-      },
-      {
-        "id": "north_gate",
-        "localXCm": 5000,
-        "localYCm": 7000,
-        "radiusCm": 400
-      },
-      {
-        "id": "east_gate",
-        "localXCm": 7000,
-        "localYCm": 5000,
-        "radiusCm": 500
-      },
-      {
-        "id": "central_blocker",
-        "localXCm": 5000,
-        "localYCm": 5000,
-        "radiusCm": 300
-      }
     ]
   },
   "solver": {

@@ -237,16 +237,15 @@ namespace Ludots.Tests.Presentation
             JsonObject config = ReadObject(Path.Combine(modRoot, "assets", "MassNavigationConfig.json"));
             JsonObject world = config["world"]?.AsObject()
                 ?? throw new InvalidOperationException("MassNavigationConfig.world missing.");
-            JsonArray obstacles = world["obstacles"]?.AsArray()
-                ?? throw new InvalidOperationException("MassNavigation world must author obstacles.");
-            Assert.That(obstacles.Count, Is.GreaterThan(0), "Solver blockers must be config-authored, not hardcoded in C#.");
-            foreach (JsonObject obstacle in obstacles.Select(node => node?.AsObject() ?? throw new InvalidOperationException("Obstacle entries must be objects.")))
-            {
-                Assert.That(RequireString(obstacle, "id"), Is.Not.Empty);
-                Assert.That(obstacle["radiusCm"]?.GetValue<float>(), Is.GreaterThan(0f));
-            }
+            Assert.That(world.ContainsKey("obstacles"), Is.False,
+                "MassNavigationConfig.world.obstacles[] is obsolete; obstacles must be authored as map/template ECS components.");
 
             JsonArray templates = ReadArray(Path.Combine(modRoot, "assets", "Entities", "templates.json"));
+            JsonObject blockerTemplate = FindObjectById(templates, "mass_navigation_blocker");
+            JsonObject blockerComponents = blockerTemplate["components"]?.AsObject()
+                ?? throw new InvalidOperationException("mass_navigation_blocker must author components.");
+            AssertObstacleAuthoring(blockerComponents, "mass_navigation_blocker template");
+
             JsonObject localPlayerTemplate = FindObjectById(templates, "mass_navigation_local_player");
             JsonObject localPlayerComponents = localPlayerTemplate["components"]?.AsObject()
                 ?? throw new InvalidOperationException("mass_navigation_local_player must author components.");
@@ -262,6 +261,18 @@ namespace Ludots.Tests.Presentation
                 entities.Select(node => node?["Template"]?.GetValue<string>()).ToArray(),
                 Does.Contain("mass_navigation_local_player"),
                 "The local player must be a map-authored entity, not a runtime fallback.");
+            JsonObject[] blockerEntities = entities
+                .Select(node => node?.AsObject() ?? throw new InvalidOperationException("MassNavigation map entities must be objects."))
+                .Where(entity => string.Equals(entity["Template"]?.GetValue<string>(), "mass_navigation_blocker", StringComparison.Ordinal))
+                .ToArray();
+            Assert.That(blockerEntities.Length, Is.GreaterThan(0),
+                "MassNavigation map must author obstacle entities through the shared manifestation obstacle components.");
+            foreach (JsonObject entity in blockerEntities)
+            {
+                JsonObject overrides = entity["Overrides"]?.AsObject()
+                    ?? throw new InvalidOperationException("MassNavigation blocker map entity must author component overrides.");
+                AssertObstacleAuthoring(overrides, entity["InstanceId"]?.GetValue<string>() ?? "mass_navigation_blocker entity");
+            }
         }
 
         [Test]
@@ -518,6 +529,19 @@ namespace Ludots.Tests.Presentation
             Assert.That(animator["animationProfileId"]?.GetValue<string>(), Is.EqualTo("mass_navigation.agent.profile"));
             Assert.That(animator["speedParamKey"]?.GetValue<string>(), Is.EqualTo(LocomotionSpeedParamKey));
             Assert.That(animator["stateParamKey"]?.GetValue<string>(), Is.EqualTo("none"));
+        }
+
+        private static void AssertObstacleAuthoring(JsonObject components, string owner)
+        {
+            JsonObject obstacle = components["ManifestationObstacleIntent2D"]?.AsObject()
+                ?? throw new InvalidOperationException($"{owner} must author ManifestationObstacleIntent2D.");
+            Assert.That(RequireString(obstacle, "shape"), Is.EqualTo("Circle"));
+            Assert.That(obstacle["sinkNavigationObstacle"]?.GetValue<bool>(), Is.True,
+                $"{owner} must project into the navigation obstacle sink.");
+            Assert.That(obstacle["sinkPhysicsCollider"]?.GetValue<bool>(), Is.False,
+                $"{owner} MassFlow blocker authoring must not implicitly duplicate a physics collider.");
+            Assert.That(obstacle["radiusCm"]?.GetValue<float>(), Is.GreaterThan(0f));
+            Assert.That(obstacle["navRadiusCm"]?.GetValue<float>(), Is.GreaterThan(0f));
         }
 
         private static void AssertAgentTemplateAuthorsHealth(JsonObject template, float expectedBase, float expectedCurrent)

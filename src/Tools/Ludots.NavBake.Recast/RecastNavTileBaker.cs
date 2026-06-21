@@ -3,6 +3,7 @@ using System.Collections.Generic;
 using DotRecast.Recast;
 using DotRecast.Recast.Geom;
 using Ludots.Core.Map.Hex;
+using Ludots.Core.Navigation.AgentProfiles;
 using Ludots.Core.Navigation.NavMesh;
 using Ludots.Core.Navigation.NavMesh.Config;
 
@@ -16,7 +17,8 @@ namespace Ludots.NavBake.Recast
             int chunkY,
             uint tileVersion,
             in NavBuildConfig legacyConfig,
-            NavAgentProfileConfig profile,
+            AgentProfileConfig agentProfile,
+            NavMeshAgentProfileConfig navProfile,
             int layer,
             NavObstacleSet obstacles,
             out NavTile tile,
@@ -41,7 +43,7 @@ namespace Ludots.NavBake.Recast
                 }
 
                 var geom = new RcSampleInputGeomProvider(verts.ToArray(), tris.ToArray());
-                var rcCfg = BuildRcConfig(profile);
+                var rcCfg = BuildRcConfig(agentProfile, navProfile);
                 var bcfg = new RcBuilderConfig(rcCfg, geom.GetMeshBoundsMin(), geom.GetMeshBoundsMax());
                 var rcBuilder = new RcBuilder();
                 var rcResult = rcBuilder.Build(geom, bcfg, keepInterResults: false);
@@ -71,12 +73,12 @@ namespace Ludots.NavBake.Recast
             }
         }
 
-        private static RcConfig BuildRcConfig(NavAgentProfileConfig profile)
+        private static RcConfig BuildRcConfig(AgentProfileConfig agentProfile, NavMeshAgentProfileConfig navProfile)
         {
-            float radius = profile.RadiusCm / 100f;
-            float height = profile.HeightCm / 100f;
-            float maxClimb = profile.MaxClimbCm / 100f;
-            float maxSlope = profile.MaxSlopeDeg;
+            float radius = agentProfile.RadiusCm / 100f;
+            float height = agentProfile.HeightCm / 100f;
+            float maxClimb = navProfile.MaxClimbCm / 100f;
+            float maxSlope = navProfile.MaxSlopeDeg;
 
             float cellSize = MathF.Max(0.05f, MathF.Min(0.5f, radius / 3f));
             float cellHeight = cellSize * 0.5f;

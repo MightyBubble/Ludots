@@ -61,6 +61,11 @@ namespace Ludots.Core.Navigation.NavMesh.Config
 
         public static NavMeshBakeConfig LoadFromRepoRoot(string repoRoot, string relativePath = NavMeshConfigPaths.BakeConfigPath)
         {
+            return LoadContextFromRepoRoot(repoRoot, relativePath).Config;
+        }
+
+        public static NavMeshBakeContext LoadContextFromRepoRoot(string repoRoot, string relativePath = NavMeshConfigPaths.BakeConfigPath)
+        {
             if (string.IsNullOrWhiteSpace(repoRoot))
             {
                 throw new ArgumentException("repoRoot is required.", nameof(repoRoot));
@@ -78,7 +83,8 @@ namespace Ludots.Core.Navigation.NavMesh.Config
             var pipeline = new ConfigPipeline(vfs, modLoader: null);
             var catalog = ConfigCatalogLoader.Load(pipeline);
             var agentProfiles = new AgentProfileConfigLoader(pipeline).Load(catalog);
-            return new NavMeshBakeConfigLoader(pipeline, agentProfiles).Load(catalog, relativePath: relativePath);
+            var config = new NavMeshBakeConfigLoader(pipeline, agentProfiles).Load(catalog, relativePath: relativePath);
+            return new NavMeshBakeContext(config, agentProfiles);
         }
 
         private void ValidateRaw(JsonObject root, string relativePath)
@@ -209,4 +215,8 @@ namespace Ludots.Core.Navigation.NavMesh.Config
             }
         }
     }
+
+    public sealed record NavMeshBakeContext(
+        NavMeshBakeConfig Config,
+        AgentProfileRegistry AgentProfiles);
 }

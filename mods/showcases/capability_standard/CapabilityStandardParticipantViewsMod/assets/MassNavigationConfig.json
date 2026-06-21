@@ -20,14 +20,6 @@
         "widthCm": 10000,
         "heightCm": 10000
       }
-    ],
-    "obstacles": [
-      {
-        "id": "showcase_anchor",
-        "localXCm": 9800,
-        "localYCm": 9800,
-        "radiusCm": 50
-      }
     ]
   },
   "solver": {

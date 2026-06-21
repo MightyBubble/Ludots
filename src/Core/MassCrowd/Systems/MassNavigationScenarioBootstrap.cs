@@ -30,7 +30,6 @@ internal static class MassNavigationScenarioBootstrap
         simulation.MassFlow.Reset(
             teamIds,
             simulation.AgentsPerTeam,
-            simulation.WorldConfig.Obstacles,
             simulation.Config.AgentProfiles,
             scenarioAgentLayer,
             simulation.Config.Scenario.SpawnLayout);
@@ -42,7 +41,7 @@ internal static class MassNavigationScenarioBootstrap
             teamLookup.Register(teamId, RelationshipTeamBootstrapper.EnsureTeamEntity(engine.World, teamLookup, teamId, teamName));
         }
 
-        int requested = simulation.MassFlow.UnitCount + simulation.WorldConfig.Obstacles.Length + simulation.HotZones.Length;
+        int requested = simulation.MassFlow.UnitCount + simulation.HotZones.Length;
         if (spawnQueue.FreeCapacity < requested)
         {
             throw new InvalidOperationException(
@@ -72,13 +71,6 @@ internal static class MassNavigationScenarioBootstrap
                 teamIdOverride: teamId);
         }
 
-        EnqueueConfiguredObstacleBlockers(
-            engine,
-            spawnQueue,
-            mapId,
-            simulation,
-            simulation.WorldConfig.Obstacles);
-
         string hotspotTemplateId = simulation.Config.Presentation.HotspotTemplateId;
         authoring.ValidateTemplate(hotspotTemplateId);
         ReadOnlySpan<MassNavigationHotZoneConfig> hotZones = simulation.HotZones;
@@ -94,24 +86,6 @@ internal static class MassNavigationScenarioBootstrap
 
         simulation.MarkScenarioSpawned();
         simulation.MarkStructuralChange();
-    }
-
-    public static void EnqueueConfiguredObstacleBlockers(GameEngine engine, MassNavigationSimulationRuntime simulation)
-    {
-        ArgumentNullException.ThrowIfNull(engine);
-        ArgumentNullException.ThrowIfNull(simulation);
-
-        RuntimeEntitySpawnQueue spawnQueue = engine.GetService(CoreServiceKeys.RuntimeEntitySpawnQueue)
-            ?? throw new InvalidOperationException("MassCrowd runtime requires RuntimeEntitySpawnQueue.");
-        ReadOnlySpan<MassNavigationObstacleConfig> obstacles = simulation.WorldConfig.Obstacles;
-        if (spawnQueue.FreeCapacity < obstacles.Length)
-        {
-            throw new InvalidOperationException(
-                $"MassCrowd runtime requires RuntimeEntitySpawnQueue free capacity {obstacles.Length}, actual {spawnQueue.FreeCapacity}.");
-        }
-
-        MapId mapId = RequireCurrentMapId(engine, simulation.Config.MapId);
-        EnqueueConfiguredObstacleBlockers(engine, spawnQueue, mapId, simulation, obstacles);
     }
 
     private static void ConfigureRelationships(MassNavigationConfig config)
@@ -158,29 +132,6 @@ internal static class MassNavigationScenarioBootstrap
 
         throw new InvalidOperationException(
             $"MassCrowd runtime scenario auto-spawn requires one explicit agent layer across generated agent templates; '{actualLabel}' differs from '{expectedLabel}'.");
-    }
-
-    private static void EnqueueConfiguredObstacleBlockers(
-        GameEngine engine,
-        RuntimeEntitySpawnQueue spawnQueue,
-        MapId mapId,
-        MassNavigationSimulationRuntime simulation,
-        ReadOnlySpan<MassNavigationObstacleConfig> obstacles)
-    {
-        string templateId = simulation.Config.Presentation.BlockerTemplateId;
-        ValidateTemplate(engine, templateId);
-        for (int i = 0; i < obstacles.Length; i++)
-        {
-            MassNavigationObstacleConfig obstacle = obstacles[i];
-            EnqueueSpawn(
-                spawnQueue,
-                mapId,
-                templateId,
-                Fix64Vec2.FromInt(
-                    (int)MathF.Round(simulation.ToWorldXCm(obstacle.LocalXCm)),
-                    (int)MathF.Round(simulation.ToWorldYCm(obstacle.LocalYCm))),
-                componentPatches: CreateBlockerRadiusPatch(obstacle.RadiusCm));
-        }
     }
 
     private static void ValidateTemplate(GameEngine engine, string templateId)
@@ -241,21 +192,4 @@ internal static class MassNavigationScenarioBootstrap
         return session.MapId;
     }
 
-    private static RuntimeEntitySpawnComponentPatch[] CreateBlockerRadiusPatch(float blockerRadiusCm)
-    {
-        if (!(blockerRadiusCm > 0f))
-        {
-            throw new InvalidOperationException("MassCrowd runtime blocker spawn patch requires radiusCm > 0.");
-        }
-
-        return
-        [
-            new RuntimeEntitySpawnComponentPatch(
-                "MassCrowdBlocker",
-                new JsonObject
-                {
-                    ["radiusCm"] = blockerRadiusCm,
-                }),
-        ];
-    }
 }

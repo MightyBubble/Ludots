@@ -138,7 +138,7 @@ internal sealed class CapabilityStandardTotalWarLikeRuntime
             SystemGroup.PostMovement);
         CapabilityStandardTotalWarLikeConfig config = EnsureConfig(engine);
         engine.RegisterPresentationSystem(new CapabilityStandardTotalWarLikeFormationOutlinePresentationSystem(engine, this, config));
-        engine.RegisterPresentationSystem(new CapabilityStandardTotalWarLikeObstacleOverlayPresentationSystem(engine, this, simulation.WorldConfig.Obstacles.Length));
+        engine.RegisterPresentationSystem(new CapabilityStandardTotalWarLikeObstacleOverlayPresentationSystem(engine, this, simulation.Config.Solver.MaxObstacleCount));
         _systemsInstalled = true;
     }
 

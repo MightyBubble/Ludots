@@ -1,6 +1,7 @@
 using System;
 using System.Collections.Generic;
 using System.IO;
+using System.Text.Json;
 using System.Text.Json.Nodes;
 using Arch.Core;
 using Ludots.Core.MassCrowd.Runtime;
@@ -49,6 +50,27 @@ namespace Ludots.Tests.Presentation
         }
 
         [Test]
+        public void MassNavigationConfig_RejectsLegacyWorldObstacles()
+        {
+            JsonObject config = ReadObject(Path.Combine(MassNavigationModRoot(), "assets", "MassNavigationConfig.json"));
+            JsonObject world = config["world"]?.AsObject()
+                ?? throw new InvalidOperationException("MassNavigationConfig.world must be authored.");
+            world["obstacles"] = new JsonArray
+            {
+                new JsonObject
+                {
+                    ["id"] = "legacy_obstacle",
+                    ["localXCm"] = 1000f,
+                    ["localYCm"] = 1000f,
+                    ["radiusCm"] = 100f,
+                },
+            };
+
+            JsonException ex = Assert.Throws<JsonException>(() => MassNavigationConfig.Load(config))!;
+            Assert.That(ex.Message, Does.Contain("obstacles"));
+        }
+
+        [Test]
         public void ParallelStep_RequiresSchedulerWhenConfiguredParallel()
         {
             JobScheduler? previousScheduler = World.SharedJobScheduler;
@@ -62,7 +84,6 @@ namespace Ludots.Tests.Presentation
                 flow.Reset(
                     new[] { 1 },
                     unitsPerTeam: 2,
-                    CreateObstacles(),
                     CreateProfileSet(),
                     layer,
                     CreateSpawnLayout(randomSeed: 1234));
@@ -141,7 +162,6 @@ namespace Ludots.Tests.Presentation
             flow.Reset(
                 new[] { 1 },
                 unitsPerTeam: 4,
-                CreateObstacles(),
                 CreateProfileSet(),
                 layer,
                 CreateSpawnLayout(randomSeed));
@@ -234,20 +254,6 @@ namespace Ludots.Tests.Presentation
                     Layer = 0
                 }
             });
-        }
-
-        private static MassNavigationObstacleConfig[] CreateObstacles()
-        {
-            return new[]
-            {
-                new MassNavigationObstacleConfig
-                {
-                    Id = "contract_obstacle",
-                    LocalXCm = 9_000f,
-                    LocalYCm = 9_000f,
-                    RadiusCm = 100f,
-                },
-            };
         }
 
         private static JsonObject ReadObject(string path)

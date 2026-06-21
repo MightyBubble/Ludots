@@ -416,16 +416,6 @@ namespace Ludots.Tests.Presentation
                             HeightCm = 1000,
                         },
                     },
-                    Obstacles = new[]
-                    {
-                        new MassNavigationObstacleConfig
-                        {
-                            Id = "blocker",
-                            LocalXCm = 5000f,
-                            LocalYCm = 5000f,
-                            RadiusCm = 100f,
-                        },
-                    },
                 },
                 Scenario = new MassNavigationScenarioConfig
                 {

@@ -5,6 +5,7 @@ using Ludots.Core.Components;
 using Ludots.Core.Config;
 using Ludots.Core.Gameplay.Components;
 using Ludots.Core.Gameplay.Spawning;
+using Ludots.Core.MassCrowd.Runtime;
 using Ludots.Core.Mathematics.FixedPoint;
 using Ludots.Core.Navigation2D.Components;
 using Ludots.Core.Physics2D;
@@ -75,6 +76,12 @@ namespace Ludots.Tests.GAS
                 Fix64.FromInt(240 * 240) +
                 Fix64.FromInt(30 * 30));
             That(nav.RadiusCm, Is.EqualTo(expectedRadius));
+
+            That(world.Has<MassFlowObstacleProjection>(entity), Is.True);
+            var projection = world.Get<MassFlowObstacleProjection>(entity);
+            That(projection.PieceCount, Is.EqualTo(1));
+            That(projection.GetShape(0), Is.EqualTo(ManifestationObstacleShape2D.Box));
+            That(projection.GetRadiusCm(0), Is.EqualTo(expectedRadius.RoundToInt()));
         }
 
         [Test]
@@ -114,6 +121,7 @@ namespace Ludots.Tests.GAS
             That(world.Has<Velocity2D>(entity), Is.False);
             That(world.Has<NavObstacle2D>(entity), Is.False);
             That(world.Has<NavKinematics2D>(entity), Is.False);
+            That(world.Has<MassFlowObstacleProjection>(entity), Is.False);
         }
 
         [Test]
@@ -252,6 +260,7 @@ namespace Ludots.Tests.GAS
             That(world.Has<Mass2D>(entity), Is.True);
             That(world.Has<Velocity2D>(entity), Is.True);
             That(world.Has<NavKinematics2D>(entity), Is.True);
+            That(world.Has<MassFlowObstacleProjection>(entity), Is.True);
 
             var state = world.Get<CompoundObstacle2DState>(entity);
             That(state.PieceCount, Is.EqualTo(2));
@@ -265,6 +274,12 @@ namespace Ludots.Tests.GAS
             That(polygon.LocalOffset, Is.EqualTo(Fix64Vec2.FromInt(160, 20)));
 
             That(world.Get<NavKinematics2D>(entity).RadiusCm, Is.EqualTo(Fix64.FromInt(120)));
+            var projection = world.Get<MassFlowObstacleProjection>(entity);
+            That(projection.PieceCount, Is.EqualTo(2));
+            That(projection.GetShape(0), Is.EqualTo(ManifestationObstacleShape2D.Box));
+            That(projection.GetShape(1), Is.EqualTo(ManifestationObstacleShape2D.Polygon));
+            That(projection.GetRadiusCm(0), Is.EqualTo(120));
+            That(projection.GetRadiusCm(1), Is.EqualTo(80));
         }
 
         [Test]

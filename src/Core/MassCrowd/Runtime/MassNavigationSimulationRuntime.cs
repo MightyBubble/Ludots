@@ -777,7 +777,7 @@ public sealed class MassNavigationSimulationRuntime
     public void ResetRuntimeState(World world, ReadOnlySpan<MassNavigationAgentSeed> agentSeeds)
     {
         ResetRuntimeState(world);
-        MassFlow.ResetAuthoredAgents(agentSeeds, WorldConfig.Obstacles);
+        MassFlow.ResetAuthoredAgents(agentSeeds);
     }
 
     public void ClearAuthoredRuntimeBindings(World world)
@@ -786,7 +786,7 @@ public sealed class MassNavigationSimulationRuntime
         ClearSelection();
         NavGroupRuntime.Reset();
         AgentState.ClearRuntimeBindings(world);
-        MassFlow.ResetAuthoredAgents(ReadOnlySpan<MassNavigationAgentSeed>.Empty, WorldConfig.Obstacles);
+        MassFlow.ResetAuthoredAgents(ReadOnlySpan<MassNavigationAgentSeed>.Empty);
         MarkAuthoredRuntimeBindingChanged();
     }
 
@@ -812,7 +812,7 @@ public sealed class MassNavigationSimulationRuntime
         }
 
         ClearAuthoredRuntimeBindings(world);
-        MassFlow.ResetAuthoredAgents(agentSeeds, WorldConfig.Obstacles);
+        MassFlow.ResetAuthoredAgents(agentSeeds);
         for (int i = 0; i < entities.Length; i++)
         {
             BindSpawnedAgent(world, entities[i], i, controllableFlags[i]);

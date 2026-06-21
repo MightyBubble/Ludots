@@ -138,7 +138,7 @@ internal sealed class TotalWarShowcaseRuntime
             SystemGroup.PostMovement);
         TotalWarShowcaseConfig config = EnsureConfig(engine);
         engine.RegisterPresentationSystem(new TotalWarFormationOutlinePresentationSystem(engine, this, config));
-        engine.RegisterPresentationSystem(new TotalWarObstacleOverlayPresentationSystem(engine, this, simulation.WorldConfig.Obstacles.Length));
+        engine.RegisterPresentationSystem(new TotalWarObstacleOverlayPresentationSystem(engine, this, simulation.Config.Solver.MaxObstacleCount));
         _systemsInstalled = true;
     }
 

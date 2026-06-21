@@ -13,6 +13,7 @@ using GraphProgramPackage = Ludots.Core.GraphRuntime.GraphProgramPackage;
 using Ludots.Core.Map.Hex;
 using Ludots.Core.Navigation.NavMesh;
 using Ludots.Core.Navigation.NavMesh.Config;
+using Ludots.Core.Physics2D.Navigation;
 using Ludots.Core.Spatial;
 using Ludots.NavBake.Recast;
 
@@ -698,10 +699,10 @@ namespace {modId}
                 Console.WriteLine($"Invalid repo root (missing assets/): {repoRoot}");
                 return 2;
             }
-            NavMeshBakeConfig bakeConfig;
+            NavMeshBakeContext bakeContext;
             try
             {
-                bakeConfig = NavMeshBakeConfigLoader.LoadFromRepoRoot(repoRoot);
+                bakeContext = NavMeshBakeConfigLoader.LoadContextFromRepoRoot(repoRoot);
             }
             catch (Exception ex)
             {
@@ -709,14 +710,18 @@ namespace {modId}
                 return 2;
             }
 
+            NavMeshBakeConfig bakeConfig = bakeContext.Config;
             var profiles = bakeConfig.Profiles;
 
-            NavObstacleSet obstacles = new NavObstacleSet();
-            string obsRel = NavAssetPaths.GetObstacleRelativePath(mapId);
-            string obsPath = Path.Combine(repoRoot, obsRel.Replace('/', Path.DirectorySeparatorChar));
-            if (File.Exists(obsPath))
+            NavObstacleSet obstacles;
+            try
             {
-                obstacles = JsonSerializer.Deserialize<NavObstacleSet>(File.ReadAllText(obsPath), new JsonSerializerOptions { PropertyNameCaseInsensitive = true }) ?? new NavObstacleSet();
+                obstacles = NavObstacleAuthoringCatalog.BuildForMap(repoRoot, mapId);
+            }
+            catch (Exception ex)
+            {
+                Console.WriteLine($"Failed to build nav obstacles from map authoring for '{mapId}': {ex.Message}");
+                return 2;
             }
 
             VertexMap map;
@@ -762,7 +767,7 @@ namespace {modId}
             }
 
             var legacyCfg = new NavBuildConfig(heightScale, minUpDot, cliffThreshold);
-            Console.WriteLine($"BakeNavRecastReact: mapId={mapId} map {map.WidthInChunks}x{map.HeightInChunks} chunks");
+            Console.WriteLine($"BakeNavRecastReact: mapId={mapId} map {map.WidthInChunks}x{map.HeightInChunks} chunks obstacles={obstacles.Obstacles.Count}");
 
             int ok = 0;
             int fail = 0;
@@ -775,9 +780,11 @@ namespace {modId}
                     int layer = bakeConfig.Layers[li].Layer;
                     for (int pi = 0; pi < profiles.Count; pi++)
                     {
-                        if (RecastNavTileBaker.TryBake(map, t.cx, t.cy, (uint)tileVersion, legacyCfg, profiles[pi], layer, obstacles, out var tile, out var artifact))
+                        var navProfile = profiles[pi];
+                        var agentProfile = bakeContext.AgentProfiles.Require(navProfile.Id, $"{NavMeshConfigPaths.BakeConfigPath}.profiles[{pi}]");
+                        if (RecastNavTileBaker.TryBake(map, t.cx, t.cy, (uint)tileVersion, legacyCfg, agentProfile, navProfile, layer, obstacles, out var tile, out var artifact))
                         {
-                            string profileId = profiles[pi].Id ?? throw new InvalidOperationException("NavMeshBakeConfig.profiles.id is required.");
+                            string profileId = navProfile.Id ?? throw new InvalidOperationException("NavMeshBakeConfig.profiles.id is required.");
                             string rel = NavAssetPaths.GetNavTileRelativePath(mapId, layer, profileId, t.cx, t.cy);
                             string outFile = Path.Combine(repoRoot, rel.Replace('/', Path.DirectorySeparatorChar));
                             Directory.CreateDirectory(Path.GetDirectoryName(outFile)!);

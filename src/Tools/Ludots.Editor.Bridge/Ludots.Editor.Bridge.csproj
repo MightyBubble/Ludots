@@ -7,6 +7,7 @@
 
   <ItemGroup>
     <ProjectReference Include="..\..\Core\Ludots.Core.csproj" />
+    <ProjectReference Include="..\..\Core\Ludots.Physics2D\Ludots.Physics2D.csproj" />
     <ProjectReference Include="..\Ludots.Launcher.Backend\Ludots.Launcher.Backend.csproj" />
     <ProjectReference Include="..\Ludots.Tool\Ludots.Tool.csproj" />
     <ProjectReference Include="..\Ludots.NavBake.Recast\Ludots.NavBake.Recast.csproj" />

@@ -8,6 +8,7 @@
 - [MassNavigation 用户教学书](mass-navigation-user-book.md)
 - [MassNavigation 正式链路手册](mass-navigation-formal-chain.md)
 - [Agent Profile](agent-profile.md)
+- [Obstacle Authoring](obstacle-authoring.md)
 - [空间尺度配置查表](spatial-scale-configuration.md)
 - [项目地图](project-map.md)
 - [发布与访问](publishing-and-access.md)

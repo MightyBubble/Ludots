@@ -288,7 +288,6 @@ public sealed class MassFlowSimulationState
     public void Reset(
         ReadOnlySpan<int> teamIds,
         int unitsPerTeam,
-        ReadOnlySpan<MassNavigationObstacleConfig> obstacles,
         MassNavigationAgentProfileSetConfig profileSet,
         MassNavigationAgentLayer layer,
         MassNavigationScenarioSpawnLayoutConfig spawnLayout)
@@ -311,7 +310,7 @@ public sealed class MassFlowSimulationState
         UnitCount = checked(unitsPerTeam * teamIds.Length);
         EnsureCapacity(UnitCount);
         InitializeTeams(teamIds, unitsPerTeam, spawnLayout);
-        CacheAuthoredObstacles(obstacles);
+        ClearRuntimeObstacles();
         InitializeUnits(profileSet, layer, spawnLayout.RandomSeed);
         ForceFlowRebuild();
         MarkAllEntitiesDirty();
@@ -319,14 +318,12 @@ public sealed class MassFlowSimulationState
         SettledUnitCount = 0;
     }
 
-    public void ResetAuthoredAgents(
-        ReadOnlySpan<MassNavigationAgentSeed> agentSeeds,
-        ReadOnlySpan<MassNavigationObstacleConfig> obstacles)
+    public void ResetAuthoredAgents(ReadOnlySpan<MassNavigationAgentSeed> agentSeeds)
     {
         UnitCount = agentSeeds.Length;
         EnsureCapacity(UnitCount);
         InitializeTeams(agentSeeds);
-        CacheAuthoredObstacles(obstacles);
+        ClearRuntimeObstacles();
         InitializeUnits(agentSeeds);
         ForceFlowRebuild();
         MarkAllEntitiesDirty();
@@ -512,6 +509,13 @@ public sealed class MassFlowSimulationState
 
         ClearStaleObstacles(ObstacleCount, previousCount);
         ForceFlowRebuild();
+    }
+
+    private void ClearRuntimeObstacles()
+    {
+        int previousCount = ObstacleCount;
+        ObstacleCount = 0;
+        ClearStaleObstacles(0, previousCount);
     }
 
     public bool SetUnitTarget(int index, float xCm, float yCm, bool resetRecovery = false)
@@ -1236,27 +1240,6 @@ public sealed class MassFlowSimulationState
         }
 
         _maxInteractingBodyRadiiDirty = true;
-    }
-
-    private void CacheAuthoredObstacles(ReadOnlySpan<MassNavigationObstacleConfig> obstacles)
-    {
-        if (obstacles.Length <= 0)
-        {
-            throw new InvalidOperationException("MassFlowSimulationState requires authored obstacles.");
-        }
-
-        if (obstacles.Length > _maxObstacleCount)
-        {
-            throw new InvalidOperationException(
-                $"MassFlowSimulationState obstacle count {obstacles.Length} exceeds solver capacity {_maxObstacleCount}.");
-        }
-
-        ObstacleCount = obstacles.Length;
-        for (int i = 0; i < obstacles.Length; i++)
-        {
-            MassNavigationObstacleConfig obstacle = obstacles[i];
-            CacheObstacle(i, obstacle.LocalXCm, obstacle.LocalYCm, obstacle.RadiusCm);
-        }
     }
 
     private void CacheObstacle(int index, float xCm, float yCm, float radiusCm)

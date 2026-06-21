@@ -5,6 +5,7 @@ using Ludots.Launcher.Backend;
 using Ludots.Core.Navigation.NavMesh;
 using Ludots.Core.Navigation.NavMesh.Bake;
 using Ludots.Core.Navigation.NavMesh.Config;
+using Ludots.Core.Physics2D.Navigation;
 using Ludots.NavBake.Recast;
 using Ludots.Tool;
 using Microsoft.AspNetCore.Http.Features;
@@ -557,6 +558,7 @@ app.MapPost("/api/nav/bake-recast-react", async (HttpRequest req) =>
     if (mapFile == null) return Results.BadRequest(new { error = "Missing form file 'map' (map_data.bin)" });
     var mapId = form.TryGetValue("mapId", out var mapIdVal) ? mapIdVal.ToString() : null;
     if (string.IsNullOrWhiteSpace(mapId)) return Results.BadRequest(new { error = "Missing form field 'mapId'" });
+    var modId = form.TryGetValue("modId", out var modIdVal) ? modIdVal.ToString() : null;
 
     var dirtyJson = form.TryGetValue("dirty", out var dirtyVal) ? dirtyVal.ToString() : null;
     var dirtyOnly = ParseBool(form.TryGetValue("dirtyOnly", out var dirtyOnlyVal) ? dirtyOnlyVal.ToString() : null, defaultValue: false);
@@ -583,24 +585,27 @@ app.MapPost("/api/nav/bake-recast-react", async (HttpRequest req) =>
         var map = VertexMapBinary.Read(vtxmStream);
 
         string repoRoot = FindAssetsRoot();
-        NavMeshBakeConfig bakeConfig;
+        NavMeshBakeContext bakeContext;
         try
         {
-            bakeConfig = NavMeshBakeConfigLoader.LoadFromRepoRoot(repoRoot);
+            bakeContext = NavMeshBakeConfigLoader.LoadContextFromRepoRoot(repoRoot);
         }
         catch (Exception ex)
         {
             return Results.BadRequest(new { error = $"Failed to load navmesh bake config '{NavMeshConfigPaths.BakeConfigPath}': {ex.Message}" });
         }
 
+        NavMeshBakeConfig bakeConfig = bakeContext.Config;
         var profiles = bakeConfig.Profiles;
 
-        NavObstacleSet obstacles = new NavObstacleSet();
-        string obsRel = NavAssetPaths.GetObstacleRelativePath(mapId);
-        string obsPath = Path.Combine(repoRoot, obsRel.Replace('/', Path.DirectorySeparatorChar));
-        if (File.Exists(obsPath))
+        NavObstacleSet obstacles;
+        try
         {
-            obstacles = JsonSerializer.Deserialize<NavObstacleSet>(File.ReadAllText(obsPath), new JsonSerializerOptions { PropertyNameCaseInsensitive = true }) ?? new NavObstacleSet();
+            obstacles = NavObstacleAuthoringCatalog.BuildForMap(repoRoot, mapId, modId);
+        }
+        catch (Exception ex)
+        {
+            return Results.BadRequest(new { error = $"Failed to build nav obstacles from map authoring for '{mapId}': {ex.Message}" });
         }
 
         var targets = ResolveTargets(map, dirtyJson, includeNeighbors, fallbackToFullWhenNoTargets: !dirtyOnly);
@@ -614,7 +619,7 @@ app.MapPost("/api/nav/bake-recast-react", async (HttpRequest req) =>
                 tiles = Array.Empty<object>(),
                 artifacts = Array.Empty<object>(),
                 message = "No targets to bake (dirtyOnly=true and dirty set is empty).",
-                config = new { mapId, dirtyOnly, includeNeighbors, heightScale, minUpDot, cliffThreshold, tileVersion }
+                config = new { mapId, modId, dirtyOnly, includeNeighbors, heightScale, minUpDot, cliffThreshold, tileVersion, obstacleCount = obstacles.Obstacles.Count }
             });
         }
         var legacyCfg = new NavBuildConfig(heightScale, minUpDot, cliffThreshold);
@@ -633,9 +638,11 @@ app.MapPost("/api/nav/bake-recast-react", async (HttpRequest req) =>
                 int layer = bakeConfig.Layers[li].Layer;
                 for (int pi = 0; pi < profiles.Count; pi++)
                 {
-                    if (RecastNavTileBaker.TryBake(map, t.cx, t.cy, (uint)tileVersion, legacyCfg, profiles[pi], layer, obstacles, out var tile, out var artifact))
+                    var navProfile = profiles[pi];
+                    var agentProfile = bakeContext.AgentProfiles.Require(navProfile.Id, $"{NavMeshConfigPaths.BakeConfigPath}.profiles[{pi}]");
+                    if (RecastNavTileBaker.TryBake(map, t.cx, t.cy, (uint)tileVersion, legacyCfg, agentProfile, navProfile, layer, obstacles, out var tile, out var artifact))
                     {
-                        string profileId = profiles[pi].Id ?? throw new InvalidOperationException("NavMeshBakeConfig.profiles.id is required.");
+                        string profileId = navProfile.Id ?? throw new InvalidOperationException("NavMeshBakeConfig.profiles.id is required.");
                         string rel = NavAssetPaths.GetNavTileRelativePath(mapId, layer, profileId, t.cx, t.cy);
                         string outFile = Path.Combine(repoRoot, rel.Replace('/', Path.DirectorySeparatorChar));
                         Directory.CreateDirectory(Path.GetDirectoryName(outFile)!);
@@ -698,7 +705,7 @@ app.MapPost("/api/nav/bake-recast-react", async (HttpRequest req) =>
             tiles,
             artifacts,
             targetsCount = targets.Count,
-            config = new { mapId, dirtyOnly, includeNeighbors, heightScale, minUpDot, cliffThreshold, tileVersion }
+            config = new { mapId, modId, dirtyOnly, includeNeighbors, heightScale, minUpDot, cliffThreshold, tileVersion, obstacleCount = obstacles.Obstacles.Count }
         });
     }
     finally

@@ -25,7 +25,7 @@ Foundation-owned files stay under `assets/` and are loaded through the normal co
 
 | File | Responsibility |
 | --- | --- |
-| `assets/MassNavigationConfig.json` | Solver window, cadence, flow, arrival, avoidance, crowd semantics, scenario teams, obstacle seed authoring, camera profiles, and view residency. |
+| `assets/MassNavigationConfig.json` | Solver window, cadence, flow, arrival, avoidance, crowd semantics, scenario teams, camera profiles, and view residency. |
 | `assets/GAS/order_types.json` | `massNavigationMove` order registration and rule authoring. |
 | `assets/Entities/templates.json` | Foundation example templates and required component contract examples. |
 | `assets/Presentation/performers.json` | Foundation example performer authoring. |
@@ -58,10 +58,11 @@ Runtime files for MassNavigation live in `src/Core/MassCrowd`. Component authori
 
 - `MassCrowdAgent` participates in the MassCrowd runtime.
 - `OrderBuffer` makes an authored agent controllable/orderable.
-- `MassCrowdBlocker` participates as a crowd obstacle and becomes the runtime MassFlow obstacle SSOT after environment binding.
+- `ManifestationObstacleIntent2D` / `CompoundObstacle2D` author obstacle geometry.
+- `MassFlowObstacleProjection` is the bridge output consumed by MassFlow environment binding.
 - `MassCrowdFormationAnchor`, `MassCrowdFormationFollower`, and optional `MassCrowdFollowerLocomotion` enable formation behavior only for templates that author those components.
 
-`MassNavigationConfig.world.obstacles[]` seeds blocker authoring through the shared runtime spawn path; the solver reads the bound ECS blockers, not a second private obstacle cache.
+`MassNavigationConfig.world.obstacles[]` is obsolete and must fail strict config loading. Obstacle authoring belongs to map/template ECS components and is documented in `gitbook/reference/obstacle-authoring.md`.
 
 The mod-owned source surface is intentionally small:
 

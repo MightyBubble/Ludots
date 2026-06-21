@@ -319,29 +319,40 @@ Local input
 
 ## 障碍物
 
-障碍 seed 写在 `mods/showcases/mass_navigation_total_war_entry/MassNavigationTotalWarEntryMod/assets/MassNavigationConfig.json` 的 `world.obstacles[]`。
+障碍物的 SSOT 是地图或模板上的 ECS 组件，不再写在 `MassNavigationConfig.json`。
 
-但 runtime 真正喂给 solver 的 SSOT 是 ECS 里的 `MassCrowdBlocker + WorldPositionCm`：
+正式链路使用 `ManifestationObstacleIntent2D` / `CompoundObstacle2D`：
 
 ```text
-world.obstacles[]
-  -> RuntimeEntitySpawnQueue
-  -> RuntimeEntitySpawnSystem
-  -> MassCrowdBlocker entity
+map/template components
+  -> ManifestationObstacleIntent2D or CompoundObstacle2D
+  -> ManifestationObstacleBridge2DSystem
+  -> MassFlowObstacleProjection + WorldPositionCm
   -> MassCrowdEnvironmentBindingSystem
   -> MassFlow obstacle arrays
 ```
 
 也就是说：
 
-- config 负责 authoring seed；
-- `MassCrowdBlocker` 组件负责 runtime obstacle；
-- `MassCrowdBlockerRadiusCmOverride` 会在 spawn request 上直接改最终 solver 半径。
+- 地图或 template 负责 authoring；
+- `ManifestationObstacleBridge2DSystem` 负责把 Circle/Box/Polygon 投影给运行时；
+- `MassCrowdEnvironmentBindingSystem` 负责把 `MassFlowObstacleProjection` 绑定进 solver；
+- `MassNavigationConfig.world.obstacles[]` 是废弃旧键，出现就应该 fail-fast。
 
 示例：
 
 ```json
-{ "id": "central_blocker", "localXCm": 5000.0, "localYCm": 5000.0, "radiusCm": 300.0 }
+{
+  "WorldPositionCm": { "Value": { "X": 5000, "Y": 5000 } },
+  "ManifestationObstacleIntent2D": {
+    "shape": "Circle",
+    "sinkPhysicsCollider": false,
+    "sinkNavigationObstacle": true,
+    "radiusCm": 300,
+    "navRadiusCm": 300,
+    "localOffsetCm": { "x": 0, "y": 0 }
+  }
+}
 ```
 
 玩家要看见障碍，所以 showcase 还配置了：
@@ -351,6 +362,8 @@ world.obstacles[]
 - `Runtime/TotalWarObstacleOverlayPresentationSystem.cs` 发射 overlay 表现。
 
 不要用隐藏 debug draw 假装障碍可见。玩家要看的东西必须走明确表现链路。
+
+更多细节见 [Obstacle Authoring](obstacle-authoring.md)。
 
 ## 相机和裁剪
 

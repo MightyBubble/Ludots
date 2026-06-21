@@ -125,13 +125,15 @@ MassCrowd membership is authored by components:
 
 - `MassCrowdAgent` means the entity participates in the core MassCrowd runtime.
 - `OrderBuffer` means the entity is controllable/orderable.
-- `MassCrowdBlocker` means the entity is a runtime MassFlow obstacle after `MassCrowdEnvironmentBindingSystem` runs.
+- `ManifestationObstacleIntent2D` / `CompoundObstacle2D` means the entity authors obstacle geometry.
+- `MassFlowObstacleProjection` means the bridge has projected authored obstacle geometry into the MassFlow runtime sink.
+- `MassCrowdBlockerProfile` is the runtime binding summary attached after `MassCrowdEnvironmentBindingSystem` runs.
 - `MassCrowdFormationAnchor` enables optional formation anchor behavior.
 - `MassCrowdFormationFollower` enables optional follower behavior.
 
 Formation is optional. Do not author a disabled formation component; absence of the component means absence of the feature.
 
-`MassNavigationConfig.world.obstacles[]` is authoring seed data, not a second runtime SSOT. The shared spawn path materializes blocker entities, then `MassCrowdEnvironmentBindingSystem` rebuilds solver obstacles from authored `MassCrowdBlocker + WorldPositionCm`.
+`MassNavigationConfig.world.obstacles[]` is obsolete. Obstacle authoring belongs to map/template ECS components. The shared spawn path materializes those components, `ManifestationObstacleBridge2DSystem` produces `MassFlowObstacleProjection`, and `MassCrowdEnvironmentBindingSystem` rebuilds solver obstacles from `MassFlowObstacleProjection + WorldPositionCm`.
 
 Showcase sidecar binding may attach `TotalWarFormationAgent` / `TotalWarFormationSoldier` / overlay components after core MassCrowd binding exists. That sidecar must not create a second MassCrowd runtime or bind agents through a post-spawn channel.
 
@@ -141,7 +143,7 @@ Showcase sidecar binding may attach `TotalWarFormationAgent` / `TotalWarFormatio
 | --- | --- |
 | `mods/showcases/mass_navigation_total_war_entry/MassNavigationTotalWarEntryMod/assets/game.json` | 启动 map、capacity、presentation culling、selection preview order keys。 |
 | `mods/showcases/mass_navigation_total_war_entry/MassNavigationTotalWarEntryMod/assets/Maps/mass_navigation_total_war.json` | map id 和 visual heightmap 绑定。 |
-| `mods/showcases/mass_navigation_total_war_entry/MassNavigationTotalWarEntryMod/assets/MassNavigationConfig.json` | 导航世界、solver、profiles、obstacle seed、cadence、arrival、avoidance、camera profiles、view residency。 |
+| `mods/showcases/mass_navigation_total_war_entry/MassNavigationTotalWarEntryMod/assets/MassNavigationConfig.json` | 导航世界、solver、profiles、cadence、arrival、avoidance、camera profiles、view residency。 |
 | `mods/showcases/mass_navigation_total_war_entry/MassNavigationTotalWarEntryMod/assets/TotalWarShowcaseConfig.json` | 方阵场景、士兵 template/profile、slot layout、outline、obstacle overlay、initial selection。 |
 | `mods/showcases/mass_navigation_total_war_entry/MassNavigationTotalWarEntryMod/assets/Entities/templates.json` | 可 spawn 的 entity templates。 |
 | `mods/showcases/mass_navigation_total_war_entry/MassNavigationTotalWarEntryMod/assets/Presentation/performers.json` | performer definitions 和 lifecycle rules。 |
