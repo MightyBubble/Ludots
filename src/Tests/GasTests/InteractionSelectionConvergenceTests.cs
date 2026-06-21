@@ -581,7 +581,7 @@ namespace Ludots.Tests.GAS
             var queue = new OrderQueue();
             var order = new Order
             {
-                OrderTypeId = 1001,
+                OrderTypeId = 101,
                 Actor = first,
                 Args = new OrderArgs
                 {

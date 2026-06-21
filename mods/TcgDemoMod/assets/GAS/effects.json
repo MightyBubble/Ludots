@@ -12,7 +12,8 @@
         "op": "Add",
         "value": -30
       }
-    ]
+    ],
+    "participatesInResponse": false
   },
   {
     "id": "Effect.Tcg.CounterBlast",
@@ -27,7 +28,8 @@
         "op": "Add",
         "value": -15
       }
-    ]
+    ],
+    "participatesInResponse": false
   },
   {
     "id": "Effect.Tcg.PoisonCounter",

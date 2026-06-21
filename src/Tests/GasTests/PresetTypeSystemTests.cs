@@ -3,6 +3,7 @@ using Arch.Core;
 using Ludots.Core.Gameplay.GAS;
 using Ludots.Core.Gameplay.GAS.Components;
 using Ludots.Core.Gameplay.GAS.Config;
+using Ludots.Core.NodeLibraries.GASGraph.Host;
 using NUnit.Framework;
 using static NUnit.Framework.Assert;
 
@@ -412,8 +413,11 @@ namespace Ludots.Tests.GAS
         }
 
         [Test]
-        public void PresetTypeLoader_GraphHandler_ParsesNumericId()
+        public void PresetTypeLoader_GraphHandler_ResolvesRegisteredGraphName()
         {
+            GraphIdRegistry.Clear();
+            int graphId = GraphIdRegistry.Register("Graph.Test.Heal.Calculate");
+
             const string json = @"[
               {
                 ""id"": ""Heal"",
@@ -421,7 +425,7 @@ namespace Ludots.Tests.GAS
                 ""activePhases"": [""OnCalculate""],
                 ""allowedLifetimes"": [""Instant""],
                 ""defaultPhaseHandlers"": {
-                  ""OnCalculate"": { ""type"": ""graph"", ""id"": ""42"" }
+                  ""OnCalculate"": { ""type"": ""graph"", ""id"": ""Graph.Test.Heal.Calculate"" }
                 }
               }
             ]";
@@ -432,7 +436,7 @@ namespace Ludots.Tests.GAS
             ref readonly var def = ref reg.Get(EffectPresetType.Heal);
             var h = def.DefaultPhaseHandlers[EffectPhaseId.OnCalculate];
             That(h.Kind, Is.EqualTo(PhaseHandlerKind.Graph));
-            That(h.HandlerId, Is.EqualTo(42));
+            That(h.HandlerId, Is.EqualTo(graphId));
         }
 
         [Test]

@@ -94,7 +94,8 @@ namespace MobaDemoMod.Systems
             {
                 "castAbility" => _castAbilityOrderTypeId,
                 "stop" => _stopOrderTypeId,
-                _ => 0
+                _ => throw new InvalidOperationException(
+                    $"[{_ctx.ModId}] input_order_mappings.json references unknown orderTypeKey '{key}'.")
             });
             
             // Ground position provider

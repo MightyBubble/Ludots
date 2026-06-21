@@ -63,14 +63,7 @@
         { "kind": "End", "tick": 0 }
       ]
     },
-    "indicator": {
-      "shape": "Circle",
-      "range": 0,
-      "radius": 280,
-      "showRangeCircle": false,
-      "validColor": "#D76BFF77",
-      "invalidColor": "#E2575788"
-    },
+    "indicator": { "shape": "Circle", "radius": 280, "showRangeCircle": false, "validColor": "#D76BFF77", "invalidColor": "#E2575788" },
     "blockTags": { "blockedAny": ["Cooldown.Arcweaver.R"] }
   },
   {
@@ -83,14 +76,7 @@
         { "kind": "End", "tick": 0 }
       ]
     },
-    "indicator": {
-      "shape": "Line",
-      "range": 360,
-      "showRangeCircle": true,
-      "validColor": "#6BE1C988",
-      "invalidColor": "#E2575788",
-      "rangeCircleColor": "#3372D16A"
-    },
+    "indicator": { "shape": "Line", "range": 360, "radius": 55, "showRangeCircle": true, "validColor": "#6BE1C988", "invalidColor": "#E2575788", "rangeCircleColor": "#3372D16A" },
     "blockTags": { "blockedAny": ["Cooldown.Arcweaver.Z"] }
   },
   {
@@ -167,14 +153,7 @@
         { "kind": "End", "tick": 0 }
       ]
     },
-    "indicator": {
-      "shape": "Circle",
-      "range": 440,
-      "radius": 120,
-      "showRangeCircle": true,
-      "validColor": "#F0C36B77",
-      "invalidColor": "#E2575788"
-    },
+    "indicator": { "shape": "Circle", "range": 440, "radius": 120, "showRangeCircle": true, "validColor": "#F0C36B77", "invalidColor": "#E2575788", "rangeCircleColor": "#3366FF55" },
     "blockTags": { "blockedAny": ["Cooldown.Vanguard.W"] }
   },
   {
@@ -187,15 +166,7 @@
         { "kind": "End", "tick": 0 }
       ]
     },
-    "indicator": {
-      "shape": "Cone",
-      "range": 360,
-      "radius": 360,
-      "angleDeg": 42,
-      "showRangeCircle": true,
-      "validColor": "#D2A55C77",
-      "invalidColor": "#E2575788"
-    },
+    "indicator": { "shape": "Cone", "range": 360, "radius": 360, "angleDeg": 42, "showRangeCircle": true, "validColor": "#D2A55C77", "invalidColor": "#E2575788", "rangeCircleColor": "#3366FF55" },
     "blockTags": { "blockedAny": ["Cooldown.Vanguard.E"] }
   },
   {
@@ -208,15 +179,7 @@
         { "kind": "End", "tick": 0 }
       ]
     },
-    "indicator": {
-      "shape": "Ring",
-      "range": 0,
-      "radius": 320,
-      "innerRadius": 140,
-      "showRangeCircle": false,
-      "validColor": "#E9A34A77",
-      "invalidColor": "#E2575788"
-    },
+    "indicator": { "shape": "Ring", "radius": 320, "innerRadius": 140, "showRangeCircle": false, "validColor": "#E9A34A77", "invalidColor": "#E2575788" },
     "blockTags": { "blockedAny": ["Cooldown.Vanguard.R"] }
   },
   {
@@ -229,13 +192,7 @@
         { "kind": "End", "tick": 0 }
       ]
     },
-    "indicator": {
-      "shape": "Line",
-      "range": 300,
-      "showRangeCircle": true,
-      "validColor": "#F06B5E77",
-      "invalidColor": "#E2575788"
-    },
+    "indicator": { "shape": "Line", "range": 300, "radius": 55, "showRangeCircle": true, "validColor": "#F06B5E77", "invalidColor": "#E2575788", "rangeCircleColor": "#3366FF55" },
     "blockTags": { "blockedAny": ["Cooldown.Vanguard.Z"] }
   },
   {
@@ -278,14 +235,7 @@
         { "kind": "End", "tick": 0 }
       ]
     },
-    "indicator": {
-      "shape": "Rectangle",
-      "range": 520,
-      "radius": 130,
-      "showRangeCircle": true,
-      "validColor": "#F0936F77",
-      "invalidColor": "#E2575788"
-    },
+    "indicator": { "shape": "Rectangle", "range": 520, "radius": 130, "showRangeCircle": true, "validColor": "#F0936F77", "invalidColor": "#E2575788", "rangeCircleColor": "#3366FF55" },
     "blockTags": { "blockedAny": ["Cooldown.Vanguard.Rune"] }
   },
   {
@@ -310,14 +260,7 @@
         { "kind": "End", "tick": 0 }
       ]
     },
-    "indicator": {
-      "shape": "Circle",
-      "range": 560,
-      "radius": 100,
-      "showRangeCircle": true,
-      "validColor": "#5ED5BB77",
-      "invalidColor": "#E2575788"
-    },
+    "indicator": { "shape": "Circle", "range": 560, "radius": 100, "showRangeCircle": true, "validColor": "#5ED5BB77", "invalidColor": "#E2575788", "rangeCircleColor": "#3366FF55" },
     "blockTags": { "blockedAny": ["Cooldown.Commander.W"] }
   },
   {
@@ -330,14 +273,7 @@
         { "kind": "End", "tick": 0 }
       ]
     },
-    "indicator": {
-      "shape": "Line",
-      "range": 720,
-      "radius": 90,
-      "showRangeCircle": true,
-      "validColor": "#7CC4E877",
-      "invalidColor": "#E2575788"
-    },
+    "indicator": { "shape": "Line", "range": 720, "radius": 90, "showRangeCircle": true, "validColor": "#7CC4E877", "invalidColor": "#E2575788", "rangeCircleColor": "#3366FF55" },
     "blockTags": { "blockedAny": ["Cooldown.Commander.E"] }
   },
   {
@@ -362,13 +298,7 @@
         { "kind": "End", "tick": 0 }
       ]
     },
-    "indicator": {
-      "shape": "Line",
-      "range": 320,
-      "showRangeCircle": true,
-      "validColor": "#7BD89A77",
-      "invalidColor": "#E2575788"
-    },
+    "indicator": { "shape": "Line", "range": 320, "radius": 55, "showRangeCircle": true, "validColor": "#7BD89A77", "invalidColor": "#E2575788", "rangeCircleColor": "#3366FF55" },
     "blockTags": { "blockedAny": ["Cooldown.Commander.Z"] }
   },
   {
@@ -411,14 +341,7 @@
         { "kind": "End", "tick": 0 }
       ]
     },
-    "indicator": {
-      "shape": "Line",
-      "range": 820,
-      "radius": 120,
-      "showRangeCircle": true,
-      "validColor": "#86B9FF77",
-      "invalidColor": "#E2575788"
-    },
+    "indicator": { "shape": "Line", "range": 820, "radius": 120, "showRangeCircle": true, "validColor": "#86B9FF77", "invalidColor": "#E2575788", "rangeCircleColor": "#3366FF55" },
     "blockTags": { "blockedAny": ["Cooldown.Commander.Rune"] }
   },
   {

@@ -48,12 +48,12 @@ namespace Ludots.Core.Gameplay.GAS.Config
             {
                 if (routesNode[routeIndex] is not JsonObject routeNode)
                 {
-                    continue;
+                    throw new InvalidOperationException($"Ability form set '{formSetName}' route[{routeIndex}] must be an object.");
                 }
 
-                var requiredAll = CompileTagMask(routeNode["requiredAll"] as JsonArray);
-                var blockedAny = CompileTagMask(routeNode["blockedAny"] as JsonArray);
-                int priority = routeNode["priority"]?.GetValue<int>() ?? 0;
+                var requiredAll = CompileTagMask(routeNode["requiredAll"] as JsonArray, formSetName, routeIndex, "requiredAll");
+                var blockedAny = CompileTagMask(routeNode["blockedAny"] as JsonArray, formSetName, routeIndex, "blockedAny");
+                int priority = RequireInt(routeNode, "priority", formSetName, routeIndex);
 
                 if (routeNode["slotOverrides"] is not JsonArray slotOverridesNode || slotOverridesNode.Count == 0)
                 {
@@ -68,7 +68,7 @@ namespace Ludots.Core.Gameplay.GAS.Config
             return new AbilityFormSetDefinition(routes.ToArray());
         }
 
-        private static GameplayTagContainer CompileTagMask(JsonArray? tagsNode)
+        private static GameplayTagContainer CompileTagMask(JsonArray? tagsNode, string formSetName, int routeIndex, string fieldName)
         {
             var tags = default(GameplayTagContainer);
             if (tagsNode == null)
@@ -81,13 +81,24 @@ namespace Ludots.Core.Gameplay.GAS.Config
                 string? tagName = tagsNode[i]?.GetValue<string>();
                 if (string.IsNullOrWhiteSpace(tagName))
                 {
-                    continue;
+                    throw new InvalidOperationException(
+                        $"Ability form set '{formSetName}' route[{routeIndex}] {fieldName}[{i}] must be a non-empty tag string.");
                 }
 
                 tags.AddTag(TagRegistry.Register(tagName));
             }
 
             return tags;
+        }
+
+        private static int RequireInt(JsonObject obj, string fieldName, string formSetName, int routeIndex)
+        {
+            if (obj[fieldName] is not JsonNode node)
+            {
+                throw new InvalidOperationException($"Ability form set '{formSetName}' route[{routeIndex}] requires {fieldName}.");
+            }
+
+            return node.GetValue<int>();
         }
 
         private static AbilityFormSlotOverride[] CompileSlotOverrides(JsonArray slotOverridesNode, string formSetName, int routeIndex)
@@ -99,7 +110,8 @@ namespace Ludots.Core.Gameplay.GAS.Config
             {
                 if (slotOverridesNode[slotOverrideIndex] is not JsonObject slotOverrideNode)
                 {
-                    continue;
+                    throw new InvalidOperationException(
+                        $"Ability form set '{formSetName}' route[{routeIndex}] slotOverrides[{slotOverrideIndex}] must be an object.");
                 }
 
                 if (slotOverrideNode["slotIndex"] is not JsonNode slotIndexNode)

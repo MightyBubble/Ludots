@@ -1,6 +1,7 @@
 using System.Collections.Generic;
 using System.Numerics;
 using Arch.Core;
+using Ludots.Core.Config;
 using Ludots.Core.Engine;
 using Ludots.Core.Gameplay.Components;
 using Ludots.Core.Gameplay.GAS;
@@ -57,7 +58,18 @@ namespace Ludots.Tests.GAS
                 var telemetry = new ResponseChainTelemetryBuffer();
                 var orderReq = new OrderRequestQueue();
  
-                var processing = new EffectProcessingLoopSystem(world, requests, clock, conditions, budget, templates, inputReq, chainOrders, telemetry, orderReq)
+                var processing = new EffectProcessingLoopSystem(
+                    world,
+                    requests,
+                    clock,
+                    conditions,
+                    budget,
+                    templates,
+                    inputReq,
+                    chainOrders,
+                    telemetry,
+                    orderReq,
+                    responseChainOrderTypes: TestResponseChainOrderTypeIds.Types)
                 {
                     MaxWorkUnitsPerSlice = int.MaxValue
                 };
@@ -242,6 +254,18 @@ namespace Ludots.Tests.GAS
             var globals = new Dictionary<string, object>
             {
                 [CoreServiceKeys.InputHandler.Name] = handler,
+                [CoreServiceKeys.GameConfig.Name] = new GameConfig
+                {
+                    Constants = new GameConstants
+                    {
+                        ResponseChainOrderTypeIds = new Dictionary<string, int>
+                        {
+                            ["chainPass"] = TestResponseChainOrderTypeIds.ChainPass,
+                            ["chainNegate"] = TestResponseChainOrderTypeIds.ChainNegate,
+                            ["chainActivateEffect"] = TestResponseChainOrderTypeIds.ChainActivateEffect
+                        }
+                    }
+                },
                 [CoreServiceKeys.InteractionActionBindings.Name] = new InteractionActionBindings
                 {
                     ResponseChainPassActionId = "UiPass",
@@ -272,6 +296,29 @@ namespace Ludots.Tests.GAS
             That(chainOrders.TryDequeue(out var activate), Is.True);
             That(activate.OrderTypeId, Is.EqualTo(TestResponseChainOrderTypeIds.ChainActivateEffect));
             That(activate.Args.I0, Is.EqualTo(9001));
+        }
+
+        [Test]
+        public void ResponseChainHumanOrderSourceSystem_MissingOrderTypes_IsRejected()
+        {
+            using var world = World.Create();
+            var (_, handler) = BuildResponseChainHandler();
+            var globals = new Dictionary<string, object>
+            {
+                [CoreServiceKeys.InputHandler.Name] = handler,
+                [CoreServiceKeys.InteractionActionBindings.Name] = new InteractionActionBindings
+                {
+                    ResponseChainPassActionId = "UiPass",
+                    ResponseChainNegateActionId = "UiNegate",
+                    ResponseChainActivateActionId = "UiActivate"
+                }
+            };
+
+            var ex = Throws<InvalidOperationException>(() =>
+                new ResponseChainHumanOrderSourceSystem(globals, new ResponseChainUiState(), new OrderQueue()));
+
+            That(ex!.Message, Does.Contain("GameConfig"));
+            That(ex.Message, Does.Contain("chainPass"));
         }
 
         [Test]
