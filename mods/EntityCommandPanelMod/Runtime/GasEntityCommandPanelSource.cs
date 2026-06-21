@@ -7,6 +7,7 @@ using Ludots.Core.Gameplay.GAS;
 using Ludots.Core.Gameplay.GAS.Components;
 using Ludots.Core.Gameplay.GAS.Registry;
 using Ludots.Core.Gameplay.GAS.Orders;
+using Ludots.Core.Gameplay.Progression;
 using Ludots.Core.Input.Orders;
 using Ludots.Core.Scripting;
 using Ludots.Core.UI.EntityCommandPanels;
@@ -21,6 +22,7 @@ namespace EntityCommandPanelMod.Runtime
         private readonly AbilityDefinitionRegistry? _abilityDefinitions;
         private readonly EffectTemplateRegistry? _effectTemplates;
         private readonly OrderTypeRegistry? _orderTypes;
+        private readonly ProgressionRequirementEvaluator? _progressionRequirements;
         private readonly IClock? _clock;
 
         public GasEntityCommandPanelSource(GameEngine engine)
@@ -29,6 +31,7 @@ namespace EntityCommandPanelMod.Runtime
             _abilityDefinitions = engine.GetService(CoreServiceKeys.AbilityDefinitionRegistry);
             _effectTemplates = engine.GetService(CoreServiceKeys.EffectTemplateRegistry);
             _orderTypes = engine.GetService(CoreServiceKeys.OrderTypeRegistry);
+            _progressionRequirements = engine.GetService(CoreServiceKeys.ProgressionRequirementEvaluator);
             _clock = engine.GetService(CoreServiceKeys.Clock);
         }
 
@@ -78,6 +81,8 @@ namespace EntityCommandPanelMod.Runtime
                 {
                     revision = HashCombine(revision, (uint)_engine.World.Get<AbilityFormSetRef>(target).FormSetId);
                 }
+
+                revision = HashProgressionRequirementRevisions(revision, target, in baseSlots);
             }
 
             if (_engine.World.Has<AbilityExecInstance>(target))
@@ -354,9 +359,30 @@ namespace EntityCommandPanelMod.Runtime
                 string displayLabel = string.Empty;
                 string detailLabel = string.Empty;
                 short cooldownPermille = 0;
-                if (effective.AbilityId > 0 &&
+                AbilityDefinition abilityDefinition = default;
+                bool hasAbilityDefinition = effective.AbilityId > 0 &&
                     abilityDefinitions != null &&
-                    abilityDefinitions.TryGet(effective.AbilityId, out var abilityDefinition))
+                    abilityDefinitions.TryGet(effective.AbilityId, out abilityDefinition);
+                Entity templateEntity = ResolveTemplateEntity(in effective);
+                var progressionPreview = EvaluateProgressionPreview(target, target, default, hasAbilityDefinition, in abilityDefinition, templateEntity);
+                if (progressionPreview.Show == ProgressionRequirementPreviewResult.Failed)
+                {
+                    destination[slotIndex] = BuildEmptySlot(slotIndex, actionId);
+                    continue;
+                }
+
+                if (progressionPreview.Show == ProgressionRequirementPreviewResult.Deferred ||
+                    progressionPreview.Use == ProgressionRequirementPreviewResult.Deferred)
+                {
+                    flags |= EntityCommandSlotStateFlags.PendingTarget;
+                }
+
+                if (progressionPreview.Use == ProgressionRequirementPreviewResult.Failed)
+                {
+                    flags |= EntityCommandSlotStateFlags.Blocked;
+                }
+
+                if (hasAbilityDefinition)
                 {
                     if (abilityDefinition.HasActivationBlockTags &&
                         IsBlocked(abilityDefinition.ActivationBlockTags, in actorTags, hasActorTags))
@@ -434,6 +460,118 @@ namespace EntityCommandPanelMod.Runtime
             }
 
             return count;
+        }
+
+        private static EntityCommandPanelSlotView BuildEmptySlot(int slotIndex, string actionId)
+        {
+            return new EntityCommandPanelSlotView(
+                slotIndex,
+                0,
+                0,
+                EntityCommandSlotStateFlags.Empty,
+                0,
+                0,
+                0,
+                string.Empty,
+                BuildEmptyDetailLabel(actionId),
+                actionId);
+        }
+
+        private ProgressionRequirementPreview EvaluateProgressionPreview(
+            Entity actor,
+            Entity subject,
+            Entity explicitScopeHost,
+            bool hasAbilityDefinition,
+            in AbilityDefinition definition,
+            Entity templateEntity)
+        {
+            var preview = new ProgressionRequirementPreview
+            {
+                Show = hasAbilityDefinition
+                    ? EvaluateProgressionShowRequirement(actor, subject, explicitScopeHost, in definition)
+                    : ProgressionRequirementPreviewResult.Satisfied,
+                Use = hasAbilityDefinition
+                    ? EvaluateProgressionUseRequirement(actor, subject, explicitScopeHost, in definition)
+                    : ProgressionRequirementPreviewResult.Satisfied
+            };
+
+            if (_engine.World.IsAlive(templateEntity) &&
+                _engine.World.Has<AbilityProgressionRequirements>(templateEntity))
+            {
+                ref readonly var requirements = ref _engine.World.Get<AbilityProgressionRequirements>(templateEntity);
+                preview.Show = CombinePreview(preview.Show, EvaluateProgressionRequirement(actor, subject, explicitScopeHost, requirements.ShowRequirementId));
+                preview.Use = CombinePreview(preview.Use, EvaluateProgressionRequirement(actor, subject, explicitScopeHost, requirements.UseRequirementId));
+            }
+
+            return preview;
+        }
+
+        private static ProgressionRequirementPreviewResult CombinePreview(
+            ProgressionRequirementPreviewResult current,
+            ProgressionRequirementPreviewResult next)
+        {
+            if (current == ProgressionRequirementPreviewResult.Failed ||
+                next == ProgressionRequirementPreviewResult.Failed)
+            {
+                return ProgressionRequirementPreviewResult.Failed;
+            }
+
+            if (current == ProgressionRequirementPreviewResult.Deferred ||
+                next == ProgressionRequirementPreviewResult.Deferred)
+            {
+                return ProgressionRequirementPreviewResult.Deferred;
+            }
+
+            return ProgressionRequirementPreviewResult.Satisfied;
+        }
+
+        private ProgressionRequirementPreviewResult EvaluateProgressionShowRequirement(Entity actor, Entity subject, Entity explicitScopeHost, in AbilityDefinition definition)
+        {
+            if (!definition.HasShowProgressionRequirement)
+            {
+                return ProgressionRequirementPreviewResult.Satisfied;
+            }
+
+            return EvaluateProgressionRequirement(actor, subject, explicitScopeHost, definition.ShowProgressionRequirementId);
+        }
+
+        private ProgressionRequirementPreviewResult EvaluateProgressionUseRequirement(Entity actor, Entity subject, Entity explicitScopeHost, in AbilityDefinition definition)
+        {
+            if (!definition.HasUseProgressionRequirement)
+            {
+                return ProgressionRequirementPreviewResult.Satisfied;
+            }
+
+            return EvaluateProgressionRequirement(actor, subject, explicitScopeHost, definition.UseProgressionRequirementId);
+        }
+
+        private ProgressionRequirementPreviewResult EvaluateProgressionRequirement(Entity actor, Entity subject, Entity explicitScopeHost, int requirementId)
+        {
+            if (requirementId <= 0)
+            {
+                return ProgressionRequirementPreviewResult.Satisfied;
+            }
+
+            ProgressionRequirementEvaluator evaluator = RequireProgressionRequirements();
+            if (!_engine.World.IsAlive(explicitScopeHost) && evaluator.RequiresExplicitScope(requirementId))
+            {
+                return ProgressionRequirementPreviewResult.Deferred;
+            }
+
+            var context = new ProgressionRequirementEvaluationContext(actor, subject, explicitScopeHost);
+            return evaluator.Evaluate(requirementId, in context)
+                ? ProgressionRequirementPreviewResult.Satisfied
+                : ProgressionRequirementPreviewResult.Failed;
+        }
+
+        private ProgressionRequirementEvaluator RequireProgressionRequirements()
+        {
+            if (_progressionRequirements == null)
+            {
+                throw new InvalidOperationException("Ability progression requirement is configured, but ProgressionRequirementEvaluator is not registered.");
+            }
+
+            return _progressionRequirements;
         }
 
         private static string ResolveAbilityInteractionModeKey(InteractionModeType interactionMode, in AbilityDefinition abilityDefinition)
@@ -517,7 +655,13 @@ namespace EntityCommandPanelMod.Runtime
         {
             if (groupIndex != 0 ||
                 slotIndex < 0 ||
-                !_engine.World.IsAlive(target))
+                !_engine.World.IsAlive(target) ||
+                !_engine.World.Has<AbilityStateBuffer>(target))
+            {
+                return false;
+            }
+
+            if (!CanActivateProgressionRequirement(target, slotIndex))
             {
                 return false;
             }
@@ -541,6 +685,21 @@ namespace EntityCommandPanelMod.Runtime
             }
 
             return inputMapping.TryActivateMappedAction(actionId, preferUiAiming: true);
+        }
+
+        private bool CanActivateProgressionRequirement(Entity target, int slotIndex)
+        {
+            ref readonly var baseSlots = ref _engine.World.Get<AbilityStateBuffer>(target);
+            AbilitySlotState slot = ResolveEffectiveSlot(target, in baseSlots, slotIndex);
+            Entity templateEntity = ResolveTemplateEntity(in slot);
+            AbilityDefinition definition = default;
+            bool hasDefinition = slot.AbilityId > 0 &&
+                _abilityDefinitions != null &&
+                _abilityDefinitions.TryGet(slot.AbilityId, out definition);
+
+            var preview = EvaluateProgressionPreview(target, target, default, hasDefinition, in definition, templateEntity);
+            return preview.Show != ProgressionRequirementPreviewResult.Failed &&
+                   preview.Use != ProgressionRequirementPreviewResult.Failed;
         }
 
         private bool TryBuildAbilityStatus(Entity target, out EntityCommandPanelStatusView status)
@@ -860,6 +1019,7 @@ namespace EntityCommandPanelMod.Runtime
                 AbilityExecRunState.Committed => "Committed",
                 AbilityExecRunState.Finished => "Finished",
                 AbilityExecRunState.Interrupted => "Interrupted",
+                AbilityExecRunState.Failed => "Failed",
                 _ => "Ability"
             };
         }
@@ -1205,6 +1365,92 @@ namespace EntityCommandPanelMod.Runtime
             return (short)Math.Clamp(value, 0, 1000);
         }
 
+        private uint HashProgressionRequirementRevisions(uint current, Entity target, in AbilityStateBuffer baseSlots)
+        {
+            if (_progressionRequirements == null)
+            {
+                return current;
+            }
+
+            int displayedSlots = ResolveDisplayedSlotCount(target, in baseSlots);
+            for (int slotIndex = 0; slotIndex < displayedSlots; slotIndex++)
+            {
+                AbilitySlotState slot = ResolveEffectiveSlot(target, in baseSlots, slotIndex);
+                Entity templateEntity = ResolveTemplateEntity(in slot);
+                AbilityDefinition definition = default;
+                bool hasDefinition = slot.AbilityId > 0 &&
+                    _abilityDefinitions != null &&
+                    _abilityDefinitions.TryGet(slot.AbilityId, out definition);
+
+                var context = new ProgressionRequirementEvaluationContext(target, target);
+                if (hasDefinition && definition.HasShowProgressionRequirement)
+                {
+                    current = HashProgressionRequirementRevision(current, definition.ShowProgressionRequirementId, in context);
+                }
+
+                if (hasDefinition && definition.HasUseProgressionRequirement)
+                {
+                    current = HashProgressionRequirementRevision(current, definition.UseProgressionRequirementId, in context);
+                }
+
+                if (_engine.World.IsAlive(templateEntity) &&
+                    _engine.World.Has<AbilityProgressionRequirements>(templateEntity))
+                {
+                    ref readonly var requirements = ref _engine.World.Get<AbilityProgressionRequirements>(templateEntity);
+                    current = HashProgressionRequirementRevision(current, requirements.ShowRequirementId, in context);
+                    current = HashProgressionRequirementRevision(current, requirements.UseRequirementId, in context);
+                }
+            }
+
+            return current;
+        }
+
+        private uint HashProgressionRequirementRevision(uint current, int requirementId, in ProgressionRequirementEvaluationContext context)
+        {
+            if (requirementId <= 0 || _progressionRequirements == null)
+            {
+                return current;
+            }
+
+            current = HashCombine(current, _progressionRequirements.ComputeScopeRevision(requirementId, in context));
+            if (_progressionRequirements.UsesGraphValidation(requirementId))
+            {
+                if (_clock == null)
+                {
+                    throw new InvalidOperationException("Graph-backed progression command requirements require the engine clock for UI cache invalidation.");
+                }
+
+                current = HashCombine(current, (uint)_clock.Now(ClockDomainId.FixedFrame));
+                current = HashCombine(current, (uint)_clock.Now(ClockDomainId.Step));
+            }
+
+            return current;
+        }
+
+        private AbilitySlotState ResolveEffectiveSlot(Entity target, in AbilityStateBuffer baseSlots, int slotIndex)
+        {
+            bool hasForm = _engine.World.Has<AbilityFormSlotBuffer>(target);
+            AbilityFormSlotBuffer formSlots = hasForm ? _engine.World.Get<AbilityFormSlotBuffer>(target) : default;
+            bool hasItemGranted = _engine.World.Has<Ludots.Core.Gameplay.Items.ItemGrantedSlotBuffer>(target);
+            Ludots.Core.Gameplay.Items.ItemGrantedSlotBuffer itemGrantedSlots = hasItemGranted
+                ? _engine.World.Get<Ludots.Core.Gameplay.Items.ItemGrantedSlotBuffer>(target)
+                : default;
+            bool hasGranted = _engine.World.Has<GrantedSlotBuffer>(target);
+            GrantedSlotBuffer grantedSlots = hasGranted ? _engine.World.Get<GrantedSlotBuffer>(target) : default;
+            return AbilitySlotResolver.Resolve(in baseSlots, in formSlots, hasForm, in itemGrantedSlots, hasItemGranted, in grantedSlots, hasGranted, slotIndex);
+        }
+
+        private Entity ResolveTemplateEntity(in AbilitySlotState slot)
+        {
+            if (slot.TemplateEntityId <= 0)
+            {
+                return default;
+            }
+
+            Entity templateEntity = EntityUtil.Reconstruct(slot.TemplateEntityId, slot.TemplateEntityWorldId, slot.TemplateEntityVersion);
+            return _engine.World.IsAlive(templateEntity) ? templateEntity : default;
+        }
+
         private static uint HashAbilityExec(uint current, in AbilityExecInstance exec)
         {
             current = HashCombine(current, (uint)exec.AbilityId);
@@ -1319,6 +1565,19 @@ namespace EntityCommandPanelMod.Runtime
             Base,
             RoutePreview,
             Granted
+        }
+
+        private enum ProgressionRequirementPreviewResult : byte
+        {
+            Satisfied,
+            Failed,
+            Deferred
+        }
+
+        private struct ProgressionRequirementPreview
+        {
+            public ProgressionRequirementPreviewResult Show;
+            public ProgressionRequirementPreviewResult Use;
         }
     }
 }

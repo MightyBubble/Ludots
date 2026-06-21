@@ -42,6 +42,14 @@
       }
     },
     {
+      "name": "progression_scope",
+      "target": {
+        "type": "path",
+        "value": "mods/showcases/progression_scope/ProgressionScopeShowcaseMod",
+        "projectPath": "ProgressionScopeShowcaseMod.csproj"
+      }
+    },
+    {
       "name": "spatial_bounds_showcase",
       "target": {
         "type": "path",

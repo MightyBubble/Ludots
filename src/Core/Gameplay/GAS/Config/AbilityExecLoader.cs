@@ -6,6 +6,7 @@ using System.Text.Json.Nodes;
 using Ludots.Core.Config;
 using Ludots.Core.Gameplay.GAS.Components;
 using Ludots.Core.Gameplay.GAS.Registry;
+using Ludots.Core.Gameplay.Progression.Registry;
 using Ludots.Core.Input.Orders;
 using Ludots.Core.NodeLibraries.GASGraph.Host;
 
@@ -167,7 +168,30 @@ namespace Ludots.Core.Gameplay.GAS.Config
                 def.HasInputBindingOverride = true;
             }
 
+            def.UseProgressionRequirementId = ResolveProgressionRequirement(obj, "useRequirement", id, path);
+            def.HasUseProgressionRequirement = def.UseProgressionRequirementId > 0;
+            def.ShowProgressionRequirementId = ResolveProgressionRequirement(obj, "showRequirement", id, path);
+            def.HasShowProgressionRequirement = def.ShowProgressionRequirementId > 0;
+
             return def;
+        }
+
+        private static int ResolveProgressionRequirement(JsonObject obj, string fieldName, string id, string path)
+        {
+            string requirementName = obj[fieldName]?.GetValue<string>() ?? string.Empty;
+            if (string.IsNullOrWhiteSpace(requirementName))
+            {
+                return 0;
+            }
+
+            int requirementId = ProgressionRequirementIdRegistry.GetId(requirementName);
+            if (requirementId <= 0)
+            {
+                throw new InvalidOperationException(
+                    $"Ability '{id}' in '{path}' field '{fieldName}' references unknown progression requirement '{requirementName}'.");
+            }
+
+            return requirementId;
         }
 
         // ──────────────── ExecSpec ────────────────

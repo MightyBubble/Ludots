@@ -27,6 +27,8 @@ namespace Ludots.Core.Gameplay.GAS
         Relation = 12,
         /// <summary>Rule-constrained settlement through the Exchange runtime.</summary>
         Exchange = 13,
+        /// <summary>Completes an entity-scoped progression through the Progression runtime.</summary>
+        CompleteProgression = 14,
     }
 
     // ── TargetResolver: pluggable target fan-out for effects ──
@@ -317,6 +319,9 @@ namespace Ludots.Core.Gameplay.GAS
         public UnitCreationDescriptor UnitCreation;
         public DisplacementDescriptor Displacement;
         public RelationDescriptor Relation;
+        public Ludots.Core.Gameplay.Progression.ProgressionScopeSpec ProgressionScope;
+        public Ludots.Core.Gameplay.Progression.ProgressionLevelChange ProgressionChange;
+        public int ProgressionId;
 
         // ── Phase Graph bindings ──
         public EffectPhaseGraphBindings PhaseGraphBindings;

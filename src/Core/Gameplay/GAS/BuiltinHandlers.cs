@@ -6,6 +6,7 @@ using Ludots.Core.Gameplay.Components;
 using Ludots.Core.Gameplay.Exchange;
 using Ludots.Core.Gameplay.GAS.Components;
 using Ludots.Core.Gameplay.Spawning;
+using Ludots.Core.Gameplay.Progression;
 using Ludots.Core.Mathematics;
 using Ludots.Core.Mathematics.FixedPoint;
 
@@ -29,6 +30,7 @@ namespace Ludots.Core.Gameplay.GAS
             registry.Register(BuiltinHandlerId.ApplyDisplacement, HandleApplyDisplacement);
             registry.Register(BuiltinHandlerId.ApplyRelation, HandleApplyRelation);
             registry.Register(BuiltinHandlerId.ExecuteExchange, HandleExecuteExchange);
+            registry.Register(BuiltinHandlerId.CompleteProgression, HandleCompleteProgression);
         }
 
         public static void HandleApplyModifiers(
@@ -420,6 +422,39 @@ namespace Ludots.Core.Gameplay.GAS
             if (!result.Succeeded)
             {
                 throw new InvalidOperationException($"ExecuteExchange failed: status={result.Status} operationId={operationId} detailIndex={result.DetailIndex}.");
+            }
+        }
+
+        public static void HandleCompleteProgression(
+            World world,
+            Entity effectEntity,
+            ref EffectContext context,
+            in EffectConfigParams mergedParams,
+            in EffectTemplateData templateData)
+        {
+            if (templateData.ProgressionId <= 0)
+            {
+                throw new InvalidOperationException("CompleteProgression requires a valid progression id.");
+            }
+
+            var runtime = BuiltinHandlerRuntimeScope.Current;
+            if (runtime?.ProgressionEvaluator == null)
+            {
+                throw new InvalidOperationException("CompleteProgression requires ProgressionRequirementEvaluator in BuiltinHandlerExecutionContext.");
+            }
+
+            var evaluationContext = new ProgressionRequirementEvaluationContext(
+                context.Source,
+                world.IsAlive(context.Target) ? context.Target : context.Source,
+                context.TargetContext);
+            if (!runtime.ProgressionEvaluator.TryResolveScopeHost(templateData.ProgressionScope, in evaluationContext, out Entity scopeHost))
+            {
+                throw new InvalidOperationException("CompleteProgression could not resolve its configured progression scope.");
+            }
+
+            if (!runtime.ProgressionEvaluator.TryApply(scopeHost, templateData.ProgressionId, templateData.ProgressionChange))
+            {
+                throw new InvalidOperationException("CompleteProgression requires the resolved scope host to author ProgressionStateBuffer before effects run.");
             }
         }
 

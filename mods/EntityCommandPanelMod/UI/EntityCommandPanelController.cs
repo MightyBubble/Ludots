@@ -953,6 +953,7 @@ namespace EntityCommandPanelMod.UI
             in RtsHudTheme theme)
         {
             bool blocked = slot.StateFlags.HasFlag(EntityCommandSlotStateFlags.Blocked);
+            bool pendingTarget = slot.StateFlags.HasFlag(EntityCommandSlotStateFlags.PendingTarget);
             bool active = slot.StateFlags.HasFlag(EntityCommandSlotStateFlags.Active);
             bool interactive = !blocked && EntityCommandPanelSourceDispatch.CanActivate(source);
             string interactionModeKey = ResolveInteractionModeKey();
@@ -978,9 +979,9 @@ namespace EntityCommandPanelMod.UI
                             Ui.Column(
                                     BuildActionPill(slot.SlotIndex, actionKey, isInteractiveGroup: true),
                                     BuildTagPill(
-                                        blocked ? "LOCKED" : active ? "LIVE" : "READY",
-                                        blocked ? "#D9777F" : active ? theme.AccentColorHex : "#7E8EA4",
-                                        blocked ? "#2B0F14" : active ? "#08111A" : "#132232"))
+                                        blocked ? "LOCKED" : pendingTarget ? "TARGET" : active ? "LIVE" : "READY",
+                                        blocked ? "#D9777F" : pendingTarget ? "#8FB8FF" : active ? theme.AccentColorHex : "#7E8EA4",
+                                        blocked ? "#2B0F14" : pendingTarget ? "#0E1F35" : active ? "#08111A" : "#132232"))
                                 .Gap(8f)
                                 .Align(UiAlignItems.End))
                         .Gap(10f)
@@ -1280,6 +1281,7 @@ namespace EntityCommandPanelMod.UI
             AppendFlag(flags, slot.StateFlags.HasFlag(EntityCommandSlotStateFlags.GrantedOverride), "UNLOCK", "#193521", "#B4F0C2");
             AppendFlag(flags, slot.StateFlags.HasFlag(EntityCommandSlotStateFlags.TemplateBacked), "SPAWNS", "#2A2040", "#D7C5FF");
             AppendFlag(flags, slot.StateFlags.HasFlag(EntityCommandSlotStateFlags.Blocked), "LOCKED", "#4A1D21", "#FFB8B8");
+            AppendFlag(flags, slot.StateFlags.HasFlag(EntityCommandSlotStateFlags.PendingTarget), "TARGET", "#172F4D", "#C8DCFF");
             AppendFlag(flags, slot.StateFlags.HasFlag(EntityCommandSlotStateFlags.Active), "ACTIVE", "#173B2D", "#B8FFD8");
 
             UiElementBuilder flagRow = flags.Count == 0

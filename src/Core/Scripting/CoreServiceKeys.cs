@@ -25,6 +25,7 @@ using Ludots.Core.Gameplay.Relationships;
 using Ludots.Core.Gameplay.Relationships.Config;
 using Ludots.Core.Gameplay.Spawning;
 using Ludots.Core.Gameplay.GAS.Systems;
+using Ludots.Core.Gameplay.Progression;
 using Ludots.Core.Gameplay.Teams;
 using Ludots.Core.GraphRuntime;
 using Ludots.Core.Hosting;
@@ -147,6 +148,10 @@ namespace Ludots.Core.Scripting
         public static readonly ServiceKey<EffectRequestQueue> EffectRequestQueue = new("EffectRequestQueue");
         public static readonly ServiceKey<AbilityDefinitionRegistry> AbilityDefinitionRegistry = new("AbilityDefinitionRegistry");
         public static readonly ServiceKey<AbilityFormSetRegistry> AbilityFormSetRegistry = new("AbilityFormSetRegistry");
+        public static readonly ServiceKey<ProgressionDefinitionRegistry> ProgressionDefinitionRegistry = new("ProgressionDefinitionRegistry");
+        public static readonly ServiceKey<ProgressionRequirementRegistry> ProgressionRequirementRegistry = new("ProgressionRequirementRegistry");
+        public static readonly ServiceKey<ProgressionScopeKeyRegistry> ProgressionScopeKeyRegistry = new("ProgressionScopeKeyRegistry");
+        public static readonly ServiceKey<ProgressionRequirementEvaluator> ProgressionRequirementEvaluator = new("ProgressionRequirementEvaluator");
         public static readonly ServiceKey<ContextGroupRegistry> ContextGroupRegistry = new("ContextGroupRegistry");
         public static readonly ServiceKey<GraphProgramRegistry> GraphProgramRegistry = new("GraphProgramRegistry");
         public static readonly ServiceKey<GraphOutputSchemaRegistry> GraphOutputSchemaRegistry = new("GraphOutputSchemaRegistry");

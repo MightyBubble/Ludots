@@ -36,7 +36,7 @@
     "id": "rts_sc2_gateway_forms",
     "routes": [
       {
-        "requiredAll": ["Tech.Rts.WarpGate"],
+        "requiredAll": ["Progression.Rts.WarpGate"],
         "priority": 100,
         "slotOverrides": [
           { "slotIndex": 0, "abilityId": "Ability.Rts.Strategy.Sc2.WarpZealot" }
