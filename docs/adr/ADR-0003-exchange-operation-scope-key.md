@@ -39,6 +39,8 @@ operationId
 
 `scopeKey` 不单独作为正式 operation identity。
 
+如果调用方传入 `ExchangeOperationKey`，则该 key 是唯一查找身份；`ExchangeExecutionContext.ScopeKey` 只用于 `TryExecute(int operationId, context)` 这个便捷入口派生 key。动态配方、动态报价或 4X 谈判实例必须把“模板/操作语义”放在 `operationId`，把“运行时实例作用域”放在 `scopeKey`，两者共同索引。
+
 ## 3 备选方案
 
 ### 3.1 使用 Merchant / Recipe / Trade 等多个 Core runtime
@@ -73,6 +75,7 @@ operationId
 * Core public 类型、枚举和架构名继续使用 `Exchange`、operation、input、output、context、settlement 等中性词。
 * `Merchant`、`Vendor`、`Forge`、`Recipe`、`Market`、`TradeRoute`、`DiplomacyDeal` 等只能出现在内容 ID、配置、Mod/UI 展示或领域示例中。
 * 动态 Exchange 正式路径必须优先使用 `(operationId, scopeKey)`。
+* Exchange 输出校验必须按同一次结算内的累计 placement reservation 判断，不能让多个输出分别基于初始容器状态通过。
 * Exchange 不保存第二份库存真相，不绕过 GAS effect pipeline。
 
 ## 6 相关文档

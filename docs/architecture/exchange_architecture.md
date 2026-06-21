@@ -37,6 +37,8 @@ Static/template operations use only `operationId`. Dynamic operations, such as g
 
 `ExchangeScopedOperationStore` only indexes runtime definitions by the pair `(operationId, scopeKey)`. A `scopeKey` alone is not a valid Exchange identity, because unrelated operation kinds may reuse the same runtime scope.
 
+When a call site already has an `ExchangeOperationKey`, that key is the sole operation lookup identity. `ExchangeExecutionContext.ScopeKey` exists for the convenience overload `TryExecute(int operationId, context)`, which derives the lookup key from the context when no explicit key was supplied.
+
 ## Runtime Settlement
 
 `ExchangeRuntime` owns the settlement sequence:
@@ -47,6 +49,8 @@ Static/template operations use only `operationId`. Dynamic operations, such as g
 4. Create or move item outputs through `InventoryRuntimeService`.
 5. Roll back consumed, created, and moved items if any item output fails.
 6. Publish GAS effect outputs only after item settlement succeeds.
+
+Output validation is cumulative. Exchange reserves each validated item placement against later outputs in the same operation, so two outputs targeting the same container cannot both pass against the same empty cell or named slot. This keeps output rejection in validation instead of relying on apply-time failure for ordinary placement conflicts.
 
 Inventory remains the ECS SSOT for item instances, containers, and locations. Exchange never stores a second inventory snapshot or a private container model.
 

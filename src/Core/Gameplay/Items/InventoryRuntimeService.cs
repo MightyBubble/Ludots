@@ -240,9 +240,39 @@ namespace Ludots.Core.Gameplay.Items
             return TryPlanAutoPlacement(container, itemInstance.DefinitionId, item, out _);
         }
 
+        public bool CanAutoPlaceItem(
+            Entity item,
+            Entity container,
+            List<ItemPlacementReservation> reservations,
+            out ItemPlacementReservation reservation)
+        {
+            reservation = default;
+            if (!TryGetItemAndContainer(item, container, out ItemInstanceCm itemInstance, out ItemContainerCm containerComponent))
+            {
+                return false;
+            }
+
+            if (!_definitions.TryGet(itemInstance.DefinitionId, out _) ||
+                !_layouts.TryGet(containerComponent.LayoutId, out _))
+            {
+                return false;
+            }
+
+            return TryPlanAutoPlacement(container, itemInstance.DefinitionId, item, reservations, out reservation);
+        }
+
         public bool CanAutoPlaceItemDefinition(Entity container, int definitionId)
         {
             return TryPlanAutoPlacement(container, definitionId, Entity.Null, out _);
+        }
+
+        public bool CanAutoPlaceItemDefinition(
+            Entity container,
+            int definitionId,
+            List<ItemPlacementReservation> reservations,
+            out ItemPlacementReservation reservation)
+        {
+            return TryPlanAutoPlacement(container, definitionId, Entity.Null, reservations, out reservation);
         }
 
         public bool TryCreateAndPlaceItem(
@@ -425,13 +455,12 @@ namespace Ludots.Core.Gameplay.Items
                 throw new ArgumentNullException(nameof(consumedRecords));
             }
 
-            consumedRecords.Clear();
-
             if (amount <= 0)
             {
                 return true;
             }
 
+            int startCount = consumedRecords.Count;
             _ownedItemScratch.Clear();
             _ownedContainerScratch.Clear();
             CollectOwnedContainers(owner, _ownedContainerScratch);
@@ -488,8 +517,8 @@ namespace Ludots.Core.Gameplay.Items
                 return true;
             }
 
-            RestoreConsumedUnits(consumedRecords);
-            consumedRecords.Clear();
+            RestoreConsumedUnits(consumedRecords, startCount);
+            consumedRecords.RemoveRange(startCount, consumedRecords.Count - startCount);
             return false;
         }
 
@@ -500,8 +529,18 @@ namespace Ludots.Core.Gameplay.Items
                 throw new ArgumentNullException(nameof(consumedRecords));
             }
 
+            RestoreConsumedUnits(consumedRecords, 0);
+        }
+
+        private void RestoreConsumedUnits(List<ItemConsumptionRecord> consumedRecords, int startIndex)
+        {
             for (int i = consumedRecords.Count - 1; i >= 0; i--)
             {
+                if (i < startIndex)
+                {
+                    break;
+                }
+
                 RestoreConsumedItem(consumedRecords[i]);
             }
         }
@@ -824,6 +863,16 @@ namespace Ludots.Core.Gameplay.Items
 
         private bool TryPlanAutoPlacement(Entity container, int definitionId, Entity ignoreItem, out ItemPlacementPlan plan)
         {
+            return TryPlanAutoPlacement(container, definitionId, ignoreItem, null, out plan);
+        }
+
+        private bool TryPlanAutoPlacement(
+            Entity container,
+            int definitionId,
+            Entity ignoreItem,
+            List<ItemPlacementReservation> reservations,
+            out ItemPlacementPlan plan)
+        {
             plan = default;
             if (!_world.IsAlive(container) || !_world.Has<ItemContainerCm>(container))
             {
@@ -844,7 +893,7 @@ namespace Ludots.Core.Gameplay.Items
             for (int i = 0; i < layout.NamedSlots.Length; i++)
             {
                 string slotId = layout.NamedSlots[i].Id;
-                if (definition.AllowsNamedSlot(slotId) && CanPlaceInNamedSlot(ignoreItem, definition, container, layout, i))
+                if (definition.AllowsNamedSlot(slotId) && CanPlaceInNamedSlot(ignoreItem, definition, container, layout, i, reservations))
                 {
                     plan = new ItemPlacementPlan
                     {
@@ -873,7 +922,7 @@ namespace Ludots.Core.Gameplay.Items
                 {
                     for (int x = 0; x <= layout.Width - rotated.Width; x++)
                     {
-                        if (CanPlaceInGrid(ignoreItem, definition, container, layout, x, y, rotation))
+                        if (CanPlaceInGrid(ignoreItem, definition, container, layout, x, y, rotation, reservations))
                         {
                             plan = new ItemPlacementPlan
                             {
@@ -890,6 +939,23 @@ namespace Ludots.Core.Gameplay.Items
             }
 
             return false;
+        }
+
+        private bool TryPlanAutoPlacement(
+            Entity container,
+            int definitionId,
+            Entity ignoreItem,
+            List<ItemPlacementReservation> reservations,
+            out ItemPlacementReservation reservation)
+        {
+            reservation = default;
+            if (!TryPlanAutoPlacement(container, definitionId, ignoreItem, reservations, out ItemPlacementPlan plan))
+            {
+                return false;
+            }
+
+            reservation = plan.ToReservation(definitionId);
+            return true;
         }
 
         private void CollectGrantItems(List<Entity> output)
@@ -981,6 +1047,17 @@ namespace Ludots.Core.Gameplay.Items
             ItemLayoutDefinition layout,
             int slotIndex)
         {
+            return CanPlaceInNamedSlot(item, definition, container, layout, slotIndex, null);
+        }
+
+        private bool CanPlaceInNamedSlot(
+            Entity item,
+            ItemDefinition definition,
+            Entity container,
+            ItemLayoutDefinition layout,
+            int slotIndex,
+            List<ItemPlacementReservation> reservations)
+        {
             ItemNamedSlotDefinition? slot = layout.GetNamedSlot(slotIndex);
             if (slot == null)
             {
@@ -997,7 +1074,7 @@ namespace Ludots.Core.Gameplay.Items
             }
 
             Entity occupant = FindNamedSlotOccupant(container, slotIndex, item);
-            return occupant == Entity.Null;
+            return occupant == Entity.Null && !ReservationOccupiesNamedSlot(container, slotIndex, reservations);
         }
 
         private bool CanPlaceInGrid(
@@ -1008,6 +1085,19 @@ namespace Ludots.Core.Gameplay.Items
             int x,
             int y,
             int rotationQuarterTurns)
+        {
+            return CanPlaceInGrid(item, definition, container, layout, x, y, rotationQuarterTurns, null);
+        }
+
+        private bool CanPlaceInGrid(
+            Entity item,
+            ItemDefinition definition,
+            Entity container,
+            ItemLayoutDefinition layout,
+            int x,
+            int y,
+            int rotationQuarterTurns,
+            List<ItemPlacementReservation> reservations)
         {
             if (!layout.HasGrid || !_shapes.TryGet(definition.ShapeId, out ItemShapeDefinition shape))
             {
@@ -1040,6 +1130,11 @@ namespace Ludots.Core.Gameplay.Items
                     {
                         return false;
                     }
+
+                    if (ReservationOccupiesGridCell(container, tx, ty, reservations))
+                    {
+                        return false;
+                    }
                 }
             }
 
@@ -1054,6 +1149,78 @@ namespace Ludots.Core.Gameplay.Items
             public short GridY;
             public short NamedSlotIndex;
             public byte RotationQuarterTurns;
+
+            public readonly ItemPlacementReservation ToReservation(int definitionId)
+            {
+                return new ItemPlacementReservation(
+                    Container,
+                    definitionId,
+                    Kind,
+                    GridX,
+                    GridY,
+                    NamedSlotIndex,
+                    RotationQuarterTurns);
+            }
+        }
+
+        private bool ReservationOccupiesNamedSlot(Entity container, int slotIndex, List<ItemPlacementReservation> reservations)
+        {
+            if (reservations == null)
+            {
+                return false;
+            }
+
+            for (int i = 0; i < reservations.Count; i++)
+            {
+                ItemPlacementReservation reservation = reservations[i];
+                if (reservation.Container == container &&
+                    reservation.Kind == ItemPlacementKind.NamedSlot &&
+                    reservation.NamedSlotIndex == slotIndex)
+                {
+                    return true;
+                }
+            }
+
+            return false;
+        }
+
+        private bool ReservationOccupiesGridCell(Entity container, int gridX, int gridY, List<ItemPlacementReservation> reservations)
+        {
+            if (reservations == null)
+            {
+                return false;
+            }
+
+            for (int i = 0; i < reservations.Count; i++)
+            {
+                ItemPlacementReservation reservation = reservations[i];
+                if (reservation.Container != container ||
+                    reservation.Kind != ItemPlacementKind.Grid ||
+                    !_definitions.TryGet(reservation.DefinitionId, out ItemDefinition definition) ||
+                    !_shapes.TryGet(definition.ShapeId, out ItemShapeDefinition shape))
+                {
+                    continue;
+                }
+
+                ItemShapeRotation rotation = shape.GetRotation(reservation.RotationQuarterTurns);
+                for (int sy = 0; sy < rotation.Height; sy++)
+                {
+                    for (int sx = 0; sx < rotation.Width; sx++)
+                    {
+                        if (!rotation.IsOccupied(sx, sy))
+                        {
+                            continue;
+                        }
+
+                        if (reservation.GridX + sx == gridX && reservation.GridY + sy == gridY)
+                        {
+                            return true;
+                        }
+                    }
+                }
+            }
+
+            return false;
         }
 
         private bool TryFindGridOccupant(Entity container, int gridX, int gridY, Entity ignoreItem, out Entity occupant)

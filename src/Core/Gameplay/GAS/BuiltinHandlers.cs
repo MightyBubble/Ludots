@@ -419,9 +419,10 @@ namespace Ludots.Core.Gameplay.GAS
             ExchangeExecutionResult result = runtime.Exchange.TryExecute(
                 new ExchangeOperationKey(operationId, scopeKey),
                 in exchangeContext);
+            runtime.RecordExchangeResult(result);
             if (!result.Succeeded)
             {
-                throw new InvalidOperationException($"ExecuteExchange failed: status={result.Status} operationId={operationId} detailIndex={result.DetailIndex}.");
+                return;
             }
         }
 

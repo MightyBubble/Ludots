@@ -41,6 +41,8 @@ operationId 静态定义
 
 `scopeKey` 不是配方本体身份，它只是某个 operation 下的运行时实例索引。这个规则与 progression 的 scope 思路一致，但避免不同 operation 复用同一个 scope 时互相撞名。
 
+当调用方已经传入 `ExchangeOperationKey` 时，查找只以这个 key 为准；`ExchangeExecutionContext.ScopeKey` 只服务 `TryExecute(operationId, context)` 的便捷入口。动态配方、动态报价和 4X 谈判实例都应使用 `operationId + scopeKey`，而不是单独用 scope 表达身份。
+
 ## 正式管线
 
 Exchange 必须复用现有基础设施：
@@ -53,7 +55,7 @@ Exchange 必须复用现有基础设施：
 执行顺序：
 
 1. 解析 operation。
-2. 先完整校验输入和输出。
+2. 先完整校验输入和输出，并按同一次结算内已经计划的物品输出累计预留容器位置。
 3. 通过 `InventoryRuntimeService` 消耗、创建或移动物品。
 4. 任一物品输出失败时回滚已消耗、已创建和已移动内容。
 5. 物品结算成功后再发布 GAS effect request。

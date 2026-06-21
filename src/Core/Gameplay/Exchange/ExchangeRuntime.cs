@@ -16,6 +16,7 @@ namespace Ludots.Core.Gameplay.Exchange
         private readonly List<ItemConsumptionRecord> _consumed = new(16);
         private readonly List<CreatedItemRecord> _created = new(8);
         private readonly List<MovedItemRecord> _moved = new(8);
+        private readonly List<ItemPlacementReservation> _reservations = new(8);
 
         public ExchangeRuntime(
             World world,
@@ -41,6 +42,7 @@ namespace Ludots.Core.Gameplay.Exchange
             _consumed.Clear();
             _created.Clear();
             _moved.Clear();
+            _reservations.Clear();
 
             if (!TryResolveOperation(in key, out ExchangeOperationDefinition operation))
             {
@@ -83,6 +85,7 @@ namespace Ludots.Core.Gameplay.Exchange
             _consumed.Clear();
             _created.Clear();
             _moved.Clear();
+            _reservations.Clear();
             return new ExchangeExecutionResult(ExchangeExecutionStatus.Success, key.OperationId);
         }
 
@@ -104,6 +107,7 @@ namespace Ludots.Core.Gameplay.Exchange
 
         private ExchangeExecutionResult Validate(int operationId, ExchangeOperationDefinition operation, in ExchangeExecutionContext context)
         {
+            _reservations.Clear();
             for (int i = 0; i < operation.Inputs.Length; i++)
             {
                 ExchangeInputDefinition input = operation.Inputs[i];
@@ -152,9 +156,13 @@ namespace Ludots.Core.Gameplay.Exchange
 
             if (output.Kind == ExchangeOutputKind.CreateItem)
             {
-                return _inventory.CanAutoPlaceItemDefinition(container, output.ItemDefinitionId)
-                    ? new ExchangeExecutionResult(ExchangeExecutionStatus.Success, operationId)
-                    : new ExchangeExecutionResult(ExchangeExecutionStatus.OutputBlocked, operationId, index);
+                if (!_inventory.CanAutoPlaceItemDefinition(container, output.ItemDefinitionId, _reservations, out ItemPlacementReservation reservation))
+                {
+                    return new ExchangeExecutionResult(ExchangeExecutionStatus.OutputBlocked, operationId, index);
+                }
+
+                _reservations.Add(reservation);
+                return new ExchangeExecutionResult(ExchangeExecutionStatus.Success, operationId);
             }
 
             if (output.Kind == ExchangeOutputKind.MoveItem)
@@ -170,9 +178,13 @@ namespace Ludots.Core.Gameplay.Exchange
                     return new ExchangeExecutionResult(ExchangeExecutionStatus.MissingSourceItem, operationId, index);
                 }
 
-                return _inventory.CanAutoPlaceItem(item, container)
-                    ? new ExchangeExecutionResult(ExchangeExecutionStatus.Success, operationId)
-                    : new ExchangeExecutionResult(ExchangeExecutionStatus.OutputBlocked, operationId, index);
+                if (!_inventory.CanAutoPlaceItem(item, container, _reservations, out ItemPlacementReservation reservation))
+                {
+                    return new ExchangeExecutionResult(ExchangeExecutionStatus.OutputBlocked, operationId, index);
+                }
+
+                _reservations.Add(reservation);
+                return new ExchangeExecutionResult(ExchangeExecutionStatus.Success, operationId);
             }
 
             return new ExchangeExecutionResult(ExchangeExecutionStatus.ExecutionFailed, operationId, index);

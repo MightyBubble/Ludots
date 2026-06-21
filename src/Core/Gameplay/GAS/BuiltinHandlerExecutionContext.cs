@@ -25,11 +25,15 @@ namespace Ludots.Core.Gameplay.GAS
 
         public int ResolvedCandidateCount { get; private set; }
         public int DroppedCount { get; private set; }
+        public bool HasExchangeResult { get; private set; }
+        public ExchangeExecutionResult LastExchangeResult { get; private set; }
 
         public void ResetPerEffect()
         {
             ResolvedCandidateCount = 0;
             DroppedCount = 0;
+            HasExchangeResult = false;
+            LastExchangeResult = default;
         }
 
         public void SetResolvedCandidateCount(int count)
@@ -48,6 +52,12 @@ namespace Ludots.Core.Gameplay.GAS
             {
                 DroppedCount += dropped;
             }
+        }
+
+        public void RecordExchangeResult(ExchangeExecutionResult result)
+        {
+            HasExchangeResult = true;
+            LastExchangeResult = result;
         }
     }
 
