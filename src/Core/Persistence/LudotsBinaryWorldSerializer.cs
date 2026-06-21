@@ -14,7 +14,7 @@ namespace Ludots.Core.Persistence
 
             EnsureWorldComponentFormatters(world);
             ArchBinarySerializer serializer = LudotsCorePersistenceFormatters.CreateBinarySerializer();
-            using World filteredWorld = CreateFilteredWorld(world);
+            using World filteredWorld = CloneIncludedWorld(world);
             EnsureWorldComponentFormatters(filteredWorld);
             return serializer.Serialize(filteredWorld);
         }
@@ -28,6 +28,36 @@ namespace Ludots.Core.Persistence
             SaveEntityWorldIdNormalizer.Normalize(world);
             SaveEntityReferenceValidator.Validate(world, SaveEntityInclusionPolicy.Default);
             return world;
+        }
+
+        internal World CloneIncludedWorld(World source)
+        {
+            if (source == null) throw new ArgumentNullException(nameof(source));
+
+            ArchBinarySerializer serializer = LudotsCorePersistenceFormatters.CreateBinarySerializer();
+            World filtered = serializer.Deserialize(serializer.Serialize(source));
+            SaveEntityWorldIdNormalizer.Normalize(filtered);
+
+            var excluded = new List<Entity>();
+            var policy = SaveEntityInclusionPolicy.Default;
+            filtered.Query(in QueryDescription.Null, entity =>
+            {
+                if (!policy.ShouldInclude(filtered, entity))
+                {
+                    excluded.Add(entity);
+                }
+            });
+
+            for (int i = 0; i < excluded.Count; i++)
+            {
+                if (filtered.IsAlive(excluded[i]))
+                {
+                    filtered.Destroy(excluded[i]);
+                }
+            }
+
+            SaveEntityReferenceValidator.Validate(filtered, policy);
+            return filtered;
         }
 
         public static void EnsureWorldComponentFormatters(World world)
@@ -68,32 +98,5 @@ namespace Ludots.Core.Persistence
             }
         }
 
-        private World CreateFilteredWorld(World source)
-        {
-            ArchBinarySerializer serializer = LudotsCorePersistenceFormatters.CreateBinarySerializer();
-            World filtered = serializer.Deserialize(serializer.Serialize(source));
-            SaveEntityWorldIdNormalizer.Normalize(filtered);
-
-            var excluded = new List<Entity>();
-            var policy = SaveEntityInclusionPolicy.Default;
-            filtered.Query(in QueryDescription.Null, entity =>
-            {
-                if (!policy.ShouldInclude(filtered, entity))
-                {
-                    excluded.Add(entity);
-                }
-            });
-
-            for (int i = 0; i < excluded.Count; i++)
-            {
-                if (filtered.IsAlive(excluded[i]))
-                {
-                    filtered.Destroy(excluded[i]);
-                }
-            }
-
-            SaveEntityReferenceValidator.Validate(filtered, policy);
-            return filtered;
-        }
     }
 }

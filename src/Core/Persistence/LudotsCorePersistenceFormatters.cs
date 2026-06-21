@@ -5,31 +5,63 @@ using System.Collections.Generic;
 using System.Linq;
 using System.Reflection;
 using System.Runtime.CompilerServices;
+using System.Threading;
 
 namespace Ludots.Core.Persistence
 {
     public static class LudotsCorePersistenceFormatters
     {
+        private static Lazy<FormatterCache> s_cache = CreateLazyCache();
+        private static int s_cacheBuildCount;
+
         public static ArchBinarySerializer CreateBinarySerializer()
         {
-            return new ArchBinarySerializer(CreateFormatters());
+            return s_cache.Value.Serializer;
         }
 
         public static IMessagePackFormatter[] CreateFormatters()
+        {
+            return s_cache.Value.Formatters.ToArray();
+        }
+
+        public static IReadOnlySet<Type> GetFormatterComponentTypes()
+        {
+            return s_cache.Value.ComponentTypes;
+        }
+
+        internal static int FormatterCacheBuildCountForTests => s_cacheBuildCount;
+
+        internal static void ResetCacheForTests()
+        {
+            s_cache = CreateLazyCache();
+            Interlocked.Exchange(ref s_cacheBuildCount, 0);
+        }
+
+        private static Lazy<FormatterCache> CreateLazyCache()
+        {
+            return new Lazy<FormatterCache>(BuildCache, isThreadSafe: true);
+        }
+
+        private static FormatterCache BuildCache()
+        {
+            Interlocked.Increment(ref s_cacheBuildCount);
+            IMessagePackFormatter[] formatters = BuildFormatters();
+            IReadOnlySet<Type> componentTypes = formatters
+                .OfType<ILudotsPersistenceComponentFormatter>()
+                .Select(formatter => formatter.ComponentType)
+                .ToHashSet();
+            return new FormatterCache(
+                formatters,
+                componentTypes);
+        }
+
+        private static IMessagePackFormatter[] BuildFormatters()
         {
             var formatters = new Dictionary<Type, IMessagePackFormatter>();
             AddComponentFormatter(formatters, new NameFormatter());
             AddComponentFormatter(formatters, new MapEntityFormatter());
             AddAutoDiscoveredUnmanagedFormatters(formatters);
             return formatters.Values.ToArray();
-        }
-
-        public static IReadOnlySet<Type> GetFormatterComponentTypes()
-        {
-            return CreateFormatters()
-                .OfType<ILudotsPersistenceComponentFormatter>()
-                .Select(formatter => formatter.ComponentType)
-                .ToHashSet();
         }
 
         private static void AddComponentFormatter(
@@ -142,6 +174,16 @@ namespace Ludots.Core.Persistence
         private static bool ContainsReferencesGeneric<T>()
         {
             return RuntimeHelpers.IsReferenceOrContainsReferences<T>();
+        }
+
+        private sealed record FormatterCache(
+            IMessagePackFormatter[] Formatters,
+            IReadOnlySet<Type> ComponentTypes)
+        {
+            private readonly ThreadLocal<ArchBinarySerializer> _serializer =
+                new(() => new ArchBinarySerializer(Formatters), trackAllValues: false);
+
+            public ArchBinarySerializer Serializer => _serializer.Value!;
         }
     }
 }

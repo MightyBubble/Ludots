@@ -277,6 +277,20 @@ public sealed class ArchPersistenceCharacterizationTests
         Assert.That(error.Message, Does.Contain("without Ludots persistence formatters"));
     }
 
+    [Test]
+    public void CorePersistenceFormattersAreScannedOnceForRepeatedSerializes()
+    {
+        LudotsCorePersistenceFormatters.ResetCacheForTests();
+        using World world = World.Create();
+        world.Create(new Name { Value = "scan-once" }, WorldPositionCm.FromCm(1, 2));
+        var serializer = new LudotsBinaryWorldSerializer();
+
+        serializer.Serialize(world);
+        serializer.Serialize(world);
+
+        Assert.That(LudotsCorePersistenceFormatters.FormatterCacheBuildCountForTests, Is.EqualTo(1));
+    }
+
     private static World RoundTrip(World world)
     {
         var serializer = new ArchBinarySerializer();

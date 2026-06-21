@@ -165,17 +165,7 @@ public sealed class WorldSnapshotOrchestrationTests
 
     private static string[] RunFixedSteps(GameEngine engine, int count)
     {
-        var trace = new string[count];
-        var pacemaker = (TurnBasedPacemaker)engine.Pacemaker;
-        IClock clock = engine.GetService(CoreServiceKeys.Clock);
-        for (int i = 0; i < count; i++)
-        {
-            pacemaker.Step();
-            engine.Tick(1f);
-            trace[i] = $"tick={engine.GameSession.CurrentTick};fixedFrame={clock.Now(ClockDomainId.FixedFrame)}";
-        }
-
-        return trace;
+        return SaveContinuationTrace.RunFixedSteps(engine, count, 1f);
     }
 
     private static string FindRepoRoot()
