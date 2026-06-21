@@ -422,9 +422,49 @@ namespace GasTests
         }
 
         [Test]
-        public void Issue244_PendingAac2_SingleEntityKeyedSoaTableContract()
+        public void Issue245_KnowledgeAndEntityCollection_UseSingleEntityKeyedSoaTable()
         {
-            Assert.Ignore("AAC-2 (#245) will replace KnowledgeProjectionStore and EntityCollectionStore duplicate sparse table internals with EntityKeyedSoaTable.");
+            var repoRoot = FindRepoRoot();
+            string tablePath = Path.Combine(repoRoot, "src", "Core", "Association", "EntityKeyedSoaTable.cs");
+            string knowledgePath = Path.Combine(repoRoot, "src", "Core", "Knowledge", "KnowledgeProjectionStore.cs");
+            string collectionPath = Path.Combine(repoRoot, "src", "Core", "EntityCollections", "EntityCollectionStore.cs");
+
+            Assert.That(File.Exists(tablePath), Is.True, $"Missing shared association base {tablePath}");
+            Assert.That(File.Exists(knowledgePath), Is.True, $"Missing {knowledgePath}");
+            Assert.That(File.Exists(collectionPath), Is.True, $"Missing {collectionPath}");
+
+            string table = File.ReadAllText(tablePath);
+            string knowledge = File.ReadAllText(knowledgePath);
+            string collection = File.ReadAllText(collectionPath);
+
+            Assert.Multiple(() =>
+            {
+                Assert.That(table, Does.Contain("public sealed class EntityKeyedSoaTable"));
+                Assert.That(table, Does.Contain("EntityKeyedSoaKey"));
+                Assert.That(table, Does.Contain("CopyByPrimary"));
+                Assert.That(table, Does.Contain("Compact()"));
+                Assert.That(knowledge, Does.Contain("EntityKeyedSoaTable<"));
+                Assert.That(collection, Does.Contain("EntityKeyedSoaTable<"));
+            });
+
+            string[] duplicatedSparseTableTokens =
+            {
+                "_bucketHeads",
+                "_entryNext",
+                "_entrySlots",
+                "BucketIndex(",
+                "Rehash(",
+                "LoadFactor"
+            };
+
+            var hits = new List<string>();
+            AppendForbiddenSourceTokens(repoRoot, knowledgePath, duplicatedSparseTableTokens, hits);
+            AppendForbiddenSourceTokens(repoRoot, collectionPath, duplicatedSparseTableTokens, hits);
+
+            Assert.That(
+                hits,
+                Is.Empty,
+                "AAC-2 (#245) requires KnowledgeProjectionStore and EntityCollectionStore to reuse EntityKeyedSoaTable instead of each hand-writing sparse hash/entry tables.");
         }
 
         [Test]
