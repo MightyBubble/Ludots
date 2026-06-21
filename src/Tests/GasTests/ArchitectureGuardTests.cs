@@ -661,6 +661,79 @@ namespace GasTests
         }
 
         [Test]
+        public void Issue252_KnowledgeRelationCollectionGrants_AreFoldedIntoRelationshipCatalog()
+        {
+            var repoRoot = FindRepoRoot();
+            string serviceKeysPath = Path.Combine(repoRoot, "src", "Core", "Scripting", "CoreServiceKeys.cs");
+            string grantPath = Path.Combine(repoRoot, "src", "Core", "Knowledge", "KnowledgeRelationCollectionGrants.cs");
+            string catalogConfigPath = Path.Combine(repoRoot, "src", "Core", "Gameplay", "Relationships", "Config", "RelationshipCatalogConfig.cs");
+            string catalogRuntimePath = Path.Combine(repoRoot, "src", "Core", "Gameplay", "Relationships", "RelationshipCatalogRuntime.cs");
+            string catalogLoaderPath = Path.Combine(repoRoot, "src", "Core", "Gameplay", "Relationships", "Config", "RelationshipCatalogPipelineLoader.cs");
+            string showcaseInstallerPath = Path.Combine(
+                repoRoot,
+                "mods",
+                "showcases",
+                "capability_standard",
+                "CapabilityStandardParticipantViewsMod",
+                "ParticipantViewKnowledgeShowcaseInstaller.cs");
+            string showcaseMapPath = Path.Combine(
+                repoRoot,
+                "mods",
+                "showcases",
+                "capability_standard",
+                "CapabilityStandardParticipantViewsMod",
+                "assets",
+                "Maps",
+                "capability_standard_participant_views.json");
+            string showcaseCatalogPath = Path.Combine(
+                repoRoot,
+                "mods",
+                "showcases",
+                "capability_standard",
+                "CapabilityStandardParticipantViewsMod",
+                "assets",
+                "Relationships",
+                "catalog.json");
+
+            Assert.That(File.Exists(serviceKeysPath), Is.True, $"Missing {serviceKeysPath}");
+            Assert.That(File.Exists(grantPath), Is.True, $"Missing {grantPath}");
+            Assert.That(File.Exists(catalogConfigPath), Is.True, $"Missing {catalogConfigPath}");
+            Assert.That(File.Exists(catalogRuntimePath), Is.True, $"Missing {catalogRuntimePath}");
+            Assert.That(File.Exists(catalogLoaderPath), Is.True, $"Missing {catalogLoaderPath}");
+            Assert.That(File.Exists(showcaseInstallerPath), Is.True, $"Missing {showcaseInstallerPath}");
+            Assert.That(File.Exists(showcaseMapPath), Is.True, $"Missing {showcaseMapPath}");
+            Assert.That(File.Exists(showcaseCatalogPath), Is.True, $"Missing {showcaseCatalogPath}");
+
+            string serviceKeys = File.ReadAllText(serviceKeysPath);
+            string grants = File.ReadAllText(grantPath);
+            string catalogConfig = File.ReadAllText(catalogConfigPath);
+            string catalogRuntime = File.ReadAllText(catalogRuntimePath);
+            string catalogLoader = File.ReadAllText(catalogLoaderPath);
+            string showcaseInstaller = File.ReadAllText(showcaseInstallerPath);
+            string showcaseMap = File.ReadAllText(showcaseMapPath);
+            string showcaseCatalog = File.ReadAllText(showcaseCatalogPath);
+
+            Assert.Multiple(() =>
+            {
+                Assert.That(serviceKeys, Does.Not.Contain("KnowledgeRelationCollectionGrantStore"));
+                Assert.That(grants, Does.Contain("public readonly struct KnowledgeRelationCollectionGrant"));
+                Assert.That(grants, Does.Contain("RelationshipCatalogRuntime"));
+                Assert.That(grants, Does.Not.Contain("public sealed class KnowledgeRelationCollectionGrantStore"));
+                Assert.That(catalogConfig, Does.Contain("KnowledgeGrants"));
+                Assert.That(catalogConfig, Does.Contain("RelationshipKnowledgeGrantConfig"));
+                Assert.That(catalogRuntime, Does.Contain("CompileKnowledgeGrants"));
+                Assert.That(catalogRuntime, Does.Contain("TryGetKnowledgeGrantAt"));
+                Assert.That(catalogRuntime, Does.Contain("EntityCollectionStore"));
+                Assert.That(catalogLoader, Does.Contain("KnowledgeGrants"));
+                Assert.That(catalogLoader, Does.Contain("JsonStringEnumConverter"));
+                Assert.That(showcaseInstaller, Does.Not.Contain("InstallGrants"));
+                Assert.That(showcaseInstaller, Does.Not.Contain("KnowledgeGrantSpec"));
+                Assert.That(showcaseMap, Does.Not.Contain("\"Grants\""));
+                Assert.That(showcaseCatalog, Does.Contain("\"knowledgeGrants\""));
+            });
+        }
+
+        [Test]
         public void Issue244_PendingCompositionContracts()
         {
             Assert.Ignore("AAC-5..AAC-8/#248..#251 will make Ownership relations, Relationship-gated Exchange, Collection+Relationship-fed Progression membership, and Inventory settlement executable contracts.");

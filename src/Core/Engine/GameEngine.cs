@@ -572,15 +572,18 @@ namespace Ludots.Core.Engine
             var relationshipReasonRegistry = new RelationshipReasonRegistry();
             var relationshipChangeBuffer = new RelationshipChangeBuffer();
             var relationshipRuntime = new RelationshipRuntime(World, relationshipTypeRegistry, relationshipMetricRegistry, relationshipFlagRegistry, relationshipBandRegistry, relationshipChangeBuffer);
-            var relationshipCatalog = new RelationshipCatalogPipelineLoader(ConfigPipeline).Load(ConfigCatalog, ConfigConflictReport);
             var tagOps = new TagOps(new TagRuleRegistry(), gasBudget);
+            var entityCollectionKeyRegistry = new StringIntRegistry(capacity: 64, startId: 1, invalidId: 0, comparer: StringComparer.Ordinal);
+            var entityCollectionStore = new EntityCollectionStore(entityCollectionKeyRegistry, initialCollectionCapacity: 128, initialRowCapacity: 4096);
+            var relationshipCatalog = new RelationshipCatalogPipelineLoader(ConfigPipeline).Load(ConfigCatalog, ConfigConflictReport);
             var relationshipCatalogRuntime = RelationshipCatalogInstaller.Install(
                 relationshipCatalog,
                 relationshipTypeRegistry,
                 relationshipMetricRegistry,
                 relationshipFlagRegistry,
                 relationshipBandRegistry,
-                relationshipReasonRegistry);
+                relationshipReasonRegistry,
+                entityCollectionStore);
             var ownershipResolver = new OwnershipResolver(relationshipRuntime, relationshipTypeRegistry.GetId("Owns"));
             var relationshipProcessingSystem = new RelationshipProcessingSystem(this, relationshipChangeBuffer, tagOps, teamEntityLookup);
             var entitySetQueryRuntime = new EntitySetQueryRuntime(World, tagOps, relationshipRuntime);
@@ -611,15 +614,12 @@ namespace Ludots.Core.Engine
             var graphProgramRegistry = new GraphProgramRegistry();
             var graphOutputSchemas = new GraphOutputSchemaRegistry();
             var graphOutputValueKeyRegistry = new StringIntRegistry(capacity: 64, startId: 1, invalidId: 0, comparer: StringComparer.Ordinal);
-            var entityCollectionKeyRegistry = new StringIntRegistry(capacity: 64, startId: 1, invalidId: 0, comparer: StringComparer.Ordinal);
-            var entityCollectionStore = new EntityCollectionStore(entityCollectionKeyRegistry, initialCollectionCapacity: 128, initialRowCapacity: 4096);
             var scopeResolver = new ScopeResolver(World, progressionScopeKeys, entityCollectionStore, relationshipRuntime);
             var knowledgeProjectionStore = new KnowledgeProjectionStore(initialCapacity: 128);
-            var knowledgeRelationCollectionGrants = new KnowledgeRelationCollectionGrantStore();
             var knowledgeRelationCollectionProjector = new KnowledgeRelationCollectionProjector(
                 relationshipRuntime,
                 entityCollectionStore,
-                knowledgeRelationCollectionGrants,
+                relationshipCatalogRuntime,
                 knowledgeProjectionStore);
             var knowledgeProjectionResolver = new KnowledgeProjectionResolver(
                 knowledgeProjectionStore,
@@ -1094,7 +1094,6 @@ namespace Ludots.Core.Engine
             SetService(CoreServiceKeys.EntityCollectionStore, entityCollectionStore);
             SetService(CoreServiceKeys.EntityCollectionKeyRegistry, entityCollectionKeyRegistry);
             SetService(CoreServiceKeys.KnowledgeProjectionStore, knowledgeProjectionStore);
-            SetService(CoreServiceKeys.KnowledgeRelationCollectionGrantStore, knowledgeRelationCollectionGrants);
             SetService(CoreServiceKeys.KnowledgeRelationCollectionProjector, knowledgeRelationCollectionProjector);
             SetService(CoreServiceKeys.KnowledgeProjectionResolver, knowledgeProjectionResolver);
             SetService(CoreServiceKeys.SelectionRuleRegistry, selectionRuleRegistry);

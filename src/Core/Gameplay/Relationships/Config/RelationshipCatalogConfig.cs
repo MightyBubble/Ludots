@@ -1,5 +1,6 @@
 using System.Collections.Generic;
 using Ludots.Core.Config;
+using Ludots.Core.Knowledge;
 
 namespace Ludots.Core.Gameplay.Relationships.Config
 {
@@ -12,6 +13,7 @@ namespace Ludots.Core.Gameplay.Relationships.Config
         public List<RelationshipReasonConfig> Reasons { get; set; } = new();
         public List<RelationshipCallbackConfig> Callbacks { get; set; } = new();
         public List<RelationshipSynergyConfig> Synergies { get; set; } = new();
+        public List<RelationshipKnowledgeGrantConfig> KnowledgeGrants { get; set; } = new();
     }
 
     public sealed class RelationshipTypeConfig : IIdentifiable
@@ -74,5 +76,23 @@ namespace Ludots.Core.Gameplay.Relationships.Config
         public int MinimumCount { get; set; } = 1;
         public List<string> ApplyTagsToTeam { get; set; } = new();
         public string EventKey { get; set; } = string.Empty;
+    }
+
+    public sealed class RelationshipKnowledgeGrantConfig : IIdentifiable
+    {
+        public string Id { get; set; } = string.Empty;
+        public string TypeId { get; set; } = string.Empty;
+        public string CollectionKey { get; set; } = string.Empty;
+        public KnowledgePresence Presence { get; set; }
+        public KnowledgePositionAccess Position { get; set; }
+        public List<int> AttributeIds { get; set; } = new();
+        public List<string> Attributes { get; set; } = new();
+        public List<int> RelationshipTypeIds { get; set; } = new();
+        public List<string> RelationshipTypes { get; set; } = new();
+        public List<int> TagIds { get; set; } = new();
+        public List<string> Tags { get; set; } = new();
+        public int ObservedTick { get; set; }
+        public int ExpiryTick { get; set; }
+        public int ConfidencePermille { get; set; } = 1000;
     }
 }

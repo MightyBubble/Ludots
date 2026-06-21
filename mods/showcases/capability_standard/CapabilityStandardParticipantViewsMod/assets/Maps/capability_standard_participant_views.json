@@ -87,25 +87,6 @@
           "Title": "Neutral envoy rumor",
           "Summary": "A neutral entity discloses last-known positions for selected Amber units."
         }
-      ],
-      "Grants": [
-        {
-          "RelationshipType": "Participant",
-          "CollectionKey": "participant_view.ally.share",
-          "Presence": "HiddenWithSource",
-          "Position": "LastKnown",
-          "Attributes": [ "Health" ],
-          "RelationshipTypes": [ "Participant" ],
-          "ConfidencePermille": 760
-        },
-        {
-          "RelationshipType": "Participant",
-          "CollectionKey": "participant_view.neutral.rumor",
-          "Presence": "HiddenWithSource",
-          "Position": "LastKnown",
-          "Attributes": [ "Health" ],
-          "ConfidencePermille": 520
-        }
       ]
     }
   },

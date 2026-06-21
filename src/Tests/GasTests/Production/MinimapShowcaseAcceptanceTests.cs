@@ -555,14 +555,9 @@ public sealed class MinimapShowcaseAcceptanceTests
     private static void InstallKnowledgeServices(
         GameEngine engine,
         KnowledgeProjectionStore store,
-        KnowledgeRelationCollectionGrantStore? grants,
         KnowledgeRelationCollectionProjector? projector)
     {
         engine.SetService(CoreServiceKeys.KnowledgeProjectionStore, store);
-        if (grants != null)
-        {
-            engine.SetService(CoreServiceKeys.KnowledgeRelationCollectionGrantStore, grants);
-        }
 
         if (projector != null)
         {
