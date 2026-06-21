@@ -568,6 +568,66 @@ namespace Ludots.Tests.Architecture
         }
 
         [Test]
+        public void Launcher_ResolvesAiShowcases_AsSingleFeatureRoots()
+        {
+            var repoRoot = FindRepoRoot();
+            var tempDirectory = Path.Combine(repoRoot, "artifacts", "tests", $"launcher-ai-showcases-{Guid.NewGuid():N}");
+            Directory.CreateDirectory(tempDirectory);
+
+            try
+            {
+                var preferencesPath = Path.Combine(tempDirectory, "preferences.json");
+                var userConfigPath = Path.Combine(tempDirectory, "config.overlay.json");
+                File.WriteAllText(preferencesPath, "{}");
+                File.WriteAllText(userConfigPath, "{}");
+
+                var launcher = new LauncherService(
+                    repoRoot,
+                    Path.Combine(repoRoot, "launcher.config.json"),
+                    Path.Combine(repoRoot, "launcher.presets.json"),
+                    preferencesPath,
+                    userConfigPath);
+
+                var utilityPlan = launcher.Resolve(
+                    new[] { "$utility_autocast_showcase" },
+                    LauncherPlatformIds.Raylib,
+                    LauncherBuildMode.Never).Plan;
+                AssertAiShowcasePlan(
+                    utilityPlan,
+                    "UtilityAutocastShowcaseMod",
+                    "utility_autocast_showcase",
+                    new[]
+                    {
+                        "LudotsCoreMod",
+                        "AIInspectorMod",
+                        "UtilityAutocastShowcaseMod"
+                    });
+
+                var combatStancePlan = launcher.Resolve(
+                    new[] { "$combat_stance_showcase" },
+                    LauncherPlatformIds.Raylib,
+                    LauncherBuildMode.Never).Plan;
+                AssertAiShowcasePlan(
+                    combatStancePlan,
+                    "CombatStanceShowcaseMod",
+                    "combat_stance_showcase",
+                    new[]
+                    {
+                        "LudotsCoreMod",
+                        "CombatStanceBehaviorMod",
+                        "CombatStanceShowcaseMod"
+                    });
+            }
+            finally
+            {
+                if (Directory.Exists(tempDirectory))
+                {
+                    Directory.Delete(tempDirectory, recursive: true);
+                }
+            }
+        }
+
+        [Test]
         public void GameBootstrapper_RejectsUnknownLauncherMetadataFields()
         {
             var repoRoot = FindRepoRoot();
@@ -972,6 +1032,25 @@ namespace Ludots.Tests.Architecture
             Assert.That(plan.OrderedModIds, Does.Not.Contain("PerformerBlacksmithShowcaseMod"));
             Assert.That(plan.OrderedModIds, Does.Not.Contain("PerformerBlacksmithScatterHudTextBenchmarkEntryMod"));
             Assert.That(plan.OrderedModIds, Does.Not.Contain("MassNavigationTotalWarEntryMod"));
+
+            var startupMapSetting = plan.Diagnostics.Settings.First(setting => string.Equals(setting.Key, "startupMapId", StringComparison.Ordinal));
+            Assert.That(startupMapSetting.EffectiveValue?.GetValue<string>(), Is.EqualTo(expectedStartupMapId));
+            Assert.That(startupMapSetting.EffectiveSource, Does.Contain(expectedRootModId));
+        }
+
+        private static void AssertAiShowcasePlan(
+            LauncherLaunchPlan plan,
+            string expectedRootModId,
+            string expectedStartupMapId,
+            string[] allowedModIds)
+        {
+            Assert.That(plan.RootModIds, Is.EqualTo(new[] { expectedRootModId }));
+            Assert.That(plan.OrderedModIds, Is.SubsetOf(allowedModIds));
+            Assert.That(plan.OrderedModIds, Does.Contain(expectedRootModId));
+            Assert.That(plan.OrderedModIds, Does.Not.Contain("AIDemoMod"));
+            Assert.That(plan.OrderedModIds, Does.Not.Contain("RtsDemoMod"));
+            Assert.That(plan.OrderedModIds, Does.Not.Contain("RelationshipShowcaseMod"));
+            Assert.That(plan.OrderedModIds, Does.Not.Contain("FourXAssociationShowcaseMod"));
 
             var startupMapSetting = plan.Diagnostics.Settings.First(setting => string.Equals(setting.Key, "startupMapId", StringComparison.Ordinal));
             Assert.That(startupMapSetting.EffectiveValue?.GetValue<string>(), Is.EqualTo(expectedStartupMapId));
