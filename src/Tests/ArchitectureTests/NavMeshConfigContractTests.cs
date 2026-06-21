@@ -35,6 +35,8 @@ namespace Ludots.Tests.Architecture
 
             Assert.That(config.Profiles, Is.Not.Null.And.Not.Empty);
             Assert.That(config.Layers, Is.Not.Null.And.Not.Empty);
+            Assert.That(config.Mode, Is.EqualTo("offline"));
+            Assert.That(config.Algorithm, Is.EqualTo("recast"));
         }
 
         [Test]
@@ -135,6 +137,8 @@ namespace Ludots.Tests.Architecture
 
             Assert.That(config.Profiles, Is.Not.Null.And.Not.Empty);
             Assert.That(config.Layers, Is.Not.Null.And.Not.Empty);
+            Assert.That(config.Mode, Is.EqualTo("offline"));
+            Assert.That(config.Algorithm, Is.EqualTo("recast"));
         }
 
         [Test]
@@ -157,6 +161,8 @@ namespace Ludots.Tests.Architecture
                 navmeshJson:
                 """
                 {
+                  "mode": "offline",
+                  "algorithm": "recast",
                   "profiles": [
                     { "id": "Small", "radiusCm": 30, "maxClimbCm": 40, "maxSlopeDeg": 45 }
                   ],

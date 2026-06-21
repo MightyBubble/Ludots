@@ -6,6 +6,7 @@ using System.Text.Json.Nodes;
 using Ludots.Core.Config;
 using Ludots.Core.Modding;
 using Ludots.Core.Navigation.AgentProfiles;
+using Ludots.Core.Navigation.NavMesh.Bake;
 
 namespace Ludots.Core.Navigation.NavMesh.Config
 {
@@ -41,6 +42,15 @@ namespace Ludots.Core.Navigation.NavMesh.Config
                 throw new InvalidOperationException($"Failed to deserialize NavMeshBakeConfig from '{relativePath}'.");
             }
 
+            _ = config.ParsedMode;
+            _ = config.ParsedAlgorithm;
+
+            if (config.ParsedMode == NavBakeMode.RuntimeIncremental &&
+                config.ParsedAlgorithm != NavBakeAlgorithmKind.Cdt)
+            {
+                throw new InvalidOperationException("NavMeshBakeConfig runtime-incremental mode must use algorithm 'cdt'.");
+            }
+
             if (config.Profiles == null || config.Profiles.Count == 0)
             {
                 throw new InvalidOperationException("NavMeshBakeConfig.profiles is empty.");
@@ -64,7 +74,7 @@ namespace Ludots.Core.Navigation.NavMesh.Config
             return LoadContextFromRepoRoot(repoRoot, relativePath).Config;
         }
 
-        public static NavMeshBakeContext LoadContextFromRepoRoot(string repoRoot, string relativePath = NavMeshConfigPaths.BakeConfigPath)
+        public static NavMeshBakeConfigContext LoadContextFromRepoRoot(string repoRoot, string relativePath = NavMeshConfigPaths.BakeConfigPath)
         {
             if (string.IsNullOrWhiteSpace(repoRoot))
             {
@@ -84,12 +94,17 @@ namespace Ludots.Core.Navigation.NavMesh.Config
             var catalog = ConfigCatalogLoader.Load(pipeline);
             var agentProfiles = new AgentProfileConfigLoader(pipeline).Load(catalog);
             var config = new NavMeshBakeConfigLoader(pipeline, agentProfiles).Load(catalog, relativePath: relativePath);
-            return new NavMeshBakeContext(config, agentProfiles);
+            return new NavMeshBakeConfigContext(config, agentProfiles);
         }
 
         private void ValidateRaw(JsonObject root, string relativePath)
         {
-            RequireOnlyProperties(root, "NavMeshBakeConfig", "profiles", "layers", "areas");
+            RequireOnlyProperties(root, "NavMeshBakeConfig", "mode", "algorithm", "profiles", "layers", "areas");
+            string mode = RequireString(root, "mode", "NavMeshBakeConfig");
+            string algorithm = RequireString(root, "algorithm", "NavMeshBakeConfig");
+            _ = NavBakeNames.ParseMode(mode, "NavMeshBakeConfig.mode");
+            _ = NavBakeNames.ParseAlgorithm(algorithm, "NavMeshBakeConfig.algorithm");
+
             if (root["profiles"] is not JsonArray profiles || profiles.Count == 0)
             {
                 throw new InvalidOperationException("NavMeshBakeConfig.profiles must be a non-empty explicit array.");
@@ -216,7 +231,7 @@ namespace Ludots.Core.Navigation.NavMesh.Config
         }
     }
 
-    public sealed record NavMeshBakeContext(
+    public sealed record NavMeshBakeConfigContext(
         NavMeshBakeConfig Config,
         AgentProfileRegistry AgentProfiles);
 }

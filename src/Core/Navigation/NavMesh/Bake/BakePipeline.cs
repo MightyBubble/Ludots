@@ -120,32 +120,18 @@ namespace Ludots.Core.Navigation.NavMesh.Bake
                 return new BakePipelineResult(false, null, artifact);
             }
 
-            // Stage 2-4: CDT pipeline (primary) with GridMesh fallback.
-            //
-            // Primary path: Contour → Polygon → CDT
-            //   Produces minimal triangle count with Delaunay quality.
-            //
-            // Fallback path: GridMesh (direct grid triangles)
-            //   Guaranteed correct for any walkable mask; more triangles but no
-            //   triangulation quality issues. Used when CDT fails on degenerate input.
-
             bool cdtSucceeded = TryCdtPipeline(context, startC, startR, config);
 
             if (!cdtSucceeded)
             {
-                context.CurrentStage = NavBakeStage.Triangulate;
-                context.Log("CDT pipeline failed, falling back to grid mesh...");
-
-                if (!GridMeshBuilder.TryBuild(context.WalkMask, startC, startR,
-                    out context.TriMesh, out string meshError))
-                {
-                    var artifact = CreateErrorArtifact(tileId, tileVersion, NavBakeStage.Triangulate,
-                        NavBakeErrorCode.TriangulateFailed,
-                        meshError ?? "Both CDT and grid mesh failed.", context);
-                    return new BakePipelineResult(false, null, artifact);
-                }
-
-                context.Log($"Grid mesh fallback: {context.TriMesh.TriangleCount} triangles, {context.TriMesh.VertexCount} vertices.");
+                var artifact = CreateErrorArtifact(
+                    tileId,
+                    tileVersion,
+                    NavBakeStage.Triangulate,
+                    NavBakeErrorCode.TriangulateFailed,
+                    "CDT pipeline failed.",
+                    context);
+                return new BakePipelineResult(false, null, artifact);
             }
 
             // Stage 5: Convert to NavTile format
@@ -170,7 +156,7 @@ namespace Ludots.Core.Navigation.NavMesh.Bake
         /// <summary>
         /// Attempts the full CDT pipeline: Contour → Polygon → CDT.
         /// Returns true if successful (context.TriMesh is set).
-        /// Returns false on any failure (caller should fall back to GridMesh).
+        /// Returns true only when CDT produced a valid mesh.
         /// </summary>
         private static bool TryCdtPipeline(BakePipelineContext context, int startC, int startR, in NavBuildConfig config)
         {

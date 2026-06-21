@@ -5,6 +5,7 @@ using Ludots.Launcher.Backend;
 using Ludots.Core.Navigation.NavMesh;
 using Ludots.Core.Navigation.NavMesh.Bake;
 using Ludots.Core.Navigation.NavMesh.Config;
+using Ludots.Core.Navigation.Terrain;
 using Ludots.Core.Physics2D.Navigation;
 using Ludots.NavBake.Recast;
 using Ludots.Tool;
@@ -459,7 +460,11 @@ app.MapPost("/api/nav/bake-react", async (HttpRequest req) =>
         vtxmStream.Position = 0;
         var map = VertexMapBinary.Read(vtxmStream);
 
-        var targets = ResolveTargets(map, dirtyJson, includeNeighbors, fallbackToFullWhenNoTargets: !dirtyOnly);
+        IReadOnlyList<NavBakeTileCoord> targets = NavBakeTileSelection.Resolve(
+            new VertexMapLogicTerrainField(map),
+            dirtyJson,
+            includeNeighbors,
+            dirtyOnly);
         if (targets.Count == 0)
         {
             return Results.Ok(new
@@ -475,61 +480,70 @@ app.MapPost("/api/nav/bake-react", async (HttpRequest req) =>
         }
         var cfg = new NavBuildConfig(heightScale, minUpDot, cliffThreshold);
 
-        var results = new TileBakeResult[targets.Count];
+        var navConfig = new NavMeshBakeConfig
+        {
+            Mode = NavBakeNames.ModeOffline,
+            Algorithm = NavBakeNames.AlgorithmCdt,
+            Profiles = new List<NavMeshAgentProfileConfig>
+            {
+                new NavMeshAgentProfileConfig { Id = "Legacy", MaxClimbCm = 0, MaxSlopeDeg = 90 }
+            },
+            Layers = new List<NavLayerConfig>
+            {
+                new NavLayerConfig { Id = "Ground", Layer = 0 }
+            },
+            Areas = new List<NavAreaCostConfig>()
+        };
+        var agentProfiles = new Ludots.Core.Navigation.AgentProfiles.AgentProfileRegistry(new[]
+        {
+            new Ludots.Core.Navigation.AgentProfiles.AgentProfileConfig
+            {
+                Id = "Legacy",
+                RadiusCm = Ludots.Core.Spatial.SpatialScaleDefaults.CellCm / 2,
+                HeightCm = Ludots.Core.Spatial.SpatialScaleDefaults.CellCm,
+                ClearanceCm = Ludots.Core.Spatial.SpatialScaleDefaults.CellCm / 2,
+                Mass = 1,
+                Layer = 0
+            }
+        });
 
-        void BakeOne(int i)
+        var bakeContext = new NavBakeContext
         {
-            var t = targets[i];
-            
-            // Use new CDT pipeline
-            var pipelineResult = BakePipeline.Execute(map, t.cx, t.cy, (uint)tileVersion, cfg);
-            
-            // Log debug info to console
-            if (pipelineResult.Artifact.DebugLog != null)
+            MapId = "editor-cdt-preview",
+            SourceUri = ToEditorUploadSourceUri(mapFile.FileName),
+            Terrain = new VertexMapLogicTerrainField(map),
+            Obstacles = new NavObstacleSet(),
+            Config = navConfig,
+            AgentProfiles = agentProfiles,
+            Targets = targets,
+            BuildConfig = cfg,
+            TileVersion = (uint)tileVersion,
+            Mode = NavBakeMode.Offline,
+            Algorithm = NavBakeAlgorithmKind.Cdt,
+            Execution = new NavBakeExecutionOptions
             {
-                Console.WriteLine($"[Bake ({t.cx},{t.cy})] Debug log:");
-                foreach (var line in pipelineResult.Artifact.DebugLog)
-                {
-                    Console.WriteLine($"  {line}");
-                }
+                Parallel = parallel,
+                MaxDegreeOfParallelism = Math.Max(1, maxDegree)
             }
-            
-            if (pipelineResult.Success && pipelineResult.Tile != null)
-            {
-                using var ms = new MemoryStream();
-                NavTileBinary.Write(ms, pipelineResult.Tile);
-                results[i] = new TileBakeResult(t.cx, t.cy, Ok: true, Convert.ToBase64String(ms.ToArray()), writeArtifact ? SerializeArtifact(pipelineResult.Artifact) : null);
-            }
-            else
-            {
-                results[i] = new TileBakeResult(t.cx, t.cy, Ok: false, null, writeArtifact ? SerializeArtifact(pipelineResult.Artifact) : null);
-            }
-        }
+        };
 
-        if (parallel)
-        {
-            Parallel.For(0, targets.Count, new ParallelOptions { MaxDegreeOfParallelism = Math.Max(1, maxDegree) }, BakeOne);
-        }
-        else
-        {
-            for (int i = 0; i < targets.Count; i++) BakeOne(i);
-        }
+        var bakeResult = new NavBakeService(new CdtNavBakeAlgorithm()).Bake(bakeContext);
 
         int okCount = 0;
         int failCount = 0;
-        var tiles = new List<object>(results.Length);
+        var tiles = new List<object>(bakeResult.Entries.Count);
         var artifacts = new List<object>();
-        for (int i = 0; i < results.Length; i++)
+        for (int i = 0; i < bakeResult.Entries.Count; i++)
         {
-            var r = results[i];
-            if (r.Ok) okCount++; else failCount++;
-            if (!string.IsNullOrEmpty(r.NavTileBase64))
+            var r = bakeResult.Entries[i];
+            if (r.Success) okCount++; else failCount++;
+            if (r.Success && r.Tile != null)
             {
-                tiles.Add(new { cx = r.Cx, cy = r.Cy, layer = 0, base64 = r.NavTileBase64 });
+                tiles.Add(new { cx = r.Target.ChunkX, cy = r.Target.ChunkY, layer = r.Layer, base64 = Convert.ToBase64String(r.ToTileBytes()) });
             }
-            if (!string.IsNullOrEmpty(r.ArtifactJson))
+            if (writeArtifact)
             {
-                artifacts.Add(new { cx = r.Cx, cy = r.Cy, json = r.ArtifactJson });
+                artifacts.Add(new { cx = r.Target.ChunkX, cy = r.Target.ChunkY, json = SerializeArtifact(r.Artifact) });
             }
         }
 
@@ -585,18 +599,17 @@ app.MapPost("/api/nav/bake-recast-react", async (HttpRequest req) =>
         var map = VertexMapBinary.Read(vtxmStream);
 
         string repoRoot = FindAssetsRoot();
-        NavMeshBakeContext bakeContext;
+        NavMeshBakeConfigContext bakeConfigContext;
         try
         {
-            bakeContext = NavMeshBakeConfigLoader.LoadContextFromRepoRoot(repoRoot);
+            bakeConfigContext = NavMeshBakeConfigLoader.LoadContextFromRepoRoot(repoRoot);
         }
         catch (Exception ex)
         {
             return Results.BadRequest(new { error = $"Failed to load navmesh bake config '{NavMeshConfigPaths.BakeConfigPath}': {ex.Message}" });
         }
 
-        NavMeshBakeConfig bakeConfig = bakeContext.Config;
-        var profiles = bakeConfig.Profiles;
+        NavMeshBakeConfig bakeConfig = bakeConfigContext.Config;
 
         NavObstacleSet obstacles;
         try
@@ -608,7 +621,11 @@ app.MapPost("/api/nav/bake-recast-react", async (HttpRequest req) =>
             return Results.BadRequest(new { error = $"Failed to build nav obstacles from map authoring for '{mapId}': {ex.Message}" });
         }
 
-        var targets = ResolveTargets(map, dirtyJson, includeNeighbors, fallbackToFullWhenNoTargets: !dirtyOnly);
+        IReadOnlyList<NavBakeTileCoord> targets = NavBakeTileSelection.Resolve(
+            new VertexMapLogicTerrainField(map),
+            dirtyJson,
+            includeNeighbors,
+            dirtyOnly);
         if (targets.Count == 0)
         {
             return Results.Ok(new
@@ -624,76 +641,59 @@ app.MapPost("/api/nav/bake-recast-react", async (HttpRequest req) =>
         }
         var legacyCfg = new NavBuildConfig(heightScale, minUpDot, cliffThreshold);
 
-        var results = new TileBakeResult[targets.Count];
-
-        void BakeOne(int i)
+        var navBakeContext = new NavBakeContext
         {
-            var t = targets[i];
-            bool okAny = false;
-            string? base64 = null;
-            string? artJson = null;
-
-            for (int li = 0; li < bakeConfig.Layers.Count; li++)
+            MapId = mapId,
+            ModId = modId ?? string.Empty,
+            SourceUri = ToEditorUploadSourceUri(mapFile.FileName),
+            Terrain = new VertexMapLogicTerrainField(map),
+            Obstacles = obstacles,
+            Config = bakeConfig,
+            AgentProfiles = bakeConfigContext.AgentProfiles,
+            Targets = targets,
+            BuildConfig = legacyCfg,
+            TileVersion = (uint)tileVersion,
+            Mode = bakeConfig.ParsedMode,
+            Algorithm = bakeConfig.ParsedAlgorithm,
+            Execution = new NavBakeExecutionOptions
             {
-                int layer = bakeConfig.Layers[li].Layer;
-                for (int pi = 0; pi < profiles.Count; pi++)
-                {
-                    var navProfile = profiles[pi];
-                    var agentProfile = bakeContext.AgentProfiles.Require(navProfile.Id, $"{NavMeshConfigPaths.BakeConfigPath}.profiles[{pi}]");
-                    if (RecastNavTileBaker.TryBake(map, t.cx, t.cy, (uint)tileVersion, legacyCfg, agentProfile, navProfile, layer, obstacles, out var tile, out var artifact))
-                    {
-                        string profileId = navProfile.Id ?? throw new InvalidOperationException("NavMeshBakeConfig.profiles.id is required.");
-                        string rel = NavAssetPaths.GetNavTileRelativePath(mapId, layer, profileId, t.cx, t.cy);
-                        string outFile = Path.Combine(repoRoot, rel.Replace('/', Path.DirectorySeparatorChar));
-                        Directory.CreateDirectory(Path.GetDirectoryName(outFile)!);
-                        using (var fs = File.Create(outFile))
-                        {
-                            NavTileBinary.Write(fs, tile);
-                        }
-
-                        if (layer == 0 && pi == 0)
-                        {
-                            using var ms = new MemoryStream();
-                            NavTileBinary.Write(ms, tile);
-                            base64 = Convert.ToBase64String(ms.ToArray());
-                            if (writeArtifact) artJson = SerializeArtifact(artifact);
-                        }
-                        okAny = true;
-                    }
-                    else
-                    {
-                        if (layer == 0 && pi == 0 && writeArtifact) artJson = SerializeArtifact(artifact);
-                    }
-                }
+                Parallel = parallel,
+                MaxDegreeOfParallelism = Math.Max(1, maxDegree)
             }
-
-            results[i] = new TileBakeResult(t.cx, t.cy, okAny, base64, artJson);
-        }
-
-        if (parallel)
-        {
-            Parallel.For(0, targets.Count, new ParallelOptions { MaxDegreeOfParallelism = Math.Max(1, maxDegree) }, BakeOne);
-        }
-        else
-        {
-            for (int i = 0; i < targets.Count; i++) BakeOne(i);
-        }
+        };
+        var navBakeResult = new NavBakeService(new RecastNavBakeAlgorithm(), new CdtNavBakeAlgorithm()).Bake(navBakeContext);
 
         int okCount = 0;
         int failCount = 0;
-        var tiles = new List<object>(results.Length);
+        var tiles = new List<object>(navBakeResult.Entries.Count);
         var artifacts = new List<object>();
-        for (int i = 0; i < results.Length; i++)
+        for (int i = 0; i < navBakeResult.Entries.Count; i++)
         {
-            var r = results[i];
-            if (r.Ok) okCount++; else failCount++;
-            if (!string.IsNullOrEmpty(r.NavTileBase64))
+            var r = navBakeResult.Entries[i];
+            if (r.Success)
             {
-                tiles.Add(new { cx = r.Cx, cy = r.Cy, layer = 0, base64 = r.NavTileBase64 });
+                okCount++;
+                string rel = NavAssetPaths.GetNavTileRelativePath(mapId, r.Layer, r.ProfileId, r.Target.ChunkX, r.Target.ChunkY);
+                string outFile = Path.Combine(repoRoot, rel.Replace('/', Path.DirectorySeparatorChar));
+                Directory.CreateDirectory(Path.GetDirectoryName(outFile)!);
+                using (var fs = File.Create(outFile))
+                {
+                    NavTileBinary.Write(fs, r.Tile);
+                }
+
+                if (r.Layer == 0 && tiles.Count == 0)
+                {
+                    tiles.Add(new { cx = r.Target.ChunkX, cy = r.Target.ChunkY, layer = r.Layer, base64 = Convert.ToBase64String(r.ToTileBytes()) });
+                }
             }
-            if (!string.IsNullOrEmpty(r.ArtifactJson))
+            else
             {
-                artifacts.Add(new { cx = r.Cx, cy = r.Cy, json = r.ArtifactJson });
+                failCount++;
+            }
+
+            if (writeArtifact)
+            {
+                artifacts.Add(new { cx = r.Target.ChunkX, cy = r.Target.ChunkY, json = SerializeArtifact(r.Artifact) });
             }
         }
 
@@ -1046,62 +1046,6 @@ static string NormalizeBindingName(string raw)
     return raw.Trim().TrimStart('$');
 }
 
-static List<(int cx, int cy)> ResolveTargets(VertexMap map, string? dirtyJson, bool includeNeighbors, bool fallbackToFullWhenNoTargets)
-{
-    if (string.IsNullOrWhiteSpace(dirtyJson))
-    {
-        if (!fallbackToFullWhenNoTargets) return new List<(int cx, int cy)>(0);
-        var all = new List<(int cx, int cy)>(map.WidthInChunks * map.HeightInChunks);
-        for (int cy = 0; cy < map.HeightInChunks; cy++)
-            for (int cx = 0; cx < map.WidthInChunks; cx++)
-                all.Add((cx, cy));
-        return all;
-    }
-
-    string[] keys;
-    try
-    {
-        keys = JsonSerializer.Deserialize<string[]>(dirtyJson) ?? Array.Empty<string>();
-    }
-    catch
-    {
-        keys = dirtyJson
-            .Split(new[] { '\r', '\n', '\t', ' ', ';' }, StringSplitOptions.RemoveEmptyEntries);
-    }
-    var set = new HashSet<(int cx, int cy)>();
-    for (int i = 0; i < keys.Length; i++)
-    {
-        var raw = keys[i].Trim().Trim('"');
-        var parts = raw.Split(',');
-        if (parts.Length != 2) continue;
-        if (!int.TryParse(parts[0], out int cx)) continue;
-        if (!int.TryParse(parts[1], out int cy)) continue;
-        set.Add((cx, cy));
-        if (includeNeighbors)
-        {
-            set.Add((cx - 1, cy));
-            set.Add((cx + 1, cy));
-            set.Add((cx, cy - 1));
-            set.Add((cx, cy + 1));
-        }
-    }
-
-    var targets = new List<(int cx, int cy)>(set.Count);
-    foreach (var t in set)
-    {
-        if (t.cx < 0 || t.cy < 0 || t.cx >= map.WidthInChunks || t.cy >= map.HeightInChunks) continue;
-        targets.Add(t);
-    }
-    if (targets.Count == 0)
-    {
-        if (!fallbackToFullWhenNoTargets) return targets;
-        for (int cy = 0; cy < map.HeightInChunks; cy++)
-            for (int cx = 0; cx < map.WidthInChunks; cx++)
-                targets.Add((cx, cy));
-    }
-    return targets;
-}
-
 static async Task<(int exitCode, string output)> RunProcessAsync(string fileName, string arguments, string workingDirectory, int timeoutMs = 60000)
 {
     var psi = new System.Diagnostics.ProcessStartInfo(fileName, arguments)
@@ -1141,7 +1085,11 @@ static string FindAssetsRoot()
     return Directory.GetCurrentDirectory();
 }
 
-readonly record struct TileBakeResult(int Cx, int Cy, bool Ok, string? NavTileBase64, string? ArtifactJson);
+static string ToEditorUploadSourceUri(string fileName)
+{
+    string leaf = Path.GetFileName(string.IsNullOrWhiteSpace(fileName) ? "map_data.bin" : fileName);
+    return "EditorUpload:" + leaf;
+}
 
 static class EditorRepo
 {

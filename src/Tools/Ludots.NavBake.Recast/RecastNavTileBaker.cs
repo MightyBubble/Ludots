@@ -5,11 +5,40 @@ using DotRecast.Recast.Geom;
 using Ludots.Core.Map.Hex;
 using Ludots.Core.Navigation.AgentProfiles;
 using Ludots.Core.Navigation.NavMesh;
+using Ludots.Core.Navigation.NavMesh.Bake;
 using Ludots.Core.Navigation.NavMesh.Config;
 using Ludots.Core.Navigation.Terrain;
 
 namespace Ludots.NavBake.Recast
 {
+    public sealed class RecastNavBakeAlgorithm : INavBakeAlgorithm
+    {
+        public NavBakeAlgorithmKind Kind => NavBakeAlgorithmKind.Recast;
+
+        public bool TryBake(
+            NavBakeContext context,
+            NavBakeTileCoord target,
+            NavLayerConfig layer,
+            NavMeshAgentProfileConfig navProfile,
+            AgentProfileConfig agentProfile,
+            out NavTile tile,
+            out NavBakeArtifact artifact)
+        {
+            return RecastNavTileBaker.TryBake(
+                context.Terrain,
+                target.ChunkX,
+                target.ChunkY,
+                context.TileVersion,
+                context.BuildConfig,
+                agentProfile,
+                navProfile,
+                layer.Layer,
+                context.Obstacles,
+                out tile,
+                out artifact);
+        }
+    }
+
     public static class RecastNavTileBaker
     {
         public static bool TryBake(

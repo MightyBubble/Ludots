@@ -12,7 +12,9 @@ using GraphProgramBlob = Ludots.Core.GraphRuntime.GraphProgramBlob;
 using GraphProgramPackage = Ludots.Core.GraphRuntime.GraphProgramPackage;
 using Ludots.Core.Map.Hex;
 using Ludots.Core.Navigation.NavMesh;
+using Ludots.Core.Navigation.NavMesh.Bake;
 using Ludots.Core.Navigation.NavMesh.Config;
+using Ludots.Core.Navigation.Terrain;
 using Ludots.Core.Physics2D.Navigation;
 using Ludots.Core.Spatial;
 using Ludots.NavBake.Recast;
@@ -699,10 +701,10 @@ namespace {modId}
                 Console.WriteLine($"Invalid repo root (missing assets/): {repoRoot}");
                 return 2;
             }
-            NavMeshBakeContext bakeContext;
+            NavMeshBakeConfigContext bakeConfigContext;
             try
             {
-                bakeContext = NavMeshBakeConfigLoader.LoadContextFromRepoRoot(repoRoot);
+                bakeConfigContext = NavMeshBakeConfigLoader.LoadContextFromRepoRoot(repoRoot);
             }
             catch (Exception ex)
             {
@@ -710,7 +712,7 @@ namespace {modId}
                 return 2;
             }
 
-            NavMeshBakeConfig bakeConfig = bakeContext.Config;
+            NavMeshBakeConfig bakeConfig = bakeConfigContext.Config;
             var profiles = bakeConfig.Profiles;
 
             NavObstacleSet obstacles;
@@ -732,155 +734,186 @@ namespace {modId}
                 map = VertexMapBinary.Read(ms);
             }
 
-            var targets = new List<(int cx, int cy)>();
+            IReadOnlyList<NavBakeTileCoord> targets;
             if (!string.IsNullOrWhiteSpace(dirtyChunksPath) && File.Exists(dirtyChunksPath))
             {
                 var json = File.ReadAllText(dirtyChunksPath);
-                var keys = JsonSerializer.Deserialize<string[]>(json) ?? Array.Empty<string>();
-                var set = new HashSet<(int cx, int cy)>();
-                for (int i = 0; i < keys.Length; i++)
-                {
-                    var parts = keys[i].Split(',');
-                    if (parts.Length != 2) continue;
-                    if (!int.TryParse(parts[0], out int cx)) continue;
-                    if (!int.TryParse(parts[1], out int cy)) continue;
-                    set.Add((cx, cy));
-                    if (includeNeighbors)
-                    {
-                        set.Add((cx - 1, cy));
-                        set.Add((cx + 1, cy));
-                        set.Add((cx, cy - 1));
-                        set.Add((cx, cy + 1));
-                    }
-                }
-                foreach (var t in set)
-                {
-                    if (t.cx < 0 || t.cy < 0 || t.cx >= map.WidthInChunks || t.cy >= map.HeightInChunks) continue;
-                    targets.Add(t);
-                }
+                targets = NavBakeTileSelection.Resolve(new VertexMapLogicTerrainField(map), json, includeNeighbors, dirtyOnly: true);
             }
             else
             {
-                for (int cy = 0; cy < map.HeightInChunks; cy++)
-                    for (int cx = 0; cx < map.WidthInChunks; cx++)
-                        targets.Add((cx, cy));
+                targets = NavBakeTileSelection.AllTiles(new VertexMapLogicTerrainField(map));
             }
 
             var legacyCfg = new NavBuildConfig(heightScale, minUpDot, cliffThreshold);
             Console.WriteLine($"BakeNavRecastReact: mapId={mapId} map {map.WidthInChunks}x{map.HeightInChunks} chunks obstacles={obstacles.Obstacles.Count}");
-
-            int ok = 0;
-            int fail = 0;
-            var consoleLock = new object();
-
-            void BakeOne((int cx, int cy) t)
+            string sourceUri = ToCoreSourceUri(repoRoot, inputReactBinPath);
+            var context = new NavBakeContext
             {
-                for (int li = 0; li < bakeConfig.Layers.Count; li++)
+                MapId = mapId,
+                SourceUri = sourceUri,
+                Terrain = new VertexMapLogicTerrainField(map),
+                Obstacles = obstacles,
+                Config = bakeConfig,
+                AgentProfiles = bakeConfigContext.AgentProfiles,
+                Targets = targets,
+                BuildConfig = legacyCfg,
+                TileVersion = (uint)tileVersion,
+                Mode = NavBakeMode.Offline,
+                Algorithm = bakeConfig.ParsedAlgorithm,
+                Execution = new NavBakeExecutionOptions
                 {
-                    int layer = bakeConfig.Layers[li].Layer;
-                    for (int pi = 0; pi < profiles.Count; pi++)
-                    {
-                        var navProfile = profiles[pi];
-                        var agentProfile = bakeContext.AgentProfiles.Require(navProfile.Id, $"{NavMeshConfigPaths.BakeConfigPath}.profiles[{pi}]");
-                        if (RecastNavTileBaker.TryBake(map, t.cx, t.cy, (uint)tileVersion, legacyCfg, agentProfile, navProfile, layer, obstacles, out var tile, out var artifact))
-                        {
-                            string profileId = navProfile.Id ?? throw new InvalidOperationException("NavMeshBakeConfig.profiles.id is required.");
-                            string rel = NavAssetPaths.GetNavTileRelativePath(mapId, layer, profileId, t.cx, t.cy);
-                            string outFile = Path.Combine(repoRoot, rel.Replace('/', Path.DirectorySeparatorChar));
-                            Directory.CreateDirectory(Path.GetDirectoryName(outFile)!);
-                            using (var fs = File.Create(outFile))
-                            {
-                                NavTileBinary.Write(fs, tile);
-                            }
-
-                            Interlocked.Increment(ref ok);
-
-                            if (writeArtifact)
-                            {
-                                string artRel = rel.Replace("navtile_", "artifact_").Replace(".ntil", ".json");
-                                string artFile = Path.Combine(repoRoot, artRel.Replace('/', Path.DirectorySeparatorChar));
-                                var json = JsonSerializer.Serialize(artifact, new JsonSerializerOptions { WriteIndented = true, IncludeFields = true });
-                                File.WriteAllText(artFile, json);
-                            }
-                        }
-                        else
-                        {
-                            Interlocked.Increment(ref fail);
-                            lock (consoleLock)
-                            {
-                                Console.WriteLine($"BakeNavRecastReact failed: tile {t.cx},{t.cy} layer={layer} profile={pi} stage={artifact.Stage} code={artifact.ErrorCode} msg={artifact.Message}");
-                            }
-                        }
-                    }
+                    Parallel = parallel,
+                    MaxDegreeOfParallelism = Math.Max(1, maxDegree)
                 }
-            }
+            };
 
-            if (parallel)
-            {
-                Parallel.ForEach(targets, new ParallelOptions { MaxDegreeOfParallelism = Math.Max(1, maxDegree) }, BakeOne);
-            }
-            else
-            {
-                for (int i = 0; i < targets.Count; i++) BakeOne(targets[i]);
-            }
-
-            Console.WriteLine($"BakeNavRecastReact done. ok={ok} fail={fail} repoRoot={Path.GetFullPath(repoRoot)}");
-            return fail == 0 ? 0 : 1;
+            var result = new NavBakeService(new RecastNavBakeAlgorithm(), new CdtNavBakeAlgorithm()).Bake(context);
+            WriteNavBakeResultToRepository(repoRoot, mapId, result, writeArtifact, "BakeNavRecastReact");
+            Console.WriteLine($"BakeNavRecastReact done. ok={result.SuccessCount} fail={result.FailureCount} repoRoot={Path.GetFullPath(repoRoot)}");
+            return result.FailureCount == 0 ? 0 : 1;
         }
 
         static int BakeTiles(VertexMap map, List<(int cx, int cy)> targets, NavBuildConfig cfg, string tilesDir, string artifactsDir, bool writeArtifact, bool parallel, int maxDegree, int tileVersion, string logPrefix, string outDirRoot)
         {
-            int ok = 0;
-            int fail = 0;
-            var consoleLock = new object();
-
-            void BakeOne((int cx, int cy) t)
+            var bakeTargets = new List<NavBakeTileCoord>(targets.Count);
+            for (int i = 0; i < targets.Count; i++)
             {
-                if (NavTileBuilder.TryBuildTile(map, t.cx, t.cy, (uint)tileVersion, cfg, out var tile, out var artifact))
+                bakeTargets.Add(new NavBakeTileCoord(targets[i].cx, targets[i].cy));
+            }
+
+            var config = new NavMeshBakeConfig
+            {
+                Mode = NavBakeNames.ModeOffline,
+                Algorithm = NavBakeNames.AlgorithmCdt,
+                Profiles = new List<NavMeshAgentProfileConfig>
                 {
-                    string outFile = Path.Combine(tilesDir, $"navtile_{t.cx}_{t.cy}.ntil");
+                    new NavMeshAgentProfileConfig
+                    {
+                        Id = "Legacy",
+                        MaxClimbCm = 0,
+                        MaxSlopeDeg = 90
+                    }
+                },
+                Layers = new List<NavLayerConfig>
+                {
+                    new NavLayerConfig { Id = "Ground", Layer = 0 }
+                },
+                Areas = new List<NavAreaCostConfig>()
+            };
+            var agentProfiles = new Ludots.Core.Navigation.AgentProfiles.AgentProfileRegistry(new[]
+            {
+                new Ludots.Core.Navigation.AgentProfiles.AgentProfileConfig
+                {
+                    Id = "Legacy",
+                    RadiusCm = SpatialScaleDefaults.CellCm / 2,
+                    HeightCm = SpatialScaleDefaults.CellCm,
+                    ClearanceCm = SpatialScaleDefaults.CellCm / 2,
+                    Mass = 1,
+                    Layer = 0
+                }
+            });
+
+            var context = new NavBakeContext
+            {
+                MapId = "legacy",
+                SourceUri = "Core:Generated/legacy-react-map.vtxm",
+                Terrain = new VertexMapLogicTerrainField(map),
+                Obstacles = new NavObstacleSet(),
+                Config = config,
+                AgentProfiles = agentProfiles,
+                Targets = bakeTargets,
+                BuildConfig = cfg,
+                TileVersion = (uint)tileVersion,
+                Mode = NavBakeMode.Offline,
+                Algorithm = NavBakeAlgorithmKind.Cdt,
+                Execution = new NavBakeExecutionOptions
+                {
+                    Parallel = parallel,
+                    MaxDegreeOfParallelism = Math.Max(1, maxDegree)
+                }
+            };
+
+            var result = new NavBakeService(new CdtNavBakeAlgorithm()).Bake(context);
+            WriteLegacyNavBakeResult(result, tilesDir, artifactsDir, writeArtifact, logPrefix);
+            Console.WriteLine($"{logPrefix} done. ok={result.SuccessCount} fail={result.FailureCount} outDir={Path.GetFullPath(outDirRoot)}");
+            return result.FailureCount == 0 ? 0 : 1;
+        }
+
+        static void WriteNavBakeResultToRepository(string repoRoot, string mapId, NavBakeResult result, bool writeArtifact, string logPrefix)
+        {
+            for (int i = 0; i < result.Entries.Count; i++)
+            {
+                NavBakeResultEntry entry = result.Entries[i];
+                if (!entry.Success)
+                {
+                    Console.WriteLine($"{logPrefix} failed: tile {entry.Target.ChunkX},{entry.Target.ChunkY} layer={entry.Layer} profile={entry.ProfileId} stage={entry.Artifact.Stage} code={entry.Artifact.ErrorCode} msg={entry.Artifact.Message}");
+                    continue;
+                }
+
+                string rel = NavAssetPaths.GetNavTileRelativePath(mapId, entry.Layer, entry.ProfileId, entry.Target.ChunkX, entry.Target.ChunkY);
+                string outFile = Path.Combine(repoRoot, rel.Replace('/', Path.DirectorySeparatorChar));
+                Directory.CreateDirectory(Path.GetDirectoryName(outFile)!);
+                using (var fs = File.Create(outFile))
+                {
+                    NavTileBinary.Write(fs, entry.Tile);
+                }
+
+                if (writeArtifact)
+                {
+                    string artRel = rel.Replace("navtile_", "artifact_").Replace(".ntil", ".json");
+                    string artFile = Path.Combine(repoRoot, artRel.Replace('/', Path.DirectorySeparatorChar));
+                    Directory.CreateDirectory(Path.GetDirectoryName(artFile)!);
+                    var json = JsonSerializer.Serialize(entry.Artifact, new JsonSerializerOptions { WriteIndented = true, IncludeFields = true });
+                    File.WriteAllText(artFile, json);
+                }
+            }
+        }
+
+        static void WriteLegacyNavBakeResult(NavBakeResult result, string tilesDir, string artifactsDir, bool writeArtifact, string logPrefix)
+        {
+            for (int i = 0; i < result.Entries.Count; i++)
+            {
+                NavBakeResultEntry entry = result.Entries[i];
+                string tileName = $"navtile_{entry.Target.ChunkX}_{entry.Target.ChunkY}.ntil";
+                string artifactName = $"artifact_{entry.Target.ChunkX}_{entry.Target.ChunkY}.json";
+                if (entry.Success)
+                {
+                    string outFile = Path.Combine(tilesDir, tileName);
                     using (var fs = File.Create(outFile))
                     {
-                        NavTileBinary.Write(fs, tile);
-                    }
-
-                    Interlocked.Increment(ref ok);
-
-                    if (writeArtifact)
-                    {
-                        string artFile = Path.Combine(artifactsDir, $"artifact_{t.cx}_{t.cy}.json");
-                        var json = JsonSerializer.Serialize(artifact, new JsonSerializerOptions { WriteIndented = true, IncludeFields = true });
-                        File.WriteAllText(artFile, json);
+                        NavTileBinary.Write(fs, entry.Tile);
                     }
                 }
                 else
                 {
-                    Interlocked.Increment(ref fail);
-                    lock (consoleLock)
-                    {
-                        Console.WriteLine($"{logPrefix} failed: tile {t.cx},{t.cy} stage={artifact.Stage} code={artifact.ErrorCode} msg={artifact.Message}");
-                    }
+                    Console.WriteLine($"{logPrefix} failed: tile {entry.Target.ChunkX},{entry.Target.ChunkY} stage={entry.Artifact.Stage} code={entry.Artifact.ErrorCode} msg={entry.Artifact.Message}");
+                }
 
-                    if (writeArtifact)
-                    {
-                        string artFile = Path.Combine(artifactsDir, $"artifact_{t.cx}_{t.cy}.json");
-                        var json = JsonSerializer.Serialize(artifact, new JsonSerializerOptions { WriteIndented = true, IncludeFields = true });
-                        File.WriteAllText(artFile, json);
-                    }
+                if (writeArtifact)
+                {
+                    string artFile = Path.Combine(artifactsDir, artifactName);
+                    var json = JsonSerializer.Serialize(entry.Artifact, new JsonSerializerOptions { WriteIndented = true, IncludeFields = true });
+                    File.WriteAllText(artFile, json);
                 }
             }
+        }
 
-            if (parallel)
+        static string ToCoreSourceUri(string repoRoot, string inputPath)
+        {
+            string assetsRoot = Path.GetFullPath(Path.Combine(repoRoot, "assets"));
+            string fullInput = Path.GetFullPath(inputPath);
+            string assetsRootWithSep = assetsRoot.EndsWith(Path.DirectorySeparatorChar.ToString(), StringComparison.Ordinal)
+                ? assetsRoot
+                : assetsRoot + Path.DirectorySeparatorChar;
+            if (!fullInput.StartsWith(assetsRootWithSep, StringComparison.Ordinal))
             {
-                Parallel.ForEach(targets, new ParallelOptions { MaxDegreeOfParallelism = Math.Max(1, maxDegree) }, BakeOne);
-            }
-            else
-            {
-                for (int i = 0; i < targets.Count; i++) BakeOne(targets[i]);
+                return "Core:EditorUploads/" + Path.GetFileName(inputPath);
             }
 
-            Console.WriteLine($"{logPrefix} done. ok={ok} fail={fail} outDir={Path.GetFullPath(outDirRoot)}");
-            return fail == 0 ? 0 : 1;
+            string relative = Path.GetRelativePath(assetsRoot, fullInput)
+                .Replace('\\', '/');
+            return "Core:" + relative;
         }
 
         static void GenerateReactMapDataBin(string outFile, int widthChunks, int heightChunks, string preset, bool overwrite)
