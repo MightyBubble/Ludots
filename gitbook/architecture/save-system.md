@@ -44,11 +44,22 @@ SaveSlotStore.ReadSlot / SaveContainerCodec.Decode
 
 ## 组件序列化
 
-Arch.Persistence 的 contractless 反射不能正确覆盖 Ludots 的 fixed buffer 组件，所以 Core 显式注册 formatter：
+Arch.Persistence 的 contractless 反射不能正确覆盖 Ludots 的 fixed buffer 组件，所以 Core 使用 Ludots formatter 闸门：
 
-- unmanaged 组件使用 `UnmanagedComponentFormatter<T>` 做整结构 raw-bytes 序列化。
-- managed 组件必须显式 formatter，目前 `Name` 使用 `NameFormatter`。
-- 新组件如果需要进入存档，必须加入 `LudotsCorePersistenceFormatters.CreateFormatters()`，并补覆盖 fixed buffer、entity-ref 和读回保真度的测试。
+- unmanaged value type 组件由 `AddAutoDiscoveredUnmanagedFormatters()` 在已加载的 `Ludots.*` / `*Mod` 程序集中自动发现，并使用 `UnmanagedComponentFormatter<T>` 做整结构 raw-bytes 序列化。
+- managed / reference 组件必须手写 `IMessagePackFormatter<T>`，实现 `ILudotsPersistenceComponentFormatter`，并在 `LudotsCorePersistenceFormatters.CreateFormatters()` 显式注册，目前 `Name` 使用 `NameFormatter`。
+- 写入前 `LudotsBinaryWorldSerializer.EnsureWorldComponentFormatters()` 会枚举被纳入实体上的组件；发现没有 Ludots formatter 的组件立即 fail-fast，不回退 contractless。
+- 含 `Entity` 引用的持久化组件必须同时登记到 `SaveEntityReferenceValidator` 与 `SaveEntityWorldIdNormalizer`；`EntityReferenceCoverageGuardTests.PersistedEntityReferenceComponentsAreAuditedAndNormalized` 会扫描 `ComponentRegistry` 与运行时持久化组件清单，防止只加 formatter 却漏掉 entity-ref 审计。
+
+新内容接入存档的决策表：
+
+| 类型 | 接入要求 | 必测 |
+|------|----------|------|
+| 纯 unmanaged 组件（含 fixed buffer） | 零手工 formatter；自动发现 | formatter coverage / fixed buffer round-trip |
+| managed / reference 组件 | 手写 formatter 并注册 `CreateFormatters()` | formatter coverage / managed payload round-trip |
+| 含 `Entity` 引用组件 | 在 formatter 基础上登记 validator 与 normalizer | entity-ref coverage guard / WorldId 归一化 / 缺失或排除实体 fail-fast |
+| 非 ECS 状态 | 实现 `ISaveParticipant` 并注册 domain | domain capture / restore / 缺失或未知 domain fail-fast |
+| 不应入存档实体 | 加 `SaveExcludedTag` 或纳入 `SaveEntityInclusionPolicy` | 排除策略测试 |
 
 `LudotsBinaryWorldSerializer` 在写入前后执行：
 

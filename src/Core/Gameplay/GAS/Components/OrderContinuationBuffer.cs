@@ -46,6 +46,26 @@ namespace Ludots.Core.Gameplay.GAS.Components
             return true;
         }
 
+        public readonly OrderContinuationEntry Get(int index)
+        {
+            if ((uint)index >= (uint)Count)
+            {
+                return default;
+            }
+
+            return _entries[index];
+        }
+
+        internal void Set(int index, in OrderContinuationEntry entry)
+        {
+            if ((uint)index >= MAX_CONTINUATIONS)
+            {
+                return;
+            }
+
+            _entries[index] = entry;
+        }
+
         public bool RemoveByTrigger(int triggerOrderId)
         {
             bool removed = false;
