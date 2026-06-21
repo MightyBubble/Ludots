@@ -297,15 +297,23 @@ namespace Ludots.Tests.Presentation
                 ?? throw new InvalidOperationException("MassNavigation agentProfiles must author at least one heavy profile.");
             Assert.That(heavy["everyNth"]?.GetValue<int>(), Is.GreaterThan(0),
                 "Heavy distribution is an authored profile rule, not a solver hardcode.");
-            Assert.That(heavy["navMass"]?.GetValue<float>(), Is.GreaterThan(1f));
             Assert.That(heavy["visualScale"]?.GetValue<float>(), Is.GreaterThan(0f));
+            Assert.That(heavy.ContainsKey("navMass"), Is.False,
+                "MassNavigation execution profiles must not own geometry or solver mass.");
+            Assert.That(heavy.ContainsKey("bodyRadiusCm"), Is.False,
+                "MassNavigation execution profiles must not own geometry or solver radius.");
+
+            JsonArray geometryProfiles = ReadArray(Path.Combine(FindRepoRoot(), "assets", "Configs", "Navigation", "agent_profiles.json"));
+            JsonObject heavyGeometry = FindObjectById(geometryProfiles, "heavy");
+            Assert.That(heavyGeometry["mass"]?.GetValue<float>(), Is.GreaterThan(1f));
+            Assert.That(heavyGeometry["radiusCm"]?.GetValue<float>(), Is.GreaterThan(0f));
 
             JsonObject avoidance = config["avoidance"]?.AsObject()
                 ?? throw new InvalidOperationException("MassNavigationConfig.avoidance missing.");
             Assert.That(avoidance.ContainsKey("lightNavMass"), Is.False,
-                "Agent navMass must be owned only by agentProfiles, not duplicated in avoidance.");
+                "Agent mass must be owned only by Navigation/agent_profiles.json, not duplicated in avoidance.");
             Assert.That(avoidance.ContainsKey("heavyNavMass"), Is.False,
-                "Agent navMass must be owned only by agentProfiles, not duplicated in avoidance.");
+                "Agent mass must be owned only by Navigation/agent_profiles.json, not duplicated in avoidance.");
             Assert.That(avoidance.ContainsKey("lightVisualScale"), Is.False,
                 "Agent visualScale must be owned only by agentProfiles, not duplicated in avoidance.");
             Assert.That(avoidance.ContainsKey("heavyVisualScale"), Is.False,
@@ -315,7 +323,7 @@ namespace Ludots.Tests.Presentation
             JsonObject obstacle = config["semantics"]?["obstacle"]?.AsObject()
                 ?? throw new InvalidOperationException("MassNavigationConfig.semantics.obstacle missing.");
             Assert.That(obstacle.ContainsKey("agentBodyRadiusCm"), Is.False,
-                "Obstacle hard-block radius must use each agent profile bodyRadiusCm, not a global obstacle body radius.");
+                "Obstacle hard-block radius must use Navigation/agent_profiles.json radiusCm, not a global obstacle body radius.");
 
             JsonObject legacyAvoidanceConfig = ReadObject(Path.Combine(modRoot, "assets", "MassNavigationConfig.json"));
             legacyAvoidanceConfig["avoidance"]!["lightNavMass"] = 1.0f;

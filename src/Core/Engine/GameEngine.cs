@@ -65,6 +65,7 @@ using Ludots.Core.Components;
 using Ludots.Core.Input.Runtime;
 using Ludots.Core.Engine.Physics2D;
 using Ludots.Core.Engine.TimeFlow;
+using Ludots.Core.Navigation.AgentProfiles;
 using Ludots.Core.Navigation.NavMesh;
 using Ludots.Core.Navigation.NavMesh.Config;
 using Ludots.Core.Navigation.AOI;
@@ -402,6 +403,7 @@ namespace Ludots.Core.Engine
 
             ConfigCatalog = Ludots.Core.Config.ConfigCatalogLoader.Load(ConfigPipeline);
             ConfigConflictReport = new Ludots.Core.Config.ConfigConflictReport();
+            LoadAgentProfiles();
             RebuildAiRuntime();
 
             // Apply log config from merged game.json
@@ -471,12 +473,26 @@ namespace Ludots.Core.Engine
             AiRuntime = loader.LoadAndCompile(catalog, ConfigConflictReport);
         }
 
+        private void LoadAgentProfiles()
+        {
+            if (ConfigPipeline == null)
+            {
+                RemoveService(CoreServiceKeys.AgentProfiles);
+                return;
+            }
+
+            AgentProfileRegistry agentProfiles = new AgentProfileConfigLoader(ConfigPipeline)
+                .Load(ConfigCatalog, ConfigConflictReport);
+            SetService(CoreServiceKeys.AgentProfiles, agentProfiles);
+        }
+
         public void ReloadConfigs(string? group = null, string? relativePath = null)
         {
             if (ConfigPipeline == null) return;
 
             ConfigCatalog = Ludots.Core.Config.ConfigCatalogLoader.Load(ConfigPipeline);
             ConfigConflictReport = new Ludots.Core.Config.ConfigConflictReport();
+            LoadAgentProfiles();
 
             bool reloadAi = string.IsNullOrWhiteSpace(group)
                          || string.Equals(group, "AI", StringComparison.OrdinalIgnoreCase)
@@ -2088,7 +2104,9 @@ namespace Ludots.Core.Engine
             var bakeConfig = LoadNavMeshBakeConfig();
             SetService(CoreServiceKeys.NavMeshBakeConfig, bakeConfig);
 
-            var profileRegistry = new NavMeshProfileRegistry(bakeConfig);
+            var agentProfiles = GetService(CoreServiceKeys.AgentProfiles)
+                ?? throw new InvalidOperationException("NavMesh bootstrap requires AgentProfiles.");
+            var profileRegistry = new NavMeshProfileRegistry(bakeConfig, agentProfiles);
             SetService(CoreServiceKeys.NavMeshProfiles, profileRegistry);
             var areaCosts = BuildAreaCostTable(bakeConfig);
             if (bakeConfig.Layers == null || bakeConfig.Layers.Count == 0) throw new InvalidOperationException("NavMeshBakeConfig.layers is empty.");
@@ -2163,6 +2181,8 @@ namespace Ludots.Core.Engine
 
             var navRegistry = GetService(CoreServiceKeys.NavQueryServices);
             var navProfiles = GetService(CoreServiceKeys.NavMeshProfiles);
+            var agentProfiles = GetService(CoreServiceKeys.AgentProfiles)
+                ?? throw new InvalidOperationException("Pathing bootstrap requires AgentProfiles.");
             bool hasNavServices = navRegistry != null && navProfiles != null;
             bool requiresGraphPathing = RequiresGraphPathing(pathingConfig);
             bool requiresNavMeshPathing = RequiresNavMeshPathing(pathingConfig);
@@ -2189,10 +2209,10 @@ namespace Ludots.Core.Engine
 
             if (hasNavServices)
             {
-                IPathService navMeshService = CreateDefaultNavMeshPathService(pathingConfig, navRegistry, navProfiles, pathStore);
+                IPathService navMeshService = CreateDefaultNavMeshPathService(pathingConfig, navRegistry, navProfiles, agentProfiles, pathStore);
                 if (loadedGraphRuntime != null)
                 {
-                    IPathService autoPathService = new AutoPathService(loadedGraphRuntime, navRegistry, navProfiles, pathStore, pathingConfig);
+                    IPathService autoPathService = new AutoPathService(loadedGraphRuntime, navRegistry, navProfiles, agentProfiles, pathStore, pathingConfig);
                     pathService = new PathServiceRouter(nodeGraphService, navMeshService, autoPathService, pathStore);
                 }
                 else
@@ -2202,7 +2222,7 @@ namespace Ludots.Core.Engine
             }
             else if (loadedGraphRuntime != null)
             {
-                pathService = new AutoPathService(loadedGraphRuntime, pathStore, pathingConfig);
+                pathService = new AutoPathService(loadedGraphRuntime, agentProfiles, pathStore, pathingConfig);
             }
 
             SetService(CoreServiceKeys.PathingConfig, pathingConfig);
@@ -2276,6 +2296,7 @@ namespace Ludots.Core.Engine
             PathingConfig pathingConfig,
             NavQueryServiceRegistry navRegistry,
             NavMeshProfileRegistry navProfiles,
+            AgentProfileRegistry agentProfiles,
             PathStore pathStore)
         {
             if (pathingConfig?.AgentTypes == null || pathingConfig.AgentTypes.Count == 0)
@@ -2290,11 +2311,12 @@ namespace Ludots.Core.Engine
                     $"PathingConfig default agent profileId '{agent?.ProfileId ?? "<null>"}' is not registered in navmesh profiles.");
             }
 
+            AgentProfileConfig agentProfile = agentProfiles.Require(agent.ProfileId, $"PathingConfig default agent '{agent.Id}'");
             var areaCosts = BuildPathNavAreaCosts(agent.NavMesh);
-            if (!navRegistry.TryCreateQuery(agent.Layer, profileIndex, areaCosts, out var query))
+            if (!navRegistry.TryCreateQuery(agentProfile.Layer, profileIndex, areaCosts, out var query))
             {
                 throw new InvalidOperationException(
-                    $"PathingConfig default agent '{agent.Id}' cannot create navmesh query for layer {agent.Layer}, profile '{agent.ProfileId}'.");
+                    $"PathingConfig default agent '{agent.Id}' cannot create navmesh query for layer {agentProfile.Layer}, profile '{agent.ProfileId}'.");
             }
 
             return new NavMeshPathServiceAdapter(query, pathStore);
@@ -2337,7 +2359,9 @@ namespace Ludots.Core.Engine
 
         private NavMeshBakeConfig LoadNavMeshBakeConfig()
         {
-            return new NavMeshBakeConfigLoader(ConfigPipeline).Load(ConfigCatalog, ConfigConflictReport);
+            var agentProfiles = GetService(CoreServiceKeys.AgentProfiles)
+                ?? throw new InvalidOperationException("NavMeshBakeConfig requires AgentProfiles.");
+            return new NavMeshBakeConfigLoader(ConfigPipeline, agentProfiles).Load(ConfigCatalog, ConfigConflictReport);
         }
 
         private string ResolveSingleExistingUri(string relPath)

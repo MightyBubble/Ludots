@@ -1144,9 +1144,7 @@ public sealed class MassNavigationSimulationRuntime
         {
             ProfileId = profileId,
             Heavy = MassFlow.IsHeavyProfile(agentIndex),
-            NavMass = MassFlow.GetNavMass(agentIndex),
             VisualScale = MassFlow.GetVisualScale(agentIndex),
-            BodyRadiusCm = MassFlow.GetBodyRadiusCm(agentIndex),
             SpeedCmPerSecond = MassFlow.GetSpeedCmPerSecond(agentIndex),
         });
         AgentState.RegisterAgentAtIndex(entity, agentIndex, controllable);

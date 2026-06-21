@@ -4,6 +4,7 @@ using System.IO;
 using System.Text.Json.Nodes;
 using Arch.Core;
 using Ludots.Core.MassCrowd.Runtime;
+using Ludots.Core.Navigation.AgentProfiles;
 using NUnit.Framework;
 using Schedulers;
 using Ludots.Core.Gameplay.Teams;
@@ -207,9 +208,7 @@ namespace Ludots.Tests.Presentation
                     {
                         Id = "light",
                         Heavy = false,
-                        NavMass = 1f,
                         VisualScale = 1f,
-                        BodyRadiusCm = 20f,
                         SpeedCmPerSecond = 800f,
                         EveryNth = 0,
                         NthOffset = 0,
@@ -217,7 +216,24 @@ namespace Ludots.Tests.Presentation
                 },
             };
             profileSet.Validate();
+            profileSet.BindAgentProfiles(CreateAgentProfiles());
             return profileSet;
+        }
+
+        private static AgentProfileRegistry CreateAgentProfiles()
+        {
+            return new AgentProfileRegistry(new[]
+            {
+                new AgentProfileConfig
+                {
+                    Id = "light",
+                    RadiusCm = 20,
+                    HeightCm = 180,
+                    ClearanceCm = 40,
+                    Mass = 1,
+                    Layer = 0
+                }
+            });
         }
 
         private static MassNavigationObstacleConfig[] CreateObstacles()

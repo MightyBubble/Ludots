@@ -15,6 +15,7 @@ using Ludots.Core.Presentation.Systems;
 using Ludots.Core.Scripting;
 using Ludots.Core.Spatial;
 using Ludots.Core.MassCrowd.Systems;
+using Ludots.Core.Navigation.AgentProfiles;
 
 namespace Ludots.Core.MassCrowd.Runtime;
 
@@ -92,6 +93,9 @@ public sealed class MassNavigationRuntime
         _config = new MassNavigationConfigLoader(engine.ConfigPipeline).Load(
             engine.ConfigCatalog,
             engine.ConfigConflictReport);
+        AgentProfileRegistry agentProfiles = engine.GetService(CoreServiceKeys.AgentProfiles)
+            ?? throw new System.InvalidOperationException("MassCrowd runtime requires AgentProfiles.");
+        _config.AgentProfiles.BindAgentProfiles(agentProfiles);
         return _config;
     }
 

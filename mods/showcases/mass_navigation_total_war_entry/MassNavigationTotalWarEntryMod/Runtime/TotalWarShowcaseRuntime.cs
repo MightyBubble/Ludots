@@ -554,7 +554,9 @@ internal sealed class TotalWarShowcaseRuntime
     private void BuildAgentPlans(GameEngine engine, MassNavigationSimulationRuntime simulation, TotalWarShowcaseConfig config)
     {
         MassNavigationAgentProfileSetConfig profileSet = simulation.Config.AgentProfiles;
-        config.ValidateAgentProfileReferences(profileSet);
+        var geometryProfiles = engine.GetService(CoreServiceKeys.AgentProfiles)
+            ?? throw new InvalidOperationException("Total War showcase requires AgentProfiles.");
+        config.ValidateAgentProfileReferences(profileSet, geometryProfiles);
 
         int soldierCount = 0;
         for (int i = 0; i < config.Formations.Length; i++)

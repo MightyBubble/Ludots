@@ -25,6 +25,7 @@ using Ludots.Core.MassCrowd.Runtime;
 using Ludots.Core.MassCrowd.Systems;
 using Ludots.Core.Mathematics;
 using Ludots.Core.Mathematics.FixedPoint;
+using Ludots.Core.Navigation.AgentProfiles;
 using Ludots.Core.Presentation.Commands;
 using Ludots.Core.Presentation.Components;
 using Ludots.Core.Presentation.DebugDraw;
@@ -263,7 +264,12 @@ namespace Ludots.Tests.Presentation
             Assert.That(profiles.Select(node => node?["id"]?.GetValue<string>()).ToArray(),
                 Is.EquivalentTo(new[] { "formation", "heavy", "light" }));
             JsonObject formationProfile = FindAgentProfileById(agentProfiles, "formation");
-            Assert.That(formationProfile["bodyRadiusCm"]?.GetValue<float>(), Is.EqualTo(720f));
+            Assert.That(formationProfile.ContainsKey("bodyRadiusCm"), Is.False,
+                "MassNavigationConfig.agentProfiles no longer owns geometry; radius comes from Navigation/agent_profiles.json.");
+            AgentProfileRegistry geometryProfiles = LoadTotalWarAgentProfiles();
+            AgentProfileConfig formationGeometry = geometryProfiles.Require("formation", "TotalWar formation geometry");
+            Assert.That(formationGeometry.RadiusCm, Is.EqualTo(720f));
+            Assert.That(formationGeometry.Mass, Is.EqualTo(12f));
             Assert.That(formationProfile["speedCmPerSecond"]?.GetValue<float>(), Is.EqualTo(360f));
             JsonObject scenarioRuntime = config["scenarioRuntime"]?.AsObject()
                 ?? throw new InvalidOperationException("scenarioRuntime must be authored.");
@@ -365,9 +371,9 @@ namespace Ludots.Tests.Presentation
             JsonObject avoidance = config["avoidance"]?.AsObject()
                 ?? throw new InvalidOperationException("avoidance must be authored.");
             Assert.That(avoidance.ContainsKey("lightNavMass"), Is.False,
-                "TotalWar agent navMass must be owned only by MassNavigationConfig.agentProfiles.");
+                "TotalWar agent mass must be owned only by Navigation/agent_profiles.json.");
             Assert.That(avoidance.ContainsKey("heavyNavMass"), Is.False,
-                "TotalWar agent navMass must be owned only by MassNavigationConfig.agentProfiles.");
+                "TotalWar agent mass must be owned only by Navigation/agent_profiles.json.");
             Assert.That(avoidance.ContainsKey("lightVisualScale"), Is.False,
                 "TotalWar agent visualScale must be owned only by MassNavigationConfig.agentProfiles.");
             Assert.That(avoidance.ContainsKey("heavyVisualScale"), Is.False,
@@ -434,14 +440,15 @@ namespace Ludots.Tests.Presentation
             JsonObject massNavConfig = ReadObject(Path.Combine(TotalWarModRoot(), "assets", "MassNavigationConfig.json"));
             TotalWarShowcaseConfig loaded = TotalWarShowcaseConfig.Load(config);
             MassNavigationConfig loadedMassNav = MassNavigationConfig.Load(massNavConfig);
-            Assert.DoesNotThrow(() => loaded.ValidateAgentProfileReferences(loadedMassNav.AgentProfiles));
+            AgentProfileRegistry geometryProfiles = LoadTotalWarAgentProfiles();
+            Assert.DoesNotThrow(() => loaded.ValidateAgentProfileReferences(loadedMassNav.AgentProfiles, geometryProfiles));
 
             JsonObject formationAgent = config["formationAgent"]?.AsObject()
                 ?? throw new InvalidOperationException("TotalWar config must author formationAgent.");
             formationAgent["profileId"] = "missing_formation_profile";
             loaded = TotalWarShowcaseConfig.Load(config);
             InvalidOperationException missingFormationProfile = Assert.Throws<InvalidOperationException>(
-                () => loaded.ValidateAgentProfileReferences(loadedMassNav.AgentProfiles))!;
+                () => loaded.ValidateAgentProfileReferences(loadedMassNav.AgentProfiles, geometryProfiles))!;
             Assert.That(missingFormationProfile.Message, Does.Contain("formationAgent.profileId"));
             Assert.That(missingFormationProfile.Message, Does.Contain("missing_formation_profile"));
 
@@ -455,7 +462,7 @@ namespace Ludots.Tests.Presentation
             soldierAgent["profileId"] = "missing_soldier_profile";
             loaded = TotalWarShowcaseConfig.Load(config);
             InvalidOperationException missingSoldierProfile = Assert.Throws<InvalidOperationException>(
-                () => loaded.ValidateAgentProfileReferences(loadedMassNav.AgentProfiles))!;
+                () => loaded.ValidateAgentProfileReferences(loadedMassNav.AgentProfiles, geometryProfiles))!;
             Assert.That(missingSoldierProfile.Message, Does.Contain("soldierAgent.profileId"));
             Assert.That(missingSoldierProfile.Message, Does.Contain("missing_soldier_profile"));
 
@@ -489,7 +496,7 @@ namespace Ludots.Tests.Presentation
                 ?? throw new InvalidOperationException("formation profile speed must be numeric.");
             loadedMassNav = MassNavigationConfig.Load(massNavConfig);
             InvalidOperationException equalSpeed = Assert.Throws<InvalidOperationException>(
-                () => loaded.ValidateAgentProfileReferences(loadedMassNav.AgentProfiles))!;
+                () => loaded.ValidateAgentProfileReferences(loadedMassNav.AgentProfiles, geometryProfiles))!;
             Assert.That(equalSpeed.Message, Does.Contain("soldierAgent.profileId"));
             Assert.That(equalSpeed.Message, Does.Contain("formationAgent.profileId"));
 
@@ -500,7 +507,7 @@ namespace Ludots.Tests.Presentation
             profile["speedCmPerSecond"] = FindAgentProfileById(profiles, "formation")["speedCmPerSecond"]!.GetValue<float>() - 1f;
             loadedMassNav = MassNavigationConfig.Load(massNavConfig);
             InvalidOperationException slowerSoldier = Assert.Throws<InvalidOperationException>(
-                () => loaded.ValidateAgentProfileReferences(loadedMassNav.AgentProfiles))!;
+                () => loaded.ValidateAgentProfileReferences(loadedMassNav.AgentProfiles, geometryProfiles))!;
             Assert.That(slowerSoldier.Message, Does.Contain("soldierAgent.profileId"));
             Assert.That(slowerSoldier.Message, Does.Contain("formationAgent.profileId"));
         }
@@ -1086,7 +1093,7 @@ namespace Ludots.Tests.Presentation
             Entity agent = world.Create(
                 new MassCrowdAgent { ProfileId = MassCrowdProfileRegistry.Register("light") },
                 new MassCrowdAgentIndex { Value = 0 },
-                new MassCrowdAgentProfile { Heavy = false, NavMass = 1f, VisualScale = 0.2f, BodyRadiusCm = 20f },
+                new MassCrowdAgentProfile { Heavy = false, VisualScale = 0.2f, SpeedCmPerSecond = 800f },
                 new PresentationStableId { Value = 1001 },
                 new PresentationDestroyEventPublished(),
                 new PresentationOwnerHasPerformerPayload { Count = 1, RootCount = 1, SingleRootPerformer = performerRoot });
@@ -2844,6 +2851,14 @@ namespace Ludots.Tests.Presentation
             return paths;
         }
 
+        private static AgentProfileRegistry LoadTotalWarAgentProfiles()
+        {
+            using var engine = new GameEngine();
+            engine.InitializeWithConfigPipeline(TotalWarDependencyPaths(), Path.Combine(FindRepoRoot(), "assets"));
+            return engine.GetService(CoreServiceKeys.AgentProfiles)
+                ?? throw new InvalidOperationException("TotalWar test expected AgentProfiles service.");
+        }
+
         private static GameEngine CreatePlayableTotalWarEngine()
         {
             EnsureTotalWarEntryAssemblyPreloaded();
@@ -3887,7 +3902,7 @@ namespace Ludots.Tests.Presentation
             foreach (string field in forbiddenProfileFields)
             {
                 Assert.That(agentAuthoring.ContainsKey(field), Is.False,
-                    $"{label}.{field} must be owned by MassNavigationConfig.agentProfiles.");
+                    $"{label}.{field} must be owned by the navigation profile config layers.");
             }
         }
 

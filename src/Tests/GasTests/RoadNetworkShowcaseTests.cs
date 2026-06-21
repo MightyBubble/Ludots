@@ -15,6 +15,7 @@ using Ludots.Core.Mathematics.FixedPoint;
 using Ludots.Core.Mathematics;
 using Ludots.Core.Input.Selection;
 using Ludots.Core.Navigation.GraphWorld;
+using Ludots.Core.Navigation.AgentProfiles;
 using Ludots.Core.Navigation.NavMesh;
 using Ludots.Core.Navigation.NavMesh.Config;
 using Ludots.Core.Navigation.Pathing;
@@ -89,7 +90,8 @@ namespace Ludots.Tests.GAS
 
             using var runtime = new LoadedGraphRuntime(store, loadedChunks, preferredProjectionCellSizeCm: chunkSizeCm / 2);
             var pathStore = new PathStore(maxPaths: 8, maxPointsPerPath: 128);
-            var service = new AutoPathService(runtime, CreateNavRegistry(), CreateNavProfiles(), pathStore, CreatePathingConfig());
+            var agentProfiles = CreateAgentProfiles();
+            var service = new AutoPathService(runtime, CreateNavRegistry(), CreateNavProfiles(agentProfiles), agentProfiles, pathStore, CreatePathingConfig());
             var request = new PathRequest(
                 requestId: 9,
                 actor: default,
@@ -363,8 +365,9 @@ namespace Ludots.Tests.GAS
             using var world = World.Create();
             var orderQueue = new OrderQueue(capacity: 16);
             var pathStore = new PathStore(maxPaths: 8, maxPointsPerPath: OrderSpatial.MaxPoints);
+            var agentProfiles = CreateAgentProfiles();
             var globals = CreateGlobals(
-                new AutoPathService(runtime, CreateNavRegistry(), CreateNavProfiles(), pathStore, CreatePathingConfig()),
+                new AutoPathService(runtime, CreateNavRegistry(), CreateNavProfiles(agentProfiles), agentProfiles, pathStore, CreatePathingConfig()),
                 pathStore,
                 moveToOrderTypeId: 77);
             globals[CoreServiceKeys.LoadedChunks.Name] = loadedChunks;
@@ -405,7 +408,8 @@ namespace Ludots.Tests.GAS
 
             using var runtime = new LoadedGraphRuntime(store, loadedChunks, preferredProjectionCellSizeCm: chunkSizeCm / 2);
             var pathStore = new PathStore(maxPaths: 8, maxPointsPerPath: 64);
-            var service = new AutoPathService(runtime, CreateNavRegistry(), CreateNavProfiles(), pathStore, CreatePathingConfig());
+            var agentProfiles = CreateAgentProfiles();
+            var service = new AutoPathService(runtime, CreateNavRegistry(), CreateNavProfiles(agentProfiles), agentProfiles, pathStore, CreatePathingConfig());
             var request = new PathRequest(
                 requestId: 1,
                 actor: default,
@@ -460,7 +464,8 @@ namespace Ludots.Tests.GAS
 
             using var runtime = new LoadedGraphRuntime(store, loadedChunks, preferredProjectionCellSizeCm: chunkSizeCm / 2);
             var pathStore = new PathStore(maxPaths: 8, maxPointsPerPath: 64);
-            var service = new AutoPathService(runtime, CreateNavRegistry(), CreateNavProfiles(), pathStore, CreatePathingConfig());
+            var agentProfiles = CreateAgentProfiles();
+            var service = new AutoPathService(runtime, CreateNavRegistry(), CreateNavProfiles(agentProfiles), agentProfiles, pathStore, CreatePathingConfig());
             var request = new PathRequest(
                 requestId: 2,
                 actor: default,
@@ -1557,15 +1562,31 @@ namespace Ludots.Tests.GAS
             }, new JsonSerializerOptions { WriteIndented = true });
         }
 
-        private static NavMeshProfileRegistry CreateNavProfiles()
+        private static AgentProfileRegistry CreateAgentProfiles()
+        {
+            return new AgentProfileRegistry(new[]
+            {
+                new AgentProfileConfig
+                {
+                    Id = RoadNetworkShowcaseIds.PathPlannerAgentTypeId,
+                    RadiusCm = 30,
+                    HeightCm = 180,
+                    ClearanceCm = 40,
+                    Mass = 1,
+                    Layer = 0
+                }
+            });
+        }
+
+        private static NavMeshProfileRegistry CreateNavProfiles(AgentProfileRegistry agentProfiles)
         {
             return new NavMeshProfileRegistry(new NavMeshBakeConfig
             {
-                Profiles = new List<NavAgentProfileConfig>
+                Profiles = new List<NavMeshAgentProfileConfig>
                 {
-                    new NavAgentProfileConfig { Id = RoadNetworkShowcaseIds.PathPlannerAgentTypeId }
+                    new NavMeshAgentProfileConfig { Id = RoadNetworkShowcaseIds.PathPlannerAgentTypeId, MaxClimbCm = 40, MaxSlopeDeg = 45 }
                 }
-            });
+            }, agentProfiles);
         }
 
         private static NavQueryServiceRegistry CreateNavRegistry()

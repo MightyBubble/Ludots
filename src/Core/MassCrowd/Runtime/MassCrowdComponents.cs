@@ -16,9 +16,7 @@ public struct MassCrowdAgentProfile
 {
     public int ProfileId;
     public bool Heavy;
-    public float NavMass;
     public float VisualScale;
-    public float BodyRadiusCm;
     public float SpeedCmPerSecond;
 }
 

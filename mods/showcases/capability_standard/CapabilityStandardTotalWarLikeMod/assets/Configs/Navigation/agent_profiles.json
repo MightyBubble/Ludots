@@ -1,0 +1,10 @@
+[
+  {
+    "id": "formation",
+    "radiusCm": 720,
+    "heightCm": 320,
+    "clearanceCm": 720,
+    "mass": 12,
+    "layer": 0
+  }
+]

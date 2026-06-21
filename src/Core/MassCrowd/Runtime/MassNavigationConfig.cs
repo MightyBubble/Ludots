@@ -221,9 +221,7 @@ public sealed class MassNavigationConfig
                 profile,
                 "id",
                 "heavy",
-                "navMass",
                 "visualScale",
-                "bodyRadiusCm",
                 "speedCmPerSecond",
                 "everyNth",
                 "nthOffset");

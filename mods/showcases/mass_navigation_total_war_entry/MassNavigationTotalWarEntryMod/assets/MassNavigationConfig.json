@@ -46,11 +46,36 @@
       }
     ],
     "obstacles": [
-      { "id": "west_gate", "localXCm": 3000.0, "localYCm": 5000.0, "radiusCm": 500.0 },
-      { "id": "south_gate", "localXCm": 5000.0, "localYCm": 3000.0, "radiusCm": 400.0 },
-      { "id": "north_gate", "localXCm": 5000.0, "localYCm": 7000.0, "radiusCm": 400.0 },
-      { "id": "east_gate", "localXCm": 7000.0, "localYCm": 5000.0, "radiusCm": 500.0 },
-      { "id": "central_blocker", "localXCm": 5000.0, "localYCm": 5000.0, "radiusCm": 300.0 }
+      {
+        "id": "west_gate",
+        "localXCm": 3000,
+        "localYCm": 5000,
+        "radiusCm": 500
+      },
+      {
+        "id": "south_gate",
+        "localXCm": 5000,
+        "localYCm": 3000,
+        "radiusCm": 400
+      },
+      {
+        "id": "north_gate",
+        "localXCm": 5000,
+        "localYCm": 7000,
+        "radiusCm": 400
+      },
+      {
+        "id": "east_gate",
+        "localXCm": 7000,
+        "localYCm": 5000,
+        "radiusCm": 500
+      },
+      {
+        "id": "central_blocker",
+        "localXCm": 5000,
+        "localYCm": 5000,
+        "radiusCm": 300
+      }
     ]
   },
   "solver": {
@@ -63,10 +88,10 @@
     "separationHashMinSearchRadiusCells": 2,
     "hardResolveHashCellSizeCm": 50,
     "hardResolveHashMinSearchRadiusCells": 1,
-    "playAreaMinXCm": 50.0,
-    "playAreaMaxXCm": 9950.0,
-    "playAreaMinYCm": 50.0,
-    "playAreaMaxYCm": 9950.0
+    "playAreaMinXCm": 50,
+    "playAreaMaxXCm": 9950,
+    "playAreaMinYCm": 50,
+    "playAreaMaxYCm": 9950
   },
   "presentation": {
     "requiredMeshAssetIds": [
@@ -80,8 +105,14 @@
     "agentsPerTeam": 0,
     "initialSelectedTeamId": 1,
     "teams": [
-      { "id": 1, "name": "Azure Vanguard" },
-      { "id": 2, "name": "Crimson Column" }
+      {
+        "id": 1,
+        "name": "Azure Vanguard"
+      },
+      {
+        "id": 2,
+        "name": "Crimson Column"
+      }
     ]
   },
   "scenarioRuntime": {
@@ -104,9 +135,14 @@
     "panelControls": {
       "maxAgentsPerTeam": 40000,
       "totalAgentStep": 2000,
-      "totalAgentPresets": [5000, 10000, 20000, 40000],
+      "totalAgentPresets": [
+        5000,
+        10000,
+        20000,
+        40000
+      ],
       "panelRefreshIntervalSeconds": 0.25,
-      "viewResidencyRetainSecondsStep": 2.0,
+      "viewResidencyRetainSecondsStep": 2,
       "simulationBudgetStepMs": 1,
       "simulationBudgetMinMs": 1,
       "simulationBudgetMaxMs": 64,
@@ -145,30 +181,24 @@
       {
         "id": "formation",
         "heavy": true,
-        "navMass": 12.0,
-        "visualScale": 1.0,
-        "bodyRadiusCm": 720.0,
-        "speedCmPerSecond": 360.0,
+        "visualScale": 1,
+        "speedCmPerSecond": 360,
         "everyNth": 0,
         "nthOffset": 0
       },
       {
         "id": "heavy",
         "heavy": true,
-        "navMass": 4.0,
         "visualScale": 0.34,
-        "bodyRadiusCm": 28.0,
-        "speedCmPerSecond": 780.0,
+        "speedCmPerSecond": 780,
         "everyNth": 7,
         "nthOffset": 0
       },
       {
         "id": "light",
         "heavy": false,
-        "navMass": 1.0,
         "visualScale": 0.22,
-        "bodyRadiusCm": 20.0,
-        "speedCmPerSecond": 920.0,
+        "speedCmPerSecond": 920,
         "everyNth": 0,
         "nthOffset": 0
       }
@@ -178,17 +208,17 @@
     "tacticalProfileId": "Camera.Profile.MassNavigationTactical",
     "strategicProfileId": "Camera.Profile.MassNavigationStrategic",
     "requestPolicy": {
-      "blendDurationSeconds": 0.0,
+      "blendDurationSeconds": 0,
       "resetRuntimeState": true,
       "snapToFollowTargetWhenAvailable": false,
-      "strategicTargetXCm": 0.0,
-      "strategicTargetYCm": -1800.0
+      "strategicTargetXCm": 0,
+      "strategicTargetYCm": -1800
     }
   },
   "minimap": {
     "visible": true,
     "initialPreset": "RtsFullMap",
-    "followCameraHalfExtentCm": 7000.0,
+    "followCameraHalfExtentCm": 7000,
     "rotateWithCamera": true
   },
   "teamRelationships": {
@@ -223,7 +253,7 @@
   },
   "viewResidency": {
     "mode": "Probe",
-    "retainSeconds": 12.0,
+    "retainSeconds": 12,
     "radiusCm": 24000,
     "initialProbeId": "battlefield_overview",
     "cameraProbes": [
@@ -281,46 +311,46 @@
   },
   "semantics": {
     "obstacle": {
-      "hardResolveCandidateDistanceCm": 100.0,
-      "softPushPaddingCm": 350.0,
-      "softPushForceScale": 8.0
+      "hardResolveCandidateDistanceCm": 100,
+      "softPushPaddingCm": 350,
+      "softPushForceScale": 8
     },
     "targetProjection": {
-      "teamTargetClearanceCm": 60.0,
-      "groupCenterClearanceCm": 60.0,
-      "teamSlotClearanceCm": 45.0,
-      "groupSlotClearanceCm": 50.0,
-      "looseTargetClearanceCm": 50.0
+      "teamTargetClearanceCm": 60,
+      "groupCenterClearanceCm": 60,
+      "teamSlotClearanceCm": 45,
+      "groupSlotClearanceCm": 50,
+      "looseTargetClearanceCm": 50
     },
     "group": {
-      "spawnSpacingCm": 46.0,
-      "spawnJitterCm": 12.0,
-      "teamSlotSpacingCm": 90.0,
-      "formationLineSpacingCm": 180.0,
-      "formationSquareSpacingCm": 80.0,
-      "formationCircleSpacingCm": 180.0,
-      "formationCircleMinRadiusCm": 200.0,
-      "formationWedgeSpacingCm": 180.0,
+      "spawnSpacingCm": 46,
+      "spawnJitterCm": 12,
+      "teamSlotSpacingCm": 90,
+      "formationLineSpacingCm": 180,
+      "formationSquareSpacingCm": 80,
+      "formationCircleSpacingCm": 180,
+      "formationCircleMinRadiusCm": 200,
+      "formationWedgeSpacingCm": 180,
       "formationRotationEpsilonRadians": 0.00001,
       "formationRotationSpeedRadiansPerSecond": 2.5,
-      "pullDeadZoneCm": 50.0,
-      "pullClampCm": 2000.0,
-      "arrivedRadiusCm": 150.0,
-      "formationArriveThresholdCm": 200.0,
-      "looseArriveThresholdCm": 300.0,
-      "unitTargetStopThresholdCm": 50.0,
-      "formationFlowSlowRadiusCm": 400.0,
+      "pullDeadZoneCm": 50,
+      "pullClampCm": 2000,
+      "arrivedRadiusCm": 150,
+      "formationArriveThresholdCm": 200,
+      "looseArriveThresholdCm": 300,
+      "unitTargetStopThresholdCm": 50,
+      "formationFlowSlowRadiusCm": 400,
       "nearSlotBlend": 0.82,
       "farSlotBlend": 0.38,
-      "nearSlotBlendDistanceSq": 4000000.0
+      "nearSlotBlendDistanceSq": 4000000
     },
     "steering": {
-      "separationRadiusCm": 200.0,
-      "goalArrivalRadiusCm": 1200.0,
+      "separationRadiusCm": 200,
+      "goalArrivalRadiusCm": 1200,
       "flowObstacleAvoidanceScale": 1.2,
-      "formationSeparationScale": 2.0,
-      "looseSeparationScale": 4.0,
-      "velocityBlendPerSecond": 5.0
+      "formationSeparationScale": 2,
+      "looseSeparationScale": 4,
+      "velocityBlendPerSecond": 5
     },
     "solver": {
       "minNavMass": 0.001,
@@ -329,15 +359,15 @@
       "parallelStepMinAgents": 2048,
       "directionEpsilonSq": 0.0001,
       "normalizationEpsilonSq": 0.000001,
-      "inverseSqrtMinValue": 0.00000001,
+      "inverseSqrtMinValue": 1e-8,
       "entitySyncPositionEpsilonSq": 0.25,
       "entitySyncVelocityEpsilonSq": 0.01,
       "facingVelocityEpsilonSq": 0.01,
-      "flowBlockedCellCost": 99999.0,
-      "flowBlockedCellThreshold": 9999.0,
-      "flowTargetStopDistanceSq": 1.0,
+      "flowBlockedCellCost": 99999,
+      "flowBlockedCellThreshold": 9999,
+      "flowTargetStopDistanceSq": 1,
       "flowObstacleNeighborRadiusCells": 4,
-      "flowObstacleNeighborWeight": 5.0,
+      "flowObstacleNeighborWeight": 5,
       "flowObstacleAvoidanceWeight": 1.5,
       "coincidentPairHashBucketCount": 1024,
       "coincidentPairHashPrimeA": 73856093,
@@ -345,4 +375,3 @@
     }
   }
 }
-

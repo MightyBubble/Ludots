@@ -5,6 +5,7 @@ using Arch.System;
 using Ludots.Core.Engine;
 using Ludots.Core.Gameplay.Components;
 using Ludots.Core.MassCrowd.Runtime;
+using Ludots.Core.Navigation.AgentProfiles;
 
 namespace Ludots.Core.MassCrowd.Systems;
 
@@ -82,13 +83,15 @@ internal sealed class MassNavigationAgentMetadataSyncSystem : ISystem<float>
                 _teamSet.Add(teamId);
                 MassCrowdAgentProfile profile = profiles[index];
                 EntityLayer layer = layers[index];
+                string profileKey = MassCrowdProfileRegistry.GetName(profile.ProfileId);
+                AgentProfileConfig geometry = _simulation.Config.AgentProfiles.ResolveGeometry(profileKey);
                 _simulation.MassFlow.SetUnitRuntimeProfile(
                     agentIndices[index].Value,
                     teamId,
                     profile.Heavy,
-                    profile.NavMass,
+                    geometry.Mass,
                     profile.VisualScale,
-                    profile.BodyRadiusCm,
+                    geometry.RadiusCm,
                     profile.SpeedCmPerSecond,
                     new MassNavigationAgentLayer(layer.Value.Category, layer.Value.Mask));
             }

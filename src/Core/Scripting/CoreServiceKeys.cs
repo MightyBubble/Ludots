@@ -37,6 +37,7 @@ using Ludots.Core.Map.Board;
 using Ludots.Core.Map.Hex;
 using Ludots.Core.Modding;
 using Ludots.Core.Navigation.GraphWorld;
+using Ludots.Core.Navigation.AgentProfiles;
 using Ludots.Core.Navigation.NavMesh;
 using Ludots.Core.Navigation.NavMesh.Config;
 using Ludots.Core.Navigation.Pathing;
@@ -287,6 +288,7 @@ namespace Ludots.Core.Scripting
         // --- Navigation ---
         public static readonly ServiceKey<LoadedGraphRuntime> LoadedGraphRuntime = new("LoadedGraphRuntime");
         public static readonly ServiceKey<Navigation2DRuntime> Navigation2DRuntime = new("Navigation2DRuntime");
+        public static readonly ServiceKey<AgentProfileRegistry> AgentProfiles = new("AgentProfiles");
         public static readonly ServiceKey<NavMeshBakeConfig> NavMeshBakeConfig = new("NavMeshBakeConfig");
         public static readonly ServiceKey<NavMeshProfileRegistry> NavMeshProfiles = new("NavMeshProfiles");
         public static readonly ServiceKey<NavQueryServiceRegistry> NavQueryServices = new("NavQueryServices");

@@ -4,16 +4,14 @@ namespace Ludots.Core.Navigation.NavMesh.Config
 {
     public sealed class NavMeshBakeConfig
     {
-        public List<NavAgentProfileConfig> Profiles { get; set; } = new List<NavAgentProfileConfig>();
+        public List<NavMeshAgentProfileConfig> Profiles { get; set; } = new List<NavMeshAgentProfileConfig>();
         public List<NavLayerConfig> Layers { get; set; } = new List<NavLayerConfig>();
         public List<NavAreaCostConfig> Areas { get; set; } = new List<NavAreaCostConfig>();
     }
 
-    public sealed class NavAgentProfileConfig
+    public sealed class NavMeshAgentProfileConfig
     {
         public string Id { get; set; } = string.Empty;
-        public int RadiusCm { get; set; }
-        public int HeightCm { get; set; }
         public int MaxClimbCm { get; set; }
         public float MaxSlopeDeg { get; set; }
     }

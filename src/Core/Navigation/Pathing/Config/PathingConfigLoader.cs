@@ -50,10 +50,9 @@ namespace Ludots.Core.Navigation.Pathing.Config
                 }
 
                 string agentPath = $"PathingConfig.agentTypes[{i}]";
-                RequireOnlyProperties(agent, agentPath, "id", "profileId", "layer", "selection", "navMesh", "nodeGraph");
+                RequireOnlyProperties(agent, agentPath, "id", "profileId", "selection", "navMesh", "nodeGraph");
                 RequireString(agent, "id", agentPath);
                 RequireString(agent, "profileId", agentPath);
-                RequireNumber(agent, "layer", agentPath);
 
                 if (agent["selection"] is not JsonObject selection)
                 {
