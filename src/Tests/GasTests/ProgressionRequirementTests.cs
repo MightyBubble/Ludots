@@ -4,6 +4,7 @@ using Arch.Core;
 using Ludots.Core.Association;
 using Ludots.Core.Config;
 using Ludots.Core.Engine;
+using Ludots.Core.EntityCollections;
 using Ludots.Core.Gameplay.GAS;
 using Ludots.Core.Gameplay.GAS.Components;
 using Ludots.Core.Gameplay.GAS.Config;
@@ -17,10 +18,12 @@ using Ludots.Core.Gameplay.Progression.Components;
 using Ludots.Core.Gameplay.Progression.Config;
 using Ludots.Core.Gameplay.Progression.Registry;
 using Ludots.Core.Gameplay.Progression.Systems;
+using Ludots.Core.Gameplay.Relationships;
 using Ludots.Core.GraphRuntime;
 using Ludots.Core.Modding;
 using Ludots.Core.NodeLibraries.GASGraph;
 using Ludots.Core.NodeLibraries.GASGraph.Host;
+using Ludots.Core.Registry;
 using Ludots.Core.Scripting;
 using NUnit.Framework;
 using System.Text.Json.Nodes;
@@ -119,6 +122,173 @@ namespace Ludots.Tests.GAS
             var contextB = new RoleResolverContext(actor: barracksB, subject: barracksB);
             Assert.That(evaluator.Evaluate(reqId, in contextA), Is.True);
             Assert.That(evaluator.Evaluate(reqId, in contextB), Is.False);
+        }
+
+        [Test]
+        public void EntityCountRequirement_CanReadTeamMembersFromEntityCollection()
+        {
+            using var world = World.Create();
+            int workerTag = TagRegistry.Register("Role.Worker");
+            int reqId = ProgressionRequirementIdRegistry.Register("Req.TeamNeedsTwoWorkers");
+            var scopeKeys = new ScopeKeyRegistry();
+            int teamScopeId = scopeKeys.Register("team");
+            var collectionKeys = new StringIntRegistry(capacity: 16, startId: 1, invalidId: 0, comparer: StringComparer.Ordinal);
+            int teamMembersKeyId = collectionKeys.Register("team.members");
+            scopeKeys.RegisterCollectionMembers("team", teamMembersKeyId);
+            var collections = new EntityCollectionStore(collectionKeys, initialCollectionCapacity: 8, initialRowCapacity: 16);
+
+            var requiredTags = default(GameplayTagContainer);
+            requiredTags.AddTag(workerTag);
+
+            var requirements = new ProgressionRequirementRegistry();
+            requirements.Register(reqId, CreateSingleNodeRequirement(
+                reqId,
+                ProgressionRequirementNodeKind.EntityCount,
+                new ScopeKey(ScopeKind.Named, teamScopeId),
+                RoleSlot.ScopeMembers,
+                progressionId: 0,
+                requiredCount: 2,
+                requiredTags: in requiredTags));
+
+            var evaluator = new ProgressionRequirementEvaluator(
+                world,
+                requirements,
+                scopeKeys,
+                scopeResolver: new ScopeResolver(world, scopeKeys, collections));
+            Entity team = world.Create(new ProgressionStateBuffer());
+            Entity researcher = world.Create();
+            var workerTags = default(GameplayTagContainer);
+            workerTags.AddTag(workerTag);
+            Entity workerA = world.Create(workerTags);
+            Entity workerB = world.Create(workerTags);
+            Entity spectator = world.Create();
+            PrepareScopeHost(world, team);
+            PrepareScopeMember(world, researcher);
+            Assert.That(evaluator.TryBindScope(researcher, teamScopeId, team), Is.True);
+
+            collections.Replace(
+                team,
+                EntityCollectionDescriptor.Create("team.members", EntityCollectionSourceKind.Explicit, EntityCollectionRoleKind.Display),
+                new[] { workerA, workerB, spectator });
+
+            var context = new RoleResolverContext(actor: researcher, subject: researcher);
+            Assert.That(evaluator.Evaluate(reqId, in context), Is.True);
+        }
+
+        [Test]
+        public void EntityCountRequirement_CanReadTeamMembersFromRelationshipEdges()
+        {
+            using var world = World.Create();
+            int workerTag = TagRegistry.Register("Role.Worker");
+            int reqId = ProgressionRequirementIdRegistry.Register("Req.TeamNeedsRelationshipWorker");
+            var scopeKeys = new ScopeKeyRegistry();
+            int teamScopeId = scopeKeys.Register("team");
+            var relationshipTypes = new RelationshipTypeRegistry();
+            var relationshipMetrics = new RelationshipMetricRegistry();
+            var relationshipFlags = new RelationshipFlagRegistry();
+            var relationshipBands = new RelationshipBandRegistry();
+            var relationshipChanges = new RelationshipChangeBuffer();
+            var relationships = new RelationshipRuntime(world, relationshipTypes, relationshipMetrics, relationshipFlags, relationshipBands, relationshipChanges);
+            int memberTypeId = relationshipTypes.Register("TeamMember");
+            scopeKeys.RegisterRelationshipOutgoingMembers("team", memberTypeId);
+
+            var requiredTags = default(GameplayTagContainer);
+            requiredTags.AddTag(workerTag);
+
+            var requirements = new ProgressionRequirementRegistry();
+            requirements.Register(reqId, CreateSingleNodeRequirement(
+                reqId,
+                ProgressionRequirementNodeKind.EntityCount,
+                new ScopeKey(ScopeKind.Named, teamScopeId),
+                RoleSlot.ScopeMembers,
+                progressionId: 0,
+                requiredCount: 2,
+                requiredTags: in requiredTags));
+
+            var evaluator = new ProgressionRequirementEvaluator(
+                world,
+                requirements,
+                scopeKeys,
+                scopeResolver: new ScopeResolver(world, scopeKeys, relationships: relationships));
+            Entity team = world.Create(new ProgressionStateBuffer());
+            Entity researcher = world.Create();
+            var workerTags = default(GameplayTagContainer);
+            workerTags.AddTag(workerTag);
+            Entity workerA = world.Create(workerTags);
+            Entity workerB = world.Create(workerTags);
+            Entity spectator = world.Create();
+            PrepareScopeHost(world, team);
+            PrepareScopeMember(world, researcher);
+            Assert.That(evaluator.TryBindScope(researcher, teamScopeId, team), Is.True);
+            relationships.EnsureLink(team, workerA, memberTypeId);
+            relationships.EnsureLink(team, workerB, memberTypeId);
+            relationships.EnsureLink(team, spectator, memberTypeId);
+
+            var context = new RoleResolverContext(actor: researcher, subject: researcher);
+            Assert.That(evaluator.Evaluate(reqId, in context), Is.True);
+        }
+
+        [Test]
+        public void EntityCountRequirement_CollectionBackedScopeEvaluatesWithoutAllocationsAfterWarmup()
+        {
+            using var world = World.Create();
+            int workerTag = TagRegistry.Register("Role.Worker");
+            int reqId = ProgressionRequirementIdRegistry.Register("Req.TeamZeroAlloc");
+            var scopeKeys = new ScopeKeyRegistry();
+            int teamScopeId = scopeKeys.Register("team");
+            var collectionKeys = new StringIntRegistry(capacity: 16, startId: 1, invalidId: 0, comparer: StringComparer.Ordinal);
+            int teamMembersKeyId = collectionKeys.Register("team.members");
+            scopeKeys.RegisterCollectionMembers("team", teamMembersKeyId);
+            var collections = new EntityCollectionStore(collectionKeys, initialCollectionCapacity: 8, initialRowCapacity: 16);
+
+            var requiredTags = default(GameplayTagContainer);
+            requiredTags.AddTag(workerTag);
+
+            var requirements = new ProgressionRequirementRegistry();
+            requirements.Register(reqId, CreateSingleNodeRequirement(
+                reqId,
+                ProgressionRequirementNodeKind.EntityCount,
+                new ScopeKey(ScopeKind.Named, teamScopeId),
+                RoleSlot.ScopeMembers,
+                progressionId: 0,
+                requiredCount: 2,
+                requiredTags: in requiredTags));
+
+            var evaluator = new ProgressionRequirementEvaluator(
+                world,
+                requirements,
+                scopeKeys,
+                scopeResolver: new ScopeResolver(world, scopeKeys, collections));
+            Entity team = world.Create(new ProgressionStateBuffer());
+            Entity researcher = world.Create();
+            var workerTags = default(GameplayTagContainer);
+            workerTags.AddTag(workerTag);
+            Entity workerA = world.Create(workerTags);
+            Entity workerB = world.Create(workerTags);
+            PrepareScopeHost(world, team);
+            PrepareScopeMember(world, researcher);
+            Assert.That(evaluator.TryBindScope(researcher, teamScopeId, team), Is.True);
+            collections.Replace(
+                team,
+                EntityCollectionDescriptor.Create("team.members", EntityCollectionSourceKind.Explicit, EntityCollectionRoleKind.Display),
+                new[] { workerA, workerB });
+
+            var context = new RoleResolverContext(actor: researcher, subject: researcher);
+            Assert.That(evaluator.Evaluate(reqId, in context), Is.True);
+            for (int i = 0; i < 64; i++)
+            {
+                evaluator.Evaluate(reqId, in context);
+            }
+
+            GC.GetAllocatedBytesForCurrentThread();
+            long before = GC.GetAllocatedBytesForCurrentThread();
+            for (int i = 0; i < 10_000; i++)
+            {
+                evaluator.Evaluate(reqId, in context);
+            }
+
+            long allocated = GC.GetAllocatedBytesForCurrentThread() - before;
+            Assert.That(allocated, Is.EqualTo(0));
         }
 
         [Test]
@@ -1031,6 +1201,48 @@ namespace Ludots.Tests.GAS
         }
 
         [Test]
+        public void ProgressionConfigLoader_LoadsCollectionBackedScopeMembership()
+        {
+            string root = CreateTempRoot();
+            try
+            {
+                Directory.CreateDirectory(Path.Combine(root, "Configs", "Progression"));
+                File.WriteAllText(Path.Combine(root, "Configs", "Progression", "scopes.json"),
+                    """
+                    [
+                      { "id": "team", "memberSource": "EntityCollection", "collection": "team.members" }
+                    ]
+                    """);
+                File.WriteAllText(Path.Combine(root, "Configs", "Progression", "progressions.json"),
+                    """
+                    [
+                      { "id": "Progression.TeamLogistics", "scope": "team" }
+                    ]
+                    """);
+                File.WriteAllText(Path.Combine(root, "Configs", "Progression", "requirements.json"), "[]");
+
+                using var world = World.Create();
+                var collectionKeys = new StringIntRegistry(capacity: 16, startId: 1, invalidId: 0, comparer: StringComparer.Ordinal);
+                var collections = new EntityCollectionStore(collectionKeys, initialCollectionCapacity: 8, initialRowCapacity: 16);
+                var loader = CreateProgressionLoader(root, out _, out var scopeKeys, out _, out _, collections);
+
+                loader.Load(CreateProgressionCatalog());
+
+                int teamScopeId = scopeKeys.GetId("team");
+                int teamMembersKeyId = collections.KeyRegistry.GetId("team.members");
+                Assert.That(teamScopeId, Is.GreaterThan(0));
+                Assert.That(teamMembersKeyId, Is.GreaterThan(0));
+                Assert.That(scopeKeys.TryGetMembershipSource(teamScopeId, out ScopeMembershipSource source), Is.True);
+                Assert.That(source.Kind, Is.EqualTo(ScopeMembershipSourceKind.EntityCollection));
+                Assert.That(source.KeyId, Is.EqualTo(teamMembersKeyId));
+            }
+            finally
+            {
+                TryDeleteDirectory(root);
+            }
+        }
+
+        [Test]
         public void ProgressionConfigLoader_RequiresExplicitProgressionScope()
         {
             string root = CreateTempRoot();
@@ -1461,7 +1673,9 @@ namespace Ludots.Tests.GAS
             out ProgressionRequirementRegistry requirements,
             out ScopeKeyRegistry scopeKeys,
             out ProgressionDefinitionRegistry progressions,
-            out ConfigPipeline pipeline)
+            out ConfigPipeline pipeline,
+            EntityCollectionStore? collections = null,
+            RelationshipTypeRegistry? relationshipTypes = null)
         {
             var vfs = new VirtualFileSystem();
             vfs.Mount("Core", root);
@@ -1470,7 +1684,7 @@ namespace Ludots.Tests.GAS
             progressions = new ProgressionDefinitionRegistry();
             requirements = new ProgressionRequirementRegistry();
             scopeKeys = new ScopeKeyRegistry();
-            return new ProgressionConfigLoader(pipeline, progressions, requirements, scopeKeys);
+            return new ProgressionConfigLoader(pipeline, progressions, requirements, scopeKeys, collections, relationshipTypes);
         }
 
         private static ConfigCatalog CreateProgressionCatalog()

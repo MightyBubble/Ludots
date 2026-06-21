@@ -12,6 +12,10 @@ namespace Ludots.Core.Gameplay.Progression.Config
     public sealed class ProgressionScopeConfig : IIdentifiable
     {
         public string Id { get; set; } = string.Empty;
+        public string? MemberSource { get; set; }
+        public string? Collection { get; set; }
+        public string? RelationshipType { get; set; }
+        public string? RelationshipDirection { get; set; }
     }
 
     public sealed class ProgressionRequirementConfig : IIdentifiable

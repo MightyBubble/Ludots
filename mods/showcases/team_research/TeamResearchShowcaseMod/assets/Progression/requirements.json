@@ -1,0 +1,12 @@
+[
+  {
+    "id": "Req.Showcase.TeamResearch.SignalRelay.Use",
+    "root": {
+      "kind": "EntityCount",
+      "scope": "team",
+      "entitySource": "ScopeMembers",
+      "count": 2,
+      "tags": ["Role.Showcase.Researcher"]
+    }
+  }
+]

@@ -1,7 +1,9 @@
 using System;
 using Arch.Core;
 using Arch.System;
+using Ludots.Core.EntityCollections;
 using Ludots.Core.Gameplay.GAS;
+using Ludots.Core.Gameplay.Relationships;
 using Ludots.Core.Registry;
 
 namespace Ludots.Core.Association
@@ -272,8 +274,68 @@ namespace Ludots.Core.Association
     public sealed class ScopeKeyRegistry
     {
         private readonly StringIntRegistry _registry = new(capacity: 32, startId: 1, invalidId: 0, comparer: StringComparer.OrdinalIgnoreCase);
+        private ScopeMembershipSource[] _membershipSources = new ScopeMembershipSource[32];
+        private bool[] _hasMembershipSource = new bool[32];
 
-        public int Register(string key) => _registry.Register(key);
+        public int Register(string key)
+        {
+            int id = _registry.Register(key);
+            EnsureMembershipSourceCapacity(id);
+            if (!_hasMembershipSource[id])
+            {
+                _membershipSources[id] = ScopeMembershipSource.ScopeBinding;
+                _hasMembershipSource[id] = true;
+            }
+
+            return id;
+        }
+
+        public int RegisterScopeBindingMembers(string key)
+        {
+            int id = Register(key);
+            _membershipSources[id] = ScopeMembershipSource.ScopeBinding;
+            _hasMembershipSource[id] = true;
+            return id;
+        }
+
+        public int RegisterCollectionMembers(string key, int collectionKeyId)
+        {
+            if (collectionKeyId <= 0)
+            {
+                throw new ArgumentOutOfRangeException(nameof(collectionKeyId), "Scope collection membership requires a registered collection key id.");
+            }
+
+            int id = Register(key);
+            _membershipSources[id] = ScopeMembershipSource.EntityCollection(collectionKeyId);
+            _hasMembershipSource[id] = true;
+            return id;
+        }
+
+        public int RegisterRelationshipOutgoingMembers(string key, int relationshipTypeId)
+        {
+            if (relationshipTypeId < 0)
+            {
+                throw new ArgumentOutOfRangeException(nameof(relationshipTypeId), "Scope relationship membership requires a concrete relationship type id.");
+            }
+
+            int id = Register(key);
+            _membershipSources[id] = ScopeMembershipSource.RelationshipOutgoing(relationshipTypeId);
+            _hasMembershipSource[id] = true;
+            return id;
+        }
+
+        public int RegisterRelationshipIncomingMembers(string key, int relationshipTypeId)
+        {
+            if (relationshipTypeId < 0)
+            {
+                throw new ArgumentOutOfRangeException(nameof(relationshipTypeId), "Scope relationship membership requires a concrete relationship type id.");
+            }
+
+            int id = Register(key);
+            _membershipSources[id] = ScopeMembershipSource.RelationshipIncoming(relationshipTypeId);
+            _hasMembershipSource[id] = true;
+            return id;
+        }
 
         public int GetId(string key) => _registry.GetId(key);
 
@@ -281,7 +343,64 @@ namespace Ludots.Core.Association
 
         public string GetName(int id) => _registry.GetName(id);
 
+        public bool TryGetMembershipSource(int scopeKeyId, out ScopeMembershipSource source)
+        {
+            if (scopeKeyId <= 0 ||
+                (uint)scopeKeyId >= (uint)_hasMembershipSource.Length ||
+                !_hasMembershipSource[scopeKeyId])
+            {
+                source = default;
+                return false;
+            }
+
+            source = _membershipSources[scopeKeyId];
+            return true;
+        }
+
         public void Freeze() => _registry.Freeze();
+
+        private void EnsureMembershipSourceCapacity(int id)
+        {
+            if ((uint)id < (uint)_membershipSources.Length)
+            {
+                return;
+            }
+
+            int newLength = Math.Max(_membershipSources.Length * 2, id + 1);
+            Array.Resize(ref _membershipSources, newLength);
+            Array.Resize(ref _hasMembershipSource, newLength);
+        }
+    }
+
+    public enum ScopeMembershipSourceKind : byte
+    {
+        ScopeBinding = 0,
+        EntityCollection = 1,
+        RelationshipOutgoing = 2,
+        RelationshipIncoming = 3
+    }
+
+    public readonly struct ScopeMembershipSource
+    {
+        public ScopeMembershipSource(ScopeMembershipSourceKind kind, int keyId)
+        {
+            Kind = kind;
+            KeyId = keyId;
+        }
+
+        public readonly ScopeMembershipSourceKind Kind;
+        public readonly int KeyId;
+
+        public static ScopeMembershipSource ScopeBinding => new(ScopeMembershipSourceKind.ScopeBinding, 0);
+
+        public static ScopeMembershipSource EntityCollection(int collectionKeyId)
+            => new(ScopeMembershipSourceKind.EntityCollection, collectionKeyId);
+
+        public static ScopeMembershipSource RelationshipOutgoing(int relationshipTypeId)
+            => new(ScopeMembershipSourceKind.RelationshipOutgoing, relationshipTypeId);
+
+        public static ScopeMembershipSource RelationshipIncoming(int relationshipTypeId)
+            => new(ScopeMembershipSourceKind.RelationshipIncoming, relationshipTypeId);
     }
 
     public sealed class ScopeResolver
@@ -290,10 +409,20 @@ namespace Ludots.Core.Association
             .WithAll<ScopeRefBuffer>();
 
         private readonly World _world;
+        private readonly ScopeKeyRegistry? _scopeKeys;
+        private readonly EntityCollectionStore? _entityCollections;
+        private readonly RelationshipRuntime? _relationships;
 
-        public ScopeResolver(World world)
+        public ScopeResolver(
+            World world,
+            ScopeKeyRegistry? scopeKeys = null,
+            EntityCollectionStore? entityCollections = null,
+            RelationshipRuntime? relationships = null)
         {
             _world = world ?? throw new ArgumentNullException(nameof(world));
+            _scopeKeys = scopeKeys;
+            _entityCollections = entityCollections;
+            _relationships = relationships;
         }
 
         public bool TryResolveHost(in ScopeKey scope, in RoleResolverContext context, out Entity scopeHost)
@@ -344,11 +473,44 @@ namespace Ludots.Core.Association
                 return 1;
             }
 
+            ScopeMembershipSource source = ResolveMembershipSource(scope.ScopeKeyId);
+            switch (source.Kind)
+            {
+                case ScopeMembershipSourceKind.ScopeBinding:
+                    return ResolveScopeBindingMembers(scope.ScopeKeyId, scopeHost, destination);
+                case ScopeMembershipSourceKind.EntityCollection:
+                    if (_entityCollections == null)
+                    {
+                        throw new InvalidOperationException("ScopeResolver requires EntityCollectionStore for EntityCollection-backed scope membership.");
+                    }
+
+                    return _entityCollections.CopyEntities(scopeHost, source.KeyId, destination);
+                case ScopeMembershipSourceKind.RelationshipOutgoing:
+                    if (_relationships == null)
+                    {
+                        throw new InvalidOperationException("ScopeResolver requires RelationshipRuntime for Relationship-backed scope membership.");
+                    }
+
+                    return _relationships.CollectOutgoing(scopeHost, source.KeyId, destination);
+                case ScopeMembershipSourceKind.RelationshipIncoming:
+                    if (_relationships == null)
+                    {
+                        throw new InvalidOperationException("ScopeResolver requires RelationshipRuntime for Relationship-backed scope membership.");
+                    }
+
+                    return _relationships.CollectIncoming(scopeHost, source.KeyId, destination);
+                default:
+                    throw new ArgumentOutOfRangeException(nameof(source.Kind), source.Kind, "Unsupported scope membership source kind.");
+            }
+        }
+
+        private unsafe int ResolveScopeBindingMembers(int scopeKeyId, Entity scopeHost, Span<Entity> destination)
+        {
             fixed (Entity* destinationPtr = destination)
             {
                 var job = new CollectScopeMembersJob
                 {
-                    ScopeKeyId = scope.ScopeKeyId,
+                    ScopeKeyId = scopeKeyId,
                     ScopeHost = scopeHost,
                     Destination = destinationPtr,
                     Capacity = destination.Length,
@@ -357,6 +519,13 @@ namespace Ludots.Core.Association
                 _world.InlineEntityQuery<CollectScopeMembersJob, ScopeRefBuffer>(in ScopeMemberQuery, ref job);
                 return job.Count;
             }
+        }
+
+        private ScopeMembershipSource ResolveMembershipSource(int scopeKeyId)
+        {
+            return _scopeKeys != null && _scopeKeys.TryGetMembershipSource(scopeKeyId, out ScopeMembershipSource source)
+                ? source
+                : ScopeMembershipSource.ScopeBinding;
         }
 
         public bool TryBindScope(Entity entity, int scopeKeyId, Entity scopeHost)
@@ -419,7 +588,7 @@ namespace Ludots.Core.Association
             return refs.TryGet(scopeKeyId, out scopeHost) && _world.IsAlive(scopeHost);
         }
 
-        private void BumpMembershipRevision(Entity scopeHost)
+        public void BumpMembershipRevision(Entity scopeHost)
         {
             if (!_world.IsAlive(scopeHost) || !_world.Has<ScopeMembershipRevision>(scopeHost))
             {

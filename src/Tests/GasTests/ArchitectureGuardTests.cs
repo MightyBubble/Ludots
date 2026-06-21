@@ -523,6 +523,27 @@ namespace GasTests
         }
 
         [Test]
+        public void Issue251_ProgressionScopeMembers_ReuseSharedScopeResolverMembershipSources()
+        {
+            var repoRoot = FindRepoRoot();
+            string evaluatorPath = Path.Combine(repoRoot, "src", "Core", "Gameplay", "Progression", "ProgressionRequirementEvaluator.cs");
+            string showcasePath = Path.Combine(repoRoot, "mods", "showcases", "team_research", "TeamResearchShowcaseMod", "mod.json");
+
+            Assert.That(File.Exists(evaluatorPath), Is.True, $"Missing {evaluatorPath}");
+            Assert.That(File.Exists(showcasePath), Is.True, $"Missing AAC-8 showcase mod {showcasePath}");
+
+            string evaluator = File.ReadAllText(evaluatorPath);
+            Assert.Multiple(() =>
+            {
+                Assert.That(evaluator, Does.Contain("_scopeResolver.ResolveMembers"));
+                Assert.That(evaluator, Does.Not.Contain("InlineEntityQuery<"));
+                Assert.That(evaluator, Does.Not.Contain("ScopeRefBuffer"));
+                Assert.That(evaluator, Does.Not.Contain("CountScopeMembersJob"));
+                Assert.That(evaluator, Does.Not.Contain("HashScopeMembersJob"));
+            });
+        }
+
+        [Test]
         public void Issue244_PendingCompositionContracts()
         {
             Assert.Ignore("AAC-5..AAC-8/#248..#251 will make Ownership relations, Relationship-gated Exchange, Collection+Relationship-fed Progression membership, and Inventory settlement executable contracts.");

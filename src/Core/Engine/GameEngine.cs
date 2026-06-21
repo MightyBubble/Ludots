@@ -590,7 +590,6 @@ namespace Ludots.Core.Engine
             var progressionDefinitions = new ProgressionDefinitionRegistry();
             var progressionRequirements = new ProgressionRequirementRegistry();
             var progressionScopeKeys = new ScopeKeyRegistry();
-            var scopeResolver = new ScopeResolver(World);
             var targetDispatchPresetLoader = new TargetDispatchPresetLoader(ConfigPipeline, targetDispatchPresetRegistry);
             targetDispatchPresetLoader.Load(ConfigCatalog, ConfigConflictReport);
             _effectTemplateLoader = new EffectTemplateLoader(
@@ -613,6 +612,7 @@ namespace Ludots.Core.Engine
             var graphOutputValueKeyRegistry = new StringIntRegistry(capacity: 64, startId: 1, invalidId: 0, comparer: StringComparer.Ordinal);
             var entityCollectionKeyRegistry = new StringIntRegistry(capacity: 64, startId: 1, invalidId: 0, comparer: StringComparer.Ordinal);
             var entityCollectionStore = new EntityCollectionStore(entityCollectionKeyRegistry, initialCollectionCapacity: 128, initialRowCapacity: 4096);
+            var scopeResolver = new ScopeResolver(World, progressionScopeKeys, entityCollectionStore, relationshipRuntime);
             var knowledgeProjectionStore = new KnowledgeProjectionStore(initialCapacity: 128);
             var knowledgeRelationCollectionGrants = new KnowledgeRelationCollectionGrantStore();
             var knowledgeRelationCollectionProjector = new KnowledgeRelationCollectionProjector(
@@ -662,7 +662,13 @@ namespace Ludots.Core.Engine
             var itemConfigLoader = new ItemConfigLoader(ConfigPipeline, itemShapes, itemLayouts, itemDefinitions);
             var exchangeLoader = new ExchangeConfigLoader(ConfigPipeline, exchangeOperations, itemDefinitions);
             exchangeLoader.LoadIds(ConfigCatalog, ConfigConflictReport);
-            new ProgressionConfigLoader(ConfigPipeline, progressionDefinitions, progressionRequirements, progressionScopeKeys).Load(ConfigCatalog, ConfigConflictReport);
+            new ProgressionConfigLoader(
+                ConfigPipeline,
+                progressionDefinitions,
+                progressionRequirements,
+                progressionScopeKeys,
+                entityCollectionStore,
+                relationshipTypeRegistry).Load(ConfigCatalog, ConfigConflictReport);
             _effectTemplateLoader = new EffectTemplateLoader(
                 ConfigPipeline,
                 effectTemplateRegistry,
@@ -713,7 +719,8 @@ namespace Ludots.Core.Engine
                 progressionScopeKeys,
                 graphProgramRegistry,
                 gasGraphApi,
-                tagOps);
+                tagOps,
+                scopeResolver);
             var phaseExecutor = new EffectPhaseExecutor(graphProgramRegistry, presetTypes, builtinHandlers, GasGraphOpHandlerTable.Instance, effectTemplateRegistry, eventBus: EventBus, budget: gasBudget);
             var inputRequestQueue = new InputRequestQueue();
             var abilityInputRequestQueue = new InputRequestQueue();

@@ -1,6 +1,5 @@
 using System;
 using Arch.Core;
-using Arch.System;
 using Ludots.Core.Association;
 using Ludots.Core.Gameplay.GAS;
 using Ludots.Core.Gameplay.GAS.Components;
@@ -13,12 +12,12 @@ namespace Ludots.Core.Gameplay.Progression
 {
     public sealed class ProgressionRequirementEvaluator
     {
-        private static readonly QueryDescription ScopeMemberQuery = new QueryDescription()
-            .WithAll<ScopeRefBuffer>();
+        private const int MaxResolvedScopeMembers = 256;
 
         private readonly World _world;
         private readonly ProgressionRequirementRegistry _requirements;
         private readonly ScopeKeyRegistry _scopeKeys;
+        private readonly ScopeResolver _scopeResolver;
         private readonly GraphProgramRegistry? _graphPrograms;
         private readonly IGraphRuntimeApi? _graphApi;
         private readonly TagOps _tagOps;
@@ -29,11 +28,13 @@ namespace Ludots.Core.Gameplay.Progression
             ScopeKeyRegistry scopeKeys,
             GraphProgramRegistry? graphPrograms = null,
             IGraphRuntimeApi? graphApi = null,
-            TagOps? tagOps = null)
+            TagOps? tagOps = null,
+            ScopeResolver? scopeResolver = null)
         {
             _world = world;
             _requirements = requirements ?? throw new ArgumentNullException(nameof(requirements));
             _scopeKeys = scopeKeys ?? throw new ArgumentNullException(nameof(scopeKeys));
+            _scopeResolver = scopeResolver ?? new ScopeResolver(world, scopeKeys);
             _graphPrograms = graphPrograms;
             _graphApi = graphApi;
             _tagOps = tagOps ?? new TagOps();
@@ -234,41 +235,9 @@ namespace Ludots.Core.Gameplay.Progression
 
         public bool TryBindScope(Entity entity, int scopeKeyId, Entity scopeHost)
         {
-            if (!_world.IsAlive(entity) || !_world.IsAlive(scopeHost) || scopeKeyId <= 0)
-            {
-                return false;
-            }
-
-            if (!_world.Has<ScopeRefBuffer>(entity) ||
-                !_world.Has<ScopeMemberTag>(entity) ||
-                !_world.Has<ScopeMembershipRevision>(scopeHost))
-            {
-                return false;
-            }
-
-            ref var refs = ref _world.Get<ScopeRefBuffer>(entity);
-            if (!refs.TryAdd(scopeKeyId, scopeHost, out bool changed, out Entity previousScopeHost))
-            {
-                return false;
-            }
-
-            if (!changed)
-            {
-                return true;
-            }
-
-            ref var revision = ref _world.Get<ScopeMembershipRevision>(scopeHost);
-            revision.Revision++;
-            if (_world.IsAlive(previousScopeHost) &&
-                (previousScopeHost.Id != scopeHost.Id ||
-                 previousScopeHost.WorldId != scopeHost.WorldId ||
-                 previousScopeHost.Version != scopeHost.Version) &&
-                _world.Has<ScopeMembershipRevision>(previousScopeHost))
-            {
-                ref var previousRevision = ref _world.Get<ScopeMembershipRevision>(previousScopeHost);
-                previousRevision.Revision++;
-            }
-            return true;
+            return _world.IsAlive(entity) &&
+                   _world.Has<ScopeMemberTag>(entity) &&
+                   _scopeResolver.TryBindScope(entity, scopeKeyId, scopeHost);
         }
 
         private bool EvaluateNode(ProgressionRequirementDefinition definition, int nodeIndex, in RoleResolverContext context)
@@ -432,17 +401,18 @@ namespace Ludots.Core.Gameplay.Progression
                 return 0;
             }
 
-            var job = new CountScopeMembersJob
+            Span<Entity> members = stackalloc Entity[MaxResolvedScopeMembers];
+            int memberCount = _scopeResolver.ResolveMembers(in node.Scope, in context, members);
+            int count = 0;
+            for (int i = 0; i < memberCount; i++)
             {
-                World = _world,
-                ScopeKeyId = node.Scope.ScopeKeyId,
-                ScopeHost = scopeHost,
-                RequiredTags = node.RequiredTags,
-                TagOps = _tagOps,
-                Count = 0
-            };
-            _world.InlineEntityQuery<CountScopeMembersJob, ScopeRefBuffer>(in ScopeMemberQuery, ref job);
-            return job.Count;
+                if (HasRequiredTags(members[i], in node.RequiredTags))
+                {
+                    count++;
+                }
+            }
+
+            return count;
         }
 
         private Entity ResolveEntitySource(RoleSlot source, in ScopeKey scope, in RoleResolverContext context)
@@ -469,43 +439,7 @@ namespace Ludots.Core.Gameplay.Progression
 
         private bool TryResolveScopeHostInternal(in ScopeKey scope, in RoleResolverContext context, out Entity scopeHost)
         {
-            if (scope.Kind == ScopeKind.Explicit)
-            {
-                scopeHost = context.ExplicitScopeHost;
-                return _world.IsAlive(scopeHost);
-            }
-
-            if (scope.Kind == ScopeKind.Self)
-            {
-                scopeHost = _world.IsAlive(context.Subject) ? context.Subject : context.Actor;
-                return _world.IsAlive(scopeHost);
-            }
-
-            int scopeKeyId = scope.ScopeKeyId;
-            if (scopeKeyId <= 0)
-            {
-                scopeHost = Entity.Null;
-                return false;
-            }
-
-            if (TryResolveScopeHostFrom(context.Subject, scopeKeyId, out scopeHost))
-            {
-                return true;
-            }
-
-            return TryResolveScopeHostFrom(context.Actor, scopeKeyId, out scopeHost);
-        }
-
-        private bool TryResolveScopeHostFrom(Entity entity, int scopeKeyId, out Entity scopeHost)
-        {
-            if (!_world.IsAlive(entity) || !_world.Has<ScopeRefBuffer>(entity))
-            {
-                scopeHost = Entity.Null;
-                return false;
-            }
-
-            ref readonly var refs = ref _world.Get<ScopeRefBuffer>(entity);
-            return refs.TryGet(scopeKeyId, out scopeHost) && _world.IsAlive(scopeHost);
+            return _scopeResolver.TryResolveHost(in scope, in context, out scopeHost);
         }
 
         private bool HasRequiredTags(Entity entity, in GameplayTagContainer requiredTags)
@@ -564,15 +498,20 @@ namespace Ludots.Core.Gameplay.Progression
                 if (node.EntitySource == RoleSlot.ScopeMembers &&
                     node.Scope.ScopeKeyId > 0)
                 {
-                    var job = new HashScopeMembersJob
+                    Span<Entity> members = stackalloc Entity[MaxResolvedScopeMembers];
+                    int memberCount = _scopeResolver.ResolveMembers(in node.Scope, in context, members);
+                    for (int i = 0; i < memberCount; i++)
                     {
-                        World = _world,
-                        ScopeKeyId = node.Scope.ScopeKeyId,
-                        ScopeHost = scopeHost,
-                        Revision = revision
-                    };
-                    _world.InlineEntityQuery<HashScopeMembersJob, ScopeRefBuffer>(in ScopeMemberQuery, ref job);
-                    revision = job.Revision;
+                        Entity member = members[i];
+                        revision = HashEntity(revision, member);
+                        if (!_world.Has<GameplayTagContainer>(member))
+                        {
+                            continue;
+                        }
+
+                        ref readonly var tags = ref _world.Get<GameplayTagContainer>(member);
+                        revision = HashTagContainer(revision, in tags);
+                    }
                 }
             }
 
@@ -640,70 +579,5 @@ namespace Ludots.Core.Gameplay.Progression
             }
         }
 
-        private struct CountScopeMembersJob : IForEachWithEntity<ScopeRefBuffer>
-        {
-            public World World;
-            public int ScopeKeyId;
-            public Entity ScopeHost;
-            public GameplayTagContainer RequiredTags;
-            public TagOps TagOps;
-            public int Count;
-
-            public void Update(Entity entity, ref ScopeRefBuffer refs)
-            {
-                if (!refs.TryGet(ScopeKeyId, out Entity host) ||
-                    host.Id != ScopeHost.Id ||
-                    host.WorldId != ScopeHost.WorldId ||
-                    host.Version != ScopeHost.Version)
-                {
-                    return;
-                }
-
-                if (RequiredTags.IsEmpty)
-                {
-                    Count++;
-                    return;
-                }
-
-                if (!World.Has<GameplayTagContainer>(entity))
-                {
-                    return;
-                }
-
-                ref var tags = ref World.Get<GameplayTagContainer>(entity);
-                if (TagOps.ContainsAll(ref tags, in RequiredTags, TagSense.Effective))
-                {
-                    Count++;
-                }
-            }
-        }
-
-        private struct HashScopeMembersJob : IForEachWithEntity<ScopeRefBuffer>
-        {
-            public World World;
-            public int ScopeKeyId;
-            public Entity ScopeHost;
-            public uint Revision;
-
-            public void Update(Entity entity, ref ScopeRefBuffer refs)
-            {
-                if (!refs.TryGet(ScopeKeyId, out Entity host) ||
-                    host.Id != ScopeHost.Id ||
-                    host.WorldId != ScopeHost.WorldId ||
-                    host.Version != ScopeHost.Version)
-                {
-                    return;
-                }
-
-                Revision = HashEntity(Revision, entity);
-                if (!World.Has<GameplayTagContainer>(entity))
-                {
-                    return;
-                }
-
-                ref readonly var tags = ref World.Get<GameplayTagContainer>(entity);
-                Revision = HashTagContainer(Revision, in tags);
-            }
-        }
     }
 }

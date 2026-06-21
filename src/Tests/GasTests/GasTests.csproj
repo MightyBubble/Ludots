@@ -80,6 +80,7 @@
     <ProjectReference Include="..\..\..\mods\showcases\association_stress\AssociationStressShowcaseMod\AssociationStressShowcaseMod.csproj" />
     <ProjectReference Include="..\..\..\mods\showcases\scope_switch\ScopeSwitchShowcaseMod\ScopeSwitchShowcaseMod.csproj" />
     <ProjectReference Include="..\..\..\mods\showcases\fog_vision_decay\FogVisionDecayShowcaseMod\FogVisionDecayShowcaseMod.csproj" />
+    <ProjectReference Include="..\..\..\mods\showcases\team_research\TeamResearchShowcaseMod\TeamResearchShowcaseMod.csproj" />
     <ProjectReference Include="..\..\..\mods\Navigation2DPlaygroundMod\Navigation2DPlaygroundMod.csproj" />
     <ProjectReference Include="..\..\Libraries\Ludots.UI.Skia\Ludots.UI.Skia.csproj" />
   </ItemGroup>

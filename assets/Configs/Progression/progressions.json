@@ -1,1 +1,6 @@
-[]
+[
+  {
+    "id": "Progression.Core.TeamRelay",
+    "scope": "core.team"
+  }
+]

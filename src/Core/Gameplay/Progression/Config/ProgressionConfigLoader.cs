@@ -4,9 +4,11 @@ using System.Text.Json;
 using System.Text.Json.Nodes;
 using Ludots.Core.Association;
 using Ludots.Core.Config;
+using Ludots.Core.EntityCollections;
 using Ludots.Core.Gameplay.GAS.Components;
 using Ludots.Core.Gameplay.GAS.Registry;
 using Ludots.Core.Gameplay.Progression.Registry;
+using Ludots.Core.Gameplay.Relationships;
 using Ludots.Core.NodeLibraries.GASGraph.Host;
 
 namespace Ludots.Core.Gameplay.Progression.Config
@@ -17,17 +19,23 @@ namespace Ludots.Core.Gameplay.Progression.Config
         private readonly ProgressionDefinitionRegistry _progressions;
         private readonly ProgressionRequirementRegistry _requirements;
         private readonly ScopeKeyRegistry _scopeKeys;
+        private readonly EntityCollectionStore? _entityCollections;
+        private readonly RelationshipTypeRegistry? _relationshipTypes;
 
         public ProgressionConfigLoader(
             ConfigPipeline pipeline,
             ProgressionDefinitionRegistry progressions,
             ProgressionRequirementRegistry requirements,
-            ScopeKeyRegistry scopeKeys)
+            ScopeKeyRegistry scopeKeys,
+            EntityCollectionStore? entityCollections = null,
+            RelationshipTypeRegistry? relationshipTypes = null)
         {
             _pipeline = pipeline ?? throw new ArgumentNullException(nameof(pipeline));
             _progressions = progressions ?? throw new ArgumentNullException(nameof(progressions));
             _requirements = requirements ?? throw new ArgumentNullException(nameof(requirements));
             _scopeKeys = scopeKeys ?? throw new ArgumentNullException(nameof(scopeKeys));
+            _entityCollections = entityCollections;
+            _relationshipTypes = relationshipTypes;
         }
 
         public void Load(ConfigCatalog catalog, ConfigConflictReport report = null)
@@ -60,7 +68,7 @@ namespace Ludots.Core.Gameplay.Progression.Config
                         throw new InvalidOperationException($"Progression scope id mismatch: '{sorted[i].Id}' vs '{cfg.Id}'.");
                     }
 
-                    _scopeKeys.Register(cfg.Id);
+                    RegisterScope(cfg);
                 }
                 catch (Exception ex)
                 {
@@ -69,6 +77,61 @@ namespace Ludots.Core.Gameplay.Progression.Config
             }
 
             ThrowIfErrors(errors, "Progression/scopes.json");
+        }
+
+        private void RegisterScope(ProgressionScopeConfig cfg)
+        {
+            string memberSource = string.IsNullOrWhiteSpace(cfg.MemberSource)
+                ? "ScopeBinding"
+                : cfg.MemberSource.Trim();
+            switch (memberSource)
+            {
+                case "ScopeBinding":
+                    _scopeKeys.RegisterScopeBindingMembers(cfg.Id);
+                    return;
+                case "EntityCollection":
+                    if (_entityCollections == null)
+                    {
+                        throw new InvalidOperationException($"Progression scope '{cfg.Id}' uses EntityCollection membership but EntityCollectionStore is not configured.");
+                    }
+
+                    if (string.IsNullOrWhiteSpace(cfg.Collection))
+                    {
+                        throw new InvalidOperationException($"Progression scope '{cfg.Id}' EntityCollection membership requires collection.");
+                    }
+
+                    int collectionKeyId = _entityCollections.KeyRegistry.Register(cfg.Collection.Trim());
+                    _scopeKeys.RegisterCollectionMembers(cfg.Id, collectionKeyId);
+                    return;
+                case "Relationship":
+                    if (_relationshipTypes == null)
+                    {
+                        throw new InvalidOperationException($"Progression scope '{cfg.Id}' uses Relationship membership but RelationshipTypeRegistry is not configured.");
+                    }
+
+                    if (string.IsNullOrWhiteSpace(cfg.RelationshipType))
+                    {
+                        throw new InvalidOperationException($"Progression scope '{cfg.Id}' Relationship membership requires relationshipType.");
+                    }
+
+                    int relationshipTypeId = _relationshipTypes.GetId(cfg.RelationshipType.Trim());
+                    string direction = string.IsNullOrWhiteSpace(cfg.RelationshipDirection)
+                        ? "Outgoing"
+                        : cfg.RelationshipDirection.Trim();
+                    switch (direction)
+                    {
+                        case "Outgoing":
+                            _scopeKeys.RegisterRelationshipOutgoingMembers(cfg.Id, relationshipTypeId);
+                            return;
+                        case "Incoming":
+                            _scopeKeys.RegisterRelationshipIncomingMembers(cfg.Id, relationshipTypeId);
+                            return;
+                        default:
+                            throw new InvalidOperationException($"Progression scope '{cfg.Id}' Relationship membership has unsupported relationshipDirection '{cfg.RelationshipDirection}'. Use 'Outgoing' or 'Incoming'.");
+                    }
+                default:
+                    throw new InvalidOperationException($"Progression scope '{cfg.Id}' has unsupported memberSource '{cfg.MemberSource}'. Use 'ScopeBinding', 'EntityCollection', or 'Relationship'.");
+            }
         }
 
         private void LoadProgressions(ConfigCatalog catalog, ConfigConflictReport report)
