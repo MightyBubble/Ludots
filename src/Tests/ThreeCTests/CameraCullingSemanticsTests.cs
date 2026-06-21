@@ -5,6 +5,7 @@ using Arch.Core;
 using Ludots.Core.Components;
 using Ludots.Core.Gameplay.Camera;
 using Ludots.Core.Mathematics;
+using Ludots.Core.Navigation.GraphWorld;
 using Ludots.Core.Presentation;
 using Ludots.Core.Presentation.Camera;
 using Ludots.Core.Presentation.Components;
@@ -80,6 +81,86 @@ namespace Ludots.Tests.ThreeC
             ref CullState cull = ref world.Get<CullState>(entity);
             Assert.That(cull.IsVisible, Is.False);
             Assert.That(cull.LOD, Is.EqualTo(LODLevel.High));
+        }
+
+        [Test]
+        public void Culling_RepeatedForceCull_DoesNotAdvanceVisibilityRevision()
+        {
+            using World world = World.Create();
+            var camera = new CameraManager();
+            camera.State.TargetCm = Vector2.Zero;
+            camera.State.DistanceCm = 2000f;
+            camera.State.Pitch = 45f;
+            camera.State.FovYDeg = 60f;
+
+            Entity entity = world.Create(
+                WorldPositionCm.FromCm(50000, 50000),
+                new CullState { IsVisible = false, LOD = LODLevel.Culled },
+                new VisualTransform
+                {
+                    Position = new Vector3(500f, 0f, 500f),
+                    Rotation = Quaternion.Identity,
+                    Scale = Vector3.One,
+                });
+            var spatial = new StubSpatialQueryService(entity);
+            var view = new StubViewController();
+
+            using var system = new CameraCullingSystem(
+                world,
+                camera,
+                spatial,
+                view,
+                cullingConfig: new CameraCullingRuntimeConfig
+                {
+                    HighLodDistanceCm = 4000f,
+                    MediumLodDistanceCm = 10000f,
+                    LowLodDistanceCm = 20000f,
+                });
+
+            system.Update(0.016f);
+            int firstRevision = system.DebugState.VisibilityRevision;
+            system.Update(0.016f);
+
+            ref CullState cull = ref world.Get<CullState>(entity);
+            Assert.That(cull.IsVisible, Is.False);
+            Assert.That(cull.LOD, Is.EqualTo(LODLevel.Low));
+            Assert.That(system.DebugState.VisibilityRevision, Is.EqualTo(firstRevision),
+                "Already hidden entities must not invalidate retained HUD projection every frame.");
+        }
+
+        [Test]
+        public void Culling_LoadedChunkGate_UsesLoadedSourceWorldKeyResolver()
+        {
+            using World world = World.Create();
+            var camera = new CameraManager();
+            camera.State.TargetCm = Vector2.Zero;
+            camera.State.DistanceCm = 20000f;
+            camera.State.Pitch = 45f;
+            camera.State.FovYDeg = 60f;
+
+            Entity entity = CreateCullableEntity(world, 7000, 100);
+            var spatial = new StubSpatialQueryService(entity);
+            var view = new StubViewController();
+            var loadedChunks = new WorldGridLoadedChunks(chunkSizeCm: 6400);
+            loadedChunks.SetLoaded(GraphChunkKey.Pack(1, 0), loaded: true);
+
+            using var system = new CameraCullingSystem(
+                world,
+                camera,
+                spatial,
+                view,
+                loadedChunks: loadedChunks,
+                cullingConfig: new CameraCullingRuntimeConfig
+                {
+                    HighLodDistanceCm = 4000f,
+                    MediumLodDistanceCm = 10000f,
+                    LowLodDistanceCm = 20000f,
+                });
+            system.Update(0.016f);
+
+            ref CullState cull = ref world.Get<CullState>(entity);
+            Assert.That(cull.IsVisible, Is.True,
+                "Camera culling must ask the loaded-chunk source for its world key instead of assuming hex-cell chunk math.");
         }
 
         private static Entity CreateCullableEntity(World world, int xCm, int yCm)

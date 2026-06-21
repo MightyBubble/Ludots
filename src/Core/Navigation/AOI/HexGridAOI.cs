@@ -5,7 +5,7 @@ using Ludots.Core.Spatial;
 
 namespace Ludots.Core.Navigation.AOI
 {
-    public class HexGridAOI : ILoadedChunks
+    public class HexGridAOI : ILoadedChunks, IWorldChunkKeyResolver
     {
         private readonly HashSet<long> _activeChunks = new HashSet<long>();
         private readonly List<IAOIListener> _listeners = new List<IAOIListener>();
@@ -17,6 +17,14 @@ namespace Ludots.Core.Navigation.AOI
         public IReadOnlyCollection<long> ActiveChunkKeys => _activeChunks;
 
         public bool IsLoaded(long chunkKey) => _activeChunks.Contains(chunkKey);
+
+        public long GetChunkKeyForWorldCm(float worldXCm, float worldYCm)
+        {
+            HexCoordinates hex = HexCoordinates.FromWorldPositionCm(
+                new System.Numerics.Vector3(worldXCm, 0f, worldYCm));
+            (int col, int row) = hex.ToOffsetCoordinates();
+            return HexCoordinates.GetChunkKey(col >> 6, row >> 6);
+        }
 
         public event Action<long> ChunkLoaded;
         public event Action<long> ChunkUnloaded;

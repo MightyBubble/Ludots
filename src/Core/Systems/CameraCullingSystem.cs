@@ -9,7 +9,6 @@ using Arch.Core;
 using Ludots.Core.Components;
 using Ludots.Core.Mathematics;
 using Ludots.Core.Gameplay.Camera;
-using Ludots.Core.Map.Hex;
 using Ludots.Core.Presentation.Camera;
 using Ludots.Core.Presentation.Components;
 using Ludots.Core.Presentation;
@@ -1680,7 +1679,7 @@ namespace Ludots.Core.Systems
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
         private void ForceCull(Entity owner, ref CullState cull)
         {
-            bool changed = cull.IsVisible || cull.LOD == LODLevel.Culled;
+            bool changed = cull.IsVisible;
             if (cull.LOD == LODLevel.Culled)
             {
                 cull.LOD = LODLevel.Low;
@@ -1701,12 +1700,12 @@ namespace Ludots.Core.Systems
                 return true;
             }
 
-            int cellX = (int)MathF.Floor(worldXCm / HexCoordinates.EdgeLengthCm);
-            int cellY = (int)MathF.Floor(worldYCm / HexCoordinates.EdgeLengthCm);
-            int chunkX = cellX >> 6;
-            int chunkY = cellY >> 6;
-            long key = HexCoordinates.GetChunkKey(chunkX, chunkY);
-            return _loadedChunks.IsLoaded(key);
+            if (_loadedChunks is not IWorldChunkKeyResolver resolver)
+            {
+                return true;
+            }
+
+            return _loadedChunks.IsLoaded(resolver.GetChunkKeyForWorldCm(worldXCm, worldYCm));
         }
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
