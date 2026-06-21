@@ -399,7 +399,6 @@ namespace Ludots.Core.Engine
 
             ConfigCatalog = Ludots.Core.Config.ConfigCatalogLoader.Load(ConfigPipeline);
             ConfigConflictReport = new Ludots.Core.Config.ConfigConflictReport();
-            RebuildAiRuntime();
 
             // Apply log config from merged game.json
             LogConfigApplier.Apply(MergedConfig.Logging);
@@ -464,7 +463,15 @@ namespace Ludots.Core.Engine
             }
 
             var atoms = new Ludots.Core.Gameplay.AI.WorldState.AtomRegistry(capacity: 256);
-            var loader = new Ludots.Core.Gameplay.AI.Config.AiConfigLoader(ConfigPipeline, atoms);
+            Ludots.Core.Gameplay.AI.Config.AiConfigValidationContext? validation = null;
+            if (TryGetService(CoreServiceKeys.OrderTypeRegistry, out OrderTypeRegistry orderTypes) && orderTypes != null)
+            {
+                validation = new Ludots.Core.Gameplay.AI.Config.AiConfigValidationContext(
+                    orderTypes,
+                    GetService(CoreServiceKeys.AbilityDefinitionRegistry));
+            }
+
+            var loader = new Ludots.Core.Gameplay.AI.Config.AiConfigLoader(ConfigPipeline, atoms, validation);
             var catalog = ConfigCatalog ?? Ludots.Core.Gameplay.AI.Config.AiConfigCatalog.CreateDefault();
             AiRuntime = loader.LoadAndCompile(catalog, ConfigConflictReport);
         }
@@ -1030,6 +1037,8 @@ namespace Ludots.Core.Engine
             SetService(CoreServiceKeys.OrderQueue, orderQueue);
             SetService(CoreServiceKeys.OrderTypeRegistry, orderTypeRegistry);
             SetService(CoreServiceKeys.OrderRuleRegistry, orderRuleRegistry);
+            RebuildAiRuntime();
+            SetService(CoreServiceKeys.AiRuntime, AiRuntime);
             SetService(CoreServiceKeys.OrderBufferSystem, orderBufferSystem);
             SetService(CoreServiceKeys.OrderRequestQueue, orderRequestQueue);
             SetService(CoreServiceKeys.ResponseChainTelemetryBuffer, responseChainTelemetry);
