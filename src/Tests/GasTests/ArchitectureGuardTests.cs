@@ -468,7 +468,7 @@ namespace GasTests
         }
 
         [Test]
-        public void Issue244_PendingAac4_SingleScopeKeyContract()
+        public void Issue244_SingleScopeKeyContract()
         {
             var repoRoot = FindRepoRoot();
             string scopePath = Path.Combine(repoRoot, "src", "Core", "Association", "ScopeKey.cs");
