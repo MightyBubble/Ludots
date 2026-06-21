@@ -126,17 +126,7 @@ public sealed class SaveSystemUatTests
 
     private static string[] RunFixedSteps(GameEngine engine, int count)
     {
-        var trace = new string[count];
-        var pacemaker = (TurnBasedPacemaker)engine.Pacemaker;
-        IClock clock = engine.GetService(CoreServiceKeys.Clock);
-        for (int i = 0; i < count; i++)
-        {
-            pacemaker.Step();
-            engine.Tick(1f / 60f);
-            trace[i] = $"tick={engine.GameSession.CurrentTick};fixedFrame={clock.Now(ClockDomainId.FixedFrame)}";
-        }
-
-        return trace;
+        return SaveContinuationTrace.RunFixedSteps(engine, count, 1f / 60f);
     }
 
     private static SavePointTrace CaptureTrace(

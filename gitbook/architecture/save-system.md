@@ -37,6 +37,7 @@ SaveSlotStore.ReadSlot / SaveContainerCodec.Decode
   -> SaveContextValidator.Validate
   -> LudotsBinaryWorldSerializer.Deserialize
   -> GameEngine.RestoreWorldSnapshot
+  -> LudotsWorldStateImporter.ImportOwnedSnapshotInto
   -> SaveParticipantRegistry.RestoreDomains
 ```
 
@@ -47,14 +48,17 @@ SaveSlotStore.ReadSlot / SaveContainerCodec.Decode
 Arch.Persistence 的 contractless 反射不能正确覆盖 Ludots 的 fixed buffer 组件，所以 Core 显式注册 formatter：
 
 - unmanaged 组件使用 `UnmanagedComponentFormatter<T>` 做整结构 raw-bytes 序列化。
-- managed 组件必须显式 formatter，目前 `Name` 使用 `NameFormatter`。
-- 新组件如果需要进入存档，必须加入 `LudotsCorePersistenceFormatters.CreateFormatters()`，并补覆盖 fixed buffer、entity-ref 和读回保真度的测试。
+- managed 组件必须显式 formatter，目前 `Name` 使用 `NameFormatter`，`MapEntity` 使用 `MapEntityFormatter`。
+- formatter 和组件类型集由 `LudotsCorePersistenceFormatters` 静态缓存，`ArchBinarySerializer` 以线程级缓存复用；一次进程内反射发现只应构建一次。
+- 新 unmanaged 组件由 formatter 自动发现覆盖；新 managed 组件必须加入 `LudotsCorePersistenceFormatters`，并补覆盖 fixed buffer、entity-ref 和读回保真度的测试。
 
 `LudotsBinaryWorldSerializer` 在写入前后执行：
 
 - `SaveEntityReferenceValidator.Validate`：拒绝引用缺失实体或被排除实体。
 - `SaveEntityWorldIdNormalizer.Normalize`：读回后把已知 entity-ref buffer 的 WorldId 对齐到当前 World。
 - `SaveEntityInclusionPolicy.Default`：排除 `SaveExcludedTag`、`GameplayEvent`、`SimulationBudgetFuseEvent`、`PresentationDestroyPending`。
+
+恢复导入使用消费式 world 转移：`WorldRestoreService` 反序列化得到的 world 由 `LudotsWorldStateImporter.ImportOwnedSnapshotInto` 直接导入目标 world，并在导入后从源 world 解绑已转移的 Arch 内部存储。这样 restore 不再额外执行整世界 serialize/deserialize，也不依赖源 world 后续 `Dispose()` 的内部清理细节。
 
 ## 非 ECS 域
 
@@ -118,7 +122,7 @@ Core Save/Load 的验收必须覆盖：
 - 实体纳入/排除策略与 clean tick boundary。
 - Entity Id / WorldId / Version 稳定性和 entity-ref 有效性。
 - Core participant capture / restore。
-- restore 后确定性续跑 trace。
+- restore 后确定性续跑 trace，必须比较 tick、fixed frame 和稳定 world 状态哈希。
 - `.ldsave` section hash、header-only listing、原子写入、autosave retention。
 - 既有 showcase UAT：`rts_cnc_training` 存档、变更、读档、续跑一致。
 

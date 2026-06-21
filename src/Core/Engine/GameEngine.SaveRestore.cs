@@ -19,7 +19,7 @@ namespace Ludots.Core.Engine
                 throw new SaveContextException("Save participant registry is not available.");
             }
 
-            LudotsWorldStateImporter.ImportInto(restoredWorld, World);
+            LudotsWorldStateImporter.ImportOwnedSnapshotInto(restoredWorld, World);
             SetService(CoreServiceKeys.World, World);
             registry.RestoreDomains(domains);
             _cooperativeSimulation?.Reset();
