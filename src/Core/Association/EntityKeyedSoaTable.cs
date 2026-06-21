@@ -112,6 +112,9 @@ namespace Ludots.Core.Association
         private int[] _entryNext;
         private int[] _entrySlots;
         private EntityKeyedSoaKey[] _entryKeys;
+        private int[] _primaryBucketHeads;
+        private int[] _primaryBucketTails;
+        private int[] _primarySlotNext;
 
         private int _slotCount;
         private int _entryCount;
@@ -145,6 +148,12 @@ namespace Ludots.Core.Association
             _entryNext = new int[initialCapacity];
             _entrySlots = new int[initialCapacity];
             _entryKeys = new EntityKeyedSoaKey[initialCapacity];
+            _primaryBucketHeads = new int[bucketCount];
+            _primaryBucketTails = new int[bucketCount];
+            Array.Fill(_primaryBucketHeads, -1);
+            Array.Fill(_primaryBucketTails, -1);
+            _primarySlotNext = new int[initialCapacity];
+            Array.Fill(_primarySlotNext, -1);
         }
 
         public int ActiveCount => _activeCount;
@@ -193,6 +202,27 @@ namespace Ludots.Core.Association
             return true;
         }
 
+        public int RemoveByPrimary(Entity primary)
+        {
+            if (primary == Entity.Null)
+            {
+                return 0;
+            }
+
+            int removed = 0;
+            int bucket = PrimaryBucketIndex(primary, _primaryBucketHeads.Length);
+            for (int slot = _primaryBucketHeads[bucket]; slot >= 0; slot = _primarySlotNext[slot])
+            {
+                if (_active[slot] && SlotMatchesPrimary(slot, primary))
+                {
+                    DeactivateSlot(slot);
+                    removed++;
+                }
+            }
+
+            return removed;
+        }
+
         public int Expire(int currentTick)
         {
             int expired = 0;
@@ -238,7 +268,8 @@ namespace Ludots.Core.Association
             }
 
             int written = 0;
-            for (int slot = 0; slot < _slotCount && written < destination.Length; slot++)
+            int bucket = PrimaryBucketIndex(primary, _primaryBucketHeads.Length);
+            for (int slot = _primaryBucketHeads[bucket]; slot >= 0 && written < destination.Length; slot = _primarySlotNext[slot])
             {
                 if (IsActiveAt(slot, currentTick) && SlotMatchesPrimary(slot, primary))
                 {
@@ -261,7 +292,8 @@ namespace Ludots.Core.Association
             }
 
             int written = 0;
-            for (int slot = 0; slot < _slotCount && written < destination.Length; slot++)
+            int bucket = PrimaryBucketIndex(primary, _primaryBucketHeads.Length);
+            for (int slot = _primaryBucketHeads[bucket]; slot >= 0 && written < destination.Length; slot = _primarySlotNext[slot])
             {
                 if (IsActiveAt(slot, currentTick) && SlotMatchesPrimary(slot, primary))
                 {
@@ -308,7 +340,8 @@ namespace Ludots.Core.Association
 
             int written = 0;
             int skipped = 0;
-            for (int slot = 0; slot < _slotCount && written < limit; slot++)
+            int bucket = PrimaryBucketIndex(primary, _primaryBucketHeads.Length);
+            for (int slot = _primaryBucketHeads[bucket]; slot >= 0 && written < limit; slot = _primarySlotNext[slot])
             {
                 if (IsActiveAt(slot, currentTick) && SlotMatchesPrimary(slot, primary))
                 {
@@ -375,6 +408,7 @@ namespace Ludots.Core.Association
             ClearSlots(write, _slotCount);
             _slotCount = write;
             RebuildEntries();
+            RebuildPrimaryIndex();
             ShrinkSlotArraysIfNeeded();
             return removed;
         }
@@ -393,10 +427,17 @@ namespace Ludots.Core.Association
                 Rehash(_bucketHeads.Length * 2);
             }
 
+            if ((_slotCount + 1) > (int)(_primaryBucketHeads.Length * LoadFactor))
+            {
+                ResizePrimaryBuckets(_primaryBucketHeads.Length * 2);
+            }
+
             int slot = _slotCount++;
             int entry = _entryCount++;
             _entryKeys[entry] = key;
             _entrySlots[entry] = slot;
+            WriteKeyColumns(slot, in key);
+            LinkPrimarySlot(slot, key.Primary);
             int bucket = BucketIndex(in key, _bucketHeads.Length);
             _entryNext[entry] = _bucketHeads[bucket];
             _bucketHeads[bucket] = entry;
@@ -515,6 +556,23 @@ namespace Ludots.Core.Association
             }
         }
 
+        private void LinkPrimarySlot(int slot, Entity primary)
+        {
+            int bucket = PrimaryBucketIndex(primary, _primaryBucketHeads.Length);
+            _primarySlotNext[slot] = -1;
+            int tail = _primaryBucketTails[bucket];
+            if (tail >= 0)
+            {
+                _primarySlotNext[tail] = slot;
+            }
+            else
+            {
+                _primaryBucketHeads[bucket] = slot;
+            }
+
+            _primaryBucketTails[bucket] = slot;
+        }
+
         private void RebuildEntries()
         {
             _entryCount = 0;
@@ -540,6 +598,34 @@ namespace Ludots.Core.Association
                 int bucket = BucketIndex(in key, _bucketHeads.Length);
                 _entryNext[entry] = _bucketHeads[bucket];
                 _bucketHeads[bucket] = entry;
+            }
+        }
+
+        private void RebuildPrimaryIndex()
+        {
+            int bucketCount = NextPowerOfTwo(Math.Max(16, _slotCount * 2));
+            ResizePrimaryBuckets(bucketCount);
+        }
+
+        private void ResizePrimaryBuckets(int bucketCount)
+        {
+            int nextBucketCount = NextPowerOfTwo(Math.Max(16, bucketCount));
+            if (_primaryBucketHeads.Length != nextBucketCount)
+            {
+                Array.Resize(ref _primaryBucketHeads, nextBucketCount);
+                Array.Resize(ref _primaryBucketTails, nextBucketCount);
+            }
+
+            Array.Fill(_primaryBucketHeads, -1);
+            Array.Fill(_primaryBucketTails, -1);
+            for (int slot = 0; slot < _slotCount; slot++)
+            {
+                _primarySlotNext[slot] = -1;
+            }
+
+            for (int slot = 0; slot < _slotCount; slot++)
+            {
+                LinkPrimarySlot(slot, _primaryEntities[slot]);
             }
         }
 
@@ -577,6 +663,12 @@ namespace Ludots.Core.Association
             Array.Resize(ref _payloads, next);
             Array.Resize(ref _expiryTicks, next);
             Array.Resize(ref _revisions, next);
+            int oldPrimaryNextLength = _primarySlotNext.Length;
+            Array.Resize(ref _primarySlotNext, next);
+            for (int slot = oldPrimaryNextLength; slot < _primarySlotNext.Length; slot++)
+            {
+                _primarySlotNext[slot] = -1;
+            }
         }
 
         private void CopySlot(int source, int destination)
@@ -615,6 +707,7 @@ namespace Ludots.Core.Association
                 _payloads[slot] = default;
                 _expiryTicks[slot] = 0;
                 _revisions[slot] = 0;
+                _primarySlotNext[slot] = -1;
             }
         }
 
@@ -631,6 +724,18 @@ namespace Ludots.Core.Association
                 hash = HashCombine(hash, key.Secondary.WorldId);
                 hash = HashCombine(hash, key.Secondary.Version);
                 hash = HashCombine(hash, key.Discriminator);
+                return (int)(hash & (uint)(bucketCount - 1));
+            }
+        }
+
+        private static int PrimaryBucketIndex(Entity primary, int bucketCount)
+        {
+            unchecked
+            {
+                uint hash = 2166136261u;
+                hash = HashCombine(hash, primary.Id);
+                hash = HashCombine(hash, primary.WorldId);
+                hash = HashCombine(hash, primary.Version);
                 return (int)(hash & (uint)(bucketCount - 1));
             }
         }

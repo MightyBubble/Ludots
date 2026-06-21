@@ -178,6 +178,124 @@ namespace Ludots.Tests.GAS
             Assert.That(store.RecordCount, Is.EqualTo(2));
         }
 
+        [Test]
+        public void MaintenancePolicy_ExpiresAndCompactsChurnedViewerTargetsWithinConfiguredBounds()
+        {
+            using World world = World.Create();
+            Entity viewer = world.Create();
+            Entity source = world.Create();
+            Entity persistentTarget = world.Create();
+            var policy = new KnowledgeProjectionMaintenancePolicy(
+                expirePeriodTicks: 1,
+                compactPeriodTicks: 1,
+                compactInactivePermilleThreshold: 250,
+                compactInactiveCountThreshold: 32);
+            var store = new KnowledgeProjectionStore(initialCapacity: 4, policy);
+            int totalExpired = 0;
+            int totalCompacted = 0;
+
+            for (int wave = 0; wave < 12; wave++)
+            {
+                for (int targetIndex = 0; targetIndex < 96; targetIndex++)
+                {
+                    Entity target = world.Create();
+                    store.Upsert(
+                        viewer,
+                        target,
+                        CreateRecord(
+                            KnowledgePresence.Known,
+                            KnowledgePositionAccess.LastKnown,
+                            source,
+                            observedTick: wave,
+                            expiryTick: wave + 1,
+                            confidencePermille: 600));
+                }
+
+                store.Upsert(
+                    viewer,
+                    persistentTarget,
+                    CreateRecord(
+                        KnowledgePresence.LiveVisible,
+                        KnowledgePositionAccess.Live,
+                        source,
+                        observedTick: wave,
+                        expiryTick: 0,
+                        confidencePermille: 1000));
+
+                KnowledgeProjectionMaintenanceResult result = store.RunMaintenance(currentTick: wave);
+                totalExpired += result.ExpiredCount;
+                totalCompacted += result.CompactedCount;
+            }
+
+            KnowledgeProjectionMaintenanceResult final = store.RunMaintenance(currentTick: 12);
+            totalExpired += final.ExpiredCount;
+            totalCompacted += final.CompactedCount;
+
+            Assert.That(totalExpired, Is.EqualTo(12 * 96));
+            Assert.That(totalCompacted, Is.GreaterThanOrEqualTo(12 * 96));
+            Assert.That(store.RecordCount, Is.EqualTo(1));
+            Assert.That(store.PhysicalRecordCount, Is.EqualTo(1));
+            Assert.That(store.RecordCapacity, Is.LessThanOrEqualTo(4));
+            Assert.That(store.TryGet(viewer, persistentTarget, currentTick: 12, out KnowledgeDisclosureRecord resolved), Is.True);
+            Assert.That(resolved.Presence, Is.EqualTo(KnowledgePresence.LiveVisible));
+
+            Span<Entity> targets = stackalloc Entity[4];
+            Span<KnowledgeDisclosureRecord> records = stackalloc KnowledgeDisclosureRecord[4];
+            Assert.That(store.CopyRecords(viewer, currentTick: 12, targets, records), Is.EqualTo(1));
+            Assert.That(targets[0], Is.EqualTo(persistentTarget));
+
+            GC.GetAllocatedBytesForCurrentThread();
+            long before = GC.GetAllocatedBytesForCurrentThread();
+            for (int i = 0; i < 10_000; i++)
+            {
+                store.TryGet(viewer, persistentTarget, currentTick: 12, out _);
+                store.CopyRecords(viewer, currentTick: 12, targets, records);
+            }
+
+            long allocated = GC.GetAllocatedBytesForCurrentThread() - before;
+            Assert.That(allocated, Is.EqualTo(0));
+        }
+
+        [Test]
+        public void ClearViewer_RemovesOneViewerPartitionWithoutDroppingOtherViewers()
+        {
+            using World world = World.Create();
+            Entity viewer = world.Create();
+            Entity otherViewer = world.Create();
+            Entity source = world.Create();
+            var store = new KnowledgeProjectionStore(initialCapacity: 4, KnowledgeProjectionMaintenancePolicy.Manual);
+
+            for (int i = 0; i < 64; i++)
+            {
+                store.Upsert(
+                    viewer,
+                    world.Create(),
+                    CreateRecord(KnowledgePresence.Known, KnowledgePositionAccess.LastKnown, source, i, 0, 700));
+            }
+
+            for (int i = 0; i < 16; i++)
+            {
+                store.Upsert(
+                    otherViewer,
+                    world.Create(),
+                    CreateRecord(KnowledgePresence.LiveVisible, KnowledgePositionAccess.Live, source, i, 0, 1000));
+            }
+
+            Assert.That(store.ClearViewer(viewer), Is.EqualTo(64));
+            Assert.That(store.RecordCount, Is.EqualTo(16));
+            Assert.That(store.Compact(), Is.EqualTo(64));
+            Assert.That(store.PhysicalRecordCount, Is.EqualTo(16));
+
+            Span<Entity> targets = stackalloc Entity[80];
+            Span<KnowledgeDisclosureRecord> records = stackalloc KnowledgeDisclosureRecord[80];
+            Assert.That(store.CopyRecords(viewer, currentTick: 65, targets, records), Is.EqualTo(0));
+            Assert.That(store.CopyRecords(otherViewer, currentTick: 65, targets, records), Is.EqualTo(16));
+            for (int i = 0; i < 16; i++)
+            {
+                Assert.That(records[i].Presence, Is.EqualTo(KnowledgePresence.LiveVisible));
+            }
+        }
+
         private static KnowledgeDisclosureRecord CreateRecord(
             KnowledgePresence presence,
             KnowledgePositionAccess position,

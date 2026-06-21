@@ -1,0 +1,14 @@
+{
+  "startupMapId": "fog_vision_decay_showcase",
+  "worldWidthInTiles": 360,
+  "worldHeightInTiles": 180,
+  "presentation": {
+    "minimap": {
+      "minZoomExtentMode": "ExplicitCm",
+      "maxZoomExtentMode": "ExplicitCm",
+      "minZoomExplicitHalfExtentCm": 750.0,
+      "maxZoomExplicitHalfExtentCm": 24000.0,
+      "debugMarkerSampleCapacity": 512
+    }
+  }
+}

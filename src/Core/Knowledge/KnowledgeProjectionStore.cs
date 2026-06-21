@@ -7,10 +7,20 @@ namespace Ludots.Core.Knowledge
     public sealed class KnowledgeProjectionStore
     {
         private readonly EntityKeyedSoaTable<KnowledgeProjectionPayload> _records;
+        private readonly KnowledgeProjectionMaintenancePolicy _policy;
+        private int _lastMaintenanceTick;
+        private int _lastExpireTick;
+        private int _lastCompactTick;
 
-        public KnowledgeProjectionStore(int initialCapacity = 64)
+        public KnowledgeProjectionStore(
+            int initialCapacity = 64,
+            KnowledgeProjectionMaintenancePolicy policy = default)
         {
             _records = new EntityKeyedSoaTable<KnowledgeProjectionPayload>(initialCapacity);
+            _policy = policy;
+            _lastMaintenanceTick = int.MinValue;
+            _lastExpireTick = int.MinValue;
+            _lastCompactTick = int.MinValue;
         }
 
         public int RecordCount => _records.ActiveCount;
@@ -41,6 +51,16 @@ namespace Ludots.Core.Knowledge
             return _records.Remove(EntityKeyedSoaKey.ForPair(viewer, target));
         }
 
+        public int ClearViewer(Entity viewer)
+        {
+            if (viewer == Entity.Null)
+            {
+                return 0;
+            }
+
+            return _records.RemoveByPrimary(viewer);
+        }
+
         public int Expire(int currentTick)
         {
             return _records.Expire(currentTick);
@@ -49,6 +69,38 @@ namespace Ludots.Core.Knowledge
         public int Compact()
         {
             return _records.Compact();
+        }
+
+        public KnowledgeProjectionMaintenanceResult RunMaintenance(int currentTick)
+        {
+            if (currentTick < _lastMaintenanceTick)
+            {
+                _lastMaintenanceTick = int.MinValue;
+                _lastExpireTick = int.MinValue;
+                _lastCompactTick = int.MinValue;
+            }
+
+            int expired = 0;
+            if (_policy.ShouldExpire(currentTick, _lastExpireTick))
+            {
+                expired = _records.Expire(currentTick);
+                _lastExpireTick = currentTick;
+            }
+
+            int compacted = 0;
+            if (_policy.ShouldCompact(currentTick, _lastCompactTick, _records.ActiveCount, _records.PhysicalSlotCount))
+            {
+                compacted = _records.Compact();
+                _lastCompactTick = currentTick;
+            }
+
+            _lastMaintenanceTick = currentTick;
+            return new KnowledgeProjectionMaintenanceResult(
+                expired,
+                compacted,
+                _records.ActiveCount,
+                _records.PhysicalSlotCount,
+                _records.SlotCapacity);
         }
 
         public bool TryGet(Entity viewer, Entity target, int currentTick, out KnowledgeDisclosureRecord record)
