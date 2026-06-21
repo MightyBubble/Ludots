@@ -1,0 +1,21 @@
+[
+  {
+    "id": "capability_standard_participant_views_team",
+    "components": {
+      "Name": { "Value": "ParticipantViews.Team" },
+      "AttributeBuffer": { "base": {} },
+      "GameplayTagContainer": {},
+      "TagCountContainer": {}
+    }
+  },
+  {
+    "id": "capability_standard_participant_views_player",
+    "components": {
+      "Name": { "Value": "ParticipantViews.Player" },
+      "SelectionDragState": {},
+      "AttributeBuffer": { "base": {} },
+      "GameplayTagContainer": {},
+      "TagCountContainer": {}
+    }
+  }
+]

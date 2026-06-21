@@ -3,13 +3,13 @@ using System.Threading.Tasks;
 namespace Ludots.WebUI;
 
 /// <summary>
-/// WebUI 桥接接口，解耦 Ludots Mod 与宿主平台（如 UE5 CEF/BluBrowser）之间的通信。
+/// WebUI 桥接接口，解耦 Ludots Mod 与宿主平台之间的通信。
 /// <para>
-/// Mod 通过 GlobalContext 获取该接口的实现：
+/// Mod 通过 <see cref="IWebUIBridgeFactory"/> 或宿主注入获取该接口的实现：
 /// <code>
-/// var bridge = context.GetEngine()?.GlobalContext[WebUIContextKeys.Bridge] as IWebUIBridge;
+/// var bridge = context.GetEngine()?.GlobalContext[WebUIContextKeys.BridgeFactory] as IWebUIBridgeFactory;
 /// </code>
-/// 宿主平台（UE5 Host System）在引擎启动时注入具体实现。
+/// 宿主平台在引擎启动时注入具体工厂实现。
 /// </para>
 /// <para>
 /// 典型使用流程：<see cref="Init"/> → <see cref="Open"/> → 事件通信 → <see cref="Close"/>。
@@ -28,43 +28,43 @@ public interface IWebUIBridge
 
     /// <summary>
     /// 打开并显示 WebUI 面板。
-    /// <para>对应 UE5 侧 <c>Web.Open()</c>，同时将 <see cref="IsOpen"/> 和 <see cref="IsShow"/> 置为 true。</para>
+    /// <para>打开面板，同时将 <see cref="IsOpen"/> 和 <see cref="IsShow"/> 置为 true。</para>
     /// </summary>
     void Open();
 
     /// <summary>
     /// 关闭 WebUI 面板（销毁浏览器实例）。
-    /// <para>对应 UE5 侧 <c>Web.Close()</c>，同时将 <see cref="IsOpen"/> 和 <see cref="IsShow"/> 置为 false。</para>
+    /// <para>关闭面板，同时将 <see cref="IsOpen"/> 和 <see cref="IsShow"/> 置为 false。</para>
     /// </summary>
     void Close();
 
     /// <summary>
     /// 显示已打开的 WebUI 面板（不重建浏览器实例）。
-    /// <para>对应 UE5 侧 <c>Web.Show()</c>，将 <see cref="IsShow"/> 置为 true。</para>
+    /// <para>将 <see cref="IsShow"/> 置为 true。</para>
     /// </summary>
     void Show();
 
     /// <summary>
     /// 隐藏 WebUI 面板（不销毁浏览器实例）。
-    /// <para>对应 UE5 侧 <c>Web.Hide()</c>，将 <see cref="IsShow"/> 置为 false。</para>
+    /// <para>将 <see cref="IsShow"/> 置为 false。</para>
     /// </summary>
     void Hide();
 
     /// <summary>
     /// 刷新 WebUI 面板（等效于先 Close 再 Open）。
-    /// <para>对应 UE5 侧 <c>Web.Refresh()</c>。</para>
+    /// <para>刷新面板。</para>
     /// </summary>
     void Refresh();
 
     /// <summary>
     /// 获取当前 WebUI 面板是否已打开（浏览器实例存在）。
-    /// <para>对应 UE5 侧 <c>Web.IsOpen</c>。</para>
+    /// <para>当前面板是否已打开。</para>
     /// </summary>
     bool IsOpen { get; }
 
     /// <summary>
     /// 获取当前 WebUI 面板是否可见（已打开且未隐藏）。
-    /// <para>对应 UE5 侧 <c>Web.IsShow</c>。</para>
+    /// <para>当前面板是否可见。</para>
     /// </summary>
     bool IsShow { get; }
 

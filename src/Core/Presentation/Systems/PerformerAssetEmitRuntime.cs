@@ -20,6 +20,7 @@ namespace Ludots.Core.Presentation.Systems
         private readonly Dictionary<string, object> _globals;
         private readonly PerformerAnimatorStateBuffer _animatorStates;
         private readonly SoundRequestBuffer _soundRequests;
+        private readonly PerformerVisualStableIdTable? _visualStableIds;
         private readonly WorldHudPerformBehavior _worldHudBehavior = new();
 
         public PerformerAssetEmitRuntime(
@@ -28,7 +29,8 @@ namespace Ludots.Core.Presentation.Systems
             PresentationRequestBuffer requests,
             Dictionary<string, object> globals,
             PerformerAnimatorStateBuffer animatorStates,
-            SoundRequestBuffer soundRequests)
+            SoundRequestBuffer soundRequests,
+            PerformerVisualStableIdTable? visualStableIds = null)
         {
             _world = world ?? throw new ArgumentNullException(nameof(world));
             _runtime = runtime ?? throw new ArgumentNullException(nameof(runtime));
@@ -36,6 +38,7 @@ namespace Ludots.Core.Presentation.Systems
             _globals = globals ?? new Dictionary<string, object>();
             _animatorStates = animatorStates;
             _soundRequests = soundRequests;
+            _visualStableIds = visualStableIds;
         }
 
         public void Emit(
@@ -129,9 +132,13 @@ namespace Ludots.Core.Presentation.Systems
                 }
 
                 ref readonly AssetBindingConfig asset = ref slot.AssetBinding;
-                if (!IsWithinMaxLod(lod, in asset) || !ResolveAssetVisibility(entity, in asset))
+                if (lod != LODLevel.Culled &&
+                    (!IsWithinMaxLod(lod, in asset) || !ResolveAssetVisibility(entity, in asset)))
                 {
-                    stableDrawCache.Remove(PerformerBehaviorRuntimeUtility.ComposeVisualStableId(state.StableId, slot.SlotIndex, asset.AssetKind, state.DefId));
+                    if (TryGetVisualStableId(in state, slot.SlotIndex, asset.AssetKind, state.DefId, out int removedStableId))
+                    {
+                        stableDrawCache.Remove(removedStableId);
+                    }
                     continue;
                 }
 
@@ -140,6 +147,7 @@ namespace Ludots.Core.Presentation.Systems
                 Vector3 scale = ResolveScale(entity, in asset, performerWorldScale);
                 Vector3 assetPosition = ResolveAssetPosition(position, performerWorldRotation, performerWorldScale, in asset);
                 Vector4 color = ApplyAlpha(ResolveColor(entity, in asset, definition.DefaultColor), ResolveAlpha(in state, in definition));
+                int stableId = GetOrAllocateVisualStableId(in state, slot.SlotIndex, asset.AssetKind, state.DefId);
                 PresentationVisualProxy proxy = new PresentationVisualProxy
                 {
                     ProxyKind = PresentationVisualProxyKind.Performer,
@@ -148,7 +156,7 @@ namespace Ludots.Core.Presentation.Systems
                     Rotation = rotation,
                     Scale = scale,
                     Color = color,
-                    StableId = PerformerBehaviorRuntimeUtility.ComposeVisualStableId(state.StableId, slot.SlotIndex, asset.AssetKind, state.DefId),
+                    StableId = stableId,
                     MaterialId = ResolveMaterialId(entity, in asset),
                     TemplateId = state.DefId,
                     AnimationProfileId = definition.AnimationProfileId,
@@ -193,12 +201,63 @@ namespace Ludots.Core.Presentation.Systems
             for (int i = 0; i < cacheableAssetBehaviorIndices.Length; i++)
             {
                 ref readonly BehaviorSlot slot = ref behaviors[cacheableAssetBehaviorIndices[i]];
-                stableDrawCache.Remove(PerformerBehaviorRuntimeUtility.ComposeVisualStableId(
-                    state.StableId,
+                if (TryGetVisualStableId(
+                    in state,
                     slot.SlotIndex,
                     slot.AssetBinding.AssetKind,
-                    state.DefId));
+                    state.DefId,
+                    out int stableId))
+                {
+                    stableDrawCache.Remove(stableId);
+                }
             }
+        }
+
+        public bool TryGetStaticStableVisualId(
+            in PerformerState state,
+            int slotIndex,
+            AssetKind assetKind,
+            int discriminator,
+            out int stableId)
+        {
+            return TryGetVisualStableId(in state, slotIndex, assetKind, discriminator, out stableId);
+        }
+
+        private int GetOrAllocateVisualStableId(
+            in PerformerState state,
+            int slotIndex,
+            AssetKind assetKind,
+            int discriminator)
+        {
+            PerformerVisualStableIdTable table = _visualStableIds
+                ?? throw new InvalidOperationException("Static performer visual stable ids require PerformerVisualStableIdTable.");
+            return table.GetOrAllocate(PerformerBehaviorRuntimeUtility.ComposeVisualStableKey(
+                    state.StableId,
+                    slotIndex,
+                    assetKind,
+                    discriminator));
+        }
+
+        private bool TryGetVisualStableId(
+            in PerformerState state,
+            int slotIndex,
+            AssetKind assetKind,
+            int discriminator,
+            out int stableId)
+        {
+            if (_visualStableIds == null)
+            {
+                stableId = 0;
+                return false;
+            }
+
+            return _visualStableIds.TryGet(
+                PerformerBehaviorRuntimeUtility.ComposeVisualStableKey(
+                    state.StableId,
+                    slotIndex,
+                    assetKind,
+                    discriminator),
+                out stableId);
         }
 
         public bool TryGetAnimatorPackedState(Entity entity, out AnimatorPackedState state)
@@ -388,7 +447,13 @@ namespace Ludots.Core.Presentation.Systems
                 return;
             }
 
-            if (!_worldHudBehavior.TryResolveProjection(_world, _globals, state.OwnerEntity, lod, out PerformPhaseResult phaseResult))
+            if (!_worldHudBehavior.TryResolveProjection(
+                    _world,
+                    _globals,
+                    state.OwnerEntity,
+                    lod,
+                    definition.RequiredAttributeIds,
+                    out PerformPhaseResult phaseResult))
             {
                 return;
             }
@@ -423,7 +488,13 @@ namespace Ludots.Core.Presentation.Systems
                 return;
             }
 
-            if (!_worldHudBehavior.TryResolveProjection(_world, _globals, state.OwnerEntity, lod, out PerformPhaseResult phaseResult))
+            if (!_worldHudBehavior.TryResolveProjection(
+                    _world,
+                    _globals,
+                    state.OwnerEntity,
+                    lod,
+                    definition.RequiredAttributeIds,
+                    out PerformPhaseResult phaseResult))
             {
                 return;
             }

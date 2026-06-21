@@ -21,6 +21,7 @@ namespace Ludots.Core.Presentation.Rendering
         private int _count;
         private int _frameStamp;
         private int _contentRevision;
+        private int _nonStaticContentRevision;
         private int _staticMeshGeometryRevision;
         private int _staticMeshDeltaBaseRevision;
         private int _staticMeshDeltaItemCount;
@@ -28,6 +29,7 @@ namespace Ludots.Core.Presentation.Rendering
 
         public int Count => _count;
         public int ContentRevision => _contentRevision;
+        public int NonStaticContentRevision => _nonStaticContentRevision;
         public int StaticMeshGeometryRevision => _staticMeshGeometryRevision;
         public int StaticMeshDeltaBaseRevision => _staticMeshDeltaBaseRevision;
         public ReadOnlySpan<PrimitiveDrawItem> StaticMeshDeltaItems =>
@@ -67,6 +69,11 @@ namespace Ludots.Core.Presentation.Rendering
                 if (!ProxyEquals(current, proxy))
                 {
                     _contentRevision++;
+                    if (!proxy.RenderPath.IsStaticInstanceLane() ||
+                        !current.RenderPath.IsStaticInstanceLane())
+                    {
+                        _nonStaticContentRevision++;
+                    }
                 }
 
                 if (!StaticMeshLaneStateEquals(current, proxy))
@@ -91,6 +98,10 @@ namespace Ludots.Core.Presentation.Rendering
                 _staticMeshGeometryRevision++;
                 TrackStaticMeshDelta(in proxy);
             }
+            else
+            {
+                _nonStaticContentRevision++;
+            }
         }
 
         public void AddNew(in PresentationVisualProxy proxy)
@@ -111,6 +122,10 @@ namespace Ludots.Core.Presentation.Rendering
             {
                 _staticMeshGeometryRevision++;
                 TrackStaticMeshDelta(in proxy);
+            }
+            else
+            {
+                _nonStaticContentRevision++;
             }
         }
 
@@ -150,6 +165,10 @@ namespace Ludots.Core.Presentation.Rendering
                 _staticMeshGeometryRevision++;
                 TrackStaticMeshDelta(in _entries[slot]);
             }
+            else
+            {
+                _nonStaticContentRevision++;
+            }
             return true;
         }
 
@@ -180,6 +199,7 @@ namespace Ludots.Core.Presentation.Rendering
             _count = 0;
             _frameStamp = 0;
             _contentRevision = 0;
+            _nonStaticContentRevision = 0;
             _staticMeshGeometryRevision = 0;
             _staticMeshDeltaBaseRevision = 0;
             _staticMeshDeltaItemCount = 0;
@@ -220,6 +240,10 @@ namespace Ludots.Core.Presentation.Rendering
                 _staticMeshGeometryRevision++;
                 TrackStaticMeshRemoval(_entries[slot].StableId);
             }
+            else
+            {
+                _nonStaticContentRevision++;
+            }
 
             _slotByStableId.Remove(removedStableId);
 
@@ -257,19 +281,10 @@ namespace Ludots.Core.Presentation.Rendering
                 return supportsA == supportsB;
             }
 
-            return itemA.MeshAssetId == itemB.MeshAssetId
-                && itemA.MaterialId == itemB.MaterialId
-                && itemA.RenderPath == itemB.RenderPath
-                && itemA.AssetKind == itemB.AssetKind
-                && itemA.MaterialCustomData.Equals(itemB.MaterialCustomData)
+            return itemA.Payload.Equals(itemB.Payload)
                 && itemA.Mobility == itemB.Mobility
-                && itemA.Position.Equals(itemB.Position)
-                && itemA.Rotation.Equals(itemB.Rotation)
-                && itemA.Scale.Equals(itemB.Scale)
-                && itemA.Color.Equals(itemB.Color)
                 && itemA.Flags == itemB.Flags
-                && itemA.LOD == itemB.LOD
-                && itemA.Visibility == itemB.Visibility;
+                && itemA.LOD == itemB.LOD;
         }
 
         private static PrimitiveDrawItem ToPrimitive(in PresentationVisualProxy proxy)

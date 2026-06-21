@@ -11,7 +11,7 @@ Implemented layers:
 * `src/Core/Commands/EntityCommandPanelCommands.cs`
   Trigger-friendly commands for open, close, show/hide, group switching, target rebinding, and layout updates.
 * `mods/EntityCommandPanelMod/`
-  Runtime implementation, GAS-backed source, handle store, source registry, and one retained `ReactivePage` host scene.
+  Runtime implementation, GAS-backed sources, collection query config registry, handle store, source registry, and one retained `ReactivePage` host scene.
 * `mods/showcases/entity_command_panel/EntityCommandPanelShowcaseMod/`
   Playable showcase over the interaction sandbox.
 
@@ -70,6 +70,15 @@ Trigger-oriented control is exposed through:
 
 The default reusable source id is `gas.ability-slots`, registered by `EntityCommandPanelMod`.
 
+Context-aware sources extend the same boundary:
+
+* `IEntityCommandPanelContextSource`
+* `IEntityCommandPanelContextActionSource`
+* `EntityCommandPanelSourceContext`
+* `EntityCommandPanelSourceDispatch`
+
+The dispatch helper routes revision, group, slot, status, queue, and activation calls to the context-aware interface when a source supports it. Existing entity-targeted sources keep their original contract.
+
 ## GAS Group Semantics
 
 The default GAS source exposes groups in this order:
@@ -88,6 +97,34 @@ State flags currently distinguish:
 * `GrantedOverride`
 * `TemplateBacked`
 * `Empty`
+
+Hot aggregation code must test flags with bit operations, not `Enum.HasFlag`, to avoid per-slot boxing allocations.
+
+## Collection Command Queries
+
+`gas.collection-ability-slots` is the collection-backed GAS source. It is for panels whose target is an owner of an entity collection, not a single actor.
+
+Flow:
+
+1. panel state provides `TargetEntity`, `SourceId`, and `InstanceKey`
+2. `EntityCommandPanelSourceDispatch` builds an `EntityCommandPanelSourceContext`
+3. `CollectionGasEntityCommandPanelSource` resolves `InstanceKey` through `IEntityCommandPanelCollectionQueryConfigRegistry`
+4. the config supplies the `EntityCollectionStore` key, filter, sort, and optional title
+5. owner entities are copied from the collection into fixed scratch arrays
+6. each owner is sampled through the existing `GasEntityCommandPanelSource`
+7. slots are aggregated, filtered, sorted, and mapped to dense display slot indices
+8. activation uses the sorted activation map and calls the existing GAS action source
+
+Unknown query ids fail explicitly. The source must not treat an unknown `InstanceKey` as a direct collection key.
+
+The default registered query is:
+
+* id: `collection.command.source`
+* collection key: `collection.command.source`
+* source id: `gas.collection-ability-slots`
+* sort: slot, owner count, label
+
+This keeps collection panels data-driven while preserving the existing GAS activation contract.
 
 ## Runtime Shape
 
@@ -109,6 +146,7 @@ Cold-path mappings remain in dictionaries:
 * instance key -> slot
 * alias -> handle
 * form set id -> cached route labels
+* command collection query id -> query config
 
 The host only recomposes when:
 
@@ -117,6 +155,8 @@ The host only recomposes when:
 * layout changes
 * target/group changes
 * source revision changes
+
+Collection command aggregation also uses fixed scratch arrays for owners, per-owner slots, aggregated slots, owner counts, and activation maps. The benchmark target is zero allocation after capacity and label-cache warmup.
 
 ## Showcase Flow
 
@@ -148,5 +188,6 @@ This means the infrastructure is reusable and multi-instance within its host, bu
 * `docs/architecture/ui_runtime_architecture.md`
 * `docs/architecture/gas_layered_architecture.md`
 * `docs/architecture/trigger_guide.md`
+* `docs/architecture/entity_collection_query_infrastructure.md`
 * `docs/rfcs/RFC-0054-entity-command-panel-infra.md`
 * `docs/rfcs/RFC-0055-ui-surface-ownership-and-showcase-takeover.md`

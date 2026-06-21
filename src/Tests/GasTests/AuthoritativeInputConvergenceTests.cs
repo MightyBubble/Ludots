@@ -232,6 +232,50 @@ namespace Ludots.Tests.GAS
         }
 
         [Test]
+        public void InputRuntimeSystem_UiWheelCaptured_SuppressesCameraZoomWithoutBlockingOtherInput()
+        {
+            var backend = new TestInputBackend();
+            var config = new InputConfigRoot
+            {
+                Actions = new List<InputActionDef>
+                {
+                    new() { Id = "Select", Type = InputActionType.Button },
+                    new() { Id = "Zoom", Type = InputActionType.Axis1D },
+                },
+                Contexts = new List<InputContextDef>
+                {
+                    new()
+                    {
+                        Id = "Gameplay",
+                        Priority = 1,
+                        Bindings = new List<InputBindingDef>
+                        {
+                            new() { ActionId = "Select", Path = "<Mouse>/LeftButton", Processors = new() },
+                            new() { ActionId = "Zoom", Path = "<Mouse>/ScrollY", Processors = new() },
+                        }
+                    }
+                }
+            };
+            var handler = new PlayerInputHandler(backend, config);
+            handler.PushContext("Gameplay");
+            var globals = new Dictionary<string, object>
+            {
+                [CoreServiceKeys.InputHandler.Name] = handler,
+                [CoreServiceKeys.UiCaptured.Name] = false,
+                [CoreServiceKeys.UiWheelCaptured.Name] = true,
+            };
+            var system = new InputRuntimeSystem(globals);
+
+            backend.MouseWheel = 1f;
+            backend.Buttons["<Mouse>/LeftButton"] = true;
+            system.Update(1f / 60f);
+
+            Assert.That(handler.ReadAction<float>("Zoom"), Is.EqualTo(0f), "UI wheel capture must suppress shared camera zoom.");
+            Assert.That(handler.PressedThisFrame("Select"), Is.True, "UI wheel capture must not block unrelated gameplay input.");
+            Assert.That(globals[CoreServiceKeys.UiWheelCaptured.Name], Is.False);
+        }
+
+        [Test]
         public void InputRuntimeSystem_CapturesGroundPointerIntoAuthoritativeSnapshot()
         {
             var (backend, handler) = BuildCameraHandler();

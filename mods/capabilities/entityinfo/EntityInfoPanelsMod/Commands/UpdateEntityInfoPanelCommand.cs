@@ -13,6 +13,7 @@ public sealed class UpdateEntityInfoPanelCommand : GameCommand
     public EntityInfoPanelLayout? Layout { get; init; }
     public EntityInfoPanelTarget? Target { get; init; }
     public EntityInfoGasDetailFlags? GasDetailFlags { get; init; }
+    public string TemplateId { get; init; } = string.Empty;
 
     public override Task ExecuteAsync(ScriptContext context)
     {
@@ -51,6 +52,11 @@ public sealed class UpdateEntityInfoPanelCommand : GameCommand
         if (GasDetailFlags.HasValue)
         {
             service.UpdateGasDetailFlags(handle, GasDetailFlags.Value);
+        }
+
+        if (!string.IsNullOrWhiteSpace(TemplateId))
+        {
+            service.UpdateTemplate(handle, TemplateId);
         }
 
         return Task.CompletedTask;

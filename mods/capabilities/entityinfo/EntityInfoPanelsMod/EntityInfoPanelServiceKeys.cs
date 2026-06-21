@@ -9,4 +9,7 @@ public static class EntityInfoPanelServiceKeys
 
     public static readonly ServiceKey<EntityInfoPanelHandleStore> HandleStore =
         new("EntityInfoPanelsMod.HandleStore");
+
+    public static readonly ServiceKey<IEntityInfoPanelTemplateCatalog> TemplateCatalog =
+        new("EntityInfoPanelsMod.TemplateCatalog");
 }

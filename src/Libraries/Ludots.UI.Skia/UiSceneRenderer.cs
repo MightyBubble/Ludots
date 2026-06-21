@@ -510,7 +510,7 @@ public sealed class SkiaUiRenderer : IUiRenderer
 
 	private static void DrawCanvas(UiNode node, SKRect rect, UiStyle style, SKCanvas canvas)
 	{
-		if (node.CanvasContent is UiCanvasContent skiaCanvas)
+		if (node.CanvasContent is ISkiaUiCanvasContent skiaCanvas)
 		{
 			SKRect rect2 = new SKRect(rect.Left + style.Padding.Left, rect.Top + style.Padding.Top, rect.Right - style.Padding.Right, rect.Bottom - style.Padding.Bottom);
 			if (!(rect2.Width <= 0.01f) && !(rect2.Height <= 0.01f))

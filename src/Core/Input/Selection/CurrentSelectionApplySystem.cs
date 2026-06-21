@@ -3,6 +3,7 @@ using System.Collections.Generic;
 using System.Numerics;
 using Arch.Core;
 using Arch.System;
+using Ludots.Core.EntityCollections;
 using Ludots.Core.Input.Interaction;
 using Ludots.Core.Mathematics;
 using Ludots.Core.Presentation.Components;
@@ -24,17 +25,28 @@ namespace Ludots.Core.Input.Selection
         private readonly World _world;
         private readonly Dictionary<string, object> _globals;
         private readonly SelectionRuntime _selection;
+        private readonly EntityCollectionStore _entityCollections;
         private Entity[] _boxSelectionScratch = new Entity[16];
         private Entity[] _selectionScratch = new Entity[16];
         private bool _suppressConfirmRelease;
 
         public Action<WorldCmInt2, Entity>? OnEntitySelected { get; set; }
 
-        public CurrentSelectionApplySystem(World world, Dictionary<string, object> globals, SelectionRuntime selection)
+        public CurrentSelectionApplySystem(
+            World world,
+            Dictionary<string, object> globals,
+            SelectionRuntime selection,
+            EntityCollectionStore entityCollections)
         {
             _world = world;
             _globals = globals;
             _selection = selection;
+            _entityCollections = entityCollections ?? throw new ArgumentNullException(nameof(entityCollections));
+        }
+
+        public CurrentSelectionApplySystem(World world, Dictionary<string, object> globals, SelectionRuntime selection)
+            : this(world, globals, selection, ResolveEntityCollectionStore(globals))
+        {
         }
 
         public CurrentSelectionApplySystem(World world, Dictionary<string, object> globals)
@@ -42,6 +54,7 @@ namespace Ludots.Core.Input.Selection
             _world = world;
             _globals = globals;
             _selection = ResolveSelectionRuntime(world, globals);
+            _entityCollections = ResolveEntityCollectionStore(globals);
         }
 
         public void Initialize() { }
@@ -60,10 +73,12 @@ namespace Ludots.Core.Input.Selection
                 _suppressConfirmRelease = true;
             }
 
-            Entity hovered = FindNearestEntity(pointer.Pointer, _selection.Config.ClickPickRadiusPixels);
+            bool hasOwner = TryGetSelectionOwner(out var owner);
+            Entity hovered = hasOwner
+                ? FindNearestEntity(owner, pointer.Pointer, _selection.Config.ClickPickRadiusPixels)
+                : Entity.Null;
             UpdateHoveredEntity(hovered);
 
-            bool hasOwner = TryGetSelectionOwner(out var owner);
             if (!hasOwner)
             {
                 if (_suppressConfirmRelease && pointer.Confirm.ReleasedThisFrame)
@@ -92,7 +107,14 @@ namespace Ludots.Core.Input.Selection
                 return;
             }
 
-            if (pointer.Confirm.PressedThisFrame)
+            if (pointer.Confirm.PressedThisFrame && pointer.Confirm.ReleasedThisFrame)
+            {
+                drag.Begin(pointer.Confirm.ResolvePressPointerOrCurrent(), ResolveAcquisitionMode());
+                drag.CurrentScreen = pointer.Confirm.ResolveReleasePointerOrCurrent();
+                ApplyCompletedSelectionGesture(owner, in drag, hovered, pointer);
+                drag.Clear();
+            }
+            else if (pointer.Confirm.PressedThisFrame)
             {
                 drag.Begin(pointer.Confirm.ResolvePressPointerOrCurrent(), ResolveAcquisitionMode());
             }
@@ -104,22 +126,7 @@ namespace Ludots.Core.Input.Selection
             if (pointer.Confirm.ReleasedThisFrame && drag.Active)
             {
                 drag.CurrentScreen = pointer.Confirm.ResolveReleasePointerOrCurrent();
-                SelectionAcquisitionMode acquisitionMode = drag.AcquisitionMode;
-
-                if (drag.ExceedsThreshold(_selection.Config.DragThresholdPixels))
-                {
-                    ApplyBoxSelection(owner, in drag, acquisitionMode);
-                }
-                else
-                {
-                    Entity acquired = ResolveClickAcquisition(owner, hovered);
-                    ApplyClickSelection(owner, acquired, acquisitionMode);
-                    if (pointer.HasGroundPoint)
-                    {
-                        OnEntitySelected?.Invoke(pointer.GroundWorldCm, acquired);
-                    }
-                }
-
+                ApplyCompletedSelectionGesture(owner, in drag, hovered, pointer);
                 drag.Clear();
             }
             else if (!pointer.Confirm.IsDown && drag.Active)
@@ -135,6 +142,24 @@ namespace Ludots.Core.Input.Selection
                    localObj is Entity local &&
                    _world.IsAlive(local) &&
                    (owner = local) != Entity.Null;
+        }
+
+        private void ApplyCompletedSelectionGesture(Entity owner, in SelectionDragState drag, Entity hovered, in PointerInteractionSnapshot pointer)
+        {
+            SelectionAcquisitionMode acquisitionMode = drag.AcquisitionMode;
+
+            if (drag.ExceedsThreshold(_selection.Config.DragThresholdPixels))
+            {
+                ApplyBoxSelection(owner, in drag, acquisitionMode);
+                return;
+            }
+
+            Entity acquired = ResolveClickAcquisition(owner, hovered);
+            ApplyClickSelection(owner, acquired, acquisitionMode);
+            if (pointer.HasGroundPoint)
+            {
+                OnEntitySelected?.Invoke(pointer.GroundWorldCm, acquired);
+            }
         }
 
         private bool IsSelectionSuppressed()
@@ -206,7 +231,7 @@ namespace Ludots.Core.Input.Selection
 
             if (acquisitionMode == SelectionAcquisitionMode.Replace)
             {
-                _selection.ClearSelection(owner, SelectionSetKeys.LivePrimary);
+                ApplyAcquisition(owner, ReadOnlySpan<Entity>.Empty, acquisitionMode);
             }
         }
 
@@ -224,7 +249,7 @@ namespace Ludots.Core.Input.Selection
             _world.Query(in SelectableQuery, (Entity entity, ref VisualTransform transform, ref CullState cull, ref SelectionSelectableTag selectable) =>
             {
                 if (!cull.IsVisible ||
-                    !SelectionEligibility.CanAcquire(_world, owner, entity, targetRelationFilter))
+                    !SelectionEligibility.CanAcquire(_world, _globals, owner, entity, targetRelationFilter))
                 {
                     return;
                 }
@@ -258,7 +283,7 @@ namespace Ludots.Core.Input.Selection
             Array.Resize(ref _boxSelectionScratch, nextSize);
         }
 
-        private Entity FindNearestEntity(Vector2 pointer, float radiusPixels)
+        private Entity FindNearestEntity(Entity owner, Vector2 pointer, float radiusPixels)
         {
             if (!_globals.TryGetValue(CoreServiceKeys.ScreenProjector.Name, out var projectorObj) || projectorObj is not IScreenProjector projector)
             {
@@ -271,7 +296,7 @@ namespace Ludots.Core.Input.Selection
 
             _world.Query(in SelectableQuery, (Entity entity, ref VisualTransform transform, ref CullState cull, ref SelectionSelectableTag selectable) =>
             {
-                if (!cull.IsVisible || !SelectionEligibility.IsSelectableNow(_world, entity))
+                if (!cull.IsVisible || !SelectionEligibility.CanInspectLive(_world, _globals, owner, entity))
                 {
                     return;
                 }
@@ -301,23 +326,42 @@ namespace Ludots.Core.Input.Selection
 
         private Entity ResolveClickAcquisition(Entity owner, Entity hovered)
         {
-            return _world.IsAlive(hovered) && SelectionEligibility.CanAcquire(_world, owner, hovered, _selection.TargetRelationFilter)
+            return _world.IsAlive(hovered) && SelectionEligibility.CanAcquire(_world, _globals, owner, hovered, _selection.TargetRelationFilter)
                 ? hovered
                 : Entity.Null;
         }
 
         private void ApplyAcquisition(Entity owner, ReadOnlySpan<Entity> hits, SelectionAcquisitionMode mode)
         {
+            SelectionAcquisitionConfig acquisition = _selection.Config.Acquisition
+                ?? throw new InvalidOperationException("selection.acquisition must be explicitly configured.");
+            string collectionKey = RequireConfiguredKey(acquisition.CollectionKey, "selection.acquisition.collectionKey");
+            string formalSetKey = RequireConfiguredKey(acquisition.FormalSelectionSetKey, "selection.acquisition.formalSelectionSetKey");
+            var descriptor = EntityCollectionDescriptor.Create(
+                collectionKey,
+                EntityCollectionSourceKind.UiAcquisition,
+                EntityCollectionRoleKind.AcquisitionPreview,
+                owner,
+                hits.Length > 0 ? hits[0] : Entity.Null,
+                string.IsNullOrWhiteSpace(acquisition.Title) ? "UI acquisition" : acquisition.Title,
+                $"{mode} | {hits.Length} entities");
+            _entityCollections.Replace(owner, descriptor, hits);
+
+            if (!acquisition.CommitToFormalSelection)
+            {
+                return;
+            }
+
             switch (mode)
             {
                 case SelectionAcquisitionMode.Replace:
-                    _selection.ReplaceSelection(owner, SelectionSetKeys.LivePrimary, hits);
+                    _selection.ReplaceSelection(owner, formalSetKey, hits);
                     return;
 
                 case SelectionAcquisitionMode.Additive:
                     for (int i = 0; i < hits.Length; i++)
                     {
-                        _selection.AddToSelection(owner, SelectionSetKeys.LivePrimary, hits[i]);
+                        _selection.AddToSelection(owner, formalSetKey, hits[i]);
                     }
                     return;
 
@@ -327,11 +371,11 @@ namespace Ludots.Core.Input.Selection
                         Entity target = hits[i];
                         if (SelectionContains(owner, target))
                         {
-                            _selection.RemoveFromSelection(owner, SelectionSetKeys.LivePrimary, target);
+                            _selection.RemoveFromSelection(owner, formalSetKey, target);
                         }
                         else
                         {
-                            _selection.AddToSelection(owner, SelectionSetKeys.LivePrimary, target);
+                            _selection.AddToSelection(owner, formalSetKey, target);
                         }
                     }
                     return;
@@ -343,14 +387,17 @@ namespace Ludots.Core.Input.Selection
 
         private bool SelectionContains(Entity owner, Entity target)
         {
-            int count = _selection.GetSelectionCount(owner, SelectionSetKeys.LivePrimary);
+            string formalSetKey = RequireConfiguredKey(
+                _selection.Config.Acquisition?.FormalSelectionSetKey,
+                "selection.acquisition.formalSelectionSetKey");
+            int count = _selection.GetSelectionCount(owner, formalSetKey);
             if (count <= 0)
             {
                 return false;
             }
 
             EnsureSelectionScratchCapacity(count);
-            int written = _selection.CopySelection(owner, SelectionSetKeys.LivePrimary, _selectionScratch);
+            int written = _selection.CopySelection(owner, formalSetKey, _selectionScratch);
             for (int i = 0; i < written; i++)
             {
                 if (_selectionScratch[i] == target)
@@ -452,6 +499,28 @@ namespace Ludots.Core.Input.Selection
 
             throw new InvalidOperationException(
                 $"{nameof(CurrentSelectionApplySystem)} requires {CoreServiceKeys.SelectionRuntime.Name} to be registered before construction.");
+        }
+
+        private static EntityCollectionStore ResolveEntityCollectionStore(Dictionary<string, object> globals)
+        {
+            if (globals.TryGetValue(CoreServiceKeys.EntityCollectionStore.Name, out var storeObj) &&
+                storeObj is EntityCollectionStore store)
+            {
+                return store;
+            }
+
+            throw new InvalidOperationException(
+                $"{nameof(CurrentSelectionApplySystem)} requires {CoreServiceKeys.EntityCollectionStore.Name} to be registered before construction.");
+        }
+
+        private static string RequireConfiguredKey(string? value, string path)
+        {
+            if (string.IsNullOrWhiteSpace(value))
+            {
+                throw new InvalidOperationException($"{path} must be explicitly configured.");
+            }
+
+            return value.Trim();
         }
     }
 

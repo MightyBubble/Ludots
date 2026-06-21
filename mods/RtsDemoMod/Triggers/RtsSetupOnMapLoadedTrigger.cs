@@ -68,6 +68,7 @@ namespace RtsDemoMod.Triggers
 
             owner = world.Create(new PlayerOwner { PlayerId = 1 });
             engine.SetService(CoreServiceKeys.LocalPlayerEntity, owner);
+            engine.SetService(CoreServiceKeys.LocalPlayerId, 1);
         }
 
         private static void EnsureSelectionViewBinding(GameEngine engine, World world)

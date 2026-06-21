@@ -1,6 +1,7 @@
 using System;
 using System.Collections.Generic;
 using System.IO;
+using System.Numerics;
 using System.Runtime.InteropServices;
 using System.Text.Json.Nodes;
 using Arch.Core;
@@ -40,6 +41,8 @@ namespace Ludots.Core.Systems
         private readonly int[] _ownerBatchStableIds = new int[TemplateBatchScratchCapacity];
         private readonly VisualTransform[] _ownerBatchTransforms = new VisualTransform[TemplateBatchScratchCapacity];
         private readonly CullState[] _ownerBatchCulls = new CullState[TemplateBatchScratchCapacity];
+        private readonly ParamDefault[][] _ownerBatchParamOverrides = new ParamDefault[TemplateBatchScratchCapacity][];
+        private readonly ParamDefault[][] _performerBatchParamOverrides = new ParamDefault[TemplateBatchScratchCapacity][];
         
         // New Registry
         public DataRegistry<EntityTemplate> TemplateRegistry { get; private set; }
@@ -93,6 +96,11 @@ namespace Ludots.Core.Systems
 
         public void LoadEntities(MapConfig mapConfig)
         {
+            LoadEntitiesAndIndex(mapConfig);
+        }
+
+        public MapLoadEntityIndex LoadEntitiesAndIndex(MapConfig mapConfig)
+        {
             if (mapConfig == null)
             {
                 throw new ArgumentNullException(nameof(mapConfig));
@@ -117,7 +125,9 @@ namespace Ludots.Core.Systems
 
             var builder = new EntityBuilder(_world, templates);
             var mapEntityTag = new MapEntity { MapId = new MapId(mapConfig.Id) };
+            var entityIndex = new MapLoadEntityIndex();
             var pendingBatchRequests = new List<TemplateEntityBatchSpawner.TemplateBatchSpawnRequest>(_templateBatchSpawner.ScratchCapacity);
+            var pendingBatchEntityData = new List<EntitySpawnData>(_templateBatchSpawner.ScratchCapacity);
             string? activeBatchTemplateId = null;
 
             void FlushPendingTemplateBatch()
@@ -125,6 +135,7 @@ namespace Ludots.Core.Systems
                 if (activeBatchTemplateId == null || pendingBatchRequests.Count == 0)
                 {
                     pendingBatchRequests.Clear();
+                    pendingBatchEntityData.Clear();
                     activeBatchTemplateId = null;
                     return;
                 }
@@ -152,6 +163,18 @@ namespace Ludots.Core.Systems
                 Span<int> stableIds = hasDirectBootstrap ? _ownerBatchStableIds.AsSpan(0, batchCount) : default;
                 Span<VisualTransform> ownerTransforms = hasDirectBootstrap ? _ownerBatchTransforms.AsSpan(0, batchCount) : default;
                 Span<CullState> ownerCulls = hasDirectBootstrap ? _ownerBatchCulls.AsSpan(0, batchCount) : default;
+                bool hasPerformerParamOverrides = BatchContainsPerformerParamOverrides(pendingBatchRequests);
+                if (hasPerformerParamOverrides && !CanApplyPerformerParamOverrides())
+                {
+                    throw new InvalidOperationException(
+                        $"Map '{mapConfig.Id}' template '{activeBatchTemplateId}' declares PerformerParamOverrides but presentation runtime is not installed.");
+                }
+
+                if (hasPerformerParamOverrides && !hasDirectBootstrap)
+                {
+                    throw new InvalidOperationException(
+                        $"Map '{mapConfig.Id}' template '{activeBatchTemplateId}' declares PerformerParamOverrides but has no direct performer bootstrap.");
+                }
 
                 if (!_templateBatchSpawner.TryCreateBatch(
                     activeBatchTemplateId,
@@ -169,20 +192,38 @@ namespace Ludots.Core.Systems
 
                 for (int i = 0; i < created.Length; i++)
                 {
+                    entityIndex.Register(mapConfig.Id, pendingBatchEntityData[i].InstanceId, created[i]);
                     PublishTemplateOnSpawnEffect(created[i], activeBatchTemplateId);
                 }
 
                 if (hasDirectBootstrap)
                 {
-                    TryBootstrapPerformerBatch(
-                        templateKeyId,
-                        created,
-                        stableIds,
-                        ownerTransforms,
-                        ownerCulls);
+                    for (int i = 0; i < batchCount; i++)
+                    {
+                        _ownerBatchParamOverrides[i] = pendingBatchRequests[i].PerformerParamOverrides;
+                    }
+
+                    try
+                    {
+                        TryBootstrapPerformerBatch(
+                            templateKeyId,
+                            created,
+                            stableIds,
+                            ownerTransforms,
+                            ownerCulls,
+                            _ownerBatchParamOverrides.AsSpan(0, batchCount));
+                    }
+                    finally
+                    {
+                        for (int i = 0; i < batchCount; i++)
+                        {
+                            _ownerBatchParamOverrides[i] = null!;
+                        }
+                    }
                 }
 
                 pendingBatchRequests.Clear();
+                pendingBatchEntityData.Clear();
                 activeBatchTemplateId = null;
             }
             
@@ -203,8 +244,8 @@ namespace Ludots.Core.Systems
                         $"Map '{mapConfig.Id}' references unknown entity template '{entityData.Template}'.");
                 }
 
-                if (_templateBatchSpawner.IsBatchCompatible(entityData.Template, templates[entityData.Template]) &&
-                    TryBuildBatchRequest(mapConfig.Id, entityData, mapEntityTag, out var batchRequest))
+                bool isBatchCompatible = _templateBatchSpawner.IsBatchCompatible(entityData.Template, templates[entityData.Template]);
+                if (isBatchCompatible && TryBuildBatchRequest(mapConfig.Id, entityData, mapEntityTag, out var batchRequest))
                 {
                     if (!string.Equals(activeBatchTemplateId, entityData.Template, StringComparison.Ordinal) ||
                         pendingBatchRequests.Count >= _templateBatchSpawner.ScratchCapacity)
@@ -214,7 +255,14 @@ namespace Ludots.Core.Systems
 
                     activeBatchTemplateId = entityData.Template;
                     pendingBatchRequests.Add(batchRequest);
+                    pendingBatchEntityData.Add(entityData);
                     continue;
+                }
+
+                if (HasPerformerParamOverrides(entityData))
+                {
+                    throw new InvalidOperationException(
+                        $"Map '{mapConfig.Id}' entity template '{entityData.Template}' declares PerformerParamOverrides but is not compatible with the map template batch path.");
                 }
 
                 FlushPendingTemplateBatch();
@@ -232,10 +280,12 @@ namespace Ludots.Core.Systems
                 var entity = builder.Build();
                 TryApplyTemplateKey(entity, entityData.Template);
                 _world.Add(entity, mapEntityTag);
+                entityIndex.Register(mapConfig.Id, entityData.InstanceId, entity);
                 PublishTemplateOnSpawnEffect(entity, entityData.Template);
             }
 
             FlushPendingTemplateBatch();
+            return entityIndex;
         }
 
         private static bool TryBuildBatchRequest(
@@ -245,22 +295,161 @@ namespace Ludots.Core.Systems
             out TemplateEntityBatchSpawner.TemplateBatchSpawnRequest request)
         {
             request = default;
-            if (entityData.Overrides == null || entityData.Overrides.Count == 0)
+            var worldPosition = default(Ludots.Core.Mathematics.FixedPoint.Fix64Vec2);
+            bool hasWorldPosition = false;
+            float facingAngleRad = 0f;
+            bool hasFacing = false;
+
+            if (entityData.Overrides != null && entityData.Overrides.Count > 0)
             {
-                request = new TemplateEntityBatchSpawner.TemplateBatchSpawnRequest(
-                    default,
-                    hasWorldPosition: false,
-                    mapEntity: mapEntity,
-                    hasMapEntity: true);
-                return true;
+                bool containsWorldPosition = entityData.Overrides.ContainsKey("WorldPositionCm");
+                bool containsFacing = entityData.Overrides.ContainsKey("FacingDirection");
+                int supportedOverrideCount = (containsWorldPosition ? 1 : 0) + (containsFacing ? 1 : 0);
+                if (entityData.Overrides.Count != supportedOverrideCount)
+                {
+                    return false;
+                }
+
+                if (containsWorldPosition)
+                {
+                    worldPosition = ParseWorldPositionOverride(
+                        mapId,
+                        entityData,
+                        entityData.Overrides["WorldPositionCm"]);
+                    hasWorldPosition = true;
+                }
+
+                if (containsFacing)
+                {
+                    facingAngleRad = ParseFacingOverride(
+                        mapId,
+                        entityData,
+                        entityData.Overrides["FacingDirection"]);
+                    hasFacing = true;
+                }
             }
 
-            if (entityData.Overrides.Count != 1 ||
-                !entityData.Overrides.TryGetValue("WorldPositionCm", out var worldPositionNode))
+            // Map-authored placement yaw is authored as core FacingDirection.
+            // Presentation VisualTransform.Rotation remains derived by presentation sync/static lowering.
+            request = new TemplateEntityBatchSpawner.TemplateBatchSpawnRequest(
+                worldPosition,
+                hasWorldPosition,
+                facingAngleRad,
+                hasFacing,
+                mapEntity,
+                hasMapEntity: true,
+                performerParamOverrides: ParsePerformerParamOverrides(mapId, entityData));
+            return true;
+        }
+
+        private static bool BatchContainsPerformerParamOverrides(List<TemplateEntityBatchSpawner.TemplateBatchSpawnRequest> requests)
+        {
+            for (int i = 0; i < requests.Count; i++)
             {
-                return false;
+                if (requests[i].PerformerParamOverrides.Length != 0)
+                {
+                    return true;
+                }
             }
 
+            return false;
+        }
+
+        private static bool HasPerformerParamOverrides(EntitySpawnData entityData)
+        {
+            return entityData.PerformerParamOverrides != null && entityData.PerformerParamOverrides.Count != 0;
+        }
+
+        private bool CanApplyPerformerParamOverrides()
+        {
+            return _performerRuntime != null &&
+                   _performerDefinitions != null &&
+                   _performerBootstrap != null &&
+                   _stableIds != null;
+        }
+
+        private static ParamDefault[] ParsePerformerParamOverrides(string mapId, EntitySpawnData entityData)
+        {
+            List<ParamOverrideData> overrides = entityData.PerformerParamOverrides;
+            if (overrides == null || overrides.Count == 0)
+            {
+                return Array.Empty<ParamDefault>();
+            }
+
+            var result = new ParamDefault[overrides.Count];
+            for (int i = 0; i < overrides.Count; i++)
+            {
+                ParamOverrideData item = overrides[i];
+                if (item == null)
+                {
+                    throw new InvalidOperationException(
+                        $"Map '{mapId}' entity template '{entityData.Template}' PerformerParamOverrides[{i}] requires an object payload.");
+                }
+
+                string paramKey = item.ParamKey;
+                if (string.IsNullOrWhiteSpace(paramKey) ||
+                    !string.Equals(paramKey, paramKey.Trim(), StringComparison.Ordinal))
+                {
+                    throw new InvalidOperationException(
+                        $"Map '{mapId}' entity template '{entityData.Template}' PerformerParamOverrides[{i}].ParamKey must be a trimmed semantic string.");
+                }
+
+                if (!item.Lane.HasValue)
+                {
+                    throw new InvalidOperationException(
+                        $"Map '{mapId}' entity template '{entityData.Template}' PerformerParamOverrides[{i}].Lane requires an explicit param lane.");
+                }
+
+                ParamLane lane = item.Lane.Value;
+                var parsed = new ParamDefault
+                {
+                    ParamKey = PerformerParamKeyRegistry.Register(paramKey),
+                    Lane = lane,
+                };
+
+                switch (lane)
+                {
+                    case ParamLane.Float:
+                        parsed.FloatValue = item.FloatValue;
+                        break;
+                    case ParamLane.Int:
+                        parsed.IntValue = item.IntValue;
+                        break;
+                    case ParamLane.Vector:
+                        parsed.VectorValue = ParsePerformerParamOverrideVector(mapId, entityData, item, i);
+                        break;
+                    default:
+                        throw new InvalidOperationException(
+                            $"Map '{mapId}' entity template '{entityData.Template}' PerformerParamOverrides[{i}].Lane '{lane}' is unsupported.");
+                }
+
+                result[i] = parsed;
+            }
+
+            return result;
+        }
+
+        private static Vector4 ParsePerformerParamOverrideVector(
+            string mapId,
+            EntitySpawnData entityData,
+            ParamOverrideData item,
+            int index)
+        {
+            float[] values = item.VectorValue;
+            if (values == null || values.Length != 4)
+            {
+                throw new InvalidOperationException(
+                    $"Map '{mapId}' entity template '{entityData.Template}' PerformerParamOverrides[{index}].VectorValue requires four numeric values.");
+            }
+
+            return new Vector4(values[0], values[1], values[2], values[3]);
+        }
+
+        private static Ludots.Core.Mathematics.FixedPoint.Fix64Vec2 ParseWorldPositionOverride(
+            string mapId,
+            EntitySpawnData entityData,
+            JsonNode worldPositionNode)
+        {
             if (worldPositionNode is not JsonObject obj)
             {
                 throw new InvalidOperationException(
@@ -301,12 +490,32 @@ namespace Ludots.Core.Systems
 
             int x = xNode.GetValue<int>();
             int y = yNode.GetValue<int>();
-            request = new TemplateEntityBatchSpawner.TemplateBatchSpawnRequest(
-                Ludots.Core.Mathematics.FixedPoint.Fix64Vec2.FromInt(x, y),
-                hasWorldPosition: true,
-                mapEntity: mapEntity,
-                hasMapEntity: true);
-            return true;
+            return Ludots.Core.Mathematics.FixedPoint.Fix64Vec2.FromInt(x, y);
+        }
+
+        private static float ParseFacingOverride(
+            string mapId,
+            EntitySpawnData entityData,
+            JsonNode facingNode)
+        {
+            if (facingNode is not JsonObject obj)
+            {
+                throw new InvalidOperationException(
+                    $"Map '{mapId}' entity template '{entityData.Template}' FacingDirection override requires an object payload.");
+            }
+
+            ValidateProperties(obj, $"Map '{mapId}' entity template '{entityData.Template}' FacingDirection", "AngleRad");
+            JsonNode angleNode = RequireProperty(
+                obj,
+                "AngleRad",
+                $"Map '{mapId}' entity template '{entityData.Template}' FacingDirection");
+            if (angleNode.GetValueKind() != System.Text.Json.JsonValueKind.Number)
+            {
+                throw new InvalidOperationException(
+                    $"Map '{mapId}' entity template '{entityData.Template}' FacingDirection.AngleRad requires a numeric value.");
+            }
+
+            return angleNode.GetValue<float>();
         }
 
         private static void ValidateProperties(JsonObject obj, string context, params string[] allowedNames)
@@ -348,8 +557,8 @@ namespace Ludots.Core.Systems
                 throw new InvalidOperationException($"Entity template key '{templateId}' is not registered.");
             }
 
-            var templateKey = new EntityTemplateKeyCm { TemplateKeyId = templateKeyId };
-            if (_world.Has<EntityTemplateKeyCm>(entity))
+            var templateKey = new EntityTemplateKeyRef { TemplateKeyId = templateKeyId };
+            if (_world.Has<EntityTemplateKeyRef>(entity))
             {
                 _world.Set(entity, templateKey);
             }
@@ -392,7 +601,8 @@ namespace Ludots.Core.Systems
             ReadOnlySpan<Entity> owners,
             ReadOnlySpan<int> ownerStableIds,
             ReadOnlySpan<VisualTransform> ownerTransforms,
-            ReadOnlySpan<CullState> ownerCulls)
+            ReadOnlySpan<CullState> ownerCulls,
+            ReadOnlySpan<ParamDefault[]> ownerParamOverrides)
         {
             if (_performerRuntime == null ||
                 _performerDefinitions == null ||
@@ -405,7 +615,8 @@ namespace Ludots.Core.Systems
 
             if (owners.Length != ownerStableIds.Length ||
                 owners.Length != ownerTransforms.Length ||
-                owners.Length != ownerCulls.Length)
+                owners.Length != ownerCulls.Length ||
+                owners.Length != ownerParamOverrides.Length)
             {
                 throw new ArgumentException("Map performer bootstrap batch spans must have matching lengths.");
             }
@@ -454,6 +665,7 @@ namespace Ludots.Core.Systems
                     _performerBatchStableIds[createCount] = _stableIds.Allocate();
                     _ownerBatchTransforms[createCount] = ownerTransforms[oi];
                     _ownerBatchCulls[createCount] = ownerCulls[oi];
+                    _performerBatchParamOverrides[createCount] = ownerParamOverrides[oi] ?? Array.Empty<ParamDefault>();
                     createCount++;
                 }
 
@@ -472,10 +684,12 @@ namespace Ludots.Core.Systems
                     _ownerBatchCulls.AsSpan(0, createCount),
                     definition,
                     _performerBatchCreated.AsSpan(0, createCount),
-                    _stableIds.Allocate);
+                    _stableIds.Allocate,
+                    _performerBatchParamOverrides.AsSpan(0, createCount));
 
                 for (int i = 0; i < createCount; i++)
                 {
+                    _performerBatchParamOverrides[i] = null!;
                     MarkHierarchyForBootstrapIfNeeded(_performerBatchCreated[i]);
                 }
             }

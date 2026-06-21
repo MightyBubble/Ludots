@@ -44,19 +44,22 @@ internal sealed class InstallEntityInfoPanelsOnGameStartTrigger : Trigger
             engine.ConfigConflictReport,
             engine.MapLoader.EntityTemplateKeys,
             presentationTextCatalog);
+        var templateCatalog = new EntityInfoPanelTemplateCatalog();
 
         var service = new EntityInfoPanelService(
             insightCatalog,
             presentationTextCatalog,
             presentationLocaleSelection,
             engine.GetService(CoreServiceKeys.AbilityDefinitionRegistry),
-            engine.GetService(CoreServiceKeys.TagOps));
+            engine.GetService(CoreServiceKeys.TagOps),
+            templateCatalog);
         var handles = new EntityInfoPanelHandleStore();
         engine.SetService(EntityInfoPanelServiceKeys.Service, service);
         engine.SetService(EntityInfoPanelServiceKeys.HandleStore, handles);
+        engine.SetService(EntityInfoPanelServiceKeys.TemplateCatalog, templateCatalog);
         engine.RegisterPresentationSystem(new EntityInfoPanelPresentationSystem(engine, service));
 
-        _context.Log("[EntityInfoPanelsMod] Service, handle store, and presentation system registered.");
+        _context.Log("[EntityInfoPanelsMod] Service, template catalog, handle store, and presentation system registered.");
         return Task.CompletedTask;
     }
 }

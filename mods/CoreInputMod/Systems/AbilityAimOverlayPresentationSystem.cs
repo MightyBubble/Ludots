@@ -46,7 +46,13 @@ namespace CoreInputMod.Systems
                 return;
             }
 
-            Entity actor = _context.GetControlledActor();
+            if (!_context.TryGetLocalPlayerId(out int playerId))
+            {
+                _bridge.ClearPreview();
+                return;
+            }
+
+            Entity actor = _context.GetControlledActor(playerId);
             if (!_world.IsAlive(actor))
             {
                 _bridge.ClearPreview();
@@ -82,9 +88,14 @@ namespace CoreInputMod.Systems
         {
             mappingSystem = default!;
             aimingMapping = default!;
+            if (!_context.TryGetLocalPlayerId(out int playerId))
+            {
+                return false;
+            }
+
             if (!_globals.TryGetValue(CoreServiceKeys.ActiveInputOrderMapping.Name, out var mappingObj) ||
                 mappingObj is not InputOrderMappingSystem activeMapping ||
-                !_world.IsAlive(_context.GetControlledActor()) ||
+                !_world.IsAlive(_context.GetControlledActor(playerId)) ||
                 _bridge == null)
             {
                 return false;

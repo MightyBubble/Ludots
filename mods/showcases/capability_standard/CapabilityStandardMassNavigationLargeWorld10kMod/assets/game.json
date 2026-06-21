@@ -1,0 +1,50 @@
+{
+  "startupMapId": "mass_navigation",
+  "windowTitle": "Ludots Engine - Capability Standard Mass Navigation Large World 10K",
+  "targetFps": 0,
+  "worldWidthInTiles": 250,
+  "worldHeightInTiles": 250,
+  "selection": {
+    "movePathPreviewOrderTypeKeys": [ "massNavigationMove" ]
+  },
+  "presentation": {
+    "performerInstanceCapacity": 131072,
+    "gasPresentationEventCapacity": 131072,
+    "presentationEventStreamCapacity": 131072,
+    "presentationOwnerChangeCapacity": 131072,
+    "performerCommandCapacity": 262144,
+    "primitiveDrawBufferCapacity": 131072,
+    "visualSnapshotBufferCapacity": 131072,
+    "visualProxyBufferCapacity": 131072,
+    "presentationRequestCapacity": 262144,
+    "groundOverlayCapacity": 65536,
+    "roadSplineCapacity": 65536,
+    "worldHudCapacity": 131072,
+    "screenHudCapacity": 131072,
+    "skinnedVisualBatchCapacity": 131072,
+    "minimapMarkerCapacity": 131072,
+    "runtimeEntitySpawnQueueCapacity": 131072,
+    "runtimeEntitySpawnReceiptQueueCapacity": 131072,
+    "cameraCulling": {
+      "highLodDistanceCm": 4000.0,
+      "mediumLodDistanceCm": 10000.0,
+      "lowLodDistanceCm": 20000.0
+    },
+    "minimap": {
+      "initialZoomNormalized": 1.0,
+      "wheelZoomNormalizedStep": 0.08,
+      "buttonZoomNormalizedStep": 0.18,
+      "zoomSliderEnabled": true,
+      "modeToggleEnabled": true,
+      "rotateToggleEnabled": true,
+      "debugMarkerSampleCapacity": 128,
+      "minZoomExtentMode": "OneChunk",
+      "maxZoomExtentMode": "FullMap",
+      "minZoomExplicitHalfExtentCm": 750.0,
+      "maxZoomExplicitHalfExtentCm": 0.0
+    }
+  },
+  "navigation2D": {
+    "enabled": false
+  }
+}

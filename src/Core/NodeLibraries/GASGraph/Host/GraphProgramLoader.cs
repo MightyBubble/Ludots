@@ -1,5 +1,6 @@
 using System;
 using System.IO;
+using Ludots.Core.EntityCollections;
 using Ludots.Core.GraphRuntime;
 using Ludots.Core.Modding;
 using Ludots.Core.NodeLibraries.GASGraph;
@@ -12,13 +13,20 @@ namespace Ludots.Core.NodeLibraries.GASGraph.Host
         private readonly ModLoader _modLoader;
         private readonly GraphProgramRegistry _registry;
         private readonly IGraphSymbolResolver _symbolResolver;
+        private readonly EntityCollectionStore? _entityCollections;
 
-        public GraphProgramLoader(VirtualFileSystem vfs, ModLoader modLoader, GraphProgramRegistry registry, IGraphSymbolResolver symbolResolver)
+        public GraphProgramLoader(
+            VirtualFileSystem vfs,
+            ModLoader modLoader,
+            GraphProgramRegistry registry,
+            IGraphSymbolResolver symbolResolver,
+            EntityCollectionStore? entityCollections = null)
         {
             _vfs = vfs;
             _modLoader = modLoader;
             _registry = registry;
             _symbolResolver = symbolResolver ?? throw new ArgumentNullException(nameof(symbolResolver));
+            _entityCollections = entityCollections;
         }
 
         public void Load(string relativePath = "Compiled/GAS/graphs.bin")
@@ -88,14 +96,29 @@ namespace Ludots.Core.NodeLibraries.GASGraph.Host
                 var op = (GraphNodeOp)ins.Op;
                 switch (op)
                 {
-                        case GraphNodeOp.QueryFilterTagAll:
+                        case GraphNodeOp.QueryFilterTagAny:
+                        case GraphNodeOp.QueryFilterTagNone:
                         case GraphNodeOp.SendEvent:
                         case GraphNodeOp.HasTag:
                             ins.Imm = ResolveTag(symbols, ins.Imm);
                             break;
                         case GraphNodeOp.LoadAttribute:
                         case GraphNodeOp.ModifyAttributeAdd:
+                        case GraphNodeOp.QueryFilterAttributeRange:
+                        case GraphNodeOp.QuerySortByAttribute:
+                        case GraphNodeOp.AggSumAttribute:
+                        case GraphNodeOp.AggAverageAttribute:
+                        case GraphNodeOp.AggMaxAttribute:
+                        case GraphNodeOp.AggMinAttribute:
+                        case GraphNodeOp.AggMaxEntityByAttribute:
+                        case GraphNodeOp.AggMinEntityByAttribute:
                             ins.Imm = ResolveAttribute(symbols, ins.Imm);
+                            break;
+                        case GraphNodeOp.QueryFilterTemplate:
+                            ins.Imm = _symbolResolver.ResolveEntityTemplate(ResolveSymbol(symbols, ins.Imm));
+                            break;
+                        case GraphNodeOp.QueryFromCollection:
+                            ins.Imm = ResolveEntityCollectionKey(ResolveSymbol(symbols, ins.Imm));
                             break;
                         case GraphNodeOp.ApplyEffectTemplate:
                         case GraphNodeOp.FanOutApplyEffect:
@@ -115,6 +138,9 @@ namespace Ludots.Core.NodeLibraries.GASGraph.Host
                         case GraphNodeOp.RelationshipAggSumMetric:
                         case GraphNodeOp.RelationshipAggMaxMetric:
                         case GraphNodeOp.RelationshipAggAverageMetric:
+                        case GraphNodeOp.RelationshipAggMinMetric:
+                        case GraphNodeOp.RelationshipAggMaxEntityByMetric:
+                        case GraphNodeOp.RelationshipAggMinEntityByMetric:
                             if (ins.Imm >= 0)
                             {
                                 ins.Imm = _symbolResolver.ResolveRelationshipMetric(ResolveSymbol(symbols, ins.Imm));
@@ -129,7 +155,10 @@ namespace Ludots.Core.NodeLibraries.GASGraph.Host
                                  op == GraphNodeOp.RelationshipGetMetric ||
                                  op == GraphNodeOp.RelationshipAggSumMetric ||
                                  op == GraphNodeOp.RelationshipAggMaxMetric ||
-                                 op == GraphNodeOp.RelationshipAggAverageMetric) &&
+                                 op == GraphNodeOp.RelationshipAggAverageMetric ||
+                                 op == GraphNodeOp.RelationshipAggMinMetric ||
+                                 op == GraphNodeOp.RelationshipAggMaxEntityByMetric ||
+                                 op == GraphNodeOp.RelationshipAggMinEntityByMetric) &&
                                 ins.Flags != byte.MaxValue)
                             {
                                 ins.Flags = checked((byte)_symbolResolver.ResolveRelationshipType(ResolveSymbol(symbols, ins.Flags)));
@@ -206,6 +235,17 @@ namespace Ludots.Core.NodeLibraries.GASGraph.Host
                 throw new InvalidOperationException($"Graph symbol index out of range: {symbolIndex} (len={symbols.Length}).");
             }
             return symbols[symbolIndex] ?? string.Empty;
+        }
+
+        private int ResolveEntityCollectionKey(string key)
+        {
+            if (_entityCollections == null)
+            {
+                throw new InvalidOperationException(
+                    $"Graph collection query key '{key}' requires an EntityCollectionStore.");
+            }
+
+            return _entityCollections.KeyRegistry.Register(key);
         }
     }
 }

@@ -18,12 +18,14 @@ namespace Ludots.Core.Systems
         private WorldSizeSpec _spec;
         private readonly QueryDescription _trackedQuery = new QueryDescription()
             .WithAll<WorldPositionCm, SpatialCellRef>()
-            .WithNone<PresentationStaticTransform, SpatialPartitionExcluded>();
+            .WithNone<PresentationStaticTransform, SpatialPartitionExcluded, PresentationDestroyPending>();
         private readonly QueryDescription _untrackedQuery = new QueryDescription()
             .WithAll<WorldPositionCm>()
-            .WithNone<SpatialCellRef, SpatialPartitionExcluded>();
+            .WithNone<SpatialCellRef, SpatialPartitionExcluded, PresentationDestroyPending>();
         private readonly QueryDescription _excludedTrackedQuery = new QueryDescription()
             .WithAll<SpatialPartitionExcluded, SpatialCellRef>();
+        private readonly QueryDescription _destroyPendingTrackedQuery = new QueryDescription()
+            .WithAll<PresentationDestroyPending, SpatialCellRef>();
 
         private readonly CommandBuffer _commandBuffer = new();
 
@@ -45,16 +47,17 @@ namespace Ludots.Core.Systems
 
         public override void Update(in float dt)
         {
-            RemoveExcludedSpatialRefs();
+            RemoveSpatialRefs(in _excludedTrackedQuery);
+            RemoveSpatialRefs(in _destroyPendingTrackedQuery);
             AddMissingSpatialRefs();
 
             var moveJob = new MoveJob { Partition = _partition, Spec = _spec };
             World.InlineEntityQuery<MoveJob, WorldPositionCm, SpatialCellRef>(in _trackedQuery, ref moveJob);
         }
 
-        private void RemoveExcludedSpatialRefs()
+        private void RemoveSpatialRefs(in QueryDescription queryDescription)
         {
-            foreach (ref var chunk in World.Query(in _excludedTrackedQuery))
+            foreach (ref var chunk in World.Query(in queryDescription))
             {
                 ref var entityFirst = ref chunk.Entity(0);
                 var refs = chunk.GetSpan<SpatialCellRef>();

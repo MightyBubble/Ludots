@@ -17,6 +17,7 @@ using Ludots.Core.Gameplay.Teams;
 using Ludots.Core.Input.Config;
 using Ludots.Core.Input.Runtime;
 using Ludots.Core.Input.Selection;
+using Ludots.Core.Layers;
 using Ludots.Core.Map;
 using Ludots.Core.Mathematics;
 using Ludots.Core.Mathematics.FixedPoint;
@@ -44,6 +45,8 @@ namespace Ludots.Tests.Presentation
     [TestFixture]
     public sealed class MassNavigationTotalWarShowcaseContractTests
     {
+        private const string MassNavigationAgentLayerName = "massNavigation.agent";
+
         [Test]
         public void TotalWarConfig_AuthorsFormationAndSoldierMassNavAgents()
         {
@@ -1667,6 +1670,105 @@ namespace Ludots.Tests.Presentation
         }
 
         [Test]
+        public void RuntimeTemplateSpawnBatch_KeepsControllableMassNavigationAgentTemplatesOnFastPath()
+        {
+            MassNavigationComponentAuthoring.Register("MassNavigationMod");
+            LayerRegistry.Register(MassNavigationAgentLayerName);
+            string templateJson = """
+[
+  {
+    "id": "mass_navigation_batch_agent",
+    "components": {
+      "Name": { "Value": "MassNavigation.BatchAgent" },
+      "WorldPositionCm": { "Value": { "X": 0, "Y": 0 } },
+      "VisualHeightmapSampleState": {},
+      "FacingDirection": { "AngleRad": 0.0 },
+      "Team": { "Id": 7 },
+      "PlayerOwner": { "PlayerId": 3 },
+      "OrderBuffer": {},
+      "SelectionSelectableTag": {},
+      "SelectionSelectableState": { "IsEnabled": true },
+      "AttributeBuffer": {
+        "base": { "Health": 100 },
+        "current": { "Health": 75 }
+      },
+      "GameplayTagContainer": {},
+      "TagCountContainer": {},
+      "MassNavigationAgentTag": {},
+      "EntityLayer": {
+        "category": [ "massNavigation.agent" ],
+        "mask": [ "massNavigation.agent" ]
+      },
+      "MassNavigationControllable": {}
+    }
+  }
+]
+""";
+
+            using TempTemplatePipeline temp = TempTemplatePipeline.Create(templateJson);
+            var templates = new DataRegistry<EntityTemplate>(temp.Pipeline);
+            templates.Load("Entities/templates.json", temp.Catalog);
+            using var world = World.Create();
+            var requests = new RuntimeEntitySpawnQueue(capacity: 8);
+            var receipts = new RuntimeEntitySpawnReceiptQueue(capacity: 8);
+            var templateKeys = new EntityTemplateKeyRegistry();
+            var timings = new PresentationTimingDiagnostics();
+            var system = new RuntimeEntitySpawnSystem(
+                world,
+                requests,
+                templates,
+                templateKeys,
+                new Ludots.Core.Presentation.PresentationStableIdAllocator(),
+                receipts: receipts,
+                timingDiagnostics: timings);
+
+            const int receiptChannel = 101;
+            for (int i = 0; i < 3; i++)
+            {
+                Assert.That(requests.TryEnqueue(new RuntimeEntitySpawnRequest
+                {
+                    Kind = RuntimeEntitySpawnKind.Template,
+                    TemplateId = "mass_navigation_batch_agent",
+                    WorldPositionCm = Fix64Vec2.FromInt(100 + i * 50, 200 + i * 60),
+                    HasWorldPosition = 1,
+                    FacingAngleRad = 0.25f * i,
+                    HasFacing = 1,
+                    EmitReceipt = 1,
+                    ReceiptChannelId = receiptChannel,
+                    ReceiptId = i + 1,
+                }), Is.True);
+            }
+
+            system.Update(0f);
+
+            Assert.That(timings.RuntimeSpawnBatchCountLastFrame, Is.EqualTo(3),
+                "Controllable MassNavigation templates should stay on the validated runtime template batch path.");
+            Assert.That(receipts.CountForChannel(receiptChannel), Is.EqualTo(3));
+
+            int spawned = 0;
+            while (receipts.TryDequeueForChannel(receiptChannel, out RuntimeEntitySpawnReceipt receipt))
+            {
+                Entity entity = receipt.Entity;
+                Assert.That(world.IsAlive(entity), Is.True);
+                Assert.That(world.Has<MassNavigationAgentTag>(entity), Is.True);
+                Assert.That(world.Has<MassNavigationControllable>(entity), Is.True);
+                Assert.That(world.Has<OrderBuffer>(entity), Is.True);
+                Assert.That(world.Get<OrderBuffer>(entity).HasActive, Is.False);
+                Assert.That(world.Has<SelectionSelectableTag>(entity), Is.True);
+                Assert.That(world.Get<SelectionSelectableState>(entity).Enabled, Is.True);
+                Assert.That(world.Get<Team>(entity).Id, Is.EqualTo(7));
+                Assert.That(world.Get<PlayerOwner>(entity).PlayerId, Is.EqualTo(3));
+                Assert.That(world.Get<Ludots.Core.Gameplay.Components.EntityLayer>(entity).Value.Category, Is.EqualTo(LayerRegistry.GetBit(MassNavigationAgentLayerName)));
+                Assert.That(world.Get<EntityTemplateKeyRef>(entity).TemplateKeyId, Is.EqualTo(templateKeys.GetId("mass_navigation_batch_agent")));
+                Assert.That(world.Get<WorldPositionCm>(entity).Value, Is.EqualTo(Fix64Vec2.FromInt(100 + spawned * 50, 200 + spawned * 60)));
+                Assert.That(world.Get<PreviousWorldPositionCm>(entity).Value, Is.EqualTo(Fix64Vec2.FromInt(100 + spawned * 50, 200 + spawned * 60)));
+                Assert.That(world.Get<FacingDirection>(entity).AngleRad, Is.EqualTo(0.25f * spawned).Within(0.001f));
+                spawned++;
+            }
+
+            Assert.That(spawned, Is.EqualTo(3));
+        }
+        [Test]
         public void MassNavigationFormationRuntime_UsesConfiguredSemanticSpacing()
         {
             var semantics = new MassNavigationGroupSemantics
@@ -2112,9 +2214,9 @@ namespace Ludots.Tests.Presentation
                       simulation.SelectedCount == 0 &&
                       SelectionContextRuntime.SnapshotCurrentSelection(engine.World, engine.GlobalContext).Length == 0 &&
                       CountSelectionMarkerPerformers(engine) == 0 &&
-                      CountTrackedAgentRuntimeTags(engine) == 0,
+                      CountAliveWithMassNavigationRuntimeTags(engine, previousAgents) == 0,
                 maxFrames: TotalWarAcceptance.FrameBudgetForInteraction,
-                failureMessage: "Scene reset should clear selection, remove scoped marker performers, and strip runtime agent tags before respawn.");
+                failureMessage: "Scene reset should clear selection, remove scoped marker performers, and strip runtime tags from agents tracked before reset.");
 
             TickUntil(
                 engine,
@@ -2437,8 +2539,9 @@ namespace Ludots.Tests.Presentation
             Assert.That(systemSource, Does.Not.Contain("PanelRefreshIntervalSeconds = 0.25f"));
 
             string refreshBody = ExtractMethodBody(runtimeSource, "public void RefreshPanel");
+            Assert.That(refreshBody, Does.Contain("if (!config.ScenarioRuntime.Panel.IsOwned)"));
+            Assert.That(refreshBody, Does.Contain("ClearPanelIfOwned(engine)"));
             Assert.That(refreshBody, Does.Contain("_panelController.MountOrSync(engine, simulation)"));
-            Assert.That(refreshBody, Does.Not.Contain("ClearPanelIfOwned(engine)"));
             string updateBody = ExtractMethodBody(systemSource, "public void Update");
             int resetIndex = updateBody.IndexOf("_refreshAccumulatorSeconds = _refreshIntervalSeconds;", StringComparison.Ordinal);
             int returnIndex = updateBody.IndexOf("return;", resetIndex, StringComparison.Ordinal);
@@ -2903,11 +3006,22 @@ namespace Ludots.Tests.Presentation
             return count;
         }
 
-        private static int CountTrackedAgentRuntimeTags(GameEngine engine)
+        private static int CountAliveWithMassNavigationRuntimeTags(GameEngine engine, ReadOnlySpan<Entity> entities)
         {
             int count = 0;
-            var query = new QueryDescription().WithAll<MassNavigationAgentTag>();
-            engine.World.Query(in query, (Entity _) => count++);
+            for (int i = 0; i < entities.Length; i++)
+            {
+                Entity entity = entities[i];
+                if (engine.World.IsAlive(entity) &&
+                    (engine.World.Has<MassNavigationAgentTag>(entity) ||
+                     engine.World.Has<MassNavigationControllable>(entity) ||
+                     engine.World.Has<MassNavigationAgentIndex>(entity) ||
+                     engine.World.Has<MassNavigationAgentProfile>(entity)))
+                {
+                    count++;
+                }
+            }
+
             return count;
         }
 

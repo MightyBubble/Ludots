@@ -99,6 +99,80 @@
       ],
       "adapterId": "raylib",
       "buildMode": "auto"
+    },
+    {
+      "id": "capability_standard_static_performer_30k_raylib",
+      "name": "Capability Standard Static Performer 30K Raylib",
+      "selectors": [
+        "$capability_standard_static_performer_30k"
+      ],
+      "adapterId": "raylib",
+      "buildMode": "auto"
+    },
+    {
+      "id": "capability_standard_mass_nav_large_world_10k_raylib",
+      "name": "Capability Standard Mass Navigation Large World 10K Raylib",
+      "selectors": [
+        "$capability_standard_mass_nav_large_world_10k"
+      ],
+      "adapterId": "raylib",
+      "buildMode": "auto"
+    },
+    {
+      "id": "capability_standard_total_war_like_raylib",
+      "name": "Capability Standard Total War Like Raylib",
+      "selectors": [
+        "$capability_standard_total_war_like"
+      ],
+      "adapterId": "raylib",
+      "buildMode": "auto"
+    },
+    {
+      "id": "capability_standard_participant_views_raylib",
+      "name": "Capability Standard Participant Views Raylib",
+      "selectors": [
+        "$capability_standard_participant_views"
+      ],
+      "adapterId": "raylib",
+      "buildMode": "auto"
+    },
+    {
+      "id": "entity_query_tactics_raylib",
+      "name": "Entity Query Tactics Raylib",
+      "selectors": [
+        "$entity_query_tactics"
+      ],
+      "adapterId": "raylib",
+      "buildMode": "auto"
+    },
+    {
+      "id": "browser_ui_showcase_raylib",
+      "name": "Browser UI Showcase Raylib",
+      "selectors": [
+        "$browser_ui_showcase"
+      ],
+      "adapterId": "raylib",
+      "buildMode": "auto"
+    },
+    {
+      "id": "browser_ui_cef_raylib",
+      "name": "Browser UI CEF Raylib",
+      "selectors": [
+        "$browser_cef_runtime",
+        "$browser_ui_showcase"
+      ],
+      "adapterId": "raylib",
+      "buildMode": "auto"
+    },
+    {
+      "id": "browser_react_flow_cef_raylib",
+      "name": "Browser React Flow CEF Raylib",
+      "selectors": [
+        "$browser_cef_runtime",
+        "$browser_react_flow_showcase"
+      ],
+      "adapterId": "raylib",
+      "buildMode": "auto"
     }
   ]
 }

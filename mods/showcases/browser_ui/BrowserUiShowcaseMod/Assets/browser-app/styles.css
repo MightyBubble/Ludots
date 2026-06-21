@@ -1,0 +1,31 @@
+:root {
+  color-scheme: dark;
+  --panel: rgba(14, 23, 38, 0.72);
+  --panel-2: rgba(17, 28, 46, 0.56);
+  --text: #eff6ff;
+  --muted: #94a3b8;
+  --accent: #38bdf8;
+  --accent-2: #22c55e;
+  --border: rgba(148, 163, 184, 0.24);
+}
+
+* { box-sizing: border-box; }
+html, body { margin: 0; min-height: 100%; background: transparent; color: var(--text); font-family: Inter, Segoe UI, sans-serif; }
+body { padding: 32px; }
+.app-shell { max-width: 1240px; margin: 0 auto; display: grid; gap: 24px; }
+.hero { display: grid; gap: 14px; }
+.eyebrow { color: var(--accent); text-transform: uppercase; letter-spacing: 0.12em; font-size: 12px; }
+h1 { margin: 0; font-size: 48px; line-height: 1; }
+p { margin: 0; color: var(--muted); font-size: 16px; line-height: 1.5; max-width: 72ch; }
+.actions { display: flex; gap: 12px; }
+button { border: 1px solid var(--border); background: rgba(14, 23, 38, 0.68); color: var(--text); border-radius: 12px; padding: 12px 16px; font: inherit; }
+.panel-grid { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 16px; }
+.panel { background: linear-gradient(180deg, var(--panel), var(--panel-2)); border: 1px solid var(--border); border-radius: 16px; padding: 20px; min-height: 140px; backdrop-filter: blur(6px); }
+.panel h2 { margin: 0 0 8px; font-size: 18px; }
+.timeline { min-height: 180px; border: 1px dashed rgba(56, 189, 248, 0.5); border-radius: 16px; background: rgba(14, 23, 38, 0.28); }
+.timeline.active { border-style: solid; box-shadow: 0 0 0 1px rgba(34, 197, 94, 0.24) inset; }
+@media (max-width: 900px) {
+  body { padding: 18px; }
+  .panel-grid { grid-template-columns: 1fr; }
+  h1 { font-size: 34px; }
+}

@@ -33,6 +33,29 @@ namespace GasTests
         }
 
         [Test]
+        public void ParseStrict_WithProcessSharedAssemblies_Succeeds()
+        {
+            string json = """
+            {
+              "name": "BrowserProviderMod",
+              "version": "1.0.0",
+              "processSharedAssemblies": [
+                "Browser.Contract",
+                "Browser.Native.Runtime"
+              ]
+            }
+            """;
+
+            var manifest = ModManifestJson.ParseStrict(json, "mem://browser.mod.json");
+
+            Assert.That(manifest.ProcessSharedAssemblies, Is.EqualTo(new[]
+            {
+                "Browser.Contract",
+                "Browser.Native.Runtime"
+            }));
+        }
+
+        [Test]
         public void ParseStrict_WithLegacyUppercaseFields_Throws()
         {
             string json = """

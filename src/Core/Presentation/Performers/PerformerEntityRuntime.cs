@@ -313,13 +313,15 @@ namespace Ludots.Core.Presentation.Performers
             ReadOnlySpan<CullState> ownerCulls,
             PerformerDefinition definition,
             Span<Entity> created,
-            Func<int>? allocateStableId = null)
+            Func<int>? allocateStableId = null,
+            ReadOnlySpan<ParamDefault[]> rootParamOverrides = default)
         {
             if (owners.Length != scopeIds.Length ||
                 owners.Length != stableIds.Length ||
                 owners.Length != ownerTransforms.Length ||
                 owners.Length != ownerCulls.Length ||
-                owners.Length > created.Length)
+                owners.Length > created.Length ||
+                (!rootParamOverrides.IsEmpty && rootParamOverrides.Length != owners.Length))
             {
                 throw new ArgumentException("Performer batch create spans must have matching lengths.");
             }
@@ -405,6 +407,14 @@ namespace Ludots.Core.Presentation.Performers
                 for (int i = 0; i < owners.Length; i++)
                 {
                     SetParamDefault(definition, created[i]);
+                }
+            }
+
+            if (!rootParamOverrides.IsEmpty)
+            {
+                for (int i = 0; i < owners.Length; i++)
+                {
+                    ApplyParamOverrides(created[i], rootParamOverrides[i]);
                 }
             }
 

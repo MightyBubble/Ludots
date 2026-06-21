@@ -11,7 +11,7 @@
     }
   ],
   "DefaultCamera": {
-    "VirtualCameraId": "Shared3C.Profile.RtsMoba",
+    "VirtualCameraId": "Camera.Acceptance.Profile.ProjectionFixed",
     "TargetXCm": 2500,
     "TargetYCm": 1700
   },

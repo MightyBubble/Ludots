@@ -26,7 +26,7 @@
 ### 3.1 为什么是它
 
 - 它已经是独立 mod，不依赖临时 fixture
-- `assets/game.json` 已提供正式 `startupMapId`
+- `<Mod>/assets/game.json` 已提供正式 `startupMapId`
 - scenario config 已覆盖 `PassThrough`、`OrthogonalCross`、`Bottleneck`、`LaneMerge`、`CircleSwap`、`GoalQueue`
 - 已有 `FormationPhysicsPlaygroundScenarioSelectionTests` 和 runtime load tests，说明入口和 scenario catalog 都是正式 contract
 

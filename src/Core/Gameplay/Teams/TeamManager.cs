@@ -33,6 +33,18 @@ namespace Ludots.Core.Gameplay.Teams
         public List<RelationshipEntry> Relationships { get; set; } = new List<RelationshipEntry>();
     }
 
+    public sealed class TeamRelationshipSnapshot
+    {
+        internal TeamRelationshipSnapshot(TeamRelationship defaultRelationship, IReadOnlyDictionary<long, TeamRelationship> relationships)
+        {
+            DefaultRelationship = defaultRelationship;
+            Relationships = relationships ?? throw new ArgumentNullException(nameof(relationships));
+        }
+
+        public TeamRelationship DefaultRelationship { get; }
+        internal IReadOnlyDictionary<long, TeamRelationship> Relationships { get; }
+    }
+
     /// <summary>
     /// Manages Team relationships (Friendly, Hostile, Neutral).
     ///
@@ -117,6 +129,30 @@ namespace Ludots.Core.Gameplay.Teams
                     SetRelationship(entry.TeamA, entry.TeamB, rel);
                 }
             }
+        }
+
+        public static TeamRelationshipSnapshot CaptureSnapshot()
+        {
+            return new TeamRelationshipSnapshot(
+                _defaultRelationship,
+                new Dictionary<long, TeamRelationship>(_relationships));
+        }
+
+        public static void RestoreSnapshot(TeamRelationshipSnapshot snapshot)
+        {
+            if (snapshot == null)
+            {
+                throw new ArgumentNullException(nameof(snapshot));
+            }
+
+            _relationships.Clear();
+            foreach (var entry in snapshot.Relationships)
+            {
+                _relationships.Add(entry.Key, entry.Value);
+            }
+
+            _defaultRelationship = snapshot.DefaultRelationship;
+            IncrementRevision();
         }
 
         public static bool TryParseRelationship(string value, out TeamRelationship relationship)

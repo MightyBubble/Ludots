@@ -1,0 +1,32 @@
+{
+  "types": [
+    { "id": "Diplomacy", "isSymmetric": false }
+  ],
+  "metrics": [
+    { "id": "Trust", "minValue": -100, "maxValue": 100, "defaultValue": 0 },
+    { "id": "TradeValue", "minValue": 0, "maxValue": 2000, "defaultValue": 0 }
+  ],
+  "flags": [
+    { "id": "TradePact" },
+    { "id": "AtWar" }
+  ],
+  "bands": [
+    { "id": "Trust.Trusted", "typeId": "Diplomacy", "metricId": "Trust", "flagId": "TradePact", "threshold": 50, "comparison": "GreaterOrEqual" }
+  ],
+  "reasons": [
+    { "id": "Scenario.Setup" },
+    { "id": "Diplomacy.Pact" },
+    { "id": "Diplomacy.War" }
+  ],
+  "callbacks": [
+    {
+      "id": "TrustedTradePartner",
+      "typeId": "Diplomacy",
+      "metricId": "Trust",
+      "minimumValue": 50,
+      "eventKey": "FourX.Relationship.TrustedTradePartner",
+      "addTagsToTarget": [ "State.4X.Relationship.Trusted" ]
+    }
+  ],
+  "synergies": []
+}

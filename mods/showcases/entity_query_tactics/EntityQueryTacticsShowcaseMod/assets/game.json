@@ -1,0 +1,19 @@
+{
+  "windowTitle": "Ludots - Entity Query Tactics Showcase",
+  "windowWidth": 1600,
+  "windowHeight": 900,
+  "targetFps": 0,
+  "startupMapId": "entity_query_tactics_showcase",
+  "startupInputContexts": ["Default_Gameplay", "EntityQueryTactics.Controls"],
+  "selection": {
+    "targetFilter": {
+      "relationFilter": "Friendly"
+    },
+    "acquisition": {
+      "collectionKey": "entityquery.collection.ui.box",
+      "commitToFormalSelection": false,
+      "formalSelectionSetKey": "selection.live.primary",
+      "title": "UI box acquisition"
+    }
+  }
+}

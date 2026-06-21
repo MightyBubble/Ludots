@@ -3,10 +3,12 @@ using System.Collections.Generic;
 using Arch.Core;
 using Arch.Core.Extensions;
 using Ludots.Core.Components;
+using Ludots.Core.EntityCollections;
 using Ludots.Core.Gameplay.Components;
 using Ludots.Core.Gameplay.GAS.Components;
 using Ludots.Core.Gameplay.GAS.Registry;
 using Ludots.Core.Input.Selection;
+using Ludots.Core.Scripting;
 
 namespace EntityInfoPanelsMod;
 
@@ -316,24 +318,54 @@ public sealed partial class EntityInfoPanelService
         bool dirty = false;
         Entity container = Entity.Null;
         Entity primary = Entity.Null;
+        Entity owner = Entity.Null;
+        EntityCollectionHandle collectionHandle = EntityCollectionHandle.Invalid;
+        EntityCollectionSourceKind sourceKind = EntityCollectionSourceKind.SelectionView;
+        string sourceTitle = string.Empty;
+        string sourceSummary = string.Empty;
         string viewKey = string.Empty;
         string setKey = string.Empty;
         int count = 0;
         uint revision = 0;
 
-        if (SelectionContextRuntime.TryDescribeCurrentView(world, globals, out SelectionViewDescriptor descriptor))
+        EntityInfoPanelTarget target = _targets[slot];
+        if (target.Kind == EntityInfoPanelTargetKind.CurrentSelectionView &&
+            SelectionContextRuntime.TryDescribeCurrentView(world, globals, out SelectionViewDescriptor descriptor))
         {
             container = descriptor.Container.Container;
             primary = descriptor.Container.Primary;
+            owner = descriptor.Container.Owner;
+            sourceKind = EntityCollectionSourceKind.SelectionView;
             viewKey = descriptor.ViewKey;
             setKey = descriptor.Container.SetKey;
             count = descriptor.Container.MemberCount;
             revision = descriptor.Container.Revision;
-            dirty |= SetString(_subtitles, slot, $"{viewKey} -> {setKey} | {count} entities");
+            sourceTitle = "Current viewed selection";
+            sourceSummary = $"{viewKey} -> {setKey} | {count} entities";
+            dirty |= SetString(_subtitles, slot, sourceSummary);
+        }
+        else if (target.Kind == EntityInfoPanelTargetKind.EntityCollection &&
+                 TryResolveEntityCollectionSource(world, globals, target, out EntityCollectionView collectionView, out collectionHandle))
+        {
+            owner = collectionView.Owner;
+            primary = collectionView.PrimaryEntity;
+            sourceKind = collectionView.SourceKind;
+            count = collectionView.Count;
+            revision = collectionView.Revision;
+            sourceTitle = string.IsNullOrWhiteSpace(collectionView.Title)
+                ? collectionView.Key
+                : collectionView.Title;
+            sourceSummary = string.IsNullOrWhiteSpace(collectionView.Summary)
+                ? $"{collectionView.Key} | {collectionView.Count} entities"
+                : collectionView.Summary;
+            setKey = collectionView.Key;
+            dirty |= SetString(_subtitles, slot, sourceSummary);
         }
         else
         {
-            dirty |= SetString(_subtitles, slot, "No active selection view.");
+            sourceTitle = ResolveMissingCollectionTitle(target);
+            sourceSummary = ResolveMissingCollectionSummary(target);
+            dirty |= SetString(_subtitles, slot, sourceSummary);
         }
 
         if (_resolvedTargets[slot] != primary)
@@ -343,11 +375,32 @@ public sealed partial class EntityInfoPanelService
         }
 
         bool sourceChanged = _entityCollectionContainers[slot] != container ||
+                             _entityCollectionHandles[slot] != collectionHandle ||
+                             _entityCollectionOwners[slot] != owner ||
+                             _entityCollectionSourceKinds[slot] != sourceKind ||
                              _entityCollectionRevisions[slot] != revision;
 
         if (_entityCollectionContainers[slot] != container)
         {
             _entityCollectionContainers[slot] = container;
+            dirty = true;
+        }
+
+        if (_entityCollectionOwners[slot] != owner)
+        {
+            _entityCollectionOwners[slot] = owner;
+            dirty = true;
+        }
+
+        if (_entityCollectionHandles[slot] != collectionHandle)
+        {
+            _entityCollectionHandles[slot] = collectionHandle;
+            dirty = true;
+        }
+
+        if (_entityCollectionSourceKinds[slot] != sourceKind)
+        {
+            _entityCollectionSourceKinds[slot] = sourceKind;
             dirty = true;
         }
 
@@ -357,6 +410,8 @@ public sealed partial class EntityInfoPanelService
             dirty = true;
         }
 
+        dirty |= SetString(_entityCollectionSourceTitles, slot, sourceTitle);
+        dirty |= SetString(_entityCollectionSourceSummaries, slot, sourceSummary);
         dirty |= SetString(_entityCollectionViewKeys, slot, viewKey);
         dirty |= SetString(_entityCollectionSetKeys, slot, setKey);
         dirty |= SetInt(_entityCollectionCounts, slot, count);
@@ -368,32 +423,60 @@ public sealed partial class EntityInfoPanelService
 
         if (sourceChanged)
         {
-            dirty |= RebuildEntityCollectionCategories(slot, world, globals, container, primary, count);
+            dirty |= RebuildEntityCollectionCategories(slot, world, primary, count);
         }
 
         return dirty;
     }
 
-    private bool RebuildEntityCollectionCategories(
-        int slot,
+    private bool TryResolveEntityCollectionSource(
         World world,
         Dictionary<string, object> globals,
-        Entity container,
-        Entity primary,
-        int count)
+        in EntityInfoPanelTarget target,
+        out EntityCollectionView view,
+        out EntityCollectionHandle handle)
+    {
+        view = default;
+        handle = EntityCollectionHandle.Invalid;
+        if (target.FixedEntity == Entity.Null ||
+            string.IsNullOrWhiteSpace(target.Key) ||
+            !world.IsAlive(target.FixedEntity) ||
+            !globals.TryGetValue(CoreServiceKeys.EntityCollectionStore.Name, out object? storeObj) ||
+            storeObj is not EntityCollectionStore store)
+        {
+            return false;
+        }
+
+        return store.TryGet(target.FixedEntity, target.Key, out handle) &&
+               store.TryGetView(handle, out view);
+    }
+
+    private static string ResolveMissingCollectionTitle(in EntityInfoPanelTarget target)
+    {
+        return target.Kind == EntityInfoPanelTargetKind.EntityCollection
+            ? "Entity collection unavailable"
+            : "Current viewed selection";
+    }
+
+    private static string ResolveMissingCollectionSummary(in EntityInfoPanelTarget target)
+    {
+        return target.Kind == EntityInfoPanelTargetKind.EntityCollection
+            ? $"Missing collection source '{target.Key}'."
+            : "No active selection view.";
+    }
+
+    private bool RebuildEntityCollectionCategories(int slot, World world, Entity primary, int count)
     {
         bool dirty = false;
         int categoryCount = 0;
-        if (container != Entity.Null &&
-            count > 0 &&
-            SelectionContextRuntime.TryGetRuntime(globals, out SelectionRuntime selection))
+        if (count > 0)
         {
             var order = new List<string>(Math.Min(count, MaxEntityCollectionCategories));
             var countsByLabel = new Dictionary<string, int>(StringComparer.Ordinal);
             var primaryByLabel = new Dictionary<string, bool>(StringComparer.Ordinal);
             for (int i = 0; i < count; i++)
             {
-                if (!selection.TryGetSelectionAt(container, i, out Entity entity) ||
+                if (!TryGetEntityCollectionEntityAt(slot, i, out Entity entity) ||
                     !world.IsAlive(entity))
                 {
                     continue;

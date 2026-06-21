@@ -1,0 +1,14 @@
+{
+  "Id": "static_obstacle_physics_showcase",
+  "Tags": ["showcase", "physics2d", "static_obstacles", "benchmark"],
+  "DefaultCamera": {
+    "VirtualCameraId": "Camera.Profile.Tactical",
+    "TargetXCm": 0,
+    "TargetYCm": 0,
+    "DistanceCm": 14500,
+    "Pitch": 62,
+    "Yaw": 180,
+    "FovYDeg": 48
+  },
+  "Entities": []
+}

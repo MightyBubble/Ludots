@@ -90,6 +90,15 @@ internal static class AcceptanceUiEvidenceWriter
 
     public static void ExportUiScene(UIRoot root, string outputPath, string backgroundHex = "#060B12")
     {
+        ExportUiScene(root, outputPath, backgroundHex, null);
+    }
+
+    public static void ExportUiScene(
+        UIRoot root,
+        string outputPath,
+        string backgroundHex,
+        Action<SKCanvas>? drawBackground)
+    {
         if (root.Scene == null)
         {
             throw new InvalidOperationException("UIRoot does not have a mounted scene.");
@@ -102,6 +111,7 @@ internal static class AcceptanceUiEvidenceWriter
         using var surface = SKSurface.Create(new SKImageInfo(ExportWidth, ExportHeight));
         SKCanvas canvas = surface.Canvas;
         canvas.Clear(ParseColor(backgroundHex));
+        drawBackground?.Invoke(canvas);
 
         var renderer = new SkiaUiRenderer();
         renderer.RenderToCanvas(root.Scene, canvas, sceneWidth, sceneHeight);

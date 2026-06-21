@@ -1,0 +1,110 @@
+using System.Collections.Generic;
+using Arch.Core;
+using Ludots.Core.Engine;
+using Ludots.Core.Gameplay.GAS;
+using Ludots.Core.Scripting;
+
+namespace Ludots.Core.Knowledge
+{
+    public static class KnowledgeProjectionConsumer
+    {
+        private const int RelationSourceBufferCapacity = 32;
+        private const int RelationTargetBufferCapacity = 64;
+
+        public static bool HasResolver(Dictionary<string, object> globals)
+        {
+            return globals.TryGetValue(CoreServiceKeys.KnowledgeProjectionResolver.Name, out object? resolverObj) &&
+                   resolverObj is KnowledgeProjectionResolver;
+        }
+
+        public static bool TryResolve(
+            World world,
+            Dictionary<string, object> globals,
+            Entity fallbackViewer,
+            Entity target,
+            out KnowledgeProjection projection)
+        {
+            projection = default;
+            if (!TryResolveViewer(world, globals, fallbackViewer, out Entity viewer) ||
+                !TryGetResolver(globals, out KnowledgeProjectionResolver resolver))
+            {
+                return false;
+            }
+
+            Span<Entity> scopes = stackalloc Entity[1] { viewer };
+            Span<Entity> relationSources = stackalloc Entity[RelationSourceBufferCapacity];
+            Span<Entity> relationTargets = stackalloc Entity[RelationTargetBufferCapacity];
+            return resolver.TryResolveWithRelationGrants(
+                viewer,
+                target,
+                ResolveCurrentTick(globals),
+                scopes,
+                relationSources,
+                relationTargets,
+                out projection);
+        }
+
+        public static bool CanReadPosition(
+            World world,
+            Dictionary<string, object> globals,
+            Entity fallbackViewer,
+            Entity target,
+            KnowledgePositionAccess requiredPosition,
+            out KnowledgeProjection projection)
+        {
+            return TryResolve(world, globals, fallbackViewer, target, out projection) &&
+                   projection.CanReadPosition(requiredPosition);
+        }
+
+        public static bool TryResolveViewer(
+            World world,
+            Dictionary<string, object> globals,
+            Entity fallbackViewer,
+            out Entity viewer)
+        {
+            if (TryResolveViewerFromKey(world, globals, CoreServiceKeys.SelectionViewViewerEntity.Name, out viewer) ||
+                TryResolveViewerFromKey(world, globals, CoreServiceKeys.LocalPlayerEntity.Name, out viewer))
+            {
+                return true;
+            }
+
+            viewer = fallbackViewer;
+            return viewer != Entity.Null && world.IsAlive(viewer);
+        }
+
+        public static int ResolveCurrentTick(Dictionary<string, object> globals)
+        {
+            if (globals.TryGetValue(CoreServiceKeys.Clock.Name, out object? clockObj) &&
+                clockObj is IClock clock)
+            {
+                return clock.Now(ClockDomainId.Step);
+            }
+
+            return 0;
+        }
+
+        private static bool TryGetResolver(
+            Dictionary<string, object> globals,
+            out KnowledgeProjectionResolver resolver)
+        {
+            resolver = default!;
+            return globals.TryGetValue(CoreServiceKeys.KnowledgeProjectionResolver.Name, out object? resolverObj) &&
+                   resolverObj is KnowledgeProjectionResolver candidate &&
+                   (resolver = candidate) != null;
+        }
+
+        private static bool TryResolveViewerFromKey(
+            World world,
+            Dictionary<string, object> globals,
+            string key,
+            out Entity viewer)
+        {
+            viewer = default;
+            return globals.TryGetValue(key, out object? viewerObj) &&
+                   viewerObj is Entity candidate &&
+                   candidate != Entity.Null &&
+                   world.IsAlive(candidate) &&
+                   (viewer = candidate) != Entity.Null;
+        }
+    }
+}

@@ -206,16 +206,65 @@ namespace Ludots.Tests.GAS
             Assert.That(handler.ReadAction<Vector2>("PointerDelta"), Is.EqualTo(Vector2.Zero));
         }
 
+        [Test]
+        public void PlayerInputHandler_DuplicateBindingAcrossActiveContexts_ContributesOnce()
+        {
+            var backend = new StubInputBackend();
+            var config = new InputConfigRoot
+            {
+                Actions = new List<InputActionDef>
+                {
+                    new() { Id = "PointerPos", Type = InputActionType.Axis2D },
+                    new() { Id = "Zoom", Type = InputActionType.Axis1D },
+                },
+                Contexts = new List<InputContextDef>
+                {
+                    new()
+                    {
+                        Id = "Gameplay",
+                        Priority = 0,
+                        Bindings = new List<InputBindingDef>
+                        {
+                            new() { ActionId = "PointerPos", Path = "<Mouse>/Pos" },
+                            new() { ActionId = "Zoom", Path = "<Mouse>/ScrollY" },
+                        }
+                    },
+                    new()
+                    {
+                        Id = "MapScoped",
+                        Priority = 100,
+                        Bindings = new List<InputBindingDef>
+                        {
+                            new() { ActionId = "PointerPos", Path = "<Mouse>/Pos" },
+                            new() { ActionId = "Zoom", Path = "<Mouse>/ScrollY" },
+                        }
+                    }
+                }
+            };
+
+            var handler = new PlayerInputHandler(backend, config);
+            handler.PushContext("Gameplay");
+            handler.PushContext("MapScoped");
+
+            backend.MousePosition = new Vector2(640f, 360f);
+            backend.MouseWheel = 2f;
+            handler.Update();
+
+            Assert.That(handler.ReadAction<Vector2>("PointerPos"), Is.EqualTo(new Vector2(640f, 360f)));
+            Assert.That(handler.ReadAction<float>("Zoom"), Is.EqualTo(2f));
+        }
+
         private sealed class StubInputBackend : IInputBackend
         {
             public Dictionary<string, bool> Buttons { get; } = new();
             public Vector2 MousePosition { get; set; }
+            public float MouseWheel { get; set; }
             public bool HasMousePosition { get; set; } = true;
 
             public float GetAxis(string devicePath) => 0f;
             public bool GetButton(string devicePath) => Buttons.TryGetValue(devicePath, out var down) && down;
             public Vector2 GetMousePosition() => HasMousePosition ? MousePosition : new Vector2(float.NaN, float.NaN);
-            public float GetMouseWheel() => 0f;
+            public float GetMouseWheel() => MouseWheel;
             public void EnableIME(bool enable) { }
             public void SetIMECandidatePosition(int x, int y) { }
             public string GetCharBuffer() => string.Empty;

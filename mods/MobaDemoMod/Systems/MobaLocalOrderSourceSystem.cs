@@ -112,7 +112,9 @@ namespace MobaDemoMod.Systems
             // Selected entity provider
             _inputOrderMapping.SetActorProvider((out Entity entity) =>
             {
-                entity = GetControlledActor();
+                entity = TryGetLocalPlayerId(out int playerId)
+                    ? GetControlledActor(playerId)
+                    : default;
                 return _world.IsAlive(entity);
             });
             _inputOrderMapping.SetSelectedEntityProvider((string setKey, out Entity entity) =>
@@ -159,7 +161,9 @@ namespace MobaDemoMod.Systems
                             CommandKind = PerformerCommandKind.CreatePerformer,
                             PerformerDefinitionId = rangeCircleDefId,
                             ScopeTag = scopeId,
-                            Source = GetControlledActor()
+                            Source = TryGetLocalPlayerId(out int playerId)
+                                ? GetControlledActor(playerId)
+                                : default
                         });
                     }
                     else
@@ -191,8 +195,18 @@ namespace MobaDemoMod.Systems
                     actorObj is Entity localPlayer &&
                     _world.IsAlive(localPlayer))
                 {
-                    var actor = GetControlledActor();
-                    _inputOrderMapping.SetLocalPlayer(actor, 1);
+                    if (!TryGetLocalPlayerId(out int playerId))
+                    {
+                        return;
+                    }
+
+                    var actor = GetControlledActor(playerId);
+                    if (!_world.IsAlive(actor))
+                    {
+                        return;
+                    }
+
+                    _inputOrderMapping.SetLocalPlayer(actor, playerId);
                     _inputOrderMapping.Update(dt);
                 }
             }
@@ -200,15 +214,34 @@ namespace MobaDemoMod.Systems
             RenderModeHud();
         }
 
-        private Entity GetControlledActor()
+        private bool TryGetLocalPlayerId(out int playerId)
         {
+            playerId = 0;
+            if (!_globals.TryGetValue(CoreServiceKeys.LocalPlayerId.Name, out object? value) ||
+                value is not int candidate ||
+                candidate <= 0)
+            {
+                return false;
+            }
+
+            playerId = candidate;
+            return true;
+        }
+
+        private Entity GetControlledActor(int playerId)
+        {
+            if (playerId <= 0)
+            {
+                return default;
+            }
+
             if (!_globals.TryGetValue(CoreServiceKeys.LocalPlayerEntity.Name, out var actorObj) || actorObj is not Entity localPlayer)
                 return default;
             if (!_world.IsAlive(localPlayer)) return default;
 
             if (TryGetSelected(SelectionSetKeys.LivePrimary, out var selected))
             {
-                if (_world.TryGet(selected, out Ludots.Core.Gameplay.Components.PlayerOwner owner) && owner.PlayerId == 1)
+                if (_world.TryGet(selected, out Ludots.Core.Gameplay.Components.PlayerOwner owner) && owner.PlayerId == playerId)
                     return selected;
             }
             return localPlayer;

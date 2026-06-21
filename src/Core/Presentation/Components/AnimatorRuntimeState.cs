@@ -1,3 +1,5 @@
+using Ludots.Core.Presentation.Assets;
+
 namespace Ludots.Core.Presentation.Components
 {
     public struct AnimatorRuntimeState
@@ -10,6 +12,9 @@ namespace Ludots.Core.Presentation.Components
         public float StateElapsedSeconds;
         public float TransitionElapsedSeconds;
         public float TransitionDurationSeconds;
+        public int ActiveTransitionIndex;
+        public AnimatorTransitionInterruptSource ActiveTransitionInterruptSource;
+        public bool ActiveTransitionOrderedInterruption;
         public bool Initialized;
         public int ReportedMissingControllerId;
         public int LastCompletedStateIndex;
@@ -26,6 +31,9 @@ namespace Ludots.Core.Presentation.Components
                 StateElapsedSeconds = 0f,
                 TransitionElapsedSeconds = 0f,
                 TransitionDurationSeconds = 0f,
+                ActiveTransitionIndex = -1,
+                ActiveTransitionInterruptSource = AnimatorTransitionInterruptSource.None,
+                ActiveTransitionOrderedInterruption = false,
                 Initialized = false,
                 ReportedMissingControllerId = 0,
                 LastCompletedStateIndex = NoState,

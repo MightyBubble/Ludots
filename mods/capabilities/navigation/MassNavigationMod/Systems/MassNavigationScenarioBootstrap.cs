@@ -22,7 +22,7 @@ internal static class MassNavigationScenarioBootstrap
             ?? throw new InvalidOperationException("MassNavigationMod requires RuntimeEntitySpawnQueue.");
         RuntimeEntitySpawnReceiptQueue receiptQueue = engine.GetService(CoreServiceKeys.RuntimeEntitySpawnReceiptQueue)
             ?? throw new InvalidOperationException("MassNavigationMod requires RuntimeEntitySpawnReceiptQueue.");
-        int receiptChannelId = ResolveReceiptChannelId(engine);
+        int receiptChannelId = simulation.BindRuntimeSpawnReceiptChannel(ResolveReceiptChannelId(engine));
         int pendingMassNavigationRequests = spawnQueue.CountForReceiptChannel(receiptChannelId);
         if (pendingMassNavigationRequests != 0)
         {
@@ -192,7 +192,7 @@ internal static class MassNavigationScenarioBootstrap
         Fix64Vec2 worldPosition,
         in MassNavigationSpawnReceiptBinding binding)
     {
-        int receiptId = simulation.SpawnReceipts.Allocate(in binding);
+        int receiptId = simulation.AllocateSpawnReceipt(in binding);
         var request = new RuntimeEntitySpawnRequest
         {
             Kind = RuntimeEntitySpawnKind.Template,

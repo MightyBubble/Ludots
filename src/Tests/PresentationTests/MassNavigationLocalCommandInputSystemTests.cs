@@ -185,7 +185,7 @@ namespace Ludots.Tests.Presentation
         [Test]
         public void BindBoardWorld_RejectsActiveHotZoneOutsideBoardCenterRange()
         {
-            MassNavigationConfig config = CreateConfig();
+            MassNavigationConfig config = CreateConfigForTests();
             config.World!.HotZones[0].CenterXCm = 1_000;
             var simulation = new MassNavigationSimulationRuntime(config);
 
@@ -200,7 +200,7 @@ namespace Ludots.Tests.Presentation
         [Test]
         public void SetFormationMode_RejectsUndefinedEnumValue()
         {
-            var simulation = new MassNavigationSimulationRuntime(CreateConfig());
+            var simulation = new MassNavigationSimulationRuntime(CreateConfigForTests());
 
             ArgumentOutOfRangeException ex = Assert.Throws<ArgumentOutOfRangeException>(
                 () => simulation.SetFormationMode((MassNavigationFormationMode)999))!;
@@ -211,7 +211,7 @@ namespace Ludots.Tests.Presentation
         [Test]
         public void SelectionScratchAndSnapshot_OverflowFailFastWithoutArrayResize()
         {
-            MassNavigationConfig config = CreateConfig();
+            MassNavigationConfig config = CreateConfigForTests();
             config.ScenarioRuntime.InitialSelectionScratchCapacity = 1;
             config.ScenarioRuntime.InitialSelectedEntityCapacity = 1;
             var simulation = new MassNavigationSimulationRuntime(config);
@@ -263,7 +263,7 @@ namespace Ludots.Tests.Presentation
                 new Team { Id = EnemyTeamId },
                 OrderBuffer.CreateEmpty());
 
-            var config = CreateConfig();
+            var config = CreateConfigForTests();
             var simulation = new MassNavigationSimulationRuntime(config);
             simulation.BindBoardWorld(new WorldSizeSpec(new WorldAabbCm(0, 0, 25_000, 25_000), 100));
             int layerIndex = LayerRegistry.Register(MassNavigationLayerNames.Agent);
@@ -370,7 +370,7 @@ namespace Ludots.Tests.Presentation
             throw new DirectoryNotFoundException("Repository root not found from test work directory.");
         }
 
-        private static MassNavigationConfig CreateConfig()
+        internal static MassNavigationConfig CreateConfigForTests()
         {
             MassFlowSolverConfig solver = CreateTestSolverConfig();
             var config = new MassNavigationConfig
@@ -432,6 +432,10 @@ namespace Ludots.Tests.Presentation
                     AutoSpawnConfiguredScenario = true,
                     InitialSelectionScratchCapacity = 8,
                     InitialSelectedEntityCapacity = 8,
+                    Panel = new MassNavigationPanelConfig
+                    {
+                        Mode = "Owned",
+                    },
                     RuntimeCapacity = new MassNavigationRuntimeCapacityConfig
                     {
                         NavigationGroupCapacity = 8,

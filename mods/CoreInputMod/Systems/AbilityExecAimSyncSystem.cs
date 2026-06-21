@@ -26,7 +26,12 @@ namespace CoreInputMod.Systems
 
         public override void Update(in float dt)
         {
-            Entity actor = _context.GetControlledActor();
+            if (!_context.TryGetLocalPlayerId(out int playerId))
+            {
+                return;
+            }
+
+            Entity actor = _context.GetControlledActor(playerId);
             if (actor == Entity.Null || !World.IsAlive(actor) || !_context.TryGetGroundWorldCm(out var worldCm))
             {
                 return;

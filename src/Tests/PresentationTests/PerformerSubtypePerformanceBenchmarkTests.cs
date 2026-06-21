@@ -5,6 +5,7 @@ using System.IO;
 using System.Numerics;
 using System.Text;
 using Arch.Core;
+using Ludots.Core.Presentation;
 using Ludots.Core.Presentation.Components;
 using Ludots.Core.Presentation.Commands;
 using Ludots.Core.Presentation.Hud;
@@ -32,6 +33,8 @@ namespace Ludots.Tests.Presentation
             var definitions = new PerformerDefinitionRegistry();
             var requests = new PresentationRequestBuffer(64_000);
             var stableDrawCache = new StableDrawCache(64_000);
+            var stableIds = new PresentationStableIdAllocator();
+            var visualStableIds = new PerformerVisualStableIdTable(stableIds, capacity: 64_000);
             var timings = new PresentationTimingDiagnostics { SystemBreakdownEnabled = true };
 
             int decalDefId = RegisterStaticVisual(definitions, "subtype.static.decal", AssetKind.Decal, 101, 201);
@@ -65,7 +68,8 @@ namespace Ludots.Tests.Presentation
                 animatorStates: null!,
                 soundRequests: null!,
                 timingDiagnostics: timings,
-                stableDrawCache: stableDrawCache);
+                stableDrawCache: stableDrawCache,
+                visualStableIds: visualStableIds);
 
             long firstEmitStart = Stopwatch.GetTimestamp();
             emit.Update(0.016f);

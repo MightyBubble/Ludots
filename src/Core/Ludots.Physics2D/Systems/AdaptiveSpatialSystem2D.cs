@@ -19,16 +19,51 @@ namespace Ludots.Core.Physics2D.Systems
 
     public sealed class AdaptiveSpatialSystem2D : BaseSystem<World, float>
     {
+        private readonly struct PairKey : IEquatable<PairKey>
+        {
+            public readonly int EntityAId;
+            public readonly int EntityBId;
+            public readonly byte ShapeSlotA;
+            public readonly byte ShapeSlotB;
+
+            public PairKey(int entityAId, byte shapeSlotA, int entityBId, byte shapeSlotB)
+            {
+                EntityAId = entityAId;
+                ShapeSlotA = shapeSlotA;
+                EntityBId = entityBId;
+                ShapeSlotB = shapeSlotB;
+            }
+
+            public bool Equals(PairKey other)
+            {
+                return EntityAId == other.EntityAId &&
+                    EntityBId == other.EntityBId &&
+                    ShapeSlotA == other.ShapeSlotA &&
+                    ShapeSlotB == other.ShapeSlotB;
+            }
+
+            public override bool Equals(object? obj)
+            {
+                return obj is PairKey other && Equals(other);
+            }
+
+            public override int GetHashCode()
+            {
+                return HashCode.Combine(EntityAId, EntityBId, ShapeSlotA, ShapeSlotB);
+            }
+        }
+
         private readonly int _maxCollisionPairs;
 
         private readonly BuildPhysicsWorldSystem2D _buildPhysicsWorld;
         private readonly List<(int, int)> _potentialPairs;
         private readonly Stack<Entity> _pairPool;
-        private readonly Dictionary<long, Entity> _pairMap;
-        private readonly HashSet<long> _usedPairKeys;
-        private readonly List<long> _unusedPairKeys;
+        private readonly Dictionary<PairKey, Entity> _pairMap;
+        private readonly HashSet<PairKey> _usedPairKeys;
+        private readonly List<PairKey> _unusedPairKeys;
 
-        private ISpatialPartitionStrategy _currentStrategy;
+        private ISpatialPartitionStrategy _currentStrategy = null!;
+        private int _observedStaticBodyVersion = -1;
 
         public CollisionPairOverflowPolicy2D OverflowPolicy { get; set; } = CollisionPairOverflowPolicy2D.Throw;
         public int DroppedPairsLastUpdate { get; private set; }
@@ -40,9 +75,9 @@ namespace Ludots.Core.Physics2D.Systems
             _maxCollisionPairs = maxCollisionPairs;
             _potentialPairs = new List<(int, int)>(_maxCollisionPairs);
             _pairPool = new Stack<Entity>(_maxCollisionPairs);
-            _pairMap = new Dictionary<long, Entity>(4096);
-            _usedPairKeys = new HashSet<long>();
-            _unusedPairKeys = new List<long>(4096);
+            _pairMap = new Dictionary<PairKey, Entity>(4096);
+            _usedPairKeys = new HashSet<PairKey>();
+            _unusedPairKeys = new List<PairKey>(4096);
 
             InitializeCollisionPairPool();
             SetStrategy(new SortAndSweepStrategy());
@@ -60,10 +95,23 @@ namespace Ludots.Core.Physics2D.Systems
         public override void Update(in float deltaTime)
         {
             DroppedPairsLastUpdate = 0;
-            var rigidBodies = _buildPhysicsWorld.RigidBodyDescriptors;
-            if (rigidBodies.Count == 0) return;
+            var dynamicBodies = _buildPhysicsWorld.DynamicRigidBodyDescriptors;
+            var staticBodies = _buildPhysicsWorld.StaticRigidBodyDescriptors;
+            bool rebuildStatic = _observedStaticBodyVersion != _buildPhysicsWorld.StaticBodyVersion;
 
-            _currentStrategy.Build(CollectionsMarshal.AsSpan(rigidBodies));
+            _currentStrategy.Build(
+                CollectionsMarshal.AsSpan(dynamicBodies),
+                CollectionsMarshal.AsSpan(staticBodies),
+                rebuildStatic);
+            _observedStaticBodyVersion = _buildPhysicsWorld.StaticBodyVersion;
+
+            if (dynamicBodies.Count == 0)
+            {
+                _potentialPairs.Clear();
+                _usedPairKeys.Clear();
+                RecycleUnusedPairs();
+                return;
+            }
 
             _potentialPairs.Clear();
             _currentStrategy.QueryPotentialCollisions(_potentialPairs);
@@ -82,6 +130,7 @@ namespace Ludots.Core.Physics2D.Systems
         private void ActivateCollisionPairs(List<(int indexA, int indexB)> pairs)
         {
             var entities = _buildPhysicsWorld.Entities;
+            var shapeSlots = _buildPhysicsWorld.ShapeSlots;
             int needed = 0;
             _usedPairKeys.Clear();
 
@@ -93,6 +142,13 @@ namespace Ludots.Core.Physics2D.Systems
 
                 var entityA = entities[rigidBodyIndexA];
                 var entityB = entities[rigidBodyIndexB];
+                if (entityA == entityB)
+                {
+                    continue;
+                }
+
+                byte shapeSlotA = shapeSlots[rigidBodyIndexA];
+                byte shapeSlotB = shapeSlots[rigidBodyIndexB];
 
                 if (World.Has<SleepingTag>(entityA) && World.Has<SleepingTag>(entityB))
                 {
@@ -102,9 +158,10 @@ namespace Ludots.Core.Physics2D.Systems
                 if (entityB.Id < entityA.Id)
                 {
                     (entityA, entityB) = (entityB, entityA);
+                    (shapeSlotA, shapeSlotB) = (shapeSlotB, shapeSlotA);
                 }
 
-                long key = MakePairKey(entityA.Id, entityB.Id);
+                var key = new PairKey(entityA.Id, shapeSlotA, entityB.Id, shapeSlotB);
                 if (!_usedPairKeys.Add(key))
                 {
                     continue;
@@ -117,6 +174,8 @@ namespace Ludots.Core.Physics2D.Systems
                     collisionPair.IsActive = true;
                     collisionPair.EntityA = entityA;
                     collisionPair.EntityB = entityB;
+                    collisionPair.ShapeSlotA = shapeSlotA;
+                    collisionPair.ShapeSlotB = shapeSlotB;
                     collisionPair.ContactCount = 0;
                     collisionPair.Penetration = Fix64.Zero;
                     if (!World.Has<ActiveCollisionPairTag>(pairEntity))
@@ -142,6 +201,8 @@ namespace Ludots.Core.Physics2D.Systems
                     collisionPair.IsActive = true;
                     collisionPair.EntityA = entityA;
                     collisionPair.EntityB = entityB;
+                    collisionPair.ShapeSlotA = shapeSlotA;
+                    collisionPair.ShapeSlotB = shapeSlotB;
                     collisionPair.ContactCount = 0;
                     collisionPair.Penetration = Fix64.Zero;
                     collisionPair.AccumulatedNormalImpulse0 = Fix64.Zero;
@@ -169,7 +230,7 @@ namespace Ludots.Core.Physics2D.Systems
 
             for (int i = 0; i < _unusedPairKeys.Count; i++)
             {
-                long key = _unusedPairKeys[i];
+                PairKey key = _unusedPairKeys[i];
                 if (!_pairMap.TryGetValue(key, out var entity)) continue;
                 _pairMap.Remove(key);
                 if (!World.IsAlive(entity)) continue;
@@ -178,13 +239,10 @@ namespace Ludots.Core.Physics2D.Systems
                 pair.IsActive = false;
                 pair.EntityA = default;
                 pair.EntityB = default;
+                pair.ShapeSlotA = 0;
+                pair.ShapeSlotB = 0;
                 _pairPool.Push(entity);
             }
-        }
-
-        private static long MakePairKey(int idA, int idB)
-        {
-            return ((long)idA << 32) | (uint)idB;
         }
 
         private void InitializeCollisionPairPool()

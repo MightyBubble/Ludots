@@ -13,6 +13,7 @@ using Ludots.Core.Mathematics;
 using Ludots.Core.Modding;
 using Ludots.Core.Presentation.Systems;
 using Ludots.Core.Scripting;
+using Ludots.Core.Systems;
 
 namespace CoreInputMod.Triggers
 {
@@ -56,18 +57,20 @@ namespace CoreInputMod.Triggers
                 ?? throw new InvalidOperationException("SelectionRuleRegistry must be registered before CoreInputMod installs.");
             var selectionRuntime = engine.GetService(CoreServiceKeys.SelectionRuntime)
                 ?? throw new InvalidOperationException("SelectionRuntime must be registered before CoreInputMod installs.");
+            var entityCollections = engine.GetService(CoreServiceKeys.EntityCollectionStore)
+                ?? throw new InvalidOperationException("EntityCollectionStore must be registered before CoreInputMod installs.");
             var orderQueue = engine.GetService(CoreServiceKeys.OrderQueue)
                 ?? throw new InvalidOperationException("OrderQueue must be registered before CoreInputMod installs.");
 
             engine.RegisterSystem(new SelectionMaintenanceSystem(engine.World, selectionRuntime), SystemGroup.InputCollection);
             engine.RegisterSystem(new OrderSelectionLeaseCleanupSystem(engine.World, orderQueue), SystemGroup.Cleanup);
 
-            var currentSelection = new CurrentSelectionApplySystem(engine.World, engine.GlobalContext, selectionRuntime);
+            var currentSelection = new CurrentSelectionApplySystem(engine.World, engine.GlobalContext, selectionRuntime, entityCollections);
             currentSelection.OnEntitySelected = (worldCm, entity) =>
             {
                 foreach (var cb in selectionCallbacks) cb(worldCm, entity);
             };
-            engine.RegisterSystem(currentSelection, SystemGroup.InputCollection);
+            engine.InsertSystemBeforeRequired<CameraRuntimeSystem>(currentSelection, SystemGroup.InputCollection);
 
             var gasSelection = new GasSelectionResponseSystem(engine.World, engine.GlobalContext, engine.SpatialQueries, selectionRules);
             gasSelection.OnSelectionTriggered = (req, worldCm) =>
@@ -84,7 +87,7 @@ namespace CoreInputMod.Triggers
             engine.RegisterPresentationSystem(new SelectedMovePathPresentationSystem(engine.World, engine.GlobalContext, selectionRuntime));
             engine.RegisterSystem(new TabTargetCycleSystem(engine.World, engine.GlobalContext), SystemGroup.InputCollection);
 
-            var vmManager = new ViewModeManager(engine.World, engine.GlobalContext, engine.GameSession.Camera);
+            var vmManager = new ViewModeManager(engine.GlobalContext);
             engine.SetService(CoreInputServiceKeys.ViewModeManager, vmManager);
             engine.RegisterSystem(new ViewModeSwitchSystem(engine.GlobalContext), SystemGroup.InputCollection);
 

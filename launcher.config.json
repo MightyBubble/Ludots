@@ -96,6 +96,70 @@
         "value": "mods/capabilities/navigation/MassNavigationMod",
         "projectPath": "MassNavigationMod.csproj"
       }
+    },
+    {
+      "name": "capability_standard_static_performer_30k",
+      "target": {
+        "type": "path",
+        "value": "mods/showcases/capability_standard/CapabilityStandardStaticPerformer30kMod",
+        "projectPath": "CapabilityStandardStaticPerformer30kMod.csproj"
+      }
+    },
+    {
+      "name": "capability_standard_mass_nav_large_world_10k",
+      "target": {
+        "type": "path",
+        "value": "mods/showcases/capability_standard/CapabilityStandardMassNavigationLargeWorld10kMod",
+        "projectPath": "CapabilityStandardMassNavigationLargeWorld10kMod.csproj"
+      }
+    },
+    {
+      "name": "capability_standard_total_war_like",
+      "target": {
+        "type": "path",
+        "value": "mods/showcases/capability_standard/CapabilityStandardTotalWarLikeMod",
+        "projectPath": "CapabilityStandardTotalWarLikeMod.csproj"
+      }
+    },
+    {
+      "name": "capability_standard_participant_views",
+      "target": {
+        "type": "path",
+        "value": "mods/showcases/capability_standard/CapabilityStandardParticipantViewsMod",
+        "projectPath": "CapabilityStandardParticipantViewsMod.csproj"
+      }
+    },
+    {
+      "name": "entity_query_tactics",
+      "target": {
+        "type": "path",
+        "value": "mods/showcases/entity_query_tactics/EntityQueryTacticsShowcaseMod",
+        "projectPath": "EntityQueryTacticsShowcaseMod.csproj"
+      }
+    },
+    {
+      "name": "browser_ui_showcase",
+      "target": {
+        "type": "path",
+        "value": "mods/showcases/browser_ui/BrowserUiShowcaseMod",
+        "projectPath": "BrowserUiShowcaseMod.csproj"
+      }
+    },
+    {
+      "name": "browser_react_flow_showcase",
+      "target": {
+        "type": "path",
+        "value": "mods/showcases/browser_react_flow/BrowserReactFlowShowcaseMod",
+        "projectPath": "BrowserReactFlowShowcaseMod.csproj"
+      }
+    },
+    {
+      "name": "browser_cef_runtime",
+      "target": {
+        "type": "path",
+        "value": "mods/browser/BrowserCefRuntimeMod",
+        "projectPath": "BrowserCefRuntimeMod.csproj"
+      }
     }
   ],
   "adapters": {

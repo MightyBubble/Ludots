@@ -11,10 +11,13 @@ using Ludots.Core.Gameplay.Components;
 using Ludots.Core.Gameplay.GAS.Components;
 using Ludots.Core.Gameplay.GAS.Registry;
 using Ludots.Core.Gameplay.Spawning;
+using Ludots.Core.Input.Selection;
+using Ludots.Core.Layers;
 using Ludots.Core.Map;
 using Ludots.Core.Mathematics;
 using Ludots.Core.Presentation;
 using Ludots.Core.Presentation.Components;
+using Ludots.Core.Presentation.Performers;
 using Ludots.Core.Spatial;
 
 namespace Ludots.Core.Config
@@ -237,7 +240,12 @@ namespace Ludots.Core.Config
                 Span<AttributeLastSnapshot> attributeSnapshots = chunk.GetSpan<AttributeLastSnapshot>();
                 Span<GameplayTagContainer> gameplayTags = chunk.GetSpan<GameplayTagContainer>();
                 Span<TagCountContainer> tagCounts = chunk.GetSpan<TagCountContainer>();
-                Span<EntityTemplateKeyCm> templateKeys = chunk.GetSpan<EntityTemplateKeyCm>();
+                Span<EntityTemplateKeyRef> templateKeys = chunk.GetSpan<EntityTemplateKeyRef>();
+                Span<OrderBuffer> orderBuffers = descriptor.HasOrderBuffer ? chunk.GetSpan<OrderBuffer>() : default;
+                Span<SelectionSelectableState> selectionStates = descriptor.HasSelectionSelectableState ? chunk.GetSpan<SelectionSelectableState>() : default;
+                Span<Ludots.Core.Gameplay.Components.EntityLayer> entityLayers = descriptor.HasEntityLayer ? chunk.GetSpan<Ludots.Core.Gameplay.Components.EntityLayer>() : default;
+                Span<Team> teams = descriptor.HasTeam ? chunk.GetSpan<Team>() : default;
+                Span<PlayerOwner> playerOwners = descriptor.HasPlayerOwner ? chunk.GetSpan<PlayerOwner>() : default;
                 Span<MapEntity> mapEntities = includeMapEntity ? chunk.GetSpan<MapEntity>() : default;
                 Span<PresentationStableId> stableIds = includeStableId ? chunk.GetSpan<PresentationStableId>() : default;
                 Span<PresentationLifecycleState> lifecycleStates = includeLifecycleState ? chunk.GetSpan<PresentationLifecycleState>() : default;
@@ -278,6 +286,30 @@ namespace Ludots.Core.Config
                     gameplayTags[componentIndex] = descriptor.GameplayTags;
                     tagCounts[componentIndex] = descriptor.TagCounts;
                     templateKeys[componentIndex] = descriptor.TemplateKey;
+                    if (descriptor.HasOrderBuffer)
+                    {
+                        orderBuffers[componentIndex] = OrderBuffer.CreateEmpty();
+                    }
+
+                    if (descriptor.HasSelectionSelectableState)
+                    {
+                        selectionStates[componentIndex] = descriptor.SelectionSelectableState;
+                    }
+
+                    if (descriptor.HasEntityLayer)
+                    {
+                        entityLayers[componentIndex] = descriptor.EntityLayer;
+                    }
+
+                    if (descriptor.HasTeam)
+                    {
+                        teams[componentIndex] = descriptor.Team;
+                    }
+
+                    if (descriptor.HasPlayerOwner)
+                    {
+                        playerOwners[componentIndex] = descriptor.PlayerOwner;
+                    }
 
                     if (includeMapEntity)
                     {
@@ -389,7 +421,8 @@ namespace Ludots.Core.Config
                 in MapEntity mapEntity = default,
                 bool hasMapEntity = false,
                 int presentationStableId = 0,
-                bool hasPresentationStableId = false)
+                bool hasPresentationStableId = false,
+                ParamDefault[]? performerParamOverrides = null)
             {
                 WorldPositionCm = worldPositionCm;
                 HasWorldPosition = hasWorldPosition;
@@ -399,6 +432,7 @@ namespace Ludots.Core.Config
                 HasMapEntity = hasMapEntity;
                 PresentationStableId = presentationStableId;
                 HasPresentationStableId = hasPresentationStableId;
+                PerformerParamOverrides = performerParamOverrides ?? Array.Empty<ParamDefault>();
             }
 
             public Ludots.Core.Mathematics.FixedPoint.Fix64Vec2 WorldPositionCm { get; }
@@ -416,6 +450,8 @@ namespace Ludots.Core.Config
             public int PresentationStableId { get; }
 
             public bool HasPresentationStableId { get; }
+
+            public ParamDefault[] PerformerParamOverrides { get; }
         }
 
         private readonly struct TemplateSpawnDescriptor
@@ -431,7 +467,16 @@ namespace Ludots.Core.Config
             public readonly CullState CullState;
             public readonly GameplayTagContainer GameplayTags;
             public readonly TagCountContainer TagCounts;
-            public readonly EntityTemplateKeyCm TemplateKey;
+            public readonly EntityTemplateKeyRef TemplateKey;
+            public readonly bool HasOrderBuffer;
+            public readonly bool HasSelectionSelectableState;
+            public readonly SelectionSelectableState SelectionSelectableState;
+            public readonly bool HasEntityLayer;
+            public readonly Ludots.Core.Gameplay.Components.EntityLayer EntityLayer;
+            public readonly bool HasTeam;
+            public readonly Team Team;
+            public readonly bool HasPlayerOwner;
+            public readonly PlayerOwner PlayerOwner;
             public readonly int OnSpawnEffectTemplateId;
             public readonly ComponentType[] TagComponentTypes;
             private readonly AttributeSeed[] _attributeSeeds;
@@ -448,7 +493,16 @@ namespace Ludots.Core.Config
                 CullState cullState,
                 GameplayTagContainer gameplayTags,
                 TagCountContainer tagCounts,
-                EntityTemplateKeyCm templateKey,
+                EntityTemplateKeyRef templateKey,
+                bool hasOrderBuffer,
+                SelectionSelectableState selectionSelectableState,
+                bool hasSelectionSelectableState,
+                Ludots.Core.Gameplay.Components.EntityLayer entityLayer,
+                bool hasEntityLayer,
+                Team team,
+                bool hasTeam,
+                PlayerOwner playerOwner,
+                bool hasPlayerOwner,
                 int onSpawnEffectTemplateId,
                 ComponentType[] tagComponentTypes,
                 AttributeSeed[] attributeSeeds)
@@ -465,6 +519,15 @@ namespace Ludots.Core.Config
                 GameplayTags = gameplayTags;
                 TagCounts = tagCounts;
                 TemplateKey = templateKey;
+                HasOrderBuffer = hasOrderBuffer;
+                SelectionSelectableState = selectionSelectableState;
+                HasSelectionSelectableState = hasSelectionSelectableState;
+                EntityLayer = entityLayer;
+                HasEntityLayer = hasEntityLayer;
+                Team = team;
+                HasTeam = hasTeam;
+                PlayerOwner = playerOwner;
+                HasPlayerOwner = hasPlayerOwner;
                 OnSpawnEffectTemplateId = onSpawnEffectTemplateId;
                 TagComponentTypes = tagComponentTypes ?? Array.Empty<ComponentType>();
                 _attributeSeeds = attributeSeeds ?? Array.Empty<AttributeSeed>();
@@ -542,6 +605,15 @@ namespace Ludots.Core.Config
                         default,
                         default,
                         default,
+                        false,
+                        default,
+                        false,
+                        default,
+                        false,
+                        default,
+                        false,
+                        default,
+                        false,
                         onSpawnEffectTemplateId,
                         Array.Empty<ComponentType>(),
                         Array.Empty<AttributeSeed>());
@@ -562,6 +634,15 @@ namespace Ludots.Core.Config
                         default,
                         default,
                         default,
+                        false,
+                        default,
+                        false,
+                        default,
+                        false,
+                        default,
+                        false,
+                        default,
+                        false,
                         onSpawnEffectTemplateId,
                         Array.Empty<ComponentType>(),
                         Array.Empty<AttributeSeed>());
@@ -593,9 +674,27 @@ namespace Ludots.Core.Config
                 bool hasStaticHeightPending = template.Components.ContainsKey("PresentationStaticHeightPending");
                 bool hasDynamicHeightSampling = template.Components.ContainsKey("VisualHeightmapSampleState");
                 bool hasSpatialPartitionExcluded = template.Components.ContainsKey("SpatialPartitionExcluded");
+                bool hasOrderBuffer = template.Components.ContainsKey("OrderBuffer");
+                bool hasSelectionSelectableState = template.Components.ContainsKey("SelectionSelectableState");
+                bool hasEntityLayer = template.Components.ContainsKey("EntityLayer");
+                bool hasTeam = template.Components.ContainsKey("Team");
+                bool hasPlayerOwner = template.Components.ContainsKey("PlayerOwner");
+                SelectionSelectableState selectionSelectableState = hasSelectionSelectableState
+                    ? ParseSelectionSelectableState(templateId, template.Components["SelectionSelectableState"])
+                    : default;
+                Ludots.Core.Gameplay.Components.EntityLayer entityLayer = hasEntityLayer
+                    ? ParseEntityLayer(templateId, template.Components["EntityLayer"])
+                    : default;
+                Team team = hasTeam ? ParseTeam(templateId, template.Components["Team"]) : default;
+                PlayerOwner playerOwner = hasPlayerOwner ? ParsePlayerOwner(templateId, template.Components["PlayerOwner"]) : default;
 
                 RequireEmptyObject(templateId, template.Components, "GameplayTagContainer");
                 RequireEmptyObject(templateId, template.Components, "TagCountContainer");
+                if (hasOrderBuffer)
+                {
+                    RequireEmptyObject(templateId, template.Components, "OrderBuffer");
+                }
+
                 if (hasStaticTransform)
                 {
                     RequireEmptyObject(templateId, template.Components, "PresentationStaticTransform");
@@ -627,7 +726,7 @@ namespace Ludots.Core.Config
                     Component<AttributeLastSnapshot>.Signature +
                     Component<GameplayTagContainer>.Signature +
                     Component<TagCountContainer>.Signature +
-                    Component<EntityTemplateKeyCm>.Signature;
+                    Component<EntityTemplateKeyRef>.Signature;
 
                 if (hasDynamicHeightSampling)
                 {
@@ -651,6 +750,31 @@ namespace Ludots.Core.Config
                     signature += Component<SpatialPartitionExcluded>.Signature;
                 }
 
+                if (hasOrderBuffer)
+                {
+                    signature += Component<OrderBuffer>.Signature;
+                }
+
+                if (hasSelectionSelectableState)
+                {
+                    signature += Component<SelectionSelectableState>.Signature;
+                }
+
+                if (hasEntityLayer)
+                {
+                    signature += Component<Ludots.Core.Gameplay.Components.EntityLayer>.Signature;
+                }
+
+                if (hasTeam)
+                {
+                    signature += Component<Team>.Signature;
+                }
+
+                if (hasPlayerOwner)
+                {
+                    signature += Component<PlayerOwner>.Signature;
+                }
+
                 for (int i = 0; i < tagComponentTypes.Length; i++)
                 {
                     signature += new Signature(tagComponentTypes[i]);
@@ -668,7 +792,16 @@ namespace Ludots.Core.Config
                     new CullState { IsVisible = false, LOD = LODLevel.Low },
                     default,
                     default,
-                    new EntityTemplateKeyCm { TemplateKeyId = templateKeyId },
+                    new EntityTemplateKeyRef { TemplateKeyId = templateKeyId },
+                    hasOrderBuffer,
+                    selectionSelectableState,
+                    hasSelectionSelectableState,
+                    entityLayer,
+                    hasEntityLayer,
+                    team,
+                    hasTeam,
+                    playerOwner,
+                    hasPlayerOwner,
                     onSpawnEffectTemplateId,
                     tagComponentTypes,
                     attributeSeeds);
@@ -695,6 +828,11 @@ namespace Ludots.Core.Config
                         string.Equals(componentName, "AttributeBuffer", StringComparison.Ordinal) ||
                         string.Equals(componentName, "GameplayTagContainer", StringComparison.Ordinal) ||
                         string.Equals(componentName, "TagCountContainer", StringComparison.Ordinal) ||
+                        string.Equals(componentName, "OrderBuffer", StringComparison.Ordinal) ||
+                        string.Equals(componentName, "SelectionSelectableState", StringComparison.Ordinal) ||
+                        string.Equals(componentName, "EntityLayer", StringComparison.Ordinal) ||
+                        string.Equals(componentName, "Team", StringComparison.Ordinal) ||
+                        string.Equals(componentName, "PlayerOwner", StringComparison.Ordinal) ||
                         string.Equals(componentName, "PresentationStaticTransform", StringComparison.Ordinal) ||
                         string.Equals(componentName, "PresentationStaticCullPending", StringComparison.Ordinal) ||
                         string.Equals(componentName, "PresentationStaticHeightPending", StringComparison.Ordinal) ||
@@ -750,6 +888,11 @@ namespace Ludots.Core.Config
                        string.Equals(componentName, "AttributeBuffer", StringComparison.Ordinal) ||
                        string.Equals(componentName, "GameplayTagContainer", StringComparison.Ordinal) ||
                        string.Equals(componentName, "TagCountContainer", StringComparison.Ordinal) ||
+                       string.Equals(componentName, "OrderBuffer", StringComparison.Ordinal) ||
+                       string.Equals(componentName, "SelectionSelectableState", StringComparison.Ordinal) ||
+                       string.Equals(componentName, "EntityLayer", StringComparison.Ordinal) ||
+                       string.Equals(componentName, "Team", StringComparison.Ordinal) ||
+                       string.Equals(componentName, "PlayerOwner", StringComparison.Ordinal) ||
                        string.Equals(componentName, "PresentationStaticTransform", StringComparison.Ordinal) ||
                        string.Equals(componentName, "PresentationStaticCullPending", StringComparison.Ordinal) ||
                        string.Equals(componentName, "PresentationStaticHeightPending", StringComparison.Ordinal) ||
@@ -831,6 +974,65 @@ namespace Ludots.Core.Config
                 }
 
                 return new Name { Value = value };
+            }
+
+            private static SelectionSelectableState ParseSelectionSelectableState(string templateId, JsonNode node)
+            {
+                if (node is not JsonObject obj)
+                {
+                    throw new InvalidOperationException($"Entity template '{templateId}' SelectionSelectableState requires an object payload.");
+                }
+
+                ValidateProperties(obj, $"Entity template '{templateId}' SelectionSelectableState", "IsEnabled");
+                JsonNode isEnabledNode = RequireProperty(obj, "IsEnabled", $"Entity template '{templateId}' SelectionSelectableState");
+                byte enabled = isEnabledNode.GetValueKind() switch
+                {
+                    JsonValueKind.True => (byte)1,
+                    JsonValueKind.False => (byte)0,
+                    _ => throw new InvalidOperationException($"Entity template '{templateId}' SelectionSelectableState.IsEnabled requires a boolean value."),
+                };
+
+                return new SelectionSelectableState { IsEnabled = enabled };
+            }
+
+            private static Ludots.Core.Gameplay.Components.EntityLayer ParseEntityLayer(string templateId, JsonNode node)
+            {
+                LayerMask layerMask = EntityLayerAuthoring.ReadLayerMask(node, $"Entity template '{templateId}'");
+                return new Ludots.Core.Gameplay.Components.EntityLayer(layerMask);
+            }
+
+            private static Team ParseTeam(string templateId, JsonNode node)
+            {
+                if (node is not JsonObject obj)
+                {
+                    throw new InvalidOperationException($"Entity template '{templateId}' Team requires an object payload.");
+                }
+
+                ValidateProperties(obj, $"Entity template '{templateId}' Team", "Id");
+                JsonNode idNode = RequireProperty(obj, "Id", $"Entity template '{templateId}' Team");
+                if (idNode.GetValueKind() != JsonValueKind.Number)
+                {
+                    throw new InvalidOperationException($"Entity template '{templateId}' Team.Id requires an integer value.");
+                }
+
+                return new Team { Id = idNode.GetValue<int>() };
+            }
+
+            private static PlayerOwner ParsePlayerOwner(string templateId, JsonNode node)
+            {
+                if (node is not JsonObject obj)
+                {
+                    throw new InvalidOperationException($"Entity template '{templateId}' PlayerOwner requires an object payload.");
+                }
+
+                ValidateProperties(obj, $"Entity template '{templateId}' PlayerOwner", "PlayerId");
+                JsonNode idNode = RequireProperty(obj, "PlayerId", $"Entity template '{templateId}' PlayerOwner");
+                if (idNode.GetValueKind() != JsonValueKind.Number)
+                {
+                    throw new InvalidOperationException($"Entity template '{templateId}' PlayerOwner.PlayerId requires an integer value.");
+                }
+
+                return new PlayerOwner { PlayerId = idNode.GetValue<int>() };
             }
 
             private static float ParseFacing(string templateId, JsonNode node)

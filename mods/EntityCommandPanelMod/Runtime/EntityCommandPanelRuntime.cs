@@ -306,7 +306,7 @@ namespace EntityCommandPanelMod.Runtime
             }
 
             if (_sources.TryGet(_sourceIds[slot], out IEntityCommandPanelSource source) &&
-                source.TryGetRevision(_targets[slot], out uint sourceRevision))
+                EntityCommandPanelSourceDispatch.TryGetRevision(source, CreateSourceContext(slot), out uint sourceRevision))
             {
                 revision = HashCombine(revision, sourceRevision);
             }
@@ -342,7 +342,7 @@ namespace EntityCommandPanelMod.Runtime
                 return 0;
             }
 
-            return Math.Max(0, source.GetGroupCount(_targets[slot]));
+            return Math.Max(0, EntityCommandPanelSourceDispatch.GetGroupCount(source, CreateSourceContext(slot)));
         }
 
         private void NormalizeGroupIndex(int slot)
@@ -447,6 +447,11 @@ namespace EntityCommandPanelMod.Runtime
         private EntityCommandPanelHandle CreateHandle(int slot)
         {
             return new EntityCommandPanelHandle(slot, _generations[slot]);
+        }
+
+        private EntityCommandPanelSourceContext CreateSourceContext(int slot)
+        {
+            return new EntityCommandPanelSourceContext(_targets[slot], _sourceIds[slot], _instanceKeys[slot]);
         }
 
         private void MarkDirty()

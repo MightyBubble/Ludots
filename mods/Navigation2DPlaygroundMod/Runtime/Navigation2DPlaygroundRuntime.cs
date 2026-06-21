@@ -278,6 +278,11 @@ namespace Navigation2DPlaygroundMod.Runtime
             }
 
             engine.GlobalContext[CoreServiceKeys.LocalPlayerEntity.Name] = owner;
+            if (engine.World.TryGet(owner, out PlayerOwner playerOwner) && playerOwner.PlayerId > 0)
+            {
+                engine.GlobalContext[CoreServiceKeys.LocalPlayerId.Name] = playerOwner.PlayerId;
+            }
+
             EnsureSelectionComponents(engine.World, owner, selection, engine.GlobalContext);
         }
 

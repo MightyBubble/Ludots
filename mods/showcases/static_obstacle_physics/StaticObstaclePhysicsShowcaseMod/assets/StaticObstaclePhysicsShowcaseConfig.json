@@ -1,0 +1,55 @@
+{
+  "mapId": "static_obstacle_physics_showcase",
+  "obstacleTemplateId": "static_obstacle_physics_compound_blocker",
+  "spawnScratchCapacity": 1024,
+  "regions": [
+    {
+      "id": "north_west_dense",
+      "centerXCm": -5200,
+      "centerYCm": -4200,
+      "columns": 16,
+      "rows": 16,
+      "spacingXCm": 420,
+      "spacingYCm": 420,
+      "staggerXCm": 90,
+      "staggerYCm": 0,
+      "facingDeg": 0
+    },
+    {
+      "id": "north_east_rotated",
+      "centerXCm": 5200,
+      "centerYCm": -4200,
+      "columns": 16,
+      "rows": 16,
+      "spacingXCm": 420,
+      "spacingYCm": 420,
+      "staggerXCm": -90,
+      "staggerYCm": 0,
+      "facingDeg": 13
+    },
+    {
+      "id": "south_west_offset",
+      "centerXCm": -5200,
+      "centerYCm": 4200,
+      "columns": 16,
+      "rows": 16,
+      "spacingXCm": 420,
+      "spacingYCm": 420,
+      "staggerXCm": 0,
+      "staggerYCm": 90,
+      "facingDeg": 27
+    },
+    {
+      "id": "south_east_counter_rotated",
+      "centerXCm": 5200,
+      "centerYCm": 4200,
+      "columns": 16,
+      "rows": 16,
+      "spacingXCm": 420,
+      "spacingYCm": 420,
+      "staggerXCm": 90,
+      "staggerYCm": 90,
+      "facingDeg": -19
+    }
+  ]
+}

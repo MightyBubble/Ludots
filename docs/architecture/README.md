@@ -8,6 +8,7 @@
 - [Camera Character Control](camera_character_control.md)
 - [Config Pipeline](config_pipeline.md)
 - [ECS and SoA](ecs_soa.md)
+- [Entity Collection Query Infrastructure](entity_collection_query_infrastructure.md)
 - [Entity Command Panel Infrastructure](entity_command_panel_infrastructure.md)
 - [Entity Insight Panel Architecture](entity_insight_panel_architecture.md)
 - [Item Inventory Equipment Architecture](item_inventory_equipment_architecture.md)
@@ -17,10 +18,14 @@
 - [Launcher SSOT and User-First Endgame](launcher_ssot_user_first.md)
 - [Pacemaker](pacemaker.md)
 - [Runtime Entity Spawn Flow](runtime_entity_spawn_flow.md)
+- [Spatial Geometry SSOT](spatial_geometry_ssot.md)
+- [Capability Standard Showcases](../../gitbook/architecture/capability-standard-showcases.md)
 - [Startup Entrypoints](startup_entrypoints.md)
 - [Time Flow](time_flow.md)
 - [Trigger Guide](trigger_guide.md)
 - [UI Runtime Architecture](ui_runtime_architecture.md)
+- [Browser UI Runtime](browser_ui_runtime.md)
+- [WebUI DataPlane Architecture](webui_dataplane_architecture.md)
 
 ## Target State And Migration
 

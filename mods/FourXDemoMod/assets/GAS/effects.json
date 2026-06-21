@@ -6,10 +6,17 @@
     ],
     "presetType": "CreateUnit",
     "lifetime": "Instant",
+    "participatesInResponse": false,
     "unitCreation": {
       "unitType": "Unit.Outpost",
+      "placementPattern": "Scatter",
+      "facingPattern": "PreserveTemplate",
       "count": 1,
       "offsetRadius": 80,
+      "placementRadiusCm": 80,
+      "placementStartAngleDeg": 0,
+      "copySourcePlayerOwner": true,
+      "linkSourceAsParent": false,
       "onSpawnEffect": "Effect.4X.OutpostComplete"
     }
   },
@@ -20,6 +27,7 @@
     ],
     "presetType": "Buff",
     "lifetime": "After",
+    "participatesInResponse": false,
     "duration": {
       "durationTicks": 1,
       "periodTicks": 0,
@@ -57,7 +65,8 @@
       {
         "tag": "Status.Researching",
         "formula": "Fixed",
-        "amount": 1
+        "amount": 1,
+        "base": 0
       }
     ]
   },
@@ -69,11 +78,17 @@
     "presetType": "Buff",
     "lifetime": "Infinite",
     "participatesInResponse": false,
+    "duration": {
+      "durationTicks": 0,
+      "periodTicks": 0,
+      "clockId": "FixedFrame"
+    },
     "grantedTags": [
       {
         "tag": "Tech.Agriculture",
         "formula": "Fixed",
-        "amount": 1
+        "amount": 1,
+        "base": 0
       }
     ],
     "modifiers": [
@@ -92,11 +107,17 @@
     "presetType": "Buff",
     "lifetime": "Infinite",
     "participatesInResponse": false,
+    "duration": {
+      "durationTicks": 0,
+      "periodTicks": 0,
+      "clockId": "FixedFrame"
+    },
     "grantedTags": [
       {
         "tag": "Status.Allied",
         "formula": "Fixed",
-        "amount": 1
+        "amount": 1,
+        "base": 0
       }
     ]
   },

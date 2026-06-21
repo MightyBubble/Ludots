@@ -92,7 +92,11 @@ public sealed class MassNavigationConfig
             "initialSelectionScratchCapacity",
             "initialSelectedEntityCapacity",
             "runtimeCapacity",
+            "panel",
             "panelControls");
+        RequireProperties(
+            RequireProperty(scenarioRuntime, "panel"),
+            "mode");
         RequireProperties(
             RequireProperty(scenarioRuntime, "runtimeCapacity"),
             "navigationGroupCapacity",
@@ -504,6 +508,7 @@ public sealed class MassNavigationScenarioRuntimeConfig
     public int InitialSelectionScratchCapacity { get; set; }
     public int InitialSelectedEntityCapacity { get; set; }
     public MassNavigationRuntimeCapacityConfig RuntimeCapacity { get; set; } = new();
+    public MassNavigationPanelConfig Panel { get; set; } = new();
     public MassNavigationPanelControlsConfig PanelControls { get; set; } = new();
 
     public void Validate()
@@ -523,6 +528,13 @@ public sealed class MassNavigationScenarioRuntimeConfig
             throw new InvalidOperationException("Mass-nav scenarioRuntime.runtimeCapacity must be explicitly configured.");
         }
 
+        if (Panel == null)
+        {
+            throw new InvalidOperationException("Mass-nav scenarioRuntime.panel must be explicitly configured.");
+        }
+
+        Panel.Validate();
+
         if (PanelControls == null)
         {
             throw new InvalidOperationException("Mass-nav scenarioRuntime.panelControls must be explicitly configured.");
@@ -530,6 +542,39 @@ public sealed class MassNavigationScenarioRuntimeConfig
 
         RuntimeCapacity.Validate(this);
         PanelControls.Validate();
+    }
+}
+
+public enum MassNavigationPanelMode : byte
+{
+    Owned = 1,
+    Hidden = 2,
+    External = 3,
+}
+
+public sealed class MassNavigationPanelConfig
+{
+    private MassNavigationPanelMode _parsedMode;
+
+    public string Mode { get; set; } = string.Empty;
+
+    [JsonIgnore]
+    public MassNavigationPanelMode ParsedMode => _parsedMode;
+
+    [JsonIgnore]
+    public bool IsOwned => _parsedMode == MassNavigationPanelMode.Owned;
+
+    public void Validate()
+    {
+        _parsedMode = Mode switch
+        {
+            "Owned" => MassNavigationPanelMode.Owned,
+            "Hidden" => MassNavigationPanelMode.Hidden,
+            "External" => MassNavigationPanelMode.External,
+            "" => throw new InvalidOperationException("Mass-nav scenarioRuntime.panel.mode must be explicit."),
+            _ => throw new InvalidOperationException(
+                $"Mass-nav scenarioRuntime.panel.mode '{Mode}' is not configured.")
+        };
     }
 }
 

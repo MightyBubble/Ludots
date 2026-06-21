@@ -1,0 +1,20 @@
+{
+  "name": "BrowserCefRuntimeMod",
+  "version": "1.0.0",
+  "description": "Injects the Windows CEF OffScreen browser runtime as an optional Ludots browser provider.",
+  "main": "bin/net8.0/BrowserCefRuntimeMod.dll",
+  "priority": 300,
+  "dependencies": {
+    "LudotsCoreMod": "^1.0.0"
+  },
+  "processSharedAssemblies": [
+    "Ludots.UI.Browser",
+    "Ludots.UI.Browser.Cef",
+    "CefSharp",
+    "CefSharp.Core",
+    "CefSharp.Core.Runtime",
+    "CefSharp.OffScreen"
+  ],
+  "author": "Ludots Team",
+  "tags": ["browser-ui", "cef", "runtime"]
+}

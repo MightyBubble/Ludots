@@ -1,16 +1,19 @@
 using System;
 using System.Numerics;
+using Arch.Core;
 using Arch.System;
 using CameraAcceptanceMod.Runtime;
+using Ludots.Core.Components;
 using Ludots.Core.Engine;
-using Ludots.Core.Gameplay.Camera;
+using Ludots.Core.Mathematics;
+using Ludots.Core.Presentation.Utils;
+using Ludots.Core.Scripting;
 
 namespace CameraAcceptanceMod.Systems
 {
     internal sealed class CameraAcceptanceHotpathSweepSystem : ISystem<float>
     {
         private readonly GameEngine _engine;
-        private bool _suppressedInput;
         private int _sweepTick;
 
         public CameraAcceptanceHotpathSweepSystem(GameEngine engine)
@@ -29,12 +32,6 @@ namespace CameraAcceptanceMod.Systems
             bool hotpathMap = string.Equals(mapId, CameraAcceptanceIds.HotpathMapId, StringComparison.OrdinalIgnoreCase);
             if (!hotpathMap)
             {
-                if (_suppressedInput)
-                {
-                    _engine.GameSession.Camera.SetUserInputSuppressed(false);
-                    _suppressedInput = false;
-                }
-
                 _sweepTick = 0;
                 if (_engine.GetService(CameraAcceptanceServiceKeys.DiagnosticsState) is CameraAcceptanceDiagnosticsState diagnostics)
                 {
@@ -44,22 +41,32 @@ namespace CameraAcceptanceMod.Systems
                 return;
             }
 
-            if (!_suppressedInput)
-            {
-                _engine.GameSession.Camera.SetUserInputSuppressed(true);
-                _suppressedInput = true;
-            }
-
             ResolveSweepPose(_sweepTick++, out string phase, out int cycle, out Vector2 targetCm);
-            _engine.GameSession.Camera.ApplyPose(new CameraPoseRequest
-            {
-                TargetCm = targetCm
-            });
+            ApplySweepAvatarTarget(targetCm);
 
             if (_engine.GetService(CameraAcceptanceServiceKeys.DiagnosticsState) is CameraAcceptanceDiagnosticsState state)
             {
                 state.PublishHotpathSweep(phase, cycle, $"{targetCm.X:0},{targetCm.Y:0}");
             }
+        }
+
+        private void ApplySweepAvatarTarget(Vector2 targetCm)
+        {
+            if (!_engine.GlobalContext.TryGetValue(CoreServiceKeys.LocalPlayerEntity.Name, out object? localObj) ||
+                localObj is not Entity localPlayer ||
+                !_engine.World.IsAlive(localPlayer) ||
+                !_engine.World.Has<WorldPositionCm>(localPlayer))
+            {
+                return;
+            }
+
+            WorldCmInt2 clamped = GroundRaycastUtil.ClampWorldCmToBounds(
+                new WorldCmInt2((int)MathF.Round(targetCm.X), (int)MathF.Round(targetCm.Y)),
+                _engine.CurrentMapSession?.PrimaryBoard?.WorldSize.Bounds ?? _engine.WorldSizeSpec.Bounds,
+                out _);
+
+            ref var position = ref _engine.World.Get<WorldPositionCm>(localPlayer);
+            position = WorldPositionCm.FromCm(clamped.X, clamped.Y);
         }
 
         private static void ResolveSweepPose(int sweepTick, out string phase, out int cycle, out Vector2 targetCm)

@@ -1,142 +1,242 @@
-[
-  {
-    "id": "acceptance.tank.layered",
-    "defaultStateIndex": 0,
-    "states": [
-      { "packedStateIndex": 31, "durationSeconds": 1.0, "playbackSpeed": 1.0, "loop": true },
-      { "packedStateIndex": 32, "durationSeconds": 0.55, "playbackSpeed": 1.0, "loop": true },
-      { "packedStateIndex": 33, "durationSeconds": 0.32, "playbackSpeed": 1.0, "loop": false }
-    ],
-    "transitions": [
-      {
-        "fromStateIndex": 0,
-        "toStateIndex": 1,
-        "conditionKind": "FloatGreaterOrEqual",
-        "parameterIndex": "animation_acceptance.tank.locomotion.speed",
-        "threshold": 0.25,
-        "durationSeconds": 0.12,
-        "consumeTrigger": false
-      },
-      {
-        "fromStateIndex": 1,
-        "toStateIndex": 0,
-        "conditionKind": "FloatLessOrEqual",
-        "parameterIndex": "animation_acceptance.tank.locomotion.speed",
-        "threshold": 0.15,
-        "durationSeconds": 0.15,
-        "consumeTrigger": false
-      },
-      {
-        "fromStateIndex": 0,
-        "toStateIndex": 2,
-        "conditionKind": "Trigger",
-        "parameterIndex": "animation_acceptance.tank.fire.trigger",
-        "threshold": 0.0,
-        "durationSeconds": 0.03,
-        "consumeTrigger": true
-      },
-      {
-        "fromStateIndex": 1,
-        "toStateIndex": 2,
-        "conditionKind": "Trigger",
-        "parameterIndex": "animation_acceptance.tank.fire.trigger",
-        "threshold": 0.0,
-        "durationSeconds": 0.02,
-        "consumeTrigger": true
-      },
-      {
-        "fromStateIndex": 2,
-        "toStateIndex": 0,
-        "conditionKind": "AutoOnNormalizedTime",
-        "parameterIndex": "none",
-        "threshold": 0.92,
-        "durationSeconds": 0.0,
-        "consumeTrigger": false
-      }
-    ]
-  },
-  {
-    "id": "acceptance.humanoid.layered",
-    "defaultStateIndex": 0,
-    "states": [
-      { "packedStateIndex": 41, "durationSeconds": 1.0, "playbackSpeed": 1.0, "loop": true },
-      { "packedStateIndex": 42, "durationSeconds": 0.58, "playbackSpeed": 1.0, "loop": true },
-      { "packedStateIndex": 43, "durationSeconds": 0.42, "playbackSpeed": 1.0, "loop": true },
-      { "packedStateIndex": 44, "durationSeconds": 0.28, "playbackSpeed": 1.0, "loop": false }
-    ],
-    "transitions": [
-      {
-        "fromStateIndex": 0,
-        "toStateIndex": 1,
-        "conditionKind": "FloatGreaterOrEqual",
-        "parameterIndex": "animation_acceptance.humanoid.locomotion.speed",
-        "threshold": 0.20,
-        "durationSeconds": 0.08,
-        "consumeTrigger": false
-      },
-      {
-        "fromStateIndex": 1,
-        "toStateIndex": 0,
-        "conditionKind": "FloatLessOrEqual",
-        "parameterIndex": "animation_acceptance.humanoid.locomotion.speed",
-        "threshold": 0.10,
-        "durationSeconds": 0.08,
-        "consumeTrigger": false
-      },
-      {
-        "fromStateIndex": 1,
-        "toStateIndex": 2,
-        "conditionKind": "FloatGreaterOrEqual",
-        "parameterIndex": "animation_acceptance.humanoid.locomotion.speed",
-        "threshold": 0.75,
-        "durationSeconds": 0.06,
-        "consumeTrigger": false
-      },
-      {
-        "fromStateIndex": 2,
-        "toStateIndex": 1,
-        "conditionKind": "FloatLessOrEqual",
-        "parameterIndex": "animation_acceptance.humanoid.locomotion.speed",
-        "threshold": 0.55,
-        "durationSeconds": 0.06,
-        "consumeTrigger": false
-      },
-      {
-        "fromStateIndex": 0,
-        "toStateIndex": 3,
-        "conditionKind": "Trigger",
-        "parameterIndex": "animation_acceptance.humanoid.fire.trigger",
-        "threshold": 0.0,
-        "durationSeconds": 0.02,
-        "consumeTrigger": true
-      },
-      {
-        "fromStateIndex": 1,
-        "toStateIndex": 3,
-        "conditionKind": "Trigger",
-        "parameterIndex": "animation_acceptance.humanoid.fire.trigger",
-        "threshold": 0.0,
-        "durationSeconds": 0.02,
-        "consumeTrigger": true
-      },
-      {
-        "fromStateIndex": 2,
-        "toStateIndex": 3,
-        "conditionKind": "Trigger",
-        "parameterIndex": "animation_acceptance.humanoid.fire.trigger",
-        "threshold": 0.0,
-        "durationSeconds": 0.02,
-        "consumeTrigger": true
-      },
-      {
-        "fromStateIndex": 3,
-        "toStateIndex": 0,
-        "conditionKind": "AutoOnNormalizedTime",
-        "parameterIndex": "none",
-        "threshold": 0.92,
-        "durationSeconds": 0.0,
-        "consumeTrigger": false
-      }
-    ]
-  }
+﻿[
+    {
+        "id":  "acceptance.tank.layered",
+        "defaultStateIndex":  0,
+        "states":  [
+                       {
+                           "packedStateIndex":  31,
+                           "durationSeconds":  1.0,
+                           "playbackSpeed":  1.0,
+                           "loop":  true
+                       },
+                       {
+                           "packedStateIndex":  32,
+                           "durationSeconds":  0.55,
+                           "playbackSpeed":  1.0,
+                           "loop":  true
+                       },
+                       {
+                           "packedStateIndex":  33,
+                           "durationSeconds":  0.32,
+                           "playbackSpeed":  1.0,
+                           "loop":  false
+                       }
+                   ],
+        "transitions":  [
+                            {
+                                "fromStateIndex":  0,
+                                "toStateIndex":  1,
+                                "conditionKind":  "FloatGreaterOrEqual",
+                                "parameterIndex":  "animation_acceptance.tank.locomotion.speed",
+                                "threshold":  0.25,
+                                "durationSeconds":  0.12,
+                                "consumeTrigger":  false,
+                                "durationMode":  "Seconds",
+                                "hasExitTime":  false,
+                                "exitTime":  0,
+                                "interruptSource":  "None",
+                                "orderedInterruption":  false
+                            },
+                            {
+                                "fromStateIndex":  1,
+                                "toStateIndex":  0,
+                                "conditionKind":  "FloatLessOrEqual",
+                                "parameterIndex":  "animation_acceptance.tank.locomotion.speed",
+                                "threshold":  0.15,
+                                "durationSeconds":  0.15,
+                                "consumeTrigger":  false,
+                                "durationMode":  "Seconds",
+                                "hasExitTime":  false,
+                                "exitTime":  0,
+                                "interruptSource":  "None",
+                                "orderedInterruption":  false
+                            },
+                            {
+                                "fromStateIndex":  0,
+                                "toStateIndex":  2,
+                                "conditionKind":  "Trigger",
+                                "parameterIndex":  "animation_acceptance.tank.fire.trigger",
+                                "threshold":  0.0,
+                                "durationSeconds":  0.03,
+                                "consumeTrigger":  true,
+                                "durationMode":  "Seconds",
+                                "hasExitTime":  false,
+                                "exitTime":  0,
+                                "interruptSource":  "None",
+                                "orderedInterruption":  false
+                            },
+                            {
+                                "fromStateIndex":  1,
+                                "toStateIndex":  2,
+                                "conditionKind":  "Trigger",
+                                "parameterIndex":  "animation_acceptance.tank.fire.trigger",
+                                "threshold":  0.0,
+                                "durationSeconds":  0.02,
+                                "consumeTrigger":  true,
+                                "durationMode":  "Seconds",
+                                "hasExitTime":  false,
+                                "exitTime":  0,
+                                "interruptSource":  "None",
+                                "orderedInterruption":  false
+                            },
+                            {
+                                "fromStateIndex":  2,
+                                "toStateIndex":  0,
+                                "conditionKind":  "AutoOnNormalizedTime",
+                                "parameterIndex":  "none",
+                                "threshold":  0.92,
+                                "durationSeconds":  0.0,
+                                "consumeTrigger":  false,
+                                "durationMode":  "Seconds",
+                                "hasExitTime":  false,
+                                "exitTime":  0,
+                                "interruptSource":  "None",
+                                "orderedInterruption":  false
+                            }
+                        ]
+    },
+    {
+        "id":  "acceptance.humanoid.layered",
+        "defaultStateIndex":  0,
+        "states":  [
+                       {
+                           "packedStateIndex":  41,
+                           "durationSeconds":  1.0,
+                           "playbackSpeed":  1.0,
+                           "loop":  true
+                       },
+                       {
+                           "packedStateIndex":  42,
+                           "durationSeconds":  0.58,
+                           "playbackSpeed":  1.0,
+                           "loop":  true
+                       },
+                       {
+                           "packedStateIndex":  43,
+                           "durationSeconds":  0.42,
+                           "playbackSpeed":  1.0,
+                           "loop":  true
+                       },
+                       {
+                           "packedStateIndex":  44,
+                           "durationSeconds":  0.28,
+                           "playbackSpeed":  1.0,
+                           "loop":  false
+                       }
+                   ],
+        "transitions":  [
+                            {
+                                "fromStateIndex":  0,
+                                "toStateIndex":  1,
+                                "conditionKind":  "FloatGreaterOrEqual",
+                                "parameterIndex":  "animation_acceptance.humanoid.locomotion.speed",
+                                "threshold":  0.20,
+                                "durationSeconds":  0.08,
+                                "consumeTrigger":  false,
+                                "durationMode":  "Seconds",
+                                "hasExitTime":  false,
+                                "exitTime":  0,
+                                "interruptSource":  "None",
+                                "orderedInterruption":  false
+                            },
+                            {
+                                "fromStateIndex":  1,
+                                "toStateIndex":  0,
+                                "conditionKind":  "FloatLessOrEqual",
+                                "parameterIndex":  "animation_acceptance.humanoid.locomotion.speed",
+                                "threshold":  0.10,
+                                "durationSeconds":  0.08,
+                                "consumeTrigger":  false,
+                                "durationMode":  "Seconds",
+                                "hasExitTime":  false,
+                                "exitTime":  0,
+                                "interruptSource":  "None",
+                                "orderedInterruption":  false
+                            },
+                            {
+                                "fromStateIndex":  1,
+                                "toStateIndex":  2,
+                                "conditionKind":  "FloatGreaterOrEqual",
+                                "parameterIndex":  "animation_acceptance.humanoid.locomotion.speed",
+                                "threshold":  0.75,
+                                "durationSeconds":  0.06,
+                                "consumeTrigger":  false,
+                                "durationMode":  "Seconds",
+                                "hasExitTime":  false,
+                                "exitTime":  0,
+                                "interruptSource":  "None",
+                                "orderedInterruption":  false
+                            },
+                            {
+                                "fromStateIndex":  2,
+                                "toStateIndex":  1,
+                                "conditionKind":  "FloatLessOrEqual",
+                                "parameterIndex":  "animation_acceptance.humanoid.locomotion.speed",
+                                "threshold":  0.55,
+                                "durationSeconds":  0.06,
+                                "consumeTrigger":  false,
+                                "durationMode":  "Seconds",
+                                "hasExitTime":  false,
+                                "exitTime":  0,
+                                "interruptSource":  "None",
+                                "orderedInterruption":  false
+                            },
+                            {
+                                "fromStateIndex":  0,
+                                "toStateIndex":  3,
+                                "conditionKind":  "Trigger",
+                                "parameterIndex":  "animation_acceptance.humanoid.fire.trigger",
+                                "threshold":  0.0,
+                                "durationSeconds":  0.02,
+                                "consumeTrigger":  true,
+                                "durationMode":  "Seconds",
+                                "hasExitTime":  false,
+                                "exitTime":  0,
+                                "interruptSource":  "None",
+                                "orderedInterruption":  false
+                            },
+                            {
+                                "fromStateIndex":  1,
+                                "toStateIndex":  3,
+                                "conditionKind":  "Trigger",
+                                "parameterIndex":  "animation_acceptance.humanoid.fire.trigger",
+                                "threshold":  0.0,
+                                "durationSeconds":  0.02,
+                                "consumeTrigger":  true,
+                                "durationMode":  "Seconds",
+                                "hasExitTime":  false,
+                                "exitTime":  0,
+                                "interruptSource":  "None",
+                                "orderedInterruption":  false
+                            },
+                            {
+                                "fromStateIndex":  2,
+                                "toStateIndex":  3,
+                                "conditionKind":  "Trigger",
+                                "parameterIndex":  "animation_acceptance.humanoid.fire.trigger",
+                                "threshold":  0.0,
+                                "durationSeconds":  0.02,
+                                "consumeTrigger":  true,
+                                "durationMode":  "Seconds",
+                                "hasExitTime":  false,
+                                "exitTime":  0,
+                                "interruptSource":  "None",
+                                "orderedInterruption":  false
+                            },
+                            {
+                                "fromStateIndex":  3,
+                                "toStateIndex":  0,
+                                "conditionKind":  "AutoOnNormalizedTime",
+                                "parameterIndex":  "none",
+                                "threshold":  0.92,
+                                "durationSeconds":  0.0,
+                                "consumeTrigger":  false,
+                                "durationMode":  "Seconds",
+                                "hasExitTime":  false,
+                                "exitTime":  0,
+                                "interruptSource":  "None",
+                                "orderedInterruption":  false
+                            }
+                        ]
+    }
 ]

@@ -15,9 +15,9 @@
   },
   "Entities": [
     {
-      "Template": "moba_dummy",
+      "Template": "moba_hero",
       "Overrides": {
-        "Name": { "Value": "CameraAcceptanceDummy" },
+        "Name": { "Value": "CameraAcceptanceHero" },
         "WorldPositionCm": { "Value": { "X": 3200, "Y": 2000 } }
       }
     },

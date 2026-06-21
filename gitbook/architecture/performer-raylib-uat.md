@@ -118,9 +118,8 @@ blacksmith_root
 
 - 黑铁匠铺第三方 mesh 可被直接加载并参与 instanced static mesh draw
 - 材质最小闭环已打通，当前 benchmark 使用模型自带纹理/材质，不再是纯色占位
-- 默认 `30k` 实例时，最终画面可稳定输出，证据见：
-  - `artifacts/raylib-ism-benchmark/benchmark-hud-frame120-v2.png`
-  - `artifacts/raylib-ism-benchmark/launch-hud-v2.out.log`
+- 默认 `30k` 实例时，最终画面可稳定输出，证据回填名为
+  `benchmark-hud-frame120-v2.png` 与 `launch-hud-v2.out.log`。
 
 默认 `30k` 实测面板数据：
 

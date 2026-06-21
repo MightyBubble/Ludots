@@ -1,6 +1,7 @@
 using System;
 using Arch.Core;
 using EntityInfoPanelsMod.Insight;
+using Ludots.Core.EntityCollections;
 
 namespace EntityInfoPanelsMod;
 
@@ -40,6 +41,11 @@ public sealed partial class EntityInfoPanelService
     {
         _entityCollectionContainers[slot] = Entity.Null;
         _entityCollectionPrimaries[slot] = Entity.Null;
+        _entityCollectionOwners[slot] = Entity.Null;
+        _entityCollectionHandles[slot] = EntityCollectionHandle.Invalid;
+        _entityCollectionSourceKinds[slot] = EntityCollectionSourceKind.Explicit;
+        _entityCollectionSourceTitles[slot] = string.Empty;
+        _entityCollectionSourceSummaries[slot] = string.Empty;
         _entityCollectionViewKeys[slot] = string.Empty;
         _entityCollectionSetKeys[slot] = string.Empty;
         _entityCollectionCounts[slot] = 0;

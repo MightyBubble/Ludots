@@ -172,7 +172,7 @@ namespace Ludots.Core.Input.Orders
         
         // Context
         private Entity _localPlayer;
-        private int _playerId = 1;
+        private int _playerId;
         private float _elapsedSeconds;
         private readonly List<Entity> _selectedActorsScratch = new(16);
 
@@ -278,6 +278,16 @@ namespace Ludots.Core.Input.Orders
         
         public void SetLocalPlayer(Entity entity, int playerId)
         {
+            if (entity == Entity.Null)
+            {
+                throw new ArgumentException("InputOrderMappingSystem requires a non-null local player entity.", nameof(entity));
+            }
+
+            if (playerId <= 0)
+            {
+                throw new ArgumentOutOfRangeException(nameof(playerId), "InputOrderMappingSystem requires a positive player id.");
+            }
+
             _localPlayer = entity;
             _playerId = playerId;
         }
@@ -727,6 +737,7 @@ namespace Ludots.Core.Input.Orders
         private bool TryBuildOrderWithOrderTypeSuffix(InputOrderMapping mapping, Entity actor, string orderTypeSuffix, out Order order)
         {
             order = default;
+            if (!HasExplicitLocalPlayer()) return false;
             int orderTypeId = _orderTypeKeyResolver!(mapping.OrderTypeKey + orderTypeSuffix);
             if (orderTypeId <= 0) return false;
             var args = new OrderArgs();
@@ -830,6 +841,7 @@ namespace Ludots.Core.Input.Orders
         private bool TryBuildContextScoredOrder(InputOrderMapping mapping, Entity hoveredEntity, out Order order)
         {
             order = default;
+            if (!HasExplicitLocalPlayer()) return false;
 
             int orderTypeId = _orderTypeKeyResolver!(mapping.OrderTypeKey);
             if (orderTypeId <= 0)
@@ -863,6 +875,7 @@ namespace Ludots.Core.Input.Orders
         private bool TryBuildOrderSmartCast(InputOrderMapping mapping, out Order order)
         {
             order = default;
+            if (!HasExplicitLocalPlayer()) return false;
 
             int orderTypeId = _orderTypeKeyResolver!(mapping.OrderTypeKey);
             if (orderTypeId <= 0) return false;
@@ -976,6 +989,7 @@ namespace Ludots.Core.Input.Orders
         private bool TryBuildVectorOrder(InputOrderMapping mapping, Vector3 origin, Vector3 endpoint, out Order order)
         {
             order = default;
+            if (!HasExplicitLocalPlayer()) return false;
             
             int orderTypeId = _orderTypeKeyResolver!(mapping.OrderTypeKey);
             if (orderTypeId <= 0) return false;
@@ -1005,6 +1019,7 @@ namespace Ludots.Core.Input.Orders
         private bool TryBuildOrder(InputOrderMapping mapping, out Order order)
         {
             order = default;
+            if (!HasExplicitLocalPlayer()) return false;
             
             int orderTypeId = _orderTypeKeyResolver!(mapping.OrderTypeKey);
             if (orderTypeId <= 0) return false;
@@ -1091,6 +1106,11 @@ namespace Ludots.Core.Input.Orders
             }
 
             return _localPlayer;
+        }
+
+        private bool HasExplicitLocalPlayer()
+        {
+            return _playerId > 0 && _localPlayer != Entity.Null;
         }
 
         private bool TryCaptureSelectedContainer(string selectionSetKey, ref OrderSelectionReference selection)
@@ -1246,6 +1266,57 @@ namespace Ludots.Core.Input.Orders
 
         public IEnumerable<string> GetMappedActionIds() => _mappingsByActionId.Keys;
 
+        public int CopyPrimarySkillActionIds(Span<string> destination)
+        {
+            if (destination.IsEmpty)
+            {
+                return 0;
+            }
+
+            Span<int> priorities = stackalloc int[destination.Length];
+            for (int i = 0; i < destination.Length; i++)
+            {
+                destination[i] = string.Empty;
+                priorities[i] = int.MaxValue;
+            }
+
+            int resolved = 0;
+            foreach (var pair in _mappingsByActionId)
+            {
+                string actionId = pair.Key;
+                InputOrderMapping mapping = _userOverrides.TryGetValue(actionId, out var overrideMapping)
+                    ? overrideMapping
+                    : pair.Value;
+                if (!mapping.IsSkillMapping ||
+                    !mapping.ArgsTemplate.I0.HasValue)
+                {
+                    continue;
+                }
+
+                int slotIndex = mapping.ArgsTemplate.I0.Value;
+                if ((uint)slotIndex >= (uint)destination.Length)
+                {
+                    continue;
+                }
+
+                int priority = ResolveSkillActionPriority(actionId);
+                string current = destination[slotIndex];
+                if (priority < priorities[slotIndex] ||
+                    (priority == priorities[slotIndex] && string.CompareOrdinal(actionId, current) < 0))
+                {
+                    if (string.IsNullOrEmpty(current))
+                    {
+                        resolved++;
+                    }
+
+                    destination[slotIndex] = actionId;
+                    priorities[slotIndex] = priority;
+                }
+            }
+
+            return resolved;
+        }
+
         /// <summary>
         /// Activates a mapped action programmatically.
         /// UI callers may prefer aiming over hold/release semantics when no key lifecycle exists.
@@ -1302,6 +1373,18 @@ namespace Ludots.Core.Input.Orders
 
             SubmitOrder(effectiveMapping, in order);
             return true;
+        }
+
+        private static int ResolveSkillActionPriority(string actionId)
+        {
+            return actionId switch
+            {
+                "SkillQ" => 0,
+                "SkillW" => 1,
+                "SkillE" => 2,
+                "SkillR" => 3,
+                _ => 100
+            };
         }
 
         public void SaveUserPreferences(string? path = null)

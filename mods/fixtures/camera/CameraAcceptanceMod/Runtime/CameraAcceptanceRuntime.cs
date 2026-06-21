@@ -14,6 +14,7 @@ using Ludots.Core.Mathematics.FixedPoint;
 using Ludots.Core.Presentation.Assets;
 using Ludots.Core.Presentation.Hud;
 using Ludots.Core.Presentation.Rendering;
+using Ludots.Core.Presentation.Terrain;
 using Ludots.Core.Presentation.Utils;
 using Ludots.Core.Scripting;
 using Ludots.UI;
@@ -90,6 +91,7 @@ namespace CameraAcceptanceMod.Runtime
             }
 
             SyncMapScopedInputOwnership(engine);
+            BindFlatGroundHeightmap(engine);
             ConfigureRenderDefaultsForMap(engine);
             RefreshPanel(engine);
 
@@ -118,7 +120,21 @@ namespace CameraAcceptanceMod.Runtime
             return Task.CompletedTask;
         }
 
-        private static void SyncMapScopedInputOwnership(GameEngine engine)
+        private static void BindFlatGroundHeightmap(GameEngine engine)
+        {
+            string? activeMapId = engine.CurrentMapSession?.MapId.Value;
+            if (!CameraAcceptanceIds.IsAcceptanceMap(activeMapId) ||
+                engine.GetService(CoreServiceKeys.VisualHeightmap) != null)
+            {
+                return;
+            }
+
+            var heightmap = new FlatVisualHeightmap();
+            engine.CurrentMapSession!.VisualHeightmap = heightmap;
+            engine.SetService(CoreServiceKeys.VisualHeightmap, heightmap);
+        }
+
+        internal static void SyncMapScopedInputOwnership(GameEngine engine)
         {
             string? activeMapId = engine.CurrentMapSession?.MapId.Value;
             bool isAcceptanceMap = CameraAcceptanceIds.IsAcceptanceMap(activeMapId);
@@ -127,10 +143,7 @@ namespace CameraAcceptanceMod.Runtime
             {
                 if (isAcceptanceMap)
                 {
-                    if (input.HasContext(CameraAcceptanceIds.InputContextId))
-                    {
-                        input.PushContext(CameraAcceptanceIds.InputContextId);
-                    }
+                    input.PushContext(CameraAcceptanceIds.InputContextId);
                 }
                 else
                 {
@@ -260,11 +273,18 @@ namespace CameraAcceptanceMod.Runtime
 
             if (string.Equals(mapId, CameraAcceptanceIds.BlendMapId, System.StringComparison.OrdinalIgnoreCase))
             {
-                engine.GameSession.Camera.ActivateVirtualCamera(
-                    ResolveActiveBlendCameraId(engine),
-                    followTarget: new FixedPointFollowTarget(new Vector2(worldCm.X, worldCm.Y)),
-                    snapToFollowTargetWhenAvailable: true,
-                    resetRuntimeState: true);
+                string cameraId = ResolveActiveBlendCameraId(engine);
+                engine.SetService(CoreServiceKeys.VirtualCameraRequest, new VirtualCameraRequest
+                {
+                    Id = cameraId,
+                    SnapToFollowTargetWhenAvailable = false,
+                    ResetRuntimeState = true
+                });
+                engine.SetService(CoreServiceKeys.CameraPoseRequest, new CameraPoseRequest
+                {
+                    VirtualCameraId = cameraId,
+                    TargetCm = new Vector2(worldCm.X, worldCm.Y)
+                });
             }
         }
 
@@ -302,6 +322,7 @@ namespace CameraAcceptanceMod.Runtime
                     Kind = RuntimeEntitySpawnKind.Template,
                     TemplateId = CameraAcceptanceIds.ProjectionSpawnTemplateId,
                     WorldPositionCm = Fix64Vec2.FromInt(spawnWorldCm.X, spawnWorldCm.Y),
+                    HasWorldPosition = 1,
                     MapId = engine.CurrentMapSession?.MapId ?? default,
                 };
 
@@ -381,20 +402,5 @@ namespace CameraAcceptanceMod.Runtime
                 : CameraAcceptanceIds.BlendSmoothCameraId;
         }
 
-        private sealed class FixedPointFollowTarget : ICameraFollowTarget
-        {
-            private readonly Vector2 _pointCm;
-
-            public FixedPointFollowTarget(Vector2 pointCm)
-            {
-                _pointCm = pointCm;
-            }
-
-            public bool TryGetPosition(out Vector2 positionCm)
-            {
-                positionCm = _pointCm;
-                return true;
-            }
-        }
     }
 }

@@ -11,6 +11,7 @@ using Ludots.Core.Modding;
 using Ludots.Core.Presentation.Minimap;
 using Ludots.Core.Presentation.Assets;
 using Ludots.Core.Presentation.Hud;
+using Ludots.Core.Presentation.Systems;
 using Ludots.Core.Scripting;
 using Ludots.Core.Spatial;
 using Ludots.UI;
@@ -65,6 +66,8 @@ internal sealed class MassNavigationRuntime
         engine.InsertSystemBeforeRequired<MassNavigationFormationSystem>(
             new MassNavigationPreSimulationStepSystem(),
             SystemGroup.PostMovement);
+        engine.InsertPresentationSystemBefore<AnimatorRuntimeSystem>(
+            new MassNavigationLocomotionAnimatorParamSystem(engine.World, simulation));
         engine.RegisterPresentationSystem(new MassNavigationHudPresentationSystem(engine, simulation));
         engine.RegisterPresentationSystem(new MassNavigationPanelPresentationSystem(
             engine,
@@ -167,6 +170,13 @@ internal sealed class MassNavigationRuntime
 
     public void RefreshPanel(GameEngine engine)
     {
+        MassNavigationConfig config = EnsureConfig(engine);
+        if (!config.ScenarioRuntime.Panel.IsOwned)
+        {
+            ClearPanelIfOwned(engine);
+            return;
+        }
+
         if (engine.GetService(CoreServiceKeys.UIRoot) is not UIRoot root)
         {
             return;
@@ -402,6 +412,7 @@ internal sealed class MassNavigationRuntime
             throw new System.InvalidOperationException("MassNavigationMod LocalPlayerEntity must author PlayerOwner.");
         }
 
+        engine.GlobalContext[CoreServiceKeys.LocalPlayerId.Name] = engine.World.Get<PlayerOwner>(owner).PlayerId;
         EnsureSelectionOwner(engine.World, owner, selection, engine.GlobalContext);
     }
 
@@ -474,7 +485,7 @@ internal sealed class MassNavigationRuntime
         renderDebug.DrawDebugDraw = false;
         // Raylib currently routes the official performer ISM/static-mesh lane through this shared draw toggle.
         renderDebug.DrawPrimitives = true;
-        renderDebug.DrawSkiaUi = true;
+        renderDebug.DrawSkiaUi = EnsureConfig(engine).ScenarioRuntime.Panel.IsOwned;
         renderDebug.DrawWorldHudBars = true;
         renderDebug.DrawWorldHudText = true;
         renderDebug.DrawCombatText = true;

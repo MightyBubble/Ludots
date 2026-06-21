@@ -1,12 +1,17 @@
 using System;
 using System.Diagnostics;
 using System.Collections.Generic;
+using System.Numerics;
 using System.Runtime.CompilerServices;
 using System.Runtime.InteropServices;
 using Arch.Core;
 using Ludots.Core.Mathematics;
 using Ludots.Core.Gameplay.Components;
+using Ludots.Core.Gameplay.GAS.Orders;
+using Ludots.Core.Gameplay.GAS.Systems;
+using Ludots.Core.Input.Selection;
 using Ludots.Core.Navigation.GraphWorld;
+using Ludots.Core.Presentation.Performers;
 using Ludots.Core.Spatial;
 
 namespace MassNavigationMod.Runtime;
@@ -75,9 +80,19 @@ public readonly record struct MassNavigationSolverRuntimeConfigSnapshot(
     float PlayAreaMinXCm,
     float PlayAreaMaxXCm);
 
+public enum MassNavigationMoveCommandResult : byte
+{
+    Submitted = 1,
+    OutsideWorld = 2,
+    EmptySelection = 3,
+    UnauthorizedSelection = 4,
+    OrderSubmitRejected = 5,
+}
+
 public sealed class MassNavigationSimulationRuntime
 {
     private const float TimingWeight = 0.18f;
+    public const string AgentLocomotionSpeedParamKey = "mass_navigation.agent.locomotion.speed";
 
     private readonly int _initialSelectedTeamId;
     private int[] _teamIds = Array.Empty<int>();
@@ -226,6 +241,7 @@ public sealed class MassNavigationSimulationRuntime
     public string ActiveHotZoneId => WorldConfig.ActiveHotZoneId;
     public string ActiveHotZoneLabel => WorldConfig.ActiveHotZoneLabel;
     public ReadOnlySpan<MassNavigationHotZoneConfig> HotZones => WorldConfig.HotZones;
+    public int RuntimeSpawnReceiptChannelId { get; private set; }
 
     public MassNavigationSimulationRuntime(MassNavigationConfig config)
     {
@@ -976,6 +992,125 @@ public sealed class MassNavigationSimulationRuntime
         AgentState.RegisterAgentAtIndex(entity, agentIndex, controllable);
     }
 
+    public int BindRuntimeSpawnReceiptChannel(int receiptChannelId)
+    {
+        if (receiptChannelId <= 0)
+        {
+            throw new InvalidOperationException("MassNavigation runtime spawn receipt channel id must be > 0.");
+        }
+
+        if (RuntimeSpawnReceiptChannelId > 0 && RuntimeSpawnReceiptChannelId != receiptChannelId)
+        {
+            throw new InvalidOperationException(
+                $"MassNavigation runtime spawn receipt channel already bound to {RuntimeSpawnReceiptChannelId}, got {receiptChannelId}.");
+        }
+
+        RuntimeSpawnReceiptChannelId = receiptChannelId;
+        return RuntimeSpawnReceiptChannelId;
+    }
+
+    public int AllocateSpawnReceipt(in MassNavigationSpawnReceiptBinding binding)
+    {
+        return SpawnReceipts.Allocate(in binding);
+    }
+
+    public (int ReceiptChannelId, int ReceiptId) AllocateSpawnReceipt(
+        int receiptChannelId,
+        in MassNavigationSpawnReceiptBinding binding)
+    {
+        return (BindRuntimeSpawnReceiptChannel(receiptChannelId), AllocateSpawnReceipt(in binding));
+    }
+
+    public static int ResolveAgentLocomotionSpeedParamKey()
+    {
+        return PerformerParamKeyRegistry.Register(AgentLocomotionSpeedParamKey);
+    }
+
+    public MassNavigationMoveCommandResult SubmitMoveCommand(
+        World world,
+        Dictionary<string, object> globals,
+        OrderBufferSystem orderBufferSystem,
+        OrderTypeRegistry orderTypeRegistry,
+        Vector2 centerCm,
+        int playerId)
+    {
+        ArgumentNullException.ThrowIfNull(world);
+        ArgumentNullException.ThrowIfNull(globals);
+        ArgumentNullException.ThrowIfNull(orderBufferSystem);
+        ArgumentNullException.ThrowIfNull(orderTypeRegistry);
+
+        if (!ContainsWorldPoint(centerCm.X, centerCm.Y))
+        {
+            RejectCommandOutsideWorld(centerCm.X, centerCm.Y);
+            return MassNavigationMoveCommandResult.OutsideWorld;
+        }
+
+        ReadOnlySpan<Entity> selected = SelectedEntities;
+        if (selected.Length <= 0)
+        {
+            RejectCommandWithoutSelection(centerCm.X, centerCm.Y);
+            return MassNavigationMoveCommandResult.EmptySelection;
+        }
+
+        if (!CanSubmitSelectionMoveOrders(world, selected, playerId))
+        {
+            RejectCommandUnauthorizedSelection(centerCm.X, centerCm.Y);
+            return MassNavigationMoveCommandResult.UnauthorizedSelection;
+        }
+
+        if (!SelectionContextRuntime.TryGetCurrentContainer(world, globals, out Entity selectionContainer))
+        {
+            throw new InvalidOperationException("MassNavigationMod requires a current selection container before submitting move orders.");
+        }
+
+        if (!orderTypeRegistry.TryGetId(MassNavigationOrderKeys.Move, out int moveOrderTypeId))
+        {
+            throw new InvalidOperationException($"MassNavigationMod requires GAS/order_types.json to define '{MassNavigationOrderKeys.Move}'.");
+        }
+
+        int sharedOrderId = AllocateSharedOrderId();
+        int submitted = 0;
+        float rotationRadians = NavGroupRuntime.SelectedRotationRadians;
+        for (int i = 0; i < selected.Length; i++)
+        {
+            Entity actor = selected[i];
+            if (!world.IsAlive(actor))
+            {
+                continue;
+            }
+
+            var order = new Order
+            {
+                OrderId = sharedOrderId,
+                OrderTypeId = moveOrderTypeId,
+                PlayerId = playerId,
+                Actor = actor,
+                SubmitMode = OrderSubmitMode.Immediate,
+                Args = MassNavigationMoveOrderArgs.Encode(
+                    centerCm,
+                    FormationMode,
+                    rotationRadians,
+                    selectionContainer)
+            };
+
+            OrderSubmitResult result = orderBufferSystem.SubmitOrder(actor, in order);
+            if (IsAcceptedOrderSubmit(result))
+            {
+                submitted++;
+            }
+        }
+
+        if (submitted <= 0)
+        {
+            RejectCommandOrderSubmit(centerCm.X, centerCm.Y);
+            return MassNavigationMoveCommandResult.OrderSubmitRejected;
+        }
+
+        FocusCommandTarget(centerCm, selected);
+        MarkCommandApply();
+        return MassNavigationMoveCommandResult.Submitted;
+    }
+
     public bool ContainsWorldPoint(float worldXCm, float worldYCm)
     {
         WorldAabbCm bounds = RequireBoardWorldSize().Bounds;
@@ -1244,6 +1379,40 @@ public sealed class MassNavigationSimulationRuntime
             float worldY = ToWorldYCm(MassFlow.GetPositionY(unitIndex));
             IncludePoint(ref minX, ref maxX, ref minY, ref maxY, worldX, worldY);
         }
+    }
+
+    private static bool CanSubmitSelectionMoveOrders(World world, ReadOnlySpan<Entity> selected, int localPlayerId)
+    {
+        int liveCommandableActors = 0;
+        for (int i = 0; i < selected.Length; i++)
+        {
+            Entity actor = selected[i];
+            if (!world.IsAlive(actor))
+            {
+                continue;
+            }
+
+            if (!CanLocalPlayerCommand(world, actor, localPlayerId))
+            {
+                return false;
+            }
+
+            liveCommandableActors++;
+        }
+
+        return liveCommandableActors > 0;
+    }
+
+    private static bool CanLocalPlayerCommand(World world, Entity actor, int localPlayerId)
+    {
+        return world.TryGet(actor, out PlayerOwner owner) &&
+               owner.PlayerId == localPlayerId;
+    }
+
+    private static bool IsAcceptedOrderSubmit(OrderSubmitResult result)
+    {
+        return result == OrderSubmitResult.Activated ||
+               result == OrderSubmitResult.Queued;
     }
 
     private void ClampWorkArea(ref float minX, ref float maxX, ref float minY, ref float maxY)
