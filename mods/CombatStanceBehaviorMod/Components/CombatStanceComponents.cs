@@ -1,8 +1,8 @@
-using Arch.Core;
+﻿using Arch.Core;
 
-namespace OpenRaStanceBehaviorMod.Components;
+namespace CombatStanceBehaviorMod.Components;
 
-public static class OpenRaCombatStances
+public static class CombatStances
 {
     public const int HoldFire = 0;
     public const int ReturnFire = 1;
@@ -15,7 +15,7 @@ public static class OpenRaCombatStances
     }
 }
 
-public static class OpenRaOrderKeys
+public static class StanceOrderKeys
 {
     public const string AttackMove = "attackMove";
     public const string AssaultMove = "assaultMove";
@@ -26,20 +26,20 @@ public static class OpenRaOrderKeys
     public const string AttackTarget = "attackTarget";
 }
 
-public struct OpenRaCombatStanceState
+public struct CombatStanceState
 {
     public int Stance;
     public int LeashRadiusCm;
     public int RetaliationTtlSteps;
 }
 
-public struct OpenRaRetaliationMemory
+public struct RetaliationMemory
 {
     public Entity LastAttacker;
     public int LastAttackerStep;
 }
 
-public struct OpenRaAttackMoveRuntime
+public struct AttackMoveRuntime
 {
     public int DestinationX;
     public int DestinationY;
@@ -48,7 +48,7 @@ public struct OpenRaAttackMoveRuntime
     public byte Assault;
 }
 
-public struct OpenRaGuardRuntime
+public struct GuardRuntime
 {
     public Entity Guarded;
     public int RadiusCm;

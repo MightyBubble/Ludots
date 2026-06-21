@@ -1,4 +1,4 @@
-using System;
+﻿using System;
 using System.Numerics;
 using Arch.Buffer;
 using Arch.Core;
@@ -14,11 +14,11 @@ using Ludots.Core.Gameplay.GAS.Registry;
 using Ludots.Core.Gameplay.Teams;
 using Ludots.Core.Mathematics;
 using Ludots.Core.Spatial;
-using OpenRaStanceBehaviorMod.Components;
+using CombatStanceBehaviorMod.Components;
 
-namespace OpenRaStanceBehaviorMod.Systems;
+namespace CombatStanceBehaviorMod.Systems;
 
-public sealed class OpenRaStanceOrderSystem : BaseSystem<World, float>
+public sealed class CombatStanceOrderSystem : BaseSystem<World, float>
 {
     private const int DefaultTargetCapacity = 256;
     private const int PendingEntityCapacity = 1024;
@@ -52,7 +52,7 @@ public sealed class OpenRaStanceOrderSystem : BaseSystem<World, float>
     private readonly int _attackTargetOrderTypeId;
     private readonly int _damageTakenEventTagId;
 
-    public OpenRaStanceOrderSystem(
+    public CombatStanceOrderSystem(
         World world,
         IClock clock,
         OrderQueue orders,
@@ -69,13 +69,13 @@ public sealed class OpenRaStanceOrderSystem : BaseSystem<World, float>
         _events = events;
         _targets = new Entity[targetCapacity < 16 ? 16 : targetCapacity];
 
-        _attackMoveOrderTypeId = RequireOrderTypeId(orderTypes, OpenRaOrderKeys.AttackMove);
-        _assaultMoveOrderTypeId = RequireOrderTypeId(orderTypes, OpenRaOrderKeys.AssaultMove);
-        _guardOrderTypeId = RequireOrderTypeId(orderTypes, OpenRaOrderKeys.Guard);
-        _setCombatStanceOrderTypeId = RequireOrderTypeId(orderTypes, OpenRaOrderKeys.SetCombatStance);
-        _scatterOrderTypeId = RequireOrderTypeId(orderTypes, OpenRaOrderKeys.Scatter);
-        _moveToOrderTypeId = RequireOrderTypeId(orderTypes, OpenRaOrderKeys.MoveTo);
-        _attackTargetOrderTypeId = RequireOrderTypeId(orderTypes, OpenRaOrderKeys.AttackTarget);
+        _attackMoveOrderTypeId = RequireOrderTypeId(orderTypes, StanceOrderKeys.AttackMove);
+        _assaultMoveOrderTypeId = RequireOrderTypeId(orderTypes, StanceOrderKeys.AssaultMove);
+        _guardOrderTypeId = RequireOrderTypeId(orderTypes, StanceOrderKeys.Guard);
+        _setCombatStanceOrderTypeId = RequireOrderTypeId(orderTypes, StanceOrderKeys.SetCombatStance);
+        _scatterOrderTypeId = RequireOrderTypeId(orderTypes, StanceOrderKeys.Scatter);
+        _moveToOrderTypeId = RequireOrderTypeId(orderTypes, StanceOrderKeys.MoveTo);
+        _attackTargetOrderTypeId = RequireOrderTypeId(orderTypes, StanceOrderKeys.AttackTarget);
         _damageTakenEventTagId = RequireTagId(DamageTakenEventTag);
     }
 
@@ -127,18 +127,18 @@ public sealed class OpenRaStanceOrderSystem : BaseSystem<World, float>
         for (int i = 0; i < _removeAttackMoveRuntimeCount; i++)
         {
             Entity entity = _removeAttackMoveRuntime[i];
-            if (World.IsAlive(entity) && World.Has<OpenRaAttackMoveRuntime>(entity))
+            if (World.IsAlive(entity) && World.Has<AttackMoveRuntime>(entity))
             {
-                _commandBuffer.Remove<OpenRaAttackMoveRuntime>(in entity);
+                _commandBuffer.Remove<AttackMoveRuntime>(in entity);
             }
         }
 
         for (int i = 0; i < _removeGuardRuntimeCount; i++)
         {
             Entity entity = _removeGuardRuntime[i];
-            if (World.IsAlive(entity) && World.Has<OpenRaGuardRuntime>(entity))
+            if (World.IsAlive(entity) && World.Has<GuardRuntime>(entity))
             {
-                _commandBuffer.Remove<OpenRaGuardRuntime>(in entity);
+                _commandBuffer.Remove<GuardRuntime>(in entity);
             }
         }
 
@@ -169,7 +169,7 @@ public sealed class OpenRaStanceOrderSystem : BaseSystem<World, float>
                 continue;
             }
 
-            Upsert(evt.Target, new OpenRaRetaliationMemory
+            Upsert(evt.Target, new RetaliationMemory
             {
                 LastAttacker = evt.Source,
                 LastAttackerStep = step
@@ -208,12 +208,12 @@ public sealed class OpenRaStanceOrderSystem : BaseSystem<World, float>
             return;
         }
 
-        if (World.Has<OpenRaAttackMoveRuntime>(entity) && orderTypeId == _moveToOrderTypeId)
+        if (World.Has<AttackMoveRuntime>(entity) && orderTypeId == _moveToOrderTypeId)
         {
             TickAttackMoveRuntime(entity, in actorPosition, step);
         }
 
-        if (World.Has<OpenRaGuardRuntime>(entity) && orderTypeId == _moveToOrderTypeId)
+        if (World.Has<GuardRuntime>(entity) && orderTypeId == _moveToOrderTypeId)
         {
             TickGuardRuntime(entity, in actorPosition, step);
         }
@@ -221,13 +221,13 @@ public sealed class OpenRaStanceOrderSystem : BaseSystem<World, float>
 
     private void TickPersistentBehavior(Entity entity, in WorldCmInt2 actorPosition, int step)
     {
-        if (World.Has<OpenRaAttackMoveRuntime>(entity))
+        if (World.Has<AttackMoveRuntime>(entity))
         {
             TickAttackMoveRuntime(entity, in actorPosition, step);
             return;
         }
 
-        if (World.Has<OpenRaGuardRuntime>(entity))
+        if (World.Has<GuardRuntime>(entity))
         {
             TickGuardRuntime(entity, in actorPosition, step);
             return;
@@ -239,19 +239,19 @@ public sealed class OpenRaStanceOrderSystem : BaseSystem<World, float>
     private void HandleSetCombatStance(Entity entity, in Order order)
     {
         int stance = order.Args.I0;
-        if (!OpenRaCombatStances.IsDefined(stance))
+        if (!CombatStances.IsDefined(stance))
         {
-            throw new InvalidOperationException($"OpenRA setCombatStance received unknown stance {stance}.");
+            throw new InvalidOperationException($"Combat stance setCombatStance received unknown stance {stance}.");
         }
 
         int leashRadiusCm = order.Args.I1;
         int retaliationTtlSteps = order.Args.I2 > 0 ? order.Args.I2 : DefaultRetaliationTtlSteps;
-        if (stance != OpenRaCombatStances.HoldFire && leashRadiusCm <= 0)
+        if (stance != CombatStances.HoldFire && leashRadiusCm <= 0)
         {
-            throw new InvalidOperationException("OpenRA setCombatStance requires Args.I1 leash radius for non-HoldFire stances.");
+            throw new InvalidOperationException("Combat stance setCombatStance requires Args.I1 leash radius for non-HoldFire stances.");
         }
 
-        Upsert(entity, new OpenRaCombatStanceState
+        Upsert(entity, new CombatStanceState
         {
             Stance = stance,
             LeashRadiusCm = leashRadiusCm,
@@ -264,7 +264,7 @@ public sealed class OpenRaStanceOrderSystem : BaseSystem<World, float>
         int radiusCm = order.Args.I0;
         if (radiusCm <= 0)
         {
-            throw new InvalidOperationException("OpenRA scatter requires Args.I0 positive scatter radius.");
+            throw new InvalidOperationException("Combat stance scatter requires Args.I0 positive scatter radius.");
         }
 
         DeterministicScatterOffset(entity, step, radiusCm, out int dx, out int dy);
@@ -277,10 +277,10 @@ public sealed class OpenRaStanceOrderSystem : BaseSystem<World, float>
         int leashRadiusCm = order.Args.I0;
         if (leashRadiusCm <= 0)
         {
-            throw new InvalidOperationException("OpenRA attackMove/assaultMove requires Args.I0 positive leash radius.");
+            throw new InvalidOperationException("Combat stance attackMove/assaultMove requires Args.I0 positive leash radius.");
         }
 
-        var runtime = new OpenRaAttackMoveRuntime
+        var runtime = new AttackMoveRuntime
         {
             DestinationX = destination.X,
             DestinationY = destination.Y,
@@ -289,7 +289,7 @@ public sealed class OpenRaStanceOrderSystem : BaseSystem<World, float>
         };
         Upsert(entity, runtime);
 
-        int stance = assault ? OpenRaCombatStances.AttackAnything : ResolveConfiguredStance(entity);
+        int stance = assault ? CombatStances.AttackAnything : ResolveConfiguredStance(entity);
         if (TryAcquireStanceTarget(entity, actorPosition, actorPosition, leashRadiusCm, step, stance, out Entity target))
         {
             EnqueueAttack(entity, target, step);
@@ -302,7 +302,7 @@ public sealed class OpenRaStanceOrderSystem : BaseSystem<World, float>
         }
         else
         {
-            QueuePendingEntity(_removeAttackMoveRuntime, ref _removeAttackMoveRuntimeCount, entity, "OpenRA attack-move removal queue");
+            QueuePendingEntity(_removeAttackMoveRuntime, ref _removeAttackMoveRuntimeCount, entity, "Combat stance attack-move removal queue");
         }
     }
 
@@ -310,17 +310,17 @@ public sealed class OpenRaStanceOrderSystem : BaseSystem<World, float>
     {
         if (order.Target == default || !World.IsAlive(order.Target))
         {
-            throw new InvalidOperationException("OpenRA guard requires a live target entity.");
+            throw new InvalidOperationException("Combat stance guard requires a live target entity.");
         }
 
         int radiusCm = order.Args.I0;
         int leashRadiusCm = order.Args.I1;
         if (radiusCm <= 0 || leashRadiusCm <= 0)
         {
-            throw new InvalidOperationException("OpenRA guard requires Args.I0 radius and Args.I1 leash radius.");
+            throw new InvalidOperationException("Combat stance guard requires Args.I0 radius and Args.I1 leash radius.");
         }
 
-        var runtime = new OpenRaGuardRuntime
+        var runtime = new GuardRuntime
         {
             Guarded = order.Target,
             RadiusCm = radiusCm,
@@ -352,9 +352,9 @@ public sealed class OpenRaStanceOrderSystem : BaseSystem<World, float>
 
     private void TickAttackMoveRuntime(Entity entity, in WorldCmInt2 actorPosition, int step)
     {
-        var runtime = World.Get<OpenRaAttackMoveRuntime>(entity);
+        var runtime = World.Get<AttackMoveRuntime>(entity);
         var destination = new WorldCmInt2(runtime.DestinationX, runtime.DestinationY);
-        int stance = runtime.Assault != 0 ? OpenRaCombatStances.AttackAnything : ResolveConfiguredStance(entity);
+        int stance = runtime.Assault != 0 ? CombatStances.AttackAnything : ResolveConfiguredStance(entity);
         if (TryAcquireStanceTarget(entity, actorPosition, actorPosition, runtime.LeashRadiusCm, step, stance, out Entity target))
         {
             runtime.EngagedTarget = target;
@@ -365,7 +365,7 @@ public sealed class OpenRaStanceOrderSystem : BaseSystem<World, float>
 
         if (IsWithinRadius(actorPosition, destination, ArrivalRadiusCm))
         {
-            QueuePendingEntity(_removeAttackMoveRuntime, ref _removeAttackMoveRuntimeCount, entity, "OpenRA attack-move removal queue");
+            QueuePendingEntity(_removeAttackMoveRuntime, ref _removeAttackMoveRuntimeCount, entity, "Combat stance attack-move removal queue");
             return;
         }
 
@@ -374,10 +374,10 @@ public sealed class OpenRaStanceOrderSystem : BaseSystem<World, float>
 
     private void TickGuardRuntime(Entity entity, in WorldCmInt2 actorPosition, int step)
     {
-        var runtime = World.Get<OpenRaGuardRuntime>(entity);
+        var runtime = World.Get<GuardRuntime>(entity);
         if (!World.IsAlive(runtime.Guarded) || !World.Has<WorldPositionCm>(runtime.Guarded))
         {
-            QueuePendingEntity(_removeGuardRuntime, ref _removeGuardRuntimeCount, entity, "OpenRA guard removal queue");
+            QueuePendingEntity(_removeGuardRuntime, ref _removeGuardRuntimeCount, entity, "Combat stance guard removal queue");
             return;
         }
 
@@ -399,20 +399,20 @@ public sealed class OpenRaStanceOrderSystem : BaseSystem<World, float>
 
     private void TickIdleStance(Entity entity, in WorldCmInt2 actorPosition, int step)
     {
-        if (!World.Has<OpenRaCombatStanceState>(entity))
+        if (!World.Has<CombatStanceState>(entity))
         {
             return;
         }
 
-        var state = World.Get<OpenRaCombatStanceState>(entity);
-        if (state.Stance == OpenRaCombatStances.HoldFire)
+        var state = World.Get<CombatStanceState>(entity);
+        if (state.Stance == CombatStances.HoldFire)
         {
             return;
         }
 
         if (state.LeashRadiusCm <= 0)
         {
-            throw new InvalidOperationException("OpenRA stance requires positive LeashRadiusCm.");
+            throw new InvalidOperationException("Combat stance requires positive LeashRadiusCm.");
         }
 
         if (TryAcquireStanceTarget(entity, actorPosition, actorPosition, state.LeashRadiusCm, step, state.Stance, out Entity target))
@@ -431,19 +431,19 @@ public sealed class OpenRaStanceOrderSystem : BaseSystem<World, float>
         out Entity target)
     {
         target = default;
-        if (stance == OpenRaCombatStances.HoldFire)
+        if (stance == CombatStances.HoldFire)
         {
             return false;
         }
 
-        if (stance == OpenRaCombatStances.ReturnFire)
+        if (stance == CombatStances.ReturnFire)
         {
             return TryAcquireRetaliationTarget(actor, in actorPosition, radiusCm, step, out target);
         }
 
-        if (stance != OpenRaCombatStances.Defend && stance != OpenRaCombatStances.AttackAnything)
+        if (stance != CombatStances.Defend && stance != CombatStances.AttackAnything)
         {
-            throw new InvalidOperationException($"OpenRA stance {stance} is not defined.");
+            throw new InvalidOperationException($"Combat stance {stance} is not defined.");
         }
 
         return TryAcquireHostileTarget(actor, in center, radiusCm, out target);
@@ -452,14 +452,14 @@ public sealed class OpenRaStanceOrderSystem : BaseSystem<World, float>
     private bool TryAcquireRetaliationTarget(Entity actor, in WorldCmInt2 actorPosition, int radiusCm, int step, out Entity target)
     {
         target = default;
-        if (!World.Has<OpenRaRetaliationMemory>(actor))
+        if (!World.Has<RetaliationMemory>(actor))
         {
             return false;
         }
 
-        var memory = World.Get<OpenRaRetaliationMemory>(actor);
-        int ttl = World.Has<OpenRaCombatStanceState>(actor)
-            ? World.Get<OpenRaCombatStanceState>(actor).RetaliationTtlSteps
+        var memory = World.Get<RetaliationMemory>(actor);
+        int ttl = World.Has<CombatStanceState>(actor)
+            ? World.Get<CombatStanceState>(actor).RetaliationTtlSteps
             : DefaultRetaliationTtlSteps;
         if (memory.LastAttacker == default ||
             !World.IsAlive(memory.LastAttacker) ||
@@ -528,15 +528,15 @@ public sealed class OpenRaStanceOrderSystem : BaseSystem<World, float>
 
     private int ResolveConfiguredStance(Entity entity)
     {
-        if (!World.Has<OpenRaCombatStanceState>(entity))
+        if (!World.Has<CombatStanceState>(entity))
         {
-            throw new InvalidOperationException("OpenRA behavior requires an explicit OpenRaCombatStanceState.");
+            throw new InvalidOperationException("Combat stance behavior requires an explicit CombatStanceState.");
         }
 
-        int stance = World.Get<OpenRaCombatStanceState>(entity).Stance;
-        if (!OpenRaCombatStances.IsDefined(stance))
+        int stance = World.Get<CombatStanceState>(entity).Stance;
+        if (!CombatStances.IsDefined(stance))
         {
-            throw new InvalidOperationException($"OpenRA entity has unknown stance {stance}.");
+            throw new InvalidOperationException($"Combat stance entity has unknown stance {stance}.");
         }
 
         return stance;
@@ -563,7 +563,7 @@ public sealed class OpenRaStanceOrderSystem : BaseSystem<World, float>
 
         if (!_orders.TryEnqueue(in order))
         {
-            throw new InvalidOperationException("OpenRA behavior order queue is full while submitting attackTarget.");
+            throw new InvalidOperationException("Combat stance behavior order queue is full while submitting attackTarget.");
         }
     }
 
@@ -582,13 +582,13 @@ public sealed class OpenRaStanceOrderSystem : BaseSystem<World, float>
 
         if (!_orders.TryEnqueue(in order))
         {
-            throw new InvalidOperationException("OpenRA behavior order queue is full while submitting moveTo.");
+            throw new InvalidOperationException("Combat stance behavior order queue is full while submitting moveTo.");
         }
     }
 
     private void CompleteActive(Entity entity)
     {
-        QueuePendingEntity(_completedOrders, ref _completedOrderCount, entity, "OpenRA completed-order queue");
+        QueuePendingEntity(_completedOrders, ref _completedOrderCount, entity, "Combat stance completed-order queue");
     }
 
     private void Upsert<T>(Entity entity, in T component)
@@ -609,7 +609,7 @@ public sealed class OpenRaStanceOrderSystem : BaseSystem<World, float>
         if (order.Args.Spatial.Kind != OrderSpatialKind.WorldCm ||
             order.Args.Spatial.Mode != OrderCollectionMode.Single)
         {
-            throw new InvalidOperationException($"OpenRA {orderName} requires a single WorldCm spatial target.");
+            throw new InvalidOperationException($"Combat stance {orderName} requires a single WorldCm spatial target.");
         }
 
         return new WorldCmInt2((int)order.Args.Spatial.WorldCm.X, (int)order.Args.Spatial.WorldCm.Z);
@@ -647,7 +647,7 @@ public sealed class OpenRaStanceOrderSystem : BaseSystem<World, float>
     {
         if (!orderTypes.TryGetId(key, out int id) || id <= 0 || !orderTypes.IsRegistered(id))
         {
-            throw new InvalidOperationException($"OpenRaStanceBehaviorMod requires GAS/order_types.json to define '{key}'.");
+            throw new InvalidOperationException($"CombatStanceBehaviorMod requires GAS/order_types.json to define '{key}'.");
         }
 
         return id;
@@ -658,7 +658,7 @@ public sealed class OpenRaStanceOrderSystem : BaseSystem<World, float>
         int id = TagRegistry.GetId(key);
         if (id <= 0)
         {
-            throw new InvalidOperationException($"OpenRaStanceBehaviorMod requires GAS/tag_rules.json or effect config to define '{key}'.");
+            throw new InvalidOperationException($"CombatStanceBehaviorMod requires GAS/tag_rules.json or effect config to define '{key}'.");
         }
 
         return id;

@@ -1,6 +1,6 @@
-# AI Utility Autocast 契约
+﻿# AI Utility Autocast 契约
 
-本页记录通用 Utility AI 与 OpenRA Stance 行为包的正式分层契约。长篇方案与证据可放在 `docs/rfcs/` 和 `docs/reference/`，但实现判断以本页为准。
+本页记录通用 Utility AI 与 Combat Stance 行为包的正式分层契约。长篇方案与证据可放在 `docs/rfcs/` 和 `docs/reference/`，但实现判断以本页为准。
 
 ## 三层模型
 
@@ -68,5 +68,5 @@ Stance、AttackMove、Guard、Patrol、AutoTarget profile 属于 behavior pack�
 - `GameEngine` 在 order type、ability、graph 注册后重建 `AiRuntime`，并将 Utility AI 接入主循环：`InputCollection` 做 think scheduling，`PostMovement` 在 spatial refresh 后、`OrderBufferSystem` 前做 decision/order intent submit，`Cleanup` 做 combat memory expiry。
 - Utility AI runtime 只提交 order intent。它可以根据配置提交 `moveTo`、`attackTarget` 或其它 order，但不发布 `EffectRequest`、不扣 mana、不写 cooldown、不绕过 GAS 校验。
 - `ActuatorReadiness` 与 `AimGate` 是 AI Core 的通用 gate；它们和 cooldown tag、activation block tag、activation precondition 进入同一 autocast 候选流水线，不把炮台等业务词带入 Core。
-- `mods/OpenRaStanceBehaviorMod` 是 OpenRA stance 业务行为包。它拥有 `attackMove`、`assaultMove`、`guard`、`setCombatStance`、`scatter`，并把这些业务 order 转换为已有基础 order intent，例如 `moveTo` 与 `attackTarget`。
+- `mods/CombatStanceBehaviorMod` 是 Combat stance 业务行为包。它拥有 `attackMove`、`assaultMove`、`guard`、`setCombatStance`、`scatter`，并把这些业务 order 转换为已有基础 order intent，例如 `moveTo` 与 `attackTarget`。
 - AI Inspector 会打印 Utility AI runtime 表规模，并读取 opt-in `UtilityAiDecisionTrace` 输出候选数、最佳 decision、readiness block、task status、最后提交的 order/ability。

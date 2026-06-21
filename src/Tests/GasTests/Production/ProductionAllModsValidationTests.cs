@@ -1,4 +1,4 @@
-using System;
+﻿using System;
 using System.Collections.Generic;
 using System.IO;
 using System.Numerics;
@@ -185,10 +185,10 @@ namespace Ludots.Tests.GAS.Production
                 .SetName("ProdModSmoke_AIInspectorMod");
 
             yield return new TestCaseData(new ModCase(
-                    "OpenRaStanceBehaviorMod",
-                    new[] { "LudotsCoreMod", "OpenRaStanceBehaviorMod" },
+                    "CombatStanceBehaviorMod",
+                    new[] { "LudotsCoreMod", "CombatStanceBehaviorMod" },
                     true))
-                .SetName("ProdModSmoke_OpenRaStanceBehaviorMod");
+                .SetName("ProdModSmoke_CombatStanceBehaviorMod");
 
             yield return new TestCaseData(new ModCase(
                     "DepConsumerMod",

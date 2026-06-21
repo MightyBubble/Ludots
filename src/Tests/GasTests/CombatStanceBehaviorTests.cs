@@ -1,4 +1,4 @@
-using System;
+﻿using System;
 using System.Numerics;
 using Arch.Core;
 using Ludots.Core.Components;
@@ -13,31 +13,31 @@ using Ludots.Core.Gameplay.Teams;
 using Ludots.Core.Mathematics;
 using Ludots.Core.Spatial;
 using NUnit.Framework;
-using OpenRaStanceBehaviorMod.Components;
-using OpenRaStanceBehaviorMod.Systems;
+using CombatStanceBehaviorMod.Components;
+using CombatStanceBehaviorMod.Systems;
 
 namespace Ludots.Tests.GAS;
 
 [TestFixture]
-public sealed class OpenRaStanceBehaviorTests
+public sealed class CombatStanceBehaviorTests
 {
     [Test]
     public void SetCombatStance_WritesStateAndCompletesOrder()
     {
-        using var fixture = OpenRaFixture.Create();
-        Entity actor = fixture.CreateActor(0, 0, OpenRaCombatStances.HoldFire);
+        using var fixture = StanceFixture.Create();
+        Entity actor = fixture.CreateActor(0, 0, CombatStances.HoldFire);
         fixture.Activate(actor, fixture.SetCombatStanceOrderTypeId, (ref Order order) =>
         {
-            order.Args.I0 = OpenRaCombatStances.AttackAnything;
+            order.Args.I0 = CombatStances.AttackAnything;
             order.Args.I1 = 900;
             order.Args.I2 = 30;
         });
 
         fixture.System.Update(1f / 60f);
 
-        Assert.That(fixture.World.Has<OpenRaCombatStanceState>(actor), Is.True);
-        var state = fixture.World.Get<OpenRaCombatStanceState>(actor);
-        Assert.That(state.Stance, Is.EqualTo(OpenRaCombatStances.AttackAnything));
+        Assert.That(fixture.World.Has<CombatStanceState>(actor), Is.True);
+        var state = fixture.World.Get<CombatStanceState>(actor);
+        Assert.That(state.Stance, Is.EqualTo(CombatStances.AttackAnything));
         Assert.That(state.LeashRadiusCm, Is.EqualTo(900));
         Assert.That(fixture.World.Get<OrderBuffer>(actor).HasActive, Is.False);
         Assert.That(fixture.Orders.Count, Is.EqualTo(0));
@@ -46,8 +46,8 @@ public sealed class OpenRaStanceBehaviorTests
     [Test]
     public void HoldFire_DoesNotSubmitAttack()
     {
-        using var fixture = OpenRaFixture.Create();
-        _ = fixture.CreateActor(0, 0, OpenRaCombatStances.HoldFire);
+        using var fixture = StanceFixture.Create();
+        _ = fixture.CreateActor(0, 0, CombatStances.HoldFire);
         _ = fixture.CreateHostile(300, 0);
 
         fixture.System.Update(1f / 60f);
@@ -58,10 +58,10 @@ public sealed class OpenRaStanceBehaviorTests
     [Test]
     public void ReturnFire_AttacksRecentAttackerOnly()
     {
-        using var fixture = OpenRaFixture.Create();
-        Entity actor = fixture.CreateActor(0, 0, OpenRaCombatStances.ReturnFire, leashRadiusCm: 900);
+        using var fixture = StanceFixture.Create();
+        Entity actor = fixture.CreateActor(0, 0, CombatStances.ReturnFire, leashRadiusCm: 900);
         Entity hostile = fixture.CreateHostile(300, 0);
-        fixture.World.Add(actor, new OpenRaRetaliationMemory { LastAttacker = hostile, LastAttackerStep = 0 });
+        fixture.World.Add(actor, new RetaliationMemory { LastAttacker = hostile, LastAttackerStep = 0 });
 
         fixture.System.Update(1f / 60f);
 
@@ -73,8 +73,8 @@ public sealed class OpenRaStanceBehaviorTests
     [Test]
     public void DamageTakenEvent_WritesRetaliationMemoryAndReturnFireAttacks()
     {
-        using var fixture = OpenRaFixture.Create();
-        Entity actor = fixture.CreateActor(0, 0, OpenRaCombatStances.ReturnFire, leashRadiusCm: 900);
+        using var fixture = StanceFixture.Create();
+        Entity actor = fixture.CreateActor(0, 0, CombatStances.ReturnFire, leashRadiusCm: 900);
         Entity hostile = fixture.CreateHostile(300, 0);
         fixture.Events.Publish(new GameplayEvent
         {
@@ -89,8 +89,8 @@ public sealed class OpenRaStanceBehaviorTests
         fixture.Clock.Advance(ClockDomainId.Step, 1);
         fixture.System.Update(1f / 60f);
 
-        Assert.That(fixture.World.Has<OpenRaRetaliationMemory>(actor), Is.True);
-        Assert.That(fixture.World.Get<OpenRaRetaliationMemory>(actor).LastAttacker, Is.EqualTo(hostile));
+        Assert.That(fixture.World.Has<RetaliationMemory>(actor), Is.True);
+        Assert.That(fixture.World.Get<RetaliationMemory>(actor).LastAttacker, Is.EqualTo(hostile));
         Assert.That(fixture.Orders.TryDequeue(out var order), Is.True);
         Assert.That(order.OrderTypeId, Is.EqualTo(fixture.AttackTargetOrderTypeId));
         Assert.That(order.Target, Is.EqualTo(hostile));
@@ -99,8 +99,8 @@ public sealed class OpenRaStanceBehaviorTests
     [Test]
     public void Defend_AttacksHostileInLeash()
     {
-        using var fixture = OpenRaFixture.Create();
-        Entity actor = fixture.CreateActor(0, 0, OpenRaCombatStances.Defend, leashRadiusCm: 900);
+        using var fixture = StanceFixture.Create();
+        Entity actor = fixture.CreateActor(0, 0, CombatStances.Defend, leashRadiusCm: 900);
         Entity hostile = fixture.CreateHostile(300, 0);
 
         fixture.System.Update(1f / 60f);
@@ -114,8 +114,8 @@ public sealed class OpenRaStanceBehaviorTests
     [Test]
     public void AttackAnything_UsesPriorityBucketThenNearest()
     {
-        using var fixture = OpenRaFixture.Create();
-        _ = fixture.CreateActor(0, 0, OpenRaCombatStances.AttackAnything, leashRadiusCm: 1200);
+        using var fixture = StanceFixture.Create();
+        _ = fixture.CreateActor(0, 0, CombatStances.AttackAnything, leashRadiusCm: 1200);
         _ = fixture.CreateHostile(200, 0, priority: 1);
         Entity highPriority = fixture.CreateHostile(900, 0, priority: 5);
 
@@ -128,8 +128,8 @@ public sealed class OpenRaStanceBehaviorTests
     [Test]
     public void AttackMove_SubmitsAttackThenResumesMove()
     {
-        using var fixture = OpenRaFixture.Create();
-        Entity actor = fixture.CreateActor(0, 0, OpenRaCombatStances.Defend, leashRadiusCm: 800);
+        using var fixture = StanceFixture.Create();
+        Entity actor = fixture.CreateActor(0, 0, CombatStances.Defend, leashRadiusCm: 800);
         Entity hostile = fixture.CreateHostile(300, 0);
         fixture.Activate(actor, fixture.AttackMoveOrderTypeId, (ref Order order) =>
         {
@@ -158,8 +158,8 @@ public sealed class OpenRaStanceBehaviorTests
     [Test]
     public void Guard_FollowsProtectedTargetAndAttacksThreat()
     {
-        using var fixture = OpenRaFixture.Create();
-        Entity actor = fixture.CreateActor(0, 0, OpenRaCombatStances.Defend, leashRadiusCm: 900);
+        using var fixture = StanceFixture.Create();
+        Entity actor = fixture.CreateActor(0, 0, CombatStances.Defend, leashRadiusCm: 900);
         Entity guarded = fixture.CreateFriendly(1000, 0);
         Entity hostile = fixture.CreateHostile(1050, 0);
         fixture.Activate(actor, fixture.GuardOrderTypeId, (ref Order order) =>
@@ -189,9 +189,9 @@ public sealed class OpenRaStanceBehaviorTests
     [Test]
     public void Scatter_SubmitsMoveOrderAndDoesNotCreateEffect()
     {
-        using var fixture = OpenRaFixture.Create();
+        using var fixture = StanceFixture.Create();
         var effects = new EffectRequestQueue();
-        Entity actor = fixture.CreateActor(0, 0, OpenRaCombatStances.HoldFire);
+        Entity actor = fixture.CreateActor(0, 0, CombatStances.HoldFire);
         fixture.Activate(actor, fixture.ScatterOrderTypeId, (ref Order order) => order.Args.I0 = 200);
 
         fixture.System.Update(1f / 60f);
@@ -208,9 +208,9 @@ public sealed class OpenRaStanceBehaviorTests
         order.Args.Spatial.WorldCm = new Vector3(x, 0f, y);
     }
 
-    private sealed class OpenRaFixture : IDisposable
+    private sealed class StanceFixture : IDisposable
     {
-        private OpenRaFixture(
+        private StanceFixture(
             World world,
             DiscreteClock clock,
             OrderQueue orders,
@@ -219,7 +219,7 @@ public sealed class OpenRaStanceBehaviorTests
             ChunkedGridSpatialPartitionWorld partition,
             WorldSizeSpec spec,
             SpatialQueryService spatial,
-            OpenRaStanceOrderSystem system)
+            CombatStanceOrderSystem system)
         {
             World = world;
             Clock = clock;
@@ -230,13 +230,13 @@ public sealed class OpenRaStanceBehaviorTests
             Spec = spec;
             Spatial = spatial;
             System = system;
-            AttackMoveOrderTypeId = orderTypes.GetId(OpenRaOrderKeys.AttackMove);
-            AssaultMoveOrderTypeId = orderTypes.GetId(OpenRaOrderKeys.AssaultMove);
-            GuardOrderTypeId = orderTypes.GetId(OpenRaOrderKeys.Guard);
-            SetCombatStanceOrderTypeId = orderTypes.GetId(OpenRaOrderKeys.SetCombatStance);
-            ScatterOrderTypeId = orderTypes.GetId(OpenRaOrderKeys.Scatter);
-            MoveToOrderTypeId = orderTypes.GetId(OpenRaOrderKeys.MoveTo);
-            AttackTargetOrderTypeId = orderTypes.GetId(OpenRaOrderKeys.AttackTarget);
+            AttackMoveOrderTypeId = orderTypes.GetId(StanceOrderKeys.AttackMove);
+            AssaultMoveOrderTypeId = orderTypes.GetId(StanceOrderKeys.AssaultMove);
+            GuardOrderTypeId = orderTypes.GetId(StanceOrderKeys.Guard);
+            SetCombatStanceOrderTypeId = orderTypes.GetId(StanceOrderKeys.SetCombatStance);
+            ScatterOrderTypeId = orderTypes.GetId(StanceOrderKeys.Scatter);
+            MoveToOrderTypeId = orderTypes.GetId(StanceOrderKeys.MoveTo);
+            AttackTargetOrderTypeId = orderTypes.GetId(StanceOrderKeys.AttackTarget);
             DamageTakenEventTagId = TagRegistry.GetId("Event.DamageTaken");
         }
 
@@ -248,7 +248,7 @@ public sealed class OpenRaStanceBehaviorTests
         public ChunkedGridSpatialPartitionWorld Partition { get; }
         public WorldSizeSpec Spec { get; }
         public SpatialQueryService Spatial { get; }
-        public OpenRaStanceOrderSystem System { get; }
+        public CombatStanceOrderSystem System { get; }
         public int AttackMoveOrderTypeId { get; }
         public int AssaultMoveOrderTypeId { get; }
         public int GuardOrderTypeId { get; }
@@ -258,7 +258,7 @@ public sealed class OpenRaStanceBehaviorTests
         public int AttackTargetOrderTypeId { get; }
         public int DamageTakenEventTagId { get; }
 
-        public static OpenRaFixture Create()
+        public static StanceFixture Create()
         {
             var world = World.Create();
             var clock = new DiscreteClock();
@@ -281,8 +281,8 @@ public sealed class OpenRaStanceBehaviorTests
 
                 return world.Get<WorldPositionCm>(entity).ToWorldCmInt2();
             });
-            var system = new OpenRaStanceOrderSystem(world, clock, orders, orderTypes, spatial, events);
-            return new OpenRaFixture(world, clock, orders, orderTypes, events, partition, spec, spatial, system);
+            var system = new CombatStanceOrderSystem(world, clock, orders, orderTypes, spatial, events);
+            return new StanceFixture(world, clock, orders, orderTypes, events, partition, spec, spatial, system);
         }
 
         public Entity CreateActor(int x, int y, int stance, int leashRadiusCm = 0)
@@ -290,7 +290,7 @@ public sealed class OpenRaStanceBehaviorTests
             var actor = World.Create(
                 new OrderBuffer { ActiveIndex = -1 },
                 new Team { Id = 1 },
-                new OpenRaCombatStanceState
+                new CombatStanceState
                 {
                     Stance = stance,
                     LeashRadiusCm = leashRadiusCm,
@@ -343,13 +343,13 @@ public sealed class OpenRaStanceBehaviorTests
         private static OrderTypeRegistry CreateOrderTypes()
         {
             var registry = new OrderTypeRegistry();
-            Register(registry, OpenRaOrderKeys.MoveTo, 101, 60);
-            Register(registry, OpenRaOrderKeys.AttackTarget, 102, 75);
-            Register(registry, OpenRaOrderKeys.AttackMove, 110, 80);
-            Register(registry, OpenRaOrderKeys.AssaultMove, 111, 80);
-            Register(registry, OpenRaOrderKeys.Guard, 112, 85);
-            Register(registry, OpenRaOrderKeys.SetCombatStance, 113, 180);
-            Register(registry, OpenRaOrderKeys.Scatter, 114, 140);
+            Register(registry, StanceOrderKeys.MoveTo, 101, 60);
+            Register(registry, StanceOrderKeys.AttackTarget, 102, 75);
+            Register(registry, StanceOrderKeys.AttackMove, 110, 80);
+            Register(registry, StanceOrderKeys.AssaultMove, 111, 80);
+            Register(registry, StanceOrderKeys.Guard, 112, 85);
+            Register(registry, StanceOrderKeys.SetCombatStance, 113, 180);
+            Register(registry, StanceOrderKeys.Scatter, 114, 140);
             return registry;
         }
 

@@ -1,4 +1,4 @@
-<Project Sdk="Microsoft.NET.Sdk">
+﻿<Project Sdk="Microsoft.NET.Sdk">
 
   <PropertyGroup>
     <TargetFramework>net8.0</TargetFramework>
@@ -54,7 +54,7 @@
     <ProjectReference Include="..\..\..\mods\RtsDemoMod\RtsDemoMod.csproj" />
     <ProjectReference Include="..\..\..\mods\AIDemoMod\AIDemoMod.csproj" />
     <ProjectReference Include="..\..\..\mods\AIInspectorMod\AIInspectorMod.csproj" />
-    <ProjectReference Include="..\..\..\mods\OpenRaStanceBehaviorMod\OpenRaStanceBehaviorMod.csproj" />
+    <ProjectReference Include="..\..\..\mods\CombatStanceBehaviorMod\CombatStanceBehaviorMod.csproj" />
     <ProjectReference Include="..\..\..\mods\fixtures\camera\CameraAcceptanceMod\CameraAcceptanceMod.csproj" />
     <ProjectReference Include="..\..\..\mods\fixtures\camera\CameraAcceptanceHotpathEntryMod\CameraAcceptanceHotpathEntryMod.csproj" />
     <ProjectReference Include="..\..\..\mods\showcases\camera\CameraShowcaseMod\CameraShowcaseMod.csproj" />
