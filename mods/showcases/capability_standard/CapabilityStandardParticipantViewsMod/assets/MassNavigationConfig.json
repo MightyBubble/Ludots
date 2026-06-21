@@ -204,6 +204,21 @@
     ]
   },
   "avoidance": {
+    "mode": "Separation",
+    "orca": {
+      "timeHorizonSeconds": 0.85,
+      "maxNeighbors": 16
+    },
+    "sonar": {
+      "maxSteerAngleDeg": 280,
+      "backwardPenaltyAngleDeg": 230,
+      "predictionTimeScale": 0.9,
+      "ignoreBehindMovingAgents": true,
+      "blockedStop": false,
+      "usePreferredVelocityWhenBlocked": true,
+      "timeHorizonSeconds": 0.85,
+      "maxNeighbors": 16
+    },
     "dominantMassRatio": 2.25,
     "friendlyResponseScale": 1.1,
     "friendlyResponseMin": 0.35,

@@ -1,9 +1,8 @@
 using System;
 using System.Numerics;
 using System.Runtime.CompilerServices;
-using Ludots.Core.Navigation2D.Config;
 
-namespace Ludots.Core.Navigation2D.Avoidance
+namespace Ludots.Core.Navigation.Avoidance
 {
     public static class SonarSolver2D
     {
@@ -45,7 +44,7 @@ namespace Ludots.Core.Navigation2D.Avoidance
             public readonly float PredictionTimeScale;
             public readonly bool IgnoreBehindMovingAgents;
             public readonly bool BlockedStop;
-            public readonly bool FallbackToPreferredVelocity;
+            public readonly bool UsePreferredVelocityWhenBlocked;
 
             [MethodImpl(MethodImplOptions.AggressiveInlining)]
             public SolveConfig(
@@ -54,26 +53,14 @@ namespace Ludots.Core.Navigation2D.Avoidance
                 float predictionTimeScale,
                 bool ignoreBehindMovingAgents,
                 bool blockedStop,
-                bool fallbackToPreferredVelocity)
+                bool usePreferredVelocityWhenBlocked)
             {
                 MaxSteerAngle = maxSteerAngle;
                 BackwardPenaltyAngle = backwardPenaltyAngle;
                 PredictionTimeScale = predictionTimeScale;
                 IgnoreBehindMovingAgents = ignoreBehindMovingAgents;
                 BlockedStop = blockedStop;
-                FallbackToPreferredVelocity = fallbackToPreferredVelocity;
-            }
-
-            [MethodImpl(MethodImplOptions.AggressiveInlining)]
-            public static SolveConfig FromConfig(Navigation2DSonarConfig config, bool fallbackToPreferredVelocity)
-            {
-                return new SolveConfig(
-                    maxSteerAngle: SonarSolver2D.DegreesToRadians(config.MaxSteerAngleDeg) * 0.5f,
-                    backwardPenaltyAngle: SonarSolver2D.DegreesToRadians(config.BackwardPenaltyAngleDeg) * 0.5f,
-                    predictionTimeScale: config.PredictionTimeScale,
-                    ignoreBehindMovingAgents: config.IgnoreBehindMovingAgents,
-                    blockedStop: config.BlockedStop,
-                    fallbackToPreferredVelocity: fallbackToPreferredVelocity);
+                UsePreferredVelocityWhenBlocked = usePreferredVelocityWhenBlocked;
             }
         }
 
@@ -85,11 +72,9 @@ namespace Ludots.Core.Navigation2D.Avoidance
             float radius,
             float timeHorizon,
             ReadOnlySpan<Obstacle> obstacles,
-            Navigation2DSonarConfig config,
-            bool fallbackToPreferredVelocity)
+            in SolveConfig solveConfig)
         {
             Span<Interval> intervalScratch = stackalloc Interval[MaxIntervals];
-            var solveConfig = SolveConfig.FromConfig(config, fallbackToPreferredVelocity);
             return ComputeDesiredVelocity(
                 position,
                 velocity,
@@ -113,11 +98,9 @@ namespace Ludots.Core.Navigation2D.Avoidance
             ReadOnlySpan<Vector2> obstaclePositions,
             ReadOnlySpan<Vector2> obstacleVelocities,
             ReadOnlySpan<float> obstacleRadii,
-            Navigation2DSonarConfig config,
-            bool fallbackToPreferredVelocity)
+            in SolveConfig solveConfig)
         {
             Span<Interval> intervalScratch = stackalloc Interval[MaxIntervals];
-            var solveConfig = SolveConfig.FromConfig(config, fallbackToPreferredVelocity);
             return ComputeDesiredVelocity(
                 position,
                 velocity,
@@ -179,7 +162,7 @@ namespace Ludots.Core.Navigation2D.Avoidance
                 {
                     return solveConfig.BlockedStop
                         ? Vector2.Zero
-                        : ClampPreferred(preferredVelocity, maxSpeed, solveConfig.FallbackToPreferredVelocity);
+                        : ClampPreferred(preferredVelocity, maxSpeed, solveConfig.UsePreferredVelocityWhenBlocked);
                 }
 
                 if (solveConfig.IgnoreBehindMovingAgents && obstacleVelocity.LengthSquared() > EpsilonSq && Vector2.Dot(desiredDir, predictedOffset) < 0f)
@@ -257,7 +240,7 @@ namespace Ludots.Core.Navigation2D.Avoidance
                 {
                     return solveConfig.BlockedStop
                         ? Vector2.Zero
-                        : ClampPreferred(preferredVelocity, maxSpeed, solveConfig.FallbackToPreferredVelocity);
+                        : ClampPreferred(preferredVelocity, maxSpeed, solveConfig.UsePreferredVelocityWhenBlocked);
                 }
 
                 if (solveConfig.IgnoreBehindMovingAgents && obstacle.Velocity.LengthSquared() > EpsilonSq && Vector2.Dot(desiredDir, predictedOffset) < 0f)
@@ -385,7 +368,7 @@ namespace Ludots.Core.Navigation2D.Avoidance
                 return Vector2.Zero;
             }
 
-            return ClampPreferred(preferredVelocity, maxSpeed, solveConfig.FallbackToPreferredVelocity);
+            return ClampPreferred(preferredVelocity, maxSpeed, solveConfig.UsePreferredVelocityWhenBlocked);
         }
 
         private static int SubtractBlockedIntervalWrapped(Span<Interval> available, int availableCount, float blockedMin, float blockedMax)
@@ -499,9 +482,9 @@ namespace Ludots.Core.Navigation2D.Avoidance
         }
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        private static Vector2 ClampPreferred(Vector2 preferredVelocity, float maxSpeed, bool fallbackToPreferredVelocity)
+        private static Vector2 ClampPreferred(Vector2 preferredVelocity, float maxSpeed, bool usePreferredVelocityWhenBlocked)
         {
-            if (!fallbackToPreferredVelocity)
+            if (!usePreferredVelocityWhenBlocked)
             {
                 return Vector2.Zero;
             }
@@ -530,7 +513,7 @@ namespace Ludots.Core.Navigation2D.Avoidance
         }
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        private static float DegreesToRadians(int degrees)
+        public static float DegreesToRadians(int degrees)
         {
             return degrees * (MathF.PI / 180f);
         }

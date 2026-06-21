@@ -6,7 +6,7 @@ using Arch.Core;
 using Arch.System;
 using Ludots.Core.Gameplay.Spawning;
 using Ludots.Core.Mathematics.FixedPoint;
-using Ludots.Core.Navigation2D.Avoidance;
+using Ludots.Core.Navigation.Avoidance;
 using Ludots.Core.Navigation2D.Components;
 using Ludots.Core.Navigation2D.Config;
 using Ludots.Core.Navigation2D.Runtime;
@@ -966,7 +966,7 @@ namespace Ludots.Core.Physics2D.Systems
                 var hasPointGoals = agentSoA.HasPointGoals.AsSpan();
                 var smartStopFlags = agentSoA.SmartStopFlags.AsSpan();
                 var separationConfig = config.Separation;
-                var sonarSolveConfig = SonarSolver2D.SolveConfig.FromConfig(config.Sonar, config.Orca.FallbackToPreferredVelocity);
+                var sonarSolveConfig = CreateSonarSolveConfig(config);
 
                 Span<int> neighborIdxScratch = stackalloc int[MaxNeighborsHard];
                 Span<float> neighborDistanceScratch = stackalloc float[MaxNeighborsHard];
@@ -1145,7 +1145,7 @@ namespace Ludots.Core.Physics2D.Systems
                 var hasPointGoals = agentSoA.HasPointGoals.AsSpan();
                 var smartStopFlags = agentSoA.SmartStopFlags.AsSpan();
                 var separationConfig = config.Separation;
-                var sonarSolveConfig = SonarSolver2D.SolveConfig.FromConfig(config.Sonar, config.Orca.FallbackToPreferredVelocity);
+                var sonarSolveConfig = CreateSonarSolveConfig(config);
 
                 Span<int> neighborIdxScratch = stackalloc int[MaxNeighborsHard];
                 Span<float> neighborDistanceScratch = stackalloc float[MaxNeighborsHard];
@@ -1907,6 +1907,17 @@ namespace Ludots.Core.Physics2D.Systems
             }
 
             return Vector2.Normalize(velocity) * maxSpeed;
+        }
+
+        private static SonarSolver2D.SolveConfig CreateSonarSolveConfig(Navigation2DSteeringConfig config)
+        {
+            return new SonarSolver2D.SolveConfig(
+                maxSteerAngle: SonarSolver2D.DegreesToRadians(config.Sonar.MaxSteerAngleDeg) * 0.5f,
+                backwardPenaltyAngle: SonarSolver2D.DegreesToRadians(config.Sonar.BackwardPenaltyAngleDeg) * 0.5f,
+                predictionTimeScale: config.Sonar.PredictionTimeScale,
+                ignoreBehindMovingAgents: config.Sonar.IgnoreBehindMovingAgents,
+                blockedStop: config.Sonar.BlockedStop,
+                usePreferredVelocityWhenBlocked: config.Orca.FallbackToPreferredVelocity);
         }
 
     }

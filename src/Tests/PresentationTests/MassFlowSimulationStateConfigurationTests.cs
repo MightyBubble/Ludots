@@ -71,6 +71,27 @@ namespace Ludots.Tests.Presentation
         }
 
         [Test]
+        public void MassNavigationConfig_RequiresExplicitStrictCaseAvoidanceMode()
+        {
+            JsonObject missingModeConfig = ReadObject(Path.Combine(MassNavigationModRoot(), "assets", "MassNavigationConfig.json"));
+            JsonObject missingAvoidance = missingModeConfig["avoidance"]?.AsObject()
+                ?? throw new InvalidOperationException("MassNavigationConfig.avoidance must be authored.");
+            missingAvoidance.Remove("mode");
+
+            InvalidOperationException missing = Assert.Throws<InvalidOperationException>(() => MassNavigationConfig.Load(missingModeConfig))!;
+            Assert.That(missing.Message, Does.Contain("mode"));
+
+            JsonObject wrongCaseConfig = ReadObject(Path.Combine(MassNavigationModRoot(), "assets", "MassNavigationConfig.json"));
+            JsonObject wrongCaseAvoidance = wrongCaseConfig["avoidance"]?.AsObject()
+                ?? throw new InvalidOperationException("MassNavigationConfig.avoidance must be authored.");
+            wrongCaseAvoidance["mode"] = "orca";
+
+            InvalidOperationException wrongCase = Assert.Throws<InvalidOperationException>(() => MassNavigationConfig.Load(wrongCaseConfig))!;
+            Assert.That(wrongCase.Message, Does.Contain("avoidance.mode"));
+            Assert.That(wrongCase.Message, Does.Contain("orca"));
+        }
+
+        [Test]
         public void ParallelStep_RequiresSchedulerWhenConfiguredParallel()
         {
             JobScheduler? previousScheduler = World.SharedJobScheduler;

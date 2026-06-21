@@ -278,6 +278,9 @@ public sealed class MassNavigationConfig
             "maxRetryCount");
         RequireProperties(
             RequireProperty(root, "avoidance"),
+            "mode",
+            "orca",
+            "sonar",
             "dominantMassRatio",
             "friendlyResponseScale",
             "friendlyResponseMin",
@@ -296,6 +299,20 @@ public sealed class MassNavigationConfig
             "nonFriendlyCorrectionOtherMassWeight",
             "nonFriendlyCorrectionShareMin",
             "nonFriendlyCorrectionShareMax");
+        RequireProperties(
+            RequireProperty(RequireProperty(root, "avoidance"), "orca"),
+            "timeHorizonSeconds",
+            "maxNeighbors");
+        RequireProperties(
+            RequireProperty(RequireProperty(root, "avoidance"), "sonar"),
+            "maxSteerAngleDeg",
+            "backwardPenaltyAngleDeg",
+            "predictionTimeScale",
+            "ignoreBehindMovingAgents",
+            "blockedStop",
+            "usePreferredVelocityWhenBlocked",
+            "timeHorizonSeconds",
+            "maxNeighbors");
         JsonElement semantics = RequireProperty(root, "semantics");
         RequireProperties(
             RequireProperty(semantics, "obstacle"),

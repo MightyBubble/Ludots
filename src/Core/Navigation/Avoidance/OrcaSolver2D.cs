@@ -2,7 +2,7 @@ using System;
 using System.Numerics;
 using System.Runtime.CompilerServices;
 
-namespace Ludots.Core.Navigation2D.Avoidance
+namespace Ludots.Core.Navigation.Avoidance
 {
     public static class OrcaSolver2D
     {
