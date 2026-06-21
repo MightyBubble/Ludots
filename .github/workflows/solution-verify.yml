@@ -1,0 +1,116 @@
+name: solution-verify
+
+on:
+  pull_request:
+    paths:
+      - '.github/workflows/solution-verify.yml'
+      - '.gitattributes'
+      - 'assets/**'
+      - 'global.json'
+      - 'launcher.config.json'
+      - 'launcher.presets.json'
+      - 'mods/**'
+      - 'NuGet.config'
+      - 'src/**'
+  push:
+    branches:
+      - main
+    paths:
+      - '.github/workflows/solution-verify.yml'
+      - '.gitattributes'
+      - 'assets/**'
+      - 'global.json'
+      - 'launcher.config.json'
+      - 'launcher.presets.json'
+      - 'mods/**'
+      - 'NuGet.config'
+      - 'src/**'
+  workflow_dispatch:
+
+jobs:
+  verify:
+    runs-on: windows-latest
+    timeout-minutes: 90
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup .NET
+        uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: |
+            8.0.x
+            9.0.x
+
+      - name: Pin solution verify SDK
+        shell: pwsh
+        run: dotnet new globaljson --sdk-version 9.0.100 --roll-forward latestFeature --force
+
+      - name: Build maintained test project graphs
+        shell: pwsh
+        run: |
+          $repoRoot = (Get-Location).Path
+          $navigationTests = Join-Path $repoRoot 'src\Tests\Navigation2DTests\Navigation2DTests.csproj'
+          $projects = Get-ChildItem src/Tests -Recurse -Filter *.csproj | Sort-Object FullName
+
+          foreach ($project in $projects) {
+            if ($project.FullName -eq $navigationTests) {
+              Write-Host "Skipping $($project.FullName): origin/main currently fails to build Navigation2DTests because Navigation2DPlaygroundPlayableAcceptanceTests is missing SelectionBuffer."
+              continue
+            }
+
+            Write-Host "Building $($project.FullName)..."
+            dotnet build $project.FullName -c Debug -v minimal
+            if ($LASTEXITCODE -ne 0) {
+              exit $LASTEXITCODE
+            }
+          }
+
+      - name: Run architecture guard tests
+        shell: pwsh
+        run: |
+          $guardFilter = @(
+            'FullyQualifiedName~ArchitectureGuardTests',
+            'FullyQualifiedName~GraphRuntimeArchitectureGuardTests'
+          ) -join '|'
+
+          dotnet test src/Tests/GasTests/GasTests.csproj -c Debug --no-build --filter $guardFilter -v minimal
+          if ($LASTEXITCODE -ne 0) {
+            exit $LASTEXITCODE
+          }
+
+      # Full GasTests and full PresentationTests are already red on origin/main.
+      # Keep this workflow honest by gating the AAC slice that currently passes on main.
+      - name: Run association core GasTests slice
+        shell: pwsh
+        run: |
+          $associationFilter = @(
+            'FullyQualifiedName~EntityKeyedSoaTableTests',
+            'FullyQualifiedName~EntityCollectionStoreTests',
+            'FullyQualifiedName~KnowledgeProjectionStoreTests',
+            'FullyQualifiedName~KnowledgeProjectionResolverTests',
+            'FullyQualifiedName~KnowledgeProjectionRelationGrantTests',
+            'FullyQualifiedName~KnowledgeProjectionAspectMaskTests',
+            'FullyQualifiedName~ScopeResolverTests',
+            'FullyQualifiedName~OwnershipRelationTests',
+            'FullyQualifiedName~ExchangeRuntimeTests',
+            'FullyQualifiedName~ProgressionRequirementTests',
+            'FullyQualifiedName~ParticipantViewProjectionTests',
+            'FullyQualifiedName~SelectionKnowledgeProjectionTests',
+            'FullyQualifiedName~AssociationStressShowcaseAcceptanceTests',
+            'FullyQualifiedName~FogVisionDecayShowcaseAcceptanceTests',
+            'FullyQualifiedName~OwnershipCascadeShowcaseAcceptanceTests',
+            'FullyQualifiedName~DiplomacyTradeGateShowcaseAcceptanceTests',
+            'FullyQualifiedName~GoldMarketShowcaseAcceptanceTests',
+            'FullyQualifiedName~ScopeSwitchShowcaseAcceptanceTests',
+            'FullyQualifiedName~TeamResearchShowcaseAcceptanceTests',
+            'FullyQualifiedName~ProgressionScopeShowcaseAcceptanceTests',
+            'FullyQualifiedName~ParticipantViewKnowledgeShowcaseAcceptanceTests',
+            'FullyQualifiedName~FourXAssociationShowcaseAcceptanceTests'
+          ) -join '|'
+
+          dotnet test src/Tests/GasTests/GasTests.csproj -c Debug --no-build --filter $associationFilter -v minimal
+          if ($LASTEXITCODE -ne 0) {
+            exit $LASTEXITCODE
+          }
