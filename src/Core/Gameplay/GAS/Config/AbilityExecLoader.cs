@@ -111,6 +111,12 @@ namespace Ludots.Core.Gameplay.GAS.Config
                 def.OnActivateEffects = onActivate;
             }
 
+            if (obj["cooldown"] is JsonObject cooldownObj)
+            {
+                def.Cooldown = CompileCooldown(cooldownObj, id, path);
+                def.HasCooldown = def.Cooldown.CooldownValueAttributeId > 0 || def.Cooldown.CooldownTagId > 0;
+            }
+
             // ── blockTags ──
             if (obj["blockTags"] is JsonObject blockObj)
             {
@@ -226,6 +232,42 @@ namespace Ludots.Core.Gameplay.GAS.Config
             {
                 ValidationGraphId = graphId
             };
+        }
+
+        private static AbilityCooldown CompileCooldown(JsonObject cooldownObj, string id, string path)
+        {
+            var cooldown = new AbilityCooldown();
+
+            string attrName = cooldownObj["valueAttribute"]?.GetValue<string>()
+                           ?? cooldownObj["cooldownValueAttribute"]?.GetValue<string>()
+                           ?? string.Empty;
+            if (!string.IsNullOrWhiteSpace(attrName))
+            {
+                int attrId = AttributeRegistry.GetId(attrName);
+                if (attrId <= 0)
+                {
+                    throw new InvalidOperationException(
+                        $"Ability '{id}' in '{path}' cooldown.valueAttribute references unknown attribute '{attrName}'.");
+                }
+
+                cooldown.CooldownValueAttributeId = attrId;
+            }
+
+            string tagName = cooldownObj["tag"]?.GetValue<string>()
+                          ?? cooldownObj["cooldownTag"]?.GetValue<string>()
+                          ?? string.Empty;
+            if (!string.IsNullOrWhiteSpace(tagName))
+            {
+                cooldown.CooldownTagId = TagRegistry.Register(tagName);
+            }
+
+            if (cooldown.CooldownValueAttributeId <= 0 && cooldown.CooldownTagId <= 0)
+            {
+                throw new InvalidOperationException(
+                    $"Ability '{id}' in '{path}' cooldown must declare valueAttribute or tag.");
+            }
+
+            return cooldown;
         }
 
         private static void CompileItem(JsonObject itemObj, ref AbilityExecSpec spec, int idx, string id, string path)

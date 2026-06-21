@@ -15,6 +15,7 @@ using Ludots.Core.EntityQueries;
 using Ludots.Core.Map;
 using Ludots.Core.Map.Hex;
 using Ludots.Core.Gameplay;
+using Ludots.Core.Gameplay.AI.Systems;
 using Ludots.Core.Gameplay.Camera;
 using Ludots.Core.Gameplay.Exchange;
 using Ludots.Core.Gameplay.Narrative;
@@ -468,7 +469,8 @@ namespace Ludots.Core.Engine
             {
                 validation = new Ludots.Core.Gameplay.AI.Config.AiConfigValidationContext(
                     orderTypes,
-                    GetService(CoreServiceKeys.AbilityDefinitionRegistry));
+                    GetService(CoreServiceKeys.AbilityDefinitionRegistry),
+                    GetService(CoreServiceKeys.GraphProgramRegistry));
             }
 
             var loader = new Ludots.Core.Gameplay.AI.Config.AiConfigLoader(ConfigPipeline, atoms, validation);
@@ -1157,10 +1159,22 @@ namespace Ludots.Core.Engine
             RegisterSystem(timedTagSystem, SystemGroup.InputCollection);
             RegisterSystem(new InventoryEquipmentGrantSyncSystem(World, inventoryRuntime, effectRequestQueue), SystemGroup.InputCollection);
             RegisterSystem(new AbilityFormRoutingSystem(World, abilityFormSets, tagOps), SystemGroup.InputCollection);
+            RegisterSystem(new UtilityAiThinkScheduleSystem(World, clock, AiRuntime.UtilityRuntime), SystemGroup.InputCollection);
             _worldToGridSyncSystem = new WorldToGridSyncSystem(World, SpatialCoords);
             _spatialPartitionUpdateSystem = new SpatialPartitionUpdateSystem(World, _spatialPartition, WorldSizeSpec);
             RegisterSystem(_worldToGridSyncSystem, SystemGroup.PostMovement);
             RegisterSystem(_spatialPartitionUpdateSystem, SystemGroup.PostMovement);
+            RegisterSystem(
+                new UtilityAiDecisionSystem(
+                    World,
+                    clock,
+                    AiRuntime.UtilityRuntime,
+                    SpatialQueries,
+                    abilityDefinitions,
+                    graphProgramRegistry,
+                    gasGraphApi,
+                    orderQueue),
+                SystemGroup.PostMovement);
 
             if (config.Navigation2D.Enabled)
             {
@@ -1276,6 +1290,8 @@ namespace Ludots.Core.Engine
             RegisterSystem(deferredTriggerProcessSystem, SystemGroup.DeferredTriggerCollection);
             
             // Phase 6: Cleanup
+            RegisterSystem(new UtilityAiCombatMemoryCleanupSystem(World, clock), SystemGroup.Cleanup);
+
             RegisterSystem(new GameplayEventDispatchSystem(EventBus, gasBudget), SystemGroup.EventDispatch);
             RegisterSystem(new GasBudgetReportSystem(gasBudget), SystemGroup.EventDispatch);
             
