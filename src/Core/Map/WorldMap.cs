@@ -1,5 +1,6 @@
 using System;
 using Ludots.Core.Mathematics;
+using Ludots.Core.Spatial;
 
 namespace Ludots.Core.Map
 {
@@ -8,17 +9,19 @@ namespace Ludots.Core.Map
         // Dimensions now configurable
         public int WidthInTiles { get; private set; }
         public int HeightInTiles { get; private set; }
-        public const int TileSize = 256;
+        public const int TileSize = SpatialScaleDefaults.MacroTileCells;
         
         public int TotalWidth => WidthInTiles * TileSize;
         public int TotalHeight => HeightInTiles * TileSize;
         
-        public const int MaxHeightLevel = 15;
+        public const int MaxHeightLevel = SpatialScaleDefaults.LogicTerrainMaxHeightLevel;
         public const int WorldScale = 1000; // 1 Grid = 1000 IntVector units
 
         private MapTile[] _tiles;
 
-        public WorldMap() : this(64, 64) { }
+        public WorldMap() : this(
+            SpatialScaleDefaults.DefaultWorldWidthMacroTiles,
+            SpatialScaleDefaults.DefaultWorldHeightMacroTiles) { }
 
         public WorldMap(int widthInChunks, int heightInChunks)
         {

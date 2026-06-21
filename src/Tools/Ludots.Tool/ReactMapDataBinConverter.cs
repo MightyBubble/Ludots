@@ -2,6 +2,7 @@ using System;
 using System.Collections.Generic;
 using System.IO;
 using System.Text;
+using Ludots.Core.Spatial;
 
 namespace Ludots.Tool
 {
@@ -28,14 +29,14 @@ namespace Ludots.Tool
     {
         private const string Magic = "VTXM";
         private const int Version = 2;
-        private const int ChunkSize = 64;
+        private const int ChunkSize = SpatialScaleDefaults.TerrainChunkCells;
         private const int CellsPerChunk = ChunkSize * ChunkSize;
         private const int ReactCellStride = 4;
         private const int ReactChunkBytes = CellsPerChunk * ReactCellStride;
 
         private const int PackedBytesPerChunk = CellsPerChunk;
         private const int Layer2BytesPerChunk = CellsPerChunk;
-        private const int FlagsUlongsPerChunk = CellsPerChunk / 64;
+        private const int FlagsUlongsPerChunk = CellsPerChunk / SpatialScaleDefaults.BitsPerFlagWord;
         private const int FlagsBytesPerChunk = FlagsUlongsPerChunk * 8;
         private const int RampBytesPerChunk = FlagsBytesPerChunk;
         private const int FactionsBytesPerChunk = CellsPerChunk;

@@ -2,6 +2,7 @@ using System;
 using System.Collections.Generic;
 using System.Numerics;
 using Ludots.Core.Map.Hex;
+using Ludots.Core.Spatial;
 
 namespace Ludots.Core.Navigation.NavMesh
 {
@@ -95,8 +96,8 @@ namespace Ludots.Core.Navigation.NavMesh
 
             float originXm = startC * HexCoordinates.HexWidth;
             float originZm = startR * HexCoordinates.RowSpacing;
-            int originXcm = (int)MathF.Round(originXm * 100f);
-            int originZcm = (int)MathF.Round(originZm * 100f);
+            int originXcm = (int)MathF.Round(SpatialScaleDefaults.MetersToCentimeters(originXm));
+            int originZcm = (int)MathF.Round(SpatialScaleDefaults.MetersToCentimeters(originZm));
 
             var vertexIndex = new Dictionary<VertexKey, int>(4096);
             var vx = new List<int>(4096);
@@ -344,9 +345,9 @@ namespace Ludots.Core.Navigation.NavMesh
 
         private static int GetOrAddVertex(Vector3 p, Dictionary<VertexKey, int> vertexIndex, List<int> vx, List<int> vy, List<int> vz)
         {
-            int xcm = (int)MathF.Round(p.X * 100f);
-            int ycm = (int)MathF.Round(p.Y * 100f);
-            int zcm = (int)MathF.Round(p.Z * 100f);
+            int xcm = (int)MathF.Round(SpatialScaleDefaults.MetersToCentimeters(p.X));
+            int ycm = (int)MathF.Round(SpatialScaleDefaults.MetersToCentimeters(p.Y));
+            int zcm = (int)MathF.Round(SpatialScaleDefaults.MetersToCentimeters(p.Z));
             var key = new VertexKey(xcm, ycm, zcm);
             if (vertexIndex.TryGetValue(key, out int idx)) return idx;
             idx = vx.Count;
@@ -530,7 +531,7 @@ namespace Ludots.Core.Navigation.NavMesh
 
         private static NavBorderPortal[] BuildPortals(VertexMap map, int mapWidth, int mapHeight, int startC, int startR, float originXm, float originZm, int[] clearanceCm, in NavBuildConfig config)
         {
-            var portals = new List<NavBorderPortal>(64);
+            var portals = new List<NavBorderPortal>(SpatialScaleDefaults.NavPortalInitialCapacity);
             int endC = startC + VertexChunk.ChunkSize;
             int endR = startR + VertexChunk.ChunkSize;
 
@@ -599,10 +600,10 @@ namespace Ludots.Core.Navigation.NavMesh
             float x1m = HexCoordinates.HexWidth * (boundaryCol + 0.5f * (r1 & 1)) - originXm;
             float z1m = HexCoordinates.RowSpacing * r1 - originZm;
 
-            int x0cm = (int)MathF.Round(x0m * 100f);
-            int z0cm = (int)MathF.Round(z0m * 100f);
-            int x1cm = (int)MathF.Round(x1m * 100f);
-            int z1cm = (int)MathF.Round(z1m * 100f);
+            int x0cm = (int)MathF.Round(SpatialScaleDefaults.MetersToCentimeters(x0m));
+            int z0cm = (int)MathF.Round(SpatialScaleDefaults.MetersToCentimeters(z0m));
+            int x1cm = (int)MathF.Round(SpatialScaleDefaults.MetersToCentimeters(x1m));
+            int z1cm = (int)MathF.Round(SpatialScaleDefaults.MetersToCentimeters(z1m));
             int dx = x1cm - x0cm;
             int dz = z1cm - z0cm;
             int len = (int)MathF.Round(MathF.Sqrt(dx * dx + dz * dz));
@@ -675,10 +676,10 @@ namespace Ludots.Core.Navigation.NavMesh
             float x1m = HexCoordinates.HexWidth * (c1 + 0.5f * (boundaryRow & 1)) - originXm;
             float z1m = z0m;
 
-            int x0cm = (int)MathF.Round(x0m * 100f);
-            int z0cm = (int)MathF.Round(z0m * 100f);
-            int x1cm = (int)MathF.Round(x1m * 100f);
-            int z1cm = (int)MathF.Round(z1m * 100f);
+            int x0cm = (int)MathF.Round(SpatialScaleDefaults.MetersToCentimeters(x0m));
+            int z0cm = (int)MathF.Round(SpatialScaleDefaults.MetersToCentimeters(z0m));
+            int x1cm = (int)MathF.Round(SpatialScaleDefaults.MetersToCentimeters(x1m));
+            int z1cm = (int)MathF.Round(SpatialScaleDefaults.MetersToCentimeters(z1m));
             int dx = x1cm - x0cm;
             int dz = z1cm - z0cm;
             int len = (int)MathF.Round(MathF.Sqrt(dx * dx + dz * dz));
@@ -743,7 +744,7 @@ namespace Ludots.Core.Navigation.NavMesh
             int n = VertexChunk.ChunkSize * VertexChunk.ChunkSize;
             int[] dist = new int[n];
             var q = new Queue<int>(n);
-            int stepCm = (int)MathF.Round(MathF.Min(HexCoordinates.HexWidth, HexCoordinates.RowSpacing) * 100f);
+            int stepCm = (int)MathF.Round(SpatialScaleDefaults.MetersToCentimeters(MathF.Min(HexCoordinates.HexWidth, HexCoordinates.RowSpacing)));
             if (stepCm < 1) stepCm = 1;
 
             for (int i = 0; i < n; i++)

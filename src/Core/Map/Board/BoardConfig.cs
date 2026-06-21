@@ -1,3 +1,5 @@
+using Ludots.Core.Spatial;
+
 namespace Ludots.Core.Map.Board
 {
     /// <summary>
@@ -13,19 +15,19 @@ namespace Ludots.Core.Map.Board
         public string SpatialType { get; set; } = "Grid";
 
         /// <summary>Board width in tiles.</summary>
-        public int WidthInTiles { get; set; } = 64;
+        public int WidthInTiles { get; set; } = SpatialScaleDefaults.DefaultWorldWidthMacroTiles;
 
         /// <summary>Board height in tiles.</summary>
-        public int HeightInTiles { get; set; } = 64;
+        public int HeightInTiles { get; set; } = SpatialScaleDefaults.DefaultWorldHeightMacroTiles;
 
         /// <summary>Grid cell size in centimeters.</summary>
-        public int GridCellSizeCm { get; set; } = 100;
+        public int GridCellSizeCm { get; set; } = SpatialScaleDefaults.CellCm;
 
         /// <summary>Hex edge length in centimeters. Applies to HexGrid boards.</summary>
         public int HexEdgeLengthCm { get; set; } = 400;
 
         /// <summary>Spatial partition chunk size in cells per side. Must be a power of two.</summary>
-        public int ChunkSizeCells { get; set; } = 64;
+        public int ChunkSizeCells { get; set; } = SpatialScaleDefaults.PartitionChunkCells;
 
         /// <summary>Path to binary data file (.vtxm, .graph) — optional.</summary>
         public string DataFile { get; set; }

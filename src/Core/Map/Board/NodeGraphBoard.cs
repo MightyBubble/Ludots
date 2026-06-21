@@ -28,8 +28,8 @@ namespace Ludots.Core.Map.Board
             Name = name;
 
             int gridCellSizeCm = config.GridCellSizeCm;
-            int worldWidthCm = config.WidthInTiles * 256 * gridCellSizeCm;
-            int worldHeightCm = config.HeightInTiles * 256 * gridCellSizeCm;
+            int worldWidthCm = config.WidthInTiles * SpatialScaleDefaults.MacroTileCells * gridCellSizeCm;
+            int worldHeightCm = config.HeightInTiles * SpatialScaleDefaults.MacroTileCells * gridCellSizeCm;
             WorldSize = new WorldSizeSpec(
                 new Mathematics.WorldAabbCm(-worldWidthCm / 2, -worldHeightCm / 2, worldWidthCm, worldHeightCm),
                 gridCellSizeCm);

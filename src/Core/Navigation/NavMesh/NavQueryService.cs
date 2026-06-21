@@ -4,6 +4,7 @@ using Ludots.Core.Collections;
 using Ludots.Core.Map.Hex;
 using Ludots.Core.Mathematics;
 using Ludots.Core.Mathematics.FixedPoint;
+using Ludots.Core.Spatial;
 
 namespace Ludots.Core.Navigation.NavMesh
 {
@@ -119,12 +120,12 @@ namespace Ludots.Core.Navigation.NavMesh
 
         /// <summary>
         /// Tile width/height in centimeters as Fix64 for deterministic tile location.
-        /// Computed once from HexCoordinates constants * ChunkSize * 100 (cm conversion).
+        /// Computed once from HexCoordinates constants * TerrainChunkCells * CellCm.
         /// </summary>
         private static readonly Fix64 TileWidthCm =
-            Fix64.FromFloat(HexCoordinates.HexWidth * VertexChunk.ChunkSize * 100f);
+            Fix64.FromFloat(HexCoordinates.HexWidth * SpatialScaleDefaults.TerrainChunkCells * SpatialScaleDefaults.CellCm);
         private static readonly Fix64 TileHeightCm =
-            Fix64.FromFloat(HexCoordinates.RowSpacing * VertexChunk.ChunkSize * 100f);
+            Fix64.FromFloat(HexCoordinates.RowSpacing * SpatialScaleDefaults.TerrainChunkCells * SpatialScaleDefaults.CellCm);
 
         private NavTileId LocateTile(int worldXcm, int worldZcm)
         {
@@ -473,7 +474,7 @@ namespace Ludots.Core.Navigation.NavMesh
 
         private static List<PortalWorldSeg> Reconstruct(List<Node> nodes, int goalNode, int startNode, int maxPortals)
         {
-            var rev = new List<PortalWorldSeg>(64);
+            var rev = new List<PortalWorldSeg>(SpatialScaleDefaults.NavPortalInitialCapacity);
             int cur = nodes[goalNode].Prev;
             while (cur != startNode && cur >= 0 && rev.Count < maxPortals)
             {

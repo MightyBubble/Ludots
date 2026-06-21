@@ -1,3 +1,5 @@
+using Ludots.Core.Spatial;
+
 namespace MassNavigationMod.Runtime;
 
 public sealed class MassNavigationCrowdSemantics
@@ -29,7 +31,7 @@ public sealed class MassNavigationCrowdSemantics
 
 public sealed class MassNavigationObstacleSemantics
 {
-    public float HardResolveCandidateDistanceCm { get; set; } = 100f;
+    public float HardResolveCandidateDistanceCm { get; set; } = SpatialScaleDefaults.CellCm;
     public float SoftPushPaddingCm { get; set; } = 350f;
     public float SoftPushForceScale { get; set; } = 8f;
 

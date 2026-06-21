@@ -2,6 +2,7 @@ using System;
 using System.Collections.Generic;
 using System.Numerics;
 using Ludots.Core.Map.Hex;
+using Ludots.Core.Spatial;
 
 namespace Ludots.Core.Navigation.NavMesh.Bake
 {
@@ -131,8 +132,8 @@ namespace Ludots.Core.Navigation.NavMesh.Bake
 
             float originXm = startC * HexCoordinates.HexWidth;
             float originZm = startR * HexCoordinates.RowSpacing;
-            int originXcm = (int)MathF.Round(originXm * 100f);
-            int originZcm = (int)MathF.Round(originZm * 100f);
+            int originXcm = (int)MathF.Round(SpatialScaleDefaults.MetersToCentimeters(originXm));
+            int originZcm = (int)MathF.Round(SpatialScaleDefaults.MetersToCentimeters(originZm));
 
             // Convert TriMesh to NavTile format with height sampling
             var result = ConvertTriMeshToNavTile(
@@ -254,9 +255,9 @@ namespace Ludots.Core.Navigation.NavMesh.Bake
                 // Sample height from terrain
                 float height = SampleHeight(map, mapWidth, mapHeight, globalC, globalR, config.HeightScaleMeters);
 
-                vx[i] = (int)MathF.Round(worldX * 100f);
-                vy[i] = (int)MathF.Round(height * 100f);
-                vz[i] = (int)MathF.Round(worldZ * 100f);
+                vx[i] = (int)MathF.Round(SpatialScaleDefaults.MetersToCentimeters(worldX));
+                vy[i] = (int)MathF.Round(SpatialScaleDefaults.MetersToCentimeters(height));
+                vz[i] = (int)MathF.Round(SpatialScaleDefaults.MetersToCentimeters(worldZ));
 
                 // DEBUG: Log first 10 vertices
                 if (i < 10)
@@ -432,7 +433,7 @@ namespace Ludots.Core.Navigation.NavMesh.Bake
             int n = VertexChunk.ChunkSize * VertexChunk.ChunkSize;
             int[] dist = new int[n];
             var q = new Queue<int>(n);
-            int stepCm = (int)MathF.Round(MathF.Min(HexCoordinates.HexWidth, HexCoordinates.RowSpacing) * 100f);
+            int stepCm = (int)MathF.Round(SpatialScaleDefaults.MetersToCentimeters(MathF.Min(HexCoordinates.HexWidth, HexCoordinates.RowSpacing)));
             if (stepCm < 1) stepCm = 1;
 
             for (int i = 0; i < n; i++)
@@ -475,7 +476,7 @@ namespace Ludots.Core.Navigation.NavMesh.Bake
 
         private static NavBorderPortal[] BuildPortals(VertexMap map, int mapWidth, int mapHeight, int startC, int startR, float originXm, float originZm, int[] clearanceCm, in NavBuildConfig config)
         {
-            var portals = new List<NavBorderPortal>(64);
+            var portals = new List<NavBorderPortal>(SpatialScaleDefaults.NavPortalInitialCapacity);
             int endC = startC + VertexChunk.ChunkSize;
             int endR = startR + VertexChunk.ChunkSize;
 
@@ -582,10 +583,10 @@ namespace Ludots.Core.Navigation.NavMesh.Bake
                 float x1m = HexCoordinates.HexWidth * (boundary + 0.5f * (r1 & 1)) - originXm;
                 float z1m = HexCoordinates.RowSpacing * r1 - originZm;
 
-                x0cm = (int)MathF.Round(x0m * 100f);
-                z0cm = (int)MathF.Round(z0m * 100f);
-                x1cm = (int)MathF.Round(x1m * 100f);
-                z1cm = (int)MathF.Round(z1m * 100f);
+                x0cm = (int)MathF.Round(SpatialScaleDefaults.MetersToCentimeters(x0m));
+                z0cm = (int)MathF.Round(SpatialScaleDefaults.MetersToCentimeters(z0m));
+                x1cm = (int)MathF.Round(SpatialScaleDefaults.MetersToCentimeters(x1m));
+                z1cm = (int)MathF.Round(SpatialScaleDefaults.MetersToCentimeters(z1m));
             }
             else
             {
@@ -601,10 +602,10 @@ namespace Ludots.Core.Navigation.NavMesh.Bake
                 float x1m = HexCoordinates.HexWidth * (c1 + 0.5f * (boundary & 1)) - originXm;
                 float z1m = z0m;
 
-                x0cm = (int)MathF.Round(x0m * 100f);
-                z0cm = (int)MathF.Round(z0m * 100f);
-                x1cm = (int)MathF.Round(x1m * 100f);
-                z1cm = (int)MathF.Round(z1m * 100f);
+                x0cm = (int)MathF.Round(SpatialScaleDefaults.MetersToCentimeters(x0m));
+                z0cm = (int)MathF.Round(SpatialScaleDefaults.MetersToCentimeters(z0m));
+                x1cm = (int)MathF.Round(SpatialScaleDefaults.MetersToCentimeters(x1m));
+                z1cm = (int)MathF.Round(SpatialScaleDefaults.MetersToCentimeters(z1m));
             }
 
             int dx = x1cm - x0cm;

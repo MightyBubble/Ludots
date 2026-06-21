@@ -13,6 +13,7 @@ using GraphProgramPackage = Ludots.Core.GraphRuntime.GraphProgramPackage;
 using Ludots.Core.Map.Hex;
 using Ludots.Core.Navigation.NavMesh;
 using Ludots.Core.Navigation.NavMesh.Config;
+using Ludots.Core.Spatial;
 using Ludots.NavBake.Recast;
 
 namespace Ludots.Tool
@@ -97,7 +98,7 @@ namespace Ludots.Tool
             var genOutOption = new Option<string>("--out", "Output .vtxm file path") { IsRequired = true };
             var genWidthOption = new Option<int>("--widthChunks", () => 16, "Map width in chunks");
             var genHeightOption = new Option<int>("--heightChunks", () => 16, "Map height in chunks");
-            var genChunkSizeOption = new Option<int>("--chunkSize", () => 64, "Chunk size (power-of-two)");
+            var genChunkSizeOption = new Option<int>("--chunkSize", () => SpatialScaleDefaults.TerrainChunkCells, "Chunk size (power-of-two)");
             var genPresetOption = new Option<string>("--preset", () => "bench", "Preset: bench|flat|stripes|cliffs|lake");
             var genOverwriteOption = new Option<bool>("--overwrite", () => false, "Overwrite if output exists");
             genVtxmCommand.AddOption(genOutOption);
@@ -880,8 +881,9 @@ namespace {modId}
             if (File.Exists(outFile) && !overwrite) throw new IOException($"File exists: {outFile}");
             if (widthChunks <= 0 || heightChunks <= 0) throw new ArgumentOutOfRangeException();
 
-            int mapW = widthChunks * 64;
-            int mapH = heightChunks * 64;
+            const int chunkSize = SpatialScaleDefaults.TerrainChunkCells;
+            int mapW = widthChunks * chunkSize;
+            int mapH = heightChunks * chunkSize;
 
             using var fs = File.Create(outFile);
             using var bw = new BinaryWriter(fs);
@@ -893,13 +895,13 @@ namespace {modId}
             {
                 for (int cx = 0; cx < widthChunks; cx++)
                 {
-                    var chunk = new byte[64 * 64 * 4];
-                    for (int ly = 0; ly < 64; ly++)
+                    var chunk = new byte[chunkSize * chunkSize * 4];
+                    for (int ly = 0; ly < chunkSize; ly++)
                     {
-                        for (int lx = 0; lx < 64; lx++)
+                        for (int lx = 0; lx < chunkSize; lx++)
                         {
-                            int gc = cx * 64 + lx;
-                            int gr = cy * 64 + ly;
+                            int gc = cx * chunkSize + lx;
+                            int gr = cy * chunkSize + ly;
 
                             byte height = 0;
                             byte water = 0;
@@ -927,7 +929,7 @@ namespace {modId}
                                 if (d2 < (mapW / 6) * (mapW / 6)) water = 10;
                             }
 
-                            int cell = (ly * 64 + lx) * 4;
+                            int cell = (ly * chunkSize + lx) * 4;
                             chunk[cell + 0] = (byte)(((height & 0x0F) << 4) | (water & 0x0F));
                             chunk[cell + 1] = (byte)(((biome & 0x0F) << 4) | (veg & 0x0F));
                             chunk[cell + 2] = flags;
