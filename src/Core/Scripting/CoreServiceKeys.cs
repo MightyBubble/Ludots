@@ -42,6 +42,7 @@ using Ludots.Core.Navigation.NavMesh;
 using Ludots.Core.Navigation.NavMesh.Config;
 using Ludots.Core.Navigation.Pathing;
 using Ludots.Core.Navigation.Pathing.Config;
+using Ludots.Core.Navigation.Terrain;
 using Ludots.Core.Navigation2D.Runtime;
 using Ludots.Core.NodeLibraries.GASGraph;
 using Ludots.Core.Presentation;
@@ -289,6 +290,7 @@ namespace Ludots.Core.Scripting
         // --- Navigation ---
         public static readonly ServiceKey<LoadedGraphRuntime> LoadedGraphRuntime = new("LoadedGraphRuntime");
         public static readonly ServiceKey<Navigation2DRuntime> Navigation2DRuntime = new("Navigation2DRuntime");
+        public static readonly ServiceKey<LogicTerrainField> LogicTerrain = new("LogicTerrain");
         public static readonly ServiceKey<AgentProfileRegistry> AgentProfiles = new("AgentProfiles");
         public static readonly ServiceKey<NavMeshBakeConfig> NavMeshBakeConfig = new("NavMeshBakeConfig");
         public static readonly ServiceKey<NavMeshProfileRegistry> NavMeshProfiles = new("NavMeshProfiles");

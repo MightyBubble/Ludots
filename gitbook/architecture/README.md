@@ -16,6 +16,7 @@
 - [Core Minimap Authoring](core-minimap-authoring.md)
 - [Map-Owned Participant Contract](map-owned-participant-contract.md)
 - [空间尺度与分辨率 SSOT](spatial-scale-and-resolution-ssot.md)
+- [Logic Terrain and Topology](../reference/logic-terrain-and-topology.md)
 - [Performer-as-Actor 架构总览](performer-as-actor-architecture.md)
 - [Instanced Batch 外部 Source Contract](instanced-batch-source-contract.md)
 - [Map Batch Performer Param Overrides](map-batch-performer-param-overrides.md)

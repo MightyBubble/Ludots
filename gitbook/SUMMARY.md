@@ -32,6 +32,7 @@
   - [MassNavigation 用户教学书](reference/mass-navigation-user-book.md)
   - [MassNavigation 正式链路手册](reference/mass-navigation-formal-chain.md)
   - [Agent Profile](reference/agent-profile.md)
+  - [Logic Terrain and Topology](reference/logic-terrain-and-topology.md)
   - [空间尺度配置查表](reference/spatial-scale-configuration.md)
   - [项目地图](reference/project-map.md)
   - [发布与访问](reference/publishing-and-access.md)

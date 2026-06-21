@@ -68,6 +68,7 @@ using Ludots.Core.Engine.TimeFlow;
 using Ludots.Core.Navigation.AgentProfiles;
 using Ludots.Core.Navigation.NavMesh;
 using Ludots.Core.Navigation.NavMesh.Config;
+using Ludots.Core.Navigation.Terrain;
 using Ludots.Core.Navigation.AOI;
 using Ludots.Core.Engine.Navigation2D;
 using Ludots.Core.Diagnostics;
@@ -155,6 +156,7 @@ namespace Ludots.Core.Engine
         public World World { get; private set; }
         public WorldMap WorldMap { get; private set; }
         public VertexMap VertexMap { get; private set; }
+        public LogicTerrainField LogicTerrain { get; private set; }
         public PhysicsWorld PhysicsWorld { get; private set; }
         public GameSession GameSession { get; private set; }
         public WorldSizeSpec WorldSizeSpec { get; private set; }
@@ -297,6 +299,7 @@ namespace Ludots.Core.Engine
             ctx.Set(CoreServiceKeys.World, World);
             ctx.Set(CoreServiceKeys.WorldMap, WorldMap);
             ctx.Set(CoreServiceKeys.VertexMap, VertexMap);
+            ctx.Set(CoreServiceKeys.LogicTerrain, LogicTerrain);
             ctx.Set(CoreServiceKeys.GameSession, GameSession);
             ctx.Set(CoreServiceKeys.Engine, this);
             ctx.Set(CoreServiceKeys.WorldSizeSpec, WorldSizeSpec);
@@ -1908,35 +1911,64 @@ namespace Ludots.Core.Engine
         {
             VertexMap?.UnsubscribeFromLoadedChunks();
             VertexMap = null;
+            LogicTerrain = null;
+            RemoveService(CoreServiceKeys.VertexMap);
+            RemoveService(CoreServiceKeys.LogicTerrain);
 
             foreach (var board in session.AllBoards)
             {
                 if (board is ITerrainBoard terrainBoard)
                 {
-                    string dataFile = FindDataFileForBoard(board.Name, mapConfig);
+                    BoardConfig boardConfig = FindConfigForBoard(board.Name, mapConfig);
+                    string dataFile = boardConfig?.DataFile;
                     if (!string.IsNullOrWhiteSpace(dataFile))
                     {
                         var vtxMap = LoadVertexMapFromFile(dataFile);
                         if (vtxMap != null)
                         {
                             terrainBoard.VertexMap = vtxMap;
+                            terrainBoard.LogicTerrain = new VertexMapLogicTerrainField(vtxMap);
                             VertexMap = vtxMap;
+                            LogicTerrain = terrainBoard.LogicTerrain;
                             SetService(CoreServiceKeys.VertexMap, vtxMap);
+                            SetService(CoreServiceKeys.LogicTerrain, LogicTerrain);
                             Diagnostics.Log.Info(in LogChannels.Engine, $"Loaded VertexMap {vtxMap.WidthInChunks}x{vtxMap.HeightInChunks} for board '{board.Name}'");
                         }
+
+                        continue;
+                    }
+
+                    if (board is GridBoard gridBoard && boardConfig != null)
+                    {
+                        int widthCells = checked(boardConfig.WidthInMacroTiles * SpatialScaleDefaults.MacroTileCells);
+                        int heightCells = checked(boardConfig.HeightInMacroTiles * SpatialScaleDefaults.MacroTileCells);
+                        gridBoard.LogicTerrain = new FlatGridLogicTerrainField(
+                            widthCells,
+                            heightCells,
+                            boardConfig.GridCellSizeCm,
+                            boardConfig.ChunkSizeCells);
+                        if (LogicTerrain == null)
+                        {
+                            LogicTerrain = gridBoard.LogicTerrain;
+                            SetService(CoreServiceKeys.LogicTerrain, LogicTerrain);
+                        }
+
+                        Diagnostics.Log.Info(
+                            in LogChannels.Engine,
+                            $"Created flat grid LogicTerrainField {widthCells}x{heightCells} cells for board '{board.Name}'");
                     }
                 }
             }
         }
 
-        private string FindDataFileForBoard(string boardName, MapConfig mapConfig)
+        private BoardConfig FindConfigForBoard(string boardName, MapConfig mapConfig)
         {
             if (mapConfig.Boards == null) return null;
             foreach (var b in mapConfig.Boards)
             {
                 if (string.Equals(b.Name, boardName, StringComparison.OrdinalIgnoreCase))
                 {
-                    return b.DataFile;
+                    return b;
                 }
             }
             return null;
@@ -2101,7 +2133,7 @@ namespace Ludots.Core.Engine
             }
             if (!navEnabled) return;
 
-            if (VertexMap == null) throw new InvalidOperationException($"NavMesh enabled but VertexMap is not loaded for map '{mapId}'.");
+            if (LogicTerrain == null) throw new InvalidOperationException($"NavMesh enabled but LogicTerrainField is not loaded for map '{mapId}'.");
 
             var bakeConfig = LoadNavMeshBakeConfig();
             SetService(CoreServiceKeys.NavMeshBakeConfig, bakeConfig);
@@ -2114,8 +2146,8 @@ namespace Ludots.Core.Engine
             if (bakeConfig.Layers == null || bakeConfig.Layers.Count == 0) throw new InvalidOperationException("NavMeshBakeConfig.layers is empty.");
 
             var stores = new Dictionary<NavQueryServiceKey, NavTileStore>(bakeConfig.Layers.Count * profileRegistry.Count);
-            int widthChunks = VertexMap.WidthInChunks;
-            int heightChunks = VertexMap.HeightInChunks;
+            int widthChunks = LogicTerrain.WidthChunks;
+            int heightChunks = LogicTerrain.HeightChunks;
 
             for (int li = 0; li < bakeConfig.Layers.Count; li++)
             {
@@ -2149,7 +2181,12 @@ namespace Ludots.Core.Engine
                 }
             }
 
-            SetService(CoreServiceKeys.NavQueryServices, new NavQueryServiceRegistry(stores));
+            var navRegistry = new NavQueryServiceRegistry(stores);
+            SetService(CoreServiceKeys.NavQueryServices, navRegistry);
+            if (MapSessions?.FocusedSession?.PrimaryBoard is INavigableBoard navigableBoard)
+            {
+                navigableBoard.NavServices = navRegistry;
+            }
         }
 
         private void ClearNavServices()

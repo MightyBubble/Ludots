@@ -6,6 +6,7 @@ using Ludots.Core.Map.Hex;
 using Ludots.Core.Navigation.AgentProfiles;
 using Ludots.Core.Navigation.NavMesh;
 using Ludots.Core.Navigation.NavMesh.Config;
+using Ludots.Core.Navigation.Terrain;
 
 namespace Ludots.NavBake.Recast
 {
@@ -24,10 +25,33 @@ namespace Ludots.NavBake.Recast
             out NavTile tile,
             out NavBakeArtifact artifact)
         {
+            if (map == null)
+            {
+                tile = null!;
+                artifact = new NavBakeArtifact(new NavTileId(chunkX, chunkY, layer), tileVersion, NavBakeStage.None, NavBakeErrorCode.InvalidInput, "VertexMap is null.", 0, 0, 0, 0);
+                return false;
+            }
+
+            return TryBake(new VertexMapLogicTerrainField(map), chunkX, chunkY, tileVersion, legacyConfig, agentProfile, navProfile, layer, obstacles, out tile, out artifact);
+        }
+
+        public static bool TryBake(
+            LogicTerrainField terrain,
+            int chunkX,
+            int chunkY,
+            uint tileVersion,
+            in NavBuildConfig legacyConfig,
+            AgentProfileConfig agentProfile,
+            NavMeshAgentProfileConfig navProfile,
+            int layer,
+            NavObstacleSet obstacles,
+            out NavTile tile,
+            out NavBakeArtifact artifact)
+        {
             tile = null!;
             artifact = default;
 
-            if (!NavTileBuilder.TryBuildTile(map, chunkX, chunkY, tileVersion, legacyConfig, out var baseTile, out var baseArtifact))
+            if (!NavTileBuilder.TryBuildTile(terrain, chunkX, chunkY, tileVersion, legacyConfig, out var baseTile, out var baseArtifact))
             {
                 artifact = baseArtifact;
                 return false;

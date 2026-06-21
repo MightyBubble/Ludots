@@ -2,6 +2,7 @@ using System;
 using Ludots.Core.Diagnostics;
 using Ludots.Core.Map.Hex;
 using Ludots.Core.Navigation.AOI;
+using Ludots.Core.Navigation.Terrain;
 using Ludots.Core.Spatial;
 
 namespace Ludots.Core.Map.Board
@@ -19,6 +20,7 @@ namespace Ludots.Core.Map.Board
         public ISpatialQueryService QueryService { get; }
         public ILoadedChunks LoadedChunks => HexGridAOI;
         public VertexMap VertexMap { get; set; }
+        public LogicTerrainField LogicTerrain { get; set; }
         public Navigation.NavMesh.NavQueryServiceRegistry NavServices { get; set; }
 
         public HexGridAOI HexGridAOI { get; }
