@@ -34,6 +34,7 @@
 
 - [GAS Combat Infrastructure](gas_combat_infrastructure.md)
 - [GAS Layered Architecture](gas_layered_architecture.md)
+- [AI Utility Autocast Contract](../../gitbook/architecture/ai-utility-autocast-contract.md)
 - [Order / Navigation / Movement Architecture](order_navigation_movement.md)
 - [Narrative Quest / Dialogue / Cinematic](narrative_quest_dialogue_cinematic.md)
 - [Narrative Frontend Kit](narrative_frontend_kit.md)
