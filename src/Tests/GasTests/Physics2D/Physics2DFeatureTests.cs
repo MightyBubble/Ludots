@@ -1,10 +1,14 @@
 using Arch.Core;
 using Arch.Core.Extensions;
+using Ludots.Core.Config;
+using Ludots.Core.Engine.Physics2D;
 using Ludots.Core.Mathematics.FixedPoint;
 using Ludots.Core.Physics2D;
 using Ludots.Core.Physics2D.Collision;
 using Ludots.Core.Physics2D.Components;
 using Ludots.Core.Physics2D.Systems;
+using Ludots.Physics.Broadphase;
+using Ludots.Physics.Broadphase.Strategies;
 using NUnit.Framework;
 
 namespace GasTests.Physics2D
@@ -140,6 +144,139 @@ namespace GasTests.Physics2D
             spatial.Update(0.016f);
 
             Assert.That(spatial.DroppedPairsLastUpdate, Is.EqualTo(1));
+        }
+
+        [Test]
+        public void UniformGrid_MatchesSortAndSweepPotentialPairsAndQueries()
+        {
+            var dynamicBodies = new[]
+            {
+                Body(index: 0, x: 0, y: 0, half: 10, isStatic: false),
+                Body(index: 1, x: 15, y: 0, half: 10, isStatic: false),
+                Body(index: 2, x: 1000, y: 1000, half: 10, isStatic: false)
+            };
+            var staticBodies = new[]
+            {
+                Body(index: 0, x: 18, y: 0, half: 8, isStatic: true),
+                Body(index: 1, x: -200, y: -200, half: 10, isStatic: true)
+            };
+
+            using var sweep = new SortAndSweepStrategy();
+            using var grid = new UniformGridStrategy(cellSizeCm: 32);
+            sweep.Build(dynamicBodies, staticBodies, rebuildStatic: true);
+            grid.Build(dynamicBodies, staticBodies, rebuildStatic: true);
+
+            var sweepPairs = new List<(int, int)>();
+            var gridPairs = new List<(int, int)>();
+            sweep.QueryPotentialCollisions(sweepPairs);
+            grid.QueryPotentialCollisions(gridPairs);
+
+            Assert.That(NormalizePairs(gridPairs), Is.EqualTo(NormalizePairs(sweepPairs)));
+
+            var query = new Aabb
+            {
+                Min = Fix64Vec2.FromInt(8, -12),
+                Max = Fix64Vec2.FromInt(28, 12)
+            };
+            var sweepResults = new List<int>();
+            var gridResults = new List<int>();
+            sweep.QueryAABB(in query, sweepResults);
+            grid.QueryAABB(in query, gridResults);
+
+            sweepResults.Sort();
+            gridResults.Sort();
+            Assert.That(gridResults, Is.EqualTo(sweepResults));
+        }
+
+        [Test]
+        public void AdaptiveSpatial_AppliesBroadphasePolicy()
+        {
+            using var world = World.Create();
+
+            int circleIndex = ShapeDataStorage2D.RegisterCircle(radius: 10f);
+            var collider = new Collider2D { Type = ColliderType2D.Circle, ShapeDataIndex = circleIndex };
+            var mass = Mass2D.FromFloat(inverseMass: 1f, inverseInertia: 0f);
+
+            world.Create(new Position2D { Value = Fix64Vec2.FromInt(0, 0) }, collider, mass);
+            world.Create(new Position2D { Value = Fix64Vec2.FromInt(5, 0) }, collider, mass);
+
+            var build = new BuildPhysicsWorldSystem2D(world);
+            var spatial = new AdaptiveSpatialSystem2D(world, build, maxCollisionPairs: 8);
+            var policy = new Physics2DBroadphasePolicy(new Physics2DBroadphaseConfig
+            {
+                Strategy = Physics2DBroadphaseStrategyKind.UniformGrid,
+                CellSizeCm = 64
+            });
+
+            build.Update(0.016f);
+            spatial.ApplyBroadphasePolicy(policy);
+            spatial.Update(0.016f);
+
+            Assert.That(spatial.CurrentStrategy, Is.TypeOf<UniformGridStrategy>());
+            Assert.That(spatial.CurrentStrategyKind, Is.EqualTo(Physics2DBroadphaseStrategyKind.UniformGrid));
+            Assert.That(spatial.CurrentCellSizeCm, Is.EqualTo(64));
+        }
+
+        [Test]
+        public void BuildPhysicsWorld_RebuildsStaticCacheAfterTrackedStaticEntityDestroyed()
+        {
+            using var world = World.Create();
+
+            int shapeIndex = ShapeDataStorage2D.RegisterBox(halfWidth: 10f, halfHeight: 10f);
+            Entity staticBody = world.Create(
+                new Position2D { Value = Fix64Vec2.FromInt(0, 0) },
+                new Collider2D { Type = ColliderType2D.Box, ShapeDataIndex = shapeIndex },
+                Mass2D.Static);
+
+            var build = new BuildPhysicsWorldSystem2D(world);
+            build.Update(0.016f);
+
+            Assert.That(build.StaticRigidBodyDescriptors.Count, Is.EqualTo(1));
+            int staticVersion = build.StaticBodyVersion;
+
+            world.Destroy(staticBody);
+            build.Update(0.016f);
+
+            Assert.That(build.StaticRigidBodyDescriptors.Count, Is.EqualTo(0));
+            Assert.That(build.StaticBodyVersion, Is.Not.EqualTo(staticVersion));
+            Assert.That(build.DirtyStaticBodyCountLastUpdate, Is.EqualTo(1));
+        }
+
+        private static RigidBodyDesc Body(int index, int x, int y, int half, bool isStatic)
+        {
+            return new RigidBodyDesc
+            {
+                Index = index,
+                EntityIndex = index + 1,
+                IsStatic = isStatic,
+                BoundingBox = new Aabb
+                {
+                    Min = Fix64Vec2.FromInt(x - half, y - half),
+                    Max = Fix64Vec2.FromInt(x + half, y + half)
+                }
+            };
+        }
+
+        private static List<(int, int)> NormalizePairs(List<(int, int)> pairs)
+        {
+            var normalized = new List<(int, int)>(pairs.Count);
+            for (int i = 0; i < pairs.Count; i++)
+            {
+                var (a, b) = pairs[i];
+                if (b < a)
+                {
+                    (a, b) = (b, a);
+                }
+
+                normalized.Add((a, b));
+            }
+
+            normalized.Sort(static (left, right) =>
+            {
+                int a = left.Item1.CompareTo(right.Item1);
+                return a != 0 ? a : left.Item2.CompareTo(right.Item2);
+            });
+            return normalized;
         }
     }
 }

@@ -950,6 +950,7 @@ namespace Ludots.Core.Engine
             var clockStepPolicy = new GasClockStepPolicy(gasClockConfig.StepEveryFixedTicks, gasClockConfig.Mode);
             var clockSystem = new GasClockSystem(clock, clockStepPolicy);
             var physics2dTickPolicy = new Physics2DTickPolicy(physics2dClockConfig.PhysicsHz, physics2dClockConfig.MaxStepsPerFixedTick);
+            var physics2dBroadphasePolicy = new Physics2DBroadphasePolicy(physics2dClockConfig.Broadphase);
             var navigation2dTickPolicy = new Navigation2DTickPolicy(navigation2dClockConfig.NavigationHz, navigation2dClockConfig.MaxStepsPerFixedTick);
             _physics2DController = new Physics2DController(World, physics2dTickPolicy, physics2dClockConfig.PhysicsHz, CreateContext, TriggerManager.FireEvent);
             var simulationLoopController = new SimulationLoopController(this);
@@ -1013,6 +1014,7 @@ namespace Ludots.Core.Engine
             SetService(CoreServiceKeys.GasClockStepPolicy, clockStepPolicy);
             SetService(CoreServiceKeys.GasClocks, gasClocks);
             SetService(CoreServiceKeys.Physics2DTickPolicy, physics2dTickPolicy);
+            SetService(CoreServiceKeys.Physics2DBroadphasePolicy, physics2dBroadphasePolicy);
             SetService(CoreServiceKeys.Navigation2DTickPolicy, navigation2dTickPolicy);
             SetService(CoreServiceKeys.Physics2DController, _physics2DController);
             SetService(CoreServiceKeys.SimulationLoopController, simulationLoopController);
@@ -1198,7 +1200,7 @@ namespace Ludots.Core.Engine
                         RegisterSystem(nav2dSystem, SystemGroup.InputCollection);
                     }
 
-                    var physics2dSystemObj = Activator.CreateInstance(physics2dSystemType, World, clock, physics2dTickPolicy);
+                    var physics2dSystemObj = Activator.CreateInstance(physics2dSystemType, World, clock, physics2dTickPolicy, physics2dBroadphasePolicy);
                     if (physics2dSystemObj is ISystem<float> physics2dSystem)
                     {
                         RegisterSystem(physics2dSystem, SystemGroup.InputCollection);

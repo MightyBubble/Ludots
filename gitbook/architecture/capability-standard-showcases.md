@@ -10,6 +10,7 @@ This page is the SSOT for production-grade capability acceptance showcase roots 
 | Large World Mass Navigation | `capability_standard_mass_nav_large_world_10k` | `mods/showcases/capability_standard/CapabilityStandardMassNavigationLargeWorld10kMod` | 10K nav agents, large-world residency, performers, HUD bar/text, effect/minimap changes |
 | Total War Like | `capability_standard_total_war_like` | `mods/showcases/capability_standard/CapabilityStandardTotalWarLikeMod` | Formation command, mass movement, selection, path preview, large battle presentation |
 | Participant Views | `capability_standard_participant_views` | `mods/showcases/capability_standard/CapabilityStandardParticipantViewsMod` | Map-owned teams/players, local player binding, player/team view projection through formal selection |
+| Physics2D Tuning | `capability_standard_physics2d_showcase` | `mods/showcases/capability_standard/CapabilityStandardPhysics2DShowcaseMod` | 15Hz Physics2D, 30K dynamic entities, 100K static entities, broadphase strategy, static obstacle templates, polygon authoring |
 
 Standard launch commands:
 
@@ -18,6 +19,7 @@ Standard launch commands:
 .\scripts\run-mod-launcher.cmd cli launch '$capability_standard_mass_nav_large_world_10k' --adapter raylib
 .\scripts\run-mod-launcher.cmd cli launch '$capability_standard_total_war_like' --adapter raylib
 .\scripts\run-mod-launcher.cmd cli launch '$capability_standard_participant_views' --adapter raylib
+.\scripts\run-mod-launcher.cmd cli launch '$capability_standard_physics2d_showcase' --adapter raylib
 ```
 
 Preset launch commands:
@@ -27,13 +29,14 @@ Preset launch commands:
 .\scripts\run-mod-launcher.cmd cli launch 'preset:capability_standard_mass_nav_large_world_10k_raylib'
 .\scripts\run-mod-launcher.cmd cli launch 'preset:capability_standard_total_war_like_raylib'
 .\scripts\run-mod-launcher.cmd cli launch 'preset:capability_standard_participant_views_raylib'
+.\scripts\run-mod-launcher.cmd cli launch 'preset:capability_standard_physics2d_showcase_raylib'
 ```
 
 ## Dependency Path
 
 - Root mods own scenario entry, productized config, and minimal scene glue.
-- Reusable logic stays in capability mods, for example `MassNavigationMod` and `ParticipantViewCapabilityMod`.
-- Standard root mod dependency closure must not include historical showcase entry mods such as `PerformerBlacksmithShowcaseMod`, `PerformerBlacksmithScatterHudTextBenchmarkEntryMod`, or `MassNavigationTotalWarEntryMod`.
+- Reusable logic stays in capability mods, for example `MassNavigationMod`, `ParticipantViewCapabilityMod`, and shared Physics2D runtime modules.
+- Standard root mod dependency closure must not include historical showcase entry mods such as `PerformerBlacksmithShowcaseMod`, `PerformerBlacksmithScatterHudTextBenchmarkEntryMod`, `MassNavigationTotalWarEntryMod`, or `Physics2DPlaygroundMod`.
 - Historical showcase mods may remain local debugging material, but they are not adapter or core-mainline acceptance SSOTs.
 
 ## Adapter Responsibilities
