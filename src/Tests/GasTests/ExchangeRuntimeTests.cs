@@ -89,7 +89,7 @@ namespace Ludots.Tests.GAS
         public void TryExecute_MoveOutputFailure_RollsBackConsumedInputAndPriorMove()
         {
             using World world = World.Create();
-            var fixture = CreateFixture(world, stashWidth: 2, stashHeight: 1, targetWidth: 1, targetHeight: 1);
+            var fixture = CreateFixture(world, stashWidth: 2, stashHeight: 2, targetWidth: 2, targetHeight: 1);
             Entity source = world.Create();
             Entity target = world.Create();
             Entity stash = fixture.Inventory.CreateContainer(source, ItemContainerOwnerKind.Actor, fixture.StashLayout, ItemContainerPurpose.Stash);
@@ -118,6 +118,65 @@ namespace Ludots.Tests.GAS
             That(fixture.Inventory.CountStackUnits(source, CreditDef), Is.EqualTo(10));
             That(world.Get<ItemLocationCm>(artifact).Container, Is.EqualTo(stash));
             That(fixture.Inventory.CountStackUnits(target, GemDef), Is.EqualTo(0));
+        }
+
+        [Test]
+        public void TryExecute_CumulativeOutputReservation_BlocksBeforeMutation()
+        {
+            using World world = World.Create();
+            var fixture = CreateFixture(world, stashWidth: 2, stashHeight: 2, targetWidth: 1, targetHeight: 1);
+            Entity source = world.Create();
+            Entity target = world.Create();
+            Entity stash = fixture.Inventory.CreateContainer(source, ItemContainerOwnerKind.Actor, fixture.StashLayout, ItemContainerPurpose.Stash);
+            Entity targetStash = fixture.Inventory.CreateContainer(target, ItemContainerOwnerKind.Actor, fixture.TargetLayout, ItemContainerPurpose.Stash);
+            Entity artifact = Put(fixture.Inventory, ArtifactDef, stash, 0, 0);
+            Put(fixture.Inventory, CreditDef, stash, 1, 0, stack: 10);
+
+            int operationId = fixture.Operations.Register("test.cumulative.output.blocked", new ExchangeOperationDefinition
+            {
+                Id = "test.cumulative.output.blocked",
+                Inputs = new[]
+                {
+                    new ExchangeInputDefinition(ExchangeInputKind.ItemStack, ExchangeActorSlot.Source, CreditDef, 5)
+                },
+                Outputs = new[]
+                {
+                    MoveItem(ExchangeActorSlot.Target, ItemContainerPurpose.Stash, ArtifactDef, ExchangeActorSlot.Source),
+                    CreateItem(ExchangeActorSlot.Target, ItemContainerPurpose.Stash, GemDef, 1)
+                }
+            });
+
+            ExchangeExecutionResult result = fixture.Runtime.TryExecute(operationId, new ExchangeExecutionContext(source, target));
+
+            That(result.Status, Is.EqualTo(ExchangeExecutionStatus.OutputBlocked));
+            That(fixture.Inventory.CountStackUnits(source, CreditDef), Is.EqualTo(10));
+            That(world.Get<ItemLocationCm>(artifact).Container, Is.EqualTo(stash));
+            That(fixture.Inventory.CountStackUnits(target, GemDef), Is.EqualTo(0));
+            That(CountItemsInContainer(world, targetStash), Is.EqualTo(0));
+        }
+
+        [Test]
+        public void ConsumeStackUnits_AppendsRollbackRecordsAcrossCalls()
+        {
+            using World world = World.Create();
+            var fixture = CreateFixture(world, stashWidth: 3, stashHeight: 2);
+            Entity actor = world.Create();
+            Entity stash = fixture.Inventory.CreateContainer(actor, ItemContainerOwnerKind.Actor, fixture.StashLayout, ItemContainerPurpose.Stash);
+            Put(fixture.Inventory, CreditDef, stash, 0, 0, stack: 20);
+            Put(fixture.Inventory, ArtifactDef, stash, 1, 0);
+
+            var consumed = new System.Collections.Generic.List<ItemConsumptionRecord>(4);
+
+            That(fixture.Inventory.ConsumeStackUnits(actor, CreditDef, 20, consumed), Is.True);
+            That(fixture.Inventory.ConsumeStackUnits(actor, ArtifactDef, 1, consumed), Is.True);
+            That(consumed.Count, Is.EqualTo(2));
+            That(fixture.Inventory.CountStackUnits(actor, CreditDef), Is.EqualTo(0));
+            That(fixture.Inventory.CountStackUnits(actor, ArtifactDef), Is.EqualTo(0));
+
+            fixture.Inventory.RestoreConsumedUnits(consumed);
+
+            That(fixture.Inventory.CountStackUnits(actor, CreditDef), Is.EqualTo(20));
+            That(fixture.Inventory.CountStackUnits(actor, ArtifactDef), Is.EqualTo(1));
         }
 
         [Test]
@@ -256,6 +315,89 @@ namespace Ludots.Tests.GAS
             That(fixture.Inventory.CountStackUnits(actor, GemDef), Is.EqualTo(1));
         }
 
+        [Test]
+        public void BuiltinExecuteExchange_NormalFailure_DoesNotThrowAndRecordsResult()
+        {
+            using World world = World.Create();
+            var fixture = CreateFixture(world, stashWidth: 2, stashHeight: 1);
+            Entity actor = world.Create();
+            Entity stash = fixture.Inventory.CreateContainer(actor, ItemContainerOwnerKind.Actor, fixture.StashLayout, ItemContainerPurpose.Stash);
+            Put(fixture.Inventory, CreditDef, stash, 0, 0, stack: 2);
+
+            int operationId = fixture.Operations.Register("test.gas.exchange.failure", new ExchangeOperationDefinition
+            {
+                Id = "test.gas.exchange.failure",
+                Inputs = new[]
+                {
+                    new ExchangeInputDefinition(ExchangeInputKind.ItemStack, ExchangeActorSlot.Source, CreditDef, 3)
+                },
+                Outputs = new[]
+                {
+                    CreateItem(ExchangeActorSlot.Source, ItemContainerPurpose.Stash, GemDef, 1)
+                }
+            });
+
+            var parameters = new EffectConfigParams();
+            That(parameters.TryAddInt(EffectParamKeys.ExchangeOperationId, operationId), Is.True);
+            var context = new EffectContext { Source = actor, Target = actor };
+            var runtimeContext = new BuiltinHandlerExecutionContext { Exchange = fixture.Runtime };
+
+            var registry = new BuiltinHandlerRegistry();
+            BuiltinHandlers.RegisterAll(registry);
+
+            DoesNotThrow(() =>
+                registry.Invoke(BuiltinHandlerId.ExecuteExchange, world, world.Create(), ref context, in parameters, new EffectTemplateData(), runtimeContext));
+
+            That(runtimeContext.HasExchangeResult, Is.True);
+            That(runtimeContext.LastExchangeResult.Status, Is.EqualTo(ExchangeExecutionStatus.InsufficientInput));
+            That(fixture.Inventory.CountStackUnits(actor, CreditDef), Is.EqualTo(2));
+            That(fixture.Inventory.CountStackUnits(actor, GemDef), Is.EqualTo(0));
+        }
+
+        [Test]
+        public void TryExecute_KeyScopeOverridesContextScope()
+        {
+            using World world = World.Create();
+            var fixture = CreateFixture(world, stashWidth: 4, stashHeight: 1);
+            Entity actor = world.Create();
+            Entity stash = fixture.Inventory.CreateContainer(actor, ItemContainerOwnerKind.Actor, fixture.StashLayout, ItemContainerPurpose.Stash);
+            Put(fixture.Inventory, CreditDef, stash, 0, 0, stack: 30);
+
+            int operationId = fixture.Operations.Register("test.scope.override", new ExchangeOperationDefinition
+            {
+                Id = "test.scope.override",
+                Inputs = new[]
+                {
+                    new ExchangeInputDefinition(ExchangeInputKind.ItemStack, ExchangeActorSlot.Source, CreditDef, 20)
+                },
+                Outputs = new[]
+                {
+                    CreateItem(ExchangeActorSlot.Source, ItemContainerPurpose.Stash, GemDef, 1)
+                }
+            });
+            fixture.Scoped.Set(operationId, scopeKey: 77, new ExchangeOperationDefinition
+            {
+                Id = "test.scope.override#77",
+                Inputs = new[]
+                {
+                    new ExchangeInputDefinition(ExchangeInputKind.ItemStack, ExchangeActorSlot.Source, CreditDef, 5)
+                },
+                Outputs = new[]
+                {
+                    CreateItem(ExchangeActorSlot.Source, ItemContainerPurpose.Stash, TokenDef, 1)
+                }
+            });
+
+            ExchangeExecutionResult result = fixture.Runtime.TryExecute(
+                new ExchangeOperationKey(operationId, 77),
+                new ExchangeExecutionContext(actor, scopeKey: 12));
+
+            That(result.Succeeded, Is.True);
+            That(fixture.Inventory.CountStackUnits(actor, CreditDef), Is.EqualTo(25));
+            That(fixture.Inventory.CountStackUnits(actor, TokenDef), Is.EqualTo(1));
+            That(fixture.Inventory.CountStackUnits(actor, GemDef), Is.EqualTo(0));
+        }
+
         private static ExchangeFixture CreateFixture(World world, int stashWidth, int stashHeight, int targetWidth = 0, int targetHeight = 0)
         {
             var shapes = new ItemShapeRegistry();
@@ -308,6 +450,19 @@ namespace Ludots.Tests.GAS
             Entity item = inventory.CreateItem(definitionId, stack);
             That(inventory.TryMoveItemToGrid(item, container, x, y), Is.True);
             return item;
+        }
+
+        private static int CountItemsInContainer(World world, Entity container)
+        {
+            int count = 0;
+            world.Query(in new QueryDescription().WithAll<ItemInstanceCm, ItemLocationCm>(), (Entity _, ref ItemInstanceCm _, ref ItemLocationCm location) =>
+            {
+                if (location.Container == container)
+                {
+                    count++;
+                }
+            });
+            return count;
         }
 
         private static ExchangeOutputDefinition CreateItem(ExchangeActorSlot actor, ItemContainerPurpose purpose, int definitionId, int quantity)
