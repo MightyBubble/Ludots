@@ -86,6 +86,7 @@ namespace Ludots.Core.Config
             Register("DestroyWhenParentExecutionEnds", SetDestroyWhenParentExecutionEnds);
             Register<UtilityAiAgent>("UtilityAiAgent", SetUtilityAiAgent);
             Register<UtilityAiState>("UtilityAiState", SetUtilityAiState);
+            Register<UtilityAiDecisionTrace>("UtilityAiDecisionTrace", SetUtilityAiDecisionTrace);
             Register<UtilityAiTargetPriority>("UtilityAiTargetPriority", SetUtilityAiTargetPriority);
             Register<UtilityAiCombatMemory>("UtilityAiCombatMemory", SetUtilityAiCombatMemory);
             Register<ActuatorReadiness>("ActuatorReadiness", SetActuatorReadiness);
@@ -302,6 +303,12 @@ namespace Ludots.Core.Config
         {
             RequireEmptyObject(data, "UtilityAiState");
             entity.Add(new UtilityAiState { CurrentDecisionId = -1 });
+        }
+
+        private static void SetUtilityAiDecisionTrace(Entity entity, JsonNode data)
+        {
+            RequireEmptyObject(data, "UtilityAiDecisionTrace");
+            entity.Add(new UtilityAiDecisionTrace());
         }
 
         private static void SetUtilityAiCombatMemory(Entity entity, JsonNode data)

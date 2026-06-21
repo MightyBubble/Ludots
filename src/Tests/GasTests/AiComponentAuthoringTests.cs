@@ -135,6 +135,10 @@ namespace Ludots.Tests.GAS
                 actor,
                 "AimGate",
                 JsonNode.Parse("""{ "actuator": "Actuator.Primary", "initialReady01": 1 }""")!);
+            Ludots.Core.Config.ComponentRegistry.Apply(
+                actor,
+                "UtilityAiDecisionTrace",
+                JsonNode.Parse("""{}""")!);
 
             That(world.Get<UtilityAiTargetPriority>(target).Bucket, Is.EqualTo((int)UtilityAiTargetPriorityBucket.High));
             That(world.Get<ActuatorReadiness>(actor).ActuatorId, Is.EqualTo(0));
@@ -142,6 +146,7 @@ namespace Ludots.Tests.GAS
             That(world.Get<ActuatorReadiness>(actor).RequiresPreparation, Is.EqualTo(1));
             That(world.Get<AimGate>(actor).ActuatorId, Is.EqualTo(0));
             That(world.Get<AimGate>(actor).Ready01, Is.EqualTo(1f));
+            That(world.Has<UtilityAiDecisionTrace>(actor), Is.True);
         }
 
         [Test]

@@ -1,0 +1,52 @@
+{
+  "Id": "utility_autocast_showcase",
+  "Tags": ["utility_autocast_showcase", "utility_ai", "autocast"],
+  "DefaultCamera": {
+    "TargetXCm": 5000,
+    "TargetYCm": 5000,
+    "Yaw": 180,
+    "Pitch": 50,
+    "DistanceCm": 7600,
+    "FovYDeg": 60
+  },
+  "Boards": [
+    {
+      "Name": "default",
+      "SpatialType": "HexGrid",
+      "WidthInTiles": 32,
+      "HeightInTiles": 32,
+      "HexEdgeLengthCm": 400,
+      "ChunkSizeCells": 32,
+      "NavigationEnabled": false
+    }
+  ],
+  "Entities": [
+    { "InstanceId": "utility-autocast-mage", "Template": "utility_autocast_mage" },
+    { "InstanceId": "utility-autocast-injured-ally", "Template": "utility_autocast_injured_ally" },
+    { "InstanceId": "utility-autocast-healthy-ally", "Template": "utility_autocast_healthy_ally" },
+    { "InstanceId": "utility-autocast-enemy-brute", "Template": "utility_autocast_enemy_brute" },
+    { "InstanceId": "utility-autocast-enemy-scout", "Template": "utility_autocast_enemy_scout" }
+  ],
+  "Teams": [
+    { "TeamId": 1, "RepresentativeInstanceId": "utility-autocast-mage" },
+    { "TeamId": 2, "RepresentativeInstanceId": "utility-autocast-enemy-brute" }
+  ],
+  "Players": [
+    { "PlayerId": 1, "TeamId": 1, "RepresentativeInstanceId": "utility-autocast-mage", "IsLocal": true },
+    { "PlayerId": 2, "TeamId": 2, "RepresentativeInstanceId": "utility-autocast-enemy-brute", "IsLocal": false }
+  ],
+  "ParticipantRelationships": {
+    "Teams": [
+      { "TeamA": 1, "TeamB": 1, "TypeId": "UtilityAutocast.Participant", "Attitude": "Friendly", "Symmetric": true },
+      { "TeamA": 2, "TeamB": 2, "TypeId": "UtilityAutocast.Participant", "Attitude": "Friendly", "Symmetric": true },
+      { "TeamA": 1, "TeamB": 2, "TypeId": "UtilityAutocast.Participant", "Attitude": "Hostile", "Symmetric": true }
+    ],
+    "Players": [
+      { "PlayerA": 1, "PlayerB": 2, "TypeId": "UtilityAutocast.Participant", "Symmetric": true }
+    ],
+    "PlayerTeams": [
+      { "PlayerId": 1, "TeamId": 1, "TypeId": "UtilityAutocast.Participant", "Symmetric": false },
+      { "PlayerId": 2, "TeamId": 2, "TypeId": "UtilityAutocast.Participant", "Symmetric": false }
+    ]
+  }
+}
