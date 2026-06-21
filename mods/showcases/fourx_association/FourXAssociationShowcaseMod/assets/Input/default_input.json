@@ -1,0 +1,25 @@
+{
+  "actions": [
+    { "id": "FourXAssociation.Scout", "name": "FourXAssociation_Scout", "type": "Button" },
+    { "id": "FourXAssociation.AdvanceFog", "name": "FourXAssociation_AdvanceFog", "type": "Button" },
+    { "id": "FourXAssociation.Pact", "name": "FourXAssociation_Pact", "type": "Button" },
+    { "id": "FourXAssociation.Trade", "name": "FourXAssociation_Trade", "type": "Button" },
+    { "id": "FourXAssociation.AddResearcher", "name": "FourXAssociation_AddResearcher", "type": "Button" },
+    { "id": "FourXAssociation.Research", "name": "FourXAssociation_Research", "type": "Button" }
+  ],
+  "contexts": [
+    {
+      "id": "FourXAssociation.Controls",
+      "priority": 230,
+      "consume": true,
+      "bindings": [
+        { "actionId": "FourXAssociation.Scout", "path": "<Keyboard>/r" },
+        { "actionId": "FourXAssociation.AdvanceFog", "path": "<Keyboard>/n" },
+        { "actionId": "FourXAssociation.Pact", "path": "<Keyboard>/p" },
+        { "actionId": "FourXAssociation.Trade", "path": "<Keyboard>/t" },
+        { "actionId": "FourXAssociation.AddResearcher", "path": "<Keyboard>/a" },
+        { "actionId": "FourXAssociation.Research", "path": "<Keyboard>/space" }
+      ]
+    }
+  ]
+}
