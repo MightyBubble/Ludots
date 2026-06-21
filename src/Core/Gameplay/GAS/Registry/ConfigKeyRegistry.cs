@@ -1,5 +1,6 @@
 using System;
 using System.Collections.Generic;
+using Ludots.Core.Registry;
 
 namespace Ludots.Core.Gameplay.GAS.Registry
 {
@@ -63,6 +64,11 @@ namespace Ludots.Core.Gameplay.GAS.Registry
         public static string GetName(int id)
         {
             return _idToName.TryGetValue(id, out var name) ? name : string.Empty;
+        }
+
+        public static RegistryMapping[] SnapshotMappings()
+        {
+            return RegistryMappingSnapshot.FromNameToId(_nameToId);
         }
     }
 }

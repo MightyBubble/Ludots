@@ -8,6 +8,7 @@
 - [Mod 架构](mod-architecture.md)
 - [GAS 分层架构](gas-layered-architecture.md)
 - [Exchange Operations](exchange-operations.md)
+- [通用存档系统](save-system.md)
 - [AI Utility Autocast 契约](ai-utility-autocast-contract.md)
 - [实体仿真分层与车道](entity-simulation-layering.md)
 - [实体仿真工作流拆分](entity-simulation-workstreams.md)

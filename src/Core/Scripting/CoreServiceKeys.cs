@@ -46,6 +46,7 @@ using Ludots.Core.Navigation.Pathing;
 using Ludots.Core.Navigation.Pathing.Config;
 using Ludots.Core.Navigation2D.Runtime;
 using Ludots.Core.NodeLibraries.GASGraph;
+using Ludots.Core.Persistence;
 using Ludots.Core.Presentation;
 using Ludots.Core.Presentation.Assets;
 using Ludots.Core.Presentation.Camera;
@@ -88,6 +89,7 @@ namespace Ludots.Core.Scripting
         public static readonly ServiceKey<SystemFactoryRegistry> SystemFactoryRegistry = new("SystemFactoryRegistry");
         public static readonly ServiceKey<TimeFlowService> TimeFlow = new("TimeFlow");
         public static readonly ServiceKey<TriggerDecoratorRegistry> TriggerDecoratorRegistry = new("TriggerDecoratorRegistry");
+        public static readonly ServiceKey<SaveParticipantRegistry> SaveParticipants = new("SaveParticipants");
 
         // --- Map ---
         public static readonly ServiceKey<MapId> MapId = new("MapId");
@@ -324,6 +326,4 @@ namespace Ludots.Core.Scripting
         public static readonly ServiceKey<ILogBackend> LogBackend = new("LogBackend");
     }
 }
-
-
 

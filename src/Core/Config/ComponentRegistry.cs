@@ -1,5 +1,6 @@
 using System;
 using System.Collections.Generic;
+using System.Collections.ObjectModel;
 using System.Text.Json;
 using System.Text.Json.Nodes;
 using Arch.Core;
@@ -209,6 +210,12 @@ namespace Ludots.Core.Config
         public static bool TryGetComponentType(string componentName, out ComponentType componentType)
         {
             return _componentTypes.TryGetValue(componentName, out componentType);
+        }
+
+        public static IReadOnlyDictionary<string, ComponentType> GetRegisteredComponentTypes()
+        {
+            var ordered = new SortedDictionary<string, ComponentType>(_componentTypes, StringComparer.Ordinal);
+            return new ReadOnlyDictionary<string, ComponentType>(ordered);
         }
 
         public static void Apply(Entity entity, string componentName, JsonNode data)
