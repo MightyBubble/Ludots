@@ -12,58 +12,15 @@ namespace Ludots.Tests.Gas
     public sealed class MapVisualHeightmapContractTests
     {
         private string _root = string.Empty;
-        private string _coreRoot = string.Empty;
         private string _modRoot = string.Empty;
 
         [SetUp]
         public void SetUp()
         {
             _root = Path.Combine(Path.GetTempPath(), "Ludots_MapVisualHeightmapContractTests", Guid.NewGuid().ToString("N"));
-            _coreRoot = Path.Combine(_root, "assets");
             _modRoot = Path.Combine(_root, "mods", "TestMapMod");
-            Directory.CreateDirectory(Path.Combine(_coreRoot, "Configs", "Maps"));
-            Directory.CreateDirectory(Path.Combine(_coreRoot, "Configs", "Navigation"));
             Directory.CreateDirectory(Path.Combine(_modRoot, "assets", "Configs", "Maps"));
             Directory.CreateDirectory(Path.Combine(_modRoot, "assets", "terrain"));
-
-            File.WriteAllText(Path.Combine(_coreRoot, "Configs", "game.json"), """
-            {
-              "startupMapId": "outer_map",
-              "worldWidthInTiles": 16,
-              "worldHeightInTiles": 16,
-              "gridCellSizeCm": 100
-            }
-            """);
-
-            File.WriteAllText(Path.Combine(_coreRoot, "Configs", "Navigation", "pathing.json"), """
-            {
-              "agentTypes": [
-                {
-                  "id": "Humanoid",
-                  "profileId": "Small",
-                  "layer": 0,
-                  "selection": {
-                    "mode": "AutoCheapest",
-                    "graphBias": 0.0,
-                    "meshBias": 0.0,
-                    "graphCostWeight": 1.0,
-                    "meshCostWeight": 1.0
-                  },
-                  "navMesh": {
-                    "areaCosts": [
-                      { "areaId": 0, "cost": 1.0 }
-                    ]
-                  },
-                  "nodeGraph": {
-                    "projectionMaxRadiusCm": 200000,
-                    "forbiddenTagsAny": [],
-                    "requiredTagsAll": [],
-                    "tagCostRules": []
-                  }
-                }
-              ]
-            }
-            """);
 
             File.WriteAllText(Path.Combine(_modRoot, "mod.json"), """
             {
@@ -231,8 +188,19 @@ namespace Ludots.Tests.Gas
         public void LoadMap_WhenVisualHeightAssetResolvesToMultipleMountedSources_ThrowsExplicitly()
         {
             WriteHeightmap("shared.vhtm", 80);
-            Directory.CreateDirectory(Path.Combine(_coreRoot, "assets", "terrain"));
-            using (var stream = File.Create(Path.Combine(_coreRoot, "assets", "terrain", "shared.vhtm")))
+            string duplicateModRoot = Path.Combine(_root, "mods", "DuplicateAssetMod");
+            Directory.CreateDirectory(Path.Combine(duplicateModRoot, "assets", "terrain"));
+            File.WriteAllText(Path.Combine(duplicateModRoot, "mod.json"), """
+            {
+              "name": "DuplicateAssetMod",
+              "version": "1.0.0",
+              "description": "duplicate asset test mod",
+              "main": "",
+              "priority": 0,
+              "dependencies": {}
+            }
+            """);
+            using (var stream = File.Create(Path.Combine(duplicateModRoot, "assets", "terrain", "shared.vhtm")))
             {
                 VisualHeightmapBinary.Write(stream, VisualHeightmapAsset.CreateSingleLayer(
                     new Ludots.Core.Mathematics.WorldAabbCm(0, 0, 100, 100),
@@ -261,10 +229,12 @@ namespace Ludots.Tests.Gas
                 Path.Combine(repoRoot, "mods", "LudotsCoreMod"),
                 Path.Combine(repoRoot, "mods", "CoreInputMod"),
                 _modRoot,
+                Directory.Exists(Path.Combine(_root, "mods", "DuplicateAssetMod")) ? Path.Combine(_root, "mods", "DuplicateAssetMod") : null,
             }.ToList();
+            modPaths.RemoveAll(string.IsNullOrWhiteSpace);
 
             var engine = new GameEngine();
-            engine.InitializeWithConfigPipeline(modPaths, _coreRoot);
+            engine.InitializeWithConfigPipeline(modPaths!, Path.Combine(repoRoot, "assets"));
             engine.Start();
             return engine;
         }
