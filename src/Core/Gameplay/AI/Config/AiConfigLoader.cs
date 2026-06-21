@@ -69,9 +69,27 @@ namespace Ludots.Core.Gameplay.AI.Config
                         throw Fail($"AI/projection.json:{id}.Op", $"Unsupported projection op '{op}'.");
                     }
 
-                    int intKey = TryReadInt(obj, "IntKey", out int ik) ? ik : -1;
-                    int intValue = TryReadInt(obj, "IntValue", out int iv) ? iv : 0;
-                    int entityKey = TryReadInt(obj, "EntityKey", out int ek) ? ek : -1;
+                    int intKey = -1;
+                    int intValue = 0;
+                    int entityKey = -1;
+                    switch (pOp)
+                    {
+                        case WorldStateProjectionOp.IntEquals:
+                        case WorldStateProjectionOp.IntGreaterOrEqual:
+                        case WorldStateProjectionOp.IntLessOrEqual:
+                            intKey = RequireOrderBlackboardKey(obj, "IntKey", $"AI/projection.json:{id}.IntKey");
+                            intValue = RequireInt(obj, "IntValue", $"AI/projection.json:{id}");
+                            RejectProjectionField(obj, "EntityKey", $"AI/projection.json:{id}.EntityKey", op);
+                            break;
+                        case WorldStateProjectionOp.EntityIsNonNull:
+                        case WorldStateProjectionOp.EntityIsNull:
+                            entityKey = RequireOrderBlackboardKey(obj, "EntityKey", $"AI/projection.json:{id}.EntityKey");
+                            RejectProjectionField(obj, "IntKey", $"AI/projection.json:{id}.IntKey", op);
+                            RejectProjectionField(obj, "IntValue", $"AI/projection.json:{id}.IntValue", op);
+                            break;
+                        default:
+                            throw Fail($"AI/projection.json:{id}.Op", $"Unsupported projection op '{op}'.");
+                    }
 
                     tmp.Add(new WorldStateProjectionRule(atomId, pOp, intKey, intValue, entityKey));
                 }
@@ -1481,6 +1499,47 @@ namespace Ludots.Core.Gameplay.AI.Config
             }
 
             return value;
+        }
+
+        private static int RequireOrderBlackboardKey(JsonObject obj, string key, string path)
+        {
+            if (!obj.TryGetPropertyValue(key, out JsonNode? node) || node == null)
+            {
+                throw Fail(path, "Order blackboard key is required.");
+            }
+
+            if (node is JsonValue value)
+            {
+                if (value.TryGetValue<int>(out int numericId))
+                {
+                    throw Fail(path, $"Order blackboard key must be a semantic string, not numeric id {numericId}.");
+                }
+
+                if (value.TryGetValue<string>(out string? text) && !string.IsNullOrWhiteSpace(text))
+                {
+                    if (!string.Equals(text, text.Trim(), StringComparison.Ordinal))
+                    {
+                        throw Fail(path, "Order blackboard key must not contain leading or trailing whitespace.");
+                    }
+
+                    if (OrderBlackboardKeyRegistry.TryGetId(text, out int keyId))
+                    {
+                        return keyId;
+                    }
+
+                    throw Fail(path, $"References unknown order blackboard key '{text}'. Declare it in GAS/order_types.json orderBlackboardKeys or use a built-in key.");
+                }
+            }
+
+            throw Fail(path, "Order blackboard key must be a non-empty semantic string.");
+        }
+
+        private static void RejectProjectionField(JsonObject obj, string key, string path, string op)
+        {
+            if (obj.ContainsKey(key))
+            {
+                throw Fail(path, $"Field is not valid for projection op '{op}'.");
+            }
         }
 
         private static int RequireInt(JsonObject obj, string key, string path)

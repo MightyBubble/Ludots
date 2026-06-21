@@ -14,22 +14,29 @@ namespace Ludots.Core.Gameplay.AI.Systems
         private readonly IClock _clock;
         private readonly ActionLibraryCompiled256 _library;
         private readonly OrderQueue _orders;
+        private readonly OrderTypeRegistry? _orderTypeRegistry;
 
         private static readonly QueryDescription _query = new QueryDescription()
             .WithAll<AIAgent, AIPlan32, OrderBuffer, BlackboardIntBuffer, BlackboardEntityBuffer>();
 
-        public AIPlanExecutionSystem(World world, IClock clock, ActionLibraryCompiled256 library, OrderQueue orders)
+        public AIPlanExecutionSystem(
+            World world,
+            IClock clock,
+            ActionLibraryCompiled256 library,
+            OrderQueue orders,
+            OrderTypeRegistry? orderTypeRegistry = null)
             : base(world)
         {
             _clock = clock;
             _library = library;
             _orders = orders;
+            _orderTypeRegistry = orderTypeRegistry;
         }
 
         public override void Update(in float dt)
         {
             int step = _clock.Now(ClockDomainId.Step);
-            var job = new ExecuteJob(_library, _orders, step);
+            var job = new ExecuteJob(_library, _orders, _orderTypeRegistry, step);
             World.InlineEntityQuery<ExecuteJob, AIAgent, AIPlan32, OrderBuffer, BlackboardIntBuffer, BlackboardEntityBuffer>(in _query, ref job);
         }
 
@@ -37,12 +44,14 @@ namespace Ludots.Core.Gameplay.AI.Systems
         {
             private readonly ActionLibraryCompiled256 _library;
             private readonly OrderQueue _orders;
+            private readonly OrderTypeRegistry? _orderTypeRegistry;
             private readonly int _step;
 
-            public ExecuteJob(ActionLibraryCompiled256 library, OrderQueue orders, int step)
+            public ExecuteJob(ActionLibraryCompiled256 library, OrderQueue orders, OrderTypeRegistry? orderTypeRegistry, int step)
             {
                 _library = library;
                 _orders = orders;
+                _orderTypeRegistry = orderTypeRegistry;
                 _step = step;
             }
 
@@ -77,7 +86,8 @@ namespace Ludots.Core.Gameplay.AI.Systems
                     ref ints,
                     ref entities,
                     _step,
-                    _orders);
+                    _orders,
+                    _orderTypeRegistry);
 
                 if (ok) plan.Advance();
             }
