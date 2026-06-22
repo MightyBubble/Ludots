@@ -28,14 +28,7 @@
     "targetQuery": {
       "kind": "BuiltinSpatial",
       "shape": "Circle",
-      "radius": 450,
-      "innerRadius": 0,
-      "halfAngle": 0,
-      "halfWidth": 0,
-      "halfHeight": 0,
-      "rotation": 0,
-      "length": 0,
-      "graphProgramId": 0
+      "radius": 450
     },
     "targetFilter": {
       "relationFilter": "Friendly",
