@@ -112,6 +112,7 @@ internal sealed class CapabilityStandardPhysics2DPlaygroundV2Runtime
         engine.SetService(CoreServiceKeys.DebugDrawCommandBuffer, debugDrawBuffer);
         engine.RegisterSystem(new CapabilityStandardPhysics2DPlaygroundV2InteractionSystem(engine, config), SystemGroup.InputCollection);
         engine.RegisterSystem(new CapabilityStandardPhysics2DPlaygroundV2BenchmarkReceiptBindingSystem(engine, config), SystemGroup.EffectProcessing);
+        engine.RegisterPresentationSystem(new CapabilityStandardPhysics2DPlaygroundV2HudSystem(engine, config));
         _systemsInstalled = true;
         _context.Log("[CapabilityStandardPhysics2DPlaygroundV2Mod] Installed interaction layer on production Physics2D/Nav systems.");
     }
@@ -243,6 +244,25 @@ internal sealed class CapabilityStandardPhysics2DPlaygroundV2Runtime
                 throw new InvalidOperationException($"Capability-standard Physics2D Playground v2 template '{templateId}' was not registered in EntityTemplateKeyRegistry.");
             }
         }
+
+        ValidateTemplate(engine, templateKeys, config.BenchmarkBodyTemplateId);
+        ValidateTemplate(engine, templateKeys, config.StaticPolygonTemplateId);
+        ValidateTemplate(engine, templateKeys, config.FrictionZoneLowTemplateId);
+        ValidateTemplate(engine, templateKeys, config.FrictionZoneMediumTemplateId);
+        ValidateTemplate(engine, templateKeys, config.FrictionZoneHighTemplateId);
+    }
+
+    private static void ValidateTemplate(GameEngine engine, EntityTemplateKeyRegistry templateKeys, string templateId)
+    {
+        if (!engine.MapLoader.TemplateRegistry.Contains(templateId))
+        {
+            throw new InvalidOperationException($"Capability-standard Physics2D Playground v2 requires configured entity template '{templateId}'.");
+        }
+
+        if (!templateKeys.TryGetId(templateId, out int templateKeyId) || templateKeyId <= 0)
+        {
+            throw new InvalidOperationException($"Capability-standard Physics2D Playground v2 template '{templateId}' was not registered in EntityTemplateKeyRegistry.");
+        }
     }
 
     private static void EnsureCamera(GameEngine engine)
@@ -289,6 +309,9 @@ internal sealed class CapabilityStandardPhysics2DPlaygroundV2Runtime
         RequireAction(input, CapabilityStandardPhysics2DPlaygroundV2InputActions.SubmitNavMove);
         RequireAction(input, CapabilityStandardPhysics2DPlaygroundV2InputActions.ApplyDisplacement);
         RequireAction(input, CapabilityStandardPhysics2DPlaygroundV2InputActions.BenchmarkForcePulse);
+        RequireAction(input, CapabilityStandardPhysics2DPlaygroundV2InputActions.SpawnStaticPolygon);
+        RequireAction(input, CapabilityStandardPhysics2DPlaygroundV2InputActions.SpawnFrictionZones);
+        RequireAction(input, CapabilityStandardPhysics2DPlaygroundV2InputActions.ApplyExplosionForce);
         RequireAction(input, CapabilityStandardPhysics2DPlaygroundV2InputActions.BenchmarkSpawnCount1);
         RequireAction(input, CapabilityStandardPhysics2DPlaygroundV2InputActions.BenchmarkSpawnCount2);
         RequireAction(input, CapabilityStandardPhysics2DPlaygroundV2InputActions.BenchmarkSpawnCount3);

@@ -16,6 +16,13 @@
   "benchmarkInitialSpeedCmPerSec": 420,
   "benchmarkForceXCmPerSec2": 1400,
   "benchmarkForceYCmPerSec2": 0,
+  "staticPolygonTemplateId": "capability_standard_physics2d_playground_v2_static_polygon",
+  "frictionZoneLowTemplateId": "capability_standard_physics2d_playground_v2_friction_zone_low",
+  "frictionZoneMediumTemplateId": "capability_standard_physics2d_playground_v2_friction_zone_medium",
+  "frictionZoneHighTemplateId": "capability_standard_physics2d_playground_v2_friction_zone_high",
+  "frictionZoneSpacingCm": 340,
+  "explosionRadiusCm": 520,
+  "explosionForceCmPerSec2": 7200,
   "spawns": [
     {
       "id": "physics_body",

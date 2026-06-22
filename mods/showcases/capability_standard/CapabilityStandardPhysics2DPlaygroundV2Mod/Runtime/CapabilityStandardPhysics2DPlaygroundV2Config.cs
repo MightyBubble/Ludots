@@ -26,6 +26,13 @@ public sealed class CapabilityStandardPhysics2DPlaygroundV2Config
     public int BenchmarkInitialSpeedCmPerSec { get; set; }
     public int BenchmarkForceXCmPerSec2 { get; set; }
     public int BenchmarkForceYCmPerSec2 { get; set; }
+    public string StaticPolygonTemplateId { get; set; } = string.Empty;
+    public string FrictionZoneLowTemplateId { get; set; } = string.Empty;
+    public string FrictionZoneMediumTemplateId { get; set; } = string.Empty;
+    public string FrictionZoneHighTemplateId { get; set; } = string.Empty;
+    public int FrictionZoneSpacingCm { get; set; }
+    public int ExplosionRadiusCm { get; set; }
+    public int ExplosionForceCmPerSec2 { get; set; }
 
     public static CapabilityStandardPhysics2DPlaygroundV2Config Load(JsonObject configObject)
     {
@@ -61,6 +68,13 @@ public sealed class CapabilityStandardPhysics2DPlaygroundV2Config
         RequireProperty(root, "benchmarkInitialSpeedCmPerSec");
         RequireProperty(root, "benchmarkForceXCmPerSec2");
         RequireProperty(root, "benchmarkForceYCmPerSec2");
+        RequireProperty(root, "staticPolygonTemplateId");
+        RequireProperty(root, "frictionZoneLowTemplateId");
+        RequireProperty(root, "frictionZoneMediumTemplateId");
+        RequireProperty(root, "frictionZoneHighTemplateId");
+        RequireProperty(root, "frictionZoneSpacingCm");
+        RequireProperty(root, "explosionRadiusCm");
+        RequireProperty(root, "explosionForceCmPerSec2");
 
         JsonElement spawns = RequireProperty(root, "spawns");
         if (spawns.ValueKind != JsonValueKind.Array)
@@ -92,6 +106,10 @@ public sealed class CapabilityStandardPhysics2DPlaygroundV2Config
         RequireNonEmpty(PrimaryNavTemplateId, nameof(PrimaryNavTemplateId));
         RequireNonEmpty(PrimaryObstacleTemplateId, nameof(PrimaryObstacleTemplateId));
         RequireNonEmpty(BenchmarkBodyTemplateId, nameof(BenchmarkBodyTemplateId));
+        RequireNonEmpty(StaticPolygonTemplateId, nameof(StaticPolygonTemplateId));
+        RequireNonEmpty(FrictionZoneLowTemplateId, nameof(FrictionZoneLowTemplateId));
+        RequireNonEmpty(FrictionZoneMediumTemplateId, nameof(FrictionZoneMediumTemplateId));
+        RequireNonEmpty(FrictionZoneHighTemplateId, nameof(FrictionZoneHighTemplateId));
 
         if (SpawnScratchCapacity < Spawns.Length)
         {
@@ -111,6 +129,11 @@ public sealed class CapabilityStandardPhysics2DPlaygroundV2Config
         if (BenchmarkSpawnRadiusCm <= 0 || BenchmarkInitialSpeedCmPerSec <= 0)
         {
             throw new InvalidOperationException("Capability-standard Physics2D Playground v2 benchmark spawn radius and initial speed must be positive.");
+        }
+
+        if (FrictionZoneSpacingCm <= 0 || ExplosionRadiusCm <= 0 || ExplosionForceCmPerSec2 <= 0)
+        {
+            throw new InvalidOperationException("Capability-standard Physics2D Playground v2 friction spacing and explosion force settings must be positive.");
         }
 
         var ids = new HashSet<string>(StringComparer.Ordinal);

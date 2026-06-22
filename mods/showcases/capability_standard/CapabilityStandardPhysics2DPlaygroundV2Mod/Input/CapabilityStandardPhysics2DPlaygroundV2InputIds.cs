@@ -16,6 +16,9 @@ public static class CapabilityStandardPhysics2DPlaygroundV2InputActions
     public const string SubmitNavMove = "CapabilityStandardPhysics2DPlaygroundV2.SubmitNavMove";
     public const string ApplyDisplacement = "CapabilityStandardPhysics2DPlaygroundV2.ApplyDisplacement";
     public const string BenchmarkForcePulse = "CapabilityStandardPhysics2DPlaygroundV2.BenchmarkForcePulse";
+    public const string SpawnStaticPolygon = "CapabilityStandardPhysics2DPlaygroundV2.SpawnStaticPolygon";
+    public const string SpawnFrictionZones = "CapabilityStandardPhysics2DPlaygroundV2.SpawnFrictionZones";
+    public const string ApplyExplosionForce = "CapabilityStandardPhysics2DPlaygroundV2.ApplyExplosionForce";
     public const string BenchmarkSpawnCount1 = "CapabilityStandardPhysics2DPlaygroundV2.BenchmarkSpawnCount1";
     public const string BenchmarkSpawnCount2 = "CapabilityStandardPhysics2DPlaygroundV2.BenchmarkSpawnCount2";
     public const string BenchmarkSpawnCount3 = "CapabilityStandardPhysics2DPlaygroundV2.BenchmarkSpawnCount3";

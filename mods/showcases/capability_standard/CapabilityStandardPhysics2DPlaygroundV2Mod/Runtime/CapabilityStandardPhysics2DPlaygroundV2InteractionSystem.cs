@@ -28,10 +28,18 @@ public sealed class CapabilityStandardPhysics2DPlaygroundV2InteractionSystem : I
 {
     internal const string BenchmarkReceiptChannelKey = "CapabilityStandardPhysics2DPlaygroundV2.BenchmarkSpawn";
 
+    private static readonly QueryDescription _allEntitiesQuery = new QueryDescription();
+    private static readonly QueryDescription _partitionQuery = new QueryDescription()
+        .WithAll<CapabilityStandardPhysics2DPlaygroundV2ModePartition>();
+    private static readonly QueryDescription _explosionTargetQuery = new QueryDescription()
+        .WithAll<Position2D, Velocity2D, Mass2D, ForceInput2D>()
+        .WithNone<NavAgent2D, NavDesiredVelocity2D, NavGoal2D, NavObstacle2D, OrderBuffer>();
+
     private readonly GameEngine _engine;
     private readonly World _world;
     private readonly CapabilityStandardPhysics2DPlaygroundV2Config _config;
     private readonly RuntimeEntitySpawnRequest[] _benchmarkSpawnScratch;
+    private readonly RuntimeEntitySpawnRequest[] _frictionZoneSpawnScratch;
     private Entity _primaryPhysicsEntity;
     private Entity _primaryNavEntity;
     private int _moveToOrderTypeId;
@@ -40,6 +48,10 @@ public sealed class CapabilityStandardPhysics2DPlaygroundV2InteractionSystem : I
     private int _nextBenchmarkReceiptId;
     private int _benchmarkForceTemplateId;
     private int _benchmarkTemplateKeyId;
+    private int _staticPolygonTemplateKeyId;
+    private int _frictionZoneLowTemplateKeyId;
+    private int _frictionZoneMediumTemplateKeyId;
+    private int _frictionZoneHighTemplateKeyId;
 
     public CapabilityStandardPhysics2DPlaygroundV2InteractionSystem(
         GameEngine engine,
@@ -49,6 +61,7 @@ public sealed class CapabilityStandardPhysics2DPlaygroundV2InteractionSystem : I
         _world = engine.World;
         _config = config ?? throw new ArgumentNullException(nameof(config));
         _benchmarkSpawnScratch = new RuntimeEntitySpawnRequest[config.SpawnScratchCapacity];
+        _frictionZoneSpawnScratch = new RuntimeEntitySpawnRequest[3];
         _benchmarkSpawnCount = config.BenchmarkDefaultSpawnCount;
     }
 
@@ -104,6 +117,21 @@ public sealed class CapabilityStandardPhysics2DPlaygroundV2InteractionSystem : I
         if (input.PressedThisFrame(CapabilityStandardPhysics2DPlaygroundV2InputActions.BenchmarkForcePulse))
         {
             ApplyBenchmarkForcePulse();
+        }
+
+        if (input.PressedThisFrame(CapabilityStandardPhysics2DPlaygroundV2InputActions.SpawnStaticPolygon))
+        {
+            SpawnStaticPolygonFromPointer(input);
+        }
+
+        if (input.PressedThisFrame(CapabilityStandardPhysics2DPlaygroundV2InputActions.SpawnFrictionZones))
+        {
+            SpawnFrictionZonesFromPointer(input);
+        }
+
+        if (input.PressedThisFrame(CapabilityStandardPhysics2DPlaygroundV2InputActions.ApplyExplosionForce))
+        {
+            ApplyExplosionForceFromPointer(input);
         }
 
         if (input.PressedThisFrame(CapabilityStandardPhysics2DPlaygroundV2InputActions.SubmitNavMove))
@@ -261,6 +289,104 @@ public sealed class CapabilityStandardPhysics2DPlaygroundV2InteractionSystem : I
         return written;
     }
 
+    public bool SpawnStaticPolygonAt(Fix64Vec2 centerCm)
+    {
+        if (CapabilityStandardPhysics2DPlaygroundV2State.ActiveMode != CapabilityStandardPhysics2DPlaygroundV2Mode.PhysicsOnly)
+        {
+            return false;
+        }
+
+        if (!TryEnqueueTemplateAt(_config.StaticPolygonTemplateId, centerCm))
+        {
+            return false;
+        }
+
+        PublishToolState(lastAction: "Spawned static polygon", explosionAffected: null);
+        return true;
+    }
+
+    public int SpawnFrictionZonesAt(Fix64Vec2 centerCm)
+    {
+        if (CapabilityStandardPhysics2DPlaygroundV2State.ActiveMode != CapabilityStandardPhysics2DPlaygroundV2Mode.PhysicsOnly)
+        {
+            return 0;
+        }
+
+        RuntimeEntitySpawnQueue spawnQueue = _engine.GetService(CoreServiceKeys.RuntimeEntitySpawnQueue)
+            ?? throw new InvalidOperationException("Physics2D Playground v2 requires RuntimeEntitySpawnQueue.");
+        MapId mapId = RequireCurrentMapId();
+        Fix64 spacing = Fix64.FromInt(_config.FrictionZoneSpacingCm);
+
+        _frictionZoneSpawnScratch[0] = BuildTemplateSpawnRequest(
+            _config.FrictionZoneLowTemplateId,
+            mapId,
+            new Fix64Vec2(centerCm.X - spacing, centerCm.Y));
+        _frictionZoneSpawnScratch[1] = BuildTemplateSpawnRequest(
+            _config.FrictionZoneMediumTemplateId,
+            mapId,
+            centerCm);
+        _frictionZoneSpawnScratch[2] = BuildTemplateSpawnRequest(
+            _config.FrictionZoneHighTemplateId,
+            mapId,
+            new Fix64Vec2(centerCm.X + spacing, centerCm.Y));
+
+        int written = spawnQueue.EnqueueMany(_frictionZoneSpawnScratch);
+        if (written != _frictionZoneSpawnScratch.Length)
+        {
+            throw new InvalidOperationException(
+                $"Physics2D Playground v2 enqueued {written} friction zone spawn requests, expected {_frictionZoneSpawnScratch.Length}.");
+        }
+
+        PublishToolState(lastAction: "Spawned friction zones", explosionAffected: null);
+        return written;
+    }
+
+    public int ApplyExplosionForceAt(Fix64Vec2 centerCm)
+    {
+        if (CapabilityStandardPhysics2DPlaygroundV2State.ActiveMode != CapabilityStandardPhysics2DPlaygroundV2Mode.PhysicsOnly)
+        {
+            return 0;
+        }
+
+        Fix64 radius = Fix64.FromInt(_config.ExplosionRadiusCm);
+        Fix64 radiusSq = radius * radius;
+        Fix64 forceMagnitude = Fix64.FromInt(_config.ExplosionForceCmPerSec2);
+        int affected = 0;
+
+        _world.Query(
+            in _explosionTargetQuery,
+            (Entity entity, ref Position2D position, ref Mass2D mass, ref ForceInput2D forceInput) =>
+            {
+                if (mass.IsStatic)
+                {
+                    return;
+                }
+
+                Fix64Vec2 delta = position.Value - centerCm;
+                Fix64 distanceSq = delta.LengthSquared();
+                if (distanceSq > radiusSq)
+                {
+                    return;
+                }
+
+                Fix64Vec2 direction = distanceSq > Fix64.OneValue
+                    ? delta.Normalized()
+                    : Fix64Vec2.FromInt(1, 0);
+                Fix64 distance = distanceSq > Fix64.Zero ? delta.Length() : Fix64.Zero;
+                Fix64 falloff = Fix64.OneValue - (distance / radius);
+                if (falloff < Fix64.Zero)
+                {
+                    falloff = Fix64.Zero;
+                }
+
+                forceInput.Force = forceInput.Force + (direction * forceMagnitude * falloff);
+                affected++;
+            });
+
+        PublishToolState(lastAction: $"Explosion affected {affected}", explosionAffected: affected);
+        return affected;
+    }
+
     public bool ApplyBenchmarkForcePulse()
     {
         if (!TryFindPrimaryPhysicsEntity(out Entity target))
@@ -400,6 +526,63 @@ public sealed class CapabilityStandardPhysics2DPlaygroundV2InteractionSystem : I
         return SpawnBenchmarkBodiesAt(worldCm);
     }
 
+    private bool SpawnStaticPolygonFromPointer(IInputActionReader input)
+    {
+        if (!TryGetGroundPointer(input, out Fix64Vec2 worldCm))
+        {
+            return false;
+        }
+
+        return SpawnStaticPolygonAt(worldCm);
+    }
+
+    private int SpawnFrictionZonesFromPointer(IInputActionReader input)
+    {
+        if (!TryGetGroundPointer(input, out Fix64Vec2 worldCm))
+        {
+            return 0;
+        }
+
+        return SpawnFrictionZonesAt(worldCm);
+    }
+
+    private int ApplyExplosionForceFromPointer(IInputActionReader input)
+    {
+        if (!TryGetGroundPointer(input, out Fix64Vec2 worldCm))
+        {
+            return 0;
+        }
+
+        return ApplyExplosionForceAt(worldCm);
+    }
+
+    private bool TryEnqueueTemplateAt(string templateId, Fix64Vec2 worldCm)
+    {
+        RuntimeEntitySpawnQueue spawnQueue = _engine.GetService(CoreServiceKeys.RuntimeEntitySpawnQueue)
+            ?? throw new InvalidOperationException("Physics2D Playground v2 requires RuntimeEntitySpawnQueue.");
+        RuntimeEntitySpawnRequest request = BuildTemplateSpawnRequest(templateId, RequireCurrentMapId(), worldCm);
+        if (!spawnQueue.TryEnqueue(in request))
+        {
+            throw new InvalidOperationException($"Physics2D Playground v2 failed to enqueue template spawn '{templateId}'.");
+        }
+
+        return true;
+    }
+
+    private static RuntimeEntitySpawnRequest BuildTemplateSpawnRequest(string templateId, MapId mapId, Fix64Vec2 worldCm)
+    {
+        return new RuntimeEntitySpawnRequest
+        {
+            Kind = RuntimeEntitySpawnKind.Template,
+            TemplateId = templateId,
+            MapId = mapId,
+            WorldPositionCm = worldCm,
+            HasWorldPosition = 1,
+            FacingAngleRad = 0f,
+            HasFacing = 1
+        };
+    }
+
     private bool TryGetGroundPointer(IInputActionReader input, out Fix64Vec2 worldCm)
     {
         worldCm = default;
@@ -473,8 +656,7 @@ public sealed class CapabilityStandardPhysics2DPlaygroundV2InteractionSystem : I
     {
         int physicsOnly = 0;
         int nav = 0;
-        var query = new QueryDescription().WithAll<CapabilityStandardPhysics2DPlaygroundV2ModePartition>();
-        _world.Query(in query, (ref CapabilityStandardPhysics2DPlaygroundV2ModePartition partition) =>
+        _world.Query(in _partitionQuery, (ref CapabilityStandardPhysics2DPlaygroundV2ModePartition partition) =>
         {
             if (partition.Mode == CapabilityStandardPhysics2DPlaygroundV2Mode.PhysicsOnly)
             {
@@ -488,6 +670,12 @@ public sealed class CapabilityStandardPhysics2DPlaygroundV2InteractionSystem : I
 
         _engine.GlobalContext[CapabilityStandardPhysics2DPlaygroundV2State.PhysicsOnlyEntityCountServiceKey] = physicsOnly;
         _engine.GlobalContext[CapabilityStandardPhysics2DPlaygroundV2State.NavEntityCountServiceKey] = nav;
+        _engine.GlobalContext[CapabilityStandardPhysics2DPlaygroundV2State.TotalEntityCountServiceKey] =
+            _world.CountEntities(in _allEntitiesQuery);
+        _engine.GlobalContext[CapabilityStandardPhysics2DPlaygroundV2State.StaticPolygonCountServiceKey] =
+            CountByTemplateKey(ResolveStaticPolygonTemplateKeyId());
+        _engine.GlobalContext[CapabilityStandardPhysics2DPlaygroundV2State.FrictionZoneCountServiceKey] =
+            CountFrictionZones();
         PublishBenchmarkState(CountBenchmarkBodies(), lastSpawned: null, forcePulse: null);
     }
 
@@ -530,27 +718,62 @@ public sealed class CapabilityStandardPhysics2DPlaygroundV2InteractionSystem : I
 
     private int ResolveBenchmarkTemplateKeyId()
     {
-        if (_benchmarkTemplateKeyId > 0)
+        return ResolveTemplateKeyId(ref _benchmarkTemplateKeyId, _config.BenchmarkBodyTemplateId);
+    }
+
+    private int ResolveStaticPolygonTemplateKeyId()
+    {
+        return ResolveTemplateKeyId(ref _staticPolygonTemplateKeyId, _config.StaticPolygonTemplateId);
+    }
+
+    private int ResolveFrictionZoneLowTemplateKeyId()
+    {
+        return ResolveTemplateKeyId(ref _frictionZoneLowTemplateKeyId, _config.FrictionZoneLowTemplateId);
+    }
+
+    private int ResolveFrictionZoneMediumTemplateKeyId()
+    {
+        return ResolveTemplateKeyId(ref _frictionZoneMediumTemplateKeyId, _config.FrictionZoneMediumTemplateId);
+    }
+
+    private int ResolveFrictionZoneHighTemplateKeyId()
+    {
+        return ResolveTemplateKeyId(ref _frictionZoneHighTemplateKeyId, _config.FrictionZoneHighTemplateId);
+    }
+
+    private int ResolveTemplateKeyId(ref int cache, string templateId)
+    {
+        if (cache > 0)
         {
-            return _benchmarkTemplateKeyId;
+            return cache;
         }
 
         EntityTemplateKeyRegistry templateKeys = _engine.GetService(CoreServiceKeys.EntityTemplateKeyRegistry)
             ?? throw new InvalidOperationException("EntityTemplateKeyRegistry missing.");
-        if (!templateKeys.TryGetId(_config.BenchmarkBodyTemplateId, out _benchmarkTemplateKeyId) ||
-            _benchmarkTemplateKeyId <= 0)
+        if (!templateKeys.TryGetId(templateId, out cache) || cache <= 0)
         {
-            _benchmarkTemplateKeyId = templateKeys.Register(_config.BenchmarkBodyTemplateId);
+            cache = templateKeys.Register(templateId);
         }
 
-        return _benchmarkTemplateKeyId;
+        return cache;
     }
 
     private int CountBenchmarkBodies()
     {
-        int templateKeyId = ResolveBenchmarkTemplateKeyId();
+        return CountByTemplateKey(ResolveBenchmarkTemplateKeyId());
+    }
+
+    private int CountFrictionZones()
+    {
+        return CountByTemplateKey(ResolveFrictionZoneLowTemplateKeyId()) +
+               CountByTemplateKey(ResolveFrictionZoneMediumTemplateKeyId()) +
+               CountByTemplateKey(ResolveFrictionZoneHighTemplateKeyId());
+    }
+
+    private int CountByTemplateKey(int templateKeyId)
+    {
         int count = 0;
-        var query = new QueryDescription().WithAll<EntityTemplateKeyRef, Position2D, Velocity2D, Mass2D>();
+        var query = new QueryDescription().WithAll<EntityTemplateKeyRef>();
         _world.Query(in query, (ref EntityTemplateKeyRef keyRef) =>
         {
             if (keyRef.TemplateKeyId == templateKeyId)
@@ -560,6 +783,20 @@ public sealed class CapabilityStandardPhysics2DPlaygroundV2InteractionSystem : I
         });
 
         return count;
+    }
+
+    private void PublishToolState(string lastAction, int? explosionAffected)
+    {
+        _engine.GlobalContext[CapabilityStandardPhysics2DPlaygroundV2State.StaticPolygonCountServiceKey] =
+            CountByTemplateKey(ResolveStaticPolygonTemplateKeyId());
+        _engine.GlobalContext[CapabilityStandardPhysics2DPlaygroundV2State.FrictionZoneCountServiceKey] =
+            CountFrictionZones();
+        _engine.GlobalContext[CapabilityStandardPhysics2DPlaygroundV2State.LastActionServiceKey] = lastAction;
+        if (explosionAffected.HasValue)
+        {
+            _engine.GlobalContext[CapabilityStandardPhysics2DPlaygroundV2State.ExplosionLastAffectedServiceKey] =
+                explosionAffected.Value;
+        }
     }
 
     private void PublishBenchmarkState(int benchmarkBodies, int? lastSpawned, int? forcePulse)

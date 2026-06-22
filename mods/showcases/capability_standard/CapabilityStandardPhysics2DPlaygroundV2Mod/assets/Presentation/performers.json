@@ -42,6 +42,90 @@
     ]
   },
   {
+    "id": "capability_standard_physics2d_playground_v2.static_polygon_bootstrap",
+    "rules": [
+      {
+        "event": { "kind": "EntitySpawned", "key": "capability_standard_physics2d_playground_v2_static_polygon" },
+        "condition": { "inline": "SourceHasVisualTransform" },
+        "command": {
+          "kind": "CreatePerformer",
+          "definitionId": "capability_standard_physics2d_playground_v2.static_polygon",
+          "scopeSource": "EventPayloadA"
+        }
+      },
+      {
+        "event": { "kind": "EntityDestroyed", "key": "capability_standard_physics2d_playground_v2_static_polygon" },
+        "command": {
+          "kind": "DestroyPerformerScope",
+          "scopeSource": "EventPayloadA"
+        }
+      }
+    ]
+  },
+  {
+    "id": "capability_standard_physics2d_playground_v2.friction_zone_low_bootstrap",
+    "rules": [
+      {
+        "event": { "kind": "EntitySpawned", "key": "capability_standard_physics2d_playground_v2_friction_zone_low" },
+        "condition": { "inline": "SourceHasVisualTransform" },
+        "command": {
+          "kind": "CreatePerformer",
+          "definitionId": "capability_standard_physics2d_playground_v2.friction_zone_low",
+          "scopeSource": "EventPayloadA"
+        }
+      },
+      {
+        "event": { "kind": "EntityDestroyed", "key": "capability_standard_physics2d_playground_v2_friction_zone_low" },
+        "command": {
+          "kind": "DestroyPerformerScope",
+          "scopeSource": "EventPayloadA"
+        }
+      }
+    ]
+  },
+  {
+    "id": "capability_standard_physics2d_playground_v2.friction_zone_medium_bootstrap",
+    "rules": [
+      {
+        "event": { "kind": "EntitySpawned", "key": "capability_standard_physics2d_playground_v2_friction_zone_medium" },
+        "condition": { "inline": "SourceHasVisualTransform" },
+        "command": {
+          "kind": "CreatePerformer",
+          "definitionId": "capability_standard_physics2d_playground_v2.friction_zone_medium",
+          "scopeSource": "EventPayloadA"
+        }
+      },
+      {
+        "event": { "kind": "EntityDestroyed", "key": "capability_standard_physics2d_playground_v2_friction_zone_medium" },
+        "command": {
+          "kind": "DestroyPerformerScope",
+          "scopeSource": "EventPayloadA"
+        }
+      }
+    ]
+  },
+  {
+    "id": "capability_standard_physics2d_playground_v2.friction_zone_high_bootstrap",
+    "rules": [
+      {
+        "event": { "kind": "EntitySpawned", "key": "capability_standard_physics2d_playground_v2_friction_zone_high" },
+        "condition": { "inline": "SourceHasVisualTransform" },
+        "command": {
+          "kind": "CreatePerformer",
+          "definitionId": "capability_standard_physics2d_playground_v2.friction_zone_high",
+          "scopeSource": "EventPayloadA"
+        }
+      },
+      {
+        "event": { "kind": "EntityDestroyed", "key": "capability_standard_physics2d_playground_v2_friction_zone_high" },
+        "command": {
+          "kind": "DestroyPerformerScope",
+          "scopeSource": "EventPayloadA"
+        }
+      }
+    ]
+  },
+  {
     "id": "capability_standard_physics2d_playground_v2.nav_agent_bootstrap",
     "rules": [
       {
@@ -161,6 +245,86 @@
           "mobility": "Static",
           "localOffset": [0.0, 1.30, 0.0],
           "localScale": [0.96, 2.60, 1.10]
+        }
+      }
+    ]
+  },
+  {
+    "id": "capability_standard_physics2d_playground_v2.static_polygon",
+    "defaultColor": [0.18, 0.58, 0.92, 0.68],
+    "behaviors": [
+      {
+        "slot": "body",
+        "kind": "AssetBinding",
+        "activeByDefault": true,
+        "assetBinding": {
+          "assetKind": "Mesh",
+          "assetId": "cube",
+          "materialId": "default_surface",
+          "renderPath": "InstancedStaticMesh",
+          "mobility": "Static",
+          "localOffset": [0.0, 0.08, 0.0],
+          "localScale": [2.80, 0.12, 2.64]
+        }
+      }
+    ]
+  },
+  {
+    "id": "capability_standard_physics2d_playground_v2.friction_zone_low",
+    "defaultColor": [0.22, 0.76, 0.92, 0.55],
+    "behaviors": [
+      {
+        "slot": "body",
+        "kind": "AssetBinding",
+        "activeByDefault": true,
+        "assetBinding": {
+          "assetKind": "Mesh",
+          "assetId": "cube",
+          "materialId": "default_surface",
+          "renderPath": "InstancedStaticMesh",
+          "mobility": "Static",
+          "localOffset": [0.0, 0.04, 0.0],
+          "localScale": [3.00, 0.08, 1.84]
+        }
+      }
+    ]
+  },
+  {
+    "id": "capability_standard_physics2d_playground_v2.friction_zone_medium",
+    "defaultColor": [0.94, 0.72, 0.22, 0.58],
+    "behaviors": [
+      {
+        "slot": "body",
+        "kind": "AssetBinding",
+        "activeByDefault": true,
+        "assetBinding": {
+          "assetKind": "Mesh",
+          "assetId": "cube",
+          "materialId": "default_surface",
+          "renderPath": "InstancedStaticMesh",
+          "mobility": "Static",
+          "localOffset": [0.0, 0.04, 0.0],
+          "localScale": [3.00, 0.08, 1.84]
+        }
+      }
+    ]
+  },
+  {
+    "id": "capability_standard_physics2d_playground_v2.friction_zone_high",
+    "defaultColor": [0.96, 0.32, 0.34, 0.60],
+    "behaviors": [
+      {
+        "slot": "body",
+        "kind": "AssetBinding",
+        "activeByDefault": true,
+        "assetBinding": {
+          "assetKind": "Mesh",
+          "assetId": "cube",
+          "materialId": "default_surface",
+          "renderPath": "InstancedStaticMesh",
+          "mobility": "Static",
+          "localOffset": [0.0, 0.04, 0.0],
+          "localScale": [3.00, 0.08, 1.84]
         }
       }
     ]

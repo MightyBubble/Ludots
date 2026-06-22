@@ -9,6 +9,11 @@ public static class CapabilityStandardPhysics2DPlaygroundV2State
     public const string BenchmarkEntityCountServiceKey = "CapabilityStandardPhysics2DPlaygroundV2.BenchmarkEntityCount";
     public const string BenchmarkLastSpawnedServiceKey = "CapabilityStandardPhysics2DPlaygroundV2.BenchmarkLastSpawned";
     public const string BenchmarkLastForcePulseServiceKey = "CapabilityStandardPhysics2DPlaygroundV2.BenchmarkLastForcePulse";
+    public const string TotalEntityCountServiceKey = "CapabilityStandardPhysics2DPlaygroundV2.TotalEntityCount";
+    public const string StaticPolygonCountServiceKey = "CapabilityStandardPhysics2DPlaygroundV2.StaticPolygonCount";
+    public const string FrictionZoneCountServiceKey = "CapabilityStandardPhysics2DPlaygroundV2.FrictionZoneCount";
+    public const string ExplosionLastAffectedServiceKey = "CapabilityStandardPhysics2DPlaygroundV2.ExplosionLastAffected";
+    public const string LastActionServiceKey = "CapabilityStandardPhysics2DPlaygroundV2.LastAction";
 
     public static bool Enabled;
     public static CapabilityStandardPhysics2DPlaygroundV2Mode ActiveMode = CapabilityStandardPhysics2DPlaygroundV2Mode.PhysicsOnly;

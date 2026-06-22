@@ -2,6 +2,7 @@ using System;
 using System.Collections.Generic;
 using System.Globalization;
 using System.IO;
+using System.Numerics;
 using System.Text;
 using System.Text.Json;
 using Arch.Core;
@@ -18,8 +19,10 @@ using Ludots.Core.Physics;
 using Ludots.Core.Physics2D.Components;
 using Ludots.Core.Physics2D.Ticking;
 using Ludots.Core.Presentation.Components;
+using Ludots.Core.Presentation.Hud;
 using Ludots.Core.Presentation.Performers;
 using Ludots.Core.Scripting;
+using Ludots.Platform.Abstractions;
 using NUnit.Framework;
 
 namespace Ludots.Tests.GAS.Production;
@@ -36,6 +39,10 @@ public sealed class CapabilityStandardPhysics2DPlaygroundV2AcceptanceTests
     private const string NavObstacleTemplateId = "capability_standard_physics2d_playground_v2_nav_obstacle";
     private const string NavTargetTemplateId = "capability_standard_physics2d_playground_v2_nav_target";
     private const string BenchmarkBodyTemplateId = "capability_standard_physics2d_playground_v2_benchmark_body";
+    private const string StaticPolygonTemplateId = "capability_standard_physics2d_playground_v2_static_polygon";
+    private const string FrictionZoneLowTemplateId = "capability_standard_physics2d_playground_v2_friction_zone_low";
+    private const string FrictionZoneMediumTemplateId = "capability_standard_physics2d_playground_v2_friction_zone_medium";
+    private const string FrictionZoneHighTemplateId = "capability_standard_physics2d_playground_v2_friction_zone_high";
 
     private static readonly string[] AcceptanceMods =
     {
@@ -56,6 +63,7 @@ public sealed class CapabilityStandardPhysics2DPlaygroundV2AcceptanceTests
         Assert.That(engine.MergedConfig.Physics2D.Enabled, Is.True);
         Assert.That(engine.MergedConfig.Navigation2D.Enabled, Is.True);
         Assert.That(engine.GetService(CoreServiceKeys.Navigation2DRuntime), Is.Not.Null);
+        engine.SetService(CoreServiceKeys.ScreenProjector, new PlaygroundV2TestScreenProjector());
 
         RuntimeEntitySpawnQueue spawnQueue = engine.GetService(CoreServiceKeys.RuntimeEntitySpawnQueue)
             ?? throw new InvalidOperationException("RuntimeEntitySpawnQueue missing.");
@@ -201,6 +209,77 @@ public sealed class CapabilityStandardPhysics2DPlaygroundV2AcceptanceTests
             "IntegrationSystem2D should consume the force input after applying it.");
         keyframes.Add(Capture(engine, frameTimesMs.Count, physicsBody, navAgent, navObstacle));
 
+        Fix64Vec2 polygonCenter = Fix64Vec2.FromInt(560, -520);
+        Assert.That(interaction.SpawnStaticPolygonAt(polygonCenter), Is.True);
+        CapabilityStandardShowcaseTestHarness.TickUntil(
+            engine,
+            frameTimesMs,
+            () => CountByTemplate(engine, StaticPolygonTemplateId) == 1,
+            maxFrames: 12);
+        Entity staticPolygon = FindFirstByTemplate(engine, StaticPolygonTemplateId);
+        AssertStaticPolygon(engine, staticPolygon);
+        AssertPresentationPayload(engine, staticPolygon, "static polygon");
+        keyframes.Add(Capture(engine, frameTimesMs.Count, physicsBody, navAgent, navObstacle));
+
+        Fix64Vec2 frictionCenter = Fix64Vec2.FromInt(560, -900);
+        Assert.That(interaction.SpawnFrictionZonesAt(frictionCenter), Is.EqualTo(3));
+        CapabilityStandardShowcaseTestHarness.TickUntil(
+            engine,
+            frameTimesMs,
+            () => CountByTemplate(engine, FrictionZoneLowTemplateId) == 1 &&
+                  CountByTemplate(engine, FrictionZoneMediumTemplateId) == 1 &&
+                  CountByTemplate(engine, FrictionZoneHighTemplateId) == 1,
+            maxFrames: 12);
+        Entity frictionLow = FindFirstByTemplate(engine, FrictionZoneLowTemplateId);
+        Entity frictionMedium = FindFirstByTemplate(engine, FrictionZoneMediumTemplateId);
+        Entity frictionHigh = FindFirstByTemplate(engine, FrictionZoneHighTemplateId);
+        AssertFrictionZone(engine, frictionLow, maxExpectedFriction: 0.05f, "low friction zone");
+        AssertFrictionZone(engine, frictionMedium, maxExpectedFriction: 0.45f, "medium friction zone");
+        AssertFrictionZone(engine, frictionHigh, maxExpectedFriction: 1.30f, "high friction zone");
+        Assert.That(ToFloat(engine.World.Get<PhysicsMaterial2D>(frictionLow).Friction),
+            Is.LessThan(ToFloat(engine.World.Get<PhysicsMaterial2D>(frictionMedium).Friction)));
+        Assert.That(ToFloat(engine.World.Get<PhysicsMaterial2D>(frictionMedium).Friction),
+            Is.LessThan(ToFloat(engine.World.Get<PhysicsMaterial2D>(frictionHigh).Friction)));
+        AssertPresentationPayload(engine, frictionLow, "low friction zone");
+        AssertPresentationPayload(engine, frictionMedium, "medium friction zone");
+        AssertPresentationPayload(engine, frictionHigh, "high friction zone");
+        keyframes.Add(Capture(engine, frameTimesMs.Count, physicsBody, navAgent, navObstacle));
+
+        Fix64Vec2 explosionCenter = Fix64Vec2.FromInt(180, -520);
+        Assert.That(interaction.SetBenchmarkSpawnCountForSlot(1), Is.EqualTo(10));
+        Assert.That(interaction.SpawnBenchmarkBodiesAt(explosionCenter), Is.True);
+        CapabilityStandardShowcaseTestHarness.TickUntil(
+            engine,
+            frameTimesMs,
+            () => CountByTemplate(engine, BenchmarkBodyTemplateId) >= 40,
+            maxFrames: 12);
+        Entity explosionSample = FindNearestByTemplate(engine, BenchmarkBodyTemplateId, explosionCenter);
+        Fix64Vec2 beforeExplosionVelocity = engine.World.Get<Velocity2D>(explosionSample).Linear;
+        int explosionAffected = interaction.ApplyExplosionForceAt(explosionCenter);
+        Assert.That(explosionAffected, Is.GreaterThan(0),
+            "X explosion must apply a radial ForceInput2D pulse to nearby dynamic physics bodies.");
+        Assert.That(ReadInt(engine, CapabilityStandardPhysics2DPlaygroundV2State.ExplosionLastAffectedServiceKey),
+            Is.EqualTo(explosionAffected));
+        Assert.That(engine.World.Get<ForceInput2D>(explosionSample).Force.LengthSquared(), Is.GreaterThan(Fix64.Zero));
+        CapabilityStandardShowcaseTestHarness.TickUntil(
+            engine,
+            frameTimesMs,
+            () => engine.World.Get<Velocity2D>(explosionSample).Linear != beforeExplosionVelocity,
+            maxFrames: 24);
+        Assert.That(engine.World.Get<ForceInput2D>(explosionSample).Force, Is.EqualTo(Fix64Vec2.Zero),
+            "IntegrationSystem2D should consume playground explosion ForceInput2D after applying it.");
+        keyframes.Add(Capture(engine, frameTimesMs.Count, physicsBody, navAgent, navObstacle));
+
+        CapabilityStandardShowcaseTestHarness.TickMeasured(engine, 1, frameTimesMs);
+        ScreenOverlayBuffer overlay = engine.GetService(CoreServiceKeys.ScreenOverlayBuffer)
+            ?? throw new InvalidOperationException("ScreenOverlayBuffer missing.");
+        Assert.That(OverlayContainsText(overlay, "FPS"), Is.True, "Playground HUD must expose live FPS.");
+        Assert.That(OverlayContainsText(overlay, "Frame"), Is.True, "Playground HUD must expose frame timing.");
+        Assert.That(OverlayContainsText(overlay, "Entities"), Is.True, "Playground HUD must expose entity statistics.");
+        Assert.That(OverlayContainsText(overlay, "G static polygon"), Is.True, "Playground HUD must list the static polygon control.");
+        Assert.That(OverlayContainsText(overlay, "X explosion"), Is.True, "Playground HUD must list the explosion control.");
+        Assert.That(CountOverlayLines(overlay), Is.GreaterThan(0), "Static polygon outlines should be drawn into ScreenOverlayBuffer.");
+
         Physics2DPerfStats stats = CapabilityStandardShowcaseTestHarness.ReadPhysicsPerfStats(engine.World);
         Assert.That(physics.PipelineStepNames.ToArray(), Does.Contain("NavToPhysicsVelocitySync"));
         WriteAcceptanceArtifacts(repoRoot, keyframes, frameTimesMs, stats);
@@ -249,6 +328,25 @@ public sealed class CapabilityStandardPhysics2DPlaygroundV2AcceptanceTests
         Assert.That(engine.World.Has<NavDesiredVelocity2D>(entity), Is.False);
         Assert.That(engine.World.Has<NavObstacle2D>(entity), Is.False);
         Assert.That(engine.World.Has<NavGoal2D>(entity), Is.False);
+    }
+
+    private static void AssertStaticPolygon(GameEngine engine, Entity entity)
+    {
+        AssertPhysicsOnlyPartition(engine, entity);
+        Assert.That(engine.World.Get<Mass2D>(entity).IsStatic, Is.True);
+        Assert.That(engine.World.Get<Collider2D>(entity).Type, Is.EqualTo(ColliderType2D.Polygon));
+        Assert.That(engine.World.Has<PhysicsMaterial2D>(entity), Is.True);
+        Assert.That(engine.World.Has<ForceInput2D>(entity), Is.False);
+    }
+
+    private static void AssertFrictionZone(GameEngine engine, Entity entity, float maxExpectedFriction, string label)
+    {
+        AssertPhysicsOnlyPartition(engine, entity);
+        Assert.That(engine.World.Get<Mass2D>(entity).IsStatic, Is.True, $"{label} should be a static physics material region.");
+        Assert.That(engine.World.Get<Collider2D>(entity).Type, Is.EqualTo(ColliderType2D.Box));
+        Assert.That(engine.World.Has<PhysicsMaterial2D>(entity), Is.True);
+        Assert.That(ToFloat(engine.World.Get<PhysicsMaterial2D>(entity).Friction), Is.LessThanOrEqualTo(maxExpectedFriction));
+        Assert.That(engine.World.Has<ForceInput2D>(entity), Is.False);
     }
 
     private static int CountSystems<T>(GameEngine engine, SystemGroup group)
@@ -307,6 +405,11 @@ public sealed class CapabilityStandardPhysics2DPlaygroundV2AcceptanceTests
         Fix64Vec2 benchmarkVelocity = benchmarkBody != Entity.Null && engine.World.Has<Velocity2D>(benchmarkBody)
             ? engine.World.Get<Velocity2D>(benchmarkBody).Linear
             : Fix64Vec2.Zero;
+        int staticPolygonCount = CountByTemplate(engine, StaticPolygonTemplateId);
+        int frictionZoneCount = CountByTemplate(engine, FrictionZoneLowTemplateId) +
+                                CountByTemplate(engine, FrictionZoneMediumTemplateId) +
+                                CountByTemplate(engine, FrictionZoneHighTemplateId);
+        int explosionLastAffected = ReadInt(engine, CapabilityStandardPhysics2DPlaygroundV2State.ExplosionLastAffectedServiceKey);
 
         return new PlaygroundV2Keyframe(
             frame,
@@ -321,7 +424,10 @@ public sealed class CapabilityStandardPhysics2DPlaygroundV2AcceptanceTests
             engine.World.Has<NavObstacle2D>(navObstacle),
             engine.World.Has<Physics2DStaticBodyState>(navObstacle),
             benchmarkCount,
-            ToFloat(benchmarkVelocity.X));
+            ToFloat(benchmarkVelocity.X),
+            staticPolygonCount,
+            frictionZoneCount,
+            explosionLastAffected);
     }
 
     private static void AssertConfigAndTemplateBoundaries(string repoRoot)
@@ -408,6 +514,23 @@ public sealed class CapabilityStandardPhysics2DPlaygroundV2AcceptanceTests
                 Assert.That(components.TryGetProperty("NavObstacle2D", out _), Is.False);
                 Assert.That(components.TryGetProperty("ManifestationObstacleIntent2D", out _), Is.False);
             }
+
+            if (string.Equals(id, StaticPolygonTemplateId, StringComparison.Ordinal))
+            {
+                AssertPhysicsOnlyTemplateComponents(components);
+                JsonElement shape = components.GetProperty("CapabilityStandardPhysics2DPlaygroundV2.RigidBody").GetProperty("shape");
+                Assert.That(RequireString(shape, "type"), Is.EqualTo("Polygon"));
+            }
+
+            if (string.Equals(id, FrictionZoneLowTemplateId, StringComparison.Ordinal) ||
+                string.Equals(id, FrictionZoneMediumTemplateId, StringComparison.Ordinal) ||
+                string.Equals(id, FrictionZoneHighTemplateId, StringComparison.Ordinal))
+            {
+                AssertPhysicsOnlyTemplateComponents(components);
+                JsonElement body = components.GetProperty("CapabilityStandardPhysics2DPlaygroundV2.RigidBody");
+                Assert.That(RequireString(body.GetProperty("shape"), "type"), Is.EqualTo("Box"));
+                Assert.That(body.GetProperty("material").TryGetProperty("friction", out _), Is.True);
+            }
         }
 
         AssertPlaygroundBenchmarkInput(repoRoot);
@@ -427,7 +550,13 @@ public sealed class CapabilityStandardPhysics2DPlaygroundV2AcceptanceTests
             "default_input.json");
         string input = File.ReadAllText(inputPath);
         Assert.That(input, Does.Contain("CapabilityStandardPhysics2DPlaygroundV2.BenchmarkForcePulse"));
+        Assert.That(input, Does.Contain("CapabilityStandardPhysics2DPlaygroundV2.SpawnStaticPolygon"));
+        Assert.That(input, Does.Contain("CapabilityStandardPhysics2DPlaygroundV2.SpawnFrictionZones"));
+        Assert.That(input, Does.Contain("CapabilityStandardPhysics2DPlaygroundV2.ApplyExplosionForce"));
         Assert.That(input, Does.Contain("\"<Keyboard>/C\""));
+        Assert.That(input, Does.Contain("\"<Keyboard>/G\""));
+        Assert.That(input, Does.Contain("\"<Keyboard>/F\""));
+        Assert.That(input, Does.Contain("\"<Keyboard>/X\""));
         Assert.That(input, Does.Contain("\"<Mouse>/Pos\""));
         Assert.That(input, Does.Contain("\"<Mouse>/RightButton\""));
 
@@ -443,6 +572,18 @@ public sealed class CapabilityStandardPhysics2DPlaygroundV2AcceptanceTests
         AssertBenchmarkCountChord(bindings, "CapabilityStandardPhysics2DPlaygroundV2.BenchmarkSpawnCount7", "<Keyboard>/u");
         AssertBenchmarkCountChord(bindings, "CapabilityStandardPhysics2DPlaygroundV2.BenchmarkSpawnCount8", "<Keyboard>/o");
         AssertBenchmarkCountChord(bindings, "CapabilityStandardPhysics2DPlaygroundV2.BenchmarkSpawnCount9", "<Keyboard>/p");
+    }
+
+    private static void AssertPhysicsOnlyTemplateComponents(JsonElement components)
+    {
+        Assert.That(components.TryGetProperty("CapabilityStandardPhysics2DPlaygroundV2.ModePartition", out JsonElement partition), Is.True);
+        Assert.That(partition.GetProperty("Mode").GetInt32(), Is.EqualTo(0));
+        Assert.That(components.TryGetProperty("CapabilityStandardPhysics2DPlaygroundV2.RigidBody", out _), Is.True);
+        Assert.That(components.TryGetProperty("OrderBuffer", out _), Is.False);
+        Assert.That(components.TryGetProperty("NavKinematics2D", out _), Is.False);
+        Assert.That(components.TryGetProperty("NavDesiredVelocity2D", out _), Is.False);
+        Assert.That(components.TryGetProperty("NavObstacle2D", out _), Is.False);
+        Assert.That(components.TryGetProperty("ManifestationObstacleIntent2D", out _), Is.False);
     }
 
     private static void AssertNoBenchmarkFunctionKeyBindings(JsonElement bindings)
@@ -528,6 +669,10 @@ public sealed class CapabilityStandardPhysics2DPlaygroundV2AcceptanceTests
         AssertBootstrapAndVisual(performers.RootElement, NavObstacleTemplateId, "capability_standard_physics2d_playground_v2.nav_obstacle");
         AssertBootstrapAndVisual(performers.RootElement, NavTargetTemplateId, "capability_standard_physics2d_playground_v2.nav_target");
         AssertBootstrapAndVisual(performers.RootElement, BenchmarkBodyTemplateId, "capability_standard_physics2d_playground_v2.benchmark_body");
+        AssertBootstrapAndVisual(performers.RootElement, StaticPolygonTemplateId, "capability_standard_physics2d_playground_v2.static_polygon");
+        AssertBootstrapAndVisual(performers.RootElement, FrictionZoneLowTemplateId, "capability_standard_physics2d_playground_v2.friction_zone_low");
+        AssertBootstrapAndVisual(performers.RootElement, FrictionZoneMediumTemplateId, "capability_standard_physics2d_playground_v2.friction_zone_medium");
+        AssertBootstrapAndVisual(performers.RootElement, FrictionZoneHighTemplateId, "capability_standard_physics2d_playground_v2.friction_zone_high");
     }
 
     private static void AssertBootstrapAndVisual(JsonElement performers, string templateId, string definitionId)
@@ -643,18 +788,19 @@ public sealed class CapabilityStandardPhysics2DPlaygroundV2AcceptanceTests
         builder.AppendLine("| CC/knockback regression | displacement under `MovementSuppressed2D` clears velocity and lands at the configured displacement distance |");
         builder.AppendLine($"| Nav mode | nav final X `{Format(final.NavAgentX)}` cm, desired X `{Format(final.NavDesiredX)}` cm/s, obstacle nav `{final.NavObstacle}` physics `{final.PhysicsObstacle}` |");
         builder.AppendLine($"| v1 benchmark carryover | LeftShift+Q/W/E/R/T/Y/U/O/P count slots, right-click/runtime burst spawn, and C GAS force pulse retained; benchmark bodies `{final.BenchmarkBodyCount}`, sample Vx `{Format(final.BenchmarkBodyVelocityX)}` cm/s |");
+        builder.AppendLine($"| Playground tools | HUD exposes FPS/frame/entity stats; G static polygons `{final.StaticPolygonCount}`, F friction zones `{final.FrictionZoneCount}`, X explosion affected `{final.ExplosionLastAffected}` bodies |");
         builder.AppendLine($"| Physics stats | Hz `{stats.PhysicsHz}`, potential pairs `{stats.PotentialPairs}`, contact pairs `{stats.ContactPairs}`, last update `{stats.PhysicsUpdateMs:F4}` ms |");
         builder.AppendLine($"| Test tick timings | frames `{frameTimesMs.Count}`, avg `{avgMs:F4}` ms, max `{maxMs:F4}` ms |");
         builder.AppendLine();
         builder.AppendLine("## Keyframes");
         builder.AppendLine();
-        builder.AppendLine("| Frame | Mode | Physics X | Physics Vx | Suppressed | Physics Has Nav | Nav X | Nav Vx | Nav Desired X | Nav Obstacle | Physics Obstacle | Benchmark Bodies | Benchmark Vx |");
-        builder.AppendLine("| ---: | --- | ---: | ---: | :---: | :---: | ---: | ---: | ---: | :---: | :---: | ---: | ---: |");
+        builder.AppendLine("| Frame | Mode | Physics X | Physics Vx | Suppressed | Physics Has Nav | Nav X | Nav Vx | Nav Desired X | Nav Obstacle | Physics Obstacle | Benchmark Bodies | Benchmark Vx | Static Polygons | Friction Zones | Explosion Last |");
+        builder.AppendLine("| ---: | --- | ---: | ---: | :---: | :---: | ---: | ---: | ---: | :---: | :---: | ---: | ---: | ---: | ---: | ---: |");
         for (int i = 0; i < keyframes.Count; i++)
         {
             PlaygroundV2Keyframe keyframe = keyframes[i];
             builder.AppendLine(
-                $"| {keyframe.Frame} | {keyframe.Mode} | {Format(keyframe.PhysicsBodyX)} | {Format(keyframe.PhysicsBodyVelocityX)} | {keyframe.PhysicsBodySuppressed} | {keyframe.PhysicsBodyHasNav} | {Format(keyframe.NavAgentX)} | {Format(keyframe.NavVelocityX)} | {Format(keyframe.NavDesiredX)} | {keyframe.NavObstacle} | {keyframe.PhysicsObstacle} | {keyframe.BenchmarkBodyCount} | {Format(keyframe.BenchmarkBodyVelocityX)} |");
+                $"| {keyframe.Frame} | {keyframe.Mode} | {Format(keyframe.PhysicsBodyX)} | {Format(keyframe.PhysicsBodyVelocityX)} | {keyframe.PhysicsBodySuppressed} | {keyframe.PhysicsBodyHasNav} | {Format(keyframe.NavAgentX)} | {Format(keyframe.NavVelocityX)} | {Format(keyframe.NavDesiredX)} | {keyframe.NavObstacle} | {keyframe.PhysicsObstacle} | {keyframe.BenchmarkBodyCount} | {Format(keyframe.BenchmarkBodyVelocityX)} | {keyframe.StaticPolygonCount} | {keyframe.FrictionZoneCount} | {keyframe.ExplosionLastAffected} |");
         }
 
         File.WriteAllText(mdPath, builder.ToString(), Encoding.UTF8);
@@ -664,6 +810,37 @@ public sealed class CapabilityStandardPhysics2DPlaygroundV2AcceptanceTests
     {
         Entity found = TryFindFirstByTemplate(engine, templateId);
         Assert.That(found, Is.Not.EqualTo(Entity.Null), $"Expected at least one entity for template '{templateId}'.");
+        return found;
+    }
+
+    private static Entity FindNearestByTemplate(GameEngine engine, string templateId, Fix64Vec2 centerCm)
+    {
+        EntityTemplateKeyRegistry templateKeys = engine.GetService(CoreServiceKeys.EntityTemplateKeyRegistry)
+            ?? throw new InvalidOperationException("EntityTemplateKeyRegistry missing.");
+        if (!templateKeys.TryGetId(templateId, out int templateKeyId) || templateKeyId <= 0)
+        {
+            Assert.Fail($"Template key '{templateId}' is not registered.");
+        }
+
+        Entity found = Entity.Null;
+        Fix64 bestDistanceSq = Fix64.MaxValue;
+        var query = new QueryDescription().WithAll<EntityTemplateKeyRef, Position2D>();
+        engine.World.Query(in query, (Entity entity, ref EntityTemplateKeyRef keyRef, ref Position2D position) =>
+        {
+            if (keyRef.TemplateKeyId != templateKeyId)
+            {
+                return;
+            }
+
+            Fix64 distanceSq = (position.Value - centerCm).LengthSquared();
+            if (found == Entity.Null || distanceSq < bestDistanceSq)
+            {
+                found = entity;
+                bestDistanceSq = distanceSq;
+            }
+        });
+
+        Assert.That(found, Is.Not.EqualTo(Entity.Null), $"Expected at least one positioned entity for template '{templateId}'.");
         return found;
     }
 
@@ -711,6 +888,46 @@ public sealed class CapabilityStandardPhysics2DPlaygroundV2AcceptanceTests
         return count;
     }
 
+    private static int ReadInt(GameEngine engine, string key)
+    {
+        return engine.GlobalContext.TryGetValue(key, out object? value) && value is int number
+            ? number
+            : 0;
+    }
+
+    private static bool OverlayContainsText(ScreenOverlayBuffer overlay, string expected)
+    {
+        foreach (ref readonly ScreenOverlayItem item in overlay.GetSpan())
+        {
+            if (item.Kind != ScreenOverlayItemKind.Text)
+            {
+                continue;
+            }
+
+            string? text = overlay.GetString(item.StringId);
+            if (text != null && text.Contains(expected, StringComparison.Ordinal))
+            {
+                return true;
+            }
+        }
+
+        return false;
+    }
+
+    private static int CountOverlayLines(ScreenOverlayBuffer overlay)
+    {
+        int count = 0;
+        foreach (ref readonly ScreenOverlayItem item in overlay.GetSpan())
+        {
+            if (item.Kind == ScreenOverlayItemKind.Line)
+            {
+                count++;
+            }
+        }
+
+        return count;
+    }
+
     private static string RequireString(JsonElement root, string propertyName)
     {
         string? value = root.GetProperty(propertyName).GetString();
@@ -732,6 +949,16 @@ public sealed class CapabilityStandardPhysics2DPlaygroundV2AcceptanceTests
         return value.ToString("0.###", CultureInfo.InvariantCulture);
     }
 
+    private sealed class PlaygroundV2TestScreenProjector : IScreenProjector
+    {
+        public Vector2 WorldToScreen(Vector3 worldPosition)
+        {
+            return new Vector2(
+                720f + (worldPosition.X * 20f),
+                450f - (worldPosition.Z * 20f));
+        }
+    }
+
     private readonly record struct PlaygroundV2Keyframe(
         int Frame,
         string Mode,
@@ -745,5 +972,8 @@ public sealed class CapabilityStandardPhysics2DPlaygroundV2AcceptanceTests
         bool NavObstacle,
         bool PhysicsObstacle,
         int BenchmarkBodyCount,
-        float BenchmarkBodyVelocityX);
+        float BenchmarkBodyVelocityX,
+        int StaticPolygonCount,
+        int FrictionZoneCount,
+        int ExplosionLastAffected);
 }
