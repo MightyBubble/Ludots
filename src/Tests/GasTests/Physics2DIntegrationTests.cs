@@ -62,6 +62,28 @@ namespace GasTests
         }
 
         [Test]
+        public void NavToPhysicsVelocitySync_ClearsResidualLocomotionVelocityBeforeIntegration_WhenMovementSuppressed()
+        {
+            using var world = World.Create();
+            var sync = new NavToPhysicsVelocitySyncSystem(world);
+            var integration = new IntegrationSystem2D(world, _solverConfig);
+            var actor = world.Create(
+                Position2D.Zero,
+                new PreviousPosition2D { Value = Fix64Vec2.Zero },
+                new Velocity2D { Linear = Fix64Vec2.FromInt(120, 0), Angular = Fix64.Zero },
+                Mass2D.FromFloat(1f, 1f),
+                new NavDesiredVelocity2D { ValueCmPerSec = Fix64Vec2.FromInt(240, 0) },
+                new MovementSuppressed2D());
+
+            sync.Update(0f);
+            integration.Update(1f);
+
+            Assert.That(world.Get<Velocity2D>(actor).Linear, Is.EqualTo(Fix64Vec2.Zero));
+            Assert.That(world.Get<Position2D>(actor).Value, Is.EqualTo(Fix64Vec2.Zero));
+            Assert.That(world.Get<NavDesiredVelocity2D>(actor).ValueCmPerSec.X.ToFloat(), Is.EqualTo(240f).Within(0.01f));
+        }
+
+        [Test]
         public void IntegrationSystem2D_ThroughputSmoke_Integrates2kBodiesWithinBudget()
         {
             using var world = World.Create();

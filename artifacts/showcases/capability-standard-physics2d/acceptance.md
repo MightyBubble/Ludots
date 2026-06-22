@@ -10,7 +10,7 @@
 | Damping field | final damping probe velocity X `1.934` cm/s, applied damping `0.55` |
 | Kinematic rotating door | final rotation `0.72` rad |
 | Physics stats | Hz `15`, potential pairs `0`, contact pairs `0`, last update `0.0000` ms |
-| Test tick timings | frames `40`, avg `3.1037` ms, max `40.0921` ms |
+| Test tick timings | frames `40`, avg `2.1872` ms, max `29.2955` ms |
 
 ## Keyframes
 
