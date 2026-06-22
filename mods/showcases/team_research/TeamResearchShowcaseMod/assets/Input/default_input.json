@@ -1,0 +1,19 @@
+{
+  "actions": [
+    { "id": "TeamResearch.AddMember", "name": "TeamResearch_AddMember", "type": "Button" },
+    { "id": "TeamResearch.ResearchPulse", "name": "TeamResearch_ResearchPulse", "type": "Button" },
+    { "id": "TeamResearch.Reset", "name": "TeamResearch_Reset", "type": "Button" }
+  ],
+  "contexts": [
+    {
+      "id": "TeamResearchShowcase.Controls",
+      "name": "Team Research Showcase Controls",
+      "priority": 88,
+      "bindings": [
+        { "actionId": "TeamResearch.AddMember", "path": "<Keyboard>/a" },
+        { "actionId": "TeamResearch.ResearchPulse", "path": "<Keyboard>/space" },
+        { "actionId": "TeamResearch.Reset", "path": "<Keyboard>/r" }
+      ]
+    }
+  ]
+}

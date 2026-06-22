@@ -17,6 +17,7 @@ namespace Ludots.Core.Gameplay.Items
         private readonly List<Entity> _grantItems = new(32);
         private readonly List<Entity> _staleEffects = new(32);
         private readonly List<DesiredPassiveEffect> _desiredEffects = new(32);
+        private bool[] _matchedDesiredEffects = Array.Empty<bool>();
 
         public InventoryEquipmentGrantSyncSystem(World world, InventoryRuntimeService inventory, EffectRequestQueue effectRequests)
             : base(world)
@@ -154,7 +155,12 @@ namespace Ludots.Core.Gameplay.Items
 
         private void SyncPassiveEffects(Entity actor, List<DesiredPassiveEffect> desiredEffects, List<Entity> staleEffects)
         {
-            bool[] matched = desiredEffects.Count > 0 ? new bool[desiredEffects.Count] : Array.Empty<bool>();
+            if (_matchedDesiredEffects.Length < desiredEffects.Count)
+            {
+                _matchedDesiredEffects = new bool[desiredEffects.Count * 2];
+            }
+
+            Array.Clear(_matchedDesiredEffects, 0, desiredEffects.Count);
 
             if (World.Has<ActiveEffectContainer>(actor))
             {
@@ -178,10 +184,10 @@ namespace Ludots.Core.Gameplay.Items
                     }
 
                     int templateId = World.Get<EffectTemplateRef>(effectEntity).TemplateId;
-                    int desiredIndex = FindDesiredEffect(desiredEffects, matched, templateId, context.TargetContext);
+                    int desiredIndex = FindDesiredEffect(desiredEffects, _matchedDesiredEffects, templateId, context.TargetContext);
                     if (desiredIndex >= 0 && !effect.CancelRequested)
                     {
-                        matched[desiredIndex] = true;
+                        _matchedDesiredEffects[desiredIndex] = true;
                         continue;
                     }
 
@@ -204,11 +210,15 @@ namespace Ludots.Core.Gameplay.Items
 
                 ref GameplayEffect effect = ref World.Get<GameplayEffect>(effectEntity);
                 effect.CancelRequested = true;
+                if (effect.AggregatesModifiers && !World.Has<AttributeAggregateDirty>(actor))
+                {
+                    World.Add(actor, new AttributeAggregateDirty());
+                }
             }
 
             for (int i = 0; i < desiredEffects.Count; i++)
             {
-                if (matched[i])
+                if (_matchedDesiredEffects[i])
                 {
                     continue;
                 }

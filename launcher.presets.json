@@ -56,6 +56,15 @@
       "buildMode": "auto"
     },
     {
+      "id": "progression_scope_raylib",
+      "name": "Progression Scope Raylib",
+      "selectors": [
+        "$progression_scope"
+      ],
+      "adapterId": "raylib",
+      "buildMode": "auto"
+    },
+    {
       "id": "spatial_bounds_showcase_raylib",
       "name": "Spatial Bounds Showcase Raylib",
       "selectors": [

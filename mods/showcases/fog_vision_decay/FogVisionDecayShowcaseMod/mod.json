@@ -1,0 +1,13 @@
+{
+  "name": "FogVisionDecayShowcaseMod",
+  "version": "1.0.0",
+  "description": "Playable fog-of-war knowledge TTL and compaction showcase.",
+  "main": "bin/net8.0/FogVisionDecayShowcaseMod.dll",
+  "priority": 132,
+  "dependencies": {
+    "LudotsCoreMod": "^1.0.0",
+    "CoreInputMod": "^1.0.0"
+  },
+  "author": "OpenAI Codex",
+  "tags": ["showcase", "knowledge", "fog-of-war", "association"]
+}

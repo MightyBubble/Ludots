@@ -1,5 +1,6 @@
 using System;
 using System.Collections.Generic;
+using Ludots.Core.Registry;
 
 namespace Ludots.Core.NodeLibraries.GASGraph.Host
 {
@@ -56,6 +57,11 @@ namespace Ludots.Core.NodeLibraries.GASGraph.Host
         public static string GetName(int id)
         {
             return _idToName.TryGetValue(id, out var name) ? name : string.Empty;
+        }
+
+        public static RegistryMapping[] SnapshotMappings()
+        {
+            return RegistryMappingSnapshot.FromNameToId(_nameToId);
         }
     }
 }

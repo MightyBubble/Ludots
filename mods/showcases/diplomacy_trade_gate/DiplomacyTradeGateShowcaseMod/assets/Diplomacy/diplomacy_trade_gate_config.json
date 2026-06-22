@@ -1,0 +1,18 @@
+{
+  "header": "Diplomacy Trade Gate Showcase",
+  "summary": "Attempt a border exchange, sign an agreement, and declare an embargo to watch Exchange settlement follow relationship requirements.",
+  "controls": "T try exchange | P sign agreement | E declare embargo | C clear embargo",
+  "sourceName": "Azure League",
+  "targetName": "Ember Compact",
+  "sourceLayout": "trade_gate_source_stash",
+  "targetLayout": "trade_gate_target_stash",
+  "creditItem": "trade_gate_credit",
+  "goodsItem": "trade_gate_goods",
+  "operation": "trade_gate.exchange_border_goods",
+  "relationshipType": "Diplomacy",
+  "trustMetric": "Trust",
+  "embargoFlag": "Embargo",
+  "pactTrust": 60,
+  "startingCredits": 30,
+  "tradeCost": 5
+}

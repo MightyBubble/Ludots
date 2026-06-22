@@ -33,6 +33,8 @@ namespace Ludots.Core.Gameplay.Relationships
             _changes = changes ?? throw new ArgumentNullException(nameof(changes));
         }
 
+        public RelationshipTypeRegistry TypeRegistry => _types;
+
         public bool HasLink(Entity source, Entity target)
         {
             return HasLink(source, target, RelationshipTypeRegistry.AnyTypeId);

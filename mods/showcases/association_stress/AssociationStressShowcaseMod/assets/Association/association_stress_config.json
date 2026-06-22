@@ -1,0 +1,14 @@
+{
+  "MapId": "association_stress_showcase",
+  "InitialScaleIndex": 0,
+  "ViewerCount": 24,
+  "ExpiryTickOffset": 12,
+  "Header": "Entity Association Core",
+  "Summary": "Knowledge projections and entity collections share one version-aware sparse table base. Scale up with [ / ] and watch capacity stay bounded after compaction.",
+  "Controls": "[ decrease | ] increase | P pulse | C compact",
+  "Scales": [
+    { "Id": "small", "Label": "Small 8x32", "SquadCount": 8, "MembersPerSquad": 32, "PulseStride": 1 },
+    { "Id": "medium", "Label": "Medium 16x64", "SquadCount": 16, "MembersPerSquad": 64, "PulseStride": 2 },
+    { "Id": "large", "Label": "Large 24x96", "SquadCount": 24, "MembersPerSquad": 96, "PulseStride": 3 }
+  ]
+}

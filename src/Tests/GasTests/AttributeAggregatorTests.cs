@@ -153,8 +153,11 @@ namespace Ludots.Tests.GAS
             attr.SetBase(healthId, 100f);
             attr.SetCurrent(healthId, 70f);
 
+            var gameplayEffect = new GameplayEffect();
+            gameplayEffect.AggregatesModifiers = true;
+            gameplayEffect.State = EffectState.Committed;
             var effect = world.Create(
-                new GameplayEffect { AggregatesModifiers = true },
+                gameplayEffect,
                 new EffectModifiers());
             ref var modifiers = ref world.Get<EffectModifiers>(effect);
             modifiers.Add(healthId, ModifierOp.Add, 25f);
@@ -165,8 +168,9 @@ namespace Ludots.Tests.GAS
             var aggregator = new AttributeAggregatorSystem(world);
             aggregator.Update(0f);
 
-            That(attr.GetCurrent(healthId), Is.EqualTo(70f));
-            That(attr.GetBase(healthId), Is.EqualTo(125f));
+            ref var aggregatedAttr = ref world.Get<AttributeBuffer>(entity);
+            That(aggregatedAttr.GetCurrent(healthId), Is.EqualTo(70f));
+            That(aggregatedAttr.GetBase(healthId), Is.EqualTo(125f));
         }
 
         [Test]
@@ -213,6 +217,42 @@ namespace Ludots.Tests.GAS
 
             That(attr.GetCurrent(healthId), Is.EqualTo(70f));
             That(attr.GetBase(healthId), Is.EqualTo(100f));
+        }
+
+        [Test]
+        public unsafe void CancelledAggregatingEffect_RevertsToBaseWhenLastModifierRemoved()
+        {
+            int moveSpeedId = EnsureAttribute("MoveSpeed");
+
+            using var world = World.Create();
+            var entity = world.Create(new AttributeBuffer(), new ActiveEffectContainer(), new AttributeAggregateDirty());
+            ref var attr = ref world.Get<AttributeBuffer>(entity);
+            attr.SetBase(moveSpeedId, 100f);
+
+            var gameplayEffect = new GameplayEffect();
+            gameplayEffect.AggregatesModifiers = true;
+            gameplayEffect.State = EffectState.Committed;
+            var effect = world.Create(
+                gameplayEffect,
+                new EffectModifiers());
+            ref var modifiers = ref world.Get<EffectModifiers>(effect);
+            modifiers.Add(moveSpeedId, ModifierOp.Add, 18f);
+
+            ref var container = ref world.Get<ActiveEffectContainer>(entity);
+            That(container.Add(effect), Is.True);
+
+            var aggregator = new AttributeAggregatorSystem(world);
+            aggregator.Update(0f);
+            That(world.Get<AttributeBuffer>(entity).GetCurrent(moveSpeedId), Is.EqualTo(118f));
+
+            world.Get<GameplayEffect>(effect).CancelRequested = true;
+            world.Add(entity, new AttributeAggregateDirty());
+
+            aggregator.Update(0f);
+
+            ref var recomputedAttr = ref world.Get<AttributeBuffer>(entity);
+            That(recomputedAttr.GetCurrent(moveSpeedId), Is.EqualTo(100f));
+            That(recomputedAttr.GetBase(moveSpeedId), Is.EqualTo(100f));
         }
 
         [Test]

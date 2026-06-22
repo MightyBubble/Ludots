@@ -1,0 +1,7 @@
+[
+  {
+    "id": "team",
+    "memberSource": "EntityCollection",
+    "collection": "team.members"
+  }
+]

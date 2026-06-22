@@ -22,7 +22,8 @@
       "limit": 3,
       "policy": "RefreshDuration",
       "overflowPolicy": "RejectNew"
-    }
+    },
+    "participatesInResponse": false
   },
   {
     "id": "Effect.Arpg.HealPotion",
@@ -37,7 +38,8 @@
         "op": "Add",
         "value": 25
       }
-    ]
+    ],
+    "participatesInResponse": false
   },
   {
     "id": "Effect.Arpg.FireArrow",
@@ -51,7 +53,8 @@
       "range": 2000,
       "arcHeight": 0,
       "impactEffect": "Effect.Arpg.Poison",
-      "collisionRelationFilter": "All"
+      "travelMode": "Legacy",
+      "impactPolicy": "Legacy"
     },
     "configParams": {
       "damage_base": {
@@ -62,7 +65,8 @@
         "type": "Int",
         "value": 1
       }
-    }
+    },
+    "participatesInResponse": false
   },
   {
     "id": "Effect.Arpg.SummonWolf",
@@ -75,8 +79,10 @@
       "unitType": "Unit.Wolf",
       "count": 1,
       "offsetRadius": 120,
-      "onSpawnEffect": "Effect.Arpg.WolfSpawnBuff"
-    }
+      "onSpawnEffect": "Effect.Arpg.WolfSpawnBuff",
+      "placementPattern": "Scatter"
+    },
+    "participatesInResponse": false
   },
   {
     "id": "Effect.Arpg.WolfSpawnBuff",
@@ -96,7 +102,8 @@
         "op": "Add",
         "value": 5
       }
-    ]
+    ],
+    "participatesInResponse": false
   },
   {
     "id": "Effect.Arpg.Bleed",

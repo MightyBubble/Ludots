@@ -1,0 +1,13 @@
+{
+  "name": "ScopeSwitchShowcaseMod",
+  "version": "1.0.0",
+  "description": "Playable ScopeKey and RoleSlot showcase for self, squad, team, and city viewer scopes.",
+  "main": "bin/net8.0/ScopeSwitchShowcaseMod.dll",
+  "priority": 0,
+  "dependencies": {
+    "LudotsCoreMod": "^1.0.0",
+    "CoreInputMod": "^1.0.0"
+  },
+  "author": "Ludots Team",
+  "tags": ["association", "scope", "showcase", "knowledge"]
+}

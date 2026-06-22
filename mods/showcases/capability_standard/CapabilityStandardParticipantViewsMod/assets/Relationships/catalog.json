@@ -1,0 +1,26 @@
+{
+  "types": [
+    { "id": "Participant", "isSymmetric": false }
+  ],
+  "knowledgeGrants": [
+    {
+      "id": "participant-view.ally-share",
+      "typeId": "Participant",
+      "collectionKey": "participant_view.ally.share",
+      "presence": "HiddenWithSource",
+      "position": "LastKnown",
+      "attributes": [ "Health" ],
+      "relationshipTypes": [ "Participant" ],
+      "confidencePermille": 760
+    },
+    {
+      "id": "participant-view.neutral-rumor",
+      "typeId": "Participant",
+      "collectionKey": "participant_view.neutral.rumor",
+      "presence": "HiddenWithSource",
+      "position": "LastKnown",
+      "attributes": [ "Health" ],
+      "confidencePermille": 520
+    }
+  ]
+}

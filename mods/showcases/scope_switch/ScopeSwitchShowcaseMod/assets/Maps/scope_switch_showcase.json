@@ -1,0 +1,14 @@
+{
+  "Id": "scope_switch_showcase",
+  "Tags": ["scope_switch_showcase", "showcase", "association", "knowledge"],
+  "DefaultCamera": {
+    "VirtualCameraId": "Tactical",
+    "TargetXCm": 0,
+    "TargetYCm": 0,
+    "DistanceCm": 9000,
+    "Pitch": 58,
+    "Yaw": 180,
+    "FovYDeg": 48
+  },
+  "Entities": []
+}

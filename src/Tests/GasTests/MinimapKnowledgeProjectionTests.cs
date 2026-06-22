@@ -7,6 +7,7 @@ using Ludots.Core.Engine;
 using Ludots.Core.EntityCollections;
 using Ludots.Core.Gameplay.GAS;
 using Ludots.Core.Gameplay.Relationships;
+using Ludots.Core.Gameplay.Relationships.Config;
 using Ludots.Core.Knowledge;
 using Ludots.Core.Presentation;
 using Ludots.Core.Presentation.Minimap;
@@ -59,13 +60,16 @@ public sealed class MinimapKnowledgeProjectionTests
             allyIntelSource,
             EntityCollectionDescriptor.Create("minimap.knowledge.disclosed", EntityCollectionSourceKind.RelationDerived, EntityCollectionRoleKind.Display),
             new[] { disclosedTarget });
-        var grants = new KnowledgeRelationCollectionGrantStore();
-        grants.Upsert(new KnowledgeRelationCollectionGrant(
-            intelTypeId,
-            collectionKeyId,
-            CreateRecord(KnowledgePresence.HiddenWithSource, KnowledgePositionAccess.LastKnown, allyIntelSource)));
-        var projector = new KnowledgeRelationCollectionProjector(relationships, collections, grants, store);
-        InstallKnowledgeServices(engine, store, grants, projector);
+        RelationshipCatalogRuntime catalogRuntime = CreateCatalogRuntime(
+            relationshipTypes,
+            collections,
+            "Minimap.KnowledgeIntel",
+            "minimap.knowledge.disclosed",
+            CreateRecord(KnowledgePresence.HiddenWithSource, KnowledgePositionAccess.LastKnown, allyIntelSource),
+            attributeId: 1,
+            relationshipTypeId: 2);
+        var projector = new KnowledgeRelationCollectionProjector(relationships, collections, catalogRuntime, store);
+        InstallKnowledgeServices(engine, store, projector);
 
         SeedMarkers(markers, liveTarget, lastKnownTarget, disclosedTarget, hiddenTarget);
         runtime.Visible = true;
@@ -105,7 +109,7 @@ public sealed class MinimapKnowledgeProjectionTests
             viewer,
             expiringTarget,
             CreateRecord(KnowledgePresence.Known, KnowledgePositionAccess.LastKnown, viewer, expiryTick: 2));
-        InstallKnowledgeServices(engine, store, null, null);
+        InstallKnowledgeServices(engine, store, null);
         engine.SetService(CoreServiceKeys.SelectionViewViewerEntity, viewer);
 
         markers.BeginFrame();
@@ -146,7 +150,7 @@ public sealed class MinimapKnowledgeProjectionTests
             Assert.That(markers.TryAdd(10_000 + i, owner, -3000f + (i * 90f), (i % 8) * 500f, in color, 7f), Is.True);
         }
 
-        InstallKnowledgeServices(engine, store, null, null);
+        InstallKnowledgeServices(engine, store, null);
         engine.SetService(CoreServiceKeys.SelectionViewViewerEntity, viewer);
         runtime.Visible = true;
         runtime.UseRtsFullMapPreset();
@@ -200,14 +204,9 @@ public sealed class MinimapKnowledgeProjectionTests
     private static void InstallKnowledgeServices(
         GameEngine engine,
         KnowledgeProjectionStore store,
-        KnowledgeRelationCollectionGrantStore? grants,
         KnowledgeRelationCollectionProjector? projector)
     {
         engine.SetService(CoreServiceKeys.KnowledgeProjectionStore, store);
-        if (grants != null)
-        {
-            engine.SetService(CoreServiceKeys.KnowledgeRelationCollectionGrantStore, grants);
-        }
 
         if (projector != null)
         {
@@ -215,6 +214,40 @@ public sealed class MinimapKnowledgeProjectionTests
         }
 
         engine.SetService(CoreServiceKeys.KnowledgeProjectionResolver, new KnowledgeProjectionResolver(store, projector));
+    }
+
+    private static RelationshipCatalogRuntime CreateCatalogRuntime(
+        RelationshipTypeRegistry relationshipTypes,
+        EntityCollectionStore collections,
+        string typeId,
+        string collectionKey,
+        in KnowledgeDisclosureRecord profile,
+        int attributeId,
+        int relationshipTypeId)
+    {
+        return RelationshipCatalogRuntime.Compile(
+            new RelationshipCatalogConfig
+            {
+                KnowledgeGrants =
+                {
+                    new RelationshipKnowledgeGrantConfig
+                    {
+                        Id = $"{typeId}.{collectionKey}",
+                        TypeId = typeId,
+                        CollectionKey = collectionKey,
+                        Presence = profile.Presence,
+                        Position = profile.Position,
+                        AttributeIds = { attributeId },
+                        RelationshipTypeIds = { relationshipTypeId },
+                        ObservedTick = profile.ObservedTick,
+                        ExpiryTick = profile.ExpiryTick,
+                        ConfidencePermille = profile.ConfidencePermille
+                    }
+                }
+            },
+            relationshipTypes,
+            new RelationshipMetricRegistry(),
+            collections);
     }
 
     private static void SeedMarkers(MinimapMarkerBuffer markers, params Entity[] owners)

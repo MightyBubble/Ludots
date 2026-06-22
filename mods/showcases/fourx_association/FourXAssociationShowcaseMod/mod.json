@@ -1,0 +1,21 @@
+{
+  "name": "FourXAssociationShowcaseMod",
+  "version": "1.0.0",
+  "description": "Integrated 4X Entity Association Core showcase linking fog, diplomacy, trade, shared research, and ownership.",
+  "main": "bin/net8.0/FourXAssociationShowcaseMod.dll",
+  "priority": 140,
+  "dependencies": {
+    "LudotsCoreMod": "^1.0.0",
+    "CoreInputMod": "^1.0.0",
+    "EntityCommandPanelMod": "^1.0.0",
+    "AssociationStressShowcaseMod": "^1.0.0",
+    "FogVisionDecayShowcaseMod": "^1.0.0",
+    "ScopeSwitchShowcaseMod": "^1.0.0",
+    "OwnershipCascadeShowcaseMod": "^1.0.0",
+    "DiplomacyTradeGateShowcaseMod": "^1.0.0",
+    "GoldMarketShowcaseMod": "^1.0.0",
+    "TeamResearchShowcaseMod": "^1.0.0"
+  },
+  "author": "OpenAI Codex",
+  "tags": ["showcase", "fourx", "entity-association", "knowledge", "exchange", "progression", "ownership"]
+}

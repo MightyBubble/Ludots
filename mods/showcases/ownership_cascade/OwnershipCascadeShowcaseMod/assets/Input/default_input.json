@@ -1,0 +1,17 @@
+{
+  "actions": [
+    { "id": "OwnershipCascade.Capture", "name": "OwnershipCascade_Capture", "type": "Button" },
+    { "id": "OwnershipCascade.Reclaim", "name": "OwnershipCascade_Reclaim", "type": "Button" }
+  ],
+  "contexts": [
+    {
+      "id": "OwnershipCascade.Controls",
+      "name": "Ownership Cascade Controls",
+      "priority": 86,
+      "bindings": [
+        { "actionId": "OwnershipCascade.Capture", "path": "<Keyboard>/c" },
+        { "actionId": "OwnershipCascade.Reclaim", "path": "<Keyboard>/r" }
+      ]
+    }
+  ]
+}

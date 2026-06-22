@@ -1,0 +1,19 @@
+{
+  "actions": [
+    { "id": "FogVisionDecay.TogglePatrol", "name": "FogVisionDecay_TogglePatrol", "type": "Button" },
+    { "id": "FogVisionDecay.StepPatrol", "name": "FogVisionDecay_StepPatrol", "type": "Button" },
+    { "id": "FogVisionDecay.Compact", "name": "FogVisionDecay_Compact", "type": "Button" }
+  ],
+  "contexts": [
+    {
+      "id": "FogVisionDecayShowcase.Controls",
+      "name": "Fog Vision Decay Showcase Controls",
+      "priority": 85,
+      "bindings": [
+        { "actionId": "FogVisionDecay.TogglePatrol", "path": "<Keyboard>/space" },
+        { "actionId": "FogVisionDecay.StepPatrol", "path": "<Keyboard>/n" },
+        { "actionId": "FogVisionDecay.Compact", "path": "<Keyboard>/c" }
+      ]
+    }
+  ]
+}

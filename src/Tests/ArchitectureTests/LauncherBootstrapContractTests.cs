@@ -515,6 +515,59 @@ namespace Ludots.Tests.Architecture
         }
 
         [Test]
+        public void Launcher_ResolvesProgressionScopeShowcase_AsSingleFeatureRoot()
+        {
+            var repoRoot = FindRepoRoot();
+            var tempDirectory = Path.Combine(repoRoot, "artifacts", "tests", $"launcher-progression-scope-{Guid.NewGuid():N}");
+            Directory.CreateDirectory(tempDirectory);
+
+            try
+            {
+                var preferencesPath = Path.Combine(tempDirectory, "preferences.json");
+                var userConfigPath = Path.Combine(tempDirectory, "config.overlay.json");
+                File.WriteAllText(preferencesPath, "{}");
+                File.WriteAllText(userConfigPath, "{}");
+
+                var launcher = new LauncherService(
+                    repoRoot,
+                    Path.Combine(repoRoot, "launcher.config.json"),
+                    Path.Combine(repoRoot, "launcher.presets.json"),
+                    preferencesPath,
+                    userConfigPath);
+
+                var plan = launcher.Resolve(
+                    new[] { "$progression_scope" },
+                    LauncherPlatformIds.Raylib,
+                    LauncherBuildMode.Never).Plan;
+
+                Assert.That(plan.RootModIds, Is.EqualTo(new[] { "ProgressionScopeShowcaseMod" }));
+                Assert.That(plan.OrderedModIds, Is.SubsetOf(new[]
+                {
+                    "LudotsCoreMod",
+                    "CoreInputMod",
+                    "EntityCommandPanelMod",
+                    "ProgressionScopeShowcaseMod"
+                }));
+                Assert.That(plan.OrderedModIds, Does.Contain("ProgressionScopeShowcaseMod"));
+                Assert.That(plan.OrderedModIds, Does.Not.Contain("RtsDemoMod"));
+                Assert.That(plan.OrderedModIds, Does.Not.Contain("RtsWar3TrainingShowcaseMod"));
+                Assert.That(plan.OrderedModIds, Does.Not.Contain("RtsCncTrainingShowcaseMod"));
+                Assert.That(plan.OrderedModIds, Does.Not.Contain("RtsSc2TrainingShowcaseMod"));
+
+                var startupMapSetting = plan.Diagnostics.Settings.First(setting => string.Equals(setting.Key, "startupMapId", StringComparison.Ordinal));
+                Assert.That(startupMapSetting.EffectiveValue?.GetValue<string>(), Is.EqualTo("progression_scope_showcase"));
+                Assert.That(startupMapSetting.EffectiveSource, Does.Contain("ProgressionScopeShowcaseMod"));
+            }
+            finally
+            {
+                if (Directory.Exists(tempDirectory))
+                {
+                    Directory.Delete(tempDirectory, recursive: true);
+                }
+            }
+        }
+
+        [Test]
         public void GameBootstrapper_RejectsUnknownLauncherMetadataFields()
         {
             var repoRoot = FindRepoRoot();

@@ -42,18 +42,17 @@ internal static class ParticipantViewKnowledgeShowcaseInstaller
             ?? throw new InvalidOperationException("CapabilityStandardParticipantViewsMod requires RelationshipTypeRegistry.");
         EntityCollectionStore collections = engine.GetService(CoreServiceKeys.EntityCollectionStore)
             ?? throw new InvalidOperationException("CapabilityStandardParticipantViewsMod requires EntityCollectionStore.");
+        RelationshipCatalogRuntime relationshipCatalog = engine.GetService(CoreServiceKeys.RelationshipCatalogRuntime)
+            ?? throw new InvalidOperationException("CapabilityStandardParticipantViewsMod requires RelationshipCatalogRuntime.");
 
         var store = new KnowledgeProjectionStore(initialCapacity: Math.Max(64, metadata.Projections.Length * 16));
-        var grants = new KnowledgeRelationCollectionGrantStore(initialGrantCapacity: Math.Max(8, metadata.Grants.Length + 1));
-        var projector = new KnowledgeRelationCollectionProjector(relationships, collections, grants, store);
+        var projector = new KnowledgeRelationCollectionProjector(relationships, collections, relationshipCatalog, store);
 
         InstallCollections(session, collections, metadata.Collections);
         InstallRelations(session, relationships, relationshipTypes, metadata.Relations);
-        InstallGrants(relationshipTypes, collections, grants, metadata.Grants);
         InstallDirectProjections(engine.World, session, relationshipTypes, store, metadata.Projections);
 
         engine.SetService(CoreServiceKeys.KnowledgeProjectionStore, store);
-        engine.SetService(CoreServiceKeys.KnowledgeRelationCollectionGrantStore, grants);
         engine.SetService(CoreServiceKeys.KnowledgeRelationCollectionProjector, projector);
         engine.SetService(CoreServiceKeys.KnowledgeProjectionResolver, new KnowledgeProjectionResolver(store, projector));
     }
@@ -110,7 +109,7 @@ internal static class ParticipantViewKnowledgeShowcaseInstaller
         for (int i = 0; i < specs.Length; i++)
         {
             KnowledgeRelationSpec spec = specs[i];
-            int relationshipTypeId = relationshipTypes.Register(
+            int relationshipTypeId = relationshipTypes.GetId(
                 RequireNonEmpty(spec.RelationshipType, $"metadata.{MetadataSectionKey}.relations[{i}].relationshipType"));
             Entity target = ResolveEntityRef(session, spec.Target, $"metadata.{MetadataSectionKey}.relations[{i}].target");
             string context = $"metadata.{MetadataSectionKey}.relations[{i}].viewers";
@@ -119,35 +118,6 @@ internal static class ParticipantViewKnowledgeShowcaseInstaller
                 Entity viewer = ResolveEntityRef(session, spec.Viewers[viewerIndex], $"{context}[{viewerIndex}]");
                 relationships.EnsureLink(viewer, target, relationshipTypeId);
             }
-        }
-    }
-
-    private static void InstallGrants(
-        RelationshipTypeRegistry relationshipTypes,
-        EntityCollectionStore collections,
-        KnowledgeRelationCollectionGrantStore grants,
-        KnowledgeGrantSpec[] specs)
-    {
-        for (int i = 0; i < specs.Length; i++)
-        {
-            KnowledgeGrantSpec spec = specs[i];
-            int relationshipTypeId = relationshipTypes.Register(
-                RequireNonEmpty(spec.RelationshipType, $"metadata.{MetadataSectionKey}.grants[{i}].relationshipType"));
-            int collectionKeyId = collections.KeyRegistry.Register(
-                RequireNonEmpty(spec.CollectionKey, $"metadata.{MetadataSectionKey}.grants[{i}].collectionKey"));
-            grants.Upsert(new KnowledgeRelationCollectionGrant(
-                relationshipTypeId,
-                collectionKeyId,
-                CreateRecord(
-                    spec.Presence,
-                    spec.Position,
-                    Entity.Null,
-                    BuildMask(spec.AttributeIds, spec.Attributes, ResolveAttributeId, $"metadata.{MetadataSectionKey}.grants[{i}].attributes"),
-                    BuildMask(spec.RelationshipTypeIds, spec.RelationshipTypes, name => relationshipTypes.Register(name), $"metadata.{MetadataSectionKey}.grants[{i}].relationshipTypes"),
-                    BuildMask(spec.TagIds, spec.Tags, ResolveTagId, $"metadata.{MetadataSectionKey}.grants[{i}].tags"),
-                    spec.ObservedTick,
-                    spec.ExpiryTick,
-                    spec.ConfidencePermille)));
         }
     }
 
@@ -170,7 +140,7 @@ internal static class ParticipantViewKnowledgeShowcaseInstaller
             KnowledgeIdMask256 relationshipMask = BuildMask(
                 spec.RelationshipTypeIds,
                 spec.RelationshipTypes,
-                name => relationshipTypes.Register(name),
+                relationshipTypes.GetId,
                 $"metadata.{MetadataSectionKey}.projections[{i}].relationshipTypes");
             KnowledgeIdMask256 tagMask = BuildMask(
                 spec.TagIds,
@@ -415,7 +385,6 @@ internal static class ParticipantViewKnowledgeShowcaseInstaller
         public KnowledgeProjectionSpec[] Projections { get; set; } = Array.Empty<KnowledgeProjectionSpec>();
         public KnowledgeRelationSpec[] Relations { get; set; } = Array.Empty<KnowledgeRelationSpec>();
         public KnowledgeCollectionSpec[] Collections { get; set; } = Array.Empty<KnowledgeCollectionSpec>();
-        public KnowledgeGrantSpec[] Grants { get; set; } = Array.Empty<KnowledgeGrantSpec>();
     }
 
     private sealed class KnowledgeProjectionSpec
@@ -460,20 +429,4 @@ internal static class ParticipantViewKnowledgeShowcaseInstaller
         public string? Summary { get; set; }
     }
 
-    private sealed class KnowledgeGrantSpec
-    {
-        public string RelationshipType { get; set; } = string.Empty;
-        public string CollectionKey { get; set; } = string.Empty;
-        public KnowledgePresence Presence { get; set; }
-        public KnowledgePositionAccess Position { get; set; }
-        public int[] AttributeIds { get; set; } = Array.Empty<int>();
-        public string[] Attributes { get; set; } = Array.Empty<string>();
-        public int[] RelationshipTypeIds { get; set; } = Array.Empty<int>();
-        public string[] RelationshipTypes { get; set; } = Array.Empty<string>();
-        public int[] TagIds { get; set; } = Array.Empty<int>();
-        public string[] Tags { get; set; } = Array.Empty<string>();
-        public int ObservedTick { get; set; } = 1;
-        public int ExpiryTick { get; set; }
-        public int ConfidencePermille { get; set; } = 1000;
-    }
 }

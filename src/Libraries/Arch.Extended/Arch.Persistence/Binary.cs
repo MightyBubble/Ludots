@@ -269,6 +269,9 @@ public partial class EntitySlotFormatter : IMessagePackFormatter<EntityData>
 
         // Write entity index
         writer.WriteUInt32((uint)value.Slot.Index);
+
+        // Write version
+        writer.WriteInt32(value.Version);
     }
 
     /// <inheritdoc cref="IMessagePackFormatter{T}.Deserialize"/>
@@ -278,8 +281,9 @@ public partial class EntitySlotFormatter : IMessagePackFormatter<EntityData>
         // Read chunk index and entity index
         var chunkIndex = reader.ReadUInt32();
         var entityIndex = reader.ReadUInt32();
+        var version = reader.ReadInt32();
 
-        return new EntityData(null!, new Slot((int)entityIndex, (int)chunkIndex), 0);
+        return new EntityData(null!, new Slot((int)entityIndex, (int)chunkIndex), version);
     }
 }
 

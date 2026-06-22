@@ -1,0 +1,16 @@
+[
+  {
+    "id": "gold_market_relic",
+    "displayName": "Aether Relic",
+    "shape": "gold_market_shape_1x1",
+    "maxStack": 999,
+    "tags": ["GoldMarket.Relic"]
+  },
+  {
+    "id": "gold_market_bonus",
+    "displayName": "Bonus Crate",
+    "shape": "gold_market_shape_1x1",
+    "maxStack": 999,
+    "tags": ["GoldMarket.Bonus"]
+  }
+]

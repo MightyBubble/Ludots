@@ -1,0 +1,14 @@
+{
+  "name": "TeamResearchShowcaseMod",
+  "version": "1.0.0",
+  "description": "AAC-8 team-scoped shared technology showcase using collection-backed scope membership.",
+  "main": "bin/net8.0/TeamResearchShowcaseMod.dll",
+  "priority": 132,
+  "dependencies": {
+    "LudotsCoreMod": "^1.0.0",
+    "CoreInputMod": "^1.0.0",
+    "EntityCommandPanelMod": "^1.0.0"
+  },
+  "author": "OpenAI Codex",
+  "tags": ["showcase", "progression", "team-research", "entity-association"]
+}

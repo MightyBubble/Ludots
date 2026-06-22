@@ -2,6 +2,7 @@ using System;
 using System.Collections.Generic;
 using System.Text.Json.Nodes;
 using Ludots.Core.Config;
+using Ludots.Core.NodeLibraries.GASGraph.Host;
 
 namespace Ludots.Core.Gameplay.GAS.Config
 {
@@ -121,12 +122,13 @@ namespace Ludots.Core.Gameplay.GAS.Config
 
             if (type == "graph")
             {
-                if (int.TryParse(id, out int graphId) && graphId > 0)
+                int graphId = GraphIdRegistry.GetId(id);
+                if (graphId > 0)
                 {
                     return PhaseHandler.Graph(graphId);
                 }
 
-                throw new InvalidOperationException($"Preset type '{presetTypeId}' handler '{phaseName}' graph id '{id}' must be a positive numeric graph id.");
+                throw new InvalidOperationException($"Preset type '{presetTypeId}' handler '{phaseName}' references unknown graph '{id}'.");
             }
 
             throw new InvalidOperationException($"Preset type '{presetTypeId}' handler '{phaseName}' has unsupported type '{type}'. Supported: builtin, graph.");

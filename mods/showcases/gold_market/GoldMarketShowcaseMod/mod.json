@@ -1,0 +1,13 @@
+{
+  "name": "GoldMarketShowcaseMod",
+  "version": "1.0.0",
+  "description": "Playable AAC-7 Exchange attribute cost showcase.",
+  "main": "bin/net8.0/GoldMarketShowcaseMod.dll",
+  "priority": 0,
+  "dependencies": {
+    "LudotsCoreMod": "^1.0.0",
+    "CoreInputMod": "^1.0.0"
+  },
+  "author": "Ludots Team",
+  "tags": ["association", "exchange", "gas", "showcase"]
+}

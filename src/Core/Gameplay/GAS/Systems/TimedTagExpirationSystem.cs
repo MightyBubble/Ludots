@@ -104,9 +104,7 @@ namespace Ludots.Core.Gameplay.GAS.Systems
                     int now = Clock.Now(clockId.ToDomainId());
                     if (now < expireAt) continue;
 
-                    TagOps.RemoveTag(ref tags, ref counts, tagId);
-                    dirtyFlags.MarkTagDirty(tagId);
-                    anyDirty = true;
+                    anyDirty |= TagOps.RemoveTag(ref tags, ref counts, tagId, ref dirtyFlags);
                     timed.RemoveAtSwapBack(i);
                 }
 

@@ -1,0 +1,9 @@
+[
+  {
+    "id": "fourx_association_supply",
+    "displayName": "Signal Supply",
+    "shape": "fourx_association_shape_1x1",
+    "maxStack": 999,
+    "tags": ["FourXAssociation.Supply"]
+  }
+]

@@ -93,9 +93,22 @@ namespace Ludots.Core.Registry
             return _idToName[id] ?? string.Empty;
         }
 
+        public RegistryMapping[] SnapshotMappings()
+        {
+            return RegistryMappingSnapshot.FromNameToId(_nameToId);
+        }
+
         public bool Contains(string name)
         {
             return !string.IsNullOrWhiteSpace(name) && _nameToId.ContainsKey(name);
+        }
+
+        public void Clear()
+        {
+            _nameToId.Clear();
+            Array.Clear(_idToName, 0, _idToName.Length);
+            _nextId = _startId;
+            _frozen = false;
         }
 
         /// <summary>

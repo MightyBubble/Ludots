@@ -79,6 +79,16 @@ namespace Ludots.Core.Presentation.Performers
             }
         }
 
+        public static RegistryMapping[] SnapshotMappings()
+        {
+            lock (Sync)
+            {
+                return RegistryMappingSnapshot.Merge(
+                    RegistryMappingSnapshot.FromNameToId(WellKnown),
+                    _custom.SnapshotMappings());
+            }
+        }
+
         public static void ClearCustomKeysForTests()
         {
             lock (Sync)

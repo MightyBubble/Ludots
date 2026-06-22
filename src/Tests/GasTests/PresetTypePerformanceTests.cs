@@ -66,7 +66,7 @@ namespace Ludots.Tests.GAS
         public void PresetTypeRegistry_Lookup_HighThroughput()
         {
             var reg = new PresetTypeRegistry();
-            int registeredTypeCount = (int)EffectPresetType.Relation + 1;
+            int registeredTypeCount = (int)EffectPresetType.Exchange + 1;
             for (int i = 0; i < registeredTypeCount; i++)
             {
                 var def = new PresetTypeDefinition

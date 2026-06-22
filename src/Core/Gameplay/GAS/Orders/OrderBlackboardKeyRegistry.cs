@@ -62,6 +62,16 @@ namespace Ludots.Core.Gameplay.GAS.Orders
             }
         }
 
+        public static RegistryMapping[] SnapshotMappings()
+        {
+            lock (Sync)
+            {
+                return RegistryMappingSnapshot.Merge(
+                    RegistryMappingSnapshot.FromNameToId(BuiltinIdsByKey),
+                    _custom.SnapshotMappings());
+            }
+        }
+
         public static void ResetToBuiltins()
         {
             lock (Sync)

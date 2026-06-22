@@ -70,7 +70,18 @@ namespace Ludots.Tests.GAS
                 var inputReq = new InputRequestQueue();
                 var chainOrders = new OrderQueue();
 
-                var processing = new EffectProcessingLoopSystem(world, requests, clock, conditions, budget, templates, inputReq, chainOrders, new ResponseChainTelemetryBuffer(), new OrderRequestQueue())
+                var processing = new EffectProcessingLoopSystem(
+                    world,
+                    requests,
+                    clock,
+                    conditions,
+                    budget,
+                    templates,
+                    inputReq,
+                    chainOrders,
+                    new ResponseChainTelemetryBuffer(),
+                    new OrderRequestQueue(),
+                    responseChainOrderTypes: TestResponseChainOrderTypeIds.Types)
                 {
                     MaxWorkUnitsPerSlice = int.MaxValue
                 };

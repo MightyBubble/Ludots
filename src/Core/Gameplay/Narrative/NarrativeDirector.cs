@@ -22,6 +22,34 @@ namespace Ludots.Core.Gameplay.Narrative
         public const string Choice3 = "NarrativeChoice3";
     }
 
+    public sealed record NarrativeQuestSnapshot(
+        string QuestId,
+        NarrativeQuestState State,
+        int StageIndex);
+
+    public sealed record NarrativeEntityBindingSnapshot(
+        string Alias,
+        Entity Entity);
+
+    public sealed record NarrativeDialogueSnapshot(
+        string DialogueId,
+        string NodeId,
+        float ElapsedSeconds);
+
+    public sealed record NarrativeCinematicSnapshot(
+        string CinematicId,
+        int StepIndex,
+        float ElapsedSeconds,
+        bool AdvanceRequested);
+
+    public sealed record NarrativeDirectorSnapshot(
+        IReadOnlyDictionary<string, NarrativeValue> Variables,
+        IReadOnlyList<NarrativeQuestSnapshot> Quests,
+        IReadOnlyDictionary<string, int> Signals,
+        IReadOnlyList<NarrativeEntityBindingSnapshot> Bindings,
+        NarrativeDialogueSnapshot ActiveDialogue,
+        NarrativeCinematicSnapshot ActiveCinematic);
+
     public sealed class NarrativeDirector
     {
         private readonly GameEngine _engine;
@@ -129,6 +157,144 @@ namespace Ludots.Core.Gameplay.Narrative
             }
 
             return views;
+        }
+
+        public NarrativeDirectorSnapshot CaptureSnapshot()
+        {
+            var quests = new List<NarrativeQuestSnapshot>(_quests.Count);
+            foreach (var pair in _quests)
+            {
+                NarrativeQuestRuntime runtime = pair.Value;
+                quests.Add(new NarrativeQuestSnapshot(
+                    runtime.Definition.Id,
+                    runtime.State,
+                    runtime.StageIndex));
+            }
+
+            var bindings = new List<NarrativeEntityBindingSnapshot>(_bindings.Count);
+            foreach (var pair in _bindings)
+            {
+                bindings.Add(new NarrativeEntityBindingSnapshot(pair.Key, pair.Value));
+            }
+
+            NarrativeDialogueSnapshot dialogue = null;
+            if (_activeDialogue?.CurrentNode != null)
+            {
+                dialogue = new NarrativeDialogueSnapshot(
+                    _activeDialogue.Definition.Id,
+                    _activeDialogue.CurrentNode.Id,
+                    _activeDialogue.ElapsedSeconds);
+            }
+
+            NarrativeCinematicSnapshot cinematic = null;
+            if (_activeCinematic?.CurrentStep != null)
+            {
+                cinematic = new NarrativeCinematicSnapshot(
+                    _activeCinematic.Definition.Id,
+                    _activeCinematic.StepIndex,
+                    _activeCinematic.ElapsedSeconds,
+                    _activeCinematic.AdvanceRequested);
+            }
+
+            return new NarrativeDirectorSnapshot(
+                _variables.CaptureSnapshot(),
+                quests,
+                new Dictionary<string, int>(_signals, StringComparer.OrdinalIgnoreCase),
+                bindings,
+                dialogue,
+                cinematic);
+        }
+
+        public void RestoreSnapshot(NarrativeDirectorSnapshot snapshot)
+        {
+            if (snapshot == null) throw new ArgumentNullException(nameof(snapshot));
+
+            _variables.RestoreSnapshot(snapshot.Variables);
+            _quests.Clear();
+            for (int i = 0; i < snapshot.Quests.Count; i++)
+            {
+                NarrativeQuestSnapshot questSnapshot = snapshot.Quests[i];
+                if (!_definitions.TryGetQuest(questSnapshot.QuestId, out NarrativeQuestDefinition definition))
+                {
+                    throw new InvalidOperationException(
+                        $"Narrative quest '{questSnapshot.QuestId}' is not registered.");
+                }
+
+                if (questSnapshot.StageIndex < -1 || questSnapshot.StageIndex >= definition.Stages.Count)
+                {
+                    throw new InvalidOperationException(
+                        $"Narrative quest '{questSnapshot.QuestId}' has invalid stage index {questSnapshot.StageIndex}.");
+                }
+
+                _quests[questSnapshot.QuestId] = new NarrativeQuestRuntime(definition)
+                {
+                    State = questSnapshot.State,
+                    StageIndex = questSnapshot.StageIndex
+                };
+            }
+
+            _signals.Clear();
+            foreach (var pair in snapshot.Signals)
+            {
+                _signals[pair.Key] = pair.Value;
+            }
+
+            _bindings.Clear();
+            for (int i = 0; i < snapshot.Bindings.Count; i++)
+            {
+                NarrativeEntityBindingSnapshot binding = snapshot.Bindings[i];
+                _bindings[binding.Alias] = binding.Entity;
+            }
+
+            _activeDialogue = null;
+            if (snapshot.ActiveDialogue != null)
+            {
+                if (!_definitions.TryGetDialogue(snapshot.ActiveDialogue.DialogueId, out NarrativeDialogueDefinition definition))
+                {
+                    throw new InvalidOperationException(
+                        $"Narrative dialogue '{snapshot.ActiveDialogue.DialogueId}' is not registered.");
+                }
+
+                NarrativeDialogueNodeDefinition node = definition.Nodes.Find(n =>
+                    string.Equals(n.Id, snapshot.ActiveDialogue.NodeId, StringComparison.OrdinalIgnoreCase));
+                if (node == null)
+                {
+                    throw new InvalidOperationException(
+                        $"Narrative dialogue '{snapshot.ActiveDialogue.DialogueId}' node '{snapshot.ActiveDialogue.NodeId}' is not registered.");
+                }
+
+                _activeDialogue = new NarrativeDialogueSession(definition)
+                {
+                    CurrentNode = node,
+                    ElapsedSeconds = snapshot.ActiveDialogue.ElapsedSeconds,
+                    CurrentChoices = BuildDialogueChoices(node)
+                };
+            }
+
+            _activeCinematic = null;
+            if (snapshot.ActiveCinematic != null)
+            {
+                if (!_definitions.TryGetCinematic(snapshot.ActiveCinematic.CinematicId, out NarrativeCinematicDefinition definition))
+                {
+                    throw new InvalidOperationException(
+                        $"Narrative cinematic '{snapshot.ActiveCinematic.CinematicId}' is not registered.");
+                }
+
+                int stepIndex = snapshot.ActiveCinematic.StepIndex;
+                if (stepIndex < 0 || stepIndex >= definition.Steps.Count)
+                {
+                    throw new InvalidOperationException(
+                        $"Narrative cinematic '{snapshot.ActiveCinematic.CinematicId}' has invalid step index {stepIndex}.");
+                }
+
+                _activeCinematic = new NarrativeCinematicSession(definition)
+                {
+                    StepIndex = stepIndex,
+                    CurrentStep = definition.Steps[stepIndex],
+                    ElapsedSeconds = snapshot.ActiveCinematic.ElapsedSeconds,
+                    AdvanceRequested = snapshot.ActiveCinematic.AdvanceRequested
+                };
+            }
         }
 
         public void StartQuest(string questId)
@@ -617,14 +783,7 @@ namespace Ludots.Core.Gameplay.Narrative
 
             _activeDialogue.CurrentNode = node;
             _activeDialogue.ElapsedSeconds = 0f;
-            _activeDialogue.CurrentChoices = new List<NarrativeDialogueChoiceDefinition>();
-            for (int i = 0; i < node.Choices.Count; i++)
-            {
-                if (EvaluateConditions(node.Choices[i].Conditions))
-                {
-                    _activeDialogue.CurrentChoices.Add(node.Choices[i]);
-                }
-            }
+            _activeDialogue.CurrentChoices = BuildDialogueChoices(node);
 
             ExecuteActions(node.OnEnter);
             if (!string.IsNullOrWhiteSpace(node.CameraId))
@@ -932,6 +1091,20 @@ namespace Ludots.Core.Gameplay.Narrative
                 NarrativeComparisonOperator.Falsy => string.IsNullOrWhiteSpace(left),
                 _ => equals,
             };
+        }
+
+        private List<NarrativeDialogueChoiceDefinition> BuildDialogueChoices(NarrativeDialogueNodeDefinition node)
+        {
+            var choices = new List<NarrativeDialogueChoiceDefinition>();
+            for (int i = 0; i < node.Choices.Count; i++)
+            {
+                if (EvaluateConditions(node.Choices[i].Conditions))
+                {
+                    choices.Add(node.Choices[i]);
+                }
+            }
+
+            return choices;
         }
 
         private sealed class NarrativeQuestRuntime

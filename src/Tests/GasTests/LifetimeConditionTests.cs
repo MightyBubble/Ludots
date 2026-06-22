@@ -104,6 +104,36 @@ namespace Ludots.Tests.GAS
         }
 
         [Test]
+        public void EffectLifetime_CancelRequested_RemovesInfiniteEffect()
+        {
+            using var world = World.Create();
+            var clock = new DiscreteClock();
+            var conditions = new GasConditionRegistry();
+            var lifetime = new EffectLifetimeSystem(world, clock, conditions);
+
+            var source = world.Create();
+            var target = world.Create(new ActiveEffectContainer());
+            var effect = GameplayEffectFactory.CreateEffect(
+                world,
+                rootId: 1,
+                source,
+                target,
+                durationTicks: 0,
+                lifetimeKind: EffectLifetimeKind.Infinite,
+                periodTicks: 0,
+                targetContext: default,
+                clockId: GasClockId.FixedFrame);
+            world.Get<GameplayEffect>(effect).State = EffectState.Committed;
+            world.Get<ActiveEffectContainer>(target).Add(effect);
+
+            world.Get<GameplayEffect>(effect).CancelRequested = true;
+            lifetime.Update(0.016f);
+
+            That(world.IsAlive(effect), Is.False);
+            That(world.Get<ActiveEffectContainer>(target).Count, Is.EqualTo(0));
+        }
+
+        [Test]
         public void EffectLifetime_OnPeriodPostGraph_ModifiesTargetAttributeCurrent()
         {
             using var world = World.Create();

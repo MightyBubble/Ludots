@@ -274,5 +274,34 @@ namespace Ludots.Tests.GAS
                 }
             }
         }
+
+        [Test]
+        public void ConfigPipeline_InvalidJsonFragment_IsRejected()
+        {
+            string root = Path.Combine(Path.GetTempPath(), "Ludots_ConfigCatalogTests", Guid.NewGuid().ToString("N"));
+            Directory.CreateDirectory(root);
+            try
+            {
+                string core = Path.Combine(root, "Core");
+                Directory.CreateDirectory(Path.Combine(core, "Configs"));
+                File.WriteAllText(Path.Combine(core, "Configs", "game.json"), "{ \"startupMapId\": ");
+
+                var vfs = new VirtualFileSystem();
+                vfs.Mount("Core", core);
+                var modLoader = new ModLoader(vfs, new Ludots.Core.Scripting.FunctionRegistry(), new Ludots.Core.Scripting.TriggerManager());
+                var pipeline = new ConfigPipeline(vfs, modLoader);
+
+                JsonException ex = Assert.Throws<JsonException>(() => pipeline.CollectFragmentsWithSources("game.json"))!;
+
+                Assert.That(ex.Message, Does.Contain("Core:Configs/game.json"));
+            }
+            finally
+            {
+                if (Directory.Exists(root))
+                {
+                    Directory.Delete(root, recursive: true);
+                }
+            }
+        }
     }
 }
