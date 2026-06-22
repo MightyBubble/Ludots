@@ -6,12 +6,14 @@ using System.Numerics;
 using System.Text;
 using System.Text.Json;
 using Arch.Core;
+using CapabilityStandardPhysics2DPlaygroundV2Mod.Input;
 using CapabilityStandardPhysics2DPlaygroundV2Mod.Runtime;
 using Ludots.Core.Components;
 using Ludots.Core.Engine;
 using Ludots.Core.Gameplay.GAS;
 using Ludots.Core.Gameplay.GAS.Components;
 using Ludots.Core.Gameplay.Spawning;
+using Ludots.Core.Input.Runtime;
 using Ludots.Core.Mathematics.FixedPoint;
 using Ludots.Core.Navigation2D.Components;
 using Ludots.Core.Navigation2D.Runtime;
@@ -21,6 +23,7 @@ using Ludots.Core.Physics2D.Ticking;
 using Ludots.Core.Presentation.Components;
 using Ludots.Core.Presentation.Hud;
 using Ludots.Core.Presentation.Performers;
+using Ludots.Core.Presentation.Rendering;
 using Ludots.Core.Scripting;
 using Ludots.Core.Spatial;
 using Ludots.Platform.Abstractions;
@@ -45,6 +48,17 @@ public sealed class CapabilityStandardPhysics2DPlaygroundV2AcceptanceTests
     private const string FrictionZoneMediumTemplateId = "capability_standard_physics2d_playground_v2_friction_zone_medium";
     private const string FrictionZoneHighTemplateId = "capability_standard_physics2d_playground_v2_friction_zone_high";
 
+    [SetUp]
+    public void SetUp()
+    {
+        CapabilityStandardPhysics2DPlaygroundV2State.Enabled = false;
+        CapabilityStandardPhysics2DPlaygroundV2State.ActiveMode = CapabilityStandardPhysics2DPlaygroundV2Mode.PhysicsOnly;
+        CapabilityStandardPhysics2DPlaygroundV2State.ExplosionCueVisible = false;
+        CapabilityStandardPhysics2DPlaygroundV2State.ExplosionCueCenterCm = Fix64Vec2.Zero;
+        CapabilityStandardPhysics2DPlaygroundV2State.ExplosionCueRadiusCm = 0;
+        CapabilityStandardPhysics2DPlaygroundV2State.ExplosionCueRemainingFrames = 0;
+    }
+
     private static readonly string[] AcceptanceMods =
     {
         "LudotsCoreMod",
@@ -64,7 +78,7 @@ public sealed class CapabilityStandardPhysics2DPlaygroundV2AcceptanceTests
         Assert.That(engine.MergedConfig.Physics2D.Enabled, Is.True);
         Assert.That(engine.MergedConfig.Navigation2D.Enabled, Is.True);
         Assert.That(engine.GetService(CoreServiceKeys.Navigation2DRuntime), Is.Not.Null);
-        engine.SetService(CoreServiceKeys.ScreenProjector, new PlaygroundV2TestScreenProjector());
+        engine.SetService(CoreServiceKeys.ScreenProjector, new PlaygroundV2TestScreenMapping());
 
         RuntimeEntitySpawnQueue spawnQueue = engine.GetService(CoreServiceKeys.RuntimeEntitySpawnQueue)
             ?? throw new InvalidOperationException("RuntimeEntitySpawnQueue missing.");
@@ -323,6 +337,151 @@ public sealed class CapabilityStandardPhysics2DPlaygroundV2AcceptanceTests
         Physics2DPerfStats stats = CapabilityStandardShowcaseTestHarness.ReadPhysicsPerfStats(engine.World);
         Assert.That(physics.PipelineStepNames.ToArray(), Does.Contain("NavToPhysicsVelocitySync"));
         WriteAcceptanceArtifacts(repoRoot, keyframes, frameTimesMs, stats);
+    }
+
+    [Test]
+    public void CapabilityStandardPhysics2DPlaygroundV2_RightClickInputPath_SpawnsBenchmarkBodies()
+    {
+        string repoRoot = CapabilityStandardShowcaseTestHarness.FindRepoRoot();
+        var inputBackend = new CapabilityStandardShowcaseTestHarness.TestInputBackend();
+        using var engine = CapabilityStandardShowcaseTestHarness.CreateEngine(repoRoot, AcceptanceMods, inputBackend);
+        var mapping = new PlaygroundV2TestScreenMapping();
+        engine.SetService(CoreServiceKeys.ScreenProjector, (IScreenProjector)mapping);
+        engine.SetService(CoreServiceKeys.ScreenRayProvider, (IScreenRayProvider)mapping);
+
+        RuntimeEntitySpawnQueue spawnQueue = engine.GetService(CoreServiceKeys.RuntimeEntitySpawnQueue)
+            ?? throw new InvalidOperationException("RuntimeEntitySpawnQueue missing.");
+        engine.LoadMap(MapId);
+
+        var frameTimesMs = new List<double>(32);
+        CapabilityStandardShowcaseTestHarness.TickUntil(engine, frameTimesMs, () => spawnQueue.Count == 0, maxFrames: 8);
+
+        var input = engine.GetService(CoreServiceKeys.InputHandler) as PlayerInputHandler
+            ?? throw new InvalidOperationException("PlayerInputHandler missing.");
+        CapabilityStandardPhysics2DPlaygroundV2InteractionSystem.SetMode(
+            CapabilityStandardPhysics2DPlaygroundV2Mode.PhysicsOnly,
+            engine);
+
+        int benchmarkBodiesBeforeClick = CountByTemplate(engine, BenchmarkBodyTemplateId);
+        Vector2 pointer = mapping.WorldCmToScreen(180f, -520f);
+        inputBackend.MousePosition = pointer;
+        inputBackend.SetButton("<Mouse>/RightButton", true);
+        CapabilityStandardShowcaseTestHarness.TickMeasured(engine, 1, frameTimesMs);
+        inputBackend.SetButton("<Mouse>/RightButton", false);
+
+        CapabilityStandardShowcaseTestHarness.TickUntil(
+            engine,
+            frameTimesMs,
+            () => CountByTemplate(engine, BenchmarkBodyTemplateId) >= benchmarkBodiesBeforeClick + 10,
+            maxFrames: 24);
+
+        Entity benchmarkBody = FindNearestByTemplate(engine, BenchmarkBodyTemplateId, Fix64Vec2.FromInt(180, -520));
+        AssertBenchmarkBody(engine, benchmarkBody);
+        Assert.That(ReadInt(engine, CapabilityStandardPhysics2DPlaygroundV2State.BenchmarkLastSpawnedServiceKey),
+            Is.EqualTo(10),
+            "A real SecondaryClick + PointerPos input frame should drive the same benchmark burst path as manual right-click play.");
+    }
+
+    [Test]
+    public void CapabilityStandardPhysics2DPlaygroundV2_ExplosionInputPath_AppliesRadialForce()
+    {
+        string repoRoot = CapabilityStandardShowcaseTestHarness.FindRepoRoot();
+        var inputBackend = new CapabilityStandardShowcaseTestHarness.TestInputBackend();
+        using var engine = CapabilityStandardShowcaseTestHarness.CreateEngine(repoRoot, AcceptanceMods, inputBackend);
+        var mapping = new PlaygroundV2TestScreenMapping();
+        engine.SetService(CoreServiceKeys.ScreenProjector, (IScreenProjector)mapping);
+        engine.SetService(CoreServiceKeys.ScreenRayProvider, (IScreenRayProvider)mapping);
+
+        RuntimeEntitySpawnQueue spawnQueue = engine.GetService(CoreServiceKeys.RuntimeEntitySpawnQueue)
+            ?? throw new InvalidOperationException("RuntimeEntitySpawnQueue missing.");
+        engine.LoadMap(MapId);
+
+        var frameTimesMs = new List<double>(32);
+        CapabilityStandardShowcaseTestHarness.TickUntil(engine, frameTimesMs, () => spawnQueue.Count == 0, maxFrames: 8);
+
+        CapabilityStandardPhysics2DPlaygroundV2InteractionSystem interaction =
+            CapabilityStandardShowcaseTestHarness.FindSystem<CapabilityStandardPhysics2DPlaygroundV2InteractionSystem>(
+                engine,
+                SystemGroup.InputCollection);
+        CapabilityStandardPhysics2DPlaygroundV2InteractionSystem.SetMode(
+            CapabilityStandardPhysics2DPlaygroundV2Mode.PhysicsOnly,
+            engine);
+
+        Fix64Vec2 explosionCenter = Fix64Vec2.FromInt(180, -520);
+        Assert.That(interaction.SpawnBenchmarkBodiesAt(explosionCenter), Is.True);
+        CapabilityStandardShowcaseTestHarness.TickUntil(
+            engine,
+            frameTimesMs,
+            () => CountSpatialTrackedByTemplate(engine, BenchmarkBodyTemplateId) >= 10,
+            maxFrames: 24);
+
+        Entity explosionSample = FindNearestByTemplate(engine, BenchmarkBodyTemplateId, explosionCenter);
+        Fix64Vec2 beforeVelocity = engine.World.Get<Velocity2D>(explosionSample).Linear;
+        Assert.That(CountSpatialQueryByTemplate(engine, BenchmarkBodyTemplateId, explosionCenter, 520),
+            Is.GreaterThan(0),
+            "The production spatial query path must be able to see the benchmark bodies before pressing X.");
+        GroundOverlayBuffer groundOverlay = engine.GetService(CoreServiceKeys.GroundOverlayBuffer)
+            ?? throw new InvalidOperationException("GroundOverlayBuffer missing.");
+        Vector2 pointer = mapping.WorldCmToScreen(180f, -520f);
+        inputBackend.MousePosition = pointer;
+        inputBackend.SetButton("<Keyboard>/X", true);
+        CapabilityStandardShowcaseTestHarness.TickUntil(
+            engine,
+            frameTimesMs,
+            () => ReadInt(engine, CapabilityStandardPhysics2DPlaygroundV2State.ExplosionLastCandidateCountServiceKey) > 0,
+            maxFrames: 4);
+        inputBackend.SetButton("<Keyboard>/X", false);
+
+        Assert.That(ReadInt(engine, CapabilityStandardPhysics2DPlaygroundV2State.ExplosionLastAffectedServiceKey),
+            Is.GreaterThan(0),
+            "A real <Keyboard>/X input frame should drive the production authoritative-input explosion path.");
+        Assert.That(ReadInt(engine, CapabilityStandardPhysics2DPlaygroundV2State.ExplosionLastCandidateCountServiceKey),
+            Is.GreaterThan(0),
+            "Explosion input should query nearby spatial candidates instead of silently doing nothing.");
+        Assert.That(CountGroundOverlayShape(groundOverlay, GroundOverlayShape.Ring), Is.GreaterThan(0),
+            "X explosion should emit visible ground feedback even when the physics response is subtle.");
+        CapabilityStandardShowcaseTestHarness.TickUntil(
+            engine,
+            frameTimesMs,
+            () => engine.World.Get<Velocity2D>(explosionSample).Linear != beforeVelocity,
+            maxFrames: 24);
+    }
+
+    [Test]
+    public void CapabilityStandardPhysics2DPlaygroundV2_ExplosionCueInputPath_FeedbacksOnEmptyGround()
+    {
+        string repoRoot = CapabilityStandardShowcaseTestHarness.FindRepoRoot();
+        var inputBackend = new CapabilityStandardShowcaseTestHarness.TestInputBackend();
+        using var engine = CapabilityStandardShowcaseTestHarness.CreateEngine(repoRoot, AcceptanceMods, inputBackend);
+        var mapping = new PlaygroundV2TestScreenMapping();
+        engine.SetService(CoreServiceKeys.ScreenProjector, (IScreenProjector)mapping);
+        engine.SetService(CoreServiceKeys.ScreenRayProvider, (IScreenRayProvider)mapping);
+
+        RuntimeEntitySpawnQueue spawnQueue = engine.GetService(CoreServiceKeys.RuntimeEntitySpawnQueue)
+            ?? throw new InvalidOperationException("RuntimeEntitySpawnQueue missing.");
+        engine.LoadMap(MapId);
+
+        var frameTimesMs = new List<double>(16);
+        CapabilityStandardShowcaseTestHarness.TickUntil(engine, frameTimesMs, () => spawnQueue.Count == 0, maxFrames: 8);
+        CapabilityStandardPhysics2DPlaygroundV2InteractionSystem.SetMode(
+            CapabilityStandardPhysics2DPlaygroundV2Mode.PhysicsOnly,
+            engine);
+
+        GroundOverlayBuffer groundOverlay = engine.GetService(CoreServiceKeys.GroundOverlayBuffer)
+            ?? throw new InvalidOperationException("GroundOverlayBuffer missing.");
+        inputBackend.MousePosition = mapping.WorldCmToScreen(2400f, -1800f);
+        inputBackend.SetButton("<Keyboard>/X", true);
+        CapabilityStandardShowcaseTestHarness.TickUntil(
+            engine,
+            frameTimesMs,
+            () => CountGroundOverlayShape(groundOverlay, GroundOverlayShape.Ring) > 0,
+            maxFrames: 4);
+        inputBackend.SetButton("<Keyboard>/X", false);
+
+        Assert.That(ReadInt(engine, CapabilityStandardPhysics2DPlaygroundV2State.ExplosionLastAffectedServiceKey),
+            Is.EqualTo(0));
+        Assert.That(CountGroundOverlayShape(groundOverlay, GroundOverlayShape.Ring), Is.GreaterThan(0),
+            "X must not look dead when the cursor lands on empty physics-only ground.");
     }
 
     private static void AssertPhysicsOnlyPartition(GameEngine engine, Entity entity)
@@ -956,6 +1115,37 @@ public sealed class CapabilityStandardPhysics2DPlaygroundV2AcceptanceTests
         return count;
     }
 
+    private static int CountSpatialQueryByTemplate(
+        GameEngine engine,
+        string templateId,
+        Fix64Vec2 centerCm,
+        int radiusCm)
+    {
+        EntityTemplateKeyRegistry templateKeys = engine.GetService(CoreServiceKeys.EntityTemplateKeyRegistry)
+            ?? throw new InvalidOperationException("EntityTemplateKeyRegistry missing.");
+        if (!templateKeys.TryGetId(templateId, out int templateKeyId) || templateKeyId <= 0)
+        {
+            return 0;
+        }
+
+        Span<Entity> scratch = stackalloc Entity[64];
+        SpatialQueryResult result = engine.SpatialQueries.QueryRadius(centerCm.ToWorldCmInt2(), radiusCm, scratch);
+        int count = 0;
+        ReadOnlySpan<Entity> entities = scratch.Slice(0, result.Count);
+        for (int i = 0; i < entities.Length; i++)
+        {
+            Entity entity = entities[i];
+            if (engine.World.IsAlive(entity) &&
+                engine.World.Has<EntityTemplateKeyRef>(entity) &&
+                engine.World.Get<EntityTemplateKeyRef>(entity).TemplateKeyId == templateKeyId)
+            {
+                count++;
+            }
+        }
+
+        return count;
+    }
+
     private static int ReadInt(GameEngine engine, string key)
     {
         return engine.GlobalContext.TryGetValue(key, out object? value) && value is int number
@@ -996,6 +1186,20 @@ public sealed class CapabilityStandardPhysics2DPlaygroundV2AcceptanceTests
         return count;
     }
 
+    private static int CountGroundOverlayShape(GroundOverlayBuffer overlay, GroundOverlayShape shape)
+    {
+        int count = 0;
+        foreach (ref readonly GroundOverlayItem item in overlay.GetSpan())
+        {
+            if (item.Shape == shape)
+            {
+                count++;
+            }
+        }
+
+        return count;
+    }
+
     private static string RequireString(JsonElement root, string propertyName)
     {
         string? value = root.GetProperty(propertyName).GetString();
@@ -1017,13 +1221,29 @@ public sealed class CapabilityStandardPhysics2DPlaygroundV2AcceptanceTests
         return value.ToString("0.###", CultureInfo.InvariantCulture);
     }
 
-    private sealed class PlaygroundV2TestScreenProjector : IScreenProjector
+    private sealed class PlaygroundV2TestScreenMapping : IScreenProjector, IScreenRayProvider
     {
+        private const float ScreenCenterX = 720f;
+        private const float ScreenCenterY = 450f;
+        private const float PixelsPerMeter = 20f;
+
         public Vector2 WorldToScreen(Vector3 worldPosition)
         {
             return new Vector2(
-                720f + (worldPosition.X * 20f),
-                450f - (worldPosition.Z * 20f));
+                ScreenCenterX + (worldPosition.X * PixelsPerMeter),
+                ScreenCenterY - (worldPosition.Z * PixelsPerMeter));
+        }
+
+        public Vector2 WorldCmToScreen(float worldXCm, float worldYCm)
+        {
+            return WorldToScreen(new Vector3(worldXCm / 100f, 0f, worldYCm / 100f));
+        }
+
+        public ScreenRay GetRay(Vector2 screenPosition)
+        {
+            float worldX = (screenPosition.X - ScreenCenterX) / PixelsPerMeter;
+            float worldZ = -(screenPosition.Y - ScreenCenterY) / PixelsPerMeter;
+            return new ScreenRay(new Vector3(worldX, 10f, worldZ), -Vector3.UnitY);
         }
     }
 

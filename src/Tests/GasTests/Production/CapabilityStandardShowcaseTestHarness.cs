@@ -3,6 +3,7 @@ using System.Collections.Generic;
 using System.Diagnostics;
 using System.IO;
 using System.Reflection;
+using System.Numerics;
 using Arch.Core;
 using Arch.System;
 using Ludots.Core.Components;
@@ -23,14 +24,17 @@ internal static class CapabilityStandardShowcaseTestHarness
 {
     public const float DeltaTime = 1f / 60f;
 
-    public static GameEngine CreateEngine(string repoRoot, IReadOnlyList<string> modIds)
+    public static GameEngine CreateEngine(
+        string repoRoot,
+        IReadOnlyList<string> modIds,
+        IInputBackend? inputBackend = null)
     {
         string assetsRoot = Path.Combine(repoRoot, "assets");
         List<string> modPaths = RepoModPaths.ResolveExplicit(repoRoot, modIds);
 
         var engine = new GameEngine();
         engine.InitializeWithConfigPipeline(modPaths, assetsRoot);
-        InstallInput(engine);
+        InstallInput(engine, inputBackend ?? new NullInputBackend());
         engine.Start();
         return engine;
     }
@@ -143,25 +147,63 @@ internal static class CapabilityStandardShowcaseTestHarness
         throw new InvalidOperationException("Could not locate repo root.");
     }
 
-    private static void InstallInput(GameEngine engine)
+    private static void InstallInput(GameEngine engine, IInputBackend inputBackend)
     {
         var inputConfig = new InputConfigPipelineLoader(engine.ConfigPipeline).Load();
-        var inputHandler = new PlayerInputHandler(new NullInputBackend(), inputConfig);
+        var inputHandler = new PlayerInputHandler(inputBackend, inputConfig);
         for (int i = 0; i < engine.MergedConfig.StartupInputContexts.Count; i++)
         {
             inputHandler.PushContext(engine.MergedConfig.StartupInputContexts[i]);
         }
 
         engine.SetService(CoreServiceKeys.InputHandler, inputHandler);
-        engine.SetService(CoreServiceKeys.AuthoritativeInput, inputHandler);
         engine.SetService(CoreServiceKeys.UiCaptured, false);
+    }
+
+    public sealed class TestInputBackend : IInputBackend
+    {
+        private readonly HashSet<string> _buttons = new(StringComparer.Ordinal);
+
+        public Vector2 MousePosition { get; set; }
+        public float MouseWheel { get; set; }
+
+        public float GetAxis(string devicePath) => 0f;
+
+        public bool GetButton(string devicePath) => _buttons.Contains(devicePath);
+
+        public Vector2 GetMousePosition() => MousePosition;
+
+        public float GetMouseWheel()
+        {
+            float value = MouseWheel;
+            MouseWheel = 0f;
+            return value;
+        }
+
+        public void EnableIME(bool enable) { }
+
+        public void SetIMECandidatePosition(int x, int y) { }
+
+        public string GetCharBuffer() => string.Empty;
+
+        public void SetButton(string devicePath, bool down)
+        {
+            if (down)
+            {
+                _buttons.Add(devicePath);
+            }
+            else
+            {
+                _buttons.Remove(devicePath);
+            }
+        }
     }
 
     private sealed class NullInputBackend : IInputBackend
     {
         public float GetAxis(string devicePath) => 0f;
         public bool GetButton(string devicePath) => false;
-        public System.Numerics.Vector2 GetMousePosition() => System.Numerics.Vector2.Zero;
+        public Vector2 GetMousePosition() => Vector2.Zero;
         public float GetMouseWheel() => 0f;
         public void EnableIME(bool enable) { }
         public void SetIMECandidatePosition(int x, int y) { }

@@ -8,14 +8,14 @@
 | Moving CC no drift | suppressed target advanced 4 x 50 cm displacement steps with `Velocity2D.Linear=0` each frame |
 | CC recovery | next sync restored velocity X `120` cm/s from `NavDesiredVelocity2D` |
 | Suppressed wall correction | suppressed knockback into static wall stayed bounded by Physics2D position correction with `Velocity2D.Linear=0` |
-| Physics stats | Hz `15`, potential pairs `1`, contact pairs `1`, last update `0.0846` ms |
-| Test tick timings | frames `62`, avg `2.1802` ms, max `39.6254` ms |
+| Physics stats | Hz `15`, potential pairs `1`, contact pairs `1`, last update `0.0283` ms |
+| Test tick timings | frames `62`, avg `1.7621` ms, max `35.3194` ms |
 
 ## Keyframes
 
 | Frame | Moving X | Moving Vx | Suppressed | Static X | Wall Target X |
 | ---: | ---: | ---: | :---: | ---: | ---: |
-| 6 | -420 | 120 | False | 140 | 100 |
+| 4 | -420 | 120 | False | 140 | 100 |
 | 21 | -380 | 120 | False | 320 | 100 |
 | 25 | -330 | 0 | True | 320 | 100 |
 | 26 | -330 | 0 | True | 320 | 100 |

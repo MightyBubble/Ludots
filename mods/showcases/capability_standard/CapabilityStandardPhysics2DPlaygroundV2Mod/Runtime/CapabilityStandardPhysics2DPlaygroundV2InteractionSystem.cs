@@ -399,6 +399,7 @@ public sealed class CapabilityStandardPhysics2DPlaygroundV2InteractionSystem : I
             explosionAffected: affected,
             explosionCandidates: query.Count,
             explosionDropped: query.Dropped);
+        PublishExplosionCue(centerCm);
         return affected;
     }
 
@@ -838,6 +839,15 @@ public sealed class CapabilityStandardPhysics2DPlaygroundV2InteractionSystem : I
             _engine.GlobalContext[CapabilityStandardPhysics2DPlaygroundV2State.ExplosionLastDroppedServiceKey] =
                 explosionDropped.Value;
         }
+    }
+
+    private void PublishExplosionCue(in Fix64Vec2 centerCm)
+    {
+        CapabilityStandardPhysics2DPlaygroundV2State.ExplosionCueVisible = true;
+        CapabilityStandardPhysics2DPlaygroundV2State.ExplosionCueCenterCm = centerCm;
+        CapabilityStandardPhysics2DPlaygroundV2State.ExplosionCueRadiusCm = _config.ExplosionRadiusCm;
+        CapabilityStandardPhysics2DPlaygroundV2State.ExplosionCueRemainingFrames =
+            CapabilityStandardPhysics2DPlaygroundV2State.ExplosionCueDurationFrames;
     }
 
     private void PublishBenchmarkState(int benchmarkBodies, int? lastSpawned, int? forcePulse)

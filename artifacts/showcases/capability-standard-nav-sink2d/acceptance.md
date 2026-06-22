@@ -9,8 +9,8 @@
 | Obstacle bridge | authored `ManifestationObstacleIntent2D` derives `Collider2D`, `Physics2DStaticBodyState`, and `NavObstacle2D` |
 | Position authority | final Position2D X `-732` cm, WorldPositionCm synced from Physics2D |
 | Runtime counts | nav agents `1`, obstacle nav `True`, obstacle physics `True` |
-| Physics stats | Hz `15`, potential pairs `0`, contact pairs `0`, last update `0.0254` ms |
-| Test tick timings | frames `36`, avg `1.5510` ms, max `21.8182` ms |
+| Physics stats | Hz `15`, potential pairs `0`, contact pairs `0`, last update `0.0230` ms |
+| Test tick timings | frames `36`, avg `1.1937` ms, max `16.5361` ms |
 
 ## Keyframes
 

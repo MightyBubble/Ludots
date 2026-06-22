@@ -9,6 +9,7 @@ using Ludots.Core.Mathematics.FixedPoint;
 using Ludots.Core.Physics2D;
 using Ludots.Core.Physics2D.Components;
 using Ludots.Core.Presentation.Hud;
+using Ludots.Core.Presentation.Rendering;
 using Ludots.Core.Scripting;
 using Ludots.Platform.Abstractions;
 
@@ -28,6 +29,8 @@ internal sealed class CapabilityStandardPhysics2DPlaygroundV2HudSystem : ISystem
     private static readonly Vector4 TextColor = new(0.86f, 0.92f, 0.95f, 1f);
     private static readonly Vector4 HintColor = new(0.94f, 0.78f, 0.45f, 1f);
     private static readonly Vector4 PolygonStroke = new(0.40f, 0.82f, 1.0f, 0.96f);
+    private static readonly Vector4 ExplosionFill = new(1.0f, 0.58f, 0.18f, 0.16f);
+    private static readonly Vector4 ExplosionBorder = new(1.0f, 0.78f, 0.28f, 0.92f);
 
     private readonly GameEngine _engine;
     private readonly CapabilityStandardPhysics2DPlaygroundV2Config _config;
@@ -62,6 +65,7 @@ internal sealed class CapabilityStandardPhysics2DPlaygroundV2HudSystem : ISystem
 
         RenderHud(overlay, dt);
         DrawStaticPolygonOutlines(overlay);
+        DrawExplosionCue();
     }
 
     public void AfterUpdate(in float dt)
@@ -195,6 +199,45 @@ internal sealed class CapabilityStandardPhysics2DPlaygroundV2HudSystem : ISystem
                     stableId++;
                 }
             });
+    }
+
+    private void DrawExplosionCue()
+    {
+        if (!CapabilityStandardPhysics2DPlaygroundV2State.ExplosionCueVisible ||
+            CapabilityStandardPhysics2DPlaygroundV2State.ExplosionCueRemainingFrames <= 0)
+        {
+            CapabilityStandardPhysics2DPlaygroundV2State.ExplosionCueVisible = false;
+            return;
+        }
+
+        if (_engine.GetService(CoreServiceKeys.GroundOverlayBuffer) is not GroundOverlayBuffer ground)
+        {
+            return;
+        }
+
+        int remaining = CapabilityStandardPhysics2DPlaygroundV2State.ExplosionCueRemainingFrames;
+        float lifetime = Math.Clamp(
+            remaining / (float)CapabilityStandardPhysics2DPlaygroundV2State.ExplosionCueDurationFrames,
+            0.25f,
+            1f);
+        float radiusM = WorldUnits.CmToM(CapabilityStandardPhysics2DPlaygroundV2State.ExplosionCueRadiusCm);
+        float innerRadiusM = MathF.Max(0f, radiusM - 0.22f);
+        Vector3 center = WorldUnits.WorldCmToVisualMeters(
+            in CapabilityStandardPhysics2DPlaygroundV2State.ExplosionCueCenterCm,
+            yMeters: 0.08f);
+
+        ground.TryAdd(new GroundOverlayItem
+        {
+            Shape = GroundOverlayShape.Ring,
+            Center = center,
+            Radius = radiusM,
+            InnerRadius = innerRadiusM,
+            FillColor = new Vector4(ExplosionFill.X, ExplosionFill.Y, ExplosionFill.Z, ExplosionFill.W * lifetime),
+            BorderColor = new Vector4(ExplosionBorder.X, ExplosionBorder.Y, ExplosionBorder.Z, ExplosionBorder.W * lifetime),
+            BorderWidth = 0.06f
+        });
+
+        CapabilityStandardPhysics2DPlaygroundV2State.ExplosionCueRemainingFrames = remaining - 1;
     }
 
     private bool TryReadPhysicsStats(out Physics2DPerfStats stats)

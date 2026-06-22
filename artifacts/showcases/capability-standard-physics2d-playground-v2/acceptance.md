@@ -13,16 +13,16 @@
 | Playground tools | HUD exposes FPS/frame/entity stats; G static polygons `1`, F friction zones `3`, X explosion affected `40` bodies |
 | Explosion spatial benchmark | local AoE used `SpatialQueries.QueryRadius` candidates `43` dropped `0` while far benchmark bodies remained outside ForceInput |
 | Friction zone benchmark design | zones are static `PhysicsMaterial2D` box colliders; material friction is exercised by production Physics2D broadphase/contact solver instead of a parallel area-field system |
-| Physics stats | Hz `15`, potential pairs `210`, contact pairs `209`, last update `7.3702` ms |
-| Test tick timings | frames `82`, avg `18.1894` ms, max `317.1776` ms |
+| Physics stats | Hz `15`, potential pairs `210`, contact pairs `209`, last update `2.0712` ms |
+| Test tick timings | frames `82`, avg `1.1523` ms, max `20.5529` ms |
 
 ## Keyframes
 
 | Frame | Mode | Physics X | Physics Vx | Suppressed | Physics Has Nav | Nav X | Nav Vx | Nav Desired X | Nav Obstacle | Physics Obstacle | Benchmark Bodies | Benchmark Vx | Static Polygons | Friction Zones | Explosion Last | Explosion Candidates | Explosion Dropped |
 | ---: | --- | ---: | ---: | :---: | :---: | ---: | ---: | ---: | :---: | :---: | ---: | ---: | ---: | ---: | ---: | ---: | ---: |
 | 0 | PhysicsOnly | -712 | 119.76 | False | False | -900 | 0 | 0 | True | True | 0 | 0 | 0 | 0 | 0 | 0 | 0 |
-| 8 | PhysicsOnly | -712 | 539.76 | False | False | -900 | 0 | 0 | True | True | 0 | 0 | 0 | 0 | 0 | 0 | 0 |
-| 8 | PhysicsOnly | -712 | 0 | True | False | -900 | 0 | 0 | True | True | 0 | 0 | 0 | 0 | 0 | 0 | 0 |
+| 7 | PhysicsOnly | -712 | 539.76 | False | False | -900 | 0 | 0 | True | True | 0 | 0 | 0 | 0 | 0 | 0 | 0 |
+| 7 | PhysicsOnly | -712 | 0 | True | False | -900 | 0 | 0 | True | True | 0 | 0 | 0 | 0 | 0 | 0 | 0 |
 | 18 | PhysicsOnly | -552 | 0 | False | False | -900 | 0 | 0 | True | True | 0 | 0 | 0 | 0 | 0 | 0 | 0 |
 | 24 | Nav | -552 | 0 | False | False | -876 | 352.8 | 360 | True | True | 0 | 0 | 0 | 0 | 0 | 0 | 0 |
 | 48 | Nav | -552 | 0 | False | False | -732 | 352.8 | 360 | True | True | 0 | 0 | 0 | 0 | 0 | 0 | 0 |

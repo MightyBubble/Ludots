@@ -1,3 +1,5 @@
+using Ludots.Core.Mathematics.FixedPoint;
+
 namespace CapabilityStandardPhysics2DPlaygroundV2Mod.Runtime;
 
 public static class CapabilityStandardPhysics2DPlaygroundV2State
@@ -16,7 +18,12 @@ public static class CapabilityStandardPhysics2DPlaygroundV2State
     public const string ExplosionLastCandidateCountServiceKey = "CapabilityStandardPhysics2DPlaygroundV2.ExplosionLastCandidateCount";
     public const string ExplosionLastDroppedServiceKey = "CapabilityStandardPhysics2DPlaygroundV2.ExplosionLastDropped";
     public const string LastActionServiceKey = "CapabilityStandardPhysics2DPlaygroundV2.LastAction";
+    public const int ExplosionCueDurationFrames = 24;
 
     public static bool Enabled;
     public static CapabilityStandardPhysics2DPlaygroundV2Mode ActiveMode = CapabilityStandardPhysics2DPlaygroundV2Mode.PhysicsOnly;
+    public static bool ExplosionCueVisible;
+    public static Fix64Vec2 ExplosionCueCenterCm;
+    public static int ExplosionCueRadiusCm;
+    public static int ExplosionCueRemainingFrames;
 }
