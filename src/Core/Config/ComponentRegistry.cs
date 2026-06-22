@@ -73,6 +73,7 @@ namespace Ludots.Core.Config
             Register("ManifestationObstacleIntent2D", SetManifestationObstacleIntent2D);
             Register("ManifestationObstaclePolygon2D", SetManifestationObstaclePolygon2D);
             Register("CompoundObstacle2D", SetCompoundObstacle2D);
+            Register<RuntimeNavMeshStructuralObstacle>("RuntimeNavMeshStructuralObstacle");
             Register("ManifestationMotion2D", SetManifestationMotion2D);
             Register("DestroyWhenParentExecutionEnds", SetDestroyWhenParentExecutionEnds);
             Register("MassCrowdAgent", SetMassCrowdAgent, null, Component<MassCrowdAgent>.ComponentType);

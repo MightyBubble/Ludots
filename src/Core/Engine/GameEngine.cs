@@ -66,6 +66,7 @@ using Ludots.Core.Engine.Physics2D;
 using Ludots.Core.Engine.TimeFlow;
 using Ludots.Core.Navigation.AgentProfiles;
 using Ludots.Core.Navigation.NavMesh;
+using Ludots.Core.Navigation.NavMesh.Bake;
 using Ludots.Core.Navigation.NavMesh.Config;
 using Ludots.Core.Navigation.Terrain;
 using Ludots.Core.Navigation.AOI;
@@ -1210,6 +1211,19 @@ namespace Ludots.Core.Engine
                     throw new InvalidOperationException($"Failed to create manifestation obstacle bridge system '{manifestationObstacleBridgeSystemTypeName}'.");
                 }
             }
+            const string runtimeNavMeshObstacleSystemTypeName = "Ludots.Core.Physics2D.Systems.RuntimeNavMeshObstacleDirtySystem";
+            var runtimeNavMeshObstacleType = Type.GetType($"{runtimeNavMeshObstacleSystemTypeName}, Ludots.Physics2D", throwOnError: false);
+            if (runtimeNavMeshObstacleType != null)
+            {
+                if (Activator.CreateInstance(runtimeNavMeshObstacleType, this) is ISystem<float> runtimeNavMeshObstacleSystem)
+                {
+                    RegisterSystem(runtimeNavMeshObstacleSystem, SystemGroup.EffectProcessing);
+                }
+                else
+                {
+                    throw new InvalidOperationException($"Failed to create runtime navmesh obstacle dirty system '{runtimeNavMeshObstacleSystemTypeName}'.");
+                }
+            }
             RegisterSystem(new DisplacementRuntimeSystem(World), SystemGroup.EffectProcessing);
             
             // Phase 4: AttributeCalculation
@@ -2180,6 +2194,36 @@ namespace Ludots.Core.Engine
 
             var navRegistry = new NavQueryServiceRegistry(stores);
             SetService(CoreServiceKeys.NavQueryServices, navRegistry);
+            if (bakeConfig.ParsedMode == NavBakeMode.RuntimeIncremental)
+            {
+                var runtimeObstacles = new NavObstacleSet();
+                SetService(CoreServiceKeys.RuntimeNavMeshObstacles, runtimeObstacles);
+                var runtimeContext = new NavBakeContext
+                {
+                    MapId = mapId,
+                    ModId = string.Empty,
+                    SourceUri = $"Core:Maps/{mapId}.runtime-navmesh",
+                    Terrain = LogicTerrain,
+                    Obstacles = runtimeObstacles,
+                    Config = bakeConfig,
+                    AgentProfiles = agentProfiles,
+                    Targets = new[] { new NavBakeTileCoord(0, 0) },
+                    BuildConfig = new NavBuildConfig(
+                        bakeConfig.RuntimeIncremental.HeightScaleMeters,
+                        bakeConfig.RuntimeIncremental.MinWalkableUpDot,
+                        bakeConfig.RuntimeIncremental.CliffHeightThreshold),
+                    TileVersion = 1,
+                    Mode = bakeConfig.ParsedMode,
+                    Algorithm = bakeConfig.ParsedAlgorithm,
+                    Execution = new NavBakeExecutionOptions { Parallel = false, MaxDegreeOfParallelism = 1 }
+                };
+                var runtimeQueue = new RuntimeIncrementalNavMeshRebuildQueue(
+                    new NavBakeService(new CdtNavBakeAlgorithm()),
+                    runtimeContext,
+                    navRegistry,
+                    profileRegistry);
+                SetService(CoreServiceKeys.RuntimeNavMeshRebuildQueue, runtimeQueue);
+            }
             if (MapSessions?.FocusedSession?.PrimaryBoard is INavigableBoard navigableBoard)
             {
                 navigableBoard.NavServices = navRegistry;
@@ -2191,6 +2235,8 @@ namespace Ludots.Core.Engine
             RemoveService(CoreServiceKeys.NavMeshBakeConfig);
             RemoveService(CoreServiceKeys.NavMeshProfiles);
             RemoveService(CoreServiceKeys.NavQueryServices);
+            RemoveService(CoreServiceKeys.RuntimeNavMeshObstacles);
+            RemoveService(CoreServiceKeys.RuntimeNavMeshRebuildQueue);
         }
 
         private void LoadPathingForSession(MapSession session)

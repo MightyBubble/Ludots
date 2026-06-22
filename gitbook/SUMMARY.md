@@ -35,6 +35,7 @@
   - [Obstacle Authoring](reference/obstacle-authoring.md)
   - [Logic Terrain and Topology](reference/logic-terrain-and-topology.md)
   - [NavBakeContext 与统一烘焙服务](reference/nav-bake-context.md)
+  - [Runtime Incremental Navmesh Rebuild](reference/runtime-incremental-navmesh-rebuild.md)
   - [MassNavigation 执行避障与目标](reference/mass-navigation-execution-avoidance-and-targets.md)
   - [Routing To Mass Execution](reference/routing-to-mass-execution.md)
   - [Move Planning MassFlow Road Execution](reference/move-planning-massflow-road-execution.md)

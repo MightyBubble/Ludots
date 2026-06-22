@@ -2,6 +2,7 @@ using System;
 using System.Collections.Generic;
 using System.Numerics;
 using Ludots.Core.Map.Hex;
+using Ludots.Core.Navigation.NavMesh.Config;
 using Ludots.Core.Navigation.Terrain;
 using Ludots.Core.Spatial;
 
@@ -63,6 +64,8 @@ namespace Ludots.Core.Navigation.NavMesh.Bake
             int chunkY,
             uint tileVersion,
             in NavBuildConfig config,
+            NavObstacleSet obstacles,
+            string layerId,
             BakePipelineContext context = null)
         {
             var tileId = new NavTileId(chunkX, chunkY, 0);
@@ -74,7 +77,7 @@ namespace Ludots.Core.Navigation.NavMesh.Bake
                 return new BakePipelineResult(false, null, artifact);
             }
 
-            return Execute(new VertexMapLogicTerrainField(map), chunkX, chunkY, tileVersion, config, context);
+            return Execute(new VertexMapLogicTerrainField(map), chunkX, chunkY, tileVersion, config, obstacles, layerId, context);
         }
 
         public static BakePipelineResult Execute(
@@ -83,10 +86,23 @@ namespace Ludots.Core.Navigation.NavMesh.Bake
             int chunkY,
             uint tileVersion,
             in NavBuildConfig config,
+            NavObstacleSet obstacles,
+            string layerId,
             BakePipelineContext context = null)
         {
             context ??= new BakePipelineContext();
             var tileId = new NavTileId(chunkX, chunkY, 0);
+
+            if (obstacles == null)
+            {
+                throw new InvalidOperationException("BakePipeline requires an explicit NavObstacleSet.");
+            }
+
+            if (string.IsNullOrWhiteSpace(layerId) ||
+                !string.Equals(layerId.Trim(), layerId, StringComparison.Ordinal))
+            {
+                throw new InvalidOperationException("BakePipeline requires an explicit non-empty trimmed nav layer id.");
+            }
 
             if (terrain == null)
             {
@@ -111,6 +127,18 @@ namespace Ludots.Core.Navigation.NavMesh.Bake
             context.CurrentStage = NavBakeStage.WalkMask;
             context.Log($"Building walk mask for chunk ({chunkX},{chunkY})...");
             context.WalkMask = WalkMaskBuilder.Build(terrain, chunkX, chunkY, config);
+            int obstacleBlockedCount = NavObstacleGeometry.ApplyToWalkMask(
+                context.WalkMask,
+                terrain,
+                chunkX,
+                chunkY,
+                obstacles,
+                layerId);
+            if (obstacleBlockedCount > 0)
+            {
+                context.Log($"Filtered {obstacleBlockedCount} walkable triangles through nav obstacle SSOT.");
+            }
+
             int walkableCount = context.WalkMask.WalkableTriangleCount;
             context.Log($"Found {walkableCount} walkable triangles.");
 

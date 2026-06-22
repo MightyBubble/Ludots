@@ -1,11 +1,20 @@
 using System;
+using System.Collections.Generic;
 using System.IO;
+using System.Reflection;
 using System.Text.Json.Nodes;
 using Ludots.Core.Config;
+using Ludots.Core.Engine;
+using Ludots.Core.Map;
 using Ludots.Core.Modding;
 using Ludots.Core.Navigation.AgentProfiles;
+using Ludots.Core.Navigation.NavMesh;
+using Ludots.Core.Navigation.NavMesh.Bake;
 using Ludots.Core.Navigation.NavMesh.Config;
 using Ludots.Core.Navigation.Pathing.Config;
+using Ludots.Core.Navigation.Terrain;
+using Ludots.Core.Scripting;
+using Ludots.Core.Spatial;
 using NUnit.Framework;
 
 namespace Ludots.Tests.Architecture
@@ -142,6 +151,50 @@ namespace Ludots.Tests.Architecture
         }
 
         [Test]
+        public void GameEngine_NavBootstrap_OfflineRecastDoesNotRegisterRuntimeIncrementalQueue()
+        {
+            string repoRoot = FindRepoRoot();
+            string tempAssetsRoot = CreateTempAssetsRootWithNavTiles(repoRoot, "nav_bootstrap_offline_contract");
+
+            try
+            {
+                using var engine = CreateEngineWithTempNavAssets(repoRoot, tempAssetsRoot, "nav_bootstrap_offline_contract");
+
+                Assert.That(engine.GetService(CoreServiceKeys.NavMeshBakeConfig), Is.Not.Null);
+                Assert.That(engine.GetService(CoreServiceKeys.NavQueryServices), Is.Not.Null);
+                Assert.That(engine.GetService(CoreServiceKeys.RuntimeNavMeshObstacles), Is.Null);
+                Assert.That(engine.GetService(CoreServiceKeys.RuntimeNavMeshRebuildQueue), Is.Null);
+            }
+            finally
+            {
+                Directory.Delete(tempAssetsRoot, recursive: true);
+            }
+        }
+
+        [Test]
+        public void GameEngine_NavBootstrap_RuntimeIncrementalCdtRegistersRuntimeQueue()
+        {
+            string repoRoot = FindRepoRoot();
+            string mapId = "nav_bootstrap_runtime_incremental_contract";
+            string tempAssetsRoot = CreateTempAssetsRootWithNavTiles(repoRoot, mapId);
+
+            try
+            {
+                RewriteTempNavmeshMode(tempAssetsRoot, NavBakeNames.ModeRuntimeIncremental, NavBakeNames.AlgorithmCdt);
+                using var engine = CreateEngineWithTempNavAssets(repoRoot, tempAssetsRoot, mapId);
+
+                Assert.That(engine.GetService(CoreServiceKeys.NavMeshBakeConfig), Is.Not.Null);
+                Assert.That(engine.GetService(CoreServiceKeys.NavQueryServices), Is.Not.Null);
+                Assert.That(engine.GetService(CoreServiceKeys.RuntimeNavMeshObstacles), Is.Not.Null);
+                Assert.That(engine.GetService(CoreServiceKeys.RuntimeNavMeshRebuildQueue), Is.Not.Null);
+            }
+            finally
+            {
+                Directory.Delete(tempAssetsRoot, recursive: true);
+            }
+        }
+
+        [Test]
         public void NavMeshAndPathing_RejectLegacyProfileFields()
         {
             var agentProfiles = new AgentProfileRegistry(new[]
@@ -169,7 +222,14 @@ namespace Ludots.Tests.Architecture
                   "layers": [
                     { "id": "Ground", "layer": 0 }
                   ],
-                  "areas": []
+                  "areas": [],
+                  "runtimeIncremental": {
+                    "tileBudgetPerFixedTick": 1,
+                    "includeNeighborTiles": true,
+                    "heightScaleMeters": 1,
+                    "minWalkableUpDot": 0.6,
+                    "cliffHeightThreshold": 1
+                  }
                 }
                 """,
                 pathingJson:
@@ -224,6 +284,86 @@ namespace Ludots.Tests.Architecture
             File.WriteAllText(Path.Combine(coreConfigs, "Navigation", "navmesh.json"), navmeshJson);
             File.WriteAllText(Path.Combine(coreConfigs, "Navigation", "pathing.json"), pathingJson);
             return tempRoot;
+        }
+
+        private static GameEngine CreateEngineWithTempNavAssets(string repoRoot, string tempAssetsRoot, string mapId)
+        {
+            var engine = new GameEngine();
+            engine.InitializeWithConfigPipeline(
+                new List<string> { Path.Combine(repoRoot, "mods", "LudotsCoreMod") },
+                tempAssetsRoot);
+
+            var vfs = (VirtualFileSystem)engine.VFS;
+            vfs.Unmount("Core");
+            vfs.Mount("Core", tempAssetsRoot);
+
+            typeof(GameEngine)
+                .GetProperty(nameof(GameEngine.LogicTerrain), BindingFlags.Instance | BindingFlags.Public)!
+                .SetValue(engine, new FlatGridLogicTerrainField(
+                    SpatialScaleDefaults.TerrainChunkCells,
+                    SpatialScaleDefaults.TerrainChunkCells,
+                    chunkSizeCells: SpatialScaleDefaults.TerrainChunkCells));
+
+            var loadNav = typeof(GameEngine).GetMethod("LoadNavForMap", BindingFlags.Instance | BindingFlags.NonPublic)
+                ?? throw new MissingMethodException(nameof(GameEngine), "LoadNavForMap");
+            loadNav.Invoke(engine, new object[]
+            {
+                mapId,
+                new MapConfig
+                {
+                    Id = mapId,
+                    Tags = new List<string> { MapTags.FeatureNavMeshOn.Name }
+                }
+            });
+
+            return engine;
+        }
+
+        private static void RewriteTempNavmeshMode(string tempAssetsRoot, string mode, string algorithm)
+        {
+            string path = Path.Combine(tempAssetsRoot, "Configs", "Navigation", "navmesh.json");
+            JsonObject navmesh = ReadObject(path);
+            navmesh["mode"] = mode;
+            navmesh["algorithm"] = algorithm;
+            File.WriteAllText(path, navmesh.ToJsonString(new System.Text.Json.JsonSerializerOptions { WriteIndented = true }));
+        }
+
+        private static string CreateTempAssetsRootWithNavTiles(string repoRoot, string mapId)
+        {
+            string tempRoot = Path.Combine(Path.GetTempPath(), "ludots-nav-bootstrap-contract-" + Guid.NewGuid().ToString("N"));
+            string configSource = Path.Combine(repoRoot, "assets", "Configs");
+            string configTarget = Path.Combine(tempRoot, "Configs");
+            CopyDirectory(configSource, configTarget);
+
+            var config = NavMeshBakeConfigLoader.LoadFromRepoRoot(repoRoot);
+            for (int layerIndex = 0; layerIndex < config.Layers.Count; layerIndex++)
+            {
+                int layer = config.Layers[layerIndex].Layer;
+                for (int profileIndex = 0; profileIndex < config.Profiles.Count; profileIndex++)
+                {
+                    string profileId = config.Profiles[profileIndex].Id;
+                    string rel = NavAssetPaths.GetNavTileRelativePath(mapId, layer, profileId, 0, 0);
+                    string tilePath = Path.Combine(tempRoot, rel.Replace('/', Path.DirectorySeparatorChar));
+                    Directory.CreateDirectory(Path.GetDirectoryName(tilePath)!);
+                    File.WriteAllBytes(tilePath, Array.Empty<byte>());
+                }
+            }
+
+            return tempRoot;
+        }
+
+        private static void CopyDirectory(string source, string target)
+        {
+            Directory.CreateDirectory(target);
+            foreach (string file in Directory.EnumerateFiles(source))
+            {
+                File.Copy(file, Path.Combine(target, Path.GetFileName(file)), overwrite: false);
+            }
+
+            foreach (string dir in Directory.EnumerateDirectories(source))
+            {
+                CopyDirectory(dir, Path.Combine(target, Path.GetFileName(dir)));
+            }
         }
 
         private static JsonObject ReadObject(string path)

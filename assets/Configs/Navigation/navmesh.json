@@ -30,5 +30,12 @@
       "areaId": 0,
       "cost": 1.0
     }
-  ]
+  ],
+  "runtimeIncremental": {
+    "tileBudgetPerFixedTick": 1,
+    "includeNeighborTiles": true,
+    "heightScaleMeters": 1.0,
+    "minWalkableUpDot": 0.6,
+    "cliffHeightThreshold": 1
+  }
 }

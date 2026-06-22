@@ -6,11 +6,17 @@ using Ludots.Core.Engine.Physics2D;
 using Ludots.Core.Gameplay.Spawning;
 using Ludots.Core.Mathematics;
 using Ludots.Core.Mathematics.FixedPoint;
+using Ludots.Core.Navigation.AgentProfiles;
+using Ludots.Core.Navigation.NavMesh;
+using Ludots.Core.Navigation.NavMesh.Bake;
+using Ludots.Core.Navigation.NavMesh.Config;
+using Ludots.Core.Navigation.Terrain;
 using Ludots.Physics.Broadphase;
 using Ludots.Core.Physics2D;
 using Ludots.Core.Physics2D.Components;
 using Ludots.Core.Physics2D.Systems;
 using Ludots.Core.Physics2D.Ticking;
+using Ludots.Core.Scripting;
 using NUnit.Framework;
 
 namespace GasTests
@@ -18,6 +24,8 @@ namespace GasTests
     [TestFixture]
     public sealed class Physics2DIntegrationTests
     {
+        private const string GroundNavLayerId = "Ground";
+
         [SetUp]
         public void SetUp()
         {
@@ -542,6 +550,188 @@ namespace GasTests
             Assert.That(build.StaticBodyVersion, Is.EqualTo(staticVersion));
             Assert.That(build.DirtyStaticBodyCountLastUpdate, Is.EqualTo(0));
             Assert.That(build.StaticRigidBodyDescriptors.Count, Is.EqualTo(2));
+        }
+
+        [Test]
+        public void RuntimeNavMeshObstacleDirtySystem_UsesBridgeStateAsStructuralDirtySource()
+        {
+            using var world = World.Create();
+            var engine = CreateRuntimeNavMeshDirtyEngine(
+                world,
+                out NavObstacleSet obstacles,
+                out RuntimeIncrementalNavMeshRebuildQueue queue,
+                out NavTileStore store);
+
+            var obstacleEntity = world.Create(
+                WorldPositionCm.FromCm(150, 150),
+                new RuntimeNavMeshStructuralObstacle(),
+                new ManifestationObstacleIntent2D
+                {
+                    Shape = ManifestationObstacleShape2D.Circle,
+                    SinkNavigationObstacle = 1,
+                    RadiusCm = 45,
+                    NavRadiusCm = 45
+                });
+            var nonStructuralEntity = world.Create(
+                WorldPositionCm.FromCm(120, 250),
+                new ManifestationObstacleIntent2D
+                {
+                    Shape = ManifestationObstacleShape2D.Circle,
+                    SinkNavigationObstacle = 1,
+                    RadiusCm = 35,
+                    NavRadiusCm = 35
+                });
+
+            var bridge = new ManifestationObstacleBridge2DSystem(world);
+            var dirtySystem = new RuntimeNavMeshObstacleDirtySystem(engine);
+            bridge.Update(0f);
+            dirtySystem.Update(0f);
+
+            Assert.That(obstacles.Obstacles.Count, Is.EqualTo(1));
+            Assert.That(queue.PendingTileCount, Is.EqualTo(0));
+            Assert.That(store.Revision, Is.EqualTo(1u));
+            Assert.That(store.TryGet(new NavTileId(0, 0, 0), out NavTile firstTile), Is.True);
+
+            world.Set(nonStructuralEntity, WorldPositionCm.FromCm(170, 250));
+            world.Add(nonStructuralEntity, new ManifestationObstacleBridge2DDirty());
+            bridge.Update(0f);
+            dirtySystem.Update(0f);
+
+            Assert.That(obstacles.Obstacles.Count, Is.EqualTo(1));
+            Assert.That(store.Revision, Is.EqualTo(1u));
+
+            world.Set(obstacleEntity, WorldPositionCm.FromCm(250, 150));
+            world.Add(obstacleEntity, new ManifestationObstacleBridge2DDirty());
+            bridge.Update(0f);
+            dirtySystem.Update(0f);
+
+            Assert.That(obstacles.Obstacles.Count, Is.EqualTo(1));
+            Assert.That(store.Revision, Is.EqualTo(2u));
+            Assert.That(store.TryGet(new NavTileId(0, 0, 0), out NavTile secondTile), Is.True);
+            Assert.That(secondTile.Checksum, Is.Not.EqualTo(firstTile.Checksum));
+        }
+
+        [Test]
+        public void RuntimeNavMeshObstacleDirtySystem_ClearsTrackedStateWhenRuntimeModeStops()
+        {
+            using var world = World.Create();
+            var engine = CreateRuntimeNavMeshDirtyEngine(world, out _, out RuntimeIncrementalNavMeshRebuildQueue queue, out NavTileStore store);
+            var obstacleEntity = world.Create(
+                WorldPositionCm.FromCm(150, 150),
+                new RuntimeNavMeshStructuralObstacle(),
+                new ManifestationObstacleIntent2D
+                {
+                    Shape = ManifestationObstacleShape2D.Circle,
+                    SinkNavigationObstacle = 1,
+                    RadiusCm = 45,
+                    NavRadiusCm = 45
+                });
+
+            var bridge = new ManifestationObstacleBridge2DSystem(world);
+            var dirtySystem = new RuntimeNavMeshObstacleDirtySystem(engine);
+            bridge.Update(0f);
+            dirtySystem.Update(0f);
+
+            Assert.That(queue.PendingTileCount, Is.EqualTo(0));
+            Assert.That(store.Revision, Is.EqualTo(1u));
+
+            engine.RemoveService(CoreServiceKeys.NavMeshBakeConfig);
+            dirtySystem.Update(0f);
+
+            world.Destroy(obstacleEntity);
+            engine.SetService(CoreServiceKeys.NavMeshBakeConfig, CreateRuntimeNavBakeConfig());
+            dirtySystem.Update(0f);
+
+            Assert.That(queue.PendingTileCount, Is.EqualTo(0));
+            Assert.That(store.Revision, Is.EqualTo(1u));
+        }
+
+        private static NavMeshBakeConfig CreateRuntimeNavBakeConfig()
+        {
+            return new NavMeshBakeConfig
+            {
+                Mode = NavBakeNames.ModeRuntimeIncremental,
+                Algorithm = NavBakeNames.AlgorithmCdt,
+                Profiles = new List<NavMeshAgentProfileConfig>
+                {
+                    new NavMeshAgentProfileConfig { Id = "Small", MaxClimbCm = 40, MaxSlopeDeg = 45 }
+                },
+                Layers = new List<NavLayerConfig>
+                {
+                    new NavLayerConfig { Id = GroundNavLayerId, Layer = 0 }
+                },
+                Areas = new List<NavAreaCostConfig>(),
+                RuntimeIncremental = new NavRuntimeIncrementalConfig
+                {
+                    TileBudgetPerFixedTick = 1,
+                    IncludeNeighborTiles = false,
+                    HeightScaleMeters = 1f,
+                    MinWalkableUpDot = 0.6f,
+                    CliffHeightThreshold = 1
+                }
+            };
+        }
+
+        private static AgentProfileRegistry CreateNavAgentProfiles()
+        {
+            return new AgentProfileRegistry(new[]
+            {
+                new AgentProfileConfig
+                {
+                    Id = "Small",
+                    RadiusCm = 30,
+                    HeightCm = 180,
+                    ClearanceCm = 40,
+                    Mass = 1,
+                    Layer = 0
+                }
+            });
+        }
+
+        private static GameEngine CreateRuntimeNavMeshDirtyEngine(
+            World world,
+            out NavObstacleSet obstacles,
+            out RuntimeIncrementalNavMeshRebuildQueue queue,
+            out NavTileStore store)
+        {
+            var engine = new GameEngine();
+            engine.SetService(CoreServiceKeys.World, world);
+            typeof(GameEngine).GetProperty(nameof(GameEngine.World))!
+                .SetValue(engine, world);
+
+            var terrain = new FlatGridLogicTerrainField(4, 4, chunkSizeCells: 4);
+            NavMeshBakeConfig bakeConfig = CreateRuntimeNavBakeConfig();
+            AgentProfileRegistry agentProfiles = CreateNavAgentProfiles();
+            var navProfiles = new NavMeshProfileRegistry(bakeConfig, agentProfiles);
+            obstacles = new NavObstacleSet();
+            store = new NavTileStore(_ => throw new InvalidOperationException("Runtime navmesh dirty test publishes before disk load."));
+            var registry = new NavQueryServiceRegistry(new Dictionary<NavQueryServiceKey, NavTileStore>
+            {
+                [new NavQueryServiceKey(0, 0)] = store
+            });
+            queue = new RuntimeIncrementalNavMeshRebuildQueue(
+                new NavBakeService(new CdtNavBakeAlgorithm()),
+                new NavBakeContext
+                {
+                    MapId = "physics_runtime_navmesh_dirty_contract",
+                    SourceUri = "Core:Maps/physics_runtime_navmesh_dirty_contract.runtime-navmesh",
+                    Terrain = terrain,
+                    Obstacles = obstacles,
+                    Config = bakeConfig,
+                    AgentProfiles = agentProfiles,
+                    Targets = new[] { new NavBakeTileCoord(0, 0) },
+                    BuildConfig = new NavBuildConfig(1f, 0.6f, 1),
+                    TileVersion = 3,
+                    Mode = NavBakeMode.RuntimeIncremental,
+                    Algorithm = NavBakeAlgorithmKind.Cdt,
+                    Execution = new NavBakeExecutionOptions { Parallel = false, MaxDegreeOfParallelism = 1 }
+                },
+                registry,
+                navProfiles);
+            engine.SetService(CoreServiceKeys.NavMeshBakeConfig, bakeConfig);
+            engine.SetService(CoreServiceKeys.RuntimeNavMeshObstacles, obstacles);
+            engine.SetService(CoreServiceKeys.RuntimeNavMeshRebuildQueue, queue);
+            return engine;
         }
     }
 }

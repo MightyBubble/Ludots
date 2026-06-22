@@ -11,6 +11,7 @@ This section collects current runbooks and reference pages.
 - [Obstacle Authoring](obstacle-authoring.md)
 - [Logic Terrain and Topology](logic-terrain-and-topology.md)
 - [NavBakeContext and Unified Bake Service](nav-bake-context.md)
+- [Runtime Incremental Navmesh Rebuild](runtime-incremental-navmesh-rebuild.md)
 - [MassNavigation Execution Avoidance and Targets](mass-navigation-execution-avoidance-and-targets.md)
 - [Routing To Mass Execution](routing-to-mass-execution.md)
 - [Move Planning MassFlow Road Execution](move-planning-massflow-road-execution.md)

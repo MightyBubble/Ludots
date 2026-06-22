@@ -40,7 +40,9 @@ namespace Ludots.Core.Navigation.NavMesh.Bake
                 target.ChunkX,
                 target.ChunkY,
                 context.TileVersion,
-                context.BuildConfig);
+                context.BuildConfig,
+                context.Obstacles,
+                layer.Id);
 
             if (!result.Success || result.Tile == null)
             {
@@ -157,9 +159,12 @@ namespace Ludots.Core.Navigation.NavMesh.Bake
         public NavBakeResult Bake(NavBakeContext context)
         {
             context.Validate();
-            if (context.Mode == NavBakeMode.RuntimeIncremental)
+
+            if (context.Mode == NavBakeMode.RuntimeIncremental &&
+                context.Algorithm != NavBakeAlgorithmKind.Cdt)
             {
-                throw new NotSupportedException("NavBakeService runtime-incremental mode is reserved for NAV-10 and is not implemented in NAV-5.");
+                throw new InvalidOperationException(
+                    "NavBakeService runtime-incremental mode requires algorithm 'cdt'.");
             }
 
             if (!_algorithms.TryGetValue(context.Algorithm, out INavBakeAlgorithm algorithm))

@@ -52,6 +52,8 @@ namespace Ludots.Core.Navigation.NavMesh
 
     public sealed class NavQueryService
     {
+        private const int MaxStableRevisionAttempts = 2;
+
         private readonly NavTileStore _store;
         private readonly int _layer;
         private readonly NavAreaCostTable _areaCosts;
@@ -88,6 +90,19 @@ namespace Ludots.Core.Navigation.NavMesh
         }
 
         public NavPathResult TryFindPath(int startXcm, int startZcm, int goalXcm, int goalZcm, int maxPortals = 256)
+        {
+            if (_store.TryRunStableRead(
+                    () => TryFindPathCore(startXcm, startZcm, goalXcm, goalZcm, maxPortals),
+                    out NavPathResult result,
+                    MaxStableRevisionAttempts))
+            {
+                return result;
+            }
+
+            return new NavPathResult(NavPathStatus.NotReady, Array.Empty<int>(), Array.Empty<int>(), Fix64.Zero);
+        }
+
+        private NavPathResult TryFindPathCore(int startXcm, int startZcm, int goalXcm, int goalZcm, int maxPortals)
         {
             if (!TryProject(startXcm, startZcm, out var startLoc)) return new NavPathResult(NavPathStatus.NotReady, Array.Empty<int>(), Array.Empty<int>(), Fix64.Zero);
             if (!TryProject(goalXcm, goalZcm, out var goalLoc)) return new NavPathResult(NavPathStatus.NotReady, Array.Empty<int>(), Array.Empty<int>(), Fix64.Zero);

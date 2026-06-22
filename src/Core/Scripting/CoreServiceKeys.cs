@@ -38,6 +38,7 @@ using Ludots.Core.Modding;
 using Ludots.Core.Navigation.GraphWorld;
 using Ludots.Core.Navigation.AgentProfiles;
 using Ludots.Core.Navigation.NavMesh;
+using Ludots.Core.Navigation.NavMesh.Bake;
 using Ludots.Core.Navigation.NavMesh.Config;
 using Ludots.Core.Navigation.Pathing;
 using Ludots.Core.Navigation.Pathing.Config;
@@ -291,6 +292,8 @@ namespace Ludots.Core.Scripting
         public static readonly ServiceKey<NavMeshBakeConfig> NavMeshBakeConfig = new("NavMeshBakeConfig");
         public static readonly ServiceKey<NavMeshProfileRegistry> NavMeshProfiles = new("NavMeshProfiles");
         public static readonly ServiceKey<NavQueryServiceRegistry> NavQueryServices = new("NavQueryServices");
+        public static readonly ServiceKey<NavObstacleSet> RuntimeNavMeshObstacles = new("RuntimeNavMeshObstacles");
+        public static readonly ServiceKey<RuntimeIncrementalNavMeshRebuildQueue> RuntimeNavMeshRebuildQueue = new("RuntimeNavMeshRebuildQueue");
         public static readonly ServiceKey<PathingConfig> PathingConfig = new("PathingConfig");
         public static readonly ServiceKey<PathStore> PathStore = new("PathStore");
         public static readonly ServiceKey<IPathService> PathService = new("PathService");

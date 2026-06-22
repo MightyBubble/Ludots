@@ -30,7 +30,7 @@ Out of scope:
 
 - Height precision expansion. Logic terrain height remains 4-bit.
 - Making visual terrain the source of walkability.
-- Runtime incremental navmesh rebuild; that is NAV-10 #304.
+- Runtime incremental navmesh rebuild details; those are covered by [NAV-10 #304](runtime-incremental-navmesh-rebuild.md).
 
 ## User Story
 

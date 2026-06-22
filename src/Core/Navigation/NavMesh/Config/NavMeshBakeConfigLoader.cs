@@ -99,7 +99,7 @@ namespace Ludots.Core.Navigation.NavMesh.Config
 
         private void ValidateRaw(JsonObject root, string relativePath)
         {
-            RequireOnlyProperties(root, "NavMeshBakeConfig", "mode", "algorithm", "profiles", "layers", "areas");
+            RequireOnlyProperties(root, "NavMeshBakeConfig", "mode", "algorithm", "profiles", "layers", "areas", "runtimeIncremental");
             string mode = RequireString(root, "mode", "NavMeshBakeConfig");
             string algorithm = RequireString(root, "algorithm", "NavMeshBakeConfig");
             _ = NavBakeNames.ParseMode(mode, "NavMeshBakeConfig.mode");
@@ -173,6 +173,44 @@ namespace Ludots.Core.Navigation.NavMesh.Config
                 RequireNumber(area, "areaId", path);
                 RequireNumber(area, "cost", path);
             }
+
+            if (root["runtimeIncremental"] is not JsonObject runtimeIncremental)
+            {
+                throw new InvalidOperationException("NavMeshBakeConfig.runtimeIncremental must be an explicit object.");
+            }
+
+            RequireOnlyProperties(
+                runtimeIncremental,
+                "NavMeshBakeConfig.runtimeIncremental",
+                "tileBudgetPerFixedTick",
+                "includeNeighborTiles",
+                "heightScaleMeters",
+                "minWalkableUpDot",
+                "cliffHeightThreshold");
+            int tileBudget = RequireInt(runtimeIncremental, "tileBudgetPerFixedTick", "NavMeshBakeConfig.runtimeIncremental");
+            if (tileBudget <= 0)
+            {
+                throw new InvalidOperationException("NavMeshBakeConfig.runtimeIncremental.tileBudgetPerFixedTick must be > 0.");
+            }
+
+            RequireBool(runtimeIncremental, "includeNeighborTiles", "NavMeshBakeConfig.runtimeIncremental");
+            float heightScale = RequireFloat(runtimeIncremental, "heightScaleMeters", "NavMeshBakeConfig.runtimeIncremental");
+            if (heightScale <= 0f || float.IsNaN(heightScale))
+            {
+                throw new InvalidOperationException("NavMeshBakeConfig.runtimeIncremental.heightScaleMeters must be > 0.");
+            }
+
+            float minUpDot = RequireFloat(runtimeIncremental, "minWalkableUpDot", "NavMeshBakeConfig.runtimeIncremental");
+            if (minUpDot < -1f || minUpDot > 1f || float.IsNaN(minUpDot))
+            {
+                throw new InvalidOperationException("NavMeshBakeConfig.runtimeIncremental.minWalkableUpDot must be between -1 and 1.");
+            }
+
+            int cliff = RequireInt(runtimeIncremental, "cliffHeightThreshold", "NavMeshBakeConfig.runtimeIncremental");
+            if (cliff < 0)
+            {
+                throw new InvalidOperationException("NavMeshBakeConfig.runtimeIncremental.cliffHeightThreshold must be >= 0.");
+            }
         }
 
         private static void RequireOnlyProperties(JsonObject obj, string path, params string[] allowed)
@@ -228,6 +266,46 @@ namespace Ludots.Core.Navigation.NavMesh.Config
             {
                 throw new InvalidOperationException($"{path}.{key} must be a number.");
             }
+        }
+
+        private static int RequireInt(JsonObject obj, string key, string path)
+        {
+            if (obj[key] is not JsonValue value || !value.TryGetValue<int>(out int number))
+            {
+                throw new InvalidOperationException($"{path}.{key} must be an integer.");
+            }
+
+            return number;
+        }
+
+        private static float RequireFloat(JsonObject obj, string key, string path)
+        {
+            if (obj[key] is not JsonValue value)
+            {
+                throw new InvalidOperationException($"{path}.{key} must be a number.");
+            }
+
+            if (value.TryGetValue<float>(out float number))
+            {
+                return number;
+            }
+
+            if (value.TryGetValue<double>(out double numberDouble))
+            {
+                return (float)numberDouble;
+            }
+
+            throw new InvalidOperationException($"{path}.{key} must be a number.");
+        }
+
+        private static bool RequireBool(JsonObject obj, string key, string path)
+        {
+            if (obj[key] is not JsonValue value || !value.TryGetValue<bool>(out bool flag))
+            {
+                throw new InvalidOperationException($"{path}.{key} must be a boolean.");
+            }
+
+            return flag;
         }
     }
 

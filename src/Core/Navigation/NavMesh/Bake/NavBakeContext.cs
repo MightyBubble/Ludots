@@ -93,6 +93,11 @@ namespace Ludots.Core.Navigation.NavMesh.Bake
                 throw new InvalidOperationException("NavBakeContext.agentProfiles is required.");
             }
 
+            if (Obstacles == null)
+            {
+                throw new InvalidOperationException("NavBakeContext.obstacles is required.");
+            }
+
             if (Targets == null)
             {
                 throw new InvalidOperationException("NavBakeContext.targets is required.");
@@ -118,6 +123,8 @@ namespace Ludots.Core.Navigation.NavMesh.Bake
                 throw new InvalidOperationException("NavBakeContext.config.layers is empty.");
             }
 
+            ValidateObstacles();
+
             for (int i = 0; i < Targets.Count; i++)
             {
                 NavBakeTileCoord target = Targets[i];
@@ -126,6 +133,77 @@ namespace Ludots.Core.Navigation.NavMesh.Bake
                     target.ChunkY >= Terrain.HeightChunks)
                 {
                     throw new InvalidOperationException($"NavBakeContext.targets[{i}] is out of terrain range: {target}.");
+                }
+            }
+        }
+
+        private void ValidateObstacles()
+        {
+            if (Obstacles.Obstacles == null)
+            {
+                throw new InvalidOperationException("NavBakeContext.obstacles.obstacles is required.");
+            }
+
+            var layerIds = new HashSet<string>(StringComparer.Ordinal);
+            for (int i = 0; i < Config.Layers.Count; i++)
+            {
+                NavLayerConfig layer = Config.Layers[i]
+                    ?? throw new InvalidOperationException($"NavBakeContext.config.layers[{i}] is null.");
+                if (string.IsNullOrWhiteSpace(layer.Id) ||
+                    !string.Equals(layer.Id.Trim(), layer.Id, StringComparison.Ordinal))
+                {
+                    throw new InvalidOperationException($"NavBakeContext.config.layers[{i}].id must be a non-empty trimmed string.");
+                }
+
+                if (!layerIds.Add(layer.Id))
+                {
+                    throw new InvalidOperationException($"NavBakeContext.config.layers contains duplicate id '{layer.Id}'.");
+                }
+            }
+
+            for (int i = 0; i < Obstacles.Obstacles.Count; i++)
+            {
+                NavObstacle obstacle = Obstacles.Obstacles[i]
+                    ?? throw new InvalidOperationException($"NavBakeContext.obstacles.obstacles[{i}] is null.");
+                string path = $"NavBakeContext.obstacles.obstacles[{i}]";
+                if (string.IsNullOrWhiteSpace(obstacle.Id) ||
+                    !string.Equals(obstacle.Id.Trim(), obstacle.Id, StringComparison.Ordinal))
+                {
+                    throw new InvalidOperationException($"{path}.id must be a non-empty trimmed string.");
+                }
+
+                if (string.IsNullOrWhiteSpace(obstacle.LayerId) ||
+                    !string.Equals(obstacle.LayerId.Trim(), obstacle.LayerId, StringComparison.Ordinal))
+                {
+                    throw new InvalidOperationException($"{path}.layerId must be a non-empty trimmed string.");
+                }
+
+                if (!layerIds.Contains(obstacle.LayerId))
+                {
+                    throw new InvalidOperationException($"{path}.layerId references unknown nav layer '{obstacle.LayerId}'.");
+                }
+
+                if (obstacle.AreaId.HasValue && ((uint)obstacle.AreaId.Value > byte.MaxValue))
+                {
+                    throw new InvalidOperationException($"{path}.areaId must be between 0 and 255.");
+                }
+
+                switch (obstacle.Kind)
+                {
+                    case NavObstacleKind.Circle:
+                        if (obstacle.RadiusCm <= 0)
+                        {
+                            throw new InvalidOperationException($"{path}.radiusCm must be > 0 for circle obstacles.");
+                        }
+                        break;
+                    case NavObstacleKind.Polygon:
+                        if (obstacle.Points == null || obstacle.Points.Count < 3)
+                        {
+                            throw new InvalidOperationException($"{path}.points must contain at least 3 points for polygon obstacles.");
+                        }
+                        break;
+                    default:
+                        throw new InvalidOperationException($"{path}.kind '{obstacle.Kind}' is not supported by navmesh bake.");
                 }
             }
         }

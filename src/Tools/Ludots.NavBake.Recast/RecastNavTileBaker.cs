@@ -33,6 +33,7 @@ namespace Ludots.NavBake.Recast
                 agentProfile,
                 navProfile,
                 layer.Layer,
+                layer.Id,
                 context.Obstacles,
                 out tile,
                 out artifact);
@@ -50,6 +51,7 @@ namespace Ludots.NavBake.Recast
             AgentProfileConfig agentProfile,
             NavMeshAgentProfileConfig navProfile,
             int layer,
+            string layerId,
             NavObstacleSet obstacles,
             out NavTile tile,
             out NavBakeArtifact artifact)
@@ -61,7 +63,7 @@ namespace Ludots.NavBake.Recast
                 return false;
             }
 
-            return TryBake(new VertexMapLogicTerrainField(map), chunkX, chunkY, tileVersion, legacyConfig, agentProfile, navProfile, layer, obstacles, out tile, out artifact);
+            return TryBake(new VertexMapLogicTerrainField(map), chunkX, chunkY, tileVersion, legacyConfig, agentProfile, navProfile, layer, layerId, obstacles, out tile, out artifact);
         }
 
         public static bool TryBake(
@@ -73,6 +75,7 @@ namespace Ludots.NavBake.Recast
             AgentProfileConfig agentProfile,
             NavMeshAgentProfileConfig navProfile,
             int layer,
+            string layerId,
             NavObstacleSet obstacles,
             out NavTile tile,
             out NavBakeArtifact artifact)
@@ -88,7 +91,7 @@ namespace Ludots.NavBake.Recast
 
             try
             {
-                BuildRecastTriangleMesh(baseTile, obstacles, layer, out var verts, out var tris);
+                BuildRecastTriangleMesh(baseTile, obstacles, layerId, out var verts, out var tris);
                 if (tris.Count == 0)
                 {
                     artifact = new NavBakeArtifact(new NavTileId(chunkX, chunkY, layer), tileVersion, NavBakeStage.Triangulate, NavBakeErrorCode.NoWalkableDomain, "No triangles after obstacle filtering.", 0, 0, 0, 0);
@@ -148,7 +151,7 @@ namespace Ludots.NavBake.Recast
                 new RcAreaModification(0), true);
         }
 
-        private static void BuildRecastTriangleMesh(NavTile baseTile, NavObstacleSet obstacles, int layer, out List<float> verts, out List<int> tris)
+        private static void BuildRecastTriangleMesh(NavTile baseTile, NavObstacleSet obstacles, string layerId, out List<float> verts, out List<int> tris)
         {
             int vCount = baseTile.VertexCount;
             verts = new List<float>(vCount * 3);
@@ -166,7 +169,7 @@ namespace Ludots.NavBake.Recast
                 int b = baseTile.TriB[i];
                 int c = baseTile.TriC[i];
 
-                if (IsTriangleBlockedByObstacles(baseTile, a, b, c, obstacles, layer))
+                if (IsTriangleBlockedByObstacles(baseTile, a, b, c, obstacles, layerId))
                 {
                     continue;
                 }
@@ -177,7 +180,7 @@ namespace Ludots.NavBake.Recast
             }
         }
 
-        private static bool IsTriangleBlockedByObstacles(NavTile tile, int a, int b, int c, NavObstacleSet obstacles, int layer)
+        private static bool IsTriangleBlockedByObstacles(NavTile tile, int a, int b, int c, NavObstacleSet obstacles, string layerId)
         {
             if (obstacles?.Obstacles == null || obstacles.Obstacles.Count == 0) return false;
 
@@ -188,57 +191,7 @@ namespace Ludots.NavBake.Recast
             int cx = tile.OriginXcm + tile.VertexXcm[c];
             int cz = tile.OriginZcm + tile.VertexZcm[c];
 
-            int mx = (ax + bx + cx) / 3;
-            int mz = (az + bz + cz) / 3;
-
-            for (int i = 0; i < obstacles.Obstacles.Count; i++)
-            {
-                var o = obstacles.Obstacles[i];
-                if (!o.Enabled) continue;
-                if (ResolveLayerId(o.LayerId) != layer) continue;
-
-                if (o.Kind == NavObstacleKind.Circle)
-                {
-                    int dx = mx - o.Center.Xcm;
-                    int dz = mz - o.Center.Zcm;
-                    long d2 = (long)dx * dx + (long)dz * dz;
-                    long r2 = (long)o.RadiusCm * o.RadiusCm;
-                    if (d2 <= r2) return true;
-                }
-                else if (o.Kind == NavObstacleKind.Polygon)
-                {
-                    if (PointInPolygon(mx, mz, o.Points)) return true;
-                }
-            }
-
-            return false;
-        }
-
-        private static int ResolveLayerId(string layerId)
-        {
-            if (string.Equals(layerId, "Ground", StringComparison.OrdinalIgnoreCase)) return 0;
-            return 0;
-        }
-
-        private static bool PointInPolygon(int xcm, int zcm, List<NavPointCm> poly)
-        {
-            if (poly == null || poly.Count < 3) return false;
-
-            bool inside = false;
-            int j = poly.Count - 1;
-            for (int i = 0; i < poly.Count; j = i++)
-            {
-                int xi = poly[i].Xcm;
-                int zi = poly[i].Zcm;
-                int xj = poly[j].Xcm;
-                int zj = poly[j].Zcm;
-
-                if ((zi > zcm) == (zj > zcm)) continue;
-                double xInt = (double)(xj - xi) * (zcm - zi) / (double)(zj - zi) + xi;
-                if (xcm < xInt) inside = !inside;
-            }
-
-            return inside;
+            return NavObstacleGeometry.IsTriangleBlockedByObstacles(ax, az, bx, bz, cx, cz, obstacles, layerId);
         }
 
         private static void BuildNavTileFromDetailMesh(
