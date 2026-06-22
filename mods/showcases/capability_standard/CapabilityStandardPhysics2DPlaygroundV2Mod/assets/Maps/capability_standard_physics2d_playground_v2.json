@@ -9,12 +9,12 @@
   ],
   "DefaultCamera": {
     "VirtualCameraId": "Camera.Profile.Tactical",
-    "TargetXCm": 0,
-    "TargetYCm": 0,
-    "DistanceCm": 7600,
-    "Pitch": 62,
+    "TargetXCm": 40,
+    "TargetYCm": -120,
+    "DistanceCm": 2600,
+    "Pitch": 58,
     "Yaw": 180,
-    "FovYDeg": 48
+    "FovYDeg": 50
   },
   "Entities": []
 }

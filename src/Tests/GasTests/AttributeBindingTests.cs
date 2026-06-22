@@ -80,6 +80,10 @@ namespace Ludots.Tests.GAS
                 ref var force = ref world.Get<ForceInput2D>(e);
                 That(force.Force.X.ToFloat(), Is.EqualTo(3f).Within(0.001f));
                 That(force.Force.Y.ToFloat(), Is.EqualTo(4f).Within(0.001f));
+                That(world.Get<AttributeBuffer>(e).GetCurrent(fxId), Is.EqualTo(0f).Within(0.001f),
+                    "ResetToZeroPerLogicFrame force request attributes are one-frame request channels.");
+                That(world.Get<AttributeBuffer>(e).GetCurrent(fyId), Is.EqualTo(0f).Within(0.001f),
+                    "ResetToZeroPerLogicFrame force request attributes are one-frame request channels.");
             }
             finally
             {

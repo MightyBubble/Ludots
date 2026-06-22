@@ -3,8 +3,16 @@
     "id": "capability_standard_physics2d_playground_v2_physics_body",
     "components": {
       "Name": { "Value": "CapabilityStandardPhysics2DPlaygroundV2.PhysicsBody" },
-      "PresentationStaticTransform": {},
       "FacingDirection": { "AngleRad": 0.0 },
+      "AttributeBuffer": {
+        "base": {
+          "Physics.ForceRequestX": 0,
+          "Physics.ForceRequestY": 0
+        }
+      },
+      "GameplayTagContainer": {},
+      "TagCountContainer": {},
+      "ForceInput2D": {},
       "CapabilityStandardPhysics2DPlaygroundV2.ModePartition": { "Mode": 0 },
       "CapabilityStandardPhysics2DPlaygroundV2.RigidBody": {
         "positionCm": { "x": -720, "y": -260 },
@@ -32,6 +40,14 @@
       "Name": { "Value": "CapabilityStandardPhysics2DPlaygroundV2.PhysicsWall" },
       "PresentationStaticTransform": {},
       "FacingDirection": { "AngleRad": 0.0 },
+      "AttributeBuffer": {
+        "base": {
+          "Physics.ForceRequestX": 0,
+          "Physics.ForceRequestY": 0
+        }
+      },
+      "GameplayTagContainer": {},
+      "TagCountContainer": {},
       "CapabilityStandardPhysics2DPlaygroundV2.ModePartition": { "Mode": 0 },
       "CapabilityStandardPhysics2DPlaygroundV2.RigidBody": {
         "positionCm": { "x": -120, "y": -260 },
@@ -58,14 +74,8 @@
     "id": "capability_standard_physics2d_playground_v2_nav_agent",
     "components": {
       "Name": { "Value": "CapabilityStandardPhysics2DPlaygroundV2.NavAgent" },
-      "WorldPositionCm": {
-        "Value": {
-          "X": -900,
-          "Y": 0
-        }
-      },
+      "WorldPositionCm": { "Value": { "X": -900, "Y": 0 } },
       "FacingDirection": { "AngleRad": 0.0 },
-      "CapabilityStandardPhysics2DPlaygroundV2.ModePartition": { "Mode": 1 },
       "AttributeBuffer": {
         "base": {
           "MoveSpeed": 360,
@@ -73,20 +83,21 @@
         }
       },
       "GameplayTagContainer": {},
-      "OrderBuffer": {}
+      "TagCountContainer": {},
+      "OrderBuffer": {},
+      "CapabilityStandardPhysics2DPlaygroundV2.ModePartition": { "Mode": 1 }
     }
   },
   {
     "id": "capability_standard_physics2d_playground_v2_nav_obstacle",
     "components": {
       "Name": { "Value": "CapabilityStandardPhysics2DPlaygroundV2.NavObstacle" },
-      "WorldPositionCm": {
-        "Value": {
-          "X": -80,
-          "Y": 0
-        }
-      },
+      "WorldPositionCm": { "Value": { "X": -80, "Y": 0 } },
+      "PresentationStaticTransform": {},
       "FacingDirection": { "AngleRad": 0.0 },
+      "AttributeBuffer": { "base": {} },
+      "GameplayTagContainer": {},
+      "TagCountContainer": {},
       "CapabilityStandardPhysics2DPlaygroundV2.ModePartition": { "Mode": 1 },
       "ManifestationObstacleIntent2D": {
         "shape": "Box",
@@ -99,6 +110,49 @@
         "sinkPhysicsCollider": true,
         "sinkNavigationObstacle": true,
         "navRadiusCm": 240
+      }
+    }
+  },
+  {
+    "id": "capability_standard_physics2d_playground_v2_nav_target",
+    "components": {
+      "Name": { "Value": "CapabilityStandardPhysics2DPlaygroundV2.NavTarget" },
+      "WorldPositionCm": { "Value": { "X": 980, "Y": 0 } },
+      "PresentationStaticTransform": {},
+      "FacingDirection": { "AngleRad": 0.0 },
+      "AttributeBuffer": { "base": {} },
+      "GameplayTagContainer": {},
+      "TagCountContainer": {},
+      "CapabilityStandardPhysics2DPlaygroundV2.ModePartition": { "Mode": 1 }
+    }
+  },
+  {
+    "id": "capability_standard_physics2d_playground_v2_benchmark_body",
+    "components": {
+      "Name": { "Value": "CapabilityStandardPhysics2DPlaygroundV2.BenchmarkBody" },
+      "FacingDirection": { "AngleRad": 0.0 },
+      "AttributeBuffer": { "base": {} },
+      "GameplayTagContainer": {},
+      "TagCountContainer": {},
+      "ForceInput2D": {},
+      "CapabilityStandardPhysics2DPlaygroundV2.RigidBody": {
+        "positionCm": { "x": 0, "y": 0 },
+        "rotationRad": 0.0,
+        "velocityCmPerSec": { "x": 0, "y": 0 },
+        "angularVelocityRadPerSec": 0.0,
+        "inverseMass": 1.0,
+        "inverseInertia": 1.0,
+        "shape": {
+          "type": "Box",
+          "halfWidthCm": 26,
+          "halfHeightCm": 26,
+          "localCenterCm": { "x": 0, "y": 0 }
+        },
+        "material": {
+          "friction": 0.32,
+          "restitution": 0.12,
+          "baseDamping": 0.998
+        }
       }
     }
   }

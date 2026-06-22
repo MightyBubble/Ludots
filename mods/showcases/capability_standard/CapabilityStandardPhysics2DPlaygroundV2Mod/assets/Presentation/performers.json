@@ -1,7 +1,153 @@
 [
   {
+    "id": "capability_standard_physics2d_playground_v2.physics_body_bootstrap",
+    "rules": [
+      {
+        "event": { "kind": "EntitySpawned", "key": "capability_standard_physics2d_playground_v2_physics_body" },
+        "condition": { "inline": "SourceHasVisualTransform" },
+        "command": {
+          "kind": "CreatePerformer",
+          "definitionId": "capability_standard_physics2d_playground_v2.physics_body",
+          "scopeSource": "EventPayloadA"
+        }
+      },
+      {
+        "event": { "kind": "EntityDestroyed", "key": "capability_standard_physics2d_playground_v2_physics_body" },
+        "command": {
+          "kind": "DestroyPerformerScope",
+          "scopeSource": "EventPayloadA"
+        }
+      }
+    ]
+  },
+  {
+    "id": "capability_standard_physics2d_playground_v2.physics_wall_bootstrap",
+    "rules": [
+      {
+        "event": { "kind": "EntitySpawned", "key": "capability_standard_physics2d_playground_v2_physics_wall" },
+        "condition": { "inline": "SourceHasVisualTransform" },
+        "command": {
+          "kind": "CreatePerformer",
+          "definitionId": "capability_standard_physics2d_playground_v2.physics_wall",
+          "scopeSource": "EventPayloadA"
+        }
+      },
+      {
+        "event": { "kind": "EntityDestroyed", "key": "capability_standard_physics2d_playground_v2_physics_wall" },
+        "command": {
+          "kind": "DestroyPerformerScope",
+          "scopeSource": "EventPayloadA"
+        }
+      }
+    ]
+  },
+  {
+    "id": "capability_standard_physics2d_playground_v2.nav_agent_bootstrap",
+    "rules": [
+      {
+        "event": { "kind": "EntitySpawned", "key": "capability_standard_physics2d_playground_v2_nav_agent" },
+        "condition": { "inline": "SourceHasVisualTransform" },
+        "command": {
+          "kind": "CreatePerformer",
+          "definitionId": "capability_standard_physics2d_playground_v2.nav_agent",
+          "scopeSource": "EventPayloadA"
+        }
+      },
+      {
+        "event": { "kind": "EntityDestroyed", "key": "capability_standard_physics2d_playground_v2_nav_agent" },
+        "command": {
+          "kind": "DestroyPerformerScope",
+          "scopeSource": "EventPayloadA"
+        }
+      }
+    ]
+  },
+  {
+    "id": "capability_standard_physics2d_playground_v2.nav_obstacle_bootstrap",
+    "rules": [
+      {
+        "event": { "kind": "EntitySpawned", "key": "capability_standard_physics2d_playground_v2_nav_obstacle" },
+        "condition": { "inline": "SourceHasVisualTransform" },
+        "command": {
+          "kind": "CreatePerformer",
+          "definitionId": "capability_standard_physics2d_playground_v2.nav_obstacle",
+          "scopeSource": "EventPayloadA"
+        }
+      },
+      {
+        "event": { "kind": "EntityDestroyed", "key": "capability_standard_physics2d_playground_v2_nav_obstacle" },
+        "command": {
+          "kind": "DestroyPerformerScope",
+          "scopeSource": "EventPayloadA"
+        }
+      }
+    ]
+  },
+  {
+    "id": "capability_standard_physics2d_playground_v2.nav_target_bootstrap",
+    "rules": [
+      {
+        "event": { "kind": "EntitySpawned", "key": "capability_standard_physics2d_playground_v2_nav_target" },
+        "condition": { "inline": "SourceHasVisualTransform" },
+        "command": {
+          "kind": "CreatePerformer",
+          "definitionId": "capability_standard_physics2d_playground_v2.nav_target",
+          "scopeSource": "EventPayloadA"
+        }
+      },
+      {
+        "event": { "kind": "EntityDestroyed", "key": "capability_standard_physics2d_playground_v2_nav_target" },
+        "command": {
+          "kind": "DestroyPerformerScope",
+          "scopeSource": "EventPayloadA"
+        }
+      }
+    ]
+  },
+  {
+    "id": "capability_standard_physics2d_playground_v2.benchmark_body_bootstrap",
+    "rules": [
+      {
+        "event": { "kind": "EntitySpawned", "key": "capability_standard_physics2d_playground_v2_benchmark_body" },
+        "condition": { "inline": "SourceHasVisualTransform" },
+        "command": {
+          "kind": "CreatePerformer",
+          "definitionId": "capability_standard_physics2d_playground_v2.benchmark_body",
+          "scopeSource": "EventPayloadA"
+        }
+      },
+      {
+        "event": { "kind": "EntityDestroyed", "key": "capability_standard_physics2d_playground_v2_benchmark_body" },
+        "command": {
+          "kind": "DestroyPerformerScope",
+          "scopeSource": "EventPayloadA"
+        }
+      }
+    ]
+  },
+  {
     "id": "capability_standard_physics2d_playground_v2.physics_body",
-    "defaultLifetime": -1,
+    "defaultColor": [0.12, 0.78, 0.95, 1.0],
+    "behaviors": [
+      {
+        "slot": "body",
+        "kind": "AssetBinding",
+        "activeByDefault": true,
+        "assetBinding": {
+          "assetKind": "Mesh",
+          "assetId": "sphere",
+          "materialId": "default_surface",
+          "renderPath": "InstancedStaticMesh",
+          "mobility": "Movable",
+          "localOffset": [0.0, 0.55, 0.0],
+          "localScale": [0.72, 0.72, 0.72]
+        }
+      }
+    ]
+  },
+  {
+    "id": "capability_standard_physics2d_playground_v2.physics_wall",
+    "defaultColor": [0.92, 0.42, 0.20, 1.0],
     "behaviors": [
       {
         "slot": "body",
@@ -11,9 +157,90 @@
           "assetKind": "Mesh",
           "assetId": "cube",
           "materialId": "default_surface",
-          "renderPath": "StaticMesh",
+          "renderPath": "InstancedStaticMesh",
+          "mobility": "Static",
+          "localOffset": [0.0, 1.30, 0.0],
+          "localScale": [0.96, 2.60, 1.10]
+        }
+      }
+    ]
+  },
+  {
+    "id": "capability_standard_physics2d_playground_v2.nav_agent",
+    "defaultColor": [0.36, 0.88, 0.38, 1.0],
+    "behaviors": [
+      {
+        "slot": "body",
+        "kind": "AssetBinding",
+        "activeByDefault": true,
+        "assetBinding": {
+          "assetKind": "Mesh",
+          "assetId": "sphere",
+          "materialId": "default_surface",
+          "renderPath": "InstancedStaticMesh",
           "mobility": "Movable",
-          "localScale": [1, 0.5, 1]
+          "localOffset": [0.0, 0.48, 0.0],
+          "localScale": [0.62, 0.62, 0.62]
+        }
+      }
+    ]
+  },
+  {
+    "id": "capability_standard_physics2d_playground_v2.nav_obstacle",
+    "defaultColor": [0.72, 0.48, 0.95, 1.0],
+    "behaviors": [
+      {
+        "slot": "body",
+        "kind": "AssetBinding",
+        "activeByDefault": true,
+        "assetBinding": {
+          "assetKind": "Mesh",
+          "assetId": "cube",
+          "materialId": "default_surface",
+          "renderPath": "InstancedStaticMesh",
+          "mobility": "Static",
+          "localOffset": [0.0, 1.70, 0.0],
+          "localScale": [1.80, 3.40, 1.20]
+        }
+      }
+    ]
+  },
+  {
+    "id": "capability_standard_physics2d_playground_v2.nav_target",
+    "defaultColor": [1.0, 0.88, 0.16, 1.0],
+    "behaviors": [
+      {
+        "slot": "body",
+        "kind": "AssetBinding",
+        "activeByDefault": true,
+        "assetBinding": {
+          "assetKind": "Mesh",
+          "assetId": "sphere",
+          "materialId": "default_surface",
+          "renderPath": "InstancedStaticMesh",
+          "mobility": "Static",
+          "localOffset": [0.0, 0.42, 0.0],
+          "localScale": [0.46, 0.46, 0.46]
+        }
+      }
+    ]
+  },
+  {
+    "id": "capability_standard_physics2d_playground_v2.benchmark_body",
+    "defaultColor": [0.98, 0.78, 0.22, 1.0],
+    "behaviors": [
+      {
+        "slot": "body",
+        "kind": "AssetBinding",
+        "activeByDefault": true,
+        "assetBinding": {
+          "assetKind": "Mesh",
+          "assetId": "cube",
+          "materialId": "default_surface",
+          "renderPath": "InstancedStaticMesh",
+          "mobility": "Movable",
+          "localOffset": [0.0, 0.34, 0.0],
+          "localScale": [0.52, 0.52, 0.52]
         }
       }
     ]

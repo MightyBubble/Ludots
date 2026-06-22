@@ -26,6 +26,7 @@ namespace Ludots.Tests.GAS.Physics2D
 
             Assert.That(pipeline.StepNames.ToArray(), Is.EqualTo(new[]
             {
+                "ForceInputWake",
                 "NavToPhysicsVelocitySync",
                 "BuildPhysicsWorld",
                 "SpatialBroadphase",
@@ -41,8 +42,8 @@ namespace Ludots.Tests.GAS.Physics2D
                 "Cleanup"
             }));
             Assert.That(pipeline.Systems.Length, Is.EqualTo(pipeline.StepNames.Length));
-            Assert.That(pipeline.Build, Is.SameAs(pipeline.Systems[1]));
-            Assert.That(pipeline.Spatial, Is.SameAs(pipeline.Systems[2]));
+            Assert.That(pipeline.Build, Is.SameAs(pipeline.Systems[2]));
+            Assert.That(pipeline.Spatial, Is.SameAs(pipeline.Systems[3]));
         }
     }
 }

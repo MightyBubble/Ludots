@@ -20,6 +20,12 @@ public sealed class CapabilityStandardPhysics2DPlaygroundV2Config
     public int PhysicsImpulseYCmPerSec { get; set; }
     public int DisplacementDistanceCm { get; set; }
     public int DisplacementTicks { get; set; }
+    public string BenchmarkBodyTemplateId { get; set; } = string.Empty;
+    public int BenchmarkDefaultSpawnCount { get; set; }
+    public int BenchmarkSpawnRadiusCm { get; set; }
+    public int BenchmarkInitialSpeedCmPerSec { get; set; }
+    public int BenchmarkForceXCmPerSec2 { get; set; }
+    public int BenchmarkForceYCmPerSec2 { get; set; }
 
     public static CapabilityStandardPhysics2DPlaygroundV2Config Load(JsonObject configObject)
     {
@@ -49,6 +55,12 @@ public sealed class CapabilityStandardPhysics2DPlaygroundV2Config
         RequireProperty(root, "physicsImpulseYCmPerSec");
         RequireProperty(root, "displacementDistanceCm");
         RequireProperty(root, "displacementTicks");
+        RequireProperty(root, "benchmarkBodyTemplateId");
+        RequireProperty(root, "benchmarkDefaultSpawnCount");
+        RequireProperty(root, "benchmarkSpawnRadiusCm");
+        RequireProperty(root, "benchmarkInitialSpeedCmPerSec");
+        RequireProperty(root, "benchmarkForceXCmPerSec2");
+        RequireProperty(root, "benchmarkForceYCmPerSec2");
 
         JsonElement spawns = RequireProperty(root, "spawns");
         if (spawns.ValueKind != JsonValueKind.Array)
@@ -79,6 +91,7 @@ public sealed class CapabilityStandardPhysics2DPlaygroundV2Config
         RequireNonEmpty(PrimaryPhysicsTemplateId, nameof(PrimaryPhysicsTemplateId));
         RequireNonEmpty(PrimaryNavTemplateId, nameof(PrimaryNavTemplateId));
         RequireNonEmpty(PrimaryObstacleTemplateId, nameof(PrimaryObstacleTemplateId));
+        RequireNonEmpty(BenchmarkBodyTemplateId, nameof(BenchmarkBodyTemplateId));
 
         if (SpawnScratchCapacity < Spawns.Length)
         {
@@ -88,6 +101,16 @@ public sealed class CapabilityStandardPhysics2DPlaygroundV2Config
         if (DisplacementDistanceCm <= 0 || DisplacementTicks <= 0)
         {
             throw new InvalidOperationException("Capability-standard Physics2D Playground v2 displacement acceptance values must be positive.");
+        }
+
+        if (BenchmarkDefaultSpawnCount <= 0 || BenchmarkDefaultSpawnCount > SpawnScratchCapacity)
+        {
+            throw new InvalidOperationException("Capability-standard Physics2D Playground v2 benchmarkDefaultSpawnCount must fit spawnScratchCapacity.");
+        }
+
+        if (BenchmarkSpawnRadiusCm <= 0 || BenchmarkInitialSpeedCmPerSec <= 0)
+        {
+            throw new InvalidOperationException("Capability-standard Physics2D Playground v2 benchmark spawn radius and initial speed must be positive.");
         }
 
         var ids = new HashSet<string>(StringComparer.Ordinal);

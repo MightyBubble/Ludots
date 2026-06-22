@@ -46,6 +46,7 @@ namespace Ludots.Core.Physics2D.Ticking
             return new Physics2DPipelineDefinition(
                 new ISystem<float>[]
                 {
+                    new ForceInputWakeSystem2D(world),
                     new NavToPhysicsVelocitySyncSystem(world),
                     build,
                     spatial,
@@ -62,6 +63,7 @@ namespace Ludots.Core.Physics2D.Ticking
                 },
                 new[]
                 {
+                    "ForceInputWake",
                     "NavToPhysicsVelocitySync",
                     "BuildPhysicsWorld",
                     "SpatialBroadphase",

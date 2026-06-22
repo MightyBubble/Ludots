@@ -111,6 +111,7 @@ internal sealed class CapabilityStandardPhysics2DPlaygroundV2Runtime
         var debugDrawBuffer = engine.GetService(CoreServiceKeys.DebugDrawCommandBuffer) ?? new DebugDrawCommandBuffer();
         engine.SetService(CoreServiceKeys.DebugDrawCommandBuffer, debugDrawBuffer);
         engine.RegisterSystem(new CapabilityStandardPhysics2DPlaygroundV2InteractionSystem(engine, config), SystemGroup.InputCollection);
+        engine.RegisterSystem(new CapabilityStandardPhysics2DPlaygroundV2BenchmarkReceiptBindingSystem(engine, config), SystemGroup.EffectProcessing);
         _systemsInstalled = true;
         _context.Log("[CapabilityStandardPhysics2DPlaygroundV2Mod] Installed interaction layer on production Physics2D/Nav systems.");
     }
@@ -253,10 +254,10 @@ internal sealed class CapabilityStandardPhysics2DPlaygroundV2Runtime
         engine.SetService(CoreServiceKeys.CameraPoseRequest, new CameraPoseRequest
         {
             VirtualCameraId = "Camera.Profile.Tactical",
-            TargetCm = System.Numerics.Vector2.Zero,
-            Pitch = 60f,
-            DistanceCm = 8000f,
-            FovYDeg = 55f
+            TargetCm = new System.Numerics.Vector2(40f, -120f),
+            Pitch = 58f,
+            DistanceCm = 2600f,
+            FovYDeg = 50f
         });
     }
 
@@ -287,6 +288,16 @@ internal sealed class CapabilityStandardPhysics2DPlaygroundV2Runtime
         RequireAction(input, CapabilityStandardPhysics2DPlaygroundV2InputActions.ApplyImpulse);
         RequireAction(input, CapabilityStandardPhysics2DPlaygroundV2InputActions.SubmitNavMove);
         RequireAction(input, CapabilityStandardPhysics2DPlaygroundV2InputActions.ApplyDisplacement);
+        RequireAction(input, CapabilityStandardPhysics2DPlaygroundV2InputActions.BenchmarkForcePulse);
+        RequireAction(input, CapabilityStandardPhysics2DPlaygroundV2InputActions.BenchmarkSpawnCount1);
+        RequireAction(input, CapabilityStandardPhysics2DPlaygroundV2InputActions.BenchmarkSpawnCount2);
+        RequireAction(input, CapabilityStandardPhysics2DPlaygroundV2InputActions.BenchmarkSpawnCount3);
+        RequireAction(input, CapabilityStandardPhysics2DPlaygroundV2InputActions.BenchmarkSpawnCount4);
+        RequireAction(input, CapabilityStandardPhysics2DPlaygroundV2InputActions.BenchmarkSpawnCount5);
+        RequireAction(input, CapabilityStandardPhysics2DPlaygroundV2InputActions.BenchmarkSpawnCount6);
+        RequireAction(input, CapabilityStandardPhysics2DPlaygroundV2InputActions.BenchmarkSpawnCount7);
+        RequireAction(input, CapabilityStandardPhysics2DPlaygroundV2InputActions.BenchmarkSpawnCount8);
+        RequireAction(input, CapabilityStandardPhysics2DPlaygroundV2InputActions.BenchmarkSpawnCount9);
     }
 
     private static void RequireAction(PlayerInputHandler input, string actionId)

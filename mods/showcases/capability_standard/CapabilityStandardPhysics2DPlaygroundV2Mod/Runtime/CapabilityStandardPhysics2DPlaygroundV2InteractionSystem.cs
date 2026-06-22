@@ -5,13 +5,20 @@ using Arch.System;
 using Ludots.Core.Components;
 using Ludots.Core.Engine;
 using Ludots.Core.Gameplay.GAS;
+using Ludots.Core.Gameplay.GAS.Components;
+using Ludots.Core.Gameplay.GAS.Registry;
 using Ludots.Core.Gameplay.GAS.Orders;
 using Ludots.Core.Gameplay.Spawning;
 using Ludots.Core.Input.Runtime;
+using Ludots.Core.Mathematics;
 using Ludots.Core.Mathematics.FixedPoint;
+using Ludots.Core.Map;
 using Ludots.Core.Navigation2D.Components;
+using Ludots.Core.Physics;
 using Ludots.Core.Physics2D.Components;
+using Ludots.Core.Presentation.Utils;
 using Ludots.Core.Scripting;
+using Ludots.Core.Spatial;
 using Ludots.Platform.Abstractions;
 using CapabilityStandardPhysics2DPlaygroundV2Mod.Input;
 
@@ -19,12 +26,20 @@ namespace CapabilityStandardPhysics2DPlaygroundV2Mod.Runtime;
 
 public sealed class CapabilityStandardPhysics2DPlaygroundV2InteractionSystem : ISystem<float>
 {
+    internal const string BenchmarkReceiptChannelKey = "CapabilityStandardPhysics2DPlaygroundV2.BenchmarkSpawn";
+
     private readonly GameEngine _engine;
     private readonly World _world;
     private readonly CapabilityStandardPhysics2DPlaygroundV2Config _config;
+    private readonly RuntimeEntitySpawnRequest[] _benchmarkSpawnScratch;
     private Entity _primaryPhysicsEntity;
     private Entity _primaryNavEntity;
     private int _moveToOrderTypeId;
+    private int _benchmarkSpawnCount;
+    private int _benchmarkReceiptChannelId;
+    private int _nextBenchmarkReceiptId;
+    private int _benchmarkForceTemplateId;
+    private int _benchmarkTemplateKeyId;
 
     public CapabilityStandardPhysics2DPlaygroundV2InteractionSystem(
         GameEngine engine,
@@ -33,6 +48,8 @@ public sealed class CapabilityStandardPhysics2DPlaygroundV2InteractionSystem : I
         _engine = engine ?? throw new ArgumentNullException(nameof(engine));
         _world = engine.World;
         _config = config ?? throw new ArgumentNullException(nameof(config));
+        _benchmarkSpawnScratch = new RuntimeEntitySpawnRequest[config.SpawnScratchCapacity];
+        _benchmarkSpawnCount = config.BenchmarkDefaultSpawnCount;
     }
 
     public void Initialize()
@@ -75,6 +92,18 @@ public sealed class CapabilityStandardPhysics2DPlaygroundV2InteractionSystem : I
         if (input.PressedThisFrame(CapabilityStandardPhysics2DPlaygroundV2InputActions.ApplyDisplacement))
         {
             ApplyPhysicsDisplacement();
+        }
+
+        HandleBenchmarkSpawnCountHotkeys(input);
+
+        if (input.PressedThisFrame(CapabilityStandardPhysics2DPlaygroundV2InputActions.SecondaryClick))
+        {
+            SpawnBenchmarkBodiesFromPointer(input);
+        }
+
+        if (input.PressedThisFrame(CapabilityStandardPhysics2DPlaygroundV2InputActions.BenchmarkForcePulse))
+        {
+            ApplyBenchmarkForcePulse();
         }
 
         if (input.PressedThisFrame(CapabilityStandardPhysics2DPlaygroundV2InputActions.SubmitNavMove))
@@ -161,6 +190,115 @@ public sealed class CapabilityStandardPhysics2DPlaygroundV2InteractionSystem : I
         return true;
     }
 
+    public int SetBenchmarkSpawnCountForSlot(int slot)
+    {
+        if (slot < 1 || slot > 9)
+        {
+            throw new ArgumentOutOfRangeException(nameof(slot), "Physics2D Playground v2 benchmark spawn count slots are 1..9.");
+        }
+
+        _benchmarkSpawnCount = slot * 10;
+        PublishBenchmarkState(CountBenchmarkBodies(), lastSpawned: null, forcePulse: null);
+        return _benchmarkSpawnCount;
+    }
+
+    public bool SpawnBenchmarkBodiesAt(Fix64Vec2 centerCm)
+    {
+        return SpawnBenchmarkBodiesAt(centerCm, _benchmarkSpawnCount) > 0;
+    }
+
+    public int SpawnBenchmarkBodiesAt(Fix64Vec2 centerCm, int count)
+    {
+        if (CapabilityStandardPhysics2DPlaygroundV2State.ActiveMode != CapabilityStandardPhysics2DPlaygroundV2Mode.PhysicsOnly)
+        {
+            return 0;
+        }
+
+        if (count <= 0)
+        {
+            return 0;
+        }
+
+        if (count > _benchmarkSpawnScratch.Length)
+        {
+            throw new InvalidOperationException(
+                $"Physics2D Playground v2 benchmark spawn count {count} exceeds scratch capacity {_benchmarkSpawnScratch.Length}.");
+        }
+
+        RuntimeEntitySpawnQueue spawnQueue = _engine.GetService(CoreServiceKeys.RuntimeEntitySpawnQueue)
+            ?? throw new InvalidOperationException("Physics2D Playground v2 requires RuntimeEntitySpawnQueue.");
+        MapId mapId = RequireCurrentMapId();
+        int receiptChannelId = ResolveBenchmarkReceiptChannelId();
+        int batchId = _nextBenchmarkReceiptId + 1;
+
+        for (int i = 0; i < count; i++)
+        {
+            Fix64Vec2 offset = ComputeBenchmarkSpawnOffset(i, count, _config.BenchmarkSpawnRadiusCm);
+            _benchmarkSpawnScratch[i] = new RuntimeEntitySpawnRequest
+            {
+                Kind = RuntimeEntitySpawnKind.Template,
+                TemplateId = _config.BenchmarkBodyTemplateId,
+                MapId = mapId,
+                WorldPositionCm = centerCm + offset,
+                HasWorldPosition = 1,
+                FacingAngleRad = 0f,
+                HasFacing = 1,
+                ReceiptChannelId = receiptChannelId,
+                ReceiptId = batchId + i,
+                EmitReceipt = 1
+            };
+        }
+
+        int written = spawnQueue.EnqueueMany(_benchmarkSpawnScratch.AsSpan(0, count));
+        if (written != count)
+        {
+            throw new InvalidOperationException(
+                $"Physics2D Playground v2 benchmark enqueued {written} spawn requests, expected {count}.");
+        }
+
+        _nextBenchmarkReceiptId = batchId + count - 1;
+        PublishBenchmarkState(CountBenchmarkBodies(), count, forcePulse: null);
+        return written;
+    }
+
+    public bool ApplyBenchmarkForcePulse()
+    {
+        if (!TryFindPrimaryPhysicsEntity(out Entity target))
+        {
+            return false;
+        }
+
+        if (!_world.Has<AttributeBuffer>(target) || !_world.Has<ForceInput2D>(target))
+        {
+            return false;
+        }
+
+        EffectRequestQueue queue = _engine.GetService(CoreServiceKeys.EffectRequestQueue)
+            ?? throw new InvalidOperationException("Physics2D Playground v2 requires EffectRequestQueue for benchmark force pulse.");
+        int templateId = ResolveBenchmarkForceTemplateId();
+        if (templateId <= 0)
+        {
+            return false;
+        }
+
+        var caller = default(EffectConfigParams);
+        caller.TryAddFloat(EffectParamKeys.ForceXAttribute, _config.BenchmarkForceXCmPerSec2);
+        caller.TryAddFloat(EffectParamKeys.ForceYAttribute, _config.BenchmarkForceYCmPerSec2);
+
+        queue.Publish(new EffectRequest
+        {
+            RootId = 0,
+            Source = target,
+            Target = target,
+            TargetContext = target,
+            TemplateId = templateId,
+            CallerParams = caller,
+            HasCallerParams = true
+        });
+        PublishBenchmarkState(CountBenchmarkBodies(), lastSpawned: null, forcePulse: 1);
+        return true;
+    }
+
     public bool SubmitNavMove()
     {
         if (!TryFindPrimaryNavEntity(out Entity actor))
@@ -210,6 +348,76 @@ public sealed class CapabilityStandardPhysics2DPlaygroundV2InteractionSystem : I
     private void SetMode(CapabilityStandardPhysics2DPlaygroundV2Mode mode)
     {
         SetMode(mode, _engine);
+    }
+
+    private void HandleBenchmarkSpawnCountHotkeys(IInputActionReader input)
+    {
+        if (input.PressedThisFrame(CapabilityStandardPhysics2DPlaygroundV2InputActions.BenchmarkSpawnCount1))
+        {
+            SetBenchmarkSpawnCountForSlot(1);
+        }
+        else if (input.PressedThisFrame(CapabilityStandardPhysics2DPlaygroundV2InputActions.BenchmarkSpawnCount2))
+        {
+            SetBenchmarkSpawnCountForSlot(2);
+        }
+        else if (input.PressedThisFrame(CapabilityStandardPhysics2DPlaygroundV2InputActions.BenchmarkSpawnCount3))
+        {
+            SetBenchmarkSpawnCountForSlot(3);
+        }
+        else if (input.PressedThisFrame(CapabilityStandardPhysics2DPlaygroundV2InputActions.BenchmarkSpawnCount4))
+        {
+            SetBenchmarkSpawnCountForSlot(4);
+        }
+        else if (input.PressedThisFrame(CapabilityStandardPhysics2DPlaygroundV2InputActions.BenchmarkSpawnCount5))
+        {
+            SetBenchmarkSpawnCountForSlot(5);
+        }
+        else if (input.PressedThisFrame(CapabilityStandardPhysics2DPlaygroundV2InputActions.BenchmarkSpawnCount6))
+        {
+            SetBenchmarkSpawnCountForSlot(6);
+        }
+        else if (input.PressedThisFrame(CapabilityStandardPhysics2DPlaygroundV2InputActions.BenchmarkSpawnCount7))
+        {
+            SetBenchmarkSpawnCountForSlot(7);
+        }
+        else if (input.PressedThisFrame(CapabilityStandardPhysics2DPlaygroundV2InputActions.BenchmarkSpawnCount8))
+        {
+            SetBenchmarkSpawnCountForSlot(8);
+        }
+        else if (input.PressedThisFrame(CapabilityStandardPhysics2DPlaygroundV2InputActions.BenchmarkSpawnCount9))
+        {
+            SetBenchmarkSpawnCountForSlot(9);
+        }
+    }
+
+    private bool SpawnBenchmarkBodiesFromPointer(IInputActionReader input)
+    {
+        if (!TryGetGroundPointer(input, out Fix64Vec2 worldCm))
+        {
+            return false;
+        }
+
+        return SpawnBenchmarkBodiesAt(worldCm);
+    }
+
+    private bool TryGetGroundPointer(IInputActionReader input, out Fix64Vec2 worldCm)
+    {
+        worldCm = default;
+        if (_engine.GetService(CoreServiceKeys.ScreenRayProvider) is not IScreenRayProvider rayProvider ||
+            !_engine.TryGetService(CoreServiceKeys.WorldSizeSpec, out WorldSizeSpec worldSize))
+        {
+            return false;
+        }
+
+        var pointer = input.ReadAction<Vector2>(CapabilityStandardPhysics2DPlaygroundV2InputActions.PointerPos);
+        var ray = rayProvider.GetRay(pointer);
+        if (!GroundRaycastUtil.TryGetGroundWorldCmBounded(in ray, worldSize, out WorldCmInt2 hit))
+        {
+            return false;
+        }
+
+        worldCm = Fix64Vec2.FromInt(hit.X, hit.Y);
+        return true;
     }
 
     private bool TryFindPrimaryPhysicsEntity(out Entity entity)
@@ -280,5 +488,102 @@ public sealed class CapabilityStandardPhysics2DPlaygroundV2InteractionSystem : I
 
         _engine.GlobalContext[CapabilityStandardPhysics2DPlaygroundV2State.PhysicsOnlyEntityCountServiceKey] = physicsOnly;
         _engine.GlobalContext[CapabilityStandardPhysics2DPlaygroundV2State.NavEntityCountServiceKey] = nav;
+        PublishBenchmarkState(CountBenchmarkBodies(), lastSpawned: null, forcePulse: null);
+    }
+
+    private MapId RequireCurrentMapId()
+    {
+        MapSession session = _engine.CurrentMapSession
+            ?? throw new InvalidOperationException("Physics2D Playground v2 benchmark requires an active map session.");
+        if (!string.Equals(session.MapId.Value, _config.MapId, StringComparison.Ordinal))
+        {
+            throw new InvalidOperationException(
+                $"Physics2D Playground v2 benchmark requires active map '{_config.MapId}', got '{session.MapId.Value}'.");
+        }
+
+        return session.MapId;
+    }
+
+    private int ResolveBenchmarkReceiptChannelId()
+    {
+        if (_benchmarkReceiptChannelId > 0)
+        {
+            return _benchmarkReceiptChannelId;
+        }
+
+        RuntimeEntitySpawnReceiptChannelRegistry channels = _engine.GetService(CoreServiceKeys.RuntimeEntitySpawnReceiptChannelRegistry)
+            ?? throw new InvalidOperationException("Physics2D Playground v2 requires RuntimeEntitySpawnReceiptChannelRegistry.");
+        _benchmarkReceiptChannelId = channels.Register(BenchmarkReceiptChannelKey);
+        return _benchmarkReceiptChannelId;
+    }
+
+    private int ResolveBenchmarkForceTemplateId()
+    {
+        if (_benchmarkForceTemplateId > 0)
+        {
+            return _benchmarkForceTemplateId;
+        }
+
+        _benchmarkForceTemplateId = EffectTemplateIdRegistry.GetId("Effect.Preset.ApplyForce2D");
+        return _benchmarkForceTemplateId;
+    }
+
+    private int ResolveBenchmarkTemplateKeyId()
+    {
+        if (_benchmarkTemplateKeyId > 0)
+        {
+            return _benchmarkTemplateKeyId;
+        }
+
+        EntityTemplateKeyRegistry templateKeys = _engine.GetService(CoreServiceKeys.EntityTemplateKeyRegistry)
+            ?? throw new InvalidOperationException("EntityTemplateKeyRegistry missing.");
+        if (!templateKeys.TryGetId(_config.BenchmarkBodyTemplateId, out _benchmarkTemplateKeyId) ||
+            _benchmarkTemplateKeyId <= 0)
+        {
+            _benchmarkTemplateKeyId = templateKeys.Register(_config.BenchmarkBodyTemplateId);
+        }
+
+        return _benchmarkTemplateKeyId;
+    }
+
+    private int CountBenchmarkBodies()
+    {
+        int templateKeyId = ResolveBenchmarkTemplateKeyId();
+        int count = 0;
+        var query = new QueryDescription().WithAll<EntityTemplateKeyRef, Position2D, Velocity2D, Mass2D>();
+        _world.Query(in query, (ref EntityTemplateKeyRef keyRef) =>
+        {
+            if (keyRef.TemplateKeyId == templateKeyId)
+            {
+                count++;
+            }
+        });
+
+        return count;
+    }
+
+    private void PublishBenchmarkState(int benchmarkBodies, int? lastSpawned, int? forcePulse)
+    {
+        _engine.GlobalContext[CapabilityStandardPhysics2DPlaygroundV2State.BenchmarkSpawnCountServiceKey] = _benchmarkSpawnCount;
+        _engine.GlobalContext[CapabilityStandardPhysics2DPlaygroundV2State.BenchmarkEntityCountServiceKey] = benchmarkBodies;
+        if (lastSpawned.HasValue)
+        {
+            _engine.GlobalContext[CapabilityStandardPhysics2DPlaygroundV2State.BenchmarkLastSpawnedServiceKey] = lastSpawned.Value;
+        }
+
+        if (forcePulse.HasValue)
+        {
+            _engine.GlobalContext[CapabilityStandardPhysics2DPlaygroundV2State.BenchmarkLastForcePulseServiceKey] = forcePulse.Value;
+        }
+    }
+
+    private static Fix64Vec2 ComputeBenchmarkSpawnOffset(int index, int count, int radiusCm)
+    {
+        int ring = 1 + index / 12;
+        int ordinal = index % 12;
+        float angle = (MathF.Tau * ordinal / 12f) + (ring * 0.17364818f);
+        float normalizedRing = MathF.Min(1f, ring / MathF.Max(1f, MathF.Ceiling(count / 12f)));
+        float radius = radiusCm * (0.25f + 0.75f * normalizedRing);
+        return Fix64Vec2.FromFloat(MathF.Cos(angle) * radius, MathF.Sin(angle) * radius);
     }
 }

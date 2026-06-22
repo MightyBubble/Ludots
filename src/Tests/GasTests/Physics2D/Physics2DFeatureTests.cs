@@ -3,6 +3,7 @@ using Arch.Core;
 using Arch.Core.Extensions;
 using Ludots.Core.Engine.Physics2D;
 using Ludots.Core.Mathematics.FixedPoint;
+using Ludots.Core.Physics;
 using Ludots.Core.Physics2D;
 using Ludots.Core.Physics2D.Collision;
 using Ludots.Core.Physics2D.Components;
@@ -210,6 +211,49 @@ namespace GasTests.Physics2D
             long after = GC.GetAllocatedBytesForCurrentThread();
 
             Assert.That(after - before, Is.LessThanOrEqualTo(64));
+        }
+
+        [Test]
+        public void ProductionPipeline_NonZeroForceInputWakesSleepingDynamicBodyBeforeIntegration()
+        {
+            using var world = World.Create();
+
+            int circleIndex = _shapeStorage.RegisterCircle(radius: 10f);
+            var collider = new Collider2D { Type = ColliderType2D.Circle, ShapeDataIndex = circleIndex };
+            var mass = Mass2D.FromFloat(inverseMass: 1f, inverseInertia: 0f);
+            Entity body = world.Create(
+                Position2D.Zero,
+                new PreviousPosition2D { Value = Fix64Vec2.Zero },
+                Velocity2D.Zero,
+                mass,
+                collider,
+                new ForceInput2D { Force = Fix64Vec2.FromInt(150, 0) },
+                new Motion { SleepTimer = 32 },
+                new SleepingTag());
+
+            var solverConfig = new Physics2DSolverConfig
+            {
+                DefaultBaseDamping = 1f,
+                SleepTimeSeconds = 10_000f,
+                CollisionPairInitialCapacity = 4,
+                CollisionPairGrowthStep = 4,
+                MaxCollisionPairs = 4
+            };
+            var tickPolicy = new Physics2DTickPolicy(targetHz: 15, maxStepsPerFixedTick: 8);
+            var pipeline = Physics2DPipelineFactory.CreateProduction(world, solverConfig, tickPolicy, _shapeStorage);
+
+            for (int i = 0; i < pipeline.Systems.Length; i++)
+            {
+                pipeline.Systems[i].Initialize();
+            }
+
+            StepPipeline(pipeline);
+
+            Assert.That(world.Has<SleepingTag>(body), Is.False,
+                "Non-zero ForceInput2D should wake sleeping dynamic bodies before IntegrationSystem2D consumes the force.");
+            Assert.That(world.Get<Velocity2D>(body).Linear.X, Is.GreaterThan(Fix64.Zero));
+            Assert.That(world.Get<ForceInput2D>(body).Force, Is.EqualTo(Fix64Vec2.Zero));
+            Assert.That(world.Get<Motion>(body).SleepTimer, Is.EqualTo(0));
         }
 
         private static void StepPipeline(Physics2DPipelineDefinition pipeline)
