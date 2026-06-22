@@ -51,6 +51,7 @@ Preset launch commands:
 - #361 Physics2D/Nav UAT roots write headless evidence to `artifacts/showcases/<name>/{acceptance.md,keyframes.jsonl}` through focused NUnit acceptance tests.
 - Pure Physics2D roots (`capability_standard_physics2d`, `capability_standard_knockback2d`, `capability_standard_physics2d_stress`) keep `navigation2D.enabled=false` and do not author Nav components in templates.
 - Nav-integrated roots (`capability_standard_nav_sink2d`, `capability_standard_physics2d_playground_v2`) keep Nav and Physics responsibilities split: Nav outputs desired velocity or obstacle facts; Physics2D owns velocity commit, position integration, and collision correction.
+- `MovementSuppressed2D` means the pre-integration movement-authority pass clears locomotion `Velocity2D.Linear` every Physics2D tick. During CC, movement may only come from displacement-authored `Position2D` steps and Physics2D collision response; once the tag is removed, `NavDesiredVelocity2D` may be committed again on the next sync.
 - Standard root mod dependency closure must not include historical showcase entry mods such as `PerformerBlacksmithShowcaseMod`, `PerformerBlacksmithScatterHudTextBenchmarkEntryMod`, or `MassNavigationTotalWarEntryMod`.
 - Historical showcase mods may remain local debugging material, but they are not adapter or core-mainline acceptance SSOTs.
 

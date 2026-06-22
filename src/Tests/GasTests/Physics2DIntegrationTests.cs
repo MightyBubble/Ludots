@@ -84,6 +84,74 @@ namespace GasTests
         }
 
         [Test]
+        public void MovementSuppressedBody_StillReceivesCollisionCorrectionWithoutLocomotionDrift()
+        {
+            using var world = World.Create();
+            int shape = _shapeStorage.RegisterBox(50f, 50f);
+            var sync = new NavToPhysicsVelocitySyncSystem(world);
+            var build = new BuildPhysicsWorldSystem2D(world, _shapeStorage);
+            var spatial = new AdaptiveSpatialSystem2D(world, build, WithPairLimit(16));
+            var narrow = new NarrowPhaseSystem2D(world, _shapeStorage);
+            var solver = new SolverSystem2D(world, _solverConfig);
+            var impulses = new ApplyImpulsesSystem2D(world);
+            var correction = new PositionCorrectionSystem2D(world, _solverConfig);
+            var integration = new IntegrationSystem2D(world, _solverConfig);
+
+            var actor = world.Create(
+                Position2D.FromCm(40, 0),
+                new PreviousPosition2D { Value = Fix64Vec2.FromInt(40, 0) },
+                new Velocity2D { Linear = Fix64Vec2.FromInt(120, 0), Angular = Fix64.Zero },
+                Mass2D.FromFloat(1f, 1f),
+                new Collider2D { Type = ColliderType2D.Box, ShapeDataIndex = shape },
+                new NavDesiredVelocity2D { ValueCmPerSec = Fix64Vec2.FromInt(240, 0) },
+                new MovementSuppressed2D());
+            world.Create(
+                Position2D.FromCm(100, 0),
+                new PreviousPosition2D { Value = Fix64Vec2.FromInt(100, 0) },
+                Velocity2D.Zero,
+                Mass2D.Static,
+                new Collider2D { Type = ColliderType2D.Box, ShapeDataIndex = shape });
+
+            sync.Update(0f);
+            build.Update(0f);
+            spatial.Update(0f);
+            narrow.Update(0f);
+            solver.Update(0f);
+            impulses.Update(0f);
+            correction.Update(0f);
+            Fix64 correctedX = world.Get<Position2D>(actor).Value.X;
+            integration.Update(1f);
+
+            Assert.That(world.Get<Velocity2D>(actor).Linear, Is.EqualTo(Fix64Vec2.Zero),
+                "Movement suppression clears locomotion velocity but does not disable Physics2D collision correction.");
+            Assert.That(world.Get<Position2D>(actor).Value.X, Is.EqualTo(correctedX),
+                "The integration step must not add residual locomotion drift after collision correction.");
+            Assert.That(correctedX, Is.LessThan(Fix64.FromInt(40)),
+                "The suppressed dynamic body should still be pushed out of the static wall by the solver/correction path.");
+        }
+
+        [Test]
+        public void NavToPhysicsVelocitySync_RestoresDesiredVelocityAfterMovementSuppressionClears()
+        {
+            using var world = World.Create();
+            var sync = new NavToPhysicsVelocitySyncSystem(world);
+            var actor = world.Create(
+                Velocity2D.Zero,
+                Mass2D.FromFloat(1f, 1f),
+                new NavDesiredVelocity2D { ValueCmPerSec = Fix64Vec2.FromInt(240, 0) },
+                new MovementSuppressed2D());
+
+            sync.Update(0f);
+            Assert.That(world.Get<Velocity2D>(actor).Linear, Is.EqualTo(Fix64Vec2.Zero));
+
+            world.Remove<MovementSuppressed2D>(actor);
+            sync.Update(0f);
+
+            Assert.That(world.Get<Velocity2D>(actor).Linear.X.ToFloat(), Is.EqualTo(240f).Within(0.01f),
+                "Velocity should be committed from NavDesiredVelocity2D on the first sync after CC clears.");
+        }
+
+        [Test]
         public void IntegrationSystem2D_ThroughputSmoke_Integrates2kBodiesWithinBudget()
         {
             using var world = World.Create();

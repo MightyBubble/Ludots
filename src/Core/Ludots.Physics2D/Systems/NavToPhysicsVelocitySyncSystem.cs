@@ -6,6 +6,10 @@ using Ludots.Core.Physics2D.Components;
 
 namespace Ludots.Core.Physics2D.Systems
 {
+    /// <summary>
+    /// Establishes the physics linear velocity from movement authority before integration:
+    /// free movers commit nav desired velocity, while suppressed movers clear locomotion velocity.
+    /// </summary>
     public sealed class NavToPhysicsVelocitySyncSystem : BaseSystem<World, float>
     {
         private static readonly QueryDescription _query = new QueryDescription()

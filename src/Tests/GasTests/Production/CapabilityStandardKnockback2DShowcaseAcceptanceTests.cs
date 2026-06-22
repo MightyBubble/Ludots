@@ -204,15 +204,38 @@ public sealed class CapabilityStandardKnockback2DShowcaseAcceptanceTests
             RemainingDistanceCm = Fix64.FromInt(100),
             TotalDurationTicks = 8,
             RemainingTicks = 8,
-            OverrideNavigation = true
+            OverrideNavigation = true,
+            MovementSuppressionApplied = true
         });
 
-        TickUntilNoDisplacement(engine, frameTimesMs, maxFrames: 80);
+        ref var velocity = ref engine.World.Get<Velocity2D>(blockerTarget);
+        velocity.Linear = Fix64Vec2.FromInt(120, 0);
+        if (!engine.World.Has<MovementSuppressed2D>(blockerTarget))
+        {
+            engine.World.Add(blockerTarget, new MovementSuppressed2D());
+        }
+
+        TickUntilSuppressedVelocityCleared(engine, frameTimesMs, blockerTarget, maxFrames: 12);
+        int observedFrames = 0;
+        while (HasActiveDisplacement(engine))
+        {
+            CapabilityStandardShowcaseTestHarness.TickMeasured(engine, 1, frameTimesMs);
+            Assert.That(engine.World.Get<Velocity2D>(blockerTarget).Linear, Is.EqualTo(Fix64Vec2.Zero),
+                "Suppressed wall-collision case must not reintroduce locomotion velocity while displacement is active.");
+            observedFrames++;
+
+            if (observedFrames > 80)
+            {
+                Assert.Fail("Suppressed wall-collision displacement did not complete within 80 frames.");
+            }
+        }
+
         CapabilityStandardShowcaseTestHarness.TickMeasured(engine, 4, frameTimesMs);
         Fix64 targetX = engine.World.Get<Position2D>(blockerTarget).Value.X;
         Fix64 wallX = engine.World.Get<Position2D>(blockerWall).Value.X;
         Assert.That(targetX, Is.LessThan(wallX),
             "Displacement should still be resolved by Physics2D collision/position correction when it reaches a static wall.");
+        Assert.That(engine.World.Has<MovementSuppressed2D>(blockerTarget), Is.False);
         Capture(engine, keyframes, frameTimesMs.Count, movingTarget, staticTarget, blockerTarget);
     }
 
@@ -319,7 +342,7 @@ public sealed class CapabilityStandardKnockback2DShowcaseAcceptanceTests
         builder.AppendLine("| Static AwayFromSource displacement | target moved exactly 180 cm on X through `DisplacementRuntimeSystem` |");
         builder.AppendLine("| Moving CC no drift | suppressed target advanced 4 x 50 cm displacement steps with `Velocity2D.Linear=0` each frame |");
         builder.AppendLine($"| CC recovery | next sync restored velocity X `{Format(ToFloat(recoveredVelocity.X))}` cm/s from `NavDesiredVelocity2D` |");
-        builder.AppendLine("| Wall correction | knockback into static wall stayed bounded by Physics2D position correction |");
+        builder.AppendLine("| Suppressed wall correction | suppressed knockback into static wall stayed bounded by Physics2D position correction with `Velocity2D.Linear=0` |");
         builder.AppendLine($"| Physics stats | Hz `{stats.PhysicsHz}`, potential pairs `{stats.PotentialPairs}`, contact pairs `{stats.ContactPairs}`, last update `{stats.PhysicsUpdateMs:F4}` ms |");
         builder.AppendLine($"| Test tick timings | frames `{frameTimesMs.Count}`, avg `{avgMs:F4}` ms, max `{maxMs:F4}` ms |");
         builder.AppendLine();

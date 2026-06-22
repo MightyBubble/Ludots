@@ -7,9 +7,9 @@
 | Static AwayFromSource displacement | target moved exactly 180 cm on X through `DisplacementRuntimeSystem` |
 | Moving CC no drift | suppressed target advanced 4 x 50 cm displacement steps with `Velocity2D.Linear=0` each frame |
 | CC recovery | next sync restored velocity X `120` cm/s from `NavDesiredVelocity2D` |
-| Wall correction | knockback into static wall stayed bounded by Physics2D position correction |
-| Physics stats | Hz `15`, potential pairs `1`, contact pairs `1`, last update `0.0295` ms |
-| Test tick timings | frames `62`, avg `4.9418` ms, max `94.3565` ms |
+| Suppressed wall correction | suppressed knockback into static wall stayed bounded by Physics2D position correction with `Velocity2D.Linear=0` |
+| Physics stats | Hz `15`, potential pairs `1`, contact pairs `1`, last update `0.0846` ms |
+| Test tick timings | frames `62`, avg `2.1802` ms, max `39.6254` ms |
 
 ## Keyframes
 
