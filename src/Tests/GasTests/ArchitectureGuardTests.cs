@@ -320,6 +320,7 @@ namespace GasTests
                 string relativeModDir = ToRepoRelativePath(repoRoot, modDir);
                 string acceptance = File.ReadAllText(acceptancePath);
                 string gameJson = File.ReadAllText(gameJsonPath);
+                string manifest = File.ReadAllText(Path.Combine(modDir, "mod.json"));
                 string templates = File.ReadAllText(templatesPath);
 
                 if (!launcherConfig.Contains($"\"name\": \"{spec.Binding}\"", StringComparison.Ordinal) ||
@@ -360,6 +361,12 @@ namespace GasTests
                     Assert.That(templates, Does.Not.Contain("NavKinematics2D"));
                     Assert.That(templates, Does.Not.Contain("NavDesiredVelocity2D"));
                     Assert.That(templates, Does.Not.Contain("NavObstacle2D"));
+                }
+
+                if (gameJson.Contains("Camera.Profile.", StringComparison.Ordinal))
+                {
+                    Assert.That(manifest, Does.Contain("\"CameraProfilesMod\""),
+                        $"{spec.Issue}: {spec.ModName} uses shared Camera.Profile.* IDs and must declare CameraProfilesMod so launcher presets are runnable.");
                 }
             }
 

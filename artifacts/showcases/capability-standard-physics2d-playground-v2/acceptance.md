@@ -8,8 +8,8 @@
 | Physics-only mode | physics body has `Position2D/Velocity2D/Mass2D`, no `OrderBuffer`, no Nav components |
 | CC/knockback regression | displacement under `MovementSuppressed2D` clears velocity and lands at the configured displacement distance |
 | Nav mode | nav final X `-732` cm, desired X `360` cm/s, obstacle nav `True` physics `True` |
-| Physics stats | Hz `15`, potential pairs `0`, contact pairs `0`, last update `0.0321` ms |
-| Test tick timings | frames `48`, avg `0.7931` ms, max `16.7899` ms |
+| Physics stats | Hz `15`, potential pairs `0`, contact pairs `0`, last update `0.0210` ms |
+| Test tick timings | frames `48`, avg `3.1444` ms, max `53.3804` ms |
 
 ## Keyframes
 

@@ -9,7 +9,6 @@ using Ludots.Core.Map;
 using Ludots.Core.Mathematics.FixedPoint;
 using Ludots.Core.Modding;
 using Ludots.Core.Navigation2D.Runtime;
-using Ludots.Core.Physics2D;
 using Ludots.Core.Presentation.DebugDraw;
 using Ludots.Core.Scripting;
 using CapabilityStandardPhysics2DPlaygroundV2Mod.Input;
@@ -84,7 +83,7 @@ internal sealed class CapabilityStandardPhysics2DPlaygroundV2Runtime
 
     private void EnsureProductionServices(GameEngine engine)
     {
-        if (engine.GetService(CoreServiceKeys.Physics2DShapeStorage) is not ShapeDataStorage2D)
+        if (engine.GetService(CoreServiceKeys.Physics2DShapeStorage) == null)
         {
             throw new InvalidOperationException("Physics2D Playground v2 requires production Physics2D shape storage from game.json physics2D/navigation2D enablement.");
         }
