@@ -1,0 +1,5 @@
+{
+  "arrivalRadiusCm": 50,
+  "defaultRetaliationTtlSteps": 180,
+  "hostileRelationshipType": "CombatStance.Hostile"
+}

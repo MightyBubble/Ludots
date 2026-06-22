@@ -1,0 +1,4 @@
+[
+  { "id": "Input.UtilityAutocast.Distance", "Kind": "DistanceToTarget" },
+  { "id": "Input.UtilityAutocast.TargetHealth", "Kind": "GraphScore", "GraphKey": "Graph.UtilityAutocast.TargetHealth" }
+]

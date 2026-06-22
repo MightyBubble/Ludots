@@ -53,6 +53,15 @@ namespace Ludots.Core.Gameplay.AI.Components
         public int Bucket;
     }
 
+    public enum UtilityAiTargetPriorityBucket
+    {
+        None = 0,
+        Low = 1,
+        Normal = 2,
+        High = 3,
+        Critical = 4
+    }
+
     public struct UtilityAiStanceState
     {
         public int StanceId;

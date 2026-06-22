@@ -1,0 +1,11 @@
+[
+  {
+    "id": "Graph.UtilityAutocast.TargetHealth",
+    "kind": "Score",
+    "entry": "target",
+    "nodes": [
+      { "id": "target", "op": "LoadExplicitTarget", "next": "health" },
+      { "id": "health", "op": "LoadAttribute", "attribute": "Health", "inputs": ["target"] }
+    ]
+  }
+]
