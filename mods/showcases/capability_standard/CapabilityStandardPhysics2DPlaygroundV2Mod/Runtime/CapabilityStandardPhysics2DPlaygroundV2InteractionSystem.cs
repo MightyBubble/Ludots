@@ -31,15 +31,13 @@ public sealed class CapabilityStandardPhysics2DPlaygroundV2InteractionSystem : I
     private static readonly QueryDescription _allEntitiesQuery = new QueryDescription();
     private static readonly QueryDescription _partitionQuery = new QueryDescription()
         .WithAll<CapabilityStandardPhysics2DPlaygroundV2ModePartition>();
-    private static readonly QueryDescription _explosionTargetQuery = new QueryDescription()
-        .WithAll<Position2D, Velocity2D, Mass2D, ForceInput2D>()
-        .WithNone<NavAgent2D, NavDesiredVelocity2D, NavGoal2D, NavObstacle2D, OrderBuffer>();
 
     private readonly GameEngine _engine;
     private readonly World _world;
     private readonly CapabilityStandardPhysics2DPlaygroundV2Config _config;
     private readonly RuntimeEntitySpawnRequest[] _benchmarkSpawnScratch;
     private readonly RuntimeEntitySpawnRequest[] _frictionZoneSpawnScratch;
+    private readonly Entity[] _explosionQueryScratch;
     private Entity _primaryPhysicsEntity;
     private Entity _primaryNavEntity;
     private int _moveToOrderTypeId;
@@ -62,6 +60,7 @@ public sealed class CapabilityStandardPhysics2DPlaygroundV2InteractionSystem : I
         _config = config ?? throw new ArgumentNullException(nameof(config));
         _benchmarkSpawnScratch = new RuntimeEntitySpawnRequest[config.SpawnScratchCapacity];
         _frictionZoneSpawnScratch = new RuntimeEntitySpawnRequest[3];
+        _explosionQueryScratch = new Entity[config.ExplosionQueryCapacity];
         _benchmarkSpawnCount = config.BenchmarkDefaultSpawnCount;
     }
 
@@ -352,39 +351,69 @@ public sealed class CapabilityStandardPhysics2DPlaygroundV2InteractionSystem : I
         Fix64 radiusSq = radius * radius;
         Fix64 forceMagnitude = Fix64.FromInt(_config.ExplosionForceCmPerSec2);
         int affected = 0;
+        SpatialQueryResult query = _engine.SpatialQueries.QueryRadius(
+            centerCm.ToWorldCmInt2(),
+            _config.ExplosionRadiusCm,
+            _explosionQueryScratch);
 
-        _world.Query(
-            in _explosionTargetQuery,
-            (Entity entity, ref Position2D position, ref Mass2D mass, ref ForceInput2D forceInput) =>
+        ReadOnlySpan<Entity> candidates = _explosionQueryScratch.AsSpan(0, query.Count);
+        for (int i = 0; i < candidates.Length; i++)
+        {
+            Entity entity = candidates[i];
+            if (!IsExplosionPhysicsTarget(entity))
             {
-                if (mass.IsStatic)
-                {
-                    return;
-                }
+                continue;
+            }
 
-                Fix64Vec2 delta = position.Value - centerCm;
-                Fix64 distanceSq = delta.LengthSquared();
-                if (distanceSq > radiusSq)
-                {
-                    return;
-                }
+            ref Position2D position = ref _world.Get<Position2D>(entity);
+            ref Mass2D mass = ref _world.Get<Mass2D>(entity);
+            if (mass.IsStatic)
+            {
+                continue;
+            }
 
-                Fix64Vec2 direction = distanceSq > Fix64.OneValue
-                    ? delta.Normalized()
-                    : Fix64Vec2.FromInt(1, 0);
-                Fix64 distance = distanceSq > Fix64.Zero ? delta.Length() : Fix64.Zero;
-                Fix64 falloff = Fix64.OneValue - (distance / radius);
-                if (falloff < Fix64.Zero)
-                {
-                    falloff = Fix64.Zero;
-                }
+            Fix64Vec2 delta = position.Value - centerCm;
+            Fix64 distanceSq = delta.LengthSquared();
+            if (distanceSq > radiusSq)
+            {
+                continue;
+            }
 
-                forceInput.Force = forceInput.Force + (direction * forceMagnitude * falloff);
-                affected++;
-            });
+            Fix64Vec2 direction = distanceSq > Fix64.OneValue
+                ? delta.Normalized()
+                : Fix64Vec2.FromInt(1, 0);
+            Fix64 distance = distanceSq > Fix64.Zero ? delta.Length() : Fix64.Zero;
+            Fix64 falloff = Fix64.OneValue - (distance / radius);
+            if (falloff < Fix64.Zero)
+            {
+                falloff = Fix64.Zero;
+            }
 
-        PublishToolState(lastAction: $"Explosion affected {affected}", explosionAffected: affected);
+            ref ForceInput2D forceInput = ref _world.Get<ForceInput2D>(entity);
+            forceInput.Force = forceInput.Force + (direction * forceMagnitude * falloff);
+            affected++;
+        }
+
+        PublishToolState(
+            lastAction: $"Explosion affected {affected}/{query.Count} candidates",
+            explosionAffected: affected,
+            explosionCandidates: query.Count,
+            explosionDropped: query.Dropped);
         return affected;
+    }
+
+    private bool IsExplosionPhysicsTarget(Entity entity)
+    {
+        return _world.IsAlive(entity) &&
+               _world.Has<Position2D>(entity) &&
+               _world.Has<Velocity2D>(entity) &&
+               _world.Has<Mass2D>(entity) &&
+               _world.Has<ForceInput2D>(entity) &&
+               !_world.Has<NavAgent2D>(entity) &&
+               !_world.Has<NavDesiredVelocity2D>(entity) &&
+               !_world.Has<NavGoal2D>(entity) &&
+               !_world.Has<NavObstacle2D>(entity) &&
+               !_world.Has<OrderBuffer>(entity);
     }
 
     public bool ApplyBenchmarkForcePulse()
@@ -785,7 +814,7 @@ public sealed class CapabilityStandardPhysics2DPlaygroundV2InteractionSystem : I
         return count;
     }
 
-    private void PublishToolState(string lastAction, int? explosionAffected)
+    private void PublishToolState(string lastAction, int? explosionAffected, int? explosionCandidates = null, int? explosionDropped = null)
     {
         _engine.GlobalContext[CapabilityStandardPhysics2DPlaygroundV2State.StaticPolygonCountServiceKey] =
             CountByTemplateKey(ResolveStaticPolygonTemplateKeyId());
@@ -796,6 +825,18 @@ public sealed class CapabilityStandardPhysics2DPlaygroundV2InteractionSystem : I
         {
             _engine.GlobalContext[CapabilityStandardPhysics2DPlaygroundV2State.ExplosionLastAffectedServiceKey] =
                 explosionAffected.Value;
+        }
+
+        if (explosionCandidates.HasValue)
+        {
+            _engine.GlobalContext[CapabilityStandardPhysics2DPlaygroundV2State.ExplosionLastCandidateCountServiceKey] =
+                explosionCandidates.Value;
+        }
+
+        if (explosionDropped.HasValue)
+        {
+            _engine.GlobalContext[CapabilityStandardPhysics2DPlaygroundV2State.ExplosionLastDroppedServiceKey] =
+                explosionDropped.Value;
         }
     }
 

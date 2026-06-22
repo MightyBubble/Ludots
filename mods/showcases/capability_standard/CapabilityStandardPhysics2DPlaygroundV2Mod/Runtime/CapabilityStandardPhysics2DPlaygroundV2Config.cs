@@ -33,6 +33,7 @@ public sealed class CapabilityStandardPhysics2DPlaygroundV2Config
     public int FrictionZoneSpacingCm { get; set; }
     public int ExplosionRadiusCm { get; set; }
     public int ExplosionForceCmPerSec2 { get; set; }
+    public int ExplosionQueryCapacity { get; set; }
 
     public static CapabilityStandardPhysics2DPlaygroundV2Config Load(JsonObject configObject)
     {
@@ -75,6 +76,7 @@ public sealed class CapabilityStandardPhysics2DPlaygroundV2Config
         RequireProperty(root, "frictionZoneSpacingCm");
         RequireProperty(root, "explosionRadiusCm");
         RequireProperty(root, "explosionForceCmPerSec2");
+        RequireProperty(root, "explosionQueryCapacity");
 
         JsonElement spawns = RequireProperty(root, "spawns");
         if (spawns.ValueKind != JsonValueKind.Array)
@@ -131,9 +133,9 @@ public sealed class CapabilityStandardPhysics2DPlaygroundV2Config
             throw new InvalidOperationException("Capability-standard Physics2D Playground v2 benchmark spawn radius and initial speed must be positive.");
         }
 
-        if (FrictionZoneSpacingCm <= 0 || ExplosionRadiusCm <= 0 || ExplosionForceCmPerSec2 <= 0)
+        if (FrictionZoneSpacingCm <= 0 || ExplosionRadiusCm <= 0 || ExplosionForceCmPerSec2 <= 0 || ExplosionQueryCapacity <= 0)
         {
-            throw new InvalidOperationException("Capability-standard Physics2D Playground v2 friction spacing and explosion force settings must be positive.");
+            throw new InvalidOperationException("Capability-standard Physics2D Playground v2 friction spacing and explosion force/query settings must be positive.");
         }
 
         var ids = new HashSet<string>(StringComparer.Ordinal);

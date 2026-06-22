@@ -86,6 +86,8 @@ internal sealed class CapabilityStandardPhysics2DPlaygroundV2HudSystem : ISystem
         int staticPolygons = ReadInt(CapabilityStandardPhysics2DPlaygroundV2State.StaticPolygonCountServiceKey);
         int frictionZones = ReadInt(CapabilityStandardPhysics2DPlaygroundV2State.FrictionZoneCountServiceKey);
         int explosionAffected = ReadInt(CapabilityStandardPhysics2DPlaygroundV2State.ExplosionLastAffectedServiceKey);
+        int explosionCandidates = ReadInt(CapabilityStandardPhysics2DPlaygroundV2State.ExplosionLastCandidateCountServiceKey);
+        int explosionDropped = ReadInt(CapabilityStandardPhysics2DPlaygroundV2State.ExplosionLastDroppedServiceKey);
         string mode = ReadString(CapabilityStandardPhysics2DPlaygroundV2State.ActiveModeServiceKey, CapabilityStandardPhysics2DPlaygroundV2State.ActiveMode.ToString());
         string lastAction = ReadString(CapabilityStandardPhysics2DPlaygroundV2State.LastActionServiceKey, "ready");
 
@@ -115,11 +117,11 @@ internal sealed class CapabilityStandardPhysics2DPlaygroundV2HudSystem : ISystem
         overlay.AddText(
             x + 14,
             y + 82,
-            $"Pairs potential {stats.PotentialPairs} | contacts {stats.ContactPairs} | mode {mode} | {lastAction}",
+            $"Pairs potential {stats.PotentialPairs} | contacts {stats.ContactPairs} | explosion candidates {explosionCandidates} dropped {explosionDropped} | mode {mode} | {lastAction}",
             14,
             TextColor,
             stableId: 62004,
-            dirtySerial: HashCode.Combine(stats.PotentialPairs, stats.ContactPairs, mode, lastAction));
+            dirtySerial: HashCode.Combine(stats.PotentialPairs, stats.ContactPairs, explosionCandidates, explosionDropped, mode, lastAction));
         overlay.AddText(
             x + 14,
             y + 110,

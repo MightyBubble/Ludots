@@ -13,6 +13,8 @@ public static class CapabilityStandardPhysics2DPlaygroundV2State
     public const string StaticPolygonCountServiceKey = "CapabilityStandardPhysics2DPlaygroundV2.StaticPolygonCount";
     public const string FrictionZoneCountServiceKey = "CapabilityStandardPhysics2DPlaygroundV2.FrictionZoneCount";
     public const string ExplosionLastAffectedServiceKey = "CapabilityStandardPhysics2DPlaygroundV2.ExplosionLastAffected";
+    public const string ExplosionLastCandidateCountServiceKey = "CapabilityStandardPhysics2DPlaygroundV2.ExplosionLastCandidateCount";
+    public const string ExplosionLastDroppedServiceKey = "CapabilityStandardPhysics2DPlaygroundV2.ExplosionLastDropped";
     public const string LastActionServiceKey = "CapabilityStandardPhysics2DPlaygroundV2.LastAction";
 
     public static bool Enabled;

@@ -22,6 +22,7 @@ using Ludots.Core.Presentation.Components;
 using Ludots.Core.Presentation.Hud;
 using Ludots.Core.Presentation.Performers;
 using Ludots.Core.Scripting;
+using Ludots.Core.Spatial;
 using Ludots.Platform.Abstractions;
 using NUnit.Framework;
 
@@ -253,14 +254,52 @@ public sealed class CapabilityStandardPhysics2DPlaygroundV2AcceptanceTests
             frameTimesMs,
             () => CountByTemplate(engine, BenchmarkBodyTemplateId) >= 40,
             maxFrames: 12);
+        CapabilityStandardShowcaseTestHarness.TickUntil(
+            engine,
+            frameTimesMs,
+            () => CountSpatialTrackedByTemplate(engine, BenchmarkBodyTemplateId) >= 40,
+            maxFrames: 12);
+
+        Fix64Vec2 farExplosionNoiseA = Fix64Vec2.FromInt(2500, 2400);
+        Fix64Vec2 farExplosionNoiseB = Fix64Vec2.FromInt(-2500, 2400);
+        Assert.That(interaction.SetBenchmarkSpawnCountForSlot(9), Is.EqualTo(90));
+        Assert.That(interaction.SpawnBenchmarkBodiesAt(farExplosionNoiseA), Is.True);
+        CapabilityStandardShowcaseTestHarness.TickUntil(
+            engine,
+            frameTimesMs,
+            () => CountByTemplate(engine, BenchmarkBodyTemplateId) >= 130,
+            maxFrames: 12);
+        Assert.That(interaction.SpawnBenchmarkBodiesAt(farExplosionNoiseB), Is.True);
+        CapabilityStandardShowcaseTestHarness.TickUntil(
+            engine,
+            frameTimesMs,
+            () => CountByTemplate(engine, BenchmarkBodyTemplateId) >= 220,
+            maxFrames: 12);
+        CapabilityStandardShowcaseTestHarness.TickUntil(
+            engine,
+            frameTimesMs,
+            () => CountSpatialTrackedByTemplate(engine, BenchmarkBodyTemplateId) >= 220,
+            maxFrames: 12);
+
         Entity explosionSample = FindNearestByTemplate(engine, BenchmarkBodyTemplateId, explosionCenter);
+        Entity farExplosionSample = FindNearestByTemplate(engine, BenchmarkBodyTemplateId, farExplosionNoiseA);
         Fix64Vec2 beforeExplosionVelocity = engine.World.Get<Velocity2D>(explosionSample).Linear;
+        Assert.That(engine.World.Get<ForceInput2D>(farExplosionSample).Force, Is.EqualTo(Fix64Vec2.Zero));
         int explosionAffected = interaction.ApplyExplosionForceAt(explosionCenter);
         Assert.That(explosionAffected, Is.GreaterThan(0),
             "X explosion must apply a radial ForceInput2D pulse to nearby dynamic physics bodies.");
+        int explosionCandidates = ReadInt(engine, CapabilityStandardPhysics2DPlaygroundV2State.ExplosionLastCandidateCountServiceKey);
+        int explosionDropped = ReadInt(engine, CapabilityStandardPhysics2DPlaygroundV2State.ExplosionLastDroppedServiceKey);
+        Assert.That(explosionCandidates, Is.GreaterThanOrEqualTo(explosionAffected));
+        Assert.That(explosionCandidates, Is.LessThan(CountByTemplate(engine, BenchmarkBodyTemplateId)),
+            "Explosion must use the spatial partition candidate set instead of scanning every benchmark body in the world.");
+        Assert.That(explosionDropped, Is.EqualTo(0),
+            "The configured playground explosion query buffer should cover the local AoE benchmark without truncation.");
         Assert.That(ReadInt(engine, CapabilityStandardPhysics2DPlaygroundV2State.ExplosionLastAffectedServiceKey),
             Is.EqualTo(explosionAffected));
         Assert.That(engine.World.Get<ForceInput2D>(explosionSample).Force.LengthSquared(), Is.GreaterThan(Fix64.Zero));
+        Assert.That(engine.World.Get<ForceInput2D>(farExplosionSample).Force, Is.EqualTo(Fix64Vec2.Zero),
+            "Far benchmark bodies should not receive ForceInput when explosion target selection goes through SpatialQueries.");
         CapabilityStandardShowcaseTestHarness.TickUntil(
             engine,
             frameTimesMs,
@@ -276,6 +315,7 @@ public sealed class CapabilityStandardPhysics2DPlaygroundV2AcceptanceTests
         Assert.That(OverlayContainsText(overlay, "FPS"), Is.True, "Playground HUD must expose live FPS.");
         Assert.That(OverlayContainsText(overlay, "Frame"), Is.True, "Playground HUD must expose frame timing.");
         Assert.That(OverlayContainsText(overlay, "Entities"), Is.True, "Playground HUD must expose entity statistics.");
+        Assert.That(OverlayContainsText(overlay, "explosion candidates"), Is.True, "Playground HUD must expose spatial explosion query stats.");
         Assert.That(OverlayContainsText(overlay, "G static polygon"), Is.True, "Playground HUD must list the static polygon control.");
         Assert.That(OverlayContainsText(overlay, "X explosion"), Is.True, "Playground HUD must list the explosion control.");
         Assert.That(CountOverlayLines(overlay), Is.GreaterThan(0), "Static polygon outlines should be drawn into ScreenOverlayBuffer.");
@@ -410,6 +450,8 @@ public sealed class CapabilityStandardPhysics2DPlaygroundV2AcceptanceTests
                                 CountByTemplate(engine, FrictionZoneMediumTemplateId) +
                                 CountByTemplate(engine, FrictionZoneHighTemplateId);
         int explosionLastAffected = ReadInt(engine, CapabilityStandardPhysics2DPlaygroundV2State.ExplosionLastAffectedServiceKey);
+        int explosionLastCandidates = ReadInt(engine, CapabilityStandardPhysics2DPlaygroundV2State.ExplosionLastCandidateCountServiceKey);
+        int explosionLastDropped = ReadInt(engine, CapabilityStandardPhysics2DPlaygroundV2State.ExplosionLastDroppedServiceKey);
 
         return new PlaygroundV2Keyframe(
             frame,
@@ -427,7 +469,9 @@ public sealed class CapabilityStandardPhysics2DPlaygroundV2AcceptanceTests
             ToFloat(benchmarkVelocity.X),
             staticPolygonCount,
             frictionZoneCount,
-            explosionLastAffected);
+            explosionLastAffected,
+            explosionLastCandidates,
+            explosionLastDropped);
     }
 
     private static void AssertConfigAndTemplateBoundaries(string repoRoot)
@@ -789,18 +833,20 @@ public sealed class CapabilityStandardPhysics2DPlaygroundV2AcceptanceTests
         builder.AppendLine($"| Nav mode | nav final X `{Format(final.NavAgentX)}` cm, desired X `{Format(final.NavDesiredX)}` cm/s, obstacle nav `{final.NavObstacle}` physics `{final.PhysicsObstacle}` |");
         builder.AppendLine($"| v1 benchmark carryover | LeftShift+Q/W/E/R/T/Y/U/O/P count slots, right-click/runtime burst spawn, and C GAS force pulse retained; benchmark bodies `{final.BenchmarkBodyCount}`, sample Vx `{Format(final.BenchmarkBodyVelocityX)}` cm/s |");
         builder.AppendLine($"| Playground tools | HUD exposes FPS/frame/entity stats; G static polygons `{final.StaticPolygonCount}`, F friction zones `{final.FrictionZoneCount}`, X explosion affected `{final.ExplosionLastAffected}` bodies |");
+        builder.AppendLine($"| Explosion spatial benchmark | local AoE used `SpatialQueries.QueryRadius` candidates `{final.ExplosionLastCandidates}` dropped `{final.ExplosionLastDropped}` while far benchmark bodies remained outside ForceInput |");
+        builder.AppendLine("| Friction zone benchmark design | zones are static `PhysicsMaterial2D` box colliders; material friction is exercised by production Physics2D broadphase/contact solver instead of a parallel area-field system |");
         builder.AppendLine($"| Physics stats | Hz `{stats.PhysicsHz}`, potential pairs `{stats.PotentialPairs}`, contact pairs `{stats.ContactPairs}`, last update `{stats.PhysicsUpdateMs:F4}` ms |");
         builder.AppendLine($"| Test tick timings | frames `{frameTimesMs.Count}`, avg `{avgMs:F4}` ms, max `{maxMs:F4}` ms |");
         builder.AppendLine();
         builder.AppendLine("## Keyframes");
         builder.AppendLine();
-        builder.AppendLine("| Frame | Mode | Physics X | Physics Vx | Suppressed | Physics Has Nav | Nav X | Nav Vx | Nav Desired X | Nav Obstacle | Physics Obstacle | Benchmark Bodies | Benchmark Vx | Static Polygons | Friction Zones | Explosion Last |");
-        builder.AppendLine("| ---: | --- | ---: | ---: | :---: | :---: | ---: | ---: | ---: | :---: | :---: | ---: | ---: | ---: | ---: | ---: |");
+        builder.AppendLine("| Frame | Mode | Physics X | Physics Vx | Suppressed | Physics Has Nav | Nav X | Nav Vx | Nav Desired X | Nav Obstacle | Physics Obstacle | Benchmark Bodies | Benchmark Vx | Static Polygons | Friction Zones | Explosion Last | Explosion Candidates | Explosion Dropped |");
+        builder.AppendLine("| ---: | --- | ---: | ---: | :---: | :---: | ---: | ---: | ---: | :---: | :---: | ---: | ---: | ---: | ---: | ---: | ---: | ---: |");
         for (int i = 0; i < keyframes.Count; i++)
         {
             PlaygroundV2Keyframe keyframe = keyframes[i];
             builder.AppendLine(
-                $"| {keyframe.Frame} | {keyframe.Mode} | {Format(keyframe.PhysicsBodyX)} | {Format(keyframe.PhysicsBodyVelocityX)} | {keyframe.PhysicsBodySuppressed} | {keyframe.PhysicsBodyHasNav} | {Format(keyframe.NavAgentX)} | {Format(keyframe.NavVelocityX)} | {Format(keyframe.NavDesiredX)} | {keyframe.NavObstacle} | {keyframe.PhysicsObstacle} | {keyframe.BenchmarkBodyCount} | {Format(keyframe.BenchmarkBodyVelocityX)} | {keyframe.StaticPolygonCount} | {keyframe.FrictionZoneCount} | {keyframe.ExplosionLastAffected} |");
+                $"| {keyframe.Frame} | {keyframe.Mode} | {Format(keyframe.PhysicsBodyX)} | {Format(keyframe.PhysicsBodyVelocityX)} | {keyframe.PhysicsBodySuppressed} | {keyframe.PhysicsBodyHasNav} | {Format(keyframe.NavAgentX)} | {Format(keyframe.NavVelocityX)} | {Format(keyframe.NavDesiredX)} | {keyframe.NavObstacle} | {keyframe.PhysicsObstacle} | {keyframe.BenchmarkBodyCount} | {Format(keyframe.BenchmarkBodyVelocityX)} | {keyframe.StaticPolygonCount} | {keyframe.FrictionZoneCount} | {keyframe.ExplosionLastAffected} | {keyframe.ExplosionLastCandidates} | {keyframe.ExplosionLastDropped} |");
         }
 
         File.WriteAllText(mdPath, builder.ToString(), Encoding.UTF8);
@@ -880,6 +926,28 @@ public sealed class CapabilityStandardPhysics2DPlaygroundV2AcceptanceTests
         engine.World.Query(in query, (ref EntityTemplateKeyRef keyRef) =>
         {
             if (keyRef.TemplateKeyId == templateKeyId)
+            {
+                count++;
+            }
+        });
+
+        return count;
+    }
+
+    private static int CountSpatialTrackedByTemplate(GameEngine engine, string templateId)
+    {
+        EntityTemplateKeyRegistry templateKeys = engine.GetService(CoreServiceKeys.EntityTemplateKeyRegistry)
+            ?? throw new InvalidOperationException("EntityTemplateKeyRegistry missing.");
+        if (!templateKeys.TryGetId(templateId, out int templateKeyId) || templateKeyId <= 0)
+        {
+            return 0;
+        }
+
+        int count = 0;
+        var query = new QueryDescription().WithAll<EntityTemplateKeyRef, SpatialCellRef>();
+        engine.World.Query(in query, (ref EntityTemplateKeyRef keyRef, ref SpatialCellRef cellRef) =>
+        {
+            if (keyRef.TemplateKeyId == templateKeyId && cellRef.Initialized != 0)
             {
                 count++;
             }
@@ -975,5 +1043,7 @@ public sealed class CapabilityStandardPhysics2DPlaygroundV2AcceptanceTests
         float BenchmarkBodyVelocityX,
         int StaticPolygonCount,
         int FrictionZoneCount,
-        int ExplosionLastAffected);
+        int ExplosionLastAffected,
+        int ExplosionLastCandidates,
+        int ExplosionLastDropped);
 }

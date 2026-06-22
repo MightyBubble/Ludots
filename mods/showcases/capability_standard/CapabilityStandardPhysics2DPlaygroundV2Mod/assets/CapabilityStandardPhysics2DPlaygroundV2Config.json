@@ -23,6 +23,7 @@
   "frictionZoneSpacingCm": 340,
   "explosionRadiusCm": 520,
   "explosionForceCmPerSec2": 7200,
+  "explosionQueryCapacity": 512,
   "spawns": [
     {
       "id": "physics_body",
