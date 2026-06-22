@@ -1,0 +1,28 @@
+{
+  "actions": [
+    { "id": "CapabilityStandardPhysics2DPlaygroundV2.PointerPos", "name": "Physics2DPlaygroundV2_PointerPos", "type": "Axis2D" },
+    { "id": "CapabilityStandardPhysics2DPlaygroundV2.PrimaryClick", "name": "Physics2DPlaygroundV2_PrimaryClick", "type": "Button" },
+    { "id": "CapabilityStandardPhysics2DPlaygroundV2.SecondaryClick", "name": "Physics2DPlaygroundV2_SecondaryClick", "type": "Button" },
+    { "id": "CapabilityStandardPhysics2DPlaygroundV2.TogglePhysicsOnlyMode", "name": "Physics2DPlaygroundV2_TogglePhysicsOnlyMode", "type": "Button" },
+    { "id": "CapabilityStandardPhysics2DPlaygroundV2.ToggleNavMode", "name": "Physics2DPlaygroundV2_ToggleNavMode", "type": "Button" },
+    { "id": "CapabilityStandardPhysics2DPlaygroundV2.ApplyImpulse", "name": "Physics2DPlaygroundV2_ApplyImpulse", "type": "Button" },
+    { "id": "CapabilityStandardPhysics2DPlaygroundV2.SubmitNavMove", "name": "Physics2DPlaygroundV2_SubmitNavMove", "type": "Button" },
+    { "id": "CapabilityStandardPhysics2DPlaygroundV2.ApplyDisplacement", "name": "Physics2DPlaygroundV2_ApplyDisplacement", "type": "Button" }
+  ],
+  "contexts": [
+    {
+      "id": "CapabilityStandard_Physics2D_PlaygroundV2",
+      "name": "Physics2D Playground v2",
+      "priority": 10,
+      "bindings": [
+        { "actionId": "CapabilityStandardPhysics2DPlaygroundV2.PrimaryClick", "path": "<Mouse>/LeftButton" },
+        { "actionId": "CapabilityStandardPhysics2DPlaygroundV2.SecondaryClick", "path": "<Mouse>/RightButton" },
+        { "actionId": "CapabilityStandardPhysics2DPlaygroundV2.TogglePhysicsOnlyMode", "path": "<Keyboard>/1" },
+        { "actionId": "CapabilityStandardPhysics2DPlaygroundV2.ToggleNavMode", "path": "<Keyboard>/2" },
+        { "actionId": "CapabilityStandardPhysics2DPlaygroundV2.ApplyImpulse", "path": "<Keyboard>/I" },
+        { "actionId": "CapabilityStandardPhysics2DPlaygroundV2.SubmitNavMove", "path": "<Keyboard>/N" },
+        { "actionId": "CapabilityStandardPhysics2DPlaygroundV2.ApplyDisplacement", "path": "<Keyboard>/K" }
+      ]
+    }
+  ]
+}

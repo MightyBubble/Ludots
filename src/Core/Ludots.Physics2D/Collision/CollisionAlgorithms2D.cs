@@ -160,7 +160,7 @@ namespace Ludots.Core.Physics2D.Collision
                 closestWorld = boxCenter + closestLocal;
             }
 
-            Fix64Vec2 diff = circleCenter - closestWorld;
+            Fix64Vec2 diff = closestWorld - circleCenter;
             Fix64 distSq = diff.LengthSquared();
             Fix64 rSq = circle.Radius * circle.Radius;
             if (distSq > rSq)
@@ -180,12 +180,12 @@ namespace Ludots.Core.Physics2D.Collision
             Fix64 dy = box.HalfHeight - Fix64.Abs(relLocal.Y);
             if (dx < dy)
             {
-                normal = new Fix64Vec2(relLocal.X >= Fix64.Zero ? Fix64.OneValue : -Fix64.OneValue, Fix64.Zero);
+                normal = new Fix64Vec2(relLocal.X >= Fix64.Zero ? -Fix64.OneValue : Fix64.OneValue, Fix64.Zero);
                 penetration = circle.Radius + dx;
             }
             else
             {
-                normal = new Fix64Vec2(Fix64.Zero, relLocal.Y >= Fix64.Zero ? Fix64.OneValue : -Fix64.OneValue);
+                normal = new Fix64Vec2(Fix64.Zero, relLocal.Y >= Fix64.Zero ? -Fix64.OneValue : Fix64.OneValue);
                 penetration = circle.Radius + dy;
             }
 

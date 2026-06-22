@@ -148,5 +148,219 @@
         }
       }
     }
+  },
+  {
+    "id": "capability_standard_physics2d_friction_wall_low",
+    "components": {
+      "Name": { "Value": "CapabilityStandardPhysics2D.FrictionWallLow" },
+      "PresentationStaticTransform": {},
+      "FacingDirection": { "AngleRad": 0.0 },
+      "CapabilityStandardPhysics2D.RigidBody": {
+        "positionCm": { "x": -180, "y": 900 },
+        "rotationRad": 0.0,
+        "velocityCmPerSec": { "x": 0, "y": 0 },
+        "angularVelocityRadPerSec": 0.0,
+        "inverseMass": 0.0,
+        "inverseInertia": 0.0,
+        "shape": {
+          "type": "Box",
+          "halfWidthCm": 160,
+          "halfHeightCm": 24,
+          "localCenterCm": { "x": 0, "y": 0 }
+        },
+        "material": {
+          "friction": 0.04,
+          "restitution": 0.0,
+          "baseDamping": 1.0
+        }
+      }
+    }
+  },
+  {
+    "id": "capability_standard_physics2d_friction_probe_low",
+    "components": {
+      "Name": { "Value": "CapabilityStandardPhysics2D.FrictionProbeLow" },
+      "PresentationStaticTransform": {},
+      "FacingDirection": { "AngleRad": 0.0 },
+      "CapabilityStandardPhysics2D.RigidBody": {
+        "positionCm": { "x": -360, "y": 1040 },
+        "rotationRad": 0.0,
+        "velocityCmPerSec": { "x": 760, "y": -420 },
+        "angularVelocityRadPerSec": 0.0,
+        "inverseMass": 1.0,
+        "inverseInertia": 1.0,
+        "shape": {
+          "type": "Circle",
+          "radiusCm": 48,
+          "localCenterCm": { "x": 0, "y": 0 }
+        },
+        "material": {
+          "friction": 0.04,
+          "restitution": 0.0,
+          "baseDamping": 1.0
+        }
+      }
+    }
+  },
+  {
+    "id": "capability_standard_physics2d_friction_wall_high",
+    "components": {
+      "Name": { "Value": "CapabilityStandardPhysics2D.FrictionWallHigh" },
+      "PresentationStaticTransform": {},
+      "FacingDirection": { "AngleRad": 0.0 },
+      "CapabilityStandardPhysics2D.RigidBody": {
+        "positionCm": { "x": -180, "y": 1260 },
+        "rotationRad": 0.0,
+        "velocityCmPerSec": { "x": 0, "y": 0 },
+        "angularVelocityRadPerSec": 0.0,
+        "inverseMass": 0.0,
+        "inverseInertia": 0.0,
+        "shape": {
+          "type": "Box",
+          "halfWidthCm": 160,
+          "halfHeightCm": 24,
+          "localCenterCm": { "x": 0, "y": 0 }
+        },
+        "material": {
+          "friction": 1.25,
+          "restitution": 0.0,
+          "baseDamping": 1.0
+        }
+      }
+    }
+  },
+  {
+    "id": "capability_standard_physics2d_friction_probe_high",
+    "components": {
+      "Name": { "Value": "CapabilityStandardPhysics2D.FrictionProbeHigh" },
+      "PresentationStaticTransform": {},
+      "FacingDirection": { "AngleRad": 0.0 },
+      "CapabilityStandardPhysics2D.RigidBody": {
+        "positionCm": { "x": -360, "y": 1400 },
+        "rotationRad": 0.0,
+        "velocityCmPerSec": { "x": 760, "y": -420 },
+        "angularVelocityRadPerSec": 0.0,
+        "inverseMass": 1.0,
+        "inverseInertia": 1.0,
+        "shape": {
+          "type": "Circle",
+          "radiusCm": 48,
+          "localCenterCm": { "x": 0, "y": 0 }
+        },
+        "material": {
+          "friction": 1.25,
+          "restitution": 0.0,
+          "baseDamping": 1.0
+        }
+      }
+    }
+  },
+  {
+    "id": "capability_standard_physics2d_radial_impulse_probe_east",
+    "components": {
+      "Name": { "Value": "CapabilityStandardPhysics2D.RadialImpulseProbeEast" },
+      "PresentationStaticTransform": {},
+      "FacingDirection": { "AngleRad": 0.0 },
+      "CapabilityStandardPhysics2D.RigidBody": {
+        "positionCm": { "x": 1180, "y": 1600 },
+        "rotationRad": 0.0,
+        "velocityCmPerSec": { "x": 0, "y": 0 },
+        "angularVelocityRadPerSec": 0.0,
+        "inverseMass": 1.0,
+        "inverseInertia": 1.0,
+        "shape": {
+          "type": "Circle",
+          "radiusCm": 36,
+          "localCenterCm": { "x": 0, "y": 0 }
+        },
+        "material": {
+          "friction": 0.0,
+          "restitution": 0.0,
+          "baseDamping": 1.0
+        },
+        "forceCmPerSec2": { "x": 3600, "y": 0 }
+      }
+    }
+  },
+  {
+    "id": "capability_standard_physics2d_radial_impulse_probe_west",
+    "components": {
+      "Name": { "Value": "CapabilityStandardPhysics2D.RadialImpulseProbeWest" },
+      "PresentationStaticTransform": {},
+      "FacingDirection": { "AngleRad": 0.0 },
+      "CapabilityStandardPhysics2D.RigidBody": {
+        "positionCm": { "x": 820, "y": 1600 },
+        "rotationRad": 0.0,
+        "velocityCmPerSec": { "x": 0, "y": 0 },
+        "angularVelocityRadPerSec": 0.0,
+        "inverseMass": 1.0,
+        "inverseInertia": 1.0,
+        "shape": {
+          "type": "Circle",
+          "radiusCm": 36,
+          "localCenterCm": { "x": 0, "y": 0 }
+        },
+        "material": {
+          "friction": 0.0,
+          "restitution": 0.0,
+          "baseDamping": 1.0
+        },
+        "forceCmPerSec2": { "x": -3600, "y": 0 }
+      }
+    }
+  },
+  {
+    "id": "capability_standard_physics2d_radial_impulse_probe_north",
+    "components": {
+      "Name": { "Value": "CapabilityStandardPhysics2D.RadialImpulseProbeNorth" },
+      "PresentationStaticTransform": {},
+      "FacingDirection": { "AngleRad": 0.0 },
+      "CapabilityStandardPhysics2D.RigidBody": {
+        "positionCm": { "x": 1000, "y": 1780 },
+        "rotationRad": 0.0,
+        "velocityCmPerSec": { "x": 0, "y": 0 },
+        "angularVelocityRadPerSec": 0.0,
+        "inverseMass": 1.0,
+        "inverseInertia": 1.0,
+        "shape": {
+          "type": "Circle",
+          "radiusCm": 36,
+          "localCenterCm": { "x": 0, "y": 0 }
+        },
+        "material": {
+          "friction": 0.0,
+          "restitution": 0.0,
+          "baseDamping": 1.0
+        },
+        "forceCmPerSec2": { "x": 0, "y": 3600 }
+      }
+    }
+  },
+  {
+    "id": "capability_standard_physics2d_radial_impulse_probe_south",
+    "components": {
+      "Name": { "Value": "CapabilityStandardPhysics2D.RadialImpulseProbeSouth" },
+      "PresentationStaticTransform": {},
+      "FacingDirection": { "AngleRad": 0.0 },
+      "CapabilityStandardPhysics2D.RigidBody": {
+        "positionCm": { "x": 1000, "y": 1420 },
+        "rotationRad": 0.0,
+        "velocityCmPerSec": { "x": 0, "y": 0 },
+        "angularVelocityRadPerSec": 0.0,
+        "inverseMass": 1.0,
+        "inverseInertia": 1.0,
+        "shape": {
+          "type": "Circle",
+          "radiusCm": 36,
+          "localCenterCm": { "x": 0, "y": 0 }
+        },
+        "material": {
+          "friction": 0.0,
+          "restitution": 0.0,
+          "baseDamping": 1.0
+        },
+        "forceCmPerSec2": { "x": 0, "y": -3600 }
+      }
+    }
   }
 ]

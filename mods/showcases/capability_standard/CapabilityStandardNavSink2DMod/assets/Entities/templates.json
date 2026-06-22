@@ -1,0 +1,48 @@
+[
+  {
+    "id": "capability_standard_nav_sink2d_agent",
+    "components": {
+      "Name": { "Value": "CapabilityStandardNavSink2D.Agent" },
+      "WorldPositionCm": {
+        "Value": {
+          "X": -900,
+          "Y": 0
+        }
+      },
+      "FacingDirection": { "AngleRad": 0.0 },
+      "AttributeBuffer": {
+        "base": {
+          "MoveSpeed": 360,
+          "Health": 100
+        }
+      },
+      "GameplayTagContainer": {},
+      "OrderBuffer": {}
+    }
+  },
+  {
+    "id": "capability_standard_nav_sink2d_bridge_obstacle",
+    "components": {
+      "Name": { "Value": "CapabilityStandardNavSink2D.BridgeObstacle" },
+      "WorldPositionCm": {
+        "Value": {
+          "X": 0,
+          "Y": 0
+        }
+      },
+      "FacingDirection": { "AngleRad": 0.0 },
+      "ManifestationObstacleIntent2D": {
+        "shape": "Box",
+        "halfWidthCm": 90,
+        "halfHeightCm": 240,
+        "localOffsetCm": {
+          "x": 0,
+          "y": 0
+        },
+        "sinkPhysicsCollider": true,
+        "sinkNavigationObstacle": true,
+        "navRadiusCm": 260
+      }
+    }
+  }
+]

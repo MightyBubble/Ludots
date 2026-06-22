@@ -1,0 +1,43 @@
+{
+  "mapId": "capability_standard_physics2d_playground_v2",
+  "spawnScratchCapacity": 8,
+  "primaryPhysicsTemplateId": "capability_standard_physics2d_playground_v2_physics_body",
+  "primaryNavTemplateId": "capability_standard_physics2d_playground_v2_nav_agent",
+  "primaryObstacleTemplateId": "capability_standard_physics2d_playground_v2_nav_obstacle",
+  "navTargetXCm": 980,
+  "navTargetYCm": 0,
+  "physicsImpulseXCmPerSec": 420,
+  "physicsImpulseYCmPerSec": 0,
+  "displacementDistanceCm": 160,
+  "displacementTicks": 4,
+  "spawns": [
+    {
+      "id": "physics_body",
+      "templateId": "capability_standard_physics2d_playground_v2_physics_body",
+      "worldXCm": -720,
+      "worldYCm": -260,
+      "facingRad": 0.0
+    },
+    {
+      "id": "physics_wall",
+      "templateId": "capability_standard_physics2d_playground_v2_physics_wall",
+      "worldXCm": -120,
+      "worldYCm": -260,
+      "facingRad": 0.0
+    },
+    {
+      "id": "nav_agent",
+      "templateId": "capability_standard_physics2d_playground_v2_nav_agent",
+      "worldXCm": -900,
+      "worldYCm": 0,
+      "facingRad": 0.0
+    },
+    {
+      "id": "nav_obstacle",
+      "templateId": "capability_standard_physics2d_playground_v2_nav_obstacle",
+      "worldXCm": -80,
+      "worldYCm": 0,
+      "facingRad": 0.0
+    }
+  ]
+}

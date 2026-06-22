@@ -1,0 +1,105 @@
+[
+  {
+    "id": "capability_standard_physics2d_playground_v2_physics_body",
+    "components": {
+      "Name": { "Value": "CapabilityStandardPhysics2DPlaygroundV2.PhysicsBody" },
+      "PresentationStaticTransform": {},
+      "FacingDirection": { "AngleRad": 0.0 },
+      "CapabilityStandardPhysics2DPlaygroundV2.ModePartition": { "Mode": 0 },
+      "CapabilityStandardPhysics2DPlaygroundV2.RigidBody": {
+        "positionCm": { "x": -720, "y": -260 },
+        "rotationRad": 0.0,
+        "velocityCmPerSec": { "x": 120, "y": 0 },
+        "angularVelocityRadPerSec": 0.0,
+        "inverseMass": 1.0,
+        "inverseInertia": 1.0,
+        "shape": {
+          "type": "Circle",
+          "radiusCm": 36,
+          "localCenterCm": { "x": 0, "y": 0 }
+        },
+        "material": {
+          "friction": 0.25,
+          "restitution": 0.2,
+          "baseDamping": 0.998
+        }
+      }
+    }
+  },
+  {
+    "id": "capability_standard_physics2d_playground_v2_physics_wall",
+    "components": {
+      "Name": { "Value": "CapabilityStandardPhysics2DPlaygroundV2.PhysicsWall" },
+      "PresentationStaticTransform": {},
+      "FacingDirection": { "AngleRad": 0.0 },
+      "CapabilityStandardPhysics2DPlaygroundV2.ModePartition": { "Mode": 0 },
+      "CapabilityStandardPhysics2DPlaygroundV2.RigidBody": {
+        "positionCm": { "x": -120, "y": -260 },
+        "rotationRad": 0.0,
+        "velocityCmPerSec": { "x": 0, "y": 0 },
+        "angularVelocityRadPerSec": 0.0,
+        "inverseMass": 0.0,
+        "inverseInertia": 0.0,
+        "shape": {
+          "type": "Box",
+          "halfWidthCm": 48,
+          "halfHeightCm": 130,
+          "localCenterCm": { "x": 0, "y": 0 }
+        },
+        "material": {
+          "friction": 0.6,
+          "restitution": 0.0,
+          "baseDamping": 1.0
+        }
+      }
+    }
+  },
+  {
+    "id": "capability_standard_physics2d_playground_v2_nav_agent",
+    "components": {
+      "Name": { "Value": "CapabilityStandardPhysics2DPlaygroundV2.NavAgent" },
+      "WorldPositionCm": {
+        "Value": {
+          "X": -900,
+          "Y": 0
+        }
+      },
+      "FacingDirection": { "AngleRad": 0.0 },
+      "CapabilityStandardPhysics2DPlaygroundV2.ModePartition": { "Mode": 1 },
+      "AttributeBuffer": {
+        "base": {
+          "MoveSpeed": 360,
+          "Health": 100
+        }
+      },
+      "GameplayTagContainer": {},
+      "OrderBuffer": {}
+    }
+  },
+  {
+    "id": "capability_standard_physics2d_playground_v2_nav_obstacle",
+    "components": {
+      "Name": { "Value": "CapabilityStandardPhysics2DPlaygroundV2.NavObstacle" },
+      "WorldPositionCm": {
+        "Value": {
+          "X": -80,
+          "Y": 0
+        }
+      },
+      "FacingDirection": { "AngleRad": 0.0 },
+      "CapabilityStandardPhysics2DPlaygroundV2.ModePartition": { "Mode": 1 },
+      "ManifestationObstacleIntent2D": {
+        "shape": "Box",
+        "halfWidthCm": 90,
+        "halfHeightCm": 220,
+        "localOffsetCm": {
+          "x": 0,
+          "y": 0
+        },
+        "sinkPhysicsCollider": true,
+        "sinkNavigationObstacle": true,
+        "navRadiusCm": 240
+      }
+    }
+  }
+]

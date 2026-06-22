@@ -1,0 +1,20 @@
+{
+  "Id": "capability_standard_physics2d_stress",
+  "Tags": [
+    "showcase",
+    "capability_standard",
+    "physics2d",
+    "stress",
+    "pure_physics2d"
+  ],
+  "DefaultCamera": {
+    "VirtualCameraId": "Camera.Profile.Tactical",
+    "TargetXCm": 1300,
+    "TargetYCm": 700,
+    "DistanceCm": 9600,
+    "Pitch": 62,
+    "Yaw": 180,
+    "FovYDeg": 48
+  },
+  "Entities": []
+}

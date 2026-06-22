@@ -40,6 +40,14 @@ namespace Ludots.Tests.GAS.Production
         private const string DampingFieldTemplateId = "capability_standard_physics2d_damping_field";
         private const string DampingProbeTemplateId = "capability_standard_physics2d_damping_probe";
         private const string DoorTemplateId = "capability_standard_physics2d_kinematic_rotating_door";
+        private const string FrictionWallLowTemplateId = "capability_standard_physics2d_friction_wall_low";
+        private const string FrictionProbeLowTemplateId = "capability_standard_physics2d_friction_probe_low";
+        private const string FrictionWallHighTemplateId = "capability_standard_physics2d_friction_wall_high";
+        private const string FrictionProbeHighTemplateId = "capability_standard_physics2d_friction_probe_high";
+        private const string RadialProbeEastTemplateId = "capability_standard_physics2d_radial_impulse_probe_east";
+        private const string RadialProbeWestTemplateId = "capability_standard_physics2d_radial_impulse_probe_west";
+        private const string RadialProbeNorthTemplateId = "capability_standard_physics2d_radial_impulse_probe_north";
+        private const string RadialProbeSouthTemplateId = "capability_standard_physics2d_radial_impulse_probe_south";
 
         private static readonly string[] AcceptanceMods =
         {
@@ -83,12 +91,24 @@ namespace Ludots.Tests.GAS.Production
             Entity dampingField = FindSingleByTemplate(engine, DampingFieldTemplateId);
             Entity dampingProbe = FindSingleByTemplate(engine, DampingProbeTemplateId);
             Entity door = FindSingleByTemplate(engine, DoorTemplateId);
+            Entity frictionWallLow = FindSingleByTemplate(engine, FrictionWallLowTemplateId);
+            Entity frictionProbeLow = FindSingleByTemplate(engine, FrictionProbeLowTemplateId);
+            Entity frictionWallHigh = FindSingleByTemplate(engine, FrictionWallHighTemplateId);
+            Entity frictionProbeHigh = FindSingleByTemplate(engine, FrictionProbeHighTemplateId);
+            Entity radialProbeEast = FindSingleByTemplate(engine, RadialProbeEastTemplateId);
+            Entity radialProbeWest = FindSingleByTemplate(engine, RadialProbeWestTemplateId);
+            Entity radialProbeNorth = FindSingleByTemplate(engine, RadialProbeNorthTemplateId);
+            Entity radialProbeSouth = FindSingleByTemplate(engine, RadialProbeSouthTemplateId);
 
             Assert.That(engine.World.Has<Position2D>(dampingField), Is.True);
             Assert.That(engine.World.Has<DampingField>(dampingField), Is.True);
             Assert.That(engine.World.Has<Collider2D>(stone), Is.True);
             Assert.That(engine.World.Has<Collider2D>(door), Is.True);
             Assert.That(engine.World.Has<ForceInput2D>(knockback), Is.True);
+            Assert.That(engine.World.Has<Collider2D>(frictionWallLow), Is.True);
+            Assert.That(engine.World.Has<Collider2D>(frictionWallHigh), Is.True);
+            Assert.That(engine.World.Has<ForceInput2D>(radialProbeEast), Is.True);
+            Assert.That(engine.World.Has<ForceInput2D>(radialProbeWest), Is.True);
 
             TickUntil(engine, frameTimesMs, () => physics.Build.StaticBodyVersion > 0, maxFrames: 8);
             Assert.That(engine.World.Has<Physics2DStaticBodyState>(wall), Is.True);
@@ -99,14 +119,20 @@ namespace Ludots.Tests.GAS.Production
             {
                 Capture(engine, frame: 0, stone, knockback, dampingProbe, door)
             };
-
+            var frictionInitial = CaptureFriction(engine, frictionProbeLow, frictionProbeHigh);
             TickMeasured(engine, 1, frameTimesMs);
             var afterFirstFrame = Capture(engine, frame: 1, stone, knockback, dampingProbe, door);
+            var radialAfterFirstFrame = CaptureRadial(engine, radialProbeEast, radialProbeWest, radialProbeNorth, radialProbeSouth);
             keyframes.Add(afterFirstFrame);
             Assert.That(afterFirstFrame.KnockbackForceX, Is.EqualTo(0f).Within(0.001f));
             Assert.That(afterFirstFrame.KnockbackForceY, Is.EqualTo(0f).Within(0.001f));
             Assert.That(afterFirstFrame.KnockbackVelocityX, Is.GreaterThan(0f));
             Assert.That(afterFirstFrame.KnockbackPositionX, Is.GreaterThan(-900f));
+            AssertRadialImpulseSymmetry(radialAfterFirstFrame);
+            Assert.That(radialAfterFirstFrame.EastVelocityX, Is.GreaterThan(0f));
+            Assert.That(radialAfterFirstFrame.WestVelocityX, Is.LessThan(0f));
+            Assert.That(radialAfterFirstFrame.NorthVelocityY, Is.GreaterThan(0f));
+            Assert.That(radialAfterFirstFrame.SouthVelocityY, Is.LessThan(0f));
 
             TickUntil(
                 engine,
@@ -117,6 +143,8 @@ namespace Ludots.Tests.GAS.Production
 
             TickMeasured(engine, 16, frameTimesMs);
             var final = Capture(engine, frame: frameTimesMs.Count, stone, knockback, dampingProbe, door);
+            var finalFriction = CaptureFriction(engine, frictionProbeLow, frictionProbeHigh);
+            var finalRadial = CaptureRadial(engine, radialProbeEast, radialProbeWest, radialProbeNorth, radialProbeSouth);
             keyframes.Add(final);
 
             Assert.That(final.StoneVelocityX, Is.LessThan(0f), "Restitution should reverse the stone after hitting the static polygon wall.");
@@ -126,11 +154,16 @@ namespace Ludots.Tests.GAS.Production
             Assert.That(engine.World.Has<AppliedDamping>(dampingProbe), Is.True);
             Assert.That(final.DoorRotationRad, Is.GreaterThan(keyframes[0].DoorRotationRad + 0.05f),
                 "The rotating door should advance through Velocity2D.Angular without Navigation2D.");
+            Assert.That(MathF.Abs(finalFriction.LowProbeX - frictionInitial.LowProbeX), Is.GreaterThan(MathF.Abs(finalFriction.HighProbeX - frictionInitial.HighProbeX) + 2f),
+                "Higher PhysicsMaterial2D.Friction should apply stronger tangent impulse and produce a shorter tangent slide distance.");
+            Assert.That(MathF.Abs(finalFriction.HighProbeVx), Is.LessThan(MathF.Abs(finalFriction.LowProbeVx) * 0.5f),
+                "High friction probe should lose more tangential speed than the low friction probe.");
+            AssertRadialImpulseSymmetry(finalRadial);
 
             Physics2DPerfStats stats = ReadPhysicsPerfStats(engine.World);
             Assert.That(stats.PhysicsHz, Is.GreaterThan(0));
 
-            WriteAcceptanceArtifacts(repoRoot, keyframes, frameTimesMs, stats, physics);
+            WriteAcceptanceArtifacts(repoRoot, keyframes, frameTimesMs, stats, physics, finalFriction, finalRadial);
         }
 
         private static GameEngine CreateEngine(string repoRoot)
@@ -245,6 +278,63 @@ namespace Ludots.Tests.GAS.Production
                 ToFloat(dampingVelocity.Linear.X),
                 ToFloat(appliedDamping.TotalFieldDamping),
                 ToFloat(doorRotation.Value));
+        }
+
+        private static FrictionSnapshot CaptureFriction(GameEngine engine, Entity lowProbe, Entity highProbe)
+        {
+            Position2D lowPosition = engine.World.Get<Position2D>(lowProbe);
+            Velocity2D lowVelocity = engine.World.Get<Velocity2D>(lowProbe);
+            Position2D highPosition = engine.World.Get<Position2D>(highProbe);
+            Velocity2D highVelocity = engine.World.Get<Velocity2D>(highProbe);
+
+            return new FrictionSnapshot(
+                ToFloat(lowPosition.Value.X),
+                ToFloat(lowVelocity.Linear.X),
+                ToFloat(highPosition.Value.X),
+                ToFloat(highVelocity.Linear.X));
+        }
+
+        private static RadialSnapshot CaptureRadial(
+            GameEngine engine,
+            Entity eastProbe,
+            Entity westProbe,
+            Entity northProbe,
+            Entity southProbe)
+        {
+            Position2D eastPosition = engine.World.Get<Position2D>(eastProbe);
+            Velocity2D eastVelocity = engine.World.Get<Velocity2D>(eastProbe);
+            Position2D westPosition = engine.World.Get<Position2D>(westProbe);
+            Velocity2D westVelocity = engine.World.Get<Velocity2D>(westProbe);
+            Position2D northPosition = engine.World.Get<Position2D>(northProbe);
+            Velocity2D northVelocity = engine.World.Get<Velocity2D>(northProbe);
+            Position2D southPosition = engine.World.Get<Position2D>(southProbe);
+            Velocity2D southVelocity = engine.World.Get<Velocity2D>(southProbe);
+
+            return new RadialSnapshot(
+                ToFloat(eastPosition.Value.X),
+                ToFloat(eastVelocity.Linear.X),
+                ToFloat(eastVelocity.Linear.Y),
+                ToFloat(westPosition.Value.X),
+                ToFloat(westVelocity.Linear.X),
+                ToFloat(westVelocity.Linear.Y),
+                ToFloat(northPosition.Value.Y),
+                ToFloat(northVelocity.Linear.X),
+                ToFloat(northVelocity.Linear.Y),
+                ToFloat(southPosition.Value.Y),
+                ToFloat(southVelocity.Linear.X),
+                ToFloat(southVelocity.Linear.Y));
+        }
+
+        private static void AssertRadialImpulseSymmetry(in RadialSnapshot snapshot)
+        {
+            Assert.That(snapshot.EastVelocityX, Is.EqualTo(-snapshot.WestVelocityX).Within(0.001f),
+                "East/west radial impulse probes should receive mirrored X velocity.");
+            Assert.That(snapshot.NorthVelocityY, Is.EqualTo(-snapshot.SouthVelocityY).Within(0.001f),
+                "North/south radial impulse probes should receive mirrored Y velocity.");
+            Assert.That(snapshot.EastVelocityY, Is.EqualTo(0f).Within(0.001f));
+            Assert.That(snapshot.WestVelocityY, Is.EqualTo(0f).Within(0.001f));
+            Assert.That(snapshot.NorthVelocityX, Is.EqualTo(0f).Within(0.001f));
+            Assert.That(snapshot.SouthVelocityX, Is.EqualTo(0f).Within(0.001f));
         }
 
         private static Physics2DPerfStats ReadPhysicsPerfStats(World world)
@@ -371,7 +461,15 @@ namespace Ludots.Tests.GAS.Production
                 KnockbackTemplateId,
                 DampingFieldTemplateId,
                 DampingProbeTemplateId,
-                DoorTemplateId
+                DoorTemplateId,
+                FrictionWallLowTemplateId,
+                FrictionProbeLowTemplateId,
+                FrictionWallHighTemplateId,
+                FrictionProbeHighTemplateId,
+                RadialProbeEastTemplateId,
+                RadialProbeWestTemplateId,
+                RadialProbeNorthTemplateId,
+                RadialProbeSouthTemplateId
             }), Is.True);
         }
 
@@ -391,7 +489,9 @@ namespace Ludots.Tests.GAS.Production
             IReadOnlyList<KeyframeSnapshot> keyframes,
             IReadOnlyList<double> frameTimesMs,
             in Physics2DPerfStats stats,
-            Physics2DSimulationSystem physics)
+            Physics2DSimulationSystem physics,
+            in FrictionSnapshot friction,
+            in RadialSnapshot radial)
         {
             string artifactDir = Path.Combine(repoRoot, "artifacts", "showcases", "capability-standard-physics2d");
             Directory.CreateDirectory(artifactDir);
@@ -429,6 +529,8 @@ namespace Ludots.Tests.GAS.Production
             builder.AppendLine($"| ForceInput knockback | frame 1 force X/Y `{Format(keyframes[1].KnockbackForceX)}` / `{Format(keyframes[1].KnockbackForceY)}`, velocity X `{Format(keyframes[1].KnockbackVelocityX)}` cm/s |");
             builder.AppendLine($"| Damping field | final damping probe velocity X `{Format(keyframes[^1].DampingProbeVelocityX)}` cm/s, applied damping `{Format(keyframes[^1].DampingProbeAppliedDamping)}` |");
             builder.AppendLine($"| Kinematic rotating door | final rotation `{Format(keyframes[^1].DoorRotationRad)}` rad |");
+            builder.AppendLine($"| Friction tangent impulse | low friction X `{Format(friction.LowProbeX)}` / Vx `{Format(friction.LowProbeVx)}`, high friction X `{Format(friction.HighProbeX)}` / Vx `{Format(friction.HighProbeVx)}` |");
+            builder.AppendLine($"| Radial impulse symmetry | east/west Vx `{Format(radial.EastVelocityX)}` / `{Format(radial.WestVelocityX)}`, north/south Vy `{Format(radial.NorthVelocityY)}` / `{Format(radial.SouthVelocityY)}` |");
             builder.AppendLine($"| Physics stats | Hz `{stats.PhysicsHz}`, potential pairs `{stats.PotentialPairs}`, contact pairs `{stats.ContactPairs}`, last update `{stats.PhysicsUpdateMs:F4}` ms |");
             builder.AppendLine($"| Test tick timings | frames `{frameTimesMs.Count}`, avg `{avgMs:F4}` ms, max `{maxMs:F4}` ms |");
             builder.AppendLine();
@@ -490,6 +592,26 @@ namespace Ludots.Tests.GAS.Production
             float DampingProbeVelocityX,
             float DampingProbeAppliedDamping,
             float DoorRotationRad);
+
+        private readonly record struct FrictionSnapshot(
+            float LowProbeX,
+            float LowProbeVx,
+            float HighProbeX,
+            float HighProbeVx);
+
+        private readonly record struct RadialSnapshot(
+            float EastPositionX,
+            float EastVelocityX,
+            float EastVelocityY,
+            float WestPositionX,
+            float WestVelocityX,
+            float WestVelocityY,
+            float NorthPositionY,
+            float NorthVelocityX,
+            float NorthVelocityY,
+            float SouthPositionY,
+            float SouthVelocityX,
+            float SouthVelocityY);
 
         private sealed class NullInputBackend : IInputBackend
         {

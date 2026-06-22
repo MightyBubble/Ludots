@@ -1,6 +1,6 @@
 {
   "mapId": "capability_standard_physics2d",
-  "spawnScratchCapacity": 8,
+  "spawnScratchCapacity": 16,
   "spawns": [
     {
       "id": "polygon_wall",
@@ -42,6 +42,62 @@
       "templateId": "capability_standard_physics2d_kinematic_rotating_door",
       "worldXCm": 720,
       "worldYCm": -420,
+      "facingRad": 0.0
+    },
+    {
+      "id": "friction_wall_low",
+      "templateId": "capability_standard_physics2d_friction_wall_low",
+      "worldXCm": -180,
+      "worldYCm": 900,
+      "facingRad": 0.0
+    },
+    {
+      "id": "friction_probe_low",
+      "templateId": "capability_standard_physics2d_friction_probe_low",
+      "worldXCm": -360,
+      "worldYCm": 1040,
+      "facingRad": 0.0
+    },
+    {
+      "id": "friction_wall_high",
+      "templateId": "capability_standard_physics2d_friction_wall_high",
+      "worldXCm": -180,
+      "worldYCm": 1260,
+      "facingRad": 0.0
+    },
+    {
+      "id": "friction_probe_high",
+      "templateId": "capability_standard_physics2d_friction_probe_high",
+      "worldXCm": -360,
+      "worldYCm": 1400,
+      "facingRad": 0.0
+    },
+    {
+      "id": "radial_impulse_probe_east",
+      "templateId": "capability_standard_physics2d_radial_impulse_probe_east",
+      "worldXCm": 1180,
+      "worldYCm": 1600,
+      "facingRad": 0.0
+    },
+    {
+      "id": "radial_impulse_probe_west",
+      "templateId": "capability_standard_physics2d_radial_impulse_probe_west",
+      "worldXCm": 820,
+      "worldYCm": 1600,
+      "facingRad": 0.0
+    },
+    {
+      "id": "radial_impulse_probe_north",
+      "templateId": "capability_standard_physics2d_radial_impulse_probe_north",
+      "worldXCm": 1000,
+      "worldYCm": 1780,
+      "facingRad": 0.0
+    },
+    {
+      "id": "radial_impulse_probe_south",
+      "templateId": "capability_standard_physics2d_radial_impulse_probe_south",
+      "worldXCm": 1000,
+      "worldYCm": 1420,
       "facingRad": 0.0
     }
   ]

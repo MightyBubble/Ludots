@@ -1,0 +1,59 @@
+{
+  "startupMapId": "capability_standard_physics2d_playground_v2",
+  "windowTitle": "Ludots Engine - Physics2D Playground v2",
+  "targetFps": 0,
+  "windowWidth": 1440,
+  "windowHeight": 900,
+  "windowResizable": true,
+  "startupInputContexts": [
+    "Default_Gameplay",
+    "CapabilityStandard_Physics2D_PlaygroundV2"
+  ],
+  "physics2D": {
+    "enabled": true
+  },
+  "navigation2D": {
+    "enabled": true,
+    "maxAgents": 256,
+    "flowIterationsPerTick": 1024,
+    "steering": {
+      "mode": "Hybrid",
+      "queryBudget": {
+        "maxNeighborsPerAgent": 8,
+        "maxCandidateChecksPerAgent": 32
+      },
+      "temporalCoherence": {
+        "enabled": true,
+        "requireSteadyStateWorld": false
+      }
+    },
+    "spatial": {
+      "cellSizeCm": 200
+    },
+    "flowStreaming": {
+      "maxActiveTilesPerFlow": 64
+    }
+  },
+  "presentation": {
+    "runtimeEntitySpawnQueueCapacity": 128,
+    "runtimeEntitySpawnReceiptQueueCapacity": 128,
+    "performerInstanceCapacity": 128,
+    "presentationEventStreamCapacity": 256,
+    "presentationOwnerChangeCapacity": 256,
+    "performerCommandCapacity": 256,
+    "primitiveDrawBufferCapacity": 256,
+    "visualSnapshotBufferCapacity": 256,
+    "visualProxyBufferCapacity": 256,
+    "presentationRequestCapacity": 256,
+    "groundOverlayCapacity": 128,
+    "worldHudCapacity": 256,
+    "screenHudCapacity": 256,
+    "skinnedVisualBatchCapacity": 256,
+    "minimapMarkerCapacity": 128,
+    "cameraCulling": {
+      "highLodDistanceCm": 5000,
+      "mediumLodDistanceCm": 12000,
+      "lowLodDistanceCm": 24000
+    }
+  }
+}

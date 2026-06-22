@@ -17,6 +17,7 @@ using Ludots.Core.Presentation.Components;
 using Ludots.Core.Presentation.Events;
 using Ludots.Core.Presentation.Hud;
 using Ludots.Core.Presentation.Performers;
+using Ludots.Core.Physics2D.Components;
 using Ludots.Core.Spatial;
 
 namespace Ludots.Core.Gameplay.Spawning
@@ -546,6 +547,16 @@ namespace Ludots.Core.Gameplay.Spawning
             else
             {
                 World.Add(entity, previous);
+            }
+
+            if (World.Has<Position2D>(entity))
+            {
+                World.Set(entity, new Position2D { Value = worldPositionCm });
+            }
+
+            if (World.Has<PreviousPosition2D>(entity))
+            {
+                World.Set(entity, new PreviousPosition2D { Value = worldPositionCm });
             }
 
             if (!World.Has<VisualTransform>(entity))

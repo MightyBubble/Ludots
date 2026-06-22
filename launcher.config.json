@@ -146,6 +146,38 @@
       }
     },
     {
+      "name": "capability_standard_knockback2d",
+      "target": {
+        "type": "path",
+        "value": "mods/showcases/capability_standard/CapabilityStandardKnockback2DMod",
+        "projectPath": "CapabilityStandardKnockback2DMod.csproj"
+      }
+    },
+    {
+      "name": "capability_standard_physics2d_stress",
+      "target": {
+        "type": "path",
+        "value": "mods/showcases/capability_standard/CapabilityStandardPhysics2DStressMod",
+        "projectPath": "CapabilityStandardPhysics2DStressMod.csproj"
+      }
+    },
+    {
+      "name": "capability_standard_nav_sink2d",
+      "target": {
+        "type": "path",
+        "value": "mods/showcases/capability_standard/CapabilityStandardNavSink2DMod",
+        "projectPath": "CapabilityStandardNavSink2DMod.csproj"
+      }
+    },
+    {
+      "name": "capability_standard_physics2d_playground_v2",
+      "target": {
+        "type": "path",
+        "value": "mods/showcases/capability_standard/CapabilityStandardPhysics2DPlaygroundV2Mod",
+        "projectPath": "CapabilityStandardPhysics2DPlaygroundV2Mod.csproj"
+      }
+    },
+    {
       "name": "entity_query_tactics",
       "target": {
         "type": "path",

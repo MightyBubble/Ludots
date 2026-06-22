@@ -1,0 +1,6 @@
+﻿{"Frame":0,"Mode":"PhysicsOnly","PhysicsBodyX":-712,"PhysicsBodyVelocityX":119.76,"PhysicsBodySuppressed":false,"PhysicsBodyHasNav":false,"NavAgentX":-900,"NavVelocityX":0,"NavDesiredX":0,"NavObstacle":true,"PhysicsObstacle":true}
+{"Frame":7,"Mode":"PhysicsOnly","PhysicsBodyX":-712,"PhysicsBodyVelocityX":539.76,"PhysicsBodySuppressed":false,"PhysicsBodyHasNav":false,"NavAgentX":-900,"NavVelocityX":0,"NavDesiredX":0,"NavObstacle":true,"PhysicsObstacle":true}
+{"Frame":7,"Mode":"PhysicsOnly","PhysicsBodyX":-712,"PhysicsBodyVelocityX":0,"PhysicsBodySuppressed":true,"PhysicsBodyHasNav":false,"NavAgentX":-900,"NavVelocityX":0,"NavDesiredX":0,"NavObstacle":true,"PhysicsObstacle":true}
+{"Frame":18,"Mode":"PhysicsOnly","PhysicsBodyX":-552,"PhysicsBodyVelocityX":0,"PhysicsBodySuppressed":false,"PhysicsBodyHasNav":false,"NavAgentX":-900,"NavVelocityX":0,"NavDesiredX":0,"NavObstacle":true,"PhysicsObstacle":true}
+{"Frame":24,"Mode":"Nav","PhysicsBodyX":-552,"PhysicsBodyVelocityX":0,"PhysicsBodySuppressed":false,"PhysicsBodyHasNav":false,"NavAgentX":-876,"NavVelocityX":352.80002,"NavDesiredX":360,"NavObstacle":true,"PhysicsObstacle":true}
+{"Frame":48,"Mode":"Nav","PhysicsBodyX":-552,"PhysicsBodyVelocityX":0,"PhysicsBodySuppressed":false,"PhysicsBodyHasNav":false,"NavAgentX":-732,"NavVelocityX":352.80002,"NavDesiredX":360,"NavObstacle":true,"PhysicsObstacle":true}

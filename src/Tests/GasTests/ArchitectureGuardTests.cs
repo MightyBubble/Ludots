@@ -247,6 +247,137 @@ namespace GasTests
         }
 
         [Test]
+        public void Issue361_Physics2DNavUatShowcases_AreFormalCapabilityStandardRoots()
+        {
+            var repoRoot = FindRepoRoot();
+            string launcherConfig = File.ReadAllText(Path.Combine(repoRoot, "launcher.config.json"));
+            string launcherPresets = File.ReadAllText(Path.Combine(repoRoot, "launcher.presets.json"));
+            string docs = File.ReadAllText(Path.Combine(repoRoot, "gitbook", "architecture", "capability-standard-showcases.md"));
+            string gasTestsProject = File.ReadAllText(Path.Combine(repoRoot, "src", "Tests", "GasTests", "GasTests.csproj"));
+
+            Issue361ShowcaseSpec[] specs =
+            {
+                new(
+                    Issue: "#362",
+                    Binding: "capability_standard_knockback2d",
+                    ModName: "CapabilityStandardKnockback2DMod",
+                    ArtifactFolder: "capability-standard-knockback2d",
+                    AcceptanceTestName: "CapabilityStandardKnockback2DShowcaseAcceptanceTests.cs",
+                    PurePhysics: true),
+                new(
+                    Issue: "#363/#364",
+                    Binding: "capability_standard_physics2d",
+                    ModName: "CapabilityStandardPhysics2DMod",
+                    ArtifactFolder: "capability-standard-physics2d",
+                    AcceptanceTestName: "CapabilityStandardPhysics2DShowcaseAcceptanceTests.cs",
+                    PurePhysics: true),
+                new(
+                    Issue: "#365",
+                    Binding: "capability_standard_physics2d_stress",
+                    ModName: "CapabilityStandardPhysics2DStressMod",
+                    ArtifactFolder: "capability-standard-physics2d-stress",
+                    AcceptanceTestName: "CapabilityStandardPhysics2DStressShowcaseAcceptanceTests.cs",
+                    PurePhysics: true),
+                new(
+                    Issue: "#366",
+                    Binding: "capability_standard_nav_sink2d",
+                    ModName: "CapabilityStandardNavSink2DMod",
+                    ArtifactFolder: "capability-standard-nav-sink2d",
+                    AcceptanceTestName: "CapabilityStandardNavSink2DShowcaseAcceptanceTests.cs",
+                    PurePhysics: false),
+                new(
+                    Issue: "#367",
+                    Binding: "capability_standard_physics2d_playground_v2",
+                    ModName: "CapabilityStandardPhysics2DPlaygroundV2Mod",
+                    ArtifactFolder: "capability-standard-physics2d-playground-v2",
+                    AcceptanceTestName: "CapabilityStandardPhysics2DPlaygroundV2AcceptanceTests.cs",
+                    PurePhysics: false)
+            };
+
+            var missing = new List<string>();
+            for (int i = 0; i < specs.Length; i++)
+            {
+                Issue361ShowcaseSpec spec = specs[i];
+                string modDir = Path.Combine(repoRoot, "mods", "showcases", "capability_standard", spec.ModName);
+                string acceptancePath = Path.Combine(repoRoot, "src", "Tests", "GasTests", "Production", spec.AcceptanceTestName);
+
+                if (!Directory.Exists(modDir))
+                {
+                    missing.Add($"{spec.Issue}: missing mod directory {ToRepoRelativePath(repoRoot, modDir)}");
+                    continue;
+                }
+
+                string gameJsonPath = Path.Combine(modDir, "assets", "game.json");
+                string templatesPath = Path.Combine(modDir, "assets", "Entities", "templates.json");
+                string configPath = Path.Combine(modDir, "assets", "Configs", "config_catalog.json");
+                string projectFile = Path.Combine(modDir, $"{spec.ModName}.csproj");
+                Assert.That(File.Exists(projectFile), Is.True, $"Missing {projectFile}");
+                Assert.That(File.Exists(gameJsonPath), Is.True, $"Missing {gameJsonPath}");
+                Assert.That(File.Exists(configPath), Is.True, $"Missing {configPath}");
+                Assert.That(File.Exists(templatesPath), Is.True, $"Missing {templatesPath}");
+                Assert.That(File.Exists(acceptancePath), Is.True, $"Missing {acceptancePath}");
+
+                string relativeModDir = ToRepoRelativePath(repoRoot, modDir);
+                string acceptance = File.ReadAllText(acceptancePath);
+                string gameJson = File.ReadAllText(gameJsonPath);
+                string templates = File.ReadAllText(templatesPath);
+
+                if (!launcherConfig.Contains($"\"name\": \"{spec.Binding}\"", StringComparison.Ordinal) ||
+                    !launcherConfig.Contains(relativeModDir, StringComparison.Ordinal))
+                {
+                    missing.Add($"{spec.Issue}: launcher.config.json missing binding {spec.Binding} -> {relativeModDir}");
+                }
+
+                if (!launcherPresets.Contains($"\"id\": \"{spec.Binding}_raylib\"", StringComparison.Ordinal) ||
+                    !launcherPresets.Contains($"\"${spec.Binding}\"", StringComparison.Ordinal))
+                {
+                    missing.Add($"{spec.Issue}: launcher.presets.json missing raylib preset for {spec.Binding}");
+                }
+
+                if (!docs.Contains($"`{spec.Binding}`", StringComparison.Ordinal) ||
+                    !docs.Contains(relativeModDir, StringComparison.Ordinal))
+                {
+                    missing.Add($"{spec.Issue}: capability-standard-showcases.md missing {spec.Binding}");
+                }
+
+                if (!gasTestsProject.Contains($"{spec.ModName}.csproj", StringComparison.Ordinal))
+                {
+                    missing.Add($"{spec.Issue}: GasTests.csproj missing {spec.ModName}.csproj reference");
+                }
+
+                if (!acceptance.Contains("\"artifacts\"", StringComparison.Ordinal) ||
+                    !acceptance.Contains("\"showcases\"", StringComparison.Ordinal) ||
+                    !acceptance.Contains(spec.ArtifactFolder, StringComparison.Ordinal))
+                {
+                    missing.Add($"{spec.Issue}: acceptance test missing artifacts/showcases/{spec.ArtifactFolder}");
+                }
+
+                if (spec.PurePhysics)
+                {
+                    Assert.That(gameJson, Does.Contain("\"physics2D\""));
+                    Assert.That(gameJson, Does.Contain("\"navigation2D\""));
+                    Assert.That(gameJson, Does.Contain("\"enabled\": false"));
+                    Assert.That(templates, Does.Not.Contain("NavKinematics2D"));
+                    Assert.That(templates, Does.Not.Contain("NavDesiredVelocity2D"));
+                    Assert.That(templates, Does.Not.Contain("NavObstacle2D"));
+                }
+            }
+
+            Assert.Multiple(() =>
+            {
+                Assert.That(launcherConfig, Does.Not.Contain("Physics2DPlaygroundMod"));
+                Assert.That(launcherPresets, Does.Not.Contain("Physics2DPlaygroundMod"));
+                Assert.That(docs, Does.Contain("retires old `Physics2DPlaygroundMod` as formal entry"));
+            });
+
+            Assert.That(
+                missing,
+                Is.Empty,
+                "Issue #361 requires every Physics2D/Nav UAT showcase to be a formal capability-standard root with launcher, docs, test, and artifact evidence:\n" +
+                string.Join("\n", missing));
+        }
+
+        [Test]
         public void ExchangeCore_RemainsSemanticAndDoesNotAdoptScenarioNames()
         {
             var repoRoot = FindRepoRoot();
@@ -1045,6 +1176,14 @@ namespace GasTests
             string ProjectFileName,
             string AcceptanceTestPath,
             string ArtifactFolder);
+
+        private readonly record struct Issue361ShowcaseSpec(
+            string Issue,
+            string Binding,
+            string ModName,
+            string ArtifactFolder,
+            string AcceptanceTestName,
+            bool PurePhysics);
 
         private static string FindRepoRoot()
         {
