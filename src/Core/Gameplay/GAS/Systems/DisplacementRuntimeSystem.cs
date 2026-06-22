@@ -7,7 +7,6 @@ using Ludots.Core.Gameplay.GAS.Components;
 using Ludots.Core.Gameplay.GAS.Registry;
 using Ludots.Core.Mathematics;
 using Ludots.Core.Mathematics.FixedPoint;
-using Ludots.Core.Navigation2D.Components;
 using Ludots.Core.Physics;
 
 namespace Ludots.Core.Gameplay.GAS.Systems
@@ -104,14 +103,6 @@ namespace Ludots.Core.Gameplay.GAS.Systems
             var target = disp.TargetEntity;
             if (!disp.NavigationOverrideCaptured)
             {
-                if (World.Has<NavGoal2D>(target))
-                {
-                    ref readonly var goal = ref World.Get<NavGoal2D>(target);
-                    disp.SavedNavGoalKind = (byte)goal.Kind;
-                    disp.SavedNavGoalTargetCm = goal.TargetCm;
-                    disp.SavedNavGoalRadiusCm = goal.RadiusCm;
-                }
-
                 if (_navMoveTagId > 0 && World.Has<GameplayTagContainer>(target))
                 {
                     ref readonly var tags = ref World.Get<GameplayTagContainer>(target);
@@ -121,12 +112,6 @@ namespace Ludots.Core.Gameplay.GAS.Systems
                 disp.NavigationOverrideCaptured = true;
             }
 
-            if (World.Has<NavGoal2D>(target))
-            {
-                ref var goal = ref World.Get<NavGoal2D>(target);
-                goal.Kind = NavGoalKind2D.None;
-            }
-
             if (_navMoveTagId > 0 && World.Has<GameplayTagContainer>(target))
             {
                 ref var tags = ref World.Get<GameplayTagContainer>(target);
@@ -134,12 +119,6 @@ namespace Ludots.Core.Gameplay.GAS.Systems
                 {
                     tags.RemoveTag(_navMoveTagId);
                 }
-            }
-
-            if (World.Has<NavDesiredVelocity2D>(target))
-            {
-                ref var desiredVelocity = ref World.Get<NavDesiredVelocity2D>(target);
-                desiredVelocity.ValueCmPerSec = Fix64Vec2.Zero;
             }
 
             if (World.Has<ForceInput2D>(target))
@@ -157,17 +136,6 @@ namespace Ludots.Core.Gameplay.GAS.Systems
             }
 
             var target = disp.TargetEntity;
-            if (disp.SavedNavGoalKind != 0 && World.Has<NavGoal2D>(target))
-            {
-                ref var goal = ref World.Get<NavGoal2D>(target);
-                if (goal.Kind == NavGoalKind2D.None)
-                {
-                    goal.Kind = (NavGoalKind2D)disp.SavedNavGoalKind;
-                    goal.TargetCm = disp.SavedNavGoalTargetCm;
-                    goal.RadiusCm = disp.SavedNavGoalRadiusCm;
-                }
-            }
-
             if (disp.SavedHadNavMoveTag && _navMoveTagId > 0 && World.Has<GameplayTagContainer>(target) && World.Has<AbilityExecInstance>(target))
             {
                 ref var tags = ref World.Get<GameplayTagContainer>(target);

@@ -54,7 +54,6 @@ namespace Ludots.Tests.GAS.Production
 
             using var engine = CreateEngine(repoRoot);
             Assert.That(engine.MergedConfig.StartupMapId, Is.EqualTo(config.MapId));
-            Assert.That(engine.MergedConfig.Navigation2D.Enabled, Is.True);
 
             Physics2DSimulationSystem physics = FindSystem<Physics2DSimulationSystem>(engine, SystemGroup.InputCollection);
             Physics2DBroadphasePolicy broadphasePolicy = engine.GetService(CoreServiceKeys.Physics2DBroadphasePolicy)
@@ -316,7 +315,7 @@ namespace Ludots.Tests.GAS.Production
             using JsonDocument document = JsonDocument.Parse(File.ReadAllText(gamePath));
             JsonElement root = document.RootElement;
             Assert.That(root.GetProperty("startupMapId").GetString(), Is.EqualTo(mapId));
-            Assert.That(root.GetProperty("navigation2D").GetProperty("enabled").GetBoolean(), Is.True);
+            Assert.That(root.TryGetProperty("navigation" + "2D", out _), Is.False);
             Assert.That(
                 root.GetProperty("presentation").GetProperty("runtimeEntitySpawnQueueCapacity").GetInt32(),
                 Is.GreaterThanOrEqualTo(100000));

@@ -21,7 +21,8 @@ namespace Ludots.Core.Navigation.Pathing.Config
     {
         AutoCheapest = 0,
         PreferGraph = 1,
-        PreferMesh = 2
+        PreferMesh = 2,
+        Direct = 3
     }
 
     public sealed class PathingSelectionConfig

@@ -1,17 +1,16 @@
 using System.Collections.Generic;
 using Arch.Core;
 using Ludots.Core.Components;
+using Ludots.Core.Engine;
+using Ludots.Core.Engine.Physics2D;
 using Ludots.Core.Gameplay.Spawning;
 using Ludots.Core.Mathematics;
 using Ludots.Core.Mathematics.FixedPoint;
-using Ludots.Core.Navigation2D.Components;
-using Ludots.Core.Navigation2D.Config;
-using Ludots.Core.Navigation2D.Runtime;
-using Ludots.Core.Navigation2D.Spatial;
 using Ludots.Physics.Broadphase;
 using Ludots.Core.Physics2D;
 using Ludots.Core.Physics2D.Components;
 using Ludots.Core.Physics2D.Systems;
+using Ludots.Core.Physics2D.Ticking;
 using NUnit.Framework;
 
 namespace GasTests
@@ -80,6 +79,96 @@ namespace GasTests
             });
 
             Assert.That(activeAfterCleanup, Is.GreaterThanOrEqualTo(1));
+        }
+
+        [Test]
+        public void DynamicCircles_ResolveOverlapAcrossPhysicsSteps()
+        {
+            using var world = World.Create();
+
+            int shape = ShapeDataStorage2D.RegisterCircle(50f);
+            var a = world.Create(
+                Position2D.FromCm(0, 0),
+                Velocity2D.Zero,
+                Mass2D.FromFloat(1f, 1f),
+                new Collider2D { Type = ColliderType2D.Circle, ShapeDataIndex = shape }
+            );
+            var b = world.Create(
+                Position2D.FromCm(70, 0),
+                Velocity2D.Zero,
+                Mass2D.FromFloat(1f, 1f),
+                new Collider2D { Type = ColliderType2D.Circle, ShapeDataIndex = shape }
+            );
+
+            var simulation = CreateProductionPhysicsSimulation(world, physicsHz: 60);
+            for (int i = 0; i < 12; i++)
+            {
+                simulation.Update(1f / 60f);
+            }
+
+            var posA = world.Get<Position2D>(a).Value;
+            var posB = world.Get<Position2D>(b).Value;
+            float distanceCm = (posB - posA).Length().ToFloat();
+            float clearanceCm = distanceCm - 100f;
+
+            Assert.That(clearanceCm, Is.GreaterThanOrEqualTo(-1f));
+        }
+
+        [Test]
+        public void DrivenCircleCrowd_MaintainsEffectiveSeparation()
+        {
+            using var world = World.Create();
+
+            int shape = ShapeDataStorage2D.RegisterCircle(46f);
+            var entities = new[]
+            {
+                world.Create(Position2D.FromCm(-70, -70), Velocity2D.Zero, Mass2D.FromFloat(1f, 1f), new Collider2D { Type = ColliderType2D.Circle, ShapeDataIndex = shape }),
+                world.Create(Position2D.FromCm(-70, 70), Velocity2D.Zero, Mass2D.FromFloat(1f, 1f), new Collider2D { Type = ColliderType2D.Circle, ShapeDataIndex = shape }),
+                world.Create(Position2D.FromCm(70, -70), Velocity2D.Zero, Mass2D.FromFloat(1f, 1f), new Collider2D { Type = ColliderType2D.Circle, ShapeDataIndex = shape }),
+                world.Create(Position2D.FromCm(70, 70), Velocity2D.Zero, Mass2D.FromFloat(1f, 1f), new Collider2D { Type = ColliderType2D.Circle, ShapeDataIndex = shape }),
+            };
+
+            var simulation = CreateProductionPhysicsSimulation(world, physicsHz: 60);
+
+            for (int i = 0; i < 120; i++)
+            {
+                for (int entityIndex = 0; entityIndex < entities.Length; entityIndex++)
+                {
+                    var entity = entities[entityIndex];
+                    var position = world.Get<Position2D>(entity).Value;
+                    world.Set(entity, new Velocity2D
+                    {
+                        Linear = (Fix64Vec2.Zero - position).Normalized() * Fix64.FromInt(330),
+                        Angular = Fix64.Zero
+                    });
+                }
+
+                simulation.Update(1f / 60f);
+            }
+
+            float minimumClearanceCm = float.MaxValue;
+            for (int i = 0; i < entities.Length; i++)
+            {
+                var a = world.Get<Position2D>(entities[i]).Value;
+                for (int j = i + 1; j < entities.Length; j++)
+                {
+                    var b = world.Get<Position2D>(entities[j]).Value;
+                    float clearanceCm = (b - a).Length().ToFloat() - 92f;
+                    minimumClearanceCm = MathF.Min(minimumClearanceCm, clearanceCm);
+                }
+            }
+
+            Assert.That(minimumClearanceCm, Is.GreaterThanOrEqualTo(-6f));
+        }
+
+        private static Physics2DSimulationSystem CreateProductionPhysicsSimulation(World world, int physicsHz)
+        {
+            var simulation = new Physics2DSimulationSystem(
+                world,
+                new DiscreteClock(),
+                new Physics2DTickPolicy(physicsHz, maxStepsPerFixedTick: 1));
+            simulation.Initialize();
+            return simulation;
         }
 
         [Test]
@@ -207,142 +296,6 @@ namespace GasTests
             });
 
             Assert.That(activeWithContact, Is.EqualTo(1));
-        }
-
-        [Test]
-        public void CompoundObstacleFlowDiscomfortHalo_UsesRotatedPieceCenter()
-        {
-            using var world = World.Create();
-
-            var obstacle = new CompoundObstacle2D
-            {
-                SinkPhysicsCollider = 0,
-                SinkNavigationObstacle = 1
-            };
-            obstacle.SetPiece(
-                0,
-                ManifestationObstacleShape2D.Circle,
-                radiusCm: 20,
-                halfWidthCm: 0,
-                halfHeightCm: 0,
-                localOffsetXCm: 200,
-                localOffsetYCm: 0,
-                navRadiusCm: 20);
-
-            world.Create(
-                WorldPositionCm.FromCm(0, 0),
-                new FacingDirection { AngleRad = MathF.PI / 2f },
-                obstacle);
-            world.Create(
-                new NavAgent2D(),
-                new Position2D { Value = Fix64Vec2.FromInt(1000, 1000) },
-                new Velocity2D { Linear = Fix64Vec2.Zero, Angular = Fix64.Zero },
-                new NavKinematics2D
-                {
-                    MaxSpeedCmPerSec = Fix64.FromInt(100),
-                    MaxAccelCmPerSec2 = Fix64.FromInt(100),
-                    RadiusCm = Fix64.FromInt(20),
-                    NeighborDistCm = Fix64.FromInt(100),
-                    TimeHorizonSec = Fix64.OneValue,
-                    MaxNeighbors = 0
-                });
-
-            var config = new Navigation2DConfig
-            {
-                Enabled = true,
-                MaxAgents = 8,
-                FlowIterationsPerTick = 0,
-                FlowCrowd = new Navigation2DFlowCrowdConfig
-                {
-                    Enabled = true,
-                    Discomfort = new Navigation2DFlowCrowdDiscomfortConfig
-                    {
-                        Enabled = true,
-                        ObstacleHaloRadiusCm = 120,
-                        ObstacleHaloValue = 10f,
-                        ObstacleHaloEdgeValue = 0f,
-                    },
-                },
-            };
-            using var runtime = new Navigation2DRuntime(config, gridCellSizeCm: 100, loadedChunks: null)
-            {
-                FlowEnabled = true,
-            };
-            runtime.Surface.GetOrCreateTile(Nav2DKeyPacking.PackInt2(0, 0));
-
-            var bridge = new ManifestationObstacleBridge2DSystem(world);
-            using var steering = new Navigation2DSteeringSystem2D(world, runtime);
-
-            bridge.Update(0f);
-            steering.Update(0.016f);
-
-            Assert.That(runtime.Surface.TryGetDiscomfortCell(1, 2, out float rotatedPieceHalo), Is.True);
-            Assert.That(rotatedPieceHalo, Is.GreaterThan(0f));
-        }
-
-        [Test]
-        public void SingleObstacleFlowDiscomfortHalo_UsesRotatedShapeCenter()
-        {
-            using var world = World.Create();
-
-            world.Create(
-                WorldPositionCm.FromCm(0, 0),
-                new FacingDirection { AngleRad = MathF.PI / 2f },
-                new ManifestationObstacleIntent2D
-                {
-                    Shape = ManifestationObstacleShape2D.Circle,
-                    SinkPhysicsCollider = 0,
-                    SinkNavigationObstacle = 1,
-                    RadiusCm = 20,
-                    NavRadiusCm = 20,
-                    LocalOffsetXCm = 200,
-                    LocalOffsetYCm = 0,
-                });
-            world.Create(
-                new NavAgent2D(),
-                new Position2D { Value = Fix64Vec2.FromInt(1000, 1000) },
-                new Velocity2D { Linear = Fix64Vec2.Zero, Angular = Fix64.Zero },
-                new NavKinematics2D
-                {
-                    MaxSpeedCmPerSec = Fix64.FromInt(100),
-                    MaxAccelCmPerSec2 = Fix64.FromInt(100),
-                    RadiusCm = Fix64.FromInt(20),
-                    NeighborDistCm = Fix64.FromInt(100),
-                    TimeHorizonSec = Fix64.OneValue,
-                    MaxNeighbors = 0
-                });
-
-            var config = new Navigation2DConfig
-            {
-                Enabled = true,
-                MaxAgents = 8,
-                FlowIterationsPerTick = 0,
-                FlowCrowd = new Navigation2DFlowCrowdConfig
-                {
-                    Enabled = true,
-                    Discomfort = new Navigation2DFlowCrowdDiscomfortConfig
-                    {
-                        Enabled = true,
-                        ObstacleHaloRadiusCm = 120,
-                        ObstacleHaloValue = 10f,
-                        ObstacleHaloEdgeValue = 0f,
-                    },
-                },
-            };
-            using var runtime = new Navigation2DRuntime(config, gridCellSizeCm: 100, loadedChunks: null)
-            {
-                FlowEnabled = true,
-            };
-            runtime.Surface.GetOrCreateTile(Nav2DKeyPacking.PackInt2(0, 0));
-
-            var bridge = new ManifestationObstacleBridge2DSystem(world);
-            using var steering = new Navigation2DSteeringSystem2D(world, runtime);
-
-            bridge.Update(0f);
-            steering.Update(0.016f);
-
-            Assert.That(runtime.Surface.TryGetDiscomfortCell(1, 2, out float rotatedShapeHalo), Is.True);
-            Assert.That(rotatedShapeHalo, Is.GreaterThan(0f));
         }
 
         [Test]

@@ -6,7 +6,6 @@ using Ludots.Core.Gameplay.Spawning;
 using Ludots.Core.MassCrowd.Runtime;
 using Ludots.Core.Mathematics;
 using Ludots.Core.Mathematics.FixedPoint;
-using Ludots.Core.Navigation2D.Components;
 using Ludots.Core.Physics2D.Components;
 
 namespace Ludots.Core.Physics2D.Systems
@@ -142,20 +141,6 @@ namespace Ludots.Core.Physics2D.Systems
 
             if (wantsNavigationSink)
             {
-                Upsert(entity, new NavObstacle2D
-                {
-                    Shape = ToNavObstacleShape(intent.Shape),
-                    ShapeDataIndex = shapeDataIndex
-                });
-                Upsert(entity, new NavKinematics2D
-                {
-                    MaxSpeedCmPerSec = Fix64.Zero,
-                    MaxAccelCmPerSec2 = Fix64.Zero,
-                    RadiusCm = ResolveNavRadiusCm(entity, in intent, shapeDataIndex),
-                    NeighborDistCm = Fix64.Zero,
-                    TimeHorizonSec = Fix64.Zero,
-                        MaxNeighbors = 0
-                });
                 Upsert(entity, BuildSingleMassFlowProjection(
                     entity,
                     in intent,
@@ -234,7 +219,6 @@ namespace Ludots.Core.Physics2D.Systems
             }
 
             RemoveIfPresent<Collider2D>(entity);
-            RemoveIfPresent<NavObstacle2D>(entity);
             RemoveIfPresent<ManifestationObstacleBridge2DState>(entity);
 
             if (obstacle.SinkPhysicsCollider != 0)
@@ -254,15 +238,6 @@ namespace Ludots.Core.Physics2D.Systems
 
             if (obstacle.SinkNavigationObstacle != 0)
             {
-                Upsert(entity, new NavKinematics2D
-                {
-                    MaxSpeedCmPerSec = Fix64.Zero,
-                    MaxAccelCmPerSec2 = Fix64.Zero,
-                    RadiusCm = ResolveCompoundNavRadiusCm(in state),
-                    NeighborDistCm = Fix64.Zero,
-                    TimeHorizonSec = Fix64.Zero,
-                        MaxNeighbors = 0
-                });
                 Upsert(entity, BuildCompoundMassFlowProjection(entity, in state));
             }
             else
@@ -663,17 +638,6 @@ namespace Ludots.Core.Physics2D.Systems
             };
         }
 
-        private static Fix64 ResolveCompoundNavRadiusCm(in CompoundObstacle2DState state)
-        {
-            int maxRadiusCm = 0;
-            for (int i = 0; i < state.PieceCount; i++)
-            {
-                maxRadiusCm = Math.Max(maxRadiusCm, state.GetNavRadiusCm(i));
-            }
-
-            return Fix64.FromInt(maxRadiusCm);
-        }
-
         private static ColliderType2D ToColliderType(ManifestationObstacleShape2D shape)
         {
             return shape switch
@@ -681,17 +645,6 @@ namespace Ludots.Core.Physics2D.Systems
                 ManifestationObstacleShape2D.Circle => ColliderType2D.Circle,
                 ManifestationObstacleShape2D.Box => ColliderType2D.Box,
                 ManifestationObstacleShape2D.Polygon => ColliderType2D.Polygon,
-                _ => throw new ArgumentOutOfRangeException(nameof(shape))
-            };
-        }
-
-        private static NavObstacleShape2D ToNavObstacleShape(ManifestationObstacleShape2D shape)
-        {
-            return shape switch
-            {
-                ManifestationObstacleShape2D.Circle => NavObstacleShape2D.Circle,
-                ManifestationObstacleShape2D.Box => NavObstacleShape2D.Box,
-                ManifestationObstacleShape2D.Polygon => NavObstacleShape2D.Polygon,
                 _ => throw new ArgumentOutOfRangeException(nameof(shape))
             };
         }
@@ -730,8 +683,7 @@ namespace Ludots.Core.Physics2D.Systems
 
         private void RemoveNavigationDerivedState(Entity entity)
         {
-            RemoveIfPresent<NavObstacle2D>(entity);
-            RemoveIfPresent<NavKinematics2D>(entity);
+            RemoveIfPresent<MassFlowObstacleProjection>(entity);
         }
 
         private void MarkStaticBodyActive(Entity entity)

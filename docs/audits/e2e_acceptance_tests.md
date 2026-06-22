@@ -132,7 +132,7 @@ WorldPositionCm = { X: 7274, Y: 3000 }
 | 命令 | 预期 |
 |:--|:--|
 | `dotnet test src/Tests/GasTests/GasTests.csproj` | 所有测试通过（当前 3 个失败需先修复） |
-| `dotnet test src/Tests/Navigation2DTests/Navigation2DTests.csproj` | 28 测试通过 |
+| `dotnet test src/Tests/ArchitectureTests/ArchitectureTests.csproj` | 架构契约测试通过 |
 | `dotnet test src/Tests/ArchitectureTests/ArchitectureTests.csproj` | 1 测试通过 |
 
 ### E2: Editor Lint

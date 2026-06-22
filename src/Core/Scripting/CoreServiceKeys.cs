@@ -4,7 +4,6 @@ using Arch.Core;
 using Ludots.Core.Config;
 using Ludots.Core.Diagnostics;
 using Ludots.Core.Engine;
-using Ludots.Core.Engine.Navigation2D;
 using Ludots.Core.Engine.Pacemaker;
 using Ludots.Core.Engine.Physics2D;
 using Ludots.Core.Engine.TimeFlow;
@@ -43,7 +42,6 @@ using Ludots.Core.Navigation.NavMesh.Config;
 using Ludots.Core.Navigation.Pathing;
 using Ludots.Core.Navigation.Pathing.Config;
 using Ludots.Core.Navigation.Terrain;
-using Ludots.Core.Navigation2D.Runtime;
 using Ludots.Core.NodeLibraries.GASGraph;
 using Ludots.Core.Presentation;
 using Ludots.Core.Presentation.Assets;
@@ -222,7 +220,6 @@ namespace Ludots.Core.Scripting
         public static readonly ServiceKey<Physics2DTickPolicy> Physics2DTickPolicy = new("Physics2DTickPolicy");
         public static readonly ServiceKey<Physics2DBroadphasePolicy> Physics2DBroadphasePolicy = new("Physics2DBroadphasePolicy");
         public static readonly ServiceKey<Physics2DController> Physics2DController = new("Physics2DController");
-        public static readonly ServiceKey<Navigation2DTickPolicy> Navigation2DTickPolicy = new("Navigation2DTickPolicy");
 
         // --- Presentation ---
         public static readonly ServiceKey<PresentationEventStream> PresentationEventStream = new("PresentationEventStream");
@@ -289,7 +286,6 @@ namespace Ludots.Core.Scripting
 
         // --- Navigation ---
         public static readonly ServiceKey<LoadedGraphRuntime> LoadedGraphRuntime = new("LoadedGraphRuntime");
-        public static readonly ServiceKey<Navigation2DRuntime> Navigation2DRuntime = new("Navigation2DRuntime");
         public static readonly ServiceKey<LogicTerrainField> LogicTerrain = new("LogicTerrain");
         public static readonly ServiceKey<AgentProfileRegistry> AgentProfiles = new("AgentProfiles");
         public static readonly ServiceKey<NavMeshBakeConfig> NavMeshBakeConfig = new("NavMeshBakeConfig");

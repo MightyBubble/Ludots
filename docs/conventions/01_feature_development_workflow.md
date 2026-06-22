@@ -103,7 +103,7 @@ AI Agent 专项规则见 [02_ai_assisted_development.md](02_ai_assisted_developm
 | Mod 新增/修改 | Launcher CLI `resolve`/`launch` 冒烟通过 + 功能冒烟测试 |
 | UI / Showcase / Presentation 变更 | 编译与相关测试通过 + adapter 可见冒烟 + 首帧可读性与接管/恢复验证 |
 | 架构边界变更 | ArchitectureTests 通过 |
-| 导航相关变更 | Navigation2DTests 全量通过 |
+| 导航相关变更 | ArchitectureTests、PresentationTests 的 MassNavigation contracts、相关 GasTests 全量通过 |
 
 测试风格遵循 `src/Tests/GasTests/TESTING_STYLE.md`。
 测试命令见 [03_environment_setup.md](03_environment_setup.md)。

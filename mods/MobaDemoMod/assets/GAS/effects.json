@@ -258,7 +258,7 @@
         "listenTag": "Effect.Moba.Damage",
         "phase": "onHit",
         "scope": "target",
-        "action": "graph",
+        "action": "Graph",
         "graphProgram": "Graph.Shield.Absorb",
         "priority": 100
       }

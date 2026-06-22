@@ -1,5 +1,6 @@
 using System;
 using System.Collections.Generic;
+using System.Reflection;
 using System.Text.Json;
 using System.Text.Json.Nodes;
 using Arch.Core;
@@ -131,7 +132,7 @@ namespace Ludots.Core.Config
             {
                 string existingMod = _registrationSource.TryGetValue(name, out var em) ? em : "(core)";
                 string newMod = modId ?? "(core)";
-                if (IsSameRegistration(name, existingSetter, setter, componentType, existingMod, newMod))
+                if (IsSameRegistration(name, existingSetter, setter, componentType))
                 {
                     return;
                 }
@@ -158,15 +159,8 @@ namespace Ludots.Core.Config
             string name,
             ComponentSetter existingSetter,
             ComponentSetter newSetter,
-            ComponentType? newComponentType,
-            string existingMod,
-            string newMod)
+            ComponentType? newComponentType)
         {
-            if (!string.Equals(existingMod, newMod, StringComparison.Ordinal))
-            {
-                return false;
-            }
-
             bool hasExistingType = _componentTypes.TryGetValue(name, out var existingType);
             if (hasExistingType || newComponentType.HasValue)
             {
@@ -175,7 +169,46 @@ namespace Ludots.Core.Config
                     existingType.Equals(newComponentType.Value);
             }
 
-            return existingSetter.Equals(newSetter);
+            return existingSetter.Equals(newSetter) ||
+                IsSameSetterDefinition(existingSetter, newSetter);
+        }
+
+        private static bool IsSameSetterDefinition(ComponentSetter existingSetter, ComponentSetter newSetter)
+        {
+            MethodInfo existingMethod = existingSetter.Method;
+            MethodInfo newMethod = newSetter.Method;
+            Type? existingDeclaringType = existingMethod.DeclaringType;
+            Type? newDeclaringType = newMethod.DeclaringType;
+            if (existingDeclaringType == null || newDeclaringType == null)
+            {
+                return false;
+            }
+
+            if (!string.Equals(existingDeclaringType.Assembly.GetName().Name, newDeclaringType.Assembly.GetName().Name, StringComparison.Ordinal) ||
+                !Equals(existingMethod.Module.ModuleVersionId, newMethod.Module.ModuleVersionId) ||
+                !string.Equals(existingDeclaringType.FullName, newDeclaringType.FullName, StringComparison.Ordinal) ||
+                !string.Equals(existingMethod.Name, newMethod.Name, StringComparison.Ordinal) ||
+                !Equals(existingMethod.ReturnType, newMethod.ReturnType))
+            {
+                return false;
+            }
+
+            ParameterInfo[] existingParameters = existingMethod.GetParameters();
+            ParameterInfo[] newParameters = newMethod.GetParameters();
+            if (existingParameters.Length != newParameters.Length)
+            {
+                return false;
+            }
+
+            for (int i = 0; i < existingParameters.Length; i++)
+            {
+                if (!Equals(existingParameters[i].ParameterType, newParameters[i].ParameterType))
+                {
+                    return false;
+                }
+            }
+
+            return true;
         }
 
         public static int UnregisterSource(string modId)

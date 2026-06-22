@@ -66,7 +66,6 @@ namespace Ludots.Tests.Architecture
         {
             string relative = ToRepoRelativePath(repoRoot, file);
             if (relative.Equals("src/Core/Spatial/SpatialScaleDefaults.cs", StringComparison.OrdinalIgnoreCase) ||
-                relative.Contains("/Navigation2D/", StringComparison.OrdinalIgnoreCase) ||
                 relative.Contains("/Ludots.Physics2D/", StringComparison.OrdinalIgnoreCase))
             {
                 return false;

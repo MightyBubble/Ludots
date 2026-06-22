@@ -6,6 +6,7 @@ using Ludots.Core.Gameplay.GAS.Orders;
 using Ludots.Core.Gameplay.Spawning;
 using Ludots.Core.Gameplay.Teams;
 using Ludots.Core.Modding;
+using Ludots.Core.Physics2D.Ticking;
 using Ludots.Core.Scripting;
 
 namespace ChampionSkillSandboxMod.Triggers
@@ -49,12 +50,18 @@ namespace ChampionSkillSandboxMod.Triggers
             var stressTelemetry = new ChampionSkillStressTelemetry();
             engine.GlobalContext[ChampionSkillStressControlState.GlobalKey] = stressControl;
             engine.GlobalContext[ChampionSkillStressTelemetry.GlobalKey] = stressTelemetry;
+            engine.InsertSystemBeforeRequired<Physics2DSimulationSystem>(
+                new ChampionSkillPhysicsAuthoringSystem(engine),
+                SystemGroup.InputCollection);
 
             if (engine.GlobalContext.TryGetValue(CoreServiceKeys.OrderQueue.Name, out var ordersObj) &&
                 ordersObj is OrderQueue orders)
             {
                 engine.RegisterSystem(
                     new ChampionSkillSandboxLocalOrderSourceSystem(engine.World, engine.GlobalContext, orders, _context),
+                    SystemGroup.InputCollection);
+                engine.RegisterSystem(
+                    new ChampionSkillCommandSnapshotCaptureSystem(engine, _runtime, orders),
                     SystemGroup.InputCollection);
 
                 if (engine.GetService(CoreServiceKeys.RuntimeEntitySpawnQueue) is RuntimeEntitySpawnQueue spawnQueue)

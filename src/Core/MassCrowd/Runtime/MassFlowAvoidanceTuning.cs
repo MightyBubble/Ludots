@@ -1,5 +1,6 @@
 using System;
 using System.Text.Json.Serialization;
+using Ludots.Core.Spatial;
 
 namespace Ludots.Core.MassCrowd.Runtime;
 
@@ -19,7 +20,7 @@ public enum MassFlowAvoidanceMode : byte
 
 public sealed class MassFlowAvoidanceTuning
 {
-    public const int MaxKernelNeighbors = 64;
+    public const int MaxKernelNeighbors = SpatialScaleDefaults.TerrainChunkCells;
 
     private MassFlowAvoidanceMode _parsedMode = MassFlowAvoidanceMode.Separation;
 

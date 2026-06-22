@@ -30,9 +30,6 @@ namespace Ludots.Core.Gameplay.GAS
         /// <summary>Whether to override navigation input during displacement.</summary>
         public bool OverrideNavigation;
         public bool NavigationOverrideCaptured;
-        public byte SavedNavGoalKind;
-        public Fix64Vec2 SavedNavGoalTargetCm;
-        public Fix64 SavedNavGoalRadiusCm;
         public bool SavedHadNavMoveTag;
     }
 }

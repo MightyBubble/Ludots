@@ -2,7 +2,6 @@ using System;
 using System.Diagnostics;
 using Ludots.Core.Components;
 using Ludots.Core.Engine;
-using Ludots.Core.Engine.Navigation2D;
 using Ludots.Core.Engine.Physics2D;
 using Ludots.Core.Presentation.Camera;
 using Ludots.Core.Presentation.Hud;
@@ -25,7 +24,7 @@ internal sealed class MassNavigationPanelController
     private MassNavigationSimulationRuntime? _simulation;
     private long _lastPerfCaptureTicks;
     private long _perfRefreshStopwatchTicks;
-    private string _lastActionText = "MassNavigation runtime, flow, and arrival knobs hot-apply now. Physics/Nav buttons only touch engine policies. Agent count and Reset rebuild the scene.";
+    private string _lastActionText = "MassNavigation runtime, flow, and arrival knobs hot-apply now. Physics buttons only touch engine policy. Agent count and Reset rebuild the scene.";
 
     public bool MountOrSync(GameEngine engine, MassNavigationSimulationRuntime simulation)
     {
@@ -93,7 +92,7 @@ internal sealed class MassNavigationPanelController
         _lastState = MassNavigationPanelState.Empty;
         _lastPerfCaptureTicks = 0;
         _perfRefreshStopwatchTicks = 0;
-        _lastActionText = "MassNavigation runtime, flow, and arrival knobs hot-apply now. Physics/Nav buttons only touch engine policies. Agent count and Reset rebuild the scene.";
+        _lastActionText = "MassNavigation runtime, flow, and arrival knobs hot-apply now. Physics buttons only touch engine policy. Agent count and Reset rebuild the scene.";
         _page?.SetState(_ => MassNavigationPanelState.Empty);
     }
 
@@ -227,20 +226,13 @@ internal sealed class MassNavigationPanelController
                     .Wrap()
                     .Gap(8f),
                 Ui.Text("Engine Policy Only").FontSize(12f).Bold().Color("#F4C77D"),
-                Ui.Text($"Physics {state.PhysicsHz} Hz / max {state.PhysicsMaxStepsPerFixedTick}  Nav {state.NavigationHz} Hz / max {state.NavigationMaxStepsPerFixedTick}").FontSize(12f).Color("#D6E4F5").WhiteSpace(UiWhiteSpace.Normal),
-                Ui.Text("LogicHz follows Engine/clock.json and drives the MassNavigation simulation. Physics/Nav buttons apply engine policy, while this mass crowd runtime uses its own configured cadence.").FontSize(11f).Color("#8EA2BD").WhiteSpace(UiWhiteSpace.Normal),
+                Ui.Text($"Physics {state.PhysicsHz} Hz / max {state.PhysicsMaxStepsPerFixedTick}").FontSize(12f).Color("#D6E4F5").WhiteSpace(UiWhiteSpace.Normal),
+                Ui.Text("LogicHz follows Engine/clock.json and drives the MassNavigation simulation. Physics buttons apply engine policy, while this mass crowd runtime uses its own configured cadence.").FontSize(11f).Color("#8EA2BD").WhiteSpace(UiWhiteSpace.Normal),
                 Ui.Row(
                         BuildActionButton($"Phys -{controls.EnginePolicyHzStep}", () => AdjustPhysicsHz(-controls.EnginePolicyHzStep)),
                         BuildActionButton($"Phys +{controls.EnginePolicyHzStep}", () => AdjustPhysicsHz(controls.EnginePolicyHzStep)),
                         BuildActionButton($"Phys Max-{controls.EnginePolicyMaxStepsStep}", () => AdjustPhysicsMaxSteps(-controls.EnginePolicyMaxStepsStep)),
                         BuildActionButton($"Phys Max+{controls.EnginePolicyMaxStepsStep}", () => AdjustPhysicsMaxSteps(controls.EnginePolicyMaxStepsStep)))
-                    .Wrap()
-                    .Gap(8f),
-                Ui.Row(
-                        BuildActionButton($"Nav -{controls.EnginePolicyHzStep}", () => AdjustNavigationHz(-controls.EnginePolicyHzStep)),
-                        BuildActionButton($"Nav +{controls.EnginePolicyHzStep}", () => AdjustNavigationHz(controls.EnginePolicyHzStep)),
-                        BuildActionButton($"Nav Max-{controls.EnginePolicyMaxStepsStep}", () => AdjustNavigationMaxSteps(-controls.EnginePolicyMaxStepsStep)),
-                        BuildActionButton($"Nav Max+{controls.EnginePolicyMaxStepsStep}", () => AdjustNavigationMaxSteps(controls.EnginePolicyMaxStepsStep)))
                     .Wrap()
                     .Gap(8f),
                 Ui.Text("MassNavigation Flow").FontSize(12f).Bold().Color("#F4C77D"),
@@ -574,33 +566,6 @@ internal sealed class MassNavigationPanelController
         SetActionFeedback($"Engine policy hot apply: physics max steps = {policy.MaxStepsPerFixedTick}. Current mass-navigation custom sim is not consuming Physics2D ticks.");
     }
 
-    private void AdjustNavigationHz(int delta)
-    {
-        if (_engine?.GetService(CoreServiceKeys.Navigation2DTickPolicy) is not Navigation2DTickPolicy policy)
-        {
-            return;
-        }
-
-        MassNavigationPanelControlsConfig controls = RequirePanelControls();
-        policy.SetTargetHz(Math.Clamp(policy.TargetHz + delta, controls.EnginePolicyHzMin, controls.EnginePolicyHzMax));
-        SetActionFeedback($"Engine policy hot apply: navigation = {policy.TargetHz} Hz. Current mass-navigation custom sim still runs on LogicHz/InputCollection.");
-    }
-
-    private void AdjustNavigationMaxSteps(int delta)
-    {
-        if (_engine?.GetService(CoreServiceKeys.Navigation2DTickPolicy) is not Navigation2DTickPolicy policy)
-        {
-            return;
-        }
-
-        MassNavigationPanelControlsConfig controls = RequirePanelControls();
-        policy.SetMaxStepsPerFixedTick(Math.Clamp(
-            policy.MaxStepsPerFixedTick + delta,
-            controls.EnginePolicyMaxStepsMin,
-            controls.EnginePolicyMaxStepsMax));
-        SetActionFeedback($"Engine policy hot apply: navigation max steps = {policy.MaxStepsPerFixedTick}. Current mass-navigation custom sim is not consuming Navigation2D ticks.");
-    }
-
     private void ToggleFlowEnabled()
     {
         if (_simulation == null)
@@ -811,8 +776,6 @@ internal sealed class MassNavigationPanelController
         int logicHz = Time.FixedDeltaTime > 0.000001f ? (int)MathF.Round(1f / Time.FixedDeltaTime) : 0;
         var physicsPolicy = engine.GetService(CoreServiceKeys.Physics2DTickPolicy)
             ?? throw new InvalidOperationException("MassNavigationMod panel requires Physics2DTickPolicy.");
-        var navigationPolicy = engine.GetService(CoreServiceKeys.Navigation2DTickPolicy)
-            ?? throw new InvalidOperationException("MassNavigationMod panel requires Navigation2DTickPolicy.");
         MassNavigationSolverDiagnostics solver = simulation.CaptureSolverDiagnostics();
         string obstacleSemanticsText = $"Obstacle semantics: visible radius = authored obstacle. hard block = visible + each agent body radius. soft push = visible + each agent body radius + {solver.ObstacleSoftPushPaddingCm:0} cm.";
         string targetSemanticsText = $"Target semantics: team target clear {solver.TeamTargetClearanceCm:0} cm. group center clear {solver.GroupCenterClearanceCm:0} cm. team slot clear {solver.TeamSlotClearanceCm:0} cm. loose/group slot clear {solver.LooseTargetClearanceCm:0}/{solver.GroupSlotClearanceCm:0} cm.";
@@ -826,8 +789,6 @@ internal sealed class MassNavigationPanelController
             SimulationSliceLimit: engine.SimulationMaxSlicesPerLogicFrame,
             PhysicsHz: physicsPolicy.TargetHz,
             PhysicsMaxStepsPerFixedTick: physicsPolicy.MaxStepsPerFixedTick,
-            NavigationHz: navigationPolicy.TargetHz,
-            NavigationMaxStepsPerFixedTick: navigationPolicy.MaxStepsPerFixedTick,
             MassNavigationSimulationHz: simulation.Cadence.SimulationHz,
             MassNavigationTargetUpdateHz: simulation.Cadence.TargetUpdateHz,
             MassNavigationFlowStepHz: simulation.Cadence.FlowStepHz,

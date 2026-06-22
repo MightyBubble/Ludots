@@ -16,7 +16,7 @@ namespace Ludots.Tests.Presentation
     public sealed class MassNavigationExecutionAvoidanceContractTests
     {
         [Test]
-        public void AvoidanceKernels_LiveOutsideNavigation2DNamespace()
+        public void AvoidanceKernels_LiveInCoreNamespace()
         {
             Assert.That(typeof(OrcaSolver2D).Namespace, Is.EqualTo("Ludots.Core.Navigation.Avoidance"));
             Assert.That(typeof(SonarSolver2D).Namespace, Is.EqualTo("Ludots.Core.Navigation.Avoidance"));
@@ -83,7 +83,7 @@ namespace Ludots.Tests.Presentation
 
         [TestCase("Orca")]
         [TestCase("Sonar")]
-        public void Runtime_ConfiguredHighQualityAvoidanceModesStepWithoutNavigation2DDependency(string mode)
+        public void Runtime_ConfiguredHighQualityAvoidanceModesStepWithoutLegacyDependency(string mode)
         {
             using var world = World.Create();
             MassNavigationConfig config = CreateConfig(mode);

@@ -5,7 +5,6 @@ using Ludots.Core.Gameplay.GAS.Components;
 using Ludots.Core.Gameplay.GAS.Registry;
 using Ludots.Core.Gameplay.GAS.Systems;
 using Ludots.Core.Mathematics.FixedPoint;
-using Ludots.Core.Navigation2D.Components;
 using Ludots.Core.Physics;
 using NUnit.Framework;
 using static NUnit.Framework.Assert;
@@ -283,7 +282,7 @@ namespace Ludots.Tests.GAS
         }
 
         [Test]
-        public void Displacement_OverrideNavigation_SuppressesAndRestoresNavigationState()
+        public void Displacement_OverrideNavigation_SuppressesForceAndRestoresMoveTag()
         {
             using var world = World.Create();
 
@@ -291,13 +290,6 @@ namespace Ludots.Tests.GAS
             var source = world.Create(new WorldPositionCm { Value = Fix64Vec2.Zero });
             var target = world.Create(
                 new WorldPositionCm { Value = Fix64Vec2.FromInt(1000, 0) },
-                new NavGoal2D
-                {
-                    Kind = NavGoalKind2D.Point,
-                    TargetCm = Fix64Vec2.FromInt(2000, 0),
-                    RadiusCm = Fix64.FromInt(25),
-                },
-                new NavDesiredVelocity2D { ValueCmPerSec = Fix64Vec2.FromInt(120, 0) },
                 new ForceInput2D { Force = Fix64Vec2.FromInt(60, 0) },
                 new GameplayTagContainer(),
                 new AbilityExecInstance());
@@ -319,17 +311,11 @@ namespace Ludots.Tests.GAS
             var system = new DisplacementRuntimeSystem(world);
             system.Update(0f);
 
-            That(world.Get<NavGoal2D>(target).Kind, Is.EqualTo(NavGoalKind2D.None));
-            That(world.Get<NavDesiredVelocity2D>(target).ValueCmPerSec, Is.EqualTo(Fix64Vec2.Zero));
             That(world.Get<ForceInput2D>(target).Force, Is.EqualTo(Fix64Vec2.Zero));
             That(world.Get<GameplayTagContainer>(target).HasTag(navMoveTagId), Is.False);
 
             system.Update(0f);
 
-            var restoredGoal = world.Get<NavGoal2D>(target);
-            That(restoredGoal.Kind, Is.EqualTo(NavGoalKind2D.Point));
-            That(restoredGoal.TargetCm.X.ToFloat(), Is.EqualTo(2000f).Within(0.01f));
-            That(restoredGoal.RadiusCm.ToFloat(), Is.EqualTo(25f).Within(0.01f));
             That(world.Get<GameplayTagContainer>(target).HasTag(navMoveTagId), Is.True);
         }
 

@@ -40,7 +40,7 @@
   复用现有 GAS 时钟系统，仅扩展步进语义。
 * Policy: `src/Core/Engine/Physics2D/Physics2DTickPolicy.cs`
   复用既有 physics tick 频率控制。
-* Policy: `src/Core/Engine/Navigation2D/Navigation2DTickPolicy.cs`
+* Policy: retired navigation tick policy removed by the navigation-domain unification.
   复用既有 navigation tick 频率控制。
 
 新增内容：

@@ -11,6 +11,7 @@
       "directionMode": "ToTarget",
       "totalDistanceCm": 440,
       "totalDurationTicks": 4,
+      "fixedDirectionDeg": 0,
       "overrideNavigation": true
     }
   },
@@ -26,6 +27,7 @@
       "speed": 2200,
       "range": 760,
       "arcHeight": 0,
+      "impactEffect": "Effect.Champion.Ezreal.ArcaneShiftBoltHit",
       "hitEffect": "Effect.Champion.Ezreal.ArcaneShiftBoltHit",
       "presentationEffect": "Effect.Champion.Ezreal.ArcaneShiftBolt",
       "travelMode": "TrackTarget",
@@ -64,6 +66,7 @@
       "speed": 1700,
       "range": 760,
       "arcHeight": 0,
+      "impactEffect": "Effect.Champion.Ezreal.EssenceFluxHit",
       "hitEffect": "Effect.Champion.Ezreal.EssenceFluxHit",
       "presentationEffect": "Effect.Champion.Ezreal.EssenceFlux",
       "travelMode": "Direction",
@@ -96,30 +99,34 @@
       {
         "tag": "State.Champion.Ezreal.WMark",
         "formula": "Fixed",
-        "amount": 1
+        "amount": 1,
+        "base": 0
       }
     ],
     "phaseListeners": [
       {
         "phase": "OnApply",
         "scope": "Target",
-        "action": "graph",
+        "action": "Graph",
         "listenEffectId": "Effect.Champion.Ezreal.MysticShotHit",
-        "graphProgram": "Graph.Champion.Ezreal.PopEssenceFlux"
+        "graphProgram": "Graph.Champion.Ezreal.PopEssenceFlux",
+        "priority": 100
       },
       {
         "phase": "OnApply",
         "scope": "Target",
-        "action": "graph",
+        "action": "Graph",
         "listenEffectId": "Effect.Champion.Ezreal.ArcaneShiftBoltHit",
-        "graphProgram": "Graph.Champion.Ezreal.PopEssenceFlux"
+        "graphProgram": "Graph.Champion.Ezreal.PopEssenceFlux",
+        "priority": 100
       },
       {
         "phase": "OnApply",
         "scope": "Target",
-        "action": "graph",
+        "action": "Graph",
         "listenEffectId": "Effect.Champion.Ezreal.TrueshotBarrageHit",
-        "graphProgram": "Graph.Champion.Ezreal.PopEssenceFlux"
+        "graphProgram": "Graph.Champion.Ezreal.PopEssenceFlux",
+        "priority": 100
       }
     ]
   },
@@ -151,6 +158,7 @@
       "speed": 2100,
       "range": 840,
       "arcHeight": 0,
+      "impactEffect": "Effect.Champion.Ezreal.MysticShotHit",
       "hitEffect": "Effect.Champion.Ezreal.MysticShotHit",
       "presentationEffect": "Effect.Champion.Ezreal.MysticShot",
       "travelMode": "Direction",
@@ -189,6 +197,7 @@
       "speed": 1800,
       "range": 20000,
       "arcHeight": 0,
+      "impactEffect": "Effect.Champion.Ezreal.TrueshotBarrageHit",
       "hitEffect": "Effect.Champion.Ezreal.TrueshotBarrageHit",
       "presentationEffect": "Effect.Champion.Ezreal.TrueshotBarrage",
       "travelMode": "Direction",
@@ -223,6 +232,11 @@
     "presetType": "Buff",
     "lifetime": "Infinite",
     "participatesInResponse": false,
+    "duration": {
+      "durationTicks": 0,
+      "periodTicks": 0,
+      "clockId": "FixedFrame"
+    },
     "modifiers": [
       {
         "attribute": "Shield",
@@ -237,7 +251,8 @@
     ],
     "expireCondition": {
       "kind": "TagPresent",
-      "tag": "State.Champion.Garen.Courage"
+      "tag": "State.Champion.Garen.Courage",
+      "sense": "Raw"
     }
   },
   {
@@ -272,7 +287,14 @@
     "targetQuery": {
       "kind": "BuiltinSpatial",
       "shape": "Circle",
-      "radius": 260
+      "radius": 260,
+      "innerRadius": 0,
+      "halfAngle": 0,
+      "halfWidth": 0,
+      "halfHeight": 0,
+      "rotation": 0,
+      "length": 0,
+      "graphProgramId": 0
     },
     "targetFilter": {
       "relationFilter": "Hostile",
@@ -280,7 +302,8 @@
       "maxTargets": 12
     },
     "targetDispatch": {
-      "payloadEffect": "Effect.Champion.Garen.JudgmentHit"
+      "payloadEffect": "Effect.Champion.Garen.JudgmentHit",
+      "preset": "SourceToResolved"
     }
   },
   {
@@ -310,7 +333,14 @@
     "targetQuery": {
       "kind": "BuiltinSpatial",
       "shape": "Circle",
-      "radius": 150
+      "radius": 150,
+      "innerRadius": 0,
+      "halfAngle": 0,
+      "halfWidth": 0,
+      "halfHeight": 0,
+      "rotation": 0,
+      "length": 0,
+      "graphProgramId": 0
     },
     "targetFilter": {
       "relationFilter": "Hostile",
@@ -318,7 +348,8 @@
       "maxTargets": 6
     },
     "targetDispatch": {
-      "payloadEffect": "Effect.Champion.Garen.DemacianJusticeHit"
+      "payloadEffect": "Effect.Champion.Garen.DemacianJusticeHit",
+      "preset": "SourceToResolved"
     }
   },
   {
@@ -350,7 +381,12 @@
       "templateId": "champion_skill_sandbox_runic_beacon",
       "count": 1,
       "copySourcePlayerOwner": true,
-      "linkSourceAsParent": true
+      "linkSourceAsParent": true,
+      "placementPattern": "Scatter",
+      "facingPattern": "PreserveTemplate",
+      "offsetRadius": 0,
+      "placementRadiusCm": 0,
+      "placementStartAngleDeg": 0
     }
   },
   {
@@ -367,7 +403,12 @@
       "count": 1,
       "onSpawnEffect": "Effect.Champion.Geomancer.RuneFieldPersistent",
       "copySourcePlayerOwner": true,
-      "linkSourceAsParent": true
+      "linkSourceAsParent": true,
+      "placementPattern": "Scatter",
+      "facingPattern": "PreserveTemplate",
+      "offsetRadius": 0,
+      "placementRadiusCm": 0,
+      "placementStartAngleDeg": 0
     }
   },
   {
@@ -386,7 +427,14 @@
     "targetQuery": {
       "kind": "BuiltinSpatial",
       "shape": "Circle",
-      "radius": 220
+      "radius": 220,
+      "innerRadius": 0,
+      "halfAngle": 0,
+      "halfWidth": 0,
+      "halfHeight": 0,
+      "rotation": 0,
+      "length": 0,
+      "graphProgramId": 0
     },
     "targetFilter": {
       "relationFilter": "Hostile",
@@ -394,7 +442,8 @@
       "maxTargets": 12
     },
     "targetDispatch": {
-      "payloadEffect": "Effect.Champion.Geomancer.RuneFieldHit"
+      "payloadEffect": "Effect.Champion.Geomancer.RuneFieldHit",
+      "preset": "SourceToResolved"
     }
   },
   {
@@ -426,7 +475,12 @@
       "templateId": "champion_skill_sandbox_stone_pillar",
       "count": 1,
       "copySourcePlayerOwner": true,
-      "linkSourceAsParent": true
+      "linkSourceAsParent": true,
+      "placementPattern": "Scatter",
+      "facingPattern": "PreserveTemplate",
+      "offsetRadius": 0,
+      "placementRadiusCm": 0,
+      "placementStartAngleDeg": 0
     }
   },
   {
@@ -442,7 +496,13 @@
       "kind": "BuiltinSpatial",
       "shape": "Line",
       "length": 920,
-      "halfWidth": 80
+      "halfWidth": 80,
+      "radius": 0,
+      "innerRadius": 0,
+      "halfAngle": 0,
+      "halfHeight": 0,
+      "rotation": 0,
+      "graphProgramId": 0
     },
     "targetFilter": {
       "relationFilter": "Hostile",
@@ -450,7 +510,8 @@
       "maxTargets": 16
     },
     "targetDispatch": {
-      "payloadEffect": "Effect.Champion.Geomancer.PrismaticBeamHit"
+      "payloadEffect": "Effect.Champion.Geomancer.PrismaticBeamHit",
+      "preset": "SourceToResolved"
     }
   },
   {
@@ -524,7 +585,14 @@
       "range": 880,
       "arcHeight": 0,
       "impactEffect": "Effect.Champion.Jayce.Cannon.ShockBlastResolve",
-      "collisionRelationFilter": "All"
+      "hitEffect": "Effect.Champion.Jayce.Cannon.ShockBlastResolve",
+      "presentationEffect": "Effect.Champion.Jayce.Cannon.ShockBlastResolve",
+      "travelMode": "Direction",
+      "impactPolicy": "DestroyOnFirstHit",
+      "collisionHalfWidth": 90,
+      "collisionRelationFilter": "Hostile",
+      "collisionExcludeSource": true,
+      "maxHitCount": 1
     }
   },
   {
@@ -539,7 +607,13 @@
       "kind": "BuiltinSpatial",
       "shape": "Line",
       "length": 880,
-      "halfWidth": 90
+      "halfWidth": 90,
+      "radius": 0,
+      "innerRadius": 0,
+      "halfAngle": 0,
+      "halfHeight": 0,
+      "rotation": 0,
+      "graphProgramId": 0
     },
     "targetFilter": {
       "relationFilter": "Hostile",
@@ -547,7 +621,8 @@
       "maxTargets": 12
     },
     "targetDispatch": {
-      "payloadEffect": "Effect.Champion.Jayce.Cannon.ShockBlastHit"
+      "payloadEffect": "Effect.Champion.Jayce.Cannon.ShockBlastHit",
+      "preset": "SourceToResolved"
     }
   },
   {
@@ -578,7 +653,13 @@
       "kind": "BuiltinSpatial",
       "shape": "Ring",
       "radius": 280,
-      "innerRadius": 90
+      "innerRadius": 90,
+      "halfAngle": 0,
+      "halfWidth": 0,
+      "halfHeight": 0,
+      "rotation": 0,
+      "length": 0,
+      "graphProgramId": 0
     },
     "targetFilter": {
       "relationFilter": "Hostile",
@@ -586,7 +667,8 @@
       "maxTargets": 12
     },
     "targetDispatch": {
-      "payloadEffect": "Effect.Champion.Jayce.Hammer.LightningFieldHit"
+      "payloadEffect": "Effect.Champion.Jayce.Hammer.LightningFieldHit",
+      "preset": "SourceToResolved"
     }
   },
   {
@@ -617,7 +699,13 @@
       "kind": "BuiltinSpatial",
       "shape": "Cone",
       "radius": 300,
-      "halfAngle": 40
+      "halfAngle": 40,
+      "innerRadius": 0,
+      "halfWidth": 0,
+      "halfHeight": 0,
+      "rotation": 0,
+      "length": 0,
+      "graphProgramId": 0
     },
     "targetFilter": {
       "relationFilter": "Hostile",
@@ -625,7 +713,8 @@
       "maxTargets": 10
     },
     "targetDispatch": {
-      "payloadEffect": "Effect.Champion.Jayce.Hammer.ThunderingBlowHit"
+      "payloadEffect": "Effect.Champion.Jayce.Hammer.ThunderingBlowHit",
+      "preset": "SourceToResolved"
     }
   },
   {
@@ -655,7 +744,14 @@
     "targetQuery": {
       "kind": "BuiltinSpatial",
       "shape": "Circle",
-      "radius": 170
+      "radius": 170,
+      "innerRadius": 0,
+      "halfAngle": 0,
+      "halfWidth": 0,
+      "halfHeight": 0,
+      "rotation": 0,
+      "length": 0,
+      "graphProgramId": 0
     },
     "targetFilter": {
       "relationFilter": "Hostile",
@@ -663,7 +759,8 @@
       "maxTargets": 10
     },
     "targetDispatch": {
-      "payloadEffect": "Effect.Champion.Jayce.Hammer.ToTheSkiesHit"
+      "payloadEffect": "Effect.Champion.Jayce.Hammer.ToTheSkiesHit",
+      "preset": "SourceToResolved"
     }
   },
   {
@@ -693,7 +790,14 @@
     "targetQuery": {
       "kind": "BuiltinSpatial",
       "shape": "Circle",
-      "radius": 180
+      "radius": 180,
+      "innerRadius": 0,
+      "halfAngle": 0,
+      "halfWidth": 0,
+      "halfHeight": 0,
+      "rotation": 0,
+      "length": 0,
+      "graphProgramId": 0
     },
     "targetFilter": {
       "relationFilter": "Hostile",
@@ -701,7 +805,8 @@
       "maxTargets": 4
     },
     "targetDispatch": {
-      "payloadEffect": "Effect.ChampionStress.Warrior.CleaveHit"
+      "payloadEffect": "Effect.ChampionStress.Warrior.CleaveHit",
+      "preset": "SourceToResolved"
     }
   },
   {
@@ -733,7 +838,14 @@
       "range": 1400,
       "arcHeight": 0,
       "impactEffect": "Effect.ChampionStress.FireMage.FireballResolve",
-      "collisionRelationFilter": "All"
+      "hitEffect": "Effect.ChampionStress.FireMage.FireballResolve",
+      "presentationEffect": "Effect.ChampionStress.FireMage.FireballResolve",
+      "travelMode": "Direction",
+      "impactPolicy": "DestroyOnFirstHit",
+      "collisionHalfWidth": 180,
+      "collisionRelationFilter": "Hostile",
+      "collisionExcludeSource": true,
+      "maxHitCount": 1
     }
   },
   {
@@ -747,7 +859,14 @@
     "targetQuery": {
       "kind": "BuiltinSpatial",
       "shape": "Circle",
-      "radius": 180
+      "radius": 180,
+      "innerRadius": 0,
+      "halfAngle": 0,
+      "halfWidth": 0,
+      "halfHeight": 0,
+      "rotation": 0,
+      "length": 0,
+      "graphProgramId": 0
     },
     "targetFilter": {
       "relationFilter": "Hostile",
@@ -755,7 +874,8 @@
       "maxTargets": 16
     },
     "targetDispatch": {
-      "payloadEffect": "Effect.ChampionStress.FireMage.FireballHit"
+      "payloadEffect": "Effect.ChampionStress.FireMage.FireballHit",
+      "preset": "SourceToResolved"
     }
   },
   {
@@ -787,7 +907,14 @@
       "range": 1500,
       "arcHeight": 0,
       "impactEffect": "Effect.ChampionStress.LaserMage.LaserResolve",
-      "collisionRelationFilter": "All"
+      "hitEffect": "Effect.ChampionStress.LaserMage.LaserResolve",
+      "presentationEffect": "Effect.ChampionStress.LaserMage.LaserResolve",
+      "travelMode": "Direction",
+      "impactPolicy": "DestroyOnFirstHit",
+      "collisionHalfWidth": 110,
+      "collisionRelationFilter": "Hostile",
+      "collisionExcludeSource": true,
+      "maxHitCount": 1
     }
   },
   {
@@ -801,7 +928,14 @@
     "targetQuery": {
       "kind": "BuiltinSpatial",
       "shape": "Circle",
-      "radius": 110
+      "radius": 110,
+      "innerRadius": 0,
+      "halfAngle": 0,
+      "halfWidth": 0,
+      "halfHeight": 0,
+      "rotation": 0,
+      "length": 0,
+      "graphProgramId": 0
     },
     "targetFilter": {
       "relationFilter": "Hostile",
@@ -809,7 +943,8 @@
       "maxTargets": 4
     },
     "targetDispatch": {
-      "payloadEffect": "Effect.ChampionStress.LaserMage.LaserHit"
+      "payloadEffect": "Effect.ChampionStress.LaserMage.LaserHit",
+      "preset": "SourceToResolved"
     }
   },
   {
@@ -857,7 +992,12 @@
       "templateId": "champion_skill_sandbox_spell_beacon",
       "count": 1,
       "copySourcePlayerOwner": true,
-      "linkSourceAsParent": true
+      "linkSourceAsParent": true,
+      "placementPattern": "Scatter",
+      "facingPattern": "PreserveTemplate",
+      "offsetRadius": 0,
+      "placementRadiusCm": 0,
+      "placementStartAngleDeg": 0
     }
   },
   {
@@ -874,7 +1014,12 @@
       "count": 1,
       "onSpawnEffect": "Effect.Champion.SpellEngineer.GravityWellPersistent",
       "copySourcePlayerOwner": true,
-      "linkSourceAsParent": true
+      "linkSourceAsParent": true,
+      "placementPattern": "Scatter",
+      "facingPattern": "PreserveTemplate",
+      "offsetRadius": 0,
+      "placementRadiusCm": 0,
+      "placementStartAngleDeg": 0
     }
   },
   {
@@ -893,7 +1038,14 @@
     "targetQuery": {
       "kind": "BuiltinSpatial",
       "shape": "Circle",
-      "radius": 240
+      "radius": 240,
+      "innerRadius": 0,
+      "halfAngle": 0,
+      "halfWidth": 0,
+      "halfHeight": 0,
+      "rotation": 0,
+      "length": 0,
+      "graphProgramId": 0
     },
     "targetFilter": {
       "relationFilter": "Hostile",
@@ -901,7 +1053,8 @@
       "maxTargets": 12
     },
     "targetDispatch": {
-      "payloadEffect": "Effect.Champion.SpellEngineer.GravityWellHit"
+      "payloadEffect": "Effect.Champion.SpellEngineer.GravityWellHit",
+      "preset": "SourceToResolved"
     }
   },
   {
@@ -937,7 +1090,8 @@
       "placementRadiusCm": 280,
       "placementStartAngleDeg": 18,
       "copySourcePlayerOwner": true,
-      "linkSourceAsParent": true
+      "linkSourceAsParent": true,
+      "offsetRadius": 0
     }
   },
   {
@@ -954,7 +1108,12 @@
       "count": 1,
       "onSpawnEffect": "Effect.Champion.SpellEngineer.GuidedLaserPersistent",
       "copySourcePlayerOwner": true,
-      "linkSourceAsParent": true
+      "linkSourceAsParent": true,
+      "placementPattern": "Scatter",
+      "facingPattern": "PreserveTemplate",
+      "offsetRadius": 0,
+      "placementRadiusCm": 0,
+      "placementStartAngleDeg": 0
     }
   },
   {
@@ -974,7 +1133,13 @@
       "kind": "BuiltinSpatial",
       "shape": "Line",
       "length": 900,
-      "halfWidth": 70
+      "halfWidth": 70,
+      "radius": 0,
+      "innerRadius": 0,
+      "halfAngle": 0,
+      "halfHeight": 0,
+      "rotation": 0,
+      "graphProgramId": 0
     },
     "targetFilter": {
       "relationFilter": "Hostile",
@@ -982,7 +1147,8 @@
       "maxTargets": 16
     },
     "targetDispatch": {
-      "payloadEffect": "Effect.Champion.SpellEngineer.GuidedLaserHit"
+      "payloadEffect": "Effect.Champion.SpellEngineer.GuidedLaserHit",
+      "preset": "SourceToResolved"
     }
   },
   {

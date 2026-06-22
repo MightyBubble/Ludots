@@ -33,6 +33,7 @@ namespace Ludots.Core.Physics2D.Systems
 
         public int StaticBodyVersion { get; private set; }
         public int DirtyStaticBodyCountLastUpdate { get; private set; }
+        public int DirtyStaticBodyCountLastRebuild { get; private set; }
         private int _observedWorldSize = -1;
 
         public BuildPhysicsWorldSystem2D(World world) : base(world)
@@ -123,6 +124,7 @@ namespace Ludots.Core.Physics2D.Systems
             if (staticCacheDirty)
             {
                 RebuildStaticRigidBodies();
+                DirtyStaticBodyCountLastRebuild = DirtyStaticBodyCountLastUpdate;
                 StaticBodyVersion = unchecked(StaticBodyVersion + 1);
             }
 

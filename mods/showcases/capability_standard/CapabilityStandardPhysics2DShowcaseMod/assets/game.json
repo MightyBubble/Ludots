@@ -28,8 +28,5 @@
     "minimapMarkerCapacity": 131072,
     "runtimeEntitySpawnQueueCapacity": 131072,
     "runtimeEntitySpawnReceiptQueueCapacity": 131072
-  },
-  "navigation2D": {
-    "enabled": true
   }
 }

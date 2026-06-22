@@ -1,6 +1,6 @@
 # Move Planning MassFlow Road Execution
 
-Parent: [Epic #281](https://github.com/MightyBubble/Ludots/issues/281). This page lands [NAV-9 #303](https://github.com/MightyBubble/Ludots/issues/303) and must be read before [NAV-8 #289](https://github.com/MightyBubble/Ludots/issues/289) deletes the deprecated `Navigation2D` stack.
+Parent: [Epic #281](https://github.com/MightyBubble/Ludots/issues/281). This page lands [NAV-9 #303](https://github.com/MightyBubble/Ludots/issues/303) and must be read before [NAV-8 #289](https://github.com/MightyBubble/Ludots/issues/289) deletes the deprecated point-target execution stack.
 
 ## Background
 
@@ -10,10 +10,10 @@ Before NAV-9, `RoadNetworkShowcaseMod` owned both road-specific route policy and
 |---|---|---|
 | `RoadNavPlanStore` | Stores active route points | Generic plan storage was tied to one showcase |
 | `RoadMoveRuntimeService` | Binds active orders to route runtime | Other mods would need to copy `Road*` classes |
-| `RoadRouteWalkStrategy` | Writes execution target | It drove `NavGoal2D` / `NavAgent2D` / `NavKinematics2D` |
+| `RoadRouteWalkStrategy` | Writes execution target | It drove retired execution components |
 | `OrderArgs.Spatial.A0` | Runtime waypoint cursor in older paths | Authored order payload was polluted by execution state |
 
-This blocked NAV-8 because the already-merged road showcase was a real downstream consumer of `Navigation2D`.
+This blocked NAV-8 because the already-merged road showcase was a real downstream consumer of the retired execution stack.
 
 ## Goal
 
@@ -51,7 +51,7 @@ right-click order
   -> MassNavigationSimulationRuntime / MassFlow
 ```
 
-There is no `NavGoal2D` execution sink in the road showcase.
+There is no retired component execution sink in the road showcase.
 
 ## User Story
 
@@ -75,7 +75,7 @@ dotnet test src/Tests/GasTests/GasTests.csproj --filter "RoadNetworkShowcase_Pla
 | Drag-select Blue Vanguard, Blue North Column, and Blue South Column | Formal selection count becomes 3 through `CurrentSelectionApplySystem` |
 | Right-click a visible ground point | Road orders are submitted through the real input/order bridge |
 | Let fixed steps run | Selected columns receive MassFlow per-agent navigation targets |
-| Inspect road entities | No `NavGoal2D`, `NavAgent2D`, or `NavKinematics2D` execution components are required |
+| Inspect road entities | No retired execution components are required |
 
 The showcase uses the real nav bake/pathing, input bridge, selection runtime, road planning, and MassFlow execution. It is not a script stub.
 
@@ -102,7 +102,7 @@ Road-specific MassFlow tuning remains in `RoadNetworkShowcaseMod/assets/MassNavi
 | Configuration or code fact | Behavior | Contract test |
 |---|---|---|
 | `Players[].IsLocal = true` for `road.player.blue` | `LocalPlayerEntityResolverSystem` keeps a valid selection owner before the confirm press frame | `RoadNetworkShowcase_PlayableInitialDragSelectRightClick_StartsRoadMoveWithoutReset` |
-| Road execution source contains no `NavGoal2D` / `NavAgent2D` / `NavKinematics2D` / `Navigation2D` | Road movement is not coupled to the deprecated sink | `RoadNetworkShowcaseMovePlanExecution_DoesNotReferenceNavigation2DExecutionComponents` |
+| Road execution source contains no retired execution component references | Road movement is not coupled to the deprecated sink | `RoadNetworkShowcaseMovePlanExecution_DoesNotReferenceLegacyExecutionComponents` |
 | Core `MovePlanning` source contains no road/corridor/fort names | Core seam remains reusable outside the road showcase | `CoreMovePlanningSeam_DoesNotReferenceRoadShowcasePolicy` |
 | Road execution source contains no `.A0` cursor usage | Runtime waypoint cursor lives in `MovePlanRuntime.CurrentWaypointIndex` | `RoadMovePlanRuntimeCursor_DoesNotUseOrderSpatialA0` |
 | Entity lacks `MassCrowdAgentIndex` | Mass sink returns false and does not invent an execution binding | `MassMovePlanExecutionSink_RequiresMassCrowdAgentIndex` |
@@ -127,7 +127,7 @@ No PR is merged during NAV-9 itself. It is built on top of the already-merged PR
 - `src/Core/MovePlanning` contains generic move-plan storage/runtime interfaces with no road-specific naming.
 - Road route planning, corridor preferences, preview splines, fort capture, and road AI remain showcase-owned.
 - Road execution writes MassFlow per-agent targets through `MassMovePlanExecutionSink`.
-- Road showcase source has zero `Navigation2D` execution component references.
+- Road showcase source has zero retired execution component references.
 - Road move-plan cursor uses `MovePlanRuntime.CurrentWaypointIndex`, not `OrderArgs.Spatial.A0`.
 - Contract tests cover source boundaries, sink failure/success cases, runtime cursor behavior, and playable road selection/right-click UAT.
 - GitBook links back to #281 and #303.

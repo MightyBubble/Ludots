@@ -11,6 +11,8 @@ namespace Ludots.Core.Physics2D.Ticking
 {
     public sealed class Physics2DSimulationSystem : ISystem<float>
     {
+        private const int PostIntegrationCorrectionIterations = 6;
+
         public bool Enabled { get; set; } = true;
 
         public BuildPhysicsWorldSystem2D Build { get; }
@@ -186,6 +188,13 @@ namespace Ludots.Core.Physics2D.Ticking
             _positionCorrection.Update(dt);
             _fieldDetector.Update(dt);
             _integration.Update(dt);
+            for (int i = 0; i < PostIntegrationCorrectionIterations; i++)
+            {
+                Build.Update(dt);
+                Spatial.Update(dt);
+                _narrowPhase.Update(dt);
+                _positionCorrection.Update(dt);
+            }
             _updateMotion.Update(dt);
             _buildIslands.Update(dt);
             _sleeping.Update(dt);

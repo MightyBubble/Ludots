@@ -4,14 +4,14 @@ Parent: [Epic #281](https://github.com/MightyBubble/Ludots/issues/281). This pag
 
 ## Background
 
-Before NAV-6, `MassFlowSimulationState` was already the Core execution engine for mass movement, but it primarily served team-slot movement and direct flow targets. The deprecated `Navigation2D` stack still owned several execution features.
+Before NAV-6, `MassFlowSimulationState` was already the Core execution engine for mass movement, but it primarily served team-slot movement and direct flow targets. A retired point-target execution stack still owned several execution features.
 
 | Capability | Old owner | Problem |
 |---|---|---|
-| Per-agent arbitrary world target | `Navigation2D` components | MassFlow callers could not address one unit as the execution sink |
+| Per-agent arbitrary world target | Retired execution components | MassFlow callers could not address one unit as the execution sink |
 | Runtime obstacle stamp | MassFlow internals plus older bridges | No public Core runtime contract for dynamic obstacle snapshots |
 | Arrival event | MassFlow settled counters only | Callers could not drain per-agent arrival facts |
-| High quality local avoidance | `Navigation2D/Avoidance` | Pure math kernels were trapped under deprecated namespace |
+| High quality local avoidance | Retired avoidance namespace | Pure math kernels were trapped under a deprecated namespace |
 
 NAV-6 moves the pure avoidance kernels into `Ludots.Core.Navigation.Avoidance` and makes MassFlow the execution owner for per-agent target, runtime obstacle stamp, arrival event, and optional ORCA/Sonar avoidance.
 
@@ -40,7 +40,7 @@ US-6.1: As an RTS player, I can issue separate target points to a few selected a
 
 US-6.2: As a player, I can switch the MassFlow avoidance mode from `Separation` to `Orca` or `Sonar`, so narrow passages use a higher quality local avoidance kernel.
 
-US-6.3: As a gameplay system, I can stamp runtime obstacles into the execution engine, so agents can project blocked targets and steer around dynamic blockers without reviving `Navigation2D`.
+US-6.3: As a gameplay system, I can stamp runtime obstacles into the execution engine, so agents can project blocked targets and steer around dynamic blockers without reviving the retired execution stack.
 
 ## UAT Showcase
 
@@ -82,8 +82,8 @@ Missing `avoidance.mode`, missing `orca`/`sonar` blocks, or wrong case such as `
 | Config change | Runtime behavior | Contract test |
 |---|---|---|
 | `avoidance.mode: Separation` | Uses existing separation and hard resolve path | `MassNavigationExecutionAvoidanceContractTests` |
-| `avoidance.mode: Orca` | Reuses separation hash neighbors and calls `OrcaSolver2D` | `Runtime_ConfiguredHighQualityAvoidanceModesStepWithoutNavigation2DDependency` |
-| `avoidance.mode: Sonar` | Reuses separation hash neighbors and calls `SonarSolver2D` | `Runtime_ConfiguredHighQualityAvoidanceModesStepWithoutNavigation2DDependency` |
+| `avoidance.mode: Orca` | Reuses separation hash neighbors and calls `OrcaSolver2D` | `Runtime_ConfiguredHighQualityAvoidanceModesStepWithoutLegacyDependency` |
+| `avoidance.mode: Sonar` | Reuses separation hash neighbors and calls `SonarSolver2D` | `Runtime_ConfiguredHighQualityAvoidanceModesStepWithoutLegacyDependency` |
 | Missing/wrong-case mode | Loader fails fast | `MassNavigationConfig_RequiresExplicitStrictCaseAvoidanceMode` |
 | Agent reaches target threshold | One `MassNavigationArrivalEvent` is emitted for that target | `Runtime_PerAgentWorldTargetProducesArrivalEvent` |
 | Runtime obstacle snapshots change | MassFlow obstacle stamp is rebuilt | `Runtime_RuntimeObstacleStampRebuildsAndBlocksTargetProjection` |
@@ -100,12 +100,12 @@ NAV-6 builds on PR #235's Core-owned `MassCrowd` runtime and the NAV-3 obstacle 
 | `ManifestationObstacleIntent2D` + `ShapeDataStorage2D` + `CompoundObstacle2DState` | Authored obstacle source upstream |
 | `MassNavigationObstacleSnapshot` | Runtime dynamic obstacle stamp input |
 
-`Navigation2DSteeringSystem2D` only keeps a temporary compatibility call to the moved kernels until [NAV-8 #289](https://github.com/MightyBubble/Ludots/issues/289) deletes the old stack.
+After [NAV-8 #289](https://github.com/MightyBubble/Ludots/issues/289), no retired steering system remains in the runtime.
 
 ## DoD
 
 - Execution engine exposes per-agent target, runtime obstacle stamp, arrival event, and optional high quality avoidance.
-- ORCA/Sonar live outside `Navigation2D` and do not depend on `Navigation2D.Config`.
+- ORCA/Sonar live under `Ludots.Core.Navigation.Avoidance` and do not depend on retired runtime config.
 - New Sonar config uses `UsePreferredVelocityWhenBlocked`; no new fallback naming is introduced.
 - Config is data-driven and strict-case fail-fast.
 - Contract tests cover moved kernel namespace, config strictness, per-agent target arrival, runtime obstacle stamp, and ORCA/Sonar step behavior.

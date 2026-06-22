@@ -27,7 +27,6 @@
 - `MobaDemoMod`
 - `RtsDemoMod`
 - `ArpgDemoMod`
-- `Navigation2DPlaygroundMod`
 - `GenreInfoShowcaseMod`
 - `ItemSystemShowcaseMod`
 - `NarrativeShowcaseMod`

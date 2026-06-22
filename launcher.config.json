@@ -1,153 +1,147 @@
 {
-  "schemaVersion": 1,
-  "scanRoots": [
-    {
-      "id": "repo_mods",
-      "path": "mods",
-      "scanMode": "recursive",
-      "enabled": true
-    }
-  ],
-  "bindings": [
-    {
-      "name": "camera_acceptance",
-      "target": {
-        "type": "path",
-        "value": "mods/fixtures/camera/CameraAcceptanceMod",
-        "projectPath": "CameraAcceptanceMod.csproj"
-      }
-    },
-    {
-      "name": "camera_acceptance_hotpath",
-      "target": {
-        "type": "path",
-        "value": "mods/fixtures/camera/CameraAcceptanceHotpathEntryMod",
-        "projectPath": "CameraAcceptanceHotpathEntryMod.csproj"
-      }
-    },
-    {
-      "name": "nav_playground",
-      "target": {
-        "type": "path",
-        "value": "mods/Navigation2DPlaygroundMod",
-        "projectPath": "Navigation2DPlaygroundMod.csproj"
-      }
-    },
-    {
-      "name": "champion_skill_stress",
-      "target": {
-        "type": "path",
-        "value": "mods/showcases/champion_skill_stress_entry/ChampionSkillStressEntryMod",
-        "projectPath": "ChampionSkillStressEntryMod.csproj"
-      }
-    },
-    {
-      "name": "spatial_bounds_showcase",
-      "target": {
-        "type": "path",
-        "value": "mods/showcases/spatial_bounds/SpatialBoundsShowcaseMod",
-        "projectPath": "SpatialBoundsShowcaseMod.csproj"
-      }
-    },
-    {
-      "name": "road_network_showcase",
-      "target": {
-        "type": "path",
-        "value": "mods/showcases/road_network/RoadNetworkShowcaseMod",
-        "projectPath": null
-      }
-    },
-    {
-      "name": "chunk_streaming_showcase",
-      "target": {
-        "type": "path",
-        "value": "mods/showcases/chunk_streaming/ChunkStreamingShowcaseMod",
-        "projectPath": "ChunkStreamingShowcaseMod.csproj"
-      }
-    },
-    {
-      "name": "performer_blacksmith_showcase",
-      "target": {
-        "type": "path",
-        "value": "mods/showcases/performer_blacksmith/PerformerBlacksmithShowcaseMod",
-        "projectPath": "PerformerBlacksmithShowcaseMod.csproj"
-      }
-    },
-    {
-      "name": "performer_blacksmith_large_world",
-      "target": {
-        "type": "path",
-        "value": "mods/showcases/performer_blacksmith_large_world_entry/PerformerBlacksmithLargeWorldEntryMod",
-        "projectPath": "PerformerBlacksmithLargeWorldEntryMod.csproj"
-      }
-    },
-    {
-      "name": "performer_blacksmith_large_world_nohud",
-      "target": {
-        "type": "path",
-        "value": "mods/showcases/performer_blacksmith_large_world_nohud_entry/PerformerBlacksmithLargeWorldNoHudEntryMod",
-        "projectPath": "PerformerBlacksmithLargeWorldNoHudEntryMod.csproj"
-      }
-    },
-    {
-      "name": "mass_navigation",
-      "target": {
-        "type": "path",
-        "value": "mods/capabilities/navigation/MassNavigationMod",
-        "projectPath": "MassNavigationMod.csproj"
-      }
-    },
-    {
-      "name": "capability_standard_static_performer_30k",
-      "target": {
-        "type": "path",
-        "value": "mods/showcases/capability_standard/CapabilityStandardStaticPerformer30kMod",
-        "projectPath": "CapabilityStandardStaticPerformer30kMod.csproj"
-      }
-    },
-    {
-      "name": "capability_standard_mass_nav_large_world_10k",
-      "target": {
-        "type": "path",
-        "value": "mods/showcases/capability_standard/CapabilityStandardMassNavigationLargeWorld10kMod",
-        "projectPath": "CapabilityStandardMassNavigationLargeWorld10kMod.csproj"
-      }
-    },
-    {
-      "name": "capability_standard_total_war_like",
-      "target": {
-        "type": "path",
-        "value": "mods/showcases/capability_standard/CapabilityStandardTotalWarLikeMod",
-        "projectPath": "CapabilityStandardTotalWarLikeMod.csproj"
-      }
-    },
-    {
-      "name": "capability_standard_participant_views",
-      "target": {
-        "type": "path",
-        "value": "mods/showcases/capability_standard/CapabilityStandardParticipantViewsMod",
-        "projectPath": "CapabilityStandardParticipantViewsMod.csproj"
-      }
-    },
-    {
-      "name": "capability_standard_physics2d_showcase",
-      "target": {
-        "type": "path",
-        "value": "mods/showcases/capability_standard/CapabilityStandardPhysics2DShowcaseMod",
-        "projectPath": "CapabilityStandardPhysics2DShowcaseMod.csproj"
-      }
-    },
-    {
-      "name": "entity_query_tactics",
-      "target": {
-        "type": "path",
-        "value": "mods/showcases/entity_query_tactics/EntityQueryTacticsShowcaseMod",
-        "projectPath": "EntityQueryTacticsShowcaseMod.csproj"
-      }
-    }
-  ],
-  "adapters": {
-    "default": "raylib"
-  },
-  "projectHints": []
+    "schemaVersion":  1,
+    "scanRoots":  [
+                      {
+                          "id":  "repo_mods",
+                          "path":  "mods",
+                          "scanMode":  "recursive",
+                          "enabled":  true
+                      }
+                  ],
+    "bindings":  [
+                     {
+                         "name":  "camera_acceptance",
+                         "target":  {
+                                        "type":  "path",
+                                        "value":  "mods/fixtures/camera/CameraAcceptanceMod",
+                                        "projectPath":  "CameraAcceptanceMod.csproj"
+                                    }
+                     },
+                     {
+                         "name":  "camera_acceptance_hotpath",
+                         "target":  {
+                                        "type":  "path",
+                                        "value":  "mods/fixtures/camera/CameraAcceptanceHotpathEntryMod",
+                                        "projectPath":  "CameraAcceptanceHotpathEntryMod.csproj"
+                                    }
+                     },
+                     {
+                         "name":  "champion_skill_stress",
+                         "target":  {
+                                        "type":  "path",
+                                        "value":  "mods/showcases/champion_skill_stress_entry/ChampionSkillStressEntryMod",
+                                        "projectPath":  "ChampionSkillStressEntryMod.csproj"
+                                    }
+                     },
+                     {
+                         "name":  "spatial_bounds_showcase",
+                         "target":  {
+                                        "type":  "path",
+                                        "value":  "mods/showcases/spatial_bounds/SpatialBoundsShowcaseMod",
+                                        "projectPath":  "SpatialBoundsShowcaseMod.csproj"
+                                    }
+                     },
+                     {
+                         "name":  "road_network_showcase",
+                         "target":  {
+                                        "type":  "path",
+                                        "value":  "mods/showcases/road_network/RoadNetworkShowcaseMod",
+                                        "projectPath":  null
+                                    }
+                     },
+                     {
+                         "name":  "chunk_streaming_showcase",
+                         "target":  {
+                                        "type":  "path",
+                                        "value":  "mods/showcases/chunk_streaming/ChunkStreamingShowcaseMod",
+                                        "projectPath":  "ChunkStreamingShowcaseMod.csproj"
+                                    }
+                     },
+                     {
+                         "name":  "performer_blacksmith_showcase",
+                         "target":  {
+                                        "type":  "path",
+                                        "value":  "mods/showcases/performer_blacksmith/PerformerBlacksmithShowcaseMod",
+                                        "projectPath":  "PerformerBlacksmithShowcaseMod.csproj"
+                                    }
+                     },
+                     {
+                         "name":  "performer_blacksmith_large_world",
+                         "target":  {
+                                        "type":  "path",
+                                        "value":  "mods/showcases/performer_blacksmith_large_world_entry/PerformerBlacksmithLargeWorldEntryMod",
+                                        "projectPath":  "PerformerBlacksmithLargeWorldEntryMod.csproj"
+                                    }
+                     },
+                     {
+                         "name":  "performer_blacksmith_large_world_nohud",
+                         "target":  {
+                                        "type":  "path",
+                                        "value":  "mods/showcases/performer_blacksmith_large_world_nohud_entry/PerformerBlacksmithLargeWorldNoHudEntryMod",
+                                        "projectPath":  "PerformerBlacksmithLargeWorldNoHudEntryMod.csproj"
+                                    }
+                     },
+                     {
+                         "name":  "mass_navigation",
+                         "target":  {
+                                        "type":  "path",
+                                        "value":  "mods/capabilities/navigation/MassNavigationMod",
+                                        "projectPath":  "MassNavigationMod.csproj"
+                                    }
+                     },
+                     {
+                         "name":  "capability_standard_static_performer_30k",
+                         "target":  {
+                                        "type":  "path",
+                                        "value":  "mods/showcases/capability_standard/CapabilityStandardStaticPerformer30kMod",
+                                        "projectPath":  "CapabilityStandardStaticPerformer30kMod.csproj"
+                                    }
+                     },
+                     {
+                         "name":  "capability_standard_mass_nav_large_world_10k",
+                         "target":  {
+                                        "type":  "path",
+                                        "value":  "mods/showcases/capability_standard/CapabilityStandardMassNavigationLargeWorld10kMod",
+                                        "projectPath":  "CapabilityStandardMassNavigationLargeWorld10kMod.csproj"
+                                    }
+                     },
+                     {
+                         "name":  "capability_standard_total_war_like",
+                         "target":  {
+                                        "type":  "path",
+                                        "value":  "mods/showcases/capability_standard/CapabilityStandardTotalWarLikeMod",
+                                        "projectPath":  "CapabilityStandardTotalWarLikeMod.csproj"
+                                    }
+                     },
+                     {
+                         "name":  "capability_standard_participant_views",
+                         "target":  {
+                                        "type":  "path",
+                                        "value":  "mods/showcases/capability_standard/CapabilityStandardParticipantViewsMod",
+                                        "projectPath":  "CapabilityStandardParticipantViewsMod.csproj"
+                                    }
+                     },
+                     {
+                         "name":  "capability_standard_physics2d_showcase",
+                         "target":  {
+                                        "type":  "path",
+                                        "value":  "mods/showcases/capability_standard/CapabilityStandardPhysics2DShowcaseMod",
+                                        "projectPath":  "CapabilityStandardPhysics2DShowcaseMod.csproj"
+                                    }
+                     },
+                     {
+                         "name":  "entity_query_tactics",
+                         "target":  {
+                                        "type":  "path",
+                                        "value":  "mods/showcases/entity_query_tactics/EntityQueryTacticsShowcaseMod",
+                                        "projectPath":  "EntityQueryTacticsShowcaseMod.csproj"
+                                    }
+                     }
+                 ],
+    "adapters":  {
+                     "default":  "raylib"
+                 },
+    "projectHints":  [
+
+                     ]
 }

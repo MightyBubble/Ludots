@@ -17,7 +17,7 @@
 | `flowCellSizeCm` | MassFlow 流场 cell | 配置值，现有 preset 为 100 cm | `mods/.../MassNavigationConfig.json` |
 | `separationHashCellSizeCm` | MassFlow 分离哈希 cell | 配置值，现有 preset 为 100 cm | `mods/.../MassNavigationConfig.json` |
 | `hardResolveHashCellSizeCm` | MassFlow 硬解析哈希 cell | 配置值，现有 preset 为 50 cm | `mods/.../MassNavigationConfig.json` |
-| `Spatial.CellSizeCm` | 旧 Navigation2D physics broadphase cell | 配置/默认 100 cm | `src/Core/Ludots.Physics2D/...` |
+| `Spatial.CellSizeCm` | retired physics broadphase cell | 配置/默认 100 cm | `src/Core/Ludots.Physics2D/...` |
 
 主要漂移点：
 

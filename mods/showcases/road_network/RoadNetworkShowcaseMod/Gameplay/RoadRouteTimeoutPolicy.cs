@@ -9,6 +9,7 @@ namespace RoadNetworkShowcaseMod.Gameplay
         public bool Update(
             ref MovePlanRuntime state,
             Vector2 position,
+            Vector2 target,
             int waypointIndex,
             float dt,
             float minProgressCm,
@@ -23,7 +24,7 @@ namespace RoadNetworkShowcaseMod.Gameplay
             minProgressCm = Math.Max(0f, minProgressCm);
             stallTimeoutSeconds = Math.Max(0.05f, stallTimeoutSeconds);
             bool progressed = waypointIndex != state.LastResolvedWaypointIndex ||
-                              DistanceSquaredCm(position, state.LastProgressPositionCm) >= minProgressCm * minProgressCm;
+                              DistanceCm(state.LastProgressPositionCm, target) - DistanceCm(position, target) >= minProgressCm;
             if (progressed)
             {
                 Reset(ref state, position, waypointIndex);
@@ -47,12 +48,12 @@ namespace RoadNetworkShowcaseMod.Gameplay
             state = default;
         }
 
-        private static float DistanceSquaredCm(Vector2 current, Vector2 target)
+        private static float DistanceCm(Vector2 current, Vector2 target)
         {
             var delta = target - current;
             float dx = delta.X;
             float dy = delta.Y;
-            return (dx * dx) + (dy * dy);
+            return MathF.Sqrt((dx * dx) + (dy * dy));
         }
     }
 }

@@ -776,68 +776,8 @@ namespace {modId}
 
         static int BakeTiles(VertexMap map, List<(int cx, int cy)> targets, NavBuildConfig cfg, string tilesDir, string artifactsDir, bool writeArtifact, bool parallel, int maxDegree, int tileVersion, string logPrefix, string outDirRoot)
         {
-            var bakeTargets = new List<NavBakeTileCoord>(targets.Count);
-            for (int i = 0; i < targets.Count; i++)
-            {
-                bakeTargets.Add(new NavBakeTileCoord(targets[i].cx, targets[i].cy));
-            }
-
-            var config = new NavMeshBakeConfig
-            {
-                Mode = NavBakeNames.ModeOffline,
-                Algorithm = NavBakeNames.AlgorithmCdt,
-                Profiles = new List<NavMeshAgentProfileConfig>
-                {
-                    new NavMeshAgentProfileConfig
-                    {
-                        Id = "Legacy",
-                        MaxClimbCm = 0,
-                        MaxSlopeDeg = 90
-                    }
-                },
-                Layers = new List<NavLayerConfig>
-                {
-                    new NavLayerConfig { Id = "Ground", Layer = 0 }
-                },
-                Areas = new List<NavAreaCostConfig>()
-            };
-            var agentProfiles = new Ludots.Core.Navigation.AgentProfiles.AgentProfileRegistry(new[]
-            {
-                new Ludots.Core.Navigation.AgentProfiles.AgentProfileConfig
-                {
-                    Id = "Legacy",
-                    RadiusCm = SpatialScaleDefaults.CellCm / 2,
-                    HeightCm = SpatialScaleDefaults.CellCm,
-                    ClearanceCm = SpatialScaleDefaults.CellCm / 2,
-                    Mass = 1,
-                    Layer = 0
-                }
-            });
-
-            var context = new NavBakeContext
-            {
-                MapId = "legacy",
-                SourceUri = "Core:Generated/legacy-react-map.vtxm",
-                Terrain = new VertexMapLogicTerrainField(map),
-                Obstacles = new NavObstacleSet(),
-                Config = config,
-                AgentProfiles = agentProfiles,
-                Targets = bakeTargets,
-                BuildConfig = cfg,
-                TileVersion = (uint)tileVersion,
-                Mode = NavBakeMode.Offline,
-                Algorithm = NavBakeAlgorithmKind.Cdt,
-                Execution = new NavBakeExecutionOptions
-                {
-                    Parallel = parallel,
-                    MaxDegreeOfParallelism = Math.Max(1, maxDegree)
-                }
-            };
-
-            var result = new NavBakeService(new CdtNavBakeAlgorithm()).Bake(context);
-            WriteLegacyNavBakeResult(result, tilesDir, artifactsDir, writeArtifact, logPrefix);
-            Console.WriteLine($"{logPrefix} done. ok={result.SuccessCount} fail={result.FailureCount} outDir={Path.GetFullPath(outDirRoot)}");
-            return result.FailureCount == 0 ? 0 : 1;
+            throw new InvalidOperationException(
+                "BakeTiles requires an authored NavMeshBakeConfig from the unified config pipeline; generated layer/profile defaults are forbidden.");
         }
 
         static void WriteNavBakeResultToRepository(string repoRoot, string mapId, NavBakeResult result, bool writeArtifact, string logPrefix)

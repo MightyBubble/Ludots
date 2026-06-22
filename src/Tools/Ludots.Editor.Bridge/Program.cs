@@ -478,82 +478,10 @@ app.MapPost("/api/nav/bake-react", async (HttpRequest req) =>
                 config = new { dirtyOnly, includeNeighbors, heightScale, minUpDot, cliffThreshold, tileVersion }
             });
         }
-        var cfg = new NavBuildConfig(heightScale, minUpDot, cliffThreshold);
-
-        var navConfig = new NavMeshBakeConfig
+        return Results.BadRequest(new
         {
-            Mode = NavBakeNames.ModeOffline,
-            Algorithm = NavBakeNames.AlgorithmCdt,
-            Profiles = new List<NavMeshAgentProfileConfig>
-            {
-                new NavMeshAgentProfileConfig { Id = "Legacy", MaxClimbCm = 0, MaxSlopeDeg = 90 }
-            },
-            Layers = new List<NavLayerConfig>
-            {
-                new NavLayerConfig { Id = "Ground", Layer = 0 }
-            },
-            Areas = new List<NavAreaCostConfig>()
-        };
-        var agentProfiles = new Ludots.Core.Navigation.AgentProfiles.AgentProfileRegistry(new[]
-        {
-            new Ludots.Core.Navigation.AgentProfiles.AgentProfileConfig
-            {
-                Id = "Legacy",
-                RadiusCm = Ludots.Core.Spatial.SpatialScaleDefaults.CellCm / 2,
-                HeightCm = Ludots.Core.Spatial.SpatialScaleDefaults.CellCm,
-                ClearanceCm = Ludots.Core.Spatial.SpatialScaleDefaults.CellCm / 2,
-                Mass = 1,
-                Layer = 0
-            }
-        });
-
-        var bakeContext = new NavBakeContext
-        {
-            MapId = "editor-cdt-preview",
-            SourceUri = ToEditorUploadSourceUri(mapFile.FileName),
-            Terrain = new VertexMapLogicTerrainField(map),
-            Obstacles = new NavObstacleSet(),
-            Config = navConfig,
-            AgentProfiles = agentProfiles,
-            Targets = targets,
-            BuildConfig = cfg,
-            TileVersion = (uint)tileVersion,
-            Mode = NavBakeMode.Offline,
-            Algorithm = NavBakeAlgorithmKind.Cdt,
-            Execution = new NavBakeExecutionOptions
-            {
-                Parallel = parallel,
-                MaxDegreeOfParallelism = Math.Max(1, maxDegree)
-            }
-        };
-
-        var bakeResult = new NavBakeService(new CdtNavBakeAlgorithm()).Bake(bakeContext);
-
-        int okCount = 0;
-        int failCount = 0;
-        var tiles = new List<object>(bakeResult.Entries.Count);
-        var artifacts = new List<object>();
-        for (int i = 0; i < bakeResult.Entries.Count; i++)
-        {
-            var r = bakeResult.Entries[i];
-            if (r.Success) okCount++; else failCount++;
-            if (r.Success && r.Tile != null)
-            {
-                tiles.Add(new { cx = r.Target.ChunkX, cy = r.Target.ChunkY, layer = r.Layer, base64 = Convert.ToBase64String(r.ToTileBytes()) });
-            }
-            if (writeArtifact)
-            {
-                artifacts.Add(new { cx = r.Target.ChunkX, cy = r.Target.ChunkY, json = SerializeArtifact(r.Artifact) });
-            }
-        }
-
-        return Results.Ok(new
-        {
-            ok = true,
-            okCount,
-            failCount,
-            tiles,
-            artifacts,
+            ok = false,
+            error = "Editor CDT preview requires an authored NavMeshBakeConfig from the unified config pipeline; generated layer/profile defaults are forbidden.",
             targetsCount = targets.Count,
             config = new { dirtyOnly, includeNeighbors, heightScale, minUpDot, cliffThreshold, tileVersion }
         });

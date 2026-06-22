@@ -108,8 +108,6 @@ namespace Ludots.Core.Scripting
         // IndicatorRequestBuffer removed �?unified into Performer direct API
         public const string PerformerDefinitionRegistry = "PerformerDefinitionRegistry";
         public const string PerformerEntityRuntime = "PerformerEntityRuntime";
-        public const string Navigation2DRuntime = "Navigation2DRuntime";
-        public const string Navigation2DTickPolicy = "Navigation2DTickPolicy";
         public const string NavMeshBakeConfig = "NavMeshBakeConfig";
         public const string NavMeshProfiles = "NavMeshProfiles";
         public const string NavQueryServices = "NavQueryServices";

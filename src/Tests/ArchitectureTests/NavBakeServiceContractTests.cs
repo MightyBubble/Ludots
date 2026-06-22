@@ -16,6 +16,8 @@ namespace Ludots.Tests.Architecture
     [TestFixture]
     public sealed class NavBakeServiceContractTests
     {
+        private const string GroundLayerId = "Ground";
+
         [Test]
         public void NavBakeService_RunsSingleContextForHeadlessAndBridgeAdapters()
         {
@@ -158,7 +160,7 @@ namespace Ludots.Tests.Architecture
                 },
                 Layers = new List<NavLayerConfig>
                 {
-                    new NavLayerConfig { Id = "Ground", Layer = 0 }
+                    new NavLayerConfig { Id = GroundLayerId, Layer = 0 }
                 },
                 Areas = new List<NavAreaCostConfig>()
             };

@@ -83,13 +83,18 @@ namespace RoadNetworkShowcaseMod.Systems
                     RoadRouteExecutionProfile execution = _profiles.ResolveExecution(entity);
 
                     if (orderRuntime.LifecycleState == MovePlanLifecycleState.Active &&
-                        _plans.TryGetPlan(entity, activeOrder.OrderId, out _))
+                        _plans.TryGetPlan(entity, activeOrder.OrderId, out MovePlanView plan))
                     {
                         if (_arrival.HasReachedFinalTarget(in activeOrder, position, execution.FinalArrivalRadiusCm))
                         {
                             orderRuntime.LifecycleState = MovePlanLifecycleState.Arrived;
                         }
-                        else if (_timeout.Update(ref planRuntime, position, planRuntime.CurrentWaypointIndex, dt, execution.MinProgressCm, execution.StallTimeoutSeconds))
+                        else if (!TryResolveTimeoutTarget(in plan, planRuntime.CurrentWaypointIndex, in activeOrder, out Vector2 timeoutTarget))
+                        {
+                            orderRuntime.LifecycleState = MovePlanLifecycleState.NeedsReplan;
+                            orderRuntime.FailureReason = MovePlanFailureReason.RouteEndedEarly;
+                        }
+                        else if (_timeout.Update(ref planRuntime, position, timeoutTarget, planRuntime.CurrentWaypointIndex, dt, execution.MinProgressCm, execution.StallTimeoutSeconds))
                         {
                             orderRuntime.TimeoutCount++;
                             orderRuntime.LifecycleState = MovePlanLifecycleState.NeedsReplan;
@@ -176,6 +181,23 @@ namespace RoadNetworkShowcaseMod.Systems
             }
 
             return true;
+        }
+
+        private static bool TryResolveTimeoutTarget(in MovePlanView plan, int waypointIndex, in Order activeOrder, out Vector2 target)
+        {
+            if (plan.TryGetWaypoint(Math.Clamp(waypointIndex, 0, Math.Max(0, plan.Count - 1)), out target))
+            {
+                return true;
+            }
+
+            if (RoadRouteFinalTargetResolver.TryResolve(in activeOrder, out Vector3 finalTargetWorldCm))
+            {
+                target = new Vector2(finalTargetWorldCm.X, finalTargetWorldCm.Z);
+                return true;
+            }
+
+            target = default;
+            return false;
         }
 
         private void CompleteRoadOrder(Entity entity)

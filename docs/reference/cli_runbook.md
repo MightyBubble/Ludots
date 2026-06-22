@@ -136,7 +136,7 @@ A single `resolve` or `launch` command may accept multiple selectors.
 .\scripts\run-mod-launcher.cmd cli resolve camera_acceptance --adapter raylib
 .\scripts\run-mod-launcher.cmd cli resolve camera_acceptance_hotpath --adapter raylib
 .\scripts\run-mod-launcher.cmd cli resolve camera_acceptance nav_playground --adapter web
-.\scripts\run-mod-launcher.cmd cli resolve --mod CameraAcceptanceMod --mod Navigation2DPlaygroundMod --adapter raylib --json
+.\scripts\run-mod-launcher.cmd cli resolve --mod CameraAcceptanceMod --mod CapabilityStandardMassNavigationLargeWorld10kMod --adapter raylib --json
 ```
 
 `resolve` surfaces:
@@ -188,7 +188,7 @@ Rules:
 .\scripts\run-mod-launcher.cmd cli binding list
 .\scripts\run-mod-launcher.cmd cli binding set camera_acceptance --path mods/fixtures/camera/CameraAcceptanceMod --project CameraAcceptanceMod.csproj
 .\scripts\run-mod-launcher.cmd cli binding set camera_acceptance_hotpath --path mods/fixtures/camera/CameraAcceptanceHotpathEntryMod --project CameraAcceptanceHotpathEntryMod.csproj
-.\scripts\run-mod-launcher.cmd cli binding set nav_playground --path mods/Navigation2DPlaygroundMod --project Navigation2DPlaygroundMod.csproj
+.\scripts\run-mod-launcher.cmd cli binding set mass_navigation --path mods/showcases/capability_standard_mass_navigation_large_world_10k/CapabilityStandardMassNavigationLargeWorld10kMod --project CapabilityStandardMassNavigationLargeWorld10kMod.csproj
 ```
 
 Notes:

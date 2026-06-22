@@ -95,8 +95,18 @@ namespace RoadNetworkShowcaseMod.Systems
 
                     if (selection.Completed)
                     {
-                        orderRuntime.LifecycleState = MovePlanLifecycleState.NeedsReplan;
-                        orderRuntime.FailureReason = MovePlanFailureReason.RouteEndedEarly;
+                        var arrival = new RoadRouteArrivalPolicy();
+                        if (arrival.HasReachedFinalTarget(in activeOrder, position, execution.FinalArrivalRadiusCm))
+                        {
+                            orderRuntime.LifecycleState = MovePlanLifecycleState.Arrived;
+                            orderRuntime.FailureReason = MovePlanFailureReason.None;
+                        }
+                        else
+                        {
+                            orderRuntime.LifecycleState = MovePlanLifecycleState.NeedsReplan;
+                            orderRuntime.FailureReason = MovePlanFailureReason.RouteEndedEarly;
+                        }
+
                         continue;
                     }
 

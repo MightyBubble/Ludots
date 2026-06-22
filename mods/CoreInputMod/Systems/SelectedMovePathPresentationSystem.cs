@@ -10,7 +10,6 @@ using Ludots.Core.Gameplay.GAS.Components;
 using Ludots.Core.Gameplay.GAS.Orders;
 using Ludots.Core.Input.Orders;
 using Ludots.Core.Input.Selection;
-using Ludots.Core.Navigation2D.Components;
 using Ludots.Core.Navigation.Pathing;
 using Ludots.Core.Presentation.Hud;
 using Ludots.Core.Presentation.Rendering;
@@ -204,13 +203,10 @@ namespace CoreInputMod.Systems
             Entity inspected = primaryViewed;
 
             bool hasOrderBuffer = inspected != Entity.Null && _world.IsAlive(inspected) && _world.Has<OrderBuffer>(inspected);
-            bool hasNavAgent = inspected != Entity.Null && _world.IsAlive(inspected) && _world.Has<NavAgent2D>(inspected);
             bool hasPosition2D = inspected != Entity.Null && _world.IsAlive(inspected) && _world.Has<Position2D>(inspected);
             bool hasVelocity2D = inspected != Entity.Null && _world.IsAlive(inspected) && _world.Has<Velocity2D>(inspected);
-            bool hasNavGoal = inspected != Entity.Null && _world.IsAlive(inspected) && _world.Has<NavGoal2D>(inspected);
             int activeMoveCount = 0;
             int queuedMoveCount = 0;
-            string navGoalSummary = "goal=(none)";
             string positionSummary = "pos2D=(none)";
             string worldSummary = "world=(none)";
             if (hasOrderBuffer && TryResolveMoveOrderTypeIds(out int[] moveOrderTypeIds))
@@ -242,11 +238,6 @@ namespace CoreInputMod.Systems
                     Vector2 world = worldPosition.Value.ToVector2();
                     worldSummary = $"world=({world.X:0.#},{world.Y:0.#})";
                 }
-
-                if (_world.TryGet(inspected, out NavGoal2D navGoal))
-                {
-                    navGoalSummary = $"goal={navGoal.Kind}@({navGoal.TargetCm.X.ToFloat():0.#},{navGoal.TargetCm.Y.ToFloat():0.#}) r={navGoal.RadiusCm.ToFloat():0.#}";
-                }
             }
 
             return
@@ -254,8 +245,8 @@ namespace CoreInputMod.Systems
                 $"viewer={DescribeEntity(selectionViewer)} view={selectionViewKey} container={DescribeEntity(viewedContainer)} " +
                 $"selCount={selectionCount} primary={DescribeEntity(primaryViewed)} " +
                 $"inspect={DescribeEntity(inspected)} orderBuf={hasOrderBuffer} activeMove={activeMoveCount} queuedMove={queuedMoveCount} " +
-                $"navAgent={hasNavAgent} pos2D={hasPosition2D} vel2D={hasVelocity2D} navGoal={hasNavGoal} " +
-                $"{positionSummary} {worldSummary} {navGoalSummary} " +
+                $"pos2D={hasPosition2D} vel2D={hasVelocity2D} " +
+                $"{positionSummary} {worldSummary} " +
                 $"overlay+line={overlayLineDelta} overlay+circle={overlayCircleDelta}";
         }
 

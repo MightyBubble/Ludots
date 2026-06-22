@@ -1,6 +1,7 @@
 using Arch.Core;
 using Ludots.Core.Gameplay.GAS;
 using Ludots.Core.Gameplay.GAS.Components;
+using Ludots.Core.Gameplay.GAS.Presentation;
 using Ludots.Core.Gameplay.GAS.Registry;
 using Ludots.Core.Gameplay.GAS.Systems;
 using NUnit.Framework;
@@ -261,6 +262,63 @@ namespace Ludots.Tests.GAS
 
             That(attributes.GetCurrent(healthId), Is.EqualTo(50f));
             That(attributes.GetBase(healthId), Is.EqualTo(100f));
+        }
+
+        [Test]
+        public void InstantDamage_InlineProposalPath_PublishesEffectAppliedDelta()
+        {
+            int healthId = EnsureAttribute("Health");
+            AttributeRegistry.SetConstraints(healthId, AttributeRegistry.AttributeConstraints.ClampToBase());
+
+            using var world = World.Create();
+            var source = world.Create();
+            var target = world.Create(new AttributeBuffer());
+            ref var attributes = ref world.Get<AttributeBuffer>(target);
+            attributes.SetBase(healthId, 100f);
+            attributes.SetCurrent(healthId, 60f);
+
+            var templates = new EffectTemplateRegistry();
+            var modifiers = default(EffectModifiers);
+            modifiers.Add(healthId, ModifierOp.Add, -10f);
+            templates.Register(1201, new EffectTemplateData
+            {
+                TagId = 1,
+                PresetType = EffectPresetType.InstantDamage,
+                LifetimeKind = EffectLifetimeKind.Instant,
+                ClockId = GasClockId.Step,
+                DurationTicks = 0,
+                PeriodTicks = 0,
+                Modifiers = modifiers,
+            });
+
+            var requests = new EffectRequestQueue();
+            var presentationEvents = new GasPresentationEventBuffer(8);
+            var proposal = new EffectProposalProcessingSystem(
+                world,
+                requests,
+                templates: templates,
+                presentationEvents: presentationEvents);
+
+            requests.Publish(new EffectRequest
+            {
+                RootId = 1,
+                Source = source,
+                Target = target,
+                TargetContext = Entity.Null,
+                TemplateId = 1201,
+            });
+
+            proposal.Update(0f);
+
+            That(attributes.GetCurrent(healthId), Is.EqualTo(50f));
+            That(presentationEvents.Count, Is.EqualTo(1));
+            ref readonly GasPresentationEvent evt = ref presentationEvents.Events[0];
+            That(evt.Kind, Is.EqualTo(GasPresentationEventKind.EffectApplied));
+            That(evt.Actor, Is.EqualTo(source));
+            That(evt.Target, Is.EqualTo(target));
+            That(evt.EffectTemplateId, Is.EqualTo(1201));
+            That(evt.AttributeId, Is.EqualTo(healthId));
+            That(evt.Delta, Is.EqualTo(-10f));
         }
 
         [Test]

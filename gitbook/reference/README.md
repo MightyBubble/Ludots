@@ -14,6 +14,7 @@ This section collects current runbooks and reference pages.
 - [MassNavigation Execution Avoidance and Targets](mass-navigation-execution-avoidance-and-targets.md)
 - [Routing To Mass Execution](routing-to-mass-execution.md)
 - [Move Planning MassFlow Road Execution](move-planning-massflow-road-execution.md)
+- [MassFlow Routing Legacy Execution Removal](massflow-routing-legacy-execution-removal.md)
 - [Spatial Scale Configuration](spatial-scale-configuration.md)
 - [Project Map](project-map.md)
 - [Publishing and Access](publishing-and-access.md)

@@ -221,16 +221,16 @@ namespace Ludots.Tests.GAS
         }
 
         [Test]
-        public void RoadNetworkShowcaseMovePlanExecution_DoesNotReferenceNavigation2DExecutionComponents()
+        public void RoadNetworkShowcaseMovePlanExecution_DoesNotReferenceLegacyExecutionComponents()
         {
             string repoRoot = FindRepoRoot();
             string showcaseRoot = Path.Combine(repoRoot, "mods", "showcases", "road_network", "RoadNetworkShowcaseMod");
             string[] forbiddenTokens =
             {
-                "NavGoal2D",
-                "NavAgent2D",
-                "NavKinematics2D",
-                "Navigation2D",
+                "LegacyPointGoalComponent",
+                "LegacyAgentComponent",
+                "LegacyKinematicsComponent",
+                "LegacyDomainRoot",
             };
 
             List<string> hits = Directory.EnumerateFiles(showcaseRoot, "*.cs", SearchOption.AllDirectories)
@@ -240,7 +240,7 @@ namespace Ludots.Tests.GAS
                     .Select(item => $"{Path.GetRelativePath(repoRoot, item.file)}:{item.lineIndex + 1}: {item.line.Trim()}"))
                 .ToList();
 
-            Assert.That(hits, Is.Empty, "Road-network move-plan execution must stay on Core MovePlanning + MassFlow, not the deprecated Navigation2D sink:" + Environment.NewLine + string.Join(Environment.NewLine, hits));
+            Assert.That(hits, Is.Empty, "Road-network move-plan execution must stay on Core MovePlanning + MassFlow, not the deprecated execution sink:" + Environment.NewLine + string.Join(Environment.NewLine, hits));
         }
 
         [Test]
@@ -604,7 +604,7 @@ namespace Ludots.Tests.GAS
             Assert.That(
                 engine.GetService(MassNavigationKeys.SimulationRuntime),
                 Is.TypeOf<MassNavigationSimulationRuntime>(),
-                "Road-network waypoint following must bootstrap the MassCrowd execution runtime instead of the deleted Navigation2D steering stack.");
+                "Road-network waypoint following must bootstrap the MassCrowd execution runtime instead of the deleted legacy steering stack.");
 
             var board = (NodeGraphBoard)engine.CurrentMapSession.PrimaryBoard;
             RoadNetworkScenarioDefinition scenario = RoadNetworkScenarioDefinition.Create(board.LoadedChunksSource.ChunkSizeCm);
@@ -907,8 +907,9 @@ namespace Ludots.Tests.GAS
             }
 
             var finalPosition = engine.World.Get<WorldPositionCm>(actor).ToWorldCmInt2();
+            string diagnostics = BuildPlayableMoveDiagnostics(engine, "Blue Vanguard");
             Assert.That(movementStarted, Is.True, "Road move never entered the fixed-step movement pipeline.");
-            Assert.That(completed, Is.True, $"Road move should complete instead of stalling mid-route. FurthestX={furthestXcm}, Final=({finalPosition.X},{finalPosition.Y}), IncomingQueue={orderQueue.Count}");
+            Assert.That(completed, Is.True, $"Road move should complete instead of stalling mid-route. FurthestX={furthestXcm}, Final=({finalPosition.X},{finalPosition.Y}), IncomingQueue={orderQueue.Count}. {diagnostics}");
             Assert.That(furthestXcm, Is.GreaterThan(17000), $"Column should traverse the full eastward road route, not stop in the currently loaded chunk window. Final=({finalPosition.X},{finalPosition.Y}), IncomingQueue={orderQueue.Count}");
             Assert.That(finalPosition.X, Is.EqualTo(18000).Within(80));
             Assert.That(finalPosition.Y, Is.EqualTo(0).Within(80));
@@ -1161,6 +1162,28 @@ namespace Ludots.Tests.GAS
             File.WriteAllText(Path.Combine(outputDir, "trace.jsonl"), BuildTimeoutTrace(refreshed, abandoned));
             File.WriteAllText(Path.Combine(outputDir, "path.mmd"), BuildTimeoutPathMermaid());
             File.WriteAllText(Path.Combine(outputDir, "summary.json"), BuildTimeoutSummary(refreshed, abandoned));
+        }
+
+        [Test]
+        public void RoadRouteTimeoutPolicy_CountsStall_WhenMotionDoesNotCloseCurrentTarget()
+        {
+            var policy = new RoadRouteTimeoutPolicy();
+            var runtime = new MovePlanRuntime();
+            var target = new Vector2(300f, 0f);
+
+            Assert.That(
+                policy.Update(ref runtime, new Vector2(100f, 0f), target, waypointIndex: 35, dt: 0f, minProgressCm: 24f, stallTimeoutSeconds: 1f),
+                Is.False);
+
+            Assert.That(
+                policy.Update(ref runtime, new Vector2(110f, 20f), target, waypointIndex: 35, dt: 0.5f, minProgressCm: 24f, stallTimeoutSeconds: 1f),
+                Is.False);
+            Assert.That(runtime.StallSeconds, Is.EqualTo(0.5f).Within(0.001f));
+
+            Assert.That(
+                policy.Update(ref runtime, new Vector2(120f, -10f), target, waypointIndex: 35, dt: 0.6f, minProgressCm: 24f, stallTimeoutSeconds: 1f),
+                Is.True);
+            Assert.That(runtime.LastProgressPositionCm, Is.EqualTo(new Vector2(100f, 0f)));
         }
 
         private static Dictionary<string, object> CreateGlobals(IPathService pathService, PathStore pathStore, int moveToOrderTypeId, int roadMoveFollowOrderTypeId = 171)
@@ -2060,6 +2083,26 @@ namespace Ludots.Tests.GAS
                     sb.Append(runtime.FailureReason);
                     sb.Append('#');
                     sb.Append(runtime.TimeoutCount);
+                }
+
+                if (engine.World.Has<MovePlanRuntime>(entity))
+                {
+                    ref readonly MovePlanRuntime planRuntime = ref engine.World.Get<MovePlanRuntime>(entity);
+                    sb.Append(" plan=");
+                    sb.Append(planRuntime.CurrentWaypointIndex);
+                    sb.Append('/');
+                    sb.Append(planRuntime.PointCount);
+                    sb.Append(" stall=");
+                    sb.Append(planRuntime.StallSeconds.ToString("0.###"));
+                    sb.Append(" last=(");
+                    sb.Append(planRuntime.LastProgressPositionCm.X.ToString("0.##"));
+                    sb.Append(',');
+                    sb.Append(planRuntime.LastProgressPositionCm.Y.ToString("0.##"));
+                    sb.Append(") final=(");
+                    sb.Append(planRuntime.FinalGoalXcm);
+                    sb.Append(',');
+                    sb.Append(planRuntime.FinalGoalYcm);
+                    sb.Append(')');
                 }
             }
 

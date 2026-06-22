@@ -17,7 +17,7 @@
 - 视觉可见性与视觉 LOD：`CullState`、`CameraCullingSystem`
 - 层级过滤表达：`EntityLayer`、`LayerMask`
 - Navigation / Physics 模式表达：`NavPhysicsMode`、`NavSolverMode`
-- ORCA / Hybrid / Sonar steering：`Navigation2DSteeringSystem2D`
+- ORCA / Sonar steering kernels：`Ludots.Core.Navigation.Avoidance`
 - OBB / Box 物理碰撞：`CollisionAlgorithms2D`
 - AOI 服务接口：`ILoadedChunks`
 - Board 级空间服务切换：`ApplyBoardSpatialConfig`
@@ -193,7 +193,7 @@
 - `Position2D` 只服务 `FullPhysics2D` 热路径
 - crowd SoA 位置只服务 `MassCrowd` 热路径
 - 同一个 entity 不能同时被 `FullPhysics2D` 与 `MassCrowd` 双写
-- `ForceInput2D`、`NavDesiredVelocity2D` 是派生输出，不是位置真相
+- `ForceInput2D` 和 MassFlow desired movement state 是派生输出，不是位置真相
 
 允许存在的重复数据只有两类：
 
@@ -237,7 +237,7 @@ AOI 的正式服务语义如下：
 - `EntityLayer` / `LayerMask`
 - `NavActor` / `NavPhysicsMode` / `NavSolverMode`
 - `Physics2DToWorldPositionSyncSystem`
-- `Navigation2DSteeringSystem2D`
+- `MassNavigationSimulationRuntime`
 - `CullState` / `CameraCullingSystem`
 - `ILoadedChunks`
 - `BoardRef`

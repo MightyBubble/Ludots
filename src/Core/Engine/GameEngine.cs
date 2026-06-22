@@ -58,7 +58,6 @@ using Ludots.Core.Presentation.Performers;
 using Ludots.Core.NodeLibraries.GASGraph;
 using Ludots.Core.Gameplay.Teams;
 using Ludots.Core.Spatial;
-using Ludots.Core.Navigation2D.Runtime;
 using Ludots.Core.Mathematics;
 using Ludots.Core.Mathematics.FixedPoint;
 using Ludots.Core.Components;
@@ -70,7 +69,6 @@ using Ludots.Core.Navigation.NavMesh;
 using Ludots.Core.Navigation.NavMesh.Config;
 using Ludots.Core.Navigation.Terrain;
 using Ludots.Core.Navigation.AOI;
-using Ludots.Core.Engine.Navigation2D;
 using Ludots.Core.Diagnostics;
 using Ludots.Core.Map.Board;
 using Ludots.Core.Gameplay.Camera.FollowTargets;
@@ -221,7 +219,6 @@ namespace Ludots.Core.Engine
         private Ludots.Core.Gameplay.GAS.GasController _gasController;
         private TimeFlowService _timeFlow;
         private int _physics2DBaseHz;
-        private int _navigation2DBaseHz;
 
         // Spatial systems — kept for hot-swap on map load
         private WorldToGridSyncSystem _worldToGridSyncSystem;
@@ -603,10 +600,7 @@ namespace Ludots.Core.Engine
             var gasClockConfig = gasClockConfigLoader.Load(ConfigCatalog, ConfigConflictReport);
             var physics2dClockConfigLoader = new Physics2DClockConfigLoader(ConfigPipeline);
             var physics2dClockConfig = physics2dClockConfigLoader.Load(ConfigCatalog, ConfigConflictReport);
-            var navigation2dClockConfigLoader = new Navigation2DClockConfigLoader(ConfigPipeline);
-            var navigation2dClockConfig = navigation2dClockConfigLoader.Load(ConfigCatalog, ConfigConflictReport);
             _physics2DBaseHz = physics2dClockConfig.PhysicsHz;
-            _navigation2DBaseHz = navigation2dClockConfig.NavigationHz;
             new AttributeConstraintsLoader(ConfigPipeline).Load(ConfigCatalog, ConfigConflictReport);
             var graphProgramRegistry = new GraphProgramRegistry();
             var graphOutputSchemas = new GraphOutputSchemaRegistry();
@@ -954,7 +948,6 @@ namespace Ludots.Core.Engine
             var clockSystem = new GasClockSystem(clock, clockStepPolicy);
             var physics2dTickPolicy = new Physics2DTickPolicy(physics2dClockConfig.PhysicsHz, physics2dClockConfig.MaxStepsPerFixedTick);
             var physics2dBroadphasePolicy = new Physics2DBroadphasePolicy(physics2dClockConfig.Broadphase);
-            var navigation2dTickPolicy = new Navigation2DTickPolicy(navigation2dClockConfig.NavigationHz, navigation2dClockConfig.MaxStepsPerFixedTick);
             _physics2DController = new Physics2DController(World, physics2dTickPolicy, physics2dClockConfig.PhysicsHz, CreateContext, TriggerManager.FireEvent);
             var simulationLoopController = new SimulationLoopController(this);
             _gasController = new Ludots.Core.Gameplay.GAS.GasController(World, clockStepPolicy, simulationLoopController, CreateContext, TriggerManager.FireEvent);
@@ -1018,7 +1011,6 @@ namespace Ludots.Core.Engine
             SetService(CoreServiceKeys.GasClocks, gasClocks);
             SetService(CoreServiceKeys.Physics2DTickPolicy, physics2dTickPolicy);
             SetService(CoreServiceKeys.Physics2DBroadphasePolicy, physics2dBroadphasePolicy);
-            SetService(CoreServiceKeys.Navigation2DTickPolicy, navigation2dTickPolicy);
             SetService(CoreServiceKeys.Physics2DController, _physics2DController);
             SetService(CoreServiceKeys.SimulationLoopController, simulationLoopController);
             SetService(CoreServiceKeys.GasController, _gasController);
@@ -1165,57 +1157,7 @@ namespace Ludots.Core.Engine
             _spatialPartitionUpdateSystem = new SpatialPartitionUpdateSystem(World, _spatialPartition, WorldSizeSpec);
             RegisterSystem(_worldToGridSyncSystem, SystemGroup.PostMovement);
             RegisterSystem(_spatialPartitionUpdateSystem, SystemGroup.PostMovement);
-
-            if (config.Navigation2D.Enabled)
-            {
-                var navigation2dRuntime = new Navigation2DRuntime(config.Navigation2D, gridCellSizeCm: SpatialCoords.GridCellSizeCm, loadedChunks: null);
-                SetService(CoreServiceKeys.Navigation2DRuntime, navigation2dRuntime);
-
-                const string nav2dSystemTypeName = "Ludots.Core.Physics2D.Systems.Navigation2DSimulationSystem2D";
-                const string physics2dSystemTypeName = "Ludots.Core.Physics2D.Ticking.Physics2DSimulationSystem";
-                const string worldSyncSystemTypeName = "Ludots.Core.Physics2D.Systems.Physics2DToWorldPositionSyncSystem";
-                const string physics2dAssemblyName = "Ludots.Physics2D";
-                var nav2dSystemType = Type.GetType($"{nav2dSystemTypeName}, {physics2dAssemblyName}", throwOnError: false);
-                if (nav2dSystemType == null)
-                {
-                    AssemblyLoadContext.Default.LoadFromAssemblyName(new AssemblyName(physics2dAssemblyName));
-                    nav2dSystemType = Type.GetType($"{nav2dSystemTypeName}, {physics2dAssemblyName}", throwOnError: false);
-                }
-
-                if (nav2dSystemType == null)
-                {
-                    throw new InvalidOperationException("Navigation2D.Enabled=true requires Ludots.Physics2D and Navigation2DSimulationSystem2D to be loadable.");
-                }
-                else
-                {
-                    var physics2dSystemType = Type.GetType($"{physics2dSystemTypeName}, {physics2dAssemblyName}", throwOnError: false);
-                    var worldSyncSystemType = Type.GetType($"{worldSyncSystemTypeName}, {physics2dAssemblyName}", throwOnError: false);
-                    if (physics2dSystemType == null || worldSyncSystemType == null)
-                    {
-                        throw new InvalidOperationException("Navigation2D.Enabled=true requires Physics2DSimulationSystem and Physics2DToWorldPositionSyncSystem to be loadable.");
-                    }
-
-                    RegisterSystem(new Ludots.Core.Navigation2D.Systems.NavOrderAgentBootstrapSystem(World), SystemGroup.InputCollection);
-
-                    var nav2dSystemObj = Activator.CreateInstance(nav2dSystemType, World, navigation2dRuntime, clock, navigation2dTickPolicy);
-                    if (nav2dSystemObj is ISystem<float> nav2dSystem)
-                    {
-                        RegisterSystem(nav2dSystem, SystemGroup.InputCollection);
-                    }
-
-                    var physics2dSystemObj = Activator.CreateInstance(physics2dSystemType, World, clock, physics2dTickPolicy, physics2dBroadphasePolicy);
-                    if (physics2dSystemObj is ISystem<float> physics2dSystem)
-                    {
-                        RegisterSystem(physics2dSystem, SystemGroup.InputCollection);
-                    }
-
-                    var worldSyncSystemObj = Activator.CreateInstance(worldSyncSystemType, World);
-                    if (worldSyncSystemObj is ISystem<float> worldSyncSystem)
-                    {
-                        RegisterSystem(worldSyncSystem, SystemGroup.PostMovement);
-                    }
-                }
-            }
+            RegisterPhysics2DSystems(clock, physics2dTickPolicy, physics2dBroadphasePolicy);
             
             // Phase 2: AbilityActivation
             RegisterSystem(orderBufferSystem, SystemGroup.AbilityActivation);
@@ -1376,11 +1318,6 @@ namespace Ludots.Core.Engine
             {
                 physics2dTickPolicy.SetTargetHz(ScaleRateHz(_physics2DBaseHz, _timeFlow.GetEffectiveScalePermille(TimeFlowDomainIds.Physics2D)));
             }
-
-            if (GetService(CoreServiceKeys.Navigation2DTickPolicy) is Navigation2DTickPolicy navigation2dTickPolicy)
-            {
-                navigation2dTickPolicy.SetTargetHz(ScaleRateHz(_navigation2DBaseHz, _timeFlow.GetEffectiveScalePermille(TimeFlowDomainIds.Navigation2D)));
-            }
         }
 
         private static int ScaleRateHz(int baseHz, int scalePermille)
@@ -1393,6 +1330,71 @@ namespace Ludots.Core.Engine
             long scaled = (long)baseHz * scalePermille;
             int targetHz = (int)((scaled + 999) / 1000);
             return Math.Max(1, targetHz);
+        }
+
+        private void RegisterPhysics2DSystems(
+            IClock clock,
+            Physics2DTickPolicy physics2dTickPolicy,
+            Physics2DBroadphasePolicy physics2dBroadphasePolicy)
+        {
+            const string physics2dAssemblyName = "Ludots.Physics2D";
+            const string physics2dSystemTypeName = "Ludots.Core.Physics2D.Ticking.Physics2DSimulationSystem";
+            const string worldSyncSystemTypeName = "Ludots.Core.Physics2D.Systems.Physics2DToWorldPositionSyncSystem";
+
+            Type? physics2dSystemType = TryResolveOptionalAssemblyType(physics2dAssemblyName, physics2dSystemTypeName);
+            Type? worldSyncSystemType = TryResolveOptionalAssemblyType(physics2dAssemblyName, worldSyncSystemTypeName);
+            if (physics2dSystemType == null && worldSyncSystemType == null)
+            {
+                return;
+            }
+
+            if (physics2dSystemType == null || worldSyncSystemType == null)
+            {
+                throw new InvalidOperationException(
+                    $"Physics2D startup requires both '{physics2dSystemTypeName}' and '{worldSyncSystemTypeName}' when '{physics2dAssemblyName}' is present.");
+            }
+
+            object? physics2dSystemObj = Activator.CreateInstance(
+                physics2dSystemType,
+                World,
+                clock,
+                physics2dTickPolicy,
+                physics2dBroadphasePolicy);
+            if (physics2dSystemObj is not ISystem<float> physics2dSystem)
+            {
+                throw new InvalidOperationException($"Failed to create Physics2D simulation system '{physics2dSystemTypeName}'.");
+            }
+
+            object? worldSyncSystemObj = Activator.CreateInstance(worldSyncSystemType, World);
+            if (worldSyncSystemObj is not ISystem<float> worldSyncSystem)
+            {
+                throw new InvalidOperationException($"Failed to create Physics2D world sync system '{worldSyncSystemTypeName}'.");
+            }
+
+            RegisterSystem(physics2dSystem, SystemGroup.InputCollection);
+            RegisterSystem(worldSyncSystem, SystemGroup.PostMovement);
+            GlobalContext["Ludots.Core.Physics2D.Ticking.Physics2DSimulationSystem"] = physics2dSystem;
+            GlobalContext["Ludots.Core.Physics2D.Systems.Physics2DToWorldPositionSyncSystem"] = worldSyncSystem;
+        }
+
+        private static Type? TryResolveOptionalAssemblyType(string assemblyName, string typeName)
+        {
+            Type? type = Type.GetType($"{typeName}, {assemblyName}", throwOnError: false);
+            if (type != null)
+            {
+                return type;
+            }
+
+            try
+            {
+                AssemblyLoadContext.Default.LoadFromAssemblyName(new AssemblyName(assemblyName));
+            }
+            catch (FileNotFoundException)
+            {
+                return null;
+            }
+
+            return Type.GetType($"{typeName}, {assemblyName}", throwOnError: false);
         }
 
         private static int RequireConfiguredOrderTypeId(
@@ -1891,11 +1893,6 @@ namespace Ludots.Core.Engine
                 RemoveService(CoreServiceKeys.LoadedGraphRuntime);
             }
 
-            if (TryGetService(CoreServiceKeys.Navigation2DRuntime, out Navigation2DRuntime navigation2dRuntime))
-            {
-                navigation2dRuntime.BindLoadedChunks(loadedChunks);
-            }
-
             // Update GlobalContext with rebuilt services
             SetService(CoreServiceKeys.WorldSizeSpec, WorldSizeSpec);
             SetService(CoreServiceKeys.SpatialCoordinateConverter, SpatialCoords);
@@ -2225,8 +2222,9 @@ namespace Ludots.Core.Engine
             bool hasNavServices = navRegistry != null && navProfiles != null;
             bool requiresGraphPathing = RequiresGraphPathing(pathingConfig);
             bool requiresNavMeshPathing = RequiresNavMeshPathing(pathingConfig);
+            bool requiresOnlyDirectPathing = RequiresOnlyDirectPathing(pathingConfig);
 
-            if (loadedGraphRuntime == null && !hasNavServices)
+            if (loadedGraphRuntime == null && !hasNavServices && !requiresOnlyDirectPathing)
             {
                 Diagnostics.Log.Info(
                     in LogChannels.Engine,
@@ -2262,6 +2260,10 @@ namespace Ludots.Core.Engine
             else if (loadedGraphRuntime != null)
             {
                 pathService = new AutoPathService(loadedGraphRuntime, agentProfiles, pathStore, pathingConfig);
+            }
+            else
+            {
+                pathService = new DirectPathService(pathStore);
             }
 
             SetService(CoreServiceKeys.PathingConfig, pathingConfig);
@@ -2329,6 +2331,25 @@ namespace Ludots.Core.Engine
             }
 
             return false;
+        }
+
+        private static bool RequiresOnlyDirectPathing(PathingConfig pathingConfig)
+        {
+            if (pathingConfig?.AgentTypes == null || pathingConfig.AgentTypes.Count == 0)
+            {
+                return false;
+            }
+
+            for (int i = 0; i < pathingConfig.AgentTypes.Count; i++)
+            {
+                var agent = pathingConfig.AgentTypes[i];
+                if (agent == null || agent.Selection?.Mode != PathSelectionMode.Direct)
+                {
+                    return false;
+                }
+            }
+
+            return true;
         }
 
         private static IPathService CreateDefaultNavMeshPathService(

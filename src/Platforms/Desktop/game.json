@@ -1,18 +1,17 @@
 {
-  "startupMapId": "entry",
-  "startupInputContexts": [
-    "Default_Gameplay",
-    "Moba_Gameplay"
-  ],
-  "windowWidth": 1280,
-  "windowHeight": 720,
-  "windowTitle": "Ludots Engine",
-  "targetFps": 60,
-  "modPaths": [
-    "../../../../../../mods/MobaDemoMod",
-    "../../../../../../mods/PerformanceVisualizationMod",
-    "../../../../../../mods/TerrainBenchmarkMod",
-    "../../../../../../mods/Physics2DPlaygroundMod",
-    "../../../../../../mods/Navigation2DPlaygroundMod"
-  ]
+    "startupMapId":  "entry",
+    "startupInputContexts":  [
+                                 "Default_Gameplay",
+                                 "Moba_Gameplay"
+                             ],
+    "windowWidth":  1280,
+    "windowHeight":  720,
+    "windowTitle":  "Ludots Engine",
+    "targetFps":  60,
+    "modPaths":  [
+                     "../../../../../../mods/MobaDemoMod",
+                     "../../../../../../mods/PerformanceVisualizationMod",
+                     "../../../../../../mods/TerrainBenchmarkMod",
+                     "../../../../../../mods/Physics2DPlaygroundMod"
+                 ]
 }

@@ -35,11 +35,13 @@ namespace Ludots.Core.Physics2D.Systems
 
                 if (pair.Penetration <= Slop) return;
 
+                ref var massA = ref pair.EntityA.Get<Mass2D>();
+                ref var massB = ref pair.EntityB.Get<Mass2D>();
                 Fix64 effectivePenetration = pair.Penetration - Slop;
                 Fix64 correctionAmount = effectivePenetration * CorrectionPercentage;
 
-                Fix64 invMassA = World.Has<SleepingTag>(pair.EntityA) ? Fix64.Zero : pair.MassA.InverseMass;
-                Fix64 invMassB = World.Has<SleepingTag>(pair.EntityB) ? Fix64.Zero : pair.MassB.InverseMass;
+                Fix64 invMassA = World.Has<SleepingTag>(pair.EntityA) ? Fix64.Zero : massA.InverseMass;
+                Fix64 invMassB = World.Has<SleepingTag>(pair.EntityB) ? Fix64.Zero : massB.InverseMass;
 
                 Fix64 totalInverseMass = invMassA + invMassB;
                 if (totalInverseMass < Epsilon) return;
