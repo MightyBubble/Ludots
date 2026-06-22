@@ -1,0 +1,141 @@
+[
+  {
+    "id": "combat_stance_team_one",
+    "components": {
+      "Name": { "Value": "Combat Stance Team One" },
+      "GameplayTagContainer": {},
+      "TagCountContainer": {}
+    }
+  },
+  {
+    "id": "combat_stance_team_two",
+    "components": {
+      "Name": { "Value": "Combat Stance Team Two" },
+      "GameplayTagContainer": {},
+      "TagCountContainer": {}
+    }
+  },
+  {
+    "id": "combat_stance_player_one",
+    "components": {
+      "Name": { "Value": "Combat Stance Player One" },
+      "GameplayTagContainer": {},
+      "TagCountContainer": {}
+    }
+  },
+  {
+    "id": "combat_stance_player_two",
+    "components": {
+      "Name": { "Value": "Combat Stance Player Two" },
+      "GameplayTagContainer": {},
+      "TagCountContainer": {}
+    }
+  },
+  {
+    "id": "combat_stance_vanguard",
+    "components": {
+      "Name": { "Value": "Combat Stance Vanguard" },
+      "Team": { "Id": 1 },
+      "PlayerOwner": { "PlayerId": 1 },
+      "WorldPositionCm": { "Value": { "X": 1000, "Y": 1000 } },
+      "OrderBuffer": {},
+      "BlackboardSpatialBuffer": {},
+      "BlackboardEntityBuffer": {},
+      "BlackboardIntBuffer": {},
+      "CombatStanceState": { "stance": "HoldFire" }
+    }
+  },
+  {
+    "id": "combat_stance_roadblock",
+    "components": {
+      "Name": { "Value": "Combat Stance Roadblock" },
+      "Team": { "Id": 2 },
+      "PlayerOwner": { "PlayerId": 2 },
+      "WorldPositionCm": { "Value": { "X": 1350, "Y": 1000 } },
+      "UtilityAiTargetPriority": { "bucket": "Low" }
+    }
+  },
+  {
+    "id": "combat_stance_guardian",
+    "components": {
+      "Name": { "Value": "Combat Stance Guardian" },
+      "Team": { "Id": 1 },
+      "WorldPositionCm": { "Value": { "X": 1000, "Y": 2000 } },
+      "OrderBuffer": {},
+      "BlackboardSpatialBuffer": {},
+      "BlackboardEntityBuffer": {},
+      "BlackboardIntBuffer": {},
+      "CombatStanceState": { "stance": "HoldFire" }
+    }
+  },
+  {
+    "id": "combat_stance_ward",
+    "components": {
+      "Name": { "Value": "Combat Stance Ward" },
+      "Team": { "Id": 1 },
+      "WorldPositionCm": { "Value": { "X": 1500, "Y": 2000 } }
+    }
+  },
+  {
+    "id": "combat_stance_guard_threat",
+    "components": {
+      "Name": { "Value": "Combat Stance Guard Threat" },
+      "Team": { "Id": 2 },
+      "WorldPositionCm": { "Value": { "X": 1580, "Y": 2000 } },
+      "UtilityAiTargetPriority": { "bucket": "Normal" }
+    }
+  },
+  {
+    "id": "combat_stance_switch_unit",
+    "components": {
+      "Name": { "Value": "Combat Stance Switch Unit" },
+      "Team": { "Id": 1 },
+      "WorldPositionCm": { "Value": { "X": 1000, "Y": 3000 } },
+      "OrderBuffer": {},
+      "BlackboardSpatialBuffer": {},
+      "BlackboardEntityBuffer": {},
+      "BlackboardIntBuffer": {},
+      "CombatStanceState": { "stance": "HoldFire" }
+    }
+  },
+  {
+    "id": "combat_stance_switch_attacker",
+    "components": {
+      "Name": { "Value": "Combat Stance Switch Attacker" },
+      "Team": { "Id": 2 },
+      "WorldPositionCm": { "Value": { "X": 1300, "Y": 3000 } },
+      "UtilityAiTargetPriority": { "bucket": "Normal" }
+    }
+  },
+  {
+    "id": "combat_stance_priority_unit",
+    "components": {
+      "Name": { "Value": "Combat Stance Priority Unit" },
+      "Team": { "Id": 1 },
+      "WorldPositionCm": { "Value": { "X": 1000, "Y": 4000 } },
+      "OrderBuffer": {},
+      "BlackboardSpatialBuffer": {},
+      "BlackboardEntityBuffer": {},
+      "BlackboardIntBuffer": {},
+      "CombatStanceState": { "stance": "HoldFire" }
+    }
+  },
+  {
+    "id": "combat_stance_priority_low_near",
+    "components": {
+      "Name": { "Value": "Combat Stance Priority Low Near" },
+      "Team": { "Id": 2 },
+      "WorldPositionCm": { "Value": { "X": 1250, "Y": 4000 } },
+      "UtilityAiTargetPriority": { "bucket": "Low" }
+    }
+  },
+  {
+    "id": "combat_stance_priority_critical_far",
+    "components": {
+      "Name": { "Value": "Combat Stance Priority Critical Far" },
+      "Team": { "Id": 2 },
+      "WorldPositionCm": { "Value": { "X": 1700, "Y": 4000 } },
+      "UtilityAiTargetPriority": { "bucket": "Critical" }
+    }
+  }
+]

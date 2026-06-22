@@ -108,6 +108,32 @@ namespace Ludots.Tests.GAS
         }
 
         [Test]
+        public void AiConfigLoader_CompilesUtilityAiDefaultStanceKey()
+        {
+            using var fixture = AiConfigFixture.Create();
+            fixture.WriteUtilityConfig(defaultStance: "Stance.ReturnFire");
+
+            var runtime = fixture.Load();
+
+            Assert.That(runtime.UtilityRuntime.Profiles[0].DefaultStanceId, Is.EqualTo(0));
+            Assert.That(runtime.UtilityRuntime.Authoring.TryGetStanceId("Stance.ReturnFire", out int stanceId), Is.True);
+            Assert.That(stanceId, Is.EqualTo(0));
+        }
+
+        [Test]
+        public void AiConfigLoader_RejectsUtilityAiDefaultStanceId()
+        {
+            using var fixture = AiConfigFixture.Create();
+            fixture.WriteUtilityConfig();
+            fixture.WriteProfilesJson("[ { \"id\": \"Profile.Basic\", \"DecisionIntervalSteps\": 1, \"MaxCandidates\": 32, \"DecisionMakers\": [ \"DM.Combat\" ], \"DefaultStanceId\": 0 } ]");
+
+            var ex = Assert.Throws<InvalidOperationException>(() => fixture.Load());
+
+            Assert.That(ex!.Message, Does.Contain("DefaultStanceId"));
+            Assert.That(ex.Message, Does.Contain("DefaultStance"));
+        }
+
+        [Test]
         public void AiConfigLoader_RejectsUtilityAiUnknownTargetFilter()
         {
             using var fixture = AiConfigFixture.Create();
@@ -318,7 +344,8 @@ namespace Ludots.Tests.GAS
                 string decisionAbilityKey = "Ability.Test.Attack",
                 string sharedCooldownTag = "Cooldown.Global.Attack",
                 bool includeGraphInput = false,
-                string graphKey = "Graph.AI.Score")
+                string graphKey = "Graph.AI.Score",
+                string? defaultStance = null)
             {
                 string ai = Path.Combine(_core, "Configs", "AI");
                 File.WriteAllText(Path.Combine(ai, "target_filters.json"),
@@ -348,10 +375,19 @@ namespace Ludots.Tests.GAS
                     "\"Tasks\": [ \"Task.Attack\" ] } ]");
                 File.WriteAllText(Path.Combine(ai, "decision_makers.json"),
                     "[ { \"id\": \"DM.Combat\", \"SelectionMode\": \"FixedPriority\", \"Decisions\": [ \"Decision.Attack\" ] } ]");
-                File.WriteAllText(Path.Combine(ai, "profiles.json"),
-                    "[ { \"id\": \"Profile.Basic\", \"DecisionIntervalSteps\": 1, \"MaxCandidates\": 32, \"DecisionMakers\": [ \"DM.Combat\" ] } ]");
-                File.WriteAllText(Path.Combine(ai, "stances.json"), "[]");
+                string defaultStanceProperty = string.IsNullOrWhiteSpace(defaultStance)
+                    ? string.Empty
+                    : $", \"DefaultStance\": \"{defaultStance}\"";
+                WriteProfilesJson("[ { \"id\": \"Profile.Basic\", \"DecisionIntervalSteps\": 1, \"MaxCandidates\": 32, \"DecisionMakers\": [ \"DM.Combat\" ]" + defaultStanceProperty + " } ]");
+                File.WriteAllText(Path.Combine(ai, "stances.json"), string.IsNullOrWhiteSpace(defaultStance)
+                    ? "[]"
+                    : $"[ {{ \"id\": \"{defaultStance}\", \"AutoAcquire\": true, \"Retaliate\": true }} ]");
                 File.WriteAllText(Path.Combine(ai, "actuators.json"), "[]");
+            }
+
+            public void WriteProfilesJson(string json)
+            {
+                File.WriteAllText(Path.Combine(_core, "Configs", "AI", "profiles.json"), json);
             }
 
             public AiCompiledRuntime Load()

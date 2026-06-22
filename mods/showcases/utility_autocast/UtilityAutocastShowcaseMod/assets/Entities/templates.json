@@ -1,0 +1,75 @@
+[
+  {
+    "id": "utility_autocast_mage",
+    "components": {
+      "Name": { "Value": "Utility Autocast Mage" },
+      "Team": { "Id": 1 },
+      "PlayerOwner": { "PlayerId": 1 },
+      "WorldPositionCm": { "Value": { "X": 5000, "Y": 5000 } },
+      "AttributeBuffer": { "base": { "Health": 160 }, "current": { "Health": 160 } },
+      "AbilityStateBuffer": {
+        "abilityIds": [
+          "Ability.UtilityAutocast.Attack",
+          "Ability.UtilityAutocast.HealBurst",
+          "Ability.UtilityAutocast.Curse"
+        ]
+      },
+      "GameplayTagContainer": {},
+      "TagCountContainer": {},
+      "TimedTagBuffer": {},
+      "OrderBuffer": {},
+      "BlackboardSpatialBuffer": {},
+      "BlackboardEntityBuffer": {},
+      "BlackboardIntBuffer": {},
+      "UtilityAiAgent": { "profile": "Profile.UtilityAutocast.Mage" },
+      "UtilityAiState": {},
+      "UtilityAiDecisionTrace": {},
+      "UtilityAiCombatMemory": {}
+    }
+  },
+  {
+    "id": "utility_autocast_injured_ally",
+    "components": {
+      "Name": { "Value": "Utility Autocast Injured Ally" },
+      "Team": { "Id": 1 },
+      "WorldPositionCm": { "Value": { "X": 5320, "Y": 5060 } },
+      "AttributeBuffer": { "base": { "Health": 120 }, "current": { "Health": 35 } },
+      "GameplayTagContainer": {},
+      "TagCountContainer": {}
+    }
+  },
+  {
+    "id": "utility_autocast_healthy_ally",
+    "components": {
+      "Name": { "Value": "Utility Autocast Healthy Ally" },
+      "Team": { "Id": 1 },
+      "WorldPositionCm": { "Value": { "X": 5480, "Y": 5120 } },
+      "AttributeBuffer": { "base": { "Health": 120 }, "current": { "Health": 110 } },
+      "GameplayTagContainer": {},
+      "TagCountContainer": {}
+    }
+  },
+  {
+    "id": "utility_autocast_enemy_brute",
+    "components": {
+      "Name": { "Value": "Utility Autocast Enemy Brute" },
+      "Team": { "Id": 2 },
+      "PlayerOwner": { "PlayerId": 2 },
+      "WorldPositionCm": { "Value": { "X": 5850, "Y": 5000 } },
+      "AttributeBuffer": { "base": { "Health": 180 }, "current": { "Health": 180 } },
+      "GameplayTagContainer": {},
+      "TagCountContainer": {}
+    }
+  },
+  {
+    "id": "utility_autocast_enemy_scout",
+    "components": {
+      "Name": { "Value": "Utility Autocast Enemy Scout" },
+      "Team": { "Id": 2 },
+      "WorldPositionCm": { "Value": { "X": 6200, "Y": 5100 } },
+      "AttributeBuffer": { "base": { "Health": 80 }, "current": { "Health": 80 } },
+      "GameplayTagContainer": {},
+      "TagCountContainer": {}
+    }
+  }
+]

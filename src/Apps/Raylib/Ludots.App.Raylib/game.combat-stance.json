@@ -1,0 +1,12 @@
+{
+  "WindowWidth": 1280,
+  "WindowHeight": 720,
+  "WindowTitle": "Ludots Engine - Combat Stance Showcase",
+  "TargetFps": 60,
+  "ModPaths": [
+    "../../../../../../../mods/LudotsCoreMod",
+    "../../../../../../../mods/CoreInputMod",
+    "../../../../../../../mods/CombatStanceBehaviorMod",
+    "../../../../../../../mods/showcases/combat_stance/CombatStanceShowcaseMod"
+  ]
+}

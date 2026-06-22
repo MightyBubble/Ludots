@@ -1,8 +1,71 @@
+using System;
+using System.Collections.Generic;
 using Ludots.Core.Gameplay.Teams;
 using Ludots.Core.Gameplay.GAS.Components;
 
 namespace Ludots.Core.Gameplay.AI.Utility
 {
+    public sealed class UtilityAiAuthoringCatalog
+    {
+        private readonly Dictionary<string, int> _profileIds;
+        private readonly Dictionary<string, int> _stanceIds;
+        private readonly Dictionary<string, int> _actuatorIds;
+
+        public UtilityAiAuthoringCatalog(
+            IReadOnlyDictionary<string, int> profileIds,
+            IReadOnlyDictionary<string, int> stanceIds,
+            IReadOnlyDictionary<string, int> actuatorIds)
+        {
+            _profileIds = profileIds != null
+                ? new Dictionary<string, int>(profileIds, StringComparer.Ordinal)
+                : new Dictionary<string, int>(StringComparer.Ordinal);
+            _stanceIds = stanceIds != null
+                ? new Dictionary<string, int>(stanceIds, StringComparer.Ordinal)
+                : new Dictionary<string, int>(StringComparer.Ordinal);
+            _actuatorIds = actuatorIds != null
+                ? new Dictionary<string, int>(actuatorIds, StringComparer.Ordinal)
+                : new Dictionary<string, int>(StringComparer.Ordinal);
+        }
+
+        public static UtilityAiAuthoringCatalog Empty { get; } = new(
+            new Dictionary<string, int>(StringComparer.Ordinal),
+            new Dictionary<string, int>(StringComparer.Ordinal),
+            new Dictionary<string, int>(StringComparer.Ordinal));
+
+        public bool TryGetProfileId(string key, out int profileId)
+        {
+            if (!string.IsNullOrWhiteSpace(key) && _profileIds.TryGetValue(key, out profileId))
+            {
+                return true;
+            }
+
+            profileId = -1;
+            return false;
+        }
+
+        public bool TryGetStanceId(string key, out int stanceId)
+        {
+            if (!string.IsNullOrWhiteSpace(key) && _stanceIds.TryGetValue(key, out stanceId))
+            {
+                return true;
+            }
+
+            stanceId = -1;
+            return false;
+        }
+
+        public bool TryGetActuatorId(string key, out int actuatorId)
+        {
+            if (!string.IsNullOrWhiteSpace(key) && _actuatorIds.TryGetValue(key, out actuatorId))
+            {
+                return true;
+            }
+
+            actuatorId = -1;
+            return false;
+        }
+    }
+
     public readonly struct UtilityAiCompiledRuntime
     {
         public readonly UtilityAiProfileDefinition[] Profiles;
@@ -17,6 +80,7 @@ namespace Ludots.Core.Gameplay.AI.Utility
         public readonly UtilityAiTaskDefinition[] Tasks;
         public readonly UtilityAiStanceDefinition[] Stances;
         public readonly UtilityAiActuatorDefinition[] Actuators;
+        public readonly UtilityAiAuthoringCatalog Authoring;
 
         public UtilityAiCompiledRuntime(
             UtilityAiProfileDefinition[] profiles,
@@ -30,7 +94,8 @@ namespace Ludots.Core.Gameplay.AI.Utility
             UtilityAiCurveDefinition[] curves,
             UtilityAiTaskDefinition[] tasks,
             UtilityAiStanceDefinition[] stances,
-            UtilityAiActuatorDefinition[] actuators)
+            UtilityAiActuatorDefinition[] actuators,
+            UtilityAiAuthoringCatalog authoring = null)
         {
             Profiles = profiles;
             DecisionMakers = decisionMakers;
@@ -44,6 +109,7 @@ namespace Ludots.Core.Gameplay.AI.Utility
             Tasks = tasks;
             Stances = stances;
             Actuators = actuators;
+            Authoring = authoring ?? UtilityAiAuthoringCatalog.Empty;
         }
 
         public static UtilityAiCompiledRuntime Empty => new(

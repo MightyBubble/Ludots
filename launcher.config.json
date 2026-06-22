@@ -168,6 +168,22 @@
         "value": "mods/browser/BrowserCefRuntimeMod",
         "projectPath": "BrowserCefRuntimeMod.csproj"
       }
+    },
+    {
+      "name": "utility_autocast_showcase",
+      "target": {
+        "type": "path",
+        "value": "mods/showcases/utility_autocast/UtilityAutocastShowcaseMod",
+        "projectPath": "UtilityAutocastShowcaseMod.csproj"
+      }
+    },
+    {
+      "name": "combat_stance_showcase",
+      "target": {
+        "type": "path",
+        "value": "mods/showcases/combat_stance/CombatStanceShowcaseMod",
+        "projectPath": "CombatStanceShowcaseMod.csproj"
+      }
     }
   ],
   "adapters": {

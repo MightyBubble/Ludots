@@ -182,6 +182,24 @@
       ],
       "adapterId": "raylib",
       "buildMode": "auto"
+    },
+    {
+      "id": "utility_autocast_showcase_raylib",
+      "name": "Utility Autocast Showcase Raylib",
+      "selectors": [
+        "$utility_autocast_showcase"
+      ],
+      "adapterId": "raylib",
+      "buildMode": "auto"
+    },
+    {
+      "id": "combat_stance_showcase_raylib",
+      "name": "Combat Stance Showcase Raylib",
+      "selectors": [
+        "$combat_stance_showcase"
+      ],
+      "adapterId": "raylib",
+      "buildMode": "auto"
     }
   ]
 }
