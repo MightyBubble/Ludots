@@ -120,12 +120,45 @@ namespace Ludots.Tests.Navigation2D
         }
 
         [Test]
+        public void SteeringUpdate_LimitsSubmittedVelocityDelta_ByMaxAcceleration()
+        {
+            using var world = World.Create();
+            using var runtime = CreateRuntime(Navigation2DAvoidanceMode.Sonar, smartStopEnabled: false);
+            var system = new Navigation2DSteeringSystem2D(world, runtime, new Ludots.Core.Physics2D.ShapeDataStorage2D());
+
+            var actor = world.Create(
+                new NavAgent2D(),
+                new NavGoal2D { Kind = NavGoalKind2D.Point, TargetCm = Fix64Vec2.FromInt(10_000, 0), RadiusCm = Fix64.Zero },
+                new NavKinematics2D
+                {
+                    MaxSpeedCmPerSec = Fix64.FromInt(600),
+                    MaxAccelCmPerSec2 = Fix64.FromInt(60),
+                    RadiusCm = Fix64.FromInt(30),
+                    NeighborDistCm = Fix64.Zero,
+                    TimeHorizonSec = Fix64.FromInt(2),
+                    MaxNeighbors = 0
+                },
+                Position2D.Zero,
+                Velocity2D.Zero,
+                Mass2D.FromFloat(1f, 1f),
+                new NavDesiredVelocity2D { ValueCmPerSec = Fix64Vec2.Zero }
+            );
+
+            system.Update(1f / 60f);
+
+            var desired = world.Get<NavDesiredVelocity2D>(actor).ValueCmPerSec;
+            Assert.That(desired.X.ToFloat(), Is.EqualTo(1f).Within(0.02f));
+            Assert.That(desired.Y.ToFloat(), Is.EqualTo(0f).Within(0.02f));
+            Assert.That(world.Has<ForceInput2D>(actor), Is.False, "Navigation steering submits velocity, not ForceInput2D.");
+        }
+
+        [Test]
         public void SteeringUpdate_RespectsPerAgentMaxNeighbors_InOrcaMode()
         {
             var desiredWithoutNeighbors = RunDesiredVelocity(maxNeighbors: 0, Navigation2DAvoidanceMode.Orca);
             var desiredWithNeighbors = RunDesiredVelocity(maxNeighbors: 1, Navigation2DAvoidanceMode.Orca);
 
-            Assert.That(desiredWithoutNeighbors.X.ToFloat(), Is.EqualTo(100f).Within(0.01f));
+            Assert.That(desiredWithoutNeighbors.X.ToFloat(), Is.EqualTo(5000f / 60f).Within(0.02f));
             Assert.That(desiredWithoutNeighbors.Y.ToFloat(), Is.EqualTo(0f).Within(0.01f));
 
             bool changedByAvoidance =

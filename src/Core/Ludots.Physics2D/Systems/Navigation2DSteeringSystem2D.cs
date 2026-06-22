@@ -11,23 +11,18 @@ using Ludots.Core.Navigation2D.Components;
 using Ludots.Core.Navigation2D.Config;
 using Ludots.Core.Navigation2D.Runtime;
 using Ludots.Core.Physics2D;
-using Ludots.Core.Physics;
 using Ludots.Core.Physics2D.Components;
 
 namespace Ludots.Core.Physics2D.Systems
 {
     public sealed class Navigation2DSteeringSystem2D : BaseSystem<World, float>
     {
-        private static readonly QueryDescription _needsForceInput = new QueryDescription()
-            .WithAll<NavAgent2D, Position2D, Velocity2D, NavKinematics2D>()
-            .WithNone<ForceInput2D>();
-
         private static readonly QueryDescription _needsDesiredVelocity = new QueryDescription()
             .WithAll<NavAgent2D, Position2D, Velocity2D, NavKinematics2D>()
             .WithNone<NavDesiredVelocity2D>();
 
         private static readonly QueryDescription _agentQuery = new QueryDescription()
-            .WithAll<NavAgent2D, Position2D, Velocity2D, NavKinematics2D, ForceInput2D, NavDesiredVelocity2D>();
+            .WithAll<NavAgent2D, Position2D, Velocity2D, NavKinematics2D, NavDesiredVelocity2D>();
 
         private static readonly QueryDescription _flowGoalQuery = new QueryDescription()
             .WithAll<NavFlowGoal2D>();
@@ -188,7 +183,6 @@ namespace Ludots.Core.Physics2D.Systems
         private void ApplySteering(float deltaTime)
         {
             float dt = deltaTime > 1e-6f ? deltaTime : 1e-6f;
-            float invDt = 1f / dt;
             var steering = _runtime.Config.Steering;
 
             if (steering.Mode == Navigation2DAvoidanceMode.Orca && steering.Orca.Enabled)
@@ -196,8 +190,7 @@ namespace Ludots.Core.Physics2D.Systems
                 var job = new OrcaSteeringChunkJob
                 {
                     Runtime = _runtime,
-                    DeltaTime = dt,
-                    InvDeltaTime = invDt
+                    DeltaTime = dt
                 };
                 ExecuteSteeringJob(in job);
                 return;
@@ -208,8 +201,7 @@ namespace Ludots.Core.Physics2D.Systems
                 var job = new HybridSteeringChunkJob
                 {
                     Runtime = _runtime,
-                    DeltaTime = dt,
-                    InvDeltaTime = invDt
+                    DeltaTime = dt
                 };
                 ExecuteSteeringJob(in job);
                 return;
@@ -218,7 +210,7 @@ namespace Ludots.Core.Physics2D.Systems
             var sonarJob = new SonarSteeringChunkJob
             {
                 Runtime = _runtime,
-                InvDeltaTime = invDt
+                DeltaTime = dt
             };
             ExecuteSteeringJob(in sonarJob);
         }
@@ -376,32 +368,35 @@ namespace Ludots.Core.Physics2D.Systems
         }
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        private static void WriteZeroSteering(ref ForceInput2D force, ref NavDesiredVelocity2D desiredVelocity)
+        private static void WriteZeroSteering(ref NavDesiredVelocity2D desiredVelocity)
         {
-            force = new ForceInput2D { Force = Fix64Vec2.Zero };
             desiredVelocity = new NavDesiredVelocity2D { ValueCmPerSec = Fix64Vec2.Zero };
         }
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
         private static void WriteSteeringOutput(
-            ref ForceInput2D force,
             ref NavDesiredVelocity2D desiredVelocity,
             in Vector2 currentVelocity,
             in Vector2 newVelocity,
-            float invDeltaTime,
+            float deltaTime,
             float maxAccel)
         {
-            _ = currentVelocity;
-            _ = invDeltaTime;
-            _ = maxAccel;
-
-            force = new ForceInput2D
+            Vector2 submittedVelocity = newVelocity;
+            if (maxAccel > 0f && deltaTime > 0f)
             {
-                Force = Fix64Vec2.Zero
-            };
+                Vector2 deltaVelocity = newVelocity - currentVelocity;
+                float maxDelta = maxAccel * deltaTime;
+                float maxDeltaSq = maxDelta * maxDelta;
+                float deltaSq = deltaVelocity.LengthSquared();
+                if (deltaSq > maxDeltaSq && deltaSq > 1e-12f)
+                {
+                    submittedVelocity = currentVelocity + deltaVelocity * (maxDelta / MathF.Sqrt(deltaSq));
+                }
+            }
+
             desiredVelocity = new NavDesiredVelocity2D
             {
-                ValueCmPerSec = Fix64Vec2.FromFloat(newVelocity.X, newVelocity.Y)
+                ValueCmPerSec = Fix64Vec2.FromFloat(submittedVelocity.X, submittedVelocity.Y)
             };
         }
 
@@ -748,7 +743,6 @@ namespace Ludots.Core.Physics2D.Systems
         {
             public Navigation2DRuntime Runtime;
             public float DeltaTime;
-            public float InvDeltaTime;
 
             public void Execute(ref Chunk chunk)
             {
@@ -758,7 +752,7 @@ namespace Ludots.Core.Physics2D.Systems
                 }
 
                 ref var entityFirst = ref chunk.Entity(0);
-                chunk.GetSpan<ForceInput2D, NavDesiredVelocity2D>(out var forces, out var desiredVelocities);
+                var desiredVelocities = chunk.GetSpan<NavDesiredVelocity2D>();
 
                 bool hasFlowBinding = Runtime.FlowEnabled && chunk.Has<NavFlowBinding2D>();
                 Span<NavFlowBinding2D> flowBindings = hasFlowBinding ? chunk.GetSpan<NavFlowBinding2D>() : default;
@@ -795,19 +789,18 @@ namespace Ludots.Core.Physics2D.Systems
                 foreach (var entityIndex in chunk)
                 {
                     var entity = Unsafe.Add(ref entityFirst, entityIndex);
-                    ref var force = ref forces[entityIndex];
                     ref var desiredVelocity = ref desiredVelocities[entityIndex];
 
                     if ((uint)entity.Id >= (uint)entityToAgentIndex.Length)
                     {
-                        WriteZeroSteering(ref force, ref desiredVelocity);
+                        WriteZeroSteering(ref desiredVelocity);
                         continue;
                     }
 
                     int i = entityToAgentIndex[entity.Id];
                     if ((uint)i >= (uint)positions.Length)
                     {
-                        WriteZeroSteering(ref force, ref desiredVelocity);
+                        WriteZeroSteering(ref desiredVelocity);
                         continue;
                     }
 
@@ -837,7 +830,7 @@ namespace Ludots.Core.Physics2D.Systems
 
                     if (smartStopFlags[i] != 0)
                     {
-                        WriteZeroSteering(ref force, ref desiredVelocity);
+                        WriteZeroSteering(ref desiredVelocity);
                         continue;
                     }
 
@@ -918,7 +911,7 @@ namespace Ludots.Core.Physics2D.Systems
                         }
                     }
 
-                    WriteSteeringOutput(ref force, ref desiredVelocity, vel, newVel, InvDeltaTime, maxAccel);
+                    WriteSteeringOutput(ref desiredVelocity, vel, newVel, DeltaTime, maxAccel);
                 }
             }
         }
@@ -926,7 +919,7 @@ namespace Ludots.Core.Physics2D.Systems
         private struct SonarSteeringChunkJob : IChunkJob
         {
             public Navigation2DRuntime Runtime;
-            public float InvDeltaTime;
+            public float DeltaTime;
 
             public void Execute(ref Chunk chunk)
             {
@@ -936,7 +929,7 @@ namespace Ludots.Core.Physics2D.Systems
                 }
 
                 ref var entityFirst = ref chunk.Entity(0);
-                chunk.GetSpan<ForceInput2D, NavDesiredVelocity2D>(out var forces, out var desiredVelocities);
+                var desiredVelocities = chunk.GetSpan<NavDesiredVelocity2D>();
 
                 bool hasFlowBinding = Runtime.FlowEnabled && chunk.Has<NavFlowBinding2D>();
                 Span<NavFlowBinding2D> flowBindings = hasFlowBinding ? chunk.GetSpan<NavFlowBinding2D>() : default;
@@ -973,19 +966,18 @@ namespace Ludots.Core.Physics2D.Systems
                 foreach (var entityIndex in chunk)
                 {
                     var entity = Unsafe.Add(ref entityFirst, entityIndex);
-                    ref var force = ref forces[entityIndex];
                     ref var desiredVelocity = ref desiredVelocities[entityIndex];
 
                     if ((uint)entity.Id >= (uint)entityToAgentIndex.Length)
                     {
-                        WriteZeroSteering(ref force, ref desiredVelocity);
+                        WriteZeroSteering(ref desiredVelocity);
                         continue;
                     }
 
                     int i = entityToAgentIndex[entity.Id];
                     if ((uint)i >= (uint)positions.Length)
                     {
-                        WriteZeroSteering(ref force, ref desiredVelocity);
+                        WriteZeroSteering(ref desiredVelocity);
                         continue;
                     }
 
@@ -1015,7 +1007,7 @@ namespace Ludots.Core.Physics2D.Systems
 
                     if (smartStopFlags[i] != 0)
                     {
-                        WriteZeroSteering(ref force, ref desiredVelocity);
+                        WriteZeroSteering(ref desiredVelocity);
                         continue;
                     }
 
@@ -1095,7 +1087,7 @@ namespace Ludots.Core.Physics2D.Systems
                         }
                     }
 
-                    WriteSteeringOutput(ref force, ref desiredVelocity, vel, newVel, InvDeltaTime, maxAccel);
+                    WriteSteeringOutput(ref desiredVelocity, vel, newVel, DeltaTime, maxAccel);
                 }
             }
         }
@@ -1104,7 +1096,6 @@ namespace Ludots.Core.Physics2D.Systems
         {
             public Navigation2DRuntime Runtime;
             public float DeltaTime;
-            public float InvDeltaTime;
 
             public void Execute(ref Chunk chunk)
             {
@@ -1114,7 +1105,7 @@ namespace Ludots.Core.Physics2D.Systems
                 }
 
                 ref var entityFirst = ref chunk.Entity(0);
-                chunk.GetSpan<ForceInput2D, NavDesiredVelocity2D>(out var forces, out var desiredVelocities);
+                var desiredVelocities = chunk.GetSpan<NavDesiredVelocity2D>();
 
                 bool hasFlowBinding = Runtime.FlowEnabled && chunk.Has<NavFlowBinding2D>();
                 Span<NavFlowBinding2D> flowBindings = hasFlowBinding ? chunk.GetSpan<NavFlowBinding2D>() : default;
@@ -1154,19 +1145,18 @@ namespace Ludots.Core.Physics2D.Systems
                 foreach (var entityIndex in chunk)
                 {
                     var entity = Unsafe.Add(ref entityFirst, entityIndex);
-                    ref var force = ref forces[entityIndex];
                     ref var desiredVelocity = ref desiredVelocities[entityIndex];
 
                     if ((uint)entity.Id >= (uint)entityToAgentIndex.Length)
                     {
-                        WriteZeroSteering(ref force, ref desiredVelocity);
+                        WriteZeroSteering(ref desiredVelocity);
                         continue;
                     }
 
                     int i = entityToAgentIndex[entity.Id];
                     if ((uint)i >= (uint)positions.Length)
                     {
-                        WriteZeroSteering(ref force, ref desiredVelocity);
+                        WriteZeroSteering(ref desiredVelocity);
                         continue;
                     }
 
@@ -1196,7 +1186,7 @@ namespace Ludots.Core.Physics2D.Systems
 
                     if (smartStopFlags[i] != 0)
                     {
-                        WriteZeroSteering(ref force, ref desiredVelocity);
+                        WriteZeroSteering(ref desiredVelocity);
                         continue;
                     }
 
@@ -1293,7 +1283,7 @@ namespace Ludots.Core.Physics2D.Systems
                         }
                     }
 
-                    WriteSteeringOutput(ref force, ref desiredVelocity, vel, newVel, InvDeltaTime, maxAccel);
+                    WriteSteeringOutput(ref desiredVelocity, vel, newVel, DeltaTime, maxAccel);
                 }
             }
         }
@@ -1452,16 +1442,6 @@ namespace Ludots.Core.Physics2D.Systems
 
         private void EnsureSteeringOutputs()
         {
-            foreach (ref var chunk in World.Query(in _needsForceInput))
-            {
-                ref var entityFirst = ref chunk.Entity(0);
-                foreach (var index in chunk)
-                {
-                    var entity = Unsafe.Add(ref entityFirst, index);
-                    _commandBuffer.Add(entity, new ForceInput2D { Force = Fix64Vec2.Zero });
-                }
-            }
-
             foreach (ref var chunk in World.Query(in _needsDesiredVelocity))
             {
                 ref var entityFirst = ref chunk.Entity(0);

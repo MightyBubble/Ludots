@@ -28,6 +28,7 @@ namespace Ludots.Core.Physics2D.Systems
             public PhysicsMaterial2D Material;
             public byte HasMaterial;
             public byte IsSleeping;
+            public int IslandId;
         }
 
         private readonly QueryDescription _singleRigidBodyQuery;
@@ -302,7 +303,8 @@ namespace Ludots.Core.Physics2D.Systems
                 Mass = mass,
                 Material = hasMaterial ? material : default,
                 HasMaterial = hasMaterial ? (byte)1 : (byte)0,
-                IsSleeping = World.Has<SleepingTag>(entity) ? (byte)1 : (byte)0
+                IsSleeping = World.Has<SleepingTag>(entity) ? (byte)1 : (byte)0,
+                IslandId = World.TryGet(entity, out Island island) ? island.IslandId : -1
             };
         }
 

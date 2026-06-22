@@ -162,7 +162,7 @@ namespace Ludots.Core.Physics2D.Systems
                     continue;
                 }
 
-                if (World.Has<SleepingTag>(entityA) && World.Has<SleepingTag>(entityB))
+                if (snapshotA.IsSleeping != 0 && snapshotB.IsSleeping != 0)
                 {
                     continue;
                 }
@@ -274,6 +274,8 @@ namespace Ludots.Core.Physics2D.Systems
             pair.HasMaterialB = snapshotB.HasMaterial;
             pair.IsSleepingA = snapshotA.IsSleeping;
             pair.IsSleepingB = snapshotB.IsSleeping;
+            pair.IslandA = snapshotA.IslandId;
+            pair.IslandB = snapshotB.IslandId;
             pair.ContactCount = 0;
             pair.Penetration = Fix64.Zero;
         }

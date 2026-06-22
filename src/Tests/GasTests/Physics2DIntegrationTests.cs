@@ -1,4 +1,5 @@
 using System.Collections.Generic;
+using System.Diagnostics;
 using Arch.Core;
 using Ludots.Core.Components;
 using Ludots.Core.Gameplay.Spawning;
@@ -9,6 +10,7 @@ using Ludots.Core.Navigation2D.Components;
 using Ludots.Core.Navigation2D.Config;
 using Ludots.Core.Navigation2D.Runtime;
 using Ludots.Core.Navigation2D.Spatial;
+using Ludots.Core.Physics;
 using Ludots.Physics.Broadphase;
 using Ludots.Core.Physics2D;
 using Ludots.Core.Physics2D.Components;
@@ -34,6 +36,69 @@ namespace GasTests
         public void ShapeStorage_FailFast_WhenMissingIndex()
         {
             Assert.Throws<KeyNotFoundException>(() => _shapeStorage.GetShapeType(123));
+        }
+
+        [Test]
+        public void NavToPhysicsVelocitySync_RespectsMovementSuppression()
+        {
+            using var world = World.Create();
+            var system = new NavToPhysicsVelocitySyncSystem(world);
+
+            var freeActor = world.Create(
+                Velocity2D.Zero,
+                Mass2D.FromFloat(1f, 1f),
+                new NavDesiredVelocity2D { ValueCmPerSec = Fix64Vec2.FromInt(120, 0) });
+            var suppressedActor = world.Create(
+                Velocity2D.Zero,
+                Mass2D.FromFloat(1f, 1f),
+                new NavDesiredVelocity2D { ValueCmPerSec = Fix64Vec2.FromInt(240, 0) },
+                new MovementSuppressed2D());
+
+            system.Update(0f);
+
+            Assert.That(world.Get<Velocity2D>(freeActor).Linear.X.ToFloat(), Is.EqualTo(120f).Within(0.01f));
+            Assert.That(world.Get<Velocity2D>(suppressedActor).Linear, Is.EqualTo(Fix64Vec2.Zero));
+            Assert.That(world.Get<NavDesiredVelocity2D>(suppressedActor).ValueCmPerSec.X.ToFloat(), Is.EqualTo(240f).Within(0.01f));
+        }
+
+        [Test]
+        public void IntegrationSystem2D_ThroughputSmoke_Integrates2kBodiesWithinBudget()
+        {
+            using var world = World.Create();
+            var system = new IntegrationSystem2D(world, _solverConfig);
+            const int bodyCount = 2_000;
+            const int measuredSteps = 30;
+
+            for (int i = 0; i < bodyCount; i++)
+            {
+                world.Create(
+                    new Position2D { Value = Fix64Vec2.FromInt(i, i & 7) },
+                    new PreviousPosition2D { Value = Fix64Vec2.FromInt(i, i & 7) },
+                    new Velocity2D { Linear = Fix64Vec2.FromInt(120, 0), Angular = Fix64.Zero },
+                    Mass2D.FromFloat(1f, 1f),
+                    new ForceInput2D { Force = Fix64Vec2.FromInt(1, 0) },
+                    new PhysicsMaterial2D
+                    {
+                        BaseDamping = Fix64.OneValue,
+                        Friction = Fix64.Zero,
+                        Restitution = Fix64.Zero
+                    },
+                    new AppliedDamping { TotalFieldDamping = Fix64.OneValue },
+                    Rotation2D.Identity);
+            }
+
+            system.Update(1f / 60f);
+
+            var stopwatch = Stopwatch.StartNew();
+            for (int i = 0; i < measuredSteps; i++)
+            {
+                system.Update(1f / 60f);
+            }
+            stopwatch.Stop();
+
+            double averageMs = stopwatch.Elapsed.TotalMilliseconds / measuredSteps;
+            TestContext.WriteLine($"Integration throughput smoke: bodies={bodyCount}, avgStepMs={averageMs:F4}. 0Alloc tests are blind to TryGet/Set throughput regressions.");
+            Assert.That(averageMs, Is.LessThan(10.0d));
         }
 
         [Test]

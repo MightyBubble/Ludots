@@ -46,6 +46,7 @@ namespace Ludots.Core.Physics2D.Ticking
             return new Physics2DPipelineDefinition(
                 new ISystem<float>[]
                 {
+                    new NavToPhysicsVelocitySyncSystem(world),
                     build,
                     spatial,
                     new NarrowPhaseSystem2D(world, shapeStorage),
@@ -61,6 +62,7 @@ namespace Ludots.Core.Physics2D.Ticking
                 },
                 new[]
                 {
+                    "NavToPhysicsVelocitySync",
                     "BuildPhysicsWorld",
                     "SpatialBroadphase",
                     "NarrowPhase",

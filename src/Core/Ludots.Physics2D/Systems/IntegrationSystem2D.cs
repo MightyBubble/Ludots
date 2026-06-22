@@ -5,7 +5,6 @@ using Arch.Core;
 using Arch.System;
 using Ludots.Core.Engine.Physics2D;
 using Ludots.Core.Mathematics.FixedPoint;
-using Ludots.Core.Navigation2D.Components;
 using Ludots.Core.Physics;
 using Ludots.Core.Physics2D.Components;
 
@@ -35,14 +34,14 @@ namespace Ludots.Core.Physics2D.Systems
 
             var job = new IntegrationJob
             {
-                World = World,
                 FixedDt = Fix64.FromFloat(deltaTime),
                 DefaultBaseDamping = _config.DefaultBaseDampingFix64,
                 MinVelocitySq = _config.MinVelocitySqFix64
             };
-            World.InlineEntityQuery<IntegrationJob, Position2D, Velocity2D, Mass2D>(
-                in _dynamicQuery,
-                ref job);
+            foreach (ref var chunk in World.Query(in _dynamicQuery))
+            {
+                job.Execute(ref chunk);
+            }
         }
 
         private void InitializeMissingPrevPos()
@@ -56,66 +55,74 @@ namespace Ludots.Core.Physics2D.Systems
             }
         }
 
-        private struct IntegrationJob : IForEachWithEntity<Position2D, Velocity2D, Mass2D>
+        private struct IntegrationJob
         {
-            public World World;
             public Fix64 FixedDt;
             public Fix64 DefaultBaseDamping;
             public Fix64 MinVelocitySq;
 
-            [MethodImpl(MethodImplOptions.AggressiveInlining)]
-            public void Update(Entity entity, ref Position2D position, ref Velocity2D velocity, ref Mass2D mass)
+            public void Execute(ref Chunk chunk)
             {
-                if (mass.IsStatic) return;
-
-                if (World.TryGet(entity, out NavDesiredVelocity2D desiredVelocity))
+                if (chunk.Count <= 0)
                 {
-                    velocity.Linear = desiredVelocity.ValueCmPerSec;
+                    return;
                 }
 
-                if (World.TryGet(entity, out ForceInput2D input))
+                chunk.GetSpan<Position2D, Velocity2D, Mass2D>(out var positions, out var velocities, out var masses);
+
+                bool hasForceInput = chunk.Has<ForceInput2D>();
+                Span<ForceInput2D> forceInputs = hasForceInput ? chunk.GetSpan<ForceInput2D>() : default;
+                bool hasPreviousPosition = chunk.Has<PreviousPosition2D>();
+                Span<PreviousPosition2D> previousPositions = hasPreviousPosition ? chunk.GetSpan<PreviousPosition2D>() : default;
+                bool hasRotation = chunk.Has<Rotation2D>();
+                Span<Rotation2D> rotations = hasRotation ? chunk.GetSpan<Rotation2D>() : default;
+                bool hasMaterial = chunk.Has<PhysicsMaterial2D>();
+                Span<PhysicsMaterial2D> materials = hasMaterial ? chunk.GetSpan<PhysicsMaterial2D>() : default;
+                bool hasAppliedDamping = chunk.Has<AppliedDamping>();
+                Span<AppliedDamping> appliedDampings = hasAppliedDamping ? chunk.GetSpan<AppliedDamping>() : default;
+
+                foreach (int index in chunk)
                 {
-                    velocity.Linear = velocity.Linear + input.Force * FixedDt;
-                    World.Set(entity, new ForceInput2D { Force = Fix64Vec2.Zero });
-                }
+                    ref Position2D position = ref positions[index];
+                    ref Velocity2D velocity = ref velocities[index];
+                    ref Mass2D mass = ref masses[index];
 
-                if (World.TryGet<PreviousPosition2D>(entity, out _))
-                {
-                    World.Set(entity, new PreviousPosition2D { Value = position.Value });
-                }
+                    if (mass.IsStatic) continue;
 
-                position.Value = position.Value + velocity.Linear * FixedDt;
+                    if (hasForceInput)
+                    {
+                        ref ForceInput2D input = ref forceInputs[index];
+                        velocity.Linear = velocity.Linear + input.Force * FixedDt;
+                        input.Force = Fix64Vec2.Zero;
+                    }
 
-                if (World.TryGet<Rotation2D>(entity, out var rotation))
-                {
-                    rotation.Value = rotation.Value + velocity.Angular * FixedDt;
-                    World.Set(entity, rotation);
-                }
+                    if (hasPreviousPosition)
+                    {
+                        previousPositions[index].Value = position.Value;
+                    }
 
-                Fix64 baseDamping = DefaultBaseDamping;
-                if (World.TryGet(entity, out PhysicsMaterial2D material))
-                {
-                    baseDamping = material.BaseDamping;
-                }
+                    position.Value = position.Value + velocity.Linear * FixedDt;
 
-                Fix64 fieldDamping = Fix64.OneValue;
-                if (World.TryGet(entity, out AppliedDamping appliedDamping))
-                {
-                    fieldDamping = appliedDamping.TotalFieldDamping;
-                }
+                    if (hasRotation)
+                    {
+                        rotations[index].Value = rotations[index].Value + velocity.Angular * FixedDt;
+                    }
 
-                Fix64 finalDamping = baseDamping * fieldDamping;
-                velocity.Linear = velocity.Linear * finalDamping;
-                velocity.Angular = velocity.Angular * finalDamping;
+                    Fix64 baseDamping = hasMaterial ? materials[index].BaseDamping : DefaultBaseDamping;
+                    Fix64 fieldDamping = hasAppliedDamping ? appliedDampings[index].TotalFieldDamping : Fix64.OneValue;
+                    Fix64 finalDamping = baseDamping * fieldDamping;
+                    velocity.Linear = velocity.Linear * finalDamping;
+                    velocity.Angular = velocity.Angular * finalDamping;
 
-                if (velocity.Linear.LengthSquared() < MinVelocitySq)
-                {
-                    velocity.Linear = Fix64Vec2.Zero;
-                }
+                    if (velocity.Linear.LengthSquared() < MinVelocitySq)
+                    {
+                        velocity.Linear = Fix64Vec2.Zero;
+                    }
 
-                if (velocity.Angular * velocity.Angular < MinVelocitySq)
-                {
-                    velocity.Angular = Fix64.Zero;
+                    if (velocity.Angular * velocity.Angular < MinVelocitySq)
+                    {
+                        velocity.Angular = Fix64.Zero;
+                    }
                 }
             }
         }

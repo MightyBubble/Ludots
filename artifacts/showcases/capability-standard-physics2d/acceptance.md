@@ -9,8 +9,8 @@
 | ForceInput knockback | frame 1 force X/Y `0` / `0`, velocity X `59.7` cm/s |
 | Damping field | final damping probe velocity X `1.934` cm/s, applied damping `0.55` |
 | Kinematic rotating door | final rotation `0.72` rad |
-| Physics stats | Hz `15`, potential pairs `0`, contact pairs `0`, last update `0.0002` ms |
-| Test tick timings | frames `40`, avg `7.5502` ms, max `106.5621` ms |
+| Physics stats | Hz `15`, potential pairs `0`, contact pairs `0`, last update `0.0000` ms |
+| Test tick timings | frames `40`, avg `3.1037` ms, max `40.0921` ms |
 
 ## Keyframes
 

@@ -7,6 +7,8 @@ using Ludots.Core.Gameplay.GAS.Systems;
 using Ludots.Core.Mathematics.FixedPoint;
 using Ludots.Core.Navigation2D.Components;
 using Ludots.Core.Physics;
+using Ludots.Core.Physics2D.Components;
+using Ludots.Core.Physics2D.Systems;
 using NUnit.Framework;
 using static NUnit.Framework.Assert;
 
@@ -283,7 +285,7 @@ namespace Ludots.Tests.GAS
         }
 
         [Test]
-        public void Displacement_OverrideNavigation_SuppressesAndRestoresNavigationState()
+        public void Displacement_OverrideNavigation_SuppressesMovementAuthorityWithoutMutatingNavigationState()
         {
             using var world = World.Create();
 
@@ -291,6 +293,7 @@ namespace Ludots.Tests.GAS
             var source = world.Create(new WorldPositionCm { Value = Fix64Vec2.Zero });
             var target = world.Create(
                 new WorldPositionCm { Value = Fix64Vec2.FromInt(1000, 0) },
+                new Position2D { Value = Fix64Vec2.FromInt(1000, 0) },
                 new NavGoal2D
                 {
                     Kind = NavGoalKind2D.Point,
@@ -319,18 +322,30 @@ namespace Ludots.Tests.GAS
             var system = new DisplacementRuntimeSystem(world);
             system.Update(0f);
 
-            That(world.Get<NavGoal2D>(target).Kind, Is.EqualTo(NavGoalKind2D.None));
-            That(world.Get<NavDesiredVelocity2D>(target).ValueCmPerSec, Is.EqualTo(Fix64Vec2.Zero));
-            That(world.Get<ForceInput2D>(target).Force, Is.EqualTo(Fix64Vec2.Zero));
-            That(world.Get<GameplayTagContainer>(target).HasTag(navMoveTagId), Is.False);
+            That(world.Has<MovementSuppressed2D>(target), Is.True);
+            That(world.Get<NavGoal2D>(target).Kind, Is.EqualTo(NavGoalKind2D.Point));
+            That(world.Get<NavDesiredVelocity2D>(target).ValueCmPerSec.X.ToFloat(), Is.EqualTo(120f).Within(0.01f));
+            That(world.Get<ForceInput2D>(target).Force.X.ToFloat(), Is.EqualTo(60f).Within(0.01f));
+            That(world.Get<GameplayTagContainer>(target).HasTag(navMoveTagId), Is.True);
+            That(world.Get<Position2D>(target).Value.X.ToFloat(), Is.EqualTo(1050f).Within(0.01f));
+            That(world.Get<WorldPositionCm>(target).Value.X.ToFloat(), Is.EqualTo(1000f).Within(0.01f));
 
             system.Update(0f);
 
-            var restoredGoal = world.Get<NavGoal2D>(target);
-            That(restoredGoal.Kind, Is.EqualTo(NavGoalKind2D.Point));
-            That(restoredGoal.TargetCm.X.ToFloat(), Is.EqualTo(2000f).Within(0.01f));
-            That(restoredGoal.RadiusCm.ToFloat(), Is.EqualTo(25f).Within(0.01f));
+            That(world.Has<MovementSuppressed2D>(target), Is.False);
+            var goal = world.Get<NavGoal2D>(target);
+            That(goal.Kind, Is.EqualTo(NavGoalKind2D.Point));
+            That(goal.TargetCm.X.ToFloat(), Is.EqualTo(2000f).Within(0.01f));
+            That(goal.RadiusCm.ToFloat(), Is.EqualTo(25f).Within(0.01f));
+            That(world.Get<NavDesiredVelocity2D>(target).ValueCmPerSec.X.ToFloat(), Is.EqualTo(120f).Within(0.01f));
+            That(world.Get<ForceInput2D>(target).Force.X.ToFloat(), Is.EqualTo(60f).Within(0.01f));
             That(world.Get<GameplayTagContainer>(target).HasTag(navMoveTagId), Is.True);
+            That(world.Get<Position2D>(target).Value.X.ToFloat(), Is.EqualTo(1100f).Within(0.01f));
+            That(world.Get<WorldPositionCm>(target).Value.X.ToFloat(), Is.EqualTo(1000f).Within(0.01f));
+
+            new Physics2DToWorldPositionSyncSystem(world).Update(0f);
+
+            That(world.Get<WorldPositionCm>(target).Value.X.ToFloat(), Is.EqualTo(1100f).Within(0.01f));
         }
 
         [Test]

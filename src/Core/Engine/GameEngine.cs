@@ -1351,13 +1351,6 @@ namespace Ludots.Core.Engine
             RegisterPhysics2DSystemFactory();
 
             bool physics2DEnabled = config.Physics2D.Enabled || config.Navigation2D.Enabled;
-            if (physics2DEnabled)
-            {
-                EnsurePhysics2DShapeStorage();
-                SystemFactoryRegistry.TryActivate(physics2dSystemFactoryName, CreateContext(), this);
-                RegisterPhysics2DWorldSyncSystem();
-            }
-
             if (config.Navigation2D.Enabled)
             {
                 var navigation2dRuntime = new Navigation2DRuntime(config.Navigation2D, gridCellSizeCm: SpatialCoords.GridCellSizeCm, loadedChunks: null);
@@ -1387,6 +1380,13 @@ namespace Ludots.Core.Engine
                         RegisterSystem(nav2dSystem, SystemGroup.InputCollection);
                     }
                 }
+            }
+
+            if (physics2DEnabled)
+            {
+                EnsurePhysics2DShapeStorage();
+                SystemFactoryRegistry.TryActivate(physics2dSystemFactoryName, CreateContext(), this);
+                RegisterPhysics2DWorldSyncSystem();
             }
             
             // Phase 2: AbilityActivation

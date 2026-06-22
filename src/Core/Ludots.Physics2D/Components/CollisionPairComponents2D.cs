@@ -35,6 +35,8 @@ namespace Ludots.Core.Physics2D.Components
         public byte HasMaterialB;
         public byte IsSleepingA;
         public byte IsSleepingB;
+        public int IslandA;
+        public int IslandB;
 
         public Fix64 CombinedFriction;
         public Fix64 CombinedRestitution;

@@ -4,11 +4,9 @@ using Arch.Core;
 using Arch.System;
 using Ludots.Core.Components;
 using Ludots.Core.Gameplay.GAS.Components;
-using Ludots.Core.Gameplay.GAS.Registry;
 using Ludots.Core.Mathematics;
 using Ludots.Core.Mathematics.FixedPoint;
-using Ludots.Core.Navigation2D.Components;
-using Ludots.Core.Physics;
+using Ludots.Core.Physics2D.Components;
 
 namespace Ludots.Core.Gameplay.GAS.Systems
 {
@@ -23,11 +21,9 @@ namespace Ludots.Core.Gameplay.GAS.Systems
         private static readonly QueryDescription _query = new QueryDescription().WithAll<DisplacementState>();
         private readonly List<Entity> _toDestroy = new();
         private readonly CommandBuffer _commandBuffer = new();
-        private readonly int _navMoveTagId;
 
         public DisplacementRuntimeSystem(World world) : base(world)
         {
-            _navMoveTagId = TagRegistry.Register("Ability.Nav.Move");
         }
 
         public override void Update(in float dt)
@@ -42,21 +38,19 @@ namespace Ludots.Core.Gameplay.GAS.Systems
                 {
                     Entity entity = System.Runtime.CompilerServices.Unsafe.Add(ref entityFirst, index);
                     ref DisplacementState disp = ref displacements[index];
-                    if (!World.IsAlive(disp.TargetEntity) || !World.Has<WorldPositionCm>(disp.TargetEntity))
+                    if (!World.IsAlive(disp.TargetEntity) || !HasDisplacementPosition(disp.TargetEntity))
                     {
-                        RestoreNavigationOverride(ref disp);
+                        ClearMovementSuppression(ref disp);
                         _toDestroy.Add(entity);
                         continue;
                     }
 
                     if (disp.RemainingTicks <= 0 || disp.RemainingDistanceCm <= Fix64.Zero)
                     {
-                        RestoreNavigationOverride(ref disp);
+                        ClearMovementSuppression(ref disp);
                         _toDestroy.Add(entity);
                         continue;
                     }
-
-                    ApplyNavigationOverride(ref disp);
 
                     Fix64 stepCm = Fix64.FromInt(disp.TotalDistanceCm) / Fix64.FromInt(disp.TotalDurationTicks);
                     if (stepCm > disp.RemainingDistanceCm)
@@ -65,17 +59,19 @@ namespace Ludots.Core.Gameplay.GAS.Systems
                     }
 
                     Fix64Vec2 direction = ComputeDirection(in disp, World);
-
-                    ref var pos = ref World.Get<WorldPositionCm>(disp.TargetEntity);
-                    pos.Value = pos.Value + direction * stepCm;
+                    ApplyPositionStep(disp.TargetEntity, direction * stepCm);
 
                     disp.RemainingDistanceCm -= stepCm;
                     disp.RemainingTicks--;
 
                     if (disp.RemainingTicks <= 0 || disp.RemainingDistanceCm <= Fix64.Zero)
                     {
-                        RestoreNavigationOverride(ref disp);
+                        ClearMovementSuppression(ref disp);
                         _toDestroy.Add(entity);
+                    }
+                    else
+                    {
+                        ApplyMovementSuppression(ref disp);
                     }
                 }
             }
@@ -94,7 +90,12 @@ namespace Ludots.Core.Gameplay.GAS.Systems
             }
         }
 
-        private void ApplyNavigationOverride(ref DisplacementState disp)
+        private bool HasDisplacementPosition(Entity target)
+        {
+            return World.Has<Position2D>(target) || World.Has<WorldPositionCm>(target);
+        }
+
+        private void ApplyMovementSuppression(ref DisplacementState disp)
         {
             if (!disp.OverrideNavigation || !World.IsAlive(disp.TargetEntity))
             {
@@ -102,80 +103,41 @@ namespace Ludots.Core.Gameplay.GAS.Systems
             }
 
             var target = disp.TargetEntity;
-            if (!disp.NavigationOverrideCaptured)
+            if (!disp.MovementSuppressionApplied && !World.Has<MovementSuppressed2D>(target))
             {
-                if (World.Has<NavGoal2D>(target))
-                {
-                    ref readonly var goal = ref World.Get<NavGoal2D>(target);
-                    disp.SavedNavGoalKind = (byte)goal.Kind;
-                    disp.SavedNavGoalTargetCm = goal.TargetCm;
-                    disp.SavedNavGoalRadiusCm = goal.RadiusCm;
-                }
-
-                if (_navMoveTagId > 0 && World.Has<GameplayTagContainer>(target))
-                {
-                    ref readonly var tags = ref World.Get<GameplayTagContainer>(target);
-                    disp.SavedHadNavMoveTag = tags.HasTag(_navMoveTagId);
-                }
-
-                disp.NavigationOverrideCaptured = true;
+                _commandBuffer.Add(target, new MovementSuppressed2D());
             }
 
-            if (World.Has<NavGoal2D>(target))
-            {
-                ref var goal = ref World.Get<NavGoal2D>(target);
-                goal.Kind = NavGoalKind2D.None;
-            }
-
-            if (_navMoveTagId > 0 && World.Has<GameplayTagContainer>(target))
-            {
-                ref var tags = ref World.Get<GameplayTagContainer>(target);
-                if (tags.HasTag(_navMoveTagId))
-                {
-                    tags.RemoveTag(_navMoveTagId);
-                }
-            }
-
-            if (World.Has<NavDesiredVelocity2D>(target))
-            {
-                ref var desiredVelocity = ref World.Get<NavDesiredVelocity2D>(target);
-                desiredVelocity.ValueCmPerSec = Fix64Vec2.Zero;
-            }
-
-            if (World.Has<ForceInput2D>(target))
-            {
-                ref var forceInput = ref World.Get<ForceInput2D>(target);
-                forceInput.Force = Fix64Vec2.Zero;
-            }
+            disp.MovementSuppressionApplied = true;
         }
 
-        private void RestoreNavigationOverride(ref DisplacementState disp)
+        private void ClearMovementSuppression(ref DisplacementState disp)
         {
-            if (!disp.OverrideNavigation || !disp.NavigationOverrideCaptured || !World.IsAlive(disp.TargetEntity))
+            if (!disp.OverrideNavigation || !World.IsAlive(disp.TargetEntity))
             {
                 return;
             }
 
             var target = disp.TargetEntity;
-            if (disp.SavedNavGoalKind != 0 && World.Has<NavGoal2D>(target))
+            if (disp.MovementSuppressionApplied && World.Has<MovementSuppressed2D>(target))
             {
-                ref var goal = ref World.Get<NavGoal2D>(target);
-                if (goal.Kind == NavGoalKind2D.None)
-                {
-                    goal.Kind = (NavGoalKind2D)disp.SavedNavGoalKind;
-                    goal.TargetCm = disp.SavedNavGoalTargetCm;
-                    goal.RadiusCm = disp.SavedNavGoalRadiusCm;
-                }
+                _commandBuffer.Remove<MovementSuppressed2D>(in target);
             }
 
-            if (disp.SavedHadNavMoveTag && _navMoveTagId > 0 && World.Has<GameplayTagContainer>(target) && World.Has<AbilityExecInstance>(target))
+            disp.MovementSuppressionApplied = false;
+        }
+
+        private void ApplyPositionStep(Entity target, Fix64Vec2 step)
+        {
+            if (World.Has<Position2D>(target))
             {
-                ref var tags = ref World.Get<GameplayTagContainer>(target);
-                if (!tags.HasTag(_navMoveTagId))
-                {
-                    tags.AddTag(_navMoveTagId);
-                }
+                ref var physicsPosition = ref World.Get<Position2D>(target);
+                physicsPosition.Value = physicsPosition.Value + step;
+                return;
             }
+
+            ref var worldPosition = ref World.Get<WorldPositionCm>(target);
+            worldPosition.Value = worldPosition.Value + step;
         }
 
         private static Fix64Vec2 ComputeDirection(in DisplacementState disp, World world)
@@ -184,20 +146,19 @@ namespace Ludots.Core.Gameplay.GAS.Systems
             {
                 case DisplacementDirectionMode.ToTarget:
                 {
-                    if (!world.Has<WorldPositionCm>(disp.TargetEntity))
+                    if (!TryGetDisplacementPosition(world, disp.TargetEntity, out Fix64Vec2 moverPos))
                     {
                         return Fix64Vec2.UnitX;
                     }
 
-                    var moverPos = world.Get<WorldPositionCm>(disp.TargetEntity).Value;
                     Fix64Vec2 destination;
                     if (disp.HasTargetPoint)
                     {
                         destination = disp.TargetPointCm;
                     }
-                    else if (world.IsAlive(disp.DirectionTargetEntity) && world.Has<WorldPositionCm>(disp.DirectionTargetEntity))
+                    else if (world.IsAlive(disp.DirectionTargetEntity) && TryGetDisplacementPosition(world, disp.DirectionTargetEntity, out Fix64Vec2 directionTargetPos))
                     {
-                        destination = world.Get<WorldPositionCm>(disp.DirectionTargetEntity).Value;
+                        destination = directionTargetPos;
                     }
                     else
                     {
@@ -216,17 +177,15 @@ namespace Ludots.Core.Gameplay.GAS.Systems
 
                 case DisplacementDirectionMode.AwayFromSource:
                 {
-                    if (!world.IsAlive(disp.SourceEntity) || !world.Has<WorldPositionCm>(disp.SourceEntity))
+                    if (!world.IsAlive(disp.SourceEntity) || !TryGetDisplacementPosition(world, disp.SourceEntity, out Fix64Vec2 sourcePos))
                     {
                         return Fix64Vec2.UnitX;
                     }
-                    if (!world.Has<WorldPositionCm>(disp.TargetEntity))
+                    if (!TryGetDisplacementPosition(world, disp.TargetEntity, out Fix64Vec2 targetPos))
                     {
                         return Fix64Vec2.UnitX;
                     }
 
-                    var targetPos = world.Get<WorldPositionCm>(disp.TargetEntity).Value;
-                    var sourcePos = world.Get<WorldPositionCm>(disp.SourceEntity).Value;
                     var delta = targetPos - sourcePos;
                     var lenSq = delta.LengthSquared();
                     if (lenSq <= Fix64.OneValue)
@@ -238,17 +197,15 @@ namespace Ludots.Core.Gameplay.GAS.Systems
 
                 case DisplacementDirectionMode.TowardSource:
                 {
-                    if (!world.IsAlive(disp.SourceEntity) || !world.Has<WorldPositionCm>(disp.SourceEntity))
+                    if (!world.IsAlive(disp.SourceEntity) || !TryGetDisplacementPosition(world, disp.SourceEntity, out Fix64Vec2 sourcePos))
                     {
                         return Fix64Vec2.UnitX;
                     }
-                    if (!world.Has<WorldPositionCm>(disp.TargetEntity))
+                    if (!TryGetDisplacementPosition(world, disp.TargetEntity, out Fix64Vec2 targetPos))
                     {
                         return Fix64Vec2.UnitX;
                     }
 
-                    var targetPos = world.Get<WorldPositionCm>(disp.TargetEntity).Value;
-                    var sourcePos = world.Get<WorldPositionCm>(disp.SourceEntity).Value;
                     var delta = sourcePos - targetPos;
                     var lenSq = delta.LengthSquared();
                     if (lenSq <= Fix64.OneValue)
@@ -266,6 +223,24 @@ namespace Ludots.Core.Gameplay.GAS.Systems
                 default:
                     return Fix64Vec2.UnitX;
             }
+        }
+
+        private static bool TryGetDisplacementPosition(World world, Entity entity, out Fix64Vec2 position)
+        {
+            if (world.Has<Position2D>(entity))
+            {
+                position = world.Get<Position2D>(entity).Value;
+                return true;
+            }
+
+            if (world.Has<WorldPositionCm>(entity))
+            {
+                position = world.Get<WorldPositionCm>(entity).Value;
+                return true;
+            }
+
+            position = Fix64Vec2.Zero;
+            return false;
         }
 
         public override void Dispose()

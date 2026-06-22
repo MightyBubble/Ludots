@@ -224,6 +224,29 @@ namespace GasTests
         }
 
         [Test]
+        public void Issue358_Physics2DHotPaths_AvoidRandomWorldAccessAndKeepThroughputGuarded()
+        {
+            var repoRoot = FindRepoRoot();
+            string integration = File.ReadAllText(Path.Combine(repoRoot, "src", "Core", "Ludots.Physics2D", "Systems", "IntegrationSystem2D.cs"));
+            string impulses = File.ReadAllText(Path.Combine(repoRoot, "src", "Core", "Ludots.Physics2D", "Systems", "ApplyImpulsesSystem2D.cs"));
+            string adaptiveSpatial = File.ReadAllText(Path.Combine(repoRoot, "src", "Core", "Ludots.Physics2D", "Systems", "AdaptiveSpatialSystem2D.cs"));
+            string sleeping = File.ReadAllText(Path.Combine(repoRoot, "src", "Core", "Ludots.Physics2D", "Systems", "SleepingSystem.cs"));
+
+            Assert.Multiple(() =>
+            {
+                Assert.That(integration, Does.Not.Contain("World.TryGet"), "0Alloc tests are blind to TryGet throughput regressions; Integration must stay chunk/span based.");
+                Assert.That(integration, Does.Not.Contain("World.Set("), "Integration hot path must mutate chunk spans instead of random World.Set writes.");
+                Assert.That(integration, Does.Not.Contain("NavDesiredVelocity2D"), "Nav to Physics velocity handoff belongs in a gateable bridge, not the physics integrator.");
+                Assert.That(adaptiveSpatial, Does.Not.Contain("World.Has<SleepingTag>"), "Broadphase should use BodySnapshot.IsSleeping instead of random World.Has calls.");
+                Assert.That(impulses, Does.Not.Contain("World.Has<SleepingTag>"), "Impulse application should use CollisionPair.IsSleepingA/B snapshot bits.");
+                Assert.That(sleeping, Does.Not.Contain("Dictionary<int, List<Entity>>"), "Sleeping island collection must not allocate one List per island.");
+                Assert.That(sleeping, Does.Not.Contain("new List<Entity>"), "Sleeping island collection must reuse storage across frames.");
+                Assert.That(sleeping, Does.Not.Contain("World.TryGet(pair.Entity"), "Wake collection should use collision-pair island snapshots instead of per-pair TryGet.");
+                Assert.That(sleeping, Does.Not.Contain("World.Has<SleepingTag>(pair.Entity"), "Wake collection should use collision-pair sleeping snapshots instead of per-pair World.Has.");
+            });
+        }
+
+        [Test]
         public void ExchangeCore_RemainsSemanticAndDoesNotAdoptScenarioNames()
         {
             var repoRoot = FindRepoRoot();
